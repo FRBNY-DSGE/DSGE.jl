@@ -1,5 +1,8 @@
 using Distributions, Roots
 
+# This file contains functions that are used to compute financial frictions steady-state values from parameter values.
+# Specifically, it is called by models/m990/parameters
+
 function zetaspbfcn(z, σ, sprd)
     zetaratio = zetabomegafcn(z, σ, sprd)/zetazomegafcn(z, σ, sprd)
     nk = nkfcn(z, σ, sprd)

@@ -1,10 +1,13 @@
 using Distributions
-include("distributions.jl")
-include("steadystate.jl")
+
+include("../../code/abstractmodel/param.jl")
+include("../../code/abstractmodel/parameters.jl")
+include("../../code/init/ff_fcns.jl")
+include("../../code/init/distributions.jl")
 
 # Then assign parameters to a theta vector
 # θ = Parameters(α, β, etc.)
-type Parameters990
+type Parameters990 <: Parameters
     alp::Param
     zeta_p::Param
     iota_p::Param
@@ -44,7 +47,7 @@ type Parameters990
     ρ_sigw::Param
     ρ_mue::Param
     ρ_gamm::Param
-    ρ_pistar::Param
+    ρ_pist::Param
     ρ_lr::Param
     ρ_zp::Param
     ρ_tfp::Param
@@ -60,7 +63,7 @@ type Parameters990
     σ_sigw::Param
     σ_mue::Param
     σ_gamm::Param
-    σ_pistar::Param
+    σ_pist::Param
     σ_lr::Param
     σ_zp::Param
     σ_tfp::Param
@@ -146,34 +149,15 @@ type Parameters990
     zeta_nmue::Float64
     zeta_nsigw::Float64
     
-    # This constructor takes in as arguments and initializes the Param fields,
-    # then immediately calls steadystate() to calculate and initialize the
-    # steady-state values (which have type Float64)
-    Parameters990(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l,
-    zeta_w, iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp,
-    epsw, Fom, sprd, zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu,
-    ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp,
-    ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law, σ_rm, σ_sigw,
-    σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2,
-    σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12,
-    σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz,
-    eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef) =
-    steadystate(new(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l,
-    zeta_w, iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp,
-    epsw, Fom, sprd, zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu,
-    ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp,
-    ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law, σ_rm, σ_sigw,
-    σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2,
-    σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12,
-    σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz,
-    eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef))
+    # This constructor takes in as arguments and initializes the Param fields, then immediately calls steadystate() to calculate and initialize the steady-state values (which have type Float64)
+    Parameters990(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w, iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp, epsw, Fom, sprd, zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef) = steadystate(new(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w, iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp, epsw, Fom, sprd, zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef))
 end
 
 
 
 # TODO: some parameters (e.g. s2) have type = 0 but a and b
-# Initialize priors, assuming subspec 2
-function initpriors()
+# Instantiate Parameters990 type
+function initparameters()
     alp = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999)) # alp
     zeta_p = Param(0.8940, false, (1e-5, 0.999), Beta(0.5, 0.1), 1, (1e-5, 0.999)) # zeta_p
     iota_p = Param(0.1865, false, (1e-5, 0.999), Beta(0.5, 0.15), 1, (1e-5, 0.999)) # iota_p
@@ -222,7 +206,7 @@ function initpriors()
     ρ_sigw = Param(0.9898, false, (1e-5, 0.999), Beta(0.75, 0.15), 1, (1e-5, 0.999)) # rho_sigw
     ρ_mue = Param(0.7500, true, (1e-5, 0.999), Beta(0.75, 0.15), 1, (1e-5, 0.999)) # rho_mue
     ρ_gamm = Param(0.7500, true, (1e-5, 0.999), Beta(0.75, 0.15), 1, (1e-5, 0.999)) # rho_gamm
-    ρ_pistar = Param(0.9900, true, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_pist
+    ρ_pist = Param(0.9900, true, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_pist
     ρ_lr = Param(0.6936, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_lr
     ρ_zp = Param(0.8910, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_zp
     ρ_tfp = Param(0.1953, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_tfp
@@ -240,7 +224,7 @@ function initpriors()
     σ_sigw = Param(0.0428, false, (1e-7, 100.), InverseGamma(0.05, 4.00), 2, (1e-5, 0.)) # sig_sigw
     σ_mue = Param(0., true, (1e-7, 100.), InverseGamma(0.05, 4.00), 2, (1e-5, 0.)) # sig_mue
     σ_gamm = Param(0., true, (1e-7, 100.), InverseGamma(0.01, 4.00), 2, (1e-5, 0.)) # sig_gamm
-    σ_pistar = Param(0.0269, false, (1e-8, 5.), InverseGamma(0.03, 6.), 2, (1e-8, 5.)) # sig_pist
+    σ_pist = Param(0.0269, false, (1e-8, 5.), InverseGamma(0.03, 6.), 2, (1e-8, 5.)) # sig_pist
     σ_lr = Param(0.1766, false, (1e-8, 10.), InverseGamma(0.75, 2.), 2, (1e-8, 5.)) # sig_lr
     σ_zp = Param(0.1662, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_zp
     σ_tfp = Param(0.9391, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_tfp
@@ -265,13 +249,14 @@ function initpriors()
     gamm_gdpdef = Param(1.0354, false, (-10., 10.), Normal(1.00, 2.), 0, (-10., -10.)) # gamm_gdpdef
     del_gdpdef = Param(0.0181, false, (-9.1, 9.1), Normal(0.00, 2.), 0, (-10., -10.)) # del_gdpdef
     
-    return Parameters990(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w, iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp, epsw, Fom, sprd, zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef)
-    #return Parameters990(alp, zeta_p, iota_p, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w, iota_w, bet, psi1, psi2, psi3, pistar, sigmac, rho, Fom, sprd, zeta_spb, gammstar, gam, Lmean, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef)
+    return Parameters990(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w, iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp, epsw, Fom, sprd, zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pist, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pist, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef)
+    #return Parameters990(alp, zeta_p, iota_p, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w, iota_w, bet, psi1, psi2, psi3, pistar, sigmac, rho, Fom, sprd, zeta_spb, gammstar, gam, Lmean, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pist, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pist, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef)
 end
 
 
 
 # (Re)calculates steady-state values from Param fields in Θ
+# The functions called to calculate financial frictions additions (zetaspbfcn, etc.) can be found in code/init/ff_fcns.jl
 function steadystate(Θ::Parameters990)
     Θ.zstar = log(1. + Θ.gam) + Θ.alp/(1. - Θ.alp)*log(Θ.ups.value)
     Θ.rstar = exp(Θ.sigmac*Θ.zstar) / Θ.bet
@@ -354,22 +339,3 @@ function steadystate(Θ::Parameters990)
     return Θ
 end
 
-
-
-# TODO: Rewrite to take into account steady-state values
-# TODO: calculated logpdf values for inverse gamma don't correspond to priodens.m results
-# Calculate (log of) joint density of Θ
-function lnprior(Θ::Parameters990)
-    sum = 0.0
-    for i = 1:length(names(Θ))
-        α = getfield(Θ, i)
-        if !isa(α, Param)
-            break
-        else
-            curr = logpdf(α.prior, α.value)
-            #println(string(i, "   ", curr))
-            sum += curr
-        end
-    end
-    return sum
-end

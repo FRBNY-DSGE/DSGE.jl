@@ -1,11 +1,10 @@
-# Each function (e.g. make_endo) returns a tuple (endo, nend)
+# Each function (e.g. make_endo) returns a tuple (endo, n_states)
 #   endo: anonymous function, takes a name like "π_t" and returns an index
-#   nend: int, number of endogenous variables
+#   n_states: int, number of endogenous variables
 
 # This allows each names array to be passed around with the function, but does not require names to be reinitialized with each call to endo (as it would have to be if endo returned the index directly)
 
-# TODO: move to spec
-nant = 6
+include("../../code/abstractmodel/modelinds.jl")
 
 
 
@@ -71,8 +70,8 @@ function make_endo()
              "R_t1",
              "zp_t",
              "E_z",
-             ["rm_tl$i" for i = 1:nant]]
-    return name -> find(names .== name), length(names)
+             ["rm_tl$i" for i = 1:n_ant_shocks]]
+    return name::String -> find(names .== name), length(names)
 end
 
 
@@ -95,14 +94,14 @@ function make_exo()
              "tfp_sh",
              "gdpdef_sh",
              "pce_sh",
-             ["rm_shl$i" for i = 1:nant]]
-    return name -> find(names .== name), length(names)
+             ["rm_shl$i" for i = 1:n_ant_shocks]]
+    return name::String -> find(names .== name), length(names)
 end
 
 
 
-# Expectation shocks
-function make_exp()
+# Expectation errors
+function make_ex()
     names = ["Ec_sh",
              "Eqk_sh",
              "Ei_sh",
@@ -116,7 +115,7 @@ function make_exp()
              "Ei_f_sh",
              "EL_f_sh",
              "Erk_f_sh"]
-    return names -> find(names .== name), length(names)
+    return name::String -> find(names .== name), length(names)
 end
 
 
@@ -183,13 +182,12 @@ function make_eq()
              "Rt1",
              "eq_zp",
              "eq_Ez",
-             ["eq_rml$i" for i=1:nant]]
-    return name -> find(names .== name), length(names)
+             ["eq_rml$i" for i=1:n_ant_shocks]]
+    return name::String -> find(names .== name), length(names)
 end
 
 
 
-# TODO: define a type for observables
 # Named observables for measurement equation
 function make_obs()
     names = ["g_y", # output growth
@@ -204,5 +202,5 @@ function make_obs()
              "pi_long", # long-term inflation
              "R_long", # long-term rate
              "tfp"] # total factor productivity
-    return name -> find(names .== name), length(names)
+    return name::String -> find(names .== name), length(names)
 end

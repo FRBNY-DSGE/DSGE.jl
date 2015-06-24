@@ -23,10 +23,14 @@ type Param <: Number
     end
 end
 
+
+
 # Constructor for values given in getpara00_990.m as del = 0.025, for example
 function Param(value::Float64)
     return Param(value, true, (value, value), PointMass(value), 0, (value, value))
 end
+
+
 
 # Methods so that arithmetic with parameters can be done tersely, like "θ.α + θ.β"
 # Some cases will still require accessing the value field, e.g. "log(Θ.α.value)"

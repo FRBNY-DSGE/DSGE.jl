@@ -1,5 +1,11 @@
 using Distributions
 
+# This file defines additional functions to return objects of type Distribution.
+# This is necessary because the original Matlab code specifies prior distributions wrt mean and SD (for beta and gamma-distributed parameters) and ν and σ (for inverse gamma-distributed parameters).
+# Note that these functions are NOT new methods for the Distributions.Beta, etc. functions, but rather new functions with the same names.
+# See also https://github.com/JuliaLang/julia/issues/9547
+
+
 
 # Distribution of fixed parameters
 type PointMass <: Distribution{Univariate, Continuous}
