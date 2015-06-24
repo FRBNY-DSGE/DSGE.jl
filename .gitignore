@@ -1,2 +1,15 @@
-*.jl~
+# Files in base directory
+*.*~
 .juliahistory
+
+# Files in code directories
+code/*/.*~
+code/*/.juliahistory
+
+# Files in model directories
+models/*/.*~
+models/*/.juliahistory
+
+# # With git v1.8+
+# **/**/*.*~
+# **/**/.juliahistory

@@ -1,9 +1,0 @@
-spec = "990"
-"../m$(spec)/parameters"
-init("990")
-m990 = init("990")
-Model
-Parameters
-workspace()
-m990 = init("990")
-m990 = init("990")
