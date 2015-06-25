@@ -33,18 +33,26 @@ end
 
 
 
+# TODO: consider if it would be easier to just represent the value field using the transformed value instead of having to do this
+# Returns the transformed value of the parameter (e.g. gam)
+function val(α::Param)
+    return α.transf(α.value)
+end
+
+
+
 # Methods so that arithmetic with parameters can be done tersely, like "θ.α + θ.β"
-# Some cases will still require accessing the value field, e.g. "log(Θ.α.value)"
-# ^Why? Why not define log(α::Param) = log(α.value)? MJS.
-Base.convert(::Type{Float64}, α::Param) = α.value
+Base.convert(::Type{Float64}, α::Param) = val(α)
 Base.promote_rule{T<:FloatingPoint}(::Type{Param}, ::Type{T}) = Float64
 Base.promote_rule{T<:Integer}(::Type{Param}, ::Type{T}) = Float64
-+(α::Param, β::Param) = α.value + β.value
--(α::Param, β::Param) = α.value - β.value
-*(α::Param, β::Param) = α.value * β.value
-/(α::Param, β::Param) = α.value / β.value
-^(α::Param, β::Param) = α.value ^ β.value
--(α::Param)           = -α.value
++(α::Param, β::Param) = val(α) + val(β)
+-(α::Param, β::Param) = val(α) - val(β)
+*(α::Param, β::Param) = val(α) * val(β)
+/(α::Param, β::Param) = val(α) / val(β)
+^(α::Param, β::Param) = val(α) ^ val(β)
+-(α::Param)           = -val(α)
+Base.log(α::Param)    = log(val(α))
+Base.exp(α::Param)    = exp(val(α))
 
 
 
