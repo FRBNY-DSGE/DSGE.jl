@@ -258,23 +258,23 @@ end
 # (Re)calculates steady-state values from Param fields in Θ
 # The functions called to calculate financial frictions additions (zetaspbfcn, etc.) can be found in code/init/ff_fcns.jl
 function steadystate(Θ::Parameters990)
-    Θ.zstar = log(1. + Θ.gam) + Θ.alp/(1. - Θ.alp)*log(Θ.ups.value)
+    Θ.zstar = log(1+Θ.gam) + Θ.alp/(1-Θ.alp)*log(Θ.ups)
     Θ.rstar = exp(Θ.sigmac*Θ.zstar) / Θ.bet
-    Θ.Rstarn = 100*(Θ.rstar*Θ.pistar - 1.)
-    Θ.rkstar = Θ.sprd*Θ.rstar*Θ.ups - (1. - Θ.del)
-    Θ.wstar = (Θ.alp^Θ.alp * (1. - Θ.alp)^(1. - Θ.alp) * Θ.rkstar^(-Θ.alp) / Θ.Bigphi)^(1./(1. - Θ.alp))
+    Θ.Rstarn = 100*(Θ.rstar*Θ.pistar - 1)
+    Θ.rkstar = Θ.sprd*Θ.rstar*Θ.ups - (1-Θ.del)
+    Θ.wstar = (Θ.alp^Θ.alp * (1-Θ.alp)^(1-Θ.alp) * Θ.rkstar^(-Θ.alp) / Θ.Bigphi)^(1/(1-Θ.alp))
     Θ.Lstar = 1.
-    Θ.kstar = (Θ.alp/(1. - Θ.alp)) * Θ.wstar * Θ.Lstar / Θ.rkstar
-    Θ.kbarstar = Θ.kstar * (1. + Θ.gam) * Θ.ups^(1. / (1. - Θ.alp))
-    Θ.istar = Θ.kbarstar * (1. - ((1. - Θ.del)/((1. + Θ.gam) * Θ.ups^(1./(1. - Θ.alp)))))
-    Θ.ystar = (Θ.kstar^Θ.alp) * (Θ.Lstar^(1. - Θ.alp)) / Θ.Bigphi
-    Θ.cstar = (1. - Θ.gstar)*Θ.ystar - Θ.istar
+    Θ.kstar = (Θ.alp/(1-Θ.alp)) * Θ.wstar * Θ.Lstar / Θ.rkstar
+    Θ.kbarstar = Θ.kstar * (1+Θ.gam) * Θ.ups^(1 / (1-Θ.alp))
+    Θ.istar = Θ.kbarstar * (1-((1-Θ.del)/((1+Θ.gam) * Θ.ups^(1/(1-Θ.alp)))))
+    Θ.ystar = (Θ.kstar^Θ.alp) * (Θ.Lstar^(1-Θ.alp)) / Θ.Bigphi
+    Θ.cstar = (1-Θ.gstar)*Θ.ystar - Θ.istar
     Θ.wl_c = (Θ.wstar*Θ.Lstar)/(Θ.cstar*Θ.law)
 
     # FINANCIAL FRICTIONS ADDITIONS
     # solve for sigmaomegastar and zomegastar
-    Θ.zwstar = quantile(Normal(), Θ.Fom.value)
-    Θ.sigwstar = Roots.fzero(sigma -> zetaspbfcn(Θ.zwstar, sigma, Θ.sprd.value) - Θ.zeta_spb, 0.5)
+    Θ.zwstar = quantile(Normal(), val(Θ.Fom))
+    Θ.sigwstar = Roots.fzero(sigma -> zetaspbfcn(Θ.zwstar, sigma, val(Θ.sprd)) - Θ.zeta_spb, 0.5)
 
     # evaluate omegabarstar
     Θ.omegabarstar = omegafcn(Θ.zwstar, Θ.sigwstar)
@@ -294,10 +294,10 @@ function steadystate(Θ::Parameters990)
     # evaluate mu, nk, and Rhostar
     Θ.muestar = mufcn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
     Θ.nkstar = nkfcn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
-    Θ.Rhostar = 1./Θ.nkstar - 1.
+    Θ.Rhostar = 1/Θ.nkstar - 1
 
     # evaluate wekstar and vkstar
-    Θ.wekstar = (1. - Θ.gammstar/Θ.bet)*Θ.nkstar - Θ.gammstar/Θ.bet*(Θ.sprd*(1. - Θ.muestar*Θ.Gstar) - 1.)
+    Θ.wekstar = (1-Θ.gammstar/Θ.bet)*Θ.nkstar - Θ.gammstar/Θ.bet*(Θ.sprd*(1-Θ.muestar*Θ.Gstar) - 1)
     Θ.vkstar = (Θ.nkstar-Θ.wekstar)/Θ.gammstar
 
     # evaluate nstar and vstar
@@ -314,14 +314,14 @@ function steadystate(Θ::Parameters990)
     Θ.zeta_bw_zw = Θ.zeta_bw/Θ.zeta_zw
 
     # elasticities wrt sigw
-    Θ.zeta_bsigw = Θ.sigwstar * (((1. - Θ.muestar*Θ.dGdsigmastar/Θ.dGammadsigmastar) / (1. - Θ.muestar*Θ.dGdomegastar/Θ.dGammadomegastar) - 1.)*Θ.dGammadsigmastar*Θ.sprd + Θ.muestar*Θ.nkstar*Θ.dGdomegastar*Θ.d2Gammadomegadsigmastar-Θ.dGammadomegastar*Θ.d2Gdomegadsigmastar/Θ.GammamuGprime^2) / ((1. - Θ.Gammastar)*Θ.sprd + Θ.dGammadomegastar/Θ.GammamuGprime*(1. - Θ.nkstar))
+    Θ.zeta_bsigw = Θ.sigwstar * (((1 - Θ.muestar*Θ.dGdsigmastar/Θ.dGammadsigmastar) / (1 - Θ.muestar*Θ.dGdomegastar/Θ.dGammadomegastar) - 1)*Θ.dGammadsigmastar*Θ.sprd + Θ.muestar*Θ.nkstar*Θ.dGdomegastar*Θ.d2Gammadomegadsigmastar-Θ.dGammadomegastar*Θ.d2Gdomegadsigmastar/Θ.GammamuGprime^2) / ((1 - Θ.Gammastar)*Θ.sprd + Θ.dGammadomegastar/Θ.GammamuGprime*(1-Θ.nkstar))
     Θ.zeta_zsigw = Θ.sigwstar * (Θ.dGammadsigmastar - Θ.muestar*Θ.dGdsigmastar) / Θ.GammamuG
-    Θ.zeta_spsigw = (Θ.zeta_bw_zw*Θ.zeta_zsigw - Θ.zeta_bsigw) / (1. - Θ.zeta_bw_zw)
+    Θ.zeta_spsigw = (Θ.zeta_bw_zw*Θ.zeta_zsigw - Θ.zeta_bsigw) / (1-Θ.zeta_bw_zw)
     
     # elasticities wrt mue
-    Θ.zeta_bmue = Θ.muestar * (Θ.nkstar*Θ.dGammadomegastar*Θ.dGdomegastar/Θ.GammamuGprime+Θ.dGammadomegastar*Θ.Gstar*Θ.sprd) / ((1. - Θ.Gammastar)*Θ.GammamuGprime*Θ.sprd + Θ.dGammadomegastar*(1. - Θ.nkstar))
+    Θ.zeta_bmue = Θ.muestar * (Θ.nkstar*Θ.dGammadomegastar*Θ.dGdomegastar/Θ.GammamuGprime+Θ.dGammadomegastar*Θ.Gstar*Θ.sprd) / ((1-Θ.Gammastar)*Θ.GammamuGprime*Θ.sprd + Θ.dGammadomegastar*(1-Θ.nkstar))
     Θ.zeta_zmue = -Θ.muestar*Θ.Gstar/Θ.GammamuG
-    Θ.zeta_spmue = (Θ.zeta_bw_zw*Θ.zeta_zmue - Θ.zeta_bmue) / (1. - Θ.zeta_bw_zw)
+    Θ.zeta_spmue = (Θ.zeta_bw_zw*Θ.zeta_zmue - Θ.zeta_bmue) / (1-Θ.zeta_bw_zw)
 
     # some ratios/elasticities
     Θ.Rkstar = Θ.sprd*Θ.pistar*Θ.rstar # (rkstar+1-delta)/ups*pistar
@@ -329,13 +329,12 @@ function steadystate(Θ::Parameters990)
     Θ.zeta_Gsigw = Θ.dGdsigmastar/Θ.Gstar*Θ.sigwstar
     
     # elasticities for the net worth evolution
-    Θ.zeta_nRk = Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1. + Θ.Rhostar)*(1. - Θ.muestar*Θ.Gstar*(1. - Θ.zeta_Gw/Θ.zeta_zw))
-    Θ.zeta_nR = Θ.gammstar/Θ.bet*(1. + Θ.Rhostar)*(1. - Θ.nkstar + Θ.muestar*Θ.Gstar*Θ.sprd*Θ.zeta_Gw/Θ.zeta_zw)
-    Θ.zeta_nqk = Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1. + Θ.Rhostar)*(1. - Θ.muestar*Θ.Gstar*(1. + Θ.zeta_Gw/Θ.zeta_zw/Θ.Rhostar)) - Θ.gammstar/Θ.bet*(1. + Θ.Rhostar)
-    Θ.zeta_nn = Θ.gammstar/Θ.bet + Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1. + Θ.Rhostar)*Θ.muestar*Θ.Gstar*Θ.zeta_Gw/Θ.zeta_zw/Θ.Rhostar
-    Θ.zeta_nmue = Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1. + Θ.Rhostar)*Θ.muestar*Θ.Gstar*(1. - Θ.zeta_Gw*Θ.zeta_zmue/Θ.zeta_zw)
-    Θ.zeta_nsigw = Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1. + Θ.Rhostar)*Θ.muestar*Θ.Gstar*(Θ.zeta_Gsigw-Θ.zeta_Gw/Θ.zeta_zw*Θ.zeta_zsigw)
+    Θ.zeta_nRk = Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Θ.Rhostar)*(1 - Θ.muestar*Θ.Gstar*(1 - Θ.zeta_Gw/Θ.zeta_zw))
+    Θ.zeta_nR = Θ.gammstar/Θ.bet*(1+Θ.Rhostar)*(1 - Θ.nkstar + Θ.muestar*Θ.Gstar*Θ.sprd*Θ.zeta_Gw/Θ.zeta_zw)
+    Θ.zeta_nqk = Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Θ.Rhostar)*(1 - Θ.muestar*Θ.Gstar*(1+Θ.zeta_Gw/Θ.zeta_zw/Θ.Rhostar)) - Θ.gammstar/Θ.bet*(1+Θ.Rhostar)
+    Θ.zeta_nn = Θ.gammstar/Θ.bet + Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Θ.Rhostar)*Θ.muestar*Θ.Gstar*Θ.zeta_Gw/Θ.zeta_zw/Θ.Rhostar
+    Θ.zeta_nmue = Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Θ.Rhostar)*Θ.muestar*Θ.Gstar*(1 - Θ.zeta_Gw*Θ.zeta_zmue/Θ.zeta_zw)
+    Θ.zeta_nsigw = Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Θ.Rhostar)*Θ.muestar*Θ.Gstar*(Θ.zeta_Gsigw-Θ.zeta_Gw/Θ.zeta_zw*Θ.zeta_zsigw)
     
     return Θ
 end
-

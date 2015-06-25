@@ -71,7 +71,17 @@ function make_endo()
              "zp_t",
              "E_z",
              ["rm_tl$i" for i = 1:n_ant_shocks]]
-    return name::String -> find(names .== name), length(names)
+    
+    function endo(name::String)
+        index = find(names .== name)
+        if length(index) != 1
+            error("$(name) not found among endogenous states")
+        else
+            return index
+        end
+    end
+            
+    return endo, length(names)
 end
 
 
@@ -95,7 +105,17 @@ function make_exo()
              "gdpdef_sh",
              "pce_sh",
              ["rm_shl$i" for i = 1:n_ant_shocks]]
-    return name::String -> find(names .== name), length(names)
+
+    function exo(name::String)
+        index = find(names .== name)
+        if length(index) != 1
+            error("$(name) not found among exogenous shocks")
+        else
+            return index
+        end
+    end
+    
+    return exo, length(names)
 end
 
 
@@ -115,7 +135,17 @@ function make_ex()
              "Ei_f_sh",
              "EL_f_sh",
              "Erk_f_sh"]
-    return name::String -> find(names .== name), length(names)
+
+    function ex(name::String)
+        index = find(names .== name)
+        if length(index) != 1
+            error("$(name) not found among expectation errors")
+        else
+            return index
+        end
+    end
+    
+    return ex, length(names)
 end
 
 
@@ -183,7 +213,17 @@ function make_eq()
              "eq_zp",
              "eq_Ez",
              ["eq_rml$i" for i=1:n_ant_shocks]]
-    return name::String -> find(names .== name), length(names)
+
+    function eq(name::String)
+        index = find(names .== name)
+        if length(index) != 1
+            error("$(name) not found among equilibrium condition equations")
+        else
+            return index
+        end
+    end
+    
+    return eq, length(names)
 end
 
 
@@ -202,5 +242,15 @@ function make_obs()
              "pi_long", # long-term inflation
              "R_long", # long-term rate
              "tfp"] # total factor productivity
-    return name::String -> find(names .== name), length(names)
+
+    function obs(name::String)
+        index = find(names .== name)
+        if length(index) != 1
+            error("$(name) not found among measurement equation observables")
+        else
+            return index
+        end
+    end
+    
+    return obs, length(names)
 end
