@@ -11,19 +11,20 @@ type Param <: Number
     prior::Distribution
     toreal::Function
     tomodel::Function
+    description::String
 
-    function Param(value::Float64, fixed::Bool, bounds::(Float64, Float64), prior::Distribution, trtype::Int64, trbounds::(Float64, Float64); transf::Function = identity)
+    function Param(value::Float64, fixed::Bool, bounds::(Float64, Float64), prior::Distribution, trtype::Int64,
+      trbounds::(Float64, Float64); transf::Function = identity, description::String = "")
         if fixed
             prior = PointMass(value)
             trtype = 0
             trbounds = (value, value)
         end
         (a, b) = trbounds
-        return new(value, fixed, bounds, transf, prior, toreal(trtype, a, b, 1.), tomodel(trtype, a, b, 1.))
+        return new(value, fixed, bounds, transf, prior, toreal(trtype, a, b, 1.), tomodel(trtype, a, b, 1.),
+        description)
     end
 end
-
-
 
 # Constructor for values given in getpara00_990.m as del = 0.025, for example
 function Param(value::Float64)
@@ -34,11 +35,10 @@ end
 
 # Methods so that arithmetic with parameters can be done tersely, like "θ.α + θ.β"
 # Some cases will still require accessing the value field, e.g. "log(Θ.α.value)"
+# ^Why? Why not define log(α::Param) = log(α.value)? MJS.
 Base.convert(::Type{Float64}, α::Param) = α.value
-Base.promote_rule(::Type{Float64}, ::Type{Param}) = Float64
-Base.promote_rule(::Type{Param}, ::Type{Float64}) = Float64
-Base.promote_rule(::Type{Int64}, ::Type{Param}) = Float64
-Base.promote_rule(::Type{Param}, ::Type{Int64}) = Float64
+Base.promote_rule{T<:FloatingPoint}(::Type{Param}, ::Type{T}) = Float64
+Base.promote_rule{T<:Integer}(::Type{Param}, ::Type{T}) = Float64
 +(α::Param, β::Param) = α.value + β.value
 -(α::Param, β::Param) = α.value - β.value
 *(α::Param, β::Param) = α.value * β.value
