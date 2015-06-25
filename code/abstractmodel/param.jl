@@ -1,3 +1,5 @@
+using DistributionsExt.PointMass
+
 # We will have a prior file that looks like
 #   α = Param(0.2,false,[-1,1],Beta(1,0.5))
 #   β = Param(27, true, [-Inf,Inf], Gamma(1,0.5))

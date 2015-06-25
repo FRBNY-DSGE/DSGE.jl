@@ -1,9 +1,9 @@
 using Distributions
+using DistributionsExt: Beta, Gamma, InverseGamma
 
 include("../../code/abstractmodel/param.jl")
 include("../../code/abstractmodel/parameters.jl")
 include("../../code/init/ff_fcns.jl")
-include("../../code/init/distributions.jl")
 
 # Then assign parameters to a theta vector
 # θ = Parameters(α, β, etc.)

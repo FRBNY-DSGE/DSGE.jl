@@ -10,7 +10,7 @@ dsge.jl/                # Top-level directory
       init.jl           # Define init(), "top-level" function in init folder
       ff_fcns.jl        # Functions used for financial frictions steady states, e.g. zetaspbfcn()
                               (renamed from steadystate.jl)
-      distributions.jl  # Extensions to the Distributions package
+      DistributionsExt.jl  # Extensions to the Distributions package
     solve/
       solve.jl**        # Define solve(), similar to init()
       gensys.jl**
