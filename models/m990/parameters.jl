@@ -292,8 +292,8 @@ function steadystate(Θ::Parameters990)
     Θ.d2Gammadomegadsigmastar = d2Gammadomegadsigmafcn(Θ.zwstar, Θ.sigwstar)
 
     # evaluate mu, nk, and Rhostar
-    Θ.muestar = mufcn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
-    Θ.nkstar = nkfcn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
+    Θ.muestar = mufcn(Θ.zwstar, Θ.sigwstar, val(Θ.sprd))
+    Θ.nkstar = nkfcn(Θ.zwstar, Θ.sigwstar, val(Θ.sprd))
     Θ.Rhostar = 1/Θ.nkstar - 1
 
     # evaluate wekstar and vkstar
@@ -309,12 +309,12 @@ function steadystate(Θ::Parameters990)
     Θ.GammamuGprime = Θ.dGammadomegastar - Θ.muestar*Θ.dGdomegastar
 
     # elasticities wrt omegabar
-    Θ.zeta_bw = zetabomegafcn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
-    Θ.zeta_zw = zetazomegafcn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
+    Θ.zeta_bw = zetabomegafcn(Θ.zwstar, Θ.sigwstar, val(Θ.sprd))
+    Θ.zeta_zw = zetazomegafcn(Θ.zwstar, Θ.sigwstar, val(Θ.sprd))
     Θ.zeta_bw_zw = Θ.zeta_bw/Θ.zeta_zw
 
     # elasticities wrt sigw
-    Θ.zeta_bsigw = Θ.sigwstar * (((1 - Θ.muestar*Θ.dGdsigmastar/Θ.dGammadsigmastar) / (1 - Θ.muestar*Θ.dGdomegastar/Θ.dGammadomegastar) - 1)*Θ.dGammadsigmastar*Θ.sprd + Θ.muestar*Θ.nkstar*Θ.dGdomegastar*Θ.d2Gammadomegadsigmastar-Θ.dGammadomegastar*Θ.d2Gdomegadsigmastar/Θ.GammamuGprime^2) / ((1 - Θ.Gammastar)*Θ.sprd + Θ.dGammadomegastar/Θ.GammamuGprime*(1-Θ.nkstar))
+    Θ.zeta_bsigw = Θ.sigwstar * (((1 - Θ.muestar*Θ.dGdsigmastar/Θ.dGammadsigmastar) / (1 - Θ.muestar*Θ.dGdomegastar/Θ.dGammadomegastar) - 1)*Θ.dGammadsigmastar*Θ.sprd + Θ.muestar*Θ.nkstar*(Θ.dGdomegastar*Θ.d2Gammadomegadsigmastar - Θ.dGammadomegastar*Θ.d2Gdomegadsigmastar)/Θ.GammamuGprime^2) / ((1 - Θ.Gammastar)*Θ.sprd + Θ.dGammadomegastar/Θ.GammamuGprime*(1-Θ.nkstar))
     Θ.zeta_zsigw = Θ.sigwstar * (Θ.dGammadsigmastar - Θ.muestar*Θ.dGdsigmastar) / Θ.GammamuG
     Θ.zeta_spsigw = (Θ.zeta_bw_zw*Θ.zeta_zsigw - Θ.zeta_bsigw) / (1-Θ.zeta_bw_zw)
     
