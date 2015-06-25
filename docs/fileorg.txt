@@ -1,6 +1,6 @@
 dsge.jl/                # Top-level directory
   code/                 # Model-agnostic code
-    main.jl**           # Calls init(), solve(), etc.
+    main.jl             # Calls init(), solve(), etc.
     abstractmodel/
       param.jl          # Define Param type
       parameters.jl     # Define abstract Parameters type      
@@ -12,8 +12,8 @@ dsge.jl/                # Top-level directory
                               (renamed from steadystate.jl)
       distributions.jl  # Extensions to the Distributions package
     solve/
-      solve.jl**        # Define solve(), similar to init()
-      gensys.jl**
+      solve.jl          # Define solve(), similar to init()
+      gensys.jl
     estimate/
       estimate.jl**
       csminwel.jl**
@@ -29,6 +29,8 @@ dsge.jl/                # Top-level directory
       measurement.jl**  # Measurement equations
   docs/
     fileorg.txt         # You are here
+    ProposedOrganization.md
+  test/                 # Testing infrastructure
   README.md
 
 (Asterisks denote files and directories to be created.)
@@ -38,9 +40,11 @@ dsge.jl/                # Top-level directory
 There are three main directories:
 1) docs contains documentation, including this file
 
-2) models holds model-specific code, basically one file for each field of our Model type.
+2) test contains testing infrastructure
 
-3) code contains all other (model-agnostic) code. The abstractmodel folder contains files that each
+3) models holds model-specific code, basically one file for each field of our Model type.
+
+4) code contains all other (model-agnostic) code. The abstractmodel folder contains files that each
    define a (model-agnostic) type and associated functions. The remaining directories (init, solve, 
    estimate, forecast) each correspond to a step. Each of these contains a file of the same name that
    defines a "main" function for that step which in turn calls other functions in that step. For
