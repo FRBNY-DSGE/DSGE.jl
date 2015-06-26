@@ -3,15 +3,10 @@
 \#*\#
 .juliahistory
 
-# Files in code directories
-code/*/.*~
-code/*/\#*\#
-code/*/.juliahistory
-
-# Files in model directories
-models/*/.*~
-models/*/\#*\#
-models/*/.juliahistory
+# Files in src directory
+src/*/.*~
+src/*/\#*\#
+src/*/.juliahistory
 
 # # With git v1.8+
 # **/**/*.*~

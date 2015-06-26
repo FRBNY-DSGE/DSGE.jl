@@ -37,4 +37,4 @@ function InverseGamma(σ::Real, ν::Real)
     return Distributions.InverseGamma(α, β)
 end    
 
-end
+end # module

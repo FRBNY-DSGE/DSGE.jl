@@ -1,9 +1,8 @@
 using Distributions
-using DistributionsExt: Beta, Gamma, InverseGamma
 
-include("../../code/abstractmodel/param.jl")
-include("../../code/abstractmodel/parameters.jl")
-include("../../code/init/ff_fcns.jl")
+using DSGE.DistributionsExt: Beta, Gamma, InverseGamma
+importall DSGE.FinancialFrictionsFunctions
+using DSGE.AbstractModel
 
 # Then assign parameters to a theta vector
 # θ = Parameters(α, β, etc.)
@@ -156,7 +155,7 @@ type Parameters990 <: Parameters
     ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law,
     σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6,
     σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz,
-    eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef) =
+    eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef)
       steadystate!(new(alp, zeta_p, iota_p, del, ups, Bigphi,
       s2, h, ppsi, nu_l, zeta_w, iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp, epsw, Fom, sprd, zeta_spb,
       gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp,
@@ -168,6 +167,7 @@ type Parameters990 <: Parameters
 
 end
 
+Base.convert(::Type{Parameters}, Θ::Parameters990) = Θ
 
 
 # TODO: some parameters (e.g. s2) have type = 0 but a and b
