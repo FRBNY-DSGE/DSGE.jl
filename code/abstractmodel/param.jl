@@ -15,8 +15,8 @@ type Param <: Number
     fixed::Bool
     bounds::(Float64, Float64)
     prior::Distribution
-    toreal::Function
-    tomodel::Function
+    trtype::Int64
+    trbounds::(Float64, Float64)
     description::String
 
     function Param(value::Float64, fixed::Bool, bounds::(Float64, Float64), prior::Distribution,
@@ -27,9 +27,11 @@ type Param <: Number
             trtype = 0
             trbounds = (value, value)
         end
+        if trtype != 0 && trtype != 1 && trtype != 2
+            error("trtype must be 0, 1, or 2")
+        end
         (a, b) = trbounds
-        return new(value, transf, transf(value), fixed, bounds, prior, toreal(trtype, a, b, 1.),
-                   tomodel(trtype, a, b, 1.), description)
+        return new(value, transf, transf(value), fixed, bounds, prior, trtype, trbounds, description)
     end
 end
 
@@ -57,31 +59,31 @@ Base.exp(α::Param)    = exp(α.tval)
 
 
 # Transforms variables from model to max (invtrans.m)
-# Returns an anonymous function (Float64 -> Float64)
-function toreal(trtype::Int64, a::Float64, b::Float64, c::Float64)
-    if trtype == 0
-       return identity
-    elseif trtype == 1
-        return function (x)
-            cx = 2 * (x - (a+b)/2) / (b-a);
-            return (1/c) * cx / sqrt(1 - cx^2);
-        end
-    elseif trtype == 2
-        return x -> b + (1/c) * log(x-a)
-    else
-        error("trtype must be 0, 1, or 2")
+function toreal(α::Param)
+    (a, b) = α.trbounds
+    c = 1.
+    
+    if α.trtype == 0
+       return α.tval
+    elseif α.trtype == 1
+        cx = 2 * (α.tval - (a+b)/2) / (b-a);
+        return (1/c) * cx / sqrt(1 - cx^2);
+    elseif α.trtype == 2
+        return b + (1/c) * log(α.tval-a)
     end
 end
 
 # Transforms variables from max to model (trans.m)
-function tomodel(trtype::Int64, a::Float64, b::Float64, c::Float64)
-    if trtype == 0
-        return identity
-    elseif trtype == 1
-        return x -> (a+b)/2 + (b-a)/2 * c * x / sqrt(1 + c^2 * x^2)
-    elseif trtype == 2
-        return x -> a + exp(c * (x-b))
-    else
-        error("trtype must be 0, 1, or 2")
+function tomodel(α::Param)
+    (a, b) = α.trbounds
+    c = 1.
+    
+    if α.trtype == 0
+        return α.tval
+    elseif α.trtype == 1
+        return (a+b)/2 + (b-a)/2 * c * α.tval / sqrt(1 + c^2 * α.tval^2)
+    elseif α.trtype == 2
+        return a + exp(c * (α.tval-b))
     end
 end
+
