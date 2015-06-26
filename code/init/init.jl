@@ -11,7 +11,7 @@ function init(spec::String)
     include("../../models/m$(spec)/modelinds.jl")
     include("../../models/m$(spec)/eqcond.jl")
 
-    Θ = initparameters()
+    Θ = Parameters990()
     I = ModelInds(make_endo, make_exo, make_ex, make_eq)
 
     return Model(spec, Θ, I, eqcond)

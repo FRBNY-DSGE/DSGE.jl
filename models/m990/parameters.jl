@@ -149,15 +149,30 @@ type Parameters990 <: Parameters
     zeta_nmue::Float64
     zeta_nsigw::Float64
     
-    # This constructor takes in as arguments and initializes the Param fields, then immediately calls steadystate() to calculate and initialize the steady-state values (which have type Float64)
-    Parameters990(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w, iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp, epsw, Fom, sprd, zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef) = steadystate(new(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w, iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp, epsw, Fom, sprd, zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef))
+    # This constructor takes in as arguments and initializes the Param fields, then immediately calls steadystate() to
+    # calculate and initialize the steady-state values (which have type Float64)
+    function Parameters990(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w, iota_w, law, bet, psi1, psi2, psi3,
+    pistar, sigmac, rho, epsp, epsw, Fom, sprd, zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf,
+    ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law,
+    σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6,
+    σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz,
+    eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef) 
+      steadystate(new(alp, zeta_p, iota_p, del, ups, Bigphi,
+      s2, h, ppsi, nu_l, zeta_w, iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp, epsw, Fom, sprd, zeta_spb,
+      gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp,
+      ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp,
+      σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13,
+      σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law, modelalp_ind, gamm_gdpdef,
+      del_gdpdef))
+    end
+
 end
 
 
 
 # TODO: some parameters (e.g. s2) have type = 0 but a and b
 # Instantiate Parameters990 type
-function initparameters()
+function Parameters990()
     alp = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999)) # alp
     zeta_p = Param(0.8940, false, (1e-5, 0.999), Beta(0.5, 0.1), 1, (1e-5, 0.999)) # zeta_p
     iota_p = Param(0.1865, false, (1e-5, 0.999), Beta(0.5, 0.15), 1, (1e-5, 0.999)) # iota_p
@@ -256,7 +271,8 @@ end
 
 
 # (Re)calculates steady-state values from Param fields in Θ
-# The functions called to calculate financial frictions additions (zetaspbfcn, etc.) can be found in code/init/ff_fcns.jl
+# The functions called to calculate financial frictions additions (zetaspbfcn, etc.) can be found in
+# code/init/ff_fcns.jl
 function steadystate(Θ::Parameters990)
     Θ.zstar = log(1+Θ.gam) + Θ.alp/(1-Θ.alp)*log(Θ.ups)
     Θ.rstar = exp(Θ.sigmac*Θ.zstar) / Θ.bet
@@ -338,4 +354,3 @@ function steadystate(Θ::Parameters990)
     
     return Θ
 end
-
