@@ -1,4 +1,9 @@
+module FinancialFrictionsFunctions
+
 using Distributions, Roots
+
+export zetaspbfcn, zetabomegafcn, zetazomegafcn, nkfcn, mufcn, omegafcn, Gfcn, Gammafcn, dGdomegafcn, d2Gdomega2fcn, dGammadomegafcn, d2Gammadomega2fcn, dGdsigmafcn, d2Gdomegadsigmafcn, dGammadsigmafcn, d2Gammadomegadsigmafcn
+
 
 # This file contains functions that are used to compute financial frictions steady-state values from parameter values.
 # Specifically, it is called by models/m990/parameters
@@ -78,3 +83,5 @@ end
 function d2Gammadomegadsigmafcn(z, σ)
     return (z/σ-1)*pdf(Normal(), z)
 end
+
+end # module

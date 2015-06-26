@@ -1,18 +1,24 @@
-dsge.jl/                # Top-level directory
-  code/                 # Model-agnostic code
-    main.jl             # Calls init(), solve(), etc.
+dsge.jl/                        # Top-level directory
+  src/
+    DSGE.jl                     # Top-level module
+    AbstractModel.jl            # AbstractModel module, `include`s files in abstractmodel/
     abstractmodel/
-      param.jl          # Define Param type
-      parameters.jl     # Define abstract Parameters type      
-      modelinds.jl      # Define ModelInds type
-      model.jl          # Define Model type
+      param.jl                  # Define Param type
+      parameters.jl             # Define abstract Parameters type      
+      modelinds.jl              # Define ModelInds type
+      model.jl                  # Define Model type
+    models/                     # Model-specific code
+      m990/
+        spec.jl                 # Set model-specific global variables
+        parameters.jl           # Define Parameters990 type
+        modelinds.jl            # Functions returning model indices for eqcond.jl
+        eqcond.jl               # G0, G1, Ψ, Π matrices to characterize equilibrium conditions
+        measurement.jl**        # Measurement equations
     init/
-      init.jl           # Define init(), "top-level" function in init folder
-      ff_fcns.jl        # Functions used for financial frictions steady states, e.g. zetaspbfcn()
-                              (renamed from steadystate.jl)
-      DistributionsExt.jl  # Extensions to the Distributions package
+      DistributionsExt.jl       # Extensions to the Distributions package
+      FinancialFrictionsFunctions.jl
     solve/
-      solve.jl          # Define solve(), similar to init()
+      solve.jl
       gensys.jl
     estimate/
       estimate.jl**
@@ -20,35 +26,12 @@ dsge.jl/                # Top-level directory
     forecast/
       forecast.jl**
       kalman.jl**
-  models/               # Model-specific code
-    m990/
-      spec.jl           # Set model-specific global variables
-      parameters.jl     # Define Parameters990 type (renamed from priors.jl)
-      modelinds.jl      # Functions returning model indices for eqcond.jl
-      eqcond.jl         # G0, G1, Ψ, Π matrices to characterize equilibrium conditions
-      measurement.jl**  # Measurement equations
   docs/
-    fileorg.txt         # You are here
+    fileorg.txt                 # You are here
     ProposedOrganization.md
-  test/                 # Testing infrastructure
+    DSGE_Model_Documentation.pdf
+    supersticky1214.pdf
+  test/                         # Testing infrastructure
   README.md
 
 (Asterisks denote files and directories to be created.)
-
-
-
-There are three main directories:
-1) docs contains documentation, including this file
-
-2) test contains testing infrastructure
-
-3) models holds model-specific code, basically one file for each field of our Model type.
-
-4) code contains all other (model-agnostic) code. The abstractmodel folder contains files that each
-   define a (model-agnostic) type and associated functions. The remaining directories (init, solve, 
-   estimate, forecast) each correspond to a step. Each of these contains a file of the same name that
-   defines a "main" function for that step which in turn calls other functions in that step. For
-   example, init.jl defines a function init(), which instantiates a Model (defined in model.jl) and 
-   may call other functions from the init folder. In turn, main.jl calls init(), solve(), etc. It's
-   possible that gensys.jl, for example, will eventually need to be its own directory inside solve, 
-   in which case its structure will be the same as in higher-level folders.

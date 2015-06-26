@@ -1,10 +1,10 @@
+using DSGE.AbstractModel
+
 # Each function (e.g. make_endo) returns a tuple (endo, n_states)
 #   endo: anonymous function, takes a name like "π_t" and returns an index
 #   n_states: int, number of endogenous variables
 
 # This allows each names array to be passed around with the function, but does not require names to be reinitialized with each call to endo (as it would have to be if endo returned the index directly)
-
-include("../../code/abstractmodel/modelinds.jl")
 
 
 

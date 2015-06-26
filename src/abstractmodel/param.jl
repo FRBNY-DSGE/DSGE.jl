@@ -1,4 +1,7 @@
-using DistributionsExt.PointMass
+using DSGE.DistributionsExt: PointMass
+
+# third-party packages
+using Distributions
 
 # We define Param to be a subtype of Number so that we can use numerical operation methods in
 #   https://github.com/JuliaLang/julia/blob/master/base/promotion.jl
@@ -86,4 +89,3 @@ function tomodel(α::Param)
         return a + exp(c * (α.tval-b))
     end
 end
-
