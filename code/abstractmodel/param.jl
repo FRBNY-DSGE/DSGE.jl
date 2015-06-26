@@ -47,22 +47,20 @@ end
 Base.convert(::Type{Float64}, α::Param) = α.tval
 Base.promote_rule{T<:FloatingPoint}(::Type{Param}, ::Type{T}) = Float64
 Base.promote_rule{T<:Integer}(::Type{Param}, ::Type{T}) = Float64
-+(α::Param, β::Param) = α.tval + β.tval
--(α::Param, β::Param) = α.tval - β.tval
-*(α::Param, β::Param) = α.tval * β.tval
-/(α::Param, β::Param) = α.tval / β.tval
-^(α::Param, β::Param) = α.tval ^ β.tval
--(α::Param)           = -α.tval
-Base.log(α::Param)    = log(α.tval)
-Base.exp(α::Param)    = exp(α.tval)
 
+for op in [:+, :-, :*, :/, :^, :-]
+    @eval ($op)(α::Param, β::Param) = ($op)(α.tval, β.tval)
+end
 
+for f in [:log, :exp]
+    @eval ($f)(α::Param) = $(f)(α.tval)
+end
 
 # Transforms variables from model to max (invtrans.m)
 function toreal(α::Param)
     (a, b) = α.trbounds
     c = 1.
-    
+
     if α.trtype == 0
        return α.tval
     elseif α.trtype == 1
@@ -77,7 +75,7 @@ end
 function tomodel(α::Param)
     (a, b) = α.trbounds
     c = 1.
-    
+
     if α.trtype == 0
         return α.tval
     elseif α.trtype == 1
@@ -86,4 +84,3 @@ function tomodel(α::Param)
         return a + exp(c * (α.tval-b))
     end
 end
-
