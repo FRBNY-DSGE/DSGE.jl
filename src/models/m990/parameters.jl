@@ -287,7 +287,7 @@ function steadystate!(Θ::Parameters990)
 
     # FINANCIAL FRICTIONS ADDITIONS
     # solve for sigmaomegastar and zomegastar
-    Θ.zwstar = quantile(Normal(), Θ.Fom.tval)
+    Θ.zwstar = quantile(Normal(), Θ.Fom.scaledvalue)
     Θ.sigwstar = fzero(sigma -> zetaspbfcn(Θ.zwstar, sigma, Θ.sprd) - Θ.zeta_spb, 0.5)
 
     # evaluate omegabarstar
