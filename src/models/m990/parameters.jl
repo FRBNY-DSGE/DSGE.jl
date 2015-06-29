@@ -185,11 +185,11 @@ function Parameters990()
     iota_w = Param(0.2992, false, (1e-5, 0.999), Beta(0.5, 0.15), 1, (1e-5, 0.999)) # iota_w
     law = Param(1.5) # law = 1.5;
     # laf = [];
-    bet = Param(0.1402, transf = x -> 1/(1 + x/100), false, (1e-5, 10.), Gamma(0.25, 0.1), 2, (1e-5, 10.)) # bet
+    bet = Param(0.1402, scalefunction = x -> 1/(1 + x/100), false, (1e-5, 10.), Gamma(0.25, 0.1), 2, (1e-5, 10.)) # bet
     psi1 = Param(1.3679, false, (1e-5, 10.), Normal(1.5, 0.25), 2, (1e-5, 10.00)) # psi1
     psi2 = Param(0.0388, false, (-0.5, 0.5), Normal(0.12, 0.05), 0, (-0.5, 0.5)) # psi2
     psi3 = Param(0.2464, false, (-0.5, 0.5), Normal(0.12, 0.05), 0, (-0.5, 0.5)) # psi3
-    pistar = Param(0.5000, transf = x -> 1 + x/100, false, (1e-5, 10.), Gamma(0.75, 0.4), 2, (1e-5, 10.)) # pistar
+    pistar = Param(0.5000, scalefunction = x -> 1 + x/100, false, (1e-5, 10.), Gamma(0.75, 0.4), 2, (1e-5, 10.)) # pistar
     sigmac = Param(0.8719, false, (1e-5, 10.), Normal(1.5, 0.37), 2, (1e-5, 10.)) # sigmac
     rho = Param(0.7126, false, (1e-5, 0.999), Beta(0.75, 0.10), 1, (1e-5, 0.999)) # rho
     epsp = Param(10.) # epsp
@@ -198,13 +198,13 @@ function Parameters990()
     nantpad = 20
     
     # financial frictions parameters
-    Fom = Param(0.0300, transf = x -> 1 - (1-x)^0.25, true, (1e-5, 0.999), Beta(0.03, 0.01), 1, (1e-5, 0.999)) # Fom
-    sprd = Param(1.7444, transf = x -> (1 + x/100)^0.25, false, (0., 100.), Gamma(2., 0.1), 2, (1e-5, 0.)) # sprd
+    Fom = Param(0.0300, scalefunction = x -> 1 - (1-x)^0.25, true, (1e-5, 0.999), Beta(0.03, 0.01), 1, (1e-5, 0.999)) # Fom
+    sprd = Param(1.7444, scalefunction = x -> (1 + x/100)^0.25, false, (0., 100.), Gamma(2., 0.1), 2, (1e-5, 0.)) # sprd
     zeta_spb = Param(0.0559, false, (1e-5, 0.999), Beta(0.05, 0.005), 1, (1e-5, 0.999)) # zeta_spb
     gammstar = Param(0.9900, true, (1e-5, 0.999), Beta(0.99, 0.002), 1, (1e-5, 0.999))  # gammstar
 
     # exogenous processes - level
-    gam = Param(0.3673, transf = x -> x/100, false, (-5., 5.), Normal(0.4, 0.1), 0, (-5.0, 5.0)) # gam
+    gam = Param(0.3673, scalefunction = x -> x/100, false, (-5., 5.), Normal(0.4, 0.1), 0, (-5.0, 5.0)) # gam
     Lmean = Param(-45.9364, false, (-1000., 1000.), Normal(-45, 5), 0, (-1000., 1000.)) # Lmean
     gstar = Param(0.18) # gstar = .18;
 
