@@ -2,6 +2,7 @@ using DSGE.DistributionsExt: PointMass
 
 # third-party packages
 using Distributions
+import Base: log, exp
 
 # We define Param to be a subtype of Number so that we can use numerical operation methods in
 #   https://github.com/JuliaLang/julia/blob/master/base/promotion.jl
@@ -51,11 +52,11 @@ Base.convert(::Type{Float64}, α::Param) = α.tval
 Base.promote_rule{T<:FloatingPoint}(::Type{Param}, ::Type{T}) = Float64
 Base.promote_rule{T<:Integer}(::Type{Param}, ::Type{T}) = Float64
 
-for op in [:+, :-, :*, :/, :^, :-]
+for op in [:+, :-, :*, :/, :^]
     @eval ($op)(α::Param, β::Param) = ($op)(α.tval, β.tval)
 end
 
-for f in [:log, :exp]
+for f in [:-, :log, :exp]
     @eval ($f)(α::Param) = $(f)(α.tval)
 end
 
