@@ -7,111 +7,111 @@ using DSGE.AbstractModel
 # Then assign parameters to a theta vector
 # θ = Parameters(α, β, etc.)
 type Parameters990 <: Parameters
-    alp::Param
-    zeta_p::Param
-    iota_p::Param
-    del::Param
-    ups::Param
-    Bigphi::Param
-    s2::Param
-    h::Param
-    ppsi::Param
-    nu_l::Param
-    zeta_w::Param
-    iota_w::Param
-    law::Param
-    bet::Param
-    psi1::Param
-    psi2::Param
-    psi3::Param
-    pistar::Param
-    sigmac::Param
-    rho::Param
-    epsp::Param
-    epsw::Param
-    Fom::Param
-    sprd::Param
-    zeta_spb::Param
-    gammstar::Param
-    gam::Param
-    Lmean::Param
-    gstar::Param
-    ρ_g::Param
-    ρ_b::Param
-    ρ_mu::Param
-    ρ_z::Param
-    ρ_laf::Param
-    ρ_law::Param
-    ρ_rm::Param
-    ρ_sigw::Param
-    ρ_mue::Param
-    ρ_gamm::Param
-    ρ_pist::Param
-    ρ_lr::Param
-    ρ_zp::Param
-    ρ_tfp::Param
-    ρ_gdpdef::Param
-    ρ_pce::Param
-    σ_g::Param
-    σ_b::Param
-    σ_mu::Param
-    σ_z::Param
-    σ_laf::Param
-    σ_law::Param
-    σ_rm::Param
-    σ_sigw::Param
-    σ_mue::Param
-    σ_gamm::Param
-    σ_pist::Param
-    σ_lr::Param
-    σ_zp::Param
-    σ_tfp::Param
-    σ_gdpdef::Param
-    σ_pce::Param
-    σ_rm1::Param
-    σ_rm2::Param
-    σ_rm3::Param
-    σ_rm4::Param
-    σ_rm5::Param
-    σ_rm6::Param
-    σ_rm7::Param
-    σ_rm8::Param
-    σ_rm9::Param
-    σ_rm10::Param
-    σ_rm11::Param
-    σ_rm12::Param
-    σ_rm13::Param
-    σ_rm14::Param
-    σ_rm15::Param
-    σ_rm16::Param
-    σ_rm17::Param
-    σ_rm18::Param
-    σ_rm19::Param
-    σ_rm20::Param
-    eta_gz::Param
-    eta_laf::Param
-    eta_law::Param
-    modelalp_ind::Param
-    gamm_gdpdef::Param
-    del_gdpdef::Param
+    alp::Param               # α     
+    zeta_p::Param            # ζ_p   
+    iota_p::Param            # ι_p   
+    del::Param               # δ     
+    ups::Param               # υ     
+    Bigphi::Param            # Φ     
+    s2::Param                # s2    
+    h::Param                 # h     
+    ppsi::Param              # ppsi  
+    nu_l::Param              # ν_l   
+    zeta_w::Param            # ζ_w   
+    iota_w::Param            # ι_w   
+    law::Param               # λ_w   
+    bet::Param               # β     
+    psi1::Param              # ψ₁    
+    psi2::Param              # ψ₂    
+    psi3::Param              # ψ₃    
+    pistar::Param            # π_star
+    sigmac::Param            # σ_c   
+    rho::Param               # ρ     
+    epsp::Param              # ϵ_p   
+    epsw::Param              # ϵ_w   
+    Fom::Param               # Fω    
+    sprd::Param              # sprd  
+    zeta_spb::Param          # ζ_spb 
+    gammstar::Param          # γ_star
+    gam::Param               # γ     
+    Lmean::Param             # Lmean 
+    gstar::Param             # g_star
+    ρ_g::Param               # ρ_g   
+    ρ_b::Param               # ρ_b   
+    ρ_mu::Param              # ρ_μ   
+    ρ_z::Param               # ρ_z   
+    ρ_laf::Param             # ρ_λ_f 
+    ρ_law::Param             # ρ_λ_w 
+    ρ_rm::Param              # ρ_rm  
+    ρ_sigw::Param            # ρ_σ_w 
+    ρ_mue::Param             # ρ_μ_e 
+    ρ_gamm::Param            # ρ_γ   
+    ρ_pist::Param            # ρ_π_star
+    ρ_lr::Param              # ρ_lr    
+    ρ_zp::Param              # ρ_zp    
+    ρ_tfp::Param             # ρ_tfp   
+    ρ_gdpdef::Param          # ρ_gdpdef
+    ρ_pce::Param             # ρ_pce   
+    σ_g::Param               # σ_g     
+    σ_b::Param               # σ_b     
+    σ_mu::Param              # σ_μ     
+    σ_z::Param               # σ_z     
+    σ_laf::Param             # σ_λ_f   
+    σ_law::Param             # σ_λ_w   
+    σ_rm::Param              # σ_rm    
+    σ_sigw::Param            # σ_σ_w   
+    σ_mue::Param             # σ_μ_e   
+    σ_gamm::Param            # σ_γ     
+    σ_pist::Param            # σ_π_star
+    σ_lr::Param              # σ_lr    
+    σ_zp::Param              # σ_zp    
+    σ_tfp::Param             # σ_tfp   
+    σ_gdpdef::Param          # σ_gdpdef
+    σ_pce::Param             # σ_pce   
+    σ_rm1::Param             # σ_rm1   
+    σ_rm2::Param             # σ_rm2   
+    σ_rm3::Param             # σ_rm3   
+    σ_rm4::Param             # σ_rm4   
+    σ_rm5::Param             # σ_rm5   
+    σ_rm6::Param             # σ_rm6   
+    σ_rm7::Param             # σ_rm7   
+    σ_rm8::Param             # σ_rm8   
+    σ_rm9::Param             # σ_rm9   
+    σ_rm10::Param            # σ_rm10  
+    σ_rm11::Param            # σ_rm11  
+    σ_rm12::Param            # σ_rm12  
+    σ_rm13::Param            # σ_rm13  
+    σ_rm14::Param            # σ_rm14  
+    σ_rm15::Param            # σ_rm15  
+    σ_rm16::Param            # σ_rm16  
+    σ_rm17::Param            # σ_rm17  
+    σ_rm18::Param            # σ_rm18  
+    σ_rm19::Param            # σ_rm19  
+    σ_rm20::Param            # σ_rm20  
+    eta_gz::Param            # η_gz    
+    eta_laf::Param           # η_λ_f   
+    eta_law::Param           # η_λ_w   
+    modelalp_ind::Param      # modelα_ind
+    gamm_gdpdef::Param       # γ_gdpdef  
+    del_gdpdef::Param        # δ_gdpdef  
 
-    zstar::Float64
-    rstar::Float64
-    Rstarn::Float64
-    rkstar::Float64
-    wstar::Float64
-    Lstar::Float64
-    kstar::Float64
-    kbarstar::Float64
-    istar::Float64
-    ystar::Float64
-    cstar::Float64
-    wl_c::Float64
-    zwstar::Float64
-    sigwstar::Float64
-    omegabarstar::Float64
-    Gstar::Float64
-    Gammastar::Float64
+    zstar::Float64           # z_star  
+    rstar::Float64           # r_star 
+    Rstarn::Float64          # R_starn
+    rkstar::Float64          # rk_star
+    wstar::Float64           # w_star 
+    Lstar::Float64           # L_star 
+    kstar::Float64           # k_star 
+    kbarstar::Float64        # k̄_star 
+    istar::Float64           # i_star 
+    ystar::Float64           # y_star 
+    cstar::Float64           # c_star 
+    wl_c::Float64            # wl_c   
+    zwstar::Float64          # zw_star
+    sigwstar::Float64        # σ_wstar
+    omegabarstar::Float64    # ω̄_star 
+    Gstar::Float64           # G_star 
+    Gammastar::Float64       # Γ_star 
     dGdomegastar::Float64
     d2Gdomega2star::Float64
     dGammadomegastar::Float64
@@ -120,33 +120,33 @@ type Parameters990 <: Parameters
     d2Gdomegadsigmastar::Float64
     dGammadsigmastar::Float64
     d2Gammadomegadsigmastar::Float64
-    muestar::Float64
-    nkstar::Float64
-    Rhostar::Float64
-    wekstar::Float64
-    vkstar::Float64
-    nstar::Float64
-    vstar::Float64
+    muestar::Float64         # μe_star 
+    nkstar::Float64          # nk_star 
+    Rhostar::Float64         # Ρ_star  
+    wekstar::Float64         # wek_star
+    vkstar::Float64          # vk_star 
+    nstar::Float64           # n_star  
+    vstar::Float64           # v_star  
     GammamuG::Float64
     GammamuGprime::Float64
-    zeta_bw::Float64
-    zeta_zw::Float64
-    zeta_bw_zw::Float64
-    zeta_bsigw::Float64
-    zeta_zsigw::Float64
-    zeta_spsigw::Float64
-    zeta_bmue::Float64
-    zeta_zmue::Float64
-    zeta_spmue::Float64
-    Rkstar::Float64
-    zeta_Gw::Float64
-    zeta_Gsigw::Float64
-    zeta_nRk::Float64
-    zeta_nR::Float64
-    zeta_nqk::Float64
-    zeta_nn::Float64
-    zeta_nmue::Float64
-    zeta_nsigw::Float64
+    zeta_bw::Float64         # ζ_bw    
+    zeta_zw::Float64         # ζ_zw    
+    zeta_bw_zw::Float64      # ζ_bw_zw 
+    zeta_bsigw::Float64      # ζ_bsigw 
+    zeta_zsigw::Float64      # ζ_zsigw 
+    zeta_spsigw::Float64     # ζ_spsigw
+    zeta_bmue::Float64       # ζ_bmue  
+    zeta_zmue::Float64       # ζ_zmue  
+    zeta_spmue::Float64      # ζ_spmue 
+    Rkstar::Float64          # Rk_star 
+    zeta_Gw::Float64         # ζ_Gw    
+    zeta_Gsigw::Float64      # ζ_Gsigw 
+    zeta_nRk::Float64        # ζ_nRk   
+    zeta_nR::Float64         # ζ_nR    
+    zeta_nqk::Float64        # ζ_nqk   
+    zeta_nn::Float64         # ζ_nn    
+    zeta_nmue::Float64       # ζ_nmue  
+    zeta_nsigw::Float64      # ζ_nsigw 
     
     # This constructor takes in as arguments and initializes the Param fields, then immediately calls steadystate!() to
     # calculate and initialize the steady-state values (which have type Float64)
