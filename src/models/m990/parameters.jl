@@ -1,8 +1,8 @@
-using Distributions
+using Distributions: Normal, quantile
+using Roots: fzero
 
 using DSGE.DistributionsExt: Beta, Gamma, InverseGamma
-importall DSGE.FinancialFrictionsFunctions
-using DSGE.AbstractModel
+using DSGE.FinancialFrictionsFunctions
 
 # Then assign parameters to a theta vector
 # θ = Parameters(α, β, etc.)
@@ -164,10 +164,8 @@ type Parameters990 <: Parameters
       σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law, modelalp_ind, gamm_gdpdef,
       del_gdpdef))
     end
-
 end
 
-Base.convert(::Type{Parameters}, Θ::Parameters990) = Θ
 
 
 # TODO: some parameters (e.g. s2) have type = 0 but a and b
@@ -290,7 +288,7 @@ function steadystate!(Θ::Parameters990)
     # FINANCIAL FRICTIONS ADDITIONS
     # solve for sigmaomegastar and zomegastar
     Θ.zwstar = quantile(Normal(), Θ.Fom.tval)
-    Θ.sigwstar = Roots.fzero(sigma -> zetaspbfcn(Θ.zwstar, sigma, Θ.sprd) - Θ.zeta_spb, 0.5)
+    Θ.sigwstar = fzero(sigma -> zetaspbfcn(Θ.zwstar, sigma, Θ.sprd) - Θ.zeta_spb, 0.5)
 
     # evaluate omegabarstar
     Θ.omegabarstar = omegafcn(Θ.zwstar, Θ.sigwstar)

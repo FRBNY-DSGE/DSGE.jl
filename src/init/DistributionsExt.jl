@@ -6,6 +6,7 @@ module DistributionsExt
 # See also https://github.com/JuliaLang/julia/issues/9547
 
 using Distributions
+import Distributions: pdf
 
 # Define PointMass distribution for fixed parameters.
 type PointMass <: Distribution{Univariate, Continuous}

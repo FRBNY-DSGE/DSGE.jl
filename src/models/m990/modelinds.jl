@@ -1,5 +1,3 @@
-using DSGE.AbstractModel
-
 # Each function (e.g. make_endo) returns a tuple (endo, n_states)
 #   endo: anonymous function, takes a name like "π_t" and returns an index
 #   n_states: int, number of endogenous variables

@@ -1,12 +1,12 @@
 module FinancialFrictionsFunctions
 
-using Distributions, Roots
+using Distributions
 
 export zetaspbfcn, zetabomegafcn, zetazomegafcn, nkfcn, mufcn, omegafcn, Gfcn, Gammafcn, dGdomegafcn, d2Gdomega2fcn, dGammadomegafcn, d2Gammadomega2fcn, dGdsigmafcn, d2Gdomegadsigmafcn, dGammadsigmafcn, d2Gammadomegadsigmafcn
 
 
 # This file contains functions that are used to compute financial frictions steady-state values from parameter values.
-# Specifically, it is called by models/m990/parameters
+# Specifically, it is called by models/m990/parameters.jl
 
 function zetaspbfcn(z, σ, sprd)
     zetaratio = zetabomegafcn(z, σ, sprd)/zetazomegafcn(z, σ, sprd)
@@ -33,15 +33,15 @@ function zetazomegafcn(z, σ, sprd)
 end
 
 function nkfcn(z, σ, sprd)
-    return 1. - (Gammafcn(z, σ) - mufcn(z, σ, sprd)*Gfcn(z, σ))*sprd
+    return 1 - (Gammafcn(z, σ) - mufcn(z, σ, sprd)*Gfcn(z, σ))*sprd
 end
 
 function mufcn(z, σ, sprd)
-    return (1. - 1./sprd)/(dGdomegafcn(z, σ)/dGammadomegafcn(z)*(1. - Gammafcn(z, σ)) + Gfcn(z, σ))
+    return (1 - 1/sprd)/(dGdomegafcn(z, σ)/dGammadomegafcn(z)*(1 - Gammafcn(z, σ)) + Gfcn(z, σ))
 end
 
 function omegafcn(z, σ)
-    return exp(σ*z - σ^2/2.)
+    return exp(σ*z - σ^2/2)
 end
 
 function Gfcn(z, σ)
@@ -49,7 +49,7 @@ function Gfcn(z, σ)
 end
 
 function Gammafcn(z, σ)
-    return omegafcn(z, σ)*(1. - cdf(Normal(), z)) + cdf(Normal(), z-σ)
+    return omegafcn(z, σ)*(1 - cdf(Normal(), z)) + cdf(Normal(), z-σ)
 end
 
 function dGdomegafcn(z, σ)
@@ -61,7 +61,7 @@ function d2Gdomega2fcn(z, σ)
 end
 
 function dGammadomegafcn(z)
-    return 1. - cdf(Normal(), z)
+    return 1 - cdf(Normal(), z)
 end
 
 function d2Gammadomega2fcn(z, σ)
@@ -73,7 +73,7 @@ function dGdsigmafcn(z, σ)
 end
 
 function d2Gdomegadsigmafcn(z, σ)
-    return -pdf(Normal(), z)*(1. - z*(z-σ))/σ^2
+    return -pdf(Normal(), z)*(1 - z*(z-σ))/σ^2
 end
 
 function dGammadsigmafcn(z, σ)
