@@ -21,7 +21,7 @@ dsge.jl/
     abstractmodel/
       param.jl
         using Distributions: Distribution
-        import Base: log, exp
+        import Base: convert, promote_rule, log, exp
         using DSGE.DistributionsExt: PointMass
         type Param
         function toreal
@@ -41,7 +41,7 @@ dsge.jl/
           include("parameters.jl")
           include("modelinds.jl")
           include("eqcond.jl")
-          function Model
+          function Model990
         end
       m990/
         spec.jl
@@ -53,7 +53,8 @@ dsge.jl/
           type Parameters990 <: Parameters
           function steadystate!
         modelinds.jl
-          # TODO: refactor ModelInds type
+          function makedict
+          function ModelInds990
         eqcond.jl
           function eqcond
     init/
@@ -83,4 +84,4 @@ dsge.jl/
     DSGE_Model_Documentation.pdf
     supersticky1214.pdf
   test/
-    README.md
+  README.md
