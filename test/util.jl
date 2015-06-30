@@ -4,7 +4,7 @@
 
 # TODO: decide what a sensible default ε value is for our situation
 # Compares matrices, reports on absolute differences, and returns true if all entries close enough
-function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::Array{R, 2}, actual::Array{S, 2}, ε::T = 0.0001)
+function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::Array{R, 2}, actual::Array{S, 2}, ε::T = 1e-4)
     # Matrices of different sizes return false
     if size(expected) != size(actual)
         return false
@@ -42,6 +42,8 @@ function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(ex
     if max_inds != (0, 0)
         (i, j) = max_inds
         println("Max abs diff of $max_abs_diff at entry ($i, $j)\n")
+    else
+        println("Max abs diff of 0\n")
     end
 
     # Return true if all entries within ε
@@ -63,7 +65,7 @@ function test_util()
     # Returns false
     m3 = [0.0001 0.0; 0.0 -0.0002]
     @test !test_matrix_eq(m1, m3)
-    @test test_matrix_eq(m1, m3, 0.0002) # but true with larger ε
+    @test test_matrix_eq(m1, m3, 2e-4) # but true with larger ε
 
     # Arguments of different float type returns true
     m2_float16 = convert(Array{Float16, 2}, m2)

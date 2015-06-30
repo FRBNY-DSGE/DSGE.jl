@@ -1,7 +1,7 @@
 using Base.Test
 
 using DSGE: DistributionsExt, AbstractModel, M990
-
+include("../util.jl")
 
 
 # src/models/M990.jl
@@ -34,7 +34,7 @@ end
 
 # src/models/m990/modelinds.jl
 function test_modelinds()
-    # ModelInds objecto creation
+    # ModelInds object creation
     I = ModelInds990()
     @test isa(I, ModelInds)
 
@@ -67,7 +67,6 @@ end
 # src/models/m990/eqcond.jl
 function test_eqcond()
     # eqcond function executes successfully
-
     Θ = Parameters990()
     I = ModelInds990()
     G0, G1, C, Ψ, Π = eqcond(Θ, I)
@@ -79,7 +78,26 @@ function test_eqcond()
     @test size(Ψ) == (66, 22)
     @test size(Π) == (66, 13)
 
-    # TODO: check output matrices against Matlab output
+    # Check output matrices against Matlab output (ε = 1e-4)
+    G0_matlab = readcsv("m990/G0.csv")
+    println("### G0")
+    @test test_matrix_eq(G0_matlab, G0)
+
+    G1_matlab = readcsv("m990/G1.csv")
+    println("### G1")
+    @test test_matrix_eq(G1_matlab, G1)
+
+    C_matlab = readcsv("m990/C.csv")
+    println("### C")
+    @test test_matrix_eq(C_matlab, C)
     
+    Ψ_matlab = readcsv("m990/PSI.csv")
+    println("### Ψ")
+    @test test_matrix_eq(Ψ_matlab, Ψ)
+
+    Π_matlab = readcsv("m990/PIE.csv")
+    println("### Π")
+    @test test_matrix_eq(Π_matlab, Π)
+
     println("eqcond.jl tests passed")
 end
