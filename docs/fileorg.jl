@@ -12,7 +12,7 @@ dsge.jl/
       end
     AbstractModel.jl
       module AbstractModel
-        export Param, Parameters, ModelInds, Model
+        export Param, toreal, tomodel, Parameters, logprior, ModelInds, makedict, Model
         include("abstractmodel/param.jl")
         include("abstractmodel/parameters.jl")
         include("abstractmodel/modelinds.jl")
@@ -31,6 +31,7 @@ dsge.jl/
         function logprior
       modelinds.jl
         type ModelInds
+        function makedict
       model.jl
         type Model
     models/
@@ -53,7 +54,7 @@ dsge.jl/
           type Parameters990 <: Parameters
           function steadystate!
         modelinds.jl
-          function makedict
+          using DSGE.AbstractModel
           function ModelInds990
         eqcond.jl
           function eqcond

@@ -1,15 +1,6 @@
-# Each function (e.g. make_endo) returns a tuple (endo, n_states)
-#   endo: anonymous function, takes a name like "π_t" and returns an index
-#   n_states: int, number of endogenous variables
+using DSGE.AbstractModel
 
-# This allows each names array to be passed around with the function, but does not require names to be reinitialized with each call to endo (as it would have to be if endo returned the index directly)
-
-
-
-function makedict{T<:String}(names::Array{T, 1})
-    return [names[i] => i for i = 1:length(names)]
-end
-
+# Return a ModelInds object, which has four fields: each is a dictionary mapping states or equations to model indices
 function ModelInds990()
     endostates = ["y_t",
                   "c_t",
@@ -167,6 +158,7 @@ function ModelInds990()
                  "eq_Ez",
                  ["eq_rml$i" for i=1:n_ant_shocks]]
 
+    # TODO: incorporate measurement equation observables
     observables = ["g_y", # output growth
                    "g_l", # aggregate hours growth
                    "g_w", # real wage growth

@@ -1,8 +1,10 @@
 module AbstractModel
 
 export
-    # types
-    Param, Parameters, ModelInds, Model
+    Param, toreal, tomodel, # param.jl
+    Parameters, logprior, # parameters.jl
+    ModelInds, makedict, # modelinds.jl
+    Model # model.jl
 
 include("abstractmodel/param.jl")
 include("abstractmodel/parameters.jl")

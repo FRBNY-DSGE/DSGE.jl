@@ -8,6 +8,10 @@ module DistributionsExt
 using Distributions
 import Distributions: pdf
 
+export PointMass, Beta, Gamma, InverseGamma
+
+
+
 # Define PointMass distribution for fixed parameters.
 type PointMass <: Distribution{Univariate, Continuous}
     μ::Float64
