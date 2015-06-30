@@ -18,9 +18,9 @@ function eqcond(Θ::Parameters990, I::ModelInds)
     ex = I.expshocks
     eq = I.equations
 
-    n_states = size(endo)
-    n_exo = size(exo)
-    n_exp = size(ex)
+    n_states = length(endo)
+    n_exo = length(exo)
+    n_exp = length(ex)
 
     G0 = zeros(n_states, n_states)
     G1 = zeros(n_states, n_states)
