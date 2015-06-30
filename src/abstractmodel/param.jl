@@ -48,7 +48,7 @@ end
 
 # Methods so that arithmetic with parameters can be done tersely, like "θ.α + θ.β"
 # Note there are still instances where we must refer to α.scaledvalue, e.g. pdf(α.prior, α.val)
-Base.convert(::Type{Float64}, α::Param) = α.scaledvalue
+Base.convert{T<:FloatingPoint}(::Type{T}, α::Param) = α.scaledvalue
 Base.promote_rule{T<:FloatingPoint}(::Type{Param}, ::Type{T}) = Float64
 Base.promote_rule{T<:Integer}(::Type{Param}, ::Type{T}) = Float64
 
@@ -68,8 +68,8 @@ function toreal(α::Param)
     if α.transformtype == 0
        return α.scaledvalue
     elseif α.transformtype == 1
-        cx = 2 * (α - (a+b)/2) / (b-a);
-        return (1/c) * cx / sqrt(1 - cx^2);
+        cx = 2 * (α - (a+b)/2) / (b-a)
+        return (1/c) * cx / sqrt(1 - cx^2)
     elseif α.transformtype == 2
         return b + (1/c) * log(α-a)
     end
