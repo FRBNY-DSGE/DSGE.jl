@@ -1,9 +1,9 @@
 # A type that bundles together the model indices dictionaries from models/m$(spec)/modelinds.jl
 type ModelInds
-    endostates::Dict{ASCIIString, Int64}
-    exoshocks::Dict{ASCIIString, Int64}
-    expshocks::Dict{ASCIIString, Int64}
-    equations::Dict{ASCIIString, Int64}
+    endostates::Dict{String, Int64}
+    exoshocks::Dict{String, Int64}
+    expshocks::Dict{String, Int64}
+    equations::Dict{String, Int64}
 end
 
 
