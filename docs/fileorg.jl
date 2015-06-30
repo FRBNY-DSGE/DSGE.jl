@@ -38,6 +38,7 @@ dsge.jl/
       M990.jl
         module M990
           using DSGE.AbstractModel
+          export Parameters990, ModelInds990, Model990, eqcond
           include("spec.jl")
           include("parameters.jl")
           include("modelinds.jl")
@@ -85,4 +86,15 @@ dsge.jl/
     DSGE_Model_Documentation.pdf
     supersticky1214.pdf
   test/
+    test_AbstractModel.jl
+      using Base.Test
+      using Distributions
+      using DSGE: DistributionsExt, AbstractModel
+      function test_all
+      function test_param
+      function test_parameters
+      function test_modelinds
+    test_M990.jl
+      using Base.Test
+      using DSGE: AbstractModel, M990
   README.md

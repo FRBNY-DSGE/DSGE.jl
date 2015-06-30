@@ -2,7 +2,7 @@ module M990
 
 using DSGE.AbstractModel
 
-export Parameters990, ModelInds990, Model990
+export Parameters990, ModelInds990, Model990, eqcond
 
 include("m990/spec.jl")
 include("m990/parameters.jl")
