@@ -81,11 +81,14 @@ dsge.jl/
     estimate/
     forecast/
   docs/
-    pkgstructure.jl
+    fileorg.jl # You are here
     ProposedOrganization.md
     DSGE_Model_Documentation.pdf
     supersticky1214.pdf
   test/
+    util.jl
+      function test_matrix_eq
+      function test_util
     test_AbstractModel.jl
       using Base.Test
       using Distributions
@@ -94,7 +97,19 @@ dsge.jl/
       function test_param
       function test_parameters
       function test_modelinds
-    test_M990.jl
-      using Base.Test
-      using DSGE: AbstractModel, M990
+    models/
+      test_M990.jl
+        using Base.Test
+        using DSGE: DistributionsExt, AbstractModel, M990
+        include("../util.jl")
+        function test_all
+        function test_parameters
+        function test_modelinds
+        function test_eqcond
+      m990/
+        G0.csv
+        G1.csv
+        C.csv
+        PSI.csv
+        PIE.csv
   README.md
