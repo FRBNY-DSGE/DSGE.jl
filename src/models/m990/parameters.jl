@@ -195,8 +195,6 @@ function Parameters990()
     epsp = Param(10.) # epsp
     epsw = Param(10.) # epsw
 
-    nantpad = 20
-    
     # financial frictions parameters
     Fom = Param(0.0300, scalefunction = x -> 1 - (1-x)^0.25, true, (1e-5, 0.999), Beta(0.03, 0.01), 1, (1e-5, 0.999)) # Fom
     sprd = Param(1.7444, scalefunction = x -> (1 + x/100)^0.25, false, (0., 100.), Gamma(2., 0.1), 2, (1e-5, 0.)) # sprd
@@ -244,9 +242,8 @@ function Parameters990()
     σ_gdpdef = Param(0.1575, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_gdpdef
     σ_pce = Param(0.0999, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_pce
 
-    # TODO: better way of representing these?
     # standard deviations of the anticipated policy shocks
-    for i = 1:nantpad
+    for i = 1:n_ant_shocks_pad
         if i < 13
             eval(parse("σ_rm$i = Param(0.20, false, (1e-7, 100.), InverseGamma(0.2, 4.00), 2, (1e-5, 0.))"))
         else
@@ -270,7 +267,7 @@ end
 
 # (Re)calculates steady-state values from Param fields in Θ
 # The functions called to calculate financial frictions additions (zetaspbfcn, etc.) can be found in
-# code/init/ff_fcns.jl
+# init/FinancialFrictionsFunctions.jl
 function steadystate!(Θ::Parameters990)
     Θ.zstar = log(1+Θ.gam) + Θ.alp/(1-Θ.alp)*log(Θ.ups)
     Θ.rstar = exp(Θ.sigmac*Θ.zstar) / Θ.bet
