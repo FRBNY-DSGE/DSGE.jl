@@ -107,40 +107,10 @@ type Parameters990 <: Parameters
     ystar::Float64           # y_star 
     cstar::Float64           # c_star 
     wl_c::Float64            # wl_c   
-    zwstar::Float64          # zw_star
-    sigwstar::Float64        # σ_wstar
-    omegabarstar::Float64    # ω̄_star 
-    Gstar::Float64           # G_star 
-    Gammastar::Float64       # Γ_star 
-    dGdomegastar::Float64
-    d2Gdomega2star::Float64
-    dGammadomegastar::Float64
-    d2Gammadomega2star::Float64
-    dGdsigmastar::Float64
-    d2Gdomegadsigmastar::Float64
-    dGammadsigmastar::Float64
-    d2Gammadomegadsigmastar::Float64
-    muestar::Float64         # μe_star 
-    nkstar::Float64          # nk_star 
-    Rhostar::Float64         # Ρ_star  
-    wekstar::Float64         # wek_star
-    vkstar::Float64          # vk_star 
     nstar::Float64           # n_star  
     vstar::Float64           # v_star  
-    GammamuG::Float64
-    GammamuGprime::Float64
-    zeta_bw::Float64         # ζ_bw    
-    zeta_zw::Float64         # ζ_zw    
-    zeta_bw_zw::Float64      # ζ_bw_zw 
-    zeta_bsigw::Float64      # ζ_bsigw 
-    zeta_zsigw::Float64      # ζ_zsigw 
     zeta_spsigw::Float64     # ζ_spsigw
-    zeta_bmue::Float64       # ζ_bmue  
-    zeta_zmue::Float64       # ζ_zmue  
     zeta_spmue::Float64      # ζ_spmue 
-    Rkstar::Float64          # Rk_star 
-    zeta_Gw::Float64         # ζ_Gw    
-    zeta_Gsigw::Float64      # ζ_Gsigw 
     zeta_nRk::Float64        # ζ_nRk   
     zeta_nR::Float64         # ζ_nR    
     zeta_nqk::Float64        # ζ_nqk   
@@ -284,68 +254,68 @@ function steadystate!(Θ::Parameters990)
 
     # FINANCIAL FRICTIONS ADDITIONS
     # solve for sigmaomegastar and zomegastar
-    Θ.zwstar = quantile(Normal(), Θ.Fom.scaledvalue)
-    Θ.sigwstar = fzero(sigma -> ζ_spb_fn(Θ.zwstar, sigma, Θ.sprd) - Θ.zeta_spb, 0.5)
+    zwstar = quantile(Normal(), Θ.Fom.scaledvalue)
+    sigwstar = fzero(sigma -> ζ_spb_fn(zwstar, sigma, Θ.sprd) - Θ.zeta_spb, 0.5)
 
     # evaluate omegabarstar
-    Θ.omegabarstar = ω_fn(Θ.zwstar, Θ.sigwstar)
+    omegabarstar = ω_fn(zwstar, sigwstar)
 
     # evaluate all BGG function elasticities
-    Θ.Gstar = G_fn(Θ.zwstar, Θ.sigwstar)
-    Θ.Gammastar = Γ_fn(Θ.zwstar, Θ.sigwstar)
-    Θ.dGdomegastar = dG_dω_fn(Θ.zwstar, Θ.sigwstar)
-    Θ.d2Gdomega2star = d2G_dω2_fn(Θ.zwstar, Θ.sigwstar)
-    Θ.dGammadomegastar = dΓ_dω_fn(Θ.zwstar)
-    Θ.d2Gammadomega2star = d2Γ_dω2_fn(Θ.zwstar, Θ.sigwstar)
-    Θ.dGdsigmastar = dG_dσ_fn(Θ.zwstar, Θ.sigwstar)
-    Θ.d2Gdomegadsigmastar = d2G_dωdσ_fn(Θ.zwstar, Θ.sigwstar)
-    Θ.dGammadsigmastar = dΓ_dσ_fn(Θ.zwstar, Θ.sigwstar)
-    Θ.d2Gammadomegadsigmastar = d2Γ_dωdσ_fn(Θ.zwstar, Θ.sigwstar)
+    Gstar = G_fn(zwstar, sigwstar)
+    Gammastar = Γ_fn(zwstar, sigwstar)
+    dGdomegastar = dG_dω_fn(zwstar, sigwstar)
+    d2Gdomega2star = d2G_dω2_fn(zwstar, sigwstar)
+    dGammadomegastar = dΓ_dω_fn(zwstar)
+    d2Gammadomega2star = d2Γ_dω2_fn(zwstar, sigwstar)
+    dGdsigmastar = dG_dσ_fn(zwstar, sigwstar)
+    d2Gdomegadsigmastar = d2G_dωdσ_fn(zwstar, sigwstar)
+    dGammadsigmastar = dΓ_dσ_fn(zwstar, sigwstar)
+    d2Gammadomegadsigmastar = d2Γ_dωdσ_fn(zwstar, sigwstar)
 
     # evaluate mu, nk, and Rhostar
-    Θ.muestar = μ_fn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
-    Θ.nkstar = nk_fn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
-    Θ.Rhostar = 1/Θ.nkstar - 1
+    muestar = μ_fn(zwstar, sigwstar, Θ.sprd)
+    nkstar = nk_fn(zwstar, sigwstar, Θ.sprd)
+    Rhostar = 1/nkstar - 1
 
     # evaluate wekstar and vkstar
-    Θ.wekstar = (1-Θ.gammstar/Θ.bet)*Θ.nkstar - Θ.gammstar/Θ.bet*(Θ.sprd*(1-Θ.muestar*Θ.Gstar) - 1)
-    Θ.vkstar = (Θ.nkstar-Θ.wekstar)/Θ.gammstar
+    wekstar = (1-Θ.gammstar/Θ.bet)*nkstar - Θ.gammstar/Θ.bet*(Θ.sprd*(1-muestar*Gstar) - 1)
+    vkstar = (nkstar-wekstar)/Θ.gammstar
 
     # evaluate nstar and vstar
-    Θ.nstar = Θ.nkstar*Θ.kstar
-    Θ.vstar = Θ.vkstar*Θ.kstar
+    Θ.nstar = nkstar*Θ.kstar
+    Θ.vstar = vkstar*Θ.kstar
 
     # a couple of combinations
-    Θ.GammamuG = Θ.Gammastar - Θ.muestar*Θ.Gstar
-    Θ.GammamuGprime = Θ.dGammadomegastar - Θ.muestar*Θ.dGdomegastar
+    GammamuG = Gammastar - muestar*Gstar
+    GammamuGprime = dGammadomegastar - muestar*dGdomegastar
 
     # elasticities wrt omegabar
-    Θ.zeta_bw = ζ_bω_fn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
-    Θ.zeta_zw = ζ_zω_fn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
-    Θ.zeta_bw_zw = Θ.zeta_bw/Θ.zeta_zw
+    zeta_bw = ζ_bω_fn(zwstar, sigwstar, Θ.sprd)
+    zeta_zw = ζ_zω_fn(zwstar, sigwstar, Θ.sprd)
+    zeta_bw_zw = zeta_bw/zeta_zw
 
     # elasticities wrt sigw
-    Θ.zeta_bsigw = Θ.sigwstar * (((1 - Θ.muestar*Θ.dGdsigmastar/Θ.dGammadsigmastar) / (1 - Θ.muestar*Θ.dGdomegastar/Θ.dGammadomegastar) - 1)*Θ.dGammadsigmastar*Θ.sprd + Θ.muestar*Θ.nkstar*(Θ.dGdomegastar*Θ.d2Gammadomegadsigmastar - Θ.dGammadomegastar*Θ.d2Gdomegadsigmastar)/Θ.GammamuGprime^2) / ((1 - Θ.Gammastar)*Θ.sprd + Θ.dGammadomegastar/Θ.GammamuGprime*(1-Θ.nkstar))
-    Θ.zeta_zsigw = Θ.sigwstar * (Θ.dGammadsigmastar - Θ.muestar*Θ.dGdsigmastar) / Θ.GammamuG
-    Θ.zeta_spsigw = (Θ.zeta_bw_zw*Θ.zeta_zsigw - Θ.zeta_bsigw) / (1-Θ.zeta_bw_zw)
+    zeta_bsigw = sigwstar * (((1 - muestar*dGdsigmastar/dGammadsigmastar) / (1 - muestar*dGdomegastar/dGammadomegastar) - 1)*dGammadsigmastar*Θ.sprd + muestar*nkstar*(dGdomegastar*d2Gammadomegadsigmastar - dGammadomegastar*d2Gdomegadsigmastar)/GammamuGprime^2) / ((1 - Gammastar)*Θ.sprd + dGammadomegastar/GammamuGprime*(1-nkstar))
+    zeta_zsigw = sigwstar * (dGammadsigmastar - muestar*dGdsigmastar) / GammamuG
+    Θ.zeta_spsigw = (zeta_bw_zw*zeta_zsigw - zeta_bsigw) / (1-zeta_bw_zw)
     
     # elasticities wrt mue
-    Θ.zeta_bmue = Θ.muestar * (Θ.nkstar*Θ.dGammadomegastar*Θ.dGdomegastar/Θ.GammamuGprime+Θ.dGammadomegastar*Θ.Gstar*Θ.sprd) / ((1-Θ.Gammastar)*Θ.GammamuGprime*Θ.sprd + Θ.dGammadomegastar*(1-Θ.nkstar))
-    Θ.zeta_zmue = -Θ.muestar*Θ.Gstar/Θ.GammamuG
-    Θ.zeta_spmue = (Θ.zeta_bw_zw*Θ.zeta_zmue - Θ.zeta_bmue) / (1-Θ.zeta_bw_zw)
+    zeta_bmue = muestar * (nkstar*dGammadomegastar*dGdomegastar/GammamuGprime+dGammadomegastar*Gstar*Θ.sprd) / ((1-Gammastar)*GammamuGprime*Θ.sprd + dGammadomegastar*(1-nkstar))
+    zeta_zmue = -muestar*Gstar/GammamuG
+    Θ.zeta_spmue = (zeta_bw_zw*zeta_zmue - zeta_bmue) / (1-zeta_bw_zw)
 
     # some ratios/elasticities
-    Θ.Rkstar = Θ.sprd*Θ.pistar*Θ.rstar # (rkstar+1-delta)/ups*pistar
-    Θ.zeta_Gw = Θ.dGdomegastar/Θ.Gstar*Θ.omegabarstar
-    Θ.zeta_Gsigw = Θ.dGdsigmastar/Θ.Gstar*Θ.sigwstar
+    Rkstar = Θ.sprd*Θ.pistar*Θ.rstar # (rkstar+1-delta)/ups*pistar
+    zeta_gw = dGdomegastar/Gstar*omegabarstar
+    zeta_Gsigw = dGdsigmastar/Gstar*sigwstar
     
     # elasticities for the net worth evolution
-    Θ.zeta_nRk = Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Θ.Rhostar)*(1 - Θ.muestar*Θ.Gstar*(1 - Θ.zeta_Gw/Θ.zeta_zw))
-    Θ.zeta_nR = Θ.gammstar/Θ.bet*(1+Θ.Rhostar)*(1 - Θ.nkstar + Θ.muestar*Θ.Gstar*Θ.sprd*Θ.zeta_Gw/Θ.zeta_zw)
-    Θ.zeta_nqk = Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Θ.Rhostar)*(1 - Θ.muestar*Θ.Gstar*(1+Θ.zeta_Gw/Θ.zeta_zw/Θ.Rhostar)) - Θ.gammstar/Θ.bet*(1+Θ.Rhostar)
-    Θ.zeta_nn = Θ.gammstar/Θ.bet + Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Θ.Rhostar)*Θ.muestar*Θ.Gstar*Θ.zeta_Gw/Θ.zeta_zw/Θ.Rhostar
-    Θ.zeta_nmue = Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Θ.Rhostar)*Θ.muestar*Θ.Gstar*(1 - Θ.zeta_Gw*Θ.zeta_zmue/Θ.zeta_zw)
-    Θ.zeta_nsigw = Θ.gammstar*Θ.Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Θ.Rhostar)*Θ.muestar*Θ.Gstar*(Θ.zeta_Gsigw-Θ.zeta_Gw/Θ.zeta_zw*Θ.zeta_zsigw)
+    Θ.zeta_nRk = Θ.gammstar*Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Rhostar)*(1 - muestar*Gstar*(1 - zeta_gw/zeta_zw))
+    Θ.zeta_nR = Θ.gammstar/Θ.bet*(1+Rhostar)*(1 - nkstar + muestar*Gstar*Θ.sprd*zeta_gw/zeta_zw)
+    Θ.zeta_nqk = Θ.gammstar*Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Rhostar)*(1 - muestar*Gstar*(1+zeta_gw/zeta_zw/Rhostar)) - Θ.gammstar/Θ.bet*(1+Rhostar)
+    Θ.zeta_nn = Θ.gammstar/Θ.bet + Θ.gammstar*Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Rhostar)*muestar*Gstar*zeta_gw/zeta_zw/Rhostar
+    Θ.zeta_nmue = Θ.gammstar*Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Rhostar)*muestar*Gstar*(1 - zeta_gw*zeta_zmue/zeta_zw)
+    Θ.zeta_nsigw = Θ.gammstar*Rkstar/Θ.pistar/exp(Θ.zstar)*(1+Rhostar)*muestar*Gstar*(zeta_Gsigw-zeta_gw/zeta_zw*zeta_zsigw)
     
     return Θ
 end
