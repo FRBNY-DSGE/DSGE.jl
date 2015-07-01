@@ -1,16 +1,12 @@
 # Expresses the equilibrium conditions in canonical form using G0, G1, C, Ψ, and Π matrices.
-# Using the assigned states and equations in modelinds.jl, coefficients are specified in the proper positions.
+# Using the assigned states and equations in modelinds.jl, coefficients are specified in the
+#   proper positions.
 
 # G0 (n states x n states) holds coefficients of current time states.
 # G1 (n states x n states) holds coefficients of lagged states.
 # C (n states x 1) is a vector of constants
-# Ψ (n states x n exogenous shocks) holds coefficients of the state corresponding to an iid shock.
+# Ψ (n states x n exogenous shocks) holds coefficients of iid shocks.
 # Π (n states x n expectational states) holds coefficients of expectational states.
-
-# Dependencies:
-#   parameters.jl
-#   modelinds.jl
-
 
 function eqcond(Θ::Parameters990, I::ModelInds)
     endo = I.endostates
@@ -416,11 +412,10 @@ function eqcond(Θ::Parameters990, I::ModelInds)
     if n_ant_shocks > 0
 
         # This section adds the anticipated shocks. There is one state for all the
-        # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds
-        # those that will hit in two periods), and the equations are set up so that
-        # rm_tl2 last period will feed into rm_tl1 this period (and so on for other
-        # numbers), and last period's rm_tl1 will feed into the rm_t process (and
-        # affect the Taylor Rule this period).
+        # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds those that
+        # will hit in two periods), and the equations are set up so that rm_tl2 last period
+        # will feed into rm_tl1 this period (and so on for other numbers), and last period's
+        # rm_tl1 will feed into the rm_t process (and affect the Taylor Rule this period).
         
         G1[eq["eq_rm"], endo["rm_tl1"]] = 1.
         G0[eq["eq_rml1"], endo["rm_tl1"]] = 1.

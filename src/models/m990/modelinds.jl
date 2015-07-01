@@ -1,6 +1,7 @@
 using DSGE.AbstractModel
 
-# Return a ModelInds object, which has four fields: each is a dictionary mapping states or equations to model indices
+# Return a ModelInds object, which has four fields: each is a dictionary mapping states or
+#   equations to model indices
 function ModelInds990()
     endostates = ["y_t",
                   "c_t",
@@ -172,5 +173,6 @@ function ModelInds990()
                    "R_long", # long-term rate
                    "tfp"] # total factor productivity
 
-    return ModelInds(makedict(endostates), makedict(exoshocks), makedict(expshocks), makedict(equations))
+    return ModelInds(makedict(endostates), makedict(exoshocks), makedict(expshocks),
+                     makedict(equations))
 end

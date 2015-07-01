@@ -1,4 +1,5 @@
-# This file has extension .jl only for the purposes of syntax highlighting; it should not be run
+# This file has extension .jl only for the purposes of syntax highlighting; it should not
+#   be run
 
 dsge.jl/
   src/

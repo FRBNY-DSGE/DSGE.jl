@@ -118,21 +118,25 @@ type Parameters990 <: Parameters
     zeta_nmue::Float64       # ζ_nmue  
     zeta_nsigw::Float64      # ζ_nsigw 
     
-    # This constructor takes in as arguments and initializes the Param fields, then immediately calls steadystate!() to
-    # calculate and initialize the steady-state values (which have type Float64)
-    function Parameters990(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w, iota_w, law, bet, psi1, psi2, psi3,
-    pistar, sigmac, rho, epsp, epsw, Fom, sprd, zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf,
-    ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law,
-    σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6,
-    σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz,
+    # This constructor takes in as arguments and initializes the Param fields, then
+    #   immediately calls steadystate!() to calculate and initialize the steady-state values
+    #   (which have type Float64)
+    function Parameters990(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w,
+    iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp, epsw, Fom, sprd,
+    zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm,
+    ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu,
+    σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef,
+    σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11,
+    σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz,
     eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef)
-      steadystate!(new(alp, zeta_p, iota_p, del, ups, Bigphi,
-      s2, h, ppsi, nu_l, zeta_w, iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp, epsw, Fom, sprd, zeta_spb,
-      gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp,
-      ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp,
-      σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13,
-      σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law, modelalp_ind, gamm_gdpdef,
-      del_gdpdef))
+      steadystate!(new(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w,
+      iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp, epsw, Fom, sprd,
+      zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm,
+      ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu,
+      σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef,
+      σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11,
+      σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz,
+      eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef))
     end
 end
 
@@ -141,76 +145,76 @@ end
 # TODO: some parameters (e.g. s2) have type = 0 but a and b
 # Instantiate Parameters990 type
 function Parameters990()
-    alp = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999)) # alp
-    zeta_p = Param(0.8940, false, (1e-5, 0.999), Beta(0.5, 0.1), 1, (1e-5, 0.999)) # zeta_p
-    iota_p = Param(0.1865, false, (1e-5, 0.999), Beta(0.5, 0.15), 1, (1e-5, 0.999)) # iota_p
-    del = Param(0.025) # del = 0.025
-    ups = Param(1.000, true, (0., 10.), Gamma(1., 0.5), 2, (1e-5, 0.)) # ups
-    Bigphi = Param(1.1066, false, (1., 10.), Normal(1.25, 0.12), 2, (1.00, 10.00)) # Bigphi
-    s2 = Param(2.7314, false, (-15., 15.), Normal(4., 1.5), 0, (-15., 15.)) # s2
-    h = Param(0.5347, false, (1e-5, 0.999), Beta(0.7, 0.1), 1, (1e-5, 0.999)) # h
-    ppsi = Param(0.6862, false, (1e-5, 0.999), Beta(0.5, 0.15), 1, (1e-5, 0.999)) # ppsi
-    nu_l = Param(2.5975, false, (1e-5, 10.), Normal(2, 0.75), 2, (1e-5, 10.)) # nu_l
-    zeta_w = Param(0.9291, false, (1e-5, 0.999), Beta(0.5, 0.1), 1, (1e-5, 0.999)) # zeta_w
-    iota_w = Param(0.2992, false, (1e-5, 0.999), Beta(0.5, 0.15), 1, (1e-5, 0.999)) # iota_w
-    law = Param(1.5) # law = 1.5;
-    # laf = [];
-    bet = Param(0.1402, scalefunction = x -> 1/(1 + x/100), false, (1e-5, 10.), Gamma(0.25, 0.1), 2, (1e-5, 10.)) # bet
-    psi1 = Param(1.3679, false, (1e-5, 10.), Normal(1.5, 0.25), 2, (1e-5, 10.00)) # psi1
-    psi2 = Param(0.0388, false, (-0.5, 0.5), Normal(0.12, 0.05), 0, (-0.5, 0.5)) # psi2
-    psi3 = Param(0.2464, false, (-0.5, 0.5), Normal(0.12, 0.05), 0, (-0.5, 0.5)) # psi3
-    pistar = Param(0.5000, scalefunction = x -> 1 + x/100, true, (1e-5, 10.), Gamma(0.75, 0.4), 2, (1e-5, 10.)) # pistar
-    sigmac = Param(0.8719, false, (1e-5, 10.), Normal(1.5, 0.37), 2, (1e-5, 10.)) # sigmac
-    rho = Param(0.7126, false, (1e-5, 0.999), Beta(0.75, 0.10), 1, (1e-5, 0.999)) # rho
-    epsp = Param(10.) # epsp
-    epsw = Param(10.) # epsw
+    alp = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999))
+    zeta_p = Param(0.8940, false, (1e-5, 0.999), Beta(0.5, 0.1), 1, (1e-5, 0.999))
+    iota_p = Param(0.1865, false, (1e-5, 0.999), Beta(0.5, 0.15), 1, (1e-5, 0.999))
+    del = Param(0.025)
+    ups = Param(1.000, true, (0., 10.), Gamma(1., 0.5), 2, (1e-5, 0.))
+    Bigphi = Param(1.1066, false, (1., 10.), Normal(1.25, 0.12), 2, (1.00, 10.00))
+    s2 = Param(2.7314, false, (-15., 15.), Normal(4., 1.5), 0, (-15., 15.))
+    h = Param(0.5347, false, (1e-5, 0.999), Beta(0.7, 0.1), 1, (1e-5, 0.999))
+    ppsi = Param(0.6862, false, (1e-5, 0.999), Beta(0.5, 0.15), 1, (1e-5, 0.999))
+    nu_l = Param(2.5975, false, (1e-5, 10.), Normal(2, 0.75), 2, (1e-5, 10.))
+    zeta_w = Param(0.9291, false, (1e-5, 0.999), Beta(0.5, 0.1), 1, (1e-5, 0.999))
+    iota_w = Param(0.2992, false, (1e-5, 0.999), Beta(0.5, 0.15), 1, (1e-5, 0.999))
+    law = Param(1.5)
+    # laf = []
+    bet = Param(0.1402, scalefunction = x -> 1/(1 + x/100), false, (1e-5, 10.), Gamma(0.25, 0.1), 2, (1e-5, 10.))
+    psi1 = Param(1.3679, false, (1e-5, 10.), Normal(1.5, 0.25), 2, (1e-5, 10.00))
+    psi2 = Param(0.0388, false, (-0.5, 0.5), Normal(0.12, 0.05), 0, (-0.5, 0.5))
+    psi3 = Param(0.2464, false, (-0.5, 0.5), Normal(0.12, 0.05), 0, (-0.5, 0.5))
+    pistar = Param(0.5000, scalefunction = x -> 1 + x/100, true, (1e-5, 10.), Gamma(0.75, 0.4), 2, (1e-5, 10.))
+    sigmac = Param(0.8719, false, (1e-5, 10.), Normal(1.5, 0.37), 2, (1e-5, 10.))
+    rho = Param(0.7126, false, (1e-5, 0.999), Beta(0.75, 0.10), 1, (1e-5, 0.999))
+    epsp = Param(10.)
+    epsw = Param(10.)
 
     # financial frictions parameters
-    Fom = Param(0.0300, scalefunction = x -> 1 - (1-x)^0.25, true, (1e-5, 0.99999), Beta(0.03, 0.01), 1, (1e-5, 0.99)) # Fom
-    sprd = Param(1.7444, scalefunction = x -> (1 + x/100)^0.25, false, (0., 100.), Gamma(2., 0.1), 2, (1e-5, 0.)) # sprd
-    zeta_spb = Param(0.0559, false, (1e-5, 0.99999), Beta(0.05, 0.005), 1, (1e-5, 0.99)) # zeta_spb
-    gammstar = Param(0.9900, true, (1e-5, 0.99999), Beta(0.99, 0.002), 1, (1e-5, 0.99))  # gammstar
+    Fom = Param(0.0300, scalefunction = x -> 1 - (1-x)^0.25, true, (1e-5, 0.99999), Beta(0.03, 0.01), 1, (1e-5, 0.99))
+    sprd = Param(1.7444, scalefunction = x -> (1 + x/100)^0.25, false, (0., 100.), Gamma(2., 0.1), 2, (1e-5, 0.))
+    zeta_spb = Param(0.0559, false, (1e-5, 0.99999), Beta(0.05, 0.005), 1, (1e-5, 0.99))
+    gammstar = Param(0.9900, true, (1e-5, 0.99999), Beta(0.99, 0.002), 1, (1e-5, 0.99))
 
     # exogenous processes - level
-    gam = Param(0.3673, scalefunction = x -> x/100, false, (-5., 5.), Normal(0.4, 0.1), 0, (-5.0, 5.0)) # gam
-    Lmean = Param(-45.9364, false, (-1000., 1000.), Normal(-45, 5), 0, (-1000., 1000.)) # Lmean
-    gstar = Param(0.18) # gstar = .18;
+    gam = Param(0.3673, scalefunction = x -> x/100, false, (-5., 5.), Normal(0.4, 0.1), 0, (-5.0, 5.0))
+    Lmean = Param(-45.9364, false, (-1000., 1000.), Normal(-45, 5), 0, (-1000., 1000.))
+    gstar = Param(0.18)
 
     # exogenous processes - autocorrelation
-    ρ_g = Param(0.9863, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_g
-    ρ_b = Param(0.9410, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_b
-    ρ_mu = Param(0.8735, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_mu
-    ρ_z = Param(0.9446, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_z
-    ρ_laf = Param(0.8827, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_laf
-    ρ_law = Param(0.3884, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_law
-    ρ_rm = Param(0.2135, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_rm
-    ρ_sigw = Param(0.9898, false, (1e-5, 0.99999), Beta(0.75, 0.15), 1, (1e-5, 0.99)) # rho_sigw
-    ρ_mue = Param(0.7500, true, (1e-5, 0.99999), Beta(0.75, 0.15), 1, (1e-5, 0.99)) # rho_mue
-    ρ_gamm = Param(0.7500, true, (1e-5, 0.99999), Beta(0.75, 0.15), 1, (1e-5, 0.99)) # rho_gamm
-    ρ_pist = Param(0.9900, true, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_pist
-    ρ_lr = Param(0.6936, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_lr
-    ρ_zp = Param(0.8910, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_zp
-    ρ_tfp = Param(0.1953, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_tfp
-    ρ_gdpdef = Param(0.5379, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_gdpdef
-    ρ_pce = Param(0.2320, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_pce
+    ρ_g = Param(0.9863, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
+    ρ_b = Param(0.9410, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
+    ρ_mu = Param(0.8735, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
+    ρ_z = Param(0.9446, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
+    ρ_laf = Param(0.8827, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
+    ρ_law = Param(0.3884, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
+    ρ_rm = Param(0.2135, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
+    ρ_sigw = Param(0.9898, false, (1e-5, 0.99999), Beta(0.75, 0.15), 1, (1e-5, 0.99))
+    ρ_mue = Param(0.7500, true, (1e-5, 0.99999), Beta(0.75, 0.15), 1, (1e-5, 0.99))
+    ρ_gamm = Param(0.7500, true, (1e-5, 0.99999), Beta(0.75, 0.15), 1, (1e-5, 0.99))
+    ρ_pist = Param(0.9900, true, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
+    ρ_lr = Param(0.6936, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
+    ρ_zp = Param(0.8910, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
+    ρ_tfp = Param(0.1953, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
+    ρ_gdpdef = Param(0.5379, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
+    ρ_pce = Param(0.2320, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
 
     # exogenous processes - standard deviation
-    σ_g = Param(2.5230, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_g
-    σ_b = Param(0.0292, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_b
-    σ_mu = Param(0.4559, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_mu
-    σ_z = Param(0.6742, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_z
-    σ_laf = Param(0.1314, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_laf
-    σ_law = Param(0.3864, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_law
-    σ_rm = Param(0.2380, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_rm
-    σ_sigw = Param(0.0428, false, (1e-7, 100.), InverseGamma(0.05, 4.00), 2, (1e-5, 0.)) # sig_sigw
-    σ_mue = Param(0., true, (1e-7, 100.), InverseGamma(0.05, 4.00), 2, (1e-5, 0.)) # sig_mue
-    σ_gamm = Param(0., true, (1e-7, 100.), InverseGamma(0.01, 4.00), 2, (1e-5, 0.)) # sig_gamm
-    σ_pist = Param(0.0269, false, (1e-8, 5.), InverseGamma(0.03, 6.), 2, (1e-8, 5.)) # sig_pist
-    σ_lr = Param(0.1766, false, (1e-8, 10.), InverseGamma(0.75, 2.), 2, (1e-8, 5.)) # sig_lr
-    σ_zp = Param(0.1662, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_zp
-    σ_tfp = Param(0.9391, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_tfp
-    σ_gdpdef = Param(0.1575, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_gdpdef
-    σ_pce = Param(0.0999, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.)) # sig_pce
+    σ_g = Param(2.5230, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
+    σ_b = Param(0.0292, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
+    σ_mu = Param(0.4559, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
+    σ_z = Param(0.6742, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
+    σ_laf = Param(0.1314, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
+    σ_law = Param(0.3864, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
+    σ_rm = Param(0.2380, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
+    σ_sigw = Param(0.0428, false, (1e-7, 100.), InverseGamma(0.05, 4.00), 2, (1e-5, 0.))
+    σ_mue = Param(0., true, (1e-7, 100.), InverseGamma(0.05, 4.00), 2, (1e-5, 0.))
+    σ_gamm = Param(0., true, (1e-7, 100.), InverseGamma(0.01, 4.00), 2, (1e-5, 0.))
+    σ_pist = Param(0.0269, false, (1e-8, 5.), InverseGamma(0.03, 6.), 2, (1e-8, 5.))
+    σ_lr = Param(0.1766, false, (1e-8, 10.), InverseGamma(0.75, 2.), 2, (1e-8, 5.))
+    σ_zp = Param(0.1662, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
+    σ_tfp = Param(0.9391, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
+    σ_gdpdef = Param(0.1575, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
+    σ_pce = Param(0.0999, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
 
     # standard deviations of the anticipated policy shocks
     for i = 1:n_ant_shocks_pad
@@ -221,22 +225,30 @@ function Parameters990()
         end
     end
 
-    eta_gz = Param(0.8400, false, (1e-5, 0.999), Beta(0.50, 0.20), 1, (1e-5, 0.999)) # eta_gz
-    eta_laf = Param(0.7892, false, (1e-5, 0.999), Beta(0.50, 0.20), 1, (1e-5, 0.999)) # eta_laf
-    eta_law = Param(0.4226, false, (1e-5, 0.999), Beta(0.50, 0.20), 1, (1e-5, 0.999)) # eta_law
+    eta_gz = Param(0.8400, false, (1e-5, 0.999), Beta(0.50, 0.20), 1, (1e-5, 0.999))
+    eta_laf = Param(0.7892, false, (1e-5, 0.999), Beta(0.50, 0.20), 1, (1e-5, 0.999))
+    eta_law = Param(0.4226, false, (1e-5, 0.999), Beta(0.50, 0.20), 1, (1e-5, 0.999))
 
-    modelalp_ind = Param(0.0000, true, (0.000, 1.000), Beta(0.50, 0.20), 0, (0., 0.)) # modelalp_ind
-    gamm_gdpdef = Param(1.0354, false, (-10., 10.), Normal(1.00, 2.), 0, (-10., -10.)) # gamm_gdpdef
-    del_gdpdef = Param(0.0181, false, (-9.1, 9.1), Normal(0.00, 2.), 0, (-10., -10.)) # del_gdpdef
+    modelalp_ind = Param(0.0000, true, (0.000, 1.000), Beta(0.50, 0.20), 0, (0., 0.))
+    gamm_gdpdef = Param(1.0354, false, (-10., 10.), Normal(1.00, 2.), 0, (-10., -10.))
+    del_gdpdef = Param(0.0181, false, (-9.1, 9.1), Normal(0.00, 2.), 0, (-10., -10.))
     
-    return Parameters990(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w, iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp, epsw, Fom, sprd, zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pist, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pist, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef)
-    #return Parameters990(alp, zeta_p, iota_p, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w, iota_w, bet, psi1, psi2, psi3, pistar, sigmac, rho, Fom, sprd, zeta_spb, gammstar, gam, Lmean, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pist, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pist, σ_lr, σ_zp, σ_tfp, σ_gdpdef, σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef)
+    return Parameters990(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w,
+                         iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp,
+                         epsw, Fom, sprd, zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b,
+                         ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pist, ρ_lr,
+                         ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law,
+                         σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pist, σ_lr, σ_zp, σ_tfp, σ_gdpdef,
+                         σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8,
+                         σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16,
+                         σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law,
+                         modelalp_ind, gamm_gdpdef, del_gdpdef)
 end
 
 
 
 # (Re)calculates steady-state values from Param fields in Θ
-# The functions called to calculate financial frictions additions (ζ_spb_fn, etc.) can be found in
+# The functions to calculate financial frictions additions (ζ_spb_fn, etc.) can be found in
 # init/FinancialFrictionsFunctions.jl
 function steadystate!(Θ::Parameters990)
     Θ.zstar = log(1+Θ.gam) + Θ.alp/(1-Θ.alp)*log(Θ.ups)

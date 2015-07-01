@@ -3,8 +3,9 @@
 
 
 # TODO: decide what a sensible default ε value is for our situation
-# Compares matrices, reports on absolute differences, and returns true if all entries close enough
-function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::Array{R, 2}, actual::Array{S, 2}, ε::T = 1e-4)
+# Compares matrices, reports absolute differences, returns true if all entries close enough
+function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}
+             (expected::Array{R, 2}, actual::Array{S, 2}, ε::T = 1e-4)
     # Matrices of different sizes return false
     if size(expected) != size(actual)
         return false

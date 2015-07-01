@@ -36,7 +36,8 @@ function test_param()
     @test isa(δ.prior, PointMass)
 
     # Invalid transformtype
-    @test_throws ErrorException α_bad = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), -1, (1e-5, 0.999))
+    @test_throws ErrorException α_bad = Param(0.1596, false, (1e-5, 0.999),
+                                              Normal(0.30, 0.05), -1, (1e-5, 0.999))
 
     # Arithmetic with parameters
     @test convert(Float16, δ) == 0.025

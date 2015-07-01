@@ -1,9 +1,9 @@
 module DistributionsExt
-# This file defines additional functions to return objects of type Distribution. This is necessary because the original
-# Matlab code specifies prior distributions wrt mean and SD (for beta and gamma-distributed parameters) and ν and σ (for
-# inverse gamma-distributed parameters). Note that these functions are NOT new methods for the Distributions.Beta, etc.
+# This file defines additional functions to return objects of type Distribution. This is
+# necessary because the original Matlab code specifies prior distributions wrt mean and SD
+# (for beta and gamma-distributed parameters) and ν and σ (for inverse gamma-distributed
+# parameters). Note these functions are NOT new methods for the Distributions.Beta, etc.
 # functions, but rather new functions with the same names.
-# See also https://github.com/JuliaLang/julia/issues/9547
 
 using Distributions
 import Distributions: pdf, mean, std
@@ -34,8 +34,8 @@ function Gamma(μ::Real, σ::Real)
     return Distributions.Gamma(α, β)
 end
 
-# ν and σ parameterize the scaled inverse chi-squared distribution, a different parameterization of the inverse gamma
-# distribution.
+# ν and σ parameterize the scaled inverse chi-squared distribution, a different
+# parameterization of the inverse gamma distribution.
 function InverseGamma(σ::Real, ν::Real)
     α = ν / 2
     β = ν * σ^2 / 2

@@ -1,4 +1,5 @@
-# A type that bundles together the model indices dictionaries from models/m$(spec)/modelinds.jl
+# A type that bundles together the model indices dictionaries from
+#   models/m$(spec)/modelinds.jl
 type ModelInds
     endostates::Dict{String, Int64}
     exoshocks::Dict{String, Int64}

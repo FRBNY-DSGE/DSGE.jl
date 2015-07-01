@@ -2,7 +2,8 @@ import Base: start, next, done
 using Distributions: logpdf
 
 # The abstract Parameters type is the supertype of all model-specific ParametersXXX types.
-# All concrete types have both Param (parameters) and Float64 (steady-state values) fields. See Parameters990 for an example.
+# All concrete types have both Param (parameters) and Float64 (steady-state values) fields.
+# See Parameters990 for an example.
 abstract Parameters
 
 
