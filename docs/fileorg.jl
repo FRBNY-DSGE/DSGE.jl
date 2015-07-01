@@ -27,6 +27,8 @@ dsge.jl/
         function toreal
         function tomodel
       parameters.jl
+        import Base: start, next, done
+        using Distributions: logpdf
         abstract Parameters
         function logprior
       modelinds.jl

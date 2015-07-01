@@ -1,7 +1,7 @@
 using Base.Test
 using Distributions
 
-using DSGE: DistributionsExt, AbstractModel
+using DSGE: DistributionsExt, AbstractModel, M990
 
 
 
@@ -59,7 +59,19 @@ end
 
 # src/abstractmodel/parameters.jl
 function test_parameters()
-    # TODO: test logprior
+    # Parameters iterator
+    Θ = Parameters990()
+    lastparam = Param(0.0)
+    for α = Θ
+        lastparam = α
+    end
+    @test isa(lastparam, Param)
+    @test lastparam.value == 0.0181
+    
+    # logprior
+    priordensity = exp(logprior(Θ))
+    @test priordensity >= 0
+    @test priordensity <= 1
 
     println("parameters.jl tests passed")
 end
