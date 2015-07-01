@@ -266,7 +266,7 @@ end
 
 
 # (Re)calculates steady-state values from Param fields in Θ
-# The functions called to calculate financial frictions additions (zetaspbfcn, etc.) can be found in
+# The functions called to calculate financial frictions additions (ζ_spb_fn, etc.) can be found in
 # init/FinancialFrictionsFunctions.jl
 function steadystate!(Θ::Parameters990)
     Θ.zstar = log(1+Θ.gam) + Θ.alp/(1-Θ.alp)*log(Θ.ups)
@@ -285,26 +285,26 @@ function steadystate!(Θ::Parameters990)
     # FINANCIAL FRICTIONS ADDITIONS
     # solve for sigmaomegastar and zomegastar
     Θ.zwstar = quantile(Normal(), Θ.Fom.scaledvalue)
-    Θ.sigwstar = fzero(sigma -> zetaspbfcn(Θ.zwstar, sigma, Θ.sprd) - Θ.zeta_spb, 0.5)
+    Θ.sigwstar = fzero(sigma -> ζ_spb_fn(Θ.zwstar, sigma, Θ.sprd) - Θ.zeta_spb, 0.5)
 
     # evaluate omegabarstar
-    Θ.omegabarstar = omegafcn(Θ.zwstar, Θ.sigwstar)
+    Θ.omegabarstar = ω_fn(Θ.zwstar, Θ.sigwstar)
 
     # evaluate all BGG function elasticities
-    Θ.Gstar = Gfcn(Θ.zwstar, Θ.sigwstar)
-    Θ.Gammastar = Gammafcn(Θ.zwstar, Θ.sigwstar)
-    Θ.dGdomegastar = dGdomegafcn(Θ.zwstar, Θ.sigwstar)
-    Θ.d2Gdomega2star = d2Gdomega2fcn(Θ.zwstar, Θ.sigwstar)
-    Θ.dGammadomegastar = dGammadomegafcn(Θ.zwstar)
-    Θ.d2Gammadomega2star = d2Gammadomega2fcn(Θ.zwstar, Θ.sigwstar)
-    Θ.dGdsigmastar = dGdsigmafcn(Θ.zwstar, Θ.sigwstar)
-    Θ.d2Gdomegadsigmastar = d2Gdomegadsigmafcn(Θ.zwstar, Θ.sigwstar)
-    Θ.dGammadsigmastar = dGammadsigmafcn(Θ.zwstar, Θ.sigwstar)
-    Θ.d2Gammadomegadsigmastar = d2Gammadomegadsigmafcn(Θ.zwstar, Θ.sigwstar)
+    Θ.Gstar = G_fn(Θ.zwstar, Θ.sigwstar)
+    Θ.Gammastar = Γ_fn(Θ.zwstar, Θ.sigwstar)
+    Θ.dGdomegastar = dG_dω_fn(Θ.zwstar, Θ.sigwstar)
+    Θ.d2Gdomega2star = d2G_dω2_fn(Θ.zwstar, Θ.sigwstar)
+    Θ.dGammadomegastar = dΓ_dω_fn(Θ.zwstar)
+    Θ.d2Gammadomega2star = d2Γ_dω2_fn(Θ.zwstar, Θ.sigwstar)
+    Θ.dGdsigmastar = dG_dσ_fn(Θ.zwstar, Θ.sigwstar)
+    Θ.d2Gdomegadsigmastar = d2G_dωdσ_fn(Θ.zwstar, Θ.sigwstar)
+    Θ.dGammadsigmastar = dΓ_dσ_fn(Θ.zwstar, Θ.sigwstar)
+    Θ.d2Gammadomegadsigmastar = d2Γ_dωdσ_fn(Θ.zwstar, Θ.sigwstar)
 
     # evaluate mu, nk, and Rhostar
-    Θ.muestar = mufcn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
-    Θ.nkstar = nkfcn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
+    Θ.muestar = μ_fn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
+    Θ.nkstar = nk_fn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
     Θ.Rhostar = 1/Θ.nkstar - 1
 
     # evaluate wekstar and vkstar
@@ -320,8 +320,8 @@ function steadystate!(Θ::Parameters990)
     Θ.GammamuGprime = Θ.dGammadomegastar - Θ.muestar*Θ.dGdomegastar
 
     # elasticities wrt omegabar
-    Θ.zeta_bw = zetabomegafcn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
-    Θ.zeta_zw = zetazomegafcn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
+    Θ.zeta_bw = ζ_bω_fn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
+    Θ.zeta_zw = ζ_zω_fn(Θ.zwstar, Θ.sigwstar, Θ.sprd)
     Θ.zeta_bw_zw = Θ.zeta_bw/Θ.zeta_zw
 
     # elasticities wrt sigw

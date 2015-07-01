@@ -73,8 +73,8 @@ dsge.jl/
       FinancialFrictionsFunctions.jl
         module FinancialFrictionsFunctions
           using Distributions
-          export zetaspbfcn, ...
-          function zetaspbfcn
+          export ζ_spb_fn, ...
+          function ζ_spb_fn
           ...
         end
     solve/
