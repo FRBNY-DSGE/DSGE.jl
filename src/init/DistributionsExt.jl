@@ -6,7 +6,7 @@ module DistributionsExt
 # See also https://github.com/JuliaLang/julia/issues/9547
 
 using Distributions
-import Distributions: pdf
+import Distributions: pdf, mean, std
 
 export PointMass, Beta, Gamma, InverseGamma
 
@@ -17,9 +17,9 @@ type PointMass <: Distribution{Univariate, Continuous}
     μ::Float64
 end
 
-function Distributions.pdf(d::PointMass, x::Real)
-    x == d.μ ? 1.0 : 0.0
-end
+Distributions.pdf(d::PointMass, x::Real) = (x == d.μ ? 1.0 : 0.0)
+Distributions.mean(d::PointMass) = d.μ
+Distributions.std(d::PointMass) = 0
 
 # Given μ and σ, calculate α and β, return distribution
 function Beta(μ::Real, σ::Real)

@@ -1,4 +1,4 @@
-using Base.Test
+using Base.Test, Distributions
 
 using DSGE: DistributionsExt, AbstractModel, M990
 include("../util.jl")
@@ -25,7 +25,83 @@ function test_parameters()
     Θ = Parameters990()
     @test isa(Θ, Parameters990)
 
-    # TODO: Check that parameters match para, bounds, etc. vectors from Matlab
+    # Parameters match para, bounds, etc. vectors from Matlab
+    para = zeros(82, 1)
+    bounds = zeros(82, 2)
+    pshape = zeros(82, 1)
+    pmean = zeros(82, 1)
+    pstdd = zeros(82, 1)
+    trspec = zeros(82, 4)
+    
+    ignore = [Θ.del, Θ.law, Θ.epsp, Θ.epsw, Θ.gstar] # not all Params appear in para vector
+    i = 1
+    for φ = Θ
+        if φ ∈ ignore
+            continue
+        end
+
+        para[i] = φ.value
+        
+        (left, right) = φ.bounds
+        bounds[i, 1] = left
+        bounds[i, 2] = right
+
+        if isa(φ.prior, Distributions.InverseGamma)
+            pshape[i] = 4
+            (α, β) = params(φ.prior)
+            ν = 2α
+            σ = sqrt(β/α)
+            pmean[i] = σ
+            pstdd[i] = ν
+        else
+            if isa(φ.prior, Distributions.Beta)
+                pshape[i] = 1
+            elseif isa(φ.prior, Distributions.Gamma)
+                pshape[i] = 2
+            elseif isa(φ.prior, Distributions.Normal)
+                pshape[i] = 3
+            end
+            pmean[i] = mean(φ.prior)
+            pstdd[i] = std(φ.prior)
+        end
+
+        trspec[i, 1] = φ.transformtype
+        (left, right) = φ.transformbounds
+        trspec[i, 2] = left
+        trspec[i, 3] = right
+        if φ == Θ.modelalp_ind
+            trspec[i, 4] = 0
+        else
+            trspec[i, 4] = 1
+        end
+
+        i += 1
+    end
+
+
+    para_matlab = readcsv("m990/para.csv")
+    println("### para")
+    @test test_matrix_eq(para_matlab, para)
+
+    bounds_matlab = readcsv("m990/bounds.csv")
+    println("### bounds")
+    @test test_matrix_eq(bounds_matlab, bounds)
+
+    pshape_matlab = readcsv("m990/pshape.csv")
+    println("### pshape")
+    @test test_matrix_eq(pshape_matlab, pshape)
+
+    pmean_matlab = readcsv("m990/pmean.csv")
+    println("### pmean")
+    @test test_matrix_eq(pmean_matlab, pmean)
+    
+    pstdd_matlab = readcsv("m990/pstdd.csv")
+    println("### pstdd")
+    @test test_matrix_eq(pstdd_matlab, pstdd)
+    
+    trspec_matlab = readcsv("m990/trspec.csv")
+    println("### trspec")
+    @test test_matrix_eq(trspec_matlab, trspec)
     
     println("parameters.jl tests passed")
 end

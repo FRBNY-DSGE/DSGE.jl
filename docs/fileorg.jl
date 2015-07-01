@@ -65,9 +65,8 @@ dsge.jl/
       DistributionsExt.jl
         module DistributionsExt
           using Distributions
-          import Distributions: pdf
+          import Distributions: pdf, mean, std
           type PointMass <: Distribution{Univariate, Continuous}
-          function Distributions.pdf
           function Beta
           function Gamma
           function InverseGamma
@@ -101,7 +100,7 @@ dsge.jl/
       function test_modelinds
     models/
       test_M990.jl
-        using Base.Test
+        using Base.Test, Distributions
         using DSGE: DistributionsExt, AbstractModel, M990
         include("../util.jl")
         function test_all
