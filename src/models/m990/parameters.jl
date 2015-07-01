@@ -159,17 +159,17 @@ function Parameters990()
     psi1 = Param(1.3679, false, (1e-5, 10.), Normal(1.5, 0.25), 2, (1e-5, 10.00)) # psi1
     psi2 = Param(0.0388, false, (-0.5, 0.5), Normal(0.12, 0.05), 0, (-0.5, 0.5)) # psi2
     psi3 = Param(0.2464, false, (-0.5, 0.5), Normal(0.12, 0.05), 0, (-0.5, 0.5)) # psi3
-    pistar = Param(0.5000, scalefunction = x -> 1 + x/100, false, (1e-5, 10.), Gamma(0.75, 0.4), 2, (1e-5, 10.)) # pistar
+    pistar = Param(0.5000, scalefunction = x -> 1 + x/100, true, (1e-5, 10.), Gamma(0.75, 0.4), 2, (1e-5, 10.)) # pistar
     sigmac = Param(0.8719, false, (1e-5, 10.), Normal(1.5, 0.37), 2, (1e-5, 10.)) # sigmac
     rho = Param(0.7126, false, (1e-5, 0.999), Beta(0.75, 0.10), 1, (1e-5, 0.999)) # rho
     epsp = Param(10.) # epsp
     epsw = Param(10.) # epsw
 
     # financial frictions parameters
-    Fom = Param(0.0300, scalefunction = x -> 1 - (1-x)^0.25, true, (1e-5, 0.999), Beta(0.03, 0.01), 1, (1e-5, 0.999)) # Fom
+    Fom = Param(0.0300, scalefunction = x -> 1 - (1-x)^0.25, true, (1e-5, 0.99999), Beta(0.03, 0.01), 1, (1e-5, 0.99)) # Fom
     sprd = Param(1.7444, scalefunction = x -> (1 + x/100)^0.25, false, (0., 100.), Gamma(2., 0.1), 2, (1e-5, 0.)) # sprd
-    zeta_spb = Param(0.0559, false, (1e-5, 0.999), Beta(0.05, 0.005), 1, (1e-5, 0.999)) # zeta_spb
-    gammstar = Param(0.9900, true, (1e-5, 0.999), Beta(0.99, 0.002), 1, (1e-5, 0.999))  # gammstar
+    zeta_spb = Param(0.0559, false, (1e-5, 0.99999), Beta(0.05, 0.005), 1, (1e-5, 0.99)) # zeta_spb
+    gammstar = Param(0.9900, true, (1e-5, 0.99999), Beta(0.99, 0.002), 1, (1e-5, 0.99))  # gammstar
 
     # exogenous processes - level
     gam = Param(0.3673, scalefunction = x -> x/100, false, (-5., 5.), Normal(0.4, 0.1), 0, (-5.0, 5.0)) # gam
@@ -184,9 +184,9 @@ function Parameters990()
     ρ_laf = Param(0.8827, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_laf
     ρ_law = Param(0.3884, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_law
     ρ_rm = Param(0.2135, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_rm
-    ρ_sigw = Param(0.9898, false, (1e-5, 0.999), Beta(0.75, 0.15), 1, (1e-5, 0.999)) # rho_sigw
-    ρ_mue = Param(0.7500, true, (1e-5, 0.999), Beta(0.75, 0.15), 1, (1e-5, 0.999)) # rho_mue
-    ρ_gamm = Param(0.7500, true, (1e-5, 0.999), Beta(0.75, 0.15), 1, (1e-5, 0.999)) # rho_gamm
+    ρ_sigw = Param(0.9898, false, (1e-5, 0.99999), Beta(0.75, 0.15), 1, (1e-5, 0.99)) # rho_sigw
+    ρ_mue = Param(0.7500, true, (1e-5, 0.99999), Beta(0.75, 0.15), 1, (1e-5, 0.99)) # rho_mue
+    ρ_gamm = Param(0.7500, true, (1e-5, 0.99999), Beta(0.75, 0.15), 1, (1e-5, 0.99)) # rho_gamm
     ρ_pist = Param(0.9900, true, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_pist
     ρ_lr = Param(0.6936, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_lr
     ρ_zp = Param(0.8910, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999)) # rho_zp
@@ -217,7 +217,7 @@ function Parameters990()
         if i < 13
             eval(parse("σ_rm$i = Param(0.20, false, (1e-7, 100.), InverseGamma(0.2, 4.00), 2, (1e-5, 0.))"))
         else
-            eval(parse("σ_rm$i = Param(0.20, true, (1e-7, 100.), InverseGamma(0.2, 4.00), 2, (1e-5, 0.))"))
+            eval(parse("σ_rm$i = Param(0.0, true, (1e-7, 100.), InverseGamma(0.2, 4.00), 2, (1e-5, 0.))"))
         end
     end
 

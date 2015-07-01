@@ -28,7 +28,6 @@ type Param <: Number
         if fixed
             prior = PointMass(value)
             transformtype = 0
-            transformbounds = (value, value)
         end
         if transformtype != 0 && transformtype != 1 && transformtype != 2
             error("transformtype must be 0, 1, or 2")
