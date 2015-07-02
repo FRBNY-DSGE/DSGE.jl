@@ -246,7 +246,7 @@ function qzdiv(stake, A, B, Q, Z, v=[])
     for i=n:-1:1
         m = 0
         for j = i:-1:1
-            if (root[j,  2] > stake) || (root[j, 1] < -.1)
+            if (root[j,  2] > stake) || (root[j, 2] < -.1)
                 m = j
                 break
             end
