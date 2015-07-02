@@ -14,7 +14,7 @@ function test_all()
     model = Model()
     @test isa(model, Model)
     
-    println("All tests in M990.jl passed")
+    println("### All tests in M990.jl passed\n")
 end
 
 
@@ -25,7 +25,7 @@ function test_parameters()
     Θ = Parameters990()
     @test isa(Θ, Parameters990)
 
-    # Parameters match para, bounds, etc. vectors from Matlab
+    # Parameters match para, bounds, etc. vectors from Matlab (ε = 1e-4)
     para = zeros(82, 1)
     bounds = zeros(82, 2)
     pshape = zeros(82, 1)
@@ -79,31 +79,31 @@ function test_parameters()
     end
 
 
-    para_matlab = readcsv("m990/para.csv")
+    para_matlab = readcsv("m990/parameters/para.csv")
     println("### para")
     @test test_matrix_eq(para_matlab, para)
 
-    bounds_matlab = readcsv("m990/bounds.csv")
+    bounds_matlab = readcsv("m990/parameters/bounds.csv")
     println("### bounds")
     @test test_matrix_eq(bounds_matlab, bounds)
 
-    pshape_matlab = readcsv("m990/pshape.csv")
+    pshape_matlab = readcsv("m990/parameters/pshape.csv")
     println("### pshape")
     @test test_matrix_eq(pshape_matlab, pshape)
 
-    pmean_matlab = readcsv("m990/pmean.csv")
+    pmean_matlab = readcsv("m990/parameters/pmean.csv")
     println("### pmean")
     @test test_matrix_eq(pmean_matlab, pmean)
     
-    pstdd_matlab = readcsv("m990/pstdd.csv")
+    pstdd_matlab = readcsv("m990/parameters/pstdd.csv")
     println("### pstdd")
     @test test_matrix_eq(pstdd_matlab, pstdd)
     
-    trspec_matlab = readcsv("m990/trspec.csv")
+    trspec_matlab = readcsv("m990/parameters/trspec.csv")
     println("### trspec")
     @test test_matrix_eq(trspec_matlab, trspec)
     
-    println("parameters.jl tests passed")
+    println("parameters.jl tests passed\n")
 end
 
 
@@ -134,7 +134,7 @@ function test_modelinds()
     @test length(eq) == 66
     @test eq["eq_Ez"] == 60
     
-    println("modelinds.jl tests passed")
+    println("modelinds.jl tests passed\n")
 end
 
 
@@ -155,25 +155,25 @@ function test_eqcond()
     @test size(Π) == (66, 13)
 
     # Check output matrices against Matlab output (ε = 1e-4)
-    G0_matlab = readcsv("m990/G0.csv")
+    G0_matlab = readcsv("m990/eqcond/G0.csv")
     println("### G0")
     @test test_matrix_eq(G0_matlab, G0)
 
-    G1_matlab = readcsv("m990/G1.csv")
+    G1_matlab = readcsv("m990/eqcond/G1.csv")
     println("### G1")
     @test test_matrix_eq(G1_matlab, G1)
 
-    C_matlab = readcsv("m990/C.csv")
+    C_matlab = readcsv("m990/eqcond/C.csv")
     println("### C")
     @test test_matrix_eq(C_matlab, C)
-    
-    Ψ_matlab = readcsv("m990/PSI.csv")
+
+    Ψ_matlab = readcsv("m990/eqcond/PSI.csv")
     println("### Ψ")
     @test test_matrix_eq(Ψ_matlab, Ψ)
 
-    Π_matlab = readcsv("m990/PIE.csv")
+    Π_matlab = readcsv("m990/eqcond/PIE.csv")
     println("### Π")
     @test test_matrix_eq(Π_matlab, Π)
 
-    println("eqcond.jl tests passed")
+    println("eqcond.jl tests passed\n")
 end

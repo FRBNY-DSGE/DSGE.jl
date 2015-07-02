@@ -6,6 +6,12 @@
 # Compares matrices, reports absolute differences, returns true if all entries close enough
 function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::Array{R, 2},
              actual::Array{S, 2}, ε::T = 1e-4)
+    test_matrix_eq(complex(expected), complex(actual), ε)
+end
+
+# Complex-valued input matrices
+function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::
+             Array{Complex{R}, 2}, actual::Array{Complex{S}, 2}, ε::T = 1e-4)
     # Matrices of different sizes return false
     if size(expected) != size(actual)
         return false
@@ -53,6 +59,32 @@ end
 
 
 
+# Complex numbers are parsed weirdly from readcsv, so we build a complex array using regex
+function readcsv_complex(file::String)
+    matrix_str = readcsv(file)
+    rows, cols = size(matrix_str)
+    matrix = complex(zeros(rows, cols))
+    for j = 1:cols
+        for i = 1:rows
+#            println("$i, $j")
+            value = matrix_str[i, j]
+            if isa(value, String)
+                m = match(r"(\d+\.?\d*e?-?\d*)([+-]\d+\.?\d*+e?-?\d*)i", value)
+                a = parse(m.captures[1])
+                b = parse(m.captures[2])
+                matrix[i, j] = complex(a, b)
+            elseif isa(value, Number)
+                matrix[i, j] = complex(value)
+            else
+                error("($i, $j) entry not a string or number")
+            end
+        end
+    end
+    return matrix
+end
+
+
+
 function test_util()
     # Matrices of different sizes returns false
     m0 = zeros(2, 3)
@@ -72,6 +104,10 @@ function test_util()
     m2_float16 = convert(Array{Float16, 2}, m2)
     ε = convert(Float32, 0.0001)
     @test test_matrix_eq(m1, m2)
+
+    # Complex-valued matrices
+    @test test_matrix_eq(complex(m1), complex(m2))
+    @test !test_matrix_eq(complex(m1), complex(m3))
 
     println("util.jl tests passed")
 end

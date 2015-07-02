@@ -10,7 +10,7 @@ function test_all()
     test_param()
     test_parameters()
     test_modelinds()
-    println("All tests in AbstractModel.jl passed")
+    println("### All tests in AbstractModel.jl passed\n")
 end
 
 
@@ -52,7 +52,7 @@ function test_param()
     @test_approx_eq_eps(toreal(α), cx / sqrt(1 - cx^2), 0.001)
     @test toreal(δ) == 0.025
 
-    println("param.jl tests passed")
+    println("param.jl tests passed\n")
 end
 
 
@@ -73,7 +73,7 @@ function test_parameters()
     @test priordensity >= 0
     @test priordensity <= 1
 
-    println("parameters.jl tests passed")
+    println("parameters.jl tests passed\n")
 end
 
 
@@ -86,7 +86,7 @@ function test_modelinds()
     @test dict["bob"] == 2
     @test_throws KeyError dict["carol"]
 
-    println("modelinds.jl tests passed")
+    println("modelinds.jl tests passed\n")
 end
 
 
