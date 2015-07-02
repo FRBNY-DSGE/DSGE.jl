@@ -27,7 +27,6 @@ function test_param()
     α_fixed = Param(0.1596, true, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999))
     @test isa(α_fixed.prior, PointMass)
     @test α_fixed.transformtype == 0
-    @test α_fixed.transformbounds == (0.1596, 0.1596)
 
     # One-argument Param constructor
     δ = Param(0.025)
