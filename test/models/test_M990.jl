@@ -11,7 +11,7 @@ function test_all()
     test_eqcond()
 
     # Model instantiation
-    model = Model990()
+    model = Model()
     @test isa(model, Model)
     
     println("All tests in M990.jl passed")
@@ -111,7 +111,7 @@ end
 # src/models/m990/modelinds.jl
 function test_modelinds()
     # ModelInds object creation
-    I = ModelInds990()
+    I = ModelInds()
     @test isa(I, ModelInds)
 
     # Endogenous states
@@ -144,7 +144,7 @@ end
 function test_eqcond()
     # eqcond function executes successfully
     Θ = Parameters990()
-    I = ModelInds990()
+    I = ModelInds()
     G0, G1, C, Ψ, Π = eqcond(Θ, I)
 
     # Matrices are of expected dimensions

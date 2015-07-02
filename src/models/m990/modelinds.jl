@@ -1,8 +1,9 @@
-using DSGE.AbstractModel
+using ..AbstractModel
+import ..AbstractModel: ModelInds
 
 # Return a ModelInds object, which has four fields: each is a dictionary mapping states or
 #   equations to model indices
-function ModelInds990()
+function AbstractModel.ModelInds()
     endostates = ["y_t",
                   "c_t",
                   "i_t",

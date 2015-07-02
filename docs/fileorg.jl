@@ -1,14 +1,15 @@
-# This file has extension .jl only for the purposes of syntax highlighting; it should not
+# This file has extensoion .jl only for the purposes of syntax highlighting; it should not
 #   be run
 
 dsge.jl/
   src/
     DSGE.jl
       module DSGE
-        export AbstractModel, DistributionsExt, FinancialFrictionsFunctions, M990
+        export M990, solve
         include("init/DistributionsExt.jl")
         include("init/FinancialFrictionsFunctions.jl")
         include("AbstractModel.jl")
+        include("solve/solve.jl")
         include("models/M990.jl")
       end
     AbstractModel.jl
@@ -23,7 +24,7 @@ dsge.jl/
       param.jl
         using Distributions: Distribution
         import Base: convert, promote_rule, log, exp
-        using DSGE.DistributionsExt: PointMass
+        using ..DistributionsExt: PointMass
         type Param
         function toreal
         function tomodel
@@ -40,26 +41,27 @@ dsge.jl/
     models/
       M990.jl
         module M990
-          using DSGE.AbstractModel
-          export Parameters990, ModelInds990, Model990, eqcond
+          using ..AbstractModel
+          import ..AbstractModel: Model
+          export Parameters990, ModelInds, Model, eqcond
           include("spec.jl")
           include("parameters.jl")
           include("modelinds.jl")
           include("eqcond.jl")
-          function Model990
+          function AbstractModel.Model
         end
       m990/
         spec.jl
         parameters.jl
           using Distributions: Normal, quantile
           using Roots: fzero
-          using DSGE.DistributionsExt: Beta, Gamma, InverseGamma
-          using DSGE.FinancialFrictionsFunctions
+          using ..DistributionsExt: Beta, Gamma, InverseGamma
+          using ..FinancialFrictionsFunctions
           type Parameters990 <: Parameters
           function steadystate!
         modelinds.jl
-          using DSGE.AbstractModel
-          function ModelInds990
+          using ..AbstractModel
+          function AbstractModel.ModelInds
         eqcond.jl
           function eqcond
     init/
@@ -80,6 +82,11 @@ dsge.jl/
           ...
         end
     solve/
+      solve.jl
+        using DSGE.AbstractModel
+        include("gensys.jl")
+        function solve
+      gensys.jl
     estimate/
     forecast/
   docs/

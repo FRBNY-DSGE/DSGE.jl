@@ -1,8 +1,8 @@
 using Distributions: Normal, quantile
 using Roots: fzero
 
-using DSGE.DistributionsExt: Beta, Gamma, InverseGamma
-using DSGE.FinancialFrictionsFunctions
+using ..DistributionsExt: Beta, Gamma, InverseGamma
+using ..FinancialFrictionsFunctions
 
 # Then assign parameters to a theta vector
 # θ = Parameters(α, β, etc.)
