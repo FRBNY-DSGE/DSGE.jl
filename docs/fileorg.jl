@@ -83,7 +83,7 @@ dsge.jl/
         end
     solve/
       solve.jl
-        using DSGE.AbstractModel
+        using .AbstractModel
         include("gensys.jl")
         function solve
       gensys.jl
@@ -97,6 +97,7 @@ dsge.jl/
   test/
     util.jl
       function test_matrix_eq
+      function readcsv_complex
       function test_util
     test_AbstractModel.jl
       using Base.Test
@@ -106,6 +107,12 @@ dsge.jl/
       function test_param
       function test_parameters
       function test_modelinds
+    test_solve.jl
+      using Base.test
+      using DSGE
+      using .M990
+      include("util.jl")
+      function test_solve
     models/
       test_M990.jl
         using Base.Test, Distributions
@@ -116,9 +123,26 @@ dsge.jl/
         function test_modelinds
         function test_eqcond
       m990/
-        G0.csv
-        G1.csv
-        C.csv
-        PSI.csv
-        PIE.csv
+        parameters/
+          para.csv
+          bounds.csv
+          pshape.csv
+          pmean.csv
+          pstdd.csv
+          trspec.csv
+        eqcond/
+          G0.csv
+          G1.csv
+          C.csv
+          PSI.csv
+          PIE.csv
+        gensys/
+          G1.csv
+          C.csv
+          impact.csv
+          fmat.csv
+          fwt.csv
+          ywt.csv
+          gev.csv
+          eu.csv
   README.md

@@ -66,10 +66,12 @@ function readcsv_complex(file::String)
     matrix = complex(zeros(rows, cols))
     for j = 1:cols
         for i = 1:rows
-#            println("$i, $j")
             value = matrix_str[i, j]
             if isa(value, String)
                 m = match(r"(\d+\.?\d*e?-?\d*)([+-]\d+\.?\d*+e?-?\d*)i", value)
+                if m == nothing
+                    error("Regex didn't match anything at ($i, $j) entry")
+                end
                 a = parse(m.captures[1])
                 b = parse(m.captures[2])
                 matrix[i, j] = complex(a, b)

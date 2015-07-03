@@ -1,7 +1,7 @@
 using Base.Test
 
 using DSGE
-using DSGE: M990
+using .M990
 include("util.jl")
 
 # src/solve/solve.jl
