@@ -1,54 +1,38 @@
 # Utilities for testing DSGE.jl
+using Base.Test
 
 
 
 # TODO: decide what a sensible default ε value is for our situation
 # Compares matrices, reports absolute differences, returns true if all entries close enough
-function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::Array{R, 2},
-             actual::Array{S, 2}, ε::T = 1e-4)
+function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::Array{R},
+             actual::Array{S}, ε::T = 1e-4)
     test_matrix_eq(complex(expected), complex(actual), ε)
 end
 
 # Complex-valued input matrices
 function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::
-             Array{Complex{R}, 2}, actual::Array{Complex{S}, 2}, ε::T = 1e-4)
+             Array{Complex{R}}, actual::Array{Complex{S}}, ε::T = 1e-4)
     # Matrices of different sizes return false
     if size(expected) != size(actual)
         return false
     end
 
-    # Size variables and counters
-    (rows, cols) = size(expected)
-    n_entries = rows * cols
+    n_dims = ndims(expected)
+    n_entries = length(expected)
     
-    n_neq = 0                   # number of entries with abs diff > 0
-    n_not_approx_eq = 0         # number of entries with abs diff > ε
-    max_abs_diff = 0.0          # maximum abs diff
-    max_inds = (0, 0)           # indices of maximum abs diff
-
-    # Count differences and find max
-    for j = 1:cols
-        for i = 1:rows
-            abs_diff = abs(expected[i, j] - actual[i, j])
-            if abs_diff > 0
-                n_neq += 1
-                if abs_diff > ε
-                    n_not_approx_eq += 1
-                end
-                if abs_diff > max_abs_diff
-                    max_abs_diff = abs_diff
-                    max_inds = (i, j)
-                end
-            end
-        end
-    end
-
+    # Count differences and find max    
+    abs_diff = abs(expected - actual)
+    n_neq = countnz(abs_diff)
+    n_not_approx_eq = count(x -> x > ε, abs_diff)
+    max_abs_diff = maximum(abs_diff)
+    max_inds = ind2sub(size(abs_diff), indmax(abs_diff))
+    
     # Print output
     println("$n_neq of $n_entries entries with abs diff > 0")
     println("$n_not_approx_eq of $n_entries entries with abs diff > $ε")
-    if max_inds != (0, 0)
-        (i, j) = max_inds
-        println("Max abs diff of $max_abs_diff at entry ($i, $j)\n")
+    if n_neq != 0
+        println("Max abs diff of $max_abs_diff at entry $max_inds\n")
     else
         println("Max abs diff of 0\n")
     end
@@ -63,7 +47,8 @@ end
 function readcsv_complex(file::String)
     matrix_str = readcsv(file)
     rows, cols = size(matrix_str)
-    matrix = complex(zeros(rows, cols))
+    matrix = complex(zeros(size(matrix_str)))
+
     for j = 1:cols
         for i = 1:rows
             value = matrix_str[i, j]
@@ -87,7 +72,7 @@ end
 
 
 
-function test_util()
+function test_test_matrix_eq()
     # Matrices of different sizes returns false
     m0 = zeros(2, 3)
     m1 = zeros(2, 2)
@@ -111,5 +96,17 @@ function test_util()
     @test test_matrix_eq(complex(m1), complex(m2))
     @test !test_matrix_eq(complex(m1), complex(m3))
 
-    println("util.jl tests passed")
+    # 3D arrays
+    m4 = zeros(2, 2, 2)
+    m5 = ones(2, 2, 2)
+    @test !test_matrix_eq(m4, m5)
+    
+    println("test_matrix_eq tests passed")
+end
+
+
+
+function test_readcsv_complex()
+    readcsv_complex("test_readcsv_complex.csv")
+    println("readcsv_complex tests passed")
 end
