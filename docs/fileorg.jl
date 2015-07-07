@@ -5,11 +5,12 @@ dsge.jl/
   src/
     DSGE.jl
       module DSGE
-        export M990, solve
+        export M990
         include("init/DistributionsExt.jl")
         include("init/FinancialFrictionsFunctions.jl")
         include("AbstractModel.jl")
-        include("solve/solve.jl")
+        include("solve/Gensys.jl")
+        include("solve/Kalman.jl")
         include("models/M990.jl")
       end
     AbstractModel.jl
@@ -82,16 +83,13 @@ dsge.jl/
           ...
         end
     solve/
-      solve.jl
-        using .AbstractModel
-        include("gensys.jl")
-        function solve
-      gensys.jl
-        module GenSys
-        include("ordered_qz.jl")
-        export gensys
-        function new_div
-        function gensys
+      Gensys.jl
+        module Gensys
+          include("ordered_qz.jl")
+          export gensys
+          function new_div
+          function gensys
+        end
       ordered_qz.jl
       Kalman.jl
         module Kalman
@@ -142,12 +140,10 @@ dsge.jl/
           G1.csv
           ...
     solve/
-      test_solve.jl
+      test_Gensys.jl
         using Base.test
-        using DSGE
-        using .M990
+        using DSGE: M990, Gensys
         include("../util.jl")
-        function test_solve
       test_ordered_qz.jl
         using Base.Test, Compat
         import Base.Linalg: BlasComplex, BlasFloat, BlasReal, QRPivoted

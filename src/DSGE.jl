@@ -5,21 +5,16 @@
 #   using DSGE
 #   using .M990
 #   model = Model()
-#   solve(model)
 
 module DSGE
 
-export
-    # modules
-    M990,
-
-    # functions
-    solve
+export M990
 
 include("init/DistributionsExt.jl")
 include("init/FinancialFrictionsFunctions.jl")
 include("AbstractModel.jl")
-include("solve/solve.jl")
+
+include("solve/Gensys.jl")
 include("solve/Kalman.jl")
 
 include("models/M990.jl")
