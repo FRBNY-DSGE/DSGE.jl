@@ -72,6 +72,13 @@ end
 
 
 
+function test_util()
+    test_test_matrix_eq()
+    test_readcsv_complex()
+    println("### All tests in util.jl tests passed\n")
+end
+
+
 function test_test_matrix_eq()
     # Matrices of different sizes returns false
     m0 = zeros(2, 3)
@@ -101,12 +108,12 @@ function test_test_matrix_eq()
     m5 = ones(2, 2, 2)
     @test !test_matrix_eq(m4, m5)
     
-    println("test_matrix_eq tests passed")
+    println("test_matrix_eq tests passed\n")
 end
 
 
 
 function test_readcsv_complex()
     readcsv_complex("test_readcsv_complex.csv")
-    println("readcsv_complex tests passed")
+    println("readcsv_complex tests passed\n")
 end

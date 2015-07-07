@@ -20,6 +20,7 @@ include("init/DistributionsExt.jl")
 include("init/FinancialFrictionsFunctions.jl")
 include("AbstractModel.jl")
 include("solve/solve.jl")
+include("solve/Kalman.jl")
 
 include("models/M990.jl")
 

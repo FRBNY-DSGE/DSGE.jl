@@ -93,6 +93,11 @@ dsge.jl/
         function new_div
         function gensys
       ordered_qz.jl
+      Kalman.jl
+        module Kalman
+          export kalcvf2NaN
+          function kalcvf2NaN
+        end
     estimate/
     forecast/
   docs/
@@ -101,10 +106,14 @@ dsge.jl/
     DSGE_Model_Documentation.pdf
     supersticky1214.pdf
   test/
+    test_readcsv_complex.csv
     util.jl
+      using Base.Test
       function test_matrix_eq
       function readcsv_complex
       function test_util
+      function test_test_matrix_eq
+      function test_readcsv_complex
     test_AbstractModel.jl
       using Base.Test
       using Distributions
@@ -125,26 +134,13 @@ dsge.jl/
       m990/
         parameters/
           para.csv
-          bounds.csv
-          pshape.csv
-          pmean.csv
-          pstdd.csv
-          trspec.csv
+          ...
         eqcond/
           G0.csv
-          G1.csv
-          C.csv
-          PSI.csv
-          PIE.csv
+          ...
         gensys/
           G1.csv
-          C.csv
-          impact.csv
-          fmat.csv
-          fwt.csv
-          ywt.csv
-          gev.csv
-          eu.csv
+          ...
     solve/
       test_solve.jl
         using Base.test
@@ -156,4 +152,18 @@ dsge.jl/
         using Base.Test, Compat
         import Base.Linalg: BlasComplex, BlasFloat, BlasReal, QRPivoted
         include("../../src/solve/ordered_qz.jl")
+      test_Kalman.jl
+        using Base.Test
+        using DSGE.Kalman
+        include("../util.jl")
+      kalcvf2NaN/
+        args/
+          data
+          ...
+        out7/
+          L.csv
+          ...
+        out9/
+          L.csv
+          ...
   README.md
