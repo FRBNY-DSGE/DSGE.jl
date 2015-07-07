@@ -56,7 +56,8 @@ only with not-s.c. z; eu=[-2,-2] for coincident zeros.
 =#
 
 module GenSys
-
+include("ordered_qz.jl")
+    
 export gensys
 
 
@@ -109,7 +110,6 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     ε = 1e-6  # small number to check convergence
     nunstab = 0.0
     zxz = 0
-    # a, b, q, z = map(real, {F[:S], F[:T], F[:Q]', F[:Z]})
     a, b, q, z = F[:S], F[:T], F[:Q]', F[:Z]
     n = size(a, 1)
 
@@ -126,7 +126,12 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
         throw(InexactError())
     end
 
-    a, b, q, z = qzdiv(div, a, b, q, z)
+    # TODO: Replicate qzdiv functionality (which we don't have permission from Chris Sims to
+    #   use) using ordschur. Currently line 221 `G0I = inv(G0)` throws an exception.
+    select = abs(F[:values]) .< div
+    FS = ordschur(F, select)
+    a, b, q, z = FS[:S], FS[:T], FS[:Q]', FS[:Z]
+    #a, b, q, z = qzdiv(div, a, b, q, z)
     gev = [diag(a) diag(b)]
 
     q1 = q[1:n-nunstab, :]

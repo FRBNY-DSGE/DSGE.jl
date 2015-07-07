@@ -1,11 +1,11 @@
-include("../src/ordered_qz.jl")
-
 debug = false
 
-using Base.Test
+using Base.Test, Compat
 
 # these tests were pulled directly from main Julia
 import Base.LinAlg: BlasComplex, BlasFloat, BlasReal, QRPivoted
+
+include("../../src/solve/ordered_qz.jl")
 
 n = 10
 
@@ -41,7 +41,7 @@ debug && println("Reorder Schur")
         # avoiding partly selection of conj. eigenvalues
         ordschura = eltya <: Complex ? a : asym
         S = schurfact(ordschura)
-        select = bitrand(n)
+        select = Compat.bitrand(n)
         O = ordschur(S, select)
         bool(sum(select)) && @test_approx_eq S[:values][find(select)] O[:values][1:sum(select)]
         @test_approx_eq O[:vectors]*O[:Schur]*O[:vectors]' ordschura

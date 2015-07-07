@@ -2,7 +2,7 @@ using Base.Test
 
 using DSGE
 using .M990
-include("util.jl")
+include("../util.jl")
 
 # src/solve/solve.jl
 function test_solve()

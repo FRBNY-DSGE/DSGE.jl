@@ -87,6 +87,12 @@ dsge.jl/
         include("gensys.jl")
         function solve
       gensys.jl
+        module GenSys
+        include("ordered_qz.jl")
+        export gensys
+        function new_div
+        function gensys
+      ordered_qz.jl
     estimate/
     forecast/
   docs/
@@ -107,12 +113,6 @@ dsge.jl/
       function test_param
       function test_parameters
       function test_modelinds
-    test_solve.jl
-      using Base.test
-      using DSGE
-      using .M990
-      include("util.jl")
-      function test_solve
     models/
       test_M990.jl
         using Base.Test, Distributions
@@ -145,4 +145,15 @@ dsge.jl/
           ywt.csv
           gev.csv
           eu.csv
+    solve/
+      test_solve.jl
+        using Base.test
+        using DSGE
+        using .M990
+        include("../util.jl")
+        function test_solve
+      test_ordered_qz.jl
+        using Base.Test, Compat
+        import Base.Linalg: BlasComplex, BlasFloat, BlasReal, QRPivoted
+        include("../../src/solve/ordered_qz.jl")
   README.md
