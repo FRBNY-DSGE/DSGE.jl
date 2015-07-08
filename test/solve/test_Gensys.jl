@@ -9,12 +9,6 @@ include("../../src/solve/Gensys_versions.jl")
 
 ### TEST CALLS TO GENSYS
 
-model = Model()
-Γ0, Γ1, C, Ψ, Π = model.eqcond(model.Θ, model.I)
-Γ1, C, impact, fmat, fwt, ywt, gev, eu, loose = gensys(complex(Γ0), complex(Γ1), C, Ψ, Π, 1 + 1e-5)
-
-
-
 # Γ0, Γ1 matrices from evaluating Matlab code up to gensys call
 mf = MatFile("gensys/gensys_args.mat")
 Γ0 = get_variable(mf, "G0")
@@ -32,8 +26,9 @@ gensys_ordschur(Γ0, Γ1, C, Ψ, Π, stake) # Throws a SingularException
 
 
 
-### TEST QZ ORDERING
+### TEST QZ FACTORIZATION
 
+# Matlab qz
 # [AA, BB, Q, Z] = qz(G0, G1);
 # alpha = diag(AA);
 # beta = diag(BB);
@@ -45,6 +40,23 @@ Z = get_variable(mf, "Z")
 alpha = get_variable(mf, "alpha")
 beta = complex(get_variable(mf, "beta"))
 close(mf)
+
+# Julia schurfact
+F = schurfact(Γ0, Γ1)
+AA_schurfact, BB_schurfact, Q_schurfact, Z_schurfact = F[:S], F[:T], F[:Q]', F[:Z]
+
+#=
+# Matlab qz vs Julia schurfact
+# None of these pass
+@test test_matrix_eq(AA, AA_schurfact)
+@test test_matrix_eq(BB, BB_schurfact)
+@test test_matrix_eq(Q, Q_schurfact)
+@test test_matrix_eq(Z, Z_schurfact)
+=#
+
+
+
+### TEST QZ ORDERING
 
 # Matlab qzdiv
 # [AA_qzdiv, BB_qzdiv, Q_qzdiv, Z_qzdiv] = qzdiv(AA, BB, Q, Z);
