@@ -1,0 +1,3 @@
+[submodule "resources/MATLAB.jl"]
+	path = resources/MATLAB.jl
+	url = https://github.com/JuliaLang/MATLAB.jl
