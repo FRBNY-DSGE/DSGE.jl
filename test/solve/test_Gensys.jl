@@ -9,10 +9,16 @@ include("../../src/solve/Gensys_versions.jl")
 
 ### TEST CALLS TO GENSYS
 
-# G0, G1 matrices from evaluating Matlab code up to gensys call
+model = Model()
+Γ0, Γ1, C, Ψ, Π = model.eqcond(model.Θ, model.I)
+Γ1, C, impact, fmat, fwt, ywt, gev, eu, loose = gensys(complex(Γ0), complex(Γ1), C, Ψ, Π, 1 + 1e-5)
+
+
+
+# Γ0, Γ1 matrices from evaluating Matlab code up to gensys call
 mf = MatFile("gensys/gensys_args.mat")
-G0 = get_variable(mf, "G0")
-G1 = get_variable(mf, "G1")
+Γ0 = get_variable(mf, "G0")
+Γ1 = get_variable(mf, "G1")
 C = get_variable(mf, "C")
 Ψ = get_variable(mf, "PSI")
 Π = get_variable(mf, "PIE")
@@ -20,8 +26,8 @@ stake = get_variable(mf, "div")
 close(mf)
 
 #=
-gensys_qzdiv(G0, G1, C, Ψ, Π, stake) # Runs without throwing exception
-gensys_ordschur(G0, G1, C, Ψ, Π, stake) # Throws a SingularException
+gensys_qzdiv(Γ0, Γ1, C, Ψ, Π, stake) # Runs without throwing exception
+gensys_ordschur(Γ0, Γ1, C, Ψ, Π, stake) # Throws a SingularException
 =#
 
 
