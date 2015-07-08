@@ -134,10 +134,10 @@ dsge.jl/
           para.csv
           ...
         eqcond/
-          G0.csv
+          Γ0.csv
           ...
         gensys/
-          G1.csv
+          Γ1.csv
           ...
     solve/
       test_Gensys.jl

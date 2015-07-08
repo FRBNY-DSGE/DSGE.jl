@@ -145,23 +145,23 @@ function test_eqcond()
     # eqcond function executes successfully
     Θ = Parameters990()
     I = ModelInds()
-    G0, G1, C, Ψ, Π = eqcond(Θ, I)
+    Γ0, Γ1, C, Ψ, Π = eqcond(Θ, I)
 
     # Matrices are of expected dimensions
-    @test size(G0) == (66, 66)
-    @test size(G1) == (66, 66)
+    @test size(Γ0) == (66, 66)
+    @test size(Γ1) == (66, 66)
     @test size(C) == (66, 1)
     @test size(Ψ) == (66, 22)
     @test size(Π) == (66, 13)
 
     # Check output matrices against Matlab output (ε = 1e-4)
-    G0_matlab = readcsv("m990/eqcond/G0.csv")
-    println("### G0")
-    @test test_matrix_eq(G0_matlab, G0)
+    Γ0_matlab = readcsv("m990/eqcond/Γ0.csv")
+    println("### Γ0")
+    @test test_matrix_eq(Γ0_matlab, Γ0)
 
-    G1_matlab = readcsv("m990/eqcond/G1.csv")
-    println("### G1")
-    @test test_matrix_eq(G1_matlab, G1)
+    Γ1_matlab = readcsv("m990/eqcond/Γ1.csv")
+    println("### Γ1")
+    @test test_matrix_eq(Γ1_matlab, Γ1)
 
     C_matlab = readcsv("m990/eqcond/C.csv")
     println("### C")
