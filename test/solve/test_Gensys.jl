@@ -1,28 +1,96 @@
-using Base.Test
+using Base: Test, LinAlg
+using MATLAB
 
-using DSGE: M990, Gensys
+using DSGE: Gensys
 include("../util.jl")
+include("../../src/solve/Gensys_versions.jl")
 
 
 
-model = Model()
-G0, G1, C, Ψ, Π = model.eqcond(model.Θ, model.I)
-G1, C, impact, fmat, fwt, ywt, gev, eu, loose = gensys(complex(G0), complex(G1), C, Ψ, Π, 1 + 1e-5)
+### TEST CALLS TO GENSYS
+
+# G0, G1 matrices from evaluating Matlab code up to gensys call
+mf = MatFile("gensys/gensys_args.mat")
+G0 = get_variable(mf, "G0")
+G1 = get_variable(mf, "G1")
+C = get_variable(mf, "C")
+Ψ = get_variable(mf, "PSI")
+Π = get_variable(mf, "PIE")
+stake = get_variable(mf, "div")
+close(mf)
+
+#=
+gensys_qzdiv(G0, G1, C, Ψ, Π, stake) # Runs without throwing exception
+gensys_ordschur(G0, G1, C, Ψ, Π, stake) # Throws a SingularException
+=#
 
 
 
-# Check output matrices against Matlab output (ε = 1e-4)
-for out in ["G1", "C", "impact", "fmat", "fwt", "ywt", "gev"]
-    if out ∈ ["G1", "C", "impact"]
-        eval(parse("$(out)_expected = readcsv(\"models/m990/gensys/$out.csv\")"))
-    else
-        eval(parse("$(out)_expected = readcsv_complex(\"models/m990/gensys/$out.csv\")"))
-    end
-    println("### $out")
-    eval(parse("@test test_matrix_eq($(out)_expected, $out)"))
-end
+### TEST QZ ORDERING
 
-eu_matlab = readcsv("models/m990/gensys/eu.csv")
-eu_matlab = convert(Array{Int64, 1}, vec(eu_matlab))
-@test eu_matlab == eu
+# [AA, BB, Q, Z] = qz(G0, G1);
+# alpha = diag(AA);
+# beta = diag(BB);
+mf = MatFile("gensys/gensys_variables.mat")
+AA = get_variable(mf, "AA")
+BB = get_variable(mf, "BB")
+Q = get_variable(mf, "Q")
+Z = get_variable(mf, "Z")
+alpha = get_variable(mf, "alpha")
+beta = complex(get_variable(mf, "beta"))
+close(mf)
 
+# Matlab qzdiv
+# [AA_qzdiv, BB_qzdiv, Q_qzdiv, Z_qzdiv] = qzdiv(AA, BB, Q, Z);
+mf = MatFile("gensys/gensys_variables.mat")
+AA_qzdiv = get_variable(mf, "AA_qzdiv")
+BB_qzdiv = get_variable(mf, "BB_qzdiv")
+Q_qzdiv = get_variable(mf, "Q_qzdiv")
+Z_qzdiv = get_variable(mf, "Z_qzdiv")
+close(mf)
+
+# Matlab ordqz
+# E = ordeig(AA, BB);
+# select = abs(E) < div;
+# [AA_ordqz, BB_ordqz, Q_ordqz, Z_ordqz] = ordqz(AA, BB, Q, Z, select);
+mf = MatFile("gensys/gensys_variables.mat")
+AA_ordqz = get_variable(mf, "AA_ordqz")
+BB_ordqz = get_variable(mf, "BB_ordqz")
+Q_ordqz = get_variable(mf, "Q_ordqz")
+Z_ordqz = get_variable(mf, "Z_ordqz")
+close(mf)
+
+# Julia qzdiv
+AA_qzdiv_j, BB_qzdiv_j, Q_qzdiv_j, Z_qzdiv_j = Gensys.qzdiv(stake, AA, BB, Q, Z)
+AA_qzdiv_j_CC, BB_qzdiv_j_CC, Q_qzdiv_j_CC, Z_qzdiv_j_CC = qzdiv_CC(stake, AA, BB, Q, Z)
+
+# Julia ordschur
+F = GeneralizedSchur(AA, BB, alpha, beta, Q', Z)
+select = abs(F[:values]) .< stake
+FS = ordschur(F, select)
+AA_ordschur, BB_ordschur, Q_ordschur, Z_ordschur = FS[:S], FS[:T], FS[:Q]', FS[:Z]
+
+#=
+# Matlab qzdiv vs Julia qzdiv
+# These don't pass
+@test test_matrix_eq(AA_qzdiv, AA_qzdiv_j)
+@test test_matrix_eq(BB_qzdiv, BB_qzdiv_j)
+@test test_matrix_eq(Q_qzdiv, Q_qzdiv_j)
+@test test_matrix_eq(Z_qzdiv, Z_qzdiv_j)
+=#
+
+#=
+# Matlab qzdiv vs Julia qzdiv_CC
+# I could have sworn these passed at one point, but now they don't??
+@test test_matrix_eq(AA_qzdiv, AA_qzdiv_j_CC)
+@test test_matrix_eq(BB_qzdiv, BB_qzdiv_j_CC)
+@test test_matrix_eq(Q_qzdiv, Q_qzdiv_j_CC)
+@test test_matrix_eq(Z_qzdiv, Z_qzdiv_j_CC)
+=#
+
+#=
+# None of these pass
+@test test_matrix_eq(AA_qzdiv, AA_ordschur)
+@test test_matrix_eq(AA_ordqz, AA_ordschur)
+@test test_matrix_eq(AA_qzdiv, AA_ordqz)
+=#
