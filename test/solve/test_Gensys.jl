@@ -31,19 +31,13 @@ gensys_ordschur(complex(Γ0), complex(Γ1), C, Ψ, Π, stake) # Throws LAPACKExc
 ### TEST QZ FACTORIZATION
 
 # Matlab qz
-# [AA, BB, Q, Z] = qz(G0, G1);
-# alpha = diag(AA);
-# beta = diag(BB);
-# E = ordeig(AA, BB);
-mf = MatFile("gensys/gensys_variables.mat")
-AA = get_variable(mf, "AA")
-BB = get_variable(mf, "BB")
-Q = get_variable(mf, "Q")
-Z = get_variable(mf, "Z")
-alpha = get_variable(mf, "alpha")
-beta = complex(get_variable(mf, "beta"))
-E = get_variable(mf, "E")
-close(mf)
+mat"""
+    [$AA, $BB, $Q, $Z] = qz($Γ0, $Γ1);
+    $alpha = diag($AA);
+    $beta = complex(diag($BB));
+    $E = ordeig($AA, $BB);
+"""
+AA_orig, BB_orig, Q_orig, Z_orig = copy(AA), copy(BB), copy(Q), copy(Z)
 
 # Julia schurfact, coercing arguments to complex
 F = schurfact(complex(Γ0), complex(Γ1))
@@ -64,7 +58,8 @@ AA_schurfact, BB_schurfact, Q_schurfact, Z_schurfact = F[:S], F[:T], F[:Q]', F[:
 ### TEST QZ ORDERING
 
 # Matlab qzdiv
-# [AA_qzdiv, BB_qzdiv, Q_qzdiv, Z_qzdiv] = qzdiv(AA, BB, Q, Z);
+# [$AA_qzdiv, $BB_qzdiv, $Q_qzdiv, $Z_qzdiv] = qzdiv($AA, $BB, $Q, $Z);
+# It doesn't seem like we can call qzdiv.m using MATLAB.jl
 mf = MatFile("gensys/gensys_variables.mat")
 AA_qzdiv_m = get_variable(mf, "AA_qzdiv")
 BB_qzdiv_m = get_variable(mf, "BB_qzdiv")
@@ -73,14 +68,10 @@ Z_qzdiv_m = get_variable(mf, "Z_qzdiv")
 close(mf)
 
 # Matlab ordqz
-# select = abs(E) < div;
-# [AA_ordqz, BB_ordqz, Q_ordqz, Z_ordqz] = ordqz(AA, BB, Q, Z, select);
-mf = MatFile("gensys/gensys_variables.mat")
-AA_ordqz = get_variable(mf, "AA_ordqz")
-BB_ordqz = get_variable(mf, "BB_ordqz")
-Q_ordqz = get_variable(mf, "Q_ordqz")
-Z_ordqz = get_variable(mf, "Z_ordqz")
-close(mf)
+mat"""
+    select = abs($E) < $stake;
+   [$AA_ordqz, $BB_ordqz, $Q_ordqz, $Z_ordqz] = ordqz($AA, $BB, $Q, $Z, select);
+"""
 
 # Julia qzdiv
 AA_qzdiv_j, BB_qzdiv_j, Q_qzdiv_j, Z_qzdiv_j = Gensys.qzdiv(stake, AA, BB, Q, Z)
@@ -104,3 +95,11 @@ AA_ordschur, BB_ordschur, Q_ordschur, Z_ordschur = FS[:S], FS[:T], FS[:Q]', FS[:
 @test !test_matrix_eq(AA_qzdiv_j, AA_ordqz)
 @test !test_matrix_eq(AA_qzdiv_j, AA_ordschur)
 @test !test_matrix_eq(AA_ordqz, AA_ordschur)
+
+
+
+### MAKE SURE NO ARGUMENTS CHANGED DURING EVALUATION
+@test AA == AA_orig
+@test BB == BB_orig
+@test Q == Q_orig
+@test Z == Z_orig
