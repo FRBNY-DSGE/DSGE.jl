@@ -77,24 +77,39 @@ mat"""
 AA_qzdiv_j, BB_qzdiv_j, Q_qzdiv_j, Z_qzdiv_j = Gensys.qzdiv(stake, AA, BB, Q, Z)
 
 # Julia ordschur
-F2 = GeneralizedSchur(AA, BB, alpha, beta, Q', Z)
 select = abs(F[:values]) .< stake
 FS = ordschur(F, select)
 AA_ordschur, BB_ordschur, Q_ordschur, Z_ordschur = FS[:S], FS[:T], FS[:Q]', FS[:Z]
 
 
 # Matlab qzdiv and Julia qzdiv DO NOT return the same QZ ordering
-@test !test_matrix_eq(AA_qzdiv_m, AA_qzdiv_j)
-@test !test_matrix_eq(BB_qzdiv_m, BB_qzdiv_j)
-@test !test_matrix_eq(Q_qzdiv_m, Q_qzdiv_j)
-@test !test_matrix_eq(Z_qzdiv_m, Z_qzdiv_j)
+# About 2000/4356 entries differ by > 1e-4
+println("### AA_qzdiv_m vs AA_qzdiv_j")
+@test !test_matrix_eq(AA_qzdiv_m, AA_qzdiv_j; noisy=true)
+println("### BB_qzdiv_m vs BB_qzdiv_j")
+@test !test_matrix_eq(BB_qzdiv_m, BB_qzdiv_j; noisy=true)
+println("### Q_qzdiv_m vs Q_qzdiv_j")
+@test !test_matrix_eq(Q_qzdiv_m, Q_qzdiv_j; noisy=true)
+println("### Z_qzdiv_m vs Z_qzdiv_j")
+@test !test_matrix_eq(Z_qzdiv_m, Z_qzdiv_j; noisy=true)
 
 # Neither do any combination of Matlab qzdiv, Matlab ordqz, Julia qzdiv, and Julia ordschur
 @test !test_matrix_eq(AA_qzdiv_m, AA_ordqz)
 @test !test_matrix_eq(AA_qzdiv_m, AA_ordschur)
 @test !test_matrix_eq(AA_qzdiv_j, AA_ordqz)
 @test !test_matrix_eq(AA_qzdiv_j, AA_ordschur)
-@test !test_matrix_eq(AA_ordqz, AA_ordschur)
+
+# However, ordqz and ordschur (both call LAPACK tgsen) are much closer
+# Roughly 200/4356 entries differ by > 1e-4
+println("### AA_ordqz vs AA_ordschur")
+@test !test_matrix_eq(AA_ordqz, AA_ordschur; noisy=true)
+println("### BB_ordqz vs BB_ordschur")
+@test !test_matrix_eq(BB_ordqz, BB_ordschur; noisy=true)
+println("### Q_ordqz vs Q_ordschur")
+@test !test_matrix_eq(Q_ordqz, Q_ordschur; noisy=true)
+println("### Z_ordqz vs Z_ordschur")
+@test test_matrix_eq(Z_ordqz, Z_ordschur; noisy=true)
+
 
 
 
