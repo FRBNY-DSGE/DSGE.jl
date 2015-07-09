@@ -87,7 +87,6 @@ AA_qzdiv_j, BB_qzdiv_j, Q_qzdiv_j, Z_qzdiv_j = Gensys.qzdiv(stake, copy(AA), cop
 
 # Julia ordschur
 F2 = GeneralizedSchur(AA, BB, alpha, beta, Q', Z)
-@test test_matrix_eq(F[:values], F2[:values])
 select = abs(F[:values]) .< stake
 FS = ordschur(F, select)
 AA_ordschur, BB_ordschur, Q_ordschur, Z_ordschur = FS[:S], FS[:T], FS[:Q]', FS[:Z]
