@@ -42,7 +42,7 @@ AA_orig, BB_orig, Q_orig, Z_orig = copy(AA), copy(BB), copy(Q), copy(Z)
 # Julia schurfact, coercing arguments to complex
 F = schurfact(complex(Γ0), complex(Γ1))
 AA_schurfact, BB_schurfact, Q_schurfact, Z_schurfact = F[:S], F[:T], F[:Q]', F[:Z]
-
+E_schurfact = F[:values]
 
 # Matlab qz vs Julia schurfact tests pass when run with `include`, not interactively
 @test test_matrix_eq(AA, AA_schurfact)
@@ -80,6 +80,7 @@ AA_qzdiv_j, BB_qzdiv_j, Q_qzdiv_j, Z_qzdiv_j = Gensys.qzdiv(stake, AA, BB, Q, Z)
 select = abs(F[:values]) .< stake
 FS = ordschur(F, select)
 AA_ordschur, BB_ordschur, Q_ordschur, Z_ordschur = FS[:S], FS[:T], FS[:Q]', FS[:Z]
+E_ordschur = FS[:values]
 
 
 # Matlab qzdiv and Julia qzdiv DO NOT return the same QZ ordering
@@ -110,6 +111,31 @@ println("### Q_ordqz vs Q_ordschur")
 println("### Z_ordqz vs Z_ordschur")
 @test test_matrix_eq(Z_ordqz, Z_ordschur; noisy=true)
 
+
+
+### TEST EIGENVALUES
+
+# Eigenvalues < stake in top left corner
+@test all(x -> abs(x) < stake, E_ordschur[1:13])
+@test !any(x -> abs(x) < stake, E_ordschur[14:66])
+
+# Sort eigenvalues by abs value
+E_sort = sort(E, by=abs)
+E_schurfact_sort = sort(E_schurfact, by=abs)
+E_ordschur_sort = sort(E_ordschur, by=abs)
+
+# All identical in first 35 entries
+@test test_matrix_eq(E_sort[1:35], E_ordschur_sort[1:35])
+@test test_matrix_eq(E_schurfact_sort[1:35], E_ordschur_sort[1:35])
+
+# All different in entries 36:51
+@test all(x -> abs(x) > 1e10 && abs(x) != Inf, E_ordschur_sort[36:51])
+@test all(x -> abs(x) == Inf,                  E_sort[36:66])
+@test all(isnan,                               E_schurfact_sort[36:66])
+
+# ordschur preserves decomposition
+@test test_matrix_eq(Q_ordschur * Γ0 * Z_ordschur, AA_ordschur)
+@test test_matrix_eq(Q_ordschur * Γ1 * Z_ordschur, BB_ordschur)
 
 
 
