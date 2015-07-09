@@ -3,6 +3,17 @@ using Base.Test
 
 
 
+# minusnan(x, y) evaluates x-y in a way that treats NaN like Inf and sets Inf - Inf = 0
+minusnan{S<:FloatingPoint, T<:FloatingPoint}(x::S, y::T) =  minusnan(complex(x), complex(y))
+
+function minusnan{S<:FloatingPoint, T<:FloatingPoint}(x::Complex{S}, y::Complex{T})
+    x = isnan(x) || isinf(x) ? Inf : x
+    y = isnan(y) || isinf(y) ? Inf : y
+    return isinf(x) && isinf(y) ? 0 : x - y
+end
+
+
+
 # TODO: decide what a sensible default ε value is for our situation
 # Compares matrices, reports absolute differences, returns true if all entries close enough
 function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::Array{R},
@@ -22,7 +33,7 @@ function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(ex
     n_entries = length(expected)
     
     # Count differences and find max    
-    abs_diff = abs(expected - actual)
+    abs_diff = abs(map(minusnan, expected, actual))
     n_neq = countnz(abs_diff)
     n_not_approx_eq = count(x -> x > ε, abs_diff)
     max_abs_diff = maximum(abs_diff)
