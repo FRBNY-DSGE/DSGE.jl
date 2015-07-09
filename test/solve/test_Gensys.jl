@@ -21,7 +21,9 @@ close(mf)
 
 #=
 gensys_qzdiv(Γ0, Γ1, C, Ψ, Π, stake) # Runs without throwing exception
-gensys_ordschur(Γ0, Γ1, C, Ψ, Π, stake) # Throws a SingularException
+gensys_qzdiv(complex(Γ0), complex(Γ1), C, Ψ, Π, stake) # Runs without throwing exception
+gensys_ordschur(Γ0, Γ1, C, Ψ, Π, stake) # Throws SingularException(1)
+gensys_ordschur(complex(Γ0), complex(Γ1), C, Ψ, Π, stake) # Throws LAPACKException(1)
 =#
 
 
@@ -32,6 +34,7 @@ gensys_ordschur(Γ0, Γ1, C, Ψ, Π, stake) # Throws a SingularException
 # [AA, BB, Q, Z] = qz(G0, G1);
 # alpha = diag(AA);
 # beta = diag(BB);
+# E = ordeig(AA, BB);
 mf = MatFile("gensys/gensys_variables.mat")
 AA = get_variable(mf, "AA")
 BB = get_variable(mf, "BB")
@@ -39,20 +42,22 @@ Q = get_variable(mf, "Q")
 Z = get_variable(mf, "Z")
 alpha = get_variable(mf, "alpha")
 beta = complex(get_variable(mf, "beta"))
+E = get_variable(mf, "E")
 close(mf)
 
-# Julia schurfact
-F = schurfact(Γ0, Γ1)
+# Julia schurfact, coercing arguments to complex
+F = schurfact(complex(Γ0), complex(Γ1))
 AA_schurfact, BB_schurfact, Q_schurfact, Z_schurfact = F[:S], F[:T], F[:Q]', F[:Z]
 
-#=
-# Matlab qz vs Julia schurfact
-# None of these pass
+
+# Matlab qz vs Julia schurfact tests pass when run with `include`, not interactively
 @test test_matrix_eq(AA, AA_schurfact)
 @test test_matrix_eq(BB, BB_schurfact)
 @test test_matrix_eq(Q, Q_schurfact)
 @test test_matrix_eq(Z, Z_schurfact)
-=#
+@test test_matrix_eq(alpha, F[:alpha])
+@test test_matrix_eq(beta, F[:beta])
+@test test_matrix_eq(E, F[:values])
 
 
 
@@ -61,14 +66,13 @@ AA_schurfact, BB_schurfact, Q_schurfact, Z_schurfact = F[:S], F[:T], F[:Q]', F[:
 # Matlab qzdiv
 # [AA_qzdiv, BB_qzdiv, Q_qzdiv, Z_qzdiv] = qzdiv(AA, BB, Q, Z);
 mf = MatFile("gensys/gensys_variables.mat")
-AA_qzdiv = get_variable(mf, "AA_qzdiv")
-BB_qzdiv = get_variable(mf, "BB_qzdiv")
-Q_qzdiv = get_variable(mf, "Q_qzdiv")
-Z_qzdiv = get_variable(mf, "Z_qzdiv")
+AA_qzdiv_m = get_variable(mf, "AA_qzdiv")
+BB_qzdiv_m = get_variable(mf, "BB_qzdiv")
+Q_qzdiv_m = get_variable(mf, "Q_qzdiv")
+Z_qzdiv_m = get_variable(mf, "Z_qzdiv")
 close(mf)
 
 # Matlab ordqz
-# E = ordeig(AA, BB);
 # select = abs(E) < div;
 # [AA_ordqz, BB_ordqz, Q_ordqz, Z_ordqz] = ordqz(AA, BB, Q, Z, select);
 mf = MatFile("gensys/gensys_variables.mat")
@@ -79,36 +83,25 @@ Z_ordqz = get_variable(mf, "Z_ordqz")
 close(mf)
 
 # Julia qzdiv
-AA_qzdiv_j, BB_qzdiv_j, Q_qzdiv_j, Z_qzdiv_j = Gensys.qzdiv(stake, AA, BB, Q, Z)
-AA_qzdiv_j_CC, BB_qzdiv_j_CC, Q_qzdiv_j_CC, Z_qzdiv_j_CC = qzdiv_CC(stake, AA, BB, Q, Z)
+AA_qzdiv_j, BB_qzdiv_j, Q_qzdiv_j, Z_qzdiv_j = Gensys.qzdiv(stake, copy(AA), copy(BB), copy(Q), copy(Z))
 
 # Julia ordschur
-F = GeneralizedSchur(AA, BB, alpha, beta, Q', Z)
+F2 = GeneralizedSchur(AA, BB, alpha, beta, Q', Z)
+@test test_matrix_eq(F[:values], F2[:values])
 select = abs(F[:values]) .< stake
 FS = ordschur(F, select)
 AA_ordschur, BB_ordschur, Q_ordschur, Z_ordschur = FS[:S], FS[:T], FS[:Q]', FS[:Z]
 
-#=
-# Matlab qzdiv vs Julia qzdiv
-# These don't pass
-@test test_matrix_eq(AA_qzdiv, AA_qzdiv_j)
-@test test_matrix_eq(BB_qzdiv, BB_qzdiv_j)
-@test test_matrix_eq(Q_qzdiv, Q_qzdiv_j)
-@test test_matrix_eq(Z_qzdiv, Z_qzdiv_j)
-=#
 
-#=
-# Matlab qzdiv vs Julia qzdiv_CC
-# I could have sworn these passed at one point, but now they don't??
-@test test_matrix_eq(AA_qzdiv, AA_qzdiv_j_CC)
-@test test_matrix_eq(BB_qzdiv, BB_qzdiv_j_CC)
-@test test_matrix_eq(Q_qzdiv, Q_qzdiv_j_CC)
-@test test_matrix_eq(Z_qzdiv, Z_qzdiv_j_CC)
-=#
+# Matlab qzdiv and Julia qzdiv DO NOT return the same QZ ordering
+@test !test_matrix_eq(AA_qzdiv_m, AA_qzdiv_j)
+@test !test_matrix_eq(BB_qzdiv_m, BB_qzdiv_j)
+@test !test_matrix_eq(Q_qzdiv_m, Q_qzdiv_j)
+@test !test_matrix_eq(Z_qzdiv_m, Z_qzdiv_j)
 
-#=
-# None of these pass
-@test test_matrix_eq(AA_qzdiv, AA_ordschur)
-@test test_matrix_eq(AA_ordqz, AA_ordschur)
-@test test_matrix_eq(AA_qzdiv, AA_ordqz)
-=#
+# Neither do any combination of Matlab qzdiv, Matlab ordqz, Julia qzdiv, and Julia ordschur
+@test !test_matrix_eq(AA_qzdiv_m, AA_ordqz)
+@test !test_matrix_eq(AA_qzdiv_m, AA_ordschur)
+@test !test_matrix_eq(AA_qzdiv_j, AA_ordqz)
+@test !test_matrix_eq(AA_qzdiv_j, AA_ordschur)
+@test !test_matrix_eq(AA_ordqz, AA_ordschur)
