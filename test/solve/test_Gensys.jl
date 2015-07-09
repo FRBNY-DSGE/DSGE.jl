@@ -42,19 +42,15 @@ beta = complex(get_variable(mf, "beta"))
 close(mf)
 
 # Julia schurfact
-F = schurfact(Γ0, Γ1)
+F = schurfact(complex(Γ0), complex(Γ1))
 AA_schurfact, BB_schurfact, Q_schurfact, Z_schurfact = F[:S], F[:T], F[:Q]', F[:Z]
 
-#=
 # Matlab qz vs Julia schurfact
-# None of these pass
+# These all pass.
 @test test_matrix_eq(AA, AA_schurfact)
 @test test_matrix_eq(BB, BB_schurfact)
 @test test_matrix_eq(Q, Q_schurfact)
 @test test_matrix_eq(Z, Z_schurfact)
-=#
-
-
 
 ### TEST QZ ORDERING
 
@@ -79,11 +75,11 @@ Z_ordqz = get_variable(mf, "Z_ordqz")
 close(mf)
 
 # Julia qzdiv
-AA_qzdiv_j, BB_qzdiv_j, Q_qzdiv_j, Z_qzdiv_j = Gensys.qzdiv(stake, AA, BB, Q, Z)
-AA_qzdiv_j_CC, BB_qzdiv_j_CC, Q_qzdiv_j_CC, Z_qzdiv_j_CC = qzdiv_CC(stake, AA, BB, Q, Z)
+AA_qzdiv_j, BB_qzdiv_j, Q_qzdiv_j, Z_qzdiv_j = Gensys.qzdiv(stake, copy(AA), copy(BB), copy(Q), copy(Z))
+AA_qzdiv_j_CC, BB_qzdiv_j_CC, Q_qzdiv_j_CC, Z_qzdiv_j_CC = qzdiv_CC(stake, copy(AA), copy(BB), copy(Q), copy(Z))
 
 # Julia ordschur
-F = GeneralizedSchur(AA, BB, alpha, beta, Q', Z)
+F = GeneralizedSchur(copy(AA), copy(BB), alpha, beta, copy(Q)', copy(Z))
 select = abs(F[:values]) .< stake
 FS = ordschur(F, select)
 AA_ordschur, BB_ordschur, Q_ordschur, Z_ordschur = FS[:S], FS[:T], FS[:Q]', FS[:Z]
