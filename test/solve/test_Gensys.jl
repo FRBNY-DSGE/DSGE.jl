@@ -83,7 +83,7 @@ Z_ordqz = get_variable(mf, "Z_ordqz")
 close(mf)
 
 # Julia qzdiv
-AA_qzdiv_j, BB_qzdiv_j, Q_qzdiv_j, Z_qzdiv_j = Gensys.qzdiv(stake, copy(AA), copy(BB), copy(Q), copy(Z))
+AA_qzdiv_j, BB_qzdiv_j, Q_qzdiv_j, Z_qzdiv_j = Gensys.qzdiv(stake, AA, BB, Q, Z)
 
 # Julia ordschur
 F2 = GeneralizedSchur(AA, BB, alpha, beta, Q', Z)
