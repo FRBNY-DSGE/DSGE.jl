@@ -1,19 +1,19 @@
 using DSGE.Gensys
 
 # method if all arguments are given
-function gensys_qzdiv(Γ0, Γ1, c, ψ, π, div)
-    F = schurfact!(Γ0, Γ1)
-    gensys_qzdiv(F, c, ψ, π, div)
+function gensys_qzdiv(Γ0, Γ1, c, Ψ, Π, div)
+    F = schurfact(Γ0, Γ1)
+    gensys_qzdiv!(F, copy(C), copy(Ψ), copy(Π), div)
 end
 
 # method if all arguments are given
-function gensys_ordschur(Γ0, Γ1, c, ψ, π, div)
-    F = schurfact!(Γ0, Γ1)
-    gensys_ordschur(F, c, ψ, π, div)
+function gensys_ordschur(Γ0, Γ1, C, Ψ, Π, div)
+    F = schurfact(Γ0, Γ1)
+    gensys_ordschur!(F, copy(C), copy(Ψ), copy(Π), div)
 end
 
 # Method that does the real work. Work directly on the decomposition F
-function gensys_qzdiv(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
+function gensys_qzdiv!(F::Base.LinAlg.GeneralizedSchur, C, Ψ, Π, div)
     eu = [0, 0]
     ε = 1e-6  # small number to check convergence
     nunstab = 0.0
@@ -39,7 +39,7 @@ function gensys_qzdiv(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     #select = abs(F[:values]) .< div
     #FS = ordschur(F, select)
     #a, b, q, z = FS[:S], FS[:T], FS[:Q]', FS[:Z]
-    a, b, q, z = Gensys.qzdiv(div, a, b, q, z)
+    a, b, q, z = Gensys.qzdiv!(div, a, b, q, z)
     gev = [diag(a) diag(b)]
 
     q1 = q[1:n-nunstab, :]
@@ -48,8 +48,8 @@ function gensys_qzdiv(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     z2 = z[:, n-nunstab+1:n]'
     a2 = a[n-nunstab+1:n, n-nunstab+1:n]
     b2 = b[n-nunstab+1:n, n-nunstab+1:n]
-    etawt = q2 * π
-    neta = size(π, 2)
+    etawt = q2 * Π
+    neta = size(Π, 2)
 
     # branch below is to handle case of no stable roots, which previously
     # (5/9/09) quit with an error in that case.
@@ -88,7 +88,7 @@ function gensys_qzdiv(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
         veta1 = zeros(neta, 0)
         deta1 = zeros(0, 0)
     else
-        etawt1 = q1 * π
+        etawt1 = q1 * Π
         ndeta1 = min(n-nunstab, neta)
         ueta1, deta1, veta1 = svd(etawt1)
         deta1 = diagm(deta1)  # TODO: do we need to do this
@@ -129,10 +129,10 @@ function gensys_qzdiv(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     G0I = inv(G0)
     G1 = G0I*G1
     usix = n-nunstab+1:n
-    C = G0I * [tmat*q*c; (a[usix, usix] - b[usix,usix])\q2*c]
-    impact = G0I * [tmat*q*ψ; zeros(nunstab, size(ψ, 2))]
+    C = G0I * [tmat*q*C; (a[usix, usix] - b[usix,usix])\q2*C]
+    impact = G0I * [tmat*q*Ψ; zeros(nunstab, size(Ψ, 2))]
     fmat = b[usix, usix]\a[usix,usix]
-    fwt = -b[usix, usix]\q2*ψ
+    fwt = -b[usix, usix]\q2*Ψ
     ywt = G0I[:, usix]
 
     loose = G0I * [etawt1 * (eye(neta) - veta * veta'); zeros(nunstab, neta)]
@@ -149,7 +149,7 @@ function gensys_qzdiv(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
 end
 
 # Method that does the real work. Work directly on the decomposition F
-function gensys_ordschur(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
+function gensys_ordschur!(F::Base.LinAlg.GeneralizedSchur, C, Ψ, Π, div)
     eu = [0, 0]
     ε = 1e-6  # small number to check convergence
     nunstab = 0.0
@@ -175,7 +175,7 @@ function gensys_ordschur(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     select = abs(F[:values]) .< div
     FS = ordschur(F, select)
     a, b, q, z = FS[:S], FS[:T], FS[:Q]', FS[:Z]
-    #a, b, q, z = Gensys.qzdiv(div, a, b, q, z)
+    #a, b, q, z = Gensys.qzdiv!(div, a, b, q, z)
     gev = [diag(a) diag(b)]
 
     q1 = q[1:n-nunstab, :]
@@ -184,8 +184,8 @@ function gensys_ordschur(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     z2 = z[:, n-nunstab+1:n]'
     a2 = a[n-nunstab+1:n, n-nunstab+1:n]
     b2 = b[n-nunstab+1:n, n-nunstab+1:n]
-    etawt = q2 * π
-    neta = size(π, 2)
+    etawt = q2 * Π
+    neta = size(Π, 2)
 
     # branch below is to handle case of no stable roots, which previously
     # (5/9/09) quit with an error in that case.
@@ -224,7 +224,7 @@ function gensys_ordschur(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
         veta1 = zeros(neta, 0)
         deta1 = zeros(0, 0)
     else
-        etawt1 = q1 * π
+        etawt1 = q1 * Π
         ndeta1 = min(n-nunstab, neta)
         ueta1, deta1, veta1 = svd(etawt1)
         deta1 = diagm(deta1)  # TODO: do we need to do this
@@ -265,10 +265,10 @@ function gensys_ordschur(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     G0I = inv(G0)
     G1 = G0I*G1
     usix = n-nunstab+1:n
-    C = G0I * [tmat*q*c; (a[usix, usix] - b[usix,usix])\q2*c]
-    impact = G0I * [tmat*q*ψ; zeros(nunstab, size(ψ, 2))]
+    C = G0I * [tmat*q*C; (a[usix, usix] - b[usix,usix])\q2*C]
+    impact = G0I * [tmat*q*Ψ; zeros(nunstab, size(Ψ, 2))]
     fmat = b[usix, usix]\a[usix,usix]
-    fwt = -b[usix, usix]\q2*ψ
+    fwt = -b[usix, usix]\q2*Ψ
     ywt = G0I[:, usix]
 
     loose = G0I * [etawt1 * (eye(neta) - veta * veta'); zeros(nunstab, neta)]
@@ -286,7 +286,7 @@ end
 
 
 
-function qzdiv_CC(stake, A, B, Q, Z, v=[])
+function qzdiv_CT!(stake, A, B, Q, Z, v=[])
     n = size(A, 1)
     vin = !isempty(v)
 
@@ -308,7 +308,7 @@ function qzdiv_CC(stake, A, B, Q, Z, v=[])
         end
 
         for k=m:1:i-1
-            A, B, Q, Z = qzswitch_CC(k, A, B, Q, Z)
+            A, B, Q, Z = qzswitch_CT!(k, A, B, Q, Z)
             temp = root[k, 2]
             root[k, 2] = root[k+1, 2]
             root[k+1, 2] = temp
@@ -325,7 +325,7 @@ function qzdiv_CC(stake, A, B, Q, Z, v=[])
 end
 
 
-function qzswitch_CC(i, A, B, Q, Z)
+function qzswitch_CT!(i, A, B, Q, Z)
     ε = sqrt(eps())*10
 
     # Get the appropriate elements
