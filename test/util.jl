@@ -6,13 +6,13 @@ using Base.Test
 # TODO: decide what a sensible default ε value is for our situation
 # Compares matrices, reports absolute differences, returns true if all entries close enough
 function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::Array{R},
-             actual::Array{S}, ε::T = 1e-4)
-    test_matrix_eq(complex(expected), complex(actual), ε)
+             actual::Array{S}, ε::T = 1e-4; noisy::Bool = false)
+    return test_matrix_eq(complex(expected), complex(actual), ε; noisy=noisy)
 end
 
 # Complex-valued input matrices
 function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::
-             Array{Complex{R}}, actual::Array{Complex{S}}, ε::T = 1e-4)
+             Array{Complex{R}}, actual::Array{Complex{S}}, ε::T = 1e-4; noisy::Bool = false)
     # Matrices of different sizes return false
     if size(expected) != size(actual)
         return false
@@ -29,12 +29,14 @@ function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(ex
     max_inds = ind2sub(size(abs_diff), indmax(abs_diff))
     
     # Print output
-    println("$n_neq of $n_entries entries with abs diff > 0")
-    println("$n_not_approx_eq of $n_entries entries with abs diff > $ε")
-    if n_neq != 0
-        println("Max abs diff of $max_abs_diff at entry $max_inds\n")
-    else
-        println("Max abs diff of 0\n")
+    if noisy
+        println("$n_neq of $n_entries entries with abs diff > 0")
+        println("$n_not_approx_eq of $n_entries entries with abs diff > $ε")
+        if n_neq != 0
+            println("Max abs diff of $max_abs_diff at entry $max_inds\n")
+        else
+            println("Max abs diff of 0\n")
+        end
     end
 
     # Return true if all entries within ε
