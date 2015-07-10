@@ -19,6 +19,8 @@ C = get_variable(mf, "C")
 stake = get_variable(mf, "div")
 close(mf)
 
+Γ0_orig, Γ1_orig, C_orig, Ψ_orig, Π_orig = copy(Γ0), copy(Γ1), copy(C), copy(Ψ), copy(Π)
+
 #=
 gensys_qzdiv(Γ0, Γ1, C, Ψ, Π, stake) # Runs without throwing exception
 gensys_qzdiv(complex(Γ0), complex(Γ1), C, Ψ, Π, stake) # Runs without throwing exception
@@ -42,16 +44,16 @@ AA_orig, BB_orig, Q_orig, Z_orig = copy(AA), copy(BB), copy(Q), copy(Z)
 # Julia schurfact, coercing arguments to complex
 F = schurfact(complex(Γ0), complex(Γ1))
 AA_schurfact, BB_schurfact, Q_schurfact, Z_schurfact = F[:S], F[:T], F[:Q]', F[:Z]
-E_schurfact = F[:values]
+alpha_schurfact, beta_schurfact, E_schurfact = F[:alpha], F[:beta], F[:values]
 
-# Matlab qz vs Julia schurfact tests pass when run with `include`, not interactively
+# Matlab qz vs Julia schurfact
 @test test_matrix_eq(AA, AA_schurfact)
 @test test_matrix_eq(BB, BB_schurfact)
 @test test_matrix_eq(Q, Q_schurfact)
 @test test_matrix_eq(Z, Z_schurfact)
-@test test_matrix_eq(alpha, F[:alpha])
-@test test_matrix_eq(beta, F[:beta])
-@test test_matrix_eq(E, F[:values])
+@test test_matrix_eq(alpha, alpha_schurfact)
+@test test_matrix_eq(beta, beta_schurfact)
+@test test_matrix_eq(E, E_schurfact)
 
 
 
@@ -80,19 +82,15 @@ AA_qzdiv_j, BB_qzdiv_j, Q_qzdiv_j, Z_qzdiv_j = Gensys.qzdiv(stake, AA, BB, Q, Z)
 select = abs(F[:values]) .< stake
 FS = ordschur(F, select)
 AA_ordschur, BB_ordschur, Q_ordschur, Z_ordschur = FS[:S], FS[:T], FS[:Q]', FS[:Z]
-E_ordschur = FS[:values]
+alpha_ordschur, beta_ordschur, E_ordschur = FS[:alpha], FS[:beta], FS[:values]
+
 
 
 # Matlab qzdiv and Julia qzdiv DO NOT return the same QZ ordering
-# About 2000/4356 entries differ by > 1e-4
-println("### AA_qzdiv_m vs AA_qzdiv_j")
-@test !test_matrix_eq(AA_qzdiv_m, AA_qzdiv_j; noisy=true)
-println("### BB_qzdiv_m vs BB_qzdiv_j")
-@test !test_matrix_eq(BB_qzdiv_m, BB_qzdiv_j; noisy=true)
-println("### Q_qzdiv_m vs Q_qzdiv_j")
-@test !test_matrix_eq(Q_qzdiv_m, Q_qzdiv_j; noisy=true)
-println("### Z_qzdiv_m vs Z_qzdiv_j")
-@test !test_matrix_eq(Z_qzdiv_m, Z_qzdiv_j; noisy=true)
+@test !test_matrix_eq(AA_qzdiv_m, AA_qzdiv_j)
+@test !test_matrix_eq(BB_qzdiv_m, BB_qzdiv_j)
+@test !test_matrix_eq(Q_qzdiv_m, Q_qzdiv_j)
+@test !test_matrix_eq(Z_qzdiv_m, Z_qzdiv_j)
 
 # Neither do any combination of Matlab qzdiv, Matlab ordqz, Julia qzdiv, and Julia ordschur
 @test !test_matrix_eq(AA_qzdiv_m, AA_ordqz)
@@ -102,18 +100,25 @@ println("### Z_qzdiv_m vs Z_qzdiv_j")
 
 # However, ordqz and ordschur (both call LAPACK tgsen) are much closer
 # Roughly 200/4356 entries differ by > 1e-4
-println("### AA_ordqz vs AA_ordschur")
-@test !test_matrix_eq(AA_ordqz, AA_ordschur; noisy=true)
-println("### BB_ordqz vs BB_ordschur")
-@test !test_matrix_eq(BB_ordqz, BB_ordschur; noisy=true)
-println("### Q_ordqz vs Q_ordschur")
-@test !test_matrix_eq(Q_ordqz, Q_ordschur; noisy=true)
-println("### Z_ordqz vs Z_ordschur")
-@test test_matrix_eq(Z_ordqz, Z_ordschur; noisy=true)
+@test !test_matrix_eq(AA_ordqz, AA_ordschur)
+@test !test_matrix_eq(BB_ordqz, BB_ordschur)
+@test !test_matrix_eq(Q_ordqz, Q_ordschur)
+@test test_matrix_eq(Z_ordqz, Z_ordschur)
 
 
 
 ### TEST EIGENVALUES
+
+# alpha and beta are the diagonal elements of AA and BB after schurfact
+@test test_matrix_eq(alpha_schurfact, diag(AA_schurfact))
+@test test_matrix_eq(beta_schurfact, diag(BB_schurfact))
+@test test_matrix_eq(E_schurfact, alpha_schurfact ./ beta_schurfact)
+
+# No coincident zeros in alpha and beta after schurfact
+coincident_zeros(x, y) = (x == 0.0 + 0.0im && y == 0.0 + 0.0im)
+coincident_zeros_approx(x, y) = (abs(x) < 1e-4 && abs(y) < 1e-4)
+@test !any(map(coincident_zeros, alpha_schurfact, beta_schurfact))
+@test !any(map(coincident_zeros_approx, alpha_schurfact, beta_schurfact))
 
 # Eigenvalues < stake in top left corner
 @test all(x -> abs(x) < stake, E_ordschur[1:13])
@@ -139,7 +144,19 @@ E_ordschur_sort = sort(E_ordschur, by=abs)
 
 
 
+### JULIA CAN'T DIVIDE COMPLEX 1/0
+@test 1.0 / 0.0 == Inf
+@test isnan((1.0 + 0.0im) / (0.0 + 0.0im))
+
+
+
 ### MAKE SURE NO ARGUMENTS CHANGED DURING EVALUATION
+@test Γ0 == Γ0_orig
+@test Γ1 == Γ1_orig
+@test C == C_orig
+@test Ψ == Ψ_orig
+@test Π == Π_orig
+
 @test AA == AA_orig
 @test BB == BB_orig
 @test Q == Q_orig
