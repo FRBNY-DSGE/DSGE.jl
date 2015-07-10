@@ -86,10 +86,19 @@ dsge.jl/
       Gensys.jl
         module Gensys
           include("ordered_qz.jl")
-          export gensys
+          export gensys, ordschur
           function new_div
           function gensys
+          function gensys!
+          function qzdiv
+          function qzdiv!
+          function qzswitch!
         end
+      Gensys_versions.jl
+        function gensys_qzdiv
+        function gensys_qzdiv!
+        function gensys_ordschur
+        function gensys_ordschur!
       ordered_qz.jl
       Kalman.jl
         module Kalman
