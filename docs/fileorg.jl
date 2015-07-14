@@ -103,8 +103,10 @@ dsge.jl/
     estimate/
       Kalman.jl
         module Kalman
-          export kalcvf2NaN
+          export kalcvf2NaN, kalsmth_k93
           function kalcvf2NaN
+          function kalsmth_k93
+          function distsmth_k93.m
         end
     forecast/
   docs/
