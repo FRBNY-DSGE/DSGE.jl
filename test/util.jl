@@ -26,6 +26,9 @@ function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(ex
              Array{Complex{R}}, actual::Array{Complex{S}}, ε::T = 1e-4; noisy::Bool = false)
     # Matrices of different sizes return false
     if size(expected) != size(actual)
+        if noisy
+            println("Size expected $(size(expected)), actual $(size(actual))\n")
+        end
         return false
     end
 
