@@ -46,7 +46,7 @@ export kalcvf2NaN
 #  03/19/2003  -  algorithm and interface were adapted from SAS/IML KALCVF subroutine for use in MATLAB M file
 #
 #==========================================================================#
-function kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0)
+function kalcvf2NaN{S<:FloatingPoint}(data::Array{S, 2}, lead::S, a::Array{S, 2}, F::Array{S, 2}, b::Array{S, 2}, H::Array{S, 2}, var::Array{S, 2}, z0::Array{S, 2}, vz0::Array{S, 2})
     T = size(data,2)
     Nz = size(a,1)
     Ny = size(b,1)
@@ -185,5 +185,7 @@ function kalcvf2NaN(data, lead, a, F, b, H, var)
 
     return kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0)
 end
+
+
 
 end # module

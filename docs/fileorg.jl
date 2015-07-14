@@ -10,7 +10,7 @@ dsge.jl/
         include("init/FinancialFrictionsFunctions.jl")
         include("AbstractModel.jl")
         include("solve/Gensys.jl")
-        include("solve/Kalman.jl")
+        include("estimate/Kalman.jl")
         include("models/M990.jl")
       end
     AbstractModel.jl
@@ -100,12 +100,12 @@ dsge.jl/
         function gensys_ordschur
         function gensys_ordschur!
       ordered_qz.jl
+    estimate/
       Kalman.jl
         module Kalman
           export kalcvf2NaN
           function kalcvf2NaN
         end
-    estimate/
     forecast/
   docs/
     fileorg.jl # You are here
@@ -157,6 +157,7 @@ dsge.jl/
         using Base.Test, Compat
         import Base.Linalg: BlasComplex, BlasFloat, BlasReal, QRPivoted
         include("../../src/solve/ordered_qz.jl")
+    estimate/
       test_Kalman.jl
         using Base.Test
         using DSGE.Kalman
