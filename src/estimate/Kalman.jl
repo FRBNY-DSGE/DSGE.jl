@@ -100,7 +100,7 @@ function kalcvf2NaN{S<:FloatingPoint}(data::Array{S, 2}, lead::S, a::Array{S, 2}
     filt = zeros(Nz, T)
     vfilt = zeros(Nz, Nz, T)
     
-    L = 0
+    L = 0.0
     
     for t = 1:T
         # If an element of the vector y(t) is missing (NaN) for the observation t, the
