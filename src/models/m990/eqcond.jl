@@ -8,7 +8,7 @@
 # Ψ (n states x n exogenous shocks) holds coefficients of iid shocks.
 # Π (n states x n expectational states) holds coefficients of expectational states.
 
-function eqcond(Θ::Parameters990, I::ModelInds)
+function eqcond(spec::Dict{String, Any}, Θ::Parameters990, I::ModelInds)
     endo = I.endostates
     exo = I.exoshocks
     ex = I.expshocks
@@ -409,7 +409,7 @@ function eqcond(Θ::Parameters990, I::ModelInds)
     Ψ[eq["eq_pist"], exo["pist_sh"]] = 1.
 
     # Anticipated policy shocks
-    if n_ant_shocks > 0
+    if spec["nant"] > 0
 
         # This section adds the anticipated shocks. There is one state for all the
         # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds those that
@@ -421,8 +421,8 @@ function eqcond(Θ::Parameters990, I::ModelInds)
         Γ0[eq["eq_rml1"], endo["rm_tl1"]] = 1.
         Ψ[eq["eq_rml1"], exo["rm_shl1"]] = 1.
 
-        if n_ant_shocks > 1
-            for i = 2:n_ant_shocks
+        if spec["nant"] > 1
+            for i = 2:spec["nant"]
                 Γ1[eq["eq_rml$(i-1)"], endo["rm_tl$i"]] = 1.
                 Γ0[eq["eq_rml$i"], endo["rm_tl$i"]] = 1.
                 Ψ[eq["eq_rml$i"], exo["rm_shl$i"]] = 1.

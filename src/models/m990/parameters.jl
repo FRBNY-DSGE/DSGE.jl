@@ -144,7 +144,7 @@ end
 
 # TODO: some parameters (e.g. s2) have type = 0 but a and b
 # Instantiate Parameters990 type
-function Parameters990()
+function Parameters990(spec::Dict{String, Any})
     alp = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999))
     zeta_p = Param(0.8940, false, (1e-5, 0.999), Beta(0.5, 0.1), 1, (1e-5, 0.999))
     iota_p = Param(0.1865, false, (1e-5, 0.999), Beta(0.5, 0.15), 1, (1e-5, 0.999))
@@ -217,7 +217,7 @@ function Parameters990()
     σ_pce = Param(0.0999, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
 
     # standard deviations of the anticipated policy shocks
-    for i = 1:n_ant_shocks_pad
+    for i = 1:spec["nantpad"]
         if i < 13
             eval(parse("σ_rm$i = Param(0.20, false, (1e-7, 100.), InverseGamma(0.2, 4.00), 2, (1e-5, 0.))"))
         else

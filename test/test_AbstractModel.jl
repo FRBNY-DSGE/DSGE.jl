@@ -60,7 +60,7 @@ end
 # src/abstractmodel/parameters.jl
 function test_parameters()
     # Parameters iterator
-    Θ = Parameters990()
+    Θ = Parameters990(spec_vars())
     lastparam = Param(0.0)
     for α = Θ
         lastparam = α

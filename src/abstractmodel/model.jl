@@ -3,6 +3,7 @@
 #   (solve, estimate, and forecast).
 type Model
     spec::String
+    spec_vars::Dict{String, Any}
     Θ::Parameters
     I::ModelInds
     eqcond::Function

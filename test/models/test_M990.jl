@@ -22,7 +22,7 @@ end
 # src/models/m990/parameters.jl
 function test_parameters()
     # Parameters990 object creation
-    Θ = Parameters990()
+    Θ = Parameters990(spec_vars())
     @test isa(Θ, Parameters990)
 
     # Parameters match para, bounds, etc. vectors from Matlab (ε = 1e-4)
@@ -111,7 +111,7 @@ end
 # src/models/m990/modelinds.jl
 function test_modelinds()
     # ModelInds object creation
-    I = ModelInds()
+    I = ModelInds(spec_vars())
     @test isa(I, ModelInds)
 
     # Endogenous states
@@ -143,9 +143,10 @@ end
 # src/models/m990/eqcond.jl
 function test_eqcond()
     # eqcond function executes successfully
-    Θ = Parameters990()
-    I = ModelInds()
-    Γ0, Γ1, C, Ψ, Π = eqcond(Θ, I)
+    spec = spec_vars()
+    Θ = Parameters990(spec)
+    I = ModelInds(spec)
+    Γ0, Γ1, C, Ψ, Π = eqcond(spec, Θ, I)
 
     # Matrices are of expected dimensions
     @test size(Γ0) == (66, 66)

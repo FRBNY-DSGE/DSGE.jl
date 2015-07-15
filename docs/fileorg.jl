@@ -44,7 +44,7 @@ dsge.jl/
         module M990
           using ..AbstractModel
           import ..AbstractModel: Model
-          export Parameters990, ModelInds, Model, eqcond
+          export spec_vars, Parameters990, ModelInds, Model, eqcond
           include("spec.jl")
           include("parameters.jl")
           include("modelinds.jl")
@@ -53,6 +53,7 @@ dsge.jl/
         end
       m990/
         spec.jl
+          function spec
         parameters.jl
           using Distributions: Normal, quantile
           using Roots: fzero

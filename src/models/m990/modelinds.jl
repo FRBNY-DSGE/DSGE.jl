@@ -3,7 +3,7 @@ import ..AbstractModel: ModelInds
 
 # Return a ModelInds object, which has four fields: each is a dictionary mapping states or
 #   equations to model indices
-function AbstractModel.ModelInds()
+function AbstractModel.ModelInds(spec::Dict{String, Any})
     endostates = ["y_t",
                   "c_t",
                   "i_t",
@@ -64,7 +64,7 @@ function AbstractModel.ModelInds()
                   "R_t1",
                   "zp_t",
                   "E_z",
-                  ["rm_tl$i" for i = 1:n_ant_shocks]]
+                  ["rm_tl$i" for i = 1:spec["nant"]]]
     
     exoshocks = ["g_sh",
                  "b_sh",
@@ -82,7 +82,7 @@ function AbstractModel.ModelInds()
                  "tfp_sh",
                  "gdpdef_sh",
                  "pce_sh",
-                 ["rm_shl$i" for i = 1:n_ant_shocks]]
+                 ["rm_shl$i" for i = 1:spec["nant"]]]
 
     expshocks = ["Ec_sh",
                  "Eqk_sh",
@@ -158,7 +158,7 @@ function AbstractModel.ModelInds()
                  "Rt1",
                  "eq_zp",
                  "eq_Ez",
-                 ["eq_rml$i" for i=1:n_ant_shocks]]
+                 ["eq_rml$i" for i=1:spec["nant"]]]
 
     # TODO: incorporate measurement equation observables
     observables = ["g_y", # output growth
