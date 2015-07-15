@@ -1,5 +1,4 @@
-using DSGE
-using DSGE: AbstractModel, Gensys
+using ..AbstractModel, ..Gensys
 
 # TODO: Do we need to pass in nant as an argument?
 function solve(model::Model)
@@ -14,6 +13,8 @@ function solve(model::Model)
 
     # Augment states
     TTT, CCC, RRR = augment_states(model, TTT_gensys, CCC_gensys, RRR_gensys)
+
+    return TTT, CCC, RRR
 end
 
 
