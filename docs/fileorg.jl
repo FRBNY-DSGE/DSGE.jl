@@ -101,6 +101,9 @@ dsge.jl/
         function gensys_ordschur
         function gensys_ordschur!
       ordered_qz.jl
+      solve.jl
+        function solve
+        function augment_states
     estimate/
       Kalman.jl
         module Kalman

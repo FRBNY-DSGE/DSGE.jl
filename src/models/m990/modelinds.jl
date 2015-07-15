@@ -160,20 +160,36 @@ function AbstractModel.ModelInds(spec::Dict{String, Any})
                  "eq_Ez",
                  ["eq_rml$i" for i=1:spec["nant"]]]
 
+    # Additional states added after solving model
+    # Lagged states and observables measurement error
+    endostates_postgensys = ["y_t1",
+                             "c_t1",
+                             "i_t1",
+                             "w_t1",
+                             "pi_t1",
+                             "L_t1",
+                             "Et_pi_t",
+                             "lr_t",
+                             "tfp_t",
+                             "e_gdpdef",
+                             "e_pce",
+                             "u_t1"]
+    
     # TODO: incorporate measurement equation observables
-    observables = ["g_y", # output growth
-                   "g_l", # aggregate hours growth
+    observables = ["g_y", # quarterly output growth
+                   "hoursg", # aggregate hours growth
                    "g_w", # real wage growth
-                   "gdpdef", # GDP deflator
-                   "pi_pce", # core PCE inflation
-                   "R", # interest rate
+                   "pi_gdpdef", # inflation (GDP deflator)
+                   "pi_pce", # inflation (core PCE)
+                   "R_n", # nominal interest rate
                    "g_c", # consumption growth
                    "g_i", # investment growth
-                   "sprd", # spread
-                   "pi_long", # long-term inflation
+                   "sprd", # spreads
+                   "pi_long", # 10-year inflation expectation
                    "R_long", # long-term rate
                    "tfp"] # total factor productivity
 
     return ModelInds(makedict(endostates), makedict(exoshocks), makedict(expshocks),
-                     makedict(equations))
+                     makedict(equations), makedict(endostates_postgensys; start=length(endostates)),
+                     makedict(observables))
 end

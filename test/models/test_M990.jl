@@ -133,6 +133,16 @@ function test_modelinds()
     eq = I.equations
     @test length(eq) == 66
     @test eq["eq_Ez"] == 60
+
+    # Additional states
+    endo_addl = I.endostates_postgensys
+    @test length(endo_addl) == 12
+    @test endo_addl["y_t1"] == 67
+
+    # Observables
+    obs = I.observables
+    @test length(obs) == 12
+    @test obs["tfp"] == 12
     
     println("modelinds.jl tests passed\n")
 end

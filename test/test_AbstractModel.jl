@@ -86,6 +86,11 @@ function test_modelinds()
     @test dict["bob"] == 2
     @test_throws KeyError dict["carol"]
 
+    # makedict with start field
+    dict = makedict(["alice", "bob"]; start=4)
+    @test dict["alice"] == 5
+    @test dict["bob"] == 6
+
     println("modelinds.jl tests passed\n")
 end
 
