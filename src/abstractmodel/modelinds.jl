@@ -4,7 +4,7 @@ type ModelInds
     endostates::Dict{String, Int64}
     exoshocks::Dict{String, Int64}
     expshocks::Dict{String, Int64}
-    equations::Dict{String, Int64}
+    eqconds::Dict{String, Int64}
     endostates_postgensys::Dict{String, Int64}
     observables::Dict{String, Int64}
 end

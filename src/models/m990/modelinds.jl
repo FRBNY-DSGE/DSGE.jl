@@ -3,6 +3,7 @@ import ..AbstractModel: ModelInds
 
 # Return a ModelInds object, which has four fields: each is a dictionary mapping states or
 #   equations to model indices
+# Updates spec with n_states, etc.
 function AbstractModel.ModelInds(spec::Dict{String, Any})
     endostates = ["y_t",
                   "c_t",
@@ -98,67 +99,67 @@ function AbstractModel.ModelInds(spec::Dict{String, Any})
                  "EL_f_sh",
                  "Erk_f_sh"]
 
-    equations = ["euler",
-                 "inv",
-                 "capval",
-                 "spread",
-                 "nevol",
-                 "output",
-                 "caputl",
-                 "capsrv",
-                 "capev",
-                 "mkupp",
-                 "phlps",
-                 "caprnt",
-                 "msub",
-                 "wage",
-                 "mp",
-                 "res",
-                 "eq_g",
-                 "eq_b",
-                 "eq_mu",
-                 "eq_z",
-                 "eq_laf",
-                 "eq_law",
-                 "eq_rm",
-                 "eq_sigw",
-                 "eq_mue",
-                 "eq_gamm",
-                 "eq_laf1",
-                 "eq_law1",
-                 "eq_Ec",
-                 "eq_Eqk",
-                 "eq_Ei",
-                 "eq_Epi",
-                 "eq_EL",
-                 "eq_Erk",
-                 "eq_Ew",
-                 "eq_ERktil",
-                 "euler_f",
-                 "inv_f",
-                 "capval_f",
-                 "output_f",
-                 "caputl_f",
-                 "capsrv_f",
-                 "capev_f",
-                 "mkupp_f",
-                 "caprnt_f",
-                 "msub_f",
-                 "res_f",
-                 "eq_Ec_f",
-                 "eq_Eqk_f",
-                 "eq_Ei_f",
-                 "eq_EL_f",
-                 "eq_Erk_f",
-                 "eq_ztil",
-                 "eq_pist",
-                 "pi1",
-                 "pi2",
-                 "pi_a",
-                 "Rt1",
-                 "eq_zp",
-                 "eq_Ez",
-                 ["eq_rml$i" for i=1:spec["nant"]]]
+    eqconds = ["euler",
+               "inv",
+               "capval",
+               "spread",
+               "nevol",
+               "output",
+               "caputl",
+               "capsrv",
+               "capev",
+               "mkupp",
+               "phlps",
+               "caprnt",
+               "msub",
+               "wage",
+               "mp",
+               "res",
+               "eq_g",
+               "eq_b",
+               "eq_mu",
+               "eq_z",
+               "eq_laf",
+               "eq_law",
+               "eq_rm",
+               "eq_sigw",
+               "eq_mue",
+               "eq_gamm",
+               "eq_laf1",
+               "eq_law1",
+               "eq_Ec",
+               "eq_Eqk",
+               "eq_Ei",
+               "eq_Epi",
+               "eq_EL",
+               "eq_Erk",
+               "eq_Ew",
+               "eq_ERktil",
+               "euler_f",
+               "inv_f",
+               "capval_f",
+               "output_f",
+               "caputl_f",
+               "capsrv_f",
+               "capev_f",
+               "mkupp_f",
+               "caprnt_f",
+               "msub_f",
+               "res_f",
+               "eq_Ec_f",
+               "eq_Eqk_f",
+               "eq_Ei_f",
+               "eq_EL_f",
+               "eq_Erk_f",
+               "eq_ztil",
+               "eq_pist",
+               "pi1",
+               "pi2",
+               "pi_a",
+               "Rt1",
+               "eq_zp",
+               "eq_Ez",
+               ["eq_rml$i" for i=1:spec["nant"]]]
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
@@ -175,7 +176,6 @@ function AbstractModel.ModelInds(spec::Dict{String, Any})
                              "e_pce",
                              "u_t1"]
     
-    # TODO: incorporate measurement equation observables
     observables = ["g_y", # quarterly output growth
                    "hoursg", # aggregate hours growth
                    "g_w", # real wage growth
@@ -187,9 +187,18 @@ function AbstractModel.ModelInds(spec::Dict{String, Any})
                    "sprd", # spreads
                    "pi_long", # 10-year inflation expectation
                    "R_long", # long-term rate
-                   "tfp"] # total factor productivity
+                   "tfp", # total factor productivity
+                   ["R_n$i" for i = 1:spec["nant"]]] # compounded nominal rates
 
+    # Update spec dictionary with number of states, etc.
+    spec["n_states"] = length(endostates)
+    spec["n_states_aug"] = length(endostates) + length(endostates_postgensys)
+    spec["n_exoshocks"] = length(exoshocks)
+    spec["n_expshocks"] = length(expshocks)
+    spec["n_eqconds"] = length(eqconds)
+    spec["n_observables"] = length(observables)
+    
     return ModelInds(makedict(endostates), makedict(exoshocks), makedict(expshocks),
-                     makedict(equations), makedict(endostates_postgensys; start=length(endostates)),
+                     makedict(eqconds), makedict(endostates_postgensys; start=length(endostates)),
                      makedict(observables))
 end

@@ -130,7 +130,7 @@ function test_modelinds()
     @test ex["Erk_f_sh"] == 13
 
     # Equations
-    eq = I.equations
+    eq = I.eqconds
     @test length(eq) == 66
     @test eq["eq_Ez"] == 60
 
@@ -156,7 +156,8 @@ function test_eqcond()
     spec = spec_vars()
     Θ = Parameters990(spec)
     I = ModelInds(spec)
-    Γ0, Γ1, C, Ψ, Π = eqcond(spec, Θ, I)
+    model = Model("990", spec, Θ, I)
+    Γ0, Γ1, C, Ψ, Π = eqcond(model)
 
     # Matrices are of expected dimensions
     @test size(Γ0) == (66, 66)

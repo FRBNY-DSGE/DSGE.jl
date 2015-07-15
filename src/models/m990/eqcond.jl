@@ -1,3 +1,5 @@
+using ..AbstractModel
+
 # Expresses the equilibrium conditions in canonical form using Γ0, Γ1, C, Ψ, and Π matrices.
 # Using the assigned states and equations in modelinds.jl, coefficients are specified in the
 #   proper positions.
@@ -7,22 +9,21 @@
 # C (n states x 1) is a vector of constants
 # Ψ (n states x n exogenous shocks) holds coefficients of iid shocks.
 # Π (n states x n expectational states) holds coefficients of expectational states.
-
-function eqcond(spec::Dict{String, Any}, Θ::Parameters990, I::ModelInds)
+function eqcond(model::Model)
+    spec = model.spec_vars
+    Θ = model.Θ
+    I = model.I
+    
     endo = I.endostates
     exo = I.exoshocks
     ex = I.expshocks
-    eq = I.equations
+    eq = I.eqconds
 
-    n_states = length(endo)
-    n_exo = length(exo)
-    n_exp = length(ex)
-
-    Γ0 = zeros(n_states, n_states)
-    Γ1 = zeros(n_states, n_states)
-    C =  zeros(n_states, 1)
-    Ψ = zeros(n_states, n_exo)
-    Π =  zeros(n_states, n_exp)
+    Γ0 = zeros(spec["n_states"], spec["n_states"])
+    Γ1 = zeros(spec["n_states"], spec["n_states"])
+    C =  zeros(spec["n_states"], 1)
+    Ψ = zeros(spec["n_states"], spec["n_exoshocks"])
+    Π =  zeros(spec["n_states"], spec["n_expshocks"])
 
 
     
