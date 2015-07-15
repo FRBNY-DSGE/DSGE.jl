@@ -7,11 +7,12 @@ type Model
     Θ::Parameters
     I::ModelInds
     eqcond::Function
+    measurement::Function
 
-    # Incomplete initialization: `eqcond` not assigned
+    # Incomplete initialization: `eqcond`, `measurement` not assigned
     Model(spec::String, spec_vars::Dict{String, Any}, Θ::Parameters, I::ModelInds) = new(spec, spec_vars, Θ, I)
 
     # Initialize all fields
-    Model(spec::String, spec_vars::Dict{String, Any}, Θ::Parameters, I::ModelInds, eqcond::Function) = new(spec, spec_vars, Θ, I, eqcond)
+    Model(spec::String, spec_vars::Dict{String, Any}, Θ::Parameters, I::ModelInds, eqcond::Function, measurement::Function) = new(spec, spec_vars, Θ, I, eqcond, measurement)
 
 end

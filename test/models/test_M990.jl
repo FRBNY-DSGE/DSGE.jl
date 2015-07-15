@@ -9,6 +9,7 @@ function test_all()
     test_parameters()
     test_modelinds()
     test_eqcond()
+    test_measurement()
 
     # Model instantiation
     model = Model()
@@ -141,7 +142,7 @@ function test_modelinds()
 
     # Observables
     obs = I.observables
-    @test length(obs) == 12
+    @test length(obs) == 18
     @test obs["tfp"] == 12
     
     println("modelinds.jl tests passed\n")
@@ -188,4 +189,13 @@ function test_eqcond()
     @test test_matrix_eq(Π_matlab, Π)
 
     println("eqcond.jl tests passed\n")
+end
+
+
+
+# src/models/m990/measurement.jl
+function test_measurement()
+    # TODO: implement
+
+    println("measurement.jl tests passed\n")
 end

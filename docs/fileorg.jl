@@ -45,10 +45,11 @@ dsge.jl/
           using ..AbstractModel
           import ..AbstractModel: Model
           export spec_vars, Parameters990, ModelInds, Model, eqcond
-          include("spec.jl")
-          include("parameters.jl")
-          include("modelinds.jl")
-          include("eqcond.jl")
+          include("m990/spec.jl")
+          include("m990/parameters.jl")
+          include("m990/modelinds.jl")
+          include("m990/eqcond.jl")
+          include("m990/measurement.jl")
           function AbstractModel.Model
         end
       m990/
@@ -65,7 +66,11 @@ dsge.jl/
           using ..AbstractModel
           function AbstractModel.ModelInds
         eqcond.jl
+          using ..AbstractModel
           function eqcond
+        measurement.jl
+          using ..AbstractModel
+          function measurement
     init/
       DistributionsExt.jl
         module DistributionsExt
@@ -102,6 +107,7 @@ dsge.jl/
         function gensys_ordschur!
       ordered_qz.jl
       solve.jl
+        using ..AbstractModel, ..Gensys
         function solve
         function augment_states
     estimate/
@@ -144,6 +150,7 @@ dsge.jl/
         function test_parameters
         function test_modelinds
         function test_eqcond
+        function test_measurement
       m990/
         parameters/
           para.csv
