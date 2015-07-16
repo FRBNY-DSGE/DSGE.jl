@@ -10,6 +10,7 @@ dsge.jl/
         include("init/FinancialFrictionsFunctions.jl")
         include("AbstractModel.jl")
         include("solve/Gensys.jl")
+        include("solve/solve.jl")
         include("estimate/Kalman.jl")
         include("models/M990.jl")
       end
@@ -44,7 +45,7 @@ dsge.jl/
         module M990
           using ..AbstractModel
           import ..AbstractModel: Model
-          export spec_vars, Parameters990, ModelInds, Model, eqcond
+          export spec_vars, Parameters990, ModelInds, Model, eqcond, measurement
           include("m990/spec.jl")
           include("m990/parameters.jl")
           include("m990/modelinds.jl")
@@ -54,7 +55,7 @@ dsge.jl/
         end
       m990/
         spec.jl
-          function spec
+          function spec_vars
         parameters.jl
           using Distributions: Normal, quantile
           using Roots: fzero
@@ -64,6 +65,7 @@ dsge.jl/
           function steadystate!
         modelinds.jl
           using ..AbstractModel
+          import ..AbstractModel: ModelInds
           function AbstractModel.ModelInds
         eqcond.jl
           using ..AbstractModel
@@ -102,9 +104,7 @@ dsge.jl/
         end
       Gensys_versions.jl
         function gensys_qzdiv
-        function gensys_qzdiv!
         function gensys_ordschur
-        function gensys_ordschur!
       ordered_qz.jl
       solve.jl
         using ..AbstractModel, ..Gensys
@@ -116,7 +116,7 @@ dsge.jl/
           export kalcvf2NaN, kalsmth_k93
           function kalcvf2NaN
           function kalsmth_k93
-          function distsmth_k93.m
+          function distsmth_k93
         end
     forecast/
   docs/
@@ -128,6 +128,7 @@ dsge.jl/
     test_readcsv_complex.csv
     util.jl
       using Base.Test
+      function minusnan
       function test_matrix_eq
       function readcsv_complex
       function test_util
@@ -163,26 +164,29 @@ dsge.jl/
           ...
     solve/
       test_Gensys.jl
-        using Base.test
-        using DSGE: M990, Gensys
+        using Base: Test, LinAlg
+        using MATLAB
+        using DSGE: Gensys
         include("../util.jl")
+        include("../../src/solve/Gensys_versions.jl")
       test_ordered_qz.jl
         using Base.Test, Compat
         import Base.Linalg: BlasComplex, BlasFloat, BlasReal, QRPivoted
         include("../../src/solve/ordered_qz.jl")
+      gensys/
+        gensys_args.mat
+        gensys_variables.mat
+        make_gensys_args.m
+        test_Gensys.m
     estimate/
       test_Kalman.jl
         using Base.Test
+        using MATLAB
         using DSGE.Kalman
         include("../util.jl")
       kalcvf2NaN/
-        args/
-          data
-          ...
-        out7/
-          L.csv
-          ...
-        out9/
-          L.csv
-          ...
+        kalcvf2NaN_args.mat
+        kalcvf2NaN_out7.mat
+        kalcvf2NaN_out9.mat
+        test_kalcvf2NaN.m
   README.md
