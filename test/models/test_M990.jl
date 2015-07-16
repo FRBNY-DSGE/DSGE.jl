@@ -154,10 +154,7 @@ end
 # src/models/m990/eqcond.jl
 function test_eqcond()
     # eqcond function executes successfully
-    spec = spec_vars()
-    Θ = Parameters990(spec)
-    I = ModelInds(spec)
-    model = Model("990", spec, Θ, I)
+    model = Model()
     Γ0, Γ1, C, Ψ, Π = eqcond(model)
 
     # Matrices are of expected dimensions
