@@ -15,6 +15,8 @@ include("init/FinancialFrictionsFunctions.jl")
 include("AbstractModel.jl")
 
 include("solve/Gensys.jl")
+include("solve/solve.jl")
+
 include("estimate/Kalman.jl")
 
 include("models/M990.jl")
