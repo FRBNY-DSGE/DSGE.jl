@@ -3,7 +3,7 @@ module M990
 using ..AbstractModel
 import ..AbstractModel: Model
 
-export spec_vars, Parameters990, ModelInds, Model, eqcond
+export spec_vars, Parameters990, ModelInds, Model, eqcond, measurement
 
 include("m990/spec.jl")
 include("m990/parameters.jl")
