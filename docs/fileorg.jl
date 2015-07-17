@@ -178,6 +178,12 @@ dsge.jl/
         gensys_variables.mat
         make_gensys_args.m
         test_Gensys.m
+      test_solve.mat
+      test_solve.jl
+        using Base: Test
+        using MATLAB
+        using DSGE: M990
+        include("../util.jl")
     estimate/
       test_Kalman.jl
         using Base.Test
@@ -189,4 +195,11 @@ dsge.jl/
         kalcvf2NaN_out7.mat
         kalcvf2NaN_out9.mat
         test_kalcvf2NaN.m
+      test_likelihood.mat
+      test_likelihood.jl
+        using Base: Test
+        using MATLAB
+        using DSGE
+        using DSGE: M990
+        include("../util.jl")
   README.md
