@@ -1,4 +1,4 @@
-using ..AbstractModel
+using .AbstractModel
 
 # This is a dsge likelihood function that can handle 2-part estimation where
 # there is a model switch.
@@ -8,10 +8,11 @@ function likelihood{T<:FloatingPoint}(model::Model, YY::Array{T, 2})
     spec = model.spec_vars
 
 
-    
+
+    # TODO: Find a way to return these matrices from measurement equation or something so `solve` isn't called twice
     ## step 1: solution to DSGE model - delivers transition equation for the state variables  S_t
     ## transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ
-    TTT, CCC, RRR, valid = solve(model::Model)
+    TTT, CCC, RRR = solve(model::Model)
 
 
     
@@ -20,12 +21,12 @@ function likelihood{T<:FloatingPoint}(model::Model, YY::Array{T, 2})
     ## where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
 
     # Get measurement equation matrices set up
-    try
-        ZZ, DD, QQ, EE, MM = measurement(model)
-    catch
+    #try
+        ZZ, DD, QQ, EE, MM = model.measurement(model)
+    #catch 
         # Error thrown during gensys
-        return -Inf
-    end
+    #    return -Inf
+    #end
 
     HH = EE + MM*QQ*MM'
     VV = QQ*MM'
@@ -50,6 +51,6 @@ function likelihood{T<:FloatingPoint}(model::Model, YY::Array{T, 2})
     A0 = zeros(size(TTT, 1), 1)
     P0 = dlyap(TTT, RRR*QQQ*RRR')
 
-    pyt, zend, Pend = kalcvf2NaN(YY', 1, zeros(spec["n_states_aug"], 1), TTT, DD, ZZ, VVall, A0, P0)
+    pyt, zend, Pend = kalcvf2NaN(YY', 1, zeros(spec["n_states_aug"], 1), TTT, DD, ZZ, VVall, A0, P0, 2)
     return pyt
 end
