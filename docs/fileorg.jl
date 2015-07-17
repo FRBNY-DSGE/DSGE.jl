@@ -45,7 +45,7 @@ dsge.jl/
         module M990
           using ..AbstractModel
           import ..AbstractModel: Model
-          export spec_vars, Parameters990, ModelInds, Model, eqcond, measurement
+          export Parameters990, ModelInds, Model
           include("m990/spec.jl")
           include("m990/parameters.jl")
           include("m990/modelinds.jl")
