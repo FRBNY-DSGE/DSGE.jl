@@ -114,6 +114,5 @@ function measurement(model::Model)
         end
     end
 
-    # TODO: when do we ever assign to EE and MM before returning?
     return ZZ, DD, QQ, EE, MM
 end

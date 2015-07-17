@@ -20,10 +20,10 @@ function likelihood{T<:FloatingPoint}(model::Model, YY::Array{T, 2})
     ## where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
 
     # Get measurement equation matrices set up
-    ZZ, DD, QQ, EE, MM, valid = measurement(model)
-
-    # invalid parameterization
-    if !valid
+    try
+        ZZ, DD, QQ, EE, MM = measurement(model)
+    catch
+        # Error thrown during gensys
         return -Inf
     end
 

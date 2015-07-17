@@ -242,6 +242,10 @@ function gensys!(F::Base.LinAlg.GeneralizedSchur, C, Ψ, Π, div)
 
     ywt=z*ywt
 
+    if eu[1] != 1 || eu[2] != 1
+        error("gensys does not give existence and uniqueness")
+    end
+
     return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
 end
 

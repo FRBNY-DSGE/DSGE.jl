@@ -1,6 +1,7 @@
 using ..AbstractModel, ..Gensys
 
-# TODO: Do we need to pass in nant as an argument?
+# Outputs TTT, RRR, CCC - matrices of the state transition equation:
+#   S_t = TTT*S_{t-1} + RRR*ε_t + CCC
 function solve(model::Model)
 
     # Get equilibrium condition matrices
