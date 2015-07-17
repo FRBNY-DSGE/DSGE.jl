@@ -1,15 +1,23 @@
-using ..AbstractModel, ..Gensys
+using .AbstractModel, .Gensys
+
+using MATLAB
 
 # Outputs TTT, RRR, CCC - matrices of the state transition equation:
 #   S_t = TTT*S_{t-1} + RRR*ε_t + CCC
 function solve(model::Model)
-
+    
     # Get equilibrium condition matrices
-    Γ0, Γ1, C, Ψ, Π = model.eqcond(model.spec_vars, model.Θ, model.I)
+    Γ0, Γ1, C, Ψ, Π  = model.eqcond(model)
 
     # Solve model
-    TTT_gensys, CCC_gensys, RRR_gensys = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
+    #TTT_gensys, CCC_gensys, RRR_gensys = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
+    solve_dir = dirname(@__FILE__)
+    mat"""
+        addpath($solve_dir);
+        [$TTT_gensys, $CCC_gensys, $RRR_gensys] = feval('gensys', $Γ0, $Γ1, $C, $Ψ, $Π, 1+1e-6);
+    """
     TTT_gensys = real(TTT_gensys)
+    CCC_gensys = reshape(CCC_gensys, length(CCC_gensys), 1)
     RRR_gensys = real(RRR_gensys)
 
     # Augment states
@@ -33,6 +41,7 @@ function augment_states{T<:FloatingPoint}(model::Model, TTT::Array{T, 2}, CCC::A
     Θ = model.Θ
     endo = model.I.endostates
     endo_addl = model.I.endostates_postgensys
+    exo = model.I.exoshocks
 
     n_endo = length(endo)
     n_exo = length(exo)
@@ -57,7 +66,7 @@ function augment_states{T<:FloatingPoint}(model::Model, TTT::Array{T, 2}, CCC::A
     TTT_aug[endo_addl["i_t1"], endo["i_t"]] = 1.0
     TTT_aug[endo_addl["w_t1"], endo["w_t"]] = 1.0
     TTT_aug[endo_addl["pi_t1"], endo["pi_t"]] = 1.0
-    TTT_aug[endo_addl["w_t1"], endo["L_t"]]  = 1.0
+    TTT_aug[endo_addl["L_t1"], endo["L_t"]]  = 1.0
     TTT_aug[endo_addl["u_t1"], endo["u_t"]] = 1.0
 
     # Expected inflation
@@ -69,7 +78,7 @@ function augment_states{T<:FloatingPoint}(model::Model, TTT::Array{T, 2}, CCC::A
     TTT_aug[endo_addl["lr_t"], endo_addl["lr_t"]] = Θ.ρ_lr.scaledvalue
     TTT_aug[endo_addl["tfp_t"], endo_addl["tfp_t"]] = Θ.ρ_tfp.scaledvalue
     TTT_aug[endo_addl["e_gdpdef"], endo_addl["e_gdpdef"]] = Θ.ρ_gdpdef.scaledvalue
-    TTT_aug[endo_addl["e_gdpdef"], endo_addl["e_pce"]] = Θ.ρ_pce.scaledvalue
+    TTT_aug[endo_addl["e_pce"], endo_addl["e_pce"]] = Θ.ρ_pce.scaledvalue
 
 
     

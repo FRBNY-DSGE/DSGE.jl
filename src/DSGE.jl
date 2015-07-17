@@ -8,7 +8,12 @@
 
 module DSGE
 
-export M990
+export
+    # modules
+    M990,
+
+    # functions
+    solve
 
 include("init/DistributionsExt.jl")
 include("init/FinancialFrictionsFunctions.jl")
