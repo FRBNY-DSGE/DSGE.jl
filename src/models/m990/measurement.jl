@@ -1,4 +1,5 @@
-using ..AbstractModel
+using ..DSGE
+using .AbstractModel
 
 # Assign measurement equation : X_t = ZZ*S_t + DD + u_t
 # where u_t = eta_t+MM* eps_t with var(eta_t) = EE
@@ -15,7 +16,7 @@ function measurement(model::Model)
     exo = I.exoshocks
     obs = I.observables
 
-    ZZ = zeros(spec["n_observables"], spec["n_states"])
+    ZZ = zeros(spec["n_observables"], spec["n_states_aug"])
     DD = zeros(spec["n_observables"], 1)
     MM = zeros(spec["n_observables"], spec["n_exoshocks"])
     EE = zeros(spec["n_observables"], spec["n_observables"])
@@ -51,7 +52,7 @@ function measurement(model::Model)
 
     ## Nominal interest rate
     ZZ[obs["R_n"], endo["R_t"]] = 1.0
-    DD[obs["R_n"]] = Θ.Rstarn.scaledvalue
+    DD[obs["R_n"]] = Θ.Rstarn
 
     ## Consumption Growth
     ZZ[obs["g_c"], endo["c_t"]] = 1.0
@@ -86,32 +87,30 @@ function measurement(model::Model)
     ZZ[obs["tfp"], endo["u_t"]] = Θ.alp/( (1-Θ.alp)*(1-Θ.modelalp_ind) + 1*Θ.modelalp_ind )
     ZZ[obs["tfp"], endo_addl["u_t1"]] = -(Θ.alp/( (1-Θ.alp)*(1-Θ.modelalp_ind) + 1*Θ.modelalp_ind) )
 
-    QQ[exo["g_sh, g_sh"]] = Θ.σ_g^2
-    QQ[exo["b_sh, b_sh"]] = Θ.σ_b^2
-    QQ[exo["mu_sh, mu_sh"]] = Θ.σ_mu^2
-    QQ[exo["z_sh, z_sh"]] = Θ.σ_z^2
-    QQ[exo["laf_sh, laf_sh"]] = Θ.σ_laf^2
-    QQ[exo["law_sh, law_sh"]] = Θ.σ_law^2
-    QQ[exo["rm_sh, rm_sh"]] = Θ.σ_rm^2
-    QQ[exo["sigw_sh, sigw_sh"]] = Θ.σ_sigw^2
-    QQ[exo["mue_sh, mue_sh"]] = Θ.σ_mue^2
-    QQ[exo["gamm_sh, gamm_sh"]] = Θ.σ_gamm^2
-    QQ[exo["pist_sh, pist_sh"]] = Θ.σ_pist^2
-    QQ[exo["lr_sh, lr_sh"]] = Θ.σ_lr^2
-    QQ[exo["zp_sh, zp_sh"]] = Θ.σ_zp^2
-    QQ[exo["tfp_sh, tfp_sh"]] = Θ.σ_tfp^2
-    QQ[exo["gdpdef_sh, gdpdef_sh"]] = Θ.σ_gdpdef^2
-    QQ[exo["pce_sh, pce_sh"]] = Θ.σ_pce^2
+    QQ[exo["g_sh"], exo["g_sh"]] = Θ.σ_g^2
+    QQ[exo["b_sh"], exo["b_sh"]] = Θ.σ_b^2
+    QQ[exo["mu_sh"], exo["mu_sh"]] = Θ.σ_mu^2
+    QQ[exo["z_sh"], exo["z_sh"]] = Θ.σ_z^2
+    QQ[exo["laf_sh"], exo["laf_sh"]] = Θ.σ_laf^2
+    QQ[exo["law_sh"], exo["law_sh"]] = Θ.σ_law^2
+    QQ[exo["rm_sh"], exo["rm_sh"]] = Θ.σ_rm^2
+    QQ[exo["sigw_sh"], exo["sigw_sh"]] = Θ.σ_sigw^2
+    QQ[exo["mue_sh"], exo["mue_sh"]] = Θ.σ_mue^2
+    QQ[exo["gamm_sh"], exo["gamm_sh"]] = Θ.σ_gamm^2
+    QQ[exo["pist_sh"], exo["pist_sh"]] = Θ.σ_pist^2
+    QQ[exo["lr_sh"], exo["lr_sh"]] = Θ.σ_lr^2
+    QQ[exo["zp_sh"], exo["zp_sh"]] = Θ.σ_zp^2
+    QQ[exo["tfp_sh"], exo["tfp_sh"]] = Θ.σ_tfp^2
+    QQ[exo["gdpdef_sh"], exo["gdpdef_sh"]] = Θ.σ_gdpdef^2
+    QQ[exo["pce_sh"], exo["pce_sh"]] = Θ.σ_pce^2
 
     # These lines set the standard deviations for the anticipated shocks. They
     # are here no longer calibrated to the std dev of contemporaneous shocks, 
     # as we had in 904
-    if spec["nant"] > 0
-        for i = 1:spec["nant"]
-            eval(parse("ZZ[obs[\"R_n$i\"], :] = ZZ[obs[\"R_n\"], :]*(TTT^i)"))
-            eval(parse("DD[obs[\"R_n$i\"]] = Θ.Rstarn"))
-            eval(parse("QQ[exo[\"rm_shl$i\"], exo[\"rm_shl$i\"]] = Θ.σ_rm$i^2"))
-        end
+    for i = 1:spec["nant"]
+        eval(parse("ZZ[obs[\"R_n$i\"], :] = ZZ[obs[\"R_n\"], :]*(TTT^$i)"))
+        eval(parse("DD[obs[\"R_n$i\"]] = Θ.Rstarn"))
+        eval(parse("QQ[exo[\"rm_shl$i\"], exo[\"rm_shl$i\"]] = Θ.σ_rm$i^2"))
     end
 
     return ZZ, DD, QQ, EE, MM
