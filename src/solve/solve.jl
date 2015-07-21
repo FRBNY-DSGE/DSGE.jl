@@ -1,4 +1,4 @@
-using .AbstractModel, .Gensys
+using .Gensys
 
 using MATLAB
 

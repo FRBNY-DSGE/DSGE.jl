@@ -1,5 +1,3 @@
-using ..AbstractModel
-
 # Expresses the equilibrium conditions in canonical form using Γ0, Γ1, C, Ψ, and Π matrices.
 # Using the assigned states and equations in modelinds.jl, coefficients are specified in the
 #   proper positions.

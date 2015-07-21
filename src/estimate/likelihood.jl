@@ -1,4 +1,4 @@
-using .AbstractModel, .Kalman
+using .Kalman
 
 # This is a dsge likelihood function that can handle 2-part estimation where
 # there is a model switch.

@@ -1,10 +1,7 @@
-using ..AbstractModel
-import ..AbstractModel: ModelInds
-
 # Return a ModelInds object, which has four fields: each is a dictionary mapping states or
 #   equations to model indices
 # Updates spec with n_states, etc.
-function AbstractModel.ModelInds(spec::Dict{String, Any})
+function ModelInds(spec::Dict{String, Any})
     endostates = ["y_t",
                   "c_t",
                   "i_t",

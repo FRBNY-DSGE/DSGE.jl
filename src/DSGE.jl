@@ -9,15 +9,17 @@
 module DSGE
 
 export
-    # modules
-    M990,
-
     # functions
-    solve, dlyap, likelihood
+    solve, dlyap, likelihood,
+
+    Parameters990, ModelInds, Model,
+
+    Param, Parameters, toreal, tomodel, logprior, spec_vars, eqcond, measurement, makedict
+
 
 include("init/DistributionsExt.jl")
 include("init/FinancialFrictionsFunctions.jl")
-include("AbstractModel.jl")
+include("core.jl")
 
 include("solve/Gensys.jl")
 include("solve/solve.jl")
@@ -26,6 +28,22 @@ include("estimate/dlyap.jl")
 include("estimate/Kalman.jl")
 include("estimate/likelihood.jl")
 
-include("models/M990.jl")
+
+
+
+
+include("models/m990/spec.jl")
+include("models/m990/parameters.jl")
+include("models/m990/modelinds.jl")
+include("models/m990/eqcond.jl")
+include("models/m990/measurement.jl")
+
+function Model()
+    spec = spec_vars()
+    Θ = Parameters990(spec)
+    I = ModelInds(spec)
+    return Model("990", spec, Θ, I, eqcond, measurement)
+end
+
 
 end

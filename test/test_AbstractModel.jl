@@ -1,7 +1,8 @@
 using Base.Test
 using Distributions
 
-using DSGE: DistributionsExt, AbstractModel, M990
+using DSGE
+using DSGE: DistributionsExt
 
 
 
