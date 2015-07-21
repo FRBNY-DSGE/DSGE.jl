@@ -1,9 +1,3 @@
-module Kalman
-
-export kalcvf2NaN, kalsmth_k93
-
-
-
 # KALCVF The Kalman filter
 #
 # State space model is defined as follows:
@@ -393,6 +387,3 @@ function distsmth_k93{S<:FloatingPoint}(y::Array{T, 2}, pred::Array{T, 2}, vpred
     return r, eta_hat
 end
 =#
-
-
-end # module

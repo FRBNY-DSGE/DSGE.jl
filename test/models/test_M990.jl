@@ -1,6 +1,7 @@
 using Base.Test, Distributions
 
-using DSGE: DistributionsExt, AbstractModel, M990
+using DSGE
+using DSGE: DistributionsExt
 include("../util.jl")
 
 
@@ -23,7 +24,7 @@ end
 # src/models/m990/parameters.jl
 function test_parameters()
     # Parameters990 object creation
-    Θ = Parameters990(M990.spec_vars())
+    Θ = Parameters990(spec_vars())
     @test isa(Θ, Parameters990)
 
     # Parameters match para, bounds, etc. vectors from Matlab (ε = 1e-4)
@@ -112,7 +113,7 @@ end
 # src/models/m990/modelinds.jl
 function test_modelinds()
     # ModelInds object creation
-    I = ModelInds(M990.spec_vars())
+    I = ModelInds(spec_vars())
     @test isa(I, ModelInds)
 
     # Endogenous states
@@ -155,7 +156,7 @@ end
 function test_eqcond()
     # eqcond function executes successfully
     model = Model()
-    Γ0, Γ1, C, Ψ, Π = M990.eqcond(model)
+    Γ0, Γ1, C, Ψ, Π = eqcond(model)
 
     # Matrices are of expected dimensions
     @test size(Γ0) == (66, 66)

@@ -8,29 +8,34 @@
 
 module DSGE
 
+include("init/DistributionsExt.jl")
+include("init/FinancialFrictionsFunctions.jl")
+
+using Distributions
+using .DistributionsExt
+
+import Base: convert, promote_rule, log, exp, start, next, done
+
+
 export
     # functions
     solve, dlyap, likelihood,
 
     Parameters990, ModelInds, Model,
 
-    Param, Parameters, toreal, tomodel, logprior, spec_vars, eqcond, measurement, makedict
+    Param, Parameters, toreal, tomodel, logprior, spec_vars, eqcond, measurement, makedict,
+    
+    # estimate/kalman.jl
+    kalcvf2NaN, kalsmth_k93
 
 
-include("abstractmodel/param.jl")
-include("abstractmodel/parameters.jl")
-include("abstractmodel/modelinds.jl")
-include("abstractmodel/model.jl")
-
-include("init/DistributionsExt.jl")
-include("init/FinancialFrictionsFunctions.jl")
 include("core.jl")
 
 include("solve/Gensys.jl")
 include("solve/solve.jl")
 
 include("estimate/dlyap.jl")
-include("estimate/Kalman.jl")
+include("estimate/kalman.jl")
 include("estimate/likelihood.jl")
 
 
