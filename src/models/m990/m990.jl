@@ -14,30 +14,22 @@ function Model990()
     return Model990(spec, Θ, ind)
 end
 
-
-
-
-
 # Model-specific specifications
 function model_specifications(T::Type{Model990})
     dict = Dict{String, Any}()
-    
+
     # Number of anticipated policy shocks
     dict["nant"] = 6
-    
+
     # Padding for nant
     dict["nantpad"] = 20
-    
+
     # Number of periods back we should start incorporating zero bound expectations
     # ZLB expectations should begin in 2008 Q4
     dict["antlags"] = 24
 
     return dict
 end
-
-
-
-
 
 # Expresses the equilibrium conditions in canonical form using Γ0, Γ1, C, Ψ, and Π matrices.
 # Using the assigned states and equations in modelinds.jl, coefficients are specified in the
@@ -52,7 +44,7 @@ function eqcond(model::AbstractModel)
     spec = model.spec_vars
     Θ = model.Θ
     ind = model.ind
-    
+
     endo = ind.endostates
     exo = ind.exoshocks
     ex = ind.expshocks
@@ -65,9 +57,9 @@ function eqcond(model::AbstractModel)
     Π =  zeros(spec["n_states"], spec["n_expshocks"])
 
 
-    
+
     ### ENDOGENOUS STATES ###
-    
+
     ### 1. Consumption Euler Equation
 
     # Sticky prices and wages
@@ -161,7 +153,7 @@ function eqcond(model::AbstractModel)
     Γ0[eq["capval_f"], endo["b_t"]] = -(Θ.sigmac*(1 + Θ.h*exp(-Θ.zstar)))/(1 - Θ.h*exp(-Θ.zstar))
 
 
-    
+
     ### 4. Aggregate Production Function
 
     # Sticky prices and wages
@@ -190,8 +182,8 @@ function eqcond(model::AbstractModel)
     Γ0[eq["caputl_f"], endo["z_t"]] = 1.
     Γ0[eq["caputl_f"], endo["u_f_t"]] = -1.
 
-    
-    
+
+
     ### 6. Rental Rate of Capital
 
     # Sticky prices and wages
@@ -203,7 +195,7 @@ function eqcond(model::AbstractModel)
     Γ0[eq["capsrv_f"], endo["rk_f_t"]] = -(1 - Θ.ppsi)/Θ.ppsi
 
 
-    
+
     ### 7. Evolution of Capital
 
     # Sticky prices and wages
@@ -236,7 +228,7 @@ function eqcond(model::AbstractModel)
     Γ0[eq["mkupp_f"], endo["k_f_t"]] =  -Θ.alp
 
 
-    
+
     ### 9. Phillips Curve
 
     # Sticky prices and wages
@@ -249,7 +241,7 @@ function eqcond(model::AbstractModel)
 
     # Flexible prices and wages not necessary
 
-    
+
 
     ### 10. Rental Rate of Capital
 
@@ -285,7 +277,7 @@ function eqcond(model::AbstractModel)
     Γ0[eq["msub_f"], endo["z_t"]] = Θ.h*exp(-Θ.zstar)/(1 - Θ.h*exp(-Θ.zstar))
 
 
-    
+
     ### 12. Evolution of Wages
 
     # Sticky prices and wages
@@ -366,7 +358,7 @@ function eqcond(model::AbstractModel)
     Γ0[eq["eq_Ez"], endo["ztil_t"]] = -(Θ.ρ_z-1)/(1-Θ.alp)
     Γ0[eq["eq_Ez"], endo["zp_t"]] = -Θ.ρ_zp
 
-    
+
 
     ### EXOGENOUS SHOCKS ###
 
@@ -425,7 +417,7 @@ function eqcond(model::AbstractModel)
     Ψ[eq["eq_rm"], exo["rm_sh"]] = 1.
 
 
-    
+
     ### Financial frictions
 
     # sigw shock
@@ -456,7 +448,7 @@ function eqcond(model::AbstractModel)
         # will hit in two periods), and the equations are set up so that rm_tl2 last period
         # will feed into rm_tl1 this period (and so on for other numbers), and last period's
         # rm_tl1 will feed into the rm_t process (and affect the Taylor Rule this period).
-        
+
         Γ1[eq["eq_rm"], endo["rm_tl1"]] = 1.
         Γ0[eq["eq_rml1"], endo["rm_tl1"]] = 1.
         Ψ[eq["eq_rml1"], exo["rm_shl1"]] = 1.
@@ -469,13 +461,13 @@ function eqcond(model::AbstractModel)
             end
         end
     end
-    
-    
-    
+
+
+
     ### EXPECTATION ERRORS ###
 
     ### E(c)
-    
+
     # Sticky prices and wages
     Γ0[eq["eq_Ec"], endo["c_t"]] = 1.
     Γ1[eq["eq_Ec"], endo["E_c"]] = 1.
@@ -487,9 +479,9 @@ function eqcond(model::AbstractModel)
     Π[eq["eq_Ec_f"], ex["Ec_f_sh"]] = 1.
 
 
-    
+
     ### E(q)
-    
+
     # Sticky prices and wages
     Γ0[eq["eq_Eqk"], endo["qk_t"]] = 1.
     Γ1[eq["eq_Eqk"], endo["E_qk"]] = 1.
@@ -501,9 +493,9 @@ function eqcond(model::AbstractModel)
     Π[eq["eq_Eqk_f"], ex["Eqk_f_sh"]] = 1.
 
 
-    
+
     ### E(i)
-    
+
     # Sticky prices and wages
     Γ0[eq["eq_Ei"], endo["i_t"]] = 1.
     Γ1[eq["eq_Ei"], endo["E_i"]] = 1.
@@ -515,7 +507,7 @@ function eqcond(model::AbstractModel)
     Π[eq["eq_Ei_f"], ex["Ei_f_sh"]] = 1.
 
 
-    
+
     ### E(pi)
 
     # Sticky prices and wages
@@ -524,7 +516,7 @@ function eqcond(model::AbstractModel)
     Π[eq["eq_Epi"], ex["Epi_sh"]] = 1.
 
 
-    
+
     ### E(l)
 
     # Sticky prices and wages
@@ -538,7 +530,7 @@ function eqcond(model::AbstractModel)
     Π[eq["eq_EL_f"], ex["EL_f_sh"]] = 1.
 
 
-    
+
     ### E(rk)
 
     # Sticky prices and wages
@@ -552,7 +544,7 @@ function eqcond(model::AbstractModel)
     Π[eq["eq_Erk_f"], ex["Erk_f_sh"]] = 1.
 
 
-    
+
     ### E(w)
 
     # Sticky prices and wages
@@ -561,16 +553,16 @@ function eqcond(model::AbstractModel)
     Π[eq["eq_Ew"], ex["Ew_sh"]] = 1.
 
 
-    
+
     ### E(Rktil)
 
     # Sticky prices and wages
     Γ0[eq["eq_ERktil"], endo["Rktil_t"]] = 1.
     Γ1[eq["eq_ERktil"], endo["E_Rktil"]] = 1.
     Π[eq["eq_ERktil"], ex["ERktil_sh"]] = 1.
-            
 
-    
+
+
     return Γ0, Γ1, C, Ψ, Π
 end
 
@@ -583,7 +575,7 @@ end
 # where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
 function measurement(model::Model990)
     TTT, CCC, RRR = solve(model)
-    
+
     spec = model.spec_vars
     Θ = model.Θ
     ind = model.ind
@@ -600,7 +592,7 @@ function measurement(model::Model990)
     QQ =  zeros(spec["n_exoshocks"], spec["n_exoshocks"])
 
 
-    
+
     ## Output growth - Quarterly!
     ZZ[obs["g_y"], endo["y_t"]] = 1.0
     ZZ[obs["g_y"], endo_addl["y_t1"]] = -1.0
@@ -682,7 +674,7 @@ function measurement(model::Model990)
     QQ[exo["pce_sh"], exo["pce_sh"]] = Θ.σ_pce^2
 
     # These lines set the standard deviations for the anticipated shocks. They
-    # are here no longer calibrated to the std dev of contemporaneous shocks, 
+    # are here no longer calibrated to the std dev of contemporaneous shocks,
     # as we had in 904
     for i = 1:spec["nant"]
         ZZ[obs["R_n$i"], :] = ZZ[obs["R_n"], :]*(TTT^i)

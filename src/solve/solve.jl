@@ -1,7 +1,7 @@
 # Outputs TTT, RRR, CCC - matrices of the state transition equation:
 #   S_t = TTT*S_{t-1} + RRR*ε_t + CCC
 function solve(model::AbstractModel)
-    
+
     # Get equilibrium condition matrices
     Γ0, Γ1, C, Ψ, Π  = eqcond(model)
 
@@ -22,10 +22,8 @@ function solve(model::AbstractModel)
     return TTT, CCC, RRR
 end
 
-
-
 # Some of our observables are growth rates, which is calculated as a
-# linear combination of a present and lagged state. To capture the lagged state, 
+# linear combination of a present and lagged state. To capture the lagged state,
 # we assign to it an index. In addition, we also need to expand the
 # matrices of the state transition equation to accommodate the extra state.
 # In dsgesolv.m, AddTTT is appended to TTT to capture the lagged state
@@ -52,8 +50,6 @@ function augment_states{T<:FloatingPoint}(model::AbstractModel, TTT::Array{T, 2}
     RRR_aug = [RRR; zeros(numAdd, n_exo)]
     CCC_aug = [CCC; zeros(numAdd, 1)]
 
-
-    
     ### TTT modifications
 
     # Track Lags
@@ -76,15 +72,11 @@ function augment_states{T<:FloatingPoint}(model::AbstractModel, TTT::Array{T, 2}
     TTT_aug[endo_addl["e_gdpdef"], endo_addl["e_gdpdef"]] = Θ.ρ_gdpdef.scaledvalue
     TTT_aug[endo_addl["e_pce"], endo_addl["e_pce"]] = Θ.ρ_pce.scaledvalue
 
-
-    
     ### CCC Modifications
 
     # Expected inflation
     CCC_aug[endo_addl["Et_pi_t"], :] = (CCC + TTT*CCC)[endo["pi_t"], :]
 
-
-    
     ### RRR modfications
 
     # Expected inflation
@@ -101,8 +93,6 @@ function augment_states{T<:FloatingPoint}(model::AbstractModel, TTT::Array{T, 2}
 
     # Measurement Error on Core PCE
     RRR_aug[endo_addl["e_pce"], exo["pce_sh"]] = 1.0
-
-
 
     return TTT_aug, CCC_aug, RRR_aug
 end

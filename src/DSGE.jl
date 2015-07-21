@@ -23,7 +23,7 @@ export
 
     # solve/
     solve,
-    
+
     # estimate/
     dlyap, kalcvf2NaN, kalsmth_k93, likelihood,
 
@@ -40,7 +40,5 @@ include("estimate/likelihood.jl")
 include("models/m990/m990.jl")
 include("models/m990/parameters.jl")
 include("models/m990/modelinds.jl")
-
-
 
 end
