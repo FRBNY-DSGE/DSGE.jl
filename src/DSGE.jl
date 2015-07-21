@@ -17,6 +17,11 @@ export
     Param, Parameters, toreal, tomodel, logprior, spec_vars, eqcond, measurement, makedict
 
 
+include("abstractmodel/param.jl")
+include("abstractmodel/parameters.jl")
+include("abstractmodel/modelinds.jl")
+include("abstractmodel/model.jl")
+
 include("init/DistributionsExt.jl")
 include("init/FinancialFrictionsFunctions.jl")
 include("core.jl")
