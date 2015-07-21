@@ -10,12 +10,12 @@
 function eqcond(model::AbstractModel)
     spec = model.spec_vars
     Θ = model.Θ
-    I = model.I
+    ind = model.ind
     
-    endo = I.endostates
-    exo = I.exoshocks
-    ex = I.expshocks
-    eq = I.eqconds
+    endo = ind.endostates
+    exo = ind.exoshocks
+    ex = ind.expshocks
+    eq = ind.eqconds
 
     Γ0 = zeros(spec["n_states"], spec["n_states"])
     Γ1 = zeros(spec["n_states"], spec["n_states"])

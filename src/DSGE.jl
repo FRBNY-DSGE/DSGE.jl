@@ -23,7 +23,7 @@ export
 
     Parameters990, ModelInds, Model990,
 
-    Param, Parameters, toreal, tomodel, logprior, spec_vars, eqcond, measurement, makedict,
+    Param, Parameters, toreal, tomodel, logprior, model_specifications, eqcond, measurement, makedict,
     
     # estimate/kalman.jl
     kalcvf2NaN, kalsmth_k93
@@ -40,13 +40,11 @@ include("estimate/likelihood.jl")
 
 
 
-
+# m990
 include("models/m990/m990.jl")
-include("models/m990/spec.jl")
 include("models/m990/parameters.jl")
 include("models/m990/modelinds.jl")
 include("models/m990/eqcond.jl")
-include("models/m990/measurement.jl")
 
 
 

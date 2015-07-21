@@ -39,9 +39,9 @@ end
 # These additional states are added after the model is solved to reduce the load on gensys
 function augment_states{T<:FloatingPoint}(model::AbstractModel, TTT::Array{T, 2}, CCC::Array{T, 2}, RRR::Array{T, 2})
     Θ = model.Θ
-    endo = model.I.endostates
-    endo_addl = model.I.endostates_postgensys
-    exo = model.I.exoshocks
+    endo = model.ind.endostates
+    endo_addl = model.ind.endostates_postgensys
+    exo = model.ind.exoshocks
 
     n_endo = length(endo)
     n_exo = length(exo)

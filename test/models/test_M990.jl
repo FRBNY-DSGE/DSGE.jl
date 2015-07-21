@@ -24,7 +24,7 @@ end
 # src/models/m990/parameters.jl
 function test_parameters()
     # Parameters990 object creation
-    Θ = Parameters990(spec_vars())
+    Θ = Parameters990(model_specifications(Model990))
     @test isa(Θ, Parameters990)
 
     # Parameters match para, bounds, etc. vectors from Matlab (ε = 1e-4)
@@ -113,7 +113,7 @@ end
 # src/models/m990/modelinds.jl
 function test_modelinds()
     # ModelInds object creation
-    I = ModelInds(spec_vars())
+    I = ModelInds(model_specifications(Model990))
     @test isa(I, ModelInds)
 
     # Endogenous states
