@@ -13,8 +13,8 @@ function test_all()
     test_measurement()
 
     # Model instantiation
-    model = Model()
-    @test isa(model, Model)
+    model = Model990()
+    @test isa(model, Model990)
     
     println("### All tests in M990.jl passed\n")
 end
@@ -155,7 +155,7 @@ end
 # src/models/m990/eqcond.jl
 function test_eqcond()
     # eqcond function executes successfully
-    model = Model()
+    model = Model990()
     Γ0, Γ1, C, Ψ, Π = eqcond(model)
 
     # Matrices are of expected dimensions

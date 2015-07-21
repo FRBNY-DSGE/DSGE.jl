@@ -7,7 +7,7 @@
 # C (n states x 1) is a vector of constants
 # Ψ (n states x n exogenous shocks) holds coefficients of iid shocks.
 # Π (n states x n expectational states) holds coefficients of expectational states.
-function eqcond(model::Model)
+function eqcond(model::AbstractModel)
     spec = model.spec_vars
     Θ = model.Θ
     I = model.I

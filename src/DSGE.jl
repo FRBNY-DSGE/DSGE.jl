@@ -21,7 +21,7 @@ export
     # functions
     solve, dlyap, likelihood,
 
-    Parameters990, ModelInds, Model,
+    Parameters990, ModelInds, Model990,
 
     Param, Parameters, toreal, tomodel, logprior, spec_vars, eqcond, measurement, makedict,
     
@@ -41,19 +41,13 @@ include("estimate/likelihood.jl")
 
 
 
-
+include("models/m990/m990.jl")
 include("models/m990/spec.jl")
 include("models/m990/parameters.jl")
 include("models/m990/modelinds.jl")
 include("models/m990/eqcond.jl")
 include("models/m990/measurement.jl")
 
-function Model()
-    spec = spec_vars()
-    Θ = Parameters990(spec)
-    I = ModelInds(spec)
-    return Model("990", spec, Θ, I, eqcond, measurement)
-end
 
 
 end

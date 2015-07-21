@@ -4,7 +4,7 @@ using MATLAB
 
 # Outputs TTT, RRR, CCC - matrices of the state transition equation:
 #   S_t = TTT*S_{t-1} + RRR*ε_t + CCC
-function solve(model::Model)
+function solve(model::AbstractModel)
     
     # Get equilibrium condition matrices
     Γ0, Γ1, C, Ψ, Π  = model.eqcond(model)
@@ -37,7 +37,7 @@ end
 # RRR and CCC with the appropriate number of zeros.
 
 # These additional states are added after the model is solved to reduce the load on gensys
-function augment_states{T<:FloatingPoint}(model::Model, TTT::Array{T, 2}, CCC::Array{T, 2}, RRR::Array{T, 2})
+function augment_states{T<:FloatingPoint}(model::AbstractModel, TTT::Array{T, 2}, CCC::Array{T, 2}, RRR::Array{T, 2})
     Θ = model.Θ
     endo = model.I.endostates
     endo_addl = model.I.endostates_postgensys

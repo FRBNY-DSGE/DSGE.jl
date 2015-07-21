@@ -1,3 +1,10 @@
+abstract AbstractModel
+
+
+
+
+
+
 # We define Param to be a subtype of Number so we can use numerical operation methods in
 #   https://github.com/JuliaLang/julia/blob/master/base/promotion.jl
 
@@ -147,23 +154,4 @@ end
 # When optional field `start` provided, first index is start+1
 function makedict{T<:String}(names::Array{T, 1}; start::Int = 0)
     return [names[i] => start+i for i = 1:length(names)]
-end
-
-
-
-
-
-
-
-
-# The given fields define the entire model structure.
-# We can then concisely pass around a Model object to the remaining steps of the model
-#   (solve, estimate, and forecast).
-type Model
-    spec::String
-    spec_vars::Dict{String, Any}
-    Θ::Parameters
-    I::ModelInds
-    eqcond::Function
-    measurement::Function
 end
