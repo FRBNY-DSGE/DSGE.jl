@@ -14,11 +14,11 @@ function Model990()
     return Model990(spec, Θ, ind)
 end
 
-description(model::Model990) = "M990"
 
 
 
-### Model-specific specifications
+
+# Model-specific specifications
 function model_specifications(T::Type{Model990})
     dict = Dict{String, Any}()
     
@@ -34,9 +34,6 @@ function model_specifications(T::Type{Model990})
 
     return dict
 end
-
-
-
 
 
 
@@ -576,9 +573,6 @@ function eqcond(model::AbstractModel)
     
     return Γ0, Γ1, C, Ψ, Π
 end
-
-
-
 
 
 

@@ -1,9 +1,3 @@
-using Distributions: Normal, quantile
-using Roots: fzero
-
-using .DistributionsExt: Beta, Gamma, InverseGamma
-using .FinancialFrictionsFunctions
-
 # Then assign parameters to a theta vector
 # θ = Parameters(α, β, etc.)
 type Parameters990 <: Parameters

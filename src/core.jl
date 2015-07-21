@@ -2,9 +2,6 @@ abstract AbstractModel
 
 
 
-
-
-
 # We define Param to be a subtype of Number so we can use numerical operation methods in
 #   https://github.com/JuliaLang/julia/blob/master/base/promotion.jl
 
@@ -94,10 +91,6 @@ end
 
 
 
-
-
-
-
 # The abstract Parameters type is the supertype of all model-specific ParametersXXX types.
 # All concrete types have both Param (parameters) and Float64 (steady-state values) fields.
 # See Parameters990 for an example.
@@ -123,17 +116,6 @@ function logprior(Θ::Parameters)
     end
     return sum
 end
-
-
-
-
-
-
-
-
-
-
-
 
 
 

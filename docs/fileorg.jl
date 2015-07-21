@@ -5,74 +5,42 @@ dsge.jl/
   src/
     DSGE.jl
       module DSGE
-        export M990
         include("init/DistributionsExt.jl")
         include("init/FinancialFrictionsFunctions.jl")
-        include("AbstractModel.jl")
         include("solve/Gensys.jl")
+        using Distributions, Roots, MATLAB
+        using .DistributionsExt, .Gensys
+        import Base: convert, promote_rule, log, exp, start, next, done
+        export Param, toreal, tomodel, Parameters, logprior, ModelInds, makedict, solve, dlyap, kalcvf2NaN, kalsmth_k93, likelihood, Parameters990, Model990, model_specifications, eqcond, measurement
+        include("core.jl")
         include("solve/solve.jl")
-        include("estimate/Kalman.jl")
-        include("models/M990.jl")
+        include("estimate/kalman.jl")
+        include("estimate/likelihood.jl")
+        include("models/m990/m990.jl")
+        include("models/m990/parameters.jl")
+        include("models/m990/modelinds.jl")
       end
-    AbstractModel.jl
-      module AbstractModel
-        export Param, toreal, tomodel, Parameters, logprior, ModelInds, makedict, Model
-        include("abstractmodel/param.jl")
-        include("abstractmodel/parameters.jl")
-        include("abstractmodel/modelinds.jl")
-        include("abstractmodel/model.jl")
-      end
-    abstractmodel/
-      param.jl
-        using Distributions: Distribution
-        import Base: convert, promote_rule, log, exp
-        using ..DistributionsExt: PointMass
-        type Param
-        function toreal
-        function tomodel
-      parameters.jl
-        import Base: start, next, done
-        using Distributions: logpdf
-        abstract Parameters
-        function logprior
-      modelinds.jl
-        type ModelInds
-        function makedict
-      model.jl
-        type Model
+    core.jl
+      abstract AbstractModel
+      type Param
+      function toreal
+      function tomodel
+      abstract Parameters
+      function logprior
+      type ModelInds
+      function makedict
     models/
-      M990.jl
-        module M990
-          using ..AbstractModel
-          import ..AbstractModel: Model
-          export Parameters990, ModelInds, Model
-          include("m990/spec.jl")
-          include("m990/parameters.jl")
-          include("m990/modelinds.jl")
-          include("m990/eqcond.jl")
-          include("m990/measurement.jl")
-          function AbstractModel.Model
-        end
       m990/
-        spec.jl
-          function spec_vars
+        m990.jl
+          type Model990 <: AbstractModel
+          function model_specifications
+          function eqcond
+          function measurement
         parameters.jl
-          using Distributions: Normal, quantile
-          using Roots: fzero
-          using ..DistributionsExt: Beta, Gamma, InverseGamma
-          using ..FinancialFrictionsFunctions
           type Parameters990 <: Parameters
           function steadystate!
         modelinds.jl
-          using ..AbstractModel
-          import ..AbstractModel: ModelInds
-          function AbstractModel.ModelInds
-        eqcond.jl
-          using ..AbstractModel
-          function eqcond
-        measurement.jl
-          using ..AbstractModel
-          function measurement
+          function ModelInds
     init/
       DistributionsExt.jl
         module DistributionsExt
@@ -111,13 +79,13 @@ dsge.jl/
         function solve
         function augment_states
     estimate/
-      Kalman.jl
-        module Kalman
-          export kalcvf2NaN, kalsmth_k93
-          function kalcvf2NaN
-          function kalsmth_k93
-          function distsmth_k93
-        end
+      kalman.jl
+        function kalcvf2NaN
+        function kalsmth_k93
+        function distsmth_k93
+      likelihood.jl
+        function likelihood
+        function dlyap
     forecast/
   docs/
     fileorg.jl # You are here
@@ -135,9 +103,9 @@ dsge.jl/
       function test_test_matrix_eq
       function test_readcsv_complex
     test_AbstractModel.jl
-      using Base.Test
-      using Distributions
-      using DSGE: DistributionsExt, AbstractModel
+      using Base.Test, Distributions
+      using DSGE
+      using DSGE: DistributionsExt
       function test_all
       function test_param
       function test_parameters
@@ -145,7 +113,8 @@ dsge.jl/
     models/
       test_M990.jl
         using Base.Test, Distributions
-        using DSGE: DistributionsExt, AbstractModel, M990
+        using DSGE
+        using DSGE: DistributionsExt
         include("../util.jl")
         function test_all
         function test_parameters
@@ -158,9 +127,6 @@ dsge.jl/
           ...
         eqcond/
           Γ0.csv
-          ...
-        gensys/
-          Γ1.csv
           ...
     solve/
       test_Gensys.jl

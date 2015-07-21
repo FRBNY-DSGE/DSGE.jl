@@ -1,12 +1,10 @@
-using Base.Test
-using Distributions
+using Base.Test, Distributions
 
 using DSGE
 using DSGE: DistributionsExt
 
 
 
-# src/AbstractModel.jl
 function test_all()
     test_param()
     test_parameters()
@@ -16,7 +14,6 @@ end
 
 
 
-# src/abstractmodel/param.jl
 function test_param()
     # Inner Param constructor
     α = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999))
@@ -58,7 +55,6 @@ end
 
 
 
-# src/abstractmodel/parameters.jl
 function test_parameters()
     # Parameters iterator
     Θ = Parameters990(model_specifications(Model990))
@@ -79,7 +75,6 @@ end
 
 
 
-# src/abstractmodel/modelinds.jl
 function test_modelinds()
     # makedict
     dict = makedict(["alice", "bob"])
@@ -94,8 +89,3 @@ function test_modelinds()
 
     println("modelinds.jl tests passed\n")
 end
-
-
-
-# src/abstractmodel/model.jl
-# Model is an abstract type and there are no functions to test in this file

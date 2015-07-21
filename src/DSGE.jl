@@ -12,35 +12,31 @@ include("init/DistributionsExt.jl")
 include("init/FinancialFrictionsFunctions.jl")
 include("solve/Gensys.jl")
 
-using Distributions, MATLAB
-using .DistributionsExt, .Gensys
+using Distributions, Roots.fzero, MATLAB
+using .DistributionsExt, .FinancialFrictionsFunctions, .Gensys
 
 import Base: convert, promote_rule, log, exp, start, next, done
 
-
 export
-    # functions
-    solve, dlyap, likelihood,
+    # core.jl
+    Param, toreal, tomodel, Parameters, logprior, ModelInds, makedict,
 
-    Parameters990, ModelInds, Model990,
-
-    Param, Parameters, toreal, tomodel, logprior, model_specifications, eqcond, measurement, makedict,
+    # solve/
+    solve,
     
-    # estimate/kalman.jl
-    kalcvf2NaN, kalsmth_k93
+    # estimate/
+    dlyap, kalcvf2NaN, kalsmth_k93, likelihood,
 
+    # models/
+    Parameters990, Model990, model_specifications, eqcond, measurement
 
 include("core.jl")
 
 include("solve/solve.jl")
 
-include("estimate/dlyap.jl")
 include("estimate/kalman.jl")
 include("estimate/likelihood.jl")
 
-
-
-# m990
 include("models/m990/m990.jl")
 include("models/m990/parameters.jl")
 include("models/m990/modelinds.jl")
