@@ -13,7 +13,7 @@ export
     M990,
 
     # functions
-    solve, likelihood
+    solve, dlyap, likelihood
 
 include("init/DistributionsExt.jl")
 include("init/FinancialFrictionsFunctions.jl")
@@ -22,6 +22,7 @@ include("AbstractModel.jl")
 include("solve/Gensys.jl")
 include("solve/solve.jl")
 
+include("estimate/dlyap.jl")
 include("estimate/Kalman.jl")
 include("estimate/likelihood.jl")
 

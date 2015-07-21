@@ -50,9 +50,9 @@ function dlyap(a, c)
     mc, nc = size(c)
 
     # a and c must be square and the same size
-    If (m != n) || (m != mc) || (n != nc)
+    if (m != n) || (m != mc) || (n != nc)
         error("Dimensions do not agree.")
-    elseif m==0
+    elseif m == 0
         x = zeros(m, m)
         return x
     end

@@ -108,9 +108,9 @@ function measurement(model::Model)
     # are here no longer calibrated to the std dev of contemporaneous shocks, 
     # as we had in 904
     for i = 1:spec["nant"]
-        eval(parse("ZZ[obs[\"R_n$i\"], :] = ZZ[obs[\"R_n\"], :]*(TTT^$i)"))
-        eval(parse("DD[obs[\"R_n$i\"]] = Θ.Rstarn"))
-        eval(parse("QQ[exo[\"rm_shl$i\"], exo[\"rm_shl$i\"]] = Θ.σ_rm$i^2"))
+        ZZ[obs["R_n$i"], :] = ZZ[obs["R_n"], :]*(TTT^i)
+        DD[obs["R_n$i"]] = Θ.Rstarn
+        QQ[exo["rm_shl$i"], exo["rm_shl$i"]] = Θ.(parse("σ_rm$i"))
     end
 
     return ZZ, DD, QQ, EE, MM

@@ -1,4 +1,4 @@
-using .AbstractModel
+using .AbstractModel, .Kalman
 
 # This is a dsge likelihood function that can handle 2-part estimation where
 # there is a model switch.
@@ -34,7 +34,7 @@ function likelihood{T<:FloatingPoint}(model::Model, YY::Array{T, 2})
 
     # TODO: What's happening here? In the Matlab code, this was only done for period 2
     if any(CCC != 0)
-        DD = DD + ZZ*(eye(spec["n_states_aug"]) - TTT)\CCC
+        DD = DD + ZZ*((eye(spec["n_states_aug"]) - TTT)\CCC)
     end
 
 
@@ -49,7 +49,7 @@ function likelihood{T<:FloatingPoint}(model::Model, YY::Array{T, 2})
     # TODO: Can we solve Lyapunov equation on matrices with anticipated shocks?
     # Solve lyapunov with normal period state matrices (i.e. period 2 matrices)
     A0 = zeros(size(TTT, 1), 1)
-    P0 = dlyap(TTT, RRR*QQQ*RRR')
+    P0 = dlyap(TTT, RRR*QQ*RRR')
 
     pyt, zend, Pend = kalcvf2NaN(YY', 1, zeros(spec["n_states_aug"], 1), TTT, DD, ZZ, VVall, A0, P0, 2)
     return pyt
