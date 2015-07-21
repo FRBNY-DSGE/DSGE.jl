@@ -1,4 +1,4 @@
-using Base.Test, Distributions
+using Base.Test, Distributions, MATLAB
 
 using DSGE
 using DSGE: DistributionsExt
@@ -193,7 +193,22 @@ end
 
 # src/models/m990/measurement.jl
 function test_measurement()
-    # TODO: implement
+    mf = MatFile("m990/test_measurement.mat")
+    ZZ_expected = get_variable(mf, "ZZ")
+    DD_expected = reshape(get_variable(mf, "DD"), 18, 1)
+    QQ_expected = get_variable(mf, "QQ")
+    EE_expected = get_variable(mf, "EE")
+    MM_expected = get_variable(mf, "MM")
+    close(mf)
+
+    model = Model990()
+    ZZ, DD, QQ, EE, MM = measurement(model)
+
+    @test test_matrix_eq(ZZ_expected, ZZ)
+    @test test_matrix_eq(DD_expected, DD)
+    @test test_matrix_eq(QQ_expected, QQ)
+    @test test_matrix_eq(EE_expected, EE)
+    @test test_matrix_eq(MM_expected, MM)
 
     println("measurement.jl tests passed\n")
 end

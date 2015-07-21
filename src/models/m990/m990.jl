@@ -687,7 +687,7 @@ function measurement(model::Model990)
     for i = 1:spec["nant"]
         ZZ[obs["R_n$i"], :] = ZZ[obs["R_n"], :]*(TTT^i)
         DD[obs["R_n$i"]] = Θ.Rstarn
-        QQ[exo["rm_shl$i"], exo["rm_shl$i"]] = Θ.(parse("σ_rm$i"))
+        QQ[exo["rm_shl$i"], exo["rm_shl$i"]] = Θ.(parse("σ_rm$i"))^2
     end
 
     return ZZ, DD, QQ, EE, MM
