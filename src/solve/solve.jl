@@ -1,13 +1,9 @@
-using .Gensys
-
-using MATLAB
-
 # Outputs TTT, RRR, CCC - matrices of the state transition equation:
 #   S_t = TTT*S_{t-1} + RRR*ε_t + CCC
 function solve(model::AbstractModel)
     
     # Get equilibrium condition matrices
-    Γ0, Γ1, C, Ψ, Π  = model.eqcond(model)
+    Γ0, Γ1, C, Ψ, Π  = eqcond(model)
 
     # Solve model
     #TTT_gensys, CCC_gensys, RRR_gensys = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
@@ -108,6 +104,5 @@ function augment_states{T<:FloatingPoint}(model::AbstractModel, TTT::Array{T, 2}
 
 
 
-    # TODO: How to deal with valid flags?
     return TTT_aug, CCC_aug, RRR_aug
 end

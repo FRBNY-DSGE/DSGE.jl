@@ -20,7 +20,7 @@ function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Array{T, 2})
 
     # Get measurement equation matrices set up
     #try
-        ZZ, DD, QQ, EE, MM = model.measurement(model)
+        ZZ, DD, QQ, EE, MM = measurement(model)
     #catch 
         # Error thrown during gensys
     #    return -Inf

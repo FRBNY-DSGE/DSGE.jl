@@ -10,9 +10,10 @@ module DSGE
 
 include("init/DistributionsExt.jl")
 include("init/FinancialFrictionsFunctions.jl")
+include("solve/Gensys.jl")
 
-using Distributions
-using .DistributionsExt
+using Distributions, MATLAB
+using .DistributionsExt, .Gensys
 
 import Base: convert, promote_rule, log, exp, start, next, done
 
@@ -31,7 +32,6 @@ export
 
 include("core.jl")
 
-include("solve/Gensys.jl")
 include("solve/solve.jl")
 
 include("estimate/dlyap.jl")
@@ -44,7 +44,6 @@ include("estimate/likelihood.jl")
 include("models/m990/m990.jl")
 include("models/m990/parameters.jl")
 include("models/m990/modelinds.jl")
-include("models/m990/eqcond.jl")
 
 
 

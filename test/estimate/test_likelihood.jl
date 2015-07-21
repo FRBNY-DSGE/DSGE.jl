@@ -2,7 +2,6 @@ using Base: Test
 using MATLAB
 
 using DSGE
-using DSGE: M990
 include("../util.jl")
 
 
@@ -12,5 +11,5 @@ lh_expected = get_variable(mf, "lnpy")
 close(mf)
 
 
-model = Model()
+model = Model990()
 lh = likelihood(model, YY)
