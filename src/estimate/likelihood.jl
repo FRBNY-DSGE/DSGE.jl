@@ -138,14 +138,13 @@ function dlyap(a, c)
     ucu = -ua'*c*ub
 
     # Solve for first column of transformed solution
-    y = zeros(n, n)
-    e = UniformScaling(1)
-    y[:, 1] = (ta + UniformScaling(1)*tb[1, 1])\ucu[:, 1]
+    y = complex(zeros(n, n))
+    y[:, 1] = (ta + UniformScaling(tb[1, 1]))\ucu[:, 1]
 
     # Solve for remaining columns of transformed solution
     for k=1:n-1
         km1 = 1:k
-        y[:, k+1] = (ta + e*tb[k+1, k+1])\(ucu[:, k+1] - y[:, km1]*tb[km1, k+1])
+        y[:, k+1] = (ta + UniformScaling(tb[k+1, k+1]))\(ucu[:, k+1] - y[:, km1]*tb[km1, k+1])
     end
 
     # Find untransformed solution
