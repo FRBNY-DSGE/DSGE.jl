@@ -1,8 +1,3 @@
-# Utilities for testing DSGE.jl
-using Base.Test
-
-
-
 # minusnan(x, y) evaluates x-y in a way that treats NaN like Inf and sets Inf - Inf = 0
 minusnan{S<:FloatingPoint, T<:FloatingPoint}(x::S, y::T) =  minusnan(complex(x), complex(y))
 
@@ -34,14 +29,14 @@ function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(ex
 
     n_dims = ndims(expected)
     n_entries = length(expected)
-    
-    # Count differences and find max    
+
+    # Count differences and find max
     abs_diff = abs(map(minusnan, expected, actual))
     n_neq = countnz(abs_diff)
     n_not_approx_eq = count(x -> x > ε, abs_diff)
     max_abs_diff = maximum(abs_diff)
     max_inds = ind2sub(size(abs_diff), indmax(abs_diff))
-    
+
     # Print output
     if noisy
         println("$n_neq of $n_entries entries with abs diff > 0")
@@ -123,7 +118,7 @@ function test_test_matrix_eq()
     m4 = zeros(2, 2, 2)
     m5 = ones(2, 2, 2)
     @test !test_matrix_eq(m4, m5)
-    
+
     println("test_matrix_eq tests passed\n")
 end
 
