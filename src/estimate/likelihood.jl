@@ -30,10 +30,12 @@ function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Array{T, 2})
     VV = QQ*MM'
     VVall =  [[RRR*QQ*RRR' RRR*VV]; [VV'*RRR' HH]]
 
+    #=
     # TODO: What's happening here? In the Matlab code, this was only done for period 2
     if any(CCC != 0)
-        DD = DD + ZZ*((eye(spec["n_states_aug"]) - TTT)\CCC)
+        DD = DD + ZZ*((UniformScaling(1) - TTT)\CCC)
     end
+    =#
 
 
     
@@ -46,8 +48,8 @@ function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Array{T, 2})
 
     # TODO: Can we solve Lyapunov equation on matrices with anticipated shocks?
     # Solve lyapunov with normal period state matrices (i.e. period 2 matrices)
-    A0 = zeros(size(TTT, 1), 1)
-    P0 = dlyap(TTT, RRR*QQ*RRR')
+    A0 = zeros(spec["n_states_aug"], 1)
+    P0 = dlyap(copy(TTT), copy(RRR*QQ*RRR'))
 
     pyt, zend, Pend = kalcvf2NaN(YY', 1, zeros(spec["n_states_aug"], 1), TTT, DD, ZZ, VVall, A0, P0, 2)
     return pyt
@@ -103,8 +105,8 @@ end
 # Step 6) Simplify to (1)
 function dlyap(a, c)
     m, n = size(a)
-    a = (a+eye(m))\(a-eye(m))
-    c = (eye(m)-a)*c*(eye(m)-a')/2
+    a = (a + UniformScaling(1))\(a - UniformScaling(1))
+    c = (UniformScaling(1)-a)*c*(UniformScaling(1)-a')/2
 
     mc, nc = size(c)
 
@@ -117,18 +119,18 @@ function dlyap(a, c)
     end
 
     # Perform schur decomposition on a (and convert to complex form)
-    ta, ua = schur(a)[1:2] # matlab code converts to complex - come back to
+    ta, ua, _ = schur(complex(a)) # matlab code converts to complex - come back to
     # ua, ta = rsf2csf(ua, ta)
     # Schur decomposition of a' can be calculated from that of a.
     j = m:-1:1
     ub = ua[:, j]
-    tb = ta[j, j]'
+    tb = ta[j ,j]'
     
     # Check all combinations of ta(i, i)+tb(j, j) for zero
     p1 = diag(ta).' # Use .' instead of ' in case a and a' are not real
     p2 = diag(tb)
-    p_sum = abs(p1) .+ abs(p2.')
-    if any(p_sum .== 0) || any(abs(p1 .+ p2') .< 1000*eps()*p_sum)
+    p_sum = abs(p1) .+ abs(p2)
+    if any(p_sum .== 0) || any(abs(p1 .+ p2) .< 1000*eps()*p_sum)
         error("Solution does not exist or is not unique.")
     end
 
@@ -137,13 +139,13 @@ function dlyap(a, c)
 
     # Solve for first column of transformed solution
     y = zeros(n, n)
-    e = eye(n)
-    y[:, 1] = (ta+e*tb[1, 1])\ucu[:, 1]
+    e = UniformScaling(1)
+    y[:, 1] = (ta + UniformScaling(1)*tb[1, 1])\ucu[:, 1]
 
     # Solve for remaining columns of transformed solution
     for k=1:n-1
         km1 = 1:k
-        y[:, k+1] = (ta+e*tb[k+1, k+1])\(ucu[:, k+1]-y[:, km1]*tb[km1, k+1])
+        y[:, k+1] = (ta + e*tb[k+1, k+1])\(ucu[:, k+1] - y[:, km1]*tb[km1, k+1])
     end
 
     # Find untransformed solution
