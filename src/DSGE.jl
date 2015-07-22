@@ -11,10 +11,10 @@ module DSGE
 
 include("init/DistributionsExt.jl")
 include("init/FinancialFrictionsFunctions.jl")
-# include("solve/Gensys.jl")
+include("solve/Gensys.jl")
 
-using Distributions, Roots.fzero #, MATLAB
-using .DistributionsExt, .FinancialFrictionsFunctions #, .Gensys
+using Distributions, Roots.fzero, MATLAB
+using .DistributionsExt, .FinancialFrictionsFunctions, .Gensys
 
 import Base: convert, promote_rule, log, exp, start, next, done
 
@@ -33,7 +33,7 @@ export
 
 include("core.jl")
 
-# include("solve/solve.jl")
+include("solve/solve.jl")
 
 include("estimate/kalman.jl")
 include("estimate/likelihood.jl")
