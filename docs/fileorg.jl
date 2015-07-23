@@ -11,7 +11,7 @@ dsge.jl/
         using Distributions, Roots, MATLAB
         using .DistributionsExt, .Gensys
         import Base: convert, promote_rule, log, exp, start, next, done
-        export AbstractModel, Param, toreal, tomodel, Parameters, logprior, ModelInds, makedict, solve, dlyap, kalcvf2NaN, kalsmth_k93, likelihood, Parameters990, Model990, model_specifications, eqcond, measurement
+        export AbstractModel, Param, toreal, tomodel, Parameters, prior, ModelInds, makedict, solve, dlyap, kalcvf2NaN, kalsmth_k93, likelihood, Parameters990, Model990, model_specifications, eqcond, measurement
         include("core.jl")
         include("solve/solve.jl")
         include("estimate/kalman.jl")
@@ -26,7 +26,7 @@ dsge.jl/
       function toreal
       function tomodel
       abstract Parameters
-      function logprior
+      function prior
       type ModelInds
       function makedict
     models/

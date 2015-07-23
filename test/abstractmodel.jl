@@ -51,8 +51,8 @@ end
 @test isa(lastparam, Param)
 @test lastparam.value == 0.0181
 
-# logprior
-priordensity = exp(logprior(Θ))
+# prior
+priordensity = exp(prior(Θ))
 @test priordensity >= 0
 @test priordensity <= 1
 

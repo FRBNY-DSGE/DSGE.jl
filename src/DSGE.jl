@@ -20,7 +20,7 @@ import Base: convert, promote_rule, log, exp, start, next, done
 
 export
     # core.jl
-    AbstractModel, Param, toreal, tomodel, Parameters, logprior, ModelInds, makedict,
+    AbstractModel, Param, toreal, tomodel, Parameters, prior, ModelInds, makedict,
 
     # solve/
     solve,

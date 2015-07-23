@@ -15,24 +15,24 @@ type Param <: Number
     scaledvalue::Float64
     fixed::Bool
     bounds::(Float64, Float64)
-    prior::Distribution
+    priordist::Distribution
     transformtype::Int64
     transformbounds::(Float64, Float64)
     description::String
 
     function Param(value::Float64, fixed::Bool, bounds::(Float64, Float64),
-                   prior::Distribution, transformtype::Int64,
+                   priordist::Distribution, transformtype::Int64,
                    transformbounds::(Float64, Float64); scalefunction::Function = identity,
                    description::String = "")
         if fixed
-            prior = PointMass(value)
+            priordist = PointMass(value)
             transformtype = 0
         end
         if transformtype != 0 && transformtype != 1 && transformtype != 2
             error("transformtype must be 0, 1, or 2")
         end
         (a, b) = transformbounds
-        return new(value, scalefunction, scalefunction(value), fixed, bounds, prior,
+        return new(value, scalefunction, scalefunction(value), fixed, bounds, priordist,
                    transformtype, transformbounds, description)
     end
 end
@@ -43,7 +43,7 @@ function Param(value::Float64)
 end
 
 # Methods so that arithmetic with parameters can be done tersely, like "θ.α + θ.β"
-# Note there are still cases where we must refer to α.scaledvalue, e.g. pdf(α.prior, α.val)
+# Note there are still cases where we must refer to α.scaledvalue, e.g. pdf(α.priordist, α.val)
 Base.convert{T<:FloatingPoint}(::Type{T}, α::Param) = α.scaledvalue
 Base.promote_rule{T<:FloatingPoint}(::Type{Param}, ::Type{T}) = Float64
 Base.promote_rule{T<:Integer}(::Type{Param}, ::Type{T}) = Float64
@@ -98,10 +98,10 @@ Base.done(Θ::Parameters, state::Int) = !isa(getfield(Θ, state), Param)
 
 # TODO: calculated logpdf values for inverse gamma don't correspond to priodens.m results
 # Calculate (log of) joint density of Θ
-function logprior(Θ::Parameters)
+function prior(Θ::Parameters)
     sum = 0.0
     for α = Θ
-        curr = logpdf(α.prior, α.value)
+        curr = logpdf(α.priordist, α.value)
         sum += curr
     end
     return sum
