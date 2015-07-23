@@ -14,3 +14,6 @@ close(mf)
 
 model = Model990()
 lh = likelihood(model, YY)
+# @test_approx_eq lh_expected lh
+
+post = posterior(model, YY)

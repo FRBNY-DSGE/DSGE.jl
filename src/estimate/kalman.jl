@@ -111,7 +111,7 @@ function kalcvf2NaN{S<:FloatingPoint}(data::Array{S, 2}, lead::Int64, a::Array{S
         # We evaluate the log likelihood function by adding values of L at every iteration
         #   step (for each t = 1,2,...T)
         if t > Ny0
-            L += -log(det(D))/2 - dy'*ddy/2 - Ny_t*log(2*pi)/2
+            L += -log(det(D))/2 - first(dy'*ddy/2) - Ny_t*log(2*pi)/2
         end
         
         ## updating

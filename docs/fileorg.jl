@@ -11,11 +11,11 @@ dsge.jl/
         using Distributions, Roots, MATLAB
         using .DistributionsExt, .Gensys
         import Base: convert, promote_rule, log, exp, start, next, done
-        export AbstractModel, Param, toreal, tomodel, Parameters, prior, ModelInds, makedict, solve, dlyap, kalcvf2NaN, kalsmth_k93, likelihood, Parameters990, Model990, model_specifications, eqcond, measurement
+        export AbstractModel, Param, toreal, tomodel, Parameters, prior, ModelInds, makedict, solve, dlyap, kalcvf2NaN, kalsmth_k93, likelihood, posterior, Parameters990, Model990, model_specifications, eqcond, measurement
         include("core.jl")
         include("solve/solve.jl")
         include("estimate/kalman.jl")
-        include("estimate/likelihood.jl")
+        include("estimate/posterior.jl")
         include("models/m990/m990.jl")
         include("models/m990/parameters.jl")
         include("models/m990/modelinds.jl")
@@ -83,7 +83,8 @@ dsge.jl/
         function kalcvf2NaN
         function kalsmth_k93
         function distsmth_k93
-      likelihood.jl
+      posterior.jl
+        function posterior
         function likelihood
         function dlyap
     forecast/
