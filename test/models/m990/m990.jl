@@ -31,23 +31,23 @@ for φ = Θ
     bounds[i, 1] = left
     bounds[i, 2] = right
 
-    if isa(φ.prior, Distributions.InverseGamma)
+    if isa(φ.priordist, Distributions.InverseGamma)
         pshape[i] = 4
-        (α, β) = params(φ.prior)
+        (α, β) = params(φ.priordist)
         ν = 2α
         σ = sqrt(β/α)
         pmean[i] = σ
         pstdd[i] = ν
     else
-        if isa(φ.prior, Distributions.Beta)
+        if isa(φ.priordist, Distributions.Beta)
             pshape[i] = 1
-        elseif isa(φ.prior, Distributions.Gamma)
+        elseif isa(φ.priordist, Distributions.Gamma)
             pshape[i] = 2
-        elseif isa(φ.prior, Distributions.Normal)
+        elseif isa(φ.priordist, Distributions.Normal)
             pshape[i] = 3
         end
-        pmean[i] = mean(φ.prior)
-        pstdd[i] = std(φ.prior)
+        pmean[i] = mean(φ.priordist)
+        pstdd[i] = std(φ.priordist)
     end
 
     trspec[i, 1] = φ.transformtype
@@ -139,7 +139,7 @@ C_matlab  = readcsv(joinpath(path,"eqcond/C.csv"))
 
 using MATLAB
 
-mf = MatFile("test_measurement.mat")
+mf = MatFile("$path/test_measurement.mat")
 ZZ_expected = get_variable(mf, "ZZ")
 DD_expected = reshape(get_variable(mf, "DD"), 18, 1)
 QQ_expected = get_variable(mf, "QQ")

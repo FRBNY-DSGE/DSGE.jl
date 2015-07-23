@@ -166,7 +166,7 @@ function kalcvf2NaN{S<:FloatingPoint}(data::Array{S, 2}, lead::Int64, a::Array{S
         vz0 = eye(Nz)*1e6
     end
 
-    return kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0)
+    return kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0, Ny0)
 end
 
 #=

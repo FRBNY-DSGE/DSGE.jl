@@ -3,9 +3,10 @@ using MATLAB
 
 using DSGE
 include("../util.jl")
+path = dirname(@__FILE__)
 
 
-mf = MatFile("test_likelihood.mat")
+mf = MatFile("$path/test_likelihood.mat")
 YY = get_variable(mf, "YY")
 lh_expected = get_variable(mf, "lnpy")
 close(mf)
