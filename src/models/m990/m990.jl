@@ -28,6 +28,10 @@ function model_specifications(T::Type{Model990})
     # ZLB expectations should begin in 2008 Q4
     dict["antlags"] = 24
 
+    # TODO: This should be set when the data are read in
+    # Number of presample periods
+    dict["n_presample_periods"] = 2
+
     return dict
 end
 

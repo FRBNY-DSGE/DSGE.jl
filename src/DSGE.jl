@@ -29,7 +29,8 @@ export
     dlyap, kalcvf2NaN, kalsmth_k93, likelihood,
 
     # models/
-    Parameters990, Model990, model_specifications, eqcond, measurement
+    Parameters990, Model990, model_specifications, eqcond, measurement,
+    kalcvf2NaN_test
 
 include("core.jl")
 

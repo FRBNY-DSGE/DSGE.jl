@@ -7,10 +7,36 @@ function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Array{T, 2})
 
 
 
+    # Partition sample
+    # Returns a structure array where size = number of distinct periods (presample,
+    # normal, ZLB, etc.). The mt struture will hold the relevant matrices for each
+    # period.
+    presample = Dict{String, Any}()
+    normal = Dict{String, Any}()
+    zlb = Dict{String, Any}()
+
+    presample["n_observables"] = spec["n_observables"] - spec["nant"]
+    normal["n_observables"] = spec["n_observables"] - spec["nant"]
+    zlb["n_observables"] = spec["n_observables"]
+
+    presample["YY"] = YY[1:spec["n_presample_periods"], 1:presample["n_observables"]]
+    normal["YY"] = YY[(spec["n_presample_periods"]+1):(end-spec["antlags"]-1), 1:normal["n_observables"]]
+    zlb["YY"] = YY[(end-spec["antlags"]):end, :]
+
+
+    
     # TODO: Find a way to return these matrices from measurement equation or something so `solve` isn't called twice
     ## step 1: solution to DSGE model - delivers transition equation for the state variables  S_t
     ## transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ
-    TTT, CCC, RRR = solve(model::AbstractModel)
+    zlb["TTT"], zlb["CCC"], zlb["RRR"] = solve(model::AbstractModel)
+
+    # Get normal, no ZLB model matrices
+    ant_state_inds = [1:(spec["n_states"]-spec["nant"]); (spec["n_states"]+1):spec["n_states_aug"]]
+    ant_shock_inds = 1:(spec["n_exoshocks"]-spec["nant"])
+
+    normal["TTT"] = zlb["TTT"][ant_state_inds, ant_state_inds]
+    normal["RRR"] = zlb["RRR"][ant_state_inds, ant_shock_inds]
+    normal["CCC"] = zlb["CCC"][ant_state_inds, :]
 
 
     
@@ -51,7 +77,10 @@ function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Array{T, 2})
     A0 = zeros(spec["n_states_aug"], 1)
     P0 = dlyap(copy(TTT), copy(RRR*QQ*RRR'))
 
-    pyt, zend, Pend = kalcvf2NaN(YY', 1, zeros(spec["n_states_aug"], 1), TTT, DD, ZZ, VVall, A0, P0, 2)
+    #pyt, zend, Pend = kalcvf2NaN(YY', 1, zeros(spec["n_states_aug"], 1), TTT, DD, ZZ, VVall, A0, P0, 2)
+
+    
+    pyt, zend, Pend = kalcvf2NaN_test(YY[1:2, :]', 1, zeros(spec["n_states_aug"], 1), TTT, DD, ZZ, VVall, A0, P0)
     return pyt
 end
 
