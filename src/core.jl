@@ -96,12 +96,26 @@ Base.start(Θ::Parameters) = 1
 Base.next(Θ::Parameters, state::Int) = getfield(Θ, state), state+1
 Base.done(Θ::Parameters, state::Int) = !isa(getfield(Θ, state), Param)
 
-# TODO: calculated logpdf values for inverse gamma don't correspond to priodens.m results
 # Calculate (log of) joint density of Θ
 function prior(Θ::Parameters)
     sum = 0.0
-    for α = Θ
-        curr = logpdf(α.priordist, α.value)
+    for φ in Θ
+        # TODO: This branch of the if statement calculates the inverse gamma density in the same way
+        # as in the Matlab code. However, we think this may reflect a bug in the Matlab code. See
+
+        if isa(φ.priordist, Distributions.InverseGamma)
+            (α, β) = params(φ.priordist)
+            ν = 2α
+            σ = sqrt(β/α)
+            
+            a = σ
+            b = ν
+            x = φ.value
+
+            curr = log(2) - log(gamma(b/2)) + (b/2)*log(b*a^2/2) - ((b+1)/2)*log(x^2) - b*a^2/(2x^2)
+        else
+            curr = logpdf(φ.priordist, φ.value)
+        end
         sum += curr
     end
     return sum
