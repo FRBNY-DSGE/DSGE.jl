@@ -9,7 +9,7 @@ my_tests = [
             "solve/solve",
             "solve/ordered_qz",
             "estimate/kalman",
-            "estimate/likelihood"
+            "estimate/posterior"
             ]
 
 for test in my_tests
