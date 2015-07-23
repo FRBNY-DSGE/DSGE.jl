@@ -26,7 +26,7 @@ export
     solve,
 
     # estimate/
-    dlyap, kalcvf2NaN, kalsmth_k93, likelihood, posterior,
+    dlyap, kalcvf2NaN, kalsmth_k93, likelihood, posterior, estimate,
 
     # models/
     Parameters990, Model990, model_specifications, eqcond, measurement
@@ -37,6 +37,7 @@ include("solve/solve.jl")
 
 include("estimate/kalman.jl")
 include("estimate/posterior.jl")
+include("estimate/estimate.jl")
 
 include("models/m990/m990.jl")
 include("models/m990/parameters.jl")
