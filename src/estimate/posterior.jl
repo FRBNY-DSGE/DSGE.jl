@@ -11,7 +11,7 @@ end
 # If there is no model switch, then we filter over the main sample all at once.
 function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Array{T, 2})
     
-    spec = model.spec_vars
+    spec = model.spec
 
 
 
