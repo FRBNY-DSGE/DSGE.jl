@@ -2,7 +2,7 @@
 # We can then concisely pass around a Model object to the remaining steps of the model
 #   (solve, estimate, and forecast).
 type Model990 <: AbstractModel
-    spec_vars::Dict{String, Any}
+    spec::Dict{String, Any}
     Θ::Parameters
     ind::ModelInds
 end
@@ -41,7 +41,7 @@ end
 # Ψ (n states x n exogenous shocks) holds coefficients of iid shocks.
 # Π (n states x n expectational states) holds coefficients of expectational states.
 function eqcond(model::AbstractModel)
-    spec = model.spec_vars
+    spec = model.spec
     Θ = model.Θ
     ind = model.ind
 
@@ -576,7 +576,7 @@ end
 function measurement(model::Model990)
     TTT, CCC, RRR = solve(model)
 
-    spec = model.spec_vars
+    spec = model.spec
     Θ = model.Θ
     ind = model.ind
 
