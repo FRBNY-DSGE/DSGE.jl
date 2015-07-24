@@ -6,9 +6,9 @@ module DistributionsExt
 # functions, but rather new functions with the same names.
 
 using Distributions
-import Distributions: pdf, mean, std
+import Distributions: params, mean, std, pdf, logpdf
 
-export PointMass, Beta, Gamma, InverseGamma
+export PointMass, Beta, Gamma, RootInverseGamma
 
 
 
@@ -20,6 +20,8 @@ end
 Distributions.pdf(d::PointMass, x::Real) = (x == d.μ ? 1.0 : 0.0)
 Distributions.mean(d::PointMass) = d.μ
 Distributions.std(d::PointMass) = 0
+
+
 
 # Given μ and σ, calculate α and β, return distribution
 function Beta(μ::Real, σ::Real)
@@ -34,12 +36,29 @@ function Gamma(μ::Real, σ::Real)
     return Distributions.Gamma(α, β)
 end
 
-# ν and σ parameterize the scaled inverse chi-squared distribution, a different
-# parameterization of the inverse gamma distribution.
-function InverseGamma(σ::Real, ν::Real)
-    α = ν / 2
-    β = ν * σ^2 / 2
-    return Distributions.InverseGamma(α, β)
-end    
+
+
+# If x ~ RootInverseGamma(ν, τ²), then
+#   x² ~ ScaledInverseChiSquared(ν, τ²)
+#   x² ~ InverseGamma(ν/2, ντ²/2)
+
+type RootInverseGamma <: Distribution{Univariate, Continuous}
+    ν::Float64
+    τ::Float64
+end
+
+Distributions.params(d::RootInverseGamma) = (d.ν, d.τ)
+
+function Distributions.pdf(d::RootInverseGamma, x::Real)
+    (ν, τ) = params(d)
+    return 2 * (ν*τ^2/2)^(ν/2) * exp((-ν*τ^2)/(2x^2)) / gamma(ν/2) / x^(ν+1)
+end
+
+function Distributions.logpdf(d::RootInverseGamma, x::Real)
+    (ν, τ) = params(d)
+    return log(2) - log(gamma(ν/2)) + (ν/2)*log(ν*τ^2/2) - ((ν+1)/2)*log(x^2) - ν*τ^2/(2x^2)
+end
+
+
 
 end # module
