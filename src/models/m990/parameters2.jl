@@ -6,24 +6,24 @@ type Param <: Number
     scaledvalue::Float64
     fixed::Bool
     bounds::(Float64, Float64)
-    prior::Distribution
+    priordist::Distribution
     transformtype::Int64
     transformbounds::(Float64, Float64)
     description::String
 
     function Param(value::Float64, fixed::Bool, bounds::(Float64, Float64),
-                   prior::Distribution, transformtype::Int64,
+                   priordist::Distribution, transformtype::Int64,
                    transformbounds::(Float64, Float64); scalefunction::Function = identity,
                    description::String = "")
         if fixed
-            prior = PointMass(value)
+            priordist = PointMass(value)
             transformtype = 0
         end
         if transformtype != 0 && transformtype != 1 && transformtype != 2
             error("transformtype must be 0, 1, or 2")
         end
         (a, b) = transformbounds
-        return new(value, scalefunction, scalefunction(value), fixed, bounds, prior,
+        return new(value, scalefunction, scalefunction(value), fixed, bounds, priordist,
                    transformtype, transformbounds, description)
     end
 end

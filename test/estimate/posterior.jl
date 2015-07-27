@@ -3,9 +3,10 @@ using MATLAB
 
 using DSGE
 include("../util.jl")
+path = dirname(@__FILE__)
 
 
-mf = MatFile("test_likelihood.mat")
+mf = MatFile("$path/test_likelihood.mat")
 YY = get_variable(mf, "YY")
 lh_expected = get_variable(mf, "lnpy")
 close(mf)
@@ -13,3 +14,6 @@ close(mf)
 
 model = Model990()
 lh = likelihood(model, YY)
+# @test_approx_eq lh_expected lh
+
+post = posterior(model, YY)

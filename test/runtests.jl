@@ -5,8 +5,11 @@ include("util.jl")
 
 my_tests = [
             "abstractmodel",
+            "models/m990/m990",
             "solve/solve",
-            "models/m990/m990"
+            "solve/ordered_qz",
+            "estimate/kalman",
+            "estimate/posterior"
             ]
 
 for test in my_tests

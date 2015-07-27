@@ -11,14 +11,14 @@ using Distributions
 
 # Inner Param constructor, fixed = true
 α_fixed = Param(0.1596, true, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999))
-@test isa(α_fixed.prior, PointMass)
+@test isa(α_fixed.priordist, PointMass)
 @test α_fixed.transformtype == 0
 
 # One-argument Param constructor
 δ = Param(0.025)
 @test δ.fixed
 @test δ.bounds == (0.025, 0.025)
-@test isa(δ.prior, PointMass)
+@test isa(δ.priordist, PointMass)
 
 # Invalid transformtype
 @test_throws ErrorException α_bad = Param(0.1596, false, (1e-5, 0.999),
@@ -51,8 +51,8 @@ end
 @test isa(lastparam, Param)
 @test lastparam.value == 0.0181
 
-# logprior
-priordensity = exp(logprior(Θ))
+# prior
+priordensity = exp(prior(Θ))
 @test priordensity >= 0
 @test priordensity <= 1
 

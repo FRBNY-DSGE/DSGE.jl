@@ -1,9 +1,17 @@
+# log posterior = log likelihood + log prior
+# log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
+function posterior{T<:FloatingPoint}(model::AbstractModel, YY::Array{T, 2})
+    return likelihood(model, YY) + prior(model.Θ)
+end
+    
+
+
 # This is a dsge likelihood function that can handle 2-part estimation where
 # there is a model switch.
 # If there is no model switch, then we filter over the main sample all at once.
 function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Array{T, 2})
     
-    spec = model.spec_vars
+    spec = model.spec
 
 
 
@@ -75,7 +83,7 @@ function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Array{T, 2})
     # TODO: Can we solve Lyapunov equation on matrices with anticipated shocks?
     # Solve lyapunov with normal period state matrices (i.e. period 2 matrices)
     A0 = zeros(spec["n_states_aug"], 1)
-    P0 = dlyap(copy(TTT), copy(RRR*QQ*RRR'))
+    P0 = dlyap!(copy(TTT), copy(RRR*QQ*RRR'))
 
     #pyt, zend, Pend = kalcvf2NaN(YY', 1, zeros(spec["n_states_aug"], 1), TTT, DD, ZZ, VVall, A0, P0, 2)
 
@@ -132,7 +140,7 @@ end
 #         X -inv(Ad+I)*X -X*inv(Ad'+I) +inv(Ad+I)*Cd*inv(Ad'+I) = 0
 # Step 5) Left multiply by (Ad + I) and right multiply by (Ad' + I)
 # Step 6) Simplify to (1)
-function dlyap(a, c)
+function dlyap!(a, c)
     m, n = size(a)
     a = (a + UniformScaling(1))\(a - UniformScaling(1))
     c = (UniformScaling(1)-a)*c*(UniformScaling(1)-a')/2

@@ -3,14 +3,14 @@ using MATLAB
 
 using DSGE
 include("../util.jl")
-
+path = dirname(@__FILE__)
 
 
 # Initialize arguments
 # These come from the first call to the Kalman filter in gibb (line 37) -> objfcndsge (15)
 #   -> dsgelh (136) -> kalcvf2NaN
 # See kalcvf2NaN/test_kalcvf2NaN.m
-mf = MatFile("kalcvf2NaN/kalcvf2NaN_args.mat")
+mf = MatFile("$path/kalcvf2NaN/kalcvf2NaN_args.mat")
 for arg in ["data", "lead", "a", "F", "b", "H", "var", "z0", "vz0"]
     eval(parse("$arg = get_variable(mf, \"$arg\")"))
 end
@@ -26,15 +26,16 @@ lead = int(lead)
 L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt =
     kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0)
 
-mf = MatFile("kalcvf2NaN/kalcvf2NaN_out9.mat")
+mf = MatFile("$path/kalcvf2NaN/kalcvf2NaN_out9.mat")
 for out in ["L", "zend", "Pend", "pred", "vpred", "yprederror", "ystdprederror", "rmse",
             "rmsd", "filt", "vfilt" ]
     eval(parse("$(out)_expected = get_variable(mf, \"$out\")"))
-    
+
     if out == "L"
         @test_approx_eq L_expected L
     elseif out == "zend"
-        zend_expected = reshape(zend_expected, length(zend_expected), 1)
+        # Not sure why this has to be enclosed in eval(parse()) to run
+        eval(parse("zend_expected = reshape(zend_expected, length(zend_expected), 1)"))
         @test test_matrix_eq(zend_expected, zend)
     else
         eval(parse("test_matrix_eq($(out)_expected, $out)"))
@@ -48,7 +49,7 @@ close(mf)
 L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt =
     kalcvf2NaN(data, lead, a, F, b, H, var)
 
-mf = MatFile("kalcvf2NaN/kalcvf2NaN_out7.mat")
+mf = MatFile("$path/kalcvf2NaN/kalcvf2NaN_out7.mat")
 for out in ["L", "zend", "Pend", "pred", "vpred", "yprederror", "ystdprederror", "rmse",
             "rmsd", "filt", "vfilt" ]
     eval(parse("$(out)_expected = get_variable(mf, \"$out\")"))
@@ -68,4 +69,4 @@ end
 
 
 
-println("### kalcvf2NaN tests passed\n")
+#println("### kalcvf2NaN tests passed\n")

@@ -123,14 +123,14 @@ type Parameters990 <: Parameters
     σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11,
     σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz,
     eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef)
-      steadystate!(new(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w,
-      iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp, epsw, Fom, sprd,
-      zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm,
-      ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu,
-      σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef,
-      σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11,
-      σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz,
-      eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef))
+        steadystate!(new(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w,
+        iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp, epsw, Fom, sprd,
+        zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b, ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm,
+        ρ_sigw, ρ_mue, ρ_gamm, ρ_pistar, ρ_lr, ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu,
+        σ_z, σ_laf, σ_law, σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pistar, σ_lr, σ_zp, σ_tfp, σ_gdpdef,
+        σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8, σ_rm9, σ_rm10, σ_rm11,
+        σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16, σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz,
+        eta_laf, eta_law, modelalp_ind, gamm_gdpdef, del_gdpdef))
     end
 end
 
@@ -193,29 +193,29 @@ function Parameters990(spec::Dict{String, Any})
     ρ_pce = Param(0.2320, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
 
     # exogenous processes - standard deviation
-    σ_g = Param(2.5230, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_b = Param(0.0292, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_mu = Param(0.4559, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_z = Param(0.6742, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_laf = Param(0.1314, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_law = Param(0.3864, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_rm = Param(0.2380, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_sigw = Param(0.0428, false, (1e-7, 100.), InverseGamma(0.05, 4.00), 2, (1e-5, 0.))
-    σ_mue = Param(0., true, (1e-7, 100.), InverseGamma(0.05, 4.00), 2, (1e-5, 0.))
-    σ_gamm = Param(0., true, (1e-7, 100.), InverseGamma(0.01, 4.00), 2, (1e-5, 0.))
-    σ_pist = Param(0.0269, false, (1e-8, 5.), InverseGamma(0.03, 6.), 2, (1e-8, 5.))
-    σ_lr = Param(0.1766, false, (1e-8, 10.), InverseGamma(0.75, 2.), 2, (1e-8, 5.))
-    σ_zp = Param(0.1662, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_tfp = Param(0.9391, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_gdpdef = Param(0.1575, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_pce = Param(0.0999, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
+    σ_g = Param(2.5230, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_b = Param(0.0292, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_mu = Param(0.4559, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_z = Param(0.6742, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_laf = Param(0.1314, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_law = Param(0.3864, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_rm = Param(0.2380, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_sigw = Param(0.0428, false, (1e-7, 100.), RootInverseGamma(4.00, 0.05), 2, (1e-5, 0.))
+    σ_mue = Param(0., true, (1e-7, 100.), RootInverseGamma(4.00, 0.05), 2, (1e-5, 0.))
+    σ_gamm = Param(0., true, (1e-7, 100.), RootInverseGamma(4.00, 0.01), 2, (1e-5, 0.))
+    σ_pist = Param(0.0269, false, (1e-8, 5.), RootInverseGamma(6., 0.03), 2, (1e-8, 5.))
+    σ_lr = Param(0.1766, false, (1e-8, 10.), RootInverseGamma(2., 0.75), 2, (1e-8, 5.))
+    σ_zp = Param(0.1662, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_tfp = Param(0.9391, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_gdpdef = Param(0.1575, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_pce = Param(0.0999, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
 
     # standard deviations of the anticipated policy shocks
     for i = 1:spec["nantpad"]
         if i < 13
-            eval(parse("σ_rm$i = Param(0.20, false, (1e-7, 100.), InverseGamma(0.2, 4.00), 2, (1e-5, 0.))"))
+            eval(parse("σ_rm$i = Param(0.20, false, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.))"))
         else
-            eval(parse("σ_rm$i = Param(0.0, true, (1e-7, 100.), InverseGamma(0.2, 4.00), 2, (1e-5, 0.))"))
+            eval(parse("σ_rm$i = Param(0.0, true, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.))"))
         end
     end
 
@@ -226,17 +226,21 @@ function Parameters990(spec::Dict{String, Any})
     modelalp_ind = Param(0.0000, true, (0.000, 1.000), Beta(0.50, 0.20), 0, (0., 0.))
     gamm_gdpdef = Param(1.0354, false, (-10., 10.), Normal(1.00, 2.), 0, (-10., -10.))
     del_gdpdef = Param(0.0181, false, (-9.1, 9.1), Normal(0.00, 2.), 0, (-10., -10.))
+
+
     
-    return Parameters990(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w,
-                         iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp,
-                         epsw, Fom, sprd, zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b,
-                         ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pist, ρ_lr,
-                         ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law,
-                         σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pist, σ_lr, σ_zp, σ_tfp, σ_gdpdef,
-                         σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8,
-                         σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16,
-                         σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law,
-                         modelalp_ind, gamm_gdpdef, del_gdpdef)
+    Θ = Parameters990(alp, zeta_p, iota_p, del, ups, Bigphi, s2, h, ppsi, nu_l, zeta_w,
+                      iota_w, law, bet, psi1, psi2, psi3, pistar, sigmac, rho, epsp,
+                      epsw, Fom, sprd, zeta_spb, gammstar, gam, Lmean, gstar, ρ_g, ρ_b,
+                      ρ_mu, ρ_z, ρ_laf, ρ_law, ρ_rm, ρ_sigw, ρ_mue, ρ_gamm, ρ_pist, ρ_lr,
+                      ρ_zp, ρ_tfp, ρ_gdpdef, ρ_pce, σ_g, σ_b, σ_mu, σ_z, σ_laf, σ_law,
+                      σ_rm, σ_sigw, σ_mue, σ_gamm, σ_pist, σ_lr, σ_zp, σ_tfp, σ_gdpdef,
+                      σ_pce, σ_rm1, σ_rm2, σ_rm3, σ_rm4, σ_rm5, σ_rm6, σ_rm7, σ_rm8,
+                      σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16,
+                      σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law,
+                      modelalp_ind, gamm_gdpdef, del_gdpdef)
+    spec["n_params"] = count(field -> isa(getfield(Θ, field), Param), names(Θ))
+    return Θ
 end
 
 
