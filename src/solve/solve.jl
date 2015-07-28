@@ -13,13 +13,13 @@ function solve(model::AbstractModel)
         [$TTT_gensys, $CCC_gensys, $RRR_gensys] = feval('gensys', $Γ0, $Γ1, $C, $Ψ, $Π, 1+1e-6);
     """
     TTT_gensys = real(TTT_gensys)
-    CCC_gensys = reshape(CCC_gensys, length(CCC_gensys), 1)
     RRR_gensys = real(RRR_gensys)
+    CCC_gensys = reshape(CCC_gensys, length(CCC_gensys), 1)
 
     # Augment states
-    TTT, CCC, RRR = augment_states(model, TTT_gensys, CCC_gensys, RRR_gensys)
+    TTT, RRR, CCC = augment_states(model, TTT_gensys, RRR_gensys, CCC_gensys)
 
-    return TTT, CCC, RRR
+    return TTT, RRR, CCC
 end
 
 # Some of our observables are growth rates, which is calculated as a
@@ -32,13 +32,14 @@ end
 
 # These additional states are added after the model is solved to reduce the load on gensys
 function augment_states{T<:FloatingPoint}(model::AbstractModel, TTT::Matrix{T}, CCC::Matrix{T}, RRR::Matrix{T})
+    spec = model.spec
     Θ = model.Θ
     endo = model.ind.endostates
     endo_addl = model.ind.endostates_postgensys
     exo = model.ind.exoshocks
 
-    n_endo = length(endo)
-    n_exo = length(exo)
+    n_endo = spec["n_states"]
+    n_exo = spec["n_exoshocks"]
     @assert (n_endo, n_endo) == size(TTT)
     @assert (n_endo, n_exo) == size(RRR)
     @assert (n_endo, 1) == size(CCC)
@@ -50,6 +51,8 @@ function augment_states{T<:FloatingPoint}(model::AbstractModel, TTT::Matrix{T}, 
     RRR_aug = [RRR; zeros(numAdd, n_exo)]
     CCC_aug = [CCC; zeros(numAdd, 1)]
 
+
+    
     ### TTT modifications
 
     # Track Lags
@@ -72,11 +75,8 @@ function augment_states{T<:FloatingPoint}(model::AbstractModel, TTT::Matrix{T}, 
     TTT_aug[endo_addl["e_gdpdef"], endo_addl["e_gdpdef"]] = Θ.ρ_gdpdef.scaledvalue
     TTT_aug[endo_addl["e_pce"], endo_addl["e_pce"]] = Θ.ρ_pce.scaledvalue
 
-    ### CCC Modifications
 
-    # Expected inflation
-    CCC_aug[endo_addl["Et_pi_t"], :] = (CCC + TTT*CCC)[endo["pi_t"], :]
-
+    
     ### RRR modfications
 
     # Expected inflation
@@ -94,5 +94,14 @@ function augment_states{T<:FloatingPoint}(model::AbstractModel, TTT::Matrix{T}, 
     # Measurement Error on Core PCE
     RRR_aug[endo_addl["e_pce"], exo["pce_sh"]] = 1.0
 
-    return TTT_aug, CCC_aug, RRR_aug
+
+    
+    ### CCC Modifications
+
+    # Expected inflation
+    CCC_aug[endo_addl["Et_pi_t"], :] = (CCC + TTT*CCC)[endo["pi_t"], :]
+
+
+    
+    return TTT_aug, RRR_aug, CCC_aug
 end
