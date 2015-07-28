@@ -31,7 +31,7 @@ end
 # RRR and CCC with the appropriate number of zeros.
 
 # These additional states are added after the model is solved to reduce the load on gensys
-function augment_states{T<:FloatingPoint}(model::AbstractModel, TTT::Matrix{T}, CCC::Matrix{T}, RRR::Matrix{T})
+function augment_states{T<:FloatingPoint}(model::AbstractModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
     spec = model.spec
     Θ = model.Θ
     endo = model.ind.endostates
