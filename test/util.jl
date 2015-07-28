@@ -106,7 +106,7 @@ function test_test_matrix_eq()
     @test test_matrix_eq(m1, m3, 2e-4) # but true with larger ε
 
     # Arguments of different float type returns true
-    m2_float16 = convert(Array{Float16, 2}, m2)
+    m2_float16 = convert(Matrix{Float16}, m2)
     ε = convert(Float32, 0.0001)
     @test test_matrix_eq(m1, m2)
 

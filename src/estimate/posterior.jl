@@ -1,6 +1,6 @@
 # log posterior = log likelihood + log prior
 # log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
-function posterior{T<:FloatingPoint}(model::AbstractModel, YY::Array{T, 2})
+function posterior{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T})
     return likelihood(model, YY) + prior(model.Θ)
 end
     
@@ -9,7 +9,7 @@ end
 # This is a dsge likelihood function that can handle 2-part estimation where
 # there is a model switch.
 # If there is no model switch, then we filter over the main sample all at once.
-function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Array{T, 2})
+function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T})
     
     spec = model.spec
 
