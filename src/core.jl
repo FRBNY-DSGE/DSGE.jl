@@ -119,6 +119,6 @@ end
 
 # Given an array of names, return a dictionary mapping names to indices
 # When optional field `start` provided, first index is start+1
-function makedict{T<:String}(names::Array{T, 1}; start::Int = 0)
+function makedict{T<:String}(names::Vector{T}; start::Int = 0)
     return [names[i] => start+i for i = 1:length(names)]
 end
