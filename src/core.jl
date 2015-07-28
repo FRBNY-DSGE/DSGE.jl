@@ -42,6 +42,15 @@ function Param(value::Float64)
     return Param(value, true, (value, value), PointMass(value), 0, (value, value))
 end
 
+# Update a Param's value and scaledvalue if it is not fixed
+function update!(α::Param, newvalue::Float64)
+    if !α.fixed
+        α.value = newvalue
+        α.scaledvalue = α.scalefunction(newvalue)
+    end
+    return α
+end
+
 # Methods so that arithmetic with parameters can be done tersely, like "θ.α + θ.β"
 # Note there are still cases where we must refer to α.scaledvalue, e.g. pdf(α.priordist, α.val)
 Base.convert{T<:FloatingPoint}(::Type{T}, α::Param) = α.scaledvalue
@@ -107,6 +116,14 @@ Base.done(Θ::Parameters, state::Int) = state == length(names(Θ))+1
 
 # Length of a Parameters object is the number of Param fields
 Base.length(Θ::Parameters) = count(field -> isa(getfield(Θ, field), Param), names(Θ))
+
+function update!{T<:FloatingPoint}(Θ::Parameters, newvalues::Vector{T})
+    @assert length(newvalues) == length(Θ)
+    for (α, newvalue) in zip(Θ, newvalues)
+        update!(α, newvalue)
+    end
+    return Θ
+end
 
 # Calculate (log of) joint density of Θ
 function prior(Θ::Parameters)
