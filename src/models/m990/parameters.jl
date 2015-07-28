@@ -4,7 +4,7 @@ type Parameters990 <: Parameters
     alp::Param               # α     
     zeta_p::Param            # ζ_p   
     iota_p::Param            # ι_p   
-    del::Param               # δ     
+    del::Float64             # δ     
     ups::Param               # υ     
     Bigphi::Param            # Φ     
     s2::Param                # s2    
@@ -13,7 +13,7 @@ type Parameters990 <: Parameters
     nu_l::Param              # ν_l   
     zeta_w::Param            # ζ_w   
     iota_w::Param            # ι_w   
-    law::Param               # λ_w   
+    law::Float64             # λ_w   
     bet::Param               # β     
     psi1::Param              # ψ₁    
     psi2::Param              # ψ₂    
@@ -21,15 +21,15 @@ type Parameters990 <: Parameters
     pistar::Param            # π_star
     sigmac::Param            # σ_c   
     rho::Param               # ρ     
-    epsp::Param              # ϵ_p   
-    epsw::Param              # ϵ_w   
+    epsp::Float64             # ϵ_p   
+    epsw::Float64            # ϵ_w   
     Fom::Param               # Fω    
     sprd::Param              # sprd  
     zeta_spb::Param          # ζ_spb 
     gammstar::Param          # γ_star
     gam::Param               # γ     
     Lmean::Param             # Lmean 
-    gstar::Param             # g_star
+    gstar::Float64           # g_star
     ρ_g::Param               # ρ_g   
     ρ_b::Param               # ρ_b   
     ρ_mu::Param              # ρ_μ   
@@ -142,7 +142,7 @@ function Parameters990(spec::Dict{String, Any})
     alp = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999))
     zeta_p = Param(0.8940, false, (1e-5, 0.999), Beta(0.5, 0.1), 1, (1e-5, 0.999))
     iota_p = Param(0.1865, false, (1e-5, 0.999), Beta(0.5, 0.15), 1, (1e-5, 0.999))
-    del = Param(0.025)
+    del = 0.025
     ups = Param(1.000, true, (0., 10.), Gamma(1., 0.5), 2, (1e-5, 0.))
     Bigphi = Param(1.1066, false, (1., 10.), Normal(1.25, 0.12), 2, (1.00, 10.00))
     s2 = Param(2.7314, false, (-15., 15.), Normal(4., 1.5), 0, (-15., 15.))
@@ -151,7 +151,7 @@ function Parameters990(spec::Dict{String, Any})
     nu_l = Param(2.5975, false, (1e-5, 10.), Normal(2, 0.75), 2, (1e-5, 10.))
     zeta_w = Param(0.9291, false, (1e-5, 0.999), Beta(0.5, 0.1), 1, (1e-5, 0.999))
     iota_w = Param(0.2992, false, (1e-5, 0.999), Beta(0.5, 0.15), 1, (1e-5, 0.999))
-    law = Param(1.5)
+    law = 1.5
     # laf = []
     bet = Param(0.1402, scalefunction = x -> 1/(1 + x/100), false, (1e-5, 10.), Gamma(0.25, 0.1), 2, (1e-5, 10.))
     psi1 = Param(1.3679, false, (1e-5, 10.), Normal(1.5, 0.25), 2, (1e-5, 10.00))
@@ -160,8 +160,8 @@ function Parameters990(spec::Dict{String, Any})
     pistar = Param(0.5000, scalefunction = x -> 1 + x/100, true, (1e-5, 10.), Gamma(0.75, 0.4), 2, (1e-5, 10.))
     sigmac = Param(0.8719, false, (1e-5, 10.), Normal(1.5, 0.37), 2, (1e-5, 10.))
     rho = Param(0.7126, false, (1e-5, 0.999), Beta(0.75, 0.10), 1, (1e-5, 0.999))
-    epsp = Param(10.)
-    epsw = Param(10.)
+    epsp = 10.
+    epsw = 10.
 
     # financial frictions parameters
     Fom = Param(0.0300, scalefunction = x -> 1 - (1-x)^0.25, true, (1e-5, 0.99999), Beta(0.03, 0.01), 1, (1e-5, 0.99))
@@ -172,7 +172,7 @@ function Parameters990(spec::Dict{String, Any})
     # exogenous processes - level
     gam = Param(0.3673, scalefunction = x -> x/100, false, (-5., 5.), Normal(0.4, 0.1), 0, (-5.0, 5.0))
     Lmean = Param(-45.9364, false, (-1000., 1000.), Normal(-45, 5), 0, (-1000., 1000.))
-    gstar = Param(0.18)
+    gstar = 0.18
 
     # exogenous processes - autocorrelation
     ρ_g = Param(0.9863, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))

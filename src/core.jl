@@ -93,8 +93,17 @@ abstract Parameters
 # Implement the iterator protocol for the Parameters type
 # This will iterate over all Param fields (not steady-state values)
 Base.start(Θ::Parameters) = 1
-Base.next(Θ::Parameters, state::Int) = getfield(Θ, state), state+1
-Base.done(Θ::Parameters, state::Int) = !isa(getfield(Θ, state), Param)
+
+function Base.next(Θ::Parameters, state::Int)
+    α = getfield(Θ, state)
+    state += 1
+    while !done(Θ, state) && !isa(getfield(Θ, state), Param)
+        state += 1
+    end
+    return α, state
+end
+
+Base.done(Θ::Parameters, state::Int) = state == length(names(Θ))+1
 
 # Calculate (log of) joint density of Θ
 function prior(Θ::Parameters)
