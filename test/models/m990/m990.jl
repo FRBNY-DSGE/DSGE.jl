@@ -8,6 +8,7 @@ model = Model990()
 # Parameters990 object creation
 Θ = Parameters990(model_specifications(Model990))
 @test isa(Θ, Parameters990)
+@test length(Θ) == 82
 
 # Parameters match para, bounds, etc. vectors from Matlab (ε = 1e-4)
 para = zeros(82, 1)

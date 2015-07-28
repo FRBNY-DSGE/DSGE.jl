@@ -105,6 +105,9 @@ end
 
 Base.done(Θ::Parameters, state::Int) = state == length(names(Θ))+1
 
+# Length of a Parameters object is the number of Param fields
+Base.length(Θ::Parameters) = count(field -> isa(getfield(Θ, field), Param), names(Θ))
+
 # Calculate (log of) joint density of Θ
 function prior(Θ::Parameters)
     sum = 0.0

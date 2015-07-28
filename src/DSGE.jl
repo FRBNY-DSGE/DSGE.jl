@@ -16,7 +16,7 @@ include("solve/Gensys.jl")
 using Distributions, Roots.fzero, MATLAB
 using .DistributionsExt, .FinancialFrictionsFunctions, .Gensys
 
-import Base: convert, promote_rule, log, exp, start, next, done
+import Base: convert, promote_rule, log, exp, start, next, done, length
 
 export
     # core.jl

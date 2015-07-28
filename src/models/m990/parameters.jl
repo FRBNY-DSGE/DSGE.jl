@@ -239,7 +239,7 @@ function Parameters990(spec::Dict{String, Any})
                       σ_rm9, σ_rm10, σ_rm11, σ_rm12, σ_rm13, σ_rm14, σ_rm15, σ_rm16,
                       σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law,
                       modelalp_ind, gamm_gdpdef, del_gdpdef)
-    spec["n_params"] = count(field -> isa(getfield(Θ, field), Param), names(Θ))
+    spec["n_params"] = length(Θ)
     return Θ
 end
 
