@@ -28,6 +28,10 @@ function model_specifications(T::Type{Model990})
     # ZLB expectations should begin in 2008 Q4
     dict["antlags"] = 24
 
+    # TODO: This should be set when the data are read in
+    # Number of presample periods
+    dict["n_presample_periods"] = 2
+
     return dict
 end
 
@@ -573,23 +577,35 @@ end
 # Assign measurement equation : X_t = ZZ*S_t + DD + u_t
 # where u_t = eta_t+MM* eps_t with var(eta_t) = EE
 # where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
-function measurement(model::Model990)
-    TTT, CCC, RRR = solve(model)
 
+function measurement(model::Model990, TTT::Matrix, RRR::Matrix, CCC::Matrix; shocks::Bool = true)
     spec = model.spec
     Θ = model.Θ
     ind = model.ind
 
     endo = ind.endostates
-    endo_addl = ind.endostates_postgensys
     exo = ind.exoshocks
     obs = ind.observables
+    
+    # If shocks = true, then return measurement equation matrices with rows and columns for anticipated policy shocks
+    if shocks
+        n_observables = spec["n_observables"]
+        n_states = spec["n_states_aug"]
+        n_exoshocks = spec["n_exoshocks"]
+        endo_addl = ind.endostates_postgensys
+    else
+        nant = spec["nant"]
+        n_observables = spec["n_observables"] - nant
+        n_states = spec["n_states_aug"] - nant
+        n_exoshocks = spec["n_exoshocks"] - nant
+        endo_addl = [key => ind.endostates_postgensys[key] - nant for key in keys(ind.endostates_postgensys)]
+    end
 
-    ZZ = zeros(spec["n_observables"], spec["n_states_aug"])
-    DD = zeros(spec["n_observables"], 1)
-    MM = zeros(spec["n_observables"], spec["n_exoshocks"])
-    EE = zeros(spec["n_observables"], spec["n_observables"])
-    QQ =  zeros(spec["n_exoshocks"], spec["n_exoshocks"])
+    ZZ = zeros(n_observables, n_states)
+    DD = zeros(n_observables, 1)
+    MM = zeros(n_observables, n_exoshocks)
+    EE = zeros(n_observables, n_observables)
+    QQ =  zeros(n_exoshocks, n_exoshocks)
 
 
 
@@ -676,10 +692,12 @@ function measurement(model::Model990)
     # These lines set the standard deviations for the anticipated shocks. They
     # are here no longer calibrated to the std dev of contemporaneous shocks,
     # as we had in 904
-    for i = 1:spec["nant"]
-        ZZ[obs["R_n$i"], :] = ZZ[obs["R_n"], :]*(TTT^i)
-        DD[obs["R_n$i"]] = Θ.Rstarn
-        QQ[exo["rm_shl$i"], exo["rm_shl$i"]] = Θ.(parse("σ_rm$i"))^2
+    if shocks
+        for i = 1:spec["nant"]
+            ZZ[obs["R_n$i"], :] = ZZ[obs["R_n"], :]*(TTT^i)
+            DD[obs["R_n$i"]] = Θ.Rstarn
+            QQ[exo["rm_shl$i"], exo["rm_shl$i"]] = Θ.(parse("σ_rm$i"))^2
+        end
     end
 
     return ZZ, DD, QQ, EE, MM

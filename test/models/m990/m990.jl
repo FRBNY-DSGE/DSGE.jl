@@ -146,7 +146,8 @@ MM_expected = get_variable(mf, "MM")
 close(mf)
 
 model = Model990()
-ZZ, DD, QQ, EE, MM = measurement(model)
+TTT, RRR, CCC = solve(model)
+ZZ, DD, QQ, EE, MM = measurement(model, TTT, RRR, CCC)
 
 @test test_matrix_eq(ZZ_expected, ZZ)
 @test test_matrix_eq(DD_expected, DD)

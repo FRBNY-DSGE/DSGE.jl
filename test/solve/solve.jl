@@ -9,8 +9,8 @@ RRR_expected = get_variable(mf, "RRR")
 close(mf)
 
 model = Model990()
-TTT, CCC, RRR = solve(model)
+TTT, RRR, CCC = solve(model)
 @test test_matrix_eq(TTT_expected, TTT)
-@test test_matrix_eq(CCC_expected, CCC)
 @test test_matrix_eq(RRR_expected, RRR)
+@test test_matrix_eq(CCC_expected, CCC)
 
