@@ -100,22 +100,7 @@ Base.done(Θ::Parameters, state::Int) = !isa(getfield(Θ, state), Param)
 function prior(Θ::Parameters)
     sum = 0.0
     for φ in Θ
-        # TODO: This branch of the if statement calculates the inverse gamma density in the same way
-        # as in the Matlab code. However, we think this may reflect a bug in the Matlab code. See
-
-        if isa(φ.priordist, Distributions.InverseGamma)
-            (α, β) = params(φ.priordist)
-            ν = 2α
-            σ = sqrt(β/α)
-            
-            a = σ
-            b = ν
-            x = φ.value
-
-            curr = log(2) - log(gamma(b/2)) + (b/2)*log(b*a^2/2) - ((b+1)/2)*log(x^2) - b*a^2/(2x^2)
-        else
-            curr = logpdf(φ.priordist, φ.value)
-        end
+        curr = logpdf(φ.priordist, φ.value)
         sum += curr
     end
     return sum
@@ -134,6 +119,6 @@ end
 
 # Given an array of names, return a dictionary mapping names to indices
 # When optional field `start` provided, first index is start+1
-function makedict{T<:String}(names::Array{T, 1}; start::Int = 0)
+function makedict{T<:String}(names::Vector{T}; start::Int = 0)
     return [names[i] => start+i for i = 1:length(names)]
 end

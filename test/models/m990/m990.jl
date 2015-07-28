@@ -31,12 +31,10 @@ for φ = Θ
     bounds[i, 1] = left
     bounds[i, 2] = right
 
-    if isa(φ.priordist, Distributions.InverseGamma)
+    if isa(φ.priordist, DistributionsExt.RootInverseGamma)
         pshape[i] = 4
-        (α, β) = params(φ.priordist)
-        ν = 2α
-        σ = sqrt(β/α)
-        pmean[i] = σ
+        (ν, τ) = params(φ.priordist)
+        pmean[i] = τ
         pstdd[i] = ν
     else
         if isa(φ.priordist, Distributions.Beta)
@@ -148,7 +146,8 @@ MM_expected = get_variable(mf, "MM")
 close(mf)
 
 model = Model990()
-ZZ, DD, QQ, EE, MM = measurement(model)
+TTT, RRR, CCC = solve(model)
+ZZ, DD, QQ, EE, MM = measurement(model, TTT, RRR, CCC)
 
 @test test_matrix_eq(ZZ_expected, ZZ)
 @test test_matrix_eq(DD_expected, DD)

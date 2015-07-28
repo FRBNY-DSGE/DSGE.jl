@@ -46,11 +46,11 @@ dsge.jl/
       DistributionsExt.jl
         module DistributionsExt
           using Distributions
-          import Distributions: pdf, mean, std
+          import Distributions: params, mean, std, pdf, logpdf
           type PointMass <: Distribution{Univariate, Continuous}
           function Beta
           function Gamma
-          function InverseGamma
+          type RootInverseGamma <: Distribution{Univariate, Continuous}
         end
       FinancialFrictionsFunctions.jl
         module FinancialFrictionsFunctions

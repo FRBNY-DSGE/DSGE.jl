@@ -193,29 +193,29 @@ function Parameters990(spec::Dict{String, Any})
     ρ_pce = Param(0.2320, false, (1e-5, 0.999), Beta(0.5, 0.2), 1, (1e-5, 0.999))
 
     # exogenous processes - standard deviation
-    σ_g = Param(2.5230, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_b = Param(0.0292, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_mu = Param(0.4559, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_z = Param(0.6742, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_laf = Param(0.1314, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_law = Param(0.3864, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_rm = Param(0.2380, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_sigw = Param(0.0428, false, (1e-7, 100.), InverseGamma(0.05, 4.00), 2, (1e-5, 0.))
-    σ_mue = Param(0., true, (1e-7, 100.), InverseGamma(0.05, 4.00), 2, (1e-5, 0.))
-    σ_gamm = Param(0., true, (1e-7, 100.), InverseGamma(0.01, 4.00), 2, (1e-5, 0.))
-    σ_pist = Param(0.0269, false, (1e-8, 5.), InverseGamma(0.03, 6.), 2, (1e-8, 5.))
-    σ_lr = Param(0.1766, false, (1e-8, 10.), InverseGamma(0.75, 2.), 2, (1e-8, 5.))
-    σ_zp = Param(0.1662, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_tfp = Param(0.9391, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_gdpdef = Param(0.1575, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
-    σ_pce = Param(0.0999, false, (1e-8, 5.), InverseGamma(0.1, 2.00), 2, (1e-8, 5.))
+    σ_g = Param(2.5230, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_b = Param(0.0292, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_mu = Param(0.4559, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_z = Param(0.6742, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_laf = Param(0.1314, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_law = Param(0.3864, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_rm = Param(0.2380, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_sigw = Param(0.0428, false, (1e-7, 100.), RootInverseGamma(4.00, 0.05), 2, (1e-5, 0.))
+    σ_mue = Param(0., true, (1e-7, 100.), RootInverseGamma(4.00, 0.05), 2, (1e-5, 0.))
+    σ_gamm = Param(0., true, (1e-7, 100.), RootInverseGamma(4.00, 0.01), 2, (1e-5, 0.))
+    σ_pist = Param(0.0269, false, (1e-8, 5.), RootInverseGamma(6., 0.03), 2, (1e-8, 5.))
+    σ_lr = Param(0.1766, false, (1e-8, 10.), RootInverseGamma(2., 0.75), 2, (1e-8, 5.))
+    σ_zp = Param(0.1662, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_tfp = Param(0.9391, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_gdpdef = Param(0.1575, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    σ_pce = Param(0.0999, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
 
     # standard deviations of the anticipated policy shocks
     for i = 1:spec["nantpad"]
         if i < 13
-            eval(parse("σ_rm$i = Param(0.20, false, (1e-7, 100.), InverseGamma(0.2, 4.00), 2, (1e-5, 0.))"))
+            eval(parse("σ_rm$i = Param(0.20, false, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.))"))
         else
-            eval(parse("σ_rm$i = Param(0.0, true, (1e-7, 100.), InverseGamma(0.2, 4.00), 2, (1e-5, 0.))"))
+            eval(parse("σ_rm$i = Param(0.0, true, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.))"))
         end
     end
 

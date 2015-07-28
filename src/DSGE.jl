@@ -26,7 +26,7 @@ export
     solve,
 
     # estimate/
-    dlyap, kalcvf2NaN, kalsmth_k93, likelihood, posterior, estimate,
+    dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, estimate,
 
     # models/
     Parameters990, Model990, model_specifications, eqcond, measurement
