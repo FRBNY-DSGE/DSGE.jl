@@ -122,7 +122,7 @@ function update!{T<:FloatingPoint}(Θ::Parameters, newvalues::Vector{T})
     for (α, newvalue) in zip(Θ, newvalues)
         update!(α, newvalue)
     end
-    return Θ
+    return steadystate!(Θ)
 end
 
 # Calculate (log of) joint density of Θ
