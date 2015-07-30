@@ -13,5 +13,5 @@ close(mf)
 
 model = Model990()
 
-hessian, stoph = hessizero!(params, model, YY; noisy=true)
-#@test test_matrix_eq(hessian_expected, hessian; noisy=true)
+@time hessian, stoph = hessizero!(params, model, YY; noisy=true)
+@test test_matrix_eq(hessian_expected, hessian, 1.0; noisy=true)

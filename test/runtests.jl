@@ -10,6 +10,7 @@ my_tests = [
             "solve/ordered_qz",
             "estimate/kalman",
             "estimate/posterior"
+            #,"estimate/hessian" (currently takes 6 hours to complete)
             ]
 
 for test in my_tests
