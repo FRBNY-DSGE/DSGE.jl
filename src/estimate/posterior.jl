@@ -3,7 +3,13 @@
 function posterior{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T})
     return likelihood(model, YY) + prior(model.Θ)
 end
-    
+
+# Evaluate posterior at `parameters`
+function posterior!{T<:FloatingPoint}(parameters::Vector{T}, model::AbstractModel, YY::Matrix{T})
+    update!(model.Θ, parameters)
+    return posterior(model, YY)
+end
+
 
 
 # This is a dsge likelihood function that can handle 2-part estimation where

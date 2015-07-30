@@ -24,6 +24,15 @@ using Distributions
 @test_throws ErrorException α_bad = Param(0.1596, false, (1e-5, 0.999),
                                           Normal(0.30, 0.05), -1, (1e-5, 0.999))
 
+# update! value
+update!(α, 0.0)
+@test α.value == 0.0
+@test α.scaledvalue == 0.0
+update!(δ, 0.0)
+@test δ.value == 0.025
+@test δ.scaledvalue == 0.025
+update!(α, 0.1596)
+
 # Arithmetic with parameters
 @test convert(Float16, δ) == 0.025
 @test promote_type(Param, Float16) == Float64
@@ -38,7 +47,7 @@ cx = 2 * (α - 1/2)
 @test_approx_eq_eps(toreal(α), cx / sqrt(1 - cx^2), 0.001)
 @test toreal(δ) == 0.025
 
-# println("param.jl tests passed\n")
+
 
 # Test Parameters type
 

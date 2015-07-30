@@ -8,6 +8,7 @@ model = Model990()
 # Parameters990 object creation
 Θ = Parameters990(model_specifications(Model990))
 @test isa(Θ, Parameters990)
+@test length(Θ) == 82
 
 # Parameters match para, bounds, etc. vectors from Matlab (ε = 1e-4)
 para = zeros(82, 1)
@@ -18,13 +19,8 @@ pstdd = zeros(82, 1)
 trspec = zeros(82, 4)
 
 # not all Params appear in para vector
-ignore = [Θ.del, Θ.law, Θ.epsp, Θ.epsw, Θ.gstar]
 i = 1
 for φ = Θ
-    if φ ∈ ignore
-        continue
-    end
-
     para[i] = φ.value
 
     (left, right) = φ.bounds
