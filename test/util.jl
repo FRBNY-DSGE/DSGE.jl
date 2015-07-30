@@ -12,13 +12,13 @@ end
 # TODO: decide what a sensible default ε value is for our situation
 # Compares matrices, reports absolute differences, returns true if all entries close enough
 function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::Array{R},
-             actual::Array{S}, ε::T = 1e-4; noisy::Bool = false)
-    return test_matrix_eq(complex(expected), complex(actual), ε; noisy=noisy)
+             actual::Array{S}; ε::T = 1e-4, noisy::Bool = false)
+    return test_matrix_eq(complex(expected), complex(actual); ε=ε, noisy=noisy)
 end
 
 # Complex-valued input matrices
 function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::
-             Array{Complex{R}}, actual::Array{Complex{S}}, ε::T = 1e-4; noisy::Bool = false)
+             Array{Complex{R}}, actual::Array{Complex{S}}; ε::T = 1e-4, noisy::Bool = false)
     # Matrices of different sizes return false
     if size(expected) != size(actual)
         if noisy
@@ -103,7 +103,7 @@ function test_test_matrix_eq()
     # Returns false
     m3 = [0.0001 0.0; 0.0 -0.0002]
     @test !test_matrix_eq(m1, m3)
-    @test test_matrix_eq(m1, m3, 2e-4) # but true with larger ε
+    @test test_matrix_eq(m1, m3; ε=2e-4) # but true with larger ε
 
     # Arguments of different float type returns true
     m2_float16 = convert(Matrix{Float16}, m2)

@@ -61,7 +61,7 @@ for out in ["L", "zend", "Pend", "pred", "vpred", "yprederror", "ystdprederror",
         @test test_matrix_eq(zend_expected, zend)
     elseif out ∈ ["Pend", "vpred", "vfilt"]
         # These matrix entries are especially large, averaging 1e5, so we allow greater ε
-        eval(parse("@test test_matrix_eq($(out)_expected, $out, 0.1)"))
+        eval(parse("@test test_matrix_eq($(out)_expected, $out; ε=0.1)"))
     else
         eval(parse("@test test_matrix_eq($(out)_expected, $out)"))
     end
