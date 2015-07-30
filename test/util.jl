@@ -125,6 +125,6 @@ end
 
 
 function test_readcsv_complex()
-    readcsv_complex("test_readcsv_complex.csv")
+    readcsv_complex("readcsv_complex.csv")
     println("readcsv_complex tests passed\n")
 end

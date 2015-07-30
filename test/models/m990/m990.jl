@@ -1,9 +1,14 @@
-using Distributions
+using Distributions, MATLAB
 using DSGE: DistributionsExt
 path = dirname(@__FILE__)
 
+### Model
 model = Model990()
 @test isa(model, Model990)
+
+
+
+### Parameters
 
 # Parameters990 object creation
 Θ = Parameters990(model_specifications(Model990))
@@ -11,11 +16,11 @@ model = Model990()
 @test length(Θ) == 82
 
 # Parameters match para, bounds, etc. vectors from Matlab (ε = 1e-4)
-para = zeros(82, 1)
+para = zeros(82)
 bounds = zeros(82, 2)
-pshape = zeros(82, 1)
-pmean = zeros(82, 1)
-pstdd = zeros(82, 1)
+pshape = zeros(82)
+pmean = zeros(82)
+pstdd = zeros(82)
 trspec = zeros(82, 4)
 
 # not all Params appear in para vector
@@ -57,13 +62,14 @@ for φ = Θ
     i += 1
 end
 
-
-para_matlab   = readcsv(joinpath(path,"parameters/para.csv"))
-bounds_matlab = readcsv(joinpath(path,"parameters/bounds.csv"))
-pshape_matlab = readcsv(joinpath(path,"parameters/pshape.csv"))
-pmean_matlab  = readcsv(joinpath(path,"parameters/pmean.csv"))
-pstdd_matlab  = readcsv(joinpath(path,"parameters/pstdd.csv"))
-trspec_matlab = readcsv(joinpath(path,"parameters/trspec.csv"))
+mf = MatFile("$path/parameters.mat")
+para_matlab   = get_variable(mf, "para")
+bounds_matlab = get_variable(mf, "bounds")
+pshape_matlab = get_variable(mf, "pshape")
+pmean_matlab  = get_variable(mf, "pmean")
+pstdd_matlab  = get_variable(mf, "pstdd")
+trspec_matlab = get_variable(mf, "trspec")
+close(mf)
 
 @test test_matrix_eq(para_matlab, para)
 @test test_matrix_eq(bounds_matlab, bounds)
@@ -71,6 +77,10 @@ trspec_matlab = readcsv(joinpath(path,"parameters/trspec.csv"))
 @test test_matrix_eq(pmean_matlab, pmean)
 @test test_matrix_eq(pstdd_matlab, pstdd)
 @test test_matrix_eq(trspec_matlab, trspec)
+
+
+
+### Model indices
 
 # ModelInds object creation
 I = ModelInds(model_specifications(Model990))
@@ -106,6 +116,10 @@ obs = I.observables
 @test length(obs) == 18
 @test obs["tfp"] == 12
 
+
+
+### Equilibrium conditions
+
 model = Model990()
 Γ0, Γ1, C, Ψ, Π = eqcond(model)
 
@@ -117,11 +131,13 @@ model = Model990()
 @test size(Π) == (66, 13)
 
 # Check output matrices against Matlab output (ε = 1e-4)
-Γ0_matlab = readcsv(joinpath(path,"eqcond/Γ0.csv"))
-Γ1_matlab = readcsv(joinpath(path,"eqcond/Γ1.csv"))
-C_matlab  = readcsv(joinpath(path,"eqcond/C.csv"))
-Ψ_matlab  = readcsv(joinpath(path,"eqcond/PSI.csv"))
-Π_matlab  = readcsv(joinpath(path,"eqcond/PIE.csv"))
+mf = MatFile("$path/eqcond.mat")
+Γ0_matlab = get_variable(mf, "G0")
+Γ1_matlab = get_variable(mf, "G1")
+C_matlab  = reshape(get_variable(mf, "C"), 66, 1)
+Ψ_matlab  = get_variable(mf, "PSI")
+Π_matlab  = get_variable(mf, "PIE")
+close(mf)
 
 @test test_matrix_eq(Γ0_matlab, Γ0)
 @test test_matrix_eq(Γ1_matlab, Γ1)
@@ -129,11 +145,11 @@ C_matlab  = readcsv(joinpath(path,"eqcond/C.csv"))
 @test test_matrix_eq(Ψ_matlab, Ψ)
 @test test_matrix_eq(Π_matlab, Π)
 
-# MATLAB Code
 
-using MATLAB
 
-mf = MatFile("$path/test_measurement.mat")
+### Measurement equation
+
+mf = MatFile("$path/measurement.mat")
 ZZ_expected = get_variable(mf, "ZZ")
 DD_expected = reshape(get_variable(mf, "DD"), 18, 1)
 QQ_expected = get_variable(mf, "QQ")
