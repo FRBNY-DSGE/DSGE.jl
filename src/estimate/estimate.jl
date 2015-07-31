@@ -1,7 +1,7 @@
 # This program produces and saves draws from the posterior distribution of
 # the parameters.
 function estimate{T<:AbstractModel}(Model::Type{T})
-    ### Step 1: Initialization
+    ### Step 1: Initialize model
     model = Model990()
     spec = model.spec
 
@@ -12,7 +12,7 @@ function estimate{T<:AbstractModel}(Model::Type{T})
 
     
     
-    ### Step 2: Finding the posterior mode: re-maximization
+    ### Step 2: Find posterior mode
 
     # Specify starting mode
     mode_in = readcsv("$savepath/mode_in.csv")
@@ -34,8 +34,6 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     update!(model, xh)
     mode = [tomodel(α) for α in model.Θ]
     update!(model, mode)
-
-    # Once we get a mode, we save the parameter vector
     writecsv("$savepath/mode_out.csv", mode)
 
     # If the algorithm stops only because we have exceeded the maximum number of
@@ -44,43 +42,32 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     
     
 
-    ### Step 3: Compute the inverse Hessian
-    # Once we find and save the posterior mode, we calculate the Hessian
-    # at the mode. The hessian is used to calculate the variance of the proposal
-    # distribution, which is used to draw a new parameter in each iteration of
-    # the algorithm.
+    ### Step 3: Compute proposal distribution
 
-    ## Step 3a: Calculate Hessian corresponding to the posterior mode
+    # Calculate the Hessian at the posterior mode
     hessian, _ = hessizero!(mode, model, YY; noisy=true)
-
-    # Save computed Hessian in output file
     writecsv("$savepath/hessian.csv", hessian)
     
-    
-    ## Step 3b: Calculate inverse of Hessian (by Singular Value Decomposition)
-    
-    # Setting the jump size for sampling
+    # Set the jump size for sampling
     cc0 = 0.01
     cc = 0.09
     date_q = 1:spec["quarters_ahead"]
 
+    # The hessian is used to calculate the variance of the proposal
+    # distribution, which is used to draw a new parameter in each iteration of
+    # the algorithm.
     propdist = proposal_distribution(mode, hessian, cc0)
-
     if propdist.rank != spec["n_free_params"]
         println("problem – shutting down dimensions")
     end
 
     
 
-    ### Step 4: Initialize algorithm by drawing para_old from a normal distribution centered on the posterior mode (propdens).
+    ### Step 4: Metropolis-Hastings algorithm
 
 
 
-    ### Step 5: For nsim*ntimes iterations within each block, generate a new parameter draw. Decide to accept or reject, and save every ntimes_th draw that is accepted.
-
-
-
-    ### Step 6: Calculate parameter covariance matrix
+    ### Step 5: Calculate parameter covariance matrix
             
 end
 
@@ -106,4 +93,22 @@ function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{
     σ = cc0*u*sqrt(Σ)
 
     return DegenerateMvNormal(μ, σ, Σ, Σ_inv, rank, logdet)
+end
+
+
+
+function metropolis_hastings{T<:FloatingPoint}(mode::Vector{T}, propdist::Distribution, model::AbstractModel, YY::Matrix{T})
+    # Initialize algorithm by drawing para_old from a normal distribution centered on the posterior mode until the parameters are within bounds or the posterior value is sufficiently large    
+    para_old = mode
+    initialized = false
+    while !initialized
+        para_old = rand(propdist)
+        post_old = posterior!(propdist, model, YY; checkbounds=true)
+        #propdens = logpdf(pdf, para_old)
+        if post_old > -Inf
+            initialized = true
+        end
+    end
+
+    # For nsim*ntimes iterations within each block, generate a new parameter draw. Decide to accept or reject, and save every ntimes_th draw that is accepted.
 end
