@@ -6,9 +6,10 @@ module DistributionsExt
 # functions, but rather new functions with the same names.
 
 using Distributions
-import Distributions: params, mean, std, pdf, logpdf
+import Distributions: params, mean, std, pdf, logpdf, _logpdf
+import Base: length
 
-export PointMass, Beta, Gamma, RootInverseGamma
+export PointMass, Beta, Gamma, RootInverseGamma, DegenerateMvNormal
 
 
 
@@ -57,6 +58,25 @@ end
 function Distributions.logpdf(d::RootInverseGamma, x::Real)
     (ν, τ) = params(d)
     return log(2) - log(gamma(ν/2)) + (ν/2)*log(ν*τ^2/2) - ((ν+1)/2)*log(x^2) - ν*τ^2/(2x^2)
+end
+
+
+
+# Degenerate multivariate normal
+# en.wikipedia.org/wiki/Multivariate_normal_distribution#Degenerate_case
+type DegenerateMvNormal <: Distribution{Multivariate, Continuous}
+    μ::Vector          # mean
+    σ::Matrix          # standard deviation
+    Σ::Matrix          # covariance
+    Σ_inv::Matrix      # generalized inverse
+    rank::Int64        # rank of Σ
+    logdet::Float64    # log of pseudo-determinant of Σ
+end
+
+Base.length(d::DegenerateMvNormal) = length(d.μ)
+
+function Distributions._logpdf{T<:FloatingPoint}(d::DegenerateMvNormal, x::Vector{T})
+    return -(1/2)*(d.rank*log(2pi) + d.logdet + (x-d.μ)'*d.Σ_inv*(x-d.μ))
 end
 
 

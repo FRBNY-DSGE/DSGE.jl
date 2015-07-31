@@ -55,30 +55,18 @@ function estimate{T<:AbstractModel}(Model::Type{T})
 
     # Save computed Hessian in output file
     writecsv("$savepath/hessian.csv", hessian)
-
+    
     
     ## Step 3b: Calculate inverse of Hessian (by Singular Value Decomposition)
-    rankhhm = spec["n_params"]
-    u, s_diag, v = svd(hessian)
-    sigpropinv = copy(hessian)
-    big_evals = find(x -> x > 1e-6, s_diag)
-    sigpropdim = length(big_evals)
+    
+    # Setting the jump size for sampling
+    cc0 = 0.01
+    cc = 0.09
+    date_q = 1:spec["quarters_ahead"]
 
-    sigproplndet = 0.0
-    s = zeros(spec["n_params"], spec["n_params"])
-    for i = 1:spec["n_params"]
-        if i > sigpropdim
-            s[i, i] = 0.0
-        else
-            s[i,i] = 1/s_diag[i]
-            sigproplndet += log(s[i, i])
-        end
-    end
+    propdist = proposal_distribution(mode, hessian, cc0)
 
-    invhhm  = u*s*u'
-    sigscale = u*sqrt(s)
-
-    if length(bigev) != spec["n_free_params"]
+    if propdist.rank != spec["n_free_params"]
         println("problem – shutting down dimensions")
     end
 
@@ -94,4 +82,28 @@ function estimate{T<:AbstractModel}(Model::Type{T})
 
     ### Step 6: Calculate parameter covariance matrix
             
+end
+
+
+
+# Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
+function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{T}, cc0::T)
+    n = size(hessian, 1)
+    @assert (n, n) = size(hessian)
+
+    u, s_diag, v = svd(hessian)
+    Σ_inv = hessian/cc0^2
+    big_evals = find(x -> x > 1e-6, s_diag)
+    rank = length(big_evals)
+
+    logdet = 0.0
+    Σ = zeros(n, n)
+    for i = 1:rank
+        Σ[i, i] = cc0^2/s_diag[i]
+        logdet += log(Σ[i, i])
+    end
+
+    σ = cc0*u*sqrt(Σ)
+
+    return DegenerateMvNormal(μ, σ, Σ, Σ_inv, rank, logdet)
 end
