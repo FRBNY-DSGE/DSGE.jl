@@ -32,6 +32,9 @@ function model_specifications(T::Type{Model990})
     # Number of presample periods
     dict["n_presample_periods"] = 2
 
+    # Number of quarters ahead to forecast
+    dict["quarters_ahead"] = 60
+
     return dict
 end
 
