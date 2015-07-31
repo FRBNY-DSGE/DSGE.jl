@@ -240,6 +240,7 @@ function Parameters990(spec::Dict{String, Any})
                       σ_rm17, σ_rm18, σ_rm19, σ_rm20, eta_gz, eta_laf, eta_law,
                       modelalp_ind, gamm_gdpdef, del_gdpdef)
     spec["n_params"] = length(Θ)
+    spec["n_free_params"] = count(α -> !α.fixed, Θ)
     return Θ
 end
 
