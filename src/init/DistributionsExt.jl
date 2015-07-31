@@ -6,7 +6,7 @@ module DistributionsExt
 # functions, but rather new functions with the same names.
 
 using Distributions
-import Distributions: params, mean, std, pdf, logpdf, _logpdf
+import Distributions: params, mean, std, pdf, logpdf, _logpdf, rand
 import Base: length
 
 export PointMass, Beta, Gamma, RootInverseGamma, DegenerateMvNormal
@@ -78,6 +78,8 @@ Base.length(d::DegenerateMvNormal) = length(d.μ)
 function Distributions._logpdf{T<:FloatingPoint}(d::DegenerateMvNormal, x::Vector{T})
     return -(1/2)*(d.rank*log(2pi) + d.logdet + (x-d.μ)'*d.Σ_inv*(x-d.μ))
 end
+
+Distributions.rand(d::DegenerateMvNormal) = d.μ + σ*randn(length(d))
 
 
 
