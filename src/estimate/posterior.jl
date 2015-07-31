@@ -1,13 +1,13 @@
 # log posterior = log likelihood + log prior
 # log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
-function posterior{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T})
-    return likelihood(model, YY) + prior(model.Θ)
+function posterior{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T}; checkbounds::Bool = false)
+    return likelihood(model, YY; checkbounds=checkbounds) + prior(model.Θ)
 end
 
 # Evaluate posterior at `parameters`
-function posterior!{T<:FloatingPoint}(parameters::Vector{T}, model::AbstractModel, YY::Matrix{T})
+function posterior!{T<:FloatingPoint}(parameters::Vector{T}, model::AbstractModel, YY::Matrix{T}; checkbounds::Bool = false)
     update!(model.Θ, parameters)
-    return posterior(model, YY)
+    return posterior(model, YY; checkbounds=checkbounds)
 end
 
 
@@ -15,7 +15,17 @@ end
 # This is a dsge likelihood function that can handle 2-part estimation where
 # there is a model switch.
 # If there is no model switch, then we filter over the main sample all at once.
-function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T})
+function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T}; checkbounds::Bool = false)
+    
+    # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
+    if checkbounds
+        for α in model.Θ
+            (left, right) = α.bounds
+            if !(left <= α.value <= right)
+                return -Inf
+            end
+        end
+    end
     
     spec = model.spec
 
