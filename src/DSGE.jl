@@ -20,7 +20,7 @@ export
     solve,
 
     # estimate/
-    dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, hessizero!, estimate,
+    dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, hessizero!, estimate, proposal_distribution, metropolis_hastings,
 
     # models/
     Parameters990, steadystate!, Model990, model_specifications, eqcond, measurement
