@@ -14,29 +14,60 @@ function Model990()
     return Model990(spec, Θ, ind)
 end
 
+
+
+
+
 # Model-specific specifications
 function model_specifications(T::Type{Model990})
-    dict = Dict{String, Any}()
+    spec = Dict{String, Any}()
 
+    
+    
+    ### Model initialization
+    
     # Number of anticipated policy shocks
-    dict["nant"] = 6
+    spec["nant"] = 6
 
     # Padding for nant
-    dict["nantpad"] = 20
+    spec["nantpad"] = 20
 
     # Number of periods back we should start incorporating zero bound expectations
     # ZLB expectations should begin in 2008 Q4
-    dict["antlags"] = 24
+    spec["antlags"] = 24
 
     # TODO: This should be set when the data are read in
     # Number of presample periods
-    dict["n_presample_periods"] = 2
+    spec["n_presample_periods"] = 2
 
+
+
+    ### Estimation
+    
+    # Number of draws per posterior simulation block
+    spec["n_draws"] = 10000
+
+    # Number of blocks
+    spec["n_blocks"] = 22
+
+    # Save every ntimes-th draw that is accepted
+    spec["n_times"] = 5
+
+
+
+    ### Forecasting
+    
     # Number of quarters ahead to forecast
-    dict["quarters_ahead"] = 60
+    spec["quarters_ahead"] = 60
 
-    return dict
+    
+    
+    return spec
 end
+
+
+
+
 
 # Expresses the equilibrium conditions in canonical form using Γ0, Γ1, C, Ψ, and Π matrices.
 # Using the assigned states and equations in modelinds.jl, coefficients are specified in the
@@ -580,7 +611,6 @@ end
 # Assign measurement equation : X_t = ZZ*S_t + DD + u_t
 # where u_t = eta_t+MM* eps_t with var(eta_t) = EE
 # where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
-
 function measurement(model::Model990, TTT::Matrix, RRR::Matrix, CCC::Matrix; shocks::Bool = true)
     spec = model.spec
     Θ = model.Θ
