@@ -75,11 +75,15 @@ end
 
 Base.length(d::DegenerateMvNormal) = length(d.μ)
 
-function Distributions._logpdf{T<:FloatingPoint}(d::DegenerateMvNormal, x::Vector{T})
-    return -(1/2)*(d.rank*log(2pi) + d.logdet + (x-d.μ)'*d.Σ_inv*(x-d.μ))
+# logpdf of d at x with variance optionally scaled by cc
+function Distributions.logpdf{T<:FloatingPoint}(d::DegenerateMvNormal, x::Vector{T}; cc::T = 1.0)
+    return -(1/2)*(d.rank*log((cc^2)*2pi) + d.logdet + (x-d.μ)'*d.Σ_inv*(x-d.μ)/cc^2)
 end
 
-Distributions.rand(d::DegenerateMvNormal) = d.μ + σ*randn(length(d))
+# Generate a draw from d with variance optionally scaled by cc
+function Distributions.rand{T<:FloatingPoint}(d::DegenerateMvNormal; cc::T = 1.0)
+    return d.μ + cc*d.σ*randn(length(d))
+end
 
 
 

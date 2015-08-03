@@ -56,7 +56,7 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     # The hessian is used to calculate the variance of the proposal
     # distribution, which is used to draw a new parameter in each iteration of
     # the algorithm.
-    propdist = proposal_distribution(mode, hessian, cc0)
+    propdist = proposal_distribution(mode, hessian)
     if propdist.rank != spec["n_free_params"]
         println("problem – shutting down dimensions")
     end
@@ -73,38 +73,38 @@ end
 
 
 
-# Compute proposal distribution: degenerate normal with mean μ and covariance cc*hessian^(-1)
-function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{T}, cc::T)
+# Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
+function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{T})
     n = size(hessian, 1)
-    @assert (n, n) = size(hessian)
+    @assert (n, n) == size(hessian)
 
     u, s_diag, v = svd(hessian)
-    Σ_inv = hessian/cc^2
+    Σ_inv = hessian
     big_evals = find(x -> x > 1e-6, s_diag)
     rank = length(big_evals)
 
     logdet = 0.0
     Σ = zeros(n, n)
     for i = 1:rank
-        Σ[i, i] = cc^2/s_diag[i]
+        Σ[i, i] = 1/s_diag[i]
         logdet += log(Σ[i, i])
     end
 
-    σ = cc*u*sqrt(Σ)
+    σ = u*sqrt(Σ)
 
     return DegenerateMvNormal(μ, σ, Σ, Σ_inv, rank, logdet)
 end
 
 
 
-function metropolis_hastings{T<:FloatingPoint}(mode::Vector{T}, propdist::Distribution, model::AbstractModel, YY::Matrix{T})
+function metropolis_hastings{T<:FloatingPoint}(mode::Vector{T}, propdist::Distribution, model::AbstractModel, YY::Matrix{T}, cc0::T, cc::T)
     # Initialize algorithm by drawing para_old from a normal distribution centered on the posterior mode until the parameters are within bounds or the posterior value is sufficiently large    
     para_old = mode
     initialized = false
     while !initialized
-        para_old = rand(propdist)
+        para_old = rand(propdist; cc=cc0)
         post_old = posterior!(para_old, model, YY; checkbounds=true)
-        #propdens = logpdf(propdist, para_old)
+        #propdens = logpdf(propdist, para_old; cc=cc0)
         if post_old > -Inf
             initialized = true
         end
@@ -130,16 +130,16 @@ function metropolis_hastings{T<:FloatingPoint}(mode::Vector{T}, propdist::Distri
             Tim += 1
 
             # Draw para_new from the proposal distribution
-            para_new = rand(propdist)
+            para_new = rand(propdist; cc=cc)
             
             # Solve the model, check that parameters are within bounds, and
             # evaluate the posterior.
             post_new = posterior!(para_new, model, YY; checkbounds=true)
 
-            [post_new,like_new,zend_new,ZZ_new,DD_new,QQ_new] = feval('objfcnmhdsge',para_new,bounds,YY,YY0,nobs, nlags,nvar,mspec,npara,trspec,pmean,pstdd,pshape,TTT_new,RRR_new,CCC_new,valid_new,para_mask,coint,cointadd,cointall,YYcoint0,args_nant_antlags{:});
+            #[post_new,like_new,zend_new,ZZ_new,DD_new,QQ_new] = feval('objfcnmhdsge',para_new,bounds,YY,YY0,nobs, nlags,nvar,mspec,npara,trspec,pmean,pstdd,pshape,TTT_new,RRR_new,CCC_new,valid_new,para_mask,coint,cointadd,cointall,YYcoint0,args_nant_antlags{:});
 
             # Calculate the multivariate log likelihood of jump from para_old to para_new
-            propdens = logpdf(propdist, para_new)
+            propdens = logpdf(propdist, para_new; cc=cc)
         end
     end
 end
