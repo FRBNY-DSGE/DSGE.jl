@@ -6,7 +6,7 @@ module DistributionsExt
 # functions, but rather new functions with the same names.
 
 using Distributions
-import Distributions: params, mean, std, pdf, logpdf, _logpdf, rand
+import Distributions: params, mean, std, pdf, logpdf, rand
 import Base: length
 
 export PointMass, Beta, Gamma, RootInverseGamma, DegenerateMvNormal
@@ -67,20 +67,11 @@ end
 type DegenerateMvNormal <: Distribution{Multivariate, Continuous}
     μ::Vector          # mean
     σ::Matrix          # standard deviation
-    Σ::Matrix          # covariance
-    Σ_inv::Matrix      # generalized inverse
-    rank::Int64        # rank of Σ
-    logdet::Float64    # log of pseudo-determinant of Σ
 end
 
 Base.length(d::DegenerateMvNormal) = length(d.μ)
 
-# logpdf of d at x with variance optionally scaled by cc
-function Distributions.logpdf{T<:FloatingPoint}(d::DegenerateMvNormal, x::Vector{T}; cc::T = 1.0)
-    return -(1/2)*(d.rank*log((cc^2)*2pi) + d.logdet + (x-d.μ)'*d.Σ_inv*(x-d.μ)/cc^2)
-end
-
-# Generate a draw from d with variance optionally scaled by cc
+# Generate a draw from d with variance optionally scaled by cc^2
 function Distributions.rand{T<:FloatingPoint}(d::DegenerateMvNormal; cc::T = 1.0)
     return d.μ + cc*d.σ*randn(length(d))
 end

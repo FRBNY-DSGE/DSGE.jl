@@ -45,20 +45,13 @@ function model_specifications(T::Type{Model990})
     ### Estimation
     
     # Number of draws per posterior simulation block
-    spec["n_draws"] = 10000
+    spec["n_sim"] = 10000
 
     # Number of blocks
     spec["n_blocks"] = 22
 
     # Save every ntimes-th draw that is accepted
     spec["n_times"] = 5
-
-
-
-    ### Forecasting
-    
-    # Number of quarters ahead to forecast
-    spec["quarters_ahead"] = 60
 
     
     
