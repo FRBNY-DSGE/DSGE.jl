@@ -105,7 +105,7 @@ function csminwel(fcn::Function,
                   extended_trace::Bool = false,
                   verbose::Bool = false,
                   kwargs...)
-
+    println("csminwel called")
     if show_trace
         @printf "Iter     Function value   Gradient norm \n"
     end
@@ -156,11 +156,13 @@ function csminwel(fcn::Function,
     # Assess multiple types of convergence
     x_converged, f_converged, gr_converged = false, false, false
 
+    println("Iterations started")
     # Iterate until convergence or exhaustion
     converged = false
     while !converged && iteration < iterations
         # Augment the iteration counter
         iteration += 1
+        println("Iteration $iteration")
 
         f1, x1, fc, retcode1 = csminit(fcn, x, f_x, gr, badg, H, args...;
                                        kwargs...)
@@ -381,12 +383,13 @@ function csminwel(fcn::Function, x0::Vector,
                   store_trace::Bool = false,
                   show_trace::Bool = false,
                   extended_trace::Bool = false,
+                  verbose::Bool = false,
                   kwargs...)
     grad{T<:Number}(x::Array{T}) = csminwell_grad(fcn, x, args...; kwargs...)
     csminwel(fcn, grad, x0, H0, args...;
              xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
              store_trace=store_trace, show_trace=show_trace,
-             extended_trace=extended_trace, kwargs...)
+             extended_trace=extended_trace, verbose=verbose, kwargs...)
 end
 
 

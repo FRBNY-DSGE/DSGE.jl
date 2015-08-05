@@ -15,25 +15,30 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     ### Step 2: Find posterior mode
 
     # Specify starting mode
-    mode_in = readcsv("$savepath/mode_in.csv")
-    update!(model, mode_in)
-
-    # Inputs to minimization algorithm (csminwel)
-    x0 = [toreal(α) for α in model.Θ]
-    H0 = 1e-4 * eye(spec["n_params"])
-    nit = 1000
-    crit = 1e-10
+    mode_in = vec(readcsv("$savepath/mode_in.csv"))
+    update!(model.Θ, mode_in)
 
     # We seek the posterior distribution of the parameters.
     # We first find the mode of the distribution (i.e., the maximum of its pdf)
     # so that once we begin sampling, we can begin from this mode.
-    xh = csminwel(posterior!, x0, H0, model, YY; ftol=crit, iterations=nit)
+    x0 = toreal(model.Θ)
+    H0 = 1e-4 * eye(spec["n_params"])
+    nit = 1000
+    crit = 1e-10
+
+    function posterior_min!{T<:FloatingPoint}(x::Vector{T})
+        tomodel!(x, model.Θ)
+        return -posterior(model, YY)
+    end
+    out, _ = csminwel(posterior_min!, x0, H0; ftol=crit, iterations=nit, verbose=true)
+    xh = out.minimum
+    
 
     # Transform modal parameters so they are no longer bounded (i.e., allowed
     # to lie anywhere on the real line).
-    update!(model, xh)
-    mode = [tomodel(α) for α in model.Θ]
-    update!(model, mode)
+    tomodel!(xh, model.Θ)
+    mode = [α.value for α in model.Θ]
+    update!(model.Θ, mode)
     writecsv("$savepath/mode_out.csv", mode)
 
     # If the algorithm stops only because we have exceeded the maximum number of

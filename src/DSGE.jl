@@ -14,13 +14,13 @@ export
     savepath,
 
     # core.jl
-    AbstractModel, Param, update!, toreal, tomodel, Parameters, prior, ModelInds, makedict,
+    AbstractModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict,
 
     # solve/
     solve,
 
     # estimate/
-    dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, hessizero!, estimate, proposal_distribution, metropolis_hastings,
+    dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel, hessizero!, estimate, proposal_distribution, metropolis_hastings,
 
     # models/
     Parameters990, steadystate!, Model990, model_specifications, eqcond, measurement
@@ -33,6 +33,7 @@ include("solve/solve.jl")
 
 include("estimate/kalman.jl")
 include("estimate/posterior.jl")
+include("estimate/csminwel.jl")
 include("estimate/hessian.jl")
 include("estimate/estimate.jl")
 

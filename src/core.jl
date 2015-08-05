@@ -68,29 +68,33 @@ end
 # Transforms variables from model to max (invtrans.m)
 function toreal(α::Param)
     (a, b) = α.transformbounds
-    c = 1.
+    c = 1.0
 
     if α.transformtype == 0
-       return α.scaledvalue
+       return α.value
     elseif α.transformtype == 1
-        cx = 2 * (α - (a+b)/2) / (b-a)
+        cx = 2 * (α.value - (a+b)/2) / (b-a)
         return (1/c) * cx / sqrt(1 - cx^2)
     elseif α.transformtype == 2
-        return b + (1/c) * log(α-a)
+        return b + (1/c) * log(α.value-a)
+    else
+        error("Invalid transform type $α.transformtype")
     end
 end
 
 # Transforms variables from max to model (trans.m)
-function tomodel(α::Param)
+function tomodel{T<:FloatingPoint}(value::T, α::Param)
     (a, b) = α.transformbounds
-    c = 1.
+    c = 1.0
 
     if α.transformtype == 0
-        return α.scaledvalue
+        return value
     elseif α.transformtype == 1
-        return (a+b)/2 + (b-a)/2*c*α/sqrt(1 + c^2 * α.scaledvalue^2)
+        return (a+b)/2 + (b-a)/2*c*value/sqrt(1 + c^2 * value^2)
     elseif α.transformtype == 2
-        return a + exp(c * (α-b))
+        return a + exp(c * (value-b))
+    else
+        error("Invalid transform type $α.transformtype")
     end
 end
 
@@ -123,6 +127,17 @@ function update!{T<:FloatingPoint}(Θ::Parameters, newvalues::Vector{T})
         update!(α, newvalue)
     end
     return steadystate!(Θ)
+end
+
+# Returns a vector of parameter values transformed to lie on the real line
+function toreal(Θ::Parameters)
+    return [toreal(α) for α in Θ]
+end
+
+# Given a vector of parameter values on the real line, maps them to the model space and updates Θ
+function tomodel!{T<:FloatingPoint}(values::Vector{T}, Θ::Parameters)
+    newvalues = [tomodel(value, α) for (value, α) in zip(values, Θ)]
+    return update!(Θ, newvalues)
 end
 
 # Calculate (log of) joint density of Θ
