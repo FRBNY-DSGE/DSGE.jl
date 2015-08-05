@@ -2,6 +2,7 @@
 using Base.LinAlg: BlasFloat, BlasInt, chkstride1, chksquare, GeneralizedSchur, Schur, blas_int
 using Base.LinAlg.LAPACK: liblapack, LAPACKException
 using Base: blasfunc
+using Compat
 
 # The code below is pull directly from lapack.jl and schur.jl in src/linalg
 # in Base. It is here to provide the ordered qz functionality present in julia

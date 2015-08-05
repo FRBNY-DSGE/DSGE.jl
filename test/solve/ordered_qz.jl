@@ -1,11 +1,9 @@
 debug = false
 
-using Base.Test, Compat
+using Compat
 
 # these tests were pulled directly from main Julia
 import Base.LinAlg: BlasComplex, BlasFloat, BlasReal, QRPivoted
-
-include("../../src/solve/ordered_qz.jl")
 
 n = 10
 
