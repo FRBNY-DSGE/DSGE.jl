@@ -1,8 +1,4 @@
-using Base.Test
 using MATLAB
-
-using DSGE
-include("../util.jl")
 path = dirname(@__FILE__)
 
 

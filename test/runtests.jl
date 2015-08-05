@@ -6,7 +6,7 @@ include("util.jl")
 my_tests = [
             "core",
             "models/m990/m990",
-            #"solve/gensys", (currently using Matlab gensys instead)
+            "solve/gensys",
             "solve/solve",
             "solve/ordered_qz",
             "estimate/kalman",

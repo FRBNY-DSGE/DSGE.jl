@@ -2,10 +2,9 @@ module DSGE
 
 include("init/DistributionsExt.jl")
 include("init/FinancialFrictionsFunctions.jl")
-include("solve/Gensys.jl")
 
 using Distributions, Roots.fzero, MATLAB
-using .DistributionsExt, .FinancialFrictionsFunctions, .Gensys
+using .DistributionsExt, .FinancialFrictionsFunctions
 
 import Base: convert, promote_rule, log, exp, start, next, done, length
 
@@ -17,7 +16,7 @@ export
     AbstractModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict,
 
     # solve/
-    solve,
+    ordschur, gensys, solve,
 
     # estimate/
     dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel, hessizero!, estimate, proposal_distribution, metropolis_hastings,
@@ -29,6 +28,8 @@ const savepath = joinpath(dirname(@__FILE__), "save/")
 
 include("core.jl")
 
+include("solve/ordered_qz.jl")
+include("solve/gensys.jl")
 include("solve/solve.jl")
 
 include("estimate/kalman.jl")

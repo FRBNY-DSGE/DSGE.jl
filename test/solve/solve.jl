@@ -1,5 +1,4 @@
 using MATLAB
-using DSGE
 path = dirname(@__FILE__)
 
 mf = MatFile("$path/solve.mat")
@@ -13,4 +12,3 @@ TTT, RRR, CCC = solve(model)
 @test test_matrix_eq(TTT_expected, TTT)
 @test test_matrix_eq(RRR_expected, RRR)
 @test test_matrix_eq(CCC_expected, CCC)
-

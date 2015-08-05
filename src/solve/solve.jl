@@ -6,12 +6,7 @@ function solve(model::AbstractModel)
     Γ0, Γ1, C, Ψ, Π  = eqcond(model)
 
     # Solve model
-    #TTT_gensys, CCC_gensys, RRR_gensys = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
-    solve_dir = dirname(@__FILE__)
-    mat"""
-        addpath($solve_dir);
-        [$TTT_gensys, $CCC_gensys, $RRR_gensys] = feval('gensys', $Γ0, $Γ1, $C, $Ψ, $Π, 1+1e-6);
-    """
+    TTT_gensys, CCC_gensys, RRR_gensys = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
     TTT_gensys = real(TTT_gensys)
     RRR_gensys = real(RRR_gensys)
     CCC_gensys = reshape(CCC_gensys, length(CCC_gensys), 1)
