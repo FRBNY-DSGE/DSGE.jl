@@ -1,6 +1,15 @@
 # This program produces and saves draws from the posterior distribution of
 # the parameters.
+
+using HDF5
+
+
 function estimate{T<:AbstractModel}(Model::Type{T})
+
+    mf = MatFile("posterior.mat")
+    YY = get_variable(mf, "YY")
+    close(mf)
+    
     ### Step 1: Initialize model
     model = Model990()
     spec = model.spec
@@ -17,6 +26,7 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     ### Step 2: Find posterior mode
 
     # Specify starting mode
+    
     println("Reading in previous mode")
     mf = MatFile("$savepath/mode_in.mat")
     mode = get_variable(mf, "params")
@@ -61,6 +71,7 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     ### Step 3: Compute proposal distribution
 
     # Calculate the Hessian at the posterior mode
+
     if spec["recalculate_hessian"]
         println("Recalculating Hessian")
         hessian, _ = hessizero!(mode, model, YY; noisy=true)
@@ -91,10 +102,24 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     cc0 = 0.01
     cc = 0.09
 
+    # !! ELM Set up HDF5 file for saving
+    h5path = joinpath(savepath,"sim_save.h5")
 
-
+    
     ### Step 5: Calculate parameter covariance matrix
-            
+
+    # !! ELM  Read in saved parameter draws
+    sim_h5 = h5open(h5path, "r+")
+    theta = sim_h5["parasim"]
+
+    # Calculate covariance matrix
+    cov_theta = cov(theta)
+    write(sim_h5, "cov_theta", convert(Matrix{Float32}, cov_theta))   #Save as single-precision float matrix    
+
+    # Close the file
+    close(sim_h5)        
+
+    
 end
 
 
@@ -143,14 +168,14 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
             initialized = true
         end
     end
-
+    
     # For n_sim*n_times iterations within each block, generate a new parameter draw. Decide to accept or reject, and save every (n_times)th draw that is accepted.
     spec = model.spec
 
     if testing
         n_blocks = 1
-        n_sim = 200
-        n_times = 5
+        n_sim = 5
+        n_times = 2
     else
         n_blocks = spec["n_blocks"]
         n_sim = spec["n_sim"]
@@ -245,6 +270,18 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
         block_rejection_rate = block_rejections/(n_sim*n_times)
         println("Block $i rejection rate: $block_rejection_rate")
     end
+
+
+    # !! ELM: Once every iblock times, write parameters to a file
+    h5path = joinpath(savepath,"sim_save.h5")     
+    simfile = h5open(sim_h5,"w") do simfile
+        write(simfile, "parasim", convert(Matrix{Float32}, parasim'))   #Save as single-precision float matrix
+        write(simfile, "postsim", convert(Matrix{Float32}, postsim'))
+        write(simfile, "TTTsim", convert(Matrix{Float32}, TTTsim'))
+        write(simfile, "RRRsim", convert(Matrix{Float32}, RRRsim'))
+        write(simfile, "zsim", convert(Matrix{Float32}, zsim))
+    end
+
     
     rejection_rate = all_rejections/(n_blocks*n_sim*n_times)
     println("Overall rejection rate: $rejection_rate")
