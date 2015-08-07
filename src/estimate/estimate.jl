@@ -6,7 +6,9 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     spec = model.spec
 
     # TODO: load data
-    # YY = loaddata()
+    mf = MatFile("$savepath/YY.mat")
+    YY = get_variable(mf, "YY")
+    close(mf)
 
     post = posterior(model, YY)
 
@@ -15,42 +17,63 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     ### Step 2: Find posterior mode
 
     # Specify starting mode
-    mode_in = vec(readcsv("$savepath/mode_in.csv"))
+    println("Reading in previous mode")
+    mf = MatFile("$savepath/mode_in.mat")
+    mode = get_variable(mf, "params")
+    close(mf)
     update!(model.Θ, mode_in)
 
-    # Inputs to minimization algorithm
-    function posterior_min!{T<:FloatingPoint}(x::Vector{T})
-        tomodel!(x, model.Θ)
-        return -posterior(model, YY)
-    end
+    if spec["reoptimize"]
+        println("Reoptimizing")
+        
+        # Inputs to minimization algorithm
+        function posterior_min!{T<:FloatingPoint}(x::Vector{T})
+            tomodel!(x, model.Θ)
+            return -posterior(model, YY)
+        end
 
-    xh = toreal(model.Θ)
-    H = 1e-4 * eye(spec["n_params"])
-    nit = 1000
-    crit = 1e-10    
-    converged = false
+        xh = toreal(model.Θ)
+        H = 1e-4 * eye(spec["n_params"])
+        nit = 1000
+        crit = 1e-10    
+        converged = false
 
-    # If the algorithm stops only because we have exceeded the maximum number of
-    # iterations, continue improving guess of modal parameters
-    while !converged
-        out, H = csminwel(posterior_min!, xh, H; ftol=crit, iterations=nit, verbose=true)
-        xh = out.minimum
-        converged = out.iteration_converged
-    end
+        # If the algorithm stops only because we have exceeded the maximum number of
+        # iterations, continue improving guess of modal parameters
+        while !converged
+            out, H = csminwel(posterior_min!, xh, H; ftol=crit, iterations=nit, verbose=true)
+            xh = out.minimum
+            converged = out.iteration_converged
+        end
 
-    # Transform modal parameters so they are no longer bounded (i.e., allowed
-    # to lie anywhere on the real line).
-    tomodel!(xh, model.Θ)
-    mode = [α.value for α in model.Θ]
-    writecsv("$savepath/mode_out.csv", mode)
-    
+        # Transform modal parameters so they are no longer bounded (i.e., allowed
+        # to lie anywhere on the real line).
+        tomodel!(xh, model.Θ)
+        mode = [α.value for α in model.Θ]
+
+        # Write mode to file
+        mf = MatFile("$savepath/mode_out.mat", "w")
+        put_variable(mf, "mode", mode)
+        close(mf)
+    end    
     
 
     ### Step 3: Compute proposal distribution
 
     # Calculate the Hessian at the posterior mode
-    hessian, _ = hessizero!(mode, model, YY; noisy=true)
-    writecsv("$savepath/hessian.csv", hessian)
+    if spec["recalculate_hessian"]
+        println("Recalculating Hessian")
+        hessian, _ = hessizero!(mode, model, YY; noisy=true)
+
+        mf = MatFile("$savepath/hessian.mat", "w")
+        put_variable(mf, "hessian", hessian)
+        close(mf)
+    else
+        println("Using pre-calculated Hessian")
+        mf = MatFile("$savepath/hessian.mat")
+        hessian = get_variable(mf, "hessian")
+        close(mf)
+    end
     
     # The hessian is used to calculate the variance of the proposal
     # distribution, which is used to draw a new parameter in each iteration of
@@ -225,6 +248,4 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
     
     rejection_rate = all_rejections/(n_blocks*n_sim*n_times)
     println("Overall rejection rate: $rejection_rate")
-
-    return para_sim
 end

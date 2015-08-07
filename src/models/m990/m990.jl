@@ -43,6 +43,12 @@ function model_specifications(T::Type{Model990})
 
 
     ### Estimation
+
+    # Whether or not to call csminwel
+    spec["reoptimize"] = false
+
+    # Whether or not to recalculate hessian
+    spec["recalculate_hessian"] = false
     
     # Number of draws per posterior simulation block
     spec["n_sim"] = 10000
