@@ -6,7 +6,8 @@ using HDF5
 
 function estimate{T<:AbstractModel}(Model::Type{T})
 
-    mf = MatFile("posterior.mat")
+    # Edited for testing; should be changed to "posterior.mat"
+    mf = MatFile("../../test/estimate/posterior.mat")
     YY = get_variable(mf, "YY")
     close(mf)
     
@@ -102,19 +103,19 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     cc0 = 0.01
     cc = 0.09
 
-    # !! ELM Set up HDF5 file for saving
+    # Set up HDF5 file for saving
     h5path = joinpath(savepath,"sim_save.h5")
 
     
     ### Step 5: Calculate parameter covariance matrix
 
-    # !! ELM  Read in saved parameter draws
+    # Read in saved parameter draws
     sim_h5 = h5open(h5path, "r+")
-    theta = sim_h5["parasim"]
-
+    θ = read(sim_h5, "parasim")
+    
     # Calculate covariance matrix
-    cov_theta = cov(theta)
-    write(sim_h5, "cov_theta", convert(Matrix{Float32}, cov_theta))   #Save as single-precision float matrix    
+    cov_θ = cov(θ)
+    write(sim_h5, "cov_θ", convert(Matrix{Float32}, cov_θ))   #Save as single-precision float matrix    
 
     # Close the file
     close(sim_h5)        
@@ -272,14 +273,15 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
     end
 
 
-    # !! ELM: Once every iblock times, write parameters to a file
+    # Once every iblock times, write parameters to a file
     h5path = joinpath(savepath,"sim_save.h5")     
-    simfile = h5open(sim_h5,"w") do simfile
-        write(simfile, "parasim", convert(Matrix{Float32}, parasim'))   #Save as single-precision float matrix
-        write(simfile, "postsim", convert(Matrix{Float32}, postsim'))
-        write(simfile, "TTTsim", convert(Matrix{Float32}, TTTsim'))
-        write(simfile, "RRRsim", convert(Matrix{Float32}, RRRsim'))
-        write(simfile, "zsim", convert(Matrix{Float32}, zsim))
+    simfile = h5open(h5path,"w") do simfile
+        write(simfile, "parasim", convert(Matrix{Float32}, para_sim'))   #Save as single-precision float matrix
+        write(simfile, "postsim", convert(Matrix{Float32}, post_sim'))
+        write(simfile, "TTTsim", convert(Matrix{Float32}, TTT_sim'))
+        write(simfile, "RRRsim", convert(Matrix{Float32}, RRR_sim'))
+        write(simfile, "CCCsim", convert(Matrix{Float32}, CCC_sim'))
+        write(simfile, "zsim", convert(Matrix{Float32}, z_sim'))
     end
 
     
