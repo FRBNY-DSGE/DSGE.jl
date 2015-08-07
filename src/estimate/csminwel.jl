@@ -15,7 +15,8 @@ written by Chris Sims.
 =#
 
 import Calculus  # for numerical derivatives
-using Optim: update!, OptimizationTrace, assess_convergence,
+import Optim
+using Optim: OptimizationTrace, assess_convergence,
              MultivariateOptimizationResults
 
 const rc_messages = Dict()
@@ -40,7 +41,7 @@ macro csminwelltrace()
                 dt["rc_message"] = rc_messages[rc]
             end
             grnorm = norm(gr, Inf)
-            update!(tr,
+            Optim.update!(tr,
                     iteration,
                     f_x,
                     grnorm,

@@ -21,7 +21,7 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     mf = MatFile("$savepath/mode_in.mat")
     mode = get_variable(mf, "params")
     close(mf)
-    update!(model.Θ, mode_in)
+    update!(model.Θ, mode)
 
     if spec["reoptimize"]
         println("Reoptimizing")
@@ -41,9 +41,9 @@ function estimate{T<:AbstractModel}(Model::Type{T})
         # If the algorithm stops only because we have exceeded the maximum number of
         # iterations, continue improving guess of modal parameters
         while !converged
-            out, H = csminwel(posterior_min!, xh, H; ftol=crit, iterations=nit, verbose=true)
+            out, H = csminwel(posterior_min!, xh, H; ftol=crit, iterations=nit, show_trace=true, verbose=true)
             xh = out.minimum
-            converged = out.iteration_converged
+            converged = !out.iteration_converged
         end
 
         # Transform modal parameters so they are no longer bounded (i.e., allowed
