@@ -15,7 +15,7 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     model = Model()
     spec = model.spec
 
-    # TODO: load data
+    # Load data
     mf = MatFile("$savepath/YY.mat")
     YY = get_variable(mf, "YY")
     close(mf)
@@ -174,10 +174,10 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
     spec = model.spec
 
     if testing
-        n_blocks = 2
-        n_sim = 5
-        n_times = 2
-        n_burn = 1
+        n_blocks = 22
+        n_sim = 100
+        n_times = 5
+        n_burn = 2 
         n_params = spec["n_params"]
     else
         n_blocks = spec["n_blocks"]
