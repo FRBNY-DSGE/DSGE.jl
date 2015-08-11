@@ -212,12 +212,14 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
              
     for i = 1:n_blocks
         block_rejections = 0
-
+        rows,cols = size(randvecs)
         for j = 1:(n_sim*n_times)
             # Draw para_new from the proposal distribution
             if testing
                 k = (i-1)*(n_sim*n_times) + j
-                para_new = propdist.μ + cc*propdist.σ*randvecs[:, k]
+                println("k is $k")
+                println("randvecs has $cols columns")
+                para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(k,cols)+1]
             else
                 para_new = rand(propdist; cc=cc)
             end
