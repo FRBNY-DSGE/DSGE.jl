@@ -1,5 +1,6 @@
 using Base: Test
 using MATLAB
+using HDF5
 
 using DSGE
 using DSGE: DistributionsExt
@@ -12,11 +13,14 @@ mf = MatFile("$path/metropolis_hastings.mat")
 mode = get_variable(mf, "params")
 hessian = get_variable(mf, "hessian")
 YY = get_variable(mf, "YYall")
-σ = get_variable(mf, "sigscale")
 
 randvecs = get_variable(mf, "randvecs")
 randvals = get_variable(mf, "randvals")
 close(mf)
+
+mf2 = MatFile("$path/sigscale.mat")
+σ = get_variable(mf2, "sigscale")
+close(mf2)
 
 model = Model990()
 cc0 = 0.01
