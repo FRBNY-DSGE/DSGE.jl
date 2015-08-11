@@ -123,8 +123,26 @@ function test_test_matrix_eq()
 end
 
 
-
 function test_readcsv_complex()
     readcsv_complex("readcsv_complex.csv")
     println("readcsv_complex tests passed\n")
+end
+
+# Convert a mat file to an hdf5 file. No compression is used.
+# Caller must be using HDF5 and MATLAB packages
+function mat_to_hdf5(matfileName, h5fileName)
+    mf = MatFile(matfileName)
+    vars = MATLAB.variable_names(mf)
+    
+    # Write each variable to h5 file
+    h5 = HDF5.h5open(h5fileName,"w") do h5
+    
+        for name in vars
+            var = MATLAB.get_variable(mf, name)
+            HDF5.write(h5, name, var)
+        end
+
+    end
+
+    MATLAB.close(mf)
 end
