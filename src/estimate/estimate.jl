@@ -1,11 +1,21 @@
 # This program produces and saves draws from the posterior distribution of
 # the parameters.
+
+using HDF5
+
+
 function estimate{T<:AbstractModel}(Model::Type{T})
+
+    # Edited for testing; should be changed to "posterior.mat"
+    mf = MatFile("../../test/estimate/posterior.mat")
+    YY = get_variable(mf, "YY")
+    close(mf)
+    
     ### Step 1: Initialize model
     model = Model()
     spec = model.spec
 
-    # TODO: load data
+    # Load data
     mf = MatFile("$savepath/YY.mat")
     YY = get_variable(mf, "YY")
     close(mf)
@@ -17,6 +27,7 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     ### Step 2: Find posterior mode
 
     # Specify starting mode
+    
     println("Reading in previous mode")
     mf = MatFile("$savepath/mode_in.mat")
     mode = get_variable(mf, "params")
@@ -62,6 +73,7 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     ### Step 3: Compute proposal distribution
 
     # Calculate the Hessian at the posterior mode
+
     if spec["recalculate_hessian"]
         println("Recalculating Hessian")
         hessian, _ = hessizero!(mode, model, YY; noisy=true)
@@ -94,10 +106,21 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     
     metropolis_hastings(propdist, model, YY, cc0, cc)
 
+    # Set up HDF5 file for saving
+    h5path = joinpath(savepath,"sim_save.h5")
 
     
     ### Step 5: Calculate parameter covariance matrix
+    # Read in saved parameter draws
+    sim_h5 = h5open(h5path, "r+")
+    θ = read(sim_h5, "parasim")
     
+    # Calculate covariance matrix
+    cov_θ = cov(θ)
+    write(sim_h5, "cov_θ", convert(Matrix{Float32}, cov_θ))   #Save as single-precision float matrix    
+
+    # Close the file
+    close(sim_h5)        
 end
 
 
@@ -146,22 +169,26 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
             initialized = true
         end
     end
-
+    
     # For n_sim*n_times iterations within each block, generate a new parameter draw. Decide to accept or reject, and save every (n_times)th draw that is accepted.
     spec = model.spec
 
     if testing
-        n_blocks = 1
-        n_sim = 200
+        n_blocks = 22
+        n_sim = 100
         n_times = 5
+        n_burn = 2 
+        n_params = spec["n_params"]
     else
         n_blocks = spec["n_blocks"]
         n_sim = spec["n_sim"]
         n_times = spec["n_times"]
+        n_burn = spec["n_burn"]
+        n_params = spec["n_params"]
     end
 
     all_rejections = 0
-
+    
     para_sim = zeros(n_sim, spec["n_params"])
     like_sim = zeros(n_sim)
     post_sim = zeros(n_sim)
@@ -169,7 +196,20 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
     RRR_sim = zeros(n_sim, spec["n_states_aug"]*spec["n_exoshocks"])
     CCC_sim = zeros(n_sim, spec["n_states_aug"])
     z_sim = zeros(n_sim, spec["n_states_aug"])
+
+    # Open HDF5 file and create individual datasets
+    h5path = joinpath(savepath,"sim_save.h5")     
+    simfile = h5open(h5path,"w") 
+
+    parasim = d_create(simfile, "parasim", datatype(Float32), dataspace(n_sim*n_blocks,n_params), "chunk", (n_sim,n_params))
+    likesim = d_create(simfile, "postsim", datatype(Float32), dataspace(n_sim*n_blocks,1), "chunk", (n_sim,1))  
+    postsim = d_create(simfile, "likesim", datatype(Float32), dataspace(n_sim*n_blocks,1), "chunk", (n_sim,1))  
+    TTTsim  = d_create(simfile, "TTTsim", datatype(Float32), dataspace(n_sim*n_blocks,spec["n_states_aug"]^2),"chunk",(n_sim,spec["n_states_aug"]^2))
+    RRRsim  = d_create(simfile, "RRRsim", datatype(Float32), dataspace(n_sim*n_blocks,spec["n_states_aug"]*spec["n_exoshocks"]),"chunk",(n_sim,spec["n_states_aug"]*spec["n_exoshocks"]))
+    # CCCsim  = d_create(simfile, "CCCsim", datatype(Float32), dataspace(n_sim*n_blocks,spec["n_states_aug"]),"chunk",(n_sim,spec["n_states_aug"]))
+    zsim    = d_create(simfile, "zsim", datatype(Float32), dataspace(n_sim*n_blocks,spec["n_states_aug"]),"chunk",(n_sim,spec["n_states_aug"]))
     
+             
     for i = 1:n_blocks
         block_rejections = 0
 
@@ -243,12 +283,38 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
                 CCC_sim[j/n_times, :] = vec(CCC_old)'
                 z_sim[j/n_times, :] = vec(zend_old)'
             end
+
         end
+
         all_rejections += block_rejections
         block_rejection_rate = block_rejections/(n_sim*n_times)
         println("Block $i rejection rate: $block_rejection_rate")
+
+        sizetest = size(para_sim)
+        println("Size of para_sim is $sizetest")
+        
+        ## Once every iblock times, write parameters to a file
+
+        # Calculate starting and ending indices for this block (corresponds to a new chunk in memory)
+        block_start = n_sim*(i-1)+1 
+        block_end   = block_start+n_sim-1 
+        println("block_start = $block_start")
+        println("block_end = $block_end")
+        
+        # Write data to file if we're past n_burn blocks
+        if i > n_burn
+            parasim[block_start:block_end, :] = convert(Matrix{Float32}, para_sim)
+            postsim[block_start:block_end, :] = convert(Vector{Float32}, post_sim)
+            likesim[block_start:block_end, :] = convert(Vector{Float32}, like_sim)
+            TTTsim[block_start:block_end,:]  = convert(Matrix{Float32}, TTT_sim)
+            RRRsim[block_start:block_end,:]  = convert(Matrix{Float32}, RRR_sim)
+            zsim[block_start:block_end,:]  = convert(Matrix{Float32}, z_sim)
+        end
     end
-    
+        
+    close(simfile)
+
     rejection_rate = all_rejections/(n_blocks*n_sim*n_times)
     println("Overall rejection rate: $rejection_rate")
 end
+
