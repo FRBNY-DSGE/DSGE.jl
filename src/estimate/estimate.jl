@@ -12,7 +12,7 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     close(mf)
     
     ### Step 1: Initialize model
-    model = Model990()
+    model = Model()
     spec = model.spec
 
     # TODO: load data
@@ -69,6 +69,7 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     end    
     
 
+    
     ### Step 3: Compute proposal distribution
 
     # Calculate the Hessian at the posterior mode
@@ -102,13 +103,14 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     # Set the jump size for sampling
     cc0 = 0.01
     cc = 0.09
+    
+    metropolis_hastings(propdist, model, YY, cc0, cc)
 
     # Set up HDF5 file for saving
     h5path = joinpath(savepath,"sim_save.h5")
 
     
     ### Step 5: Calculate parameter covariance matrix
-
     # Read in saved parameter draws
     sim_h5 = h5open(h5path, "r+")
     θ = read(sim_h5, "parasim")
