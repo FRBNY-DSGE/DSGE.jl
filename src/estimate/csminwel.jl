@@ -1,3 +1,4 @@
+using Debug
 
 #=
 
@@ -16,7 +17,7 @@ written by Chris Sims.
 
 import Calculus  # for numerical derivatives
 import Optim
-using Optim: OptimizationTrace, assess_convergence,
+using Optim: OptimizationTrace, #assess_convergence,
              MultivariateOptimizationResults
 
 const rc_messages = Dict()
@@ -92,7 +93,7 @@ This is a port of the MATLAB version of that function.
 See the file `examples/csminwel.jl` for an example of usage
 """ ->
 =#
-function csminwel(fcn::Function,
+@debug function csminwel(fcn::Function,
                   grad::Function,
                   x0::Vector,
                   H0::Matrix=1e-5.*eye(length(x0)),
@@ -107,7 +108,7 @@ function csminwel(fcn::Function,
                   verbose::Bool = false,
                   randvecs::Matrix = [],
                   kwargs...)
-
+    
     # PZL 8/11/15: for time tests
     randi = 1
 
@@ -164,11 +165,12 @@ function csminwel(fcn::Function,
     # Iterate until convergence or exhaustion
     converged = false
     while !converged && iteration < iterations
+
         # Augment the iteration counter
         iteration += 1
 
         f1, x1, fc, retcode1 = csminit(fcn, x, f_x, gr, badg, H, args...;
-                                       kwargs...)
+                                       verbose=verbose, kwargs...)
         f_calls += fc
 
         if retcode1 != 1
@@ -198,7 +200,7 @@ function csminwel(fcn::Function,
                 end
                 
                 f2, x2, fc, retcode2 = csminit(fcn, x, f_x, gr, badg, Hcliff,
-                                               args...; kwargs...)
+                                               args...; verbose=verbose, kwargs...)
                 f_calls += fc
 
                 if f2 < f_x
@@ -226,7 +228,7 @@ function csminwel(fcn::Function,
                             end
                             f3, x3, fc, retcode3 = csminit(fcn, x, f_x, gcliff,
                                                            false, eye(nx),
-                                                           args...; kwargs...)
+                                                           args...; verbose=verbose, kwargs...)
                             f_calls += fc
 
                             if retcode3==2 || retcode3==4
@@ -383,7 +385,7 @@ you cannot supply an analytical derivative, but it is not as robust as
 using the true derivative.
 """ ->
 =#
-function csminwel(fcn::Function, x0::Vector,
+@debug function csminwel(fcn::Function, x0::Vector,
                   H0::Matrix=0.5.*eye(length(x0)), args...;
                   xtol::Real=1e-32,  # default from Optim.jl
                   ftol::Float64=1e-14,  # Default from csminwel
@@ -403,7 +405,7 @@ function csminwel(fcn::Function, x0::Vector,
 end
 
 
-function csminwell_grad(fcn, x, args...; kwargs...)
+@debug function csminwell_grad(fcn, x, args...; kwargs...)
     f(a) = fcn(a, args...; kwargs...)
     gr = Calculus.gradient(f, x)
     bad_grads = abs(gr) .>= 1e15
@@ -412,7 +414,7 @@ function csminwell_grad(fcn, x, args...; kwargs...)
 end
 
 # SL: This function worked for rosen example (2014-09-23 09:08:52)
-function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Bool=false, kwargs...)
+@debug function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Bool=false, kwargs...)
     angle = .005
 
     #(0<THETA<.5) THETA near .5 makes long line searches, possibly fewer
@@ -467,7 +469,7 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Bool=false, kwargs
         end
 
         if verbose
-            @printf "Predicted Improvement: %f\n" (-dfhat/2)
+            @sprintf "Predicted Improvement: %18.9f\n" (-dfhat/2)
         end
         # Have OK dx, now adjust length of step (lambda) until min and
         # max improvement rate criteria are met.
@@ -490,7 +492,7 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Bool=false, kwargs
             f = fcn(dxtest, args...; kwargs...)
             
             if verbose
-                @printf "lambda = %f; f = %f\n" lambda f
+                @sprintf "lambda = %10.5f; f = %20.7f\n" lambda f
             end
                 
             if f < fhat
@@ -585,14 +587,14 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Bool=false, kwargs
     end
 
     if verbose
-        @printf "Norm of dx %f\n" dxnorm
+        @sprintf "Norm of dx %10.5f\n" dxnorm
     end
     
     return fhat, xhat, f_calls, retcode
 end
 
 
-function bfgsi(H0, dg, dx)
+@debug function bfgsi(H0, dg, dx)
     # H = bfgsi(H0,dg,dx)
     # dg is previous change in gradient; dx is previous change in x;
     # 6/8/93 version that updates inverse hessian instead of hessian
@@ -632,4 +634,35 @@ function bfgsi(H0, dg, dx)
         H = H0
     end
     return H
+end
+
+
+@debug function assess_convergence(x::Array,
+                            x_previous::Array,
+                            f_x::Real,
+                            f_x_previous::Real,
+                            gr::Array,
+                            xtol::Real,
+                            ftol::Real,
+                            grtol::Real)
+    x_converged, f_converged, gr_converged = false, false, false
+
+    if Optim.maxdiff(x, x_previous) < xtol
+        x_converged = true
+    end
+
+    # Relative Tolerance
+    # if abs(f_x - f_x_previous) / (abs(f_x) + ftol) < ftol || nextfloat(f_x) >= f_x_previous
+    # Absolute Tolerance
+    if abs(f_x - f_x_previous) < ftol
+        f_converged = true
+    end
+
+    if norm(vec(gr), Inf) < grtol
+        gr_converged = true
+    end
+
+    converged = x_converged || f_converged || gr_converged
+
+    return x_converged, f_converged, gr_converged, converged
 end
