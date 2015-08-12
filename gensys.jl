@@ -88,6 +88,11 @@ end
 #- gensys methods -#
 ## -------------- ##
 
+# Wrapper methods ensuring no side effects on input arguments
+gensys(Γ0, Γ1, c, ψ, π) = gensys!(copy(Γ0), copy(Γ1), copy(C), copy(ψ), copy(π))
+gensys(Γ0, Γ1, c, ψ, π, div) = gensys!(copy(Γ0), copy(Γ1), copy(C), copy(ψ), copy(π), div)
+
+
 # method if no div is given
 function gensys!(Γ0, Γ1, c, ψ, π)
     F = schurfact!(Γ0, Γ1)
@@ -125,7 +130,9 @@ function gensys!(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
         throw(InexactError(msg))
     end
 
-    a, b, q, z = qzdiv(div, a, b, q, z)
+    select = (abs(F[:alpha]) .> div*abs(F[:beta]))
+    FS = ordschur(F, select)
+    a, b, q, z = FS[:S], FS[:T], FS[:Q]', FS[:Z]
     gev = [diag(a) diag(b)]
 
     q1 = q[1:n-nunstab, :]
