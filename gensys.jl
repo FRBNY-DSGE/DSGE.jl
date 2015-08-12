@@ -89,8 +89,8 @@ end
 ## -------------- ##
 
 # Wrapper methods ensuring no side effects on input arguments
-gensys(Γ0, Γ1, c, ψ, π) = gensys!(copy(Γ0), copy(Γ1), copy(C), copy(ψ), copy(π))
-gensys(Γ0, Γ1, c, ψ, π, div) = gensys!(copy(Γ0), copy(Γ1), copy(C), copy(ψ), copy(π), div)
+gensys(Γ0, Γ1, c, ψ, π) = gensys!(copy(Γ0), copy(Γ1), copy(c), copy(ψ), copy(π))
+gensys(Γ0, Γ1, c, ψ, π, div) = gensys!(copy(Γ0), copy(Γ1), copy(c), copy(ψ), copy(π), div)
 
 
 # method if no div is given
