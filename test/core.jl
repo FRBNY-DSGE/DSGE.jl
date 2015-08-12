@@ -1,5 +1,5 @@
-using DSGE: DistributionsExt
 using Distributions
+import DSGE: PointMass
 
 # Test Param type
 
@@ -65,7 +65,6 @@ priordensity = exp(prior(Θ))
 @test priordensity >= 0
 @test priordensity <= 1
 
-# println("parameters.jl tests passed\n")
 
 # Test modelinds
 
@@ -80,4 +79,3 @@ dict = makedict(["alice", "bob"]; start=4)
 @test dict["alice"] == 5
 @test dict["bob"] == 6
 
-# println("modelinds.jl tests passed\n")
