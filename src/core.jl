@@ -9,20 +9,22 @@ abstract AbstractModel
 # calculations. We use the scaled parameter value in calculations, but the original value in
 # estimation.
 
+typealias Interval{T} @compat Tuple{T, T}
+
 type Param <: Number
     value::Float64
     scalefunction::Function
     scaledvalue::Float64
     fixed::Bool
-    bounds::(Float64, Float64)
+    bounds::Interval{Float64}
     priordist::Distribution
     transformtype::Int64
-    transformbounds::(Float64, Float64)
+    transformbounds::Interval{Float64}
     description::String
 
-    function Param(value::Float64, fixed::Bool, bounds::(Float64, Float64),
+    function Param(value::Float64, fixed::Bool, bounds::Interval{Float64},
                    priordist::Distribution, transformtype::Int64,
-                   transformbounds::(Float64, Float64); scalefunction::Function = identity,
+                   transformbounds::Interval{Float64}; scalefunction::Function = identity,
                    description::String = "")
         if fixed
             priordist = PointMass(value)

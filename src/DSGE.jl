@@ -1,5 +1,7 @@
 module DSGE
 
+using Compat
+
 include("init/DistributionsExt.jl")
 include("init/FinancialFrictionsFunctions.jl")
 
