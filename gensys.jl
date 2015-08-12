@@ -89,28 +89,23 @@ end
 #- gensys methods -#
 ## -------------- ##
 
-# Wrapper methods ensuring no side effects on input arguments
-gensys(Γ0, Γ1, c, ψ, π) = gensys!(copy(Γ0), copy(Γ1), copy(c), copy(ψ), copy(π))
-gensys(Γ0, Γ1, c, ψ, π, div) = gensys!(copy(Γ0), copy(Γ1), copy(c), copy(ψ), copy(π), div)
-
-
 # method if no div is given
-function gensys!(Γ0, Γ1, c, ψ, π)
-    F = schurfact!(Γ0, Γ1)
+function gensys(Γ0, Γ1, c, ψ, π)
+    F = schurfact(Γ0, Γ1)
     div = new_div(F)
-    gensys!(F, c, ψ, π, div)
+    gensys(F, c, ψ, π, div)
 end
 
 
 # method if all arguments are given
-function gensys!(Γ0, Γ1, c, ψ, π, div)
-    F = schurfact!(Γ0, Γ1)
-    gensys!(F, c, ψ, π, div)
+function gensys(Γ0, Γ1, c, ψ, π, div)
+    F = schurfact(Γ0, Γ1)
+    gensys(F, c, ψ, π, div)
 end
 
 
 # Method that does the real work. Work directly on the decomposition F
-function gensys!(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
+function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     eu = [0, 0]
     ε = 1e-6  # small number to check convergence
     nunstab = 0.0
