@@ -104,7 +104,7 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     cc0 = 0.01
     cc = 0.09
     
-    metropolis_hastings(propdist, model, YY, cc0, cc)
+    metropolis_hastings(propdist, model, YY, cc0, cc, savepath)
 
     # Set up HDF5 file for saving
     h5path = joinpath(savepath,"sim_save.h5")
@@ -150,75 +150,147 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
 
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
-    println("Testing = $testing")
+    # println("Testing = $testing")
     
-    # Initialize algorithm by drawing para_old from a normal distribution centered on the posterior mode until the parameters are within bounds or the posterior value is sufficiently large    
+
+    # Set number of draws, how many we will save, and how many we will burn
+    # (initialized here for scoping; will re-initialize in the while loop)
+
+    spec = model.spec
+
+    n_blocks = 0
+    n_sim = 0
+    n_times = 0
+    n_burn = 0
+    n_params = spec["n_params"]
+
+    
+    # Initialize algorithm by drawing para_old from a normal distribution centered on the
+    # posterior mode until the parameters are within bounds or the posterior value is sufficiently large.
+
     para_old = propdist.μ
     post_old = -Inf
+    like_old = -Inf
+
+    TTT_old = []
+    RRR_old = []
+    CCC_old = []
+    
+    zend_old = []
+    ZZ_old = []
+    DD_old = []
+    QQ_old = []
+    
     initialized = false
+    
     while !initialized
         if testing
             para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
+
+            n_blocks = 22
+            n_sim = 100
+            n_times = 5
+            n_burn = 2 
+            n_params = spec["n_params"]
+
         else
             para_old = rand(propdist; cc=cc0)
+
+            n_blocks = spec["n_blocks"]
+            n_sim = spec["n_sim"]
+            n_times = spec["n_times"]
+            n_burn = spec["n_burn"]
+            n_params = spec["n_params"]
         end
+
+        # For benchmarking against MatLab
+        ## h5f = h5open("para_old_jl.h5","w") do h5f
+        ##     h5f["para_old"] = para_old
+        ## end
+
         
         post_old, like_old, out = posterior!(para_old, model, YY; mh=true)
+
+        # For benchmarking against Matlab
+        ## h5f = h5open("old_jl.h5","w") do h5f
+        ##     h5f["post_old"] = post_old
+        ##     h5f["like_old"] = like_old
+        ##     for key in keys(out)
+        ##         h5f[key] = get(out,key,0)
+        ##     end
+        ##     # h5f["out"] = out
+        ## end
+
+        
         if post_old > -Inf
             propdist.μ = para_old
+
+            TTT_old = out["TTT"]
+            RRR_old = out["RRR"]
+            CCC_old = out["CCC"]
+            zend_old  = out["zend"]
+            
             initialized = true
         end
+
     end
     
-    # For n_sim*n_times iterations within each block, generate a new parameter draw. Decide to accept or reject, and save every (n_times)th draw that is accepted.
-    spec = model.spec
-
-    if testing
-        n_blocks = 22
-        n_sim = 100
-        n_times = 5
-        n_burn = 2 
-        n_params = spec["n_params"]
-    else
-        n_blocks = spec["n_blocks"]
-        n_sim = spec["n_sim"]
-        n_times = spec["n_times"]
-        n_burn = spec["n_burn"]
-        n_params = spec["n_params"]
-    end
+    # For n_sim*n_times iterations within each block, generate a new parameter draw.
+    # Decide to accept or reject, and save every (n_times)th draw that is accepted.
 
     all_rejections = 0
-    
+
+    # Initialize matrices for parameter draws and transition matrices
     para_sim = zeros(n_sim, spec["n_params"])
     like_sim = zeros(n_sim)
     post_sim = zeros(n_sim)
-    TTT_sim = zeros(n_sim, spec["n_states_aug"]^2)
-    RRR_sim = zeros(n_sim, spec["n_states_aug"]*spec["n_exoshocks"])
-    CCC_sim = zeros(n_sim, spec["n_states_aug"])
-    z_sim = zeros(n_sim, spec["n_states_aug"])
+    TTT_sim  = zeros(n_sim, spec["n_states_aug"]^2)
+    RRR_sim  = zeros(n_sim, spec["n_states_aug"]*spec["n_exoshocks"])
+    CCC_sim  = zeros(n_sim, spec["n_states_aug"])
+    z_sim    = zeros(n_sim, spec["n_states_aug"])
 
-    # Open HDF5 file and create individual datasets
-    h5path = joinpath(savepath,"sim_save.h5")     
+    # Open HDF5 file
+    if testing
+        savepath = joinpath(pwd(),"save")
+    end
+    
+    h5path = joinpath("$savepath","sim_save.h5")     
     simfile = h5open(h5path,"w") 
 
-    parasim = d_create(simfile, "parasim", datatype(Float32), dataspace(n_sim*n_blocks,n_params), "chunk", (n_sim,n_params))
-    likesim = d_create(simfile, "postsim", datatype(Float32), dataspace(n_sim*n_blocks,1), "chunk", (n_sim,1))  
-    postsim = d_create(simfile, "likesim", datatype(Float32), dataspace(n_sim*n_blocks,1), "chunk", (n_sim,1))  
-    TTTsim  = d_create(simfile, "TTTsim", datatype(Float32), dataspace(n_sim*n_blocks,spec["n_states_aug"]^2),"chunk",(n_sim,spec["n_states_aug"]^2))
-    RRRsim  = d_create(simfile, "RRRsim", datatype(Float32), dataspace(n_sim*n_blocks,spec["n_states_aug"]*spec["n_exoshocks"]),"chunk",(n_sim,spec["n_states_aug"]*spec["n_exoshocks"]))
-    # CCCsim  = d_create(simfile, "CCCsim", datatype(Float32), dataspace(n_sim*n_blocks,spec["n_states_aug"]),"chunk",(n_sim,spec["n_states_aug"]))
-    zsim    = d_create(simfile, "zsim", datatype(Float32), dataspace(n_sim*n_blocks,spec["n_states_aug"]),"chunk",(n_sim,spec["n_states_aug"]))
+    n_saved_obs = n_sim * (n_blocks - n_burn)
     
-             
+    parasim = d_create(simfile, "parasim", datatype(Float32),
+                       dataspace(n_saved_obs,n_params), "chunk", (n_sim,n_params))
+
+    # likesim = d_create(simfile, "likesim", datatype(Float32),
+    #                  dataspace(n_saved_obs,1), "chunk", (n_sim,1))  
+
+    postsim = d_create(simfile, "postsim", datatype(Float32),
+                       dataspace(n_saved_obs,1), "chunk", (n_sim,1))  
+
+    TTTsim  = d_create(simfile, "TTTsim", datatype(Float32),
+                       dataspace(n_saved_obs,spec["n_states_aug"]^2),"chunk",(n_sim,spec["n_states_aug"]^2))
+
+    RRRsim  = d_create(simfile, "RRRsim", datatype(Float32),
+                       dataspace(n_saved_obs,spec["n_states_aug"]*spec["n_exoshocks"]),"chunk",
+                       (n_sim,spec["n_states_aug"]*spec["n_exoshocks"]))
+
+    # CCCsim  = d_create(simfile, "CCCsim", datatype(Float32),
+    #                  dataspace(n_saved_obs,spec["n_states_aug"]),"chunk",(n_sim,spec["n_states_aug"]))
+
+    zsim    = d_create(simfile, "zsim", datatype(Float32),
+                       dataspace(n_saved_obs,spec["n_states_aug"]),"chunk",(n_sim,spec["n_states_aug"])) 
+    
+    rows, cols = size(randvecs)
+    numvals = size(randvals)[1]
+    
     for i = 1:n_blocks
         block_rejections = 0
-        rows,cols = size(randvecs)
+
         for j = 1:(n_sim*n_times)
             # Draw para_new from the proposal distribution
             if testing
                 k = (i-1)*(n_sim*n_times) + j
-                println("k is $k")
-                println("randvecs has $cols columns")
                 para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(k,cols)+1]
             else
                 para_new = rand(propdist; cc=cc)
@@ -227,6 +299,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
             # Solve the model, check that parameters are within bounds, and
             # evaluate the posterior.
             post_new, like_new, out = posterior!(para_new, model, YY; mh=true)
+
             if testing
                 println("Iteration $j: posterior = $post_new")
             end
@@ -242,7 +315,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
             
             if testing
                 k = (i-1)*(n_sim*n_times) + j
-                x = randvals[k]
+                x = randvals[mod(k,numvals)+1]
             else
                 x = rand()
             end
@@ -263,19 +336,21 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
                 DD_old = out["DD"]
                 QQ_old = out["QQ"]
 
-                if testing
-                    println("Iteration $j: accept proposed jump")
-                end
+                ## if testing
+                ##     println("Iteration $j: accept proposed jump")
+                ## end
             else
                 # Reject proposed jump
                 block_rejections += 1
                 
-                if testing
-                    println("Iteration $j: reject proposed jump")
-                end
+                ## if testing
+                ##     println("Iteration $j: reject proposed jump")
+                ## end
             end
 
+
             # Save every (n_times)th draw
+
             if j % n_times == 0
                 like_sim[j/n_times] = like_old
                 post_sim[j/n_times] = post_old
@@ -286,28 +361,26 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
                 z_sim[j/n_times, :] = vec(zend_old)'
             end
 
+            
         end
-
+                
         all_rejections += block_rejections
         block_rejection_rate = block_rejections/(n_sim*n_times)
-        println("Block $i rejection rate: $block_rejection_rate")
+        #println("Block $i rejection rate: $block_rejection_rate")
 
-        sizetest = size(para_sim)
-        println("Size of para_sim is $sizetest")
-        
+                
         ## Once every iblock times, write parameters to a file
 
         # Calculate starting and ending indices for this block (corresponds to a new chunk in memory)
-        block_start = n_sim*(i-1)+1 
+        block_start = n_sim*(i-n_burn-1)+1 
         block_end   = block_start+n_sim-1 
-        println("block_start = $block_start")
-        println("block_end = $block_end")
-        
+
+     
         # Write data to file if we're past n_burn blocks
         if i > n_burn
             parasim[block_start:block_end, :] = convert(Matrix{Float32}, para_sim)
             postsim[block_start:block_end, :] = convert(Vector{Float32}, post_sim)
-            likesim[block_start:block_end, :] = convert(Vector{Float32}, like_sim)
+            # likesim[block_start:block_end, :] = convert(Vector{Float32}, like_sim)
             TTTsim[block_start:block_end,:]  = convert(Matrix{Float32}, TTT_sim)
             RRRsim[block_start:block_end,:]  = convert(Matrix{Float32}, RRR_sim)
             zsim[block_start:block_end,:]  = convert(Matrix{Float32}, z_sim)
@@ -317,6 +390,6 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
     close(simfile)
 
     rejection_rate = all_rejections/(n_blocks*n_sim*n_times)
-    println("Overall rejection rate: $rejection_rate")
+    #println("Overall rejection rate: $rejection_rate")
 end
 
