@@ -1,12 +1,11 @@
 using Distributions, MATLAB
-using DSGE: DistributionsExt
+import DSGE: RootInverseGamma
+
 path = dirname(@__FILE__)
 
 ### Model
 model = Model990()
 @test isa(model, Model990)
-
-
 
 ### Parameters
 
@@ -32,7 +31,7 @@ for φ = Θ
     bounds[i, 1] = left
     bounds[i, 2] = right
 
-    if isa(φ.priordist, DistributionsExt.RootInverseGamma)
+    if isa(φ.priordist, RootInverseGamma)
         pshape[i] = 4
         (ν, τ) = params(φ.priordist)
         pmean[i] = τ

@@ -2,11 +2,10 @@ module DSGE
 
 using Compat
 
-include("init/DistributionsExt.jl")
 include("init/FinancialFrictionsFunctions.jl")
 
 using Distributions, Roots.fzero, MATLAB
-using .DistributionsExt, .FinancialFrictionsFunctions
+using .FinancialFrictionsFunctions
 
 import Base: convert, promote_rule, log, exp, start, next, done, length
 
@@ -28,6 +27,7 @@ export
 
 const savepath = joinpath(dirname(@__FILE__), "save/")
 
+include("distributions_ext.jl")
 include("core.jl")
 
 include("solve/ordered_qz.jl")
