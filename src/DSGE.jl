@@ -1,11 +1,7 @@
 module DSGE
 
 using Compat
-
-include("init/FinancialFrictionsFunctions.jl")
-
 using Distributions, Roots.fzero, MATLAB
-using .FinancialFrictionsFunctions
 
 import Base: convert, promote_rule, log, exp, start, next, done, length
 
