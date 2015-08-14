@@ -81,37 +81,35 @@ close(mf)
 
 ### Model indices
 
-# ModelInds object creation
-I = ModelInds(model_specifications(Model990))
-@test isa(I, ModelInds)
+inds = ModelInds(model_specifications(Model990))
 
 # Endogenous states
-endo = I.endostates
+endo = inds.endostates
 @test length(endo) == 66
 @test endo["E_z"] == 60
 
 # Exogenous shocks
-exo = I.exoshocks
+exo = inds.exoshocks
 @test length(exo) == 22
 @test exo["pce_sh"] == 16
 
 # Expectation shocks
-ex = I.expshocks
+ex = inds.expshocks
 @test length(ex) == 13
 @test ex["Erk_f_sh"] == 13
 
 # Equations
-eq = I.eqconds
+eq = inds.eqconds
 @test length(eq) == 66
 @test eq["eq_Ez"] == 60
 
 # Additional states
-endo_addl = I.endostates_postgensys
+endo_addl = inds.endostates_postgensys
 @test length(endo_addl) == 12
 @test endo_addl["y_t1"] == 67
 
 # Observables
-obs = I.observables
+obs = inds.observables
 @test length(obs) == 18
 @test obs["tfp"] == 12
 
