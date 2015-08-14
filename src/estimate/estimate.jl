@@ -2,7 +2,7 @@
 # the parameters.
 
 using HDF5
-
+using Debug
 
 function estimate{T<:AbstractModel}(Model::Type{T})
 
@@ -203,25 +203,8 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
             n_params = spec["n_params"]
         end
 
-        # For benchmarking against MatLab
-        ## h5f = h5open("para_old_jl.h5","w") do h5f
-        ##     h5f["para_old"] = para_old
-        ## end
-
-        
         post_old, like_old, out = posterior!(para_old, model, YY; mh=true)
 
-        # For benchmarking against Matlab
-        ## h5f = h5open("old_jl.h5","w") do h5f
-        ##     h5f["post_old"] = post_old
-        ##     h5f["like_old"] = like_old
-        ##     for key in keys(out)
-        ##         h5f[key] = get(out,key,0)
-        ##     end
-        ##     # h5f["out"] = out
-        ## end
-
-        
         if post_old > -Inf
             propdist.μ = para_old
 
@@ -234,7 +217,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
         end
 
     end
-    
+
     # For n_sim*n_times iterations within each block, generate a new parameter draw.
     # Decide to accept or reject, and save every (n_times)th draw that is accepted.
 
@@ -288,10 +271,10 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
         block_rejections = 0
 
         for j = 1:(n_sim*n_times)
+
             # Draw para_new from the proposal distribution
             if testing
-                k = (i-1)*(n_sim*n_times) + j
-                para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(k,cols)+1]
+                para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(j,cols)]
             else
                 para_new = rand(propdist; cc=cc)
             end
@@ -299,10 +282,10 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
             # Solve the model, check that parameters are within bounds, and
             # evaluate the posterior.
             post_new, like_new, out = posterior!(para_new, model, YY; mh=true)
-
-            if testing
-                println("Iteration $j: posterior = $post_new")
-            end
+            
+            ## if testing
+            ##     println("Iteration $j: posterior = $post_new")
+            ## end
 
             # Choose to accept or reject the new parameter by calculating the
             # ratio (r) of the new posterior value relative to the old one
@@ -315,7 +298,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
             
             if testing
                 k = (i-1)*(n_sim*n_times) + j
-                x = randvals[mod(k,numvals)+1]
+                x = randvals[mod(j,numvals)]
             else
                 x = rand()
             end
