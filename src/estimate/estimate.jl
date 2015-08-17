@@ -4,15 +4,9 @@
 using HDF5
 using Debug
 
-function estimate{T<:AbstractModel}(Model::Type{T})
+function estimate{T<:AbstractModel}(model::T)
 
-    # Edited for testing; should be changed to "posterior.mat"
-    mf = MatFile("../../test/estimate/posterior.mat")
-    YY = get_variable(mf, "YY")
-    close(mf)
-    
     ### Step 1: Initialize model
-    model = Model()
     spec = model.spec
 
     # Load data
@@ -21,13 +15,10 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     close(mf)
 
     post = posterior(model, YY)
-
-    
     
     ### Step 2: Find posterior mode
 
     # Specify starting mode
-    
     println("Reading in previous mode")
     mf = MatFile("$inpath/mode_in.mat")
     mode = get_variable(mf, "params")
@@ -68,12 +59,9 @@ function estimate{T<:AbstractModel}(Model::Type{T})
         close(mf)
     end    
     
-
-    
     ### Step 3: Compute proposal distribution
 
     # Calculate the Hessian at the posterior mode
-
     if spec["recalculate_hessian"]
         println("Recalculating Hessian")
         hessian, _ = hessizero!(mode, model, YY; noisy=true)
@@ -96,8 +84,6 @@ function estimate{T<:AbstractModel}(Model::Type{T})
         println("problem – shutting down dimensions")
     end
 
-    
-
     ### Step 4: Metropolis-Hastings algorithm
 
     # Set the jump size for sampling
@@ -109,7 +95,6 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     # Set up HDF5 file for saving
     h5path = joinpath(inpath,"sim_save.h5")
 
-    
     ### Step 5: Calculate parameter covariance matrix
     # Read in saved parameter draws
     sim_h5 = h5open(h5path, "r+")
@@ -122,8 +107,6 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     # Close the file
     close(sim_h5)        
 end
-
-
 
 # Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
 function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{T})
@@ -144,18 +127,14 @@ function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{
     return DegenerateMvNormal(μ, σ)
 end
 
-
-
 function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::AbstractModel, YY::Matrix{T}, cc0::T, cc::T, randvecs = [], randvals = [])
 
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
     println("Testing = $testing")
     
-
     # Set number of draws, how many we will save, and how many we will burn
     # (initialized here for scoping; will re-initialize in the while loop)
-
     spec = model.spec
 
     n_blocks = 0
@@ -164,7 +143,6 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
     n_burn = 0
     n_params = spec["n_params"]
 
-    
     # Initialize algorithm by drawing para_old from a normal distribution centered on the
     # posterior mode until the parameters are within bounds or the posterior value is sufficiently large.
 
@@ -192,7 +170,6 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
             n_times = 5
             n_burn = 2 
             n_params = spec["n_params"]
-
         else
             para_old = rand(propdist; cc=cc0)
 
@@ -380,4 +357,3 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
     rejection_rate = all_rejections/(n_blocks*n_sim*n_times)
     println("Overall rejection rate: $rejection_rate")
 end
-
