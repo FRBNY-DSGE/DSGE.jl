@@ -16,7 +16,7 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     spec = model.spec
 
     # Load data
-    mf = MatFile("$savepath/YY.mat")
+    mf = MatFile("$inpath/YY.mat")
     YY = get_variable(mf, "YY")
     close(mf)
 
@@ -29,7 +29,7 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     # Specify starting mode
     
     println("Reading in previous mode")
-    mf = MatFile("$savepath/mode_in.mat")
+    mf = MatFile("$inpath/mode_in.mat")
     mode = get_variable(mf, "params")
     close(mf)
     update!(model.Θ, mode)
@@ -63,7 +63,7 @@ function estimate{T<:AbstractModel}(Model::Type{T})
         mode = [α.value for α in model.Θ]
 
         # Write mode to file
-        mf = MatFile("$savepath/mode_out.mat", "w")
+        mf = MatFile("$outpath/mode_out.mat", "w")
         put_variable(mf, "mode", mode)
         close(mf)
     end    
@@ -78,12 +78,12 @@ function estimate{T<:AbstractModel}(Model::Type{T})
         println("Recalculating Hessian")
         hessian, _ = hessizero!(mode, model, YY; noisy=true)
 
-        mf = MatFile("$savepath/hessian.mat", "w")
+        mf = MatFile("$outpath/hessian.mat", "w")
         put_variable(mf, "hessian", hessian)
         close(mf)
     else
         println("Using pre-calculated Hessian")
-        mf = MatFile("$savepath/hessian.mat")
+        mf = MatFile("$inpath/hessian.mat")
         hessian = get_variable(mf, "hessian")
         close(mf)
     end
@@ -104,10 +104,10 @@ function estimate{T<:AbstractModel}(Model::Type{T})
     cc0 = 0.01
     cc = 0.09
     
-    metropolis_hastings(propdist, model, YY, cc0, cc, savepath)
+    metropolis_hastings(propdist, model, YY, cc0, cc)
 
     # Set up HDF5 file for saving
-    h5path = joinpath(savepath,"sim_save.h5")
+    h5path = joinpath(inpath,"sim_save.h5")
 
     
     ### Step 5: Calculate parameter covariance matrix
@@ -150,7 +150,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
 
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
-    # println("Testing = $testing")
+    println("Testing = $testing")
     
 
     # Set number of draws, how many we will save, and how many we will burn
@@ -232,12 +232,17 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
     CCC_sim  = zeros(n_sim, spec["n_states_aug"])
     z_sim    = zeros(n_sim, spec["n_states_aug"])
 
-    # Open HDF5 file
+    # Open HDF5 file for saving output
     if testing
-        savepath = joinpath(pwd(),"save")
+        savepath  = joinpath(pwd(),"save")
+        inpath    = savepath;
+        outpath   = savepath;
+        tablepath = savepath;
+        plotpath  = savepath;
+        logpath   = savepath;
     end
     
-    h5path = joinpath("$savepath","sim_save.h5")     
+    h5path = joinpath("$outpath","sim_save.h5")     
     simfile = h5open(h5path,"w") 
 
     n_saved_obs = n_sim * (n_blocks - n_burn)
@@ -283,9 +288,9 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
             # evaluate the posterior.
             post_new, like_new, out = posterior!(para_new, model, YY; mh=true)
             
-            ## if testing
-            ##     println("Iteration $j: posterior = $post_new")
-            ## end
+            if testing
+                println("Iteration $j: posterior = $post_new")
+            end
 
             # Choose to accept or reject the new parameter by calculating the
             # ratio (r) of the new posterior value relative to the old one
@@ -319,16 +324,16 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
                 DD_old = out["DD"]
                 QQ_old = out["QQ"]
 
-                ## if testing
-                ##     println("Iteration $j: accept proposed jump")
-                ## end
+                if testing
+                    println("Iteration $j: accept proposed jump")
+                end
             else
                 # Reject proposed jump
                 block_rejections += 1
                 
-                ## if testing
-                ##     println("Iteration $j: reject proposed jump")
-                ## end
+                if testing
+                    println("Iteration $j: reject proposed jump")
+                end
             end
 
 
@@ -349,7 +354,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
                 
         all_rejections += block_rejections
         block_rejection_rate = block_rejections/(n_sim*n_times)
-        #println("Block $i rejection rate: $block_rejection_rate")
+        println("Block $i rejection rate: $block_rejection_rate")
 
                 
         ## Once every iblock times, write parameters to a file
@@ -373,6 +378,6 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
     close(simfile)
 
     rejection_rate = all_rejections/(n_blocks*n_sim*n_times)
-    #println("Overall rejection rate: $rejection_rate")
+    println("Overall rejection rate: $rejection_rate")
 end
 
