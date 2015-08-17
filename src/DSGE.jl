@@ -24,7 +24,8 @@ export
 const savepath = joinpath(dirname(@__FILE__), "save/")
 
 include("distributions_ext.jl")
-include("core.jl")
+include("parameters.jl")
+include("abstractdsgemodel.jl")
 
 include("solve/ordered_qz.jl")
 include("solve/gensys.jl")
@@ -38,8 +39,5 @@ include("estimate/estimate.jl")
 include("models/m990/m990.jl")
 include("models/m990/eqcond.jl")
 include("models/m990/measurement.jl")
-
-# include("models/m990/parameters.jl")
-# include("models/m990/modelinds.jl")
 
 end
