@@ -1,14 +1,17 @@
-# Files in base directory
-*.*~
-\#*\#
-.juliahistory
+# # Files in base directory
+# *.*~
+# \#*\#
+# .juliahistory
+# 
+# # Files in src directory
+# src/*/.*~
+# src/*/\#*\#
+# src/*/.juliahistory
+# 
+# # Data
+# *.h5
 
-# Files in src directory
-src/*/.*~
-src/*/\#*\#
-src/*/.juliahistory
-
-# # With git v1.8+
-# **/**/*.*~
-# **/**/\#*\#
-# **/**/.juliahistory
+# With git v1.8+
+**/**/*.*~
+**/**/\#*\#
+**/**/.juliahistory

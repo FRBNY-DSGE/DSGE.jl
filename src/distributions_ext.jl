@@ -1,7 +1,16 @@
 # This file defines additional functions to return objects of type Distribution. This is
 # necessary because the original Matlab code specifies prior distributions wrt mean and SD
 # (for beta and gamma-distributed parameters) and ν and σ (for inverse gamma-distributed
-# parameters).
+# parameters). Note these functions are NOT new methods for the Distributions.Beta, etc.
+# functions, but rather new functions with the same names.
+
+using Distributions
+import Distributions: params, mean, std, pdf, logpdf, rand
+import Base: length
+
+export PointMass, Beta, Gamma, RootInverseGamma, DegenerateMvNormal
+
+
 
 # Define PointMass distribution for fixed parameters.
 type PointMass <: Distribution{Univariate, Continuous}
@@ -44,4 +53,21 @@ end
 function Distributions.logpdf(d::RootInverseGamma, x::Real)
     (ν, τ) = params(d)
     return log(2) - log(gamma(ν/2)) + (ν/2)*log(ν*τ^2/2) - ((ν+1)/2)*log(x^2) - ν*τ^2/(2x^2)
+end
+
+
+
+# Degenerate multivariate normal
+# en.wikipedia.org/wiki/Multivariate_normal_distribution#Degenerate_case
+type DegenerateMvNormal <: Distribution{Multivariate, Continuous}
+    μ::Vector          # mean
+    σ::Matrix          # standard deviation
+    rank::Int64        # rank
+end
+
+Base.length(d::DegenerateMvNormal) = length(d.μ)
+
+# Generate a draw from d with variance optionally scaled by cc^2
+function Distributions.rand{T<:FloatingPoint}(d::DegenerateMvNormal; cc::T = 1.0)
+    return d.μ + cc*d.σ*randn(length(d))
 end
