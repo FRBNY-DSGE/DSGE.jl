@@ -24,7 +24,12 @@ export
     # models/
     Parameters990, steadystate!, Model990, model_specifications, eqcond, measurement
 
-const savepath = joinpath(dirname(@__FILE__), "save/")
+const savepath  = joinpath(dirname(@__FILE__), "save/")
+const inpath    = joinpath(savepath, "inputData/")
+const outpath   = joinpath(savepath, "outputData/")
+const tablepath = joinpath(savepath, "results/tables/")
+const plotpath  = joinpath(savepath, "results/plots/")
+const logpath   = joinpath(savepath, "logs/")
 
 include("core.jl")
 
