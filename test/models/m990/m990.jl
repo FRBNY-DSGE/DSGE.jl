@@ -18,7 +18,7 @@ trspec = zeros(82, 4)
 
 # # not all Params appear in para vector
 i = 1
-for θ in model.par
+for θ in model.parameters
 	!isa(θ,Param) && continue
 
     para[i] = θ.value

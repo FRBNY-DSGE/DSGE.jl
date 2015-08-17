@@ -1,7 +1,7 @@
 # Calculate (log of) joint density of Θ
 function prior(m::AbstractDSGEModel)
     x = zero(Float64)
-    for θ in m.par
+    for θ in m.parameters
         if isa(θ,Param)
             x += logpdf(θ.priordist, θ.value)
         end
@@ -17,7 +17,7 @@ end
 
 # Evaluate posterior at `parameters`
 function posterior!{T<:FloatingPoint}(parameters::Vector{T}, m::AbstractDSGEModel, YY::Matrix{T})
-    update!(m.par, parameters)
+    update!(m.parameters, parameters)
     return posterior(m, YY)
 end
 

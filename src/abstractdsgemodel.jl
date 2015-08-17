@@ -1,10 +1,14 @@
 abstract AbstractDSGEModel
 
-Base.getindex(m::AbstractDSGEModel, i::Integer) = m.par[i]
-Base.getindex(m::AbstractDSGEModel, keyword::Symbol) = m.par[m.parkeys[keyword]]
+Base.getindex(m::AbstractDSGEModel, i::Integer) =
+	(j = i - length(m.parameters)) > 0 ? m.steady_state[j] : m.parameters[i]
+Base.getindex(m::AbstractDSGEModel, k::Symbol) =
+	(j = (i = m.keys[k]) - length(m.parameters)) > 0 ? m.steady_state[j] : m.parameters[i]
 
-Base.setindex!(m::AbstractDSGEModel, value, i::Integer) = setindex!(m.par, value, i)
-Base.setindex!(m::AbstractDSGEModel, value, keyword::Symbol) = setindex!(m.par, value, m.parkeys[keyword])
+Base.setindex!(m::AbstractDSGEModel, value, i::Integer) =
+	(j = i - length(m.parameters)) > 0 ? setindex!(m.steady_state, value, j) : setindex!(m.parameters, value, i)
+Base.setindex!(m::AbstractDSGEModel, value, k::Symbol) =
+	(j = (i = m.keys[k]) - length(m.parameters)) > 0 ? (@inbounds m.steady_state[j] = value) : (@inbounds m.parameters[i] = value)
 
 function Base.show{T<:AbstractDSGEModel}(io::IO, m::T)
     @printf io "%s" "Dynamic Stochastic General Equilibrium Model\n"

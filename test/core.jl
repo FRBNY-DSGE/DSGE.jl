@@ -50,7 +50,7 @@ cx = 2 * (α - 1/2)
 
 model = Model990()
 lastparam = Param(0.0)
-for α in model.par
+for α in model.parameters
     isa(α,Param) && (lastparam = α)
 end
 @test isa(lastparam, Param)

@@ -2,20 +2,21 @@
 # We can then concisely pass around a Model object to the remaining steps of the model
 #   (solve, estimate, and forecast).
 type Model990 <: AbstractDSGEModel
-    par::Vector                                 # vector of all of the model parameters
-    parkeys::Dict{Symbol,Int}                   # human-readable names for all the model parameters
+    parameters::Vector                                  # vector of all of the model parameters
+    steady_state::Vector                                 # model steady-state values
+    keys::Dict{Symbol,Int}                              # human-readable names for all the model parameters and steady-states
 
-    endogenous_states::Dict{Symbol,Int}                # these fields used to create matrices in the
-    exogenous_shocks::Dict{Symbol,Int}                 # measurement and equilibrium condition equations.
-    expected_shocks::Dict{Symbol,Int}                 #
-    equilibrium_conditions::Dict{Symbol,Int}                   #
-    endogenous_states_postgensys::Dict{Symbol,Int}     #
-    observables::Dict{Symbol,Int}                      #
+    endogenous_states::Dict{Symbol,Int}                 # these fields used to create matrices in the
+    exogenous_shocks::Dict{Symbol,Int}                  # measurement and equilibrium condition equations.
+    expected_shocks::Dict{Symbol,Int}                   #
+    equilibrium_conditions::Dict{Symbol,Int}            #
+    endogenous_states_postgensys::Dict{Symbol,Int}      #
+    observables::Dict{Symbol,Int}                       #
 
-    anticipated_shocks::Int           #   6           # Number of anticipated policy shocks
-    anticipated_shocks_padding::Int              #   20          # Padding for nant
-    anticipated_lags::Int             #   24          # Number of periods back to incorporate zero bound expectations
-    presample_periods::Int    #   2
+    anticipated_shocks::Int                             # Number of anticipated policy shocks
+    anticipated_shocks_padding::Int                     # Padding for nant
+    anticipated_lags::Int                               # Number of periods back to incorporate zero bound expectations
+    presample_periods::Int
 end
 
 description(m::Model990) = "This is some model that we're trying to make work."
@@ -173,8 +174,8 @@ function initialise_model_parameters!(m::Model990)
 end
 
 function Model990()
-    keylist = [
-            # parameters
+    parameter_keys, steady_state_keys = (
+            # parameter keys
             [:alp, :zeta_p, :iota_p, :del, :ups, :Bigphi, :s2, :h, :ppsi, :nu_l, :zeta_w, :iota_w,
             :law, :bet, :psi1, :psi2, :psi3, :pistar, :sigmac, :rho, :epsp, :epsw, :Fom, :sprd,
             :zeta_spb, :gammstar, :gam, :Lmean, :gstar, :ρ_g, :ρ_b, :ρ_mu, :ρ_z, :ρ_laf, :ρ_law,
@@ -185,20 +186,21 @@ function Model990()
             :σ_rm16, :σ_rm17, :σ_rm18, :σ_rm19, :σ_rm20, :eta_gz, :eta_laf, :eta_law, :modelalp_ind,
             :gamm_gdpdef, :del_gdpdef],
 
-            # steady state values
+            # steady state keys
             [:zstar, :rstar, :Rstarn, :rkstar, :wstar, :Lstar, :kstar, :kbarstar, :istar, :ystar,
             :cstar, :wl_c, :nstar, :vstar, :zeta_spsigw, :zeta_spmue, :zeta_nRk, :zeta_nR, :zeta_nqk,
             :zeta_nn, :zeta_nmue, :zeta_nsigw]
-            ]
+            )
 
     # initialise human-readable keys for variablesiables
-    parkeys = Dict{Symbol,Int}()
-    for (i,k) in enumerate(keylist)
-        parkeys[k] = i
+    keylist = Dict{Symbol,Int}()
+    for (i,k) in enumerate(vcat(parameter_keys,steady_state_keys))
+        keylist[k] = i
     end
 
     # initialise vector to store actual values
-    par = @compat Vector{Any}(length(keylist))
+    parameters   = @compat Vector{Any}(length(parameter_keys))
+    steady_state = @compat Vector{Any}(length(steady_state_keys))
 
     # Number of anticipated policy shocks
     anticipated_shocks = 6
@@ -216,8 +218,9 @@ function Model990()
 
     # initialise empty model
     m = Model990(
-            par,
-            parkeys,
+            parameters,
+            steady_state,
+            keylist,
             Dict{Symbol,Int}(),
             Dict{Symbol,Int}(),
             Dict{Symbol,Int}(),
