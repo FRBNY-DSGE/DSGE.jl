@@ -9,9 +9,9 @@ Base.setindex!(m::AbstractDSGEModel, value, keyword::Symbol) = setindex!(m.par, 
 function Base.show{T<:AbstractDSGEModel}(io::IO, m::T)
     @printf io "%s" "Dynamic Stochastic General Equilibrium Model\n"
     @printf io "%s %s\n" "model: " T
-    @printf io "%s             %i\n" "# states:" states(m)
-    @printf io "%s %i\n" "# anticipated shocks:" anticipated_shocks(m)
-    @printf io "%s   %i\n" "# anticipated lags:" anticipated_lags(m)
+    @printf io "%s             %i\n" "no. states:" states(m)
+    @printf io "%s %i\n" "no. anticipated shocks:" anticipated_shocks(m)
+    @printf io "%s   %i\n" "no. anticipated lags:" anticipated_lags(m)
     @printf io "%s\n %s\n" "description:" description(m)
 end
 
