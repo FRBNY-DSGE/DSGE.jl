@@ -93,7 +93,7 @@ function estimate{T<:AbstractModel}(model::T)
     metropolis_hastings(propdist, model, YY, cc0, cc)
 
     # Set up HDF5 file for saving
-    h5path = joinpath(inpath,"sim_save.h5")
+    h5path = joinpath(outpath,"sim_save.h5")
 
     ### Step 5: Calculate parameter covariance matrix
     # Read in saved parameter draws
@@ -124,7 +124,7 @@ function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{
 
     σ = U*sqrt(S_inv)
 
-    return DegenerateMvNormal(μ, σ)
+    return DegenerateMvNormal(μ, σ, rank)
 end
 
 function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::AbstractModel, YY::Matrix{T}, cc0::T, cc::T, randvecs = [], randvals = [])
@@ -209,15 +209,15 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
     CCC_sim  = zeros(n_sim, spec["n_states_aug"])
     z_sim    = zeros(n_sim, spec["n_states_aug"])
 
-    # Open HDF5 file for saving output
-    if testing
-        savepath  = joinpath(pwd(),"save")
-        inpath    = savepath;
-        outpath   = savepath;
-        tablepath = savepath;
-        plotpath  = savepath;
-        logpath   = savepath;
-    end
+    # # Open HDF5 file for saving output
+    # if testing
+    #     savepath  = joinpath(pwd(),"save")
+    #     inpath    = savepath;
+    #     outpath   = savepath;
+    #     tablepath = savepath;
+    #     plotpath  = savepath;
+    #     logpath   = savepath;
+    # end
     
     h5path = joinpath("$outpath","sim_save.h5")     
     simfile = h5open(h5path,"w") 
@@ -246,8 +246,10 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
     zsim    = d_create(simfile, "zsim", datatype(Float32),
                        dataspace(n_saved_obs,spec["n_states_aug"]),"chunk",(n_sim,spec["n_states_aug"])) 
     
-    rows, cols = size(randvecs)
-    numvals = size(randvals)[1]
+    if testing
+      rows, cols = size(randvecs)
+      numvals = size(randvals)[1]
+    end
     
     for i = 1:n_blocks
         block_rejections = 0
