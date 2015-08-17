@@ -22,6 +22,7 @@
 #    vz0 is an optional [Nz x Nz] covariance matrix of an initial state vector.
 #    Ny0 is an optional scalar indicating the number of periods of presample
 #       (i.e. the number of periods which we don't add to the likelihood)
+# allout is an optional keyword argument indicating whether we want optional output variables returned as well
 #
 # The KALCVF function returns the following output:
 #   logl is a value of the average log likelihood function of the SSM
@@ -44,7 +45,7 @@
 #  03/19/2003  -  algorithm and interface were adapted from SAS/IML KALCVF subroutine for use in MATLAB M file
 #
 #==========================================================================#
-function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}, F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, z0::Matrix{S}, vz0::Matrix{S}, Ny0::Int = 0)
+function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}, F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, z0::Matrix{S}, vz0::Matrix{S}, Ny0::Int = 0; allout::Bool = false)
     T = size(data, 2)
     Nz = size(a, 1)
     Ny = size(b, 1)
@@ -70,15 +71,17 @@ function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}
     V = var[1:Nz, 1:Nz]
     R = var[(Nz+1):end, (Nz+1):end]
     G = var[1:Nz, (Nz+1):end]
-    
-    pred = zeros(Nz, T)
-    vpred = zeros(Nz, Nz, T)
-    
-    yprederror = NaN*zeros(Ny, T)
-    ystdprederror = NaN*zeros(Ny, T)
 
-    filt = zeros(Nz, T)
-    vfilt = zeros(Nz, Nz, T)
+    if allout
+        pred = zeros(Nz, T)
+        vpred = zeros(Nz, Nz, T)
+        
+        yprederror = NaN*zeros(Ny, T)
+        ystdprederror = NaN*zeros(Ny, T)
+        
+        filt = zeros(Nz, T)
+        vfilt = zeros(Nz, Nz, T)
+    end
     
     L = 0.0
     
@@ -102,10 +105,12 @@ function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}
         D = H_t*P*H_t' + HG + HG' + R_t    # D = ZZ*P_{t+t-1}*ZZ' + HG + HG' + R_t 
         D = (D+D')/2
 
-        pred[:, t] = z
-        vpred[:, :, t] = P
-        yprederror[nonmissing, t] = dy
-        ystdprederror[nonmissing, t] = dy./sqrt(diag(D))
+        if allout
+            pred[:, t] = z
+            vpred[:, :, t] = P
+            yprederror[nonmissing, t] = dy
+            ystdprederror[nonmissing, t] = dy./sqrt(diag(D))
+        end
 
         ddy = D\dy 
         # We evaluate the log likelihood function by adding values of L at every iteration
@@ -119,15 +124,17 @@ function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}
         z = z + PHG*ddy                    # z_{t|t} = z_{t|t-1} + P_{t|t-1}*H(Θ)' + ...
         P = P - PHG/D*PHG'                 # P_{t|t} = P_{t|t-1} - PHG*(1/D)*PHG
 
-        PH = P*H_t'
-        filt[:, t] = z
-        vfilt[:, :, t] = P
+        if allout
+            PH = P*H_t'
+            filt[:, t] = z
+            vfilt[:, :, t] = P
+        end
     end
     
     zend = z
     Pend = P
 
-    if lead > 1
+    if allout && lead > 1
         for t = (T+2):(T+lead)
             z = F*z + a
             P = F*P*F' + V
@@ -136,10 +143,14 @@ function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}
         end
     end
 
-    rmse = sqrt(mean((yprederror.^2)', 1))
-    rmsd = sqrt(mean((ystdprederror.^2)', 1))
+    if allout
+        rmse = sqrt(mean((yprederror.^2)', 1))
+        rmsd = sqrt(mean((ystdprederror.^2)', 1))
+        return L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt
+    else
+        return L, zend, Pend
+    end
 
-    return L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt
 end
 
 
@@ -155,7 +166,7 @@ end
 # Note that all eigenvalues of the matrix F are inside the unit circle when the SSM is stationary.
 # When the preceding formula cannot be applied, the initial state vector estimate is set to a
 # and its covariance matrix is given by 1E6I. Optionally, you can specify initial values.
-function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}, F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, Ny0::Int = 0)
+function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}, F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, Ny0::Int = 0; allout::Bool = false)
     Nz = size(a, 1)
     V = var[1:Nz, 1:Nz]
 
@@ -168,7 +179,7 @@ function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}
         vz0 = eye(Nz)*1e6
     end
 
-    return kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0, Ny0)
+    return kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=allout)
 end
 
 #=
