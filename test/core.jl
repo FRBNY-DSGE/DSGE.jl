@@ -1,5 +1,5 @@
 using Distributions
-import DSGE: PointMass
+import DSGE: Param, PointMass
 
 # Test Param type
 
@@ -48,34 +48,15 @@ cx = 2 * (α - 1/2)
 @test toreal(δ) == 0.025
 
 
-
-# Test Parameters type
-
-# Parameters iterator
-Θ = Parameters990(model_specifications(Model990))
+model = Model990()
 lastparam = Param(0.0)
-for α = Θ
-    lastparam = α
+for α in model.par
+    isa(α,Param) && (lastparam = α)
 end
 @test isa(lastparam, Param)
 @test lastparam.value == 0.0181
 
 # prior
-priordensity = exp(prior(Θ))
+priordensity = exp(prior(model))
 @test priordensity >= 0
 @test priordensity <= 1
-
-
-# Test modelinds
-
-# makedict
-dict = makedict(["alice", "bob"])
-@test dict["alice"] == 1
-@test dict["bob"] == 2
-@test_throws KeyError dict["carol"]
-
-# makedict with start field
-dict = makedict(["alice", "bob"]; start=4)
-@test dict["alice"] == 5
-@test dict["bob"] == 6
-

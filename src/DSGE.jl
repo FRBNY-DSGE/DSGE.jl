@@ -19,7 +19,7 @@ export
     dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, hessizero!, estimate,
 
     # models/
-    Parameters990, steadystate!, Model990, model_specifications, eqcond, measurement
+    steadystate!, Model990, model_specifications, eqcond, measurement
 
 const savepath = joinpath(dirname(@__FILE__), "save/")
 
@@ -36,7 +36,10 @@ include("estimate/hessian.jl")
 include("estimate/estimate.jl")
 
 include("models/m990/m990.jl")
-include("models/m990/parameters.jl")
-include("models/m990/modelinds.jl")
+include("models/m990/eqcond.jl")
+include("models/m990/measurement.jl")
+
+# include("models/m990/parameters.jl")
+# include("models/m990/modelinds.jl")
 
 end

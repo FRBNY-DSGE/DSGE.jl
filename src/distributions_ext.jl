@@ -8,9 +8,11 @@ type PointMass <: Distribution{Univariate, Continuous}
     μ::Float64
 end
 
-Distributions.pdf(d::PointMass, x::Real) = (x == d.μ ? 1.0 : 0.0)
+Distributions.pdf(d::PointMass, x::Real) = x == d.μ ? 1.0 : 0.0
+Distributions.logpdf(d::PointMass, x::Real) = x == d.μ ? 0.0 : -Inf
 Distributions.mean(d::PointMass) = d.μ
 Distributions.std(d::PointMass) = 0
+Distributions.var(d::PointMass) = 0
 
 # Given μ and σ, calculate α and β, return distribution
 function BetaAlt(μ::Real, σ::Real)

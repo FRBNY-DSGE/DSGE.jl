@@ -1,5 +1,42 @@
 abstract AbstractModel
 
+Base.getindex(m::AbstractModel, i::Integer) = m.par[i]
+Base.getindex(m::AbstractModel, keyword::Symbol) = m.par[m.parkeys[keyword]]
+
+Base.setindex!(m::AbstractModel, value, i::Integer) = setindex!(m.par, value, i)
+Base.setindex!(m::AbstractModel, value, keyword::Symbol) = setindex!(m.par, value, m.parkeys[keyword])
+
+function Base.show{T<:AbstractModel}(io::IO, m::T)
+    @printf io "%s" "Dynamic Stochastic General Equilibrium Model\n"
+    @printf io "%s %s\n" "model: " T
+    @printf io "%s             %i\n" "# states:" n_states(m)
+    @printf io "%s %i\n" "# anticipated shocks:" n_ant_shocks(m)
+    @printf io "%s   %i\n" "# anticipated lags:" n_ant_lags(m)
+    @printf io "%s\n %s\n" "description:" description(m)
+end
+
+# Number of anticipated policy shocks
+n_ant_shocks(m::AbstractModel) = m.n_ant_shocks
+
+# Padding for nant
+n_ant_pad(m::AbstractModel) = m.n_ant_pad
+
+# Number of periods back we should start incorporating zero bound expectations
+# ZLB expectations should begin in 2008 Q4
+n_ant_lags(m::AbstractModel) = m.n_ant_lags
+
+# TODO: This should be set when the data are read in
+# Number of presample periods
+n_presample_periods(m::AbstractModel) = m.n_presample_periods
+
+# Number of a few things that are useful apparently
+n_states(m::AbstractModel)      = length(m.endostates)
+n_states_aug(m::AbstractModel)  = n_states(m) + length(m.endostates_postgensys)
+n_exoshocks(m::AbstractModel)   = length(m.exoshocks)
+n_expshocks(m::AbstractModel)   = length(m.expshocks)
+n_eqconds(m::AbstractModel)     = length(m.eqconds)
+n_observables(m::AbstractModel) = length(m.observables)
+
 # We define Param to be a subtype of Number so we can use numerical operation methods in
 #   https://github.com/JuliaLang/julia/blob/master/base/promotion.jl
 
@@ -10,6 +47,15 @@ abstract AbstractModel
 # estimation.
 
 typealias Interval{T} @compat Tuple{T, T}
+
+# The abstract Parameters type is the supertype of all model-specific ParametersXXX types.
+# All concrete types have both Param (parameters) and Float64 (steady-state values) fields.
+# See Parameters990 for an example.
+abstract Parameters
+
+# of states:             66
+# of anticipated shocks: 6
+# of anticipated lags:   24
 
 type Param <: Number
     value::Float64
@@ -53,6 +99,14 @@ function update!(α::Param, newvalue::Float64)
     return α
 end
 
+function update!{T<:FloatingPoint}(Θ::Parameters, newvalues::Vector{T})
+    @assert length(newvalues) == length(Θ)
+    for (α, newvalue) in zip(Θ, newvalues)
+        update!(α, newvalue)
+    end
+    return steadystate!(Θ)
+end
+
 # Methods so that arithmetic with parameters can be done tersely, like "θ.α + θ.β"
 # Note there are still cases where we must refer to α.scaledvalue, e.g. pdf(α.priordist, α.val)
 Base.convert{T<:FloatingPoint}(::Type{T}, α::Param) = α.scaledvalue
@@ -94,62 +148,4 @@ function tomodel(α::Param)
     elseif α.transformtype == 2
         return a + exp(c * (α-b))
     end
-end
-
-# The abstract Parameters type is the supertype of all model-specific ParametersXXX types.
-# All concrete types have both Param (parameters) and Float64 (steady-state values) fields.
-# See Parameters990 for an example.
-abstract Parameters
-
-# Implement the iterator protocol for the Parameters type
-# This will iterate over all Param fields (not steady-state values)
-Base.start(Θ::Parameters) = 1
-
-function Base.next(Θ::Parameters, state::Int)
-    α = getfield(Θ, state)
-    state += 1
-    while !done(Θ, state) && !isa(getfield(Θ, state), Param)
-        state += 1
-    end
-    return α, state
-end
-
-Base.done(Θ::Parameters, state::Int) = state == length(names(Θ))+1
-
-# Length of a Parameters object is the number of Param fields
-Base.length(Θ::Parameters) = count(field -> isa(getfield(Θ, field), Param), names(Θ))
-
-function update!{T<:FloatingPoint}(Θ::Parameters, newvalues::Vector{T})
-    @assert length(newvalues) == length(Θ)
-    for (α, newvalue) in zip(Θ, newvalues)
-        update!(α, newvalue)
-    end
-    return steadystate!(Θ)
-end
-
-# Calculate (log of) joint density of Θ
-function prior(Θ::Parameters)
-    sum = 0.0
-    for φ in Θ
-        curr = logpdf(φ.priordist, φ.value)
-        sum += curr
-    end
-    return sum
-end
-
-# A type that bundles together the model indices dictionaries from
-#   models/m$(spec)/modelinds.jl
-type ModelInds
-    endostates::Dict{String, Int64}
-    exoshocks::Dict{String, Int64}
-    expshocks::Dict{String, Int64}
-    eqconds::Dict{String, Int64}
-    endostates_postgensys::Dict{String, Int64}
-    observables::Dict{String, Int64}
-end
-
-# Given an array of names, return a dictionary mapping names to indices
-# When optional field `start` provided, first index is start+1
-function makedict{T<:String}(names::Vector{T}; start::Int = 0)
-    return [names[i] => start+i for i = 1:length(names)]
 end
