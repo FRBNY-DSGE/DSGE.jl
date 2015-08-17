@@ -1,41 +1,41 @@
-abstract AbstractModel
+abstract AbstractDSGEModel
 
-Base.getindex(m::AbstractModel, i::Integer) = m.par[i]
-Base.getindex(m::AbstractModel, keyword::Symbol) = m.par[m.parkeys[keyword]]
+Base.getindex(m::AbstractDSGEModel, i::Integer) = m.par[i]
+Base.getindex(m::AbstractDSGEModel, keyword::Symbol) = m.par[m.parkeys[keyword]]
 
-Base.setindex!(m::AbstractModel, value, i::Integer) = setindex!(m.par, value, i)
-Base.setindex!(m::AbstractModel, value, keyword::Symbol) = setindex!(m.par, value, m.parkeys[keyword])
+Base.setindex!(m::AbstractDSGEModel, value, i::Integer) = setindex!(m.par, value, i)
+Base.setindex!(m::AbstractDSGEModel, value, keyword::Symbol) = setindex!(m.par, value, m.parkeys[keyword])
 
-function Base.show{T<:AbstractModel}(io::IO, m::T)
+function Base.show{T<:AbstractDSGEModel}(io::IO, m::T)
     @printf io "%s" "Dynamic Stochastic General Equilibrium Model\n"
     @printf io "%s %s\n" "model: " T
-    @printf io "%s             %i\n" "# states:" n_states(m)
-    @printf io "%s %i\n" "# anticipated shocks:" n_ant_shocks(m)
-    @printf io "%s   %i\n" "# anticipated lags:" n_ant_lags(m)
+    @printf io "%s             %i\n" "# states:" states(m)
+    @printf io "%s %i\n" "# anticipated shocks:" anticipated_shocks(m)
+    @printf io "%s   %i\n" "# anticipated lags:" anticipated_lags(m)
     @printf io "%s\n %s\n" "description:" description(m)
 end
 
 # Number of anticipated policy shocks
-n_ant_shocks(m::AbstractModel) = m.n_ant_shocks
+anticipated_shocks(m::AbstractDSGEModel) = m.anticipated_shocks
 
 # Padding for nant
-n_ant_pad(m::AbstractModel) = m.n_ant_pad
+anticipated_shocks_padding(m::AbstractDSGEModel) = m.anticipated_shocks_padding
 
 # Number of periods back we should start incorporating zero bound expectations
 # ZLB expectations should begin in 2008 Q4
-n_ant_lags(m::AbstractModel) = m.n_ant_lags
+anticipated_lags(m::AbstractDSGEModel) = m.anticipated_lags
 
 # TODO: This should be set when the data are read in
 # Number of presample periods
-n_presample_periods(m::AbstractModel) = m.n_presample_periods
+presample_periods(m::AbstractDSGEModel) = m.presample_periods
 
 # Number of a few things that are useful apparently
-n_states(m::AbstractModel)      = length(m.endostates)
-n_states_aug(m::AbstractModel)  = n_states(m) + length(m.endostates_postgensys)
-n_exoshocks(m::AbstractModel)   = length(m.exoshocks)
-n_expshocks(m::AbstractModel)   = length(m.expshocks)
-n_eqconds(m::AbstractModel)     = length(m.eqconds)
-n_observables(m::AbstractModel) = length(m.observables)
+states(m::AbstractDSGEModel)      = length(m.endogenous_states)
+augmented_states(m::AbstractDSGEModel)  = states(m) + length(m.endogenous_states_postgensys)
+exogenous_shocks(m::AbstractDSGEModel)   = length(m.exogenous_shocks)
+expected_shocks(m::AbstractDSGEModel)   = length(m.expected_shocks)
+equilibrium_conditions(m::AbstractDSGEModel)     = length(m.equilibrium_conditions)
+observables(m::AbstractDSGEModel) = length(m.observables)
 
 # We define Param to be a subtype of Number so we can use numerical operation methods in
 #   https://github.com/JuliaLang/julia/blob/master/base/promotion.jl

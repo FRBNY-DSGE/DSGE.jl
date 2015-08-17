@@ -9,13 +9,13 @@
 # Π  (n states x n expectational states) holds coefficients of expectational states.
 
 function eqcond(m::Model990)
-    endo, exo, ex, eq = m.endostates, m.exoshocks, m.expshocks, m.eqconds
+    endo, exo, ex, eq = m.endogenous_states, m.exogenous_shocks, m.expected_shocks, m.equilibrium_conditions
 
-    Γ0 = zeros(n_states(m), n_states(m))
-    Γ1 = zeros(n_states(m), n_states(m))
-    C  =  zeros(n_states(m), 1)
-    Ψ  = zeros(n_states(m), n_exoshocks(m))
-    Π  =  zeros(n_states(m), n_expshocks(m))
+    Γ0 = zeros(states(m), states(m))
+    Γ1 = zeros(states(m), states(m))
+    C  =  zeros(states(m), 1)
+    Ψ  = zeros(states(m), exogenous_shocks(m))
+    Π  =  zeros(states(m), expected_shocks(m))
 
     ### ENDOGENOUS STATES ###
 
@@ -402,7 +402,7 @@ function eqcond(m::Model990)
     Ψ[eq[:eq_pist], exo[:pist_sh]]  = 1.
 
     # Anticipated policy shocks
-    if n_ant_shocks(m) > 0
+    if anticipated_shocks(m) > 0
 
         # This section adds the anticipated shocks. There is one state for all the
         # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds those that
@@ -414,8 +414,8 @@ function eqcond(m::Model990)
         Γ0[eq[:eq_rml1], endo[:rm_tl1]] = 1.
         Ψ[eq[:eq_rml1], exo[:rm_shl1]]  = 1.
 
-        if n_ant_shocks(m) > 1
-            for i = 2:n_ant_shocks(m)
+        if anticipated_shocks(m) > 1
+            for i = 2:anticipated_shocks(m)
                 Γ1[eq[symbol("eq_rml$(i-1)")], endo[symbol("rm_tl$i")]] = 1.
                 Γ0[eq[symbol("eq_rml$i")], endo[symbol("rm_tl$i")]] = 1.
                 Ψ[eq[symbol("eq_rml$i")], exo[symbol("rm_shl$i")]] = 1.

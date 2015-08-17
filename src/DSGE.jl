@@ -10,7 +10,7 @@ export
     savepath,
 
     # core.jl
-    AbstractModel, Param, update!, toreal, tomodel, Parameters, prior, ModelInds, makedict,
+    AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, prior, ModelInds, makedict,
 
     # solve/
     ordschur, gensys, solve,

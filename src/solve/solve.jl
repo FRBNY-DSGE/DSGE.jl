@@ -1,6 +1,6 @@
 # Outputs TTT, RRR, CCC - matrices of the state transition equation:
 #   S_t = TTT*S_{t-1} + RRR*ε_t + CCC
-function solve(model::AbstractModel)
+function solve(model::AbstractDSGEModel)
 
     # Get equilibrium condition matrices
     Γ0, Γ1, C, Ψ, Π  = eqcond(model)
@@ -26,13 +26,13 @@ end
 # RRR and CCC with the appropriate number of zeros.
 
 # These additional states are added after the model is solved to reduce the load on gensys
-function augment_states{T<:FloatingPoint}(m::AbstractModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
-    endo = m.endostates
-    endo_addl = m.endostates_postgensys
-    exo = m.exoshocks
+function augment_states{T<:FloatingPoint}(m::AbstractDSGEModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
+    endo = m.endogenous_states
+    endo_addl = m.endogenous_states_postgensys
+    exo = m.exogenous_shocks
 
-    n_endo = n_states(m)
-    n_exo = n_exoshocks(m)
+    n_endo = states(m)
+    n_exo = exogenous_shocks(m)
     @assert (n_endo, n_endo) == size(TTT)
     @assert (n_endo, n_exo) == size(RRR)
     @assert (n_endo, 1) == size(CCC)

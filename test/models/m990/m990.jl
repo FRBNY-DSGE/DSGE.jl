@@ -76,27 +76,27 @@ close(mf)
 ### Model indices
 
 # Endogenous states
-endo = model.endostates
+endo = model.endogenous_states
 @test length(endo) == 66
 @test endo[:E_z] == 60
 
 # Exogenous shocks
-exo = model.exoshocks
+exo = model.exogenous_shocks
 @test length(exo) == 22
 @test exo[:pce_sh] == 16
 
 # Expectation shocks
-ex = model.expshocks
+ex = model.expected_shocks
 @test length(ex) == 13
 @test ex[:Erk_f_sh] == 13
 
 # Equations
-eq = model.eqconds
+eq = model.equilibrium_conditions
 @test length(eq) == 66
 @test eq[:eq_Ez] == 60
 
 # Additional states
-endo_addl = model.endostates_postgensys
+endo_addl = model.endogenous_states_postgensys
 @test length(endo_addl) == 12
 @test endo_addl[:y_t1] == 67
 

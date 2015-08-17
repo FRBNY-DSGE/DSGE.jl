@@ -3,27 +3,27 @@
 # where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
 
 function measurement(m::Model990, TTT::Matrix, RRR::Matrix, CCC::Matrix; shocks::Bool = true)
-    endo, exo, obs  = m.endostates, m.exoshocks, m.observables
+    endo, exo, obs  = m.endogenous_states, m.exogenous_shocks, m.observables
 
     # If shocks = true, then return measurement equation matrices with rows and columns for anticipated policy shocks
     if shocks
-        _n_observables = n_observables(m)
-        _n_states = n_states_aug(m)
-        _n_exoshocks = n_exoshocks(m)
-        endo_addl = m.endostates_postgensys
+        _observables = observables(m)
+        _states = augmented_states(m)
+        _exogenous_shocks = exogenous_shocks(m)
+        endo_addl = m.endogenous_states_postgensys
     else
-        _n_observables = n_observables(m) - n_ant_shocks(m)
-        _n_states = n_states_aug(m) - n_ant_shocks(m)
-        _n_exoshocks = n_exoshocks(m) - n_ant_shocks(m)
+        _observables = observables(m) - anticipated_shocks(m)
+        _states = augmented_states(m) - anticipated_shocks(m)
+        _exogenous_shocks = exogenous_shocks(m) - anticipated_shocks(m)
         endo_addl = Dict(
-            [(key,m.endostates_postgensys[key] - n_ant_shocks(m)) for key in keys(m.endostates_postgensys)])
+            [(key,m.endogenous_states_postgensys[key] - anticipated_shocks(m)) for key in keys(m.endogenous_states_postgensys)])
     end
 
-    ZZ = zeros(_n_observables, _n_states)
-    DD = zeros(_n_observables, 1)
-    MM = zeros(_n_observables, _n_exoshocks)
-    EE = zeros(_n_observables, _n_observables)
-    QQ = zeros(_n_exoshocks, _n_exoshocks)
+    ZZ = zeros(_observables, _states)
+    DD = zeros(_observables, 1)
+    MM = zeros(_observables, _exogenous_shocks)
+    EE = zeros(_observables, _observables)
+    QQ = zeros(_exogenous_shocks, _exogenous_shocks)
 
     ## Output growth - Quarterly!
     ZZ[obs[:g_y], endo[:y_t]]       = 1.0
@@ -109,7 +109,7 @@ function measurement(m::Model990, TTT::Matrix, RRR::Matrix, CCC::Matrix; shocks:
     # are here no longer calibrated to the std dev of contemporaneous shocks,
     # as we had in 904
     if shocks
-        for i = 1:n_ant_shocks(m)
+        for i = 1:anticipated_shocks(m)
             ZZ[obs[symbol("R_n$i")], :] = ZZ[obs[:R_n], :]*(TTT^i)
             DD[obs[symbol("R_n$i")]] = m[:Rstarn]
             QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_rm$i")]^2

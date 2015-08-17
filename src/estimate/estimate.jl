@@ -1,6 +1,6 @@
 # This program produces and saves draws from the posterior distribution of
 # the parameters.
-function estimate{T<:AbstractModel}(Model::Type{T})
+function estimate{T<:AbstractDSGEModel}(Model::Type{T})
     ### Step 1: Initialization
     model = Model()
 
@@ -9,8 +9,8 @@ function estimate{T<:AbstractModel}(Model::Type{T})
 
     post = posterior(model, YY)
 
-    
-    
+
+
     ### Step 2: Finding the posterior mode: re-maximization
 
     #=
@@ -45,5 +45,5 @@ function estimate{T<:AbstractModel}(Model::Type{T})
 
 
     ### Step 6: Calculate parameter covariance matrix
-            
+
 end

@@ -1,60 +1,60 @@
 # The given fields define the entire model structure.
 # We can then concisely pass around a Model object to the remaining steps of the model
 #   (solve, estimate, and forecast).
-type Model990 <: AbstractModel
+type Model990 <: AbstractDSGEModel
     par::Vector                                 # vector of all of the model parameters
     parkeys::Dict{Symbol,Int}                   # human-readable names for all the model parameters
 
-    endostates::Dict{Symbol,Int}                # these fields used to create matrices in the
-    exoshocks::Dict{Symbol,Int}                 # measurement and equilibrium condition equations.
-    expshocks::Dict{Symbol,Int}                 #
-    eqconds::Dict{Symbol,Int}                   #
-    endostates_postgensys::Dict{Symbol,Int}     #
-    observables::Dict{Symbol,Int}               #
+    endogenous_states::Dict{Symbol,Int}                # these fields used to create matrices in the
+    exogenous_shocks::Dict{Symbol,Int}                 # measurement and equilibrium condition equations.
+    expected_shocks::Dict{Symbol,Int}                 #
+    equilibrium_conditions::Dict{Symbol,Int}                   #
+    endogenous_states_postgensys::Dict{Symbol,Int}     #
+    observables::Dict{Symbol,Int}                      #
 
-    n_ant_shocks::Int           #   6           # Number of anticipated policy shocks
-    n_ant_pad::Int              #   20          # Padding for nant
-    n_ant_lags::Int             #   24          # Number of periods back to incorporate zero bound expectations
-    n_presample_periods::Int    #   2
+    anticipated_shocks::Int           #   6           # Number of anticipated policy shocks
+    anticipated_shocks_padding::Int              #   20          # Padding for nant
+    anticipated_lags::Int             #   24          # Number of periods back to incorporate zero bound expectations
+    presample_periods::Int    #   2
 end
 
 description(m::Model990) = "This is some model that we're trying to make work."
 
 function initialise_model_indices!(m::Model990)
     # Endogenous states
-    endostates = [
+    endogenous_states = [
       :y_t, :c_t, :i_t, :qk_t, :k_t, :kbar_t, :u_t, :rk_t, :Rktil_t, :n_t, :mc_t,
       :pi_t, :muw_t, :w_t, :L_t, :R_t, :g_t, :b_t, :mu_t, :z_t, :laf_t, :laf_t1,
       :law_t, :law_t1, :rm_t, :sigw_t, :mue_t, :gamm_t, :pist_t, :E_c, :E_qk, :E_i,
       :E_pi, :E_L, :E_rk, :E_w, :E_Rktil, :y_f_t, :c_f_t, :i_f_t, :qk_f_t, :k_f_t,
       :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :r_f_t, :E_c_f, :E_qk_f, :E_i_f,
       :E_L_f, :E_rk_f, :ztil_t, :pi_t1, :pi_t2, :pi_a_t, :R_t1, :zp_t, :E_z,
-      [symbol("rm_tl$i") for i = 1:n_ant_shocks(m)]]
+      [symbol("rm_tl$i") for i = 1:anticipated_shocks(m)]]
 
     # Exogenous shocks
-    exoshocks = [
+    exogenous_shocks = [
       :g_sh, :b_sh, :mu_sh, :z_sh, :laf_sh, :law_sh, :rm_sh, :sigw_sh, :mue_sh,
       :gamm_sh, :pist_sh, :lr_sh, :zp_sh, :tfp_sh, :gdpdef_sh, :pce_sh,
-      [symbol("rm_shl$i") for i = 1:n_ant_shocks(m)]]
+      [symbol("rm_shl$i") for i = 1:anticipated_shocks(m)]]
 
     # Expectations shocks
-    expshocks = [
+    expected_shocks = [
       : Ec_sh, :Eqk_sh, :Ei_sh, :Epi_sh, :EL_sh, :Erk_sh, :Ew_sh, :ERktil_sh, :Ec_f_sh,
       :Eqk_f_sh, :Ei_f_sh, :EL_f_sh, :Erk_f_sh]
 
     # Equilibrium conditions
-    eqconds = [
+    equilibrium_conditions = [
       :euler, :inv, :capval, :spread, :nevol, :output, :caputl, :capsrv, :capev,
       :mkupp, :phlps, :caprnt, :msub, :wage, :mp, :res, :eq_g, :eq_b, :eq_mu, :eq_z,
       :eq_laf, :eq_law, :eq_rm, :eq_sigw, :eq_mue, :eq_gamm, :eq_laf1, :eq_law1, :eq_Ec,
       :eq_Eqk, :eq_Ei, :eq_Epi, :eq_EL, :eq_Erk, :eq_Ew, :eq_ERktil, :euler_f, :inv_f,
       :capval_f, :output_f, :caputl_f, :capsrv_f, :capev_f, :mkupp_f, :caprnt_f, :msub_f,
       :res_f, :eq_Ec_f, :eq_Eqk_f, :eq_Ei_f, :eq_EL_f, :eq_Erk_f, :eq_ztil, :eq_pist,
-      :pi1, :pi2, :pi_a, :Rt1, :eq_zp, :eq_Ez, [symbol("eq_rml$i") for i=1:n_ant_shocks(m)]]
+      :pi1, :pi2, :pi_a, :Rt1, :eq_zp, :eq_Ez, [symbol("eq_rml$i") for i=1:anticipated_shocks(m)]]
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
-    endostates_postgensys = [
+    endogenous_states_postgensys = [
       :y_t1, :c_t1, :i_t1, :w_t1, :pi_t1, :L_t1, :Et_pi_t, :lr_t, :tfp_t, :e_gdpdef,
       :e_pce, :u_t1]
 
@@ -71,14 +71,14 @@ function initialise_model_indices!(m::Model990)
                    :pi_long,     # 10-year inflation expectation
                    :R_long,      # long-term rate
                    :tfp,         # total factor productivity
-                   [symbol("R_n$i") for i=1:n_ant_shocks(m)]] # compounded nominal rates
+                   [symbol("R_n$i") for i=1:anticipated_shocks(m)]] # compounded nominal rates
 
-    for (i,k) in enumerate(endostates);             m.endostates[k]            = i end
-    for (i,k) in enumerate(exoshocks);              m.exoshocks[k]             = i end
-    for (i,k) in enumerate(expshocks);              m.expshocks[k]             = i end
-    for (i,k) in enumerate(eqconds);                m.eqconds[k]               = i end
-    for (i,k) in enumerate(endostates);             m.endostates[k]            = i end
-    for (i,k) in enumerate(endostates_postgensys);  m.endostates_postgensys[k] = i+length(endostates) end
+    for (i,k) in enumerate(endogenous_states);             m.endogenous_states[k]            = i end
+    for (i,k) in enumerate(exogenous_shocks);              m.exogenous_shocks[k]             = i end
+    for (i,k) in enumerate(expected_shocks);              m.expected_shocks[k]             = i end
+    for (i,k) in enumerate(equilibrium_conditions);                m.equilibrium_conditions[k]               = i end
+    for (i,k) in enumerate(endogenous_states);             m.endogenous_states[k]            = i end
+    for (i,k) in enumerate(endogenous_states_postgensys);  m.endogenous_states_postgensys[k] = i+length(endogenous_states) end
     for (i,k) in enumerate(observables);            m.observables[k]           = i end
 end
 
@@ -155,7 +155,7 @@ function initialise_model_parameters!(m::Model990)
     m[:σ_pce   ] = Param(0.0999, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
 
     # standard deviations of the anticipated policy shocks
-    for i = 1:n_ant_pad(m)
+    for i = 1:anticipated_shocks_padding(m)
         m[symbol("σ_rm$i")] = if i < 13
             Param(0.20, false, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.))
         else
@@ -201,18 +201,18 @@ function Model990()
     par = @compat Vector{Any}(length(keylist))
 
     # Number of anticipated policy shocks
-    n_ant_shocks = 6
+    anticipated_shocks = 6
 
     # Padding for nant
-    n_ant_pad = 20
+    anticipated_shocks_padding = 20
 
     # Number of periods back we should start incorporating zero bound expectations
     # ZLB expectations should begin in 2008 Q4
-    n_ant_lags = 24
+    anticipated_lags = 24
 
     # TODO: This should be set when the data are read in
     # Number of presample periods
-    n_presample_periods = 2
+    presample_periods = 2
 
     # initialise empty model
     m = Model990(
@@ -225,10 +225,10 @@ function Model990()
             Dict{Symbol,Int}(),
             Dict{Symbol,Int}(),
 
-            n_ant_shocks,
-            n_ant_pad,
-            n_ant_lags,
-            n_presample_periods)
+            anticipated_shocks,
+            anticipated_shocks_padding,
+            anticipated_lags,
+            presample_periods)
 
     initialise_model_parameters!(m)
     initialise_model_indices!(m)

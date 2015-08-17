@@ -1,10 +1,10 @@
 # Compute Hessian of posterior function evaluated at x (vector)
 # if noisy, display error messages, results, etc.
 # 11/12/01 translated by Marco DelNegro in matlab from Frank Schorfheide's program in gauss
-function hessizero!{T<:FloatingPoint}(x::Vector{T}, model::AbstractModel, YY::Matrix{T}; noisy::Bool = false)
+function hessizero!{T<:FloatingPoint}(x::Vector{T}, model::AbstractDSGEModel, YY::Matrix{T}; noisy::Bool = false)
 
     update!(model.Θ, x)
-    
+
     ## index of free parameters
     para_free = [!α.fixed for α in model.Θ]
     fpara_free = find(para_free)
@@ -35,7 +35,7 @@ function hessizero!{T<:FloatingPoint}(x::Vector{T}, model::AbstractModel, YY::Ma
             parady[seli] = parady[seli] - dx[k]*dxscale[seli]
             #paradxdy = copy(paradx)
             #paradxdy[seli] = paradxdy[seli] - dx[k]*dxscale[seli]
-            
+
             fx = posterior!(x, model, YY)
             fdx = posterior!(paradx, model, YY)
             fdy = posterior!(parady, model, YY)
@@ -47,16 +47,16 @@ function hessizero!{T<:FloatingPoint}(x::Vector{T}, model::AbstractModel, YY::Ma
             hessdiag[k] = -(2fx - fdx - fdy) / (dx[k]*dxscale[seli])^2
             #hessdiag[k] = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k]*dxscale[seli]*dxscale[seli])
         end
-        
+
         if noisy
             println("Values: $(-hessdiag)")
         end
-        
+
         hessian[seli, seli] = -(hessdiag[3]+hessdiag[4])/2
         if hessian[seli, seli] < 0
             error("Negative diagonal in Hessian")
         end
-        
+
         if noisy
             println("Value used: $(hessian[seli, seli])\n")
         end
@@ -71,11 +71,11 @@ function hessizero!{T<:FloatingPoint}(x::Vector{T}, model::AbstractModel, YY::Ma
         seli = fpara_free[i]
         for j = (i+1):nfree
             selj = fpara_free[j]
-            
+
             if noisy
                 println("Hessian element: ($seli, $selj)")
             end
-            
+
             for k = 1:ndx
                 paradx = copy(x)
                 parady = copy(x)
@@ -83,7 +83,7 @@ function hessizero!{T<:FloatingPoint}(x::Vector{T}, model::AbstractModel, YY::Ma
                 parady[selj] = parady[selj] - dx[k]*dxscale[selj]
                 paradxdy = copy(paradx)
                 paradxdy[selj] = paradxdy[selj] - dx[k]*dxscale[selj]
-                
+
                 fx = posterior!(x, model, YY)
                 fdx = posterior!(paradx, model, YY)
                 fdy = posterior!(parady, model, YY)
@@ -95,7 +95,7 @@ function hessizero!{T<:FloatingPoint}(x::Vector{T}, model::AbstractModel, YY::Ma
                 #hessdiag[k] = -(2fx - fdx - fdy) / (dx[k]*dxscale[seli])^2
                 hessdiag[k] = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k]*dxscale[seli]*dxscale[selj])
             end
-            
+
             if noisy
                 println("Values: $(-hessdiag)")
             end
@@ -112,7 +112,7 @@ function hessizero!{T<:FloatingPoint}(x::Vector{T}, model::AbstractModel, YY::Ma
                 hessian[seli, selj] = 0
                 errorij[(seli, selj)] = corrij
             end
-            
+
             hessian[selj, seli] = hessian[seli, selj]
 
             if noisy
