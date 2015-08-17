@@ -10,7 +10,7 @@ import Base: convert, promote_rule, log, exp, start, next, done, length
 
 export
     # DSGE.jl
-    savepath,
+    savepath, inpath, outpath, tablepath, plotpath, logpath,
 
     # core.jl
     AbstractModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict,
@@ -24,9 +24,9 @@ export
     # models/
     Parameters990, steadystate!, Model990, model_specifications, eqcond, measurement
 
-const savepath  = joinpath(dirname(@__FILE__), "save/")
-const inpath    = joinpath(savepath, "inputData/")
-const outpath   = joinpath(savepath, "outputData/")
+const savepath  = joinpath(dirname(@__FILE__), "../save/")
+const inpath    = joinpath(savepath, "input_data/")
+const outpath   = joinpath(savepath, "output_data/")
 const tablepath = joinpath(savepath, "results/tables/")
 const plotpath  = joinpath(savepath, "results/plots/")
 const logpath   = joinpath(savepath, "logs/")
