@@ -67,6 +67,7 @@ end
 type DegenerateMvNormal <: Distribution{Multivariate, Continuous}
     μ::Vector          # mean
     σ::Matrix          # standard deviation
+    rank::Int64        # rank
 end
 
 Base.length(d::DegenerateMvNormal) = length(d.μ)
