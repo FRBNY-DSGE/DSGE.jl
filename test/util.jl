@@ -123,8 +123,74 @@ function test_test_matrix_eq()
 end
 
 
-
 function test_readcsv_complex()
     readcsv_complex("readcsv_complex.csv")
     println("readcsv_complex tests passed\n")
+end
+
+# Convert a mat file to an hdf5 file. No compression is used.
+# Caller must be using HDF5 and MATLAB packages
+function mat_to_hdf5(matfileName, h5fileName)
+    mf = MatFile(matfileName)
+    vars = MATLAB.variable_names(mf)
+    
+    # Write each variable to h5 file
+    h5 = HDF5.h5open(h5fileName,"w") do h5
+    
+        for name in vars
+            var = MATLAB.get_variable(mf, name)
+            HDF5.write(h5, name, var)
+        end
+
+    end
+
+    MATLAB.close(mf)
+end
+
+function compare_mat_hdf5(matfile,h5file)
+    mf = MatFile(matfileName)
+    mvars = MATLAB.variable_names(mf)
+    
+    # Compare variables
+    h5 = HDF5.h5open(h5fileName,"w") do h5
+        h5vars = HDF5.names(h5)
+      
+        for name in mvars
+            if(in(h5vars,name))
+                mvar  = MATLAB.get_variable(mf, name)
+                h5var = HDF5.read(h5f, name)
+
+                test_matrix_eq(mvar, h5var,noisy=true)
+                
+            else
+                println("Missing: h5 file doesn't contain variable $name")
+            end
+            
+            
+        end
+
+    end
+
+    MATLAB.close(mf)
+   
+end
+
+function compare_matvar_hdf5var(matfile, mname, h5file, h5name)
+    #Get matlab variable
+    mf = MatFile(matfile)
+    mvar = MATLAB.get_variable(mf, mname)
+    MATLAB.close(mf)    
+
+    # get hdf5 variable
+    h5 = HDF5.h5open(h5file,"r") 
+    h5var = HDF5.read(h5, h5name)
+    HDF5.close(h5)
+    
+
+    if(isa(h5var,Matrix))
+        return mvar, h5var, test_matrix_eq(mvar, h5var, noisy=true)
+    elseif(isa(h5var,Float64) || isa(h5var,Float32))
+        return mvar, h5var, mvar == h5var
+    end
+    
 end

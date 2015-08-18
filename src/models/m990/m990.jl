@@ -173,6 +173,7 @@ function initialise_model_parameters!(m::Model990)
     m[:del_gdpdef  ] = Param(0.0181, false, (-9.1, 9.1), Normal(0.00, 2.), 0, (-10., -10.))
 end
 
+<<<<<<< HEAD
 function Model990()
     parameter_keys, steady_state_keys = (
             # parameter keys
@@ -201,8 +202,22 @@ function Model990()
     # initialise vector to store actual values
     parameters   = @compat Vector{Any}(length(parameter_keys))
     steady_state = @compat Vector{Any}(length(steady_state_keys))
+=======
+
+
+
+
+# Model-specific specifications
+function model_specifications(T::Type{Model990})
+    spec = Dict{String, Any}()
+>>>>>>> master
+
+
+
+    ### Model initialization
 
     # Number of anticipated policy shocks
+<<<<<<< HEAD
     anticipated_shocks = 6
 
     # Padding for nant
@@ -247,6 +262,44 @@ end
     return -zetaratio/(1-zetaratio)*nk/(1-nk)
 end
 
+    # spec["nant"] = 6
+
+    # # Padding for nant
+    # spec["nantpad"] = 20
+
+    # # Number of periods back we should start incorporating zero bound expectations
+    # # ZLB expectations should begin in 2008 Q4
+    # spec["antlags"] = 24
+
+    # # TODO: This should be set when the data are read in
+    # # Number of presample periods
+    # spec["n_presample_periods"] = 2
+
+
+
+    # ### Estimation
+
+    # # Whether or not to call csminwel
+    # spec["reoptimize"] = false
+
+    # # Whether or not to recalculate hessian
+    # spec["recalculate_hessian"] = false
+
+    # # Number of draws per posterior simulation block
+    # spec["n_sim"] = 10 #10000
+
+    # # Number of blocks
+    # spec["n_blocks"] = 1 #22
+
+    # # Save every ntimes-th draw that is accepted
+    # spec["n_times"] = 5
+
+    # # How many draws to discard as burn-in
+    # spec["n_burn"] = 2*spec["n_sim"]
+
+    # return spec
+
+
 @inline function ζ_bω_fn(z, σ, sprd)
     nk          = nk_fn(z, σ, sprd)
     μstar       = μ_fn(z, σ, sprd)
@@ -268,6 +321,7 @@ end
         (Γ_fn(z, σ) - μstar*G_fn(z, σ))
 end
 
+<<<<<<< HEAD
 nk_fn(z, σ, sprd) = 1 - (Γ_fn(z, σ) - μ_fn(z, σ, sprd)*G_fn(z, σ))*sprd
 μ_fn(z, σ, sprd)  =
     (1 - 1/sprd)/(dG_dω_fn(z, σ)/dΓ_dω_fn(z)*(1 - Γ_fn(z, σ)) + G_fn(z, σ))
@@ -368,4 +422,134 @@ function steadystate!(m::Model990)
     m[:zeta_nsigw]  = m[:gammstar]*Rkstar/m[:pistar]/exp(m[:zstar])*(1+Rhostar)*muestar*Gstar*(zeta_Gsigw-zeta_gw/zeta_zw*zeta_zsigw)
 
     return m
+=======
+
+
+# Assign measurement equation : X_t = ZZ*S_t + DD + u_t
+# where u_t = eta_t+MM* eps_t with var(eta_t) = EE
+# where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
+function measurement(model::Model990, TTT::Matrix, RRR::Matrix, CCC::Matrix; shocks::Bool = true)
+    spec = model.spec
+    Θ = model.Θ
+    ind = model.ind
+
+    endo = ind.endostates
+    exo = ind.exoshocks
+    obs = ind.observables
+
+    # If shocks = true, then return measurement equation matrices with rows and columns for anticipated policy shocks
+    if shocks
+        n_observables = spec["n_observables"]
+        n_states = spec["n_states_aug"]
+        n_exoshocks = spec["n_exoshocks"]
+        endo_addl = ind.endostates_postgensys
+    else
+        nant = spec["nant"]
+        n_observables = spec["n_observables"] - nant
+        n_states = spec["n_states_aug"] - nant
+        n_exoshocks = spec["n_exoshocks"] - nant
+        endo_addl = [key => ind.endostates_postgensys[key] - nant for key in keys(ind.endostates_postgensys)]
+    end
+
+    ZZ = zeros(n_observables, n_states)
+    DD = zeros(n_observables, 1)
+    MM = zeros(n_observables, n_exoshocks)
+    EE = zeros(n_observables, n_observables)
+    QQ =  zeros(n_exoshocks, n_exoshocks)
+
+
+
+    ## Output growth - Quarterly!
+    ZZ[obs["g_y"], endo["y_t"]] = 1.0
+    ZZ[obs["g_y"], endo_addl["y_t1"]] = -1.0
+    ZZ[obs["g_y"], endo["z_t"]] = 1.0
+    DD[obs["g_y"]] = 100*(exp(Θ.zstar)-1)
+
+    ## Hoursg
+    ZZ[obs["hoursg"], endo["L_t"]] = 1.0
+    DD[obs["hoursg"]] = Θ.Lmean.scaledvalue
+
+    ## Labor Share/real wage growth
+    ZZ[obs["g_w"], endo["w_t"]] = 1.0
+    ZZ[obs["g_w"], endo_addl["w_t1"]] = -1.0
+    ZZ[obs["g_w"], endo["z_t"]] = 1.0
+    DD[obs["g_w"]] = 100*(exp(Θ.zstar)-1)
+
+    ## Inflation (GDP Deflator)
+    ZZ[obs["pi_gdpdef"], endo["pi_t"]] = Θ.gamm_gdpdef
+    ZZ[obs["pi_gdpdef"], endo_addl["e_gdpdef"]] = 1.0
+    DD[obs["pi_gdpdef"]] = 100*(Θ.pistar-1) + Θ.del_gdpdef
+
+    ## Inflation (Core PCE)
+    ZZ[obs["pi_pce"], endo["pi_t"]] = 1.0
+    ZZ[obs["pi_pce"], endo_addl["e_pce"]] = 1.0
+    DD[obs["pi_pce"]] = 100*(Θ.pistar-1)
+
+    ## Nominal interest rate
+    ZZ[obs["R_n"], endo["R_t"]] = 1.0
+    DD[obs["R_n"]] = Θ.Rstarn
+
+    ## Consumption Growth
+    ZZ[obs["g_c"], endo["c_t"]] = 1.0
+    ZZ[obs["g_c"], endo_addl["c_t1"]] = -1.0
+    ZZ[obs["g_c"], endo["z_t"]] = 1.0
+    DD[obs["g_c"]] = 100*(exp(Θ.zstar)-1)
+
+    ## Investment Growth
+    ZZ[obs["g_i"], endo["i_t"]] = 1.0
+    ZZ[obs["g_i"], endo_addl["i_t1"]] = -1.0
+    ZZ[obs["g_i"], endo["z_t"]] = 1.0
+    DD[obs["g_i"]] = 100*(exp(Θ.zstar)-1)
+
+    ## Spreads
+    ZZ[obs["sprd"], endo["E_Rktil"]] = 1.0
+    ZZ[obs["sprd"], endo["R_t"]] = -1.0
+    DD[obs["sprd"]] = 100*log(Θ.sprd)
+
+    ## 10 yrs infl exp
+    TTT10 = (1/40)*((eye(size(TTT, 1)) - TTT)\(TTT - TTT^41))
+    ZZ[obs["pi_long"], :] =  TTT10[endo["pi_t"], :]
+    DD[obs["pi_long"]] = 100*(Θ.pistar-1)
+
+    ## Long Rate
+    ZZ[obs["R_long"], :] = ZZ[6, :]*TTT10
+    ZZ[obs["R_long"], endo_addl["lr_t"]] = 1.0
+    DD[obs["R_long"]] = Θ.Rstarn
+
+    ## TFP
+    ZZ[obs["tfp"], endo["z_t"]] = (1-Θ.alp)*Θ.modelalp_ind + 1*(1-Θ.modelalp_ind)
+    ZZ[obs["tfp"], endo_addl["tfp_t"]] = 1.0
+    ZZ[obs["tfp"], endo["u_t"]] = Θ.alp/( (1-Θ.alp)*(1-Θ.modelalp_ind) + 1*Θ.modelalp_ind )
+    ZZ[obs["tfp"], endo_addl["u_t1"]] = -(Θ.alp/( (1-Θ.alp)*(1-Θ.modelalp_ind) + 1*Θ.modelalp_ind) )
+
+    QQ[exo["g_sh"], exo["g_sh"]] = Θ.σ_g^2
+    QQ[exo["b_sh"], exo["b_sh"]] = Θ.σ_b^2
+    QQ[exo["mu_sh"], exo["mu_sh"]] = Θ.σ_mu^2
+    QQ[exo["z_sh"], exo["z_sh"]] = Θ.σ_z^2
+    QQ[exo["laf_sh"], exo["laf_sh"]] = Θ.σ_laf^2
+    QQ[exo["law_sh"], exo["law_sh"]] = Θ.σ_law^2
+    QQ[exo["rm_sh"], exo["rm_sh"]] = Θ.σ_rm^2
+    QQ[exo["sigw_sh"], exo["sigw_sh"]] = Θ.σ_sigw^2
+    QQ[exo["mue_sh"], exo["mue_sh"]] = Θ.σ_mue^2
+    QQ[exo["gamm_sh"], exo["gamm_sh"]] = Θ.σ_gamm^2
+    QQ[exo["pist_sh"], exo["pist_sh"]] = Θ.σ_pist^2
+    QQ[exo["lr_sh"], exo["lr_sh"]] = Θ.σ_lr^2
+    QQ[exo["zp_sh"], exo["zp_sh"]] = Θ.σ_zp^2
+    QQ[exo["tfp_sh"], exo["tfp_sh"]] = Θ.σ_tfp^2
+    QQ[exo["gdpdef_sh"], exo["gdpdef_sh"]] = Θ.σ_gdpdef^2
+    QQ[exo["pce_sh"], exo["pce_sh"]] = Θ.σ_pce^2
+
+    # These lines set the standard deviations for the anticipated shocks. They
+    # are here no longer calibrated to the std dev of contemporaneous shocks,
+    # as we had in 904
+    if shocks
+        for i = 1:spec["nant"]
+            ZZ[obs["R_n$i"], :] = ZZ[obs["R_n"], :]*(TTT^i)
+            DD[obs["R_n$i"]] = Θ.Rstarn
+            QQ[exo["rm_shl$i"], exo["rm_shl$i"]] = Θ.(parse("σ_rm$i"))^2
+        end
+    end
+
+    return ZZ, DD, QQ, EE, MM
+>>>>>>> master
 end

@@ -20,7 +20,9 @@ lead = int(lead)
 
 # Method with all arguments provided (9)
 L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt =
-    kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0)
+    kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0; allout=true)
+
+L, zend, Pend = kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0)
 
 mf = MatFile("$path/kalcvf2NaN/kalcvf2NaN_out9.mat")
 for out in ["L", "zend", "Pend", "pred", "vpred", "yprederror", "ystdprederror", "rmse",
@@ -43,7 +45,9 @@ close(mf)
 
 # Method with optional arguments omitted (7)
 L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt =
-    kalcvf2NaN(data, lead, a, F, b, H, var)
+    kalcvf2NaN(data, lead, a, F, b, H, var; allout=true)
+
+L, zend, Pend = kalcvf2NaN(data, lead, a, F, b, H, var)
 
 mf = MatFile("$path/kalcvf2NaN/kalcvf2NaN_out7.mat")
 for out in ["L", "zend", "Pend", "pred", "vpred", "yprederror", "ystdprederror", "rmse",
