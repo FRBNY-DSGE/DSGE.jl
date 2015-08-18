@@ -10,7 +10,7 @@ export
     savepath, inpath, outpath, tablepath, plotpath, logpath,
 
     # abstractdsgemodel.jl
-    AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict
+    AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict,
 
     # solve/
     ordschur, gensys, solve,
