@@ -66,7 +66,7 @@ function likelihood{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; m
     zlb[:YY] = YY[(end-num_anticipated_lags(model)):end, :]
 
 
-    # Step 1: solution to DSGE m - delivers transition equation for the state variables  S_t
+    # Step 1: solution to DSGE model - delivers transition equation for the state variables  S_t
     # transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ
     # If we are in MH, then any errors coming out of gensys should be caught and a -Inf
     # posterior should be returned.
