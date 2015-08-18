@@ -26,7 +26,6 @@ using Debug
     # Specify starting mode
 
     println("Reading in previous mode")
-
     mode = []
 
     if m.reoptimize
