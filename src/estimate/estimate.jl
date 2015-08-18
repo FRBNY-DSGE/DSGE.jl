@@ -204,10 +204,10 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
     para_sim = zeros(n_sim, spec["n_params"])
     like_sim = zeros(n_sim)
     post_sim = zeros(n_sim)
-    TTT_sim  = zeros(n_sim, spec["n_states_aug"]^2)
-    RRR_sim  = zeros(n_sim, spec["n_states_aug"]*spec["n_exoshocks"])
-    CCC_sim  = zeros(n_sim, spec["n_states_aug"])
-    z_sim    = zeros(n_sim, spec["n_states_aug"])
+    TTT_sim  = zeros(n_sim, num_states_augmented(model)^2)
+    RRR_sim  = zeros(n_sim, num_states_augmented(model)*num_shocks_exogenous(model))
+    CCC_sim  = zeros(n_sim, num_states_augmented(model))
+    z_sim    = zeros(n_sim, num_states_augmented(model))
 
     # # Open HDF5 file for saving output
     # if testing
@@ -234,17 +234,17 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
                        dataspace(n_saved_obs,1), "chunk", (n_sim,1))
 
     TTTsim  = d_create(simfile, "TTTsim", datatype(Float32),
-                       dataspace(n_saved_obs,spec["n_states_aug"]^2),"chunk",(n_sim,spec["n_states_aug"]^2))
+                       dataspace(n_saved_obs,num_states_augmented(model)^2),"chunk",(n_sim,num_states_augmented(model)^2))
 
     RRRsim  = d_create(simfile, "RRRsim", datatype(Float32),
-                       dataspace(n_saved_obs,spec["n_states_aug"]*spec["n_exoshocks"]),"chunk",
-                       (n_sim,spec["n_states_aug"]*spec["n_exoshocks"]))
+                       dataspace(n_saved_obs,num_states_augmented(model)*num_shocks_exogenous(model)),"chunk",
+                       (n_sim,num_states_augmented(model)*num_shocks_exogenous(model)))
 
     # CCCsim  = d_create(simfile, "CCCsim", datatype(Float32),
-    #                  dataspace(n_saved_obs,spec["n_states_aug"]),"chunk",(n_sim,spec["n_states_aug"]))
+    #                  dataspace(n_saved_obs,num_states_augmented(model)),"chunk",(n_sim,num_states_augmented(model)))
 
     zsim    = d_create(simfile, "zsim", datatype(Float32),
-                       dataspace(n_saved_obs,spec["n_states_aug"]),"chunk",(n_sim,spec["n_states_aug"]))
+                       dataspace(n_saved_obs,num_states_augmented(model)),"chunk",(n_sim,num_states_augmented(model)))
 
     if testing
       rows, cols = size(randvecs)

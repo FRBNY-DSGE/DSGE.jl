@@ -50,17 +50,17 @@ function likelihood{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T}; mh::B
     zlb = Dict{String, Any}()
     mt = [presample, normal, zlb]
 
-    presample["observables"] = observables(m) - anticipated_shocks(m)
-    normal["observables"] = observables(m) - anticipated_shocks(m)
-    zlb["observables"] = observables(m)
+    presample["num_observables"] = num_observables(m) - num_anticipated_shocks(m)
+    normal["num_observables"] = num_observables(m) - num_anticipated_shocks(m)
+    zlb["num_observables"] = num_observables(m)
 
-    presample["states"] = augmented_states(m) - anticipated_shocks(m)
-    normal["states"] = augmented_states(m) - anticipated_shocks(m)
-    zlb["states"] = augmented_states(m)
+    presample["num_states"] = num_states_augmented(m) - num_anticipated_shocks(m)
+    normal["num_states"] = num_states_augmented(m) - num_anticipated_shocks(m)
+    zlb["num_states"] = num_states_augmented(m)
 
-    presample["YY"] = YY[1:presample_periods(m), 1:presample["observables"]]
-    normal["YY"] = YY[(presample_periods(m)+1):(end-anticipated_lags(m)-1), 1:normal["observables"]]
-    zlb["YY"] = YY[(end-anticipated_lags(m)):end, :]
+    presample["YY"] = YY[1:num_presample_periods(m), 1:presample["num_observables"]]
+    normal["YY"] = YY[(num_presample_periods(m)+1):(end-num_anticipated_lags(m)-1), 1:normal["num_observables"]]
+    zlb["YY"] = YY[(end-num_anticipated_lags(m)):end, :]
 
 
 
@@ -69,8 +69,8 @@ function likelihood{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T}; mh::B
     zlb["TTT"], zlb["RRR"], zlb["CCC"] = solve(m::AbstractDSGEModel)
 
     # Get normal, no ZLB m matrices
-    state_inds = [1:(states(m)-anticipated_shocks(m)); (states(m)+1):augmented_states(m)]
-    shock_inds = 1:(exogenous_shocks(m)-anticipated_shocks(m))
+    state_inds = [1:(num_states(m)-num_anticipated_shocks(m)); (num_states(m)+1):num_states_augmented(m)]
+    shock_inds = 1:(num_shocks_exogenous(m)-num_anticipated_shocks(m))
 
     normal["TTT"] = zlb["TTT"][state_inds, state_inds]
     normal["RRR"] = zlb["RRR"][state_inds, shock_inds]
@@ -118,9 +118,9 @@ function likelihood{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T}; mh::B
     ##         define VVall as the joint variance of the two shocks VVall = var([eps2_tu_t])
 
     # Run Kalman filter on presample
-    presample["A0"] = zeros(presample["states"], 1)
+    presample["A0"] = zeros(presample["num_states"], 1)
     presample["P0"] = dlyap!(copy(presample["TTT"]), copy(presample["RRR"]*presample["QQ"]*presample["RRR"]'))
-    presample["pyt"], presample["zend"], presample["Pend"] = kalcvf2NaN(presample["YY"]', 1, zeros(presample["states"], 1), presample["TTT"], presample["DD"], presample["ZZ"], presample["VVall"], presample["A0"], presample["P0"])
+    presample["pyt"], presample["zend"], presample["Pend"] = kalcvf2NaN(presample["YY"]', 1, zeros(presample["num_states"], 1), presample["TTT"], presample["DD"], presample["ZZ"], presample["VVall"], presample["A0"], presample["P0"])
 
     # Run Kalman filter on normal and ZLB periods
     for p = 2:3
@@ -133,22 +133,22 @@ function likelihood{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T}; mh::B
             # state space without anticipated policy shocks, then shoves in nant
             # zeros in the middle of zend and Pend in the location of
             # the anticipated shock entries.
-            before_shocks = 1:(states(m)-anticipated_shocks(m))
-            after_shocks_old = (states(m)-anticipated_shocks(m)+1):(augmented_states(m)-anticipated_shocks(m))
-            after_shocks_new = (states(m)+1):augmented_states(m)
+            before_shocks = 1:(num_states(m)-num_anticipated_shocks(m))
+            after_shocks_old = (num_states(m)-num_anticipated_shocks(m)+1):(num_states_augmented(m)-num_anticipated_shocks(m))
+            after_shocks_new = (num_states(m)+1):num_states_augmented(m)
 
             zprev = [normal["zend"][before_shocks, :];
-                     zeros(anticipated_shocks(m), 1);
+                     zeros(num_anticipated_shocks(m), 1);
                      normal["zend"][after_shocks_old, :]]
 
-            Pprev = zeros(augmented_states(m), augmented_states(m))
+            Pprev = zeros(num_states_augmented(m), num_states_augmented(m))
             Pprev[before_shocks, before_shocks] = normal["Pend"][before_shocks, before_shocks]
             Pprev[before_shocks, after_shocks_new] = normal["Pend"][before_shocks, after_shocks_old]
             Pprev[after_shocks_new, before_shocks] = normal["Pend"][after_shocks_old, before_shocks]
             Pprev[after_shocks_new, after_shocks_new] = normal["Pend"][after_shocks_old, after_shocks_old]
         end
 
-        mt[p]["pyt"], mt[p]["zend"], mt[p]["Pend"] = kalcvf2NaN(mt[p]["YY"]', 1, zeros(mt[p]["states"], 1), mt[p]["TTT"], mt[p]["DD"], mt[p]["ZZ"], mt[p]["VVall"], zprev, Pprev)
+        mt[p]["pyt"], mt[p]["zend"], mt[p]["Pend"] = kalcvf2NaN(mt[p]["YY"]', 1, zeros(mt[p]["num_states"], 1), mt[p]["TTT"], mt[p]["DD"], mt[p]["ZZ"], mt[p]["VVall"], zprev, Pprev)
     end
 
     # Return total log-likelihood, excluding the presample
