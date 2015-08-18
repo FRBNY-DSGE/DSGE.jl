@@ -264,6 +264,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
 
             # Solve the model, check that parameters are within bounds, and
             # evaluate the posterior.
+
             post_new, like_new, out = posterior!(m, para_new, YY; mh=true)
 
             if verbose 
@@ -305,13 +306,19 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
                 if verbose 
                     println("Iteration $j: accept proposed jump")
                 end
+
+                println("Iteration $j: accept proposed jump")
+
             else
                 # Reject proposed jump
                 block_rejections += 1
+                
+                println("Iteration $j: reject proposed jump")
 
                 if verbose 
                     println("Iteration $j: reject proposed jump")
                 end
+
             end
 
 
