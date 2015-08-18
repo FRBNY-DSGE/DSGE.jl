@@ -1,17 +1,28 @@
+# Calculate (log of) joint density of Θ
+function prior(m::AbstractDSGEModel)
+    x = zero(Float64)
+    for θ in m.parameters
+        if isa(θ,Param)
+            x += logpdf(θ.priordist, θ.value)
+        end
+    end
+    return x
+end
+
 # log posterior = log likelihood + log prior
 # log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
-function posterior{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T}; mh::Bool = false)
+function posterior{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
     if mh
-        like, out = likelihood(model, YY; mh=mh)
-        post = like + prior(model.Θ)
+        like, out = likelihood(m, YY; mh=mh)
+        post = like + prior(m)
         return post, like, out
     else
-        return likelihood(model, YY; mh=mh) + prior(model.Θ)
+        return likelihood(m, YY; mh=mh) + prior(m)
     end
 end
 
 # Evaluate posterior at `parameters`
-function posterior!{T<:FloatingPoint}(parameters::Vector{T}, model::AbstractModel, YY::Matrix{T}; mh::Bool = false)
+function posterior!{T<:FloatingPoint}(parameters::Vector{T}, model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
     update!(model.Θ, parameters)
     return posterior(model, YY; mh=mh)
 end
@@ -21,8 +32,8 @@ end
 # This is a dsge likelihood function that can handle 2-part estimation where
 # there is a model switch.
 # If there is no model switch, then we filter over the main sample all at once.
-function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T}; mh::Bool = false)
-    
+function likelihood{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
+
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if mh
         for α in model.Θ
@@ -32,8 +43,6 @@ function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T}; mh::B
             end
         end
     end
-    
-    spec = model.spec
 
     # Partition sample into presample, normal, and zero lower bound periods
     presample = Dict{String, Any}()
@@ -41,34 +50,34 @@ function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T}; mh::B
     zlb = Dict{String, Any}()
     mt = [presample, normal, zlb]
 
-    presample["n_observables"] = spec["n_observables"] - spec["nant"]
-    normal["n_observables"] = spec["n_observables"] - spec["nant"]
-    zlb["n_observables"] = spec["n_observables"]
+    presample["num_observables"] = num_observables(m) - num_anticipated_shocks(m)
+    normal["num_observables"] = num_observables(m) - num_anticipated_shocks(m)
+    zlb["num_observables"] = num_observables(m)
 
-    presample["n_states"] = spec["n_states_aug"] - spec["nant"]
-    normal["n_states"] = spec["n_states_aug"] - spec["nant"]
-    zlb["n_states"] = spec["n_states_aug"]
+    presample["num_states"] = num_states_augmented(m) - num_anticipated_shocks(m)
+    normal["num_states"] = num_states_augmented(m) - num_anticipated_shocks(m)
+    zlb["num_states"] = num_states_augmented(m)
 
-    presample["YY"] = YY[1:spec["n_presample_periods"], 1:presample["n_observables"]]
-    normal["YY"] = YY[(spec["n_presample_periods"]+1):(end-spec["antlags"]-1), 1:normal["n_observables"]]
-    zlb["YY"] = YY[(end-spec["antlags"]):end, :]
+    presample["YY"] = YY[1:num_presample_periods(m), 1:presample["num_observables"]]
+    normal["YY"] = YY[(num_presample_periods(m)+1):(end-num_anticipated_lags(m)-1), 1:normal["num_observables"]]
+    zlb["YY"] = YY[(end-num_anticipated_lags(m)):end, :]
 
 
-    
-    ## step 1: solution to DSGE model - delivers transition equation for the state variables  S_t
+
+    ## step 1: solution to DSGE m - delivers transition equation for the state variables  S_t
     ## transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ
-    zlb["TTT"], zlb["RRR"], zlb["CCC"] = solve(model::AbstractModel)
+    zlb["TTT"], zlb["RRR"], zlb["CCC"] = solve(m::AbstractDSGEModel)
 
-    # Get normal, no ZLB model matrices
-    state_inds = [1:(spec["n_states"]-spec["nant"]); (spec["n_states"]+1):spec["n_states_aug"]]
-    shock_inds = 1:(spec["n_exoshocks"]-spec["nant"])
+    # Get normal, no ZLB m matrices
+    state_inds = [1:(num_states(m)-num_anticipated_shocks(m)); (num_states(m)+1):num_states_augmented(m)]
+    shock_inds = 1:(num_shocks_exogenous(m)-num_anticipated_shocks(m))
 
     normal["TTT"] = zlb["TTT"][state_inds, state_inds]
     normal["RRR"] = zlb["RRR"][state_inds, shock_inds]
     normal["CCC"] = zlb["CCC"][state_inds, :]
 
 
-    
+
     ## step 2: define the measurement equation: X_t = ZZ*S_t + D + u_t
     ## where u_t = eta_t+MM* eps_t with var(eta_t) = EE
     ## where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
@@ -77,8 +86,8 @@ function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T}; mh::B
     for p = 2:3
         #try
             shocks = (p == 3)
-            mt[p]["ZZ"], mt[p]["DD"], mt[p]["QQ"], mt[p]["EE"], mt[p]["MM"] = measurement(model, mt[p]["TTT"], mt[p]["RRR"], mt[p]["CCC"]; shocks=shocks)
-        #catch 
+            mt[p]["ZZ"], mt[p]["DD"], mt[p]["QQ"], mt[p]["EE"], mt[p]["MM"] = measurement(m, mt[p]["TTT"], mt[p]["RRR"], mt[p]["CCC"]; shocks=shocks)
+        #catch
             # Error thrown during gensys
             #    return -Inf
         #end
@@ -99,8 +108,8 @@ function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T}; mh::B
     presample["TTT"], presample["RRR"], presample["QQ"] = normal["TTT"], normal["RRR"], normal["QQ"]
     presample["ZZ"], presample["DD"], presample["VVall"] = normal["ZZ"], normal["DD"], normal["VVall"]
 
-    
-    
+
+
     ## step 3: compute log-likelihood using Kalman filter - written by Iskander
     ##         note that Iskander's program assumes a transition equation written as:
     ##         S_t = TTT S_{t-1} +eps2_t, where eps2_t = RRReps_t
@@ -109,9 +118,9 @@ function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T}; mh::B
     ##         define VVall as the joint variance of the two shocks VVall = var([eps2_tu_t])
 
     # Run Kalman filter on presample
-    presample["A0"] = zeros(presample["n_states"], 1)
+    presample["A0"] = zeros(presample["num_states"], 1)
     presample["P0"] = dlyap!(copy(presample["TTT"]), copy(presample["RRR"]*presample["QQ"]*presample["RRR"]'))
-    presample["pyt"], presample["zend"], presample["Pend"] = kalcvf2NaN(presample["YY"]', 1, zeros(presample["n_states"], 1), presample["TTT"], presample["DD"], presample["ZZ"], presample["VVall"], presample["A0"], presample["P0"])
+    presample["pyt"], presample["zend"], presample["Pend"] = kalcvf2NaN(presample["YY"]', 1, zeros(presample["num_states"], 1), presample["TTT"], presample["DD"], presample["ZZ"], presample["VVall"], presample["A0"], presample["P0"])
 
     # Run Kalman filter on normal and ZLB periods
     for p = 2:3
@@ -124,22 +133,22 @@ function likelihood{T<:FloatingPoint}(model::AbstractModel, YY::Matrix{T}; mh::B
             # state space without anticipated policy shocks, then shoves in nant
             # zeros in the middle of zend and Pend in the location of
             # the anticipated shock entries.
-            before_shocks = 1:(spec["n_states"]-spec["nant"])
-            after_shocks_old = (spec["n_states"]-spec["nant"]+1):(spec["n_states_aug"]-spec["nant"])
-            after_shocks_new = (spec["n_states"]+1):spec["n_states_aug"]
-            
+            before_shocks = 1:(num_states(m)-num_anticipated_shocks(m))
+            after_shocks_old = (num_states(m)-num_anticipated_shocks(m)+1):(num_states_augmented(m)-num_anticipated_shocks(m))
+            after_shocks_new = (num_states(m)+1):num_states_augmented(m)
+
             zprev = [normal["zend"][before_shocks, :];
-                     zeros(spec["nant"], 1);
+                     zeros(num_anticipated_shocks(m), 1);
                      normal["zend"][after_shocks_old, :]]
 
-            Pprev = zeros(spec["n_states_aug"], spec["n_states_aug"])
+            Pprev = zeros(num_states_augmented(m), num_states_augmented(m))
             Pprev[before_shocks, before_shocks] = normal["Pend"][before_shocks, before_shocks]
             Pprev[before_shocks, after_shocks_new] = normal["Pend"][before_shocks, after_shocks_old]
             Pprev[after_shocks_new, before_shocks] = normal["Pend"][after_shocks_old, before_shocks]
             Pprev[after_shocks_new, after_shocks_new] = normal["Pend"][after_shocks_old, after_shocks_old]
         end
-        
-        mt[p]["pyt"], mt[p]["zend"], mt[p]["Pend"] = kalcvf2NaN(mt[p]["YY"]', 1, zeros(mt[p]["n_states"], 1), mt[p]["TTT"], mt[p]["DD"], mt[p]["ZZ"], mt[p]["VVall"], zprev, Pprev)
+
+        mt[p]["pyt"], mt[p]["zend"], mt[p]["Pend"] = kalcvf2NaN(mt[p]["YY"]', 1, zeros(mt[p]["num_states"], 1), mt[p]["TTT"], mt[p]["DD"], mt[p]["ZZ"], mt[p]["VVall"], zprev, Pprev)
     end
 
     # Return total log-likelihood, excluding the presample
@@ -221,7 +230,7 @@ function dlyap!(a, c)
     j = m:-1:1
     ub = ua[:, j]
     tb = ta[j ,j]'
-    
+
     # Check all combinations of ta(i, i)+tb(j, j) for zero
     p1 = diag(ta).' # Use .' instead of ' in case a and a' are not real
     p2 = diag(tb)

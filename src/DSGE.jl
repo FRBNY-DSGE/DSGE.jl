@@ -10,7 +10,7 @@ export
     savepath, inpath, outpath, tablepath, plotpath, logpath,
 
     # core.jl
-    AbstractModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict,
+    AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict,
 
     # solve/
     ordschur, gensys, solve,
@@ -19,7 +19,7 @@ export
     dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel, hessizero!, estimate, proposal_distribution, metropolis_hastings,
 
     # models/
-    Parameters990, steadystate!, Model990, model_specifications, eqcond, measurement
+    steadystate!, Model990, model_specifications, eqcond, measurement
 
 const savepath  = joinpath(dirname(@__FILE__), "../save/")
 const inpath    = joinpath(savepath, "input_data/")
@@ -29,7 +29,8 @@ const plotpath  = joinpath(savepath, "results/plots/")
 const logpath   = joinpath(savepath, "logs/")
 
 include("distributions_ext.jl")
-include("core.jl")
+include("parameters.jl")
+include("abstractdsgemodel.jl")
 
 include("solve/ordered_qz.jl")
 include("solve/gensys.jl")
@@ -42,7 +43,7 @@ include("estimate/hessian.jl")
 include("estimate/estimate.jl")
 
 include("models/m990/m990.jl")
-include("models/m990/parameters.jl")
-include("models/m990/modelinds.jl")
+include("models/m990/eqcond.jl")
+include("models/m990/measurement.jl")
 
 end
