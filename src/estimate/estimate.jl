@@ -28,7 +28,6 @@ using Debug
     # Specify starting mode
 
     println("Reading in previous mode")
-    
     mode = []
     h5open("$in_path/mode_in.h5","r") do h5
         mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
@@ -94,6 +93,7 @@ using Debug
         h5open("$in_path/hessian_optimized.h5","r") do h5
             hessian = read(h5["hessian"])
         end
+=
     end
 
     # The hessian is used to calculate the variance of the proposal
