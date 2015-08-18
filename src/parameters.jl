@@ -51,12 +51,12 @@ function update!(α::Param, newvalue::Float64)
     return α
 end
 
-function update!{T<:FloatingPoint}(Θ::Vector, newvalues::Vector{T})
-    @assert length(newvalues) == length(Θ)
-    for (α, newvalue) in zip(Θ, newvalues)
+function update!{T<:FloatingPoint}(m::AbstractDSGEModel, newvalues::Vector{T})
+    @assert length(newvalues) == length(m.parameters)
+    for (α, newvalue) in zip(m.parameters, newvalues)
         isa(α,Param) && update!(α, newvalue)
     end
-    return steadystate!(Θ)
+    return steadystate!(m)
 end
 
 # Methods so that arithmetic with parameters can be done tersely, like "θ.α + θ.β"

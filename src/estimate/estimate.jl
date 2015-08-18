@@ -4,38 +4,37 @@
 using HDF5
 using Debug
 
-function estimate{T<:AbstractDSGEModel}(model::T)
+function estimate{T<:AbstractDSGEModel}(m::T)
 
-    ### Step 1: Initialize model
-    spec = model.spec
+    ### Step 1: Initialize
 
     # Load data
     mf = MatFile("$inpath/YY.mat")
     YY = get_variable(mf, "YY")
     close(mf)
 
-    post = posterior(model, YY)
+    post = posterior(m, YY)
 
     ### Step 2: Find posterior mode
 
     # Specify starting mode
-    println("Reading in previous mode")
+    println("Reading in previous mode...")
     mf = MatFile("$inpath/mode_in.mat")
     mode = get_variable(mf, "params")
     close(mf)
-    update!(model.Θ, mode)
+    update!(m.parameters, mode)
 
-    if spec["reoptimize"]
-        println("Reoptimizing")
+    if m.reoptimize
+        println("Reoptimizing...")
 
         # Inputs to minimization algorithm
         function posterior_min!{T<:FloatingPoint}(x::Vector{T})
-            tomodel!(x, model.Θ)
-            return -posterior(model, YY)
+            tomodel!(x, m.parameters)
+            return -posterior(m, YY)
         end
 
-        xh = toreal(model.Θ)
-        H = 1e-4 * eye(spec["n_params"])
+        xh = toreal(m.parameters)
+        H = 1e-4 * eye(num_parameters(m))
         nit = 1000
         crit = 1e-10
         converged = false
@@ -50,8 +49,8 @@ function estimate{T<:AbstractDSGEModel}(model::T)
 
         # Transform modal parameters so they are no longer bounded (i.e., allowed
         # to lie anywhere on the real line).
-        tomodel!(xh, model.Θ)
-        mode = [α.value for α in model.Θ]
+        tomodel!(xh, m.parameters)
+        mode = [α.value for α in m.parameters]
 
         # Write mode to file
         mf = MatFile("$outpath/mode_out.mat", "w")
@@ -62,15 +61,15 @@ function estimate{T<:AbstractDSGEModel}(model::T)
     ### Step 3: Compute proposal distribution
 
     # Calculate the Hessian at the posterior mode
-    if spec["recalculate_hessian"]
-        println("Recalculating Hessian")
-        hessian, _ = hessizero!(mode, model, YY; noisy=true)
+    if m.recalculate_hessian
+        println("Recalculating Hessian...")
+        hessian, _ = hessizero!(mode, m, YY; noisy=true)
 
         mf = MatFile("$outpath/hessian.mat", "w")
         put_variable(mf, "hessian", hessian)
         close(mf)
     else
-        println("Using pre-calculated Hessian")
+        println("Using pre-calculated Hessian...")
         mf = MatFile("$inpath/hessian.mat")
         hessian = get_variable(mf, "hessian")
         close(mf)
@@ -80,7 +79,7 @@ function estimate{T<:AbstractDSGEModel}(model::T)
     # distribution, which is used to draw a new parameter in each iteration of
     # the algorithm.
     propdist = proposal_distribution(mode, hessian)
-    if propdist.rank != spec["n_free_params"]
+    if propdist.rank != num_parameters_free(m)
         println("problem – shutting down dimensions")
     end
 
@@ -90,7 +89,7 @@ function estimate{T<:AbstractDSGEModel}(model::T)
     cc0 = 0.01
     cc = 0.09
 
-    metropolis_hastings(propdist, model, YY, cc0, cc)
+    metropolis_hastings(propdist, m, YY, cc0, cc)
 
     # Set up HDF5 file for saving
     h5path = joinpath(outpath,"sim_save.h5")
@@ -127,7 +126,7 @@ function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{
     return DegenerateMvNormal(μ, σ, rank)
 end
 
-function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::AbstractDSGEModel, YY::Matrix{T}, cc0::T, cc::T, randvecs = [], randvals = [])
+function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::AbstractDSGEModel, YY::Matrix{T}, cc0::T, cc::T, randvecs = [], randvals = [])
 
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
@@ -135,17 +134,14 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
 
     # Set number of draws, how many we will save, and how many we will burn
     # (initialized here for scoping; will re-initialize in the while loop)
-    spec = model.spec
-
     n_blocks = 0
     n_sim = 0
     n_times = 0
     n_burn = 0
-    n_params = spec["n_params"]
+    n_params = num_parameters(m)
 
     # Initialize algorithm by drawing para_old from a normal distribution centered on the
     # posterior mode until the parameters are within bounds or the posterior value is sufficiently large.
-
     para_old = propdist.μ
     post_old = -Inf
     like_old = -Inf
@@ -165,22 +161,20 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
         if testing
             para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
 
-            n_blocks = 22
-            n_sim = 100
-            n_times = 5
-            n_burn = 2
-            n_params = spec["n_params"]
+            n_blocks = num_mh_blocks_test(m)
+            n_sim = num_mh_simulations_test(m)
+            n_burn = num_mh_burn_test(m)
+            n_times = mh_thinning_step(m)
         else
             para_old = rand(propdist; cc=cc0)
 
-            n_blocks = spec["n_blocks"]
-            n_sim = spec["n_sim"]
-            n_times = spec["n_times"]
-            n_burn = spec["n_burn"]
-            n_params = spec["n_params"]
+            n_blocks = num_mh_blocks(m)
+            n_sim = num_mh_simulations(m)
+            n_burn = num_mh_burn(m)
+            n_times = mh_thinning_step(m)
         end
 
-        post_old, like_old, out = posterior!(para_old, model, YY; mh=true)
+        post_old, like_old, out = posterior!(para_old, m, YY; mh=true)
 
         if post_old > -Inf
             propdist.μ = para_old
@@ -201,13 +195,13 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
     all_rejections = 0
 
     # Initialize matrices for parameter draws and transition matrices
-    para_sim = zeros(n_sim, spec["n_params"])
+    para_sim = zeros(n_sim, num_parameters(m))
     like_sim = zeros(n_sim)
     post_sim = zeros(n_sim)
-    TTT_sim  = zeros(n_sim, num_states_augmented(model)^2)
-    RRR_sim  = zeros(n_sim, num_states_augmented(model)*num_shocks_exogenous(model))
-    CCC_sim  = zeros(n_sim, num_states_augmented(model))
-    z_sim    = zeros(n_sim, num_states_augmented(model))
+    TTT_sim  = zeros(n_sim, num_states_augmented(m)^2)
+    RRR_sim  = zeros(n_sim, num_states_augmented(m)*num_shocks_exogenous(m))
+    CCC_sim  = zeros(n_sim, num_states_augmented(m))
+    z_sim    = zeros(n_sim, num_states_augmented(m))
 
     # # Open HDF5 file for saving output
     # if testing
@@ -234,17 +228,17 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
                        dataspace(n_saved_obs,1), "chunk", (n_sim,1))
 
     TTTsim  = d_create(simfile, "TTTsim", datatype(Float32),
-                       dataspace(n_saved_obs,num_states_augmented(model)^2),"chunk",(n_sim,num_states_augmented(model)^2))
+                       dataspace(n_saved_obs,num_states_augmented(m)^2),"chunk",(n_sim,num_states_augmented(m)^2))
 
     RRRsim  = d_create(simfile, "RRRsim", datatype(Float32),
-                       dataspace(n_saved_obs,num_states_augmented(model)*num_shocks_exogenous(model)),"chunk",
-                       (n_sim,num_states_augmented(model)*num_shocks_exogenous(model)))
+                       dataspace(n_saved_obs,num_states_augmented(m)*num_shocks_exogenous(m)),"chunk",
+                       (n_sim,num_states_augmented(m)*num_shocks_exogenous(m)))
 
     # CCCsim  = d_create(simfile, "CCCsim", datatype(Float32),
-    #                  dataspace(n_saved_obs,num_states_augmented(model)),"chunk",(n_sim,num_states_augmented(model)))
+    #                  dataspace(n_saved_obs,num_states_augmented(m)),"chunk",(n_sim,num_states_augmented(m)))
 
     zsim    = d_create(simfile, "zsim", datatype(Float32),
-                       dataspace(n_saved_obs,num_states_augmented(model)),"chunk",(n_sim,num_states_augmented(model)))
+                       dataspace(n_saved_obs,num_states_augmented(m)),"chunk",(n_sim,num_states_augmented(m)))
 
     if testing
       rows, cols = size(randvecs)
@@ -265,7 +259,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::Ab
 
             # Solve the model, check that parameters are within bounds, and
             # evaluate the posterior.
-            post_new, like_new, out = posterior!(para_new, model, YY; mh=true)
+            post_new, like_new, out = posterior!(para_new, m, YY; mh=true)
 
             if testing
                 println("Iteration $j: posterior = $post_new")

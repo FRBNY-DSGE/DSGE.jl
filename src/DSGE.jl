@@ -9,8 +9,8 @@ export
     # DSGE.jl
     savepath, inpath, outpath, tablepath, plotpath, logpath,
 
-    # core.jl
-    AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict,
+    # abstractdsgemodel.jl
+    AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict
 
     # solve/
     ordschur, gensys, solve,
