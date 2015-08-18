@@ -58,7 +58,8 @@ function hessizero!{T<:FloatingPoint}(x::Vector{T}, model::AbstractDSGEModel, YY
         end
 
         if noisy
-            println("Value used: $(hessian[seli, seli])\n")
+            value = hessian[seli, seli]
+            println("Value used: $value\n")
         end
     end
 
@@ -116,7 +117,8 @@ function hessizero!{T<:FloatingPoint}(x::Vector{T}, model::AbstractDSGEModel, YY
             hessian[selj, seli] = hessian[seli, selj]
 
             if noisy
-                println("Value used: $(hessian[seli, seli])")
+                value = hessian[seli, selj]
+                println("Value used: $value")
                 println("Correlation: $corrij")
                 println("Number of errors: $(length(errorij))\n")
             end

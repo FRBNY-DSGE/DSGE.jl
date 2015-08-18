@@ -11,22 +11,39 @@ end
 
 # log posterior = log likelihood + log prior
 # log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
-function posterior{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T})
-    return likelihood(m, YY) + prior(m)
+function posterior{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
+    if mh
+        like, out = likelihood(model, YY; mh=mh)
+        post = like + prior(model.Θ)
+        return post, like, out
+    else
+        return likelihood(model, YY; mh=mh) + prior(model.Θ)
+    end
 end
 
 # Evaluate posterior at `parameters`
-function posterior!{T<:FloatingPoint}(parameters::Vector{T}, m::AbstractDSGEModel, YY::Matrix{T})
-    update!(m.parameters, parameters)
-    return posterior(m, YY)
+function posterior!{T<:FloatingPoint}(parameters::Vector{T}, model::AbstractModel, YY::Matrix{T}; mh::Bool = false)
+    update!(model.Θ, parameters)
+    return posterior(model, YY; mh=mh)
 end
 
 
 
 # This is a dsge likelihood function that can handle 2-part estimation where
-# there is a m switch.
-# If there is no m switch, then we filter over the main sample all at once.
-function likelihood{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T})
+# there is a model switch.
+# If there is no model switch, then we filter over the main sample all at once.
+function likelihood{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
+
+    # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
+    if mh
+        for α in model.Θ
+            (left, right) = α.bounds
+            if !α.fixed && !(left <= α.value <= right)
+                return -Inf, Dict{String, Any}()
+            end
+        end
+    end
+
     # Partition sample into presample, normal, and zero lower bound periods
     presample = Dict{String, Any}()
     normal = Dict{String, Any}()
@@ -135,7 +152,12 @@ function likelihood{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T})
     end
 
     # Return total log-likelihood, excluding the presample
-    return normal["pyt"] + zlb["pyt"]
+    like = normal["pyt"] + zlb["pyt"]
+    if mh
+        return like, zlb
+    else
+        return like
+    end
 end
 
 
