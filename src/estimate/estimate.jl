@@ -127,7 +127,7 @@ function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{
     return DegenerateMvNormal(μ, σ, rank)
 end
 
-function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::AbstractModel, YY::Matrix{T}, cc0::T, cc::T, randvecs = [], randvals = [])
+function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, model::AbstractDSGEModel, YY::Matrix{T}, cc0::T, cc::T, randvecs = [], randvals = [])
 
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
