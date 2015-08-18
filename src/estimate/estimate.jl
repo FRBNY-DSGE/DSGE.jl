@@ -262,15 +262,10 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
                 para_new = rand(propdist; cc=cc)
             end
 
-            # Solve the model, check that parameters are within bounds, and evaluate the
-            # posterior. If gensys throws an error down the call stack, then catch it, and
-            # set outputs to silly values.
-            try
-                post_new, like_new, out = posterior!(m, para_new, YY; mh=true)
-            catch
-                println(STDERR, "....1 loose endogenous error.")
-                post_new, like_new, out = -Inf, -Inf, None
-            end
+            # Solve the model, check that parameters are within bounds, and
+            # evaluate the posterior.
+
+            post_new, like_new, out = posterior!(m, para_new, YY; mh=true)
 
             if verbose 
                 println("Iteration $j: posterior = $post_new")
@@ -311,13 +306,19 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
                 if verbose 
                     println("Iteration $j: accept proposed jump")
                 end
+
+                println("Iteration $j: accept proposed jump")
+
             else
                 # Reject proposed jump
                 block_rejections += 1
+                
+                println("Iteration $j: reject proposed jump")
 
                 if verbose 
                     println("Iteration $j: reject proposed jump")
                 end
+
             end
 
 
