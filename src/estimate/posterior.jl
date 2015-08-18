@@ -1,3 +1,4 @@
+
 # Calculate (log of) joint density of Θ
 function prior(model::AbstractDSGEModel)
     x = zero(Float64)
@@ -8,6 +9,7 @@ function prior(model::AbstractDSGEModel)
     end
     return x
 end
+
 
 # log posterior = log likelihood + log prior
 # log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
@@ -63,8 +65,7 @@ function likelihood{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; m
     zlb["YY"] = YY[(end-num_anticipated_lags(model)):end, :]
 
 
-
-    ## step 1: solution to DSGE m - delivers transition equation for the state variables  S_t
+    ## step 1: solution to DSGE model - delivers transition equation for the state variables  S_t
     ## transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ
     zlb["TTT"], zlb["RRR"], zlb["CCC"] = solve(model::AbstractDSGEModel)
 
