@@ -18,9 +18,11 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
     ### Step 2: Find posterior mode
 
     # Specify starting mode
-    println("Reading in previous mode...")
-    mf = MatFile("$inpath/mode_in.mat")
-    mode = get_variable(mf, "params")
+
+    println("Reading in previous mode")
+    mf = MatFile("$inpath/mode_in_optimized.mat")
+    mode = get_variable(mf, "mode")
+
     close(mf)
     update!(m, mode)
 
@@ -69,8 +71,9 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
         put_variable(mf, "hessian", hessian)
         close(mf)
     else
-        println("Using pre-calculated Hessian...")
-        mf = MatFile("$inpath/hessian.mat")
+
+        println("Using pre-calculated Hessian")
+        mf = MatFile("$inpath/hessian_optimized.mat")
         hessian = get_variable(mf, "hessian")
         close(mf)
     end
@@ -97,6 +100,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
     ### Step 5: Calculate parameter covariance matrix
     # Read in saved parameter draws
     sim_h5 = h5open(h5path, "r+")
+
     θ = read(sim_h5, "parasim")
 
     # Calculate covariance matrix
@@ -135,6 +139,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
 
     # Set number of draws, how many we will save, and how many we will burn
     # (initialized here for scoping; will re-initialize in the while loop)
+
     n_blocks = 0
     n_sim = 0
     n_times = 0
@@ -168,7 +173,6 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
             n_times = m.mh_thinning_step
         else
             para_old = rand(propdist; cc=cc0)
-
             n_blocks = m.num_mh_blocks
             n_sim = m.num_mh_simulations
             n_burn = m.num_mh_burn
@@ -242,8 +246,8 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
                        dataspace(n_saved_obs,num_states_augmented(m)),"chunk",(n_sim,num_states_augmented(m)))
 
     if testing
-      rows, cols = size(randvecs)
-      numvals = size(randvals)[1]
+        rows, cols = size(randvecs)
+        numvals = size(randvals)[1]
     end
 
     for i = 1:n_blocks
