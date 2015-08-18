@@ -78,8 +78,6 @@ using Debug
 end
 
 
-
-
 @debug function makeMomentTables{T<:FloatingPoint}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
     
     ## Tabulates parameter moments in 3 LaTeX tables:
