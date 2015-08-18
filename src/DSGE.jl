@@ -1,7 +1,7 @@
 module DSGE
 
 using Compat
-using Distributions, Roots.fzero, MATLAB
+using Distributions, Roots.fzero, MATLAB, HDF5
 
 export
     # DSGE.jl
@@ -20,11 +20,11 @@ export
     steadystate!, Model990, model_specifications, eqcond, measurement
 
 const savepath  = joinpath(dirname(@__FILE__), "../save/")
-const inpath    = joinpath(savepath, "input_data/")
-const outpath   = joinpath(savepath, "output_data/")
-const tablepath = joinpath(savepath, "results/tables/")
-const plotpath  = joinpath(savepath, "results/plots/")
-const logpath   = joinpath(savepath, "logs/")
+inpath() = joinpath(savepath, "input_data/")
+outpath() = joinpath(savepath, "output_data/")
+tablepath() = joinpath(savepath, "results/tables/")
+plotpath()  = joinpath(savepath, "results/plots/")
+logpath()   = joinpath(savepath, "logs/")
 
 include("distributions_ext.jl")
 include("abstractdsgemodel.jl")
