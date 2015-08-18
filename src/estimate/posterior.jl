@@ -11,18 +11,18 @@ end
 
 # log posterior = log likelihood + log prior
 # log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
-function posterior{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
+function posterior{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
     if mh
-        like, out = likelihood(model, YY; mh=mh)
-        post = like + prior(model.Θ)
+        like, out = likelihood(m, YY; mh=mh)
+        post = like + prior(m)
         return post, like, out
     else
-        return likelihood(model, YY; mh=mh) + prior(model.Θ)
+        return likelihood(m, YY; mh=mh) + prior(m)
     end
 end
 
 # Evaluate posterior at `parameters`
-function posterior!{T<:FloatingPoint}(parameters::Vector{T}, model::AbstractModel, YY::Matrix{T}; mh::Bool = false)
+function posterior!{T<:FloatingPoint}(parameters::Vector{T}, model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
     update!(model.Θ, parameters)
     return posterior(model, YY; mh=mh)
 end
