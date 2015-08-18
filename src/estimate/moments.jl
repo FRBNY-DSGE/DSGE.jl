@@ -20,7 +20,6 @@
 ##
 ##     post: (ndraws x 1) matrix holding the posterior value
 ##	   (stored in post*, output from gibb.m)
-
 ##     OUTPUTS
 ##     From makeMomentsTables():
 ##
@@ -184,6 +183,7 @@ end
     mainParams_fid = open(mainParams_out,"w")
 
     beginTexTableDoc(mainParams_fid)
+
     @printf(mainParams_fid,"\\caption{Parameter Estimates}\n")
     @printf(mainParams_fid,"\\vspace*{.5cm}\n")
     @printf(mainParams_fid,"{\\small \n")
@@ -235,6 +235,7 @@ end
     periphParams_fid = open(periphParams_out,"w")
     
     beginTexTableDoc(periphParams_fid)
+
     @printf(periphParams_fid,"\\caption{Parameter Estimates}\n")
     @printf(periphParams_fid,"\\vspace*{.2cm}\n")
     @printf(periphParams_fid,"{\\small \n")
