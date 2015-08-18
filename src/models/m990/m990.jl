@@ -2,21 +2,29 @@
 # We can then concisely pass around a Model object to the remaining steps of the model
 #   (solve, estimate, and forecast).
 type Model990 <: AbstractDSGEModel
-    parameters::Vector                                  # vector of all of the model parameters
-    steady_state::Vector                                # model steady-state values
-    keys::Dict{Symbol,Int}                              # human-readable names for all the model parameters and steady-num_states
+    parameters::Vector                              # vector of all of the model parameters
+    steady_state::Vector                            # model steady-state values
+    keys::Dict{Symbol,Int}                          # human-readable names for all the model
+                                                    # parameters and steady-num_states
 
-    endogenous_states::Dict{Symbol,Int}                 # these fields used to create matrices in the
-    exogenous_shocks::Dict{Symbol,Int}                  # measurement and equilibrium condition equations.
-    expected_shocks::Dict{Symbol,Int}                   #
-    equilibrium_conditions::Dict{Symbol,Int}            #
-    endogenous_states_postgensys::Dict{Symbol,Int}      #
-    observables::Dict{Symbol,Int}                       #
+    endogenous_states::Dict{Symbol,Int}             # these fields used to create matrices in the
+    exogenous_shocks::Dict{Symbol,Int}              # measurement and equilibrium condition equations.
+    expected_shocks::Dict{Symbol,Int}               #
+    equilibrium_conditions::Dict{Symbol,Int}        #
+    endogenous_states_postgensys::Dict{Symbol,Int}  #
+    observables::Dict{Symbol,Int}                   #
 
-    num_anticipated_shocks::Int                         # Number of anticipated policy shocks
-    num_anticipated_shocks_padding::Int                 # Padding for nant
-    num_anticipated_lags::Int                           # Number of periods back to incorporate zero bound expectations
-    num_presample_periods::Int                          # Number of periods in the presample
+    num_anticipated_shocks::Int                     # Number of anticipated policy shocks
+    num_anticipated_shocks_padding::Int             # Padding for nant
+    num_anticipated_lags::Int                       # Number of periods back to incorporate zero bound expectations
+    num_presample_periods::Int                      # Number of periods in the presample
+
+    reoptimize::Bool                                # Reoptimize the posterior mode
+    recalculate_hessian::Bool                       # Recalculate the hessian at the mode
+    num_mh_simulations::Int                         # 
+    num_mh_blocks::Int                              #
+    num_mh_burn::Int                                #
+    mh_thinning_step::Int                           #
 end
 
 description(m::Model990) = "This is some model that we're trying to make work."
@@ -202,18 +210,22 @@ function Model990()
     parameters   = @compat Vector{Any}(length(parameter_keys))
     steady_state = @compat Vector{Any}(length(steady_state_keys))
 
-    num_anticipated_shocks = 6
+    # Model-specific specifications
+    num_anticipated_shocks          = 6
+    num_anticipated_shocks_padding  = 20
+    num_anticipated_lags            = 24
+    num_presample_periods           = 2 # TODO: This should be set when the data are read in
 
-    # Padding for nant
-    num_anticipated_shocks_padding = 20
-
-    # Number of periods back we should start incorporating zero bound expectations
-    # ZLB expectations should begin in 2008 Q4
-    num_anticipated_lags = 24
-
-    # TODO: This should be set when the data are read in
-    # Number of presample periods
-    num_presample_periods = 2
+    # Estimation specifications
+    reoptimize                      = false
+    recalculate_hessian             = false
+    num_mh_simulations              = 10000
+    num_mh_blocks                   = 22
+    num_mh_burn                     = 2
+    mh_thinning_step                = 5
+    num_mh_simulations_test         = 10
+    num_mh_blocks_test              = 1
+    num_mh_burn_test                = 0
 
     # initialise empty model
     m = Model990(
@@ -230,7 +242,14 @@ function Model990()
             num_anticipated_shocks,
             num_anticipated_shocks_padding,
             num_anticipated_lags,
-            num_presample_periods)
+            num_presample_periods,
+
+            reoptimize,
+            recalculate_hessian,
+            num_mh_simulations,
+            num_mh_blocks,
+            num_mh_burn,
+            mh_thinning_step)
 
     initialise_model_parameters!(m)
     initialise_model_indices!(m)
@@ -245,44 +264,6 @@ end
     nk = nk_fn(z, σ, sprd)
     return -zetaratio/(1-zetaratio)*nk/(1-nk)
 end
-
-    # spec["nant"] = 6
-
-    # # Padding for nant
-    # spec["nantpad"] = 20
-
-    # # Number of periods back we should start incorporating zero bound expectations
-    # # ZLB expectations should begin in 2008 Q4
-    # spec["antlags"] = 24
-
-    # # TODO: This should be set when the data are read in
-    # # Number of presample periods
-    # spec["num_presample_periods"] = 2
-
-
-
-    # ### Estimation
-
-    # # Whether or not to call csminwel
-    # spec["reoptimize"] = false
-
-    # # Whether or not to recalculate hessian
-    # spec["recalculate_hessian"] = false
-
-    # # Number of draws per posterior simulation block
-    # spec["n_sim"] = 10 #10000
-
-    # # Number of blocks
-    # spec["n_blocks"] = 1 #22
-
-    # # Save every ntimes-th draw that is accepted
-    # spec["n_times"] = 5
-
-    # # How many draws to discard as burn-in
-    # spec["n_burn"] = 2*spec["n_sim"]
-
-    # return spec
-
 
 @inline function ζ_bω_fn(z, σ, sprd)
     nk          = nk_fn(z, σ, sprd)
