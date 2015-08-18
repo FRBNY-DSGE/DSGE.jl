@@ -3,6 +3,7 @@
 #   (solve, estimate, and forecast).
 type Model990 <: AbstractDSGEModel
     parameters::Vector                              # vector of all of the model parameters
+    parameters_fixed::Vector                        # vector of all "permanently fixed" model parameters
     steady_state::Vector                            # model steady-state values
     keys::Dict{Symbol,Int}                          # human-readable names for all the model
                                                     # parameters and steady-num_states
@@ -95,7 +96,7 @@ function initialise_model_parameters!(m::Model990)
     m[:alp     ] = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999))
     m[:zeta_p  ] = Param(0.8940, false, (1e-5, 0.999), BetaAlt(0.5, 0.1), 1, (1e-5, 0.999))
     m[:iota_p  ] = Param(0.1865, false, (1e-5, 0.999), BetaAlt(0.5, 0.15), 1, (1e-5, 0.999))
-    m[:del     ] = 0.025
+    m[:del     ] = Param(0.025) # omit from parameter vector
     m[:ups     ] = Param(1.000, true, (0., 10.), GammaAlt(1., 0.5), 2, (1e-5, 0.))
     m[:Bigphi  ] = Param(1.1066, false, (1., 10.), Normal(1.25, 0.12), 2, (1.00, 10.00))
     m[:s2      ] = Param(2.7314, false, (-15., 15.), Normal(4., 1.5), 0, (-15., 15.))
@@ -104,7 +105,7 @@ function initialise_model_parameters!(m::Model990)
     m[:nu_l    ] = Param(2.5975, false, (1e-5, 10.), Normal(2, 0.75), 2, (1e-5, 10.))
     m[:zeta_w  ] = Param(0.9291, false, (1e-5, 0.999), BetaAlt(0.5, 0.1), 1, (1e-5, 0.999))
     m[:iota_w  ] = Param(0.2992, false, (1e-5, 0.999), BetaAlt(0.5, 0.15), 1, (1e-5, 0.999))
-    m[:law     ] = 1.5
+    m[:law     ] = Param(1.5) # omit from parameter vector
 
     m[:bet     ] = Param(0.1402, scalefunction = x -> 1/(1 + x/100), false, (1e-5, 10.), GammaAlt(0.25, 0.1), 2, (1e-5, 10.))
     m[:psi1    ] = Param(1.3679, false, (1e-5, 10.), Normal(1.5, 0.25), 2, (1e-5, 10.00))
@@ -113,8 +114,8 @@ function initialise_model_parameters!(m::Model990)
     m[:pistar  ] = Param(0.5000, scalefunction = x -> 1 + x/100, true, (1e-5, 10.), GammaAlt(0.75, 0.4), 2, (1e-5, 10.))
     m[:sigmac  ] = Param(0.8719, false, (1e-5, 10.), Normal(1.5, 0.37), 2, (1e-5, 10.))
     m[:rho     ] = Param(0.7126, false, (1e-5, 0.999), BetaAlt(0.75, 0.10), 1, (1e-5, 0.999))
-    m[:epsp    ] = 10.
-    m[:epsw    ] = 10.
+    m[:epsp    ] = Param(10.) # omit from parameter vector
+    m[:epsw    ] = Param(10.) # omit from parameter vector
 
     # financial frictions parameters
     m[:Fom     ] = Param(0.0300, scalefunction = x -> 1 - (1-x)^0.25, true, (1e-5, 0.99999), BetaAlt(0.03, 0.01), 1, (1e-5, 0.99))
@@ -125,7 +126,7 @@ function initialise_model_parameters!(m::Model990)
     # exogenous processes - level
     m[:gam     ] = Param(0.3673, scalefunction = x -> x/100, false, (-5., 5.), Normal(0.4, 0.1), 0, (-5.0, 5.0))
     m[:Lmean   ] = Param(-45.9364, false, (-1000., 1000.), Normal(-45, 5), 0, (-1000., 1000.))
-    m[:gstar   ] = 0.18
+    m[:gstar   ] = Param(0.18) # omit from parameter vector
 
     # exogenous processes - autocorrelation
     m[:ρ_g     ] = Param(0.9863, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999))
@@ -182,17 +183,20 @@ function initialise_model_parameters!(m::Model990)
 end
 
 function Model990()
-    parameter_keys, steady_state_keys = (
+    parameter_keys, parameter_fixed_keys, steady_state_keys = (
             # parameter keys
-            [:alp, :zeta_p, :iota_p, :del, :ups, :Bigphi, :s2, :h, :ppsi, :nu_l, :zeta_w, :iota_w,
-            :law, :bet, :psi1, :psi2, :psi3, :pistar, :sigmac, :rho, :epsp, :epsw, :Fom, :sprd,
-            :zeta_spb, :gammstar, :gam, :Lmean, :gstar, :ρ_g, :ρ_b, :ρ_mu, :ρ_z, :ρ_laf, :ρ_law,
+            [:alp, :zeta_p, :iota_p, :ups, :Bigphi, :s2, :h, :ppsi, :nu_l, :zeta_w, :iota_w,
+            :bet, :psi1, :psi2, :psi3, :pistar, :sigmac, :rho, :Fom, :sprd,
+            :zeta_spb, :gammstar, :gam, :Lmean, :ρ_g, :ρ_b, :ρ_mu, :ρ_z, :ρ_laf, :ρ_law,
             :ρ_rm, :ρ_sigw, :ρ_mue, :ρ_gamm, :ρ_pist, :ρ_lr, :ρ_zp, :ρ_tfp, :ρ_gdpdef, :ρ_pce,
             :σ_g, :σ_b, :σ_mu, :σ_z, :σ_laf, :σ_law, :σ_rm, :σ_sigw, :σ_mue, :σ_gamm, :σ_pist,
             :σ_lr, :σ_zp, :σ_tfp, :σ_gdpdef, :σ_pce, :σ_rm1, :σ_rm2, :σ_rm3, :σ_rm4, :σ_rm5,
             :σ_rm6, :σ_rm7, :σ_rm8, :σ_rm9, :σ_rm10, :σ_rm11, :σ_rm12, :σ_rm13, :σ_rm14, :σ_rm15,
             :σ_rm16, :σ_rm17, :σ_rm18, :σ_rm19, :σ_rm20, :eta_gz, :eta_laf, :eta_law, :modelalp_ind,
             :gamm_gdpdef, :del_gdpdef],
+
+            # parameter fixed keys
+            [:del, :law, :epsp, :epsw, :gstar],
 
             # steady state keys
             [:zstar, :rstar, :Rstarn, :rkstar, :wstar, :Lstar, :kstar, :kbarstar, :istar, :ystar,
@@ -202,13 +206,14 @@ function Model990()
 
     # initialise human-readable keys for variablesiables
     keylist = Dict{Symbol,Int}()
-    for (i,k) in enumerate(vcat(parameter_keys,steady_state_keys))
+    for (i,k) in enumerate(vcat(parameter_keys,parameter_fixed_keys,steady_state_keys))
         keylist[k] = i
     end
 
     # initialise vector to store actual values
-    parameters   = @compat Vector{Any}(length(parameter_keys))
-    steady_state = @compat Vector{Any}(length(steady_state_keys))
+    parameters       = @compat Vector{Any}(length(parameter_keys))
+    parameters_fixed = @compat Vector{Any}(length(parameter_fixed_keys))
+    steady_state     = @compat Vector{Any}(length(steady_state_keys))
 
     # Model-specific specifications
     num_anticipated_shocks          = 6
@@ -230,6 +235,7 @@ function Model990()
     # initialise empty model
     m = Model990(
             parameters,
+            parameters_fixed,
             steady_state,
             keylist,
             Dict{Symbol,Int}(),
