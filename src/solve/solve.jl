@@ -31,8 +31,8 @@ function augment_states{T<:FloatingPoint}(m::AbstractDSGEModel, TTT::Matrix{T}, 
     endo_addl = m.endogenous_states_postgensys
     exo = m.exogenous_shocks
 
-    n_endo = states(m)
-    n_exo = exogenous_shocks(m)
+    n_endo = num_states(m)
+    n_exo = num_shocks_exogenous(m)
     @assert (n_endo, n_endo) == size(TTT)
     @assert (n_endo, n_exo) == size(RRR)
     @assert (n_endo, 1) == size(CCC)

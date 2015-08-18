@@ -2,20 +2,23 @@
 # Using the assigned states and equations in modelinds.jl, coefficients are specified in the
 #   proper positions.
 
-# Γ0 (n states x n states) holds coefficients of current time states.
-# Γ1 (n states x n states) holds coefficients of lagged states.
-# C  (n states x 1) is a vector of constants
-# Ψ  (n states x n exogenous shocks) holds coefficients of iid shocks.
-# Π  (n states x n expectational states) holds coefficients of expectational states.
+# Γ0 (num_states x num_states) holds coefficients of current time states.
+# Γ1 (num_states x num_states) holds coefficients of lagged states.
+# C  (num_states x 1) is a vector of constants
+# Ψ  (num_states x num_shocks_exogenous) holds coefficients of iid shocks.
+# Π  (num_states x num_states_expectational) holds coefficients of expectational states.
 
 function eqcond(m::Model990)
-    endo, exo, ex, eq = m.endogenous_states, m.exogenous_shocks, m.expected_shocks, m.equilibrium_conditions
+    endo = m.endogenous_states
+    exo  = m.exogenous_shocks
+    ex   = m.expected_shocks
+    eq   = m.equilibrium_conditions
 
-    Γ0 = zeros(states(m), states(m))
-    Γ1 = zeros(states(m), states(m))
-    C  =  zeros(states(m), 1)
-    Ψ  = zeros(states(m), exogenous_shocks(m))
-    Π  =  zeros(states(m), expected_shocks(m))
+    Γ0 = zeros(num_states(m), num_states(m))
+    Γ1 = zeros(num_states(m), num_states(m))
+    C  = zeros(num_states(m), 1)
+    Ψ  = zeros(num_states(m), num_shocks_exogenous(m))
+    Π  = zeros(num_states(m), num_shocks_expectational(m))
 
     ### ENDOGENOUS STATES ###
 
@@ -402,7 +405,7 @@ function eqcond(m::Model990)
     Ψ[eq[:eq_pist], exo[:pist_sh]]  = 1.
 
     # Anticipated policy shocks
-    if anticipated_shocks(m) > 0
+    if num_anticipated_shocks(m) > 0
 
         # This section adds the anticipated shocks. There is one state for all the
         # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds those that
@@ -414,8 +417,8 @@ function eqcond(m::Model990)
         Γ0[eq[:eq_rml1], endo[:rm_tl1]] = 1.
         Ψ[eq[:eq_rml1], exo[:rm_shl1]]  = 1.
 
-        if anticipated_shocks(m) > 1
-            for i = 2:anticipated_shocks(m)
+        if num_anticipated_shocks(m) > 1
+            for i = 2:num_anticipated_shocks(m)
                 Γ1[eq[symbol("eq_rml$(i-1)")], endo[symbol("rm_tl$i")]] = 1.
                 Γ0[eq[symbol("eq_rml$i")], endo[symbol("rm_tl$i")]] = 1.
                 Ψ[eq[symbol("eq_rml$i")], exo[symbol("rm_shl$i")]] = 1.
@@ -524,5 +527,3 @@ function eqcond(m::Model990)
 
     return Γ0, Γ1, C, Ψ, Π
 end
-
-

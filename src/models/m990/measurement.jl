@@ -3,27 +3,29 @@
 # where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
 
 function measurement(m::Model990, TTT::Matrix, RRR::Matrix, CCC::Matrix; shocks::Bool = true)
-    endo, exo, obs  = m.endogenous_states, m.exogenous_shocks, m.observables
+    endo = m.endogenous_states
+    exo  = m.exogenous_shocks
+    obs  = m.observables
 
     # If shocks = true, then return measurement equation matrices with rows and columns for anticipated policy shocks
     if shocks
-        _observables = observables(m)
-        _states = augmented_states(m)
-        _exogenous_shocks = exogenous_shocks(m)
+        _num_observables = num_observables(m)
+        _num_states = num_states_augmented(m)
+        _num_shocks_exogenous = num_shocks_exogenous(m)
         endo_addl = m.endogenous_states_postgensys
     else
-        _observables = observables(m) - anticipated_shocks(m)
-        _states = augmented_states(m) - anticipated_shocks(m)
-        _exogenous_shocks = exogenous_shocks(m) - anticipated_shocks(m)
+        _num_observables = num_observables(m) - num_anticipated_shocks(m)
+        _num_states = num_states_augmented(m) - num_anticipated_shocks(m)
+        _num_shocks_exogenous = num_shocks_exogenous(m) - num_anticipated_shocks(m)
         endo_addl = Dict(
-            [(key,m.endogenous_states_postgensys[key] - anticipated_shocks(m)) for key in keys(m.endogenous_states_postgensys)])
+            [(key,m.endogenous_states_postgensys[key] - num_anticipated_shocks(m)) for key in keys(m.endogenous_states_postgensys)])
     end
 
-    ZZ = zeros(_observables, _states)
-    DD = zeros(_observables, 1)
-    MM = zeros(_observables, _exogenous_shocks)
-    EE = zeros(_observables, _observables)
-    QQ = zeros(_exogenous_shocks, _exogenous_shocks)
+    ZZ = zeros(_num_observables, _num_states)
+    DD = zeros(_num_observables, 1)
+    MM = zeros(_num_observables, _num_shocks_exogenous)
+    EE = zeros(_num_observables, _num_observables)
+    QQ = zeros(_num_shocks_exogenous, _num_shocks_exogenous)
 
     ## Output growth - Quarterly!
     ZZ[obs[:g_y], endo[:y_t]]       = 1.0
@@ -109,7 +111,7 @@ function measurement(m::Model990, TTT::Matrix, RRR::Matrix, CCC::Matrix; shocks:
     # are here no longer calibrated to the std dev of contemporaneous shocks,
     # as we had in 904
     if shocks
-        for i = 1:anticipated_shocks(m)
+        for i = 1:num_anticipated_shocks(m)
             ZZ[obs[symbol("R_n$i")], :] = ZZ[obs[:R_n], :]*(TTT^i)
             DD[obs[symbol("R_n$i")]] = m[:Rstarn]
             QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_rm$i")]^2

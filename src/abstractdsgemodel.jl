@@ -20,23 +20,23 @@ function Base.show{T<:AbstractDSGEModel}(io::IO, m::T)
 end
 
 # Number of anticipated policy shocks
-anticipated_shocks(m::AbstractDSGEModel) = m.anticipated_shocks
+num_anticipated_shocks(m::AbstractDSGEModel) = m.num_anticipated_shocks
 
 # Padding for nant
-anticipated_shocks_padding(m::AbstractDSGEModel) = m.anticipated_shocks_padding
+num_anticipated_shocks_padding(m::AbstractDSGEModel) = m.num_anticipated_shocks_padding
 
 # Number of periods back we should start incorporating zero bound expectations
 # ZLB expectations should begin in 2008 Q4
-anticipated_lags(m::AbstractDSGEModel) = m.anticipated_lags
+num_anticipated_lags(m::AbstractDSGEModel) = m.num_anticipated_lags
 
 # TODO: This should be set when the data are read in
 # Number of presample periods
-presample_periods(m::AbstractDSGEModel) = m.presample_periods
+num_presample_periods(m::AbstractDSGEModel) = m.num_presample_periods
 
 # Number of a few things that are useful apparently
-states(m::AbstractDSGEModel)      = length(m.endogenous_states)
-augmented_states(m::AbstractDSGEModel)  = states(m) + length(m.endogenous_states_postgensys)
-exogenous_shocks(m::AbstractDSGEModel)   = length(m.exogenous_shocks)
-expected_shocks(m::AbstractDSGEModel)   = length(m.expected_shocks)
-equilibrium_conditions(m::AbstractDSGEModel)     = length(m.equilibrium_conditions)
-observables(m::AbstractDSGEModel) = length(m.observables)
+num_states(m::AbstractDSGEModel)      = length(m.endogenous_states)
+num_states_augmented(m::AbstractDSGEModel)  = num_states(m) + length(m.endogenous_states_postgensys)
+num_shocks_exogenous(m::AbstractDSGEModel)   = length(m.exogenous_shocks)
+num_shocks_expectational(m::AbstractDSGEModel)   = length(m.expected_shocks)
+num_equilibrium_conditions(m::AbstractDSGEModel)     = length(m.equilibrium_conditions)
+num_observables(m::AbstractDSGEModel) = length(m.observables)
