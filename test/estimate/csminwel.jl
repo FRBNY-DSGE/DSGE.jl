@@ -1,4 +1,5 @@
-import DSGE, Hobo
+import DSGE
+# import Hobo
 
 # Example usage:
 function rosenbrock(x::Vector)
@@ -17,10 +18,11 @@ end
 # A really bad guess
 x_init = [10.0, -9.0]
 
-println("Testing using Hobo.csminwel...")
-res_real_grad  = Hobo.csminwel(rosenbrock, rosenbrock_grad, [10.0, -9.0])
-res_numeric_grad  = Hobo.csminwel(rosenbrock, [10.0, -9.0])
+# println("Testing using Hobo.csminwel...")
+# res_real_grad  = Hobo.csminwel(rosenbrock, rosenbrock_grad, [10.0, -9.0])
+# res_numeric_grad  = Hobo.csminwel(rosenbrock, [10.0, -9.0])
 
-println("Testing using DSGE.csminwel...")
 res_real_grad  = DSGE.csminwel(rosenbrock, rosenbrock_grad, [10.0, -9.0])
 res_numeric_grad  = DSGE.csminwel(rosenbrock, [10.0, -9.0])
+
+None
