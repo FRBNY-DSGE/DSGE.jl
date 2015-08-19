@@ -1,14 +1,29 @@
 abstract AbstractDSGEModel
 
-Base.getindex(m::AbstractDSGEModel, i::Integer) =
-	(j = i - length(m.parameters)) > 0 ? m.steady_state[j] : m.parameters[i]
-Base.getindex(m::AbstractDSGEModel, k::Symbol) =
-	(j = (i = m.keys[k]) - length(m.parameters)) > 0 ? m.steady_state[j] : m.parameters[i]
+# TODO consider stacking all parameters in a single vector. Alternately, all fixed
+# parameters can be added to the normal parameters vector at a (potentially negligible)
+# performance hit.
+Base.getindex(m::AbstractDSGEModel, i::Integer) = begin
+    if i <= num_parameters(m)
+        return m.parameters[i]
+    elseif i <= num_parameters(m) + num_parameters_fixed(m)
+        return m.parameters_fixed[i - num_parameters(m)]
+    elseif i <= num_parameters(m) + num_parameters_fixed(m) + num_parameters_steady_state(m)
+        return m.steady_state[i - num_parameters(m) - num_parameters_fixed(m)]
+    end
+end
+Base.getindex(m::AbstractDSGEModel, k::Symbol) = Base.getindex(m,m.keys[k])
 
-Base.setindex!(m::AbstractDSGEModel, value, i::Integer) =
-	(j = i - length(m.parameters)) > 0 ? setindex!(m.steady_state, value, j) : setindex!(m.parameters, value, i)
-Base.setindex!(m::AbstractDSGEModel, value, k::Symbol) =
-	(j = (i = m.keys[k]) - length(m.parameters)) > 0 ? (@inbounds m.steady_state[j] = value) : (@inbounds m.parameters[i] = value)
+Base.setindex!(m::AbstractDSGEModel, value, i::Integer) = begin 
+    if i <= num_parameters(m)
+        setindex!(m.parameters, value, i)
+    elseif i <= num_parameters(m) + num_parameters_fixed(m)
+        setindex!(m.parameters_fixed, value, i-num_parameters(m))
+    elseif i <= num_parameters(m) + num_parameters_fixed(m) + num_parameters_steady_state(m)
+        setindex!(m.steady_state, value, i - num_parameters(m) - num_parameters_fixed(m))
+    end
+end
+Base.setindex!(m::AbstractDSGEModel, value, k::Symbol) = Base.setindex!(m,value,m.keys[k])
 
 function Base.show{T<:AbstractDSGEModel}(io::IO, m::T)
     @printf io "%s" "Dynamic Stochastic General Equilibrium Model\n"
@@ -40,3 +55,7 @@ num_shocks_exogenous(m::AbstractDSGEModel)       = length(m.exogenous_shocks)
 num_shocks_expectational(m::AbstractDSGEModel)   = length(m.expected_shocks)
 num_equilibrium_conditions(m::AbstractDSGEModel) = length(m.equilibrium_conditions)
 num_observables(m::AbstractDSGEModel)            = length(m.observables)
+num_parameters(m::AbstractDSGEModel)             = length(m.parameters)
+num_parameters_fixed(m::AbstractDSGEModel)       = length(m.parameters_fixed)
+num_parameters_steady_state(m::AbstractDSGEModel)= length(m.steady_state)
+num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.parameters]) 

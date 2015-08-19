@@ -7,7 +7,7 @@ export
     # DSGE.jl
     savepath, inpath, outpath, tablepath, plotpath, logpath,
 
-    # core.jl
+    # abstractdsgemodel.jl
     AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict,
 
     # solve/
@@ -27,8 +27,8 @@ const plotpath  = joinpath(savepath, "results/plots/")
 const logpath   = joinpath(savepath, "logs/")
 
 include("distributions_ext.jl")
-include("parameters.jl")
 include("abstractdsgemodel.jl")
+include("parameters.jl")
 
 if VERSION <= v"0.4-"
     include("solve/ordered_qz.jl")
