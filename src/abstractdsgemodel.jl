@@ -59,3 +59,12 @@ num_parameters(m::AbstractDSGEModel)             = length(m.parameters)
 num_parameters_fixed(m::AbstractDSGEModel)       = length(m.parameters_fixed)
 num_parameters_steady_state(m::AbstractDSGEModel)= length(m.steady_state)
 num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.parameters]) 
+
+# TODO is there a better place for these? They do depend on AbstractDSGEModel type.
+function tomodel!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
+    tomodel!(values, m.parameters)
+    return steadystate!(m)
+end
+function update!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
+    return update!(m.parameters, values)
+end

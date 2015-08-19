@@ -44,6 +44,19 @@ function Param(value::Float64)
     return Param(value, true, (value, value), PointMass(value), 0, (value, value))
 end
 
+# Update a vector of parameters with a vector of new values.
+# TODO the user should never be able to update the parameters without also calling
+# steadystate!(model). See estimate:32,33. However, if we want to operate on vectors of
+# parameters in the file parameters.jl, then we don't have access to the model object and
+# the steadystate! function.
+function update!{T<:FloatingPoint}(parameters::Vector{Param}, newvalues::Vector{T})
+    @assert length(newvalues) == length(parameters)
+    for (θ, newvalue) in zip(parameters, newvalues)
+        isa(θ,Param) && update!(θ, newvalue)
+    end
+    return parameters
+end
+
 # Update a Param's value and scaledvalue if it is not fixed
 function update!(θ::Param, newvalue::Float64)
     if !θ.fixed
@@ -53,13 +66,6 @@ function update!(θ::Param, newvalue::Float64)
     return θ
 end
 
-function update!{T<:FloatingPoint}(m::AbstractDSGEModel, newvalues::Vector{T})
-    @assert length(newvalues) == length(m.parameters)
-    for (θ, newvalue) in zip(m.parameters, newvalues)
-        isa(θ,Param) && update!(θ, newvalue)
-    end
-    return steadystate!(m)
-end
 
 # Methods so that arithmetic with parameters can be done tersely, like "θ.α + θ.β"
 # Note there are still cases where we must refer to α.scaledvalue, e.g. pdf(θ.priordist, θ.val)
@@ -123,10 +129,3 @@ function tomodel!{T<:FloatingPoint}(values::Vector{T}, parameters::Vector{Param}
     newvalues = [tomodel(value, θ) for (value, θ) in zip(values, parameters)]
     return update!(parameters, newvalues)
 end
-
-# # Transform values from unbounded to bounded model-space, and updates Param value field.
-# # Map parameter value to the model space and update parameter value field.
-# function tomodel!{T<:FloatingPoint}(value::T, θ::Param)
-#     newvalue = tomodel(value, θ)
-#     update!(θ, newvalue)
-# end
