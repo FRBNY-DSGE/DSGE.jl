@@ -5,6 +5,7 @@ using Distributions, Roots.fzero, MATLAB
 
 import Base: convert, promote_rule, log, exp, start, next, done, length
 
+# TODO clean this up. Some of the things below no longer exist.
 export
     # DSGE.jl
     savepath, inpath, outpath, tablepath, plotpath, logpath,
@@ -29,8 +30,8 @@ const plotpath  = joinpath(savepath, "results/plots/")
 const logpath   = joinpath(savepath, "logs/")
 
 include("distributions_ext.jl")
-include("parameters.jl")
 include("abstractdsgemodel.jl")
+include("parameters.jl")
 
 include("solve/ordered_qz.jl")
 include("solve/gensys.jl")

@@ -3,7 +3,7 @@
 # 11/12/01 translated by Marco DelNegro in matlab from Frank Schorfheide's program in gauss
 function hessizero!{T<:FloatingPoint}(x::Vector{T}, model::AbstractDSGEModel, YY::Matrix{T}; noisy::Bool = false)
 
-    update!(model.Θ, x)
+    update!(model, x)
 
     ## index of free parameters
     para_free = [!α.fixed for α in model.Θ]
