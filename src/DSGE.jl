@@ -3,9 +3,6 @@ module DSGE
 using Compat
 using Distributions, Roots.fzero, MATLAB
 
-import Base: convert, promote_rule, log, exp, start, next, done, length
-
-# TODO clean this up. Some of the things below no longer exist.
 export
     # DSGE.jl
     savepath, inpath, outpath, tablepath, plotpath, logpath,
@@ -33,7 +30,10 @@ include("distributions_ext.jl")
 include("abstractdsgemodel.jl")
 include("parameters.jl")
 
-include("solve/ordered_qz.jl")
+if VERSION <= v"0.4-"
+    include("solve/ordered_qz.jl")
+end
+
 include("solve/gensys.jl")
 include("solve/solve.jl")
 

@@ -1,3 +1,5 @@
+import Base: convert, promote_rule, +, -, *, /, ^, log, exp
+
 # We define Param to be a subtype of Number so we can use numerical operation methods in
 #   https://github.com/JuliaLang/julia/blob/master/base/promotion.jl
 
