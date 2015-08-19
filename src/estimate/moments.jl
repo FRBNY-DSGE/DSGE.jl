@@ -51,14 +51,14 @@ using Debug
     ## - percent: the percentage of the mass of draws from Metropolis-Hastings
     ##            we want to include between bands shown in the table
 
-    # Read in the matrix of parameter draws from metropolis-hastings
-
-    infile = joinpath(outpath(m),"sim_save.h5")
-    println("Reading draws from Metropolis-Hastings from $infile...")
-
     Θ = []
     post = []
 
+    # Specify which file to read in
+    infile = joinpath("$savepath","sim_save.h5")
+    println("Reading draws from Metropolis-Hastings from $infile...")
+
+    # Read in the matrix of parameter draws and posteriors from metropolis-hastings
     try
         fid = h5open(infile,"r") do fid
             Θ = read(fid,"parasim")
@@ -446,3 +446,62 @@ function plotParamDraws()
     
 >>>>>>> Calculate density bands for moments tables
 end
+
+function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
+    ## Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]` is above
+    ## `bands[1,i]` and below `bands[2,i]`.
+    ## 
+    ## Inputs:
+    ## -draws: [num_draws x num_draw_dimensions] matrix
+    ## -percent: percent of data within bands (e.g. .9 to get 90% of mass within bands)
+    ## -minimize: if =1, choose shortest interval, otherwise just chop off lowest and highest (percent/2)
+    ##
+    ## Output:
+    ## -[2 x num_draw_dimensions] matrix 
+
+    if(percent < 0 || percent > 1)
+       throw(DomainError())
+    end
+    
+    num_draws, num_draw_dimensions = size(draws)
+    band  = zeros(2, num_draw_dimensions)
+    num_in_band  = round(percent * num_draws)
+    
+    for i in 1:num_draw_dimensions
+
+        # Sort response for parameter i such that 1st element is largest
+        draw_variable_i = draws[:,i]
+        sort!(draw_variable_i, rev=true)
+
+        # Search to find the interval containing the minimum # of observations
+        # comprising `percent` of the mass
+        if minimize
+
+            upper_index=1
+            minwidth = draw_variable_i[1] - draw_variable_i[num_in_band]
+            done = 0
+            j = 2
+            
+            while j <= (num_draws - num_in_band + 1)
+
+                newwidth = draw_variable_i[j] - draw_variable_i[j + num_in_band - 1]
+
+                if newwidth < minwidth
+                    upper_index = j
+                    minwidth = newwidth        
+                end
+
+                j = j+1
+            end
+            
+        else
+            upper_index = num_draws - nwidth - floor(.5*num_draws-num_in_band)
+        end
+
+        band[2,i] = draw_variable_i[upper_index]
+        band[1,i] = draw_variable_i[upper_index + num_in_band - 1]
+    end
+
+    return band
+end
+
