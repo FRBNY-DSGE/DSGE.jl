@@ -44,13 +44,12 @@
 
 using HDF5
 
-## TODO: initializePrograms etc
+## TODO: initializePrograms etc - probably all that will be in model.spec
 
 # Computes moments and outputs them as a TeX table
 function computeMoments(verbose::Bool = 0, percent::Float64 = 0.90)
 
     ## Input file
-
     infile = joinpath("$savepath","sim_save.h5")
     println("Infile: $infile")
 
@@ -64,39 +63,92 @@ function computeMoments(verbose::Bool = 0, percent::Float64 = 0.90)
             post = read(fid,"postsim")
         end
     catch
-        @printf "Could not open file $infile"
+        @printf(1,"Could not open file %s", infile)
     end
 
-    nDraws = size(θ,1)
+    num_draws = size(θ,1)
     
     ## Produce TeX table of moments
-    makeMomentsTable(θ)
-    
+    makeMomentsTable(θ,percent)
+
+    ## Do we want to calc covariance here? Haven't we done it already in estimate?
 end
 
 
-function high_probability_interval(draws::Matrix{Float32}, percent::Float64, short::Bool)
-    []
+function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
+    ## Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]` is above
+    ## `bands[1,i]` and below `bands[2,i]`.
+    ## 
+    ## Inputs:
+    ## -draws: [num_draws x num_draw_dimensions] matrix
+    ## -percent: percent of data within bands (e.g. .9 to get 90% of mass within bands)
+    ## -minimize: if =1, choose shortest interval, otherwise just chop off lowest and highest (percent/2)
+    ##
+    ## Output:
+    ## -[2 x num_draw_dimensions] matrix 
 
-    band = zeros(2,drawdim)
+    if(percent < 0 || percent > 1)
+       throw(DomainError())
+    end
+    
+    num_draws, num_draw_dimensions = size(draws)
+    band  = zeros(2, num_draw_dimensions)
+    num_in_band  = round(percent * num_draws)
+    
+    for i in 1:num_draw_dimensions
+
+        # Sort response for parameter i such that 1st element is largest
+        draw_variable_i = draws[:,i]
+        sort!(draw_variable_i, rev=true)
+
+        # Search to find the interval containing the minimum # of observations
+        # comprising `percent` of the mass
+        if minimize
+
+            upper_index=1
+            minwidth = draw_variable_i[1] - draw_variable_i[num_in_band]
+            done = 0
+            j = 2
+            
+            while j <= (num_draws - num_in_band + 1)
+
+                newwidth = draw_variable_i[j] - draw_variable_i[j + num_in_band - 1]
+
+                if newwidth < minwidth
+                    upper_index = j
+                    minwidth = newwidth        
+                end
+
+                j = j+1
+            end
+            
+        else
+            upper_index = num_draws - nwidth - floor(.5*num_draws-num_in_band)
+        end
+
+        band[2,i] = draw_variable_i[upper_index]
+        band[1,i] = draw_variable_i[upper_index + num_in_band - 1]
+    end
+
+    return band
 end
 
-## ?? Float32s
-function makeMomentsTables(θ::Vector{Param})
 
-    ```
-Tabulates parameter moments in 3 LaTeX tables:
-
-- For MAIN parameters, a list of prior means, prior standard deviations, posterior means,
-  and 90% bands for posterior draws
-- For LESS IMPORTANT parameters, a list of the prior means, prior standard deviations,
-  posterior means and 90% bands for posterior draws.
-- A list of prior means and posterior means
-    ```
-
+function makeMomentsTables(θ::Vector{Param}, percent::Float64)
     
+    ## Tabulates parameter moments in 3 LaTeX tables:
+    ##
+    ## -For MAIN parameters, a list of prior means, prior standard deviations, posterior means,
+    ## and 90% bands for posterior draws
+    ## -For LESS IMPORTANT parameters, a list of the prior means, prior standard deviations,
+    ## posterior means and 90% bands for posterior draws.
+    ## -A list of prior means and posterior means
+    ##
+    ## Input:
+    ## - `Θ`, our vector of parameters
+    ## - `percent`: the mass of observations we want 
+
     # Variables we have to somehow set:
-    percent = 0.4  # I made this up
     pmean = rand(spec["n_params"])
     
     # ?? Do we have to do this for the prior or is it done in something like initializePrograms?
@@ -104,11 +156,14 @@ Tabulates parameter moments in 3 LaTeX tables:
     
     θ_hat = mean(θ,1)'       # posterior mean for each param
     Θ_sig = cov(Θ)           # posterior std dev
-
-    # ??? what's hpdint in MATLAB doing?
-    Θ_bands = high_probability_interval()
     
-
+    # ?? Do we want to be doing error handling like this?
+    try
+        Θ_bands = find_density_bands(Θ,percent,minimize=true)
+    catch
+        println("percent must be between 0 and 1")
+    end
+    
     # Save posterior mean
     cov_filename = joinpath("$outpath","cov.h5")
     posterior_fid = h5open(cov_filename,"w") do posterior_fid
@@ -116,21 +171,18 @@ Tabulates parameter moments in 3 LaTeX tables:
     end
 
     ## Open tex files
-    mainParams_out = joinpath("$tablepath", "moments_mainParams.tex")
+    mainParams_out = joinpath(tablepath(), "moments_mainParams.tex")
     mainParams_fid = open(mainParams_out,"w")
-
-    periphParams_out = joinpath("$tablepath", "moments_periphParams.tex")
-    periphParams_fid = open(periphParams_out,"w")
-
-    prioPostMean_out = joinpath("$tablepath", "moments_prioPostMean.tex")
+    
+    prioPostMean_out = joinpath(tablepath(), "moments_prioPostMean.tex")
     prioPostMean_fid = open(prioPostMean_out,"w")
-
+    
     ## Create variables for writing to output table
     colnames = ["Parameter ", "Prior Mean ", "Prior Stdd ", "Post Mean ", "$(100*percent)\\% {\\tiny Lower Band} ", "$(100*percent)\\% {\\tiny Upper Band} " ]
 
     outmat = [pmean pstdd Θ_hat Θ_bands]      # prior mean and std dev, posterior mean, and bands (n_params x 5)
     outmat2 = [pmean Θ_hat]                   # prior mean and posterior mean (n_params x 2)
-
+    
     ## Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT parameters
     
     @printf(mainParams_fid,"\\documentclass[12pt]{article}\n")
@@ -153,7 +205,7 @@ Tabulates parameter moments in 3 LaTeX tables:
     important_para = [];
     
     # Go through all params in model, check tex names
-    ## for param in model.Θ
+    ## for param in 1:length(Θ)
         
     ##     texLabel = param.texLabel
         
@@ -172,7 +224,7 @@ Tabulates parameter moments in 3 LaTeX tables:
     ##         continue
     ##     end
 
-    ##     # ?? figure out how to print a whole row of a matrix! 
+    ##     #
     ##     for i in outmat
     ##         @printf(mainParams_fid,"\\\\ \\n %4.99s &  ", texLabel)
     ##         @printf(mainParams_fid, "8.3f & ", outmat[param,i])
@@ -189,6 +241,9 @@ Tabulates parameter moments in 3 LaTeX tables:
     close(mainParams_fid)    
     
     # Write to Table 2: Prior mean, std dev and posterior mean, bands for other params
+    periphParams_out = joinpath(tablepath(), "moments_periphParams.tex")
+    periphParams_fid = open(periphParams_out,"w")
+    
     @printf(periphParams_fid,"\\documentclass[12pt]{article}\n")
     @printf(periphParams_fid,"\\usepackage[dvips]{color}\n")
     @printf(periphParams_fid,"\\begin{document}\n")
@@ -208,37 +263,38 @@ Tabulates parameter moments in 3 LaTeX tables:
     # default (1)
     other_para = 1
     table_count = 0
-    for param in length(Θ)
-        if in(param, important_para)
+    for param in 1:length(Θ)
+        println("$param")
+        if in(Θ[param], important_para)
             continue
         end
-            
-        if ((other_para%25 == 0) && !(i==length(Θ)))
+        # Make a new table if the current one is too large    
+        if ((other_para%25 == 0) && !(param==length(Θ)))
             @printf(periphParams_fid,"\\\\  \\\hline\n")
             @printf(periphParams_fid,"\\end{tabular}}\n")
-        @printf(periphParams_fid,"\\end{table}\n")
-        @printf(periphParams_fid,"\\end{document}")
-        table_count = table_count + 1
-        close(periphParams_fid)
-        filename = @sprintf("periphParams_%d.tex",table_count)
-        periphParams_out = joinpath("$tablepath",filename)
-        periphParams_fid = open(periphParams_out,"w")
-        @printf(periphParams_fid,"\\documentclass[12pt]{article}\n")
-        @printf(periphParams_fid,"\\usepackage[dvips]{color}\n")
-        @printf(periphParams_fid,"\\begin{document}\n")
-        @printf(periphParams_fid,"\\pagestyle{empty}\n")
-        @printf(periphParams_fid,"\\begin{table}[h] \\centering\n")
-        @printf(periphParams_fid,"\\caption{Parameter Estimates}\n")
-        @printf(periphParams_fid,"\\vspace*{.2cm}\n")
-        @printf(periphParams_fid,"{\\small \n")
+            @printf(periphParams_fid,"\\end{table}\n")
+            @printf(periphParams_fid,"\\end{document}")
+            table_count = table_count + 1
+            close(periphParams_fid)
+            filename = @sprintf("periphParams_%d.tex",table_count)
+            periphParams_out = joinpath("$tablepath()",filename)
+            periphParams_fid = open(periphParams_out,"w")
+            @printf(periphParams_fid,"\\documentclass[12pt]{article}\n")
+            @printf(periphParams_fid,"\\usepackage[dvips]{color}\n")
+            @printf(periphParams_fid,"\\begin{document}\n")
+            @printf(periphParams_fid,"\\pagestyle{empty}\n")
+            @printf(periphParams_fid,"\\begin{table}[h] \\centering\n")
+            @printf(periphParams_fid,"\\caption{Parameter Estimates}\n")
+            @printf(periphParams_fid,"\\vspace*{.2cm}\n")
+            @printf(periphParams_fid,"{\\small \n")
             @printf(periphParams_fid,"\\begin{tabular}{lllllll}\\hline \n")
             for col in colnames
                 @printf(periphParams_fid, "%4.99s & ", col)
             end
-        
-        
         end
-        @printf(periphParams_fid, "\\\\ \n \$\%4.99s\$ & ",param)
+        #print the parameter name
+        @printf(periphParams_fid, "\\\\ \n \$\%4.99s\$ & ", Θ[param])
+        #Print the values in outmat
         for val in outmat[param,:]
             @printf(periphParams_fid, "\%8.3f & ",val)
         end
@@ -263,7 +319,7 @@ Tabulates parameter moments in 3 LaTeX tables:
     @printf(prioPostMean_fid,"\\begin{tabular}{ccc}\\hline \n")
     @printf(prioPostMean_fid," Parameter & Prior \n")
     @printf(prioPostMean_fid,"\\\\  \\\hline\n")
-    for param in length(Θ)
+    for param in 1:length(Θ)
         @printf(prioPostMean_fid, " \\n \$%4.99s\$ ", param )
         for val in outmat2[param,:]
             @printf(periphParams_fid, "\%8.3f & ",val)
@@ -275,11 +331,10 @@ Tabulates parameter moments in 3 LaTeX tables:
     @printf(prioPostMean_fid,"\\end{table}\n")
     @printf(prioPostMean_fid,"\\end{document}")
     close(prioPostMean_fid)
-    @printf("Tables are in $tablepath")
+    @printf("Tables are in %s",tablepath())
 end
 
-function 
 
 function plotParamDraws()
-
+    
 end
