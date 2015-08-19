@@ -22,7 +22,7 @@
 ##	   (stored in post*, output from gibb.m)
 
 ##     OUTPUTS
-##     From momTable.m:
+##     From makeMomentsTables():
 ##
 ##     1: (mhpara*Mean): holds the mean parameter across
 ##     draws from the posterior.
@@ -40,39 +40,44 @@
 
 
 using HDF5
+using Debug
 
-## TODO: initializePrograms etc - probably all that will be in model.spec
 
-
-function computeMoments(percent::Float64 = 0.90)
-    ## Computes moments of parameter draws and outputs them as a TeX table
+@debug function computeMoments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
+    
+    ## Computes prior and posterior parameter moments, tabulates them in various TeX tables,
+    ## and plots parameter draws from the prior and posterior distribution
+    ##
     ## Inputs:
+    ## - m: an instance of an AbstractDSGEModel subtype
     ## - percent: the percentage of the mass of draws from Metropolis-Hastings
     ##            we want to include between bands shown in the table
 
     
-    # Initialize vectors
-    θ = []
-    post = []
+    # Read in the matrix of parameter draws from metropolis-hastings
 
-    # Specify which file to read in
-    infile = joinpath("$savepath","sim_save.h5")
+    infile = joinpath(outpath(),"sim_save.h5")
     println("Reading draws from Metropolis-Hastings from $infile...")
 
-    # Read in the matrix of parameter draws and posteriors from metropolis-hastings
+    Θ = []
+    post = []
+
     try
         fid = h5open(infile,"r") do fid
-            θ = read(fid,"parasim")
+            Θ = read(fid,"parasim")
+            @bp
             post = read(fid,"postsim")
         end
     catch
         @printf(1,"Could not open file %s", infile)
     end
 
-    num_draws = size(θ,1)
+    num_draws = size(Θ,1)
+
+    
     
     # Produce TeX table of moments
-    makeMomentsTable(θ,percent)
+    makeMomentTables(m,Θ,percent)
 
     # ?? Do we want to calc covariance here? Haven't we done it already in estimate?
 
@@ -82,7 +87,7 @@ end
 
 
 
-function makeMomentsTables(θ::Array{T<:AbstractFloat}, percent::Float64)
+@debug function makeMomentTables{T<:FloatingPoint}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
     
     ## Tabulates parameter moments in 3 LaTeX tables:
     ##
@@ -93,17 +98,50 @@ function makeMomentsTables(θ::Array{T<:AbstractFloat}, percent::Float64)
     ## -A list of prior means and posterior means
     ##
     ## Input:
-    ## - `Θ`, our vector of parameters
-    ## - `percent`: the mass of observations we want 
+    ## - `Θ`: [num_draws x num_parameters] matrix holding the posterior draws from metropolis-hastings
+    ##        from save/sim_save.h5 
+    ## - `percent`: the mass of observations we want; 0 <= percent <= 1
 
-    # Variables we have to somehow set:
-    # pmean
+
+    ## Step 1: Extract moments of prior distribution from m.parameters
+
+    num_params = length(m.parameters) + length(m.parameters_fixed)    
+    prior_means = zeros(num_params,1)
+    prior_stddev = zeros(num_params,1)
+
     
-    # ?? Do we have to do this for the prior or is it done in something like initializePrograms?
-    # Compute mean, std dev, and 90% bands across draws from the posterior
+    for (i,k) in enumerate(m.keys)
+
+        if(i > num_params)
+            continue
+        end
+        
+        param  = getindex(m,i)
+        println(i)
+        
+        if isa(param.priordist, DSGE.Normal)
+
+            prior_means[i] = param.priordist.μ
+            prior_stddev[i] = param.priordist.σ
+            
+        elseif isa(param.priordist, Distributions.Beta)
+
+            prior_means[i] = param.priordist.α
+            prior_stddev[i] = param.priordist.β
+
+        elseif isa(param.priordist, Distributions.Gamma)
+
+            prior_means[i] = param.priordist.α
+            prior_stddev[i] = param.priordist.θ  # small \theta
+            
+        end
+    end
     
-    θ_hat = mean(θ,1)'       # posterior mean for each param
-    Θ_sig = cov(Θ)           # posterior std dev
+    
+    ## Step 2: Compute moments and `percent' bands from parameter draws
+    @bp
+    Θ_hat = mean(Θ,1)'                   # posterior mean for each parameter
+    Θ_sig = cov(Θ, mean=Θ_hat)           # posterior std dev for each parameter
     
     # ?? Do we want to be doing error handling like this?
     try
@@ -118,70 +156,66 @@ function makeMomentsTables(θ::Array{T<:AbstractFloat}, percent::Float64)
         posterior_fid["Θ_hat"] = convert(Matrix{Float32}, Θ_hat)
     end
 
-    ## Open tex files
-    mainParams_out = joinpath(tablepath(), "moments_mainParams.tex")
-    mainParams_fid = open(mainParams_out,"w")
-    
-    prioPostMean_out = joinpath(tablepath(), "moments_prioPostMean.tex")
-    prioPostMean_fid = open(prioPostMean_out,"w")
-    
-    ## Create variables for writing to output table
+            
+    ## Step 3: Create variables for writing to output table
     colnames = ["Parameter ", "Prior Mean ", "Prior Stdd ", "Post Mean ", "$(100*percent)\\% {\\tiny Lower Band} ", "$(100*percent)\\% {\\tiny Upper Band} " ]
 
     outmat = [pmean pstdd Θ_hat Θ_bands]      # prior mean and std dev, posterior mean, and bands (n_params x 5)
     outmat2 = [pmean Θ_hat]                   # prior mean and posterior mean (n_params x 2)
+
     
-    ## Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT parameters
-    
-    @printf(mainParams_fid,"\\documentclass[12pt]{article}\n")
-    @printf(mainParams_fid,"\\usepackage[dvips]{color}\n")
-    @printf(mainParams_fid,"\\begin{document}\n")
-    @printf(mainParams_fid,"\\pagestyle{empty}\n")
-    @printf(mainParams_fid,"\\begin{table}[h] \\centering\n")
-    @printf(mainParams_fid,"\\caption{Parameter Estimates}\n")
-    @printf(mainParams_fid,"\\vspace*{.5cm}\n")
-    @printf(mainParams_fid,"{\\small \n")
-    @printf(mainParams_fid,"\\begin{tabular}{lllllll}\\hline \n")
+    ## Step 4: Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT parameters
+
+    mainParams_out = joinpath(tablepath(), "moments_mainParams.tex")
+    mainParams_fid = open(mainParams_out,"w")
+
+    # Preamble
+    ## @printf(mainParams_fid,"\\documentclass[12pt]{article}\n")
+    ## @printf(mainParams_fid,"\\usepackage[dvips]{color}\n")
+    ## @printf(mainParams_fid,"\\begin{document}\n")
+    ## @printf(mainParams_fid,"\\pagestyle{empty}\n")
+    ## @printf(mainParams_fid,"\\begin{table}[h] \\centering\n")
+    ## @printf(mainParams_fid,"\\caption{Parameter Estimates}\n")
+    ## @printf(mainParams_fid,"\\vspace*{.5cm}\n")
+    ## @printf(mainParams_fid,"{\\small \n")
+    ## @printf(mainParams_fid,"\\begin{tabular}{lllllll}\\hline \n")
 
     # Column names
     for col in colnames
         @printf(mainParams_fid, "%4.99s & ", col)
     end
-    
-    
-    ## Keep track of indices for important parameters within para_names
-    important_para = [];
-    
-    # Go through all params in model, check tex names
-    ## for param in 1:length(Θ)
         
-    ##     texLabel = param.texLabel
+    # Keep track of indices for important parameters 
+   
+    for (i,k) in enumerate(m.keys)
         
-    ##     # ?? rho_ might need to be ρ
-    ##     if (!ismatch(r"rho_", texLabel) &&
-    ##         !ismatch(r"zeta_", texLabel) &&
-    ##         !ismatch(r"psi_", texLabel) &&
-    ##         !ismatch(r"nu_l", texLabel) &&
-    ##         !ismatch(r"pi^\*_", texLabel) &&
-    ##         ( model.spec != 16 || !ismatch(r"u^\*", texLabel))) 
-    ##         continue
-    ##     end
+        # ?? rho_ might need to be ρ
+        if (!ismatch(r"ρ_", k) &&
+            !ismatch(r"zeta_", k) &&
+            !ismatch(r"psi", k) &&
+            !ismatch(r"nu_l", k) &&
+            !ismatch(r"pistar", k) &&
+            ( model.spec != 16 || !ismatch(r"u^\*", k))) 
+            continue
+        end
             
-    ##     # !! What is subspec in the Julia code?
-    ##     if(texLabel == "\rho_{\chi}" || (isequal(subspec,7) && texLabel == "\rho_{b}"))
-    ##         continue
-    ##     end
+        # !! What is subspec in the Julia code?
+        if(k == ":ρ_chi" || (isequal(subspec,7) && texLabel == ":ρ_b"))
+            continue
+        end
 
-    ##     #
-    ##     for i in outmat
-    ##         @printf(mainParams_fid,"\\\\ \\n %4.99s &  ", texLabel)
-    ##         @printf(mainParams_fid, "8.3f & ", outmat[param,i])
-    ##     end
+        #
 
-    ##     important_para = [important_para, param]
+        @printf(mainParams_fid, "\\\\ \n \$\%4.99s\$ & ", k)
+        #Print the values in outmat
+        for val in outmat[i,:]
+            @printf(mainParams_fid, "\%8.3f & ",val)
+        end
+
+        important_para = [important_para, param]
         
-    ## end
-    
+    end
+
     @printf(mainParams_fid,"\\\\  \\\hline\n")
     @printf(mainParams_fid,"\\end{tabular}}\n")
     @printf(mainParams_fid,"\\end{table}\n")
@@ -257,6 +291,9 @@ function makeMomentsTables(θ::Array{T<:AbstractFloat}, percent::Float64)
 
    ## Write to Table 3: Prior mean and posterior mean for all parameters
 
+    prioPostMean_out = joinpath(tablepath(), "moments_prioPostMean.tex")
+    prioPostMean_fid = open(prioPostMean_out,"w")
+
     @printf(prioPostMean_fid,"\\documentclass[12pt]{article}\n")
     @printf(prioPostMean_fid,"\\usepackage[dvips]{color}\n")
     @printf(prioPostMean_fid,"\\begin{document}\n")
@@ -279,13 +316,14 @@ function makeMomentsTables(θ::Array{T<:AbstractFloat}, percent::Float64)
     @printf(prioPostMean_fid,"\\end{table}\n")
     @printf(prioPostMean_fid,"\\end{document}")
     close(prioPostMean_fid)
-    @printf("Tables are in %s",tablepath())
+
+   println("Tables are in %s",tablepath())
 end
 
 
-function plotParamDraws()
+## function plotParamDraws()
     
-end
+## end
 
 function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
     ## Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]` is above
