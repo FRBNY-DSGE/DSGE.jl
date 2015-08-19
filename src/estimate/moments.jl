@@ -54,11 +54,9 @@ using Debug
     Θ = []
     post = []
 
-    # Specify which file to read in
-    infile = joinpath("$savepath","sim_save.h5")
+    infile = joinpath(outpath(),"sim_save.h5")
     println("Reading draws from Metropolis-Hastings from $infile...")
 
-    # Read in the matrix of parameter draws and posteriors from metropolis-hastings
     try
         fid = h5open(infile,"r") do fid
             Θ = read(fid,"parasim")
@@ -149,8 +147,6 @@ end
     posterior_fid = h5open(cov_filename,"w") do posterior_fid
         posterior_fid["Θ_hat"] = float32(Θ_hat)
     end
-
-
 
     ###########################################################################################
     ## STEP 3: Create variables for writing to output table
@@ -432,19 +428,6 @@ function endTexTableDoc(fid::IOStream;small::Bool=false)
     @printf(fid,"\\end{document}")
     close(fid)
 
-=======
-    @printf(prioPostMean_fid, "\\\\ \\hline")
-    @printf(prioPostMean_fid,"\\end{tabular}}\n")
-    @printf(prioPostMean_fid,"\\end{table}\n")
-    @printf(prioPostMean_fid,"\\end{document}")
-    close(prioPostMean_fid)
-    @printf("Tables are in %s",tablepath())
-end
-
-
-function plotParamDraws()
-    
->>>>>>> Calculate density bands for moments tables
 end
 
 function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
