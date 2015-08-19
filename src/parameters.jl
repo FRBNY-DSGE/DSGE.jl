@@ -73,6 +73,11 @@ for f in [:-, :log, :exp]
     @eval ($f)(α::Param) = $(f)(α.scaledvalue)
 end
 
+# Returns a vector of parameter values transformed to lie on the real line.
+function toreal(parameters::Vector{Param})
+    return [toreal(θ) for θ in parameters]
+end
+
 # Transforms variables from model to max (invtrans.m)
 function toreal(θ::Param)
     (a, b) = θ.transformbounds
@@ -90,8 +95,8 @@ function toreal(θ::Param)
     end
 end
 
-function toreal(parameters::Vector{Param})
-    return [toreal(θ) for θ in parameters]
+function tomodel{T<:FloatingPoint}(values::Vector{T}, parameters::Vector{Param})
+    return [tomodel(value, θ) for (value, θ) in zip(values, parameters)]
 end
 
 # Transforms variables from max to model (trans.m)
@@ -110,16 +115,16 @@ function tomodel{T<:FloatingPoint}(value::T, θ::Param)
     end
 end
 
-# Transform values from unbounded to bounded model-space, and updates Param value field.
-function tomodel!{T<:FloatingPoint}(value::T, θ::Param)
-    newvalue = tomodel(value, θ)
-    update!(θ, newvalue)
-end
-
-function tomodel{T<:FloatingPoint}(values::Vector{T}, parameters::Vector{Param})
-    return [tomodel(value, θ) for (value, θ) in zip(values, parameters)]
-end
-
+# Given a vector of parameter values on the real line, map them to the model space and
+# update model.parameters field.
 function tomodel!{T<:FloatingPoint}(values::Vector{T}, parameters::Vector{Param})
-    return [tomodel!(value, θ) for (value, θ) in zip(values, parameters)]
+    newvalues = [tomodel(value, θ) for (value, θ) in zip(values, parameters)]
+    return update!(parameters, newvalues)
 end
+
+# # Transform values from unbounded to bounded model-space, and updates Param value field.
+# # Map parameter value to the model space and update parameter value field.
+# function tomodel!{T<:FloatingPoint}(value::T, θ::Param)
+#     newvalue = tomodel(value, θ)
+#     update!(θ, newvalue)
+# end
