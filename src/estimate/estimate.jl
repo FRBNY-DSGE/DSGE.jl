@@ -42,8 +42,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
         # If the algorithm stops only because we have exceeded the maximum number of
         # iterations, continue improving guess of modal parameters
         while !converged
-            out, H = csminwel(posterior_min!, xh, H; ftol=crit, iterations=nit,
-                show_trace=true, verbose=verbose)
+            out, H = csminwel(posterior_min!, xh, H; ftol=crit, iterations=nit, show_trace=true, verbose=verbose)
             xh = out.minimum
             converged = !out.iteration_converged
         end

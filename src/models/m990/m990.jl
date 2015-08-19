@@ -2,8 +2,8 @@
 # We can then concisely pass around a Model object to the remaining steps of the model
 #   (solve, estimate, and forecast).
 type Model990 <: AbstractDSGEModel
-    parameters::Vector                              # vector of all of the model parameters
-    parameters_fixed::Vector                        # vector of all "permanently fixed" model parameters
+    parameters::Vector{Param}                       # vector of all of the model parameters
+    parameters_fixed::Vector{Param}                 # vector of all "permanently fixed" model parameters
     steady_state::Vector                            # model steady-state values
     keys::Dict{Symbol,Int}                          # human-readable names for all the model
                                                     # parameters and steady-num_states
@@ -211,8 +211,8 @@ function Model990()
     end
 
     # initialise vector to store actual values
-    parameters       = @compat Vector{Any}(length(parameter_keys))
-    parameters_fixed = @compat Vector{Any}(length(parameter_fixed_keys))
+    parameters       = @compat Vector{Param}(length(parameter_keys))
+    parameters_fixed = @compat Vector{Param}(length(parameter_fixed_keys))
     steady_state     = @compat Vector{Any}(length(steady_state_keys))
 
     # Model-specific specifications
