@@ -29,7 +29,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
 
         # Inputs to minimization algorithm
         function posterior_min!{T<:FloatingPoint}(x::Vector{T})
-            tomodel!(x, m.parameters)
+            tomodel!(m,x)
             return -posterior(m, YY)
         end
 
@@ -49,7 +49,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
 
         # Transform modal parameters so they are no longer bounded (i.e., allowed
         # to lie anywhere on the real line).
-        tomodel!(xh, m.parameters)
+        tomodel!(m, xh)
         mode = [α.value for α in m.parameters]
 
         # Write mode to file
