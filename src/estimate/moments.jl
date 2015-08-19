@@ -41,7 +41,6 @@
 using HDF5
 using Debug
 
-
 @debug function computeMoments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
     
     ## Computes prior and posterior parameter moments, tabulates them in various TeX tables,
@@ -52,7 +51,6 @@ using Debug
     ## - percent: the percentage of the mass of draws from Metropolis-Hastings
     ##            we want to include between bands shown in the table
 
-    
     # Read in the matrix of parameter draws from metropolis-hastings
 
     infile = joinpath(outpath(m),"sim_save.h5")
@@ -153,6 +151,7 @@ end
     end
 
 
+
     ###########################################################################################
     ## STEP 3: Create variables for writing to output table
     ###########################################################################################
@@ -230,7 +229,7 @@ end
     
     periphParams_out = joinpath(tablepath(m), "moments_periphParams_0.tex")
     periphParams_fid = open(periphParams_out,"w")
-    
+
     beginTexTableDoc(periphParams_fid)
 
     @printf(periphParams_fid,"\\caption{Parameter Estimates}\n")
@@ -279,6 +278,7 @@ end
                 @printf(periphParams_fid, "%4.99s & ", col)
             end
         end
+
         
         # Print the parameter name
         @printf(periphParams_fid, "\\\\ \n \$\%4.99s\$ & ", param.texLabel)
@@ -307,6 +307,7 @@ end
     @printf(prioPostMean_fid,"\\caption{Parameter Estimates: Prior and Posterior Mean}\n")
     @printf(prioPostMean_fid,"\\vspace*{.5cm}\n")
     @printf(prioPostMean_fid,"\\begin{tabular}{ccc}\\hline \n")
+
     @printf(prioPostMean_fid," Parameter & Prior & Posterior  \\tabularnewline \\hline\n")
     
     # Write out the results
@@ -401,6 +402,7 @@ function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
         band[1,i] = draw_variable_i[upper_index + num_in_band - 1]
     end
 
+
     return band
 end
 
@@ -430,4 +432,17 @@ function endTexTableDoc(fid::IOStream;small::Bool=false)
     @printf(fid,"\\end{document}")
     close(fid)
 
+=======
+    @printf(prioPostMean_fid, "\\\\ \\hline")
+    @printf(prioPostMean_fid,"\\end{tabular}}\n")
+    @printf(prioPostMean_fid,"\\end{table}\n")
+    @printf(prioPostMean_fid,"\\end{document}")
+    close(prioPostMean_fid)
+    @printf("Tables are in %s",tablepath())
+end
+
+
+function plotParamDraws()
+    
+>>>>>>> Calculate density bands for moments tables
 end
