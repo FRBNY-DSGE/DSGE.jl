@@ -22,7 +22,7 @@ function posterior{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh
 end
 
 # Evaluate posterior at `parameters`
-function posterior!{T<:FloatingPoint}(parameters::Vector{T}, model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
+function posterior!{T<:FloatingPoint}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false)
     update!(model, parameters)
     return posterior(model, YY; mh=mh)
 end

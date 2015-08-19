@@ -345,10 +345,10 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
             RRRsim[block_start:block_end,:]  = convert(Matrix{Float32}, RRR_sim)
             zsim[block_start:block_end,:]  = convert(Matrix{Float32}, z_sim)
         end
-    end
+    end # of block
 
     close(simfile)
 
     rejection_rate = all_rejections/(n_blocks*n_sim*n_times)
     println("Overall rejection rate: $rejection_rate")
-end
+end # of loop over blocks
