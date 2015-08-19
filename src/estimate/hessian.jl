@@ -6,19 +6,19 @@ function hessizero!{T<:FloatingPoint}(model::AbstractDSGEModel, x::Vector{T}, YY
     update!(model, x)
 
     ## index of free parameters
-    para_free = [!θ.fixed for θ in model.parameters]
+    para_free  = [!θ.fixed for θ in model.parameters]
     fpara_free = find(para_free)
-    nfree = length(fpara_free)
+    nfree      = length(fpara_free)
 
-    npara = length(x)
-    ndx = 6
-    dx =  exp(-(6:2:(6+(ndx-1)*2))')
-    hessian = zeros(npara, npara)
-    #gradx = zeros(ndx, 1)
-    #grady = zeros(ndx, 1)
-    #gradxy = zeros(ndx, 1)
+    npara    = length(x)
+    ndx      = 6
+    dx       = exp(-(6:2:(6+(ndx-1)*2))')
+    hessian  = zeros(npara, npara)
+    #gradx   = zeros(ndx, 1)
+    #grady   = zeros(ndx, 1)
+    #gradxy  = zeros(ndx, 1)
     hessdiag = zeros(ndx, 1)
-    dxscale = ones(npara, 1)
+    dxscale  = ones(npara, 1)
 
 
 
@@ -29,22 +29,22 @@ function hessizero!{T<:FloatingPoint}(model::AbstractDSGEModel, x::Vector{T}, YY
         end
 
         for k = 1:ndx
-            paradx = copy(x)
-            parady = copy(x)
-            paradx[seli] = paradx[seli] + dx[k]*dxscale[seli]
-            parady[seli] = parady[seli] - dx[k]*dxscale[seli]
-            #paradxdy = copy(paradx)
+            paradx          = copy(x)
+            parady          = copy(x)
+            paradx[seli]    = paradx[seli] + dx[k]*dxscale[seli]
+            parady[seli]    = parady[seli] - dx[k]*dxscale[seli]
+            #paradxdy       = copy(paradx)
             #paradxdy[seli] = paradxdy[seli] - dx[k]*dxscale[seli]
 
-            fx = posterior!(x, model, YY)
-            fdx = posterior!(paradx, model, YY)
-            fdy = posterior!(parady, model, YY)
-            #fdxdy = posterior!(paradxdy, model, YY)
+            fx     = posterior!(model, x, YY)
+            fdx    = posterior!(model, paradx, YY)
+            fdy    = posterior!(model, parady, YY)
+            #fdxdy = posterior!(model, paradxdy, YY)
 
-            #gradx[k] = -(fx - fdx) / (dx[k]*dxscale[seli])
-            #grady[k] = (fx - fdy) / (dx[k]*dxscale[seli])
-            #gradxy[k] = -(fx - fdxdy) / sqrt((dx[k]*dxscale[seli])^2 + (dx[k]*dxscale[seli])^2)
-            hessdiag[k] = -(2fx - fdx - fdy) / (dx[k]*dxscale[seli])^2
+            #gradx[k]    = -(fx - fdx) / (dx[k]*dxscale[seli])
+            #grady[k]    = (fx - fdy) / (dx[k]*dxscale[seli])
+            #gradxy[k]   = -(fx - fdxdy) / sqrt((dx[k]*dxscale[seli])^2 + (dx[k]*dxscale[seli])^2)
+            hessdiag[k]  = -(2fx - fdx - fdy) / (dx[k]*dxscale[seli])^2
             #hessdiag[k] = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k]*dxscale[seli]*dxscale[seli])
         end
 
@@ -78,23 +78,23 @@ function hessizero!{T<:FloatingPoint}(model::AbstractDSGEModel, x::Vector{T}, YY
             end
 
             for k = 1:ndx
-                paradx = copy(x)
-                parady = copy(x)
-                paradx[seli] = paradx[seli] + dx[k]*dxscale[seli]
-                parady[selj] = parady[selj] - dx[k]*dxscale[selj]
-                paradxdy = copy(paradx)
+                paradx         = copy(x)
+                parady         = copy(x)
+                paradx[seli]   = paradx[seli] + dx[k]*dxscale[seli]
+                parady[selj]   = parady[selj] - dx[k]*dxscale[selj]
+                paradxdy       = copy(paradx)
                 paradxdy[selj] = paradxdy[selj] - dx[k]*dxscale[selj]
 
-                fx = posterior!(x, model, YY)
-                fdx = posterior!(paradx, model, YY)
-                fdy = posterior!(parady, model, YY)
-                fdxdy = posterior!(paradxdy, model, YY)
+                fx    = posterior!(model, x, YY)
+                fdx   = posterior!(model, paradx, YY)
+                fdy   = posterior!(model, parady, YY)
+                fdxdy = posterior!(model, paradxdy, YY)
 
-                #gradx[k] = -(fx - fdx) / (dx[k]*dxscale[seli])
-                #grady[k] = (fx - fdy) / (dx[k]*dxscale[selj])
-                #gradxy[k] = -(fx -fdxdy) / sqrt((dx[k]*dxscale[selj])^2 + (dx[k]*dxscale[seli])^2)
+                #gradx[k]    = -(fx - fdx) / (dx[k]*dxscale[seli])
+                #grady[k]    = (fx - fdy) / (dx[k]*dxscale[selj])
+                #gradxy[k]   = -(fx -fdxdy) / sqrt((dx[k]*dxscale[selj])^2 + (dx[k]*dxscale[seli])^2)
                 #hessdiag[k] = -(2fx - fdx - fdy) / (dx[k]*dxscale[seli])^2
-                hessdiag[k] = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k]*dxscale[seli]*dxscale[selj])
+                hessdiag[k]  = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k]*dxscale[seli]*dxscale[selj])
             end
 
             if verbose

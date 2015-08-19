@@ -29,9 +29,9 @@ function hessizero_saveall!{T<:FloatingPoint}(model::AbstractModel, x::Vector{T}
             paradx[seli] = paradx[seli] + dx[k]
             parady[seli] = parady[seli] - dx[k]
 
-            fx = posterior!(x, model, YY)
-            fdx = posterior!(paradx, model, YY)
-            fdy = posterior!(parady, model, YY)
+            fx  = posterior!(model, x, YY)
+            fdx = posterior!(model, paradx, YY)
+            fdy = posterior!(model, parady, YY)
             hessdiag[seli, seli, k] = -(2fx - fdx - fdy) / (dx[k])^2
         end
         
@@ -59,10 +59,10 @@ function hessizero_saveall!{T<:FloatingPoint}(model::AbstractModel, x::Vector{T}
                 paradxdy = copy(paradx)
                 paradxdy[selj] = paradxdy[selj] - dx[k]
                 
-                fx = posterior!(x, model, YY)
-                fdx = posterior!(paradx, model, YY)
-                fdy = posterior!(parady, model, YY)
-                fdxdy = posterior!(paradxdy, model, YY)
+                fx    = posterior!(model, x, YY)
+                fdx   = posterior!(model, paradx, YY)
+                fdy   = posterior!(model, parady, YY)
+                fdxdy = posterior!(model, paradxdy, YY)
                 hessdiag[seli, selj, k] = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k])
                 hessdiag[selj, seli, k] = hessdiag[seli, selj, k]
             end
