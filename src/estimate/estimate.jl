@@ -4,7 +4,7 @@
 using HDF5
 using Debug
 
-function estimate{T<:AbstractDSGEModel}(m::T)
+function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
 
     ### Step 1: Initialize
 
@@ -22,7 +22,7 @@ function estimate{T<:AbstractDSGEModel}(m::T)
     mf = MatFile("$inpath/mode_in.mat")
     mode = get_variable(mf, "params")
     close(mf)
-    update!(m.parameters, mode)
+    update!(m, mode)
 
     if m.reoptimize
         println("Reoptimizing...")
@@ -42,7 +42,8 @@ function estimate{T<:AbstractDSGEModel}(m::T)
         # If the algorithm stops only because we have exceeded the maximum number of
         # iterations, continue improving guess of modal parameters
         while !converged
-            out, H = csminwel(posterior_min!, xh, H; ftol=crit, iterations=nit, show_trace=true, verbose=true)
+            out, H = csminwel(posterior_min!, xh, H; ftol=crit, iterations=nit,
+                show_trace=true, verbose=verbose)
             xh = out.minimum
             converged = !out.iteration_converged
         end
@@ -89,7 +90,7 @@ function estimate{T<:AbstractDSGEModel}(m::T)
     cc0 = 0.01
     cc = 0.09
 
-    metropolis_hastings(propdist, m, YY, cc0, cc)
+    metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose)
 
     # Set up HDF5 file for saving
     h5path = joinpath(outpath,"sim_save.h5")
@@ -126,7 +127,8 @@ function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{
     return DegenerateMvNormal(μ, σ, rank)
 end
 
-function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::AbstractDSGEModel, YY::Matrix{T}, cc0::T, cc::T, randvecs = [], randvals = [])
+function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::AbstractDSGEModel,
+    YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = false)
 
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
@@ -161,17 +163,17 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
         if testing
             para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
 
-            n_blocks = num_mh_blocks_test(m)
-            n_sim = num_mh_simulations_test(m)
-            n_burn = num_mh_burn_test(m)
-            n_times = mh_thinning_step(m)
+            n_blocks = m.num_mh_blocks_test
+            n_sim = m.num_mh_simulations_test
+            n_burn = m.num_mh_burn_test
+            n_times = m.mh_thinning_step
         else
             para_old = rand(propdist; cc=cc0)
 
-            n_blocks = num_mh_blocks(m)
-            n_sim = num_mh_simulations(m)
-            n_burn = num_mh_burn(m)
-            n_times = mh_thinning_step(m)
+            n_blocks = m.num_mh_blocks
+            n_sim = m.num_mh_simulations
+            n_burn = m.num_mh_burn
+            n_times = m.mh_thinning_step
         end
 
         post_old, like_old, out = posterior!(para_old, m, YY; mh=true)
@@ -261,7 +263,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
             # evaluate the posterior.
             post_new, like_new, out = posterior!(para_new, m, YY; mh=true)
 
-            if testing
+            if verbose 
                 println("Iteration $j: posterior = $post_new")
             end
 
@@ -297,14 +299,14 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
                 DD_old = out["DD"]
                 QQ_old = out["QQ"]
 
-                if testing
+                if verbose 
                     println("Iteration $j: accept proposed jump")
                 end
             else
                 # Reject proposed jump
                 block_rejections += 1
 
-                if testing
+                if verbose 
                     println("Iteration $j: reject proposed jump")
                 end
             end
