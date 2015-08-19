@@ -64,7 +64,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
     # Calculate the Hessian at the posterior mode
     if m.recalculate_hessian
         println("Recalculating Hessian...")
-        hessian, _ = hessizero!(mode, m, YY; noisy=true)
+        hessian, _ = hessizero!(m, mode, YY; verbose=true)
 
         mf = MatFile("$outpath/hessian.mat", "w")
         put_variable(mf, "hessian", hessian)
