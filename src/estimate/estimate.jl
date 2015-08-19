@@ -175,7 +175,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
             n_times = m.mh_thinning_step
         end
 
-        post_old, like_old, out = posterior!(para_old, m, YY; mh=true)
+        post_old, like_old, out = posterior!(m, para_old, YY; mh=true)
 
         if post_old > -Inf
             propdist.μ = para_old
@@ -260,7 +260,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
 
             # Solve the model, check that parameters are within bounds, and
             # evaluate the posterior.
-            post_new, like_new, out = posterior!(para_new, m, YY; mh=true)
+            post_new, like_new, out = posterior!(m, para_new, YY; mh=true)
 
             if verbose 
                 println("Iteration $j: posterior = $post_new")
