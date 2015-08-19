@@ -1,12 +1,12 @@
 # Compute Hessian of posterior function evaluated at x (vector)
-# if noisy, display error messages, results, etc.
+# if verbose, display error messages, results, etc.
 # 11/12/01 translated by Marco DelNegro in matlab from Frank Schorfheide's program in gauss
-function hessizero_saveall!{T<:FloatingPoint}(x::Vector{T}, model::AbstractModel, YY::Matrix{T}; noisy::Bool = false)
+function hessizero_saveall!{T<:FloatingPoint}(model::AbstractModel, x::Vector{T}, YY::Matrix{T}; verbose::Bool = false)
 
-    update!(model.Θ, x)
+    update!(model, x)
     
     ## index of free parameters
-    para_free = [!α.fixed for α in model.Θ]
+    para_free = [!θ.fixed for θ in model.parameters]
     fpara_free = find(para_free)
     nfree = length(fpara_free)
 
@@ -19,7 +19,7 @@ function hessizero_saveall!{T<:FloatingPoint}(x::Vector{T}, model::AbstractModel
 
     # Compute Diagonal elements first
     for seli = fpara_free'
-        if noisy
+        if verbose
             println("\nHessian element: ($seli, $seli)")
         end
 
@@ -35,7 +35,7 @@ function hessizero_saveall!{T<:FloatingPoint}(x::Vector{T}, model::AbstractModel
             hessdiag[seli, seli, k] = -(2fx - fdx - fdy) / (dx[k])^2
         end
         
-        if noisy
+        if verbose
             values = reshape(hessdiag[seli, seli, :], 6, 1)
             println("Values: $values")
         end
@@ -47,7 +47,7 @@ function hessizero_saveall!{T<:FloatingPoint}(x::Vector{T}, model::AbstractModel
         for j = (i+1):nfree
             selj = fpara_free[j]
             
-            if noisy
+            if verbose
                 println("\nHessian element: ($seli, $selj)")
             end
             
@@ -67,7 +67,7 @@ function hessizero_saveall!{T<:FloatingPoint}(x::Vector{T}, model::AbstractModel
                 hessdiag[selj, seli, k] = hessdiag[seli, selj, k]
             end
             
-            if noisy
+            if verbose
                 values = reshape(hessdiag[seli, selj, :], 6, 1)
                 println("Values: $values")
             end

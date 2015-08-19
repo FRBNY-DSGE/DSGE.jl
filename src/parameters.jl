@@ -45,24 +45,24 @@ function Param(value::Float64)
 end
 
 # Update a Param's value and scaledvalue if it is not fixed
-function update!(α::Param, newvalue::Float64)
-    if !α.fixed
-        α.value = newvalue
-        α.scaledvalue = α.scalefunction(newvalue)
+function update!(θ::Param, newvalue::Float64)
+    if !θ.fixed
+        θ.value = newvalue
+        θ.scaledvalue = θ.scalefunction(newvalue)
     end
-    return α
+    return θ
 end
 
-function update!{T<:FloatingPoint}(Θ::Vector, newvalues::Vector{T})
-    @assert length(newvalues) == length(Θ)
-    for (α, newvalue) in zip(Θ, newvalues)
-        isa(α,Param) && update!(α, newvalue)
+function update!{T<:FloatingPoint}(m::AbstractDSGEModel, newvalues::Vector{T})
+    @assert length(newvalues) == length(m.parameters)
+    for (θ, newvalue) in zip(m.parameters, newvalues)
+        isa(θ,Param) && update!(θ, newvalue)
     end
-    return steadystate!(Θ)
+    return steadystate!(m)
 end
 
 # Methods so that arithmetic with parameters can be done tersely, like "θ.α + θ.β"
-# Note there are still cases where we must refer to α.scaledvalue, e.g. pdf(α.priordist, α.val)
+# Note there are still cases where we must refer to α.scaledvalue, e.g. pdf(θ.priordist, θ.val)
 Base.convert{T<:FloatingPoint}(::Type{T}, α::Param) = α.scaledvalue
 Base.promote_rule{T<:FloatingPoint}(::Type{Param}, ::Type{T}) = Float64
 Base.promote_rule{T<:Integer}(::Type{Param}, ::Type{T}) = Float64
@@ -75,35 +75,58 @@ for f in [:-, :log, :exp]
     @eval ($f)(α::Param) = $(f)(α.scaledvalue)
 end
 
+# Returns a vector of parameter values transformed to lie on the real line.
+function toreal(parameters::Vector{Param})
+    return [toreal(θ) for θ in parameters]
+end
+
 # Transforms variables from model to max (invtrans.m)
-function toreal(α::Param)
-    (a, b) = α.transformbounds
+function toreal(θ::Param)
+    (a, b) = θ.transformbounds
     c = 1.0
 
-    if α.transformtype == 0
-       return α.value
-    elseif α.transformtype == 1
-        cx = 2 * (α.value - (a+b)/2) / (b-a)
+    if θ.transformtype == 0
+       return θ.value
+    elseif θ.transformtype == 1
+        cx = 2 * (θ.value - (a+b)/2) / (b-a)
         return (1/c) * cx / sqrt(1 - cx^2)
-    elseif α.transformtype == 2
-        return b + (1/c) * log(α.value-a)
+    elseif θ.transformtype == 2
+        return b + (1/c) * log(θ.value-a)
     else
-        error("Invalid transform type $α.transformtype")
+        error("Invalid transform type $θ.transformtype")
     end
+end
+
+function tomodel{T<:FloatingPoint}(values::Vector{T}, parameters::Vector{Param})
+    return [tomodel(value, θ) for (value, θ) in zip(values, parameters)]
 end
 
 # Transforms variables from max to model (trans.m)
-function tomodel{T<:FloatingPoint}(value::T, α::Param)
-    (a, b) = α.transformbounds
+function tomodel{T<:FloatingPoint}(value::T, θ::Param)
+    (a, b) = θ.transformbounds
     c = 1.0
 
-    if α.transformtype == 0
+    if θ.transformtype == 0
         return value
-    elseif α.transformtype == 1
+    elseif θ.transformtype == 1
         return (a+b)/2 + (b-a)/2*c*value/sqrt(1 + c^2 * value^2)
-    elseif α.transformtype == 2
+    elseif θ.transformtype == 2
         return a + exp(c * (value-b))
     else
-        error("Invalid transform type $α.transformtype")
+        error("Invalid transform type $θ.transformtype")
     end
 end
+
+# Given a vector of parameter values on the real line, map them to the model space and
+# update model.parameters field.
+function tomodel!{T<:FloatingPoint}(values::Vector{T}, parameters::Vector{Param})
+    newvalues = [tomodel(value, θ) for (value, θ) in zip(values, parameters)]
+    return update!(parameters, newvalues)
+end
+
+# # Transform values from unbounded to bounded model-space, and updates Param value field.
+# # Map parameter value to the model space and update parameter value field.
+# function tomodel!{T<:FloatingPoint}(value::T, θ::Param)
+#     newvalue = tomodel(value, θ)
+#     update!(θ, newvalue)
+# end

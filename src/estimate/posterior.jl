@@ -1,7 +1,7 @@
 # Calculate (log of) joint density of Θ
-function prior(m::AbstractDSGEModel)
+function prior(model::AbstractDSGEModel)
     x = zero(Float64)
-    for θ in m.parameters
+    for θ in model.parameters
         if isa(θ,Param)
             x += logpdf(θ.priordist, θ.value)
         end
@@ -11,19 +11,19 @@ end
 
 # log posterior = log likelihood + log prior
 # log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
-function posterior{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
+function posterior{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
     if mh
-        like, out = likelihood(m, YY; mh=mh)
-        post = like + prior(m)
+        like, out = likelihood(model, YY; mh=mh)
+        post = like + prior(model)
         return post, like, out
     else
-        return likelihood(m, YY; mh=mh) + prior(m)
+        return likelihood(model, YY; mh=mh) + prior(model)
     end
 end
 
 # Evaluate posterior at `parameters`
 function posterior!{T<:FloatingPoint}(parameters::Vector{T}, model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
-    update!(model.Θ, parameters)
+    update!(model, parameters)
     return posterior(model, YY; mh=mh)
 end
 
@@ -32,13 +32,13 @@ end
 # This is a dsge likelihood function that can handle 2-part estimation where
 # there is a model switch.
 # If there is no model switch, then we filter over the main sample all at once.
-function likelihood{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
+function likelihood{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if mh
-        for α in model.Θ
-            (left, right) = α.bounds
-            if !α.fixed && !(left <= α.value <= right)
+        for θ in model.parameters
+            (left, right) = θ.bounds
+            if !θ.fixed && !(left <= θ.value <= right)
                 return -Inf, Dict{String, Any}()
             end
         end
@@ -50,27 +50,27 @@ function likelihood{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T}; mh::B
     zlb = Dict{String, Any}()
     mt = [presample, normal, zlb]
 
-    presample["num_observables"] = num_observables(m) - num_anticipated_shocks(m)
-    normal["num_observables"] = num_observables(m) - num_anticipated_shocks(m)
-    zlb["num_observables"] = num_observables(m)
+    presample["num_observables"] = num_observables(model) - num_anticipated_shocks(model)
+    normal["num_observables"] = num_observables(model) - num_anticipated_shocks(model)
+    zlb["num_observables"] = num_observables(model)
 
-    presample["num_states"] = num_states_augmented(m) - num_anticipated_shocks(m)
-    normal["num_states"] = num_states_augmented(m) - num_anticipated_shocks(m)
-    zlb["num_states"] = num_states_augmented(m)
+    presample["num_states"] = num_states_augmented(model) - num_anticipated_shocks(model)
+    normal["num_states"] = num_states_augmented(model) - num_anticipated_shocks(model)
+    zlb["num_states"] = num_states_augmented(model)
 
-    presample["YY"] = YY[1:num_presample_periods(m), 1:presample["num_observables"]]
-    normal["YY"] = YY[(num_presample_periods(m)+1):(end-num_anticipated_lags(m)-1), 1:normal["num_observables"]]
-    zlb["YY"] = YY[(end-num_anticipated_lags(m)):end, :]
+    presample["YY"] = YY[1:num_presample_periods(model), 1:presample["num_observables"]]
+    normal["YY"] = YY[(num_presample_periods(model)+1):(end-num_anticipated_lags(model)-1), 1:normal["num_observables"]]
+    zlb["YY"] = YY[(end-num_anticipated_lags(model)):end, :]
 
 
 
     ## step 1: solution to DSGE m - delivers transition equation for the state variables  S_t
     ## transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ
-    zlb["TTT"], zlb["RRR"], zlb["CCC"] = solve(m::AbstractDSGEModel)
+    zlb["TTT"], zlb["RRR"], zlb["CCC"] = solve(model::AbstractDSGEModel)
 
     # Get normal, no ZLB m matrices
-    state_inds = [1:(num_states(m)-num_anticipated_shocks(m)); (num_states(m)+1):num_states_augmented(m)]
-    shock_inds = 1:(num_shocks_exogenous(m)-num_anticipated_shocks(m))
+    state_inds = [1:(num_states(model)-num_anticipated_shocks(model)); (num_states(model)+1):num_states_augmented(model)]
+    shock_inds = 1:(num_shocks_exogenous(model)-num_anticipated_shocks(model))
 
     normal["TTT"] = zlb["TTT"][state_inds, state_inds]
     normal["RRR"] = zlb["RRR"][state_inds, shock_inds]
@@ -86,7 +86,7 @@ function likelihood{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T}; mh::B
     for p = 2:3
         #try
             shocks = (p == 3)
-            mt[p]["ZZ"], mt[p]["DD"], mt[p]["QQ"], mt[p]["EE"], mt[p]["MM"] = measurement(m, mt[p]["TTT"], mt[p]["RRR"], mt[p]["CCC"]; shocks=shocks)
+            mt[p]["ZZ"], mt[p]["DD"], mt[p]["QQ"], mt[p]["EE"], mt[p]["MM"] = measurement(model, mt[p]["TTT"], mt[p]["RRR"], mt[p]["CCC"]; shocks=shocks)
         #catch
             # Error thrown during gensys
             #    return -Inf
@@ -133,15 +133,15 @@ function likelihood{T<:FloatingPoint}(m::AbstractDSGEModel, YY::Matrix{T}; mh::B
             # state space without anticipated policy shocks, then shoves in nant
             # zeros in the middle of zend and Pend in the location of
             # the anticipated shock entries.
-            before_shocks = 1:(num_states(m)-num_anticipated_shocks(m))
-            after_shocks_old = (num_states(m)-num_anticipated_shocks(m)+1):(num_states_augmented(m)-num_anticipated_shocks(m))
-            after_shocks_new = (num_states(m)+1):num_states_augmented(m)
+            before_shocks = 1:(num_states(model)-num_anticipated_shocks(model))
+            after_shocks_old = (num_states(model)-num_anticipated_shocks(model)+1):(num_states_augmented(model)-num_anticipated_shocks(model))
+            after_shocks_new = (num_states(model)+1):num_states_augmented(model)
 
             zprev = [normal["zend"][before_shocks, :];
-                     zeros(num_anticipated_shocks(m), 1);
+                     zeros(num_anticipated_shocks(model), 1);
                      normal["zend"][after_shocks_old, :]]
 
-            Pprev = zeros(num_states_augmented(m), num_states_augmented(m))
+            Pprev = zeros(num_states_augmented(model), num_states_augmented(model))
             Pprev[before_shocks, before_shocks] = normal["Pend"][before_shocks, before_shocks]
             Pprev[before_shocks, after_shocks_new] = normal["Pend"][before_shocks, after_shocks_old]
             Pprev[after_shocks_new, before_shocks] = normal["Pend"][after_shocks_old, before_shocks]
