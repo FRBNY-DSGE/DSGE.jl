@@ -106,7 +106,6 @@ See the file `examples/csminwel.jl` for an example of usage
                   show_trace::Bool = false,
                   extended_trace::Bool = false,
                   verbose::Bool = false,
-                  randvecs::Matrix = [],
                   kwargs...)
     
     # PZL 8/11/15: for time tests
@@ -188,11 +187,11 @@ See the file `examples/csminwel.jl` for an example of usage
                 # 1D
 
                 # PZL 8/11/15: for time tests
-                if randvecs == []
+                if true
                     Hcliff = H + diagm(diag(H).*rand(nx))
                 else
-                    Hcliff = H + diamg(diag(H) .* randvecs[:, randi])
-                    randi += 1
+                    # Hcliff = H + diamg(diag(H) .* randvecs[:, randi])
+                    # randi += 1
                 end
 
                 if verbose
@@ -395,13 +394,12 @@ using the true derivative.
                   show_trace::Bool = false,
                   extended_trace::Bool = false,
                   verbose::Bool = false,
-                  randvecs::Matrix = [],
                   kwargs...)
     grad{T<:Number}(x::Array{T}) = csminwell_grad(fcn, x, args...; kwargs...)
     csminwel(fcn, grad, x0, H0, args...;
              xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
              store_trace=store_trace, show_trace=show_trace,
-             extended_trace=extended_trace, verbose=verbose, randvecs=randvecs, kwargs...)
+             extended_trace=extended_trace, verbose=verbose, kwargs...)
 end
 
 
