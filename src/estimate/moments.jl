@@ -301,7 +301,6 @@ end
     @printf(prioPostMean_fid,"\\caption{Parameter Estimates: Prior and Posterior Mean}\n")
     @printf(prioPostMean_fid,"\\vspace*{.5cm}\n")
     @printf(prioPostMean_fid,"\\begin{tabular}{ccc}\\hline \n")
-
     @printf(prioPostMean_fid," Parameter & Prior & Posterior  \\tabularnewline \\hline\n")
     
     # Write out the results
@@ -337,6 +336,28 @@ end
     
     endTexTableDoc(prioPostMean_fid)
     println("Tables are in ",tablepath(m))
+=======
+    @printf(prioPostMean_fid," Parameter & Prior \n")
+    @printf(prioPostMean_fid,"\\\\  \\\hline\n")
+    
+    for (index, param) in enumerate(m.parameters)
+
+        @printf(prioPostMean_fid, " \\n \$%4.99s\$ ", param.texLabel )
+        
+        for val in outmat2[index,:]
+            @printf(periphParams_fid, "\%8.3f & ",val)
+        end
+
+        @printf(prioPostMean_fid, "\\\\ ")
+        
+    end
+    
+    @printf(prioPostMean_fid, "\\\\ \\hline")
+    @printf(prioPostMean_fid,"\\end{tabular}}\n")
+    @printf(prioPostMean_fid,"\\end{table}\n")
+    @printf(prioPostMean_fid,"\\end{document}")
+    close(prioPostMean_fid)
+>>>>>>> Add texLabel field to Param type for easy TeX table printing
 
 end
 
