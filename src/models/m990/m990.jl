@@ -26,6 +26,10 @@ type Model990 <: AbstractDSGEModel
     num_mh_blocks::Int                              #
     num_mh_burn::Int                                #
     mh_thinning_step::Int                           #
+    
+    num_mh_simulations_test::Int                    # 
+    num_mh_blocks_test::Int                         #
+    num_mh_burn_test::Int                           #    
 end
 
 description(m::Model990) = "This is some model that we're trying to make work."
@@ -257,7 +261,11 @@ function Model990()
             num_mh_simulations,
             num_mh_blocks,
             num_mh_burn,
-            mh_thinning_step)
+            mh_thinning_step,
+                 
+            num_mh_simulations_test,   
+            num_mh_blocks_test,  
+            num_mh_burn_test)
 
     initialise_model_parameters!(m)
     initialise_model_indices!(m)
