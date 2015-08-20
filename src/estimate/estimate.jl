@@ -17,7 +17,6 @@ using Debug
     h5 = h5open(joinpath(in_path,"YY.h5"), "r") 
     YY = read(h5["YY"])
     close(h5)
-    
     post = posterior(m, YY)
 
     ###################################################################################################
@@ -83,19 +82,13 @@ using Debug
         h5open("$out_path/hessian.h5","w") do h5
             h5["hessian"] = hessian
         end
-        
+
     else
         println("Using pre-calculated Hessian")
- 
+
         h5 = h5open("$in_path/hessian_optimized.h5","r") 
         hessian = read(h5["hessian"])
         close(h5)
-
-        #retrieve-mat
-        ## println("Using pre-calculated Hessian")
-        ## mf = MatFile("$inpath/hessian_optimized.mat")
-        ## hessian = get_variable(mf, "hessian")
-        ## close(mf)
 
     end
 
@@ -204,7 +197,10 @@ end
 
     while !initialized
         if testing
-            para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
+            para_old = rand(propdist; cc=cc0)
+            
+            #ELM REMOVE THIS BEFORE COMMITTING
+            #para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
 
             n_blocks = m.num_mh_blocks_test
             n_sim = m.num_mh_simulations_test
@@ -285,10 +281,11 @@ end
     zsim    = d_create(simfile, "zsim", datatype(Float32),
                        dataspace(n_saved_obs,num_states_augmented(m)),"chunk",(n_sim,num_states_augmented(m)))
 
-    if testing
-        rows, cols = size(randvecs)
-        numvals = size(randvals)[1]
-    end
+    # ELM UNCOMMENT THIS
+    ## if testing
+    ##     rows, cols = size(randvecs)
+    ##     numvals = size(randvals)[1]
+    ## end
 
     for i = 1:n_blocks
         block_rejections = 0
@@ -322,8 +319,10 @@ end
             r = exp(post_new - post_old)
 
             if testing
-                k = (i-1)*(n_sim*n_times) + j
-                x = randvals[mod(j,numvals)]
+                x = rand()
+                # ELM REMOVE THIS
+                ## k = (i-1)*(n_sim*n_times) + j
+                ## x = randvals[mod(j,numvals)]
             else
                 x = rand()
             end
