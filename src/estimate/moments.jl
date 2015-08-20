@@ -71,6 +71,9 @@ using Debug
         @printf(1,"Could not open file %s", infile)
     end
 
+    # Convert back to Float64 for compatability with other variables
+    Θ = convert(Matrix{Float64},Θ)
+
     num_draws = size(Θ,1)
 
     # Produce TeX table of moments
@@ -154,7 +157,8 @@ end
         posterior_fid["Θ_hat"] = convert(Matrix{Float32}, Θ_hat)
     end
 
-            
+
+    
     ## Step 3: Create variables for writing to output table
     colnames = ["Parameter ", "Prior Mean ", "Prior Stdd ", "Post Mean ", "$(100*percent)\\% {\\tiny Lower Band} ", "$(100*percent)\\% {\\tiny Upper Band} " ]
 
@@ -185,39 +189,32 @@ end
         
     # Keep track of indices for important parameters 
     important_para = []
-    
-    for (k,v) in m.keys
-        if v > length(m.parameters)
-            continue
-        end
-        
 
-        name = string(k)
+    for (index, param) in enumerate(m.parameters)   
+
         
-        # ?? rho_ might need to be ρ
-        if (!ismatch(r"ρ_", name) &&
-            !ismatch(r"zeta_", name) &&
-            !ismatch(r"psi", name) &&
-            !ismatch(r"nu_l", name) &&
-            !ismatch(r"pistar", name) &&
-            (!ismatch(r"ups", name)))  ##Is this correct? mspec == 16 or u_^*
+        if (!ismatch(r"rho_", param.texLabel) &&
+            !ismatch(r"zeta_", param.texLabel) &&
+            !ismatch(r"psi", param.texLabel) &&
+            !ismatch(r"nu_l", param.texLabel) &&
+            !ismatch(r"pistar", param.texLabel) &&
+            (!ismatch(r"ups", param.texLabel)))  ##Is this correct? mspec == 16 or u_^*
             continue
         end
             
-        # !! What is subspec in the Julia code?
-        if(k == ":ρ_chi") # ??? || (isequal(subspec,7) && texLabel == ":ρ_b"))
+        # TODO: Decide whether subspec should be a field in the model
+        if(ismatch(r"\\rho_chi",param.texLabel)) # ??? || (isequal(subspec,7) && texLabel == ":ρ_b"))
             continue
         end
 
-        #
-
-        @printf(mainParams_fid, "\\\\ \n \$\%4.99s\$ & ", k)
+        @printf(mainParams_fid, "\\\\ \n \$\%4.99s\$ & ", param.texLabel)
+        
         #Print the values in outmat
-        for val in outmat[v,:]
+        for val in outmat[index,:]
             @printf(mainParams_fid, "\%8.3f & ",val)
         end
 
-        important_para = [important_para, k]
+        important_para = [important_para, index]
         
     end
 
@@ -228,7 +225,7 @@ end
     close(mainParams_fid)    
     
     # Write to Table 2: Prior mean, std dev and posterior mean, bands for other params
-    periphParams_out = joinpath(tablepath(), "moments_periphParams.tex")
+    periphParams_out = joinpath(tablepath(), "moments_periphParams_0.tex")
     periphParams_fid = open(periphParams_out,"w")
     
     @printf(periphParams_fid,"\\documentclass[12pt]{article}\n")
@@ -253,21 +250,26 @@ end
 
     for (index, param) in enumerate(m.parameters)
     
-        if in(param, important_para)
+        if in(index, important_para)
             continue
         end
         
-        # Make a new table if the current one is too large    
+        # Make a new table if the current one is too large
+        
         if ((other_para%25 == 0) && (index != length(m.parameters)) )
+            
             @printf(periphParams_fid,"\\\\  \\\hline\n")
             @printf(periphParams_fid,"\\end{tabular}}\n")
             @printf(periphParams_fid,"\\end{table}\n")
             @printf(periphParams_fid,"\\end{document}")
+            
             table_count = table_count + 1
             close(periphParams_fid)
-            filename = @sprintf("periphParams_%d.tex",table_count)
+            
+            filename = @sprintf("moments_periphParams_%d.tex",table_count)
             periphParams_out = joinpath(tablepath(),filename)
             periphParams_fid = open(periphParams_out,"w")
+            
             @printf(periphParams_fid,"\\documentclass[12pt]{article}\n")
             @printf(periphParams_fid,"\\usepackage[dvips]{color}\n")
             @printf(periphParams_fid,"\\begin{document}\n")
@@ -277,31 +279,40 @@ end
             @printf(periphParams_fid,"\\vspace*{.2cm}\n")
             @printf(periphParams_fid,"{\\small \n")
             @printf(periphParams_fid,"\\begin{tabular}{lllllll}\\hline \n")
+            
             for col in colnames
                 @printf(periphParams_fid, "%4.99s & ", col)
             end
         end
+        
         #print the parameter name
         @printf(periphParams_fid, "\\\\ \n \$\%4.99s\$ & ", param.texLabel)
+        
         #Print the values in outmat
         for val in outmat[index,:]
             @printf(periphParams_fid, "\%8.3f & ",val)
         end
+        
         other_para = other_para+1
         
    end
+   
    @printf(periphParams_fid,"\\\\  \\\hline\n")
    @printf(periphParams_fid,"\\end{tabular}}\n")
    @printf(periphParams_fid,"\\end{table}\n")
    @printf(periphParams_fid,"\\end{document}")
    close(periphParams_fid)    
 
-@bp
 
    ## Write to Table 3: Prior mean and posterior mean for all parameters
 
     prioPostMean_out = joinpath(tablepath(), "moments_prioPostMean.tex")
     prioPostMean_fid = open(prioPostMean_out,"w")
+
+
+    # Counter for parameters to track length of table and number of tables in excess of
+    # default (1)
+    table_count = 0
 
     @printf(prioPostMean_fid,"\\documentclass[12pt]{article}\n")
     @printf(prioPostMean_fid,"\\usepackage[dvips]{color}\n")
@@ -311,28 +322,52 @@ end
     @printf(prioPostMean_fid,"\\caption{Parameter Estimates: Prior and Posterior Mean}\n")
     @printf(prioPostMean_fid,"\\vspace*{.5cm}\n")
     @printf(prioPostMean_fid,"\\begin{tabular}{ccc}\\hline \n")
-    @printf(prioPostMean_fid," Parameter & Prior \n")
-    @printf(prioPostMean_fid,"\\\\  \\\hline\n")
+    @printf(prioPostMean_fid," Parameter & Prior & Posterior  \\tabularnewline \\hline\n")
     
     for (index, param) in enumerate(m.parameters)
 
-        @printf(prioPostMean_fid, " \\n \$%4.99s\$ ", param.texLabel )
-        
-        for val in outmat2[index,:]
-            @printf(periphParams_fid, "\%8.3f & ",val)
+        if ((index % 40 == 0) && (index != length(m.parameters)) )
+
+            @printf(prioPostMean_fid,"\\\\  \\\hline\n")
+            @printf(prioPostMean_fid,"\\end{tabular}}\n")
+            @printf(prioPostMean_fid,"\\end{table}\n")
+            @printf(prioPostMean_fid,"\\end{document}")
+            
+            table_count = table_count + 1
+            close(prioPostMean_fid)
+            
+            filename = @sprintf("moments_prioPostMean_%d.tex",table_count)
+            prioPostMean_out = joinpath(tablepath(),filename)
+            prioPostMean_fid = open(prioPostMean_out,"w")
+            
+            @printf(prioPostMean_fid,"\\documentclass[12pt]{article}\n")
+            @printf(prioPostMean_fid,"\\usepackage[dvips]{color}\n")
+            @printf(prioPostMean_fid,"\\begin{document}\n")
+            @printf(prioPostMean_fid,"\\pagestyle{empty}\n")
+            @printf(prioPostMean_fid,"\\begin{table}[h] \\centering\n")
+            @printf(prioPostMean_fid,"\\caption{Parameter Estimates: Prior and Posterior Mean}\n")
+            @printf(prioPostMean_fid,"\\vspace*{.5cm}\n")
+            @printf(prioPostMean_fid,"\\begin{tabular}{ccc}\\hline \n")
+            @printf(prioPostMean_fid," Parameter & Prior & Posterior  \\tabularnewline \\hline\n")
+
         end
 
-        @printf(prioPostMean_fid, "\\\\ ")
+        
+        @printf(prioPostMean_fid, "\\\\ \n \$\%4.99s\$ & ", param.texLabel)
+
+        val = outmat2[index,:]
+        @printf(prioPostMean_fid, "\%8.3f &   \%8.3f  ", val[1], val[2])
         
     end
-    
-    @printf(prioPostMean_fid, "\\\\ \\hline")
-    @printf(prioPostMean_fid,"\\end{tabular}}\n")
+
+    @printf(prioPostMean_fid, "\\\\ \\\hline\n")
+    @printf(prioPostMean_fid,"\\end{tabular}\n")
     @printf(prioPostMean_fid,"\\end{table}\n")
     @printf(prioPostMean_fid,"\\end{document}")
     close(prioPostMean_fid)
 
-   println("Tables are in %s",tablepath())
+   println("Tables are in ",tablepath())
+
 end
 
 
