@@ -38,7 +38,7 @@ Description from original
 
 System given as
 
-       Γ0*y(t) = Γ1*y(t-1) + c + Ψ*z(t) + Π*η(t),
+       Γ0*y(t) = Γ1*y(t-1) + c + ψ*z(t) + π*η(t),
 
 with z an exogenous variable process and eta being endogenously
 determined one-step-ahead expectational errors.  Returned system is
@@ -55,6 +55,10 @@ only with not-s.c. z; eu=[-2,-2] for coincident zeros.
 
 =#
 
+module GenSys
+include("ordered_qz.jl")
+
+export gensys
 
 
 function new_div(F::Base.LinAlg.GeneralizedSchur)
@@ -85,25 +89,28 @@ end
 #- gensys methods -#
 ## -------------- ##
 
-# Wrapper method ensuring no side effects on input arguments
-function gensys(Γ0, Γ1, C, Ψ, Π, div)
-    return gensys!(copy(Γ0), copy(Γ1), copy(C), copy(Ψ), copy(Π), div)
+# method if no div is given
+function gensys(Γ0, Γ1, c, ψ, π)
+    F = schurfact(Γ0, Γ1)
+    div = new_div(F)
+    gensys(F, c, ψ, π, div)
 end
 
-# method if no div is given
-function gensys!(Γ0, Γ1, C, Ψ, Π)
-    F = schurfact!(complex(Γ0), complex(Γ1))
-    div = new_div(F)
-    gensys!(F, C, Ψ, Π, div)
-end
 
 # method if all arguments are given
-function gensys!(Γ0, Γ1, C, Ψ, Π, div)
-    F = schurfact!(complex(Γ0), complex(Γ1))
+function gensys(Γ0, Γ1, c, ψ, π, div)
+    F = schurfact(Γ0, Γ1)
+    gensys(F, c, ψ, π, div)
+end
+
+
+# Method that does the real work. Work directly on the decomposition F
+function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     eu = [0, 0]
     ε = 1e-6  # small number to check convergence
     nunstab = 0.0
     zxz = 0
+    # a, b, q, z = map(real, {F[:S], F[:T], F[:Q]', F[:Z]})
     a, b, q, z = F[:S], F[:T], F[:Q]', F[:Z]
     n = size(a, 1)
 
@@ -116,11 +123,10 @@ function gensys!(Γ0, Γ1, C, Ψ, Π, div)
 
     if zxz == 1
         msg = "Coincident zeros.  Indeterminacy and/or nonexistence."
-        #throw(InexactError(msg))
-        throw(InexactError())
+        throw(InexactError(msg))
     end
 
-    select = (abs(F[:alpha]) .> div*abs(F[:beta])) # we select eigenvalues greater than 1 !
+    select = (abs(F[:alpha]) .> div*abs(F[:beta]))
     FS = ordschur(F, select)
     a, b, q, z = FS[:S], FS[:T], FS[:Q]', FS[:Z]
     gev = [diag(a) diag(b)]
@@ -131,8 +137,8 @@ function gensys!(Γ0, Γ1, C, Ψ, Π, div)
     z2 = z[:, n-nunstab+1:n]'
     a2 = a[n-nunstab+1:n, n-nunstab+1:n]
     b2 = b[n-nunstab+1:n, n-nunstab+1:n]
-    etawt = q2 * Π
-    neta = size(Π, 2)
+    etawt = q2 * π
+    neta = size(π, 2)
 
     # branch below is to handle case of no stable roots, which previously
     # (5/9/09) quit with an error in that case.
@@ -171,7 +177,7 @@ function gensys!(Γ0, Γ1, C, Ψ, Π, div)
         veta1 = zeros(neta, 0)
         deta1 = zeros(0, 0)
     else
-        etawt1 = q1 * Π
+        etawt1 = q1 * π
         ndeta1 = min(n-nunstab, neta)
         ueta1, deta1, veta1 = svd(etawt1)
         deta1 = diagm(deta1)  # TODO: do we need to do this
@@ -202,23 +208,23 @@ function gensys!(Γ0, Γ1, C, Ψ, Π, div)
     # Cast as an int because we use it as an int!
     nunstab = int(nunstab)
     tmat = [eye(int(n-nunstab)) -(ueta*(deta\veta')*veta1*deta1*ueta1')']
-    Γ0 = [tmat*a; zeros(nunstab,n-nunstab) eye(nunstab)]
+    G0 = [tmat*a; zeros(nunstab,n-nunstab) eye(nunstab)]
     G1 = [tmat*b; zeros(nunstab,n)]
 
     # ----------------------
-    # Γ0 is always non-singular because by construction there are no zeros on
-    # the diagonal of a(1:n-nunstab,1:n-nunstab), which forms Γ0's ul corner.
+    # G0 is always non-singular because by construction there are no zeros on
+    # the diagonal of a(1:n-nunstab,1:n-nunstab), which forms G0's ul corner.
     # -----------------------
-    Γ0I = inv(Γ0)
-    G1 = Γ0I*G1
+    G0I = inv(G0)
+    G1 = G0I*G1
     usix = n-nunstab+1:n
-    C = Γ0I * [tmat*q*C; (a[usix, usix] - b[usix,usix])\q2*C]
-    impact = Γ0I * [tmat*q*Ψ; zeros(nunstab, size(Ψ, 2))]
+    C = G0I * [tmat*q*c; (a[usix, usix] - b[usix,usix])\q2*c]
+    impact = G0I * [tmat*q*ψ; zeros(nunstab, size(ψ, 2))]
     fmat = b[usix, usix]\a[usix,usix]
-    fwt = -b[usix, usix]\q2*Ψ
-    ywt = Γ0I[:, usix]
+    fwt = -b[usix, usix]\q2*ψ
+    ywt = G0I[:, usix]
 
-    loose = Γ0I * [etawt1 * (eye(neta) - veta * veta'); zeros(nunstab, neta)]
+    loose = G0I * [etawt1 * (eye(neta) - veta * veta'); zeros(nunstab, neta)]
 
     # -------------------- above are output for system in terms of z'y -------
     G1 = real(z*G1*z')
@@ -228,9 +234,7 @@ function gensys!(Γ0, Γ1, C, Ψ, Π, div)
 
     ywt=z*ywt
 
-    if eu[1] != 1 || eu[2] != 1
-        error("gensys does not give existence and uniqueness")
-    end
-
     return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
 end
+
+end  # module
