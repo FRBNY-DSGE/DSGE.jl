@@ -65,7 +65,6 @@ using Debug
     try
         fid = h5open(infile,"r") do fid
             Θ = read(fid,"parasim")
-            @bp
             post = read(fid,"postsim")
         end
     catch
@@ -74,8 +73,6 @@ using Debug
 
     num_draws = size(Θ,1)
 
-    
-    
     # Produce TeX table of moments
     makeMomentTables(m,Θ,percent)
 
@@ -105,7 +102,7 @@ end
 
     ## Step 1: Extract moments of prior distribution from m.parameters
 
-    num_params = length(m.parameters) + length(m.parameters_fixed)    
+    num_params = length(m.parameters) 
     prior_means = zeros(num_params,1)
     prior_stddev = zeros(num_params,1)
 
@@ -117,7 +114,6 @@ end
         end
         
         param  = getindex(m,i)
-        println(i)
         
         if isa(param.priordist, DSGE.Normal)
 
@@ -139,19 +135,20 @@ end
     
     
     ## Step 2: Compute moments and `percent' bands from parameter draws
-    @bp
-    Θ_hat = mean(Θ,1)'                   # posterior mean for each parameter
-    Θ_sig = cov(Θ, mean=Θ_hat)           # posterior std dev for each parameter
+
+    Θ_hat = mean(Θ,1)'                    # posterior mean for each parameter
+    Θ_sig = cov(Θ, mean=Θ_hat')           # posterior std dev for each parameter
+    Θ_bands = []
     
     # ?? Do we want to be doing error handling like this?
     try
-        Θ_bands = find_density_bands(Θ,percent,minimize=true)
+        Θ_bands = find_density_bands(Θ,percent,minimize=true)'
     catch
         println("percent must be between 0 and 1")
     end
     
     # Save posterior mean
-    cov_filename = joinpath("$outpath","cov.h5")
+    cov_filename = joinpath(outpath(),"cov.h5")
     posterior_fid = h5open(cov_filename,"w") do posterior_fid
         posterior_fid["Θ_hat"] = convert(Matrix{Float32}, Θ_hat)
     end
@@ -160,8 +157,8 @@ end
     ## Step 3: Create variables for writing to output table
     colnames = ["Parameter ", "Prior Mean ", "Prior Stdd ", "Post Mean ", "$(100*percent)\\% {\\tiny Lower Band} ", "$(100*percent)\\% {\\tiny Upper Band} " ]
 
-    outmat = [pmean pstdd Θ_hat Θ_bands]      # prior mean and std dev, posterior mean, and bands (n_params x 5)
-    outmat2 = [pmean Θ_hat]                   # prior mean and posterior mean (n_params x 2)
+    outmat = [prior_means prior_stddev Θ_hat Θ_bands]      # prior mean and std dev, posterior mean, and bands (n_params x 5)
+    outmat2 = [prior_means Θ_hat]                   # prior mean and posterior mean (n_params x 2)
 
     
     ## Step 4: Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT parameters
@@ -170,15 +167,15 @@ end
     mainParams_fid = open(mainParams_out,"w")
 
     # Preamble
-    ## @printf(mainParams_fid,"\\documentclass[12pt]{article}\n")
-    ## @printf(mainParams_fid,"\\usepackage[dvips]{color}\n")
-    ## @printf(mainParams_fid,"\\begin{document}\n")
-    ## @printf(mainParams_fid,"\\pagestyle{empty}\n")
-    ## @printf(mainParams_fid,"\\begin{table}[h] \\centering\n")
-    ## @printf(mainParams_fid,"\\caption{Parameter Estimates}\n")
-    ## @printf(mainParams_fid,"\\vspace*{.5cm}\n")
-    ## @printf(mainParams_fid,"{\\small \n")
-    ## @printf(mainParams_fid,"\\begin{tabular}{lllllll}\\hline \n")
+    @printf(mainParams_fid,"\\documentclass[12pt]{article}\n")
+    @printf(mainParams_fid,"\\usepackage[dvips]{color}\n")
+    @printf(mainParams_fid,"\\begin{document}\n")
+    @printf(mainParams_fid,"\\pagestyle{empty}\n")
+    @printf(mainParams_fid,"\\begin{table}[h] \\centering\n")
+    @printf(mainParams_fid,"\\caption{Parameter Estimates}\n")
+    @printf(mainParams_fid,"\\vspace*{.5cm}\n")
+    @printf(mainParams_fid,"{\\small \n")
+    @printf(mainParams_fid,"\\begin{tabular}{lllllll}\\hline \n")
 
     # Column names
     for col in colnames
@@ -186,21 +183,28 @@ end
     end
         
     # Keep track of indices for important parameters 
-   
-    for (i,k) in enumerate(m.keys)
+    important_para = []
+    
+    for (k,v) in m.keys
+        if v > length(m.parameters)
+            continue
+        end
+        
+
+        name = string(k)
         
         # ?? rho_ might need to be ρ
-        if (!ismatch(r"ρ_", k) &&
-            !ismatch(r"zeta_", k) &&
-            !ismatch(r"psi", k) &&
-            !ismatch(r"nu_l", k) &&
-            !ismatch(r"pistar", k) &&
-            ( model.spec != 16 || !ismatch(r"u^\*", k))) 
+        if (!ismatch(r"ρ_", name) &&
+            !ismatch(r"zeta_", name) &&
+            !ismatch(r"psi", name) &&
+            !ismatch(r"nu_l", name) &&
+            !ismatch(r"pistar", name) &&
+            (!ismatch(r"ups", name)))  ##Is this correct? mspec == 16 or u_^*
             continue
         end
             
         # !! What is subspec in the Julia code?
-        if(k == ":ρ_chi" || (isequal(subspec,7) && texLabel == ":ρ_b"))
+        if(k == ":ρ_chi") # ??? || (isequal(subspec,7) && texLabel == ":ρ_b"))
             continue
         end
 
@@ -208,11 +212,11 @@ end
 
         @printf(mainParams_fid, "\\\\ \n \$\%4.99s\$ & ", k)
         #Print the values in outmat
-        for val in outmat[i,:]
+        for val in outmat[v,:]
             @printf(mainParams_fid, "\%8.3f & ",val)
         end
 
-        important_para = [important_para, param]
+        important_para = [important_para, k]
         
     end
 
@@ -245,13 +249,15 @@ end
     # default (1)
     other_para = 1
     table_count = 0
-    for param in 1:length(Θ)
-        println("$param")
-        if in(Θ[param], important_para)
+
+    for (index, param) in enumerate(m.parameters)
+    
+        if in(param, important_para)
             continue
         end
+        
         # Make a new table if the current one is too large    
-        if ((other_para%25 == 0) && !(param==length(Θ)))
+        if ((other_para%25 == 0) && (index != length(m.parameters)) )
             @printf(periphParams_fid,"\\\\  \\\hline\n")
             @printf(periphParams_fid,"\\end{tabular}}\n")
             @printf(periphParams_fid,"\\end{table}\n")
@@ -259,7 +265,7 @@ end
             table_count = table_count + 1
             close(periphParams_fid)
             filename = @sprintf("periphParams_%d.tex",table_count)
-            periphParams_out = joinpath("$tablepath()",filename)
+            periphParams_out = joinpath(tablepath(),filename)
             periphParams_fid = open(periphParams_out,"w")
             @printf(periphParams_fid,"\\documentclass[12pt]{article}\n")
             @printf(periphParams_fid,"\\usepackage[dvips]{color}\n")
@@ -275,9 +281,9 @@ end
             end
         end
         #print the parameter name
-        @printf(periphParams_fid, "\\\\ \n \$\%4.99s\$ & ", Θ[param])
+        @printf(periphParams_fid, "\\\\ \n \$\%4.99s\$ & ", string(param))
         #Print the values in outmat
-        for val in outmat[param,:]
+        for val in outmat[index,:]
             @printf(periphParams_fid, "\%8.3f & ",val)
         end
         other_para = other_para+1
@@ -288,6 +294,8 @@ end
    @printf(periphParams_fid,"\\end{table}\n")
    @printf(periphParams_fid,"\\end{document}")
    close(periphParams_fid)    
+
+@bp
 
    ## Write to Table 3: Prior mean and posterior mean for all parameters
 
