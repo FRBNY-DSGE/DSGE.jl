@@ -138,8 +138,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
 
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
-    # ELM REMOVE THIS BEFORE COMMITTING ANYTHING
-    testing = true
+    
     println("Testing = $testing")
     
     
@@ -171,10 +170,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
 
     while !initialized
         if testing
-            para_old = rand(propdist; cc=cc0)
-            
-            #ELM REMOVE THIS BEFORE COMMITTING
-            #para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
+            para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
 
             n_blocks = m.num_mh_blocks_test
             n_sim = m.num_mh_simulations_test
@@ -255,11 +251,10 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
     zsim    = d_create(simfile, "zsim", datatype(Float32),
                        dataspace(n_saved_obs,num_states_augmented(m)),"chunk",(n_sim,num_states_augmented(m)))
 
-    # ELM UNCOMMENT THIS
-    ## if testing
-    ##     rows, cols = size(randvecs)
-    ##     numvals = size(randvals)[1]
-    ## end
+    if testing
+        rows, cols = size(randvecs)
+        numvals = size(randvals)[1]
+    end
 
     for i = 1:n_blocks
         block_rejections = 0
@@ -268,12 +263,11 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
 
             # Draw para_new from the proposal distribution
 
-            # ELM UNCOMMENT THIS
-            ## if testing
-            ##     para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(j,cols)]
-            ## else
+            if testing
+                para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(j,cols)]
+            else
                 para_new = rand(propdist; cc=cc)
-            # end
+            end
 
             # Solve the model, check that parameters are within bounds, and
             # evaluate the posterior.
@@ -294,10 +288,8 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
             r = exp(post_new - post_old)
 
             if testing
-                x = rand()
-                # ELM REMOVE THIS
-                ## k = (i-1)*(n_sim*n_times) + j
-                ## x = randvals[mod(j,numvals)]
+                k = (i-1)*(n_sim*n_times) + j
+                x = randvals[mod(j,numvals)]
             else
                 x = rand()
             end
