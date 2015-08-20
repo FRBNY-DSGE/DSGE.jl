@@ -203,10 +203,7 @@ end
 
     while !initialized
         if testing
-            para_old = rand(propdist; cc=cc0)
-            
-            #ELM REMOVE THIS BEFORE COMMITTING
-            #para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
+            para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
 
             n_blocks = m.num_mh_blocks_test
             n_sim = m.num_mh_simulations_test
@@ -287,11 +284,10 @@ end
     zsim    = d_create(simfile, "zsim", datatype(Float32),
                        dataspace(n_saved_obs,num_states_augmented(m)),"chunk",(n_sim,num_states_augmented(m)))
 
-    # ELM UNCOMMENT THIS
-    ## if testing
-    ##     rows, cols = size(randvecs)
-    ##     numvals = size(randvals)[1]
-    ## end
+    if testing
+        rows, cols = size(randvecs)
+        numvals = size(randvals)[1]
+    end
 
     for i = 1:n_blocks
         block_rejections = 0
@@ -304,7 +300,7 @@ end
                 para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(j,cols)]
             else
                 para_new = rand(propdist; cc=cc)
-            # end
+            end
 
             # Solve the model, check that parameters are within bounds, gensys returns a
             # meaningful system, and evaluate the posterior.
@@ -325,10 +321,8 @@ end
             r = exp(post_new - post_old)
 
             if testing
-                x = rand()
-                # ELM REMOVE THIS
-                ## k = (i-1)*(n_sim*n_times) + j
-                ## x = randvals[mod(j,numvals)]
+                k = (i-1)*(n_sim*n_times) + j
+                x = randvals[mod(j,numvals)]
             else
                 x = rand(m.rng)
             end
