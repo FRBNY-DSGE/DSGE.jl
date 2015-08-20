@@ -66,6 +66,9 @@ using Debug
         @printf(1,"Could not open file %s", infile)
     end
 
+    # Convert back to Float64 for compatability with other variables
+    Θ = convert(Matrix{Float64},Θ)
+
     num_draws = size(Θ,1)
 
     # Produce TeX table of moments
@@ -251,7 +254,6 @@ end
         # Make a new table if the current one is too large
         
         if ((other_para%25 == 0) && (index != length(m.parameters)) )
-
             # Finish and close the old file
             endTexTableDoc(periphParams_fid;small=true)
 
@@ -336,28 +338,6 @@ end
     
     endTexTableDoc(prioPostMean_fid)
     println("Tables are in ",tablepath(m))
-=======
-    @printf(prioPostMean_fid," Parameter & Prior \n")
-    @printf(prioPostMean_fid,"\\\\  \\\hline\n")
-    
-    for (index, param) in enumerate(m.parameters)
-
-        @printf(prioPostMean_fid, " \\n \$%4.99s\$ ", param.texLabel )
-        
-        for val in outmat2[index,:]
-            @printf(periphParams_fid, "\%8.3f & ",val)
-        end
-
-        @printf(prioPostMean_fid, "\\\\ ")
-        
-    end
-    
-    @printf(prioPostMean_fid, "\\\\ \\hline")
-    @printf(prioPostMean_fid,"\\end{tabular}}\n")
-    @printf(prioPostMean_fid,"\\end{table}\n")
-    @printf(prioPostMean_fid,"\\end{document}")
-    close(prioPostMean_fid)
->>>>>>> Add texLabel field to Param type for easy TeX table printing
 
 end
 
