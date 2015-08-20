@@ -173,19 +173,19 @@ function initialise_model_parameters!(m::Model990)
     # standard deviations of the anticipated policy shocks
     for i = 1:num_anticipated_shocks_padding(m)
         m[symbol("σ_rm$i")] = if i < 13
-            Param(0.20, false, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.))
+            Param(0.20, false, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.),texLabel= @sprintf("\\sigma_{ant%d}",i) )
         else
-            Param(0.0, true, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.))
+            Param(0.0, true, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.),texLabel= @sprintf("\\sigma_{ant%d}",i) )
         end
     end
 
-    m[:eta_gz      ] = Param(0.8400, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999))
-    m[:eta_laf     ] = Param(0.7892, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999))
-    m[:eta_law     ] = Param(0.4226, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999))
+    m[:eta_gz      ] = Param(0.8400, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999), texLabel = "\\eta_{gz}")
+    m[:eta_laf     ] = Param(0.7892, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999), texLabel = "\\eta_{\\lambda_f}")
+    m[:eta_law     ] = Param(0.4226, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999), texLabel = "\\eta_{\\lambda_w}")
 
-    m[:modelalp_ind] = Param(0.0000, true, (0.000, 1.000), BetaAlt(0.50, 0.20), 0, (0., 0.))
-    m[:gamm_gdpdef ] = Param(1.0354, false, (-10., 10.), Normal(1.00, 2.), 0, (-10., -10.))
-    m[:del_gdpdef  ] = Param(0.0181, false, (-9.1, 9.1), Normal(0.00, 2.), 0, (-10., -10.))
+    m[:modelalp_ind] = Param(0.0000, true, (0.000, 1.000), BetaAlt(0.50, 0.20), 0, (0., 0.), texLabel = "i_{\\alpha}^{model}")
+    m[:gamm_gdpdef ] = Param(1.0354, false, (-10., 10.), Normal(1.00, 2.), 0, (-10., -10.), texLabel = "\\Gamma_{gdpdef}")
+    m[:del_gdpdef  ] = Param(0.0181, false, (-9.1, 9.1), Normal(0.00, 2.), 0, (-10., -10.), texLabel = "\\delta_{gdpdef}")
 end
 
 function Model990()
