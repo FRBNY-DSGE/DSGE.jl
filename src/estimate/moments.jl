@@ -157,7 +157,6 @@ end
 
     outmat = [prior_means prior_stddev Θ_hat Θ_bands]      # prior mean and std dev, posterior mean,
                                                            # and bands (n_params x 5)
-
     outmat2 = [prior_means Θ_hat]                          # prior mean and posterior mean
                                                            # (n_params x 2)
 
@@ -274,7 +273,6 @@ end
                 @printf(periphParams_fid, "%4.99s & ", col)
             end
         end
-
         
         # Print the parameter name
         @printf(periphParams_fid, "\\\\ \n \$\%4.99s\$ & ", param.texLabel)
