@@ -9,7 +9,10 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
     ### Step 1: Initialize
 
     # Load data
-    mf = MatFile("$inpath/YY.mat")
+    in_path = inpath()
+    out_path = outpath()
+    
+    mf = MatFile("$in_path/YY.mat")
     YY = get_variable(mf, "YY")
     close(mf)
 
@@ -20,7 +23,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
     # Specify starting mode
 
     println("Reading in previous mode")
-    mf = MatFile("$inpath/mode_in_optimized.mat")
+    mf = MatFile("$in_path/mode_in_optimized.mat")
     mode = get_variable(mf, "mode")
 
     close(mf)
@@ -55,7 +58,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
         mode = [α.value for α in m.parameters]
 
         # Write mode to file
-        mf = MatFile("$outpath/mode_out.mat", "w")
+        mf = MatFile("$out_path/mode_out.mat", "w")
         put_variable(mf, "mode", mode)
         close(mf)
     end
@@ -67,13 +70,13 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
         println("Recalculating Hessian...")
         hessian, _ = hessizero!(m, mode, YY; verbose=true)
 
-        mf = MatFile("$outpath/hessian.mat", "w")
+        mf = MatFile("$out_path/hessian.mat", "w")
         put_variable(mf, "hessian", hessian)
         close(mf)
     else
 
         println("Using pre-calculated Hessian")
-        mf = MatFile("$inpath/hessian_optimized.mat")
+        mf = MatFile("$in_path/hessian_optimized.mat")
         hessian = get_variable(mf, "hessian")
         close(mf)
     end
@@ -95,7 +98,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
     metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose)
 
     # Set up HDF5 file for saving
-    h5path = joinpath(outpath,"sim_save.h5")
+    h5path = joinpath(out_path,"sim_save.h5")
 
     ### Step 5: Calculate parameter covariance matrix
     # Read in saved parameter draws
@@ -135,8 +138,11 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
 
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
+    # ELM REMOVE THIS BEFORE COMMITTING ANYTHING
+    testing = true
     println("Testing = $testing")
-
+    
+    
     # Set number of draws, how many we will save, and how many we will burn
     # (initialized here for scoping; will re-initialize in the while loop)
 
@@ -165,7 +171,10 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
 
     while !initialized
         if testing
-            para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
+            para_old = rand(propdist; cc=cc0)
+            
+            #ELM REMOVE THIS BEFORE COMMITTING
+            #para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
 
             n_blocks = m.num_mh_blocks_test
             n_sim = m.num_mh_simulations_test
@@ -218,7 +227,8 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
     #     logpath   = savepath;
     # end
 
-    h5path = joinpath("$outpath","sim_save.h5")
+    
+    h5path = joinpath(outpath(),"sim_save.h5")
     simfile = h5open(h5path,"w")
 
     n_saved_obs = n_sim * (n_blocks - n_burn)
@@ -245,10 +255,11 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
     zsim    = d_create(simfile, "zsim", datatype(Float32),
                        dataspace(n_saved_obs,num_states_augmented(m)),"chunk",(n_sim,num_states_augmented(m)))
 
-    if testing
-        rows, cols = size(randvecs)
-        numvals = size(randvals)[1]
-    end
+    # ELM UNCOMMENT THIS
+    ## if testing
+    ##     rows, cols = size(randvecs)
+    ##     numvals = size(randvals)[1]
+    ## end
 
     for i = 1:n_blocks
         block_rejections = 0
@@ -256,11 +267,13 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
         for j = 1:(n_sim*n_times)
 
             # Draw para_new from the proposal distribution
-            if testing
-                para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(j,cols)]
-            else
+
+            # ELM UNCOMMENT THIS
+            ## if testing
+            ##     para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(j,cols)]
+            ## else
                 para_new = rand(propdist; cc=cc)
-            end
+            # end
 
             # Solve the model, check that parameters are within bounds, and
             # evaluate the posterior.
@@ -281,8 +294,10 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
             r = exp(post_new - post_old)
 
             if testing
-                k = (i-1)*(n_sim*n_times) + j
-                x = randvals[mod(j,numvals)]
+                x = rand()
+                # ELM REMOVE THIS
+                ## k = (i-1)*(n_sim*n_times) + j
+                ## x = randvals[mod(j,numvals)]
             else
                 x = rand()
             end
