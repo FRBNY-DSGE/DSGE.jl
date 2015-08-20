@@ -51,9 +51,7 @@ end
 # the steadystate! function.
 function update!{T<:FloatingPoint}(parameters::Vector{Param}, newvalues::Vector{T})
     @assert length(newvalues) == length(parameters)
-    for (θ, newvalue) in zip(parameters, newvalues)
-        isa(θ,Param) && update!(θ, newvalue)
-    end
+    map(update!, parameters, newvalues)
     return parameters
 end
 
@@ -104,7 +102,7 @@ function toreal(θ::Param)
 end
 
 function tomodel{T<:FloatingPoint}(values::Vector{T}, parameters::Vector{Param})
-    return [tomodel(value, θ) for (value, θ) in zip(values, parameters)]
+    return map(tomodel, values, parameters)
 end
 
 # Transforms variables from max to model (trans.m)
@@ -126,6 +124,6 @@ end
 # Given a vector of parameter values on the real line, map them to the model space and
 # update model.parameters field.
 function tomodel!{T<:FloatingPoint}(values::Vector{T}, parameters::Vector{Param})
-    newvalues = [tomodel(value, θ) for (value, θ) in zip(values, parameters)]
+    newvalues = map(tomodel, values, parameters)
     return update!(parameters, newvalues)
 end
