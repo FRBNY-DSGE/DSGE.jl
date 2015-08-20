@@ -78,7 +78,8 @@ using Debug
 
     # ?? Do we want to calc covariance here? Haven't we done it already in estimate?
 
-    return Θ, post
+    # ?? What to return?
+    #return Θ, post
 end
 
 
@@ -281,7 +282,7 @@ end
             end
         end
         #print the parameter name
-        @printf(periphParams_fid, "\\\\ \n \$\%4.99s\$ & ", string(param))
+        @printf(periphParams_fid, "\\\\ \n \$\%4.99s\$ & ", param.texLabel)
         #Print the values in outmat
         for val in outmat[index,:]
             @printf(periphParams_fid, "\%8.3f & ",val)
@@ -312,13 +313,19 @@ end
     @printf(prioPostMean_fid,"\\begin{tabular}{ccc}\\hline \n")
     @printf(prioPostMean_fid," Parameter & Prior \n")
     @printf(prioPostMean_fid,"\\\\  \\\hline\n")
-    for param in 1:length(Θ)
-        @printf(prioPostMean_fid, " \\n \$%4.99s\$ ", param )
-        for val in outmat2[param,:]
+    
+    for (index, param) in enumerate(m.parameters)
+
+        @printf(prioPostMean_fid, " \\n \$%4.99s\$ ", param.texLabel )
+        
+        for val in outmat2[index,:]
             @printf(periphParams_fid, "\%8.3f & ",val)
         end
+
         @printf(prioPostMean_fid, "\\\\ ")
+        
     end
+    
     @printf(prioPostMean_fid, "\\\\ \\hline")
     @printf(prioPostMean_fid,"\\end{tabular}}\n")
     @printf(prioPostMean_fid,"\\end{table}\n")

@@ -21,11 +21,12 @@ type Param <: Number
     transformtype::Int64
     transformbounds::Interval{Float64}
     description::String
-
+    texLabel::String
+    
     function Param(value::Float64, fixed::Bool, bounds::Interval{Float64},
                    priordist::Distribution, transformtype::Int64,
                    transformbounds::Interval{Float64}; scalefunction::Function = identity,
-                   description::String = "")
+                   description::String = "",texLabel::String="")
         if fixed
             priordist = PointMass(value)
             transformtype = 0
@@ -35,7 +36,7 @@ type Param <: Number
         end
         (a, b) = transformbounds
         return new(value, scalefunction, scalefunction(value), fixed, bounds, priordist,
-                   transformtype, transformbounds, description)
+                   transformtype, transformbounds, description,texLabel)
     end
 end
 
