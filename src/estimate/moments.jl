@@ -72,15 +72,13 @@ using Debug
     end
 
     # Convert back to Float64 for compatability with other variables
-    Θ = convert(Matrix{Float64},Θ)
+    #Θ = convert(Matrix{Float64},Θ)
 
     num_draws = size(Θ,1)
 
     # Produce TeX table of moments
     makeMomentTables(m,Θ,percent)
 
-    # ?? What to return?
-    #return Θ, post
 end
 
 
@@ -102,8 +100,10 @@ end
     ## - `percent`: the mass of observations we want; 0 <= percent <= 1
 
 
-    ## Step 1: Extract moments of prior distribution from m.parameters
-
+    ###########################################################################################
+    ## STEP 1: Extract moments of prior distribution from m.parameters
+    ###########################################################################################
+    
     num_params = length(m.parameters) 
     prior_means = zeros(num_params,1)
     prior_stddev = zeros(num_params,1)
@@ -135,14 +135,15 @@ end
         end
     end
     
+    ###########################################################################################
+    ## STEP 2: Compute moments and `percent' bands from parameter draws
+    ###########################################################################################
     
-    ## Step 2: Compute moments and `percent' bands from parameter draws
-
     Θ_hat = mean(Θ,1)'                    # posterior mean for each parameter
     Θ_sig = cov(Θ, mean=Θ_hat')           # posterior std dev for each parameter
     Θ_bands = []
     
-    # ?? Do we want to be doing error handling like this?
+    # TODO: Do we want to be doing error handling like this?
     try
         Θ_bands = find_density_bands(Θ,percent,minimize=true)'
     catch
@@ -156,25 +157,33 @@ end
     end
 
 
+    ###########################################################################################
+    ## STEP 3: Create variables for writing to output table
+    ###########################################################################################
     
-    ## Step 3: Create variables for writing to output table
-    colnames = ["Parameter ", "Prior Mean ", "Prior Stdd ", "Post Mean ", "$(100*percent)\\% {\\tiny Lower Band} ", "$(100*percent)\\% {\\tiny Upper Band} " ]
+    colnames = ["Parameter ", "Prior Mean ", "Prior Stdd ", "Post Mean ",
+                "$(100*percent)\\% {\\tiny Lower Band} ", "$(100*percent)\\% {\\tiny Upper Band} " ]
 
-    outmat = [prior_means prior_stddev Θ_hat Θ_bands]      # prior mean and std dev, posterior mean, and bands (n_params x 5)
-    outmat2 = [prior_means Θ_hat]                   # prior mean and posterior mean (n_params x 2)
+    outmat = [prior_means prior_stddev Θ_hat Θ_bands]      # prior mean and std dev, posterior mean,
+                                                           # and bands (n_params x 5)
 
+    outmat2 = [prior_means Θ_hat]                          # prior mean and posterior mean
+                                                           # (n_params x 2)
+
+
+    ###########################################################################################
+    ## STEP 4: WRITE TABLES
+    ###########################################################################################
     
-    ## Step 4: Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT parameters
-
+    ###########################################################################################
+    ## 4a. Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT parameters
+    ###########################################################################################
+    
+    # Open and start the file
     mainParams_out = joinpath(tablepath(m), "moments_mainParams.tex")
     mainParams_fid = open(mainParams_out,"w")
 
-    # Preamble
-    @printf(mainParams_fid,"\\documentclass[12pt]{article}\n")
-    @printf(mainParams_fid,"\\usepackage[dvips]{color}\n")
-    @printf(mainParams_fid,"\\begin{document}\n")
-    @printf(mainParams_fid,"\\pagestyle{empty}\n")
-    @printf(mainParams_fid,"\\begin{table}[h] \\centering\n")
+    beginTexTableDoc(mainParams_fid)
     @printf(mainParams_fid,"\\caption{Parameter Estimates}\n")
     @printf(mainParams_fid,"\\vspace*{.5cm}\n")
     @printf(mainParams_fid,"{\\small \n")
@@ -189,7 +198,6 @@ end
     important_para = []
 
     for (index, param) in enumerate(m.parameters)   
-
         
         if (!ismatch(r"rho_", param.texLabel) &&
             !ismatch(r"zeta_", param.texLabel) &&
@@ -216,21 +224,17 @@ end
         
     end
 
-    @printf(mainParams_fid,"\\\\  \\\hline\n")
-    @printf(mainParams_fid,"\\end{tabular}}\n")
-    @printf(mainParams_fid,"\\end{table}\n")
-    @printf(mainParams_fid,"\\end{document}")
-    close(mainParams_fid)    
+    # Close the file
+    endTexTableDoc(mainParams_fid;small=true)
+
+    ###########################################################################################
+    ## 4b. Write to Table 2: Prior mean, std dev and posterior mean, bands for other params
+    ###########################################################################################
     
-    # Write to Table 2: Prior mean, std dev and posterior mean, bands for other params
     periphParams_out = joinpath(tablepath(m), "moments_periphParams_0.tex")
     periphParams_fid = open(periphParams_out,"w")
     
-    @printf(periphParams_fid,"\\documentclass[12pt]{article}\n")
-    @printf(periphParams_fid,"\\usepackage[dvips]{color}\n")
-    @printf(periphParams_fid,"\\begin{document}\n")
-    @printf(periphParams_fid,"\\pagestyle{empty}\n")
-    @printf(periphParams_fid,"\\begin{table}[h] \\centering\n")
+    beginTexTableDoc(periphParams_fid)
     @printf(periphParams_fid,"\\caption{Parameter Estimates}\n")
     @printf(periphParams_fid,"\\vspace*{.2cm}\n")
     @printf(periphParams_fid,"{\\small \n")
@@ -255,24 +259,19 @@ end
         # Make a new table if the current one is too large
         
         if ((other_para%25 == 0) && (index != length(m.parameters)) )
-            
-            @printf(periphParams_fid,"\\\\  \\\hline\n")
-            @printf(periphParams_fid,"\\end{tabular}}\n")
-            @printf(periphParams_fid,"\\end{table}\n")
-            @printf(periphParams_fid,"\\end{document}")
-            
+
+            # Finish and close the old file
+            endTexTableDoc(periphParams_fid;small=true)
+
+            # Update table counter
             table_count = table_count + 1
-            close(periphParams_fid)
-            
+
+            # Start the new file
             filename = @sprintf("moments_periphParams_%d.tex",table_count)
             periphParams_out = joinpath(tablepath(m),filename)
             periphParams_fid = open(periphParams_out,"w")
             
-            @printf(periphParams_fid,"\\documentclass[12pt]{article}\n")
-            @printf(periphParams_fid,"\\usepackage[dvips]{color}\n")
-            @printf(periphParams_fid,"\\begin{document}\n")
-            @printf(periphParams_fid,"\\pagestyle{empty}\n")
-            @printf(periphParams_fid,"\\begin{table}[h] \\centering\n")
+            beginTexTableDoc(periphParams_fid)
             @printf(periphParams_fid,"\\caption{Parameter Estimates}\n")
             @printf(periphParams_fid,"\\vspace*{.2cm}\n")
             @printf(periphParams_fid,"{\\small \n")
@@ -283,66 +282,51 @@ end
             end
         end
         
-        #print the parameter name
+        # Print the parameter name
         @printf(periphParams_fid, "\\\\ \n \$\%4.99s\$ & ", param.texLabel)
         
-        #Print the values in outmat
+        # Print the values in outmat
         for val in outmat[index,:]
             @printf(periphParams_fid, "\%8.3f & ",val)
         end
         
         other_para = other_para+1
         
-   end
-   
-   @printf(periphParams_fid,"\\\\  \\\hline\n")
-   @printf(periphParams_fid,"\\end{tabular}}\n")
-   @printf(periphParams_fid,"\\end{table}\n")
-   @printf(periphParams_fid,"\\end{document}")
-   close(periphParams_fid)    
+    end
+    endTexTableDoc(periphParams_fid;small=true)
 
+    ###########################################################################################
+    ## 4c. Write to Table 5: Prior mean and posterior mean for all parameters
+    ###########################################################################################
 
-   ## Write to Table 3: Prior mean and posterior mean for all parameters
-
+    table_count = 0  # Keep track of how many tables we've made
+    
+    # Open the TeX file and set up the heading
     prioPostMean_out = joinpath(tablepath(m), "moments_prioPostMean.tex")
     prioPostMean_fid = open(prioPostMean_out,"w")
 
-
-    # Counter for parameters to track length of table and number of tables in excess of
-    # default (1)
-    table_count = 0
-
-    @printf(prioPostMean_fid,"\\documentclass[12pt]{article}\n")
-    @printf(prioPostMean_fid,"\\usepackage[dvips]{color}\n")
-    @printf(prioPostMean_fid,"\\begin{document}\n")
-    @printf(prioPostMean_fid,"\\pagestyle{empty}\n")
-    @printf(prioPostMean_fid,"\\begin{table}[h] \\centering\n")
+    beginTexTableDoc(prioPostMean_fid)
     @printf(prioPostMean_fid,"\\caption{Parameter Estimates: Prior and Posterior Mean}\n")
     @printf(prioPostMean_fid,"\\vspace*{.5cm}\n")
     @printf(prioPostMean_fid,"\\begin{tabular}{ccc}\\hline \n")
     @printf(prioPostMean_fid," Parameter & Prior & Posterior  \\tabularnewline \\hline\n")
     
+    # Write out the results
     for (index, param) in enumerate(m.parameters)
 
         if ((index % 40 == 0) && (index != length(m.parameters)) )
 
-            @printf(prioPostMean_fid,"\\\\  \\\hline\n")
-            @printf(prioPostMean_fid,"\\end{tabular}}\n")
-            @printf(prioPostMean_fid,"\\end{table}\n")
-            @printf(prioPostMean_fid,"\\end{document}")
-            
+            # Close the old file
+            endTexTableDoc(prioPostMean_fid)
+
+            # Generate the new filename
             table_count = table_count + 1
-            close(prioPostMean_fid)
-            
             filename = @sprintf("moments_prioPostMean_%d.tex",table_count)
+
+            # Open a new file and start the next table
             prioPostMean_out = joinpath(tablepath(m),filename)
-            prioPostMean_fid = open(prioPostMean_out,"w")
-            
-            @printf(prioPostMean_fid,"\\documentclass[12pt]{article}\n")
-            @printf(prioPostMean_fid,"\\usepackage[dvips]{color}\n")
-            @printf(prioPostMean_fid,"\\begin{document}\n")
-            @printf(prioPostMean_fid,"\\pagestyle{empty}\n")
-            @printf(prioPostMean_fid,"\\begin{table}[h] \\centering\n")
+            prioPostMean_fid = open(prioPostMean_out,"w")            
+            beginTexTableDoc(prioPostMean_fid)
             @printf(prioPostMean_fid,"\\caption{Parameter Estimates: Prior and Posterior Mean}\n")
             @printf(prioPostMean_fid,"\\vspace*{.5cm}\n")
             @printf(prioPostMean_fid,"\\begin{tabular}{ccc}\\hline \n")
@@ -357,21 +341,12 @@ end
         @printf(prioPostMean_fid, "\%8.3f &   \%8.3f  ", val[1], val[2])
         
     end
-
-    @printf(prioPostMean_fid, "\\\\ \\\hline\n")
-    @printf(prioPostMean_fid,"\\end{tabular}\n")
-    @printf(prioPostMean_fid,"\\end{table}\n")
-    @printf(prioPostMean_fid,"\\end{document}")
-    close(prioPostMean_fid)
-
-   println("Tables are in ",tablepath(m))
+    
+    endTexTableDoc(prioPostMean_fid)
+    println("Tables are in ",tablepath(m))
 
 end
 
-
-## function plotParamDraws()
-    
-## end
 
 function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
     ## Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]` is above
@@ -431,3 +406,30 @@ function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
     return band
 end
 
+function beginTexTableDoc(fid::IOStream)
+
+    @printf(fid,"\\documentclass[12pt]{article}\n")
+    @printf(fid,"\\usepackage[dvips]{color}\n")
+    @printf(fid,"\\begin{document}\n")
+    @printf(fid,"\\pagestyle{empty}\n")
+    @printf(fid,"\\begin{table}[h] \\centering\n")
+    
+end
+
+# Prints the necessarily lines to end a table and close a document
+# to file descriptor fid and closes the file
+function endTexTableDoc(fid::IOStream;small::Bool=false)
+
+    @printf(fid, "\\\\ \\\hline\n")
+    
+    if small
+        @printf(fid,"\\end{tabular}}\n")
+    else
+        @printf(fid,"\\end{tabular}\n")
+    end
+    
+    @printf(fid,"\\end{table}\n")
+    @printf(fid,"\\end{document}")
+    close(fid)
+
+end
