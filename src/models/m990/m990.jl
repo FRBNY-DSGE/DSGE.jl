@@ -15,6 +15,10 @@ type Model990 <: AbstractDSGEModel
     endogenous_states_postgensys::Dict{Symbol,Int}  #
     observables::Dict{Symbol,Int}                   #
 
+    spec                                            # The model specification number
+    savepath::String                                # The absolute path to the top-level save directory for this
+                                                    # model specification
+    
     num_anticipated_shocks::Int                     # Number of anticipated policy shocks
     num_anticipated_shocks_padding::Int             # Padding for nant
     num_anticipated_lags::Int                       # Number of periods back to incorporate zero bound expectations
@@ -26,6 +30,13 @@ type Model990 <: AbstractDSGEModel
     num_mh_blocks::Int                              #
     num_mh_burn::Int                                #
     mh_thinning_step::Int                           #
+    
+    num_mh_simulations_test::Int                    # These fields are used to test Metropolis-Hastings with 
+    num_mh_blocks_test::Int                         # a small number of draws from the posterior
+    num_mh_burn_test::Int                           #
+
+
+    
 end
 
 description(m::Model990) = "This is some model that we're trying to make work."
@@ -95,93 +106,93 @@ function initialise_model_indices!(m::Model990)
 end
 
 function initialise_model_parameters!(m::Model990)
-    m[:alp     ] = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999))
-    m[:zeta_p  ] = Param(0.8940, false, (1e-5, 0.999), BetaAlt(0.5, 0.1), 1, (1e-5, 0.999))
-    m[:iota_p  ] = Param(0.1865, false, (1e-5, 0.999), BetaAlt(0.5, 0.15), 1, (1e-5, 0.999))
+    m[:alp     ] = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999),texLabel="\\alpha")
+    m[:zeta_p  ] = Param(0.8940, false, (1e-5, 0.999), BetaAlt(0.5, 0.1), 1, (1e-5, 0.999), texLabel="\\zeta_p")
+    m[:iota_p  ] = Param(0.1865, false, (1e-5, 0.999), BetaAlt(0.5, 0.15), 1, (1e-5, 0.999), texLabel="\\iota_p")
     m[:del     ] = Param(0.025) # omit from parameter vector
-    m[:ups     ] = Param(1.000, true, (0., 10.), GammaAlt(1., 0.5), 2, (1e-5, 0.))
-    m[:Bigphi  ] = Param(1.1066, false, (1., 10.), Normal(1.25, 0.12), 2, (1.00, 10.00))
-    m[:s2      ] = Param(2.7314, false, (-15., 15.), Normal(4., 1.5), 0, (-15., 15.))
-    m[:h       ] = Param(0.5347, false, (1e-5, 0.999), BetaAlt(0.7, 0.1), 1, (1e-5, 0.999))
-    m[:ppsi    ] = Param(0.6862, false, (1e-5, 0.999), BetaAlt(0.5, 0.15), 1, (1e-5, 0.999))
-    m[:nu_l    ] = Param(2.5975, false, (1e-5, 10.), Normal(2, 0.75), 2, (1e-5, 10.))
-    m[:zeta_w  ] = Param(0.9291, false, (1e-5, 0.999), BetaAlt(0.5, 0.1), 1, (1e-5, 0.999))
-    m[:iota_w  ] = Param(0.2992, false, (1e-5, 0.999), BetaAlt(0.5, 0.15), 1, (1e-5, 0.999))
+    m[:ups     ] = Param(1.000, true, (0., 10.), GammaAlt(1., 0.5), 2, (1e-5, 0.), texLabel="\\Upsilon") 
+    m[:Bigphi  ] = Param(1.1066, false, (1., 10.), Normal(1.25, 0.12), 2, (1.00, 10.00), texLabel="\\Phi")
+    m[:s2      ] = Param(2.7314, false, (-15., 15.), Normal(4., 1.5), 0, (-15., 15.), texLabel="S")
+    m[:h       ] = Param(0.5347, false, (1e-5, 0.999), BetaAlt(0.7, 0.1), 1, (1e-5, 0.999), texLabel="h")
+    m[:ppsi    ] = Param(0.6862, false, (1e-5, 0.999), BetaAlt(0.5, 0.15), 1, (1e-5, 0.999), texLabel="ppsi")
+    m[:nu_l    ] = Param(2.5975, false, (1e-5, 10.), Normal(2, 0.75), 2, (1e-5, 10.), texLabel="\\nu_l")
+    m[:zeta_w  ] = Param(0.9291, false, (1e-5, 0.999), BetaAlt(0.5, 0.1), 1, (1e-5, 0.999), texLabel="\\zeta_w")
+    m[:iota_w  ] = Param(0.2992, false, (1e-5, 0.999), BetaAlt(0.5, 0.15), 1, (1e-5, 0.999), texLabel="\\iota_w")
     m[:law     ] = Param(1.5) # omit from parameter vector
 
-    m[:bet     ] = Param(0.1402, scalefunction = x -> 1/(1 + x/100), false, (1e-5, 10.), GammaAlt(0.25, 0.1), 2, (1e-5, 10.))
-    m[:psi1    ] = Param(1.3679, false, (1e-5, 10.), Normal(1.5, 0.25), 2, (1e-5, 10.00))
-    m[:psi2    ] = Param(0.0388, false, (-0.5, 0.5), Normal(0.12, 0.05), 0, (-0.5, 0.5))
-    m[:psi3    ] = Param(0.2464, false, (-0.5, 0.5), Normal(0.12, 0.05), 0, (-0.5, 0.5))
-    m[:pistar  ] = Param(0.5000, scalefunction = x -> 1 + x/100, true, (1e-5, 10.), GammaAlt(0.75, 0.4), 2, (1e-5, 10.))
-    m[:sigmac  ] = Param(0.8719, false, (1e-5, 10.), Normal(1.5, 0.37), 2, (1e-5, 10.))
-    m[:rho     ] = Param(0.7126, false, (1e-5, 0.999), BetaAlt(0.75, 0.10), 1, (1e-5, 0.999))
+    m[:bet     ] = Param(0.1402, scalefunction = x -> 1/(1 + x/100), false, (1e-5, 10.), GammaAlt(0.25, 0.1), 2, (1e-5, 10.), texLabel="\\beta")
+    m[:psi1    ] = Param(1.3679, false, (1e-5, 10.), Normal(1.5, 0.25), 2, (1e-5, 10.00),texLabel="\\psi_1")
+    m[:psi2    ] = Param(0.0388, false, (-0.5, 0.5), Normal(0.12, 0.05), 0, (-0.5, 0.5),texLabel="\\psi_2")
+    m[:psi3    ] = Param(0.2464, false, (-0.5, 0.5), Normal(0.12, 0.05), 0, (-0.5, 0.5),texLabel="\\psi_3")
+    m[:pistar  ] = Param(0.5000, scalefunction = x -> 1 + x/100, true, (1e-5, 10.), GammaAlt(0.75, 0.4), 2, (1e-5, 10.), texLabel="\\pi^*")
+    m[:sigmac  ] = Param(0.8719, false, (1e-5, 10.), Normal(1.5, 0.37), 2, (1e-5, 10.),texLabel="\\sigma_{c}")
+    m[:rho     ] = Param(0.7126, false, (1e-5, 0.999), BetaAlt(0.75, 0.10), 1, (1e-5, 0.999), texLabel="\\rho")
     m[:epsp    ] = Param(10.) # omit from parameter vector
     m[:epsw    ] = Param(10.) # omit from parameter vector
 
     # financial frictions parameters
-    m[:Fom     ] = Param(0.0300, scalefunction = x -> 1 - (1-x)^0.25, true, (1e-5, 0.99999), BetaAlt(0.03, 0.01), 1, (1e-5, 0.99))
-    m[:sprd    ] = Param(1.7444, scalefunction = x -> (1 + x/100)^0.25, false, (0., 100.), GammaAlt(2., 0.1), 2, (1e-5, 0.))
-    m[:zeta_spb] = Param(0.0559, false, (1e-5, 0.99999), BetaAlt(0.05, 0.005), 1, (1e-5, 0.99))
-    m[:gammstar] = Param(0.9900, true, (1e-5, 0.99999), BetaAlt(0.99, 0.002), 1, (1e-5, 0.99))
+    m[:Fom     ] = Param(0.0300, scalefunction = x -> 1 - (1-x)^0.25, true, (1e-5, 0.99999), BetaAlt(0.03, 0.01), 1, (1e-5, 0.99), texLabel="F(\omega)")
+    m[:sprd    ] = Param(1.7444, scalefunction = x -> (1 + x/100)^0.25, false, (0., 100.), GammaAlt(2., 0.1), 2, (1e-5, 0.),texLabel="spr_*")
+    m[:zeta_spb] = Param(0.0559, false, (1e-5, 0.99999), BetaAlt(0.05, 0.005), 1, (1e-5, 0.99), texLabel = "\\zeta_{sp}")
+    m[:gammstar] = Param(0.9900, true, (1e-5, 0.99999), BetaAlt(0.99, 0.002), 1, (1e-5, 0.99), texLabel = "\\gamma_*")
 
     # exogenous processes - level
-    m[:gam     ] = Param(0.3673, scalefunction = x -> x/100, false, (-5., 5.), Normal(0.4, 0.1), 0, (-5.0, 5.0))
-    m[:Lmean   ] = Param(-45.9364, false, (-1000., 1000.), Normal(-45, 5), 0, (-1000., 1000.))
+    m[:gam     ] = Param(0.3673, scalefunction = x -> x/100, false, (-5., 5.), Normal(0.4, 0.1), 0, (-5.0, 5.0), texLabel = "\\gamma")
+    m[:Lmean   ] = Param(-45.9364, false, (-1000., 1000.), Normal(-45, 5), 0, (-1000., 1000.), texLabel = "Lmean")
     m[:gstar   ] = Param(0.18) # omit from parameter vector
 
     # exogenous processes - autocorrelation
-    m[:ρ_g     ] = Param(0.9863, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999))
-    m[:ρ_b     ] = Param(0.9410, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999))
-    m[:ρ_mu    ] = Param(0.8735, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999))
-    m[:ρ_z     ] = Param(0.9446, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999))
-    m[:ρ_laf   ] = Param(0.8827, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999))
-    m[:ρ_law   ] = Param(0.3884, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999))
-    m[:ρ_rm    ] = Param(0.2135, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999))
-    m[:ρ_sigw  ] = Param(0.9898, false, (1e-5, 0.99999), BetaAlt(0.75, 0.15), 1, (1e-5, 0.99))
-    m[:ρ_mue   ] = Param(0.7500, true, (1e-5, 0.99999), BetaAlt(0.75, 0.15), 1, (1e-5, 0.99))
-    m[:ρ_gamm  ] = Param(0.7500, true, (1e-5, 0.99999), BetaAlt(0.75, 0.15), 1, (1e-5, 0.99))
-    m[:ρ_pist  ] = Param(0.9900, true, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999))
-    m[:ρ_lr    ] = Param(0.6936, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999))
-    m[:ρ_zp    ] = Param(0.8910, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999))
-    m[:ρ_tfp   ] = Param(0.1953, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999))
-    m[:ρ_gdpdef] = Param(0.5379, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999))
-    m[:ρ_pce   ] = Param(0.2320, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999))
+    m[:ρ_g     ] = Param(0.9863, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999), texLabel = "\\rho_{g}")
+    m[:ρ_b     ] = Param(0.9410, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{b}")
+    m[:ρ_mu    ] = Param(0.8735, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{\\mu}")
+    m[:ρ_z     ] = Param(0.9446, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{z}")
+    m[:ρ_laf   ] = Param(0.8827, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{\\lambda_f}")
+    m[:ρ_law   ] = Param(0.3884, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{\\lambda_w}")
+    m[:ρ_rm    ] = Param(0.2135, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{rm}")
+    m[:ρ_sigw  ] = Param(0.9898, false, (1e-5, 0.99999), BetaAlt(0.75, 0.15), 1, (1e-5, 0.99),texLabel = "\\rho_{sigw}")
+    m[:ρ_mue   ] = Param(0.7500, true, (1e-5, 0.99999), BetaAlt(0.75, 0.15), 1, (1e-5, 0.99),texLabel = "\\rho_{mue}")
+    m[:ρ_gamm  ] = Param(0.7500, true, (1e-5, 0.99999), BetaAlt(0.75, 0.15), 1, (1e-5, 0.99),texLabel = "\\rho_{gamm}")
+    m[:ρ_pist  ] = Param(0.9900, true, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{pi}^*")
+    m[:ρ_lr    ] = Param(0.6936, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{lr}")
+    m[:ρ_zp    ] = Param(0.8910, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{z^p}")
+    m[:ρ_tfp   ] = Param(0.1953, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{tfp}")
+    m[:ρ_gdpdef] = Param(0.5379, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{gdpdef}")
+    m[:ρ_pce   ] = Param(0.2320, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{pce}")
 
     # exogenous processes - standard deviation
-    m[:σ_g     ] = Param(2.5230, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
-    m[:σ_b     ] = Param(0.0292, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
-    m[:σ_mu    ] = Param(0.4559, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
-    m[:σ_z     ] = Param(0.6742, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
-    m[:σ_laf   ] = Param(0.1314, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
-    m[:σ_law   ] = Param(0.3864, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
-    m[:σ_rm    ] = Param(0.2380, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
-    m[:σ_sigw  ] = Param(0.0428, false, (1e-7, 100.), RootInverseGamma(4.00, 0.05), 2, (1e-5, 0.))
-    m[:σ_mue   ] = Param(0., true, (1e-7, 100.), RootInverseGamma(4.00, 0.05), 2, (1e-5, 0.))
-    m[:σ_gamm  ] = Param(0., true, (1e-7, 100.), RootInverseGamma(4.00, 0.01), 2, (1e-5, 0.))
-    m[:σ_pist  ] = Param(0.0269, false, (1e-8, 5.), RootInverseGamma(6., 0.03), 2, (1e-8, 5.))
-    m[:σ_lr    ] = Param(0.1766, false, (1e-8, 10.), RootInverseGamma(2., 0.75), 2, (1e-8, 5.))
-    m[:σ_zp    ] = Param(0.1662, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
-    m[:σ_tfp   ] = Param(0.9391, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
-    m[:σ_gdpdef] = Param(0.1575, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
-    m[:σ_pce   ] = Param(0.0999, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.))
+    m[:σ_g     ] = Param(2.5230, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{g}")
+    m[:σ_b     ] = Param(0.0292, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{b}")
+    m[:σ_mu    ] = Param(0.4559, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{\\mu}")
+    m[:σ_z     ] = Param(0.6742, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{z}")
+    m[:σ_laf   ] = Param(0.1314, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{\\lambda_f}")
+    m[:σ_law   ] = Param(0.3864, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{\\lambda_w}")
+    m[:σ_rm    ] = Param(0.2380, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{rm}")
+    m[:σ_sigw  ] = Param(0.0428, false, (1e-7, 100.), RootInverseGamma(4.00, 0.05), 2, (1e-5, 0.),texLabel = "\\sigma_{sigw}")
+    m[:σ_mue   ] = Param(0., true, (1e-7, 100.), RootInverseGamma(4.00, 0.05), 2, (1e-5, 0.),texLabel = "\\sigma_{mue}")
+    m[:σ_gamm  ] = Param(0., true, (1e-7, 100.), RootInverseGamma(4.00, 0.01), 2, (1e-5, 0.),texLabel = "\\sigma_{gamm}")
+    m[:σ_pist  ] = Param(0.0269, false, (1e-8, 5.), RootInverseGamma(6., 0.03), 2, (1e-8, 5.),texLabel = "\\sigma_{pi}^*")
+    m[:σ_lr    ] = Param(0.1766, false, (1e-8, 10.), RootInverseGamma(2., 0.75), 2, (1e-8, 5.),texLabel = "\\sigma_{lr}")
+    m[:σ_zp    ] = Param(0.1662, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{z^p}")
+    m[:σ_tfp   ] = Param(0.9391, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{tfp}")
+    m[:σ_gdpdef] = Param(0.1575, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{gdpdef}")
+    m[:σ_pce   ] = Param(0.0999, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{pce}")
 
     # standard deviations of the anticipated policy shocks
     for i = 1:num_anticipated_shocks_padding(m)
         m[symbol("σ_rm$i")] = if i < 13
-            Param(0.20, false, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.))
+            Param(0.20, false, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.),texLabel= @sprintf("\\sigma_{ant%d}",i) )
         else
-            Param(0.0, true, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.))
+            Param(0.0, true, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.),texLabel= @sprintf("\\sigma_{ant%d}",i) )
         end
     end
 
-    m[:eta_gz      ] = Param(0.8400, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999))
-    m[:eta_laf     ] = Param(0.7892, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999))
-    m[:eta_law     ] = Param(0.4226, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999))
+    m[:eta_gz      ] = Param(0.8400, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999), texLabel = "\\eta_{gz}")
+    m[:eta_laf     ] = Param(0.7892, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999), texLabel = "\\eta_{\\lambda_f}")
+    m[:eta_law     ] = Param(0.4226, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999), texLabel = "\\eta_{\\lambda_w}")
 
-    m[:modelalp_ind] = Param(0.0000, true, (0.000, 1.000), BetaAlt(0.50, 0.20), 0, (0., 0.))
-    m[:gamm_gdpdef ] = Param(1.0354, false, (-10., 10.), Normal(1.00, 2.), 0, (-10., -10.))
-    m[:del_gdpdef  ] = Param(0.0181, false, (-9.1, 9.1), Normal(0.00, 2.), 0, (-10., -10.))
+    m[:modelalp_ind] = Param(0.0000, true, (0.000, 1.000), BetaAlt(0.50, 0.20), 0, (0., 0.), texLabel = "i_{\\alpha}^{model}")
+    m[:gamm_gdpdef ] = Param(1.0354, false, (-10., 10.), Normal(1.00, 2.), 0, (-10., -10.), texLabel = "\\Gamma_{gdpdef}")
+    m[:del_gdpdef  ] = Param(0.0181, false, (-9.1, 9.1), Normal(0.00, 2.), 0, (-10., -10.), texLabel = "\\delta_{gdpdef}")
 end
 
 function Model990()
@@ -218,10 +229,18 @@ function Model990()
     steady_state     = @compat Vector{Any}(length(steady_state_keys))
 
     # Model-specific specifications
+    spec                            = split(basename(@__FILE__),'.')[1] 
+    savepath                        = joinpath(dirname(@__FILE__), *("../../../save/",spec))
+
+    # Create the save directories if they don't already exist
+    createSaveDirectories(savepath)
+    
     num_anticipated_shocks          = 6
     num_anticipated_shocks_padding  = 20
     num_anticipated_lags            = 24
     num_presample_periods           = 2 # TODO: This should be set when the data are read in
+    
+
 
     # Estimation specifications
     reoptimize                      = false
@@ -247,6 +266,9 @@ function Model990()
             Dict{Symbol,Int}(),
             Dict{Symbol,Int}(),
 
+            spec,
+            savepath,
+                 
             num_anticipated_shocks,
             num_anticipated_shocks_padding,
             num_anticipated_lags,
@@ -257,12 +279,17 @@ function Model990()
             num_mh_simulations,
             num_mh_blocks,
             num_mh_burn,
-            mh_thinning_step)
+            mh_thinning_step,
+                 
+            num_mh_simulations_test,   
+            num_mh_blocks_test,  
+            num_mh_burn_test)
 
     initialise_model_parameters!(m)
     initialise_model_indices!(m)
 
     return steadystate!(m)
+
 end
 
 # functions that are used to compute financial frictions
@@ -394,4 +421,24 @@ function steadystate!(m::Model990)
     m[:zeta_nsigw]  = m[:gammstar]*Rkstar/m[:pistar]/exp(m[:zstar])*(1+Rhostar)*muestar*Gstar*(zeta_Gsigw-zeta_gw/zeta_zw*zeta_zsigw)
 
     return m
+end
+
+# Creates the proper directory structure for input and output files
+function createSaveDirectories(savepath::String)
+
+    paths = [savepath,
+             joinpath(savepath, "input_data"),
+             joinpath(savepath, "output_data"),
+             joinpath(savepath, "logs"),
+             joinpath(savepath, "results"),
+             joinpath(savepath, "results/tables"),
+             joinpath(savepath, "results/plots")]
+
+    for path in paths
+        if(!ispath(path))
+            mkdir(path)
+            println("created $path")
+        end
+    end
+        
 end

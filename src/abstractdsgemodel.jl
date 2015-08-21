@@ -59,3 +59,21 @@ num_parameters(m::AbstractDSGEModel)             = length(m.parameters)
 num_parameters_fixed(m::AbstractDSGEModel)       = length(m.parameters_fixed)
 num_parameters_steady_state(m::AbstractDSGEModel)= length(m.steady_state)
 num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.parameters]) 
+
+# Paths to where input/output/results data are stored
+savepath(m::AbstractDSGEModel)  = m.savepath
+inpath(m::AbstractDSGEModel)    = joinpath(m.savepath, "input_data/")
+outpath(m::AbstractDSGEModel)   = joinpath(m.savepath, "output_data/")
+tablepath(m::AbstractDSGEModel) = joinpath(m.savepath, "results/tables/")
+plotpath(m::AbstractDSGEModel)  = joinpath(m.savepath, "results/plots/")
+logpath(m::AbstractDSGEModel)   = joinpath(m.savepath, "logs/")
+
+# TODO is there a better place for these? They do depend on AbstractDSGEModel type.
+function tomodel!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
+    tomodel!(values, m.parameters)
+    return steadystate!(m)
+end
+function update!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
+    return update!(m.parameters, values)
+end
+

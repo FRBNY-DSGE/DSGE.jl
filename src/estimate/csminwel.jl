@@ -106,7 +106,7 @@ See the file `examples/csminwel.jl` for an example of usage
                   show_trace::Bool = false,
                   extended_trace::Bool = false,
                   verbose::Bool = false,
-                  randvecs::Matrix = [],
+                  randvecs::Array = [],
                   kwargs...)
     
     # PZL 8/11/15: for time tests
@@ -395,7 +395,7 @@ using the true derivative.
                   show_trace::Bool = false,
                   extended_trace::Bool = false,
                   verbose::Bool = false,
-                  randvecs::Matrix = [],
+                  randvecs::Array= [],
                   kwargs...)
     grad{T<:Number}(x::Array{T}) = csminwell_grad(fcn, x, args...; kwargs...)
     csminwel(fcn, grad, x0, H0, args...;
