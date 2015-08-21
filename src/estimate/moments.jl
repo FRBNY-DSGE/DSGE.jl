@@ -54,7 +54,7 @@ using Debug
     Θ = []
     post = []
 
-    infile = joinpath(outpath(),"sim_save.h5")
+    infile = joinpath(outpath(m),"sim_save.h5")
     println("Reading draws from Metropolis-Hastings from $infile...")
 
     try
