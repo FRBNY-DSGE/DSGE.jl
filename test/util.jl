@@ -1,3 +1,8 @@
+using Base.Test
+using MATLAB
+using HDF5
+
+
 # minusnan(x, y) evaluates x-y in a way that treats NaN like Inf and sets Inf - Inf = 0
 minusnan{S<:FloatingPoint, T<:FloatingPoint}(x::S, y::T) =  minusnan(complex(x), complex(y))
 
