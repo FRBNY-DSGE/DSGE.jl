@@ -140,10 +140,7 @@ end
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
 
-    @bp
-    
     println("Testing = $testing")
-    
     
     # Set number of draws, how many we will save, and how many we will burn
     # (initialized here for scoping; will re-initialize in the while loop)
