@@ -4,29 +4,36 @@
 using HDF5
 using Debug
 
-function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
+function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false)
 
+    ###################################################################################################
     ### Step 1: Initialize
+    ###################################################################################################
 
     # Load data
     in_path = inpath(m)
     out_path = outpath(m)
     
-    mf = MatFile("$in_path/YY.mat")
-    YY = get_variable(mf, "YY")
-    close(mf)
-
+    YY = []
+    h5open("$in_path/YY.h5", "r") do h5
+        YY = read(h5["YY"])
+    end
+    
     post = posterior(m, YY)
 
-    ### Step 2: Find posterior mode
-
+    ###################################################################################################
+    ### Step 2: Find posterior mode (if reoptimizing, run csminwel)
+    ###################################################################################################
+    
     # Specify starting mode
 
     println("Reading in previous mode")
-    mf = MatFile("$in_path/mode_in_optimized.mat")
-    mode = get_variable(mf, "mode")
-
-    close(mf)
+    
+    mode = []
+    h5open("$in_path/mode_in_optimized.h5","r") do h5
+        mode = read(h5["mode"])
+    end
+    
     update!(m, mode)
 
     if m.reoptimize
@@ -58,27 +65,33 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
         mode = [α.value for α in m.parameters]
 
         # Write mode to file
-        mf = MatFile("$out_path/mode_out.mat", "w")
-        put_variable(mf, "mode", mode)
-        close(mf)
+        h5open("$out_path/mode_out.h5","w") do h5
+            h5["mode"] = mode
+        end
+        
     end
 
+    ###################################################################################################
     ### Step 3: Compute proposal distribution
+    ###################################################################################################
 
+    hessian = []
+    
     # Calculate the Hessian at the posterior mode
     if m.recalculate_hessian
         println("Recalculating Hessian...")
         hessian, _ = hessizero!(m, mode, YY; verbose=true)
 
-        mf = MatFile("$out_path/hessian.mat", "w")
-        put_variable(mf, "hessian", hessian)
-        close(mf)
+        h5open("$out_path/hessian.h5","w") do h5
+            h5["hessian"] = hessian
+        end
+        
     else
-
         println("Using pre-calculated Hessian")
-        mf = MatFile("$in_path/hessian_optimized.mat")
-        hessian = get_variable(mf, "hessian")
-        close(mf)
+ 
+        h5open("$in_path/hessian_optimized.h5","r") do h5
+            hessian = read(h5["hessian"])
+        end
     end
 
     # The hessian is used to calculate the variance of the proposal
@@ -89,18 +102,34 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
         println("problem – shutting down dimensions")
     end
 
-    ### Step 4: Metropolis-Hastings algorithm
-
+    ###################################################################################################
+    ### Step 4: Sample from posterior using Metropolis-Hastings algorithm
+    ###################################################################################################
+    
     # Set the jump size for sampling
     cc0 = 0.01
     cc = 0.09
+    
+    if !testing
+        metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose)
+    else
+        randvecs = []
+        randvals = []
+        
+        h5open("$in_path/rand_save.h5","r") do h5
+            randvecs = read(h5["randvecs"])
+            randvals = read(h5["randvals"])
+        end
 
-    metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose)
+        metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose, randvecs=randvecs, randvals=randvals)
+    end
 
+    ###################################################################################################
+    ### Step 5: Calculate and save parameter covariance matrix
+    ###################################################################################################
+    
     # Set up HDF5 file for saving
     h5path = joinpath(out_path,"sim_save.h5")
-
-    ### Step 5: Calculate parameter covariance matrix
 
     # Read in saved parameter draws
     sim_h5 = h5open(h5path, "r+")
