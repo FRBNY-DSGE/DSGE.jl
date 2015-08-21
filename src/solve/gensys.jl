@@ -55,7 +55,12 @@ only with not-s.c. z; eu=[-2,-2] for coincident zeros.
 
 =#
 
-
+# Define Gensys error types.
+type GensysError <: Exception
+    msg::ASCIIString
+end
+GensysError() = GensysError("Error in gensys.")
+Base.showerror(io::IO, ex::GensysError) = print(io, ex.msg)
 
 function new_div(F::Base.LinAlg.GeneralizedSchur)
     ε = 1e-6  # small number to check convergence
@@ -116,8 +121,7 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     end
 
     if zxz == 1
-        msg = "Coincident zeros.  Indeterminacy and/or nonexistence."
-        throw(InexactError(msg))
+        throw(GensysError("Coincident zeros.  Indeterminacy and/or nonexistence."))
     end
 
     select = (abs(F[:alpha]) .> div*abs(F[:beta]))
@@ -229,7 +233,7 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     ywt=z*ywt
 
     if eu[1] != 1 || eu[2] != 1
-        error("gensys does not give existence and uniqueness")
+        throw(GensysError("Gensys does not give existence and uniqueness."))
     end
 
     return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
