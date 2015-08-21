@@ -67,7 +67,7 @@ using Debug
     end
 
     # Convert back to Float64 for compatability with other variables
-    Θ = convert(Matrix{Float64},Θ)
+    #Θ = convert(Matrix{Float64},Θ)
 
     num_draws = size(Θ,1)
 
@@ -177,7 +177,6 @@ end
     mainParams_fid = open(mainParams_out,"w")
 
     beginTexTableDoc(mainParams_fid)
-
     @printf(mainParams_fid,"\\caption{Parameter Estimates}\n")
     @printf(mainParams_fid,"\\vspace*{.5cm}\n")
     @printf(mainParams_fid,"{\\small \n")
@@ -229,7 +228,6 @@ end
     periphParams_fid = open(periphParams_out,"w")
 
     beginTexTableDoc(periphParams_fid)
-
     @printf(periphParams_fid,"\\caption{Parameter Estimates}\n")
     @printf(periphParams_fid,"\\vspace*{.2cm}\n")
     @printf(periphParams_fid,"{\\small \n")
@@ -254,6 +252,7 @@ end
         # Make a new table if the current one is too large
         
         if ((other_para%25 == 0) && (index != length(m.parameters)) )
+
             # Finish and close the old file
             endTexTableDoc(periphParams_fid;small=true)
 
@@ -340,7 +339,6 @@ end
     println("Tables are in ",tablepath(m))
 
 end
-
 
 function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
     ## Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]` is above
@@ -487,3 +485,30 @@ function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
     return band
 end
 
+function beginTexTableDoc(fid::IOStream)
+
+    @printf(fid,"\\documentclass[12pt]{article}\n")
+    @printf(fid,"\\usepackage[dvips]{color}\n")
+    @printf(fid,"\\begin{document}\n")
+    @printf(fid,"\\pagestyle{empty}\n")
+    @printf(fid,"\\begin{table}[h] \\centering\n")
+    
+end
+
+# Prints the necessarily lines to end a table and close a document
+# to file descriptor fid and closes the file
+function endTexTableDoc(fid::IOStream;small::Bool=false)
+
+    @printf(fid, "\\\\ \\\hline\n")
+    
+    if small
+        @printf(fid,"\\end{tabular}}\n")
+    else
+        @printf(fid,"\\end{tabular}\n")
+    end
+    
+    @printf(fid,"\\end{table}\n")
+    @printf(fid,"\\end{document}")
+    close(fid)
+
+end
