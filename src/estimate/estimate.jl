@@ -109,7 +109,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
 
     # Calculate covariance matrix
     cov_θ = cov(θ)
-    write(sim_h5, "cov_θ", convert(Matrix{Float32}, cov_θ))   #Save as single-precision float matrix
+    write(sim_h5, "cov_θ", float32(cov_θ))   #Save as single-precision float matrix
 
     # Close the file
     close(sim_h5)
@@ -317,14 +317,10 @@ end
                     println("Iteration $j: accept proposed jump")
                 end
 
-                println("Iteration $j: accept proposed jump")
-
             else
                 # Reject proposed jump
                 block_rejections += 1
                 
-                println("Iteration $j: reject proposed jump")
-
                 if verbose 
                     println("Iteration $j: reject proposed jump")
                 end
@@ -359,12 +355,12 @@ end
 
         # Write data to file if we're past n_burn blocks
         if i > n_burn
-            parasim[block_start:block_end, :] = convert(Matrix{Float32}, para_sim)
-            postsim[block_start:block_end, :] = convert(Vector{Float32}, post_sim)
-            # likesim[block_start:block_end, :] = convert(Vector{Float32}, like_sim)
-            TTTsim[block_start:block_end,:]  = convert(Matrix{Float32}, TTT_sim)
-            RRRsim[block_start:block_end,:]  = convert(Matrix{Float32}, RRR_sim)
-            zsim[block_start:block_end,:]  = convert(Matrix{Float32}, z_sim)
+            parasim[block_start:block_end, :] = float32(para_sim)
+            postsim[block_start:block_end, :] = float32(post_sim)
+            # likesim[block_start:block_end, :] = float32(like_sim)
+            TTTsim[block_start:block_end,:]  = float32(TTT_sim)
+            RRRsim[block_start:block_end,:]  = float32(RRR_sim)
+            zsim[block_start:block_end,:]  = float32(z_sim)
         end
     end # of block
 
