@@ -78,6 +78,7 @@ function update!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
     return update!(m.parameters, values)
 end
 
+
 ## function prepareForTesting{T<:AbstractDSGEModel}(m::AbstractDSGEModel)
 
 ##     m.num_mh_simulations
