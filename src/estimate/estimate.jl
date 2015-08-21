@@ -9,7 +9,10 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
     ### Step 1: Initialize
 
     # Load data
-    mf = MatFile("$inpath/YY.mat")
+    in_path = inpath(m)
+    out_path = outpath(m)
+    
+    mf = MatFile("$in_path/YY.mat")
     YY = get_variable(mf, "YY")
     close(mf)
 
@@ -18,9 +21,11 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
     ### Step 2: Find posterior mode
 
     # Specify starting mode
-    println("Reading in previous mode...")
-    mf = MatFile("$inpath/mode_in.mat")
-    mode = get_variable(mf, "params")
+
+    println("Reading in previous mode")
+    mf = MatFile("$in_path/mode_in_optimized.mat")
+    mode = get_variable(mf, "mode")
+
     close(mf)
     update!(m, mode)
 
@@ -29,7 +34,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
 
         # Inputs to minimization algorithm
         function posterior_min!{T<:FloatingPoint}(x::Vector{T})
-            tomodel!(x, m.parameters)
+            tomodel!(m,x)
             return -posterior(m, YY)
         end
 
@@ -49,11 +54,11 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
 
         # Transform modal parameters so they are no longer bounded (i.e., allowed
         # to lie anywhere on the real line).
-        tomodel!(xh, m.parameters)
+        tomodel!(m, xh)
         mode = [α.value for α in m.parameters]
 
         # Write mode to file
-        mf = MatFile("$outpath/mode_out.mat", "w")
+        mf = MatFile("$out_path/mode_out.mat", "w")
         put_variable(mf, "mode", mode)
         close(mf)
     end
@@ -65,12 +70,13 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
         println("Recalculating Hessian...")
         hessian, _ = hessizero!(m, mode, YY; verbose=true)
 
-        mf = MatFile("$outpath/hessian.mat", "w")
+        mf = MatFile("$out_path/hessian.mat", "w")
         put_variable(mf, "hessian", hessian)
         close(mf)
     else
-        println("Using pre-calculated Hessian...")
-        mf = MatFile("$inpath/hessian.mat")
+
+        println("Using pre-calculated Hessian")
+        mf = MatFile("$in_path/hessian_optimized.mat")
         hessian = get_variable(mf, "hessian")
         close(mf)
     end
@@ -92,16 +98,18 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
     metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose)
 
     # Set up HDF5 file for saving
-    h5path = joinpath(outpath,"sim_save.h5")
+    h5path = joinpath(out_path,"sim_save.h5")
 
     ### Step 5: Calculate parameter covariance matrix
+
     # Read in saved parameter draws
     sim_h5 = h5open(h5path, "r+")
+
     θ = read(sim_h5, "parasim")
 
     # Calculate covariance matrix
     cov_θ = cov(θ)
-    write(sim_h5, "cov_θ", convert(Matrix{Float32}, cov_θ))   #Save as single-precision float matrix
+    write(sim_h5, "cov_θ", float32(cov_θ))   #Save as single-precision float matrix
 
     # Close the file
     close(sim_h5)
@@ -126,15 +134,17 @@ function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{
     return DegenerateMvNormal(μ, σ, rank)
 end
 
-function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::AbstractDSGEModel,
+@debug function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::AbstractDSGEModel,
     YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = false)
 
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
-    println("Testing = $testing")
 
+    println("Testing = $testing")
+    
     # Set number of draws, how many we will save, and how many we will burn
     # (initialized here for scoping; will re-initialize in the while loop)
+
     n_blocks = 0
     n_sim = 0
     n_times = 0
@@ -168,7 +178,6 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
             n_times = m.mh_thinning_step
         else
             para_old = rand(propdist; cc=cc0)
-
             n_blocks = m.num_mh_blocks
             n_sim = m.num_mh_simulations
             n_burn = m.num_mh_burn
@@ -214,7 +223,8 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
     #     logpath   = savepath;
     # end
 
-    h5path = joinpath("$outpath","sim_save.h5")
+    
+    h5path = joinpath(outpath(m),"sim_save.h5")
     simfile = h5open(h5path,"w")
 
     n_saved_obs = n_sim * (n_blocks - n_burn)
@@ -242,8 +252,8 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
                        dataspace(n_saved_obs,num_states_augmented(m)),"chunk",(n_sim,num_states_augmented(m)))
 
     if testing
-      rows, cols = size(randvecs)
-      numvals = size(randvals)[1]
+        rows, cols = size(randvecs)
+        numvals = size(randvals)[1]
     end
 
     for i = 1:n_blocks
@@ -252,6 +262,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
         for j = 1:(n_sim*n_times)
 
             # Draw para_new from the proposal distribution
+
             if testing
                 para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(j,cols)]
             else
@@ -301,13 +312,15 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
                 if verbose 
                     println("Iteration $j: accept proposed jump")
                 end
+
             else
                 # Reject proposed jump
                 block_rejections += 1
-
+                
                 if verbose 
                     println("Iteration $j: reject proposed jump")
                 end
+
             end
 
 
@@ -338,12 +351,12 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
 
         # Write data to file if we're past n_burn blocks
         if i > n_burn
-            parasim[block_start:block_end, :] = convert(Matrix{Float32}, para_sim)
-            postsim[block_start:block_end, :] = convert(Vector{Float32}, post_sim)
-            # likesim[block_start:block_end, :] = convert(Vector{Float32}, like_sim)
-            TTTsim[block_start:block_end,:]  = convert(Matrix{Float32}, TTT_sim)
-            RRRsim[block_start:block_end,:]  = convert(Matrix{Float32}, RRR_sim)
-            zsim[block_start:block_end,:]  = convert(Matrix{Float32}, z_sim)
+            parasim[block_start:block_end, :] = float32(para_sim)
+            postsim[block_start:block_end, :] = float32(post_sim)
+            # likesim[block_start:block_end, :] = float32(like_sim)
+            TTTsim[block_start:block_end,:]  = float32(TTT_sim)
+            RRRsim[block_start:block_end,:]  = float32(RRR_sim)
+            zsim[block_start:block_end,:]  = float32(z_sim)
         end
     end # of block
 
