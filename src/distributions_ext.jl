@@ -67,6 +67,10 @@ type DegenerateMvNormal <: Distribution{Multivariate, Continuous}
     rank::Int64        # rank
 end
 
+function DegenerateMvNormal(μ::Vector,σ::Matrix)
+    return DegenerateMvNormal(μ,σ,rank(σ))
+end
+
 Base.length(d::DegenerateMvNormal) = length(d.μ)
 
 # Generate a draw from d with variance optionally scaled by cc^2
