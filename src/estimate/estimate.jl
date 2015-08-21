@@ -269,8 +269,8 @@ end
                 para_new = rand(propdist; cc=cc)
             end
 
-            # Solve the model, check that parameters are within bounds, and
-            # evaluate the posterior.
+            # Solve the model, check that parameters are within bounds, gensys returns a
+            # meaningful system, and evaluate the posterior.
 
             post_new, like_new, out = posterior!(m, para_new, YY; mh=true)
 

@@ -35,13 +35,14 @@ end
 # there is a model switch.
 # If there is no model switch, then we filter over the main sample all at once.
 function likelihood{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
+    MH_NULL_OUTPUT = (-Inf, Dict{String, Any}())
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if mh
         for θ in model.parameters
             (left, right) = θ.bounds
             if !θ.fixed && !(left <= θ.value <= right)
-                return -Inf, Dict{String, Any}()
+                return MH_NULL_OUTPUT
             end
         end
     end
@@ -65,9 +66,20 @@ function likelihood{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; m
     zlb["YY"] = YY[(end-num_anticipated_lags(model)):end, :]
 
 
-    ## step 1: solution to DSGE model - delivers transition equation for the state variables  S_t
-    ## transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ
-    zlb["TTT"], zlb["RRR"], zlb["CCC"] = solve(model::AbstractDSGEModel)
+    # Step 1: solution to DSGE m - delivers transition equation for the state variables  S_t
+    # transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ
+    # If we are in MH, then any errors coming out of gensys should be caught and a -Inf
+    # posterior should be returned.
+    try
+        zlb["TTT"], zlb["RRR"], zlb["CCC"] = solve(model)
+    catch err
+        if mh && isa(err, GensysError)
+            info(err.msg)
+            return MH_NULL_OUTPUT
+        else
+            rethrow(err)
+        end
+    end
 
     # Get normal, no ZLB m matrices
     state_inds = [1:(num_states(model)-num_anticipated_shocks(model)); (num_states(model)+1):num_states_augmented(model)]
