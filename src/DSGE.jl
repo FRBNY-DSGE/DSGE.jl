@@ -19,13 +19,6 @@ export
     # models/
     steadystate!, Model990, model_specifications, eqcond, measurement
 
-const savepath  = joinpath(dirname(@__FILE__), "../save/")
-inpath() = joinpath(savepath, "input_data/")
-outpath() = joinpath(savepath, "output_data/")
-tablepath() = joinpath(savepath, "results/tables/")
-plotpath()  = joinpath(savepath, "results/plots/")
-logpath()   = joinpath(savepath, "logs/")
-
 include("distributions_ext.jl")
 include("abstractdsgemodel.jl")
 include("parameters.jl")

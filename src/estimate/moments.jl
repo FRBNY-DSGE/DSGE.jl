@@ -56,7 +56,7 @@ using Debug
     
     # Read in the matrix of parameter draws from metropolis-hastings
 
-    infile = joinpath(outpath(),"sim_save.h5")
+    infile = joinpath(outpath(m),"sim_save.h5")
     println("Reading draws from Metropolis-Hastings from $infile...")
 
     Θ = []
@@ -78,8 +78,6 @@ using Debug
 
     # Produce TeX table of moments
     makeMomentTables(m,Θ,percent)
-
-    # ?? Do we want to calc covariance here? Haven't we done it already in estimate?
 
     # ?? What to return?
     #return Θ, post
@@ -152,7 +150,7 @@ end
     end
     
     # Save posterior mean
-    cov_filename = joinpath(outpath(),"cov.h5")
+    cov_filename = joinpath(outpath(m),"cov.h5")
     posterior_fid = h5open(cov_filename,"w") do posterior_fid
         posterior_fid["Θ_hat"] = convert(Matrix{Float32}, Θ_hat)
     end
@@ -168,7 +166,7 @@ end
     
     ## Step 4: Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT parameters
 
-    mainParams_out = joinpath(tablepath(), "moments_mainParams.tex")
+    mainParams_out = joinpath(tablepath(m), "moments_mainParams.tex")
     mainParams_fid = open(mainParams_out,"w")
 
     # Preamble
@@ -225,7 +223,7 @@ end
     close(mainParams_fid)    
     
     # Write to Table 2: Prior mean, std dev and posterior mean, bands for other params
-    periphParams_out = joinpath(tablepath(), "moments_periphParams_0.tex")
+    periphParams_out = joinpath(tablepath(m), "moments_periphParams_0.tex")
     periphParams_fid = open(periphParams_out,"w")
     
     @printf(periphParams_fid,"\\documentclass[12pt]{article}\n")
@@ -267,7 +265,7 @@ end
             close(periphParams_fid)
             
             filename = @sprintf("moments_periphParams_%d.tex",table_count)
-            periphParams_out = joinpath(tablepath(),filename)
+            periphParams_out = joinpath(tablepath(m),filename)
             periphParams_fid = open(periphParams_out,"w")
             
             @printf(periphParams_fid,"\\documentclass[12pt]{article}\n")
@@ -306,7 +304,7 @@ end
 
    ## Write to Table 3: Prior mean and posterior mean for all parameters
 
-    prioPostMean_out = joinpath(tablepath(), "moments_prioPostMean.tex")
+    prioPostMean_out = joinpath(tablepath(m), "moments_prioPostMean.tex")
     prioPostMean_fid = open(prioPostMean_out,"w")
 
 
@@ -337,7 +335,7 @@ end
             close(prioPostMean_fid)
             
             filename = @sprintf("moments_prioPostMean_%d.tex",table_count)
-            prioPostMean_out = joinpath(tablepath(),filename)
+            prioPostMean_out = joinpath(tablepath(m),filename)
             prioPostMean_fid = open(prioPostMean_out,"w")
             
             @printf(prioPostMean_fid,"\\documentclass[12pt]{article}\n")
@@ -366,7 +364,7 @@ end
     @printf(prioPostMean_fid,"\\end{document}")
     close(prioPostMean_fid)
 
-   println("Tables are in ",tablepath())
+   println("Tables are in ",tablepath(m))
 
 end
 

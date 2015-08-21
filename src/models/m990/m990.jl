@@ -15,6 +15,10 @@ type Model990 <: AbstractDSGEModel
     endogenous_states_postgensys::Dict{Symbol,Int}  #
     observables::Dict{Symbol,Int}                   #
 
+    spec                                            # The model specification number
+    savepath::String                                # The absolute path to the top-level save directory for this
+                                                    # model specification
+    
     num_anticipated_shocks::Int                     # Number of anticipated policy shocks
     num_anticipated_shocks_padding::Int             # Padding for nant
     num_anticipated_lags::Int                       # Number of periods back to incorporate zero bound expectations
@@ -27,9 +31,12 @@ type Model990 <: AbstractDSGEModel
     num_mh_burn::Int                                #
     mh_thinning_step::Int                           #
     
-    num_mh_simulations_test::Int                    # 
-    num_mh_blocks_test::Int                         #
-    num_mh_burn_test::Int                           #    
+    num_mh_simulations_test::Int                    # These fields are used to test Metropolis-Hastings with 
+    num_mh_blocks_test::Int                         # a small number of draws from the posterior
+    num_mh_burn_test::Int                           #
+
+
+    
 end
 
 description(m::Model990) = "This is some model that we're trying to make work."
@@ -222,10 +229,18 @@ function Model990()
     steady_state     = @compat Vector{Any}(length(steady_state_keys))
 
     # Model-specific specifications
+    spec                            = split(basename(@__FILE__),'.')[1] 
+    savepath                        = joinpath(dirname(@__FILE__), *("../../../save/",spec))
+
+    # Create the save directories if they don't already exist
+    createSaveDirectories(savepath)
+    
     num_anticipated_shocks          = 6
     num_anticipated_shocks_padding  = 20
     num_anticipated_lags            = 24
     num_presample_periods           = 2 # TODO: This should be set when the data are read in
+    
+
 
     # Estimation specifications
     reoptimize                      = false
@@ -251,6 +266,9 @@ function Model990()
             Dict{Symbol,Int}(),
             Dict{Symbol,Int}(),
 
+            spec,
+            savepath,
+                 
             num_anticipated_shocks,
             num_anticipated_shocks_padding,
             num_anticipated_lags,
@@ -403,4 +421,24 @@ function steadystate!(m::Model990)
     m[:zeta_nsigw]  = m[:gammstar]*Rkstar/m[:pistar]/exp(m[:zstar])*(1+Rhostar)*muestar*Gstar*(zeta_Gsigw-zeta_gw/zeta_zw*zeta_zsigw)
 
     return m
+end
+
+# Creates the proper directory structure for input and output files
+function createSaveDirectories(savepath::String)
+
+    paths = [savepath,
+             joinpath(savepath, "input_data"),
+             joinpath(savepath, "output_data"),
+             joinpath(savepath, "logs"),
+             joinpath(savepath, "results"),
+             joinpath(savepath, "results/tables"),
+             joinpath(savepath, "results/plots")]
+
+    for path in paths
+        if(!ispath(path))
+            mkdir(path)
+            println("created $path")
+        end
+    end
+        
 end
