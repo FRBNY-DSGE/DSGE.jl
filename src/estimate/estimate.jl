@@ -9,8 +9,8 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
     ### Step 1: Initialize
 
     # Load data
-    in_path = inpath()
-    out_path = outpath()
+    in_path = inpath(m)
+    out_path = outpath(m)
     
     mf = MatFile("$in_path/YY.mat")
     YY = get_variable(mf, "YY")
@@ -101,6 +101,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false)
     h5path = joinpath(out_path,"sim_save.h5")
 
     ### Step 5: Calculate parameter covariance matrix
+
     # Read in saved parameter draws
     sim_h5 = h5open(h5path, "r+")
 
@@ -133,11 +134,13 @@ function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{
     return DegenerateMvNormal(μ, σ, rank)
 end
 
-function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::AbstractDSGEModel,
+@debug function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::AbstractDSGEModel,
     YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = false)
 
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
+
+    @bp
     
     println("Testing = $testing")
     
@@ -224,7 +227,7 @@ function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::Abstra
     # end
 
     
-    h5path = joinpath(outpath(),"sim_save.h5")
+    h5path = joinpath(outpath(m),"sim_save.h5")
     simfile = h5open(h5path,"w")
 
     n_saved_obs = n_sim * (n_blocks - n_burn)
