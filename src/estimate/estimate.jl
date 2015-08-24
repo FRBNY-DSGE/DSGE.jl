@@ -4,7 +4,7 @@
 using HDF5
 using Debug
 
-function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false)
+@debug function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false)
 
     ###################################################################################################
     ### Step 1: Initialize
@@ -30,8 +30,8 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false)
     println("Reading in previous mode")
     
     mode = []
-    h5open("$in_path/mode_in_optimized.h5","r") do h5
-        mode = read(h5["mode"])
+    h5open("$in_path/mode_in.h5","r") do h5
+        mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
     end
     
     update!(m, mode)
@@ -71,6 +71,8 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false)
         
     end
 
+    @bp
+    
     ###################################################################################################
     ### Step 3: Compute proposal distribution
     ###################################################################################################
