@@ -46,7 +46,7 @@ using Debug
         # Inputs to minimization algorithm
         function posterior_min!{T<:FloatingPoint}(x::Vector{T})
             tomodel!(m,x)
-            return -posterior(m, YY)
+            return -posterior(m, YY, catchGensysErrors=true)
         end
 
         xh = toreal(m.parameters)

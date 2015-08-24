@@ -13,20 +13,24 @@ end
 
 # log posterior = log likelihood + log prior
 # log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
-function posterior{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
+function posterior{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
     if mh
+        catchGensysErrors = true
         like, out = likelihood(model, YY; mh=mh)
         post = like + prior(model)
         return post, like, out
     else
-        return likelihood(model, YY; mh=mh) + prior(model)
+        return likelihood(model, YY; mh=mh, catchGensysErrors=catchGensysErrors) + prior(model)
     end
 end
 
 # Evaluate posterior at `parameters`
-function posterior!{T<:FloatingPoint}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false)
+function posterior!{T<:FloatingPoint}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
     update!(model, parameters)
-    return posterior(model, YY; mh=mh)
+    if mh
+        catchGensysErrors = true
+    end
+    return posterior(model, YY; mh=mh, catchGensysErrors=catchGensysErrors)
 end
 
 
@@ -34,11 +38,13 @@ end
 # This is a dsge likelihood function that can handle 2-part estimation where
 # there is a model switch.
 # If there is no model switch, then we filter over the main sample all at once.
-function likelihood{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
+function likelihood{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors = false)
     MH_NULL_OUTPUT = (-Inf, Dict{Symbol, Any}())
+    GENSYS_ERROR_OUTPUT = -Inf
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if mh
+        catchGensysErrors = true  # for consistency
         for θ in model.parameters
             (left, right) = θ.bounds
             if !θ.fixed && !(left <= θ.value <= right)
@@ -73,9 +79,13 @@ function likelihood{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; m
     try
         zlb[:TTT], zlb[:RRR], zlb[:CCC] = solve(model)
     catch err
-        if mh && isa(err, GensysError)
+        if catchGensysErrors && isa(err, GensysError)
             info(err.msg)
-            return MH_NULL_OUTPUT
+            if mh
+                return MH_NULL_OUTPUT
+            else
+                return GENSYS_ERROR_OUTPUT
+            end
         else
             rethrow(err)
         end
