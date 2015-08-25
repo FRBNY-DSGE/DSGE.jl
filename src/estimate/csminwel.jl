@@ -189,7 +189,7 @@ See the file `examples/csminwel.jl` for an example of usage
 
                 # PZL 8/11/15: for time tests
                 if randvecs == []
-                    Hcliff = H + diagm(diag(H).*rand(nx))
+                    Hcliff = H + diagm(diag(H).*rand(m.rng, nx))
                 else
                     Hcliff = H + diamg(diag(H) .* randvecs[:, randi])
                     randi += 1

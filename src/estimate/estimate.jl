@@ -318,7 +318,7 @@ end
                 k = (i-1)*(n_sim*n_times) + j
                 x = randvals[mod(j,numvals)]
             else
-                x = rand()
+                x = rand(m.rng)
             end
 
             if x < min(1.0, r)

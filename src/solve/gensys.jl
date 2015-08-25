@@ -51,7 +51,7 @@ If div is omitted from argument list, a div>1 is calculated.
 
 eu(1)=1 for existence, eu(2)=1 for uniqueness.  eu(1)=-1 for existence
 only with not-s.c. z; eu=[-2,-2] for coincident zeros.
-
+=#
 
 =#
 
@@ -242,4 +242,4 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
 end
 
-end  # module
+#end  # module

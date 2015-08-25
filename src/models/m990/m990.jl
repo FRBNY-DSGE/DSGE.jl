@@ -286,9 +286,9 @@ function Model990()
                  
             num_mh_simulations_test,   
             num_mh_blocks_test,  
-            num_mh_burn_test),
+            num_mh_burn_test,
 
-            rng
+            rng)
 
     initialise_model_parameters!(m)
     initialise_model_indices!(m)
