@@ -35,7 +35,7 @@ type Model990 <: AbstractDSGEModel
     num_mh_blocks_test::Int                         # a small number of draws from the posterior
     num_mh_burn_test::Int                           #
 
-
+    rng::AbstractRNG                                # Random number generator
     
 end
 
@@ -253,6 +253,9 @@ function Model990()
     num_mh_blocks_test              = 1
     num_mh_burn_test                = 0
 
+    # Random number generator
+    rng                             = MersenneTwister(111)
+    
     # initialise empty model
     m = Model990(
             parameters,
@@ -283,7 +286,9 @@ function Model990()
                  
             num_mh_simulations_test,   
             num_mh_blocks_test,  
-            num_mh_burn_test)
+            num_mh_burn_test),
+
+            rng
 
     initialise_model_parameters!(m)
     initialise_model_indices!(m)
