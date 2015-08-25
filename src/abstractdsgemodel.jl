@@ -73,7 +73,18 @@ function tomodel!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
     tomodel!(values, m.parameters)
     return steadystate!(m)
 end
+
 function update!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
     return update!(m.parameters, values)
+end
+
+function prepareForTesting{T<:AbstractDSGEModel}(m::AbstractDSGEModel)
+
+    m.num_mh_simulations
+    m.num_mh_blocks
+    m.num_mh_burn
+    m.mh_thinning_step
+
+    
 end
 
