@@ -35,7 +35,7 @@ using Debug
 
     if m.reoptimize
         println("Reoptimizing...")
-
+        
         # Inputs to minimization algorithm
         function posterior_min!{T<:FloatingPoint}(x::Vector{T})
             tomodel!(m,x)
