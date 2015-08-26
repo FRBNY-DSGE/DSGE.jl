@@ -230,7 +230,7 @@ function Model990()
 
     # Model-specific specifications
     spec                            = split(basename(@__FILE__),'.')[1] 
-    savepath                        = joinpath(dirname(@__FILE__), *("../../../save/",spec))
+    savepath                        = normpath(joinpath(dirname(@__FILE__), *("../../../save/",spec)))
 
     # Create the save directories if they don't already exist
     createSaveDirectories(savepath)
