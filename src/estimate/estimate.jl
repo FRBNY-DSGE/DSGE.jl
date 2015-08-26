@@ -13,6 +13,11 @@ using Debug
     # Load data
     in_path = inpath(m)
     out_path = outpath(m)
+
+    ## mf = MatFile("/home/rceexm08/.julia/v0.3/DSGE/save/old/YY.mat","r")
+    ## #mf = MatFile(joinpath(inpath(m),"YY.mat"),"r")
+    ## YY = get_variable(mf, "YY")
+    ## close(mf)
     
     h5 = h5open(joinpath(in_path,"YY.h5"), "r") 
     YY = read(h5["YY"])
