@@ -221,10 +221,10 @@ end
         if post_old > -Inf
             propdist.μ = para_old
 
-            TTT_old = out["TTT"]
-            RRR_old = out["RRR"]
-            CCC_old = out["CCC"]
-            zend_old  = out["zend"]
+            TTT_old = out[:TTT]
+            RRR_old = out[:RRR]
+            CCC_old = out[:CCC]
+            zend_old  = out[:zend]
 
             initialized = true
         end
@@ -333,14 +333,14 @@ end
                 like_old = like_new
                 propdist.μ = para_new
 
-                TTT_old = out["TTT"]
-                RRR_old = out["RRR"]
-                CCC_old = out["CCC"]
+                TTT_old = out[:TTT]
+                RRR_old = out[:RRR]
+                CCC_old = out[:CCC]
 
-                zend_old = out["zend"]
-                ZZ_old = out["ZZ"]
-                DD_old = out["DD"]
-                QQ_old = out["QQ"]
+                zend_old = out[:zend]
+                ZZ_old = out[:ZZ]
+                DD_old = out[:DD]
+                QQ_old = out[:QQ]
 
                 if verbose 
                     println("Iteration $j: accept proposed jump")
