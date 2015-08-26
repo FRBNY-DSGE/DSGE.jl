@@ -14,10 +14,9 @@ using Debug
     in_path = inpath(m)
     out_path = outpath(m)
     
-    YY = []
-    h5open("$in_path/YY.h5", "r") do h5
-        YY = read(h5["YY"])
-    end
+    h5 = h5open(joinpath(in_path,"YY_new.h5"), "r") 
+    YY = read(h5["YY"])
+    close(h5)
     
     post = posterior(m, YY)
 
@@ -28,6 +27,7 @@ using Debug
     # Specify starting mode
 
     println("Reading in previous mode")
+
     mode = []
     h5open("$in_path/mode_in.h5","r") do h5
         mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
