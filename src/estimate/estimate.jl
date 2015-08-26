@@ -14,7 +14,7 @@ using Debug
     in_path = inpath(m)
     out_path = outpath(m)
     
-    h5 = h5open(joinpath(in_path,"YY_new.h5"), "r") 
+    h5 = h5open(joinpath(in_path,"YY.h5"), "r") 
     YY = read(h5["YY"])
     close(h5)
     
@@ -27,11 +27,10 @@ using Debug
     # Specify starting mode
 
     println("Reading in previous mode")
-
-    mode = []
-    h5open("$in_path/mode_in.h5","r") do h5
-        mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
-    end
+    
+    h5 = h5open("$in_path/mode_in.h5","r") 
+    mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
+    close(h5)
     
     update!(m, mode)
 
@@ -90,10 +89,16 @@ using Debug
     else
         println("Using pre-calculated Hessian")
  
-        h5open("$in_path/hessian_optimized.h5","r") do h5
-            hessian = read(h5["hessian"])
-        end
-=
+        h5 = h5open("$in_path/hessian_optimized.h5","r") 
+        hessian = read(h5["hessian"])
+        close(h5)
+
+        #retrieve-mat
+        ## println("Using pre-calculated Hessian")
+        ## mf = MatFile("$inpath/hessian_optimized.mat")
+        ## hessian = get_variable(mf, "hessian")
+        ## close(mf)
+
     end
 
     # The hessian is used to calculate the variance of the proposal
@@ -118,10 +123,10 @@ using Debug
         randvecs = []
         randvals = []
         
-        h5open("$in_path/rand_save.h5","r") do h5
-            randvecs = read(h5["randvecs"])
-            randvals = read(h5["randvals"])
-        end
+        h5= h5open("$in_path/rand_save.h5","r") 
+        randvecs = read(h5["randvecs"])
+        randvals = read(h5["randvals"])
+        close(h5)
 
         metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose, randvecs=randvecs, randvals=randvals)
     end
