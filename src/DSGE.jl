@@ -17,7 +17,7 @@ export
     dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel, hessizero!, estimate, proposal_distribution, metropolis_hastings, computeMoments, makeMomentTables, find_density_bands,
 
     # models/
-    steadystate!, Model990, model_specifications, eqcond, measurement
+    steadystate!, Model990, model_specifications, eqcond, measurement, createSaveDirectories
 
 include("distributions_ext.jl")
 include("abstractdsgemodel.jl")
