@@ -70,9 +70,6 @@ using Debug
         @printf(1,"Could not open file %s", infile)
     end
 
-    # Convert back to Float64 for compatability with other variables
-    #Θ = convert(Matrix{Float64},Θ)
-
     num_draws = size(Θ,1)
 
     # Produce TeX table of moments
@@ -117,19 +114,21 @@ end
         param  = getindex(m,i)
         
         if isa(param.priordist, DSGE.Normal)
-
+            
             prior_means[i] = param.priordist.μ
             prior_stddev[i] = param.priordist.σ
             
         elseif isa(param.priordist, Distributions.Beta)
-
-            prior_means[i] = param.priordist.α
-            prior_stddev[i] = param.priordist.β
+            μ,σ = betaMoments(param.priordist)
+            
+            prior_means[i] = μ
+            prior_stddev[i] = σ
 
         elseif isa(param.priordist, Distributions.Gamma)
-
-            prior_means[i] = param.priordist.α
-            prior_stddev[i] = param.priordist.θ  # small \theta
+            μ,σ = gammaMoments(param.priordist)
+            
+            prior_means[i] = μ
+            prior_stddev[i] = σ  # small \theta
             
         end
     end
@@ -152,7 +151,7 @@ end
     # Save posterior mean
     cov_filename = joinpath(outpath(m),"cov.h5")
     posterior_fid = h5open(cov_filename,"w") do posterior_fid
-        posterior_fid["Θ_hat"] = convert(Matrix{Float32}, Θ_hat)
+        posterior_fid["Θ_hat"] = float32(Θ_hat)
     end
 
 
@@ -209,7 +208,7 @@ end
         end
             
         # TODO: Decide whether subspec should be a field in the model
-        if(ismatch(r"\\rho_chi",param.texLabel)) # ??? || (isequal(subspec,7) && texLabel == ":ρ_b"))
+        if(ismatch(r"rho_chi",param.texLabel)) # ??? || (isequal(subspec,7) && texLabel == ":ρ_b"))
             continue
         end
 
