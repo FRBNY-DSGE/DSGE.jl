@@ -152,6 +152,21 @@ function mat_to_hdf5(matfileName, h5fileName)
     MATLAB.close(mf)
 end
 
+function matvar_to_hdf5var(matfileName,matVarName,h5fileName,h5VarName)
+
+    # Open mat file and get the desired variable
+    mf = MatFile(matfileName)
+    var = MATLAB.get_variable(mf, matVarName)
+    
+    # Open the HDF5 file and write the variable
+    h5 = HDF5.h5open(h5fileName,"w")
+    HDF5.write(h5, h5VarName, var)
+
+    # Close the files
+    HDF5.close(h5)
+    MATLAB.close(mf)
+end
+
 function compare_mat_hdf5(matfile,h5file)
     mf = MatFile(matfileName)
     mvars = MATLAB.variable_names(mf)
