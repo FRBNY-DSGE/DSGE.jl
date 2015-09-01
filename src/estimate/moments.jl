@@ -60,7 +60,7 @@ using Debug
     try
         fid = h5open(infile,"r") do fid
             Θ = read(fid,"parasim")
-            post = read(fid,"postsim")
+            #post = read(fid,"postsim")
         end
     catch
         @printf(1,"Could not open file %s", infile)
