@@ -1,42 +1,4 @@
-##                           OVERVIEW
-## moments.jl: Computes moments, tabulates parameter moments, and plots parameter
-## draws from the prior and posterior distribution.
-
-## IMPORTANT VARIABLES
-## PLOTDRAWS: Specify whether or not you want to plot the parameter draws
-## (runs momPlot.m)
-## percent: In the output laTex table, we report <percent> bands for
-##     parameter draws from the posterior
-
-##     INPUTS
-##     infile1: This refers to a an output file (mhparam*) from gibb.m,
-##     which holds draws from the posterior.
-##
-##     infile4: This refers to a an output file (post*) from gibb.m, which
-##     holds the value of the posterior, for each posterior draw.
-##
-##     theta: (ndraws x npara) matrix holding the posterior draws
-##	   (stored in mhpara*, output from gibb.m)
-##
-##     post: (ndraws x 1) matrix holding the posterior value
-##	   (stored in post*, output from gibb.m)
-##     OUTPUTS
-##     From makeMomentsTables():
-##
-##     1: (mhpara*Mean): holds the mean parameter across
-##     draws from the posterior.
-##
-##     2: (*Mom_MainParams*): laTex table that lists the
-##	   moments for important parameters.
-##
-##     3: (*Mom_PeriphParams*): laTex table that lists the
-##	       moments for less important parameters.
-##		   4: (*PrioPostMean*) that lists the prior and
-##		   posterior means
-
-##		  
-
-
+## moments.jl: Computes and tabulates moments of parameter draws from Metropolis-Hastings
 
 using HDF5
 using Debug
@@ -75,7 +37,6 @@ using Debug
     makeMomentTables(m,Θ,percent)
 
 end
-
 
 @debug function makeMomentTables{T<:FloatingPoint}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
     
@@ -194,10 +155,12 @@ end
         
         if (!ismatch(r"rho_", param.texLabel) &&
             !ismatch(r"zeta_", param.texLabel) &&
-            !ismatch(r"psi", param.texLabel) &&
+            !ismatch(r"psi_", param.texLabel) &&
             !ismatch(r"nu_l", param.texLabel) &&
-            !ismatch(r"pistar", param.texLabel) &&
-            (!ismatch(r"ups", param.texLabel)))  ##Is this correct? mspec == 16 or u_^*
+            !ismatch(r"pi\^\*", param.texLabel) &&
+            !ismatch(r"sigma_{pi}\^\*",param.texLabel) &&
+            (!ismatch(r"pistar", param.texLabel)))
+            # (!ismatch(r"ups", param.texLabel)))  ##Is this correct? mspec == 16 or u_^*
             continue
         end
             
