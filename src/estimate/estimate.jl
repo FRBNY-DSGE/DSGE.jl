@@ -33,6 +33,8 @@ using Debug
         mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
         close(h5)
     else
+        @bp
+        
         h5 = h5open("$in_path/mode_in_optimized.h5","r") 
         mode = read(h5["mode"])  
         close(h5)
@@ -40,6 +42,8 @@ using Debug
     
     update!(m, mode)
 
+    @bp
+    
     if m.reoptimize
         println("Reoptimizing...")
         
@@ -106,6 +110,11 @@ using Debug
         println("problem – shutting down dimensions")
     end
 
+    ## !!
+    ## h5open("$out_path/propdist-sigma.h5","w") do h5
+    ##     h5["propdist.σ"] = propdist.σ
+    ## end
+    
     ###################################################################################################
     ### Step 4: Sample from posterior using Metropolis-Hastings algorithm
     ###################################################################################################
@@ -113,6 +122,8 @@ using Debug
     # Set the jump size for sampling
     cc0 = 0.01
     cc = 0.09
+
+    @bp
     
     if !testing
         metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose)
@@ -149,7 +160,8 @@ using Debug
 end
 
 # Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
-function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{T})
+@debug function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{T})
+    @bp
     n = length(μ)
     @assert (n, n) == size(hessian)
 
@@ -164,6 +176,10 @@ function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{
 
     σ = U*sqrt(S_inv)
 
+    h5open("/home/rceexm08/.julia/v0.3/DSGE/save/m990-no_reoptimize_no_recalc_hessian/eigenvectors.h5","w") do h5
+        h5["U"] = U
+    end
+    
     return DegenerateMvNormal(μ, σ, rank)
 end
 
@@ -201,6 +217,7 @@ end
 
     initialized = false
 
+    @bp
     while !initialized
         if testing
             para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
@@ -230,6 +247,7 @@ end
             initialized = true
         end
 
+        @bp
     end
 
     # For n_sim*n_times iterations within each block, generate a new parameter draw.
@@ -302,6 +320,8 @@ end
                 para_new = rand(propdist; cc=cc)
             end
 
+            @bp
+            
             # Solve the model, check that parameters are within bounds, gensys returns a
             # meaningful system, and evaluate the posterior.
 
@@ -357,6 +377,7 @@ end
 
             end
 
+            @bp
 
             # Save every (n_times)th draw
 
