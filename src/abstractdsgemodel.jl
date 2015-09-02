@@ -14,7 +14,7 @@ Base.getindex(m::AbstractDSGEModel, i::Integer) = begin
 end
 Base.getindex(m::AbstractDSGEModel, k::Symbol) = Base.getindex(m,m.keys[k])
 
-Base.setindex!(m::AbstractDSGEModel, value, i::Integer) = begin 
+Base.setindex!(m::AbstractDSGEModel, value, i::Integer) = begin
     if i <= num_parameters(m)
         setindex!(m.parameters, value, i)
     elseif i <= num_parameters(m) + num_parameters_fixed(m)
@@ -26,12 +26,12 @@ end
 Base.setindex!(m::AbstractDSGEModel, value, k::Symbol) = Base.setindex!(m,value,m.keys[k])
 
 function Base.show{T<:AbstractDSGEModel}(io::IO, m::T)
-    @printf io "%s" "Dynamic Stochastic General Equilibrium Model\n"
+    @printf io "Dynamic Stochastic General Equilibrium Model\n"
     @printf io "%s\n" T
-    @printf io "%s             %i\n" "no. states:" num_states(m)
-    @printf io "%s %i\n" "no. anticipated shocks:" num_anticipated_shocks(m)
-    @printf io "%s   %i\n" "no. anticipated lags:" num_anticipated_lags(m)
-    @printf io "%s\n %s\n" "description:" description(m)
+    @printf io "no. states:             %i\n" num_states(m)
+    @printf io "no. anticipated shocks: %i\n" num_anticipated_shocks(m)
+    @printf io "no. anticipated lags:   %i\n" num_anticipated_lags(m)
+    @printf io "description:\n %s\n" description(m)
 end
 
 # Number of anticipated policy shocks
@@ -58,7 +58,7 @@ num_observables(m::AbstractDSGEModel)            = length(m.observables)
 num_parameters(m::AbstractDSGEModel)             = length(m.parameters)
 num_parameters_fixed(m::AbstractDSGEModel)       = length(m.parameters_fixed)
 num_parameters_steady_state(m::AbstractDSGEModel)= length(m.steady_state)
-num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.parameters]) 
+num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.parameters])
 
 # Paths to where input/output/results data are stored
 savepath(m::AbstractDSGEModel)  = normpath(m.savepath)
