@@ -12,7 +12,10 @@ function minusnan{S<:FloatingPoint, T<:FloatingPoint}(x::Complex{S}, y::Complex{
     return isinf(x) && isinf(y) ? 0 : x - y
 end
 
-
+# checksigns(x,y) checks to see if x and y have the same sign
+function checksigns(x::Number,y::Number)
+    sign(x)==sign(y)
+end
 
 # TODO: decide what a sensible default ε value is for our situation
 # Compares matrices, reports absolute differences, returns true if all entries close enough
@@ -41,11 +44,14 @@ function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(ex
     n_not_approx_eq = count(x -> x > ε, abs_diff)
     max_abs_diff = maximum(abs_diff)
     max_inds = ind2sub(size(abs_diff), indmax(abs_diff))
-
+    diff_sign = !map(checksigns, expected, actual)
+    n_diff_sign = countnz(diff_sign)
+    
     # Print output
     if noisy
         println("$n_neq of $n_entries entries with abs diff > 0")
         println("$n_not_approx_eq of $n_entries entries with abs diff > $ε")
+        println("$n_diff_sign of $n_entries entries have opposite signs")
         if n_neq != 0
             println("Max abs diff of $max_abs_diff at entry $max_inds\n")
         else
