@@ -1,10 +1,9 @@
 # The given fields define the entire model structure.
 # We can then concisely pass around a Model object to the remaining steps of the model
 #   (solve, estimate, and forecast).
-type Model990 <: AbstractDSGEModel
-    parameters::Vector{Param}                       # vector of all of the model parameters
-    parameters_fixed::Vector{Param}                 # vector of all "permanently fixed" model parameters
-    steady_state::Vector                            # model steady-state values
+type Model990{T} <: AbstractDSGEModel{T}
+    parameters::ParameterVector{T}                  # vector of all of the model parameters
+    steady_state::Vector{T}                         # model steady-state values
     keys::Dict{Symbol,Int}                          # human-readable names for all the model
                                                     # parameters and steady-num_states
 
@@ -18,7 +17,7 @@ type Model990 <: AbstractDSGEModel
     spec                                            # The model specification number
     savepath::String                                # The absolute path to the top-level save directory for this
                                                     # model specification
-    
+
     num_anticipated_shocks::Int                     # Number of anticipated policy shocks
     num_anticipated_shocks_padding::Int             # Padding for nant
     num_anticipated_lags::Int                       # Number of periods back to incorporate zero bound expectations
@@ -26,17 +25,14 @@ type Model990 <: AbstractDSGEModel
 
     reoptimize::Bool                                # Reoptimize the posterior mode
     recalculate_hessian::Bool                       # Recalculate the hessian at the mode
-    num_mh_simulations::Int                         # 
+    num_mh_simulations::Int                         #
     num_mh_blocks::Int                              #
     num_mh_burn::Int                                #
     mh_thinning_step::Int                           #
-    
-    num_mh_simulations_test::Int                    # These fields are used to test Metropolis-Hastings with 
+
+    num_mh_simulations_test::Int                    # These fields are used to test Metropolis-Hastings with
     num_mh_blocks_test::Int                         # a small number of draws from the posterior
     num_mh_burn_test::Int                           #
-
-
-    
 end
 
 description(m::Model990) = "This is some model that we're trying to make work."
@@ -105,142 +101,18 @@ function initialise_model_indices!(m::Model990)
     for (i,k) in enumerate(observables);                  m.observables[k]                  = i end
 end
 
-function initialise_model_parameters!(m::Model990)
-    m[:alp     ] = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999),texLabel="\\alpha")
-    m[:zeta_p  ] = Param(0.8940, false, (1e-5, 0.999), BetaAlt(0.5, 0.1), 1, (1e-5, 0.999), texLabel="\\zeta_p")
-    m[:iota_p  ] = Param(0.1865, false, (1e-5, 0.999), BetaAlt(0.5, 0.15), 1, (1e-5, 0.999), texLabel="\\iota_p")
-    m[:del     ] = Param(0.025) # omit from parameter vector
-    m[:ups     ] = Param(1.000, true, (0., 10.), GammaAlt(1., 0.5), 2, (1e-5, 0.), texLabel="\\Upsilon") 
-    m[:Bigphi  ] = Param(1.1066, false, (1., 10.), Normal(1.25, 0.12), 2, (1.00, 10.00), texLabel="\\Phi")
-    m[:s2      ] = Param(2.7314, false, (-15., 15.), Normal(4., 1.5), 0, (-15., 15.), texLabel="S")
-    m[:h       ] = Param(0.5347, false, (1e-5, 0.999), BetaAlt(0.7, 0.1), 1, (1e-5, 0.999), texLabel="h")
-    m[:ppsi    ] = Param(0.6862, false, (1e-5, 0.999), BetaAlt(0.5, 0.15), 1, (1e-5, 0.999), texLabel="ppsi")
-    m[:nu_l    ] = Param(2.5975, false, (1e-5, 10.), Normal(2, 0.75), 2, (1e-5, 10.), texLabel="\\nu_l")
-    m[:zeta_w  ] = Param(0.9291, false, (1e-5, 0.999), BetaAlt(0.5, 0.1), 1, (1e-5, 0.999), texLabel="\\zeta_w")
-    m[:iota_w  ] = Param(0.2992, false, (1e-5, 0.999), BetaAlt(0.5, 0.15), 1, (1e-5, 0.999), texLabel="\\iota_w")
-    m[:law     ] = Param(1.5) # omit from parameter vector
-
-    m[:bet     ] = Param(0.1402, scalefunction = x -> 1/(1 + x/100), false, (1e-5, 10.), GammaAlt(0.25, 0.1), 2, (1e-5, 10.), texLabel="\\beta")
-    m[:psi1    ] = Param(1.3679, false, (1e-5, 10.), Normal(1.5, 0.25), 2, (1e-5, 10.00),texLabel="\\psi_1")
-    m[:psi2    ] = Param(0.0388, false, (-0.5, 0.5), Normal(0.12, 0.05), 0, (-0.5, 0.5),texLabel="\\psi_2")
-    m[:psi3    ] = Param(0.2464, false, (-0.5, 0.5), Normal(0.12, 0.05), 0, (-0.5, 0.5),texLabel="\\psi_3")
-    m[:pistar  ] = Param(0.5000, scalefunction = x -> 1 + x/100, true, (1e-5, 10.), GammaAlt(0.75, 0.4), 2, (1e-5, 10.), texLabel="\\pi^*")
-    m[:sigmac  ] = Param(0.8719, false, (1e-5, 10.), Normal(1.5, 0.37), 2, (1e-5, 10.),texLabel="\\sigma_{c}")
-    m[:rho     ] = Param(0.7126, false, (1e-5, 0.999), BetaAlt(0.75, 0.10), 1, (1e-5, 0.999), texLabel="\\rho")
-    m[:epsp    ] = Param(10.) # omit from parameter vector
-    m[:epsw    ] = Param(10.) # omit from parameter vector
-
-    # financial frictions parameters
-    m[:Fom     ] = Param(0.0300, scalefunction = x -> 1 - (1-x)^0.25, true, (1e-5, 0.99999), BetaAlt(0.03, 0.01), 1, (1e-5, 0.99), texLabel="F(\omega)")
-    m[:sprd    ] = Param(1.7444, scalefunction = x -> (1 + x/100)^0.25, false, (0., 100.), GammaAlt(2., 0.1), 2, (1e-5, 0.),texLabel="spr_*")
-    m[:zeta_spb] = Param(0.0559, false, (1e-5, 0.99999), BetaAlt(0.05, 0.005), 1, (1e-5, 0.99), texLabel = "\\zeta_{sp}")
-    m[:gammstar] = Param(0.9900, true, (1e-5, 0.99999), BetaAlt(0.99, 0.002), 1, (1e-5, 0.99), texLabel = "\\gamma_*")
-
-    # exogenous processes - level
-    m[:gam     ] = Param(0.3673, scalefunction = x -> x/100, false, (-5., 5.), Normal(0.4, 0.1), 0, (-5.0, 5.0), texLabel = "\\gamma")
-    m[:Lmean   ] = Param(-45.9364, false, (-1000., 1000.), Normal(-45, 5), 0, (-1000., 1000.), texLabel = "Lmean")
-    m[:gstar   ] = Param(0.18) # omit from parameter vector
-
-    # exogenous processes - autocorrelation
-    m[:ρ_g     ] = Param(0.9863, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999), texLabel = "\\rho_{g}")
-    m[:ρ_b     ] = Param(0.9410, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{b}")
-    m[:ρ_mu    ] = Param(0.8735, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{\\mu}")
-    m[:ρ_z     ] = Param(0.9446, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{z}")
-    m[:ρ_laf   ] = Param(0.8827, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{\\lambda_f}")
-    m[:ρ_law   ] = Param(0.3884, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{\\lambda_w}")
-    m[:ρ_rm    ] = Param(0.2135, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{rm}")
-    m[:ρ_sigw  ] = Param(0.9898, false, (1e-5, 0.99999), BetaAlt(0.75, 0.15), 1, (1e-5, 0.99),texLabel = "\\rho_{sigw}")
-    m[:ρ_mue   ] = Param(0.7500, true, (1e-5, 0.99999), BetaAlt(0.75, 0.15), 1, (1e-5, 0.99),texLabel = "\\rho_{mue}")
-    m[:ρ_gamm  ] = Param(0.7500, true, (1e-5, 0.99999), BetaAlt(0.75, 0.15), 1, (1e-5, 0.99),texLabel = "\\rho_{gamm}")
-    m[:ρ_pist  ] = Param(0.9900, true, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{pi}^*")
-    m[:ρ_lr    ] = Param(0.6936, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{lr}")
-    m[:ρ_zp    ] = Param(0.8910, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{z^p}")
-    m[:ρ_tfp   ] = Param(0.1953, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{tfp}")
-    m[:ρ_gdpdef] = Param(0.5379, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{gdpdef}")
-    m[:ρ_pce   ] = Param(0.2320, false, (1e-5, 0.999), BetaAlt(0.5, 0.2), 1, (1e-5, 0.999),texLabel = "\\rho_{pce}")
-
-    # exogenous processes - standard deviation
-    m[:σ_g     ] = Param(2.5230, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{g}")
-    m[:σ_b     ] = Param(0.0292, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{b}")
-    m[:σ_mu    ] = Param(0.4559, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{\\mu}")
-    m[:σ_z     ] = Param(0.6742, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{z}")
-    m[:σ_laf   ] = Param(0.1314, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{\\lambda_f}")
-    m[:σ_law   ] = Param(0.3864, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{\\lambda_w}")
-    m[:σ_rm    ] = Param(0.2380, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{rm}")
-    m[:σ_sigw  ] = Param(0.0428, false, (1e-7, 100.), RootInverseGamma(4.00, 0.05), 2, (1e-5, 0.),texLabel = "\\sigma_{sigw}")
-    m[:σ_mue   ] = Param(0., true, (1e-7, 100.), RootInverseGamma(4.00, 0.05), 2, (1e-5, 0.),texLabel = "\\sigma_{mue}")
-    m[:σ_gamm  ] = Param(0., true, (1e-7, 100.), RootInverseGamma(4.00, 0.01), 2, (1e-5, 0.),texLabel = "\\sigma_{gamm}")
-    m[:σ_pist  ] = Param(0.0269, false, (1e-8, 5.), RootInverseGamma(6., 0.03), 2, (1e-8, 5.),texLabel = "\\sigma_{pi}^*")
-    m[:σ_lr    ] = Param(0.1766, false, (1e-8, 10.), RootInverseGamma(2., 0.75), 2, (1e-8, 5.),texLabel = "\\sigma_{lr}")
-    m[:σ_zp    ] = Param(0.1662, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{z^p}")
-    m[:σ_tfp   ] = Param(0.9391, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{tfp}")
-    m[:σ_gdpdef] = Param(0.1575, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{gdpdef}")
-    m[:σ_pce   ] = Param(0.0999, false, (1e-8, 5.), RootInverseGamma(2.00, 0.1), 2, (1e-8, 5.),texLabel = "\\sigma_{pce}")
-
-    # standard deviations of the anticipated policy shocks
-    for i = 1:num_anticipated_shocks_padding(m)
-        m[symbol("σ_rm$i")] = if i < 13
-            Param(0.20, false, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.),texLabel= @sprintf("\\sigma_{ant%d}",i) )
-        else
-            Param(0.0, true, (1e-7, 100.), RootInverseGamma(4.00, 0.2), 2, (1e-5, 0.),texLabel= @sprintf("\\sigma_{ant%d}",i) )
-        end
-    end
-
-    m[:eta_gz      ] = Param(0.8400, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999), texLabel = "\\eta_{gz}")
-    m[:eta_laf     ] = Param(0.7892, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999), texLabel = "\\eta_{\\lambda_f}")
-    m[:eta_law     ] = Param(0.4226, false, (1e-5, 0.999), BetaAlt(0.50, 0.20), 1, (1e-5, 0.999), texLabel = "\\eta_{\\lambda_w}")
-
-    m[:modelalp_ind] = Param(0.0000, true, (0.000, 1.000), BetaAlt(0.50, 0.20), 0, (0., 0.), texLabel = "i_{\\alpha}^{model}")
-    m[:gamm_gdpdef ] = Param(1.0354, false, (-10., 10.), Normal(1.00, 2.), 0, (-10., -10.), texLabel = "\\Gamma_{gdpdef}")
-    m[:del_gdpdef  ] = Param(0.0181, false, (-9.1, 9.1), Normal(0.00, 2.), 0, (-10., -10.), texLabel = "\\delta_{gdpdef}")
-end
-
 function Model990()
-    parameter_keys, parameter_fixed_keys, steady_state_keys = (
-            # parameter keys
-            [:alp, :zeta_p, :iota_p, :ups, :Bigphi, :s2, :h, :ppsi, :nu_l, :zeta_w, :iota_w,
-            :bet, :psi1, :psi2, :psi3, :pistar, :sigmac, :rho, :Fom, :sprd,
-            :zeta_spb, :gammstar, :gam, :Lmean, :ρ_g, :ρ_b, :ρ_mu, :ρ_z, :ρ_laf, :ρ_law,
-            :ρ_rm, :ρ_sigw, :ρ_mue, :ρ_gamm, :ρ_pist, :ρ_lr, :ρ_zp, :ρ_tfp, :ρ_gdpdef, :ρ_pce,
-            :σ_g, :σ_b, :σ_mu, :σ_z, :σ_laf, :σ_law, :σ_rm, :σ_sigw, :σ_mue, :σ_gamm, :σ_pist,
-            :σ_lr, :σ_zp, :σ_tfp, :σ_gdpdef, :σ_pce, :σ_rm1, :σ_rm2, :σ_rm3, :σ_rm4, :σ_rm5,
-            :σ_rm6, :σ_rm7, :σ_rm8, :σ_rm9, :σ_rm10, :σ_rm11, :σ_rm12, :σ_rm13, :σ_rm14, :σ_rm15,
-            :σ_rm16, :σ_rm17, :σ_rm18, :σ_rm19, :σ_rm20, :eta_gz, :eta_laf, :eta_law, :modelalp_ind,
-            :gamm_gdpdef, :del_gdpdef],
-
-            # parameter fixed keys
-            [:del, :law, :epsp, :epsw, :gstar],
-
-            # steady state keys
-            [:zstar, :rstar, :Rstarn, :rkstar, :wstar, :Lstar, :kstar, :kbarstar, :istar, :ystar,
-            :cstar, :wl_c, :nstar, :vstar, :zeta_spsigw, :zeta_spmue, :zeta_nRk, :zeta_nR, :zeta_nqk,
-            :zeta_nn, :zeta_nmue, :zeta_nsigw]
-            )
-
-    # initialise human-readable keys for variablesiables
-    keylist = Dict{Symbol,Int}()
-    for (i,k) in enumerate(vcat(parameter_keys,parameter_fixed_keys,steady_state_keys))
-        keylist[k] = i
-    end
-
-    # initialise vector to store actual values
-    parameters       = @compat Vector{Param}(length(parameter_keys))
-    parameters_fixed = @compat Vector{Param}(length(parameter_fixed_keys))
-    steady_state     = @compat Vector{Any}(length(steady_state_keys))
-
     # Model-specific specifications
-    spec                            = split(basename(@__FILE__),'.')[1] 
+    spec                            = split(basename(@__FILE__),'.')[1]
     savepath                        = joinpath(dirname(@__FILE__), *("../../../save/",spec))
 
     # Create the save directories if they don't already exist
-    createSaveDirectories(savepath)
-    
-    num_anticipated_shocks          = 6
-    num_anticipated_shocks_padding  = 20
-    num_anticipated_lags            = 24
-    num_presample_periods           = 2 # TODO: This should be set when the data are read in
-    
+    # createSaveDirectories(savepath)
 
+    _num_anticipated_shocks          = 6
+    _num_anticipated_shocks_padding  = 20
+    _num_anticipated_lags            = 24
+    _num_presample_periods           = 2 # TODO: This should be set when the data are read in
 
     # Estimation specifications
     reoptimize                      = false
@@ -254,25 +126,17 @@ function Model990()
     num_mh_burn_test                = 0
 
     # initialise empty model
-    m = Model990(
-            parameters,
-            parameters_fixed,
-            steady_state,
-            keylist,
-            Dict{Symbol,Int}(),
-            Dict{Symbol,Int}(),
-            Dict{Symbol,Int}(),
-            Dict{Symbol,Int}(),
-            Dict{Symbol,Int}(),
-            Dict{Symbol,Int}(),
+    m = Model990{Float64}(
+            # model parameters and steady state values
+            @compat(Vector{AbstractParameter{Float64}}()), @compat(Vector{Float64}()), Dict{Symbol,Int}(),
+
+            # model indices
+            Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(),
 
             spec,
             savepath,
-                 
-            num_anticipated_shocks,
-            num_anticipated_shocks_padding,
-            num_anticipated_lags,
-            num_presample_periods,
+
+            _num_anticipated_shocks, _num_anticipated_shocks_padding, _num_anticipated_lags, _num_presample_periods,
 
             reoptimize,
             recalculate_hessian,
@@ -280,16 +144,105 @@ function Model990()
             num_mh_blocks,
             num_mh_burn,
             mh_thinning_step,
-                 
-            num_mh_simulations_test,   
-            num_mh_blocks_test,  
+
+            num_mh_simulations_test,
+            num_mh_blocks_test,
             num_mh_burn_test)
 
-    initialise_model_parameters!(m)
+    m <= parameter(:alp,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),    Normal(0.30, 0.05),         fixed=false, description="α: This is the something something.")
+    m <= parameter(:zeta_p,   0.8940, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),    BetaAlt(0.5, 0.1),          fixed=false, description="ζ_p: This is the something something.")
+    m <= parameter(:iota_p,   0.1865, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),    BetaAlt(0.5, 0.15),         fixed=false, description="ι_p: This is the something something.")
+    m <= parameter(:del,      0.025,                                                                               fixed=true,  description="δ: This is the something something." )     # omit from parameter vector
+    m <= parameter(:ups,      1.000,  (0., 10.),     (1e-5, 0.),      Exponential(),   GammaAlt(1., 0.5),          fixed=true,  description="υ: This is the something something.")
+    m <= parameter(:Bigphi,   1.1066, (1., 10.),     (1.00, 10.00),   Exponential(),   Normal(1.25, 0.12),         fixed=false, description="Φ: This is the something something.")
+    m <= parameter(:s2,       2.7314, (-15., 15.),   (-15., 15.),     Untransformed(), Normal(4., 1.5),            fixed=false, description="s2: This is the something something.")
+    m <= parameter(:h,        0.5347, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),    BetaAlt(0.7, 0.1),          fixed=false, description="h: This is the something something.")
+    m <= parameter(:ppsi,     0.6862, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),    BetaAlt(0.5, 0.15),         fixed=false, description="ppsi: This is the something something.")
+    m <= parameter(:nu_l,     2.5975, (1e-5, 10.),   (1e-5, 10.),     Exponential(),   Normal(2, 0.75),            fixed=false, description="ν_l: This is the something something.")
+    m <= parameter(:zeta_w,   0.9291, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),    BetaAlt(0.5, 0.1),          fixed=false, description="ζ_w: This is the something something.")
+    m <= parameter(:iota_w,   0.2992, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),    BetaAlt(0.5, 0.15),         fixed=false, description="ι_w: This is the something something.")
+    m <= parameter(:law,      1.5000,                                                                              fixed=true,  description="λ_w: This is the something something.") # omit from parameter vector
+
+    m <= parameter(:bet,      0.1402, (1e-5, 10.),   (1e-5, 10.),     Exponential(),   GammaAlt(0.25, 0.1),        fixed=false, description="β: This is the something something.",       scaling = x -> (1 + x/100)\1)
+    m <= parameter(:psi1,     1.3679, (1e-5, 10.),   (1e-5, 10.00),   Exponential(),   Normal(1.5, 0.25),          fixed=false, description="ψ₁: This is the something something.")
+    m <= parameter(:psi2,     0.0388, (-0.5, 0.5),   (-0.5, 0.5),     Untransformed(), Normal(0.12, 0.05),         fixed=false, description="ψ₂: This is the something something.")
+    m <= parameter(:psi3,     0.2464, (-0.5, 0.5),   (-0.5, 0.5),     Untransformed(), Normal(0.12, 0.05),         fixed=false, description="ψ₃: This is the something something.")
+    m <= parameter(:pistar,   0.5000, (1e-5, 10.),   (1e-5, 10.),     Exponential(),   GammaAlt(0.75, 0.4),        fixed=true,  description="π_star: This is the something something.",  scaling = x -> 1 + x/100)
+    m <= parameter(:sigmac,   0.8719, (1e-5, 10.),   (1e-5, 10.),     Exponential(),   Normal(1.5, 0.37),          fixed=false, description="σ_c: This is the something something.")
+    m <= parameter(:rho,      0.7126, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),    BetaAlt(0.75, 0.10),        fixed=false, description="ρ: This is the something something.")
+    m <= parameter(:epsp,     10.000,                                                                              fixed=true,  description="ϵ_p: This is the something something.") # omit from parameter vector
+    m <= parameter(:epsw,     10.000,                                                                              fixed=true,  description="ϵ_w: This is the something something.") # omit from parameter vector
+
+    # financial frictions parameters
+    m <= parameter(:Fom,      0.0300, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),   BetaAlt(0.03, 0.01),         fixed=true,  description="F(ω): This is the something something.",    scaling = x -> 1 - (1-x)^0.25)
+    m <= parameter(:sprd,     1.7444, (0., 100.),      (1e-5, 0.),    Exponential(),  GammaAlt(2., 0.1),           fixed=false, description="spr_*: This is the something something.",   scaling = x -> (1 + x/100)^0.25)
+    m <= parameter(:zeta_spb, 0.0559, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),   BetaAlt(0.05, 0.005),        fixed=false, description="ζ_spb: This is the something something.")
+    m <= parameter(:gammstar, 0.9900, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),   BetaAlt(0.99, 0.002),        fixed=true,  description="γ_star: This is the something something.")
+
+    # exogenous processes - level
+    m <= parameter(:gam,      0.3673, (-5.0, 5.0),     (-5., 5.),     Untransformed(), Normal(0.4, 0.1),           fixed=false, description="γ: This is the something something.",       scaling = x -> x/100)
+    m <= parameter(:Lmean,  -45.9364, (-1000., 1000.), (-1e3, 1e3),   Untransformed(), Normal(-45, 5),             fixed=false, description="Lmean: This is the something something.")
+    m <= parameter(:gstar,    0.1800,                                                                              fixed=true,  description="g_star: This is the something something.") # omit from parameter vector
+
+    # exogenous processes - autocorrelation
+    m <= parameter(:ρ_g,      0.9863, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),          fixed=false, description="ρ_g: This is the something something.")
+    m <= parameter(:ρ_b,      0.9410, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),          fixed=false, description="ρ_b: This is the something something.")
+    m <= parameter(:ρ_mu,     0.8735, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),          fixed=false, description="ρ_μ: This is the something something.")
+    m <= parameter(:ρ_z,      0.9446, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),          fixed=false, description="ρ_z: This is the something something.")
+    m <= parameter(:ρ_laf,    0.8827, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),          fixed=false, description="ρ_λ_f: This is the something something.")
+    m <= parameter(:ρ_law,    0.3884, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),          fixed=false, description="ρ_λ_w: This is the something something.")
+    m <= parameter(:ρ_rm,     0.2135, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),          fixed=false, description="ρ_rm: This is the something something.")
+    m <= parameter(:ρ_sigw,   0.9898, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),        fixed=false, description="ρ_σ_w: This is the something something.")
+    m <= parameter(:ρ_mue,    0.7500, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),        fixed=true,  description="ρ_μ_e: This is the something something.")
+    m <= parameter(:ρ_gamm,   0.7500, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),        fixed=true,  description="ρ_γ: This is the something something.")
+    m <= parameter(:ρ_pist,   0.9900, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),          fixed=true,  description="ρ_π_star: This is the something something.")
+    m <= parameter(:ρ_lr,     0.6936, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),          fixed=false, description="ρ_lr: This is the something something.")
+    m <= parameter(:ρ_zp,     0.8910, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),          fixed=false, description="ρ_zp: This is the something something.")
+    m <= parameter(:ρ_tfp,    0.1953, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),          fixed=false, description="ρ_tfp: This is the something something.")
+    m <= parameter(:ρ_gdpdef, 0.5379, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),          fixed=false, description="ρ_gdpdef: This is the something something.")
+    m <= parameter(:ρ_pce,    0.2320, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),          fixed=false, description="ρ_pce: This is the something something.")
+
+    # exogenous processes - standard deviation
+    m <= parameter(:σ_g,      2.5230, (1e-8, 5.),      (1e-8, 5.),    Exponential(), RootInverseGamma(2.00, 0.1),  fixed=false, description="σ_a: This is the something something.")
+    m <= parameter(:σ_b,      0.0292, (1e-8, 5.),      (1e-8, 5.),    Exponential(), RootInverseGamma(2.00, 0.1),  fixed=false, description="σ_b: This is the something something.")
+    m <= parameter(:σ_mu,     0.4559, (1e-8, 5.),      (1e-8, 5.),    Exponential(), RootInverseGamma(2.00, 0.1),  fixed=false, description="σ_μ: This is the something something.")
+    m <= parameter(:σ_z,      0.6742, (1e-8, 5.),      (1e-8, 5.),    Exponential(), RootInverseGamma(2.00, 0.1),  fixed=false, description="σ_z: This is the something something.")
+    m <= parameter(:σ_laf,    0.1314, (1e-8, 5.),      (1e-8, 5.),    Exponential(), RootInverseGamma(2.00, 0.1),  fixed=false, description="σ_λ_f: This is the something something.")
+    m <= parameter(:σ_law,    0.3864, (1e-8, 5.),      (1e-8, 5.),    Exponential(), RootInverseGamma(2.00, 0.1),  fixed=false, description="σ_λ_w: This is the something something.")
+    m <= parameter(:σ_rm,     0.2380, (1e-8, 5.),      (1e-8, 5.),    Exponential(), RootInverseGamma(2.00, 0.1),  fixed=false, description="σ_rm: This is the something something.")
+    m <= parameter(:σ_sigw,   0.0428, (1e-7,100.),     (1e-5, 0.),    Exponential(), RootInverseGamma(4.00, 0.05), fixed=false, description="σ_σ_w: This is the something something.")
+    m <= parameter(:σ_mue,    0.0000, (1e-7,100.),     (1e-5, 0.),    Exponential(), RootInverseGamma(4.00, 0.05), fixed=true,  description="σ_μ_e: This is the something something.")
+    m <= parameter(:σ_gamm,   0.0000, (1e-7,100.),     (1e-5, 0.),    Exponential(), RootInverseGamma(4.00, 0.01), fixed=true,  description="σ_γ: This is the something something.")
+    m <= parameter(:σ_pist,   0.0269, (1e-8, 5.),      (1e-8, 5.),    Exponential(), RootInverseGamma(6., 0.03),   fixed=false, description="σ_π_star: This is the something something.")
+    m <= parameter(:σ_lr,     0.1766, (1e-8,10.),      (1e-8, 5.),    Exponential(), RootInverseGamma(2., 0.75),   fixed=false, description="σ_lr: This is the something something.")
+    m <= parameter(:σ_zp,     0.1662, (1e-8, 5.),      (1e-8, 5.),    Exponential(), RootInverseGamma(2.00, 0.1),  fixed=false, description="σ_zp: This is the something something.")
+    m <= parameter(:σ_tfp,    0.9391, (1e-8, 5.),      (1e-8, 5.),    Exponential(), RootInverseGamma(2.00, 0.1),  fixed=false, description="σ_tfp: This is the something something.")
+    m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.),      (1e-8, 5.),    Exponential(), RootInverseGamma(2.00, 0.1),  fixed=false, description="σ_gdpdef: This is the something something.")
+    m <= parameter(:σ_pce,    0.0999, (1e-8, 5.),      (1e-8, 5.),    Exponential(), RootInverseGamma(2.00, 0.1),  fixed=false, description="σ_pce: This is the something something.")
+
+    # standard deviations of the anticipated policy shocks
+    for i = 1:num_anticipated_shocks_padding(m)
+        if i < 13
+            m <= parameter(symbol("σ_rm$i"), 0.2, (1e-7, 100.), (1e-5, 0.), Exponential(), RootInverseGamma(4.00, 0.2), fixed=false, description="σ_rm$i: This is the something something.")
+        else
+            m <= parameter(symbol("σ_rm$i"), 0.0, (1e-7, 100.), (1e-5, 0.), Exponential(), RootInverseGamma(4.00, 0.2), fixed=true,  description="σ_rm$i: This is the something something.")
+        end
+    end
+
+    m <= parameter(:eta_gz,       0.8400, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),    BetaAlt(0.50, 0.20),  fixed=false, description="η_gz: This is the something something.")
+    m <= parameter(:eta_laf,      0.7892, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),    BetaAlt(0.50, 0.20),  fixed=false, description="η_λ_f: This is the something something.")
+    m <= parameter(:eta_law,      0.4226, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),    BetaAlt(0.50, 0.20),  fixed=false, description="η_λ_w: This is the something something.")
+
+    m <= parameter(:modelalp_ind ,0.0000, (0.000, 1.000), (0., 0.),     Untransformed(), BetaAlt(0.50, 0.20),  fixed=true,  description="modelα_ind: This is the something something.")
+    m <= parameter(:gamm_gdpdef,  1.0354, (-10., 10.), (-10., -10.),    Untransformed(), Normal(1.00, 2.),     fixed=false, description="γ_gdpdef: This is the something something.")
+    m <= parameter(:del_gdpdef,   0.0181, (-9.1, 9.1), (-10., -10.),    Untransformed(), Normal(0.00, 2.),     fixed=false, description="δ_gdpdef: This is the something something.")
+
+    # steady states
+    m <= [:zstar, :rstar, :Rstarn, :rkstar, :wstar, :Lstar, :kstar, :kbarstar, :istar, :ystar, :cstar, :wl_c, :nstar, :vstar, :zeta_spsigw, :zeta_spmue, :zeta_nRk, :zeta_nR, :zeta_nqk, :zeta_nn, :zeta_nmue, :zeta_nsigw]
+
     initialise_model_indices!(m)
-
-    return steadystate!(m)
-
+    steadystate!(m)
+    return m
 end
 
 # functions that are used to compute financial frictions
@@ -353,7 +306,7 @@ function steadystate!(m::Model990)
 
     # FINANCIAL FRICTIONS ADDITIONS
     # solve for sigmaomegastar and zomegastar
-    zwstar = quantile(Normal(), m[:Fom].scaledvalue)
+    zwstar = quantile(Normal(), m[:Fom].value)
     sigwstar = fzero(sigma -> ζ_spb_fn(zwstar, sigma, m[:sprd]) - m[:zeta_spb], 0.5)
 
     # evaluate omegabarstar
@@ -440,5 +393,7 @@ function createSaveDirectories(savepath::String)
             println("created $path")
         end
     end
-        
+
 end
+
+
