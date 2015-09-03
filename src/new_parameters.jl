@@ -80,8 +80,8 @@ end
 
 function Base.show{T,U}(io::IO, p::Parameter{T,U})
 	@printf io "%s\n" typeof(p)
-	@printf io ":%s\n%s\n"      p.key p.description
-    @printf io "____________________________\n"
+	@printf io "(:%s)\n%s\n"      p.key p.description
+    @printf io "-----------------------------\n"
 	@printf io "real value:        %+6f\n" toreal(p)
 	!isa(U(),Untransformed) && @printf io "transformed value: %+6f\n" p.value
 
@@ -108,13 +108,14 @@ function tomodel{T}(p::Parameter{T,SquareRoot}, x::T)
 end
 function toreal{T}(p::Parameter{T,SquareRoot}, x::T = p.value)
 	(a,b), c = p.transbounds, one(T)
-	cx = 2 * (x - (a+b)/2)/(b-a); (1/c)*cx/sqrt(1 - cx^2)
+	cx = 2 * (x - (a+b)/2)/(b-a)
+    (1/c)*cx/sqrt(1 - cx^2)
 end
 
 # Exponential
 function tomodel{T}(p::Parameter{T,Exponential}, x::T)
 	(a,b),c = p.transbounds,one(T)
-	a + exp(x-b)
+	a + exp(c*(x-b))
 end
 function toreal{T}(p::Parameter{T,Exponential}, x::T = p.value)
 	(a,b),c = p.transbounds,one(T)
