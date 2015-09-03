@@ -1,37 +1,73 @@
-abstract AbstractDSGEModel
-
-# TODO consider stacking all parameters in a single vector. Alternately, all fixed
-# parameters can be added to the normal parameters vector at a (potentially negligible)
-# performance hit.
-Base.getindex(m::AbstractDSGEModel, i::Integer) = begin
-    if i <= num_parameters(m)
-        return m.parameters[i]
-    elseif i <= num_parameters(m) + num_parameters_fixed(m)
-        return m.parameters_fixed[i - num_parameters(m)]
-    elseif i <= num_parameters(m) + num_parameters_fixed(m) + num_parameters_steady_state(m)
-        return m.steady_state[i - num_parameters(m) - num_parameters_fixed(m)]
-    end
-end
-Base.getindex(m::AbstractDSGEModel, k::Symbol) = Base.getindex(m,m.keys[k])
-
-Base.setindex!(m::AbstractDSGEModel, value, i::Integer) = begin
-    if i <= num_parameters(m)
-        setindex!(m.parameters, value, i)
-    elseif i <= num_parameters(m) + num_parameters_fixed(m)
-        setindex!(m.parameters_fixed, value, i-num_parameters(m))
-    elseif i <= num_parameters(m) + num_parameters_fixed(m) + num_parameters_steady_state(m)
-        setindex!(m.steady_state, value, i - num_parameters(m) - num_parameters_fixed(m))
-    end
-end
-Base.setindex!(m::AbstractDSGEModel, value, k::Symbol) = Base.setindex!(m,value,m.keys[k])
+abstract AbstractDSGEModel{T<:FloatingPoint}
 
 function Base.show{T<:AbstractDSGEModel}(io::IO, m::T)
-    @printf io "%s Dynamic Stochastic General Equilibrium Model\n"
+    @printf io "Dynamic Stochastic General Equilibrium Model\n"
     @printf io "%s\n" T
     @printf io "no. states:             %i\n" num_states(m)
     @printf io "no. anticipated shocks: %i\n" num_anticipated_shocks(m)
     @printf io "no. anticipated lags:   %i\n" num_anticipated_lags(m)
-    @printf io "%description:\n %s\n" description(m)
+    @printf io "description:\n %s\n"          description(m)
+end
+
+# TODO consider stacking all parameters in a single vector. Alternately, all fixed
+# parameters can be added to the normal parameters vector at a (potentially negligible)
+# performance hit.
+@inline function Base.getindex(m::AbstractDSGEModel, i::Integer)
+    if i <= (j = length(m.parameters))
+        return m.parameters[i]
+    else
+        return m.steady_state[i-j]q
+    end
+end
+
+# need to define like this so we can disable bounds checking
+@inline function Base.getindex(m::AbstractDSGEModel, k::Symbol)
+    i = m.keys[k]
+    @inbounds if i <= (j = length(m.parameters))
+        return m.parameters[i]
+    else
+        return m.steady_state[i-j]
+    end
+end
+
+@inline function Base.setindex!(m::AbstractDSGEModel, value, i::Integer)
+    if i <= (j = length(m.parameters))
+        return setindex!(m.parameters, value, i)
+    else
+        return setindex!(m.steady_state, value, i-j)
+    end
+end
+Base.setindex!(m::AbstractDSGEModel, value, k::Symbol) = Base.setindex!(m, value, m.keys[k])
+
+# syntax for adding a prameter to a model m <= parameter
+function (<=){T}(m::AbstractDSGEModel{T}, p::AbstractParameter{T})
+    @assert !in(p.key, m.keys) "Key $(p.key) is already present in DSGE model"
+
+    new_param_index = length(m.keys) + 1
+
+    # grow parameters and add the parameter
+    push!(m.parameters, p)
+
+    # add parameter location to dict
+    setindex!(m.keys, new_param_index, p.key)
+end
+
+function (<=){T}(m::AbstractDSGEModel{T}, k::Symbol)
+    @assert !in(k, m.keys) "Key $(k) is already present in DSGE model"
+
+    new_param_index = length(m.keys) + 1
+
+    # grow steady_state values with a zero
+    push!(m.steady_state, zero(T))
+
+    # add parameter location to dict
+    setindex!(m.keys, new_param_index, k)
+end
+
+function (<=){T}(m::AbstractDSGEModel, vec::Vector{Union(Symbol,AbstractParameter)})
+    for k in vec
+        m <= k
+    end
 end
 
 # Number of anticipated policy shocks
