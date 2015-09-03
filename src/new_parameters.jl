@@ -1,5 +1,3 @@
-import Base: convert, promote_rule, +, -, *, /, ^, log, exp
-
 typealias Interval{T} @compat Tuple{T,T}
 
 # define all the kinds of transformations we make
@@ -127,16 +125,31 @@ tomodel{T}(pvec::ParameterVector{T}) = map(tomodel, pvec)
 toreal{T}(pvec::ParameterVector{T}, values::Vector{T}) = map(toreal, pvec, values)
 
 # define operators to work on parameters
-Base.convert{T<:FloatingPoint}(::Type{T}, p::AbstractParameter{T}) = convert(T,p.value)
-Base.promote_rule{T<:FloatingPoint}(::Type{AbstractParameter}, ::Type{T}) = T
 
-for op in [:+, :-, :*, :/, :^]
+Base.convert{T<:Real}(::Type{T}, p::AbstractParameter) = convert(T,p.value)
+Base.promote_rule{T<:Real,U<:Real}(::Type{AbstractParameter{T}}, ::Type{U}) = promote_rule(U,T)
+
+Base.(:^)(p::AbstractParameter, x::Integer) = (^)(p.value, x)
+
+for op in (:(Base.(:+)),
+           :(Base.(:-)),
+           :(Base.(:*)),
+           :(Base.(:/)),
+           :(Base.(:^)))
+
     @eval ($op)(p::AbstractParameter, q::AbstractParameter) = ($op)(p.value, q.value)
-    @eval ($op)(p::AbstractParameter, x::Number) = ($op)(p.value, x)
-    @eval ($op)(x::Number, p::AbstractParameter) = ($op)(x, p.value)
+    @eval ($op)(p::AbstractParameter, x::Number)            = ($op)(p.value, x)
+    @eval ($op)(x::Number, p::AbstractParameter)            = ($op)(x, p.value)
 end
 
-for f in [:-, :log, :exp]
+for f in (:(Base.exp),
+          :(Base.log),
+          :(Base.(:-)),
+          :(Base.(:<)),
+          :(Base.(:>)),
+          :(Base.(:<=)),
+          :(Base.(:>=)))
+
     @eval ($f)(p::AbstractParameter) = ($f)(p.value)
 end
 

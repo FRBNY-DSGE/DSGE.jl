@@ -64,7 +64,7 @@ function (<=){T}(m::AbstractDSGEModel{T}, k::Symbol)
     setindex!(m.keys, new_param_index, k)
 end
 
-function (<=){T}(m::AbstractDSGEModel, vec::Vector{Union(Symbol,AbstractParameter)})
+function (<=)(m::AbstractDSGEModel, vec::Vector{Symbol})
     for k in vec
         m <= k
     end
