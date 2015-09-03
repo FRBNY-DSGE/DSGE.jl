@@ -70,6 +70,9 @@ function (<=)(m::AbstractDSGEModel, vec::Vector{Symbol})
     end
 end
 
+Distributions.logpdf(m::AbstractDSGEModel) = logpdf(m.parameters)
+Distributions.pdf(m::AbstractDSGEModel) = exp(logpdf(m))
+
 # Number of anticipated policy shocks
 num_anticipated_shocks(m::AbstractDSGEModel) = m.num_anticipated_shocks
 
