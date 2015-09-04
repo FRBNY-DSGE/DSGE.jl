@@ -13,7 +13,7 @@ tic()
 m = Model990()
 m.savepath = normpath(joinpath(dirname(@__FILE__),"../../save/m990-no_reoptimize_no_recalc_hessian/"))
 createSaveDirectories(m.savepath)
-estimate(m,verbose=true)
+estimate(m,verbose=true,testing=true,using_matlab_sigscale=true)
 computeMoments(m)
 time_elapsed = toq()
 
