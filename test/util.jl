@@ -12,15 +12,36 @@ function minusnan{S<:FloatingPoint, T<:FloatingPoint}(x::Complex{S}, y::Complex{
     return isinf(x) && isinf(y) ? 0 : x - y
 end
 
-# checksigns(x,y) checks to see if x and y have the same sign
+# checksigns(x,y) checks to see if x and y have the same sign. returns 1 if they do, 0 if not, and -1 if one is zero but the other isnt
 function checksigns(x::Number,y::Number)
-    sign(x)==sign(y)
+    sx = sign(x)
+    sy = sign(y)
+
+    if sx == sy
+        return 1
+    
+    elseif sx == 0 || sy == 0 # one is zero
+        return -1
+        
+    else
+        return 0
+    end
 end
 
 # TODO: decide what a sensible default ε value is for our situation
 # Compares matrices, reports absolute differences, returns true if all entries close enough
 function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::Array{R},
              actual::Array{S}; ε::T = 1e-4, noisy::Bool = false)
+
+    n_entries = length(expected)
+    same_sign = map(checksigns, expected, actual)
+    diff_sign_zeros = count(x-> x < 0, same_sign) # # that are different because 1 sign is 0
+    n_diff_sign = count(x -> x != 1, same_sign)
+
+    if noisy
+        println("$n_diff_sign of $n_entries entries have opposite signs")
+    end
+
     return test_matrix_eq(complex(expected), complex(actual); ε=ε, noisy=noisy)
 end
 
@@ -44,14 +65,15 @@ function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(ex
     n_not_approx_eq = count(x -> x > ε, abs_diff)
     max_abs_diff = maximum(abs_diff)
     max_inds = ind2sub(size(abs_diff), indmax(abs_diff))
-    diff_sign = !map(checksigns, expected, actual)
-    n_diff_sign = countnz(diff_sign)
+    ## same_sign = map(checksigns, expected, actual)
+    ## diff_sign_zeros = count(x-> x < 0, same_sign) # # that are different because 1 sign is 0
+    ## n_diff_sign = count(x -> x != 1, same_sign)
     
     # Print output
     if noisy
         println("$n_neq of $n_entries entries with abs diff > 0")
         println("$n_not_approx_eq of $n_entries entries with abs diff > $ε")
-        println("$n_diff_sign of $n_entries entries have opposite signs")
+        # println("$n_diff_sign of $n_entries entries have opposite signs")
         if n_neq != 0
             println("Max abs diff of $max_abs_diff at entry $max_inds\n")
         else
@@ -63,7 +85,160 @@ function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(ex
     return n_not_approx_eq == 0
 end
 
+function test_matrix_abs_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::
+             Array{R}, actual::Array{S}; ε::T = 1e-4, noisy::Bool = false)
+    # Matrices of different sizes return false
+    if size(expected) != size(actual)
+        if noisy
+            println("Size expected $(size(expected)), actual $(size(actual))\n")
+        end
+        return false
+    end
+    
+    n_dims = ndims(expected)
+    n_entries = length(expected)
 
+    expected = abs(expected)
+    actual = abs(actual)
+    
+    # Count differences and find max
+    abs_diff = abs(map(minusnan, expected, actual))
+    n_neq = countnz(abs_diff)
+    n_not_approx_eq = count(x -> x > ε, abs_diff)
+    max_abs_diff = maximum(abs_diff)
+    max_inds = ind2sub(size(abs_diff), indmax(abs_diff))
+    
+    # Print output
+    if noisy
+        println("$n_neq of $n_entries entries with abs diff > 0")
+        println("$n_not_approx_eq of $n_entries entries with abs diff > $ε")
+        if n_neq != 0
+            println("Max abs diff of $max_abs_diff at entry $max_inds\n")
+        else
+            println("Max abs diff of 0\n")
+        end
+    end
+
+    # Return true if all entries within ε
+    return n_not_approx_eq == 0
+end
+
+#function test_eigs_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint, U<:FloatingPoint, V<:FloatingPoint}(eigvals_expected::Array{R}, eigvals_actual::Array{S}, eigvecs_expected::Array{U},  eigvecs_actual::Array{V}; ε::T = 1e-12, noisy::Bool = true)
+
+function test_eigs_eq(eigvals_expected::Array, eigvals_actual::Array, eigvecs_expected::Array,  eigvecs_actual::Array; ε = 1e-12, noisy::Bool = true)
+   
+    # check to see if sizes correspond
+    if size(eigvecs_expected) != size(eigvecs_actual)
+        if noisy
+            println("Eigenvectors matrix size expected $(size(eigvecs_expected)), actual $(size(eigvecs_actual))\n")
+        end
+        return false
+    end
+
+    if size(eigvals_expected) != size(eigvals_actual)
+        if noisy
+            println("Eigenvalues vector size expected $(size(eigvals_expected)), actual $(size(eigvals_actual))\n")
+        end
+        return false
+    end
+    
+    # Take absolute values of everything
+    abs_eigvals_expected = abs(eigvals_expected);
+    abs_eigvals_actual   = abs(eigvals_actual);
+
+    abs_eigvecs_expected = abs(eigvecs_expected);
+    abs_eigvecs_actual   = abs(eigvecs_actual);
+
+    ## @test abs_eigvecs_actual .> 0
+    ## @test abs_eigvecs_expected .> 0
+    
+    
+    # Stick the eigenvalues on top of the eigenvectors, sort the columns of the matrix, and then separate
+    # the eigenvals and vecs back out again
+    
+    expected = [abs_eigvals_expected'; abs_eigvecs_expected]
+    actual   = [abs_eigvals_actual'; abs_eigvecs_actual]
+
+    expected_sorted = sortcols(expected)
+    actual_sorted   = sortcols(actual)
+
+    eigvals_expected_sorted = expected_sorted[1,:] 
+    eigvals_actual_sorted   = actual_sorted[1,:]
+    
+    eigvecs_expected_sorted = expected_sorted[2:end,:]
+    eigvecs_actual_sorted = actual_sorted[2:end,:]
+    
+    # See if expected eigenvalues/vectors == actual eigenvalues/vectors
+    vals_eq = test_matrix_eq(eigvals_expected_sorted, eigvals_actual_sorted,ε = ε, noisy=true);
+    vecs_eq = test_matrix_eq(eigvecs_expected_sorted, eigvecs_actual_sorted, ε = ε, noisy=true)
+
+    # return vals_eq && vecs_eq
+    return eigvals_expected_sorted, eigvals_actual_sorted, eigvecs_expected_sorted, eigvecs_actual_sorted
+    
+end
+
+function test_test_eigs_eq()
+    A_eigvals = [0.4, -6.2, 3.4, 4.7]
+    B_eigvals = [7.3, 2.4, -0.3, 10.2 ]
+
+    A_eigvecs = [.2   -1.0   .4 -100.0;
+                 -.5   0.0  6.4    8.5;
+                 0.0   2.0  -1.0   1.4;
+                 5.0   5.0  7.0    8.0]
+    
+    B_eigvecs = [-.5   3.7   .4 -100.0;
+                 0.0   2.0  -1.0   1.4;
+                 5.0  -8.0  7.0   -4.0;
+                 -.5   0.0  6.4    8.5]
+
+    @test !test_eigs_eq(A_eigvals, B_eigvals, A_eigvecs, B_eigvecs)
+
+    E_eigvals = [.1, .4, .3, .2]
+    F_eigvals = [.2, .4, .1, .3]
+ 
+
+    E_eigvecs = [0.2   0.4   -0.9    -0.7;
+                -0.3   0.5    0.8     0.0;
+                 0.1   0.1    0.1     0.1;
+                 3.7   4.2    8.8    -0.3]
+
+    F_eigvecs = [-0.7  0.4    0.2    -0.9;
+                  0.0  0.5   -0.3     0.8;
+                  0.1  0.1    0.1     0.1;
+                 -0.3  4.2    3.7     8.8 ]
+
+    @test test_eigs_eq(E_eigvals, F_eigvals, E_eigvecs, F_eigvecs)
+
+    C_eigvals = [.10, .20]
+    D_eigvals = [.20, .10]
+
+    C_eigvecs = [.10 -.30;
+                 2.3 0.5]
+
+    D_eigvecs = [-.30    .10 ;
+                  0.5    2.3]
+
+    
+    @test test_eigs_eq(C_eigvals, D_eigvals, C_eigvecs, D_eigvecs)
+
+    println("test_eigs_eq passed")
+end
+
+function get_diagonal{T<:Number}(matrix::Matrix{T})
+    rows,cols = size(matrix)
+
+    if rows != cols
+        println("Not a square matrix")
+        return
+    end
+
+    diag = zeros(rows)
+    for i in 1:rows
+        diag[i] = matrix[i,i]
+    end
+
+    return diag
+end
 
 # Complex numbers are parsed weirdly from readcsv, so we build a complex array using regex
 function readcsv_complex(file::String)
@@ -97,6 +272,7 @@ end
 function test_util()
     test_test_matrix_eq()
     test_readcsv_complex()
+    test_test_eigs_eq()
     println("### All tests in util.jl tests passed\n")
 end
 
