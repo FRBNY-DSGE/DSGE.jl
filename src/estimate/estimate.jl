@@ -35,6 +35,8 @@ using Debug
         close(h5)
     else
         h5 = h5open("$in_path/mode_in_optimized.h5","r") 
+        ## modepath = joinpath(in_path,"mode_tochange.h5")
+        ## h5 = h5open(modepath,"r") 
         mode = read(h5["mode"])  
         close(h5)
     end
@@ -197,7 +199,9 @@ end
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
 
-    println("Testing = $testing")
+    if verbose
+        println("Testing = $testing")
+    end
     
     # Set number of draws, how many we will save, and how many we will burn
     # (initialized here for scoping; will re-initialize in the while loop)
@@ -275,10 +279,10 @@ end
     h5path = joinpath(outpath(m),"sim_save.h5")
 
     ## !! Remove this
-    if use_matlab_sigscale
-        h5path = ("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/sim_save.h5")
+    ## if use_matlab_sigscale
+    ##     h5path = ("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/sim_save.h5")
         
-    end
+    ## end
     
     simfile = h5open(h5path,"w")
 
@@ -319,7 +323,7 @@ end
             # Draw para_new from the proposal distribution
 
             if testing
-                para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(j,cols)]
+                para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(j,cols)+1]
             else
                 para_new = rand(propdist; cc=cc)
             end
@@ -343,8 +347,8 @@ end
             r = exp(post_new - post_old)
 
             if testing
-                k = (i-1)*(n_sim*n_times) + j
-                x = randvals[mod(j,numvals)]
+                k = (i-1)*(n_sim*n_times) + mod(j,numvals)+1
+                x = randvals[mod(j,numvals)+1]
             else
                 x = rand(m.rng)
             end
@@ -394,8 +398,10 @@ end
 
         all_rejections += block_rejections
         block_rejection_rate = block_rejections/(n_sim*n_times)
-        println("Block $i rejection rate: $block_rejection_rate")
 
+        if verbose
+            println("Block $i rejection rate: $block_rejection_rate")
+        end
 
         ## Once every iblock times, write parameters to a file
 
@@ -418,5 +424,7 @@ end
     close(simfile)
 
     rejection_rate = all_rejections/(n_blocks*n_sim*n_times)
-    println("Overall rejection rate: $rejection_rate")
+    if verbose
+        println("Overall rejection rate: $rejection_rate")
+    end
 end # of loop over blocks
