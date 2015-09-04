@@ -1,10 +1,11 @@
 # This program produces and saves draws from the posterior distribution of
 # the parameters.
 
+using MATLAB
 using HDF5
 using Debug
 
-@debug function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false)
+@debug function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false, using_matlab_sigscale=false)
 
     ###################################################################################################
     ### Step 1: Initialize
@@ -33,8 +34,6 @@ using Debug
         mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
         close(h5)
     else
-        @bp
-        
         h5 = h5open("$in_path/mode_in_optimized.h5","r") 
         mode = read(h5["mode"])  
         close(h5)
@@ -42,8 +41,6 @@ using Debug
     
     update!(m, mode)
 
-    @bp
-    
     if m.reoptimize
         println("Reoptimizing...")
         
@@ -105,7 +102,8 @@ using Debug
     # The hessian is used to calculate the variance of the proposal
     # distribution, which is used to draw a new parameter in each iteration of
     # the algorithm.
-    propdist = proposal_distribution(mode, hessian)
+
+    propdist = proposal_distribution(mode, hessian, use_matlab_sigscale=using_matlab_sigscale)
     if propdist.rank != num_parameters_free(m)
         println("problem – shutting down dimensions")
     end
@@ -123,8 +121,6 @@ using Debug
     cc0 = 0.01
     cc = 0.09
 
-    @bp
-    
     if !testing
         metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose)
     else
@@ -136,9 +132,10 @@ using Debug
         randvals = read(h5["randvals"])
         close(h5)
 
-        metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose, randvecs=randvecs, randvals=randvals)
+        metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose, randvecs=randvecs, randvals=randvals,
+                            use_matlab_sigscale=using_matlab_sigscale)
+        
     end
-
     ###################################################################################################
     ### Step 5: Calculate and save parameter covariance matrix
     ###################################################################################################
@@ -160,15 +157,15 @@ using Debug
 end
 
 # Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
-@debug function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{T})
-    @bp
+@debug function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale=false)
+
     n = length(μ)
     @assert (n, n) == size(hessian)
 
     S_diag, U = eig(hessian)
     big_evals = find(x -> x > 1e-6, S_diag)
     rank = length(big_evals)
-
+    
     S_inv = zeros(n, n)
     for i = (n-rank+1):n
         S_inv[i, i] = 1/S_diag[i]
@@ -176,15 +173,26 @@ end
 
     σ = U*sqrt(S_inv)
 
-    h5open("/home/rceexm08/.julia/v0.3/DSGE/save/m990-no_reoptimize_no_recalc_hessian/eigenvectors.h5","w") do h5
-        h5["U"] = U
+    ## !! TODO: remove this
+    if use_matlab_sigscale
+        # read in matlab sigscale
+        mf = MatFile("/home/rceexm08/dsge/workspace/test-estimation-step/matlab/sigscale.mat")
+        σ = get_variable(mf, "sigscale")
+        close(mf)
     end
+
+    
+    ## !! TODO: remove this
+    ## h5open("/home/rceexm08/.julia/v0.3/DSGE/save/m990-no_reoptimize_no_recalc_hessian/eig-outputs.h5","w") do h5
+    ##     h5["U"] = U
+    ##     h5["S_diag"] = S_diag
+    ## end
     
     return DegenerateMvNormal(μ, σ, rank)
 end
 
 @debug function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::AbstractDSGEModel,
-    YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = false)
+    YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = false, use_matlab_sigscale=false)
 
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
@@ -217,7 +225,6 @@ end
 
     initialized = false
 
-    @bp
     while !initialized
         if testing
             para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
@@ -247,7 +254,6 @@ end
             initialized = true
         end
 
-        @bp
     end
 
     # For n_sim*n_times iterations within each block, generate a new parameter draw.
@@ -265,17 +271,15 @@ end
     z_sim    = zeros(n_sim, num_states_augmented(m))
 
     # # Open HDF5 file for saving output
-    # if testing
-    #     savepath  = joinpath(pwd(),"save")
-    #     inpath    = savepath;
-    #     outpath   = savepath;
-    #     tablepath = savepath;
-    #     plotpath  = savepath;
-    #     logpath   = savepath;
-    # end
-
     
     h5path = joinpath(outpath(m),"sim_save.h5")
+
+    ## !! Remove this
+    if use_matlab_sigscale
+        h5path = ("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/sim_save.h5")
+        
+    end
+    
     simfile = h5open(h5path,"w")
 
     n_saved_obs = n_sim * (n_blocks - n_burn)
@@ -320,8 +324,6 @@ end
                 para_new = rand(propdist; cc=cc)
             end
 
-            @bp
-            
             # Solve the model, check that parameters are within bounds, gensys returns a
             # meaningful system, and evaluate the posterior.
 
@@ -376,8 +378,6 @@ end
                 end
 
             end
-
-            @bp
 
             # Save every (n_times)th draw
 
