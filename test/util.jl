@@ -17,9 +17,12 @@ function checksigns(x::Number,y::Number)
     sx = sign(x)
     sy = sign(y)
 
-    if sx == sy
+    if sx == sy 
         return 1
-    
+    elseif isnan(x) && isnan(y)
+        
+        return 1
+        
     elseif sx == 0 || sy == 0 # one is zero
         return -1
         
@@ -40,6 +43,7 @@ function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(ex
 
     if noisy
         println("$n_diff_sign of $n_entries entries have opposite signs")
+        println("$diff_sign_zeros of $n_entries entries have different signs, but one of the entries is 0")
     end
 
     return test_matrix_eq(complex(expected), complex(actual); ε=ε, noisy=noisy)
@@ -48,6 +52,7 @@ end
 # Complex-valued input matrices
 function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::
              Array{Complex{R}}, actual::Array{Complex{S}}; ε::T = 1e-4, noisy::Bool = false)
+
     # Matrices of different sizes return false
     if size(expected) != size(actual)
         if noisy
@@ -65,9 +70,6 @@ function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(ex
     n_not_approx_eq = count(x -> x > ε, abs_diff)
     max_abs_diff = maximum(abs_diff)
     max_inds = ind2sub(size(abs_diff), indmax(abs_diff))
-    ## same_sign = map(checksigns, expected, actual)
-    ## diff_sign_zeros = count(x-> x < 0, same_sign) # # that are different because 1 sign is 0
-    ## n_diff_sign = count(x -> x != 1, same_sign)
     
     # Print output
     if noisy
@@ -350,11 +352,11 @@ function matvar_to_hdf5var(matfileName,matVarName,h5fileName,h5VarName)
 end
 
 function compare_mat_hdf5(matfile,h5file)
-    mf = MatFile(matfileName)
+    mf = MatFile(matfile)
     mvars = MATLAB.variable_names(mf)
     
     # Compare variables
-    h5 = HDF5.h5open(h5fileName,"w") do h5
+    h5 = HDF5.h5open(h5file,"w") do h5
         h5vars = HDF5.names(h5)
       
         for name in mvars
@@ -377,22 +379,22 @@ function compare_mat_hdf5(matfile,h5file)
    
 end
 
-function compare_matvar_hdf5var(matfile, mname, h5file, h5name)
+function compare_matvar_hdf5var(matfile, mname, h5file, h5name; ε=1e-4, noisy=true)
     #Get matlab variable
-    mf = MatFile(matfile)
-    mvar = MATLAB.get_variable(mf, mname)
-    MATLAB.close(mf)    
+    mf = MatFile(matfile);
+    mvar = MATLAB.get_variable(mf, mname);
+    MATLAB.close(mf);    
 
     # get hdf5 variable
-    h5 = HDF5.h5open(h5file,"r") 
-    h5var = HDF5.read(h5, h5name)
-    HDF5.close(h5)
+    h5 = HDF5.h5open(h5file,"r"); 
+    h5var = HDF5.read(h5, h5name);
+    HDF5.close(h5);
     
 
-    if(isa(h5var,Matrix))
-        return mvar, h5var, test_matrix_eq(mvar, h5var, noisy=true)
-    elseif(isa(h5var,Float64) || isa(h5var,Float32))
-        return mvar, h5var, mvar == h5var
+    if isa(h5var,Vector) || isa(h5var,Matrix)
+        return mvar, h5var, test_matrix_eq(mvar, h5var, ε=ε, noisy=noisy);
+    elseif isa(h5var,Float64) || isa(h5var,Float32)
+        return mvar, h5var, mvar == h5var;
     end
     
 end
