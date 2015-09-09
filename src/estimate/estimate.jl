@@ -5,6 +5,8 @@ using MATLAB
 using HDF5
 using Debug
 
+include("../../test/util.jl")
+
 @debug function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false, using_matlab_sigscale=false)
 
     ###################################################################################################
@@ -14,11 +16,17 @@ using Debug
     # Load data
     in_path = inpath(m)
     out_path = outpath(m)
+
+    mf = MatFile(joinpath(in_path,"YY_mat.mat"),"r");
+    YY0 = get_variable(mf,"YY0");
+    YY1 = get_variable(mf,"YY");
+    YY = [YY0;YY1]
+    close(mf)
     
-    h5 = h5open(joinpath(in_path,"YY.h5"), "r") 
-    YY = read(h5["YY"])
-    close(h5)
-    post = posterior(m, YY)
+    ## h5 = h5open(joinpath(in_path,"YY.h5"), "r") 
+    ## YY = read(h5["YY"])
+    ## close(h5)
+    ## post = posterior(m, YY)
 
     ###################################################################################################
     ### Step 2: Find posterior mode (if reoptimizing, run csminwel)
@@ -36,11 +44,12 @@ using Debug
     else
         h5 = h5open("$in_path/mode_in_optimized.h5","r") 
         ## modepath = joinpath(in_path,"mode_tochange.h5")
-        ## h5 = h5open(modepath,"r") 
-        mode = read(h5["mode"])  
+        ## h5 = h5open("mode_tochange.h5","r") 
+        mode = read(h5["mode"])
+        
         close(h5)
     end
-    
+
     update!(m, mode)
 
     if m.reoptimize
@@ -178,18 +187,12 @@ end
     ## !! TODO: remove this
     if use_matlab_sigscale
         # read in matlab sigscale
-        mf = MatFile("/home/rceexm08/dsge/workspace/test-estimation-step/matlab/sigscale.mat")
+        println("using sigscale from Matlab")
+        mf = MatFile("sigscale.mat")
         σ = get_variable(mf, "sigscale")
         close(mf)
     end
 
-    
-    ## !! TODO: remove this
-    ## h5open("/home/rceexm08/.julia/v0.3/DSGE/save/m990-no_reoptimize_no_recalc_hessian/eig-outputs.h5","w") do h5
-    ##     h5["U"] = U
-    ##     h5["S_diag"] = S_diag
-    ## end
-    
     return DegenerateMvNormal(μ, σ, rank)
 end
 
@@ -232,7 +235,21 @@ end
     while !initialized
         if testing
             para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
+            @bp
 
+            mf = MatFile("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/para_postmask.mat")
+            mat_paraold_postmask = get_variable(mf,"para_old")
+            close(mf)
+            
+            test_matrix_eq(mat_paraold_postmask, para_old,noisy=true)
+
+            mf = MatFile("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/para_premask.mat")
+            mat_paraold_premask = get_variable(mf,"para_old")
+            close(mf)
+
+            test_matrix_eq(mat_paraold_premask, para_old, noisy=true)
+            @bp
+            
             n_blocks = m.num_mh_blocks_test
             n_sim = m.num_mh_simulations_test
             n_burn = m.num_mh_burn_test
@@ -245,16 +262,33 @@ end
             n_times = m.mh_thinning_step
         end
 
-        post_old, like_old, out = posterior!(m, para_old, YY; mh=true)
+        
+        post_old, like_old, out = posterior!(m, para_old, YY; mh=true, mat_paraold_postmask = mat_paraold_postmask)
 
+        @bp
+        
+        ## !! check TTT matrices
+        mf = MatFile("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/TTT.mat")
+        mat_TTT_old = get_variable(mf, "TTT_old")
+        test_matrix_eq(mat_TTT_old, out[:TTT], ε=1e-12, noisy=true)
+        close(mf)
+        @bp
+        
         if post_old > -Inf
             propdist.μ = para_old
-
+            
             TTT_old = out[:TTT]
             RRR_old = out[:RRR]
             CCC_old = out[:CCC]
             zend_old  = out[:zend]
 
+            ## !!
+            ## mf1 = MatFile("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/dsgesolv_mat.mat")
+            
+            ## TTT_old = get_variable(mf1, "TTT_new")
+            ## RRR_old = get_variable(mf1, "RRR_new")
+            ## close(mf1)
+            
             initialized = true
         end
 
@@ -278,10 +312,9 @@ end
     
     h5path = joinpath(outpath(m),"sim_save.h5")
 
-    ## !! Remove this
+    ## !! remove this! 
     ## if use_matlab_sigscale
     ##     h5path = ("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/sim_save.h5")
-        
     ## end
     
     simfile = h5open(h5path,"w")
@@ -333,6 +366,7 @@ end
 
             post_new, like_new, out = posterior!(m, para_new, YY; mh=true)
 
+            
             if verbose 
                 println("Iteration $j: posterior = $post_new")
             end
