@@ -1,3 +1,6 @@
+using Debug
+using MATLAB
+
 # Outputs TTT, RRR, CCC - matrices of the state transition equation:
 #   S_t = TTT*S_{t-1} + RRR*ε_t + CCC
 function solve(model::AbstractDSGEModel)
@@ -5,12 +8,32 @@ function solve(model::AbstractDSGEModel)
     # Get equilibrium condition matrices
     Γ0, Γ1, C, Ψ, Π  = eqcond(model)
 
+    # !!
+    @bp
+    mf = MatFile("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/pre_gensys.mat")
+    G0 = get_variable(mf, "G0")
+    test_matrix_eq(G0, Γ0, ε=12,noisy=true)
+    
+    G1 = get_variable(mf, "G1")
+    test_matrix_eq(G1, Γ1, ε=12,noisy=true)
+
+    C_mat = get_variable(mf, "C")
+    test_matrix_eq(C_mat, C, ε=12,noisy=true)
+
+    PSI = get_variable(mf, "PSI")
+    test_matrix_eq(PSI, Ψ, ε=12,noisy=true)
+    
+    PIE = get_variable(mf, "PIE")
+    test_matrix_eq(PIE, Π, ε=12,noisy=true)
+
+    close(mf)
+    
     # Solve model
     TTT_gensys, CCC_gensys, RRR_gensys = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
     TTT_gensys = real(TTT_gensys)
     RRR_gensys = real(RRR_gensys)
     CCC_gensys = reshape(CCC_gensys, length(CCC_gensys), 1)
-
+    
     # Augment states
     TTT, RRR, CCC = augment_states(model, TTT_gensys, RRR_gensys, CCC_gensys)
 

@@ -1,3 +1,4 @@
+using Debug
 
 # Calculate (log of) joint density of Θ
 function prior(model::AbstractDSGEModel)
@@ -17,6 +18,7 @@ function posterior{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh
     if mh
         catchGensysErrors = true
         like, out = likelihood(model, YY; mh=mh)
+
         post = like + prior(model)
         return post, like, out
     else
@@ -25,11 +27,19 @@ function posterior{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh
 end
 
 # Evaluate posterior at `parameters`
-function posterior!{T<:FloatingPoint}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
+@debug function posterior!{T<:FloatingPoint}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false, mat_paraold_postmask=[])
     update!(model, parameters)
     if mh
         catchGensysErrors = true
     end
+    
+    para_check = Array(Float64, size(model.parameters))
+    for (i,k) in enumerate(model.parameters)
+        println(i)
+        para_check[i] = k.value
+    end
+    test_matrix_eq(para_check, mat_paraold_postmask, ε=1e-12, noisy=true)
+    @bp
     return posterior(model, YY; mh=mh, catchGensysErrors=catchGensysErrors)
 end
 
@@ -38,7 +48,7 @@ end
 # This is a dsge likelihood function that can handle 2-part estimation where
 # there is a model switch.
 # If there is no model switch, then we filter over the main sample all at once.
-function likelihood{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors = false)
+@debug function likelihood{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors = false)
     MH_NULL_OUTPUT = (-Inf, Dict{Symbol, Any}())
     GENSYS_ERROR_OUTPUT = -Inf
 
