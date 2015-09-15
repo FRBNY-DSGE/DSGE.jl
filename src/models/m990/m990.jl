@@ -133,7 +133,7 @@ function initialise_model_parameters!(m::Model990)
     # financial frictions parameters
     m[:Fom     ] = Param(0.0300, scalefunction = x -> 1 - (1-x)^0.25, true, (1e-5, 0.99999), BetaAlt(0.03, 0.01), 1, (1e-5, 0.99), texLabel="F(\omega)")
     m[:sprd    ] = Param(1.7444, scalefunction = x -> (1 + x/100)^0.25, false, (0., 100.), GammaAlt(2., 0.1), 2, (1e-5, 0.),texLabel="spr_*")
-    m[:zeta_spb] = Param(0.0559, false, (1e-5, 0.99999), BetaAlt(0.05, 0.005), 1, (1e-5, 0.99), texLabel = "\\zeta_{sp}")
+    m[:zeta_spb] = Param(0.0559, false, (1e-5, 0.99999), BetaAlt(0.05, 0.005), 1, (1e-5, 0.99), texLabel = "\\zeta_{spb}")
     m[:gammstar] = Param(0.9900, true, (1e-5, 0.99999), BetaAlt(0.99, 0.002), 1, (1e-5, 0.99), texLabel = "\\gamma_*")
 
     # exogenous processes - level

@@ -1,14 +1,14 @@
 module DSGE
 
 using Compat
-using Distributions, Roots.fzero, MATLAB, HDF5
+using Distributions, Roots.fzero, HDF5, MATLAB
 
 export
     # DSGE.jl
     savepath, inpath, outpath, tablepath, plotpath, logpath,
 
     # abstractdsgemodel.jl
-    AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict,
+    AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict, num_states, num_shocks_exogenous, num_shocks_expectational, 
 
     # solve/
     ordschur, gensys, solve,
@@ -41,4 +41,5 @@ include("models/m990/m990.jl")
 include("models/m990/eqcond.jl")
 include("models/m990/measurement.jl")
 
+include("../test/util.jl")
 end

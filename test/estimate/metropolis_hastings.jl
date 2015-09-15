@@ -1,32 +1,30 @@
 using Base: Test
-using MATLAB
+# using MATLAB
 using HDF5
-
 using DSGE
-using DSGE: DistributionsExt
 include("../util.jl")
-path = dirname(@__FILE__)
 
+m = Model990()
+m.reoptimize = false
+m.recalculate_hessian = false
+m.num_mh_blocks_test = 1
+m.num_mh_simulations_test = 100
+m.num_mh_burn_test = 0
+m.mh_thinning_step = 1
 
+estimate(m, verbose=false, testing=true, using_matlab_sigscale=true)
 
-mf = MatFile("$path/metropolis_hastings.mat")
-mode = get_variable(mf, "params")
-hessian = get_variable(mf, "hessian")
-YY = get_variable(mf, "YYall")
+# Read in the parameter draws from estimate()
+h5_fn = joinpath(outpath(m), "sim_save.h5")
+h5 = h5open(h5_fn, "r")
+jl_draws = read(h5, "parasim")
+close(h5)
 
-randvecs = get_variable(mf, "randvecs")
-randvals = get_variable(mf, "randvals")
-close(mf)
+# Read in the reference parameter draws
+reference_fn = joinpath(dirname(@__FILE__), "metropolis_hastings.h5")
+h5_ref = h5open(reference_fn, "r")
+ref_draws = read(h5_ref, "theta")
+close(h5_ref)
 
-mf2 = MatFile("$path/sigscale.mat")
-σ = get_variable(mf2, "sigscale")
-close(mf2)
-
-model = Model990()
-cc0 = 0.01
-cc = 0.09
-
-propdist = DegenerateMvNormal(mode, σ)
-
-metropolis_hastings(propdist, model, YY, cc0, cc, randvecs, randvals)
-
+# Test equal
+@test test_matrix_eq(ref_draws, jl_draws, ε=1e-9)
