@@ -1,7 +1,7 @@
 using Base.Test
 using MATLAB
 using HDF5
-
+using DSGE
 
 # minusnan(x, y) evaluates x-y in a way that treats NaN like Inf and sets Inf - Inf = 0
 minusnan{S<:FloatingPoint, T<:FloatingPoint}(x::S, y::T) =  minusnan(complex(x), complex(y))
@@ -10,6 +10,11 @@ function minusnan{S<:FloatingPoint, T<:FloatingPoint}(x::Complex{S}, y::Complex{
     x = isnan(x) || isinf(x) ? Inf : x
     y = isnan(y) || isinf(y) ? Inf : y
     return isinf(x) && isinf(y) ? 0 : x - y
+end
+
+# percenterr(x,y) returns the absolute value of the percentage error of y wrt x
+function percenterr{S<:FloatingPoint, T<:FloatingPoint}(x::Complex{S}, y::Complex{T})
+    return abs((x-y)/x)
 end
 
 # checksigns(x,y) checks to see if x and y have the same sign. returns 1 if they do, 0 if not, and -1 if one is zero but the other isnt
@@ -70,6 +75,11 @@ function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(ex
     n_not_approx_eq = count(x -> x > ε, abs_diff)
     max_abs_diff = maximum(abs_diff)
     max_inds = ind2sub(size(abs_diff), indmax(abs_diff))
+
+    # Count percent differences and find max
+    pct_err = map(percenterr, expected, actual) #percenterr returns an absolute value
+    max_pct_err = maximum(pct_err)
+    max_pct_inds = ind2sub(size(pct_err), indmax(pct_err))
     
     # Print output
     if noisy
@@ -77,7 +87,14 @@ function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(ex
         println("$n_not_approx_eq of $n_entries entries with abs diff > $ε")
         # println("$n_diff_sign of $n_entries entries have opposite signs")
         if n_neq != 0
-            println("Max abs diff of $max_abs_diff at entry $max_inds\n")
+            println("Max abs diff of $max_abs_diff at entry $max_inds")
+            if isa(expected, Matrix)
+                println("The entries at $max_inds are $(expected[max_inds[1],max_inds[2]]) (expected) and $(actual[max_inds[1], max_inds[2]]) (actual)")
+            end
+            println("Max percent error of $max_pct_err at entry $max_pct_inds")
+            if isa(expected, Matrix)
+                println("The entries at $max_pct_inds are $(expected[max_pct_inds[1],max_pct_inds[2]]) (expected) and $(actual[max_pct_inds[1], max_pct_inds[2]]) (actual)\n")
+            end
         else
             println("Max abs diff of 0\n")
         end
@@ -225,6 +242,46 @@ function test_test_eigs_eq()
 
     println("test_eigs_eq passed")
 end
+
+
+function find_matrix_diffs{T<:Number}(m0::Matrix{T}, m1::Matrix{T}; ε=1e-4)
+
+    if size(m0) != size(m1)
+        println("The matrices are not the same size.")
+        return
+    end
+
+    n_entries = length(m0)
+    
+    abs_diff = abs(map(minusnan, m0, m1))
+    rows, cols = size(abs_diff)
+
+
+    # Get row, column indices for absolute differences
+    v_indices = find(x-> x>ε, abs_diff)
+    m_indices = ind2sub(size(abs_diff), v_indices)
+
+    abs_diff_entries = m_indices
+    #abs_diff_entries = collect(zip(m_indices[1],m_indices[2]))
+    
+    # Figure out which entries have diff signs
+    same_sign = map(checksigns, m0, m1)
+    
+    # Get row, column indices for entries with opposite signs
+    v_indices = find(x-> x != 1, same_sign)
+    m_indices = ind2sub(size(abs_diff), v_indices)
+
+    opp_sign_entries = m_indices
+    #opp_sign_entries = collect(zip(m_indices[1], m_indices[2]))
+    
+    ## for (i,k) in enumerate(zipped)
+    ##     println(k)
+    ## end
+    
+    return abs_diff_entries, opp_sign_entries
+    
+end
+
 
 function get_diagonal{T<:Number}(matrix::Matrix{T})
     rows,cols = size(matrix)
@@ -395,6 +452,45 @@ function compare_matvar_hdf5var(matfile, mname, h5file, h5name; ε=1e-4, noisy=t
         return mvar, h5var, test_matrix_eq(mvar, h5var, ε=ε, noisy=noisy);
     elseif isa(h5var,Float64) || isa(h5var,Float32)
         return mvar, h5var, mvar == h5var;
+    end
+    
+end
+
+function get_diff_symbols{S<:FloatingPoint, T<:AbstractDSGEModel}(m::T, expected::Matrix{S}, actual::Matrix{S}; ε=1e-4, noisy=true)
+
+    diff_entries, opp_sign_entries = find_matrix_diffs(expected, actual; ε=ε)
+
+    diff_states = Set(diff_entries[2])
+    diff_eqcond = Set(diff_entries[1])
+
+    diff_state_inds  = Dict{Int64,Symbol}()
+    diff_eqcond_inds = Dict{Int64,Symbol}()
+
+    println("States:")
+    for (i,k) in enumerate(m.endogenous_states)
+        j= k[2]
+        if in(j, diff_states)
+            get!(diff_state_inds, j, k[1])
+            println(k)
+        end
+    end
+
+    println("\n")
+    println("Equilibrium conditions:")
+    for (i,k) in enumerate(m.equilibrium_conditions)
+        j= k[2]
+
+        if in(j, diff_eqcond)
+            get!(diff_eqcond_inds, j, k[1])
+            println(k)
+        end
+    end
+    
+    println("\nEntries:")
+    zipped = collect(zip(diff_entries[1], diff_entries[2]))
+    for entry in zipped
+        diff = abs(expected[entry[1],entry[2]] - actual[entry[1],entry[2]])
+        @printf "%s, %s, %f, %f, %f\n" diff_eqcond_inds[entry[1]] diff_state_inds[entry[2]] diff expected[entry[1],entry[2]] actual[entry[1],entry[2]]
     end
     
 end

@@ -1,7 +1,7 @@
 # This program produces and saves draws from the posterior distribution of
 # the parameters.
 
-using MATLAB
+# using MATLAB
 using HDF5
 using Debug
 
@@ -17,24 +17,50 @@ include("../../test/util.jl")
     in_path = inpath(m)
     out_path = outpath(m)
 
-    mf = MatFile(joinpath(in_path,"YY_mat.mat"),"r");
-    YY0 = get_variable(mf,"YY0");
-    YY1 = get_variable(mf,"YY");
-    YY = [YY0;YY1]
-    close(mf)
+    ## mf = MatFile(joinpath(in_path,"YY_mat.mat"),"r");
+    ## YY0 = get_variable(mf,"YY0");
+    ## YY1 = get_variable(mf,"YY");
+    ## YY = [YY0;YY1]
+    ## close(mf)
     
-    ## h5 = h5open(joinpath(in_path,"YY.h5"), "r") 
-    ## YY = read(h5["YY"])
-    ## close(h5)
-    ## post = posterior(m, YY)
+    h5 = h5open(joinpath(in_path,"YY.h5"), "r") 
+    YY = read(h5["YY"])
+    close(h5)
 
+    post = posterior(m, YY)
+
+    
+    ## This is the first of several blocks of commented-out code in this commit that tests parameters and
+    ## matrices against the matlab version of the code.
+    ## The code commented out here because of path dependence, and will not run because unnecessary
+    ## binary files are not included and username is not defined. However, 
+    ## wanted to save it in a comment in case we want to refer back to it at some point.
+    
+    ## path = "/home/$username/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/"
+    ## solvepath = "/home/$username/.julia/v0.3/DSGE/test/estimate/solve/"
+
+    ## Check against matlab params
+    ## mf = MatFile("$solvepath/para2.mat")
+    ## mat_para = get_variable(mf, "para")
+    ## jl_para = similar(mat_para)
+    ## for (i,p) in enumerate(m.parameters)
+    ##     if i<=length(mat_para)
+    ##         jl_para[i] = p.value
+    ##     end
+    ## end
+    ## test_matrix_eq(mat_para, jl_para; noisy=true)
+    ## close(mf)
+    
     ###################################################################################################
     ### Step 2: Find posterior mode (if reoptimizing, run csminwel)
     ###################################################################################################
     
     # Specify starting mode
 
-    println("Reading in previous mode")
+    if verbose
+        println("Reading in previous mode")
+    end
+    
     mode = []
 
     if m.reoptimize
@@ -43,10 +69,7 @@ include("../../test/util.jl")
         close(h5)
     else
         h5 = h5open("$in_path/mode_in_optimized.h5","r") 
-        ## modepath = joinpath(in_path,"mode_tochange.h5")
-        ## h5 = h5open("mode_tochange.h5","r") 
         mode = read(h5["mode"])
-        
         close(h5)
     end
 
@@ -95,7 +118,10 @@ include("../../test/util.jl")
     
     # Calculate the Hessian at the posterior mode
     if m.recalculate_hessian
-        println("Recalculating Hessian...")
+        if verbose
+            println("Recalculating Hessian...")
+        end
+        
         hessian, _ = hessizero!(m, mode, YY; verbose=true)
 
         h5open("$out_path/hessian.h5","w") do h5
@@ -103,7 +129,10 @@ include("../../test/util.jl")
         end
 
     else
-        println("Using pre-calculated Hessian")
+        if verbose
+            println("Using pre-calculated Hessian")
+        end
+
         h5 = h5open("$in_path/hessian_optimized.h5","r") 
         hessian = read(h5["hessian"])
         close(h5)
@@ -114,12 +143,26 @@ include("../../test/util.jl")
     # distribution, which is used to draw a new parameter in each iteration of
     # the algorithm.
 
-    propdist = proposal_distribution(mode, hessian, use_matlab_sigscale=using_matlab_sigscale)
+    propdist = proposal_distribution(mode, hessian,
+                                     use_matlab_sigscale=using_matlab_sigscale,
+                                     sigscalepath=inpath(m), verbose=verbose)
+
     if propdist.rank != num_parameters_free(m)
-        println("problem – shutting down dimensions")
+        println("problem –    shutting down dimensions")
     end
 
-    ## !!
+    ## if using_matlab_sigscale
+    ##     if verbose
+    ##         println("Testing that sigscale is the same")
+    ##     end
+
+    ##     mf = MatFile(joinpath(inpath(m),"sigscale.mat"))
+    ##     sigscale = get_variable(mf, "sigscale") #convert(Matrix{Float64}, get_variable(mf, "sigscale"))
+    ##     test_matrix_eq(sigscale, propdist.σ; ε=1e-12, noisy=verbose)
+    ##     close(mf)
+    ## end
+    
+    ## Use the h5 version of the matlab sigscale
     ## h5open("$out_path/propdist-sigma.h5","w") do h5
     ##     h5["propdist.σ"] = propdist.σ
     ## end
@@ -168,7 +211,7 @@ include("../../test/util.jl")
 end
 
 # Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
-@debug function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale=false)
+@debug function proposal_distribution{T<:FloatingPoint, V<:String}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=false)
 
     n = length(μ)
     @assert (n, n) == size(hessian)
@@ -184,13 +227,20 @@ end
 
     σ = U*sqrt(S_inv)
 
-    ## !! TODO: remove this
+    # Use predefined reference sigscale if indicated
     if use_matlab_sigscale
-        # read in matlab sigscale
-        println("using sigscale from Matlab")
-        mf = MatFile("sigscale.mat")
-        σ = get_variable(mf, "sigscale")
-        close(mf)
+
+        if verbose
+            println("Using sigscale from Matlab")
+        end
+
+        h5 = h5open(joinpath(sigscalepath,"sigscale.h5"), "r")
+        σ = read(h5, "sigscale")
+        close(h5)
+        
+        ## mf = MatFile(joinpath(sigscalepath,"sigscale.mat"))
+        ## σ = get_variable(mf, "sigscale")
+        ## close(mf)
     end
 
     return DegenerateMvNormal(μ, σ, rank)
@@ -235,21 +285,6 @@ end
     while !initialized
         if testing
             para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
-            @bp
-
-            mf = MatFile("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/para_postmask.mat")
-            mat_paraold_postmask = get_variable(mf,"para_old")
-            close(mf)
-            
-            test_matrix_eq(mat_paraold_postmask, para_old,noisy=true)
-
-            mf = MatFile("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/para_premask.mat")
-            mat_paraold_premask = get_variable(mf,"para_old")
-            close(mf)
-
-            test_matrix_eq(mat_paraold_premask, para_old, noisy=true)
-            @bp
-            
             n_blocks = m.num_mh_blocks_test
             n_sim = m.num_mh_simulations_test
             n_burn = m.num_mh_burn_test
@@ -262,17 +297,56 @@ end
             n_times = m.mh_thinning_step
         end
 
+        post_old, like_old, out = posterior!(m, para_old, YY; mh=true, verbose=true)
         
-        post_old, like_old, out = posterior!(m, para_old, YY; mh=true, mat_paraold_postmask = mat_paraold_postmask)
+        ## This is a block of code that tests the model parameters and posterior! output against Matlab.
+        ## It's commented out here because of path dependence, and will not run because unnecessary
+        ## binary files are not included and username is not defined. However, 
+        ## wanted to save it in a comment in case we want to refer back to it at some point.
 
-        @bp
+        ## path = "/home/$username/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/"
+        ## solvepath = "/home/$username/.julia/v0.3/DSGE/test/estimate/solve/"
+
         
-        ## !! check TTT matrices
-        mf = MatFile("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/TTT.mat")
-        mat_TTT_old = get_variable(mf, "TTT_old")
-        test_matrix_eq(mat_TTT_old, out[:TTT], ε=1e-12, noisy=true)
-        close(mf)
-        @bp
+        ## println("After updating the model, testing that the parameters are are equal to post-mask in Matlab:")
+        
+        ## mf = MatFile("$solvepath/para4.mat")
+        ## mat_para = get_variable(mf, "para")
+        ## jl_para = similar(mat_para)
+        ## for (i,p) in enumerate(m.parameters)
+        ##     if i <= length(mat_para)
+        ##         jl_para[i] = p.value
+        ##     end
+        ## end
+
+        ## test_matrix_eq(mat_para, jl_para, ε=1e-9, noisy=true)
+
+        ## extracted_params = Array(Float64,size(m.parameters))
+        ## for (i,k) in enumerate(m.parameters)
+        ##     extracted_params[i] = k.value
+        ## end
+
+        ## mf = MatFile("$path/para_postmask.mat")
+        ## mat_paraold_postmask = get_variable(mf,"para_old")
+        ## close(mf)
+        
+        # test_matrix_eq(mat_paraold_postmask, extracted_params, ε=1e-12, noisy=true)
+        # @bp
+        
+        ## Check TTT matrices
+        ## println("Testing the TTT matrix after returning from posterior!:")
+        ## println("against the objfcnmhdsge on line 180 in gibb.m (outside valid loop)")
+        ## mf = MatFile("$path/TTT_posterior.mat")
+        ## mat_TTT_post = get_variable(mf, "TTT")
+        ## test_matrix_eq(mat_TTT_post, out[:TTT], ε=1e-12, noisy=true)
+        ## close(mf)
+
+        ## println("against the objfcnmhdsge on line 205 in gibb.m (in ~valid0 loop)")
+        ## mf = MatFile("$path/TTT_posterior_valid0.mat")
+        ## mat_TTT_post_valid0 = get_variable(mf, "TTT_old")
+        ## test_matrix_eq(mat_TTT_post_valid0, out[:TTT], ε=1e-12, noisy=true)
+        ## close(mf)
+        ## @bp
         
         if post_old > -Inf
             propdist.μ = para_old
@@ -281,13 +355,6 @@ end
             RRR_old = out[:RRR]
             CCC_old = out[:CCC]
             zend_old  = out[:zend]
-
-            ## !!
-            ## mf1 = MatFile("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/dsgesolv_mat.mat")
-            
-            ## TTT_old = get_variable(mf1, "TTT_new")
-            ## RRR_old = get_variable(mf1, "RRR_new")
-            ## close(mf1)
             
             initialized = true
         end
@@ -312,11 +379,6 @@ end
     
     h5path = joinpath(outpath(m),"sim_save.h5")
 
-    ## !! remove this! 
-    ## if use_matlab_sigscale
-    ##     h5path = ("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/sim_save.h5")
-    ## end
-    
     simfile = h5open(h5path,"w")
 
     n_saved_obs = n_sim * (n_blocks - n_burn)

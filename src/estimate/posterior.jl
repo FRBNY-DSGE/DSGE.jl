@@ -14,33 +14,26 @@ end
 
 # log posterior = log likelihood + log prior
 # log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
-function posterior{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
+function posterior{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false, verbose::Bool=false)
     if mh
         catchGensysErrors = true
-        like, out = likelihood(model, YY; mh=mh)
+        like, out = likelihood(model, YY; mh=mh, verbose=verbose)
 
         post = like + prior(model)
         return post, like, out
     else
-        return likelihood(model, YY; mh=mh, catchGensysErrors=catchGensysErrors) + prior(model)
+        return likelihood(model, YY; mh=mh, catchGensysErrors=catchGensysErrors, verbose=verbose) + prior(model)
     end
 end
 
 # Evaluate posterior at `parameters`
-@debug function posterior!{T<:FloatingPoint}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false, mat_paraold_postmask=[])
+@debug function posterior!{T<:FloatingPoint}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false, verbose::Bool=false)
     update!(model, parameters)
+        
     if mh
         catchGensysErrors = true
     end
-    
-    para_check = Array(Float64, size(model.parameters))
-    for (i,k) in enumerate(model.parameters)
-        println(i)
-        para_check[i] = k.value
-    end
-    test_matrix_eq(para_check, mat_paraold_postmask, ε=1e-12, noisy=true)
-    @bp
-    return posterior(model, YY; mh=mh, catchGensysErrors=catchGensysErrors)
+    return posterior(model, YY; mh=mh, catchGensysErrors=catchGensysErrors, verbose=verbose)
 end
 
 
@@ -48,7 +41,7 @@ end
 # This is a dsge likelihood function that can handle 2-part estimation where
 # there is a model switch.
 # If there is no model switch, then we filter over the main sample all at once.
-@debug function likelihood{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors = false)
+@debug function likelihood{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false, verbose::Bool=false)
     MH_NULL_OUTPUT = (-Inf, Dict{Symbol, Any}())
     GENSYS_ERROR_OUTPUT = -Inf
 
@@ -87,7 +80,7 @@ end
     # If we are in MH, then any errors coming out of gensys should be caught and a -Inf
     # posterior should be returned.
     try
-        zlb[:TTT], zlb[:RRR], zlb[:CCC] = solve(model)
+        zlb[:TTT], zlb[:RRR], zlb[:CCC] = solve(model, verbose=verbose)
     catch err
         if catchGensysErrors && isa(err, GensysError)
             info(err.msg)

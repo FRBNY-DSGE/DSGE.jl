@@ -75,7 +75,8 @@ function tomodel!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
 end
 
 function update!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
-    return update!(m.parameters, values)
+    update!(m.parameters, values)
+    return steadystate!(m) #!!
 end
 
 

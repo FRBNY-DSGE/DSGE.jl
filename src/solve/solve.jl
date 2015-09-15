@@ -1,42 +1,136 @@
 using Debug
-using MATLAB
+# using MATLAB
+include("../../test/util.jl")
+
 
 # Outputs TTT, RRR, CCC - matrices of the state transition equation:
 #   S_t = TTT*S_{t-1} + RRR*ε_t + CCC
-function solve(model::AbstractDSGEModel)
+@debug function solve(model::AbstractDSGEModel; verbose::Bool=false)
 
     # Get equilibrium condition matrices
-    Γ0, Γ1, C, Ψ, Π  = eqcond(model)
+    Γ0, Γ1, C, Ψ, Π  = eqcond(model) #(, augmented=false)
 
-    # !!
-    @bp
-    mf = MatFile("/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/pre_gensys.mat")
-    G0 = get_variable(mf, "G0")
-    test_matrix_eq(G0, Γ0, ε=12,noisy=true)
+    ## These big, commented-out "if verbose" blocks  are all code that checks the output of eqcond
+    ## against the identical point in the Matlab code. It will not work as written because
+    ## username is undefined, and unnecessary binary files are not included in the commit.
+    ## The code will be deleted in a commit immediately following this one; just want to keep it
+    ## here in the comments in case we want to refer back to it at some point.
     
-    G1 = get_variable(mf, "G1")
-    test_matrix_eq(G1, Γ1, ε=12,noisy=true)
+    ## path =
+    ## "/home/$username/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/"
 
-    C_mat = get_variable(mf, "C")
-    test_matrix_eq(C_mat, C, ε=12,noisy=true)
-
-    PSI = get_variable(mf, "PSI")
-    test_matrix_eq(PSI, Ψ, ε=12,noisy=true)
+    ## solvepath = "/home/$username/.julia/v0.3/DSGE/test/estimate/solve/"
     
-    PIE = get_variable(mf, "PIE")
-    test_matrix_eq(PIE, Π, ε=12,noisy=true)
+    ## if verbose
+    
+    ##     println("\ntesting model parameters (from inside valid0 loop) against matlab")
+    ##     mf = MatFile("$solvepath/para4.mat")
+    ##     para_mat = get_variable(mf, "para") jl_para = similar(para_mat)
+    ##     for (i,p) in enumerate(model.parameters) if i <=
+    ##         length(para_mat) jl_para[i] = p.value end end
+    ##     test_matrix_eq(para_mat, jl_para, ε=1e-12, noisy=true)
+    ##     close(mf)
+        
+    ##     println("\ntesting steady state parameters (from inside valid0 loop) against matlab")
+    ##     mf = MatFile("$solvepath/steadystate.mat")
+    ##     ss_para_mat = get_variable(mf, "steadyStateParams")
+    ##     test_matrix_eq(ss_para_mat, float64(model.steady_state), ε=1e-12, noisy=true)
+    ##     close(mf)
 
-    close(mf)
+    ##     ss_diffs = ss_para_mat - float64(model.steady_state)
+    ##     ss_names = [:zstar, :rstar, :Rstarn, :rkstar, :wstar, :Lstar, :kstar, :kbarstar, :istar, :ystar,
+    ##         :cstar, :wl_c, :nstar, :vstar, :zeta_spsigw, :zeta_spmue, :zeta_nRk, :zeta_nR, :zeta_nqk,
+    ##         :zeta_nn, :zeta_nmue, :zeta_nsigw]
+
+    ##     for i in 1:length(ss_diffs)
+    ##         @printf "steadystate = %s, diff = %f, mat = %f, jl = %f\n" ss_names[i] ss_diffs[i] ss_para_mat[i] model.steady_state[i]
+    ##     end
+                    
+    ##     println("\ntesting eqcond_mat (from inside valid0 loop) against results of eqcond")
+    ##     mf = MatFile("$path/eqcond_mat.mat")
+
+    ##     G0 = get_variable(mf, "G0")
+    ##     println(typeof(Γ0),typeof(G0))
+        
+    ##     println("testing G0")    
+    ##     test_matrix_eq(G0, Γ0; ε=1e-12, noisy=true)
+    ##     #abs_diff_entries, opp_sign_entries = find_matrix_diffs(G0, Γ0; ε=1e-12)
+    ##     get_diff_symbols(model, G0, Γ0, ε=1e-12)
+        
+    ##     println("testing G1")
+    ##     G1 = get_variable(mf, "G1")
+    ##     test_matrix_eq(G1, Γ1; ε=1e-12, noisy=true)
+
+    ##     println("testing C")
+    ##     C_mat = get_variable(mf, "C")
+    ##     test_matrix_eq(C_mat, C, ε=1e-12, noisy=true)
+
+    ##     println("testing PSI")
+    ##     PSI = get_variable(mf, "PSI")
+    ##     test_matrix_eq(PSI, Ψ, ε=1e-12, noisy=true)
+
+    ##     println("testing PIE")
+    ##     PIE = get_variable(mf, "PIE")
+    ##     test_matrix_eq(PIE, Π, ε=1e-12, noisy=true)
+
+    ##     close(mf)
+        
+    ##     @bp
+
+    ## end # of verbose 
     
     # Solve model
     TTT_gensys, CCC_gensys, RRR_gensys = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
     TTT_gensys = real(TTT_gensys)
     RRR_gensys = real(RRR_gensys)
     CCC_gensys = reshape(CCC_gensys, length(CCC_gensys), 1)
+
+    ## if verbose
+    ##     mf = MatFile("$path/TTT_gensys.mat")
+    ##     TTT_gensys_mat = get_variable(mf, "TTT")
+    ##     RRR_gensys_mat = get_variable(mf, "RRR")
+    ##     close(mf)
+
+    ##     println("Testing TTT and RRR when they're returned from gensys")
+    ##     println("TTT_gensys:")
+    ##     test_matrix_eq(TTT_gensys_mat, TTT_gensys; ε=1e-12, noisy=true)
+    ##     println("RRR_gensys:")
+    ##     test_matrix_eq(RRR_gensys_mat, RRR_gensys; ε=1e-12, noisy=true)
+
+    ##     @bp
+    ## end
     
     # Augment states
     TTT, RRR, CCC = augment_states(model, TTT_gensys, RRR_gensys, CCC_gensys)
 
+    ## if verbose
+    ##     mf = MatFile("$path/TTT_solve.mat")
+    ##     TTT_mat = get_variable(mf, "TTT")
+    ##     RRR_mat = get_variable(mf, "RRR")
+    ##     close(mf)
+
+    ##     println("Testing the TTT matrix returned from solve against that returned from dsgesolv before valid0 loop:")
+    ##     test_matrix_eq(TTT_mat, TTT; ε=1e-12, noisy=true);
+        
+
+    ##     println("Testing the RRR matrix returned from solve against that returned from dsgesolv before valid0 loop:")
+    ##     test_matrix_eq(RRR_mat, RRR; ε=1e-12, noisy=true);
+
+
+    ##     mf = MatFile("$path/TTT_solve_valid0.mat")
+    ##     TTT_mat_valid0 = get_variable(mf, "TTT_old")
+    ##     RRR_mat_valid0 = get_variable(mf, "RRR_old")
+    ##     close(mf)
+
+    ##     println("Testing the TTT matrix returned from solve against that returned from dsgesolv in the valid0 loop:")
+    ##     test_matrix_eq(TTT_mat_valid0, TTT; ε=1e-12, noisy=true);
+
+    ##     println("Testing the RRR matrix returned from solve against that returned from dsgesolv in the valid0 loop:")
+    ##     test_matrix_eq(RRR_mat_valid0, RRR; ε=1e-12, noisy=true);
+        
+    ##     @bp
+    ## end # of verbose
+    
     return TTT, RRR, CCC
 end
 
