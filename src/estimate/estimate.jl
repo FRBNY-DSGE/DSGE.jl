@@ -1,7 +1,6 @@
 # This program produces and saves draws from the posterior distribution of
 # the parameters.
 
-# using MATLAB
 using HDF5
 using Debug
 
@@ -17,39 +16,12 @@ include("../../test/util.jl")
     in_path = inpath(m)
     out_path = outpath(m)
 
-    ## mf = MatFile(joinpath(in_path,"YY_mat.mat"),"r");
-    ## YY0 = get_variable(mf,"YY0");
-    ## YY1 = get_variable(mf,"YY");
-    ## YY = [YY0;YY1]
-    ## close(mf)
-    
     h5 = h5open(joinpath(in_path,"YY.h5"), "r") 
     YY = read(h5["YY"])
     close(h5)
 
     post = posterior(m, YY)
 
-    
-    ## This is the first of several blocks of commented-out code in this commit that tests parameters and
-    ## matrices against the matlab version of the code.
-    ## The code commented out here because of path dependence, and will not run because unnecessary
-    ## binary files are not included and username is not defined. However, 
-    ## wanted to save it in a comment in case we want to refer back to it at some point.
-    
-    ## path = "/home/$username/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/"
-    ## solvepath = "/home/$username/.julia/v0.3/DSGE/test/estimate/solve/"
-
-    ## Check against matlab params
-    ## mf = MatFile("$solvepath/para2.mat")
-    ## mat_para = get_variable(mf, "para")
-    ## jl_para = similar(mat_para)
-    ## for (i,p) in enumerate(m.parameters)
-    ##     if i<=length(mat_para)
-    ##         jl_para[i] = p.value
-    ##     end
-    ## end
-    ## test_matrix_eq(mat_para, jl_para; noisy=true)
-    ## close(mf)
     
     ###################################################################################################
     ### Step 2: Find posterior mode (if reoptimizing, run csminwel)
@@ -151,21 +123,6 @@ include("../../test/util.jl")
         println("problem –    shutting down dimensions")
     end
 
-    ## if using_matlab_sigscale
-    ##     if verbose
-    ##         println("Testing that sigscale is the same")
-    ##     end
-
-    ##     mf = MatFile(joinpath(inpath(m),"sigscale.mat"))
-    ##     sigscale = get_variable(mf, "sigscale") #convert(Matrix{Float64}, get_variable(mf, "sigscale"))
-    ##     test_matrix_eq(sigscale, propdist.σ; ε=1e-12, noisy=verbose)
-    ##     close(mf)
-    ## end
-    
-    ## Use the h5 version of the matlab sigscale
-    ## h5open("$out_path/propdist-sigma.h5","w") do h5
-    ##     h5["propdist.σ"] = propdist.σ
-    ## end
     
     ###################################################################################################
     ### Step 4: Sample from posterior using Metropolis-Hastings algorithm
@@ -237,10 +194,7 @@ end
         h5 = h5open(joinpath(sigscalepath,"sigscale.h5"), "r")
         σ = read(h5, "sigscale")
         close(h5)
-        
-        ## mf = MatFile(joinpath(sigscalepath,"sigscale.mat"))
-        ## σ = get_variable(mf, "sigscale")
-        ## close(mf)
+
     end
 
     return DegenerateMvNormal(μ, σ, rank)
@@ -298,55 +252,6 @@ end
         end
 
         post_old, like_old, out = posterior!(m, para_old, YY; mh=true, verbose=true)
-        
-        ## This is a block of code that tests the model parameters and posterior! output against Matlab.
-        ## It's commented out here because of path dependence, and will not run because unnecessary
-        ## binary files are not included and username is not defined. However, 
-        ## wanted to save it in a comment in case we want to refer back to it at some point.
-
-        ## path = "/home/$username/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/"
-        ## solvepath = "/home/$username/.julia/v0.3/DSGE/test/estimate/solve/"
-
-        
-        ## println("After updating the model, testing that the parameters are are equal to post-mask in Matlab:")
-        
-        ## mf = MatFile("$solvepath/para4.mat")
-        ## mat_para = get_variable(mf, "para")
-        ## jl_para = similar(mat_para)
-        ## for (i,p) in enumerate(m.parameters)
-        ##     if i <= length(mat_para)
-        ##         jl_para[i] = p.value
-        ##     end
-        ## end
-
-        ## test_matrix_eq(mat_para, jl_para, ε=1e-9, noisy=true)
-
-        ## extracted_params = Array(Float64,size(m.parameters))
-        ## for (i,k) in enumerate(m.parameters)
-        ##     extracted_params[i] = k.value
-        ## end
-
-        ## mf = MatFile("$path/para_postmask.mat")
-        ## mat_paraold_postmask = get_variable(mf,"para_old")
-        ## close(mf)
-        
-        # test_matrix_eq(mat_paraold_postmask, extracted_params, ε=1e-12, noisy=true)
-        # @bp
-        
-        ## Check TTT matrices
-        ## println("Testing the TTT matrix after returning from posterior!:")
-        ## println("against the objfcnmhdsge on line 180 in gibb.m (outside valid loop)")
-        ## mf = MatFile("$path/TTT_posterior.mat")
-        ## mat_TTT_post = get_variable(mf, "TTT")
-        ## test_matrix_eq(mat_TTT_post, out[:TTT], ε=1e-12, noisy=true)
-        ## close(mf)
-
-        ## println("against the objfcnmhdsge on line 205 in gibb.m (in ~valid0 loop)")
-        ## mf = MatFile("$path/TTT_posterior_valid0.mat")
-        ## mat_TTT_post_valid0 = get_variable(mf, "TTT_old")
-        ## test_matrix_eq(mat_TTT_post_valid0, out[:TTT], ε=1e-12, noisy=true)
-        ## close(mf)
-        ## @bp
         
         if post_old > -Inf
             propdist.μ = para_old

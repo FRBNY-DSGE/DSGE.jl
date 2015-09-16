@@ -1,15 +1,14 @@
 using Base: Test
-using MATLAB
+using DSGE, HDF5
 
-using DSGE
 include("../util.jl")
 path = dirname(@__FILE__)
 
-mf = MatFile("$path/hessian.mat")
-params = get_variable(mf, "params")
-YY = get_variable(mf, "YY")
-hessian_expected = get_variable(mf, "hessian")
-close(mf)
+h5 = h5open("$path/hessian.h5")
+params = read(h5, "params")
+YY = read(h5, "YY")
+hessian_expected = read(h5, "hessian")
+close(h5)
 
 model = Model990()
 
