@@ -1,7 +1,7 @@
 module DSGE
 
 using Compat
-using Distributions, Roots.fzero, HDF5, MATLAB
+using Distributions, Roots.fzero, HDF5 
 
 export
     # DSGE.jl
