@@ -1,4 +1,4 @@
-using HDF5 #, MATLAB
+using HDF5 
 import Distributions
 import DSGE: RootInverseGamma
 include("../../util.jl")
@@ -59,21 +59,21 @@ for θ in model.parameters
     i += 1
 end
 
-## mf = MatFile("$path/parameters.mat")
-## para_matlab   = get_variable(mf, "para")
-## bounds_matlab = get_variable(mf, "bounds")
-## pshape_matlab = get_variable(mf, "pshape")
-## pmean_matlab  = get_variable(mf, "pmean")
-## pstdd_matlab  = get_variable(mf, "pstdd")
-## trspec_matlab = get_variable(mf, "trspec")
-## close(mf)
+## h5 = h5open("$path/parameters.h5")
+## para_ref   = read(h5, "para")
+## bounds_ref = read(h5, "bounds")
+## pshape_ref = read(h5, "pshape")
+## pmean_ref  = read(h5, "pmean")
+## pstdd_ref  = read(h5, "pstdd")
+## trspec_ref = read(h5, "trspec")
+## close(h5)
 
-# @test test_matrix_eq(para_matlab, para)
-# @test test_matrix_eq(bounds_matlab, bounds)
-# @test test_matrix_eq(pshape_matlab, pshape)
-# @test test_matrix_eq(pmean_matlab, pmean)
-# @test test_matrix_eq(pstdd_matlab, pstdd)
-# @test test_matrix_eq(trspec_matlab, trspec)
+# @test test_matrix_eq(para_ref, para)
+# @test test_matrix_eq(bounds_ref, bounds)
+# @test test_matrix_eq(pshape_ref, pshape)
+# @test test_matrix_eq(pmean_ref, pmean)
+# @test test_matrix_eq(pstdd_ref, pstdd)
+# @test test_matrix_eq(trspec_ref, trspec)
 
 ### Model indices
 
@@ -118,14 +118,6 @@ obs = model.observables
 @test size(Π) == (66, 13)
 
 # # Check output matrices against Matlab output (ε = 1e-4)
-## mf = MatFile("$path/eqcond.mat")
-## Γ0_matlab = get_variable(mf, "G0")
-## Γ1_matlab = get_variable(mf, "G1")
-## C_matlab  = reshape(get_variable(mf, "C"), 66, 1)
-## Ψ_matlab  = get_variable(mf, "PSI")
-## Π_matlab  = get_variable(mf, "PIE")
-## close(mf)
-
 h5 = h5open("$path/eqcond.h5")
 Γ0_ref = read(h5, "G0")
 Γ1_ref = read(h5, "G1")
@@ -143,15 +135,6 @@ close(h5)
 
 
 # ### Measurement equation
-
-## mf = MatFile("$path/measurement.mat")
-## ZZ_expected = get_variable(mf, "ZZ")
-## DD_expected = reshape(get_variable(mf, "DD"), 18, 1)
-## QQ_expected = get_variable(mf, "QQ")
-## EE_expected = get_variable(mf, "EE")
-## MM_expected = get_variable(mf, "MM")
-## close(mf)
-
 h5 = h5open("$path/measurement.h5")
 ZZ_expected = read(h5, "ZZ")
 DD_expected = reshape(read(h5, "DD"), 18, 1)

@@ -14,23 +14,12 @@ function eqcond(m::Model990)
     ex   = m.expected_shocks
     eq   = m.equilibrium_conditions
 
-    ## if augmented
     Γ0 = zeros(num_states(m), num_states(m))
     Γ1 = zeros(num_states(m), num_states(m))
     C  = zeros(num_states(m), 1)
     Ψ  = zeros(num_states(m), num_shocks_exogenous(m))
     Π  = zeros(num_states(m), num_shocks_expectational(m))
 
-    ## else
-    ##     num_states_0 = num_states(m) - num_anticipated_shocks(m)
-
-    ##     Γ0 = zeros(num_states_0, num_states_0)
-    ##     Γ1 = zeros(num_states_0, num_states_0)
-    ##     C  = zeros(num_states_0, 1)
-    ##     Ψ  = zeros(num_states_0, num_shocks_exogenous(m))
-    ##     Π  = zeros(num_states_0, num_shocks_expectational(m))
-        
-    ## end
     ### ENDOGENOUS STATES ###
 
     ### 1. Consumption Euler Equation
@@ -416,7 +405,6 @@ function eqcond(m::Model990)
     Ψ[eq[:eq_pist], exo[:pist_sh]]  = 1.
 
     # Anticipated policy shocks
-    # !!
     if num_anticipated_shocks(m) > 0 
 
         # This section adds the anticipated shocks. There is one state for all the
