@@ -8,7 +8,7 @@ export
     savepath, inpath, outpath, tablepath, plotpath, logpath,
 
     # abstractdsgemodel.jl
-    AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict, num_states, num_shocks_exogenous, num_shocks_expectational, 
+    AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict, num_states, num_shocks_exogenous, num_shocks_expectational, createSaveDirectories, 
 
     # solve/
     ordschur, gensys, solve,

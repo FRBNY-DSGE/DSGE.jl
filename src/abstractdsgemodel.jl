@@ -61,12 +61,55 @@ num_parameters_steady_state(m::AbstractDSGEModel)= length(m.steady_state)
 num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.parameters]) 
 
 # Paths to where input/output/results data are stored
-savepath(m::AbstractDSGEModel)  = normpath(m.savepath)
-inpath(m::AbstractDSGEModel)    = normpath(joinpath(m.savepath, "input_data/"))
-outpath(m::AbstractDSGEModel)   = normpath(joinpath(m.savepath, "output_data/"))
-tablepath(m::AbstractDSGEModel) = normpath(joinpath(m.savepath, "results/tables/"))
-plotpath(m::AbstractDSGEModel)  = normpath(joinpath(m.savepath, "results/plots/"))
-logpath(m::AbstractDSGEModel)   = normpath(joinpath(m.savepath, "logs/"))
+savepath(m::AbstractDSGEModel)  = m.savepaths[:savepath]
+inpath(m::AbstractDSGEModel)    = m.savepaths[:inpath]
+outpath(m::AbstractDSGEModel)   = m.savepaths[:outpath]
+tablepath(m::AbstractDSGEModel) = m.savepaths[:tablepath]
+plotpath(m::AbstractDSGEModel)  = m.savepaths[:plotpath]
+logpath(m::AbstractDSGEModel)   = m.savepaths[:logpath]
+
+function createSaveDirectories{T<:String}(m::AbstractDSGEModel, savepath::T; reset_inpath::Bool=true)
+
+    createSaveDirectories(savepath)
+
+    paths = [(:savepath,  savepath),
+             (:outpath,   joinpath(savepath, "output_data")),
+             (:logpath,   joinpath(savepath, "logs")),
+             (:tablepath, joinpath(savepath, "results/tables")),
+             (:plotpath,  joinpath(savepath, "results/plots"))]
+
+    if reset_inpath
+        append!(paths, [(:inpath, joinpath(savepath, "input_data"))])
+    else
+        append!(paths, [(:inpath, inpath(m))])
+    end
+
+    m.savepaths = Dict{Symbol,String}(paths)
+    
+end
+
+## Creates proper directory structure for input and output files rooted at new_savepath,
+## and copies the files in `old_savepath/input_data` to `new_savepath/input_data`
+function createSaveDirectories{T<:String}(m::AbstractDSGEModel, new_savepath::T, old_savepath::T; reset_inpath::Bool=true, copy_infiles::Bool=true)
+
+    createSaveDirectories(m, new_savepath; reset_inpath=reset_inpath)
+
+    if copy_infiles
+        for file in readdir(normpath(joinpath(old_savepath, "input_data")))
+            #if isfile(abspath(file))
+                println(file)
+                cp(abspath(joinpath(old_savepath, "input_data/$file")), inpath(m))
+                old = abspath(joinpath(old_savepath, "input_data/$file"))
+                new = abspath(joinpath(new_savepath, "input_data"))
+                @printf "Copied %s to %s" old new
+            #end
+        end
+    end
+
+    return m.savepaths
+end
+
+
 
 # TODO is there a better place for these? They do depend on AbstractDSGEModel type.
 function tomodel!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
@@ -78,15 +121,4 @@ function update!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
     update!(m.parameters, values)
     return steadystate!(m) 
 end
-
-
-## function prepareForTesting{T<:AbstractDSGEModel}(m::AbstractDSGEModel)
-
-##     m.num_mh_simulations
-##     m.num_mh_blocks
-##     m.num_mh_burn
-##     m.mh_thinning_step
-
-    
-## end
 

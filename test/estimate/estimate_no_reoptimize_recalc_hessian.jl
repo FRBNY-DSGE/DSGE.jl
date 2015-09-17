@@ -11,12 +11,14 @@ using DSGE
 tic()
 # Run without reoptimizing anything
 m = Model990()
-m.savepath = normpath(joinpath(dirname(@__FILE__),"../../save/m990-no_reoptimize_recalc_hessian/"))
-createSaveDirectories(m.savepath)
+new_savepath = normpath(joinpath(dirname(@__FILE__),"../../save/m990-no_reoptimize_recalc_hessian/"))
+createSaveDirectories(m, new_savepath, savepath(m))
+
 m.num_mh_simulations_test= m.num_mh_simulations
 m.num_mh_blocks_test = m.num_mh_blocks
 m.num_mh_burn_test=m.num_mh_burn
 m.recalculate_hessian = true
+
 estimate(m,verbose=true,testing=true)
 computeMoments(m)
 time_elapsed = toq()

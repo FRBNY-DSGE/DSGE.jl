@@ -16,7 +16,7 @@ type Model990 <: AbstractDSGEModel
     observables::Dict{Symbol,Int}                   #
 
     spec                                            # The model specification number
-    savepath::String                                # The absolute path to the top-level save directory for this
+    savepaths::Dict{Symbol,String}                  # The absolute path to the top-level save directory for this
                                                     # model specification
     
     num_anticipated_shocks::Int                     # Number of anticipated policy shocks
@@ -229,9 +229,17 @@ function Model990()
     steady_state     = @compat Vector{Any}(length(steady_state_keys))
 
     # Model-specific specifications
-    spec                            = split(basename(@__FILE__),'.')[1] 
-    savepath                        = normpath(joinpath(dirname(@__FILE__), *("../../../save/",spec)))
+    spec        = split(basename(@__FILE__),'.')[1]
+    savepath    = normpath(joinpath(dirname(@__FILE__), *("../../../save/",spec)))
+    savepaths   = Dict{Symbol,String}([(:savepath,  savepath),
+                                       (:inpath,    normpath(joinpath(savepath, "input_data/"))),
+                                       (:outpath,   normpath(joinpath(savepath, "output_data/"))),      
+                                       (:tablepath, normpath(joinpath(savepath, "results/tables/"))),   
+                                       (:plotpath,  normpath(joinpath(savepath, "results/plots/"))),  
+                                       (:logpath,   normpath(joinpath(savepath, "logs/")))]) 
 
+
+    
     # Create the save directories if they don't already exist
     createSaveDirectories(savepath)
     
@@ -270,7 +278,7 @@ function Model990()
             Dict{Symbol,Int}(),
 
             spec,
-            savepath,
+            savepaths,
                  
             num_anticipated_shocks,
             num_anticipated_shocks_padding,
@@ -292,7 +300,7 @@ function Model990()
 
     initialise_model_parameters!(m)
     initialise_model_indices!(m)
-
+    
     return steadystate!(m)
 
 end
@@ -428,9 +436,10 @@ function steadystate!(m::Model990)
     return m
 end
 
-# Creates the proper directory structure for input and output files
+## Creates the proper directory structure for input and output files. 
 function createSaveDirectories(savepath::String)
-
+    savepath = abspath(normpath(savepath))
+    
     paths = [savepath,
              joinpath(savepath, "input_data"),
              joinpath(savepath, "output_data"),
@@ -439,11 +448,13 @@ function createSaveDirectories(savepath::String)
              joinpath(savepath, "results/tables"),
              joinpath(savepath, "results/plots")]
 
+    # Create each new directory that needs to be made
     for path in paths
         if(!ispath(path))
             mkdir(path)
             println("created $path")
         end
     end
-        
+
 end
+
