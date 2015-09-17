@@ -138,7 +138,7 @@ include("../../test/util.jl")
         randvecs = []
         randvals = []
         
-        h5= h5open("$in_path/rand_save.h5","r") 
+        h5= h5open("/data/dsge_data_dir/dsgejl/estimate/save/input_data/rand_save_big.h5","r")
         randvecs = read(h5["randvecs"])
         randvals = read(h5["randvals"])
         close(h5)
@@ -251,7 +251,7 @@ end
             n_times = m.mh_thinning_step
         end
 
-        post_old, like_old, out = posterior!(m, para_old, YY; mh=true, verbose=true)
+        post_old, like_old, out = posterior!(m, para_old, YY; mh=true)
         
         if post_old > -Inf
             propdist.μ = para_old
@@ -332,7 +332,6 @@ end
             # meaningful system, and evaluate the posterior.
 
             post_new, like_new, out = posterior!(m, para_new, YY; mh=true)
-
             
             if verbose 
                 println("Iteration $j: posterior = $post_new")
