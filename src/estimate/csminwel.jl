@@ -1,4 +1,5 @@
 using Debug
+using Compat
 
 #=
 
@@ -360,7 +361,7 @@ See the file `examples/csminwel.jl` for an example of usage
     return MultivariateOptimizationResults("csminwel",
                                            x0,
                                            x,
-                                           float64(f_x),
+                                           convert(Float64, f_x),
                                            iteration,
                                            iteration==iterations,
                                            x_converged,

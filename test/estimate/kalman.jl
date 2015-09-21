@@ -14,7 +14,7 @@ for arg in ["a", "b", "z0"]
     eval(parse("$arg = reshape(get_variable(mf, \"$arg\"), length($arg), 1)"))
 end
 close(mf)
-lead = int(lead)
+lead = round(Int,lead)
 
 
 
