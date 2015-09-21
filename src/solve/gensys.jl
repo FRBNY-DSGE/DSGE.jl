@@ -1,3 +1,5 @@
+using Debug
+
 #=
 
 @author : Spencer Lyon <spencer.lyon@nyu.edu>,
@@ -105,7 +107,7 @@ end
 
 
 # Method that does the real work. Work directly on the decomposition F
-function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
+@debug function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     eu = [0, 0]
     ε = 1e-6  # small number to check convergence
     nunstab = 0.0
@@ -129,12 +131,14 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     a, b, q, z = FS[:S], FS[:T], FS[:Q]', FS[:Z]
     gev = [diag(a) diag(b)]
 
-    q1 = q[1:n-nunstab, :]
-    q2 = q[n-nunstab+1:n, :]
-    z1 = z[:, 1:n-nunstab]'
-    z2 = z[:, n-nunstab+1:n]'
-    a2 = a[n-nunstab+1:n, n-nunstab+1:n]
-    b2 = b[n-nunstab+1:n, n-nunstab+1:n]
+    nunstab_int = round(Int,nunstab)
+    
+    q1 = q[1:n-nunstab_int, :]
+    q2 = q[n-nunstab_int+1:n, :]
+    z1 = z[:, 1:n-nunstab_int]'
+    z2 = z[:, n-nunstab_int+1:n]'
+    a2 = a[n-nunstab_int+1:n, n-nunstab_int+1:n]
+    b2 = b[n-nunstab_int+1:n, n-nunstab_int+1:n]
     etawt = q2 * π
     neta = size(π, 2)
 
