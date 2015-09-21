@@ -204,8 +204,8 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     end
 
     # Cast as an int because we use it as an int!
-    nunstab = int(nunstab)
-    tmat = [eye(int(n-nunstab)) -(ueta*(deta\veta')*veta1*deta1*ueta1')']
+    nunstab = round(Int, nunstab)
+    tmat = [eye(convert(Int64,(n-nunstab))) -(ueta*(deta\veta')*veta1*deta1*ueta1')']
     G0 = [tmat*a; zeros(nunstab,n-nunstab) eye(nunstab)]
     G1 = [tmat*b; zeros(nunstab,n)]
 
