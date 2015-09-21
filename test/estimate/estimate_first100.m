@@ -1,6 +1,7 @@
-%% Main_first100.m
+%% estimate_first100.m
 %% This script runs the estimation step without reoptimizing/recalculating
-%% the hessian, for the first 100 draws of Metropolis-Hastings
+%% the hessian, for the first 100 draws of Metropolis-Hastings. It saves the
+%% output in metropolis_hastings.h5.
 % 
 % Copyright Federal Reserve Bank of New York.  You may reproduce, use, modify,
 % make derivative works of, and distribute and this code in whole or in part
@@ -29,15 +30,16 @@
 clear
 close all
 
-% set paths
+% set paths -- the user will need to set paths to the clean code on their
+% own machine
+
 path = '~/dsge/cleanCode990/';
 dirs = {[path, '']; [path, 'data/']; [path, 'dsgesolv/']; [path, 'estimation/'];...
     [path,'forecast/']; [path, 'initialization/']; [path, 'kalman/'];...
     [path,'toolbox/']; [path, 'plotting/']};
 addpath(dirs{:});
 
-%spath = '/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/';
-%fpath = '/home/rceexm08/.julia/v0.3/DSGE/test/estimate/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian/matlab_tables/';
+
 % sets important variables and flags
 spec_990  
 
@@ -59,26 +61,24 @@ nsim    = 100;
 ntimes  = 1;
 nburn   = 0;
 
-%spath = ''
 if ~reoptimize & ~CH
-  %spath = [pwd, '/no_reoptimize_no_recalc_hessian' ];
-  spath = [pwd, '/']
+  spath = [pwd, '/metropolis_hastings/m990-no_reoptimize_no_recalc_hessian' ];
 elseif ~reoptimize & CH 
-
+  disp('Please set up a save directory for this case');
+  exit;
 end
 fpath = [spath, '/matlab_tables'];
   
 %% Estimation
 % In this stage we draw from the distribution for the parameters. The modal
-% parameters as well as the draws of parameters, are outputted in the /save
+% parameters as well as the draws of parameters, are outputted in the spath
 % folder.
 gibb;
 
-%% Write draws to HDF5 file
+%% Read in binary file of draws and write them to HDF5 file
 num1 = npara*nsim*4     % number of bytes per file
-fn = [spath, '/params']
-fid = fopen(fn, 'r')
-
+fn = [spath, '/params'];
+fid = fopen(fn, 'r');
 
 theta = []
 while(ftell(fid) < num1)
@@ -91,12 +91,9 @@ end;
 
 fclose(fid)
 
-dset_details.Location = spath;
+h5path = [pwd, '/']
+dset_details.Location = h5path;
 dset_details.Name = 'theta';
 
-hdf5write('metropolis_hastings.h5', dset_details, 'theta', 'WriteMode','overwrite')
-
-
-
-%exit;
+hdf5write('metropolis_hastings.h5', dset_details, theta, 'WriteMode','overwrite');
 
