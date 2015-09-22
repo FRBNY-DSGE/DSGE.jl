@@ -186,7 +186,7 @@ include("../../test/util.jl")
 end
 
 # Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
-@debug function proposal_distribution{T<:AbstractFloat, V<:String}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=false)
+@debug function proposal_distribution{T<:AbstractFloat, V<:AbstractString}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=false)
 
     n = length(μ)
     @assert (n, n) == size(hessian)
