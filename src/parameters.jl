@@ -59,7 +59,7 @@ end
 # steadystate!(model). See estimate:32,33. However, if we want to operate on vectors of
 # parameters in the file parameters.jl, then we don't have access to the model object and
 # the steadystate! function.
-function update!{T<:FloatingPoint}(parameters::Vector{Param}, newvalues::Vector{T})
+function update!{T<:AbstractFloat}(parameters::Vector{Param}, newvalues::Vector{T})
     @assert length(newvalues) == length(parameters)
     map(update!, parameters, newvalues)
     return parameters
@@ -77,8 +77,8 @@ end
 
 # Methods so that arithmetic with parameters can be done tersely, like "θ.α + θ.β"
 # Note there are still cases where we must refer to α.scaledvalue, e.g. pdf(θ.priordist, θ.val)
-Base.convert{T<:FloatingPoint}(::Type{T}, α::Param) = α.scaledvalue
-Base.promote_rule{T<:FloatingPoint}(::Type{Param}, ::Type{T}) = Float64
+Base.convert{T<:AbstractFloat}(::Type{T}, α::Param) = α.scaledvalue
+Base.promote_rule{T<:AbstractFloat}(::Type{Param}, ::Type{T}) = Float64
 Base.promote_rule{T<:Integer}(::Type{Param}, ::Type{T}) = Float64
 
 for op in [:+, :-, :*, :/, :^]
@@ -111,12 +111,12 @@ function toreal(θ::Param)
     end
 end
 
-function tomodel{T<:FloatingPoint}(values::Vector{T}, parameters::Vector{Param})
+function tomodel{T<:AbstractFloat}(values::Vector{T}, parameters::Vector{Param})
     return map(tomodel, values, parameters)
 end
 
 # Transforms variables from max to model (trans.m)
-function tomodel{T<:FloatingPoint}(value::T, θ::Param)
+function tomodel{T<:AbstractFloat}(value::T, θ::Param)
     (a, b) = θ.transformbounds
     c = 1.0
 
@@ -133,7 +133,7 @@ end
 
 # Given a vector of parameter values on the real line, map them to the model space and
 # update model.parameters field.
-function tomodel!{T<:FloatingPoint}(values::Vector{T}, parameters::Vector{Param})
+function tomodel!{T<:AbstractFloat}(values::Vector{T}, parameters::Vector{Param})
     newvalues = map(tomodel, values, parameters)
     return update!(parameters, newvalues)
 end

@@ -1,3 +1,5 @@
+using Compat
+
 # KALCVF The Kalman filter
 #
 # State space model is defined as follows:
@@ -45,7 +47,7 @@
 #  03/19/2003  -  algorithm and interface were adapted from SAS/IML KALCVF subroutine for use in MATLAB M file
 #
 #==========================================================================#
-function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}, F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, z0::Matrix{S}, vz0::Matrix{S}, Ny0::Int = 0; allout::Bool = false)
+function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S}, lead::Int64, a::Matrix{S}, F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, z0::Matrix{S}, vz0::Matrix{S}, Ny0::Int = 0; allout::Bool = false)
     T = size(data, 2)
     Nz = size(a, 1)
     Ny = size(b, 1)
@@ -166,7 +168,7 @@ end
 # Note that all eigenvalues of the matrix F are inside the unit circle when the SSM is stationary.
 # When the preceding formula cannot be applied, the initial state vector estimate is set to a
 # and its covariance matrix is given by 1E6I. Optionally, you can specify initial values.
-function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}, F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, Ny0::Int = 0; allout::Bool = false)
+function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S}, lead::Int64, a::Matrix{S}, F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, Ny0::Int = 0; allout::Bool = false)
     Nz = size(a, 1)
     V = var[1:Nz, 1:Nz]
 
@@ -341,7 +343,7 @@ end
 # eta_hat, the optional (Ne x Nt) matrix of smoothed shocks.
 
 # Dan Greenwald, 7/7/2010.
-function distsmth_k93{S<:FloatingPoint}(y::Matrix{S}, pred::Matrix{S}, vpred::Matrix{S}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, peachcount, psize, nant::Int = 0, antlags::Int = 0)
+function distsmth_k93{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, vpred::Matrix{S}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, peachcount, psize, nant::Int = 0, antlags::Int = 0)
     Nt = size(y, 2)
     Nz = size(T, 1)
 

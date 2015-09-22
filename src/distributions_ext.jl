@@ -4,14 +4,16 @@
 # parameters). Note these functions are NOT new methods for the Distributions.Beta, etc.
 # functions, but rather new functions with the same names.
 
-using Distributions
+using Distributions, Compat
 import Distributions: params, mean, std, pdf, logpdf, rand
 import Base: length
 
 export PointMass, Beta, Gamma, RootInverseGamma, DegenerateMvNormal
 
-
-
+## if VERSION < v"0.4.0-dev+6425" 
+##     typealias AbstractFloat FloatingPoint
+## end
+    
 # Define PointMass distribution for fixed parameters.
 type PointMass <: Distribution{Univariate, Continuous}
     μ::Float64
@@ -94,6 +96,6 @@ end
 Base.length(d::DegenerateMvNormal) = length(d.μ)
 
 # Generate a draw from d with variance optionally scaled by cc^2
-function Distributions.rand{T<:FloatingPoint}(d::DegenerateMvNormal; cc::T = 1.0)
+function Distributions.rand{T<:AbstractFloat}(d::DegenerateMvNormal; cc::T = 1.0)
     return d.μ + cc*d.σ*randn(length(d))
 end

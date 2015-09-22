@@ -120,12 +120,12 @@ end
 
 
 # TODO is there a better place for these? They do depend on AbstractDSGEModel type.
-function tomodel!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
+function tomodel!{T<:AbstractFloat}(m::AbstractDSGEModel, values::Vector{T})
     tomodel!(values, m.parameters)
     return steadystate!(m)
 end
 
-function update!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
+function update!{T<:AbstractFloat}(m::AbstractDSGEModel, values::Vector{T})
     update!(m.parameters, values)
     return steadystate!(m) 
 end
