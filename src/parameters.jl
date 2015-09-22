@@ -1,16 +1,24 @@
 import Base: convert, promote_rule, +, -, *, /, ^, log, exp
 
-# We define Param to be a subtype of Number so we can use numerical operation methods in
-#   https://github.com/JuliaLang/julia/blob/master/base/promotion.jl
+"""
+## Params
 
-# Some parameter values, especially rates, are given in one form but in practice we would
-# like to use them in another form. For example, pistar = 0.5000 refers to an inflation rate
-# of 0.5%; its scalefunction x -> 1 + x/100 specifies the form in which pistar is used in
-# calculations. We use the scaled parameter value in calculations, but the original value in
-# estimation.
+We define Param to be a subtype of Number so we can use numerical operation methods in
+  https://github.com/JuliaLang/julia/blob/master/base/promotion.jl
+
+Some parameter values, especially rates, are given in one form but in practice we would
+like to use them in another form. For example, pistar = 0.5000 refers to an inflation rate
+of 0.5%; its scalefunction x -> 1 + x/100 specifies the form in which pistar is used in
+calculations. We use the scaled parameter value in calculations, but the original value in
+estimation.
+"""
+:param_type
 
 typealias Interval{T} @compat Tuple{T, T}
-typealias AbstractString String
+
+if VERSION < v"0.4.0-rc+10"
+    typealias AbstractString String
+end
 
 type Param <: Number
     value::Float64

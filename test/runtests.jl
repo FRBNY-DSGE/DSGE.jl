@@ -12,7 +12,8 @@ my_tests = [
             "estimate/kalman",
             "estimate/posterior",
             #"estimate/hessian" (currently takes 6 hours to complete)
-            "estimate/csminwel"
+            "estimate/csminwel",
+            "estimate/metropolis_hastings"
             ]
 
 for test in my_tests

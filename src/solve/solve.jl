@@ -1,29 +1,34 @@
+#using Debug
+#include("../../test/util.jl")
+
+
 # Outputs TTT, RRR, CCC - matrices of the state transition equation:
 #   S_t = TTT*S_{t-1} + RRR*ε_t + CCC
 function solve(model::AbstractDSGEModel)
 
     # Get equilibrium condition matrices
-    Γ0, Γ1, C, Ψ, Π  = eqcond(model)
-
+    Γ0, Γ1, C, Ψ, Π  = eqcond(model) 
+    
     # Solve model
     TTT_gensys, CCC_gensys, RRR_gensys = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
     TTT_gensys = real(TTT_gensys)
     RRR_gensys = real(RRR_gensys)
     CCC_gensys = reshape(CCC_gensys, length(CCC_gensys), 1)
-
+    
     # Augment states
     TTT, RRR, CCC = augment_states(model, TTT_gensys, RRR_gensys, CCC_gensys)
-
+    
     return TTT, RRR, CCC
 end
 
-# Some of our observables are growth rates, which is calculated as a
-# linear combination of a present and lagged state. To capture the lagged state,
-# we assign to it an index. In addition, we also need to expand the
-# matrices of the state transition equation to accommodate the extra state.
-# In dsgesolv.m, AddTTT is appended to TTT to capture the lagged state
-# value in the current state vector, while AddRRR and AddCCC augment
-# RRR and CCC with the appropriate number of zeros.
+
+## # Some of our observables are growth rates, which is calculated as a
+## # linear combination of a present and lagged state. To capture the lagged state,
+## # we assign to it an index. In addition, we also need to expand the
+## # matrices of the state transition equation to accommodate the extra state.
+## # In dsgesolv.m, AddTTT is appended to TTT to capture the lagged state
+## # value in the current state vector, while AddRRR and AddCCC augment
+## # RRR and CCC with the appropriate number of zeros.
 
 # These additional states are added after the model is solved to reduce the load on gensys
 function augment_states{T<:FloatingPoint}(m::AbstractDSGEModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
@@ -36,15 +41,13 @@ function augment_states{T<:FloatingPoint}(m::AbstractDSGEModel, TTT::Matrix{T}, 
     @assert (n_endo, n_endo) == size(TTT)
     @assert (n_endo, n_exo) == size(RRR)
     @assert (n_endo, 1) == size(CCC)
-
+    
     # Initialize augmented matrices
     numAdd = 12
     TTT_aug = zeros(n_endo + numAdd, n_endo + numAdd)
     TTT_aug[1:n_endo, 1:n_endo] = TTT
     RRR_aug = [RRR; zeros(numAdd, n_exo)]
     CCC_aug = [CCC; zeros(numAdd, 1)]
-
-
 
     ### TTT modifications
 
@@ -67,7 +70,6 @@ function augment_states{T<:FloatingPoint}(m::AbstractDSGEModel, TTT::Matrix{T}, 
     TTT_aug[endo_addl[:tfp_t], endo_addl[:tfp_t]] = m[:ρ_tfp].scaledvalue
     TTT_aug[endo_addl[:e_gdpdef], endo_addl[:e_gdpdef]] = m[:ρ_gdpdef].scaledvalue
     TTT_aug[endo_addl[:e_pce], endo_addl[:e_pce]] = m[:ρ_pce].scaledvalue
-
 
 
     ### RRR modfications
@@ -93,8 +95,6 @@ function augment_states{T<:FloatingPoint}(m::AbstractDSGEModel, TTT::Matrix{T}, 
 
     # Expected inflation
     CCC_aug[endo_addl[:Et_pi_t], :] = (CCC + TTT*CCC)[endo[:pi_t], :]
-
-
 
     return TTT_aug, RRR_aug, CCC_aug
 end

@@ -1,16 +1,16 @@
-using Distributions
+import Distributions
 import DSGE: Param, PointMass
 
 # Test Param type
 
 # Inner Param constructor
-α = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999))
+α = Param(0.1596, false, (1e-5, 0.999), Distributions.Normal(0.30, 0.05), 1, (1e-5, 0.999))
 @test α.scalefunction == identity
 @test α.scaledvalue == 0.1596
 @test α.description == ""
 
 # Inner Param constructor, fixed = true
-α_fixed = Param(0.1596, true, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999))
+α_fixed = Param(0.1596, true, (1e-5, 0.999), Distributions.Normal(0.30, 0.05), 1, (1e-5, 0.999))
 @test isa(α_fixed.priordist, PointMass)
 @test α_fixed.transformtype == 0
 
@@ -22,7 +22,7 @@ import DSGE: Param, PointMass
 
 # Invalid transformtype
 @test_throws ErrorException α_bad = Param(0.1596, false, (1e-5, 0.999),
-                                          Normal(0.30, 0.05), -1, (1e-5, 0.999))
+                                          Distributions.Normal(0.30, 0.05), -1, (1e-5, 0.999))
 
 # update! value
 update!(α, 0.0)

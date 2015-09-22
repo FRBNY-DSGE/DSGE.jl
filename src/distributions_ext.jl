@@ -47,6 +47,26 @@ end
 
 Distributions.params(d::RootInverseGamma) = (d.ν, d.τ)
 
+# Given α,β, get μ and σ
+function betaMoments(dist::Distributions.Beta)
+    α = dist.α
+    β = dist.β
+
+    μ = α / (α + β)
+    σ = sqrt( α*β/((α+β)^2 * (α+β+1)) )
+    return μ, σ
+end
+
+function gammaMoments(dist::Distributions.Gamma)
+    α = dist.α
+    θ = dist.θ
+
+    μ = α / θ
+    σ = α / θ^2
+    return μ, σ
+end
+
+
 function Distributions.pdf(d::RootInverseGamma, x::Real)
     (ν, τ) = params(d)
     return 2 * (ν*τ^2/2)^(ν/2) * exp((-ν*τ^2)/(2x^2)) / gamma(ν/2) / x^(ν+1)
