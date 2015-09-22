@@ -1,6 +1,4 @@
-#using Debug
-#include("../../test/util.jl")
-
+using Compat
 
 # Outputs TTT, RRR, CCC - matrices of the state transition equation:
 #   S_t = TTT*S_{t-1} + RRR*ε_t + CCC
@@ -31,7 +29,7 @@ end
 ## # RRR and CCC with the appropriate number of zeros.
 
 # These additional states are added after the model is solved to reduce the load on gensys
-function augment_states{T<:FloatingPoint}(m::AbstractDSGEModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
+function augment_states{T<:AbstractFloat}(m::AbstractDSGEModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
     endo = m.endogenous_states
     endo_addl = m.endogenous_states_postgensys
     exo = m.exogenous_shocks

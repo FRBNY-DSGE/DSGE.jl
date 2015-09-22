@@ -3,14 +3,14 @@ using Base.Test, Compat, MATLAB, HDF5, DSGE
 # minusnan(x, y) evaluates x-y in a way that treats NaN like Inf and sets Inf - Inf = 0
 minusnan{S<:@compat(AbstractFloat), T<:@compat(AbstractFloat)}(x::S, y::T) =  minusnan(complex(x), complex(y))
 
-function minusnan{S<:@compat(AbstractFloat), T<:@compat(AbstractFloat)}(x::Complex{S}, y::Complex{T})
+function minusnan{S<:AbstractFloat, T<:AbstractFloat}(x::Complex{S}, y::Complex{T})
     x = isnan(x) || isinf(x) ? Inf : x
     y = isnan(y) || isinf(y) ? Inf : y
     return isinf(x) && isinf(y) ? 0 : x - y
 end
 
 # percenterr(x,y) returns the absolute value of the percentage error of y wrt x
-function percenterr{S<:FloatingPoint, T<:FloatingPoint}(x::Complex{S}, y::Complex{T})
+function percenterr{S<:AbstractFloat, T<:AbstractFloat}(x::Complex{S}, y::Complex{T})
     return abs((x-y)/x)
 end
 
@@ -35,8 +35,7 @@ end
 
 # TODO: decide what a sensible default ε value is for our situation
 # Compares matrices, reports absolute differences, returns true if all entries close enough
-function test_matrix_eq{R<:@compat(AbstractFloat), S<:@compat(AbstractFloat), T<:@compat(AbstractFloat)}
-    (expected::Array{R}, actual::Array{S}; ε::T = 1e-4, noisy::Bool = false)
+function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{R}, actual::Array{S}; ε::T = 1e-4, noisy::Bool = false)
 
     n_entries = length(expected)
     same_sign = map(checksigns, expected, actual)
@@ -53,8 +52,7 @@ end
 
 # Complex-valued input matrices
 
-function test_matrix_eq{R<:@compat(AbstractFloat), S<:@compat(AbstractFloat), T<:@compat(AbstractFloat)}
-    (expected::Array{Complex{R}}, actual::Array{Complex{S}}; ε::T = 1e-4, noisy::Bool = false)
+function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{Complex{R}}, actual::Array{Complex{S}}; ε::T = 1e-4, noisy::Bool = false)
 
     # Matrices of different sizes return false
     if size(expected) != size(actual)
@@ -102,7 +100,7 @@ function test_matrix_eq{R<:@compat(AbstractFloat), S<:@compat(AbstractFloat), T<
     return n_not_approx_eq == 0
 end
 
-function test_matrix_abs_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::
+function test_matrix_abs_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::
              Array{R}, actual::Array{S}; ε::T = 1e-4, noisy::Bool = false)
     # Matrices of different sizes return false
     if size(expected) != size(actual)
@@ -140,7 +138,7 @@ function test_matrix_abs_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint
     return n_not_approx_eq == 0
 end
 
-#function test_eigs_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint, U<:FloatingPoint, V<:FloatingPoint}(eigvals_expected::Array{R}, eigvals_actual::Array{S}, eigvecs_expected::Array{U},  eigvecs_actual::Array{V}; ε::T = 1e-12, noisy::Bool = true)
+#function test_eigs_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat, U<:AbstractFloat, V<:AbstractFloat}(eigvals_expected::Array{R}, eigvals_actual::Array{S}, eigvecs_expected::Array{U},  eigvecs_actual::Array{V}; ε::T = 1e-12, noisy::Bool = true)
 
 function test_eigs_eq(eigvals_expected::Array, eigvals_actual::Array, eigvecs_expected::Array,  eigvecs_actual::Array; ε = 1e-12, noisy::Bool = true)
    
@@ -454,7 +452,7 @@ function compare_matvar_hdf5var(matfile, mname, h5file, h5name; ε=1e-4, noisy=t
     
 end
 
-function get_diff_symbols{S<:FloatingPoint, T<:AbstractDSGEModel}(m::T, expected::Matrix{S}, actual::Matrix{S}; ε=1e-4, noisy=true)
+function get_diff_symbols{S<:AbstractFloat, T<:AbstractDSGEModel}(m::T, expected::Matrix{S}, actual::Matrix{S}; ε=1e-4, noisy=true)
 
     diff_entries, opp_sign_entries = find_matrix_diffs(expected, actual; ε=ε)
 
