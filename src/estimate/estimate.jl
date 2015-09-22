@@ -4,6 +4,31 @@
 using HDF5
 using Debug
 
+
+
+#=
+@doc* md"""
+This routine implements the full estimation stage of the FRBNY DSGE model.
+
+### Parameters
+
+* `m<:AbstractDSGEModel`: An instance of a specific model type, e.g. Model990
+
+#### Optional Arguments
+
+* `verbose::Bool`: If verbose is true, the routine will print updates to standard out TODO: how often?
+* `testing::Bool`: If testing is true, the routine reads in a predetermined sequence of
+ random vectors and values rather than computing its own.
+
+#### Example
+
+```julia
+m = Model990()
+estimate(m, verbose=true)
+```
+"""->
+=#
+
 @debug function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false)
 
     ###################################################################################################
@@ -149,7 +174,19 @@ using Debug
     close(sim_h5)
 end
 
-# Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
+#=
+@doc* md"""
+
+Returns a degenerate multivariate normal distribution
+with mean μ and covariance hessian^(-1). Computes the inverse of the
+hessian via eigenvalue decomposition.
+
+### Parameters
+
+* `μ::Vector{T<:FloatingPoint}`: the desired mean of the distribution
+* `hessian::Matrix{T<:FloatingPoint}`: the hessian matrix
+"""->
+=#
 function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{T})
     n = length(μ)
     @assert (n, n) == size(hessian)
@@ -167,6 +204,8 @@ function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{
 
     return DegenerateMvNormal(μ, σ, rank)
 end
+
+
 
 @debug function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::AbstractDSGEModel,
     YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = false)
