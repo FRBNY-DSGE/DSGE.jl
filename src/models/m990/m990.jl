@@ -1,3 +1,7 @@
+# Defines the model structure for Model990
+
+typealias AbstractString String
+
 # The given fields define the entire model structure.
 # We can then concisely pass around a Model object to the remaining steps of the model
 #   (solve, estimate, and forecast).
