@@ -1,12 +1,9 @@
-using Base.Test
-using MATLAB
-using HDF5
-
+using Base.Test, Compat, MATLAB, HDF5
 
 # minusnan(x, y) evaluates x-y in a way that treats NaN like Inf and sets Inf - Inf = 0
-minusnan{S<:FloatingPoint, T<:FloatingPoint}(x::S, y::T) =  minusnan(complex(x), complex(y))
+minusnan{S<:@compat(AbstractFloat), T<:@compat(AbstractFloat)}(x::S, y::T) =  minusnan(complex(x), complex(y))
 
-function minusnan{S<:FloatingPoint, T<:FloatingPoint}(x::Complex{S}, y::Complex{T})
+function minusnan{S<:@compat(AbstractFloat), T<:@compat(AbstractFloat)}(x::Complex{S}, y::Complex{T})
     x = isnan(x) || isinf(x) ? Inf : x
     y = isnan(y) || isinf(y) ? Inf : y
     return isinf(x) && isinf(y) ? 0 : x - y
@@ -16,14 +13,15 @@ end
 
 # TODO: decide what a sensible default ε value is for our situation
 # Compares matrices, reports absolute differences, returns true if all entries close enough
-function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::Array{R},
-             actual::Array{S}; ε::T = 1e-4, noisy::Bool = false)
+function test_matrix_eq{R<:@compat(AbstractFloat), S<:@compat(AbstractFloat), T<:@compat(AbstractFloat)}
+    (expected::Array{R}, actual::Array{S}; ε::T = 1e-4, noisy::Bool = false)
     return test_matrix_eq(complex(expected), complex(actual); ε=ε, noisy=noisy)
 end
 
 # Complex-valued input matrices
-function test_matrix_eq{R<:FloatingPoint, S<:FloatingPoint, T<:FloatingPoint}(expected::
-             Array{Complex{R}}, actual::Array{Complex{S}}; ε::T = 1e-4, noisy::Bool = false)
+function test_matrix_eq{R<:@compat(AbstractFloat), S<:@compat(AbstractFloat), T<:@compat(AbstractFloat)}
+    (expected::Array{Complex{R}}, actual::Array{Complex{S}}; ε::T = 1e-4, noisy::Bool = false)
+
     # Matrices of different sizes return false
     if size(expected) != size(actual)
         if noisy
@@ -60,7 +58,7 @@ end
 
 
 # Complex numbers are parsed weirdly from readcsv, so we build a complex array using regex
-function readcsv_complex{T<:AbstractString}(file::T)
+function readcsv_complex{T<:@compat(AbstractString)}(file::T)
     matrix_str = readcsv(file)
     rows, cols = size(matrix_str)
     matrix = complex(zeros(size(matrix_str)))

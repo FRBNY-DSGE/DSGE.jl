@@ -10,6 +10,7 @@ import Base: convert, promote_rule, +, -, *, /, ^, log, exp
 # estimation.
 
 typealias Interval{T} @compat Tuple{T, T}
+typealias AbstractString String
 
 type Param <: Number
     value::Float64
