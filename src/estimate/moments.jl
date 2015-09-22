@@ -1,46 +1,7 @@
-##                           OVERVIEW
-## moments.jl: Computes moments, tabulates parameter moments, and plots parameter
-## draws from the prior and posterior distribution.
-
-## IMPORTANT VARIABLES
-## PLOTDRAWS: Specify whether or not you want to plot the parameter draws
-## (runs momPlot.m)
-## percent: In the output laTex table, we report <percent> bands for
-##     parameter draws from the posterior
-
-##     INPUTS
-##     infile1: This refers to a an output file (mhparam*) from gibb.m,
-##     which holds draws from the posterior.
-##
-##     infile4: This refers to a an output file (post*) from gibb.m, which
-##     holds the value of the posterior, for each posterior draw.
-##
-##     theta: (ndraws x npara) matrix holding the posterior draws
-##	   (stored in mhpara*, output from gibb.m)
-##
-##     post: (ndraws x 1) matrix holding the posterior value
-##	   (stored in post*, output from gibb.m)
-##     OUTPUTS
-##     From makeMomentsTables():
-##
-##     1: (mhpara*Mean): holds the mean parameter across
-##     draws from the posterior.
-##
-##     2: (*Mom_MainParams*): laTex table that lists the
-##	   moments for important parameters.
-##
-##     3: (*Mom_PeriphParams*): laTex table that lists the
-##	       moments for less important parameters.
-##		   4: (*PrioPostMean*) that lists the prior and
-##		   posterior means
-
-##		  
-
-
+## moments.jl: Computes and tabulates moments of parameter draws from Metropolis-Hastings
 
 using HDF5
 using Debug
-
 
 @debug function computeMoments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
     
@@ -64,7 +25,7 @@ using Debug
     try
         fid = h5open(infile,"r") do fid
             Θ = read(fid,"parasim")
-            post = read(fid,"postsim")
+            #post = read(fid,"postsim")
         end
     catch
         @printf(1,"Could not open file %s", infile)
@@ -79,8 +40,6 @@ using Debug
     makeMomentTables(m,Θ,percent)
 
 end
-
-
 
 
 @debug function makeMomentTables{T<:FloatingPoint}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
@@ -122,14 +81,16 @@ end
             prior_stddev[i] = param.priordist.σ
             
         elseif isa(param.priordist, Distributions.Beta)
-
-            prior_means[i] = param.priordist.α
-            prior_stddev[i] = param.priordist.β
+            μ,σ = betaMoments(param.priordist)
+            
+            prior_means[i] = μ
+            prior_stddev[i] = σ
 
         elseif isa(param.priordist, Distributions.Gamma)
-
-            prior_means[i] = param.priordist.α
-            prior_stddev[i] = param.priordist.θ  # small \theta
+            μ,σ = gammaMoments(param.priordist)
+            
+            prior_means[i] = μ
+            prior_stddev[i] = σ  # small \theta
             
         end
     end
@@ -201,15 +162,17 @@ end
         
         if (!ismatch(r"rho_", param.texLabel) &&
             !ismatch(r"zeta_", param.texLabel) &&
-            !ismatch(r"psi", param.texLabel) &&
+            !ismatch(r"psi_", param.texLabel) &&
             !ismatch(r"nu_l", param.texLabel) &&
-            !ismatch(r"pistar", param.texLabel) &&
-            (!ismatch(r"ups", param.texLabel)))  ##Is this correct? mspec == 16 or u_^*
+            !ismatch(r"pi\^\*", param.texLabel) &&
+            !ismatch(r"sigma_{pi}\^\*",param.texLabel) &&
+            (!ismatch(r"pistar", param.texLabel)))
+            # (!ismatch(r"ups", param.texLabel)))  ##Is this correct? mspec == 16 or u_^*
             continue
         end
             
         # TODO: Decide whether subspec should be a field in the model
-        if(ismatch(r"\\rho_chi",param.texLabel)) # ??? || (isequal(subspec,7) && texLabel == ":ρ_b"))
+        if(ismatch(r"rho_chi",param.texLabel)) # ??? || (isequal(subspec,7) && texLabel == ":ρ_b"))
             continue
         end
 
@@ -233,7 +196,7 @@ end
     
     periphParams_out = joinpath(tablepath(m), "moments_periphParams_0.tex")
     periphParams_fid = open(periphParams_out,"w")
-    
+
     beginTexTableDoc(periphParams_fid)
 
     @printf(periphParams_fid,"\\caption{Parameter Estimates}\n")
@@ -345,6 +308,94 @@ end
     
     endTexTableDoc(prioPostMean_fid)
     println("Tables are in ",tablepath(m))
+
+end
+
+
+function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
+    ## Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]` is above
+    ## `bands[1,i]` and below `bands[2,i]`.
+    ## 
+    ## Inputs:
+    ## -draws: [num_draws x num_draw_dimensions] matrix
+    ## -percent: percent of data within bands (e.g. .9 to get 90% of mass within bands)
+    ## -minimize: if =1, choose shortest interval, otherwise just chop off lowest and highest (percent/2)
+    ##
+    ## Output:
+    ## -[2 x num_draw_dimensions] matrix 
+
+    if(percent < 0 || percent > 1)
+       throw(DomainError())
+    end
+    
+    num_draws, num_draw_dimensions = size(draws)
+    band  = zeros(2, num_draw_dimensions)
+    num_in_band  = round(percent * num_draws)
+    
+    for i in 1:num_draw_dimensions
+
+        # Sort response for parameter i such that 1st element is largest
+        draw_variable_i = draws[:,i]
+        sort!(draw_variable_i, rev=true)
+
+        # Search to find the interval containing the minimum # of observations
+        # comprising `percent` of the mass
+        if minimize
+
+            upper_index=1
+            minwidth = draw_variable_i[1] - draw_variable_i[num_in_band]
+            done = 0
+            j = 2
+            
+            while j <= (num_draws - num_in_band + 1)
+
+                newwidth = draw_variable_i[j] - draw_variable_i[j + num_in_band - 1]
+
+                if newwidth < minwidth
+                    upper_index = j
+                    minwidth = newwidth        
+                end
+
+                j = j+1
+            end
+            
+        else
+            upper_index = num_draws - nwidth - floor(.5*num_draws-num_in_band)
+        end
+
+        band[2,i] = draw_variable_i[upper_index]
+        band[1,i] = draw_variable_i[upper_index + num_in_band - 1]
+    end
+
+
+    return band
+end
+
+function beginTexTableDoc(fid::IOStream)
+
+    @printf(fid,"\\documentclass[12pt]{article}\n")
+    @printf(fid,"\\usepackage[dvips]{color}\n")
+    @printf(fid,"\\begin{document}\n")
+    @printf(fid,"\\pagestyle{empty}\n")
+    @printf(fid,"\\begin{table}[h] \\centering\n")
+    
+end
+
+# Prints the necessarily lines to end a table and close a document
+# to file descriptor fid and closes the file
+function endTexTableDoc(fid::IOStream;small::Bool=false)
+
+    @printf(fid, "\\\\ \\\hline\n")
+    
+    if small
+        @printf(fid,"\\end{tabular}}\n")
+    else
+        @printf(fid,"\\end{tabular}\n")
+    end
+    
+    @printf(fid,"\\end{table}\n")
+    @printf(fid,"\\end{document}")
+    close(fid)
 
 end
 

@@ -4,7 +4,9 @@
 using HDF5
 using Debug
 
-@debug function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false)
+include("../../test/util.jl")
+
+@debug function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false, using_matlab_sigscale=false)
 
     ###################################################################################################
     ### Step 1: Initialize
@@ -13,12 +15,13 @@ using Debug
     # Load data
     in_path = inpath(m)
     out_path = outpath(m)
-    
+
     h5 = h5open(joinpath(in_path,"YY.h5"), "r") 
     YY = read(h5["YY"])
     close(h5)
-    
+
     post = posterior(m, YY)
+
 
     ###################################################################################################
     ### Step 2: Find posterior mode (if reoptimizing, run csminwel)
@@ -26,21 +29,32 @@ using Debug
     
     # Specify starting mode
 
-    println("Reading in previous mode")
+    if verbose
+        println("Reading in previous mode")
+    end
     
-    h5 = h5open("$in_path/mode_in.h5","r") 
-    mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
-    close(h5)
-    
+    mode = []
+
+    if m.reoptimize
+        h5 = h5open("$in_path/mode_in.h5","r") 
+        mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
+        close(h5)
+    else
+        h5 = h5open("$in_path/mode_in_optimized.h5","r") 
+        mode = read(h5["mode"])
+        close(h5)
+    end
+
+
     update!(m, mode)
 
     if m.reoptimize
         println("Reoptimizing...")
-
+        
         # Inputs to minimization algorithm
         function posterior_min!{T<:FloatingPoint}(x::Vector{T})
             tomodel!(m,x)
-            return -posterior(m, YY)
+            return -posterior(m, YY, catchGensysErrors=true)
         end
 
         xh = toreal(m.parameters)
@@ -68,6 +82,7 @@ using Debug
         end
         
     end
+
     
     ###################################################################################################
     ### Step 3: Compute proposal distribution
@@ -77,35 +92,39 @@ using Debug
     
     # Calculate the Hessian at the posterior mode
     if m.recalculate_hessian
-        println("Recalculating Hessian...")
+        if verbose
+            println("Recalculating Hessian...")
+        end
+        
         hessian, _ = hessizero!(m, mode, YY; verbose=true)
 
         h5open("$out_path/hessian.h5","w") do h5
             h5["hessian"] = hessian
         end
-        
+
     else
-        println("Using pre-calculated Hessian")
- 
+        if verbose
+            println("Using pre-calculated Hessian")
+        end
+
         h5 = h5open("$in_path/hessian_optimized.h5","r") 
         hessian = read(h5["hessian"])
         close(h5)
-
-        #retrieve-mat
-        ## println("Using pre-calculated Hessian")
-        ## mf = MatFile("$inpath/hessian_optimized.mat")
-        ## hessian = get_variable(mf, "hessian")
-        ## close(mf)
 
     end
 
     # The hessian is used to calculate the variance of the proposal
     # distribution, which is used to draw a new parameter in each iteration of
     # the algorithm.
-    propdist = proposal_distribution(mode, hessian)
+
+    propdist = proposal_distribution(mode, hessian,
+                                     use_matlab_sigscale=using_matlab_sigscale,
+                                     sigscalepath=inpath(m), verbose=verbose)
+
     if propdist.rank != num_parameters_free(m)
-        println("problem – shutting down dimensions")
+        println("problem –    shutting down dimensions")
     end
+
 
     ###################################################################################################
     ### Step 4: Sample from posterior using Metropolis-Hastings algorithm
@@ -129,6 +148,24 @@ using Debug
         metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose, randvecs=randvecs, randvals=randvals)
     end
 
+
+    if !testing
+        metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose)
+    else
+        randvecs = []
+        randvals = []
+        
+        h5= h5open("/data/dsge_data_dir/dsgejl/estimate/save/input_data/rand_save_big.h5","r")
+        randvecs = read(h5["randvecs"])
+        randvals = read(h5["randvals"])
+        close(h5)
+
+        metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose, randvecs=randvecs, randvals=randvals,
+                            use_matlab_sigscale=using_matlab_sigscale)
+        
+    end
+
+    
     ###################################################################################################
     ### Step 5: Calculate and save parameter covariance matrix
     ###################################################################################################
@@ -150,14 +187,15 @@ using Debug
 end
 
 # Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
-function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{T})
+@debug function proposal_distribution{T<:FloatingPoint, V<:String}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=false)
+
     n = length(μ)
     @assert (n, n) == size(hessian)
 
     S_diag, U = eig(hessian)
     big_evals = find(x -> x > 1e-6, S_diag)
     rank = length(big_evals)
-
+    
     S_inv = zeros(n, n)
     for i = (n-rank+1):n
         S_inv[i, i] = 1/S_diag[i]
@@ -165,16 +203,31 @@ function proposal_distribution{T<:FloatingPoint}(μ::Vector{T}, hessian::Matrix{
 
     σ = U*sqrt(S_inv)
 
+    # Use predefined reference sigscale if indicated
+    if use_matlab_sigscale
+
+        if verbose
+            println("Using sigscale from Matlab")
+        end
+
+        h5 = h5open(joinpath(sigscalepath,"sigscale.h5"), "r")
+        σ = read(h5, "sigscale")
+        close(h5)
+
+    end
+
     return DegenerateMvNormal(μ, σ, rank)
 end
 
 @debug function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::AbstractDSGEModel,
-    YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = false)
+    YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = false, use_matlab_sigscale=false)
 
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
 
-    println("Testing = $testing")
+    if verbose
+        println("Testing = $testing")
+    end
     
     # Set number of draws, how many we will save, and how many we will burn
     # (initialized here for scoping; will re-initialize in the while loop)
@@ -205,7 +258,6 @@ end
     while !initialized
         if testing
             para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
-
             n_blocks = m.num_mh_blocks_test
             n_sim = m.num_mh_simulations_test
             n_burn = m.num_mh_burn_test
@@ -219,7 +271,7 @@ end
         end
 
         post_old, like_old, out = posterior!(m, para_old, YY; mh=true)
-
+        
         if post_old > -Inf
             propdist.μ = para_old
 
@@ -248,17 +300,9 @@ end
     z_sim    = zeros(n_sim, num_states_augmented(m))
 
     # # Open HDF5 file for saving output
-    # if testing
-    #     savepath  = joinpath(pwd(),"save")
-    #     inpath    = savepath;
-    #     outpath   = savepath;
-    #     tablepath = savepath;
-    #     plotpath  = savepath;
-    #     logpath   = savepath;
-    # end
-
     
     h5path = joinpath(outpath(m),"sim_save.h5")
+
     simfile = h5open(h5path,"w")
 
     n_saved_obs = n_sim * (n_blocks - n_burn)
@@ -298,15 +342,16 @@ end
             # Draw para_new from the proposal distribution
 
             if testing
-                para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(j,cols)]
+                para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(j,cols)+1]
             else
                 para_new = rand(propdist; cc=cc)
             end
 
             # Solve the model, check that parameters are within bounds, gensys returns a
             # meaningful system, and evaluate the posterior.
-            post_new, like_new, out = posterior!(m, para_new, YY; mh=true)
 
+            post_new, like_new, out = posterior!(m, para_new, YY; mh=true)
+            
             if verbose 
                 println("Iteration $j: posterior = $post_new")
             end
@@ -321,10 +366,10 @@ end
             r = exp(post_new - post_old)
 
             if testing
-                k = (i-1)*(n_sim*n_times) + j
-                x = randvals[mod(j,numvals)]
+                k = (i-1)*(n_sim*n_times) + mod(j,numvals)+1
+                x = randvals[mod(j,numvals)+1]
             else
-                x = rand()
+                x = rand(m.rng)
             end
 
             if x < min(1.0, r)
@@ -354,9 +399,8 @@ end
                 if verbose 
                     println("Iteration $j: reject proposed jump")
                 end
-
+                
             end
-
 
             # Save every (n_times)th draw
 
@@ -373,8 +417,10 @@ end
 
         all_rejections += block_rejections
         block_rejection_rate = block_rejections/(n_sim*n_times)
-        println("Block $i rejection rate: $block_rejection_rate")
 
+        if verbose
+            println("Block $i rejection rate: $block_rejection_rate")
+        end
 
         ## Once every iblock times, write parameters to a file
 
@@ -397,5 +443,7 @@ end
     close(simfile)
 
     rejection_rate = all_rejections/(n_blocks*n_sim*n_times)
-    println("Overall rejection rate: $rejection_rate")
+    if verbose
+        println("Overall rejection rate: $rejection_rate")
+    end
 end # of loop over blocks

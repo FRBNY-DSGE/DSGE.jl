@@ -1,5 +1,7 @@
-using Distributions, MATLAB
+using HDF5 
+import Distributions
 import DSGE: RootInverseGamma
+include("../../util.jl")
 
 path = dirname(@__FILE__)
 
@@ -29,7 +31,7 @@ for θ in model.parameters
 
     if isa(θ.priordist, RootInverseGamma)
         pshape[i] = 4
-        (ν, τ) = params(θ.priordist)
+        (ν, τ) = Distributions.params(θ.priordist)
         pmean[i] = τ
         pstdd[i] = ν
     else
@@ -40,8 +42,8 @@ for θ in model.parameters
         elseif isa(θ.priordist, Distributions.Normal)
             pshape[i] = 3
         end
-        pmean[i] = mean(θ.priordist)
-        pstdd[i] = std(θ.priordist)
+        pmean[i] = Distributions.mean(θ.priordist)
+        pstdd[i] = Distributions.std(θ.priordist)
     end
 
     trspec[i, 1] = θ.transformtype
@@ -57,21 +59,21 @@ for θ in model.parameters
     i += 1
 end
 
-mf = MatFile("$path/parameters.mat")
-para_matlab   = get_variable(mf, "para")
-bounds_matlab = get_variable(mf, "bounds")
-pshape_matlab = get_variable(mf, "pshape")
-pmean_matlab  = get_variable(mf, "pmean")
-pstdd_matlab  = get_variable(mf, "pstdd")
-trspec_matlab = get_variable(mf, "trspec")
-close(mf)
+## h5 = h5open("$path/parameters.h5")
+## para_ref   = read(h5, "para")
+## bounds_ref = read(h5, "bounds")
+## pshape_ref = read(h5, "pshape")
+## pmean_ref  = read(h5, "pmean")
+## pstdd_ref  = read(h5, "pstdd")
+## trspec_ref = read(h5, "trspec")
+## close(h5)
 
-# @test test_matrix_eq(para_matlab, para)
-# @test test_matrix_eq(bounds_matlab, bounds)
-# @test test_matrix_eq(pshape_matlab, pshape)
-# @test test_matrix_eq(pmean_matlab, pmean)
-# @test test_matrix_eq(pstdd_matlab, pstdd)
-# @test test_matrix_eq(trspec_matlab, trspec)
+# @test test_matrix_eq(para_ref, para)
+# @test test_matrix_eq(bounds_ref, bounds)
+# @test test_matrix_eq(pshape_ref, pshape)
+# @test test_matrix_eq(pmean_ref, pmean)
+# @test test_matrix_eq(pstdd_ref, pstdd)
+# @test test_matrix_eq(trspec_ref, trspec)
 
 ### Model indices
 
@@ -116,31 +118,30 @@ obs = model.observables
 @test size(Π) == (66, 13)
 
 # # Check output matrices against Matlab output (ε = 1e-4)
-mf = MatFile("$path/eqcond.mat")
-Γ0_matlab = get_variable(mf, "G0")
-Γ1_matlab = get_variable(mf, "G1")
-C_matlab  = reshape(get_variable(mf, "C"), 66, 1)
-Ψ_matlab  = get_variable(mf, "PSI")
-Π_matlab  = get_variable(mf, "PIE")
-close(mf)
+h5 = h5open("$path/eqcond.h5")
+Γ0_ref = read(h5, "G0")
+Γ1_ref = read(h5, "G1")
+C_ref  = reshape(read(h5, "C"), 66, 1)
+Ψ_ref  = read(h5, "PSI")
+Π_ref  = read(h5, "PIE")
+close(h5)
 
-@test test_matrix_eq(Γ0_matlab, Γ0)
-@test test_matrix_eq(Γ1_matlab, Γ1)
-@test test_matrix_eq(C_matlab, C)
-@test test_matrix_eq(Ψ_matlab, Ψ)
-@test test_matrix_eq(Π_matlab, Π)
+@test test_matrix_eq(Γ0_ref, Γ0)
+@test test_matrix_eq(Γ1_ref, Γ1)
+@test test_matrix_eq(C_ref, C)
+@test test_matrix_eq(Ψ_ref, Ψ)
+@test test_matrix_eq(Π_ref, Π)
 
 
 
 # ### Measurement equation
-
-mf = MatFile("$path/measurement.mat")
-ZZ_expected = get_variable(mf, "ZZ")
-DD_expected = reshape(get_variable(mf, "DD"), 18, 1)
-QQ_expected = get_variable(mf, "QQ")
-EE_expected = get_variable(mf, "EE")
-MM_expected = get_variable(mf, "MM")
-close(mf)
+h5 = h5open("$path/measurement.h5")
+ZZ_expected = read(h5, "ZZ")
+DD_expected = reshape(read(h5, "DD"), 18, 1)
+QQ_expected = read(h5, "QQ")
+EE_expected = read(h5, "EE")
+MM_expected = read(h5, "MM")
+close(h5)
 
 model = Model990()
 TTT, RRR, CCC = solve(model)
