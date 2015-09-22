@@ -60,7 +60,7 @@ end
 
 
 # Complex numbers are parsed weirdly from readcsv, so we build a complex array using regex
-function readcsv_complex(file::String)
+function readcsv_complex{T<:AbstractString}(file::T)
     matrix_str = readcsv(file)
     rows, cols = size(matrix_str)
     matrix = complex(zeros(size(matrix_str)))
@@ -68,7 +68,7 @@ function readcsv_complex(file::String)
     for j = 1:cols
         for i = 1:rows
             value = matrix_str[i, j]
-            if isa(value, String)
+            if isa(value, AbstractString)
                 m = match(r"(\d+\.?\d*e?-?\d*) ?([+-]) ?(\d+\.?\d*+e?-?\d*)im?", value)
                 if m == nothing
                     error("Regex didn't match anything at ($i, $j) entry")

@@ -16,7 +16,7 @@ type Model990 <: AbstractDSGEModel
     observables::Dict{Symbol,Int}                   #
 
     spec                                            # The model specification number
-    savepath::String                                # The absolute path to the top-level save directory for this
+    savepath::AbstractString                        # The absolute path to the top-level save directory for this
                                                     # model specification
     
     num_anticipated_shocks::Int                     # Number of anticipated policy shocks
@@ -424,7 +424,7 @@ function steadystate!(m::Model990)
 end
 
 # Creates the proper directory structure for input and output files
-function createSaveDirectories(savepath::String)
+function createSaveDirectories{T<:AbstractString}(savepath::T)
 
     paths = [savepath,
              joinpath(savepath, "input_data"),

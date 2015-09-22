@@ -20,13 +20,13 @@ type Param <: Number
     priordist::Distribution
     transformtype::Int64
     transformbounds::Interval{Float64}
-    description::String
-    texLabel::String
+    description::AbstractString
+    texLabel::AbstractString
     
-    function Param(value::Float64, fixed::Bool, bounds::Interval{Float64},
+    function Param{T<:AbstractString}(value::Float64, fixed::Bool, bounds::Interval{Float64},
                    priordist::Distribution, transformtype::Int64,
                    transformbounds::Interval{Float64}; scalefunction::Function = identity,
-                   description::String = "",texLabel::String="")
+                   description::T = "",texLabel::T="")
         if fixed
             priordist = PointMass(value)
             transformtype = 0
