@@ -1,4 +1,5 @@
 import Base: convert, promote_rule, +, -, *, /, ^, log, exp
+using Compat
 
 """
 ## Params
@@ -16,9 +17,10 @@ estimation.
 
 typealias Interval{T} @compat Tuple{T, T}
 
-if VERSION < v"0.4.0-rc+10"
-    typealias AbstractString String
-end
+# Compat should take care of this
+## if VERSION < v"0.4.0-rc+10"
+##     typealias AbstractString String
+## end
 
 type Param <: Number
     value::Float64

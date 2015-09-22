@@ -1,6 +1,6 @@
-# Defines the model structure for Model990
+#Defines the model structure for Model990
 
-typealias AbstractString String
+#typealias AbstractString String
 
 # The given fields define the entire model structure.
 # We can then concisely pass around a Model object to the remaining steps of the model
@@ -235,12 +235,12 @@ function Model990()
     # Model-specific specifications
     spec        = split(basename(@__FILE__),'.')[1]
     savepath    = normpath(joinpath(dirname(@__FILE__), *("../../../save/",spec)))
-    savepaths   = Dict{Symbol,String}([(:savepath,  savepath),
-                                       (:inpath,    normpath(joinpath(savepath, "input_data/"))),
-                                       (:outpath,   normpath(joinpath(savepath, "output_data/"))),      
-                                       (:tablepath, normpath(joinpath(savepath, "results/tables/"))),   
-                                       (:plotpath,  normpath(joinpath(savepath, "results/plots/"))),  
-                                       (:logpath,   normpath(joinpath(savepath, "logs/")))]) 
+    savepaths   = Dict{Symbol,AbstractString}([(:savepath,  savepath),
+                                               (:inpath,    normpath(joinpath(savepath, "input_data/"))),
+                                               (:outpath,   normpath(joinpath(savepath, "output_data/"))),      
+                                               (:tablepath, normpath(joinpath(savepath, "results/tables/"))),   
+                                               (:plotpath,  normpath(joinpath(savepath, "results/plots/"))),  
+                                               (:logpath,   normpath(joinpath(savepath, "logs/")))]) 
 
 
     # Create the save directories if they don't already exist

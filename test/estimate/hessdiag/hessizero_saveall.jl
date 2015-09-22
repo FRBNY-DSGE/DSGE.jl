@@ -1,7 +1,9 @@
+using Compat
+
 # Compute Hessian of posterior function evaluated at x (vector)
 # if verbose, display error messages, results, etc.
 # 11/12/01 translated by Marco DelNegro in matlab from Frank Schorfheide's program in gauss
-function hessizero_saveall!{T<:FloatingPoint}(model::AbstractModel, x::Vector{T}, YY::Matrix{T}; verbose::Bool = false)
+function hessizero_saveall!{T<:AbstractFloat}(model::AbstractModel, x::Vector{T}, YY::Matrix{T}; verbose::Bool = false)
 
     update!(model, x)
     
