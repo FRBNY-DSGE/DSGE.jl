@@ -2,7 +2,7 @@
 # To use, run julia mat_to_hdf5.jl matFile1 matFile2 ...
 
 using HDF5
-using MATLAB
+#using MATLAB #uncomment to actually use this script; comment out to suppress warnings when not using
 
 for matfile in ARGS
     
