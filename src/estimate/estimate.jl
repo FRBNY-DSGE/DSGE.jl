@@ -327,7 +327,13 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
         numvals = size(randvals)[1]
     end
 
+    # keep track of how long metropolis_hastings has been sampling
+    total_sampling_time = 0
+    
     for i = 1:n_blocks
+
+        tic()
+        
         block_rejections = 0
 
         for j = 1:(n_sim*n_times)
@@ -346,7 +352,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
             post_new, like_new, out = posterior!(m, para_new, YY; mh=true)
             
             if verboseness[verbose] >= verboseness[:high] 
-                println("Iteration $j: posterior = $post_new")
+                println("Block $i, Iteration $j: posterior = $post_new")
             end
 
             # Choose to accept or reject the new parameter by calculating the
@@ -382,7 +388,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
                 QQ_old = out[:QQ]
 
                 if verboseness[verbose] >= verboseness[:high] 
-                    println("Iteration $j: accept proposed jump")
+                    println("Block $i, Iteration $j: accept proposed jump")
                 end
 
             else
@@ -390,7 +396,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
                 block_rejections += 1
                 
                 if verboseness[verbose] >= verboseness[:high] 
-                    println("Iteration $j: reject proposed jump")
+                    println("Block $i, Iteration $j: reject proposed jump")
                 end
                 
             end
@@ -413,9 +419,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
         all_rejections += block_rejections
         block_rejection_rate = block_rejections/(n_sim*n_times)
 
-        if verboseness[verbose] > verboseness[:low]
-            println("Block $i rejection rate: $block_rejection_rate")
-        end
+        
 
         ## Once every iblock times, write parameters to a file
 
@@ -433,6 +437,26 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
             RRRsim[block_start:block_end,:]  = map(Float32, RRR_sim)
             zsim[block_start:block_end,:]  = map(Float32, z_sim)
         end
+
+
+        block_time = toq()
+
+        # Print status
+        if verboseness[verbose] > verboseness[:none]
+
+            # Calculate time to complete this block, average block
+            # time, and expected time to completion
+
+            total_sampling_time += block_time
+            expected_time_remaining_sec = (total_sampling_time/i)*(n_blocks - i)
+            expected_time_remaining_hrs = expected_time_remaining_sec/3600
+
+            println("Completed $i of $n_blocks blocks.")
+            println("Total time to compute $i blocks: $total_sampling_time")
+            println("Expected time remaining for Metropolis-Hastings: $expected_time_remaining_hrs hours")
+            println("Block $i rejection rate: $block_rejection_rate \n")
+        end
+        
     end # of block
 
     close(simfile)
