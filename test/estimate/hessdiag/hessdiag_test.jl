@@ -1,4 +1,4 @@
-using DSGE, MATLAB
+using DSGE, HDF5 #, MATLAB
 
 ndx = 6
 dx = exp(-(6:2:(6+(ndx-1)*2))')
@@ -8,10 +8,16 @@ dx = exp(-(6:2:(6+(ndx-1)*2))')
 #     hessian[i, j] = -(hessdiag[3] + hessdiag[4])/2
 # hessdiag_mat[i, j, k] and hessdiag_jl[i, j, k] correspond to hessdiag[k] for entry (i, j)
 
-mf = MatFile("hessdiag.mat")
-hessdiag_mat = get_variable(mf, "hessdiag_mat")
-hessdiag_jl = get_variable(mf, "hessdiag_jl")
-close(mf)
+## mf = MatFile("hessdiag.mat")
+## hessdiag_mat = get_variable(mf, "hessdiag_mat")
+## hessdiag_jl = get_variable(mf, "hessdiag_jl")
+## close(mf)
+
+h5 = h5open("hessdiag.h5")
+hessdiag_mat = read(h5, "hessdiag_mat")
+hessdiag_jl = read(h5, "hessdiag_jl")
+close(h5)
+
 
 # Hypothesis: As dx[k] gets bigger, hessdiag_mat[i, j, k] and hessdiag_jl[i, j, k] get closer
 # Hence hessian_12_mat and hessian_12_jl should be closer to each other than hessian_56_mat and
