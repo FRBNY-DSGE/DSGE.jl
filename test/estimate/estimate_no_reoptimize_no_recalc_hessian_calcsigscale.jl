@@ -16,7 +16,7 @@ new_savepath = "/data/dsge_data_dir/dsgejl/estimate/save_noreop_norecalc_calcsig
 # Create directories
 create_save_directories(m, new_savepath, reset_inpath=false) 
 
-estimate(m,verbose=true,testing=false,using_matlab_sigscale=false)
+estimate(m,verbose=:low,testing=false,using_matlab_sigscale=false)
 time_elapsed = toq()
 
 tic()

@@ -12,7 +12,7 @@ m.num_mh_simulations_test = 100
 m.num_mh_burn_test = 0
 m.mh_thinning_step = 1
 
-estimate(m, verbose=false, testing=true, using_matlab_sigscale=true)
+estimate(m, verbose=:none, testing=true, using_matlab_sigscale=true)
 
 # Read in the parameter draws from estimate()
 h5_fn = joinpath(outpath(m), "sim_save.h5")

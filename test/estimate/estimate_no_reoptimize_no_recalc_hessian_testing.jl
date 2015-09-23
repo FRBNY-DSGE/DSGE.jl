@@ -21,7 +21,7 @@ m.num_mh_blocks_test = m.num_mh_blocks
 m.num_mh_burn_test=m.num_mh_burn
 
 tic()
-estimate(m,verbose=true,testing=true,using_matlab_sigscale=true)
+estimate(m,verbose=:low,testing=true,using_matlab_sigscale=true)
 time_elapsed = toq()
 
 tic()
