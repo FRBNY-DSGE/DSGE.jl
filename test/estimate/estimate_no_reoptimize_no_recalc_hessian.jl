@@ -13,13 +13,13 @@ m = Model990()
 new_savepath = "/data/dsge_data_dir/dsgejl/estimate/save_noreop_norecalc/"
 
 # Create directories
-createSaveDirectories(m, new_savepath, reset_inpath=false) 
+create_save_directories(m, new_savepath, reset_inpath=false) 
 
 estimate(m,verbose=true,testing=false,using_matlab_sigscale=true)
 time_elapsed = toq()
 
 tic()
-computeMoments(m)
+compute_moments(m)
 time_elapsed_tables = toq()
 
 println("Estimate, no reoptimize, no recalc Hessian, without using randvecs and randvals.")

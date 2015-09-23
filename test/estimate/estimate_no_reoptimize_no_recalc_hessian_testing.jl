@@ -12,7 +12,7 @@ m = Model990()
 new_savepath = "/data/dsge_data_dir/dsgejl/estimate/save_noreop_norecalc_testing/"
 
 # Create directories
-createSaveDirectories(m, new_savepath, reset_inpath=false) 
+create_save_directories(m, new_savepath, reset_inpath=false) 
 
 # Since we want to run estimate with precalculated random vectors,
 # reset the metropolis-hastings specifications for the whole simulation
@@ -25,7 +25,7 @@ estimate(m,verbose=true,testing=true,using_matlab_sigscale=true)
 time_elapsed = toq()
 
 tic()
-computeMoments(m)
+compute_moments(m)
 time_elapsed_tables = toq()
 
 println("No reoptimize, no recalc hessian, using precomputed random vectors and values.")
