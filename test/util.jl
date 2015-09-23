@@ -1,4 +1,5 @@
-using Base.Test, Compat, MATLAB, HDF5, DSGE
+using Base.Test, Compat, HDF5, DSGE
+#using MATLAB      #Comment out MATLAB to suppress warnings, still need package to convert files 
 
 # minusnan(x, y) evaluates x-y in a way that treats NaN like Inf and sets Inf - Inf = 0
 minusnan{S<:@compat(AbstractFloat), T<:@compat(AbstractFloat)}(x::S, y::T) =  minusnan(complex(x), complex(y))
