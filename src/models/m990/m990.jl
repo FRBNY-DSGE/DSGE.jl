@@ -242,7 +242,7 @@ function Model990()
 
 
     # Create the save directories if they don't already exist
-    createSaveDirectories(savepath)
+    create_save_directories(savepath)
     
     num_anticipated_shocks          = 6
     num_anticipated_shocks_padding  = 20
@@ -438,8 +438,8 @@ function steadystate!(m::Model990)
 end
 
 ## Creates the proper directory structure for input and output files. 
+function create_save_directories(savepath::String)
 
-function createSaveDirectories{T<:AbstractString}(savepath::T)
     savepath = abspath(normpath(savepath))
     
     paths = [savepath,

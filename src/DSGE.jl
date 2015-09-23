@@ -6,16 +6,16 @@ using Distributions, Roots.fzero, HDF5
 export
 
     # abstractdsgemodel.jl
-    AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict, num_states, num_shocks_exogenous, num_shocks_expectational, createSaveDirectories, savepath, inpath, outpath, tablepath, plotpath, logpath,
+    AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict, num_states, num_shocks_exogenous, num_shocks_expectational, create_save_directories, savepath, inpath, outpath, tablepath, plotpath, logpath, 
 
     # solve/
     ordschur, gensys, solve,
 
     # estimate/
-    dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel, hessizero!, estimate, proposal_distribution, metropolis_hastings, computeMoments, makeMomentTables, find_density_bands,
+    dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel, hessizero!, estimate, proposal_distribution, metropolis_hastings, compute_moments, makeMomentTables, find_density_bands,
 
     # models/
-    steadystate!, Model990, model_specifications, eqcond, measurement, createSaveDirectories
+    steadystate!, Model990, model_specifications, eqcond, measurement, create_save_directories
 
 
 

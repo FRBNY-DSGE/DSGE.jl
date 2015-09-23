@@ -2,7 +2,8 @@
 
 using HDF5, Compat
 
-function computeMoments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
+
+@debug function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
     
     ## Computes prior and posterior parameter moments, tabulates them in various TeX tables,
     ## and plots parameter draws from the prior and posterior distribution
@@ -36,12 +37,11 @@ function computeMoments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
     num_draws = size(Θ,1)
 
     # Produce TeX table of moments
-    makeMomentTables(m,Θ,percent)
+    make_moment_tables(m,Θ,percent)
 
 end
 
-
-function makeMomentTables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
+@debug function make_moment_tables{T<:FloatingPoint}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
     
     ## Tabulates parameter moments in 3 LaTeX tables:
     ##
