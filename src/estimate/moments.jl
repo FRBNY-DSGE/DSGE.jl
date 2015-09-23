@@ -1,8 +1,8 @@
 ## moments.jl: Computes and tabulates moments of parameter draws from Metropolis-Hastings
 
-using HDF5, Compat, Debug
+using HDF5, Compat
 
-@debug function computeMoments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
+function computeMoments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
     
     ## Computes prior and posterior parameter moments, tabulates them in various TeX tables,
     ## and plots parameter draws from the prior and posterior distribution
@@ -41,7 +41,7 @@ using HDF5, Compat, Debug
 end
 
 
-@debug function makeMomentTables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
+function makeMomentTables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
     
     ## Tabulates parameter moments in 3 LaTeX tables:
     ##

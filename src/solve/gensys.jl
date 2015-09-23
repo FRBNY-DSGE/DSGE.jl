@@ -1,5 +1,3 @@
-using Debug
-
 #=
 
 @author : Spencer Lyon <spencer.lyon@nyu.edu>,

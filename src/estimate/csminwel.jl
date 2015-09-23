@@ -1,4 +1,3 @@
-using Debug
 using Compat
 
 #=
@@ -94,7 +93,7 @@ This is a port of the MATLAB version of that function.
 See the file `examples/csminwel.jl` for an example of usage
 """ ->
 =#
-@debug function csminwel(fcn::Function,
+function csminwel(fcn::Function,
                   grad::Function,
                   x0::Vector,
                   H0::Matrix=1e-5.*eye(length(x0)),
@@ -386,7 +385,7 @@ you cannot supply an analytical derivative, but it is not as robust as
 using the true derivative.
 """ ->
 =#
-@debug function csminwel(fcn::Function, x0::Vector,
+function csminwel(fcn::Function, x0::Vector,
                   H0::Matrix=0.5.*eye(length(x0)), args...;
                   xtol::Real=1e-32,  # default from Optim.jl
                   ftol::Float64=1e-14,  # Default from csminwel
@@ -406,7 +405,7 @@ using the true derivative.
 end
 
 
-@debug function csminwell_grad(fcn, x, args...; kwargs...)
+function csminwell_grad(fcn, x, args...; kwargs...)
     f(a) = fcn(a, args...; kwargs...)
     gr = Calculus.gradient(f, x)
     bad_grads = abs(gr) .>= 1e15
@@ -415,7 +414,7 @@ end
 end
 
 # SL: This function worked for rosen example (2014-09-23 09:08:52)
-@debug function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Bool=false, kwargs...)
+function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Bool=false, kwargs...)
     angle = .005
 
     #(0<THETA<.5) THETA near .5 makes long line searches, possibly fewer
@@ -595,7 +594,7 @@ end
 end
 
 
-@debug function bfgsi(H0, dg, dx)
+function bfgsi(H0, dg, dx)
     # H = bfgsi(H0,dg,dx)
     # dg is previous change in gradient; dx is previous change in x;
     # 6/8/93 version that updates inverse hessian instead of hessian
@@ -638,7 +637,7 @@ end
 end
 
 
-@debug function assess_convergence(x::Array,
+function assess_convergence(x::Array,
                             x_previous::Array,
                             f_x::Real,
                             f_x_previous::Real,
