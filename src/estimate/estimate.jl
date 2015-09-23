@@ -132,21 +132,6 @@ include("../../test/util.jl")
     # Set the jump size for sampling
     cc0 = 0.01
     cc = 0.09
-    
-    if !testing
-        metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose)
-    else
-        randvecs = []
-        randvals = []
-        
-        h5= h5open("$in_path/rand_save.h5","r") 
-        randvecs = read(h5["randvecs"])
-        randvals = read(h5["randvals"])
-        close(h5)
-
-        metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose, randvecs=randvecs, randvals=randvals)
-    end
-
 
     if !testing
         metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose)
@@ -179,7 +164,7 @@ include("../../test/util.jl")
 
     # Calculate covariance matrix
     cov_θ = cov(θ)
-    write(sim_h5, "cov_θ", float32(cov_θ))   #Save as single-precision float matrix
+    write(sim_h5, "cov_θ", map(Float32,cov_θ))   #Save as single-precision float matrix
 
     # Close the file
     close(sim_h5)
@@ -404,13 +389,15 @@ end
             # Save every (n_times)th draw
 
             if j % n_times == 0
-                like_sim[j/n_times] = like_old
-                post_sim[j/n_times] = post_old
-                para_sim[j/n_times, :] = para_old'
-                TTT_sim[j/n_times, :] = vec(TTT_old)'
-                RRR_sim[j/n_times, :] = vec(RRR_old)'
-                CCC_sim[j/n_times, :] = vec(CCC_old)'
-                z_sim[j/n_times, :] = vec(zend_old)'
+                draw_index = round(Int,j/n_times)
+                
+                like_sim[draw_index] = like_old
+                post_sim[draw_index] = post_old
+                para_sim[draw_index, :] = para_old'
+                TTT_sim[draw_index, :] = vec(TTT_old)'
+                RRR_sim[draw_index, :] = vec(RRR_old)'
+                CCC_sim[draw_index, :] = vec(CCC_old)'
+                z_sim[draw_index, :] = vec(zend_old)'
             end
         end
 
@@ -430,12 +417,12 @@ end
 
         # Write data to file if we're past n_burn blocks
         if i > n_burn
-            parasim[block_start:block_end, :] = float32(para_sim)
-            postsim[block_start:block_end, :] = float32(post_sim)
-            # likesim[block_start:block_end, :] = float32(like_sim)
-            TTTsim[block_start:block_end,:]  = float32(TTT_sim)
-            RRRsim[block_start:block_end,:]  = float32(RRR_sim)
-            zsim[block_start:block_end,:]  = float32(z_sim)
+            parasim[block_start:block_end, :] = map(Float32,para_sim)
+            postsim[block_start:block_end, :] = map(Float32, post_sim)
+            # likesim[block_start:block_end, :] = map(Float32, like_sim)
+            TTTsim[block_start:block_end,:]  = map(Float32,TTT_sim)
+            RRRsim[block_start:block_end,:]  = map(Float32, RRR_sim)
+            zsim[block_start:block_end,:]  = map(Float32, z_sim)
         end
     end # of block
 
