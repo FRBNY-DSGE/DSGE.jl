@@ -1,6 +1,4 @@
-#Defines the model structure for Model990
-
-#typealias AbstractString String
+# Defines the model structure for Model990
 
 # The given fields define the entire model structure.
 # We can then concisely pass around a Model object to the remaining steps of the model
@@ -8,7 +6,7 @@
 type Model990 <: AbstractDSGEModel
     parameters::Vector{Param}                       # vector of all of the model parameters
     parameters_fixed::Vector{Param}                 # vector of all "permanently fixed" model parameters
-    steady_state::Vector                            # model steady-state values
+    steady_state::Vector                            # model steady-state values    
     keys::Dict{Symbol,Int}                          # human-readable names for all the model
                                                     # parameters and steady-num_states
 
@@ -20,7 +18,7 @@ type Model990 <: AbstractDSGEModel
     observables::Dict{Symbol,Int}                   #
 
     spec                                            # The model specification number
-    savepaths::Dict{Symbol,String}                  # The absolute path to the top-level save directory for this
+    savepaths::Dict{Symbol,AbstractString}          # The absolute path to the top-level save directory for this
                                                     # model specification
     
     num_anticipated_shocks::Int                     # Number of anticipated policy shocks

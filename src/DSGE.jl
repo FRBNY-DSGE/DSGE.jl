@@ -1,15 +1,12 @@
 module DSGE
-
 using Compat
 using Distributions, Roots.fzero, HDF5 
 
 
 export
-    # DSGE.jl
-    savepath, inpath, outpath, tablepath, plotpath, logpath,
 
     # abstractdsgemodel.jl
-    AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict, num_states, num_shocks_exogenous, num_shocks_expectational, createSaveDirectories, 
+    AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict, num_states, num_shocks_exogenous, num_shocks_expectational, createSaveDirectories, savepath, inpath, outpath, tablepath, plotpath, logpath,
 
     # solve/
     ordschur, gensys, solve,
@@ -19,6 +16,8 @@ export
 
     # models/
     steadystate!, Model990, model_specifications, eqcond, measurement, createSaveDirectories
+
+
 
 include("distributions_ext.jl")
 include("abstractdsgemodel.jl")
