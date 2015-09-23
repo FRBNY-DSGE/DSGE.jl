@@ -1,11 +1,11 @@
 # This program produces and saves draws from the posterior distribution of
 # the parameters.
 
-using HDF5, Compat, Debug
+using HDF5, Compat
 include("../../test/util.jl")
 
 
-@debug function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false, using_matlab_sigscale=false)
+function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false, using_matlab_sigscale=false)
 
     ###################################################################################################
     ### Step 1: Initialize
@@ -171,7 +171,7 @@ include("../../test/util.jl")
 end
 
 # Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
-@debug function proposal_distribution{T<:AbstractFloat, V<:AbstractString}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=false)
+function proposal_distribution{T<:AbstractFloat, V<:AbstractString}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=false)
 
     n = length(μ)
     @assert (n, n) == size(hessian)
@@ -203,7 +203,7 @@ end
     return DegenerateMvNormal(μ, σ, rank)
 end
 
-@debug function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel,
+function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel,
     YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = false, use_matlab_sigscale=false)
 
     # If testing, then we read in a specific sequence of "random" vectors and numbers
