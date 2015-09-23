@@ -1,6 +1,7 @@
 import Distributions
 import DSGE: Param, PointMass
 
+
 # Test Param type
 
 # Inner Param constructor
@@ -42,11 +43,11 @@ update!(α, 0.1596)
 @test -δ == -0.025
 @test log(δ) == log(0.025)
 
+
 # toreal and tomodel
 cx = 2 * (α - 1/2)
 @test_approx_eq_eps(toreal(α), cx / sqrt(1 - cx^2), 0.001)
 @test toreal(δ) == 0.025
-
 
 model = Model990()
 lastparam = Param(0.0)
@@ -60,3 +61,5 @@ end
 priordensity = exp(prior(model))
 @test priordensity >= 0
 @test priordensity <= 1
+
+
