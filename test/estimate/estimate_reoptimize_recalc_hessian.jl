@@ -12,7 +12,7 @@ new_savepath = "/data/dsge_data_dir/dsgejl/estimate/save_reop_recalc/"
 create_save_directories(m, new_savepath, reset_inpath=false)
 
 tic()
-estimate(m,verbose=true)
+estimate(m,verbose=:low)
 time_elapsed = toq()
 
 tic()

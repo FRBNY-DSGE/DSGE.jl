@@ -5,12 +5,15 @@ using HDF5, Compat
 include("../../test/util.jl")
 
 
-function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false, using_matlab_sigscale=false)
+function estimate{T<:AbstractDSGEModel}(m::T; verbose=:low, testing=false, using_matlab_sigscale=false)
 
     ###################################################################################################
     ### Step 1: Initialize
     ###################################################################################################
 
+    # Set up levels of verbose-ness
+    verboseness = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
+    
     # Load data
     in_path = inpath(m)
     out_path = outpath(m)
@@ -28,7 +31,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false, usin
     
     # Specify starting mode
 
-    if verbose
+    if verboseness[verbose] > verboseness[:none] 
         println("Reading in previous mode")
     end
     
@@ -91,7 +94,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false, usin
     
     # Calculate the Hessian at the posterior mode
     if m.recalculate_hessian
-        if verbose
+        if verboseness[verbose] > verboseness[:none] 
             println("Recalculating Hessian...")
         end
         
@@ -102,7 +105,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false, usin
         end
 
     else
-        if verbose
+        if verboseness[verbose] > verboseness[:none]
             println("Using pre-calculated Hessian")
         end
 
@@ -171,8 +174,11 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=false, testing=false, usin
 end
 
 # Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
-function proposal_distribution{T<:AbstractFloat, V<:AbstractString}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=false)
+@debug function proposal_distribution{T<:FloatingPoint, V<:String}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=:low)
 
+    # Set up levels of verbose-ness
+    verboseness = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
+    
     n = length(μ)
     @assert (n, n) == size(hessian)
 
@@ -190,7 +196,7 @@ function proposal_distribution{T<:AbstractFloat, V<:AbstractString}(μ::Vector{T
     # Use predefined reference sigscale if indicated
     if use_matlab_sigscale
 
-        if verbose
+        if verboseness[verbose] > verboseness[:none]
             println("Using sigscale from Matlab")
         end
 
@@ -206,10 +212,13 @@ end
 function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel,
     YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = false, use_matlab_sigscale=false)
 
+    # Set up levels of verbose-ness
+    verboseness = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
+    
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
 
-    if verbose
+    if verboseness[verbose] > verboseness[:none]
         println("Testing = $testing")
     end
     
@@ -336,7 +345,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
 
             post_new, like_new, out = posterior!(m, para_new, YY; mh=true)
             
-            if verbose 
+            if verboseness[verbose] >= verboseness[:high] 
                 println("Iteration $j: posterior = $post_new")
             end
 
@@ -372,7 +381,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
                 DD_old = out[:DD]
                 QQ_old = out[:QQ]
 
-                if verbose 
+                if verboseness[verbose] >= verboseness[:high] 
                     println("Iteration $j: accept proposed jump")
                 end
 
@@ -380,7 +389,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
                 # Reject proposed jump
                 block_rejections += 1
                 
-                if verbose 
+                if verboseness[verbose] >= verboseness[:high] 
                     println("Iteration $j: reject proposed jump")
                 end
                 
@@ -404,7 +413,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
         all_rejections += block_rejections
         block_rejection_rate = block_rejections/(n_sim*n_times)
 
-        if verbose
+        if verboseness[verbose] > verboseness[:low]
             println("Block $i rejection rate: $block_rejection_rate")
         end
 
@@ -429,7 +438,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
     close(simfile)
 
     rejection_rate = all_rejections/(n_blocks*n_sim*n_times)
-    if verbose
+    if verboseness[verbose] > verboseness[:none]
         println("Overall rejection rate: $rejection_rate")
     end
 end # of loop over blocks
