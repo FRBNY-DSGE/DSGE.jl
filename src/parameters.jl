@@ -17,11 +17,6 @@ estimation.
 
 typealias Interval{T} @compat Tuple{T, T}
 
-# Compat should take care of this
-## if VERSION < v"0.4.0-rc+10"
-##     typealias AbstractString String
-## end
-
 type Param <: Number
     value::Float64
     scalefunction::Function

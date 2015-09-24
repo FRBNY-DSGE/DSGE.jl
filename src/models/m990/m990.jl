@@ -43,7 +43,7 @@ measurement equation and equilibrium conditions.
 
 * `spec`: The model specification number. For Model990, `spec`= 990. `spec` is used to determine input/output file paths. Any  changes to eqcond.jl or measurement.jl should be considered a new  model, and spec should be incremented accordingly.
 
-* `savepaths::Dict{Symbol,String}`: A dictionary containing the filesystem paths to input and output files for running the model. Keys are `:savepath`, `:inpath`, `:outpath`, `:tablepath`, `:plotpath`, and `:logpath`.See `create_save_directories(str::AbstractString)` for further details. 
+* `savepaths::Dict{Symbol,AbstractString}`: A dictionary containing the filesystem paths to input and output files for running the model. Keys are `:savepath`, `:inpath`, `:outpath`, `:tablepath`, `:plotpath`, and `:logpath`.See `create_save_directories(str::AbstractString)` for further details. 
 
 * `num_anticipated_shocks::Int`: Number of anticipated policy shocks.
 
@@ -534,7 +534,10 @@ function steadystate!(m::Model990)
 end
 
 doc"""
-Inputs: savepath::AbstractString
+create_save_directories{T<:AbstractString}(savepath::T)
+
+Inputs:
+savepath::AbstractString
 
 Description:
 Creates the proper directory structure for input and output files, treating the DSGE/save directory as the root of a savepath directory subtree. Specifically, the following paths are created:
@@ -551,7 +554,7 @@ Creates the proper directory structure for input and output files, treating the 
 
   * :logpath     => "savepath/logs/"
 """
-function create_save_directories(savepath::String)
+function create_save_directories{T<:AbstractString}(savepath::T)
 
     savepath = abspath(normpath(savepath))
     

@@ -9,10 +9,6 @@ import Distributions: params, mean, std, pdf, logpdf, rand
 import Base: length
 
 export PointMass, Beta, Gamma, RootInverseGamma, DegenerateMvNormal
-
-## if VERSION < v"0.4.0-dev+6425" 
-##     typealias AbstractFloat FloatingPoint
-## end
     
 # Define PointMass distribution for fixed parameters.
 type PointMass <: Distribution{Univariate, Continuous}

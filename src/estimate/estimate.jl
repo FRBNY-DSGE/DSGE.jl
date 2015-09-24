@@ -190,7 +190,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Boo
 end
 
 doc"""
-proposal_distribution{T<:FloatingPoint, V<:String}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=:low)
+proposal_distribution{T<:AbstractFloat, V<:AbstractString}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=:low)
 
 ### Parameters:
 * `μ`: Vector of means
@@ -199,7 +199,7 @@ proposal_distribution{T<:FloatingPoint, V<:String}(μ::Vector{T}, hessian::Matri
 ### Description:
 Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
 """
-function proposal_distribution{T<:FloatingPoint, V<:String}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=:low)
+function proposal_distribution{T<:AbstractFloat, V<:AbstractString}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=:low)
 
     # Set up levels of verbose-ness
     verboseness = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
@@ -258,7 +258,7 @@ metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEMod
 ### Description
 Implements the Metropolis-Hastings MCMC algorithm.
 """
-function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::AbstractDSGEModel,
+function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel,
     YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = :low, use_matlab_sigscale=false)
 
     # Set up levels of verbose-ness

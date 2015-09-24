@@ -76,7 +76,7 @@ tablepath(m::AbstractDSGEModel) = m.savepaths[:tablepath]
 plotpath(m::AbstractDSGEModel)  = m.savepaths[:plotpath]
 logpath(m::AbstractDSGEModel)   = m.savepaths[:logpath]
 
-function create_save_directories{T<:String}(m::AbstractDSGEModel, savepath::T; reset_inpath::Bool=true)
+function create_save_directories{T<:AbstractString}(m::AbstractDSGEModel, savepath::T; reset_inpath::Bool=true)
 
     create_save_directories(savepath)
 
@@ -98,7 +98,7 @@ end
 
 ## Creates proper directory structure for input and output files rooted at new_savepath,
 ## and copies the files in `old_savepath/input_data` to `new_savepath/input_data`
-function create_save_directories{T<:String}(m::AbstractDSGEModel, new_savepath::T, old_savepath::T; reset_inpath::Bool=true, copy_infiles::Bool=true)
+function create_save_directories{T<:AbstractString}(m::AbstractDSGEModel, new_savepath::T, old_savepath::T; reset_inpath::Bool=true, copy_infiles::Bool=true)
 
     create_save_directories(m, new_savepath; reset_inpath=reset_inpath)
 
