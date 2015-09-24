@@ -1,6 +1,5 @@
 using Compat
 
-
 #=
 
 @author : Jonathan Payne <jep459@nyu.edu>,
