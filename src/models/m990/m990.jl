@@ -1,8 +1,83 @@
-# Defines the model structure for Model990
+doc"""
+TODO: Decide whether this is the right place for this documentation...
 
-# The given fields define the entire model structure.
-# We can then concisely pass around a Model object to the remaining steps of the model
-#   (solve, estimate, and forecast).
+The Model990 type defines the structure of the FRBNY DSGE
+model. We can then concisely pass around a Model object to the
+remaining steps of the model (solve, estimate, and forecast).
+
+### Fields
+
+#### Parameters and Steady-States
+* `parameters::Vector{Param}`: Vector of all of the unfixed model parameters.
+
+* `parameters_fixed::Vector{Param}`: Vector of model parameters that
+  are permanently fixed. They are constructed with the `Param(value)` constructor.
+
+* `steady_state::Vector`: Model steady-state values. These are
+  computed as functions of the model parameters whenever the model
+  parameters are updated via the `update!` function.
+
+* `keys::Dict{Symbol,Int}`: Maps human-readable names for all model
+  parameters and steady-states to their indices in `parameters` and
+  `steady_state`.
+
+#### Inputs to Measurement and Equilibrium Condition Equations
+
+The following fields are dictionaries that map human-readible names to
+row and column indices in the matrix representations of of the
+measurement equation and equilibrium conditions.
+
+* `endogenous_states::Dict{Symbol,Int}`: Maps each state to a column in the measurement and equilibrium condition matrices.
+
+* `exogenous_shocks::Dict{Symbol,Int}`: Maps each shock to a column. 
+
+* `expected_shocks::Dict{Symbol,Int}`: Maps each expected shock to a column.
+
+* `equilibrium_conditions::Dict{Symbol,Int}`: Maps each equlibrium condition to a row in the matrix returned by `eqcond()`.
+
+* `endogenous_states_postgensys::Dict{Symbol,Int}`: Maps lagged states to their columns in the measurement and equilibrium condition equations. These are added after Gensys solves the model.
+
+* `observables::Dict{Symbol,Int}`: Maps each observable to a row in the matrix returned by `measurement()`
+
+#### Model Specifications
+
+* `spec`: The model specification number. For Model990, `spec`= 990. `spec` is used to determine input/output file paths. Any  changes to eqcond.jl or measurement.jl should be considered a new  model, and spec should be incremented accordingly.
+
+* `savepaths::Dict{Symbol,String}`: A dictionary containing the filesystem paths to input and output files for running the model. Keys are `:savepath`, `:inpath`, `:outpath`, `:tablepath`, `:plotpath`, and `:logpath`.See `create_save_directories(str::AbstractString)` for further details. 
+
+* `num_anticipated_shocks::Int`: Number of anticipated policy shocks.
+
+* `num_anticipated_shocks_padding::Int`: Padding for `num_anticipated_shocks`.
+
+* `num_anticipated_lags::Int`: Number of periods back to incorporate zero bound expectations.
+
+* `num_presample_periods::Int`: Number of periods in the presample
+
+* `reoptimize::Bool`: Whether to reoptimize the posterior mode. If `false` (the default), `estimate()` reads in a previously found mode.
+
+* `recalculate_hessian::Bool`: Whether to reecalculate the hessian at the mode. If `false` (the default), `estimate()` reads in a previously computed Hessian.
+
+##### Metropolis-Hastings Specifications 
+* `num_mh_simulations::Int`: Number of draws from the posterior distribution per block.
+
+* `num_mh_blocks::Int`: Number of blocks to run Metropolis-Hastings.
+
+* `num_mh_burn::Int`: Number of blocks to discard as burn-in for Metropolis-Hastings
+
+* `mh_thinning_step::Int`: Save every `mh_thinning_step`-th draw in Metropolis-Hastings.
+
+The following fields are used to test Metropolis-Hastings with a small
+number of draws from the posterior:
+
+*  num_mh_simulations_test::Int        
+
+*  num_mh_blocks_test::Int             
+
+*  num_mh_burn_test::Int                 
+
+#### Other Fields
+* `rng::AbstractRNG`: Random number generator, implemented as a MersenneTwister()
+ """
 type Model990 <: AbstractDSGEModel
     parameters::Vector{Param}                       # vector of all of the model parameters
     parameters_fixed::Vector{Param}                 # vector of all "permanently fixed" model parameters
@@ -43,6 +118,12 @@ end
 
 description(m::Model990) = "This is some model that we're trying to make work."
 
+doc"""
+Inputs: `m:: Model990`
+
+Description:
+Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
+"""
 function initialise_model_indices!(m::Model990)
     # Endogenous states
     endogenous_states = [[
@@ -107,6 +188,13 @@ function initialise_model_indices!(m::Model990)
     for (i,k) in enumerate(observables);                  m.observables[k]                  = i end
 end
 
+
+"""
+Inputs: `m::Model990`
+
+Description:
+Initializes the parameters for a `Model990` object.
+"""
 function initialise_model_parameters!(m::Model990)
     m[:alp     ] = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999),texLabel="\\alpha")
     m[:zeta_p  ] = Param(0.8940, false, (1e-5, 0.999), BetaAlt(0.5, 0.1), 1, (1e-5, 0.999), texLabel="\\zeta_p")
@@ -197,6 +285,9 @@ function initialise_model_parameters!(m::Model990)
     m[:del_gdpdef  ] = Param(0.0181, false, (-9.1, 9.1), Normal(0.00, 2.), 0, (-10., -10.), texLabel = "\\delta_{gdpdef}")
 end
 
+doc"""
+Initializes and returns a `Model990` object.
+"""
 function Model990()
     parameter_keys, parameter_fixed_keys, steady_state_keys = (
             # parameter keys
@@ -350,6 +441,11 @@ d2G_dωdσ_fn(z, σ) = -pdf(Normal(), z)*(1 - z*(z-σ))/σ^2
 dΓ_dσ_fn(z, σ)    = -pdf(Normal(), z-σ)
 d2Γ_dωdσ_fn(z, σ) = (z/σ-1)*pdf(Normal(), z)
 
+doc"""
+Inputs: `m::Model990`
+
+Description: (Re)calculates the model's steady-state values. `steadystate!(m)` must be called whenever the parameters of `m` are updated. 
+"""
 # (Re)calculates steady-state values
 function steadystate!(m::Model990)
     m[:zstar]    = log(1+m[:gam]) + m[:alp]/(1-m[:alp])*log(m[:ups])
@@ -437,7 +533,24 @@ function steadystate!(m::Model990)
     return m
 end
 
-## Creates the proper directory structure for input and output files. 
+doc"""
+Inputs: savepath::AbstractString
+
+Description:
+Creates the proper directory structure for input and output files, treating the DSGE/save directory as the root of a savepath directory subtree. Specifically, the following paths are created:
+
+  * :savepath    => "/path/to/DSGE/save/m'spec'/"
+
+  * :inpath      => "savepath/input_data/"
+
+  * :outpath     => "savepath/output_data/"
+
+  * :tablepath   => "savepath/results/tables/"
+
+  * :plotpath    => "savepath/results/plots/"
+
+  * :logpath     => "savepath/logs/"
+"""
 function create_save_directories(savepath::String)
 
     savepath = abspath(normpath(savepath))
