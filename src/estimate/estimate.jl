@@ -3,9 +3,24 @@
 
 using HDF5, Compat
 include("../../test/util.jl")
+doc"""
+estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
 
+### Parameters:
+- `m`: The model object
 
-function estimate{T<:AbstractDSGEModel}(m::T; verbose=:low, testing=false, using_matlab_sigscale=false)
+### Optional Arguments:
+- `verbose`: The desired frequency of function progress messages printed to standard out.
+
+   - `:none`: No status updates will be reported.
+
+   - `:low`: Status updates will be provided in csminwel and at each block in Metropolis-Hastings.
+
+   - `:high`: Status updates provided at each iteration in Metropolis-Hastings.
+
+- `testing`: Run `estimate()` in testing mode. In this case, a set of predetermined random numbers are read in and used rather than drawn from the Random Number Generator, and Metropolis-Hastings runs for `num_mh_simulations_test`*`num_mh_blocks_test` simulations.
+"""
+function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false, using_matlab_sigscale::Bool=false)
 
     ###################################################################################################
     ### Step 1: Initialize
@@ -68,7 +83,8 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=:low, testing=false, using
         # If the algorithm stops only because we have exceeded the maximum number of
         # iterations, continue improving guess of modal parameters
         while !converged
-            out, H = csminwel(posterior_min!, xh, H; ftol=crit, iterations=nit, show_trace=true, verbose=verbose)
+            verbose_bool = verboseness[verbose] > verboseness[:none] ? true : false
+            out, H = csminwel(posterior_min!, xh, H; ftol=crit, iterations=nit, show_trace=true, verbose=verbose_bool)
             xh = out.minimum
             converged = !out.iteration_converged
         end
@@ -173,8 +189,17 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose=:low, testing=false, using
     close(sim_h5)
 end
 
-# Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
-@debug function proposal_distribution{T<:FloatingPoint, V<:String}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=:low)
+doc"""
+proposal_distribution{T<:FloatingPoint, V<:String}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=:low)
+
+### Parameters:
+* `μ`: Vector of means
+* `h` Hessian matrix
+
+### Description:
+Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
+"""
+function proposal_distribution{T<:FloatingPoint, V<:String}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=:low)
 
     # Set up levels of verbose-ness
     verboseness = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
@@ -209,8 +234,32 @@ end
     return DegenerateMvNormal(μ, σ, rank)
 end
 
-function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel,
-    YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = false, use_matlab_sigscale=false)
+doc"""
+metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel, YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = :low)
+
+### Parameters
+* `propdist` The proposal distribution that Metropolis-Hastings begins sampling from.
+* `m`: The model object
+* `YY`: Data matrix for observables
+* `cc0`: Jump size for initializing Metropolis-Hastings.
+* `cc`: Jump size for the rest of Metropolis-Hastings.
+
+### Optional Arguments
+* `randvecs`: A set of predetermined random vectors drawn from N(0,I) used to avoid true randomness during testing. 
+* `randvals`: A set of predetermined random values drawn from U(0,1) used during testing.
+* `verbose`: The desired frequency of function progress messages printed to standard out.
+
+   - `:none`: No status updates will be reported.
+
+   - `:low`: Status updates provided at each block.
+
+   - `:high`: Status updates provided at each draw.
+ 
+### Description
+Implements the Metropolis-Hastings MCMC algorithm.
+"""
+function metropolis_hastings{T<:FloatingPoint}(propdist::Distribution, m::AbstractDSGEModel,
+    YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = :low, use_matlab_sigscale=false)
 
     # Set up levels of verbose-ness
     verboseness = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
@@ -362,7 +411,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
             # the new draw if its posterior value is greater than the previous draw's,
             # but it gives some probability to accepting a draw with a smaller posterior value,
             # so that we may explore tails and other local modes.
-            r = exp(post_new - post_old)
+            posterior_ratio = exp(post_new - post_old)
 
             if testing
                 k = (i-1)*(n_sim*n_times) + mod(j,numvals)+1
@@ -371,7 +420,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
                 x = rand(m.rng)
             end
 
-            if x < min(1.0, r)
+            if x < min(1.0, posterior_ratio)
                 # Accept proposed jump
                 para_old = para_new
                 post_old = post_new
