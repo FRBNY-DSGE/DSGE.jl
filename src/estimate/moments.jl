@@ -2,18 +2,18 @@
 
 using HDF5, Compat
 
+doc"""
+compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
 
+### Parameters
+  - `m`: the model object
+  - `percent`: the percentage of the mass of draws from Metropolis-Hastings included between the bands displayed in output tables. 
+
+### Description
+Computes prior and posterior parameter moments and tabulates them in various LaTeX tables, and plots parameter draws from the prior and posterior distribution. Tables are stored in `tablepath(m)`.
+"""
 function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
-    
-    ## Computes prior and posterior parameter moments, tabulates them in various TeX tables,
-    ## and plots parameter draws from the prior and posterior distribution
-    ##
-    ## Inputs:
-    ## - m: an instance of an AbstractDSGEModel subtype
-    ## - percent: the percentage of the mass of draws from Metropolis-Hastings
-    ##            we want to include between bands shown in the table
-
-    
+        
     # Read in the matrix of parameter draws from metropolis-hastings
 
     infile = joinpath(outpath(m),"sim_save.h5")
@@ -31,9 +31,6 @@ function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
         @printf(1,"Could not open file %s", infile)
     end
 
-    # Convert back to Float64 for compatability with other variables
-    #Θ = convert(Matrix{Float64},Θ)
-
     num_draws = size(Θ,1)
 
     # Produce TeX table of moments
@@ -41,21 +38,25 @@ function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
 
 end
 
+doc"""
+make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
+
+### Parameters
+    - `Θ`: [num_draws x num_parameters] matrix holding the posterior draws from metropolis-hastings
+           from save/sim_save.h5 
+    - `percent`: the mass of observations we want; 0 <= percent <= 1
+
+### Description
+Tabulates parameter moments in 3 LaTeX tables:
+    
+1. For MAIN parameters, a list of prior means, prior standard deviations, posterior means, and 90% bands for posterior draws
+
+2. For LESS IMPORTANT parameters, a list of the prior means, prior standard deviations, posterior means and 90% bands for posterior draws.
+
+3. A list of prior means and posterior means
+"""
 function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
     
-    ## Tabulates parameter moments in 3 LaTeX tables:
-    ##
-    ## -For MAIN parameters, a list of prior means, prior standard deviations, posterior means,
-    ## and 90% bands for posterior draws
-    ## -For LESS IMPORTANT parameters, a list of the prior means, prior standard deviations,
-    ## posterior means and 90% bands for posterior draws.
-    ## -A list of prior means and posterior means
-    ##
-    ## Input:
-    ## - `Θ`: [num_draws x num_parameters] matrix holding the posterior draws from metropolis-hastings
-    ##        from save/sim_save.h5 
-    ## - `percent`: the mass of observations we want; 0 <= percent <= 1
-
 
     ###########################################################################################
     ## STEP 1: Extract moments of prior distribution from m.parameters
@@ -311,65 +312,15 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
 end
 
 
-function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
-    ## Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]` is above
-    ## `bands[1,i]` and below `bands[2,i]`.
-    ## 
-    ## Inputs:
-    ## -draws: [num_draws x num_draw_dimensions] matrix
-    ## -percent: percent of data within bands (e.g. .9 to get 90% of mass within bands)
-    ## -minimize: if =1, choose shortest interval, otherwise just chop off lowest and highest (percent/2)
-    ##
-    ## Output:
-    ## -[2 x num_draw_dimensions] matrix 
+doc"""
+beginTexTableDoc(fid::IOStream)
 
-    if(percent < 0 || percent > 1)
-       throw(DomainError())
-    end
-    
-    num_draws, num_draw_dimensions = size(draws)
-    band  = zeros(2, num_draw_dimensions)
-    num_in_band  = round(percent * num_draws)
-    
-    for i in 1:num_draw_dimensions
+### Parameters
+- `fid`: File descriptor 
 
-        # Sort response for parameter i such that 1st element is largest
-        draw_variable_i = draws[:,i]
-        sort!(draw_variable_i, rev=true)
-
-        # Search to find the interval containing the minimum # of observations
-        # comprising `percent` of the mass
-        if minimize
-
-            upper_index=1
-            minwidth = draw_variable_i[1] - draw_variable_i[num_in_band]
-            done = 0
-            j = 2
-            
-            while j <= (num_draws - num_in_band + 1)
-
-                newwidth = draw_variable_i[j] - draw_variable_i[j + num_in_band - 1]
-
-                if newwidth < minwidth
-                    upper_index = j
-                    minwidth = newwidth        
-                end
-
-                j = j+1
-            end
-            
-        else
-            upper_index = num_draws - nwidth - floor(.5*num_draws-num_in_band)
-        end
-
-        band[2,i] = draw_variable_i[upper_index]
-        band[1,i] = draw_variable_i[upper_index + num_in_band - 1]
-    end
-
-
-    return band
-end
-
+### Description
+Prints the preamble for a LaTeX table to the file indicated by `fid`.
+"""
 function beginTexTableDoc(fid::IOStream)
 
     @printf(fid,"\\documentclass[12pt]{article}\n")
@@ -380,8 +331,16 @@ function beginTexTableDoc(fid::IOStream)
     
 end
 
-# Prints the necessarily lines to end a table and close a document
-# to file descriptor fid and closes the file
+doc"""
+### Parameters
+- `fid`: File descriptor
+
+### Optional Arguments
+- `small`: Whether to print an additional curly bracket after "\end{tabular}" (necessary if the table is enclosed by "\small{}")
+
+### Description
+Prints the necessarily lines to end a table and close a LaTeX document to file descriptor `fid`, then closes the file.
+"""
 function endTexTableDoc(fid::IOStream;small::Bool=false)
 
     @printf(fid, "\\\\ \\\hline\n")
@@ -398,18 +357,20 @@ function endTexTableDoc(fid::IOStream;small::Bool=false)
 
 end
 
+doc"""
+find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
 
+### Parameters
+- draws: Matrix of parameter draws (from Metropolis-Hastings, for example)
+- percent: percent of data within bands (e.g. .9 to get 90% of mass within bands)
+
+### Optional Arguments
+- `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and highest (percent/2)
+
+### Description
+Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]` is above `bands[1,i]` and below `bands[2,i]`.
+"""
 function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
-    ## Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]` is above
-    ## `bands[1,i]` and below `bands[2,i]`.
-    ## 
-    ## Inputs:
-    ## -draws: [num_draws x num_draw_dimensions] matrix
-    ## -percent: percent of data within bands (e.g. .9 to get 90% of mass within bands)
-    ## -minimize: if =1, choose shortest interval, otherwise just chop off lowest and highest (percent/2)
-    ##
-    ## Output:
-    ## -[2 x num_draw_dimensions] matrix 
 
     if(percent < 0 || percent > 1)
        throw(DomainError())
@@ -455,32 +416,4 @@ function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
     end
 
     return band
-end
-
-function beginTexTableDoc(fid::IOStream)
-
-    @printf(fid,"\\documentclass[12pt]{article}\n")
-    @printf(fid,"\\usepackage[dvips]{color}\n")
-    @printf(fid,"\\begin{document}\n")
-    @printf(fid,"\\pagestyle{empty}\n")
-    @printf(fid,"\\begin{table}[h] \\centering\n")
-    
-end
-
-# Prints the necessarily lines to end a table and close a document
-# to file descriptor fid and closes the file
-function endTexTableDoc(fid::IOStream;small::Bool=false)
-
-    @printf(fid, "\\\\ \\\hline\n")
-    
-    if small
-        @printf(fid,"\\end{tabular}}\n")
-    else
-        @printf(fid,"\\end{tabular}\n")
-    end
-    
-    @printf(fid,"\\end{table}\n")
-    @printf(fid,"\\end{document}")
-    close(fid)
-
 end
