@@ -3,7 +3,9 @@
 
 using HDF5, Compat
 include("../../test/util.jl")
-doc"""
+
+#=
+doc """
 estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
 
 ### Parameters:
@@ -19,7 +21,8 @@ estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
    - `:high`: Status updates provided at each iteration in Metropolis-Hastings.
 
 - `testing`: Run `estimate()` in testing mode. In this case, a set of predetermined random numbers are read in and used rather than drawn from the Random Number Generator, and Metropolis-Hastings runs for `num_mh_simulations_test`*`num_mh_blocks_test` simulations.
-"""
+"""->
+=#
 function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false, using_matlab_sigscale::Bool=false)
 
     ###################################################################################################
@@ -27,7 +30,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Boo
     ###################################################################################################
 
     # Set up levels of verbose-ness
-    verboseness = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
+    verboseness = @compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
     
     # Load data
     in_path = inpath(m)
@@ -183,12 +186,13 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Boo
 
     # Calculate covariance matrix
     cov_θ = cov(θ)
-    write(sim_h5, "cov_θ", map(Float32,cov_θ))   #Save as single-precision float matrix
+    write(sim_h5, "cov_θ", @compat(map(Float32,cov_θ)))   #Save as single-precision float matrix
 
     # Close the file
     close(sim_h5)
 end
 
+#=
 doc"""
 proposal_distribution{T<:AbstractFloat, V<:AbstractString}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=:low)
 
@@ -198,11 +202,12 @@ proposal_distribution{T<:AbstractFloat, V<:AbstractString}(μ::Vector{T}, hessia
 
 ### Description:
 Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
-"""
+"""->
+=#
 function proposal_distribution{T<:AbstractFloat, V<:AbstractString}(μ::Vector{T}, hessian::Matrix{T}; use_matlab_sigscale::Bool=false, sigscalepath::V="", verbose=:low)
 
     # Set up levels of verbose-ness
-    verboseness = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
+    verboseness = @compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
     
     n = length(μ)
     @assert (n, n) == size(hessian)
@@ -234,6 +239,7 @@ function proposal_distribution{T<:AbstractFloat, V<:AbstractString}(μ::Vector{T
     return DegenerateMvNormal(μ, σ, rank)
 end
 
+#=
 doc"""
 metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel, YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = :low)
 
@@ -258,11 +264,12 @@ metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEMod
 ### Description
 Implements the Metropolis-Hastings MCMC algorithm.
 """
+=#
 function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel,
     YY::Matrix{T}, cc0::T, cc::T; randvecs = [], randvals = [], verbose = :low, use_matlab_sigscale=false)
 
     # Set up levels of verbose-ness
-    verboseness = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
+    verboseness = @compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
     
     # If testing, then we read in a specific sequence of "random" vectors and numbers
     testing = !(randvecs == [] && randvals == [])
@@ -479,12 +486,12 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
 
         # Write data to file if we're past n_burn blocks
         if i > n_burn
-            parasim[block_start:block_end, :] = map(Float32,para_sim)
-            postsim[block_start:block_end, :] = map(Float32, post_sim)
-            # likesim[block_start:block_end, :] = map(Float32, like_sim)
-            TTTsim[block_start:block_end,:]  = map(Float32,TTT_sim)
-            RRRsim[block_start:block_end,:]  = map(Float32, RRR_sim)
-            zsim[block_start:block_end,:]  = map(Float32, z_sim)
+            parasim[block_start:block_end, :]   = @compat(map(Float32,para_sim))
+            postsim[block_start:block_end, :]   = @compat(map(Float32, post_sim))
+            # likesim[block_start:block_end, :] = @compat(map(Float32, like_sim))
+            TTTsim[block_start:block_end,:]     = @compat(map(Float32,TTT_sim))
+            RRRsim[block_start:block_end,:]     = @compat(map(Float32, RRR_sim))
+            zsim[block_start:block_end,:]       = @compat(map(Float32, z_sim))
         end
 
 

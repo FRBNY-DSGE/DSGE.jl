@@ -24,5 +24,3 @@ x_init = [10.0, -9.0]
 
 res_real_grad  = DSGE.csminwel(rosenbrock, rosenbrock_grad, [10.0, -9.0])
 res_numeric_grad  = DSGE.csminwel(rosenbrock, [10.0, -9.0])
-
-Union{}

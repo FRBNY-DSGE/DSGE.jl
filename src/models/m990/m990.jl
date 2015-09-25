@@ -1,3 +1,4 @@
+#=
 doc"""
 TODO: Decide whether this is the right place for this documentation...
 
@@ -78,6 +79,7 @@ number of draws from the posterior:
 #### Other Fields
 * `rng::AbstractRNG`: Random number generator, implemented as a MersenneTwister()
  """
+ =#
 type Model990 <: AbstractDSGEModel
     parameters::Vector{Param}                       # vector of all of the model parameters
     parameters_fixed::Vector{Param}                 # vector of all "permanently fixed" model parameters
@@ -117,13 +119,14 @@ type Model990 <: AbstractDSGEModel
 end
 
 description(m::Model990) = "This is some model that we're trying to make work."
-
+#=
 doc"""
 Inputs: `m:: Model990`
 
 Description:
 Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 """
+=#
 function initialise_model_indices!(m::Model990)
     # Endogenous states
     endogenous_states = [[
@@ -285,9 +288,11 @@ function initialise_model_parameters!(m::Model990)
     m[:del_gdpdef  ] = Param(0.0181, false, (-9.1, 9.1), Normal(0.00, 2.), 0, (-10., -10.), texLabel = "\\delta_{gdpdef}")
 end
 
+#=
 doc"""
 Initializes and returns a `Model990` object.
 """
+=#
 function Model990()
     parameter_keys, parameter_fixed_keys, steady_state_keys = (
             # parameter keys
@@ -441,11 +446,13 @@ d2G_dωdσ_fn(z, σ) = -pdf(Normal(), z)*(1 - z*(z-σ))/σ^2
 dΓ_dσ_fn(z, σ)    = -pdf(Normal(), z-σ)
 d2Γ_dωdσ_fn(z, σ) = (z/σ-1)*pdf(Normal(), z)
 
+#=
 doc"""
 Inputs: `m::Model990`
 
 Description: (Re)calculates the model's steady-state values. `steadystate!(m)` must be called whenever the parameters of `m` are updated. 
 """
+=#
 # (Re)calculates steady-state values
 function steadystate!(m::Model990)
     m[:zstar]    = log(1+m[:gam]) + m[:alp]/(1-m[:alp])*log(m[:ups])
@@ -533,6 +540,7 @@ function steadystate!(m::Model990)
     return m
 end
 
+#=
 doc"""
 create_save_directories{T<:AbstractString}(savepath::T)
 
@@ -554,6 +562,7 @@ Creates the proper directory structure for input and output files, treating the 
 
   * :logpath     => "savepath/logs/"
 """
+=#
 function create_save_directories{T<:AbstractString}(savepath::T)
 
     savepath = abspath(normpath(savepath))
