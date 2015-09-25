@@ -455,6 +455,8 @@ Description: (Re)calculates the model's steady-state values. `steadystate!(m)` m
 =#
 # (Re)calculates steady-state values
 function steadystate!(m::Model990)
+    SIGWSTAR_ZERO = 0.5
+    
     m[:zstar]    = log(1+m[:gam]) + m[:alp]/(1-m[:alp])*log(m[:ups])
     m[:rstar]    = exp(m[:sigmac]*m[:zstar]) / m[:bet]
     m[:Rstarn]   = 100*(m[:rstar]*m[:pistar] - 1)
@@ -471,8 +473,13 @@ function steadystate!(m::Model990)
     # FINANCIAL FRICTIONS ADDITIONS
     # solve for sigmaomegastar and zomegastar
     zwstar = quantile(Normal(), m[:Fom].scaledvalue)
-    sigwstar = fzero(sigma -> ζ_spb_fn(zwstar, sigma, m[:sprd]) - m[:zeta_spb], 0.5)
-
+    sigwstar = SIGWSTAR_ZERO
+    try
+        sigwstar = fzero(sigma -> ζ_spb_fn(zwstar, sigma, m[:sprd]) - m[:zeta_spb], SIGWSTAR_ZERO)
+    catch
+        sigwstar = SIGWSTAR_ZERO
+    end
+    
     # evaluate omegabarstar
     omegabarstar = ω_fn(zwstar, sigwstar)
 
