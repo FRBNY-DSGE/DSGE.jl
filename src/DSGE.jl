@@ -1,6 +1,10 @@
 module DSGE
 using Compat
-using Distributions, Roots.fzero, HDF5 
+using Distributions, Roots.fzero, HDF5
+
+if VERSION < v"0.4-"
+    using Docile
+end
 
 
 export

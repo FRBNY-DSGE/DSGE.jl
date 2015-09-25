@@ -2,6 +2,7 @@
 
 using HDF5, Compat
 
+#=
 doc"""
 compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
 
@@ -12,6 +13,8 @@ compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
 ### Description
 Computes prior and posterior parameter moments and tabulates them in various LaTeX tables, and plots parameter draws from the prior and posterior distribution. Tables are stored in `tablepath(m)`.
 """
+=#
+
 function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
         
     # Read in the matrix of parameter draws from metropolis-hastings
@@ -38,6 +41,7 @@ function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
 
 end
 
+#=
 doc"""
 make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
 
@@ -55,6 +59,7 @@ Tabulates parameter moments in 3 LaTeX tables:
 
 3. A list of prior means and posterior means
 """
+=#
 function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
     
 
@@ -311,7 +316,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
 
 end
 
-
+#=
 doc"""
 beginTexTableDoc(fid::IOStream)
 
@@ -321,6 +326,7 @@ beginTexTableDoc(fid::IOStream)
 ### Description
 Prints the preamble for a LaTeX table to the file indicated by `fid`.
 """
+=#
 function beginTexTableDoc(fid::IOStream)
 
     @printf(fid,"\\documentclass[12pt]{article}\n")
@@ -331,6 +337,7 @@ function beginTexTableDoc(fid::IOStream)
     
 end
 
+#=
 doc"""
 ### Parameters
 - `fid`: File descriptor
@@ -341,6 +348,7 @@ doc"""
 ### Description
 Prints the necessarily lines to end a table and close a LaTeX document to file descriptor `fid`, then closes the file.
 """
+=#
 function endTexTableDoc(fid::IOStream;small::Bool=false)
 
     @printf(fid, "\\\\ \\\hline\n")
@@ -357,6 +365,7 @@ function endTexTableDoc(fid::IOStream;small::Bool=false)
 
 end
 
+#=
 doc"""
 find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
 
@@ -370,6 +379,7 @@ find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
 ### Description
 Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]` is above `bands[1,i]` and below `bands[2,i]`.
 """
+=#
 function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
 
     if(percent < 0 || percent > 1)

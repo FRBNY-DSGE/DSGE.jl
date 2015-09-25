@@ -253,13 +253,13 @@ if VERSION <= v"0.4-"
         end
     end
 
-    ordschur!{Ty<:BlasFloat}(Q::StridedMatrix{Ty}, T::StridedMatrix{Ty}, select::Union{Vector{Bool},BitVector}) = Schur(trsen!(convert(Vector{BlasInt}, select), T , Q)...)
-    ordschur{Ty<:BlasFloat}(Q::StridedMatrix{Ty}, T::StridedMatrix{Ty}, select::Union{Vector{Bool},BitVector}) = ordschur!(copy(Q), copy(T), select)
-    ordschur!{Ty<:BlasFloat}(schur::Schur{Ty}, select::Union{Vector{Bool},BitVector}) = (res=ordschur!(schur.Z, schur.T, select); schur[:values][:]=res[:values]; res)
-    ordschur{Ty<:BlasFloat}(schur::Schur{Ty}, select::Union{Vector{Bool},BitVector}) = ordschur(schur.Z, schur.T, select)
+    ordschur!{Ty<:BlasFloat}(Q::StridedMatrix{Ty}, T::StridedMatrix{Ty}, select::Union(Vector{Bool},BitVector)) = Schur(trsen!(convert(Vector{BlasInt}, select), T , Q)...)
+    ordschur{Ty<:BlasFloat}(Q::StridedMatrix{Ty}, T::StridedMatrix{Ty}, select::Union(Vector{Bool},BitVector)) = ordschur!(copy(Q), copy(T), select)
+    ordschur!{Ty<:BlasFloat}(schur::Schur{Ty}, select::Union(Vector{Bool},BitVector)) = (res=ordschur!(schur.Z, schur.T, select); schur[:values][:]=res[:values]; res)
+    ordschur{Ty<:BlasFloat}(schur::Schur{Ty}, select::Union(Vector{Bool},BitVector)) = ordschur(schur.Z, schur.T, select)
 
-    ordschur!{Ty<:BlasFloat}(S::StridedMatrix{Ty}, T::StridedMatrix{Ty}, Q::StridedMatrix{Ty}, Z::StridedMatrix{Ty}, select::Union{Vector{Bool},BitVector}) = GeneralizedSchur(tgsen!(convert(Vector{BlasInt}, select), S, T, Q, Z)...)
-    ordschur{Ty<:BlasFloat}(S::StridedMatrix{Ty}, T::StridedMatrix{Ty}, Q::StridedMatrix{Ty}, Z::StridedMatrix{Ty}, select::Union{Vector{Bool},BitVector}) = ordschur!(copy(S), copy(T), copy(Q), copy(Z), select)
-    ordschur!{Ty<:BlasFloat}(gschur::GeneralizedSchur{Ty}, select::Union{Vector{Bool},BitVector}) = (res=ordschur!(gschur.S, gschur.T, gschur.Q, gschur.Z, select); gschur[:alpha][:]=res[:alpha]; gschur[:beta][:]=res[:beta]; res)
-    ordschur{Ty<:BlasFloat}(gschur::GeneralizedSchur{Ty}, select::Union{Vector{Bool},BitVector}) = ordschur(gschur.S, gschur.T, gschur.Q, gschur.Z, select)
+    ordschur!{Ty<:BlasFloat}(S::StridedMatrix{Ty}, T::StridedMatrix{Ty}, Q::StridedMatrix{Ty}, Z::StridedMatrix{Ty}, select::Union(Vector{Bool},BitVector)) = GeneralizedSchur(tgsen!(convert(Vector{BlasInt}, select), S, T, Q, Z)...)
+    ordschur{Ty<:BlasFloat}(S::StridedMatrix{Ty}, T::StridedMatrix{Ty}, Q::StridedMatrix{Ty}, Z::StridedMatrix{Ty}, select::Union(Vector{Bool},BitVector)) = ordschur!(copy(S), copy(T), copy(Q), copy(Z), select)
+    ordschur!{Ty<:BlasFloat}(gschur::GeneralizedSchur{Ty}, select::Union(Vector{Bool},BitVector)) = (res=ordschur!(gschur.S, gschur.T, gschur.Q, gschur.Z, select); gschur[:alpha][:]=res[:alpha]; gschur[:beta][:]=res[:beta]; res)
+    ordschur{Ty<:BlasFloat}(gschur::GeneralizedSchur{Ty}, select::Union(Vector{Bool},BitVector)) = ordschur(gschur.S, gschur.T, gschur.Q, gschur.Z, select)
 end
