@@ -134,3 +134,4 @@ function tomodel!{T<:AbstractFloat}(values::Vector{T}, parameters::Vector{Param}
     newvalues = map(tomodel, values, parameters)
     return update!(parameters, newvalues)
 end
+
