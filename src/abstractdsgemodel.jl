@@ -37,7 +37,7 @@ end
 # Number of anticipated policy shocks
 num_anticipated_shocks(m::AbstractDSGEModel) = m.num_anticipated_shocks
 
-# Padding for nant
+# Padding for number of anticipated policy shocks
 num_anticipated_shocks_padding(m::AbstractDSGEModel) = m.num_anticipated_shocks_padding
 
 # Number of periods back we should start incorporating zero bound expectations
@@ -60,13 +60,6 @@ num_parameters_fixed(m::AbstractDSGEModel)       = length(m.parameters_fixed)
 num_parameters_steady_state(m::AbstractDSGEModel)= length(m.steady_state)
 num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.parameters])
 
-# Paths to where input/output/results data are stored
-savepath(m::AbstractDSGEModel)  = normpath(m.savepath)
-inpath(m::AbstractDSGEModel)    = normpath(joinpath(m.savepath, "input_data/"))
-outpath(m::AbstractDSGEModel)   = normpath(joinpath(m.savepath, "output_data/"))
-tablepath(m::AbstractDSGEModel) = normpath(joinpath(m.savepath, "results/tables/"))
-plotpath(m::AbstractDSGEModel)  = normpath(joinpath(m.savepath, "results/plots/"))
-logpath(m::AbstractDSGEModel)   = normpath(joinpath(m.savepath, "logs/"))
 
 # Paths to where input/output/results data are stored
 savepath(m::AbstractDSGEModel)  = m.savepaths[:savepath]
