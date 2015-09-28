@@ -23,7 +23,7 @@ close(h5)
 # Read in the reference parameter draws
 reference_fn = joinpath(dirname(@__FILE__), "metropolis_hastings.h5")
 h5_ref = h5open(reference_fn, "r")
-ref_draws = read(h5_ref, "theta")
+ref_draws = read(h5_ref, "parasim")
 close(h5_ref)
 
 # Test equal

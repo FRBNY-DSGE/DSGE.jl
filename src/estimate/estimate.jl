@@ -280,9 +280,6 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
     # Set up levels of verbose-ness
     verboseness = @compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
     
-    # If testing, then we read in a specific sequence of "random" vectors and numbers
-    #testing = !(randvecs == [] && randvals == [])
-
     # If testing, set the global random seed at a fixed number
     if testing
         srand(123)
@@ -321,13 +318,11 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
 
     while !initialized
         if testing
-            #para_old = propdist.μ + cc0*propdist.σ*randvecs[:, 1]
             n_blocks = m.num_mh_blocks_test
             n_sim = m.num_mh_simulations_test
             n_burn = m.num_mh_burn_test
             n_times = m.mh_thinning_step
         else
-            #para_old = rand(propdist; cc=cc0)
             n_blocks = m.num_mh_blocks
             n_sim = m.num_mh_simulations
             n_burn = m.num_mh_burn
@@ -393,10 +388,6 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
     zsim    = d_create(simfile, "zsim", datatype(Float32),
                        dataspace(n_saved_obs,num_states_augmented(m)),"chunk",(n_sim,num_states_augmented(m)))
 
-    ## if testing
-    ##     rows, cols = size(randvecs)
-    ##     numvals = size(randvals)[1]
-    ## end
 
     # keep track of how long metropolis_hastings has been sampling
     total_sampling_time = 0
@@ -410,12 +401,6 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
         for j = 1:(n_sim*n_times)
 
             # Draw para_new from the proposal distribution
-
-            ## if testing
-            ##     para_new = propdist.μ + cc*propdist.σ*randvecs[:, mod(j,cols)+1]
-            ## else
-            ##     para_new = rand(propdist; cc=cc)
-            ## end
 
             para_new = rand(propdist; cc=cc)
             
@@ -437,14 +422,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
             # so that we may explore tails and other local modes.
             posterior_ratio = exp(post_new - post_old)
 
-            ## if testing
-            ##     k = (i-1)*(n_sim*n_times) + mod(j,numvals)+1
-            ##     x = randvals[mod(j,numvals)+1]
-            ## else
-            ##     x = rand(m.rng)
-            ## end
-
-            x = rand(m.rng)
+            x = rand()
             
             if x < min(1.0, posterior_ratio)
                 # Accept proposed jump
