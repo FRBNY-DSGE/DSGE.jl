@@ -16,7 +16,7 @@ export
     ordschur, gensys, solve,
 
     # estimate/
-    dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel, hessizero!, estimate, proposal_distribution, metropolis_hastings, compute_moments, makeMomentTables, find_density_bands,
+    dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel, hessizero!, estimate, proposal_distribution, metropolis_hastings, compute_parameter_covariance, compute_moments, make_moment_tables, find_density_bands,
 
     # models/
     steadystate!, Model990, model_specifications, eqcond, measurement, create_save_directories
