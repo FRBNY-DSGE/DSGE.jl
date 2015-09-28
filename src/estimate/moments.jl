@@ -11,33 +11,37 @@ compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
   - `percent`: the percentage of the mass of draws from Metropolis-Hastings included between the bands displayed in output tables. 
 
 ### Description
-Computes prior and posterior parameter moments and tabulates them in various LaTeX tables, and plots parameter draws from the prior and posterior distribution. Tables are stored in `tablepath(m)`.
+Computes prior and posterior parameter moments. Tabulates prior mean, posterior mean, and bands in various LaTeX tables stored `tablepath(m)`.
 """
 =#
+function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90; verbose=true)
+    
+    ### Step 1: Read in the matrix of parameter draws from metropolis-hastings
 
-function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
-        
-    # Read in the matrix of parameter draws from metropolis-hastings
+    filename = joinpath(outpath(m),"sim_save.h5")
 
-    infile = joinpath(outpath(m),"sim_save.h5")
-    println("Reading draws from Metropolis-Hastings from $infile...")
-
-    Θ = []
+    if verbose
+        println("Reading draws from Metropolis-Hastings from $filename...")
+    end
+    
+    param_draws = []
     post = []
 
     try
-        fid = h5open(infile,"r") do fid
-            Θ = read(fid,"parasim")
-            #post = read(fid,"postsim")
-        end
+        fid = h5open(filename,"r+") 
+        param_draws = read(fid,"parasim")
+        #post = read(fid,"postsim")
+        close(fid)
     catch
-        @printf(1,"Could not open file %s", infile)
+        @printf(1,"Could not open file %s", filename)
     end
 
-    num_draws = size(Θ,1)
+    num_draws = size(param_draws,1)
 
-    # Produce TeX table of moments
-    make_moment_tables(m,Θ,percent)
+    
+    ### Step 2: Produce TeX table of moments
+
+    make_moment_tables(m,param_draws,percent, verbose=verbose)
 
 end
 
@@ -60,7 +64,7 @@ Tabulates parameter moments in 3 LaTeX tables:
 3. A list of prior means and posterior means
 """
 =#
-function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
+function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64; verbose=true)
     
 
     ###########################################################################################
@@ -105,12 +109,11 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
     ###########################################################################################
     
     Θ_hat = mean(Θ,1)'                    # posterior mean for each parameter
-    Θ_sig = cov(Θ, mean=Θ_hat')           # posterior std dev for each parameter
+    # Θ_sig = cov(Θ, mean=Θ_hat')           # posterior std dev for each parameter
     Θ_bands = []
-    
-    # TODO: Do we want to be doing error handling like this?
+
     try
-        Θ_bands = find_density_bands(Θ,percent,minimize=true)'
+        Θ_bands = find_density_bands(Θ,percent,minimize=true)' # We need the transpose
     catch
         println("percent must be between 0 and 1")
     end
@@ -188,7 +191,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
             @printf(mainParams_fid, "\%8.3f & ",val)
         end
 
-        important_para = [important_para, index]
+        important_para = [important_para; index]
         
     end
 
@@ -312,8 +315,10 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
     end
     
     endTexTableDoc(prioPostMean_fid)
-    println("Tables are in ",tablepath(m))
 
+    if verbose
+        println("Tables are in ",tablepath(m))
+    end
 end
 
 #=
@@ -388,7 +393,7 @@ function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
     
     num_draws, num_draw_dimensions = size(draws)
     band  = zeros(2, num_draw_dimensions)
-    num_in_band  = round(percent * num_draws)
+    num_in_band  = round(Int, percent * num_draws)
     
     for i in 1:num_draw_dimensions
 

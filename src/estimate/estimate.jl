@@ -166,21 +166,9 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Boo
     ###################################################################################################
     ### Step 5: Calculate and save parameter covariance matrix
     ###################################################################################################
-    
-    # Set up HDF5 file for saving
-    h5path = joinpath(out_path,"sim_save.h5")
 
-    # Read in saved parameter draws
-    sim_h5 = h5open(h5path, "r+")
+    compute_parameter_covariance(m);
 
-    θ = read(sim_h5, "parasim")
-
-    # Calculate covariance matrix
-    cov_θ = cov(θ)
-    write(sim_h5, "cov_θ", @compat(map(Float32,cov_θ)))   #Save as single-precision float matrix
-
-    # Close the file
-    close(sim_h5)
 end
 
 #=
@@ -504,3 +492,36 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
         println("Overall rejection rate: $rejection_rate")
     end
 end # of loop over blocks
+
+
+#=
+doc"""
+compute_parameter_covariance{T<:AbstractDSGEModel}(m::T)
+
+### Parameters
+
+### Description:
+Calculates the parameter covariance matrix and writes it to the sim_save.h5 file.
+"""
+=#
+function compute_parameter_covariance{T<:AbstractDSGEModel}(m::T)
+
+    # Read in saved parameter draws
+    h5path = joinpath(outpath(m),"sim_save.h5")
+    if(!isfile(h5path))
+        println("File $h5path does not exist. Check outpath(m) or run metropolis_hastings(m).")
+        return
+    end
+
+    sim_h5 = h5open(h5path, "r+")
+    param_draws = read(sim_h5, "parasim")
+
+    # Calculate covariance matrix
+    param_covariance = cov(param_draws)
+    write(sim_h5, "param_covariance", @compat(map(Float32, param_covariance)))   #Save as single-precision float matrix
+
+    # Close the file
+    close(sim_h5)
+
+    return param_covariance
+end
