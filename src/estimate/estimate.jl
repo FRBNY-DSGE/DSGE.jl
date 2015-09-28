@@ -161,21 +161,6 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Boo
     cc = 0.09
 
     metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose, testing=testing)
-    ## if !testing
-    ##     metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose)
-    ## else
-    ##     randvecs = []
-    ##     randvals = []
-        
-    ##     h5= h5open("/data/dsge_data_dir/dsgejl/estimate/save/input_data/rand_save_big.h5","r")
-    ##     randvecs = read(h5["randvecs"])
-    ##     randvals = read(h5["randvals"])
-    ##     close(h5)
-
-    ##     metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose, randvecs=randvecs, randvals=randvals,
-    ##                         use_matlab_sigscale=using_matlab_sigscale)
-        
-    ## end
 
     
     ###################################################################################################
