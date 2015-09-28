@@ -69,6 +69,22 @@ tablepath(m::AbstractDSGEModel) = m.savepaths[:tablepath]
 plotpath(m::AbstractDSGEModel)  = m.savepaths[:plotpath]
 logpath(m::AbstractDSGEModel)   = m.savepaths[:logpath]
 
+
+#=
+doc"""
+create_save_directories{T<:AbstractString}(m::AbstractDSGEModel, savepath::T; reset_inpath::Bool=true)
+
+### Parameters
+- `m`: the model object
+- `savepath`: the desired root of the new save subtree
+
+### Optional Arguments
+- `reset_inpath`: Whether to set the value of `m.savepaths[:inpath]` to `new_savepath/input_data`. Default = `true`.
+
+### Description
+Creates the default directory structure for input and output files rooted at `savepath` and updates `m.savepaths` appropriately. By default, resets m`.savepaths[:inpath]` to `new_savepath/input_data`.
+"""
+=#
 function create_save_directories{T<:AbstractString}(m::AbstractDSGEModel, savepath::T; reset_inpath::Bool=true)
 
     create_save_directories(savepath)
@@ -89,21 +105,40 @@ function create_save_directories{T<:AbstractString}(m::AbstractDSGEModel, savepa
     
 end
 
-## Creates proper directory structure for input and output files rooted at new_savepath,
-## and copies the files in `old_savepath/input_data` to `new_savepath/input_data`
+#=
+doc"""
+create_save_directories{T<:AbstractString}(m::AbstractDSGEModel, new_savepath::T, old_savepath::T; reset_inpath::Bool=true, copy_infiles::Bool=true)
+
+### Parameters
+- `m`: the model object
+- `new_savepath`: the desired root of the new save subtree
+- `old_savepath`: the root of the old save directory subtree. 
+
+### Optional Arguments
+- `reset_inpath`: Whether to set the value of `m.savepaths[:inpath]` to `new_savepath/input_data`. Default = `true`.
+- `copy_infiles`: Whether to copy the input files 
+
+### Description
+Creates the default directory structure for input and output files rooted at `new_savepath` by calling `create_save_directories(m, new_savepath; reset_inpath=reset_inpath)`. By default, resets m`.savepaths[:inpath]` to `new_savepath/input_data` and copies input files from `old_savepath` to that directory.
+
+
+### Usage
+This method is intended to be used after a model object is created with the default savepath location, in the event that the user decides to use the same directory structure rooted elsewhere in the filesystem. It allows the user to run multiple versions of the model with the same input files (without making a copy). In this case, the `reset_inpath` and `copy_infiles` arguments should be set to `false`.
+
+`new_savepath` and `old_savepath` refer to the directory that will contain (in the case of `new_savepath`) or contains (in the case of `old_savepath`) the `input_data`, `output_data`, `results`, and `log` subdirectories. 
+"""
+=#
 function create_save_directories{T<:AbstractString}(m::AbstractDSGEModel, new_savepath::T, old_savepath::T; reset_inpath::Bool=true, copy_infiles::Bool=true)
 
     create_save_directories(m, new_savepath; reset_inpath=reset_inpath)
 
     if copy_infiles
         for file in readdir(normpath(joinpath(old_savepath, "input_data")))
-            #if isfile(abspath(file))
-                println(file)
-                cp(abspath(joinpath(old_savepath, "input_data/$file")), inpath(m))
-                old = abspath(joinpath(old_savepath, "input_data/$file"))
-                new = abspath(joinpath(new_savepath, "input_data"))
-                @printf "Copied %s to %s" old new
-            #end
+            println(file)
+            cp(abspath(joinpath(old_savepath, "input_data/$file")), inpath(m))
+            old = abspath(joinpath(old_savepath, "input_data/$file"))
+            new = abspath(joinpath(new_savepath, "input_data"))
+            @printf "Copied %s to %s" old new
         end
     end
 
@@ -113,11 +148,35 @@ end
 
 
 # TODO is there a better place for these? They do depend on AbstractDSGEModel type.
+#=
+doc"""
+tomodel!{T<:AbstractFloat}(m::AbstractDSGEModel, values::Vector{T})
+
+### Parameters:
+-`m`: the model object
+-`values`: the new values to assign to non-steady-state parameters.
+
+### Description:
+Transforms `values` from the real line to the model space, and assigns `values[i]` to `m.parameters[i].value` for non-steady-state parameters. Recomputes the steady-state paramter values.
+"""
+=#
 function tomodel!{T<:AbstractFloat}(m::AbstractDSGEModel, values::Vector{T})
     tomodel!(values, m.parameters)
     return steadystate!(m)
 end
 
+#=
+doc"""
+update!{T<:AbstractFloat}(m::AbstractDSGEModel, values::Vector{T})
+
+### Parameters:
+-`m`: the model object
+-`values`: the new values to assign to non-steady-state parameters.
+
+### Description:
+Update `m.parameters` with `values`, recomputing the steady-state parameter values.
+"""
+=#
 function update!{T<:AbstractFloat}(m::AbstractDSGEModel, values::Vector{T})
     update!(m.parameters, values)
     return steadystate!(m) 
