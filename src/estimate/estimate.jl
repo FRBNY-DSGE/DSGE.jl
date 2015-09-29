@@ -518,7 +518,7 @@ function compute_parameter_covariance{T<:AbstractDSGEModel}(m::T)
 
     # Calculate covariance matrix
     param_covariance = cov(param_draws)
-    write(sim_h5, "param_covariance", @compat(map(Float32, param_covariance)))   #Save as single-precision float matrix
+    write(sim_h5, "param_covariance", param_covariance)
 
     # Close the file
     close(sim_h5)
