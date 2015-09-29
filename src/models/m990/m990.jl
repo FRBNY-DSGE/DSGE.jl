@@ -315,7 +315,7 @@ function Model990()
             :zeta_nn, :zeta_nmue, :zeta_nsigw]
             )
 
-    # initialise human-readable keys for variablesiables
+    # initialise human-readable keys for variables
     keylist = Dict{Symbol,Int}()
     for (i,k) in enumerate(vcat(parameter_keys,parameter_fixed_keys,steady_state_keys))
         keylist[k] = i
@@ -335,7 +335,6 @@ function Model990()
                                                (:tablepath, normpath(joinpath(savepath, "results/tables/"))),   
                                                (:plotpath,  normpath(joinpath(savepath, "results/plots/"))),  
                                                (:logpath,   normpath(joinpath(savepath, "logs/")))]) 
-
 
     # Create the save directories if they don't already exist
     create_save_directories(savepath)
