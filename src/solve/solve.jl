@@ -1,7 +1,20 @@
 using Compat
 
-# Outputs TTT, RRR, CCC - matrices of the state transition equation:
-#   S_t = TTT*S_{t-1} + RRR*ε_t + CCC
+#=
+doc"""
+solve(model::AbstractDSGEModel)
+
+### Parameters
+- `model`: the model object
+
+### Return values
+ - TTT, RRR, and CCC matrices of the state transition equation:
+              S_t = TTT*S_{t-1} + RRR*ε_t + CCC
+
+## Description
+Loads in the matrices that form the canonical representation of the equilibrium conditions by calling `eqcond`. Then calls `gensys` for the state-space representation of the model. Finally, calls `augment_states` to add growth rates to the observables. See documentation for each of these 3 functions for further details.
+"""
+=#
 function solve(model::AbstractDSGEModel)
 
     # Get equilibrium condition matrices
@@ -20,15 +33,44 @@ function solve(model::AbstractDSGEModel)
 end
 
 
-## # Some of our observables are growth rates, which is calculated as a
-## # linear combination of a present and lagged state. To capture the lagged state,
-## # we assign to it an index. In addition, we also need to expand the
-## # matrices of the state transition equation to accommodate the extra state.
-## # In dsgesolv.m, AddTTT is appended to TTT to capture the lagged state
-## # value in the current state vector, while AddRRR and AddCCC augment
-## # RRR and CCC with the appropriate number of zeros.
+#=
+doc"""
+augment_states{T<:AbstractFloat}(m::AbstractDSGEModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
 
-# These additional states are added after the model is solved to reduce the load on gensys
+### Parameters
+-`m`: the model object
+-`TTT`, `RRR`, and `CCC` are matrices of the state transition equation that is returned from `gensys`:
+              S_t = TTT*S_{t-1} + RRR*ε_t + CCC
+
+### Return values
+- `TTT_aug`, `RRR_aug`, and `CCC_aug`, which extend the corresponding input matrices to include observables which are growth rates.
+
+### Description
+Some observables in the model are growth rates, which are calculated as a linear combination of a present and lagged state (which is not yet accounted for in the `TTT`, `RRR`,and `CCC` matrices). To improve the performance of `gensys`, these additional states are added after the model is solved. `augment_states` assigns an index to each lagged state, and extends the input `TTT`, `RRR`, and `CCC` matrices to accommodate the additional states and capture the lagged state value in the current state vector. `RRR` and `CCC` are mostly augmented with zeros.
+
+The diagram below shows how `TTT` is extended to `TTT_aug`.
+
+                TTT_aug
+     (m.endogenous_states_postgensys
+                  x
+     m.endogenous_states_postgensys)                               
+     ________________________ _________     
+    |                        |         |
+    |                        |         |
+    |          TTT           |  lag    |
+    | (m.endogenous_states   | states  |  
+    |          x             |         |
+    |  m.endogenous_states)  |         |
+    |                        |         |
+    |                        |         |
+    |________________________|         |
+    |                                  |
+    |          lag                     |
+    |         states                   |  
+    |__________________________________|
+
+"""                                
+=#
 function augment_states{T<:AbstractFloat}(m::AbstractDSGEModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
     endo = m.endogenous_states
     endo_addl = m.endogenous_states_postgensys
@@ -61,8 +103,8 @@ function augment_states{T<:AbstractFloat}(m::AbstractDSGEModel, TTT::Matrix{T}, 
     # Expected inflation
     TTT_aug[endo_addl[:Et_pi_t], 1:n_endo] = (TTT^2)[endo[:pi_t], :]
 
-    # The 8th column of AddTTT corresponds to "v_lr" which is set equal to
-    # e_lr –measurements errors for the two real wage observables built in
+    # The 8th column of the addition to TTT corresponds to "v_lr" which is set equal to
+    # e_lr – measurement errors for the two real wage observables built in
     # as exogenous structural shocks.
     TTT_aug[endo_addl[:lr_t], endo_addl[:lr_t]] = m[:ρ_lr].scaledvalue
     TTT_aug[endo_addl[:tfp_t], endo_addl[:tfp_t]] = m[:ρ_tfp].scaledvalue
