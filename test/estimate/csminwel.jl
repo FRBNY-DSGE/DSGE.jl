@@ -22,5 +22,7 @@ x_init = [10.0, -9.0]
 # res_real_grad  = Hobo.csminwel(rosenbrock, rosenbrock_grad, [10.0, -9.0])
 # res_numeric_grad  = Hobo.csminwel(rosenbrock, [10.0, -9.0])
 
-res_real_grad  = DSGE.csminwel(rosenbrock, rosenbrock_grad, [10.0, -9.0])
-res_numeric_grad  = DSGE.csminwel(rosenbrock, [10.0, -9.0])
+m = DSGE.Model990()
+
+res_real_grad  = DSGE.csminwel(rosenbrock, rosenbrock_grad, [10.0, -9.0]; model=m)
+res_numeric_grad  = DSGE.csminwel(rosenbrock, [10.0, -9.0]; model=m)

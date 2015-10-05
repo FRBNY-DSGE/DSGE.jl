@@ -2,8 +2,8 @@ using Compat
 
 #=
 
-@author : Jonathan Payne <jep459@nyu.edu>,
-@author : Spencer Lyon <spencer.lyon@nyu.edu>
+    @author : Jonathan Payne <jep459@nyu.edu>,
+    @author : Spencer Lyon <spencer.lyon@nyu.edu>
 
 @date: 2014-Sep-22
 
@@ -18,7 +18,7 @@ written by Chris Sims.
 import Calculus  # for numerical derivatives
 import Optim
 using Optim: OptimizationTrace, #assess_convergence,
-             MultivariateOptimizationResults
+MultivariateOptimizationResults
 
 const rc_messages = Dict()
 rc_messages[0] = "Standard Iteration"
@@ -43,12 +43,12 @@ macro csminwelltrace()
             end
             grnorm = norm(gr, Inf)
             Optim.update!(tr,
-                    iteration,
-                    f_x,
-                    grnorm,
-                    dt,
-                    store_trace,
-                    show_trace)
+                          iteration,
+                          f_x,
+                          grnorm,
+                          dt,
+                          store_trace,
+                          show_trace)
         end
     end
 end
@@ -73,20 +73,20 @@ This is a port of the MATLAB version of that function.
 #### Optional Arguments
 
 * `H0::Matrix`: An initial guess for the Hessian matrix -- must be
-  positive definite. If none is given, then a scaled down identity
-  matrix is used.
+positive definite. If none is given, then a scaled down identity
+matrix is used.
 * `args...`:  Other positional arguments to be passed to `f` on each
-  function call
+function call
 
 #### Keyword Arguments (optional)
 
 * `ftol::{T<:Real}=1e-14`: Threshold for convergence in terms of change
-  in function value across iterations.
+in function value across iterations.
 * `iterations::Int=100`: Maximum number of iterations
 * `io::IO=STDOUT`: The `IO` object to print messages to. Defaults to
-  STDOUT, which is typically the REPL if Julia is run interactively.
+STDOUT, which is typically the REPL if Julia is run interactively.
 * `kwargs...`: Other keyword arguments to be passed to `f` on each
-  function call
+function call
 
 
 #### Example
@@ -94,75 +94,76 @@ This is a port of the MATLAB version of that function.
 See the file `examples/csminwel.jl` for an example of usage
 """->
 =#
-function csminwel(fcn::Function,
-                  grad::Function,
-                  x0::Vector,
-                  H0::Matrix=1e-5.*eye(length(x0)),
-                  args...;
-                  xtol::Real=1e-32,  # default from Optim.jl
-                  ftol::Float64=1e-14,  # Default from csminwel
-                  grtol::Real=1e-8,  # default from Optim.jl
-                  iterations::Int=1000,
-                  store_trace::Bool = false,
-                  show_trace::Bool = false,
-                  extended_trace::Bool = false,
-                  verbose::Bool = false,
-                  randvecs::Array = [],
-                  kwargs...)
+function csminwel{T<:AbstractDSGEModel}(fcn::Function,
+                                        grad::Function,
+                                        x0::Vector,
+                                        H0::Matrix=1e-5.*eye(length(x0)),
+                                        args...;                                        
+                                        model::T=Model990(),
+                                        xtol::Real=1e-32,  # default from Optim.jl
+                                        ftol::Float64=1e-14,  # Default from csminwel
+                                        grtol::Real=1e-8,  # default from Optim.jl
+                                        iterations::Int=1000,
+                                        store_trace::Bool = false,
+                                        show_trace::Bool = false,
+                                        extended_trace::Bool = false,
+                                        verbose::Bool = false,
+                                        randvecs::Array = [],
+                                        kwargs...)
     
     # PZL 8/11/15: for time tests
     randi = 1
-
+    
     if show_trace
         @printf "Iter     Function value   Gradient norm \n"
     end
-
+    
     # unpack dimensions
     nx = size(x0, 1)
-
+    
     # Count function and gradient calls
     f_calls = 0
     g_calls = 0
-
+    
     # Maintain current state in x and previous state in x_previous
     x, x_previous = copy(x0), copy(x0)
-
+    
     # start with Initial Hessian
     H = H0
-
+    
     # start rc parameter at 0
     rc = 0
-
+    
     f_x = fcn(x0, args...; kwargs...)
     f_calls += 1
-
+    
     if f_x > 1e50
         throw(ArgumentError("Bad initial guess. Try again"))
     end
-
+    
     gr, badg = grad(x0)
     g_calls += 1
-
+    
     # Count iterations
     iteration = 0
-
+    
     # Maintain a trace
     tr = OptimizationTrace()
     tracing = show_trace || store_trace || extended_trace
     @csminwelltrace
-
+    
     # set objects to their starting values
     retcode3 = 101
-
+    
     # set up return variables so they are available outside while loop
     fh = copy(f_x)
     xh = copy(x0)
     gh = copy(x0)
     retcodeh = 1000
-
+    
     # Assess multiple types of convergence
     x_converged, f_converged, gr_converged = false, false, false
-
+    
     # Iterate until convergence or exhaustion
     converged = false
     while !converged && iteration < iterations
@@ -190,7 +191,7 @@ function csminwel(fcn::Function,
 
                 # PZL 8/11/15: for time tests
                 if randvecs == []
-                    Hcliff = H + diagm(diag(H).*rand(m.rng, nx))
+                    Hcliff = H + diagm(diag(H).*rand(model.rng, nx))
                 else
                     Hcliff = H + diamg(diag(H) .* randvecs[:, randi])
                     randi += 1
@@ -326,20 +327,20 @@ function csminwel(fcn::Function,
                 #error("improvement < ftol -- terminating")
                 @printf "improvement < ftol -- terminating\n"
             end
-               
+            
         end
 
-        #!! 2015-08-03 ELM: Throwing a warning because maintain has no value
-        #rc = maintain 
+      #!! 2015-08-03 ELM: Throwing a warning because maintain has no value
+      #rc = maintain 
 
-        # record# retcodeh of previous x
-        copy!(x_previous, x)
+      # record# retcodeh of previous x
+      copy!(x_previous, x)
 
-        # update before next iteration
-        f_x_previous, f_x = f_x, fh
-        x = xh
-        gr = gh
-        badg = badgh
+      # update before next iteration
+      f_x_previous, f_x = f_x, fh
+      x = xh
+      gr = gh
+      badg = badgh
 
         # Check convergence
         x_converged,
@@ -385,21 +386,22 @@ you cannot supply an analytical derivative, but it is not as robust as
 using the true derivative.
 """
 =#
-function csminwel(fcn::Function, x0::Vector,
-                  H0::Matrix=0.5.*eye(length(x0)), args...;
-                  xtol::Real=1e-32,  # default from Optim.jl
-                  ftol::Float64=1e-14,  # Default from csminwel
-                  grtol::Real=1e-8,  # default from Optim.jl
-                  iterations::Int=1000,
-                  store_trace::Bool = false,
-                  show_trace::Bool = false,
-                  extended_trace::Bool = false,
-                  verbose::Bool = false,
-                  randvecs::Array= [],
-                  kwargs...)
+function csminwel{T<:AbstractDSGEModel}(fcn::Function, x0::Vector,
+                                        H0::Matrix=0.5.*eye(length(x0)), args...;
+                                        model::T=Model990(),
+                                        xtol::Real=1e-32,  # default from Optim.jl
+                                        ftol::Float64=1e-14,  # Default from csminwel
+                                        grtol::Real=1e-8,  # default from Optim.jl
+                                        iterations::Int=1000,
+                                        store_trace::Bool = false,
+                                        show_trace::Bool = false,
+                                        extended_trace::Bool = false,
+                                        verbose::Bool = false,
+                                        randvecs::Array= [],
+                                        kwargs...)
     grad{T<:Number}(x::Array{T}) = csminwell_grad(fcn, x, args...; kwargs...)
     csminwel(fcn, grad, x0, H0, args...;
-             xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
+             model=model, xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
              store_trace=store_trace, show_trace=show_trace,
              extended_trace=extended_trace, verbose=verbose, randvecs=randvecs, kwargs...)
 end
@@ -665,4 +667,29 @@ function assess_convergence(x::Array,
     converged = x_converged || f_converged || gr_converged
 
     return x_converged, f_converged, gr_converged, converged
+end
+
+#=
+"""
+Wrapper function to send a model to csminwel
+"""
+=#
+function csminwel(
+                  fcn::Function,
+                  grad::Function,
+                  x0::Vector,
+                  H0::Matrix=1e-5.*eye(length(x0)),
+                  args...;
+                  xtol::Real=1e-32,  # default from Optim.jl
+                  ftol::Float64=1e-14,  # Default from csminwel
+                  grtol::Real=1e-8,  # default from Optim.jl
+                  iterations::Int=1000,
+                  store_trace::Bool = false,
+                  show_trace::Bool = false,
+                  extended_trace::Bool = false,
+                  verbose::Bool = false,
+                  randvecs::Array = [],
+                  kwargs...)
+    
+    
 end
