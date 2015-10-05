@@ -77,7 +77,7 @@ number of draws from the posterior:
 *  num_mh_burn_test::Int                 
 
 #### Other Fields
-* `rng::AbstractRNG`: Random number generator, implemented as a MersenneTwister()
+* `rng::MersenneTwister`: Random number generator, implemented as a MersenneTwister()
  """
  =#
 type Model990 <: AbstractDSGEModel
@@ -115,7 +115,7 @@ type Model990 <: AbstractDSGEModel
     num_mh_burn_test::Int                           #
 
 
-    rng::AbstractRNG                                # Random number generator
+    rng::MersenneTwister                            # Random number generator
 end
 
 description(m::Model990) = "This is some model that we're trying to make work."
@@ -358,7 +358,7 @@ function Model990()
     num_mh_burn_test                = 0
 
     # Random number generator
-    rng                             = MersenneTwister(111)
+    rng                             = MersenneTwister()
     
     # initialise empty model
     m = Model990(

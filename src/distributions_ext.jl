@@ -4,7 +4,7 @@
 # parameters). Note these functions are NOT new methods for the Distributions.Beta, etc.
 # functions, but rather new functions with the same names.
 
-using Distributions, Compat
+using Distributions, Compat, DSGE
 import Distributions: params, mean, std, pdf, logpdf, rand
 import Base: length
 
@@ -182,3 +182,15 @@ Generate a draw from d with variance optionally scaled by cc^2.
 function Distributions.rand{T<:AbstractFloat}(d::DegenerateMvNormal; cc::T = 1.0)
     return d.μ + cc*d.σ*randn(length(d))
 end
+
+## #=
+## doc"""
+## Distributions.rand{T<:AbstractFloat}(d::DegenerateMvNormal; cc::T = 1.0)
+
+## Generate a draw from d with variance optionally scaled by cc^2.
+## """
+## =#
+## function Distributions.rand{T<:AbstractFloat, U<:AbstractDSGEModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
+##     return d.μ + cc*d.σ*randn(m.rng, length(d))
+## end
+
