@@ -1,5 +1,8 @@
 using HDF5
+using Base.Test
+using DSGE
 
+include("../util.jl")
 path = dirname(@__FILE__)
 
 h5 = h5open("$path/solve.h5")

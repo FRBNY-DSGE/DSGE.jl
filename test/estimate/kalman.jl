@@ -1,5 +1,7 @@
 #using MATLAB
-using HDF5
+using HDF5, Base.Test
+import DSGE: kalcvf2NaN
+include("../util.jl")
 
 path = dirname(@__FILE__)
 

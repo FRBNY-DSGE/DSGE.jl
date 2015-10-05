@@ -1,6 +1,6 @@
 import Distributions
 import DSGE: Param, PointMass
-
+include("util.jl")
 
 # Test Param type
 

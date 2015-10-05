@@ -1,6 +1,6 @@
 debug = false
 
-using Compat
+using Compat, Base.Test
 
 # these tests were pulled directly from main Julia
 import Base.LinAlg: BlasComplex, BlasFloat, BlasReal, QRPivoted
