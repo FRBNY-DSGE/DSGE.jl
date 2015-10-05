@@ -433,6 +433,29 @@ function compare_mat_hdf5(matfile,h5file)
    
 end
 
+function compare_hdf5s(file1,file2)
+    fid1 = h5open(file1, "r")
+    fid2 = h5open(file2, "r")
+
+    names1 = names(fid1)
+    names2 = names(fid2)
+
+    for name in names1
+        if(in(name, names2))
+            var1 = read(fid1,string(name))
+            var2 = read(fid2,string(name))
+            println(name)
+            test_matrix_eq(var1, var2, ε=1e-9, noisy=true)
+        else
+            println("Missing: $file2 doesn't contain variable $name")
+        end
+
+    end
+    
+    close(fid1)
+    close(fid2)
+end
+
 function compare_matvar_hdf5var(matfile, mname, h5file, h5name; ε=1e-4, noisy=true)
     #Get matlab variable
     mf = MatFile(matfile);
