@@ -2,6 +2,8 @@
 doc"""
 TODO: Decide whether this is the right place for this documentation...
 
+Model990 <: AbstractDSGEModel
+
 The Model990 type defines the structure of the FRBNY DSGE
 model. We can then concisely pass around a Model object to the
 remaining steps of the model (solve, estimate, and forecast).
