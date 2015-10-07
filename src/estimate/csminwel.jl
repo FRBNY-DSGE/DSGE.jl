@@ -94,12 +94,12 @@ function call
 See the file `examples/csminwel.jl` for an example of usage
 """->
 =#
-function csminwel{T<:AbstractDSGEModel}(fcn::Function,
+function csminwel{S<:AbstractDSGEModel}(fcn::Function,
                                         grad::Function,
                                         x0::Vector,
                                         H0::Matrix=1e-5.*eye(length(x0)),
+                                        model::S=Model990(), 
                                         args...;                                        
-                                        model::T=Model990(),
                                         xtol::Real=1e-32,  # default from Optim.jl
                                         ftol::Float64=1e-14,  # Default from csminwel
                                         grtol::Real=1e-8,  # default from Optim.jl
@@ -386,9 +386,9 @@ you cannot supply an analytical derivative, but it is not as robust as
 using the true derivative.
 """
 =#
-function csminwel{T<:AbstractDSGEModel}(fcn::Function, x0::Vector,
+function csminwel{S<:AbstractDSGEModel}(fcn::Function, x0::Vector,
                                         H0::Matrix=0.5.*eye(length(x0)), args...;
-                                        model::T=Model990(),
+                                        model::S=Model990(),
                                         xtol::Real=1e-32,  # default from Optim.jl
                                         ftol::Float64=1e-14,  # Default from csminwel
                                         grtol::Real=1e-8,  # default from Optim.jl
@@ -399,9 +399,10 @@ function csminwel{T<:AbstractDSGEModel}(fcn::Function, x0::Vector,
                                         verbose::Bool = false,
                                         randvecs::Array= [],
                                         kwargs...)
+    
     grad{T<:Number}(x::Array{T}) = csminwell_grad(fcn, x, args...; kwargs...)
-    csminwel(fcn, grad, x0, H0, args...;
-             model=model, xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
+    csminwel(fcn, grad, x0, H0, model, args...;
+             xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
              store_trace=store_trace, show_trace=show_trace,
              extended_trace=extended_trace, verbose=verbose, randvecs=randvecs, kwargs...)
 end

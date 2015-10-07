@@ -66,7 +66,7 @@ function hessizero!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY
     # Now compute off-diagonal elements
     # Make sure that correlations are between -1 and 1
     # errorij contains the index of elements that are invalid
-    errorij = Dict{(Int64, Int64), Float64}()
+    errorij = Dict{Tuple{Int64}, Float64}()
 
     for i = 1:(nfree-1)
         seli = fpara_free[i]

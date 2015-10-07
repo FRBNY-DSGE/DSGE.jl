@@ -1,7 +1,7 @@
 # This program produces and saves draws from the posterior distribution of
 # the parameters.
 
-using HDF5, Compat
+using HDF5, Compat, Debug
 include("../../test/util.jl")
 
 #=
@@ -23,7 +23,7 @@ estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
 - `testing`: Run `estimate()` in testing mode. In this case, a set of predetermined random numbers are read in and used rather than drawn from the Random Number Generator, and Metropolis-Hastings runs for `num_mh_simulations_test`*`num_mh_blocks_test` simulations.
 """->
 =#
-function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
+@debug function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
 
     ###################################################################################################
     ### Step 1: Initialize
@@ -204,13 +204,13 @@ function proposal_distribution{T<:AbstractFloat}(μ::Vector{T}, hessian::Matrix{
 
     σ = U*sqrt(S_inv)
 
-    h5 = h5open(joinpath("/home/rceexm08/.julia/v0.4/DSGE/save/m990/output_data/","sigma_test.h5"), "w")
-    h5["σ"] = σ
-    h5["hessian"] = hessian
-    h5["μ"] = μ
-    h5["U"] = U
-    h5["S_diag"] = S_diag
-    close(h5)
+    ## h5 = h5open(joinpath("/home/rceexm08/.julia/v0.4/DSGE/save/m990/output_data/","sigma_test.h5"), "w")
+    ## h5["σ"] = σ
+    ## h5["hessian"] = hessian
+    ## h5["μ"] = μ
+    ## h5["U"] = U
+    ## h5["S_diag"] = S_diag
+    ## close(h5)
 
     return DegenerateMvNormal(μ, σ, rank)
 end

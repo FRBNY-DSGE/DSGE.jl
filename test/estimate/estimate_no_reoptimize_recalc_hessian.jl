@@ -18,7 +18,7 @@ m.num_mh_burn_test=m.num_mh_burn
 m.recalculate_hessian = true
 
 tic()
-estimate(m,verbose=true,testing=false)
+estimate(m,verbose=:low,testing=false)
 time_elapsed = toq()
 
 tic()
