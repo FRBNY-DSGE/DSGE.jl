@@ -1,5 +1,5 @@
 #=
-
+"""
 @author : Spencer Lyon <spencer.lyon@nyu.edu>,
 @author: Chase Coleman <ccoleman@stern.nyu.edu>
 
@@ -51,11 +51,20 @@ If div is omitted from argument list, a div>1 is calculated.
 
 eu(1)=1 for existence, eu(2)=1 for uniqueness.  eu(1)=-1 for existence
 only with not-s.c. z; eu=[-2,-2] for coincident zeros.
-
-
+"""
 =#
 
-# Define Gensys error types.
+
+#=
+"""
+GensysError <: Exception
+
+A `GensysError` is thrown when Gensys does not give a unique solution, or no solution exists. If a `GensysError`is thrown during Metropolis-Hastings, it is caught by `posterior`. `posterior` then returns a value of `-Inf`, which Metropolis-Hastings always rejects.
+
+### Fields
+`msg::ASCIIString`: Info message. Default = "Error in gensys." 
+"""
+=#
 type GensysError <: Exception
     msg::ASCIIString
 end
