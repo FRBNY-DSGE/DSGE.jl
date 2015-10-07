@@ -1,8 +1,12 @@
-# This file defines additional functions to return objects of type Distribution. This is
-# necessary because the original Matlab code specifies prior distributions wrt mean and SD
-# (for beta and gamma-distributed parameters) and ν and σ (for inverse gamma-distributed
-# parameters). Note these functions are NOT new methods for the Distributions.Beta, etc.
-# functions, but rather new functions with the same names.
+#=
+"""
+This file defines additional functions to return objects of type Distribution. This is
+necessary because we specify prior distributions wrt mean and SD
+(for beta and gamma-distributed parameters) and ν and σ (for inverse gamma-distributed
+parameters). Note these functions are NOT new methods for the Distributions.Beta, etc.
+functions, but rather new functions with the same names.
+"""
+=#
 
 using Distributions, Compat, DSGE
 import Distributions: params, mean, std, pdf, logpdf, rand
@@ -36,7 +40,7 @@ BetaAlt(μ::Real, σ::Real)
 `σ::Real`: The standard deviation of the desired distribution 
 
 ### Description:
-Given μ and σ, calculate α and β and return a Distributions.Beta distribution object.
+Given μ and σ, calculate α and β and return a Distributions.Beta Distribution object.
 """
 =#
 function BetaAlt(μ::Real, σ::Real)
@@ -55,7 +59,7 @@ GammaAlt(μ::Real, σ::Real)
 `σ::Real`: The standard deviation of the desired distribution 
 
 ### Description:
-Given μ and σ, calculate α and β and return a Distributions.Gamma distribution object.
+Given μ and σ, calculate α and β and return a Distributions.Gamma object.
 """
 =#
 function GammaAlt(μ::Real, σ::Real)
@@ -71,6 +75,7 @@ type RootInverseGamma <: Distribution{Univariate, Continuous}
 If x ~ RootInverseGamma(ν, τ²), then
   x² ~ ScaledInverseChiSquared(ν, τ²)
   x² ~ InverseGamma(ν/2, ντ²/2)
+
 
 """
 =#
