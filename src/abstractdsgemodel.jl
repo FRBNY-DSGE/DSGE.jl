@@ -39,9 +39,16 @@ end
 end
 Base.setindex!(m::AbstractDSGEModel, value, k::Symbol) = Base.setindex!(m, value, m.keys[k])
 
-# syntax for adding a prameter to a model m <= parameter
+#=
+"""
+(<=){T}(m::AbstractDSGEModel{T}, p::AbstractParameter{T})
+
+Syntax for adding a parameter to a model: m <= parameter.
+NOTE: If `p` is added to `m` and length(m.steady_state) > 0, `keys(m)` will not generate the index of `p` in `m.parameters`.
+"""
+=#
 function (<=){T}(m::AbstractDSGEModel{T}, p::AbstractParameter{T})
-    @assert !in(p.key, m.keys) "Key $(p.key) is already present in DSGE model"
+    @assert !in(p.key, keys(m.keys)) "Key $(p.key) is already present in DSGE model"
 
     new_param_index = length(m.keys) + 1
 
@@ -52,8 +59,15 @@ function (<=){T}(m::AbstractDSGEModel{T}, p::AbstractParameter{T})
     setindex!(m.keys, new_param_index, p.key)
 end
 
+#=
+"""
+(<=){T}(m::AbstractDSGEModel{T}, k::Symbol)
+
+Add a new steady-state value to the model by appending a 0 to the steady-state vector and adding k to m.keys.
+"""
+=#
 function (<=){T}(m::AbstractDSGEModel{T}, k::Symbol)
-    @assert !in(k, m.keys) "Key $(k) is already present in DSGE model"
+    @assert !in(k, keys(m.keys)) "Key $(k) is already present in DSGE model"
 
     new_param_index = length(m.keys) + 1
 
@@ -63,6 +77,14 @@ function (<=){T}(m::AbstractDSGEModel{T}, k::Symbol)
     # add parameter location to dict
     setindex!(m.keys, new_param_index, k)
 end
+
+#=
+"""
+(<=)(m::AbstractDSGEModel, vec::Vector{Symbol})
+
+Add all elements of `vec` to the `m.steady_state`. Update `m.keys` appropriately.
+"""
+=#
 
 function (<=)(m::AbstractDSGEModel, vec::Vector{Symbol})
     for k in vec
