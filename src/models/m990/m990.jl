@@ -149,98 +149,154 @@ function Model990()
             num_mh_blocks_test,
             num_mh_burn_test)
 
-    m <= parameter(:alp,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     Normal(0.30, 0.05),         fixed=false, description="α: This is the something something.")
-    m <= parameter(:zeta_p,   0.8940, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.1),          fixed=false, description="ζ_p: This is the something something.")
-    m <= parameter(:iota_p,   0.1865, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false, description="ι_p: This is the something something.")
-    m <= parameter(:del,      0.025,                                                                                fixed=true,  description="δ: This is the something something." )     # omit from parameter vector
-    m <= parameter(:ups,      1.000,  (0., 10.),     (1e-5, 0.),      Exponential(),    GammaAlt(1., 0.5),          fixed=true,  description="υ: This is the something something.")
-    m <= parameter(:Bigphi,   1.1066, (1., 10.),     (1.00, 10.00),   Exponential(),    Normal(1.25, 0.12),         fixed=false, description="Φ: This is the something something.")
-    m <= parameter(:s2,       2.7314, (-15., 15.),   (-15., 15.),     Untransformed(),  Normal(4., 1.5),            fixed=false, description="s2: This is the something something.")
-    m <= parameter(:h,        0.5347, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.7, 0.1),          fixed=false, description="h: This is the something something.")
-    m <= parameter(:ppsi,     0.6862, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false, description="ppsi: This is the something something.")
-    m <= parameter(:nu_l,     2.5975, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    Normal(2, 0.75),            fixed=false, description="ν_l: This is the something something.")
-    m <= parameter(:zeta_w,   0.9291, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.1),          fixed=false, description="ζ_w: This is the something something.")
-    m <= parameter(:iota_w,   0.2992, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false, description="ι_w: This is the something something.")
-    m <= parameter(:law,      1.5000,                                                                               fixed=true,  description="λ_w: This is the something something.")     # omit from parameter vector
+    m <= parameter(:alp,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
+                   description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.", texLabel="\\alpha")
 
-    m <= parameter(:bet,      0.1402, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    GammaAlt(0.25, 0.1),        fixed=false, description="β: This is the something something.",       scaling = x -> (1 + x/100)\1)
-    m <= parameter(:psi1,     1.3679, (1e-5, 10.),   (1e-5, 10.00),   Exponential(),    Normal(1.5, 0.25),          fixed=false, description="ψ₁: This is the something something.")
-    m <= parameter(:psi2,     0.0388, (-0.5, 0.5),   (-0.5, 0.5),     Untransformed(),  Normal(0.12, 0.05),         fixed=false, description="ψ₂: This is the something something.")
-    m <= parameter(:psi3,     0.2464, (-0.5, 0.5),   (-0.5, 0.5),     Untransformed(),  Normal(0.12, 0.05),         fixed=false, description="ψ₃: This is the something something.")
-    m <= parameter(:pistar,   0.5000, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    GammaAlt(0.75, 0.4),        fixed=true,  description="π_star: This is the something something.",  scaling = x -> 1 + x/100)
-    m <= parameter(:sigmac,   0.8719, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    Normal(1.5, 0.37),          fixed=false, description="σ_c: This is the something something.")
-    m <= parameter(:rho,      0.7126, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.75, 0.10),        fixed=false, description="ρ: This is the something something.")
-    m <= parameter(:epsp,     10.000,                                                                               fixed=true,  description="ϵ_p: This is the something something.")     # omit from parameter vector
-    m <= parameter(:epsw,     10.000,                                                                               fixed=true,  description="ϵ_w: This is the something something.")     # omit from parameter vector
+    m <= parameter(:zeta_p,   0.8940, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.1),          fixed=false,
+                   description="ζ_p: In every period, (1-ζ_p) of the intermediate goods producers optimize prices. ζ_p of them adjust prices according to steady-state inflation, π_star.", texLabel="\\zeta_p")
+
+    m <= parameter(:iota_p,   0.1865, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false,
+                   description="ι_p: The weight on last period's inflation in the equation that describes the intertemporal change in prices for intermediate goods producers who cannot adjust prices themselves in a given period (a geometric average of steady-state inflation (π_star, with weight (1-ι_p)) and last period's inflation (π_{t-1})).", texLabel="\\iota_p")
+
+    m <= parameter(:del,      0.025,                                                                                fixed=true,  description="δ: The capital depreciation rate.", texLabel="\\delta" )     # omit from parameter vector
+
+    m <= parameter(:ups,      1.000,  (0., 10.),     (1e-5, 0.),      Exponential(),    GammaAlt(1., 0.5),          fixed=true,  description="υ: This is the something something.", texLabel="\\Upsilon") # is this supposed to be Υ?
+    m <= parameter(:Bigphi,   1.1066, (1., 10.),     (1.00, 10.00),   Exponential(),    Normal(1.25, 0.12),         fixed=false, description="Φ: This is the something something.", texLabel="\\Phi")
+    m <= parameter(:s2,       2.7314, (-15., 15.),   (-15., 15.),     Untransformed(),  Normal(4., 1.5),            fixed=false, description="s2: This is the something something.", texLabel="S")
+    m <= parameter(:h,        0.5347, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.7, 0.1),          fixed=false, description="h: Consumption habit persistence.", texLabel="h")
+    m <= parameter(:ppsi,     0.6862, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false, description="ppsi: This is the something something.", texLabel="ppsi")
+    m <= parameter(:nu_l,     2.5975, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    Normal(2, 0.75),            fixed=false, description="ν_l: This is the something something.", texLabel="\nu_l")
+    m <= parameter(:zeta_w,   0.9291, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.1),          fixed=false, description="ζ_w: This is the something something.", texLabel="\zeta_w")
+    m <= parameter(:iota_w,   0.2992, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false, description="ι_w: This is the something something.", texLabel="\\iota_w")
+    m <= parameter(:law,      1.5000,                                                                               fixed=true,  description="λ_w: The wage markup, which affects the elasticity of substitution between differentiated labor services.", texLabel="\\lambda_w")     # omit from parameter vector
+
+    m <= parameter(:bet,      0.1402, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    GammaAlt(0.25, 0.1),        fixed=false, description="β: Discount rate.",       scaling = x -> (1 + x/100)\1, texLabel="\\beta ")
+    m <= parameter(:psi1,     1.3679, (1e-5, 10.),   (1e-5, 10.00),   Exponential(),    Normal(1.5, 0.25),          fixed=false, description="ψ₁: This is the something something.", texLabel="\\psi_1")
+    m <= parameter(:psi2,     0.0388, (-0.5, 0.5),   (-0.5, 0.5),     Untransformed(),  Normal(0.12, 0.05),         fixed=false, description="ψ₂: This is the something something.", texLabel="\\psi_2")
+    m <= parameter(:psi3,     0.2464, (-0.5, 0.5),   (-0.5, 0.5),     Untransformed(),  Normal(0.12, 0.05),         fixed=false, description="ψ₃: This is the something something.", , texLabel="\\psi_3")
+    m <= parameter(:pistar,   0.5000, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    GammaAlt(0.75, 0.4),        fixed=true,  description="π_star: The steady-state rate of inflation.",  scaling = x -> 1 + x/100, texLabel="\\pi^*")
+    m <= parameter(:sigmac,   0.8719, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    Normal(1.5, 0.37),          fixed=false, description="σ_c: This is the something something.", texLabel="\\sigma_{c}")
+    m <= parameter(:rho,      0.7126, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.75, 0.10),        fixed=false, description="ρ: This is the something something.", texLabel="\\rho")
+    m <= parameter(:epsp,     10.000,                                                                               fixed=true,  description="ϵ_p: This is the something something.", texLabel="\\epsilon_{sp}")     # omit from parameter vector
+    m <= parameter(:epsw,     10.000,                                                                               fixed=true,  description="ϵ_w: This is the something something.", texLabel="\\epsilon_{sw}")     # omit from parameter vector
 
     # financial frictions parameters
-    m <= parameter(:Fom,      0.0300, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.03, 0.01),         fixed=true,  description="F(ω): This is the something something.",    scaling = x -> 1 - (1-x)^0.25)
-    m <= parameter(:sprd,     1.7444, (0., 100.),      (1e-5, 0.),    Exponential(),   GammaAlt(2., 0.1),           fixed=false, description="spr_*: This is the something something.",   scaling = x -> (1 + x/100)^0.25)
-    m <= parameter(:zeta_spb, 0.0559, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.05, 0.005),        fixed=false, description="ζ_spb: This is the something something.")
-    m <= parameter(:gammstar, 0.9900, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.99, 0.002),        fixed=true,  description="γ_star: This is the something something.")
+    m <= parameter(:Fom,      0.0300, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.03, 0.01),         fixed=true,  description="F(ω): The cumulative distribution function of ω (idiosyncratic iid shock that increases or decreases entrepreneurs' capital).",    scaling = x -> 1 - (1-x)^0.25, texLabel="F(\omega)")
+    m <= parameter(:sprd,     1.7444, (0., 100.),      (1e-5, 0.),    Exponential(),   GammaAlt(2., 0.1),           fixed=false, description="spr_*: This is the something something.",   scaling = x -> (1 + x/100)^0.25, texLabel="spr_*")
+    m <= parameter(:zeta_spb, 0.0559, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.05, 0.005),        fixed=false, description="ζ_spb: (1-ζ_spb) is the probability with which each household chooses their wage freely in any given period. Otherwise, wages increase by the steady-state growth rate of aggregate wages, π_star × eˠ", texLabel="\\zeta_{sp}")
+    m <= parameter(:gammstar, 0.9900, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.99, 0.002),        fixed=true,  description="γ_star: This is the something something.", texLabel="\\gamma_*")
 
     # exogenous processes - level
-    m <= parameter(:gam,      0.3673, (-5.0, 5.0),     (-5., 5.),     Untransformed(), Normal(0.4, 0.1),            fixed=false, description="γ: This is the something something.",       scaling = x -> x/100)
-    m <= parameter(:Lmean,  -45.9364, (-1000., 1000.), (-1e3, 1e3),   Untransformed(), Normal(-45, 5),              fixed=false, description="Lmean: This is the something something.")
-    m <= parameter(:gstar,    0.1800,                                                                               fixed=true,  description="g_star: This is the something something.")  # omit from parameter vector
+    m <= parameter(:gam,      0.3673, (-5.0, 5.0),     (-5., 5.),     Untransformed(), Normal(0.4, 0.1),            fixed=false,
+                   description="γ: The log of the steady-state growth rate of technology.",       scaling = x -> x/100, texLabel="\\gamma")
+    m <= parameter(:Lmean,  -45.9364, (-1000., 1000.), (-1e3, 1e3),   Untransformed(), Normal(-45, 5),              fixed=false, description="Lmean: This is the something something.",         texLabel="Lmean")
+    m <= parameter(:gstar,    0.1800,                                                                               fixed=true,  description="g_star: This is the something something.",        texLabel="g^*")  # omit from parameter vector
 
-    # exogenous processes - autocorrelation
-    m <= parameter(:ρ_g,      0.9863, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_g: This is the something something.")
-    m <= parameter(:ρ_b,      0.9410, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_b: This is the something something.")
-    m <= parameter(:ρ_mu,     0.8735, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_μ: This is the something something.")
-    m <= parameter(:ρ_z,      0.9446, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_z: This is the something something.")
-    m <= parameter(:ρ_laf,    0.8827, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_λ_f: This is the something something.")
-    m <= parameter(:ρ_law,    0.3884, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_λ_w: This is the something something.")
-    m <= parameter(:ρ_rm,     0.2135, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_rm: This is the something something.")
-    m <= parameter(:ρ_sigw,   0.9898, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=false, description="ρ_σ_w: This is the something something.")
-    m <= parameter(:ρ_mue,    0.7500, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=true,  description="ρ_μ_e: This is the something something.")
-    m <= parameter(:ρ_gamm,   0.7500, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=true,  description="ρ_γ: This is the something something.")
-    m <= parameter(:ρ_pist,   0.9900, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=true,  description="ρ_π_star: This is the something something.")
-    m <= parameter(:ρ_lr,     0.6936, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_lr: This is the something something.")
-    m <= parameter(:ρ_zp,     0.8910, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_zp: This is the something something.")
-    m <= parameter(:ρ_tfp,    0.1953, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_tfp: This is the something something.")
-    m <= parameter(:ρ_gdpdef, 0.5379, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_gdpdef: This is the something something.")
-    m <= parameter(:ρ_pce,    0.2320, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_pce: This is the something something.")
+    # exogenous processes - autocorrelation 
+    m <= parameter(:ρ_g,      0.9863, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
+                   description="ρ_g: The coefficient on the lag term in the exogenous government spending process, ln(g_t) = (1-ρ_g)*ln(g) + ρ_g*ln(g_{t-1} + ε_{g,t}.",
+                   texLabel="\\rho_g")
+
+    m <= parameter(:ρ_b,      0.9410, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
+                   description="ρ_b: The coefficient on the lagged intertemporal preference shifter b in its AR(1) process.",
+                   texLabel="\\rho_b")
+
+    m <= parameter(:ρ_mu,     0.8735, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
+                   description="ρ_μ: The coefficient on the lag term in the exogenous marginal efficiency of investment shock process.",
+                   texLabel="\\rho_{\\mu}")
+
+    m <= parameter(:ρ_z,      0.9446, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
+                   description="ρ_z: The coefficient on the deviation of the lagged productivty growth rate from the steady-state productivity growth rate in the technology process.",
+                   texLabel="\\rho_z")
+
+    m <= parameter(:ρ_laf,    0.8827, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
+                   description="ρ_λ_f: The coefficient on something in the price mark-up shock process.",
+                   texLabel="\\rho_{z}") # TODO - is this right?...see p12 of supersticky
+
+    m <= parameter(:ρ_law,    0.3884, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_λ_w: This is the something something.",           texLabel="\\rho_{\\lambda_f}")
+
+    m <= parameter(:ρ_rm,     0.2135, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_rm: This is the something something.",            texLabel="\\rho_{rm}")
+
+    m <= parameter(:ρ_sigw,   0.9898, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=false,
+                   description="ρ_σ_w: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with mean ρ_σ_w. Innovations to the process are called _spread shocks_.",
+                   texLabel="\\rho_{sigw}")
+
+    m <= parameter(:ρ_mue,    0.7500, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=true,
+                   description="ρ_μ_e: Verification costs are a fraction μ_e of the amount the bank extracts from an entrepreneur in case of bankruptcy???? This doesn't seem right because μ_e isn't a process (p12 of PDF)",
+                   texLabel="\\rho_{mue}")
+    
+    m <= parameter(:ρ_gamm,   0.7500, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=true,  description="ρ_γ: This is the something something.",              texLabel="\\rho_{gamm}")    
+    m <= parameter(:ρ_pist,   0.9900, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=true,  description="ρ_π_star: This is the something something.",         texLabel="\\rho_{pi}^*")   
+    m <= parameter(:ρ_lr,     0.6936, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_lr: This is the something something.",             texLabel="\\rho_{lr}")      
+    m <= parameter(:ρ_zp,     0.8910, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_zp: This is the something something.",             texLabel="\\rho_{z^p}")    
+    m <= parameter(:ρ_tfp,    0.1953, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_tfp: This is the something something.",            texLabel="\\rho_{tfp}")     
+    m <= parameter(:ρ_gdpdef, 0.5379, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_gdpdef: This is the something something.",         texLabel="\\rho_{gdpdef}")  
+    m <= parameter(:ρ_pce,    0.2320, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_pce: This is the something something.",            texLabel="\\rho_{pce}")     
 
     # exogenous processes - standard deviation
-    m <= parameter(:σ_g,      2.5230, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_a: This is the something something.")
-    m <= parameter(:σ_b,      0.0292, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_b: This is the something something.")
-    m <= parameter(:σ_mu,     0.4559, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_μ: This is the something something.")
-    m <= parameter(:σ_z,      0.6742, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_z: This is the something something.")
-    m <= parameter(:σ_laf,    0.1314, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_λ_f: This is the something something.")
-    m <= parameter(:σ_law,    0.3864, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_λ_w: This is the something something.")
-    m <= parameter(:σ_rm,     0.2380, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_rm: This is the something something.")
-    m <= parameter(:σ_sigw,   0.0428, (1e-7,100.),     (1e-5, 0.),    Exponential(),   RootInverseGamma(4., 0.05),  fixed=false, description="σ_σ_w: This is the something something.")
-    m <= parameter(:σ_mue,    0.0000, (1e-7,100.),     (1e-5, 0.),    Exponential(),   RootInverseGamma(4., 0.05),  fixed=true,  description="σ_μ_e: This is the something something.")
-    m <= parameter(:σ_gamm,   0.0000, (1e-7,100.),     (1e-5, 0.),    Exponential(),   RootInverseGamma(4., 0.01),  fixed=true,  description="σ_γ: This is the something something.")
-    m <= parameter(:σ_pist,   0.0269, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(6., 0.03),  fixed=false, description="σ_π_star: This is the something something.")
-    m <= parameter(:σ_lr,     0.1766, (1e-8,10.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.75),  fixed=false, description="σ_lr: This is the something something.")
-    m <= parameter(:σ_zp,     0.1662, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_zp: This is the something something.")
-    m <= parameter(:σ_tfp,    0.9391, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_tfp: This is the something something.")
-    m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_gdpdef: This is the something something.")
-    m <= parameter(:σ_pce,    0.0999, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_pce: This is the something something.")
+    m <= parameter(:σ_g,      2.5230, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
+                   description="σ_g: The standard deviation of the government spending process.",
+                   texLabel="\\sigma_{g}")
+    
+    m <= parameter(:σ_b,      0.0292, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
+                   description="σ_b: This is the something something.",
+                   texLabel="\\sigma_{b}")
+
+    m <= parameter(:σ_mu,     0.4559, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
+                   description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
+                   texLabel="\\sigma_{\\mu}")
+
+    m <= parameter(:σ_z,      0.6742, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
+                   description="σ_z: This is the something something.",
+                   texLabel="\\sigma_{z}")
+
+    m <= parameter(:σ_laf,    0.1314, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
+                   description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good.  Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
+                   texLabel="\\sigma_{\\lambda_f}")
+
+    m <= parameter(:σ_law,    0.3864, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
+                   description="σ_λ_w: This is the something something.",
+                   texLabel="\\sigma_{\\lambda_w}")
+    
+    m <= parameter(:σ_rm,     0.2380, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
+                   description="σ_rm: This is the something something.",
+                   texLabel="\\sigma_{rm}")
+    
+    m <= parameter(:σ_sigw,   0.0428, (1e-7,100.),     (1e-5, 0.),    Exponential(),   RootInverseGamma(4., 0.05),  fixed=false,
+                   description="σ_σ_w: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_w.",
+                   texLabel="\\sigma_{sigw}")
+    
+    m <= parameter(:σ_mue,    0.0000, (1e-7,100.),     (1e-5, 0.),    Exponential(),   RootInverseGamma(4., 0.05),  fixed=true,  description="σ_μ_e: This is the something something.",           texLabel="\\sigma_{mue}")
+    m <= parameter(:σ_gamm,   0.0000, (1e-7,100.),     (1e-5, 0.),    Exponential(),   RootInverseGamma(4., 0.01),  fixed=true,  description="σ_γ: This is the something something.",             texLabel="\\sigma_{gamm}")    
+    m <= parameter(:σ_pist,   0.0269, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(6., 0.03),  fixed=false, description="σ_π_star: This is the something something.",        texLabel="\\sigma_{pi}^*")   
+    m <= parameter(:σ_lr,     0.1766, (1e-8,10.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.75),  fixed=false, description="σ_lr: This is the something something.",            texLabel="\\sigma_{lr}")      
+    m <= parameter(:σ_zp,     0.1662, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_zp: This is the something something.",            texLabel="\\sigma_{z^p}")    
+    m <= parameter(:σ_tfp,    0.9391, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_tfp: This is the something something.",           texLabel="\\sigma_{tfp}")     
+    m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_gdpdef: This is the something something.",        texLabel="\\sigma_{gdpdef}")  
+    m <= parameter(:σ_pce,    0.0999, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_pce: This is the something something.",           texLabel="\\sigma_{pce}")     
 
     # standard deviations of the anticipated policy shocks
     for i = 1:num_anticipated_shocks_padding(m)
         if i < 13
-            m <= parameter(symbol("σ_rm$i"), .2, (1e-7, 100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., .2), fixed=false, description="σ_rm$i: This is the something something.")
+            m <= parameter(symbol("σ_rm$i"), .2, (1e-7, 100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., .2), fixed=false, description="σ_rm$i: This is the something something.", texLabel=@sprintf("\\sigma_ant{%d}",i))
         else
-            m <= parameter(symbol("σ_rm$i"), .0, (1e-7, 100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., .2), fixed=true,  description="σ_rm$i: This is the something something.")
+            m <= parameter(symbol("σ_rm$i"), .0, (1e-7, 100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., .2), fixed=true,  description="σ_rm$i: This is the something something.", texLabel=@sprintf("\\sigma_ant{%d}",i))
         end
     end
 
-    m <= parameter(:eta_gz,       0.8400, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),  BetaAlt(0.50, 0.20),         fixed=false, description="η_gz: This is the something something.")
-    m <= parameter(:eta_laf,      0.7892, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),  BetaAlt(0.50, 0.20),         fixed=false, description="η_λ_f: This is the something something.")
-    m <= parameter(:eta_law,      0.4226, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),  BetaAlt(0.50, 0.20),         fixed=false, description="η_λ_w: This is the something something.")
+    m <= parameter(:eta_gz,       0.8400, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),  BetaAlt(0.50, 0.20),         fixed=false, description="η_gz: This is the something something.",  texLabel="\\eta_{gz}")        
+    m <= parameter(:eta_laf,      0.7892, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),  BetaAlt(0.50, 0.20),         fixed=false, description="η_λ_f: This is the something something.", texLabel="\\eta_{\\lambda_f}")
+    m <= parameter(:eta_law,      0.4226, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),  BetaAlt(0.50, 0.20),         fixed=false, description="η_λ_w: This is the something something.", texLabel="\\eta_{\\lambda_w}")
 
-    m <= parameter(:modelalp_ind, 0.0000, (0.000, 1.000), (0., 0.),   Untransformed(), BetaAlt(0.50, 0.20),         fixed=true,  description="modelα_ind: This is the something something.")
-    m <= parameter(:gamm_gdpdef,  1.0354, (-10., 10.), (-10., -10.),  Untransformed(), Normal(1.00, 2.),            fixed=false, description="γ_gdpdef: This is the something something.")
-    m <= parameter(:del_gdpdef,   0.0181, (-9.1, 9.1), (-10., -10.),  Untransformed(), Normal(0.00, 2.),            fixed=false, description="δ_gdpdef: This is the something something.")
+    m <= parameter(:modelalp_ind, 0.0000, (0.000, 1.000), (0., 0.),   Untransformed(), BetaAlt(0.50, 0.20),         fixed=true,  description="modelα_ind: This is the something something.", texLabel="i_{\\alpha}^model")        
+    m <= parameter(:gamm_gdpdef,  1.0354, (-10., 10.), (-10., -10.),  Untransformed(), Normal(1.00, 2.),            fixed=false, description="γ_gdpdef: This is the something something.",   texLabel="\\Gamma_{gdpdef}")
+    m <= parameter(:del_gdpdef,   0.0181, (-9.1, 9.1), (-10., -10.),  Untransformed(), Normal(0.00, 2.),            fixed=false, description="δ_gdpdef: This is the something something.",   texLabel="\\delta_{gdpdef}")
 
     # steady states
     m <= [:zstar, :rstar, :Rstarn, :rkstar, :wstar, :Lstar, :kstar, :kbarstar, :istar, :ystar, :cstar, :wl_c, :nstar, :vstar, :zeta_spsigw, :zeta_spmue, :zeta_nRk, :zeta_nR, :zeta_nqk, :zeta_nn, :zeta_nmue, :zeta_nsigw]
 
     initialise_model_indices!(m)
+    ##steady_state_descriptions(m)
     steadystate!(m)
     return m
 end
@@ -396,4 +452,31 @@ function createSaveDirectories(savepath::String)
 
 end
 
+# TODO: maybe? Make steady-state values parameter types so they can have descriptions/tex names/etc?
+## function steady_state_descriptions(m::Model990)
 
+##     m[:zstar].description          = "The steady-state growth rate of productivity."    
+##     m[:rstar].description          = "This is the steady-state something something."
+##     m[:Rstarn].description         = "This is the steady-state something something."
+##     m[:rkstar].description         = "This is the steady-state something something."
+##     m[:wstar].description          = "This is the steady-state something something."
+##     m[:Lstar].description          = "This is the steady-state something something."
+##     m[:kstar].description          = "This is the steady-state something something."
+##     m[:kbarstar].description       = "This is the steady-state something something."
+##     m[:istar].description          = "This is the steady-state something something."
+##     m[:ystar].description          = "This is the steady-state something something."
+##     m[:cstar].description          = "This is the steady-state something something."
+##     m[:wl_c].description           = "This is the steady-state something something."
+##     m[:nstar].description          = "This is the steady-state something something."
+##     m[:vstar].description          = "This is the steady-state something something."
+##     m[:zeta_spsigw].description    = "This is the steady-state something something."
+##     m[:zeta_spmue].description     = "This is the steady-state something something."
+##     m[:zeta_nRk].description       = "This is the steady-state something something."
+##     m[:zeta_nR].description        = "This is the steady-state something something."
+##     m[:zeta_nqk].description       = "This is the steady-state something something."
+##     m[:zeta_nn].description        = "This is the steady-state something something."
+##     m[:zeta_nmue].description      = "This is the steady-state something something."
+##     m[:zeta_nsigw].description     = "This is the steady-state something something."
+
+
+## end

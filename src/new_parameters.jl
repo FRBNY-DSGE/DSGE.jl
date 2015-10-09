@@ -1,3 +1,5 @@
+using Compat
+
 typealias Interval{T} @compat Tuple{T,T}
 
 # define all the kinds of transformations we make
@@ -10,7 +12,7 @@ Base.show(io::IO, t::Untransformed) = @printf io "x -> x\n"
 Base.show(io::IO, t::SquareRoot)    = @printf io "x -> (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)\n"
 Base.show(io::IO, t::Exponential)   = @printf io "x -> b + (1/c) * log(x-a)\n"
 
-abstract AbstractParameter{T<:FloatingPoint}
+abstract AbstractParameter{T<:AbstractFloat}
 abstract Parameter{T,U<:Transform} <: AbstractParameter{T}
 
 typealias ParameterVector{T} Vector{AbstractParameter{T}}
@@ -18,17 +20,18 @@ typealias NullablePrior      Nullable{ContinuousUnivariateDistribution}
 
 # do we need value bounds?
 immutable UnscaledParameter{T,U} <: Parameter{T,U}
-	key::Symbol
+    key::Symbol
     value::T                    # transformed parameter value
     valuebounds::Interval{T}
     transbounds::Interval{T}
     prior::NullablePrior
     fixed::Bool
-    description::String
+    description::AbstractString
+    texLabel::AbstractString
 end
 
 immutable ScaledParameter{T,U} <: Parameter{T,U}
-	key::Symbol
+    key::Symbol
     value::T                    # scaled, transformed parameter value
     unscaledvalue::T			# unscaled, transformed parameter value
     scaling::Function
@@ -36,7 +39,7 @@ immutable ScaledParameter{T,U} <: Parameter{T,U}
     transbounds::Interval{T}
     prior::NullablePrior
     fixed::Bool
-    description::String
+    description::AbstractString
 end
 
 hasprior(p::Parameter) = !isnull(p.prior)
@@ -45,23 +48,24 @@ typealias NullableOrPrior Union(NullablePrior, ContinuousUnivariateDistribution)
 
 # method to construct parameters
 function parameter{T,U<:Transform}(key::Symbol,
-	                    		   value::T,
-	                    		   valuebounds::Interval{T} = (value,value),
-	                    		   transbounds::Interval{T} = (value,value),
-	                    		   transform::U             = Untransformed(),
-	                    		   prior::NullableOrPrior   = NullablePrior();
-	                    		   description::String      = "This variable is missing a description. Zac will not be pleased!",
-								   fixed::Bool              = true,
-								   scaling::Function        = identity)
-
-	# ensure that we have a Nullable{Distribution}, if not construct one
-	prior = !isa(prior,NullablePrior) ? NullablePrior(prior) : prior
-
-	if scaling == identity
-		return UnscaledParameter{T,U}(key, value, valuebounds, transbounds, prior, fixed, description)
-	else
-		return ScaledParameter{T,U}(key, scaling(value), value, scaling, valuebounds, transbounds, prior, fixed, description)
-	end
+                                   value::T,
+                                   valuebounds::Interval{T} = (value,value),
+                                   transbounds::Interval{T} = (value,value),
+                                   transform::U             = Untransformed(),
+                                   prior::NullableOrPrior   = NullablePrior();
+                                   description::AbstractString      = "This variable is missing a description. Zac will not be pleased!",
+                                   fixed::Bool              = true,
+                                   scaling::Function        = identity
+                                   texLabel::AbstractString = "This variable is missing a LaTeX label. This will make it difficult to print nice tables!")
+    
+    # ensure that we have a Nullable{Distribution}, if not construct one
+    prior = !isa(prior,NullablePrior) ? NullablePrior(prior) : prior
+    
+    if scaling == identity
+        return UnscaledParameter{T,U}(key, value, valuebounds, transbounds, prior, fixed, description)
+    else
+        return ScaledParameter{T,U}(key, scaling(value), value, scaling, valuebounds, transbounds, prior, fixed, description)
+    end
 end
 
 # generate a parameter given a new value
@@ -81,6 +85,7 @@ end
 function Base.show{T,U}(io::IO, p::Parameter{T,U})
 	@printf io "%s\n" typeof(p)
 	@printf io "(:%s)\n%s\n"      p.key p.description
+    	@printf io "LaTeX label: %s\n"     p.texLabel
     @printf io "-----------------------------\n"
 	@printf io "real value:        %+6f\n" toreal(p)
 	!isa(U(),Untransformed) && @printf io "transformed value: %+6f\n" p.value
@@ -103,23 +108,23 @@ toreal{T}(p::Parameter{T,Untransformed}, x::T = p.value) = x
 
 # SquareRoot
 function tomodel{T}(p::Parameter{T,SquareRoot}, x::T)
-	(a,b), c = p.transbounds, one(T)
-	(a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)
+    (a,b), c = p.transbounds, one(T)
+    (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)
 end
 function toreal{T}(p::Parameter{T,SquareRoot}, x::T = p.value)
-	(a,b), c = p.transbounds, one(T)
-	cx = 2 * (x - (a+b)/2)/(b-a)
+    (a,b), c = p.transbounds, one(T)
+    cx = 2 * (x - (a+b)/2)/(b-a)
     (1/c)*cx/sqrt(1 - cx^2)
 end
 
 # Exponential
 function tomodel{T}(p::Parameter{T,Exponential}, x::T)
-	(a,b),c = p.transbounds,one(T)
-	a + exp(c*(x-b))
+    (a,b),c = p.transbounds,one(T)
+    a + exp(c*(x-b))
 end
 function toreal{T}(p::Parameter{T,Exponential}, x::T = p.value)
-	(a,b),c = p.transbounds,one(T)
-	b + (1/c) * log(x-a)
+    (a,b),c = p.transbounds,one(T)
+    b + (1/c) * log(x-a)
 end
 
 tomodel{T}(pvec::ParameterVector{T}) = map(tomodel, pvec)
@@ -180,7 +185,7 @@ end
 # calculate logpdf at new values, without needing to allocate a temporary array with update
 function Distributions.logpdf{T}(pvec::ParameterVector{T}, newvalues::Vector{T})
     @assert length(newvalues) == length(pvec) "Length of input vector (=$(length(newvalues))) must match length of parameter vector (=$(length(pvec)))"
-
+    
     x = zero(T)
     @inbounds for i = 1:length(pvec)
         if hasprior(pvec[i])
