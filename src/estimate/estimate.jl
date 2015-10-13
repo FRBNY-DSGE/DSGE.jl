@@ -39,10 +39,7 @@ estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
     end
     
     # Load data
-    in_path = inpath(m)
-    out_path = outpath(m)
-
-    h5 = h5open(joinpath(in_path,"YY.h5"), "r") 
+    h5 = h5open(joinpath(inpath(m),"YY.h5"), "r") 
     YY = read(h5["YY"])
     close(h5)
 
@@ -62,11 +59,11 @@ estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
     mode = []
 
     if m.reoptimize
-        h5 = h5open("$in_path/mode_in.h5","r") 
+        h5 = h5open(joinpath(inpath(m), "mode_in.h5"),"r")
         mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
         close(h5)
     else
-        h5 = h5open("$in_path/mode_in_optimized.h5","r") 
+        h5 = h5open(joinpath(inpath(m), "mode_in_optimized.h5"),"r") 
         mode = read(h5["mode"])
         close(h5)
     end
@@ -101,12 +98,12 @@ estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
         # Transform modal parameters so they are no longer bounded (i.e., allowed
         # to lie anywhere on the real line).
         tomodel!(m, xh)
-        mode = [α.value for α in m.parameters]
+        mode = [param.value for param in m.parameters]
 
         # Write mode to file
-        h5open("$out_path/mode_out.h5","w") do h5
-            h5["mode"] = mode
-        end
+        h5 = h5open(joinpath(outpath(m), "mode_out.h5"),"w")
+        h5["mode"] = mode
+        close(h5)
         
     end
 
@@ -134,7 +131,7 @@ estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
             println("Using pre-calculated Hessian")
         end
 
-        h5 = h5open("$in_path/hessian_optimized.h5","r") 
+        h5 = h5open(joinpath(inpath(m),"hessian_optimized.h5"),"r")
         hessian = read(h5["hessian"])
         close(h5)
 
