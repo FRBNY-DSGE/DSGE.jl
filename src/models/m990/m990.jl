@@ -3,7 +3,7 @@
 #   (solve, estimate, and forecast).
 type Model990{T} <: AbstractDSGEModel{T}
     parameters::ParameterVector{T}                  # vector of all of the model parameters
-    steady_state::Vector{T}                         # model steady-state values
+    steady_state::ParameterVector{T}                # model steady-state values
     keys::Dict{Symbol,Int}                          # human-readable names for all the model
                                                     # parameters and steady-num_states
 
@@ -376,12 +376,30 @@ function Model990()
     m <= parameter(:del_gdpdef,   0.0181, (-9.1, 9.1), (-10., -10.),  Untransformed(), Normal(0.00, 2.),            fixed=false, description="δ_gdpdef: This is the something something.",   texLabel="\\delta_{gdpdef}")
 
     # steady states
-    m <= [:zstar,  # steady-state growth rate of productivity
-          :rstar,
-          :Rstarn, :rkstar, :wstar, :Lstar, :kstar, :kbarstar, :istar, :ystar, :cstar, :wl_c, :nstar, :vstar, :zeta_spsigw, :zeta_spmue, :zeta_nRk, :zeta_nR, :zeta_nqk, :zeta_nn, :zeta_nmue, :zeta_nsigw]
+    m <= parameter(:zstar,        NaN, description="steady-state growth rate of productivity", texLabel="\\z_*")
+    m <= parameter(:rstar,        NaN, description="steady-state something something", texLabel="\\r_*")
+    m <= parameter(:Rstarn,       NaN, description="steady-state something something", texLabel="\\R_*_n")
+    m <= parameter(:rkstar,       NaN, description="steady-state something something", texLabel="\\BLAH")
+    m <= parameter(:wstar,        NaN, description="steady-state something something", texLabel="\\w_*")
+    m <= parameter(:Lstar,        NaN, description="steady-state something something", texLabel="\\L_*") 
+    m <= parameter(:kstar,        NaN, description="Effective capital that households rent to firms in the steady state.", texLabel="\\k_*")
+    m <= parameter(:kbarstar,     NaN, description="Total capital owned by households in the steady state.", texLabel="\\bar{k}_*")
+    m <= parameter(:istar,        NaN, description="Steady-state investment;", texLabel="\\i_*")
+    m <= parameter(:ystar,        NaN, description="steady-state something something", texLabel="\\y_*")
+    m <= parameter(:cstar,        NaN, description="steady-state something something", texLabel="\\c_*")
+    m <= parameter(:wl_c,         NaN, description="steady-state something something", texLabel="\\wl_c")
+    m <= parameter(:nstar,        NaN, description="steady-state something something", texLabel="\\n_*")
+    m <= parameter(:vstar,        NaN, description="steady-state something something", texLabel="\\v_*")
+    m <= parameter(:zeta_spsigw,  NaN, description="steady-state something something", texLabel="\\zeta_{sp_σ_w}")
+    m <= parameter(:zeta_spmue,   NaN, description="steady-state something something", texLabel="\\zeta_{sp_μ_e}")
+    m <= parameter(:zeta_nRk,     NaN, description="steady-state something something", texLabel="\\zeta_{n_R_k}")
+    m <= parameter(:zeta_nR,      NaN, description="steady-state something something", texLabel="\\BLAH")
+    m <= parameter(:zeta_nqk,     NaN, description="steady-state something something", texLabel="\\BLAH")
+    m <= parameter(:zeta_nn,      NaN, description="steady-state something something", texLabel="\\BLAH")
+    m <= parameter(:zeta_nmue,    NaN, description="steady-state something something", texLabel="\\BLAH")
+    m <= parameter(:zeta_nsigw,   NaN, description="steady-state something something", texLabel="\\BLAH")
 
     initialise_model_indices!(m)
-    ##steady_state_descriptions(m)
     steadystate!(m)
     return m
 end
@@ -537,31 +555,3 @@ function createSaveDirectories(savepath::String)
 
 end
 
-# TODO: maybe? Make steady-state values parameter types so they can have descriptions/tex names/etc?
-## function steady_state_descriptions(m::Model990)
-
-##     m[:zstar].description          = "The steady-state growth rate of productivity."    
-##     m[:rstar].description          = "This is the steady-state something something."
-##     m[:Rstarn].description         = "This is the steady-state something something."
-##     m[:rkstar].description         = "This is the steady-state something something."
-##     m[:wstar].description          = "This is the steady-state something something."
-##     m[:Lstar].description          = "This is the steady-state something something."
-##     m[:kstar].description          = "This is the steady-state something something."
-##     m[:kbarstar].description       = "This is the steady-state something something."
-##     m[:istar].description          = "This is the steady-state something something."
-##     m[:ystar].description          = "This is the steady-state something something."
-##     m[:cstar].description          = "This is the steady-state something something."
-##     m[:wl_c].description           = "This is the steady-state something something."
-##     m[:nstar].description          = "This is the steady-state something something."
-##     m[:vstar].description          = "This is the steady-state something something."
-##     m[:zeta_spsigw].description    = "This is the steady-state something something."
-##     m[:zeta_spmue].description     = "This is the steady-state something something."
-##     m[:zeta_nRk].description       = "This is the steady-state something something."
-##     m[:zeta_nR].description        = "This is the steady-state something something."
-##     m[:zeta_nqk].description       = "This is the steady-state something something."
-##     m[:zeta_nn].description        = "This is the steady-state something something."
-##     m[:zeta_nmue].description      = "This is the steady-state something something."
-##     m[:zeta_nsigw].description     = "This is the steady-state something something."
-
-
-## end
