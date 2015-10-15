@@ -191,7 +191,6 @@ Generate a draw from d with variance optionally scaled by cc^2.
 """
 =#
 @debug function rand{T<:AbstractFloat, U<:AbstractDSGEModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
-    @bp
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
 

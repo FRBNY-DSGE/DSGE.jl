@@ -20,17 +20,19 @@ estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
 
    - `:high`: Status updates provided at each iteration in Metropolis-Hastings.
 
-- `testing`: Run `estimate()` in testing mode. In this case, a set of predetermined random numbers are read in and used rather than drawn from the Random Number Generator, and Metropolis-Hastings runs for `num_mh_simulations_test`*`num_mh_blocks_test` simulations.
+- `testing`: Run `estimate()` in testing mode. In this case, Metropolis-Hastings runs for `num_mh_simulations_test`*`num_mh_blocks_test` simulations.
+
+- `proposal_covariance`: Used to test the metropolis_hastings algorithm with a precomputed covariance matrix for the proposal distribution. When the Hessian is singular, eigenvectors corresponding to zero eigenvectors are not well defined, so eigenvalue decomposition can cause problems. Passing a precomputed matrix allows us to ensure that the rest of the routine has not broken.
 """->
 =#
-@debug function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
+@debug function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false, proposal_covariance=[])
 
     ###################################################################################################
     ### Step 1: Initialize
     ###################################################################################################
 
     # Set up levels of verbose-ness
-    verboseness = @compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
+    verboseness = verbose_dict() #@compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
 
     # Set global random seed
     if testing
@@ -110,23 +112,33 @@ estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
     
     ###################################################################################################
     ### Step 3: Compute proposal distribution
+    ###
+    ### In Metropolis-Hastings, we draw sample parameter vectors from
+    ### the proposal distribution, which is a degenerate multivariate
+    ### normal centered at the mode. Its variance is the inverse of
+    ### the hessian. We find the inverse via eigenvalue decomposition.
     ###################################################################################################
 
     hessian = []
     
-    # Calculate the Hessian at the posterior mode
     if m.recalculate_hessian
+        
+        # Calculate the Hessian at the posterior mode
+
         if verboseness[verbose] > verboseness[:none] 
             println("Recalculating Hessian...")
         end
         
         hessian, _ = hessizero!(m, mode, YY; verbose=true)
 
-        h5open("$out_path/hessian.h5","w") do h5
-            h5["hessian"] = hessian
-        end
+        h5 = h5open(joinpath(outpath(m),"hessian.h5"),"w") 
+        h5["hessian"] = hessian
+        close(h5)
 
     else
+
+        # Read in a pre-optimized mode
+        
         if verboseness[verbose] > verboseness[:none]
             println("Using pre-calculated Hessian")
         end
@@ -137,12 +149,32 @@ estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
 
     end
 
-    # The hessian is used to calculate the variance of the proposal
-    # distribution, which is used to draw a new parameter in each iteration of
-    # the algorithm.
+    # Compute inverse hessian and create proposal distribution, or
+    # just create it with the given cov matrix if we have it
+    propdist = []
+    if length(proposal_covariance) == 0
+                
+        # Make sure the mode and hessian have the same number of parameters
+        n = length(mode)
+        @assert (n, n) == size(hessian)
 
-    propdist = proposal_distribution(mode, hessian, testing=testing)
+        # Compute the inverse of the Hessian via eigenvalue decomposition
+        S_diag, U = eig(hessian)
+        big_eigvals = find(x -> x > 1e-6, S_diag)
+        rank = length(big_eigvals)
+    
+        S_inv = zeros(n, n)
 
+        for i = (n-rank+1):n
+            S_inv[i, i] = 1/S_diag[i]
+        end
+        
+        hessian_inv = U*sqrt(S_inv) #this is the inverse of the hessian
+        propdist = DegenerateMvNormal(mode, hessian_inv, rank)
+    else
+        propdist = DegenerateMvNormal(mode, proposal_covariance)
+    end
+    
     if propdist.rank != num_parameters_free(m)
         println("problem –    shutting down dimensions")
     end
@@ -167,50 +199,6 @@ estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
 
 end
 
-#=
-doc"""
-proposal_distribution{T<:AbstractFloat, V<:AbstractString}(μ::Vector{T}, hessian::Matrix{T})
-
-### Parameters:
-* `μ`: Vector of means
-* `h` Hessian matrix
-
-### Description:
-Compute proposal distribution: degenerate normal with mean μ and covariance hessian^(-1)
-"""->
-=#
-function proposal_distribution{T<:AbstractFloat}(μ::Vector{T}, hessian::Matrix{T}; testing::Bool=false)
-
-    # Set up levels of verbose-ness
-    verboseness = @compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
-    
-    n = length(μ)
-    @assert (n, n) == size(hessian)
-
-    ## if testing
-    ##     srand(0)
-    ## end
-    S_diag, U = eig(hessian)
-    big_evals = find(x -> x > 1e-6, S_diag)
-    rank = length(big_evals)
-    
-    S_inv = zeros(n, n)
-    for i = (n-rank+1):n
-        S_inv[i, i] = 1/S_diag[i]
-    end
-
-    σ = U*sqrt(S_inv)
-
-    ## h5 = h5open(joinpath("/home/rceexm08/.julia/v0.4/DSGE/save/m990/output_data/","sigma_test.h5"), "w")
-    ## h5["σ"] = σ
-    ## h5["hessian"] = hessian
-    ## h5["μ"] = μ
-    ## h5["U"] = U
-    ## h5["S_diag"] = S_diag
-    ## close(h5)
-
-    return DegenerateMvNormal(μ, σ, rank)
-end
 
 #=
 doc"""
@@ -241,26 +229,16 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
        YY::Matrix{T}, cc0::T, cc::T; verbose::Symbol=:low, testing::Bool=false)
 
     # Set up levels of verbose-ness
-    verboseness = @compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
+    verboseness = verbose_dict() #@compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
 
-    randstate = 0
-    paraold_count = 0
-    x_count = 0
-    @printf "Random state %d : %d\n" randstate+=1 m.rng.state.val[1]
-    @printf "Random vals %d : %f\n" randstate+=1 m.rng.vals[1]
-    
     # If testing, set the random seeds at fixed numbers
     if testing
         srand(m.rng, 654)
-        @printf "Random state %d : %d\n" randstate+=1 m.rng.state.val[1]
-        @printf "Random vals %d : %f\n" randstate+=1 m.rng.vals[1]
     end
     
     if verboseness[verbose] > verboseness[:none]
         println("Testing = $testing")
     end
-    @printf "Random state %d : %d\n" randstate+=1 m.rng.state.val[1]
-    @printf "Random vals %d : %f\n" randstate+=1 m.rng.vals[1]
     
     # Set number of draws, how many we will save, and how many we will burn
     # (initialized here for scoping; will re-initialize in the while loop)
@@ -274,9 +252,6 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
     # Initialize algorithm by drawing para_old from a normal distribution centered on the
     # posterior mode until the parameters are within bounds or the posterior value is sufficiently large.
     para_old = rand(propdist, m; cc=cc0)
-    @printf "para_old %d : %f\n" paraold_count+=1 para_old[1] 
-    @printf "Random state %d : %d\n" randstate+=1 m.rng.state.val[1]
-    @printf "Random vals %d : %f\n" randstate+=1 m.rng.vals[1]
     post_old = -Inf
     like_old = -Inf
 
@@ -376,11 +351,9 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
         for j = 1:(n_sim*n_times)
 
             # Draw para_new from the proposal distribution
-
-            #para_new = rand(propdist; cc=cc)
+            
             para_new = rand(propdist, m; cc=cc)
-            @printf "para_old %d : %f\n" paraold_count+=1 para_old[1] 
-            @printf "Random state %d: %d\n" randstate+=1 m.rng.state.val[1]
+
             # Solve the model, check that parameters are within bounds, gensys returns a
             # meaningful system, and evaluate the posterior.
 
@@ -397,13 +370,11 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
             # the new draw if its posterior value is greater than the previous draw's,
             # but it gives some probability to accepting a draw with a smaller posterior value,
             # so that we may explore tails and other local modes.
+
             posterior_ratio = exp(post_new - post_old)
 
             x = rand(m.rng)
-            @printf "x %d : %f\n" x_count+=1 x
-            @printf "Random state %d : %d\n" randstate+=1 m.rng.state.val[1]
-            @printf "Random vals %d : %f\n" randstate+=1 m.rng.vals[1]
-            
+                        
             if x < min(1.0, posterior_ratio)
                 # Accept proposed jump
                 para_old = para_new
@@ -508,7 +479,7 @@ compute_parameter_covariance{T<:AbstractDSGEModel}(m::T)
 ### Parameters
 
 ### Description:
-Calculates the parameter covariance matrix and writes it to the sim_save.h5 file.
+Calculates the parameter covariance matrix from saved parameter draws, and writes it to the sim_save.h5 file.
 """
 =#
 function compute_parameter_covariance{T<:AbstractDSGEModel}(m::T)
