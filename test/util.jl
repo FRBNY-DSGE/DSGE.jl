@@ -1,5 +1,5 @@
-using Base.Test, Compat, HDF5, DSGE
-#using MATLAB      #Comment out MATLAB to suppress warnings, still need package to convert files 
+using Base.Test, Compat, HDF5, DSGE, Debug
+
 
 # minusnan(x, y) evaluates x-y in a way that treats NaN like Inf and sets Inf - Inf = 0
 minusnan{S<:@compat(AbstractFloat), T<:@compat(AbstractFloat)}(x::S, y::T) =  minusnan(complex(x), complex(y))
@@ -12,6 +12,10 @@ end
 
 # percenterr(x,y) returns the absolute value of the percentage error of y wrt x
 function percenterr{S<:AbstractFloat, T<:AbstractFloat}(x::Complex{S}, y::Complex{T})
+    return abs((x-y)/x)
+end
+
+function percenterr{S<:AbstractFloat, T<:AbstractFloat}(x::S, y::T)
     return abs((x-y)/x)
 end
 
@@ -36,7 +40,7 @@ end
 
 # TODO: decide what a sensible default ε value is for our situation
 # Compares matrices, reports absolute differences, returns true if all entries close enough
-function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{R}, actual::Array{S}; ε::T = 1e-4, noisy::Bool = false)
+@debug function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{R}, actual::Array{S}; ε::T = 1e-4, ε_pct::T = 10.0, noisy::Bool = false)
 
     n_entries = length(expected)
     same_sign = map(checksigns, expected, actual)
@@ -48,12 +52,47 @@ function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(ex
         println("$diff_sign_zeros of $n_entries entries have different signs, but one of the entries is 0")
     end
 
-    return test_matrix_eq(complex(expected), complex(actual); ε=ε, noisy=noisy)
+    abs_diff_eq = test_matrix_eq(complex(expected), complex(actual); ε=ε, ε_pct=ε_pct, noisy=noisy)
+    # return test_matrix_eq(complex(expected), complex(actual); ε=ε, ε_pct=ε_pct, noisy=noisy)
+    
+    ## # Count percent differences and find max
+    ## pct_err = map(percenterr, expected, actual) #percenterr returns an absolute value
+    ## n_neq_pct = countnz(pct_err)
+    ## n_not_approx_eq_pct = count(x -> x > ε_pct, pct_err)
+    ## max_pct_err = maximum(pct_err)
+    ## max_pct_inds = ind2sub(size(pct_err), indmax(pct_err))
+    ## max_pct_expected = expected[max_pct_inds[1], max_pct_inds[2]]
+    ## max_pct_actual = actual[max_pct_inds[1], max_pct_inds[2]]
+
+    ## if noisy
+    ##     if n_neq_pct != 0
+    ##         println("Max percent error of $max_pct_err at entry $max_pct_inds")
+    ##         if isa(expected, Matrix)
+    ##             println("The entries at $max_pct_inds are $max_pct_expected (expected) and $(actual[max_pct_inds[1], max_pct_inds[2]]) (actual)\n")
+    ##         end
+    ##     else 
+    ##         println("Max pct diff of 0\n")
+    ##     end
+
+    ## end
+
+    ## # Return true if all entries within ε and ε_pct. If there are
+    ## # significant pct diffs warn
+    ## # the user but return true.
+
+    
+    ## if n_not_approx_eq_pct !=0 && abs(expected[max_pct_inds[1],max_pct_inds[2]]) > abs(complex(1e-9))
+    ##     @bp
+    ##     warn("Relative differences between entries exceed threshold of $ε_pct\%")
+    ##     println("The entries at $max_pct_inds are $(expected[max_pct_inds[1],max_pct_inds[2]]) (expected) and $(actual[max_pct_inds[1], max_pct_inds[2]]) (actual)")
+    ##     println("Max pct diff of $max_pct_err")        
+    ## end
+    
+    return abs_diff_eq 
 end
 
 # Complex-valued input matrices
-
-function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{Complex{R}}, actual::Array{Complex{S}}; ε::T = 1e-4, noisy::Bool = false)
+function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{Complex{R}}, actual::Array{Complex{S}}; ε::T = 1e-4, ε_pct::T=10.0, noisy::Bool = false)
 
     # Matrices of different sizes return false
     if size(expected) != size(actual)
@@ -69,74 +108,64 @@ function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(ex
     # Count differences and find max
     abs_diff = abs(map(minusnan, expected, actual))
     n_neq = countnz(abs_diff)
-    n_not_approx_eq = count(x -> x > ε, abs_diff)
+    n_not_approx_eq = count(x -> x > ε, abs_diff)    
     max_abs_diff = maximum(abs_diff)
     max_inds = ind2sub(size(abs_diff), indmax(abs_diff))
 
     # Count percent differences and find max
     pct_err = map(percenterr, expected, actual) #percenterr returns an absolute value
+    n_neq_pct = countnz(pct_err)
+    n_not_approx_eq_pct = count(x -> x > ε_pct, pct_err)
     max_pct_err = maximum(pct_err)
     max_pct_inds = ind2sub(size(pct_err), indmax(pct_err))
-    
+
     # Print output
     if noisy
         println("$n_neq of $n_entries entries with abs diff > 0")
         println("$n_not_approx_eq of $n_entries entries with abs diff > $ε")
         # println("$n_diff_sign of $n_entries entries have opposite signs")
+
+        # If there are absolute differences
         if n_neq != 0
             println("Max abs diff of $max_abs_diff at entry $max_inds")
             if isa(expected, Matrix)
                 println("The entries at $max_inds are $(expected[max_inds[1],max_inds[2]]) (expected) and $(actual[max_inds[1], max_inds[2]]) (actual)")
             end
-            println("Max percent error of $max_pct_err at entry $max_pct_inds")
-            if isa(expected, Matrix)
-                println("The entries at $max_pct_inds are $(expected[max_pct_inds[1],max_pct_inds[2]]) (expected) and $(actual[max_pct_inds[1], max_pct_inds[2]]) (actual)\n")
-            end
-        else
-            println("Max abs diff of 0\n")
+            
+        else 
+            println("Max abs diff of 0")
         end
+
+        # If there are percent differences
+        ## if n_neq_pct != 0
+        ##     println("Max percent error of $max_pct_err at entry $max_pct_inds")
+        ##     if isa(expected, Matrix)
+        ##         println("The entries at $max_pct_inds are $(expected[max_pct_inds[1],max_pct_inds[2]]) (expected) and $(actual[max_pct_inds[1], max_pct_inds[2]]) (actual)\n")
+        ##     end
+        ## else 
+        ##     println("Max pct diff of 0\n")
+        ## end
     end
 
-    # Return true if all entries within ε
+    # Return true if all entries within ε and ε_pct. If there are
+    # significant pct diffs warn
+    # the user but return true.
+    
+    ## if n_not_approx_eq_pct !=0 && abs(expected[max_pct_inds[1],max_pct_inds[2]]) > abs(complex(1e-9))
+    ##     warn("Relative differences between entries exceed threshold of $ε_pct\%")
+    ##     println("The entries at $max_pct_inds are $(expected[max_pct_inds[1],max_pct_inds[2]]) (expected) and $(actual[max_pct_inds[1], max_pct_inds[2]]) (actual)")
+    ##     println("Max pct diff of $max_pct_err")        
+    ## end
+    
     return n_not_approx_eq == 0
 end
 
+
+# Tests whether the absolute values of 2 matrices are equal
 function test_matrix_abs_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::
              Array{R}, actual::Array{S}; ε::T = 1e-4, noisy::Bool = false)
-    # Matrices of different sizes return false
-    if size(expected) != size(actual)
-        if noisy
-            println("Size expected $(size(expected)), actual $(size(actual))\n")
-        end
-        return false
-    end
-    
-    n_dims = ndims(expected)
-    n_entries = length(expected)
 
-    expected = abs(expected)
-    actual = abs(actual)
-    
-    # Count differences and find max
-    abs_diff = abs(map(minusnan, expected, actual))
-    n_neq = countnz(abs_diff)
-    n_not_approx_eq = count(x -> x > ε, abs_diff)
-    max_abs_diff = maximum(abs_diff)
-    max_inds = ind2sub(size(abs_diff), indmax(abs_diff))
-    
-    # Print output
-    if noisy
-        println("$n_neq of $n_entries entries with abs diff > 0")
-        println("$n_not_approx_eq of $n_entries entries with abs diff > $ε")
-        if n_neq != 0
-            println("Max abs diff of $max_abs_diff at entry $max_inds\n")
-        else
-            println("Max abs diff of 0\n")
-        end
-    end
-
-    # Return true if all entries within ε
-    return n_not_approx_eq == 0
+    return test_matrix_eq(abs(expected), abs(actual), ε=ε, noisy=noisy)
 end
 
 #function test_eigs_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat, U<:AbstractFloat, V<:AbstractFloat}(eigvals_expected::Array{R}, eigvals_actual::Array{S}, eigvecs_expected::Array{U},  eigvecs_actual::Array{V}; ε::T = 1e-12, noisy::Bool = true)
@@ -513,4 +542,8 @@ function get_diff_symbols{S<:AbstractFloat, T<:AbstractDSGEModel}(m::T, expected
         @printf "%s, %s, %f, %f, %f\n" diff_eqcond_inds[entry[1]] diff_state_inds[entry[2]] diff expected[entry[1],entry[2]] actual[entry[1],entry[2]]
     end
     
+end
+
+function verbose_dict()
+    @compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
 end
