@@ -13,6 +13,6 @@ addprocs(1)
 S_diag, U = eig(matrix) 
 
 # Test for equality
-@test test_matrix_eq(ref_S_diag, S_diag, ε=1e-9, ε_pct=1e-9)
-@test test_matrix_eq(ref_U, U, ε=1e-9, ε_pct=1e-9)
+@test test_matrix_eq(ref_S_diag, S_diag, ϵ=1e-9, ϵ_pct=1e-9)
+@test test_matrix_eq(ref_U, U, ϵ=1e-9, ϵ_pct=1e-9)
 
