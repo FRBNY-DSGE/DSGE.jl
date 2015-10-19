@@ -58,7 +58,7 @@ function eqcond(m::Model990)
     Γ1[eq[:inv], endo[:i_t]]  = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ0[eq[:inv], endo[:E_i]]  = -m[:β]*exp((1 - m[:σ_c])*m[:zstar])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ0[eq[:inv], endo[:E_z]]  = -m[:β]*exp((1 - m[:σ_c])*m[:zstar])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
-    Γ0[eq[:inv], endo[:mu_t]] = -1.
+    Γ0[eq[:inv], endo[:μ_t]] = -1.
 
     # Flexible prices and wages
     Γ0[eq[:inv_f], endo[:qk_f_t]] = -1/(m[:S′′]*exp(2*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar])))
@@ -67,7 +67,7 @@ function eqcond(m::Model990)
     Γ1[eq[:inv_f], endo[:i_f_t]]  = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ0[eq[:inv_f], endo[:E_i_f]]  = -m[:β]*exp((1 - m[:σ_c])*m[:zstar])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ0[eq[:inv_f], endo[:E_z]]    = -m[:β]*exp((1 - m[:σ_c])*m[:zstar])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
-    Γ0[eq[:inv_f], endo[:mu_t]]   = -1.
+    Γ0[eq[:inv_f], endo[:μ_t]]   = -1.
 
 
 
@@ -89,7 +89,7 @@ function eqcond(m::Model990)
     Γ0[eq[:spread], endo[:qk_t]]    = -m[:ζ_spb]
     Γ0[eq[:spread], endo[:kbar_t]]  = -m[:ζ_spb]
     Γ0[eq[:spread], endo[:n_t]]     = m[:ζ_spb]
-    Γ0[eq[:spread], endo[:σω_t]]  = -1.
+    Γ0[eq[:spread], endo[:σ_ω_t]]  = -1.
     Γ0[eq[:spread], endo[:μe_t]]   = -1.
 
     # n evol
@@ -99,7 +99,7 @@ function eqcond(m::Model990)
     Γ0[eq[:nevol], endo[:z_t]]     = m[:gammstar]*m[:vstar]/m[:nstar]
     Γ0[eq[:nevol], endo[:Rktil_t]] = -m[:ζ_nRk]
     Γ0[eq[:nevol], endo[:π_t]]    = (m[:ζ_nRk] - m[:ζ_nR])
-    Γ1[eq[:nevol], endo[:σω_t]]  = -m[:ζ_nσω]/m[:ζ_spσω]
+    Γ1[eq[:nevol], endo[:σ_ω_t]]  = -m[:ζ_nσ_ω]/m[:ζ_spσ_ω]
     Γ1[eq[:nevol], endo[:μe_t]]   = -m[:ζ_nμe]/m[:ζ_spμe]
     Γ1[eq[:nevol], endo[:qk_t]]    = m[:ζ_nqk]
     Γ1[eq[:nevol], endo[:kbar_t]]  = m[:ζ_nqk]
@@ -165,14 +165,14 @@ function eqcond(m::Model990)
     Γ1[eq[:capev], endo[:kbar_t]] = 1 - m[:istar]/m[:kbarstar]
     Γ0[eq[:capev], endo[:z_t]]    = 1 - m[:istar]/m[:kbarstar]
     Γ0[eq[:capev], endo[:i_t]]    = -m[:istar]/m[:kbarstar]
-    Γ0[eq[:capev], endo[:mu_t]]   = -m[:istar]*m[:S′′]*exp(2*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))/m[:kbarstar]
+    Γ0[eq[:capev], endo[:μ_t]]   = -m[:istar]*m[:S′′]*exp(2*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))/m[:kbarstar]
 
     # Flexible prices and wages
     Γ0[eq[:capev_f], endo[:kbar_f_t]] = 1.
     Γ1[eq[:capev_f], endo[:kbar_f_t]] = 1 - m[:istar]/m[:kbarstar]
     Γ0[eq[:capev_f], endo[:z_t]]      = 1 - m[:istar]/m[:kbarstar]
     Γ0[eq[:capev_f], endo[:i_f_t]]    = -m[:istar]/m[:kbarstar]
-    Γ0[eq[:capev_f], endo[:mu_t]]     = -m[:istar]*m[:S′′]*exp(2*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))/m[:kbarstar]
+    Γ0[eq[:capev_f], endo[:μ_t]]     = -m[:istar]*m[:S′′]*exp(2*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))/m[:kbarstar]
 
 
 
@@ -202,7 +202,7 @@ function eqcond(m::Model990)
         exp((1 - m[:σ_c])*m[:zstar]))
 
     # Comment out for counterfactual with no price mark up shock
-    Γ0[eq[:phlps], endo[:laf_t]] = -(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))/
+    Γ0[eq[:phlps], endo[:λ_f_t]] = -(1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))/
         (1 + m[:ι_p]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
 
     # Flexible prices and wages not necessary
@@ -226,7 +226,7 @@ function eqcond(m::Model990)
     ### 11. Marginal Substitution
 
     # Sticky prices and wages
-    Γ0[eq[:msub], endo[:muw_t]] = 1.
+    Γ0[eq[:msub], endo[:μ_w_t]] = 1.
     Γ0[eq[:msub], endo[:L_t]]   = m[:nu_l]
     Γ0[eq[:msub], endo[:c_t]]   = 1/(1 - m[:h]*exp(-m[:zstar]))
     Γ1[eq[:msub], endo[:c_t]]   = m[:h]*exp(-m[:zstar])/(1 - m[:h]*exp(-m[:zstar]))
@@ -245,7 +245,7 @@ function eqcond(m::Model990)
 
     # Sticky prices and wages
     Γ0[eq[:wage], endo[:w_t]]   = 1
-    Γ0[eq[:wage], endo[:muw_t]] = (1 - m[:ζ_w]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))*
+    Γ0[eq[:wage], endo[:μ_w_t]] = (1 - m[:ζ_w]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))*
         (1 - m[:ζ_w])/(m[:ζ_w]*((m[:λ_w] - 1)*m[:ϵ_w] + 1))/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ0[eq[:wage], endo[:π_t]]  = (1 + m[:ι_w]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ1[eq[:wage], endo[:w_t]]   = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
@@ -254,7 +254,7 @@ function eqcond(m::Model990)
     Γ0[eq[:wage], endo[:E_w]]   = -m[:β]*exp((1 - m[:σ_c])*m[:zstar])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ0[eq[:wage], endo[:E_z]]   = -m[:β]*exp((1 - m[:σ_c])*m[:zstar])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ0[eq[:wage], endo[:E_π]]  = -m[:β]*exp((1 - m[:σ_c])*m[:zstar])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
-    Γ0[eq[:wage], endo[:law_t]] = -1.
+    Γ0[eq[:wage], endo[:λ_w_t]] = -1.
 
     # Flexible prices and wages not necessary
 
@@ -266,7 +266,7 @@ function eqcond(m::Model990)
     Γ0[eq[:mp], endo[:R_t]]    = 1.
     Γ1[eq[:mp], endo[:R_t]]    = m[:ρ]
     Γ0[eq[:mp], endo[:π_t]]   = -(1 - m[:ρ])*m[:ψ1]
-    Γ0[eq[:mp], endo[:πstar_t]] = (1 - m[:ρ])*m[:ψ1]
+    Γ0[eq[:mp], endo[:π_star_t]] = (1 - m[:ρ])*m[:ψ1]
     Γ0[eq[:mp], endo[:y_t]]    = -(1 - m[:ρ])*m[:ψ2] - m[:ψ3]
     Γ0[eq[:mp], endo[:y_f_t]]  = (1 - m[:ρ])*m[:ψ2] + m[:ψ3]
     Γ1[eq[:mp], endo[:y_t]]    = -m[:ψ3]
@@ -353,27 +353,27 @@ function eqcond(m::Model990)
     Ψ[eq[:eq_b], exo[:b_sh]]  = 1.
 
     # Investment-specific technology
-    Γ0[eq[:eq_mu], endo[:mu_t]] = 1.
-    Γ1[eq[:eq_mu], endo[:mu_t]] = m[:ρ_μ]
-    Ψ[eq[:eq_mu], exo[:mu_sh]]  = 1.
+    Γ0[eq[:eq_μ], endo[:μ_t]] = 1.
+    Γ1[eq[:eq_μ], endo[:μ_t]] = m[:ρ_μ]
+    Ψ[eq[:eq_μ], exo[:μ_sh]]  = 1.
 
     # Price mark-up shock
-    Γ0[eq[:eq_laf], endo[:laf_t]]  = 1.
-    Γ1[eq[:eq_laf], endo[:laf_t]]  = m[:ρ_laf]
-    Γ1[eq[:eq_laf], endo[:laf_t1]] = -m[:η_λ_f]
-    Ψ[eq[:eq_laf], exo[:laf_sh]]   = 1.
+    Γ0[eq[:eq_λ_f], endo[:λ_f_t]]  = 1.
+    Γ1[eq[:eq_λ_f], endo[:λ_f_t]]  = m[:ρ_λ_f]
+    Γ1[eq[:eq_λ_f], endo[:λ_f_t1]] = -m[:η_λ_f]
+    Ψ[eq[:eq_λ_f], exo[:λ_f_sh]]   = 1.
 
-    Γ0[eq[:eq_laf1], endo[:laf_t1]] = 1.
-    Ψ[eq[:eq_laf1], exo[:laf_sh]]   = 1.
+    Γ0[eq[:eq_λ_f1], endo[:λ_f_t1]] = 1.
+    Ψ[eq[:eq_λ_f1], exo[:λ_f_sh]]   = 1.
 
     # Wage mark-up shock
-    Γ0[eq[:eq_law], endo[:law_t]]  = 1.
-    Γ1[eq[:eq_law], endo[:law_t]]  = m[:ρ_λ_w]
-    Γ1[eq[:eq_law], endo[:law_t1]] = -m[:η_λ_w]
-    Ψ[eq[:eq_law], exo[:law_sh]]   = 1.
+    Γ0[eq[:eq_λ_w], endo[:λ_w_t]]  = 1.
+    Γ1[eq[:eq_λ_w], endo[:λ_w_t]]  = m[:ρ_λ_w]
+    Γ1[eq[:eq_λ_w], endo[:λ_w_t1]] = -m[:η_λ_w]
+    Ψ[eq[:eq_λ_w], exo[:λ_w_sh]]   = 1.
 
-    Γ0[eq[:eq_law1], endo[:law_t1]] = 1.
-    Ψ[eq[:eq_law1], exo[:law_sh]]   = 1.
+    Γ0[eq[:eq_λ_w1], endo[:λ_w_t1]] = 1.
+    Ψ[eq[:eq_λ_w1], exo[:λ_w_sh]]   = 1.
 
     # Monetary policy shock
     Γ0[eq[:eq_rm], endo[:rm_t]] = 1.
@@ -384,10 +384,10 @@ function eqcond(m::Model990)
 
     ### Financial frictions
 
-    # σω shock
-    Γ0[eq[:eq_σω], endo[:σω_t]] = 1.
-    Γ1[eq[:eq_σω], endo[:σω_t]] = m[:ρ_σ_w]
-    Ψ[eq[:eq_σω], exo[:σω_sh]]  = 1.
+    # σ_ω shock
+    Γ0[eq[:eq_σ_ω], endo[:σ_ω_t]] = 1.
+    Γ1[eq[:eq_σ_ω], endo[:σ_ω_t]] = m[:ρ_σ_w]
+    Ψ[eq[:eq_σ_ω], exo[:σ_ω_sh]]  = 1.
 
     # μe shock
     Γ0[eq[:eq_μe], endo[:μe_t]] = 1.
@@ -400,9 +400,9 @@ function eqcond(m::Model990)
     Ψ[eq[:eq_gamm], exo[:gamm_sh]]  = 1.
 
     # Long-term inflation expectations
-    Γ0[eq[:eq_πstar], endo[:πstar_t]] = 1.
-    Γ1[eq[:eq_πstar], endo[:πstar_t]] = m[:ρ_π_star]
-    Ψ[eq[:eq_πstar], exo[:πstar_sh]]  = 1.
+    Γ0[eq[:eq_π_star], endo[:π_star_t]] = 1.
+    Γ1[eq[:eq_π_star], endo[:π_star_t]] = m[:ρ_π_star]
+    Ψ[eq[:eq_π_star], exo[:π_star_sh]]  = 1.
 
     # Anticipated policy shocks
     if num_anticipated_shocks(m) > 0
