@@ -41,39 +41,39 @@ function initialise_model_indices!(m::Model990)
     # Endogenous states
     endogenous_states = [[
         :y_t, :c_t, :i_t, :qk_t, :k_t, :kbar_t, :u_t, :rk_t, :Rktil_t, :n_t, :mc_t,
-        :pi_t, :muw_t, :w_t, :L_t, :R_t, :g_t, :b_t, :mu_t, :z_t, :laf_t, :laf_t1,
-        :law_t, :law_t1, :rm_t, :sigw_t, :mue_t, :gamm_t, :pist_t, :E_c, :E_qk, :E_i,
-        :E_pi, :E_L, :E_rk, :E_w, :E_Rktil, :y_f_t, :c_f_t, :i_f_t, :qk_f_t, :k_f_t,
+        :π_t, :muw_t, :w_t, :L_t, :R_t, :g_t, :b_t, :mu_t, :z_t, :laf_t, :laf_t1,
+        :λ_wt, :λ_wt1, :rm_t, :σω_t, :μe_t, :gamm_t, :πstar_t, :E_c, :E_qk, :E_i,
+        :E_π, :E_L, :E_rk, :E_w, :E_Rktil, :y_f_t, :c_f_t, :i_f_t, :qk_f_t, :k_f_t,
         :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :r_f_t, :E_c_f, :E_qk_f, :E_i_f,
-        :E_L_f, :E_rk_f, :ztil_t, :pi_t1, :pi_t2, :pi_a_t, :R_t1, :zp_t, :E_z];
+        :E_L_f, :E_rk_f, :ztil_t, :π_t1, :π_t2, :π_a_t, :R_t1, :zp_t, :E_z];
         [symbol("rm_tl$i") for i = 1:num_anticipated_shocks(m)]]
 
     # Exogenous shocks
     exogenous_shocks = [[
-        :g_sh, :b_sh, :mu_sh, :z_sh, :laf_sh, :law_sh, :rm_sh, :sigw_sh, :mue_sh,
-        :gamm_sh, :pist_sh, :lr_sh, :zp_sh, :tfp_sh, :gdpdef_sh, :pce_sh];
+        :g_sh, :b_sh, :mu_sh, :z_sh, :laf_sh, :law_sh, :rm_sh, :σω_sh, :μe_sh,
+        :gamm_sh, :πstar_sh, :lr_sh, :zp_sh, :tfp_sh, :gdpdef_sh, :pce_sh];
         [symbol("rm_shl$i") for i = 1:num_anticipated_shocks(m)]]
 
     # Expectations shocks
     expected_shocks = [
-        :Ec_sh, :Eqk_sh, :Ei_sh, :Epi_sh, :EL_sh, :Erk_sh, :Ew_sh, :ERktil_sh, :Ec_f_sh,
+        :Ec_sh, :Eqk_sh, :Ei_sh, :Eπ_sh, :EL_sh, :Erk_sh, :Ew_sh, :ERktil_sh, :Ec_f_sh,
         :Eqk_f_sh, :Ei_f_sh, :EL_f_sh, :Erk_f_sh]
 
     # Equilibrium conditions
     equilibrium_conditions = [[
         :euler, :inv, :capval, :spread, :nevol, :output, :caputl, :capsrv, :capev,
         :mkupp, :phlps, :caprnt, :msub, :wage, :mp, :res, :eq_g, :eq_b, :eq_mu, :eq_z,
-        :eq_laf, :eq_law, :eq_rm, :eq_sigw, :eq_mue, :eq_gamm, :eq_laf1, :eq_law1, :eq_Ec,
-        :eq_Eqk, :eq_Ei, :eq_Epi, :eq_EL, :eq_Erk, :eq_Ew, :eq_ERktil, :euler_f, :inv_f,
+        :eq_laf, :eq_law, :eq_rm, :eq_σω, :eq_μe, :eq_gamm, :eq_laf1, :eq_law1, :eq_Ec,
+        :eq_Eqk, :eq_Ei, :eq_Eπ, :eq_EL, :eq_Erk, :eq_Ew, :eq_ERktil, :euler_f, :inv_f,
         :capval_f, :output_f, :caputl_f, :capsrv_f, :capev_f, :mkupp_f, :caprnt_f, :msub_f,
-        :res_f, :eq_Ec_f, :eq_Eqk_f, :eq_Ei_f, :eq_EL_f, :eq_Erk_f, :eq_ztil, :eq_pist,
-        :pi1, :pi2, :pi_a, :Rt1, :eq_zp, :eq_Ez];
+        :res_f, :eq_Ec_f, :eq_Eqk_f, :eq_Ei_f, :eq_EL_f, :eq_Erk_f, :eq_ztil, :eq_πstar,
+        :π1, :π2, :π_a, :Rt1, :eq_zp, :eq_Ez];
         [symbol("eq_rml$i") for i=1:num_anticipated_shocks(m)]]
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
     endogenous_states_postgensys = [
-        :y_t1, :c_t1, :i_t1, :w_t1, :pi_t1, :L_t1, :Et_pi_t, :lr_t, :tfp_t, :e_gdpdef,
+        :y_t1, :c_t1, :i_t1, :w_t1, :π_t1, :L_t1, :Et_π_t, :lr_t, :tfp_t, :e_gdpdef,
         :e_pce, :u_t1]
 
     # Measurement equation observables
@@ -81,13 +81,13 @@ function initialise_model_indices!(m::Model990)
         :g_y,         # quarterly output growth
         :hoursg,      # aggregate hours growth
         :g_w,         # real wage growth
-        :pi_gdpdef,   # inflation (GDP deflator)
-        :pi_pce,      # inflation (core PCE)
+        :π_gdpdef,   # inflation (GDP deflator)
+        :π_pce,      # inflation (core PCE)
         :R_n,         # nominal interest rate
         :g_c,         # consumption growth
         :g_i,         # investment growth
         :sprd,        # spreads
-        :pi_long,     # 10-year inflation expectation
+        :π_long,     # 10-year inflation expectation
         :R_long,      # long-term rate
         :tfp];        # total factor productivity
         [symbol("R_n$i") for i=1:num_anticipated_shocks(m)]] # compounded nominal rates
@@ -175,7 +175,7 @@ function Model990()
                    texLabel="\\Phi")
 
     ## TODO - figure out how to print primes. maybe develop a convention for derivatives?
-    m <= parameter(:S2,       2.7314, (-15., 15.),   (-15., 15.),     Untransformed(),  Normal(4., 1.5),            fixed=false,
+    m <= parameter(:S′′,       2.7314, (-15., 15.),   (-15., 15.),     Untransformed(),  Normal(4., 1.5),            fixed=false,
                    description="S'': The second derivative of households' cost of adjusting investment.", texLabel="S''")
 
     m <= parameter(:h,        0.5347, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.7, 0.1),          fixed=false,
@@ -218,8 +218,8 @@ function Model990()
                    description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
                    texLabel="\\psi_3")
 
-    m <= parameter(:π_star,   0.5000, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    GammaAlt(0.75, 0.4),        fixed=true,  scaling = x -> 1 + x/100,
-                   description="π_star: The steady-state rate of inflation.",  
+    m <= parameter(:πstar,   0.5000, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    GammaAlt(0.75, 0.4),        fixed=true,  scaling = x -> 1 + x/100,
+                   description="πstar: The steady-state rate of inflation.",  
                    texLabel="\\pi_*")   
 
     m <= parameter(:σ_c,   0.8719, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    Normal(1.5, 0.37),          fixed=false,
@@ -257,7 +257,7 @@ function Model990()
 
     # exogenous processes - level
     m <= parameter(:γ,      0.3673, (-5.0, 5.0),     (-5., 5.),     Untransformed(), Normal(0.4, 0.1),            fixed=false, scaling = x -> x/100, 
-                   description="γ: The log of the steady-state growth rate of technology.",
+                   description="γ: The log of the steady-state growth rate of technology.", # check this, I thinkt that's γstar
                    texLabel="\\gamma")
 
     m <= parameter(:Lmean,  -45.9364, (-1000., 1000.), (-1e3, 1e3),   Untransformed(), Normal(-45, 5),              fixed=false,
@@ -301,18 +301,18 @@ function Model990()
     # TODO - check this
     m <= parameter(:ρ_σ_w,   0.9898, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=false,
                    description="ρ_σ_w: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with mean ρ_σ_w. Innovations to the process are called _spread shocks_.",
-                   texLabel="\\rho_{sigw}")
+                   texLabel="\\rho_{\\sigma \\omega}")
 
     # We're skipping this for now
-    m <= parameter(:ρ_mue,    0.7500, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=true,
+    m <= parameter(:ρ_μe,    0.7500, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=true,
                    description="ρ_μ_e: Verification costs are a fraction μ_e of the amount the bank extracts from an entrepreneur in case of bankruptcy???? This doesn't seem right because μ_e isn't a process (p12 of PDF)",
                    texLabel="\\rho_{\\mu_e}")
 
     ## TODO
     m <= parameter(:ρ_γ,   0.7500, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=true,  description="ρ_γ: AR(1) coefficient on XX process.",              texLabel="\\rho_{gamm}")    
-    m <= parameter(:ρ_π_star,   0.9900, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=true,  description="ρ_π_star: This is the something something.",         texLabel="\\rho_{pi}^*")   
+    m <= parameter(:ρ_πstar,   0.9900, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=true,  description="ρ_πstar: This is the something something.",         texLabel="\\rho_{pi}^*")   
     m <= parameter(:ρ_lr,     0.6936, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_lr: This is the something something.",             texLabel="\\rho_{lr}")      
-    m <= parameter(:ρ_zp,     0.8910, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_zp: This is the something something.",             texLabel="\\rho_{z^p}")    
+    m <= parameter(:ρ_z_p,     0.8910, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_z_p: This is the something something.",             texLabel="\\rho_{z^p}")    
     m <= parameter(:ρ_tfp,    0.1953, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_tfp: This is the something something.",            texLabel="\\rho_{tfp}")     
     m <= parameter(:ρ_gdpdef, 0.5379, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_gdpdef: GDP deflator.",                            texLabel="\\rho_{gdpdef}")  
     m <= parameter(:ρ_pce,    0.2320, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_pce: This is the something something.",            texLabel="\\rho_{pce}")     
@@ -351,14 +351,14 @@ function Model990()
     
     m <= parameter(:σ_σ_w,   0.0428, (1e-7,100.),     (1e-5, 0.),    Exponential(),   RootInverseGamma(4., 0.05),  fixed=false,
                    description="σ_σ_w: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_w.",
-                   texLabel="\\sigma_{sigw}")
+                   texLabel="\\sigma_{σ_w}")
     
-    m <= parameter(:σ_mue,    0.0000, (1e-7,100.),     (1e-5, 0.),    Exponential(),   RootInverseGamma(4., 0.05),  fixed=true,  description="σ_μ_e: This is the something something.",           texLabel="\\sigma_{mue}")
+    m <= parameter(:σ_μe,    0.0000, (1e-7,100.),     (1e-5, 0.),    Exponential(),   RootInverseGamma(4., 0.05),  fixed=true,  description="σ_μ_e: This is the something something.",           texLabel="\\sigma_{μe}")
     m <= parameter(:σ_γ,   0.0000, (1e-7,100.),     (1e-5, 0.),    Exponential(),   RootInverseGamma(4., 0.01),  fixed=true,  description="σ_γ: This is the something something.",             texLabel="\\sigma_{gamm}")    
-    m <= parameter(:σ_π_star,   0.0269, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(6., 0.03),  fixed=false, description="σ_π_star: This is the something something.",        texLabel="\\sigma_{pi}^*")   
+    m <= parameter(:σ_πstar,   0.0269, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(6., 0.03),  fixed=false, description="σ_πstar: This is the something something.",        texLabel="\\sigma_{pi}^*")   
     m <= parameter(:σ_lr,     0.1766, (1e-8,10.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.75),  fixed=false, description="σ_lr: This is the something something to do with long run inflation expectations.",
                    texLabel="\\sigma_{lr}")      
-    m <= parameter(:σ_zp,     0.1662, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_zp: This is the something something.",            texLabel="\\sigma_{z^p}")    
+    m <= parameter(:σ_z_p,     0.1662, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_z_p: This is the something something.",            texLabel="\\sigma_{z^p}")    
     m <= parameter(:σ_tfp,    0.9391, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_tfp: This is the something something.",           texLabel="\\sigma_{tfp}")     
     m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_gdpdef: This is the something something.",        texLabel="\\sigma_{gdpdef}")  
     m <= parameter(:σ_pce,    0.0999, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_pce: This is the something something.",           texLabel="\\sigma_{pce}")     
@@ -424,14 +424,14 @@ function Model990()
     m <= parameter(:wl_c,         NaN, description="steady-state something something", texLabel="\\wl_c")
     m <= parameter(:nstar,        NaN, description="steady-state something something", texLabel="\\n_*")
     m <= parameter(:vstar,        NaN, description="steady-state something something", texLabel="\\v_*")
-    m <= parameter(:zeta_spsigw,  NaN, description="steady-state something something", texLabel="\\zeta_{sp_σ_w}")
-    m <= parameter(:zeta_spmue,   NaN, description="steady-state something something", texLabel="\\zeta_{sp_μ_e}")
-    m <= parameter(:zeta_nRk,     NaN, description="steady-state something something", texLabel="\\zeta_{n_R_k}")
-    m <= parameter(:zeta_nR,      NaN, description="steady-state something something", texLabel="\\BLAH")
-    m <= parameter(:zeta_nqk,     NaN, description="steady-state something something", texLabel="\\BLAH")
-    m <= parameter(:zeta_nn,      NaN, description="steady-state something something", texLabel="\\BLAH")
-    m <= parameter(:zeta_nmue,    NaN, description="steady-state something something", texLabel="\\BLAH")
-    m <= parameter(:zeta_nsigw,   NaN, description="steady-state something something", texLabel="\\BLAH")
+    m <= parameter(:ζ_spσw,  NaN, description="steady-state something something", texLabel="\\zeta_{sp_σ_w}")
+    m <= parameter(:ζ_spμe,   NaN, description="steady-state something something", texLabel="\\zeta_{sp_μ_e}")
+    m <= parameter(:ζ_nRk,     NaN, description="steady-state something something", texLabel="\\zeta_{n_R_k}")
+    m <= parameter(:ζ_nR,      NaN, description="steady-state something something", texLabel="\\zeta{n_R}")
+    m <= parameter(:ζ_nqk,     NaN, description="steady-state something something", texLabel="\\zeta{n_q_k}")
+    m <= parameter(:ζ_nn,      NaN, description="steady-state something something", texLabel="\\BLAH")
+    m <= parameter(:ζ_nμe,    NaN, description="steady-state something something", texLabel="\\BLAH")
+    m <= parameter(:ζ_nσw,   NaN, description="steady-state something something", texLabel="\\BLAH")
 
     initialise_model_indices!(m)
     steadystate!(m)
@@ -484,87 +484,87 @@ d2Γ_dωdσ_fn(z, σ) = (z/σ-1)*pdf(Normal(), z)
 
 # (Re)calculates steady-state values
 function steadystate!(m::Model990)
-    m[:zstar]    = log(1+m[:gam]) + m[:alp]/(1-m[:alp])*log(m[:ups])
-    m[:rstar]    = exp(m[:sigmac]*m[:zstar]) / m[:bet]
-    m[:Rstarn]   = 100*(m[:rstar]*m[:pistar] - 1)
-    m[:rkstar]   = m[:sprd]*m[:rstar]*m[:ups] - (1-m[:del])
-    m[:wstar]    = (m[:alp]^m[:alp] * (1-m[:alp])^(1-m[:alp]) * m[:rkstar]^(-m[:alp]) / m[:Bigphi])^(1/(1-m[:alp]))
+    m[:zstar]    = log(1+m[:γ]) + m[:α]/(1-m[:α])*log(m[:Upsilon])
+    m[:rstar]    = exp(m[:σ_c]*m[:zstar]) / m[:β]
+    m[:Rstarn]   = 100*(m[:rstar]*m[:πstar] - 1)
+    m[:rkstar]   = m[:sprd]*m[:rstar]*m[:Upsilon] - (1-m[:δ])
+    m[:wstar]    = (m[:α]^m[:α] * (1-m[:α])^(1-m[:α]) * m[:rkstar]^(-m[:α]) / m[:Φ])^(1/(1-m[:α]))
     m[:Lstar]    = 1.
-    m[:kstar]    = (m[:alp]/(1-m[:alp])) * m[:wstar] * m[:Lstar] / m[:rkstar]
-    m[:kbarstar] = m[:kstar] * (1+m[:gam]) * m[:ups]^(1 / (1-m[:alp]))
-    m[:istar]    = m[:kbarstar] * (1-((1-m[:del])/((1+m[:gam]) * m[:ups]^(1/(1-m[:alp])))))
-    m[:ystar]    = (m[:kstar]^m[:alp]) * (m[:Lstar]^(1-m[:alp])) / m[:Bigphi]
+    m[:kstar]    = (m[:α]/(1-m[:α])) * m[:wstar] * m[:Lstar] / m[:rkstar]
+    m[:kbarstar] = m[:kstar] * (1+m[:γ]) * m[:Upsilon]^(1 / (1-m[:α]))
+    m[:istar]    = m[:kbarstar] * (1-((1-m[:δ])/((1+m[:γ]) * m[:Upsilon]^(1/(1-m[:α])))))
+    m[:ystar]    = (m[:kstar]^m[:α]) * (m[:Lstar]^(1-m[:α])) / m[:Φ]
     m[:cstar]    = (1-m[:gstar])*m[:ystar] - m[:istar]
-    m[:wl_c]     = (m[:wstar]*m[:Lstar])/(m[:cstar]*m[:law])
+    m[:wl_c]     = (m[:wstar]*m[:Lstar])/(m[:cstar]*m[:λ_w])
 
     # FINANCIAL FRICTIONS ADDITIONS
-    # solve for sigmaomegastar and zomegastar
-    zwstar = quantile(Normal(), m[:Fom].value)
-    sigwstar = fzero(sigma -> ζ_spb_fn(zwstar, sigma, m[:sprd]) - m[:zeta_spb], 0.5)
+    # solve for σωstar and zωstar
+    zωstar = quantile(Normal(), m[:Fω].value)
+    σωstar = fzero(sigma -> ζ_spb_fn(zωstar, sigma, m[:sprd]) - m[:ζ_spb], 0.5)
 
-    # evaluate omegabarstar
-    omegabarstar = ω_fn(zwstar, sigwstar)
+    # evaluate ωbarstar
+    ωbarstar = ω_fn(zωstar, σωstar)
 
     # evaluate all BGG function elasticities
-    Gstar                   = G_fn(zwstar, sigwstar)
-    Gammastar               = Γ_fn(zwstar, sigwstar)
-    dGdomegastar            = dG_dω_fn(zwstar, sigwstar)
-    d2Gdomega2star          = d2G_dω2_fn(zwstar, sigwstar)
-    dGammadomegastar        = dΓ_dω_fn(zwstar)
-    d2Gammadomega2star      = d2Γ_dω2_fn(zwstar, sigwstar)
-    dGdsigmastar            = dG_dσ_fn(zwstar, sigwstar)
-    d2Gdomegadsigmastar     = d2G_dωdσ_fn(zwstar, sigwstar)
-    dGammadsigmastar        = dΓ_dσ_fn(zwstar, sigwstar)
-    d2Gammadomegadsigmastar = d2Γ_dωdσ_fn(zwstar, sigwstar)
+    Gstar                   = G_fn(zωstar, σωstar)
+    Γstar               = Γ_fn(zωstar, σωstar)
+    dGdωstar            = dG_dω_fn(zωstar, σωstar)
+    d2Gdω2star          = d2G_dω2_fn(zωstar, σωstar)
+    dΓdωstar        = dΓ_dω_fn(zωstar)
+    d2Γdω2star      = d2Γ_dω2_fn(zωstar, σωstar)
+    dGdσstar            = dG_dσ_fn(zωstar, σωstar)
+    d2Gdωdσstar     = d2G_dωdσ_fn(zωstar, σωstar)
+    dΓdσstar        = dΓ_dσ_fn(zωstar, σωstar)
+    d2Γdωdσstar = d2Γ_dωdσ_fn(zωstar, σωstar)
 
     # evaluate mu, nk, and Rhostar
-    muestar       = μ_fn(zwstar, sigwstar, m[:sprd])
-    nkstar        = nk_fn(zwstar, sigwstar, m[:sprd])
+    μestar       = μ_fn(zωstar, σωstar, m[:sprd])
+    nkstar        = nk_fn(zωstar, σωstar, m[:sprd])
     Rhostar       = 1/nkstar - 1
 
     # evaluate wekstar and vkstar
-    wekstar       = (1-m[:gammstar]/m[:bet])*nkstar - m[:gammstar]/m[:bet]*(m[:sprd]*(1-muestar*Gstar) - 1)
-    vkstar        = (nkstar-wekstar)/m[:gammstar]
+    wekstar       = (1-m[:γstar]/m[:β])*nkstar - m[:γstar]/m[:β]*(m[:sprd]*(1-μestar*Gstar) - 1)
+    vkstar        = (nkstar-wekstar)/m[:γstar]
 
     # evaluate nstar and vstar
     m[:nstar]       = nkstar*m[:kstar]
     m[:vstar]       = vkstar*m[:kstar]
 
     # a couple of combinations
-    GammamuG      = Gammastar - muestar*Gstar
-    GammamuGprime = dGammadomegastar - muestar*dGdomegastar
+    ΓmuG      = Γstar - μestar*Gstar
+    ΓmuGprime = dΓdωstar - μestar*dGdωstar
 
-    # elasticities wrt omegabar
-    zeta_bw       = ζ_bω_fn(zwstar, sigwstar, m[:sprd])
-    zeta_zw       = ζ_zω_fn(zwstar, sigwstar, m[:sprd])
-    zeta_bw_zw    = zeta_bw/zeta_zw
+    # elasticities wrt ωbar 
+    ζ_bw       = ζ_bω_fn(zωstar, σωstar, m[:sprd])
+    ζ_zw       = ζ_zω_fn(zωstar, σωstar, m[:sprd])
+    ζ_bw_zw    = ζ_bw/ζ_zw
 
-    # elasticities wrt sigw
-    zeta_bsigw      = sigwstar * (((1 - muestar*dGdsigmastar/dGammadsigmastar) /
-        (1 - muestar*dGdomegastar/dGammadomegastar) - 1)*dGammadsigmastar*m[:sprd] + muestar*nkstar*
-            (dGdomegastar*d2Gammadomegadsigmastar - dGammadomegastar*d2Gdomegadsigmastar)/GammamuGprime^2) /
-                ((1 - Gammastar)*m[:sprd] + dGammadomegastar/GammamuGprime*(1-nkstar))
-    zeta_zsigw      = sigwstar * (dGammadsigmastar - muestar*dGdsigmastar) / GammamuG
-    m[:zeta_spsigw] = (zeta_bw_zw*zeta_zsigw - zeta_bsigw) / (1-zeta_bw_zw)
+    # elasticities wrt σω
+    ζ_bσω      = σωstar * (((1 - μestar*dGdσstar/dΓdσstar) /
+        (1 - μestar*dGdωstar/dΓdωstar) - 1)*dΓdσstar*m[:sprd] + μestar*nkstar*
+            (dGdωstar*d2Γdωdσstar - dΓdωstar*d2Gdωdσstar)/ΓmuGprime^2) /
+                ((1 - Γstar)*m[:sprd] + dΓdωstar/ΓmuGprime*(1-nkstar))
+    ζ_zσω      = σωstar * (dΓdσstar - μestar*dGdσstar) / ΓmuG
+    m[:ζ_spσω] = (ζ_bw_zw*ζ_zσω - ζ_bσω) / (1-ζ_bw_zw)
 
-    # elasticities wrt mue
-    zeta_bmue      = muestar * (nkstar*dGammadomegastar*dGdomegastar/GammamuGprime+dGammadomegastar*Gstar*m[:sprd]) /
-        ((1-Gammastar)*GammamuGprime*m[:sprd] + dGammadomegastar*(1-nkstar))
-    zeta_zmue      = -muestar*Gstar/GammamuG
-    m[:zeta_spmue] = (zeta_bw_zw*zeta_zmue - zeta_bmue) / (1-zeta_bw_zw)
+    # elasticities wrt μe
+    ζ_bμe      = μestar * (nkstar*dΓdωstar*dGdωstar/ΓmuGprime+dΓdωstar*Gstar*m[:sprd]) /
+        ((1-Γstar)*ΓmuGprime*m[:sprd] + dΓdωstar*(1-nkstar))
+    ζ_zμe      = -μestar*Gstar/ΓmuG
+    m[:ζ_spμe] = (ζ_bw_zw*ζ_zμe - ζ_bμe) / (1-ζ_bw_zw)
 
     # some ratios/elasticities
-    Rkstar        = m[:sprd]*m[:pistar]*m[:rstar] # (rkstar+1-delta)/ups*pistar
-    zeta_gw       = dGdomegastar/Gstar*omegabarstar
-    zeta_Gsigw    = dGdsigmastar/Gstar*sigwstar
+    Rkstar        = m[:sprd]*m[:πstar]*m[:rstar] # (rkstar+1-δ)/Upsilon*πstar
+    ζ_gw       = dGdωstar/Gstar*ωbarstar
+    ζ_Gσω    = dGdσstar/Gstar*σωstar
 
     # elasticities for the net worth evolution
-    m[:zeta_nRk]    = m[:gammstar]*Rkstar/m[:pistar]/exp(m[:zstar])*(1+Rhostar)*(1 - muestar*Gstar*(1 - zeta_gw/zeta_zw))
-    m[:zeta_nR]     = m[:gammstar]/m[:bet]*(1+Rhostar)*(1 - nkstar + muestar*Gstar*m[:sprd]*zeta_gw/zeta_zw)
-    m[:zeta_nqk]    = m[:gammstar]*Rkstar/m[:pistar]/exp(m[:zstar])*(1+Rhostar)*(1 - muestar*Gstar*(1+zeta_gw/zeta_zw/Rhostar)) - m[:gammstar]/m[:bet]*(1+Rhostar)
-    m[:zeta_nn]     = m[:gammstar]/m[:bet] + m[:gammstar]*Rkstar/m[:pistar]/exp(m[:zstar])*(1+Rhostar)*muestar*Gstar*zeta_gw/zeta_zw/Rhostar
-    m[:zeta_nmue]   = m[:gammstar]*Rkstar/m[:pistar]/exp(m[:zstar])*(1+Rhostar)*muestar*Gstar*(1 - zeta_gw*zeta_zmue/zeta_zw)
-    m[:zeta_nsigw]  = m[:gammstar]*Rkstar/m[:pistar]/exp(m[:zstar])*(1+Rhostar)*muestar*Gstar*(zeta_Gsigw-zeta_gw/zeta_zw*zeta_zsigw)
+    m[:ζ_nRk]    = m[:γstar]*Rkstar/m[:πstar]/exp(m[:zstar])*(1+Rhostar)*(1 - μestar*Gstar*(1 - ζ_gw/ζ_zw))
+    m[:ζ_nR]     = m[:γstar]/m[:β]*(1+Rhostar)*(1 - nkstar + μestar*Gstar*m[:sprd]*ζ_gw/ζ_zw)
+    m[:ζ_nqk]    = m[:γstar]*Rkstar/m[:πstar]/exp(m[:zstar])*(1+Rhostar)*(1 - μestar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γstar]/m[:β]*(1+Rhostar)
+    m[:ζ_nn]     = m[:γstar]/m[:β] + m[:γstar]*Rkstar/m[:πstar]/exp(m[:zstar])*(1+Rhostar)*μestar*Gstar*ζ_gw/ζ_zw/Rhostar
+    m[:ζ_nμe]   = m[:γstar]*Rkstar/m[:πstar]/exp(m[:zstar])*(1+Rhostar)*μestar*Gstar*(1 - ζ_gw*ζ_zμe/ζ_zw)
+    m[:ζ_nσω]  = m[:γstar]*Rkstar/m[:πstar]/exp(m[:zstar])*(1+Rhostar)*μestar*Gstar*(ζ_Gσω-ζ_gw/ζ_zw*ζ_zσω)
 
     return m
 end
