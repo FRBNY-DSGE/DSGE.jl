@@ -40,7 +40,7 @@ end
 
 # TODO: decide what a sensible default ε value is for our situation
 # Compares matrices, reports absolute differences, returns true if all entries close enough
-@debug function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{R}, actual::Array{S}; ε::T = 1e-4, ε_pct::T = 10.0, noisy::Bool = false)
+@debug function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{R}, actual::Array{S}; ε::T = 1e-4, ε_pct::T = 12.0, noisy::Bool = false)
 
     n_entries = length(expected)
     same_sign = map(checksigns, expected, actual)
@@ -53,46 +53,12 @@ end
     end
 
     abs_diff_eq = test_matrix_eq(complex(expected), complex(actual); ε=ε, ε_pct=ε_pct, noisy=noisy)
-    # return test_matrix_eq(complex(expected), complex(actual); ε=ε, ε_pct=ε_pct, noisy=noisy)
-    
-    ## # Count percent differences and find max
-    ## pct_err = map(percenterr, expected, actual) #percenterr returns an absolute value
-    ## n_neq_pct = countnz(pct_err)
-    ## n_not_approx_eq_pct = count(x -> x > ε_pct, pct_err)
-    ## max_pct_err = maximum(pct_err)
-    ## max_pct_inds = ind2sub(size(pct_err), indmax(pct_err))
-    ## max_pct_expected = expected[max_pct_inds[1], max_pct_inds[2]]
-    ## max_pct_actual = actual[max_pct_inds[1], max_pct_inds[2]]
-
-    ## if noisy
-    ##     if n_neq_pct != 0
-    ##         println("Max percent error of $max_pct_err at entry $max_pct_inds")
-    ##         if isa(expected, Matrix)
-    ##             println("The entries at $max_pct_inds are $max_pct_expected (expected) and $(actual[max_pct_inds[1], max_pct_inds[2]]) (actual)\n")
-    ##         end
-    ##     else 
-    ##         println("Max pct diff of 0\n")
-    ##     end
-
-    ## end
-
-    ## # Return true if all entries within ε and ε_pct. If there are
-    ## # significant pct diffs warn
-    ## # the user but return true.
-
-    
-    ## if n_not_approx_eq_pct !=0 && abs(expected[max_pct_inds[1],max_pct_inds[2]]) > abs(complex(1e-9))
-    ##     @bp
-    ##     warn("Relative differences between entries exceed threshold of $ε_pct\%")
-    ##     println("The entries at $max_pct_inds are $(expected[max_pct_inds[1],max_pct_inds[2]]) (expected) and $(actual[max_pct_inds[1], max_pct_inds[2]]) (actual)")
-    ##     println("Max pct diff of $max_pct_err")        
-    ## end
     
     return abs_diff_eq 
 end
 
 # Complex-valued input matrices
-function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{Complex{R}}, actual::Array{Complex{S}}; ε::T = 1e-4, ε_pct::T=10.0, noisy::Bool = false)
+function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{Complex{R}}, actual::Array{Complex{S}}; ε::T = 1e-4, ε_pct::T=5.0, noisy::Bool = false)
 
     # Matrices of different sizes return false
     if size(expected) != size(actual)
@@ -108,17 +74,22 @@ function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(ex
     # Count differences and find max
     abs_diff = abs(map(minusnan, expected, actual))
     n_neq = countnz(abs_diff)
-    n_not_approx_eq = count(x -> x > ε, abs_diff)    
+    diff_inds = find(x -> x > ε, abs_diff)    
+    n_not_approx_eq = length(diff_inds)
     max_abs_diff = maximum(abs_diff)
     max_inds = ind2sub(size(abs_diff), indmax(abs_diff))
 
     # Count percent differences and find max
     pct_err = map(percenterr, expected, actual) #percenterr returns an absolute value
     n_neq_pct = countnz(pct_err)
-    n_not_approx_eq_pct = count(x -> x > ε_pct, pct_err)
+    diff_inds_pct = find(x -> x > ε_pct, pct_err)
+    n_not_approx_eq_pct = length(diff_inds_pct)
     max_pct_err = maximum(pct_err)
     max_pct_inds = ind2sub(size(pct_err), indmax(pct_err))
 
+    # Find elements that are both absolutely and relatively different
+    very_different = intersect(diff_inds, diff_inds_pct)
+    
     # Print output
     if noisy
         println("$n_neq of $n_entries entries with abs diff > 0")
@@ -137,27 +108,37 @@ function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(ex
         end
 
         # If there are percent differences
-        ## if n_neq_pct != 0
-        ##     println("Max percent error of $max_pct_err at entry $max_pct_inds")
-        ##     if isa(expected, Matrix)
-        ##         println("The entries at $max_pct_inds are $(expected[max_pct_inds[1],max_pct_inds[2]]) (expected) and $(actual[max_pct_inds[1], max_pct_inds[2]]) (actual)\n")
-        ##     end
-        ## else 
-        ##     println("Max pct diff of 0\n")
-        ## end
+        if n_neq_pct != 0
+            println("Max percent error of $max_pct_err at entry $max_pct_inds")
+            if isa(expected, Matrix)
+                println("The entries at $max_pct_inds are $(expected[max_pct_inds[1],max_pct_inds[2]]) (expected) and $(actual[max_pct_inds[1], max_pct_inds[2]]) (actual)\n")
+            end
+        else 
+            println("Max pct diff of 0\n")
+        end
     end
 
-    # Return true if all entries within ε and ε_pct. If there are
-    # significant pct diffs warn
-    # the user but return true.
-    
-    ## if n_not_approx_eq_pct !=0 && abs(expected[max_pct_inds[1],max_pct_inds[2]]) > abs(complex(1e-9))
-    ##     warn("Relative differences between entries exceed threshold of $ε_pct\%")
-    ##     println("The entries at $max_pct_inds are $(expected[max_pct_inds[1],max_pct_inds[2]]) (expected) and $(actual[max_pct_inds[1], max_pct_inds[2]]) (actual)")
-    ##     println("Max pct diff of $max_pct_err")        
-    ## end
-    
-    return n_not_approx_eq == 0
+    # Warn if there are absolute diffs or relative diffs 
+    if n_not_approx_eq !=0 
+        warn("Absolute differences between entries exceed threshold of $ε")
+    end
+
+
+    if n_not_approx_eq_pct !=0
+        
+        # Super-small numbers result in huge % differences between
+        # numbers, so only warn if the numbers arent tiny
+        for i = 1:length(diff_inds_pct)
+            if real(expected[diff_inds_pct[i]]) > real(ε_pct)
+                warn("Relative differences between entries exceed threshold of $ε_pct\%")
+                break
+            end
+        end
+    end
+
+        
+    # Fail if there are elements that have absolute differences > ϵ and relative differences > ϵ_pct
+    return length(very_different) == 0
 end
 
 
