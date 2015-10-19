@@ -233,7 +233,7 @@ function initialise_model_parameters!(m::Model990)
 
     # exogenous processes - level
     m[:gam     ] = Param(0.3673, scalefunction = x -> x/100, false, (-5., 5.), Normal(0.4, 0.1), 0, (-5.0, 5.0), texLabel = "\\gamma")
-    m[:Lmean   ] = Param(-45.9364, false, (-1000., 1000.), Normal(-45, 5), 0, (-1000., 1000.), texLabel = "Lmean")
+    m[:Lmean   ] = Param(-45.9364, false, (-1000., 1000.), Normal(-45, 5.), 0, (-1000., 1000.), texLabel = "Lmean")
     m[:gstar   ] = Param(0.18) # omit from parameter vector
 
     # exogenous processes - autocorrelation
