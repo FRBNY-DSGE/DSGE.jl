@@ -10,7 +10,7 @@ model = Model990()
 
 ### Parameters
 
-# Parameters match para, bounds, etc. vectors from Matlab (ε = 1e-4)
+# Parameters match para, bounds, etc. vectors from Matlab (ϵ = 1e-4)
 para = zeros(82)
 bounds = zeros(82, 2)
 pshape = zeros(82)
@@ -117,7 +117,7 @@ obs = model.observables
 @test size(Ψ) == (66, 22)
 @test size(Π) == (66, 13)
 
-# # Check output matrices against Matlab output (ε = 1e-4)
+# # Check output matrices against Matlab output (ϵ = 1e-4)
 h5 = h5open("$path/eqcond.h5")
 Γ0_ref = read(h5, "G0")
 Γ1_ref = read(h5, "G1")

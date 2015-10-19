@@ -38,9 +38,9 @@ function checksigns(x::Number,y::Number)
     end
 end
 
-# TODO: decide what a sensible default ε value is for our situation
+# TODO: decide what a sensible default ϵ value is for our situation
 # Compares matrices, reports absolute differences, returns true if all entries close enough
-@debug function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{R}, actual::Array{S}; ε::T = 1e-4, ε_pct::T = 12.0, noisy::Bool = false)
+@debug function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{R}, actual::Array{S}; ϵ::T = 1e-4, ϵ_pct::T = 12.0, noisy::Bool = false)
 
     n_entries = length(expected)
     same_sign = map(checksigns, expected, actual)
@@ -52,13 +52,13 @@ end
         println("$diff_sign_zeros of $n_entries entries have different signs, but one of the entries is 0")
     end
 
-    abs_diff_eq = test_matrix_eq(complex(expected), complex(actual); ε=ε, ε_pct=ε_pct, noisy=noisy)
+    abs_diff_eq = test_matrix_eq(complex(expected), complex(actual); ϵ=ϵ, ϵ_pct=ϵ_pct, noisy=noisy)
     
     return abs_diff_eq 
 end
 
 # Complex-valued input matrices
-function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{Complex{R}}, actual::Array{Complex{S}}; ε::T = 1e-4, ε_pct::T=5.0, noisy::Bool = false)
+function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{Complex{R}}, actual::Array{Complex{S}}; ϵ::T = 1e-4, ϵ_pct::T=5.0, noisy::Bool = false)
 
     # Matrices of different sizes return false
     if size(expected) != size(actual)
@@ -74,7 +74,7 @@ function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(ex
     # Count differences and find max
     abs_diff = abs(map(minusnan, expected, actual))
     n_neq = countnz(abs_diff)
-    diff_inds = find(x -> x > ε, abs_diff)    
+    diff_inds = find(x -> x > ϵ, abs_diff)    
     n_not_approx_eq = length(diff_inds)
     max_abs_diff = maximum(abs_diff)
     max_inds = ind2sub(size(abs_diff), indmax(abs_diff))
@@ -82,7 +82,7 @@ function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(ex
     # Count percent differences and find max
     pct_err = map(percenterr, expected, actual) #percenterr returns an absolute value
     n_neq_pct = countnz(pct_err)
-    diff_inds_pct = find(x -> x > ε_pct, pct_err)
+    diff_inds_pct = find(x -> x > ϵ_pct, pct_err)
     n_not_approx_eq_pct = length(diff_inds_pct)
     max_pct_err = maximum(pct_err)
     max_pct_inds = ind2sub(size(pct_err), indmax(pct_err))
@@ -93,7 +93,7 @@ function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(ex
     # Print output
     if noisy
         println("$n_neq of $n_entries entries with abs diff > 0")
-        println("$n_not_approx_eq of $n_entries entries with abs diff > $ε")
+        println("$n_not_approx_eq of $n_entries entries with abs diff > $ϵ")
         # println("$n_diff_sign of $n_entries entries have opposite signs")
 
         # If there are absolute differences
@@ -120,7 +120,7 @@ function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(ex
 
     # Warn if there are absolute diffs or relative diffs 
     if n_not_approx_eq !=0 
-        warn("Absolute differences between entries exceed threshold of $ε")
+        warn("Absolute differences between entries exceed threshold of $ϵ")
     end
 
 
@@ -129,8 +129,8 @@ function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(ex
         # Super-small numbers result in huge % differences between
         # numbers, so only warn if the numbers arent tiny
         for i = 1:length(diff_inds_pct)
-            if real(expected[diff_inds_pct[i]]) > real(ε_pct)
-                warn("Relative differences between entries exceed threshold of $ε_pct\%")
+            if real(expected[diff_inds_pct[i]]) > real(ϵ_pct)
+                warn("Relative differences between entries exceed threshold of $ϵ_pct\%")
                 break
             end
         end
@@ -144,14 +144,14 @@ end
 
 # Tests whether the absolute values of 2 matrices are equal
 function test_matrix_abs_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::
-             Array{R}, actual::Array{S}; ε::T = 1e-4, noisy::Bool = false)
+             Array{R}, actual::Array{S}; ϵ::T = 1e-4, noisy::Bool = false)
 
-    return test_matrix_eq(abs(expected), abs(actual), ε=ε, noisy=noisy)
+    return test_matrix_eq(abs(expected), abs(actual), ϵ=ϵ, noisy=noisy)
 end
 
-#function test_eigs_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat, U<:AbstractFloat, V<:AbstractFloat}(eigvals_expected::Array{R}, eigvals_actual::Array{S}, eigvecs_expected::Array{U},  eigvecs_actual::Array{V}; ε::T = 1e-12, noisy::Bool = true)
+#function test_eigs_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat, U<:AbstractFloat, V<:AbstractFloat}(eigvals_expected::Array{R}, eigvals_actual::Array{S}, eigvecs_expected::Array{U},  eigvecs_actual::Array{V}; ϵ::T = 1e-12, noisy::Bool = true)
 
-function test_eigs_eq(eigvals_expected::Array, eigvals_actual::Array, eigvecs_expected::Array,  eigvecs_actual::Array; ε = 1e-12, noisy::Bool = true)
+function test_eigs_eq(eigvals_expected::Array, eigvals_actual::Array, eigvecs_expected::Array,  eigvecs_actual::Array; ϵ = 1e-12, noisy::Bool = true)
    
     # check to see if sizes correspond
     if size(eigvecs_expected) != size(eigvecs_actual)
@@ -195,8 +195,8 @@ function test_eigs_eq(eigvals_expected::Array, eigvals_actual::Array, eigvecs_ex
     eigvecs_actual_sorted = actual_sorted[2:end,:]
     
     # See if expected eigenvalues/vectors == actual eigenvalues/vectors
-    vals_eq = test_matrix_eq(eigvals_expected_sorted, eigvals_actual_sorted,ε = ε, noisy=true);
-    vecs_eq = test_matrix_eq(eigvecs_expected_sorted, eigvecs_actual_sorted, ε = ε, noisy=true)
+    vals_eq = test_matrix_eq(eigvals_expected_sorted, eigvals_actual_sorted,ϵ = ϵ, noisy=true);
+    vecs_eq = test_matrix_eq(eigvecs_expected_sorted, eigvecs_actual_sorted, ϵ = ϵ, noisy=true)
 
     # return vals_eq && vecs_eq
     return eigvals_expected_sorted, eigvals_actual_sorted, eigvecs_expected_sorted, eigvecs_actual_sorted
@@ -251,7 +251,7 @@ function test_test_eigs_eq()
 end
 
 
-function find_matrix_diffs{T<:Number}(m0::Matrix{T}, m1::Matrix{T}; ε=1e-4)
+function find_matrix_diffs{T<:Number}(m0::Matrix{T}, m1::Matrix{T}; ϵ=1e-4)
 
     if size(m0) != size(m1)
         println("The matrices are not the same size.")
@@ -265,7 +265,7 @@ function find_matrix_diffs{T<:Number}(m0::Matrix{T}, m1::Matrix{T}; ε=1e-4)
 
 
     # Get row, column indices for absolute differences
-    v_indices = find(x-> x>ε, abs_diff)
+    v_indices = find(x-> x>ϵ, abs_diff)
     m_indices = ind2sub(size(abs_diff), v_indices)
 
     abs_diff_entries = m_indices
@@ -356,11 +356,11 @@ function test_test_matrix_eq()
     # Returns false
     m3 = [0.0001 0.0; 0.0 -0.0002]
     @test !test_matrix_eq(m1, m3)
-    @test test_matrix_eq(m1, m3; ε=2e-4) # but true with larger ε
+    @test test_matrix_eq(m1, m3; ϵ=2e-4) # but true with larger ϵ
 
     # Arguments of different float type returns true
     m2_float16 = convert(Matrix{Float16}, m2)
-    ε = convert(Float32, 0.0001)
+    ϵ = convert(Float32, 0.0001)
     @test test_matrix_eq(m1, m2)
 
     # Complex-valued matrices
@@ -455,7 +455,7 @@ function compare_hdf5s(file1,file2)
             var1 = read(fid1,string(name))
             var2 = read(fid2,string(name))
             println(name)
-            test_matrix_eq(var1, var2, ε=1e-9, noisy=true)
+            test_matrix_eq(var1, var2, ϵ=1e-9, noisy=true)
         else
             println("Missing: $file2 doesn't contain variable $name")
         end
@@ -466,7 +466,7 @@ function compare_hdf5s(file1,file2)
     close(fid2)
 end
 
-function compare_matvar_hdf5var(matfile, mname, h5file, h5name; ε=1e-4, noisy=true)
+function compare_matvar_hdf5var(matfile, mname, h5file, h5name; ϵ=1e-4, noisy=true)
     #Get matlab variable
     mf = MatFile(matfile);
     mvar = MATLAB.get_variable(mf, mname);
@@ -479,16 +479,16 @@ function compare_matvar_hdf5var(matfile, mname, h5file, h5name; ε=1e-4, noisy=t
     
 
     if isa(h5var,Vector) || isa(h5var,Matrix)
-        return mvar, h5var, test_matrix_eq(mvar, h5var, ε=ε, noisy=noisy);
+        return mvar, h5var, test_matrix_eq(mvar, h5var, ϵ=ϵ, noisy=noisy);
     elseif isa(h5var,Float64) || isa(h5var,Float32)
         return mvar, h5var, mvar == h5var;
     end
     
 end
 
-function get_diff_symbols{S<:AbstractFloat, T<:AbstractDSGEModel}(m::T, expected::Matrix{S}, actual::Matrix{S}; ε=1e-4, noisy=true)
+function get_diff_symbols{S<:AbstractFloat, T<:AbstractDSGEModel}(m::T, expected::Matrix{S}, actual::Matrix{S}; ϵ=1e-4, noisy=true)
 
-    diff_entries, opp_sign_entries = find_matrix_diffs(expected, actual; ε=ε)
+    diff_entries, opp_sign_entries = find_matrix_diffs(expected, actual; ϵ=ϵ)
 
     diff_states = Set(diff_entries[2])
     diff_eqcond = Set(diff_entries[1])

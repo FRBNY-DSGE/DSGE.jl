@@ -9,7 +9,7 @@ solve(model::AbstractDSGEModel)
 
 ### Return values
  - TTT, RRR, and CCC matrices of the state transition equation:
-              S_t = TTT*S_{t-1} + RRR*ε_t + CCC
+              S_t = TTT*S_{t-1} + RRR*ϵ_t + CCC
 
 ## Description
 Loads in the matrices that form the canonical representation of the equilibrium conditions by calling `eqcond`. Then calls `gensys` for the state-space representation of the model. Finally, calls `augment_states` to add growth rates to the observables. See documentation for each of these 3 functions for further details.
@@ -40,7 +40,7 @@ augment_states{T<:AbstractFloat}(m::AbstractDSGEModel, TTT::Matrix{T}, RRR::Matr
 ### Parameters
 -`m`: the model object
 -`TTT`, `RRR`, and `CCC` are matrices of the state transition equation that is returned from `gensys`:
-              S_t = TTT*S_{t-1} + RRR*ε_t + CCC
+              S_t = TTT*S_{t-1} + RRR*ϵ_t + CCC
 
 ### Return values
 - `TTT_aug`, `RRR_aug`, and `CCC_aug`, which extend the corresponding input matrices to include observables which are growth rates.
