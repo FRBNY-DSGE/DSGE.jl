@@ -187,7 +187,7 @@ function Model990()
 
     ## TODO - ask Marc and Marco
     m <= parameter(:ν_l,     2.5975, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    Normal(2, 0.75),            fixed=false,
-                   description="ν_l: This is the something something.", texLabel="\nu_l")
+                   description="ν_l: The coefficient of relative risk aversion on the labor term of households' utility function.", texLabel="\nu_l")
     
     m <= parameter(:ζ_w,   0.9291, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.1),          fixed=false,
                    description="ζ_w: (1-ζ_w) is the probability with which households can freely choose wages in each period. With probability ζ_w, wages increase at a geometrically weighted average of the steady state rate of wage increases and last period's productivity times last period's inflation.",
