@@ -52,7 +52,7 @@ function eqcond(m::Model990)
     ### 2. Investment Euler Equation
 
     # Sticky prices and wages
-    Γ0[eq[:inv], endo[:qk_t]] = -1/(m[:s2]*exp(2.*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar])))
+    Γ0[eq[:inv], endo[:qk_t]] = -1/(m[:S′′]*exp(2.*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar])))
     Γ0[eq[:inv], endo[:i_t]]  = 1.
     Γ0[eq[:inv], endo[:z_t]]  = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ1[eq[:inv], endo[:i_t]]  = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
@@ -61,7 +61,7 @@ function eqcond(m::Model990)
     Γ0[eq[:inv], endo[:mu_t]] = -1.
 
     # Flexible prices and wages
-    Γ0[eq[:inv_f], endo[:qk_f_t]] = -1/(m[:s2]*exp(2*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar])))
+    Γ0[eq[:inv_f], endo[:qk_f_t]] = -1/(m[:S′′]*exp(2*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar])))
     Γ0[eq[:inv_f], endo[:i_f_t]]  = 1.
     Γ0[eq[:inv_f], endo[:z_t]]    = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ1[eq[:inv_f], endo[:i_f_t]]  = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
@@ -165,23 +165,23 @@ function eqcond(m::Model990)
     Γ1[eq[:capev], endo[:kbar_t]] = 1 - m[:istar]/m[:kbarstar]
     Γ0[eq[:capev], endo[:z_t]]    = 1 - m[:istar]/m[:kbarstar]
     Γ0[eq[:capev], endo[:i_t]]    = -m[:istar]/m[:kbarstar]
-    Γ0[eq[:capev], endo[:mu_t]]   = -m[:istar]*m[:s2]*exp(2*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))/m[:kbarstar]
+    Γ0[eq[:capev], endo[:mu_t]]   = -m[:istar]*m[:S′′]*exp(2*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))/m[:kbarstar]
 
     # Flexible prices and wages
     Γ0[eq[:capev_f], endo[:kbar_f_t]] = 1.
     Γ1[eq[:capev_f], endo[:kbar_f_t]] = 1 - m[:istar]/m[:kbarstar]
     Γ0[eq[:capev_f], endo[:z_t]]      = 1 - m[:istar]/m[:kbarstar]
     Γ0[eq[:capev_f], endo[:i_f_t]]    = -m[:istar]/m[:kbarstar]
-    Γ0[eq[:capev_f], endo[:mu_t]]     = -m[:istar]*m[:s2]*exp(2*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))/m[:kbarstar]
+    Γ0[eq[:capev_f], endo[:mu_t]]     = -m[:istar]*m[:S′′]*exp(2*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))/m[:kbarstar]
 
 
 
     ### 8. Price Markup
 
     # Sticky prices and wages
-    Γ0[eq[:mkupp], endo[:mc_t]] = 1
-    Γ0[eq[:mkupp], endo[:w_t]]  =  -1.
-    Γ0[eq[:mkupp], endo[:L_t]]  =  -m[:α]
+    Γ0[eq[:mkupp], endo[:mc_t]] =  1.
+    Γ0[eq[:mkupp], endo[:w_t]]  = -1.
+    Γ0[eq[:mkupp], endo[:L_t]]  = -m[:α]
     Γ0[eq[:mkupp], endo[:k_t]]  =  m[:α]
 
     # Flexible prices and wages
