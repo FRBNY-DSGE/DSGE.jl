@@ -46,12 +46,12 @@ function measurement(m::Model990, TTT::Matrix, RRR::Matrix, CCC::Matrix; shocks:
     ## Inflation (GDP Deflator)
     ZZ[obs[:pi_gdpdef], endo[:pi_t]]          = m[:gamm_gdpdef]
     ZZ[obs[:pi_gdpdef], endo_addl[:e_gdpdef]] = 1.0
-    DD[obs[:pi_gdpdef]]                       = 100*(m[:πstar]-1) + m[:del_gdpdef]
+    DD[obs[:pi_gdpdef]]                       = 100*(m[:π_star]-1) + m[:del_gdpdef]
 
     ## Inflation (Core PCE)
     ZZ[obs[:pi_pce], endo[:pi_t]]       = 1.0
     ZZ[obs[:pi_pce], endo_addl[:e_pce]] = 1.0
-    DD[obs[:pi_pce]]                    = 100*(m[:πstar]-1)
+    DD[obs[:pi_pce]]                    = 100*(m[:π_star]-1)
 
     ## Nominal interest rate
     ZZ[obs[:R_n], endo[:R_t]] = 1.0
@@ -77,7 +77,7 @@ function measurement(m::Model990, TTT::Matrix, RRR::Matrix, CCC::Matrix; shocks:
     ## 10 yrs infl exp
     TTT10                = (1/40)*((eye(size(TTT, 1)) - TTT)\(TTT - TTT^41))
     ZZ[obs[:pi_long], :] =  TTT10[endo[:pi_t], :]
-    DD[obs[:pi_long]]    = 100*(m[:πstar]-1)
+    DD[obs[:pi_long]]    = 100*(m[:π_star]-1)
 
     ## Long Rate
     ZZ[obs[:R_long], :]                = ZZ[6, :]*TTT10
@@ -97,10 +97,10 @@ function measurement(m::Model990, TTT::Matrix, RRR::Matrix, CCC::Matrix; shocks:
     QQ[exo[:laf_sh], exo[:laf_sh]]       = m[:σ_λ_f]^2
     QQ[exo[:law_sh], exo[:law_sh]]       = m[:σ_λ_w]^2
     QQ[exo[:rm_sh], exo[:rm_sh]]         = m[:σ_rm]^2
-    QQ[exo[:σω_sh], exo[:σω_sh]]         = m[:σ_σω]^2
+    QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]       = m[:σ_σ_ω]^2
     QQ[exo[:μe_sh], exo[:μe_sh]]         = m[:σ_μe]^2
     QQ[exo[:gamm_sh], exo[:gamm_sh]]     = m[:σ_gamm]^2
-    QQ[exo[:πstar_sh], exo[:πstar_sh]]   = m[:σ_πstar]^2
+    QQ[exo[:π_star_sh], exo[:π_star_sh]] = m[:σ_π_star]^2
     QQ[exo[:lr_sh], exo[:lr_sh]]         = m[:σ_lr]^2
     QQ[exo[:zp_sh], exo[:zp_sh]]         = m[:σ_zp]^2
     QQ[exo[:tfp_sh], exo[:tfp_sh]]       = m[:σ_tfp]^2
