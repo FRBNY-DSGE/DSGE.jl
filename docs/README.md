@@ -69,8 +69,8 @@ To change defaults for estimation and forecasts, see `m990.jl`. There, you can m
   - `num_mh_blocks_test`: `num_mh_blocks` when the argument `testing=true` is passed to `estimate`.
   - `num_mh_burn_test`: `num_mh_burn` when the argument `testing=true` is passed to `estimate`.
 
-  **Forecast Parameters**
-  TBU 
+- **Forecast Parameters**
+  - TBU 
 
 You can also write a script that constructs a model object and then reassigns these fields in the model `m`.
 
@@ -114,6 +114,43 @@ This section focuses on what the code does and why, while the code itself
 (including comments) provides detailed information regarding *how* these basic
 procedures are implemented.
 
+## The Model Object
+
+TBU after merge
+
+## The AbstractDSGEModel Type
+
+TBU after merge
+
+
+## Parameters: The `AbstractParameter` Type
+
+Subtypes of `AbstractParameter` implement our notion of a model parameter: a
+time-invariant, unobserved value that has economic significance in the
+model's equilibrium conditions. We estimate the model to find the
+values of these parameters.
+
+Though all parameters are time-invariant, each has different
+features. Parameters whose values are scaled for use in computation
+are implemented as `ScaledParameter` types, while those whose values
+are not scaled are implemented as `UnscaledParameter`s. 
+
+All parameters have the following fields:
+
+-`value`: The transformed, scaled (for `ScaledParameter`s) value of the parameter
+-`valuebounds`: The parameter's value is constrained to lie between these bounds
+-`transbounds`: Bounds for the transformed parameter value
+-`prior`: Prior probability distribution for the parameter
+-`fixed`: Whether or not the parameter is fixed at a certain value. 
+-`description`: Short description of the parameter's economic significance
+-`texLabel`: Provided for printing tables of parameter values to LaTeX
+
+`ScaledParameters` also have the following fields:
+
+-`unscaledvalue`: Unscaled, transformed parameter value
+-`scaling::Function`: The function used to scale the parameter 
+
+Parameter values are accessed using 
 
 ## Estimation
 
@@ -123,7 +160,7 @@ procedures are implemented.
 
 **Main Steps**: 
 
-- *Initialization*: Read in and transform raw data from `save/m990/input_data`. 
+- *Initialization*: Read in and transform raw data from `save/m990/input_data/`. 
 
 - *Find Mode*: The main program will call the `csminwel` optimization
   routine (located in `csminwel.jl`) to find modal parameter
@@ -152,6 +189,17 @@ estimation program also saves the resulting posterior value and transition
 equation matrices implied by each draw of the parameter vector. This is to save
 time in the forecasting step since that code can avoid recomputing those
 matrices. In addition, to save space, all files in `save/input_data` and `save/output_data` are HDF5 files.
+
+# Extending or Editing a Model
+
+A particular model is defined by the files `mSPEC.jl` (which defines
+the model object for model number SPEC), `eqcond.jl` (which defines
+the equilibrium conditions) and `measurement.jl` (which defines the
+mappings from states to observables). To add new parameters, equilibrium conditions, or
+measurement equations, edit these files. The rest of the package
+implements the machinery necessary to solve and estimate the model
+parameters, and is model-agnostic.
+
 
 # DISCLAIMER
 
