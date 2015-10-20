@@ -107,23 +107,24 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
     ###########################################################################################
     ## STEP 2: Compute moments and `percent' bands from parameter draws
     ###########################################################################################
-    
-    Θ_hat = mean(Θ,1)'                    # posterior mean for each parameter
-    # Θ_sig = cov(Θ, mean=Θ_hat')           # posterior std dev for each parameter
+
+    # Posterior mean for each
+    Θ_hat = mean(Θ,1)'       
+
+    # Covariance: Note that this has already been computed and saved
+    # in $outpath(m)/parameter_covariance.h5.   
+    # parameter Θ_sig = cov(Θ, mean=Θ_hat') 
+
+    # Bands for each
     Θ_bands = []
 
     try
         Θ_bands = find_density_bands(Θ,percent,minimize=true)' # We need the transpose
     catch
         println("percent must be between 0 and 1")
+        return -1
     end
     
-    # Save posterior mean
-    cov_filename = joinpath(outpath(m),"cov.h5")
-    posterior_fid = h5open(cov_filename,"w") do posterior_fid
-        posterior_fid["Θ_hat"] = convert(Matrix{Float32}, Θ_hat)
-    end
-
 
     ###########################################################################################
     ## STEP 3: Create variables for writing to output table
@@ -147,7 +148,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
     ## 4a. Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT parameters
     ###########################################################################################
     
-    # Open and start the file
+    # Open and start the TeX file
     mainParams_out = joinpath(tablepath(m), "moments_mainParams.tex")
     mainParams_fid = open(mainParams_out,"w")
 
