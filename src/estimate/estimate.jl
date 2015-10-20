@@ -491,15 +491,17 @@ function compute_parameter_covariance{T<:AbstractDSGEModel}(m::T)
         return
     end
 
-    sim_h5 = h5open(h5path, "r+")
+    sim_h5 = h5open(h5path, "r")
     param_draws = read(sim_h5, "parasim")
-
+    close(sim_h5)
+    
     # Calculate covariance matrix
     param_covariance = cov(param_draws)
-    write(sim_h5, "param_covariance", param_covariance)
 
-    # Close the file
-    close(sim_h5)
+    # Write to file
+    cov_h5 = h5open(joinpath(outpath(m),"parameter_covariance.h5"),"w")
+    cov_h5["param_covariance"] = param_covariance
+    close(cov_h5)
 
     return param_covariance
 end
