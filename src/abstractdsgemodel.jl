@@ -1,4 +1,4 @@
-abstract AbstractDSGEModel{T<:FloatingPoint}
+abstract AbstractDSGEModel{T<:AbstractFloat}
 
 function Base.show{T<:AbstractDSGEModel}(io::IO, m::T)
     @printf io "Dynamic Stochastic General Equilibrium Model\n"
@@ -130,11 +130,11 @@ plotpath(m::AbstractDSGEModel)  = normpath(joinpath(m.savepath, "results/plots/"
 logpath(m::AbstractDSGEModel)   = normpath(joinpath(m.savepath, "logs/"))
 
 # TODO is there a better place for these? They do depend on AbstractDSGEModel type.
-function tomodel!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
+function tomodel!{T<:AbstractFloat}(m::AbstractDSGEModel, values::Vector{T})
     tomodel!(values, m.parameters)
     return steadystate!(m)
 end
-function update!{T<:FloatingPoint}(m::AbstractDSGEModel, values::Vector{T})
+function update!{T<:AbstractFloat}(m::AbstractDSGEModel, values::Vector{T})
     return update!(m.parameters, values)
 end
 
