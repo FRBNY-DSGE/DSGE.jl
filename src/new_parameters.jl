@@ -1,46 +1,53 @@
-using Compat
+using Compat, Distributions, Debug
+import DSGE: PointMass
 
 typealias Interval{T} @compat Tuple{T,T}
 
 # define all the kinds of transformations we make
 abstract Transform
-immutable Untransformed <: Transform end
-immutable SquareRoot    <: Transform end
-immutable Exponential   <: Transform end
+type Untransformed <: Transform end
+type SquareRoot    <: Transform end
+type Exponential   <: Transform end
 
 Base.show(io::IO, t::Untransformed) = @printf io "x -> x\n"
 Base.show(io::IO, t::SquareRoot)    = @printf io "x -> (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)\n"
 Base.show(io::IO, t::Exponential)   = @printf io "x -> b + (1/c) * log(x-a)\n"
 
-abstract AbstractParameter{T<:AbstractFloat}
+abstract AbstractParameter{T<:Real} # made this real for conversions
 abstract Parameter{T,U<:Transform} <: AbstractParameter{T}
 
 typealias ParameterVector{T} Vector{AbstractParameter{T}}
 typealias NullablePrior      Nullable{ContinuousUnivariateDistribution}
 
 # do we need value bounds?
-immutable UnscaledParameter{T,U} <: Parameter{T,U}
+type UnscaledParameter{T,U} <: Parameter{T,U}
     key::Symbol
     value::T                    # transformed parameter value
     valuebounds::Interval{T}
     transbounds::Interval{T}
+    transform::U
     prior::NullablePrior
     fixed::Bool
     description::AbstractString
     texLabel::AbstractString
 end
 
-immutable ScaledParameter{T,U} <: Parameter{T,U}
+type ScaledParameter{T,U} <: Parameter{T,U}
     key::Symbol
-    value::T                    # scaled, transformed parameter value
-    unscaledvalue::T			# unscaled, transformed parameter value
-    scaling::Function
+    value::T                    # unscaled, untransformed parameter value
+    scaledvalue::T		# scaled, untransformed parameter value
     valuebounds::Interval{T}
     transbounds::Interval{T}
+    transform::U                # we only use transformed values for csminwel.
+                                # tomodel/toreal takes care of the conversion.
     prior::NullablePrior
     fixed::Bool
+    scaling::Function
     description::AbstractString
+    texLabel::AbstractString
 end
+
+
 
 hasprior(p::Parameter) = !isnull(p.prior)
 
@@ -53,25 +60,49 @@ function parameter{T,U<:Transform}(key::Symbol,
                                    transbounds::Interval{T} = (value,value),
                                    transform::U             = Untransformed(),
                                    prior::NullableOrPrior   = NullablePrior();
-                                   description::AbstractString      = "This variable is missing a description. Zac will not be pleased!",
                                    fixed::Bool              = true,
-                                   scaling::Function        = identity
-                                   texLabel::AbstractString = "This variable is missing a LaTeX label. This will make it difficult to print nice tables!")
+                                   scaling::Function        = identity,
+                                   description::AbstractString      = "This variable is missing a description.",
+                                   texLabel::AbstractString = "")
+
+    
+    # If fixed=true, force bounds to match and prior to be
+    # PointMass. We need to define new variable names here because of lexical
+    # scoping.
+
+    ret_valuebounds = valuebounds
+    ret_transbounds = transbounds
+    ret_prior = prior
+
+    if fixed
+        ret_transbounds = (value,value)  # value is transformed already       
+        ret_prior = PointMass(value)
+
+        if isa(transform, Untransformed)
+            ret_valuebounds = (value,value)
+        end
+    else
+        ret_transbounds = transbounds
+    end
     
     # ensure that we have a Nullable{Distribution}, if not construct one
-    prior = !isa(prior,NullablePrior) ? NullablePrior(prior) : prior
-    
+    ret_prior = !isa(ret_prior,NullablePrior) ? NullablePrior(ret_prior) : ret_prior
+
     if scaling == identity
-        return UnscaledParameter{T,U}(key, value, valuebounds, transbounds, prior, fixed, description)
+        return UnscaledParameter{T,U}(key, value, ret_valuebounds, ret_transbounds, transform,
+                                      ret_prior, fixed, description, texLabel)
     else
-        return ScaledParameter{T,U}(key, scaling(value), value, scaling, valuebounds, transbounds, prior, fixed, description)
+        return ScaledParameter{T,U}(key, scaling(value), value, ret_valuebounds, ret_transbounds, transform,
+                                    ret_prior, fixed, scaling, description, texLabel)
     end
 end
 
+
+
 # generate a parameter given a new value
 function parameter{T,U}(p::UnscaledParameter{T,U}, newvalue::T)
-	p.fixed && return p
-	a,b = p.transbounds
+	p.fixed && return p  # if the parameter is fixed, don't change its value
+	a,b = p.transbounds  
 	@assert a <= newvalue <= b "New value is out of bounds"
 	UnscaledParameter{T,U}(p.key, newvalue, p.valuebounds, p.transbounds, p.prior, p.fixed, p.description)
 end
@@ -132,8 +163,12 @@ toreal{T}(pvec::ParameterVector{T}, values::Vector{T}) = map(toreal, pvec, value
 
 # define operators to work on parameters
 
-Base.convert{T<:Real}(::Type{T}, p::AbstractParameter) = convert(T,p.value)
-Base.promote_rule{T<:Real,U<:Real}(::Type{AbstractParameter{T}}, ::Type{U}) = promote_rule(U,T)
+# do we also want to convert p to type AbstractParameter{T}? Seems so.
+Base.convert{T<:Real, U<:AbstractParameter}(::Type{T}, p::U)       = convert(T,p.value)
+#Base.convert{T<:Real, U<:AbstractParameter}(p::U, v::T)            = setfield!(p,:value,v)
+#Base.convert{T<:Real, U<:AbstractParameter}(::Type{U}, v::T)            = setfield!(p,:value,v)
+Base.promote_type{T<:Real,U<:Real}(::Type{AbstractParameter{T}}, ::Type{U}) = promote_type(T,U)
+Base.promote_rule{T<:Real,U<:Real}(::Type{AbstractParameter{T}}, ::Type{U}) = promote_rule(T,U)
 
 Base.(:^)(p::AbstractParameter, x::Integer) = (^)(p.value, x)
 
@@ -160,8 +195,9 @@ for f in (:(Base.exp),
 end
 
 # this function is optimised for speed
-function update!{T}(pvec::ParameterVector{T}, newvalues::Vector{T})
-	@assert length(newvalues) == length(pvec) "Length of input vector (=$(length(newvalues))) must match length of parameter vector (=$(length(pvec)))"
+@debug function update!{T}(pvec::ParameterVector{T}, newvalues::Vector{T})
+    @bp
+    @assert length(newvalues) == length(pvec) "Length of input vector (=$(length(newvalues))) must match length of parameter vector (=$(length(pvec)))"
    	map!(parameter, pvec, pvec, newvalues)
 end
 # define the non-mutating version like this because we need the type stability of map!
