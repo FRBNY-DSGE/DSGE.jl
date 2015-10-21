@@ -5,6 +5,7 @@ include("util.jl")
 
 my_tests = [
             "core",
+            "new_parameters",
             "models/m990/m990",
             "solve/gensys",
             "solve/solve",

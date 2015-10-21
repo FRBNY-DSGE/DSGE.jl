@@ -1,42 +1,62 @@
-using Distributions
-import DSGE: Param, PointMass
+using Distributions, DSGE, Compat
+include(joinpath(dirname(@__FILE__()),"../src/distributions_ext.jl"))
 
 # Test Param type
 
-# Inner Param constructor
-α = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999))
-@test α.scalefunction == identity
-@test α.scaledvalue == 0.1596
-@test α.description == ""
+# UnscaledParameter, fixed=false
+α =  parameter(:α, 0.1596, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05), fixed=false)
+@test isa(α, UnscaledParameter)
+@test α.key == :α
+@test isa(α.prior.value, Normal)
+@test α.prior.value.μ == 0.3
+@test α.description == "This variable is missing a description."
+@test α.texLabel == ""
 
-# Inner Param constructor, fixed = true
-α_fixed = Param(0.1596, true, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999))
-@test isa(α_fixed.priordist, PointMass)
-@test α_fixed.transformtype == 0
+# UnscaledParameter, fixed = true
+α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05), fixed=true)
+@test α_fixed.transbounds == (0.1596,0.1596)
+@test isa(α_fixed.prior.value, DSGE.PointMass) 
+@test isa(α_fixed.transform, SquareRoot)
 
-# One-argument Param constructor
-δ = Param(0.025)
+
+# Fixed UnscaledParameter, minimal constructor
+δ = parameter(:δ, 0.025)
 @test δ.fixed
-@test δ.bounds == (0.025, 0.025)
-@test isa(δ.priordist, PointMass)
+@test δ.transbounds == (0.025, 0.025)
+@test δ.valuebounds == (0.025, 0.025)
+println(δ.prior.value)
+@test isa(δ.prior.value, DSGE.PointMass)
 
-# Invalid transformtype
-@test_throws ErrorException α_bad = Param(0.1596, false, (1e-5, 0.999),
-                                          Normal(0.30, 0.05), -1, (1e-5, 0.999))
+# Scaled parameter
+β = parameter(:β, 0.1402, (1e-5, 10.), (1e-5, 10.), DSGE.Exponential(), GammaAlt(0.25, 0.1), fixed=false,  scaling = x -> (1 + x/100)\1, description="β: Discount rate.", texLabel="\\beta ")
+@test isa(β, ScaledParameter)
+@test isa(β.prior.value, Gamma)
+@test isa(β.transform, DSGE.Exponential)
 
-# update! value
-update!(α, 0.0)
-@test α.value == 0.0
-@test α.scaledvalue == 0.0
-update!(δ, 0.0)
-@test δ.value == 0.025
-@test δ.scaledvalue == 0.025
-update!(α, 0.1596)
+# Invalid transform
+@test_throws UndefVarError α_bad = parameter(:α, 0.1596, (1e-5, 0.999), (1e-5, 0.999),
+                                              InvalidTransform(), Normal(0.30, 0.05), fixed=false)
+
+## # update! value
+## update!(α, 0.0)
+## @test α.value == 0.0
+
+## # update! fixed parameter shouldn't change its value
+## update!(δ, 0.0)
+## @test δ.value == 0.025
+
+## # update! scaled parameter
+## update!(β, 0.0)
+## @test α.unscaledvalue == 0.0
+
+
+## update!(α, 0.1596)
 
 # Arithmetic with parameters
-@test convert(Float16, δ) == 0.025
-@test promote_type(Param, Float16) == Float64
-@test promote_type(Param, Int8) == Float64
+@test promote_type(AbstractParameter{Float64}, Float16) == Float64
+@test promote_type(AbstractParameter{Float64}, Int8) == Float64
+## @test promote_rule(AbstractParameter{Float64}, Float16) == Float64
+## @test promote_rule(AbstractParameter{Float64}, Int8) == Float64
 @test δ + δ == 0.05
 @test δ^2 == 0.025^2
 @test -δ == -0.025
@@ -49,11 +69,11 @@ cx = 2 * (α - 1/2)
 
 
 model = Model990()
-lastparam = Param(0.0)
+lastparam = parameter(:p, 0.0)
 for α in model.parameters
-    isa(α,Param) && (lastparam = α)
+    isa(α, Parameter) && (lastparam = α)
 end
-@test isa(lastparam, Param)
+@test isa(lastparam, Parameter)
 @test lastparam.value == 0.0181
 
 # prior
