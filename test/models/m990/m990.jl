@@ -19,7 +19,7 @@ trspec = zeros(82, 4)
 # # not all Params appear in para vector
 i = 1
 for θ in model.parameters
-	!isa(θ,Param) && continue
+	!isa(θ,AbstractParameter) && continue
 
     para[i] = θ.value
 
