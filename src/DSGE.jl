@@ -6,8 +6,15 @@ module DSGE
         # DSGE.jl
         savepath, inpath, outpath, tablepath, plotpath, logpath,
 
+        # distributions_ext.jl
+        PointMass, BetaAlt, GammaAlt,
+
         # abstractdsgemodel.jl
         AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict,
+
+        # new_parameters
+        parameter, Transform, Untransformed, SquareRoot, Exponential,
+        AbstractParameter, Parameter, NullablePrior, ParameterVector, ScaledParameter, UnscaledParameter,
 
         # solve/
         ordschur, gensys, solve,
