@@ -13,7 +13,7 @@ Base.show(io::IO, t::Untransformed) = @printf io "x -> x\n"
 Base.show(io::IO, t::SquareRoot)    = @printf io "x -> (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)\n"
 Base.show(io::IO, t::Exponential)   = @printf io "x -> b + (1/c) * log(x-a)\n"
 
-abstract AbstractParameter{T<:Real} # made this real for conversions
+abstract AbstractParameter{T<:Number} # made this real for conversions
 abstract Parameter{T,U<:Transform} <: AbstractParameter{T}
 
 typealias ParameterVector{T} Vector{AbstractParameter{T}}
@@ -23,7 +23,7 @@ type UnscaledParameter{T,U} <: Parameter{T,U}
     key::Symbol
     value::T                             # parameter value in model space
     valuebounds::Interval{T}             # bounds of parameter value
-    transform_parameters::Interval{T}    # parameters for transformation
+    transform_parameterization::Interval{T}    # parameters for transformation
     transform::U                # transformation we use to go between model space and real line for csminwel
     prior::NullablePrior        # prior distribution
     fixed::Bool                 # is this parameter fixed at some value, or do we estimate it?
@@ -36,7 +36,7 @@ type ScaledParameter{T,U} <: Parameter{T,U}
     value::T                    # unscaled parameter value in model space
     scaledvalue::T		# scaled parameter value in model space
     valuebounds::Interval{T}    # 
-    transform_parameters::Interval{T}    # 
+    transform_parameterization::Interval{T}    # 
     transform::U                # we only use transformed values for csminwel.
                                 # tomodel/toreal takes care of the conversion.
     prior::NullablePrior
@@ -80,7 +80,7 @@ typealias UnscaledOrSteadyState Union(UnscaledParameter, SteadyStateParameter)
 function parameter{T,U<:Transform}(key::Symbol,
                                    value::T,
                                    valuebounds::Interval{T} = (value,value),
-                                   transform_parameters::Interval{T} = (value,value),
+                                   transform_parameterization::Interval{T} = (value,value),
                                    transform::U             = Untransformed(),
                                    prior::NullableOrPrior   = NullablePrior();
                                    fixed::Bool              = true,
@@ -94,34 +94,34 @@ function parameter{T,U<:Transform}(key::Symbol,
     # scoping.
 
     ret_valuebounds = valuebounds
-    ret_transform_parameters = transform_parameters
+    ret_transform_parameterization = transform_parameterization
     ret_prior = prior
 
     if fixed
-        ret_transform_parameters = (value,value)  # value is transformed already       
+        ret_transform_parameterization = (value,value)  # value is transformed already       
         ret_prior = PointMass(value)
 
         if isa(transform, Untransformed)
             ret_valuebounds = (value,value)
         end
     else
-        ret_transform_parameters = transform_parameters
+        ret_transform_parameterization = transform_parameterization
     end
     
     # ensure that we have a Nullable{Distribution}, if not construct one
     ret_prior = !isa(ret_prior,NullablePrior) ? NullablePrior(ret_prior) : ret_prior
 
     if scaling == identity
-        return UnscaledParameter{T,U}(key, value, ret_valuebounds, ret_transform_parameters, transform,
+        return UnscaledParameter{T,U}(key, value, ret_valuebounds, ret_transform_parameterization, transform,
                                       ret_prior, fixed, description, texLabel)
     else
-        return ScaledParameter{T,U}(key, value, scaling(value), ret_valuebounds, ret_transform_parameters, transform,
+        return ScaledParameter{T,U}(key, value, scaling(value), ret_valuebounds, ret_transform_parameterization, transform,
                                     ret_prior, fixed, scaling, description, texLabel)
     end
 end
 
 # construct steady-state parameters
-function SteadyStateParameter{T<:Real}(key::Symbol,
+function SteadyStateParameter{T<:Number}(key::Symbol,
                                        value::T;
                                        description::AbstractString = "No description provided.",
                                        texLabel::AbstractString = "")
@@ -131,17 +131,17 @@ end
 
 
 # generate a parameter given a new value 
-function parameter{T<:Real,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::T)
+function parameter{T<:Number,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::T)
     p.fixed && return p  # if the parameter is fixed, don't change its value
     a,b = p.valuebounds  
     @assert a <= newvalue <= b "New value is out of bounds"
-    UnscaledParameter{T,U}(p.key, newvalue, p.valuebounds, p.transform_parameters, p.prior, p.fixed, p.description)
+    UnscaledParameter{T,U}(p.key, newvalue, p.valuebounds, p.transform_parameterization, p.prior, p.fixed, p.description)
 end
-function parameter{T<:Real,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
+function parameter{T<:Number,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
     p.fixed && return p
     a,b = p.valuebounds  
     @assert a <= newvalue <= b "New value is out of bounds"
-    ScaledParameter{T,U}(p.key, newvalue, p.scaling(newvalue), p.scaling, p.valuebounds, p.transform_parameters, p.prior, p.fixed, p.description)
+    ScaledParameter{T,U}(p.key, newvalue, p.scaling(newvalue), p.scaling, p.valuebounds, p.transform_parameterization, p.prior, p.fixed, p.description)
 end
 
 function Base.show{T,U}(io::IO, p::Parameter{T,U})
@@ -181,22 +181,22 @@ toreal{T}(p::Parameter{T,Untransformed}, x::T = p.value) = x
 
 # SquareRoot
 function tomodel{T}(p::Parameter{T,SquareRoot}, x::T)
-    (a,b), c = p.transform_parameters, one(T)
+    (a,b), c = p.transform_parameterization, one(T)
     (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)
 end
 function toreal{T}(p::Parameter{T,SquareRoot}, x::T = p.value)
-    (a,b), c = p.transform_parameters, one(T)
+    (a,b), c = p.transform_parameterization, one(T)
     cx = 2 * (x - (a+b)/2)/(b-a)
     (1/c)*cx/sqrt(1 - cx^2)
 end
 
 # Exponential
 function tomodel{T}(p::Parameter{T,Exponential}, x::T)
-    (a,b),c = p.transform_parameters,one(T)
+    (a,b),c = p.transform_parameterization,one(T)
     a + exp(c*(x-b))
 end
 function toreal{T}(p::Parameter{T,Exponential}, x::T = p.value)
-    (a,b),c = p.transform_parameters,one(T)
+    (a,b),c = p.transform_parameterization,one(T)
     b + (1/c) * log(x-a)
 end
 
@@ -207,11 +207,11 @@ toreal{T}(pvec::ParameterVector{T}, values::Vector{T}) = map(toreal, pvec, value
 # define operators to work on parameters
 
 # TODO: do we also want to convert p to type AbstractParameter{T}? Seems so.
-Base.convert{T<:Real}(::Type{T}, p::UnscaledParameter)  = convert(T,p.value)
-Base.convert{T<:Real}(::Type{T}, p::ScaledParameter)    = convert(T,p.scaledvalue)  
-Base.convert{T<:Real}(::Type{T}, p::SteadyStateParameter)  = convert(T,p.value)
+Base.convert{T<:Number}(::Type{T}, p::UnscaledParameter)  = convert(T,p.value)
+Base.convert{T<:Number}(::Type{T}, p::ScaledParameter)    = convert(T,p.scaledvalue)  
+Base.convert{T<:Number}(::Type{T}, p::SteadyStateParameter)  = convert(T,p.value)
 
-Base.promote_rule{T<:Real,U<:Real}(::Type{AbstractParameter{T}}, ::Type{U}) = promote_rule(T,U)
+Base.promote_rule{T<:Number,U<:Number}(::Type{AbstractParameter{T}}, ::Type{U}) = promote_rule(T,U)
 
 for op in (:(Base.(:+)),
            :(Base.(:-)),
@@ -220,10 +220,12 @@ for op in (:(Base.(:+)),
            :(Base.(:^)))
 
     @eval ($op)(p::UnscaledOrSteadyState, q::UnscaledOrSteadyState) = ($op)(p.value, q.value)
+    @eval ($op)(p::UnscaledOrSteadyState, x::Integer)            = ($op)(p.value, x)
     @eval ($op)(p::UnscaledOrSteadyState, x::Number)            = ($op)(p.value, x)
     @eval ($op)(x::Number, p::UnscaledOrSteadyState)            = ($op)(x, p.value)
 
     @eval ($op)(p::ScaledParameter, q::ScaledParameter) = ($op)(p.scaledvalue, q.scaledvalue)
+    @eval ($op)(p::ScaledParameter, x::Integer)            = ($op)(p.scaledvalue, x)
     @eval ($op)(p::ScaledParameter, x::Number)            = ($op)(p.scaledvalue, x)
     @eval ($op)(x::Number, p::ScaledParameter)            = ($op)(x, p.scaledvalue)
 
