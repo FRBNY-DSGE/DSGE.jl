@@ -15,7 +15,7 @@ module DSGE
         # new_parameters.jl
         parameter, Transform, Untransformed, SquareRoot, Exponential, NullablePrior,
         AbstractParameter, Parameter, ParameterVector, ScaledParameter, UnscaledParameter, SteadyStateParameter,
-        toreal, tomodel, update, update!, tomodel, toreal,
+        toreal, tomodel, update, update!, tomodel, toreal, Interval,
 
         # solve/
         ordschur, gensys, solve,
