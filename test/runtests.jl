@@ -1,9 +1,9 @@
 using Base.Test
 using DSGE
 
-include("util.jl")
+include(joinpath(dirname(@__FILE__()),"util.jl"))
 
-my_tests = [
+my_tests = [            
             "core",
             "models/m990/m990",
             "solve/gensys",
@@ -12,7 +12,9 @@ my_tests = [
             "estimate/kalman",
             "estimate/posterior",
             #"estimate/hessian" (currently takes 6 hours to complete)
-            "estimate/csminwel"
+            "estimate/csminwel",
+            "estimate/eig",
+            "estimate/metropolis_hastings"
             ]
 
 for test in my_tests

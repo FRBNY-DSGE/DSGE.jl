@@ -1,7 +1,5 @@
-using Debug
-
 #=
-
+"""
 @author : Spencer Lyon <spencer.lyon@nyu.edu>,
 @author: Chase Coleman <ccoleman@stern.nyu.edu>
 
@@ -53,11 +51,20 @@ If div is omitted from argument list, a div>1 is calculated.
 
 eu(1)=1 for existence, eu(2)=1 for uniqueness.  eu(1)=-1 for existence
 only with not-s.c. z; eu=[-2,-2] for coincident zeros.
-
-
+"""
 =#
 
-# Define Gensys error types.
+
+#=
+"""
+GensysError <: Exception
+
+A `GensysError` is thrown when Gensys does not give a unique solution, or no solution exists. If a `GensysError`is thrown during Metropolis-Hastings, it is caught by `posterior`. `posterior` then returns a value of `-Inf`, which Metropolis-Hastings always rejects.
+
+### Fields
+`msg::ASCIIString`: Info message. Default = "Error in gensys." 
+"""
+=#
 type GensysError <: Exception
     msg::ASCIIString
 end
@@ -65,7 +72,7 @@ GensysError() = GensysError("Error in gensys.")
 Base.showerror(io::IO, ex::GensysError) = print(io, ex.msg)
 
 function new_div(F::Base.LinAlg.GeneralizedSchur)
-    ε = 1e-6  # small number to check convergence
+    ϵ = 1e-6  # small number to check convergence
     n = size(F[:T], 1)
 
     a, b, q, z = F[:S], F[:T], F[:Q]', F[:Z]
@@ -78,7 +85,7 @@ function new_div(F::Base.LinAlg.GeneralizedSchur)
     for i=1:n
         if abs(a[i, i]) > 0
             divhat = abs(b[i, i]) / abs(a[i, i])
-            if 1 + ε < divhat && divhat <= div
+            if 1 + ϵ < divhat && divhat <= div
                 div = .5 * (1 + divhat)
             end
         end
@@ -107,9 +114,9 @@ end
 
 
 # Method that does the real work. Work directly on the decomposition F
-@debug function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
+function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     eu = [0, 0]
-    ε = 1e-6  # small number to check convergence
+    ϵ = 1e-6  # small number to check convergence
     nunstab = 0.0
     zxz = 0
     a, b, q, z = F[:S], F[:T], F[:Q]', F[:Z]
@@ -117,7 +124,7 @@ end
 
     for i=1:n
         nunstab += (abs(b[i, i]) > div * abs(a[i,i]))
-        if abs(a[i, i]) < ε && abs(b[i, i]) < ε
+        if abs(a[i, i]) < ϵ && abs(b[i, i]) < ϵ
             zxz = 1
         end
     end
@@ -139,6 +146,7 @@ end
     z2 = z[:, n-nunstab_int+1:n]'
     a2 = a[n-nunstab_int+1:n, n-nunstab_int+1:n]
     b2 = b[n-nunstab_int+1:n, n-nunstab_int+1:n]
+
     etawt = q2 * π
     neta = size(π, 2)
 
@@ -154,7 +162,7 @@ end
         ueta, deta, veta = svd(etawt)
         deta = diagm(deta)  # TODO: do we need to do this
         md = min(size(deta)...)
-        bigev = find(diag(deta[1:md,1:md]) .> ε)
+        bigev = find(diag(deta[1:md,1:md]) .> ϵ)
         ueta = ueta[:, bigev]
         veta = veta[:, bigev]
         deta = deta[bigev, bigev]
@@ -184,7 +192,7 @@ end
         ueta1, deta1, veta1 = svd(etawt1)
         deta1 = diagm(deta1)  # TODO: do we need to do this
         md = min(size(deta1)...)
-        bigev = find(diag(deta1[1:md, 1:md]) .> ε)
+        bigev = find(diag(deta1[1:md, 1:md]) .> ϵ)
         ueta1 = ueta1[:, bigev]
         veta1 = veta1[:, bigev]
         deta1 = deta1[bigev, bigev]
@@ -196,7 +204,7 @@ end
         loose = veta1-veta*veta'*veta1
         ul, dl, vl = svd(loose)
         dl = diagm(dl)  # TODO: do we need to do this
-        nloose = sum(abs(diag(dl)) .> ε*n)
+        nloose = sum(abs(diag(dl)) .> ϵ*n)
         unique = (nloose == 0)
     end
 
@@ -210,6 +218,7 @@ end
     # Cast as an int because we use it as an int!
     nunstab = round(Int, nunstab)
     tmat = [eye(convert(Int64,(n-nunstab))) -(ueta*(deta\veta')*veta1*deta1*ueta1')']
+
     G0 = [tmat*a; zeros(nunstab,n-nunstab) eye(nunstab)]
     G1 = [tmat*b; zeros(nunstab,n)]
 

@@ -1,16 +1,17 @@
-using Distributions
+import Distributions
 import DSGE: Param, PointMass
+include("util.jl")
 
 # Test Param type
 
 # Inner Param constructor
-α = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999))
+α = Param(0.1596, false, (1e-5, 0.999), Distributions.Normal(0.30, 0.05), 1, (1e-5, 0.999))
 @test α.scalefunction == identity
 @test α.scaledvalue == 0.1596
 @test α.description == ""
 
 # Inner Param constructor, fixed = true
-α_fixed = Param(0.1596, true, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999))
+α_fixed = Param(0.1596, true, (1e-5, 0.999), Distributions.Normal(0.30, 0.05), 1, (1e-5, 0.999))
 @test isa(α_fixed.priordist, PointMass)
 @test α_fixed.transformtype == 0
 
@@ -22,7 +23,7 @@ import DSGE: Param, PointMass
 
 # Invalid transformtype
 @test_throws ErrorException α_bad = Param(0.1596, false, (1e-5, 0.999),
-                                          Normal(0.30, 0.05), -1, (1e-5, 0.999))
+                                          Distributions.Normal(0.30, 0.05), -1, (1e-5, 0.999))
 
 # update! value
 update!(α, 0.0)
@@ -42,11 +43,11 @@ update!(α, 0.1596)
 @test -δ == -0.025
 @test log(δ) == log(0.025)
 
+
 # toreal and tomodel
 cx = 2 * (α - 1/2)
 @test_approx_eq_eps(toreal(α), cx / sqrt(1 - cx^2), 0.001)
 @test toreal(δ) == 0.025
-
 
 model = Model990()
 lastparam = Param(0.0)
@@ -60,3 +61,5 @@ end
 priordensity = exp(prior(model))
 @test priordensity >= 0
 @test priordensity <= 1
+
+

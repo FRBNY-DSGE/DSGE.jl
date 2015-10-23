@@ -1,8 +1,10 @@
+using Compat
+
 # KALCVF The Kalman filter
 #
 # State space model is defined as follows:
 #   z(t+1) = a+F*z(t)+η(t)     (state or transition equation)
-#     y(t) = b+H*z(t)+ε(t)     (observation or measurement equation)
+#     y(t) = b+H*z(t)+ϵ(t)     (observation or measurement equation)
 #
 # [logl, <pred, vpred, <filt, vfilt>>] = kalcvf(data, lead, a, F, b, H, var, <z0, vz0>)
 # computes the one-step prediction and the filtered estimate, as well as their covariance matrices.
@@ -17,7 +19,7 @@
 #      H is an [Ny x Nz] matrix for a time-invariant measurement matrix in the measurement equation.
 #    var is an [Ny + Nz] x [Ny + Nz] matrix for a time-invariant variance matrix for
 #           the error in the transition equation and the error in the measurement equation,
-#           that is, [η(t)', ε(t)']'.
+#           that is, [η(t)', ϵ(t)']'.
 #     z0 is an optional [Nz x 1] initial state vector.
 #    vz0 is an optional [Nz x Nz] covariance matrix of an initial state vector.
 #    Ny0 is an optional scalar indicating the number of periods of presample
@@ -26,7 +28,7 @@
 #
 # The KALCVF function returns the following output:
 #   logl is a value of the average log likelihood function of the SSM
-#           under assumption that observation noise ε(t) is normally distributed
+#           under assumption that observation noise ϵ(t) is normally distributed
 #   pred is an optional [Nz x (T+lead)] matrix containing one-step predicted state vectors.
 #  vpred is an optional [Nz x Nz x(T+lead)] matrix containing mean square errors of predicted state vectors.
 #   filt is an optional [Nz x T] matrix containing filtered state vectors.
@@ -45,7 +47,7 @@
 #  03/19/2003  -  algorithm and interface were adapted from SAS/IML KALCVF subroutine for use in MATLAB M file
 #
 #==========================================================================#
-function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}, F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, z0::Matrix{S}, vz0::Matrix{S}, Ny0::Int = 0; allout::Bool = false)
+function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S}, lead::Int64, a::Matrix{S}, F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, z0::Matrix{S}, vz0::Matrix{S}, Ny0::Int = 0; allout::Bool = false)
     T = size(data, 2)
     Nz = size(a, 1)
     Ny = size(b, 1)
@@ -63,7 +65,7 @@ function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}
     @assert size(z) == (Nz, 1)
     @assert size(P) == (Nz, Nz)
 
-    # V(t) and R(t) are variances of η(t) and ε(t), respectively, and G(t) is a covariance of η(t) and ε(t)
+    # V(t) and R(t) are variances of η(t) and ϵ(t), respectively, and G(t) is a covariance of η(t) and ϵ(t)
     # In dsgelh :
     # --- V is same as QQ
     # --- R is same as EE
@@ -91,8 +93,8 @@ function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}
         nonmissing = !isnan(data[:, t])
         data_t = data[nonmissing, t]       # data_t = Y_T = [y1, y2, ..., yT] is matrix of observable data time-series
         H_t = H[nonmissing, :]             # H_t = DD is matrix mapping states to observables
-        G_t = G[:, nonmissing]             # G_t = Cov(η_t, ε_t)
-        R_t = R[nonmissing, nonmissing]    # R_t = Var(ε_t)
+        G_t = G[:, nonmissing]             # G_t = Cov(η_t, ϵ_t)
+        R_t = R[nonmissing, nonmissing]    # R_t = Var(ϵ_t)
         Ny_t = length(data_t)              # Ny_t = T is length of time
         b_t = b[nonmissing, :]             # b_t = DD
         
@@ -101,7 +103,7 @@ function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}
         z = a + F*z                        # z_{t|t-1} = a + F(Θ)*z_{t-1|t-1}
         P = F*P*F' + V                     # P_{t|t-1} = F(Θ)*P_{t-1|t-1}*F(Θ)' + F(Θ)*Var(η_t)*F(Θ)'
         dy = data_t - H_t*z - b_t          # dy = y_t - H(Θ)*z_{t|t-1} - DD is prediction error or innovation
-        HG = H_t*G_t                       # HG is ZZ*Cov(η_t, ε_t)
+        HG = H_t*G_t                       # HG is ZZ*Cov(η_t, ϵ_t)
         D = H_t*P*H_t' + HG + HG' + R_t    # D = ZZ*P_{t+t-1}*ZZ' + HG + HG' + R_t 
         D = (D+D')/2
 
@@ -166,7 +168,7 @@ end
 # Note that all eigenvalues of the matrix F are inside the unit circle when the SSM is stationary.
 # When the preceding formula cannot be applied, the initial state vector estimate is set to a
 # and its covariance matrix is given by 1E6I. Optionally, you can specify initial values.
-function kalcvf2NaN{S<:FloatingPoint}(data::Matrix{S}, lead::Int64, a::Matrix{S}, F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, Ny0::Int = 0; allout::Bool = false)
+function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S}, lead::Int64, a::Matrix{S}, F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, Ny0::Int = 0; allout::Bool = false)
     Nz = size(a, 1)
     V = var[1:Nz, 1:Nz]
 
@@ -341,7 +343,7 @@ end
 # eta_hat, the optional (Ne x Nt) matrix of smoothed shocks.
 
 # Dan Greenwald, 7/7/2010.
-function distsmth_k93{S<:FloatingPoint}(y::Matrix{S}, pred::Matrix{S}, vpred::Matrix{S}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, peachcount, psize, nant::Int = 0, antlags::Int = 0)
+function distsmth_k93{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, vpred::Matrix{S}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, peachcount, psize, nant::Int = 0, antlags::Int = 0)
     Nt = size(y, 2)
     Nz = size(T, 1)
 

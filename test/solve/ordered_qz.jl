@@ -1,6 +1,6 @@
 debug = false
 
-using Compat
+using Compat, Base.Test
 
 # these tests were pulled directly from main Julia
 import Base.LinAlg: BlasComplex, BlasFloat, BlasReal, QRPivoted
@@ -26,12 +26,12 @@ for eltya in (Float32, Float64, Complex64, Complex128, BigFloat, Int)
     a2 = eltya == Int ? rand(1:7, n, n) : convert(Matrix{eltya}, eltya <: Complex ? complex(a2real, a2img) : a2real)
     asym = a'+a                  # symmetric indefinite
     apd  = a'*a                 # symmetric positive-definite
-    ε = εa = eps(abs(float(one(eltya))))
+    ϵ = ϵa = eps(abs(float(one(eltya))))
 
     for eltyb in (Float32, Float64, Complex64, Complex128, Int)
         b = eltyb == Int ? rand(1:5, n, 2) : convert(Matrix{eltyb}, eltyb <: Complex ? complex(breal, bimg) : breal)
-        εb = eps(abs(float(one(eltyb))))
-        ε = max(εa,εb)
+        ϵb = eps(abs(float(one(eltyb))))
+        ϵ = max(ϵa,ϵb)
 
 debug && println("Reorder Schur")
     if eltya != BigFloat && eltyb != BigFloat # Revisit when implemented in julia

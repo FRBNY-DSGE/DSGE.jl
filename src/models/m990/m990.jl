@@ -1,10 +1,91 @@
-# The given fields define the entire model structure.
-# We can then concisely pass around a Model object to the remaining steps of the model
-#   (solve, estimate, and forecast).
+#=
+doc"""
+TODO: Decide whether this is the right place for this documentation...
+
+Model990 <: AbstractDSGEModel
+
+The Model990 type defines the structure of the FRBNY DSGE
+model. We can then concisely pass around a Model object to the
+remaining steps of the model (solve, estimate, and forecast).
+
+### Fields
+
+#### Parameters and Steady-States
+* `parameters::Vector{Param}`: Vector of all of the unfixed model parameters.
+
+* `parameters_fixed::Vector{Param}`: Vector of model parameters that
+  are permanently fixed. They are constructed with the `Param(value)` constructor.
+
+* `steady_state::Vector`: Model steady-state values. These are
+  computed as functions of the model parameters whenever the model
+  parameters are updated via the `update!` function.
+
+* `keys::Dict{Symbol,Int}`: Maps human-readable names for all model
+  parameters and steady-states to their indices in `parameters` and
+  `steady_state`.
+
+#### Inputs to Measurement and Equilibrium Condition Equations
+
+The following fields are dictionaries that map human-readible names to
+row and column indices in the matrix representations of of the
+measurement equation and equilibrium conditions.
+
+* `endogenous_states::Dict{Symbol,Int}`: Maps each state to a column in the measurement and equilibrium condition matrices.
+
+* `exogenous_shocks::Dict{Symbol,Int}`: Maps each shock to a column. 
+
+* `expected_shocks::Dict{Symbol,Int}`: Maps each expected shock to a column.
+
+* `equilibrium_conditions::Dict{Symbol,Int}`: Maps each equlibrium condition to a row in the matrix returned by `eqcond()`.
+
+* `endogenous_states_postgensys::Dict{Symbol,Int}`: Maps lagged states to their columns in the measurement and equilibrium condition equations. These are added after Gensys solves the model.
+
+* `observables::Dict{Symbol,Int}`: Maps each observable to a row in the matrix returned by `measurement()`
+
+#### Model Specifications
+
+* `spec`: The model specification number. For Model990, `spec`= 990. `spec` is used to determine input/output file paths. Any  changes to eqcond.jl or measurement.jl should be considered a new  model, and spec should be incremented accordingly.
+
+* `savepaths::Dict{Symbol,AbstractString}`: A dictionary containing the filesystem paths to input and output files for running the model. Keys are `:savepath`, `:inpath`, `:outpath`, `:tablepath`, `:plotpath`, and `:logpath`.See `create_save_directories(str::AbstractString)` for further details. 
+
+* `num_anticipated_shocks::Int`: Number of anticipated policy shocks.
+
+* `num_anticipated_shocks_padding::Int`: Padding for `num_anticipated_shocks`.
+
+* `num_anticipated_lags::Int`: Number of periods back to incorporate zero bound expectations.
+
+* `num_presample_periods::Int`: Number of periods in the presample
+
+* `reoptimize::Bool`: Whether to reoptimize the posterior mode. If `false` (the default), `estimate()` reads in a previously found mode.
+
+* `recalculate_hessian::Bool`: Whether to reecalculate the hessian at the mode. If `false` (the default), `estimate()` reads in a previously computed Hessian.
+
+##### Metropolis-Hastings Specifications 
+* `num_mh_simulations::Int`: Number of draws from the posterior distribution per block.
+
+* `num_mh_blocks::Int`: Number of blocks to run Metropolis-Hastings.
+
+* `num_mh_burn::Int`: Number of blocks to discard as burn-in for Metropolis-Hastings
+
+* `mh_thinning_step::Int`: Save every `mh_thinning_step`-th draw in Metropolis-Hastings.
+
+The following fields are used to test Metropolis-Hastings with a small
+number of draws from the posterior:
+
+*  num_mh_simulations_test::Int        
+
+*  num_mh_blocks_test::Int             
+
+*  num_mh_burn_test::Int                 
+
+#### Other Fields
+* `rng::MersenneTwister`: Random number generator, implemented as a MersenneTwister()
+ """
+ =#
 type Model990 <: AbstractDSGEModel
     parameters::Vector{Param}                       # vector of all of the model parameters
     parameters_fixed::Vector{Param}                 # vector of all "permanently fixed" model parameters
-    steady_state::Vector                            # model steady-state values
+    steady_state::Vector                            # model steady-state values    
     keys::Dict{Symbol,Int}                          # human-readable names for all the model
                                                     # parameters and steady-num_states
 
@@ -16,7 +97,7 @@ type Model990 <: AbstractDSGEModel
     observables::Dict{Symbol,Int}                   #
 
     spec                                            # The model specification number
-    savepath::String                                # The absolute path to the top-level save directory for this
+    savepaths::Dict{Symbol,AbstractString}          # The absolute path to the top-level save directory for this
                                                     # model specification
     
     num_anticipated_shocks::Int                     # Number of anticipated policy shocks
@@ -36,11 +117,18 @@ type Model990 <: AbstractDSGEModel
     num_mh_burn_test::Int                           #
 
 
-    
+    rng::MersenneTwister                            # Random number generator
 end
 
 description(m::Model990) = "This is some model that we're trying to make work."
+#=
+doc"""
+Inputs: `m:: Model990`
 
+Description:
+Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
+"""
+=#
 function initialise_model_indices!(m::Model990)
     # Endogenous states
     endogenous_states = [[
@@ -105,6 +193,13 @@ function initialise_model_indices!(m::Model990)
     for (i,k) in enumerate(observables);                  m.observables[k]                  = i end
 end
 
+
+"""
+Inputs: `m::Model990`
+
+Description:
+Initializes the parameters for a `Model990` object.
+"""
 function initialise_model_parameters!(m::Model990)
     m[:alp     ] = Param(0.1596, false, (1e-5, 0.999), Normal(0.30, 0.05), 1, (1e-5, 0.999),texLabel="\\alpha")
     m[:zeta_p  ] = Param(0.8940, false, (1e-5, 0.999), BetaAlt(0.5, 0.1), 1, (1e-5, 0.999), texLabel="\\zeta_p")
@@ -138,7 +233,7 @@ function initialise_model_parameters!(m::Model990)
 
     # exogenous processes - level
     m[:gam     ] = Param(0.3673, scalefunction = x -> x/100, false, (-5., 5.), Normal(0.4, 0.1), 0, (-5.0, 5.0), texLabel = "\\gamma")
-    m[:Lmean   ] = Param(-45.9364, false, (-1000., 1000.), Normal(-45, 5), 0, (-1000., 1000.), texLabel = "Lmean")
+    m[:Lmean   ] = Param(-45.9364, false, (-1000., 1000.), Normal(-45, 5.), 0, (-1000., 1000.), texLabel = "Lmean")
     m[:gstar   ] = Param(0.18) # omit from parameter vector
 
     # exogenous processes - autocorrelation
@@ -195,6 +290,11 @@ function initialise_model_parameters!(m::Model990)
     m[:del_gdpdef  ] = Param(0.0181, false, (-9.1, 9.1), Normal(0.00, 2.), 0, (-10., -10.), texLabel = "\\delta_{gdpdef}")
 end
 
+#=
+doc"""
+Initializes and returns a `Model990` object.
+"""
+=#
 function Model990()
     parameter_keys, parameter_fixed_keys, steady_state_keys = (
             # parameter keys
@@ -217,7 +317,7 @@ function Model990()
             :zeta_nn, :zeta_nmue, :zeta_nsigw]
             )
 
-    # initialise human-readable keys for variablesiables
+    # initialise human-readable keys for variables
     keylist = Dict{Symbol,Int}()
     for (i,k) in enumerate(vcat(parameter_keys,parameter_fixed_keys,steady_state_keys))
         keylist[k] = i
@@ -229,11 +329,17 @@ function Model990()
     steady_state     = @compat Vector{Any}(length(steady_state_keys))
 
     # Model-specific specifications
-    spec                            = split(basename(@__FILE__),'.')[1] 
-    savepath                        = joinpath(dirname(@__FILE__), *("../../../save/",spec))
+    spec        = split(basename(@__FILE__),'.')[1]
+    savepath    = normpath(joinpath(dirname(@__FILE__), *("../../../save/",spec)))
+    savepaths   = Dict{Symbol,AbstractString}([(:savepath,  savepath),
+                                               (:inpath,    normpath(joinpath(savepath, "input_data/"))),
+                                               (:outpath,   normpath(joinpath(savepath, "output_data/"))),      
+                                               (:tablepath, normpath(joinpath(savepath, "results/tables/"))),   
+                                               (:plotpath,  normpath(joinpath(savepath, "results/plots/"))),  
+                                               (:logpath,   normpath(joinpath(savepath, "logs/")))]) 
 
     # Create the save directories if they don't already exist
-    createSaveDirectories(savepath)
+    create_save_directories(savepath)
     
     num_anticipated_shocks          = 6
     num_anticipated_shocks_padding  = 20
@@ -253,6 +359,9 @@ function Model990()
     num_mh_blocks_test              = 1
     num_mh_burn_test                = 0
 
+    # Random number generator
+    rng                             = MersenneTwister()
+    
     # initialise empty model
     m = Model990(
             parameters,
@@ -267,7 +376,7 @@ function Model990()
             Dict{Symbol,Int}(),
 
             spec,
-            savepath,
+            savepaths,
                  
             num_anticipated_shocks,
             num_anticipated_shocks_padding,
@@ -283,11 +392,13 @@ function Model990()
                  
             num_mh_simulations_test,   
             num_mh_blocks_test,  
-            num_mh_burn_test)
+            num_mh_burn_test,
+
+            rng)
 
     initialise_model_parameters!(m)
     initialise_model_indices!(m)
-
+    
     return steadystate!(m)
 
 end
@@ -336,8 +447,17 @@ d2G_dωdσ_fn(z, σ) = -pdf(Normal(), z)*(1 - z*(z-σ))/σ^2
 dΓ_dσ_fn(z, σ)    = -pdf(Normal(), z-σ)
 d2Γ_dωdσ_fn(z, σ) = (z/σ-1)*pdf(Normal(), z)
 
+#=
+doc"""
+Inputs: `m::Model990`
+
+Description: (Re)calculates the model's steady-state values. `steadystate!(m)` must be called whenever the parameters of `m` are updated. 
+"""
+=#
 # (Re)calculates steady-state values
 function steadystate!(m::Model990)
+    SIGWSTAR_ZERO = 0.5
+    
     m[:zstar]    = log(1+m[:gam]) + m[:alp]/(1-m[:alp])*log(m[:ups])
     m[:rstar]    = exp(m[:sigmac]*m[:zstar]) / m[:bet]
     m[:Rstarn]   = 100*(m[:rstar]*m[:pistar] - 1)
@@ -354,8 +474,13 @@ function steadystate!(m::Model990)
     # FINANCIAL FRICTIONS ADDITIONS
     # solve for sigmaomegastar and zomegastar
     zwstar = quantile(Normal(), m[:Fom].scaledvalue)
-    sigwstar = fzero(sigma -> ζ_spb_fn(zwstar, sigma, m[:sprd]) - m[:zeta_spb], 0.5)
-
+    sigwstar = SIGWSTAR_ZERO
+    try
+        sigwstar = fzero(sigma -> ζ_spb_fn(zwstar, sigma, m[:sprd]) - m[:zeta_spb], SIGWSTAR_ZERO)
+    catch
+        sigwstar = SIGWSTAR_ZERO
+    end
+    
     # evaluate omegabarstar
     omegabarstar = ω_fn(zwstar, sigwstar)
 
@@ -423,9 +548,33 @@ function steadystate!(m::Model990)
     return m
 end
 
-# Creates the proper directory structure for input and output files
-function createSaveDirectories(savepath::String)
+#=
+doc"""
+create_save_directories{T<:AbstractString}(savepath::T)
 
+Inputs:
+savepath::AbstractString
+
+Description:
+Creates the proper directory structure for input and output files, treating the DSGE/save directory as the root of a savepath directory subtree. Specifically, the following paths are created:
+
+  * :savepath    => "/path/to/DSGE/save/m'spec'/"
+
+  * :inpath      => "savepath/input_data/"
+
+  * :outpath     => "savepath/output_data/"
+
+  * :tablepath   => "savepath/results/tables/"
+
+  * :plotpath    => "savepath/results/plots/"
+
+  * :logpath     => "savepath/logs/"
+"""
+=#
+function create_save_directories{T<:AbstractString}(savepath::T)
+
+    savepath = abspath(normpath(savepath))
+    
     paths = [savepath,
              joinpath(savepath, "input_data"),
              joinpath(savepath, "output_data"),
@@ -434,11 +583,15 @@ function createSaveDirectories(savepath::String)
              joinpath(savepath, "results/tables"),
              joinpath(savepath, "results/plots")]
 
+    # Create each new directory that needs to be made
     for path in paths
+
         if(!ispath(path))
             mkdir(path)
             println("created $path")
         end
     end
-        
+
 end
+
+

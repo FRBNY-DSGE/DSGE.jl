@@ -8,7 +8,7 @@
 # Ψ  (num_states x num_shocks_exogenous) holds coefficients of iid shocks.
 # Π  (num_states x num_states_expectational) holds coefficients of expectational states.
 
-function eqcond(m::Model990)
+function eqcond(m::Model990) 
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
     ex   = m.expected_shocks
@@ -405,7 +405,7 @@ function eqcond(m::Model990)
     Ψ[eq[:eq_pist], exo[:pist_sh]]  = 1.
 
     # Anticipated policy shocks
-    if num_anticipated_shocks(m) > 0
+    if num_anticipated_shocks(m) > 0 
 
         # This section adds the anticipated shocks. There is one state for all the
         # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds those that
