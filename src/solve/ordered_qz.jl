@@ -1,15 +1,20 @@
+#=
+"""
+The code below is pulled directly from lapack.jl and schur.jl in src/linalg
+in Base. It is here to provide the ordered qz functionality present in julia
+0.4-dev to the latest 0.3 release.
+"""
+=#
+
 # bring things from around `Base` that we use below
 using Base.LinAlg: BlasFloat, BlasInt, chkstride1, chksquare, GeneralizedSchur, Schur, blas_int
 using Base.LinAlg.LAPACK: liblapack, LAPACKException
 using Base: blasfunc
 using Compat
 
-# The code below is pull directly from lapack.jl and schur.jl in src/linalg
-# in Base. It is here to provide the ordered qz functionality present in julia
-# 0.4-dev to the latest 0.3 release.
 
-# I needed to copy/paste these here because if I just import them from Base
-# they point to the function `info` instead of the local variable
+# These need to be included because if they are imported, they point
+# to the function `info` instead of the local variable
 macro assertargsok() #Handle only negative info codes - use only if positive info code is useful!
     :(info[1]<0 && throw(ArgumentError("invalid argument #$(-info[1]) to LAPACK call")))
 end

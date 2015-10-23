@@ -1,5 +1,10 @@
+using Compat
 
-# Calculate (log of) joint density of Θ
+#=
+doc"""
+Calculates (log of) the joint density of the model parameters.
+"""
+=#
 function prior(model::AbstractDSGEModel)
     x = zero(Float64)
     for θ in model.parameters
@@ -11,34 +16,83 @@ function prior(model::AbstractDSGEModel)
 end
 
 
-# log posterior = log likelihood + log prior
-# log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
-function posterior{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
+#=
+doc"""
+posterior{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
+
+### Parameters
+-`model`: the model object
+-`YY`: matrix of data for observables
+
+### Optional Arguments
+-`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the log likelihood and the transition matrices for the zero-lower-bound period are also returned.
+-`catchGensysErrors`: Whether or not to catch errors of type `GensysError`
+
+### Description
+Calculates and returns the log of the posterior distribution for the model parameters:
+  log posterior = log likelihood + log prior
+  log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)    # where Θ is `m.parameters`
+"""
+=#
+function posterior{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
     if mh
+        catchGensysErrors = true
         like, out = likelihood(model, YY; mh=mh)
         post = like + prior(model)
         return post, like, out
     else
-        return likelihood(model, YY; mh=mh) + prior(model)
+        return likelihood(model, YY; mh=mh, catchGensysErrors=catchGensysErrors) + prior(model)
     end
 end
 
-# Evaluate posterior at `parameters`
-function posterior!{T<:FloatingPoint}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false)
+#=
+doc"""
+posterior!{T<:AbstractFloat}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
+
+### Parameters
+-`model`: The model object
+-`parameters`: New values for the model parameters
+
+### Optional Arguments
+-`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the log likelihood and the transition matrices for the zero-lower-bound period are also returned.
+-`catchGensysErrors`: Whether or not to catch errors of type `GensysError`. If `mh = true`, `GensysErrors` should always be caught.
+
+### Description
+Evaluates the log posterior distribution at `parameters`
+"""
+=#
+function posterior!{T<:AbstractFloat}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
     update!(model, parameters)
-    return posterior(model, YY; mh=mh)
+        
+    if mh
+        catchGensysErrors = true
+    end
+    return posterior(model, YY; mh=mh, catchGensysErrors=catchGensysErrors)
 end
 
+#=
+doc"""
+likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
 
+### Parameters
+-`model`: The model object
+-`YY`: matrix of data for observables
 
-# This is a dsge likelihood function that can handle 2-part estimation where
-# there is a model switch.
-# If there is no model switch, then we filter over the main sample all at once.
-function likelihood{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false)
+## Optional Arguments
+-`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the transition matrices for the zero-lower-bound period are returned in a dictionary.
+-`catchGensysErrors`: If `mh = true`, `GensysErrors` should always be caught.
+
+### Description
+`likelihood` is a dsge likelihood function that can handle 2-part estimation where the observed sample contains both a normal stretch of time (in which interest rates are positive) and a stretch of time in which interest rates reach the zero lower bound. If there is a zero-lower-bound period, then we filter over the 2 periods separately. Otherwise, we filter over the main sample all at once.
+"""
+=#
+function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
     MH_NULL_OUTPUT = (-Inf, Dict{Symbol, Any}())
+    GENSYS_ERROR_OUTPUT = -Inf
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if mh
+        catchGensysErrors = true  # for consistency
         for θ in model.parameters
             (left, right) = θ.bounds
             if !θ.fixed && !(left <= θ.value <= right)
@@ -73,9 +127,13 @@ function likelihood{T<:FloatingPoint}(model::AbstractDSGEModel, YY::Matrix{T}; m
     try
         zlb[:TTT], zlb[:RRR], zlb[:CCC] = solve(model)
     catch err
-        if mh && isa(err, GensysError)
+        if catchGensysErrors && isa(err, GensysError)
             info(err.msg)
-            return MH_NULL_OUTPUT
+            if mh
+                return MH_NULL_OUTPUT
+            else
+                return GENSYS_ERROR_OUTPUT
+            end
         else
             rethrow(err)
         end
@@ -175,52 +233,56 @@ end
 
 
 
+#=
+doc"""
+DLYAP   Discrete Lyapunov equation solver.
 
+   X = DLYAP(A,Q) solves the discrete Lyapunov equation:
 
-# DLYAP   Discrete Lyapunov equation solver.
-#
-#    X = DLYAP(A,Q) solves the discrete Lyapunov equation:
-#
-#     A*X*A' - X + Q = 0
-#
-#    See also  LYAP.
+    A*X*A' - X + Q = 0
 
-#  J.N. Little 2-1-86, AFP 7-28-94
-#  Copyright 1986-2001 The MathWorks, Inc.
-#  $Revision: 1.11 $  $Date: 2001/01/18 19:50:01 $
+   See also  LYAP.
 
-#LYAP  Solve continuous-time Lyapunov equations.
-#
-#   x = LYAP(a,c) solves the special form of the Lyapunov matrix
-#   equation:
-#
-#           a*x + x*a' = -c
-#
-#   See also  DLYAP.
+ This is a port of the following Matlab implementation:
+ J.N. Little 2-1-86, AFP 7-28-94
+ Copyright 1986-2001 The MathWorks, Inc.
+ $Revision: 1.11 $  $Date: 2001/01/18 19:50:01 $
 
-#  S.N. Bangert 1-10-86
-#  Copyright 1986-2001 The MathWorks, Inc.
-#  $Revision: 1.10 $  $Date: 2001/01/18 19:50:23 $
-#  Last revised JNL 3-24-88, AFP 9-3-95
+LYAP  Solve continuous-time Lyapunov equations.
 
-# How to prove the following conversion is true.  Re: show that if
-#         (1) Ad X Ad' + Cd = X             Discrete lyaponuv eqn
-#         (2) Ac = inv(Ad + I) (Ad - I)     From dlyap
-#         (3) Cc = (I - Ac) Cd (I - Ac')/2  From dlyap
-# Then
-#         (4) Ac X + X Ac' + Cc = 0         Continuous lyapunov
-#
-# Step 1) Substitute (2) into (3)
-#         Use identity 2*inv(M+I) = I - inv(M+I)*(M-I)
-#                                 = I - (M-I)*inv(M+I) to show
-#         (5) Cc = 4*inv(Ad + I)*Cd*inv(Ad' + I)
-# Step 2) Substitute (2) and (5) into (4)
-# Step 3) Replace (Ad - I) with (Ad + I -2I)
-#         Replace (Ad' - I) with (Ad' + I -2I)
-# Step 4) Multiply through and simplify to get
-#         X -inv(Ad+I)*X -X*inv(Ad'+I) +inv(Ad+I)*Cd*inv(Ad'+I) = 0
-# Step 5) Left multiply by (Ad + I) and right multiply by (Ad' + I)
-# Step 6) Simplify to (1)
+  x = LYAP(a,c) solves the special form of the Lyapunov matrix
+  equation:
+
+          a*x + x*a' = -c
+
+  See also  DLYAP.
+
+ This is a port of the following Matlab implementation:
+ S.N. Bangert 1-10-86
+ Copyright 1986-2001 The MathWorks, Inc.
+ $Revision: 1.10 $  $Date: 2001/01/18 19:50:23 $
+ Last revised JNL 3-24-88, AFP 9-3-95
+
+How to prove the following conversion is true.  Re: show that if
+        (1) Ad X Ad' + Cd = X             Discrete lyaponuv eqn
+        (2) Ac = inv(Ad + I) (Ad - I)     From dlyap
+        (3) Cc = (I - Ac) Cd (I - Ac')/2  From dlyap
+Then
+        (4) Ac X + X Ac' + Cc = 0         Continuous lyapunov
+
+Step 1) Substitute (2) into (3)
+        Use identity 2*inv(M+I) = I - inv(M+I)*(M-I)
+                                = I - (M-I)*inv(M+I) to show
+        (5) Cc = 4*inv(Ad + I)*Cd*inv(Ad' + I)
+Step 2) Substitute (2) and (5) into (4)
+Step 3) Replace (Ad - I) with (Ad + I -2I)
+        Replace (Ad' - I) with (Ad' + I -2I)
+Step 4) Multiply through and simplify to get
+        X -inv(Ad+I)*X -X*inv(Ad'+I) +inv(Ad+I)*Cd*inv(Ad'+I) = 0
+Step 5) Left multiply by (Ad + I) and right multiply by (Ad' + I)
+Step 6) Simplify to (1)
+"""
+=#
 function dlyap!(a, c)
     m, n = size(a)
     a = (a + UniformScaling(1))\(a - UniformScaling(1))

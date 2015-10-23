@@ -1,7 +1,7 @@
 # Compute Hessian of posterior function evaluated at x (vector)
 # if verbose, display error messages, results, etc.
 # 11/12/01 translated by Marco DelNegro in matlab from Frank Schorfheide's program in gauss
-function hessizero!{T<:FloatingPoint}(model::AbstractDSGEModel, x::Vector{T}, YY::Matrix{T}; verbose::Bool = false)
+function hessizero!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::Matrix{T}; verbose::Bool = false)
 
     update!(model, x)
 
@@ -66,7 +66,7 @@ function hessizero!{T<:FloatingPoint}(model::AbstractDSGEModel, x::Vector{T}, YY
     # Now compute off-diagonal elements
     # Make sure that correlations are between -1 and 1
     # errorij contains the index of elements that are invalid
-    errorij = Dict{(Int64, Int64), Float64}()
+    errorij = Dict{Tuple{Int64}, Float64}()
 
     for i = 1:(nfree-1)
         seli = fpara_free[i]

@@ -1,103 +1,71 @@
-##                           OVERVIEW
-## moments.jl: Computes moments, tabulates parameter moments, and plots parameter
-## draws from the prior and posterior distribution.
+## moments.jl: Computes and tabulates moments of parameter draws from Metropolis-Hastings
 
-## IMPORTANT VARIABLES
-## PLOTDRAWS: Specify whether or not you want to plot the parameter draws
-## (runs momPlot.m)
-## percent: In the output laTex table, we report <percent> bands for
-##     parameter draws from the posterior
+using HDF5, Compat
 
-##     INPUTS
-##     infile1: This refers to a an output file (mhparam*) from gibb.m,
-##     which holds draws from the posterior.
-##
-##     infile4: This refers to a an output file (post*) from gibb.m, which
-##     holds the value of the posterior, for each posterior draw.
-##
-##     theta: (ndraws x npara) matrix holding the posterior draws
-##	   (stored in mhpara*, output from gibb.m)
-##
-##     post: (ndraws x 1) matrix holding the posterior value
-##	   (stored in post*, output from gibb.m)
-##     OUTPUTS
-##     From makeMomentsTables():
-##
-##     1: (mhpara*Mean): holds the mean parameter across
-##     draws from the posterior.
-##
-##     2: (*Mom_MainParams*): laTex table that lists the
-##	   moments for important parameters.
-##
-##     3: (*Mom_PeriphParams*): laTex table that lists the
-##	       moments for less important parameters.
-##		   4: (*PrioPostMean*) that lists the prior and
-##		   posterior means
+#=
+doc"""
+compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
 
-##		  
+### Parameters
+  - `m`: the model object
+  - `percent`: the percentage of the mass of draws from Metropolis-Hastings included between the bands displayed in output tables. 
 
-
-
-using HDF5
-using Debug
-
-
-@debug function computeMoments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
+### Description
+Computes prior and posterior parameter moments. Tabulates prior mean, posterior mean, and bands in various LaTeX tables stored `tablepath(m)`.
+"""
+=#
+function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90; verbose=true)
     
-    ## Computes prior and posterior parameter moments, tabulates them in various TeX tables,
-    ## and plots parameter draws from the prior and posterior distribution
-    ##
-    ## Inputs:
-    ## - m: an instance of an AbstractDSGEModel subtype
-    ## - percent: the percentage of the mass of draws from Metropolis-Hastings
-    ##            we want to include between bands shown in the table
+    ### Step 1: Read in the matrix of parameter draws from metropolis-hastings
 
+    filename = joinpath(outpath(m),"sim_save.h5")
+
+    if verbose
+        println("Reading draws from Metropolis-Hastings from $filename...")
+    end
     
-    # Read in the matrix of parameter draws from metropolis-hastings
-
-    infile = joinpath(outpath(m),"sim_save.h5")
-    println("Reading draws from Metropolis-Hastings from $infile...")
-
-    Θ = []
+    param_draws = []
     post = []
 
     try
-        fid = h5open(infile,"r") do fid
-            Θ = read(fid,"parasim")
-            post = read(fid,"postsim")
-        end
+        fid = h5open(filename,"r+") 
+        param_draws = read(fid,"parasim")
+        #post = read(fid,"postsim")
+        close(fid)
     catch
-        @printf(1,"Could not open file %s", infile)
+        @printf(1,"Could not open file %s", filename)
     end
 
-    # Convert back to Float64 for compatability with other variables
-    #Θ = convert(Matrix{Float64},Θ)
+    num_draws = size(param_draws,1)
 
-    num_draws = size(Θ,1)
+    
+    ### Step 2: Produce TeX table of moments
 
-    # Produce TeX table of moments
-    makeMomentTables(m,Θ,percent)
+    make_moment_tables(m,param_draws,percent, verbose=verbose)
 
 end
 
+#=
+doc"""
+make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
 
+### Parameters
+    - `Θ`: [num_draws x num_parameters] matrix holding the posterior draws from metropolis-hastings
+           from save/sim_save.h5 
+    - `percent`: the mass of observations we want; 0 <= percent <= 1
 
-
-@debug function makeMomentTables{T<:FloatingPoint}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
+### Description
+Tabulates parameter moments in 3 LaTeX tables:
     
-    ## Tabulates parameter moments in 3 LaTeX tables:
-    ##
-    ## -For MAIN parameters, a list of prior means, prior standard deviations, posterior means,
-    ## and 90% bands for posterior draws
-    ## -For LESS IMPORTANT parameters, a list of the prior means, prior standard deviations,
-    ## posterior means and 90% bands for posterior draws.
-    ## -A list of prior means and posterior means
-    ##
-    ## Input:
-    ## - `Θ`: [num_draws x num_parameters] matrix holding the posterior draws from metropolis-hastings
-    ##        from save/sim_save.h5 
-    ## - `percent`: the mass of observations we want; 0 <= percent <= 1
+1. For MAIN parameters, a list of prior means, prior standard deviations, posterior means, and 90% bands for posterior draws
 
+2. For LESS IMPORTANT parameters, a list of the prior means, prior standard deviations, posterior means and 90% bands for posterior draws.
+
+3. A list of prior means and posterior means
+"""
+=#
+function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64; verbose=true)
+    
 
     ###########################################################################################
     ## STEP 1: Extract moments of prior distribution from m.parameters
@@ -122,14 +90,16 @@ end
             prior_stddev[i] = param.priordist.σ
             
         elseif isa(param.priordist, Distributions.Beta)
-
-            prior_means[i] = param.priordist.α
-            prior_stddev[i] = param.priordist.β
+            μ,σ = betaMoments(param.priordist)
+            
+            prior_means[i] = μ
+            prior_stddev[i] = σ
 
         elseif isa(param.priordist, Distributions.Gamma)
-
-            prior_means[i] = param.priordist.α
-            prior_stddev[i] = param.priordist.θ  # small \theta
+            μ,σ = gammaMoments(param.priordist)
+            
+            prior_means[i] = μ
+            prior_stddev[i] = σ  # small \theta
             
         end
     end
@@ -137,24 +107,24 @@ end
     ###########################################################################################
     ## STEP 2: Compute moments and `percent' bands from parameter draws
     ###########################################################################################
-    
-    Θ_hat = mean(Θ,1)'                    # posterior mean for each parameter
-    Θ_sig = cov(Θ, mean=Θ_hat')           # posterior std dev for each parameter
+
+    # Posterior mean for each
+    Θ_hat = mean(Θ,1)'       
+
+    # Covariance: Note that this has already been computed and saved
+    # in $outpath(m)/parameter_covariance.h5.   
+    # parameter Θ_sig = cov(Θ, mean=Θ_hat') 
+
+    # Bands for each
     Θ_bands = []
-    
-    # TODO: Do we want to be doing error handling like this?
+
     try
-        Θ_bands = find_density_bands(Θ,percent,minimize=true)'
+        Θ_bands = find_density_bands(Θ,percent,minimize=true)' # We need the transpose
     catch
         println("percent must be between 0 and 1")
+        return -1
     end
     
-    # Save posterior mean
-    cov_filename = joinpath(outpath(m),"cov.h5")
-    posterior_fid = h5open(cov_filename,"w") do posterior_fid
-        posterior_fid["Θ_hat"] = convert(Matrix{Float32}, Θ_hat)
-    end
-
 
     ###########################################################################################
     ## STEP 3: Create variables for writing to output table
@@ -178,7 +148,7 @@ end
     ## 4a. Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT parameters
     ###########################################################################################
     
-    # Open and start the file
+    # Open and start the TeX file
     mainParams_out = joinpath(tablepath(m), "moments_mainParams.tex")
     mainParams_fid = open(mainParams_out,"w")
 
@@ -201,15 +171,17 @@ end
         
         if (!ismatch(r"rho_", param.texLabel) &&
             !ismatch(r"zeta_", param.texLabel) &&
-            !ismatch(r"psi", param.texLabel) &&
+            !ismatch(r"psi_", param.texLabel) &&
             !ismatch(r"nu_l", param.texLabel) &&
-            !ismatch(r"pistar", param.texLabel) &&
-            (!ismatch(r"ups", param.texLabel)))  ##Is this correct? mspec == 16 or u_^*
+            !ismatch(r"pi\^\*", param.texLabel) &&
+            !ismatch(r"sigma_{pi}\^\*",param.texLabel) &&
+            (!ismatch(r"pistar", param.texLabel)))
+            # (!ismatch(r"ups", param.texLabel)))  ##Is this correct? mspec == 16 or u_^*
             continue
         end
             
         # TODO: Decide whether subspec should be a field in the model
-        if(ismatch(r"\\rho_chi",param.texLabel)) # ??? || (isequal(subspec,7) && texLabel == ":ρ_b"))
+        if(ismatch(r"rho_chi",param.texLabel)) # ??? || (isequal(subspec,7) && texLabel == ":ρ_b"))
             continue
         end
 
@@ -220,7 +192,7 @@ end
             @printf(mainParams_fid, "\%8.3f & ",val)
         end
 
-        important_para = [important_para, index]
+        important_para = [important_para; index]
         
     end
 
@@ -233,7 +205,7 @@ end
     
     periphParams_out = joinpath(tablepath(m), "moments_periphParams_0.tex")
     periphParams_fid = open(periphParams_out,"w")
-    
+
     beginTexTableDoc(periphParams_fid)
 
     @printf(periphParams_fid,"\\caption{Parameter Estimates}\n")
@@ -344,22 +316,77 @@ end
     end
     
     endTexTableDoc(prioPostMean_fid)
-    println("Tables are in ",tablepath(m))
+
+    if verbose
+        println("Tables are in ",tablepath(m))
+    end
+end
+
+#=
+doc"""
+beginTexTableDoc(fid::IOStream)
+
+### Parameters
+- `fid`: File descriptor 
+
+### Description
+Prints the preamble for a LaTeX table to the file indicated by `fid`.
+"""
+=#
+function beginTexTableDoc(fid::IOStream)
+
+    @printf(fid,"\\documentclass[12pt]{article}\n")
+    @printf(fid,"\\usepackage[dvips]{color}\n")
+    @printf(fid,"\\begin{document}\n")
+    @printf(fid,"\\pagestyle{empty}\n")
+    @printf(fid,"\\begin{table}[h] \\centering\n")
+    
+end
+
+#=
+doc"""
+### Parameters
+- `fid`: File descriptor
+
+### Optional Arguments
+- `small`: Whether to print an additional curly bracket after "\end{tabular}" (necessary if the table is enclosed by "\small{}")
+
+### Description
+Prints the necessarily lines to end a table and close a LaTeX document to file descriptor `fid`, then closes the file.
+"""
+=#
+function endTexTableDoc(fid::IOStream;small::Bool=false)
+
+    @printf(fid, "\\\\ \\\hline\n")
+    
+    if small
+        @printf(fid,"\\end{tabular}}\n")
+    else
+        @printf(fid,"\\end{tabular}\n")
+    end
+    
+    @printf(fid,"\\end{table}\n")
+    @printf(fid,"\\end{document}")
+    close(fid)
 
 end
 
+#=
+doc"""
+find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
 
+### Parameters
+- draws: Matrix of parameter draws (from Metropolis-Hastings, for example)
+- percent: percent of data within bands (e.g. .9 to get 90% of mass within bands)
+
+### Optional Arguments
+- `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and highest (percent/2)
+
+### Description
+Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]` is above `bands[1,i]` and below `bands[2,i]`.
+"""
+=#
 function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
-    ## Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]` is above
-    ## `bands[1,i]` and below `bands[2,i]`.
-    ## 
-    ## Inputs:
-    ## -draws: [num_draws x num_draw_dimensions] matrix
-    ## -percent: percent of data within bands (e.g. .9 to get 90% of mass within bands)
-    ## -minimize: if =1, choose shortest interval, otherwise just chop off lowest and highest (percent/2)
-    ##
-    ## Output:
-    ## -[2 x num_draw_dimensions] matrix 
 
     if(percent < 0 || percent > 1)
        throw(DomainError())
@@ -367,7 +394,7 @@ function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
     
     num_draws, num_draw_dimensions = size(draws)
     band  = zeros(2, num_draw_dimensions)
-    num_in_band  = round(percent * num_draws)
+    num_in_band  = round(Int, percent * num_draws)
     
     for i in 1:num_draw_dimensions
 
@@ -405,32 +432,4 @@ function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
     end
 
     return band
-end
-
-function beginTexTableDoc(fid::IOStream)
-
-    @printf(fid,"\\documentclass[12pt]{article}\n")
-    @printf(fid,"\\usepackage[dvips]{color}\n")
-    @printf(fid,"\\begin{document}\n")
-    @printf(fid,"\\pagestyle{empty}\n")
-    @printf(fid,"\\begin{table}[h] \\centering\n")
-    
-end
-
-# Prints the necessarily lines to end a table and close a document
-# to file descriptor fid and closes the file
-function endTexTableDoc(fid::IOStream;small::Bool=false)
-
-    @printf(fid, "\\\\ \\\hline\n")
-    
-    if small
-        @printf(fid,"\\end{tabular}}\n")
-    else
-        @printf(fid,"\\end{tabular}\n")
-    end
-    
-    @printf(fid,"\\end{table}\n")
-    @printf(fid,"\\end{document}")
-    close(fid)
-
 end
