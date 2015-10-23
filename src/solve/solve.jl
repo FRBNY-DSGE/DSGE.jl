@@ -53,27 +53,27 @@ function augment_states{T<:FloatingPoint}(m::AbstractDSGEModel, TTT::Matrix{T}, 
     TTT_aug[endo_addl[:c_t1], endo[:c_t]] = 1.0
     TTT_aug[endo_addl[:i_t1], endo[:i_t]] = 1.0
     TTT_aug[endo_addl[:w_t1], endo[:w_t]] = 1.0
-    TTT_aug[endo_addl[:pi_t1], endo[:pi_t]] = 1.0
+    TTT_aug[endo_addl[:π_t1], endo[:π_t]] = 1.0
     TTT_aug[endo_addl[:L_t1], endo[:L_t]]  = 1.0
     TTT_aug[endo_addl[:u_t1], endo[:u_t]] = 1.0
 
     # Expected inflation
-    TTT_aug[endo_addl[:Et_pi_t], 1:n_endo] = (TTT^2)[endo[:pi_t], :]
+    TTT_aug[endo_addl[:Et_π_t], 1:n_endo] = (TTT^2)[endo[:π_t], :]
 
     # The 8th column of AddTTT corresponds to "v_lr" which is set equal to
     # e_lr –measurements errors for the two real wage observables built in
     # as exogenous structural shocks.
-    TTT_aug[endo_addl[:lr_t], endo_addl[:lr_t]] = m[:ρ_lr].scaledvalue
-    TTT_aug[endo_addl[:tfp_t], endo_addl[:tfp_t]] = m[:ρ_tfp].scaledvalue
-    TTT_aug[endo_addl[:e_gdpdef], endo_addl[:e_gdpdef]] = m[:ρ_gdpdef].scaledvalue
-    TTT_aug[endo_addl[:e_pce], endo_addl[:e_pce]] = m[:ρ_pce].scaledvalue
+    TTT_aug[endo_addl[:lr_t], endo_addl[:lr_t]] = m[:ρ_lr]
+    TTT_aug[endo_addl[:tfp_t], endo_addl[:tfp_t]] = m[:ρ_tfp]
+    TTT_aug[endo_addl[:e_gdpdef], endo_addl[:e_gdpdef]] = m[:ρ_gdpdef]
+    TTT_aug[endo_addl[:e_pce], endo_addl[:e_pce]] = m[:ρ_pce]
 
 
 
     ### RRR modfications
 
     # Expected inflation
-    RRR_aug[endo_addl[:Et_pi_t], :] = (TTT*RRR)[endo[:pi_t], :]
+    RRR_aug[endo_addl[:Et_π_t], :] = (TTT*RRR)[endo[:π_t], :]
 
     # Measurement Error on long rate
     RRR_aug[endo_addl[:lr_t], exo[:lr_sh]] = 1.0
@@ -92,7 +92,7 @@ function augment_states{T<:FloatingPoint}(m::AbstractDSGEModel, TTT::Matrix{T}, 
     ### CCC Modifications
 
     # Expected inflation
-    CCC_aug[endo_addl[:Et_pi_t], :] = (CCC + TTT*CCC)[endo[:pi_t], :]
+    CCC_aug[endo_addl[:Et_π_t], :] = (CCC + TTT*CCC)[endo[:π_t], :]
 
 
 
