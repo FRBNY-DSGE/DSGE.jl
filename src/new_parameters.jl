@@ -21,9 +21,9 @@ typealias NullablePrior      Nullable{ContinuousUnivariateDistribution}
 
 type UnscaledParameter{T,U} <: Parameter{T,U}
     key::Symbol
-    value::T                    # parameter value in model space
-    valuebounds::Interval{T}    # bounds of parameter value
-    transbounds::Interval{T}    # parameters for transformation
+    value::T                             # parameter value in model space
+    valuebounds::Interval{T}             # bounds of parameter value
+    transform_parameters::Interval{T}    # parameters for transformation
     transform::U                # transformation we use to go between model space and real line for csminwel
     prior::NullablePrior        # prior distribution
     fixed::Bool                 # is this parameter fixed at some value, or do we estimate it?
@@ -36,7 +36,7 @@ type ScaledParameter{T,U} <: Parameter{T,U}
     value::T                    # unscaled parameter value in model space
     scaledvalue::T		# scaled parameter value in model space
     valuebounds::Interval{T}    # 
-    transbounds::Interval{T}    # 
+    transform_parameters::Interval{T}    # 
     transform::U                # we only use transformed values for csminwel.
                                 # tomodel/toreal takes care of the conversion.
     prior::NullablePrior
@@ -80,7 +80,7 @@ typealias UnscaledOrSteadyState Union(UnscaledParameter, SteadyStateParameter)
 function parameter{T,U<:Transform}(key::Symbol,
                                    value::T,
                                    valuebounds::Interval{T} = (value,value),
-                                   transbounds::Interval{T} = (value,value),
+                                   transform_parameters::Interval{T} = (value,value),
                                    transform::U             = Untransformed(),
                                    prior::NullableOrPrior   = NullablePrior();
                                    fixed::Bool              = true,
@@ -94,28 +94,28 @@ function parameter{T,U<:Transform}(key::Symbol,
     # scoping.
 
     ret_valuebounds = valuebounds
-    ret_transbounds = transbounds
+    ret_transform_parameters = transform_parameters
     ret_prior = prior
 
     if fixed
-        ret_transbounds = (value,value)  # value is transformed already       
+        ret_transform_parameters = (value,value)  # value is transformed already       
         ret_prior = PointMass(value)
 
         if isa(transform, Untransformed)
             ret_valuebounds = (value,value)
         end
     else
-        ret_transbounds = transbounds
+        ret_transform_parameters = transform_parameters
     end
     
     # ensure that we have a Nullable{Distribution}, if not construct one
     ret_prior = !isa(ret_prior,NullablePrior) ? NullablePrior(ret_prior) : ret_prior
 
     if scaling == identity
-        return UnscaledParameter{T,U}(key, value, ret_valuebounds, ret_transbounds, transform,
+        return UnscaledParameter{T,U}(key, value, ret_valuebounds, ret_transform_parameters, transform,
                                       ret_prior, fixed, description, texLabel)
     else
-        return ScaledParameter{T,U}(key, value, scaling(value), ret_valuebounds, ret_transbounds, transform,
+        return ScaledParameter{T,U}(key, value, scaling(value), ret_valuebounds, ret_transform_parameters, transform,
                                     ret_prior, fixed, scaling, description, texLabel)
     end
 end
@@ -135,13 +135,13 @@ function parameter{T<:Real,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::T)
     p.fixed && return p  # if the parameter is fixed, don't change its value
     a,b = p.valuebounds  
     @assert a <= newvalue <= b "New value is out of bounds"
-    UnscaledParameter{T,U}(p.key, newvalue, p.valuebounds, p.transbounds, p.prior, p.fixed, p.description)
+    UnscaledParameter{T,U}(p.key, newvalue, p.valuebounds, p.transform_parameters, p.prior, p.fixed, p.description)
 end
 function parameter{T<:Real,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
     p.fixed && return p
     a,b = p.valuebounds  
     @assert a <= newvalue <= b "New value is out of bounds"
-    ScaledParameter{T,U}(p.key, newvalue, p.scaling(newvalue), p.scaling, p.valuebounds, p.transbounds, p.prior, p.fixed, p.description)
+    ScaledParameter{T,U}(p.key, newvalue, p.scaling(newvalue), p.scaling, p.valuebounds, p.transform_parameters, p.prior, p.fixed, p.description)
 end
 
 function Base.show{T,U}(io::IO, p::Parameter{T,U})
@@ -181,22 +181,22 @@ toreal{T}(p::Parameter{T,Untransformed}, x::T = p.value) = x
 
 # SquareRoot
 function tomodel{T}(p::Parameter{T,SquareRoot}, x::T)
-    (a,b), c = p.transbounds, one(T)
+    (a,b), c = p.transform_parameters, one(T)
     (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)
 end
 function toreal{T}(p::Parameter{T,SquareRoot}, x::T = p.value)
-    (a,b), c = p.transbounds, one(T)
+    (a,b), c = p.transform_parameters, one(T)
     cx = 2 * (x - (a+b)/2)/(b-a)
     (1/c)*cx/sqrt(1 - cx^2)
 end
 
 # Exponential
 function tomodel{T}(p::Parameter{T,Exponential}, x::T)
-    (a,b),c = p.transbounds,one(T)
+    (a,b),c = p.transform_parameters,one(T)
     a + exp(c*(x-b))
 end
 function toreal{T}(p::Parameter{T,Exponential}, x::T = p.value)
-    (a,b),c = p.transbounds,one(T)
+    (a,b),c = p.transform_parameters,one(T)
     b + (1/c) * log(x-a)
 end
 

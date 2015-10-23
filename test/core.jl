@@ -14,7 +14,7 @@ import DSGE: PointMass
 
 # UnscaledParameter, fixed = true
 α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05), fixed=true)
-@test α_fixed.transbounds == (0.1596,0.1596)
+@test α_fixed.transform_parameterization == (0.1596,0.1596)
 @test isa(α_fixed.prior.value, PointMass) 
 @test isa(α_fixed.transform, SquareRoot)
 
@@ -22,7 +22,7 @@ import DSGE: PointMass
 # Fixed UnscaledParameter, minimal constructor
 δ = parameter(:δ, 0.025)
 @test δ.fixed
-@test δ.transbounds == (0.025, 0.025)
+@test δ.transform_parameterization == (0.025, 0.025)
 @test δ.valuebounds == (0.025, 0.025)
 println(δ.prior.value)
 @test isa(δ.prior.value, PointMass)
