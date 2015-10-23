@@ -60,7 +60,7 @@ for θ in model.parameters
        throw(error("This kind of transform not allowed")) 
     end
         
-    (left, right) = θ.transbounds
+    (left, right) = θ.transform_parameterization
     trspec[i, 2] = left
     trspec[i, 3] = right
     if θ == model[:modelα_ind]
@@ -71,22 +71,6 @@ for θ in model.parameters
 
     i += 1
 end
-
-## mf = MatFile("$path/parameters.mat")
-## para_matlab   = get_variable(mf, "para")
-## bounds_matlab = get_variable(mf, "bounds")
-## pshape_matlab = get_variable(mf, "pshape")
-## pmean_matlab  = get_variable(mf, "pmean")
-## pstdd_matlab  = get_variable(mf, "pstdd")
-## trspec_matlab = get_variable(mf, "trspec")
-## close(mf)
-
-## @test test_matrix_eq(para_matlab, para)
-## @test test_matrix_eq(bounds_matlab, bounds)
-## @test test_matrix_eq(pshape_matlab, pshape)
-## @test test_matrix_eq(pmean_matlab, pmean)
-## @test test_matrix_eq(pstdd_matlab, pstdd)
-## @test test_matrix_eq(trspec_matlab, trspec)
 
 ### Model indices
 
