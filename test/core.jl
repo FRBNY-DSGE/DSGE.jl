@@ -1,7 +1,7 @@
-using Distributions, DSGE, Compat
-include(joinpath(dirname(@__FILE__()),"../src/distributions_ext.jl"))
+using Distributions, Compat
+import DSGE: PointMass
 
-# Test Param type
+# Test Parameter type
 
 # UnscaledParameter, fixed=false
 α =  parameter(:α, 0.1596, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05), fixed=false)
@@ -15,7 +15,7 @@ include(joinpath(dirname(@__FILE__()),"../src/distributions_ext.jl"))
 # UnscaledParameter, fixed = true
 α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05), fixed=true)
 @test α_fixed.transbounds == (0.1596,0.1596)
-@test isa(α_fixed.prior.value, DSGE.PointMass) 
+@test isa(α_fixed.prior.value, PointMass) 
 @test isa(α_fixed.transform, SquareRoot)
 
 
@@ -25,7 +25,7 @@ include(joinpath(dirname(@__FILE__()),"../src/distributions_ext.jl"))
 @test δ.transbounds == (0.025, 0.025)
 @test δ.valuebounds == (0.025, 0.025)
 println(δ.prior.value)
-@test isa(δ.prior.value, DSGE.PointMass)
+@test isa(δ.prior.value, PointMass)
 
 # Scaled parameter
 β = parameter(:β, 0.1402, (1e-5, 10.), (1e-5, 10.), DSGE.Exponential(), GammaAlt(0.25, 0.1), fixed=false,  scaling = x -> (1 + x/100)\1, description="β: Discount rate.", texLabel="\\beta ")

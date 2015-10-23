@@ -1,5 +1,5 @@
-using Distributions, MATLAB
-import DSGE: RootInverseGamma
+using Distributions, MATLAB, Base.Test
+import DSGE: RootInverseGamma, Exponential
 
 path = dirname(@__FILE__)
 
@@ -8,7 +8,7 @@ model = Model990()
 
 ### Parameters
 
-# Parameters match para, bounds, etc. vectors from Matlab (ε = 1e-4)
+# Parameters match para, bounds, etc. vectors from Matlab (ϵ = 1e-4)
 para = zeros(82)
 bounds = zeros(82, 2)
 pshape = zeros(82)
@@ -16,39 +16,54 @@ pmean = zeros(82)
 pstdd = zeros(82)
 trspec = zeros(82, 4)
 
+# keys to skip (used to be fixed_parameters)
+fixed_parameters = [:δ, :λ_w, :ϵ_p, :ϵ_w, :g_star]
+    
 # # not all Params appear in para vector
 i = 1
 for θ in model.parameters
-	!isa(θ,AbstractParameter) && continue
-
+    !isa(θ,AbstractParameter) && continue
+    in(θ.key, fixed_parameters) && continue
+    
     para[i] = θ.value
 
-    (left, right) = θ.bounds
+    (left, right) = θ.valuebounds
     bounds[i, 1] = left
     bounds[i, 2] = right
 
-    if isa(θ.priordist, RootInverseGamma)
+    prior = θ.prior.value
+    
+    if isa(prior, RootInverseGamma)
         pshape[i] = 4
-        (ν, τ) = params(θ.priordist)
+        (ν, τ) = params(prior)
         pmean[i] = τ
         pstdd[i] = ν
     else
-        if isa(θ.priordist, Distributions.Beta)
+        if isa(prior, Distributions.Beta)
             pshape[i] = 1
-        elseif isa(θ.priordist, Distributions.Gamma)
+        elseif isa(prior, Distributions.Gamma)
             pshape[i] = 2
-        elseif isa(θ.priordist, Distributions.Normal)
+        elseif isa(prior, Distributions.Normal)
             pshape[i] = 3
         end
-        pmean[i] = mean(θ.priordist)
-        pstdd[i] = std(θ.priordist)
+        pmean[i] = mean(prior)
+        pstdd[i] = std(prior)
     end
 
-    trspec[i, 1] = θ.transformtype
-    (left, right) = θ.transformbounds
+    if θ.transform == Untransformed()
+        trspec[i, 1] = 0
+    elseif θ.transform == SquareRoot()
+        trspec[i, 1] = 1
+    elseif  θ.transform == Exponential()
+        trspec[i, 1] = 2        
+    else
+       throw(error("This kind of transform not allowed")) 
+    end
+        
+    (left, right) = θ.transbounds
     trspec[i, 2] = left
     trspec[i, 3] = right
-    if θ == model[:modelalp_ind]
+    if θ == model[:modelα_ind]
         trspec[i, 4] = 0
     else
         trspec[i, 4] = 1
@@ -57,21 +72,21 @@ for θ in model.parameters
     i += 1
 end
 
-mf = MatFile("$path/parameters.mat")
-para_matlab   = get_variable(mf, "para")
-bounds_matlab = get_variable(mf, "bounds")
-pshape_matlab = get_variable(mf, "pshape")
-pmean_matlab  = get_variable(mf, "pmean")
-pstdd_matlab  = get_variable(mf, "pstdd")
-trspec_matlab = get_variable(mf, "trspec")
-close(mf)
+## mf = MatFile("$path/parameters.mat")
+## para_matlab   = get_variable(mf, "para")
+## bounds_matlab = get_variable(mf, "bounds")
+## pshape_matlab = get_variable(mf, "pshape")
+## pmean_matlab  = get_variable(mf, "pmean")
+## pstdd_matlab  = get_variable(mf, "pstdd")
+## trspec_matlab = get_variable(mf, "trspec")
+## close(mf)
 
-# @test test_matrix_eq(para_matlab, para)
-# @test test_matrix_eq(bounds_matlab, bounds)
-# @test test_matrix_eq(pshape_matlab, pshape)
-# @test test_matrix_eq(pmean_matlab, pmean)
-# @test test_matrix_eq(pstdd_matlab, pstdd)
-# @test test_matrix_eq(trspec_matlab, trspec)
+## @test test_matrix_eq(para_matlab, para)
+## @test test_matrix_eq(bounds_matlab, bounds)
+## @test test_matrix_eq(pshape_matlab, pshape)
+## @test test_matrix_eq(pmean_matlab, pmean)
+## @test test_matrix_eq(pstdd_matlab, pstdd)
+## @test test_matrix_eq(trspec_matlab, trspec)
 
 ### Model indices
 
@@ -115,7 +130,7 @@ obs = model.observables
 @test size(Ψ) == (66, 22)
 @test size(Π) == (66, 13)
 
-# # Check output matrices against Matlab output (ε = 1e-4)
+# # Check output matrices against Matlab output (ϵ = 1e-4)
 mf = MatFile("$path/eqcond.mat")
 Γ0_matlab = get_variable(mf, "G0")
 Γ1_matlab = get_variable(mf, "G1")

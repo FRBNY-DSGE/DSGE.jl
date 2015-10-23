@@ -10,17 +10,18 @@ module DSGE
         PointMass, BetaAlt, GammaAlt,
 
         # abstractdsgemodel.jl
-        AbstractDSGEModel, Param, update!, toreal, tomodel, Parameters, tomodel!, prior, ModelInds, makedict,
+        AbstractDSGEModel, ModelInds, makedict, tomodel!, toreal!, #toreal, tomodel, update!,  Parameters,
 
-        # new_parameters
-        parameter, Transform, Untransformed, SquareRoot, Exponential,
-        AbstractParameter, Parameter, NullablePrior, ParameterVector, ScaledParameter, UnscaledParameter,
+        # new_parameters.jl
+        parameter, Transform, Untransformed, SquareRoot, Exponential, NullablePrior,
+        AbstractParameter, Parameter, ParameterVector, ScaledParameter, UnscaledParameter, SteadyStateParameter,
+        toreal, tomodel, update, update!, tomodel, toreal,
 
         # solve/
         ordschur, gensys, solve,
 
         # estimate/
-        dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel, hessizero!, estimate, proposal_distribution, metropolis_hastings,
+        dlyap!, kalcvf2NaN, kalsmth_k93, prior, likelihood, posterior, posterior!, csminwel, hessizero!, estimate, proposal_distribution, metropolis_hastings,
 
         # models/
         steadystate!, Model990, model_specifications, eqcond, measurement

@@ -19,25 +19,24 @@ abstract Parameter{T,U<:Transform} <: AbstractParameter{T}
 typealias ParameterVector{T} Vector{AbstractParameter{T}}
 typealias NullablePrior      Nullable{ContinuousUnivariateDistribution}
 
-# do we need value bounds?
 type UnscaledParameter{T,U} <: Parameter{T,U}
     key::Symbol
-    value::T                    # transformed parameter value
-    valuebounds::Interval{T}
-    transbounds::Interval{T}
-    transform::U
-    prior::NullablePrior
-    fixed::Bool
-    description::AbstractString
-    texLabel::AbstractString
+    value::T                    # parameter value in model space
+    valuebounds::Interval{T}    # bounds of parameter value
+    transbounds::Interval{T}    # parameters for transformation
+    transform::U                # transformation we use to go between model space and real line for csminwel
+    prior::NullablePrior        # prior distribution
+    fixed::Bool                 # is this parameter fixed at some value, or do we estimate it?
+    description::AbstractString 
+    texLabel::AbstractString    # LaTeX label for printing
 end
 
 type ScaledParameter{T,U} <: Parameter{T,U}
     key::Symbol
-    value::T                    # unscaled, untransformed parameter value
-    scaledvalue::T		# scaled, untransformed parameter value
-    valuebounds::Interval{T}
-    transbounds::Interval{T}
+    value::T                    # unscaled parameter value in model space
+    scaledvalue::T		# scaled parameter value in model space
+    valuebounds::Interval{T}    # 
+    transbounds::Interval{T}    # 
     transform::U                # we only use transformed values for csminwel.
                                 # tomodel/toreal takes care of the conversion.
     prior::NullablePrior
@@ -47,11 +46,35 @@ type ScaledParameter{T,U} <: Parameter{T,U}
     texLabel::AbstractString
 end
 
+"""
+type SteadyStateParameter{T} <: AbstractParameter{T}
 
+Defines a type for the model's steady-state parameters, stored in `m.steady_state`. Their values are calculated and set by `steadystate!(m)`, rather than being estimated directly.  `SteadyStateParameter`s have the following fields:
+
+-`key::Symbol`: Key for referencing this parameter
+
+-`value::T`: The parameter's steady-state value
+
+-`description::AbstractString`: Short description of the parameter's economic significance
+
+-`texLabel::AbstractString`: for LaTeX printing
+
+Unlike true model parameters (for which we must find modal values using csminwel), these values need not be transformed from the model space to the real line. Thus, they do not have `transform` fields. 
+"""
+type SteadyStateParameter{T} <: AbstractParameter{T}
+    key::Symbol
+    value::T                    
+    description::AbstractString
+    texLabel::AbstractString
+end
 
 hasprior(p::Parameter) = !isnull(p.prior)
 
 typealias NullableOrPrior Union(NullablePrior, ContinuousUnivariateDistribution)
+
+# We want to use values from UnscaledParameters and
+# SteadyStateParameters in computation, so we alias their union here.
+typealias UnscaledOrSteadyState Union(UnscaledParameter, SteadyStateParameter)
 
 # method to construct parameters
 function parameter{T,U<:Transform}(key::Symbol,
@@ -92,44 +115,63 @@ function parameter{T,U<:Transform}(key::Symbol,
         return UnscaledParameter{T,U}(key, value, ret_valuebounds, ret_transbounds, transform,
                                       ret_prior, fixed, description, texLabel)
     else
-        return ScaledParameter{T,U}(key, scaling(value), value, ret_valuebounds, ret_transbounds, transform,
+        return ScaledParameter{T,U}(key, value, scaling(value), ret_valuebounds, ret_transbounds, transform,
                                     ret_prior, fixed, scaling, description, texLabel)
     end
 end
 
+# construct steady-state parameters
+function SteadyStateParameter{T<:Real}(key::Symbol,
+                                       value::T;
+                                       description::AbstractString = "No description provided.",
+                                       texLabel::AbstractString = "")
 
-
-# generate a parameter given a new value
-function parameter{T,U}(p::UnscaledParameter{T,U}, newvalue::T)
-	p.fixed && return p  # if the parameter is fixed, don't change its value
-	a,b = p.transbounds  
-	@assert a <= newvalue <= b "New value is out of bounds"
-	UnscaledParameter{T,U}(p.key, newvalue, p.valuebounds, p.transbounds, p.prior, p.fixed, p.description)
+    return SteadyStateParameter(key, value, description, texLabel)
 end
-function parameter{T,U}(p::ScaledParameter{T,U}, newvalue::T)
-	p.fixed && return p
-	a,b = p.transbounds
-	@assert a <= newvalue <= b "New value is out of bounds"
-	ScaledParameter{T,U}(p.key, p.scaling(newvalue), newvalue, p.scaling, p.valuebounds, p.transbounds, p.prior, p.fixed, p.description)
+
+
+# generate a parameter given a new value 
+function parameter{T<:Real,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::T)
+    p.fixed && return p  # if the parameter is fixed, don't change its value
+    a,b = p.valuebounds  
+    @assert a <= newvalue <= b "New value is out of bounds"
+    UnscaledParameter{T,U}(p.key, newvalue, p.valuebounds, p.transbounds, p.prior, p.fixed, p.description)
+end
+function parameter{T<:Real,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
+    p.fixed && return p
+    a,b = p.valuebounds  
+    @assert a <= newvalue <= b "New value is out of bounds"
+    ScaledParameter{T,U}(p.key, newvalue, p.scaling(newvalue), p.scaling, p.valuebounds, p.transbounds, p.prior, p.fixed, p.description)
 end
 
 function Base.show{T,U}(io::IO, p::Parameter{T,U})
-	@printf io "%s\n" typeof(p)
-	@printf io "(:%s)\n%s\n"      p.key p.description
-    	@printf io "LaTeX label: %s\n"     p.texLabel
+    @printf io "%s\n" typeof(p)
+    @printf io "(:%s)\n%s\n"      p.key p.description
+    @printf io "LaTeX label: %s\n"     p.texLabel
     @printf io "-----------------------------\n"
-	@printf io "real value:        %+6f\n" toreal(p)
-	!isa(U(),Untransformed) && @printf io "transformed value: %+6f\n" p.value
-
-	if hasprior(p)
+    #@printf io "real value:        %+6f\n" toreal(p)
+    @printf io "unscaled, untransformed value:        %+6f\n" p.value
+    isa(p,ScaledParameter) && @printf "scaled, untransformed value:        %+6f\n" p.scaledvalue
+    #!isa(U(),Untransformed) && @printf io "transformed value: %+6f\n" p.value
+    
+    if hasprior(p)
         @printf io "prior distribution:\n\t%s\n" get(p.prior)
     else
         @printf io "prior distribution:\n\t%s\n" "no prior"
-	end
+    end
 
-	@printf io "transformation:\n\t%s" U()
+    @printf io "transformation for csminwel:\n\t%s" U()
     @printf io "parameter is %s\n" p.fixed ? "fixed" : "not fixed"
 end
+
+function Base.show{T}(io::IO, p::SteadyStateParameter{T})
+    @printf io "%s\n" typeof(p)
+    @printf io "(:%s)\n%s\n"      p.key p.description
+    @printf io "LaTeX label: %s\n"     p.texLabel
+    @printf io "-----------------------------\n"
+    @printf io "value:        %+6f\n" p.value
+end
+
 
 # does anyone know what c does here?
 
@@ -161,16 +203,15 @@ end
 tomodel{T}(pvec::ParameterVector{T}) = map(tomodel, pvec)
 toreal{T}(pvec::ParameterVector{T}, values::Vector{T}) = map(toreal, pvec, values)
 
+
 # define operators to work on parameters
 
-# do we also want to convert p to type AbstractParameter{T}? Seems so.
-Base.convert{T<:Real, U<:AbstractParameter}(::Type{T}, p::U)       = convert(T,p.value)
-#Base.convert{T<:Real, U<:AbstractParameter}(p::U, v::T)            = setfield!(p,:value,v)
-#Base.convert{T<:Real, U<:AbstractParameter}(::Type{U}, v::T)            = setfield!(p,:value,v)
-Base.promote_type{T<:Real,U<:Real}(::Type{AbstractParameter{T}}, ::Type{U}) = promote_type(T,U)
-Base.promote_rule{T<:Real,U<:Real}(::Type{AbstractParameter{T}}, ::Type{U}) = promote_rule(T,U)
+# TODO: do we also want to convert p to type AbstractParameter{T}? Seems so.
+Base.convert{T<:Real}(::Type{T}, p::UnscaledParameter)  = convert(T,p.value)
+Base.convert{T<:Real}(::Type{T}, p::ScaledParameter)    = convert(T,p.scaledvalue)  
+Base.convert{T<:Real}(::Type{T}, p::SteadyStateParameter)  = convert(T,p.value)
 
-Base.(:^)(p::AbstractParameter, x::Integer) = (^)(p.value, x)
+Base.promote_rule{T<:Real,U<:Real}(::Type{AbstractParameter{T}}, ::Type{U}) = promote_rule(T,U)
 
 for op in (:(Base.(:+)),
            :(Base.(:-)),
@@ -178,9 +219,16 @@ for op in (:(Base.(:+)),
            :(Base.(:/)),
            :(Base.(:^)))
 
-    @eval ($op)(p::AbstractParameter, q::AbstractParameter) = ($op)(p.value, q.value)
-    @eval ($op)(p::AbstractParameter, x::Number)            = ($op)(p.value, x)
-    @eval ($op)(x::Number, p::AbstractParameter)            = ($op)(x, p.value)
+    @eval ($op)(p::UnscaledOrSteadyState, q::UnscaledOrSteadyState) = ($op)(p.value, q.value)
+    @eval ($op)(p::UnscaledOrSteadyState, x::Number)            = ($op)(p.value, x)
+    @eval ($op)(x::Number, p::UnscaledOrSteadyState)            = ($op)(x, p.value)
+
+    @eval ($op)(p::ScaledParameter, q::ScaledParameter) = ($op)(p.scaledvalue, q.scaledvalue)
+    @eval ($op)(p::ScaledParameter, x::Number)            = ($op)(p.scaledvalue, x)
+    @eval ($op)(x::Number, p::ScaledParameter)            = ($op)(x, p.scaledvalue)
+
+    @eval ($op)(p::ScaledParameter, q::UnscaledOrSteadyState) = ($op)(p.scaledvalue, q.value)
+    @eval ($op)(p::UnscaledOrSteadyState, q::ScaledParameter) = ($op)(p.value, q.scaledvalue)
 end
 
 for f in (:(Base.exp),
@@ -191,12 +239,12 @@ for f in (:(Base.exp),
           :(Base.(:<=)),
           :(Base.(:>=)))
 
-    @eval ($f)(p::AbstractParameter) = ($f)(p.value)
+    @eval ($f)(p::UnscaledOrSteadyState) = ($f)(p.value)
+    @eval ($f)(p::ScaledParameter) = ($f)(p.scaledvalue)
 end
 
 # this function is optimised for speed
-@debug function update!{T}(pvec::ParameterVector{T}, newvalues::Vector{T})
-    @bp
+function update!{T}(pvec::ParameterVector{T}, newvalues::Vector{T})
     @assert length(newvalues) == length(pvec) "Length of input vector (=$(length(newvalues))) must match length of parameter vector (=$(length(pvec)))"
    	map!(parameter, pvec, pvec, newvalues)
 end
@@ -204,8 +252,8 @@ end
 update{T}(pvec::ParameterVector{T}, newvalues::Vector{T}) = update!(copy(pvec), newvalues)
 
 Distributions.pdf(p::AbstractParameter) = exp(logpdf(p))
-Distributions.logpdf{T,U}(p::UnscaledParameter{T,U}) = logpdf(get(p.prior),p.value)
-Distributions.logpdf{T,U}(p::ScaledParameter{T,U})   = logpdf(get(p.prior),p.unscaledvalue)
+Distributions.logpdf{T,U}(p::Parameter{T,U}) = logpdf(get(p.prior),p.value) # we want the unscaled value for ScaledParameters
+
 
 # this function is optimised for speed
 function Distributions.logpdf{T}(pvec::ParameterVector{T})

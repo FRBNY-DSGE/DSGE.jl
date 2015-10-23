@@ -3,8 +3,8 @@
 function prior(model::AbstractDSGEModel)
     x = zero(Float64)
     for θ in model.parameters
-        if isa(θ,Param)
-            x += logpdf(θ.priordist, θ.value)
+        if isa(θ,Parameter)
+            x += logpdf(θ)
         end
     end
     return x

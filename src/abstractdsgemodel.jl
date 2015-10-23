@@ -16,7 +16,7 @@ end
     if i <= (j = length(m.parameters))
         return m.parameters[i]
     else
-        return m.steady_state[i-j]q
+        return m.steady_state[i-j]
     end
 end
 
@@ -32,9 +32,16 @@ end
 
 @inline function Base.setindex!(m::AbstractDSGEModel, value, i::Integer)
     if i <= (j = length(m.parameters))
-        return setindex!(m.parameters, value, i)
+        param = m.parameters[i]
+        param.value = value
+        if isa(ScaledParameter)
+            param.scaledvalue = param.scaling(value)
+        end
+        return param
     else
-        return setindex!(m.steady_state, value, i-j)
+        ssparam = m.steady_state[i-j]
+        ssparam.value = value
+        return ssparam
     end
 end
 Base.setindex!(m::AbstractDSGEModel, value, k::Symbol) = Base.setindex!(m, value, m.keys[k])
@@ -61,36 +68,37 @@ end
 
 #=
 """
-(<=){T}(m::AbstractDSGEModel{T}, k::Symbol)
+(<=){T}(m::AbstractDSGEModel{T}, ssp::SteadyStateParameter)
 
-Add a new steady-state value to the model by appending a 0 to the steady-state vector and adding k to m.keys.
+Add a new steady-state value to the model by appending `ssp` to the `m.steady_state` and adding `ssp.key` to `m.keys`.
 """
 =#
-function (<=){T}(m::AbstractDSGEModel{T}, k::Symbol)
-    @assert !in(k, keys(m.keys)) "Key $(k) is already present in DSGE model"
+function (<=){T}(m::AbstractDSGEModel{T}, ssp::SteadyStateParameter)
+    @assert !in(ssp.key, keys(m.keys)) "Key $(ssp) is already present in DSGE model"
 
     new_param_index = length(m.keys) + 1
 
-    # grow steady_state values with a zero
-    push!(m.steady_state, zero(T))
+    # append ssp to steady_state vector
+    push!(m.steady_state, ssp)
 
     # add parameter location to dict
-    setindex!(m.keys, new_param_index, k)
+    setindex!(m.keys, new_param_index, ssp.key)
 end
 
-#=
-"""
-(<=)(m::AbstractDSGEModel, vec::Vector{Symbol})
+## Defunct bc steady state values have their own type now
+## #=
+## """
+## (<=)(m::AbstractDSGEModel, vec::Vector{Symbol})
 
-Add all elements of `vec` to the `m.steady_state`. Update `m.keys` appropriately.
-"""
-=#
+## Add all elements of `vec` to the `m.steady_state`. Update `m.keys` appropriately.
+## """
+## =#
 
-function (<=)(m::AbstractDSGEModel, vec::Vector{Symbol})
-    for k in vec
-        m <= k
-    end
-end
+## function (<=)(m::AbstractDSGEModel, vec::Vector{Symbol})
+##     for k in vec
+##         m <= k
+##     end
+## end
 
 Distributions.logpdf(m::AbstractDSGEModel) = logpdf(m.parameters)
 Distributions.pdf(m::AbstractDSGEModel) = exp(logpdf(m))
@@ -135,6 +143,7 @@ function tomodel!{T<:AbstractFloat}(m::AbstractDSGEModel, values::Vector{T})
     return steadystate!(m)
 end
 function update!{T<:AbstractFloat}(m::AbstractDSGEModel, values::Vector{T})
-    return update!(m.parameters, values)
+    update!(m.parameters, values)
+    return steadystate!(m)
 end
 

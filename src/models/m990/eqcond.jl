@@ -1,3 +1,5 @@
+using Debug
+
 # Expresses the equilibrium conditions in canonical form using Γ0, Γ1, C, Ψ, and Π matrices.
 # Using the assigned states and equations in modelinds.jl, coefficients are specified in the
 #   proper positions.
@@ -8,7 +10,7 @@
 # Ψ  (num_states x num_shocks_exogenous) holds coefficients of iid shocks.
 # Π  (num_states x num_states_expectational) holds coefficients of expectational states.
 
-function eqcond(m::Model990)
+@debug function eqcond(m::Model990)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
     ex   = m.expected_shocks
@@ -52,7 +54,7 @@ function eqcond(m::Model990)
     ### 2. Investment Euler Equation
 
     # Sticky prices and wages
-    Γ0[eq[:inv], endo[:qk_t]] = -1/(m[:S′′]*exp(2.*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar])))
+    Γ0[eq[:inv], endo[:qk_t]] = -1/(m[:S′′]*exp(2.0*m[:zstar])*(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar])))
     Γ0[eq[:inv], endo[:i_t]]  = 1.
     Γ0[eq[:inv], endo[:z_t]]  = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ1[eq[:inv], endo[:i_t]]  = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
@@ -95,8 +97,8 @@ function eqcond(m::Model990)
     # n evol
     # Sticky prices and wages
     Γ0[eq[:nevol], endo[:n_t]]     = 1.
-    Γ0[eq[:nevol], endo[:gamm_t]]  = -1.
-    Γ0[eq[:nevol], endo[:z_t]]     = m[:gammstar]*m[:vstar]/m[:nstar]
+    Γ0[eq[:nevol], endo[:γ_t]]  = -1.
+    Γ0[eq[:nevol], endo[:z_t]]     = m[:γ_star]*m[:vstar]/m[:nstar]
     Γ0[eq[:nevol], endo[:Rktil_t]] = -m[:ζ_nRk]
     Γ0[eq[:nevol], endo[:π_t]]    = (m[:ζ_nRk] - m[:ζ_nR])
     Γ1[eq[:nevol], endo[:σ_ω_t]]  = -m[:ζ_nσ_ω]/m[:ζ_spσ_ω]
@@ -226,8 +228,8 @@ function eqcond(m::Model990)
     ### 11. Marginal Substitution
 
     # Sticky prices and wages
-    Γ0[eq[:msub], endo[:μ_w_t]] = 1.
-    Γ0[eq[:msub], endo[:L_t]]   = m[:nu_l]
+    Γ0[eq[:msub], endo[:μ_ω_t]] = 1.
+    Γ0[eq[:msub], endo[:L_t]]   = m[:ν_l]
     Γ0[eq[:msub], endo[:c_t]]   = 1/(1 - m[:h]*exp(-m[:zstar]))
     Γ1[eq[:msub], endo[:c_t]]   = m[:h]*exp(-m[:zstar])/(1 - m[:h]*exp(-m[:zstar]))
     Γ0[eq[:msub], endo[:z_t]]   = m[:h]*exp(-m[:zstar]) /(1 - m[:h]*exp(-m[:zstar]))
@@ -235,7 +237,7 @@ function eqcond(m::Model990)
 
     # Flexible prices and wages
     Γ0[eq[:msub_f], endo[:w_f_t]] = -1.
-    Γ0[eq[:msub_f], endo[:L_f_t]] = m[:nu_l]
+    Γ0[eq[:msub_f], endo[:L_f_t]] = m[:ν_l]
     Γ0[eq[:msub_f], endo[:c_f_t]] = 1/(1 - m[:h]*exp(-m[:zstar]))
     Γ1[eq[:msub_f], endo[:c_f_t]] = m[:h]*exp(-m[:zstar])/(1 - m[:h]*exp(-m[:zstar]))
     Γ0[eq[:msub_f], endo[:z_t]]   = m[:h]*exp(-m[:zstar])/(1 - m[:h]*exp(-m[:zstar]))
@@ -245,7 +247,7 @@ function eqcond(m::Model990)
 
     # Sticky prices and wages
     Γ0[eq[:wage], endo[:w_t]]   = 1
-    Γ0[eq[:wage], endo[:μ_w_t]] = (1 - m[:ζ_w]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))*
+    Γ0[eq[:wage], endo[:μ_ω_t]] = (1 - m[:ζ_w]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))*
         (1 - m[:ζ_w])/(m[:ζ_w]*((m[:λ_w] - 1)*m[:ϵ_w] + 1))/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ0[eq[:wage], endo[:π_t]]  = (1 + m[:ι_w]*m[:β]*exp((1 - m[:σ_c])*m[:zstar]))/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ1[eq[:wage], endo[:w_t]]   = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
@@ -394,10 +396,10 @@ function eqcond(m::Model990)
     Γ1[eq[:eq_μe], endo[:μe_t]] = m[:ρ_μe]
     Ψ[eq[:eq_μe], exo[:μe_sh]]  = 1.
 
-    # gamm shock
-    Γ0[eq[:eq_gamm], endo[:gamm_t]] = 1.
-    Γ1[eq[:eq_gamm], endo[:gamm_t]] = m[:ρ_γ]
-    Ψ[eq[:eq_gamm], exo[:gamm_sh]]  = 1.
+    # γ shock
+    Γ0[eq[:eq_γ], endo[:γ_t]] = 1.
+    Γ1[eq[:eq_γ], endo[:γ_t]] = m[:ρ_γ]
+    Ψ[eq[:eq_γ], exo[:γ_sh]]  = 1.
 
     # Long-term inflation expectations
     Γ0[eq[:eq_π_star], endo[:π_star_t]] = 1.
