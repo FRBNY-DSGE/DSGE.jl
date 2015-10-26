@@ -1,6 +1,5 @@
-using HDF5 
-import Distributions
-import DSGE: RootInverseGamma
+using Distributions,  Base.Test, HDF5
+import DSGE: RootInverseGamma, Exponential
 include("../../util.jl")
 
 path = dirname(@__FILE__)
@@ -10,7 +9,7 @@ model = Model990()
 
 ### Parameters
 
-# Parameters match para, bounds, etc. vectors from Matlab (ϵ = 1e-4)
+# Parameters match parameters, bounds, etc. vectors from reference (ϵ = 1e-4)
 para = zeros(82)
 bounds = zeros(82, 2)
 pshape = zeros(82)
@@ -18,39 +17,55 @@ pmean = zeros(82)
 pstdd = zeros(82)
 trspec = zeros(82, 4)
 
-# # not all Params appear in para vector
+# keys to skip (used to be fixed_parameters)
+fixed_parameters = [:δ, :λ_w, :ϵ_p, :ϵ_w, :g_star]
+    
+# not all parameters appear in model.parameters
 i = 1
 for θ in model.parameters
-	!isa(θ,Param) && continue
-
+    !isa(θ,AbstractParameter) && continue
+    in(θ.key, fixed_parameters) && continue
+    
     para[i] = θ.value
 
-    (left, right) = θ.bounds
+    (left, right) = θ.valuebounds
     bounds[i, 1] = left
     bounds[i, 2] = right
 
-    if isa(θ.priordist, RootInverseGamma)
+    prior = θ.prior.value
+    
+    if isa(prior, RootInverseGamma)
         pshape[i] = 4
-        (ν, τ) = Distributions.params(θ.priordist)
+        (ν, τ) = params(prior)
         pmean[i] = τ
         pstdd[i] = ν
     else
-        if isa(θ.priordist, Distributions.Beta)
+        if isa(prior, Distributions.Beta)
             pshape[i] = 1
-        elseif isa(θ.priordist, Distributions.Gamma)
+        elseif isa(prior, Distributions.Gamma)
             pshape[i] = 2
-        elseif isa(θ.priordist, Distributions.Normal)
+        elseif isa(prior, Distributions.Normal)
             pshape[i] = 3
         end
-        pmean[i] = Distributions.mean(θ.priordist)
-        pstdd[i] = Distributions.std(θ.priordist)
+        pmean[i] = mean(prior)
+        pstdd[i] = std(prior)
+        
     end
 
-    trspec[i, 1] = θ.transformtype
-    (left, right) = θ.transformbounds
+    if θ.transform == Untransformed()
+        trspec[i, 1] = 0
+    elseif θ.transform == SquareRoot()
+        trspec[i, 1] = 1
+    elseif  θ.transform == Exponential()
+        trspec[i, 1] = 2        
+    else
+       throw(error("This kind of transform not allowed")) 
+    end
+        
+    (left, right) = θ.transform_parameterization
     trspec[i, 2] = left
     trspec[i, 3] = right
-    if θ == model[:modelalp_ind]
+    if θ == model[:modelα_ind]
         trspec[i, 4] = 0
     else
         trspec[i, 4] = 1
@@ -58,22 +73,6 @@ for θ in model.parameters
 
     i += 1
 end
-
-## h5 = h5open("$path/parameters.h5")
-## para_ref   = read(h5, "para")
-## bounds_ref = read(h5, "bounds")
-## pshape_ref = read(h5, "pshape")
-## pmean_ref  = read(h5, "pmean")
-## pstdd_ref  = read(h5, "pstdd")
-## trspec_ref = read(h5, "trspec")
-## close(h5)
-
-# @test test_matrix_eq(para_ref, para)
-# @test test_matrix_eq(bounds_ref, bounds)
-# @test test_matrix_eq(pshape_ref, pshape)
-# @test test_matrix_eq(pmean_ref, pmean)
-# @test test_matrix_eq(pstdd_ref, pstdd)
-# @test test_matrix_eq(trspec_ref, trspec)
 
 ### Model indices
 
@@ -110,14 +109,14 @@ obs = model.observables
 ### Equilibrium conditions
 Γ0, Γ1, C, Ψ, Π = eqcond(model)
 
-# # Matrices are of expected dimensions
+# Matrices are of expected dimensions
 @test size(Γ0) == (66, 66)
 @test size(Γ1) == (66, 66)
 @test size(C) == (66, 1)
 @test size(Ψ) == (66, 22)
 @test size(Π) == (66, 13)
 
-# # Check output matrices against Matlab output (ϵ = 1e-4)
+# Check output matrices against reference output (ϵ = 1e-4)
 h5 = h5open("$path/eqcond.h5")
 Γ0_ref = read(h5, "G0")
 Γ1_ref = read(h5, "G1")
@@ -131,7 +130,6 @@ close(h5)
 @test test_matrix_eq(C_ref, C)
 @test test_matrix_eq(Ψ_ref, Ψ)
 @test test_matrix_eq(Π_ref, Π)
-
 
 
 # ### Measurement equation

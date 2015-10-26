@@ -37,12 +37,6 @@ This routine implements the full estimation stage of the FRBNY DSGE model.
     # Set up levels of verbose-ness
     verboseness = verbose_dict() 
 
-    # Set global random seed
-    if testing
-        #srand(987)
-        #srand(m.rng, 111)
-    end
-    
     # Load data
     h5 = h5open(joinpath(inpath(m),"YY.h5"), "r") 
     YY = read(h5["YY"])
@@ -64,11 +58,13 @@ This routine implements the full estimation stage of the FRBNY DSGE model.
     mode = []
 
     if m.reoptimize
-        h5 = h5open(joinpath(inpath(m), "mode_in.h5"),"r")
+        #h5 = h5open(joinpath(inpath(m), "mode_in.h5"),"r")
+        h5 = h5open(joinpath(inpath(m), "mode_in_new.h5"),"r")
         mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
         close(h5)
     else
-        h5 = h5open(joinpath(inpath(m), "mode_in_optimized.h5"),"r") 
+        #h5 = h5open(joinpath(inpath(m), "mode_in_optimized.h5"),"r")
+        h5 = h5open(joinpath(inpath(m), "mode_in_optimized_new.h5"),"r") 
         mode = read(h5["mode"])
         close(h5)
     end
@@ -480,9 +476,10 @@ doc"""
 compute_parameter_covariance{T<:AbstractDSGEModel}(m::T)
 
 ### Parameters
+* `m::AbstractDSGEModel`: the model object
 
 ### Description:
-Calculates the parameter covariance matrix from saved parameter draws, and writes it to the sim_save.h5 file.
+Calculates the parameter covariance matrix from saved parameter draws, and writes it to the parameter_covariance.h5 file in the `outpath(m)` directory.
 """
 =#
 function compute_parameter_covariance{T<:AbstractDSGEModel}(m::T)
