@@ -58,13 +58,11 @@ This routine implements the full estimation stage of the FRBNY DSGE model.
     mode = []
 
     if m.reoptimize
-        #h5 = h5open(joinpath(inpath(m), "mode_in.h5"),"r")
-        h5 = h5open(joinpath(inpath(m), "mode_in_new.h5"),"r")
+        h5 = h5open(joinpath(inpath(m), "mode_in.h5"),"r")
         mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
         close(h5)
     else
-        #h5 = h5open(joinpath(inpath(m), "mode_in_optimized.h5"),"r")
-        h5 = h5open(joinpath(inpath(m), "mode_in_optimized_new.h5"),"r") 
+        h5 = h5open(joinpath(inpath(m), "mode_in_optimized.h5"),"r")
         mode = read(h5["mode"])
         close(h5)
     end
