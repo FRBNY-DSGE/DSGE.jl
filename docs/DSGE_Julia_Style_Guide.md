@@ -2,98 +2,98 @@
 
 ## Intro 
 
-
-The following objects define a model: 
-
-- __Parameters__: Have values, bounds, fixed-or-not status, priors
-- __States__: Collections of type `State` that map a name to an index.
-  (e.g. "π_t" -> 1)
-- __Equilibrium Conditions__: A function that takes parameters and model
-  indices, then returns Γ0, Γ1, Ψ, and Π
-
-These are enough to define the model structure. _Everything else_ is
-essentially a function of these basics, and we can get to a forecast by
-this chain:
-
-- (Parameters + Model Indices + Eqcond Function) -> (TTT + RRR)
-- (TTT + RRR + Data) -> Estimation
-- (Estimation + TTT + RRR + Data) -> Forecast
-
-
-## The Model Object
-
-A big improvement of the Julia code over Matlab is that we can follow the object-oriented 
-programming paradigm. Rather than having a lot of different variables that we associate with 
-different model specifications floating around, we can define different model types and easily
-create a new instance of any type (with, say, new data or different flags). 
-Each variable is expressly tied to a particular instance of that type of model, so we can pass
-the whole model object to any function we want and that function will have access to the particular 
-state associated with that instance of the model.
-
-A model is defined with the following fields, which are guaranteed by the AbstractDSGEModel
-
+This document lists Julia coding recommendations consistent with best
+practices in the software development community. The recommendations are
+based on guidelines for other languages collected from a number of
+sources and on personal experience. These guidelines are written with
+the FRBNY DSGE code in mind. All pull requests submitted should follow these general style guidelines.
 
 
 ## Naming conventions
 
-Emphasize readability! This is our opportunity to make the code as self-documenting and clear
-as possible. Always air on the side of more descriptive, rather than less.
+Emphasize readability! Our goal is for the code to mimic
+the mathematical notation used in FRBNY DSGE papers as closely as possible.
 
 ### Variables
 
-1. The names of variables should document their meaning or use. 
+1. The names of variables should document their meaning or
+use. Variables with a large scope should have especially meaningful
+names. Variables with a small scope can have short names.
 
 2. Exhibit consistency with the existing codebase.
 
-3. Variable names should be in lower case, using underscores to separate parts of a compound variable name. 
-  - For example, `steady_state` and `parameters_fixed` are two fields in the `Model990()` object that follow 
-this Julia convention. 
-  - Acronyms, even if normally uppercase, should be lower case.
+3. Variables with economic or statistical significance should take
+unicode syntax or imitate LaTeX syntax.  For example, ρ often
+signifies the coefficient on an AR(1) process, and σ usually stands
+for standard deviation. Parameters in the text should keep the same
+symbol in the code (e.g. α in the code is the same α as in [this
+paper](http://www.newyorkfed.org/research/staff_reports/sr647.html),
+and takes on it usual significance as the capital share in a
+Cobb-Douglas output function.
 
-4. Variables with economic or mathematical significance should imitate LaTeX syntax. Underscores can and 
-should be used when the variable refers to a mathematical object that has a subscript (as in LaTeX).
-  - For example, $r_m$ should be represented by the variable `r_m`. If the mathematical object 
-has multiple subscripts, for example x_{i,j}, simply concatenate the subscripts into `x_ij`. If the object has
-superscripts as well, for example $y^f_t$, separate the superscripts with an underscore and place them first: 
+
+4. *Underscores:* 
+
+  -Variable names should be in lower case, using underscores to
+separate parts of a compound variable name. For example,
+`steady_state` and `equilibrium_conditions` are two fields in the
+`Model990()` object that follow this convention. Also notice that,
+though the words could be shortened, they are spelled out for maximum
+clarity.
+
+  -Consistent with (3), underscores can and should be used when the
+variable refers to a mathematical object that has a subscript. (In
+this case, we are imitating LaTeX syntax.) For example, $r_m$ in LaTeX
+should be represented by the variable `r_m`.
+
+  -If the mathematical object has multiple subscripts, for example
+$x_{i,j}$, simply concatenate the subscripts into `x_ij`.
+
+  -If the object has superscripts as well as subscripts, for example $y^f_t$,
+separate the superscripts with an underscore and place them first:
 `y_f_t`.
-  - For compatibility with existing code, variables with numeric subscripts should exclude the underscore:
-`G0`, `psi1`
 
-5. Variables with statistical significance (punny!) should be unicode characters. 
-  - For example, μ usually signifies a mean, and σ usually stands for standard deviation. 
-  - However, model parameters are currently defined as symbols that reflect LaTeX syntax. For example, the 
-symbol for the parameter ψ in the parameters vector is :psi.
+  -For compatibility with existing code, variables with numeric
+subscripts should exclude the underscore (e.g. `G0`, `ψ1`).
 
-6. Variables with a large scope should have meaningful names. Variables with a small scope can have short names.
-  - In practice most variables should have meaningful names. The use of short names should be reserved for 
-conditions where they clarify the structure of the statements. Scratch variables used for temporary storage or 
-indices can be kept short. A programmer reading such variables should be able to assume that its value is not 
-used outside a few lines of code. Common scratch variables for integers are `i`, `j`, `k`, `m`, `n` and for
-doubles `x`, `y` and `z`
 
-7. The prefix *num_* should be used for variables representing the number of objects.
-  - Enhances the readability of the code
-  - Use the suffix `s` as is natural in spoken language (e.g. `num_parameters`)
+5. *Suffixes:*
 
-8. A convention on pluralization should be followed consistently.
-  - A suggested practice is to make all variable names either singular or plural. 
-  - *Having two variables with names differing only by a final letter *s* should be avoided.*  An acceptable 
-  alternative for the plural is to use the suffix `Array` or `List` (eg `point`, `point_list`)
+  -Time: Consistent with the previous bullet points, the suffix `_t` as in
+ `x_t` signifies the value of `x` at time `t`. The suffix `_t1`
+ signifies the value of `x` at time `t-1`.
 
-9. Consistent with programming convention, iterator variables should be named or prefixed with `i`, `j`, `k`, etc.
-  ```julia
-   for i = 1:num_parameters(m)
-      ;
-   end
-  ```
+  -Shocks: The suffix `_sh` refers to a model shock.
 
-10. Named constants can be all uppercase using underscore to separate words.
+6. *Prefixes:* 
+
+  -The prefix `eq_` refers to an equilibrium condition.
+ 
+  -The prefix `E` refers to an expecational shock.
+ 
+  -The prefix `num_` should be used for variables representing the
+number of objects (e.g. `num_parameters` or `num_anticipated_shocks`)
+use the suffix `s` as is natural in spoken language.
+
+  - Observables with the prefix `g` refer to growth rates.
+
+7. Negative Boolean variable names should be avoided. A problem arises
+when such a name is used in conjunction with the logical negation
+operator as this results in a double negative. It is not immediately
+apparent what `!isNotFound` means.  Use `isFound`. Avoid `isNotFound`.
+
+8. Matrices that have mathematical significance (e.g. inputs to
+Gensys, or the matrices of the transition and measurement equations)
+should be upper case, as they are in mathematical notation (e.g. `TTT` or `YY`).
+
+9. Named constants can be all uppercase using underscore to separate words.
   – e.g. `MAX_ITERATIONS`
+## Parameters
 
-## The Param Type
 
-- The model object contains an array of 
-- fundamental individual objects of type `Param`, which have fields
+TBU
+- A parameter vector of type `Parameters` collects more fundamental
+  individual objects of type `Parameter`, which have fields
 
   - `Value`:   Float64
   - `IsFixed`: Logical
@@ -120,27 +120,16 @@ Parameter file for a particulare model looks like this, for all parameters:
 θ = Parameters(α, β, ...)
 ```
 
-## Defining Indices (deprecated)
+## Defining Indices 
 
-We have five functions for defining model indices, all collected into a
-"ModelInds990" file.
+We define several dictionaries that map variable names to indices in matrices representing the model's equilibrium conditions and observables.
 
-All functions take a name like "π_t" or "rm" and give back an index.
-Functions are:
-
-- `endo`: For endogenous states
-- `exo`:  Exogenous shocks
+- `endogenous_states`: For endogenous states
+- `exogenous_shocks`:  Exogenous shocks
 - `exp`:  Expectation shocks
-- `eq`:   Equation indices
-- `obs`:  Indices of named observables to use in measurement equation
+- `equilibrium_conditions`:   Equation indices
+- `observables`:  Indices of named observables to use in measurement equation
 
-They all look like this:
-```julia
-  function exo(name)
-    names = ["π_sh", "rm_sh", "jerry", "george", "elaine", "kramer"]
-    return find(map(nm -> (nm == name), names))
-  end
-```
 - Since we don't care about the number, we only have to define the names.
 - In this setup, adding states is easier, because we don't have to
   increment the index numbers of _everything_ when we add states.
@@ -149,17 +138,18 @@ They all look like this:
 
 ## Equilibrium Conditions
 
-A model-specific function of parameters and indices. Should look very
-similar to our current code. Example
+A model-specific function of parameters and indices. 
 ```julia
-function eqcond990(θ::Parameters, endo::EndoStates, exo::ExoShocks, exp::ExpShocks, eq::Equations)
+function eqcond990(model::AbstractDSGEModel)
+  eq = model.equilibrium_conditions
+  endo = model.endogenous_states
 
-  Γ0[eq["mp"], endo["R_t"]) = 1;
-  Γ1[eq["mp"], endo["R_t"]) = θ.ρ;
-  Γ0[eq["mp"], endo["π_t"]) = -θ.Ψ_1;
+  Γ0[eq[:mp], endo[:R_t]) = 1;
+  Γ1[eq[:mp], endo[:R_t]) = θ.ρ;
+  Γ0[eq[:mp], endo[:π_t]) = -θ.Ψ_1;
   etc.
 
-  return Γ0, Γ1, Ψ, Π
+  return Γ0, Γ1, C, Ψ, Π
 
 end
 ```

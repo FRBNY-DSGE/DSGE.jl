@@ -1,30 +1,4 @@
-abstract AbstractDSGEModel
-using Debug
-
-# TODO consider stacking all parameters in a single vector. Alternately, all fixed
-# parameters can be added to the normal parameters vector at a (potentially negligible)
-# performance hit.
-Base.getindex(m::AbstractDSGEModel, i::Integer) = begin
-    if i <= num_parameters(m)
-        return m.parameters[i]
-    elseif i <= num_parameters(m) + num_parameters_fixed(m)
-        return m.parameters_fixed[i - num_parameters(m)]
-    elseif i <= num_parameters(m) + num_parameters_fixed(m) + num_parameters_steady_state(m)
-        return m.steady_state[i - num_parameters(m) - num_parameters_fixed(m)]
-    end
-end
-Base.getindex(m::AbstractDSGEModel, k::Symbol) = Base.getindex(m,m.keys[k])
-
-Base.setindex!(m::AbstractDSGEModel, value, i::Integer) = begin
-    if i <= num_parameters(m)
-        setindex!(m.parameters, value, i)
-    elseif i <= num_parameters(m) + num_parameters_fixed(m)
-        setindex!(m.parameters_fixed, value, i-num_parameters(m))
-    elseif i <= num_parameters(m) + num_parameters_fixed(m) + num_parameters_steady_state(m)
-        setindex!(m.steady_state, value, i - num_parameters(m) - num_parameters_fixed(m))
-    end
-end
-Base.setindex!(m::AbstractDSGEModel, value, k::Symbol) = Base.setindex!(m,value,m.keys[k])
+abstract AbstractDSGEModel{T<:AbstractFloat}
 
 function Base.show{T<:AbstractDSGEModel}(io::IO, m::T)
     @printf io "Dynamic Stochastic General Equilibrium Model\n"
@@ -32,8 +6,99 @@ function Base.show{T<:AbstractDSGEModel}(io::IO, m::T)
     @printf io "no. states:             %i\n" num_states(m)
     @printf io "no. anticipated shocks: %i\n" num_anticipated_shocks(m)
     @printf io "no. anticipated lags:   %i\n" num_anticipated_lags(m)
-    @printf io "description:\n %s\n" description(m)
+    @printf io "description:\n %s\n"          description(m)
 end
+
+@inline function Base.getindex(m::AbstractDSGEModel, i::Integer)
+    if i <= (j = length(m.parameters))
+        return m.parameters[i]
+    else
+        return m.steady_state[i-j]
+    end
+end
+
+# need to define like this so we can disable bounds checking
+@inline function Base.getindex(m::AbstractDSGEModel, k::Symbol)
+    i = m.keys[k]
+    @inbounds if i <= (j = length(m.parameters))
+        return m.parameters[i]
+    else
+        return m.steady_state[i-j]
+    end
+end
+
+@inline function Base.setindex!(m::AbstractDSGEModel, value, i::Integer)
+    if i <= (j = length(m.parameters))
+        param = m.parameters[i]
+        param.value = value
+        if isa(ScaledParameter)
+            param.scaledvalue = param.scaling(value)
+        end
+        return param
+    else
+        ssparam = m.steady_state[i-j]
+        ssparam.value = value
+        return ssparam
+    end
+end
+Base.setindex!(m::AbstractDSGEModel, value, k::Symbol) = Base.setindex!(m, value, m.keys[k])
+
+#=
+"""
+(<=){T}(m::AbstractDSGEModel{T}, p::AbstractParameter{T})
+
+Syntax for adding a parameter to a model: m <= parameter.
+NOTE: If `p` is added to `m` and length(m.steady_state) > 0, `keys(m)` will not generate the index of `p` in `m.parameters`.
+"""
+=#
+function (<=){T}(m::AbstractDSGEModel{T}, p::AbstractParameter{T})
+    @assert !in(p.key, keys(m.keys)) "Key $(p.key) is already present in DSGE model"
+
+    new_param_index = length(m.keys) + 1
+
+    # grow parameters and add the parameter
+    push!(m.parameters, p)
+
+    # add parameter location to dict
+    setindex!(m.keys, new_param_index, p.key)
+end
+
+#=
+"""
+(<=){T}(m::AbstractDSGEModel{T}, ssp::SteadyStateParameter)
+
+Add a new steady-state value to the model by appending `ssp` to the `m.steady_state` and adding `ssp.key` to `m.keys`.
+"""
+=#
+function (<=){T}(m::AbstractDSGEModel{T}, ssp::SteadyStateParameter)
+    @assert !in(ssp.key, keys(m.keys)) "Key $(ssp) is already present in DSGE model"
+
+    new_param_index = length(m.keys) + 1
+
+    # append ssp to steady_state vector
+    push!(m.steady_state, ssp)
+
+    # add parameter location to dict
+    setindex!(m.keys, new_param_index, ssp.key)
+end
+
+## Defunct bc steady state values have their own type now
+## #=
+## """
+## (<=)(m::AbstractDSGEModel, vec::Vector{Symbol})
+
+## Add all elements of `vec` to the `m.steady_state`. Update `m.keys` appropriately.
+## """
+## =#
+
+## function (<=)(m::AbstractDSGEModel, vec::Vector{Symbol})
+##     for k in vec
+##         m <= k
+##     end
+## end
+
+Distributions.logpdf(m::AbstractDSGEModel) = logpdf(m.parameters)
+Distributions.pdf(m::AbstractDSGEModel) = exp(logpdf(m))
 
 # Number of anticipated policy shocks
 num_anticipated_shocks(m::AbstractDSGEModel) = m.num_anticipated_shocks

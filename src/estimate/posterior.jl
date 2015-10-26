@@ -8,8 +8,8 @@ Calculates (log of) the joint density of the model parameters.
 function prior(model::AbstractDSGEModel)
     x = zero(Float64)
     for θ in model.parameters
-        if isa(θ,Param)
-            x += logpdf(θ.priordist, θ.value)
+        if isa(θ,Parameter)
+            x += logpdf(θ)
         end
     end
     return x
@@ -94,7 +94,7 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
     if mh
         catchGensysErrors = true  # for consistency
         for θ in model.parameters
-            (left, right) = θ.bounds
+            (left, right) = θ.valuebounds
             if !θ.fixed && !(left <= θ.value <= right)
                 return MH_NULL_OUTPUT
             end
