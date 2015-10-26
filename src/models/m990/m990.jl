@@ -11,7 +11,7 @@ remaining steps of the model (solve, estimate, and forecast).
 ### Fields
 
 #### Parameters and Steady-States
-* `parameters::Vector{Param}`: Vector of all of the unfixed model parameters.
+* `parameters::Vector{AbstractParameter}`: Vector of all model parameters.
 
 * `steady_state::Vector`: Model steady-state values. These are
   computed as functions of the model parameters whenever the model
@@ -29,15 +29,15 @@ measurement equation and equilibrium conditions.
 
 * `endogenous_states::Dict{Symbol,Int}`: Maps each state to a column in the measurement and equilibrium condition matrices.
 
-* `exogenous_shocks::Dict{Symbol,Int}`: Maps each shock to a column. 
+* `exogenous_shocks::Dict{Symbol,Int}`: Maps each shock to a column in the measurement and equilibrium condition matrices. 
 
-* `expected_shocks::Dict{Symbol,Int}`: Maps each expected shock to a column.
+* `expected_shocks::Dict{Symbol,Int}`: Maps each expected shock to a column in the measurement and equilibrium condition matrices.
 
-* `equilibrium_conditions::Dict{Symbol,Int}`: Maps each equlibrium condition to a row in the matrix returned by `eqcond()`.
+* `equilibrium_conditions::Dict{Symbol,Int}`: Maps each equlibrium condition to a row in the equilibrium condition system returned by `eqcond()`.
 
 * `endogenous_states_postgensys::Dict{Symbol,Int}`: Maps lagged states to their columns in the measurement and equilibrium condition equations. These are added after Gensys solves the model.
 
-* `observables::Dict{Symbol,Int}`: Maps each observable to a row in the matrix returned by `measurement()`
+* `observables::Dict{Symbol,Int}`: Maps each observable to a row in the matrices returned by `measurement()`
 
 #### Model Specifications
 
