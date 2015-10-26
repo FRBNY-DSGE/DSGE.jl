@@ -268,7 +268,7 @@ function Model990()
     ## TODO
     m <= parameter(:Upsilon,  1.000,  (0., 10.),     (1e-5, 0.),      Exponential(),    GammaAlt(1., 0.5),          fixed=true,
                    description="Υ: This is the something something.",
-                   texLabel="\\mathcal{\\Upsilon}") # is this supposed to be Υ?
+                   texLabel="\\mathcal{\\Upsilon}") 
 
     ## TODO - ask Marc and Marco
     m <= parameter(:Φ,   1.1066, (1., 10.),     (1.00, 10.00),   Exponential(),    Normal(1.25, 0.12),         fixed=false,
