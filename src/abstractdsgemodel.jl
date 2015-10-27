@@ -122,7 +122,6 @@ num_shocks_expectational(m::AbstractDSGEModel)   = length(m.expected_shocks)
 num_equilibrium_conditions(m::AbstractDSGEModel) = length(m.equilibrium_conditions)
 num_observables(m::AbstractDSGEModel)            = length(m.observables)
 num_parameters(m::AbstractDSGEModel)             = length(m.parameters)
-num_parameters_fixed(m::AbstractDSGEModel)       = length(m.parameters_fixed)
 num_parameters_steady_state(m::AbstractDSGEModel)= length(m.steady_state)
 num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.parameters])
 
@@ -255,7 +254,7 @@ Distributions.rand{T<:AbstractFloat, U<:AbstractDSGEModel}(d::DegenerateMvNormal
 Generate a draw from d with variance optionally scaled by cc^2.
 """
 =#
-@debug function rand{T<:AbstractFloat, U<:AbstractDSGEModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
+function rand{T<:AbstractFloat, U<:AbstractDSGEModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
 

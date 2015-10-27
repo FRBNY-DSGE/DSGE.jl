@@ -590,7 +590,7 @@ Description: (Re)calculates the model's steady-state values. `steadystate!(m)` m
 """
 =#
 # (Re)calculates steady-state values
-@debug function steadystate!(m::Model990)
+function steadystate!(m::Model990)
     SIGWSTAR_ZERO = 0.5
     
     m[:zstar]    = log(1+m[:γ]) + m[:α]/(1-m[:α])*log(m[:Upsilon])
