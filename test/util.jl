@@ -40,29 +40,29 @@ end
 
 # TODO: decide what a sensible default ϵ value is for our situation
 # Compares matrices, reports absolute differences, returns true if all entries close enough
-@debug function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{R}, actual::Array{S}; ϵ::T = 1e-4, ϵ_pct::T = 12.0, noisy::Bool = false)
+@debug function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{R}, actual::Array{S}; ϵ::T = 1e-4, ϵ_pct::T = 12.0, verbose::Bool = false)
 
     n_entries = length(expected)
     same_sign = map(checksigns, expected, actual)
     diff_sign_zeros = count(x-> x < 0, same_sign) # # that are different because 1 sign is 0
     n_diff_sign = count(x -> x != 1, same_sign)
 
-    if noisy
+    if verbose
         println("$n_diff_sign of $n_entries entries have opposite signs")
         println("$diff_sign_zeros of $n_entries entries have different signs, but one of the entries is 0")
     end
 
-    abs_diff_eq = test_matrix_eq(complex(expected), complex(actual); ϵ=ϵ, ϵ_pct=ϵ_pct, noisy=noisy)
+    abs_diff_eq = test_matrix_eq(complex(expected), complex(actual); ϵ=ϵ, ϵ_pct=ϵ_pct, verbose=verbose)
     
     return abs_diff_eq 
 end
 
 # Complex-valued input matrices
-function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{Complex{R}}, actual::Array{Complex{S}}; ϵ::T = 1e-4, ϵ_pct::T=5.0, noisy::Bool = false)
+function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::Array{Complex{R}}, actual::Array{Complex{S}}; ϵ::T = 1e-4, ϵ_pct::T=5.0, verbose::Bool = false)
 
     # Matrices of different sizes return false
     if size(expected) != size(actual)
-        if noisy
+        if verbose
             println("Size expected $(size(expected)), actual $(size(actual))\n")
         end
         return false
@@ -91,7 +91,7 @@ function test_matrix_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(ex
     very_different = intersect(diff_inds, diff_inds_pct)
     
     # Print output
-    if noisy
+    if verbose
         println("$n_neq of $n_entries entries with abs diff > 0")
         println("$n_not_approx_eq of $n_entries entries with abs diff > $ϵ")
         # println("$n_diff_sign of $n_entries entries have opposite signs")
@@ -144,25 +144,25 @@ end
 
 # Tests whether the absolute values of 2 matrices are equal
 function test_matrix_abs_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat}(expected::
-             Array{R}, actual::Array{S}; ϵ::T = 1e-4, noisy::Bool = false)
+             Array{R}, actual::Array{S}; ϵ::T = 1e-4, verbose::Bool = false)
 
-    return test_matrix_eq(abs(expected), abs(actual), ϵ=ϵ, noisy=noisy)
+    return test_matrix_eq(abs(expected), abs(actual), ϵ=ϵ, verbose=verbose)
 end
 
-#function test_eigs_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat, U<:AbstractFloat, V<:AbstractFloat}(eigvals_expected::Array{R}, eigvals_actual::Array{S}, eigvecs_expected::Array{U},  eigvecs_actual::Array{V}; ϵ::T = 1e-12, noisy::Bool = true)
+#function test_eigs_eq{R<:AbstractFloat, S<:AbstractFloat, T<:AbstractFloat, U<:AbstractFloat, V<:AbstractFloat}(eigvals_expected::Array{R}, eigvals_actual::Array{S}, eigvecs_expected::Array{U},  eigvecs_actual::Array{V}; ϵ::T = 1e-12, verbose::Bool = true)
 
-function test_eigs_eq(eigvals_expected::Array, eigvals_actual::Array, eigvecs_expected::Array,  eigvecs_actual::Array; ϵ = 1e-12, noisy::Bool = true)
+function test_eigs_eq(eigvals_expected::Array, eigvals_actual::Array, eigvecs_expected::Array,  eigvecs_actual::Array; ϵ = 1e-12, verbose::Bool = true)
    
     # check to see if sizes correspond
     if size(eigvecs_expected) != size(eigvecs_actual)
-        if noisy
+        if verbose
             println("Eigenvectors matrix size expected $(size(eigvecs_expected)), actual $(size(eigvecs_actual))\n")
         end
         return false
     end
 
     if size(eigvals_expected) != size(eigvals_actual)
-        if noisy
+        if verbose
             println("Eigenvalues vector size expected $(size(eigvals_expected)), actual $(size(eigvals_actual))\n")
         end
         return false
@@ -195,8 +195,8 @@ function test_eigs_eq(eigvals_expected::Array, eigvals_actual::Array, eigvecs_ex
     eigvecs_actual_sorted = actual_sorted[2:end,:]
     
     # See if expected eigenvalues/vectors == actual eigenvalues/vectors
-    vals_eq = test_matrix_eq(eigvals_expected_sorted, eigvals_actual_sorted,ϵ = ϵ, noisy=true);
-    vecs_eq = test_matrix_eq(eigvecs_expected_sorted, eigvecs_actual_sorted, ϵ = ϵ, noisy=true)
+    vals_eq = test_matrix_eq(eigvals_expected_sorted, eigvals_actual_sorted,ϵ = ϵ, verbose=true);
+    vecs_eq = test_matrix_eq(eigvecs_expected_sorted, eigvecs_actual_sorted, ϵ = ϵ, verbose=true)
 
     # return vals_eq && vecs_eq
     return eigvals_expected_sorted, eigvals_actual_sorted, eigvecs_expected_sorted, eigvecs_actual_sorted
@@ -428,7 +428,7 @@ function compare_mat_hdf5(matfile,h5file)
                 mvar  = MATLAB.get_variable(mf, name)
                 h5var = HDF5.read(h5f, name)
 
-                test_matrix_eq(mvar, h5var,noisy=true)
+                test_matrix_eq(mvar, h5var,verbose=true)
                 
             else
                 println("Missing: h5 file doesn't contain variable $name")
@@ -455,7 +455,7 @@ function compare_hdf5s(file1,file2)
             var1 = read(fid1,string(name))
             var2 = read(fid2,string(name))
             println(name)
-            test_matrix_eq(var1, var2, ϵ=1e-9, noisy=true)
+            test_matrix_eq(var1, var2, ϵ=1e-9, verbose=true)
         else
             println("Missing: $file2 doesn't contain variable $name")
         end
@@ -466,7 +466,7 @@ function compare_hdf5s(file1,file2)
     close(fid2)
 end
 
-function compare_matvar_hdf5var(matfile, mname, h5file, h5name; ϵ=1e-4, noisy=true)
+function compare_matvar_hdf5var(matfile, mname, h5file, h5name; ϵ=1e-4, verbose=true)
     #Get matlab variable
     mf = MatFile(matfile);
     mvar = MATLAB.get_variable(mf, mname);
@@ -479,14 +479,14 @@ function compare_matvar_hdf5var(matfile, mname, h5file, h5name; ϵ=1e-4, noisy=t
     
 
     if isa(h5var,Vector) || isa(h5var,Matrix)
-        return mvar, h5var, test_matrix_eq(mvar, h5var, ϵ=ϵ, noisy=noisy);
+        return mvar, h5var, test_matrix_eq(mvar, h5var, ϵ=ϵ, verbose=verbose);
     elseif isa(h5var,Float64) || isa(h5var,Float32)
         return mvar, h5var, mvar == h5var;
     end
     
 end
 
-function get_diff_symbols{S<:AbstractFloat, T<:AbstractDSGEModel}(m::T, expected::Matrix{S}, actual::Matrix{S}; ϵ=1e-4, noisy=true)
+function get_diff_symbols{S<:AbstractFloat, T<:AbstractDSGEModel}(m::T, expected::Matrix{S}, actual::Matrix{S}; ϵ=1e-4, verbose=true)
 
     diff_entries, opp_sign_entries = find_matrix_diffs(expected, actual; ϵ=ϵ)
 

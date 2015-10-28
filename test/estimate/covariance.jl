@@ -22,5 +22,5 @@ for i = 19:82
 end
 cov = U*S_inv*U'
 
-@test test_matrix_eq(S_inv_exp, S_inv; noisy=true)
-@test test_matrix_eq(cov_exp, cov; noisy=true)
+@test test_matrix_eq(S_inv_exp, S_inv; verbose=true)
+@test test_matrix_eq(cov_exp, cov; verbose=true)
