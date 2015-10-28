@@ -11,7 +11,7 @@ path = dirname(@__FILE__)
 # See kalcvf2NaN/test_kalcvf2NaN.m
 
 
-h5 = h5open("$path/kalcvf2NaN/kalcvf2NaN_args.h5")
+h5 = h5open("$path/../reference/kalcvf2NaN_args.h5")
 for arg in ["data", "lead", "a", "F", "b", "H", "var", "z0", "vz0"]
     eval(parse("$arg = read(h5, \"$arg\")"))
 end
@@ -29,7 +29,7 @@ L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt =
 L, zend, Pend = kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0)
 
 
-h5 = h5open("$path/kalcvf2NaN/kalcvf2NaN_out9.h5")
+h5 = h5open("$path/../reference/kalcvf2NaN_out9.h5")
 for out in ["L", "zend", "Pend", "pred", "vpred", "yprederror", "ystdprederror", "rmse",
             "rmsd", "filt", "vfilt" ]
     eval(parse("$(out)_expected = read(h5, \"$out\")"))
@@ -55,7 +55,7 @@ L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt =
 L, zend, Pend = kalcvf2NaN(data, lead, a, F, b, H, var)
 
 
-h5 = h5open("$path/kalcvf2NaN/kalcvf2NaN_out7.h5")
+h5 = h5open("$path/../reference/kalcvf2NaN_out7.h5")
 for out in ["L", "zend", "Pend", "pred", "vpred", "yprederror", "ystdprederror", "rmse",
             "rmsd", "filt", "vfilt" ]
     eval(parse("$(out)_expected = read(h5, \"$out\")"))

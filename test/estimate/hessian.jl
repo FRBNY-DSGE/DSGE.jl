@@ -4,7 +4,7 @@ using DSGE, HDF5
 include("../util.jl")
 path = dirname(@__FILE__)
 
-h5 = h5open("$path/hessian.h5")
+h5 = h5open("$path/../reference/hessian.h5")
 params = read(h5, "params")
 YY = read(h5, "YY")
 hessian_expected = read(h5, "hessian")
