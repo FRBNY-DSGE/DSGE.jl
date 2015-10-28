@@ -12,7 +12,7 @@ model = Model990()
 stake = 1 + 1e-6
 G1, C, impact, fmat, fwt, ywt, gev, eu, loose = gensys(Γ0, Γ1, C, Ψ, Π, stake)
 
-h5 = h5open("$path/gensys.h5")
+h5 = h5open("$path/../reference/gensys.h5")
 G1_exp = read(h5, "G1_gensys")
 C_exp = reshape(read(h5, "C_gensys"), 66, 1)
 impact_exp = read(h5, "impact")

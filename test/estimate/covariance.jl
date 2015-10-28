@@ -6,7 +6,7 @@ include("../util.jl")
 path = dirname(@__FILE__)
 
 
-h5 = h5open("$path/covariance.h5")
+h5 = h5open("$path/../reference/covariance.h5")
 hessian = read(h5, "hessian")
 U_exp = read(h5, "u")
 S_exp = read(h5, "s")

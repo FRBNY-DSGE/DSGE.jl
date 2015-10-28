@@ -2,7 +2,7 @@ using Base.Test, HDF5
 include("../util.jl")
 
 # Read in an input matrix and reference eigenvalues/eigenvectors
-h5 = h5open(joinpath(dirname(@__FILE__), "eig.h5"),"r")
+h5 = h5open(joinpath(dirname(@__FILE__), "..", "reference", "eig.h5"),"r")
 matrix = read(h5,"matrix_in")
 ref_U = read(h5,"U")
 ref_S_diag = read(h5, "S_diag")

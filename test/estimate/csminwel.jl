@@ -1,6 +1,3 @@
-import DSGE
-# import Hobo
-
 # Example usage:
 function rosenbrock(x::Vector)
     (1-x[1])^2.0 + 105*(x[2]-x[1]^2.0)^4.0
@@ -18,11 +15,7 @@ end
 # A really bad guess
 x_init = [10.0, -9.0]
 
-# println("Testing using Hobo.csminwel...")
-# res_real_grad  = Hobo.csminwel(rosenbrock, rosenbrock_grad, [10.0, -9.0])
-# res_numeric_grad  = Hobo.csminwel(rosenbrock, [10.0, -9.0])
+m = Model990()
 
-m = DSGE.Model990()
-
-res_real_grad  = DSGE.csminwel(rosenbrock, rosenbrock_grad, [10.0, -9.0])
-res_numeric_grad  = DSGE.csminwel(rosenbrock, [10.0, -9.0], model=m)
+res_real_grad  = csminwel(rosenbrock, rosenbrock_grad, [10.0, -9.0])
+res_numeric_grad  = csminwel(rosenbrock, [10.0, -9.0], model=m)

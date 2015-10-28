@@ -5,7 +5,7 @@ using DSGE
 include("../util.jl")
 path = dirname(@__FILE__)
 
-h5 = h5open("$path/solve.h5")
+h5 = h5open("$path/../reference/solve.h5")
 TTT_expected = read(h5, "TTT")
 CCC_expected = reshape(read(h5, "CCC"), 78, 1)
 RRR_expected = read(h5, "RRR")
