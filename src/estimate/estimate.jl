@@ -6,7 +6,7 @@ include("../../test/util.jl")
 
 #=
 doc """
-estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
+estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_covariance=[])
 
 ### Parameters:
 - `m`: The model object
@@ -20,15 +20,13 @@ estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false)
 
    - `:high`: Status updates provided at each iteration in Metropolis-Hastings.
 
-- `testing`: Run `estimate()` in testing mode. In this case, Metropolis-Hastings runs for `num_mh_simulations_test`*`num_mh_blocks_test` simulations.
-
 - `proposal_covariance`: Used to test the metropolis_hastings algorithm with a precomputed covariance matrix for the proposal distribution. When the Hessian is singular, eigenvectors corresponding to zero eigenvectors are not well defined, so eigenvalue decomposition can cause problems. Passing a precomputed matrix allows us to ensure that the rest of the routine has not broken.
 
 ### Description
 This routine implements the full estimation stage of the FRBNY DSGE model.
 """->
 =#
-@debug function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, testing::Bool=false, proposal_covariance=[])
+function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_covariance=[])
 
     ###################################################################################################
     ### Step 1: Initialize
@@ -185,7 +183,7 @@ This routine implements the full estimation stage of the FRBNY DSGE model.
     cc0 = 0.01
     cc = 0.09
 
-    metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose, testing=testing)
+    metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose);
 
     
     ###################################################################################################
@@ -194,12 +192,13 @@ This routine implements the full estimation stage of the FRBNY DSGE model.
 
     compute_parameter_covariance(m);
 
+    Void
 end
 
 
 #=
 doc"""
-metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel, YY::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low, testing::Bool = false)
+metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel, YY::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low, fix_seed::Bool=true)
 
 ### Parameters
 * `propdist` The proposal distribution that Metropolis-Hastings begins sampling from.
@@ -216,27 +215,25 @@ metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEMod
    - `:low`: Status updates provided at each block.
 
    - `:high`: Status updates provided at each draw.
-* `testing`: fix the seed of the random number generator
+
+* `fix_seed`: fix the seed of the random number generator
 
 ### Description
 Implements the Metropolis-Hastings MCMC algorithm for sampling from the posterior distribution of the parameters.
 """
 =#
 function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel,
-       YY::Matrix{T}, cc0::T, cc::T; verbose::Symbol=:low, testing::Bool=false)
+       YY::Matrix{T}, cc0::T, cc::T; verbose::Symbol=:low, fix_seed::Bool=true)
 
     # Set up levels of verbose-ness
     verboseness = verbose_dict() 
 
     # If testing, set the random seeds at fixed numbers
-    if testing
+    
+    if fix_seed || m.testing
         srand(m.rng, 654)
     end
-    
-    if verboseness[verbose] > verboseness[:none]
-        println("Testing = $testing")
-    end
-    
+        
     # Set number of draws, how many we will save, and how many we will burn
     # (initialized here for scoping; will re-initialize in the while loop)
 
@@ -264,17 +261,11 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
     initialized = false
 
     while !initialized
-        if testing
-            n_blocks = m.num_mh_blocks_test
-            n_sim = m.num_mh_simulations_test
-            n_burn = m.num_mh_burn_test
-            n_times = m.mh_thinning_step
-        else
-            n_blocks = m.num_mh_blocks
-            n_sim = m.num_mh_simulations
-            n_burn = m.num_mh_burn
-            n_times = m.mh_thinning_step
-        end
+
+        n_blocks = m.num_mh_blocks
+        n_sim = m.num_mh_simulations
+        n_burn = m.num_mh_burn
+        n_times = m.mh_thinning_step
 
         post_old, like_old, out = posterior!(m, para_old, YY; mh=true)
         
@@ -289,6 +280,12 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
             initialized = true
         end
 
+    end
+
+    # Report number of blocks that will be used 
+    if verboseness[verbose] > verboseness[:none]
+        println("Blocks: $n_blocks")
+        println("Draws per block: $n_sim")        
     end
 
     # For n_sim*n_times iterations within each block, generate a new parameter draw.
@@ -501,5 +498,5 @@ function compute_parameter_covariance{T<:AbstractDSGEModel}(m::T)
     cov_h5["param_covariance"] = param_covariance
     close(cov_h5)
 
-    return param_covariance
+    return param_covariance;
 end

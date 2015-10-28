@@ -14,7 +14,7 @@ module DSGE
         PointMass, BetaAlt, GammaAlt,
         
         # abstractdsgemodel.jl
-        AbstractDSGEModel, tomodel!, toreal!, num_states, num_shocks_exogenous, num_shocks_expectational, create_save_directories, savepath, inpath, outpath, tablepath, plotpath, logpath,
+        AbstractDSGEModel, tomodel!, toreal!, num_states, num_shocks_exogenous, num_shocks_expectational, toggle_test_mode, create_save_directories, savepath, inpath, outpath, tablepath, plotpath, logpath,
         
         #toreal, tomodel, update!,  Parameters,
         

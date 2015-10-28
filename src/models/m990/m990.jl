@@ -77,6 +77,10 @@ number of draws from the posterior:
 
 #### Other Fields
 * `rng::MersenneTwister`: Random number generator, implemented as a MersenneTwister()
+
+* `test::Bool`: Indicates whether the model is in test mode
+
+* `savepaths_test::Dict{Symbol,AbstractString}`: Where to write/read input from
  """
  =#
 type Model990{T} <: AbstractDSGEModel{T}
@@ -111,8 +115,11 @@ type Model990{T} <: AbstractDSGEModel{T}
     num_mh_simulations_test::Int                    # These fields are used to test Metropolis-Hastings with
     num_mh_blocks_test::Int                         # a small number of draws from the posterior
     num_mh_burn_test::Int                           #
-
+    mh_thinning_step_test::Int                      #
+    
     rng::MersenneTwister                            # Random number generator
+    testing::Bool                                   # Whether we are in testing mode or not
+    savepaths_test::Dict{Symbol,AbstractString}     # Where to write testing output
 end
 
 description(m::Model990) = "This is some model that we're trying to make work."
@@ -216,12 +223,25 @@ function Model990()
     num_mh_blocks                   = 22
     num_mh_burn                     = 2
     mh_thinning_step                = 5
-    num_mh_simulations_test         = 10
+    num_mh_simulations_test         = 100
     num_mh_blocks_test              = 1
     num_mh_burn_test                = 0
-
+    mh_thinning_step_test           = 1  
+    
     # Random number generator
     rng                             = MersenneTwister()
+
+    # Testing information
+    testing                          = false
+
+    tmp = mktempdir(savepath)
+    savepaths_test = Dict{Symbol,AbstractString}([(:savepath, tmp),
+                                                  (:inpath,   savepaths[:inpath] ),
+                                                  (:outpath,  tmp ),
+                                                  (:tablepath,tmp ),
+                                                  (:plotpath, tmp ),
+                                                  (:logpath,  tmp ) ])
+
     
     # initialise empty model
     m = Model990{Float64}(
@@ -246,8 +266,11 @@ function Model990()
             num_mh_simulations_test,   
             num_mh_blocks_test,  
             num_mh_burn_test,
-
-            rng)
+            mh_thinning_step_test,
+                          
+            rng,
+            testing,
+            savepaths_test)
 
 
     m <= parameter(:α,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     Normal(0.30, 0.05),         fixed=false,

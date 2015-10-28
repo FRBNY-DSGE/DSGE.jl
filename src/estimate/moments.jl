@@ -84,19 +84,19 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
         
         param  = getindex(m,i)
         
-        if isa(param.priordist, DSGE.Normal)
+        if isa(param.prior.value, DSGE.Normal)
 
-            prior_means[i] = param.priordist.μ
-            prior_stddev[i] = param.priordist.σ
+            prior_means[i] = param.prior.value.μ
+            prior_stddev[i] = param.prior.value.σ
             
-        elseif isa(param.priordist, Distributions.Beta)
-            μ,σ = betaMoments(param.priordist)
+        elseif isa(param.prior.value, Distributions.Beta)
+            μ,σ = betaMoments(param.prior.value)
             
             prior_means[i] = μ
             prior_stddev[i] = σ
 
-        elseif isa(param.priordist, Distributions.Gamma)
-            μ,σ = gammaMoments(param.priordist)
+        elseif isa(param.prior.value, Distributions.Gamma)
+            μ,σ = gammaMoments(param.prior.value)
             
             prior_means[i] = μ
             prior_stddev[i] = σ  # small \theta
@@ -181,7 +181,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
         end
             
         # TODO: Decide whether subspec should be a field in the model
-        if(ismatch(r"rho_chi",param.texLabel)) # ??? || (isequal(subspec,7) && texLabel == ":ρ_b"))
+        if(ismatch(r"rho_chi",param.texLabel)) # ??? || (isequal(subspec,7) && texLabel == ":rho_b"))
             continue
         end
 
@@ -389,7 +389,7 @@ Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `d
 function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
 
     if(percent < 0 || percent > 1)
-       throw(DomainError())
+        error("percent must be between 0 and 1")
     end
     
     num_draws, num_draw_dimensions = size(draws)

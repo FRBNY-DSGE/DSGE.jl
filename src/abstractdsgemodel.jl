@@ -82,21 +82,6 @@ function (<=){T}(m::AbstractDSGEModel{T}, ssp::SteadyStateParameter)
     setindex!(m.keys, new_param_index, ssp.key)
 end
 
-## Defunct bc steady state values have their own type now
-## #=
-## """
-## (<=)(m::AbstractDSGEModel, vec::Vector{Symbol})
-
-## Add all elements of `vec` to the `m.steady_state`. Update `m.keys` appropriately.
-## """
-## =#
-
-## function (<=)(m::AbstractDSGEModel, vec::Vector{Symbol})
-##     for k in vec
-##         m <= k
-##     end
-## end
-
 Distributions.logpdf(m::AbstractDSGEModel) = logpdf(m.parameters)
 Distributions.pdf(m::AbstractDSGEModel) = exp(logpdf(m))
 
@@ -127,13 +112,67 @@ num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.pa
 
 
 # Paths to where input/output/results data are stored
-savepath(m::AbstractDSGEModel)  = m.savepaths[:savepath]
-inpath(m::AbstractDSGEModel)    = m.savepaths[:inpath]
-outpath(m::AbstractDSGEModel)   = m.savepaths[:outpath]
-tablepath(m::AbstractDSGEModel) = m.savepaths[:tablepath]
-plotpath(m::AbstractDSGEModel)  = m.savepaths[:plotpath]
-logpath(m::AbstractDSGEModel)   = m.savepaths[:logpath]
+function savepath(m::AbstractDSGEModel)
+    path = m.savepaths[:savepath]
+    if !ispath(path) create_save_directories(path) end
+    return path
+end
 
+function inpath(m::AbstractDSGEModel)  
+    path = m.savepaths[:inpath]
+    if !ispath(path)
+        mkdir(path)
+        @printf "Created %s\n" path
+    end
+    
+    return path
+end
+
+function outpath(m::AbstractDSGEModel) 
+    path = m.savepaths[:outpath]
+    if !ispath(path)
+        mkdir(path)
+        @printf "Created %s\n" path
+    end
+    
+    return path
+
+end
+
+
+function tablepath(m::AbstractDSGEModel)
+    path = m.savepaths[:tablepath]
+
+    if !ispath(path)
+        mkdir(path)
+        @printf "Created %s\n" path
+    end
+    
+    return path
+
+end
+
+function plotpath(m::AbstractDSGEModel)
+    path = m.savepaths[:plotpath]
+    if !ispath(path)
+        mkdir(path)
+        @printf "Created %s\n" path
+    end
+    
+    return path
+
+end
+
+function logpath(m::AbstractDSGEModel)
+    path = m.savepaths[:logpath]
+    if !ispath(path)
+        mkdir(path)
+        @printf "Created %s\n" path
+    end
+    
+    return path
+
+end
 
 #=
 doc"""
@@ -247,14 +286,31 @@ function update!{T<:AbstractFloat}(m::AbstractDSGEModel, values::Vector{T})
     return steadystate!(m) 
 end
 
-#=
-doc"""
-Distributions.rand{T<:AbstractFloat, U<:AbstractDSGEModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
+"""
+rand{T<:AbstractFloat, U<:AbstractDSGEModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
 
 Generate a draw from d with variance optionally scaled by cc^2.
 """
-=#
 function rand{T<:AbstractFloat, U<:AbstractDSGEModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
 
+function toggle_test_mode{U<:Number}(m::AbstractDSGEModel{U})
+    switch_settings = [:num_mh_simulations, :num_mh_blocks, :num_mh_burn, :mh_thinning_step,
+                       :savepaths]
+
+    test_settings   = [:num_mh_simulations_test, :num_mh_blocks_test, :num_mh_burn_test,
+                       :mh_thinning_step_test, :savepaths_test]
+    
+    # Switch the values in the test/non-test fields
+    for (i,setting) in enumerate(switch_settings)
+        tmp = getfield(m, setting)
+        setfield!(m, setting, getfield(m,test_settings[i]))
+        setfield!(m, test_settings[i], tmp)
+    end
+
+    # Swap whatever test mode I'm in
+    m.testing = !m.testing
+
+    @printf "Testing mode %s\n" m.testing ? "on" : "off"
+end
