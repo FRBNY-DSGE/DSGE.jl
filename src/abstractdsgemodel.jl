@@ -128,16 +128,36 @@ Creates the proper directory structure for input and output files, treating the 
                  output_data/<spec>/<out_type>/figures/
 
 =#
-logpath(m::AbstractDSGEModel)                        = modelpath(m, "log", "")
-rawpath(m::AbstractDSGEModel, s::AbstractString)     = modelpath(m, s, "raw")
-workpath(m::AbstractDSGEModel, s::AbstractString)    = modelpath(m, s, "work")
-tablespath(m::AbstractDSGEModel, s::AbstractString)  = modelpath(m, s, "tables")
-figurespath(m::AbstractDSGEModel, s::AbstractString) = modelpath(m, s, "figures")
-function modelpath(m::AbstractDSGEModel, out_type::AbstractString, sub_type::AbstractString)
+function logpath(m::AbstractDSGEModel)
+    return modelpath(m, "log", "log.log")
+end
+function rawpath(m::AbstractDSGEModel, out_type::AbstractString, file_name::AbstractString)
+    return modelpath(m, out_type, "raw", file_name)
+end
+function workpath(m::AbstractDSGEModel, out_type::AbstractString, file_name::AbstractString)
+    return modelpath(m, out_type, "work", file_name)
+end
+function tablespath(m::AbstractDSGEModel, out_type::AbstractString, file_name::AbstractString)
+    return modelpath(m, out_type, "tables", file_name)
+end
+function figurespath(m::AbstractDSGEModel, out_type::AbstractString, file_name::AbstractString)
+    return modelpath(m, out_type, "figures", file_name)
+end
+function modelpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, sub_type::T,
+    file_name::T)
+
+    # Containing dir
     path = joinpath(m.savepathroot, "output_data", m.spec, out_type, sub_type)
     if !isdir(path) 
         mkpath(path) 
     end
+
+    # File with model string inserted
+    model_string = "" # Later, will be something like m.modelstring
+    (base, ext) = splitext(file_name)
+    file_name_detail = base * model_string * ext
+    path = joinpath(path, file_name_detail)
+
     return path
 end
 

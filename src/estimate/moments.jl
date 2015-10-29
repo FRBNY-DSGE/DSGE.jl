@@ -19,7 +19,7 @@ function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90; ve
     
     ### Step 1: Read in the matrix of parameter draws from metropolis-hastings
 
-    filename = joinpath(rawpath(m,"estimate"),"sim_save.h5")
+    filename = rawpath(m,"estimate","sim_save.h5")
 
     if verbose
         println("Reading draws from Metropolis-Hastings from $filename...")
@@ -150,7 +150,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
     ###########################################################################################
     
     # Open and start the TeX file
-    mainParams_out = joinpath(tablespath(m,"estimate"), "moments_mainParams.tex")
+    mainParams_out = tablespath(m,"estimate", "moments_mainParams.tex")
     mainParams_fid = open(mainParams_out,"w")
 
     beginTexTableDoc(mainParams_fid)
@@ -204,7 +204,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
     ## 4b. Write to Table 2: Prior mean, std dev and posterior mean, bands for other params
     ###########################################################################################
     
-    periphParams_out = joinpath(tablespath(m,"estimate"), "moments_periphParams_0.tex")
+    periphParams_out = tablespath(m,"estimate", "moments_periphParams_0.tex")
     periphParams_fid = open(periphParams_out,"w")
 
     beginTexTableDoc(periphParams_fid)
@@ -242,7 +242,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
 
             # Start the new file
             filename = @sprintf("moments_periphParams_%d.tex",table_count)
-            periphParams_out = joinpath(tablespath(m,"estimate"),filename)
+            periphParams_out = tablespath(m,"estimate",filename)
             periphParams_fid = open(periphParams_out,"w")
             
             beginTexTableDoc(periphParams_fid)
@@ -276,7 +276,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
     table_count = 0  # Keep track of how many tables we've made
     
     # Open the TeX file and set up the heading
-    prioPostMean_out = joinpath(tablespath(m,"estimate"), "moments_prioPostMean.tex")
+    prioPostMean_out = tablespath(m,"estimate", "moments_prioPostMean.tex")
     prioPostMean_fid = open(prioPostMean_out,"w")
 
     beginTexTableDoc(prioPostMean_fid)
@@ -298,7 +298,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
             filename = @sprintf("moments_prioPostMean_%d.tex",table_count)
 
             # Open a new file and start the next table
-            prioPostMean_out = joinpath(tablespath(m,"estimate"),filename)
+            prioPostMean_out = tablespath(m,"estimate",filename)
             prioPostMean_fid = open(prioPostMean_out,"w")            
             beginTexTableDoc(prioPostMean_fid)
             @printf(prioPostMean_fid,"\\caption{Parameter Estimates: Prior and Posterior Mean}\n")
@@ -319,7 +319,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
     endTexTableDoc(prioPostMean_fid)
 
     if verbose
-        println("Tables are in ",tablespath(m,"estimate"))
+        @printf "Tables are saved as %s.\n" tablespath(m, "estimate", "*.tex")
     end
 end
 
