@@ -99,7 +99,7 @@ num_anticipated_lags(m::AbstractDSGEModel) = m.num_anticipated_lags
 # Number of presample periods
 num_presample_periods(m::AbstractDSGEModel) = m.num_presample_periods
 
-# Number of a few things that are useful apparently
+# Number of a few things that are useful 
 num_states(m::AbstractDSGEModel)                 = length(m.endogenous_states)
 num_states_augmented(m::AbstractDSGEModel)       = num_states(m) + length(m.endogenous_states_postgensys)
 num_shocks_exogenous(m::AbstractDSGEModel)       = length(m.exogenous_shocks)
@@ -143,6 +143,7 @@ end
 function figurespath(m::AbstractDSGEModel, out_type::AbstractString, file_name::AbstractString)
     return modelpath(m, out_type, "figures", file_name)
 end
+    
 function modelpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, sub_type::T,
     file_name::T)
 
