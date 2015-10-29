@@ -111,32 +111,30 @@ num_parameters_steady_state(m::AbstractDSGEModel)= length(m.steady_state)
 num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.parameters])
 
 #=
-Paths to where input/output/results data are stored
+Build paths to where input/output/results data are stored.
+
 Description:
 Creates the proper directory structure for input and output files, treating the DSGE/save
-    directory as the root of a savepath directory subtree. Specifically, the following paths
-    are created:
+    directory as the root of a savepath directory subtree. Specifically, the following
+    structure is implemented:
 
-  * :savepath    => "/path/to/DSGE/save/m'spec'/"
+    datapathroot/
+                 
+    savepathroot/
+                 output_data/<spec>/log/
+                 output_data/<spec>/<out_type>/raw/
+                 output_data/<spec>/<out_type>/work/
+                 output_data/<spec>/<out_type>/tables/
+                 output_data/<spec>/<out_type>/figures/
 
-  * :inpath      => "savepath/input_data/"
-
-  * :outpath     => "savepath/output_data/"
-
-  * :tablepath   => "savepath/results/tables/"
-
-  * :plotpath    => "savepath/results/plots/"
-
-  * :logpath     => "savepath/logs/"
 =#
 logpath(m::AbstractDSGEModel)                        = modelpath(m, "log", "")
 rawpath(m::AbstractDSGEModel, s::AbstractString)     = modelpath(m, s, "raw")
 workpath(m::AbstractDSGEModel, s::AbstractString)    = modelpath(m, s, "work")
 tablespath(m::AbstractDSGEModel, s::AbstractString)  = modelpath(m, s, "tables")
 figurespath(m::AbstractDSGEModel, s::AbstractString) = modelpath(m, s, "figures")
-function modelpath(m::AbstractDSGEModel, result_type::AbstractString,
-                   sub_type::AbstractString)
-    path = joinpath(m.savepathroot, "output_data", m.spec, result_type, sub_type)
+function modelpath(m::AbstractDSGEModel, out_type::AbstractString, sub_type::AbstractString)
+    path = joinpath(m.savepathroot, "output_data", m.spec, out_type, sub_type)
     if !isdir(path) 
         mkpath(path) 
     end
