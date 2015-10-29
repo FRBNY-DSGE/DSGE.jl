@@ -41,9 +41,11 @@ measurement equation and equilibrium conditions.
 
 #### Model Specifications
 
-* `spec`: The model specification number. For Model990, `spec`= 990. `spec` is used to determine input/output file paths. Any  changes to eqcond.jl or measurement.jl should be considered a new  model, and spec should be incremented accordingly.
+* `spec::AbstractString`: The model specification number. For Model990, `spec`= 990. `spec` is used to determine input/output file paths. Any  changes to eqcond.jl or measurement.jl should be considered a new  model, and spec should be incremented accordingly.
 
-* `savepaths::Dict{Symbol,AbstractString}`: A dictionary containing the filesystem paths to input and output files for running the model. Keys are `:savepath`, `:inpath`, `:outpath`, `:tablepath`, `:plotpath`, and `:logpath`.See `create_save_directories(str::AbstractString)` for further details. 
+* `datapathroot::AbstractString`: The root directory for model input data.
+
+* `savepathroot::AbstractString`: The root directory for model output.
 
 * `num_anticipated_shocks::Int`: Number of anticipated policy shocks.
 
@@ -80,7 +82,9 @@ number of draws from the posterior:
 
 * `test::Bool`: Indicates whether the model is in test mode
 
-* `savepaths_test::Dict{Symbol,AbstractString}`: Where to write/read input from
+* `datapathroot_test::AbstractString`: Directory for input data used in testing reference model.
+
+* `savepathroot_test::AbstractString`: A temporary directory for model testing output
  """
  =#
 type Model990{T} <: AbstractDSGEModel{T}
@@ -100,8 +104,6 @@ type Model990{T} <: AbstractDSGEModel{T}
     datapathroot::AbstractString                    # The absolute path to the top-level
                                                     # directory with input data.
     savepathroot::AbstractString                    # The absolute path to the top-level save directory for this
-                                                    # model specification
-    #savepaths::Dict{Symbol,AbstractString}          # The absolute path to the top-level save directory for this
                                                     # model specification
 
     num_anticipated_shocks::Int                     # Number of anticipated policy shocks
@@ -127,7 +129,8 @@ type Model990{T} <: AbstractDSGEModel{T}
     savepathroot_test::AbstractString               # Where to write testing output
 end
 
-description(m::Model990) = "This is some model that we're trying to make work."
+description(m::Model990) = "FRBNY DSGE Model m990"
+
 #=
 doc"""
 Inputs: `m:: Model990`
@@ -207,15 +210,6 @@ function Model990()
     spec         = split(basename(@__FILE__),'.')[1]
     datapathroot = normpath(joinpath(dirname(@__FILE__), "..","..","..","save",spec,"input_data"))
     savepathroot = normpath(joinpath(dirname(@__FILE__), "..","..","..","save",spec))
-    #savepaths   = Dict{Symbol,AbstractString}([(:savepath,  savepath),
-    #                                           (:inpath,    normpath(joinpath(savepath, "input_data/"))),
-    #                                           (:outpath,   normpath(joinpath(savepath, "output_data/"))),      
-    #                                           (:tablepath, normpath(joinpath(savepath, "results/tables/"))),   
-    #                                           (:plotpath,  normpath(joinpath(savepath, "results/plots/"))),  
-    #                                           (:logpath,   normpath(joinpath(savepath, "logs/")))]) 
-
-    # # Create the save directories if they don't already exist
-    # create_save_directories(savepath)
     
     _num_anticipated_shocks          = 6
     _num_anticipated_shocks_padding  = 20
@@ -242,14 +236,6 @@ function Model990()
 
     datapathroot_test = normpath(joinpath(dirname(@__FILE__), "..","..","..","test","reference"))
     savepathroot_test = ""
-    # tmp = mktempdir()
-    # savepaths_test = Dict{Symbol,AbstractString}([(:savepath, tmp),
-    #                                               (:inpath,   savepaths[:inpath] ),
-    #                                               (:outpath,  tmp ),
-    #                                               (:tablepath,tmp ),
-    #                                               (:plotpath, tmp ),
-    #                                               (:logpath,  tmp ) ])
-
     
     # initialise empty model
     m = Model990{Float64}(
@@ -262,7 +248,6 @@ function Model990()
             spec,
             datapathroot,
             savepathroot,
-            #savepaths,
 
             _num_anticipated_shocks, 
             _num_anticipated_shocks_padding, 
@@ -285,8 +270,6 @@ function Model990()
             testing,
             datapathroot_test,
             savepathroot_test)
-            #savepaths_test)
-
 
     m <= parameter(:α,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.",
