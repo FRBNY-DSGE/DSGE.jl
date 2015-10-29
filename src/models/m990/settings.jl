@@ -33,6 +33,7 @@ function (<=){T}(m::AbstractDSGEModel{T}, s::Setting)
     if s.savestring 
         # Add to a sorted dictionary of things to print
     end
+
     setindex!(m.settings, s, s.key)
 end
 

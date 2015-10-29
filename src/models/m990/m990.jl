@@ -80,7 +80,7 @@ number of draws from the posterior:
 #### Other Fields
 * `rng::MersenneTwister`: Random number generator, implemented as a MersenneTwister()
 
-* `test::Bool`: Indicates whether the model is in test mode
+* `_testing::Bool`: Indicates whether the model is in test mode. Should only be set/unset via calls to `toggle_test_mode(m)`
 
 * `datapathroot_test::AbstractString`: Directory for input data used in testing reference model.
 
@@ -100,33 +100,10 @@ type Model990{T} <: AbstractDSGEModel{T}
     endogenous_states_postgensys::Dict{Symbol,Int}  #
     observables::Dict{Symbol,Int}                   #
 
-    spec::AbstractString                            # The model specification number
-    datapathroot::AbstractString                    # The absolute path to the top-level
-                                                    # directory with input data.
-    savepathroot::AbstractString                    # The absolute path to the top-level save directory for this
-                                                    # model specification
-
-    num_anticipated_shocks::Int                     # Number of anticipated policy shocks
-    num_anticipated_shocks_padding::Int             # Padding for nant
-    num_anticipated_lags::Int                       # Number of periods back to incorporate zero bound expectations
-    num_presample_periods::Int                      # Number of periods in the presample
-
-    reoptimize::Bool                                # Reoptimize the posterior mode
-    recalculate_hessian::Bool                       # Recalculate the hessian at the mode
-    num_mh_simulations::Int                         #
-    num_mh_blocks::Int                              #
-    num_mh_burn::Int                                #
-    mh_thinning_step::Int                           #
-
-    num_mh_simulations_test::Int                    # These fields are used to test Metropolis-Hastings with
-    num_mh_blocks_test::Int                         # a small number of draws from the posterior
-    num_mh_burn_test::Int                           #
-    mh_thinning_step_test::Int                      #
-    
+    settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     rng::MersenneTwister                            # Random number generator
-    testing::Bool                                   # Whether we are in testing mode or not
-    datapathroot_test::AbstractString               # Where to load data for test
-    savepathroot_test::AbstractString               # Where to write testing output
+    _testing::Bool                                   # Whether we are in testing mode or not
+
 end
 
 description(m::Model990) = "FRBNY DSGE Model m990"
@@ -514,6 +491,7 @@ function Model990()
     m <= SteadyStateParameter(:ζ_nμe,    NaN, description="steady-state something something", texLabel="\\BLAH")
     m <= SteadyStateParameter(:ζ_nσ_ω,   NaN, description="steady-state something something", texLabel="\\BLAH")
 
+    default_settings(m)
     initialise_model_indices!(m)
     steadystate!(m)
     return m
