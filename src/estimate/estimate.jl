@@ -98,7 +98,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
         mode = [param.value for param in m.parameters]
 
         # Write mode to file
-        h5 = h5open(joinpath(outpath(m, "estimate"), "mode_out.h5"),"w")
+        h5 = h5open(outpath(m, "estimate", "mode_out.h5"),"w")
         h5["mode"] = mode
         close(h5)
         
@@ -126,7 +126,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
         
         hessian, _ = hessizero!(m, mode, YY; verbose=true)
 
-        h5 = h5open(joinpath(outpath(m, "estimate"),"hessian.h5"),"w") 
+        h5 = h5open(outpath(m, "estimate","hessian.h5"),"w") 
         h5["hessian"] = hessian
         close(h5)
 
@@ -303,7 +303,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
     z_sim    = zeros(n_sim, num_states_augmented(m))
 
     # Open HDF5 file for saving output
-    simfile = h5open(joinpath(rawpath(m,"estimate"),"sim_save.h5"),"w")
+    simfile = h5open(rawpath(m,"estimate","sim_save.h5"),"w")
     n_saved_obs = n_sim * (n_blocks - n_burn)
     parasim = d_create(simfile, "parasim", datatype(Float32),
                        dataspace(n_saved_obs,n_params), "chunk", (n_sim,n_params))
@@ -465,13 +465,14 @@ compute_parameter_covariance{T<:AbstractDSGEModel}(m::T)
 * `m::AbstractDSGEModel`: the model object
 
 ### Description:
-Calculates the parameter covariance matrix from saved parameter draws, and writes it to the parameter_covariance.h5 file in the `outpath(m)` directory.
+Calculates the parameter covariance matrix from saved parameter draws, and writes it to the
+parameter_covariance.h5 file in the `workpath(m)` directory.
 """
 =#
 function compute_parameter_covariance{T<:AbstractDSGEModel}(m::T)
 
     # Read in saved parameter draws
-    param_draws_path = joinpath(rawpath(m,"estimate"),"sim_save.h5")
+    param_draws_path = rawpath(m,"estimate","sim_save.h5")
     if !isfile(param_draws_path)
         @printf STDERR "Saved parameter draws not found."
         return
@@ -484,7 +485,7 @@ function compute_parameter_covariance{T<:AbstractDSGEModel}(m::T)
     param_covariance = cov(param_draws)
 
     # Write to file
-    cov_h5 = h5open(joinpath(workpath(m, "estimate"),"parameter_covariance.h5"),"w")
+    cov_h5 = h5open(workpath(m, "estimate","parameter_covariance.h5"),"w")
     cov_h5["param_covariance"] = param_covariance
     close(cov_h5)
 
