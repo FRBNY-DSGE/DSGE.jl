@@ -8,7 +8,7 @@ module DSGE
     export
 
         # DSGE.jl
-        savepath, inpath, outpath, tablepath, plotpath, logpath,
+        inpath, rawpath, workpath, tablespath, figurespath, logpath,
         
         # distributions_ext.jl
         PointMass, BetaAlt, GammaAlt,
@@ -22,7 +22,6 @@ module DSGE
         parameter, Transform, Untransformed, SquareRoot, Exponential, NullablePrior,
         AbstractParameter, Parameter, ParameterVector, ScaledParameter, UnscaledParameter, SteadyStateParameter,
         toreal, tomodel, update, update!, tomodel, toreal, Interval,
-        
         
         # estimate/
         dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel, hessizero!, estimate, proposal_distribution, metropolis_hastings, compute_parameter_covariance, compute_moments, make_moment_tables, find_density_bands, prior,
