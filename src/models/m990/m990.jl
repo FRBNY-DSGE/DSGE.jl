@@ -211,32 +211,13 @@ function Model990()
     datapathroot = normpath(joinpath(dirname(@__FILE__), "..","..","..","save",spec,"input_data"))
     savepathroot = normpath(joinpath(dirname(@__FILE__), "..","..","..","save",spec))
     
-    _num_anticipated_shocks          = 6
-    _num_anticipated_shocks_padding  = 20
-    _num_anticipated_lags            = 24
-    _num_presample_periods           = 2 # TODO: This should be set when the data are read in
-
-    # Estimation specifications
-    reoptimize                      = false
-    recalculate_hessian             = false
-    num_mh_simulations              = 10000
-    num_mh_blocks                   = 22
-    num_mh_burn                     = 2
-    mh_thinning_step                = 5
-    num_mh_simulations_test         = 100
-    num_mh_blocks_test              = 1
-    num_mh_burn_test                = 0
-    mh_thinning_step_test           = 1  
-    
-    # Random number generator
-    rng                             = MersenneTwister()
-
-    # Testing information
-    testing                          = false
-
     datapathroot_test = normpath(joinpath(dirname(@__FILE__), "..","..","..","test","reference"))
     savepathroot_test = ""
     
+    settings           = Dict{Symbol,Setting}()
+    rng                = MersenneTwister()        # Random Number Generator
+    testing            = false                       
+
     # initialise empty model
     m = Model990{Float64}(
             # model parameters and steady state values
@@ -245,31 +226,10 @@ function Model990()
             # model indices
             Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(),
 
-            spec,
-            datapathroot,
-            savepathroot,
-
-            _num_anticipated_shocks, 
-            _num_anticipated_shocks_padding, 
-            _num_anticipated_lags, 
-            _num_presample_periods,
-
-            reoptimize,
-            recalculate_hessian,
-            num_mh_simulations,
-            num_mh_blocks,
-            num_mh_burn,
-            mh_thinning_step,
-                 
-            num_mh_simulations_test,   
-            num_mh_blocks_test,  
-            num_mh_burn_test,
-            mh_thinning_step_test,
-                          
+            settings,              
             rng,
-            testing,
-            datapathroot_test,
-            savepathroot_test)
+            testing)
+
 
     m <= parameter(:α,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.",
