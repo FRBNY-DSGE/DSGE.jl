@@ -110,146 +110,47 @@ num_parameters(m::AbstractDSGEModel)             = length(m.parameters)
 num_parameters_steady_state(m::AbstractDSGEModel)= length(m.steady_state)
 num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.parameters])
 
-
-# Paths to where input/output/results data are stored
-function savepath(m::AbstractDSGEModel)
-    path = m.savepaths[:savepath]
-    if !ispath(path) create_save_directories(path) end
-    return path
-end
-
-function inpath(m::AbstractDSGEModel)  
-    path = m.savepaths[:inpath]
-    if !ispath(path)
-        mkdir(path)
-        @printf "Created %s\n" path
-    end
-    
-    return path
-end
-
-function outpath(m::AbstractDSGEModel) 
-    path = m.savepaths[:outpath]
-    if !ispath(path)
-        mkdir(path)
-        @printf "Created %s\n" path
-    end
-    
-    return path
-
-end
-
-
-function tablepath(m::AbstractDSGEModel)
-    path = m.savepaths[:tablepath]
-
-    if !ispath(path)
-        mkdir(path)
-        @printf "Created %s\n" path
-    end
-    
-    return path
-
-end
-
-function plotpath(m::AbstractDSGEModel)
-    path = m.savepaths[:plotpath]
-    if !ispath(path)
-        mkdir(path)
-        @printf "Created %s\n" path
-    end
-    
-    return path
-
-end
-
-function logpath(m::AbstractDSGEModel)
-    path = m.savepaths[:logpath]
-    if !ispath(path)
-        mkdir(path)
-        @printf "Created %s\n" path
-    end
-    
-    return path
-
-end
-
 #=
-doc"""
-create_save_directories{T<:AbstractString}(m::AbstractDSGEModel, savepath::T; reset_inpath::Bool=true)
+Paths to where input/output/results data are stored
+Description:
+Creates the proper directory structure for input and output files, treating the DSGE/save
+    directory as the root of a savepath directory subtree. Specifically, the following paths
+    are created:
 
-### Parameters
-- `m`: the model object
-- `savepath`: the desired root of the new save subtree
+  * :savepath    => "/path/to/DSGE/save/m'spec'/"
 
-### Optional Arguments
-- `reset_inpath`: Whether to set the value of `m.savepaths[:inpath]` to `new_savepath/input_data`. Default = `true`.
+  * :inpath      => "savepath/input_data/"
 
-### Description
-Creates the default directory structure for input and output files rooted at `savepath` and updates `m.savepaths` appropriately. By default, resets m`.savepaths[:inpath]` to `new_savepath/input_data`.
-"""
+  * :outpath     => "savepath/output_data/"
+
+  * :tablepath   => "savepath/results/tables/"
+
+  * :plotpath    => "savepath/results/plots/"
+
+  * :logpath     => "savepath/logs/"
 =#
-function create_save_directories{T<:AbstractString}(m::AbstractDSGEModel, savepath::T; reset_inpath::Bool=true)
-
-    create_save_directories(savepath)
-
-    paths = [(:savepath,  savepath),
-             (:outpath,   joinpath(savepath, "output_data")),
-             (:logpath,   joinpath(savepath, "logs")),
-             (:tablepath, joinpath(savepath, "results/tables")),
-             (:plotpath,  joinpath(savepath, "results/plots"))]
-
-    if reset_inpath
-        append!(paths, [(:inpath, joinpath(savepath, "input_data"))])
-    else
-        append!(paths, [(:inpath, inpath(m))])
+logpath(m::AbstractDSGEModel)                        = modelpath(m, "log", "")
+rawpath(m::AbstractDSGEModel, s::AbstractString)     = modelpath(m, s, "raw")
+workpath(m::AbstractDSGEModel, s::AbstractString)    = modelpath(m, s, "work")
+tablespath(m::AbstractDSGEModel, s::AbstractString)  = modelpath(m, s, "tables")
+figurespath(m::AbstractDSGEModel, s::AbstractString) = modelpath(m, s, "figures")
+function modelpath(m::AbstractDSGEModel, result_type::AbstractString,
+                   sub_type::AbstractString)
+    path = joinpath(m.savepathroot, "output_data", m.spec, result_type, sub_type)
+    if !isdir(path) 
+        mkpath(path) 
     end
-
-    m.savepaths = Dict{Symbol,AbstractString}(paths)
-    
+    return path
 end
 
-#=
-doc"""
-create_save_directories{T<:AbstractString}(m::AbstractDSGEModel, new_savepath::T, old_savepath::T; reset_inpath::Bool=true, copy_infiles::Bool=true)
-
-### Parameters
-- `m`: the model object
-- `new_savepath`: the desired root of the new save subtree
-- `old_savepath`: the root of the old save directory subtree. 
-
-### Optional Arguments
-- `reset_inpath`: Whether to set the value of `m.savepaths[:inpath]` to `new_savepath/input_data`. Default = `true`.
-- `copy_infiles`: Whether to copy the input files 
-
-### Description
-Creates the default directory structure for input and output files rooted at `new_savepath` by calling `create_save_directories(m, new_savepath; reset_inpath=reset_inpath)`. By default, resets m`.savepaths[:inpath]` to `new_savepath/input_data` and copies input files from `old_savepath` to that directory.
-
-
-### Usage
-This method is intended to be used after a model object is created with the default savepath location, in the event that the user decides to use the same directory structure rooted elsewhere in the filesystem. It allows the user to run multiple versions of the model with the same input files (without making a copy). In this case, the `reset_inpath` and `copy_infiles` arguments should be set to `false`.
-
-`new_savepath` and `old_savepath` refer to the directory that will contain (in the case of `new_savepath`) or contains (in the case of `old_savepath`) the `input_data`, `output_data`, `results`, and `log` subdirectories. 
-"""
-=#
-function create_save_directories{T<:AbstractString}(m::AbstractDSGEModel, new_savepath::T, old_savepath::T; reset_inpath::Bool=true, copy_infiles::Bool=true)
-
-    create_save_directories(m, new_savepath; reset_inpath=reset_inpath)
-
-    if copy_infiles
-        for file in readdir(normpath(joinpath(old_savepath, "input_data")))
-            println(file)
-            cp(abspath(joinpath(old_savepath, "input_data/$file")), inpath(m))
-            old = abspath(joinpath(old_savepath, "input_data/$file"))
-            new = abspath(joinpath(new_savepath, "input_data"))
-            @printf "Copied %s to %s" old new
-        end
+# Input data handled slightly differently, because it is not model-specific.
+function inpath(m::AbstractDSGEModel)
+    path = m.datapathroot
+    if !isdir(path)
+        mkpath(path)
     end
-
-    return m.savepaths
+    return path
 end
-
-
 
 # TODO is there a better place for these? They do depend on AbstractDSGEModel type.
 #=
@@ -295,22 +196,29 @@ function rand{T<:AbstractFloat, U<:AbstractDSGEModel}(d::DegenerateMvNormal, m::
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
 
-function toggle_test_mode{U<:Number}(m::AbstractDSGEModel{U})
-    switch_settings = [:num_mh_simulations, :num_mh_blocks, :num_mh_burn, :mh_thinning_step,
-                       :savepaths]
+function toggle_test_mode{U<:Number}(m::AbstractDSGEModel{U}; verbose=false)
+    # Swap whatever test mode I'm in
+    m.testing = !m.testing
 
-    test_settings   = [:num_mh_simulations_test, :num_mh_blocks_test, :num_mh_burn_test,
-                       :mh_thinning_step_test, :savepaths_test]
-    
+    # Create tmp testing directory as needed.
+    if m.testing && isempty(m.savepathroot_test)
+        m.savepathroot_test = mktempdir()
+    end
+
     # Switch the values in the test/non-test fields
-    for (i,setting) in enumerate(switch_settings)
+    normal_settings = [:num_mh_simulations, :num_mh_blocks, :num_mh_burn, :mh_thinning_step,
+                       :savepathroot, :datapathroot]
+
+    test_settings   = [:num_mh_simulations_test, :num_mh_blocks_test, :num_mh_burn_test, 
+                       :mh_thinning_step_test, :savepathroot_test, :datapathroot_test]
+    
+    for (i,setting) in enumerate(normal_settings)
         tmp = getfield(m, setting)
         setfield!(m, setting, getfield(m,test_settings[i]))
         setfield!(m, test_settings[i], tmp)
     end
 
-    # Swap whatever test mode I'm in
-    m.testing = !m.testing
-
-    @printf "Testing mode %s\n" m.testing ? "on" : "off"
+    if verbose
+        @printf "Testing mode %s\n" m.testing ? "on" : "off"
+    end
 end

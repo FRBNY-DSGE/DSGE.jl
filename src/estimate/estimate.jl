@@ -98,7 +98,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
         mode = [param.value for param in m.parameters]
 
         # Write mode to file
-        h5 = h5open(joinpath(outpath(m), "mode_out.h5"),"w")
+        h5 = h5open(joinpath(outpath(m, "estimate"), "mode_out.h5"),"w")
         h5["mode"] = mode
         close(h5)
         
@@ -126,7 +126,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
         
         hessian, _ = hessizero!(m, mode, YY; verbose=true)
 
-        h5 = h5open(joinpath(outpath(m),"hessian.h5"),"w") 
+        h5 = h5open(joinpath(outpath(m, "estimate"),"hessian.h5"),"w") 
         h5["hessian"] = hessian
         close(h5)
 
@@ -303,34 +303,25 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
     z_sim    = zeros(n_sim, num_states_augmented(m))
 
     # Open HDF5 file for saving output
-    
-    h5path = joinpath(outpath(m),"sim_save.h5")
-
-    simfile = h5open(h5path,"w")
-
+    simfile = h5open(joinpath(rawpath(m,"estimate"),"sim_save.h5"),"w")
     n_saved_obs = n_sim * (n_blocks - n_burn)
-
     parasim = d_create(simfile, "parasim", datatype(Float32),
                        dataspace(n_saved_obs,n_params), "chunk", (n_sim,n_params))
-
-    # likesim = d_create(simfile, "likesim", datatype(Float32),
-    #                  dataspace(n_saved_obs,1), "chunk", (n_sim,1))
-
     postsim = d_create(simfile, "postsim", datatype(Float32),
                        dataspace(n_saved_obs,1), "chunk", (n_sim,1))
-
     TTTsim  = d_create(simfile, "TTTsim", datatype(Float32),
                        dataspace(n_saved_obs,num_states_augmented(m)^2),"chunk",(n_sim,num_states_augmented(m)^2))
-
     RRRsim  = d_create(simfile, "RRRsim", datatype(Float32),
                        dataspace(n_saved_obs,num_states_augmented(m)*num_shocks_exogenous(m)),"chunk",
                        (n_sim,num_states_augmented(m)*num_shocks_exogenous(m)))
+    zsim    = d_create(simfile, "zsim", datatype(Float32),
+                       dataspace(n_saved_obs,num_states_augmented(m)),"chunk",(n_sim,num_states_augmented(m)))
 
+    # likesim = d_create(simfile, "likesim", datatype(Float32),
+    #                  dataspace(n_saved_obs,1), "chunk", (n_sim,1))
     # CCCsim  = d_create(simfile, "CCCsim", datatype(Float32),
     #                  dataspace(n_saved_obs,num_states_augmented(m)),"chunk",(n_sim,num_states_augmented(m)))
 
-    zsim    = d_create(simfile, "zsim", datatype(Float32),
-                       dataspace(n_saved_obs,num_states_augmented(m)),"chunk",(n_sim,num_states_augmented(m)))
 
 
     # keep track of how long metropolis_hastings has been sampling
@@ -480,13 +471,12 @@ Calculates the parameter covariance matrix from saved parameter draws, and write
 function compute_parameter_covariance{T<:AbstractDSGEModel}(m::T)
 
     # Read in saved parameter draws
-    h5path = joinpath(outpath(m),"sim_save.h5")
-    if(!isfile(h5path))
-        println("File $h5path does not exist. Check outpath(m) or run metropolis_hastings(m).")
+    param_draws_path = joinpath(rawpath(m,"estimate"),"sim_save.h5")
+    if !isfile(param_draws_path)
+        @printf STDERR "Saved parameter draws not found."
         return
     end
-
-    sim_h5 = h5open(h5path, "r")
+    sim_h5 = h5open(param_draws_path, "r")
     param_draws = read(sim_h5, "parasim")
     close(sim_h5)
     
@@ -494,7 +484,7 @@ function compute_parameter_covariance{T<:AbstractDSGEModel}(m::T)
     param_covariance = cov(param_draws)
 
     # Write to file
-    cov_h5 = h5open(joinpath(outpath(m),"parameter_covariance.h5"),"w")
+    cov_h5 = h5open(joinpath(workpath(m, "estimate"),"parameter_covariance.h5"),"w")
     cov_h5["param_covariance"] = param_covariance
     close(cov_h5)
 

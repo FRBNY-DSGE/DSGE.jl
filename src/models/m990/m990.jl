@@ -96,8 +96,12 @@ type Model990{T} <: AbstractDSGEModel{T}
     endogenous_states_postgensys::Dict{Symbol,Int}  #
     observables::Dict{Symbol,Int}                   #
 
-    spec                                            # The model specification number
-    savepaths::Dict{Symbol,AbstractString}          # The absolute path to the top-level save directory for this
+    spec::AbstractString                            # The model specification number
+    datapathroot::AbstractString                    # The absolute path to the top-level
+                                                    # directory with input data.
+    savepathroot::AbstractString                    # The absolute path to the top-level save directory for this
+                                                    # model specification
+    #savepaths::Dict{Symbol,AbstractString}          # The absolute path to the top-level save directory for this
                                                     # model specification
 
     num_anticipated_shocks::Int                     # Number of anticipated policy shocks
@@ -119,7 +123,8 @@ type Model990{T} <: AbstractDSGEModel{T}
     
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
-    savepaths_test::Dict{Symbol,AbstractString}     # Where to write testing output
+    datapathroot_test::AbstractString               # Where to load data for test
+    savepathroot_test::AbstractString               # Where to write testing output
 end
 
 description(m::Model990) = "This is some model that we're trying to make work."
@@ -199,17 +204,18 @@ end
 function Model990()
 
     # Model-specific specifications
-    spec        = split(basename(@__FILE__),'.')[1]
-    savepath    = normpath(joinpath(dirname(@__FILE__), *("../../../save/",spec)))
-    savepaths   = Dict{Symbol,AbstractString}([(:savepath,  savepath),
-                                               (:inpath,    normpath(joinpath(savepath, "input_data/"))),
-                                               (:outpath,   normpath(joinpath(savepath, "output_data/"))),      
-                                               (:tablepath, normpath(joinpath(savepath, "results/tables/"))),   
-                                               (:plotpath,  normpath(joinpath(savepath, "results/plots/"))),  
-                                               (:logpath,   normpath(joinpath(savepath, "logs/")))]) 
+    spec         = split(basename(@__FILE__),'.')[1]
+    datapathroot = normpath(joinpath(dirname(@__FILE__), "..","..","..","save",spec,"input_data"))
+    savepathroot = normpath(joinpath(dirname(@__FILE__), "..","..","..","save",spec))
+    #savepaths   = Dict{Symbol,AbstractString}([(:savepath,  savepath),
+    #                                           (:inpath,    normpath(joinpath(savepath, "input_data/"))),
+    #                                           (:outpath,   normpath(joinpath(savepath, "output_data/"))),      
+    #                                           (:tablepath, normpath(joinpath(savepath, "results/tables/"))),   
+    #                                           (:plotpath,  normpath(joinpath(savepath, "results/plots/"))),  
+    #                                           (:logpath,   normpath(joinpath(savepath, "logs/")))]) 
 
-    # Create the save directories if they don't already exist
-    create_save_directories(savepath)
+    # # Create the save directories if they don't already exist
+    # create_save_directories(savepath)
     
     _num_anticipated_shocks          = 6
     _num_anticipated_shocks_padding  = 20
@@ -234,13 +240,15 @@ function Model990()
     # Testing information
     testing                          = false
 
-    tmp = mktempdir(savepath)
-    savepaths_test = Dict{Symbol,AbstractString}([(:savepath, tmp),
-                                                  (:inpath,   savepaths[:inpath] ),
-                                                  (:outpath,  tmp ),
-                                                  (:tablepath,tmp ),
-                                                  (:plotpath, tmp ),
-                                                  (:logpath,  tmp ) ])
+    datapathroot_test = normpath(joinpath(dirname(@__FILE__), "..","..","..","test","reference"))
+    savepathroot_test = ""
+    # tmp = mktempdir()
+    # savepaths_test = Dict{Symbol,AbstractString}([(:savepath, tmp),
+    #                                               (:inpath,   savepaths[:inpath] ),
+    #                                               (:outpath,  tmp ),
+    #                                               (:tablepath,tmp ),
+    #                                               (:plotpath, tmp ),
+    #                                               (:logpath,  tmp ) ])
 
     
     # initialise empty model
@@ -252,9 +260,14 @@ function Model990()
             Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(),
 
             spec,
-            savepaths,
+            datapathroot,
+            savepathroot,
+            #savepaths,
 
-            _num_anticipated_shocks, _num_anticipated_shocks_padding, _num_anticipated_lags, _num_presample_periods,
+            _num_anticipated_shocks, 
+            _num_anticipated_shocks_padding, 
+            _num_anticipated_lags, 
+            _num_presample_periods,
 
             reoptimize,
             recalculate_hessian,
@@ -270,7 +283,9 @@ function Model990()
                           
             rng,
             testing,
-            savepaths_test)
+            datapathroot_test,
+            savepathroot_test)
+            #savepaths_test)
 
 
     m <= parameter(:α,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
@@ -704,50 +719,3 @@ function steadystate!(m::Model990)
 
     return m
 end
-
-#=
-doc"""
-create_save_directories{T<:AbstractString}(savepath::T)
-
-Inputs:
-savepath::AbstractString
-
-Description:
-Creates the proper directory structure for input and output files, treating the DSGE/save directory as the root of a savepath directory subtree. Specifically, the following paths are created:
-
-  * :savepath    => "/path/to/DSGE/save/m'spec'/"
-
-  * :inpath      => "savepath/input_data/"
-
-  * :outpath     => "savepath/output_data/"
-
-  * :tablepath   => "savepath/results/tables/"
-
-  * :plotpath    => "savepath/results/plots/"
-
-  * :logpath     => "savepath/logs/"
-"""
-=#
-function create_save_directories{T<:AbstractString}(savepath::T)
-
-    savepath = abspath(normpath(savepath))
-    
-    paths = [savepath,
-             joinpath(savepath, "input_data"),
-             joinpath(savepath, "output_data"),
-             joinpath(savepath, "logs"),
-             joinpath(savepath, "results"),
-             joinpath(savepath, "results/tables"),
-             joinpath(savepath, "results/plots")]
-
-    # Create each new directory that needs to be made
-    for path in paths
-
-        if(!ispath(path))
-            mkdir(path)
-            println("created $path")
-        end
-    end
-
-end
-
