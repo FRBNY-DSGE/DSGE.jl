@@ -86,10 +86,10 @@ Distributions.logpdf(m::AbstractDSGEModel) = logpdf(m.parameters)
 Distributions.pdf(m::AbstractDSGEModel) = exp(logpdf(m))
 
 # Number of anticipated policy shocks
-num_anticipated_shocks(m::AbstractDSGEModel) = m.num_anticipated_shocks
+num_anticipated_shocks(m::AbstractDSGEModel) = m.settings[:m.num_anticipated_shocks]
 
 # Padding for number of anticipated policy shocks
-num_anticipated_shocks_padding(m::AbstractDSGEModel) = m.num_anticipated_shocks_padding
+num_anticipated_shocks_padding(m::AbstractDSGEModel) = m.settings[:num_anticipated_shocks_padding]
 
 # Number of periods back we should start incorporating zero bound expectations
 # ZLB expectations should begin in 2008 Q4
@@ -170,6 +170,12 @@ function inpath(m::AbstractDSGEModel)
     end
     return path
 end
+
+function namestring(base::ASCIIString, m::AbstractDSGEModel)
+    parts = join(m._filestrings,"_")
+    filename = *(base,parts)
+end
+
 
 # TODO is there a better place for these? They do depend on AbstractDSGEModel type.
 #=

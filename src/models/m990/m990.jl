@@ -102,8 +102,8 @@ type Model990{T} <: AbstractDSGEModel{T}
 
     settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     rng::MersenneTwister                            # Random number generator
-    _testing::Bool                                   # Whether we are in testing mode or not
-
+    _testing::Bool                                  # Whether we are in testing mode or not
+    #_filestrings::SortedSet{AbstractString}         # The strings we will print to a filename
 end
 
 description(m::Model990) = "FRBNY DSGE Model m990"
@@ -194,7 +194,8 @@ function Model990()
     settings           = Dict{Symbol,Setting}()
     rng                = MersenneTwister()        # Random Number Generator
     testing            = false                       
-
+    #filestrings        = SortedSet{AbstractString}()
+    
     # initialise empty model
     m = Model990{Float64}(
             # model parameters and steady state values
@@ -206,8 +207,12 @@ function Model990()
             settings,              
             rng,
             testing)
+    #filestrings)
 
+    # Set settings
+    default_settings(m)
 
+    # Initialize parameters
     m <= parameter(:α,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.",
                    texLabel="\\alpha")
@@ -491,7 +496,7 @@ function Model990()
     m <= SteadyStateParameter(:ζ_nμe,    NaN, description="steady-state something something", texLabel="\\BLAH")
     m <= SteadyStateParameter(:ζ_nσ_ω,   NaN, description="steady-state something something", texLabel="\\BLAH")
 
-    default_settings(m)
+
     initialise_model_indices!(m)
     steadystate!(m)
     return m
