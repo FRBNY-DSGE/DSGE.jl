@@ -1,4 +1,5 @@
-import DataStructures: SortedSet, insert!
+using DataStructures: SortedDict, insert!
+
 
 T = gensym()
 immutable Setting{T} 
@@ -9,10 +10,22 @@ immutable Setting{T}
     description::AbstractString  # description of what the setting is for
 end
 
-# for printing codes to filename string - maybe?
-Base.convert{T<:AbstractString, U<:Integer}(::Type{T}, s::Setting{U}) = @sprintf "%s=%d" s.code s.value
-Base.convert{T<:AbstractString}(::Type{T}, s::Setting{Bool}) = @sprintf "%s=%d" s.code s.value
+# for printing codes to filename string 
+Base.convert{T<:Number, U<:Number}(::Type{T}, s::Setting{U}) = convert(T, s.value)
+#Base.convert(::Type{Bool}, s::Setting{Bool}) = s.value
 Base.convert{T<:AbstractString, U<:AbstractString}(::Type{T}, s::Setting{U}) = convert(T, s.value)
+#Base.convert{T<:AbstractString}(::Type{T}, s::Setting{ASCIIString}) = s.value
+
+Base.promote_rule{T<:Number,U<:Number}(::Type{Setting{T}}, ::Type{U}) = promote_rule(T,U)
+Base.promote_rule{T<:AbstractString,U<:AbstractString}(::Type{Setting{T}}, ::Type{U}) = promote_rule(T,U)
+Base.promote_rule(::Type{Setting{Bool}}, ::Type{Bool}) = promote_rule(Bool, Bool)
+
+Base.string(s::Setting{AbstractString}) = string(s.value)
+
+filename_string(s::Setting) = "$(s.code)=$(s.value)"
+
+
+
 
 # key, value constructor
 function Setting(key, value)
@@ -25,17 +38,33 @@ end
 
 
 """
-(<=){T}(m::AbstractDSGEModel{T}, s::Setting{T})
+(<=){T}(m::AbstractDSGEModel{T}, s::Setting)
 
 Syntax for adding a setting to a model/overwriting a setting: m <= setting
 """
 function (<=){T}(m::AbstractDSGEModel{T}, s::Setting)
     if s.savestring 
         # Add to a sorted dictionary of things to print
-        insert!(m.filesuffixes, string(s))
+        insert!(m._filestrings, s.key, filename_string(s))
     end
 
-    setindex!(m.settings, s, s.key)
+    m.settings[s.key] = s
+end
+
+
+"""
+get_setting(m::AbstractDSGEModel, setting::Symbol)
+
+Returns the value of the setting
+"""
+function get_setting(m::AbstractDSGEModel, setting::Symbol)
+    s_test = symbol(setting,"_test")
+    
+    if m.testing && in(s_test, keys(m.test_settings))
+        return m.test_settings[s_test].value
+    end
+    
+    m.settings[setting].value
 end
 
 
@@ -46,15 +75,16 @@ Add default settings to the model's settings dictionary
 """
 function default_settings(m::AbstractDSGEModel)
 
-    # spec and subspec numbers
-    spec = split(basename(@__FILE__),'.')[1]   
-    m <= Setting(:spec, spec, "Model specification number")
-    m <= Setting(:subspec, 0, "Model sub-specification number")
+    # Subspec number
+    m <= Setting(:subspec, "ss0", "Model sub-specification number")
 
     # I/O File locations
-    savepath = normpath(joinpath(dirname(@__FILE__), *("../../../save/",spec)))
-    m <= Setting(:savepathroot, savepath,                                 "Root of data directory structure")
-    m <= Setting(:datapathroot, joinpath(dirname(savepath),"input_data"), "Input data directory path")
+    modelpath = normpath(joinpath(dirname(@__FILE__), "..","save",spec(m)))
+    datapath = normpath(joinpath(dirname(@__FILE__), "..","save",spec(m),"input_data"))
+
+    
+    m <= Setting(:modelpathroot, modelpath, "Root of data directory structure")
+    m <= Setting(:datapathroot, datapath, "Input data directory path")
 
     # Anticipated shocks
     m <= Setting(:num_anticipated_shocks,         6, "Number of anticipated policy shocks")
@@ -102,11 +132,17 @@ function default_test_settings(m::AbstractDSGEModel)
     test[:mh_thinning_step_test]   = Setting(:mh_thinning_step_test, 1, false, "thin",
                                              "Thinning step in Metropolis-Hastings")
 
+
+    # I/O
+    datapathroot_test = normpath(joinpath(dirname(@__FILE__), "..","test","reference"))
+    modelpathroot_test = ""
     
-    test[:savepathroot_test]       = Setting(:savepathroot_test, "")
+    test[:modelpathroot_test] = Setting(:modelpathroot_test, modelpathroot_test,
+                                       "Where to write files when in test mode")
 
-    test[:datapathroot_test] = Setting(:datapathroot_test,
-                                       normpath(joinpath(dirname(@__FILE__), "..","..","..","test","reference"))) 
+    test[:datapathroot_test] = Setting(:datapathroot_test, datapathroot_test,
+                                       "Location of input files when in test mode" )
 
+    m.test_settings = test
 end
     

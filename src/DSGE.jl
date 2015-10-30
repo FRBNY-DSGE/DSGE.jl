@@ -1,5 +1,6 @@
 module DSGE
     using Compat, Distributions, Roots.fzero, HDF5
+    using DataStructures: SortedDict, insert!, ForwardOrdering
     
     if VERSION < v"0.4-"
         using Docile
@@ -17,7 +18,7 @@ module DSGE
         AbstractDSGEModel, tomodel!, toreal!, num_states, num_shocks_exogenous, num_shocks_expectational, toggle_test_mode, create_save_directories, savepath, inpath, outpath, tablepath, plotpath, logpath,
         
         # settings.jl
-        Setting, 
+        Setting, get_setting,
         
         # new_parameters.jl
         parameter, Transform, Untransformed, SquareRoot, Exponential, NullablePrior,
