@@ -70,7 +70,7 @@ function measurement(m::Model990, TTT::Matrix, RRR::Matrix, CCC::Matrix; shocks:
     DD[obs[:g_i]]                    = 100*(exp(m[:zstar])-1)
 
     ## Spreads
-    ZZ[obs[:sprd], endo[:E_Rktil]] = 1.0
+    ZZ[obs[:sprd], endo[:ERktil_t]] = 1.0
     ZZ[obs[:sprd], endo[:R_t]]     = -1.0
     DD[obs[:sprd]]                 = 100*log(m[:sprd])
 

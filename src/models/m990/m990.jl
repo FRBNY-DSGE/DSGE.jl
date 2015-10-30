@@ -144,10 +144,10 @@ function initialise_model_indices!(m::Model990)
     endogenous_states = [[
         :y_t, :c_t, :i_t, :qk_t, :k_t, :kbar_t, :u_t, :rk_t, :Rktil_t, :n_t, :mc_t,
         :π_t, :μ_ω_t, :w_t, :L_t, :R_t, :g_t, :b_t, :μ_t, :z_t, :λ_f_t, :λ_f_t1,
-        :λ_w_t, :λ_w_t1, :rm_t, :σ_ω_t, :μe_t, :γ_t, :π_star_t, :E_c, :E_qk, :E_i,
-        :E_π, :E_L, :E_rk, :E_w, :E_Rktil, :y_f_t, :c_f_t, :i_f_t, :qk_f_t, :k_f_t,
-        :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :r_f_t, :E_c_f, :E_qk_f, :E_i_f,
-        :E_L_f, :E_rk_f, :ztil_t, :π_t1, :π_t2, :π_a_t, :R_t1, :zp_t, :E_z];
+        :λ_w_t, :λ_w_t1, :rm_t, :σ_ω_t, :μe_t, :γ_t, :π_star_t, :Ec_t, :Eqk_t, :Ei_t,
+        :Eπ_t, :EL_t, :Erk_t, :Ew_t, :ERktil_t, :y_f_t, :c_f_t, :i_f_t, :qk_f_t, :k_f_t,
+        :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :r_f_t, :Ec_f_t, :Eqk_f_t, :Ei_f_t,
+        :EL_f_t, :Erk_f_t, :ztil_t, :π_t1, :π_t2, :π_a_t, :R_t1, :zp_t, :Ez_t];
         [symbol("rm_tl$i") for i = 1:num_anticipated_shocks(m)]]
 
     # Exogenous shocks
