@@ -26,7 +26,7 @@ estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_covariance=[
 This routine implements the full estimation stage of the FRBNY DSGE model.
 """->
 =#
-function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_covariance=[])
+@debug function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_covariance=[])
 
     ###################################################################################################
     ### Step 1: Initialize
@@ -55,7 +55,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     
     mode = []
 
-    if m.reoptimize
+    if reoptimize(m)
         h5 = h5open(joinpath(inpath(m), "mode_in.h5"),"r")
         mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
         close(h5)
@@ -68,7 +68,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
 
     update!(m, mode)
 
-    if m.reoptimize
+    if reoptimize(m)
         println("Reoptimizing...")
         
         # Inputs to minimization algorithm
@@ -116,7 +116,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
 
     hessian = []
     
-    if m.recalculate_hessian
+    if recalculate_hessian(m)
         
         # Calculate the Hessian at the posterior mode
 
@@ -262,10 +262,10 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
 
     while !initialized
 
-        n_blocks = m.num_mh_blocks
-        n_sim = m.num_mh_simulations
-        n_burn = m.num_mh_burn
-        n_times = m.mh_thinning_step
+        n_blocks = num_mh_blocks(m)
+        n_sim    = num_mh_simulations(m)
+        n_burn   = num_mh_burn(m)
+        n_times  = mh_thinning_step(m)
 
         post_old, like_old, out = posterior!(m, para_old, YY; mh=true)
         
