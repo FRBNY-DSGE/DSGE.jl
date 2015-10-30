@@ -79,7 +79,7 @@ end
 # Endogenous states
 endo = model.endogenous_states
 @test length(endo) == 66
-@test endo[:E_z] == 60
+@test endo[:Ez_t] == 60
 
 # Exogenous shocks
 exo = model.exogenous_shocks
