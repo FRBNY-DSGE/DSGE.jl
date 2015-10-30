@@ -1,3 +1,4 @@
+using Debug
 abstract AbstractDSGEModel{T<:AbstractFloat}
 
 function Base.show{T<:AbstractDSGEModel}(io::IO, m::T)
@@ -86,18 +87,18 @@ Distributions.logpdf(m::AbstractDSGEModel) = logpdf(m.parameters)
 Distributions.pdf(m::AbstractDSGEModel) = exp(logpdf(m))
 
 # Number of anticipated policy shocks
-num_anticipated_shocks(m::AbstractDSGEModel) = m.settings[:m.num_anticipated_shocks]
+num_anticipated_shocks(m::AbstractDSGEModel) = get_setting(m, :num_anticipated_shocks)
 
 # Padding for number of anticipated policy shocks
-num_anticipated_shocks_padding(m::AbstractDSGEModel) = m.settings[:num_anticipated_shocks_padding]
+num_anticipated_shocks_padding(m::AbstractDSGEModel) = get_setting(m, :num_anticipated_shocks_padding)
 
 # Number of periods back we should start incorporating zero bound expectations
 # ZLB expectations should begin in 2008 Q4
-num_anticipated_lags(m::AbstractDSGEModel) = m.num_anticipated_lags
+num_anticipated_lags(m::AbstractDSGEModel) = get_setting(m, :num_anticipated_lags)
 
 # TODO: This should be set when the data are read in
 # Number of presample periods
-num_presample_periods(m::AbstractDSGEModel) = m.num_presample_periods
+num_presample_periods(m::AbstractDSGEModel) = get_setting(m, :num_presample_periods)
 
 # Number of a few things that are useful 
 num_states(m::AbstractDSGEModel)                 = length(m.endogenous_states)
@@ -110,7 +111,27 @@ num_parameters(m::AbstractDSGEModel)             = length(m.parameters)
 num_parameters_steady_state(m::AbstractDSGEModel)= length(m.steady_state)
 num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.parameters])
 
+
+# Interface for I/O settings
+spec(m::AbstractDSGEModel)          = m.spec
+subspec(m::AbstractDSGEModel)       = get_setting(m, :subspec)
+modelpathroot(m::AbstractDSGEModel) = get_setting(m, :modelpathroot)
+datapathroot(m::AbstractDSGEModel)  = get_setting(m, :datapathroot)
+
+# Interface for estimation settings
+reoptimize(m::AbstractDSGEModel)          = get_setting(m, :reoptimize)
+recalculate_hessian(m::AbstractDSGEModel) = get_setting(m, :recalculate_hessian)
+
+# Interface for Metropolis-Hastings settings
+num_mh_blocks(m::AbstractDSGEModel)      =  get_setting(m, :num_mh_blocks)
+num_mh_simulations(m::AbstractDSGEModel) =  get_setting(m, :num_mh_simulations) 
+num_mh_burn(m::AbstractDSGEModel)        =  get_setting(m, :num_mh_burn)
+mh_thinning_step(m::AbstractDSGEModel)   =  get_setting(m, :mh_thinning_step)
+
+
+
 #=
+"""
 Build paths to where input/output/results data are stored.
 
 Description:
@@ -121,18 +142,18 @@ Creates the proper directory structure for input and output files, treating the 
     datapathroot/
                  
     savepathroot/
-                 output_data/<spec>/log/
-                 output_data/<spec>/<out_type>/raw/
-                 output_data/<spec>/<out_type>/work/
-                 output_data/<spec>/<out_type>/tables/
-                 output_data/<spec>/<out_type>/figures/
-
+                 output_data/<spec>/<subspec>/log/
+                 output_data/<spec>/<subspec>/<out_type>/raw/
+                 output_data/<spec>/<subspec>/<out_type>/work/
+                 output_data/<spec>/<subspec>/<out_type>/tables/
+                 output_data/<spec>/<subspec>/<out_type>/figures/
+"""
 =#
 function logpath(m::AbstractDSGEModel)
     return modelpath(m, "log", "log.log")
 end
 function rawpath(m::AbstractDSGEModel, out_type::AbstractString, file_name::AbstractString)
-    return modelpath(m, out_type, "raw", file_name)
+        return modelpath(m, out_type, "raw", file_name)
 end
 function workpath(m::AbstractDSGEModel, out_type::AbstractString, file_name::AbstractString)
     return modelpath(m, out_type, "work", file_name)
@@ -148,7 +169,7 @@ function modelpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, sub_typ
     file_name::T)
 
     # Containing dir
-    path = joinpath(m.savepathroot, "output_data", m.spec, out_type, sub_type)
+    path = joinpath(modelpathroot(m), "output_data", spec(m), subspec(m), out_type, sub_type)
     if !isdir(path) 
         mkpath(path) 
     end
@@ -164,7 +185,7 @@ end
 
 # Input data handled slightly differently, because it is not model-specific.
 function inpath(m::AbstractDSGEModel)
-    path = m.datapathroot
+    path = datapathroot(m)
     if !isdir(path)
         mkpath(path)
     end
@@ -172,7 +193,7 @@ function inpath(m::AbstractDSGEModel)
 end
 
 function namestring(base::ASCIIString, m::AbstractDSGEModel)
-    parts = join(m._filestrings,"_")
+    parts = join(m.filestrings,"_")
     filename = *(base,parts)
 end
 
@@ -220,30 +241,4 @@ Generate a draw from d with variance optionally scaled by cc^2.
 function rand{T<:AbstractFloat, U<:AbstractDSGEModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
-
-function toggle_test_mode{U<:Number}(m::AbstractDSGEModel{U}; verbose=false)
-    # Swap whatever test mode I'm in
-    m.testing = !m.testing
-
-    # Create tmp testing directory as needed.
-    if m.testing && isempty(m.savepathroot_test)
-        m.savepathroot_test = mktempdir()
-    end
-
-    # Switch the values in the test/non-test fields
-    normal_settings = [:num_mh_simulations, :num_mh_blocks, :num_mh_burn, :mh_thinning_step,
-                       :savepathroot, :datapathroot]
-
-    test_settings   = [:num_mh_simulations_test, :num_mh_blocks_test, :num_mh_burn_test, 
-                       :mh_thinning_step_test, :savepathroot_test, :datapathroot_test]
     
-    for (i,setting) in enumerate(normal_settings)
-        tmp = getfield(m, setting)
-        setfield!(m, setting, getfield(m,test_settings[i]))
-        setfield!(m, test_settings[i], tmp)
-    end
-
-    if verbose
-        @printf "Testing mode %s\n" m.testing ? "on" : "off"
-    end
-end
