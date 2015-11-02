@@ -117,6 +117,7 @@ spec(m::AbstractDSGEModel)          = m.spec
 subspec(m::AbstractDSGEModel)       = get_setting(m, :subspec)
 modelpathroot(m::AbstractDSGEModel) = get_setting(m, :modelpathroot)
 datapathroot(m::AbstractDSGEModel)  = get_setting(m, :datapathroot)
+data_vintage(m::AbstractDSGEModel)  = get_setting(m, :data_vintage)
 
 # Interface for estimation settings
 reoptimize(m::AbstractDSGEModel)          = get_setting(m, :reoptimize)
@@ -192,9 +193,9 @@ function inpath(m::AbstractDSGEModel)
     return path
 end
 
-function namestring(base::ASCIIString, m::AbstractDSGEModel)
-    parts = join(m.filestrings,"_")
-    filename = *(base,parts)
+function filestring(base::ASCIIString, m::AbstractDSGEModel)
+    parts = join(values(m._filestrings),"_")
+    filename = *(base,"_",parts)
 end
 
 
