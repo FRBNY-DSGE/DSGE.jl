@@ -20,8 +20,8 @@ module DSGE
         # abstractdsgemodel.jl
         AbstractDSGEModel, tomodel!, toreal!, num_states, num_shocks_exogenous, num_shocks_expectational,
         spec, subspec, modelpathroot, datapathroot, modelpath, inpath, workpath, rawpath, tablespath,
-        figurespath, logpath, filestring, reoptimize, recalculate_hessian, num_mh_blocks, num_mh_simulations,
-        num_mh_burn, mh_thinning_step,
+        figurespath, logpath, modelstring, reoptimize, recalculate_hessian, num_mh_blocks, num_mh_simulations,
+        num_mh_burn, mh_thinning_step, data_vintage,
         
         # new_parameters.jl
         parameter, Transform, Untransformed, SquareRoot, Exponential, NullablePrior,

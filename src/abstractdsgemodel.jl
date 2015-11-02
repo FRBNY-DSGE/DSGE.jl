@@ -7,6 +7,7 @@ function Base.show{T<:AbstractDSGEModel}(io::IO, m::T)
     @printf io "no. states:             %i\n" num_states(m)
     @printf io "no. anticipated shocks: %i\n" num_anticipated_shocks(m)
     @printf io "no. anticipated lags:   %i\n" num_anticipated_lags(m)
+    @printf io "data vintage:           %s\n" data_vintage(m)
     @printf io "description:\n %s\n"          description(m)
 end
 
@@ -114,10 +115,11 @@ num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.pa
 
 # Interface for I/O settings
 spec(m::AbstractDSGEModel)          = m.spec
-subspec(m::AbstractDSGEModel)       = get_setting(m, :subspec)
+subspec(m::AbstractDSGEModel)       = m.subspec 
 modelpathroot(m::AbstractDSGEModel) = get_setting(m, :modelpathroot)
 datapathroot(m::AbstractDSGEModel)  = get_setting(m, :datapathroot)
 data_vintage(m::AbstractDSGEModel)  = get_setting(m, :data_vintage)
+
 
 # Interface for estimation settings
 reoptimize(m::AbstractDSGEModel)          = get_setting(m, :reoptimize)
@@ -176,9 +178,9 @@ function modelpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, sub_typ
     end
 
     # File with model string inserted
-    model_string = "" # Later, will be something like m.modelstring
+    model_string = modelstring(m)
     (base, ext) = splitext(file_name)
-    file_name_detail = base * model_string * ext
+    file_name_detail = base * "_" * model_string * ext
     path = joinpath(path, file_name_detail)
 
     return path
@@ -193,9 +195,8 @@ function inpath(m::AbstractDSGEModel)
     return path
 end
 
-function filestring(base::ASCIIString, m::AbstractDSGEModel)
-    parts = join(values(m._filestrings),"_")
-    filename = *(base,"_",parts)
+function modelstring(m::AbstractDSGEModel)
+    m.testing ? "_test" : join(values(m._filestrings),"_")
 end
 
 

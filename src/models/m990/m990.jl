@@ -101,6 +101,7 @@ type Model990{T} <: AbstractDSGEModel{T}
     observables::Dict{Symbol,Int}                   #
 
     spec::ASCIIString                               # Model specification number (eg "m990")
+    subspec::ASCIIString                            # Model subspecification
     settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
@@ -108,7 +109,7 @@ type Model990{T} <: AbstractDSGEModel{T}
     _filestrings::SortedDict{Symbol,AbstractString, ForwardOrdering} # The strings we will print to a filename
 end
 
-description(m::Model990) = "FRBNY DSGE Model m990"
+description(m::Model990) = "FRBNY DSGE Model m990, $(m.subspec)"
 
 #=
 doc"""
@@ -183,10 +184,11 @@ function initialise_model_indices!(m::Model990)
 end
 
 
-function Model990()
+function Model990(subspec::Int=0)
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]   
+    subspec            = "ss$(subspec)"
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()        # Random Number Generator
@@ -202,6 +204,7 @@ function Model990()
             Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(),
                           
             spec,
+            subspec,
             settings,
             test_settings,
             rng,

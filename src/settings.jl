@@ -10,9 +10,7 @@ end
 
 # for printing codes to filename string 
 Base.convert{T<:Number, U<:Number}(::Type{T}, s::Setting{U}) = convert(T, s.value)
-#Base.convert(::Type{Bool}, s::Setting{Bool}) = s.value
 Base.convert{T<:AbstractString, U<:AbstractString}(::Type{T}, s::Setting{U}) = convert(T, s.value)
-#Base.convert{T<:AbstractString}(::Type{T}, s::Setting{ASCIIString}) = s.value
 
 Base.promote_rule{T<:Number,U<:Number}(::Type{Setting{T}}, ::Type{U}) = promote_rule(T,U)
 Base.promote_rule{T<:AbstractString,U<:AbstractString}(::Type{Setting{T}}, ::Type{U}) = promote_rule(T,U)
@@ -74,7 +72,7 @@ Add default settings to the model's settings dictionary
 function default_settings(m::AbstractDSGEModel)
 
     # Subspec number
-    m <= Setting(:subspec, "ss0", "Model sub-specification number")
+    #m <= Setting(:subspec, "ss0", "Model sub-specification number")
 
     # I/O File locations
     modelpath = normpath(joinpath(dirname(@__FILE__), "..","save",spec(m)))
@@ -100,9 +98,17 @@ function default_settings(m::AbstractDSGEModel)
     m <= Setting(:num_mh_burn,         2    , "Number of blocks to use as burn-in in Metropolis-Hastings")
     m <= Setting(:mh_thinning_step,    5    , "How often to write draw to file in Metropolis_Hastings")
 
-    # Data vintage
-    vint = 
-    m <= Setting(:data_vintage, "REF", true, "vint", "Date of data")
+    # Data vintage. Default behavior: choose the most recent data file
+    input_files = readdir(inpath(m)) 
+    vint = 0
+    for file in input_files
+        if ismatch(r"^\s*data*", file)
+            regmatch = match(r"^\s*data_(?P<vint>\d{6})", file)
+            vint = max(vint, parse(Int,regmatch[:vint]))
+        end
+    end
+    vint = "$vint"
+    m <= Setting(:data_vintage, vint, true, "vint", "Date of data")
     
     # Test settings
     default_test_settings(m)
