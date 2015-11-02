@@ -150,6 +150,8 @@ Creates the proper directory structure for input and output files, treating the 
                  output_data/<spec>/<subspec>/<out_type>/work/
                  output_data/<spec>/<subspec>/<out_type>/tables/
                  output_data/<spec>/<subspec>/<out_type>/figures/
+
+Note: we refer to the savepathroot/output_data/<spec>/<subspec>/ directory as `modelpathroot`.
 """
 =#
 function logpath(m::AbstractDSGEModel)
@@ -172,7 +174,7 @@ function modelpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, sub_typ
     file_name::T)
 
     # Containing dir
-    path = joinpath(modelpathroot(m), "output_data", spec(m), subspec(m), out_type, sub_type)
+    path = joinpath(modelpathroot(m), out_type, sub_type)
     if !isdir(path) 
         mkpath(path) 
     end

@@ -98,7 +98,7 @@ This routine implements the full estimation stage of the FRBNY DSGE model.
         mode = [param.value for param in m.parameters]
 
         # Write mode to file
-        h5 = h5open(outpath(m, "estimate", "mode_out.h5"),"w")
+        h5 = h5open(rawpath(m, "estimate", "mode_out.h5"),"w")
         h5["mode"] = mode
         close(h5)
         
@@ -126,7 +126,7 @@ This routine implements the full estimation stage of the FRBNY DSGE model.
         
         hessian, _ = hessizero!(m, mode, YY; verbose=true)
 
-        h5 = h5open(outpath(m, "estimate","hessian.h5"),"w") 
+        h5 = h5open(rawpath(m, "estimate","hessian_out.h5"),"w") 
         h5["hessian"] = hessian
         close(h5)
 

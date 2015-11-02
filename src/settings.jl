@@ -75,8 +75,8 @@ function default_settings(m::AbstractDSGEModel)
     #m <= Setting(:subspec, "ss0", "Model sub-specification number")
 
     # I/O File locations
-    modelpath = normpath(joinpath(dirname(@__FILE__), "..","save",spec(m)))
-    datapath = normpath(joinpath(dirname(@__FILE__), "..","save",spec(m),"input_data"))
+    modelpath = normpath(joinpath(dirname(@__FILE__), "..","save","output_data",spec(m),subspec(m)))
+    datapath = normpath(joinpath(dirname(@__FILE__), "..","save","input_data"))
 
     
     m <= Setting(:modelpathroot, modelpath, "Root of data directory structure")
