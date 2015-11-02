@@ -158,10 +158,15 @@ end
 function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::Matrix{T}; verbose::Bool = false)
     update!(model, x)
 
-    ## index of free parameters
+    # Index of free parameters
     para_free      = [!θ.fixed for θ in model.parameters]
     para_free_inds = find(para_free)
-    num_para_free  = length(para_free_inds)
+
+    # Testing
+    if model.testing
+        num_free_hessian_test = 4
+        para_free_inds = para_free_inds[1:num_free_hessian_test]
+    end
 
     num_para = length(x)
     hessian  = zeros(num_para, num_para)
