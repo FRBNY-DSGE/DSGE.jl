@@ -5,7 +5,7 @@ function hess_diag_element!{T<:AbstractFloat}(model::AbstractDSGEModel,
                                                i::Int; 
                                                verbose::Bool = false)
     # Setup
-    num_para    = length(x)
+    num_para = length(x)
     ndx      = 6
     dx       = exp(-(6:2:(6+(ndx-1)*2))')
     hessdiag = zeros(ndx, 1)
@@ -51,7 +51,7 @@ function hess_offdiag_element!{T<:AbstractFloat}(model::AbstractDSGEModel,
                                                   σ_xσ_y::T;
                                                   verbose::Bool = false)
     # Setup
-    num_para    = length(x)
+    num_para = length(x)
     ndx      = 6
     dx       = exp(-(6:2:(6+(ndx-1)*2))')
     hessdiag = zeros(ndx, 1)
@@ -63,11 +63,11 @@ function hess_offdiag_element!{T<:AbstractFloat}(model::AbstractDSGEModel,
     end
 
     for k = 1:ndx
-        paradx         = copy(x)
-        parady         = copy(x)
+        paradx      = copy(x)
+        parady      = copy(x)
         paradx[i]   = paradx[i] + dx[k]*dxscale[i]
         parady[j]   = parady[j] - dx[k]*dxscale[j]
-        paradxdy       = copy(paradx)
+        paradxdy    = copy(paradx)
         paradxdy[j] = paradxdy[j] - dx[k]*dxscale[j]
 
         fx    = posterior!(model, x, YY)
@@ -97,24 +97,18 @@ function hess_offdiag_element!{T<:AbstractFloat}(model::AbstractDSGEModel,
     return value, ρ_xy
 end
 
-# Compute Hessian of posterior function evaluated at x (vector)
-# if verbose, display error messages, results, etc.
-# 11/12/01 translated by Marco DelNegro in matlab from Frank Schorfheide's program in gauss
+# Compute Hessian of posterior function evaluated at x
 function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::Matrix{T}; verbose::Bool = false)
 
     update!(model, x)
 
     ## index of free parameters
-    para_free  = [!θ.fixed for θ in model.parameters]
+    para_free      = [!θ.fixed for θ in model.parameters]
     para_free_inds = find(para_free)
-    num_free      = length(para_free_inds)
+    num_para_free  = length(para_free_inds)
 
     num_para = length(x)
-    ndx      = 6
-    dx       = exp(-(6:2:(6+(ndx-1)*2))')
     hessian  = zeros(num_para, num_para)
-    hessdiag = zeros(ndx, 1)
-    dxscale  = ones(num_para, 1)
 
     # Compute diagonal elements first
     for row = para_free_inds'
@@ -127,9 +121,9 @@ function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::
     #TODO this can just be a matrix
     errorij = Dict{Tuple{Int64}, Float64}()
 
-    for i = 1:(num_free-1)
+    for i = 1:(num_para_free-1)
         row = para_free_inds[i]
-        for j = (i+1):num_free
+        for j = (i+1):num_para_free
             col = para_free_inds[j]
 
             σ_xσ_y = sqrt(hessian[row, row]*hessian[col, col])
@@ -140,7 +134,7 @@ function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::
 
             # if not null
             if ρ_xy < -1 || ρ_xy > 1
-            errorij[(row, col)] = ρ_xy
+                errorij[(row, col)] = ρ_xy
             end
 
             if verbose
