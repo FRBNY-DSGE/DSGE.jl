@@ -2,13 +2,13 @@
 function hess_diag_element!{T<:AbstractFloat}(fcn::Function,
                                               x::Vector{T}, 
                                               i::Int; 
+                                              ndx::Int=6,
                                               verbose::Bool = false)
     # Setup
     num_para = length(x)
-    ndx      = 6
+    dxscale  = ones(num_para, 1)
     dx       = exp(-(6:2:(6+(ndx-1)*2))')
     hessdiag = zeros(ndx, 1)
-    dxscale  = ones(num_para, 1)
 
     # Computation
     if verbose
@@ -35,7 +35,7 @@ function hess_diag_element!{T<:AbstractFloat}(fcn::Function,
         error("Negative diagonal in Hessian")
     end
     if verbose
-        println("Value used: $value\n")
+        println("Value used: $value")
     end
 
     return value
@@ -47,13 +47,13 @@ function hess_offdiag_element!{T<:AbstractFloat}(fcn::Function,
                                                  i::Int, 
                                                  j::Int,
                                                  σ_xσ_y::T;
+                                                 ndx::Int=6,
                                                  verbose::Bool = false)
     # Setup
     num_para = length(x)
-    ndx      = 6
+    dxscale  = ones(num_para, 1)
     dx       = exp(-(6:2:(6+(ndx-1)*2))')
     hessdiag = zeros(ndx, 1)
-    dxscale  = ones(num_para, 1)
 
     # Computation
     if verbose
@@ -88,12 +88,18 @@ function hess_offdiag_element!{T<:AbstractFloat}(fcn::Function,
         ρ_xy = value / σ_xσ_y
     end
 
-    if ρ_xy < -1 || ρ_xy > 1
+    if ρ_xy < -1 || 1 < ρ_xy
         value = 0
+    end
+
+    if verbose
+        println("Value used: $value")
+        println("Correlation: $ρ_xy")
     end
 
     return value, ρ_xy
 end
+
 function hessian!{T<:AbstractFloat}(fcn::Function, 
                                     x::Vector{T}; 
                                     verbose::Bool = false)
@@ -101,41 +107,47 @@ function hessian!{T<:AbstractFloat}(fcn::Function,
     hessian  = zeros(num_para, num_para)
 
     # Compute diagonal elements first
+    diag_elements = @sync @parallel (hcat) for i = 1:num_para
+        hess_diag_element!(fcn, x, i; verbose=verbose)
+    end
     for i = 1:num_para
-        hessian[i, i] = hess_diag_element!(fcn, x, i; verbose=verbose)
+        hessian[i, i] = diag_elements[i]
     end
 
     # Now compute off-diagonal elements
     # Make sure that correlations are between -1 and 1
-    # errorij contains the index of elements that are invalid
-    #TODO this can just be a matrix
-    errorij = Dict{Tuple{Int64}, Float64}()
+    # invalid_corr indexes elements that are invalid
+    invalid_corr = Dict{Tuple{Int,Int}, Float64}()
 
-    for i = 1:(num_para-1)
-        for j = (i+1):num_para
+    # Build indices to iterate over
+    num_off_diag_els = Int(num_para*(num_para-1)/2)
+    off_diag_inds = Vector{Tuple{Int,Int}}(num_off_diag_els)
+    k=1
+    for i=1:(num_para-1), j=(i+1):num_para
+        off_diag_inds[k] = (i,j)
+        k = k+1
+    end
 
-            σ_xσ_y = sqrt(hessian[i, i]*hessian[j, j])
-            (value, ρ_xy) = hess_offdiag_element!(fcn, x, i, j, σ_xσ_y; verbose=verbose)
+    # Iterate over off diag elements
+    off_diag_out = @sync @parallel (hcat) for (i,j) in off_diag_inds
+        σ_xσ_y = sqrt(hessian[i, i]*hessian[j, j])
+        hess_offdiag_element!(fcn, x, i, j, σ_xσ_y; verbose=verbose)
+    end
+    for k=1:num_off_diag_els
+        (i,j) = off_diag_inds[k]
+        (value, ρ_xy) = off_diag_out[k]
 
-            hessian[i, j] = value
-            hessian[j, i] = value
+        hessian[i,j] = value
+        hessian[j,i] = value
 
-            # if not null
-            if ρ_xy < -1 || ρ_xy > 1
-                errorij[(i, j)] = ρ_xy
-            end
-
-            if verbose
-                println("Value used: $value")
-                println("Correlation: $ρ_xy")
-                println("Number of errors: $(length(errorij))\n")
-            end
+        if ρ_xy < -1 || 1 < ρ_xy
+            invalid_corr[(i, j)] = ρ_xy
         end
     end
 
     has_errors= false
-    if !isempty(errorij)
-        println("Errors: $errorij")
+    if !isempty(invalid_corr)
+        println("Errors: $invalid_corr")
         has_errors = true
     end
 

@@ -28,9 +28,9 @@ This routine implements the full estimation stage of the FRBNY DSGE model.
 =#
 function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_covariance=[])
 
-    ###################################################################################################
+    ########################################################################################
     ### Step 1: Initialize
-    ###################################################################################################
+    ########################################################################################
 
     # Set up levels of verbose-ness
     verboseness = verbose_dict() 
@@ -43,9 +43,9 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     post = posterior(m, YY)
 
 
-    ###################################################################################################
+    ########################################################################################
     ### Step 2: Find posterior mode (if reoptimizing, run csminwel)
-    ###################################################################################################
+    ########################################################################################
     
     # Specify starting mode
 
@@ -105,43 +105,40 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     end
 
     
-    ###################################################################################################
+    ########################################################################################
     ### Step 3: Compute proposal distribution
     ###
     ### In Metropolis-Hastings, we draw sample parameter vectors from
     ### the proposal distribution, which is a degenerate multivariate
     ### normal centered at the mode. Its variance is the inverse of
     ### the hessian. We find the inverse via eigenvalue decomposition.
-    ###################################################################################################
+    ########################################################################################
 
     hessian = []
     
+    # Calculate the Hessian at the posterior mode
     if m.recalculate_hessian
         
-        # Calculate the Hessian at the posterior mode
-
         if verboseness[verbose] > verboseness[:none] 
             println("Recalculating Hessian...")
         end
         
-        hessian, _ = hessizero!(m, mode, YY; verbose=true)
+        hessian, _ = hessian!(m, mode, YY; verbose=true)
 
-        h5 = h5open(outpath(m, "estimate","hessian.h5"),"w") 
-        h5["hessian"] = hessian
-        close(h5)
+        h5open(outpath(m, "estimate","hessian.h5"),"w") do file
+            file["hessian"] = hessian
+        end
 
+    # Read in a pre-optimized mode
     else
-
-        # Read in a pre-optimized mode
         
         if verboseness[verbose] > verboseness[:none]
             println("Using pre-calculated Hessian")
         end
 
-        h5 = h5open(joinpath(inpath(m),"hessian_optimized.h5"),"r")
-        hessian = read(h5["hessian"])
-        close(h5)
-
+        h5open(outpath(m, "estimate","hessian_optimized.h5"),"w") do file
+            file["hessian"] = hessian
+        end
     end
 
     # Compute inverse hessian and create proposal distribution, or
@@ -175,9 +172,9 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     end
 
 
-    ###################################################################################################
+    ########################################################################################
     ### Step 4: Sample from posterior using Metropolis-Hastings algorithm
-    ###################################################################################################
+    ########################################################################################
     
     # Set the jump size for sampling
     cc0 = 0.01
@@ -186,13 +183,13 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose);
 
     
-    ###################################################################################################
+    ########################################################################################
     ### Step 5: Calculate and save parameter covariance matrix
-    ###################################################################################################
+    ########################################################################################
 
     compute_parameter_covariance(m);
 
-    Void
+    return nothing 
 end
 
 
