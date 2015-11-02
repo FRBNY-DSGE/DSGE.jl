@@ -5,11 +5,11 @@ function hess_diag_element!{T<:AbstractFloat}(model::AbstractDSGEModel,
                                                i::Int; 
                                                verbose::Bool = false)
     # Setup
-    npara    = length(x)
+    num_para    = length(x)
     ndx      = 6
     dx       = exp(-(6:2:(6+(ndx-1)*2))')
     hessdiag = zeros(ndx, 1)
-    dxscale  = ones(npara, 1)
+    dxscale  = ones(num_para, 1)
 
     # Computation
     if verbose
@@ -51,11 +51,11 @@ function hess_offdiag_element!{T<:AbstractFloat}(model::AbstractDSGEModel,
                                                   σ_xσ_y::T;
                                                   verbose::Bool = false)
     # Setup
-    npara    = length(x)
+    num_para    = length(x)
     ndx      = 6
     dx       = exp(-(6:2:(6+(ndx-1)*2))')
     hessdiag = zeros(ndx, 1)
-    dxscale  = ones(npara, 1)
+    dxscale  = ones(num_para, 1)
 
     # Computation
     if verbose
@@ -82,16 +82,16 @@ function hess_offdiag_element!{T<:AbstractFloat}(model::AbstractDSGEModel,
         println("Values: $(-hessdiag)")
     end
 
-    val = -(hessdiag[3]+hessdiag[4])/2
+    value = -(hessdiag[3]+hessdiag[4])/2
 
-    if val == 0 || σ_xσ_y == 0
+    if value == 0 || σ_xσ_y == 0
         ρ_xy = 0
     else
-        ρ_xy = val / σ_xσ_y
+        ρ_xy = value / σ_xσ_y
     end
 
     if ρ_xy < -1 || ρ_xy > 1
-        val = 0
+        value = 0
     end
 
     return value, ρ_xy
@@ -106,19 +106,19 @@ function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::
 
     ## index of free parameters
     para_free  = [!θ.fixed for θ in model.parameters]
-    fpara_free = find(para_free)
-    nfree      = length(fpara_free)
+    para_free_inds = find(para_free)
+    num_free      = length(para_free_inds)
 
-    npara    = length(x)
+    num_para = length(x)
     ndx      = 6
     dx       = exp(-(6:2:(6+(ndx-1)*2))')
-    hessian  = zeros(npara, npara)
+    hessian  = zeros(num_para, num_para)
     hessdiag = zeros(ndx, 1)
-    dxscale  = ones(npara, 1)
+    dxscale  = ones(num_para, 1)
 
     # Compute diagonal elements first
-    for seli = fpara_free'
-        hessian[seli, seli] = hess_diag_element!(model, x, YY, seli; verbose=verbose)
+    for row = para_free_inds'
+        hessian[row, row] = hess_diag_element!(model, x, YY, row; verbose=verbose)
     end
 
     # Now compute off-diagonal elements
@@ -127,24 +127,24 @@ function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::
     #TODO this can just be a matrix
     errorij = Dict{Tuple{Int64}, Float64}()
 
-    for i = 1:(nfree-1)
-        seli = fpara_free[i]
-        for j = (i+1):nfree
-            selj = fpara_free[j]
+    for i = 1:(num_free-1)
+        row = para_free_inds[i]
+        for j = (i+1):num_free
+            col = para_free_inds[j]
 
-            σ_xσ_y = sqrt(hessian[seli, seli]*hessian[selj, selj])
-            (val, ρ_xy) = hess_offdiag_element!(model, x, YY, seli, selj, σ_xσ_y; verbose=verbose)
+            σ_xσ_y = sqrt(hessian[row, row]*hessian[col, col])
+            (value, ρ_xy) = hess_offdiag_element!(model, x, YY, row, col, σ_xσ_y; verbose=verbose)
 
-            hessian[seli, selj] = val
-            hessian[selj, seli] = val
+            hessian[row, col] = value
+            hessian[col, row] = value
 
             # if not null
             if ρ_xy < -1 || ρ_xy > 1
-            errorij[(seli, selj)] = ρ_xy
+            errorij[(row, col)] = ρ_xy
             end
 
             if verbose
-                println("Value used: $val")
+                println("Value used: $value")
                 println("Correlation: $ρ_xy")
                 println("Number of errors: $(length(errorij))\n")
             end
