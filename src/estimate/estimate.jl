@@ -36,7 +36,7 @@ This routine implements the full estimation stage of the FRBNY DSGE model.
     verboseness = verbose_dict() 
 
     # Load data
-    h5 = h5open(joinpath(inpath(m),"YY.h5"), "r") 
+    h5 = h5open(joinpath(inpath(m),"data_$(data_vintage(m)).h5"), "r") 
     YY = read(h5["YY"])
     close(h5)
 
