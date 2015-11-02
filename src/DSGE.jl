@@ -24,7 +24,10 @@ module DSGE
         toreal, tomodel, update, update!, tomodel, toreal, Interval,
         
         # estimate/
-        dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel, hessizero!, estimate, proposal_distribution, metropolis_hastings, compute_parameter_covariance, compute_moments, make_moment_tables, find_density_bands, prior,
+        dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel,
+        hessian!,
+        estimate, proposal_distribution, metropolis_hastings, compute_parameter_covariance, 
+        compute_moments, make_moment_tables, find_density_bands, prior,
         
         # models/
         steadystate!, Model990, model_specifications, eqcond, measurement, create_save_directories,
