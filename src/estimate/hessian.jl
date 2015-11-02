@@ -1,9 +1,8 @@
 # Compute diag element
-function hess_diag_element!{T<:AbstractFloat}(model::AbstractDSGEModel, 
-                                               x::Vector{T}, 
-                                               YY::Matrix{T}, 
-                                               i::Int; 
-                                               verbose::Bool = false)
+function hess_diag_element!{T<:AbstractFloat}(fcn::Function,
+                                              x::Vector{T}, 
+                                              i::Int; 
+                                              verbose::Bool = false)
     # Setup
     num_para = length(x)
     ndx      = 6
@@ -23,9 +22,9 @@ function hess_diag_element!{T<:AbstractFloat}(model::AbstractDSGEModel,
         paradx[i] = paradx[i] + dx[k]*dxscale[i]
         parady[i] = parady[i] - dx[k]*dxscale[i]
 
-        fx  = posterior!(model, x, YY)
-        fdx = posterior!(model, paradx, YY)
-        fdy = posterior!(model, parady, YY)
+        fx  = fcn(x)
+        fdx = fcn(paradx)
+        fdy = fcn(parady)
 
         hessdiag[k]  = -(2fx - fdx - fdy) / (dx[k]*dxscale[i])^2
     end
@@ -43,13 +42,12 @@ function hess_diag_element!{T<:AbstractFloat}(model::AbstractDSGEModel,
 end
 
 # Compute off diag element
-function hess_offdiag_element!{T<:AbstractFloat}(model::AbstractDSGEModel, 
-                                                  x::Vector{T}, 
-                                                  YY::Matrix{T}, 
-                                                  i::Int, 
-                                                  j::Int,
-                                                  σ_xσ_y::T;
-                                                  verbose::Bool = false)
+function hess_offdiag_element!{T<:AbstractFloat}(fcn::Function,
+                                                 x::Vector{T}, 
+                                                 i::Int, 
+                                                 j::Int,
+                                                 σ_xσ_y::T;
+                                                 verbose::Bool = false)
     # Setup
     num_para = length(x)
     ndx      = 6
@@ -70,10 +68,10 @@ function hess_offdiag_element!{T<:AbstractFloat}(model::AbstractDSGEModel,
         paradxdy    = copy(paradx)
         paradxdy[j] = paradxdy[j] - dx[k]*dxscale[j]
 
-        fx    = posterior!(model, x, YY)
-        fdx   = posterior!(model, paradx, YY)
-        fdy   = posterior!(model, parady, YY)
-        fdxdy = posterior!(model, paradxdy, YY)
+        fx    = fcn(x)
+        fdx   = fcn(paradx)
+        fdy   = fcn(parady)
+        fdxdy = fcn(paradxdy)
 
         hessdiag[k]  = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k]*dxscale[i]*dxscale[j])
     end
@@ -96,23 +94,15 @@ function hess_offdiag_element!{T<:AbstractFloat}(model::AbstractDSGEModel,
 
     return value, ρ_xy
 end
-
-# Compute Hessian of posterior function evaluated at x
-function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::Matrix{T}; verbose::Bool = false)
-
-    update!(model, x)
-
-    ## index of free parameters
-    para_free      = [!θ.fixed for θ in model.parameters]
-    para_free_inds = find(para_free)
-    num_para_free  = length(para_free_inds)
-
+function hessian!{T<:AbstractFloat}(fcn::Function, 
+                                    x::Vector{T}; 
+                                    verbose::Bool = false)
     num_para = length(x)
     hessian  = zeros(num_para, num_para)
 
     # Compute diagonal elements first
-    for row = para_free_inds'
-        hessian[row, row] = hess_diag_element!(model, x, YY, row; verbose=verbose)
+    for i = 1:num_para
+        hessian[i, i] = hess_diag_element!(fcn, x, i; verbose=verbose)
     end
 
     # Now compute off-diagonal elements
@@ -121,20 +111,18 @@ function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::
     #TODO this can just be a matrix
     errorij = Dict{Tuple{Int64}, Float64}()
 
-    for i = 1:(num_para_free-1)
-        row = para_free_inds[i]
-        for j = (i+1):num_para_free
-            col = para_free_inds[j]
+    for i = 1:(num_para-1)
+        for j = (i+1):num_para
 
-            σ_xσ_y = sqrt(hessian[row, row]*hessian[col, col])
-            (value, ρ_xy) = hess_offdiag_element!(model, x, YY, row, col, σ_xσ_y; verbose=verbose)
+            σ_xσ_y = sqrt(hessian[i, i]*hessian[j, j])
+            (value, ρ_xy) = hess_offdiag_element!(fcn, x, i, j, σ_xσ_y; verbose=verbose)
 
-            hessian[row, col] = value
-            hessian[col, row] = value
+            hessian[i, j] = value
+            hessian[j, i] = value
 
             # if not null
             if ρ_xy < -1 || ρ_xy > 1
-                errorij[(row, col)] = ρ_xy
+                errorij[(i, j)] = ρ_xy
             end
 
             if verbose
@@ -152,4 +140,39 @@ function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::
     end
 
     return hessian, has_errors 
+end
+
+# Compute Hessian of posterior function evaluated at x
+function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::Matrix{T}; verbose::Bool = false)
+    update!(model, x)
+
+    ## index of free parameters
+    para_free      = [!θ.fixed for θ in model.parameters]
+    para_free_inds = find(para_free)
+    num_para_free  = length(para_free_inds)
+
+    num_para = length(x)
+    hessian  = zeros(num_para, num_para)
+
+    # x_hessian is the vector of free params
+    # x_model is the vector of all params
+    x_model = copy(x)
+    x_hessian = x_model[para_free_inds]
+    function f_hessian(x_hessian)
+        x_model[para_free_inds] = x_hessian
+        return posterior!(model, x_model, YY)
+    end
+
+    hessian_free, has_errors = hessian!(f_hessian, x_hessian; verbose=verbose)
+
+    # Fill in rows/cols of zeros corresponding to location of fixed parameters
+    # For each row corresponding to a free parameter, fill in columns corresponding to free
+    # parameters. Everything else is 0.
+    for i=1:length(para_free_inds)
+        row_full = para_free_inds[i]
+        row_free = i
+        hessian[row_full,para_free_inds] = hessian_free[row_free,:]
+    end
+
+    return hessian, has_errors
 end
