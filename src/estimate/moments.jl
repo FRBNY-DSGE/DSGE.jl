@@ -113,7 +113,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
     Θ_hat = mean(Θ,1)'       
 
     # Covariance: Note that this has already been computed and saved
-    # in $outpath(m)/parameter_covariance.h5.   
+    # in $workpath(m)/parameter_covariance.h5.   
     # parameter Θ_sig = cov(Θ, mean=Θ_hat') 
 
     # Bands for each
