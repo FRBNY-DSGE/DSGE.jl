@@ -67,4 +67,25 @@ priordensity = exp(prior(model))
 @test priordensity >= 0
 @test priordensity <= 1
 
+# settings
+# settings - boolean, string, and number. adding to model. overwriting. filestrings. testing/not testing.
+num_mh_blocks = Setting(:num_mh_blocks, 22) # short constructor
+reoptimize = Setting(:reoptimize, false)
+data_vintage = Setting(:data_vintage, "REF", true, "vint", "Date of data") # full constructor
+@test promote_rule(Setting{Float64}, Float16) == Float64
+@test promote_rule(Setting{Bool}, Bool) == Bool
+@test promote_rule(Setting{ASCIIString}, AbstractString) == UTF8String
+@test convert(Int64, num_mh_blocks) == 22
+@test convert(ASCIIString, data_vintage) == "REF"
+
+
+@test get_setting(model, :num_mh_blocks) == model.settings[:num_mh_blocks].value
+model.testing = true
+@test get_setting(model, :num_mh_blocks) == model.test_settings[:num_mh_blocks_test].value
+@test filestring("sim_save",model) == "sim_save_vint=REF"
+
+model.testing = false
+model <= Setting(:num_mh_blocks, 5, "Number of blocks for Metropolis-Hastings")
+@test model.settings[:num_mh_blocks].value == 5
+
 

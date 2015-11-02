@@ -1,7 +1,5 @@
-using DataStructures: SortedDict, insert!
+#using Debug
 
-
-T = gensym()
 immutable Setting{T} 
     key::Symbol                  # name of setting
     value::T                     # whatever the setting is
@@ -22,7 +20,7 @@ Base.promote_rule(::Type{Setting{Bool}}, ::Type{Bool}) = promote_rule(Bool, Bool
 
 Base.string(s::Setting{AbstractString}) = string(s.value)
 
-filename_string(s::Setting) = "$(s.code)=$(s.value)"
+to_filename(s::Setting) = "$(s.code)=$(s.value)"
 
 
 
@@ -45,7 +43,7 @@ Syntax for adding a setting to a model/overwriting a setting: m <= setting
 function (<=){T}(m::AbstractDSGEModel{T}, s::Setting)
     if s.savestring 
         # Add to a sorted dictionary of things to print
-        insert!(m._filestrings, s.key, filename_string(s))
+        insert!(m._filestrings, s.key, to_filename(s))
     end
 
     m.settings[s.key] = s
@@ -59,12 +57,12 @@ Returns the value of the setting
 """
 function get_setting(m::AbstractDSGEModel, setting::Symbol)
     s_test = symbol(setting,"_test")
-    
+
     if m.testing && in(s_test, keys(m.test_settings))
         return m.test_settings[s_test].value
     end
-    
-    m.settings[setting].value
+
+    return m.settings[setting].value
 end
 
 
@@ -103,7 +101,8 @@ function default_settings(m::AbstractDSGEModel)
     m <= Setting(:mh_thinning_step,    5    , "How often to write draw to file in Metropolis_Hastings")
 
     # Data vintage
-    m <= Setting(:data_vintage,        "REF", "Date of data")
+    vint = 
+    m <= Setting(:data_vintage, "REF", true, "vint", "Date of data")
     
     # Test settings
     default_test_settings(m)
@@ -135,13 +134,15 @@ function default_test_settings(m::AbstractDSGEModel)
 
     # I/O
     datapathroot_test = normpath(joinpath(dirname(@__FILE__), "..","test","reference"))
-    modelpathroot_test = ""
+    modelpathroot_test = normpath(joinpath(dirname(@__FILE__), "..","test","output_data"))
     
     test[:modelpathroot_test] = Setting(:modelpathroot_test, modelpathroot_test,
                                        "Where to write files when in test mode")
 
     test[:datapathroot_test] = Setting(:datapathroot_test, datapathroot_test,
                                        "Location of input files when in test mode" )
+
+    test[:data_vintage_test] = Setting(:data_vintage_test, "REF", true, "vint", "Reference data identifier")
 
     m.test_settings = test
 end
