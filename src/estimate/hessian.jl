@@ -1,5 +1,5 @@
 # Compute diag element
-function hessiandiagelement!{T<:AbstractFloat}(model::AbstractDSGEModel, 
+function hess_diag_element!{T<:AbstractFloat}(model::AbstractDSGEModel, 
                                                x::Vector{T}, 
                                                YY::Matrix{T}, 
                                                i::Int; 
@@ -43,7 +43,7 @@ function hessiandiagelement!{T<:AbstractFloat}(model::AbstractDSGEModel,
 end
 
 # Compute off diag element
-function hessianoffdiagelement!{T<:AbstractFloat}(model::AbstractDSGEModel, 
+function hess_offdiag_element!{T<:AbstractFloat}(model::AbstractDSGEModel, 
                                                   x::Vector{T}, 
                                                   YY::Matrix{T}, 
                                                   i::Int, 
@@ -59,23 +59,23 @@ function hessianoffdiagelement!{T<:AbstractFloat}(model::AbstractDSGEModel,
 
     # Computation
     if verbose
-        println("Hessian element: ($seli, $selj)")
+        println("Hessian element: ($i, $j)")
     end
 
     for k = 1:ndx
         paradx         = copy(x)
         parady         = copy(x)
-        paradx[seli]   = paradx[seli] + dx[k]*dxscale[seli]
-        parady[selj]   = parady[selj] - dx[k]*dxscale[selj]
+        paradx[i]   = paradx[i] + dx[k]*dxscale[i]
+        parady[j]   = parady[j] - dx[k]*dxscale[j]
         paradxdy       = copy(paradx)
-        paradxdy[selj] = paradxdy[selj] - dx[k]*dxscale[selj]
+        paradxdy[j] = paradxdy[j] - dx[k]*dxscale[j]
 
         fx    = posterior!(model, x, YY)
         fdx   = posterior!(model, paradx, YY)
         fdy   = posterior!(model, parady, YY)
         fdxdy = posterior!(model, paradxdy, YY)
 
-        hessdiag[k]  = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k]*dxscale[seli]*dxscale[selj])
+        hessdiag[k]  = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k]*dxscale[i]*dxscale[j])
     end
 
     if verbose
@@ -100,7 +100,7 @@ end
 # Compute Hessian of posterior function evaluated at x (vector)
 # if verbose, display error messages, results, etc.
 # 11/12/01 translated by Marco DelNegro in matlab from Frank Schorfheide's program in gauss
-function hessizero!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::Matrix{T}; verbose::Bool = false)
+function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::Matrix{T}; verbose::Bool = false)
 
     update!(model, x)
 
@@ -118,7 +118,7 @@ function hessizero!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY
 
     # Compute diagonal elements first
     for seli = fpara_free'
-        hessian[seli, seli] = hessiandiagelement!(model, x, YY, seli; verbose=verbose)
+        hessian[seli, seli] = hess_diag_element!(model, x, YY, seli; verbose=verbose)
     end
 
     # Now compute off-diagonal elements
@@ -133,7 +133,7 @@ function hessizero!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY
             selj = fpara_free[j]
 
             σ_xσ_y = sqrt(hessian[seli, seli]*hessian[selj, selj])
-            (val, ρ_xy) = hessianoffdiagelement!(model, x, YY, seli, selj, σ_xσ_y; verbose=verbose)
+            (val, ρ_xy) = hess_offdiag_element!(model, x, YY, seli, selj, σ_xσ_y; verbose=verbose)
 
             hessian[seli, selj] = val
             hessian[selj, seli] = val
