@@ -12,6 +12,7 @@ my_tests = [
             "solve/ordered_qz",
             "estimate/kalman",
             "estimate/posterior",
+            "estimate/hessizero",
             "estimate/hessian",
             "estimate/csminwel",
             "estimate/eig",
