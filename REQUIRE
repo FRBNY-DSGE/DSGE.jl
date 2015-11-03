@@ -1,7 +1,8 @@
-Distributions
-Debug
-Roots
-Compat
 Calculus
-Optim
+Compat
+DataStructures
+Debug
+Distributions
 HDF5
+Optim
+Roots
