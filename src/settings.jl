@@ -121,7 +121,7 @@ function default_test_settings(m::AbstractDSGEModel)
 
     test = Dict{Symbol,Setting}()
 
-    test[:max_hessian_free_params_test] = Setting(:max_hessian_free_params_test, 4, false, "mhfp",
+    test[:max_hessian_free_params_test] = Setting(:max_hessian_free_params_test, 3, false, "mhfp",
                                             "Max number of free params for which to calculate Hessian")
 
     test[:num_mh_simulations_test] = Setting(:num_mh_simulations_test, 100, false, "nsim",
