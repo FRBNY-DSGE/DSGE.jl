@@ -43,39 +43,6 @@ measurement equation and equilibrium conditions.
 
 * `spec::AbstractString`: The model specification number. For Model990, `spec`= 990. `spec` is used to determine input/output file paths. Any  changes to eqcond.jl or measurement.jl should be considered a new  model, and spec should be incremented accordingly.
 
-* `datapathroot::AbstractString`: The root directory for model input data.
-
-* `savepathroot::AbstractString`: The root directory for model output.
-
-* `num_anticipated_shocks::Int`: Number of anticipated policy shocks.
-
-* `num_anticipated_shocks_padding::Int`: Padding for `num_anticipated_shocks`.
-
-* `num_anticipated_lags::Int`: Number of periods back to incorporate zero bound expectations.
-
-* `num_presample_periods::Int`: Number of periods in the presample
-
-* `reoptimize::Bool`: Whether to reoptimize the posterior mode. If `false` (the default), `estimate()` reads in a previously found mode.
-
-* `recalculate_hessian::Bool`: Whether to reecalculate the hessian at the mode. If `false` (the default), `estimate()` reads in a previously computed Hessian.
-
-##### Metropolis-Hastings Specifications 
-* `num_mh_simulations::Int`: Number of draws from the posterior distribution per block.
-
-* `num_mh_blocks::Int`: Number of blocks to run Metropolis-Hastings.
-
-* `num_mh_burn::Int`: Number of blocks to discard as burn-in for Metropolis-Hastings
-
-* `mh_thinning_step::Int`: Save every `mh_thinning_step`-th draw in Metropolis-Hastings.
-
-The following fields are used to test Metropolis-Hastings with a small
-number of draws from the posterior:
-
-*  num_mh_simulations_test::Int        
-
-*  num_mh_blocks_test::Int             
-
-*  num_mh_burn_test::Int                 
 
 #### Other Fields
 * `rng::MersenneTwister`: Random number generator, implemented as a MersenneTwister()
@@ -213,7 +180,8 @@ function Model990(subspec::Int=0)
 
     # Set settings
     default_settings(m)
-
+    default_test_settings(m)
+    
     # Initialize parameters
     m <= parameter(:α,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.",

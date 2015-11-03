@@ -15,7 +15,7 @@ module DSGE
         PointMass, BetaAlt, GammaAlt,
 
         # settings.jl
-        Setting, get_setting,
+        Setting, get_setting, default_settings, default_test_settings,
 
         # abstractdsgemodel.jl
         AbstractDSGEModel, tomodel!, toreal!, num_states, num_shocks_exogenous, num_shocks_expectational,
@@ -26,13 +26,15 @@ module DSGE
         # new_parameters.jl
         parameter, Transform, Untransformed, SquareRoot, Exponential, NullablePrior,
         AbstractParameter, Parameter, ParameterVector, ScaledParameter, UnscaledParameter, SteadyStateParameter,
-        toreal, tomodel, update, update!, tomodel, toreal, Interval,
+        toreal, tomodel, update, update!, tomodel, toreal, Interval, ParamBoundsError,
         
         # estimate/
-        dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel, hessizero!, estimate, proposal_distribution, metropolis_hastings, compute_parameter_covariance, compute_moments, make_moment_tables, find_density_bands, prior,
+        dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel, hessizero!, estimate,
+        metropolis_hastings, compute_parameter_covariance, compute_moments, make_moment_tables,
+        find_density_bands, prior,
         
         # models/
-        steadystate!, Model990, model_specifications, eqcond, measurement, create_save_directories,
+        steadystate!, Model990, eqcond, measurement,
 
         # solve/
         ordschur, gensys, solve

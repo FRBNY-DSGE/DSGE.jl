@@ -10,7 +10,7 @@ import DSGE: PointMass
 @test α.key == :α
 @test isa(α.prior.value, Normal)
 @test α.prior.value.μ == 0.3
-@test α.description == "This variable is missing a description."
+@test α.description == ""
 @test α.texLabel == ""
 
 # UnscaledParameter, fixed = true
@@ -81,7 +81,7 @@ data_vintage = Setting(:data_vintage, "REF", true, "vint", "Date of data") # ful
 
 @test get_setting(model, :num_mh_blocks) == model.settings[:num_mh_blocks].value
 model.testing = true
-@test get_setting(model, :num_mh_blocks) == model.test_settings[:num_mh_blocks_test].value
+@test get_setting(model, :num_mh_blocks) == model.test_settings[:num_mh_blocks].value
 @test modelstring(model) == "_test"
 
 model.testing = false

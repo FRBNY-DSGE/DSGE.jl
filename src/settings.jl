@@ -1,5 +1,16 @@
-#using Debug
-
+"""
+Setting{T<:Any}
+- `key::Symbol`: Name of setting
+- `value::T`: Value of setting 
+- `savestring::Bool`: Indicates whether to append this setting's code
+and value to output file names. If true, output file names will
+include a suffix of the form _code1=val1_code2=val2_etc. where codes
+are listed in alphabetical order.
+- `code::AbstractString`: string of <=4 characters to print to output
+file suffixes when `savestring` is true.
+- `description::AbstractString`: Short description of what the setting
+is used for.
+"""
 immutable Setting{T} 
     key::Symbol                  # name of setting
     value::T                     # whatever the setting is
@@ -21,8 +32,6 @@ Base.string(s::Setting{AbstractString}) = string(s.value)
 to_filename(s::Setting) = "$(s.code)=$(s.value)"
 
 
-
-
 # key, value constructor
 function Setting(key, value)
     Setting(key, value, false, "", "")
@@ -34,7 +43,7 @@ end
 
 
 """
-(<=){T}(m::AbstractDSGEModel{T}, s::Setting)
+`(<=){T}(m::AbstractDSGEModel{T}, s::Setting)`
 
 Syntax for adding a setting to a model/overwriting a setting: m <= setting
 """
@@ -49,30 +58,65 @@ end
 
 
 """
-get_setting(m::AbstractDSGEModel, setting::Symbol)
+`get_setting(m::AbstractDSGEModel, setting::Symbol)`
 
 Returns the value of the setting
 """
-function get_setting(m::AbstractDSGEModel, setting::Symbol)
-    s_test = symbol(setting,"_test")
+function get_setting(m::AbstractDSGEModel, s::Symbol)
 
-    if m.testing && in(s_test, keys(m.test_settings))
-        return m.test_settings[s_test].value
+    if m.testing && in(s, keys(m.test_settings))
+        return m.test_settings[s].value
     end
 
-    return m.settings[setting].value
+    return m.settings[s].value
 end
 
 
 """
-default_settings(m::AbstractDSGEModel)
+`default_settings(m::AbstractDSGEModel)`
 
-Add default settings to the model's settings dictionary
+The following Settings are constructed, initialized and added to
+`m.settings`:
+
+### I/O 
+
+- `datapathroot::Setting{ASCIIString}`: The root directory for
+  model input data.
+- `savepathroot::Setting{ASCIIString}`: The root directory for model output.
+- `data_vintage`::Setting{ASCIIString}`: Data vintage identifier,
+  formatted YYMMDD (e.g. data from October 30, 2015 is identified by
+  the string "151030".)
+
+### Anticipated Shocks
+- `num_anticipated_shocks::Setting{Int}`: Number of anticipated policy shocks.
+- `num_anticipated_shocks_padding::Setting{Int}`: Padding for
+  `num_anticipated_shocks`.
+- `num_anticipated_lags::Setting{Int}`: Number of periods back to
+incorporate zero bound expectations.
+- `num_presample_periods::Setting{Int}`: Number of periods in the
+  presample
+
+### Estimation 
+
+- `reoptimize::Setting{Bool}`: Whether to reoptimize the posterior
+mode. If `false` (the default), `estimate()` reads in a previously
+found mode.
+- `recalculate_hessian::Setting{Bool}`: Whether to reecalculate the
+hessian at the mode. If `false` (the default), `estimate()` reads in
+a previously computed Hessian.
+
+#### Metropolis-Hastings 
+
+- `num_mh_simulations::Setting{Int}`: Number of draws from the
+posterior distribution per block.
+- `num_mh_blocks::Setting{Int}`: Number of blocks to run
+Metropolis-Hastings.
+- `num_mh_burn::Setting{Int}`: Number of blocks to discard as burn-in
+for Metropolis-Hastings
+- `mh_thinning_step::Setting{Int}`: Save every `mh_thinning_step`-th
+draw in Metropolis-Hastings.
 """
 function default_settings(m::AbstractDSGEModel)
-
-    # Subspec number
-    #m <= Setting(:subspec, "ss0", "Model sub-specification number")
 
     # I/O File locations
     modelpath = normpath(joinpath(dirname(@__FILE__), "..","save","output_data",spec(m),subspec(m)))
@@ -110,46 +154,56 @@ function default_settings(m::AbstractDSGEModel)
     vint = "$vint"
     m <= Setting(:data_vintage, vint, true, "vint", "Date of data")
     
-    # Test settings
-    default_test_settings(m)
-    
 end
 
 
 """
-default_test_settings(m::AbstractDSGEModel)
+`default_test_settings(m::AbstractDSGEModel)`
 
-Add default testing settings to the model's settings dictionary
+The following Settings are constructed, initialized and added to
+`m.test_settings`. Their purposes are identical to those in
+`m.settings`, but these values are used to test DSGE.jl.
+
+
+### I/O Locations and identifiers
+- `modelpathroot::Setting{ASCIIString}`: A temporary directory in /tmp/
+- `datapathroot::Setting{ASCIIString}`: DSGEroot/test/reference/
+- `data_vintage::Setting{ASCIIString}`: "_REF"
+
+### Metropolis-Hastings 
+- `num_mh_simulations::Setting{Int}`: 100 
+- `num_mh_blocks::Setting{Int}`: 1
+- `num_mh_burn::Setting{Int}`: 0 
+- `mh_thinning_step::Setting{Int}`: 1
 """
 function default_test_settings(m::AbstractDSGEModel)
-
-    test = Dict{Symbol,Setting}()
-
-    test[:num_mh_simulations_test] = Setting(:num_mh_simulations_test, 100, false, "nsim",
-                                            "Number of parameter draws per block in Metropolis-Hastings") 
     
-    test[:num_mh_blocks_test]      = Setting(:num_mh_blocks_test, 1, false, "nblc",
-                                             "Number of blocks to draw parameters in Metropolis-Hastings")
-    
-    test[:num_mh_burn_test]        = Setting(:num_mh_burn_test,   0, false, "nbrn",
-                                             "Number of burn-in blocks in Metropolis-Hastings")
-    
-    test[:mh_thinning_step_test]   = Setting(:mh_thinning_step_test, 1, false, "thin",
-                                             "Thinning step in Metropolis-Hastings")
-
+    test = m.test_settings
 
     # I/O
-    datapathroot_test = normpath(joinpath(dirname(@__FILE__), "..","test","reference"))
-    modelpathroot_test = normpath(joinpath(dirname(@__FILE__), "..","test","output_data"))
+    datapathroot = normpath(joinpath(dirname(@__FILE__), "..","test","reference"))
+    modelpathroot = mktempdir()
     
-    test[:modelpathroot_test] = Setting(:modelpathroot_test, modelpathroot_test,
+    test[:modelpathroot] = Setting(:modelpathroot, modelpathroot,
                                        "Where to write files when in test mode")
 
-    test[:datapathroot_test] = Setting(:datapathroot_test, datapathroot_test,
+    test[:datapathroot] = Setting(:datapathroot, datapathroot,
                                        "Location of input files when in test mode" )
 
-    test[:data_vintage_test] = Setting(:data_vintage_test, "REF", true, "vint", "Reference data identifier")
+    test[:data_vintage] = Setting(:data_vintage, "REF", true, "vint", "Reference data identifier")
 
-    m.test_settings = test
+    
+    # Metropolis-Hastings
+    test[:num_mh_simulations] = Setting(:num_mh_simulations, 100, false, "nsim",
+                                        "Number of parameter draws per block for testing Metropolis-Hastings") 
+    
+    test[:num_mh_blocks]      = Setting(:num_mh_blocks, 1, false, "nblc",
+                                        "Number of blocks to draw parameters for testing Metropolis-Hastings")
+    
+    test[:num_mh_burn]        = Setting(:num_mh_burn,   0, false, "nbrn",
+                                        "Number of burn-in blocks for testing Metropolis-Hastings")
+    
+    test[:mh_thinning_step]   = Setting(:mh_thinning_step, 1, false, "thin",
+                                        "Thinning step for testing Metropolis-Hastings")
 end
     
