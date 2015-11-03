@@ -45,14 +45,13 @@ end
 end
 Base.setindex!(m::AbstractDSGEModel, value, k::Symbol) = Base.setindex!(m, value, m.keys[k])
 
-#=
+
 """
 (<=){T}(m::AbstractDSGEModel{T}, p::AbstractParameter{T})
 
 Syntax for adding a parameter to a model: m <= parameter.
 NOTE: If `p` is added to `m` and length(m.steady_state) > 0, `keys(m)` will not generate the index of `p` in `m.parameters`.
 """
-=#
 function (<=){T}(m::AbstractDSGEModel{T}, p::AbstractParameter{T})
     @assert !in(p.key, keys(m.keys)) "Key $(p.key) is already present in DSGE model"
 
@@ -151,7 +150,7 @@ Creates the proper directory structure for input and output files, treating the 
                  output_data/<spec>/<subspec>/<out_type>/tables/
                  output_data/<spec>/<subspec>/<out_type>/figures/
 
-Note: we refer to the savepathroot/output_data/<spec>/<subspec>/ directory as `modelpathroot`.
+Note: we refer to the savepathroot/output_data/<spec>/<subspec>/ directory as modelpathroot.
 """
 =#
 function logpath(m::AbstractDSGEModel)
