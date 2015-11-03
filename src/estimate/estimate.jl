@@ -36,7 +36,7 @@ This routine implements the full estimation stage of the FRBNY DSGE model.
     verboseness = verbose_dict() 
 
     # Load data
-    h5 = h5open(joinpath(inpath(m),"data_$(data_vintage(m)).h5"), "r") 
+    h5 = h5open(joinpath(inpath(m),"data_$(data_vintage(m)).h5"), "r")
     YY = read(h5["YY"])
     close(h5)
 
@@ -336,7 +336,6 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
         for j = 1:(n_sim*n_times)
 
             # Draw para_new from the proposal distribution
-            
             para_new = rand(propdist, m; cc=cc)
 
             # Solve the model, check that parameters are within bounds, gensys returns a
