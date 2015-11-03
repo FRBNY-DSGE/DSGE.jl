@@ -18,7 +18,7 @@ end
 
 #=
 doc"""
-posterior{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
+posterior{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catch_errors::Bool = false)
 
 ### Parameters
 -`model`: the model object
@@ -26,7 +26,7 @@ posterior{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = 
 
 ### Optional Arguments
 -`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the log likelihood and the transition matrices for the zero-lower-bound period are also returned.
--`catchGensysErrors`: Whether or not to catch errors of type `GensysError`
+-`catch_errors`: Whether or not to catch errors of type `GensysError` or `ParamBoundsError`
 
 ### Description
 Calculates and returns the log of the posterior distribution for the model parameters:
@@ -34,45 +34,58 @@ Calculates and returns the log of the posterior distribution for the model param
   log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)    # where Θ is `m.parameters`
 """
 =#
-function posterior{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
+function posterior{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catch_errors::Bool = false)
     if mh
-        catchGensysErrors = true
+        catch_errors = true
         like, out = likelihood(model, YY; mh=mh)
         post = like + prior(model)
         return post, like, out
     else
-        return likelihood(model, YY; mh=mh, catchGensysErrors=catchGensysErrors) + prior(model)
+        return likelihood(model, YY; mh=mh, catch_errors=catch_errors) + prior(model)
     end
 end
 
 #=
 doc"""
-posterior!{T<:AbstractFloat}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
+posterior!{T<:AbstractFloat}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; [mh::Bool = false], [catch_errors::Bool = false])
 
 ### Parameters
 -`model`: The model object
 -`parameters`: New values for the model parameters
+- `YY`: Matrix of input data for observables
 
 ### Optional Arguments
 -`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the log likelihood and the transition matrices for the zero-lower-bound period are also returned.
--`catchGensysErrors`: Whether or not to catch errors of type `GensysError`. If `mh = true`, `GensysErrors` should always be caught.
+-`catch_errors`: Whether or not to catch errors of type `GensysError` or `ParamBoundsError`. If `mh = true`, both should always be caught.
 
 ### Description
 Evaluates the log posterior distribution at `parameters`
 """
 =#
-function posterior!{T<:AbstractFloat}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
-    update!(model, parameters)
+function posterior!{T<:AbstractFloat}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false, catch_errors::Bool = false)
+    MH_NULL_OUTPUT = (-Inf, Dict{Symbol, Any}())
         
     if mh
-        catchGensysErrors = true
+
+        try
+            update!(model, parameters)
+        catch err
+            @printf "There was an error of type %s :" typeof(err)
+            @printf "%s\n" err.msg
+            return MH_NULL_OUTPUT
+        end
+
+        return posterior(model, YY; mh=true, catch_errors=true)
+    else
+        return posterior(model, YY; mh=mh, catch_errors=catch_errors)
     end
-    return posterior(model, YY; mh=mh, catchGensysErrors=catchGensysErrors)
+    
+
 end
 
 #=
 doc"""
-likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
+likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catch_errors::Bool = false)
 
 ### Parameters
 -`model`: The model object
@@ -80,19 +93,19 @@ likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool =
 
 ## Optional Arguments
 -`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the transition matrices for the zero-lower-bound period are returned in a dictionary.
--`catchGensysErrors`: If `mh = true`, `GensysErrors` should always be caught.
+-`catch_errors`: If `mh = true`, `GensysErrors` should always be caught.
 
 ### Description
 `likelihood` is a dsge likelihood function that can handle 2-part estimation where the observed sample contains both a normal stretch of time (in which interest rates are positive) and a stretch of time in which interest rates reach the zero lower bound. If there is a zero-lower-bound period, then we filter over the 2 periods separately. Otherwise, we filter over the main sample all at once.
 """
 =#
-function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catchGensysErrors::Bool = false)
+function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catch_errors::Bool = false)
     MH_NULL_OUTPUT = (-Inf, Dict{Symbol, Any}())
     GENSYS_ERROR_OUTPUT = -Inf
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if mh
-        catchGensysErrors = true  # for consistency
+        catch_errors = true  # for consistency
         for θ in model.parameters
             (left, right) = θ.valuebounds
             if !θ.fixed && !(left <= θ.value <= right)
@@ -127,7 +140,7 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
     try
         zlb[:TTT], zlb[:RRR], zlb[:CCC] = solve(model)
     catch err
-        if catchGensysErrors && isa(err, GensysError)
+        if catch_errors && isa(err, GensysError)
             info(err.msg)
             if mh
                 return MH_NULL_OUTPUT

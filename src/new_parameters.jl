@@ -54,14 +54,40 @@ abstract AbstractParameter{T<:Number}
 """
 Parameter{T<:Number, U<:Transform} <: AbstractParameter{T}
 
-The Parameter type is the common supertype of time-invariant, non-steady-state model parameters. It has 2 subtypes, `UnscaledParameter` and `ScaledParameter`. `ScaledParameter`s are parameters whose values are scaled when used in the model's equilibrium conditions
-
+The Parameter type is the common supertype of time-invariant,
+non-steady-state model parameters. It has 2 subtypes,
+`UnscaledParameter` and `ScaledParameter`. `ScaledParameter`s are
+parameters whose values are scaled when used in the model's
+equilibrium conditions. The scaled value is stored for convenience,
+and udpated when the parameter's value is updated.
 """
 abstract Parameter{T,U<:Transform} <: AbstractParameter{T}
 
 typealias ParameterVector{T} Vector{AbstractParameter{T}}
 typealias NullablePrior      Nullable{ContinuousUnivariateDistribution}
 
+
+"""
+UnscaledParameter{T<:Number,U<:Transform} <: Parameter{T,U}
+
+Time-invariant model parameter whose value is used as-is in the model's equilibrium conditions (`eqcond`).
+
+#### Fields
+- `key::Symbol`: Parameter name. For maximum clarity, `key`
+should conform to the guidelines established in the DSGE Style Guide.
+- `value::T`: Parameter value. Initialized in model space (guaranteed
+to be between `valuebounds`), but can be transformed between model
+space and the real line via calls to `toreal` and `tomodel`.
+- `valuebounds::Interval{T}`: Bounds for the parameter's value in model space.
+- `transform_parameterization::Interval{T}`: Parameters used to
+transform `value` between model space and the real line.
+- `transform::U`: Transformation used to transform `value` between
+model space and real line.
+- `prior::NullablePrior`: Prior distribution for parameter value.
+- `fixed::Bool`: Indicates whether the parameter's value is fixed rather than estimated.
+- `description::AbstractString`:  A short description of the parameter's economic significance.
+- `texLabel::AbstractString`: String for printing the parameter name to LaTeX.
+"""
 type UnscaledParameter{T,U} <: Parameter{T,U}
     key::Symbol
     value::T                             # parameter value in model space
@@ -78,20 +104,26 @@ end
 """
 ScaledParameter{T,U} <: Parameter{T,U}
 
+Time-invariant model parameter whose value is scaled for use in the model's equilibrium conditions (`eqcond`).
 
 #### Fields
 
-* `key::Symbol`: parameter name
-* `value::T`: The parameter's unscaled value. For compatibility with the existing code setup, it should be initialized "untransformed", i.e. in model space, within `valuebounds`
-* `scaledvalue::T`: Parameter value scaled for use in `eqcond.jl`
-* `valuebounds::Interval{T}`: Bounds for the parameter's value 
-* `transform_parameterization::Interval{T}`: Parameters used to transform `value` between model space and the real line.
-* `transform::U`: The transformation used to convert `value` between model space and the real line, for use in csminwel.
-* `prior::NullablePrior`: Prior distribution for parameter value.
-* `fixed::Bool`: Whether or not the parameter's value is fixed rather than estimated.
-* `scaling::Function`: Function used to scale parameter value for use in equilibrium conditions.
-* `description::AbstractString`: A short description of the parameter's economic significance.
-* `texLabel::AbstractString`: For printing tables of parameter values to LaTeX
+- `key::Symbol`: Parameter name. For maximum clarity, `key`
+should conform to the guidelines established in the DSGE Style Guide.
+- `value::T`: The parameter's unscaled value. Initialized in model
+  space (guaranteed to be between `valuebounds`), but can be
+  transformed between model space and the real line via calls to
+  `toreal` and `tomodel`.
+- `scaledvalue::T`: Parameter value scaled for use in `eqcond.jl`
+- `valuebounds::Interval{T}`: Bounds for the parameter's value in model space.
+- `transform_parameterization::Interval{T}`: Parameters used to
+  transform `value` between model space and the real line.
+- `transform::U`: The transformation used to convert `value` between model space and the real line, for use in csminwel.
+- `prior::NullablePrior`: Prior distribution for parameter value.
+- `fixed::Bool`: Indicates whether the parameter's value is fixed rather than estimated.
+- `scaling::Function`: Function used to scale parameter value for use in equilibrium conditions.
+- `description::AbstractString`: A short description of the parameter's economic significance.
+- `texLabel::AbstractString`: String for printing parameter name to LaTeX.
 """
 type ScaledParameter{T,U} <: Parameter{T,U}
     key::Symbol
@@ -110,18 +142,23 @@ end
 """
 SteadyStateParameter{T} <: AbstractParameter{T}
 
-Defines a type for the model's steady-state parameters, stored in
-`m.steady_state`. Their values are calculated and set by
-`steadystate!(m)`, rather than being estimated directly. They do not
-require transformations from the model space to the real line or
-scalings.
+Steady-state model parameter whose value depends upon the value of
+other (non-steady-state) `Parameter`s. `SteadyStateParameter`s must be
+constructed and added to an instance of a model object `m` _after_ all
+other model `Parameter`s have been defined. Once added to `m`,
+`SteadyStateParameter`s are stored in `m.steady_state`. Their values
+are calculated and set by `steadystate!(m)`, rather than being
+estimated directly. `SteadyStateParameter`s do not require
+transformations from the model space to the real line or scalings for
+use in equilibrium conditions.
 
 #### Fields
 
-* `key::Symbol`: Key for referencing this parameter
-* `value::T`: The parameter's steady-state value
-* `description::AbstractString`: Short description of the parameter's economic significance
-* `texLabel::AbstractString`: for LaTeX printing
+- `key::Symbol`: Parameter name. Should conform to the guidelines
+established in the DSGE Style Guide.
+- `value::T`: The parameter's steady-state value.
+- `description::AbstractString`: Short description of the parameter's economic significance.
+- `texLabel::AbstractString`: String for printing parameter name to LaTeX.
 """
 type SteadyStateParameter{T} <: AbstractParameter{T}
     key::Symbol
@@ -138,13 +175,30 @@ typealias NullableOrPrior @compat(Union{NullablePrior, ContinuousUnivariateDistr
 # SteadyStateParameters in computation, so we alias their union here.
 typealias UnscaledOrSteadyState @compat(Union{UnscaledParameter, SteadyStateParameter})
 
+"""
+ParamBoundsError <: Exception
+
+A `ParamBoundsError` is thrown upon an attempt to assign a parameter value that is not between `valuebounds`.
+"""
+type ParamBoundsError <: Exception
+    msg::AbstractString
+end
+ParamBoundsError() = ParamBoundsError("Value not between valuebounds")
+Base.showerror(io::IO, ex::ParamBoundsError) = print(io, ex.msg)
 
 """
-parameter{T,U<:Transform}(key::Symbol, value::T, [valuebounds = (value,value)], [transform_parameterization = (value,value)], [transform = Untransformed()], [prior = NullablePrior()], [fixed = true], [scaling::Function = identity], [description = "This variable is missing a description."],[texLabel::AbstractString = ""])
+parameter{T,U<:Transform}(key::Symbol, value::T, [valuebounds =
+(value,value)], [transform_parameterization = (value,value)],
+[transform = Untransformed()], [prior = NullablePrior()], [fixed =
+true], [scaling::Function = identity], [description = ""],[texLabel::AbstractString = ""])
 
 
-By default, returns a fixed `UnscaledParameter` object with key `key` and value `value`. If `scaling` is given, a `ScaledParameter` object is returned.
+By default, returns a fixed `UnscaledParameter` object with key `key`
+and value `value`. If `scaling` is given, a `ScaledParameter` object
+is returned.
+
 """
+
 function parameter{T,U<:Transform}(key::Symbol,
                                    value::T,
                                    valuebounds::Interval{T} = (value,value),
@@ -153,7 +207,7 @@ function parameter{T,U<:Transform}(key::Symbol,
                                    prior::NullableOrPrior   = NullablePrior();
                                    fixed::Bool              = true,
                                    scaling::Function        = identity,
-                                   description::AbstractString      = "This variable is missing a description.",
+                                   description::AbstractString = "",
                                    texLabel::AbstractString = "")
 
     
@@ -188,27 +242,57 @@ function parameter{T,U<:Transform}(key::Symbol,
     end
 end
 
-# construct steady-state parameters
+
+"""
+SteadyStateParameter{T<:Number}(key::Symbol, value::T;
+[description::AbstractString = ""], [texLabel::AbstractString = ""])
+
+SteadyStateParameter constructor with optional `description` and `texLabel` arguments.
+"""
 function SteadyStateParameter{T<:Number}(key::Symbol,
                                        value::T;
-                                       description::AbstractString = "No description provided.",
+                                       description::AbstractString = "",
                                        texLabel::AbstractString = "")
 
     return SteadyStateParameter(key, value, description, texLabel)
 end
 
 
-# generate a parameter given a new value 
+"""
+parameter{T<:Number,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::T)
+
+Returns an UnscaledParameter with value field equal to `newvalue` and
+all other fields equal to their values in `p`. Throws a
+`ParamBoundsError` if `newvalue` is not between `p.valuebounds`.
+
+If `p` is fixed, returns `p` without changing `p.value`.
+"""
 function parameter{T<:Number,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::T)
     p.fixed && return p  # if the parameter is fixed, don't change its value
     a,b = p.valuebounds  
-    @assert a <= newvalue <= b "New value is out of bounds"
+    if !(a <= newvalue <= b)
+        throw(ParamBoundsError("New value of $(string(p.key)) ($(newvalue)) is out of bounds ($(p.valuebounds))"))
+    end
     UnscaledParameter{T,U}(p.key, newvalue, p.valuebounds, p.transform_parameterization, p.transform, p.prior, p.fixed, p.description, p.texLabel)
 end
+
+
+"""
+parameter{T<:Number,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
+
+Returns a ScaledParameter with value field equal to `newvalue`,
+scaledvalue field equal to `p.scaling(newvalue)`, and all other fields
+equal to their values in `p`. Throws a `ParamBoundsError` if
+`newvalue` is not between `p.valuebounds`.
+
+If `p` is fixed, returns `p` without changing `p.value`.
+"""
 function parameter{T<:Number,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
     p.fixed && return p
-    a,b = p.valuebounds  
-    @assert a <= newvalue <= b "New value is out of bounds"
+    a,b = p.valuebounds
+    if !(a <= newvalue <= b)
+        throw(ParamBoundsError("New value of $(string(p.key)) ($(newvalue)) is out of bounds ($(p.valuebounds))"))
+    end
     ScaledParameter{T,U}(p.key, newvalue, p.scaling(newvalue), p.valuebounds, p.transform_parameterization, p.transform, p.prior, p.fixed, p.scaling, p.description, p.texLabel)
 end
 
@@ -241,8 +325,29 @@ function Base.show{T}(io::IO, p::SteadyStateParameter{T})
 end
 
 
-# does anyone know what c does here?
+"""
+tomodel{T<:Number, U<:Transform}(p::Parameter{T,U}, x::T)
 
+Transforms `x` from the real line to lie between `p.valuebounds` without updating
+`p.value`. The transformations are defined as follows,
+where (a,b) = p.transform_parameterization and c a scalar (default=1):
+
+- Untransformed: x
+- SquareRoot:    (a+b)/2 + (b-a)/2 * c * x/sqrt(1 + c^2 * x^2)
+- Exponential:   a + exp(c*(x-b))
+"""
+
+"""
+toreal{T<:Number, U<:Transform}(p::Parameter{T,U}, x::T = p.value)
+
+Transforms `p.value` from model space (between `p.valuebounds`) to the real line, without updating
+`p.value`. The transformations are defined as follows,
+where (a,b) = p.transform_parameterization, c a scalar (default=1), and x = p.value:
+
+- Untransformed: x
+- SquareRoot:   (1/c)*cx/sqrt(1 - cx^2), where cx =  2 * (x - (a+b)/2)/(b-a)
+- Exponential:   a + exp(c*(x-b))
+"""
 # Untransformed
 tomodel{T}(p::Parameter{T,Untransformed}, x::T) = x
 toreal{T}(p::Parameter{T,Untransformed}, x::T = p.value) = x
@@ -313,11 +418,25 @@ for f in (:(Base.exp),
     @eval ($f)(p::ScaledParameter) = ($f)(p.scaledvalue)
 end
 
+"""
+update!{T}(pvec::ParameterVector{T}, newvalues::Vector{T})
+
+Update all parameters in `pvec` that are not fixed with
+`newvalues`. Length of `newvalues` must equal length of `pvec`.
+"""
 # this function is optimised for speed
 function update!{T}(pvec::ParameterVector{T}, newvalues::Vector{T})
     @assert length(newvalues) == length(pvec) "Length of input vector (=$(length(newvalues))) must match length of parameter vector (=$(length(pvec)))"
     map!(parameter, pvec, pvec, newvalues)
 end
+
+"""
+update{T}(pvec::ParameterVector{T}, newvalues::Vector{T})
+
+Returns a copy of `pvec` where non-fixed parameter values are udpated
+to `newvalues`. `pvec` remains unchanged. Length of `newvalues` must
+equal length of `pvec`.
+"""
 # define the non-mutating version like this because we need the type stability of map!
 update{T}(pvec::ParameterVector{T}, newvalues::Vector{T}) = update!(copy(pvec), newvalues)
 

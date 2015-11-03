@@ -47,6 +47,6 @@ for w in [parameter(:moop, 3.0, fixed=false), parameter(:moop, 3.0; scaling = lo
 	@test_throws MethodError parameter(w, one(Int))
 
 	# new value is out of bounds
-	@test_throws AssertionError parameter(w, -1.)
+	@test_throws ParamBoundsError parameter(w, -1.)
 end
 
