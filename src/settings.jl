@@ -97,10 +97,11 @@ function default_settings(m::AbstractDSGEModel)
     # Estimation
     m <= Setting(:reoptimize,          false, "Reoptimize the posterior mode")
     m <= Setting(:recalculate_hessian, false, "Recalculate the hessian at the mode")
+    m <= Setting(:max_hessian_free_params, typemax(Int), "Max number of free params for which to calculate Hessian")
     m <= Setting(:num_mh_simulations,  10000, "Number of draws per block in Metropolis-Hastings")
     m <= Setting(:num_mh_blocks,       22   , "Number of blocks for Metropolis-Hastings")
     m <= Setting(:num_mh_burn,         2    , "Number of blocks to use as burn-in in Metropolis-Hastings")
-    m <= Setting(:mh_thinning_step,    5    , "How often to write draw to file in Metropolis_Hastings")
+    m <= Setting(:mh_thinning_step,    5    , "How often to write draw to file in Metropolis-Hastings")
 
     # Data vintage
     m <= Setting(:data_vintage,        "REF", "Date of data")
@@ -119,6 +120,9 @@ Add default testing settings to the model's settings dictionary
 function default_test_settings(m::AbstractDSGEModel)
 
     test = Dict{Symbol,Setting}()
+
+    test[:max_hessian_free_params_test] = Setting(:max_hessian_free_params_test, 4, false, "mhfp",
+                                            "Max number of free params for which to calculate Hessian")
 
     test[:num_mh_simulations_test] = Setting(:num_mh_simulations_test, 100, false, "nsim",
                                             "Number of parameter draws per block in Metropolis-Hastings") 
@@ -145,4 +149,3 @@ function default_test_settings(m::AbstractDSGEModel)
 
     m.test_settings = test
 end
-    

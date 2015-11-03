@@ -155,17 +155,21 @@ function hessian!{T<:AbstractFloat}(fcn::Function,
 end
 
 # Compute Hessian of posterior function evaluated at x
-function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::Matrix{T}; verbose::Bool = false)
+function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, 
+                                    x::Vector{T}, 
+                                    YY::Matrix{T}; 
+                                    verbose::Bool = false)
     update!(model, x)
 
     # Index of free parameters
     para_free      = [!θ.fixed for θ in model.parameters]
     para_free_inds = find(para_free)
 
-    # Testing
-    if model.testing
-        num_free_hessian_test = 4
-        para_free_inds = para_free_inds[1:num_free_hessian_test]
+    # Compute hessian only for freem parameters with indices less than max. Useful for
+    # testing purposes.
+    max_free_ind = max_hessian_free_params(model)
+    if max_free_ind < maximum(para_free_inds)
+        para_free_inds = para_free_inds[1:max_free_ind]
     end
 
     num_para = length(x)
@@ -185,9 +189,7 @@ function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::
     # Fill in rows/cols of zeros corresponding to location of fixed parameters
     # For each row corresponding to a free parameter, fill in columns corresponding to free
     # parameters. Everything else is 0.
-    for i=1:length(para_free_inds)
-        row_full = para_free_inds[i]
-        row_free = i
+    for (row_free, row_full) in enumerate(para_free_inds)
         hessian[row_full,para_free_inds] = hessian_free[row_free,:]
     end
 

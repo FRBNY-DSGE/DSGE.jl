@@ -1,4 +1,3 @@
-using Debug
 abstract AbstractDSGEModel{T<:AbstractFloat}
 
 function Base.show{T<:AbstractDSGEModel}(io::IO, m::T)
@@ -111,7 +110,6 @@ num_parameters(m::AbstractDSGEModel)             = length(m.parameters)
 num_parameters_steady_state(m::AbstractDSGEModel)= length(m.steady_state)
 num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.parameters])
 
-
 # Interface for I/O settings
 spec(m::AbstractDSGEModel)          = m.spec
 subspec(m::AbstractDSGEModel)       = get_setting(m, :subspec)
@@ -119,16 +117,15 @@ modelpathroot(m::AbstractDSGEModel) = get_setting(m, :modelpathroot)
 datapathroot(m::AbstractDSGEModel)  = get_setting(m, :datapathroot)
 
 # Interface for estimation settings
-reoptimize(m::AbstractDSGEModel)          = get_setting(m, :reoptimize)
-recalculate_hessian(m::AbstractDSGEModel) = get_setting(m, :recalculate_hessian)
+reoptimize(m::AbstractDSGEModel)              = get_setting(m, :reoptimize)
+recalculate_hessian(m::AbstractDSGEModel)     = get_setting(m, :recalculate_hessian)
+max_hessian_free_params(m::AbstractDSGEModel) = get_setting(m, :max_hessian_free_params)
 
 # Interface for Metropolis-Hastings settings
 num_mh_blocks(m::AbstractDSGEModel)      =  get_setting(m, :num_mh_blocks)
 num_mh_simulations(m::AbstractDSGEModel) =  get_setting(m, :num_mh_simulations) 
 num_mh_burn(m::AbstractDSGEModel)        =  get_setting(m, :num_mh_burn)
 mh_thinning_step(m::AbstractDSGEModel)   =  get_setting(m, :mh_thinning_step)
-
-
 
 #=
 """

@@ -16,17 +16,20 @@ end
 
 model = Model990()
 
-# Ad-hoc testing...
-toggle_test_mode(model)
+# Test subset of hessian elements.
+model.testing = true
+
 para_free      = [!θ.fixed for θ in model.parameters]
 para_free_inds = find(para_free)
-num_free_hessian_test = 4
-para_free_inds = para_free_inds[1:num_free_hessian_test]
-max_free_ind = max(para_free_inds...)
 
-hessian, hessian_errors = hessian!(model, mode, YY; verbose=true)
+max_free_ind = DSGE.max_hessian_free_params(model)
+if max_free_ind < maximum(para_free_inds)
+    para_free_inds = para_free_inds[1:max_free_ind]
+end
+
+hessian, hessian_errors = hessian!(model, mode, YY; verbose=false)
 @test test_matrix_eq(hessian_expected[1:max_free_ind, 1:max_free_ind], 
                      hessian[1:max_free_ind, 1:max_free_ind]; 
-                     ϵ=1.0, verbose=true)
+                     ϵ=1.0, verbose=false)
 
-toggle_test_mode(model)
+model.testing = false
