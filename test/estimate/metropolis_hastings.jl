@@ -3,7 +3,7 @@ include("../util.jl")
 
 # Set up model for testing
 m = Model990()
-toggle_test_mode(m)
+m.testing=true
 
 # Read in the covariance matrix for Metropolis-Hastings and reference parameter draws
 reference_fn  = joinpath(dirname(@__FILE__), "..", "reference", "metropolis_hastings.h5")
@@ -46,5 +46,4 @@ compute_moments(m, verbose=false)
 rm(h5_fn)
 rm(h5_cov_fn)
 
-# Toggle testing off.
-toggle_test_mode(m)
+

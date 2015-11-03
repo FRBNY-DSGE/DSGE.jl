@@ -80,7 +80,7 @@ number of draws from the posterior:
 #### Other Fields
 * `rng::MersenneTwister`: Random number generator, implemented as a MersenneTwister()
 
-* `test::Bool`: Indicates whether the model is in test mode
+* `testing::Bool`: Indicates whether the model is in test mode. Should only be set/unset via calls to `toggle_test_mode(m)`
 
 * `datapathroot_test::AbstractString`: Directory for input data used in testing reference model.
 
@@ -100,33 +100,12 @@ type Model990{T} <: AbstractDSGEModel{T}
     endogenous_states_postgensys::Dict{Symbol,Int}  #
     observables::Dict{Symbol,Int}                   #
 
-    spec::AbstractString                            # The model specification number
-    datapathroot::AbstractString                    # The absolute path to the top-level
-                                                    # directory with input data.
-    savepathroot::AbstractString                    # The absolute path to the top-level save directory for this
-                                                    # model specification
-
-    num_anticipated_shocks::Int                     # Number of anticipated policy shocks
-    num_anticipated_shocks_padding::Int             # Padding for nant
-    num_anticipated_lags::Int                       # Number of periods back to incorporate zero bound expectations
-    num_presample_periods::Int                      # Number of periods in the presample
-
-    reoptimize::Bool                                # Reoptimize the posterior mode
-    recalculate_hessian::Bool                       # Recalculate the hessian at the mode
-    num_mh_simulations::Int                         #
-    num_mh_blocks::Int                              #
-    num_mh_burn::Int                                #
-    mh_thinning_step::Int                           #
-
-    num_mh_simulations_test::Int                    # These fields are used to test Metropolis-Hastings with
-    num_mh_blocks_test::Int                         # a small number of draws from the posterior
-    num_mh_burn_test::Int                           #
-    mh_thinning_step_test::Int                      #
-    
+    spec::ASCIIString                               # Model specification number (eg "m990")
+    settings::Dict{Symbol,Setting}                  # Settings/flags for computation
+    test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
-    datapathroot_test::AbstractString               # Where to load data for test
-    savepathroot_test::AbstractString               # Where to write testing output
+    _filestrings::SortedDict{Symbol,AbstractString, ForwardOrdering} # The strings we will print to a filename
 end
 
 description(m::Model990) = "FRBNY DSGE Model m990"
@@ -207,35 +186,12 @@ end
 function Model990()
 
     # Model-specific specifications
-    spec         = split(basename(@__FILE__),'.')[1]
-    datapathroot = normpath(joinpath(dirname(@__FILE__), "..","..","..","save",spec,"input_data"))
-    savepathroot = normpath(joinpath(dirname(@__FILE__), "..","..","..","save",spec))
-    
-    _num_anticipated_shocks          = 6
-    _num_anticipated_shocks_padding  = 20
-    _num_anticipated_lags            = 24
-    _num_presample_periods           = 2 # TODO: This should be set when the data are read in
-
-    # Estimation specifications
-    reoptimize                      = false
-    recalculate_hessian             = false
-    num_mh_simulations              = 10000
-    num_mh_blocks                   = 22
-    num_mh_burn                     = 2
-    mh_thinning_step                = 5
-    num_mh_simulations_test         = 100
-    num_mh_blocks_test              = 1
-    num_mh_burn_test                = 0
-    mh_thinning_step_test           = 1  
-    
-    # Random number generator
-    rng                             = MersenneTwister()
-
-    # Testing information
-    testing                          = false
-
-    datapathroot_test = normpath(joinpath(dirname(@__FILE__), "..","..","..","test","reference"))
-    savepathroot_test = ""
+    spec               = split(basename(@__FILE__),'.')[1]   
+    settings           = Dict{Symbol,Setting}()
+    test_settings      = Dict{Symbol,Setting}()
+    rng                = MersenneTwister()        # Random Number Generator
+    testing            = false                       
+    _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
     
     # initialise empty model
     m = Model990{Float64}(
@@ -244,33 +200,18 @@ function Model990()
 
             # model indices
             Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(),
-
-            spec,
-            datapathroot,
-            savepathroot,
-
-            _num_anticipated_shocks, 
-            _num_anticipated_shocks_padding, 
-            _num_anticipated_lags, 
-            _num_presample_periods,
-
-            reoptimize,
-            recalculate_hessian,
-            num_mh_simulations,
-            num_mh_blocks,
-            num_mh_burn,
-            mh_thinning_step,
-                 
-            num_mh_simulations_test,   
-            num_mh_blocks_test,  
-            num_mh_burn_test,
-            mh_thinning_step_test,
                           
+            spec,
+            settings,
+            test_settings,
             rng,
             testing,
-            datapathroot_test,
-            savepathroot_test)
+            _filestrings)
 
+    # Set settings
+    default_settings(m)
+
+    # Initialize parameters
     m <= parameter(:α,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.",
                    texLabel="\\alpha")
@@ -287,12 +228,12 @@ function Model990()
                    description="δ: The capital depreciation rate.", texLabel="\\delta" )     # omit from parameter vector
 
     ## TODO
-    m <= parameter(:Upsilon,  1.000,  (0., 10.),     (1e-5, 0.),      Exponential(),    GammaAlt(1., 0.5),          fixed=true,
+    m <= parameter(:Upsilon,  1.000,  (0., 10.),     (1e-5, 0.),      DSGE.Exponential(),    GammaAlt(1., 0.5),          fixed=true,
                    description="Υ: This is the something something.",
                    texLabel="\\mathcal{\\Upsilon}") 
 
     ## TODO - ask Marc and Marco
-    m <= parameter(:Φ,   1.1066, (1., 10.),     (1.00, 10.00),   Exponential(),    Normal(1.25, 0.12),         fixed=false,
+    m <= parameter(:Φ,   1.1066, (1., 10.),     (1.00, 10.00),   DSGE.Exponential(),    Normal(1.25, 0.12),         fixed=false,
                    description="Φ: This is the something something.",
                    texLabel="\\Phi")
 
@@ -307,7 +248,7 @@ function Model990()
                    description="ppsi: This is the something something.", texLabel="ppsi")
 
     ## TODO - ask Marc and Marco
-    m <= parameter(:ν_l,     2.5975, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    Normal(2, 0.75),            fixed=false,
+    m <= parameter(:ν_l,     2.5975, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    Normal(2, 0.75),            fixed=false,
                    description="ν_l: The coefficient of relative risk aversion on the labor term of households' utility function.", texLabel="\nu_l")
     
     m <= parameter(:ζ_w,   0.9291, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.1),          fixed=false,
@@ -323,11 +264,11 @@ function Model990()
                    description="λ_w: The wage markup, which affects the elasticity of substitution between differentiated labor services.",
                    texLabel="\\lambda_w")     # omit from parameter vector
 
-    m <= parameter(:β,      0.1402, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    GammaAlt(0.25, 0.1),        fixed=false,  scaling = x -> 1/(1 + x/100),
+    m <= parameter(:β,      0.1402, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    GammaAlt(0.25, 0.1),        fixed=false,  scaling = x -> 1/(1 + x/100),
                    description="β: Discount rate.",       
                    texLabel="\\beta ")
 
-    m <= parameter(:ψ1,     1.3679, (1e-5, 10.),   (1e-5, 10.00),   Exponential(),    Normal(1.5, 0.25),          fixed=false,
+    m <= parameter(:ψ1,     1.3679, (1e-5, 10.),   (1e-5, 10.00),   DSGE.Exponential(),    Normal(1.5, 0.25),          fixed=false,
                    description="ψ₁: Weight on inflation gap in monetary policy rule.",
                    texLabel="\\psi_1")
 
@@ -339,11 +280,11 @@ function Model990()
                    description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
                    texLabel="\\psi_3")
 
-    m <= parameter(:π_star,   0.5000, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    GammaAlt(0.75, 0.4),        fixed=true,  scaling = x -> 1 + x/100,
+    m <= parameter(:π_star,   0.5000, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    GammaAlt(0.75, 0.4),        fixed=true,  scaling = x -> 1 + x/100,
                    description="π_star: The steady-state rate of inflation.",  
                    texLabel="\\pi_*")   
 
-    m <= parameter(:σ_c,   0.8719, (1e-5, 10.),   (1e-5, 10.),     Exponential(),    Normal(1.5, 0.37),          fixed=false,
+    m <= parameter(:σ_c,   0.8719, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    Normal(1.5, 0.37),          fixed=false,
                    description="σ_c: This is the something something.",
                    texLabel="\\sigma_{c}")
     
@@ -364,7 +305,7 @@ function Model990()
                    description="F(ω): The cumulative distribution function of ω (idiosyncratic iid shock that increases or decreases entrepreneurs' capital).",
                    texLabel="F(\omega)")
     
-    m <= parameter(:sprd,     1.7444, (0., 100.),      (1e-5, 0.),    Exponential(),   GammaAlt(2., 0.1),           fixed=false,  scaling = x -> (1 + x/100)^0.25,
+    m <= parameter(:sprd,     1.7444, (0., 100.),      (1e-5, 0.),    DSGE.Exponential(),   GammaAlt(2., 0.1),           fixed=false,  scaling = x -> (1 + x/100)^0.25,
                    description="spr_*: This is the something something.",   
                    texLabel="spr_*")
 
@@ -439,61 +380,61 @@ function Model990()
     m <= parameter(:ρ_pce,    0.2320, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_pce: This is the something something.",            texLabel="\\rho_{pce}")     
 
     # exogenous processes - standard deviation
-    m <= parameter(:σ_g,      2.5230, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
+    m <= parameter(:σ_g,      2.5230, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_g: The standard deviation of the government spending process.",
                    texLabel="\\sigma_{g}")
     
-    m <= parameter(:σ_b,      0.0292, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
+    m <= parameter(:σ_b,      0.0292, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_b: This is the something something.",
                    texLabel="\\sigma_{b}")
 
-    m <= parameter(:σ_μ,     0.4559, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
+    m <= parameter(:σ_μ,     0.4559, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
                    texLabel="\\sigma_{\\mu}")
 
     ## TODO
-    m <= parameter(:σ_z,      0.6742, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
+    m <= parameter(:σ_z,      0.6742, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_z: This is the something something.",
                    texLabel="\\sigma_{z}")
 
-    m <= parameter(:σ_λ_f,    0.1314, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
+    m <= parameter(:σ_λ_f,    0.1314, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good.  Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
                    texLabel="\\sigma_{\\lambda_f}")
 
     ## TODO
-    m <= parameter(:σ_λ_w,    0.3864, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
+    m <= parameter(:σ_λ_w,    0.3864, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_λ_w: This is the something something.",
                    texLabel="\\sigma_{\\lambda_w}")
 
     ## TODO
-    m <= parameter(:σ_rm,     0.2380, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
+    m <= parameter(:σ_rm,     0.2380, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_rm: This is the something something.",
                    texLabel="\\sigma_{rm}")
     
-    m <= parameter(:σ_σ_ω,   0.0428, (1e-7,100.),     (1e-5, 0.),    Exponential(),   RootInverseGamma(4., 0.05),  fixed=false,
+    m <= parameter(:σ_σ_ω,   0.0428, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(),   RootInverseGamma(4., 0.05),  fixed=false,
                    description="σ_σ_ω: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_ω.",
                    texLabel="\\sigma_{\\sigma_\\omega}")
     
-    m <= parameter(:σ_μe,    0.0000, (1e-7,100.),     (1e-5, 0.),    Exponential(),   RootInverseGamma(4., 0.05),  fixed=true,  description="σ_μ_e: This is the something something.",           texLabel="\\sigma_{μe}")
-    m <= parameter(:σ_γ,   0.0000, (1e-7,100.),     (1e-5, 0.),    Exponential(),   RootInverseGamma(4., 0.01),  fixed=true,  description="σ_γ: This is the something something.",             texLabel="\\sigma_{\\gamma}")    
-    m <= parameter(:σ_π_star,   0.0269, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(6., 0.03),  fixed=false, description="σ_π_star: This is the something something.",        texLabel="\\sigma_{pi}^*")   
-    m <= parameter(:σ_lr,     0.1766, (1e-8,10.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.75),  fixed=false, description="σ_lr: This is the something something to do with long run inflation expectations.",
+    m <= parameter(:σ_μe,    0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(),   RootInverseGamma(4., 0.05),  fixed=true,  description="σ_μ_e: This is the something something.",           texLabel="\\sigma_{μe}")
+    m <= parameter(:σ_γ,   0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(),   RootInverseGamma(4., 0.01),  fixed=true,  description="σ_γ: This is the something something.",             texLabel="\\sigma_{\\gamma}")    
+    m <= parameter(:σ_π_star,   0.0269, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(6., 0.03),  fixed=false, description="σ_π_star: This is the something something.",        texLabel="\\sigma_{pi}^*")   
+    m <= parameter(:σ_lr,     0.1766, (1e-8,10.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.75),  fixed=false, description="σ_lr: This is the something something to do with long run inflation expectations.",
                    texLabel="\\sigma_{lr}")      
-    m <= parameter(:σ_z_p,     0.1662, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_z_p: This is the something something.",            texLabel="\\sigma_{z^p}")    
-    m <= parameter(:σ_tfp,    0.9391, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_tfp: This is the something something.",           texLabel="\\sigma_{tfp}")     
-    m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_gdpdef: This is the something something.",        texLabel="\\sigma_{gdpdef}")  
-    m <= parameter(:σ_pce,    0.0999, (1e-8, 5.),      (1e-8, 5.),    Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_pce: This is the something something.",           texLabel="\\sigma_{pce}")     
+    m <= parameter(:σ_z_p,     0.1662, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_z_p: This is the something something.",            texLabel="\\sigma_{z^p}")    
+    m <= parameter(:σ_tfp,    0.9391, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_tfp: This is the something something.",           texLabel="\\sigma_{tfp}")     
+    m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_gdpdef: This is the something something.",        texLabel="\\sigma_{gdpdef}")  
+    m <= parameter(:σ_pce,    0.0999, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_pce: This is the something something.",           texLabel="\\sigma_{pce}")     
 
     # standard deviations of the anticipated policy shocks
     for i = 1:num_anticipated_shocks_padding(m)
         if i < 13
-            m <= parameter(symbol("σ_rm$i"), .2, (1e-7, 100.), (1e-5, 0.), Exponential(),
+            m <= parameter(symbol("σ_rm$i"), .2, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(),
                            RootInverseGamma(4., .2), fixed=false,
                            description="σ_rm$i: This is the something something.",
                            texLabel=@sprintf("\\sigma_ant{%d}",i))
         else
             m <= parameter(symbol("σ_rm$i"), .0, (1e-7, 100.), (1e-5, 0.),
-                           Exponential(), RootInverseGamma(4., .2), fixed=true,
+                           DSGE.Exponential(), RootInverseGamma(4., .2), fixed=true,
                            description="σ_rm$i: This is the something something.",
                            texLabel=@sprintf("\\sigma_ant{%d}",i))
         end
@@ -553,6 +494,7 @@ function Model990()
     m <= SteadyStateParameter(:ζ_nn,      NaN, description="steady-state something something", texLabel="\\BLAH")
     m <= SteadyStateParameter(:ζ_nμe,    NaN, description="steady-state something something", texLabel="\\BLAH")
     m <= SteadyStateParameter(:ζ_nσ_ω,   NaN, description="steady-state something something", texLabel="\\BLAH")
+
 
     initialise_model_indices!(m)
     steadystate!(m)
