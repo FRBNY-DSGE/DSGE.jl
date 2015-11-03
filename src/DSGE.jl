@@ -15,15 +15,17 @@ module DSGE
         PointMass, BetaAlt, GammaAlt,
         
         # abstractdsgemodel.jl
-        AbstractDSGEModel, tomodel!, toreal!, num_states, num_shocks_exogenous, num_shocks_expectational, toggle_test_mode, create_save_directories, savepath, inpath, outpath, tablepath, plotpath, logpath,
+        AbstractDSGEModel, tomodel!, toreal!, num_states, num_shocks_exogenous,
+        num_shocks_expectational, toggle_test_mode, create_save_directories, savepath,
+        inpath, outpath, tablepath, plotpath, logpath,
         
         # settings.jl
         Setting, get_setting,
         
         # new_parameters.jl
         parameter, Transform, Untransformed, SquareRoot, Exponential, NullablePrior,
-        AbstractParameter, Parameter, ParameterVector, ScaledParameter, UnscaledParameter, SteadyStateParameter,
-        toreal, tomodel, update, update!, tomodel, toreal, Interval,
+        AbstractParameter, Parameter, ParameterVector, ScaledParameter, UnscaledParameter,
+        SteadyStateParameter, toreal, tomodel, update, update!, tomodel, toreal, Interval,
         
         # estimate/
         dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel,
