@@ -130,6 +130,8 @@ num_mh_simulations(m::AbstractDSGEModel) =  get_setting(m, :num_mh_simulations)
 num_mh_burn(m::AbstractDSGEModel)        =  get_setting(m, :num_mh_burn)
 mh_thinning_step(m::AbstractDSGEModel)   =  get_setting(m, :mh_thinning_step)
 
+
+
 #=
 """
 Build paths to where input/output/results data are stored.
