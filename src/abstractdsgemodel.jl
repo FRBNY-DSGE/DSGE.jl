@@ -116,6 +116,9 @@ subspec(m::AbstractDSGEModel)       = get_setting(m, :subspec)
 modelpathroot(m::AbstractDSGEModel) = get_setting(m, :modelpathroot)
 datapathroot(m::AbstractDSGEModel)  = get_setting(m, :datapathroot)
 
+# Interface for general computation settings
+use_parallel_workers(m::AbstractDSGEModel)    = get_setting(m, :use_parallel_workers)
+
 # Interface for estimation settings
 reoptimize(m::AbstractDSGEModel)              = get_setting(m, :reoptimize)
 recalculate_hessian(m::AbstractDSGEModel)     = get_setting(m, :recalculate_hessian)

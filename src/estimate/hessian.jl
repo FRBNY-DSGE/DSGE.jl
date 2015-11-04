@@ -1,5 +1,5 @@
 # Compute diag element
-function hess_diag_element!{T<:AbstractFloat}(fcn::Function,
+function hess_diag_element{T<:AbstractFloat}(fcn::Function,
                                               x::Vector{T}, 
                                               i::Int; 
                                               ndx::Int=6,
@@ -48,7 +48,7 @@ function hess_diag_element!{T<:AbstractFloat}(fcn::Function,
 end
 
 # Compute off diag element
-function hess_offdiag_element!{T<:AbstractFloat}(fcn::Function,
+function hess_offdiag_element{T<:AbstractFloat}(fcn::Function,
                                                  x::Vector{T}, 
                                                  i::Int, 
                                                  j::Int,
@@ -109,16 +109,23 @@ end
 function hessizero{T<:AbstractFloat}(fcn::Function, 
                                     x::Vector{T}; 
                                     check_neg_diag::Bool=false,
-                                    verbose::Bool=false)
+                                    verbose::Bool=false,
+                                    distr::Bool=true)
     num_para = length(x)
     hessian  = zeros(num_para, num_para)
 
     # Compute diagonal elements first
-    diag_elements = @sync @parallel (hcat) for i = 1:num_para
-        hess_diag_element!(fcn, x, i; check_neg_diag=check_neg_diag, verbose=verbose)
-    end
-    for i = 1:num_para
-        hessian[i, i] = diag_elements[i]
+    if distr
+        diag_elements = @sync @parallel (hcat) for i = 1:num_para
+            hess_diag_element(fcn, x, i; check_neg_diag=check_neg_diag, verbose=verbose)
+        end
+        for i = 1:num_para
+            hessian[i, i] = diag_elements[i]
+        end
+    else
+        for i=1:num_para
+            hessian[i,i] = hess_diag_element(fcn, x, i; check_neg_diag=check_neg_diag, verbose=verbose) 
+        end
     end
 
     # Now compute off-diagonal elements
@@ -136,14 +143,19 @@ function hessizero{T<:AbstractFloat}(fcn::Function,
     end
 
     # Iterate over off diag elements
-    off_diag_out = @sync @parallel (hcat) for (i,j) in off_diag_inds
-        σ_xσ_y = sqrt(abs(hessian[i, i]*hessian[j, j]))
-        hess_offdiag_element!(fcn, x, i, j, σ_xσ_y; verbose=verbose)
-    end
-    
-    # Ensure off_diag_out is array
-    if !isa(off_diag_out, Array)
-        off_diag_out = [off_diag_out]
+    if distr
+        off_diag_out = @sync @parallel (hcat) for (i,j) in off_diag_inds
+            σ_xσ_y = sqrt(abs(hessian[i, i]*hessian[j, j]))
+            hess_offdiag_element(fcn, x, i, j, σ_xσ_y; verbose=verbose)
+        end
+        # Ensure off_diag_out is array
+        off_diag_out = hcat(off_diag_out)
+    else
+        off_diag_out = Array{Tuple{T, T},1}(num_off_diag_els)
+        for (k,(i,j)) in enumerate(off_diag_inds)
+            σ_xσ_y = sqrt(abs(hessian[i, i]*hessian[j, j]))
+            off_diag_out[k] = hess_offdiag_element(fcn, x, i, j, σ_xσ_y; verbose=verbose)
+        end
     end
 
     # Fill in values
@@ -159,7 +171,7 @@ function hessizero{T<:AbstractFloat}(fcn::Function,
         end
     end
 
-    has_errors= false
+    has_errors = false
     if !isempty(invalid_corr)
         println("Errors: $invalid_corr")
         has_errors = true
@@ -198,7 +210,9 @@ function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel,
         return -posterior!(model, x_model, YY)
     end
 
-    hessian_free, has_errors = hessizero(f_hessian, x_hessian; check_neg_diag=true, verbose=verbose)
+    distr=use_parallel_workers(model)
+    hessian_free, has_errors = hessizero(f_hessian, x_hessian; 
+        check_neg_diag=true, verbose=verbose, distr=distr)
 
     # Fill in rows/cols of zeros corresponding to location of fixed parameters
     # For each row corresponding to a free parameter, fill in columns corresponding to free

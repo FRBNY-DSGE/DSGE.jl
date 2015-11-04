@@ -94,6 +94,9 @@ function default_settings(m::AbstractDSGEModel)
     # TODO: should be set when data are read in
     m <= Setting(:num_presample_periods, 2, "Number of periods in the presample")
 
+    # General computation
+    m <= Setting(:use_parallel_workers, true, "Use available parallel workers in computations")
+
     # Estimation
     m <= Setting(:reoptimize,          false, "Reoptimize the posterior mode")
     m <= Setting(:recalculate_hessian, false, "Recalculate the hessian at the mode")
@@ -120,6 +123,8 @@ Add default testing settings to the model's settings dictionary
 function default_test_settings(m::AbstractDSGEModel)
 
     test = Dict{Symbol,Setting}()
+    test[:use_parallel_workers_test] = Setting(:use_parallel_workers_test, false, false, "parw", 
+                                            "Use available parallel workers in computations")
 
     test[:max_hessian_free_params_test] = Setting(:max_hessian_free_params_test, 3, false, "mhfp",
                                             "Max number of free params for which to calculate Hessian")
