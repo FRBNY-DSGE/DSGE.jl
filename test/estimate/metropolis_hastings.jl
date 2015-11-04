@@ -34,10 +34,12 @@ for fixed_param in [:δ, :λ_w, :ϵ_w, :ϵ_p, :g_star]
 end
 
 # Test that the parameter draws are equal
-@test test_matrix_eq(ref_draws, test_draws, ϵ=1e-6)
+@test test_matrix_eq(ref_draws, test_draws, ϵ_abs=1e-6)
+@test_matrix_approx_eq ref_draws test_draws
 
 # Test that the covariance matrices are equal
-@test test_matrix_eq(ref_cov, test_cov, ϵ=1e-6)
+@test test_matrix_eq(ref_cov, test_cov, ϵ_abs=1e-6)
+@test_matrix_approx_eq ref_cov test_cov
 
 # Make sure that compute_moments runs appropriately
 compute_moments(m, verbose=false)
@@ -46,4 +48,4 @@ compute_moments(m, verbose=false)
 rm(h5_fn)
 rm(h5_cov_fn)
 
-
+nothing

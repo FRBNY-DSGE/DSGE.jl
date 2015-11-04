@@ -19,3 +19,5 @@ m = Model990()
 
 res_real_grad  = csminwel(rosenbrock, rosenbrock_grad, [10.0, -9.0])
 res_numeric_grad  = csminwel(rosenbrock, [10.0, -9.0], model=m)
+
+nothing

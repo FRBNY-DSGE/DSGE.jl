@@ -126,11 +126,19 @@ C_ref  = reshape(read(h5, "C"), 66, 1)
 close(h5)
 
 @test test_matrix_eq(Γ0_ref, Γ0)
+@test_matrix_approx_eq Γ0_ref Γ0
+ 
 @test test_matrix_eq(Γ1_ref, Γ1)
-@test test_matrix_eq(C_ref, C)
-@test test_matrix_eq(Ψ_ref, Ψ)
-@test test_matrix_eq(Π_ref, Π)
+@test_matrix_approx_eq Γ1_ref Γ1
 
+@test test_matrix_eq(C_ref, C)
+@test_matrix_approx_eq C_ref C
+
+@test test_matrix_eq(Ψ_ref, Ψ)
+@test_matrix_approx_eq Ψ_ref Ψ
+
+@test test_matrix_eq(Π_ref, Π)
+@test_matrix_approx_eq Π_ref Π
 
 # ### Measurement equation
 h5 = h5open("$path/measurement.h5")
@@ -146,7 +154,18 @@ TTT, RRR, CCC = solve(model)
 ZZ, DD, QQ, EE, MM = measurement(model, TTT, RRR, CCC)
 
 @test test_matrix_eq(ZZ_expected, ZZ)
+@test_matrix_approx_eq ZZ_expected ZZ
+
 @test test_matrix_eq(DD_expected, DD)
+@test_matrix_approx_eq DD_expected DD
+
 @test test_matrix_eq(QQ_expected, QQ)
+@test_matrix_approx_eq QQ_expected QQ
+
 @test test_matrix_eq(EE_expected, EE)
+@test_matrix_approx_eq EE_expected EE
+
 @test test_matrix_eq(MM_expected, MM)
+@test_matrix_approx_eq MM_expected MM
+
+nothing
