@@ -14,11 +14,6 @@ close(h5)
 
 model = Model990()
 TTT, RRR, CCC = solve(model)
-@test test_matrix_eq(TTT_expected, TTT)
 @test_matrix_approx_eq TTT_expected TTT
-
-@test test_matrix_eq(RRR_expected, RRR)
 @test_matrix_approx_eq RRR_expected RRR
-
-@test test_matrix_eq(CCC_expected, CCC)
 @test_matrix_approx_eq CCC_expected CCC

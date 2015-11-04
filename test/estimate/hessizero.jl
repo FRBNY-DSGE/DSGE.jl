@@ -1,5 +1,5 @@
-using Base: Test
 using DSGE
+using Base.Test
 
 # Test `hessizero` in context of Rosenbrock function
 function rosenbrock(x::Vector)
@@ -21,7 +21,6 @@ end
 x0 = [1.0, 1.0]
 hessian_expected = rosenbrock_hessian(x0)
 hessian, _ = DSGE.hessizero(rosenbrock, x0; check_neg_diag=true)
-@test test_matrix_eq(hessian_expected, hessian; ϵ_abs=1e-2)
 @test_matrix_approx_eq hessian_expected hessian
 
 # Not at the min (indeed, we are at max), ensure throws error
@@ -34,6 +33,5 @@ x1 = Vector[[0.5, 1.5], [-1.0, -1.0]]
 for x in x1
     hessian_expected = rosenbrock_hessian(x)
     hessian, _ = DSGE.hessizero(rosenbrock, x)
-    @test test_matrix_eq(hessian_expected, hessian; ϵ_abs=1e-2)
     @test_matrix_approx_eq hessian_expected hessian
 end

@@ -1,5 +1,5 @@
-using HDF5, Base.Test
 import DSGE: kalcvf2NaN
+using HDF5, Base.Test
 include("../util.jl")
 
 path = dirname(@__FILE__)
@@ -40,10 +40,8 @@ for out in ["L", "zend", "Pend", "pred", "vpred", "yprederror", "ystdprederror",
     elseif out == "zend"
         # Not sure why this has to be enclosed in eval(parse()) to run
         eval(parse("zend_expected = reshape(zend_expected, length(zend_expected), 1)"))
-        @test test_matrix_eq(zend_expected, zend)
         @test_matrix_approx_eq zend_expected zend
     else
-        eval(parse("test_matrix_eq($(out)_expected, $out)"))
         eval(parse("@test_matrix_approx_eq $(out)_expected $out"))
     end
 end
@@ -67,14 +65,11 @@ for out in ["L", "zend", "Pend", "pred", "vpred", "yprederror", "ystdprederror",
         @test_approx_eq_eps L_expected L 1e-4
     elseif out == "zend"
         zend_expected = reshape(zend_expected, length(zend_expected), 1)
-        @test test_matrix_eq(zend_expected, zend)
         @test_matrix_approx_eq zend_expected zend
     elseif out ∈ ["Pend", "vpred", "vfilt"]
         # These matrix entries are especially large, averaging 1e5, so we allow greater ϵ
-        eval(parse("@test test_matrix_eq($(out)_expected, $out; ϵ_abs=1e-1)"))
         eval(parse("@test_matrix_approx_eq_eps $(out)_expected $(out) 1e-1 1e-2"))
     else
-        eval(parse("@test test_matrix_eq($(out)_expected, $out)"))
         eval(parse("@test_matrix_approx_eq $(out)_expected $out"))
     end
 end

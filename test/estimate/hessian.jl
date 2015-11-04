@@ -1,5 +1,5 @@
-using Base: Test
-using DSGE, HDF5
+using DSGE
+using HDF5, Base.Test
 
 include("../util.jl")
 path = dirname(@__FILE__)
@@ -32,7 +32,6 @@ end
 
 expect = hessian_expected[1:max_free_ind, 1:max_free_ind]
 actual = hessian[1:max_free_ind, 1:max_free_ind]
-@test test_matrix_eq(expect, actual; ϵ_abs=1.0, ϵ_rel=1e-1)
 @test_matrix_approx_eq_eps expect actual 1e-3 1e-1
 # TODO calibrate above for when use_parallel_workers ≡ true
 
