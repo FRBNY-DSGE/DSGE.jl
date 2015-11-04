@@ -23,4 +23,9 @@ end
 cov = U*S_inv*U'
 
 @test test_matrix_eq(S_inv_exp, S_inv; verbose=true)
+@test_matrix_approx_eq S_inv_exp S_inv
+
 @test test_matrix_eq(cov_exp, cov; verbose=true)
+@test_matrix_approx_eq cov_exp cov
+
+nothing

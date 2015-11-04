@@ -13,6 +13,11 @@ addprocs(1)
 S_diag, U = eig(matrix) 
 
 # Test for equality
-@test test_matrix_eq(ref_S_diag, S_diag, ϵ=1e-9, ϵ_pct=1e-9)
-@test test_matrix_eq(ref_U, U, ϵ=1e-9, ϵ_pct=1e-9)
+@test test_matrix_eq(ref_S_diag, S_diag, ϵ_abs=1e-9, ϵ_rel=1e-9)
+@test_matrix_approx_eq_eps ref_S_diag S_diag 1e-6 1e-2
 
+@test test_matrix_eq(ref_U, U, ϵ_abs=1e-9, ϵ_rel=1e-9)
+@test_matrix_approx_eq_eps ref_U U 1e-6 1e-2
+# TODO calibrate above for when use_parallel_workers ≡ true 
+
+nothing

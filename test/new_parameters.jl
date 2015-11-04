@@ -50,3 +50,4 @@ for w in [parameter(:moop, 3.0, fixed=false), parameter(:moop, 3.0; scaling = lo
 	@test_throws ParamBoundsError parameter(w, -1.)
 end
 
+nothing
