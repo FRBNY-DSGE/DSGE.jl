@@ -1,4 +1,3 @@
-using Debug
 abstract AbstractDSGEModel{T<:AbstractFloat}
 
 function Base.show{T<:AbstractDSGEModel}(io::IO, m::T)
@@ -29,11 +28,11 @@ end
     end
 end
 
-@inline function Base.setindex!(m::AbstractDSGEModel, value, i::Integer)
+@inline function Base.setindex!{T<:Number}(m::AbstractDSGEModel, value::T, i::Integer)
     if i <= (j = length(m.parameters))
         param = m.parameters[i]
         param.value = value
-        if isa(ScaledParameter)
+        if isa(param, ScaledParameter)
             param.scaledvalue = param.scaling(value)
         end
         return param
@@ -43,6 +42,22 @@ end
         return ssparam
     end
 end
+
+"""
+`setindex!{T<:AbstractParameter}(m::AbstractDSGEModel, param::T, i::Integer)`
+
+If `i`<length(m.parameters), overwrites m.parameters[i] with
+param. Otherwise, overwrites m.steady_state[i-length(m.parameters).
+"""
+@inline function Base.setindex!{T<:AbstractParameter}(m::AbstractDSGEModel, param::T, i::Integer)
+    if i <= (j = length(m.parameters))
+        m.parameters[i] = param
+    else
+        m.steady_state[i-j] = param
+    end
+    return param
+end
+
 Base.setindex!(m::AbstractDSGEModel, value, k::Symbol) = Base.setindex!(m, value, m.keys[k])
 
 
@@ -53,15 +68,20 @@ Syntax for adding a parameter to a model: m <= parameter.
 NOTE: If `p` is added to `m` and length(m.steady_state) > 0, `keys(m)` will not generate the index of `p` in `m.parameters`.
 """
 function (<=){T}(m::AbstractDSGEModel{T}, p::AbstractParameter{T})
-    @assert !in(p.key, keys(m.keys)) "Key $(p.key) is already present in DSGE model"
 
-    new_param_index = length(m.keys) + 1
+    if !in(p.key, keys(m.keys))
 
-    # grow parameters and add the parameter
-    push!(m.parameters, p)
+        new_param_index = length(m.keys) + 1
 
-    # add parameter location to dict
-    setindex!(m.keys, new_param_index, p.key)
+        # grow parameters and add the parameter
+        push!(m.parameters, p)
+
+        # add parameter location to dict
+        setindex!(m.keys, new_param_index, p.key)
+    else
+        # overwrite the previous parameter with the new one
+        setindex!(m, p, p.key)
+    end
 end
 
 #=
@@ -72,15 +92,19 @@ Add a new steady-state value to the model by appending `ssp` to the `m.steady_st
 """
 =#
 function (<=){T}(m::AbstractDSGEModel{T}, ssp::SteadyStateParameter)
-    @assert !in(ssp.key, keys(m.keys)) "Key $(ssp) is already present in DSGE model"
 
-    new_param_index = length(m.keys) + 1
+    if !in(ssp.key, keys(m.keys))
+        new_param_index = length(m.keys) + 1
 
-    # append ssp to steady_state vector
-    push!(m.steady_state, ssp)
+        # append ssp to steady_state vector
+        push!(m.steady_state, ssp)
 
-    # add parameter location to dict
-    setindex!(m.keys, new_param_index, ssp.key)
+        # add parameter location to dict
+        setindex!(m.keys, new_param_index, ssp.key)
+    else
+        # overwrite the previous parameter with the new one
+        setindex!(m, ssp, ssp.key)
+    end
 end
 
 Distributions.logpdf(m::AbstractDSGEModel) = logpdf(m.parameters)
