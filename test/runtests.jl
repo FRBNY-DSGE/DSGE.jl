@@ -12,7 +12,8 @@ my_tests = [
             "solve/ordered_qz",
             "estimate/kalman",
             "estimate/posterior",
-            #"estimate/hessian" (currently takes 6 hours to complete)
+            "estimate/hessizero",
+            "estimate/hessian",
             "estimate/csminwel",
             "estimate/eig",
             "estimate/metropolis_hastings"
