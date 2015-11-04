@@ -23,9 +23,9 @@ function.
 =#
 abstract Transform
 
-type Untransformed <: Transform end
-type SquareRoot    <: Transform end
-type Exponential   <: Transform end
+immutable Untransformed <: Transform end
+immutable SquareRoot    <: Transform end
+immutable Exponential   <: Transform end
 
 Base.show(io::IO, t::Untransformed) = @printf io "x -> x\n"
 Base.show(io::IO, t::SquareRoot)    = @printf io "x -> (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)\n"
