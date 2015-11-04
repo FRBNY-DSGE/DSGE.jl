@@ -87,5 +87,6 @@ model <= Setting(:num_mh_blocks, 5, "Number of blocks for Metropolis-Hastings")
 @test ismatch(r"^\s*vint=(\d{6})", modelstring(model))
 
 
+
 nothing
 
