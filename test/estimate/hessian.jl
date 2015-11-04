@@ -28,9 +28,11 @@ if max_free_ind < maximum(para_free_inds)
     para_free_inds = para_free_inds[1:max_free_ind]
 end
 
-hessian, _ = hessian!(model, mode, YY)
+@time hessian, _ = hessian!(model, mode, YY)
 @test test_matrix_eq(hessian_expected[1:max_free_ind, 1:max_free_ind], 
                      hessian[1:max_free_ind, 1:max_free_ind]; 
                      ϵ=1.0)
 
 model.testing = false
+
+nothing
