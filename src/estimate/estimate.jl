@@ -2,7 +2,6 @@
 # the parameters.
 
 using HDF5, Compat, Debug
-include("../../test/util.jl")
 
 #=
 doc """
@@ -33,7 +32,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     ########################################################################################
 
     # Set up levels of verbose-ness
-    verboseness = verbose_dict() 
+    verboseness = VERBOSE_DICT
 
     # Load data
     h5 = h5open(joinpath(inpath(m),"data_$(data_vintage(m)).h5"), "r")

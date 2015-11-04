@@ -42,12 +42,12 @@ module DSGE
         # solve/
         ordschur, gensys, solve
     
+    const VERBOSE_DICT = @compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
+
     include("new_parameters.jl")
     include("distributions_ext.jl")
     include("abstractdsgemodel.jl")
     include("settings.jl")
-    include("../test/util.jl")
-    # include("parameters.jl")
     
     if VERSION <= v"0.4-"
         include("solve/ordered_qz.jl")
