@@ -19,7 +19,6 @@ function initialize_subspec(m::Model990)
 end
 
 function ss5(m::Model990)
-
     m <= parameter(:ι_p, 0.0, fixed=true,
                    description= "ι_p: The persistence of last period's inflation in
                    the equation that describes the intertemporal
