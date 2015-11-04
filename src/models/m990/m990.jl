@@ -86,7 +86,7 @@ Description:
 Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 """
 =#
-function initialise_model_indices!(m::Model990)
+function initialize_model_indices!(m::Model990)
     # Endogenous states
     endogenous_states = [[
         :y_t, :c_t, :i_t, :qk_t, :k_t, :kbar_t, :u_t, :rk_t, :Rktil_t, :n_t, :mc_t,
@@ -151,18 +151,18 @@ function initialise_model_indices!(m::Model990)
 end
 
 
-function Model990(subspec::Int=0)
+function Model990(subspec::AbstractString="ss0")
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]   
-    subspec            = "ss$(subspec)"
+    subspec            = subspec
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()        # Random Number Generator
     testing            = false                       
     _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
     
-    # initialise empty model
+    # initialize empty model
     m = Model990{Float64}(
             # model parameters and steady state values
             @compat(Vector{AbstractParameter{Float64}}()), @compat(Vector{Float64}()), Dict{Symbol,Int}(),
@@ -336,7 +336,7 @@ function Model990(subspec::Int=0)
                    description="ρ_σ_w: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with mean ρ_σ_w. Innovations to the process are called _spread shocks_.",
                    texLabel="\\rho_{\\sigma \\omega}")
 
-    # We're skipping this for now
+    # TODO - We're skipping this for now
     m <= parameter(:ρ_μe,    0.7500, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=true,
                    description="ρ_μ_e: Verification costs are a fraction μ_e of the amount the bank extracts from an entrepreneur in case of bankruptcy???? This doesn't seem right because μ_e isn't a process (p12 of PDF)",
                    texLabel="\\rho_{\\mu_e}")
@@ -467,7 +467,8 @@ function Model990(subspec::Int=0)
     m <= SteadyStateParameter(:ζ_nσ_ω,   NaN, description="steady-state something something", texLabel="\\BLAH")
 
 
-    initialise_model_indices!(m)
+    initialize_model_indices!(m)
+    initialize_subspec(m)
     steadystate!(m)
     return m
 end

@@ -10,9 +10,6 @@ module DSGE
 
     export
 
-        # DSGE.jl
-        inpath, rawpath, workpath, tablespath, figurespath, logpath,
-        
         # distributions_ext.jl
         BetaAlt, GammaAlt,
 
@@ -66,6 +63,7 @@ module DSGE
     include("estimate/moments.jl")
     
     include("models/m990/m990.jl")
+    include("models/m990/subspecs.jl")
     include("models/m990/eqcond.jl")
     include("models/m990/measurement.jl")
     
