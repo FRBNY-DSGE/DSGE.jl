@@ -1,5 +1,5 @@
+using DSGE
 using HDF5, Base.Test
-import DSGE: Model990, likelihood, posterior, posterior!
 
 path = dirname(@__FILE__)
 

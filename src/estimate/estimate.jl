@@ -32,6 +32,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     ########################################################################################
 
     # Set up levels of verbose-ness
+    # TODO just reference global
     verboseness = VERBOSE_DICT
 
     # Load data
@@ -222,7 +223,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
        YY::Matrix{T}, cc0::T, cc::T; verbose::Symbol=:low, fix_seed::Bool=true)
 
     # Set up levels of verbose-ness
-    verboseness = verbose_dict() 
+    verboseness = VERBOSE_DICT
 
     # If testing, set the random seeds at fixed numbers
     

@@ -19,14 +19,10 @@ impact_exp = read(h5, "impact")
 eu_exp = read(h5, "eu")
 close(h5)
 
-
-@test test_matrix_eq(G1_exp, G1)
 @test_matrix_approx_eq G1_exp G1
 
-@test test_matrix_eq(C_exp, C)
 @test_matrix_approx_eq C_exp C
 
-@test test_matrix_eq(impact_exp, impact)
 @test_matrix_approx_eq impact_exp impact
 
 @test isequal(eu_exp, eu)
