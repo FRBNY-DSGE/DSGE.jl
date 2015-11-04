@@ -8,7 +8,7 @@ Calculates (log of) the joint density of the model parameters.
 function prior(model::AbstractDSGEModel)
     x = zero(Float64)
     for θ in model.parameters
-        if isa(θ,Parameter)
+        if !θ.fixed
             x += logpdf(θ)
         end
     end

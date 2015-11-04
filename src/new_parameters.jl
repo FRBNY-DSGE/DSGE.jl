@@ -1,5 +1,4 @@
 using Compat, Distributions, Debug
-import DSGE: PointMass
 import Base: <=
 
 #=
@@ -211,9 +210,8 @@ function parameter{T,U<:Transform}(key::Symbol,
                                    texLabel::AbstractString = "")
 
     
-    # If fixed=true, force bounds to match and prior to be
-    # PointMass. We need to define new variable names here because of lexical
-    # scoping.
+    # If fixed=true, force bounds to match and leave prior as null.  We need to define new
+    # variable names here because of lexical scoping.
 
     ret_valuebounds = valuebounds
     ret_transform_parameterization = transform_parameterization
@@ -221,7 +219,6 @@ function parameter{T,U<:Transform}(key::Symbol,
 
     if fixed
         ret_transform_parameterization = (value,value)  # value is transformed already       
-        ret_prior = PointMass(value)
 
         if isa(transform, Untransformed)
             ret_valuebounds = (value,value)

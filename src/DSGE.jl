@@ -12,7 +12,7 @@ module DSGE
         inpath, rawpath, workpath, tablespath, figurespath, logpath,
         
         # distributions_ext.jl
-        PointMass, BetaAlt, GammaAlt,
+        BetaAlt, GammaAlt,
 
         # settings.jl
         Setting, get_setting, default_settings, default_test_settings,

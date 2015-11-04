@@ -1,5 +1,4 @@
 using Distributions, Compat
-import DSGE: PointMass
 
 
 # Test Parameter type
@@ -16,7 +15,6 @@ import DSGE: PointMass
 # UnscaledParameter, fixed = true
 α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05), fixed=true)
 @test α_fixed.transform_parameterization == (0.1596,0.1596)
-@test isa(α_fixed.prior.value, PointMass) 
 @test isa(α_fixed.transform, SquareRoot)
 
 
@@ -25,7 +23,6 @@ import DSGE: PointMass
 @test δ.fixed
 @test δ.transform_parameterization == (0.025, 0.025)
 @test δ.valuebounds == (0.025, 0.025)
-@test isa(δ.prior.value, PointMass)
 
 # Scaled parameter
 β = parameter(:β, 0.1402, (1e-5, 10.), (1e-5, 10.), DSGE.Exponential(), GammaAlt(0.25, 0.1), fixed=false,  scaling = x -> (1 + x/100)\1, description="β: Discount rate.", texLabel="\\beta ")

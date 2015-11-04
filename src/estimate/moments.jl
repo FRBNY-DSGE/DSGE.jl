@@ -85,7 +85,14 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
         
         param  = getindex(m,i)
         
-        if isa(param.prior.value, DSGE.Normal)
+        # Null prior means parameter is fixed
+        if isnull(param.prior)
+            prior_means[i]  = param.value
+            prior_stddev[i] = 0
+
+        # TODO xxxMoments could be declared something like
+        # function distMoments{T<:Distribution}(prior_value::T)
+        elseif isa(param.prior.value, DSGE.Normal)
 
             prior_means[i] = param.prior.value.μ
             prior_stddev[i] = param.prior.value.σ

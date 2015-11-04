@@ -12,24 +12,7 @@ using Distributions, Compat, DSGE
 import Distributions: params, mean, std, pdf, logpdf, rand
 import Base: length
 
-export PointMass, Beta, Gamma, RootInverseGamma, DegenerateMvNormal
-
-#=
-doc"""
-PointMass <: Distribution{Univariate, Continuous}
-
-Fixed parameters are drawn from a PointMass distribution, and thus always take on the same value.
-"""
-=#
-type PointMass <: Distribution{Univariate, Continuous}
-    μ::Float64
-end
-
-Distributions.pdf(d::PointMass, x::Real) = x == d.μ ? 1.0 : 0.0
-Distributions.logpdf(d::PointMass, x::Real) = x == d.μ ? 0.0 : -Inf
-Distributions.mean(d::PointMass) = d.μ
-Distributions.std(d::PointMass) = 0
-Distributions.var(d::PointMass) = 0
+export Beta, Gamma, RootInverseGamma, DegenerateMvNormal
 
 #=
 doc"""
