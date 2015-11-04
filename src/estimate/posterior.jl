@@ -77,9 +77,9 @@ function posterior!{T<:AbstractFloat}(model::AbstractDSGEModel, parameters::Vect
 
         return posterior(model, YY; mh=true, catch_errors=true)
     else
-        return posterior(model, YY; mh=mh, catch_errors=catch_errors)
+        update!(model, parameters)
+        return posterior(model, YY; catch_errors=catch_errors)
     end
-    
 
 end
 
