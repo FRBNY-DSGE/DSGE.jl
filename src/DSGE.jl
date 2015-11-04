@@ -18,20 +18,23 @@ module DSGE
         Setting, get_setting, default_settings, default_test_settings,
 
         # abstractdsgemodel.jl
-        AbstractDSGEModel, tomodel!, toreal!, num_states, num_shocks_exogenous, num_shocks_expectational,
-        spec, subspec, modelpathroot, datapathroot, modelpath, inpath, workpath, rawpath, tablespath,
-        figurespath, logpath, modelstring, reoptimize, recalculate_hessian, num_mh_blocks, num_mh_simulations,
+        AbstractDSGEModel, tomodel!, toreal!, num_states, num_shocks_exogenous,
+        num_shocks_expectational, spec, subspec, modelpathroot, datapathroot, modelpath,
+        inpath, workpath, rawpath, tablespath, figurespath, logpath, modelstring,
+        reoptimize, recalculate_hessian, num_mh_blocks, num_mh_simulations,
         num_mh_burn, mh_thinning_step, data_vintage,
+
         
         # new_parameters.jl
         parameter, Transform, Untransformed, SquareRoot, Exponential, NullablePrior,
-        AbstractParameter, Parameter, ParameterVector, ScaledParameter, UnscaledParameter, SteadyStateParameter,
-        toreal, tomodel, update, update!, tomodel, toreal, Interval, ParamBoundsError,
+        AbstractParameter, Parameter, ParameterVector, ScaledParameter, UnscaledParameter,
+        SteadyStateParameter, toreal, tomodel, update, update!, tomodel, toreal, Interval,
+        ParamBoundsError,
         
         # estimate/
-        dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel, hessizero!, estimate,
-        metropolis_hastings, compute_parameter_covariance, compute_moments, make_moment_tables,
-        find_density_bands, prior,
+        dlyap!, kalcvf2NaN, kalsmth_k93, likelihood, posterior, posterior!, csminwel,
+        hessian!, estimate, proposal_distribution, metropolis_hastings,
+        compute_parameter_covariance, compute_moments, make_moment_tables, find_density_bands, prior,
         
         # models/
         steadystate!, Model990, eqcond, measurement,

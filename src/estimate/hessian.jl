@@ -1,135 +1,225 @@
-# Compute Hessian of posterior function evaluated at x (vector)
-# if verbose, display error messages, results, etc.
-# 11/12/01 translated by Marco DelNegro in matlab from Frank Schorfheide's program in gauss
-function hessizero!{T<:AbstractFloat}(model::AbstractDSGEModel, x::Vector{T}, YY::Matrix{T}; verbose::Bool = false)
-
-    update!(model, x)
-
-    ## index of free parameters
-    para_free  = [!θ.fixed for θ in model.parameters]
-    fpara_free = find(para_free)
-    nfree      = length(fpara_free)
-
-    npara    = length(x)
-    ndx      = 6
+# Compute diag element
+function hess_diag_element{T<:AbstractFloat}(fcn::Function,
+                                              x::Vector{T}, 
+                                              i::Int; 
+                                              ndx::Int=6,
+                                              check_neg_diag::Bool=false,
+                                              verbose::Bool=false)
+    # Setup
+    num_para = length(x)
+    dxscale  = ones(num_para, 1)
     dx       = exp(-(6:2:(6+(ndx-1)*2))')
-    hessian  = zeros(npara, npara)
-    #gradx   = zeros(ndx, 1)
-    #grady   = zeros(ndx, 1)
-    #gradxy  = zeros(ndx, 1)
     hessdiag = zeros(ndx, 1)
-    dxscale  = ones(npara, 1)
 
+    # Computation
+    if verbose
+        println("Hessian element: ($i, $i)")
+    end
 
+    # Diagonal element computation
+    for k = 1:ndx
+        paradx    = copy(x)
+        parady    = copy(x)
+        paradx[i] = paradx[i] + dx[k]*dxscale[i]
+        parady[i] = parady[i] - dx[k]*dxscale[i]
 
-    # Compute Diagonal elements first
-    for seli = fpara_free'
-        if verbose
-            println("Hessian element: ($seli, $seli)")
+        fx  = fcn(x)
+        fdx = fcn(paradx)
+        fdy = fcn(parady)
+
+        hessdiag[k]  = -(2fx - fdx - fdy) / (dx[k]*dxscale[i])^2
+    end
+
+    if verbose
+        println("Values: $(hessdiag)")
+    end
+
+    value = (hessdiag[3]+hessdiag[4])/2
+
+    if check_neg_diag && value < 0
+        error("Negative diagonal in Hessian")
+    end
+
+    if verbose
+        println("Value used: $value")
+    end
+
+    return value
+end
+
+# Compute off diag element
+function hess_offdiag_element{T<:AbstractFloat}(fcn::Function,
+                                                 x::Vector{T}, 
+                                                 i::Int, 
+                                                 j::Int,
+                                                 σ_xσ_y::T;
+                                                 ndx::Int=6,
+                                                 verbose::Bool=false)
+    # Setup
+    num_para = length(x)
+    dxscale  = ones(num_para, 1)
+    dx       = exp(-(6:2:(6+(ndx-1)*2))')
+    hessdiag = zeros(ndx, 1)
+
+    # Computation
+    if verbose
+        println("Hessian element: ($i, $j)")
+    end
+
+    for k = 1:ndx
+        paradx      = copy(x)
+        parady      = copy(x)
+        paradx[i]   = paradx[i] + dx[k]*dxscale[i]
+        parady[j]   = parady[j] - dx[k]*dxscale[j]
+        paradxdy    = copy(paradx)
+        paradxdy[j] = paradxdy[j] - dx[k]*dxscale[j]
+
+        fx    = fcn(x)
+        fdx   = fcn(paradx)
+        fdy   = fcn(parady)
+        fdxdy = fcn(paradxdy)
+
+        hessdiag[k]  = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k]*dxscale[i]*dxscale[j])
+    end
+
+    if verbose
+        println("Values: $(hessdiag)")
+    end
+
+    value = (hessdiag[3]+hessdiag[4])/2
+
+    if value == 0 || σ_xσ_y == 0
+        ρ_xy = 0
+    else
+        ρ_xy = value / σ_xσ_y
+    end
+
+    if ρ_xy < -1 || 1 < ρ_xy
+        value = 0
+    end
+
+    if verbose
+        println("Value used: $value")
+        println("Correlation: $ρ_xy")
+    end
+
+    return value, ρ_xy
+end
+
+function hessizero{T<:AbstractFloat}(fcn::Function, 
+                                    x::Vector{T}; 
+                                    check_neg_diag::Bool=false,
+                                    verbose::Bool=false,
+                                    distr::Bool=true)
+    num_para = length(x)
+    hessian  = zeros(num_para, num_para)
+
+    # Compute diagonal elements first
+    if distr
+        diag_elements = @sync @parallel (hcat) for i = 1:num_para
+            hess_diag_element(fcn, x, i; check_neg_diag=check_neg_diag, verbose=verbose)
         end
-
-        for k = 1:ndx
-            paradx          = copy(x)
-            parady          = copy(x)
-            paradx[seli]    = paradx[seli] + dx[k]*dxscale[seli]
-            parady[seli]    = parady[seli] - dx[k]*dxscale[seli]
-            #paradxdy       = copy(paradx)
-            #paradxdy[seli] = paradxdy[seli] - dx[k]*dxscale[seli]
-
-            fx     = posterior!(model, x, YY)
-            fdx    = posterior!(model, paradx, YY)
-            fdy    = posterior!(model, parady, YY)
-            #fdxdy = posterior!(model, paradxdy, YY)
-
-            #gradx[k]    = -(fx - fdx) / (dx[k]*dxscale[seli])
-            #grady[k]    = (fx - fdy) / (dx[k]*dxscale[seli])
-            #gradxy[k]   = -(fx - fdxdy) / sqrt((dx[k]*dxscale[seli])^2 + (dx[k]*dxscale[seli])^2)
-            hessdiag[k]  = -(2fx - fdx - fdy) / (dx[k]*dxscale[seli])^2
-            #hessdiag[k] = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k]*dxscale[seli]*dxscale[seli])
+        for i = 1:num_para
+            hessian[i, i] = diag_elements[i]
         end
-
-        if verbose
-            println("Values: $(-hessdiag)")
-        end
-
-        hessian[seli, seli] = -(hessdiag[3]+hessdiag[4])/2
-        if hessian[seli, seli] < 0
-            error("Negative diagonal in Hessian")
-        end
-
-        if verbose
-            value = hessian[seli, seli]
-            println("Value used: $value\n")
+    else
+        for i=1:num_para
+            hessian[i,i] = hess_diag_element(fcn, x, i; check_neg_diag=check_neg_diag, verbose=verbose) 
         end
     end
 
     # Now compute off-diagonal elements
     # Make sure that correlations are between -1 and 1
-    # errorij contains the index of elements that are invalid
-    errorij = Dict{Tuple{Int64}, Float64}()
+    # invalid_corr indexes elements that are invalid
+    invalid_corr = Dict{Tuple{Int,Int}, Float64}()
 
-    for i = 1:(nfree-1)
-        seli = fpara_free[i]
-        for j = (i+1):nfree
-            selj = fpara_free[j]
+    # Build indices to iterate over
+    num_off_diag_els = Int(num_para*(num_para-1)/2)
+    off_diag_inds = Vector{Tuple{Int,Int}}(num_off_diag_els)
+    k=1
+    for i=1:(num_para-1), j=(i+1):num_para
+        off_diag_inds[k] = (i,j)
+        k = k+1
+    end
 
-            if verbose
-                println("Hessian element: ($seli, $selj)")
-            end
-
-            for k = 1:ndx
-                paradx         = copy(x)
-                parady         = copy(x)
-                paradx[seli]   = paradx[seli] + dx[k]*dxscale[seli]
-                parady[selj]   = parady[selj] - dx[k]*dxscale[selj]
-                paradxdy       = copy(paradx)
-                paradxdy[selj] = paradxdy[selj] - dx[k]*dxscale[selj]
-
-                fx    = posterior!(model, x, YY)
-                fdx   = posterior!(model, paradx, YY)
-                fdy   = posterior!(model, parady, YY)
-                fdxdy = posterior!(model, paradxdy, YY)
-
-                #gradx[k]    = -(fx - fdx) / (dx[k]*dxscale[seli])
-                #grady[k]    = (fx - fdy) / (dx[k]*dxscale[selj])
-                #gradxy[k]   = -(fx -fdxdy) / sqrt((dx[k]*dxscale[selj])^2 + (dx[k]*dxscale[seli])^2)
-                #hessdiag[k] = -(2fx - fdx - fdy) / (dx[k]*dxscale[seli])^2
-                hessdiag[k]  = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k]*dxscale[seli]*dxscale[selj])
-            end
-
-            if verbose
-                println("Values: $(-hessdiag)")
-            end
-
-            hessian[seli, selj] = -(hessdiag[3]+hessdiag[4])/2
-
-            if hessian[seli, selj] == 0 || hessian[selj, selj] == 0
-                corrij = 0
-            else
-                corrij = hessian[seli, selj] / sqrt(hessian[seli, seli]*hessian[selj, selj])
-            end
-
-            if corrij < -1 || corrij > 1
-                hessian[seli, selj] = 0
-                errorij[(seli, selj)] = corrij
-            end
-
-            hessian[selj, seli] = hessian[seli, selj]
-
-            if verbose
-                value = hessian[seli, selj]
-                println("Value used: $value")
-                println("Correlation: $corrij")
-                println("Number of errors: $(length(errorij))\n")
-            end
+    # Iterate over off diag elements
+    if distr
+        off_diag_out = @sync @parallel (hcat) for (i,j) in off_diag_inds
+            σ_xσ_y = sqrt(abs(hessian[i, i]*hessian[j, j]))
+            hess_offdiag_element(fcn, x, i, j, σ_xσ_y; verbose=verbose)
+        end
+        # Ensure off_diag_out is array
+        off_diag_out = hcat(off_diag_out)
+    else
+        off_diag_out = Array{Tuple{T, T},1}(num_off_diag_els)
+        for (k,(i,j)) in enumerate(off_diag_inds)
+            σ_xσ_y = sqrt(abs(hessian[i, i]*hessian[j, j]))
+            off_diag_out[k] = hess_offdiag_element(fcn, x, i, j, σ_xσ_y; verbose=verbose)
         end
     end
 
-    stoph = false
-    if !isempty(errorij)
-        println("Errors: $errorij")
-        stoph = true
+    # Fill in values
+    for k=1:num_off_diag_els
+        (i,j) = off_diag_inds[k]
+        (value, ρ_xy) = off_diag_out[k]
+
+        hessian[i,j] = value
+        hessian[j,i] = value
+
+        if ρ_xy < -1 || 1 < ρ_xy
+            invalid_corr[(i, j)] = ρ_xy
+        end
     end
 
-    return hessian, stoph
+    has_errors = false
+    if !isempty(invalid_corr)
+        println("Errors: $invalid_corr")
+        has_errors = true
+    end
+
+    return hessian, has_errors 
+end
+
+# Compute Hessian of posterior function evaluated at x
+function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, 
+                                    x::Vector{T}, 
+                                    YY::Matrix{T}; 
+                                    verbose::Bool = false)
+    update!(model, x)
+
+    # Index of free parameters
+    para_free      = [!θ.fixed for θ in model.parameters]
+    para_free_inds = find(para_free)
+
+    # Compute hessian only for freem parameters with indices less than max. Useful for
+    # testing purposes.
+    max_free_ind = max_hessian_free_params(model)
+    if max_free_ind < maximum(para_free_inds)
+        para_free_inds = para_free_inds[1:max_free_ind]
+    end
+
+    num_para = length(x)
+    hessian  = zeros(num_para, num_para)
+
+    # x_hessian is the vector of free params
+    # x_model is the vector of all params
+    x_model = copy(x)
+    x_hessian = x_model[para_free_inds]
+    function f_hessian(x_hessian)
+        x_model[para_free_inds] = x_hessian
+        return -posterior!(model, x_model, YY)
+    end
+
+    distr=use_parallel_workers(model)
+    hessian_free, has_errors = hessizero(f_hessian, x_hessian; 
+        check_neg_diag=true, verbose=verbose, distr=distr)
+
+    # Fill in rows/cols of zeros corresponding to location of fixed parameters
+    # For each row corresponding to a free parameter, fill in columns corresponding to free
+    # parameters. Everything else is 0.
+    for (row_free, row_full) in enumerate(para_free_inds)
+        hessian[row_full,para_free_inds] = hessian_free[row_free,:]
+    end
+
+    return hessian, has_errors
 end

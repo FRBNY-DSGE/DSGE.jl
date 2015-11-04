@@ -111,7 +111,6 @@ num_parameters(m::AbstractDSGEModel)             = length(m.parameters)
 num_parameters_steady_state(m::AbstractDSGEModel)= length(m.steady_state)
 num_parameters_free(m::AbstractDSGEModel)        = sum([!α.fixed for α in m.parameters])
 
-
 # Interface for I/O settings
 spec(m::AbstractDSGEModel)          = m.spec
 subspec(m::AbstractDSGEModel)       = m.subspec 
@@ -119,18 +118,19 @@ modelpathroot(m::AbstractDSGEModel) = get_setting(m, :modelpathroot)
 datapathroot(m::AbstractDSGEModel)  = get_setting(m, :datapathroot)
 data_vintage(m::AbstractDSGEModel)  = get_setting(m, :data_vintage)
 
+# Interface for general computation settings
+use_parallel_workers(m::AbstractDSGEModel)    = get_setting(m, :use_parallel_workers)
 
 # Interface for estimation settings
 reoptimize(m::AbstractDSGEModel)          = get_setting(m, :reoptimize)
 recalculate_hessian(m::AbstractDSGEModel) = get_setting(m, :recalculate_hessian)
+max_hessian_free_params(m::AbstractDSGEModel) = get_setting(m, :max_hessian_free_params)
 
 # Interface for Metropolis-Hastings settings
 num_mh_blocks(m::AbstractDSGEModel)      =  get_setting(m, :num_mh_blocks)
 num_mh_simulations(m::AbstractDSGEModel) =  get_setting(m, :num_mh_simulations) 
 num_mh_burn(m::AbstractDSGEModel)        =  get_setting(m, :num_mh_burn)
 mh_thinning_step(m::AbstractDSGEModel)   =  get_setting(m, :mh_thinning_step)
-
-
 
 #=
 """
@@ -157,7 +157,7 @@ function logpath(m::AbstractDSGEModel)
     return modelpath(m, "log", "log.log")
 end
 function rawpath(m::AbstractDSGEModel, out_type::AbstractString, file_name::AbstractString)
-        return modelpath(m, out_type, "raw", file_name)
+    return modelpath(m, out_type, "raw", file_name)
 end
 function workpath(m::AbstractDSGEModel, out_type::AbstractString, file_name::AbstractString)
     return modelpath(m, out_type, "work", file_name)
@@ -173,7 +173,7 @@ function modelpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, sub_typ
     file_name::T)
 
     # Containing dir
-    path = joinpath(modelpathroot(m), out_type, sub_type)
+    path = joinpath(modelpathroot(m), "output_data", spec(m), subspec(m), out_type, sub_type)
     if !isdir(path) 
         mkpath(path) 
     end
@@ -199,8 +199,6 @@ end
 function modelstring(m::AbstractDSGEModel)
     m.testing ? "_test" : join(values(m._filestrings),"_")
 end
-
-
 # TODO is there a better place for these? They do depend on AbstractDSGEModel type.
 #=
 doc"""

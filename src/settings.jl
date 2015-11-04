@@ -134,13 +134,17 @@ function default_settings(m::AbstractDSGEModel)
     # TODO: should be set when data are read in
     m <= Setting(:num_presample_periods, 2, "Number of periods in the presample")
 
+    # General computation
+    m <= Setting(:use_parallel_workers, true, "Use available parallel workers in computations")
+
     # Estimation
     m <= Setting(:reoptimize,          false, "Reoptimize the posterior mode")
     m <= Setting(:recalculate_hessian, false, "Recalculate the hessian at the mode")
+    m <= Setting(:max_hessian_free_params, typemax(Int), "Max number of free params for which to calculate Hessian")
     m <= Setting(:num_mh_simulations,  10000, "Number of draws per block in Metropolis-Hastings")
     m <= Setting(:num_mh_blocks,       22   , "Number of blocks for Metropolis-Hastings")
     m <= Setting(:num_mh_burn,         2    , "Number of blocks to use as burn-in in Metropolis-Hastings")
-    m <= Setting(:mh_thinning_step,    5    , "How often to write draw to file in Metropolis_Hastings")
+    m <= Setting(:mh_thinning_step,    5    , "How often to write draw to file in Metropolis-Hastings")
 
     # Data vintage. Default behavior: choose the most recent data file
     input_files = readdir(inpath(m)) 
@@ -192,6 +196,11 @@ function default_test_settings(m::AbstractDSGEModel)
 
     test[:data_vintage] = Setting(:data_vintage, "REF", true, "vint", "Reference data identifier")
 
+    test[:use_parallel_workers] = Setting(:use_parallel_workers, false, false, "parw", 
+                                            "Use available parallel workers in computations")
+
+    test[:max_hessian_free_params] = Setting(:max_hessian_free_params, 3, false, "mhfp",
+                                            "Max number of free params for which to calculate Hessian")
     
     # Metropolis-Hastings
     test[:num_mh_simulations] = Setting(:num_mh_simulations, 100, false, "nsim",
@@ -206,4 +215,3 @@ function default_test_settings(m::AbstractDSGEModel)
     test[:mh_thinning_step]   = Setting(:mh_thinning_step, 1, false, "thin",
                                         "Thinning step for testing Metropolis-Hastings")
 end
-    
