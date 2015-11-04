@@ -1,5 +1,5 @@
 using HDF5, Base.Test
-import DSGE: Model990, likelihood, posterior
+import DSGE: Model990, likelihood, posterior, posterior!
 
 path = dirname(@__FILE__)
 
@@ -16,3 +16,14 @@ lh = likelihood(model, YY)
 
 post = posterior(model, YY)
 @test_approx_eq post_expected post
+
+x = map(α->α.value, model.parameters)
+post_at_start = posterior!(model, x, YY)
+@test_approx_eq post_expected post_at_start
+
+# Ensure if we are not evaluating at start vector, then we do not get the reference
+# posterior
+x = x .+ 0.01
+post_not_at_start = posterior!(model, x, YY)
+ϵ = 1.0
+@test abs(post_at_start - post_not_at_start) > ϵ
