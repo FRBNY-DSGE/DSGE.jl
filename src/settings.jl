@@ -147,7 +147,7 @@ function default_settings(m::AbstractDSGEModel)
     m <= Setting(:mh_thinning_step,    5    , "How often to write draw to file in Metropolis-Hastings")
 
     # Data vintage. Default behavior: choose the most recent data file
-    input_files = readdir(inpath(m)) 
+    input_files = readdir(inpath(m, "data", "")) 
     vint = 0
     for file in input_files
         if ismatch(r"^\s*data*", file)
