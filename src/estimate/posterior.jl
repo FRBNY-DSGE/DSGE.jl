@@ -24,8 +24,7 @@ function Posterior{T<:AbstractFloat}(post::T = -Inf,
                                      mats    = Dict{Symbol,Matrix{T}}())
     return Posterior{T}(post, like, mats)
 end
-import Base.getindex
-function getindex(P::Posterior, d::Symbol)
+function Base.getindex(P::Posterior, d::Symbol)
     if d == :post
         return P.post
     elseif d == :like
@@ -139,17 +138,18 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
     presample = Dict{Symbol, Any}()
     normal    = Dict{Symbol, Any}()
     zlb       = Dict{Symbol, Any}()
-    mt = [presample, normal, zlb]
+    mt        = [presample, normal, zlb]
 
     num_obs_no_ant_shocks = num_observables(model) - num_anticipated_shocks(model)
     num_obs               = num_observables(model)
 
     num_states_no_ant_shocks = num_states_augmented(model) - num_anticipated_shocks(model)
-    num_states_               = num_states_augmented(model)
+    num_states_              = num_states_augmented(model)
     mt_num_states            = [num_states_no_ant_shocks, num_states_no_ant_shocks, num_states_]
 
     presample[:YY] = YY[1:num_presample_periods(model), 1:num_obs_no_ant_shocks]
-    normal[:YY]    = YY[(num_presample_periods(model)+1):(end-num_anticipated_lags(model)-1), 1:num_obs_no_ant_shocks]
+    normal[:YY]    = YY[(num_presample_periods(model)+1):(end-num_anticipated_lags(model)-1), 
+                        1:num_obs_no_ant_shocks]
     zlb[:YY]       = YY[(end-num_anticipated_lags(model)):end, :]
 
 
@@ -183,15 +183,15 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
     ## where u_t = eta_t+MM* eps_t with var(eta_t) = EE
     ## where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
 
-    # Get measurement equation matrices set up for all periods that aren't the presample
+    # Get measurement equation matrices set up for normal and zlb periods
     for p = 2:3
         shocks = (p == 3)
-        mt[p][:ZZ], mt[p][:DD], mt[p][:QQ], mt[p][:EE], mt[p][:MM] = measurement(model, mt[p][:TTT], mt[p][:RRR], mt[p][:CCC]; shocks=shocks)
-
+        mt[p][:ZZ], mt[p][:DD], mt[p][:QQ], mt[p][:EE], mt[p][:MM] = 
+            measurement(model, mt[p][:TTT], mt[p][:RRR], mt[p][:CCC]; shocks=shocks)
         mt[p][:HH] = mt[p][:EE] + mt[p][:MM]*mt[p][:QQ]*mt[p][:MM]'
         mt[p][:VV] = mt[p][:QQ]*mt[p][:MM]'
-        mt[p][:VVall] = [[mt[p][:RRR]*mt[p][:QQ]*mt[p][:RRR]'   mt[p][:RRR]*mt[p][:VV]];
-                          [mt[p][:VV]'*mt[p][:RRR]'               mt[p][:HH]]]
+        mt[p][:VVall] = [[mt[p][:RRR]*mt[p][:QQ]*mt[p][:RRR]' mt[p][:RRR]*mt[p][:VV]];
+                         [mt[p][:VV]'*mt[p][:RRR]'            mt[p][:HH]]]
     end
 
     # TODO: Incorporate this into measurement equation (why is this only done for normal period?)
@@ -216,7 +216,10 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
     # Run Kalman filter on presample
     presample[:A0] = zeros(T, num_states_no_ant_shocks, 1)
     presample[:P0] = dlyap!(copy(presample[:TTT]), copy(presample[:RRR]*presample[:QQ]*presample[:RRR]'))
-    presample[:pyt], presample[:zend], presample[:Pend] = kalcvf2NaN(presample[:YY]', 1, zeros(T, num_states_no_ant_shocks, 1), presample[:TTT], presample[:DD], presample[:ZZ], presample[:VVall], presample[:A0], presample[:P0])
+    out = kalcvf2NaN(presample[:YY]', 1, zeros(T, num_states_no_ant_shocks, 1), presample[:TTT], presample[:DD], presample[:ZZ], presample[:VVall], presample[:A0], presample[:P0])
+    presample[:pyt]  = out[:L]
+    presample[:zend] = out[:zend]
+    presample[:Pend] = out[:Pend]
 
     # Run Kalman filter on normal and ZLB periods
     for p = 2:3
@@ -244,7 +247,10 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
             Pprev[after_shocks_new, after_shocks_new] = normal[:Pend][after_shocks_old, after_shocks_old]
         end
 
-        mt[p][:pyt], mt[p][:zend], mt[p][:Pend] = kalcvf2NaN(mt[p][:YY]', 1, zeros(mt_num_states[p], 1), mt[p][:TTT], mt[p][:DD], mt[p][:ZZ], mt[p][:VVall], zprev, Pprev)
+        out = kalcvf2NaN(mt[p][:YY]', 1, zeros(mt_num_states[p], 1), mt[p][:TTT], mt[p][:DD], mt[p][:ZZ], mt[p][:VVall], zprev, Pprev)
+        mt[p][:pyt]  = out[:L]
+        mt[p][:zend] = out[:zend]
+        mt[p][:Pend] = out[:Pend]
     end
 
     # Return total log-likelihood, excluding the presample
