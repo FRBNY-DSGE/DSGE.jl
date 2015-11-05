@@ -52,24 +52,35 @@ end
 
 # subspecs
 function sstest(m::Model990)
-    # Change all the fields of an unfixed parameter
-    m <= parameter(m[:ι_w], 0.000, valuebounds=(0.0, .9999), transform_parameterization=(0.0,0.9999), transform=Untransformed(), prior=Normal(0.0,1.0))
 
-    # Change the value to something outside the bounds
-    @test_throws ParamBoundsError m <= parameter(m[:ζ_p], 0.0)
+    # Change all the fields of an unfixed parameter
+    m <= parameter(:ι_w, 0.000, (0.0, .9999), (0.0,0.9999), Untransformed(), Normal(0.0,1.0), fixed=false,
+                   description="ι_w: This is the something something.",
+                   texLabel="\\iota_w")
+
 
     # Change an unfixed parameter to be fixed
-    m <= parameter(m[:ι_p], 0.000, valuebounds=(0.0,0.0), prior=PointMass(0.0), fixed=true)
+    m <= parameter(:ι_p, 0.000, fixed=true,
+                   description= "ι_p: The persistence of last period's inflation in
+                   the equation that describes the intertemporal
+                   change in prices for intermediate goods producers
+                   who cannot adjust prices. The change in prices is a
+                   geometric average of steady-state inflation
+                   (π_star, with weight (1-ι_p)) and last period's
+                   inflation (π_{t-1})).",
+                   texLabel="\\iota_p")
+
 
     # Change a fixed parameter
-    m <= parameter(m[:δ],   0.02,  valuebounds=(0.02,0.02), prior=PointMass(0.02), fixed=true)
+    m <= parameter(:δ, 0.02,  fixed=true,
+                   description="δ: The capital depreciation rate.", texLabel="\\delta" )     
 
-    # incomplete change for fixed parameter - shouldnt go through
-    m <= parameter(m[:ϵ_p], 11.0, valuebounds=(11.0,11.0), fixed=true)
 
-    # incomplete change for unfixed parameter to fixed - shouldnt go through
-    m <= parameter(m[:ψ1], 0.0, fixed=true)
-    
+    # Overwrite a fixed parameter with an unfixed parameter
+    m <= parameter(:ϵ_p, 0.750, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    GammaAlt(0.75, 0.4),        fixed=false,  scaling = x -> 1 + x/100,
+                   description="ϵ_p: This is the something something.",
+                   texLabel="\\varepsilon_{p}")     
+
     steadystate!(m)
 end
 
@@ -84,22 +95,17 @@ sstest(m)
 
 @test m[:ι_p].value == 0.0
 @test m[:ι_p].valuebounds == (0.0, 0.0)
-@test isa(m[:ι_p].prior.value, PointMass)
+@test isnull(m[:ι_p].prior)
 @test m[:ι_p].fixed == true
 
 @test m[:δ].value == 0.02
 @test m[:δ].valuebounds == (0.02, 0.02)
-@test isa(m[:δ].prior.value, PointMass)
-@test m[:δ].prior.value.μ == 0.02
+@test isnull(m[:δ].prior)
 @test m[:δ].fixed == true
 
-@test m[:ϵ_p].value == 10.0
-@test m[:ϵ_p].valuebounds == (10.0,10.0)
-@test m[:ϵ_p].fixed == true
-
-@test m[:ψ1].value == 1.3679
-@test m[:ψ1].transform == DSGE.Exponential()
-@test isa(m[:ψ1].prior.value, Normal)
-@test m[:ψ1].fixed==false
+@test m[:ϵ_p].value == 0.750
+@test m[:ϵ_p].transform == DSGE.Exponential()
+@test isa(m[:ϵ_p].prior.value, Gamma)
+@test m[:ϵ_p].fixed==false
 
 nothing

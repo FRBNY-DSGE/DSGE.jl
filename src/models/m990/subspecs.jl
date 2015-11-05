@@ -19,8 +19,22 @@ function initialize_subspec(m::Model990)
 end
 
 function ss5(m::Model990)
-    m <= parameter(m[:ι_p], 0.000, valuebounds=(0.0,0.0), prior=PointMass(0.0), fixed=true)
-    m <= parameter(m[:ι_w], 0.000, valuebounds=(0.0,0.0), prior=PointMass(0.0), fixed=true)
+
+    m <= parameter(:ι_p, 0.0, fixed=true,
+                   description= "ι_p: The persistence of last period's inflation in
+                   the equation that describes the intertemporal
+                   change in prices for intermediate goods producers
+                   who cannot adjust prices. The change in prices is a
+                   geometric average of steady-state inflation
+                   (π_star, with weight (1-ι_p)) and last period's
+                   inflation (π_{t-1})).",
+                   texLabel="\\iota_p")
+
+
+    m <= parameter(:ι_w,   0.0, fixed=true,
+                   description="ι_w: This is the something something.",
+                   texLabel="\\iota_w")
+    
 end
 
 
