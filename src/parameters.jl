@@ -267,10 +267,6 @@ function parameter{T<:Number,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::
     if !(a <= newvalue <= b)
         throw(ParamBoundsError("New value of $(string(p.key)) ($(newvalue)) is out of bounds ($(p.valuebounds))"))
     end
-
-    # ensure that we have a Nullable{Distribution}, if not construct one
-    prior = !isa(prior,NullablePrior) ? NullablePrior(prior) : prior
-
     UnscaledParameter{T,V}(p.key, newvalue, valuebounds, transform_parameterization, transform, prior, fixed, p.description, p.texLabel)
 end
 
@@ -288,10 +284,6 @@ function parameter{T<:Number,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
     if !(a <= newvalue <= b)
         throw(ParamBoundsError("New value of $(string(p.key)) ($(newvalue)) is out of bounds ($(p.valuebounds))"))
     end
-
-    # ensure that we have a Nullable{Distribution}, if not construct one
-    prior = !isa(prior,NullablePrior) ? NullablePrior(prior) : prior
-    
     ScaledParameter{T,V}(p.key, newvalue, scaling(newvalue), valuebounds, transform_parameterization, transform, prior, fixed, scaling, p.description, p.texLabel)
 end
 
