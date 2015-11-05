@@ -196,7 +196,7 @@ function Model990(subspec::AbstractString="ss0")
                    texLabel="\\iota_p")
 
     m <= parameter(:δ,      0.025,  fixed=true,
-                   description="δ: The capital depreciation rate.", texLabel="\\delta" )     # omit from parameter vector
+                   description="δ: The capital depreciation rate.", texLabel="\\delta" )     
 
     ## TODO
     m <= parameter(:Upsilon,  1.000,  (0., 10.),     (1e-5, 0.),      DSGE.Exponential(),    GammaAlt(1., 0.5),          fixed=true,
@@ -233,7 +233,7 @@ function Model990(subspec::AbstractString="ss0")
 
     m <= parameter(:λ_w,      1.5000,                                                                               fixed=true,
                    description="λ_w: The wage markup, which affects the elasticity of substitution between differentiated labor services.",
-                   texLabel="\\lambda_w")     # omit from parameter vector
+                   texLabel="\\lambda_w")     
 
     m <= parameter(:β,      0.1402, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    GammaAlt(0.25, 0.1),        fixed=false,  scaling = x -> 1/(1 + x/100),
                    description="β: Discount rate.",       
@@ -265,11 +265,11 @@ function Model990(subspec::AbstractString="ss0")
     
     m <= parameter(:ϵ_p,     10.000,                                                                               fixed=true,
                    description="ϵ_p: This is the something something.",
-                   texLabel="\\varepsilon_{p}")     # omit from parameter vector
+                   texLabel="\\varepsilon_{p}")     
 
     m <= parameter(:ϵ_w,     10.000,                                                                               fixed=true,
                    description="ϵ_w: This is the something something.",
-                   texLabel="\\varepsilon_{w}")     # omit from parameter vector
+                   texLabel="\\varepsilon_{w}")     
 
     # financial frictions parameters
     m <= parameter(:Fω,      0.0300, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.03, 0.01),         fixed=true,    scaling = x -> 1 - (1-x)^0.25,
@@ -299,7 +299,7 @@ function Model990(subspec::AbstractString="ss0")
 
     m <= parameter(:g_star,    0.1800,                                                                               fixed=true,
                    description="g_star: This is the something something.",
-                   texLabel="g_*")  # omit from parameter vector
+                   texLabel="g_*")  
 
     # exogenous processes - autocorrelation 
     m <= parameter(:ρ_g,      0.9863, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,

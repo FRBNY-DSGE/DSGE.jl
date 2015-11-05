@@ -256,103 +256,35 @@ end
 
 
 """
-parameter{T<:Number,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::T;
-                                  [valuebounds::Interval{T} = p.valuebounds],
-                                  [transform_parameterization::Interval{T} = p.transform_parameterization],
-                                  [transform::Transform                    = p.transform],
-                                  [prior::NullablePrior                    = p.prior],
-                                  [fixed::Bool                             = p.fixed])
-    
+parameter{T<:Number,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::T)
 
-Returns an UnscaledParameter with value field equal to `newvalue`. Throws a
-`ParamBoundsError` if `newvalue` is not between `valuebounds`.
-
-If `fixed=true`, `p` will be returned unless the new
-valuebounds and new prior (matching `newvalue`) are explicitly provided.
+Returns an UnscaledParameter with value field equal to `newvalue`. If
+`p` is a fixed parameter, it is returned unchanged.
 """
-function parameter{T<:Number,U<:Transform, V<:Transform}(p::UnscaledParameter{T,U}, newvalue::T;
-                                           valuebounds::Interval{T}                = p.valuebounds,
-                                           transform_parameterization::Interval{T} = p.transform_parameterization,
-                                           transform::V                            = p.transform,
-                                           prior::NullableOrPrior                  = p.prior,
-                                           fixed::Bool                             = p.fixed)
-    
-    # don't change a fixed parameter unless both new valuebounds and prior are provided and match newvalue
-    if fixed
-
-        valuebounds != (newvalue,newvalue) && return p 
-        
-        if isa(prior, NullablePrior) && isa(prior.value, PointMass)
-            !(prior.value.μ == newvalue) && return p
-        elseif isa(prior, PointMass)
-            !(prior.μ == newvalue) && return p
-        else
-            return p
-        end
-    end
-    
-    # make sure new value is between new bounds
-    a,b = valuebounds  
+function parameter{T<:Number,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::T)
+    p.fixed && return p    # if the parameter is fixed, don't change its value
+    a,b = p.valuebounds  
     if !(a <= newvalue <= b)
         throw(ParamBoundsError("New value of $(string(p.key)) ($(newvalue)) is out of bounds ($(p.valuebounds))"))
     end
-
-    # ensure that we have a Nullable{Distribution}, if not construct one
-    prior = !isa(prior,NullablePrior) ? NullablePrior(prior) : prior
-
-    UnscaledParameter{T,V}(p.key, newvalue, valuebounds, transform_parameterization, transform, prior, fixed, p.description, p.texLabel)
+    UnscaledParameter{T,U}(p.key, newvalue, p.valuebounds, p.transform_parameterization, p.transform, p.prior, p.fixed, p.description, p.texLabel)
 end
 
 
 """
-parameter{T<:Number,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T;
-                                  [valuebounds::Interval{T}                = p.valuebounds],
-                                  [transform_parameterization::Interval{T} = p.transform_parameterization],
-                                  [transform::Transform                    = p.transform],
-                                  [prior::NullableOrPrior                  = p.prior],
-                                  [fixed::Bool                             = p.fixed],
-                                  [scaling::Function                       = p.scaling])
+parameter{T<:Number,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
 
-
-Returns a ScaledParameter with value field equal to `newvalue`,
-scaledvalue field equal to `p.scaling(newvalue)`. Throws a `ParamBoundsError` if
-`newvalue` is not between `valuebounds`.
-
-If `fixed=true`, `p` will be returned unless the new
-valuebounds and new prior (matching `newvalue`) are explicitly provided.
+Returns a ScaledParameter with value field equal to `newvalue` and
+scaledvalue field equal to `p.scaling(newvalue)`. If `p` is a fixed
+parameter, it is returned unchanged.
 """
-function parameter{T<:Number,U<:Transform, V<:Transform}(p::ScaledParameter{T,U}, newvalue::T;
-                                           valuebounds::Interval{T}                = p.valuebounds,
-                                           transform_parameterization::Interval{T} = p.transform_parameterization,
-                                           transform::V                            = p.transform,
-                                           prior::NullableOrPrior                  = p.prior,
-                                           fixed::Bool                             = p.fixed,
-                                           scaling::Function                       = p.scaling)
-
-    # don't change a fixed parameter unless both new valuebounds and prior are provided and match newvalue
-    if fixed
-
-        if valuebounds != (newvalue,newvalue)  return p end
-        
-        if isa(prior, NullablePrior) && isa(prior.value, PointMass)
-            (prior.value.μ != newvalue) && return p
-        elseif isa(prior, PointMass)
-            (prior.μ != newvalue) && return p
-        else
-            return p
-        end
-    end
-    
-    # make sure new value is between new bounds
-    a,b = valuebounds
+function parameter{T<:Number,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
+    p.fixed && return p    # if the parameter is fixed, don't change its value
+    a,b = p.valuebounds
     if !(a <= newvalue <= b)
         throw(ParamBoundsError("New value of $(string(p.key)) ($(newvalue)) is out of bounds ($(p.valuebounds))"))
     end
-
-    # ensure that we have a Nullable{Distribution}, if not construct one
-    prior = !isa(prior,NullablePrior) ? NullablePrior(prior) : prior
-    
-    ScaledParameter{T,V}(p.key, newvalue, scaling(newvalue), valuebounds, transform_parameterization, transform, prior, fixed, scaling, p.description, p.texLabel)
+    ScaledParameter{T,U}(p.key, newvalue, p.scaling(newvalue), p.valuebounds, p.transform_parameterization, p.transform, p.prior, p.fixed, p.scaling, p.description, p.texLabel)
 end
 
 function Base.show{T,U}(io::IO, p::Parameter{T,U})
