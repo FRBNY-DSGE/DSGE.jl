@@ -1,8 +1,12 @@
 language: julia
+os:
+    - linux
+    - osx
 julia:
     - 0.4
+notifications:
+    email: false
 script:
-    - git fetch --unshallow
-    - julia --color=yes -e 'Pkg.clone(pwd())'
-    - julia --color=yes -e "Pkg.build(\"DSGE\")"
-    - julia --check-bounds=yes --color=yes -e "Pkg.test(\"DSGE\")"
+    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+    - julia --color=yes -e 'Pkg.clone(pwd()); Pkg.build("DSGE"); Pkg.test("DSGE")'
+#   - julia --color=yes -e 'Pkg.clone(pwd()); Pkg.build("DSGE"); Pkg.test("DSGE"; coverage=true)'
