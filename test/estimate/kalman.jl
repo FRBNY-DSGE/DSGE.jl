@@ -23,26 +23,25 @@ lead = round(Int,lead)
 
 
 # Method with all arguments provided (9)
-L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt =
-    kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0; allout=true)
-
-L, zend, Pend = kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0)
+out_3 = kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0)
+out_9 = kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0; allout=true)
 
 
 #TODO clean up to use less eval
 h5 = h5open("$path/../reference/kalcvf2NaN_out9.h5")
-for out in ["L", "zend", "Pend", "pred", "vpred", "yprederror", "ystdprederror", "rmse",
-            "rmsd", "filt", "vfilt" ]
-    eval(parse("$(out)_expected = read(h5, \"$out\")"))
+for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
+            :rmsd, :filt, :vfilt]
+    expect = read(h5, "$out")
+    actual = out_9[out]
 
-    if out == "L"
-        @test_approx_eq L_expected L
-    elseif out == "zend"
-        # Not sure why this has to be enclosed in eval(parse()) to run
-        eval(parse("zend_expected = reshape(zend_expected, length(zend_expected), 1)"))
-        @test_matrix_approx_eq zend_expected zend
+    if out == :zend
+        expect = reshape(expect, length(expect), 1)
+    end
+
+    if ndims(expect) == 0
+        @test_approx_eq expect actual
     else
-        eval(parse("@test_matrix_approx_eq $(out)_expected $out"))
+        @test_matrix_approx_eq expect actual
     end
 end
 close(h5)
@@ -50,27 +49,27 @@ close(h5)
 
 
 # Method with optional arguments omitted (7)
-L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt =
-    kalcvf2NaN(data, lead, a, F, b, H, var; allout=true)
-
-L, zend, Pend = kalcvf2NaN(data, lead, a, F, b, H, var)
+out_3 = kalcvf2NaN(data, lead, a, F, b, H, var)
+out_9 = kalcvf2NaN(data, lead, a, F, b, H, var; allout=true)
 
 
 h5 = h5open("$path/../reference/kalcvf2NaN_out7.h5")
-for out in ["L", "zend", "Pend", "pred", "vpred", "yprederror", "ystdprederror", "rmse",
-            "rmsd", "filt", "vfilt" ]
-    eval(parse("$(out)_expected = read(h5, \"$out\")"))
+for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
+            :rmsd, :filt, :vfilt]
+    expect = read(h5, "$out")
+    actual = out_9[out]
 
-    if out == "L"
-        @test_approx_eq_eps L_expected L 1e-4
-    elseif out == "zend"
-        zend_expected = reshape(zend_expected, length(zend_expected), 1)
-        @test_matrix_approx_eq zend_expected zend
-    elseif out ∈ ["Pend", "vpred", "vfilt"]
+    if out == :zend
+        expect = reshape(expect, length(expect), 1)
+    end
+
+    if out == :L
+        @test_approx_eq_eps expect actual 1e-4
+    elseif out ∈ [:Pend, :vpred, :vfilt]
         # These matrix entries are especially large, averaging 1e5, so we allow greater ϵ
-        eval(parse("@test_matrix_approx_eq_eps $(out)_expected $(out) 1e-1 1e-2"))
+        @test_matrix_approx_eq_eps expect actual 1e-1 1e-2
     else
-        eval(parse("@test_matrix_approx_eq $(out)_expected $out"))
+        @test_matrix_approx_eq expect actual 
     end
 end
 close(h5)

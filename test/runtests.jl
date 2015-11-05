@@ -6,7 +6,6 @@ include(joinpath(dirname(@__FILE__()),"util.jl"))
 my_tests = [            
             "core",
             "parameters",
-            "models/m990/m990",
             "solve/gensys",
             "solve/solve",
             "solve/ordered_qz",
@@ -16,7 +15,8 @@ my_tests = [
             "estimate/hessian",
             "estimate/csminwel",
             "estimate/eig",
-            "estimate/metropolis_hastings"
+            "estimate/metropolis_hastings",
+            "models/m990/m990"
             ]
 
 for test in my_tests

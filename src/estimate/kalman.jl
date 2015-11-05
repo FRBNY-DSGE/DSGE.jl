@@ -1,5 +1,3 @@
-using Compat
-
 # KALCVF The Kalman filter
 #
 # State space model is defined as follows:
@@ -47,7 +45,52 @@ using Compat
 #  03/19/2003  -  algorithm and interface were adapted from SAS/IML KALCVF subroutine for use in MATLAB M file
 #
 #==========================================================================#
-function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S}, lead::Int64, a::Matrix{S}, F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, z0::Matrix{S}, vz0::Matrix{S}, Ny0::Int = 0; allout::Bool = false)
+immutable Kalman{S<:AbstractFloat}
+    L::S
+    zend::Matrix{S}
+    Pend::Matrix{S}
+    pred::Matrix{S}
+    vpred::Array{S,3}
+    yprederror::Matrix{S}
+    ystdprederror::Matrix{S}
+    rmse::Matrix{S}
+    rmsd::Matrix{S}
+    filt::Matrix{S}
+    vfilt::Array{S,3}
+end
+function Kalman{S<:AbstractFloat}(L::S,
+                                  zend::Matrix{S},
+                                  Pend::Matrix{S},
+                                  pred::Matrix{S}          = Matrix{S}(),
+                                  vpred::Array{S,3}        = Array{S}(0,0,0),
+                                  yprederror::Matrix{S}    = Matrix{S}(),
+                                  ystdprederror::Matrix{S} = Matrix{S}(),
+                                  rmse::Matrix{S}          = Matrix{S}(),
+                                  rmsd::Matrix{S}          = Matrix{S}(),
+                                  filt::Matrix{S}          = Matrix{S}(),
+                                  vfilt::Array{S,3}        = Array{S}(0,0,0))
+    return Kalman{S}(L,zend,Pend,pred,vpred,yprederror,ystdprederror,rmse,rmsd,filt,vfilt)
+end
+function Base.getindex(K::Kalman, d::Symbol)
+    if d in (:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse, :rmsd,
+             :filt, :vfilt)
+        return getfield(K, d)
+    else
+        throw(KeyError(d))
+    end
+end
+
+function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S},
+                                      lead::Int64,
+                                      a::Matrix{S},
+                                      F::Matrix{S},
+                                      b::Matrix{S},
+                                      H::Matrix{S},
+                                      var::Matrix{S},
+                                      z0::Matrix{S},
+                                      vz0::Matrix{S},
+                                      Ny0::Int = 0;
+                                      allout::Bool = false)
     T = size(data, 2)
     Nz = size(a, 1)
     Ny = size(b, 1)
@@ -65,7 +108,8 @@ function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S}, lead::Int64, a::Matrix{S}
     @assert size(z) == (Nz, 1)
     @assert size(P) == (Nz, Nz)
 
-    # V(t) and R(t) are variances of η(t) and ϵ(t), respectively, and G(t) is a covariance of η(t) and ϵ(t)
+    # V(t) and R(t) are variances of η(t) and ϵ(t), respectively, and G(t) is a covariance
+    # of η(t) and ϵ(t)
     # In dsgelh :
     # --- V is same as QQ
     # --- R is same as EE
@@ -75,17 +119,15 @@ function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S}, lead::Int64, a::Matrix{S}
     G = var[1:Nz, (Nz+1):end]
 
     if allout
-        pred = zeros(Nz, T)
-        vpred = zeros(Nz, Nz, T)
-        
-        yprederror = NaN*zeros(Ny, T)
-        ystdprederror = NaN*zeros(Ny, T)
-        
-        filt = zeros(Nz, T)
-        vfilt = zeros(Nz, Nz, T)
+        pred          = zeros(S, Nz, T)
+        vpred         = zeros(S, Nz, Nz, T)
+        yprederror    = NaN*zeros(S, Ny, T)
+        ystdprederror = NaN*zeros(S, Ny, T)
+        filt          = zeros(Nz, T)
+        vfilt         = zeros(Nz, Nz, T)
     end
     
-    L = 0.0
+    L = zero(S)
     
     for t = 1:T
         # If an element of the vector y(t) is missing (NaN) for the observation t, the
@@ -108,9 +150,9 @@ function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S}, lead::Int64, a::Matrix{S}
         D = (D+D')/2
 
         if allout
-            pred[:, t] = z
-            vpred[:, :, t] = P
-            yprederror[nonmissing, t] = dy
+            pred[:, t]                   = z
+            vpred[:, :, t]               = P
+            yprederror[nonmissing, t]    = dy
             ystdprederror[nonmissing, t] = dy./sqrt(diag(D))
         end
 
@@ -128,7 +170,7 @@ function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S}, lead::Int64, a::Matrix{S}
 
         if allout
             PH = P*H_t'
-            filt[:, t] = z
+            filt[:, t]     = z
             vfilt[:, :, t] = P
         end
     end
@@ -140,7 +182,7 @@ function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S}, lead::Int64, a::Matrix{S}
         for t = (T+2):(T+lead)
             z = F*z + a
             P = F*P*F' + V
-            pred[:, t] = z
+            pred[:, t]     = z
             vpred[:, :, t] = P
         end
     end
@@ -148,16 +190,12 @@ function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S}, lead::Int64, a::Matrix{S}
     if allout
         rmse = sqrt(mean((yprederror.^2)', 1))
         rmsd = sqrt(mean((ystdprederror.^2)', 1))
-        return L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt
+        return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt)
     else
-        return L, zend, Pend
+        return Kalman(L, zend, Pend)
     end
 
 end
-
-
-
-
 
 # The initial state vector and its covariance matrix of the time invariant Kalman filters
 # are computed under the stationarity condition:
@@ -168,7 +206,15 @@ end
 # Note that all eigenvalues of the matrix F are inside the unit circle when the SSM is stationary.
 # When the preceding formula cannot be applied, the initial state vector estimate is set to a
 # and its covariance matrix is given by 1E6I. Optionally, you can specify initial values.
-function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S}, lead::Int64, a::Matrix{S}, F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, Ny0::Int = 0; allout::Bool = false)
+function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S},
+                                      lead::Int64,
+                                      a::Matrix{S},
+                                      F::Matrix{S},
+                                      b::Matrix{S},
+                                      H::Matrix{S},
+                                      var::Matrix{S},
+                                      Ny0::Int = 0;
+                                      allout::Bool = false)
     Nz = size(a, 1)
     V = var[1:Nz, 1:Nz]
 
