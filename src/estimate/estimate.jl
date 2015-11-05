@@ -36,7 +36,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     verboseness = VERBOSE_DICT
 
     # Load data
-    h5 = h5open(joinpath(inpath(m),"data_$(data_vintage(m)).h5"), "r")
+    h5 = h5open(inpath(m, "data","data_$(data_vintage(m)).h5"), "r")
     YY = read(h5["YY"])
     close(h5)
 
@@ -56,11 +56,11 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     mode = []
 
     if reoptimize(m)
-        h5 = h5open(joinpath(inpath(m), "mode_in.h5"),"r")
+        h5 = h5open(inpath(m, "user", "mode_in.h5"),"r")
         mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
         close(h5)
     else
-        h5 = h5open(joinpath(inpath(m), "mode_in_optimized.h5"),"r")
+        h5 = h5open(inpath(m, "user", "mode_in_optimized.h5"),"r")
         mode = read(h5["mode"])
         close(h5)
     end
@@ -136,7 +136,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
             println("Using pre-calculated Hessian")
         end
 
-        hessian = h5open(joinpath(inpath(m), "hessian_optimized.h5"),"r") do file
+        hessian = h5open(inpath(m, "user", "hessian_optimized.h5"),"r") do file
             read(file, "hessian")
         end
     end

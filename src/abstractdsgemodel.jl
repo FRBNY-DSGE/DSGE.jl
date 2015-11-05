@@ -156,16 +156,16 @@ Note: we refer to the savepathroot/output_data/<spec>/<subspec>/ directory as mo
 function logpath(m::AbstractDSGEModel)
     return modelpath(m, "log", "log.log")
 end
-function rawpath(m::AbstractDSGEModel, out_type::AbstractString, file_name::AbstractString)
+function rawpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T)
     return modelpath(m, out_type, "raw", file_name)
 end
-function workpath(m::AbstractDSGEModel, out_type::AbstractString, file_name::AbstractString)
+function workpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T)
     return modelpath(m, out_type, "work", file_name)
 end
-function tablespath(m::AbstractDSGEModel, out_type::AbstractString, file_name::AbstractString)
+function tablespath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T)
     return modelpath(m, out_type, "tables", file_name)
 end
-function figurespath(m::AbstractDSGEModel, out_type::AbstractString, file_name::AbstractString)
+function figurespath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T)
     return modelpath(m, out_type, "figures", file_name)
 end
     
@@ -188,18 +188,30 @@ function modelpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, sub_typ
 end
 
 # Input data handled slightly differently, because it is not model-specific.
-function inpath(m::AbstractDSGEModel)
+function inpath{T<:AbstractString}(m::AbstractDSGEModel, in_type::T, file_name::T)
     path = datapathroot(m)
+    # Normal cases.
+    if in_type == "data" || in_type == "cond"
+        path = joinpath(path, in_type)
+    end
+
+    # User-provided inputs. May treat this differently in the future.
+    if in_type == "user"
+        path = joinpath(path, "user")
+    end
+
+    # Containing dir
     if !isdir(path)
         mkpath(path)
     end
-    return path
+
+    return joinpath(path, file_name)
 end
 
 function modelstring(m::AbstractDSGEModel)
     m.testing ? "_test" : join(values(m._filestrings),"_")
 end
-# TODO is there a better place for these? They do depend on AbstractDSGEModel type.
+
 #=
 doc"""
 tomodel!{T<:AbstractFloat}(m::AbstractDSGEModel, values::Vector{T})

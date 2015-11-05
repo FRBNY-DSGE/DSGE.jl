@@ -4,22 +4,23 @@ using HDF5, Base.Test
 include("../util.jl")
 path = dirname(@__FILE__)
 
-mode = h5open("$path/../reference/mode_in_optimized.h5") do file
-    read(file, "mode")
-end
-YY = h5open("$path/../reference/data_REF.h5") do file
-    read(file, "YY")
-end
-hessian_expected = h5open("$path/../reference/hessian_optimized.h5") do file
-    read(file, "hessian")
-end
 
 # Test hessian! in context of model
 model = Model990()
-
-# Test subset of hessian elements.
 model.testing = true
 
+# Setup paths
+mode = h5open(inpath(model, "user", "mode_in_optimized.h5")) do file
+    read(file, "mode")
+end
+YY = h5open(inpath(model, "data", "data_REF.h5")) do file
+    read(file, "YY")
+end
+hessian_expected = h5open(inpath(model, "user", "hessian_optimized.h5")) do file
+    read(file, "hessian")
+end
+
+# Test subset of hessian elements.
 para_free      = [!θ.fixed for θ in model.parameters]
 para_free_inds = find(para_free)
 
