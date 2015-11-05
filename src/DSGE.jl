@@ -1,3 +1,5 @@
+isdefined(Base, :__precompile__) && __precompile__()
+
 module DSGE
     using Compat, Distributions, Roots.fzero, HDF5
     using DataStructures: SortedDict, insert!, ForwardOrdering
