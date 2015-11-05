@@ -267,7 +267,7 @@ function parameter{T<:Number,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::
     if !(a <= newvalue <= b)
         throw(ParamBoundsError("New value of $(string(p.key)) ($(newvalue)) is out of bounds ($(p.valuebounds))"))
     end
-    UnscaledParameter{T,V}(p.key, newvalue, valuebounds, transform_parameterization, transform, prior, fixed, p.description, p.texLabel)
+    UnscaledParameter{T,U}(p.key, newvalue, p.valuebounds, p.transform_parameterization, p.transform, p.prior, p.fixed, p.description, p.texLabel)
 end
 
 
@@ -284,7 +284,7 @@ function parameter{T<:Number,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
     if !(a <= newvalue <= b)
         throw(ParamBoundsError("New value of $(string(p.key)) ($(newvalue)) is out of bounds ($(p.valuebounds))"))
     end
-    ScaledParameter{T,V}(p.key, newvalue, scaling(newvalue), valuebounds, transform_parameterization, transform, prior, fixed, scaling, p.description, p.texLabel)
+    ScaledParameter{T,U}(p.key, newvalue, p.scaling(newvalue), p.valuebounds, p.transform_parameterization, p.transform, p.prior, p.fixed, p.scaling, p.description, p.texLabel)
 end
 
 function Base.show{T,U}(io::IO, p::Parameter{T,U})
