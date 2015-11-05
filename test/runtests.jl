@@ -5,7 +5,7 @@ include(joinpath(dirname(@__FILE__()),"util.jl"))
 
 my_tests = [            
             "core",
-            "new_parameters",
+            "parameters",
             "models/m990/m990",
             "solve/gensys",
             "solve/solve",

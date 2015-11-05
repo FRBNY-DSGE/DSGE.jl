@@ -25,7 +25,7 @@ module DSGE
         num_mh_burn, mh_thinning_step, data_vintage,
 
         
-        # new_parameters.jl
+        # parameters.jl
         parameter, Transform, Untransformed, SquareRoot, Exponential, NullablePrior,
         AbstractParameter, Parameter, ParameterVector, ScaledParameter, UnscaledParameter,
         SteadyStateParameter, toreal, tomodel, update, update!, tomodel, toreal, Interval,
@@ -44,7 +44,7 @@ module DSGE
     
     const VERBOSE_DICT = @compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
 
-    include("new_parameters.jl")
+    include("parameters.jl")
     include("distributions_ext.jl")
     include("abstractdsgemodel.jl")
     include("settings.jl")
