@@ -58,7 +58,7 @@ this chain:
 
 - (Parameters + Model Indices + Eqcond Function) -> (TTT + RRR)
 - (TTT + RRR + Data) -> Estimation
-- (Estimation + TTT + RRR + Data) -> Forecast      # not yet implemented
+- (Estimation + TTT + RRR + Data) -> Forecast      (not yet implemented)
 
 
 # Running the Code
@@ -103,8 +103,15 @@ The directory structure follows Julia module conventions. In the
 top-level directory (DSGE), you will find the folling subdirectory
 tree:
 
-  - `docs/`: Helpful documentation, including this README
+  - `doc/`: Documentation, including this README
   - `save/`: 
+     - `input_data/`: 
+         -`data/`:  Macroeconomic series formatted as an n x m Array{Float64,2}, where n is the number of observations and m is the number of series used as input.
+             - `data_151030.h5`: input data vintage from October 30, 2015 (note that this is something of a misnomer because this data isnt from that date...)
+         -`user/`: User-created files to use as input. For instance, the user may specify a previously computed mode when `reoptimize(m)==false`, or a starting point for optimization when `reoptimize(m)==true`.
+             - `mode_in.h5`: Used as starting point for estimation when `reoptimize(m)==false`.
+             - ``
+     - `output_data/`
      - `m990/`: Input/output files for the Model990 type. A model of
        type mSPEC (with `m.spec = SPEC`) will create its own save directory `mSPEC` at this
        level in the directory tree.
