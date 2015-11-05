@@ -40,7 +40,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     YY = read(h5["YY"])
     close(h5)
 
-    post = posterior(m, YY)
+    post = posterior(m, YY)[:post]
 
 
     ########################################################################################
@@ -74,7 +74,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
         # Inputs to minimization algorithm
         function posterior_min!{T<:AbstractFloat}(x::Vector{T})
             tomodel!(m,x)
-            return -posterior(m, YY, catchGensysErrors=true)
+            return -posterior(m, YY, catchGensysErrors=true)[:post]
         end
 
         xh = toreal(m.parameters)
@@ -264,7 +264,8 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
         n_burn   = num_mh_burn(m)
         n_times  = mh_thinning_step(m)
 
-        post_old, like_old, out = posterior!(m, para_old, YY; mh=true)
+        post_out = posterior!(m, para_old, YY; mh=true)
+        post_old, like_old, out = post_out[:post], post_out[:like], post_out[:mats]
         
         if post_old > -Inf
             propdist.μ = para_old
@@ -338,7 +339,8 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
             # Solve the model, check that parameters are within bounds, gensys returns a
             # meaningful system, and evaluate the posterior.
 
-            post_new, like_new, out = posterior!(m, para_new, YY; mh=true)
+            post_out = posterior!(m, para_new, YY; mh=true)
+            post_new, like_new, out = post_out[:post], post_out[:like], post_out[:mats]
             
             if verboseness[verbose] >= verboseness[:high] 
                 println("Block $i, Iteration $j: posterior = $post_new")

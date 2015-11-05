@@ -207,7 +207,7 @@ function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel,
     x_hessian = x_model[para_free_inds]
     function f_hessian(x_hessian)
         x_model[para_free_inds] = x_hessian
-        return -posterior!(model, x_model, YY)
+        return -posterior!(model, x_model, YY)[:post]
     end
 
     distr=use_parallel_workers(model)

@@ -1,5 +1,3 @@
-using Compat
-
 #=
 doc"""
 Calculates (log of) the joint density of the model parameters.
@@ -15,6 +13,29 @@ function prior(model::AbstractDSGEModel)
     return x
 end
 
+# Type returned by posterior
+immutable Posterior{T<:AbstractFloat}
+    post::T
+    like::T
+    mats
+end
+function Posterior{T<:AbstractFloat}(post::T = -Inf,
+                                     like::T = -Inf,
+                                     mats    = Dict{Symbol,Matrix{T}}())
+    return Posterior{T}(post, like, mats)
+end
+import Base.getindex
+function getindex(P::Posterior, d::Symbol)
+    if d == :post
+        return P.post
+    elseif d == :like
+        return P.like
+    elseif d == :mats
+        return P.mats
+    else
+        throw(KeyError(d))
+    end
+end
 
 #=
 doc"""
@@ -39,9 +60,11 @@ function posterior{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh
         catch_errors = true
         like, out = likelihood(model, YY; mh=mh)
         post = like + prior(model)
-        return post, like, out
+        return Posterior(post, like, out)
     else
-        return likelihood(model, YY; mh=mh, catch_errors=catch_errors) + prior(model)
+        like, out = likelihood(model, YY; mh=mh, catch_errors=catch_errors)
+        post = like + prior(model)
+        return Posterior(post, like)
     end
 end
 
@@ -63,8 +86,6 @@ Evaluates the log posterior distribution at `parameters`
 """
 =#
 function posterior!{T<:AbstractFloat}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false, catch_errors::Bool = false)
-    MH_NULL_OUTPUT = (-Inf, Dict{Symbol, Any}())
-        
     if mh
 
         try
@@ -72,7 +93,7 @@ function posterior!{T<:AbstractFloat}(model::AbstractDSGEModel, parameters::Vect
         catch err
             @printf "There was an error of type %s :" typeof(err)
             @printf "%s\n" err.msg
-            return MH_NULL_OUTPUT
+            return Posterior()
         end
 
         return posterior(model, YY; mh=true, catch_errors=true)
@@ -100,37 +121,36 @@ likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool =
 """
 =#
 function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catch_errors::Bool = false)
-    MH_NULL_OUTPUT = (-Inf, Dict{Symbol, Any}())
-    GENSYS_ERROR_OUTPUT = -Inf
+    LIKE_NULL_DICT   = Dict{Symbol, Matrix{T}}()
+    LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if mh
-        catch_errors = true  # for consistency
+        catch_errors = true  # for consistency # TODO why is this here?
         for θ in model.parameters
             (left, right) = θ.valuebounds
             if !θ.fixed && !(left <= θ.value <= right)
-                return MH_NULL_OUTPUT
+                return LIKE_NULL_OUTPUT
             end
         end
     end
 
     # Partition sample into presample, normal, and zero lower bound periods
     presample = Dict{Symbol, Any}()
-    normal = Dict{Symbol, Any}()
-    zlb = Dict{Symbol, Any}()
+    normal    = Dict{Symbol, Any}()
+    zlb       = Dict{Symbol, Any}()
     mt = [presample, normal, zlb]
 
-    presample[:num_observables] = num_observables(model) - num_anticipated_shocks(model)
-    normal[:num_observables] = num_observables(model) - num_anticipated_shocks(model)
-    zlb[:num_observables] = num_observables(model)
+    num_obs_no_ant_shocks = num_observables(model) - num_anticipated_shocks(model)
+    num_obs               = num_observables(model)
 
-    presample[:num_states] = num_states_augmented(model) - num_anticipated_shocks(model)
-    normal[:num_states] = num_states_augmented(model) - num_anticipated_shocks(model)
-    zlb[:num_states] = num_states_augmented(model)
+    num_states_no_ant_shocks = num_states_augmented(model) - num_anticipated_shocks(model)
+    num_states_               = num_states_augmented(model)
+    mt_num_states            = [num_states_no_ant_shocks, num_states_no_ant_shocks, num_states_]
 
-    presample[:YY] = YY[1:num_presample_periods(model), 1:presample[:num_observables]]
-    normal[:YY] = YY[(num_presample_periods(model)+1):(end-num_anticipated_lags(model)-1), 1:normal[:num_observables]]
-    zlb[:YY] = YY[(end-num_anticipated_lags(model)):end, :]
+    presample[:YY] = YY[1:num_presample_periods(model), 1:num_obs_no_ant_shocks]
+    normal[:YY]    = YY[(num_presample_periods(model)+1):(end-num_anticipated_lags(model)-1), 1:num_obs_no_ant_shocks]
+    zlb[:YY]       = YY[(end-num_anticipated_lags(model)):end, :]
 
 
     # Step 1: solution to DSGE model - delivers transition equation for the state variables  S_t
@@ -142,18 +162,15 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
     catch err
         if catch_errors && isa(err, GensysError)
             info(err.msg)
-            if mh
-                return MH_NULL_OUTPUT
-            else
-                return GENSYS_ERROR_OUTPUT
-            end
+            return LIKE_NULL_OUTPUT
         else
             rethrow(err)
         end
     end
 
-    # Get normal, no ZLB m matrices
-    state_inds = [1:(num_states(model)-num_anticipated_shocks(model)); (num_states(model)+1):num_states_augmented(model)]
+    # Get normal, no ZLB matrices
+    state_inds = [1:(num_states(model)-num_anticipated_shocks(model));
+                  (num_states(model)+1):num_states_augmented(model)]
     shock_inds = 1:(num_shocks_exogenous(model)-num_anticipated_shocks(model))
 
     normal[:TTT] = zlb[:TTT][state_inds, state_inds]
@@ -168,13 +185,8 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
 
     # Get measurement equation matrices set up for all periods that aren't the presample
     for p = 2:3
-        #try
-            shocks = (p == 3)
-            mt[p][:ZZ], mt[p][:DD], mt[p][:QQ], mt[p][:EE], mt[p][:MM] = measurement(model, mt[p][:TTT], mt[p][:RRR], mt[p][:CCC]; shocks=shocks)
-        #catch
-            # Error thrown during gensys
-            #    return -Inf
-        #end
+        shocks = (p == 3)
+        mt[p][:ZZ], mt[p][:DD], mt[p][:QQ], mt[p][:EE], mt[p][:MM] = measurement(model, mt[p][:TTT], mt[p][:RRR], mt[p][:CCC]; shocks=shocks)
 
         mt[p][:HH] = mt[p][:EE] + mt[p][:MM]*mt[p][:QQ]*mt[p][:MM]'
         mt[p][:VV] = mt[p][:QQ]*mt[p][:MM]'
@@ -189,7 +201,7 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
     end
 
     # Presample measurement & transition equation matrices are same as normal period
-    presample[:TTT], presample[:RRR], presample[:QQ] = normal[:TTT], normal[:RRR], normal[:QQ]
+    presample[:TTT], presample[:RRR], presample[:QQ]  = normal[:TTT], normal[:RRR], normal[:QQ]
     presample[:ZZ], presample[:DD], presample[:VVall] = normal[:ZZ], normal[:DD], normal[:VVall]
 
 
@@ -202,9 +214,9 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
     ##         define VVall as the joint variance of the two shocks VVall = var([eps2_tu_t])
 
     # Run Kalman filter on presample
-    presample[:A0] = zeros(presample[:num_states], 1)
+    presample[:A0] = zeros(T, num_states_no_ant_shocks, 1)
     presample[:P0] = dlyap!(copy(presample[:TTT]), copy(presample[:RRR]*presample[:QQ]*presample[:RRR]'))
-    presample[:pyt], presample[:zend], presample[:Pend] = kalcvf2NaN(presample[:YY]', 1, zeros(presample[:num_states], 1), presample[:TTT], presample[:DD], presample[:ZZ], presample[:VVall], presample[:A0], presample[:P0])
+    presample[:pyt], presample[:zend], presample[:Pend] = kalcvf2NaN(presample[:YY]', 1, zeros(T, num_states_no_ant_shocks, 1), presample[:TTT], presample[:DD], presample[:ZZ], presample[:VVall], presample[:A0], presample[:P0])
 
     # Run Kalman filter on normal and ZLB periods
     for p = 2:3
@@ -217,22 +229,22 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
             # state space without anticipated policy shocks, then shoves in nant
             # zeros in the middle of zend and Pend in the location of
             # the anticipated shock entries.
-            before_shocks = 1:(num_states(model)-num_anticipated_shocks(model))
+            before_shocks    = 1:(num_states(model)-num_anticipated_shocks(model))
             after_shocks_old = (num_states(model)-num_anticipated_shocks(model)+1):(num_states_augmented(model)-num_anticipated_shocks(model))
             after_shocks_new = (num_states(model)+1):num_states_augmented(model)
 
             zprev = [normal[:zend][before_shocks, :];
-                     zeros(num_anticipated_shocks(model), 1);
+                     zeros(T, num_anticipated_shocks(model), 1);
                      normal[:zend][after_shocks_old, :]]
 
-            Pprev = zeros(num_states_augmented(model), num_states_augmented(model))
-            Pprev[before_shocks, before_shocks] = normal[:Pend][before_shocks, before_shocks]
-            Pprev[before_shocks, after_shocks_new] = normal[:Pend][before_shocks, after_shocks_old]
-            Pprev[after_shocks_new, before_shocks] = normal[:Pend][after_shocks_old, before_shocks]
+            Pprev = zeros(T, num_states_augmented(model), num_states_augmented(model))
+            Pprev[before_shocks, before_shocks]       = normal[:Pend][before_shocks, before_shocks]
+            Pprev[before_shocks, after_shocks_new]    = normal[:Pend][before_shocks, after_shocks_old]
+            Pprev[after_shocks_new, before_shocks]    = normal[:Pend][after_shocks_old, before_shocks]
             Pprev[after_shocks_new, after_shocks_new] = normal[:Pend][after_shocks_old, after_shocks_old]
         end
 
-        mt[p][:pyt], mt[p][:zend], mt[p][:Pend] = kalcvf2NaN(mt[p][:YY]', 1, zeros(mt[p][:num_states], 1), mt[p][:TTT], mt[p][:DD], mt[p][:ZZ], mt[p][:VVall], zprev, Pprev)
+        mt[p][:pyt], mt[p][:zend], mt[p][:Pend] = kalcvf2NaN(mt[p][:YY]', 1, zeros(mt_num_states[p], 1), mt[p][:TTT], mt[p][:DD], mt[p][:ZZ], mt[p][:VVall], zprev, Pprev)
     end
 
     # Return total log-likelihood, excluding the presample
@@ -240,7 +252,7 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
     if mh
         return like, zlb
     else
-        return like
+        return like, LIKE_NULL_DICT
     end
 end
 
