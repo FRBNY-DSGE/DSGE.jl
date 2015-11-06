@@ -37,14 +37,14 @@ Base.show(io::IO, t::Exponential)   = @printf io "x -> b + (1/c) * log(x-a)\n"
 AbstractParameter{T<:Number}
 
 The AbstractParameter type is the common supertype of all model
-parameters, including steady-state values that we treat as
-parameters. Its subtype structure is as follows:
+parameters, including steady-state values.  Its subtype structure is
+as follows:
 
-*`AbstractParameter{T<:Number}`
-    *`Parameter{T<:Number, U<:Transform}`
-        *`UnscaledParameter{T<:Number, U:<Transform}`
-        *`ScaledParameter{T<:Number, U:<Transform}`
-    *`SteadyStateParameter{T<:Number}`
+-`AbstractParameter{T<:Number}`: The common abstract supertype for all parameters.
+    -`Parameter{T<:Number, U<:Transform}`: The abstract supertype for parameters that are directly estimated. 
+        -`UnscaledParameter{T<:Number, U:<Transform}`: Concrete type for parameters that do not need to be scaled for equilibrium conditions.
+        -`ScaledParameter{T<:Number, U:<Transform}`: Concrete type for parameters that are scaled for equilibrium conditions.
+    -`SteadyStateParameter{T<:Number}`: Concrete type for steady-state parameters.
 """
 abstract AbstractParameter{T<:Number} 
 

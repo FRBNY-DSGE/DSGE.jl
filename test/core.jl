@@ -82,9 +82,9 @@ model.testing = true
 @test modelstring(model) == "_test"
 
 model.testing = false
-model <= Setting(:num_mh_blocks, 5, "Number of blocks for Metropolis-Hastings")
+model <= Setting(:num_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Hastings")
 @test model.settings[:num_mh_blocks].value == 5
-@test ismatch(r"^\s*vint=(\d{6})", modelstring(model))
+@test ismatch(r"^\s*vint=(\d{6})_mhbk=5", modelstring(model))
 
 
 nothing
