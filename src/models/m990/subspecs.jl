@@ -5,7 +5,7 @@ function initialize_subspec(m::Model990)
     if subspec(m) == "ss0"
         return
     elseif subspec(m) == "ss5"
-        return ss5(model)
+        return ss5(m)
     else
         error("This subspec is not defined.")
     end

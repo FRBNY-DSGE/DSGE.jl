@@ -1,5 +1,13 @@
 """
 Setting{T<:Any}
+
+The `Setting` type is an interface for computational settings that
+affect how the code runs without affecting the mathematical definition
+of the model. It also provides support for non-conflicting file names
+for output of 2 models that differ only in the values of their
+computational settings.
+
+### Fields
 - `key::Symbol`: Name of setting
 - `value::T`: Value of setting 
 - `savestring::Bool`: Indicates whether to append this setting's code
@@ -7,7 +15,7 @@ and value to output file names. If true, output file names will
 include a suffix of the form _code1=val1_code2=val2_etc. where codes
 are listed in alphabetical order.
 - `code::AbstractString`: string of <=4 characters to print to output
-file suffixes when `savestring` is true.
+file suffixes when `savestring=true`.
 - `description::AbstractString`: Short description of what the setting
 is used for.
 """
@@ -84,8 +92,10 @@ The following Settings are constructed, initialized and added to
   model input data.
 - `savepathroot::Setting{ASCIIString}`: The root directory for model output.
 - `data_vintage`::Setting{ASCIIString}`: Data vintage identifier,
-  formatted YYMMDD (e.g. data from October 30, 2015 is identified by
-  the string "151030".)
+formatted YYMMDD (e.g. data from October 30, 2015 is identified by
+the string "151030".) By default, `data_vintage` is set to the most
+recent date of the files in datapathroot/data/data_YYMMDD.h5. It is
+the only default setting that is printed to output filenames.
 
 ### Anticipated Shocks
 - `num_anticipated_shocks::Setting{Int}`: Number of anticipated policy shocks.

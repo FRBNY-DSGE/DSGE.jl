@@ -1,8 +1,7 @@
-#=
-doc"""
+"""
 TODO: Decide whether this is the right place for this documentation...
 
-Model990 <: AbstractDSGEModel
+Model990{T} <: AbstractDSGEModel{T}
 
 The Model990 type defines the structure of the FRBNY DSGE
 model. We can then concisely pass around a Model object to the
@@ -11,15 +10,14 @@ remaining steps of the model (solve, estimate, and forecast).
 ### Fields
 
 #### Parameters and Steady-States
-* `parameters::Vector{AbstractParameter}`: Vector of all model parameters.
+* `parameters::Vector{AbstractParameter}`: Vector of all time-invariant model parameters.
 
-* `steady_state::Vector`: Model steady-state values. These are
-  computed as functions of the model parameters whenever the model
-  parameters are updated via the `update!` function.
+* `steady_state::Vector`: Model steady-state values, computed as a
+function of elements of `parameters`.
 
 * `keys::Dict{Symbol,Int}`: Maps human-readable names for all model
-  parameters and steady-states to their indices in `parameters` and
-  `steady_state`.
+parameters and steady-states to their indices in `parameters` and
+`steady_state`.
 
 #### Inputs to Measurement and Equilibrium Condition Equations
 
@@ -27,35 +25,61 @@ The following fields are dictionaries that map human-readible names to
 row and column indices in the matrix representations of of the
 measurement equation and equilibrium conditions.
 
-* `endogenous_states::Dict{Symbol,Int}`: Maps each state to a column in the measurement and equilibrium condition matrices.
+* `endogenous_states::Dict{Symbol,Int}`: Maps each state to a column
+in the measurement and equilibrium condition matrices.
 
-* `exogenous_shocks::Dict{Symbol,Int}`: Maps each shock to a column in the measurement and equilibrium condition matrices. 
+* `exogenous_shocks::Dict{Symbol,Int}`: Maps each shock to a column in
+the measurement and equilibrium condition matrices.
 
-* `expected_shocks::Dict{Symbol,Int}`: Maps each expected shock to a column in the measurement and equilibrium condition matrices.
+* `expected_shocks::Dict{Symbol,Int}`: Maps each expected shock to a
+column in the measurement and equilibrium condition matrices.
 
-* `equilibrium_conditions::Dict{Symbol,Int}`: Maps each equlibrium condition to a row in the equilibrium condition system returned by `eqcond()`.
+* `equilibrium_conditions::Dict{Symbol,Int}`: Maps each equlibrium
+condition to a row in the model's equilibrium condition matrices.
 
-* `endogenous_states_postgensys::Dict{Symbol,Int}`: Maps lagged states to their columns in the measurement and equilibrium condition equations. These are added after Gensys solves the model.
+* `endogenous_states_postgensys::Dict{Symbol,Int}`: Maps lagged states
+to their columns in the measurement and equilibrium condition
+equations. These are added after Gensys solves the model.
 
-* `observables::Dict{Symbol,Int}`: Maps each observable to a row in the matrices returned by `measurement()`
+* `observables::Dict{Symbol,Int}`: Maps each observable to a row in
+the model's measurement equation matrices.
 
-#### Model Specifications
+#### Model Specifications and Settings
 
-* `spec::AbstractString`: The model specification number. For Model990, `spec`= 990. `spec` is used to determine input/output file paths. Any  changes to eqcond.jl or measurement.jl should be considered a new  model, and spec should be incremented accordingly.
+* `spec::AbstractString`: The model specification identifier, "m990",
+cached here for filepath computation.
 
+* `subspec::AbstractString`: The model subspecification number,
+indicating that some parameters from the original model spec ("ss0")
+are initialized differently. Cached here for filepath computation. 
+
+
+
+* `settings::Dict{Symbol,Setting}`: Settings/flags that affect
+computation without changing the economic or mathematical setup of
+the model.
+
+* `test_settings::Dict{Symbol,Setting}`: Settings/flags for testing mode
 
 #### Other Fields
-* `rng::MersenneTwister`: Random number generator, implemented as a MersenneTwister()
 
-* `testing::Bool`: Indicates whether the model is in test mode. Should only be set/unset via calls to `toggle_test_mode(m)`
+* `rng::MersenneTwister`: Random number generator. By default, it is
+seeded to ensure replicability in algorithms that involve randomness
+(such as Metropolis-Hastings).
 
-* `datapathroot_test::AbstractString`: Directory for input data used in testing reference model.
+* `testing::Bool`: Indicates whether the model is in testing mode. If
+`true`, settings from `m.test_settings` are used in place of those in
+`m.settings`.
 
-* `savepathroot_test::AbstractString`: A temporary directory for model testing output
- """
- =#
+* `_filestrings::SortedDict{Symbol,AbstractString,ForwardOrdering}`:
+An alphabetized list of setting identifier strings. These are
+concatenated and appended to the filenames of all output files to
+avoid overwriting the output of previous estimations/forecasts that
+differ only in their settings, but not in their underlying
+mathematical structure. 
+"""
 type Model990{T} <: AbstractDSGEModel{T}
-    parameters::ParameterVector{T}                  # vector of all of the model parameters
+    parameters::ParameterVector{T}                  # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                # model steady-state values
     keys::Dict{Symbol,Int}                          # human-readable names for all the model
                                                     # parameters and steady-num_states
@@ -68,7 +92,7 @@ type Model990{T} <: AbstractDSGEModel{T}
     observables::Dict{Symbol,Int}                   #
 
     spec::ASCIIString                               # Model specification number (eg "m990")
-    subspec::ASCIIString                            # Model subspecification
+    subspec::ASCIIString                            # Model subspecification (eg "ss0")
     settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator

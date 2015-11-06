@@ -1,8 +1,8 @@
 using Debug
 
 # Expresses the equilibrium conditions in canonical form using Γ0, Γ1, C, Ψ, and Π matrices.
-# Using the assigned states and equations in modelinds.jl, coefficients are specified in the
-#   proper positions.
+# Using the mappings of states/equations to integers defined in m990.jl, coefficients are
+# specified in their proper positions.
 
 # Γ0 (num_states x num_states) holds coefficients of current time states.
 # Γ1 (num_states x num_states) holds coefficients of lagged states.
