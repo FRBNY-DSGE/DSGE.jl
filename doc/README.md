@@ -123,11 +123,11 @@ tree (square brackets indicate future additions to the tree that will be added i
      - `estimate/`: Mode-finding and posterior sampling.
      - `models/`
            - `m990/`: Contains code to define and initialize version 990 of the FRBNY DSGE model.
-              - `eqcond.jl`: Constructs `Model990`'s equilibrium condition matrices.
-	      - `m990.jl`: Code for constructing a `Model990` object.
-	      - `measurement.jl`: Constructs `Model990`'s measurement equation matrices.
-	      - `subspecs.jl`: Code for model sub-specifications is defined here. See "Editing or Extending a Model" for details on constructing model sub-specifications.
-	   - [`m991/`]: Code for new subtypes of `AbstractDSGEModel` should be kept in directories at this level in the directory tree
+              - `eqcond.jl`: Constructs `Model990`'s equilibrium condition matrices
+              - `m990.jl`: Code for constructing a `Model990` object.
+              - `measurement.jl`: Constructs `Model990`'s measurement equation matrices.
+              - `subspecs.jl`: Code for model sub-specifications is defined here. See "Editing or Extending a Model" for details on constructing model sub-specifications.
+           - [`m991/`]: Code for new subtypes of `AbstractDSGEModel` should be kept in directories at this level in the directory tree
      - `parameters.jl`: Implements the `AbstractParameter` type and its subtypes.
      - `settings.jl`: Implements the `Setting` type.
      - `solve/`: Solving the model; includes `gensys.jl` code.
