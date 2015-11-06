@@ -132,22 +132,20 @@ close(h5)
 @test_matrix_approx_eq Π_ref Π
 
 # ### Measurement equation
+expect = Dict{Symbol, Matrix}()
 h5 = h5open("$path/measurement.h5")
-ZZ_expected = read(h5, "ZZ")
-DD_expected = reshape(read(h5, "DD"), 18, 1)
-QQ_expected = read(h5, "QQ")
-EE_expected = read(h5, "EE")
-MM_expected = read(h5, "MM")
+expect[:ZZ] = read(h5, "ZZ")
+expect[:DD] = reshape(read(h5, "DD"), 18, 1)
+expect[:QQ] = read(h5, "QQ")
+expect[:EE] = read(h5, "EE")
+expect[:MM]  = read(h5, "MM")
 close(h5)
 
 model = Model990()
 TTT, RRR, CCC = solve(model)
-ZZ, DD, QQ, EE, MM = measurement(model, TTT, RRR, CCC)
-
-@test_matrix_approx_eq ZZ_expected ZZ
-@test_matrix_approx_eq DD_expected DD
-@test_matrix_approx_eq QQ_expected QQ
-@test_matrix_approx_eq EE_expected EE
-@test_matrix_approx_eq MM_expected MM
+actual = measurement(model, TTT, RRR, CCC)
+for d in (:ZZ, :DD, :QQ, :EE, :MM)
+    @test_matrix_approx_eq expect[d] actual[d]
+end
 
 nothing

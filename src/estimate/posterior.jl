@@ -191,25 +191,18 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel{T}, YY::Matrix{T}
     ## where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
 
     # Get measurement equation matrices set up for normal and zlb periods
-    for p = 2:3
-        shocks = (p == 3)
-        regime_mats[p][:ZZ], regime_mats[p][:DD], regime_mats[p][:QQ], regime_mats[p][:EE], regime_mats[p][:MM] = 
-            measurement(model, regime_mats[p][:TTT], regime_mats[p][:RRR], regime_mats[p][:CCC]; shocks=shocks)
-        regime_mats[p][:HH] = regime_mats[p][:EE] + regime_mats[p][:MM]*regime_mats[p][:QQ]*regime_mats[p][:MM]'
-        regime_mats[p][:VV] = regime_mats[p][:QQ]*regime_mats[p][:MM]'
-        regime_mats[p][:VVall] = [[regime_mats[p][:RRR]*regime_mats[p][:QQ]*regime_mats[p][:RRR]' regime_mats[p][:RRR]*regime_mats[p][:VV]];
-                         [regime_mats[p][:VV]'*regime_mats[p][:RRR]'            regime_mats[p][:HH]]]
+    Measurement_R2 = measurement(model, R2[:TTT], R2[:RRR], R2[:CCC]; shocks=false)
+    Measurement_R3 = measurement(model, R3[:TTT], R3[:RRR], R3[:CCC]; shocks=true)
+    for d in (:ZZ, :DD, :QQ, :VVall)
+        R2[d] = Measurement_R2[d]
+        R3[d] = Measurement_R3[d]
     end
 
-    # TODO: Incorporate this into measurement equation (why is this only done for normal period?)
-    # Adjustment to DD because measurement equation assumes CCC is the zero vector
-    if any(R2[:CCC] != 0)
-        R2[:DD] += R2[:ZZ]*((UniformScaling(1) - R2[:TTT])\R2[:CCC])
-    end
 
     # Presample measurement & transition equation matrices are same as normal period
-    R1[:TTT], R1[:RRR], R1[:QQ]  = R2[:TTT], R2[:RRR], R2[:QQ]
-    R1[:ZZ], R1[:DD], R1[:VVall] = R2[:ZZ], R2[:DD], R2[:VVall]
+    for d in (:TTT, :RRR, :QQ, :ZZ, :DD, :VVall)
+        R1[d] = R2[d]
+    end
 
     ## step 3: compute log-likelihood using Kalman filter
     ##         note that kalcvf2NaN function assumes a transition equation written as:
