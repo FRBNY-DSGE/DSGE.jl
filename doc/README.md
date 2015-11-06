@@ -88,14 +88,14 @@ tree (square brackets indicate future additions to the tree that will be added i
 
   - `doc/`: Documentation, including this README
   - `save/`: 
-     - `input_data/`: This directory is referred to as `datapathroot` in the code.
-         -`data/`:  Macroeconomic series formatted as an n x m Array{Float64,2}, where n is the number of observations and m is the number of series used as input.
-             - `data_151030.h5`: input data vintage from October 30, 2015 (note that this is something of a misnomer because this data isnt from that date...)
-         -`user/`: User-created files for model input. For instance, the user may specify a previously computed mode when `reoptimize(m)==false`, or a starting point for optimization when `reoptimize(m)==true`.
-             - `mode_in.h5`: Used as starting point for estimation when `reoptimize(m)==false`.
-	     - `mode_in_optimized.h5`: Taken as the mode when `reoptimize(m)==true`.
-	     - `hessian.h5`: Used as starting point for hessian calculation when `recalculate_hessian(m)==false`.
-	     - `hessian_optimized.h5`: Taken as the hessian when `recalculate_hessian(m)==true`.
+    - `input_data/`: This directory is referred to as `datapathroot` in the code.
+      -`data/`:  Macroeconomic series formatted as an n x m Array{Float64,2}, where n is the number of observations and m is the number of series used as input.
+      		 - `data_151030.h5`: input data vintage from October 30, 2015 (note that this is something of a misnomer because this data isnt from that date...)
+	-`user/`: User-created files for model input. For instance, the user may specify a previously computed mode when `reoptimize(m)==false`, or a starting point for optimization when `reoptimize(m)==true`.
+	  	   - `mode_in.h5`: Used as starting point for estimation when `reoptimize(m)==false`.
+	     	   - `mode_in_optimized.h5`: Taken as the mode when `reoptimize(m)==true`.
+	     	   - `hessian.h5`: Used as starting point for hessian calculation when `recalculate_hessian(m)==false`.
+	     	   - `hessian_optimized.h5`: Taken as the hessian when `recalculate_hessian(m)==true`.
      - `output_data/`: 
          - `m990/`: Input/output files for the Model990 type. A model of type mSPEC will create its own save directory `mSPEC` at this  level in the directory tree.
               -`ss0/`: Subdirectory for subspec 0. We refer to this directory as `modelpathroot` in the code.
