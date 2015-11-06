@@ -74,7 +74,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
         # Inputs to minimization algorithm
         function posterior_min!{T<:AbstractFloat}(x::Vector{T})
             tomodel!(m,x)
-            return -posterior(m, YY, catchGensysErrors=true)[:post]
+            return -posterior(m, YY; catch_errors=true)[:post]
         end
 
         xh = toreal(m.parameters)
@@ -86,7 +86,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
         # If the algorithm stops only because we have exceeded the maximum number of
         # iterations, continue improving guess of modal parameters
         while !converged
-            verbose_bool = verboseness[verbose] > verboseness[:none] ? true : false
+            verbose_bool = verboseness[verbose] > verboseness[:none]
             out, H = csminwel(posterior_min!, xh, H; model=m, ftol=crit, iterations=nit, show_trace=true, verbose=verbose_bool)
             xh = out.minimum
             converged = !out.iteration_converged
@@ -114,11 +114,8 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     ### the hessian. We find the inverse via eigenvalue decomposition.
     ########################################################################################
 
-    hessian = []
-    
     # Calculate the Hessian at the posterior mode
-    if recalculate_hessian(m)
-        
+    hessian = if recalculate_hessian(m)
         if verboseness[verbose] > verboseness[:none] 
             println("Recalculating Hessian...")
         end
@@ -129,9 +126,10 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
             file["hessian"] = hessian
         end
 
+        hessian
+
     # Read in a pre-optimized mode
     else
-        
         if verboseness[verbose] > verboseness[:none]
             println("Using pre-calculated Hessian")
         end
@@ -143,9 +141,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
 
     # Compute inverse hessian and create proposal distribution, or
     # just create it with the given cov matrix if we have it
-    propdist = []
-    if length(proposal_covariance) == 0
-                
+    propdist = if length(proposal_covariance) == 0
         # Make sure the mode and hessian have the same number of parameters
         n = length(mode)
         @assert (n, n) == size(hessian)
@@ -162,9 +158,9 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
         end
         
         hessian_inv = U*sqrt(S_inv) #this is the inverse of the hessian
-        propdist = DegenerateMvNormal(mode, hessian_inv, rank)
+        DegenerateMvNormal(mode, hessian_inv, rank)
     else
-        propdist = DegenerateMvNormal(mode, proposal_covariance)
+        DegenerateMvNormal(mode, proposal_covariance)
     end
     
     if propdist.rank != num_parameters_free(m)

@@ -3,8 +3,8 @@ doc"""
 Calculates (log of) the joint density of the model parameters.
 """
 =#
-function prior(model::AbstractDSGEModel)
-    x = zero(Float64)
+function prior{T<:AbstractFloat}(model::AbstractDSGEModel{T})
+    x = zero(T)
     for θ in model.parameters
         if !θ.fixed
             x += logpdf(θ)
@@ -17,20 +17,16 @@ end
 immutable Posterior{T<:AbstractFloat}
     post::T
     like::T
-    mats
+    mats::Dict{Symbol, Matrix{T}}
 end
 function Posterior{T<:AbstractFloat}(post::T = -Inf,
                                      like::T = -Inf,
-                                     mats    = Dict{Symbol,Matrix{T}}())
+                                     mats::Dict{Symbol,Matrix{T}}    = Dict{Symbol,Matrix{T}}())
     return Posterior{T}(post, like, mats)
 end
 function Base.getindex(P::Posterior, d::Symbol)
-    if d == :post
-        return P.post
-    elseif d == :like
-        return P.like
-    elseif d == :mats
-        return P.mats
+    if d in (:post, :like, :mats)
+        return getfield(P, d)
     else
         throw(KeyError(d))
     end
@@ -54,15 +50,16 @@ Calculates and returns the log of the posterior distribution for the model param
   log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)    # where Θ is `m.parameters`
 """
 =#
-function posterior{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catch_errors::Bool = false)
+function posterior{T<:AbstractFloat}(model::AbstractDSGEModel,
+                                     YY::Matrix{T};
+                                     mh::Bool = false,
+                                     catch_errors::Bool = false)
+    catch_errors = catch_errors | mh
+    like, out = likelihood(model, YY; mh=mh, catch_errors=catch_errors)
+    post = like + prior(model)
     if mh
-        catch_errors = true
-        like, out = likelihood(model, YY; mh=mh)
-        post = like + prior(model)
         return Posterior(post, like, out)
     else
-        like, out = likelihood(model, YY; mh=mh, catch_errors=catch_errors)
-        post = like + prior(model)
         return Posterior(post, like)
     end
 end
@@ -84,9 +81,13 @@ posterior!{T<:AbstractFloat}(model::AbstractDSGEModel, parameters::Vector{T}, YY
 Evaluates the log posterior distribution at `parameters`
 """
 =#
-function posterior!{T<:AbstractFloat}(model::AbstractDSGEModel, parameters::Vector{T}, YY::Matrix{T}; mh::Bool = false, catch_errors::Bool = false)
+function posterior!{T<:AbstractFloat}(model::AbstractDSGEModel{T},
+                                      parameters::Vector{T},
+                                      YY::Matrix{T};
+                                      mh::Bool = false,
+                                      catch_errors::Bool = false)
+    catch_errors = catch_errors | mh
     if mh
-
         try
             update!(model, parameters)
         catch err
@@ -94,12 +95,10 @@ function posterior!{T<:AbstractFloat}(model::AbstractDSGEModel, parameters::Vect
             @printf "%s\n" err.msg
             return Posterior()
         end
-
-        return posterior(model, YY; mh=true, catch_errors=true)
     else
         update!(model, parameters)
-        return posterior(model, YY; catch_errors=catch_errors)
     end
+    return posterior(model, YY; mh=mh, catch_errors=catch_errors)
 
 end
 
@@ -119,13 +118,13 @@ likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool =
 `likelihood` is a dsge likelihood function that can handle 2-part estimation where the observed sample contains both a normal stretch of time (in which interest rates are positive) and a stretch of time in which interest rates reach the zero lower bound. If there is a zero-lower-bound period, then we filter over the 2 periods separately. Otherwise, we filter over the main sample all at once.
 """
 =#
-function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; mh::Bool = false, catch_errors::Bool = false)
+function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel{T}, YY::Matrix{T}; mh::Bool = false, catch_errors::Bool = false)
+    catch_errors = catch_errors | mh
     LIKE_NULL_DICT   = Dict{Symbol, Matrix{T}}()
     LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if mh
-        catch_errors = true  # for consistency # TODO why is this here?
         for θ in model.parameters
             (left, right) = θ.valuebounds
             if !θ.fixed && !(left <= θ.value <= right)
@@ -134,23 +133,32 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
         end
     end
 
-    # Partition sample into presample, normal, and zero lower bound periods
-    presample = Dict{Symbol, Any}()
-    normal    = Dict{Symbol, Any}()
-    zlb       = Dict{Symbol, Any}()
-    mt        = [presample, normal, zlb]
 
-    num_obs_no_ant_shocks = num_observables(model) - num_anticipated_shocks(model)
-    num_obs               = num_observables(model)
+    # Partition sample into three regimes, and store associated matrices:
+    # - R1: presample
+    # - R2: normal
+    # - R3: zero lower bound and beyond
+    R1 = Dict{Symbol, Matrix{T}}()
+    R2 = Dict{Symbol, Matrix{T}}()
+    R3 = Dict{Symbol, Matrix{T}}()
+    regime_mats = [R1, R2, R3]
+    regime_likes = zeros(T, 3)
 
-    num_states_no_ant_shocks = num_states_augmented(model) - num_anticipated_shocks(model)
-    num_states_              = num_states_augmented(model)
-    mt_num_states            = [num_states_no_ant_shocks, num_states_no_ant_shocks, num_states_]
+    n_T0         = num_presample_periods(model)
+    n_ant        = num_anticipated_shocks(model)
+    n_ant_lags   = num_anticipated_lags(model)
+    n_obs_no_ant = num_observables(model) - num_anticipated_shocks(model)
+    n_obs        = num_observables(model)
+    n_exo        = num_shocks_exogenous(model)
 
-    presample[:YY] = YY[1:num_presample_periods(model), 1:num_obs_no_ant_shocks]
-    normal[:YY]    = YY[(num_presample_periods(model)+1):(end-num_anticipated_lags(model)-1), 
-                        1:num_obs_no_ant_shocks]
-    zlb[:YY]       = YY[(end-num_anticipated_lags(model)):end, :]
+    n_states_no_ant = num_states_augmented(model) - num_anticipated_shocks(model)
+    n_states_aug    = num_states_augmented(model)
+    n_states        = num_states(model)
+    mt_num_states   = [n_states_no_ant, n_states_no_ant, n_states_aug]
+
+    R1[:YY] = YY[1:n_T0, 1:n_obs_no_ant]
+    R2[:YY] = YY[(n_T0+1):(end-n_ant_lags-1), 1:n_obs_no_ant]
+    R3[:YY] = YY[(end-n_ant_lags):end, :]
 
 
     # Step 1: solution to DSGE model - delivers transition equation for the state variables  S_t
@@ -158,7 +166,7 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
     # If we are in MH, then any errors coming out of gensys should be caught and a -Inf
     # posterior should be returned.
     try
-        zlb[:TTT], zlb[:RRR], zlb[:CCC] = solve(model)
+        R3[:TTT], R3[:RRR], R3[:CCC] = solve(model)
     catch err
         if catch_errors && isa(err, GensysError)
             info(err.msg)
@@ -169,13 +177,12 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
     end
 
     # Get normal, no ZLB matrices
-    state_inds = [1:(num_states(model)-num_anticipated_shocks(model));
-                  (num_states(model)+1):num_states_augmented(model)]
-    shock_inds = 1:(num_shocks_exogenous(model)-num_anticipated_shocks(model))
+    state_inds = [1:(n_states-n_ant); (n_states+1):n_states_aug]
+    shock_inds = 1:(n_exo-n_ant)
 
-    normal[:TTT] = zlb[:TTT][state_inds, state_inds]
-    normal[:RRR] = zlb[:RRR][state_inds, shock_inds]
-    normal[:CCC] = zlb[:CCC][state_inds, :]
+    R2[:TTT] = R3[:TTT][state_inds, state_inds]
+    R2[:RRR] = R3[:RRR][state_inds, shock_inds]
+    R2[:CCC] = R3[:CCC][state_inds, :]
 
 
 
@@ -186,77 +193,76 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; m
     # Get measurement equation matrices set up for normal and zlb periods
     for p = 2:3
         shocks = (p == 3)
-        mt[p][:ZZ], mt[p][:DD], mt[p][:QQ], mt[p][:EE], mt[p][:MM] = 
-            measurement(model, mt[p][:TTT], mt[p][:RRR], mt[p][:CCC]; shocks=shocks)
-        mt[p][:HH] = mt[p][:EE] + mt[p][:MM]*mt[p][:QQ]*mt[p][:MM]'
-        mt[p][:VV] = mt[p][:QQ]*mt[p][:MM]'
-        mt[p][:VVall] = [[mt[p][:RRR]*mt[p][:QQ]*mt[p][:RRR]' mt[p][:RRR]*mt[p][:VV]];
-                         [mt[p][:VV]'*mt[p][:RRR]'            mt[p][:HH]]]
+        regime_mats[p][:ZZ], regime_mats[p][:DD], regime_mats[p][:QQ], regime_mats[p][:EE], regime_mats[p][:MM] = 
+            measurement(model, regime_mats[p][:TTT], regime_mats[p][:RRR], regime_mats[p][:CCC]; shocks=shocks)
+        regime_mats[p][:HH] = regime_mats[p][:EE] + regime_mats[p][:MM]*regime_mats[p][:QQ]*regime_mats[p][:MM]'
+        regime_mats[p][:VV] = regime_mats[p][:QQ]*regime_mats[p][:MM]'
+        regime_mats[p][:VVall] = [[regime_mats[p][:RRR]*regime_mats[p][:QQ]*regime_mats[p][:RRR]' regime_mats[p][:RRR]*regime_mats[p][:VV]];
+                         [regime_mats[p][:VV]'*regime_mats[p][:RRR]'            regime_mats[p][:HH]]]
     end
 
     # TODO: Incorporate this into measurement equation (why is this only done for normal period?)
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
-    if any(normal[:CCC] != 0)
-        normal[:DD] += normal[:ZZ]*((UniformScaling(1) - normal[:TTT])\normal[:CCC])
+    if any(R2[:CCC] != 0)
+        R2[:DD] += R2[:ZZ]*((UniformScaling(1) - R2[:TTT])\R2[:CCC])
     end
 
     # Presample measurement & transition equation matrices are same as normal period
-    presample[:TTT], presample[:RRR], presample[:QQ]  = normal[:TTT], normal[:RRR], normal[:QQ]
-    presample[:ZZ], presample[:DD], presample[:VVall] = normal[:ZZ], normal[:DD], normal[:VVall]
+    R1[:TTT], R1[:RRR], R1[:QQ]  = R2[:TTT], R2[:RRR], R2[:QQ]
+    R1[:ZZ], R1[:DD], R1[:VVall] = R2[:ZZ], R2[:DD], R2[:VVall]
 
-
-
-    ## step 3: compute log-likelihood using Kalman filter - written by Iskander
-    ##         note that Iskander's program assumes a transition equation written as:
+    ## step 3: compute log-likelihood using Kalman filter
+    ##         note that kalcvf2NaN function assumes a transition equation written as:
     ##         S_t = TTT S_{t-1} +eps2_t, where eps2_t = RRReps_t
     ##         therefore redefine QQ2 = var(eps2_t) = RRR*QQ*RRR'
     ##         and  VV2 = cov(eps2_t,u_u) = RRR*VV
     ##         define VVall as the joint variance of the two shocks VVall = var([eps2_tu_t])
 
     # Run Kalman filter on presample
-    presample[:A0] = zeros(T, num_states_no_ant_shocks, 1)
-    presample[:P0] = dlyap!(copy(presample[:TTT]), copy(presample[:RRR]*presample[:QQ]*presample[:RRR]'))
-    out = kalcvf2NaN(presample[:YY]', 1, zeros(T, num_states_no_ant_shocks, 1), presample[:TTT], presample[:DD], presample[:ZZ], presample[:VVall], presample[:A0], presample[:P0])
-    presample[:pyt]  = out[:L]
-    presample[:zend] = out[:zend]
-    presample[:Pend] = out[:Pend]
+    R1[:A0]         = zeros(T, n_states_no_ant, 1)
+    R1[:P0]         = dlyap(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
+    out             = kalcvf2NaN(R1[:YY]', 1, zeros(T, n_states_no_ant, 1), R1[:TTT], R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0])
+    regime_likes[1] = out[:L]
+    R1[:zend]       = out[:zend]
+    R1[:Pend]       = out[:Pend]
 
-    # Run Kalman filter on normal and ZLB periods
-    for p = 2:3
-        if p == 2
-            zprev = presample[:zend]
-            Pprev = presample[:Pend]
-        else
-            # This section expands the number of states to accomodate extra states for the
-            # anticipated policy shocks. It does so by taking the zend and Pend for the
-            # state space without anticipated policy shocks, then shoves in nant
-            # zeros in the middle of zend and Pend in the location of
-            # the anticipated shock entries.
-            before_shocks    = 1:(num_states(model)-num_anticipated_shocks(model))
-            after_shocks_old = (num_states(model)-num_anticipated_shocks(model)+1):(num_states_augmented(model)-num_anticipated_shocks(model))
-            after_shocks_new = (num_states(model)+1):num_states_augmented(model)
+    # Run Kalman filter on normal period
+    zprev           = R1[:zend]
+    Pprev           = R1[:Pend]
+    out             = kalcvf2NaN(R2[:YY]', 1, zeros(mt_num_states[2], 1), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev)
+    regime_likes[2] = out[:L]
+    R2[:zend]       = out[:zend]
+    R2[:Pend]       = out[:Pend]
 
-            zprev = [normal[:zend][before_shocks, :];
-                     zeros(T, num_anticipated_shocks(model), 1);
-                     normal[:zend][after_shocks_old, :]]
+    # Run Kalman filter on ZLB period
+    # This section expands the number of states to accomodate extra states for the
+    # anticipated policy shocks. It does so by taking the zend and Pend for the
+    # state space without anticipated policy shocks, then shoves in nant
+    # zeros in the middle of zend and Pend in the location of
+    # the anticipated shock entries.
+    before_shocks    = 1:(n_states-n_ant)
+    after_shocks_old = (n_states-n_ant+1):(n_states_aug-n_ant)
+    after_shocks_new = (n_states+1):n_states_aug
 
-            Pprev = zeros(T, num_states_augmented(model), num_states_augmented(model))
-            Pprev[before_shocks, before_shocks]       = normal[:Pend][before_shocks, before_shocks]
-            Pprev[before_shocks, after_shocks_new]    = normal[:Pend][before_shocks, after_shocks_old]
-            Pprev[after_shocks_new, before_shocks]    = normal[:Pend][after_shocks_old, before_shocks]
-            Pprev[after_shocks_new, after_shocks_new] = normal[:Pend][after_shocks_old, after_shocks_old]
-        end
+    zprev = [R2[:zend][before_shocks, :];
+             zeros(T, n_ant, 1);
+             R2[:zend][after_shocks_old, :]]
 
-        out = kalcvf2NaN(mt[p][:YY]', 1, zeros(mt_num_states[p], 1), mt[p][:TTT], mt[p][:DD], mt[p][:ZZ], mt[p][:VVall], zprev, Pprev)
-        mt[p][:pyt]  = out[:L]
-        mt[p][:zend] = out[:zend]
-        mt[p][:Pend] = out[:Pend]
-    end
+    Pprev                                     = zeros(T, n_states_aug, n_states_aug)
+    Pprev[before_shocks, before_shocks]       = R2[:Pend][before_shocks, before_shocks]
+    Pprev[before_shocks, after_shocks_new]    = R2[:Pend][before_shocks, after_shocks_old]
+    Pprev[after_shocks_new, before_shocks]    = R2[:Pend][after_shocks_old, before_shocks]
+    Pprev[after_shocks_new, after_shocks_new] = R2[:Pend][after_shocks_old, after_shocks_old]
+
+    out             = kalcvf2NaN(R3[:YY]', 1, zeros(mt_num_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev)
+    regime_likes[3] = out[:L]
+    R3[:zend]       = out[:zend]
+    R3[:Pend]       = out[:Pend]
 
     # Return total log-likelihood, excluding the presample
-    like = normal[:pyt] + zlb[:pyt]
+    like = regime_likes[2] + regime_likes[3]
     if mh
-        return like, zlb
+        return like, R3
     else
         return like, LIKE_NULL_DICT
     end
@@ -314,6 +320,9 @@ Step 5) Left multiply by (Ad + I) and right multiply by (Ad' + I)
 Step 6) Simplify to (1)
 """
 =#
+function dlyap(a, c)
+    return dlyap!(copy(a), copy(c))
+end
 function dlyap!(a, c)
     m, n = size(a)
     a = (a + UniformScaling(1))\(a - UniformScaling(1))
