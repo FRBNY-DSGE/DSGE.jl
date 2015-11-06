@@ -31,34 +31,31 @@ development and will be released upon completion.
 
 # Model Design
 
-The Julia implementation of the FRBNY model is designed around a
-single object - the Model Object - which centralizes all information
-about the model's parameters, states, equilibrium conditions, and
-settings in a single data structure. The Model Object also keeps track
-of file locations for all I/O operations. 
-
-The general structure and basic functionality of the model object is
-implemented by the AbstractDSGEModel type in
-`abstractdsgemodel.jl`. For a specific model specification SPEC, the
-model object is constructed by the function `ModelSPEC()` in
-`mSPEC.jl`, which is a subtype of `AbstractDSGEModel`.
+DSGE.jl is an object-oriented approach to solving the
+FRBNY DSGE model that takes advantage of Julia's type system, multiple
+dispatch, package-handling mechanism, and other features. A single
+model object centralizes all information about the model's parameters,
+states, equilibrium conditions, and settings in a single data
+structure. The model object also keeps track of file locations for all
+I/O operations.
 
 The following objects define a model:
 
 - __Parameters__: Have values, bounds, fixed-or-not status, priors. An
-  instance of the `Param` type houses all information about a given
+  instance of the `AbstractParameter` type houses all information about a given
   parameter in a single data structure.
-- __States__: Mappings of names to indices (e.g. "π_t" -> 1)
+- __States__: Mappings of names to indices (e.g. "π_t" -> 1).
 - __Equilibrium Conditions__: A function that takes parameters and model
-  indices, then returns Γ0, Γ1, Ψ, and Π (which fully describe the model in cannonical form)
-
+  indices, then returns Γ0, Γ1, Ψ, and Π (which fully describe the model in cannonical form).
+- __Measurement Equation__: A function mapping states to observables.
+ 
 These are enough to define the model structure. _Everything else_ is
-essentially a function of these basics, and we can get to a forecast by
-this chain:
+essentially a function of these basics, and we can solve the model and
+forecast observables via the following chain:
 
-- (Parameters + Model Indices + Eqcond Function) -> (TTT + RRR)
-- (TTT + RRR + Data) -> Estimation
-- (Estimation + TTT + RRR + Data) -> Forecast      (not yet implemented)
+- (Parameters + Model Indices + Equilibrium conditions) -> (TTT + RRR) (transition matrices in state-space form)
+- (TTT + RRR + Data) -> Estimated parameter values 
+- (Estimated parameters + TTT + RRR + Data) -> Forecast      (not yet implemented)
 
 
 # Running the Code
@@ -99,7 +96,7 @@ tree (square brackets indicate future additions to the tree that will be added i
   - `output_data/`: 
     - `m990/`: Input/output files for the Model990 type. A model of type mSPEC will create its own save directory `mSPEC` at this  level in the directory tree.
       - `ss0/`: Subdirectory for subspec 0. We refer to this directory as `modelpathroot` in the code.
-        - `estimate`
+        - `estimate/`
           - `figures/`: Plots and other figures
           - `tables/`: LaTeX tables	          
           - `raw/`: Raw output from estimation step 
@@ -109,18 +106,27 @@ tree (square brackets indicate future additions to the tree that will be added i
           - `work/`: HDF5 files created using `raw/` files as input
             - `cov.h5`: Covariance matrix for parameter draws from Metropolis-Hastings. Can be used as hessian matrix.
         - [`forecast/`]: Output for forecasts 
-            - `figures/`: Plots and other figures
-            - `tables/`: LaTeX tables	          
-            - `raw/`: Raw output from forecast step
-            - `work/`: HDF5 files created using `raw/` files as input
+            - [`figures/`]: Plots and other figures
+            - [`tables/`]: LaTeX tables	          
+            - [`raw/`]: Raw output from forecast step
+            - [`work/`]: HDF5 files created using `raw/` files as input
         - [`irfs/`]: Impulse-response function outputs
-        - [`shockdecs`]: Shock decompositions
+            - [`figures/`]: Plots and other figures
+            - [`tables/`]: LaTeX tables	          
+            - [`raw/`]: Raw output from forecast step
+            - [`work/`]: HDF5 files created using `raw/` files as input
+        - [`shockdecs/`]: Shock decompositions
+            - [`figures/`]: Plots and other figures
+            - [`tables/`]: LaTeX tables	          
+            - [`raw/`]: Raw output from forecast step
+            - [`work/`]: HDF5 files created using `raw/` files as input
       - [`ss1/`] Additional model subspecs will have subdirectories identical to `ss0` at this level in the directory tree. 
   - `src/`
      - `abstractdsgemodel.jl`: Defines the `AbstractDSGEModel` type.
      - `distributions_ext.jl`: Defines additional functions to return objects of type Distribution.
      - `DSGE.jl`: The main module file.
      - `estimate/`: Mode-finding and posterior sampling.
+     - [`forecast/`]: Forecasting.
      - `models/`
            - `m990/`: Contains code to define and initialize version 990 of the FRBNY DSGE model.
               - `eqcond.jl`: Constructs `Model990`'s equilibrium condition matrices
@@ -169,41 +175,41 @@ parameters and steady-states to their indices in `parameters` and
 `steady_state`.
 
 #### Inputs to the Measurement and Equilibrium Condition Equations
--`endogenous_states::Dict{Symbol,Int}`: Maps each state to a column
+- `endogenous_states::Dict{Symbol,Int}`: Maps each state to a column
 in the measurement and equilibrium condition matrices.
--`exogenous_shocks::Dict{Symbol,Int}`: Maps each shock to a column in
+- `exogenous_shocks::Dict{Symbol,Int}`: Maps each shock to a column in
 the measurement and equilibrium condition matrices.
--`expected_shocks::Dict{Symbol,Int}`: Maps each expected shock to a
+- `expected_shocks::Dict{Symbol,Int}`: Maps each expected shock to a
 column in the measurement and equilibrium condition matrices.
--`equilibrium_conditions::Dict{Symbol,Int}`: Maps each equlibrium
- condition to a row in the model's equilibrium condition matrices.
--`endogenous_states_postgensys::Dict{Symbol,Int}`: Maps lagged states
- to their columns in the measurement and equilibrium condition
- equations. These are added after Gensys solves the model.
--`observables::Dict{Symbol,Int}`: Maps each observable to a row in the
+- `equilibrium_conditions::Dict{Symbol,Int}`: Maps each equlibrium
+condition to a row in the model's equilibrium condition matrices.
+- `endogenous_states_postgensys::Dict{Symbol,Int}`: Maps lagged states
+to their columns in the measurement and equilibrium condition
+equations. These are added after Gensys solves the model.
+- `observables::Dict{Symbol,Int}`: Maps each observable to a row in the
  model's measurement equation matrices.
 
 #### Model Specification and Settings
--`spec::ASCIIString`: Model specification number (eg
+- `spec::ASCIIString`: Model specification number (eg
  "m990"). Identifies a particular set of parameters, equilibrium
  conditions, and measurement equation (equivalently, a concrete model
  type - for example, models of type `Model990` should have spec = "m990".)
--`subspec::ASCIIString`: Model subspecification (eg "ss0"). Indicates any changes
+- `subspec::ASCIIString`: Model subspecification (eg "ss0"). Indicates any changes
  to parameter initialization from `spec`. See "Editing or Extending a
  Model" below for more details.
--`settings::Dict{Symbol,Setting}`: Settings/flags that affect
+- `settings::Dict{Symbol,Setting}`: Settings/flags that affect
  computation without changing the economic or mathematical setup of
  the model.
--`test_settings::Dict{Symbol,Setting}`: Settings/flags for testing mode
+- `test_settings::Dict{Symbol,Setting}`: Settings/flags for testing mode
 
 #### Other Fields
--`rng::MersenneTwister`: Random number generator. By default, it is
+- `rng::MersenneTwister`: Random number generator. By default, it is
  seeded to ensure replicability in algorithms that involve randomness
  (such as Metropolis-Hastings).
--`testing::Bool`: Indicates whether the model is in testing mode. If
- `true`, settings from `m.test_settings` are used in place of those in
- `m.settings`.
--`_filestrings::SortedDict{Symbol,AbstractString,ForwardOrdering}`:
+- `testing::Bool`: Indicates whether the model is in testing mode. If
+`true`, settings from `m.test_settings` are used in place of those in
+`m.settings`.
+- `_filestrings::SortedDict{Symbol,AbstractString,ForwardOrdering}`:
 An alphabetized list of setting identifier strings. These are
 concatenated and appended to the filenames of all output files to
 avoid overwriting the output of previous estimations/forecasts that
@@ -242,7 +248,7 @@ cannonical representation of the equilibrium conditions is
 `Γ0 s_t + Γ1 s_{t-1} + C + Ψ ε_t + Π η_t`
 
 where `Γ0`, `Γ1`, `C`, `Ψ`, and `Π` are matrices of coefficients for `s_t`
-(states at time $t$), `s_{t-1}` (lagged states), `ε_t` (iid shocks) and
+(states at time `t`), `s_{t-1}` (lagged states), `ε_t` (iid shocks) and
 `η_t` (expectational shocks). Each row of these matrices corresponds
 to an equilibrium condition, which we define using a descriptive name
 (for example, we name the consumption Euler equation `:euler`). States
@@ -272,11 +278,11 @@ parameters.
 These various requirements are nicely addressed using a parameterized
 type hierarchy. 
 
--`AbstractParameter{T<:Number}`: The common abstract supertype for all parameters.
-    -`Parameter{T<:Number, U<:Transform}`: The abstract supertype for parameters that are directly estimated. 
-        -`UnscaledParameter{T<:Number, U:<Transform}`: Concrete type for parameters that do not need to be scaled for equilibrium conditions.
-        -`ScaledParameter{T<:Number, U:<Transform}`: Concrete type for parameters that are scaled for equilibrium conditions.
-    -`SteadyStateParameter{T<:Number}`: Concrete type for steady-state parameters.
+- `AbstractParameter{T<:Number}`: The common abstract supertype for all parameters.
+    - `Parameter{T<:Number, U<:Transform}`: The abstract supertype for parameters that are directly estimated. 
+        - `UnscaledParameter{T<:Number, U:<Transform}`: Concrete type for parameters that do not need to be scaled for equilibrium conditions.
+        - `ScaledParameter{T<:Number, U:<Transform}`: Concrete type for parameters that are scaled for equilibrium conditions.
+    - `SteadyStateParameter{T<:Number}`: Concrete type for steady-state parameters.
 
 
 All `Parameter`s have the following fields:
@@ -303,8 +309,8 @@ to LaTeX.
 
 `ScaledParameters` also have the following fields:
 
--`scaledvalue::T`: Parameter value scaled for use in `eqcond.jl`
--`scaling::Function`: Function used to scale parameter value for use
+- `scaledvalue::T`: Parameter value scaled for use in `eqcond.jl`
+- `scaling::Function`: Function used to scale parameter value for use
 in equilibrium conditions.
 
 *Note:* Though not strictly necessary, defining a scaling with the
@@ -315,10 +321,10 @@ Because the values of `SteadyStateParameter`s are directly computed as a
 function of `ScaledParameter`s and `UnscaledParameter`s,
 they only require 4 fields:
 
--`key::Symbol`
--`value::T`                    
--`description::AbstractString`
--`texLabel::AbstractString`
+- `key::Symbol`
+- `value::T`                    
+- `description::AbstractString`
+- `texLabel::AbstractString`
 
 
 
@@ -373,10 +379,10 @@ is used for.
 - `datapathroot::Setting{ASCIIString}`: The root directory for
 model input data.
 - `savepathroot::Setting{ASCIIString}`: The root directory for model output.
-- `data_vintage`::Setting{ASCIIString}`: Data vintage identifier,
+- `data_vintage::Setting{ASCIIString}`: Data vintage identifier,
 formatted YYMMDD (e.g. data from October 30, 2015 is identified by the
 string "151030".) By default, `data_vintage` is set to the most recent
-date of the files with name datapathroot/data/data_YYMMDD.h5. It is the only
+date of the files with name `datapathroot/data/data_YYMMDD.h5`. It is the only
 setting printed to output filenames by default.
 
 #### Anticipated Shocks
@@ -386,7 +392,7 @@ setting printed to output filenames by default.
 - `num_anticipated_lags::Setting{Int}`: Number of periods back to
 incorporate zero bound expectations.
 - `num_presample_periods::Setting{Int}`: Number of periods in the
-presample
+presample.
 
 #### Estimation 
 - `reoptimize::Setting{Bool}`: Whether to reoptimize the posterior
@@ -402,7 +408,7 @@ posterior distribution per block.
 - `num_mh_blocks::Setting{Int}`: Number of blocks to run
 Metropolis-Hastings.
 - `num_mh_burn::Setting{Int}`: Number of blocks to discard as burn-in
-for Metropolis-Hastings
+for Metropolis-Hastings.
 - `mh_thinning_step::Setting{Int}`: Save every `mh_thinning_step`-th
 draw in Metropolis-Hastings.
 
@@ -413,22 +419,22 @@ the value of the setting `s` in `m.settings`. Some settings also
 have explicit getter methods that take only the model object `m` as an argument:
 
 *I/O settings*:
-`modelpathroot(m)`
-`datapathroot(m)`
-`data_vintage(m)`
+`modelpathroot(m)`,
+`datapathroot(m)`,
+`data_vintage(m)`,
 
 *Parallelization:*
 `use_parallel_workers(m)`
 
-*Estimation*
-`reoptimize(m)`
-`recalculate_hessian(m)`
-`max_hessian_free_params(m)`
+*Estimation:*
+`reoptimize(m)`,
+`recalculate_hessian(m)`,
+`max_hessian_free_params(m)`,
 
-*Metropolis-Hastings*
-`num_mh_blocks(m)`
-`num_mh_simulations(m)`
-`num_mh_burn(m)`
+*Metropolis-Hastings:*
+`num_mh_blocks(m)`,
+`num_mh_simulations(m)`, 
+`num_mh_burn(m)`, 
 `mh_thinning_step(m)`	
 
 
@@ -448,9 +454,9 @@ meaningful code when overwriting any default settings.
 For example, overwriting `reoptimize` should look like this:
 ```julia
 m = Model990()
-# reoptimize(m) will return false by default
+# reoptimize(m) returns false by default
 m <= Setting(:reoptimize, true, true, "reop", "whether to re-find the mode")
-# reoptimize(m) will return true
+# reoptimize(m) returns true; prints "reop=true" to output filenames
 ```
 
 ### Test settings 
@@ -496,7 +502,7 @@ HDF5 files.
 
 # Extending or Editing a Model
 
-Most users will want to extend or edit the DSGE model we provide in a
+Most users will want to extend or edit `Model990` in a
 number of different ways. The most common changes we anticipate are
 listed below, in decreasing order of complexity:
 
@@ -516,8 +522,8 @@ defined as a new model *subspecification*, or *subspec*. While less
 significant than a change to the model's equilibrium conditions,
 changing the values of some parameter fields (especially priors) can
 have economic significance over and above settings we use for
-computational purposes. *For multiple reasons, parameter definitions
-should not be modified in the model object's constructor.* First,
+computational purposes. **For multiple reasons, parameter definitions
+should not be modified in the model object's constructor.** First,
 incrementing the model's subspecification number when parameters are
 changed improves model-level (as opposed to code-level) version
 control. Second, it avoids potential output filename collisions,
@@ -572,21 +578,16 @@ parameters using the `<=` syntax. For example,
 
 ```julia
 function ss1(m::Model990)
-
     m <= parameter(:ι_w, 0.000, (0.0, .9999), (0.0,0.9999), Untransformed(), Normal(0.0,1.0), fixed=false,
                    description="ι_w: Some description.",
                    texLabel="\\iota_w")
-
     m <= parameter(:ι_p, 0.0, fixed=true,
                    description= "ι_p: Some description"
                    texLabel="\\iota_p")
-
-    
 end
 ```
 
-
-2. Add an `elseif` condition to `initialize_subspec`
+2. Add an `elseif` condition to `initialize_subspec`:
 
 ```julia
     ...
@@ -595,9 +596,8 @@ end
     ...
 ```
 
-To construct an instance of `Model990`, subspec `ss1`, call the
-constructor for `Model990` with `ss1` as an
-argument. For example,
+To construct an instance of `Model990`, `ss1`, call the constructor
+for `Model990` with `ss1` as an argument. For example,
 
 ```julia
 m = Model990("ss1")
