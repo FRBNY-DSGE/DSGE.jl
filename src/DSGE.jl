@@ -42,7 +42,7 @@ module DSGE
         # solve/
         ordschur, gensys, solve
     
-    const VERBOSE_DICT = @compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
+    const VERBOSITY = @compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
 
     include("parameters.jl")
     include("distributions_ext.jl")

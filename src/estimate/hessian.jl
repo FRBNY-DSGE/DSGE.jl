@@ -12,7 +12,7 @@ function hess_diag_element{T<:AbstractFloat}(fcn::Function,
     hessdiag = zeros(ndx, 1)
 
     # Computation
-    if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Hessian element: ($i, $i)")
     end
 
@@ -30,7 +30,7 @@ function hess_diag_element{T<:AbstractFloat}(fcn::Function,
         hessdiag[k]  = -(2fx - fdx - fdy) / (dx[k]*dxscale[i])^2
     end
 
-    if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:high]
+    if VERBOSITY[verbose] >= VERBOSITY[:high]
         println("Values: $(hessdiag)")
     end
 
@@ -40,7 +40,7 @@ function hess_diag_element{T<:AbstractFloat}(fcn::Function,
         error("Negative diagonal in Hessian")
     end
 
-    if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:high]
+    if VERBOSITY[verbose] >= VERBOSITY[:high]
         println("Value used: $value")
     end
 
@@ -62,7 +62,7 @@ function hess_offdiag_element{T<:AbstractFloat}(fcn::Function,
     hessdiag = zeros(ndx, 1)
 
     # Computation
-    if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Hessian element: ($i, $j)")
     end
 
@@ -82,7 +82,7 @@ function hess_offdiag_element{T<:AbstractFloat}(fcn::Function,
         hessdiag[k]  = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k]*dxscale[i]*dxscale[j])
     end
 
-    if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:high]
+    if VERBOSITY[verbose] >= VERBOSITY[:high]
         println("Values: $(hessdiag)")
     end
 
@@ -98,7 +98,7 @@ function hess_offdiag_element{T<:AbstractFloat}(fcn::Function,
         value = 0
     end
 
-    if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:high]
+    if VERBOSITY[verbose] >= VERBOSITY[:high]
         println("Value used: $value")
         println("Correlation: $ρ_xy")
     end
