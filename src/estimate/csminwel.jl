@@ -300,7 +300,7 @@ function csminwel{S<:AbstractDSGEModel}(fcn::Function,
 
         stuck = (abs(fh-f_x) < ftol)
         if !badg && !badgh && !stuck
-            H = bfgsi(H , gh-gr , xh-x)
+            H = bfgsi(H , gh-gr , xh-x; verbose=verbose)
         end
 
         if stuck
@@ -350,8 +350,10 @@ approximate the gradient numerically. This is convenient for cases where
 you cannot supply an analytical derivative, but it is not as robust as
 using the true derivative.
 """
-function csminwel{S<:AbstractDSGEModel}(fcn::Function, x0::Vector,
-                                        H0::Matrix=0.5.*eye(length(x0)), args...;
+function csminwel{S<:AbstractDSGEModel}(fcn::Function,
+                                        x0::Vector,
+                                        H0::Matrix=0.5.*eye(length(x0)),
+                                        args...;
                                         model::S=Model990(),
                                         xtol::Real=1e-32,  # default from Optim.jl
                                         ftol::Float64=1e-14,  # Default from csminwel
@@ -568,7 +570,7 @@ end
 ### Attribution
 Adapted from `bfgsi.m`, Christopher Sims, 1996.
 """
-function bfgsi(H0, dg, dx)
+function bfgsi(H0, dg, dx; verbose::Symbol = none)
     if size(dg, 2) > 1
         dg = dg'
     end
@@ -586,16 +588,17 @@ function bfgsi(H0, dg, dx)
         # gradient is super small so don't worry updating right now
         if norm(dg) < 1e-7
             return H0
-        end
-        warn("bfgs update failed")
+        else
+            warn("bfgs update failed")
 
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            @printf "|dg| = %f, |dx| = %f\n" (norm(dg)) (norm(dx))
-            @printf "dg'dx = %f\n" dgdx
-            @printf "|H*dg| = %f\n" (norm(Hgd))
-        end
+            H = H0
 
-        H = H0
+            if VERBOSITY[verbose] >= VERBOSITY[:high]
+                @printf "|dg| = %f, |dx| = %f\n" (norm(dg)) (norm(dx))
+                @printf "dg'dx = %f\n" dgdx
+                @printf "|H*dg| = %f\n" (norm(Hdg))
+            end
+        end
     end
     return H
 end
