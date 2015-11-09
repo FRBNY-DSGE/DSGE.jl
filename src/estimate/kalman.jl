@@ -1,85 +1,68 @@
-# KALCVF The Kalman filter
-#
-# State space model is defined as follows:
-#   z(t+1) = a+F*z(t)+η(t)     (state or transition equation)
-#     y(t) = b+H*z(t)+ϵ(t)     (observation or measurement equation)
-#
-# [logl, <pred, vpred, <filt, vfilt>>] = kalcvf(data, lead, a, F, b, H, var, <z0, vz0>)
-# computes the one-step prediction and the filtered estimate, as well as their covariance matrices.
-# The function uses forward recursions, and you can also use it to obtain k-step estimates.
-#
-# The inputs to the KALCVF function are as follows:
-#   data is a [Ny x T] matrix containing data (y(1), ... , y(T)).
-#   lead is the number of steps to forecast after the end of the data.
-#      a is an [Nz x 1] vector for a time-invariant input vector in the transition equation.
-#      F is an [Nz x Nz] matrix for a time-invariant transition matrix in the transition equation.
-#      b is an [Ny x 1] vector for a time-invariant input vector in the measurement equation.
-#      H is an [Ny x Nz] matrix for a time-invariant measurement matrix in the measurement equation.
-#    var is an [Ny + Nz] x [Ny + Nz] matrix for a time-invariant variance matrix for
-#           the error in the transition equation and the error in the measurement equation,
-#           that is, [η(t)', ϵ(t)']'.
-#     z0 is an optional [Nz x 1] initial state vector.
-#    vz0 is an optional [Nz x Nz] covariance matrix of an initial state vector.
-#    Ny0 is an optional scalar indicating the number of periods of presample
-#       (i.e. the number of periods which we don't add to the likelihood)
-# allout is an optional keyword argument indicating whether we want optional output variables returned as well
-#
-# The KALCVF function returns the following output:
-#   logl is a value of the average log likelihood function of the SSM
-#           under assumption that observation noise ϵ(t) is normally distributed
-#   pred is an optional [Nz x (T+lead)] matrix containing one-step predicted state vectors.
-#  vpred is an optional [Nz x Nz x(T+lead)] matrix containing mean square errors of predicted state vectors.
-#   filt is an optional [Nz x T] matrix containing filtered state vectors.
-#  vfilt is an optional [Nz x Nz x T] matrix containing mean square errors of filtered state vectors.
-#
-#
-# This is a M-file for MATLAB.
-# Copyright 2002-2003 Federal Reserve Bank of Atlanta
-# Revision: 1.2    Date: 2003/03/19 19:16:17
-# Iskander Karibzhanov 5-28-02.
-# Master of Science in Computational Finance
-# Georgia Institute of Technology
-#==========================================================================#
-# Revision history:
-#
-#  03/19/2003  -  algorithm and interface were adapted from SAS/IML KALCVF subroutine for use in MATLAB M file
-#
-#==========================================================================#
-immutable Kalman{S<:AbstractFloat}
-    L::S
-    zend::Matrix{S}
-    Pend::Matrix{S}
-    pred::Matrix{S}
-    vpred::Array{S,3}
-    yprederror::Matrix{S}
-    ystdprederror::Matrix{S}
-    rmse::Matrix{S}
-    rmsd::Matrix{S}
-    filt::Matrix{S}
-    vfilt::Array{S,3}
-end
-function Kalman{S<:AbstractFloat}(L::S,
-                                  zend::Matrix{S},
-                                  Pend::Matrix{S},
-                                  pred::Matrix{S}          = Matrix{S}(),
-                                  vpred::Array{S,3}        = Array{S}(0,0,0),
-                                  yprederror::Matrix{S}    = Matrix{S}(),
-                                  ystdprederror::Matrix{S} = Matrix{S}(),
-                                  rmse::Matrix{S}          = Matrix{S}(),
-                                  rmsd::Matrix{S}          = Matrix{S}(),
-                                  filt::Matrix{S}          = Matrix{S}(),
-                                  vfilt::Array{S,3}        = Array{S}(0,0,0))
-    return Kalman{S}(L,zend,Pend,pred,vpred,yprederror,ystdprederror,rmse,rmsd,filt,vfilt)
-end
-function Base.getindex(K::Kalman, d::Symbol)
-    if d in (:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse, :rmsd,
-             :filt, :vfilt)
-        return getfield(K, d)
-    else
-        throw(KeyError(d))
-    end
-end
 
+"""
+`kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=false)`
+`kalcvf2NaN(data, lead, a, F, b, H, var, Ny0=0; allout=false)`
+
+Inputs
+------
+
+- `data` is a [Ny x T] matrix containing data (y(1), ... , y(T)).
+- `lead` is the number of steps to forecast after the end of the data.
+- `a` is an [Nz x 1] vector for a time-invariant input vector in the transition equation.
+- `F` is an [Nz x Nz] matrix for a time-invariant transition matrix in the transition
+  equation.
+- `b` is an [Ny x 1] vector for a time-invariant input vector in the measurement equation.
+- `H` is an [Ny x Nz] matrix for a time-invariant measurement matrix in the measurement
+  equation.
+- `var` is an [Ny + Nz] x [Ny + Nz] matrix for a time-invariant variance matrix for the
+  error in the transition equation and the error in the measurement equation, that is,
+  [η(t)', ϵ(t)']'.
+- `z0` is an optional [Nz x 1] initial state vector.
+- `vz0` is an optional [Nz x Nz] covariance matrix of an initial state vector.
+- `Ny0` is an optional scalar indicating the number of periods of presample (i.e. the number
+  of periods which we don't add to the likelihood)
+- `allout` is an optional keyword argument indicating whether we want optional output
+  variables returned as well 
+
+
+Outputs
+-------
+
+- `logl` is a value of the average log likelihood function of the SSM under assumption that
+  observation noise ϵ(t) is normally distributed
+- `pred` is a [Nz x (T+lead)] matrix containing one-step predicted state vectors.
+- `vpred` is a [Nz x Nz x(T+lead)] matrix containing mean square errors of predicted
+  state vectors.
+- `filt` is an optional [Nz x T] matrix containing filtered state vectors.
+- `vfilt` is an optional [Nz x Nz x T] matrix containing mean square errors of filtered state
+  vectors.
+
+
+Notes
+-----
+State space model is defined as follows:
+```
+z(t+1) = a+F*z(t)+η(t)     (state or transition equation)
+y(t) = b+H*z(t)+ϵ(t)       (observation or measurement equation)
+```
+
+When z0 and Vz0 are omitted, the initial state vector and its covariance matrix of the time
+invariant Kalman filters are computed under the stationarity condition:
+```
+z0 = (I-F)\a
+vz0 = (I-kron(F,F))\(V(:),Nz,Nz)
+```
+where F and V are the time invariant transition matrix and the covariance matrix of
+transition equation noise, and vec(V) is an [Nz^2 x 1] column vector that is constructed by
+the stacking Nz columns of matrix V.  Note that all eigenvalues of the matrix F are inside
+the unit circle when the SSM is stationary.  When the preceding formula cannot be applied,
+the initial state vector estimate is set to a and its covariance matrix is given by 1E6I.
+Optionally, you can specify initial values.
+
+Attribution
+-----------
+Adapted from `KALCVF`, Iskander Karibzhanov, Federal Reserve Bank of Atlanta, 2003-03-19.
+"""
 function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S},
                                       lead::Int64,
                                       a::Matrix{S},
@@ -197,15 +180,6 @@ function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S},
 
 end
 
-# The initial state vector and its covariance matrix of the time invariant Kalman filters
-# are computed under the stationarity condition:
-#        z0 = (I-F)\a
-#       vz0 = (I-kron(F,F))\(V(:),Nz,Nz)
-# where F and V are the time invariant transition matrix and the covariance matrix of transition equation noise,
-# and vec(V) is an [Nz^2 x 1] column vector that is constructed by the stacking Nz columns of matrix V.
-# Note that all eigenvalues of the matrix F are inside the unit circle when the SSM is stationary.
-# When the preceding formula cannot be applied, the initial state vector estimate is set to a
-# and its covariance matrix is given by 1E6I. Optionally, you can specify initial values.
 function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S},
                                       lead::Int64,
                                       a::Matrix{S},
@@ -230,221 +204,37 @@ function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S},
     return kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=allout)
 end
 
-#=
-
-# KALSMTH_K93.M
-
-# This is a Kalman Smoothing program based on S.J. Koopman's "Disturbance
-# Smoother for State Space Models" (Biometrika, 1993), as specified in
-# Durbin and Koopman's "A Simple and Efficient Simulation Smoother for
-# State Space Time Series Analysis" (Biometrika, 2002). The algorithm has been
-# simplified for the case in which there is no measurement error, and the
-# model matrices do not vary with time.
-
-# Unlike other Kalman Smoothing programs, there is no need to invert
-# singular matrices using the Moore-Penrose pseudoinverse (pinv), which
-# should lead to efficiency gains and fewer inversion problems. Also, the
-# states vector and the corresponding matrices do not need to be augmented
-# to include the shock innovations. Instead they are saved automatically
-# in the eta_hat matrix.
-
-# Nz will stand for the number of states, Ny for the number of observables,
-# Ne for the number of shocks, and Nt for the number of periods of data.
-
-# The state space is assumed to take the form:
-# y(t) = Z*alpha(t) + b
-# alpha(t+1) = T*alpha(t) + R*eta(t+1)
-
-# INPUTS:
-
-# A0, the (Nz x 1) initial (time 0) states vector.
-# P0, the (Nz x Nz) initial (time 0) state covariance matrix.
-# y, the (Ny x Nt) matrix of observable data.
-# pred, the (Nz x Nt) matrix of one-step-ahead predicted states (from the Kalman Filter).
-# vpred, the (Nz x Nz x Nt) matrix of one-step-ahead predicted covariance matrices.
-# T, the (Nz x Nz) transition matrix.
-# R, the (Nz x Ne) matrix translating shocks to states.
-# Q, the (Ne x Ne) covariance matrix for the shocks.
-# Z, the (Ny x Nz) measurement matrix.
-# b, the (Ny x 1) constant vector in the measurement equation.
-
-# nant, an optional scalar for the zero bound specification indicating the
-#       number of periods ahead the interest rate is fixed.
-# antlags, an optional scalar for the zero bound specification indicating
-#       the number of periods for which interest rate expectations have
-#       been fixed
-# Ny0, an optional scalar indicating the number of periods of presample
-#       (i.e. the number of periods for which smoothed states are not required).
-
-# OUTPUTS:
-
-# alpha_hat, the (Nz x Nt) matrix of smoothed states.
-# eta_hat, the optional (Ne x Nt) matrix of smoothed shocks.
-
-# If Ny0 is nonzero, the alpha_hat and eta_hat matrices will be shorter by
-# that number of columns (taken from the beginning).
-
-# Dan Greenwald, 7/7/2010.
-
-function kalsmth_k93(A0, P0, y, pred::Matrix{S}, vpred::Array{S, 3}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, nant::Int, antlags::Int, peachcount, psize, Ny0::Int = 0)
-
-    Ne = size(R, 2)
-    Ny = size(y, 1)
-    Nt = size(y, 2)
-    Nz = size(T, 1)
-
-    alpha_hat = zeros(Nz, Nt)
-
-    [r, eta_hat] = distsmth_k93(y, pred, vpred, T, R, Q, Z, b, peachcount, psize, nant, antlags)
-    
-    ah_t = A0 + P0*r[:, 1]
-    alpha_hat[:, 1] = ah_t
-
-    for t = 2:Nt
-
-        # This section relates to the zero bound framework, in which no
-        # anticipated shocks are supposed to occur before the model switch.
-        # In these periods, this is accomplished by setting the relevant
-        # rows and columns of the Q matrix to zero. In other periods, or in
-        # specifications with zero bound off (and hence with nant = 0), the
-        # normal Q matrix can be used.
-
-        if nant != 0
-            # The first part of the conditional below pertains to the periods in which zerobound is off.
-            # To specify this period, we must account for (peachcount*psize) since peachdata is augmented to y.
-            # JC 11/30/10
-            if nant > 0 && t < Nt - antlags - (peachcount*psize)
-                Q_t = zeros(Ne, Ne)
-                Q_t[1:(Ne-nant), 1:(Ne-nant)] = Q[1:(Ne-nant), 1:(Ne-nant)]
-                ah_t = T*ah_t + R*Q_t*R'*r[:, t]
-            else
-                ah_t = T*ah_t + R*Q*R'*r[:, t]
-            end
-        else
-            ah_t = T*ah_t + R*Q*R'*r[:, t]
-        end
-
-        alpha_hat[:, t] = ah_t
-    end
-
-    alpha_hat = alpha_hat[:, (Ny0+1):end]
-    eta_hat = eta_hat[:, (Ny0+1):end]
-    
-    return alpha_hat, eta_hat
+immutable Kalman{S<:AbstractFloat}
+    L::S
+    zend::Matrix{S}
+    Pend::Matrix{S}
+    pred::Matrix{S}
+    vpred::Array{S,3}
+    yprederror::Matrix{S}
+    ystdprederror::Matrix{S}
+    rmse::Matrix{S}
+    rmsd::Matrix{S}
+    filt::Matrix{S}
+    vfilt::Array{S,3}
 end
-
-
-
-
-
-# DISTSMTH_K93.M
-
-# This is a Kalman Smoothing program based on S.J. Koopman's "Disturbance
-# Smoother for State Space Models" (Biometrika, 1993), as specified in
-# Durbin and Koopman's "A Simple and Efficient Simulation Smoother for
-# State Space Time Series Analysis" (Biometrika, 2002). The algorithm has been
-# simplified for the case in which there is no measurement error, and the
-# model matrices do not vary with time.
-
-# This disturbance smoother is intended for use with the state smoother
-# kalsmth_93.m from the same papers (Koopman 1993, Durbin and Koopman
-# 2002). It produces a matrix of vectors, r, that is used for state
-# smoothing, and an optional matrix, eta_hat, containing the smoothed
-# shocks. It has been adjusted to account for the possibility of missing
-# values in the data, and to accommodate the zero bound model, which
-# requires that no anticipated shocks occur before the zero bound window,
-# which is achieved by setting the entries in the Q matrix corresponding to
-# the anticipated shocks to zero in those periods.
-
-# Nz will stand for the number of states, Ny for the number of observables,
-# Ne for the number of shocks, and Nt for the number of periods of data.
-
-# The state space is assumed to take the form:
-# y(t) = Z*alpha(t) + b
-# alpha(t+1) = T*alpha(t) + R*eta(t+1)
-
-# INPUTS:
-
-# y, the (Ny x Nt) matrix of observable data.
-# pred, the (Nz x Nt) matrix of one-step-ahead predicted states (from the Kalman Filter).
-# vpred, the (Nz x Nz x Nt) matrix of one-step-ahead predicted covariance matrices.
-# T, the (Nz x Nz) transition matrix.
-# R, the (Nz x Ne) matrix translating shocks to states.
-# Q, the (Ne x Ne) covariance matrix for the shocks.
-# Z, the (Ny x Nz) measurement matrix.
-# b, the (Ny x 1) constant vector in the measurement equation.
-
-# nant, an optional scalar for the zero bound specification indicating the
-#       number of periods ahead the interest rate is fixed.
-# antlags, an optional scalar for the zero bound specification indicating
-#       the number of periods for which interest rate expectations have
-#       been fixed
-# Ny0, an optional scalar indicating the number of periods of presample
-#       (i.e. the number of periods for which smoothed states are not
-#       required).
-
-# OUTPUTS:
-
-# r, the (Nz x Nt) matrix used for state smoothing.
-# eta_hat, the optional (Ne x Nt) matrix of smoothed shocks.
-
-# Dan Greenwald, 7/7/2010.
-function distsmth_k93{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, vpred::Matrix{S}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, peachcount, psize, nant::Int = 0, antlags::Int = 0)
-    Nt = size(y, 2)
-    Nz = size(T, 1)
-
-    r = zeros(Nz, Nt) # holds r_T-1, ...r_0
-    r_t = zeros(Nz, 1)
-
-    Ne = size(R, 2)
-    eta_hat = zeros(Ne, Nt)
-
-    for t = Nt:-1:1
-
-        y_t = y[:, t]
-
-        # This section deals with the possibility of missing values in the y_t
-        # vector (especially relevant for smoothing over peachdata).
-        nonmissing = !isnan(y_t)
-        y_t = y_t[nonmissing]
-        Z_t = Z[nonmissing, :]
-        b_t = b[nonmissing]
-
-        a = pred[:, t]
-        P = vpred[:, :, t]
-
-        F = Z_t*P*Z_t'
-        v = y_t - Z_t*a - b_t
-        K = T*P*Z_t'/F
-        L = T - K*Z_t
-
-        r_t = Z_t'/F*v + L'*r_t
-        r[:, t] = r_t
-
-        # This section relates to the zero bound framework, in which no
-        # anticipated shocks are supposed to occur before the model switch.
-        # In these periods, this is accomplished by setting the relevant
-        # rows and columns of the Q matrix to zero. In other periods, or in
-        # specifications with zero bound off (and hence with nant = 0), the
-        # normal Q matrix can be used.
-        if nant != 0
-            
-            # The first part of the conditional below pertains to the periods in which zerobound is off.
-            # To specify this period, we must account for (peachcount*psize) since peachdata is augmented to y.
-            # JC 11/30/10
-            if nant > 0 && t < Nt - antlags - peachcount*psize
-                Q_t = zeros(Ne, Ne)
-                Q_t[1:Ne-nant, 1:Ne-nant] = Q[1:Ne-nant, 1:Ne-nant]
-                eta_hat[:, t] = Q_t * R' * r_t
-            else
-                eta_hat[:, t] = Q * R' * r_t
-            end
-        else
-            eta_hat[:, t] = Q * R' * r_t
-        end
-    end
-
-
-    return r, eta_hat
+function Kalman{S<:AbstractFloat}(L::S,
+                                  zend::Matrix{S},
+                                  Pend::Matrix{S},
+                                  pred::Matrix{S}          = Matrix{S}(),
+                                  vpred::Array{S,3}        = Array{S}(0,0,0),
+                                  yprederror::Matrix{S}    = Matrix{S}(),
+                                  ystdprederror::Matrix{S} = Matrix{S}(),
+                                  rmse::Matrix{S}          = Matrix{S}(),
+                                  rmsd::Matrix{S}          = Matrix{S}(),
+                                  filt::Matrix{S}          = Matrix{S}(),
+                                  vfilt::Array{S,3}        = Array{S}(0,0,0))
+    return Kalman{S}(L,zend,Pend,pred,vpred,yprederror,ystdprederror,rmse,rmsd,filt,vfilt)
 end
-=#
+function Base.getindex(K::Kalman, d::Symbol)
+    if d in (:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse, :rmsd,
+             :filt, :vfilt)
+        return getfield(K, d)
+    else
+        throw(KeyError(d))
+    end
+end
