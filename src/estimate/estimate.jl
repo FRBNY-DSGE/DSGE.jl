@@ -31,16 +31,12 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     ### Step 1: Initialize
     ########################################################################################
 
-    # Set up levels of verbose-ness
-    # TODO just reference global
-    verboseness = VERBOSE_DICT
-
     # Load data
     h5 = h5open(inpath(m, "data","data_$(data_vintage(m)).h5"), "r")
     YY = read(h5["YY"])
     close(h5)
 
-    post = posterior(m, YY)
+    post = posterior(m, YY)[:post]
 
 
     ########################################################################################
@@ -49,7 +45,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     
     # Specify starting mode
 
-    if verboseness[verbose] > verboseness[:none] 
+    if VERBOSE_DICT[verbose] > VERBOSE_DICT[:none] 
         println("Reading in previous mode")
     end
     
@@ -74,7 +70,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
         # Inputs to minimization algorithm
         function posterior_min!{T<:AbstractFloat}(x::Vector{T})
             tomodel!(m,x)
-            return -posterior(m, YY, catchGensysErrors=true)
+            return -posterior(m, YY; catch_errors=true)[:post]
         end
 
         xh = toreal(m.parameters)
@@ -86,7 +82,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
         # If the algorithm stops only because we have exceeded the maximum number of
         # iterations, continue improving guess of modal parameters
         while !converged
-            verbose_bool = verboseness[verbose] > verboseness[:none] ? true : false
+            verbose_bool = VERBOSE_DICT[verbose] > VERBOSE_DICT[:none]
             out, H = csminwel(posterior_min!, xh, H; model=m, ftol=crit, iterations=nit, show_trace=true, verbose=verbose_bool)
             xh = out.minimum
             converged = !out.iteration_converged
@@ -114,12 +110,9 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     ### the hessian. We find the inverse via eigenvalue decomposition.
     ########################################################################################
 
-    hessian = []
-    
     # Calculate the Hessian at the posterior mode
-    if recalculate_hessian(m)
-        
-        if verboseness[verbose] > verboseness[:none] 
+    hessian = if recalculate_hessian(m)
+        if VERBOSE_DICT[verbose] > VERBOSE_DICT[:none] 
             println("Recalculating Hessian...")
         end
         
@@ -129,10 +122,11 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
             file["hessian"] = hessian
         end
 
+        hessian
+
     # Read in a pre-optimized mode
     else
-        
-        if verboseness[verbose] > verboseness[:none]
+        if VERBOSE_DICT[verbose] > VERBOSE_DICT[:none]
             println("Using pre-calculated Hessian")
         end
 
@@ -143,9 +137,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
 
     # Compute inverse hessian and create proposal distribution, or
     # just create it with the given cov matrix if we have it
-    propdist = []
-    if length(proposal_covariance) == 0
-                
+    propdist = if length(proposal_covariance) == 0
         # Make sure the mode and hessian have the same number of parameters
         n = length(mode)
         @assert (n, n) == size(hessian)
@@ -162,9 +154,9 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
         end
         
         hessian_inv = U*sqrt(S_inv) #this is the inverse of the hessian
-        propdist = DegenerateMvNormal(mode, hessian_inv, rank)
+        DegenerateMvNormal(mode, hessian_inv, rank)
     else
-        propdist = DegenerateMvNormal(mode, proposal_covariance)
+        DegenerateMvNormal(mode, proposal_covariance)
     end
     
     if propdist.rank != num_parameters_free(m)
@@ -222,9 +214,6 @@ Implements the Metropolis-Hastings MCMC algorithm for sampling from the posterio
 function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel,
        YY::Matrix{T}, cc0::T, cc::T; verbose::Symbol=:low, fix_seed::Bool=true)
 
-    # Set up levels of verbose-ness
-    verboseness = VERBOSE_DICT
-
     # If testing, set the random seeds at fixed numbers
     
     if fix_seed || m.testing
@@ -264,7 +253,8 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
         n_burn   = num_mh_burn(m)
         n_times  = mh_thinning_step(m)
 
-        post_old, like_old, out = posterior!(m, para_old, YY; mh=true)
+        post_out = posterior!(m, para_old, YY; mh=true)
+        post_old, like_old, out = post_out[:post], post_out[:like], post_out[:mats]
         
         if post_old > -Inf
             propdist.μ = para_old
@@ -280,7 +270,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
     end
 
     # Report number of blocks that will be used 
-    if verboseness[verbose] > verboseness[:none]
+    if VERBOSE_DICT[verbose] > VERBOSE_DICT[:none]
         println("Blocks: $n_blocks")
         println("Draws per block: $n_sim")        
     end
@@ -338,9 +328,10 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
             # Solve the model, check that parameters are within bounds, gensys returns a
             # meaningful system, and evaluate the posterior.
 
-            post_new, like_new, out = posterior!(m, para_new, YY; mh=true)
+            post_out = posterior!(m, para_new, YY; mh=true)
+            post_new, like_new, out = post_out[:post], post_out[:like], post_out[:mats]
             
-            if verboseness[verbose] >= verboseness[:high] 
+            if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:high] 
                 println("Block $i, Iteration $j: posterior = $post_new")
             end
 
@@ -372,7 +363,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
                 DD_old = out[:DD]
                 QQ_old = out[:QQ]
 
-                if verboseness[verbose] >= verboseness[:high] 
+                if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:high] 
                     println("Block $i, Iteration $j: accept proposed jump")
                 end
 
@@ -380,7 +371,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
                 # Reject proposed jump
                 block_rejections += 1
                 
-                if verboseness[verbose] >= verboseness[:high] 
+                if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:high] 
                     println("Block $i, Iteration $j: reject proposed jump")
                 end
                 
@@ -427,7 +418,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
         block_time = toq()
 
         # Print status
-        if verboseness[verbose] > verboseness[:none]
+        if VERBOSE_DICT[verbose] > VERBOSE_DICT[:none]
 
             # Calculate time to complete this block, average block
             # time, and expected time to completion
@@ -447,7 +438,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::Abstra
     close(simfile)
 
     rejection_rate = all_rejections/(n_blocks*n_sim*n_times)
-    if verboseness[verbose] > verboseness[:none]
+    if VERBOSE_DICT[verbose] > VERBOSE_DICT[:none]
         println("Overall rejection rate: $rejection_rate")
     end
 end # of loop over blocks

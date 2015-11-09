@@ -4,7 +4,7 @@ function hess_diag_element{T<:AbstractFloat}(fcn::Function,
                                               i::Int; 
                                               ndx::Int=6,
                                               check_neg_diag::Bool=false,
-                                              verbose::Bool=false)
+                                              verbose::Symbol=:none)
     # Setup
     num_para = length(x)
     dxscale  = ones(num_para, 1)
@@ -12,12 +12,12 @@ function hess_diag_element{T<:AbstractFloat}(fcn::Function,
     hessdiag = zeros(ndx, 1)
 
     # Computation
-    if verbose
+    if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:low]
         println("Hessian element: ($i, $i)")
     end
 
     # Diagonal element computation
-    for k = 1:ndx
+    for k = 3:4
         paradx    = copy(x)
         parady    = copy(x)
         paradx[i] = paradx[i] + dx[k]*dxscale[i]
@@ -30,7 +30,7 @@ function hess_diag_element{T<:AbstractFloat}(fcn::Function,
         hessdiag[k]  = -(2fx - fdx - fdy) / (dx[k]*dxscale[i])^2
     end
 
-    if verbose
+    if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:high]
         println("Values: $(hessdiag)")
     end
 
@@ -40,7 +40,7 @@ function hess_diag_element{T<:AbstractFloat}(fcn::Function,
         error("Negative diagonal in Hessian")
     end
 
-    if verbose
+    if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:high]
         println("Value used: $value")
     end
 
@@ -54,7 +54,7 @@ function hess_offdiag_element{T<:AbstractFloat}(fcn::Function,
                                                  j::Int,
                                                  σ_xσ_y::T;
                                                  ndx::Int=6,
-                                                 verbose::Bool=false)
+                                                 verbose::Symbol=:none)
     # Setup
     num_para = length(x)
     dxscale  = ones(num_para, 1)
@@ -62,11 +62,11 @@ function hess_offdiag_element{T<:AbstractFloat}(fcn::Function,
     hessdiag = zeros(ndx, 1)
 
     # Computation
-    if verbose
+    if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:low]
         println("Hessian element: ($i, $j)")
     end
 
-    for k = 1:ndx
+    for k = 3:4
         paradx      = copy(x)
         parady      = copy(x)
         paradx[i]   = paradx[i] + dx[k]*dxscale[i]
@@ -82,7 +82,7 @@ function hess_offdiag_element{T<:AbstractFloat}(fcn::Function,
         hessdiag[k]  = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k]*dxscale[i]*dxscale[j])
     end
 
-    if verbose
+    if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:high]
         println("Values: $(hessdiag)")
     end
 
@@ -98,7 +98,7 @@ function hess_offdiag_element{T<:AbstractFloat}(fcn::Function,
         value = 0
     end
 
-    if verbose
+    if VERBOSE_DICT[verbose] >= VERBOSE_DICT[:high]
         println("Value used: $value")
         println("Correlation: $ρ_xy")
     end
@@ -109,7 +109,7 @@ end
 function hessizero{T<:AbstractFloat}(fcn::Function, 
                                     x::Vector{T}; 
                                     check_neg_diag::Bool=false,
-                                    verbose::Bool=false,
+                                    verbose::Symbol=:none,
                                     distr::Bool=true)
     num_para = length(x)
     hessian  = zeros(num_para, num_para)
@@ -184,7 +184,7 @@ end
 function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel, 
                                     x::Vector{T}, 
                                     YY::Matrix{T}; 
-                                    verbose::Bool = false)
+                                    verbose::Symbol = :none)
     update!(model, x)
 
     # Index of free parameters
@@ -207,7 +207,7 @@ function hessian!{T<:AbstractFloat}(model::AbstractDSGEModel,
     x_hessian = x_model[para_free_inds]
     function f_hessian(x_hessian)
         x_model[para_free_inds] = x_hessian
-        return -posterior!(model, x_model, YY)
+        return -posterior!(model, x_model, YY)[:post]
     end
 
     distr=use_parallel_workers(model)
