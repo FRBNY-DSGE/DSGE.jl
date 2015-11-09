@@ -327,6 +327,17 @@ where (a,b) = p.transform_parameterization and c a scalar (default=1):
 - SquareRoot:    (a+b)/2 + (b-a)/2 * c * x/sqrt(1 + c^2 * x^2)
 - Exponential:   a + exp(c*(x-b))
 """
+tomodel{T}(p::Parameter{T,Untransformed}, x::T) = x
+function tomodel{T}(p::Parameter{T,SquareRoot}, x::T)
+    (a,b), c = p.transform_parameterization, one(T)
+    (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)
+end
+function tomodel{T}(p::Parameter{T,Exponential}, x::T)
+    (a,b),c = p.transform_parameterization,one(T)
+    a + exp(c*(x-b))
+end
+
+tomodel{T}(pvec::ParameterVector{T}) = map(tomodel, pvec)
 
 """
 toreal{T<:Number, U<:Transform}(p::Parameter{T,U}, x::T = p.value)
@@ -339,33 +350,19 @@ where (a,b) = p.transform_parameterization, c a scalar (default=1), and x = p.va
 - SquareRoot:   (1/c)*cx/sqrt(1 - cx^2), where cx =  2 * (x - (a+b)/2)/(b-a)
 - Exponential:   a + exp(c*(x-b))
 """
-# Untransformed
-tomodel{T}(p::Parameter{T,Untransformed}, x::T) = x
 toreal{T}(p::Parameter{T,Untransformed}, x::T = p.value) = x
-
-# SquareRoot
-function tomodel{T}(p::Parameter{T,SquareRoot}, x::T)
-    (a,b), c = p.transform_parameterization, one(T)
-    (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)
-end
 function toreal{T}(p::Parameter{T,SquareRoot}, x::T = p.value)
     (a,b), c = p.transform_parameterization, one(T)
     cx = 2 * (x - (a+b)/2)/(b-a)
     (1/c)*cx/sqrt(1 - cx^2)
-end
-
-# Exponential
-function tomodel{T}(p::Parameter{T,Exponential}, x::T)
-    (a,b),c = p.transform_parameterization,one(T)
-    a + exp(c*(x-b))
 end
 function toreal{T}(p::Parameter{T,Exponential}, x::T = p.value)
     (a,b),c = p.transform_parameterization,one(T)
     b + (1/c) * log(x-a)
 end
 
-tomodel{T}(pvec::ParameterVector{T}) = map(tomodel, pvec)
 toreal{T}(pvec::ParameterVector{T}, values::Vector{T}) = map(toreal, pvec, values)
+
 
 
 # define operators to work on parameters
