@@ -1,13 +1,33 @@
+type Measurement{T<:AbstractFloat}
+    ZZ::Matrix{T}
+    DD::Matrix{T}
+    QQ::Matrix{T}
+    EE::Matrix{T}
+    MM::Matrix{T}
+    VVall::Matrix{T}
+end
+function Base.getindex(M::Measurement, d::Symbol)
+    if d in (:ZZ, :DD, :QQ, :EE, :MM, :VVall)
+        return getfield(M, d)
+    else
+        throw(KeyError(d))
+    end
+end
+
 # Assign measurement equation : X_t = ZZ*S_t + DD + u_t
 # where u_t = eta_t+MM* eps_t with var(eta_t) = EE
 # where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
-
-function measurement(m::Model990, TTT::Matrix, RRR::Matrix, CCC::Matrix; shocks::Bool = true)
+function measurement{T<:AbstractFloat}(m::Model990{T},
+                                       TTT::Matrix{T},
+                                       RRR::Matrix{T},
+                                       CCC::Matrix{T};
+                                       shocks::Bool = true)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
     obs  = m.observables
 
-    # If shocks = true, then return measurement equation matrices with rows and columns for anticipated policy shocks
+    # If shocks = true, then return measurement equation matrices with rows and columns for
+    # anticipated policy shocks
     if shocks
         _num_observables = num_observables(m)
         _num_states = num_states_augmented(m)
@@ -118,5 +138,15 @@ function measurement(m::Model990, TTT::Matrix, RRR::Matrix, CCC::Matrix; shocks:
         end
     end
 
-    return ZZ, DD, QQ, EE, MM
+    # Adjustment to DD because measurement equation assumes CCC is the zero vector
+    if any(CCC != 0)
+        DD += ZZ*((UniformScaling(1) - TTT)\CCC)
+    end
+
+    HH = EE + MM*QQ*MM'
+    VV = QQ*MM'
+    VVall = [[RRR*QQ*RRR' RRR*VV];
+             [VV'*RRR'    HH]]
+
+    return Measurement(ZZ, DD, QQ, EE, MM, VVall)
 end
