@@ -249,7 +249,8 @@ Transforms `values` from the real line to the model space, and assigns `values[i
 """
 =#
 function tomodel!{T<:AbstractFloat}(m::AbstractDSGEModel, values::Vector{T})
-    tomodel!(values, m.parameters)
+    new_values = tomodel(m.parameters, values)
+    update!(m, new_values)
     return steadystate!(m)
 end
 
