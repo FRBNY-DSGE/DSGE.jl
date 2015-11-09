@@ -60,7 +60,7 @@ Optionally, you can specify initial values.
 
 Attribution
 -----------
-Adapted from `KALCVF`, Iskander Karibzhanov, Federal Reserve Bank of Atlanta, 2003-03-19.
+Adapted from `kalcvf.m`, Iskander Karibzhanov, Federal Reserve Bank of Atlanta, 2003-03-19.
 """
 function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
                                       lead::Int64,
