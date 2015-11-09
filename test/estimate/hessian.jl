@@ -29,7 +29,7 @@ if max_free_ind < maximum(para_free_inds)
     para_free_inds = para_free_inds[1:max_free_ind]
 end
 
-@time hessian, _ = hessian!(model, mode, YY; verbose=true)
+@time hessian, _ = hessian!(model, mode, YY; verbose=:low)
 
 # The values here are liable to differ between machines, based on different
 # architectures/multithreading. Hessian values tend to be large, so these larger tolerances
