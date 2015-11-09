@@ -637,7 +637,7 @@ end
 """
 Wrapper function to send a model to csminwel
 """
-function csminwel(
+function csminwel(model::AbstractDSGEModel,
                   fcn::Function,
                   grad::Function,
                   x0::Vector,
