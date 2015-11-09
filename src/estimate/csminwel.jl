@@ -1,5 +1,3 @@
-using Compat
-
 #=
 
     @author : Jonathan Payne <jep459@nyu.edu>,
@@ -10,7 +8,7 @@ using Compat
 References
 ----------
 
-Simple port of the original Matlab files csminwl.m, numgrad.m, bfgsi.m
+Simple port of the original Matlab files csminwel.m, numgrad.m, bfgsi.m
 written by Chris Sims.
 
 =#
@@ -19,16 +17,16 @@ import Calculus  # for numerical derivatives
 import Optim
 using Optim: OptimizationTrace, #assess_convergence,
 MultivariateOptimizationResults
+using Compat
 
-const rc_messages = Dict()
-rc_messages[0] = "Standard Iteration"
-rc_messages[1] = "zero gradient"
-rc_messages[2] = "back and forth on step length never finished"
-rc_messages[3] = "smallest step still improving too slow"
-rc_messages[4] = "back and forth on step length never finished"
-rc_messages[5] = "largest step still improving too fast"
-rc_messages[6] = "smallest step still improving too slow, reversed gradient"
-rc_messages[7] = "warning: possible inaccuracy in H matrix"
+const rc_messages = Dict(0 => "Standard Iteration",
+                         1 => "zero gradient",
+                         2 => "back and forth on step length never finished",
+                         3 => "smallest step still improving too slow",
+                         4 => "back and forth on step length never finished",
+                         5 => "largest step still improving too fast",
+                         6 => "smallest step still improving too slow, reversed gradient",
+                         7 => "warning: possible inaccuracy in H matrix")
 
 macro csminwelltrace()
     quote
@@ -53,18 +51,13 @@ macro csminwelltrace()
     end
 end
 
-
-
-
-#=
-@doc* md"""
-
+"""
 This routine implements Chris Sims' `csminwel` algorithm found
 [here](http://sims.princeton.edu/yftp/optimize/).
 
 This is a port of the MATLAB version of that function.
 
-### Parameters
+### Arguments
 
 * `f::Function` : The objective function
 * `grad::Function` : The gradient of the objective function
@@ -87,13 +80,7 @@ in function value across iterations.
 STDOUT, which is typically the REPL if Julia is run interactively.
 * `kwargs...`: Other keyword arguments to be passed to `f` on each
 function call
-
-
-#### Example
-
-See the file `examples/csminwel.jl` for an example of usage
-"""->
-=#
+"""
 function csminwel{S<:AbstractDSGEModel}(fcn::Function,
                                         grad::Function,
                                         x0::Vector,
@@ -107,7 +94,7 @@ function csminwel{S<:AbstractDSGEModel}(fcn::Function,
                                         store_trace::Bool = false,
                                         show_trace::Bool = false,
                                         extended_trace::Bool = false,
-                                        verbose::Bool = false,
+                                        verbose::Symbol = :none,
                                         randvecs::Array = [],
                                         kwargs...)
     
@@ -167,8 +154,6 @@ function csminwel{S<:AbstractDSGEModel}(fcn::Function,
     # Iterate until convergence or exhaustion
     converged = false
     while !converged && iteration < iterations
-
-        # Augment the iteration counter
         iteration += 1
 
         f1, x1, fc, retcode1 = csminit(fcn, x, f_x, gr, badg, H, args...;
@@ -184,20 +169,18 @@ function csminwel{S<:AbstractDSGEModel}(fcn::Function,
                 wall1 = badg1
             end
 
+            # Bad gradient or back and forth on step length.  Possibly at cliff edge. Try
+            # perturbing search direction if problem not 1D
             if wall1 && (length(H) > 1)
-                # Bad gradient or back and forth on step length.  Possibly at
-                # cliff edge. Try perturbing search direction if problem not
-                # 1D
 
-                # PZL 8/11/15: for time tests
-                if randvecs == []
+                if !model.testing
                     Hcliff = H + diagm(diag(H).*rand(model.rng, nx))
                 else
                     Hcliff = H + diamg(diag(H) .* randvecs[:, randi])
                     randi += 1
                 end
 
-                if verbose
+                if VERBOSITY[verbose] >= VERBOSITY[:low]
                     @printf "Cliff.  Perturbing search direction.\n"
                 end
                 
@@ -255,8 +238,7 @@ function csminwel{S<:AbstractDSGEModel}(fcn::Function,
                     retcode3 = 101
                 end
             else
-                # normal iteration, no walls, or else 1D, or else we're
-                # finished here.
+                # normal iteration, no walls, or else 1D, or else we're finished here.
                 f2, f3 = f_x, f_x
                 badg2, badg3 = true, true
                 retcode2, retcode3 = 101, 101
@@ -323,24 +305,21 @@ function csminwel{S<:AbstractDSGEModel}(fcn::Function,
 
         if stuck
             #!! 2015-08-03 ELM: This seems to throw an error when in fact we've just come to a solution. 
-            if verbose
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
                 #error("improvement < ftol -- terminating")
                 @printf "improvement < ftol -- terminating\n"
             end
             
         end
 
-      #!! 2015-08-03 ELM: Throwing a warning because maintain has no value
-      #rc = maintain 
+        # record# retcodeh of previous x
+        copy!(x_previous, x)
 
-      # record# retcodeh of previous x
-      copy!(x_previous, x)
-
-      # update before next iteration
-      f_x_previous, f_x = f_x, fh
-      x = xh
-      gr = gh
-      badg = badgh
+        # update before next iteration
+        f_x_previous, f_x = f_x, fh
+        x = xh
+        gr = gh
+        badg = badgh
 
         # Check convergence
         x_converged,
@@ -359,33 +338,18 @@ function csminwel{S<:AbstractDSGEModel}(fcn::Function,
 
     end
 
-    return MultivariateOptimizationResults("csminwel",
-                                           x0,
-                                           x,
-                                           convert(Float64, f_x),
-                                           iteration,
-                                           iteration==iterations,
-                                           x_converged,
-                                           xtol,
-                                           f_converged,
-                                           ftol,
-                                           gr_converged,
-                                           grtol,
-                                           tr,
-                                           f_calls,
-                                           g_calls), H  # also return H
-
+    return MultivariateOptimizationResults("csminwel", x0, x, convert(Float64, f_x),
+        iteration, iteration==iterations, x_converged, xtol, f_converged, ftol, gr_converged,
+        grtol, tr, f_calls, g_calls), H  # also return H 
 end
 
 
-#=
-doc"""
+"""
 Version of `csminwel` that will use finite differencing methods to
 approximate the gradient numerically. This is convenient for cases where
 you cannot supply an analytical derivative, but it is not as robust as
 using the true derivative.
 """
-=#
 function csminwel{S<:AbstractDSGEModel}(fcn::Function, x0::Vector,
                                         H0::Matrix=0.5.*eye(length(x0)), args...;
                                         model::S=Model990(),
@@ -396,8 +360,8 @@ function csminwel{S<:AbstractDSGEModel}(fcn::Function, x0::Vector,
                                         store_trace::Bool = false,
                                         show_trace::Bool = false,
                                         extended_trace::Bool = false,
-                                        verbose::Bool = false,
-                                        randvecs::Array= [],
+                                        verbose::Symbol = :none,
+                                        randvecs::Array = [],
                                         kwargs...)
     
     grad{T<:Number}(x::Array{T}) = csminwell_grad(fcn, x, args...; kwargs...)
@@ -416,12 +380,10 @@ function csminwell_grad(fcn, x, args...; kwargs...)
     return gr, any(bad_grads)
 end
 
-# SL: This function worked for rosen example (2014-09-23 09:08:52)
-function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Bool=false, kwargs...)
+function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwargs...)
     angle = .005
 
-    #(0<THETA<.5) THETA near .5 makes long line searches, possibly fewer
-    # iterations.
+    #(0<THETA<.5) THETA near .5 makes long line searches, possibly fewer iterations.
     theta = .3
     fchange = 1000
     minlamb = 1e-9
@@ -439,15 +401,14 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Bool=false, kwargs
         retcode = 1
         dxnorm = 0.0
     else
-        # with badg true, we don't try to match rate of improvement to
-        # directional derivative.  We're satisfied just to get some
-        # improvement in f.
+        # with badg true, we don't try to match rate of improvement to directional
+        # derivative.  We're satisfied just to get some improvement in f.
         dx = vec(-H0*gr)
         dxnorm = norm(dx)
 
         if dxnorm > 1e12
 
-            if verbose
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
                 @printf "Near singular H problem.\n"
             end
             
@@ -465,17 +426,17 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Bool=false, kwargs
                 dx *= dxnorm/norm(dx)
                 dfhat = dot(dx, gr)
 
-                if verbose
+                if VERBOSITY[verbose] >= VERBOSITY[:low]
                     @printf "Correct for low angle %f\n" a
                 end
             end
         end
 
-        if verbose
-            @sprintf "Predicted Improvement: %18.9f\n" (-dfhat/2)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            @printf "Predicted Improvement: %18.9f\n" (-dfhat/2)
         end
-        # Have OK dx, now adjust length of step (lambda) until min and
-        # max improvement rate criteria are met.
+        # Have OK dx, now adjust length of step (lambda) until min and max improvement rate
+        # criteria are met.
         done = false
         fact = 3.0
         shrink = true
@@ -494,8 +455,8 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Bool=false, kwargs
 
             f = fcn(dxtest, args...; kwargs...)
             
-            if verbose
-                @sprintf "lambda = %10.5f; f = %20.7f\n" lambda f
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                @printf "lambda = %10.5f; f = %20.7f\n" lambda f
             end
                 
             if f < fhat
@@ -589,21 +550,25 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Bool=false, kwargs
         end
     end
 
-    if verbose
-        @sprintf "Norm of dx %10.5f\n" dxnorm
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        @printf "Norm of dx %10.5f\n" dxnorm
     end
     
     return fhat, xhat, f_calls, retcode
 end
 
+"""
+`bfgsi(H0, dg, dx)`
 
+### Arguments
+- `H0`: hessian matrix 
+- `dg`: previous change in gradient
+- `dx`: previous change in x
+
+### Attribution
+Adapted from `bfgsi.m`, Christopher Sims, 1996.
+"""
 function bfgsi(H0, dg, dx)
-    # H = bfgsi(H0,dg,dx)
-    # dg is previous change in gradient; dx is previous change in x;
-    # 6/8/93 version that updates inverse hessian instead of hessian
-    # itself.
-    # Copyright by Christopher Sims 1996.  This material may be freely
-    # reproduced and modified.
     if size(dg, 2) > 1
         dg = dg'
     end
@@ -616,10 +581,6 @@ function bfgsi(H0, dg, dx)
     dgdx = dot(dx, dg)
 
     if abs(dgdx) > 1e-12
-        # SL: (1+(dg'*Hdg)/dgdx) this is a (1, 1) 2d array, but we should
-        #     be treating it is a scalar. That's why I have .* after it not *
-
-        # 2015-08-03 ELM: Got warning Number + Array is deprecated; use .+ instead
         H = H0 .+ (dgdx.+(dg'*Hdg)).*(dx*dx')/(dgdx^2) - (Hdg*dx'.+dx*Hdg')/dgdx
     else
         # gradient is super small so don't worry updating right now
@@ -628,7 +589,7 @@ function bfgsi(H0, dg, dx)
         end
         warn("bfgs update failed")
 
-        if verbose
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
             @printf "|dg| = %f, |dx| = %f\n" (norm(dg)) (norm(dx))
             @printf "dg'dx = %f\n" dgdx
             @printf "|H*dg| = %f\n" (norm(Hgd))
@@ -670,11 +631,9 @@ function assess_convergence(x::Array,
     return x_converged, f_converged, gr_converged, converged
 end
 
-#=
 """
 Wrapper function to send a model to csminwel
 """
-=#
 function csminwel(
                   fcn::Function,
                   grad::Function,
@@ -688,7 +647,7 @@ function csminwel(
                   store_trace::Bool = false,
                   show_trace::Bool = false,
                   extended_trace::Bool = false,
-                  verbose::Bool = false,
+                  verbose::Symbol = :none,
                   randvecs::Array = [],
                   kwargs...)
     
