@@ -557,6 +557,8 @@ see fit. If adding new states, equilibrium conditions, shocks, or
 observables, be sure to add them to the appropriate list in
 `initialize_model_indices`.
 
+4. Open the module file, `src/DSGE.jl`. Add `ModelXXX` to the list of functions to export, and include each of the files in `src/model/mXXX`.
+
 
 ## Model subspecifications (`m.subspec`)
 
