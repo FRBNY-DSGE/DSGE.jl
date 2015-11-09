@@ -1,27 +1,22 @@
-## moments.jl: Computes and tabulates moments of parameter draws from Metropolis-Hastings
+"""
+`compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90; verbose::Symbol=:none)`
 
-using HDF5, Compat
-
-#=
-doc"""
-compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90)
-
-### Parameters
-  - `m`: the model object
-  - `percent`: the percentage of the mass of draws from Metropolis-Hastings included between the bands displayed in output tables. 
-
-### Description
 Computes prior and posterior parameter moments. Tabulates prior mean, posterior mean, and
 bands in various LaTeX tables stored `tablespath(m)`.
+
+### Arguments
+  - `m`: the model object
+  - `percent`: the percentage of the mass of draws from Metropolis-Hastings included between
+    the bands displayed in output tables. 
 """
-=#
-function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90; verbose=true)
+function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90; 
+                                               verbose::Symbol=:none)
     
     ### Step 1: Read in the matrix of parameter draws from metropolis-hastings
 
     filename = rawpath(m,"estimate","sim_save.h5")
 
-    if verbose
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Reading draws from Metropolis-Hastings from $filename...")
     end
     
@@ -46,31 +41,35 @@ function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90; ve
 
 end
 
-#=
-doc"""
-make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64)
+"""
+```
+make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64;
+                                     verbose::Symbol=:none)
+```
 
-### Parameters
+Tabulates parameter moments in 3 LaTeX tables:
+    
+1. For MAIN parameters, a list of prior means, prior standard deviations, posterior means,
+   and 90% bands for posterior draws
+
+2. For LESS IMPORTANT parameters, a list of the prior means, prior standard deviations,
+   posterior means and 90% bands for posterior draws.
+
+3. A list of prior means and posterior means
+
+### Arguments
     - `Θ`: [num_draws x num_parameters] matrix holding the posterior draws from metropolis-hastings
            from save/sim_save.h5 
     - `percent`: the mass of observations we want; 0 <= percent <= 1
-
-### Description
-Tabulates parameter moments in 3 LaTeX tables:
-    
-1. For MAIN parameters, a list of prior means, prior standard deviations, posterior means, and 90% bands for posterior draws
-
-2. For LESS IMPORTANT parameters, a list of the prior means, prior standard deviations, posterior means and 90% bands for posterior draws.
-
-3. A list of prior means and posterior means
 """
-=#
-function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64; verbose=true)
-    
+function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel,
+                                              Θ::Array{T,2},
+                                              percent::Float64;
+                                              verbose::Symbol=:none)
 
-    ###########################################################################################
+    ########################################################################################
     ## STEP 1: Extract moments of prior distribution from m.parameters
-    ###########################################################################################
+    ########################################################################################
     
     num_params = length(m.parameters) 
     prior_means = zeros(num_params,1)
@@ -112,9 +111,9 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
         end
     end
     
-    ###########################################################################################
+    ########################################################################################
     ## STEP 2: Compute moments and `percent' bands from parameter draws
-    ###########################################################################################
+    ########################################################################################
 
     # Posterior mean for each
     Θ_hat = mean(Θ,1)'       
@@ -134,9 +133,9 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
     end
     
 
-    ###########################################################################################
+    ########################################################################################
     ## STEP 3: Create variables for writing to output table
-    ###########################################################################################
+    ########################################################################################
     
     colnames = ["Parameter ", "Prior Mean ", "Prior Stdd ", "Post Mean ",
                 "$(100*percent)\\% {\\tiny Lower Band} ", "$(100*percent)\\% {\\tiny Upper Band} " ]
@@ -148,13 +147,14 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
                                                            # (n_params x 2)
 
 
-    ###########################################################################################
+    ########################################################################################
     ## STEP 4: WRITE TABLES
-    ###########################################################################################
+    ########################################################################################
     
-    ###########################################################################################
-    ## 4a. Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT parameters
-    ###########################################################################################
+    ########################################################################################
+    ## 4a. Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT
+    ##     parameters
+    ########################################################################################
     
     # Open and start the TeX file
     mainParams_out = tablespath(m,"estimate", "moments_mainParams.tex")
@@ -207,9 +207,9 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
     # Close the file
     endTexTableDoc(mainParams_fid;small=true)
 
-    ###########################################################################################
+    ########################################################################################
     ## 4b. Write to Table 2: Prior mean, std dev and posterior mean, bands for other params
-    ###########################################################################################
+    ########################################################################################
     
     periphParams_out = tablespath(m,"estimate", "moments_periphParams_0.tex")
     periphParams_fid = open(periphParams_out,"w")
@@ -276,9 +276,9 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
     end
     endTexTableDoc(periphParams_fid;small=true)
 
-    ###########################################################################################
+    ########################################################################################
     ## 4c. Write to Table 5: Prior mean and posterior mean for all parameters
-    ###########################################################################################
+    ########################################################################################
 
     table_count = 0  # Keep track of how many tables we've made
     
@@ -325,7 +325,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,
     
     endTexTableDoc(prioPostMean_fid)
 
-    if verbose
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         @printf "Tables are saved as %s.\n" tablespath(m, "estimate", "*.tex")
     end
 end
@@ -351,18 +351,17 @@ function beginTexTableDoc(fid::IOStream)
     
 end
 
-#=
-doc"""
-### Parameters
+"""
+`endTexTableDoc(fid::IOStream;small::Bool=false)`
+
+Prints the necessarily lines to end a table and close a LaTeX document to file descriptor `fid`, then closes the file.
+
+### Arguments
 - `fid`: File descriptor
 
 ### Optional Arguments
 - `small`: Whether to print an additional curly bracket after "\end{tabular}" (necessary if the table is enclosed by "\small{}")
-
-### Description
-Prints the necessarily lines to end a table and close a LaTeX document to file descriptor `fid`, then closes the file.
 """
-=#
 function endTexTableDoc(fid::IOStream;small::Bool=false)
 
     @printf(fid, "\\\\ \\\hline\n")
@@ -379,21 +378,21 @@ function endTexTableDoc(fid::IOStream;small::Bool=false)
 
 end
 
-#=
-doc"""
-find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
+"""
+`find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)`
 
 ### Parameters
 - draws: Matrix of parameter draws (from Metropolis-Hastings, for example)
 - percent: percent of data within bands (e.g. .9 to get 90% of mass within bands)
 
 ### Optional Arguments
-- `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and highest (percent/2)
+- `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
+  highest (percent/2)
 
 ### Description
-Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]` is above `bands[1,i]` and below `bands[2,i]`.
+Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]`
+is above `bands[1,i]` and below `bands[2,i]`.
 """
-=#
 function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
 
     if(percent < 0 || percent > 1)
