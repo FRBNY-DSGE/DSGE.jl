@@ -4,13 +4,7 @@ include("../util.jl")
 
 path = dirname(@__FILE__)
 
-
-# Initialize arguments
-# These come from the first call to the Kalman filter in gibb (line 37) -> objfcndsge (15)
-#   -> dsgelh (136) -> kalcvf2NaN
-# See kalcvf2NaN/test_kalcvf2NaN.m
-
-
+# Initialize arguments to function
 h5 = h5open("$path/../reference/kalman_filter_args.h5")
 for arg in ["data", "lead", "a", "F", "b", "H", "var", "z0", "vz0"]
     eval(parse("$arg = read(h5, \"$arg\")"))
@@ -21,13 +15,10 @@ end
 
 lead = round(Int,lead)
 
-
 # Method with all arguments provided (9)
 out_3 = kalman_filter(data, lead, a, F, b, H, var, z0, vz0)
 out_9 = kalman_filter(data, lead, a, F, b, H, var, z0, vz0; allout=true)
 
-
-#TODO clean up to use less eval
 h5 = h5open("$path/../reference/kalman_filter_out9.h5")
 for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
             :rmsd, :filt, :vfilt]
@@ -46,12 +37,9 @@ for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
 end
 close(h5)
 
-
-
 # Method with optional arguments omitted (7)
 out_3 = kalman_filter(data, lead, a, F, b, H, var)
 out_9 = kalman_filter(data, lead, a, F, b, H, var; allout=true)
-
 
 h5 = h5open("$path/../reference/kalman_filter_out7.h5")
 for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,

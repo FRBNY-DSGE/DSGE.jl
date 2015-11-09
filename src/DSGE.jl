@@ -31,7 +31,7 @@ module DSGE
         ParamBoundsError,
         
         # estimate/
-        dlyap!, kalman_filter, likelihood, posterior, posterior!,
+        dlyap, kalman_filter, likelihood, posterior, posterior!,
         csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, compute_moments,
         make_moment_tables, find_density_bands, prior,
@@ -57,6 +57,7 @@ module DSGE
     include("solve/solve.jl")
     
     include("estimate/kalman.jl")
+    include("estimate/dlyap.jl")
     include("estimate/posterior.jl")
     include("estimate/csminwel.jl")
     include("estimate/hessian.jl")
