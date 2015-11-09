@@ -1,7 +1,6 @@
-
 """
-`kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=false)`
-`kalcvf2NaN(data, lead, a, F, b, H, var, Ny0=0; allout=false)`
+`kalman_filter(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=false)`
+`kalman_filter(data, lead, a, F, b, H, var, Ny0=0; allout=false)`
 
 Inputs
 ------
@@ -63,7 +62,7 @@ Attribution
 -----------
 Adapted from `KALCVF`, Iskander Karibzhanov, Federal Reserve Bank of Atlanta, 2003-03-19.
 """
-function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S},
+function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
                                       lead::Int64,
                                       a::Matrix{S},
                                       F::Matrix{S},
@@ -180,7 +179,7 @@ function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S},
 
 end
 
-function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S},
+function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
                                       lead::Int64,
                                       a::Matrix{S},
                                       F::Matrix{S},
@@ -201,7 +200,7 @@ function kalcvf2NaN{S<:AbstractFloat}(data::Matrix{S},
         vz0 = eye(Nz)*1e6
     end
 
-    return kalcvf2NaN(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=allout)
+    return kalman_filter(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=allout)
 end
 
 immutable Kalman{S<:AbstractFloat}

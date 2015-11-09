@@ -205,7 +205,7 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel{T}, YY::Matrix{T}
     end
 
     ## step 3: compute log-likelihood using Kalman filter
-    ##         note that kalcvf2NaN function assumes a transition equation written as:
+    ##         note that kalman_filter function assumes a transition equation written as:
     ##         S_t = TTT S_{t-1} +eps2_t, where eps2_t = RRReps_t
     ##         therefore redefine QQ2 = var(eps2_t) = RRR*QQ*RRR'
     ##         and  VV2 = cov(eps2_t,u_u) = RRR*VV
@@ -214,7 +214,7 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel{T}, YY::Matrix{T}
     # Run Kalman filter on presample
     R1[:A0]         = zeros(T, n_states_no_ant, 1)
     R1[:P0]         = dlyap(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
-    out             = kalcvf2NaN(R1[:YY]', 1, zeros(T, n_states_no_ant, 1), R1[:TTT], R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0])
+    out             = kalman_filter(R1[:YY]', 1, zeros(T, n_states_no_ant, 1), R1[:TTT], R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0])
     regime_likes[1] = out[:L]
     R1[:zend]       = out[:zend]
     R1[:Pend]       = out[:Pend]
@@ -222,7 +222,7 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel{T}, YY::Matrix{T}
     # Run Kalman filter on normal period
     zprev           = R1[:zend]
     Pprev           = R1[:Pend]
-    out             = kalcvf2NaN(R2[:YY]', 1, zeros(mt_num_states[2], 1), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev)
+    out             = kalman_filter(R2[:YY]', 1, zeros(mt_num_states[2], 1), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev)
     regime_likes[2] = out[:L]
     R2[:zend]       = out[:zend]
     R2[:Pend]       = out[:Pend]
@@ -247,7 +247,7 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel{T}, YY::Matrix{T}
     Pprev[after_shocks_new, before_shocks]    = R2[:Pend][after_shocks_old, before_shocks]
     Pprev[after_shocks_new, after_shocks_new] = R2[:Pend][after_shocks_old, after_shocks_old]
 
-    out             = kalcvf2NaN(R3[:YY]', 1, zeros(mt_num_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev)
+    out             = kalman_filter(R3[:YY]', 1, zeros(mt_num_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev)
     regime_likes[3] = out[:L]
     R3[:zend]       = out[:zend]
     R3[:Pend]       = out[:Pend]
