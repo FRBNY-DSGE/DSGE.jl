@@ -338,6 +338,14 @@ function tomodel{T}(p::Parameter{T,Exponential}, x::T)
 end
 
 tomodel{T}(pvec::ParameterVector{T}) = map(tomodel, pvec)
+tomodel{T}(pvec::ParameterVector{T}, values::Vector{T}) = map(tomodel, pvec, values)
+# function tomodel{T}(model::AbstractDSGEModel, x::Vector{T})
+#     pvec = copy(model.parameters
+#     for (i, θ) in pvec
+#         pvec.value = x[i]
+#     end
+#     map(tomodel, pvec)
+# end
 
 """
 toreal{T<:Number, U<:Transform}(p::Parameter{T,U}, x::T = p.value)
@@ -362,6 +370,11 @@ function toreal{T}(p::Parameter{T,Exponential}, x::T = p.value)
 end
 
 toreal{T}(pvec::ParameterVector{T}, values::Vector{T}) = map(toreal, pvec, values)
+function toreal{T}(pvec::ParameterVector{T})
+    values = T[θ.value for θ in pvec]
+    toreal(pvec, values)
+end
+
 
 
 
