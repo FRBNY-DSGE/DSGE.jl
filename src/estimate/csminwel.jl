@@ -434,7 +434,7 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
             end
         end
 
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
             @printf "Predicted Improvement: %18.9f\n" (-dfhat/2)
         end
         # Have OK dx, now adjust length of step (lambda) until min and max improvement rate
@@ -457,7 +457,7 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
 
             f = fcn(dxtest, args...; kwargs...)
             
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
+            if VERBOSITY[verbose] >= VERBOSITY[:high]
                 @printf "lambda = %10.5f; f = %20.7f\n" lambda f
             end
                 
@@ -552,7 +552,7 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
         end
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:high]
         @printf "Norm of dx %10.5f\n" dxnorm
     end
     
@@ -570,7 +570,7 @@ end
 ### Attribution
 Adapted from `bfgsi.m`, Christopher Sims, 1996.
 """
-function bfgsi(H0, dg, dx; verbose::Symbol = none)
+function bfgsi(H0, dg, dx; verbose::Symbol = :none)
     if size(dg, 2) > 1
         dg = dg'
     end
@@ -582,16 +582,15 @@ function bfgsi(H0, dg, dx; verbose::Symbol = none)
     Hdg = H0*dg
     dgdx = dot(dx, dg)
 
+    H = H0
     if abs(dgdx) > 1e-12
-        H = H0 .+ (dgdx.+(dg'*Hdg)).*(dx*dx')/(dgdx^2) - (Hdg*dx'.+dx*Hdg')/dgdx
+        H += (dgdx.+(dg'*Hdg)).*(dx*dx')/(dgdx^2) - (Hdg*dx'.+dx*Hdg')/dgdx
     else
-        # gradient is super small so don't worry updating right now
         if norm(dg) < 1e-7
-            return H0
+            # gradient is super small so don't worry updating right now
+            # do nothing
         else
             warn("bfgs update failed")
-
-            H = H0
 
             if VERBOSITY[verbose] >= VERBOSITY[:high]
                 @printf "|dg| = %f, |dx| = %f\n" (norm(dg)) (norm(dx))
@@ -633,6 +632,16 @@ function assess_convergence(x::Array,
 
     return x_converged, f_converged, gr_converged, converged
 end
+
+# function Base.show(io::IO, t::OptimizationState)
+#     @printf io "%6d   %14e   %14e\n" t.iteration t.value t.gradnorm
+#     if !isempty(t.metadata)
+#         for (key, value) in t.metadata
+#             @printf io " * %s: %s\n" key value
+#         end
+#     end
+#     return
+# end
 
 """
 Wrapper function to send a model to csminwel
