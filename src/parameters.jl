@@ -215,10 +215,14 @@ function parameter{T,U<:Transform}(key::Symbol,
 
     ret_valuebounds = valuebounds
     ret_transform_parameterization = transform_parameterization
+    ret_transform = transform
+    ret_U = U
     ret_prior = prior
 
     if fixed
         ret_transform_parameterization = (value,value)  # value is transformed already       
+        ret_transform = Untransformed()                 # fixed priors should stay untransformed
+        ret_U = Untransformed
 
         if isa(transform, Untransformed)
             ret_valuebounds = (value,value)
@@ -231,10 +235,10 @@ function parameter{T,U<:Transform}(key::Symbol,
     ret_prior = !isa(ret_prior,NullablePrior) ? NullablePrior(ret_prior) : ret_prior
 
     if scaling == identity
-        return UnscaledParameter{T,U}(key, value, ret_valuebounds, ret_transform_parameterization, transform,
+        return UnscaledParameter{T,ret_U}(key, value, ret_valuebounds, ret_transform_parameterization, ret_transform,
                                       ret_prior, fixed, description, texLabel)
     else
-        return ScaledParameter{T,U}(key, value, scaling(value), ret_valuebounds, ret_transform_parameterization, transform,
+        return ScaledParameter{T,ret_U}(key, value, scaling(value), ret_valuebounds, ret_transform_parameterization, ret_transform,
                                     ret_prior, fixed, scaling, description, texLabel)
     end
 end
@@ -370,12 +374,7 @@ function toreal{T}(p::Parameter{T,Exponential}, x::T = p.value)
 end
 
 toreal{T}(pvec::ParameterVector{T}, values::Vector{T}) = map(toreal, pvec, values)
-function toreal{T}(pvec::ParameterVector{T})
-    values = T[θ.value for θ in pvec]
-    toreal(pvec, values)
-end
-
-
+toreal{T}(pvec::ParameterVector{T}) = map(toreal, pvec)
 
 
 # define operators to work on parameters
