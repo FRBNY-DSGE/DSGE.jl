@@ -59,10 +59,25 @@ end
 @test isa(lastparam, Parameter)
 @test lastparam.value == 0.0181
 
+# toreal and tomodel, acting on the entire parameter vector. they should be inverses!
+pvec = model.parameters
+vals = toreal(pvec)
+tomodel!(model, vals)
+@test pvec == model.parameters
+
+# all fixed parameters should be unchanged by both toreal and tomodel
+for θ in model.parameters
+    if θ.fixed
+        @test θ == toreal(θ)
+        @test θ == tomodel(θ, 3.14)
+        @test θ == tomodel(θ, θ.value)
+    end
+end
+
+
 # prior
 priordensity = exp(prior(model))
-@test priordensity >= 0
-@test priordensity <= 1
+@test 0 <= priordensity <= 1
 
 # settings
 # settings - boolean, string, and number. adding to model. overwriting. filestrings. testing/not testing.
