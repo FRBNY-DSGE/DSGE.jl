@@ -4,7 +4,6 @@ using HDF5, Base.Test
 include("../util.jl")
 path = dirname(@__FILE__)
 
-
 # Test hessian! in context of model
 model = Model990()
 model.testing = true
