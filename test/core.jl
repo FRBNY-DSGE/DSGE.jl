@@ -1,6 +1,5 @@
 using Distributions, Compat
 
-
 # Test Parameter type
 
 # UnscaledParameter, fixed=false
@@ -103,4 +102,3 @@ model <= Setting(:num_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropol
 
 
 nothing
-
