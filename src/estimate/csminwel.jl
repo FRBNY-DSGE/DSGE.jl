@@ -81,11 +81,10 @@ STDOUT, which is typically the REPL if Julia is run interactively.
 * `kwargs...`: Other keyword arguments to be passed to `f` on each
 function call
 """
-function csminwel{S<:AbstractDSGEModel}(fcn::Function,
+function csminwel(fcn::Function,
                                         grad::Function,
                                         x0::Vector,
                                         H0::Matrix=1e-5.*eye(length(x0)),
-                                        model::S=Model990(), 
                                         args...;                                        
                                         xtol::Real=1e-32,  # default from Optim.jl
                                         ftol::Float64=1e-14,  # Default from csminwel
@@ -95,11 +94,8 @@ function csminwel{S<:AbstractDSGEModel}(fcn::Function,
                                         show_trace::Bool = false,
                                         extended_trace::Bool = false,
                                         verbose::Symbol = :none,
-                                        randvecs::Array = [],
+                                        rng::AbstractRNG = MersenneTwister(),
                                         kwargs...)
-    
-    # PZL 8/11/15: for time tests
-    randi = 1
     
     if show_trace
         @printf "Iter     Function value   Gradient norm \n"
@@ -173,12 +169,7 @@ function csminwel{S<:AbstractDSGEModel}(fcn::Function,
             # perturbing search direction if problem not 1D
             if wall1 && (length(H) > 1)
 
-                if !model.testing
-                    Hcliff = H + diagm(diag(H).*rand(model.rng, nx))
-                else
-                    Hcliff = H + diamg(diag(H) .* randvecs[:, randi])
-                    randi += 1
-                end
+                Hcliff = H + diagm(diag(H).*rand(rng, nx))
 
                 if VERBOSITY[verbose] >= VERBOSITY[:low]
                     @printf "Cliff.  Perturbing search direction.\n"
@@ -352,27 +343,26 @@ approximate the gradient numerically. This is convenient for cases where
 you cannot supply an analytical derivative, but it is not as robust as
 using the true derivative.
 """
-function csminwel{S<:AbstractDSGEModel}(fcn::Function,
-                                        x0::Vector,
-                                        H0::Matrix=0.5.*eye(length(x0)),
-                                        args...;
-                                        model::S=Model990(),
-                                        xtol::Real=1e-32,  # default from Optim.jl
-                                        ftol::Float64=1e-14,  # Default from csminwel
-                                        grtol::Real=1e-8,  # default from Optim.jl
-                                        iterations::Int=1000,
-                                        store_trace::Bool = false,
-                                        show_trace::Bool = false,
-                                        extended_trace::Bool = false,
-                                        verbose::Symbol = :none,
-                                        randvecs::Array = [],
-                                        kwargs...)
+function csminwel(fcn::Function,
+                  x0::Vector,
+                  H0::Matrix=0.5.*eye(length(x0)),
+                  args...;
+                  xtol::Real=1e-32,  # default from Optim.jl
+                  ftol::Float64=1e-14,  # Default from csminwel
+                  grtol::Real=1e-8,  # default from Optim.jl
+                  iterations::Int=1000,
+                  store_trace::Bool = false,
+                  show_trace::Bool = false,
+                  extended_trace::Bool = false,
+                  verbose::Symbol = :none,
+                  rng::AbstractRNG = MersenneTwister(),
+                  kwargs...)
     
     grad{T<:Number}(x::Array{T}) = csminwell_grad(fcn, x, args...; kwargs...)
-    csminwel(fcn, grad, x0, H0, model, args...;
+    csminwel(fcn, grad, x0, H0, args...;
              xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
              store_trace=store_trace, show_trace=show_trace,
-             extended_trace=extended_trace, verbose=verbose, randvecs=randvecs, kwargs...)
+             extended_trace=extended_trace, verbose=verbose, rng=rng, kwargs...)
 end
 
 
@@ -647,22 +637,53 @@ end
 """
 Wrapper function to send a model to csminwel
 """
-function csminwel(model::AbstractDSGEModel,
-                  fcn::Function,
-                  grad::Function,
-                  x0::Vector,
-                  H0::Matrix=1e-5.*eye(length(x0)),
-                  args...;
-                  xtol::Real=1e-32,  # default from Optim.jl
-                  ftol::Float64=1e-14,  # Default from csminwel
-                  grtol::Real=1e-8,  # default from Optim.jl
-                  iterations::Int=1000,
-                  store_trace::Bool = false,
-                  show_trace::Bool = false,
-                  extended_trace::Bool = false,
-                  verbose::Symbol = :none,
-                  randvecs::Array = [],
-                  kwargs...)
+function optimize!(model::AbstractDSGEModel,
+                   data::Matrix;
+                   optimizer::Function  = csminwel,
+                   xtol::Real           = 1e-32,  # default from Optim.jl
+                   ftol::Float64        = 1e-14,  # Default from csminwel
+                   grtol::Real          = 1e-8,  # default from Optim.jl
+                   iterations::Int      = 1000,
+                   store_trace::Bool    = false,
+                   show_trace::Bool     = false,
+                   extended_trace::Bool = false,
+                   verbose::Symbol      = :none)
+
+        # For now, only csminwel should be used
+        @assert optimizer == csminwel
     
+        # Inputs to optimization
+        H0             = 1e-4 * eye(num_parameters_free(model))
+        para_free_inds = find([!θ.fixed for θ in model.parameters])
+        x_model        = toreal(model.parameters)
+        x_opt          = x_model[para_free_inds]
+
+        function f_opt(x_opt)
+            x_model[para_free_inds] = x_opt
+            tomodel!(model,x_model)
+            return -posterior(model, data; catch_errors=true)[:post]
+        end
+
+        rng = model.rng
     
+        out, H_ = optimizer(f_opt, x_opt, H0; 
+            xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
+            store_trace=store_trace, show_trace=show_trace, extended_trace=extended_trace,
+            verbose=verbose, rng=rng)
+
+        x_model[para_free_inds] = out.minimum
+        tomodel!(model, x_model)
+
+        # Match original dimensions
+        out.minimum = x_model
+
+        H = zeros(num_parameters(model), num_parameters(model))
+        # Fill in rows/cols of zeros corresponding to location of fixed parameters
+        # For each row corresponding to a free parameter, fill in columns corresponding to free
+        # parameters. Everything else is 0.
+        for (row_free, row_full) in enumerate(para_free_inds)
+            H[row_full,para_free_inds] = H_[row_free,:]
+        end
+
+        return out, H
 end
