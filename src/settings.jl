@@ -129,7 +129,7 @@ draw in Metropolis-Hastings.
 function default_settings(m::AbstractDSGEModel)
 
     # I/O File locations
-    modelpath = normpath(joinpath(dirname(@__FILE__), "..","save","output_data",spec(m),subspec(m)))
+    modelpath = normpath(joinpath(dirname(@__FILE__), "..","save","output_data"))
     datapath = normpath(joinpath(dirname(@__FILE__), "..","save","input_data"))
 
     
