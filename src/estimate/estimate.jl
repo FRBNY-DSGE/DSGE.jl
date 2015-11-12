@@ -17,7 +17,11 @@ estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_covariance=[
 
    - `:high`: Status updates provided at each iteration in Metropolis-Hastings.
 
-- `proposal_covariance`: Used to test the metropolis_hastings algorithm with a precomputed covariance matrix for the proposal distribution. When the Hessian is singular, eigenvectors corresponding to zero eigenvectors are not well defined, so eigenvalue decomposition can cause problems. Passing a precomputed matrix allows us to ensure that the rest of the routine has not broken.
+- `proposal_covariance`: Used to test the metropolis_hastings algorithm with a precomputed
+  covariance matrix for the proposal distribution. When the Hessian is singular, eigenvectors
+  corresponding to zero eigenvectors are not well defined, so eigenvalue decomposition can
+  cause problems. Passing a precomputed matrix allows us to ensure that the rest of the
+  routine has not broken.
 
 ### Description
 This routine implements the full estimation stage of the FRBNY DSGE model.
@@ -122,7 +126,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
 
     # Compute inverse hessian and create proposal distribution, or
     # just create it with the given cov matrix if we have it
-    propdist = if length(proposal_covariance) == 0
+    propdist = if isempty(proposal_covariance)
         # Make sure the mode and hessian have the same number of parameters
         n = length(mode)
         @assert (n, n) == size(hessian)
@@ -170,11 +174,16 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
 end
 
 
-#=
-doc"""
-metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel, YY::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low, fix_seed::Bool=true)
+"""
+```
+metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel,
+    YY::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low)
+```
 
-### Parameters
+Implements the Metropolis-Hastings MCMC algorithm for sampling from the posterior
+distribution of the parameters.
+
+### Arguments
 * `propdist` The proposal distribution that Metropolis-Hastings begins sampling from.
 * `m`: The model object
 * `YY`: Data matrix for observables
@@ -189,19 +198,17 @@ metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEMod
    - `:low`: Status updates provided at each block.
 
    - `:high`: Status updates provided at each draw.
-
-* `fix_seed`: fix the seed of the random number generator
-
-### Description
-Implements the Metropolis-Hastings MCMC algorithm for sampling from the posterior distribution of the parameters.
 """
-=#
-function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractDSGEModel,
-       YY::Matrix{T}, cc0::T, cc::T; verbose::Symbol=:low, fix_seed::Bool=true)
+function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
+                                               m::AbstractDSGEModel,
+                                               YY::Matrix{T},
+                                               cc0::T,
+                                               cc::T;
+                                               verbose::Symbol=:low)
 
     # If testing, set the random seeds at fixed numbers
     
-    if fix_seed || m.testing
+    if m.testing
         srand(m.rng, 654)
     end
         
