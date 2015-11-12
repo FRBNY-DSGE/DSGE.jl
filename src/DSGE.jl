@@ -1,4 +1,4 @@
-isdefined(Base, :__precompile__) && __precompile__()
+isdefined(Base, :__precompile__) && __precompile__(false)
 
 module DSGE
     using Distributions, Roots.fzero, HDF5
@@ -53,7 +53,6 @@ module DSGE
     include("distributions_ext.jl")
     include("abstractdsgemodel.jl")
     include("settings.jl")
-
     include("solve/gensys.jl")
     include("solve/solve.jl")
 
