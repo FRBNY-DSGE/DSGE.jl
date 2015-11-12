@@ -623,7 +623,7 @@ function assess_convergence(x::Array,
 end
 
 function Base.show(io::IO, t::OptimizationState)
-    @printf io "%6d   %14.9e   %14.9e\n" t.iteration t.value t.gradnorm
+    @printf io "%6d   %14.9f   %14.9f\n" t.iteration t.value t.gradnorm
     if !isempty(t.metadata)
         for (key, value) in t.metadata
             @printf io " * %s: %s\n" key value
