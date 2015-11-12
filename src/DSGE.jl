@@ -32,7 +32,7 @@ module DSGE
         
         # estimate/
         dlyap, kalman_filter, likelihood, posterior, posterior!,
-        csminwel, hessian!, estimate, proposal_distribution,
+        optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, compute_moments,
         make_moment_tables, find_density_bands, prior,
         
