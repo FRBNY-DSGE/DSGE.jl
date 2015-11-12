@@ -1,7 +1,7 @@
-isdefined(Base, :__precompile__) && __precompile__()
+isdefined(Base, :__precompile__) && __precompile__(false)
 
 module DSGE
-    using Compat, Distributions, Roots.fzero, HDF5
+    using Compat, Distributions, Roots.fzero, HDF5, Debug
     using DataStructures: SortedDict, insert!, ForwardOrdering
     
     if VERSION < v"0.4-"
@@ -53,16 +53,6 @@ module DSGE
         include("solve/ordered_qz.jl")
     end
     
-    include("solve/gensys.jl")
-    include("solve/solve.jl")
-    
-    include("estimate/kalman.jl")
-    include("estimate/dlyap.jl")
-    include("estimate/posterior.jl")
-    include("estimate/csminwel.jl")
-    include("estimate/hessian.jl")
-    include("estimate/estimate.jl")
-    include("estimate/moments.jl")
     
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")
@@ -78,5 +68,17 @@ module DSGE
     include("models/smets_wouters/subspecs.jl")
     include("models/smets_wouters/eqcond.jl")
     include("models/smets_wouters/measurement.jl")
+    include("models/smets_wouters/augment_states.jl")
+
+    include("solve/gensys.jl")
+    include("solve/solve.jl")
+    
+    include("estimate/kalman.jl")
+    include("estimate/dlyap.jl")
+    include("estimate/posterior.jl")
+    include("estimate/csminwel.jl")
+    include("estimate/hessian.jl")
+    include("estimate/estimate.jl")
+    include("estimate/moments.jl")
 
 end
