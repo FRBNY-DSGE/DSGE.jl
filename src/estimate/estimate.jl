@@ -66,29 +66,34 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
         println("Reoptimizing...")
         
         # Inputs to minimization algorithm
-        function posterior_min!{T<:AbstractFloat}(x::Vector{T})
-            tomodel!(m,x)
-            return -posterior(m, YY; catch_errors=true)[:post]
-        end
-
-        xh = toreal(m.parameters)
-        H = 1e-4 * eye(num_parameters(m))
-        nit = 1000
+        H = 1e-4 * eye(num_parameters_free(m))
+        nit = 100
         crit = 1e-10
         converged = false
+
+        para_free = [!θ.fixed for θ in m.parameters]
+        para_free_inds = find(para_free)
+        x_model = toreal(m.parameters)
+        x_opt = x_model[para_free_inds]
+        function f_opt(x_opt)
+            x_model[para_free_inds] = x_opt
+            tomodel!(m,x_model)
+            return -posterior(m, YY; catch_errors=true)[:post]
+        end
 
         # If the algorithm stops only because we have exceeded the maximum number of
         # iterations, continue improving guess of modal parameters
         while !converged
-            out, H = csminwel(posterior_min!, xh, H; model=m, ftol=crit, iterations=nit, show_trace=true, verbose=verbose)
-            xh = out.minimum
+            out, H = csminwel(f_opt, x_opt, H; model=m, ftol=crit, iterations=nit, show_trace=true, verbose=verbose)
+            x_opt = out.minimum
+            x_model[para_free_inds] = x_opt
             converged = !out.iteration_converged
         end
 
         # Transform modal parameters so they are no longer bounded (i.e., allowed
         # to lie anywhere on the real line).
-        tomodel!(m, xh)
-        mode = [param.value for param in m.parameters]
+        tomodel!(m, x_model)
+        mode = map(θ->θ.value, m.parameters)
 
         # Write mode to file
         h5 = h5open(rawpath(m, "estimate", "mode_out.h5"),"w")
