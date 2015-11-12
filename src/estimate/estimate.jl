@@ -50,11 +50,11 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
     mode = []
 
     if reoptimize(m)
-        h5 = h5open(inpath(m, "user", "mode_in.h5"),"r")
-        mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
+        h5 = h5open(inpath(m, "user", "mode_in_$(data_vintage(m)).h5"),"r")
+        mode = read(h5["params"])   #dataset name is mode in mode_in_optimized, but params in mode_in
         close(h5)
     else
-        h5 = h5open(inpath(m, "user", "mode_in_optimized.h5"),"r")
+        h5 = h5open(inpath(m, "user", "mode_in_optimized_$(data_vintage(m)).h5"),"r")
         mode = read(h5["mode"])
         close(h5)
     end
