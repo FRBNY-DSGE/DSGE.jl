@@ -42,7 +42,7 @@ module DSGE
         make_moment_tables, find_density_bands, prior,
 
         # models/
-        steadystate!, Model990, Model994, SmetsWouters, eqcond, measurement,
+        steadystate!, Model990, SmetsWouters, eqcond, measurement,
 
         # solve/
         ordschur, gensys, solve

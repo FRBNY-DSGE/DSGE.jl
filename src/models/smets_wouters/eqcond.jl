@@ -258,6 +258,7 @@ function eqcond(m::SmetsWouters)
     Γ0[eq[:res], endo[:g_t]] = -m[:g_star]
     if m[:ρ_z] < 1
         Γ0[eq[:res], endo[:ztil_t]] = m[:g_star] * (1/(1-m[:α]))
+
     end
     Γ0[eq[:res], endo[:c_t]] = -m[:cstar]/m[:ystar]
     Γ0[eq[:res], endo[:i_t]] = -m[:istar]/m[:ystar]
