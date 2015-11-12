@@ -15,18 +15,11 @@ solve(model::AbstractDSGEModel)
 Loads in the matrices that form the canonical representation of the equilibrium conditions by calling `eqcond`. Then calls `gensys` for the state-space representation of the model. Finally, calls `augment_states` to add growth rates to the observables. See documentation for each of these 3 functions for further details.
 """
 =#
-@debug function solve(model::AbstractDSGEModel)
+function solve(model::AbstractDSGEModel)
 
-    @bp
     # Get equilibrium condition matrices
     Γ0, Γ1, C, Ψ, Π  = eqcond(model) 
-    @bp
 
-    h5 = h5open("/home/rceexm08/gensys_jl.h5","w")
-    h5["Γ0"] = Γ0
-    h5["Γ1"] = Γ1
-    close(h5)
-    
     # Solve model
     TTT_gensys, CCC_gensys, RRR_gensys = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
     TTT_gensys = real(TTT_gensys)
