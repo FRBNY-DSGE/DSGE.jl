@@ -294,13 +294,14 @@ function csminwel(fcn::Function,
             H = bfgsi(H , gh-gr , xh-x; verbose=verbose)
         end
 
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
+            @printf "Improvement on iteration %d = %18.9f\n" iteration fh-f_x
+        end
+
         if stuck
-            #!! 2015-08-03 ELM: This seems to throw an error when in fact we've just come to a solution. 
             if VERBOSITY[verbose] >= VERBOSITY[:low]
-                #error("improvement < ftol -- terminating")
                 @printf "improvement < ftol -- terminating\n"
             end
-            
         end
 
         # record# retcodeh of previous x
