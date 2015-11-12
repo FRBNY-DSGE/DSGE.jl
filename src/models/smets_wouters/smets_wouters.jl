@@ -136,9 +136,9 @@ function initialize_model_indices!(m::SmetsWouters)
         :euler, :inv, :capval, :output, :caputl, :capsrv, :capev,
         :mkupp, :phlps, :caprnt, :msub, :wage, :mp, :res, :eq_g, :eq_b, :eq_μ, :eq_z,
         :eq_λ_f, :eq_λ_w, :eq_rm, :eq_λ_f1, :eq_λ_w1, :eq_Ec,
-        :eq_Eqk, :eq_Ei, :eq_EL, :eq_Erk, :eq_Ew, :euler_f, :inv_f,
+        :eq_Eqk, :eq_Ei, :eq_Eπ, :eq_EL, :eq_Erk, :eq_Ew, :euler_f, :inv_f,
         :capval_f, :output_f, :caputl_f, :capsrv_f, :capev_f, :mkupp_f, :caprnt_f, :msub_f,
-        :res_f, :eq_Ec_f, :eq_Eqk_f, :eq_Ei_f, :eq_EL_f, :eq_Erk_f];
+        :res_f, :eq_Ec_f, :eq_Eqk_f, :eq_Ei_f, :eq_EL_f, :eq_Erk_f, :eq_ztil];
         [symbol("eq_rml$i") for i=1:num_anticipated_shocks(m)]]
 
     # Additional states added after solving model
@@ -154,11 +154,7 @@ function initialize_model_indices!(m::SmetsWouters)
         :π_gdpdef,    # inflation (GDP deflator)
         :R_n,         # nominal interest rate
         :g_c,         # consumption growth
-        :g_i,         # investment growth
-        :sprd,        # spreads
-        :π_long,      # 10-year inflation expectation
-        :R_long,      # long-term rate
-        :tfp];        # total factor productivity
+        :g_i];         # investment growth
         [symbol("R_n$i") for i=1:num_anticipated_shocks(m)]] # compounded nominal rates
 
     for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
@@ -435,10 +431,20 @@ end
 
 function settings_smets_wouters(m::SmetsWouters)
 
+    default_settings(m)
+    
     # Anticipated shocks
-    m <= Setting(:num_anticipated_shocks,         12, "Number of anticipated policy shocks")
+    m <= Setting(:num_anticipated_shocks,         0, "Number of anticipated policy shocks")
     m <= Setting(:num_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
     m <= Setting(:num_anticipated_lags,  26, "Number of periods back to incorporate zero bound expectations")
 
-    return default_settings(m)
+    # Estimation
+    m <= Setting(:reoptimize, true, true, "reop", "whether to re-find mode")
+    m <= Setting(:recalculate_hessian, true, true, "ch", "whether to calculate the hessian")
+
+    # Data vintage
+    m <= Setting(:data_vintage, "150827", true, "vint", "Date of data")
+
+    m.settings
 end
+
