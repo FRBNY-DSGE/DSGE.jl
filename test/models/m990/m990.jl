@@ -1,3 +1,4 @@
+using DSGE
 import DSGE: RootInverseGamma, Exponential
 using HDF5, Base.Test, Distributions
 include("../../util.jl")
@@ -23,7 +24,7 @@ fixed_parameters = [:δ, :λ_w, :ϵ_p, :ϵ_w, :g_star]
 # not all parameters appear in model.parameters
 i = 1
 for θ in model.parameters
-    !isa(θ,AbstractParameter) && continue
+    !isa(θ,AbstractParameter) && error()
     in(θ.key, fixed_parameters) && continue
     
     para[i] = θ.value

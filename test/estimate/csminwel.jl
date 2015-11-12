@@ -34,7 +34,7 @@ res_numeric_grad, _ = csminwel(rosenbrock, [10.0, -9.0])
 model = Model990()
 model.testing=true
 
-params = h5open(inpath(model, "user", "mode_in.h5")) do file
+x0 = h5open(inpath(model, "user", "mode_in.h5")) do file
     read(file, "params")
 end
 YY = h5open(inpath(model, "data", "data_REF.h5")) do file
@@ -47,11 +47,11 @@ H_expected = read(file, "H_expected")
 close(file)
 
 # See src/estimate/estimate.jl
-update!(model, params)
+update!(model, x0)
 nit = 5
 crit = 1e-10
 
-out, H = optimize!(model, YY; ftol=crit, iterations=nit)
+@time out, H = optimize!(model, YY; ftol=crit, iterations=nit)
 
 @test_matrix_approx_eq minimum_ out.minimum
 @test_approx_eq f_minimum out.f_minimum
