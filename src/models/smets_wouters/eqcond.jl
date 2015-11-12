@@ -68,7 +68,7 @@ function eqcond(m::SmetsWouters)
     Γ0[eq[:inv_f], endo[:z_t]]    = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ1[eq[:inv_f], endo[:i_f_t]]  = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ0[eq[:inv_f], endo[:Ei_f_t]]  = -m[:β]*exp((1 - m[:σ_c])*m[:zstar])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
-    Γ0[eq[:inv_f], endo[:ztil_t]] = -( 1/(1-m[:α]) )*(m[:ρ_z]-1)*m[:β]*exp((1-m[:σ_c])*zstar)/(1+m[:β]*exp((1-m[:σ_c])*zstar))
+    Γ0[eq[:inv_f], endo[:ztil_t]] = -( 1/(1-m[:α]) )*(m[:ρ_z]-1)*m[:β]*exp((1-m[:σ_c])*m[:zstar])/(1+m[:β]*exp((1-m[:σ_c])*m[:zstar]))
 
     Γ0[eq[:inv_f], endo[:μ_t]]   = -1.
 
@@ -78,12 +78,12 @@ function eqcond(m::SmetsWouters)
 
     # Sticky prices and wages
 
-    Γ0[eq[:capval],endo[:E_rk]] = -m[:rkstar]/(m[:rkstar]+1-m[:δ])
-    Γ0[eq[:capval],endo[:E_qk]] = -(1-m[:δ])/(m[:rkstar]+1-m[:δ])
+    Γ0[eq[:capval],endo[:Erk_t]] = -m[:rkstar]/(m[:rkstar]+1-m[:δ])
+    Γ0[eq[:capval],endo[:Eqk_t]] = -(1-m[:δ])/(m[:rkstar]+1-m[:δ])
     Γ0[eq[:capval],endo[:qk_t]] = 1.
     Γ0[eq[:capval],endo[:R_t]]  = 1.
-    Γ0[eq[:capval],endo[:b_t]]  = -(m[:σ_c]*(1+h*exp(-m[:zstar])))/(1-h*exp(-m[:zstar]))
-    Γ0[eq[:capval],endo[:E_pi]] = -1.
+    Γ0[eq[:capval],endo[:b_t]]  = -(m[:σ_c]*(1+m[:h]*exp(-m[:zstar])))/(1-m[:h]*exp(-m[:zstar]))
+    Γ0[eq[:capval],endo[:Eπ_t]] = -1.
 
     # Flexible prices and wages 
     Γ0[eq[:capval_f], endo[:Erk_f_t]] = -m[:rkstar]/(1 + m[:rkstar] - m[:δ])
@@ -256,8 +256,8 @@ function eqcond(m::SmetsWouters)
     # Sticky prices and wages
     Γ0[eq[:res], endo[:y_t]] = 1.
     Γ0[eq[:res], endo[:g_t]] = -m[:g_star]
-    if m[:ρ_z]<1
-        Γ0[eq[:res], endo[:ztil_t]] = m[:gstar] * (1/(1-m[:α]))
+    if m[:ρ_z] < 1
+        Γ0[eq[:res], endo[:ztil_t]] = m[:g_star] * (1/(1-m[:α]))
     end
     Γ0[eq[:res], endo[:c_t]] = -m[:cstar]/m[:ystar]
     Γ0[eq[:res], endo[:i_t]] = -m[:istar]/m[:ystar]
@@ -267,41 +267,11 @@ function eqcond(m::SmetsWouters)
     Γ0[eq[:res_f], endo[:y_f_t]] = 1.
     Γ0[eq[:res_f], endo[:g_t]]   = -m[:g_star]
     if m[:ρ_z]<1
-        Γ0[eq[:res_f], endo[:ztil_t]] = m[:gstar] * (1/(1-m[:α]))
+        Γ0[eq[:res_f], endo[:ztil_t]] = m[:g_star] * (1/(1-m[:α]))
     end
     Γ0[eq[:res_f], endo[:c_f_t]] = -m[:cstar]/m[:ystar]
     Γ0[eq[:res_f], endo[:i_f_t]] = -m[:istar]/m[:ystar]
     Γ0[eq[:res_f], endo[:u_f_t]] = -m[:rkstar]*m[:kstar]/m[:ystar]
-
-
-
-    ### 15. Extra States
-    # These aren't strictly necessary, but they track lags or simplify the equations
-
-    # π_t1
-    Γ0[eq[:π1], endo[:π_t1]] = 1.
-    Γ1[eq[:π1], endo[:π_t]]  = 1.
-
-    # π_t2
-    Γ0[eq[:π2], endo[:π_t2]] = 1.
-    Γ1[eq[:π2], endo[:π_t1]] = 1.
-
-    # π_a
-    Γ0[eq[:π_a], endo[:π_a_t]] = 1.
-    Γ0[eq[:π_a], endo[:π_t]]   = -1.
-    Γ0[eq[:π_a], endo[:π_t1]]  = -1.
-    Γ0[eq[:π_a], endo[:π_t2]]  = -1.
-    Γ1[eq[:π_a], endo[:π_t2]]  = 1.
-
-    # Rt1
-    Γ0[eq[:Rt1], endo[:R_t1]] = 1.
-    Γ1[eq[:Rt1], endo[:R_t]]  = 1.
-
-    # Ez_t
-    Γ0[eq[:eq_Ez], endo[:Ez_t]]    = 1.
-    Γ0[eq[:eq_Ez], endo[:ztil_t]] = -(m[:ρ_z]-1)/(1-m[:α])
-    Γ0[eq[:eq_Ez], endo[:zp_t]]   = -m[:ρ_z_p]
-
 
 
     ### EXOGENOUS SHOCKS ###
