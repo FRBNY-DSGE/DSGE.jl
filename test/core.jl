@@ -12,10 +12,13 @@ using Distributions, Compat
 @test α.texLabel == ""
 
 # UnscaledParameter, fixed = true
-α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05), fixed=true)
+α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), Untransformed(), Normal(0.30, 0.05), fixed=true)
 @test α_fixed.transform_parameterization == (0.1596,0.1596)
-@test isa(α_fixed.transform, SquareRoot)
+@test isa(α_fixed.transform, Untransformed)
 
+# UnscaledParameter, fixed = true, transform should be overwritten given fixed
+α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05), fixed=true)
+@test isa(α_fixed.transform, Untransformed)
 
 # Fixed UnscaledParameter, minimal constructor
 δ = parameter(:δ, 0.025)
@@ -67,9 +70,8 @@ tomodel!(model, vals)
 # all fixed parameters should be unchanged by both toreal and tomodel
 for θ in model.parameters
     if θ.fixed
-        @test θ == toreal(θ)
-        @test θ == tomodel(θ, 3.14)
-        @test θ == tomodel(θ, θ.value)
+        @test θ.value == toreal(θ)
+        @test θ.value == tomodel(θ, θ.value)
     end
 end
 
