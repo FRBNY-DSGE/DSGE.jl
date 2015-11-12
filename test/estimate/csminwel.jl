@@ -25,11 +25,9 @@ end
 x_init = [10.0, -9.0]
 x_expected = [a, a^2.0]
 
-model = Model990()
-
 res_real_grad, _ = csminwel(rosenbrock, rosenbrock_grad, [10.0, -9.0])
 @test_approx_eq x_expected res_real_grad.minimum
-res_numeric_grad, _ = csminwel(rosenbrock, [10.0, -9.0], model=model)
+res_numeric_grad, _ = csminwel(rosenbrock, [10.0, -9.0])
 @test_approx_eq_eps x_expected res_numeric_grad.minimum 1e-8
 
 # Test in model optimization
@@ -50,23 +48,10 @@ close(file)
 
 # See src/estimate/estimate.jl
 update!(model, params)
-
-function posterior_min!{T<:AbstractFloat}(x::Vector{T})
-    tomodel!(model,x)
-    return -posterior(model, YY; catch_errors=true)[:post]
-end
-
-x0 = toreal(model.parameters)
-H = 1e-4 * eye(DSGE.num_parameters(model))
 nit = 5
 crit = 1e-10
 
-out, H = csminwel(posterior_min!, x0, H; model=model, ftol=crit, iterations=nit, show_trace=false, verbose=:none)
-# h5 = h5open("/home/rcemjs04/.julia/v0.4/DSGE/test/reference/csminwel_out.h5","w")
-# h5["minimum"] = out.minimum
-# h5["f_minimum"] = out.f_minimum
-# h5["H_expected"] = H
-# close(h5)
+out, H = optimize!(model, YY; ftol=crit, iterations=nit)
 
 @test_matrix_approx_eq minimum_ out.minimum
 @test_approx_eq f_minimum out.f_minimum
