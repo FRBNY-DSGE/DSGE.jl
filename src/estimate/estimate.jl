@@ -47,16 +47,15 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
         println("Reading in previous mode")
     end
     
-    mode = []
-
-    if reoptimize(m)
-        h5 = h5open(inpath(m, "user", "mode_in.h5"),"r")
-        mode = read(h5["params"])   #it's mode in mode_in_optimized, but params in mode_in
-        close(h5)
+    mode = if reoptimize(m)
+        #it's mode in mode_in_optimized, but params in mode_in
+        h5open(inpath(m, "user", "mode_in.h5"),"r") do file
+            read(file, "params")   
+        end
     else
-        h5 = h5open(inpath(m, "user", "mode_in_optimized.h5"),"r")
-        mode = read(h5["mode"])
-        close(h5)
+        h5open(inpath(m, "user", "mode_in_optimized.h5"),"r") do file
+            read(file, "mode")
+        end
     end
 
     update!(m, mode)
