@@ -13,7 +13,6 @@ Driver to compute the model solution and augment transition matrices.
     S_t = TTT*S_{t-1} + RRR*ϵ_t + CCC
     ```
 """
-
 function solve(m::AbstractModel)
 
     # Get equilibrium condition matrices
