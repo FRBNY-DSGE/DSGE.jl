@@ -677,3 +677,13 @@ function steadystate!(m::Model994)
 
     return m
 end
+
+function settings_m994(m::Model994)
+
+    # Anticipated shocks
+    m <= Setting(:num_anticipated_shocks,         6, "Number of anticipated policy shocks")
+    m <= Setting(:num_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
+    m <= Setting(:num_anticipated_lags,  24, "Number of periods back to incorporate zero bound expectations")
+
+    return default_settings(m)
+end

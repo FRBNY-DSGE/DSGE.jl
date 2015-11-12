@@ -104,7 +104,7 @@ the only default setting that is printed to output filenames.
 - `num_anticipated_lags::Setting{Int}`: Number of periods back to
 incorporate zero bound expectations.
 - `num_presample_periods::Setting{Int}`: Number of periods in the
-  presample
+presample
 
 ### Estimation 
 
@@ -136,10 +136,6 @@ function default_settings(m::AbstractDSGEModel)
     m <= Setting(:modelpathroot, modelpath, "Root of data directory structure")
     m <= Setting(:datapathroot, datapath, "Input data directory path")
 
-    # Anticipated shocks
-    m <= Setting(:num_anticipated_shocks,         6, "Number of anticipated policy shocks")
-    m <= Setting(:num_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    m <= Setting(:num_anticipated_lags,  24, "Number of periods back to incorporate zero bound expectations")
 
     # TODO: should be set when data are read in
     m <= Setting(:num_presample_periods, 2, "Number of periods in the presample")
