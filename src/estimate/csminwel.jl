@@ -199,7 +199,9 @@ function csminwel{S<:AbstractDSGEModel}(fcn::Function,
                     end
 
                     if wall2
-                        @printf "Cliff again.  Try traversing\n"
+                        if VERBOSITY[verbose] >= VERBOSITY[:low]
+                            @printf "Cliff again.  Try traversing\n"
+                        end
 
                         if norm(x2-x1) < 1e-13
                             f3 = f_x
@@ -585,20 +587,19 @@ function bfgsi(H0, dg, dx; verbose::Symbol = :none)
     H = H0
     if abs(dgdx) > 1e-12
         H += (dgdx.+(dg'*Hdg)).*(dx*dx')/(dgdx^2) - (Hdg*dx'.+dx*Hdg')/dgdx
+    elseif norm(dg) < 1e-7
+        # gradient is super small so don't worry updating right now
+        # do nothing
     else
-        if norm(dg) < 1e-7
-            # gradient is super small so don't worry updating right now
-            # do nothing
-        else
-            warn("bfgs update failed")
+        warn("bfgs update failed")
 
-            if VERBOSITY[verbose] >= VERBOSITY[:high]
-                @printf "|dg| = %f, |dx| = %f\n" (norm(dg)) (norm(dx))
-                @printf "dg'dx = %f\n" dgdx
-                @printf "|H*dg| = %f\n" (norm(Hdg))
-            end
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
+            @printf "|dg| = %f, |dx| = %f\n" (norm(dg)) (norm(dx))
+            @printf "dg'dx = %f\n" dgdx
+            @printf "|H*dg| = %f\n" (norm(Hdg))
         end
     end
+
     return H
 end
 
