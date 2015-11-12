@@ -290,7 +290,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
 
     # exogenous processes - level
     m <= parameter(:γ,      0.3982, (-5.0, 5.0),     (-5., 5.),     Untransformed(), Normal(0.4, 0.1),            fixed=false, scaling = x -> x/100, 
-                   description="γ: The log of the steady-state growth rate of technology.", # check this, I thinkt that's γ_star
+                   description="γ: The log of the steady-state growth rate of technology.", 
                    texLabel="\\gamma")
 
     m <= parameter(:Lmean,  875., (-1000., 1000.), (-1e3, 1e3),   Untransformed(), Normal(-45, 5),   fixed=false,
