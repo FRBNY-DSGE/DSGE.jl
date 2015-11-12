@@ -203,7 +203,7 @@ function Model990(subspec::AbstractString="ss0")
             _filestrings)
 
     # Set settings
-    default_settings(m)
+    settings_m990(m)
     default_test_settings(m)
     
     # Initialize parameters
@@ -639,4 +639,14 @@ function steadystate!(m::Model990)
     m[:ζ_nσ_ω]  = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:zstar])*(1+Rhostar)*μestar*Gstar*(ζ_Gσ_ω-ζ_gw/ζ_zw*ζ_zσ_ω)
 
     return m
+end
+
+function settings_m990(m::Model990)
+
+    # Anticipated shocks
+    m <= Setting(:num_anticipated_shocks,         6, "Number of anticipated policy shocks")
+    m <= Setting(:num_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
+    m <= Setting(:num_anticipated_lags,  24, "Number of periods back to incorporate zero bound expectations")
+
+    return default_settings(m)
 end
