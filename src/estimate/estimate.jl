@@ -105,7 +105,7 @@ function estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_cov
             println("Recalculating Hessian...")
         end
         
-        hessian, _ = hessian!(m, mode, YY; verbose=true)
+        hessian, _ = hessian!(m, mode, YY; verbose=verbose)
 
         h5open(rawpath(m, "estimate","hessian.h5"),"w") do file
             file["hessian"] = hessian
