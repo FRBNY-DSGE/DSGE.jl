@@ -37,7 +37,7 @@ module DSGE
         make_moment_tables, find_density_bands, prior,
         
         # models/
-        steadystate!, Model990, Model994, eqcond, measurement,
+        steadystate!, Model990, Model994, SmetsWouters, eqcond, measurement,
 
         # solve/
         ordschur, gensys, solve
@@ -73,5 +73,10 @@ module DSGE
     include("models/m994/subspecs.jl")
     include("models/m994/eqcond.jl")
     include("models/m994/measurement.jl")
+
+    include("models/smets_wouters/smets_wouters.jl")
+    include("models/smets_wouters/subspecs.jl")
+    include("models/smets_wouters/eqcond.jl")
+    include("models/smets_wouters/measurement.jl")
 
 end
