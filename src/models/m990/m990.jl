@@ -244,7 +244,8 @@ function Model990(subspec::AbstractString="ss0")
 
     ## TODO - ask Marc and Marco
     m <= parameter(:ν_l,     2.5975, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    Normal(2, 0.75),            fixed=false,
-                   description="ν_l: The coefficient of relative risk aversion on the labor term of households' utility function.", texLabel="\nu_l")
+                   description="ν_l: The coefficient of relative risk aversion on the labor
+                   term of households' utility function.", texLabel="\\nu_l")
     
     m <= parameter(:ζ_w,   0.9291, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.1),          fixed=false,
                    description="ζ_w: (1-ζ_w) is the probability with which households can freely choose wages in each period. With probability ζ_w, wages increase at a geometrically weighted average of the steady state rate of wage increases and last period's productivity times last period's inflation.",
@@ -298,7 +299,7 @@ function Model990(subspec::AbstractString="ss0")
     # financial frictions parameters
     m <= parameter(:Fω,      0.0300, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.03, 0.01),         fixed=true,    scaling = x -> 1 - (1-x)^0.25,
                    description="F(ω): The cumulative distribution function of ω (idiosyncratic iid shock that increases or decreases entrepreneurs' capital).",
-                   texLabel="F(\omega)")
+                   texLabel="F(\\omega)")
     
     m <= parameter(:sprd,     1.7444, (0., 100.),      (1e-5, 0.),    DSGE.Exponential(),   GammaAlt(2., 0.1),           fixed=false,  scaling = x -> (1 + x/100)^0.25,
                    description="spr_*: This is the something something.",   
@@ -348,7 +349,7 @@ function Model990(subspec::AbstractString="ss0")
 
     m <= parameter(:ρ_λ_w,    0.3884, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
                    description="ρ_λ_w: AR(1) coefficient in the wage mark-up shock process.", # CHECK THIS
-                   texLabel="\\rho_{\\lambda_f}")
+                   texLabel="\\rho_{\\lambda_w}")
 
     #monetary policy shock - see eqcond
     m <= parameter(:ρ_rm,     0.2135, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
@@ -358,7 +359,7 @@ function Model990(subspec::AbstractString="ss0")
     # TODO - check this
     m <= parameter(:ρ_σ_w,   0.9898, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=false,
                    description="ρ_σ_w: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with mean ρ_σ_w. Innovations to the process are called _spread shocks_.",
-                   texLabel="\\rho_{\\sigma \\omega}")
+                   texLabel="\\rho_{\\sigma_\\omega}")
 
     # TODO - We're skipping this for now
     m <= parameter(:ρ_μe,    0.7500, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=true,
@@ -367,7 +368,7 @@ function Model990(subspec::AbstractString="ss0")
 
     ## TODO
     m <= parameter(:ρ_γ,   0.7500, (1e-5, 0.99999), (1e-5, 0.99),  SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=true,  description="ρ_γ: AR(1) coefficient on XX process.",              texLabel="\\rho_{\\gamma}")    
-    m <= parameter(:ρ_π_star,   0.9900, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=true,  description="ρ_π_star: This is the something something.",         texLabel="\\rho_{pi}^*")   
+    m <= parameter(:ρ_π_star,   0.9900, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2),           fixed=true,  description="ρ_π_star: This is the something something.",         texLabel="\\rho_{\\pi^*}")   
     m <= parameter(:ρ_lr,     0.6936, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_lr: This is the something something.",             texLabel="\\rho_{lr}")      
     m <= parameter(:ρ_z_p,     0.8910, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_z_p: This is the something something.",             texLabel="\\rho_{z^p}")    
     m <= parameter(:ρ_tfp,    0.1953, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_tfp: This is the something something.",            texLabel="\\rho_{tfp}")     
@@ -410,9 +411,9 @@ function Model990(subspec::AbstractString="ss0")
                    description="σ_σ_ω: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_ω.",
                    texLabel="\\sigma_{\\sigma_\\omega}")
     
-    m <= parameter(:σ_μe,    0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(),   RootInverseGamma(4., 0.05),  fixed=true,  description="σ_μ_e: This is the something something.",           texLabel="\\sigma_{μe}")
+    m <= parameter(:σ_μe,    0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(), RootInverseGamma(4., 0.05),  fixed=true,  description="σ_μ_e: This is the something something.",           texLabel="\\sigma_{\\mu_e}")
     m <= parameter(:σ_γ,   0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(),   RootInverseGamma(4., 0.01),  fixed=true,  description="σ_γ: This is the something something.",             texLabel="\\sigma_{\\gamma}")    
-    m <= parameter(:σ_π_star,   0.0269, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(6., 0.03),  fixed=false, description="σ_π_star: This is the something something.",        texLabel="\\sigma_{pi}^*")   
+    m <= parameter(:σ_π_star,   0.0269, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(), RootInverseGamma(6., 0.03),  fixed=false, description="σ_π_star: This is the something something.",        texLabel="\\sigma_{\\pi^*}")   
     m <= parameter(:σ_lr,     0.1766, (1e-8,10.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.75),  fixed=false, description="σ_lr: This is the something something to do with long run inflation expectations.",
                    texLabel="\\sigma_{lr}")      
     m <= parameter(:σ_z_p,     0.1662, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_z_p: This is the something something.",            texLabel="\\sigma_{z^p}")    
@@ -454,7 +455,7 @@ function Model990(subspec::AbstractString="ss0")
     m <= parameter(:modelα_ind, 0.0000, (0.000, 1.000), (0., 0.), Untransformed(),
                    BetaAlt(0.50, 0.20), fixed=true,
                    description="modelα_ind: Indicates whether to use the model's endogenous α in the capacity utilization adjustment of total factor productivity.",
-                   texLabel="i_{\\alpha}^model")
+                   texLabel="I\\{\\alpha^model\\}")
     
     m <= parameter(:Γ_gdpdef,  1.0354, (-10., 10.), (-10., -10.),  Untransformed(),
                    Normal(1.00, 2.), fixed=false,
@@ -481,14 +482,14 @@ function Model990(subspec::AbstractString="ss0")
     m <= SteadyStateParameter(:wl_c,   NaN, description="steady-state something something", texLabel="\\wl_c")
     m <= SteadyStateParameter(:nstar,  NaN, description="steady-state something something", texLabel="\\n_*")
     m <= SteadyStateParameter(:vstar,  NaN, description="steady-state something something", texLabel="\\v_*")
-    m <= SteadyStateParameter(:ζ_spσ_ω,  NaN, description="steady-state something something", texLabel="\\zeta_{sp_σ_w}")
-    m <= SteadyStateParameter(:ζ_spμe,   NaN, description="steady-state something something", texLabel="\\zeta_{sp_μ_e}")
+    m <= SteadyStateParameter(:ζ_spσ_ω,  NaN, description="steady-state something something", texLabel="\\zeta_{sp_{\\sigma_\\omega}}")
+    m <= SteadyStateParameter(:ζ_spμe,   NaN, description="steady-state something something", texLabel="\\zeta_{sp_{\\mu_e}}")
     m <= SteadyStateParameter(:ζ_nRk,     NaN, description="steady-state something something", texLabel="\\zeta_{n_R_k}")
-    m <= SteadyStateParameter(:ζ_nR,      NaN, description="steady-state something something", texLabel="\\zeta{n_R}")
-    m <= SteadyStateParameter(:ζ_nqk,     NaN, description="steady-state something something", texLabel="\\zeta{n_q_k}")
-    m <= SteadyStateParameter(:ζ_nn,      NaN, description="steady-state something something", texLabel="\\BLAH")
-    m <= SteadyStateParameter(:ζ_nμe,    NaN, description="steady-state something something", texLabel="\\BLAH")
-    m <= SteadyStateParameter(:ζ_nσ_ω,   NaN, description="steady-state something something", texLabel="\\BLAH")
+    m <= SteadyStateParameter(:ζ_nR,      NaN, description="steady-state something something", texLabel="\\zeta_{n_R}")
+    m <= SteadyStateParameter(:ζ_nqk,     NaN, description="steady-state something something", texLabel="\\zeta_{n_q_k}")
+    m <= SteadyStateParameter(:ζ_nn,      NaN, description="steady-state something something", texLabel="\\zeta_{nn}")
+    m <= SteadyStateParameter(:ζ_nμe,    NaN, description="steady-state something something", texLabel="\\zeta_{n_{\\mu_e}}")
+    m <= SteadyStateParameter(:ζ_nσ_ω,   NaN, description="steady-state something something", texLabel="\\zeta_{n_{\\sigma_\\omega}}")
 
 
     initialize_model_indices!(m)
