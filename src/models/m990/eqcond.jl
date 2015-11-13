@@ -1,5 +1,3 @@
-using Debug
-
 # Expresses the equilibrium conditions in canonical form using Γ0, Γ1, C, Ψ, and Π matrices.
 # Using the mappings of states/equations to integers defined in m990.jl, coefficients are
 # specified in their proper positions.
