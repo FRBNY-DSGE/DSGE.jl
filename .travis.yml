@@ -1,7 +1,7 @@
 language: julia
 os:
-    - linux
     - osx
+#   - linux
 julia:
     - 0.4
 notifications:

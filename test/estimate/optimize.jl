@@ -21,7 +21,7 @@ close(file)
 update!(model, x0)
 n_iterations = 3
 
-@time out, H = optimize!(model, YY; iterations=n_iterations, show_trace=true)
+@time out, H = optimize!(model, YY; iterations=n_iterations)
 
 @test_matrix_approx_eq minimum_ out.minimum
 @test_approx_eq f_minimum out.f_minimum
