@@ -624,7 +624,7 @@ function assess_convergence(x::Array,
 end
 
 function Base.show(io::IO, t::OptimizationState)
-    @printf io "%6d   %14.9f   %14.9f\n" t.iteration t.value t.gradnorm
+    @printf io "%6d   %14.10e   %14.10e\n" t.iteration t.value t.gradnorm
     if !isempty(t.metadata)
         for (key, value) in t.metadata
             @printf io " * %s: %s\n" key value
@@ -638,7 +638,7 @@ Wrapper function to send a model to csminwel
 """
 function optimize!(model::AbstractDSGEModel,
                    data::Matrix;
-                   optimizer::Function  = csminwel,
+                   method::Symbol       = :csminwel,
                    xtol::Real           = 1e-32,  # default from Optim.jl
                    ftol::Float64        = 1e-14,  # Default from csminwel
                    grtol::Real          = 1e-8,  # default from Optim.jl
@@ -649,7 +649,11 @@ function optimize!(model::AbstractDSGEModel,
                    verbose::Symbol      = :none)
 
         # For now, only csminwel should be used
-        @assert optimizer == csminwel
+        optimizer = if method == :csminwel
+            csminwel
+        else
+            error("Method ",method," is not supported.")
+        end
     
         # Inputs to optimization
         H0             = 1e-4 * eye(num_parameters_free(model))
