@@ -49,6 +49,9 @@ function Setting(key, value, description)
     Setting(key, value, false, "", description)
 end
 
+function Base.show(io::IO, s::Setting)
+    @printf io "%s: %s" s.key s.value
+end
 
 """
 `(<=){T}(m::AbstractDSGEModel{T}, s::Setting)`
