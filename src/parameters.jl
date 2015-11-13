@@ -1,4 +1,3 @@
-using Compat, Distributions, Debug
 import Base: <=
 
 #=
