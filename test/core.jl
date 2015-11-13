@@ -1,6 +1,5 @@
 using Distributions, Compat
 
-
 # Test Parameter type
 
 # UnscaledParameter, fixed=false
@@ -13,10 +12,13 @@ using Distributions, Compat
 @test α.texLabel == ""
 
 # UnscaledParameter, fixed = true
-α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05), fixed=true)
+α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), Untransformed(), Normal(0.30, 0.05), fixed=true)
 @test α_fixed.transform_parameterization == (0.1596,0.1596)
-@test isa(α_fixed.transform, SquareRoot)
+@test isa(α_fixed.transform, Untransformed)
 
+# UnscaledParameter, fixed = true, transform should be overwritten given fixed
+α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05), fixed=true)
+@test isa(α_fixed.transform, Untransformed)
 
 # Fixed UnscaledParameter, minimal constructor
 δ = parameter(:δ, 0.025)
@@ -59,10 +61,24 @@ end
 @test isa(lastparam, Parameter)
 @test lastparam.value == 0.0181
 
+# toreal and tomodel, acting on the entire parameter vector. they should be inverses!
+pvec = model.parameters
+vals = toreal(pvec)
+tomodel!(model, vals)
+@test pvec == model.parameters
+
+# all fixed parameters should be unchanged by both toreal and tomodel
+for θ in model.parameters
+    if θ.fixed
+        @test θ.value == toreal(θ)
+        @test θ.value == tomodel(θ, θ.value)
+    end
+end
+
+
 # prior
 priordensity = exp(prior(model))
-@test priordensity >= 0
-@test priordensity <= 1
+@test 0 <= priordensity <= 1
 
 # settings
 # settings - boolean, string, and number. adding to model. overwriting. filestrings. testing/not testing.
@@ -88,4 +104,3 @@ model <= Setting(:num_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropol
 
 
 nothing
-
