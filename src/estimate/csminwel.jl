@@ -623,15 +623,15 @@ function assess_convergence(x::Array,
     return x_converged, f_converged, gr_converged, converged
 end
 
-function Base.show(io::IO, t::OptimizationState)
-    @printf io "%6d   %14.10e   %14.10e\n" t.iteration t.value t.gradnorm
-    if !isempty(t.metadata)
-        for (key, value) in t.metadata
-            @printf io " * %s: %s\n" key value
-        end
-    end
-    return
-end
+# function Base.show(io::IO, t::OptimizationState)
+#     @printf io "%6d   %14.10e   %14.10e\n" t.iteration t.value t.gradnorm
+#     if !isempty(t.metadata)
+#         for (key, value) in t.metadata
+#             @printf io " * %s: %s\n" key value
+#         end
+#     end
+#     return
+# end
 
 """
 Wrapper function to send a model to csminwel
