@@ -3,7 +3,7 @@
 
 """
 ```
-estimate{T<:AbstractDSGEModel}(m::T; verbose::Symbol=:low, proposal_covariance=[])
+estimate(m::AbstractDSGEModel; verbose::Symbol=:low, proposal_covariance=Matrix())
 ```
 
 This routine implements the full estimation stage of the FRBNY DSGE model.
@@ -26,8 +26,9 @@ This routine implements the full estimation stage of the FRBNY DSGE model.
   cause problems. Passing a precomputed matrix allows us to ensure that the rest of the
   routine has not broken.
 """
-function estimate{T<:AbstractDSGEModel}(m::T;
-    verbose::Symbol=:low, proposal_covariance::Matrix=[])
+function estimate(m::AbstractDSGEModel; 
+                  verbose::Symbol=:low,
+                  proposal_covariance::Matrix=Matrix())
 
     ########################################################################################
     ### Step 1: Initialize
