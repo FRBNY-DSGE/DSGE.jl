@@ -16,7 +16,7 @@ ref_cov       = read(file, "ref_cov")
 close(file)
 
 # Set up and run metropolis-hastings
-DSGE.estimate(model, verbose=:none, proposal_covariance = propdist_cov)
+DSGE.estimate(model; verbose=:none, proposal_covariance = propdist_cov)
 
 # Read in the parameter draws and covariance just generated from estimate()
 test_draws = h5open(rawpath(model, "estimate", "sim_save.h5"), "r") do file
