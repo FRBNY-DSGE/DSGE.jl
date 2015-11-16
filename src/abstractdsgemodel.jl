@@ -157,7 +157,6 @@ num_mh_burn(m::AbstractDSGEModel)        =  get_setting(m, :num_mh_burn)
 mh_thinning_step(m::AbstractDSGEModel)   =  get_setting(m, :mh_thinning_step)
 
 #=
-"""
 Build paths to where input/output/results data are stored.
 
 Description:
@@ -175,27 +174,87 @@ Creates the proper directory structure for input and output files, treating the 
                  output_data/<spec>/<subspec>/<out_type>/figures/
 
 Note: we refer to the savepathroot/output_data/<spec>/<subspec>/ directory as modelpathroot.
-"""
 =#
+"""
+```
+logpath(model)
+```
+
+Returns path to log file. Path built as
+```
+<output root>/output_data/<spec>/<subspec>/log/log_<modelstring>.log
+```
+"""
 function logpath(m::AbstractDSGEModel)
     return modelpath(m, "log", "log.log")
 end
-function rawpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T)
+"""
+```
+rawpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T="")
+```
+
+Returns path to specific raw output file, creating containing directory as needed. If
+`file_name` not specified, creates and returns path to containing directory only. Path built
+as
+```
+<output root>/output_data/<spec>/<subspec>/<out_type>/raw/<file_name>_<modelstring>.<ext>
+```
+"""
+function rawpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T="")
     return modelpath(m, out_type, "raw", file_name)
 end
-function workpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T)
+
+"""
+```
+workpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T="")
+```
+
+Returns path to specific work output file, creating containing directory as needed. If
+`file_name` not specified, creates and returns path to containing directory only. Path built
+as
+```
+<output root>/output_data/<spec>/<subspec>/<out_type>/work/<file_name>_<modelstring>.<ext>
+```
+"""
+function workpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T="")
     return modelpath(m, out_type, "work", file_name)
 end
-function tablespath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T)
+
+"""
+```
+tablespath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T="")
+```
+
+Returns path to specific tables output file, creating containing directory as needed. If
+`file_name` not specified, creates and returns path to containing directory only. Path built
+as
+```
+<output root>/output_data/<spec>/<subspec>/<out_type>/tables/<file_name>_<modelstring>.<ext>
+```
+"""
+function tablespath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T="")
     return modelpath(m, out_type, "tables", file_name)
 end
-function figurespath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T)
+
+"""
+```
+figurespath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T="")
+```
+
+Returns path to specific figures output file, creating containing directory as needed. If
+`file_name` not specified, creates and returns path to containing directory only. Path built
+as
+```
+<output root>/output_data/<spec>/<subspec>/<out_type>/figures/<file_name>_<modelstring>.<ext>
+```
+"""
+function figurespath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, file_name::T="")
     return modelpath(m, out_type, "figures", file_name)
 end
     
+# Not exposed to user. Actually create path and insert model string to file name.
 function modelpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, sub_type::T,
-    file_name::T)
-
+                                      file_name::T="")
     # Containing dir
     path = joinpath(modelpathroot(m), "output_data", spec(m), subspec(m), out_type, sub_type)
     if !isdir(path) 
@@ -203,25 +262,45 @@ function modelpath{T<:AbstractString}(m::AbstractDSGEModel, out_type::T, sub_typ
     end
 
     # File with model string inserted
-    model_string = modelstring(m)
-    (base, ext) = splitext(file_name)
-    file_name_detail = base * "_" * model_string * ext
-    path = joinpath(path, file_name_detail)
+    if !isempty(file_name)
+        model_string = modelstring(m)
+        (base, ext) = splitext(file_name)
+        file_name_detail = base * "_" * model_string * ext
+        path = joinpath(path, file_name_detail)
+    end
 
     return path
 end
 
 # Input data handled slightly differently, because it is not model-specific.
-function inpath{T<:AbstractString}(m::AbstractDSGEModel, in_type::T, file_name::T)
+"""
+```
+inpath{T<:AbstractString}(m::AbstractDSGEModel, in_type::T, file_name::T="")
+```
+
+Returns path to specific input data file, creating containing directory as needed. If
+`file_name` not specified, creates and returns path to containing directory only. Valid
+`in_type` includes:
+
+* `"data"`: recorded data
+* `"cond"`: conditional data - nowcasts for the current forecast quarter, or related
+* `"user"`: user-supplied data for starting parameter vector, hessian, or related
+
+Path built as
+```
+<data root>/<in_type>/<file_name>
+```
+"""
+function inpath{T<:AbstractString}(m::AbstractDSGEModel, in_type::T, file_name::T="")
     path = datapathroot(m)
     # Normal cases.
     if in_type == "data" || in_type == "cond"
         path = joinpath(path, in_type)
-    end
-
     # User-provided inputs. May treat this differently in the future.
-    if in_type == "user"
+    elseif in_type == "user"
         path = joinpath(path, "user")
+    else
+        error("Invalid in_type: ", in_type)
     end
 
     # Containing dir
@@ -229,7 +308,12 @@ function inpath{T<:AbstractString}(m::AbstractDSGEModel, in_type::T, file_name::
         mkpath(path)
     end
 
-    return joinpath(path, file_name)
+    # If file_name provided, return full path
+    if !isempty(file_name)
+        path = joinpath(path, file_name)
+    end
+
+    return path
 end
 
 function modelstring(m::AbstractDSGEModel)
