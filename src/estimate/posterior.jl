@@ -77,8 +77,8 @@ function posterior!{T<:AbstractFloat}(model::AbstractDSGEModel{T},
         try
             update!(model, parameters)
         catch err
-            @printf "There was an error of type %s :" typeof(err)
-            @printf "%s\n" err.msg
+            @printf STDERR "There was an error of type %s :" typeof(err)
+            @printf STDERR "%s\n" err.msg
             return Posterior()
         end
     else
