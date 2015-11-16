@@ -59,12 +59,16 @@ end
 Syntax for adding a setting to a model/overwriting a setting: m <= setting
 """
 function (<=){T}(m::AbstractDSGEModel{T}, s::Setting)
-    if s.savestring 
-        # Add to a sorted dictionary of things to print
-        insert!(m._filestrings, s.key, to_filename(s))
-    end
+    if !m.testing
+        if s.savestring 
+            # Add to a sorted dictionary of things to print
+            insert!(m._filestrings, s.key, to_filename(s))
+        end
 
-    m.settings[s.key] = s
+        m.settings[s.key] = s
+    else
+        m.test_settings[s.key] = s
+    end
 end
 
 
