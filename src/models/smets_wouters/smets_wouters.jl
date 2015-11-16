@@ -144,7 +144,7 @@ function initialize_model_indices!(m::SmetsWouters)
     # Additional states added after solving model
     # Lagged states and observables measurement error
     endogenous_states_postgensys = [
-        :y_t1, :c_t1, :i_t1, :w_t1, :π_t1, :L_t1]
+        :y_t1, :c_t1, :i_t1, :w_t1, :π_t1, :L_t1, :Et_π_t]
 
     # Measurement equation observables
     observables = [[
@@ -255,7 +255,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
                    description="β: Discount rate.",       
                    texLabel="\\beta ")
 
-    m <= parameter(:ψ1,  0.7937, (1e-5, 10.),   (1e-5, 10.00),   DSGE.Exponential(),    Normal(1.5, 0.25),          fixed=false,
+    m <= parameter(:ψ1,  1.7985, (1e-5, 10.),   (1e-5, 10.00),   DSGE.Exponential(),    Normal(1.5, 0.25),          fixed=false,
                    description="ψ₁: Weight on inflation gap in monetary policy rule.",
                    texLabel="\\psi_1")
 
