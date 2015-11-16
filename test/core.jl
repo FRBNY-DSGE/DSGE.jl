@@ -95,12 +95,22 @@ data_vintage = Setting(:data_vintage, "REF", true, "vint", "Date of data") # ful
 @test get_setting(model, :num_mh_blocks) == model.settings[:num_mh_blocks].value
 model.testing = true
 @test get_setting(model, :num_mh_blocks) == model.test_settings[:num_mh_blocks].value
-@test modelstring(model) == "_test"
+@test DSGE.modelstring(model) == "_test"
 
 model.testing = false
 model <= Setting(:num_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Hastings")
 @test model.settings[:num_mh_blocks].value == 5
-@test ismatch(r"^\s*vint=(\d{6})_mhbk=5", modelstring(model))
+@test ismatch(r"^\s*vint=(\d{6})_mhbk=5", DSGE.modelstring(model))
 
+# model paths. all this should work without errors
+model.testing = true
+rawpath(model, "test")
+rawpath(model, "test", "temp")
+workpath(model, "test")
+workpath(model, "test", "temp")
+tablespath(model, "test")
+tablespath(model, "test", "temp")
+figurespath(model, "test")
+figurespath(model, "test", "temp")
 
 nothing
