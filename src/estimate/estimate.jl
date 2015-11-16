@@ -61,7 +61,9 @@ function estimate(m::AbstractModel;
                 ftol=ftol, iterations=n_iterations, show_trace=true, verbose=verbose)
             converged = !out.iteration_converged
 
+            total_opt_time += toq()
             total_iterations += out.iterations
+
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 @printf "Total iterations completed: %d\n" total_iterations
                 @printf "Optimization time elapsed: %5.2f\n" optimization_time += toq()
