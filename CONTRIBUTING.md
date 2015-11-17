@@ -72,6 +72,12 @@ Cobb-Douglas output function.
     transition and measurement equations) should be upper case, as they are
     in mathematical notation, and can repeat the letter to avoid collisions:
     `TTT` or `YY`.
+  - Symbols such as overbars (which indicate mean values) and  tildes (which indicate
+    log-deviations from the steady state) are written using a 3- or
+    4-letter abbreviation immediately after the variable they modify:
+    `kbar_t`, `ztil` (z tilde).
+  - Stars indicating steady-state variables are included as
+    subscripts: `π_star_t`
 - Suffixes
   - Time: Consistent with the previous bullet points, the suffix `_t` as in
     `x_t` signifies the value of `x` at time `t`. The suffix `_t1`
