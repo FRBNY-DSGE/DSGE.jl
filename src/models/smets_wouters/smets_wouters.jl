@@ -236,7 +236,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
 
     ## TODO - ask Marc and Marco
     m <= parameter(:ν_l,     2.8401, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    Normal(2, 0.75),            fixed=false,
-                   description="ν_l: The coefficient of relative risk aversion on the labor term of households' utility function.", texLabel="\nu_l")
+                   description="ν_l: The coefficient of relative risk aversion on the labor term of households' utility function.", texLabel="\\nu_l")
     
     m <= parameter(:ζ_w,   0.7937, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.1),          fixed=false,
                    description="ζ_w: (1-ζ_w) is the probability with which households can freely choose wages in each period. With probability ζ_w, wages increase at a geometrically weighted average of the steady state rate of wage increases and last period's productivity times last period's inflation.",
@@ -267,7 +267,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
                    description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
                    texLabel="\\psi_3")
 
-    m <= parameter(:π_star,   0.7000, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    GammaAlt(0.62, 0.1),        fixed=true,  scaling = x -> 1 + x/100,
+    m <= parameter(:π_star,   0.7000, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    GammaAlt(0.62, 0.1),        fixed=false,  scaling = x -> 1 + x/100,
                    description="π_star: The steady-state rate of inflation.",  
                    texLabel="\\pi_*")   
 
