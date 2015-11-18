@@ -3,6 +3,7 @@ isdefined(Base, :__precompile__) && __precompile__()
 module DSGE
     using Compat, Distributions, Roots.fzero, HDF5, Debug
     using DataStructures: SortedDict, insert!, ForwardOrdering
+    using QuantEcon: solve_discrete_lyapunov
     
     if VERSION < v"0.4-"
         using Docile
@@ -18,7 +19,7 @@ module DSGE
 
         # abstractdsgemodel.jl
         AbstractDSGEModel, tomodel!, toreal!, num_states, num_shocks_exogenous,
-        num_shocks_expectational, spec, subspec, 
+        num_shocks_expectational, num_parameters, spec, subspec, 
         modelpath, inpath, workpath, rawpath, tablespath, figurespath, logpath,
         reoptimize, recalculate_hessian, num_mh_blocks, num_mh_simulations,
         num_mh_burn, mh_thinning_step, data_vintage,
@@ -31,7 +32,7 @@ module DSGE
         ParamBoundsError,
         
         # estimate/
-        dlyap, kalman_filter, likelihood, posterior, posterior!,
+        kalman_filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, compute_moments,
         make_moment_tables, find_density_bands, prior,
@@ -74,7 +75,6 @@ module DSGE
     include("solve/solve.jl")
     
     include("estimate/kalman.jl")
-    include("estimate/dlyap.jl")
     include("estimate/posterior.jl")
     include("estimate/csminwel.jl")
     include("estimate/hessian.jl")
