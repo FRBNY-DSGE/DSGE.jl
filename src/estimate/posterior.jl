@@ -207,7 +207,7 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel{T},
 
     # Run Kalman filter on presample
     R1[:A0]         = zeros(T, n_states_no_ant, 1)
-    R1[:P0]         = dlyap(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
+    R1[:P0]         = solve_discrete_lyapunov(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
     out             = kalman_filter(R1[:YY]', 1, zeros(T, n_states_no_ant, 1), R1[:TTT], R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0])
     regime_likes[1] = out[:L]
     R1[:zend]       = out[:zend]
