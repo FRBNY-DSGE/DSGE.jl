@@ -1,26 +1,3 @@
-# DISCLAIMER
-
-Copyright Federal Reserve Bank of New York.  You may reproduce, use, modify,
-make derivative works of, and distribute and this code in whole or in part so
-long as you keep this notice in the documentation associated with any
-distributed works.   Neither the name of the Federal Reserve Bank of New York
-(FRBNY) nor the names of any of the authors may be used to endorse or promote
-works derived from this code without prior written permission.  Portions of the
-code attributed to third parties are subject to applicable third party licenses
-and rights.  By your use of this code you accept this license and any
-applicable third party license.
-
-OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY
-
-FOR A PARTICULAR PURPOSE, EXCEPT TO THE EXTENT THAT THESE DISCLAIMERS ARE HELD
-TO BE LEGALLY INVALID.  FRBNY IS NOT, UNDER ANY CIRCUMSTANCES, LIABLE TO YOU
-FOR DAMAGES OF ANY KIND ARISING OUT OF OR IN CONNECTION WITH USE OF OR
-INABILITY TO USE THE CODE, INCLUDING, BUT NOT LIMITED TO DIRECT, INDIRECT,
-INCIDENTAL, CONSEQUENTIAL, PUNITIVE, SPECIAL OR EXEMPLARY DAMAGES, WHETHER
-
-EQUITABLE THEORY, EVEN IF FRBNY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
-DAMAGES OR LOSS AND REGARDLESS OF WHETHER SUCH DAMAGES OR LOSS IS FORESEEABLE.
-
 # FRBNY DSGE Model (Version 990.2)
 
 This module, written in Julia, estimates the model discussed in the
@@ -624,10 +601,3 @@ counterfactuals. Add code to compute history of states and shocks.
    - Shock decompositions
    - Shock histories
    - State histories
-
-As these steps are under development, we would welcome improvements to
-the existing code from the community. Some examples could be:
-- Performance improvements
-- Alternatives to algorithms used here (such as new optimization routines)
-
-

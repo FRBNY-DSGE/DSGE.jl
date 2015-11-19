@@ -1,4 +1,48 @@
 # Notes for DSGE.jl Contributors
+We are continuing to add more features to this package. Please see the README
+for details.
+
+As these steps are under development, we would welcome improvements to
+the existing code from the community. Some examples could be:
+- Performance improvements
+- Alternatives to algorithms used here (optimization, hessian, etc.)
+- Other general improvements
+  - Adding documentation/test coverage
+  - Adding existing notable DSGE models into the models/ directory
+
+
+### Git Recommendations For Pull Requests
+These are adapted from JuliaLang.
+
+ - Avoid working from the `master` branch of your fork, creating a new branch
+   will make it easier if DSGE's `master` changes and you need to update your
+   pull request.
+ - Try to
+   [squash](http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html)
+   together small commits that make repeated changes to the same section of
+   code so your pull request is easier to review, and Julia's history won't
+   have any broken intermediate commits. A reasonable number of separate
+   well-factored commits is fine, especially for larger changes.
+ - If any conflicts arise due to changes in DSGE's `master`, prefer updating
+   your pull request branch with `git rebase` versus `git merge` or `git pull`,
+   since the latter will introduce merge commits that clutter the git history
+   with noise that makes your changes more difficult to review.
+ - Descriptive commit messages are good.
+ - Using `git add -p` or `git add -i` can be useful to avoid accidentally
+   committing unrelated changes.
+ - GitHub does not send notifications when you push a new commit to a pull
+   request, so please add a comment to the pull request thread to let reviewers
+   know when you've made changes.
+ - When linking to specific lines of code in discussion of an issue or pull
+   request, hit the `y` key while viewing code on GitHub to reload the page
+   with a URL that includes the specific version that you're viewing. That way
+   any lines of code that you refer to will still make sense in the future,
+   even if the content of the file changes.
+ - Whitespace can be automatically removed from existing commits with `git rebase`.
+   - To remove whitespace for the previous commit, run
+     `git rebase --whitespace=fix HEAD~1`.
+   - To remove whitespace relative to the `master` branch, run
+     `git rebase --whitespace=fix master`.
 
 ## DSGE Julia Style Guide
 
