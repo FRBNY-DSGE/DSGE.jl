@@ -64,17 +64,17 @@ tree (square brackets indicate future additions to the tree that will be added i
 
 - `doc/`: Documentation, including this README
 - `save/`: 
-  - `input_data/`: This directory is referred to as `datapathroot` in the code.
+  - `input_data/`: This directory is referred to as `dataroot` in the code.
     - `data/`:  Macroeconomic series formatted as an n x m Array{Float64,2}, where n is the number of observations and m is the number of series used as input.
       - `data_151030.h5`: input data vintage from October 30, 2015 (note that this is something of a misnomer because this data isnt from that date...)
-    - `user/`: User-created files for model input. For instance, the user may specify a previously computed mode when `reoptimize(m)==false`, or a starting point for optimization when `reoptimize(m)==true`.
-      - `mode_in.h5`: Used as starting point for estimation when `reoptimize(m)==false`.
-      - `mode_in_optimized.h5`: Taken as the mode when `reoptimize(m)==true`.
-      - `hessian.h5`: Used as starting point for hessian calculation when `recalculate_hessian(m)==false`.
-      - `hessian_optimized.h5`: Taken as the hessian when `recalculate_hessian(m)==true`.
+    - `user/`: User-created files for model input. For instance, the user may specify a previously computed mode when `optimize(m)==false`, or a starting point for optimization when `optimize(m)==true`.
+      - `mode_in.h5`: Used as starting point for estimation when `optimize(m)==false`.
+      - `mode_in_optimized.h5`: Taken as the mode when `optimize(m)==true`.
+      - `hessian.h5`: Used as starting point for hessian calculation when `calculate_hessian(m)==false`.
+      - `hessian_optimized.h5`: Taken as the hessian when `calculate_hessian(m)==true`.
   - `output_data/`: 
     - `m990/`: Input/output files for the Model990 type. A model of type mSPEC will create its own save directory `mSPEC` at this  level in the directory tree.
-      - `ss0/`: Subdirectory for subspec 0. We refer to this directory as `modelpathroot` in the code.
+      - `ss0/`: Subdirectory for subspec 0. We refer to this directory as `saveroot` in the code.
         - `estimate/`
           - `figures/`: Plots and other figures
           - `tables/`: LaTeX tables	          
@@ -101,7 +101,7 @@ tree (square brackets indicate future additions to the tree that will be added i
             - [`work/`]: HDF5 files created using `raw/` files as input
       - [`ss1/`] Additional model subspecs will have subdirectories identical to `ss0` at this level in the directory tree. 
   - `src/`
-     - `abstractdsgemodel.jl`: Defines the `AbstractDSGEModel` type.
+     - `abstractdsgemodel.jl`: Defines the `AbstractModel` type.
      - `distributions_ext.jl`: Defines additional functions to return objects of type Distribution.
      - `DSGE.jl`: The main module file.
      - `estimate/`: Mode-finding and posterior sampling.
@@ -112,7 +112,7 @@ tree (square brackets indicate future additions to the tree that will be added i
               - `m990.jl`: Code for constructing a `Model990` object.
               - `measurement.jl`: Constructs `Model990`'s measurement equation matrices.
               - `subspecs.jl`: Code for model sub-specifications is defined here. See "Editing or Extending a Model" for details on constructing model sub-specifications.
-           - [`m991/`]: Code for new subtypes of `AbstractDSGEModel` should be kept in directories at this level in the directory tree
+           - [`m991/`]: Code for new subtypes of `AbstractModel` should be kept in directories at this level in the directory tree
      - `parameters.jl`: Implements the `AbstractParameter` type and its subtypes.
      - `settings.jl`: Implements the `Setting` type.
      - `solve/`: Solving the model; includes `gensys.jl` code.
@@ -130,16 +130,16 @@ This section focuses on what the code does and why, while the code itself
 (including comments) provides detailed information regarding *how* these basic
 procedures are implemented.
 
-## The AbstractDSGEModel Type and the Model Object
+## The AbstractModel Type and the Model Object
 
-The `AbstractDSGEModel` type provides a common infrastructure for all
+The `AbstractModel` type provides a common infrastructure for all
 model objects, which greatly facilitates the implementation of new
-model specifications. Any concrete subtype of `AbstractDSGEModel` can
-be passed to any function defined for `AbstractDSGEModel`, provided
+model specifications. Any concrete subtype of `AbstractModel` can
+be passed to any function defined for `AbstractModel`, provided
 that the concrete type has the fields that the function expects to be
 available. 
 
-`Model990` is one example of a concrete subtype of `AbstractDSGEModel`
+`Model990` is one example of a concrete subtype of `AbstractModel`
 that implements a single specification of the FRBNY DSGE
 model. Infinitely more specifications are possible - see "Extending or
 Editing a Model" below.
@@ -163,7 +163,7 @@ the measurement and equilibrium condition matrices.
 column in the measurement and equilibrium condition matrices.
 - `equilibrium_conditions::Dict{Symbol,Int}`: Maps each equlibrium
 condition to a row in the model's equilibrium condition matrices.
-- `endogenous_states_postgensys::Dict{Symbol,Int}`: Maps lagged states
+- `endogenous_states_augmented::Dict{Symbol,Int}`: Maps lagged states
 to their columns in the measurement and equilibrium condition
 equations. These are added after Gensys solves the model.
 - `observables::Dict{Symbol,Int}`: Maps each observable to a row in the
@@ -210,7 +210,7 @@ that map variable names to indices in these matrices:
 - `exogenous_shocks`:  Exogenous shocks
 - `expected_shocks`:  Expectation shocks
 - `equilibrium_conditions`: Equation indices
-- `endogenous_states_postgensys`: Endogenous states, after model solution and
+- `endogenous_states_augmented`: Endogenous states, after model solution and
     system augmentation
 - `observables`:  Indices of named observables to use in measurement equation
 
@@ -272,7 +272,7 @@ conform to the guidelines established in the DSGE Style Guide, in
 CONTRIBUTING.md
 - `value::T`: Parameter value. Initialized in model space (guaranteed
 to be between `valuebounds`), but can be transformed between model
-space and the real line via calls to `toreal` and `tomodel`.
+space and the real line via calls to `transform_to_real_line` and `transform_to_model_space`.
 - `valuebounds::Interval{T}`: Bounds for the parameter's value in
 model space.
 - `transform_parameterization::Interval{T}`: Parameters used to
@@ -284,7 +284,7 @@ model space and real line.
 rather than estimated.
 - `description::AbstractString`: A short description of the
 parameter's economic significance.
-- `texLabel::AbstractString`: String for printing the parameter name
+- `tex_label::AbstractString`: String for printing the parameter name
 to LaTeX.
 
 `ScaledParameters` also have the following fields:
@@ -304,7 +304,7 @@ they only require 4 fields:
 - `key::Symbol`
 - `value::T`
 - `description::AbstractString`
-- `texLabel::AbstractString`
+- `tex_label::AbstractString`
 
 
 
@@ -343,12 +343,12 @@ The `Setting{T<:Any}` type has the following fields:
 
 - `key::Symbol`: Name of setting
 - `value::T`: Value of setting 
-- `savestring::Bool`: Indicates whether to append this setting's code
+- `print::Bool`: Indicates whether to append this setting's code
 and value to output file names. If true, output file names will
 include a suffix of the form _code1=val1_code2=val2_etc. where codes
 are listed in alphabetical order.
 - `code::AbstractString`: short string (<=4 characters) to print to output
-file names when `savestring=true`.
+file names when `print=true`.
 - `description::AbstractString`: Short description of what the setting
 is used for.
 
@@ -356,65 +356,65 @@ is used for.
 
 #### I/O 
 
-- `datapathroot::Setting{ASCIIString}`: The root directory for
+- `dataroot::Setting{ASCIIString}`: The root directory for
 model input data.
 - `savepathroot::Setting{ASCIIString}`: The root directory for model output.
 - `data_vintage::Setting{ASCIIString}`: Data vintage identifier,
 formatted YYMMDD (e.g. data from October 30, 2015 is identified by the
 string "151030".) By default, `data_vintage` is set to the most recent
-date of the files with name `datapathroot/data/data_YYMMDD.h5`. It is the only
+date of the files with name `dataroot/data/data_YYMMDD.h5`. It is the only
 setting printed to output filenames by default.
 
 #### Anticipated Shocks
-- `num_anticipated_shocks::Setting{Int}`: Number of anticipated policy shocks.
-- `num_anticipated_shocks_padding::Setting{Int}`: Padding for
-`num_anticipated_shocks`.
-- `num_anticipated_lags::Setting{Int}`: Number of periods back to
+- `n_anticipated_shocks::Setting{Int}`: Number of anticipated policy shocks.
+- `n_anticipated_shocks_padding::Setting{Int}`: Padding for
+`n_anticipated_shocks`.
+- `n_anticipated_lags::Setting{Int}`: Number of periods back to
 incorporate zero bound expectations.
-- `num_presample_periods::Setting{Int}`: Number of periods in the
+- `n_presample_periods::Setting{Int}`: Number of periods in the
 presample.
 
 #### Estimation 
-- `reoptimize::Setting{Bool}`: Whether to reoptimize the posterior
+- `optimize::Setting{Bool}`: Whether to optimize the posterior
 mode. If `false` (the default), `estimate()` reads in a previously
 found mode.
-- `recalculate_hessian::Setting{Bool}`: Whether to reecalculate the
+- `calculate_hessian::Setting{Bool}`: Whether to reecalculate the
 hessian at the mode. If `false` (the default), `estimate()` reads in
 a previously computed Hessian.
 
 ##### Metropolis-Hastings 
-- `num_mh_simulations::Setting{Int}`: Number of draws from the
+- `n_mh_simulations::Setting{Int}`: Number of draws from the
 posterior distribution per block.
-- `num_mh_blocks::Setting{Int}`: Number of blocks to run
+- `n_mh_blocks::Setting{Int}`: Number of blocks to run
 Metropolis-Hastings.
-- `num_mh_burn::Setting{Int}`: Number of blocks to discard as burn-in
+- `n_mh_burn::Setting{Int}`: Number of blocks to discard as burn-in
 for Metropolis-Hastings.
 - `mh_thinning_step::Setting{Int}`: Save every `mh_thinning_step`-th
 draw in Metropolis-Hastings.
 
 
 ### Accessing Settings
-The function `get_setting(m::AbstractDSGEModel, s::Symbol)` returns
+The function `get_setting(m::AbstractModel, s::Symbol)` returns
 the value of the setting `s` in `m.settings`. Some settings also
 have explicit getter methods that take only the model object `m` as an argument:
 
 *I/O settings*:
-`modelpathroot(m)`,
-`datapathroot(m)`,
+`saveroot(m)`,
+`dataroot(m)`,
 `data_vintage(m)`,
 
 *Parallelization:*
 `use_parallel_workers(m)`
 
 *Estimation:*
-`reoptimize(m)`,
-`recalculate_hessian(m)`,
+`optimize(m)`,
+`calculate_hessian(m)`,
 `max_hessian_free_params(m)`,
 
 *Metropolis-Hastings:*
-`num_mh_blocks(m)`,
-`num_mh_simulations(m)`, 
-`num_mh_burn(m)`, 
+`n_mh_blocks(m)`,
+`n_mh_simulations(m)`, 
+`n_mh_burn(m)`, 
 `mh_thinning_step(m)`	
 
 
@@ -428,15 +428,15 @@ be modified. This immutability enforces the filenaming convention
 described in the preceding paragraphs (the default parameters are
 constructed without codes and are not printed to filename outputs to
 avoid excessively long filenames). Therefore, we strongly suggest that
-users who modify settings set `savestring=true` and define a
+users who modify settings set `print=true` and define a
 meaningful code when overwriting any default settings.
 
-For example, overwriting `reoptimize` should look like this:
+For example, overwriting `optimize` should look like this:
 ```julia
 m = Model990()
-# reoptimize(m) returns false by default
-m <= Setting(:reoptimize, true, true, "reop", "whether to re-find the mode")
-# reoptimize(m) returns true; prints "reop=true" to output filenames
+# optimize(m) returns false by default
+m <= Setting(:optimize, true, true, "reop", "whether to re-find the mode")
+# optimize(m) returns true; prints "reop=true" to output filenames
 ```
 
 ### Test settings 
@@ -466,7 +466,7 @@ starting parameter vector is known to be optimized, the file should
 be called `mode_in_optimized.h5`
 
 - *Sample from Posterior*: Posterior sampling begins from the computed
-mode, (or the provided mode if `reoptimize=false`), first computing
+mode, (or the provided mode if `optimize=false`), first computing
 the Hessian matrix to scale the proposal distribution in the
 Metropolis Hastings algorithm. Default settings for the number of
 sampling blocks and the size of those blocks can be altered as
@@ -488,15 +488,13 @@ listed below, in decreasing order of complexity:
 
 1. Add new parameters
 2. Modify equilibrium conditions or measurement equations
-3. Change the values of various parameter fields (i.e. initial `value`, `prior`,
-`transform`, etc)
-4. Change the values of various computational settings (i.e. `reoptimize`,
-`num_mh_blocks`)
+3. Change the values of various parameter fields (i.e. initial `value`, `prior`, `transform`, etc)
+4. Change the values of various computational settings (i.e. `optimize`, `n_mh_blocks`)
 
 Points 1 and 2 often go together (adding a new parameter guarantees a
 change in equilibrium conditions), and are such fundamental changes
 that they increment the model specification nymber and require the
-definition of a new subtype of `AbstractDSGEModel` (for instance,
+definition of a new subtype of `AbstractModel` (for instance,
 `Model991`). See "Model specification" below for more details.
 
 Any changes to the initialization of preexisting parameters are
@@ -519,12 +517,12 @@ Overriding default settings is described in the "Settings" section above.
 ## Model specification (`m.spec`) 
 
 A particular model, which corresponds to a subtype of
-`AbstractDSGEModel`, is defined as a set of parameters, equilibrium
+`AbstractModel`, is defined as a set of parameters, equilibrium
 conditions (defined by the `eqcond` function) and measurement
 equations (defined by the `measurement` function). Therefore, the
 addition of new parameters, states, or observables, or any changes to
 the equilibrium conditions or measurement equations necessitate the
-creation of a new subtype of `AbstractDSGEModel.`
+creation of a new subtype of `AbstractModel.`
 
 To create a new model object, we recommend doing the following:
 
@@ -537,7 +535,7 @@ chosen model specification number. Rename `m990.jl` in this directory to `mXXX.j
 3. Edit the `m990.jl`, `eqcond.jl`, and `measurement.jl` files as you
 see fit. If adding new states, equilibrium conditions, shocks, or
 observables, be sure to add them to the appropriate list in
-`initialize_model_indices`.
+`init_model_indices`.
 
 4. Open the module file, `src/DSGE.jl`. Add `ModelXXX` to the list of functions
 to export, and include each of the files in `src/model/mXXX`.
@@ -546,7 +544,7 @@ to export, and include each of the files in `src/model/mXXX`.
 
 Model990 subspecifications are initialized by overwriting initial
 parameter definitions before the model object is fully
-constructed. This happens via a call to `initialize_subspec` in the
+constructed. This happens via a call to `init_subspec` in the
 `Model990` constructor. (Clearly, an identical protocol should be
 followed for new model types as well.)
 
@@ -556,22 +554,22 @@ is not actually subspecification 1 of Model990. In the source code,
 our subspecification 5 is provided as additional example.):
 
 1. Define a new function, `ss1`, that takes an object of type
-`Model990` (not `AbstractDSGEModel`!) as an argument. In this
+`Model990` (not `AbstractModel`!) as an argument. In this
 function, construct new parameter objects and overwrite existing model
 parameters using the `<=` syntax. For example,
 
 ```julia
 function ss1(m::Model990)
-    m <= parameter(:ι_w, 0.000, (0.0, .9999), (0.0,0.9999), Untransformed(), Normal(0.0,1.0), fixed=false,
+    m <= parameter(:ι_w, 0.000, (0.0, .9999), (0.0,0.9999), DSGE.Untransformed(), Normal(0.0,1.0), fixed=false,
                    description="ι_w: Some description.",
-                   texLabel="\\iota_w")
+                   tex_label="\\iota_w")
     m <= parameter(:ι_p, 0.0, fixed=true,
-                   description= "ι_p: Some description."
-                   texLabel="\\iota_p")
+                   description= "ι_p: Some description"
+                   tex_label="\\iota_p")
 end
 ```
 
-2. Add an `elseif` condition to `initialize_subspec`:
+2. Add an `elseif` condition to `init_subspec`:
 
 ```julia
     ...

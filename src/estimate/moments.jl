@@ -1,5 +1,5 @@
 """
-`compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90; verbose::Symbol=:none)`
+`compute_moments{T<:AbstractModel}(m::T, percent::Float64 = 0.90; verbose::Symbol=:none)`
 
 Computes prior and posterior parameter moments. Tabulates prior mean, posterior mean, and
 bands in various LaTeX tables stored `tablespath(m)`.
@@ -9,7 +9,7 @@ bands in various LaTeX tables stored `tablespath(m)`.
   - `percent`: the percentage of the mass of draws from Metropolis-Hastings included between
     the bands displayed in output tables. 
 """
-function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90; 
+function compute_moments{T<:AbstractModel}(m::T, percent::Float64 = 0.90; 
                                                verbose::Symbol=:none)
     
     ### Step 1: Read in the matrix of parameter draws from metropolis-hastings
@@ -32,7 +32,7 @@ function compute_moments{T<:AbstractDSGEModel}(m::T, percent::Float64 = 0.90;
         @printf(1,"Could not open file %s", filename)
     end
 
-    num_draws = size(param_draws,1)
+    n_draws = size(param_draws,1)
 
     
     ### Step 2: Produce TeX table of moments
@@ -43,7 +43,7 @@ end
 
 """
 ```
-make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel, Θ::Array{T,2}, percent::Float64;
+make_moment_tables{T<:AbstractFloat}(m::AbstractModel, Θ::Array{T,2}, percent::Float64;
                                      verbose::Symbol=:none)
 ```
 
@@ -58,11 +58,11 @@ Tabulates parameter moments in 3 LaTeX tables:
 3. A list of prior means and posterior means
 
 ### Arguments
-    - `Θ`: [num_draws x num_parameters] matrix holding the posterior draws from metropolis-hastings
+    - `Θ`: [n_draws x n_parameters] matrix holding the posterior draws from metropolis-hastings
            from save/sim_save.h5 
     - `percent`: the mass of observations we want; 0 <= percent <= 1
 """
-function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel,
+function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
                                               Θ::Array{T,2},
                                               percent::Float64;
                                               verbose::Symbol=:none)
@@ -71,14 +71,14 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel,
     ## STEP 1: Extract moments of prior distribution from m.parameters
     ########################################################################################
     
-    num_params = length(m.parameters) 
-    prior_means = zeros(num_params,1)
-    prior_stddev = zeros(num_params,1)
+    n_params = length(m.parameters) 
+    prior_means = zeros(n_params,1)
+    prior_stddev = zeros(n_params,1)
 
     
     for (i,k) in enumerate(m.keys)
 
-        if(i > num_params)
+        if(i > n_params)
             continue
         end
         
@@ -97,13 +97,13 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel,
             prior_stddev[i] = param.prior.value.σ
             
         elseif isa(param.prior.value, Distributions.Beta)
-            μ,σ = betaMoments(param.prior.value)
+            μ,σ = moments(param.prior.value)
             
             prior_means[i] = μ
             prior_stddev[i] = σ
 
         elseif isa(param.prior.value, Distributions.Gamma)
-            μ,σ = gammaMoments(param.prior.value)
+            μ,σ = moments(param.prior.value)
             
             prior_means[i] = μ
             prior_stddev[i] = σ  # small \theta
@@ -177,23 +177,23 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel,
 
     for (index, param) in enumerate(m.parameters)   
         
-        if (!ismatch(r"rho_", param.texLabel) &&
-            !ismatch(r"zeta_", param.texLabel) &&
-            !ismatch(r"psi_", param.texLabel) &&
-            !ismatch(r"nu_l", param.texLabel) &&
-            !ismatch(r"pi\^\*", param.texLabel) &&
-            !ismatch(r"sigma_{pi}\^\*",param.texLabel) &&
-            (!ismatch(r"pistar", param.texLabel)))
-            # (!ismatch(r"ups", param.texLabel)))  ##Is this correct? mspec == 16 or u_^*
+        if (!ismatch(r"rho_", param.tex_label) &&
+            !ismatch(r"zeta_", param.tex_label) &&
+            !ismatch(r"psi_", param.tex_label) &&
+            !ismatch(r"nu_l", param.tex_label) &&
+            !ismatch(r"pi\^\*", param.tex_label) &&
+            !ismatch(r"sigma_{pi}\^\*",param.tex_label) &&
+            (!ismatch(r"pistar", param.tex_label)))
+            # (!ismatch(r"ups", param.tex_label)))  ##Is this correct? mspec == 16 or u_^*
             continue
         end
             
         # TODO: Decide whether subspec should be a field in the model
-        if(ismatch(r"rho_chi",param.texLabel)) # ??? || (isequal(subspec,7) && texLabel == ":rho_b"))
+        if(ismatch(r"rho_chi",param.tex_label)) # ??? || (isequal(subspec,7) && tex_label == ":rho_b"))
             continue
         end
 
-        @printf(mainParams_fid, "\\\\ \n \$\%4.99s\$ & ", param.texLabel)
+        @printf(mainParams_fid, "\\\\ \n \$\%4.99s\$ & ", param.tex_label)
         
         #Print the values in outmat
         for val in outmat[index,:]
@@ -264,7 +264,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel,
         end
         
         # Print the parameter name
-        @printf(periphParams_fid, "\\\\ \n \$\%4.99s\$ & ", param.texLabel)
+        @printf(periphParams_fid, "\\\\ \n \$\%4.99s\$ & ", param.tex_label)
         
         # Print the values in outmat
         for val in outmat[index,:]
@@ -316,7 +316,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractDSGEModel,
         end
 
         
-        @printf(prioPostMean_fid, "\\\\ \n \$\%4.99s\$ & ", param.texLabel)
+        @printf(prioPostMean_fid, "\\\\ \n \$\%4.99s\$ & ", param.tex_label)
 
         val = outmat2[index,:]
         @printf(prioPostMean_fid, "\%8.3f &   \%8.3f  ", val[1], val[2])
@@ -399,11 +399,11 @@ function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
         error("percent must be between 0 and 1")
     end
     
-    num_draws, num_draw_dimensions = size(draws)
-    band  = zeros(2, num_draw_dimensions)
-    num_in_band  = round(Int, percent * num_draws)
+    n_draws, n_draw_dimensions = size(draws)
+    band  = zeros(2, n_draw_dimensions)
+    n_in_band  = round(Int, percent * n_draws)
     
-    for i in 1:num_draw_dimensions
+    for i in 1:n_draw_dimensions
 
         # Sort response for parameter i such that 1st element is largest
         draw_variable_i = draws[:,i]
@@ -414,13 +414,13 @@ function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
         if minimize
 
             upper_index=1
-            minwidth = draw_variable_i[1] - draw_variable_i[num_in_band]
+            minwidth = draw_variable_i[1] - draw_variable_i[n_in_band]
             done = 0
             j = 2
             
-            while j <= (num_draws - num_in_band + 1)
+            while j <= (n_draws - n_in_band + 1)
 
-                newwidth = draw_variable_i[j] - draw_variable_i[j + num_in_band - 1]
+                newwidth = draw_variable_i[j] - draw_variable_i[j + n_in_band - 1]
 
                 if newwidth < minwidth
                     upper_index = j
@@ -431,11 +431,11 @@ function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
             end
             
         else
-            upper_index = num_draws - nwidth - floor(.5*num_draws-num_in_band)
+            upper_index = n_draws - nwidth - floor(.5*n_draws-n_in_band)
         end
 
         band[2,i] = draw_variable_i[upper_index]
-        band[1,i] = draw_variable_i[upper_index + num_in_band - 1]
+        band[1,i] = draw_variable_i[upper_index + n_in_band - 1]
     end
 
     return band
