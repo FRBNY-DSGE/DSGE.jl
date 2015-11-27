@@ -1,5 +1,5 @@
 using DSGE
-import DSGE: RootInverseGamma, Exponential
+import DSGE: RootInverseGamma
 using HDF5, Base.Test, Distributions
 include("../../util.jl")
 
@@ -53,11 +53,11 @@ for θ in model.parameters
         
     end
 
-    if θ.transform == Untransformed()
+    if θ.transform == DSGE.Untransformed()
         trspec[i, 1] = 0
-    elseif θ.transform == SquareRoot()
+    elseif θ.transform == DSGE.SquareRoot()
         trspec[i, 1] = 1
-    elseif  θ.transform == Exponential()
+    elseif  θ.transform == DSGE.Exponential()()
         trspec[i, 1] = 2        
     else
        throw(error("This kind of transform not allowed")) 

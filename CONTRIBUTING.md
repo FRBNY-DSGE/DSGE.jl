@@ -77,8 +77,8 @@ separate parts of a compound variable name. For example,
 though the words could be shortened, they are spelled out for maximum
 clarity.
 
-5. The prefix `num_` should be used for variables representing the
-number of objects (e.g. `num_parameters` or `num_anticipated_shocks`)
+5. The prefix `n_` should be used for variables representing the
+number of objects (e.g. `n_parameters` or `n_anticipated_shocks`)
 use the suffix `s` as is natural in spoken language.
 
 6. Negative Boolean variable names should be avoided. A problem arises
@@ -129,7 +129,9 @@ Cobb-Douglas output function.
   - Shocks: The suffix `_sh` refers to a model shock.
 - Prefixes
   - The prefix `eq_` refers to an equilibrium condition.
+  - The prefix `obs_` refers to an observable.
   - The prefix `E` refers to the expectation operator.
+  - The prefix `I` refers to the indicator operator.
   - Observables with the prefix `g` refer to growth rates.
 
 ### Code Formatting Guidelines

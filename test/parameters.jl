@@ -1,21 +1,19 @@
-import DSGE: Exponential
-
 #TODO: add tests and specify behavior for fixed params
 # transformations
 for T in subtypes(Transform)
     u = parameter(:σ_pist, 2.5230, (1e-8, 5.), (1e-8, 5.), T(), fixed=false)
-    @test ( toreal(u) |> x -> tomodel(u,x) ) == u.value
+    @test ( transform_to_real_line(u) |> x -> transform_to_model_space(u,x) ) == u.value
     
-    if !isa(T,Type{Untransformed})
-        # check toreal and tomodel to different things if T is not Untransformed
-        @test toreal(u,u.value) != tomodel(u,u.value)
+    if !isa(T,Type{DSGE.Untransformed})
+        # check transform_to_real_line and transform_to_model_space to different things if T is not DSGE.Untransformed
+        @test transform_to_real_line(u,u.value) != transform_to_model_space(u,u.value)
     end
 end
 
 # probability
 N = 10^2
-u = parameter(:bloop, 2.5230, (1e-8, 5.), (1e-8, 5.), SquareRoot(); fixed = true)
-v = parameter(:cat, 2.5230, (1e-8, 5.), (1e-8, 5.), Exponential(), Gamma(2.00, 0.1))
+u = parameter(:bloop, 2.5230, (1e-8, 5.), (1e-8, 5.), DSGE.SquareRoot(); fixed = true)
+v = parameter(:cat, 2.5230, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), Gamma(2.00, 0.1))
 
 pvec = @compat ParameterVector{Float64}(N)
 for i in 1:length(pvec)
@@ -54,9 +52,9 @@ end
 function sstest(m::Model990)
 
     # Change all the fields of an unfixed parameter
-    m <= parameter(:ι_w, 0.000, (0.0, .9999), (0.0,0.9999), Untransformed(), Normal(0.0,1.0), fixed=false,
+    m <= parameter(:ι_w, 0.000, (0.0, .9999), (0.0,0.9999), DSGE.Untransformed(), Normal(0.0,1.0), fixed=false,
                    description="ι_w: This is the something something.",
-                   texLabel="\\iota_w")
+                   tex_label="\\iota_w")
 
 
     # Change an unfixed parameter to be fixed
@@ -68,18 +66,18 @@ function sstest(m::Model990)
                    geometric average of steady-state inflation
                    (π_star, with weight (1-ι_p)) and last period's
                    inflation (π_{t-1})).",
-                   texLabel="\\iota_p")
+                   tex_label="\\iota_p")
 
 
     # Change a fixed parameter
     m <= parameter(:δ, 0.02,  fixed=true,
-                   description="δ: The capital depreciation rate.", texLabel="\\delta" )     
+                   description="δ: The capital depreciation rate.", tex_label="\\delta" )     
 
 
     # Overwrite a fixed parameter with an unfixed parameter
     m <= parameter(:ϵ_p, 0.750, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    GammaAlt(0.75, 0.4),        fixed=false,  scaling = x -> 1 + x/100,
                    description="ϵ_p: This is the something something.",
-                   texLabel="\\varepsilon_{p}")     
+                   tex_label="\\varepsilon_{p}")     
 
     steadystate!(m)
 end
@@ -89,7 +87,7 @@ sstest(m)
 
 @test m[:ι_w].value == 0.0
 @test m[:ι_w].valuebounds == (0.0, .9999)
-@test m[:ι_w].transform == Untransformed()
+@test m[:ι_w].transform == DSGE.Untransformed()
 @test m[:ι_w].transform_parameterization == (0.0,0.9999)
 @test isa(m[:ι_w].prior.value, Normal)
 

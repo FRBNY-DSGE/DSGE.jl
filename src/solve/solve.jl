@@ -2,10 +2,10 @@ using Compat, DSGE, HDF5
 
 #=
 doc"""
-solve(model::AbstractDSGEModel)
+solve(m::AbstractModel)
 
 ### Parameters
-- `model`: the model object
+- `m`: the model object
 
 ### Return values
  - TTT, RRR, and CCC matrices of the state transition equation:
@@ -15,11 +15,11 @@ solve(model::AbstractDSGEModel)
 Loads in the matrices that form the canonical representation of the equilibrium conditions by calling `eqcond`. Then calls `gensys` for the state-space representation of the model. Finally, calls `augment_states` to add growth rates to the observables. See documentation for each of these 3 functions for further details.
 """
 =#
-function solve(model::AbstractDSGEModel)
+function solve(m::AbstractModel)
 
     # Get equilibrium condition matrices
-    Γ0, Γ1, C, Ψ, Π  = eqcond(model) 
-
+    Γ0, Γ1, C, Ψ, Π  = eqcond(m) 
+    
     # Solve model
     TTT_gensys, CCC_gensys, RRR_gensys = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
     TTT_gensys = real(TTT_gensys)
@@ -27,7 +27,7 @@ function solve(model::AbstractDSGEModel)
     CCC_gensys = reshape(CCC_gensys, length(CCC_gensys), 1)
     
     # Augment states
-    TTT, RRR, CCC = augment_states(model, TTT_gensys, RRR_gensys, CCC_gensys)
+    TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
     
     return TTT, RRR, CCC
 end
@@ -35,10 +35,10 @@ end
 
 #=
 doc"""
-augment_states{T<:AbstractFloat}(m::AbstractDSGEModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
+augment_states{T<:AbstractFloat}(m::AbstractModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
 
 ### Parameters
--`m`: the model object
+-`m`: the m object
 -`TTT`, `RRR`, and `CCC` are matrices of the state transition equation that is returned from `gensys`:
               S_t = TTT*S_{t-1} + RRR*ϵ_t + CCC
 
@@ -76,8 +76,8 @@ function augment_states{T<:AbstractFloat}(m::Model990{T}, TTT::Matrix{T}, RRR::M
     endo_addl = m.endogenous_states_postgensys
     exo = m.exogenous_shocks
 
-    n_endo = num_states(m)
-    n_exo = num_shocks_exogenous(m)
+    n_endo = n_states(m)
+    n_exo = n_shocks_exogenous(m)
     @assert (n_endo, n_endo) == size(TTT)
     @assert (n_endo, n_exo) == size(RRR)
     @assert (n_endo, 1) == size(CCC)
@@ -108,8 +108,8 @@ function augment_states{T<:AbstractFloat}(m::Model990{T}, TTT::Matrix{T}, RRR::M
     # as exogenous structural shocks.
     TTT_aug[endo_addl[:lr_t], endo_addl[:lr_t]] = m[:ρ_lr]
     TTT_aug[endo_addl[:tfp_t], endo_addl[:tfp_t]] = m[:ρ_tfp]
-    TTT_aug[endo_addl[:e_gdpdef], endo_addl[:e_gdpdef]] = m[:ρ_gdpdef]
-    TTT_aug[endo_addl[:e_pce], endo_addl[:e_pce]] = m[:ρ_pce]
+    TTT_aug[endo_addl[:e_gdpdef_t], endo_addl[:e_gdpdef_t]] = m[:ρ_gdpdef]
+    TTT_aug[endo_addl[:e_pce_t], endo_addl[:e_pce_t]] = m[:ρ_pce]
 
 
     ### RRR modfications
@@ -124,10 +124,10 @@ function augment_states{T<:AbstractFloat}(m::Model990{T}, TTT::Matrix{T}, RRR::M
     RRR_aug[endo_addl[:tfp_t], exo[:tfp_sh]] = 1.0
 
     # Measurement Error on GDP Deflator
-    RRR_aug[endo_addl[:e_gdpdef], exo[:gdpdef_sh]] = 1.0
+    RRR_aug[endo_addl[:e_gdpdef_t], exo[:gdpdef_sh]] = 1.0
 
     # Measurement Error on Core PCE
-    RRR_aug[endo_addl[:e_pce], exo[:pce_sh]] = 1.0
+    RRR_aug[endo_addl[:e_pce_t], exo[:pce_sh]] = 1.0
 
 
 
