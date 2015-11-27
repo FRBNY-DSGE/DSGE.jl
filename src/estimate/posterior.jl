@@ -1,11 +1,11 @@
 """
-`prior(model)`
+`prior(m::AbstractModel)`
 
-Calculates log joint prior density of the model parameters.
+Calculates log joint prior density of m.parameters.
 """
-function prior{T<:AbstractFloat}(model::AbstractDSGEModel{T})
+function prior{T<:AbstractFloat}(m::AbstractModel{T})
     x = zero(T)
-    for θ in model.parameters
+    for θ in m.parameters
         if !θ.fixed
             x += logpdf(θ)
         end
@@ -15,18 +15,18 @@ end
 
 """
 ```
-posterior{T<:AbstractFloat}(model::AbstractDSGEModel{T}, YY::Matrix{T}; 
+posterior{T<:AbstractFloat}(m::AbstractModel{T}, YY::Matrix{T}; 
                              mh::Bool = false, catch_errors::Bool = false)
 ```
 
-Calculates and returns the log of the posterior distribution for the model parameters:
+Calculates and returns the log of the posterior distribution for m.parameters:
 ```
 log posterior = log likelihood + log prior
 log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
 ```
 
 ### Arguments
--`model`: the model object
+-`m`: the model object
 -`YY`: matrix of data for observables
 
 ### Optional Arguments
@@ -34,13 +34,13 @@ log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
   transition matrices for the zero-lower-bound period are also returned.
 -`catch_errors`: Whether or not to catch errors of type `GensysError` or `ParamBoundsError`
 """
-function posterior{T<:AbstractFloat}(model::AbstractDSGEModel{T},
+function posterior{T<:AbstractFloat}(m::AbstractModel{T},
                                      YY::Matrix{T};
                                      mh::Bool = false,
                                      catch_errors::Bool = false)
     catch_errors = catch_errors | mh
-    like, out = likelihood(model, YY; mh=mh, catch_errors=catch_errors)
-    post = like + prior(model)
+    like, out = likelihood(m, YY; mh=mh, catch_errors=catch_errors)
+    post = like + prior(m)
     if mh
         return Posterior(post, like, out)
     else
@@ -50,14 +50,14 @@ end
 
 """
 ```
-posterior!{T<:AbstractFloat}(model::AbstractDSGEModel{T}, parameters::Vector{T}, YY::Matrix{T};
+posterior!{T<:AbstractFloat}(m::AbstractModel{T}, parameters::Vector{T}, YY::Matrix{T};
                               mh::Bool = false, catch_errors::Bool = false)
 ```
 
 Evaluates the log posterior density at `parameters`
 
 ### Arguments
--`model`: The model object
+-`m`: The model object
 -`parameters`: New values for the model parameters
 - `YY`: Matrix of input data for observables
 
@@ -67,7 +67,7 @@ Evaluates the log posterior density at `parameters`
 -`catch_errors`: Whether or not to catch errors of type `GensysError` or `ParamBoundsError`.
   If `mh = true`, both should always be caught.
 """
-function posterior!{T<:AbstractFloat}(model::AbstractDSGEModel{T},
+function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
                                       parameters::Vector{T},
                                       YY::Matrix{T};
                                       mh::Bool = false,
@@ -75,22 +75,22 @@ function posterior!{T<:AbstractFloat}(model::AbstractDSGEModel{T},
     catch_errors = catch_errors | mh
     if mh
         try
-            update!(model, parameters)
+            update!(m, parameters)
         catch err
             @printf STDERR "There was an error of type %s :" typeof(err)
             @printf STDERR "%s\n" err.msg
             return Posterior()
         end
     else
-        update!(model, parameters)
+        update!(m, parameters)
     end
-    return posterior(model, YY; mh=mh, catch_errors=catch_errors)
+    return posterior(m, YY; mh=mh, catch_errors=catch_errors)
 
 end
 
 """
 ```
-likelihood{T<:AbstractFloat}(model::AbstractDSGEModel, YY::Matrix{T}; 
+likelihood{T<:AbstractFloat}(m::AbstractModel, YY::Matrix{T}; 
                               mh::Bool = false, catch_errors::Bool = false)
 ```
 
@@ -101,7 +101,7 @@ there is a zero-lower-bound period, then we filter over the 2 periods separately
 Otherwise, we filter over the main sample all at once.
 
 ### Arguments
--`model`: The model object
+-`m`: The model object
 -`YY`: matrix of data for observables
 
 ### Optional Arguments
@@ -109,7 +109,7 @@ Otherwise, we filter over the main sample all at once.
   the zero-lower-bound period are returned in a dictionary.
 -`catch_errors`: If `mh = true`, `GensysErrors` should always be caught.
 """
-function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel{T},
+function likelihood{T<:AbstractFloat}(m::AbstractModel{T},
                                       YY::Matrix{T};
                                       mh::Bool = false,
                                       catch_errors::Bool = false)
@@ -119,7 +119,7 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel{T},
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if mh
-        for θ in model.parameters
+        for θ in m.parameters
             (left, right) = θ.valuebounds
             if !θ.fixed && !(left <= θ.value <= right)
                 return LIKE_NULL_OUTPUT
@@ -138,17 +138,17 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel{T},
     regime_mats = [R1, R2, R3]
     regime_likes = zeros(T, 3)
 
-    n_T0         = num_presample_periods(model)
-    n_ant        = num_anticipated_shocks(model)
-    n_ant_lags   = num_anticipated_lags(model)
-    n_obs_no_ant = num_observables(model) - num_anticipated_shocks(model)
-    n_obs        = num_observables(model)
-    n_exo        = num_shocks_exogenous(model)
+    n_T0         = n_presample_periods(m)
+    n_ant        = n_anticipated_shocks(m)
+    n_ant_lags   = n_anticipated_lags(m)
+    n_obs_no_ant = n_observables(m) - n_anticipated_shocks(m)
+    n_obs        = n_observables(m)
+    n_exo        = n_shocks_exogenous(m)
 
-    n_states_no_ant = num_states_augmented(model) - num_anticipated_shocks(model)
-    n_states_aug    = num_states_augmented(model)
-    n_states        = num_states(model)
-    mt_num_states   = [n_states_no_ant, n_states_no_ant, n_states_aug]
+    n_states_no_ant = n_states_augmented(m) - n_anticipated_shocks(m)
+    n_states_aug    = n_states_augmented(m)
+    n_states        = n_states(m)
+    mt_n_states   = [n_states_no_ant, n_states_no_ant, n_states_aug]
 
     R1[:YY] = YY[1:n_T0, 1:n_obs_no_ant]
     R2[:YY] = YY[(n_T0+1):(end-n_ant_lags-1), 1:n_obs_no_ant]
@@ -160,7 +160,7 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel{T},
     # If we are in MH, then any errors coming out of gensys should be caught and a -Inf
     # posterior should be returned.
     try
-        R3[:TTT], R3[:RRR], R3[:CCC] = solve(model)
+        R3[:TTT], R3[:RRR], R3[:CCC] = solve(m)
     catch err
         if catch_errors && isa(err, GensysError)
             info(err.msg)
@@ -185,8 +185,8 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel{T},
     ## where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
 
     # Get measurement equation matrices set up for normal and zlb periods
-    Measurement_R2 = measurement(model, R2[:TTT], R2[:RRR], R2[:CCC]; shocks=false)
-    Measurement_R3 = measurement(model, R3[:TTT], R3[:RRR], R3[:CCC]; shocks=true)
+    Measurement_R2 = measurement(m, R2[:TTT], R2[:RRR], R2[:CCC]; shocks=false)
+    Measurement_R3 = measurement(m, R3[:TTT], R3[:RRR], R3[:CCC]; shocks=true)
     for d in (:ZZ, :DD, :QQ, :VVall)
         R2[d] = Measurement_R2[d]
         R3[d] = Measurement_R3[d]
@@ -216,7 +216,7 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel{T},
     # Run Kalman filter on normal period
     zprev           = R1[:zend]
     Pprev           = R1[:Pend]
-    out             = kalman_filter(R2[:YY]', 1, zeros(mt_num_states[2], 1), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev)
+    out             = kalman_filter(R2[:YY]', 1, zeros(mt_n_states[2], 1), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev)
     regime_likes[2] = out[:L]
     R2[:zend]       = out[:zend]
     R2[:Pend]       = out[:Pend]
@@ -241,7 +241,7 @@ function likelihood{T<:AbstractFloat}(model::AbstractDSGEModel{T},
     Pprev[after_shocks_new, before_shocks]    = R2[:Pend][after_shocks_old, before_shocks]
     Pprev[after_shocks_new, after_shocks_new] = R2[:Pend][after_shocks_old, after_shocks_old]
 
-    out             = kalman_filter(R3[:YY]', 1, zeros(mt_num_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev)
+    out             = kalman_filter(R3[:YY]', 1, zeros(mt_n_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev)
     regime_likes[3] = out[:L]
     R3[:zend]       = out[:zend]
     R3[:Pend]       = out[:Pend]

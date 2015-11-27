@@ -29,86 +29,86 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
     # If shocks = true, then return measurement equation matrices with rows and columns for
     # anticipated policy shocks
     if shocks
-        _num_observables = num_observables(m)
-        _num_states = num_states_augmented(m)
-        _num_shocks_exogenous = num_shocks_exogenous(m)
-        endo_addl = m.endogenous_states_postgensys
+        _n_observables = n_observables(m)
+        _n_states = n_states_augmented(m)
+        _n_shocks_exogenous = n_shocks_exogenous(m)
+        endo_addl = m.endogenous_states_augmented
     else
-        _num_observables = num_observables(m) - num_anticipated_shocks(m)
-        _num_states = num_states_augmented(m) - num_anticipated_shocks(m)
-        _num_shocks_exogenous = num_shocks_exogenous(m) - num_anticipated_shocks(m)
+        _n_observables = n_observables(m) - n_anticipated_shocks(m)
+        _n_states = n_states_augmented(m) - n_anticipated_shocks(m)
+        _n_shocks_exogenous = n_shocks_exogenous(m) - n_anticipated_shocks(m)
         endo_addl = Dict(
-            [(key,m.endogenous_states_postgensys[key] - num_anticipated_shocks(m)) for key in keys(m.endogenous_states_postgensys)])
+            [(key,m.endogenous_states_augmented[key] - n_anticipated_shocks(m)) for key in keys(m.endogenous_states_augmented)])
     end
 
-    ZZ = zeros(_num_observables, _num_states)
-    DD = zeros(_num_observables, 1)
-    MM = zeros(_num_observables, _num_shocks_exogenous)
-    EE = zeros(_num_observables, _num_observables)
-    QQ = zeros(_num_shocks_exogenous, _num_shocks_exogenous)
+    ZZ = zeros(_n_observables, _n_states)
+    DD = zeros(_n_observables, 1)
+    MM = zeros(_n_observables, _n_shocks_exogenous)
+    EE = zeros(_n_observables, _n_observables)
+    QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
 
     ## Output growth - Quarterly!
-    ZZ[obs[:g_y], endo[:y_t]]       = 1.0
-    ZZ[obs[:g_y], endo_addl[:y_t1]] = -1.0
-    ZZ[obs[:g_y], endo[:z_t]]       = 1.0
-    DD[obs[:g_y]]                   = 100*(exp(m[:zstar])-1)
+    ZZ[obs[:obs_gdp], endo[:y_t]]       = 1.0
+    ZZ[obs[:obs_gdp], endo_addl[:y_t1]] = -1.0
+    ZZ[obs[:obs_gdp], endo[:z_t]]       = 1.0
+    DD[obs[:obs_gdp]]                   = 100*(exp(m[:z_star])-1)
 
     ## Hours growth
-    ZZ[obs[:g_hours], endo[:L_t]] = 1.0
-    DD[obs[:g_hours]]             = m[:Lmean]
+    ZZ[obs[:obs_hours], endo[:L_t]] = 1.0
+    DD[obs[:obs_hours]]             = m[:Lmean]
 
     ## Labor Share/real wage growth
-    ZZ[obs[:g_w], endo[:w_t]]       = 1.0
-    ZZ[obs[:g_w], endo_addl[:w_t1]] = -1.0
-    ZZ[obs[:g_w], endo[:z_t]]       = 1.0
-    DD[obs[:g_w]]                   = 100*(exp(m[:zstar])-1)
+    ZZ[obs[:obs_wages], endo[:w_t]]       = 1.0
+    ZZ[obs[:obs_wages], endo_addl[:w_t1]] = -1.0
+    ZZ[obs[:obs_wages], endo[:z_t]]       = 1.0
+    DD[obs[:obs_wages]]                   = 100*(exp(m[:z_star])-1)
 
     ## Inflation (GDP Deflator)
-    ZZ[obs[:π_gdpdef], endo[:π_t]]          = m[:Γ_gdpdef]
-    ZZ[obs[:π_gdpdef], endo_addl[:e_gdpdef]] = 1.0
-    DD[obs[:π_gdpdef]]                       = 100*(m[:π_star]-1) + m[:δ_gdpdef]
+    ZZ[obs[:obs_gdpdeflator], endo[:π_t]]          = m[:Γ_gdpdef]
+    ZZ[obs[:obs_gdpdeflator], endo_addl[:e_gdpdef_t]] = 1.0
+    DD[obs[:obs_gdpdeflator]]                       = 100*(m[:π_star]-1) + m[:δ_gdpdef]
 
     ## Inflation (Core PCE)
-    ZZ[obs[:π_pce], endo[:π_t]]       = 1.0
-    ZZ[obs[:π_pce], endo_addl[:e_pce]] = 1.0
-    DD[obs[:π_pce]]                    = 100*(m[:π_star]-1)
+    ZZ[obs[:obs_corepce], endo[:π_t]]       = 1.0
+    ZZ[obs[:obs_corepce], endo_addl[:e_corepce_t]] = 1.0
+    DD[obs[:obs_corepce]]                    = 100*(m[:π_star]-1)
 
     ## Nominal interest rate
-    ZZ[obs[:R_n], endo[:R_t]] = 1.0
-    DD[obs[:R_n]]              = m[:Rstarn]
+    ZZ[obs[:obs_nominalrate], endo[:R_t]] = 1.0
+    DD[obs[:obs_nominalrate]]              = m[:Rstarn]
 
     ## Consumption Growth
-    ZZ[obs[:g_c], endo[:c_t]]       = 1.0
-    ZZ[obs[:g_c], endo_addl[:c_t1]] = -1.0
-    ZZ[obs[:g_c], endo[:z_t]]       = 1.0
-    DD[obs[:g_c]]                   = 100*(exp(m[:zstar])-1)
+    ZZ[obs[:obs_consumption], endo[:c_t]]       = 1.0
+    ZZ[obs[:obs_consumption], endo_addl[:c_t1]] = -1.0
+    ZZ[obs[:obs_consumption], endo[:z_t]]       = 1.0
+    DD[obs[:obs_consumption]]                   = 100*(exp(m[:z_star])-1)
 
     ## Investment Growth
-    ZZ[obs[:g_i], endo[:i_t]]       = 1.0
-    ZZ[obs[:g_i], endo_addl[:i_t1]] = -1.0
-    ZZ[obs[:g_i], endo[:z_t]]       = 1.0
-    DD[obs[:g_i]]                    = 100*(exp(m[:zstar])-1)
+    ZZ[obs[:obs_investment], endo[:i_t]]       = 1.0
+    ZZ[obs[:obs_investment], endo_addl[:i_t1]] = -1.0
+    ZZ[obs[:obs_investment], endo[:z_t]]       = 1.0
+    DD[obs[:obs_investment]]                    = 100*(exp(m[:z_star])-1)
 
     ## Spreads
-    ZZ[obs[:sprd], endo[:ERktil_t]] = 1.0
-    ZZ[obs[:sprd], endo[:R_t]]     = -1.0
-    DD[obs[:sprd]]                 = 100*log(m[:sprd])
+    ZZ[obs[:obs_spread], endo[:ERtil_k_t]] = 1.0
+    ZZ[obs[:obs_spread], endo[:R_t]]     = -1.0
+    DD[obs[:obs_spread]]                 = 100*log(m[:spr])
 
     ## 10 yrs infl exp
     TTT10                = (1/40)*((eye(size(TTT, 1)) - TTT)\(TTT - TTT^41))
-    ZZ[obs[:π_long], :] =  TTT10[endo[:π_t], :]
-    DD[obs[:π_long]]    = 100*(m[:π_star]-1)
+    ZZ[obs[:obs_longinflation], :] =  TTT10[endo[:π_t], :]
+    DD[obs[:obs_longinflation]]    = 100*(m[:π_star]-1)
 
     ## Long Rate
-    ZZ[obs[:R_long], :]                = ZZ[6, :]*TTT10
-    ZZ[obs[:R_long], endo_addl[:lr_t]] = 1.0
-    DD[obs[:R_long]]                   = m[:Rstarn]
+    ZZ[obs[:obs_longrate], :]                = ZZ[6, :]*TTT10
+    ZZ[obs[:obs_longrate], endo_addl[:lr_t]] = 1.0
+    DD[obs[:obs_longrate]]                   = m[:Rstarn]
 
     ## TFP
-    ZZ[obs[:tfp], endo[:z_t]]           = (1-m[:α])*m[:modelα_ind] + 1*(1-m[:modelα_ind])
-    ZZ[obs[:tfp], endo_addl[:tfp_t]]    = 1.0
-    ZZ[obs[:tfp], endo[:u_t]]           = m[:α]/( (1-m[:α])*(1-m[:modelα_ind]) + 1*m[:modelα_ind] )
-    ZZ[obs[:tfp], endo_addl[:u_t1]]     = -(m[:α]/( (1-m[:α])*(1-m[:modelα_ind]) + 1*m[:modelα_ind]) )
+    ZZ[obs[:obs_tfp], endo[:z_t]]           = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
+    ZZ[obs[:obs_tfp], endo_addl[:tfp_t]]    = 1.0
+    ZZ[obs[:obs_tfp], endo[:u_t]]           = m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα] )
+    ZZ[obs[:obs_tfp], endo_addl[:u_t1]]     = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
 
     QQ[exo[:g_sh], exo[:g_sh]]           = m[:σ_g]^2
     QQ[exo[:b_sh], exo[:b_sh]]           = m[:σ_b]^2
@@ -116,25 +116,25 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
     QQ[exo[:z_sh], exo[:z_sh]]           = m[:σ_z]^2
     QQ[exo[:λ_f_sh], exo[:λ_f_sh]]       = m[:σ_λ_f]^2
     QQ[exo[:λ_w_sh], exo[:λ_w_sh]]       = m[:σ_λ_w]^2
-    QQ[exo[:rm_sh], exo[:rm_sh]]         = m[:σ_rm]^2
+    QQ[exo[:rm_sh], exo[:rm_sh]]         = m[:σ_r_m]^2
     QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]       = m[:σ_σ_ω]^2
-    QQ[exo[:μe_sh], exo[:μe_sh]]         = m[:σ_μe]^2
+    QQ[exo[:μ_e_sh], exo[:μ_e_sh]]       = m[:σ_μ_e]^2
     QQ[exo[:γ_sh], exo[:γ_sh]]           = m[:σ_γ]^2
     QQ[exo[:π_star_sh], exo[:π_star_sh]] = m[:σ_π_star]^2
     QQ[exo[:lr_sh], exo[:lr_sh]]         = m[:σ_lr]^2
     QQ[exo[:zp_sh], exo[:zp_sh]]         = m[:σ_z_p]^2
     QQ[exo[:tfp_sh], exo[:tfp_sh]]       = m[:σ_tfp]^2
     QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]] = m[:σ_gdpdef]^2
-    QQ[exo[:pce_sh], exo[:pce_sh]]       = m[:σ_pce]^2
+    QQ[exo[:corepce_sh], exo[:corepce_sh]]       = m[:σ_corepce]^2
 
     # These lines set the standard deviations for the anticipated shocks. They
     # are here no longer calibrated to the std dev of contemporaneous shocks,
     # as we had in 904
     if shocks
-        for i = 1:num_anticipated_shocks(m)
-            ZZ[obs[symbol("R_n$i")], :] = ZZ[obs[:R_n], :]*(TTT^i)
-            DD[obs[symbol("R_n$i")]] = m[:Rstarn]
-            QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_rm$i")]^2
+        for i = 1:n_anticipated_shocks(m)
+            ZZ[obs[symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], :]*(TTT^i)
+            DD[obs[symbol("obs_nominalrate$i")]] = m[:Rstarn]
+            QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_r_m$i")]^2
         end
     end
 

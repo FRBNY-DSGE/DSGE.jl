@@ -1,6 +1,4 @@
-#using Match
-
-function initialize_subspec(m::Model990)
+function init_subspec(m::Model990)
 
     if subspec(m) == "ss0"
         return
@@ -9,13 +7,6 @@ function initialize_subspec(m::Model990)
     else
         error("This subspec is not defined.")
     end
-    
-    ## This is neat pattern matching we can do, but has deprication warnings...
-    ## @match subspec(m) begin
-    ##     "ss0"          => return
-    ##     "ss5"          => ss5(m)
-    ##     _              => error("This subspec is not defined.")
-    ## end
 end
 
 function ss5(m::Model990)
@@ -28,12 +19,12 @@ function ss5(m::Model990)
                    geometric average of steady-state inflation
                    (π_star, with weight (1-ι_p)) and last period's
                    inflation (π_{t-1})).",
-                   texLabel="\\iota_p")
+                   tex_label="\\iota_p")
 
 
     m <= parameter(:ι_w,   0.0, fixed=true,
                    description="ι_w: This is the something something.",
-                   texLabel="\\iota_w")
+                   tex_label="\\iota_w")
     
 end
 

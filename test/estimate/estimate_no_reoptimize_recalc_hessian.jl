@@ -12,10 +12,10 @@ m = Model990()
 new_savepath = "/data/dsge_data_dir/dsgejl/estimate/save_noreop_recalc/"
 create_save_directories(m, new_savepath, reset_inpath=false)
 
-m.num_mh_simulations_test= m.num_mh_simulations
-m.num_mh_blocks_test = m.num_mh_blocks
-m.num_mh_burn_test=m.num_mh_burn
-m.recalculate_hessian = true
+m.n_mh_simulations_test= m.n_mh_simulations
+m.n_mh_blocks_test = m.n_mh_blocks
+m.n_mh_burn_test=m.n_mh_burn
+m.calculate_hessian = true
 
 tic()
 estimate(m,verbose=:low,testing=false)

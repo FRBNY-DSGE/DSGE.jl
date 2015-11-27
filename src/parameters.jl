@@ -16,7 +16,7 @@ Subtypes of the abstract Transform type indicate how a `Parameter`'s
 value is transformed from model space (which can be bounded to a
 limited section of the real line) to the entire real line (which is
 necessary for mode-finding using csminwel). The transformation is
-performed by the `toreal` function, and is reversed by the `tomodel`
+performed by the `transform_to_real_line` function, and is reversed by the `transform_to_model_space`
 function.
 """
 =#
@@ -75,7 +75,7 @@ Time-invariant model parameter whose value is used as-is in the model's equilibr
 should conform to the guidelines established in the DSGE Style Guide.
 - `value::T`: Parameter value. Initialized in model space (guaranteed
 to be between `valuebounds`), but can be transformed between model
-space and the real line via calls to `toreal` and `tomodel`.
+space and the real line via calls to `transform_to_real_line` and `transform_to_model_space`.
 - `valuebounds::Interval{T}`: Bounds for the parameter's value in model space.
 - `transform_parameterization::Interval{T}`: Parameters used to
 transform `value` between model space and the real line.
@@ -84,7 +84,7 @@ model space and real line.
 - `prior::NullablePrior`: Prior distribution for parameter value.
 - `fixed::Bool`: Indicates whether the parameter's value is fixed rather than estimated.
 - `description::AbstractString`:  A short description of the parameter's economic significance.
-- `texLabel::AbstractString`: String for printing the parameter name to LaTeX.
+- `tex_label::AbstractString`: String for printing the parameter name to LaTeX.
 """
 type UnscaledParameter{T,U} <: Parameter{T,U}
     key::Symbol
@@ -95,7 +95,7 @@ type UnscaledParameter{T,U} <: Parameter{T,U}
     prior::NullablePrior        # prior distribution
     fixed::Bool                 # is this parameter fixed at some value, or do we estimate it?
     description::AbstractString 
-    texLabel::AbstractString    # LaTeX label for printing
+    tex_label::AbstractString    # LaTeX label for printing
 end
 
 
@@ -111,7 +111,7 @@ should conform to the guidelines established in the DSGE Style Guide.
 - `value::T`: The parameter's unscaled value. Initialized in model
   space (guaranteed to be between `valuebounds`), but can be
   transformed between model space and the real line via calls to
-  `toreal` and `tomodel`.
+  `transform_to_real_line` and `transform_to_model_space`.
 - `scaledvalue::T`: Parameter value scaled for use in `eqcond.jl`
 - `valuebounds::Interval{T}`: Bounds for the parameter's value in model space.
 - `transform_parameterization::Interval{T}`: Parameters used to
@@ -121,7 +121,7 @@ should conform to the guidelines established in the DSGE Style Guide.
 - `fixed::Bool`: Indicates whether the parameter's value is fixed rather than estimated.
 - `scaling::Function`: Function used to scale parameter value for use in equilibrium conditions.
 - `description::AbstractString`: A short description of the parameter's economic significance.
-- `texLabel::AbstractString`: String for printing parameter name to LaTeX.
+- `tex_label::AbstractString`: String for printing parameter name to LaTeX.
 """
 type ScaledParameter{T,U} <: Parameter{T,U}
     key::Symbol
@@ -134,7 +134,7 @@ type ScaledParameter{T,U} <: Parameter{T,U}
     fixed::Bool
     scaling::Function
     description::AbstractString
-    texLabel::AbstractString
+    tex_label::AbstractString
 end
 
 """
@@ -156,13 +156,13 @@ use in equilibrium conditions.
 established in the DSGE Style Guide.
 - `value::T`: The parameter's steady-state value.
 - `description::AbstractString`: Short description of the parameter's economic significance.
-- `texLabel::AbstractString`: String for printing parameter name to LaTeX.
+- `tex_label::AbstractString`: String for printing parameter name to LaTeX.
 """
 type SteadyStateParameter{T} <: AbstractParameter{T}
     key::Symbol
     value::T                    
     description::AbstractString
-    texLabel::AbstractString
+    tex_label::AbstractString
 end
 
 hasprior(p::Parameter) = !isnull(p.prior)
@@ -188,7 +188,7 @@ Base.showerror(io::IO, ex::ParamBoundsError) = print(io, ex.msg)
 parameter{T,U<:Transform}(key::Symbol, value::T, [valuebounds =
 (value,value)], [transform_parameterization = (value,value)],
 [transform = Untransformed()], [prior = NullablePrior()], [fixed =
-true], [scaling::Function = identity], [description = ""],[texLabel::AbstractString = ""])
+true], [scaling::Function = identity], [description = ""],[tex_label::AbstractString = ""])
 
 
 By default, returns a fixed `UnscaledParameter` object with key `key`
@@ -201,60 +201,60 @@ function parameter{T,U<:Transform}(key::Symbol,
                                    value::T,
                                    valuebounds::Interval{T} = (value,value),
                                    transform_parameterization::Interval{T} = (value,value),
-                                   transform::U             = Untransformed(),
+                                   transform::U             = DSGE.Untransformed(),
                                    prior::NullableOrPrior   = NullablePrior();
                                    fixed::Bool              = true,
                                    scaling::Function        = identity,
                                    description::AbstractString = "",
-                                   texLabel::AbstractString = "")
+                                   tex_label::AbstractString = "")
 
     
     # If fixed=true, force bounds to match and leave prior as null.  We need to define new
     # variable names here because of lexical scoping.
 
-    ret_valuebounds = valuebounds
-    ret_transform_parameterization = transform_parameterization
-    ret_transform = transform
-    ret_U = U
-    ret_prior = prior
+    valuebounds_new = valuebounds
+    transform_parameterization_new = transform_parameterization
+    transform_new = transform
+    U_new = U
+    prior_new = prior
 
     if fixed
-        ret_transform_parameterization = (value,value)  # value is transformed already       
-        ret_transform = Untransformed()                 # fixed priors should stay untransformed
-        ret_U = Untransformed
+        transform_parameterization_new = (value,value)  # value is transformed already       
+        transform_new = DSGE.Untransformed()                 # fixed priors should stay untransformed
+        U_new = Untransformed
 
         if isa(transform, Untransformed)
-            ret_valuebounds = (value,value)
+            valuebounds_new = (value,value)
         end
     else
-        ret_transform_parameterization = transform_parameterization
+        transform_parameterization_new = transform_parameterization
     end
     
     # ensure that we have a Nullable{Distribution}, if not construct one
-    ret_prior = !isa(ret_prior,NullablePrior) ? NullablePrior(ret_prior) : ret_prior
+    prior_new = !isa(prior_new,NullablePrior) ? NullablePrior(prior_new) : prior_new
 
     if scaling == identity
-        return UnscaledParameter{T,ret_U}(key, value, ret_valuebounds, ret_transform_parameterization, ret_transform,
-                                      ret_prior, fixed, description, texLabel)
+        return UnscaledParameter{T,U_new}(key, value, valuebounds_new, transform_parameterization_new, transform_new,
+                                      prior_new, fixed, description, tex_label)
     else
-        return ScaledParameter{T,ret_U}(key, value, scaling(value), ret_valuebounds, ret_transform_parameterization, ret_transform,
-                                    ret_prior, fixed, scaling, description, texLabel)
+        return ScaledParameter{T,U_new}(key, value, scaling(value), valuebounds_new, transform_parameterization_new, transform_new,
+                                    prior_new, fixed, scaling, description, tex_label)
     end
 end
 
 
 """
 SteadyStateParameter{T<:Number}(key::Symbol, value::T;
-[description::AbstractString = ""], [texLabel::AbstractString = ""])
+[description::AbstractString = ""], [tex_label::AbstractString = ""])
 
-SteadyStateParameter constructor with optional `description` and `texLabel` arguments.
+SteadyStateParameter constructor with optional `description` and `tex_label` arguments.
 """
 function SteadyStateParameter{T<:Number}(key::Symbol,
                                        value::T;
                                        description::AbstractString = "",
-                                       texLabel::AbstractString = "")
+                                       tex_label::AbstractString = "")
 
-    return SteadyStateParameter(key, value, description, texLabel)
+    return SteadyStateParameter(key, value, description, tex_label)
 end
 
 
@@ -270,7 +270,7 @@ function parameter{T<:Number,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::
     if !(a <= newvalue <= b)
         throw(ParamBoundsError("New value of $(string(p.key)) ($(newvalue)) is out of bounds ($(p.valuebounds))"))
     end
-    UnscaledParameter{T,U}(p.key, newvalue, p.valuebounds, p.transform_parameterization, p.transform, p.prior, p.fixed, p.description, p.texLabel)
+    UnscaledParameter{T,U}(p.key, newvalue, p.valuebounds, p.transform_parameterization, p.transform, p.prior, p.fixed, p.description, p.tex_label)
 end
 
 
@@ -287,18 +287,18 @@ function parameter{T<:Number,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
     if !(a <= newvalue <= b)
         throw(ParamBoundsError("New value of $(string(p.key)) ($(newvalue)) is out of bounds ($(p.valuebounds))"))
     end
-    ScaledParameter{T,U}(p.key, newvalue, p.scaling(newvalue), p.valuebounds, p.transform_parameterization, p.transform, p.prior, p.fixed, p.scaling, p.description, p.texLabel)
+    ScaledParameter{T,U}(p.key, newvalue, p.scaling(newvalue), p.valuebounds, p.transform_parameterization, p.transform, p.prior, p.fixed, p.scaling, p.description, p.tex_label)
 end
 
 function Base.show{T,U}(io::IO, p::Parameter{T,U})
     @printf io "%s\n" typeof(p)
     @printf io "(:%s)\n%s\n"      p.key p.description
-    @printf io "LaTeX label: %s\n"     p.texLabel
+    @printf io "LaTeX label: %s\n"     p.tex_label
     @printf io "-----------------------------\n"
-    #@printf io "real value:        %+6f\n" toreal(p)
+    #@printf io "real value:        %+6f\n" transform_to_real_line(p)
     @printf io "unscaled, untransformed value:        %+6f\n" p.value
     isa(p,ScaledParameter) && @printf "scaled, untransformed value:        %+6f\n" p.scaledvalue
-    #!isa(U(),Untransformed) && @printf io "transformed value: %+6f\n" p.value
+    #!isa(U(),DSGE.Untransformed) && @printf io "transformed value: %+6f\n" p.value
     
     if hasprior(p)
         @printf io "prior distribution:\n\t%s\n" get(p.prior)
@@ -313,14 +313,14 @@ end
 function Base.show{T}(io::IO, p::SteadyStateParameter{T})
     @printf io "%s\n" typeof(p)
     @printf io "(:%s)\n%s\n"      p.key p.description
-    @printf io "LaTeX label: %s\n"     p.texLabel
+    @printf io "LaTeX label: %s\n"     p.tex_label
     @printf io "-----------------------------\n"
     @printf io "value:        %+6f\n" p.value
 end
 
 
 """
-tomodel{T<:Number, U<:Transform}(p::Parameter{T,U}, x::T)
+transform_to_model_space{T<:Number, U<:Transform}(p::Parameter{T,U}, x::T)
 
 Transforms `x` from the real line to lie between `p.valuebounds` without updating
 `p.value`. The transformations are defined as follows,
@@ -330,20 +330,20 @@ where (a,b) = p.transform_parameterization and c a scalar (default=1):
 - SquareRoot:    (a+b)/2 + (b-a)/2 * c * x/sqrt(1 + c^2 * x^2)
 - Exponential:   a + exp(c*(x-b))
 """
-tomodel{T}(p::Parameter{T,Untransformed}, x::T) = x
-function tomodel{T}(p::Parameter{T,SquareRoot}, x::T)
+transform_to_model_space{T}(p::Parameter{T,Untransformed}, x::T) = x
+function transform_to_model_space{T}(p::Parameter{T,SquareRoot}, x::T)
     (a,b), c = p.transform_parameterization, one(T)
     (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)
 end
-function tomodel{T}(p::Parameter{T,Exponential}, x::T)
+function transform_to_model_space{T}(p::Parameter{T,Exponential}, x::T)
     (a,b),c = p.transform_parameterization,one(T)
     a + exp(c*(x-b))
 end
 
-tomodel{T}(pvec::ParameterVector{T}, values::Vector{T}) = map(tomodel, pvec, values)
+transform_to_model_space{T}(pvec::ParameterVector{T}, values::Vector{T}) = map(transform_to_model_space, pvec, values)
 
 """
-toreal{T<:Number, U<:Transform}(p::Parameter{T,U}, x::T = p.value)
+transform_to_real_line{T<:Number, U<:Transform}(p::Parameter{T,U}, x::T = p.value)
 
 Transforms `p.value` from model space (between `p.valuebounds`) to the real line, without updating
 `p.value`. The transformations are defined as follows,
@@ -353,19 +353,19 @@ where (a,b) = p.transform_parameterization, c a scalar (default=1), and x = p.va
 - SquareRoot:   (1/c)*cx/sqrt(1 - cx^2), where cx =  2 * (x - (a+b)/2)/(b-a)
 - Exponential:   a + exp(c*(x-b))
 """
-toreal{T}(p::Parameter{T,Untransformed}, x::T = p.value) = x
-function toreal{T}(p::Parameter{T,SquareRoot}, x::T = p.value)
+transform_to_real_line{T}(p::Parameter{T,Untransformed}, x::T = p.value) = x
+function transform_to_real_line{T}(p::Parameter{T,SquareRoot}, x::T = p.value)
     (a,b), c = p.transform_parameterization, one(T)
     cx = 2 * (x - (a+b)/2)/(b-a)
     (1/c)*cx/sqrt(1 - cx^2)
 end
-function toreal{T}(p::Parameter{T,Exponential}, x::T = p.value)
+function transform_to_real_line{T}(p::Parameter{T,Exponential}, x::T = p.value)
     (a,b),c = p.transform_parameterization,one(T)
     b + (1/c) * log(x-a)
 end
 
-toreal{T}(pvec::ParameterVector{T}, values::Vector{T}) = map(toreal, pvec, values)
-toreal{T}(pvec::ParameterVector{T}) = map(toreal, pvec)
+transform_to_real_line{T}(pvec::ParameterVector{T}, values::Vector{T}) = map(transform_to_real_line, pvec, values)
+transform_to_real_line{T}(pvec::ParameterVector{T}) = map(transform_to_real_line, pvec)
 
 
 # define operators to work on parameters
@@ -410,26 +410,26 @@ for f in (:(Base.exp),
 end
 
 """
-update!{T}(pvec::ParameterVector{T}, newvalues::Vector{T})
+update!{T}(pvec::ParameterVector{T}, values::Vector{T})
 
 Update all parameters in `pvec` that are not fixed with
-`newvalues`. Length of `newvalues` must equal length of `pvec`.
+`values`. Length of `values` must equal length of `pvec`.
 """
 # this function is optimised for speed
-function update!{T}(pvec::ParameterVector{T}, newvalues::Vector{T})
-    @assert length(newvalues) == length(pvec) "Length of input vector (=$(length(newvalues))) must match length of parameter vector (=$(length(pvec)))"
-    map!(parameter, pvec, pvec, newvalues)
+function update!{T}(pvec::ParameterVector{T}, values::Vector{T})
+    @assert length(values) == length(pvec) "Length of input vector (=$(length(values))) must match length of parameter vector (=$(length(pvec)))"
+    map!(parameter, pvec, pvec, values)
 end
 
 """
-update{T}(pvec::ParameterVector{T}, newvalues::Vector{T})
+update{T}(pvec::ParameterVector{T}, values::Vector{T})
 
 Returns a copy of `pvec` where non-fixed parameter values are udpated
-to `newvalues`. `pvec` remains unchanged. Length of `newvalues` must
+to `values`. `pvec` remains unchanged. Length of `values` must
 equal length of `pvec`.
 """
 # define the non-mutating version like this because we need the type stability of map!
-update{T}(pvec::ParameterVector{T}, newvalues::Vector{T}) = update!(copy(pvec), newvalues)
+update{T}(pvec::ParameterVector{T}, values::Vector{T}) = update!(copy(pvec), values)
 
 Distributions.pdf(p::AbstractParameter) = exp(logpdf(p))
 Distributions.logpdf{T,U}(p::Parameter{T,U}) = logpdf(get(p.prior),p.value) # we want the unscaled value for ScaledParameters
@@ -447,17 +447,17 @@ function Distributions.logpdf{T}(pvec::ParameterVector{T})
 end
 
 # calculate logpdf at new values, without needing to allocate a temporary array with update
-function Distributions.logpdf{T}(pvec::ParameterVector{T}, newvalues::Vector{T})
-    @assert length(newvalues) == length(pvec) "Length of input vector (=$(length(newvalues))) must match length of parameter vector (=$(length(pvec)))"
+function Distributions.logpdf{T}(pvec::ParameterVector{T}, values::Vector{T})
+    @assert length(values) == length(pvec) "Length of input vector (=$(length(values))) must match length of parameter vector (=$(length(pvec)))"
     
     x = zero(T)
     @inbounds for i = 1:length(pvec)
         if hasprior(pvec[i])
-            x += logpdf(parameter(pvec[i], newvalues[i]))
+            x += logpdf(parameter(pvec[i], values[i]))
         end
     end
     x
 end
 
 Distributions.pdf{T}(pvec::ParameterVector{T}) = exp(logpdf(pvec))
-Distributions.pdf{T}(pvec::ParameterVector{T}, newvalues::Vector{T}) = exp(logpdf(pvec, newvalues))
+Distributions.pdf{T}(pvec::ParameterVector{T}, values::Vector{T}) = exp(logpdf(pvec, values))
