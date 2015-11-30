@@ -42,7 +42,7 @@ If `div` is omitted from argument list, a `div`>1 is calculated.
 ### Notes
 
 We constrain Julia to use the complex version of the `schurfact` routine regardless of the
-types of Γ0 and Γ1, to match the behavior of Matlab.  Matlab always uses the complex version
+types of `Γ0` and `Γ1`, to match the behavior of Matlab.  Matlab always uses the complex version
 of the Schur decomposition, even if the inputs are real numbers.
 """
 function gensys(Γ0, Γ1, c, ψ, π)

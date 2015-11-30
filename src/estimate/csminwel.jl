@@ -1,16 +1,6 @@
 #=
-
-    @author : Jonathan Payne <jep459@nyu.edu>,
-    @author : Spencer Lyon <spencer.lyon@nyu.edu>
-
-@date: 2014-Sep-22
-
-References
-----------
-
-Simple port of the original Matlab files csminwel.m, numgrad.m, bfgsi.m
-written by Chris Sims.
-
+Copyright Chris Sims
+See http://sims.princeton.edu/yftp/optimize/
 =#
 
 import Calculus  # for numerical derivatives
@@ -50,18 +40,24 @@ macro csminwelltrace()
 end
 
 """
-This routine implements Chris Sims' `csminwel` algorithm found
-[here](http://sims.princeton.edu/yftp/optimize/).
+```
+csminwel(fcn::Function, grad::Function, x0::Vector, H0::Matrix=1e-5.*eye(length(x0)), args...;
+         xtol::Real=1e-32, ftol::Float64=1e-14, grtol::Real=1e-8, iterations::Int=1000,
+         store_trace::Bool = false, show_trace::Bool = false, extended_trace::Bool = false,
+         verbose::Symbol = :none, rng::AbstractRNG = MersenneTwister(), kwargs...)
+```
 
-This is a port of the MATLAB version of that function.
+Minimizes `fcn` using the csminwel algorithm.
 
 ### Arguments
 
-* `f::Function` : The objective function
-* `grad::Function` : The gradient of the objective function
-* `x0::Array`: The starting guess for the optimizer
+* `fcn::Function` : The objective function
+* `grad::Function` : The gradient of the objective function. This argument can be omitted if
+an analytical gradient is not available, which will cause a numerical gradient to be
+calculated.
+* `x0::Vector`: The starting guess for the optimizer
 
-#### Optional Arguments
+### Optional Arguments
 
 * `H0::Matrix`: An initial guess for the Hessian matrix -- must be
 positive definite. If none is given, then a scaled down identity
@@ -69,31 +65,29 @@ matrix is used.
 * `args...`:  Other positional arguments to be passed to `f` on each
 function call
 
-#### Keyword Arguments (optional)
+### Keyword Arguments
 
 * `ftol::{T<:Real}=1e-14`: Threshold for convergence in terms of change
 in function value across iterations.
 * `iterations::Int=100`: Maximum number of iterations
-* `io::IO=STDOUT`: The `IO` object to print messages to. Defaults to
-STDOUT, which is typically the REPL if Julia is run interactively.
 * `kwargs...`: Other keyword arguments to be passed to `f` on each
 function call
 """
 function csminwel(fcn::Function,
-                                        grad::Function,
-                                        x0::Vector,
-                                        H0::Matrix=1e-5.*eye(length(x0)),
-                                        args...;                                        
-                                        xtol::Real=1e-32,  # default from Optim.jl
-                                        ftol::Float64=1e-14,  # Default from csminwel
-                                        grtol::Real=1e-8,  # default from Optim.jl
-                                        iterations::Int=1000,
-                                        store_trace::Bool = false,
-                                        show_trace::Bool = false,
-                                        extended_trace::Bool = false,
-                                        verbose::Symbol = :none,
-                                        rng::AbstractRNG = MersenneTwister(),
-                                        kwargs...)
+                  grad::Function,
+                  x0::Vector,
+                  H0::Matrix=1e-5.*eye(length(x0)),
+                  args...;                                        
+                  xtol::Real           = 1e-32,  # default from Optim.jl
+                  ftol::Float64        = 1e-14,  # Default from csminwel
+                  grtol::Real          = 1e-8,   # default from Optim.jl
+                  iterations::Int      = 1000,
+                  store_trace::Bool    = false,
+                  show_trace::Bool     = false,
+                  extended_trace::Bool = false,
+                  verbose::Symbol      = :none,
+                  rng::AbstractRNG     = MersenneTwister(),
+                  kwargs...)
     
     if show_trace
         @printf "Iter     Function value   Gradient norm \n"
@@ -336,25 +330,25 @@ function csminwel(fcn::Function,
 end
 
 
-"""
+#=
 Version of `csminwel` that will use finite differencing methods to
 approximate the gradient numerically. This is convenient for cases where
 you cannot supply an analytical derivative, but it is not as robust as
 using the true derivative.
-"""
+=#
 function csminwel(fcn::Function,
                   x0::Vector,
                   H0::Matrix=0.5.*eye(length(x0)),
                   args...;
-                  xtol::Real=1e-32,  # default from Optim.jl
-                  ftol::Float64=1e-14,  # Default from csminwel
-                  grtol::Real=1e-8,  # default from Optim.jl
-                  iterations::Int=1000,
-                  store_trace::Bool = false,
-                  show_trace::Bool = false,
+                  xtol::Real           = 1e-32, # default from Optim.jl
+                  ftol::Float64        = 1e-14, # Default from csminwel
+                  grtol::Real          = 1e-8,  # default from Optim.jl
+                  iterations::Int      = 1000,
+                  store_trace::Bool    = false,
+                  show_trace::Bool     = false,
                   extended_trace::Bool = false,
-                  verbose::Symbol = :none,
-                  rng::AbstractRNG = MersenneTwister(),
+                  verbose::Symbol      = :none,
+                  rng::AbstractRNG     = MersenneTwister(),
                   kwargs...)
     
     grad{T<:Number}(x::Array{T}) = csminwell_grad(fcn, x, args...; kwargs...)
@@ -551,15 +545,14 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
 end
 
 """
-`bfgsi(H0, dg, dx)`
+```
+bfgsi(H0, dg, dx)
+```
 
 ### Arguments
 - `H0`: hessian matrix 
 - `dg`: previous change in gradient
 - `dx`: previous change in x
-
-### Attribution
-Adapted from `bfgsi.m`, Christopher Sims, 1996.
 """
 function bfgsi(H0, dg, dx; verbose::Symbol = :none)
     if size(dg, 2) > 1
@@ -632,61 +625,3 @@ end
 #     end
 #     return
 # end
-
-"""
-Wrapper function to send a model to csminwel
-"""
-function optimize!(model::AbstractDSGEModel,
-                   data::Matrix;
-                   method::Symbol       = :csminwel,
-                   xtol::Real           = 1e-32,  # default from Optim.jl
-                   ftol::Float64        = 1e-14,  # Default from csminwel
-                   grtol::Real          = 1e-8,  # default from Optim.jl
-                   iterations::Int      = 1000,
-                   store_trace::Bool    = false,
-                   show_trace::Bool     = false,
-                   extended_trace::Bool = false,
-                   verbose::Symbol      = :none)
-
-        # For now, only csminwel should be used
-        optimizer = if method == :csminwel
-            csminwel
-        else
-            error("Method ",method," is not supported.")
-        end
-    
-        # Inputs to optimization
-        H0             = 1e-4 * eye(num_parameters_free(model))
-        para_free_inds = find([!θ.fixed for θ in model.parameters])
-        x_model        = toreal(model.parameters)
-        x_opt          = x_model[para_free_inds]
-
-        function f_opt(x_opt)
-            x_model[para_free_inds] = x_opt
-            tomodel!(model,x_model)
-            return -posterior(model, data; catch_errors=true)[:post]
-        end
-
-        rng = model.rng
-    
-        out, H_ = optimizer(f_opt, x_opt, H0; 
-            xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
-            store_trace=store_trace, show_trace=show_trace, extended_trace=extended_trace,
-            verbose=verbose, rng=rng)
-
-        x_model[para_free_inds] = out.minimum
-        tomodel!(model, x_model)
-
-        # Match original dimensions
-        out.minimum = x_model
-
-        H = zeros(num_parameters(model), num_parameters(model))
-        # Fill in rows/cols of zeros corresponding to location of fixed parameters
-        # For each row corresponding to a free parameter, fill in columns corresponding to free
-        # parameters. Everything else is 0.
-        for (row_free, row_full) in enumerate(para_free_inds)
-            H[row_full,para_free_inds] = H_[row_free,:]
-        end
-
-        return out, H
-end
