@@ -302,7 +302,7 @@ function of `ScaledParameter`s and `UnscaledParameter`s,
 they only require 4 fields:
 
 - `key::Symbol`
-- `value::T`                    
+- `value::T`
 - `description::AbstractString`
 - `texLabel::AbstractString`
 
@@ -488,8 +488,10 @@ listed below, in decreasing order of complexity:
 
 1. Add new parameters
 2. Modify equilibrium conditions or measurement equations
-3. Change the values of various parameter fields (i.e. initial `value`, `prior`, `transform`, etc)
-4. Change the values of various computational settings (i.e. `reoptimize`, `num_mh_blocks`)
+3. Change the values of various parameter fields (i.e. initial `value`, `prior`,
+`transform`, etc)
+4. Change the values of various computational settings (i.e. `reoptimize`,
+`num_mh_blocks`)
 
 Points 1 and 2 often go together (adding a new parameter guarantees a
 change in equilibrium conditions), and are such fundamental changes
@@ -537,8 +539,8 @@ see fit. If adding new states, equilibrium conditions, shocks, or
 observables, be sure to add them to the appropriate list in
 `initialize_model_indices`.
 
-4. Open the module file, `src/DSGE.jl`. Add `ModelXXX` to the list of functions to export, and include each of the files in `src/model/mXXX`.
-
+4. Open the module file, `src/DSGE.jl`. Add `ModelXXX` to the list of functions
+to export, and include each of the files in `src/model/mXXX`.
 
 ## Model subspecifications (`m.subspec`)
 
@@ -586,11 +588,23 @@ m = Model990("ss1")
 ```
 
 ## Acknowledgements
-Copyright Chris Sims. 
+Developers of this package at [FRBNY](https://www.newyorkfed.org/research)
+include 
+
+* [Pearl Li](https://github.com/pearlzli)
+* [Erica Moszkowski](https://github.com/emoszkowski)
+* [Micah Smith](http://micahsmith.com)
+
+Contributors to this package at [QuantEcon](http://quantecon.org) include 
+
+* [Zac Cranko](https://github.com/ZacCranko)
+* [Spencer Lyon](http://spencerlyon.com)
+* [Pablo Winant](http://www.mosphere.fr)
 
 The `gensys` and `csminwel` routines (and some dependencies) are copyright
-Chris Sims. 
+[Chris Sims](http://www.princeton.edu/sims). 
 
 The `kalman_filter` routine is loosely based on a version of the
-Kalman filter algorithm written by Iskander Karibzhanov while he was
+Kalman filter algorithm written by 
+[Iskander Karibzhanov](http://karibzhanov.com) while he was
 an employee at the Federal Reserve Bank of Atlanta.
