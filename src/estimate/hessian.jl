@@ -193,7 +193,7 @@ function hessian!{T<:AbstractFloat}(m::AbstractModel,
 
     # Compute hessian only for freem parameters with indices less than max. Useful for
     # testing purposes.
-    max_free_ind = max_hessian_free_params(m)
+    max_free_ind = n_hessian_test_params(m)
     if max_free_ind < maximum(para_free_inds)
         para_free_inds = para_free_inds[1:max_free_ind]
     end

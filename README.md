@@ -68,8 +68,8 @@ tree (square brackets indicate future additions to the tree that will be added i
     - `data/`:  Macroeconomic series formatted as an n x m Array{Float64,2}, where n is the number of observations and m is the number of series used as input.
       - `data_151030.h5`: input data vintage from October 30, 2015 (note that this is something of a misnomer because this data isnt from that date...)
     - `user/`: User-created files for model input. For instance, the user may specify a previously computed mode when `optimize(m)==false`, or a starting point for optimization when `optimize(m)==true`.
-      - `mode_in.h5`: Used as starting point for estimation when `optimize(m)==false`.
-      - `mode_in_optimized.h5`: Taken as the mode when `optimize(m)==true`.
+      - `params_start.h5`: Used as starting point for estimation when `optimize(m)==false`.
+      - `params_mode.h5`: Taken as the mode when `optimize(m)==true`.
       - `hessian.h5`: Used as starting point for hessian calculation when `calculate_hessian(m)==false`.
       - `hessian_optimized.h5`: Taken as the hessian when `calculate_hessian(m)==true`.
   - `output_data/`: 
@@ -81,7 +81,7 @@ tree (square brackets indicate future additions to the tree that will be added i
           - `raw/`: Raw output from estimation step 
             - mode_out.h5: Optimized mode after running csminwel
             - hessian_out.h5: Hessian at the mode
-            - sim_save.h5: Draws from posterior distribution			     
+            - mh_save.h5: Draws from posterior distribution			     
           - `work/`: HDF5 files created using `raw/` files as input
             - `cov.h5`: Covariance matrix for parameter draws from Metropolis-Hastings. Can be used as hessian matrix.
         - [`forecast/`]: Output for forecasts 
@@ -389,7 +389,7 @@ posterior distribution per block.
 Metropolis-Hastings.
 - `n_mh_burn::Setting{Int}`: Number of blocks to discard as burn-in
 for Metropolis-Hastings.
-- `mh_thinning_step::Setting{Int}`: Save every `mh_thinning_step`-th
+- `mh_thin::Setting{Int}`: Save every `mh_thin`-th
 draw in Metropolis-Hastings.
 
 
@@ -409,13 +409,13 @@ have explicit getter methods that take only the model object `m` as an argument:
 *Estimation:*
 `optimize(m)`,
 `calculate_hessian(m)`,
-`max_hessian_free_params(m)`,
+`n_hessian_test_params(m)`,
 
 *Metropolis-Hastings:*
 `n_mh_blocks(m)`,
 `n_mh_simulations(m)`, 
 `n_mh_burn(m)`, 
-`mh_thinning_step(m)`	
+`mh_thin(m)`	
 
 
 ### Overwriting Default Settings
@@ -461,9 +461,9 @@ is used.)
 - *Find Mode*: The main program will call the `csminwel` optimization
 routine (located in `csminwel.jl`) to find modal parameter
 estimates. Can optionally start estimation from a starting parameter
-vector by specifying `save/input_data/mode_in.h5` If the
+vector by specifying `save/input_data/params_start.h5` If the
 starting parameter vector is known to be optimized, the file should
-be called `mode_in_optimized.h5`
+be called `params_mode.h5`
 
 - *Sample from Posterior*: Posterior sampling begins from the computed
 mode, (or the provided mode if `optimize=false`), first computing
@@ -472,7 +472,7 @@ Metropolis Hastings algorithm. Default settings for the number of
 sampling blocks and the size of those blocks can be altered as
 described in "Extending or Editing a Model".
 
-**Remark**: In addition to saving each `mh_thinning_step`-th draw of the
+**Remark**: In addition to saving each `mh_thin`-th draw of the
 parameter vector, the estimation program also saves the resulting
 posterior value and transition equation matrices implied by each draw
 of the parameter vector. This is to save time in the forecasting step

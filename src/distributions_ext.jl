@@ -7,11 +7,11 @@ functions, but rather new functions with the same names.
 """
 
 
-using Distributions, Compat, DSGE
-import Distributions: params, mean, std, pdf, logpdf, rand
-import Base: length
+#using Distributions, Compat, DSGE
+#import Distributions: params, mean, std, pdf, logpdf, rand
+#import Base.length
 
-export Beta, Gamma, RootInverseGamma, DegenerateMvNormal
+# export Beta, Gamma, RootInverseGamma, DegenerateMvNormal
 
 """
 BetaAlt(μ::AbstractFloat, σ::AbstractFloat)

@@ -32,12 +32,12 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
         _n_observables = n_observables(m)
         _n_states = n_states_augmented(m)
         _n_shocks_exogenous = n_shocks_exogenous(m)
-        endo_addl = m.endogenous_states_augmented
+        endo_new = m.endogenous_states_augmented
     else
         _n_observables = n_observables(m) - n_anticipated_shocks(m)
         _n_states = n_states_augmented(m) - n_anticipated_shocks(m)
         _n_shocks_exogenous = n_shocks_exogenous(m) - n_anticipated_shocks(m)
-        endo_addl = Dict(
+        endo_new = Dict(
             [(key,m.endogenous_states_augmented[key] - n_anticipated_shocks(m)) for key in keys(m.endogenous_states_augmented)])
     end
 
@@ -49,7 +49,7 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
 
     ## Output growth - Quarterly!
     ZZ[obs[:obs_gdp], endo[:y_t]]       = 1.0
-    ZZ[obs[:obs_gdp], endo_addl[:y_t1]] = -1.0
+    ZZ[obs[:obs_gdp], endo_new[:y_t1]] = -1.0
     ZZ[obs[:obs_gdp], endo[:z_t]]       = 1.0
     DD[obs[:obs_gdp]]                   = 100*(exp(m[:z_star])-1)
 
@@ -59,18 +59,18 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
 
     ## Labor Share/real wage growth
     ZZ[obs[:obs_wages], endo[:w_t]]       = 1.0
-    ZZ[obs[:obs_wages], endo_addl[:w_t1]] = -1.0
+    ZZ[obs[:obs_wages], endo_new[:w_t1]] = -1.0
     ZZ[obs[:obs_wages], endo[:z_t]]       = 1.0
     DD[obs[:obs_wages]]                   = 100*(exp(m[:z_star])-1)
 
     ## Inflation (GDP Deflator)
     ZZ[obs[:obs_gdpdeflator], endo[:π_t]]          = m[:Γ_gdpdef]
-    ZZ[obs[:obs_gdpdeflator], endo_addl[:e_gdpdef_t]] = 1.0
+    ZZ[obs[:obs_gdpdeflator], endo_new[:e_gdpdef_t]] = 1.0
     DD[obs[:obs_gdpdeflator]]                       = 100*(m[:π_star]-1) + m[:δ_gdpdef]
 
     ## Inflation (Core PCE)
     ZZ[obs[:obs_corepce], endo[:π_t]]       = 1.0
-    ZZ[obs[:obs_corepce], endo_addl[:e_corepce_t]] = 1.0
+    ZZ[obs[:obs_corepce], endo_new[:e_corepce_t]] = 1.0
     DD[obs[:obs_corepce]]                    = 100*(m[:π_star]-1)
 
     ## Nominal interest rate
@@ -79,13 +79,13 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
 
     ## Consumption Growth
     ZZ[obs[:obs_consumption], endo[:c_t]]       = 1.0
-    ZZ[obs[:obs_consumption], endo_addl[:c_t1]] = -1.0
+    ZZ[obs[:obs_consumption], endo_new[:c_t1]] = -1.0
     ZZ[obs[:obs_consumption], endo[:z_t]]       = 1.0
     DD[obs[:obs_consumption]]                   = 100*(exp(m[:z_star])-1)
 
     ## Investment Growth
     ZZ[obs[:obs_investment], endo[:i_t]]       = 1.0
-    ZZ[obs[:obs_investment], endo_addl[:i_t1]] = -1.0
+    ZZ[obs[:obs_investment], endo_new[:i_t1]] = -1.0
     ZZ[obs[:obs_investment], endo[:z_t]]       = 1.0
     DD[obs[:obs_investment]]                    = 100*(exp(m[:z_star])-1)
 
@@ -101,14 +101,14 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
 
     ## Long Rate
     ZZ[obs[:obs_longrate], :]                = ZZ[6, :]*TTT10
-    ZZ[obs[:obs_longrate], endo_addl[:lr_t]] = 1.0
+    ZZ[obs[:obs_longrate], endo_new[:lr_t]] = 1.0
     DD[obs[:obs_longrate]]                   = m[:Rstarn]
 
     ## TFP
     ZZ[obs[:obs_tfp], endo[:z_t]]           = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
-    ZZ[obs[:obs_tfp], endo_addl[:tfp_t]]    = 1.0
+    ZZ[obs[:obs_tfp], endo_new[:tfp_t]]    = 1.0
     ZZ[obs[:obs_tfp], endo[:u_t]]           = m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα] )
-    ZZ[obs[:obs_tfp], endo_addl[:u_t1]]     = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
+    ZZ[obs[:obs_tfp], endo_new[:u_t1]]     = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
 
     QQ[exo[:g_sh], exo[:g_sh]]           = m[:σ_g]^2
     QQ[exo[:b_sh], exo[:b_sh]]           = m[:σ_b]^2
