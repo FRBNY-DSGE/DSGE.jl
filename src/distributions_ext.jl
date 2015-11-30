@@ -1,3 +1,4 @@
+#=
 """
 This file defines additional functions to return objects of type Distribution. This is
 necessary because we specify prior distributions wrt mean and SD
@@ -5,13 +6,11 @@ necessary because we specify prior distributions wrt mean and SD
 parameters). Note these functions are NOT new methods for the Distributions.Beta, etc.
 functions, but rather new functions with the same names.
 """
+=#
 
 
-#using Distributions, Compat, DSGE
-#import Distributions: params, mean, std, pdf, logpdf, rand
-#import Base.length
-
-# export Beta, Gamma, RootInverseGamma, DegenerateMvNormal
+import Distributions: params, mean, std, pdf, logpdf, rand
+import Base.length
 
 """
 BetaAlt(μ::AbstractFloat, σ::AbstractFloat)
@@ -90,6 +89,7 @@ function moments(dist::Distributions.Gamma)
     σ = α / θ^2
     return μ, σ
 end
+
 
 """
 Distributions.pdf(d::RootInverseGamma, x::AbstractFloat)
