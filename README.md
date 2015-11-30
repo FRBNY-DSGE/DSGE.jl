@@ -599,7 +599,7 @@ Contributors to this package at [QuantEcon](http://quantecon.org) include
 
 * [Zac Cranko](https://github.com/ZacCranko)
 * [Spencer Lyon](http://spencerlyon.com)
-* [Pablo Winant](http://mosphere.fr)
+* [Pablo Winant](http://www.mosphere.fr)
 
 The `gensys` and `csminwel` routines (and some dependencies) are copyright
 [Chris Sims](http://www.princeton.edu/sims). 
