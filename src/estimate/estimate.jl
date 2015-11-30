@@ -76,8 +76,9 @@ function estimate(m::AbstractModel;
         # If the algorithm stops only because we have exceeded the maximum number of
         # iterations, continue improving guess of modal parameters
         total_iterations = 0
-        tic()
+        optimization_time = 0
         while !converged
+            tic()
             out, H = optimize!(m, YY; 
                 ftol=ftol, iterations=n_iterations, show_trace=true, verbose=verbose)
             converged = !out.iteration_converged
@@ -85,7 +86,7 @@ function estimate(m::AbstractModel;
             total_iterations += out.iterations
             if VERBOSITY[verbose] >= VERBOSITY[:low] 
                 @printf "Total iterations completed: %d" total_iterations
-                @printf "Optimization time elapsed: %5.2f" toq()
+                @printf "Optimization time elapsed: %5.2f" optimization_time += toq()
             end
 
             # Write params to file after every `n_iterations` iterations
