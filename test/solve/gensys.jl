@@ -14,7 +14,7 @@ G1, C, impact, fmat, fwt, ywt, gev, eu, loose = gensys(Γ0, Γ1, C, Ψ, Π, stak
 
 h5 = h5open("$path/../reference/gensys.h5")
 G1_exp = read(h5, "G1_gensys")
-C_exp = reshape(read(h5, "C_gensys"), 66, 1)
+C_exp = reshape(read(h5, "C_gensys"), 60, 1)
 impact_exp = read(h5, "impact")
 eu_exp = read(h5, "eu")
 close(h5)

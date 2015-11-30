@@ -36,7 +36,7 @@ function estimate(m::AbstractModel;
 
     # Load data
     YY = h5open(inpath(m, "data","data_$(data_vintage(m)).h5"), "r") do f
-        read(f, "YY")
+        read(f, "data")
     end
 
     post = posterior(m, YY)[:post]
