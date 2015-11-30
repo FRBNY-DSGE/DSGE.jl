@@ -22,7 +22,7 @@ module DSGE
         n_shocks_expectational, n_parameters, spec, subspec, 
         saveroot, inpath, workpath, rawpath, tablespath, figurespath, logpath,
         optimize, calculate_hessian, n_mh_blocks, n_mh_simulations,
-        n_mh_burn, mh_thinning_step, data_vintage,
+        n_mh_burn, mh_thin, data_vintage,
 
         
         # parameters.jl

@@ -10,15 +10,16 @@ using Distributions, Compat
 @test α.prior.value.μ == 0.3
 @test α.description == ""
 @test α.tex_label == ""
+@test isa(α.transform, DSGE.SquareRoot)
 
 # UnscaledParameter, fixed = true
-α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), DSGE.Untransformed()(), Normal(0.30, 0.05), fixed=true)
+α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), DSGE.Untransformed(), Normal(0.30, 0.05), fixed=true)
 @test α_fixed.transform_parameterization == (0.1596,0.1596)
-@test isa(α_fixed.transform, DSGE.Untransformed())
+@test isa(α_fixed.transform, DSGE.Untransformed)
 
 # UnscaledParameter, fixed = true, transform should be overwritten given fixed
 α_fixed =  parameter(:α_fixed, 0.1596, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), Normal(0.30, 0.05), fixed=true)
-@test isa(α_fixed.transform, DSGE.Untransformed())
+@test isa(α_fixed.transform, DSGE.Untransformed)
 
 # Fixed UnscaledParameter, minimal constructor
 δ = parameter(:δ, 0.025)

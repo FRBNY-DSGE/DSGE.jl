@@ -148,13 +148,13 @@ use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers
 # Interface for estimation settings
 optimize(m::AbstractModel)          = get_setting(m, :optimize)
 calculate_hessian(m::AbstractModel) = get_setting(m, :calculate_hessian)
-max_hessian_free_params(m::AbstractModel) = get_setting(m, :max_hessian_free_params)
+n_hessian_test_params(m::AbstractModel) = get_setting(m, :n_hessian_test_params)
 
 # Interface for Metropolis-Hastings settings
 n_mh_blocks(m::AbstractModel)      =  get_setting(m, :n_mh_blocks)
 n_mh_simulations(m::AbstractModel) =  get_setting(m, :n_mh_simulations) 
 n_mh_burn(m::AbstractModel)        =  get_setting(m, :n_mh_burn)
-mh_thinning_step(m::AbstractModel)   =  get_setting(m, :mh_thinning_step)
+mh_thin(m::AbstractModel)   =  get_setting(m, :mh_thin)
 
 #=
 Build paths to where input/output/results data are stored.
