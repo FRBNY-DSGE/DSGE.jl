@@ -144,9 +144,9 @@ function default_settings(m::AbstractDSGEModel)
     m <= Setting(:datapathroot, datapath, "Input data directory path")
 
     # Anticipated shocks
-    m <= Setting(:num_anticipated_shocks,         6, "Number of anticipated policy shocks")
+    m <= Setting(:num_anticipated_shocks,         0, "Number of anticipated policy shocks")
     m <= Setting(:num_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    m <= Setting(:num_anticipated_lags,  24, "Number of periods back to incorporate zero bound expectations")
+    m <= Setting(:num_anticipated_lags,  0, "Number of periods back to incorporate zero bound expectations")
 
     # TODO: should be set when data are read in
     m <= Setting(:num_presample_periods, 2, "Number of periods in the presample")
