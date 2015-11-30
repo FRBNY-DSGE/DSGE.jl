@@ -14,7 +14,7 @@ function compute_moments{T<:AbstractModel}(m::T, percent::Float64 = 0.90;
     
     ### Step 1: Read in the matrix of parameter draws from metropolis-hastings
 
-    filename = rawpath(m,"estimate","sim_save.h5")
+    filename = rawpath(m,"estimate","mh_save.h5")
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Reading draws from Metropolis-Hastings from $filename...")
@@ -43,7 +43,7 @@ end
 
 """
 ```
-make_moment_tables{T<:AbstractFloat}(m::AbstractModel, Θ::Array{T,2}, percent::Float64;
+make_moment_tables{T<:AbstractFloat}(m::AbstractModel, θ::Array{T,2}, percent::Float64;
                                      verbose::Symbol=:none)
 ```
 
@@ -58,12 +58,12 @@ Tabulates parameter moments in 3 LaTeX tables:
 3. A list of prior means and posterior means
 
 ### Arguments
-    - `Θ`: [n_draws x n_parameters] matrix holding the posterior draws from metropolis-hastings
-           from save/sim_save.h5 
+    - `θ`: [n_draws x n_parameters] matrix holding the posterior draws from metropolis-hastings
+           from save/mh_save.h5 
     - `percent`: the mass of observations we want; 0 <= percent <= 1
 """
 function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
-                                              Θ::Array{T,2},
+                                              θ::Array{T,2},
                                               percent::Float64;
                                               verbose::Symbol=:none)
 
@@ -73,7 +73,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
     
     n_params = length(m.parameters) 
     prior_means = zeros(n_params,1)
-    prior_stddev = zeros(n_params,1)
+    prior_std = zeros(n_params,1)
 
     
     for (i,k) in enumerate(m.keys)
@@ -87,26 +87,26 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
         # Null prior means parameter is fixed
         if isnull(param.prior)
             prior_means[i]  = param.value
-            prior_stddev[i] = 0
+            prior_std[i] = 0
 
         # TODO xxxMoments could be declared something like
         # function distMoments{T<:Distribution}(prior_value::T)
         elseif isa(param.prior.value, DSGE.Normal)
 
             prior_means[i] = param.prior.value.μ
-            prior_stddev[i] = param.prior.value.σ
+            prior_std[i] = param.prior.value.σ
             
         elseif isa(param.prior.value, Distributions.Beta)
             μ,σ = moments(param.prior.value)
             
             prior_means[i] = μ
-            prior_stddev[i] = σ
+            prior_std[i] = σ
 
         elseif isa(param.prior.value, Distributions.Gamma)
             μ,σ = moments(param.prior.value)
             
             prior_means[i] = μ
-            prior_stddev[i] = σ  # small \theta
+            prior_std[i] = σ  # small \theta
             
         end
     end
@@ -116,17 +116,17 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
     ########################################################################################
 
     # Posterior mean for each
-    Θ_hat = mean(Θ,1)'       
+    θ_hat = mean(θ,1)'       
 
     # Covariance: Note that this has already been computed and saved
     # in $workpath(m)/parameter_covariance.h5.   
-    # parameter Θ_sig = cov(Θ, mean=Θ_hat') 
+    # parameter θ_sig = cov(θ, mean=θ_hat') 
 
     # Bands for each
-    Θ_bands = []
+    θ_bands = []
 
     try
-        Θ_bands = find_density_bands(Θ,percent,minimize=true)' # We need the transpose
+        θ_bands = find_density_bands(θ,percent,minimize=true)' # We need the transpose
     catch
         println("percent must be between 0 and 1")
         return -1
@@ -140,10 +140,10 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
     colnames = ["Parameter ", "Prior Mean ", "Prior Stdd ", "Post Mean ",
                 "$(100*percent)\\% {\\tiny Lower Band} ", "$(100*percent)\\% {\\tiny Upper Band} " ]
 
-    outmat = [prior_means prior_stddev Θ_hat Θ_bands]      # prior mean and std dev, posterior mean,
+    outmat = [prior_means prior_std θ_hat θ_bands]      # prior mean and std dev, posterior mean,
                                                            # and bands (n_params x 5)
 
-    outmat2 = [prior_means Θ_hat]                          # prior mean and posterior mean
+    outmat2 = [prior_means θ_hat]                          # prior mean and posterior mean
                                                            # (n_params x 2)
 
 
@@ -157,19 +157,19 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
     ########################################################################################
     
     # Open and start the TeX file
-    mainParams_out = tablespath(m,"estimate", "moments_mainParams.tex")
-    mainParams_fid = open(mainParams_out,"w")
+    moments0_out = tablespath(m,"estimate", "moments0.tex")
+    moments0_fid = open(moments0_out,"w")
 
-    beginTexTableDoc(mainParams_fid)
+    beginTexTableDoc(moments0_fid)
 
-    @printf(mainParams_fid,"\\caption{Parameter Estimates}\n")
-    @printf(mainParams_fid,"\\vspace*{.5cm}\n")
-    @printf(mainParams_fid,"{\\small \n")
-    @printf(mainParams_fid,"\\begin{tabular}{lllllll}\\hline \n")
+    @printf(moments0_fid,"\\caption{Parameter Estimates}\n")
+    @printf(moments0_fid,"\\vspace*{.5cm}\n")
+    @printf(moments0_fid,"{\\small \n")
+    @printf(moments0_fid,"\\begin{tabular}{lllllll}\\hline \n")
 
     # Column names
     for col in colnames
-        @printf(mainParams_fid, "%4.99s & ", col)
+        @printf(moments0_fid, "%4.99s & ", col)
     end
         
     # Keep track of indices for important parameters 
@@ -193,11 +193,11 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
             continue
         end
 
-        @printf(mainParams_fid, "\\\\ \n \$\%4.99s\$ & ", param.tex_label)
+        @printf(moments0_fid, "\\\\ \n \$\%4.99s\$ & ", param.tex_label)
         
         #Print the values in outmat
         for val in outmat[index,:]
-            @printf(mainParams_fid, "\%8.3f & ",val)
+            @printf(moments0_fid, "\%8.3f & ",val)
         end
 
         important_para = [important_para; index]
@@ -205,25 +205,25 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
     end
 
     # Close the file
-    endTexTableDoc(mainParams_fid;small=true)
+    endTexTableDoc(moments0_fid;small=true)
 
     ########################################################################################
     ## 4b. Write to Table 2: Prior mean, std dev and posterior mean, bands for other params
     ########################################################################################
     
-    periphParams_out = tablespath(m,"estimate", "moments_periphParams_0.tex")
-    periphParams_fid = open(periphParams_out,"w")
+    moments_table_out = tablespath(m,"estimate", "moments1.tex")
+    moments_table_fid = open(moments_table_out,"w")
 
-    beginTexTableDoc(periphParams_fid)
+    beginTexTableDoc(moments_table_fid)
 
-    @printf(periphParams_fid,"\\caption{Parameter Estimates}\n")
-    @printf(periphParams_fid,"\\vspace*{.2cm}\n")
-    @printf(periphParams_fid,"{\\small \n")
-    @printf(periphParams_fid,"\\begin{tabular}{lllllll}\\hline \n")
+    @printf(moments_table_fid,"\\caption{Parameter Estimates}\n")
+    @printf(moments_table_fid,"\\vspace*{.2cm}\n")
+    @printf(moments_table_fid,"{\\small \n")
+    @printf(moments_table_fid,"\\begin{tabular}{lllllll}\\hline \n")
     
     # Column names
     for col in colnames
-        @printf(periphParams_fid, "%4.99s & ", col)
+        @printf(moments_table_fid, "%4.99s & ", col)
     end
     
     # Counter for parameters to track length of table and number of tables in excess of
@@ -242,39 +242,39 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
         if ((other_para%25 == 0) && (index != length(m.parameters)) )
 
             # Finish and close the old file
-            endTexTableDoc(periphParams_fid;small=true)
+            endTexTableDoc(moments_table_fid;small=true)
 
             # Update table counter
             table_count = table_count + 1
 
             # Start the new file
-            filename = @sprintf("moments_periphParams_%d.tex",table_count)
-            periphParams_out = tablespath(m,"estimate",filename)
-            periphParams_fid = open(periphParams_out,"w")
+            filename = @sprintf("moments%d.tex",table_count)
+            moments_table_out = tablespath(m,"estimate",filename)
+            moments_table_fid = open(moments_table_out,"w")
             
-            beginTexTableDoc(periphParams_fid)
-            @printf(periphParams_fid,"\\caption{Parameter Estimates}\n")
-            @printf(periphParams_fid,"\\vspace*{.2cm}\n")
-            @printf(periphParams_fid,"{\\small \n")
-            @printf(periphParams_fid,"\\begin{tabular}{lllllll}\\hline \n")
+            beginTexTableDoc(moments_table_fid)
+            @printf(moments_table_fid,"\\caption{Parameter Estimates}\n")
+            @printf(moments_table_fid,"\\vspace*{.2cm}\n")
+            @printf(moments_table_fid,"{\\small \n")
+            @printf(moments_table_fid,"\\begin{tabular}{lllllll}\\hline \n")
             
             for col in colnames
-                @printf(periphParams_fid, "%4.99s & ", col)
+                @printf(moments_table_fid, "%4.99s & ", col)
             end
         end
         
         # Print the parameter name
-        @printf(periphParams_fid, "\\\\ \n \$\%4.99s\$ & ", param.tex_label)
+        @printf(moments_table_fid, "\\\\ \n \$\%4.99s\$ & ", param.tex_label)
         
         # Print the values in outmat
         for val in outmat[index,:]
-            @printf(periphParams_fid, "\%8.3f & ",val)
+            @printf(moments_table_fid, "\%8.3f & ",val)
         end
         
         other_para = other_para+1
         
     end
-    endTexTableDoc(periphParams_fid;small=true)
+    endTexTableDoc(moments_table_fid;small=true)
 
     ########################################################################################
     ## 4c. Write to Table 5: Prior mean and posterior mean for all parameters
