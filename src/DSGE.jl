@@ -59,6 +59,7 @@ module DSGE
     
     include("estimate/kalman.jl")
     include("estimate/posterior.jl")
+    include("estimate/optimize.jl")
     include("estimate/csminwel.jl")
     include("estimate/hessian.jl")
     include("estimate/estimate.jl")
