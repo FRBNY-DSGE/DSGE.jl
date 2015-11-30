@@ -1,6 +1,6 @@
 function init_subspec(m::Model990)
 
-    if subspec(m) == "ss0"
+    if subspec(m) == "ss2"
         return
     elseif subspec(m) == "ss5"
         return ss5(m)

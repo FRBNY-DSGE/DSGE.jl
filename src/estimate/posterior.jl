@@ -147,8 +147,8 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel{T},
 
     n_states_no_ant = n_states_augmented(m) - n_anticipated_shocks(m)
     n_states_aug    = n_states_augmented(m)
-    n_states        = n_states(m)
-    mt_n_states   = [n_states_no_ant, n_states_no_ant, n_states_aug]
+    n_states        = DSGE.n_states(m)
+    regime_states   = [n_states_no_ant, n_states_no_ant, n_states_aug]
 
     R1[:YY] = YY[1:n_T0, 1:n_obs_no_ant]
     R2[:YY] = YY[(n_T0+1):(end-n_ant_lags-1), 1:n_obs_no_ant]
@@ -185,11 +185,11 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel{T},
     ## where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
 
     # Get measurement equation matrices set up for normal and zlb periods
-    Measurement_R2 = measurement(m, R2[:TTT], R2[:RRR], R2[:CCC]; shocks=false)
-    Measurement_R3 = measurement(m, R3[:TTT], R3[:RRR], R3[:CCC]; shocks=true)
+    measurement_R2 = measurement(m, R2[:TTT], R2[:RRR], R2[:CCC]; shocks=false)
+    measurement_R3 = measurement(m, R3[:TTT], R3[:RRR], R3[:CCC]; shocks=true)
     for d in (:ZZ, :DD, :QQ, :VVall)
-        R2[d] = Measurement_R2[d]
-        R3[d] = Measurement_R3[d]
+        R2[d] = measurement_R2[d]
+        R3[d] = measurement_R3[d]
     end
 
 
@@ -216,7 +216,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel{T},
     # Run Kalman filter on normal period
     zprev           = R1[:zend]
     Pprev           = R1[:Pend]
-    out             = kalman_filter(R2[:YY]', 1, zeros(mt_n_states[2], 1), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev)
+    out             = kalman_filter(R2[:YY]', 1, zeros(regime_states[2], 1), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev)
     regime_likes[2] = out[:L]
     R2[:zend]       = out[:zend]
     R2[:Pend]       = out[:Pend]
@@ -241,7 +241,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel{T},
     Pprev[after_shocks_new, before_shocks]    = R2[:Pend][after_shocks_old, before_shocks]
     Pprev[after_shocks_new, after_shocks_new] = R2[:Pend][after_shocks_old, after_shocks_old]
 
-    out             = kalman_filter(R3[:YY]', 1, zeros(mt_n_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev)
+    out             = kalman_filter(R3[:YY]', 1, zeros(regime_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev)
     regime_likes[3] = out[:L]
     R3[:zend]       = out[:zend]
     R3[:Pend]       = out[:Pend]

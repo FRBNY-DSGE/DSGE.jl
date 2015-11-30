@@ -130,7 +130,7 @@ posterior distribution per block.
 Metropolis-Hastings.
 - `n_mh_burn::Setting{Int}`: Number of blocks to discard as burn-in
 for Metropolis-Hastings
-- `mh_thinning_step::Setting{Int}`: Save every `mh_thinning_step`-th
+- `mh_thin::Setting{Int}`: Save every `mh_thin`-th
 draw in Metropolis-Hastings.
 """
 function default_settings(m::AbstractModel)
@@ -157,11 +157,11 @@ function default_settings(m::AbstractModel)
     # Estimation
     m <= Setting(:optimize,          false, "Optimize the posterior mode. If false, reads in mode from a file.")
     m <= Setting(:calculate_hessian, false, "Recalculate the hessian at the mode")
-    m <= Setting(:max_hessian_free_params, typemax(Int), "Max number of free params for which to calculate Hessian")
+    m <= Setting(:n_hessian_test_params, typemax(Int), "Max number of free params for which to calculate Hessian")
     m <= Setting(:n_mh_simulations,  10000, "Number of draws per block in Metropolis-Hastings")
     m <= Setting(:n_mh_blocks,       22   , "Number of blocks for Metropolis-Hastings")
     m <= Setting(:n_mh_burn,         2    , "Number of blocks to use as burn-in in Metropolis-Hastings")
-    m <= Setting(:mh_thinning_step,    5    , "How often to write draw to file in Metropolis-Hastings")
+    m <= Setting(:mh_thin,    5    , "How often to write draw to file in Metropolis-Hastings")
 
     # Data vintage. Default behavior: choose the most recent data file
     input_files = readdir(inpath(m, "data", "")) 
@@ -195,7 +195,7 @@ The following Settings are constructed, initialized and added to
 - `n_mh_simulations::Setting{Int}`: 100 
 - `n_mh_blocks::Setting{Int}`: 1
 - `n_mh_burn::Setting{Int}`: 0 
-- `mh_thinning_step::Setting{Int}`: 1
+- `mh_thin::Setting{Int}`: 1
 """
 function default_test_settings(m::AbstractModel)
     
@@ -216,7 +216,7 @@ function default_test_settings(m::AbstractModel)
     test[:use_parallel_workers] = Setting(:use_parallel_workers, false, false, "parw", 
                                             "Use available parallel workers in computations")
 
-    test[:max_hessian_free_params] = Setting(:max_hessian_free_params, 3, false, "mhfp",
+    test[:n_hessian_test_params] = Setting(:n_hessian_test_params, 3, false, "mhfp",
                                             "Max number of free params for which to calculate Hessian")
     
     # Metropolis-Hastings
@@ -229,6 +229,6 @@ function default_test_settings(m::AbstractModel)
     test[:n_mh_burn]        = Setting(:n_mh_burn,   0, false, "nbrn",
                                         "Number of burn-in blocks for testing Metropolis-Hastings")
     
-    test[:mh_thinning_step]   = Setting(:mh_thinning_step, 1, false, "thin",
+    test[:mh_thin]   = Setting(:mh_thin, 1, false, "thin",
                                         "Thinning step for testing Metropolis-Hastings")
 end
