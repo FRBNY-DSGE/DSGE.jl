@@ -1,117 +1,59 @@
 #=
+Copyright Chris Sims
+See http://sims.princeton.edu/yftp/gensys/
+=#
+
 """
-@author : Spencer Lyon <spencer.lyon@nyu.edu>,
-@author: Chase Coleman <ccoleman@stern.nyu.edu>
+```
+gensys(Γ0, Γ1, c, ψ, π)
+gensys(Γ0, Γ1, c, ψ, π, div)
+gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
+```
 
-@date: 2014-09-11
-
-References
-----------
-
-Simple port of the original Matlab files gensys.m, qzdiv.m, and
-qzswitch.m, written by Chris Sims.
-
-http://sims.princeton.edu/yftp/gensys/
-
-Notes
------
-We are allowing Julia to pick the real or complex version of the
-schurfact routine based on the types of Γ0 and Γ1.
-
-When they are both  filled with real values, all the returns except
-[fmat, fwt, ywt] are the same as the Matlab version.
-
-When either or both is complex, all the return values are the same as
-Matlab's.
-
-The reason for this is that matlab always uses the complex version of
-the schur decomposition, even if the inputs are real numbers.
-
-The schur decomposition function in LAPACK accepts an argument for
-sorting variables.  qzdiv and qzswitch are currently doing the sorting,
-but it would be faster to just return the sorted solution.  Need to
-read a little more, but to achieve this set sort to 'Y' and sort by
-eigenvalues (into explosive and non-explosive).
-
-Description from original
--------------------------
+Generate state-space solution to canonical-form DSGE model.
 
 System given as
+```
+Γ0*y(t) = Γ1*y(t-1) + c + Ψ*z(t) + Π*η(t),
+```
+with z an exogenous variable process and η being endogenously
+determined one-step-ahead expectational errors.
 
-       Γ0*y(t) = Γ1*y(t-1) + c + Ψ*z(t) + Π*η(t),
+Returned system is
+```
+y(t) = G1*y(t-1) + C + impact*z(t) + ywt*inv(I-fmat*inv(L))*fwt*z(t+1)
+```
+Returned values are
+```
+G1, C, impact, fmat, fwt, ywt, gev, eu, loose
+```
 
-with z an exogenous variable process and eta being endogenously
-determined one-step-ahead expectational errors.  Returned system is
+If `z(t)` is i.i.d., the last term drops out.
 
-      y(t) = G1*y(t-1) + C + impact*z(t) + ywt*inv(I-fmat*inv(L))*fwt*z(t+1)
+If `div` is omitted from argument list, a `div`>1 is calculated.
 
-If z(t) is i.i.d., the last term drops out.
+### Return codes
 
-If div is omitted from argument list, a div>1 is calculated.
+* `eu[1]==1` for existence
+* `eu[2]==1` for uniqueness
+* `eu[1]==-1` for existence only with not-s.c. z;
+* `eu==[-2,-2]` for coincident zeros.
 
-eu(1)=1 for existence, eu(2)=1 for uniqueness.  eu(1)=-1 for existence
-only with not-s.c. z; eu=[-2,-2] for coincident zeros.
+### Notes
+
+We constrain Julia to use the complex version of the `schurfact` routine regardless of the
+types of Γ0 and Γ1, to match the behavior of Matlab.  Matlab always uses the complex version
+of the Schur decomposition, even if the inputs are real numbers.
 """
-=#
-
-
-#=
-"""
-GensysError <: Exception
-
-A `GensysError` is thrown when Gensys does not give a unique solution, or no solution exists. If a `GensysError`is thrown during Metropolis-Hastings, it is caught by `posterior`. `posterior` then returns a value of `-Inf`, which Metropolis-Hastings always rejects.
-
-### Fields
-`msg::ASCIIString`: Info message. Default = "Error in gensys." 
-"""
-=#
-type GensysError <: Exception
-    msg::ASCIIString
-end
-GensysError() = GensysError("Error in gensys.")
-Base.showerror(io::IO, ex::GensysError) = print(io, ex.msg)
-
-function new_div(F::Base.LinAlg.GeneralizedSchur)
-    ϵ = 1e-6  # small number to check convergence
-    n = size(F[:T], 1)
-
-    a, b, q, z = F[:S], F[:T], F[:Q]', F[:Z]
-
-    nunstab = 0.0
-    zxz = 0
-
-    div = 1.01
-
-    for i=1:n
-        if abs(a[i, i]) > 0
-            divhat = abs(b[i, i]) / abs(a[i, i])
-            if 1 + ϵ < divhat && divhat <= div
-                div = .5 * (1 + divhat)
-            end
-        end
-    end
-
-    return div
-end
-
-
-## -------------- ##
-#- gensys methods -#
-## -------------- ##
-
-# method if no div is given
 function gensys(Γ0, Γ1, c, ψ, π)
     F = schurfact(complex(Γ0), complex(Γ1))
     div = new_div(F)
     gensys(F, c, ψ, π, div)
 end
-
-# method if all arguments are given
 function gensys(Γ0, Γ1, c, ψ, π, div)
     F = schurfact(complex(Γ0), complex(Γ1))
     gensys(F, c, ψ, π, div)
 end
-
 
 # Method that does the real work. Work directly on the decomposition F
 function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
@@ -150,8 +92,8 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     etawt = q2 * π
     neta = size(π, 2)
 
-    # branch below is to handle case of no stable roots, which previously
-    # (5/9/09) quit with an error in that case.
+    # branch below is to handle case of no stable roots, rather than quitting with an error
+    # in that case.
     if isapprox(nunstab, 0.0)
         etawt == zeros(0, neta)
         ueta = zeros(0, 0)
@@ -173,11 +115,9 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     # eu[1] == 1 && info("gensys: Existence of a solution!")
 
 
-    # ----------------------------------------------------
     # Note that existence and uniqueness are not just matters of comparing
     # numbers of roots and numbers of endogenous errors.  These counts are
     # reported below because usually they point to the source of the problem.
-    # ------------------------------------------------------
 
     # branch below to handle case of no stable roots
     if nunstab == n
@@ -222,10 +162,8 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     G0 = [tmat*a; zeros(nunstab,n-nunstab) eye(nunstab)]
     G1 = [tmat*b; zeros(nunstab,n)]
 
-    # ----------------------
     # G0 is always non-singular because by construction there are no zeros on
     # the diagonal of a(1:n-nunstab,1:n-nunstab), which forms G0's ul corner.
-    # -----------------------
     G0I = inv(G0)
     G1 = G0I*G1
     usix = n-nunstab+1:n
@@ -237,7 +175,7 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
 
     loose = G0I * [etawt1 * (eye(neta) - veta * veta'); zeros(nunstab, neta)]
 
-    # -------------------- above are output for system in terms of z'y -------
+    # above are output for system in terms of z'y
     G1 = real(z*G1*z')
     C = real(z*C)
     impact = real(z * impact)
@@ -250,4 +188,48 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     end
 
     return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
+end
+
+"""
+```
+GensysError <: Exception
+```
+
+A `GensysError` is thrown when Gensys does not give a unique solution, or no solution
+exists. If a `GensysError`is thrown during Metropolis-Hastings, it is caught by `posterior`.
+`posterior` then returns a value of `-Inf`, which Metropolis-Hastings always rejects.
+
+### Fields
+
+* `msg::ASCIIString`: Info message. Default = "Error in gensys." 
+"""
+type GensysError <: Exception
+    msg::ASCIIString
+end
+GensysError() = GensysError("Error in gensys.")
+Base.showerror(io::IO, ex::GensysError) = print(io, ex.msg)
+
+"""
+```
+new_div(F::Base.LinAlg.GeneralizedSchur)
+```
+"""
+function new_div(F::Base.LinAlg.GeneralizedSchur)
+    ϵ = 1e-6  # small number to check convergence
+    n = size(F[:T], 1)
+
+    a, b, q, z = F[:S], F[:T], F[:Q]', F[:Z]
+
+    div = 1.01
+
+    for i=1:n
+        if abs(a[i, i]) > 0
+            divhat = abs(b[i, i]) / abs(a[i, i])
+            if 1 + ϵ < divhat && divhat <= div
+                div = .5 * (1 + divhat)
+            end
+        end
+    end
+
+    return div
 end
