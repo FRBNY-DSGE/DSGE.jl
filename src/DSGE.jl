@@ -43,16 +43,15 @@ module DSGE
         # solve/
         ordschur, gensys, solve
     
-    const VERBOSITY = @compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
+    const VERBOSITY = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
+    const LIKE_NULL_DICT   = Dict{Symbol, Matrix{AbstractFloat}}()
+    const LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
+
 
     include("parameters.jl")
     include("distributions_ext.jl")
     include("abstractdsgemodel.jl")
     include("settings.jl")
-    
-    if VERSION <= v"0.4-"
-        include("solve/ordered_qz.jl")
-    end
     
     include("solve/gensys.jl")
     include("solve/solve.jl")
@@ -69,5 +68,6 @@ module DSGE
     include("models/m990/subspecs.jl")
     include("models/m990/eqcond.jl")
     include("models/m990/measurement.jl")
+    include("models/m990/augment_states.jl")
     
 end

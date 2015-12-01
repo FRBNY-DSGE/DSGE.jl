@@ -1,5 +1,5 @@
 """
-`prior(m::AbstractModel)`
+`prior(m::AbstractModel{T})`
 
 Calculates log joint prior density of m.parameters.
 """
@@ -109,13 +109,11 @@ Otherwise, we filter over the main sample all at once.
   the zero-lower-bound period are returned in a dictionary.
 -`catch_errors`: If `mh = true`, `GensysErrors` should always be caught.
 """
-function likelihood{T<:AbstractFloat}(m::AbstractModel{T},
+function likelihood{T<:AbstractFloat}(m::AbstractModel,
                                       YY::Matrix{T};
                                       mh::Bool = false,
                                       catch_errors::Bool = false)
     catch_errors = catch_errors | mh
-    LIKE_NULL_DICT   = Dict{Symbol, Matrix{T}}()
-    LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if mh

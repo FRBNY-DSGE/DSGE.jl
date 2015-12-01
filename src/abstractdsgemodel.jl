@@ -1,4 +1,4 @@
-abstract AbstractModel{T<:AbstractFloat}
+abstract AbstractModel{T}
 
 function Base.show{T<:AbstractModel}(io::IO, m::T)
     @printf io "Dynamic Stochastic General Equilibrium Model\n"
@@ -84,13 +84,12 @@ function (<=){T}(m::AbstractModel{T}, p::AbstractParameter{T})
     end
 end
 
-#=
+
 """
 (<=){T}(m::AbstractModel{T}, ssp::SteadyStateParameter)
 
 Add a new steady-state value to the model by appending `ssp` to the `m.steady_state` and adding `ssp.key` to `m.keys`.
 """
-=#
 function (<=){T}(m::AbstractModel{T}, ssp::SteadyStateParameter)
 
     if !in(ssp.key, keys(m.keys))
