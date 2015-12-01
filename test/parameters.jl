@@ -1,5 +1,3 @@
-#TODO: add tests and specify behavior for fixed params
-# transformations
 for T in subtypes(Transform)
     u = parameter(:σ_pist, 2.5230, (1e-8, 5.), (1e-8, 5.), T(), fixed=false)
     @test ( transform_to_real_line(u) |> x -> transform_to_model_space(u,x) ) == u.value
@@ -15,7 +13,7 @@ N = 10^2
 u = parameter(:bloop, 2.5230, (1e-8, 5.), (1e-8, 5.), DSGE.SquareRoot(); fixed = true)
 v = parameter(:cat, 2.5230, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), Gamma(2.00, 0.1))
 
-pvec = @compat ParameterVector{Float64}(N)
+pvec =  ParameterVector{Float64}(N)
 for i in 1:length(pvec)
 	pvec[i] = (i%2 == 0) ? u : v
 end

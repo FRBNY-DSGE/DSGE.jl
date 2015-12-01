@@ -43,33 +43,15 @@ module DSGE
         # solve/
         ordschur, gensys, solve
     
-    const VERBOSITY = @compat(Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2))
+    const VERBOSITY = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
+    const LIKE_NULL_DICT   = Dict{Symbol, Matrix{AbstractFloat}}()
+    const LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
+
 
     include("parameters.jl")
     include("distributions_ext.jl")
     include("abstractdsgemodel.jl")
     include("settings.jl")
-    
-    if VERSION <= v"0.4-"
-        include("solve/ordered_qz.jl")
-    end
-    
-    
-    include("models/m990/m990.jl")
-    include("models/m990/subspecs.jl")
-    include("models/m990/eqcond.jl")
-    include("models/m990/measurement.jl")
-
-    include("models/m994/m994.jl")
-    include("models/m994/subspecs.jl")
-    include("models/m994/eqcond.jl")
-    include("models/m994/measurement.jl")
-
-    include("models/smets_wouters/smets_wouters.jl")
-    include("models/smets_wouters/subspecs.jl")
-    include("models/smets_wouters/eqcond.jl")
-    include("models/smets_wouters/measurement.jl")
-    include("models/smets_wouters/augment_states.jl")
 
     include("solve/gensys.jl")
     include("solve/solve.jl")
@@ -81,5 +63,17 @@ module DSGE
     include("estimate/hessian.jl")
     include("estimate/estimate.jl")
     include("estimate/moments.jl")
+    
+    include("models/m990/m990.jl")
+    include("models/m990/subspecs.jl")
+    include("models/m990/eqcond.jl")
+    include("models/m990/measurement.jl")
+    include("models/m990/augment_states.jl")
+
+    include("models/smets_wouters/smets_wouters.jl")
+    include("models/smets_wouters/subspecs.jl")
+    include("models/smets_wouters/eqcond.jl")
+    include("models/smets_wouters/measurement.jl")
+    include("models/smets_wouters/augment_states.jl")
 
 end
