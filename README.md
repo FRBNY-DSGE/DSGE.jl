@@ -601,7 +601,7 @@ Contributors to this package at [QuantEcon](http://quantecon.org) include
 * [Spencer Lyon](http://spencerlyon.com)
 * [Pablo Winant](http://www.mosphere.fr)
 
-The `gensys` and `csminwel` routines (and some dependencies) are copyright
+The `gensys` and `csminwel` routines are copyright
 [Chris Sims](http://www.princeton.edu/~sims). 
 
 The `kalman_filter` routine is loosely based on a version of the
