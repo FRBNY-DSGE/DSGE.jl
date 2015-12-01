@@ -99,6 +99,15 @@ other data structure.  However, MATLAB classes are both relatively complicated
 and slower than non-object implementations. And using `struct`s in this way
 results in copies of all model variables made on every function call.
 
+Indeed, changes like this reduce the number of lines of code in *DSGE.jl*, a
+rough proxy for ease of maintenance. We find that the fixed cost of setting up
+the type system is offset by savings in core programs.
+
+| Language             | Lines of code (hundreds) |
+| -------------------- | :----------------------: |
+| Matlab               | 63                       |
+| Julia                | 37                       |
+
 A type-based approach allows us to take advantage of method dispatch in Julia by
 defining different model types for different model specifications. As detailed
 in the
