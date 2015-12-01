@@ -8,7 +8,6 @@ my_tests = [
             "parameters",
             "solve/gensys",
             "solve/solve",
-            "solve/ordered_qz",
             "estimate/kalman",
             "estimate/posterior",
             "estimate/hessizero",

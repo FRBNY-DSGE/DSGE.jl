@@ -1,5 +1,5 @@
 using DSGE
-import DSGE: RootInverseGamma, Exponential
+import DSGE: RootInverseGamma
 using HDF5, Base.Test, Distributions
 include("../../util.jl")
 
@@ -53,11 +53,11 @@ for θ in model.parameters
         
     end
 
-    if θ.transform == Untransformed()
+    if θ.transform == DSGE.Untransformed()
         trspec[i, 1] = 0
-    elseif θ.transform == SquareRoot()
+    elseif θ.transform == DSGE.SquareRoot()
         trspec[i, 1] = 1
-    elseif  θ.transform == Exponential()
+    elseif  θ.transform == DSGE.Exponential()()
         trspec[i, 1] = 2        
     else
        throw(error("This kind of transform not allowed")) 
@@ -66,7 +66,7 @@ for θ in model.parameters
     (left, right) = θ.transform_parameterization
     trspec[i, 2] = left
     trspec[i, 3] = right
-    if θ == model[:modelα_ind]
+    if θ == model[:Iendoα]
         trspec[i, 4] = 0
     else
         trspec[i, 4] = 1
@@ -85,7 +85,7 @@ endo = model.endogenous_states
 # Exogenous shocks
 exo = model.exogenous_shocks
 @test length(exo) == 22
-@test exo[:pce_sh] == 16
+@test exo[:corepce_sh] == 16
 
 # Expectation shocks
 ex = model.expected_shocks
@@ -98,14 +98,14 @@ eq = model.equilibrium_conditions
 @test eq[:eq_Ez] == 60
 
 # Additional states
-endo_addl = model.endogenous_states_postgensys
-@test length(endo_addl) == 12
-@test endo_addl[:y_t1] == 67
+endo_new = model.endogenous_states_augmented
+@test length(endo_new) == 12
+@test endo_new[:y_t1] == 67
 
 # Observables
 obs = model.observables
 @test length(obs) == 18
-@test obs[:tfp] == 12
+@test obs[:obs_tfp] == 12
 
 ### Equilibrium conditions
 Γ0, Γ1, C, Ψ, Π = eqcond(model)

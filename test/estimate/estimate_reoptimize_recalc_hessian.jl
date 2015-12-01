@@ -6,8 +6,8 @@
 using DSGE
 
 m = Model990()
-m.reoptimize=true
-m.recalculate_hessian = true
+m.optimize=true
+m.calculate_hessian = true
 new_savepath = "/data/dsge_data_dir/dsgejl/estimate/save_reop_recalc/"
 create_save_directories(m, new_savepath, reset_inpath=false)
 

@@ -9,13 +9,13 @@ model = Model990()
 model.testing = true
 
 # Setup paths
-mode = h5open(inpath(model, "user", "mode_in_optimized.h5")) do file
+mode = h5open(inpath(model, "user", "params_mode.h5")) do file
     read(file, "mode")
 end
 YY = h5open(inpath(model, "data", "data_REF.h5")) do file
     read(file, "YY")
 end
-hessian_expected = h5open(inpath(model, "user", "hessian_optimized.h5")) do file
+hessian_expected = h5open(inpath(model, "user", "hessian.h5")) do file
     read(file, "hessian")
 end
 
@@ -23,7 +23,7 @@ end
 para_free      = [!θ.fixed for θ in model.parameters]
 para_free_inds = find(para_free)
 
-max_free_ind = DSGE.max_hessian_free_params(model)
+max_free_ind = DSGE.n_hessian_test_params(model)
 if max_free_ind < maximum(para_free_inds)
     para_free_inds = para_free_inds[1:max_free_ind]
 end
