@@ -1,3 +1,7 @@
+#=
+This code is loosely based on a routine originally copyright Federal Reserve Bank of Atlanta
+and written by Iskander Karibzhanov.
+=#
 """
 ```
 kalman_filter(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=false)
@@ -23,7 +27,7 @@ Inputs
 - `Ny0`: an optional scalar indicating the number of periods of presample (i.e. the number
   of periods which we don't add to the likelihood)
 - `allout`: an optional keyword argument indicating whether we want optional output
-  variables returned as well 
+  variables returned as well
 
 Outputs
 -------
@@ -105,9 +109,9 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
         filt          = zeros(Nz, T)
         vfilt         = zeros(Nz, Nz, T)
     end
-    
+
     L = zero(S)
-    
+
     for t = 1:T
         # If an element of the vector y(t) is missing (NaN) for the observation t, the
         #   corresponding row is ditched from the measurement equation.
@@ -118,14 +122,14 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
         R_t = R[nonmissing, nonmissing]    # R_t = Var(ϵ_t)
         Ny_t = length(data_t)              # Ny_t = T is length of time
         b_t = b[nonmissing, :]             # b_t = DD
-        
-        
+
+
         ## forecasting
         z = a + F*z                        # z_{t|t-1} = a + F(Θ)*z_{t-1|t-1}
         P = F*P*F' + V                     # P_{t|t-1} = F(Θ)*P_{t-1|t-1}*F(Θ)' + F(Θ)*Var(η_t)*F(Θ)'
         dy = data_t - H_t*z - b_t          # dy = y_t - H(Θ)*z_{t|t-1} - DD is prediction error or innovation
         HG = H_t*G_t                       # HG is ZZ*Cov(η_t, ϵ_t)
-        D = H_t*P*H_t' + HG + HG' + R_t    # D = ZZ*P_{t+t-1}*ZZ' + HG + HG' + R_t 
+        D = H_t*P*H_t' + HG + HG' + R_t    # D = ZZ*P_{t+t-1}*ZZ' + HG + HG' + R_t
         D = (D+D')/2
 
         if allout
@@ -135,13 +139,13 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
             ystdprederror[nonmissing, t] = dy./sqrt(diag(D))
         end
 
-        ddy = D\dy 
+        ddy = D\dy
         # We evaluate the log likelihood function by adding values of L at every iteration
         #   step (for each t = 1,2,...T)
         if t > Ny0
             L += -log(det(D))/2 - first(dy'*ddy/2) - Ny_t*log(2*pi)/2
         end
-        
+
         ## updating
         PHG = P*H_t' + G_t
         z = z + PHG*ddy                    # z_{t|t} = z_{t|t-1} + P_{t|t-1}*H(Θ)' + ...
@@ -153,7 +157,7 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
             vfilt[:, :, t] = P
         end
     end
-    
+
     zend = z
     Pend = P
 

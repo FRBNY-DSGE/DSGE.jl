@@ -3,11 +3,13 @@
 
 [![Build Status](https://magnum.travis-ci.com/FRBNY-DSGE/DSGE.jl.svg?token=zYYDq5WnGdhvYZrx5pHz&branch=master)](https://magnum.travis-ci.com/FRBNY-DSGE/DSGE.jl)
 
-This module, written in Julia, estimates the model discussed in the Liberty
-Street Economics blog post "The FRBNY DSGE Model Forecast." This
-object-oriented, Julia-language implementation reproduces the MATLAB code
-included in that post. Code to forecast the model is under development and will
-be released upon completion.
+This module estimates the model discussed in the Liberty Street Economics blog
+post
+[The FRBNY DSGE Model Forecast](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html).
+This object-oriented, Julia-language implementation mirrors the MATLAB code
+included in that post. FRBNY is currently working on extending the code to
+include forecasts and other features. Extensions of the DSGE model code may be
+released in the future at the discretion of FRBNY.
 
 # Model Design
 
@@ -567,18 +569,17 @@ include
 
 * [Pearl Li](https://github.com/pearlzli)
 * [Erica Moszkowski](https://github.com/emoszkowski)
-* [Micah Smith](http://micahsmith.com)
+* [Micah Smith](https://github.com/micahjsmith)
 
 Contributors to this package at [QuantEcon](http://quantecon.org) include
 
 * [Zac Cranko](https://github.com/ZacCranko)
-* [Spencer Lyon](http://spencerlyon.com)
-* [Pablo Winant](http://www.mosphere.fr)
+* [Spencer Lyon](http://github.com/spencerlyon2)
+* [Pablo Winant](http://github.com/albop)
 
 The `gensys` and `csminwel` routines are copyright
 [Chris Sims](http://www.princeton.edu/~sims).
 
 The `kalman_filter` routine is loosely based on a version of the
-Kalman filter algorithm written by
-[Iskander Karibzhanov](http://karibzhanov.com) while he was
-an employee at the Federal Reserve Bank of Atlanta.
+Kalman filter algorithm originally (C) Federal Reserve Bank of Atlanta and written by
+[Iskander Karibzhanov](http://karibzhanov.com).
