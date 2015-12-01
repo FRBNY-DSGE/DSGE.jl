@@ -10,7 +10,7 @@ functions, but rather new functions with the same names.
 
 
 import Distributions: params, mean, std, pdf, logpdf, rand
-import Base.length
+import Base: length, rank
 
 """
 BetaAlt(μ::AbstractFloat, σ::AbstractFloat)
@@ -126,20 +126,11 @@ end
 
 
 """
-DegenerateMvNormal(μ::Vector,σ::Matrix)
-
-Returns a DegenerateMvNormal type with mean vector μ and covariance matrix σ
-"""
-function DegenerateMvNormal(μ::Vector,σ::Matrix)
-    return DegenerateMvNormal(μ,σ)
-end
-
-"""
 rank(d::DegenerateMvNormal)
 
 Returns the rank of d.σ.
 """
-function DegenerateMvNormal(d::DegenerateMvNormal)
+function rank(d::DegenerateMvNormal)
     return rank(d.σ)
 end
 

@@ -189,7 +189,7 @@ function Model990(subspec::AbstractString="ss2")
     # initialize empty model
     m = Model990{Float64}(
             # model parameters and steady state values
-            @compat(Vector{AbstractParameter{Float64}}()), @compat(Vector{Float64}()), Dict{Symbol,Int}(),
+            Vector{AbstractParameter{Float64}}(), Vector{Float64}(), Dict{Symbol,Int}(),
 
             # model indices
             Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(),
