@@ -1,5 +1,6 @@
 # The DSGE Matlab to Julia Transition: Improvements and Challenges
 *Zac Cranko, Pearl Li, Spencer Lyon, Erica Moszkowski, Micah Smith, Pablo Winant*
+
 *December 3, 2015*
 
 The FRBNY DSGE model is a relatively large New Keynesian model augmented with
@@ -33,7 +34,7 @@ Benchmark times relative to MATLAB (smaller is better)
 | `solve`              | 1.00         | 0.09           |
 | `kalman_filter`      | 1.00         | 0.75           |
 | `posterior`          | 1.00         | 0.26           |
-| `csminwel`           |              |                |
+| `csminwel`           | 1.00         | 0.33           |
 | `hessian`            | 1.00         | 0.23           |
 | `metropolis_hastings`| 1.00         | 0.11           |
 
