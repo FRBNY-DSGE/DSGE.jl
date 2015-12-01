@@ -11,11 +11,11 @@ about a possible collaboration, we jumped at the idea, as it would give us an
 opportunity to rework our code in an arguably faster language, redesign it from
 the ground up, and release it open source for the benefit of the community.
 Julia was the language of choice, recommended by the QuantEcon group for its
-high performance and suitability for this breed of technical computing. 
+high performance and suitability for this breed of technical computing.
 
 [Any
 additional commentary about our collaboration from the QuantEcon folks would be
-great!] 
+great!]
 
 In this post, we’ll discuss our experiences redesigning our code from
 the ground up, the resulting performance changes, and the challenges we faced
@@ -40,7 +40,7 @@ Benchmark times relative to MATLAB (smaller is better)
 We ultimately achieve an increase of speed that reduces running time to 1/10th
 to 3/4th that of the MATLAB code. This increase is very significant for our
 purposes, as we substantially reduce the running time of the "full shebang"
-(optimization, hessian calculation, and Metropolis-Hastings sampling). 
+(optimization, hessian calculation, and Metropolis-Hastings sampling).
 
 How much of this increase is due to native performance adventures of Julia, and
 how much is simply due to the improvements in design that came from rebuilding
@@ -78,9 +78,9 @@ However, MATLAB classes are both relatively complicated and slower than
 non-object implementations. And large `struct`s would be susceptible to
 excessive dynamic field access.
 
-Furthermore, an object-oriented approach allows us to take advantage of method
+Furthermore, a type-based approach allows us to take advantage of method
 dispatch in Julia by defining different model types for different model
-specifications. As detailed in the 
+specifications. As detailed in the
 [README file](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/README.md),
 changes to the model’s equilibrium conditions and measurement equation are
 referred to as changes in a model's "specification."  In the Julia code, model
@@ -99,11 +99,11 @@ and significant code specialization is possible.
 
 It is easy to see that all model types constructed for use with *DSGE.jl* are
 closely related: they will have the same fields, and are passed to the same
-methods.  If it sounds to you like we have an implicit interface here, you’d be
+methods.  If it sounds to you like we have an implicit interface here, you’re
 right. Rather than implementing each object as a standalone type, we define an
 abstract type, `AbstractModel`, to serve as the parent for all model types.
 Because most of our routines are not model-specific, we need only define them
-once (with an argument of type `AbstractModel`) and Julia’s type promotion
+once (with an argument of type `AbstractModel`) and Julia’s dispatch system
 takes care of the rest. These functions expect the model object to have certain
 fields, and for those fields to have certain types. In this way, although Julia
 does not have a mechanism for explicit interface definitions (as other
@@ -118,12 +118,12 @@ different ways. Steady-state parameters, for example, are really functions of
 other parameters, and have different implementation.
 
 [TODO not really relevant to Improvement section?]
-We use parameterized types to increase the flexibility of our codebase in a
-number of ways. For example, we are now able to think of all computational
-settings, such as flags, data vintages, and the number of samples to draw
-using the Metropolis-Hastings algorithm, as objects of type `Setting`.
-We can have settings of various data types and store them centrally in a
-single, type-stable dictionary within the model object.
+We use parameterized (generic) types to increase the flexibility of our codebase
+in a number of ways. For example, we are now able to think of all computational
+settings, such as flags, data vintages, and the number of samples to draw using
+the Metropolis-Hastings algorithm, as instances of type `Setting`. We can have
+settings of various data types and store them centrally in a single dictionary
+within the model object.
 
 Julia's JIT compilation also provides significant performance boosts in some
 areas. For example, we allow a variable number of anticipated
@@ -137,7 +137,7 @@ to purely interpreted code) provides further performance improvement.
 
 We have found that a number of Julia features make working with
 *DSGE.jl* simply more pleasant and user-friendly than working with our old
-codebase. Julia’s clearly integrated testing infrastructure has made our 
+codebase. Julia’s clearly integrated testing infrastructure has made our
 development workflow significantly more robust.  Unicode support means that code
 can correspond more closely to actual model equations, reducing the headache
 associated with translating from "math" to "code".  Operator overloading and
@@ -168,7 +168,7 @@ rapid succession, and using *DSGE.jl* with a new Julia version inevitably floods
 the user’s screen with deprecation warnings. There is significant difficulty in
 finding written resources on the language in addition to the Julia Manual.
 Google searches frequently return discussions in GitHub *Issues*, which are
-unhelpful to elementary users and can be actively misleading at times. 
+unhelpful to elementary users and can be actively misleading at times.
 
 Differences between the behavior of MATLAB and Julia’s core linear algebra
 libraries led to many roadblocks in the development of *DSGE.jl*. Julia uses
@@ -176,7 +176,7 @@ multithreaded BLAS functions for some linear algebra functions.  Using a
 different number of threads can change the results of matrix decomposition when
 the matrix is singular. This indeterminacy caused significant problems for our
 testing suite, both in comparing output matrices to MATLAB results and in
-testing for reproducibility among Julia outputs. 
+testing for reproducibility among Julia outputs.
 
 We ran into many of these problems while porting the model solution algorithm,
 `gensys`. At one point, the generalized Schur (QZ) decomposition is computed,
