@@ -6,7 +6,8 @@ The FRBNY DSGE model is a relatively large New Keynesian model augmented with
 financial frictions and a variety of innovations. Here at the Fed, we use it
 both for forecasting and policy analysis. Research using this model includes
 looking at the dynamics of inflation during the great recession, the effects of
-forward guidance, and more. When we were approached by the folks at QuantEcon
+forward guidance, and more. When we were approached by the folks at
+[QuantEcon](http://quantecon.org/)
 about a possible collaboration, we jumped at the idea, as it would give us an
 opportunity to rework our code in an arguably faster language, redesign it from
 the ground up, and release it open source for the benefit of the community. A
