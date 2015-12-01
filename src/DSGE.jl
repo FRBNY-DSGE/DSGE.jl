@@ -61,6 +61,7 @@ module DSGE
     include("estimate/optimize.jl")
     include("estimate/csminwel.jl")
     include("estimate/hessian.jl")
+    include("estimate/hessizero.jl")
     include("estimate/estimate.jl")
     include("estimate/moments.jl")
     
