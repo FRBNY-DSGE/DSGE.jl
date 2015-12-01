@@ -1,6 +1,6 @@
 """
 ```
-optimize!(model::AbstractDSGEModel, data::Matrix;
+optimize!(m::AbstractModel, data::Matrix;
           method::Symbol       = :csminwel,
           xtol::Real           = 1e-32,  # default from Optim.jl
           ftol::Float64        = 1e-14,  # Default from csminwel
@@ -14,7 +14,7 @@ optimize!(model::AbstractDSGEModel, data::Matrix;
 
 Wrapper function to send a model to csminwel (or another optimization routine).
 """
-function optimize!(model::AbstractDSGEModel,
+function optimize!(m::AbstractModel,
                    data::Matrix;
                    method::Symbol       = :csminwel,
                    xtol::Real           = 1e-32,  # default from Optim.jl
@@ -34,18 +34,18 @@ function optimize!(model::AbstractDSGEModel,
         end
     
         # Inputs to optimization
-        H0             = 1e-4 * eye(num_parameters_free(model))
-        para_free_inds = find([!θ.fixed for θ in model.parameters])
-        x_model        = toreal(model.parameters)
+        H0             = 1e-4 * eye(n_parameters_free(m))
+        para_free_inds = find([!θ.fixed for θ in m.parameters])
+        x_model        = transform_to_real_line(m.parameters)
         x_opt          = x_model[para_free_inds]
 
         function f_opt(x_opt)
             x_model[para_free_inds] = x_opt
-            tomodel!(model,x_model)
-            return -posterior(model, data; catch_errors=true)[:post]
+            transform_to_model_space!(m,x_model)
+            return -posterior(m, data; catch_errors=true)[:post]
         end
 
-        rng = model.rng
+        rng = m.rng
     
         out, H_ = optimizer(f_opt, x_opt, H0; 
             xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
@@ -53,12 +53,13 @@ function optimize!(model::AbstractDSGEModel,
             verbose=verbose, rng=rng)
 
         x_model[para_free_inds] = out.minimum
-        tomodel!(model, x_model)
+        transform_to_model_space!(m, x_model)
 
         # Match original dimensions
         out.minimum = x_model
 
-        H = zeros(num_parameters(model), num_parameters(model))
+        H = zeros(n_parameters(m), n_parameters(m))
+
         # Fill in rows/cols of zeros corresponding to location of fixed parameters
         # For each row corresponding to a free parameter, fill in columns corresponding to free
         # parameters. Everything else is 0.
