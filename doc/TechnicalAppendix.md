@@ -1,4 +1,4 @@
-# The DSGE Matlab to Julia Transition: Improvements and Challenges
+# The DSGE MATLAB to Julia Transition: Improvements and Challenges
 *Zac Cranko, Pearl Li, Spencer Lyon, Erica Moszkowski, Micah Smith, Pablo Winant*  
 *December 3, 2015*
 
@@ -59,6 +59,11 @@ Julia's advantage in this single arena of computation.
 
 ## Code Improvements
 
+As we discuss the improvements we have made in our Julia package, it is
+important to note that many similar improvements could have been made to our
+MATLAB code directly. (As we would be the first ones to admit.) Regardless, 
+the Julia paradigm can result in code that is high-quality from the offset.
+
 Julia provides versatile language features that allow us to improve our code's
 performance and clarity in several fundamental ways. First and foremost of these
 is the highly integrated, robust, and flexible type system that lends itself
@@ -112,8 +117,8 @@ TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
 In our MATLAB code, on the other hand, we would approximate this type of
 dispatch by using a `switch` statement over a model identifier variable. For
 the hundreds of models we have worked with in a development capacity, this led
-to bloat in our model solution code. In Julia, we encapsulate this behavior with
-the model definition itself.
+to bloat in our model solution code. In Julia, we encapsulate this behavior
+within the model definition itself.
 
 It is easy to see that all model types constructed for use with *DSGE.jl* are
 closely related: they will have the same fields, and are passed to the same
@@ -125,7 +130,18 @@ once (with an argument of type `AbstractModel`) and Julia's dispatch system
 takes care of the rest. We similarly define model parameters as subtypes of a
 common abstract type `AbstractParameter`. This allows us to abstract to one
 notion of a model parameter, while implementing different kinds of parameters in
-different ways. 
+different ways. We also use parameterized (generic) types to increase the
+flexibility of model parameters (as well as elsewhere in our codebase):
+```julia
+# A parameter contains values of data type `T` and embeds a transformation of
+# type `U`
+abstract Parameter{T,U<:Transform} <: AbstractParameter{T}
+
+# One transformation used is the identity
+type UnscaledParameter{T,U} <: Parameter{T,U}
+    # ...
+end
+```
 
 These functions expect the model object to have certain fields,
 and for those fields to have certain types. (As an example of Julia's
@@ -139,14 +155,7 @@ using *DSGE.jl* is relatively straightforward. (See
 [here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/README.md#extending-or-editing-a-model)
 for detailed instructions).
 
-We use parameterized (generic) types to increase the flexibility of our codebase
-in a number of ways. For example, we are now able to think of all computational
-settings, such as flags, data vintages, and the number of samples to draw using
-the Metropolis-Hastings algorithm, as instances of type `Setting`. We can have
-settings of various data types and store them centrally in a single dictionary
-within the model object.
-
-Julia's JIT compilation also provides significant performance boosts in some
+Julia's JIT compilation provides significant performance boosts in some
 areas. For example, we allow a variable number of anticipated monetary policy
 shocks, beginning in 2008Q4, that we use to treat the zero lower bound. In our
 MATLAB code, we suffer some dynamic code generation to implement this feature.
@@ -158,42 +167,51 @@ if exist('nant','var')
     end
 end
 ```
-Julia's compile-time evaluation of such statements eliminates this performance
-hit. 
+
+Julia's faster evaluation of such statements reduces this performance
+hit, as these symbols can be associated with the model object. 
 ```julia
-[symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]]
+[symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]
 # ...
-[symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
+[symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]
 ```
 
 Granted, there may be better solutions to our problem in both languages,
 but similar situations involving code generation are easily addressed in Julia.
-Then, of course, the compilation itself (as opposed to purely interpreted code)
-provides further performance improvement.
 
 We have found that a number of Julia features make working with
 *DSGE.jl* simply more pleasant and user-friendly than working with our old
 codebase. Julia's clearly integrated testing infrastructure has made our
 development workflow significantly more robust. Unicode support means that code
 can correspond more closely to actual model equations, reducing the headache
-associated with translating from "math" to "code". Operator overloading and
-user-defined syntax makes it easy to be much more expressive with our code. For
-example, we can use `m[:α]` to access the value of parameter `α` from model
-`m`, and `m <= Foo`  to add settings or parameters to the model object.
-Inline markdown documentation also helps improve the developer experience.
-We have also found that Julia's highly integrated, Git-based package manager
-provides a huge improvement over MATLAB's decentralized *FileExchange*. As Julia
-users, we can now pull in high-quality, fully tested, community-supported
-external packages that can each be installed or updated with a single command.
-This reduces the incentive of users to create their own, lower-quality
-functionality, increasing developer *and* code performance. (Or to fight for
-the toolbox licenses available to their department.)
+associated with translating from "math" to "code".  (Inline 
+[Markdown](https://en.wikipedia.org/wiki/Markdown)
+documentation helps in a similar way.) Operator overloading and user-defined
+syntax make it easy to be much more expressive with our code. 
+```julia
+julia> m[:α]                         # Access value of param α from model m
+julia> m <= parameter(:ϵ_p, 10.000)  # Add parameter ϵ_p to model
+julia> Γ0, Γ1, C, Ψ, Π  = eqcond(m)  # Get equilibrium conditions
+```
+
+We have found that Julia's highly integrated, Git-based package manager
+provides a huge improvement over MATLAB's decentralized 
+[FileExchange](http://www.mathworks.com/matlabcentral/fileexchange/).
+As Julia users, we can now pull in high-quality, fully tested,
+community-supported external packages that can each be installed or updated with
+a single command.
+```julia
+julia> Pkg.add("QuantEcon")          # That's it!
+```
+This reduces the need for users to create their own, likely lower-quality
+functionality, increasing developer *and* code performance. (Or the need to
+fight for the toolbox licenses available to their department.)
 
 We acknowledge that our package is far from perfect. Possible improvements to
 *DSGE.jl* are many and varied. We may experiment with alternative, modern,
 numerical routines to improve speed. Ultimately, powerful metaprogramming
-support (such as a macro to parse equilibrium conditions) would
-allow user to specify model equations almost literally. We
+support would allow user to specify model equations more literally, in
+mathematical notation. We
 [welcome](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/CONTRIBUTING.md)
 improvements to the existing code from the community.
 
@@ -221,10 +239,9 @@ algorithm, `gensys`. At one point, the generalized Schur (QZ) decomposition is
 computed, yielding the decompositions `A=QSZ'` and `B=QTZ'`. In MATLAB, upper
 triangular matrices `S` and `T` are returned. In Julia, meanwhile, the default
 behavior is to return a real decomposition with upper Hessenberg (blocked
-diagonal) matrices `S` and `T`. We then reorder the explosive generalized
-eigenvalues using Chris Sims' `qzdiv` in MATLAB and `ordschur` in Julia. The
-default behavior in the two languages is to order these values in opposite
-directions, exposing a user without deep knowledge of the procedure to errors.
+diagonal) matrices `S` and `T`. Differing behaviors like this in the two
+languages might expose a user without deep knowledge of the procedure to
+errors.
 
 Finally, dealing with a recently introduced language can make it more
 difficult for new users to produce performant code.  A typical economist,
@@ -233,13 +250,12 @@ nature and use of language concepts like type stability, parametric types, and
 preallocation. Julia's profiler and debugger lack the flexibility of those in
 MATLAB, and can make it difficult to identify the source of errors or
 performance bottlenecks. And Julia IDEs, like [Juno](http://junolab.org/), while
-admirable, are not as mature or featured as that of MATLAB.
-
+admirable, are not as mature or featured as the MATLAB IDE.
 
 ## Conclusion
 
 After months of hard work, we are pleased to be able to increase the performance
-of our model and provide our work for the benefit of the community. For those
+of our model and provide our project for the benefit of the community. For those
 considering similar projects, we find the benefits of a transition to Julia are
 significant. One should, however, be realistic about the challenges that will be
 faced transitioning to a young language.
