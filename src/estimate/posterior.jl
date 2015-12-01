@@ -77,8 +77,6 @@ function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
         try
             update!(m, parameters)
         catch err
-            @printf STDERR "There was an error of type %s :" typeof(err)
-            @printf STDERR "%s\n" err.msg
             return Posterior()
         end
     else
