@@ -129,6 +129,8 @@ function estimate(m::AbstractModel;
         hessian = h5open(inpath(m, "user", "hessian.h5"),"r") do file
             read(file, "hessian")
         end
+
+        hessian
     end
 
     # Compute inverse hessian and create proposal distribution, or
@@ -144,18 +146,17 @@ function estimate(m::AbstractModel;
         rank = length(big_eig_vals)
     
         S_inv = zeros(n, n)
-
         for i = (n-rank+1):n
             S_inv[i, i] = 1/S_diag[i]
         end
         
         hessian_inv = U*sqrt(S_inv) #this is the inverse of the hessian
-        DegenerateMvNormal(params, hessian_inv, rank)
+        DSGE.DegenerateMvNormal(params, hessian_inv)
     else
-        DegenerateMvNormal(params, proposal_covariance)
+        DSGE.DegenerateMvNormal(params, proposal_covariance)
     end
-    
-    if rank(propdist) != n_parameters_free(m)
+
+    if DSGE.rank(propdist) != n_parameters_free(m)
         println("problem –    shutting down dimensions")
     end
 
@@ -224,8 +225,6 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
     n_burn = 0
     n_params = n_parameters(m)
 
-    println("Called MH")
-    
     # Initialize algorithm by drawing para_old from a normal distribution centered on the
     # posterior mode until the parameters are within bounds or the posterior value is sufficiently large.
     para_old = rand(propdist, m; cc=cc0)
@@ -286,7 +285,6 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
     CCC_sim  = zeros(n_sim, n_states_augmented(m))
     mhzend    = zeros(n_sim, n_states_augmented(m))
 
-    println("made it to here")
     # Open HDF5 file for saving output
     simfile = h5open(rawpath(m,"estimate","mh_save.h5"),"w")
     n_saved_obs = n_sim * (n_blocks - n_burn)
@@ -396,13 +394,13 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
         block_end   = block_start+n_sim-1
 
         # Write data to file if we're past n_burn blocks
-        if i > n_burn
-            parasim[block_start:block_end, :]   = @compat(map(Float32,mhparams))
-            postsim[block_start:block_end, :]   = @compat(map(Float32, mhposterior))
-            # likesim[block_start:block_end, :] = @compat(map(Float32, mhlikelihood))
-            TTTsim[block_start:block_end,:]     = @compat(map(Float32,mhTTT))
-            RRRsim[block_start:block_end,:]     = @compat(map(Float32, mhRRR))
-            zsim[block_start:block_end,:]       = @compat(map(Float32, mhzend))
+        if block > n_burn
+            parasim[block_start:block_end, :]   = map(Float32,mhparams)
+            postsim[block_start:block_end, :]   = map(Float32, mhposterior)
+            # likesim[block_start:block_end, :] = map(Float32, mhlikelihood)
+            TTTsim[block_start:block_end,:]     = map(Float32,mhTTT)
+            RRRsim[block_start:block_end,:]     = map(Float32, mhRRR)
+            zsim[block_start:block_end,:]       = map(Float32, mhzend)
         end
 
 

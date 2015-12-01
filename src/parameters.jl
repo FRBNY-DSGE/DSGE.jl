@@ -5,7 +5,7 @@ import Base: <=
 Interval{T} is a typealias for Tuple{T,T}
 """
 =#
-typealias Interval{T} @compat Tuple{T,T}
+typealias Interval{T} Tuple{T,T}
 
 
 #=
@@ -170,11 +170,11 @@ end
 
 hasprior(p::Parameter) = !isnull(p.prior)
 
-typealias NullableOrPrior @compat(Union{NullablePrior, ContinuousUnivariateDistribution})
+typealias NullableOrPrior Union{NullablePrior, ContinuousUnivariateDistribution}
 
 # We want to use value field from UnscaledParameters and
 # SteadyStateParameters in computation, so we alias their union here.
-typealias UnscaledOrSteadyState @compat(Union{UnscaledParameter, SteadyStateParameter})
+typealias UnscaledOrSteadyState Union{UnscaledParameter, SteadyStateParameter}
 
 """
 ParamBoundsError <: Exception
