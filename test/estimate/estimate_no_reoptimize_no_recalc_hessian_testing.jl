@@ -16,9 +16,9 @@ create_save_directories(m, new_savepath, reset_inpath=false)
 
 # Since we want to run estimate with precalculated random vectors,
 # reset the metropolis-hastings specifications for the whole simulation
-m.num_mh_simulations_test= m.num_mh_simulations
-m.num_mh_blocks_test = m.num_mh_blocks
-m.num_mh_burn_test=m.num_mh_burn
+m.n_mh_simulations_test= m.n_mh_simulations
+m.n_mh_blocks_test = m.n_mh_blocks
+m.n_mh_burn_test=m.n_mh_burn
 
 tic()
 estimate(m,verbose=:low,testing=true,using_matlab_sigscale=true)
