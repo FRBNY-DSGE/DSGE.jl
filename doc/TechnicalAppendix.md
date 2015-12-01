@@ -48,15 +48,16 @@ how much is simply due to the improvements in design that came from rebuilding
 this project from the ground up? It is of course difficult to say, and it is
 important to emphasize that one cannot be sure what portion of the performance
 increase can be attributed to inherent language features as opposed to design
-differences. Indeed, our MATLAB code suffers from inefficiencies due to its
+differences. Indeed, our MATLAB code suffers from many inefficiencies due to its
 long, cumulative development, and support for a plethora of models and features.
-These design issues have been largely addressed in our Julia package. If we are
-most interested in isolating differences to the languages themselves, our code
-to compute the model solution with gensys and apply the Kalman filter has
-relatively little redesign and optimization as compared to the MATLAB code and
-provides the most comparable, though still imperfect, measurements of
-performance. This reduction of 1/5th to 3/4th could therefore be taken as a
-first estimate of Julia's advantage in this single arena of computation.
+Meanwhile, these design issues have been largely addressed in our Julia package.
+To best isolate differences in the languages themselves, we can look at our code
+to compute the model solution with `gensys` and apply the Kalman filter with
+`kalman_filter`. These two functions have relatively little redesign and
+optimization as compared to the MATLAB code and provide the most comparable,
+though still imperfect, measurements of performance. The reduction of 1/5th to
+3/4th in computing time, therefore, could be taken as a first estimate of
+Julia's advantage in this single arena of computation.
 
 ## Code Improvements
 
@@ -72,12 +73,27 @@ model’s fields.  By comparison, our MATLAB code stored all variables
 directly in the global workspace – an approach that scaled poorly as model
 specifications become more and more complex. To illustrate just how unwieldy our
 MATLAB code was, many of our function calls required more than 20 positional
-arguments (a nightmare for usage and human-readability). Certainly, one could
-approximate a "model object" in MATLAB by using its own object-oriented classes,
-or by "bundling" model attributes into a `struct` or other data structure.
-However, MATLAB classes are both relatively complicated and slower than
-non-object implementations. And large `struct`s would be susceptible to
-excessive dynamic field access.
+arguments, a serious challenge for usage and human-readability:
+```matlab
+[post_new,like_new,zend_new,ZZ_new,DD_new,QQ_new] = ...
+    feval('objfcnmhdsge',para_new,bounds,YY,YY0,nobs,nlags,nvar,mspec,npara,...
+    trspec,pmean,pstdd,pshape,TTT_new,RRR_new,CCC_new,valid_new,para_mask,...
+    coint,cointadd,cointall,YYcoint0,args_nant_antlags{:});
+```
+While several of these arguments (`*coint*`) relate to a feature not-implemented
+in Julia, one can still see the excesses of providing so much information about
+the model separately in function calls.
+
+The same code in Julia:
+```julia
+post_out = posterior!(m, para_new, data; mh=true)
+```
+
+Certainly, one could approximate a "model object" in MATLAB by using its own
+object-oriented classes, or by "bundling" model attributes into a `struct` or
+other data structure.  However, MATLAB classes are both relatively complicated
+and slower than non-object implementations. And using `struct`s in this way
+results in copies of all model variables made on every function call.
 
 Furthermore, an object-oriented approach allows us to take advantage of method
 dispatch in Julia by defining different model types for different model
