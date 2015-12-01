@@ -1,5 +1,5 @@
 #=
-Copyright Chris Sims
+This code is based on a routine originally copyright Chris Sims.
 See http://sims.princeton.edu/yftp/optimize/
 =#
 
