@@ -411,12 +411,12 @@ function Model990(subspec::AbstractString="ss2")
             m <= parameter(symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(),
                            RootInverseGamma(4., .2), fixed=false,
                            description="σ_r_m$i: No description available.",
-                           tex_label=@sprintf("\\sigma_ant{%d}",i))
+                           tex_label=@sprintf("\\sigma_{ant%d}",i))
         else
             m <= parameter(symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.),
                            DSGE.Exponential(), RootInverseGamma(4., .2), fixed=true,
                            description="σ_r_m$i: No description available.",
-                           tex_label=@sprintf("\\sigma_ant{%d}",i))
+                           tex_label=@sprintf("\\sigma_{ant%d}",i))
         end
     end
 
@@ -438,7 +438,7 @@ function Model990(subspec::AbstractString="ss2")
     m <= parameter(:Iendoα, 0.0000, (0.000, 1.000), (0., 0.), DSGE.Untransformed(),
                    BetaAlt(0.50, 0.20), fixed=true,
                    description="Iendoα: Indicates whether to use the model's endogenous α in the capacity utilization adjustment of total factor productivity.",
-                   tex_label="I\\{\\alpha^model\\}")
+                   tex_label="I\\{\\alpha^{model}\\}")
 
     m <= parameter(:Γ_gdpdef,  1.0354, (-10., 10.), (-10., -10.),  DSGE.Untransformed(),
                    Normal(1.00, 2.), fixed=false,
