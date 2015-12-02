@@ -1,4 +1,4 @@
-# Data 
+# Data
 
 ## Description
 
@@ -11,12 +11,13 @@ following series (the number corresponds to the column of data matrix):
 3.  Real wage growth (Bureau of Labor Statistics)
 4.  Inflation (GDP Deflator) (Bureau of Economic Analysis)
 5.  Inflation (Core PCE) (Bureau of Economic Analysis)
-6.  FFR (Federal Reserve Board)
+6.  Federal Funds Rate (Board of Governors of the Federal Reserve System)
 7.  Consumption growth (Bureau of Economic Analysis)
 8.  Investment growth (Bureau of Economic Analysis)
-10. Spread (Baa) (Board of Governors of the Federal Reserve)
-11. 10-year Inflation Expectations (Survey of Professional Forecasters)
+10. Spread (Baa) (Board of Governors of the Federal Reserve System)
+11. 10-year Inflation Expectations (Federal Reserve Bank of Philadelphia)
 12. Total Factor Productivity (Federal Reserve Bank of San Francisco)
+13. Income growth (Bureau of Economic Analysis)
 
 The following series were used to transform some series into per capita terms:
 
@@ -24,15 +25,16 @@ The following series were used to transform some series into per capita terms:
 Statistics)
 
 The *Baa Spread* series is made available by the Board of Governors of the
-Federal Reserve, and can be found
+Federal Reserve System, and can be found
 [here](http://www.federalreserve.gov/releases/h15/data.htm).
 
 The *Total Factor Productivity* series is made available by the Federal Reserve
 Bank of San Francisco, and can be found
 [here](http://www.frbsf.org/economic-research/total-factor-productivity-tfp/).
 
-The *10-year Inflation Expectations* series is made available by the Federal
-Reserve Bank of Philadelphia, and can be found
+The *10-year Inflation Expectations* series from the *Survey of Professional
+Forecasters* is made available by the Federal Reserve Bank of Philadelphia, and
+can be found
 [here](https://www.philadelphiafed.org/research-and-data/real-time-center/survey-of-professional-forecasters/historical-data/inflation-forecasts).
 
 All other series are retrieved from
