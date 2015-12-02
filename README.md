@@ -77,9 +77,9 @@ future features are implemented.)
     - `user/`: User-created files for model input. For instance, the user may
       specify a previously computed mode when `optimize(m)==false`, or a
       starting point for optimization when `optimize(m)==true`.
-      - `params_start.h5`: Used as starting point for estimation when
+      - `paramsstart.h5`: Used as starting point for estimation when
         `optimize(m)==true`.
-      - `params_mode.h5`: Taken as the mode when `optimize(m)==false`.
+      - `paramsmode.h5`: Taken as the mode when `optimize(m)==false`.
       - `hessian.h5`: Taken as the Hessian matrix when
         `calculate_hessian(m)==false`.
   - `output_data/`: This directory is referred to as `saveroot` in the code.
@@ -93,7 +93,7 @@ future features are implemented.)
           - `raw/`: Raw output data from estimation step
             - `mode_out.h5`: Optimized mode after running optimization
             - `hessian_out.h5`: Hessian at the mode
-            - `mh_save.h5`: Draws from posterior distribution
+            - `mhsave.h5`: Draws from posterior distribution
           - `work/`: Derived data files created using `raw/` files as input
             - `cov.h5`: Covariance matrix for parameter draws from
               Metropolis-Hastings. Can be used as proposal covariance matrix.
@@ -468,8 +468,8 @@ distribution.
 - *Find Mode*: The main program will call the `csminwel` optimization routine
  (located in `csminwel.jl`) to find modal parameter estimates. Can optionally
  start estimation from a starting parameter vector by specifying
- `save/input_data/params_start.h5` If the starting parameter vector is known to
- be optimized, the file should be called `params_mode.h5`
+ `save/input_data/user/paramsstart.h5` If the starting parameter vector is
+ known to be optimized, the file should be called `paramsmode.h5`
 
 - *Compute Hessian matrix*: first computing the Hessian matrix to scale the
   proposal distribution in the Metropolis-Hastings algorithm. Default

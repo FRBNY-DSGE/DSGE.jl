@@ -5,7 +5,7 @@ using HDF5
 model = Model990()
 model.testing=true
 
-x0 = h5open(inpath(model, "user", "params_start.h5")) do file
+x0 = h5open(inpath(model, "user", "paramsstart.h5")) do file
     read(file, "params")
 end
 data = h5open(inpath(model, "data", "data_REF.h5")) do file
