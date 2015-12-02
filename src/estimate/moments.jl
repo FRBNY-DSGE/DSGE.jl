@@ -16,7 +16,7 @@ function compute_moments{T<:AbstractModel}(m::T, percent::Float64 = 0.90;
 
     # Step 1: Read in the matrix of parameter draws from metropolis-hastings
 
-    filename = rawpath(m,"estimate","mh_save.h5")
+    filename = rawpath(m,"estimate","mhsave.h5")
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Reading draws from Metropolis-Hastings from $filename...")
@@ -27,7 +27,7 @@ function compute_moments{T<:AbstractModel}(m::T, percent::Float64 = 0.90;
 
     try
         fid = h5open(filename,"r+")
-        param_draws = read(fid,"parasim")
+        param_draws = read(fid,"mhparams")
         #post = read(fid,"postsim")
         close(fid)
     catch
@@ -61,7 +61,7 @@ Tabulates parameter moments in 3 LaTeX tables:
 
 ### Arguments
 - `θ`: [n_draws x n_parameters] matrix holding the posterior draws from
-  metropolis-hastings from save/mh_save.h5
+  metropolis-hastings from save/mhsave.h5
 - `percent`: the mass of observations we want; 0 <= percent <= 1
 """
 function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
