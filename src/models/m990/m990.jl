@@ -1,82 +1,70 @@
 """
-TODO: Decide whether this is the right place for this documentation...
-
 Model990{T} <: AbstractModel{T}
 
-The Model990 type defines the structure of the FRBNY DSGE
-model. We can then concisely pass around a Model object to the
-remaining steps of the model (solve, estimate, and forecast).
+The Model990 type defines the structure of the FRBNY DSGE model.
 
 ### Fields
 
 #### Parameters and Steady-States
 * `parameters::Vector{AbstractParameter}`: Vector of all time-invariant model parameters.
 
-* `steady_state::Vector`: Model steady-state values, computed as a
-function of elements of `parameters`.
+* `steady_state::Vector`: Model steady-state values, computed as a function of elements of
+  `parameters`.
 
-* `keys::Dict{Symbol,Int}`: Maps human-readable names for all model
-parameters and steady-states to their indices in `parameters` and
-`steady_state`.
+* `keys::Dict{Symbol,Int}`: Maps human-readable names for all model parameters and
+  steady-states to their indices in `parameters` and `steady_state`.
 
 #### Inputs to Measurement and Equilibrium Condition Equations
 
-The following fields are dictionaries that map human-readible names to
-row and column indices in the matrix representations of of the
-measurement equation and equilibrium conditions.
+The following fields are dictionaries that map human-readible names to row and column
+indices in the matrix representations of of the measurement equation and equilibrium
+conditions.
 
-* `endogenous_states::Dict{Symbol,Int}`: Maps each state to a column
-in the measurement and equilibrium condition matrices.
+* `endogenous_states::Dict{Symbol,Int}`: Maps each state to a column in the measurement and
+  equilibrium condition matrices.
 
-* `exogenous_shocks::Dict{Symbol,Int}`: Maps each shock to a column in
-the measurement and equilibrium condition matrices.
+* `exogenous_shocks::Dict{Symbol,Int}`: Maps each shock to a column in the measurement and
+  equilibrium condition matrices.
 
-* `expected_shocks::Dict{Symbol,Int}`: Maps each expected shock to a
-column in the measurement and equilibrium condition matrices.
+* `expected_shocks::Dict{Symbol,Int}`: Maps each expected shock to a column in the
+  measurement and equilibrium condition matrices.
 
-* `equilibrium_conditions::Dict{Symbol,Int}`: Maps each equlibrium
-condition to a row in the model's equilibrium condition matrices.
+* `equilibrium_conditions::Dict{Symbol,Int}`: Maps each equlibrium condition to a row in the
+  model's equilibrium condition matrices.
 
-* `endogenous_states_augmented::Dict{Symbol,Int}`: Maps lagged states
-to their columns in the measurement and equilibrium condition
-equations. These are added after Gensys solves the model.
+* `endogenous_states_augmented::Dict{Symbol,Int}`: Maps lagged states to their columns in
+  the measurement and equilibrium condition equations. These are added after Gensys solves the
+  model.
 
-* `observables::Dict{Symbol,Int}`: Maps each observable to a row in
-the model's measurement equation matrices.
+* `observables::Dict{Symbol,Int}`: Maps each observable to a row in the model's measurement
+  equation matrices.
 
 #### Model Specifications and Settings
 
-* `spec::AbstractString`: The model specification identifier, "m990",
-cached here for filepath computation.
+* `spec::AbstractString`: The model specification identifier, "m990", cached here for
+  filepath computation.
 
-* `subspec::AbstractString`: The model subspecification number,
-indicating that some parameters from the original model spec ("ss0")
-are initialized differently. Cached here for filepath computation. 
+* `subspec::AbstractString`: The model subspecification number, indicating that some
+  parameters from the original model spec ("ss0") are initialized differently. Cached here for
+  filepath computation.
 
-
-
-* `settings::Dict{Symbol,Setting}`: Settings/flags that affect
-computation without changing the economic or mathematical setup of
-the model.
+* `settings::Dict{Symbol,Setting}`: Settings/flags that affect computation without changing
+  the economic or mathematical setup of the model.
 
 * `test_settings::Dict{Symbol,Setting}`: Settings/flags for testing mode
 
 #### Other Fields
 
-* `rng::MersenneTwister`: Random number generator. By default, it is
-seeded to ensure replicability in algorithms that involve randomness
-(such as Metropolis-Hastings).
+* `rng::MersenneTwister`: Random number generator. Can be is seeded to ensure
+  replicability in algorithms that involve randomness (such as Metropolis-Hastings).
 
-* `testing::Bool`: Indicates whether the model is in testing mode. If
-`true`, settings from `m.test_settings` are used in place of those in
-`m.settings`.
+* `testing::Bool`: Indicates whether the model is in testing mode. If `true`, settings from
+  `m.test_settings` are used in place of those in `m.settings`.
 
-* `_filestrings::SortedDict{Symbol,AbstractString,ForwardOrdering}`:
-An alphabetized list of setting identifier strings. These are
-concatenated and appended to the filenames of all output files to
-avoid overwriting the output of previous estimations/forecasts that
-differ only in their settings, but not in their underlying
-mathematical structure. 
+* `_filestrings::SortedDict{Symbol,AbstractString,ForwardOrdering}`: An alphabetized list of
+  setting identifier strings. These are concatenated and appended to the filenames of all
+  output files to avoid overwriting the output of previous estimations/forecasts that differ
+  only in their settings, but not in their underlying mathematical structure.
 """
 type Model990{T} <: AbstractModel{T}
     parameters::ParameterVector{T}                  # vector of all time-invariant model parameters
@@ -88,7 +76,7 @@ type Model990{T} <: AbstractModel{T}
     exogenous_shocks::Dict{Symbol,Int}              # measurement and equilibrium condition equations.
     expected_shocks::Dict{Symbol,Int}               #
     equilibrium_conditions::Dict{Symbol,Int}        #
-    endogenous_states_augmented::Dict{Symbol,Int}  #
+    endogenous_states_augmented::Dict{Symbol,Int}   #
     observables::Dict{Symbol,Int}                   #
 
     spec::ASCIIString                               # Model specification number (eg "m990")
@@ -178,14 +166,14 @@ end
 function Model990(subspec::AbstractString="ss2")
 
     # Model-specific specifications
-    spec               = split(basename(@__FILE__),'.')[1]   
+    spec               = split(basename(@__FILE__),'.')[1]
     subspec            = subspec
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()        # Random Number Generator
-    testing            = false                       
+    testing            = false
     _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
-    
+
     # initialize empty model
     m = Model990{Float64}(
             # model parameters and steady state values
@@ -193,7 +181,7 @@ function Model990(subspec::AbstractString="ss2")
 
             # model indices
             Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(),
-                          
+
             spec,
             subspec,
             settings,
@@ -205,7 +193,7 @@ function Model990(subspec::AbstractString="ss2")
     # Set settings
     settings_m990(m)
     default_test_settings(m)
-    
+
     # Initialize parameters
     m <= parameter(:α,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.",
@@ -220,16 +208,14 @@ function Model990(subspec::AbstractString="ss2")
                    tex_label="\\iota_p")
 
     m <= parameter(:δ,      0.025,  fixed=true,
-                   description="δ: The capital depreciation rate.", tex_label="\\delta" )     
+                   description="δ: The capital depreciation rate.", tex_label="\\delta" )
 
-    ## TODO
     m <= parameter(:Upsilon,  1.000,  (0., 10.),     (1e-5, 0.),      DSGE.Exponential(),    GammaAlt(1., 0.5),          fixed=true,
-                   description="Υ: This is the something something.",
-                   tex_label="\\mathcal{\\Upsilon}") 
+                   description="Υ: No description available.",
+                   tex_label="\\mathcal{\\Upsilon}")
 
-    ## TODO - ask Marc and Marco
     m <= parameter(:Φ,   1.1066, (1., 10.),     (1.00, 10.00),   DSGE.Exponential(),    Normal(1.25, 0.12),         fixed=false,
-                   description="Φ: This is the something something.",
+                   description="Φ: No description available.",
                    tex_label="\\Phi")
 
     m <= parameter(:S′′,       2.7314, (-15., 15.),   (-15., 15.),     DSGE.Untransformed(),  Normal(4., 1.5),            fixed=false,
@@ -238,30 +224,27 @@ function Model990(subspec::AbstractString="ss2")
     m <= parameter(:h,        0.5347, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     BetaAlt(0.7, 0.1),          fixed=false,
                    description="h: Consumption habit persistence.", tex_label="h")
 
-    ## TODO - ask Marc and Marco
     m <= parameter(:ppsi,     0.6862, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false,
-                   description="ppsi: This is the something something.", tex_label="ppsi")
+                   description="ppsi: No description available.", tex_label="ppsi")
 
-    ## TODO - ask Marc and Marco
     m <= parameter(:ν_l,     2.5975, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    Normal(2, 0.75),            fixed=false,
                    description="ν_l: The coefficient of relative risk aversion on the labor
                    term of households' utility function.", tex_label="\\nu_l")
-    
+
     m <= parameter(:ζ_w,   0.9291, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     BetaAlt(0.5, 0.1),          fixed=false,
                    description="ζ_w: (1-ζ_w) is the probability with which households can freely choose wages in each period. With probability ζ_w, wages increase at a geometrically weighted average of the steady state rate of wage increases and last period's productivity times last period's inflation.",
                    tex_label="\\zeta_w")
 
-    #TODO: Something to do with intertemporal changes in wages? – Check in tex file
     m <= parameter(:ι_w,   0.2992, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false,
-                   description="ι_w: This is the something something.",
+                   description="ι_w: No description available.",
                    tex_label="\\iota_w")
 
     m <= parameter(:λ_w,      1.5000,                                                                               fixed=true,
                    description="λ_w: The wage markup, which affects the elasticity of substitution between differentiated labor services.",
-                   tex_label="\\lambda_w")     
+                   tex_label="\\lambda_w")
 
     m <= parameter(:β,      0.1402, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    GammaAlt(0.25, 0.1),        fixed=false,  scaling = x -> 1/(1 + x/100),
-                   description="β: Discount rate.",       
+                   description="β: Discount rate.",
                    tex_label="\\beta ")
 
     m <= parameter(:ψ1,     1.3679, (1e-5, 10.),   (1e-5, 10.00),   DSGE.Exponential(),    Normal(1.5, 0.25),          fixed=false,
@@ -277,56 +260,56 @@ function Model990(subspec::AbstractString="ss2")
                    tex_label="\\psi_3")
 
     m <= parameter(:π_star,   0.5000, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    GammaAlt(0.75, 0.4),        fixed=true,  scaling = x -> 1 + x/100,
-                   description="π_star: The steady-state rate of inflation.",  
-                   tex_label="\\pi_*")   
+                   description="π_star: The steady-state rate of inflation.",
+                   tex_label="\\pi_*")
 
     m <= parameter(:σ_c,   0.8719, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    Normal(1.5, 0.37),          fixed=false,
-                   description="σ_c: This is the something something.",
+                   description="σ_c: No description available.",
                    tex_label="\\sigma_{c}")
-    
+
     m <= parameter(:ρ,      0.7126, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     BetaAlt(0.75, 0.10),        fixed=false,
                    description="ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho")
-    
+
     m <= parameter(:ϵ_p,     10.000,                                                                               fixed=true,
-                   description="ϵ_p: This is the something something.",
-                   tex_label="\\varepsilon_{p}")     
+                   description="ϵ_p: No description available.",
+                   tex_label="\\varepsilon_{p}")
 
     m <= parameter(:ϵ_w,     10.000,                                                                               fixed=true,
-                   description="ϵ_w: This is the something something.",
-                   tex_label="\\varepsilon_{w}")     
+                   description="ϵ_w: No description available.",
+                   tex_label="\\varepsilon_{w}")
 
     # financial frictions parameters
     m <= parameter(:Fω,      0.0300, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(),    BetaAlt(0.03, 0.01),         fixed=true,    scaling = x -> 1 - (1-x)^0.25,
                    description="F(ω): The cumulative distribution function of ω (idiosyncratic iid shock that increases or decreases entrepreneurs' capital).",
                    tex_label="F(\\omega)")
-    
+
     m <= parameter(:spr,     1.7444, (0., 100.),      (1e-5, 0.),    DSGE.Exponential(),   GammaAlt(2., 0.1),           fixed=false,  scaling = x -> (1 + x/100)^0.25,
-                   description="spr_*: This is the something something.",   
+                   description="spr_*: No description available.",
                    tex_label="spr_*")
 
     m <= parameter(:ζ_spb, 0.0559, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(),    BetaAlt(0.05, 0.005),        fixed=false,
                    description="ζ_spb: The elasticity of the expected exess return on capital (or 'spread') with respect to leverage.",
                    tex_label="\\zeta_{spb}")
-    
+
     m <= parameter(:γ_star, 0.9900, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(),    BetaAlt(0.99, 0.002),        fixed=true,
-                   description="γ_star: This is the something something.",
+                   description="γ_star: No description available.",
                    tex_label="\\gamma_*")
 
     # exogenous processes - level
-    m <= parameter(:γ,      0.3673, (-5.0, 5.0),     (-5., 5.),     DSGE.Untransformed(), Normal(0.4, 0.1),            fixed=false, scaling = x -> x/100, 
+    m <= parameter(:γ,      0.3673, (-5.0, 5.0),     (-5., 5.),     DSGE.Untransformed(), Normal(0.4, 0.1),            fixed=false, scaling = x -> x/100,
                    description="γ: The log of the steady-state growth rate of technology.", # check this, I thinkt that's γ_star
                    tex_label="\\gamma")
 
     m <= parameter(:Lmean,  -45.9364, (-1000., 1000.), (-1e3, 1e3),   DSGE.Untransformed(), Normal(-45, 5),              fixed=false,
-                   description="Lmean: This is the something something.",
+                   description="Lmean: No description available.",
                    tex_label="Lmean")
 
     m <= parameter(:g_star,    0.1800,                                                                               fixed=true,
-                   description="g_star: This is the something something.",
-                   tex_label="g_*")  
+                   description="g_star: No description available.",
+                   tex_label="g_*")
 
-    # exogenous processes - autocorrelation 
+    # exogenous processes - autocorrelation
     m <= parameter(:ρ_g,      0.9863, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
                    description="ρ_g: AR(1) coefficient in the government spending process.",
                    tex_label="\\rho_g")
@@ -345,7 +328,7 @@ function Model990(subspec::AbstractString="ss2")
 
     m <= parameter(:ρ_λ_f,    0.8827, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
                    description="ρ_λ_f: AR(1) coefficient in the price mark-up shock process.",
-                   tex_label="\\rho_{\\lambda_f}") 
+                   tex_label="\\rho_{\\lambda_f}")
 
     m <= parameter(:ρ_λ_w,    0.3884, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
                    description="ρ_λ_w: AR(1) coefficient in the wage mark-up shock process.", # CHECK THIS
@@ -356,102 +339,95 @@ function Model990(subspec::AbstractString="ss2")
                    description="ρ_rm: AR(1) coefficient in the monetary policy shock process.", # CHECK THIS
                    tex_label="\\rho_{rm}")
 
-    # TODO - check this
     m <= parameter(:ρ_σ_w,   0.9898, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=false,
                    description="ρ_σ_w: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with mean ρ_σ_w. Innovations to the process are called _spread shocks_.",
                    tex_label="\\rho_{\\sigma_\\omega}")
 
-    # TODO - We're skipping this for now
     m <= parameter(:ρ_μ_e,    0.7500, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=true,
                    description="ρ_μ_e: Verification costs are a fraction μ_e of the amount the bank extracts from an entrepreneur in case of bankruptcy???? This doesn't seem right because μ_e isn't a process (p12 of PDF)",
                    tex_label="\\rho_{\\mu_e}")
 
-    ## TODO
-    m <= parameter(:ρ_γ,   0.7500, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=true,  description="ρ_γ: AR(1) coefficient on XX process.",              tex_label="\\rho_{\\gamma}")    
-    m <= parameter(:ρ_π_star,   0.9900, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2),           fixed=true,  description="ρ_π_star: This is the something something.",         tex_label="\\rho_{\\pi^*}")   
-    m <= parameter(:ρ_lr,     0.6936, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_lr: This is the something something.",             tex_label="\\rho_{lr}")      
-    m <= parameter(:ρ_z_p,     0.8910, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_z_p: This is the something something.",             tex_label="\\rho_{z^p}")    
-    m <= parameter(:ρ_tfp,    0.1953, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_tfp: This is the something something.",            tex_label="\\rho_{tfp}")     
-    m <= parameter(:ρ_gdpdef, 0.5379, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_gdpdef: GDP deflator.",                            tex_label="\\rho_{gdpdef}")  
-    m <= parameter(:ρ_corepce,    0.2320, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_corepce: This is the something something.",            tex_label="\\rho_{corepce}")     
+    m <= parameter(:ρ_γ,   0.7500, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(), BetaAlt(0.75, 0.15),         fixed=true,  description="ρ_γ: No description available.",              tex_label="\\rho_{\\gamma}")
+    m <= parameter(:ρ_π_star,   0.9900, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2),           fixed=true,  description="ρ_π_star: No description available.",         tex_label="\\rho_{\\pi^*}")
+    m <= parameter(:ρ_lr,     0.6936, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_lr: No description available.",             tex_label="\\rho_{lr}")
+    m <= parameter(:ρ_z_p,     0.8910, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_z_p: No description available.",             tex_label="\\rho_{z^p}")
+    m <= parameter(:ρ_tfp,    0.1953, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_tfp: No description available.",            tex_label="\\rho_{tfp}")
+    m <= parameter(:ρ_gdpdef, 0.5379, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_gdpdef: GDP deflator.",                            tex_label="\\rho_{gdpdef}")
+    m <= parameter(:ρ_corepce,    0.2320, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_corepce: No description available.",            tex_label="\\rho_{corepce}")
 
     # exogenous processes - standard deviation
     m <= parameter(:σ_g,      2.5230, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_g: The standard deviation of the government spending process.",
                    tex_label="\\sigma_{g}")
-    
+
     m <= parameter(:σ_b,      0.0292, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
-                   description="σ_b: This is the something something.",
+                   description="σ_b: No description available.",
                    tex_label="\\sigma_{b}")
 
     m <= parameter(:σ_μ,     0.4559, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
                    tex_label="\\sigma_{\\mu}")
 
-    ## TODO
     m <= parameter(:σ_z,      0.6742, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
-                   description="σ_z: This is the something something.",
+                   description="σ_z: No description available.",
                    tex_label="\\sigma_{z}")
 
     m <= parameter(:σ_λ_f,    0.1314, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good.  Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
                    tex_label="\\sigma_{\\lambda_f}")
 
-    ## TODO
     m <= parameter(:σ_λ_w,    0.3864, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
-                   description="σ_λ_w: This is the something something.",
+                   description="σ_λ_w: No description available.",
                    tex_label="\\sigma_{\\lambda_w}")
 
-    ## TODO
     m <= parameter(:σ_r_m,     0.2380, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
-                   description="σ_r_m: This is the something something.",
+                   description="σ_r_m: No description available.",
                    tex_label="\\sigma_{rm}")
-    
+
     m <= parameter(:σ_σ_ω,   0.0428, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(),   RootInverseGamma(4., 0.05),  fixed=false,
                    description="σ_σ_ω: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_ω.",
                    tex_label="\\sigma_{\\sigma_\\omega}")
-    
-    m <= parameter(:σ_μ_e,    0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(), RootInverseGamma(4., 0.05),  fixed=true,  description="σ_μ_e: This is the something something.",           tex_label="\\sigma_{\\mu_e}")
-    m <= parameter(:σ_γ,   0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(),   RootInverseGamma(4., 0.01),  fixed=true,  description="σ_γ: This is the something something.",             tex_label="\\sigma_{\\gamma}")    
-    m <= parameter(:σ_π_star,   0.0269, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(), RootInverseGamma(6., 0.03),  fixed=false, description="σ_π_star: This is the something something.",        tex_label="\\sigma_{\\pi^*}")   
-    m <= parameter(:σ_lr,     0.1766, (1e-8,10.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.75),  fixed=false, description="σ_lr: This is the something something to do with long run inflation expectations.",
-                   tex_label="\\sigma_{lr}")      
-    m <= parameter(:σ_z_p,     0.1662, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_z_p: This is the something something.",            tex_label="\\sigma_{z^p}")    
-    m <= parameter(:σ_tfp,    0.9391, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_tfp: This is the something something.",           tex_label="\\sigma_{tfp}")     
+
+    m <= parameter(:σ_μ_e,    0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(), RootInverseGamma(4., 0.05),  fixed=true,  description="σ_μ_e: No description available.",           tex_label="\\sigma_{\\mu_e}")
+    m <= parameter(:σ_γ,   0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(),   RootInverseGamma(4., 0.01),  fixed=true,  description="σ_γ: No description available.",             tex_label="\\sigma_{\\gamma}")
+    m <= parameter(:σ_π_star,   0.0269, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(), RootInverseGamma(6., 0.03),  fixed=false, description="σ_π_star: No description available.",        tex_label="\\sigma_{\\pi^*}")
+    m <= parameter(:σ_lr,     0.1766, (1e-8,10.),      (1e-8, 5.),    DSGE.Exponential(), RootInverseGamma(2., 0.75),  fixed=false, description="σ_lr: No description available.",
+                   tex_label="\\sigma_{lr}")
+    m <= parameter(:σ_z_p,     0.1662, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_z_p: No description available.",            tex_label="\\sigma_{z^p}")
+    m <= parameter(:σ_tfp,    0.9391, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_tfp: No description available.",           tex_label="\\sigma_{tfp}")
     m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.), (1e-8, 5.),DSGE.Exponential(),
          RootInverseGamma(2., 0.10), fixed=false,
-         description="σ_gdpdef: This is the something something.",
-         tex_label="\\sigma_{gdpdef}")  
+         description="σ_gdpdef: No description available.",
+         tex_label="\\sigma_{gdpdef}")
 
     m <= parameter(:σ_corepce, 0.0999, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),RootInverseGamma(2., 0.10),
                    fixed=false,
-                   description="σ_corepce: This is the something something.",
-                   tex_label="\\sigma_{corepce}")     
+                   description="σ_corepce: No description available.",
+                   tex_label="\\sigma_{corepce}")
 
     # standard deviations of the anticipated policy shocks
     for i = 1:n_anticipated_shocks_padding(m)
         if i < 13
             m <= parameter(symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(),
                            RootInverseGamma(4., .2), fixed=false,
-                           description="σ_r_m$i: This is the something something.",
+                           description="σ_r_m$i: No description available.",
                            tex_label=@sprintf("\\sigma_ant{%d}",i))
         else
             m <= parameter(symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.),
                            DSGE.Exponential(), RootInverseGamma(4., .2), fixed=true,
-                           description="σ_r_m$i: This is the something something.",
+                           description="σ_r_m$i: No description available.",
                            tex_label=@sprintf("\\sigma_ant{%d}",i))
         end
     end
 
-    ## TODO - look at etas in eqcond and figure out what they are, then confirm with Marc and Marco
     m <= parameter(:η_gz,       0.8400, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(),
                    BetaAlt(0.50, 0.20), fixed=false,
-                   description="η_gz: Has to do with correlation of g and z shocks.",
-                   tex_label="\\eta_{gz}")        
+                   description="η_gz: Correlate g and z shocks.",
+                   tex_label="\\eta_{gz}")
 
     m <= parameter(:η_λ_f,      0.7892, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(),
                    BetaAlt(0.50, 0.20),         fixed=false,
-                   description="η_λ_f: This is the something something.",
+                   description="η_λ_f: No description available.",
                    tex_label="\\eta_{\\lambda_f}")
 
     m <= parameter(:η_λ_w,      0.4226, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(),
@@ -463,41 +439,40 @@ function Model990(subspec::AbstractString="ss2")
                    BetaAlt(0.50, 0.20), fixed=true,
                    description="Iendoα: Indicates whether to use the model's endogenous α in the capacity utilization adjustment of total factor productivity.",
                    tex_label="I\\{\\alpha^model\\}")
-    
+
     m <= parameter(:Γ_gdpdef,  1.0354, (-10., 10.), (-10., -10.),  DSGE.Untransformed(),
                    Normal(1.00, 2.), fixed=false,
-                   description="Γ_gdpdef: This is the something something to do with the gdp deflator.",
+                   description="Γ_gdpdef: No description available.",
                    tex_label="\\Gamma_{gdpdef}")
 
     m <= parameter(:δ_gdpdef,   0.0181, (-9.1, 9.1), (-10., -10.),  DSGE.Untransformed(),
                    Normal(0.00, 2.),            fixed=false,
-                   description="δ_gdpdef: This is the something something.",
+                   description="δ_gdpdef: No description available.",
                    tex_label="\\delta_{gdpdef}")
 
     # steady states
-    m <= SteadyStateParameter(:z_star,  NaN, description="steady-state growth rate of productivity", tex_label="\\z_*")
-    m <= SteadyStateParameter(:rstar,   NaN, description="steady-state something something", tex_label="\\r_*")
-    m <= SteadyStateParameter(:Rstarn,  NaN, description="steady-state something something", tex_label="\\R_*_n")
-    m <= SteadyStateParameter(:r_k_star,  NaN, description="steady-state something something", tex_label="\\r^k_*")
-    m <= SteadyStateParameter(:wstar,   NaN, description="steady-state something something", tex_label="\\w_*")
-    m <= SteadyStateParameter(:Lstar,   NaN, description="steady-state something something", tex_label="\\L_*") 
+    m <= SteadyStateParameter(:z_star,  NaN, description="No description available.", tex_label="\\z_*")
+    m <= SteadyStateParameter(:rstar,   NaN, description="No description available.", tex_label="\\r_*")
+    m <= SteadyStateParameter(:Rstarn,  NaN, description="No description available.", tex_label="\\R_*_n")
+    m <= SteadyStateParameter(:r_k_star,  NaN, description="No description available.", tex_label="\\r^k_*")
+    m <= SteadyStateParameter(:wstar,   NaN, description="No description available.", tex_label="\\w_*")
+    m <= SteadyStateParameter(:Lstar,   NaN, description="No description available.", tex_label="\\L_*")
     m <= SteadyStateParameter(:kstar,   NaN, description="Effective capital that households rent to firms in the steady state.", tex_label="\\k_*")
     m <= SteadyStateParameter(:kbarstar, NaN, description="Total capital owned by households in the steady state.", tex_label="\\bar{k}_*")
     m <= SteadyStateParameter(:istar,  NaN, description="Detrended steady-state investment", tex_label="\\i_*")
-    m <= SteadyStateParameter(:ystar,  NaN, description="steady-state something something", tex_label="\\y_*")
-    m <= SteadyStateParameter(:cstar,  NaN, description="steady-state something something", tex_label="\\c_*")
-    m <= SteadyStateParameter(:wl_c,   NaN, description="steady-state something something", tex_label="\\wl_c")
-    m <= SteadyStateParameter(:nstar,  NaN, description="steady-state something something", tex_label="\\n_*")
-    m <= SteadyStateParameter(:vstar,  NaN, description="steady-state something something", tex_label="\\v_*")
-    m <= SteadyStateParameter(:ζ_spσ_ω,  NaN, description="steady-state something something", tex_label="\\zeta_{sp_{\\sigma_\\omega}}")
-    m <= SteadyStateParameter(:ζ_spμ_e,   NaN, description="steady-state something something", tex_label="\\zeta_{sp_{\\mu_e}}")
-    m <= SteadyStateParameter(:ζ_nRk,     NaN, description="steady-state something something", tex_label="\\zeta_{n_R_k}")
-    m <= SteadyStateParameter(:ζ_nR,      NaN, description="steady-state something something", tex_label="\\zeta_{n_R}")
-    m <= SteadyStateParameter(:ζ_nqk,     NaN, description="steady-state something something", tex_label="\\zeta_{n_q_k}")
-    m <= SteadyStateParameter(:ζ_nn,      NaN, description="steady-state something something", tex_label="\\zeta_{nn}")
-    m <= SteadyStateParameter(:ζ_nμ_e,    NaN, description="steady-state something something", tex_label="\\zeta_{n_{\\mu_e}}")
-    m <= SteadyStateParameter(:ζ_nσ_ω,   NaN, description="steady-state something something", tex_label="\\zeta_{n_{\\sigma_\\omega}}")
-
+    m <= SteadyStateParameter(:ystar,  NaN, description="No description available.", tex_label="\\y_*")
+    m <= SteadyStateParameter(:cstar,  NaN, description="No description available.", tex_label="\\c_*")
+    m <= SteadyStateParameter(:wl_c,   NaN, description="No description available.", tex_label="\\wl_c")
+    m <= SteadyStateParameter(:nstar,  NaN, description="No description available.", tex_label="\\n_*")
+    m <= SteadyStateParameter(:vstar,  NaN, description="No description available.", tex_label="\\v_*")
+    m <= SteadyStateParameter(:ζ_spσ_ω,  NaN, description="No description available.", tex_label="\\zeta_{sp_{\\sigma_\\omega}}")
+    m <= SteadyStateParameter(:ζ_spμ_e,   NaN, description="No description available.", tex_label="\\zeta_{sp_{\\mu_e}}")
+    m <= SteadyStateParameter(:ζ_nRk,     NaN, description="No description available.", tex_label="\\zeta_{n_R_k}")
+    m <= SteadyStateParameter(:ζ_nR,      NaN, description="No description available.", tex_label="\\zeta_{n_R}")
+    m <= SteadyStateParameter(:ζ_nqk,     NaN, description="No description available.", tex_label="\\zeta_{n_q_k}")
+    m <= SteadyStateParameter(:ζ_nn,      NaN, description="No description available.", tex_label="\\zeta_{nn}")
+    m <= SteadyStateParameter(:ζ_nμ_e,    NaN, description="No description available.", tex_label="\\zeta_{n_{\\mu_e}}")
+    m <= SteadyStateParameter(:ζ_nσ_ω,   NaN, description="No description available.", tex_label="\\zeta_{n_{\\sigma_\\omega}}")
 
     init_model_indices!(m)
     init_subspec(m)
@@ -549,17 +524,17 @@ d2G_dωdσ_fn(z, σ) = -pdf(Normal(), z)*(1 - z*(z-σ))/σ^2
 dΓ_dσ_fn(z, σ)    = -pdf(Normal(), z-σ)
 d2Γ_dωdσ_fn(z, σ) = (z/σ-1)*pdf(Normal(), z)
 
-#=
-doc"""
-Inputs: `m::Model990`
-
-Description: (Re)calculates the model's steady-state values. `steadystate!(m)` must be called whenever the parameters of `m` are updated. 
 """
-=#
-# (Re)calculates steady-state values
+```
+steadystate!(m::Model990)
+```
+
+Calculates the model's steady-state values. `steadystate!(m)` must be called whenever
+the parameters of `m` are updated.
+"""
 function steadystate!(m::Model990)
     SIGWSTAR_ZERO = 0.5
-    
+
     m[:z_star]    = log(1+m[:γ]) + m[:α]/(1-m[:α])*log(m[:Upsilon])
     m[:rstar]    = exp(m[:σ_c]*m[:z_star]) / m[:β]
     m[:Rstarn]   = 100*(m[:rstar]*m[:π_star] - 1)
@@ -577,7 +552,7 @@ function steadystate!(m::Model990)
     # solve for σ_ω_star and zω_star
     zω_star = quantile(Normal(), m[:Fω].scaledvalue)
     σ_ω_star = SIGWSTAR_ZERO
-    try 
+    try
         σ_ω_star = fzero(sigma -> ζ_spb_fn(zω_star, sigma, m[:spr]) - m[:ζ_spb], 0.5)
     catch
         σ_ω_star = SIGWSTAR_ZERO
@@ -614,7 +589,7 @@ function steadystate!(m::Model990)
     ΓμG      = Γstar - μ_estar*Gstar
     ΓμGprime = dΓdω_star - μ_estar*dGdω_star
 
-    # elasticities wrt ωbar 
+    # elasticities wrt ωbar
     ζ_bw       = ζ_bω_fn(zω_star, σ_ω_star, m[:spr])
     ζ_zw       = ζ_zω_fn(zω_star, σ_ω_star, m[:spr])
     ζ_bw_zw    = ζ_bw/ζ_zw

@@ -23,9 +23,6 @@ function ss5(m::Model990)
 
 
     m <= parameter(:ι_w,   0.0, fixed=true,
-                   description="ι_w: This is the something something.",
+                   description="ι_w: No description available.",
                    tex_label="\\iota_w")
-    
 end
-
-
