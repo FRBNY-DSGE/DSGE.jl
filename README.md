@@ -25,7 +25,7 @@ The following objects define a model:
 - __Parameters__: Have values, bounds, fixed-or-not status, priors. An
   instance of the `AbstractParameter` type houses all information about a given
   parameter in a single data structure.
-- __States__: Mappings of names to indices (e.g. `π_t` __->__ 1).
+- __States__: Mappings of names to indices (e.g. `π_t` ➜ 1).
 - __Equilibrium Conditions__: A function that takes parameters and model
   indices, then returns `Γ0`, `Γ1`, `C`, `Ψ`, and `Π` (which fully describe the
   model in canonical form).
@@ -35,10 +35,10 @@ These are enough to define the model structure. _Everything else_ is essentially
 a function of these basics, and we can solve the model and forecast observables
 via the following chain:
 
-- Parameters + Model Indices + Equilibrium conditions __->__ Transition matrices
+- Parameters + Model Indices + Equilibrium conditions ➜ Transition matrices
   in state-space form
-- Transition matrices + Data __->__ Estimated parameter values
-- Estimated parameters + Transition matrices + Data __->__ Forecast (not yet
+- Transition matrices + Data ➜ Estimated parameter values
+- Estimated parameters + Transition matrices + Data ➜ Forecast (not yet
   implemented)
 
 # Running the Code
@@ -149,7 +149,7 @@ This section focuses on what the code does and why, while the code itself
 (including comments) provides detailed information regarding *how* these basic
 procedures are implemented.
 
-## The AbstractModel Type and the Model Object
+## The `AbstractModel` Type and the Model Object
 
 The `AbstractModel` type provides a common infrastructure for all model objects,
 which greatly facilitates the implementation of new model specifications. Any
@@ -441,9 +441,9 @@ the code, the value in `settings` is used.)
 
 ## Estimation
 
-**Main Function**: `estimate` in `src/estimate/estimate.jl`
+**Main Function**: `estimate` in [estimate.jl](src/estimate/estimate.jl).
 
-**Purpose**: Finds modal parameter estimates and samples from posterior
+**Purpose**: Finds modal parameter values and samples from posterior
 distribution.
 
 **Main Steps**:
