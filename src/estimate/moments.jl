@@ -1,41 +1,43 @@
 """
-`compute_moments{T<:AbstractModel}(m::T, percent::Float64 = 0.90; verbose::Symbol=:none)`
+```
+compute_moments{T<:AbstractModel}(m::T, percent::Float64 = 0.90; verbose::Symbol=:none)
+```
 
 Computes prior and posterior parameter moments. Tabulates prior mean, posterior mean, and
 bands in various LaTeX tables stored `tablespath(m)`.
 
 ### Arguments
-  - `m`: the model object
-  - `percent`: the percentage of the mass of draws from Metropolis-Hastings included between
-    the bands displayed in output tables. 
+- `m`: the model object
+- `percent`: the percentage of the mass of draws from Metropolis-Hastings included between
+  the bands displayed in output tables.
 """
-function compute_moments{T<:AbstractModel}(m::T, percent::Float64 = 0.90; 
-                                               verbose::Symbol=:none)
-    
-    ### Step 1: Read in the matrix of parameter draws from metropolis-hastings
+function compute_moments{T<:AbstractModel}(m::T, percent::Float64 = 0.90;
+                                           verbose::Symbol=:none)
+
+    # Step 1: Read in the matrix of parameter draws from metropolis-hastings
 
     filename = rawpath(m,"estimate","mh_save.h5")
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Reading draws from Metropolis-Hastings from $filename...")
     end
-    
+
     param_draws = []
     post = []
 
     try
-        fid = h5open(filename,"r+") 
+        fid = h5open(filename,"r+")
         param_draws = read(fid,"parasim")
         #post = read(fid,"postsim")
         close(fid)
     catch
         @printf(1,"Could not open file %s", filename)
+        return
     end
 
     n_draws = size(param_draws,1)
 
-    
-    ### Step 2: Produce TeX table of moments
+    # Step 2: Produce TeX table of moments
 
     make_moment_tables(m,param_draws,percent, verbose=verbose)
 
@@ -48,7 +50,7 @@ make_moment_tables{T<:AbstractFloat}(m::AbstractModel, θ::Array{T,2}, percent::
 ```
 
 Tabulates parameter moments in 3 LaTeX tables:
-    
+
 1. For MAIN parameters, a list of prior means, prior standard deviations, posterior means,
    and 90% bands for posterior draws
 
@@ -58,78 +60,50 @@ Tabulates parameter moments in 3 LaTeX tables:
 3. A list of prior means and posterior means
 
 ### Arguments
-    - `θ`: [n_draws x n_parameters] matrix holding the posterior draws from metropolis-hastings
-           from save/mh_save.h5 
-    - `percent`: the mass of observations we want; 0 <= percent <= 1
+- `θ`: [n_draws x n_parameters] matrix holding the posterior draws from
+  metropolis-hastings from save/mh_save.h5
+- `percent`: the mass of observations we want; 0 <= percent <= 1
 """
 function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
                                               θ::Array{T,2},
                                               percent::Float64;
                                               verbose::Symbol=:none)
 
-    ########################################################################################
-    ## STEP 1: Extract moments of prior distribution from m.parameters
-    ########################################################################################
-    
-    n_params = length(m.parameters) 
+    # STEP 1: Extract moments of prior distribution from m.parameters
+
+    n_params = length(m.parameters)
     prior_means = zeros(n_params,1)
     prior_std = zeros(n_params,1)
 
-    
+
     for (i,k) in enumerate(m.keys)
 
         if(i > n_params)
             continue
         end
-        
-        param  = getindex(m,i)
-        
-        # Null prior means parameter is fixed
-        if isnull(param.prior) || param.fixed
-            if param.fixed
-                μ,σ = moments(param.prior.value)
-                @assert param.value == μ
-            end 
 
+        param  = getindex(m,i)
+
+        # If param is fixed, we simply set mean to its value and std to 0
+        if param.fixed
             prior_means[i]  = param.value
             prior_std[i] = 0
-
         else
-            μ,σ = moments(param.prior.value)
-            
+            pri = get(param.prior)
+            μ,σ = moments(pri)
             prior_means[i] = μ
             prior_std[i] = σ
         end
-        ## elseif isa(param.prior.value, DSGE.Normal)
-
-        ##     prior_means[i] = param.prior.value.μ
-        ##     prior_std[i] = param.prior.value.σ
-            
-        ## elseif isa(param.prior.value, Distributions.Beta)
-        ##     μ,σ = moments(param.prior.value)
-            
-        ##     prior_means[i] = μ
-        ##     prior_std[i] = σ
-
-        ## elseif isa(param.prior.value, Distributions.Gamma)
-        ##     μ,σ = moments(param.prior.value)
-            
-        ##     prior_means[i] = μ
-        ##     prior_std[i] = σ  
-            
-        ## end
     end
-    
-    ########################################################################################
-    ## STEP 2: Compute moments and `percent' bands from parameter draws
-    ########################################################################################
+
+    # STEP 2: Compute moments and `percent' bands from parameter draws
 
     # Posterior mean for each
-    θ_hat = mean(θ,1)'       
+    θ_hat = mean(θ,1)'
 
     # Covariance: Note that this has already been computed and saved
-    # in $workpath(m)/parameter_covariance.h5.   
-    # parameter θ_sig = cov(θ, mean=θ_hat') 
+    # in $workpath(m)/parameter_covariance.h5.
+    # parameter θ_sig = cov(θ, mean=θ_hat')
 
     # Bands for each
     θ_bands = []
@@ -140,12 +114,10 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
         println("percent must be between 0 and 1")
         return -1
     end
-    
 
-    ########################################################################################
-    ## STEP 3: Create variables for writing to output table
-    ########################################################################################
-    
+
+    # STEP 3: Create variables for writing to output table
+
     colnames = ["Parameter ", "Prior Mean ", "Prior Stdd ", "Post Mean ",
                 "$(100*percent)\\% {\\tiny Lower Band} ", "$(100*percent)\\% {\\tiny Upper Band} " ]
 
@@ -156,15 +128,11 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
                                                            # (n_params x 2)
 
 
-    ########################################################################################
-    ## STEP 4: WRITE TABLES
-    ########################################################################################
-    
-    ########################################################################################
-    ## 4a. Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT
-    ##     parameters
-    ########################################################################################
-    
+    # STEP 4: WRITE TABLES
+
+    # 4a. Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT
+    #     parameters
+
     # Open and start the TeX file
     moments0_out = tablespath(m,"estimate", "moments0.tex")
     moments0_fid = open(moments0_out,"w")
@@ -180,12 +148,12 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
     for col in colnames
         @printf(moments0_fid, "%4.99s & ", col)
     end
-        
-    # Keep track of indices for important parameters 
+
+    # Keep track of indices for important parameters
     important_para = []
 
-    for (index, param) in enumerate(m.parameters)   
-        
+    for (index, param) in enumerate(m.parameters)
+
         if (!ismatch(r"rho_", param.tex_label) &&
             !ismatch(r"zeta_", param.tex_label) &&
             !ismatch(r"psi_", param.tex_label) &&
@@ -196,30 +164,28 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
             # (!ismatch(r"ups", param.tex_label)))  ##Is this correct? mspec == 16 or u_^*
             continue
         end
-            
+
         # TODO: Decide whether subspec should be a field in the model
         if(ismatch(r"rho_chi",param.tex_label)) # ??? || (isequal(subspec,7) && tex_label == ":rho_b"))
             continue
         end
 
         @printf(moments0_fid, "\\\\ \n \$\%4.99s\$ & ", param.tex_label)
-        
+
         #Print the values in outmat
         for val in outmat[index,:]
             @printf(moments0_fid, "\%8.3f & ",val)
         end
 
         important_para = [important_para; index]
-        
+
     end
 
     # Close the file
     endTexTableDoc(moments0_fid;small=true)
 
-    ########################################################################################
-    ## 4b. Write to Table 2: Prior mean, std dev and posterior mean, bands for other params
-    ########################################################################################
-    
+    # 4b. Write to Table 2: Prior mean, std dev and posterior mean, bands for other params
+
     moments_table_out = tablespath(m,"estimate", "moments1.tex")
     moments_table_fid = open(moments_table_out,"w")
 
@@ -229,25 +195,25 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
     @printf(moments_table_fid,"\\vspace*{.2cm}\n")
     @printf(moments_table_fid,"{\\small \n")
     @printf(moments_table_fid,"\\begin{tabular}{lllllll}\\hline \n")
-    
+
     # Column names
     for col in colnames
         @printf(moments_table_fid, "%4.99s & ", col)
     end
-    
+
     # Counter for parameters to track length of table and number of tables in excess of
     # default (1)
     other_para = 1
     table_count = 0
 
     for (index, param) in enumerate(m.parameters)
-    
+
         if in(index, important_para)
             continue
         end
-        
+
         # Make a new table if the current one is too large
-        
+
         if ((other_para%25 == 0) && (index != length(m.parameters)) )
 
             # Finish and close the old file
@@ -260,28 +226,28 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
             filename = @sprintf("moments%d.tex",table_count)
             moments_table_out = tablespath(m,"estimate",filename)
             moments_table_fid = open(moments_table_out,"w")
-            
+
             beginTexTableDoc(moments_table_fid)
             @printf(moments_table_fid,"\\caption{Parameter Estimates}\n")
             @printf(moments_table_fid,"\\vspace*{.2cm}\n")
             @printf(moments_table_fid,"{\\small \n")
             @printf(moments_table_fid,"\\begin{tabular}{lllllll}\\hline \n")
-            
+
             for col in colnames
                 @printf(moments_table_fid, "%4.99s & ", col)
             end
         end
-        
+
         # Print the parameter name
         @printf(moments_table_fid, "\\\\ \n \$\%4.99s\$ & ", param.tex_label)
-        
+
         # Print the values in outmat
         for val in outmat[index,:]
             @printf(moments_table_fid, "\%8.3f & ",val)
         end
-        
+
         other_para = other_para+1
-        
+
     end
     endTexTableDoc(moments_table_fid;small=true)
 
@@ -290,7 +256,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
     ########################################################################################
 
     table_count = 0  # Keep track of how many tables we've made
-    
+
     # Open the TeX file and set up the heading
     prioPostMean_out = tablespath(m,"estimate", "moments_prioPostMean.tex")
     prioPostMean_fid = open(prioPostMean_out,"w")
@@ -300,7 +266,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
     @printf(prioPostMean_fid,"\\vspace*{.5cm}\n")
     @printf(prioPostMean_fid,"\\begin{tabular}{ccc}\\hline \n")
     @printf(prioPostMean_fid," Parameter & Prior & Posterior  \\tabularnewline \\hline\n")
-    
+
     # Write out the results
     for (index, param) in enumerate(m.parameters)
 
@@ -315,7 +281,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
 
             # Open a new file and start the next table
             prioPostMean_out = tablespath(m,"estimate",filename)
-            prioPostMean_fid = open(prioPostMean_out,"w")            
+            prioPostMean_fid = open(prioPostMean_out,"w")
             beginTexTableDoc(prioPostMean_fid)
             @printf(prioPostMean_fid,"\\caption{Parameter Estimates: Prior and Posterior Mean}\n")
             @printf(prioPostMean_fid,"\\vspace*{.5cm}\n")
@@ -324,14 +290,14 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
 
         end
 
-        
+
         @printf(prioPostMean_fid, "\\\\ \n \$\%4.99s\$ & ", param.tex_label)
 
         val = outmat2[index,:]
         @printf(prioPostMean_fid, "\%8.3f &   \%8.3f  ", val[1], val[2])
-        
+
     end
-    
+
     endTexTableDoc(prioPostMean_fid)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -339,48 +305,49 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
     end
 end
 
-#=
-doc"""
-beginTexTableDoc(fid::IOStream)
-
-### Parameters
-- `fid`: File descriptor 
-
-### Description
-Prints the preamble for a LaTeX table to the file indicated by `fid`.
 """
-=#
-function beginTexTableDoc(fid::IOStream)
+```
+beginTexTableDoc(fid::IOStream)
+```
 
+Prints the preamble for a LaTeX table to the file indicated by `fid`.
+
+### Arguments
+- `fid`: File descriptor
+"""
+function beginTexTableDoc(fid::IOStream)
     @printf(fid,"\\documentclass[12pt]{article}\n")
     @printf(fid,"\\usepackage[dvips]{color}\n")
     @printf(fid,"\\begin{document}\n")
     @printf(fid,"\\pagestyle{empty}\n")
     @printf(fid,"\\begin{table}[h] \\centering\n")
-    
 end
 
 """
-`endTexTableDoc(fid::IOStream;small::Bool=false)`
+```
+endTexTableDoc(fid::IOStream; small::Bool=false)
+```
 
-Prints the necessarily lines to end a table and close a LaTeX document to file descriptor `fid`, then closes the file.
+Prints the necessarily lines to end a table and close a LaTeX document to file descriptor
+`fid`, then closes the file.
 
 ### Arguments
 - `fid`: File descriptor
 
 ### Optional Arguments
-- `small`: Whether to print an additional curly bracket after "\end{tabular}" (necessary if the table is enclosed by "\small{}")
+- `small`: Whether to print an additional curly bracket after "\end{tabular}" (necessary if
+  the table is enclosed by "\small{}")
 """
 function endTexTableDoc(fid::IOStream;small::Bool=false)
 
     @printf(fid, "\\\\ \\\hline\n")
-    
+
     if small
         @printf(fid,"\\end{tabular}}\n")
     else
         @printf(fid,"\\end{tabular}\n")
     end
-    
+
     @printf(fid,"\\end{table}\n")
     @printf(fid,"\\end{document}")
     close(fid)
@@ -388,30 +355,31 @@ function endTexTableDoc(fid::IOStream;small::Bool=false)
 end
 
 """
-`find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)`
+```
+find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
+```
 
-### Parameters
+Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]`
+is above `bands[1,i]` and below `bands[2,i]`.
+
+### Arguments
 - draws: Matrix of parameter draws (from Metropolis-Hastings, for example)
 - percent: percent of data within bands (e.g. .9 to get 90% of mass within bands)
 
 ### Optional Arguments
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
-
-### Description
-Returns a [2 x cols(draws)] matrix `bands` such that `percent` of the mass of `draws[:,i]`
-is above `bands[1,i]` and below `bands[2,i]`.
 """
 function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
 
     if(percent < 0 || percent > 1)
         error("percent must be between 0 and 1")
     end
-    
+
     n_draws, n_draw_dimensions = size(draws)
     band  = zeros(2, n_draw_dimensions)
     n_in_band  = round(Int, percent * n_draws)
-    
+
     for i in 1:n_draw_dimensions
 
         # Sort response for parameter i such that 1st element is largest
@@ -426,19 +394,19 @@ function find_density_bands(draws::Matrix, percent::Real; minimize::Bool=true)
             minwidth = draw_variable_i[1] - draw_variable_i[n_in_band]
             done = 0
             j = 2
-            
+
             while j <= (n_draws - n_in_band + 1)
 
                 newwidth = draw_variable_i[j] - draw_variable_i[j + n_in_band - 1]
 
                 if newwidth < minwidth
                     upper_index = j
-                    minwidth = newwidth        
+                    minwidth = newwidth
                 end
 
                 j = j+1
             end
-            
+
         else
             upper_index = n_draws - nwidth - floor(.5*n_draws-n_in_band)
         end
