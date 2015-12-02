@@ -16,17 +16,18 @@ This routine implements the full estimation stage of the FRBNY DSGE model.
 
    - `:none`: No status updates will be reported.
 
-   - `:low`: Status updates will be provided in csminwel and at each block in Metropolis-Hastings.
+   - `:low`: Status updates will be provided in csminwel and at each block in
+     Metropolis-Hastings.
 
    - `:high`: Status updates provided at each iteration in Metropolis-Hastings.
 
 - `proposal_covariance`: Used to test the metropolis_hastings algorithm with a precomputed
-  covariance matrix for the proposal distribution. When the Hessian is singular, eigenvectors
-  corresponding to zero eigenvectors are not well defined, so eigenvalue decomposition can
-  cause problems. Passing a precomputed matrix allows us to ensure that the rest of the
-  routine has not broken.
+  covariance matrix for the proposal distribution. When the Hessian is singular,
+  eigenvectors corresponding to zero eigenvectors are not well defined, so eigenvalue
+  decomposition can cause problems. Passing a precomputed matrix allows us to ensure that
+  the rest of the routine has not broken.
 """
-function estimate(m::AbstractModel; 
+function estimate(m::AbstractModel;
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix())
 
@@ -45,26 +46,26 @@ function estimate(m::AbstractModel;
     ########################################################################################
     ### Step 2: Find posterior mode (if reoptimizing, run csminwel)
     ########################################################################################
-    
+
     # Specify starting mode
 
-    vint = get_setting(m, :data_vintage)    
+    vint = get_setting(m, :data_vintage)
     params = if optimize(m)
         #it's mode in params_mode, but params in params_start
         fn = inpath(m, "user", "params_start_$vint.h5")
         h5open(fn,"r") do file
 
-            if VERBOSITY[verbose] >= VERBOSITY[:low] 
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println("Reading in starting parameter vector from $fn")
             end
 
-            read(file, "params")   
+            read(file, "params")
         end
     else
         fn = inpath(m, "user", "params_mode_$vint.h5")
         h5open(fn,"r") do file
 
-            if VERBOSITY[verbose] >= VERBOSITY[:low] 
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println("Reading in previous mode from $fn")
             end
 
@@ -76,7 +77,7 @@ function estimate(m::AbstractModel;
 
     if optimize(m)
         println("Reoptimizing...")
-        
+
         # Inputs to optimization algorithm
         n_iterations       = 100
         ftol      = 1e-10
@@ -88,12 +89,12 @@ function estimate(m::AbstractModel;
         optimization_time = 0
         while !converged
             tic()
-            out, H = optimize!(m, data; 
+            out, H = optimize!(m, data;
                 ftol=ftol, iterations=n_iterations, show_trace=true, verbose=verbose)
             converged = !out.iteration_converged
 
             total_iterations += out.iterations
-            if VERBOSITY[verbose] >= VERBOSITY[:low] 
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
                 @printf "Total iterations completed: %d\n" total_iterations
                 @printf "Optimization time elapsed: %5.2f\n" optimization_time += toq()
             end
@@ -105,7 +106,7 @@ function estimate(m::AbstractModel;
             end
         end
     end
-    
+
     ########################################################################################
     ### Step 3: Compute proposal distribution
     ###
@@ -117,10 +118,10 @@ function estimate(m::AbstractModel;
 
     # Calculate the Hessian at the posterior mode
     hessian = if calculate_hessian(m)
-        if VERBOSITY[verbose] >= VERBOSITY[:low] 
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("Recalculating Hessian...")
         end
-        
+
         hessian, _ = hessian!(m, params, data; verbose=verbose)
 
         h5open(rawpath(m, "estimate","hessian_$vint.h5"),"w") do file
@@ -154,12 +155,12 @@ function estimate(m::AbstractModel;
         S_diag, U = eig(hessian)
         big_eig_vals = find(x -> x > 1e-6, S_diag)
         rank = length(big_eig_vals)
-    
+
         S_inv = zeros(n, n)
         for i = (n-rank+1):n
             S_inv[i, i] = 1/S_diag[i]
         end
-        
+
         hessian_inv = U*sqrt(S_inv) #this is the inverse of the hessian
         DSGE.DegenerateMvNormal(params, hessian_inv)
     else
@@ -173,7 +174,7 @@ function estimate(m::AbstractModel;
     ########################################################################################
     ### Step 4: Sample from posterior using Metropolis-Hastings algorithm
     ########################################################################################
-    
+
     # Set the jump size for sampling
     cc0 = 0.01
     cc = 0.09
@@ -186,7 +187,7 @@ function estimate(m::AbstractModel;
 
     compute_parameter_covariance(m);
 
-    return nothing 
+    return nothing
 end
 
 
@@ -200,14 +201,14 @@ Implements the Metropolis-Hastings MCMC algorithm for sampling from the posterio
 distribution of the parameters.
 
 ### Arguments
-* `propdist` The proposal distribution that Metropolis-Hastings begins sampling from.
-* `m`: The model object
-* `data`: Data matrix for observables
-* `cc0`: Jump size for initializing Metropolis-Hastings.
-* `cc`: Jump size for the rest of Metropolis-Hastings.
+- `propdist` The proposal distribution that Metropolis-Hastings begins sampling from.
+- `m`: The model object
+- `data`: Data matrix for observables
+- `cc0`: Jump size for initializing Metropolis-Hastings.
+- `cc`: Jump size for the rest of Metropolis-Hastings.
 
 ### Optional Arguments
-* `verbose`: The desired frequency of function progress messages printed to standard out.
+- `verbose`: The desired frequency of function progress messages printed to standard out.
 
    - `:none`: No status updates will be reported.
 
@@ -226,17 +227,18 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
     if m.testing
         srand(m.rng, 654)
     end
-        
+
     # Set number of draws, how many we will save, and how many we will burn
     # (initialized here for scoping; will re-initialize in the while loop)
     n_blocks = 0
-    n_sim = 0
-    mhthin = 0
-    n_burn = 0
+    n_sim    = 0
+    mhthin   = 0
+    n_burn   = 0
     n_params = n_parameters(m)
 
     # Initialize algorithm by drawing para_old from a normal distribution centered on the
-    # posterior mode until the parameters are within bounds or the posterior value is sufficiently large.
+    # posterior mode until the parameters are within bounds or the posterior value is
+    # sufficiently large.
     para_old = rand(propdist, m; cc=cc0)
     post_old = -Inf
     like_old = -Inf
@@ -257,11 +259,11 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
         n_blocks = n_mh_blocks(m)
         n_sim    = n_mh_simulations(m)
         n_burn   = n_mh_burn(m)
-        mhthin  = mh_thin(m)
+        mhthin   = mh_thin(m)
 
         post_out = posterior!(m, para_old, data; mh=true)
         post_old, like_old, out = post_out[:post], post_out[:like], post_out[:mats]
-        
+
         if post_old > -Inf
             propdist.μ = para_old
 
@@ -275,10 +277,10 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
 
     end
 
-    # Report number of blocks that will be used 
+    # Report number of blocks that will be used
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Blocks: $n_blocks")
-        println("Draws per block: $n_sim")        
+        println("Draws per block: $n_sim")
     end
 
     # For n_sim*mhthin iterations within each block, generate a new parameter draw.
@@ -287,13 +289,13 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
     all_rejections = 0
 
     # Initialize matrices for parameter draws and transition matrices
-    mhparams = zeros(n_sim, n_parameters(m))
+    mhparams     = zeros(n_sim, n_parameters(m))
     mhlikelihood = zeros(n_sim)
-    mhposterior = zeros(n_sim)
-    mhTTT  = zeros(n_sim, n_states_augmented(m)^2)
-    mhRRR  = zeros(n_sim, n_states_augmented(m)*n_shocks_exogenous(m))
-    CCC_sim  = zeros(n_sim, n_states_augmented(m))
-    mhzend    = zeros(n_sim, n_states_augmented(m))
+    mhposterior  = zeros(n_sim)
+    mhTTT        = zeros(n_sim, n_states_augmented(m)^2)
+    mhRRR        = zeros(n_sim, n_states_augmented(m)*n_shocks_exogenous(m))
+    CCC_sim      = zeros(n_sim, n_states_augmented(m))
+    mhzend       = zeros(n_sim, n_states_augmented(m))
 
     # Open HDF5 file for saving output
     simfile = h5open(rawpath(m,"estimate","mh_save.h5"),"w")
@@ -317,7 +319,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
 
     # keep track of how long metropolis_hastings has been sampling
     total_sampling_time = 0
-    
+
     for block = 1:n_blocks
 
         tic()
@@ -332,8 +334,8 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
             # meaningful system, and evaluate the posterior.
             post_out = posterior!(m, para_new, data; mh=true)
             post_new, like_new, out = post_out[:post], post_out[:like], post_out[:mats]
-            
-            if VERBOSITY[verbose] >= VERBOSITY[:high] 
+
+            if VERBOSITY[verbose] >= VERBOSITY[:high]
                 println("Block $block, Iteration $j: posterior = $post_new")
             end
 
@@ -348,7 +350,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
             r = exp(post_new - post_old)
 
             x = rand(m.rng)
-                        
+
             if x < min(1.0, r)
                 # Accept proposed jump
                 para_old = para_new
@@ -365,32 +367,32 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
                 DD_old = out[:DD]
                 QQ_old = out[:QQ]
 
-                if VERBOSITY[verbose] >= VERBOSITY[:high] 
+                if VERBOSITY[verbose] >= VERBOSITY[:high]
                     println("Block $block, Iteration $j: accept proposed jump")
                 end
 
             else
                 # Reject proposed jump
                 block_rejections += 1
-                
-                if VERBOSITY[verbose] >= VERBOSITY[:high] 
+
+                if VERBOSITY[verbose] >= VERBOSITY[:high]
                     println("Block $block, Iteration $j: reject proposed jump")
                 end
-                
+
             end
 
             # Save every (mhthin)th draw
 
             if j % mhthin == 0
                 draw_index = round(Int,j/mhthin)
-                
+
                 mhlikelihood[draw_index] = like_old
-                mhposterior[draw_index] = post_old
-                mhparams[draw_index, :] = para_old'
-                mhTTT[draw_index, :] = vec(TTT_old)'
-                mhRRR[draw_index, :] = vec(RRR_old)'
-                CCC_sim[draw_index, :] = vec(CCC_old)'
-                mhzend[draw_index, :] = vec(zend_old)'
+                mhposterior[draw_index]  = post_old
+                mhparams[draw_index, :]  = para_old'
+                mhTTT[draw_index, :]     = vec(TTT_old)'
+                mhRRR[draw_index, :]     = vec(RRR_old)'
+                CCC_sim[draw_index, :]   = vec(CCC_old)'
+                mhzend[draw_index, :]    = vec(zend_old)'
             end
         end
 
@@ -427,7 +429,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
             println("Expected time remaining for Metropolis-Hastings: $expected_time_remaining_hrs hours")
             println("Block $block rejection rate: $block_rejection_rate \n")
         end
-        
+
     end # of block
 
     close(simfile)
@@ -460,7 +462,7 @@ function compute_parameter_covariance{T<:AbstractModel}(m::T)
     param_draws = h5open(param_draws_path, "r") do f
         read(f, "parasim")
     end
-    
+
     # Calculate covariance matrix
     param_covariance = cov(param_draws)
 

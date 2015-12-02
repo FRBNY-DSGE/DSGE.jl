@@ -81,7 +81,7 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     gev = [diag(a) diag(b)]
 
     nunstab_int = round(Int,nunstab)
-    
+
     q1 = q[1:n-nunstab_int, :]
     q2 = q[n-nunstab_int+1:n, :]
     z1 = z[:, 1:n-nunstab_int]'
@@ -113,7 +113,6 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     eu[1] = length(bigev) >= nunstab
 
     # eu[1] == 1 && info("gensys: Existence of a solution!")
-
 
     # Note that existence and uniqueness are not just matters of comparing
     # numbers of roots and numbers of endogenous errors.  These counts are
@@ -209,11 +208,6 @@ end
 GensysError() = GensysError("Error in gensys.")
 Base.showerror(io::IO, ex::GensysError) = print(io, ex.msg)
 
-"""
-```
-new_div(F::Base.LinAlg.GeneralizedSchur)
-```
-"""
 function new_div(F::Base.LinAlg.GeneralizedSchur)
     ϵ = 1e-6  # small number to check convergence
     n = size(F[:T], 1)

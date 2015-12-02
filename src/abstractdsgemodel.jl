@@ -44,7 +44,9 @@ end
 end
 
 """
-`setindex!{T<:AbstractParameter}(m::AbstractModel, param::T, i::Integer)`
+```
+setindex!{T<:AbstractParameter}(m::AbstractModel, param::T, i::Integer)
+```
 
 If `i`<length(m.parameters), overwrites m.parameters[i] with
 param. Otherwise, overwrites m.steady_state[i-length(m.parameters).
@@ -62,10 +64,13 @@ Base.setindex!(m::AbstractModel, value, k::Symbol) = Base.setindex!(m, value, m.
 
 
 """
+```
 (<=){T}(m::AbstractModel{T}, p::AbstractParameter{T})
+```
 
 Syntax for adding a parameter to a model: m <= parameter.
-NOTE: If `p` is added to `m` and length(m.steady_state) > 0, `keys(m)` will not generate the index of `p` in `m.parameters`.
+NOTE: If `p` is added to `m` and length(m.steady_state) > 0, `keys(m)` will not generate the
+index of `p` in `m.parameters`.
 """
 function (<=){T}(m::AbstractModel{T}, p::AbstractParameter{T})
 
@@ -86,9 +91,12 @@ end
 
 
 """
+```
 (<=){T}(m::AbstractModel{T}, ssp::SteadyStateParameter)
+```
 
-Add a new steady-state value to the model by appending `ssp` to the `m.steady_state` and adding `ssp.key` to `m.keys`.
+Add a new steady-state value to the model by appending `ssp` to the `m.steady_state` and
+adding `ssp.key` to `m.keys`.
 """
 function (<=){T}(m::AbstractModel{T}, ssp::SteadyStateParameter)
 
@@ -119,11 +127,10 @@ n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_s
 # ZLB expectations should begin in 2008 Q4
 n_anticipated_lags(m::AbstractModel) = get_setting(m, :n_anticipated_lags)
 
-# TODO: This should be set when the data are read in
 # Number of presample periods
 n_presample_periods(m::AbstractModel) = get_setting(m, :n_presample_periods)
 
-# Number of a few things that are useful 
+# Number of a few things that are useful
 n_states(m::AbstractModel)                 = length(m.endogenous_states)
 n_states_augmented(m::AbstractModel)       = n_states(m) + length(m.endogenous_states_augmented)
 n_shocks_exogenous(m::AbstractModel)       = length(m.exogenous_shocks)
@@ -135,11 +142,11 @@ n_parameters_steady_state(m::AbstractModel)= length(m.steady_state)
 n_parameters_free(m::AbstractModel)        = sum([!α.fixed for α in m.parameters])
 
 # Interface for I/O settings
-spec(m::AbstractModel)          = m.spec
-subspec(m::AbstractModel)       = m.subspec 
-saveroot(m::AbstractModel) = get_setting(m, :saveroot)
-dataroot(m::AbstractModel)  = get_setting(m, :dataroot)
-data_vintage(m::AbstractModel)  = get_setting(m, :data_vintage)
+spec(m::AbstractModel)         = m.spec
+subspec(m::AbstractModel)      = m.subspec
+saveroot(m::AbstractModel)     = get_setting(m, :saveroot)
+dataroot(m::AbstractModel)     = get_setting(m, :dataroot)
+data_vintage(m::AbstractModel) = get_setting(m, :data_vintage)
 
 # Interface for general computation settings
 use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers)
@@ -151,7 +158,7 @@ n_hessian_test_params(m::AbstractModel) = get_setting(m, :n_hessian_test_params)
 
 # Interface for Metropolis-Hastings settings
 n_mh_blocks(m::AbstractModel)      =  get_setting(m, :n_mh_blocks)
-n_mh_simulations(m::AbstractModel) =  get_setting(m, :n_mh_simulations) 
+n_mh_simulations(m::AbstractModel) =  get_setting(m, :n_mh_simulations)
 n_mh_burn(m::AbstractModel)        =  get_setting(m, :n_mh_burn)
 mh_thin(m::AbstractModel)   =  get_setting(m, :mh_thin)
 
@@ -164,7 +171,7 @@ Creates the proper directory structure for input and output files, treating the 
     structure is implemented:
 
     dataroot/
-                 
+
     savepathroot/
                  output_data/<spec>/<subspec>/log/
                  output_data/<spec>/<subspec>/<out_type>/raw/
@@ -250,14 +257,14 @@ as
 function figurespath{T<:AbstractString}(m::AbstractModel, out_type::T, file_name::T="")
     return saveroot(m, out_type, "figures", file_name)
 end
-    
+
 # Not exposed to user. Actually create path and insert model string to file name.
 function saveroot{T<:AbstractString}(m::AbstractModel, out_type::T, sub_type::T,
                                       file_name::T="")
     # Containing dir
     path = joinpath(saveroot(m), "output_data", spec(m), subspec(m), out_type, sub_type)
-    if !isdir(path) 
-        mkpath(path) 
+    if !isdir(path)
+        mkpath(path)
     end
 
     # File with model string inserted
@@ -319,47 +326,48 @@ function modelstring(m::AbstractModel)
     m.testing ? "_test" : join(values(m._filestrings),"_")
 end
 
-#=
-doc"""
+"""
+```
 transform_to_model_space!{T<:AbstractFloat}(m::AbstractModel, values::Vector{T})
+```
 
-### Parameters:
+Transforms `values` from the real line to the model space, and assigns `values[i]` to
+`m.parameters[i].value` for non-steady-state parameters. Recomputes the steady-state
+paramter values.
+
+### Arguments
 -`m`: the model object
 -`values`: the new values to assign to non-steady-state parameters.
-
-### Description:
-Transforms `values` from the real line to the model space, and assigns `values[i]` to `m.parameters[i].value` for non-steady-state parameters. Recomputes the steady-state paramter values.
 """
-=#
 function transform_to_model_space!{T<:AbstractFloat}(m::AbstractModel, values::Vector{T})
     new_values = transform_to_model_space(m.parameters, values)
     update!(m, new_values)
     steadystate!(m)
 end
 
-#=
-doc"""
+"""
+```
 update!{T<:AbstractFloat}(m::AbstractModel, values::Vector{T})
+```
 
-### Parameters:
+Update `m.parameters` with `values`, recomputing the steady-state parameter values.
+
+### Arguments:
 -`m`: the model object
 -`values`: the new values to assign to non-steady-state parameters.
-
-### Description:
-Update `m.parameters` with `values`, recomputing the steady-state parameter values.
 """
-=#
 function update!{T<:AbstractFloat}(m::AbstractModel, values::Vector{T})
     update!(m.parameters, values)
-    steadystate!(m) 
+    steadystate!(m)
 end
 
 """
+```
 rand{T<:AbstractFloat, U<:AbstractModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
+```
 
 Generate a draw from d with variance optionally scaled by cc^2.
 """
 function rand{T<:AbstractFloat, U<:AbstractModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
-    

@@ -32,7 +32,7 @@ function optimize!(m::AbstractModel,
         else
             error("Method ",method," is not supported.")
         end
-    
+
         # Inputs to optimization
         H0             = 1e-4 * eye(n_parameters_free(m))
         para_free_inds = find([!θ.fixed for θ in m.parameters])
@@ -46,8 +46,8 @@ function optimize!(m::AbstractModel,
         end
 
         rng = m.rng
-    
-        out, H_ = optimizer(f_opt, x_opt, H0; 
+
+        out, H_ = optimizer(f_opt, x_opt, H0;
             xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
             store_trace=store_trace, show_trace=show_trace, extended_trace=extended_trace,
             verbose=verbose, rng=rng)
@@ -61,8 +61,8 @@ function optimize!(m::AbstractModel,
         H = zeros(n_parameters(m), n_parameters(m))
 
         # Fill in rows/cols of zeros corresponding to location of fixed parameters
-        # For each row corresponding to a free parameter, fill in columns corresponding to free
-        # parameters. Everything else is 0.
+        # For each row corresponding to a free parameter, fill in columns corresponding to
+        # free parameters. Everything else is 0.
         for (row_free, row_full) in enumerate(para_free_inds)
             H[row_full,para_free_inds] = H_[row_free,:]
         end

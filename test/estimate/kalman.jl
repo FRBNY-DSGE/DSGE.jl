@@ -1,4 +1,3 @@
-import DSGE: kalman_filter
 using HDF5, Base.Test
 include("../util.jl")
 
@@ -57,7 +56,7 @@ for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
         # These matrix entries are especially large, averaging 1e5, so we allow greater ϵ
         @test_matrix_approx_eq_eps expect actual 1e-1 1e-2
     else
-        @test_matrix_approx_eq expect actual 
+        @test_matrix_approx_eq expect actual
     end
 end
 close(h5)
