@@ -577,8 +577,9 @@ Contributors to this package at [QuantEcon](http://quantecon.org) include
 * [Spencer Lyon](http://github.com/spencerlyon2)
 * [Pablo Winant](http://github.com/albop)
 
-The `gensys` and `csminwel` routines are copyright
-[Chris Sims](http://www.princeton.edu/~sims).
+The `gensys` and `csminwel` routines in [gensys.jl](src/solve/gensys.jl) and
+[csminwel.jl](src/estimate/csminwel.jl) are based on routines originally
+copyright [Chris Sims](http://www.princeton.edu/~sims).
 
 The `kalman_filter` routine is loosely based on a version of the
 Kalman filter algorithm originally (C) Federal Reserve Bank of Atlanta and written by
