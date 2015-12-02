@@ -16,21 +16,25 @@ feature. We use internal data from the Federal Reserve Board on the implied
 Federal Funds Rate derived from OIS quotes.
 
 1. Choose a value for `n_anticipated_shocks` (we suggest `6`):
-   ```julia
-   m <= Setting(:n_anticipated_shocks, 6, true, "nant", "Number of ant. pol. shocks)
-   ```
+
+    ```julia
+    m <= Setting(:n_anticipated_shocks, 6, true, "nant", "Number of ant. pol. shocks)
+    ```
+
 2. Add implied FFR data to the `data` matrix:
     1. Append `n_anticipated_shocks` columns of `NaN` values to the end of the
        `data` matrix.
     2. Construct a matrix of data, say `ImpliedFFR`, on anticipated policy
        shocks. Define
-       ```pseudocode
-       For t from first quarter ZLB binds to last quarter ZLB binds
-           For h from 1 quarter ahead to n_anticipated_shocks quarters ahead
-               ImpliedFFR[t,h] := FFR at horizon h quarters ahead implied as of quarter t.
-           End
-       End
-       ```
+
+         ```pseudocode
+         For t from first quarter ZLB binds to last quarter ZLB binds
+            For h from 1 quarter ahead to n_anticipated_shocks quarters ahead
+                ImpliedFFR[t,h] := FFR at horizon h quarters ahead implied as of quarter t.
+            End
+         End
+         ```
+
     3. Fill in the `data` matrix with the `ImpliedFFR` matrix. The first
        row of the `ImpliedFFR` matrix should go in the row of the `data` matrix in
        which the ZLB first bound and the last row of the `ImpliedFFR` matrix should
@@ -80,12 +84,8 @@ Staff Report
 - page 23, for how the anticipated policy shocks propagate through the model.
 
 For more in depth discussion of anticipated policy shocks/forward guidance and
-the impact on the macroeconomy,
-[see](https://www.newyorkfed.org/medialibrary/media/research/staff_reports/sr574.pdf)
-```
-The Forward Guidance Puzzle
-Marco Del Negro, Marc Giannoni, and Christina Patterson
-Federal Reserve Bank of New York Staff Reports, no. 574
-```
+the impact on the macroeconomy, see NY Fed Working Paper
+[The Forward Guidance Puzzle](https://www.newyorkfed.org/medialibrary/media/research/staff_reports/sr574.pdf)
+by Marco Del Negro, Marc Giannoni, and Christina Patterson.
 
 Thanks to [Matthew Cocci](https://github.com/MattCocci) for the *Discussion*.
