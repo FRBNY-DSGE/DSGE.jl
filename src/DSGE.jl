@@ -20,7 +20,7 @@ module DSGE
         # abstractdsgemodel.jl
         AbstractModel, transform_to_model_space!, transform_to_real_line!,
         n_states, n_shocks_exogenous, n_shocks_expectational, n_parameters,
-        n_anticipated_shocks, n_anticipated_lags,
+        n_anticipated_shocks,
         spec, subspec,
         saveroot, inpath, workpath, rawpath, tablespath, figurespath, logpath,
         optimize, calculate_hessian,
