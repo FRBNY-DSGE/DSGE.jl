@@ -5,7 +5,6 @@ function Base.show{T<:AbstractModel}(io::IO, m::T)
     @printf io "%s\n" T
     @printf io "no. states:             %i\n" n_states(m)
     @printf io "no. anticipated shocks: %i\n" n_anticipated_shocks(m)
-    @printf io "no. anticipated lags:   %i\n" n_anticipated_lags(m)
     @printf io "data vintage:           %s\n" data_vintage(m)
     @printf io "description:\n %s\n"          description(m)
 end
@@ -123,9 +122,9 @@ n_anticipated_shocks(m::AbstractModel) = get_setting(m, :n_anticipated_shocks)
 # Padding for number of anticipated policy shocks
 n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_shocks_padding)
 
-# Number of periods back we should start incorporating zero bound expectations
+# First period we should incorporate zero bound expectations
 # ZLB expectations should begin in 2008 Q4
-n_anticipated_lags(m::AbstractModel) = get_setting(m, :n_anticipated_lags)
+zlb_start_index(m::AbstractModel) = get_setting(m, :zlb_start_index)
 
 # Number of presample periods
 n_presample_periods(m::AbstractModel) = get_setting(m, :n_presample_periods)
