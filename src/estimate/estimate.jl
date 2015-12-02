@@ -159,7 +159,7 @@ function estimate(m::AbstractModel;
     else
         DSGE.DegenerateMvNormal(params, proposal_covariance)
     end
-
+    
     if DSGE.rank(propdist) != n_parameters_free(m)
         println("problem –    shutting down dimensions")
     end
@@ -216,6 +216,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
                                                cc::T;
                                                verbose::Symbol=:low)
 
+
     # If testing, set the random seeds at fixed numbers
     if m.testing
         srand(m.rng, 654)
@@ -246,7 +247,6 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
     QQ_old = []
 
     initialized = false
-
     while !initialized
 
         n_blocks = n_mh_blocks(m)
@@ -269,8 +269,9 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
         end
 
     end
+    
+    # Report number of blocks that will be used 
 
-    # Report number of blocks that will be used
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Blocks: $n_blocks")
         println("Draws per block: $n_sim")
