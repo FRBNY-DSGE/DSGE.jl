@@ -15,19 +15,19 @@ end
 
 """
 ```
-posterior{T<:AbstractFloat}(m::AbstractModel{T}, YY::Matrix{T}; 
+posterior{T<:AbstractFloat}(m::AbstractModel{T}, data::Matrix{T}; 
                              mh::Bool = false, catch_errors::Bool = false)
 ```
 
 Calculates and returns the log of the posterior distribution for m.parameters:
 ```
 log posterior = log likelihood + log prior
-log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
+log Pr(Θ|data)  = log Pr(data|Θ)   + log Pr(Θ)
 ```
 
 ### Arguments
 -`m`: the model object
--`YY`: matrix of data for observables
+-`data`: matrix of data for observables
 
 ### Optional Arguments
 -`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the log likelihood and the
@@ -35,11 +35,11 @@ log Pr(Θ|YY)  = log Pr(YY|Θ)   + log Pr(Θ)
 -`catch_errors`: Whether or not to catch errors of type `GensysError` or `ParamBoundsError`
 """
 function posterior{T<:AbstractFloat}(m::AbstractModel{T},
-                                     YY::Matrix{T};
+                                     data::Matrix{T};
                                      mh::Bool = false,
                                      catch_errors::Bool = false)
     catch_errors = catch_errors | mh
-    like, out = likelihood(m, YY; mh=mh, catch_errors=catch_errors)
+    like, out = likelihood(m, data; mh=mh, catch_errors=catch_errors)
     post = like + prior(m)
     if mh
         return Posterior(post, like, out)
@@ -50,7 +50,7 @@ end
 
 """
 ```
-posterior!{T<:AbstractFloat}(m::AbstractModel{T}, parameters::Vector{T}, YY::Matrix{T};
+posterior!{T<:AbstractFloat}(m::AbstractModel{T}, parameters::Vector{T}, data::Matrix{T};
                               mh::Bool = false, catch_errors::Bool = false)
 ```
 
@@ -59,7 +59,7 @@ Evaluates the log posterior density at `parameters`
 ### Arguments
 -`m`: The model object
 -`parameters`: New values for the model parameters
-- `YY`: Matrix of input data for observables
+- `data`: Matrix of input data for observables
 
 ### Optional Arguments
 -`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the log likelihood and the
@@ -69,7 +69,7 @@ Evaluates the log posterior density at `parameters`
 """
 function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
                                       parameters::Vector{T},
-                                      YY::Matrix{T};
+                                      data::Matrix{T};
                                       mh::Bool = false,
                                       catch_errors::Bool = false)
     catch_errors = catch_errors | mh
@@ -82,7 +82,7 @@ function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
     else
         update!(m, parameters)
     end
-    return posterior(m, YY; mh=mh, catch_errors=catch_errors)
+    return posterior(m, data; mh=mh, catch_errors=catch_errors)
 
 end
 
@@ -92,7 +92,7 @@ const LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
 
 """
 ```
-likelihood{T<:AbstractFloat}(m::AbstractModel, YY::Matrix{T}; 
+likelihood{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T}; 
                               mh::Bool = false, catch_errors::Bool = false)
 ```
 
@@ -104,7 +104,7 @@ Otherwise, we filter over the main sample all at once.
 
 ### Arguments
 -`m`: The model object
--`YY`: matrix of data for observables
+-`data`: matrix of data for observables
 
 ### Optional Arguments
 -`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the transition matrices for
@@ -112,7 +112,7 @@ Otherwise, we filter over the main sample all at once.
 -`catch_errors`: If `mh = true`, `GensysErrors` should always be caught.
 """
 function likelihood{T<:AbstractFloat}(m::AbstractModel,
-                                      YY::Matrix{T};
+                                      data::Matrix{T};
                                       mh::Bool = false,
                                       catch_errors::Bool = false)
     catch_errors = catch_errors | mh
@@ -150,9 +150,9 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     n_states        = DSGE.n_states(m)
     regime_states   = [n_states_no_ant, n_states_no_ant, n_states_aug]
 
-    R1[:YY] = YY[1:n_T0, 1:n_obs_no_ant]
-    R2[:YY] = YY[(n_T0+1):(end-n_ant_lags-1), 1:n_obs_no_ant]
-    R3[:YY] = YY[(end-n_ant_lags):end, :]
+    R1[:data] = data[1:n_T0, 1:n_obs_no_ant]
+    R2[:data] = data[(n_T0+1):(end-n_ant_lags-1), 1:n_obs_no_ant]
+    R3[:data] = data[(end-n_ant_lags):end, :]
 
 
     # Step 1: solution to DSGE model - delivers transition equation for the state variables  S_t
@@ -208,7 +208,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     # Run Kalman filter on presample
     R1[:A0]         = zeros(T, n_states_no_ant, 1)
     R1[:P0]         = solve_discrete_lyapunov(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
-    out             = kalman_filter(R1[:YY]', 1, zeros(T, n_states_no_ant, 1), R1[:TTT], R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0])
+    out             = kalman_filter(R1[:data]', 1, zeros(T, n_states_no_ant, 1), R1[:TTT], R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0])
     regime_likes[1] = out[:L]
     R1[:zend]       = out[:zend]
     R1[:Pend]       = out[:Pend]
@@ -216,7 +216,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     # Run Kalman filter on normal period
     zprev           = R1[:zend]
     Pprev           = R1[:Pend]
-    out             = kalman_filter(R2[:YY]', 1, zeros(regime_states[2], 1), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev)
+    out             = kalman_filter(R2[:data]', 1, zeros(regime_states[2], 1), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev)
     regime_likes[2] = out[:L]
     R2[:zend]       = out[:zend]
     R2[:Pend]       = out[:Pend]
@@ -241,7 +241,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     Pprev[after_shocks_new, before_shocks]    = R2[:Pend][after_shocks_old, before_shocks]
     Pprev[after_shocks_new, after_shocks_new] = R2[:Pend][after_shocks_old, after_shocks_old]
 
-    out             = kalman_filter(R3[:YY]', 1, zeros(regime_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev)
+    out             = kalman_filter(R3[:data]', 1, zeros(regime_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev)
     regime_likes[3] = out[:L]
     R3[:zend]       = out[:zend]
     R3[:Pend]       = out[:Pend]
