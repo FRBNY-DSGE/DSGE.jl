@@ -85,30 +85,39 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
         param  = getindex(m,i)
         
         # Null prior means parameter is fixed
-        if isnull(param.prior)
+        if isnull(param.prior) || param.fixed
+            if param.fixed
+                μ,σ = moments(param.prior.value)
+                @assert param.value == μ
+            end 
+
             prior_means[i]  = param.value
             prior_std[i] = 0
 
-        # TODO xxxMoments could be declared something like
-        # function distMoments{T<:Distribution}(prior_value::T)
-        elseif isa(param.prior.value, DSGE.Normal)
-
-            prior_means[i] = param.prior.value.μ
-            prior_std[i] = param.prior.value.σ
-            
-        elseif isa(param.prior.value, Distributions.Beta)
+        else
             μ,σ = moments(param.prior.value)
             
             prior_means[i] = μ
             prior_std[i] = σ
-
-        elseif isa(param.prior.value, Distributions.Gamma)
-            μ,σ = moments(param.prior.value)
-            
-            prior_means[i] = μ
-            prior_std[i] = σ  # small \theta
-            
         end
+        ## elseif isa(param.prior.value, DSGE.Normal)
+
+        ##     prior_means[i] = param.prior.value.μ
+        ##     prior_std[i] = param.prior.value.σ
+            
+        ## elseif isa(param.prior.value, Distributions.Beta)
+        ##     μ,σ = moments(param.prior.value)
+            
+        ##     prior_means[i] = μ
+        ##     prior_std[i] = σ
+
+        ## elseif isa(param.prior.value, Distributions.Gamma)
+        ##     μ,σ = moments(param.prior.value)
+            
+        ##     prior_means[i] = μ
+        ##     prior_std[i] = σ  
+            
+        ## end
     end
     
     ########################################################################################

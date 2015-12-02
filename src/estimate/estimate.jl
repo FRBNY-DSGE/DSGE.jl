@@ -35,11 +35,11 @@ function estimate(m::AbstractModel;
     ########################################################################################
 
     # Load data
-    YY = h5open(inpath(m, "data","data_$(data_vintage(m)).h5"), "r") do f
+    data = h5open(inpath(m, "data","data_$(data_vintage(m)).h5"), "r") do f
         read(f, "data")
     end
 
-    post = posterior(m, YY)[:post]
+    post = posterior(m, data)[:post]
 
 
     ########################################################################################
@@ -48,18 +48,27 @@ function estimate(m::AbstractModel;
     
     # Specify starting mode
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low] 
-        println("Reading in previous mode")
-    end
-    
+    vint = get_setting(m, :data_vintage)    
     params = if optimize(m)
         #it's mode in params_mode, but params in params_start
-        h5open(inpath(m, "user", "params_start.h5"),"r") do file
+        fn = inpath(m, "user", "params_start_$vint.h5")
+        h5open(fn,"r") do file
+
+            if VERBOSITY[verbose] >= VERBOSITY[:low] 
+                println("Reading in starting parameter vector from $fn")
+            end
+
             read(file, "params")   
         end
 
     else
-        h5open(inpath(m, "user", "params_mode.h5"),"r") do file
+        fn = inpath(m, "user", "params_mode_$vint.h5")
+        h5open(fn,"r") do file
+
+            if VERBOSITY[verbose] >= VERBOSITY[:low] 
+                println("Reading in previous mode from $fn")
+            end
+
             read(file, "mode")
         end
     end
@@ -80,14 +89,14 @@ function estimate(m::AbstractModel;
         optimization_time = 0
         while !converged
             tic()
-            out, H = optimize!(m, YY; 
+            out, H = optimize!(m, data; 
                 ftol=ftol, iterations=n_iterations, show_trace=true, verbose=verbose)
             converged = !out.iteration_converged
 
             total_iterations += out.iterations
             if VERBOSITY[verbose] >= VERBOSITY[:low] 
-                @printf "Total iterations completed: %d" total_iterations
-                @printf "Optimization time elapsed: %5.2f" optimization_time += toq()
+                @printf "Total iterations completed: %d\n" total_iterations
+                @printf "Optimization time elapsed: %5.2f\n" optimization_time += toq()
             end
 
             # Write params to file after every `n_iterations` iterations
@@ -113,9 +122,9 @@ function estimate(m::AbstractModel;
             println("Recalculating Hessian...")
         end
         
-        hessian, _ = hessian!(m, params, YY; verbose=verbose)
+        hessian, _ = hessian!(m, params, data; verbose=verbose)
 
-        h5open(rawpath(m, "estimate","hessian.h5"),"w") do file
+        h5open(rawpath(m, "estimate","hessian_$vint.h5"),"w") do file
             file["hessian"] = hessian
         end
 
@@ -123,11 +132,12 @@ function estimate(m::AbstractModel;
 
     # Read in a pre-optimized mode
     else
+        fn = inpath(m, "user", "hessian_$vint.h5")
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Using pre-calculated Hessian")
+            println("Using pre-calculated Hessian from $fn")
         end
 
-        hessian = h5open(inpath(m, "user", "hessian.h5"),"r") do file
+        hessian = h5open(fn,"r") do file
             read(file, "hessian")
         end
 
@@ -169,7 +179,7 @@ function estimate(m::AbstractModel;
     cc0 = 0.01
     cc = 0.09
 
-    metropolis_hastings(propdist, m, YY, cc0, cc; verbose=verbose);
+    metropolis_hastings(propdist, m, data, cc0, cc; verbose=verbose);
 
     ########################################################################################
     ### Step 5: Calculate and save parameter covariance matrix
@@ -184,7 +194,7 @@ end
 """
 ```
 metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractModel,
-    YY::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low)
+    data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low)
 ```
 
 Implements the Metropolis-Hastings MCMC algorithm for sampling from the posterior
@@ -193,7 +203,7 @@ distribution of the parameters.
 ### Arguments
 * `propdist` The proposal distribution that Metropolis-Hastings begins sampling from.
 * `m`: The model object
-* `YY`: Data matrix for observables
+* `data`: Data matrix for observables
 * `cc0`: Jump size for initializing Metropolis-Hastings.
 * `cc`: Jump size for the rest of Metropolis-Hastings.
 
@@ -208,7 +218,7 @@ distribution of the parameters.
 """
 function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
                                                m::AbstractModel,
-                                               YY::Matrix{T},
+                                               data::Matrix{T},
                                                cc0::T,
                                                cc::T;
                                                verbose::Symbol=:low)
@@ -250,7 +260,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
         n_burn   = n_mh_burn(m)
         mhthin  = mh_thin(m)
 
-        post_out = posterior!(m, para_old, YY; mh=true)
+        post_out = posterior!(m, para_old, data; mh=true)
         post_old, like_old, out = post_out[:post], post_out[:like], post_out[:mats]
         
         if post_old > -Inf
@@ -321,7 +331,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
 
             # Solves the model, check that parameters are within bounds, gensys returns a
             # meaningful system, and evaluate the posterior.
-            post_out = posterior!(m, para_new, YY; mh=true)
+            post_out = posterior!(m, para_new, data; mh=true)
             post_new, like_new, out = post_out[:post], post_out[:like], post_out[:mats]
             
             if VERBOSITY[verbose] >= VERBOSITY[:high] 
@@ -445,7 +455,7 @@ function compute_parameter_covariance{T<:AbstractModel}(m::T)
     # Read in saved parameter draws
     param_draws_path = rawpath(m,"estimate","mh_save.h5")
     if !isfile(param_draws_path)
-        @printf STDERR "Saved parameter draws not found."
+        @printf STDERR "Saved parameter draws not found.\n"
         return
     end
     param_draws = h5open(param_draws_path, "r") do f
