@@ -12,8 +12,8 @@ model.testing = true
 mode = h5open(inpath(model, "user", "params_mode.h5")) do file
     read(file, "mode")
 end
-YY = h5open(inpath(model, "data", "data_REF.h5")) do file
-    read(file, "YY")
+data = h5open(inpath(model, "data", "data_REF.h5")) do file
+    read(file, "data")
 end
 hessian_expected = h5open(inpath(model, "user", "hessian.h5")) do file
     read(file, "hessian")
@@ -28,7 +28,7 @@ if max_free_ind < maximum(para_free_inds)
     para_free_inds = para_free_inds[1:max_free_ind]
 end
 
-@time hessian, _ = hessian!(model, mode, YY; verbose=:none)
+@time hessian, _ = hessian!(model, mode, data; verbose=:none)
 
 # The values here are liable to differ between machines, based on different
 # architectures/multithreading. Hessian values tend to be large, so these larger tolerances

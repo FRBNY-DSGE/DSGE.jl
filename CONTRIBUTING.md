@@ -115,7 +115,7 @@ Cobb-Douglas output function.
   - Matrices that have mathematical significance (e.g. the matrices of the
     transition and measurement equations) should be upper case, as they are
     in mathematical notation, and can repeat the letter to avoid collisions:
-    `TTT` or `YY`.
+    `TTT` or `QQ`.
   - Symbols such as overbars (which indicate mean values) and  tildes (which indicate
     log-deviations from the steady state) are written using a 3- or
     4-letter abbreviation immediately after the variable they modify:

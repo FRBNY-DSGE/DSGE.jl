@@ -428,8 +428,8 @@ For example, overwriting `optimize` should look like this:
 ```julia
 m = Model990()
 # optimize(m) returns false by default
-m <= Setting(:optimize, true, true, "reop", "whether to re-find the mode")
-# optimize(m) returns true; prints "reop=true" to output filenames
+m <= Setting(:optimize, true, true, "optm", "whether to re-find the mode")
+# optimize(m) returns true; prints "optm=true" to output filenames
 ```
 
 ### Test settings

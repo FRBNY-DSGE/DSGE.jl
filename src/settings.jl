@@ -136,7 +136,7 @@ draw in Metropolis-Hastings.
 function default_settings(m::AbstractModel)
 
     # I/O File locations
-    saveroot = normpath(joinpath(dirname(@__FILE__), "..","save","output_data"))
+    saveroot = normpath(joinpath(dirname(@__FILE__), "..","save"))
     datapath = normpath(joinpath(dirname(@__FILE__), "..","save","input_data"))
 
     
@@ -144,7 +144,7 @@ function default_settings(m::AbstractModel)
     m <= Setting(:dataroot, datapath, "Input data directory path")
 
     # Anticipated shocks
-    m <= Setting(:n_anticipated_shocks,         6, "Number of anticipated policy shocks")
+    m <= Setting(:n_anticipated_shocks,         0, "Number of anticipated policy shocks")
     m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
     m <= Setting(:n_anticipated_lags,  24, "Number of periods back to incorporate zero bound expectations")
 
