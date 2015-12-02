@@ -151,6 +151,8 @@ data_vintage(m::AbstractModel) = get_setting(m, :data_vintage)
 use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers)
 
 # Interface for estimation settings
+detect_mh_start(m::AbstractModel)   = get_setting(m, :detect_mh_start)
+estimation_start_file(m::AbstractModel)     = get_setting(m, :estimation_start_file)
 optimize(m::AbstractModel)          = get_setting(m, :optimize)
 calculate_hessian(m::AbstractModel) = get_setting(m, :calculate_hessian)
 n_hessian_test_params(m::AbstractModel) = get_setting(m, :n_hessian_test_params)
@@ -159,7 +161,43 @@ n_hessian_test_params(m::AbstractModel) = get_setting(m, :n_hessian_test_params)
 n_mh_blocks(m::AbstractModel)      =  get_setting(m, :n_mh_blocks)
 n_mh_simulations(m::AbstractModel) =  get_setting(m, :n_mh_simulations)
 n_mh_burn(m::AbstractModel)        =  get_setting(m, :n_mh_burn)
-mh_thin(m::AbstractModel)   =  get_setting(m, :mh_thin)
+mh_thin(m::AbstractModel)          =  get_setting(m, :mh_thin)
+
+# Function for user to set starting point for MH
+"""
+```
+specify_starting_parameters(m::AbstractModel; [path::ASCIIString=""])
+```
+
+Prepares `m` for full estimation with starting parameter vector
+specified by `path`. If `path==""`, estimation begins from the initial
+parameter values specified in the model definition. Model settings are
+refactored such that `optimize(m)` and `calculate_hessian(m)` are `true.`
+"""
+function specify_starting_parameters(m::AbstractModel, path::AbstractString = "")
+
+    m <= Setting(:optimize,          true, "Optimize the posterior mode. If false, reads in mode from a file.")
+    m <= Setting(:calculate_hessian, true, "Recalculate the hessian at the mode")
+
+    if path == ""
+        m <= Setting(:detect_starting_parameters, :none , "Use initial
+        parameter vector from source code as starting point for
+        optimization")
+        
+    else
+        if isfile(path)
+            m <= Setting(:detect_starting_parameters, :user , "Use $path as starting point for optimization")
+            
+            m <= Setting(:estimation_start_file, normpath(abspath(path)),
+            "Filepath for starting parametervector for
+            Metropolis-Hastings. Only accessed in the case in which
+            detect_starting_parameters(m) == :user")
+        else
+            error("$path is not a file.")
+        end
+    end
+end
+
 
 #=
 Build paths to where input/output/results data are stored.
@@ -370,3 +408,5 @@ Generate a draw from d with variance optionally scaled by cc^2.
 function rand{T<:AbstractFloat, U<:AbstractModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
+
+    

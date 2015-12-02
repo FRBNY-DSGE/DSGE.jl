@@ -106,28 +106,9 @@ function default_settings(m::AbstractModel)
     saveroot = normpath(joinpath(dirname(@__FILE__), "..","save"))
     datapath = normpath(joinpath(dirname(@__FILE__), "..","save","input_data"))
 
-
     m <= Setting(:saveroot, saveroot, "Root of data directory structure")
     m <= Setting(:dataroot, datapath, "Input data directory path")
 
-    # Anticipated shocks
-    m <= Setting(:n_anticipated_shocks,         0, "Number of anticipated policy shocks")
-    m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    m <= Setting(:zlb_start_index,  198, "Time index of first period to incorporate zero bound expectation")
-
-    m <= Setting(:n_presample_periods, 2, "Number of periods in the presample")
-
-    # General computation
-    m <= Setting(:use_parallel_workers, true, "Use available parallel workers in computations")
-
-    # Estimation
-    m <= Setting(:optimize,          false, "Optimize the posterior mode. If false, reads in mode from a file.")
-    m <= Setting(:calculate_hessian, false, "Recalculate the hessian at the mode")
-    m <= Setting(:n_hessian_test_params, typemax(Int), "Max number of free params for which to calculate Hessian")
-    m <= Setting(:n_mh_simulations,  10000, "Number of draws per block in Metropolis-Hastings")
-    m <= Setting(:n_mh_blocks,       22   , "Number of blocks for Metropolis-Hastings")
-    m <= Setting(:n_mh_burn,         2    , "Number of blocks to use as burn-in in Metropolis-Hastings")
-    m <= Setting(:mh_thin,    5    , "Metropolis-Hastings thinning step")
 
     # Data vintage. Default behavior: choose the most recent data file
     input_files = readdir(inpath(m, "data", ""))
@@ -140,6 +121,38 @@ function default_settings(m::AbstractModel)
     end
     vint = "$vint"
     m <= Setting(:data_vintage, vint, true, "vint", "Date of data")
+
+    # Anticipated shocks
+    m <= Setting(:n_anticipated_shocks,         0, "Number of anticipated policy shocks")
+    m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
+    m <= Setting(:zlb_start_index,  198, "Time index of first period to incorporate zero bound expectation")
+    m <= Setting(:n_presample_periods, 2, "Number of periods in the presample")
+
+    # General computation
+    m <= Setting(:use_parallel_workers, true, "Use available parallel workers in computations")
+
+    # Estimation
+    m <= Setting(:optimize,          false, "Optimize the posterior mode. If false, reads in mode from a file.")
+    m <= Setting(:calculate_hessian, false, "Recalculate the hessian at the mode")
+    m <= Setting(:n_hessian_test_params, typemax(Int), "Max number of free params for which to calculate Hessian")
+
+    m <= Setting(:detect_starting_parameters, :auto , "Search for the most
+    recently saved parameter vector to use as the starting point for
+    Metropolis-Hastings. Options are :auto, :none, or :user.")
+
+    #m <= Setting(:estimation_start_file,
+    #infile(m,"user","params)start_$vint.h5"), "Filepath for starting
+    #parameter vector for estimation step. Only accessed in the
+    #case in which detect_starting_parameters(m) == :user")
+
+    m <= Setting(:estimation_start_file, "", "Filepath for starting parameter
+    vector for Metropolis-Hastings. Only accessed in the case in which detect_starting_parameters(m) == :user")
+
+    m <= Setting(:n_mh_simulations,  10000, "Number of draws per block in Metropolis-Hastings")
+    m <= Setting(:n_mh_blocks,       22   , "Number of blocks for Metropolis-Hastings")
+    m <= Setting(:n_mh_burn,         2    , "Number of blocks to use as burn-in in Metropolis-Hastings")
+    m <= Setting(:mh_thin,    5    , "Metropolis-Hastings thinning step")
+
 
 end
 
