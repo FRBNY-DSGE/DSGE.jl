@@ -3,10 +3,6 @@ This code is based on a routine originally copyright Chris Sims.
 See http://sims.princeton.edu/yftp/optimize/
 =#
 
-import Calculus  # for numerical derivatives
-import Optim
-using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
-
 const rc_messages = Dict(0 => "Standard Iteration",
                          1 => "zero gradient",
                          2 => "back and forth on step length never finished",
