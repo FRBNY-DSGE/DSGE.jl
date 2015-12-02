@@ -86,6 +86,10 @@ function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
 
 end
 
+# Empty outputs from `likelihood`.
+const LIKE_NULL_DICT   = Dict{Symbol, Matrix{AbstractFloat}}()
+const LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
+
 """
 ```
 likelihood{T<:AbstractFloat}(m::AbstractModel, YY::Matrix{T}; 
