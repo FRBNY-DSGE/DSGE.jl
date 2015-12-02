@@ -73,7 +73,7 @@ function csminwel(fcn::Function,
                   grad::Function,
                   x0::Vector,
                   H0::Matrix=1e-5.*eye(length(x0)),
-                  args...;                                        
+                  args...;
                   xtol::Real           = 1e-32,  # default from Optim.jl
                   ftol::Float64        = 1e-14,  # Default from csminwel
                   grtol::Real          = 1e-8,   # default from Optim.jl
@@ -84,57 +84,57 @@ function csminwel(fcn::Function,
                   verbose::Symbol      = :none,
                   rng::AbstractRNG     = MersenneTwister(),
                   kwargs...)
-    
+
     if show_trace
         @printf "Iter     Function value   Gradient norm \n"
     end
-    
+
     # unpack dimensions
     nx = size(x0, 1)
-    
+
     # Count function and gradient calls
     f_calls = 0
     g_calls = 0
-    
+
     # Maintain current state in x and previous state in x_previous
     x, x_previous = copy(x0), copy(x0)
-    
+
     # start with Initial Hessian
     H = H0
-    
+
     # start rc parameter at 0
     rc = 0
-    
+
     f_x = fcn(x0, args...; kwargs...)
     f_calls += 1
-    
+
     if f_x > 1e50
         throw(ArgumentError("Bad initial guess. Try again"))
     end
-    
+
     gr, badg = grad(x0)
     g_calls += 1
-    
+
     # Count iterations
     iteration = 0
-    
+
     # Maintain a trace
     tr = OptimizationTrace()
     tracing = show_trace || store_trace || extended_trace
     @csminwelltrace
-    
+
     # set objects to their starting values
     retcode3 = 101
-    
+
     # set up return variables so they are available outside while loop
     fh = copy(f_x)
     xh = copy(x0)
     gh = copy(x0)
     retcodeh = 1000
-    
+
     # Assess multiple types of convergence
     x_converged, f_converged, gr_converged = false, false, false
-    
+
     # Iterate until convergence or exhaustion
     converged = false
     while !converged && iteration < iterations
@@ -162,7 +162,7 @@ function csminwel(fcn::Function,
                 if VERBOSITY[verbose] >= VERBOSITY[:low]
                     @printf "Cliff.  Perturbing search direction.\n"
                 end
-                
+
                 f2, x2, fc, retcode2 = csminit(fcn, x, f_x, gr, badg, Hcliff,
                                                args...; verbose=verbose, kwargs...)
                 f_calls += fc
@@ -322,7 +322,7 @@ function csminwel(fcn::Function,
 
     return MultivariateOptimizationResults("csminwel", x0, x, convert(Float64, f_x),
         iteration, iteration==iterations, x_converged, xtol, f_converged, ftol, gr_converged,
-        grtol, tr, f_calls, g_calls), H  # also return H 
+        grtol, tr, f_calls, g_calls), H  # also return H
 end
 
 
@@ -346,7 +346,7 @@ function csminwel(fcn::Function,
                   verbose::Symbol      = :none,
                   rng::AbstractRNG     = MersenneTwister(),
                   kwargs...)
-    
+
     grad{T<:Number}(x::Array{T}) = csminwell_grad(fcn, x, args...; kwargs...)
     csminwel(fcn, grad, x0, H0, args...;
              xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
@@ -394,7 +394,7 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 @printf "Near singular H problem.\n"
             end
-            
+
             dx = dx * fchange / dxnorm
         end
 
@@ -437,11 +437,11 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
             end
 
             f = fcn(dxtest, args...; kwargs...)
-            
+
             if VERBOSITY[verbose] >= VERBOSITY[:high]
                 @printf "lambda = %10.5f; f = %20.7f\n" lambda f
             end
-                
+
             if f < fhat
                 fhat = f
                 xhat = dxtest
@@ -536,7 +536,7 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
     if VERBOSITY[verbose] >= VERBOSITY[:high]
         @printf "Norm of dx %10.5f\n" dxnorm
     end
-    
+
     return fhat, xhat, f_calls, retcode
 end
 
@@ -546,7 +546,7 @@ bfgsi(H0, dg, dx)
 ```
 
 ### Arguments
-- `H0`: hessian matrix 
+- `H0`: hessian matrix
 - `dg`: previous change in gradient
 - `dx`: previous change in x
 """

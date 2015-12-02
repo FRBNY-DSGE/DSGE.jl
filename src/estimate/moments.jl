@@ -165,7 +165,6 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel,
             continue
         end
 
-        # TODO: Decide whether subspec should be a field in the model
         if(ismatch(r"rho_chi",param.tex_label)) # ??? || (isequal(subspec,7) && tex_label == ":rho_b"))
             continue
         end

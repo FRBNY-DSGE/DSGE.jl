@@ -15,7 +15,7 @@ end
 
 """
 ```
-posterior{T<:AbstractFloat}(m::AbstractModel{T}, data::Matrix{T}; 
+posterior{T<:AbstractFloat}(m::AbstractModel{T}, data::Matrix{T};
                              mh::Bool = false, catch_errors::Bool = false)
 ```
 
@@ -54,7 +54,7 @@ posterior!{T<:AbstractFloat}(m::AbstractModel{T}, parameters::Vector{T}, data::M
                               mh::Bool = false, catch_errors::Bool = false)
 ```
 
-Evaluates the log posterior density at `parameters`
+Evaluates the log posterior density at `parameters`.
 
 ### Arguments
 -`m`: The model object
@@ -92,15 +92,15 @@ const LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
 
 """
 ```
-likelihood{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T}; 
+likelihood{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T};
                               mh::Bool = false, catch_errors::Bool = false)
 ```
 
-`likelihood` is a dsge likelihood function that can handle 2-part estimation where the
-observed sample contains both a normal stretch of time (in which interest rates are
-positive) and a stretch of time in which interest rates reach the zero lower bound. If
-there is a zero-lower-bound period, then we filter over the 2 periods separately.
-Otherwise, we filter over the main sample all at once.
+Evaluate the DSGE likelihood function. Can handle "two part" estimation where the observed
+sample contains both a normal stretch of time (in which interest rates are positive) and
+a stretch of time in which interest rates reach the zero lower bound. If there is a
+zero-lower-bound period, then we filter over the 2 periods separately.  Otherwise, we
+filter over the main sample all at once.
 
 ### Arguments
 -`m`: The model object
@@ -126,7 +126,6 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
             end
         end
     end
-
 
     # Partition sample into three regimes, and store associated matrices:
     # - R1: presample
@@ -155,7 +154,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     R3[:data] = data[(end-n_ant_lags):end, :]
 
 
-    # Step 1: solution to DSGE model - delivers transition equation for the state variables  S_t
+    # Step 1: solution to DSGE model - delivers transition equation for the state variables
     # transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ
     # If we are in MH, then any errors coming out of gensys should be caught and a -Inf
     # posterior should be returned.
@@ -178,8 +177,6 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     R2[:RRR] = R3[:RRR][state_inds, shock_inds]
     R2[:CCC] = R3[:CCC][state_inds, :]
 
-
-
     ## step 2: define the measurement equation: X_t = ZZ*S_t + D + u_t
     ## where u_t = eta_t+MM* eps_t with var(eta_t) = EE
     ## where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
@@ -191,7 +188,6 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
         R2[d] = measurement_R2[d]
         R3[d] = measurement_R3[d]
     end
-
 
     # Presample measurement & transition equation matrices are same as normal period
     for d in (:TTT, :RRR, :QQ, :ZZ, :DD, :VVall)
@@ -273,4 +269,3 @@ function Base.getindex(P::Posterior, d::Symbol)
         throw(KeyError(d))
     end
 end
-
