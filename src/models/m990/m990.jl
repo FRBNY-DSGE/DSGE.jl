@@ -1,7 +1,9 @@
 """
+```
 Model990{T} <: AbstractModel{T}
+```
 
-The Model990 type defines the structure of the FRBNY DSGE model.
+The `Model990` type defines the structure of the FRBNY DSGE model.
 
 ### Fields
 
@@ -56,7 +58,7 @@ conditions.
 #### Other Fields
 
 * `rng::MersenneTwister`: Random number generator. Can be is seeded to ensure
-  replicability in algorithms that involve randomness (such as Metropolis-Hastings).
+  reproducibility in algorithms that involve randomness (such as Metropolis-Hastings).
 
 * `testing::Bool`: Indicates whether the model is in testing mode. If `true`, settings from
   `m.test_settings` are used in place of those in `m.settings`.
@@ -170,7 +172,7 @@ function Model990(subspec::AbstractString="ss2")
     subspec            = subspec
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
-    rng                = MersenneTwister()        # Random Number Generator
+    rng                = MersenneTwister()
     testing            = false
     _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
 
@@ -298,7 +300,7 @@ function Model990(subspec::AbstractString="ss2")
 
     # exogenous processes - level
     m <= parameter(:γ,      0.3673, (-5.0, 5.0),     (-5., 5.),     DSGE.Untransformed(), Normal(0.4, 0.1),            fixed=false, scaling = x -> x/100,
-                   description="γ: The log of the steady-state growth rate of technology.", # check this, I thinkt that's γ_star
+                   description="γ: The log of the steady-state growth rate of technology.",
                    tex_label="\\gamma")
 
     m <= parameter(:Lmean,  -45.9364, (-1000., 1000.), (-1e3, 1e3),   DSGE.Untransformed(), Normal(-45, 5),              fixed=false,
@@ -331,12 +333,12 @@ function Model990(subspec::AbstractString="ss2")
                    tex_label="\\rho_{\\lambda_f}")
 
     m <= parameter(:ρ_λ_w,    0.3884, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
-                   description="ρ_λ_w: AR(1) coefficient in the wage mark-up shock process.", # CHECK THIS
+                   description="ρ_λ_w: AR(1) coefficient in the wage mark-up shock process.",
                    tex_label="\\rho_{\\lambda_w}")
 
     #monetary policy shock - see eqcond
     m <= parameter(:ρ_rm,     0.2135, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
-                   description="ρ_rm: AR(1) coefficient in the monetary policy shock process.", # CHECK THIS
+                   description="ρ_rm: AR(1) coefficient in the monetary policy shock process.",
                    tex_label="\\rho_{rm}")
 
     m <= parameter(:ρ_σ_w,   0.9898, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=false,

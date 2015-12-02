@@ -181,7 +181,9 @@ typealias NullableOrPrior Union{NullablePrior, ContinuousUnivariateDistribution}
 typealias UnscaledOrSteadyState Union{UnscaledParameter, SteadyStateParameter}
 
 """
+```
 ParamBoundsError <: Exception
+```
 
 A `ParamBoundsError` is thrown upon an attempt to assign a parameter value that is not
 between `valuebounds`.
@@ -433,7 +435,9 @@ for f in (:(Base.exp),
 end
 
 """
+```
 update!{T}(pvec::ParameterVector{T}, values::Vector{T})
+```
 
 Update all parameters in `pvec` that are not fixed with
 `values`. Length of `values` must equal length of `pvec`.
@@ -445,7 +449,9 @@ function update!{T}(pvec::ParameterVector{T}, values::Vector{T})
 end
 
 """
+```
 update{T}(pvec::ParameterVector{T}, values::Vector{T})
+```
 
 Returns a copy of `pvec` where non-fixed parameter values are udpated
 to `values`. `pvec` remains unchanged. Length of `values` must
