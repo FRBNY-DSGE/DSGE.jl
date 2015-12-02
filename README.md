@@ -132,7 +132,15 @@ indicate future additions to the tree that will be added in future steps):
      - `solve/`: Solving the model; includes `gensys.jl` code.
   - `test/`: Module test suite.
 
+# Input data used
+
+For more details on the sample input data provided, please see
+[Data](doc/Data.md). For more details on using market interest rate
+expectations to treat the zero lower bound, see
+[Anticipated Policy Shocks](doc/AnticipatedPolicyShocks.md).
+
 # Implementation Details
+
 This section describes important functions and implementation features in
 greater detail. If the user is interested only in running the default model and
 reproducing the forecast results, this section can be ignored.
