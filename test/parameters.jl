@@ -51,7 +51,7 @@ function sstest(m::Model990)
 
     # Change all the fields of an unfixed parameter
     m <= parameter(:ι_w, 0.000, (0.0, .9999), (0.0,0.9999), DSGE.Untransformed(), Normal(0.0,1.0), fixed=false,
-                   description="ι_w: This is the something something.",
+                   description="ι_w: No description available.",
                    tex_label="\\iota_w")
 
 
@@ -74,7 +74,7 @@ function sstest(m::Model990)
 
     # Overwrite a fixed parameter with an unfixed parameter
     m <= parameter(:ϵ_p, 0.750, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    GammaAlt(0.75, 0.4),        fixed=false,  scaling = x -> 1 + x/100,
-                   description="ϵ_p: This is the something something.",
+                   description="ϵ_p: No description available.",
                    tex_label="\\varepsilon_{p}")     
 
     steadystate!(m)
