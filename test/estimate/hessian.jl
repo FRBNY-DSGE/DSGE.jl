@@ -9,8 +9,8 @@ model = Model990()
 model.testing = true
 
 # Setup paths
-mode = h5open(inpath(model, "user", "params_mode.h5")) do file
-    read(file, "mode")
+mode = h5open(inpath(model, "user", "paramsmode.h5")) do file
+    read(file, "params")
 end
 data = h5open(inpath(model, "data", "data_REF.h5")) do file
     read(file, "data")

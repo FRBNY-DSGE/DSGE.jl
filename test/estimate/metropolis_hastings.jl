@@ -19,11 +19,11 @@ close(file)
 DSGE.estimate(model; verbose=:none, proposal_covariance = propdist_cov)
 
 # Read in the parameter draws and covariance just generated from estimate()
-test_draws = h5open(rawpath(model, "estimate", "mh_save.h5"), "r") do file
-    read(file, "parasim")
+test_draws = h5open(rawpath(model, "estimate", "mhsave.h5"), "r") do file
+    read(file, "mhparams")
 end
 test_cov = h5open(workpath(model, "estimate", "parameter_covariance.h5"), "r") do file
-    read(file, "param_covariance")
+    read(file, "mhcov")
 end
 
 # Test that the fixed parameters are all fixed
