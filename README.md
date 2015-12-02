@@ -58,9 +58,30 @@ estimate(m)             # estimate the model
 computeMoments(m)       # produce LaTeX tables of parameter moments
 ```
 
-To change any of the model's default settings, parameters, equilibrium
-conditions, etc., see [Implementation Details](#implementation-details) for more
-specifics.
+By default, the `estimate` routine reads in a vector of modal
+parameter values and a Hessian matrix calculated at that mode. The
+user can re-estimate the model by setting the `:reoptimize` setting
+and `calculate_hessian` settings to `true`. Optimization begins at a
+vector of parameter values specified by the proper vintage of the file
+`save/user/params_start.h5`. To specify a starting parameter contained
+in another file, run
+
+```julia
+m = Model990()
+specify_starting_parameters(m, "path/to/parameter/file.h5")
+estimate(m)
+```
+
+This will set off a full re-estimation of the model parameters at the
+values specified in the file. To estimate the model starting from the
+parameter values specified in the model definition, use
+
+```julia
+specify_starting_parameters(m)
+```
+
+For more detail on changing the model's default settings, parameters, equilibrium
+conditions, etc., see [Implementation Details](#implementation-details) for more specifics.
 
 # Input/Output Directory Structure
 
