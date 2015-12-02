@@ -1,22 +1,20 @@
-type Measurement{T<:AbstractFloat}
-    ZZ::Matrix{T}
-    DD::Matrix{T}
-    QQ::Matrix{T}
-    EE::Matrix{T}
-    MM::Matrix{T}
-    VVall::Matrix{T}
-end
-function Base.getindex(M::Measurement, d::Symbol)
-    if d in (:ZZ, :DD, :QQ, :EE, :MM, :VVall)
-        return getfield(M, d)
-    else
-        throw(KeyError(d))
-    end
-end
+"""
+```
+measurement{T<:AbstractFloat}(m::Model990{T}, TTT::Matrix{T}, RRR::Matrix{T},
+                              CCC::Matrix{T}; shocks::Bool = true)
+```
 
-# Assign measurement equation : X_t = ZZ*S_t + DD + u_t
-# where u_t = eta_t+MM* eps_t with var(eta_t) = EE
-# where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
+Assign measurement equation
+```
+X_t = ZZ*S_t + DD + u_t
+```
+where
+```
+u_t = eta_t + MM*eps_t
+var(eta_t) = EE
+var(u_t) = HH = EE + MM*QQ*MM'
+cov(eps_t,u_t) = VV = QQ*MM'
+"""
 function measurement{T<:AbstractFloat}(m::Model990{T},
                                        TTT::Matrix{T},
                                        RRR::Matrix{T},
@@ -48,67 +46,67 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
 
     ## Output growth - Quarterly!
-    ZZ[obs[:obs_gdp], endo[:y_t]]       = 1.0
+    ZZ[obs[:obs_gdp], endo[:y_t]]      = 1.0
     ZZ[obs[:obs_gdp], endo_new[:y_t1]] = -1.0
-    ZZ[obs[:obs_gdp], endo[:z_t]]       = 1.0
-    DD[obs[:obs_gdp]]                   = 100*(exp(m[:z_star])-1)
+    ZZ[obs[:obs_gdp], endo[:z_t]]      = 1.0
+    DD[obs[:obs_gdp]]                  = 100*(exp(m[:z_star])-1)
 
     ## Hours growth
     ZZ[obs[:obs_hours], endo[:L_t]] = 1.0
     DD[obs[:obs_hours]]             = m[:Lmean]
 
     ## Labor Share/real wage growth
-    ZZ[obs[:obs_wages], endo[:w_t]]       = 1.0
+    ZZ[obs[:obs_wages], endo[:w_t]]      = 1.0
     ZZ[obs[:obs_wages], endo_new[:w_t1]] = -1.0
-    ZZ[obs[:obs_wages], endo[:z_t]]       = 1.0
-    DD[obs[:obs_wages]]                   = 100*(exp(m[:z_star])-1)
+    ZZ[obs[:obs_wages], endo[:z_t]]      = 1.0
+    DD[obs[:obs_wages]]                  = 100*(exp(m[:z_star])-1)
 
     ## Inflation (GDP Deflator)
-    ZZ[obs[:obs_gdpdeflator], endo[:π_t]]          = m[:Γ_gdpdef]
+    ZZ[obs[:obs_gdpdeflator], endo[:π_t]]            = m[:Γ_gdpdef]
     ZZ[obs[:obs_gdpdeflator], endo_new[:e_gdpdef_t]] = 1.0
-    DD[obs[:obs_gdpdeflator]]                       = 100*(m[:π_star]-1) + m[:δ_gdpdef]
+    DD[obs[:obs_gdpdeflator]]                        = 100*(m[:π_star]-1) + m[:δ_gdpdef]
 
     ## Inflation (Core PCE)
-    ZZ[obs[:obs_corepce], endo[:π_t]]       = 1.0
+    ZZ[obs[:obs_corepce], endo[:π_t]]             = 1.0
     ZZ[obs[:obs_corepce], endo_new[:e_corepce_t]] = 1.0
-    DD[obs[:obs_corepce]]                    = 100*(m[:π_star]-1)
+    DD[obs[:obs_corepce]]                         = 100*(m[:π_star]-1)
 
     ## Nominal interest rate
     ZZ[obs[:obs_nominalrate], endo[:R_t]] = 1.0
-    DD[obs[:obs_nominalrate]]              = m[:Rstarn]
+    DD[obs[:obs_nominalrate]]             = m[:Rstarn]
 
     ## Consumption Growth
-    ZZ[obs[:obs_consumption], endo[:c_t]]       = 1.0
+    ZZ[obs[:obs_consumption], endo[:c_t]]      = 1.0
     ZZ[obs[:obs_consumption], endo_new[:c_t1]] = -1.0
-    ZZ[obs[:obs_consumption], endo[:z_t]]       = 1.0
-    DD[obs[:obs_consumption]]                   = 100*(exp(m[:z_star])-1)
+    ZZ[obs[:obs_consumption], endo[:z_t]]      = 1.0
+    DD[obs[:obs_consumption]]                  = 100*(exp(m[:z_star])-1)
 
     ## Investment Growth
-    ZZ[obs[:obs_investment], endo[:i_t]]       = 1.0
+    ZZ[obs[:obs_investment], endo[:i_t]]      = 1.0
     ZZ[obs[:obs_investment], endo_new[:i_t1]] = -1.0
-    ZZ[obs[:obs_investment], endo[:z_t]]       = 1.0
-    DD[obs[:obs_investment]]                    = 100*(exp(m[:z_star])-1)
+    ZZ[obs[:obs_investment], endo[:z_t]]      = 1.0
+    DD[obs[:obs_investment]]                  = 100*(exp(m[:z_star])-1)
 
     ## Spreads
     ZZ[obs[:obs_spread], endo[:ERtil_k_t]] = 1.0
-    ZZ[obs[:obs_spread], endo[:R_t]]     = -1.0
-    DD[obs[:obs_spread]]                 = 100*log(m[:spr])
+    ZZ[obs[:obs_spread], endo[:R_t]]       = -1.0
+    DD[obs[:obs_spread]]                   = 100*log(m[:spr])
 
     ## 10 yrs infl exp
-    TTT10                = (1/40)*((eye(size(TTT, 1)) - TTT)\(TTT - TTT^41))
-    ZZ[obs[:obs_longinflation], :] =  TTT10[endo[:π_t], :]
+    TTT10                          = (1/40)*((eye(size(TTT, 1)) - TTT)\(TTT - TTT^41))
+    ZZ[obs[:obs_longinflation], :] = TTT10[endo[:π_t], :]
     DD[obs[:obs_longinflation]]    = 100*(m[:π_star]-1)
 
     ## Long Rate
-    ZZ[obs[:obs_longrate], :]                = ZZ[6, :]*TTT10
+    ZZ[obs[:obs_longrate], :]               = ZZ[6, :]*TTT10
     ZZ[obs[:obs_longrate], endo_new[:lr_t]] = 1.0
-    DD[obs[:obs_longrate]]                   = m[:Rstarn]
+    DD[obs[:obs_longrate]]                  = m[:Rstarn]
 
     ## TFP
-    ZZ[obs[:obs_tfp], endo[:z_t]]           = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
-    ZZ[obs[:obs_tfp], endo_new[:tfp_t]]    = 1.0
-    ZZ[obs[:obs_tfp], endo[:u_t]]           = m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα] )
-    ZZ[obs[:obs_tfp], endo_new[:u_t1]]     = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
+    ZZ[obs[:obs_tfp], endo[:z_t]]       = (1-m[:α])*m[:Iendoα] + 1*(1-m[:Iendoα])
+    ZZ[obs[:obs_tfp], endo_new[:tfp_t]] = 1.0
+    ZZ[obs[:obs_tfp], endo[:u_t]]       = m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα] )
+    ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
 
     QQ[exo[:g_sh], exo[:g_sh]]           = m[:σ_g]^2
     QQ[exo[:b_sh], exo[:b_sh]]           = m[:σ_b]^2
@@ -132,8 +130,8 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
     # as we had in 904
     if shocks
         for i = 1:n_anticipated_shocks(m)
-            ZZ[obs[symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], :]*(TTT^i)
-            DD[obs[symbol("obs_nominalrate$i")]] = m[:Rstarn]
+            ZZ[obs[symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]*(TTT^i)
+            DD[obs[symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
             QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_r_m$i")]^2
         end
     end
@@ -143,10 +141,26 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
         DD += ZZ*((UniformScaling(1) - TTT)\CCC)
     end
 
-    HH = EE + MM*QQ*MM'
-    VV = QQ*MM'
+    HH    = EE + MM*QQ*MM'
+    VV    = QQ*MM'
     VVall = [[RRR*QQ*RRR' RRR*VV];
              [VV'*RRR'    HH]]
 
     return Measurement(ZZ, DD, QQ, EE, MM, VVall)
+end
+
+type Measurement{T<:AbstractFloat}
+    ZZ::Matrix{T}
+    DD::Matrix{T}
+    QQ::Matrix{T}
+    EE::Matrix{T}
+    MM::Matrix{T}
+    VVall::Matrix{T}
+end
+function Base.getindex(M::Measurement, d::Symbol)
+    if d in (:ZZ, :DD, :QQ, :EE, :MM, :VVall)
+        return getfield(M, d)
+    else
+        throw(KeyError(d))
+    end
 end
