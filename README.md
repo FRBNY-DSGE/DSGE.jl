@@ -586,7 +586,7 @@ Contributors to this package at [QuantEcon](http://quantecon.org) include
 
 * [Zac Cranko](https://github.com/ZacCranko)
 * [Spencer Lyon](https://github.com/spencerlyon2)
-* [Pablo Winant](https://github.com/albop)
+* [Pablo Winant](http://www.mosphere.fr/)
 
 The `gensys` and `csminwel` routines in [gensys.jl](src/solve/gensys.jl) and
 [csminwel.jl](src/estimate/csminwel.jl) are based on routines originally
