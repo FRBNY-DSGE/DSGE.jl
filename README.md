@@ -456,11 +456,14 @@ distribution.
  `save/input_data/params_start.h5` If the starting parameter vector is known to
  be optimized, the file should be called `params_mode.h5`
 
-- *Sample from Posterior*: Posterior sampling begins from the computed mode, (or
-  the provided mode if `optimize=false`), first computing the Hessian matrix to
-  scale the proposal distribution in the Metropolis Hastings algorithm. Default
-  settings for the number of sampling blocks and the size of those blocks can be
-  altered as described in "Extending or Editing a Model".
+- *Compute Hessian matrix*: first computing the Hessian matrix to scale the
+  proposal distribution in the Metropolis Hastings algorithm. Default
+
+- *Sample from Posterior*: Posterior sampling is performed using the
+  Metropolis-Hastings algorithm. A proposal distribution is constructed centered
+  at the posterior mode and with proposal covariance scaled by the inverse of
+  the Hessian matrix. Settings for the number of sampling blocks and the size of
+  those blocks can be altered as described in "Extending or Editing a Model".
 
 **Remark**: In addition to saving each `mh_thin`-th draw of the parameter
 vector, the estimation program also saves the resulting posterior value and
@@ -582,13 +585,13 @@ include
 Contributors to this package at [QuantEcon](http://quantecon.org) include
 
 * [Zac Cranko](https://github.com/ZacCranko)
-* [Spencer Lyon](http://github.com/spencerlyon2)
-* [Pablo Winant](http://github.com/albop)
+* [Spencer Lyon](https://github.com/spencerlyon2)
+* [Pablo Winant](https://github.com/albop)
 
 The `gensys` and `csminwel` routines in [gensys.jl](src/solve/gensys.jl) and
 [csminwel.jl](src/estimate/csminwel.jl) are based on routines originally
 copyright [Chris Sims](http://www.princeton.edu/~sims).
 
 The `kalman_filter` routine is loosely based on a version of the
-Kalman filter algorithm originally (C) Federal Reserve Bank of Atlanta and written by
-[Iskander Karibzhanov](http://karibzhanov.com).
+Kalman filter algorithm originally copyright Federal Reserve Bank of Atlanta
+and written by [Iskander Karibzhanov](http://karibzhanov.com).
