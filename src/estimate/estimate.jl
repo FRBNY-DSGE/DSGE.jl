@@ -44,14 +44,25 @@ function estimate(m::AbstractModel;
 
     vint = get_setting(m, :data_vintage)
     params = if optimize(m)
-        fn = inpath(m, "user", "paramsstart_$vint.h5")
-        h5open(fn,"r") do file
-
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Reading in starting parameter vector from $fn")
+        if detect_starting_parameters(m) == :none
+            # start from the initial values of parameters 
+            [Float64(p.value) for p in m.parameters]
+        else
+            # read in a starting parameter value
+            fn = if (detect_starting_parameters(m) == :auto)
+                inpath(m, "user", "paramsstart_$vint.h5")
+            elseif (detect_starting_parameters(m) == :user)
+                get_setting(m, :estimation_start_file)
             end
+            
+            h5open(fn,"r") do file
+                
+                if VERBOSITY[verbose] >= VERBOSITY[:low]
+                    println("Loading starting parameter vector from $fn...")
+                end
 
-            read(file, "params")
+                read(file, "params")
+            end
         end
 
     else
@@ -59,7 +70,7 @@ function estimate(m::AbstractModel;
         h5open(fn,"r") do file
 
             if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Reading in previous mode from $fn")
+                println("Loading previous mode from $fn...")
             end
 
             read(file, "params")

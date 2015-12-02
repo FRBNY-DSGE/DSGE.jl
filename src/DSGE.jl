@@ -24,7 +24,7 @@ module DSGE
         spec, subspec,
         saveroot, inpath, workpath, rawpath, tablespath, figurespath, logpath,
         optimize, calculate_hessian,
-        n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin,
+        n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin, specify_mh_start,
         data_vintage,
 
         # parameters.jl
