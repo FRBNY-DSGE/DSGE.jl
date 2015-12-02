@@ -1,4 +1,4 @@
-using Base.Test, Compat
+using Base.Test
 
 function test_matrix_eq2{T<:AbstractFloat, U<:AbstractString}(expect::Array{T}, 
                                                               actual::Array{T}, 
