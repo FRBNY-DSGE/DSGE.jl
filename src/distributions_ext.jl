@@ -63,35 +63,6 @@ end
 Distributions.params(d::RootInverseGamma) = (d.ν, d.τ)
 
 """
-moments(dist::Distributions.Beta)
-
-Compute the mean μ and standard deviation σ of a Distributions.Beta object. 
-"""
-function moments(dist::Distributions.Beta)
-    α = dist.α
-    β = dist.β
-
-    μ = α / (α + β)
-    σ = sqrt( α*β/((α+β)^2 * (α+β+1)) )
-    return μ, σ
-end
-
-"""
-moments(dist::Distributions.Gamma)
-
-Compute the mean μ and standard deviation σ of a Distributions.Gamma object. 
-"""
-function moments(dist::Distributions.Gamma)
-    α = dist.α
-    θ = dist.θ
-
-    μ = α / θ
-    σ = α / θ^2
-    return μ, σ
-end
-
-
-"""
 Distributions.pdf(d::RootInverseGamma, x::AbstractFloat)
 
 Compute the pdf of a RootInverseGamma distribution at x.
@@ -151,3 +122,75 @@ Generate a draw from d with variance optionally scaled by cc^2.
 function Distributions.rand{T<:AbstractFloat}(d::DegenerateMvNormal; cc::T = 1.0)
     return d.μ + cc*d.σ*randn(length(d))
 end
+
+"""
+moments(dist::DegenerateMvNormal)
+
+Compute the mean μ and standard deviation σ of a DSGE.DegenerateMvNormal object. 
+"""
+function moments(dist::DegenerateMvNormal)
+    return dist.μ, dist.σ
+end
+
+"""
+moments(dist::RootInverseGamma)
+
+Compute the mean μ and standard deviation σ of a DSGE.RootInverseGamma object.
+
+A Root Inverse Gamma / Nagasaki Scaled Chi2 Distribution's mean and standard deviation can be computed as follows:
+
+    μ = β^(.5) * Γ(α - 0.5) / Γ(α)
+    σ = (β / (α - 1) - μ²)^(0.5)
+
+where α = ν/2 and β = τ*ν/2.
+"""
+function moments(dist::RootInverseGamma)
+    ν, τ = params(dist)
+
+    α = ν/2
+    β = τ*ν/2
+
+    μ = β^(.5) * gamma(α - 0.5) / gamma(α)
+    σ = (β / (α - 1) - μ²)^(0.5)
+        
+    return μ, σ
+end
+
+
+"""
+moments(dist::Distributions.Beta)
+
+Compute the mean μ and standard deviation σ of a Distributions.Beta object. 
+"""
+function moments(dist::Distributions.Beta)
+    α = dist.α
+    β = dist.β
+
+    μ = α / (α + β)
+    σ = sqrt( α*β/((α+β)^2 * (α+β+1)) )
+    return μ, σ
+end
+
+"""
+moments(dist::Distributions.Gamma)
+
+Compute the mean μ and standard deviation σ of a Distributions.Gamma object. 
+"""
+function moments(dist::Distributions.Gamma)
+    α = dist.α
+    θ = dist.θ
+
+    μ = α / θ
+    σ = α / θ^2
+    return μ, σ
+end
+
+"""
+moments(dist::Distributions.Normal)
+
+Return the mean and std dev or a Distributions.Normal object
+"""
+function moments(dist::Distributions.Gamma)
+    params(d)
+end
+

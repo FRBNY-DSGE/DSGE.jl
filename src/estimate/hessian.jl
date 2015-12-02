@@ -109,7 +109,7 @@ end
 # Compute Hessian of posterior function evaluated at x
 function hessian!{T<:AbstractFloat}(m::AbstractModel, 
                                     x::Vector{T}, 
-                                    YY::Matrix{T}; 
+                                    data::Matrix{T}; 
                                     verbose::Symbol = :none)
     update!(m, x)
 
@@ -133,7 +133,7 @@ function hessian!{T<:AbstractFloat}(m::AbstractModel,
     x_hessian = x_model[para_free_inds]
     function f_hessian(x_hessian)
         x_model[para_free_inds] = x_hessian
-        return -posterior!(m, x_model, YY)[:post]
+        return -posterior!(m, x_model, data)[:post]
     end
 
     distr=use_parallel_workers(m)
