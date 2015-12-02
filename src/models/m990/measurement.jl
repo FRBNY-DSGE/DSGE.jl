@@ -14,6 +14,7 @@ u_t = eta_t + MM*eps_t
 var(eta_t) = EE
 var(u_t) = HH = EE + MM*QQ*MM'
 cov(eps_t,u_t) = VV = QQ*MM'
+```
 """
 function measurement{T<:AbstractFloat}(m::Model990{T},
                                        TTT::Matrix{T},
