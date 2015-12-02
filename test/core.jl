@@ -1,4 +1,4 @@
-using Distributions, Compat
+using Distributions
 
 # Test Parameter type
 

@@ -1,13 +1,13 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-    using Compat, Distributions, Roots.fzero, HDF5
+    using Distributions, Roots.fzero, HDF5
     using DataStructures: SortedDict, insert!, ForwardOrdering
     using QuantEcon: solve_discrete_lyapunov
+    import Calculus
+    import Optim
+    using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
 
-    if VERSION < v"0.4-"
-        using Docile
-    end
 
     export
 
@@ -46,9 +46,6 @@ module DSGE
         ordschur, gensys, solve
 
     const VERBOSITY = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
-    const LIKE_NULL_DICT   = Dict{Symbol, Matrix{AbstractFloat}}()
-    const LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
-
 
     include("parameters.jl")
     include("distributions_ext.jl")
