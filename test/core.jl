@@ -84,7 +84,7 @@ priordensity = exp(prior(m))
 # settings
 # settings - boolean, string, and number. adding to model. overwriting. filestrings. testing/not testing.
 n_mh_blocks = Setting(:n_mh_blocks, 22) # short constructor
-optimize = Setting(:optimize, false)
+reoptimize = Setting(:reoptimize, false)
 data_vintage = Setting(:data_vintage, "REF", true, "vint", "Date of data") # full constructor
 @test promote_rule(Setting{Float64}, Float16) == Float64
 @test promote_rule(Setting{Bool}, Bool) == Bool

@@ -151,7 +151,7 @@ data_vintage(m::AbstractModel) = get_setting(m, :data_vintage)
 use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers)
 
 # Interface for estimation settings
-optimize(m::AbstractModel)          = get_setting(m, :optimize)
+reoptimize(m::AbstractModel)          = get_setting(m, :reoptimize)
 calculate_hessian(m::AbstractModel) = get_setting(m, :calculate_hessian)
 hessian_path(m::AbstractModel)      = get_setting(m, :hessian_path)
 n_hessian_test_params(m::AbstractModel) = get_setting(m, :n_hessian_test_params)
@@ -180,7 +180,7 @@ function load_parameters_from_file(m::AbstractModel, path::AbstractString)
             end
         end
     else
-        error("$path is not a valid HDF5 file.")        
+        error("$path is not a valid HDF5 file.")
     end
 
     @assert length(x) == length(m.parameters)
@@ -204,8 +204,8 @@ Usage: should be run before calling `estimate(m)`, e.g.:
 """
 function specify_mode!(m::AbstractModel, mode_file::AbstractString = ""; verbose=:low)
 
-    m <= Setting(:optimize, false, "Optimize the posterior mode. If false, reads in mode from a file.")
-    
+    m <= Setting(:reoptimize, false, "Optimize the posterior mode. If false, reads in mode from a file.")
+
     if mode_file == ""
         mode_file = inpath(m, "user", "paramsmode.h5")
     end
@@ -238,7 +238,7 @@ function specify_hessian(m::AbstractModel, path::AbstractString=""; verbose=:low
         error("Invalid input Hessian file: $path",)
     end
 
-    m <= Setting(:calculate_hessian, false, "Recalculate the Hessian at the mode")
+    m <= Setting(:calculate_hessian, false, "Calculate the Hessian at the mode")
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Specified hessian from $path.")
