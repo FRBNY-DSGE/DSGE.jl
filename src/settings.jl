@@ -136,18 +136,6 @@ function default_settings(m::AbstractModel)
     m <= Setting(:calculate_hessian, false, "Recalculate the hessian at the mode")
     m <= Setting(:n_hessian_test_params, typemax(Int), "Max number of free params for which to calculate Hessian")
 
-    m <= Setting(:detect_starting_parameters, :auto , "Search for the most
-    recently saved parameter vector to use as the starting point for
-    Metropolis-Hastings. Options are :auto, :none, or :user.")
-
-    #m <= Setting(:estimation_start_file,
-    #infile(m,"user","params)start_$vint.h5"), "Filepath for starting
-    #parameter vector for estimation step. Only accessed in the
-    #case in which detect_starting_parameters(m) == :user")
-
-    m <= Setting(:estimation_start_file, "", "Filepath for starting parameter
-    vector for Metropolis-Hastings. Only accessed in the case in which detect_starting_parameters(m) == :user")
-
     m <= Setting(:n_mh_simulations,  10000, "Number of draws per block in Metropolis-Hastings")
     m <= Setting(:n_mh_blocks,       22   , "Number of blocks for Metropolis-Hastings")
     m <= Setting(:n_mh_burn,         2    , "Number of blocks to use as burn-in in Metropolis-Hastings")

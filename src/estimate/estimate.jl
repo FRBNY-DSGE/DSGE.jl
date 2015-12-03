@@ -43,48 +43,26 @@ function estimate(m::AbstractModel;
     # Specify starting mode
 
     vint = get_setting(m, :data_vintage)
-    params = if optimize(m)
-        if detect_starting_parameters(m) == :none
-            # start from the initial values of parameters 
-            [Float64(p.value) for p in m.parameters]
-        else
-            # read in a starting parameter value
-            fn = if (detect_starting_parameters(m) == :auto)
-                inpath(m, "user", "paramsstart_$vint.h5")
-            elseif (detect_starting_parameters(m) == :user)
-                get_setting(m, :estimation_start_file)
-            end
-            
-            h5open(fn,"r") do file
-                
-                if VERBOSITY[verbose] >= VERBOSITY[:low]
-                    println("Loading starting parameter vector from $fn...")
-                end
-
-                read(file, "params")
-            end
-        end
-    else
+    if !optimize(m)
+        # Load the mode
         fn = inpath(m, "user", "paramsmode_$vint.h5")
-        h5open(fn,"r") do file
 
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Loading previous mode from $fn...")
-            end
-
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("Loading previous mode from $fn...")
+        end
+        
+        params = h5open(fn,"r") do file
             read(file, "params")
         end
-    end
-
-    update!(m, params)
-
-    if optimize(m)
+        
+        update!(m, params)
+    else
         println("Reoptimizing...")
 
         # Inputs to optimization algorithm
         n_iterations       = 100
-        ftol      = 1e-10
-        converged = false
+        ftol               = 1e-10
+        converged          = false
 
         # If the algorithm stops only because we have exceeded the maximum number of
         # iterations, continue improving guess of modal parameters
