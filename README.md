@@ -1,8 +1,8 @@
 # FRBNY DSGE Model (Version 990.2)
 [![Build Status](https://travis-ci.org/FRBNY-DSGE/DSGE.jl.svg)](https://travis-ci.org/FRBNY-DSGE/DSGE.jl)
 
-The *DSGE.jl* package implements the FRBNY DSGE model and provides general code to
-estimate many user-specified DSGE models. The package is introduced in the
+The *DSGE.jl* package implements the FRBNY DSGE model and provides general code
+to estimate many user-specified DSGE models. The package is introduced in the
 Liberty Street Economics blog post
 [The FRBNY DSGE Model Meets Julia](http://libertystreeteconomics.newyorkfed.org/2015/12/the-frbny-dsge-model-meets-julia.html).
 
@@ -16,7 +16,7 @@ the discretion of FRBNY.
 
 # Model Design
 
-DSGE.jl is an object-oriented approach to solving the FRBNY DSGE model that
+*DSGE.jl* is an object-oriented approach to solving the FRBNY DSGE model that
 takes advantage of Julia's type system, multiple dispatch, package-handling
 mechanism, and other features. A single model object centralizes all information
 about the model's parameters, states, equilibrium conditions, and settings in a
@@ -49,98 +49,112 @@ via the following chain:
 ## Running with Default Settings
 
 So far, only the estimation step of the DSGE model has been implemented. To run
-the estimation step from the Julia REPL, simply create an instance of the model
-object and pass it to the `estimate` function.
+the estimation step in Julia, simply create an instance of the model object and
+pass it to the `estimate` function.
 
 ```julia
-m = Model990()          # construct a model object
-estimate(m)             # estimate the model
-computeMoments(m)       # produce LaTeX tables of parameter moments
+# construct a model object
+m = Model990()
+
+# optimize parameter vector, compute Hessian at mode, and full posterior
+# parameter sampling
+estimate(m)
+
+# produce LaTeX tables of parameter moments
+compute_moments(m)
 ```
 
-To change any of the model's default settings, parameters, equilibrium
-conditions, etc., see "Implementation Details" for more specifics.
+By default, the `estimate` routine reoptimizes the initial parameter vector,
+computes the Hessian at the mode, and conducts full posterior parameter
+sampling. (The initial parameter vector used is specified in the model's
+constructor.)
 
-# Directory Structure
+The user may want to avoid reoptimizing the parameter vector and calculating the
+Hessian matrix at this new vector. Please see [Reoptimizing](#reoptimizing)
+below.
 
-The directory structure follows Julia module conventions. In the top-level
-directory (DSGE), you will find the folling subdirectory tree (square brackets
-indicate future additions to the tree that will be added in future steps):
+For more detail on changing the model's default settings, parameters, equilibrium
+conditions, etc., see [Implementation Details](#implementation-details) for more specifics.
 
-- `doc/`: Documentation, including this README
-- `save/`:
-  - `input_data/`: This directory is referred to as `dataroot` in the code.
-    - `data/`:  Macroeconomic series formatted as an `n` x `m` Array{Float64,2},
-      where `n` is the number of observations and `m` is the number of series
-      used as input.
-      - `data_<yymmdd>.h5`: input data vintage from `yymmdd`.
-    - `user/`: User-created files for model input. For instance, the user may
-      specify a previously computed mode when `optimize(m)==false`, or a
-      starting point for optimization when `optimize(m)==true`.
-      - `params_start.h5`: Used as starting point for estimation when
-        `optimize(m)==false`.
-      - `params_mode.h5`: Taken as the mode when `optimize(m)==true`.
-      - `hessian.h5`: Used as starting point for Hessian calculation when
-        `calculate_hessian(m)==false`.
-      - `hessian_optimized.h5`: Taken as the Hessian when
-        `calculate_hessian(m)==true`.
-  - `output_data/`:
-    - `m990/`: Input/output files for the Model990 type. A model of type mSPEC
+## Input/Output Directory Structure
+
+The *DSGE.jl* estimation uses data files as input and produces large data files
+as outputs. One estimation saves approximately 6GB of parameter draws and
+related outputs. It is useful to understand how these files are loaded/saved
+and how to control this behavior.
+
+### Directory Tree
+The following subdirectory tree indicates the default locations of
+these input and outputs. Square brackets indicate directories in the tree that
+will become relevant as future features are implemented.
+- `<dataroot>/`: Root data directory.
+  - `data/`:  Macroeconomic input data series.
+    - `data_<yymmdd>.h5`: Input data vintage from `yymmdd`.
+  - `user/`: User-created files for model input. For instance, the user may
+    specify a previously computed mode when `optimize(m)==false`, or a
+    starting point for optimization when `optimize(m)==true`.
+    - `paramsstart.h5`: Used as starting point for estimation when
+      `optimize(m)==true`.
+    - `paramsmode.h5`: Taken as the mode when `optimize(m)==false`.
+    - `hessian.h5`: Taken as the Hessian matrix when
+      `calculate_hessian(m)==false`.
+
+- `<saveroot>/`: Root save directory.
+  - `output_data/`
+    - `m990/`: Input/output files for the `Model990` type. A model of type mSPEC
       will create its own save directory `mSPEC` at this  level in the directory
       tree.
-      - `ss0/`: Subdirectory for subspec 0. We refer to this directory as
-        `saveroot` in the code.
+      - `ss0/`: Subdirectory for subspec 0.
         - `estimate/`
           - `figures/`: Plots and other figures
           - `tables/`: LaTeX tables
-          - `raw/`: Raw output from estimation step
-            - mode_out.h5: Optimized mode after running csminwel
-            - hessian_out.h5: Hessian at the mode
-            - mh_save.h5: Draws from posterior distribution
-          - `work/`: HDF5 files created using `raw/` files as input
+          - `raw/`: Raw output data from estimation step
+            - `paramsmode.h5`: Optimized mode after running optimization
+            - `hessian.h5`: Hessian at the mode
+            - `mhsave.h5`: Draws from posterior distribution
+          - `work/`: Derived data files created using `raw/` files as input
             - `cov.h5`: Covariance matrix for parameter draws from
               Metropolis-Hastings. Can be used as proposal covariance matrix.
         - [`xxx/`]: Other model outputs, such as forecasts, impulse response
           functions, and shock decompositions.
             - [`figures/`]: Plots and other figures
             - [`tables/`]: LaTeX tables
-            - [`raw/`]: Raw output from `xxx` step
-            - [`work/`]: HDF5 files created using `raw/` files as input
+            - [`raw/`]: Raw output data from `xxx` step
+            - [`work/`]: Derived data files created using `raw/` files as input
       - [`ss1/`] Additional model subspecs will have subdirectories identical to
         `ss0` at this level in the directory tree.
-  - `src/`
-     - `abstractdsgemodel.jl`: Defines the `AbstractModel` type.
-     - `distributions_ext.jl`: Defines additional functions to return objects of
-       type Distribution.
-     - `DSGE.jl`: The main module file.
-     - `estimate/`: Mode-finding and posterior sampling.
-     - [`xxx/`]: Other model outputs, such as forecasts, impulse response
-         functions, and shock decompositions.
-     - `models/`
-           - `m990/`: Contains code to define and initialize version 990 of the
-             FRBNY DSGE model.
-              - `eqcond.jl`: Constructs `Model990` equilibrium condition
-                matrices
-              - `m990.jl`: Code for constructing a `Model990` object.
-              - `measurement.jl`: Constructs `Model990` measurement equation
-                matrices.
-              - `subspecs.jl`: Code for model sub-specifications is defined
-                here. See "Editing or Extending a Model" for details on
-                constructing model sub-specifications.
-           - [`m991/`]: Code for new subtypes of `AbstractModel` should be kept
-             in directories at this level in the directory tree
-     - `parameters.jl`: Implements the `AbstractParameter` type and its
-       subtypes.
-     - `settings.jl`: Implements the `Setting` type.
-     - `solve/`: Solving the model; includes `gensys.jl` code.
-  - `test/`: Module test suite.
+
+### Directory Paths
+
+By default, input/output directories are located in the *DSGE.jl* package, along
+with the source code. Default values of the input/output directory roots:
+```julia
+julia> saveroot(M)
+"<path/to/user/Julia/packages>/DSGE/save"
+
+julia> dataroot(m)
+"<path/to/user/Julia/packages>/DSGE/save/input_data"
+```
+
+Note these locations can be overridden as desired:
+```julia
+m <= Setting(:saveroot, "path/to/my/save/root")
+m <= Setting(:dataroot, "path/to/my/data/root")
+```
 
 # Input data used
 
 For more details on the sample input data provided, please see
-[Data](doc/Data.md). For more details on using market interest rate
-expectations to treat the zero lower bound, see
-[Anticipated Policy Shocks](doc/AnticipatedPolicyShocks.md).
+[Data](doc/Data.md).
+
+For more details on using market interest rate expectations to treat the zero
+lower bound, see
+[Anticipated Policy Shocks](doc/AnticipatedPolicyShocks.md). In particular,
+note that our model, as used to compute the forecasts referenced in Liberty
+Street Economics posts,  is trained on data that includes six quarters of
+interest rate expectations. The user is responsible for procuring interest rate
+expectations and appending it to the provided sample data set, as discussed in
+the linked documentation here.
 
 # Implementation Details
 
@@ -152,6 +166,94 @@ This section focuses on what the code does and why, while the code itself
 (including comments) provides detailed information regarding *how* these basic
 procedures are implemented.
 
+## Source Code Directory Structure
+
+The source code directory structure follows Julia module conventions.
+
+  - `doc/`: Code and model documentation
+  - `src/`
+     - `DSGE.jl`: The main module file.
+     - `abstractdsgemodel.jl`: Defines the `AbstractModel` type.
+     - `parameters.jl`: Implements the `AbstractParameter` type and its
+       subtypes.
+     - `settings.jl`: Implements the `Setting` type.
+     - `distributions_ext.jl`: Defines additional functions to return objects of
+       type Distribution.
+     - `estimate/`: Mode-finding and posterior sampling.
+     - [`xxx/`]: Other model functionality, such as forecasts, impulse response
+       functions, and shock decompositions.
+     - `models/`
+           - `m990/`: Contains code to define and initialize version 990 of the
+             FRBNY DSGE model.
+              - `eqcond.jl`: Constructs `Model990` equilibrium condition
+                matrices
+              - `m990.jl`: Code for constructing a `Model990` object.
+              - `measurement.jl`: Constructs `Model990` measurement equation
+                matrices.
+              - `subspecs.jl`: Code for model sub-specifications is defined
+                here. See [Editing or Extending a Model](#editing-or-extending-a-model)
+                for details on constructing model sub-specifications.
+           - [`m991/`]: Code for new subtypes of `AbstractModel` should be kept
+             in directories at this level in the directory tree
+     - `solve/`: Solving the model; includes `gensys.jl` code.
+  - `test/`: Module test suite.
+
+## Reoptimizing
+
+Generally, the user will want to reoptimize the parameter vector (and
+consequently, calculate the Hessian at this new mode) everytime they conduct
+posterior sampling:
+- the input data are updated with new observations or revised
+- the model sub-specification is changed
+- the model is derived from an existing model with differing equilibrium
+  conditions or measurement equation.
+
+This behavior can be controlled more finely.
+
+### Reoptimize from Starting Vector
+
+Reoptimize the model starting from the parameter values supplied in use
+in a specified file. Ensure that you supply an HDF5 file with a variable named
+`params` that is the correct dimension and data type.
+```julia
+m = Model990()
+params = load_parameters_from_file(m, "path/to/parameter/file.h5")
+update!(m, params)
+m <= Setting(:reoptimize, true)
+m <= Setting(:calculate_hessian, true)
+estimate(m)
+```
+
+### Skip Reoptimization Entirely
+
+You can provide a modal parameter vector and optionally a Hessian matrix calculated
+at that mode to skip the reoptimization entirely. These values are usually computed
+by the user previously. Some samples are also supplied with the package.
+
+You can skip reoptimization the parameter vector entirely.
+```julia
+m = Model990()
+specify_mode(m, "path/to/parameter/mode/file.h5")
+estimate(m)
+```
+The `specify_mode` function will update the parameter vector to the mode and
+skip reoptimization. Ensure that you supply an HDF5 file with a variable named
+`params` that is the correct dimension and data type.
+
+
+You can additional skip calculation of the Hessian matrix entirely.
+```julia
+m = Model990()
+specify_mode(m, "path/to/parameter/mode/file.h5")
+specify_hessian(m, "path/to/Hessian/matrix/file.h5")
+estimate(m)
+```
+The `specify_hessian` function will cause `estimate` to read in the Hessian
+matrix rather than calculating it directly.  Ensure that you supply an HDF5
+file with a variable named `hessian` that is the correct dimension and data
+type. Specifying the Hessian matrix but *not* the parameter mode results in
+undefined behavior.
+
 ## The `AbstractModel` Type and the Model Object
 
 The `AbstractModel` type provides a common infrastructure for all model objects,
@@ -161,8 +263,8 @@ concrete subtype of `AbstractModel` can be passed to any function defined for
 function expects to be available.
 
 `Model990` is one example of a concrete subtype of `AbstractModel` that
-implements a single specification of the FRBNY DSGE model. See "Extending or
-Editing a Model" below.
+implements a single specification of the FRBNY DSGE model.
+See [Editing or Extending a Model](#editing-or-extending-a-model).
 
 ### Required Fields
 
@@ -191,13 +293,14 @@ Editing a Model" below.
   measurement equation matrices.
 
 #### Model Specification and Settings
-- `spec::ASCIIString`: Model specification number (e.g. "m990"). Identifies a
+- `spec::ASCIIString`: Model specification number (e.g. `"m990"`). Identifies a
   particular set of parameters, equilibrium conditions, and measurement equation
   (equivalently, a concrete model type - for example, models of type `Model990`
-  should have spec = "m990".)
-- `subspec::ASCIIString`: Model sub-specification (e.g. "ss0"). Indicates any
-  changes to parameter initialization from `spec`. See "Editing or Extending a
-  Model" below for more details.
+  would have `spec = "m990"`.)
+- `subspec::ASCIIString`: Model sub-specification (e.g. `"ss0"`). Indicates any
+  changes to parameter initialization from `spec`.
+  See [Editing or Extending a Model](#editing-or-extending-a-model) for more
+  details.
 - `settings::Dict{Symbol,Setting}`: Settings/flags that affect computation
   without changing the economic or mathematical setup of the model.
 - `test_settings::Dict{Symbol,Setting}`: Settings/flags for testing mode
@@ -212,8 +315,8 @@ Editing a Model" below.
   alphabetized list of setting identifier strings. These are concatenated and
   appended to the filenames of all output files to avoid overwriting the output
   of previous estimations/forecasts that differ only in their settings, but not
-  in their underlying mathematical structure. See "Settings" below for more
-  details.
+  in their underlying mathematical structure. See [Settings](#model-settings)
+  for more details.
 
 ## Defining Indices
 
@@ -279,7 +382,6 @@ hierarchy.
     - `SteadyStateParameter{T<:Number}`: Concrete type for steady-state
       parameters.
 
-
 All `Parameter`s have the following fields:
 
 - `key::Symbol`: Parameter name. For maximum clarity, `key` should conform to
@@ -318,7 +420,7 @@ fields:
 - `description::AbstractString`
 - `tex_label::AbstractString`
 
-## `m.settings` and the `Setting` type
+## Model Settings
 
 The `Setting` type implements computational settings that affect how the code
 runs without affecting the mathematical definition of the model. These include
@@ -364,7 +466,7 @@ The `Setting{T<:Any}` type has the following fields:
 
 - `dataroot::Setting{ASCIIString}`: The root directory for
   model input data.
-- `savepathroot::Setting{ASCIIString}`: The root directory for model output.
+- `saveroot::Setting{ASCIIString}`: The root directory for model output.
 - `data_vintage::Setting{ASCIIString}`: Data vintage identifier, formatted
   `yymmdd`. By default, `data_vintage` is set to the most recent date of the
   files with name `<dataroot>/data/data_<yymmdd>.h5`. It is the only setting
@@ -373,8 +475,10 @@ The `Setting{T<:Any}` type has the following fields:
 #### Anticipated Shocks
 - `n_anticipated_shocks::Setting{Int}`: Number of anticipated policy shocks.
 - `n_anticipated_shocks_padding::Setting{Int}`: Padding for anticipated shocks.
-- `n_anticipated_lags::Setting{Int}`: Number of periods back to incorporate zero
-  bound expectations.
+- `zlb_start_index::Setting{Int}`: Index into input data matrix of first period to
+  incorporate zero bound expectations. The first observation in the sample data
+  is 1959Q3 and we assume the zero lower bound period starts in 2008Q4, so we
+  set this to `198` by default.
 - `n_presample_periods::Setting{Int}`: Number of periods in the presample.
 
 #### Estimation
@@ -383,7 +487,7 @@ The `Setting{T<:Any}` type has the following fields:
 - `calculate_hessian::Setting{Bool}`: Whether to compute the Hessian. If `false`
   (the default), `estimate()` reads in a previously computed Hessian.
 
-##### Metropolis-Hastings
+#### Metropolis-Hastings
 - `n_mh_simulations::Setting{Int}`: Number of draws from the posterior
   distribution per block.
 - `n_mh_blocks::Setting{Int}`: Number of blocks to run Metropolis-Hastings.
@@ -456,17 +560,18 @@ distribution.
 - *Find Mode*: The main program will call the `csminwel` optimization routine
  (located in `csminwel.jl`) to find modal parameter estimates. Can optionally
  start estimation from a starting parameter vector by specifying
- `save/input_data/params_start.h5` If the starting parameter vector is known to
- be optimized, the file should be called `params_mode.h5`
+ `save/input_data/user/paramsstart.h5` If the starting parameter vector is
+ known to be optimized, the file should be called `paramsmode.h5`
 
 - *Compute Hessian matrix*: first computing the Hessian matrix to scale the
-  proposal distribution in the Metropolis Hastings algorithm. Default
+  proposal distribution in the Metropolis-Hastings algorithm. Default
 
 - *Sample from Posterior*: Posterior sampling is performed using the
   Metropolis-Hastings algorithm. A proposal distribution is constructed centered
   at the posterior mode and with proposal covariance scaled by the inverse of
   the Hessian matrix. Settings for the number of sampling blocks and the size of
-  those blocks can be altered as described in "Extending or Editing a Model".
+  those blocks can be altered as described in
+  [Editing or Extending a Model](#editing-or-extending-a-model)
 
 **Remark**: In addition to saving each `mh_thin`-th draw of the parameter
 vector, the estimation program also saves the resulting posterior value and
@@ -475,7 +580,7 @@ is to save time in the forecasting step since that code can avoid recomputing
 those matrices. In addition, to save space, all files in `save/input_data` and
 `save/output_data` are HDF5 files.
 
-# Extending or Editing a Model
+# Editing or Extending a Model
 
 Users may want to extend or edit `Model990` in a number of different ways.
 The most common changes we anticipate are listed below, in decreasing order of
@@ -491,8 +596,8 @@ complexity:
 Points 1 and 2 often go together (adding a new parameter guarantees a change in
 equilibrium conditions), and are such fundamental changes that they increment
 the model specification number and require the definition of a new subtype of
-`AbstractModel` (for instance, `Model991`). See "Model specification" below for
-more details.
+`AbstractModel` (for instance, `Model991`).
+See [Model specification](#model-specification-mspec) for more details.
 
 Any changes to the initialization of preexisting parameters are defined as a new
 model *sub-specification*, or *subspec*. While less significant than a change to
@@ -504,10 +609,11 @@ the model's sub-specification number when parameters are changed improves
 model-level (as opposed to code-level) version control. Second, it avoids
 potential output filename collisions, preventing the user from overwriting
 output from previous estimations with the original parameters. The protocol for
-defining new sub-specifications is described below in "Model
-sub-specifications".
+defining new sub-specifications is described in
+[Model sub-specifications](#model-sub-specifications-msubspec).
 
-Overriding default settings is described in the "Settings" section above.
+Overriding default settings is described in the [Settings](#model-settings)
+section above.
 
 ## Model specification (`m.spec`)
 
@@ -520,9 +626,9 @@ creation of a new subtype of `AbstractModel.`
 
 To create a new model object, we recommend doing the following:
 
-1. Duplicate the `m990` directory within the `src/models/` directory. Name the
-new directory `mXXX.jl`, where `XXX` is your chosen model specification number.
-Rename `m990.jl` in this directory to `mXXX.jl`.
+1. Duplicate the `m990` directory within the [models](src/models/) directory. Name the
+new directory `mXXX.jl`, where `XXX` is your chosen model specification number
+or string.  Rename `m990.jl` in this directory to `mXXX.jl`.
 
 2. In the `mXXX/` directory, change all references to `Model990` to `ModelXXX`.
 
@@ -535,15 +641,15 @@ to export, and include each of the files in `src/model/mXXX`.
 
 ## Model sub-specifications (`m.subspec`)
 
-Model990 sub-specifications are initialized by overwriting initial parameter
+`Model990` sub-specifications are initialized by overwriting initial parameter
 definitions before the model object is fully constructed. This happens via a
 call to `init_subspec` in the `Model990` constructor. (Clearly, an identical
 protocol should be followed for new model types as well.)
 
 To create a new sub-specification (e.g., subspec 1) of `Model990`, edit the file
 `src/models/subspecs.jl` as follows (note that this example is not actually
-sub-specification `1` of Model990. In the source code, our sub-specification `5`
-is provided as additional example.):
+sub-specification `1` of `Model990`. In the source code, our sub-specification
+`5` is provided as additional example.):
 
 1. Define a new function, `ss1`, that takes an object of type `Model990` (not
 `AbstractModel`!) as an argument. In this function, construct new parameter

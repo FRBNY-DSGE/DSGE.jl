@@ -139,7 +139,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
 
     n_T0         = n_presample_periods(m)
     n_ant        = n_anticipated_shocks(m)
-    n_ant_lags   = n_anticipated_lags(m)
+    t_zlb_start  = zlb_start_index(m)
     n_obs_no_ant = n_observables(m) - n_anticipated_shocks(m)
     n_obs        = n_observables(m)
     n_exo        = n_shocks_exogenous(m)
@@ -150,9 +150,8 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     regime_states   = [n_states_no_ant, n_states_no_ant, n_states_aug]
 
     R1[:data] = data[1:n_T0, 1:n_obs_no_ant]
-    R2[:data] = data[(n_T0+1):(end-n_ant_lags-1), 1:n_obs_no_ant]
-    R3[:data] = data[(end-n_ant_lags):end, :]
-
+    R2[:data] = data[(n_T0+1):t_zlb_start, 1:n_obs_no_ant]
+    R3[:data] = data[t_zlb_start+1:end, :]
 
     # Step 1: solution to DSGE model - delivers transition equation for the state variables
     # transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ

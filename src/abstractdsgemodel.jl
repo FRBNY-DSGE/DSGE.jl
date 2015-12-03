@@ -5,7 +5,6 @@ function Base.show{T<:AbstractModel}(io::IO, m::T)
     @printf io "%s\n" T
     @printf io "no. states:             %i\n" n_states(m)
     @printf io "no. anticipated shocks: %i\n" n_anticipated_shocks(m)
-    @printf io "no. anticipated lags:   %i\n" n_anticipated_lags(m)
     @printf io "data vintage:           %s\n" data_vintage(m)
     @printf io "description:\n %s\n"          description(m)
 end
@@ -123,9 +122,9 @@ n_anticipated_shocks(m::AbstractModel) = get_setting(m, :n_anticipated_shocks)
 # Padding for number of anticipated policy shocks
 n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_shocks_padding)
 
-# Number of periods back we should start incorporating zero bound expectations
+# First period we should incorporate zero bound expectations
 # ZLB expectations should begin in 2008 Q4
-n_anticipated_lags(m::AbstractModel) = get_setting(m, :n_anticipated_lags)
+zlb_start_index(m::AbstractModel) = get_setting(m, :zlb_start_index)
 
 # Number of presample periods
 n_presample_periods(m::AbstractModel) = get_setting(m, :n_presample_periods)
@@ -154,13 +153,98 @@ use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers
 # Interface for estimation settings
 optimize(m::AbstractModel)          = get_setting(m, :optimize)
 calculate_hessian(m::AbstractModel) = get_setting(m, :calculate_hessian)
+hessian_path(m::AbstractModel)      = get_setting(m, :hessian_path)
 n_hessian_test_params(m::AbstractModel) = get_setting(m, :n_hessian_test_params)
 
 # Interface for Metropolis-Hastings settings
 n_mh_blocks(m::AbstractModel)      =  get_setting(m, :n_mh_blocks)
 n_mh_simulations(m::AbstractModel) =  get_setting(m, :n_mh_simulations)
 n_mh_burn(m::AbstractModel)        =  get_setting(m, :n_mh_burn)
-mh_thin(m::AbstractModel)   =  get_setting(m, :mh_thin)
+mh_thin(m::AbstractModel)          =  get_setting(m, :mh_thin)
+
+
+"""
+```
+load_parameters_from_file(m::AbstractModel,path::AbstractString)
+```
+Returns a vector of parameters, read from a file, suitable for updating `m`.
+"""
+function load_parameters_from_file(m::AbstractModel, path::AbstractString)
+
+    if isfile(path) && splitext(path)[2] == ".h5"
+        x  = h5open(path, "r") do file
+            try
+                read(file, "params")
+            catch
+                error("$path does not contain variable params")
+            end
+        end
+    else
+        error("$path is not a valid HDF5 file.")        
+    end
+
+    @assert length(x) == length(m.parameters)
+    @assert eltype(x) == typeof(m.parameters[1].value)
+    return x
+end
+
+"""
+```
+specify_mode!(m::AbstractModel, mode_file::AbstractString=""; verbose=:low)
+```
+
+Updates the values of `m.parameters` with the values from
+`mode_file`. Sets `reoptimize` setting to `false`.
+
+Usage: should be run before calling `estimate(m)`, e.g.:
+
+    m = Model990()
+    specify_mode!(m, modefile)
+    estimate(m)
+"""
+function specify_mode!(m::AbstractModel, mode_file::AbstractString = ""; verbose=:low)
+
+    m <= Setting(:optimize, false, "Optimize the posterior mode. If false, reads in mode from a file.")
+    
+    if mode_file == ""
+        mode_file = inpath(m, "user", "paramsmode.h5")
+    end
+    mode_file = normpath(mode_file)
+
+    update!(m,load_parameters_from_file(m,mode_file))
+
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println("Loaded previous mode from $mode_file.")
+    end
+
+end
+
+"""
+```
+specify_hessian(m::AbstractModel, path::AbstractString=""; verbose=:low)
+```
+
+Specify a Hessian matrix calculated at the posterior mode to use in the model estimation. If
+no path is provided, will attempt to detect location.
+"""
+function specify_hessian(m::AbstractModel, path::AbstractString=""; verbose=:low)
+    if isempty(path)
+        path = inpath(m, "user", "hessian.h5")
+    end
+
+    if isfile(path) && splitext(path)[2] == ".h5"
+        m <= Setting(:hessian_path, normpath(abspath(path)))
+    else
+        error("Invalid input Hessian file: $path",)
+    end
+
+    m <= Setting(:calculate_hessian, false, "Recalculate the Hessian at the mode")
+
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println("Specified hessian from $path.")
+    end
+end
+
 
 #=
 Build paths to where input/output/results data are stored.
@@ -371,3 +455,5 @@ Generate a draw from d with variance optionally scaled by cc^2.
 function rand{T<:AbstractFloat, U<:AbstractModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
+
+

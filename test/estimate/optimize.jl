@@ -1,30 +1,28 @@
 using DSGE
 using HDF5
+path = dirname(@__FILE__)
+include("../util.jl")
 
 # Test in model optimization
-model = Model990()
-model.testing=true
+m = Model990()
+m.testing=true
 
-x0 = h5open(inpath(model, "user", "params_start.h5")) do file
-    read(file, "params")
-end
-data = h5open(inpath(model, "data", "data_REF.h5")) do file
-    read(file, "data")
-end
-file = h5open("$path/../reference/csminwel_out.h5","r")
+file = h5open("$path/../reference/optimize.h5","r")
+x0 = read(file, "params")
+data = read(file, "data")
 minimum_ = read(file, "minimum")
 f_minimum = read(file, "f_minimum")
 H_expected = read(file, "H")
 close(file)
 
 # See src/estimate/estimate.jl
-update!(model, x0)
+update!(m, x0)
 n_iterations = 3
 
-@time out, H = optimize!(model, data; iterations=n_iterations)
+@time out, H = optimize!(m, data; iterations=n_iterations)
 
 @test_matrix_approx_eq minimum_ out.minimum
-@test_approx_eq f_minimum out.f_minimum
+@test_approx_eq_eps f_minimum out.f_minimum 10e-8
 @test_matrix_approx_eq H_expected H
 
 nothing
