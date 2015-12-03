@@ -113,7 +113,7 @@ function estimate(m::AbstractModel;
 
     # Read in a pre-optimized mode
     else
-        fn = inpath(m, "user", "hessian_$vint.h5")
+        fn = hessian_path(m)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("Using pre-calculated Hessian from $fn")
         end
