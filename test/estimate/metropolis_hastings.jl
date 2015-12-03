@@ -11,12 +11,14 @@ model.testing=true
 # Read in the covariance matrix for Metropolis-Hastings and reference parameter draws
 fn = "$path/../reference/metropolis_hastings.h5"
 file = h5open(fn,"r")
-propdist_cov  = read(file, "propdist_cov")
+#propdist_cov  = read(file, "hessian")
 ref_draws     = read(file, "ref_draws")
 ref_cov       = read(file, "ref_cov")
 close(file)
 
 # Set up and run metropolis-hastings
+specify_mode!(m, fn)
+specify_hessian(m, fn)
 DSGE.estimate(model; verbose=:none, proposal_covariance = propdist_cov)
 
 # Read in the parameter draws and covariance just generated from estimate()
