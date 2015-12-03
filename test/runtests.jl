@@ -3,7 +3,7 @@ using DSGE
 
 include(joinpath(dirname(@__FILE__()),"util.jl"))
 
-my_tests = [            
+my_tests = [
             "core",
             "parameters",
             "solve/gensys",

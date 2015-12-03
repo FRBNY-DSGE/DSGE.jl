@@ -1,7 +1,7 @@
 using Base.Test
 
-function test_matrix_eq2{T<:AbstractFloat, U<:AbstractString}(expect::Array{T}, 
-                                                              actual::Array{T}, 
+function test_matrix_eq2{T<:AbstractFloat, U<:AbstractString}(expect::Array{T},
+                                                              actual::Array{T},
                                                               expstr::U,
                                                               actstr::U,
                                                               ϵ_abs::Float64 = 1e-6,
@@ -25,11 +25,11 @@ function test_matrix_eq2{T<:AbstractFloat, U<:AbstractString}(expect::Array{T},
     n_mixed_diff = sum(mixed_diff)
 
     if n_mixed_diff ≠ 0
-        sdiff = string("|a - b| <= ", ϵ_abs, 
+        sdiff = string("|a - b| <= ", ϵ_abs,
                    " or |a - b|/|b| <= ", ϵ_rel, "%,",
                    " ∀ a ∈ ", actstr, ",",
                    " ∀ b ∈ ",expstr)
-        error("assertion failed:\n", 
+        error("assertion failed:\n",
               "    ", sdiff,
               "\n$(n_abs_diff) entries fail absolute equality filter",
               "\n$(n_rel_diff) entries fail relative equality filter",
