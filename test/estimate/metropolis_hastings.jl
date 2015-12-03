@@ -9,7 +9,8 @@ model = Model990()
 model.testing=true
 
 # Read in the covariance matrix for Metropolis-Hastings and reference parameter draws
-file = h5open("$path/../reference/metropolis_hastings.h5","r")
+fn = "$path/../reference/metropolis_hastings.h5"
+file = h5open(fn,"r")
 propdist_cov  = read(file, "propdist_cov")
 ref_draws     = read(file, "ref_draws")
 ref_cov       = read(file, "ref_cov")
