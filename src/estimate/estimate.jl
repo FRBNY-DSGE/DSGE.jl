@@ -67,25 +67,23 @@ function estimate(m::AbstractModel;
 
     else
         fn = inpath(m, "user", "paramsmode_$vint.h5")
-        h5open(fn,"r") do file
 
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Loading previous mode from $fn...")
-            end
-
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("Loading previous mode from $fn...")
+        end
+        
+        params = h5open(fn,"r") do file
             read(file, "params")
         end
-    end
-
-    update!(m, params)
-
-    if optimize(m)
+        
+        update!(m, params)
+    else
         println("Reoptimizing...")
 
         # Inputs to optimization algorithm
         n_iterations       = 100
-        ftol      = 1e-10
-        converged = false
+        ftol               = 1e-10
+        converged          = false
 
         # If the algorithm stops only because we have exceeded the maximum number of
         # iterations, continue improving guess of modal parameters

@@ -13,7 +13,7 @@ my_tests = [
             "estimate/hessizero",
             "estimate/hessian",
             "estimate/csminwel",
-            #"estimate/optimize",
+            "estimate/optimize",
             "estimate/eig",
             #"estimate/metropolis_hastings",
             "models/m990/m990"
