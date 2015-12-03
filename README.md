@@ -53,16 +53,23 @@ the estimation step in Julia, simply create an instance of the model object and
 pass it to the `estimate` function.
 
 ```julia
-m = Model990()          # construct a model object
-estimate(m)             # full posterior parameter sampling
-compute_moments(m)      # produce LaTeX tables of parameter moments
+# construct a model object
+m = Model990()
+
+# optimize parameter vector, compute Hessian at mode, and full posterior
+# parameter sampling
+estimate(m)
+
+# produce LaTeX tables of parameter moments
+compute_moments(m)
 ```
 
-By default, the `estimate` routine reads in a vector of modal parameter values
-and a Hessian matrix calculated at that mode. These values are supplied with
-the package or can be computed by the user.
+By default, the `estimate` routine reoptimizes the initial parameter vector,
+computes the Hessian at the mode, and conducts full posterior parameter
+sampling. (The initial parameter vector used is specified in the model's
+constructor.)
 
-The user will often want to reoptimize the parameter vector and calculate the
+The user may want to avoid reoptimizing the parameter vector and calculating the
 Hessian matrix at this new vector. Please see [Reoptimizing](#reoptimizing)
 below.
 
@@ -193,25 +200,17 @@ The source code directory structure follows Julia module conventions.
 
 ## Reoptimizing
 
-In a variety of situations, the user will want to reoptimize the parameter
-vector (and consequently, calculate the Hessian at this new mode):
+Generally, the user will want to reoptimize the parameter vector (and
+consequently, calculate the Hessian at this new mode) everytime they conduct
+posterior sampling:
 - the input data are updated with new observations or revised
 - the model sub-specification is changed
 - the model is derived from an existing model with differing equilibrium
   conditions or measurement equation.
 
-You can reoptimize the parameters and recalculate the Hessian matrix
-by setting the `reoptimize` and `calculate_hessian` settings to `true`.
+This behavior can be controlled more finely.
 
-Reoptimize the model starting from the parameter values supplied in the
-model initialization. (The initialization parameter values are those defined in
-your model constructor.)
-```julia
-m = Model990()
-m <= Setting(:reoptimize, true)
-m <= Setting(:calculate_hessian, true)
-estimate(m)
-```
+### Reoptimize from Starting Vector
 
 Reoptimize the model starting from the parameter values supplied in use
 in a specified file. Ensure that you supply an HDF5 file with a variable named
@@ -224,6 +223,36 @@ m <= Setting(:reoptimize, true)
 m <= Setting(:calculate_hessian, true)
 estimate(m)
 ```
+
+### Skip Reoptimization Entirely
+
+You can provide a modal parameter vector and optionally a Hessian matrix calculated
+at that mode to skip the reoptimization entirely. These values are usually computed
+by the user previously. Some samples are also supplied with the package.
+
+You can skip reoptimization the parameter vector entirely.
+```julia
+m = Model990()
+specify_mode(m, "path/to/parameter/mode/file.h5")
+estimate(m)
+```
+The `specify_mode` function will update the parameter vector to the mode and
+skip reoptimization. Ensure that you supply an HDF5 file with a variable named
+`params` that is the correct dimension and data type.
+
+
+You can additional skip calculation of the Hessian matrix entirely.
+```julia
+m = Model990()
+specify_mode(m, "path/to/parameter/mode/file.h5")
+specify_hessian(m, "path/to/Hessian/matrix/file.h5")
+estimate(m)
+```
+The `specify_hessian` function will cause `estimate` to read in the Hessian
+matrix rather than calculating it directly.  Ensure that you supply an HDF5
+file with a variable named `hessian` that is the correct dimension and data
+type. Specifying the Hessian matrix but *not* the parameter mode results in
+undefined behavior.
 
 ## The `AbstractModel` Type and the Model Object
 
