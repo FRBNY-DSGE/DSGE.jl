@@ -219,8 +219,6 @@ in a specified file. Ensure that you supply an HDF5 file with a variable named
 m = Model990()
 params = load_parameters_from_file(m, "path/to/parameter/file.h5")
 update!(m, params)
-m <= Setting(:reoptimize, true)
-m <= Setting(:calculate_hessian, true)
 estimate(m)
 ```
 
@@ -228,15 +226,15 @@ estimate(m)
 
 You can provide a modal parameter vector and optionally a Hessian matrix calculated
 at that mode to skip the reoptimization entirely. These values are usually computed
-by the user previously. Some samples are also supplied with the package.
+by the user previously.
 
 You can skip reoptimization the parameter vector entirely.
 ```julia
 m = Model990()
-specify_mode(m, "path/to/parameter/mode/file.h5")
+specify_mode!(m, "path/to/parameter/mode/file.h5")
 estimate(m)
 ```
-The `specify_mode` function will update the parameter vector to the mode and
+The `specify_mode!` function will update the parameter vector to the mode and
 skip reoptimization. Ensure that you supply an HDF5 file with a variable named
 `params` that is the correct dimension and data type.
 
@@ -244,7 +242,7 @@ skip reoptimization. Ensure that you supply an HDF5 file with a variable named
 You can additional skip calculation of the Hessian matrix entirely.
 ```julia
 m = Model990()
-specify_mode(m, "path/to/parameter/mode/file.h5")
+specify_mode!(m, "path/to/parameter/mode/file.h5")
 specify_hessian(m, "path/to/Hessian/matrix/file.h5")
 estimate(m)
 ```
@@ -325,13 +323,13 @@ large matrices, and keeping track of which rows and columns correspond to which
 states, shocks, equations, etc. can be confusing. To improve clarity, we define
 several dictionaries that map variable names to indices in these matrices:
 
-- `endogenous_states`: Maps endogenous model states to columns in `Γ0` and `ZZ`.
-- `exogenous_shocks`:  Exogenous shocks
-- `expected_shocks`:  Expectation shocks
-- `equilibrium_conditions`: Equation indices
-- `endogenous_states_augmented`: Endogenous states, after model solution and
+- `endogenous_states`: Indices of endogenous model states
+- `exogenous_shocks`: Indices of exogenous shocks
+- `expected_shocks`: Indices of expectation shocks
+- `equilibrium_conditions`: Indices of equalibrium condition equations
+- `endogenous_states_augmented`: Indices of model states, after model solution and
   system augmentation
-- `observables`:  Indices of named observables to use in measurement equation
+- `observables`:  Indices of named observables
 
 This approach has a number of advantages. Most importantly, it is robust to
 inadvertent typos or indexing errors. Since the actual index number doesn't
@@ -343,15 +341,15 @@ assigned an index.
 As an example, consider the model's equilibrium conditions. The canonical
 representation of the equilibrium conditions is
 
-`Γ0 s_t + Γ1 s_{t-1} + C + Ψ ε_t + Π η_t`
+`Γ0 s_t = Γ1 s_{t-1} + C + Ψ ε_t + Π η_t`
 
 where `Γ0`, `Γ1`, `C`, `Ψ`, and `Π` are matrices of coefficients for `s_t`
 (states at time `t`), `s_{t-1}` (lagged states), `ε_t` (exogenous shocks) and
 `η_t` (expectational shocks). Each row of these matrices corresponds to an
 equilibrium condition, which we define using a descriptive name (for example, we
 name the consumption Euler equation `:euler`). States (columns of `Γ0` and
-`Γ1`), shocks (columns of `Ψ`), and expectational states (columns `Π`) also have
-names.
+`Γ1`), exogenous shocks (columns of `Ψ`), and expectational shocks (columns
+`Π`) also have names.
 
 ## Parameters: The `AbstractParameter` Type
 
@@ -385,7 +383,7 @@ hierarchy.
 All `Parameter`s have the following fields:
 
 - `key::Symbol`: Parameter name. For maximum clarity, `key` should conform to
-the guidelines established in the DSGE Style Guide, in CONTRIBUTING.md
+  the guidelines established in [CONTRIBUTING.md](CONTRIBUTING.md).
 - `value::T`: Parameter value. Initialized in model space (guaranteed to be
   between `valuebounds`), but can be transformed between model space and the
   real line via calls to `transform_to_real_line` and
@@ -539,46 +537,35 @@ m <= Setting(:optimize, true, true, "optm", "whether to re-find the mode")
 # optimize(m) returns true; prints "optm=true" to output filenames
 ```
 
-### Test settings
-
-There are some settings that are always used when testing the code. These are
-defined in `m.test_settings`, and returned by `get_setting` when
-`m.testing=true` (if a setting is not in `test_settings` but is referenced in
-the code, the value in `settings` is used.)
-
 ## Estimation
 
-**Main Function**: `estimate` in [estimate.jl](src/estimate/estimate.jl).
-
-**Purpose**: Finds modal parameter values and samples from posterior
-distribution.
+Finds modal parameter values, calculate Hessian matrix at mode, and samples
+from posterior distribution. See `estimate` in
+[estimate.jl](src/estimate/estimate.jl).
 
 **Main Steps**:
 
 - *Initialization*: Read in and transform raw data from `save/input_data/`.
 
-- *Find Mode*: The main program will call the `csminwel` optimization routine
- (located in `csminwel.jl`) to find modal parameter estimates. Can optionally
- start estimation from a starting parameter vector by specifying
- `save/input_data/user/paramsstart.h5` If the starting parameter vector is
- known to be optimized, the file should be called `paramsmode.h5`
+- *Optimize parameter vector*: The main program will call the `csminwel`
+  optimization routine (located in `csminwel.jl`) to find modal parameter
+  estimates.
 
-- *Compute Hessian matrix*: first computing the Hessian matrix to scale the
-  proposal distribution in the Metropolis-Hastings algorithm. Default
+- *Compute Hessian matrix*: Computing the Hessian matrix to scale the
+  proposal distribution in the Metropolis-Hastings algorithm.
 
 - *Sample from Posterior*: Posterior sampling is performed using the
   Metropolis-Hastings algorithm. A proposal distribution is constructed centered
   at the posterior mode and with proposal covariance scaled by the inverse of
   the Hessian matrix. Settings for the number of sampling blocks and the size of
   those blocks can be altered as described in
-  [Editing or Extending a Model](#editing-or-extending-a-model)
+  [Editing or Extending a Model](#editing-or-extending-a-model).
 
 **Remark**: In addition to saving each `mh_thin`-th draw of the parameter
 vector, the estimation program also saves the resulting posterior value and
 transition equation matrices implied by each draw of the parameter vector. This
 is to save time in the forecasting step since that code can avoid recomputing
-those matrices. In addition, to save space, all files in `save/input_data` and
-`save/output_data` are HDF5 files.
+those matrices.
 
 # Editing or Extending a Model
 
@@ -603,13 +590,13 @@ Any changes to the initialization of preexisting parameters are defined as a new
 model *sub-specification*, or *subspec*. While less significant than a change to
 the model's equilibrium conditions, changing the values of some parameter fields
 (especially priors) can have economic significance over and above settings we
-use for computational purposes. **For multiple reasons, parameter definitions
-should not be modified in the model object's constructor.** First, incrementing
-the model's sub-specification number when parameters are changed improves
-model-level (as opposed to code-level) version control. Second, it avoids
-potential output filename collisions, preventing the user from overwriting
-output from previous estimations with the original parameters. The protocol for
-defining new sub-specifications is described in
+use for computational purposes. **Parameter definitions should not be modified
+in the model object's constructor.** First, incrementing the model's
+sub-specification number when parameters are changed improves model-level (as
+opposed to code-level) version control. Second, it avoids potential output
+filename collisions, preventing the user from overwriting output from previous
+estimations with the original parameters. The protocol for defining new
+sub-specifications is described in
 [Model sub-specifications](#model-sub-specifications-msubspec).
 
 Overriding default settings is described in the [Settings](#model-settings)
