@@ -165,11 +165,11 @@ mh_thin(m::AbstractModel)          =  get_setting(m, :mh_thin)
 
 """
 ```
-load_parameters_from_file(m::AbstractModel,path::ASCIIString)
+load_parameters_from_file(m::AbstractModel,path::AbstractString)
 ```
 Returns a vector of parameters, read from a file, suitable for updating `m`.
 """
-function load_parameters_from_file(m::AbstractModel, path::ASCIIString)
+function load_parameters_from_file(m::AbstractModel, path::AbstractString)
 
     if isfile(path) && splitext(path)[2] == ".h5"
         x  = h5open(path, "r") do file
@@ -190,7 +190,7 @@ end
 
 """
 ```
-specify_mode!(m::AbstractModel, mode_file::ASCIIString="")
+specify_mode!(m::AbstractModel, mode_file::AbstractString="")
 ```
 
 Updates the values of `m.parameters` with the values from
@@ -202,12 +202,12 @@ Usage: should be run before calling `estimate(m)`, e.g.:
     specify_mode!(m, modefile)
     estimate(m)
 """
-function specify_mode!(m::AbstractModel, mode_file::ASCIIString = ""; verbose=:low)
+function specify_mode!(m::AbstractModel, mode_file::AbstractString = "")
 
     m <= Setting(:optimize, false, "Optimize the posterior mode. If false, reads in mode from a file.")
-
+    
     if mode_file == ""
-        mode_file = inpath(m, "user", "paramsmode_$vint.h5")
+        mode_file = inpath(m, "user", "paramsmode.h5")
     end
     
     print("Loading previous mode from $mode_file...")
@@ -217,13 +217,13 @@ end
 
 """
 ```
-specify_hessian(m::AbstractModel, path::AbstractString=="")
+specify_hessian(m::AbstractModel, path::AbstractString="")
 ```
 
 Specify a Hessian matrix calculated at the posterior mode to use in the model estimation. If
 no path is provided, will attempt to detect location.
 """
-function specify_hessian(m::AbstractModel, path::AbstractString=="")
+function specify_hessian(m::AbstractModel, path::AbstractString="")
     if isempty(path)
         path = inpath(m, "user", "hessian.h5")
     end
