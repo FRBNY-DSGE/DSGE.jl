@@ -74,7 +74,9 @@ function estimate(m::AbstractModel;
             end
         end
     end
-
+    
+    params = map(θ->θ.value, m.parameters)
+    
     ########################################################################################
     ### Step 3: Compute proposal distribution
     ###
