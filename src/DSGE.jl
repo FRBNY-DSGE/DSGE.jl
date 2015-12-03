@@ -18,13 +18,12 @@ module DSGE
         Setting, get_setting, default_settings, default_test_settings,
 
         # abstractdsgemodel.jl
-        
         AbstractModel, transform_to_model_space!, transform_to_real_line!,
         n_states, n_shocks_exogenous, n_shocks_expectational, n_parameters,
         n_anticipated_shocks,
         spec, subspec,
         dataroot, saveroot, inpath, workpath, rawpath, tablespath, figurespath, logpath,
-        optimize, calculate_hessian,
+        reoptimize, calculate_hessian,
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin, specify_mh_start,
         data_vintage,
         specify_mode!, specify_hessian, load_parameters_from_file,
