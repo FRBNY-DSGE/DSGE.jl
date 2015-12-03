@@ -9,21 +9,21 @@ lh_expected = read(h5, "lnpy")
 post_expected = read(h5, "obj")
 close(h5)
 
-model = Model990()
+m = Model990()
 
-lh, _ = likelihood(model, data)
+lh, _ = likelihood(m, data)
 @test_approx_eq lh_expected lh
 
-post = posterior(model, data)[:post]
+post = posterior(m, data)[:post]
 @test_approx_eq post_expected post
 
-x = map(α->α.value, model.parameters)
-post_at_start = posterior!(model, x, data)[:post]
+x = map(α->α.value, m.parameters)
+post_at_start = posterior!(m, x, data)[:post]
 @test_approx_eq post_expected post_at_start
 
 # Ensure if we are not evaluating at start vector, then we do not get the reference
 # posterior
 y = x .+ 0.01
-post_not_at_start = posterior!(model, y, data)[:post]
+post_not_at_start = posterior!(m, y, data)[:post]
 ϵ = 1.0
 @test abs(post_at_start - post_not_at_start) > ϵ
