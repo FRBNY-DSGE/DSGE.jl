@@ -126,7 +126,7 @@ function estimate(m::AbstractModel;
 
         hessian, _ = hessian!(m, params, data; verbose=verbose)
 
-        h5open(rawpath(m, "estimate","hessian_$vint.h5"),"w") do file
+        h5open(rawpath(m, "estimate","hessian.h5"),"w") do file
             file["hessian"] = hessian
         end
 
