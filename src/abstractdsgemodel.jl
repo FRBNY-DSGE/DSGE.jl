@@ -190,7 +190,7 @@ end
 
 """
 ```
-specify_mode!(m::AbstractModel, mode_file::AbstractString="")
+specify_mode!(m::AbstractModel, mode_file::AbstractString=""; verbose=:low)
 ```
 
 Updates the values of `m.parameters` with the values from
@@ -202,28 +202,32 @@ Usage: should be run before calling `estimate(m)`, e.g.:
     specify_mode!(m, modefile)
     estimate(m)
 """
-function specify_mode!(m::AbstractModel, mode_file::AbstractString = "")
+function specify_mode!(m::AbstractModel, mode_file::AbstractString = ""; verbose=:low)
 
     m <= Setting(:optimize, false, "Optimize the posterior mode. If false, reads in mode from a file.")
     
     if mode_file == ""
         mode_file = inpath(m, "user", "paramsmode.h5")
     end
-    
-    print("Loading previous mode from $mode_file...")
+    mode_file = normpath(mode_file)
+
     update!(m,load_parameters_from_file(m,mode_file))
-    println("done.")
+
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println("Loaded previous mode from $mode_file.")
+    end
+
 end
 
 """
 ```
-specify_hessian(m::AbstractModel, path::AbstractString="")
+specify_hessian(m::AbstractModel, path::AbstractString=""; verbose=:low)
 ```
 
 Specify a Hessian matrix calculated at the posterior mode to use in the model estimation. If
 no path is provided, will attempt to detect location.
 """
-function specify_hessian(m::AbstractModel, path::AbstractString="")
+function specify_hessian(m::AbstractModel, path::AbstractString=""; verbose=:low)
     if isempty(path)
         path = inpath(m, "user", "hessian.h5")
     end
@@ -236,7 +240,9 @@ function specify_hessian(m::AbstractModel, path::AbstractString="")
 
     m <= Setting(:calculate_hessian, false, "Recalculate the Hessian at the mode")
 
-    nothing
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println("Specified hessian from $path.")
+    end
 end
 
 

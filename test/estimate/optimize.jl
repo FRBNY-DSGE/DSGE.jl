@@ -4,8 +4,8 @@ path = dirname(@__FILE__)
 include("../util.jl")
 
 # Test in model optimization
-model = Model990()
-model.testing=true
+m = Model990()
+m.testing=true
 
 file = h5open("$path/../reference/optimize.h5","r")
 x0 = read(file, "params")
@@ -16,10 +16,10 @@ H_expected = read(file, "H")
 close(file)
 
 # See src/estimate/estimate.jl
-update!(model, x0)
+update!(m, x0)
 n_iterations = 3
 
-@time out, H = optimize!(model, data; iterations=n_iterations)
+@time out, H = optimize!(m, data; iterations=n_iterations)
 
 @test_matrix_approx_eq minimum_ out.minimum
 @test_approx_eq_eps f_minimum out.f_minimum 10e-8
