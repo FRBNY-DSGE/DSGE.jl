@@ -43,21 +43,8 @@ function estimate(m::AbstractModel;
     # Specify starting mode
 
     vint = get_setting(m, :data_vintage)
-    if !optimize(m)
-        # Load the mode
-        fn = inpath(m, "user", "paramsmode_$vint.h5")
-
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Loading previous mode from $fn...")
-        end
-        
-        params = h5open(fn,"r") do file
-            read(file, "params")
-        end
-        
-        update!(m, params)
-    else
-        println("Reoptimizing...")
+    if optimize(m)
+        println("Optimizing...")
 
         # Inputs to optimization algorithm
         n_iterations       = 100
