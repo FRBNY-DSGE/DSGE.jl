@@ -54,22 +54,22 @@ cx = 2 * (α - 1/2)
 @test_approx_eq_eps(transform_to_real_line(α), cx / sqrt(1 - cx^2), 0.001)
 @test transform_to_real_line(δ) == 0.025
 
-model = Model990()
+m = Model990()
 lastparam = parameter(:p, 0.0)
-for α in model.parameters
-    isa(α, Parameter) && (lastparam = α)
+for θ in m.parameters
+    isa(θ, Parameter) && (lastparam = θ)
 end
 @test isa(lastparam, Parameter)
 @test lastparam.value == 0.0181
 
 # transform_to_real_line and transform_to_model_space, acting on the entire parameter vector. they should be inverses!
-pvec = model.parameters
+pvec = m.parameters
 vals = transform_to_real_line(pvec)
-transform_to_model_space!(model, vals)
-@test pvec == model.parameters
+transform_to_model_space!(m, vals)
+@test pvec == m.parameters
 
 # all fixed parameters should be unchanged by both transform_to_real_line and transform_to_model_space
-for θ in model.parameters
+for θ in m.parameters
     if θ.fixed
         @test θ.value == transform_to_real_line(θ)
         @test θ.value == transform_to_model_space(θ, θ.value)
@@ -78,7 +78,7 @@ end
 
 
 # prior
-priordensity = exp(prior(model))
+priordensity = exp(prior(m))
 @test 0 <= priordensity <= 1
 
 # settings
@@ -93,25 +93,25 @@ data_vintage = Setting(:data_vintage, "REF", true, "vint", "Date of data") # ful
 @test convert(ASCIIString, data_vintage) == "REF"
 
 
-@test get_setting(model, :n_mh_blocks) == model.settings[:n_mh_blocks].value
-model.testing = true
-@test get_setting(model, :n_mh_blocks) == model.test_settings[:n_mh_blocks].value
-@test DSGE.modelstring(model) == "_test"
+@test get_setting(m, :n_mh_blocks) == m.settings[:n_mh_blocks].value
+m.testing = true
+@test get_setting(m, :n_mh_blocks) == m.test_settings[:n_mh_blocks].value
+@test DSGE.modelstring(m) == "_test"
 
-model.testing = false
-model <= Setting(:n_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Hastings")
-@test model.settings[:n_mh_blocks].value == 5
-@test ismatch(r"^\s*vint=(\d{6})_mhbk=5", DSGE.modelstring(model))
+m.testing = false
+m <= Setting(:n_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Hastings")
+@test m.settings[:n_mh_blocks].value == 5
+@test ismatch(r"^\s*vint=(\d{6})_mhbk=5", DSGE.modelstring(m))
 
 # model paths. all this should work without errors
-model.testing = true
-rawpath(model, "test")
-rawpath(model, "test", "temp")
-workpath(model, "test")
-workpath(model, "test", "temp")
-tablespath(model, "test")
-tablespath(model, "test", "temp")
-figurespath(model, "test")
-figurespath(model, "test", "temp")
+m.testing = true
+rawpath(m, "test")
+rawpath(m, "test", "temp")
+workpath(m, "test")
+workpath(m, "test", "temp")
+tablespath(m, "test")
+tablespath(m, "test", "temp")
+figurespath(m, "test")
+figurespath(m, "test", "temp")
 
 nothing
