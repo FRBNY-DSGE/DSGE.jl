@@ -54,56 +54,46 @@ pass it to the `estimate` function.
 
 ```julia
 m = Model990()          # construct a model object
-estimate(m)             # estimate the model
-computeMoments(m)       # produce LaTeX tables of parameter moments
+estimate(m)             # full posterior parameter sampling
+compute_moments(m)      # produce LaTeX tables of parameter moments
 ```
 
-By default, the `estimate` routine reads in a vector of modal
-parameter values and a Hessian matrix calculated at that mode. The
-user can re-estimate the model by setting the `:reoptimize` setting
-and `calculate_hessian` settings to `true`. Optimization begins at a
-vector of parameter values specified by the proper vintage of the file
-`save/user/params_start.h5`. To specify a starting parameter contained
-in another file, run
+By default, the `estimate` routine reads in a vector of modal parameter values
+and a Hessian matrix calculated at that mode. These values are supplied with
+the package or can be computed by the user.
 
-```julia
-m = Model990()
-specify_starting_parameters(m, "path/to/parameter/file.h5")
-estimate(m)
-```
-
-This will set off a full re-estimation of the model parameters at the
-values specified in the file. To estimate the model starting from the
-parameter values specified in the model definition, use
-
-```julia
-specify_starting_parameters(m)
-```
+The user will often want to reoptimize the parameter vector and calculate the
+Hessian matrix at this new vector. Please see [Reoptimizing](#reoptimizing)
+below.
 
 For more detail on changing the model's default settings, parameters, equilibrium
 conditions, etc., see [Implementation Details](#implementation-details) for more specifics.
 
-# Input/Output Directory Structure
+## Input/Output Directory Structure
 
 The *DSGE.jl* estimation uses data files as input and produces large data files
-as outputs. The following subdirectory tree indicates the default locations of
-these input and outputs. (Note these locations can be overridden as desired.
-Square brackets indicate directories in the tree that will become relevant as
-future features are implemented.)
+as outputs. One estimation saves approximately 6GB of parameter draws and
+related outputs. It is useful to understand how these files are loaded/saved
+and how to control this behavior.
 
-- `save/`:
-  - `input_data/`: This directory is referred to as `dataroot` in the code.
-    - `data/`:  Macroeconomic input data series.
-      - `data_<yymmdd>.h5`: Input data vintage from `yymmdd`.
-    - `user/`: User-created files for model input. For instance, the user may
-      specify a previously computed mode when `optimize(m)==false`, or a
-      starting point for optimization when `optimize(m)==true`.
-      - `paramsstart.h5`: Used as starting point for estimation when
-        `optimize(m)==true`.
-      - `paramsmode.h5`: Taken as the mode when `optimize(m)==false`.
-      - `hessian.h5`: Taken as the Hessian matrix when
-        `calculate_hessian(m)==false`.
-  - `output_data/`: This directory is referred to as `saveroot` in the code.
+### Directory Tree
+The following subdirectory tree indicates the default locations of
+these input and outputs. Square brackets indicate directories in the tree that
+will become relevant as future features are implemented.
+- `<dataroot>/`: Root data directory.
+  - `data/`:  Macroeconomic input data series.
+    - `data_<yymmdd>.h5`: Input data vintage from `yymmdd`.
+  - `user/`: User-created files for model input. For instance, the user may
+    specify a previously computed mode when `optimize(m)==false`, or a
+    starting point for optimization when `optimize(m)==true`.
+    - `paramsstart.h5`: Used as starting point for estimation when
+      `optimize(m)==true`.
+    - `paramsmode.h5`: Taken as the mode when `optimize(m)==false`.
+    - `hessian.h5`: Taken as the Hessian matrix when
+      `calculate_hessian(m)==false`.
+
+- `<saveroot>/`: Root save directory.
+  - `output_data/`
     - `m990/`: Input/output files for the `Model990` type. A model of type mSPEC
       will create its own save directory `mSPEC` at this  level in the directory
       tree.
@@ -112,8 +102,8 @@ future features are implemented.)
           - `figures/`: Plots and other figures
           - `tables/`: LaTeX tables
           - `raw/`: Raw output data from estimation step
-            - `mode_out.h5`: Optimized mode after running optimization
-            - `hessian_out.h5`: Hessian at the mode
+            - `paramsmode.h5`: Optimized mode after running optimization
+            - `hessian.h5`: Hessian at the mode
             - `mhsave.h5`: Draws from posterior distribution
           - `work/`: Derived data files created using `raw/` files as input
             - `cov.h5`: Covariance matrix for parameter draws from
@@ -126,6 +116,24 @@ future features are implemented.)
             - [`work/`]: Derived data files created using `raw/` files as input
       - [`ss1/`] Additional model subspecs will have subdirectories identical to
         `ss0` at this level in the directory tree.
+
+### Directory Paths
+
+By default, input/output directories are located in the *DSGE.jl* package, along
+with the source code. Default values of the input/output directory roots:
+```julia
+julia> saveroot(M)
+"<path/to/user/Julia/packages>/DSGE/save"
+
+julia> dataroot(m)
+"<path/to/user/Julia/packages>/DSGE/save/input_data"
+```
+
+Note these locations can be overridden as desired:
+```julia
+m <= Setting(:saveroot, "path/to/my/save/root")
+m <= Setting(:dataroot, "path/to/my/data/root")
+```
 
 # Input data used
 
@@ -182,6 +190,40 @@ The source code directory structure follows Julia module conventions.
              in directories at this level in the directory tree
      - `solve/`: Solving the model; includes `gensys.jl` code.
   - `test/`: Module test suite.
+
+## Reoptimizing
+
+In a variety of situations, the user will want to reoptimize the parameter
+vector (and consequently, calculate the Hessian at this new mode):
+- the input data are updated with new observations or revised
+- the model sub-specification is changed
+- the model is derived from an existing model with differing equilibrium
+  conditions or measurement equation.
+
+You can reoptimize the parameters and recalculate the Hessian matrix
+by setting the `reoptimize` and `calculate_hessian` settings to `true`.
+
+Reoptimize the model starting from the parameter values supplied in the
+model initialization. (The initialization parameter values are those defined in
+your model constructor.)
+```julia
+m = Model990()
+m <= Setting(:reoptimize, true)
+m <= Setting(:calculate_hessian, true)
+estimate(m)
+```
+
+Reoptimize the model starting from the parameter values supplied in use
+in a specified file. Ensure that you supply an HDF5 file with a variable named
+`params` that is the correct dimension and data type.
+```julia
+m = Model990()
+params = load_parameters_from_file(m, "path/to/parameter/file.h5")
+update!(m, params)
+m <= Setting(:reoptimize, true)
+m <= Setting(:calculate_hessian, true)
+estimate(m)
+```
 
 ## The `AbstractModel` Type and the Model Object
 
