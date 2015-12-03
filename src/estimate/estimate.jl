@@ -43,8 +43,8 @@ function estimate(m::AbstractModel;
     # Specify starting mode
 
     vint = get_setting(m, :data_vintage)
-    if optimize(m)
-        println("Optimizing...")
+    if reoptimize(m)
+        println("Reoptimizing...")
 
         # Inputs to optimization algorithm
         n_iterations       = 100
@@ -100,7 +100,7 @@ function estimate(m::AbstractModel;
 
         hessian
 
-    # Read in a pre-optimized mode
+    # Read in a pre-calculated Hessian
     else
         fn = hessian_path(m)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
