@@ -153,6 +153,7 @@ use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers
 # Interface for estimation settings
 optimize(m::AbstractModel)          = get_setting(m, :optimize)
 calculate_hessian(m::AbstractModel) = get_setting(m, :calculate_hessian)
+hessian_path(m::AbstractModel)      = get_setting(m, :hessian_path)
 n_hessian_test_params(m::AbstractModel) = get_setting(m, :n_hessian_test_params)
 
 # Interface for Metropolis-Hastings settings
@@ -397,4 +398,26 @@ function rand{T<:AbstractFloat, U<:AbstractModel}(d::DegenerateMvNormal, m::U; c
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
 
-    
+"""
+```
+specify_hessian(m::AbstractModel, path::AbstractString=="")
+```
+
+Specify a Hessian matrix calculated at the posterior mode to use in the model estimation. If
+no path is provided, will attempt to detect location.
+"""
+function specify_hessian(m::AbstractModel, path::AbstractString=="")
+    if isempty(path)
+        path = inpath(m, "user", "hessian.h5")
+    end
+
+    if isfile(path) && splitext(path)[2] == ".h5"
+        m <= Setting(:hessian_path, normpath(abspath(path)))
+    else
+        error("Invalid input Hessian file: $path",)
+    end
+
+    m <= Setting(:calculate_hessian, false, "Recalculate the Hessian at the mode")
+
+    nothing
+end
