@@ -162,13 +162,14 @@ n_mh_simulations(m::AbstractModel) =  get_setting(m, :n_mh_simulations)
 n_mh_burn(m::AbstractModel)        =  get_setting(m, :n_mh_burn)
 mh_thin(m::AbstractModel)          =  get_setting(m, :mh_thin)
 
-# Function for user to set starting point for MH
+
 """
 ```
 load_parameters_from_file(m::AbstractModel,path::ASCIIString)
 ```
+Returns a vector of parameters, read from a file, suitable for updating `m`.
 """
-function load_parameters_from_file(m::AbstractModel, path::AbstractString)
+function load_parameters_from_file(m::AbstractModel, path::ASCIIString)
 
     if isfile(path) && splitext(path)[2] == ".h5"
         x  = h5open(path, "r") do file
@@ -185,6 +186,57 @@ function load_parameters_from_file(m::AbstractModel, path::AbstractString)
     @assert length(x) == length(m.parameters)
     @assert eltype(x) == typeof(m.parameters[1].value)
     return x
+end
+
+"""
+```
+specify_mode!(m::AbstractModel, mode_file::ASCIIString="")
+```
+
+Updates the values of `m.parameters` with the values from
+`mode_file`. Sets `reoptimize` setting to `false`.
+
+Usage: should be run before calling `estimate(m)`, e.g.:
+
+    m = Model990()
+    specify_mode!(m, modefile)
+    estimate(m)
+"""
+function specify_mode!(m::AbstractModel, mode_file::ASCIIString = ""; verbose=:low)
+
+    m <= Setting(:optimize, false, "Optimize the posterior mode. If false, reads in mode from a file.")
+
+    if mode_file == ""
+        mode_file = inpath(m, "user", "paramsmode_$vint.h5")
+    end
+    
+    print("Loading previous mode from $mode_file...")
+    update!(m,load_parameters_from_file(m,mode_file))
+    println("done.")
+end
+
+"""
+```
+specify_hessian(m::AbstractModel, path::AbstractString=="")
+```
+
+Specify a Hessian matrix calculated at the posterior mode to use in the model estimation. If
+no path is provided, will attempt to detect location.
+"""
+function specify_hessian(m::AbstractModel, path::AbstractString=="")
+    if isempty(path)
+        path = inpath(m, "user", "hessian.h5")
+    end
+
+    if isfile(path) && splitext(path)[2] == ".h5"
+        m <= Setting(:hessian_path, normpath(abspath(path)))
+    else
+        error("Invalid input Hessian file: $path",)
+    end
+
+    m <= Setting(:calculate_hessian, false, "Recalculate the Hessian at the mode")
+
+    nothing
 end
 
 
@@ -398,26 +450,4 @@ function rand{T<:AbstractFloat, U<:AbstractModel}(d::DegenerateMvNormal, m::U; c
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
 
-"""
-```
-specify_hessian(m::AbstractModel, path::AbstractString=="")
-```
 
-Specify a Hessian matrix calculated at the posterior mode to use in the model estimation. If
-no path is provided, will attempt to detect location.
-"""
-function specify_hessian(m::AbstractModel, path::AbstractString=="")
-    if isempty(path)
-        path = inpath(m, "user", "hessian.h5")
-    end
-
-    if isfile(path) && splitext(path)[2] == ".h5"
-        m <= Setting(:hessian_path, normpath(abspath(path)))
-    else
-        error("Invalid input Hessian file: $path",)
-    end
-
-    m <= Setting(:calculate_hessian, false, "Recalculate the Hessian at the mode")
-
-    nothing
-end

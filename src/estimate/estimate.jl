@@ -43,42 +43,8 @@ function estimate(m::AbstractModel;
     # Specify starting mode
 
     vint = get_setting(m, :data_vintage)
-    params = if optimize(m)
-        if detect_starting_parameters(m) == :none
-            # start from the initial values of parameters 
-            [Float64(p.value) for p in m.parameters]
-        else
-            # read in a starting parameter value
-            fn = if (detect_starting_parameters(m) == :auto)
-                inpath(m, "user", "paramsstart_$vint.h5")
-            elseif (detect_starting_parameters(m) == :user)
-                get_setting(m, :estimation_start_file)
-            end
-            
-            h5open(fn,"r") do file
-                
-                if VERBOSITY[verbose] >= VERBOSITY[:low]
-                    println("Loading starting parameter vector from $fn...")
-                end
-
-                read(file, "params")
-            end
-        end
-
-    else
-        fn = inpath(m, "user", "paramsmode_$vint.h5")
-
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Loading previous mode from $fn...")
-        end
-        
-        params = h5open(fn,"r") do file
-            read(file, "params")
-        end
-        
-        update!(m, params)
-    else
-        println("Reoptimizing...")
+    if optimize(m)
+        println("Optimizing...")
 
         # Inputs to optimization algorithm
         n_iterations       = 100

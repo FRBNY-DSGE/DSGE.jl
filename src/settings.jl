@@ -132,8 +132,8 @@ function default_settings(m::AbstractModel)
     m <= Setting(:use_parallel_workers, true, "Use available parallel workers in computations")
 
     # Estimation
-    m <= Setting(:optimize,          false, "Optimize the posterior mode. If false, reads in mode from a file.")
-    m <= Setting(:calculate_hessian, false, "Recalculate the hessian at the mode")
+    m <= Setting(:optimize,          true, "Optimize the posterior mode. If false, reads in mode from a file.")
+    m <= Setting(:calculate_hessian, true, "Recalculate the hessian at the mode")
     m <= Setting(:n_hessian_test_params, typemax(Int), "Max number of free params for which to calculate Hessian")
 
     m <= Setting(:n_mh_simulations,  10000, "Number of draws per block in Metropolis-Hastings")
