@@ -90,20 +90,20 @@ will become relevant as future features are implemented.
 - `<dataroot>/`: Root data directory.
   - `data/`:  Macroeconomic input data series.
     - `data_<yymmdd>.h5`: Input data vintage from `yymmdd`.
-  - `user/`: User-created files for model input. For instance, the user may
-    specify a previously computed mode when `optimize(m)==false`, or a
-    starting point for optimization when `optimize(m)==true`.
-    - `paramsstart.h5`: Used as starting point for estimation when
-      `optimize(m)==true`.
-    - `paramsmode.h5`: Taken as the mode when `optimize(m)==false`.
-    - `hessian.h5`: Taken as the Hessian matrix when
-      `calculate_hessian(m)==false`.
+  - `cond/`: Conditional data, i.e.
+    ["nowcast"](https://en.wikipedia.org/wiki/Nowcasting_%28economics%29), for
+    the current forecast quarter.
+  - `user/`: User-created or sample model input files. For instance, the user may
+    specify a previously computed mode when `reoptimize(m)` is `false`, or a
+    starting point for optimization when `reoptimize(m)` is `true`.
+    - `paramsmode.h5`: Sample modal parameter vector.
+    - `hessian.h5`: Sample Hessian matrix at mode.
 
 - `<saveroot>/`: Root save directory.
   - `output_data/`
-    - `m990/`: Input/output files for the `Model990` type. A model of type mSPEC
-      will create its own save directory `mSPEC` at this  level in the directory
-      tree.
+    - `m990/`: Input/output files for the `Model990` type. A model of type
+      `SPEC` will create its own save directory `SPEC/` at this  level in the
+      directory tree.
       - `ss0/`: Subdirectory for subspec 0.
         - `estimate/`
           - `figures/`: Plots and other figures
@@ -128,13 +128,8 @@ will become relevant as future features are implemented.
 
 By default, input/output directories are located in the *DSGE.jl* package, along
 with the source code. Default values of the input/output directory roots:
-```julia
-julia> saveroot(M)
-"<path/to/user/Julia/packages>/DSGE/save"
-
-julia> dataroot(m)
-"<path/to/user/Julia/packages>/DSGE/save/input_data"
-```
+- `saveroot(m)`: `"$(Pkg.dir())/DSGE/save"`
+- `dataroot(m)`: `"$(Pkg.dir())/DSGE/save/input_data"`
 
 Note these locations can be overridden as desired:
 ```julia
@@ -201,7 +196,7 @@ The source code directory structure follows Julia module conventions.
 ## Reoptimizing
 
 Generally, the user will want to reoptimize the parameter vector (and
-consequently, calculate the Hessian at this new mode) everytime they conduct
+consequently, calculate the Hessian at this new mode) every time they conduct
 posterior sampling:
 - the input data are updated with new observations or revised
 - the model sub-specification is changed
@@ -224,9 +219,9 @@ estimate(m)
 
 ### Skip Reoptimization Entirely
 
-You can provide a modal parameter vector and optionally a Hessian matrix calculated
-at that mode to skip the reoptimization entirely. These values are usually computed
-by the user previously.
+You can provide a modal parameter vector and optionally a Hessian matrix
+calculated at that mode to skip the reoptimization entirely. These values are
+usually computed by the user previously.
 
 You can skip reoptimization the parameter vector entirely.
 ```julia
@@ -237,7 +232,6 @@ estimate(m)
 The `specify_mode!` function will update the parameter vector to the mode and
 skip reoptimization. Ensure that you supply an HDF5 file with a variable named
 `params` that is the correct dimension and data type.
-
 
 You can additional skip calculation of the Hessian matrix entirely.
 ```julia
@@ -254,7 +248,7 @@ undefined behavior.
 
 ## The `AbstractModel` Type and the Model Object
 
-The `AbstractModel` type provides a common infrastructure for all model objects,
+The `AbstractModel` type provides a common interface for all model objects,
 which greatly facilitates the implementation of new model specifications. Any
 concrete subtype of `AbstractModel` can be passed to any function defined for
 `AbstractModel`, provided that the concrete type has the fields that the
@@ -264,9 +258,7 @@ function expects to be available.
 implements a single specification of the FRBNY DSGE model.
 See [Editing or Extending a Model](#editing-or-extending-a-model).
 
-### Required Fields
-
-#### Parameters and Steady-States
+### Parameters and Steady-States
 - `parameters::Vector{AbstractParameter}`: Vector of all time-invariant model
   parameters.
 - `steady_state::Vector`: Model steady-state values, computed as a function of
@@ -275,7 +267,7 @@ See [Editing or Extending a Model](#editing-or-extending-a-model).
   and steady-states to their indices in `parameters` and
   `steady_state`.
 
-#### Inputs to the Measurement and Equilibrium Condition Equations
+### Inputs to the Measurement and Equilibrium Condition Equations
 - `endogenous_states::Dict{Symbol,Int}`: Maps each state to a column in the
   measurement and equilibrium condition matrices.
 - `exogenous_shocks::Dict{Symbol,Int}`: Maps each shock to a column in the
@@ -290,7 +282,7 @@ See [Editing or Extending a Model](#editing-or-extending-a-model).
 - `observables::Dict{Symbol,Int}`: Maps each observable to a row in the model's
   measurement equation matrices.
 
-#### Model Specification and Settings
+### Model Specification and Settings
 - `spec::ASCIIString`: Model specification number (e.g. `"m990"`). Identifies a
   particular set of parameters, equilibrium conditions, and measurement equation
   (equivalently, a concrete model type - for example, models of type `Model990`
@@ -303,7 +295,7 @@ See [Editing or Extending a Model](#editing-or-extending-a-model).
   without changing the economic or mathematical setup of the model.
 - `test_settings::Dict{Symbol,Setting}`: Settings/flags for testing mode
 
-#### Other Fields
+### Other Fields
 - `rng::MersenneTwister`: Random number generator. By default, it is
   seeded to ensure reproducibility in algorithms that involve randomness
   (such as Metropolis-Hastings).
@@ -326,9 +318,9 @@ several dictionaries that map variable names to indices in these matrices:
 - `endogenous_states`: Indices of endogenous model states
 - `exogenous_shocks`: Indices of exogenous shocks
 - `expected_shocks`: Indices of expectation shocks
-- `equilibrium_conditions`: Indices of equalibrium condition equations
-- `endogenous_states_augmented`: Indices of model states, after model solution and
-  system augmentation
+- `equilibrium_conditions`: Indices of equilibrium condition equations
+- `endogenous_states_augmented`: Indices of model states, after model solution
+  and system augmentation
 - `observables`:  Indices of named observables
 
 This approach has a number of advantages. Most importantly, it is robust to
@@ -341,7 +333,9 @@ assigned an index.
 As an example, consider the model's equilibrium conditions. The canonical
 representation of the equilibrium conditions is
 
-`Γ0 s_t = Γ1 s_{t-1} + C + Ψ ε_t + Π η_t`
+```
+Γ0 s_t = Γ1 s_{t-1} + C + Ψ ε_t + Π η_t
+```
 
 where `Γ0`, `Γ1`, `C`, `Ψ`, and `Π` are matrices of coefficients for `s_t`
 (states at time `t`), `s_{t-1}` (lagged states), `ε_t` (exogenous shocks) and
@@ -473,17 +467,18 @@ The `Setting{T<:Any}` type has the following fields:
 #### Anticipated Shocks
 - `n_anticipated_shocks::Setting{Int}`: Number of anticipated policy shocks.
 - `n_anticipated_shocks_padding::Setting{Int}`: Padding for anticipated shocks.
-- `zlb_start_index::Setting{Int}`: Index into input data matrix of first period to
-  incorporate zero bound expectations. The first observation in the sample data
-  is 1959Q3 and we assume the zero lower bound period starts in 2008Q4, so we
-  set this to `198` by default.
+- `zlb_start_index::Setting{Int}`: Index into input data matrix of first period
+  to incorporate zero bound expectations. The first observation in the sample
+  data is 1959Q3 and we assume the zero lower bound period starts in 2008Q4, so
+  we set this to `198` by default.
 - `n_presample_periods::Setting{Int}`: Number of periods in the presample.
 
 #### Estimation
-- `optimize::Setting{Bool}`: Whether to optimize the posterior mode. If `false`
-  (the default), `estimate()` reads in a previously found mode.
-- `calculate_hessian::Setting{Bool}`: Whether to compute the Hessian. If `false`
-  (the default), `estimate()` reads in a previously computed Hessian.
+- `reoptimize::Setting{Bool}`: Whether to reoptimize the posterior mode. If
+  `true` (the default), `estimate()` begins reoptimizing from the model object's
+  parameter vector.
+- `calculate_hessian::Setting{Bool}`: Whether to compute the Hessian. If `true`
+  (the default), `estimate()` calculates the Hessian at the posterior mode.
 
 #### Metropolis-Hastings
 - `n_mh_simulations::Setting{Int}`: Number of draws from the posterior
@@ -507,7 +502,7 @@ that take only the model object `m` as an argument:
 `use_parallel_workers(m)`
 
 *Estimation*:
-`optimize(m)`,
+`reoptimize(m)`,
 `calculate_hessian(m)`,
 `n_hessian_test_params(m)`,
 
@@ -529,12 +524,10 @@ to avoid excessively long filenames). Therefore, we strongly suggest that users
 who modify settings set `print=true` and define a meaningful code when
 overwriting any default settings.
 
-For example, overwriting `optimize` should look like this:
+For example, overwriting `use_parallel_workers` should look like this:
 ```julia
 m = Model990()
-# optimize(m) returns false by default
-m <= Setting(:optimize, true, true, "optm", "whether to re-find the mode")
-# optimize(m) returns true; prints "optm=true" to output filenames
+m <= Setting(:use_parallel_workers, true)
 ```
 
 ## Estimation
@@ -570,8 +563,7 @@ those matrices.
 # Editing or Extending a Model
 
 Users may want to extend or edit `Model990` in a number of different ways.
-The most common changes we anticipate are listed below, in decreasing order of
-complexity:
+The most common changes are listed below, in decreasing order of complexity:
 
 1. Add new parameters
 2. Modify equilibrium conditions or measurement equations
@@ -686,8 +678,11 @@ Contributors to this package at [QuantEcon](http://quantecon.org) include
 
 The `gensys` and `csminwel` routines in [gensys.jl](src/solve/gensys.jl) and
 [csminwel.jl](src/estimate/csminwel.jl) are based on routines originally
-copyright [Chris Sims](http://www.princeton.edu/~sims).
+copyright [Chris Sims](http://www.princeton.edu/~sims). The files are released
+here with permission of Chris Sims under the BSD-3 [license](LICENSE).
 
 The `kalman_filter` routine is loosely based on a version of the
 Kalman filter algorithm originally copyright Federal Reserve Bank of Atlanta
-and written by [Iskander Karibzhanov](http://karibzhanov.com).
+and written by [Iskander Karibzhanov](http://karibzhanov.com). The files are
+released here with permission of the Federal Reserve Bank of Atlanta under the
+BSD-3 [license](LICENSE).
