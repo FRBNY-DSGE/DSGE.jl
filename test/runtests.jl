@@ -16,7 +16,8 @@ my_tests = [
             "estimate/optimize",
             "estimate/eig",
             "estimate/metropolis_hastings",
-            "models/m990/m990"
+            "models/m990/m990",
+            "models/smets_wouters/smets_wouters"
             ]
 
 for test in my_tests

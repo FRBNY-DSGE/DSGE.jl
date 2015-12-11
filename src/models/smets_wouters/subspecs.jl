@@ -1,6 +1,11 @@
-#using Match
+"""
+`init_subspec(m::SmetsWouters)`
 
-function initialize_subspec(m::SmetsWouters)
+Initializes a model subspecification by overwriting parameters from
+the original model object with new parameter objects. This function is
+called from within the model constructor.
+"""
+function init_subspec(m::SmetsWouters)
 
     if subspec(m) == "ss0"
         return
@@ -8,11 +13,5 @@ function initialize_subspec(m::SmetsWouters)
         error("This subspec is not defined.")
     end
     
-    ## This is neat pattern matching we can do, but has deprication warnings...
-    ## @match subspec(m) begin
-    ##     "ss0"          => return
-    ##     "ss5"          => ss5(m)
-    ##     _              => error("This subspec is not defined.")
-    ## end
 end
 
