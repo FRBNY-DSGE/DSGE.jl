@@ -8,7 +8,6 @@ module DSGE
     import Optim
     using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
 
-
     export
 
         # distributions_ext.jl
@@ -39,13 +38,13 @@ module DSGE
         kalman_filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, compute_moments,
-        make_moment_tables, find_density_bands, prior,
+        find_density_bands, prior,
 
         # models/
         steadystate!, Model990, eqcond, measurement,
 
         # solve/
-        ordschur, gensys, solve
+        gensys, solve
 
     const VERBOSITY = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
 
