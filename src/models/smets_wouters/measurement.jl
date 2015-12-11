@@ -1,6 +1,21 @@
-# Assign measurement equation : X_t = ZZ*S_t + DD + u_t
-# where u_t = eta_t+MM* eps_t with var(eta_t) = EE
-# where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
+"""
+```
+measurement{T<:AbstractFloat}(m::SmetsWouters{T}, TTT::Matrix{T}, RRR::Matrix{T},
+                              CCC::Matrix{T}; shocks::Bool = true)
+```
+
+Assign measurement equation
+```
+X_t = ZZ*S_t + DD + u_t
+```
+where
+```
+u_t = eta_t + MM*eps_t
+var(eta_t) = EE
+var(u_t) = HH = EE + MM*QQ*MM'
+cov(eps_t,u_t) = VV = QQ*MM'
+```
+"""
 function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
                                        TTT::Matrix{T},
                                        RRR::Matrix{T},
@@ -13,59 +28,59 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
     # If shocks = true, then return measurement equation matrices with rows and columns for
     # anticipated policy shocks
     if shocks
-        _num_observables = num_observables(m)
-        _num_states = num_states_augmented(m)
-        _num_shocks_exogenous = num_shocks_exogenous(m)
-        endo_addl = m.endogenous_states_postgensys
+        _n_observables = n_observables(m)
+        _n_states = n_states_augmented(m)
+        _n_shocks_exogenous = n_shocks_exogenous(m)
+        endo_addl = m.endogenous_states_augmented
     else
-        _num_observables = num_observables(m) - num_anticipated_shocks(m)
-        _num_states = num_states_augmented(m) - num_anticipated_shocks(m)
-        _num_shocks_exogenous = num_shocks_exogenous(m) - num_anticipated_shocks(m)
+        _n_observables = n_observables(m) - n_anticipated_shocks(m)
+        _n_states = n_states_augmented(m) - n_anticipated_shocks(m)
+        _n_shocks_exogenous = n_shocks_exogenous(m) - n_anticipated_shocks(m)
         endo_addl = Dict(
-            [(key,m.endogenous_states_postgensys[key] - num_anticipated_shocks(m)) for key in keys(m.endogenous_states_postgensys)])
+            [(key,m.endogenous_states_augmented[key] - n_anticipated_shocks(m)) for key in keys(m.endogenous_states_augmented)])
     end
 
-    ZZ = zeros(_num_observables, _num_states)
-    DD = zeros(_num_observables, 1)
-    MM = zeros(_num_observables, _num_shocks_exogenous)
-    EE = zeros(_num_observables, _num_observables)
-    QQ = zeros(_num_shocks_exogenous, _num_shocks_exogenous)
+    ZZ = zeros(_n_observables, _n_states)
+    DD = zeros(_n_observables, 1)
+    MM = zeros(_n_observables, _n_shocks_exogenous)
+    EE = zeros(_n_observables, _n_observables)
+    QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
 
     ## Output growth - Quarterly!
-    ZZ[obs[:g_y], endo[:y_t]]       = 1.0
-    ZZ[obs[:g_y], endo_addl[:y_t1]] = -1.0
-    ZZ[obs[:g_y], endo[:z_t]]       = 1.0
-    DD[obs[:g_y]]                   = 100*(exp(m[:zstar])-1)
+    ZZ[obs[:obs_gdp], endo[:y_t]]       = 1.0
+    ZZ[obs[:obs_gdp], endo_addl[:y_t1]] = -1.0
+    ZZ[obs[:obs_gdp], endo[:z_t]]       = 1.0
+    DD[obs[:obs_gdp]]                   = 100*(exp(m[:zstar])-1)
 
     ## Hours growth
-    ZZ[obs[:g_hours], endo[:L_t]] = 1.0
-    DD[obs[:g_hours]]             = m[:Lmean]
+    ZZ[obs[:obs_hours], endo[:L_t]] = 1.0
+    DD[obs[:obs_hours]]             = m[:Lmean]
 
     ## Labor Share/real wage growth
-    ZZ[obs[:g_w], endo[:w_t]]       = 1.0
-    ZZ[obs[:g_w], endo_addl[:w_t1]] = -1.0
-    ZZ[obs[:g_w], endo[:z_t]]       = 1.0
-    DD[obs[:g_w]]                   = 100*(exp(m[:zstar])-1)
+    ZZ[obs[:obs_wages], endo[:w_t]]       = 1.0
+    ZZ[obs[:obs_wages], endo_addl[:w_t1]] = -1.0
+    ZZ[obs[:obs_wages], endo[:z_t]]       = 1.0
+    DD[obs[:obs_wages]]                   = 100*(exp(m[:zstar])-1)
 
     ## Inflation (GDP Deflator)
-    ZZ[obs[:π_gdpdef], endo[:π_t]]  = 1.0
-    DD[obs[:π_gdpdef]]              = 100*(m[:π_star]-1)
+    ZZ[obs[:obs_gdpdeflator], endo[:π_t]]  = 1.0
+    DD[obs[:obs_gdpdeflator]]              = 100*(m[:π_star]-1)
 
     ## Nominal interest rate
-    ZZ[obs[:R_n], endo[:R_t]]       = 1.0
-    DD[obs[:R_n]]                   = m[:Rstarn]
+    ZZ[obs[:obs_nominalrate], endo[:R_t]]       = 1.0
+    DD[obs[:obs_nominalrate]]                   = m[:Rstarn]
 
     ## Consumption Growth
-    ZZ[obs[:g_c], endo[:c_t]]       = 1.0
-    ZZ[obs[:g_c], endo_addl[:c_t1]] = -1.0
-    ZZ[obs[:g_c], endo[:z_t]]       = 1.0
-    DD[obs[:g_c]]                   = 100*(exp(m[:zstar])-1)
+    ZZ[obs[:obs_consumption], endo[:c_t]]       = 1.0
+    ZZ[obs[:obs_consumption], endo_addl[:c_t1]] = -1.0
+    ZZ[obs[:obs_consumption], endo[:z_t]]       = 1.0
+    DD[obs[:obs_consumption]]                   = 100*(exp(m[:zstar])-1)
 
     ## Investment Growth
-    ZZ[obs[:g_i], endo[:i_t]]       = 1.0
-    ZZ[obs[:g_i], endo_addl[:i_t1]] = -1.0
-    ZZ[obs[:g_i], endo[:z_t]]       = 1.0
-    DD[obs[:g_i]]                   = 100*(exp(m[:zstar])-1)
+    ZZ[obs[:obs_investment], endo[:i_t]]       = 1.0
+    ZZ[obs[:obs_investment], endo_addl[:i_t1]] = -1.0
+    ZZ[obs[:obs_investment], endo[:z_t]]       = 1.0
+    DD[obs[:obs_investment]]                   = 100*(exp(m[:zstar])-1)
 
     QQ[exo[:g_sh], exo[:g_sh]]           = m[:σ_g]^2
     QQ[exo[:b_sh], exo[:b_sh]]           = m[:σ_b]^2
@@ -79,7 +94,7 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
     # shocks to be equal to the standard deviation for the
     # unanticipated policy shock
     if shocks
-        for i = 1:num_anticipated_shocks(m)
+        for i = 1:n_anticipated_shocks(m)
             QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_rm$i")]^2
         end
     end

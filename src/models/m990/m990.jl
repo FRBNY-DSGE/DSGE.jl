@@ -92,14 +92,15 @@ end
 
 description(m::Model990) = "FRBNY DSGE Model m990, $(m.subspec)"
 
-#=
-doc"""
-Inputs: `m:: Model990`
+"""
+`init_model_indices!(m::Model990)`
+
+Arguments:
+`m:: Model990`: a model object
 
 Description:
 Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 """
-=#
 function init_model_indices!(m::Model990)
     # Endogenous states
     endogenous_states = [[
