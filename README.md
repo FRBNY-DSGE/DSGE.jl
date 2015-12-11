@@ -56,7 +56,7 @@ pass it to the `estimate` function.
 # construct a model object
 m = Model990()
 
-# optimize parameter vector, compute Hessian at mode, and full posterior
+# reoptimize parameter vector, compute Hessian at mode, and full posterior
 # parameter sampling
 estimate(m)
 
@@ -109,7 +109,7 @@ will become relevant as future features are implemented.
           - `figures/`: Plots and other figures
           - `tables/`: LaTeX tables
           - `raw/`: Raw output data from estimation step
-            - `paramsmode.h5`: Optimized mode after running optimization
+            - `paramsmode.h5`: Parameter vector mode after running optimization
             - `hessian.h5`: Hessian at the mode
             - `mhsave.h5`: Draws from posterior distribution
           - `work/`: Derived data files created using `raw/` files as input
@@ -540,7 +540,7 @@ from posterior distribution. See `estimate` in
 
 - *Initialization*: Read in and transform raw data from `save/input_data/`.
 
-- *Optimize parameter vector*: The main program will call the `csminwel`
+- *Reoptimize parameter vector*: The main program will call the `csminwel`
   optimization routine (located in `csminwel.jl`) to find modal parameter
   estimates.
 
@@ -569,7 +569,7 @@ The most common changes are listed below, in decreasing order of complexity:
 2. Modify equilibrium conditions or measurement equations
 3. Change the values of various parameter fields (i.e. initial `value`,
    `prior`, `transform`, etc.)
-4. Change the values of various computational settings (i.e. `optimize`,
+4. Change the values of various computational settings (i.e. `reoptimize`,
    `n_mh_blocks`)
 
 Points 1 and 2 often go together (adding a new parameter guarantees a change in
