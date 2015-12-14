@@ -92,14 +92,15 @@ end
 
 description(m::Model990) = "FRBNY DSGE Model m990, $(m.subspec)"
 
-#=
-doc"""
-Inputs: `m:: Model990`
+"""
+`init_model_indices!(m::Model990)`
+
+Arguments:
+`m:: Model990`: a model object
 
 Description:
 Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 """
-=#
 function init_model_indices!(m::Model990)
     # Endogenous states
     endogenous_states = [[
@@ -193,7 +194,7 @@ function Model990(subspec::AbstractString="ss2")
             _filestrings)
 
     # Set settings
-    default_settings(m)
+    settings_m990(m)
     default_test_settings(m)
 
     # Initialize parameters
@@ -624,4 +625,14 @@ function steadystate!(m::Model990)
     m[:ζ_nσ_ω]  = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*(ζ_Gσ_ω-ζ_gw/ζ_zw*ζ_zσ_ω)
 
     return m
+end
+
+function settings_m990(m::Model990)
+
+    # Anticipated shocks
+    m <= Setting(:num_anticipated_shocks,         6, "Number of anticipated policy shocks")
+    m <= Setting(:num_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
+    m <= Setting(:num_anticipated_lags,  24, "Number of periods back to incorporate zero bound expectations")
+
+    return default_settings(m)
 end

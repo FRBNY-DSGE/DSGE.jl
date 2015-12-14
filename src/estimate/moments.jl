@@ -333,10 +333,10 @@ function write_table_preamble(fid::IOStream)
     @printf fid "\\centering\n"
 end
 
-#=
-`small`: Whether to print an additional curly bracket after "\end{tabular}" (necessary if
-the table is enclosed by "\small{}")
-=#
+
+# `small`: Whether to print an additional curly bracket after "\end{tabular}" (necessary if
+# the table is enclosed by "\small{}")
+
 function write_table_postamble(fid::IOStream; note::AbstractString="", small::Bool=false)
     @printf fid "\\\\ \\\hline\n"
 
