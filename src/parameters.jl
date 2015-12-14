@@ -429,6 +429,9 @@ for f in (:(Base.exp),
 
     @eval ($f)(p::UnscaledOrSteadyState) = ($f)(p.value)
     @eval ($f)(p::ScaledParameter) = ($f)(p.scaledvalue)
+
+    @eval ($f)(p::UnscaledOrSteadyState, x::Number) = ($f)(p.value, x)
+    @eval ($f)(p::ScaledParameter, x::Number) = ($f)(p.scaledvalue, x)  
 end
 
 """

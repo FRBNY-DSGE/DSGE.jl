@@ -41,7 +41,7 @@ module DSGE
         find_density_bands, prior,
 
         # models/
-        steadystate!, Model990, eqcond, measurement,
+        steadystate!, Model990, SmetsWouters, eqcond, measurement,
 
         # solve/
         gensys, solve
@@ -52,7 +52,6 @@ module DSGE
     include("distributions_ext.jl")
     include("abstractdsgemodel.jl")
     include("settings.jl")
-
     include("solve/gensys.jl")
     include("solve/solve.jl")
 
@@ -70,5 +69,11 @@ module DSGE
     include("models/m990/eqcond.jl")
     include("models/m990/measurement.jl")
     include("models/m990/augment_states.jl")
+
+    include("models/smets_wouters/smets_wouters.jl")
+    include("models/smets_wouters/subspecs.jl")
+    include("models/smets_wouters/eqcond.jl")
+    include("models/smets_wouters/measurement.jl")
+    include("models/smets_wouters/augment_states.jl")
 
 end

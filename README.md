@@ -233,7 +233,7 @@ The `specify_mode!` function will update the parameter vector to the mode and
 skip reoptimization. Ensure that you supply an HDF5 file with a variable named
 `params` that is the correct dimension and data type.
 
-You can additional skip calculation of the Hessian matrix entirely.
+You can additionally skip calculation of the Hessian matrix entirely.
 ```julia
 m = Model990()
 specify_mode!(m, "path/to/parameter/mode/file.h5")
