@@ -204,24 +204,24 @@ function SmetsWouters(subspec::AbstractString="ss0")
                    tex_label="\\alpha")
 
     m <= parameter(:ζ_p,   0.7813, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.1),          fixed=false,
-                   description="ζ_p: The Calvo parameter. In every period, (1-ζ_p) of the intermediate goods producers optimize prices. ζ_p of them adjust prices according to steady-state inflation, π_star.",
+                   description="ζ_p: The Calvo parameter. In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
                    tex_label="\\zeta_p")
 
     m <= parameter(:ι_p,   0.3291, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false,
-                   description="ι_p: The persistence of last period's inflation in the equation that describes the intertemporal change in prices for intermediate goods producers who cannot adjust prices. The change in prices is a geometric average of steady-state inflation (π_star, with weight (1-ι_p)) and last period's inflation (π_{t-1})).",
+                   description="ι_p: The weight attributed to last period's inflation in price indexation. (1-ι_p) is the weight attributed to steady-state inflation.",
+
                    tex_label="\\iota_p")
 
     m <= parameter(:δ,      0.025,  fixed=true,
                    description="δ: The capital depreciation rate.", tex_label="\\delta" )     
 
-    ## TODO
+    
     m <= parameter(:Upsilon,  1.000,  (0., 10.),     (1e-5, 0.),      DSGE.Exponential(),    GammaAlt(1., 0.5),          fixed=true,
-                   description="Υ: This is the something something.",
+                   description="Υ: The trend evolution of the price of investment goods relative to consumption goods. Set equal to 1.",
                    tex_label="\\mathcal{\\Upsilon}") 
 
-    ## TODO - ask Marc and Marco
     m <= parameter(:Φ,   1.4672, (1., 10.),     (1.00, 10.00),   DSGE.Exponential(),    Normal(1.25, 0.12),         fixed=false,
-                   description="Φ: This is the something something.",
+                   description="Φ: Fixed costs.",
                    tex_label="\\Phi")
 
     m <= parameter(:S′′,       6.3325, (-15., 15.),   (-15., 15.),     Untransformed(),  Normal(4., 1.5),            fixed=false,
@@ -230,11 +230,9 @@ function SmetsWouters(subspec::AbstractString="ss0")
     m <= parameter(:h,        0.7205, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.7, 0.1),          fixed=false,
                    description="h: Consumption habit persistence.", tex_label="h")
 
-    ## TODO - ask Marc and Marco
     m <= parameter(:ppsi,     0.2648, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false,
-                   description="ppsi: This is the something something.", tex_label="ppsi")
+                   description="ppsi: Utilization costs.", tex_label="ppsi")
 
-    ## TODO - ask Marc and Marco
     m <= parameter(:ν_l,     2.8401, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    Normal(2, 0.75),            fixed=false,
                    description="ν_l: The coefficient of relative risk aversion on the labor term of households' utility function.", tex_label="\\nu_l")
     
@@ -242,9 +240,8 @@ function SmetsWouters(subspec::AbstractString="ss0")
                    description="ζ_w: (1-ζ_w) is the probability with which households can freely choose wages in each period. With probability ζ_w, wages increase at a geometrically weighted average of the steady state rate of wage increases and last period's productivity times last period's inflation.",
                    tex_label="\\zeta_w")
 
-    #TODO: Something to do with intertemporal changes in wages? – Check in tex file
     m <= parameter(:ι_w,   0.4425, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false,
-                   description="ι_w: This is the something something.",
+                   description="ι_w: No description available.",
                    tex_label="\\iota_w")
 
     m <= parameter(:λ_w,      1.5000,                                                                               fixed=true,
@@ -272,7 +269,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
                    tex_label="\\pi_*")   
 
     m <= parameter(:σ_c, 1.2312, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    Normal(1.5, 0.37),          fixed=false,
-                   description="σ_c: This is the something something.",
+                   description="σ_c: No description available.",
                    tex_label="\\sigma_{c}")
     
     m <= parameter(:ρ,      .8258, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.75, 0.10),        fixed=false,
@@ -280,11 +277,11 @@ function SmetsWouters(subspec::AbstractString="ss0")
                    tex_label="\\rho")
 
     m <= parameter(:ϵ_p,     10.000,                                                                               fixed=true,
-                   description="ϵ_p: This is the something something.",
+                   description="ϵ_p: No description available.",
                    tex_label="\\varepsilon_{p}")     
 
     m <= parameter(:ϵ_w,     10.000,                                                                               fixed=true,
-                   description="ϵ_w: This is the something something.",
+                   description="ϵ_w: No description available.",
                    tex_label="\\varepsilon_{w}")     
     
 
@@ -294,11 +291,11 @@ function SmetsWouters(subspec::AbstractString="ss0")
                    tex_label="\\gamma")
 
     m <= parameter(:Lmean,  875., (-1000., 1000.), (-1e3, 1e3),   Untransformed(), Normal(-45, 5),   fixed=false,
-                   description="Lmean: This is the something something.",
+                   description="Lmean: No description available.",
                    tex_label="Lmean")
 
     m <= parameter(:g_star,    0.1800,                                                                               fixed=true,
-                   description="g_star: This is the something something.",
+                   description="g_star: No description available.",
                    tex_label="g_*")  
 
     # exogenous processes - autocorrelation 
@@ -338,42 +335,38 @@ function SmetsWouters(subspec::AbstractString="ss0")
                    tex_label="\\sigma_{g}")
     
     m <= parameter(:σ_b,      0.1818, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
-                   description="σ_b: This is the something something.",
+                   description="σ_b: No description available.",
                    tex_label="\\sigma_{b}")
 
     m <= parameter(:σ_μ,     0.4601, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
                    tex_label="\\sigma_{\\mu}")
 
-    ## TODO
     m <= parameter(:σ_z,      0.4618, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
-                   description="σ_z: This is the something something.",
+                   description="σ_z: No description available.",
                    tex_label="\\sigma_{z}")
 
     m <= parameter(:σ_λ_f,    0.1455, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good.  Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
                    tex_label="\\sigma_{\\lambda_f}")
 
-    ## TODO
     m <= parameter(:σ_λ_w,    0.2089, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
-                   description="σ_λ_w: This is the something something.",
+                   description="σ_λ_w: No description available.",
                    tex_label="\\sigma_{\\lambda_w}")
 
-    ## TODO
     m <= parameter(:σ_rm,     0.2397, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
-                   description="σ_rm: This is the something something.",
+                   description="σ_rm: No description available.",
                    tex_label="\\sigma_{rm}")
     
     
-    ## TODO - look at etas in eqcond and figure out what they are, then confirm with Marc and Marco
     m <= parameter(:η_gz,       0.0500, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),
                    BetaAlt(0.50, 0.20), fixed=false,
-                   description="η_gz: Has to do with correlation of g and z shocks.",
+                   description="η_gz: Correlate g and z shocks.",
                    tex_label="\\eta_{gz}")        
 
     m <= parameter(:η_λ_f,      0.7652, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),
                    BetaAlt(0.50, 0.20),         fixed=false,
-                   description="η_λ_f: This is the something something.",
+                   description="η_λ_f: No description available.",
                    tex_label="\\eta_{\\lambda_f}")
 
     m <= parameter(:η_λ_w,      0.8936, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),
@@ -403,14 +396,13 @@ function SmetsWouters(subspec::AbstractString="ss0")
 end
 
 
-#=
-doc"""
-Inputs: `m::SmetsWouters`
-
-Description: (Re)calculates the model's steady-state values. `steadystate!(m)` must be called whenever the parameters of `m` are updated. 
 """
-=#
-# (Re)calculates steady-state values
+```
+steadystate!(m::SmetsWouters)
+```
+
+Calculates the model's steady-state values. `steadystate!(m)` must be called whenever the parameters of `m` are updated. 
+"""
 function steadystate!(m::SmetsWouters)
     m[:zstar]    = log(1+m[:γ]) + m[:α]/(1-m[:α])*log(m[:Upsilon])
     m[:rstar]    = exp(m[:σ_c]*m[:zstar]) / m[:β]

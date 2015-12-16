@@ -203,7 +203,7 @@ function Model990(subspec::AbstractString="ss2")
                    tex_label="\\alpha")
 
     m <= parameter(:ζ_p,   0.8940, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     BetaAlt(0.5, 0.1),          fixed=false,
-                   description="ζ_p: The Calvo parameter. In every period, (1-ζ_p) of the intermediate goods producers optimize prices. ζ_p of them adjust prices according to a weighted average of the previous period's inflation(π_t1) and steady-state inflation (π_star).",
+                   description="ζ_p: The Calvo parameter. In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
                    tex_label="\\zeta_p")
 
     m <= parameter(:ι_p,   0.1865, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false,
