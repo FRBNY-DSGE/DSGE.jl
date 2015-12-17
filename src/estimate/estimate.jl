@@ -166,7 +166,6 @@ end
 metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractModel,
     data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low)
 ```
-
 Implements the Metropolis-Hastings MCMC algorithm for sampling from the posterior
 distribution of the parameters.
 
