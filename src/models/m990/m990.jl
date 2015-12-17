@@ -92,14 +92,15 @@ end
 
 description(m::Model990) = "FRBNY DSGE Model m990, $(m.subspec)"
 
-#=
-doc"""
-Inputs: `m:: Model990`
+"""
+`init_model_indices!(m::Model990)`
+
+Arguments:
+`m:: Model990`: a model object
 
 Description:
 Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 """
-=#
 function init_model_indices!(m::Model990)
     # Endogenous states
     endogenous_states = [[
@@ -193,31 +194,31 @@ function Model990(subspec::AbstractString="ss2")
             _filestrings)
 
     # Set settings
-    default_settings(m)
+    settings_m990(m)
     default_test_settings(m)
 
     # Initialize parameters
     m <= parameter(:α,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
-                   description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.",
+                   description="α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",
                    tex_label="\\alpha")
 
     m <= parameter(:ζ_p,   0.8940, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     BetaAlt(0.5, 0.1),          fixed=false,
-                   description="ζ_p: The Calvo parameter. In every period, (1-ζ_p) of the intermediate goods producers optimize prices. ζ_p of them adjust prices according to steady-state inflation, π_star.",
+                   description="ζ_p: The Calvo parameter. In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
                    tex_label="\\zeta_p")
 
     m <= parameter(:ι_p,   0.1865, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false,
-                   description="ι_p: The persistence of last period's inflation in the equation that describes the intertemporal change in prices for intermediate goods producers who cannot adjust prices. The change in prices is a geometric average of steady-state inflation (π_star, with weight (1-ι_p)) and last period's inflation (π_{t-1})).",
+                   description="ι_p: The weight attributed to last period's inflation in price indexation. (1-ι_p) is the weight attributed to steady-state inflation.",
                    tex_label="\\iota_p")
 
     m <= parameter(:δ,      0.025,  fixed=true,
                    description="δ: The capital depreciation rate.", tex_label="\\delta" )
 
     m <= parameter(:Upsilon,  1.000,  (0., 10.),     (1e-5, 0.),      DSGE.Exponential(),    GammaAlt(1., 0.5),          fixed=true,
-                   description="Υ: No description available.",
+                   description="Υ: The trend evolution of the price of investment goods relative to consumption goods. Set equal to 1.",
                    tex_label="\\mathcal{\\Upsilon}")
 
     m <= parameter(:Φ,   1.1066, (1., 10.),     (1.00, 10.00),   DSGE.Exponential(),    Normal(1.25, 0.12),         fixed=false,
-                   description="Φ: No description available.",
+                   description="Φ: Fixed costs.",
                    tex_label="\\Phi")
 
     m <= parameter(:S′′,       2.7314, (-15., 15.),   (-15., 15.),     DSGE.Untransformed(),  Normal(4., 1.5),            fixed=false,
@@ -227,7 +228,7 @@ function Model990(subspec::AbstractString="ss2")
                    description="h: Consumption habit persistence.", tex_label="h")
 
     m <= parameter(:ppsi,     0.6862, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false,
-                   description="ppsi: No description available.", tex_label="ppsi")
+                   description="ppsi: Utilization costs.", tex_label="ppsi")
 
     m <= parameter(:ν_l,     2.5975, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    Normal(2, 0.75),            fixed=false,
                    description="ν_l: The coefficient of relative risk aversion on the labor
@@ -624,4 +625,14 @@ function steadystate!(m::Model990)
     m[:ζ_nσ_ω]  = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*(ζ_Gσ_ω-ζ_gw/ζ_zw*ζ_zσ_ω)
 
     return m
+end
+
+function settings_m990(m::Model990)
+
+    # Anticipated shocks
+    m <= Setting(:num_anticipated_shocks,         6, "Number of anticipated policy shocks")
+    m <= Setting(:num_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
+    m <= Setting(:num_anticipated_lags,  24, "Number of periods back to incorporate zero bound expectations")
+
+    return default_settings(m)
 end

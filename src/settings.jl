@@ -109,7 +109,6 @@ function default_settings(m::AbstractModel)
     m <= Setting(:saveroot, saveroot, "Root of data directory structure")
     m <= Setting(:dataroot, datapath, "Input data directory path")
 
-
     # Data vintage. Default behavior: choose the most recent data file
     input_files = readdir(inpath(m, "data", ""))
     vint = 0
