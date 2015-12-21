@@ -310,7 +310,7 @@ function Model990(subspec::AbstractString="ss2")
                    tex_label="F(\\omega)")
 
     m <= parameter(:spr,     1.7444, (0., 100.),      (1e-5, 0.),    DSGE.Exponential(),   GammaAlt(2., 0.1),           fixed=false,  scaling = x -> (1 + x/100)^0.25,
-                   description="spr_*: No description available.",
+                   description="spr_*: Steady-state spreads.",
                    tex_label="spr_*")
 
     m <= parameter(:ζ_spb, 0.0559, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(),    BetaAlt(0.05, 0.005),        fixed=false,
@@ -372,10 +372,10 @@ function Model990(subspec::AbstractString="ss2")
                    description="ρ_μ_e: Verification costs are a fraction μ_e of the amount the bank extracts from an entrepreneur in case of bankruptcy???? This doesn't seem right because μ_e isn't a process (p12 of PDF)",
                    tex_label="\\rho_{\\mu_e}")
 
-    m <= parameter(:ρ_γ,   0.7500, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(), BetaAlt(0.75, 0.15),         fixed=true,  description="ρ_γ: No description available.",              tex_label="\\rho_{\\gamma}")
-    m <= parameter(:ρ_π_star,   0.9900, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2),           fixed=true,  description="ρ_π_star: No description available.",         tex_label="\\rho_{\\pi^*}")
-    m <= parameter(:ρ_lr,     0.6936, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_lr: No description available.",             tex_label="\\rho_{lr}")
-    m <= parameter(:ρ_z_p,     0.8910, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_z_p: No description available.",             tex_label="\\rho_{z^p}")
+    m <= parameter(:ρ_γ,   0.7500, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(), BetaAlt(0.75, 0.15),         fixed=true,  description="ρ_γ: Autocorrelation coefficient on the γ shock.",              tex_label="\\rho_{\\gamma}")
+    m <= parameter(:ρ_π_star,   0.9900, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2),           fixed=true,  description="ρ_π_star: Autocorrelation coefficient on the π_star shock.",  tex_label="\\rho_{\\pi^*}")
+    m <= parameter(:ρ_lr,     0.6936, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_lr: Autocorrelation coefficient on the lr shock.", tex_label="\\rho_{lr}")
+    m <= parameter(:ρ_z_p,     0.8910, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_z_p: Autocorrelation coefficient on the z_p shock.", tex_label="\\rho_{z^p}")
     m <= parameter(:ρ_tfp,    0.1953, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_tfp: No description available.",            tex_label="\\rho_{tfp}")
     m <= parameter(:ρ_gdpdef, 0.5379, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_gdpdef: GDP deflator.",                            tex_label="\\rho_{gdpdef}")
     m <= parameter(:ρ_corepce,    0.2320, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_corepce: No description available.",            tex_label="\\rho_{corepce}")
@@ -413,21 +413,20 @@ function Model990(subspec::AbstractString="ss2")
                    description="σ_σ_ω: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_ω.",
                    tex_label="\\sigma_{\\sigma_\\omega}")
 
-    m <= parameter(:σ_μ_e,    0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(), RootInverseGamma(4., 0.05),  fixed=true,  description="σ_μ_e: No description available.",           tex_label="\\sigma_{\\mu_e}")
-    m <= parameter(:σ_γ,   0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(),   RootInverseGamma(4., 0.01),  fixed=true,  description="σ_γ: No description available.",             tex_label="\\sigma_{\\gamma}")
-    m <= parameter(:σ_π_star,   0.0269, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(), RootInverseGamma(6., 0.03),  fixed=false, description="σ_π_star: No description available.",        tex_label="\\sigma_{\\pi^*}")
-    m <= parameter(:σ_lr,     0.1766, (1e-8,10.),      (1e-8, 5.),    DSGE.Exponential(), RootInverseGamma(2., 0.75),  fixed=false, description="σ_lr: No description available.",
-                   tex_label="\\sigma_{lr}")
-    m <= parameter(:σ_z_p,     0.1662, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_z_p: No description available.",            tex_label="\\sigma_{z^p}")
-    m <= parameter(:σ_tfp,    0.9391, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_tfp: No description available.",           tex_label="\\sigma_{tfp}")
+    m <= parameter(:σ_μ_e,    0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(), RootInverseGamma(4., 0.05),  fixed=true,  description="σ_μ_e: Standard deviation of the μ_e shock.",         tex_label="\\sigma_{\\mu_e}")
+    m <= parameter(:σ_γ,   0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(),   RootInverseGamma(4., 0.01),  fixed=true,  description="σ_γ: Standard deviation of the γ shock.",              tex_label="\\sigma_{\\gamma}")
+    m <= parameter(:σ_π_star,   0.0269, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(), RootInverseGamma(6., 0.03),  fixed=false, description="σ_π_star: Standard deviation of the π_star shock.", tex_label="\\sigma_{\\pi^*}")
+    m <= parameter(:σ_lr,     0.1766, (1e-8,10.),      (1e-8, 5.),    DSGE.Exponential(), RootInverseGamma(2., 0.75),  fixed=false, description="σ_lr: Standard deviation of the lr shock.",           tex_label="\\sigma_{lr}")
+    m <= parameter(:σ_z_p,     0.1662, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_z_p: Standard deviation of the z_p shock.",      tex_label="\\sigma_{z^p}")
+    m <= parameter(:σ_tfp,    0.9391, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false, description="σ_tfp: Standard deviation of the σ_tfp shock.",     tex_label="\\sigma_{tfp}")
     m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.), (1e-8, 5.),DSGE.Exponential(),
          RootInverseGamma(2., 0.10), fixed=false,
-         description="σ_gdpdef: No description available.",
+         description="σ_gdpdef: Standard deviation of the gdpdef shock.",
          tex_label="\\sigma_{gdpdef}")
 
     m <= parameter(:σ_corepce, 0.0999, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),RootInverseGamma(2., 0.10),
                    fixed=false,
-                   description="σ_corepce: No description available.",
+                   description="σ_corepce: Standard deviation of the pce shock.",
                    tex_label="\\sigma_{corepce}")
 
     # standard deviations of the anticipated policy shocks
@@ -435,12 +434,12 @@ function Model990(subspec::AbstractString="ss2")
         if i < 13
             m <= parameter(symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(),
                            RootInverseGamma(4., .2), fixed=false,
-                           description="σ_r_m$i: No description available.",
+                           description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
         else
             m <= parameter(symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.),
                            DSGE.Exponential(), RootInverseGamma(4., .2), fixed=true,
-                           description="σ_r_m$i: No description available.",
+                           description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
         end
     end
@@ -452,12 +451,12 @@ function Model990(subspec::AbstractString="ss2")
 
     m <= parameter(:η_λ_f,      0.7892, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(),
                    BetaAlt(0.50, 0.20),         fixed=false,
-                   description="η_λ_f: No description available.",
+                   description="η_λ_f: Moving average component in the price markup shock.",
                    tex_label="\\eta_{\\lambda_f}")
 
     m <= parameter(:η_λ_w,      0.4226, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(),
                    BetaAlt(0.50, 0.20),         fixed=false,
-                   description="η_λ_w: AR(2) coefficient on wage markup shock process.",
+                   description="η_λ_w: Moving average component in the wage markup shock.",
                    tex_label="\\eta_{\\lambda_w}")
 
     m <= parameter(:Iendoα, 0.0000, (0.000, 1.000), (0., 0.), DSGE.Untransformed(),
