@@ -88,6 +88,8 @@ type Model990{T} <: AbstractModel{T}
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
     _filestrings::SortedDict{Symbol,AbstractString, ForwardOrdering} # The strings we will print to a filename
+
+    fred_series::Vector{ASCIIString}                # FRED identifiers
 end
 
 description(m::Model990) = "FRBNY DSGE Model m990, $(m.subspec)"
@@ -176,7 +178,12 @@ function Model990(subspec::AbstractString="ss2")
     rng                = MersenneTwister()
     testing            = false
     _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
-
+    fred_series        = ["GDP", "GDPCTPI", "PCE", "FPI",
+                          "CNP16OV", "CE16OV", "PRS85006013", "UNRATE", "AWHNONAG", "FF",
+                          "BAA", "GS10", "PRS85006063", "CES0500000030", "CLF16OV",
+                          "PCEPILFE", "COMPNFB", "GDI"]
+    
+    
     # initialize empty model
     m = Model990{Float64}(
             # model parameters and steady state values
@@ -191,7 +198,8 @@ function Model990(subspec::AbstractString="ss2")
             test_settings,
             rng,
             testing,
-            _filestrings)
+            _filestrings,
+            fred_series)
 
     # Set settings
     settings_m990(m)

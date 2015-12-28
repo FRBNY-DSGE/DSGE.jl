@@ -24,7 +24,7 @@ is used for.
 immutable Setting{T}
     key::Symbol                  # name of setting
     value::T                     # whatever the setting is
-    print::Bool             # whether or not to add this setting to the print
+    print::Bool                  # whether or not to add this setting to the print
     code::AbstractString         # what gets printed to the print
     description::AbstractString  # description of what the setting is for
 end
