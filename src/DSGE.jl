@@ -3,11 +3,12 @@ isdefined(Base, :__precompile__) && __precompile__()
 module DSGE
     using Distributions, Roots.fzero, HDF5
     using DataStructures: SortedDict, insert!, ForwardOrdering
+    using FredData, DataFrames
     using QuantEcon: solve_discrete_lyapunov
     import Calculus
     import Optim
     using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
-
+    
     export
 
         # distributions_ext.jl
@@ -44,7 +45,10 @@ module DSGE
         steadystate!, Model990, SmetsWouters, eqcond, measurement,
 
         # solve/
-        gensys, solve
+        gensys, solve,
+
+        # data/
+        load_fred_data
 
     const VERBOSITY = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
 
@@ -75,5 +79,7 @@ module DSGE
     include("models/smets_wouters/eqcond.jl")
     include("models/smets_wouters/measurement.jl")
     include("models/smets_wouters/augment_states.jl")
+
+    include("data/fred_data.jl")
 
 end
