@@ -3,10 +3,15 @@
 
 Checks in `inpath(m)` for a FRED dataset corresponding to
 `data_vintage(m)`. Necessary series (identified by series mnemonics in
-`m.fred_series`) that are not found on disk are fetched from the FRED
+`m.data_series[:fred]`) that are not found on disk are fetched from the FRED
 API. The full dataset is returned and written to the appropriate data vintage file.
+
+# Arguments
+- `m::AbstractModel`: the model object
+- `start_date`: starting date. 
 """
 function load_fred_data(m::AbstractModel; start_date="1959-01-01", end_date=last_quarter_end())
+    mnemonics = m.data_series[:fred]
     
     # Date formatting
     df = "y-m-d"
@@ -24,35 +29,39 @@ function load_fred_data(m::AbstractModel; start_date="1959-01-01", end_date=last
     missing_series = []
     dataset = []
     
-    # Check to see if a dataset of our particular vintage exists and that we have the right number of observations
     datafile = inpath(m, "data", "data_$vint.txt") 
     if isfile(datafile)
 
+        # Read in dataset and check that the file contains data for the proper dates
         dataset = readtable(datafile, separator = '\t')
-        @assert size(dataset)[1] == n_quarters "Number of quarters requested does not match number of quarters of data on disk."
-        
-        # If series isn't in the file, add it to missing_series
-        for series in m.fred_series
-            if !in(symbol(series), names(dataset))
-                append!(missing_series,series)
+
+        if !in(string(firstdayofquarter(start_date)), dataset[:date]) || 
+            !in(string(firstdayofquarter(end_date)), dataset[:date])
+            missing_series = mnemonics
+        else
+            # If we have the right dates but the series isn't in the file, add it to missing_series
+            for series in mnemonics
+                if !in(symbol(series), names(dataset))
+                    append!(missing_series,series)
+                end
             end
         end
-
     else
-        missing_series = m.fred_series
+        missing_series = mnemonics
         dataset = DataFrame(date = get_quarter_starts(start_date,end_date))
     end
 
     # Get the missing data series
     if missing_series != []
-
+        
         fredseries = Array{FredSeries, 1}(length(missing_series))
         f = Fred()
-
+        
         for (i,s) in enumerate(missing_series)
             println(s)
             try
-                fredseries[i] = get_data(f, s; frequency="q", observation_start=string(start_date), observation_end=string(end_date))
+                fredseries[i] = get_data(f, s; frequency="q", observation_start = string(start_date),
+                                         observation_end=string(end_date), vintage_dates=string(vint_date))
             catch err
                 warn("$s could not be fetched.")
                 continue
@@ -65,37 +74,16 @@ function load_fred_data(m::AbstractModel; start_date="1959-01-01", end_date=last
                 series = fredseries[i]
                 series_id = symbol(series.id)
                 rename!(series.df, :value, series_id)
-                dataset = join(dataset, series.df[[:date, series_id]], on=:date)
+                dataset = join(dataset, series.df[:date, series_id], on=:date)
             end
         end
 
+        writetable(datafile, dataset, separator = '\t')
     end
 
+    # Make sure to only return the series and dates that are specified for this
+    # model (there may be additional series in the # file)
 
-    writetable(datafile, dataset, separator = '\t')
-    return dataset
-end
-
-
-
-"""
-Returns the first day of the previous quarter
-"""
-function last_quarter_end()
-    
-    cqs = Dates.firstdayofquarter(now())     # current quarter start
-    lqe = cqs - Day(1)                       # last quarter end
-
-    Dates.format(lqe, "yyyy-mm-dd")
-end
-
-"""
-Returns a DataArray of quarter start dates between `start_date` and `end_date`.
-"""
-function get_quarter_starts(start_date,end_date)
-    dr = start_date:end_date
-    
-    dates = recur(dr) do x
-        firstdayofquarter(x) == x 
-    end
+     cols = [:date; convert(Vector{Symbol}, [symbol(s) for s in mnemonics])]
+     return dataset[string(start_date):string(end_date), cols]
 end
