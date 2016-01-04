@@ -68,7 +68,7 @@ conditions.
   output files to avoid overwriting the output of previous estimations/forecasts that differ
   only in their settings, but not in their underlying mathematical structure.
 
-* `data_series::Dict{Symbol,Vector{ASCIIString}}`: A dictionary that
+* `data_series::Dict{Symbol,Vector{Symbol}}`: A dictionary that
   stores data sources (keys) and lists of series mnemonics
   (values). DSGE.jl will fetch data from the Federal Reserve Bank of
   St. Louis's FRED database; all other data must be downloaded by the
@@ -95,7 +95,7 @@ type Model990{T} <: AbstractModel{T}
     testing::Bool                                   # Whether we are in testing mode or not
     _filestrings::SortedDict{Symbol,AbstractString, ForwardOrdering} # The strings we will print to a filename
 
-    data_series::Dict{Symbol,Vector{ASCIIString}}   # Keys = data sources, values = vector of series mnemonics
+    data_series::Dict{Symbol,Vector{Symbol}}   # Keys = data sources, values = vector of series mnemonics
 end
 
 description(m::Model990) = "FRBNY DSGE Model m990, $(m.subspec)"
@@ -185,15 +185,15 @@ function Model990(subspec::AbstractString="ss2")
     testing            = false
     _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
 
-    fred_series        = ["GDP", "GDPCTPI", "PCE", "FPI",
-                          "CNP16OV", "CE16OV", "PRS85006013", "UNRATE", "AWHNONAG", "FF",
-                          "BAA", "GS10", "PRS85006063", "CES0500000030", "CLF16OV",
-                          "PCEPILFE", "COMPNFB", "GDI"]
-    spf_series         = []
+    fred_series        = [:GDP, :GDPCTPI, :PCE, :FPI]
+                          :CNP16OV, :CE16OV, :PRS85006013, :UNRATE, :AWHNONAG, :FF,
+                          :BAA, :GS10, :PRS85006063, :CES0500000030, :CLF16OV,
+                          :PCEPILFE, :COMPNFB]
+    spf_series         = [:ASACX10]
     fernald_series     = []
     ois_series         = []
     
-    data_series = Dict{Symbol,AbstractString}(:fred => fred_series, :spf => spf_series,
+    data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
                                               :fernald => fernald_series, :ois => ois_series)
     
     # initialize empty model

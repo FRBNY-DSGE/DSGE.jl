@@ -3,7 +3,7 @@ isdefined(Base, :__precompile__) && __precompile__()
 module DSGE
     using Distributions, Roots.fzero, HDF5
     using DataStructures: SortedDict, insert!, ForwardOrdering
-    using FredData, DataFrames
+    using FredData, DataFrames, Base.Dates
     using QuantEcon: solve_discrete_lyapunov
     import Calculus
     import Optim
@@ -48,7 +48,7 @@ module DSGE
         gensys, solve,
 
         # data/
-        load_fred_data
+        load_fred_data, load_data
 
     const VERBOSITY = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
 
