@@ -185,7 +185,7 @@ function Model990(subspec::AbstractString="ss2")
     testing            = false
     _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
 
-    fred_series        = [:GDP, :GDPCTPI, :PCE, :FPI]
+    fred_series        = [:GDP, :GDPCTPI, :PCE, :FPI,
                           :CNP16OV, :CE16OV, :PRS85006013, :UNRATE, :AWHNONAG, :FF,
                           :BAA, :GS10, :PRS85006063, :CES0500000030, :CLF16OV,
                           :PCEPILFE, :COMPNFB]

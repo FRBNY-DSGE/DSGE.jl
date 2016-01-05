@@ -32,11 +32,6 @@ function load_fred_data(m::AbstractModel;
     else
         Year(1900) + Date(vint, df2)
     end
-
-    # Get data vintage and check that last_quarter_end is before that.
-    @assert vint_date >= end_date "Data vintage must be more recent than end date specified."
-    
-    n_quarters = 4*(year(end_date) - year(start_date)) - quarterofyear(start_date) + quarterofyear(end_date) + 1
     
     # Set up dataset and labels
     missing_series = Vector{Symbol}()
@@ -57,7 +52,7 @@ function load_fred_data(m::AbstractModel;
         qend = lastdayofquarter(end_date)
 
         if !in(qstart, data[:date]) || !in(qend, data[:date])
-            println("Start and end dates are not in data...fetching all FRED series...")
+            println("Start and end dates are not in data file...fetching all FRED series...")
             data = DataFrame(date = get_quarter_ends(start_date,end_date))
             missing_series = mnemonics
         else
@@ -85,6 +80,7 @@ function load_fred_data(m::AbstractModel;
                 fredseries[i] = get_data(f, string(s); frequency="q", observation_start=string(start_date),
                                          observation_end=string(end_date), vintage_dates=string(vint_date))
             catch err
+                warn(err.msg)
                 warn("$s could not be fetched.")
                 continue
             end
