@@ -73,7 +73,7 @@ function load_fred_data(m::AbstractModel;
         
         fredseries = Array{FredSeries, 1}(length(missing_series))
         f = Fred()
-        
+
         for (i,s) in enumerate(missing_series)
             println("Fetching $(s)...")
             try
@@ -93,7 +93,7 @@ function load_fred_data(m::AbstractModel;
                 series_id = symbol(series.id)
                 rename!(series.df, :value, series_id)
                 map!(x->lastdayofquarter(x), series.df[:date], series.df[:date])
-                data = join(data, series.df[:,[:date, series_id]], on=:date)
+                data = join(data, series.df[:,[:date, series_id]], on=:date, kind=:outer)
             end
         end
         

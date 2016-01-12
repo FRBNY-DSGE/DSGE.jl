@@ -113,8 +113,8 @@ function default_settings(m::AbstractModel)
     input_files = readdir(inpath(m, "data", ""))
     vint = 0
     for file in input_files
-        if ismatch(r"^\s*data*", file)
-            regmatch = match(r"^\s*data_(?P<vint>\d{6})", file)
+        if ismatch(r"^\s*fred*", file)
+            regmatch = match(r"^\s*fred_(?P<vint>\d{6})", file)
             vint = max(vint, parse(Int,regmatch[:vint]))
         end
     end

@@ -20,15 +20,18 @@ function load_data(m::AbstractModel; start_date="1959-03-31", end_date=last_quar
 
     # Date formatting
     start_date = Date(start_date, "y-m-d")
-    end_date = Date(end_date, "y-m-d")
 
-    # Load FRED data first
+    if !isa(end_date, Date) end_date = Date(end_date, "y-m-d") end
+
+    # Load FRED data, set ois series to load
     data = load_fred_data(m; start_date=firstdayofquarter(start_date), end_date=end_date)
-
+    set_ois_series!(m)
+    
     # For each additional source, search for the file with the proper name. Open
     # it, read it in, and merge it with fred_series
     
     vint = data_vintage(m)
+    
     for source in keys(m.data_series)
         
         if isequal(source, :fred)
@@ -46,10 +49,12 @@ function load_data(m::AbstractModel; start_date="1959-03-31", end_date=last_quar
             # Convert dates from strings to quarter-end dates for date arithmetic
             addl_data[:date] = stringstodates(addl_data[:date])
             map!(x->lastdayofquarter(x), addl_data[:date], addl_data[:date])
+
             
             if !in(lastdayofquarter(start_date), addl_data[:date]) || 
                 !in(lastdayofquarter(end_date), addl_data[:date])
-                error("$infile does not contain the date range specified. Check that data are up to date.")
+                warn("$infile does not contain the entire date range specified...you may want to update your data.")
+                
             end
             
             # make sure each mnemonic that was specified is present
@@ -63,8 +68,8 @@ function load_data(m::AbstractModel; start_date="1959-03-31", end_date=last_quar
             cols = [:date; mnemonics]
             rows = start_date .<= addl_data[:date] .<= end_date
             
-            addl_data = addl_data[rows, cols]            
-            data = join(data, addl_data, on=:date)
+            addl_data = addl_data[rows, cols]
+            data = join(data, addl_data, on=:date, kind=:outer)
             
         elseif isempty(m.data_series[source])
             warn("No series were specificed from $(string(source))")
@@ -73,11 +78,27 @@ function load_data(m::AbstractModel; start_date="1959-03-31", end_date=last_quar
             error("$infile was not found." )
         end
     end
+
+    # turn NAs into NaNs
+    for col in names(data)
+        data[isna(data[:]),:] = NaN
+    end
     
     return data
 end
 
+"""
+`set_ois_series!(m::AbstractModel)`
 
+    Sets the series to load from the file `ois_vint.txt` based on `n_anticipated_shocks(m)`.  
+"""
+function set_ois_series!(m::AbstractModel)
+    nant = n_anticipated_shocks(m)
+    if nant > 0
+        m.data_series[:ois] = [symbol("ant$i") for i in 1:nant]
+    end
+
+end
 
 
 """
