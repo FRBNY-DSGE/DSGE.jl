@@ -190,11 +190,11 @@ function Model990(subspec::AbstractString="ss2")
                           :BAA, :GS10, :PRS85006063, :CES0500000030, :CLF16OV,
                           :PCEPILFE, :COMPNFB]
     spf_series         = [:ASACX10]
-    fernald_series     = []
-    ois_series         = []
+    fernald_series     = [:alpha, :dtfp, :dtfp_util]
+    # ois data taken care of in load_data
     
     data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
-                                              :fernald => fernald_series, :ois => ois_series)
+                                              :fernald => fernald_series)
     
     # initialize empty model
     m = Model990{Float64}(
@@ -650,9 +650,9 @@ end
 function settings_m990(m::Model990)
 
     # Anticipated shocks
-    m <= Setting(:num_anticipated_shocks,         6, "Number of anticipated policy shocks")
-    m <= Setting(:num_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    m <= Setting(:num_anticipated_lags,  24, "Number of periods back to incorporate zero bound expectations")
+    m <= Setting(:n_anticipated_shocks,         6, "Number of anticipated policy shocks")
+    m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
+    m <= Setting(:n_anticipated_lags,  24, "Number of periods back to incorporate zero bound expectations")
 
     return default_settings(m)
 end
