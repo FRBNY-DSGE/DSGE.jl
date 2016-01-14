@@ -83,5 +83,6 @@ module DSGE
     include("data/load_data.jl")
     include("data/fred_data.jl")
     include("data/transformations.jl")
+    include("data/transform_data.jl")
 
 end
