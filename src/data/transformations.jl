@@ -1,3 +1,73 @@
+function Base.call(x::Function, df::DataFrame)
+    x(df)
+end
+
+
+"""
+`function thousandstomillions(v)`
+
+Convert vector from thousands scale to millions scale
+"""
+function thousandstomillions(v)
+    v / 1000
+end
+
+
+"""
+`function annualtoquarter(v)`
+
+Convert from annual to quarter by dividing by 4
+"""
+function annualtoquarter(v)
+    v / 4
+end
+
+function nominal_to_real(col, df, deflator=:GDP)
+    if deflator == :GDP
+        return df[col] ./ df[:GDPCTPI] 
+    elseif deflator == :PCE
+        return df[col] ./ df[:PCEPILFE]
+    else
+        error("nominal_to_real isn't defined for this deflator")
+    end
+end
+
+"""
+`function nominal_to_realpercapita(col::Symbol, df)`
+
+Convert column col from a nominal to a real, per-capita value
+"""
+function nominal_to_realpercapita(col, df, deflator=:GDP)
+    nominal_to_real(col, df, deflator) ./ thousandstomillions(df[:CNP16OV])
+end
+
+"""
+"""
+function to_perpersonemployed(col, df; src=:nonfarm)
+    if src == :nonfarm
+        df[col] ./ df[:PRS85006013]
+    elseif src == :civilian
+        df[col] ./ df[:CE16OV]
+    else
+        error("to_perpersonemployed isn't defined for this deflator")
+    end
+end
+
+
+"""
+`function nominal_to_realperemployed(col::Symbol, df)`
+
+Convert column col from a nominal to a real, per-person-employed value
+"""
+function nominal_to_realperemployed(col, df; src=:nonfarm)
+    if src == :nonfarm
+        to_perpersonemployed(col, df, src=src) ./ df[:PRS85006013]
+    elseif src == :civilian
+        to_perpersonemployed(col, df, src=src) ./ df[:CE16OV]
+    end
+end
+
+
 """
 ```
 yt, yf = hpfilter(y::Vector{AbstractFloat}, λ::AbstractFloat)
@@ -45,3 +115,5 @@ difflog(y::Vector{AbstractFloat})
 function difflog(x::Vector{AbstractFloat})
     return log([NaN; diff(x)])
 end
+
+
