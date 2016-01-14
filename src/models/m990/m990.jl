@@ -1,5 +1,5 @@
 """
-```
+S```
 Model990{T} <: AbstractModel{T}
 ```
 
@@ -95,7 +95,8 @@ type Model990{T} <: AbstractModel{T}
     testing::Bool                                   # Whether we are in testing mode or not
     _filestrings::SortedDict{Symbol,AbstractString, ForwardOrdering} # The strings we will print to a filename
 
-    data_series::Dict{Symbol,Vector{Symbol}}   # Keys = data sources, values = vector of series mnemonics
+    data_series::Dict{Symbol,Vector{Symbol}}       # Keys = data sources, values = vector of series mnemonics
+    data_transforms::OrderedDict{Symbol,Function}  # functions to transform raw data into input matrix
 end
 
 description(m::Model990) = "FRBNY DSGE Model m990, $(m.subspec)"
@@ -185,6 +186,7 @@ function Model990(subspec::AbstractString="ss2")
     testing            = false
     _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
 
+    # Set up data sources and series
     fred_series        = [:GDP, :GDPCTPI, :PCE, :FPI,
                           :CNP16OV, :CE16OV, :PRS85006013, :UNRATE, :AWHNONAG, :FF,
                           :BAA, :GS10, :PRS85006063, :CES0500000030, :CLF16OV,
@@ -195,6 +197,10 @@ function Model990(subspec::AbstractString="ss2")
     
     data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
                                               :fernald => fernald_series)
+
+
+    # set up data transformations
+    data_transforms = OrderedDict{Symbol,Function}()
     
     # initialize empty model
     m = Model990{Float64}(
@@ -211,12 +217,16 @@ function Model990(subspec::AbstractString="ss2")
             rng,
             testing,
             _filestrings,
-            data_series)
+            data_series,
+            data_transforms)
 
     # Set settings
     settings_m990(m)
     default_test_settings(m)
 
+    # Set data transformations
+    init_data_transforms!(m)
+    
     # Initialize parameters
     m <= parameter(:α,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",
@@ -656,3 +666,106 @@ function settings_m990(m::Model990)
 
     return default_settings(m)
 end
+
+
+function init_data_transforms!(m::Model990)
+    
+    ## 1. FRED
+    
+    # Nominal GDP -> real GDP per capita
+    m.data_transforms[:REALGDP] = function realgdppercapita(levels)
+        nominal_to_realpercapita(:GDP, levels)
+    end
+
+    # GDP deflator
+    m.data_transforms[:GDPDEF] = function gdpdeflator(levels)
+        levels[:GDPCTPI]
+    end
+
+    # Nominal consumption -> real consumption per capita
+    m.data_transforms[:REALC] = function realcpercapita(levels)
+        nominal_to_realpercapita(:PCE, levels)
+    end
+
+    # Nominal investment -> real investment per capita
+    m.data_transforms[:REALI] = function realipercapita(levels)
+        nominal_to_realpercapita(:FPI, levels)
+    end
+
+    # Employment/population ratio relative to average employment/pop ratio
+    m.data_transforms[:LSUPPLY] = function empratio(levels)
+        levels[:CE16OV] ./ levels[:CNP16OV] / (mean(levels[:CE16OV]) / mean(levels[:CNP16OV]))
+    end
+    
+    # Nominal compensation -> real compensation per employee
+    m.data_transforms[:REALWAGEEC] = function realwageec(levels)
+        nominal_to_realperemployed(:PRS85006063, levels)
+    end
+
+    # Nominal average weekly earnings -> real average weekly earnings
+    m.data_transforms[:REALWAGEAWE] = function realwageawe(levels)
+        nominal_to_real(:CES0500000030, levels)
+    end
+
+    # Annualized fed funds rate -> quarterly fed funds rate
+    m.data_transforms[:FEDFUNDS] = function fedfunds(levels)
+        annualtoquarter(levels[:FF])
+    end
+
+    # civilian labor force / civilian employment
+    m.data_transforms[:UNEMP] = function unemployment(levels)
+        to_perpersonemployed(:CLF16OV, levels, src=:civilian) 
+    end
+
+
+    # Baa-T spread, quarterly rate
+    m.data_transforms[:SPREAD] = function spread(levels)
+        annualtoquarter(levels[:BAA] - levels[:GS10])
+    end
+
+    # population
+    m.data_transforms[:POPULATION] = function population(levels)
+        levels[:CNP16OV]
+    end
+
+    # core pce
+    m.data_transforms[:COREPCE] = function corepce(levels)
+        levels[:PCEPILFE]
+    end
+
+
+    # BLS Employment
+    m.data_transforms[:EMPLOYMENT] = function employment(levels)
+        levels[:CE16OV]
+    end
+
+    # hours
+    m.data_transforms[:HOURS] = function hours(levels)
+        levels[:AWHNONAG]
+    end
+
+    # real hourly wage
+    m.data_transforms[:REALHRLYWAGE] = function realhourlywage(levels)
+        levels[:COMPNFB]
+    end
+
+    ## 2. SPF
+    
+    # inflation expectations
+    m.data_transforms[:LONGRATE] = function inflationexpectations(levels)
+        levels[:ASACX10]  - 0.5
+    end
+    
+end
+
+## # For some reason this function won't work; doing it the dumb way above
+## function relativeemploymentratio(levels)
+##     employed = levels[:CE16OV]
+##     pop      = levels[:CNP16OV]
+    
+##     avg_empratio = mean(employed)/mean(pop)
+    
+##     employed ./ pop / avg_empratio
+    
+## end
+    
