@@ -81,7 +81,7 @@ function load_data(m::AbstractModel; start_date="1959-03-31", end_date=last_quar
 
     # turn NAs into NaNs
     for col in names(data)
-        data[isna(data[:]),:] = NaN
+        data[isna(data[col]), col] = NaN
     end
     
     return data
