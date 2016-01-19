@@ -1,4 +1,3 @@
-
 """
 `transform_data(m::AbstractModel, levels::DataFrame)`
 
@@ -13,11 +12,6 @@ function transform_data(m::AbstractModel, levels::DataFrame)
         transformed[series] = call(m.data_transforms[series], levels)
     end
     
-    # Order the matrix columns appropriately
-    transformed
+    sort!(transformed, cols = :date)
 end
 
-function order_data!(m::AbstractModel, transformed::DataFrame)
-
-    
-end

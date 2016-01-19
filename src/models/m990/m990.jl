@@ -674,7 +674,7 @@ function init_data_transforms!(m::Model990)
     
     # Nominal GDP -> real GDP per capita
     m.data_transforms[:REALGDP] = function realgdppercapita(levels)
-        nominal_to_realpercapita(:GDP, levels)
+        nominal_to_realpercapita(:GDP, levels, scale = 1000)
     end
 
     # GDP deflator
@@ -684,12 +684,12 @@ function init_data_transforms!(m::Model990)
 
     # Nominal consumption -> real consumption per capita
     m.data_transforms[:REALC] = function realcpercapita(levels)
-        nominal_to_realpercapita(:PCE, levels)
+        nominal_to_realpercapita(:PCE, levels, scale = 1000)
     end
 
     # Nominal investment -> real investment per capita
     m.data_transforms[:REALI] = function realipercapita(levels)
-        nominal_to_realpercapita(:FPI, levels)
+        nominal_to_realpercapita(:FPI, levels, scale = 10000)
     end
 
     # Employment/population ratio relative to average employment/pop ratio
@@ -699,7 +699,7 @@ function init_data_transforms!(m::Model990)
     
     # Nominal compensation -> real compensation per employee
     m.data_transforms[:REALWAGEEC] = function realwageec(levels)
-        nominal_to_realperemployed(:PRS85006063, levels)
+        nominal_to_realpercapita(:PRS85006063, levels, population_measure=:nonfarm_employed)
     end
 
     # Nominal average weekly earnings -> real average weekly earnings
@@ -714,7 +714,7 @@ function init_data_transforms!(m::Model990)
 
     # civilian labor force / civilian employment
     m.data_transforms[:UNEMP] = function unemployment(levels)
-        to_perpersonemployed(:CLF16OV, levels, src=:civilian) 
+        percapita(:CLF16OV, levels, population_measure = :civilian_employed)
     end
 
 
@@ -757,15 +757,4 @@ function init_data_transforms!(m::Model990)
     end
     
 end
-
-## # For some reason this function won't work; doing it the dumb way above
-## function relativeemploymentratio(levels)
-##     employed = levels[:CE16OV]
-##     pop      = levels[:CNP16OV]
-    
-##     avg_empratio = mean(employed)/mean(pop)
-    
-##     employed ./ pop / avg_empratio
-    
-## end
     
