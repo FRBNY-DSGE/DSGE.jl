@@ -121,9 +121,16 @@ function default_settings(m::AbstractModel)
     vint = "$vint"
     m <= Setting(:data_vintage, vint, true, "vint", "Date of data")
 
+    # Data settings
+    m <= Setting(:use_population_forecast, false, "Whether to use population forecasts as data")
+
+    # Timing
+    ffq = lastdayofquarter(Date(data_vintage(m), "yymmdd") + Year(2000))
+    m <= Setting(:first_forecast_quarter, ffq, "First quarter for which to produce forecasts.")
+    
     # Anticipated shocks
-    m <= Setting(:n_anticipated_shocks,         0, "Number of anticipated policy shocks")
-    m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
+    # m <= Setting(:n_anticipated_shocks,         0, "Number of anticipated policy shocks")
+    # m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
     m <= Setting(:zlb_start_index,  198, "Time index of first period to incorporate zero bound expectation")
     m <= Setting(:n_presample_periods, 2, "Number of periods in the presample")
 
