@@ -150,6 +150,9 @@ data_vintage(m::AbstractModel) = get_setting(m, :data_vintage)
 # Interface for general computation settings
 use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers)
 
+# Interface for data step
+use_population_forecast(m::AbstractModel) = get_setting(m, :use_population_forecast)
+
 # Interface for estimation settings
 reoptimize(m::AbstractModel)          = get_setting(m, :reoptimize)
 calculate_hessian(m::AbstractModel) = get_setting(m, :calculate_hessian)
@@ -455,5 +458,4 @@ Generate a draw from d with variance optionally scaled by cc^2.
 function rand{T<:AbstractFloat, U<:AbstractModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
-
 

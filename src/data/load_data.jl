@@ -47,9 +47,9 @@ function load_data(m::AbstractModel; start_date="1959-03-31", end_date=last_quar
             addl_data = readtable(infile, separator = '\t')
 
             # Convert dates from strings to quarter-end dates for date arithmetic
-            addl_data[:date] = stringstodates(addl_data[:date])
-            map!(x->lastdayofquarter(x), addl_data[:date], addl_data[:date])
-
+            #addl_data[:date] = stringstodates(addl_data[:date])
+            #map!(x->lastdayofquarter(x), addl_data[:date], addl_data[:date])
+            format_dates!(:date, addl_data)
             
             if !in(lastdayofquarter(start_date), addl_data[:date]) || 
                 !in(lastdayofquarter(end_date), addl_data[:date])
@@ -80,11 +80,9 @@ function load_data(m::AbstractModel; start_date="1959-03-31", end_date=last_quar
     end
 
     # turn NAs into NaNs
-    for col in names(data)
-        data[isna(data[col]), col] = NaN
-    end
+    na2nan!(data)
     
-    return data
+    return sort!(data, cols = :date)
 end
 
 """
@@ -134,4 +132,35 @@ function stringstodates(stringarray)
     end
 
     dates
+end
+
+function format_dates!(col, df)
+    df[col] = stringstodates(df[col])
+    map!(x->lastdayofquarter(x), df[col], df[col])
+end
+
+"""
+```
+na2nan!(df::DataFrame)
+```
+
+Convert all NAs in a DataFrame to NaNs.
+"""
+function na2nan!(df::DataFrame)
+    for col in names(df)
+        df[isna(df[col]), col] = NaN
+    end
+end
+
+"""
+```
+na2nan!(df::DataFrame)
+```
+
+Convert all NAs in a DataFrame to NaNs.
+"""
+function na2nan!(v::DataArray)
+    for i = 1:length(v)
+        v[i] = isna(v[i]) ?  NaN : v[i]
+    end
 end

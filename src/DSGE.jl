@@ -8,6 +8,7 @@ module DSGE
     import Calculus
     import Optim
     using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
+    import NaNMath
     
     export
 
@@ -27,6 +28,7 @@ module DSGE
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin, specify_mh_start,
         data_vintage,
         specify_mode!, specify_hessian, load_parameters_from_file,
+        use_population_forecast,
 
 
         # parameters.jl
@@ -48,7 +50,7 @@ module DSGE
         gensys, solve,
 
         # data/
-        load_fred_data, load_data
+        load_fred_data, load_data, transform_data, hpfilter, difflog
 
     const VERBOSITY = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
 

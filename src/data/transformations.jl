@@ -13,7 +13,7 @@ function annualtoquarter(v)
 end
 
 """
-`nominal_to_real(col, df; deflator=:GDP)`
+`nominal_to_real(col, df; deflator_mnemonic=:GDPCTPI)`
 
 Converts nominal to real values using the specified
 deflator.
@@ -24,20 +24,10 @@ deflator.
 
 ## Keyword arguments
 
-- `deflator`: indicates which deflator to use to calculate real values.
-   - `:GDP`: GDP deflator
-       - FRED mnemonic: :GDPCTPI
-   - `:PCE`: PCE deflator
-       - FRED mnemonic: :PCEPILFE
+- `deflator_mnemonic`: indicates which deflator to use to calculate real values. Default value is the FRED GDP Deflator mnemonic.
 """
-function nominal_to_real(col, df; deflator=:GDP)
-    if deflator == :GDP
-        return df[col] ./ df[:GDPCTPI] 
-    elseif deflator == :PCE
-        return df[col] ./ df[:PCEPILFE]
-    else
-        error("nominal_to_real isn't defined for this deflator")
-    end
+function nominal_to_real(col, df; deflator_mnemonic=:GDPCTPI)
+    return df[col] ./ df[deflator_mnemonic] 
 end
 
 
@@ -46,14 +36,14 @@ end
 
 Convert column `col` in `df` from a nominal to a real, per-person-employed value
 """
-function nominal_to_realpercapita(col, df; population_measure=:adult_population, deflator=:GDP, scale = 1)
+function nominal_to_realpercapita(col, df; population_mnemonic=:CNP16OV, deflator_mnemonic=:GDPCTPI, scale = 1)
 
     # create a temporary column to hold per-capita values
-    df[:temp] = percapita(col, df, population_measure=population_measure) 
+    df[:temp] = percapita(col, df, population_mnemonic=population_mnemonic) 
 
     # convert to real values and scale 
-    realpercapita = scale * nominal_to_real(:temp, df, deflator=deflator)
-
+    realpercapita = scale * nominal_to_real(:temp, df, deflator_mnemonic=deflator_mnemonic)
+    
     # delete temporary column
     delete!(df, :temp)
     
@@ -62,7 +52,7 @@ end
 
 
 """
-`percapita(col, df; population_measure=:adult_population)`
+`percapita(col, df; population_mnemonic=:CNP16OV)`
 
 Converts data column `col` of DataFrame `df` to a per-capita value.
 
@@ -71,78 +61,120 @@ Converts data column `col` of DataFrame `df` to a per-capita value.
 - `df`: DataFrame containining series for proper population measure and `col`
 
 ## Keyword arguments
-- `population_measure`: currently implemented for the following 3 values:
-   - `:adult_population`
-      - FRED mnemonic: CNP16OV
-      - description: civilian noninstitutional population age 16+
-      - source: Bureau of Labor Statistics
-   - `:nonfarm_employed`
-      - FRED mnemonic: :PRS85006013
-      - description: nonfarm business sector employment
-      - source: Bureau of Labor Statistics
-   - `:civilian_employed`
-      - FRED mnemonic: :CE16OV
-      - description: civilian employment
-      - source: Bureau of Labor Statistics
+
+- `population_mnemonic`: a mnemonic found in df for some population
+  measure. Default value = civilian noninstitutional population age 16+ (CNP16OV).
 """
-function percapita(col, df; population_measure=:adult_population)
-    
-    if population_measure == :adult_population
-        df[col] ./ df[:CNP16OV]
-    elseif population_measure == :nonfarm_employed
-        df[col] ./ df[:PRS85006013]
-    elseif population_measure == :civilian_employed
-        df[col] ./ df[:CE16OV]
-    else
-        error("percapita isn't defined for this population measure.")
-    end
+function percapita(col, df; population_mnemonic=:CNP16OV)
+   df[col] ./ df[population_mnemonic] 
 end
 
 
 """
 ```
-yt, yf = hpfilter(y::Vector{AbstractFloat}, λ::AbstractFloat)
+yt, yf = hpfilter(y, λ::AbstractFloat)
 ```
 
 Applies the Hodrick-Prescott filter. The smoothing parameter `λ` is applied to the columns of
 `y`, returning the trend component `yt` and the cyclical component `yf`.
 """
-function hpfilter(y::Vector{AbstractFloat}, λ::AbstractFloat)
-    n = length(y);
-    a = spzeros(n,n);
+function hpfilter(y, λ::Real)
+    n = length(y)
+    a = spzeros(n,n)
     for i = 3:n-2
-        a[i,i]   = 6λ+1;
-        a[i,i+1] = -4λ;
-        a[i,i+2] = λ;
-        a[i,i-2] = λ;
-        a[i,i-1] = -4λ;
+        a[i,i]   = 6λ+1
+        a[i,i+1] = -4λ
+        a[i,i+2] = λ
+        a[i,i-2] = λ
+        a[i,i-1] = -4λ
     end
 
-    a[2,2] = 1+5λ;
-    a[2,3] = -4λ;
-    a[2,4] = λ;
-    a[2,1] = -2λ;
-    a[1,1] = 1+λ;
-    a[1,2] = -2λ;
-    a[1,3] = λ;
+    a[2,2] = 1+5λ
+    a[2,3] = -4λ
+    a[2,4] = λ
+    a[2,1] = -2λ
+    a[1,1] = 1+λ
+    a[1,2] = -2λ
+    a[1,3] = λ
     
-    a[n-1,n-1] = 1+5λ;
-    a[n-1,n-2] = -4λ;
-    a[n-1,n-3] = λ;
-    a[n-1,n]   = -2λ;
-    a[n,n]     = 1+λ;
-    a[n,n-1]   = -2λ;
-    a[n,n-2]   = λ;
+    a[n-1,n-1] = 1+5λ
+    a[n-1,n-2] = -4λ
+    a[n-1,n-3] = λ
+    a[n-1,n]   = -2λ
+    a[n,n]     = 1+λ
+    a[n,n-1]   = -2λ
+    a[n,n-2]   = λ
 
-    yt = a\y;
-    yf = y-yt;
+    if !isa(y, Vector{Float64}) float64(y) end
+
+    yt = a\y
+    yf = y-yt
+
+    return yt, yf
 end
 
 """
 ```
-difflog(y::Vector{AbstractFloat})
+difflog(x::Vector{AbstractFloat})
 ```
 """
-function difflog(x::Vector{AbstractFloat})
-    return log([NaN; diff(x)])
+function difflog{T<:AbstractFloat}(x::Vector{T})
+    [NaN; log(x[2:end]) - log(x[1:end-1])]
 end
+
+
+"""
+```
+difflog(x::DataArray{AbstractFloat})
+```
+"""
+function difflog(x::DataArray)
+    DSGE.na2nan!(x)
+    y = convert(Vector{Float64}, x)
+    return difflog(y)
+end
+
+
+"""
+```
+q2qpctchange(y)
+```
+
+Calculates the quarter-to-quarter percentage change of a series.
+"""
+function q2qpctchange(y)
+    100 * difflog(y)
+end
+
+
+"""
+```
+realq2qpctchange(col::Symbol, df::DataFrame, deflator=:GDP)
+```
+
+Calculates the real quarter-to-quarter percentage change of a series.
+"""
+function realq2qpctchange(col::Symbol, df::DataFrame, deflator=:GDP)
+
+    deflator_symbol = if deflator == :GDP 
+        :GDPCTPI
+    elseif deflator == :PCE
+        :PCEPILFE        
+    end
+
+    100 * (difflog(df[col]) - difflog(df[deflator_symbol]))
+end
+
+"""
+```
+hpadjust(y, df)
+```
+
+## Parameters
+- `y`: A vector of data
+- `df`: DataFrame containing both a filtered and unfiltered population growth series 
+"""
+function hpadjust(y, df)
+    y + 100*(df[:unfiltered_population_growth] - df[:filtered_population_growth])
+end
+

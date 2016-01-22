@@ -193,10 +193,12 @@ function Model990(subspec::AbstractString="ss2")
                           :PCEPILFE, :COMPNFB]
     spf_series         = [:ASACX10]
     fernald_series     = [:alpha, :dtfp, :dtfp_util]
+    longrate_series    = [:longrate]
+    
     # ois data taken care of in load_data
     
     data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
-                                              :fernald => fernald_series)
+                                              :fernald => fernald_series, :longrate => longrate_series)
 
 
     # set up data transformations
@@ -662,99 +664,163 @@ function settings_m990(m::Model990)
     # Anticipated shocks
     m <= Setting(:n_anticipated_shocks,         6, "Number of anticipated policy shocks")
     m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    m <= Setting(:n_anticipated_lags,  24, "Number of periods back to incorporate zero bound expectations")
+    # m <= Setting(:n_anticipated_lags,  24, "Number of periods back to incorporate zero bound expectations")
 
     return default_settings(m)
 end
 
+"""
+```
+init_data_transforms!(m::Model990)
+```
 
+This function initializes a dictionary of functions that map series
+read in in levels to the appropriate transformed value. At the time
+that the functions are initialized, data is not itself in
+memory. These functions are model-specific because they assume that
+certain series are available.
+"""
 function init_data_transforms!(m::Model990)
     
-    ## 1. FRED
+    ## A. FRED
     
-    # Nominal GDP -> real GDP per capita
-    m.data_transforms[:REALGDP] = function realgdppercapita(levels)
-        nominal_to_realpercapita(:GDP, levels, scale = 1000)
+    # 1. Output gap
+    m.data_transforms[:gdp] = function (levels)
+        # FROM: Level of nominal GDP (FRED :GDP series)
+        # TO:   Quarter-to-quarter percent change of real, per-capita GDP, adjusted for population smoothing
+
+        gdp = nominal_to_realpercapita(:GDP, levels, scale = 1000)
+        hpadjust(q2qpctchange(gdp), levels)
     end
 
-    # GDP deflator
-    m.data_transforms[:GDPDEF] = function gdpdeflator(levels)
-        levels[:GDPCTPI]
+    # 2. Employment/Hours per capita
+    m.data_transforms[:laborsupply] = function (levels)
+        # FROM: Average weekly hours (AWHNONAG) & civilian employment (CE16OV)
+        # TO:   log (3 * aggregregate weekly hours / 100), per-capita
+        # Note: Not sure why the 3 is there.
+
+        aggregateweeklyhours = levels[:AWHNONAG] .* levels[:CE16OV]
+        100*(log(3 * aggregateweeklyhours / 100) - log(levels[:filtered_population]))
     end
 
-    # Nominal consumption -> real consumption per capita
-    m.data_transforms[:REALC] = function realcpercapita(levels)
-        nominal_to_realpercapita(:PCE, levels, scale = 1000)
+    # 3. Real wage growth
+    m.data_transforms[:wagegrowth] = function realhourlywage(levels)
+        # FROM: Nominal compensation per hour (:COMPNFB from FRED) 
+        # TO: quarter to quarter percent change of real compensation
+
+        realq2qpctchange(:COMPNFB, levels)
     end
 
-    # Nominal investment -> real investment per capita
-    m.data_transforms[:REALI] = function realipercapita(levels)
-        nominal_to_realpercapita(:FPI, levels, scale = 10000)
+    # 4. GDP deflator
+    m.data_transforms[:gdpdeflator] = function (levels)
+        # FROM: GDP deflator (index)
+        # TO:   Approximate quarter-to-quarter percent change of gdp deflator,
+        #       i.e.  quarterly gdp deflator inflation
+
+        q2qpctchange(levels[:GDPCTPI])
     end
 
-    # Employment/population ratio relative to average employment/pop ratio
-    m.data_transforms[:LSUPPLY] = function empratio(levels)
-        levels[:CE16OV] ./ levels[:CNP16OV] / (mean(levels[:CE16OV]) / mean(levels[:CNP16OV]))
-    end
-    
-    # Nominal compensation -> real compensation per employee
-    m.data_transforms[:REALWAGEEC] = function realwageec(levels)
-        nominal_to_realpercapita(:PRS85006063, levels, population_measure=:nonfarm_employed)
+    # 5. Core PCE
+    m.data_transforms[:corepce] = function (levels)
+        # FROM: Core PCE index
+        # INTO: Approximate quarter-to-quarter percent change of Core PCE, 
+        # i.e. quarterly core pce inflation
+
+        q2qpctchange(levels[:PCEPILFE])
     end
 
-    # Nominal average weekly earnings -> real average weekly earnings
-    m.data_transforms[:REALWAGEAWE] = function realwageawe(levels)
-        nominal_to_real(:CES0500000030, levels)
-    end
-
-    # Annualized fed funds rate -> quarterly fed funds rate
-    m.data_transforms[:FEDFUNDS] = function fedfunds(levels)
+    # 6. Nominal short-term interest rate (3 months)
+    m.data_transforms[:fedfunds] = function (levels)
+        # FROM: Nominal effective federal funds rate (aggregate daily data at a
+        #       quarterly frequency at an annual rate)
+        # TO:   Nominal effective fed funds rate, at a quarterly rate
+        
         annualtoquarter(levels[:FF])
     end
 
-    # civilian labor force / civilian employment
-    m.data_transforms[:UNEMP] = function unemployment(levels)
-        percapita(:CLF16OV, levels, population_measure = :civilian_employed)
+    # 7. Consumption growth
+    m.data_transforms[:consumption] = function (levels)
+        # FROM: Nominal consumption
+        # TO:   Real consumption, approximate quarter-to-quarter percent change,
+        #       per capita, adjusted for population filtering
+
+        hpadjust(q2qpctchange(nominal_to_realpercapita(:PCE, levels, scale = 1000)), levels)
     end
 
+    # 8. Investment growth
+    m.data_transforms[:investment] = function (levels)
+        # FROM: Nominal investment
+        # INTO: Real investment, approximate quarter-to-quarter percent change,
+        #       per capita, adjusted for population filtering
+                
+        inv = q2qpctchange(nominal_to_realpercapita(:FPI, levels, scale = 10000))
+        hpadjust(inv, levels)
+    end
 
-    # Baa-T spread, quarterly rate
-    m.data_transforms[:SPREAD] = function spread(levels)
+    # 9. Spread: BAA-10yr TBill
+    m.data_transforms[:spread] = function (levels)
+        # FROM: Baa corporate bond yield (percent annualized), and 10-year
+        #       treasury note yield (percent annualized)
+        # TO:   Baa yield - 10T yield spread at a quarterly rate
+        # Note: Moody's corporate bond yields on the H15 are based on corporate
+        #       bonds with remaining maturities of at least 20 years.
+
         annualtoquarter(levels[:BAA] - levels[:GS10])
     end
-
-    # population
-    m.data_transforms[:POPULATION] = function population(levels)
-        levels[:CNP16OV]
-    end
-
-    # core pce
-    m.data_transforms[:COREPCE] = function corepce(levels)
-        levels[:PCEPILFE]
-    end
-
-
-    # BLS Employment
-    m.data_transforms[:EMPLOYMENT] = function employment(levels)
-        levels[:CE16OV]
-    end
-
-    # hours
-    m.data_transforms[:HOURS] = function hours(levels)
-        levels[:AWHNONAG]
-    end
-
-    # real hourly wage
-    m.data_transforms[:REALHRLYWAGE] = function realhourlywage(levels)
-        levels[:COMPNFB]
-    end
-
-    ## 2. SPF
     
-    # inflation expectations
-    m.data_transforms[:LONGRATE] = function inflationexpectations(levels)
+    # 10. Long term inflation expectations (Survey of Professional Forecasters)
+    m.data_transforms[:inflation10] = function (levels)
+        # FROM: SPF: 10-Year average yr/yr CPI inflation expectations (annual percent)
+        # TO:   FROM, less 0.5
+        # Note: We subtract 0.5 because 0.5% inflation corresponds to
+        #       the assumed long-term rate of 2 percent inflation, but the
+        #       data are measuring expectations of actual inflation.
+
         levels[:ASACX10]  - 0.5
     end
-    
+
+    ## # 11. Long rate
+    #TODO: get yield and premia from FRED
+    m.data_transforms[:longrate] = function (levels)
+        # interim solution
+        # FROM: pre-computed long rate at an annual rate
+        # TO:   10T yield - 10T term premium at a quarterly rate
+        
+        annualtoquarter(levels[:longrate])
+        
+        # For when we figure out how to get this raw data...
+        # FROM: 10-year treasury yield (percent), and 10-year treasury term premium (percent)
+        # TO:   10T yield less term premium, at a quarterly rate 
+        # Note: subtracting the term premium leaves the long term interest rate
+        #       less the premium that issuers must pay to have investors hold long-term debt
+
+        # annualtoquarter(levels[2:end, :10Tyield] - levels[2:end, :10Tpremium])
+    end
+
+    # 12. Fernald TFP
+    m.data_transforms[:tfp] = function (levels)
+        # FROM: Fernald's unadjusted TFP series (levels)
+        # TO: De-meaned unadjusted TFP series, adjusted by Fernald's
+        #     estimated alpha (capacity utilization rate?)
+        # Note: not sure offhand why it is multiplied by 4.
+
+        tfp_unadj = levels[:dtfp]
+        tfp_unadj - NaNMath.mean(convert(Vector{Float64}, tfp_unadj)) ./ (4*(1 - levels[:alpha]))
+    end
+
+    # Columns 13 - 13 + n_anticipated_shocks
+    for i = 1:n_anticipated_shocks(m)
+        # FROM: OIS expectations of $i-period-ahead interest rates at an annual rate
+        # TO:   OIS expectations of $i-period-ahead interest rates at a quarterly rate
+        
+        m.data_transforms[symbol("ois$i")] = function (levels)
+
+            anticipated_shocks = fill(NaN, size(levels)[1])
+            zlb = zlb_start_index(m)
+            anticipated_shocks[zlb:end] = annualtoquarter(levels[zlb:end, symbol("ant$i")])
+            
+            anticipated_shocks
+        end
+    end
 end
     
