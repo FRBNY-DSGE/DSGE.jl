@@ -10,7 +10,7 @@ written to the appropriate data vintage file and returned.
 # Arguments
 - `m::AbstractModel`: the model object
 - `start_date`: starting date.
-- `end_date`: ending date. 
+- `end_date`: ending date.
 
 # Notes
 
@@ -21,42 +21,44 @@ compatibility with other datasets.
 function load_fred_data(m::AbstractModel;
                         start_date::Date=Date("1959-01-01", "y-m-d"),
                         end_date::Date=last_quarter_end())
-    
+
     mnemonics = m.data_series[:fred]
     vint = data_vintage(m)
-    df2 = "yymmdd"
+    dateformat = "yymmdd"
 
     # Have to do this wacky parsing to prepend the century to the data vintage
     vint_date = if parse(Int,vint[1:2]) < 59
-        Year(2000) + Date(vint, df2)
+        Year(2000) + Date(vint, dateformat)
     else
-        Year(1900) + Date(vint, df2)
+        Year(1900) + Date(vint, dateformat)
     end
-    
+
     # Set up dataset and labels
     missing_series = Vector{Symbol}()
     data = []
 
     datafile = inpath(m, "data", "fred_$vint.txt")
     if isfile(datafile)
-        
+
         # Read in dataset and check that the file contains data for the proper dates
         data = readtable(datafile, separator = '\t')
 
         # Convert dates from strings to dates for date arithmetic
+        #TODO: use format_dates!?
         data[:date] = stringstodates(data[:date])
         println(names(data))
         map!(x->lastdayofquarter(x), data[:date], data[:date])
-        
+
         qstart = lastdayofquarter(start_date)
         qend = lastdayofquarter(end_date)
 
         if !in(qstart, data[:date]) || !in(qend, data[:date])
-            println("Start and end dates are not in data file...fetching all FRED series...")
+            println("FRED dataset on disk missing start or end date. Fetching data from FRED.")
             data = DataFrame(date = get_quarter_ends(start_date,end_date))
             missing_series = mnemonics
         else
-            # If we have the right dates but the series isn't in the file, add it to missing_series
+            # If we have the right dates but the series isn't in the file, add it to
+            # missing_series
             for series in mnemonics
                 if !in(series, names(data))
                     push!(missing_series,series)
@@ -70,22 +72,24 @@ function load_fred_data(m::AbstractModel;
 
     # Get the missing data series
     if !isempty(missing_series)
-        
+
         fredseries = Array{FredSeries, 1}(length(missing_series))
         f = Fred()
 
         for (i,s) in enumerate(missing_series)
-            println("Fetching $(s)...")
+            println("Fetching FRED series $s...")
             try
-                fredseries[i] = get_data(f, string(s); frequency="q", observation_start=string(start_date),
-                                         observation_end=string(end_date), vintage_dates=string(vint_date))
+                fredseries[i] = get_data(f, string(s); frequency="q",
+                                                       observation_start=string(start_date),
+                                                       observation_end=string(end_date),
+                                                       vintage_dates=string(vint_date))
             catch err
                 warn(err.msg)
-                warn("$s could not be fetched.")
+                warn("FRED series $s could not be fetched.")
                 continue
             end
         end
-        
+
         # Extract dataframe from each series and merge on date
         for i = 1:length(fredseries)
             if isdefined(fredseries, i)
@@ -96,16 +100,16 @@ function load_fred_data(m::AbstractModel;
                 data = join(data, series.df[:,[:date, series_id]], on=:date, kind=:outer)
             end
         end
-        
+
         # Change the dates to be the last day of each quarter
         n_rows, n_cols = size(data)
 
         for i = 1:n_rows
             data[i,:date] = Dates.lastdayofquarter(data[i,:date])
         end
-        
+
         writetable(datafile, data, separator = '\t')
-        println("Data written to $datafile.")
+        println("Updated data from FRED written to $datafile.")
     end
 
     # Make sure to only return the series and dates that are specified for this
