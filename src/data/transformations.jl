@@ -1,8 +1,3 @@
-function Base.call(x::Function, df::DataFrame)
-    x(df)
-end
-
-
 """
 `function annualtoquarter(v)`
 
@@ -18,35 +13,40 @@ end
 Converts nominal to real values using the specified
 deflator.
 
-## Parameters
+## Arguments
 - `col`: symbol indicating which column of `df` to transform
 - `df`: DataFrame containining series for proper population measure and `col`
 
 ## Keyword arguments
 
-- `deflator_mnemonic`: indicates which deflator to use to calculate real values. Default value is the FRED GDP Deflator mnemonic.
+- `deflator_mnemonic`: indicates which deflator to use to calculate real values. Default
+  value is the FRED GDP Deflator mnemonic.
 """
 function nominal_to_real(col, df; deflator_mnemonic=:GDPCTPI)
-    return df[col] ./ df[deflator_mnemonic] 
+    return df[col] ./ df[deflator_mnemonic]
 end
 
 
+#TODO: can we cut this and just make sequential calls to `percapita` and `nominal_to_real`
+#in the caller?
 """
 `function nominal_to_realpercapita(col::Symbol, df)`
 
 Convert column `col` in `df` from a nominal to a real, per-person-employed value
 """
-function nominal_to_realpercapita(col, df; population_mnemonic=:CNP16OV, deflator_mnemonic=:GDPCTPI, scale = 1)
+function nominal_to_realpercapita(col, df; population_mnemonic=:CNP16OV,
+                                           deflator_mnemonic=:GDPCTPI,
+                                           scale = 1)
 
     # create a temporary column to hold per-capita values
-    df[:temp] = percapita(col, df, population_mnemonic=population_mnemonic) 
+    df[:temp] = percapita(col, df, population_mnemonic=population_mnemonic)
 
-    # convert to real values and scale 
+    # convert to real values and scale
     realpercapita = scale * nominal_to_real(:temp, df, deflator_mnemonic=deflator_mnemonic)
-    
+
     # delete temporary column
     delete!(df, :temp)
-    
+
     return realpercapita
 end
 
@@ -56,7 +56,7 @@ end
 
 Converts data column `col` of DataFrame `df` to a per-capita value.
 
-## Parameters
+## Arguments
 - `col`: symbol indicating which column of data to transform
 - `df`: DataFrame containining series for proper population measure and `col`
 
@@ -66,19 +66,23 @@ Converts data column `col` of DataFrame `df` to a per-capita value.
   measure. Default value = civilian noninstitutional population age 16+ (CNP16OV).
 """
 function percapita(col, df; population_mnemonic=:CNP16OV)
-   df[col] ./ df[population_mnemonic] 
+   df[col] ./ df[population_mnemonic]
 end
 
 
 """
 ```
-yt, yf = hpfilter(y, λ::AbstractFloat)
+yt, yf = hpfilter(y, λ::Real)
 ```
 
-Applies the Hodrick-Prescott filter. The smoothing parameter `λ` is applied to the columns of
-`y`, returning the trend component `yt` and the cyclical component `yf`.
+Applies the Hodrick-Prescott filter. The smoothing parameter `λ` is applied to the columns
+of `y`, returning the trend component `yt` and the cyclical component `yf`.
 """
 function hpfilter(y, λ::Real)
+    if !isa(y, Vector{Float64})
+        y = float64(y)
+    end
+
     n = length(y)
     a = spzeros(n,n)
     for i = 3:n-2
@@ -96,7 +100,7 @@ function hpfilter(y, λ::Real)
     a[1,1] = 1+λ
     a[1,2] = -2λ
     a[1,3] = λ
-    
+
     a[n-1,n-1] = 1+5λ
     a[n-1,n-2] = -4λ
     a[n-1,n-3] = λ
@@ -104,8 +108,6 @@ function hpfilter(y, λ::Real)
     a[n,n]     = 1+λ
     a[n,n-1]   = -2λ
     a[n,n-2]   = λ
-
-    if !isa(y, Vector{Float64}) float64(y) end
 
     yt = a\y
     yf = y-yt
@@ -137,29 +139,30 @@ end
 
 """
 ```
-q2qpctchange(y)
+oneqtrpctchange(y)
 ```
 
 Calculates the quarter-to-quarter percentage change of a series.
 """
-function q2qpctchange(y)
+function oneqtrpctchange(y)
     100 * difflog(y)
 end
 
-
+#TODO: can we cut this and replace with sequential calls to `nominal_to_real` and
+#`oneqtrpctchange`?
 """
 ```
-realq2qpctchange(col::Symbol, df::DataFrame, deflator=:GDP)
+realoneqtrpctchange(col::Symbol, df::DataFrame, deflator=:GDP)
 ```
 
 Calculates the real quarter-to-quarter percentage change of a series.
 """
-function realq2qpctchange(col::Symbol, df::DataFrame, deflator=:GDP)
+function realoneqtrpctchange(col::Symbol, df::DataFrame, deflator=:GDP)
 
-    deflator_symbol = if deflator == :GDP 
+    deflator_symbol = if deflator == :GDP
         :GDPCTPI
     elseif deflator == :PCE
-        :PCEPILFE        
+        :PCEPILFE
     end
 
     100 * (difflog(df[col]) - difflog(df[deflator_symbol]))
@@ -170,11 +173,12 @@ end
 hpadjust(y, df)
 ```
 
-## Parameters
+Adjust series to compensate for differences between filtered and unfiltered population.
+## Arguments
 - `y`: A vector of data
-- `df`: DataFrame containing both a filtered and unfiltered population growth series 
+- `df`: DataFrame containing both a filtered and unfiltered population growth series
 """
-function hpadjust(y, df)
-    y + 100*(df[:unfiltered_population_growth] - df[:filtered_population_growth])
+function hpadjust(y, df; filtered_mnemonic=:filtered_population_growth,
+                         unfiltered_mnemonic=:unfiltered_population_growth)
+    y + 100 * (df[unfiltered_mnemonic] - df[filtered_mnemonic])
 end
-

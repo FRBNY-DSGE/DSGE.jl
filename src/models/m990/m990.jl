@@ -194,16 +194,16 @@ function Model990(subspec::AbstractString="ss2")
     spf_series         = [:ASACX10]
     fernald_series     = [:alpha, :dtfp, :dtfp_util]
     longrate_series    = [:longrate]
-    
+
     # ois data taken care of in load_data
-    
+
     data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
                                               :fernald => fernald_series, :longrate => longrate_series)
 
 
     # set up data transformations
     data_transforms = OrderedDict{Symbol,Function}()
-    
+
     # initialize empty model
     m = Model990{Float64}(
             # model parameters and steady state values
@@ -228,7 +228,7 @@ function Model990(subspec::AbstractString="ss2")
 
     # Set data transformations
     init_data_transforms!(m)
-    
+
     # Initialize parameters
     m <= parameter(:α,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",
@@ -681,16 +681,16 @@ memory. These functions are model-specific because they assume that
 certain series are available.
 """
 function init_data_transforms!(m::Model990)
-    
+
     ## A. FRED
-    
+
     # 1. Output gap
     m.data_transforms[:gdp] = function (levels)
         # FROM: Level of nominal GDP (FRED :GDP series)
         # TO:   Quarter-to-quarter percent change of real, per-capita GDP, adjusted for population smoothing
 
         gdp = nominal_to_realpercapita(:GDP, levels, scale = 1000)
-        hpadjust(q2qpctchange(gdp), levels)
+        hpadjust(oneqtrpctchange(gdp), levels)
     end
 
     # 2. Employment/Hours per capita
@@ -705,10 +705,10 @@ function init_data_transforms!(m::Model990)
 
     # 3. Real wage growth
     m.data_transforms[:wagegrowth] = function realhourlywage(levels)
-        # FROM: Nominal compensation per hour (:COMPNFB from FRED) 
+        # FROM: Nominal compensation per hour (:COMPNFB from FRED)
         # TO: quarter to quarter percent change of real compensation
 
-        realq2qpctchange(:COMPNFB, levels)
+        realoneqtrpctchange(:COMPNFB, levels)
     end
 
     # 4. GDP deflator
@@ -717,16 +717,16 @@ function init_data_transforms!(m::Model990)
         # TO:   Approximate quarter-to-quarter percent change of gdp deflator,
         #       i.e.  quarterly gdp deflator inflation
 
-        q2qpctchange(levels[:GDPCTPI])
+        oneqtrpctchange(levels[:GDPCTPI])
     end
 
     # 5. Core PCE
     m.data_transforms[:corepce] = function (levels)
         # FROM: Core PCE index
-        # INTO: Approximate quarter-to-quarter percent change of Core PCE, 
+        # INTO: Approximate quarter-to-quarter percent change of Core PCE,
         # i.e. quarterly core pce inflation
 
-        q2qpctchange(levels[:PCEPILFE])
+        oneqtrpctchange(levels[:PCEPILFE])
     end
 
     # 6. Nominal short-term interest rate (3 months)
@@ -734,7 +734,7 @@ function init_data_transforms!(m::Model990)
         # FROM: Nominal effective federal funds rate (aggregate daily data at a
         #       quarterly frequency at an annual rate)
         # TO:   Nominal effective fed funds rate, at a quarterly rate
-        
+
         annualtoquarter(levels[:FF])
     end
 
@@ -744,7 +744,7 @@ function init_data_transforms!(m::Model990)
         # TO:   Real consumption, approximate quarter-to-quarter percent change,
         #       per capita, adjusted for population filtering
 
-        hpadjust(q2qpctchange(nominal_to_realpercapita(:PCE, levels, scale = 1000)), levels)
+        hpadjust(oneqtrpctchange(nominal_to_realpercapita(:PCE, levels, scale = 1000)), levels)
     end
 
     # 8. Investment growth
@@ -752,8 +752,8 @@ function init_data_transforms!(m::Model990)
         # FROM: Nominal investment
         # INTO: Real investment, approximate quarter-to-quarter percent change,
         #       per capita, adjusted for population filtering
-                
-        inv = q2qpctchange(nominal_to_realpercapita(:FPI, levels, scale = 10000))
+
+        inv = oneqtrpctchange(nominal_to_realpercapita(:FPI, levels, scale = 10000))
         hpadjust(inv, levels)
     end
 
@@ -767,7 +767,7 @@ function init_data_transforms!(m::Model990)
 
         annualtoquarter(levels[:BAA] - levels[:GS10])
     end
-    
+
     # 10. Long term inflation expectations (Survey of Professional Forecasters)
     m.data_transforms[:inflation10] = function (levels)
         # FROM: SPF: 10-Year average yr/yr CPI inflation expectations (annual percent)
@@ -785,12 +785,12 @@ function init_data_transforms!(m::Model990)
         # interim solution
         # FROM: pre-computed long rate at an annual rate
         # TO:   10T yield - 10T term premium at a quarterly rate
-        
+
         annualtoquarter(levels[:longrate])
-        
+
         # For when we figure out how to get this raw data...
         # FROM: 10-year treasury yield (percent), and 10-year treasury term premium (percent)
-        # TO:   10T yield less term premium, at a quarterly rate 
+        # TO:   10T yield less term premium, at a quarterly rate
         # Note: subtracting the term premium leaves the long term interest rate
         #       less the premium that issuers must pay to have investors hold long-term debt
 
@@ -812,15 +812,15 @@ function init_data_transforms!(m::Model990)
     for i = 1:n_anticipated_shocks(m)
         # FROM: OIS expectations of $i-period-ahead interest rates at an annual rate
         # TO:   OIS expectations of $i-period-ahead interest rates at a quarterly rate
-        
+
         m.data_transforms[symbol("ois$i")] = function (levels)
 
             anticipated_shocks = fill(NaN, size(levels)[1])
             zlb = zlb_start_index(m)
             anticipated_shocks[zlb:end] = annualtoquarter(levels[zlb:end, symbol("ant$i")])
-            
+
             anticipated_shocks
         end
     end
 end
-    
+
