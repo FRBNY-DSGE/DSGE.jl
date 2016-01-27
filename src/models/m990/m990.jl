@@ -188,15 +188,15 @@ function Model990(subspec::AbstractString="ss2")
 
     # Set up data sources and series
     fred_series        = [:GDP, :GDPCTPI, :PCE, :FPI,
-                          :CNP16OV, :CE16OV, :PRS85006013, :UNRATE, :AWHNONAG, :FF,
+                          :CNP16OV, :CE16OV, :PRS85006013, :UNRATE, :AWHNONAG, :DFF,
                           :BAA, :GS10, :PRS85006063, :CES0500000030, :CLF16OV,
                           :PCEPILFE, :COMPNFB]
     spf_series         = [:ASACX10]
     fernald_series     = [:alpha, :dtfp, :dtfp_util]
     longrate_series    = [:longrate]
 
-    # ois data taken care of in load_data
-
+    # ois and longrate data taken care of in load_data
+    
     data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
                                               :fernald => fernald_series, :longrate => longrate_series)
 
@@ -735,7 +735,8 @@ function init_data_transforms!(m::Model990)
         #       quarterly frequency at an annual rate)
         # TO:   Nominal effective fed funds rate, at a quarterly rate
 
-        annualtoquarter(levels[:FF])
+        annualtoquarter(levels[:DFF])
+
     end
 
     # 7. Consumption growth
@@ -776,7 +777,7 @@ function init_data_transforms!(m::Model990)
         #       the assumed long-term rate of 2 percent inflation, but the
         #       data are measuring expectations of actual inflation.
 
-        levels[:ASACX10]  - 0.5
+        annualtoquarter(levels[:ASACX10]  .- 0.5)
     end
 
     ## # 11. Long rate
@@ -805,21 +806,17 @@ function init_data_transforms!(m::Model990)
         # Note: not sure offhand why it is multiplied by 4.
 
         tfp_unadj = levels[:dtfp]
-        tfp_unadj - NaNMath.mean(convert(Vector{Float64}, tfp_unadj)) ./ (4*(1 - levels[:alpha]))
+        (tfp_unadj - NaNMath.mean(convert(Vector{Float64}, tfp_unadj))) ./ (4*(1 - levels[:alpha]))
     end
 
     # Columns 13 - 13 + n_anticipated_shocks
     for i = 1:n_anticipated_shocks(m)
-        # FROM: OIS expectations of $i-period-ahead interest rates at an annual rate
-        # TO:   OIS expectations of $i-period-ahead interest rates at a quarterly rate
-
+        # FROM: OIS expectations of $i-period-ahead interest rates at a quarterly rate
+        # TO:   Same
+        
         m.data_transforms[symbol("ois$i")] = function (levels)
-
-            anticipated_shocks = fill(NaN, size(levels)[1])
-            zlb = zlb_start_index(m)
-            anticipated_shocks[zlb:end] = annualtoquarter(levels[zlb:end, symbol("ant$i")])
-
-            anticipated_shocks
+            levels[:, symbol("ant$i")]
+            
         end
     end
 end

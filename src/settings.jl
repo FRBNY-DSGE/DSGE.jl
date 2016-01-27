@@ -123,15 +123,15 @@ function default_settings(m::AbstractModel)
 
     # Data settings
     m <= Setting(:use_population_forecast, false, "Whether to use population forecasts as data")
+    m <= Setting(:adjust_longrate, true, "Whether to adjust the 10T zero-coupon yield for term premium.")
 
     # Timing
     ffq = lastdayofquarter(Date(data_vintage(m), "yymmdd") + Year(2000))
     m <= Setting(:first_forecast_quarter, ffq, "First quarter for which to produce forecasts.")
     
     # Anticipated shocks
-    # m <= Setting(:n_anticipated_shocks,         0, "Number of anticipated policy shocks")
-    # m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    m <= Setting(:zlb_start_index,  198, "Time index of first period to incorporate zero bound expectation")
+    zlb_start = Date("2008-12-31","y-m-d")
+    m <= Setting(:zlb_start_date,  zlb_start, "Time index of first period to incorporate zero bound expectation")
     m <= Setting(:n_presample_periods, 2, "Number of periods in the presample")
 
     # General computation

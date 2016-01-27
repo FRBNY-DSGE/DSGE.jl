@@ -124,7 +124,11 @@ n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_s
 
 # First period we should incorporate zero bound expectations
 # ZLB expectations should begin in 2008 Q4
-zlb_start_index(m::AbstractModel) = get_setting(m, :zlb_start_index)
+function zlb_start_index(m::AbstractModel, data::DataFrame)
+    date = get_setting(m, :zlb_start_date)
+    find(x->x==date, data[:date])[1]
+end
+
 
 # Number of presample periods
 n_presample_periods(m::AbstractModel) = get_setting(m, :n_presample_periods)
@@ -152,6 +156,7 @@ use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers
 
 # Interface for data step
 use_population_forecast(m::AbstractModel) = get_setting(m, :use_population_forecast)
+adjust_longrate(m::AbstractModel)         = get_setting(m, :adjust_longrate)
 
 # Interface for estimation settings
 reoptimize(m::AbstractModel)          = get_setting(m, :reoptimize)
