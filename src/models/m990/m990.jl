@@ -10,7 +10,7 @@ The `Model990` type defines the structure of the FRBNY DSGE model.
 #### Parameters and Steady-States
 * `parameters::Vector{AbstractParameter}`: Vector of all time-invariant model parameters.
 
-* `steady_state::Vector`: Model steady-state values, computed as a function of elements of
+* `steady_state::Vector{AbstractParameter}`: Model steady-state values, computed as a function of elements of
   `parameters`.
 
 * `keys::Dict{Symbol,Int}`: Maps human-readable names for all model parameters and

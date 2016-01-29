@@ -1,6 +1,6 @@
 """
 ```
-load_data(m::AbstractModel; start_date="1959-03-31", end_date=last_quarter_end())
+load_data(m::AbstractModel; Date("1959-03-31","y-m-d")::Date, end_date=last_quarter_end()::Date)
 ```
 
 Checks in `inpath(m)` for vintaged datasets corresponding to the ones in
@@ -17,17 +17,19 @@ on date).
 The name of the input data file must be the same as the source string in `m.data_series`,
 and those files must be located in .csv files in `inpath(m, "data")`.
 """
-function load_data(m::AbstractModel; start_date="1959-03-31", end_date=last_quarter_end())
+function load_data(m::AbstractModel; start_date=Date("1959-03-31","y-m-d")::Date,
+                                     end_date=last_quarter_end()::Date)
 
     #TODO: can we handle this date formatting like we do in load_fred_data?
     # Date formatting
-    if !isa(start_date, Date)
-        start_date = Date(start_date, "y-m-d")
-    end
-    if !isa(end_date, Date)
-        end_date = Date(end_date, "y-m-d")
-    end
+    ## if !isa(start_date, Date)
+    ##     start_date = Date(start_date, "y-m-d")
+    ## end
+    ## if !isa(end_date, Date)
+    ##     end_date = Date(end_date, "y-m-d")
+    ## end
 
+    
     # Load FRED data, set ois series to load, and set which longrate series to load
     data = load_fred_data(m; start_date=firstdayofquarter(start_date), end_date=end_date)
     set_ois_series!(m)
