@@ -49,7 +49,7 @@ cached here for filepath computation.
 
 * `subspec::AbstractString`: The model subspecification number,
 indicating that some parameters from the original model spec ("ss0")
-are initialized differently. Cached here for filepath computation. 
+are initialized differently. Cached here for filepath computation.
 
 
 
@@ -74,7 +74,7 @@ An alphabetized list of setting identifier strings. These are
 concatenated and appended to the filenames of all output files to
 avoid overwriting the output of previous estimations/forecasts that
 differ only in their settings, but not in their underlying
-mathematical structure. 
+mathematical structure.
 """
 type SmetsWouters{T} <: AbstractModel{T}
     parameters::ParameterVector{T}                  # vector of all time-invariant model parameters
@@ -89,8 +89,8 @@ type SmetsWouters{T} <: AbstractModel{T}
     endogenous_states_augmented::Dict{Symbol,Int}   #
     observables::Dict{Symbol,Int}                   #
 
-    spec::ASCIIString                               # Model specification number 
-    subspec::ASCIIString                            # Model subspecification 
+    spec::ASCIIString                               # Model specification number
+    subspec::ASCIIString                            # Model subspecification
     settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
@@ -156,7 +156,7 @@ function init_model_indices!(m::SmetsWouters)
         :obs_investment];       # investment growth
         [symbol("obs_nominalrate$i") for i=1:n_anticipated_shocks(m)]] # compounded nominal rates
 
-    
+
     for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
     for (i,k) in enumerate(exogenous_shocks);             m.exogenous_shocks[k]             = i end
     for (i,k) in enumerate(expected_shocks);              m.expected_shocks[k]              = i end
@@ -170,14 +170,14 @@ end
 function SmetsWouters(subspec::AbstractString="ss0")
 
     # Model-specific specifications
-    spec               = split(basename(@__FILE__),'.')[1]   
+    spec               = split(basename(@__FILE__),'.')[1]
     subspec            = subspec
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()        # Random Number Generator
-    testing            = false                       
+    testing            = false
     _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
-    
+
     # initialize empty model
     m = SmetsWouters{Float64}(
             # model parameters and steady state values
@@ -185,7 +185,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
 
             # model indices
             Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(), Dict{Symbol,Int}(),
-                          
+
             spec,
             subspec,
             settings,
@@ -195,9 +195,9 @@ function SmetsWouters(subspec::AbstractString="ss0")
             _filestrings)
 
     # Set settings
-    settings_smets_wouters(m)
-    default_test_settings(m)
-    
+    settings_smets_wouters!(m)
+    default_test_settings!(m)
+
     # Initialize parameters
     m <= parameter(:α,      0.24, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.",
@@ -213,12 +213,12 @@ function SmetsWouters(subspec::AbstractString="ss0")
                    tex_label="\\iota_p")
 
     m <= parameter(:δ,      0.025,  fixed=true,
-                   description="δ: The capital depreciation rate.", tex_label="\\delta" )     
+                   description="δ: The capital depreciation rate.", tex_label="\\delta" )
 
-    
+
     m <= parameter(:Upsilon,  1.000,  (0., 10.),     (1e-5, 0.),      DSGE.Exponential(),    GammaAlt(1., 0.5),          fixed=true,
                    description="Υ: The trend evolution of the price of investment goods relative to consumption goods. Set equal to 1.",
-                   tex_label="\\mathcal{\\Upsilon}") 
+                   tex_label="\\mathcal{\\Upsilon}")
 
     m <= parameter(:Φ,   1.4672, (1., 10.),     (1.00, 10.00),   DSGE.Exponential(),    Normal(1.25, 0.12),         fixed=false,
                    description="Φ: Fixed costs.",
@@ -235,7 +235,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
 
     m <= parameter(:ν_l,     2.8401, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    Normal(2, 0.75),            fixed=false,
                    description="ν_l: The coefficient of relative risk aversion on the labor term of households' utility function.", tex_label="\\nu_l")
-    
+
     m <= parameter(:ζ_w,   0.7937, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.5, 0.1),          fixed=false,
                    description="ζ_w: (1-ζ_w) is the probability with which households can freely choose wages in each period. With probability ζ_w, wages increase at a geometrically weighted average of the steady state rate of wage increases and last period's productivity times last period's inflation.",
                    tex_label="\\zeta_w")
@@ -246,10 +246,10 @@ function SmetsWouters(subspec::AbstractString="ss0")
 
     m <= parameter(:λ_w,      1.5000,                                                                               fixed=true,
                    description="λ_w: The wage markup, which affects the elasticity of substitution between differentiated labor services.",
-                   tex_label="\\lambda_w")     
+                   tex_label="\\lambda_w")
 
     m <= parameter(:β, 0.7420, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    GammaAlt(0.25, 0.1),        fixed=false,  scaling = x -> 1/(1 + x/100),
-                   description="β: Discount rate.",       
+                   description="β: Discount rate.",
                    tex_label="\\beta ")
 
     m <= parameter(:ψ1,  1.7985, (1e-5, 10.),   (1e-5, 10.00),   DSGE.Exponential(),    Normal(1.5, 0.25),          fixed=false,
@@ -265,29 +265,29 @@ function SmetsWouters(subspec::AbstractString="ss0")
                    tex_label="\\psi_3")
 
     m <= parameter(:π_star,   0.7000, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    GammaAlt(0.62, 0.1),        fixed=false,  scaling = x -> 1 + x/100,
-                   description="π_star: The steady-state rate of inflation.",  
-                   tex_label="\\pi_*")   
+                   description="π_star: The steady-state rate of inflation.",
+                   tex_label="\\pi_*")
 
     m <= parameter(:σ_c, 1.2312, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    Normal(1.5, 0.37),          fixed=false,
                    description="σ_c: No description available.",
                    tex_label="\\sigma_{c}")
-    
+
     m <= parameter(:ρ,      .8258, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     BetaAlt(0.75, 0.10),        fixed=false,
                    description="ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho")
 
     m <= parameter(:ϵ_p,     10.000,                                                                               fixed=true,
                    description="ϵ_p: No description available.",
-                   tex_label="\\varepsilon_{p}")     
+                   tex_label="\\varepsilon_{p}")
 
     m <= parameter(:ϵ_w,     10.000,                                                                               fixed=true,
                    description="ϵ_w: No description available.",
-                   tex_label="\\varepsilon_{w}")     
-    
+                   tex_label="\\varepsilon_{w}")
+
 
     # exogenous processes - level
-    m <= parameter(:γ,      0.3982, (-5.0, 5.0),     (-5., 5.),     Untransformed(), Normal(0.4, 0.1),            fixed=false, scaling = x -> x/100, 
-                   description="γ: The log of the steady-state growth rate of technology.", 
+    m <= parameter(:γ,      0.3982, (-5.0, 5.0),     (-5., 5.),     Untransformed(), Normal(0.4, 0.1),            fixed=false, scaling = x -> x/100,
+                   description="γ: The log of the steady-state growth rate of technology.",
                    tex_label="\\gamma")
 
     m <= parameter(:Lmean,  875., (-1000., 1000.), (-1e3, 1e3),   Untransformed(), Normal(-45, 5),   fixed=false,
@@ -296,9 +296,9 @@ function SmetsWouters(subspec::AbstractString="ss0")
 
     m <= parameter(:g_star,    0.1800,                                                                               fixed=true,
                    description="g_star: No description available.",
-                   tex_label="g_*")  
+                   tex_label="g_*")
 
-    # exogenous processes - autocorrelation 
+    # exogenous processes - autocorrelation
     m <= parameter(:ρ_g,      0.9930, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
                    description="ρ_g: AR(1) coefficient in the government spending process.",
                    tex_label="\\rho_g")
@@ -317,7 +317,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
 
     m <= parameter(:ρ_λ_f,    0.8692, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
                    description="ρ_λ_f: AR(1) coefficient in the price mark-up shock process.",
-                   tex_label="\\rho_{\\lambda_f}") 
+                   tex_label="\\rho_{\\lambda_f}")
 
     m <= parameter(:ρ_λ_w,    0.9546, (1e-5, 0.999),   (1e-5, 0.999), SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false,
                    description="ρ_λ_w: AR(1) coefficient in the wage mark-up shock process.", # CHECK THIS
@@ -333,7 +333,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
     m <= parameter(:σ_g,      0.6090, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_g: The standard deviation of the government spending process.",
                    tex_label="\\sigma_{g}")
-    
+
     m <= parameter(:σ_b,      0.1818, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_b: No description available.",
                    tex_label="\\sigma_{b}")
@@ -357,12 +357,12 @@ function SmetsWouters(subspec::AbstractString="ss0")
     m <= parameter(:σ_rm,     0.2397, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_rm: No description available.",
                    tex_label="\\sigma_{rm}")
-    
-    
+
+
     m <= parameter(:η_gz,       0.0500, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),
                    BetaAlt(0.50, 0.20), fixed=false,
                    description="η_gz: Correlate g and z shocks.",
-                   tex_label="\\eta_{gz}")        
+                   tex_label="\\eta_{gz}")
 
     m <= parameter(:η_λ_f,      0.7652, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(),
                    BetaAlt(0.50, 0.20),         fixed=false,
@@ -373,7 +373,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
                    BetaAlt(0.50, 0.20),         fixed=false,
                    description="η_λ_w: AR(2) coefficient on wage markup shock process.",
                    tex_label="\\eta_{\\lambda_w}")
-    
+
 
     # steady states
     m <= SteadyStateParameter(:zstar,  NaN, description="steady-state growth rate of productivity", tex_label="\\z_*")
@@ -381,7 +381,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
     m <= SteadyStateParameter(:Rstarn,  NaN, description="steady-state something something", tex_label="\\R_*_n")
     m <= SteadyStateParameter(:rkstar,  NaN, description="steady-state something something", tex_label="\\BLAH")
     m <= SteadyStateParameter(:wstar,   NaN, description="steady-state something something", tex_label="\\w_*")
-    m <= SteadyStateParameter(:Lstar,   NaN, description="steady-state something something", tex_label="\\L_*") 
+    m <= SteadyStateParameter(:Lstar,   NaN, description="steady-state something something", tex_label="\\L_*")
     m <= SteadyStateParameter(:kstar,   NaN, description="Effective capital that households rent to firms in the steady state.", tex_label="\\k_*")
     m <= SteadyStateParameter(:kbarstar, NaN, description="Total capital owned by households in the steady state.", tex_label="\\bar{k}_*")
     m <= SteadyStateParameter(:istar,  NaN, description="Detrended steady-state investment", tex_label="\\i_*")
@@ -390,7 +390,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
     m <= SteadyStateParameter(:wl_c,   NaN, description="steady-state something something", tex_label="\\wl_c")
 
     init_model_indices!(m)
-    init_subspec(m)
+    init_subspec!(m)
     steadystate!(m)
     return m
 end
@@ -401,7 +401,7 @@ end
 steadystate!(m::SmetsWouters)
 ```
 
-Calculates the model's steady-state values. `steadystate!(m)` must be called whenever the parameters of `m` are updated. 
+Calculates the model's steady-state values. `steadystate!(m)` must be called whenever the parameters of `m` are updated.
 """
 function steadystate!(m::SmetsWouters)
     m[:zstar]    = log(1+m[:γ]) + m[:α]/(1-m[:α])*log(m[:Upsilon])
@@ -421,10 +421,10 @@ function steadystate!(m::SmetsWouters)
 end
 
 
-function settings_smets_wouters(m::SmetsWouters)
+function settings_smets_wouters!(m::SmetsWouters)
 
-    default_settings(m)
-    
+    default_settings!(m)
+
     # Anticipated shocks
     m <= Setting(:n_anticipated_shocks,         0, "Number of anticipated policy shocks")
     m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
@@ -439,4 +439,3 @@ function settings_smets_wouters(m::SmetsWouters)
 
     m.settings
 end
-

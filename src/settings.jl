@@ -24,7 +24,7 @@ is used for.
 immutable Setting{T}
     key::Symbol                  # name of setting
     value::T                     # whatever the setting is
-    print::Bool             # whether or not to add this setting to the print
+    print::Bool                  # whether or not to add this setting to the print
     code::AbstractString         # what gets printed to the print
     description::AbstractString  # description of what the setting is for
 end
@@ -95,12 +95,12 @@ end
 
 """
 ```
-default_settings(m::AbstractModel)
+default_settings!(m::AbstractModel)
 ```
 
 Default Settings are constructed, initialized and added to `m.settings`.
 """
-function default_settings(m::AbstractModel)
+function default_settings!(m::AbstractModel)
 
     # I/O File locations
     saveroot = normpath(joinpath(dirname(@__FILE__), "..","save"))
@@ -113,20 +113,30 @@ function default_settings(m::AbstractModel)
     input_files = readdir(inpath(m, "data", ""))
     vint = 0
     for file in input_files
-        if ismatch(r"^\s*data*", file)
-            regmatch = match(r"^\s*data_(?P<vint>\d{6})", file)
+        if ismatch(r"^\s*fred*", file)
+            regmatch = match(r"^\s*fred_(?P<vint>\d{6})", file)
             vint = max(vint, parse(Int,regmatch[:vint]))
         end
     end
     vint = "$vint"
     m <= Setting(:data_vintage, vint, true, "vint", "Date of data")
 
+    # Data settings
+    m <= Setting(:use_population_forecast, false, "Whether to use population forecasts as data")
+    m <= Setting(:adjust_longrate, true, "Whether to adjust the 10T zero-coupon yield for term premium.")
+
+    # Timing
+    ffq = lastdayofquarter(Date(data_vintage(m), "yymmdd") + Year(2000))
+    m <= Setting(:first_forecast_quarter, ffq, "First quarter for which to produce forecasts.")
+    
     # Anticipated shocks
+    zlb_start = Date("2008-12-31","y-m-d")
+    m <= Setting(:zlb_start_date,  zlb_start, "First period to incorporate zero bound expectation")
+    m <= Setting(:n_presample_periods, 2, "Number of periods in the presample")
     m <= Setting(:n_anticipated_shocks,         0, "Number of anticipated policy shocks")
     m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    m <= Setting(:zlb_start_index,  198, "Time index of first period to incorporate zero bound expectation")
-    m <= Setting(:n_presample_periods, 2, "Number of periods in the presample")
-
+    m <= Setting(:zlb_start_index, 198, "Index of first period to incorporate zero bound expectation")
+    
     # General computation
     m <= Setting(:use_parallel_workers, true, "Use available parallel workers in computations")
 
@@ -146,7 +156,7 @@ end
 
 """
 ```
-default_test_settings(m::AbstractModel)
+default_test_settings!(m::AbstractModel)
 ```
 
 The following Settings are constructed, initialized and added to
@@ -164,7 +174,7 @@ The following Settings are constructed, initialized and added to
 - `n_mh_burn::Setting{Int}`: 0
 - `mh_thin::Setting{Int}`: 1
 """
-function default_test_settings(m::AbstractModel)
+function default_test_settings!(m::AbstractModel)
 
     test = m.test_settings
 

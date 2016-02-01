@@ -1,5 +1,5 @@
 """
-```
+S```
 Model990{T} <: AbstractModel{T}
 ```
 
@@ -10,7 +10,7 @@ The `Model990` type defines the structure of the FRBNY DSGE model.
 #### Parameters and Steady-States
 * `parameters::Vector{AbstractParameter}`: Vector of all time-invariant model parameters.
 
-* `steady_state::Vector`: Model steady-state values, computed as a function of elements of
+* `steady_state::Vector{AbstractParameter}`: Model steady-state values, computed as a function of elements of
   `parameters`.
 
 * `keys::Dict{Symbol,Int}`: Maps human-readable names for all model parameters and
@@ -67,6 +67,12 @@ conditions.
   setting identifier strings. These are concatenated and appended to the filenames of all
   output files to avoid overwriting the output of previous estimations/forecasts that differ
   only in their settings, but not in their underlying mathematical structure.
+
+* `data_series::Dict{Symbol,Vector{Symbol}}`: A dictionary that
+  stores data sources (keys) and lists of series mnemonics
+  (values). DSGE.jl will fetch data from the Federal Reserve Bank of
+  St. Louis's FRED database; all other data must be downloaded by the
+  user. See `load_data` for further details.
 """
 type Model990{T} <: AbstractModel{T}
     parameters::ParameterVector{T}                  # vector of all time-invariant model parameters
@@ -88,6 +94,9 @@ type Model990{T} <: AbstractModel{T}
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
     _filestrings::SortedDict{Symbol,AbstractString, ForwardOrdering} # The strings we will print to a filename
+
+    data_series::Dict{Symbol,Vector{Symbol}}       # Keys = data sources, values = vector of series mnemonics
+    data_transforms::OrderedDict{Symbol,Function}  # functions to transform raw data into input matrix
 end
 
 description(m::Model990) = "FRBNY DSGE Model m990, $(m.subspec)"
@@ -177,6 +186,24 @@ function Model990(subspec::AbstractString="ss2")
     testing            = false
     _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
 
+    # Set up data sources and series
+    fred_series        = [:GDP, :GDPCTPI, :PCE, :FPI,
+                          :CNP16OV, :CE16OV, :PRS85006013, :UNRATE, :AWHNONAG, :DFF,
+                          :BAA, :GS10, :PRS85006063, :CES0500000030, :CLF16OV,
+                          :PCEPILFE, :COMPNFB]
+    spf_series         = [:ASACX10]
+    fernald_series     = [:alpha, :dtfp, :dtfp_util]
+    longrate_series    = [:longrate]
+
+    # ois and longrate data taken care of in load_data
+    
+    data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
+                                              :fernald => fernald_series, :longrate => longrate_series)
+
+
+    # set up data transformations
+    data_transforms = OrderedDict{Symbol,Function}()
+
     # initialize empty model
     m = Model990{Float64}(
             # model parameters and steady state values
@@ -191,11 +218,16 @@ function Model990(subspec::AbstractString="ss2")
             test_settings,
             rng,
             testing,
-            _filestrings)
+            _filestrings,
+            data_series,
+            data_transforms)
 
     # Set settings
-    settings_m990(m)
-    default_test_settings(m)
+    settings_m990!(m)
+    default_test_settings!(m)
+
+    # Set data transformations
+    init_data_transforms!(m)
 
     # Initialize parameters
     m <= parameter(:α,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
@@ -478,7 +510,7 @@ function Model990(subspec::AbstractString="ss2")
     m <= SteadyStateParameter(:ζ_nσ_ω,   NaN, description="No description available.", tex_label="\\zeta_{n_{\\sigma_\\omega}}")
 
     init_model_indices!(m)
-    init_subspec(m)
+    init_subspec!(m)
     steadystate!(m)
     return m
 end
@@ -627,12 +659,163 @@ function steadystate!(m::Model990)
     return m
 end
 
-function settings_m990(m::Model990)
+function settings_m990!(m::Model990)
 
-    # Anticipated shocks
-    m <= Setting(:num_anticipated_shocks,         6, "Number of anticipated policy shocks")
-    m <= Setting(:num_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    m <= Setting(:num_anticipated_lags,  24, "Number of periods back to incorporate zero bound expectations")
+    default_settings!(m)
+end
 
-    return default_settings(m)
+"""
+```
+init_data_transforms!(m::Model990)
+```
+
+This function initializes a dictionary of functions that map series
+read in in levels to the appropriate transformed value. At the time
+that the functions are initialized, data is not itself in
+memory. These functions are model-specific because they assume that
+certain series are available.
+"""
+function init_data_transforms!(m::Model990)
+
+    ## A. FRED
+
+    # 1. Output gap
+    m.data_transforms[:gdp] = function (levels)
+        # FROM: Level of nominal GDP (FRED :GDP series)
+        # TO:   Quarter-to-quarter percent change of real, per-capita GDP, adjusted for population smoothing
+
+        levels[:temp] = percapita(:GDP, levels)
+        gdp = 1000 * nominal_to_real(:temp, levels)
+        hpadjust(oneqtrpctchange(gdp), levels)
+    end
+
+    # 2. Employment/Hours per capita
+    m.data_transforms[:laborsupply] = function (levels)
+        # FROM: Average weekly hours (AWHNONAG) & civilian employment (CE16OV)
+        # TO:   log (3 * aggregregate weekly hours / 100), per-capita
+        # Note: Not sure why the 3 is there.
+
+        aggregateweeklyhours = levels[:AWHNONAG] .* levels[:CE16OV]
+        100*(log(3 * aggregateweeklyhours / 100) - log(levels[:filtered_population]))
+    end
+
+    # 3. Real wage growth
+    m.data_transforms[:wagegrowth] = function realhourlywage(levels)
+        # FROM: Nominal compensation per hour (:COMPNFB from FRED)
+        # TO: quarter to quarter percent change of real compensation (using GDP deflator)
+
+        oneqtrpctchange(nominal_to_real(:COMPNFB, levels))
+    end
+
+    # 4. GDP deflator
+    m.data_transforms[:gdpdeflator] = function (levels)
+        # FROM: GDP deflator (index)
+        # TO:   Approximate quarter-to-quarter percent change of gdp deflator,
+        #       i.e.  quarterly gdp deflator inflation
+
+        oneqtrpctchange(levels[:GDPCTPI])
+    end
+
+    # 5. Core PCE
+    m.data_transforms[:corepce] = function (levels)
+        # FROM: Core PCE index
+        # INTO: Approximate quarter-to-quarter percent change of Core PCE,
+        # i.e. quarterly core pce inflation
+
+        oneqtrpctchange(levels[:PCEPILFE])
+    end
+
+    # 6. Nominal short-term interest rate (3 months)
+    m.data_transforms[:fedfunds] = function (levels)
+        # FROM: Nominal effective federal funds rate (aggregate daily data at a
+        #       quarterly frequency at an annual rate)
+        # TO:   Nominal effective fed funds rate, at a quarterly rate
+
+        annualtoquarter(levels[:DFF])
+
+    end
+
+    # 7. Consumption growth
+    m.data_transforms[:consumption] = function (levels)
+        # FROM: Nominal consumption
+        # TO:   Real consumption, approximate quarter-to-quarter percent change,
+        #       per capita, adjusted for population filtering
+
+        levels[:temp] = percapita(:PCE, levels)
+        cons = 1000 * nominal_to_real(:temp, levels)
+        hpadjust(oneqtrpctchange(cons), levels)
+    end
+
+    # 8. Investment growth
+    m.data_transforms[:investment] = function (levels)
+        # FROM: Nominal investment
+        # INTO: Real investment, approximate quarter-to-quarter percent change,
+        #       per capita, adjusted for population filtering
+
+        levels[:temp] = percapita(:FPI, levels)
+        inv = 10000 * nominal_to_real(:temp, levels)
+        hpadjust(oneqtrpctchange(inv), levels)
+    end
+
+    # 9. Spread: BAA-10yr TBill
+    m.data_transforms[:spread] = function (levels)
+        # FROM: Baa corporate bond yield (percent annualized), and 10-year
+        #       treasury note yield (percent annualized)
+        # TO:   Baa yield - 10T yield spread at a quarterly rate
+        # Note: Moody's corporate bond yields on the H15 are based on corporate
+        #       bonds with remaining maturities of at least 20 years.
+
+        annualtoquarter(levels[:BAA] - levels[:GS10])
+    end
+
+    # 10. Long term inflation expectations (Survey of Professional Forecasters)
+    m.data_transforms[:inflation10] = function (levels)
+        # FROM: SPF: 10-Year average yr/yr CPI inflation expectations (annual percent)
+        # TO:   FROM, less 0.5
+        # Note: We subtract 0.5 because 0.5% inflation corresponds to
+        #       the assumed long-term rate of 2 percent inflation, but the
+        #       data are measuring expectations of actual inflation.
+
+        annualtoquarter(levels[:ASACX10]  .- 0.5)
+    end
+
+    ## # 11. Long rate
+    #TODO: get yield and premia from FRED
+    m.data_transforms[:longrate] = function (levels)
+        # interim solution
+        # FROM: pre-computed long rate at an annual rate
+        # TO:   10T yield - 10T term premium at a quarterly rate
+
+        annualtoquarter(levels[:longrate])
+
+        # For when we figure out how to get this raw data...
+        # FROM: 10-year treasury yield (percent), and 10-year treasury term premium (percent)
+        # TO:   10T yield less term premium, at a quarterly rate
+        # Note: subtracting the term premium leaves the long term interest rate
+        #       less the premium that issuers must pay to have investors hold long-term debt
+
+        # annualtoquarter(levels[2:end, :10Tyield] - levels[2:end, :10Tpremium])
+    end
+
+    # 12. Fernald TFP
+    m.data_transforms[:tfp] = function (levels)
+        # FROM: Fernald's unadjusted TFP series (levels)
+        # TO: De-meaned unadjusted TFP series, adjusted by Fernald's
+        #     estimated alpha (capacity utilization rate?)
+        # Note: not sure offhand why it is multiplied by 4.
+
+        tfp_unadj = levels[:dtfp]
+        (tfp_unadj - NaNMath.mean(convert(Vector{Float64}, tfp_unadj))) ./ (4*(1 - levels[:alpha]))
+    end
+
+    # Columns 13 - 13 + n_anticipated_shocks
+    for i = 1:n_anticipated_shocks(m)
+        # FROM: OIS expectations of $i-period-ahead interest rates at a quarterly rate
+        # TO:   Same
+        
+        m.data_transforms[symbol("ois$i")] = function (levels)
+            levels[:, symbol("ant$i")]
+            
+        end
+    end
 end
