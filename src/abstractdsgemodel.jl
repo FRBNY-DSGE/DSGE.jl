@@ -124,6 +124,14 @@ n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_s
 
 # First period we should incorporate zero bound expectations
 # ZLB expectations should begin in 2008 Q4
+function zlb_start_index!(m::AbstractModel, data::DataFrame)
+    date = get_setting(m, :zlb_start_date)
+    zlb_start = find(x->x==date, data[:date])[1]
+    m <= Setting(:zlb_start_index, zlb_start, "Index of first period to incorporate zero bound expectation")
+
+    zlb_start
+end
+
 zlb_start_index(m::AbstractModel) = get_setting(m, :zlb_start_index)
 
 # Number of presample periods
@@ -149,6 +157,10 @@ data_vintage(m::AbstractModel) = get_setting(m, :data_vintage)
 
 # Interface for general computation settings
 use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers)
+
+# Interface for data step
+use_population_forecast(m::AbstractModel) = get_setting(m, :use_population_forecast)
+adjust_longrate(m::AbstractModel)         = get_setting(m, :adjust_longrate)
 
 # Interface for estimation settings
 reoptimize(m::AbstractModel)          = get_setting(m, :reoptimize)
@@ -455,5 +467,4 @@ Generate a draw from d with variance optionally scaled by cc^2.
 function rand{T<:AbstractFloat, U<:AbstractModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
-
 
