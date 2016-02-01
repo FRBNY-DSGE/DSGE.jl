@@ -689,7 +689,8 @@ function init_data_transforms!(m::Model990)
         # FROM: Level of nominal GDP (FRED :GDP series)
         # TO:   Quarter-to-quarter percent change of real, per-capita GDP, adjusted for population smoothing
 
-        gdp = nominal_to_realpercapita(:GDP, levels, scale = 1000)
+        levels[:temp] = percapita(:GDP, levels)
+        gdp = 1000 * nominal_to_real(:temp, levels)
         hpadjust(oneqtrpctchange(gdp), levels)
     end
 
@@ -706,9 +707,9 @@ function init_data_transforms!(m::Model990)
     # 3. Real wage growth
     m.data_transforms[:wagegrowth] = function realhourlywage(levels)
         # FROM: Nominal compensation per hour (:COMPNFB from FRED)
-        # TO: quarter to quarter percent change of real compensation
+        # TO: quarter to quarter percent change of real compensation (using GDP deflator)
 
-        realoneqtrpctchange(:COMPNFB, levels)
+        oneqtrpctchange(nominal_to_real(:COMPNFB, levels))
     end
 
     # 4. GDP deflator
@@ -745,7 +746,9 @@ function init_data_transforms!(m::Model990)
         # TO:   Real consumption, approximate quarter-to-quarter percent change,
         #       per capita, adjusted for population filtering
 
-        hpadjust(oneqtrpctchange(nominal_to_realpercapita(:PCE, levels, scale = 1000)), levels)
+        levels[:temp] = percapita(:PCE, levels)
+        cons = 1000 * nominal_to_real(:temp, levels)
+        hpadjust(oneqtrpctchange(cons), levels)
     end
 
     # 8. Investment growth
@@ -754,8 +757,9 @@ function init_data_transforms!(m::Model990)
         # INTO: Real investment, approximate quarter-to-quarter percent change,
         #       per capita, adjusted for population filtering
 
-        inv = oneqtrpctchange(nominal_to_realpercapita(:FPI, levels, scale = 10000))
-        hpadjust(inv, levels)
+        levels[:temp] = percapita(:FPI, levels)
+        inv = 10000 * nominal_to_real(:temp, levels)
+        hpadjust(oneqtrpctchange(inv), levels)
     end
 
     # 9. Spread: BAA-10yr TBill
