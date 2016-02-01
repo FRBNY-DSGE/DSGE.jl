@@ -27,30 +27,6 @@ function nominal_to_real(col, df; deflator_mnemonic=:GDPCTPI)
 end
 
 
-#TODO: can we cut this and just make sequential calls to `percapita` and `nominal_to_real`
-#in the caller?
-"""
-`function nominal_to_realpercapita(col::Symbol, df)`
-
-Convert column `col` in `df` from a nominal to a real, per-person-employed value
-"""
-function nominal_to_realpercapita(col, df; population_mnemonic=:CNP16OV,
-                                           deflator_mnemonic=:GDPCTPI,
-                                           scale = 1)
-
-    # create a temporary column to hold per-capita values
-    df[:temp] = percapita(col, df, population_mnemonic=population_mnemonic)
-
-    # convert to real values and scale
-    realpercapita = scale * nominal_to_real(:temp, df, deflator_mnemonic=deflator_mnemonic)
-
-    # delete temporary column
-    delete!(df, :temp)
-
-    return realpercapita
-end
-
-
 """
 `percapita(col, df; population_mnemonic=:CNP16OV)`
 
@@ -148,25 +124,6 @@ function oneqtrpctchange(y)
     100 * difflog(y)
 end
 
-#TODO: can we cut this and replace with sequential calls to `nominal_to_real` and
-#`oneqtrpctchange`?
-"""
-```
-realoneqtrpctchange(col::Symbol, df::DataFrame, deflator=:GDP)
-```
-
-Calculates the real quarter-to-quarter percentage change of a series.
-"""
-function realoneqtrpctchange(col::Symbol, df::DataFrame, deflator=:GDP)
-
-    deflator_symbol = if deflator == :GDP
-        :GDPCTPI
-    elseif deflator == :PCE
-        :PCEPILFE
-    end
-
-    100 * (difflog(df[col]) - difflog(df[deflator_symbol]))
-end
 
 """
 ```
