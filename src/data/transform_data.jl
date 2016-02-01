@@ -1,61 +1,69 @@
 """
-`transform_data(m::AbstractModel, levels::DataFrame)`
+`transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic = :CNP16OV)`
 
 Transform data loaded in levels and order columns appropriately for the DSGE model.
+
+## Parameters
+- `m::AbstractModel`: the model object
+- `levels::DataFrame`: data loaded in levels (for instance, the output of `load_data`)
+
+## Optional Arguments
+
+- `population_mnemonic`: the name of the column in `levels` that holds
+  the population measure for computing per-capita values. By default,
+  it is CNP16OV (Civilian Noninstitutional Population, in thousands, obtained via the FRED API).
 """
-function transform_data(m::AbstractModel, levels::DataFrame)
+function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic = :CNP16OV)
 
     n_obs, _ = size(levels)
 
-    # HP filter population forecasts, if they're being used
+    # Step 1: HP filter population forecasts, if they're being used
 
-    # popreal: historical population, unfiltered
-    # population_all: filtered full series (including Macro Advisers forecast)
-    # dlpopforecast: growth rates of population forecasts pre-filtering
+    # population_recorded: historical population, unfiltered
+    # population_all: full unfiltered series (including forecast)
+    # dlpopulation_forecast: growth rates of population forecasts pre-filtering
 
-    popreal = levels[:,[:date, :CNP16OV]]
-    population_all, dlpopforecast, n_popforecast_obs = if use_population_forecast(m)
+    population_recorded = levels[:,[:date, population_mnemonic]]
+    population_all, dlpopulation_forecast, n_population_forecast_obs = if use_population_forecast(m)
 
         # load population forecast
+        population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).txt")
 
-        #TODO: refactor "popforecast" etc. -> "population_forecast" everywhere
-        popforecast_file = inpath(m, "data", "popforecast_$(data_vintage(m)).txt")
         #TODO: please use CSV :)
-        pop_forecast = readtable(popforecast_file, separator = '\t')
-        #TODO: confused why CNP16OV is hardcoded here
-        rename!(pop_forecast, :POPULATION,  :CNP16OV)
+        pop_forecast = readtable(population_forecast_file, separator = '\t')
+
+        rename!(pop_forecast, :POPULATION,  population_mnemonic)
         DSGE.na2nan!(pop_forecast)
         DSGE.format_dates!(:date, pop_forecast)
 
         # use our "real" series as current value
-        pop_all = [popreal; pop_forecast[2:end,:]]
+        pop_all = [population_recorded; pop_forecast[2:end,:]]
 
-        pop_all[:CNP16OV], difflog(pop_forecast[:CNP16OV]), length(pop_forecast[:CNP16OV])
+        pop_all[population_mnemonic], difflog(pop_forecast[population_mnemonic]), length(pop_forecast[population_mnemonic])
     else
-        popreal, _, 0
+        population_recorded, _, 0
     end
 
     # hp filter
     population_all = convert(Array, population_all)
-    popfor, _ = hpfilter(population_all, 1600)
+    filtered_population, _ = hpfilter(population_all, 1600)
 
     # filtered series (levels)
-    population = popfor[1:end-n_popforecast_obs+1]     # filtered recorded population series
-    MA_pop     = popfor[end-n_popforecast_obs+1:end]   # filtered forecast population series
+    filtered_population_recorded     = filtered_population[1:end-n_population_forecast_obs+1]     # filtered recorded population series
+    filtered_population_forecast     = filtered_population[end-n_population_forecast_obs+1:end]   # filtered forecast population series
 
-    # growth rates - TODO: clean up, leaving all names now for easier comparison to MATLAB
-    dlpopreal = difflog(popreal[:CNP16OV])
-    dlpopall = difflog(population)
+    # filtered growth rates 
+    dlpopulation_recorded            = difflog(population_recorded[population_mnemonic])
+    dlfiltered_population_recorded   = difflog(filtered_population_recorded)
 
-    levels[:filtered_population] = population
-    levels[:filtered_population_growth] = dlpopall
-    levels[:unfiltered_population_growth] = dlpopreal
+    levels[:filtered_population]          = filtered_population_recorded
+    levels[:filtered_population_growth]   = dlfiltered_population_recorded
+    levels[:unfiltered_population_growth] = dlpopulation_recorded
 
-    # Now apply transformations to each series
+    # Step 2: apply transformations to each series
     transformed = DataFrame()
     transformed[:date] = levels[:date]
 
-    #TODO can we remove enumerate?
     for series in keys(m.data_transforms)
         f = m.data_transforms[series]
         transformed[series] = f(levels)

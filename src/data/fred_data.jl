@@ -44,10 +44,7 @@ function load_fred_data(m::AbstractModel;
         data = readtable(datafile, separator = '\t')
 
         # Convert dates from strings to dates for date arithmetic
-        #TODO: use format_dates!?
-        format_dates!(data[:date])
-        ## data[:date] = stringstodates(data[:date])
-        ## map!(x->lastdayofquarter(x), data[:date], data[:date])
+        format_dates!(:date, data)
 
         qstart = lastdayofquarter(start_date)
         qend = lastdayofquarter(end_date)
