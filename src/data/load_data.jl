@@ -50,7 +50,7 @@ function load_data(m::AbstractModel; start_date=Date("1959-03-31","y-m-d")::Date
         if isfile(file)
 
             # Read in dataset and check that the file contains data for the proper dates
-            addl_data = readtable(file, separator = '\t')
+            addl_data = readtable(file)
 
             # Convert dates from strings to quarter-end dates for date arithmetic
             format_dates!(:date, addl_data)
