@@ -195,8 +195,8 @@ function SmetsWouters(subspec::AbstractString="ss0")
             _filestrings)
 
     # Set settings
-    settings_smets_wouters(m)
-    default_test_settings(m)
+    settings_smets_wouters!(m)
+    default_test_settings!(m)
 
     # Initialize parameters
     m <= parameter(:α,      0.24, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
@@ -390,7 +390,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
     m <= SteadyStateParameter(:wl_c,   NaN, description="steady-state something something", tex_label="\\wl_c")
 
     init_model_indices!(m)
-    init_subspec(m)
+    init_subspec!(m)
     steadystate!(m)
     return m
 end
@@ -421,9 +421,9 @@ function steadystate!(m::SmetsWouters)
 end
 
 
-function settings_smets_wouters(m::SmetsWouters)
+function settings_smets_wouters!(m::SmetsWouters)
 
-    default_settings(m)
+    default_settings!(m)
 
     # Anticipated shocks
     m <= Setting(:n_anticipated_shocks,         0, "Number of anticipated policy shocks")

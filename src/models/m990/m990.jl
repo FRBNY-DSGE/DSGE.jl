@@ -223,8 +223,8 @@ function Model990(subspec::AbstractString="ss2")
             data_transforms)
 
     # Set settings
-    settings_m990(m)
-    default_test_settings(m)
+    settings_m990!(m)
+    default_test_settings!(m)
 
     # Set data transformations
     init_data_transforms!(m)
@@ -510,7 +510,7 @@ function Model990(subspec::AbstractString="ss2")
     m <= SteadyStateParameter(:ζ_nσ_ω,   NaN, description="No description available.", tex_label="\\zeta_{n_{\\sigma_\\omega}}")
 
     init_model_indices!(m)
-    init_subspec(m)
+    init_subspec!(m)
     steadystate!(m)
     return m
 end
@@ -659,14 +659,9 @@ function steadystate!(m::Model990)
     return m
 end
 
-function settings_m990(m::Model990)
+function settings_m990!(m::Model990)
 
-    # Anticipated shocks
-    m <= Setting(:n_anticipated_shocks,         6, "Number of anticipated policy shocks")
-    m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    # m <= Setting(:n_anticipated_lags,  24, "Number of periods back to incorporate zero bound expectations")
-
-    return default_settings(m)
+    default_settings!(m)
 end
 
 """
@@ -824,4 +819,3 @@ function init_data_transforms!(m::Model990)
         end
     end
 end
-
