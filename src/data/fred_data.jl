@@ -41,7 +41,7 @@ function load_fred_data(m::AbstractModel;
     if isfile(datafile)
 
         # Read in dataset and check that the file contains data for the proper dates
-        data = readtable(datafile, separator = '\t')
+        data = readtable(datafile)
 
         # Convert dates from strings to dates for date arithmetic
         format_dates!(:date, data)
@@ -105,7 +105,7 @@ function load_fred_data(m::AbstractModel;
             data[i,:date] = Dates.lastdayofquarter(data[i,:date])
         end
 
-        writetable(datafile, data, separator = '\t')
+        writetable(datafile, data)
         println("Updated data from FRED written to $datafile.")
     end
 

@@ -28,9 +28,7 @@ function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic
 
         # load population forecast
         population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).txt")
-
-        #TODO: please use CSV :)
-        pop_forecast = readtable(population_forecast_file, separator = '\t')
+        pop_forecast = readtable(population_forecast_file)
 
         rename!(pop_forecast, :POPULATION,  population_mnemonic)
         DSGE.na2nan!(pop_forecast)
