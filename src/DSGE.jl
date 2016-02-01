@@ -16,7 +16,7 @@ module DSGE
         BetaAlt, GammaAlt,
 
         # settings.jl
-        Setting, get_setting, default_settings, default_test_settings,
+        Setting, get_setting, default_settings!, default_test_settings!,
 
         # abstractdsgemodel.jl
         AbstractModel, transform_to_model_space!, transform_to_real_line!,

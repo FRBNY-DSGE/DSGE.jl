@@ -95,12 +95,12 @@ end
 
 """
 ```
-default_settings(m::AbstractModel)
+default_settings!(m::AbstractModel)
 ```
 
 Default Settings are constructed, initialized and added to `m.settings`.
 """
-function default_settings(m::AbstractModel)
+function default_settings!(m::AbstractModel)
 
     # I/O File locations
     saveroot = normpath(joinpath(dirname(@__FILE__), "..","save"))
@@ -156,7 +156,7 @@ end
 
 """
 ```
-default_test_settings(m::AbstractModel)
+default_test_settings!(m::AbstractModel)
 ```
 
 The following Settings are constructed, initialized and added to
@@ -174,7 +174,7 @@ The following Settings are constructed, initialized and added to
 - `n_mh_burn::Setting{Int}`: 0
 - `mh_thin::Setting{Int}`: 1
 """
-function default_test_settings(m::AbstractModel)
+function default_test_settings!(m::AbstractModel)
 
     test = m.test_settings
 
