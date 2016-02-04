@@ -50,7 +50,7 @@ module DSGE
         gensys, solve,
 
         # data/
-        load_fred_data, load_data, transform_data, hpfilter, difflog
+        load_fred_data, load_data, transform_data, save_data_matrix!, hpfilter, difflog
 
     const VERBOSITY = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
 
