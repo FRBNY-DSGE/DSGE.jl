@@ -193,9 +193,8 @@ function Model990(subspec::AbstractString="ss2")
                           :PCEPILFE, :COMPNFB]
     spf_series         = [:ASACX10]
     fernald_series     = [:alpha, :dtfp, :dtfp_util]
-    longrate_series    = [:longrate]
-
-    # ois and longrate data taken care of in load_data
+    longrate_series    = [:FYCZZA, :FTPZAC]
+    # ois data taken care of in load_data
     
     data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
                                               :fernald => fernald_series, :longrate => longrate_series)
@@ -786,15 +785,7 @@ function init_data_transforms!(m::Model990)
         # FROM: pre-computed long rate at an annual rate
         # TO:   10T yield - 10T term premium at a quarterly rate
 
-        annualtoquarter(levels[:longrate])
-
-        # For when we figure out how to get this raw data...
-        # FROM: 10-year treasury yield (percent), and 10-year treasury term premium (percent)
-        # TO:   10T yield less term premium, at a quarterly rate
-        # Note: subtracting the term premium leaves the long term interest rate
-        #       less the premium that issuers must pay to have investors hold long-term debt
-
-        # annualtoquarter(levels[2:end, :10Tyield] - levels[2:end, :10Tpremium])
+        annualtoquarter(levels[:FYCZZA] - levels[:FTPZAC])
     end
 
     # 12. Fernald TFP
