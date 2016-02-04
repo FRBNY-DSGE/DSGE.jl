@@ -56,7 +56,7 @@ of `y`, returning the trend component `yt` and the cyclical component `yf`.
 """
 function hpfilter(y, λ::Real)
     if !isa(y, Vector{Float64})
-        y = float64(y)
+        y = vec(map(Float64, y))
     end
 
     n = length(y)

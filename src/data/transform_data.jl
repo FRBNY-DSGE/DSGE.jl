@@ -27,7 +27,7 @@ function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic
     population_all, dlpopulation_forecast, n_population_forecast_obs = if use_population_forecast(m)
 
         # load population forecast
-        population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).txt")
+        population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
         pop_forecast = readtable(population_forecast_file)
 
         rename!(pop_forecast, :POPULATION,  population_mnemonic)
@@ -36,10 +36,9 @@ function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic
 
         # use our "real" series as current value
         pop_all = [population_recorded; pop_forecast[2:end,:]]
-
         pop_all[population_mnemonic], difflog(pop_forecast[population_mnemonic]), length(pop_forecast[population_mnemonic])
     else
-        population_recorded, _, 0
+        population_recorded[:,2], _, 0
     end
 
     # hp filter
@@ -71,10 +70,11 @@ function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic
 end
 
 """
-`extract_data_matrix!(m::AbstractModel, transformed::DataFrame; start_date = Date("1959-09-30","y-m-d"))`
+`save_data_matrix!(m::AbstractModel, transformed::DataFrame; start_date = Date("1959-09-30","y-m-d"))`
 
 Convert a DataFrame of data prepared for model `m` into a
-`Matrix{AbstractFloat}`. Also computes the index in which the
+`Matrix{AbstractFloat}`, and saves this in `inpath(m, "data",
+"data_vint.h5")`, where "vint" is m.data_vintage. Also computes the index in which the
 zero-lower-bound expectations begin.
 
 ## Parameters
@@ -84,7 +84,7 @@ zero-lower-bound expectations begin.
 ## Keyword Arguments
 - `start_date`: the date at which the dataset should begin (default = 1959 Q3)
 """
-function extract_data_matrix!(m::AbstractModel, transformed::DataFrame; start_date = Date("1959-09-30","y-m-d"))
+function save_data_matrix!(m::AbstractModel, transformed::DataFrame; start_date = Date("1959-09-30","y-m-d"))
     
     # Extract only the rows that come after start_date and the columns that aren't the date column
     start = find(x -> x==start_date, transformed[:date])[1]
@@ -92,5 +92,12 @@ function extract_data_matrix!(m::AbstractModel, transformed::DataFrame; start_da
     # Set the model's zlb period
     zlb_start_index!(m, transformed[start:end,:])
 
-    convert(Matrix{AbstractFloat}, transformed[start:end, 2:end])
+    data = convert(Matrix{Float64}, transformed[start:end, 2:end])
+
+    vint = data_vintage(m)
+    h5open(inpath(m, "data", "data_$vint.h5"), "w") do h5
+        h5["data"] = data
+    end
+    
+    data
 end

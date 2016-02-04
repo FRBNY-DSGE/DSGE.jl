@@ -37,7 +37,7 @@ function load_fred_data(m::AbstractModel;
     missing_series = Vector{Symbol}()
     data = []
 
-    datafile = inpath(m, "data", "fred_$vint.txt")
+    datafile = inpath(m, "data", "fred_$vint.csv")
     if isfile(datafile)
 
         # Read in dataset and check that the file contains data for the proper dates
