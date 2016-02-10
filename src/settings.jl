@@ -112,13 +112,17 @@ function default_settings!(m::AbstractModel)
     # Data vintage. Default behavior: choose the most recent data file
     input_files = readdir(inpath(m, "data", ""))
     vint = 0
-    for file in input_files
-        if ismatch(r"^\s*fred*", file)
-            regmatch = match(r"^\s*fred_(?P<vint>\d{6})", file)
-            vint = max(vint, parse(Int,regmatch[:vint]))
+    vint = try
+        for file in input_files
+            if ismatch(r"^\s*fred*", file)
+                regmatch = match(r"^\s*fred_(?P<vint>\d{6})", file)
+                vint = max(vint, parse(Int,regmatch[:vint]))
+            end
         end
+        "$vint"
+    catch
+        NaN
     end
-    vint = "$vint"
     m <= Setting(:data_vintage, vint, true, "vint", "Date of data")
 
     # Data settings
@@ -126,7 +130,11 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:adjust_longrate, true, "Whether to adjust the 10T zero-coupon yield for term premium.")
 
     # Timing
-    ffq = lastdayofquarter(Date(data_vintage(m), "yymmdd") + Year(2000))
+    ffq = try
+        lastdayofquarter(Date(data_vintage(m), "yymmdd") + Year(2000))
+    catch
+        Date(lastdayofquarter(now()))
+    end
     m <= Setting(:first_forecast_quarter, ffq, "First quarter for which to produce forecasts.")
     
     # Anticipated shocks
