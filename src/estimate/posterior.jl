@@ -150,8 +150,8 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     regime_states   = [n_states_no_ant, n_states_no_ant, n_states_aug]
 
     R1[:data] = data[1:n_T0, 1:n_obs_no_ant]
-    R2[:data] = data[(n_T0+1):t_zlb_start, 1:n_obs_no_ant]
-    R3[:data] = data[t_zlb_start+1:end, :]
+    R2[:data] = data[(n_T0+1):t_zlb_start-1, 1:n_obs_no_ant]
+    R3[:data] = data[t_zlb_start:end, :]
 
     # Step 1: solution to DSGE model - delivers transition equation for the state variables
     # transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ
