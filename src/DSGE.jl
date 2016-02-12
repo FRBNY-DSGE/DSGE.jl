@@ -2,19 +2,21 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
     using Distributions, Roots.fzero, HDF5
-    using DataStructures: SortedDict, insert!, ForwardOrdering
+    using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
+    using FredData, DataFrames, Base.Dates
     using QuantEcon: solve_discrete_lyapunov
     import Calculus
     import Optim
     using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
-
+    import NaNMath
+    
     export
 
         # distributions_ext.jl
         BetaAlt, GammaAlt,
 
         # settings.jl
-        Setting, get_setting, default_settings, default_test_settings,
+        Setting, get_setting, default_settings!, default_test_settings!,
 
         # abstractdsgemodel.jl
         AbstractModel, transform_to_model_space!, transform_to_real_line!,
@@ -26,6 +28,7 @@ module DSGE
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin, specify_mh_start,
         data_vintage,
         specify_mode!, specify_hessian, load_parameters_from_file,
+        use_population_forecast,
 
 
         # parameters.jl
@@ -44,7 +47,10 @@ module DSGE
         steadystate!, Model990, SmetsWouters, eqcond, measurement,
 
         # solve/
-        gensys, solve
+        gensys, solve,
+
+        # data/
+        load_fred_data, load_data, transform_data, save_data_matrix!, hpfilter, difflog
 
     const VERBOSITY = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
 
@@ -75,5 +81,10 @@ module DSGE
     include("models/smets_wouters/eqcond.jl")
     include("models/smets_wouters/measurement.jl")
     include("models/smets_wouters/augment_states.jl")
+
+    include("data/load_data.jl")
+    include("data/fred_data.jl")
+    include("data/transformations.jl")
+    include("data/transform_data.jl")
 
 end
