@@ -43,6 +43,9 @@ module DSGE
         metropolis_hastings, compute_parameter_covariance, compute_moments,
         find_density_bands, prior,
 
+        # forecast/
+        kalman_smoother, disturbance_smoother,
+
         # models/
         steadystate!, Model990, SmetsWouters, eqcond, measurement,
 
@@ -69,6 +72,8 @@ module DSGE
     include("estimate/hessizero.jl")
     include("estimate/estimate.jl")
     include("estimate/moments.jl")
+ 
+    include("forecast/smoothers.jl")
 
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")
