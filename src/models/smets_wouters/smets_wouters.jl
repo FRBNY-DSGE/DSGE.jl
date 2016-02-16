@@ -167,7 +167,7 @@ function init_model_indices!(m::SmetsWouters)
 end
 
 
-function SmetsWouters(subspec::AbstractString="ss0")
+function SmetsWouters(subspec::AbstractString="ss0"; testing::Bool=false)
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]
@@ -175,7 +175,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()        # Random Number Generator
-    testing            = false
+    testing            = testing
     _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
 
     # initialize empty model

@@ -7,7 +7,7 @@ path = dirname(@__FILE__)
 
 
 
-m = Model990()
+m = Model990(testing=true)
 Γ0, Γ1, C, Ψ, Π = eqcond(m)
 stake = 1 + 1e-6
 G1, C, impact, fmat, fwt, ywt, gev, eu, loose = gensys(Γ0, Γ1, C, Ψ, Π, stake)

@@ -9,7 +9,7 @@ lh_expected = read(h5, "lnpy")
 post_expected = read(h5, "obj")
 close(h5)
 
-m = Model990()
+m = Model990(testing=true)
 
 lh, _ = likelihood(m, data)
 @test_approx_eq lh_expected lh

@@ -54,7 +54,7 @@ cx = 2 * (α - 1/2)
 @test_approx_eq_eps(transform_to_real_line(α), cx / sqrt(1 - cx^2), 0.001)
 @test transform_to_real_line(δ) == 0.025
 
-m = Model990()
+m = Model990(testing=true)
 lastparam = parameter(:p, 0.0)
 for θ in m.parameters
     isa(θ, Parameter) && (lastparam = θ)
@@ -91,15 +91,13 @@ data_vintage = Setting(:data_vintage, "REF", true, "vint", "Date of data") # ful
 @test promote_rule(Setting{ASCIIString}, AbstractString) == UTF8String
 @test convert(Int64, n_mh_blocks) == 22
 @test convert(ASCIIString, data_vintage) == "REF"
-
-
-@test get_setting(m, :n_mh_blocks) == m.settings[:n_mh_blocks].value
-m.testing = true
 @test get_setting(m, :n_mh_blocks) == m.test_settings[:n_mh_blocks].value
 @test DSGE.modelstring(m) == "_test"
 
 m.testing = false
+@test get_setting(m, :n_mh_blocks) == m.settings[:n_mh_blocks].value
 m <= Setting(:n_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Hastings")
+m <= Setting(:data_vintage, "160209", true, "vint", "data vintage")
 @test m.settings[:n_mh_blocks].value == 5
 @test ismatch(r"^\s*vint=(\d{6})_mhbk=5", DSGE.modelstring(m))
 

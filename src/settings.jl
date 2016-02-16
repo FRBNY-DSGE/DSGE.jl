@@ -60,19 +60,15 @@ end
 (<=){T}(m::AbstractModel{T}, s::Setting)
 ```
 
-Syntax for adding a setting to a model/overwriting a setting: m <= setting
+Syntax for adding a setting to a model/overwriting a setting in `m.settings`: m <= setting
 """
 function (<=){T}(m::AbstractModel{T}, s::Setting)
-    if !m.testing
-        if s.print
-            # Add to a sorted dictionary of things to print
-            insert!(m._filestrings, s.key, to_filename(s))
-        end
-
-        m.settings[s.key] = s
-    else
-        m.test_settings[s.key] = s
+    if s.print
+        # Add to a sorted dictionary of things to print
+        insert!(m._filestrings, s.key, to_filename(s))
     end
+    
+    m.settings[s.key] = s
 end
 
 
@@ -120,7 +116,9 @@ function default_settings!(m::AbstractModel)
         end
         "$vint"
     catch
-        warn("No data files detected in default saveroot. User must set m.settings[:data_vintage].")
+        if !m.testing
+            warn("No data files detected in default saveroot. User must set m.settings[:data_vintage].")
+        end
         NaN
     end
     m <= Setting(:data_vintage, vint, true, "vint", "Date of data")
@@ -133,7 +131,9 @@ function default_settings!(m::AbstractModel)
     ffq = try
         lastdayofquarter(Date(data_vintage(m), "yymmdd") + Year(2000))
     catch
-        warn("No data files detected in default saveroot. m.settings[:first_forecast_quarter] defaults to current quarter.")
+        if !m.testing
+            warn("No data files detected in default saveroot. m.settings[:first_forecast_quarter] defaults to current quarter.")
+        end
         Date(lastdayofquarter(now()))
     end
     m <= Setting(:first_forecast_quarter, ffq, "First quarter for which to produce forecasts.")

@@ -6,7 +6,7 @@ include("../../util.jl")
 path = dirname(@__FILE__)
 
 ### Model
-sw = SmetsWouters()
+sw = SmetsWouters(testing=true)
 
 ### Parameters
 
@@ -137,7 +137,7 @@ expect[:EE] = read(h5, "EE")
 expect[:MM]  = read(h5, "MM")
 close(h5)
 
-sw = SmetsWouters()
+sw = SmetsWouters(testing=true)
 TTT, RRR, CCC = solve(sw)
 actual = measurement(sw, TTT, RRR, CCC)
 for d in (:ZZ, :DD, :QQ, :EE, :MM)

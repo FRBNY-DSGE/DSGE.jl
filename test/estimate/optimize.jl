@@ -4,8 +4,8 @@ path = dirname(@__FILE__)
 include("../util.jl")
 
 # Test in model optimization
-m = Model990()
-m.testing=true
+m = Model990(testing=true)
+
 
 file = h5open("$path/../reference/optimize.h5","r")
 x0 = read(file, "params")
