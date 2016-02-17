@@ -367,7 +367,7 @@ function saveroot{T<:AbstractString}(m::AbstractModel, out_type::T, sub_type::T,
     if !isempty(file_name)
         model_string = modelstring(m)
         (base, ext) = splitext(file_name)
-        file_name_detail = base * "_" * model_string * ext
+        file_name_detail = base * model_string * ext
         path = joinpath(path, file_name_detail)
     end
 
@@ -419,7 +419,11 @@ function inpath{T<:AbstractString}(m::AbstractModel, in_type::T, file_name::T=""
 end
 
 function modelstring(m::AbstractModel)
-    m.testing ? "_test" : join(values(m._filestrings),"_")
+    if !m.testing
+        "_" * join(values(m._filestrings),"_")
+    else
+        "_test"
+    end
 end
 
 """
