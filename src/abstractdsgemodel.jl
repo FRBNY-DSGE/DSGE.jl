@@ -160,7 +160,6 @@ use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers
 
 # Interface for data step
 use_population_forecast(m::AbstractModel) = get_setting(m, :use_population_forecast)
-adjust_longrate(m::AbstractModel)         = get_setting(m, :adjust_longrate)
 
 # Interface for estimation settings
 reoptimize(m::AbstractModel)          = get_setting(m, :reoptimize)

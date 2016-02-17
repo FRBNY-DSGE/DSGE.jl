@@ -20,11 +20,11 @@ and those files must be located in .csv files in `inpath(m, "data")`.
 function load_data(m::AbstractModel; start_date=Date("1959-03-31","y-m-d")::Date,
                                      end_date=last_quarter_end()::Date)
 
-    
-    # Load FRED data, set ois series to load, and set which longrate series to load
+
+    # Load FRED data, set ois series to load
     data = load_fred_data(m; start_date=firstdayofquarter(start_date), end_date=end_date)
     set_ois_series!(m)
-    
+
     # For each additional source, search for the file with the proper name. Open
     # it, read it in, and merge it with fred_series
 
@@ -51,7 +51,7 @@ function load_data(m::AbstractModel; start_date=Date("1959-03-31","y-m-d")::Date
 
             # Read in dataset and check that the file contains data for the proper dates
             addl_data = readtable(file)
-            
+
             # Convert dates from strings to quarter-end dates for date arithmetic
             format_dates!(:date, addl_data)
 

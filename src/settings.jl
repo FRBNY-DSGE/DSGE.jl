@@ -115,7 +115,6 @@ function default_settings!(m::AbstractModel)
 
     # Data settings
     m <= Setting(:use_population_forecast, false, "Whether to use population forecasts as data")
-    m <= Setting(:adjust_longrate, true, "Whether to adjust the 10T zero-coupon yield for term premium.")
 
     # Timing
     ffq = lastdayofquarter(Date(data_vintage(m), DSGE_DATE_FORMAT) + Year(2000))
