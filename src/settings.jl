@@ -109,20 +109,8 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:saveroot, saveroot, "Root of data directory structure")
     m <= Setting(:dataroot, datapath, "Input data directory path")
 
-    # Data vintage. Default behavior: choose the most recent data file
-    input_files = readdir(inpath(m, "data", ""))
-    vint = try
-        for file in input_files
-            if ismatch(r"^\s*fred*", file)
-                regmatch = match(r"^\s*fred_(?P<vint>\d{6})", file)
-                vint = max(vint, parse(Int,regmatch[:vint]))
-            end
-        end
-        "$vint"
-    catch
-        warn("No data files detected in default saveroot. User must set m.settings[:data_vintage].")
-        NaN
-    end
+    # Data vintage. Default behavior: choose today's vintage
+    vint = Dates.format(now(), DSGE_DATE_FORMAT)
     m <= Setting(:data_vintage, vint, true, "vint", "Date of data")
 
     # Data settings
@@ -130,14 +118,9 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:adjust_longrate, true, "Whether to adjust the 10T zero-coupon yield for term premium.")
 
     # Timing
-    ffq = try
-        lastdayofquarter(Date(data_vintage(m), "yymmdd") + Year(2000))
-    catch
-        warn("No data files detected in default saveroot. m.settings[:first_forecast_quarter] defaults to current quarter.")
-        Date(lastdayofquarter(now()))
-    end
+    ffq = lastdayofquarter(Date(data_vintage(m), DSGE_DATE_FORMAT) + Year(2000))
     m <= Setting(:first_forecast_quarter, ffq, "First quarter for which to produce forecasts.")
-    
+
     # Anticipated shocks
     zlb_start = Date("2008-12-31","y-m-d")
     m <= Setting(:zlb_start_date,  zlb_start, "First period to incorporate zero bound expectation")
@@ -145,7 +128,7 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:n_anticipated_shocks,         0, "Number of anticipated policy shocks")
     m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
     m <= Setting(:zlb_start_index, 198, "Index of first period to incorporate zero bound expectation")
-    
+
     # General computation
     m <= Setting(:use_parallel_workers, true, "Use available parallel workers in computations")
 

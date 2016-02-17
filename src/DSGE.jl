@@ -53,6 +53,7 @@ module DSGE
         load_fred_data, load_data, transform_data, save_data_matrix!, hpfilter, difflog
 
     const VERBOSITY = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
+    const DSGE_DATE_FORMAT = "yymmdd"
 
     include("parameters.jl")
     include("distributions_ext.jl")
