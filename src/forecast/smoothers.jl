@@ -37,12 +37,12 @@ Inputs
 - `Z`, the (Ny x Nz) measurement matrix.
 - `b`, the (Ny x 1) constant vector in the measurement equation.
 
-- `nant`, an optional scalar for the zero bound specification indicating the
+- `n_anticipated_shocks`, an optional scalar for the zero bound specification indicating the
       number of periods ahead the interest rate is fixed.
-antlags, an optional scalar for the zero bound specification indicating
+- antlags, an optional scalar for the zero bound specification indicating
       the number of periods for which interest rate expectations have
       been fixed
-Ny0, an optional scalar indicating the number of periods of presample
+- Ny0, an optional scalar indicating the number of periods of presample
       (i.e. the number of periods for which smoothed states are not required).
 
 OUTPUTS:
@@ -53,7 +53,7 @@ eta_hat, the optional (Ne x Nt) matrix of smoothed shocks.
 If Ny0 is nonzero, the alpha_hat and eta_hat matrices will be shorter by
 that number of columns (taken from the beginning).
 """
-function kalman_smoother{S<:AbstractFloat}(A0, P0, y, pred::Matrix{S}, vpred::Array{S, 3}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, nant::Int, antlags::Int, peachcount::Int, psize::Int, Ny0::Int = 0)
+function kalman_smoother{S<:AbstractFloat}(A0, P0, y, pred::Matrix{S}, vpred::Array{S, 3}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, n_anticipated_shocks::Int, antlags::Int, peachcount::Int, psize::Int, Ny0::Int = 0)
 
     Ne = size(R, 2)
     Ny = size(y, 1)
@@ -62,7 +62,7 @@ function kalman_smoother{S<:AbstractFloat}(A0, P0, y, pred::Matrix{S}, vpred::Ar
 
     alpha_hat = zeros(Nz, Nt)
 
-    r, eta_hat = disturbance_smoother(y, pred, vpred, T, R, Q, Z, b, peachcount, psize, nant, antlags)
+    r, eta_hat = disturbance_smoother(y, pred, vpred, T, R, Q, Z, b, peachcount, psize, n_anticipated_shocks, antlags)
     
     ah_t = A0 + P0*r[:, 1]
     alpha_hat[:, 1] = ah_t
@@ -73,16 +73,16 @@ function kalman_smoother{S<:AbstractFloat}(A0, P0, y, pred::Matrix{S}, vpred::Ar
         # anticipated shocks are supposed to occur before the model switch.
         # In these periods, this is accomplished by setting the relevant
         # rows and columns of the Q matrix to zero. In other periods, or in
-        # specifications with zero bound off (and hence with nant = 0), the
+        # specifications with zero bound off (and hence with n_anticipated_shocks = 0), the
         # normal Q matrix can be used.
 
-        if nant != 0
+        if n_anticipated_shocks != 0
             # The first part of the conditional below pertains to the periods in which zerobound is off.
             # To specify this period, we must account for (peachcount*psize) since peachdata is augmented to y.
             # JC 11/30/10
-            if nant > 0 && t < Nt - antlags - (peachcount*psize)
+            if n_anticipated_shocks > 0 && t < Nt - antlags - (peachcount*psize)
                 Q_t = zeros(Ne, Ne)
-                Q_t[1:(Ne-nant), 1:(Ne-nant)] = Q[1:(Ne-nant), 1:(Ne-nant)]
+                Q_t[1:(Ne-n_anticipated_shocks), 1:(Ne-n_anticipated_shocks)] = Q[1:(Ne-n_anticipated_shocks), 1:(Ne-n_anticipated_shocks)]
                 ah_t = T*ah_t + R*Q_t*R'*r[:, t]
             else
                 ah_t = T*ah_t + R*Q*R'*r[:, t]
@@ -141,7 +141,7 @@ end
 # Z, the (Ny x Nz) measurement matrix.
 # b, the (Ny x 1) constant vector in the measurement equation.
 
-# nant, an optional scalar for the zero bound specification indicating the
+# n_anticipated_shocks, an optional scalar for the zero bound specification indicating the
 #       number of periods ahead the interest rate is fixed.
 # antlags, an optional scalar for the zero bound specification indicating
 #       the number of periods for which interest rate expectations have
@@ -156,7 +156,7 @@ end
 # eta_hat, the optional (Ne x Nt) matrix of smoothed shocks.
 
 # Dan Greenwald, 7/7/2010.
-function disturbance_smoother{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, vpred::Array{S,3}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, peachcount::Int, psize::Int, nant::Int = 0, antlags::Int = 0)
+function disturbance_smoother{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, vpred::Array{S,3}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, peachcount::Int, psize::Int, n_anticipated_shocks::Int = 0, antlags::Int = 0)
     Nt = size(y, 2)
     Nz = size(T, 1)
 
@@ -192,16 +192,16 @@ function disturbance_smoother{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, v
         # anticipated shocks are supposed to occur before the model switch.
         # In these periods, this is accomplished by setting the relevant
         # rows and columns of the Q matrix to zero. In other periods, or in
-        # specifications with zero bound off (and hence with nant = 0), the
+        # specifications with zero bound off (and hence with n_anticipated_shocks = 0), the
         # normal Q matrix can be used.
-        if nant != 0
+        if n_anticipated_shocks != 0
             
             # The first part of the conditional below pertains to the periods in which zerobound is off.
             # To specify this period, we must account for (peachcount*psize) since peachdata is augmented to y.
             # JC 11/30/10
-            if nant > 0 && t < Nt - antlags - peachcount*psize
+            if n_anticipated_shocks > 0 && t < Nt - antlags - peachcount*psize
                 Q_t = zeros(Ne, Ne)
-                Q_t[1:Ne-nant, 1:Ne-nant] = Q[1:Ne-nant, 1:Ne-nant]
+                Q_t[1:Ne-n_anticipated_shocks, 1:Ne-n_anticipated_shocks] = Q[1:Ne-n_anticipated_shocks, 1:Ne-n_anticipated_shocks]
                 eta_hat[:, t] = Q_t * R' * r_t
             else
                 eta_hat[:, t] = Q * R' * r_t
