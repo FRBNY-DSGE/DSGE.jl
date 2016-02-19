@@ -111,18 +111,7 @@ function default_settings!(m::AbstractModel)
 
     # Data vintage. Default behavior: choose the most recent data file
     input_files = readdir(inpath(m, "data", ""))
-    vint = try
-        for file in input_files
-            if ismatch(r"^\s*fred*", file)
-                regmatch = match(r"^\s*fred_(?P<vint>\d{6})", file)
-                vint = max(vint, parse(Int,regmatch[:vint]))
-            end
-        end
-        "$vint"
-    catch
-        warn("No data files detected in default saveroot. User must set m.settings[:data_vintage].")
-        NaN
-    end
+    vint = Dates.format(today(), "yymmdd")
     m <= Setting(:data_vintage, vint, true, "vint", "Date of data")
 
     # Data settings
@@ -130,11 +119,8 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:adjust_longrate, true, "Whether to adjust the 10T zero-coupon yield for term premium.")
 
     # Timing
-    ffq = try
+    ffq = function (m::AbstractModel)
         lastdayofquarter(Date(data_vintage(m), "yymmdd") + Year(2000))
-    catch
-        warn("No data files detected in default saveroot. m.settings[:first_forecast_quarter] defaults to current quarter.")
-        Date(lastdayofquarter(now()))
     end
     m <= Setting(:first_forecast_quarter, ffq, "First quarter for which to produce forecasts.")
     
