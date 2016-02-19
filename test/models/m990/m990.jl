@@ -6,7 +6,7 @@ include("../../util.jl")
 path = dirname(@__FILE__)
 
 ### Model
-model = Model990(testing=true)
+model = Model990()
 
 ### Parameters
 
@@ -142,7 +142,7 @@ expect[:EE] = read(h5, "EE")
 expect[:MM]  = read(h5, "MM")
 close(h5)
 
-model = Model990(testing=true)
+model = Model990()
 TTT, RRR, CCC = solve(model)
 actual = measurement(model, TTT, RRR, CCC)
 for d in (:ZZ, :DD, :QQ, :EE, :MM)

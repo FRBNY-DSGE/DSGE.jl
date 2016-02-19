@@ -5,7 +5,8 @@ include("../util.jl")
 path = dirname(@__FILE__)
 
 # Test hessian! in context of model
-m = Model990(testing=true)
+m = Model990()
+m.testing = true
 
 # Setup paths
 mode = h5open(inpath(m, "user", "paramsmode.h5")) do file

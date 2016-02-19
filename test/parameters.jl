@@ -11,7 +11,7 @@ end
 # probability
 N = 10^2
 u = parameter(:bloop, 2.5230, (1e-8, 5.), (1e-8, 5.), DSGE.SquareRoot(); fixed = true)
-v = parameter(:cat, 2.5230, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), Distributions.Gamma(2.00, 0.1))
+v = parameter(:cat, 2.5230, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), Gamma(2.00, 0.1))
 
 pvec =  ParameterVector{Float64}(N)
 for i in 1:length(pvec)
@@ -80,7 +80,7 @@ function sstest(m::Model990)
     steadystate!(m)
 end
 
-m = Model990(testing=true)
+m = Model990()
 sstest(m)
 
 @test m[:ι_w].value == 0.0

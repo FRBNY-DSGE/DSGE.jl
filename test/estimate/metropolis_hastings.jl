@@ -5,8 +5,8 @@ include("../util.jl")
 path = dirname(@__FILE__)
 
 # Set up model for testing
-m = Model990(testing=true)
-
+m = Model990()
+m.testing=true
 
 # Read in the covariance matrix for Metropolis-Hastings and reference parameter draws
 file = h5open("$path/../reference/metropolis_hastings.h5","r")

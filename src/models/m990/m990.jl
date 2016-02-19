@@ -175,7 +175,7 @@ function init_model_indices!(m::Model990)
 end
 
 
-function Model990(subspec::AbstractString="ss2"; testing::Bool=false)
+function Model990(subspec::AbstractString="ss2")
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]
@@ -183,7 +183,7 @@ function Model990(subspec::AbstractString="ss2"; testing::Bool=false)
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()
-    testing            = testing
+    testing            = false
     _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
 
     # Set up data sources and series

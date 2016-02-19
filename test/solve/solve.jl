@@ -12,7 +12,7 @@ RRR_expected = read(h5, "RRR")
 close(h5)
 
 
-m = Model990(testing=true)
+m = Model990()
 TTT, RRR, CCC = solve(m)
 @test_matrix_approx_eq TTT_expected TTT
 @test_matrix_approx_eq RRR_expected RRR
