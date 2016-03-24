@@ -39,18 +39,18 @@ Inputs
 
 - `n_anticipated_shocks`, an optional scalar for the zero bound specification indicating the
       number of periods ahead the interest rate is fixed.
-- antlags, an optional scalar for the zero bound specification indicating
+- `antlags`, an optional scalar for the zero bound specification indicating
       the number of periods for which interest rate expectations have
       been fixed
-- Ny0, an optional scalar indicating the number of periods of presample
+- `Ny0`, an optional scalar indicating the number of periods of presample
       (i.e. the number of periods for which smoothed states are not required).
 
 OUTPUTS:
 
-alpha_hat, the (Nz x Nt) matrix of smoothed states.
-eta_hat, the optional (Ne x Nt) matrix of smoothed shocks.
+- `α_hat`, the (`Nz` x `Nt`) matrix of smoothed states.
+- `η_hat`, the optional (`Ne` x `Nt`) matrix of smoothed shocks.
 
-If Ny0 is nonzero, the alpha_hat and eta_hat matrices will be shorter by
+If `Ny0` is nonzero, the `α_hat` and `η_hat` matrices will be shorter by
 that number of columns (taken from the beginning).
 """
 function kalman_smoother{S<:AbstractFloat}(A0, P0, y, pred::Matrix{S}, vpred::Array{S, 3}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, n_anticipated_shocks::Int, antlags::Int, peachcount::Int, psize::Int, Ny0::Int = 0)
