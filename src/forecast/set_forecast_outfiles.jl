@@ -1,4 +1,4 @@
-function set_forecast_outfiles(m, cond, output_type, forecast_settings)
+function set_forecast_outfiles(m, input_type, output_type, cond, forecast_settings)
     output_file_names = [
     "hist", # cond
     "hist_s", # cond

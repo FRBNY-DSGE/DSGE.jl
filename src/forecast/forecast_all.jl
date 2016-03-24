@@ -1,6 +1,7 @@
 """
 ```
-forecast_all(...)
+forecast_all(m::AbstractModel, data::Matrix{Float64}; cond::Vector{Symbol}
+input_type::Vector{Symbol} output_type::Vector{Symbol}
 ```
 
 Inputs
@@ -13,6 +14,11 @@ Inputs
     - `:semi`: use "semiconditional data" - average of quarter-to-date observations for high frequency series
     - `:cond`: use "conditional data" - semiconditional plus nowcasts for desired
       observables
+- `input_type`: any combination of
+    - `:mode`: forecast using the modal parameters only
+    - `:mean`: forecast using the mean parameters only
+    - `:full`: forecast using all parameters (full distribution)
+    - `:subset`: forecast using a well-defined user-specified subset of draws
 - `output_type`: any combination of
     - `:states`: smoothed states (history) for all specified conditional data types
     - `:shocks`: smoothed shocks (history, standardized) for all specified conditional data types
@@ -38,10 +44,16 @@ Inputs
     - `:mats`: recompute system matrices (TTT, RRR, CCC) given parameters only
     - `:zend`: recompute final state vector (s_{T}) given parameters only
     - `:irfs`: impulse response functions
+
+Outputs
+-------
+
+- todo
 """
 
 function forecast_all(m::AbstractModel, data::Matrix{Float64};
-                      cond::Vector{Symbol}    = Vector{Symbol}(),
+                      cond::Vector{Symbol}        = Vector{Symbol}(),
+                      input_type::Vector{Symbol}  = Vector{Symbol}(),
                       output_type::Vector{Symbol} = Vector{Symbol}())
 
     # Prepare forecast settings
@@ -70,7 +82,7 @@ function forecast_all(m::AbstractModel, data::Matrix{Float64};
     # Enddate_forecastfile # total number of quarters in the observable time series and the forecast period
 
     # Set up infiles
-    input_file_names = set_forecast_infiles(m)
+    input_file_names = set_forecast_infiles(m, input_type)
 
     # Read infiles
     for input_file in input_file_names
@@ -86,8 +98,15 @@ function forecast_all(m::AbstractModel, data::Matrix{Float64};
         forecast(m, data_for_forecast...)
     end
 
+    # Example: call forecast, unconditional data, states+observables
+    forecast(m, data,
+             TTT, RRR, CCC, zend,
+             forecast_horizons, bounded_interest_rate_flag, no_forecast_shocks_flag,
+             tdist_shocks_flag, tdist_drawdf_flag, tdist_df_value)
+
     # Set up outfiles
-    output_file_names = set_forecast_outfiles(m, output_type)
+    output_file_names = set_forecast_outfiles(m, input_type, output_type, cond,
+                                              forecast_settings)
 
     # Write outfiles
     for output_file in output_file_names
