@@ -12,7 +12,7 @@ Inputs
 - `cond`: conditional data type, any combination of
     - `:none`: no conditional data
     - `:semi`: use "semiconditional data" - average of quarter-to-date observations for high frequency series
-    - `:cond`: use "conditional data" - semiconditional plus nowcasts for desired
+    - `:full`: use "conditional data" - semiconditional plus nowcasts for desired
       observables
 - `input_type`: any combination of
     - `:mode`: forecast using the modal parameters only
@@ -59,11 +59,11 @@ function forecast_all(m::AbstractModel, data::Matrix{Float64};
     # Prepare forecast settings
     use_expected_rate_date     = (n_anticipated_shocks(m) > 0)    # use data on expected future interest rates
     shockdec_whichshocks       = 1:n_shocks_exogenous(m)          # defaults to 1:n_shocks_exogenous(m)
-    bounded_interest_rate_flag = 1                                # defaults to 1, i.e. enforce bounded interest rate
-    no_forecast_shocks_flag    = 0                                # defaults to 0, i.e. do *not* turn off all shocks
-    disturbance_smoother_flag  = 1                                # defaults to 1, i.e. do use disturbance smoother
-    tdist_shocks_flag          = 0                                # defaults to 0, i.e. do not use t-distributed shocks
-    tdist_drawdf_flag          = 0                                # defaults to 0, i.e. do not draw t-distribution d.o.f.
+    bounded_interest_rate_flag = true                             # defaults to 1, i.e. enforce bounded interest rate
+    no_forecast_shocks_flag    = false                            # defaults to 0, i.e. do *not* turn off all shocks
+    disturbance_smoother_flag  = true                             # defaults to 1, i.e. do use disturbance smoother
+    tdist_shocks_flag          = false                            # defaults to 0, i.e. do not use t-distributed shocks
+    tdist_drawdf_flag          = false                            # defaults to 0, i.e. do not draw t-distribution d.o.f.
     tdist_df_value             = 15                               # defaults to 15
     forecast_horizons          = 60                               # defaults to 60
     shockdec_startindex        = 190                              # defaults to index of 2007-Q1, confirm this index is correct
@@ -86,8 +86,16 @@ function forecast_all(m::AbstractModel, data::Matrix{Float64};
     input_file_names = get_forecast_infiles(m, input_type)
 
     # Read infiles
-    for input_file in input_file_names
-        read(input_file)
+    keys = [:params, :TTT, :RRR, :CCC, :zend]
+    for k in keys
+        if haskey(input_file_names, k)
+            h5open(input_file_names[k], "r") do f
+                tmp = read(f, string(k))
+            end
+            eval(parse(string(k) * "= tmp"))
+        end
+    end
+
     # If we just have one draw of parameters in mode or mean case, then we don't have the
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
     if input_data in [:mean, :mode]
