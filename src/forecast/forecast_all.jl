@@ -1,7 +1,7 @@
 """
 ```
-forecast_all(m::AbstractModel, data::Matrix{Float64}; cond::Vector{Symbol}
-input_type::Vector{Symbol} output_type::Vector{Symbol}
+forecast_all(m::AbstractModel, data::Matrix{Float64}; cond_types::Vector{Symbol}
+input_types::Vector{Symbol} output_types::Vector{Symbol}
 ```
 
 Inputs
@@ -9,17 +9,17 @@ Inputs
 
 - `m`: model object
 - `data`: matrix of data for observables
-- `cond`: conditional data type, any combination of
+- `cond_types`: conditional data type, any combination of
     - `:none`: no conditional data
     - `:semi`: use "semiconditional data" - average of quarter-to-date observations for high frequency series
     - `:full`: use "conditional data" - semiconditional plus nowcasts for desired
       observables
-- `input_type`: any combination of
+- `input_types`: which set of parameters to use, any combination of
     - `:mode`: forecast using the modal parameters only
     - `:mean`: forecast using the mean parameters only
     - `:full`: forecast using all parameters (full distribution)
     - `:subset`: forecast using a well-defined user-specified subset of draws
-- `output_type`: any combination of
+- `output_types`: forecast routine outputs to compute, any combination of
     - `:states`: smoothed states (history) for all specified conditional data types
     - `:shocks`: smoothed shocks (history, standardized) for all specified conditional data types
     - `:shocks_nonstandardized`: smoothed shocks (history, non-standardized) for all
@@ -52,9 +52,9 @@ Outputs
 """
 
 function forecast_all(m::AbstractModel, data::Matrix{Float64};
-                      cond::Vector{Symbol}        = Vector{Symbol}(),
-                      input_type::Vector{Symbol}  = Vector{Symbol}(),
-                      output_type::Vector{Symbol} = Vector{Symbol}())
+                      cond_types::Vector{Symbol}        = Vector{Symbol}(),
+                      input_types::Vector{Symbol}  = Vector{Symbol}(),
+                      output_types::Vector{Symbol} = Vector{Symbol}())
 
     # Prepare forecast settings
     use_expected_rate_date     = (n_anticipated_shocks(m) > 0)    # use data on expected future interest rates
@@ -82,6 +82,21 @@ function forecast_all(m::AbstractModel, data::Matrix{Float64};
     # Startdate            # index for shock decomosition and counterfactual start date
     # Enddate_forecastfile # total number of quarters in the observable time series and the forecast period
 
+    for input_type in input_types
+        for cond_type in cond_types
+            for output_type in output_types
+                forecast_one(m, data; cond_type=cond_type, input_type=input_type, output_type=output_type)
+            end
+        end
+    end
+
+end
+
+function forecast_one(m::AbstractModel, data::Matrix{Float64};
+                      cond_type::Symbol   = :none
+                      input_type::Symbol  = :mode
+                      output_type::Symbol = :simple)
+
     # Set up infiles
     input_file_names = get_forecast_infiles(m, input_type)
 
@@ -105,13 +120,10 @@ function forecast_all(m::AbstractModel, data::Matrix{Float64};
         zend = kal[:zend]
     end
 
-    # Prepare conditional data matrices
-    # May not be necessary as we can iterate over it
-
-    # Call forecast level 2 programs
-    for (cond_data_type, cond_data) in cond
-        data_for_forecast = append!(copy(data), cond_data)
-        forecast(m, data_for_forecast...)
+    # Prepare conditional data matrix. All missing columns will be set to NaN.
+    if cond_type in [:semi, :full]
+        cond_data = load_cond_data(m, cond_type)
+        data = [data; cond_data]
     end
 
     # Example: call forecast, unconditional data, states+observables
@@ -125,7 +137,7 @@ function forecast_all(m::AbstractModel, data::Matrix{Float64};
              tdist_df_value=tdist_df_value)
 
     # Set up outfiles
-    output_file_names = set_forecast_outfiles(m, input_type, output_type, cond,
+    output_file_names = set_forecast_outfiles(m, input_type, output_type, cond_type,
                                               forecast_settings)
 
     # Write outfiles
