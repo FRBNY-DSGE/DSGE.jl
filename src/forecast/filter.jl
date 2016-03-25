@@ -33,24 +33,56 @@ Outputs
 function filter{S<:AbstractFloat}(m::AbstractModel,
                                   data::Matrix{S},
                                   lead::Int,
-                                  sys::Array{System};   
-                                  z0::Vector{S},
-                                  vz0::Matrix{S}, 
-                                  Ny0::Int =0;
-                                  allout::Bool = false)
+                                  sys::Vector{System},   
+                                  z0::Vector{S}=zeros(S, n_states_augmented(m) - n_anticipated_shocks(m), 1),
+                                  vz0::Matrix{S}=[]; 
+                                  Ny0::Int =0,
+                                  allout::Bool = false,
+                                  use_expected_rate_data::Bool = true)
 
     # numbers of useful things
     ndraws   = n_draws(m)
     @assert size(sys,1) == ndraws
+
     
     # Make vector of Kalman objects to return
     filtered_states = Array{Kalman}(ndraws)
     
-    # Parallelize
+    # Parallelize. We want to call a version of filter that operates
+    # on a single draw and then call that for each element
     for i = 1:ndraws
-        # TODO: make driver for kalman_filter that takes System?
-        filtered_states[i] = kalman_filter(data, lead, ...) 
+        filtered_states[i] = filter(m, data, lead, ..., use_expected_rate_data) 
+    end
+        
+    return filtered_states
+end
+
+
+function filter{S<:AbstractFloat}(m::AbstractModel,
+                                  data::Matrix{S},
+                                  sys::System,  
+                                  z0::Vector{S}=zeros(S, n_states_augmented(m) - n_anticipated_shocks(m), 1),
+                                  vz0::Matrix{S}=[];
+                                  lead::Int=0,
+                                  Ny0::Int =0,
+                                  allout::Bool = false,
+                                  use_expected_rate_data = true)
+
+    TTT = sys[:TTT]
+    RRR = sys[:RRR]
+    QQ  = sys[:QQ]
+    
+    # if initial vz0 isn't given, solve for it using discrete lyapunov equation
+    if vz0 == 0
+        vz0 = solve_discrete_lyapunov(TTT, RRR*QQ*RRR')
     end
 
-    return filtered_states
+    if use_expected_rate_data
+        # Do stuff to calculate when regime switches that involves the model object
+        # End up calling filter twice (or maybe 3 times)
+        
+    else
+        # pull out the elements of sys and call the kalman filter
+        kalman_filter(data, lead, sys[:CCC], TTT, sys[:DD], sys[:ZZ], sys[:VVall], z0, vz0, Ny0, allout)
+    end
 end
