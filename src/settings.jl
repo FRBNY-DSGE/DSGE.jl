@@ -145,7 +145,6 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:n_mh_burn,         2    , "Number of blocks to use as burn-in in Metropolis-Hastings")
     m <= Setting(:mh_thin,    5    , "Metropolis-Hastings thinning step")
 
-
 end
 
 
