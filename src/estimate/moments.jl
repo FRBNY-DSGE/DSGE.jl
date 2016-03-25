@@ -32,11 +32,34 @@ function compute_moments(m::AbstractModel, percent::AbstractFloat = 0.90; verbos
 
     n_draws = size(param_draws,1)
 
+    # Save mean parameter vector
+    save_mean_parameters(m, param_draws)
+
     # Produce TeX table of moments
     make_moment_tables(m, param_draws, percent, verbose=verbose)
 end
 
-#=
+"""
+```
+save_mean_parameters{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T})
+```
+
+Computes and saves the posterior mean of the parameters.
+
+### Arguments
+- `m`
+- `draws`: n_draws x n_parameters matrix holding the posterior draws from
+  Metropolis-Hastings
+"""
+function save_mean_parameters{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T})
+    post_means = mean(draws,1)'
+    filename = workpath(m, "estimate", "paramsmean.h5")
+    h5open(filename, "r") do f
+        f["params"] = post_means
+    end
+end
+
+"""
 ```
 make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T},
     percent::AbstractFloat; verbose::Symbol = :none)
@@ -54,9 +77,9 @@ Tabulates parameter moments in 3 LaTeX tables:
 
 ### Arguments
 - `draws`: [n_draws x n_parameters] matrix holding the posterior draws from
-  metropolis-hastings from save/mhsave.h5
+  Metropolis-Hastings from save/mhsave.h5
 - `percent`: the mass of observations we want; 0 <= percent <= 1
-=#
+"""
 function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T},
                                               percent::AbstractFloat;
                                               verbose::Symbol = :none)
