@@ -17,8 +17,8 @@ on date).
 The name of the input data file must be the same as the source string in `m.data_series`,
 and those files must be located in .csv files in `inpath(m, "data")`.
 """
-function load_data(m::AbstractModel; start_date=Date("1959-03-31","y-m-d")::Date,
-                                     end_date=last_quarter_end()::Date)
+function load_data(m::AbstractModel; start_date::Date = Date("1959-03-31","y-m-d"),
+                                     end_date::Date   = last_quarter_end())
 
 
     # Load FRED data, set ois series to load
