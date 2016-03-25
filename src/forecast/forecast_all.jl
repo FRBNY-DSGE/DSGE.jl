@@ -52,7 +52,7 @@ Outputs
 """
 
 function forecast_all(m::AbstractModel, data::Matrix{Float64};
-                      cond_types::Vector{Symbol}        = Vector{Symbol}(),
+                      cond_types::Vector{Symbol}   = Vector{Symbol}(),
                       input_types::Vector{Symbol}  = Vector{Symbol}(),
                       output_types::Vector{Symbol} = Vector{Symbol}())
 
@@ -98,16 +98,21 @@ function forecast_one(m::AbstractModel, data::Matrix{Float64};
                       output_type::Symbol = :simple)
 
     # Set up infiles
-    input_file_names = get_forecast_infiles(m, input_type)
+    input_file_name = get_input_file(m, input_type)
 
     # Read infiles
-    keys = [:params, :TTT, :RRR, :CCC, :zend]
-    for k in keys
-        if haskey(input_file_names, k)
-            h5open(input_file_names[k], "r") do f
-                tmp = read(f, string(k))
-            end
-            eval(parse(string(k) * "= tmp"))
+    if input_data in [:mean, :mode]
+        params = h5open(input_file_name, "r") do f
+            read(f, "params")
+        end
+        TTT = RRR = CCC = zend = []
+    elseif input_data == :full
+        h5open(input_file_name, "r") do f
+            params = read(f, "params")
+            TTT = read(f, "TTT")
+            RRR = read(f, "RRR")
+            CCC = read(f, "CCC")
+            zend = read(f, "zend")
         end
     end
 
@@ -137,7 +142,7 @@ function forecast_one(m::AbstractModel, data::Matrix{Float64};
              tdist_df_value=tdist_df_value)
 
     # Set up outfiles
-    output_file_names = set_forecast_outfiles(m, input_type, output_type, cond_type,
+    output_file_names = get_output_files(m, input_type, output_type, cond_type,
                                               forecast_settings)
 
     # Write outfiles
@@ -145,4 +150,42 @@ function forecast_one(m::AbstractModel, data::Matrix{Float64};
         write(output_file)
     end
 
+end
+
+function get_input_file(m, input_type)
+    if input_type == :mode
+        return rawpath(m,"estimate","paramsmode.h5")
+    elseif input_type == :mean
+        return workpath(m,"estimate","paramsmean.h5")
+    elseif input_type == :full
+        return rawpath(m,"estimate","mhsave.h5")
+    elseif input_type == :subset
+        #TODO
+        return ""
+    else
+        throw(ArgumentError("Invalid input_type: " * input_type)) 
+    end
+end
+
+function get_output_files(m, input_type, output_type, cond, forecast_settings)
+    output_file_names = [
+    "hist", # cond
+    "hist_s", # cond
+    "forecast", # cond
+    "forecast_s", # cond
+    "states",
+    "datashocks", # shocks over uncond period
+    "datashocks_ns", # non-standardized
+    "shocks", # cond # shocks over period of conditional data
+    "shocks_ns", # non-standardized
+    "counter",
+    "coutner_s",
+    "shockdec",
+    "shockdec_s",
+    "ytrend",
+    "ytrend_s",
+    "dettrend", # cond
+    "dettrend_s"] # cond
+
+    return output_file_names
 end

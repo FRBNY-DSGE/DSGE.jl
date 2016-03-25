@@ -18,6 +18,10 @@ end
 function Base.getindex(sys::System, d::Symbol)
     if d in (:transition, :measurement)
         return getfield(sys, d)
+    elseif d in fieldnames(sys.transition)
+        return getfield(sys.transition, d)
+    elseif d in fieldnames(sys.measurement)
+        return getfield(sys.measurement, d)
     else
         throw(KeyError(d))
     end
