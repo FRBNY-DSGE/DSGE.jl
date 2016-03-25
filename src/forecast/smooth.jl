@@ -17,6 +17,7 @@ Outputs
 - A vector of `KalmanSmooth` objects containing the smoothed states and shocks for each draw
 """
 function smooth{S<:AbstractFloat}(m::AbstractModel,
+                                  forecast_settings::Vector{Setting},
                                   data::Matrix{AbstractFloat},
                                   sys::Vector{System},
                                   kal::Vector{Kalman})
@@ -37,12 +38,10 @@ function smooth{S<:AbstractFloat}(m::AbstractModel,
     # Think about whether level 1 functions should return KalmanSmooth
     # objects and level 2 should return a vector of them.
     for i = 1:ndraws
-        if smoother(m) == :simulation
+        if disturbance_smoother_flag
             smoothed[i] = disturbance_smoother(...)
-        elseif smoother(m) == :kalman
-            smoothed[i] = kalman_smoother(...)
         else
-            error("Invalid smoother setting. Please choose either `:simulation` or `:kalman`.")
+            smoothed[i] = kalman_smoother(...)
         end
     end
 
