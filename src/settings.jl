@@ -3,23 +3,20 @@
 Setting{T<:Any}
 ```
 
-The `Setting` type is an interface for computational settings that
-affect how the code runs without affecting the mathematical definition
-of the model. It also provides support for non-conflicting file names
-for output of 2 models that differ only in the values of their
+The `Setting` type is an interface for computational settings that affect how the code runs
+without affecting the mathematical definition of the model. It also provides support for
+non-conflicting file names for output of 2 models that differ only in the values of their
 computational settings.
 
 ### Fields
 - `key::Symbol`: Name of setting
 - `value::T`: Value of setting
-- `print::Bool`: Indicates whether to append this setting's code
-and value to output file names. If true, output file names will
-include a suffix of the form _code1=val1_code2=val2_etc. where codes
-are listed in alphabetical order.
-- `code::AbstractString`: string of <=4 characters to print to output
-file suffixes when `print=true`.
-- `description::AbstractString`: Short description of what the setting
-is used for.
+- `print::Bool`: Indicates whether to append this setting's code and value to output file
+  names. If true, output file names will include a suffix of the form _code1=val1_code2=val2
+  etc. where codes are listed in alphabetical order.
+- `code::AbstractString`: string of <=4 characters to print to output file suffixes when
+  `print=true`.
+- `description::AbstractString`: Short description of what the setting is used for.
 """
 immutable Setting{T}
     key::Symbol                  # name of setting
@@ -39,7 +36,7 @@ Base.promote_rule(::Type{Setting{Bool}}, ::Type{Bool}) = promote_rule(Bool, Bool
 
 Base.string(s::Setting{AbstractString}) = string(s.value)
 
-to_filename(s::Setting) = "$(s.code)=$(s.value)"
+to_filestring(s::Setting) = "$(s.code)=$(s.value)"
 
 
 # key, value constructor
@@ -62,11 +59,13 @@ end
 
 Syntax for adding a setting to a model/overwriting a setting: m <= setting
 """
-function (<=){T}(m::AbstractModel{T}, s::Setting)
+function (<=)(m::AbstractModel, s::Setting)
     if !m.testing
         if s.print
             # Add to a sorted dictionary of things to print
-            insert!(m._filestrings, s.key, to_filename(s))
+            # Can improve if desired but N is so small
+            push!(m._filestrings, to_filestring(s))
+            sort!(m._filestrings)
         end
 
         m.settings[s.key] = s
