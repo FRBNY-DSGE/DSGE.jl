@@ -93,7 +93,7 @@ type Model990{T} <: AbstractModel{T}
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
-    _filestrings::SortedDict{Symbol,AbstractString, ForwardOrdering} # The strings we will print to a filename
+    _filestrings::Vector{AbstractString}            # The strings we will print to a filename
 
     data_series::Dict{Symbol,Vector{Symbol}}       # Keys = data sources, values = vector of series mnemonics
     data_transforms::OrderedDict{Symbol,Function}  # functions to transform raw data into input matrix
@@ -184,7 +184,7 @@ function Model990(subspec::AbstractString="ss2")
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()
     testing            = false
-    _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
+    _filestrings       = Vector{AbstractString}()
 
     # Set up data sources and series
     fred_series        = [:GDP, :GDPCTPI, :PCE, :FPI,

@@ -95,7 +95,7 @@ type SmetsWouters{T} <: AbstractModel{T}
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
-    _filestrings::SortedDict{Symbol,AbstractString, ForwardOrdering} # The strings we will print to a filename
+    _filestrings::Vector{AbstractString}            # The strings we will print to a filename
 end
 
 description(m::SmetsWouters) = "Smets-Wouters Model"
@@ -176,7 +176,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()        # Random Number Generator
     testing            = false
-    _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
+    _filestrings       = Vector{AbstractString}()
 
     # initialize empty model
     m = SmetsWouters{Float64}(

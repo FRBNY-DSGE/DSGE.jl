@@ -101,17 +101,15 @@ m.testing = true
 m.testing = false
 m <= Setting(:n_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Hastings")
 @test m.settings[:n_mh_blocks].value == 5
-@test ismatch(r"^_.*vint=(\d{6}).*_mhbk=5", DSGE.modelstring(m))
+@test ismatch(r"^\s*_mhbk=5_vint=(\d{6})", DSGE.modelstring(m))
 
 # model paths. all this should work without errors
 m.testing = true
-rawpath(m, "test")
-rawpath(m, "test", "temp")
-workpath(m, "test")
-workpath(m, "test", "temp")
-tablespath(m, "test")
-tablespath(m, "test", "temp")
-figurespath(m, "test")
-figurespath(m, "test", "temp")
+addl_strings = ["foo=bar", "hat=head", "city=newyork"]
+for fn in [:rawpath, :workpath, :tablespath, :figurespath]
+    @eval $(fn)(m, "test")
+    @eval $(fn)(m, "test", "temp")
+    @eval $(fn)(m, "test", "temp", addl_strings)
+end
 
 nothing

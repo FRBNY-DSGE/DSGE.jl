@@ -280,82 +280,51 @@ Note: we refer to the savepathroot/output_data/<spec>/<subspec>/ directory as sa
 ```
 logpath(model)
 ```
-
 Returns path to log file. Path built as
 ```
 <output root>/output_data/<spec>/<subspec>/log/log_<modelstring>.log
 ```
 """
 function logpath(m::AbstractModel)
-    return saveroot(m, "log", "log.log")
-end
-"""
-```
-rawpath{T<:AbstractString}(m::AbstractModel, out_type::T, file_name::T="")
-```
-
-Returns path to specific raw output file, creating containing directory as needed. If
-`file_name` not specified, creates and returns path to containing directory only. Path built
-as
-```
-<output root>/output_data/<spec>/<subspec>/<out_type>/raw/<file_name>_<modelstring>.<ext>
-```
-"""
-function rawpath{T<:AbstractString}(m::AbstractModel, out_type::T, file_name::T="")
-    return saveroot(m, out_type, "raw", file_name)
+    return savepath(m, "log", "log.log")
 end
 
-"""
-```
-workpath{T<:AbstractString}(m::AbstractModel, out_type::T, file_name::T="")
-```
+strs = [:work, :raw, :tables, :figures]
+fns = [symbol(x, "path") for x in strs]
+for (str, fn) in zip(strs, fns)
+    @eval begin
+        # First eval function
+        function $fn{T<:AbstractString}(m::AbstractModel,
+                                             out_type::T,
+                                             file_name::T="",
+                                             model_string_addl::Vector{T}=Vector{T}())
+            return savepath(m, out_type, $(string(str)), file_name, model_string_addl)
+        end
 
-Returns path to specific work output file, creating containing directory as needed. If
-`file_name` not specified, creates and returns path to containing directory only. Path built
-as
-```
-<output root>/output_data/<spec>/<subspec>/<out_type>/work/<file_name>_<modelstring>.<ext>
-```
-"""
-function workpath{T<:AbstractString}(m::AbstractModel, out_type::T, file_name::T="")
-    return saveroot(m, out_type, "work", file_name)
-end
+        # Then, add docstring to it
+        @doc $(
+        """
+        ```
+        $fn{T<:AbstractString}(m::AbstractModel, out_type::T, file_name::T="")
+        ```
 
-"""
-```
-tablespath{T<:AbstractString}(m::AbstractModel, out_type::T, file_name::T="")
-```
-
-Returns path to specific tables output file, creating containing directory as needed. If
-`file_name` not specified, creates and returns path to containing directory only. Path built
-as
-```
-<output root>/output_data/<spec>/<subspec>/<out_type>/tables/<file_name>_<modelstring>.<ext>
-```
-"""
-function tablespath{T<:AbstractString}(m::AbstractModel, out_type::T, file_name::T="")
-    return saveroot(m, out_type, "tables", file_name)
-end
-
-"""
-```
-figurespath{T<:AbstractString}(m::AbstractModel, out_type::T, file_name::T="")
-```
-
-Returns path to specific figures output file, creating containing directory as needed. If
-`file_name` not specified, creates and returns path to containing directory only. Path built
-as
-```
-<output root>/output_data/<spec>/<subspec>/<out_type>/figures/<file_name>_<modelstring>.<ext>
-```
-"""
-function figurespath{T<:AbstractString}(m::AbstractModel, out_type::T, file_name::T="")
-    return saveroot(m, out_type, "figures", file_name)
+        Returns path to specific $str output file, creating containing directory as needed. If
+        `file_name` not specified, creates and returns path to containing directory only. Path built
+        as
+        ```
+        <output root>/output_data/<spec>/<subspec>/<out_type>/$str/<file_name>_<modelstring>.<ext>
+        ```
+        """
+        ) $fn
+    end
 end
 
 # Not exposed to user. Actually create path and insert model string to file name.
-function saveroot{T<:AbstractString}(m::AbstractModel, out_type::T, sub_type::T,
-                                      file_name::T="")
+function savepath{T<:AbstractString}(m::AbstractModel,
+                                     out_type::T,
+                                     sub_type::T,
+                                     file_name::T="",
+                                     model_string_addl::Vector{T}=Vector{T}())
     # Containing dir
     path = joinpath(saveroot(m), "output_data", spec(m), subspec(m), out_type, sub_type)
     if !isdir(path)
@@ -364,7 +333,11 @@ function saveroot{T<:AbstractString}(m::AbstractModel, out_type::T, sub_type::T,
 
     # File with model string inserted
     if !isempty(file_name)
-        model_string = modelstring(m)
+        if isempty(model_string_addl)
+            model_string = modelstring(m)
+        else
+            model_string = modelstring(m, model_string_addl)
+        end
         (base, ext) = splitext(file_name)
         file_name_detail = base * model_string * ext
         path = joinpath(path, file_name_detail)
@@ -417,9 +390,11 @@ function inpath{T<:AbstractString}(m::AbstractModel, in_type::T, file_name::T=""
     return path
 end
 
-function modelstring(m::AbstractModel)
+modelstring(m::AbstractModel) = m.testing ? "_test" : "_"*join(m._filestrings,"_")
+function modelstring{T<:AbstractString}(m::AbstractModel, d::Vector{T})
     if !m.testing
-        "_" * join(values(m._filestrings),"_")
+        # Merge m._filestrings with additional file strings, sort, and join.
+        "_"*join(sort(append!(copy(m._filestrings), d)), "_")
     else
         "_test"
     end
