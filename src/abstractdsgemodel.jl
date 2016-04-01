@@ -282,7 +282,7 @@ logpath(model)
 ```
 Returns path to log file. Path built as
 ```
-<output root>/output_data/<spec>/<subspec>/log/log_<modelstring>.log
+<output root>/output_data/<spec>/<subspec>/log/log_<filestring>.log
 ```
 """
 function logpath(m::AbstractModel)
@@ -297,8 +297,8 @@ for (str, fn) in zip(strs, fns)
         function $fn{T<:AbstractString}(m::AbstractModel,
                                              out_type::T,
                                              file_name::T="",
-                                             model_string_addl::Vector{T}=Vector{T}())
-            return savepath(m, out_type, $(string(str)), file_name, model_string_addl)
+                                             filestring_addl::Vector{T}=Vector{T}())
+            return savepath(m, out_type, $(string(str)), file_name, filestring_addl)
         end
 
         # Then, add docstring to it
@@ -312,7 +312,7 @@ for (str, fn) in zip(strs, fns)
         `file_name` not specified, creates and returns path to containing directory only. Path built
         as
         ```
-        <output root>/output_data/<spec>/<subspec>/<out_type>/$str/<file_name>_<modelstring>.<ext>
+        <output root>/output_data/<spec>/<subspec>/<out_type>/$str/<file_name>_<filestring>.<ext>
         ```
         """
         ) $fn
@@ -324,7 +324,7 @@ function savepath{T<:AbstractString}(m::AbstractModel,
                                      out_type::T,
                                      sub_type::T,
                                      file_name::T="",
-                                     model_string_addl::Vector{T}=Vector{T}())
+                                     filestring_addl::Vector{T}=Vector{T}())
     # Containing dir
     path = joinpath(saveroot(m), "output_data", spec(m), subspec(m), out_type, sub_type)
     if !isdir(path)
@@ -333,13 +333,13 @@ function savepath{T<:AbstractString}(m::AbstractModel,
 
     # File with model string inserted
     if !isempty(file_name)
-        if isempty(model_string_addl)
-            model_string = modelstring(m)
+        if isempty(filestring_addl)
+            myfilestring = filestring(m)
         else
-            model_string = modelstring(m, model_string_addl)
+            myfilestring = filestring(m, filestring_addl)
         end
         (base, ext) = splitext(file_name)
-        file_name_detail = base * model_string * ext
+        file_name_detail = base * myfilestring * ext
         path = joinpath(path, file_name_detail)
     end
 
@@ -390,9 +390,9 @@ function inpath{T<:AbstractString}(m::AbstractModel, in_type::T, file_name::T=""
     return path
 end
 
-modelstring(m::AbstractModel) = modelstring(m, Vector{AbstractString}())
-modelstring(m::AbstractModel, d::AbstractString) = modelstring(m, [d])
-function modelstring{T<:AbstractString}(m::AbstractModel,
+filestring(m::AbstractModel) = filestring(m, Vector{AbstractString}())
+filestring(m::AbstractModel, d::AbstractString) = filestring(m, [d])
+function filestring{T<:AbstractString}(m::AbstractModel,
                                         d::Vector{T})
     if !m.testing
         filestrings = Vector{T}()
