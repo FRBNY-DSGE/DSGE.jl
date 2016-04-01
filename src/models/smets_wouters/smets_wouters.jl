@@ -69,12 +69,6 @@ seeded to ensure replicability in algorithms that involve randomness
 `true`, settings from `m.test_settings` are used in place of those in
 `m.settings`.
 
-* `_filestrings::SortedDict{Symbol,AbstractString,ForwardOrdering}`:
-An alphabetized list of setting identifier strings. These are
-concatenated and appended to the filenames of all output files to
-avoid overwriting the output of previous estimations/forecasts that
-differ only in their settings, but not in their underlying
-mathematical structure.
 """
 type SmetsWouters{T} <: AbstractModel{T}
     parameters::ParameterVector{T}                  # vector of all time-invariant model parameters
@@ -95,7 +89,6 @@ type SmetsWouters{T} <: AbstractModel{T}
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
-    _filestrings::Vector{AbstractString}            # The strings we will print to a filename
 end
 
 description(m::SmetsWouters) = "Smets-Wouters Model"
@@ -176,7 +169,6 @@ function SmetsWouters(subspec::AbstractString="ss0")
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()        # Random Number Generator
     testing            = false
-    _filestrings       = Vector{AbstractString}()
 
     # initialize empty model
     m = SmetsWouters{Float64}(
@@ -191,8 +183,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
             settings,
             test_settings,
             rng,
-            testing,
-            _filestrings)
+            testing)
 
     # Set settings
     settings_smets_wouters!(m)

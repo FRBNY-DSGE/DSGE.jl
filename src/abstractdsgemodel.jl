@@ -390,13 +390,22 @@ function inpath{T<:AbstractString}(m::AbstractModel, in_type::T, file_name::T=""
     return path
 end
 
-modelstring(m::AbstractModel) = m.testing ? "_test" : "_"*join(m._filestrings,"_")
-function modelstring{T<:AbstractString}(m::AbstractModel, d::Vector{T})
+modelstring(m::AbstractModel) = modelstring(m, Vector{AbstractString}())
+modelstring(m::AbstractModel, d::AbstractString) = modelstring(m, [d])
+function modelstring{T<:AbstractString}(m::AbstractModel,
+                                        d::Vector{T})
     if !m.testing
-        # Merge m._filestrings with additional file strings, sort, and join.
-        "_"*join(sort(append!(copy(m._filestrings), d)), "_")
+        filestrings = Vector{T}()
+        for (skey, sval) in m.settings
+            if sval.print
+                push!(filestrings, to_filestring(sval))
+            end
+        end
+        append!(filestrings, d)
+        sort!(filestrings)
+        return "_"*join(filestrings, "_")
     else
-        "_test"
+        return "_test"
     end
 end
 
