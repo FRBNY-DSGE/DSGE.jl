@@ -301,12 +301,6 @@ See [Editing or Extending a Model](#editing-or-extending-a-model).
   (such as Metropolis-Hastings).
 - `testing::Bool`: Indicates whether the model is in testing mode. If `true`,
   settings from `m.test_settings` are used in place of those in `m.settings`.
-- `_filestrings::SortedDict{Symbol,AbstractString,ForwardOrdering}`: An
-  alphabetized list of setting identifier strings. These are concatenated and
-  appended to the filenames of all output files to avoid overwriting the output
-  of previous estimations/forecasts that differ only in their settings, but not
-  in their underlying mathematical structure. See [Settings](#model-settings)
-  for more details.
 
 ## Defining Indices
 

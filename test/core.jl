@@ -92,26 +92,25 @@ data_vintage = Setting(:data_vintage, "REF", true, "vint", "Date of data") # ful
 @test convert(Int64, n_mh_blocks) == 22
 @test convert(ASCIIString, data_vintage) == "REF"
 
-
 @test get_setting(m, :n_mh_blocks) == m.settings[:n_mh_blocks].value
 m.testing = true
 @test get_setting(m, :n_mh_blocks) == m.test_settings[:n_mh_blocks].value
-@test DSGE.modelstring(m) == "_test"
+@test DSGE.filestring(m) == "_test"
 
 m.testing = false
 m <= Setting(:n_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Hastings")
 @test m.settings[:n_mh_blocks].value == 5
-@test ismatch(r"^\s*vint=(\d{6})_mhbk=5", DSGE.modelstring(m))
+@test ismatch(r"^\s*_mhbk=5_vint=(\d{6})", DSGE.filestring(m))
+DSGE.filestring(m, "key=val")
+DSGE.filestring(m, ["key=val", "foo=bar"])
 
 # model paths. all this should work without errors
 m.testing = true
-rawpath(m, "test")
-rawpath(m, "test", "temp")
-workpath(m, "test")
-workpath(m, "test", "temp")
-tablespath(m, "test")
-tablespath(m, "test", "temp")
-figurespath(m, "test")
-figurespath(m, "test", "temp")
+addl_strings = ["foo=bar", "hat=head", "city=newyork"]
+for fn in [:rawpath, :workpath, :tablespath, :figurespath]
+    @eval $(fn)(m, "test")
+    @eval $(fn)(m, "test", "temp")
+    @eval $(fn)(m, "test", "temp", addl_strings)
+end
 
 nothing

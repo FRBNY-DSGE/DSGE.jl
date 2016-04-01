@@ -17,14 +17,14 @@ on date).
 The name of the input data file must be the same as the source string in `m.data_series`,
 and those files must be located in .csv files in `inpath(m, "data")`.
 """
-function load_data(m::AbstractModel; start_date=Date("1959-03-31","y-m-d")::Date,
-                                     end_date=last_quarter_end()::Date)
+function load_data(m::AbstractModel; start_date::Date = Date("1959-03-31","y-m-d"),
+                                     end_date::Date   = last_quarter_end())
 
-    
-    # Load FRED data, set ois series to load, and set which longrate series to load
+
+    # Load FRED data, set ois series to load
     data = load_fred_data(m; start_date=firstdayofquarter(start_date), end_date=end_date)
     set_ois_series!(m)
-    
+
     # For each additional source, search for the file with the proper name. Open
     # it, read it in, and merge it with fred_series
 
@@ -51,7 +51,7 @@ function load_data(m::AbstractModel; start_date=Date("1959-03-31","y-m-d")::Date
 
             # Read in dataset and check that the file contains data for the proper dates
             addl_data = readtable(file)
-            
+
             # Convert dates from strings to quarter-end dates for date arithmetic
             format_dates!(:date, addl_data)
 
@@ -96,79 +96,5 @@ function set_ois_series!(m::AbstractModel)
     nant = n_anticipated_shocks(m)
     if nant > 0
         m.data_series[:ois] = [symbol("ant$i") for i in 1:nant]
-    end
-end
-
-
-"""
-`last_quarter_end()`
-
-Returns the first day of the previous quarter
-"""
-function last_quarter_end()
-    cqs = Dates.firstdayofquarter(now())     # current quarter start
-    lqe = cqs - Dates.Day(1)                 # last quarter end
-
-    Date(lqe)
-end
-
-"""
-Returns a DataArray of quarter start dates between `start_date` and `end_date`.
-"""
-function get_quarter_ends(start_date,end_date)
-    dr = start_date:end_date
-
-    dates = recur(dr) do x
-        lastdayofquarter(x) == x
-    end
-end
-
-"""
-Converts a collection of strings in "y-m-d" format to Dates.
-"""
-function stringstodates(stringarray)
-    n = length(stringarray)
-    dates = Vector{Date}(n)
-    for i = 1:n
-        dates[i] = Date(stringarray[i], "y-m-d")
-    end
-
-    dates
-end
-
-"""
-`format_dates!(col, df)`
-
-Change column `col` of dates in `df` from String to Date, and map any dates given in the
-interior of a quarter to the last day of the quarter.
-"""
-function format_dates!(col, df)
-    df[col] = stringstodates(df[col])
-    map!(x->lastdayofquarter(x), df[col], df[col])
-end
-
-"""
-```
-na2nan!(df::DataFrame)
-```
-
-Convert all NAs in a DataFrame to NaNs.
-"""
-function na2nan!(df::DataFrame)
-    for col in names(df)
-        df[isna(df[col]), col] = NaN
-    end
-end
-
-"""
-```
-na2nan!(df::DataFrame)
-```
-
-Convert all NAs in a DataFrame to NaNs.
-"""
-function na2nan!(v::DataArray)
-    for i = 1:length(v)
-        v[i] = isna(v[i]) ?  NaN : v[i]
     end
 end
