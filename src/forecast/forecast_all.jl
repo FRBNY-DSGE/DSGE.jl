@@ -59,11 +59,11 @@ function forecast_all(m::AbstractModel, data::Matrix{Float64};
     # Prepare forecast settings
     use_expected_rate_date     = (n_anticipated_shocks(m) > 0)    # use data on expected future interest rates
     shockdec_whichshocks       = 1:n_shocks_exogenous(m)          # defaults to 1:n_shocks_exogenous(m)
-    bounded_interest_rate_flag = true                             # defaults to 1, i.e. enforce bounded interest rate
-    no_forecast_shocks_flag    = false                            # defaults to 0, i.e. do *not* turn off all shocks
-    disturbance_smoother_flag  = true                             # defaults to 1, i.e. do use disturbance smoother
-    tdist_shocks_flag          = false                            # defaults to 0, i.e. do not use t-distributed shocks
-    tdist_drawdf_flag          = false                            # defaults to 0, i.e. do not draw t-distribution d.o.f.
+    bounded_interest_rate_flag = true                             # defaults to true, i.e. enforce bounded interest rate
+    no_forecast_shocks_flag    = false                            # defaults to false, i.e. do *not* turn off all shocks
+    simulation_smoother_flag   = true                             # defaults to true, i.e. do use simulation smoother
+    tdist_shocks_flag          = false                            # defaults to false, i.e. do not use t-distributed shocks
+    tdist_drawdf_flag          = false                            # defaults to false, i.e. do not draw t-distribution d.o.f.
     tdist_df_value             = 15                               # defaults to 15
     forecast_horizons          = 60                               # defaults to 60
     shockdec_startindex        = 190                              # defaults to index of 2007-Q1, confirm this index is correct
@@ -74,7 +74,7 @@ function forecast_all(m::AbstractModel, data::Matrix{Float64};
     # ShockremoveList      # indices of shocks to use in shock decomposition and counterfactual
     # bdd_int_rate         # enforce zero lower bound on nominal interest rate in forecast
     # sflag                # set all shocks to zero in forecast
-    # dsflag               # draw states from disturbance smoother
+    # dsflag               # draw states from simulation smoother
     # tflag                # draw Shocks from multivariatei t-distribution
     # dfflag               # draw degrees of freedom of t-distributino
     # df_bar               # if !dfflag, set degrees of freedom to value of df_bar (defaults to 15)
@@ -163,29 +163,45 @@ function get_input_file(m, input_type)
         #TODO
         return ""
     else
-        throw(ArgumentError("Invalid input_type: " * input_type)) 
+        throw(ArgumentError("Invalid input_type: $(input_type)"))
     end
 end
 
 function get_output_files(m, input_type, output_type, cond, forecast_settings)
-    output_file_names = [
-    "hist", # cond
-    "hist_s", # cond
-    "forecast", # cond
-    "forecast_s", # cond
-    "states",
-    "datashocks", # shocks over uncond period
-    "datashocks_ns", # non-standardized
-    "shocks", # cond # shocks over period of conditional data
-    "shocks_ns", # non-standardized
-    "counter",
-    "coutner_s",
-    "shockdec",
-    "shockdec_s",
-    "ytrend",
-    "ytrend_s",
-    "dettrend", # cond
-    "dettrend_s"] # cond
+    additional_file_strings = Dict{Symbol,AbstractString}()
 
-    return output_file_names
+    # Add additional file strings here
+    additional_file_strings[:para] = abbrev_symbol(input_type)
+    additional_file_strings[:cond] = abbrev_symbol(cond)
+
+
+    filename = rawpath(m, "forecast", output_type * ".h5", additional_file_strings)
+
+    if output_type == :states
+        prefix = "histstates"
+    elseif output_type == :shocks
+        prefix = "histshocks"
+    elseif output_type == :shocks_nonstandardized
+        prefix = "histshocksns"
+    elseif output_type == :forecast
+        prefix = "forecaststates"
+        prefix = "forecastobs"
+        prefix = "forecastshocks"
+    elseif output_type == :shockdec
+        prefix = "shockdecstates"
+        prefix = "shockdecobs"
+    elseif output_type == :dettrend
+        prefix = "dettrendstates"
+        prefix = "dettrendobs"
+    elseif output_type == :counter
+        prefix = "counterstates"
+        prefix = "counterobs"
+    elseif output_type in [:simple, :simple_cond]
+        prefix = "histstates"
+        prefix = "forecaststates"
+        prefix = "forecastobs"
+        prefix = "forecastshocks"
+    elseif output_type == :all
+
+    end
 end
