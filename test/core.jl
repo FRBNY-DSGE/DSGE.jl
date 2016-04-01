@@ -92,7 +92,6 @@ data_vintage = Setting(:data_vintage, "REF", true, "vint", "Date of data") # ful
 @test convert(Int64, n_mh_blocks) == 22
 @test convert(ASCIIString, data_vintage) == "REF"
 
-
 @test get_setting(m, :n_mh_blocks) == m.settings[:n_mh_blocks].value
 m.testing = true
 @test get_setting(m, :n_mh_blocks) == m.test_settings[:n_mh_blocks].value
@@ -102,6 +101,8 @@ m.testing = false
 m <= Setting(:n_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Hastings")
 @test m.settings[:n_mh_blocks].value == 5
 @test ismatch(r"^\s*_mhbk=5_vint=(\d{6})", DSGE.modelstring(m))
+DSGE.modelstring(m, "key=val")
+DSGE.modelstring(m, ["key=val", "foo=bar"])
 
 # model paths. all this should work without errors
 m.testing = true

@@ -1,6 +1,6 @@
 """
 ```
-Setting{T<:Any}
+Setting{T}
 ```
 
 The `Setting` type is an interface for computational settings that affect how the code runs
@@ -61,13 +61,6 @@ Syntax for adding a setting to a model/overwriting a setting: m <= setting
 """
 function (<=)(m::AbstractModel, s::Setting)
     if !m.testing
-        if s.print
-            # Add to a sorted dictionary of things to print
-            # Can improve if desired but N is so small
-            push!(m._filestrings, to_filestring(s))
-            sort!(m._filestrings)
-        end
-
         m.settings[s.key] = s
     else
         m.test_settings[s.key] = s
