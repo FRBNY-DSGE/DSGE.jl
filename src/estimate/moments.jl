@@ -54,7 +54,7 @@ Computes and saves the posterior mean of the parameters.
 function save_mean_parameters{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T})
     post_means = mean(draws,1)'
     filename = workpath(m, "estimate", "paramsmean.h5")
-    h5open(filename, "r") do f
+    h5open(filename, "w") do f
         f["params"] = post_means
     end
 end

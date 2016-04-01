@@ -63,11 +63,6 @@ conditions.
 * `testing::Bool`: Indicates whether the model is in testing mode. If `true`, settings from
   `m.test_settings` are used in place of those in `m.settings`.
 
-* `_filestrings::SortedDict{Symbol,AbstractString,ForwardOrdering}`: An alphabetized list of
-  setting identifier strings. These are concatenated and appended to the filenames of all
-  output files to avoid overwriting the output of previous estimations/forecasts that differ
-  only in their settings, but not in their underlying mathematical structure.
-
 * `data_series::Dict{Symbol,Vector{Symbol}}`: A dictionary that
   stores data sources (keys) and lists of series mnemonics
   (values). DSGE.jl will fetch data from the Federal Reserve Bank of
@@ -93,7 +88,6 @@ type Model990{T} <: AbstractModel{T}
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
-    _filestrings::SortedDict{Symbol,AbstractString, ForwardOrdering} # The strings we will print to a filename
 
     data_series::Dict{Symbol,Vector{Symbol}}       # Keys = data sources, values = vector of series mnemonics
     data_transforms::OrderedDict{Symbol,Function}  # functions to transform raw data into input matrix
@@ -184,7 +178,6 @@ function Model990(subspec::AbstractString="ss2")
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()
     testing            = false
-    _filestrings       = SortedDict{Symbol,AbstractString, ForwardOrdering}()
 
     # Set up data sources and series
     fred_series        = [:GDP, :GDPCTPI, :PCE, :FPI,
@@ -217,7 +210,6 @@ function Model990(subspec::AbstractString="ss2")
             test_settings,
             rng,
             testing,
-            _filestrings,
             data_series,
             data_transforms)
 
