@@ -206,17 +206,17 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
 end
 
 immutable Kalman{S<:AbstractFloat}
-    L::S
-    zend::Matrix{S}
+    L::S                  # Likelihood
+    zend::Matrix{S}       # last-period state vector
     Pend::Matrix{S}
-    pred::Matrix{S}
-    vpred::Array{S,3}
+    pred::Matrix{S}       # predicted value
+    vpred::Array{S,3}      
     yprederror::Matrix{S}
     ystdprederror::Matrix{S}
     rmse::Matrix{S}
     rmsd::Matrix{S}
-    filt::Matrix{S}
-    vfilt::Array{S,3}
+    filt::Matrix{S}        # filtered states?
+    vfilt::Array{S,3}      # 
 end
 function Kalman{S<:AbstractFloat}(L::S,
                                   zend::Matrix{S},
