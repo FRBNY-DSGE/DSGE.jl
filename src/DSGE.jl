@@ -59,6 +59,15 @@ module DSGE
     include("distributions_ext.jl")
     include("abstractdsgemodel.jl")
     include("settings.jl")
+    include("defaults.jl")
+    include("util.jl")
+
+    include("data/load_data.jl")
+    include("data/fred_data.jl")
+    include("data/transformations.jl")
+    include("data/transform_data.jl")
+    include("data/util.jl")
+
     include("solve/gensys.jl")
     include("solve/solve.jl")
 
@@ -82,11 +91,5 @@ module DSGE
     include("models/smets_wouters/eqcond.jl")
     include("models/smets_wouters/measurement.jl")
     include("models/smets_wouters/augment_states.jl")
-
-    include("data/load_data.jl")
-    include("data/fred_data.jl")
-    include("data/transform_data.jl")
-    include("data/transformations.jl")
-    include("data/util.jl")
 
 end
