@@ -137,6 +137,8 @@ function default_test_settings!(m::AbstractModel)
     # Forecast
     test[:forecast_horizons] = Setting(:forecast_horizons, 1,
         "Forecast horizons")
+    test[:forecast_jstep] = Setting(:forecast_jstep, 1,
+        "Forecast thinning step (in addition to MH thinning step")
     test[:shockdec_startindex] = Setting(:shockdec_startindex, 2,
         "Index of start of shock decomposition output period")
     test[:shockdec_endindex] = Setting(:shockdec_endindex, 4,
