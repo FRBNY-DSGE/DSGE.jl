@@ -157,7 +157,11 @@ spec(m::AbstractModel)         = m.spec
 subspec(m::AbstractModel)      = m.subspec
 saveroot(m::AbstractModel)     = get_setting(m, :saveroot)
 dataroot(m::AbstractModel)     = get_setting(m, :dataroot)
+
+# Interface for data
 data_vintage(m::AbstractModel) = get_setting(m, :data_vintage)
+cond_vintage(m::AbstractModel) = get_setting(m, :cond_vintage)
+cond_id(m::AbstractModel) = get_setting(m, :cond_id)
 
 # Interface for general computation settings
 use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers)
