@@ -51,36 +51,10 @@ Outputs
 - todo
 """
 
-function forecast_all(m::AbstractModel, data::Matrix{Float64};
+function forecast_all{T<:AbstractFloat}(m::AbstractModel{T}, data::Matrix{T};
                       cond_types::Vector{Symbol}   = Vector{Symbol}(),
                       input_types::Vector{Symbol}  = Vector{Symbol}(),
                       output_types::Vector{Symbol} = Vector{Symbol}())
-
-    # Prepare forecast settings
-    use_expected_rate_date     = (n_anticipated_shocks(m) > 0)    # use data on expected future interest rates
-    shockdec_whichshocks       = 1:n_shocks_exogenous(m)          # defaults to 1:n_shocks_exogenous(m)
-    bounded_interest_rate_flag = true                             # defaults to true, i.e. enforce bounded interest rate
-    no_forecast_shocks_flag    = false                            # defaults to false, i.e. do *not* turn off all shocks
-    simulation_smoother_flag   = true                             # defaults to true, i.e. do use simulation smoother
-    tdist_shocks_flag          = false                            # defaults to false, i.e. do not use t-distributed shocks
-    tdist_drawdf_flag          = false                            # defaults to false, i.e. do not draw t-distribution d.o.f.
-    tdist_df_value             = 15                               # defaults to 15
-    forecast_horizons          = 60                               # defaults to 60
-    shockdec_startindex        = 190                              # defaults to index of 2007-Q1, confirm this index is correct
-    shockdec_endindex          = size(data,1)+forecast_horizons-1 # defaults to first_forecast_quarter+forecast_horizons-1
-    forecast_observables       = m.observables                    # defaults to all observables
-
-    # # Matlab settings to translate
-    # ShockremoveList      # indices of shocks to use in shock decomposition and counterfactual
-    # bdd_int_rate         # enforce zero lower bound on nominal interest rate in forecast
-    # sflag                # set all shocks to zero in forecast
-    # dsflag               # draw states from simulation smoother
-    # tflag                # draw Shocks from multivariatei t-distribution
-    # dfflag               # draw degrees of freedom of t-distributino
-    # df_bar               # if !dfflag, set degrees of freedom to value of df_bar (defaults to 15)
-    # qahead               # number of periods to forecast past stime
-    # Startdate            # index for shock decomosition and counterfactual start date
-    # Enddate_forecastfile # total number of quarters in the observable time series and the forecast period
 
     for input_type in input_types
         for cond_type in cond_types
@@ -92,7 +66,7 @@ function forecast_all(m::AbstractModel, data::Matrix{Float64};
 
 end
 
-function forecast_one(m::AbstractModel, data::Matrix{Float64};
+function forecast_one{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T};
                       cond_type::Symbol   = :none
                       input_type::Symbol  = :mode
                       output_type::Symbol = :simple)
@@ -132,18 +106,10 @@ function forecast_one(m::AbstractModel, data::Matrix{Float64};
     end
 
     # Example: call forecast, unconditional data, states+observables
-    forecast(m, data, sys, zend;
-             observables=forecast_observables,
-             forecast_horizons=forecast_horizons,
-             bounded_interest_rate_flag=bounded_interest_rate_flag,
-             no_forecast_shocks_flag=no_forecast_shocks_flag,
-             tdist_shocks_flag=tdist_shocks_flag,
-             tdist_drawdf_flag=tdist_drawdf_flag,
-             tdist_df_value=tdist_df_value)
+    forecast(m, data, sys, zend)
 
     # Set up outfiles
-    output_file_names = get_output_files(m, input_type, output_type, cond_type,
-                                              forecast_settings)
+    output_file_names = get_output_files(m, input_type, output_type, cond_type)
 
     # Write outfiles
     for output_file in output_file_names
@@ -167,41 +133,41 @@ function get_input_file(m, input_type)
     end
 end
 
-function get_output_files(m, input_type, output_type, cond, forecast_settings)
-    additional_file_strings = Dict{Symbol,AbstractString}()
+function get_output_files(m, input_type, output_type, cond)
 
     # Add additional file strings here
-    additional_file_strings[:para] = abbrev_symbol(input_type)
-    additional_file_strings[:cond] = abbrev_symbol(cond)
+    additional_file_strings = []
+    push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
+    push!(additional_file_strings, "cond=" * abbrev_symbol(cond))
 
-
-    filename = rawpath(m, "forecast", output_type * ".h5", additional_file_strings)
-
+    # Results prefix
     if output_type == :states
-        prefix = "histstates"
+        results = ["histstates"]
     elseif output_type == :shocks
-        prefix = "histshocks"
+        results = ["histshocks"]
     elseif output_type == :shocks_nonstandardized
-        prefix = "histshocksns"
+        results = ["histshocksns"]
     elseif output_type == :forecast
-        prefix = "forecaststates"
-        prefix = "forecastobs"
-        prefix = "forecastshocks"
+        results = ["forecaststates",
+                   "forecastobs",
+                   "forecastshocks"]
     elseif output_type == :shockdec
-        prefix = "shockdecstates"
-        prefix = "shockdecobs"
+        results = ["shockdecstates",
+                   "shockdecobs"]
     elseif output_type == :dettrend
-        prefix = "dettrendstates"
-        prefix = "dettrendobs"
+        results = ["dettrendstates",
+                   "dettrendobs"]
     elseif output_type == :counter
-        prefix = "counterstates"
-        prefix = "counterobs"
+        results = ["counterstates",
+                   "counterobs"]
     elseif output_type in [:simple, :simple_cond]
-        prefix = "histstates"
-        prefix = "forecaststates"
-        prefix = "forecastobs"
-        prefix = "forecastshocks"
+        results = ["histstates",
+                   "forecaststates",
+                   "forecastobs",
+                   "forecastshocks"]
     elseif output_type == :all
-
+        results = []
     end
+
+    return [rawpath(m, "forecast", x*".h5", additional_file_strings) for x in results]
 end

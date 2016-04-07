@@ -9,7 +9,8 @@ module DSGE
     import Optim
     using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
     import NaNMath
-    
+    using Levenshtein
+
     export
 
         # distributions_ext.jl
@@ -26,7 +27,7 @@ module DSGE
         dataroot, saveroot, inpath, workpath, rawpath, tablespath, figurespath, logpath,
         reoptimize, calculate_hessian,
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin, specify_mh_start,
-        data_vintage,
+        data_vintage, cond_vintage, cond_id,
         specify_mode!, specify_hessian, load_parameters_from_file,
         use_population_forecast,
 
@@ -62,6 +63,17 @@ module DSGE
     include("distributions_ext.jl")
     include("abstractdsgemodel.jl")
     include("settings.jl")
+    include("defaults.jl")
+    include("statespace.jl")
+    include("util.jl")
+
+    include("data/load_data.jl")
+    include("data/fred_data.jl")
+    include("data/transformations.jl")
+    include("data/transform_data.jl")
+    include("data/load_cond_data.jl")
+    include("data/util.jl")
+
     include("solve/gensys.jl")
     include("solve/solve.jl")
 
@@ -73,8 +85,9 @@ module DSGE
     include("estimate/hessizero.jl")
     include("estimate/estimate.jl")
     include("estimate/moments.jl")
- 
+
     include("forecast/smoothers.jl")
+    include("forecast/compute_system.jl")
 
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")
@@ -87,10 +100,5 @@ module DSGE
     include("models/smets_wouters/eqcond.jl")
     include("models/smets_wouters/measurement.jl")
     include("models/smets_wouters/augment_states.jl")
-
-    include("data/load_data.jl")
-    include("data/fred_data.jl")
-    include("data/transformations.jl")
-    include("data/transform_data.jl")
 
 end
