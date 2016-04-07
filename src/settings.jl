@@ -1,25 +1,22 @@
 """
 ```
-Setting{T<:Any}
+Setting{T}
 ```
 
-The `Setting` type is an interface for computational settings that
-affect how the code runs without affecting the mathematical definition
-of the model. It also provides support for non-conflicting file names
-for output of 2 models that differ only in the values of their
+The `Setting` type is an interface for computational settings that affect how the code runs
+without affecting the mathematical definition of the model. It also provides support for
+non-conflicting file names for output of 2 models that differ only in the values of their
 computational settings.
 
 ### Fields
 - `key::Symbol`: Name of setting
 - `value::T`: Value of setting
-- `print::Bool`: Indicates whether to append this setting's code
-and value to output file names. If true, output file names will
-include a suffix of the form _code1=val1_code2=val2_etc. where codes
-are listed in alphabetical order.
-- `code::AbstractString`: string of <=4 characters to print to output
-file suffixes when `print=true`.
-- `description::AbstractString`: Short description of what the setting
-is used for.
+- `print::Bool`: Indicates whether to append this setting's code and value to output file
+  names. If true, output file names will include a suffix of the form _code1=val1_code2=val2
+  etc. where codes are listed in alphabetical order.
+- `code::AbstractString`: string of <=4 characters to print to output file suffixes when
+  `print=true`.
+- `description::AbstractString`: Short description of what the setting is used for.
 """
 immutable Setting{T}
     key::Symbol                  # name of setting
@@ -39,7 +36,7 @@ Base.promote_rule(::Type{Setting{Bool}}, ::Type{Bool}) = promote_rule(Bool, Bool
 
 Base.string(s::Setting{AbstractString}) = string(s.value)
 
-to_filename(s::Setting) = "$(s.code)=$(s.value)"
+to_filestring(s::Setting) = "$(s.code)=$(s.value)"
 
 
 # key, value constructor
@@ -62,13 +59,8 @@ end
 
 Syntax for adding a setting to a model/overwriting a setting: m <= setting
 """
-function (<=){T}(m::AbstractModel{T}, s::Setting)
+function (<=)(m::AbstractModel, s::Setting)
     if !m.testing
-        if s.print
-            # Add to a sorted dictionary of things to print
-            insert!(m._filestrings, s.key, to_filename(s))
-        end
-
         m.settings[s.key] = s
     else
         m.test_settings[s.key] = s
@@ -91,62 +83,6 @@ function get_setting(m::AbstractModel, s::Symbol)
 
     return m.settings[s].value
 end
-
-
-"""
-```
-default_settings!(m::AbstractModel)
-```
-
-Default Settings are constructed, initialized and added to `m.settings`.
-"""
-function default_settings!(m::AbstractModel)
-
-    # I/O File locations
-    saveroot = normpath(joinpath(dirname(@__FILE__), "..","save"))
-    datapath = normpath(joinpath(dirname(@__FILE__), "..","save","input_data"))
-
-    m <= Setting(:saveroot, saveroot, "Root of data directory structure")
-    m <= Setting(:dataroot, datapath, "Input data directory path")
-
-    # Data vintage. Default behavior: choose the most recent data file
-    input_files = readdir(inpath(m, "data", ""))
-    vint = Dates.format(today(), "yymmdd")
-    m <= Setting(:data_vintage, vint, true, "vint", "Date of data")
-
-    # Data settings
-    m <= Setting(:use_population_forecast, false, "Whether to use population forecasts as data")
-    m <= Setting(:adjust_longrate, true, "Whether to adjust the 10T zero-coupon yield for term premium.")
-
-    # Timing
-    ffq = function (m::AbstractModel)
-        lastdayofquarter(Date(data_vintage(m), "yymmdd") + Year(2000))
-    end
-    m <= Setting(:first_forecast_quarter, ffq, "First quarter for which to produce forecasts.")
-    
-    # Anticipated shocks
-    zlb_start = Date("2008-12-31","y-m-d")
-    m <= Setting(:zlb_start_date,  zlb_start, "First period to incorporate zero bound expectation")
-    m <= Setting(:n_presample_periods, 2, "Number of periods in the presample")
-    m <= Setting(:n_anticipated_shocks,         0, "Number of anticipated policy shocks")
-    m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    m <= Setting(:zlb_start_index, 198, "Index of first period to incorporate zero bound expectation")
-    
-    # General computation
-    m <= Setting(:use_parallel_workers, true, "Use available parallel workers in computations")
-
-    # Estimation
-    m <= Setting(:reoptimize,          true, "Optimize the posterior mode. If false, reads in mode from a file.")
-    m <= Setting(:calculate_hessian, true, "Calculate the hessian at the mode")
-    m <= Setting(:n_hessian_test_params, typemax(Int), "Max number of free params for which to calculate Hessian")
-
-    m <= Setting(:n_mh_simulations,  10000, "Number of draws per block in Metropolis-Hastings")
-    m <= Setting(:n_mh_blocks,       22   , "Number of blocks for Metropolis-Hastings")
-    m <= Setting(:n_mh_burn,         2    , "Number of blocks to use as burn-in in Metropolis-Hastings")
-    m <= Setting(:mh_thin,    5    , "Metropolis-Hastings thinning step")
-
-end
-
 
 """
 ```
@@ -176,30 +112,37 @@ function default_test_settings!(m::AbstractModel)
     dataroot = normpath(joinpath(dirname(@__FILE__), "..","test","reference"))
     saveroot = mktempdir()
 
+    #General
     test[:saveroot] = Setting(:saveroot, saveroot,
-                                       "Where to write files when in test mode")
-
+        "Where to write files when in test mode")
     test[:dataroot] = Setting(:dataroot, dataroot,
-                                       "Location of input files when in test mode" )
-
-    test[:data_vintage] = Setting(:data_vintage, "REF", true, "vint", "Reference data identifier")
-
+        "Location of input files when in test mode" )
+    test[:data_vintage] = Setting(:data_vintage, "REF", true, "vint",
+        "Reference data identifier")
     test[:use_parallel_workers] = Setting(:use_parallel_workers, false, false, "parw",
-                                            "Use available parallel workers in computations")
-
+        "Use available parallel workers in computations")
     test[:n_hessian_test_params] = Setting(:n_hessian_test_params, 3, false, "mhfp",
-                                            "Max number of free params for which to calculate Hessian")
+        "Max number of free params for which to calculate Hessian")
 
     # Metropolis-Hastings
     test[:n_mh_simulations] = Setting(:n_mh_simulations, 100, false, "nsim",
-                                        "Number of parameter draws per block for testing Metropolis-Hastings")
+        "Number of parameter draws per block for testing Metropolis-Hastings")
+    test[:n_mh_blocks] = Setting(:n_mh_blocks, 1, false, "nblc",
+        "Number of blocks to draw parameters for testing Metropolis-Hastings")
+    test[:n_mh_burn] = Setting(:n_mh_burn, 0, false, "nbrn",
+        "Number of burn-in blocks for testing Metropolis-Hastings")
+    test[:mh_thin] = Setting(:mh_thin, 1, false, "thin",
+        "Thinning step for testing Metropolis-Hastings")
 
-    test[:n_mh_blocks]      = Setting(:n_mh_blocks, 1, false, "nblc",
-                                        "Number of blocks to draw parameters for testing Metropolis-Hastings")
+    # Forecast
+    test[:forecast_horizons] = Setting(:forecast_horizons, 1,
+        "Forecast horizons")
+    test[:shockdec_startindex] = Setting(:shockdec_startindex, 2,
+        "Index of start of shock decomposition output period")
+    test[:shockdec_endindex] = Setting(:shockdec_endindex, 4,
+        "Index of end of shock decomposition output period")
+    test[:shockdec_whichshocks] = Setting(:shockdec_whichshocks, :all, #TODO
+        "Sets of shocks for which to conduct shock decomposition")
 
-    test[:n_mh_burn]        = Setting(:n_mh_burn,   0, false, "nbrn",
-                                        "Number of burn-in blocks for testing Metropolis-Hastings")
-
-    test[:mh_thin]   = Setting(:mh_thin, 1, false, "thin",
-                                        "Thinning step for testing Metropolis-Hastings")
+    return test
 end

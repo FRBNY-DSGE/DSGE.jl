@@ -149,19 +149,3 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
 
     return Measurement(ZZ, DD, QQ, EE, MM, VVall)
 end
-
-type Measurement{T<:AbstractFloat}
-    ZZ::Matrix{T}
-    DD::Matrix{T}
-    QQ::Matrix{T}
-    EE::Matrix{T}
-    MM::Matrix{T}
-    VVall::Matrix{T}
-end
-function Base.getindex(M::Measurement, d::Symbol)
-    if d in (:ZZ, :DD, :QQ, :EE, :MM, :VVall)
-        return getfield(M, d)
-    else
-        throw(KeyError(d))
-    end
-end
