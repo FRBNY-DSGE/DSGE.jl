@@ -262,8 +262,8 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
     mhparams     = zeros(n_sim, n_parameters(m))
     mhlikelihood = zeros(n_sim)
     mhposterior  = zeros(n_sim)
-    mhTTT        = zeros(n_sim, n_states_augmented(m)^2)
-    mhRRR        = zeros(n_sim, n_states_augmented(m)*n_shocks_exogenous(m))
+    mhTTT        = zeros(n_sim, n_states_augmented(m), n_states_augmented(m))
+    mhRRR        = zeros(n_sim, n_states_augmented(m), n_shocks_exogenous(m))
     mhCCC        = zeros(n_sim, n_states_augmented(m))
     mhzend       = zeros(n_sim, n_states_augmented(m))
 
@@ -271,21 +271,27 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
     simfile = h5open(rawpath(m,"estimate","mhsave.h5"),"w")
     n_saved_obs = n_sim * (n_blocks - n_burn)
     parasim = d_create(simfile, "mhparams", datatype(Float32),
-                       dataspace(n_saved_obs,n_params), "chunk", (n_sim,n_params))
+                       dataspace(n_saved_obs,n_params),
+                       "chunk", (n_sim,n_params))
     postsim = d_create(simfile, "mhposterior", datatype(Float32),
-                       dataspace(n_saved_obs,1), "chunk", (n_sim,1))
+                       dataspace(n_saved_obs,1),
+                       "chunk", (n_sim,1))
     TTTsim  = d_create(simfile, "mhTTT", datatype(Float32),
-                       dataspace(n_saved_obs,n_states_augmented(m)^2),"chunk",(n_sim,n_states_augmented(m)^2))
+                       dataspace(n_saved_obs,n_states_augmented(m),n_states_augmented(m)),
+                       "chunk", (n_sim,n_states_augmented(m),n_states_augmented(m)))
     RRRsim  = d_create(simfile, "mhRRR", datatype(Float32),
-                       dataspace(n_saved_obs,n_states_augmented(m)*n_shocks_exogenous(m)),"chunk",
-                       (n_sim,n_states_augmented(m)*n_shocks_exogenous(m)))
+                       dataspace(n_saved_obs,n_states_augmented(m),n_shocks_exogenous(m)),
+                       "chunk", (n_sim,n_states_augmented(m),n_shocks_exogenous(m)))
     zsim    = d_create(simfile, "mhzend", datatype(Float32),
-                       dataspace(n_saved_obs,n_states_augmented(m)),"chunk",(n_sim,n_states_augmented(m)))
+                       dataspace(n_saved_obs,n_states_augmented(m)),
+                       "chunk", (n_sim,n_states_augmented(m)))
 
     # likesim = d_create(simfile, "mhlikelihood", datatype(Float32),
-    #                  dataspace(n_saved_obs,1), "chunk", (n_sim,1))
+    #                  dataspace(n_saved_obs,1),
+    #                  "chunk", (n_sim,1))
     # CCCsim  = d_create(simfile, "mhCCC", datatype(Float32),
-    #                  dataspace(n_saved_obs,n_states_augmented(m)),"chunk",(n_sim,n_states_augmented(m)))
+    #                  dataspace(n_saved_obs,n_states_augmented(m)),
+    #                  "chunk",(n_sim,n_states_augmented(m)))
 
     # keep track of how long metropolis_hastings has been sampling
     total_sampling_time = 0
@@ -354,15 +360,15 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
             # Save every (mhthin)th draw
 
             if j % mhthin == 0
-                draw_index = round(Int,j/mhthin)
+                draw_index = convert(Int,j/mhthin)
 
                 mhlikelihood[draw_index] = like_old
                 mhposterior[draw_index]  = post_old
                 mhparams[draw_index, :]  = para_old'
-                mhTTT[draw_index, :]     = vec(TTT_old)'
-                mhRRR[draw_index, :]     = vec(RRR_old)'
-                mhCCC[draw_index, :]   = vec(CCC_old)'
-                mhzend[draw_index, :]    = vec(zend_old)'
+                mhTTT[draw_index, :, :]  = TTT_old
+                mhRRR[draw_index, :, :]  = RRR_old
+                mhCCC[draw_index, :, :]  = CCC_old'
+                mhzend[draw_index, :]    = zend_old'
             end
         end # of block
 
@@ -377,10 +383,10 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
 
         # Write data to file if we're past n_burn blocks
         if block > n_burn
-            parasim[block_start:block_end, :]   = map(Float32,mhparams)
+            parasim[block_start:block_end, :]   = map(Float32, mhparams)
             postsim[block_start:block_end, :]   = map(Float32, mhposterior)
-            TTTsim[block_start:block_end,:]     = map(Float32,mhTTT)
-            RRRsim[block_start:block_end,:]     = map(Float32, mhRRR)
+            TTTsim[block_start:block_end,:,:]   = map(Float32, mhTTT)
+            RRRsim[block_start:block_end,:,:]   = map(Float32, mhRRR)
             zsim[block_start:block_end,:]       = map(Float32, mhzend)
             # likesim[block_start:block_end, :] = map(Float32, mhlikelihood)
             # CCCsim[block_start:block_end, :]  = map(Float32, mhCCC)
@@ -392,12 +398,13 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             block_time = toq()
             total_sampling_time += block_time
-            expected_time_remaining_sec = (total_sampling_time/block)*(n_blocks - block)
-            expected_time_remaining_hrs = expected_time_remaining_sec/3600
+            total_sampling_time_minutes = total_sampling_time/60
+            expected_time_remaining = (total_sampling_time/block)*(n_blocks - block)
+            expected_time_remaining_minutes = expected_time_remaining_sec/60
 
             println("Completed $block of $n_blocks blocks.")
-            println("Total time to compute $block blocks: $total_sampling_time")
-            println("Expected time remaining for Metropolis-Hastings: $expected_time_remaining_hrs hours")
+            println("Total time to compute $block blocks: $total_sampling_time_minutes minutes")
+            println("Expected time remaining for Metropolis-Hastings: $expected_time_remaining_minutes minutes")
             println("Block $block rejection rate: $block_rejection_rate \n")
         end
 
@@ -422,7 +429,7 @@ parameter_covariance.h5 file in the `workpath(m)` directory.
 ### Arguments
 * `m::AbstractModel`: the model object
 """
-function compute_parameter_covariance{T<:AbstractModel}(m::T)
+function compute_parameter_covariance(m::AbstractModel)
 
     # Read in saved parameter draws
     param_draws_path = rawpath(m,"estimate","mhsave.h5")
