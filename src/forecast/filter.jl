@@ -53,30 +53,6 @@ function filter{S<:AbstractFloat}(m::AbstractModel,
     return filtered_states
 end
 
-type FilterInput{T<:AbstractModel,S<:AbstractFloat}
-    m::T
-    data::Matrix{S}
-    lead::Int
-    sys::System
-    z0::Array{S}
-    vz0::Matrix{S}
-    Ny0::Int
-    allout::Bool
-    use_expected_rate_data::Bool
-end
-
-function FilterInput{T<:AbstractFloat}(m::AbstractModel,data::Matrix{T},sys::System{T})
-
-    nstates = n_states_augmented(m) 
-
-    FilterInput(m,data,1,sys,zeros(nstates,1),zeros(nstates,nstates),0,true,true)
-end
-
-
-function filter(f::FilterInput)
-
-    return filter(f.m, f.data, f.sys, f.z0, f.vz0, lead=f.lead, Ny0=f.Ny0, allout=f.allout, use_expected_rate_data =f.use_expected_rate_data)  
-end
 
 function filter{S<:AbstractFloat}(m::AbstractModel,
                                   data::Matrix{S},
@@ -124,11 +100,11 @@ end
 
 function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
                                                data::Matrix{S},
-                                               TTT=[]::Matrix{S},
-                                               RRR=[]::Matrix{S},
-                                               CCC=[]::Matrix{S},
-                                               z0::Array{S}=[],
-                                               vz0::Matrix{S}=[];
+                                               TTT::Matrix{S} = Matrix{S}(0,0),
+                                               RRR::Matrix{S} = Matrix{S}(0,0),
+                                               CCC::Matrix{S} = Matrix{S}(0,0),
+                                               z0::Array{S}   = Array{S}(0),
+                                               vz0::Matrix{S} = Matrix{S}(0,0);
                                                lead::Int=0,
                                                Ny0::Int =0,
                                                allout::Bool = false,
@@ -216,7 +192,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
 
     # Run Kalman filter on presample
     R1[:A0] = if isempty(z0)
-        zeros(T, n_states_no_ant, 1)
+        zeros(S, n_states_no_ant, 1)
     else
         z0
     end
@@ -271,4 +247,53 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     ## Return outputs from both regimes
     return R2, R3 
    
+end
+
+
+
+## Package all inputs to the Kalman Filter into a single object to
+## facilitate parallelization via pmap.
+"""
+
+`FilterInput{T<:AbstractModel,S<:AbstractFloat}`
+
+Fields
+—————–
+ - `m`::T`
+ - `data::Matrix{S}`
+ - `lead::Int` 
+ - `sys::System`
+ - `z0::Array{S}`
+ - `vz0::Matrix{S}`
+ - `Ny0::Int`
+ - `allout::Bool`
+ - `use_expected_rate_data::Bool`
+
+Notes
+————-
+  See the help for `kalman_filter` for an explanation of each field.
+"""
+type FilterInput{T<:AbstractModel,S<:AbstractFloat}
+    m::T
+    data::Matrix{S}
+    lead::Int
+    sys::System
+    z0::Array{S}
+    vz0::Matrix{S}
+    Ny0::Int
+    allout::Bool
+    use_expected_rate_data::Bool
+end
+
+function FilterInput{T<:AbstractFloat}(m::AbstractModel,data::Matrix{T},sys::System{T})
+
+    nstates = n_states_augmented(m) 
+
+    FilterInput(m,data,1,sys,zeros(nstates,1),zeros(nstates,nstates),0,true,true)
+end
+
+
+function filter(f::FilterInput)
+
+    return filter(f.m, f.data, f.sys, f.z0, f.vz0, lead=f.lead, Ny0=f.Ny0, allout=f.allout, use_expected_rate_data =f.use_expected_rate_data)  
 end

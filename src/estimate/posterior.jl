@@ -128,8 +128,8 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     end
 
     # Return total log-likelihood, excluding the presample
-    R2, R3 = kalman_filter_2part(m, data, mh=mh, catch_errors=catch_errors)
-    like = R2[:like] + R3[:like]
+    R2, R3 = kalman_filter_2part(m, data, mh=mh, catch_errors=catch_errors, allout=false)
+    like = R2[:like][1] + R3[:like][1]  # these are matrices with 1 element that we need to extract
     
     if mh
         return like, R3
