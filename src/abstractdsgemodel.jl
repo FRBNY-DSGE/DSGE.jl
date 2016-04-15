@@ -176,7 +176,7 @@ n_mh_blocks(m::AbstractModel)      =  get_setting(m, :n_mh_blocks)
 n_mh_simulations(m::AbstractModel) =  get_setting(m, :n_mh_simulations)
 n_mh_burn(m::AbstractModel)        =  get_setting(m, :n_mh_burn)
 mh_thin(m::AbstractModel)          =  get_setting(m, :mh_thin)
-n_draws(m::AbstractModel)          =  (n_mh_blocks(m) - n_mh_burn(m)) * (n_mh_simulations(m)/n_mh_thin(m))
+n_draws(m::AbstractModel)          =  round(Int,(n_mh_blocks(m) - n_mh_burn(m)) * (n_mh_simulations(m)/mh_thin(m)))
 
 # Interface for forecast settings
 first_forecast_quarter(m::AbstractModel) = get_setting(m, :first_forecast_quarter)(m)

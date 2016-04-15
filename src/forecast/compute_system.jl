@@ -1,13 +1,13 @@
-function compute_system(m; use_expected_rate_date=false)
+function compute_system(m; use_expected_rate_data=false)
 
 # Solve model
 TTT, RRR, CCC = solve(m)
 
 # Index out non-anticipated shocks rows and columns of system matrices if desired
-if !use_expected_rate_date
+if !use_expected_rate_data
     n_states     = DSGE.n_states(m)
     n_ant        = n_anticipated_shocks(m)
-    n_states_aug = n_states_augmented(m)
+    n_states_aug = DSGE.n_states_augmented(m)
     n_exo        = n_shocks_exogenous(m)
 
     state_inds = [1:(n_states-n_ant); (n_states+1):n_states_aug]

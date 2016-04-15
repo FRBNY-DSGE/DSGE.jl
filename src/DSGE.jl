@@ -21,12 +21,12 @@ module DSGE
 
         # abstractdsgemodel.jl
         AbstractModel, transform_to_model_space!, transform_to_real_line!,
-        n_states, n_shocks_exogenous, n_shocks_expectational, n_parameters,
-        n_anticipated_shocks,
-        spec, subspec,
+        n_states, n_shocks_exogenous, n_shocks_expectational, n_parameters, n_observables,
+        spec, subspec, n_anticipated_shocks, n_states_augmented,
+        n_presample_periods, zlb_start_index,
         dataroot, saveroot, inpath, workpath, rawpath, tablespath, figurespath, logpath,
         reoptimize, calculate_hessian,
-        n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin, specify_mh_start,
+        n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin, specify_mh_start, n_draws,
         data_vintage, cond_vintage, cond_id,
         specify_mode!, specify_hessian, load_parameters_from_file,
         use_population_forecast,
@@ -38,6 +38,9 @@ module DSGE
         UnscaledParameter, SteadyStateParameter, transform_to_real_line, transform_to_model_space,
         update, update!, transform_to_model_space, transform_to_real_line, Interval, ParamBoundsError,
 
+        # statespace/
+        Measurement, Transition, System,
+
         # estimate/
         kalman_filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
@@ -45,7 +48,7 @@ module DSGE
         find_density_bands, prior,
 
         # forecast/
-        kalman_smoother, disturbance_smoother,
+        kalman_smoother, disturbance_smoother, FilterInput,
 
         # models/
         steadystate!, Model990, SmetsWouters, eqcond, measurement,
@@ -88,6 +91,8 @@ module DSGE
 
     include("forecast/smoothers.jl")
     include("forecast/compute_system.jl")
+    include("forecast/filter.jl")
+
 
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")
