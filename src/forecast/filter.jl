@@ -91,7 +91,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel,
         
     else
         # pull out the elements of sys and call the kalman filter
-        kal = kalman_filter(data, lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0, allout)
+        kal = kalman_filter(data, lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0, allout=allout)
 
         return kal[:filt]
     end
