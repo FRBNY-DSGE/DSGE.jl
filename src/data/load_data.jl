@@ -3,7 +3,7 @@
 load_data(m::AbstractModel; start_date = "", end_date = "", population_mnemonic = :CNP16OV
 ```
 
-Loads the data for model `m`, transforms it appropriately, and returns a `Matrix{Float64}`.
+Loads the data for model `m` and transforms it appropriately. Returns a DataFrame.
 
 ### Inputs
 - `m`: Model object
@@ -32,9 +32,8 @@ function load_data(m::AbstractModel; start_date="", end_date="", population_mnem
 
     levels = load_levels_data(m, start_date=start_date, end_date=end_date)
     transformed = transform_data(m, levels, population_mnemonic)
-    data_matrix  = convert(Matrix{Float64}, data)
     
-    return data_matrix
+    return transformed
 end
 
 
