@@ -9,8 +9,7 @@ kalman_filter(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=false)
 kalman_filter(data, lead, a, F, b, H, var, Ny0=0; allout=false)
 ```
 
-Inputs
-------
+### Inputs
 
 - `data`: a `Ny x T` matrix containing data `y(1), ... , y(T)`.
 - `lead`: the number of steps to forecast after the end of the data.
@@ -23,6 +22,8 @@ Inputs
 - `var`: an `Ny + Nz` x `Ny + Nz` matrix for a time-invariant variance matrix for the
   error in the transition equation and the error in the measurement equation, that is,
   `[η(t)', ϵ(t)']'`.
+
+#### Optional Inputs
 - `z0`: an optional `Nz x 1` initial state vector.
 - `vz0`: an optional `Nz x Nz` covariance matrix of an initial state vector.
 - `Ny0`: an optional scalar indicating the number of periods of presample (i.e. the number
@@ -30,17 +31,14 @@ Inputs
 - `allout`: an optional keyword argument indicating whether we want optional output
   variables returned as well
 
-Outputs
--------
+Where:
+- `Nz`: number of states
+- `Ny`: number of observables
+- `T`: number of time periods for which we have data
 
-- `logl`: value of the average log likelihood function of the SSM under assumption that
-  observation noise ϵ(t) is normally distributed
-- `pred`: a `Nz` x `T+lead` matrix containing one-step predicted state vectors.
-- `vpred`: a `Nz` x `Nz` x `T+lead` matrix containing mean square errors of predicted
-  state vectors.
-- `filt`: an optional `Nz` x `T` matrix containing filtered state vectors.
-- `vfilt`: an optional `Nz` x `Nz` x `T` matrix containing mean square errors of filtered
-  state vectors.
+### Outputs
+
+- a `Kalman` object. See documentation for `Kalman`.
 
 
 Notes
@@ -205,6 +203,24 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
     return kalman_filter(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=allout)
 end
 
+"""
+
+### Fields:
+- `L`: value of the average log likelihood function of the SSM under assumption that
+  observation noise ϵ(t) is normally distributed
+- `zend`: The state vector in the last period for which data is provided
+- `Pend`:
+
+
+#### Fields filled in when `allout=true` in a call to `kalman_filter`:
+- `pred`: a `Nz` x `T+lead` matrix containing one-step predicted state vectors.
+- `vpred`: a `Nz` x `Nz` x `T+lead` matrix containing mean square errors of predicted
+  state vectors.
+
+- `filt`: an `Nz` x `T` matrix containing filtered state vectors.
+- `vfilt`: an `Nz` x `Nz` x `T` matrix containing mean square errors of filtered
+  state vectors.
+"""
 immutable Kalman{S<:AbstractFloat}
     L::S                  # Likelihood
     zend::Matrix{S}       # last-period state vector

@@ -1,12 +1,17 @@
 """
 ```
+filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, lead::Int,
+                                  sys::Vector{System},
+                                  z0::Vector{S}=[], vz0::Matrix{S}=[];
+                                  Ny0::Int =0, allout::Bool = false,
+                                  use_expected_rate_data::Bool = true)
+
 filter(...)
 ```
     
-Computes and returns the filtered values of states for every parameter draw.
+Computes and returns the filtered values of states for every state-space system in `sys`.
 
-Inputs
-------
+### Inputs
 
 - `m`: model object
 - `data`: matrix of data for observables
@@ -14,12 +19,14 @@ Inputs
 - `sys::Vector{System}`: a vector of `System` objects specifying state-space system matrices for each draw
 - `z0`: an optional `Nz x 1` initial state vector.
 - `vz0`: an optional `Nz x Nz` covariance matrix of an initial state vector.
-- `Ny0`: an optional scalar indicating the number of periods of presample (i.e. the number  of periods which we don't add to the likelihood)
+- `Ny0`: an optional scalar indicating the number of periods of
+  presample (i.e. the number of periods which we don't add to the
+  likelihood)
 - `allout`: an optional keyword argument indicating whether we want optional output
   variables returned as well
 
-Outputs
--------
+### Outputs
+
 `filter` returns a vector of `Kalman` objects, which each contain the following fields.
   - `logl`: value of the average log likelihood function of the SSM under assumption that
     observation noise ϵ(t) is normally distributed
@@ -64,6 +71,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel,
                                   allout::Bool = false,
                                   use_expected_rate_data = true)
 
+    # pull out the elements of sys
     TTT    = sys[:TTT]
     RRR    = sys[:RRR]
     CCC    = sys[:CCC]
@@ -81,6 +89,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel,
         vz0 = solve_discrete_lyapunov(TTT, RRR*QQ*RRR')
     end
 
+    # Call the appropriate version of the Kalman filter
     if use_expected_rate_data
 
         # We have 3 regimes: presample, main sample, and expected-rate sample (starting at zlb_start_index)
@@ -90,14 +99,48 @@ function filter{S<:AbstractFloat}(m::AbstractModel,
         return filtered_states
         
     else
-        # pull out the elements of sys and call the kalman filter
+        # regular Kalman filter with no regime-switching
         kal = kalman_filter(data, lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0, allout=allout)
 
         return kal[:filt]
     end
 end
 
+"""
+```
+kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+     TTT::Matrix{S}, RRR::Matrix{S}, CCC::Matrix{S}, z0::Array{S},
+     vz0::Matrix{S}; lead::Int, Ny0::Int, allout::Bool,
+     catch_errors::Bool)
+```
 
+Implments the Kalman Filter over 2 regimes. The first regime does not
+incorporate interest rate expectations data; the second does.
+
+### Inputs
+Where:
+- `Nz`: number of states
+- `Ny`: number of observables
+
+- `m`: model object
+- `data`: a `Ny x T` matrix containing data `y(1), ... , y(T)`.
+- `TTT`: an optional `Nz x Nz` matrix for a time-invariant transition matrix in the transition
+  equation. If not provided, it will be calculated.
+- `RRR`: an optional `Nz` x `Nz` matrix for a time-invariant variance matrix
+  for the error in the transition equation.  If not provided, it will be calculated.
+- `CCC`: an `Nz x 1` vector for a time-invariant input vector in the
+  transition equation.  If not provided, it will be calculated.
+- `z0`: an optional `Nz x 1` initial state vector.
+- `vz0`: an optional `Nz x Nz` covariance matrix of an initial state vector.
+
+#### Keyword arguments
+
+- `lead`: the number of steps to forecast after the end of the data.
+- `Ny0`: an optional scalar indicating the number of periods of presample (i.e. the number
+  of periods which we don't add to the likelihood)
+- `allout`: an optional keyword argument indicating whether we want optional output
+  variables returned as well
+"""
 function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
                                                data::Matrix{S},
                                                TTT::Matrix{S} = Matrix{S}(0,0),
@@ -108,7 +151,6 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
                                                lead::Int=0,
                                                Ny0::Int =0,
                                                allout::Bool = false,
-                                               mh::Bool = false,
                                                catch_errors::Bool = false)
     
 
@@ -257,8 +299,8 @@ end
 
 `FilterInput{T<:AbstractModel,S<:AbstractFloat}`
 
-Fields
-—————–
+### Fields
+
  - `m`::T`
  - `data::Matrix{S}`
  - `lead::Int` 
@@ -269,8 +311,8 @@ Fields
  - `allout::Bool`
  - `use_expected_rate_data::Bool`
 
-Notes
-————-
+### Notes
+
   See the help for `kalman_filter` for an explanation of each field.
 """
 type FilterInput{T<:AbstractModel,S<:AbstractFloat}
