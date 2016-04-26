@@ -14,7 +14,7 @@ Computes and returns the filtered values of states for every state-space system 
 ### Inputs
 
 - `m`: model object
-- `data`: matrix of data for observables
+- `df`: DataFrame of data for observables
 - `lead`: number of periods to forecast after the end of the data
 - `sys::Vector{System}`: a vector of `System` objects specifying state-space system matrices for each draw
 - `z0`: an optional `Nz x 1` initial state vector.
@@ -37,26 +37,61 @@ Computes and returns the filtered values of states for every state-space system 
   - `vfilt`: an optional `Nz` x `Nz` x `T` matrix containing mean square errors of filtered
     state vectors.
 """
-function filter{S<:AbstractFloat}(m::AbstractModel,
-                                  data::Matrix{S},
-                                  lead::Int,
-                                  sys::Vector{System},   
-                                  z0::Vector{S}=[],
-                                  vz0::Matrix{S}=[]; 
+function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
+                                  df::DataFrame,
+                                  sys::Vector{System{S}},   
+                                  z0::Vector{S}=Array{S}(0),
+                                  vz0::Matrix{S}=Array{S}(0,0);
+                                  lead::Int=0,
                                   Ny0::Int =0,
                                   allout::Bool = false,
                                   use_expected_rate_data::Bool = true)
 
-    # numbers of useful things
-    ndraws   = n_draws(m)
+    # # numbers of useful things
+    #ndraws   = n_draws(m)
+    ndraws = 10
     @assert size(sys,1) == ndraws
 
-    inputs = @sync @parallel (vcat) for i = 1:ndraws
-        FilterInput(m, data, sys[i], z0, vz0, lead, Ny0, allout, use_expected_rate_data)
-    end
     
-    filtered_states = pmap(filter, inputs)
+    # inputs = @sync @parallel (vcat) for i = 1:ndraws
+    #     FilterInput(m, data, sys[i], z0, vz0, lead, Ny0, allout, use_expected_rate_data)
+    # end
+    
+    # filtered_states = pmap(filter, inputs)
 
+    # Convert the DataFrame to a data matrix without altering the original dataframe  
+    df2 = copy(df)
+    delete!(df2, [:date])
+    data  = convert(Matrix{S}, df2[4:end,:])
+    println("data: $(size(data))")
+    
+    # Remove the presample from the date vector
+    # normal_period_startdate = get_setting(m, normal_period_startdate)
+    # last_historical_period  = get_setting(m, last_historical_period)
+    normal_period_startdate = Date("1959-12-31","y-m-d")
+    last_historical_period  = Date("2016-12-31", "y-m-d")
+    dates = df[normal_period_startdate .<= df[:date] .<= last_historical_period, :date]
+    
+    # Make sure the model object and the data are defined on every node
+    @everywhere  m    = remotecall_fetch(1, ()->m)
+    @everywhere  data = remotecall_fetch(1, ()->data)
+
+    # Call filter over all draws
+    use_ois         = get_setting(m, :use_expected_rate_data)    
+    filtered_states = pmap(i -> DSGE.filter(m,data,sys[i], allout=true, use_expected_rate_data=use_ois), 1:ndraws)
+    
+    # Turn the filtered states back into a dataframe
+    # filtered_states_df = DataFrame(filtered_states)
+
+    # add the names of the states
+    # state_names = [keys(m.endogenous_states)...; keys(m.endogenous_states_augmented)...]
+    # println("state_names: $(size(state_names))")
+    # println("filtered_states_df: $(size(filtered_states_df))")
+    
+    #names!(filtered_states_df, state_names)
+
+    #filtered_states_df[:date] = dates
+        
     return filtered_states
 end
 
@@ -64,19 +99,21 @@ end
 function filter{S<:AbstractFloat}(m::AbstractModel,
                                   data::Matrix{S},
                                   sys::System,  
-                                  z0::Array{S}=[],
-                                  vz0::Matrix{S}=[];
+                                  z0::Array{S}=Array{S}(0),
+                                  vz0::Matrix{S}=Matrix{S}(0,0);
                                   lead::Int=0,
                                   Ny0::Int =0,
                                   allout::Bool = false,
                                   use_expected_rate_data = true)
 
+    
     # pull out the elements of sys
     TTT    = sys[:TTT]
     RRR    = sys[:RRR]
     CCC    = sys[:CCC]
     QQ     = sys[:QQ]
     ZZ     = sys[:ZZ]
+    DD     = sys[:DD]
     VVall  = sys[:VVall]
 
     # if initial z0 is not given, set it to the 0 vector
@@ -91,18 +128,21 @@ function filter{S<:AbstractFloat}(m::AbstractModel,
 
     # Call the appropriate version of the Kalman filter
     if use_expected_rate_data
-
+        println("z0: $(size(z0))")
+        println("vz0: $(size(vz0))")
+        println("TTT: $(size(TTT))")
+        
         # We have 3 regimes: presample, main sample, and expected-rate sample (starting at zlb_start_index)
-        R2, R3 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0, lead=lead, Ny0=Ny0, allout=allout)
-
+        R2, R3 = kalman_filter_2part(m, data', TTT, RRR, CCC, z0, vz0, lead=lead, Ny0=Ny0, allout=allout)
+                
         filtered_states = [R2[:filt] R3[:filt]]
-        return filtered_states
+        return filtered_states'
         
     else
         # regular Kalman filter with no regime-switching
-        kal = kalman_filter(data, lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0, allout=allout)
+        kal = kalman_filter(data', lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0, allout=allout)
 
-        return kal[:filt]
+        return kal[:filt]'
     end
 end
 
@@ -293,49 +333,49 @@ end
 
 
 
-## Package all inputs to the Kalman Filter into a single object to
-## facilitate parallelization via pmap.
-"""
+# ## Package all inputs to the Kalman Filter into a single object to
+# ## facilitate parallelization via pmap.
+# """
 
-`FilterInput{T<:AbstractModel,S<:AbstractFloat}`
+# `FilterInput{T<:AbstractModel,S<:AbstractFloat}`
 
-### Fields
+# ### Fields
 
- - `m`::T`
- - `data::Matrix{S}`
- - `lead::Int` 
- - `sys::System`
- - `z0::Array{S}`
- - `vz0::Matrix{S}`
- - `Ny0::Int`
- - `allout::Bool`
- - `use_expected_rate_data::Bool`
+#  - `m`::T`
+#  - `data::Matrix{S}`
+#  - `lead::Int` 
+#  - `sys::System`
+#  - `z0::Array{S}`
+#  - `vz0::Matrix{S}`
+#  - `Ny0::Int`
+#  - `allout::Bool`
+#  - `use_expected_rate_data::Bool`
 
-### Notes
+# ### Notes
 
-  See the help for `kalman_filter` for an explanation of each field.
-"""
-type FilterInput{T<:AbstractModel,S<:AbstractFloat}
-    m::T
-    data::Matrix{S}
-    lead::Int
-    sys::System
-    z0::Array{S}
-    vz0::Matrix{S}
-    Ny0::Int
-    allout::Bool
-    use_expected_rate_data::Bool
-end
+#   See the help for `kalman_filter` for an explanation of each field.
+# """
+# type FilterInput{T<:AbstractModel,S<:AbstractFloat}
+#     m::T
+#     data::Matrix{S}
+#     lead::Int
+#     sys::System
+#     z0::Array{S}
+#     vz0::Matrix{S}
+#     Ny0::Int
+#     allout::Bool
+#     use_expected_rate_data::Bool
+# end
 
-function FilterInput{T<:AbstractFloat}(m::AbstractModel,data::Matrix{T},sys::System{T})
+# function FilterInput{T<:AbstractFloat}(m::AbstractModel,data::Matrix{T},sys::System{T})
 
-    nstates = n_states_augmented(m) 
+#     nstates = n_states_augmented(m) 
 
-    FilterInput(m,data,1,sys,zeros(nstates,1),zeros(nstates,nstates),0,true,true)
-end
+#     FilterInput(m,data,1,sys,zeros(nstates,1),zeros(nstates,nstates),0,true,true)
+# end
 
 
-function filter(f::FilterInput)
+# function filter(f::FilterInput)
 
-    return filter(f.m, f.data, f.sys, f.z0, f.vz0, lead=f.lead, Ny0=f.Ny0, allout=f.allout, use_expected_rate_data =f.use_expected_rate_data)  
-end
+#     return filter(f.m, f.data, f.sys, f.z0, f.vz0, lead=f.lead, Ny0=f.Ny0, allout=f.allout, use_expected_rate_data =f.use_expected_rate_data)  
+# end
