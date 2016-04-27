@@ -7,18 +7,26 @@ Create a DataFrame with all data series for this model, fully transformed.
 
 Check in `inpath(m)` for vintaged datasets corresponding to the ones in
 `keys(m.data_series)`. Load the appriopriate data series (specified in
-`m.data_series[source]`) for each data source. The start and end date of the data downloaded
+`m.data_series[source]`) for each data source. The start and end dates of the data returned
 are given by the date_presample_start and date_mainsample_end model settings. Save the
 resulting DataFrame to disk.
 
 # Notes
 
 The name of the input data file must be the same as the source string in `m.data_series`,
-and those files must be located in .csv files in `inpath(m, "data")`.
+and those files must be located in .csv files in `inpath(m, "data")`. To accomodate growth
+rates and other similar transformations, more rows of data may be downloaded than otherwise
+specified by the date model settings.
 """
 function load_data(m::AbstractModel)
     df = load_data_levels(m)
     df = transform_data(m, df)
+
+    # Ensure that only appropriate rows make it into the returned DataFrame.
+    start_date = get_setting(m, :date_presample_start)
+    end_date   = get_setting(m, :date_mainsample_end)
+    df = df[start_date .<= df[:, :date] .<= end_date, :]
+
     save_data(m, df)
 
     return df
@@ -125,14 +133,10 @@ end
 df_to_matrix(m::AbstractModel, df::DataFrame)
 ```
 
-Return `df`, converted to matrix of floats, such that rows are between presample start date
-setting and main sample end date and date column is discard.
+Return `df`, converted to matrix of floats, and discard date column.
 """
 function df_to_matrix(m::AbstractModel, df::DataFrame)
-    start_date = get_setting(m, :date_presample_start)
-    end_date = get_setting(m, :date_mainsample_end)
     datecol = df.colindex[:date]
     inds = setdiff(1:size(df,2), datecol)
-    df1 = df[start_date .<= df[:, :date] .<= end_date, inds]
-    return convert(Matrix{Float64}, df1)
+    return convert(Matrix{Float64}, df[:, inds])
 end
