@@ -136,6 +136,7 @@ df_to_matrix(m::AbstractModel, df::DataFrame)
 Return `df`, converted to matrix of floats, and discard date column.
 """
 function df_to_matrix(m::AbstractModel, df::DataFrame)
+    #TODO sort columns as well according to observables
     datecol = df.colindex[:date]
     inds = setdiff(1:size(df,2), datecol)
     return convert(Matrix{Float64}, df[:, inds])
