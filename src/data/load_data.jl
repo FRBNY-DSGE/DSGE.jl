@@ -1,25 +1,24 @@
 """
 ```
-load_data(m::AbstractModel; Date("1959-03-31","y-m-d")::Date, end_date=last_quarter_end()::Date)
+load_data(m::AbstractModel)
 ```
 
 Checks in `inpath(m)` for vintaged datasets corresponding to the ones in
 `keys(m.data_series)`. Loads the appriopriate data series (specified in
 `m.data_series[source]`) for each data source, and returns a consolidated DataFrame (merged
-on date).
-
-# Arguments
-- `m::AbstractModel`: model object
-- `start_date`: start date of entire sample
-- `end_date`: end date of entire sample
+on date). The start and end date of the data downloaded are given by the
+date_presample_start and date_mainsample_end model settings.  
 
 # Notes
 The name of the input data file must be the same as the source string in `m.data_series`,
 and those files must be located in .csv files in `inpath(m, "data")`.
 """
-function load_data(m::AbstractModel; start_date::Date = Date("1959-03-31","y-m-d"),
-                                     end_date::Date   = last_quarter_end())
+function load_data(m::AbstractModel)
 
+    # Start two quarters further back than `start_date` as we need these additional
+    # quarters to compute differences.
+    start_date = get_setting(m, :date_presample_start) - Dates.Month(6)
+    end_date = get_setting(m, :date_mainsample_end)
 
     # Load FRED data, set ois series to load
     data = load_fred_data(m; start_date=firstdayofquarter(start_date), end_date=end_date)
