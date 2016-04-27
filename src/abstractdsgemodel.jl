@@ -125,7 +125,7 @@ n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_s
 # First period we should incorporate zero bound expectations
 # ZLB expectations should begin in 2008 Q4
 function zlb_start_index!(m::AbstractModel, data::DataFrame)
-    date = get_setting(m, :zlb_start_date)
+    date = get_setting(m, :date_zlbregime_start)
     zlb_start = find(x->x==date, data[:date])[1]
     m <= Setting(:zlb_start_index, zlb_start, "Index of first period to incorporate zero bound expectation")
 
