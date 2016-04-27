@@ -113,10 +113,8 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:first_forecast_quarter, ffq, "First quarter for which to produce forecasts.")
 
     # Anticipated shocks
-    m <= Setting(:n_presample_periods, 2, "Number of periods in the presample")
     m <= Setting(:n_anticipated_shocks,         0, "Number of anticipated policy shocks")
     m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    m <= Setting(:zlb_start_index, 198, "Index of first period to incorporate zero bound expectation")
 
     # General computation
     m <= Setting(:use_parallel_workers, true, "Use available parallel workers in computations")
