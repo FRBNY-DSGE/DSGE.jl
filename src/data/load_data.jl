@@ -76,7 +76,11 @@ function load_data(m::AbstractModel)
             addl_data = addl_data[rows, cols]
             data = join(data, addl_data, on=:date, kind=:outer)
         else
-            error("$file was not found." )
+            # If series not found, use all NaNs
+            addl_data = DataFrame(fill(NaN, (size(data,1), length(mnemonics))))
+            names!(addl_data, mnemonics)
+            data = hcat(data, addl_data)
+            warn("$file was not found; NaNs used." )
         end
     end
 
