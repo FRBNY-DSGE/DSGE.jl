@@ -9,7 +9,9 @@ using DSGE, DataFrames, HDF5
 m = Model990()
 m.testing = true
 
-data,dates = h5open("../reference/filter_args.h5","r") do h5
+path = dirname(@__FILE__)
+
+data,dates = h5open("$path/../reference/filter_args.h5","r") do h5
     read(h5,"data"), read(h5, "dates")
 end
 

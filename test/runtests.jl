@@ -18,8 +18,8 @@ my_tests = [
             "estimate/metropolis_hastings",
             "models/m990/m990",
             "models/smets_wouters/smets_wouters",
-            "forecast/smoothers",
-            "forecast/filter",
+            # "forecast/smoothers",
+            "forecast/filter"
             ]
 
 for test in my_tests
