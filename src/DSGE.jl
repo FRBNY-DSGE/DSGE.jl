@@ -39,16 +39,16 @@ module DSGE
         update, update!, transform_to_model_space, transform_to_real_line, Interval, ParamBoundsError,
 
         # statespace/
-        Measurement, Transition, System,
+        Measurement, Transition, System, 
 
         # estimate/
-        kalman_filter, likelihood, posterior, posterior!,
+        kalman_filter, kalman_filter_2part, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, compute_moments,
         find_density_bands, prior,
 
         # forecast/
-        kalman_smoother, disturbance_smoother, FilterInput,
+        kalman_smoother, disturbance_smoother, filter, compute_system,
 
         # models/
         steadystate!, Model990, SmetsWouters, eqcond, measurement,
