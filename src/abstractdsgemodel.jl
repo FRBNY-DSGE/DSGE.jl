@@ -122,20 +122,24 @@ n_anticipated_shocks(m::AbstractModel) = get_setting(m, :n_anticipated_shocks)
 # Padding for number of anticipated policy shocks
 n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_shocks_padding)
 
-# First period we should incorporate zero bound expectations
-# ZLB expectations should begin in 2008 Q4
-function zlb_start_index!(m::AbstractModel, data::DataFrame)
-    date = get_setting(m, :zlb_start_date)
-    zlb_start = find(x->x==date, data[:date])[1]
-    m <= Setting(:zlb_start_index, zlb_start, "Index of first period to incorporate zero bound expectation")
-
-    zlb_start
+# Index into data matrix of first period to incorporate expected rate data
+function zlb_start_index(m::AbstractModel)
+    zlb_start_quarter = get_setting(m, :date_zlbregime_start)
+    presample_start_quarter = get_setting(m, :date_presample_start)
+    days = zlb_start_quarter - presample_start_quarter
+    quarters = round(days.value / 365.25 * 4.0)
+    index = quarters+1
+    return convert(Int, index)
 end
 
-zlb_start_index(m::AbstractModel) = get_setting(m, :zlb_start_index)
-
 # Number of presample periods
-n_presample_periods(m::AbstractModel) = get_setting(m, :n_presample_periods)
+function n_presample_periods(m::AbstractModel)
+    mainsample_start_quarter = get_setting(m, :date_mainsample_start)
+    presample_start_quarter = get_setting(m, :date_presample_start)
+    days = mainsample_start_quarter - presample_start_quarter
+    quarters = round(days.value / 365.25 * 4.0)
+    return convert(Int, quarters)
+end
 
 # Number of a few things that are useful
 n_states(m::AbstractModel)                 = length(m.endogenous_states)

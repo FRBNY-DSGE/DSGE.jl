@@ -102,4 +102,10 @@ module DSGE
     include("models/smets_wouters/measurement.jl")
     include("models/smets_wouters/augment_states.jl")
 
+    include("data/load_data.jl")
+    include("data/fred_data.jl")
+    include("data/transform_data.jl")
+    include("data/transformations.jl")
+    include("data/util.jl")
+
 end
