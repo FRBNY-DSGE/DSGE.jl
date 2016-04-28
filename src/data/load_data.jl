@@ -1,46 +1,6 @@
 """
 ```
-load_data(m::AbstractModel; start_date = "", end_date = "", population_mnemonic = :CNP16OV
-```
-
-Loads the data for model `m`, transforms it appropriately, and returns a `Matrix{Float64}`.
-
-### Inputs
-- `m`: Model object
-
-#### Keyword arguments
-- `start_date`: first date to obtain data for. Default = 06/30/1959.
-- `end_date`: last date to obtain data for. Default = last day of current quarter.
-- `population_mnemonic`: the name of the column that will hold the
-  population measure for computing per-capita values. By default, it
-  is CNP16OV (Civilian Noninstitutional Population, in thousands,
-  obtained via the FRED API).
-"""
-function load_data(m::AbstractModel; start_date="", end_date="", population_mnemonic = :CNP16OV)
-
-    start_date = if isempty(start_date)
-        Date("1959-06-30","y-m-d")
-    else
-        Date(start_date,"y-m-d")
-    end
-
-    end_date = if isempty(end_date)
-        last_quarter_end()
-    else
-        Date(end_date, "y-m-d")
-    end
-
-    levels = load_levels_data(m, start_date=start_date, end_date=end_date)
-    transformed = transform_data(m, levels, population_mnemonic)
-    data_matrix  = convert(Matrix{Float64}, data)
-    
-    return data_matrix
-end
-
-
-"""
-```
-load_levels_data(m::AbstractModel; Date("1959-03-31","y-m-d")::Date, end_date=last_quarter_end()::Date)
+load_data(m::AbstractModel; Date("1959-03-31","y-m-d")::Date, end_date=last_quarter_end()::Date)
 ```
 
 Checks in `inpath(m)` for vintaged datasets corresponding to the ones in
