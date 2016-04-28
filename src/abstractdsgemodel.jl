@@ -182,7 +182,7 @@ n_mh_burn(m::AbstractModel)        =  get_setting(m, :n_mh_burn)
 mh_thin(m::AbstractModel)          =  get_setting(m, :mh_thin)
 
 # Interface for forecast settings
-first_forecast_quarter(m::AbstractModel) = get_setting(m, :first_forecast_quarter)(m)
+nothing
 
 """
 ```
