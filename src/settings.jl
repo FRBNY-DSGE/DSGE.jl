@@ -113,12 +113,8 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:first_forecast_quarter, ffq, "First quarter for which to produce forecasts.")
 
     # Anticipated shocks
-    zlb_start = Date("2008-12-31","y-m-d")
-    m <= Setting(:zlb_start_date,  zlb_start, "First period to incorporate zero bound expectation")
-    m <= Setting(:n_presample_periods, 2, "Number of periods in the presample")
     m <= Setting(:n_anticipated_shocks,         0, "Number of anticipated policy shocks")
     m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    m <= Setting(:zlb_start_index, 198, "Index of first period to incorporate zero bound expectation")
 
     # General computation
     m <= Setting(:use_parallel_workers, true, "Use available parallel workers in computations")
@@ -133,7 +129,13 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:n_mh_burn,         2    , "Number of blocks to use as burn-in in Metropolis-Hastings")
     m <= Setting(:mh_thin,    5    , "Metropolis-Hastings thinning step")
 
-
+    # Dates
+    m <= Setting(:date_presample_start, quartertodate("1959-Q3"), "Start date of pre-sample")
+    m <= Setting(:date_mainsample_start, quartertodate("1960-Q1"), "Start date of main sample")
+    m <= Setting(:date_zlbregime_start, quartertodate("2008-Q4"), "Start date of zero lower bound regime")
+    m <= Setting(:date_mainsample_end, Dates.lastdayofquarter(Dates.today()-Dates.Month(3)), "End date of main sample")
+    m <= Setting(:date_forecast_start, Dates.lastdayofquarter(Dates.today()), "Start date of forecast period")
+    m <= Setting(:date_forecast_start, Dates.lastdayofquarter(Dates.today()+Dates.Month(60*3)), "End date of forecast period")
 end
 
 

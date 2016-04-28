@@ -1,29 +1,50 @@
 """
 ```
-load_data(m::AbstractModel; Date("1959-03-31","y-m-d")::Date, end_date=last_quarter_end()::Date)
+load_data(m::AbstractModel)
 ```
 
-Checks in `inpath(m)` for vintaged datasets corresponding to the ones in
-`keys(m.data_series)`. Loads the appriopriate data series (specified in
-`m.data_series[source]`) for each data source, and returns a consolidated DataFrame (merged
-on date).
+Create a DataFrame with all data series for this model, fully transformed.  
 
-# Arguments
-- `m::AbstractModel`: model object
-- `start_date`: start date of entire sample
-- `end_date`: end date of entire sample
+Check in `inpath(m)` for vintaged datasets corresponding to the ones in
+`keys(m.data_series)`. Load the appriopriate data series (specified in
+`m.data_series[source]`) for each data source. The start and end dates of the data returned
+are given by the date_presample_start and date_mainsample_end model settings. Save the
+resulting DataFrame to disk.
 
 # Notes
+
 The name of the input data file must be the same as the source string in `m.data_series`,
-and those files must be located in .csv files in `inpath(m, "data")`.
+and those files must be located in .csv files in `inpath(m, "data")`. To accomodate growth
+rates and other similar transformations, more rows of data may be downloaded than otherwise
+specified by the date model settings.
 """
-function load_data(m::AbstractModel; start_date::Date = Date("1959-03-31","y-m-d"),
-                                     end_date::Date   = last_quarter_end())
+function load_data(m::AbstractModel)
+    df = load_data_levels(m)
+    df = transform_data(m, df)
 
+    # Ensure that only appropriate rows make it into the returned DataFrame.
+    start_date = get_setting(m, :date_presample_start)
+    end_date   = get_setting(m, :date_mainsample_end)
+    df = df[start_date .<= df[:, :date] .<= end_date, :]
 
-    # Load FRED data, set ois series to load
-    data = load_fred_data(m; start_date=firstdayofquarter(start_date), end_date=end_date)
-    set_ois_series!(m)
+    save_data(m, df)
+
+    return df
+end
+
+function load_data_levels(m::AbstractModel)
+    # Start two quarters further back than `start_date` as we need these additional
+    # quarters to compute differences.
+    start_date = get_setting(m, :date_presample_start) - Dates.Month(6)
+    end_date = get_setting(m, :date_mainsample_end)
+
+    # Load FRED data
+    df = load_fred_data(m; start_date=firstdayofquarter(start_date), end_date=end_date)
+
+    # Set ois series to load
+    if n_anticipated_shocks(m) > 0
+        m.data_series[:ois] = [symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
+    end
 
     # For each additional source, search for the file with the proper name. Open
     # it, read it in, and merge it with fred_series
@@ -33,7 +54,7 @@ function load_data(m::AbstractModel; start_date::Date = Date("1959-03-31","y-m-d
     for source in keys(m.data_series)
 
         # Skip FRED sources, which are handled separately
-        if isequal(source, :fred)
+        if source == :fred
             continue
         end
 
@@ -75,26 +96,48 @@ function load_data(m::AbstractModel; start_date::Date = Date("1959-03-31","y-m-d
             rows = start_date .<= addl_data[:date] .<= end_date
 
             addl_data = addl_data[rows, cols]
-            data = join(data, addl_data, on=:date, kind=:outer)
+            df = join(df, addl_data, on=:date, kind=:outer)
         else
-            error("$file was not found." )
+            # If series not found, use all NaNs
+            addl_data = DataFrame(fill(NaN, (size(df,1), length(mnemonics))))
+            names!(addl_data, mnemonics)
+            df = hcat(df, addl_data)
+            warn("$file was not found; NaNs used." )
         end
     end
 
     # turn NAs into NaNs
-    na2nan!(data)
+    na2nan!(df)
 
-    return sort!(data, cols = :date)
+    sort!(df, cols = :date)
+
+    return df
 end
 
 """
-`set_ois_series!(m::AbstractModel)`
+```
+save_data(m::AbstractModel, df::DataFrame)
+```
 
-Sets the series to load from the file `ois_vint.csv` based on `n_anticipated_shocks(m)`.
+Save `df` to disk as CSV. File is located in `inpath(m, "data")`. Note that this file is not
+currently used for anything besides convenient visual inspection.
 """
-function set_ois_series!(m::AbstractModel)
-    nant = n_anticipated_shocks(m)
-    if nant > 0
-        m.data_series[:ois] = [symbol("ant$i") for i in 1:nant]
-    end
+function save_data(m::AbstractModel, df::DataFrame)
+    vint = data_vintage(m)
+    filename = inpath(m, "data", "data_$vint.csv")
+    writetable(filename, df; nastring="NaN")
+end
+
+"""
+```
+df_to_matrix(m::AbstractModel, df::DataFrame)
+```
+
+Return `df`, converted to matrix of floats, and discard date column.
+"""
+function df_to_matrix(m::AbstractModel, df::DataFrame)
+    #TODO sort columns as well according to observables
+    datecol = df.colindex[:date]
+    inds = setdiff(1:size(df,2), datecol)
+    return convert(Matrix{Float64}, df[:, inds])
 end
