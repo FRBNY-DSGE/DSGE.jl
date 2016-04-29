@@ -27,10 +27,10 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
                                     initial_state_draws::Matrix{T}; 
                                     shock_distribution::Union{Distribution, Matrix{T}}=Matrix{T}(0,0))
 
-
+        
     # numbers of useful things
     ndraws = if m.testing
-        2
+        2   # TODO: make testing less hard-codey
     else
         n_draws(m)
     end
@@ -40,39 +40,62 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
     @everywhere Z_pseudo = remotecall_fetch(1, ()->[])
     @everywhere D_pseudo = remotecall_fetch(1, ()->[])
 
+        
     # retrieve settings for forecast
     horizon  = forecast_horizons(m)
-    nstates  = n_states(m)
-
-    # set up distribution of shocks if not specified
-    if isempty(shock_distribution)
+    nshocks  = n_shocks_exogenous(m)
+    ndraws   = if m.testing
+        2
+    else
+        n_draws(m)
+    end
         
-        shock_distribution = if forecast_kill_shocks(m)    # Set all shocks to zero
-            zeros(horizon,nstates)
-        else                                               # Construct Distribution object
+    # set up distribution of shocks if not specified
+    # For now, we construct a giant vector of distirbutions of shocks and pass
+    # each to computeForecast.
+    # 
+    # TODO: refactor so that computeForecast
+    # creates its own DegenerateMvNormal based on passing the QQ
+    # matrix (which has already been computed/is taking up space)
+    # rather than having to copy each Distribution across nodes. This will also be much more
+    # space-efficient for if forecast_kill_shocks is true.
+        
+    if isempty(shock_distribution)
+
+        # Kill shocks: make a big vector of arrays of zeros
+        shock_distribution = if forecast_kill_shocks(m)
+            @sync @parallel (vcat) for i = 1:ndraws
+                zeros(horizon,nshocks)
+            end
+        else
             if forecast_tdist_shocks(m)                    ## use t-distributed shocks
-                TDist(forecast_tdist_df_val(m))
+                @sync @parallel (vcat) for i = 1:ndraws
+                    TDist(forecast_tdist_df_val(m))
+                end
             else                                           ## use normally distributed shocks
-                Normal(0,sqrt(sys[:QQ]))
+                @sync @parallel (vcat) for i = 1:ndraws
+                    DegenerateMvNormal(zeros(nshocks),sqrt(sys[i][:QQ]))
+                end
             end
         end
+
     end
 
         
     # Forecast the states
-
+    
     forecasts = pmap(i -> computeForecast(sys[i][TTT], sys[i][RRR], sys[i][CCC], sys[i][ZZ],
                                           sys[i][DD], Z_pseudo, D_pseudo,
-                                          forecast_horizons, vars_to_forecast, shockdistribution,
-                                          initial_state_draws))
+                                          forecast_horizons, [], shock_distribution[i],
+                                          initial_state_draws[i]), 1:ndraws)
     
 
     # unpack the giant vector of dictionaries that gets returned
-    states      = [x[:states] for x in forecasts]
-    observables = [x[:observables] for x in forecasts]
+    # states      = [x[:states] for x in forecasts]
+    # observables = [x[:observables] for x in forecasts]
     # shocks      = [x[:shocks] for x in forecasts]  # not yet implemented
         
-    return states, observables #, shocks
+    return forecasts # states, observables #, shocks
 end
 
 

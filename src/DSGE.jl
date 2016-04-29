@@ -14,7 +14,7 @@ module DSGE
     export
 
         # distributions_ext.jl
-        BetaAlt, GammaAlt,
+        BetaAlt, GammaAlt, DegenerateMvNormal,
 
         # settings.jl
         Setting, get_setting, default_settings!, default_test_settings!,
@@ -50,7 +50,7 @@ module DSGE
 
         # forecast/
         kalman_smoother, disturbance_smoother, forecast_all, forecast_one,
->>
+
         # models/
         steadystate!, Model990, SmetsWouters, eqcond, measurement,
 

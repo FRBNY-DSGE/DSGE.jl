@@ -87,9 +87,9 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
     out   = pmap(i -> DSGE.filter(m,data,sys[i], allout=true,
                                             use_expected_rate_data=use_expected_rate_data), 1:ndraws)
 
-    filtered_states = [x[1] for x in out]
-    pred            = [x[2] for x in out]
-    vpred           = [x[3] for x in out]
+    filtered_states = [Array(x[1]) for x in out]  # to make type stable
+    pred            = [Array(x[2]) for x in out]  
+    vpred           = [Array(x[3]) for x in out]
     
     return filtered_states, pred, vpred
 end
