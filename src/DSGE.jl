@@ -50,9 +50,10 @@ module DSGE
         gensys, solve,
 
         # data/
-        load_fred_data, load_data, transform_data, save_data_matrix!, hpfilter, difflog
+        load_fred_data, load_data, transform_data, save_data_matrix!, hpfilter, difflog,
+        quartertodate
 
-    const VERBOSITY = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
+    const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
 
     include("parameters.jl")
