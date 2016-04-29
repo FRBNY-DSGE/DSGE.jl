@@ -23,16 +23,16 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:use_population_forecast, false, "Whether to use population forecasts as data")
 
     # Dates
-    ffq = lastdayofquarter(Date(data_vintage(m), DSGE_DATE_FORMAT) + Year(2000))
-    m <= Setting(:first_forecast_quarter, ffq, "First quarter for which to produce forecasts.")
+    m <= Setting(:date_presample_start, quartertodate("1959-Q3"), "Start date of pre-sample")
+    m <= Setting(:date_mainsample_start, quartertodate("1960-Q1"), "Start date of main sample")
+    m <= Setting(:date_zlbregime_start, quartertodate("2008-Q4"), "Start date of zero lower bound regime")
+    m <= Setting(:date_mainsample_end, Dates.lastdayofquarter(Dates.today()-Dates.Month(3)), "End date of main sample")
+    m <= Setting(:date_forecast_start, Dates.lastdayofquarter(Dates.today()), "Start date of forecast period")
+    m <= Setting(:date_forecast_end, Dates.lastdayofquarter(Dates.today()+Dates.Month(60*3)), "End date of forecast period")
 
     # Anticipated shocks
-    zlb_start = Date("2008-12-31","y-m-d")
-    m <= Setting(:zlb_start_date,  zlb_start, "First period to incorporate zero bound expectation")
-    m <= Setting(:n_presample_periods, 2, "Number of periods in the presample")
     m <= Setting(:n_anticipated_shocks, 0, "Number of anticipated policy shocks")
     m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    m <= Setting(:zlb_start_index, 198, "Index of first period to incorporate zero bound expectation")
 
     # General computation
     m <= Setting(:use_parallel_workers, true, "Use available parallel workers in computations")
@@ -50,13 +50,13 @@ function default_settings!(m::AbstractModel)
 
     # Forecast
     m <= Setting(:use_expected_rate_data, (n_anticipated_shocks(m) > 0), "Use data on expected future interest rates")
-    m <= Setting(:forecast_horizons, 60, "Forecast horizons")
     m <= Setting(:forecast_observables, :all, "Observables to forecast")
     m <= Setting(:forecast_kill_shocks, false, "Kill (set to 0) all shocks in forecast")
     m <= Setting(:forecast_tdist_shocks, false, "Draw Students-t distributed shocks in forecast")
     m <= Setting(:forecast_tdist_draw_df, false, "Draw Students-t degrees of freedom parameter")
     m <= Setting(:forecast_tdist_df_val, 15, "Students-t degrees of freedom fixed value")
-    m <= Setting(:use_simulation_smoother, true, "Use Durbin-Koopman (2002) simulation smoother")
+    m <= Setting(:forecast_use_simulation_smoother, true, "Use Durbin-Koopman (2002) simulation smoother")
+    m <= Setting(:forecast_jstep, 5, "Forecast thinning step (in addition to MH thinning step")
     m <= Setting(:forecast_enforce_zlb, true, "Enforce zero lower bound in forecast periods")
     m <= Setting(:shockdec_startindex, 190, "Index of start of shock decomposition output period")
     m <= Setting(:shockdec_endindex, 50000, "Index of end of shock decomposition output period")

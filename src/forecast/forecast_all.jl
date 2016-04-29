@@ -4,8 +4,10 @@ forecast_all(m::AbstractModel, data::Matrix{Float64}; cond_types::Vector{Symbol}
 input_types::Vector{Symbol} output_types::Vector{Symbol}
 ```
 
-Inputs
-------
+Compute forecasts for all specified combinations of conditional data, input types, and
+output types.
+
+# Arguments
 
 - `m`: model object
 - `data`: matrix of data for observables
@@ -50,15 +52,14 @@ Outputs
 
 - todo
 """
-
 function forecast_all{T<:AbstractFloat}(m::AbstractModel{T}, data::Matrix{T};
                       cond_types::Vector{Symbol}   = Vector{Symbol}(),
                       input_types::Vector{Symbol}  = Vector{Symbol}(),
                       output_types::Vector{Symbol} = Vector{Symbol}())
 
     for input_type in input_types
-        for cond_type in cond_types
-            for output_type in output_types
+        for output_type in output_types
+            for cond_type in cond_types
                 forecast_one(m, data; cond_type=cond_type, input_type=input_type, output_type=output_type)
             end
         end
@@ -67,37 +68,70 @@ function forecast_all{T<:AbstractFloat}(m::AbstractModel{T}, data::Matrix{T};
 end
 
 function forecast_one{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T};
-                      cond_type::Symbol   = :none
-                      input_type::Symbol  = :mode
-                      output_type::Symbol = :simple)
+                      input_type::Symbol  = :mode,
+                      output_type::Symbol = :simple,
+                      cond_type::Symbol  = :none)
+    # Some variables
+    n_states = n_states_augmented(m)
+    jstep = get_setting(m, :forecast_jstep)
 
     # Set up infiles
     input_file_name = get_input_file(m, input_type)
 
-    # Read infiles
-    if input_data in [:mean, :mode]
-        params = h5open(input_file_name, "r") do f
-            read(f, "params")
-        end
-        TTT = RRR = CCC = zend = []
-    elseif input_data == :full
+    # Read infiles and set n_sim based on input_type type
+    if input_type in [:mean, :mode]
         h5open(input_file_name, "r") do f
             params = read(f, "params")
-            TTT = read(f, "TTT")
-            RRR = read(f, "RRR")
-            CCC = read(f, "CCC")
-            zend = read(f, "zend")
         end
+        TTT = RRR = CCC = zend = []
+        n_sim = 1
+    elseif input_type == :full
+        h5open(input_file_name, "r") do f
+            params = read(f, "mhparams")
+            TTT = read(f, "mhTTT")
+            RRR = read(f, "mhRRR")
+            CCC = read(f, "mhCCC")
+            zend = read(f, "mhzend")
+        end
+        n_sim = size(params,1)/jstep
     end
+
+    # Populate systems vector
+    systems = Vector{System}(n_sim/jstep)
 
     # If we just have one draw of parameters in mode or mean case, then we don't have the
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
-    if input_data in [:mean, :mode]
+    if input_type in [:mean, :mode]
         update!(m, params)
         sys = compute_system(m; use_expected_rate_date=false)
         kal = filter(m, data, sys; Ny0 = n_presample_periods(m))
         zend = kal[:zend]
+        initial_state_draws = vcat(zend)
+
+    # If we have many draws, then we must package them into a vector of System objects.
+    elseif input_type in [:full]
+        for j in jstep:jstep:n_sim
+            # Prepare transition eq
+            TTT_j    = squeeze(TTT[j,:,:],1)
+            RRR_j   = squeeze(RRR[j,:,:],1)
+            CCC_j   = squeeze(CCC[j,:,:],1)
+            trans_j = Transition(TTT_j, RRR_j, CCC_j)
+
+            # Prepare measurement eq
+            params_j = vec(params[j,:])
+            update!(m, params_j)
+            meas_j   = measurement(m, TTT_j, RRR_j, CCC_j; shocks = false)
+
+            # Prepare system
+            sys_j = System(trans_j, meas_j)
+            systems[j] = sys_j
+        end
+
+        initial_state_draws = zend[jstep:jstep:n_sim,:]
     end
+
+    # Check initial_state_draws matrix, which is n_simulations x n_states
+    @assert size(initial_state_draws) == (n_sim/jstep, n_states)
 
     # Prepare conditional data matrix. All missing columns will be set to NaN.
     if cond_type in [:semi, :full]
@@ -106,7 +140,7 @@ function forecast_one{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T};
     end
 
     # Example: call forecast, unconditional data, states+observables
-    forecast(m, data, sys, zend)
+    forecast(m, data, systems, initial_state_draws)
 
     # Set up outfiles
     output_file_names = get_output_files(m, input_type, output_type, cond_type)
@@ -143,10 +177,13 @@ function get_output_files(m, input_type, output_type, cond)
     # Results prefix
     if output_type == :states
         results = ["histstates"]
+        throw(ArgumentError("Not implemented."))
     elseif output_type == :shocks
         results = ["histshocks"]
+        throw(ArgumentError("Not implemented."))
     elseif output_type == :shocks_nonstandardized
         results = ["histshocksns"]
+        throw(ArgumentError("Not implemented."))
     elseif output_type == :forecast
         results = ["forecaststates",
                    "forecastobs",
@@ -154,19 +191,24 @@ function get_output_files(m, input_type, output_type, cond)
     elseif output_type == :shockdec
         results = ["shockdecstates",
                    "shockdecobs"]
+        throw(ArgumentError("Not implemented."))
     elseif output_type == :dettrend
         results = ["dettrendstates",
                    "dettrendobs"]
+        throw(ArgumentError("Not implemented."))
     elseif output_type == :counter
         results = ["counterstates",
                    "counterobs"]
+        throw(ArgumentError("Not implemented."))
     elseif output_type in [:simple, :simple_cond]
         results = ["histstates",
                    "forecaststates",
                    "forecastobs",
                    "forecastshocks"]
+        throw(ArgumentError("Not implemented."))
     elseif output_type == :all
         results = []
+        throw(ArgumentError("Not implemented."))
     end
 
     return [rawpath(m, "forecast", x*".h5", additional_file_strings) for x in results]

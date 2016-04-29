@@ -24,7 +24,7 @@ Estimate the DSGE parameter posterior distribution.
 function estimate(m::AbstractModel, df::DataFrame;
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix())
-    data = df_to_matrix(df)
+    data = df_to_matrix(m, df)
     estimate(m, data; verbose=verbose, proposal_covariance=proposal_covariance)
 end
 function estimate(m::AbstractModel;

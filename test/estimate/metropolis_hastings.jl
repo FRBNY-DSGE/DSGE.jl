@@ -1,5 +1,6 @@
 using DSGE
 using HDF5, Base.Test
+using DataFrames
 
 include("../util.jl")
 path = dirname(@__FILE__)
@@ -15,12 +16,18 @@ ref_draws     = read(file, "ref_draws")
 ref_cov       = read(file, "ref_cov")
 close(file)
 
+# Read in the data
+filename = inpath(m, "data", "data_$(data_vintage(m)).csv")
+df = readtable(filename)
+
 # Set up and run metropolis-hastings
 specify_mode!(m, inpath(m, "user", "paramsmode.h5"), verbose=:none)
 specify_hessian(m, inpath(m, "user", "hessian.h5"), verbose=:none)
-DSGE.estimate(m; verbose=:none, proposal_covariance = propdist_cov)
 
-# Read in the parameter draws and covariance just generated from estimate()
+# Note Distributions (used in earlier test) also exports `estimate`.
+DSGE.estimate(m, df; verbose=:none, proposal_covariance = propdist_cov)
+
+# Read in the parameter draws and covariance just generated from estimate.
 test_draws = h5open(rawpath(m, "estimate", "mhsave.h5"), "r") do file
     read(file, "mhparams")
 end

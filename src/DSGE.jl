@@ -40,7 +40,7 @@ module DSGE
         update, update!, transform_to_model_space, transform_to_real_line, Interval, ParamBoundsError,
 
         # statespace/
-        Measurement, Transition, System, 
+        Measurement, Transition, System, compute_system,
 
         # estimate/
         kalman_filter, kalman_filter_2part, likelihood, posterior, posterior!,
@@ -49,8 +49,8 @@ module DSGE
         find_density_bands, prior,
 
         # forecast/
-        kalman_smoother, disturbance_smoother, filter, compute_system,
-
+        kalman_smoother, disturbance_smoother, forecast_all, forecast_one,
+>>
         # models/
         steadystate!, Model990, SmetsWouters, eqcond, measurement,
 
@@ -58,9 +58,10 @@ module DSGE
         gensys, solve,
 
         # data/
-        load_fred_data, load_data, transform_data, save_data_matrix!, hpfilter, difflog, df_to_matrix
+        load_fred_data, load_data, transform_data, save_data_matrix!, hpfilter, difflog,
+        quartertodate, df_to_matrix
 
-    const VERBOSITY = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
+    const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
 
     include("parameters.jl")
@@ -92,8 +93,9 @@ module DSGE
 
     include("forecast/smoothers.jl")
     include("forecast/compute_system.jl")
-    include("forecast/filter.jl")
 
+    include("forecast/filter.jl")
+    include("forecast/forecast_all.jl")
 
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")

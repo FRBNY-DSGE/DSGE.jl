@@ -18,6 +18,7 @@ my_tests = [
             "estimate/metropolis_hastings",
             "models/m990/m990",
             "models/smets_wouters/smets_wouters",
+			"data/data",
             # "forecast/smoothers",
             "forecast/filter"
             ]
