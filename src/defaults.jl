@@ -28,7 +28,7 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:date_zlbregime_start, quartertodate("2008-Q4"), "Start date of zero lower bound regime")
     m <= Setting(:date_mainsample_end, Dates.lastdayofquarter(Dates.today()-Dates.Month(3)), "End date of main sample")
     m <= Setting(:date_forecast_start, Dates.lastdayofquarter(Dates.today()), "Start date of forecast period")
-    m <= Setting(:date_forecast_start, Dates.lastdayofquarter(Dates.today()+Dates.Month(60*3)), "End date of forecast period")
+    m <= Setting(:date_forecast_end, Dates.lastdayofquarter(Dates.today()+Dates.Month(60*3)), "End date of forecast period")
 
     # Anticipated shocks
     m <= Setting(:n_anticipated_shocks, 0, "Number of anticipated policy shocks")
@@ -50,7 +50,6 @@ function default_settings!(m::AbstractModel)
 
     # Forecast
     m <= Setting(:use_expected_rate_data, (n_anticipated_shocks(m) > 0), "Use data on expected future interest rates")
-    m <= Setting(:forecast_horizons, 60, "Forecast horizons")
     m <= Setting(:forecast_observables, :all, "Observables to forecast")
     m <= Setting(:forecast_kill_shocks, false, "Kill (set to 0) all shocks in forecast")
     m <= Setting(:forecast_tdist_shocks, false, "Draw Students-t distributed shocks in forecast")

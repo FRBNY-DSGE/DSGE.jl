@@ -135,8 +135,9 @@ function default_test_settings!(m::AbstractModel)
         "Thinning step for testing Metropolis-Hastings")
 
     # Forecast
-    test[:forecast_horizons] = Setting(:forecast_horizons, 1,
-        "Forecast horizons")
+    test[:date_forecast_end] = Setting(:date_forecast_end,
+        Dates.lastdayofquarter(get_setting(m, :date_forecast_start)+Dates.Month(3)),
+        "End date of forecast period")
     test[:forecast_jstep] = Setting(:forecast_jstep, 1,
         "Forecast thinning step (in addition to MH thinning step")
     test[:shockdec_startindex] = Setting(:shockdec_startindex, 2,
