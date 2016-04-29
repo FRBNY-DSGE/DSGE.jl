@@ -215,7 +215,21 @@ function disturbance_smoother{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, v
     return KalmanSmooth(r, eta_hat)
 end
 
+function disturbance_smoother{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, vpred::Array{S,3},
+                                                sys::System, peachcount::Int, psize::Int,
+                                                n_anticipated_shocks::Int = 0, antlags::Int = 0)
 
+    TTT = sys[:TTT]
+    RRR = sys[:RRR]
+    QQ  = sys[:QQ]
+    ZZ  = sys[:ZZ]
+    DD  = sys[:DD]
+
+    disturbance_smoother(y, pred, vpred, TTT, RRR, QQ, ZZ, DD, peachcount, psize, n_anticipated_shocks, antlags)
+end
+
+
+    
 """
 ```
 KalmanSmooth{T<:AbstractFloat}

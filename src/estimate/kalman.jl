@@ -255,9 +255,9 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     # - R1: presample
     # - R2: normal
     # - R3: zero lower bound and beyond
-    R1 = Dict{Symbol, Matrix{S}}()
-    R2 = Dict{Symbol, Matrix{S}}()
-    R3 = Dict{Symbol, Matrix{S}}()
+    R1 = Dict{Symbol, Array{S}}()
+    R2 = Dict{Symbol, Array{S}}()
+    R3 = Dict{Symbol, Array{S}}()
     regime_mats = [R1, R2, R3]
     #regime_likes = zeros(T, 3)
 
@@ -354,7 +354,9 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     R2[:zend]       = out[:zend]
     R2[:Pend]       = out[:Pend]
     R2[:filt]       = out[:filt]
-
+    R2[:pred]       = out[:pred]
+    R2[:vpred]      = out[:vpred]
+        
     # Run Kalman filter on ZLB period
     # This section expands the number of states to accomodate extra states for the
     # anticipated policy shocks. It does so by taking the zend and Pend for the
@@ -382,6 +384,8 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     R3[:zend]       = out[:zend]
     R3[:Pend]       = out[:Pend]
     R3[:filt]       = out[:filt]
+    R3[:pred]       = out[:pred]
+    R3[:vpred]      = out[:vpred]
 
     ## Return outputs from both regimes
     return R2, R3 

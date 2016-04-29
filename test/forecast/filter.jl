@@ -30,7 +30,7 @@ addprocs(ndraws)
 @everywhere using DSGE
 @everywhere using DataFrames
 
-filtered_states = DSGE.filter(m, df, syses, allout=true)
+filtered_states, pred, vpred  = DSGE.filter(m, df, syses, allout=true)
 
 
 if isempty(filtered_states)

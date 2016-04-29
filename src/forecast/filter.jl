@@ -53,7 +53,7 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
 
     
     # Convert the DataFrame to a data matrix without altering the original dataframe  
-    data  = convert(Matrix{S}, df[:, setdiff(names(df),[:date])])
+    data  = df_to_matrix(df) 
                 
     filter(m, data, sys, z0, vz0, lead=lead, Ny0 =Ny0, allout=allout,
            use_expected_rate_data=use_expected_rate_data)
@@ -84,10 +84,14 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
     @everywhere data = remotecall_fetch(1, ()->data)
 
     # Call filter over all draws
-    filtered_states = pmap(i -> DSGE.filter(m,data,sys[i], allout=true,
+    out   = pmap(i -> DSGE.filter(m,data,sys[i], allout=true,
                                             use_expected_rate_data=use_expected_rate_data), 1:ndraws)
-            
-    return filtered_states
+
+    filtered_states = [x[1] for x in out]
+    pred            = [x[2] for x in out]
+    vpred           = [x[3] for x in out]
+    
+    return filtered_states, pred, vpred
 end
 
 
@@ -113,18 +117,23 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
 
     # Call the appropriate version of the Kalman filter
     if use_expected_rate_data
-        
+
         # We have 3 regimes: presample, main sample, and expected-rate sample (starting at zlb_start_index)
         R2, R3 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0, lead=lead, Ny0=Ny0, allout=allout)
                 
         filtered_states = [R2[:filt] R3[:filt]]
-        return filtered_states'
+
+        println("R2: $(size(R2[:vpred]))")
+        println("R3: $(size(R3[:vpred]))")
+        pred            = hcat(R2[:pred], R3[:pred])
+        vpred           = cat(3, R2[:vpred], R3[:vpred])
+        return filtered_states', pred, vpred
         
     else
         # regular Kalman filter with no regime-switching
         kal = kalman_filter(data', lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0, allout=allout)
 
-        return kal[:filt]'
+        return kal[:filt]', kal[:pred], kal[:vpred]
     end
 end
 

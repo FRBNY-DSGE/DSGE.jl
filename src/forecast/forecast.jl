@@ -22,36 +22,71 @@ states, observables, and pseudoobserables, as well as the values of
 shock innovations.
 
 """
-function forecast(m::AbstractModel,
-                  data::Matrix{AbstractFloat},
-                  sys::Vector{System},    
-                  z_T::Vector{AbstractFloat}, 
-                  shockdistribution::Distribution,  
-                  observables::Vector{Symbol})
-    
+function forecast{T<:AbstractFloat}(m::AbstractModel,
+                                    sys::Vector{System{T}},    
+                                    initial_state_draws::Matrix{T}; 
+                                    shock_distribution::Union{Distribution, Matrix{T}}=Matrix{T}(0,0))
+
+
     # numbers of useful things
-    ndraws   = n_draws(m)
+    ndraws = if m.testing
+        2
+    else
+        n_draws(m)
+    end
     @assert length(sys) == ndraws
-    
-    # make matrix of forecasts and forecast shock values
-    forecasts = Vector{Forecast}(ndraws)
-    
-    # Parallelize over all draws
-    for i = 1:ndraws
-        forecasts[i] = compute_forecast(...)
+
+    # for now, we are ignoring pseudoobservables so these can be empty
+    @everywhere Z_pseudo = remotecall_fetch(1, ()->[])
+    @everywhere D_pseudo = remotecall_fetch(1, ()->[])
+
+    # retrieve settings for forecast
+    horizon  = forecast_horizons(m)
+    nstates  = n_states(m)
+
+    # set up distribution of shocks if not specified
+    if isempty(shock_distribution)
+        
+        shock_distribution = if forecast_kill_shocks(m)    # Set all shocks to zero
+            zeros(horizon,nstates)
+        else                                               # Construct Distribution object
+            if forecast_tdist_shocks(m)                    ## use t-distributed shocks
+                TDist(forecast_tdist_df_val(m))
+            else                                           ## use normally distributed shocks
+                Normal(0,sqrt(sys[:QQ]))
+            end
+        end
     end
 
-    return forecasts
+        
+    # Forecast the states
+
+    forecasts = pmap(i -> computeForecast(sys[i][TTT], sys[i][RRR], sys[i][CCC], sys[i][ZZ],
+                                          sys[i][DD], Z_pseudo, D_pseudo,
+                                          forecast_horizons, vars_to_forecast, shockdistribution,
+                                          initial_state_draws))
+    
+
+    # unpack the giant vector of dictionaries that gets returned
+    states      = [x[:states] for x in forecasts]
+    observables = [x[:observables] for x in forecasts]
+    # shocks      = [x[:shocks] for x in forecasts]  # not yet implemented
+        
+    return states, observables #, shocks
 end
 
-# I'm imagining that a Forecast object looks like the following for a single draw.
+
+
+# I'm imagining that a Forecast object could be returned from
+# computeForecast rather than a dictionary. It could look something like the
+# type outlined below for a single draw.
 # Perhaps we could also add some fancy indexing to be able to index by names of states/observables/etc.
 # Question becomes: where do we store the list of observables? In the
 # model object? In a separate forecastSettings vector that we also
 # pass to forecast?
-immutable Forecast{T<:AbstractFloat}
-    states::Matrix{T}
-    observables::Matrix{T}
-    pseudoobservables::Matrix{T}
-    shocks::Matrix{T}
-end
+# immutable Forecast{T<:AbstractFloat}
+#     states::Matrix{T}
+#     observables::Matrix{T}
+#     pseudoobservables::Matrix{T}
+#     shocks::Matrix{T}
+# end

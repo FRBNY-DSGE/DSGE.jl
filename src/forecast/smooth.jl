@@ -31,15 +31,18 @@ function smooth{S<:AbstractFloat}(m::AbstractModel,
 
     # Extract settings from model: peachcount, psize, n_anticipated_shocks, n_anticipated_lags
     
-    # Make output vector
-    smoothed = Vector{KalmanSmooth}(ndraws)
+    n_ant_shocks = n_anticipated_shocks(m)
+    n_ant_lags   = n_anticipated_lags(m)
     
     # Parallelize
     # Think about whether level 1 functions should return KalmanSmooth
     # objects and level 2 should return a vector of them.
     for i = 1:ndraws
         if disturbance_smoother_flag
-            smoothed[i] = disturbance_smoother(...)
+
+            smoothed[i] = disturbance_smoother(data, pred, vpred, sys,
+                                                n_ant_shocks, n_ant_lags)
+
         else
             smoothed[i] = kalman_smoother(...)
         end

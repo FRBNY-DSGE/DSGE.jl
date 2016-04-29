@@ -30,6 +30,7 @@ module DSGE
         data_vintage, cond_vintage, cond_id,
         specify_mode!, specify_hessian, load_parameters_from_file,
         use_population_forecast,
+        forecast_horizons, forecast_tdist_df_val, forecast_kill_shocks,
 
 
         # parameters.jl

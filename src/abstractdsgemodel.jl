@@ -180,6 +180,10 @@ n_draws(m::AbstractModel)          =  round(Int,(n_mh_blocks(m) - n_mh_burn(m)) 
 
 # Interface for forecast settings
 first_forecast_quarter(m::AbstractModel) = get_setting(m, :first_forecast_quarter)(m)
+forecast_horizons(m::AbstractModel)      = get_setting(m, :forecast_horizons)
+forecast_tdist_df_val(m::AbstractModel)  = get_setting(m, :forecast_tdist_df_val)
+forecast_kill_shocks(m::AbstractModel)   = get_setting(m, :forecast_kill_shocks)
+    
 """
 ```
 load_parameters_from_file(m::AbstractModel,path::AbstractString)
