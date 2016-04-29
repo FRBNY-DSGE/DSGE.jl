@@ -35,6 +35,33 @@ function stringstodates(stringarray)
 end
 
 """
+Convert string in the form "YYqX", "YYYYqX", "YYYYQX", or "YYYY-QX" to a Date of the end of
+the indicated quarter. `X` is in {1,2,3,4} and case of `q` is ignored.
+"""
+function quartertodate(string)
+    if ismatch(r"^[0-9]{2}[qQ][1-4]$", string)
+        year = "20"*string[1:2]
+        quarter = string[end]
+    elseif ismatch(r"^[0-9]{4}[qQ][1-4]$", string)
+        year = string[1:4]
+        quarter = string[end]
+    elseif ismatch(r"^[0-9]{4}-[qQ][1-4]$", string)
+        year = string[1:4]
+        quarter = string[end]
+    else
+        throw(ParseError("Invalid format: $string"))
+    end
+
+    year = parse(Int, year)
+    quarter = parse(Int, quarter)
+    month = 3*quarter
+    day = 1
+
+    return Dates.lastdayofquarter(Date(year, month, day))
+end
+
+
+"""
 `format_dates!(col, df)`
 
 Change column `col` of dates in `df` from String to Date, and map any dates given in the

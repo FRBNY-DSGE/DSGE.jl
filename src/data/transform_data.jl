@@ -38,7 +38,7 @@ function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic
         pop_all = [population_recorded; pop_forecast[2:end,:]]
         pop_all[population_mnemonic], difflog(pop_forecast[population_mnemonic]), length(pop_forecast[population_mnemonic])
     else
-        population_recorded[:,2], _, 0
+        population_recorded[:,population_mnemonic], _, 1
     end
 
     # hp filter
@@ -67,37 +67,4 @@ function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic
     end
 
     sort!(transformed, cols = :date)
-end
-
-"""
-`save_data_matrix!(m::AbstractModel, transformed::DataFrame; start_date = Date("1959-09-30","y-m-d"))`
-
-Convert a DataFrame of data prepared for model `m` into a
-`Matrix{AbstractFloat}`, and saves this in `inpath(m, "data",
-"data_vint.h5")`, where "vint" is m.data_vintage. Also computes the index in which the
-zero-lower-bound expectations begin.
-
-## Parameters
-- `m`: the model object
-- `transformed`: a DataFrame of data that has been transformed for input into the DSGE model
-
-## Keyword Arguments
-- `start_date`: the date at which the dataset should begin (default = 1959 Q3)
-"""
-function save_data_matrix!(m::AbstractModel, transformed::DataFrame; start_date = Date("1959-09-30","y-m-d"))
-    
-    # Extract only the rows that come after start_date and the columns that aren't the date column
-    start = find(x -> x==start_date, transformed[:date])[1]
-
-    # Set the model's zlb period
-    zlb_start_index!(m, transformed[start:end,:])
-
-    data = convert(Matrix{Float64}, transformed[start:end, 2:end])
-
-    vint = data_vintage(m)
-    h5open(inpath(m, "data", "data_$vint.h5"), "w") do h5
-        h5["data"] = data
-    end
-    
-    data
 end

@@ -1,12 +1,13 @@
 """
 ```
-estimate(m::AbstractModel; verbose::Symbol=:low, proposal_covariance=Matrix())
+estimate(m::AbstractModel, df::DataFrame; verbose::Symbol=:low, proposal_covariance=Matrix())
 ```
 
-This routine implements the full estimation stage of the FRBNY DSGE model.
+Estimate the DSGE parameter posterior distribution.
 
 ### Arguments
-- `m`: The model object
+- `m`: model object
+- `df`: well-formed data as DataFrame
 
 ### Optional Arguments:
 - `verbose`: The desired frequency of function progress messages printed to standard out.
@@ -20,7 +21,22 @@ This routine implements the full estimation stage of the FRBNY DSGE model.
   decomposition can cause problems. Passing a precomputed matrix allows us to ensure that
   the rest of the routine has not broken.
 """
+function estimate(m::AbstractModel, df::DataFrame;
+                  verbose::Symbol=:low,
+                  proposal_covariance::Matrix=Matrix())
+    data = df_to_matrix(df)
+    estimate(m, data; verbose=verbose, proposal_covariance=proposal_covariance)
+end
 function estimate(m::AbstractModel;
+                  verbose::Symbol=:low,
+                  proposal_covariance::Matrix=Matrix())
+    # Load data
+    data = h5open(inpath(m, "data","data_$(data_vintage(m)).h5"), "r") do f
+        read(f, "data")
+    end
+    estimate(m, data; verbose=verbose, proposal_covariance=proposal_covariance)
+end
+function estimate(m::AbstractModel, data::Matrix{Float64};
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix())
 
@@ -28,13 +44,7 @@ function estimate(m::AbstractModel;
     ### Step 1: Initialize
     ########################################################################################
 
-    # Load data
-    data = h5open(inpath(m, "data","data_$(data_vintage(m)).h5"), "r") do f
-        read(f, "data")
-    end
-
     post = posterior(m, data)[:post]
-
 
     ########################################################################################
     ### Step 2: Find posterior mode (if reoptimizing, run csminwel)

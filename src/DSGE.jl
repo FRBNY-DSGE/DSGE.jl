@@ -30,7 +30,7 @@ module DSGE
         data_vintage, cond_vintage, cond_id,
         specify_mode!, specify_hessian, load_parameters_from_file,
         use_population_forecast,
-        forecast_horizons, forecast_tdist_df_val, forecast_kill_shocks,
+        forecast_horizons, forecast_tdist_shocks, forecast_tdist_df_val, forecast_kill_shocks, 
 
 
         # parameters.jl
@@ -58,7 +58,7 @@ module DSGE
         gensys, solve,
 
         # data/
-        load_fred_data, load_data, transform_data, save_data_matrix!, hpfilter, difflog
+        load_fred_data, load_data, transform_data, save_data_matrix!, hpfilter, difflog, df_to_matrix
 
     const VERBOSITY = Dict{Symbol,Int}(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
@@ -106,5 +106,11 @@ module DSGE
     include("models/smets_wouters/eqcond.jl")
     include("models/smets_wouters/measurement.jl")
     include("models/smets_wouters/augment_states.jl")
+
+    include("data/load_data.jl")
+    include("data/fred_data.jl")
+    include("data/transform_data.jl")
+    include("data/transformations.jl")
+    include("data/util.jl")
 
 end

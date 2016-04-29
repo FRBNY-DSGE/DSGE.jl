@@ -53,7 +53,7 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
 
     
     # Convert the DataFrame to a data matrix without altering the original dataframe  
-    data  = df_to_matrix(df) 
+    data  = df_to_matrix(m,df) 
                 
     filter(m, data, sys, z0, vz0, lead=lead, Ny0 =Ny0, allout=allout,
            use_expected_rate_data=use_expected_rate_data)
