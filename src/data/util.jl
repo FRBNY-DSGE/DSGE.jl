@@ -1,7 +1,7 @@
 """
 `last_quarter_end()`
 
-Returns the first day of the previous quarter
+Returns the last day of the previous quarter
 """
 function last_quarter_end()
     cqs = Dates.firstdayofquarter(now())     # current quarter start
@@ -11,17 +11,17 @@ function last_quarter_end()
 end
 
 """
-Returns a DataArray of quarter start dates between `start_date` and `end_date`.
-"""
-function get_quarter_ends(start_date,end_date)
-    dr = start_date:end_date
+`get_quarter_ends(start_date::Date,end_date::Date)`
 
-    dates = recur(dr) do x
-        lastdayofquarter(x) == x
-    end
+Returns a DataArray of quarter end dates between `start_date` and `end_date`.
+"""
+function get_quarter_ends(start_date::Date,end_date::Date)
+    map(lastdayofquarter, collect(start_date:Dates.Month(3):end_date))
 end
 
 """
+`stringstodates(stringarray)`
+
 Converts a collection of strings in "y-m-d" format to Dates.
 """
 function stringstodates(stringarray)
@@ -35,10 +35,12 @@ function stringstodates(stringarray)
 end
 
 """
-Convert string in the form "YYqX", "YYYYqX", "YYYYQX", or "YYYY-QX" to a Date of the end of
-the indicated quarter. `X` is in {1,2,3,4} and case of `q` is ignored.
+`quartertodate(string::AbstractString)`
+
+Convert `string` in the form "YYqX", "YYYYqX", or "YYYY-qX" to a Date of the end of
+the indicated quarter. "X" is in `{1,2,3,4}` and the case of "q" is ignored.
 """
-function quartertodate(string)
+function quartertodate(string::AbstractString)
     if ismatch(r"^[0-9]{2}[qQ][1-4]$", string)
         year = "20"*string[1:2]
         quarter = string[end]
@@ -57,7 +59,18 @@ function quartertodate(string)
     month = 3*quarter
     day = 1
 
-    return Dates.lastdayofquarter(Date(year, month, day))
+    return lastdayofquarter(Date(year, month, day))
+end
+
+"""
+`subtract_quarters(t1::Date, t0::Date)`
+
+Compute the number of quarters between t1 and t0, including t0 and excluding t1.
+"""
+function subtract_quarters(t1::Date, t0::Date)
+    days = t1 - t0
+    quarters = round(days.value / 365.25 * 4.0)
+    return convert(Int, quarters)
 end
 
 
@@ -67,9 +80,9 @@ end
 Change column `col` of dates in `df` from String to Date, and map any dates given in the
 interior of a quarter to the last day of the quarter.
 """
-function format_dates!(col, df)
+function format_dates!(col::Symbol, df::DataFrame)
     df[col] = stringstodates(df[col])
-    map!(x->lastdayofquarter(x), df[col], df[col])
+    map!(lastdayofquarter, df[col], df[col])
 end
 
 """
