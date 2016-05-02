@@ -68,7 +68,7 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
     shock_distribution = if isempty(shock_distribution)
 
         # Kill shocks: make a big vector of arrays of zeros
-        shock_distribution = if forecast_kill_shocks(m)
+        if forecast_kill_shocks(m)
             @sync @parallel (vcat) for i = 1:ndraws
                 zeros(horizon,nshocks)
             end
@@ -94,15 +94,10 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
                                           horizon, vars_to_forecast, shock_distribution[i],
                                           vec(initial_state_draws[i,:])), 1:ndraws)
     
-
-    # forecasts = computeForecast(sys[1][:TTT], sys[1][:RRR], sys[1][:CCC], sys[1][:ZZ],
-    #                 sys[1][:DD], Z_pseudo, D_pseudo,
-    #                 horizon, vars_to_forecast, shock_distribution[1],
-    #                 vec(initial_state_draws[1,:]))
-    
     # unpack the giant vector of dictionaries that gets returned
     states      = [x["states"] for x in forecasts]
     observables = [x["observables"] for x in forecasts]
+    # pseudo      = [x["pseudo_observables"] for x in forecasts]  # not yet implemented
     # shocks      = [x["shocks"] for x in forecasts]  # not yet implemented
         
     return  states, observables #, shocks
