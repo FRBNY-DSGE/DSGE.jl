@@ -96,6 +96,7 @@ module DSGE
 
     include("forecast/filter.jl")
     include("forecast/forecast_all.jl")
+    include("forecast/forecast.jl")
     include("forecast/computeForecast.jl")
 
     include("models/m990/m990.jl")

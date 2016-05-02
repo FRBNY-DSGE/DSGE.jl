@@ -7,7 +7,7 @@ of shocks or distribution of shocks, model object
 Inputs
 ------
 - `m`: model object
-- `data`: matrix of data for observables
+- `data`: matrix of data of observables
 - `sys::Vector{System}`: a vector of `System` objects specifying
   state-space system matrices for each draw
 - `z_T`: state vector in final historical period
@@ -25,7 +25,8 @@ shock innovations.
 function forecast{T<:AbstractFloat}(m::AbstractModel,
                                     sys::Vector{System{T}},    
                                     initial_state_draws::Matrix{T}; 
-                                    shock_distribution::Union{Distribution, Matrix{T}}=Matrix{T}(0,0))
+                                    shock_distribution::Union{Distribution, Matrix{T}}=Matrix{T}(0,0),
+                                    vars_to_forecast::Vector{Symbol}=[:p1, :p2])
 
         
     # numbers of useful things
@@ -37,10 +38,14 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
     @assert length(sys) == ndraws
 
     # for now, we are ignoring pseudoobservables so these can be empty
-    @everywhere Z_pseudo = remotecall_fetch(1, ()->[])
-    @everywhere D_pseudo = remotecall_fetch(1, ()->[])
+    Z_pseudo = Matrix{Float64}(12,72)
+    D_pseudo = Matrix{Float64}(12,1)
+    @everywhere Z_pseudo = remotecall_fetch(1, ()->Matrix{Float64}(12,72))
+    @everywhere D_pseudo = remotecall_fetch(1, ()->Matrix{Float64}(12,72))
 
-        
+    # put the list of variables to forecast on every node
+    @eval @everywhere vars=$vars_to_forecast
+
     # retrieve settings for forecast
     horizon  = forecast_horizons(m)
     nshocks  = n_shocks_exogenous(m)
@@ -60,7 +65,7 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
     # rather than having to copy each Distribution across nodes. This will also be much more
     # space-efficient for if forecast_kill_shocks is true.
         
-    if isempty(shock_distribution)
+    shock_distribution = if isempty(shock_distribution)
 
         # Kill shocks: make a big vector of arrays of zeros
         shock_distribution = if forecast_kill_shocks(m)
@@ -83,19 +88,24 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
 
         
     # Forecast the states
-    
-    forecasts = pmap(i -> computeForecast(sys[i][TTT], sys[i][RRR], sys[i][CCC], sys[i][ZZ],
-                                          sys[i][DD], Z_pseudo, D_pseudo,
-                                          forecast_horizons, [], shock_distribution[i],
-                                          initial_state_draws[i]), 1:ndraws)
+    # todo: figure out why vars isn't working
+    forecasts = pmap(i -> computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
+                                          sys[i][:DD], Z_pseudo, D_pseudo,
+                                          horizon, vars_to_forecast, shock_distribution[i],
+                                          vec(initial_state_draws[i,:])), 1:ndraws)
     
 
+    # forecasts = computeForecast(sys[1][:TTT], sys[1][:RRR], sys[1][:CCC], sys[1][:ZZ],
+    #                 sys[1][:DD], Z_pseudo, D_pseudo,
+    #                 horizon, vars_to_forecast, shock_distribution[1],
+    #                 vec(initial_state_draws[1,:]))
+    
     # unpack the giant vector of dictionaries that gets returned
-    # states      = [x[:states] for x in forecasts]
-    # observables = [x[:observables] for x in forecasts]
-    # shocks      = [x[:shocks] for x in forecasts]  # not yet implemented
+    states      = [x["states"] for x in forecasts]
+    observables = [x["observables"] for x in forecasts]
+    # shocks      = [x["shocks"] for x in forecasts]  # not yet implemented
         
-    return forecasts # states, observables #, shocks
+    return  states, observables #, shocks
 end
 
 
