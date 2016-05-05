@@ -101,16 +101,20 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     n_sim_forecast = convert(Int, n_sim/jstep)
 
     # Populate systems vector
-    systems = Vector{System}(n_sim_forecast)
+    systems = Vector{System{Float64}}(n_sim_forecast)
+    initial_state_draws = Vector{Vector{Float64}}(n_sim_forecast)
 
     # If we just have one draw of parameters in mode or mean case, then we don't have the
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
     if input_type in [:mean, :mode]
         update!(m, params)
-        sys = compute_system(m; use_expected_rate_date = false)
+        sys = compute_system(m; use_expected_rate_data = true)
         kal = filter(m, df, sys; Ny0 = n_presample_periods(m))
         zend = kal[:zend]
-        initial_state_draws = vcat(zend)
+
+        # Prepare system
+        systems[1] = sys
+        initial_state_draws[1] = vec(zend)
 
     # If we have many draws, then we must package them into a vector of System objects.
     elseif input_type in [:full]
@@ -120,24 +124,20 @@ function forecast_one(m::AbstractModel, df::DataFrame;
             TTT_j  = squeeze(TTT[j,:,:],1)
             RRR_j  = squeeze(RRR[j,:,:],1)
             #CCC_j = squeeze(CCC[j,:,:],1)
-            CCC_j  = zeros(eltype(TTT_j), size(TTT_j, 1), 1)
-            trans_j = Transition(TTT_j, RRR_j, CCC_j)
+            trans_j = Transition(TTT_j, RRR_j)
+            CCC_j = trans_j[:CCC]
 
             # Prepare measurement eq
             params_j = vec(params[j,:])
             update!(m, params_j)
-            meas_j   = measurement(m, TTT_j, RRR_j, CCC_j; shocks = false)
+            meas_j   = measurement(m, TTT_j, RRR_j, CCC_j; shocks = true)
 
             # Prepare system
             sys_j = System(trans_j, meas_j)
             systems[i] = sys_j
+            initial_state_draws[i] = vec(zend[j,:])
         end
-
-        initial_state_draws = zend[jstep:jstep:n_sim,:]
     end
-
-    # Check initial_state_draws matrix, which is n_simulations x n_states
-    @assert size(initial_state_draws) == (n_sim/jstep, n_states)
 
     # Prepare conditional data matrix. All missing columns will be set to NaN.
     if cond_type in [:semi, :full]
@@ -146,29 +146,28 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     end
 
     # Example: call forecast, unconditional data, states+observables
-    function forecast(args...)
-        return 1,2,3
+    forecast_output = Dict{Symbol, Any}()
+
+    if output_type in [:forecast, :simple, :simple_cond]
+        function forecast(args...)
+            return 1,2,3
+        end
+        #@bp
+        forecastobs, forecaststates, forecastshocks = forecast(m, systems, initial_state_draws)
+        forecast_output[:forecastobs] = forecastobs
+        forecast_output[:forecaststates] = forecaststates
+        forecast_output[:forecastshocks] = forecastshocks
     end
-    forecastobs, forecaststates, forecastshocks = forecast(m, systems, initial_state_draws)
 
     # Set up outfiles
-    output_file_names = get_output_files(m, input_type, output_type, cond_type)
+    output_files = get_output_files(m, input_type, output_type, cond_type)
 
-    # In this demo, output_file_names is a three element vector
-    h5open(output_file_names[1], "w") do f
-        f["forecastobs"] = forecastobs
+    # Write output files
+    for (var,file) in output_files
+        h5open(file, "w") do f
+            write(f, string(var), forecast_output[var])
+        end
     end
-    h5open(output_file_names[2], "w") do f
-        f["forecaststates"] = forecaststates
-    end
-    h5open(output_file_names[3], "w") do f
-        f["forecastshocks"] = forecastshocks
-    end
-
-    # # Write outfiles
-    # for output_file in output_file_names
-    #     write(output_file)
-    # end
 
 end
 
@@ -187,49 +186,49 @@ function get_input_file(m, input_type)
     end
 end
 
-function get_output_files(m, input_type, output_type, cond)
+function get_output_files(m, input_type, output_type, cond_type)
 
     # Add additional file strings here
-    additional_file_strings = []
+    additional_file_strings = ASCIIString[]
     push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
-    push!(additional_file_strings, "cond=" * abbrev_symbol(cond))
+    push!(additional_file_strings, "cond=" * abbrev_symbol(cond_type))
 
-    # Results prefix
+    # vars prefix
     if output_type == :states
-        results = ["histstates"]
+        vars = ["histstates"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :shocks
-        results = ["histshocks"]
+        vars = ["histshocks"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :shocks_nonstandardized
-        results = ["histshocksns"]
+        vars = ["histshocksns"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :forecast
-        results = ["forecaststates",
+        vars = ["forecaststates",
                    "forecastobs",
                    "forecastshocks"]
     elseif output_type == :shockdec
-        results = ["shockdecstates",
+        vars = ["shockdecstates",
                    "shockdecobs"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :dettrend
-        results = ["dettrendstates",
+        vars = ["dettrendstates",
                    "dettrendobs"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :counter
-        results = ["counterstates",
+        vars = ["counterstates",
                    "counterobs"]
         throw(ArgumentError("Not implemented."))
     elseif output_type in [:simple, :simple_cond]
-        results = ["histstates",
+        vars = ["histstates",
                    "forecaststates",
                    "forecastobs",
                    "forecastshocks"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :all
-        results = []
+        vars = []
         throw(ArgumentError("Not implemented."))
     end
 
-    return [rawpath(m, "forecast", x*".h5", additional_file_strings) for x in results]
+    return [symbol(x) => rawpath(m, "forecast", x*".h5", additional_file_strings) for x in vars]
 end
