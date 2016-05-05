@@ -149,10 +149,6 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     forecast_output = Dict{Symbol, Any}()
 
     if output_type in [:forecast, :simple, :simple_cond]
-        function forecast(args...)
-            return 1,2,3
-        end
-        #@bp
         forecastobs, forecaststates, forecastshocks = forecast(m, systems, initial_state_draws)
         forecast_output[:forecastobs] = forecastobs
         forecast_output[:forecaststates] = forecaststates
