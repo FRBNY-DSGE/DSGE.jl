@@ -24,7 +24,7 @@ shock innovations.
 """
 function forecast{T<:AbstractFloat}(m::AbstractModel,
                                     sys::Vector{System{T}},
-                                    initial_state_draws::Vector{Vector{{T}},
+                                    initial_state_draws::Vector{Vector{T}};
                                     shock_distribution::Union{Distribution, Matrix{T}}=Matrix{T}(0,0),
                                     vars_to_forecast::Vector{Symbol}=[:p1, :p2])
 
