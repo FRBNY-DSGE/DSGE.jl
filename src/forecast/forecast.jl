@@ -23,12 +23,12 @@ shock innovations.
 
 """
 function forecast{T<:AbstractFloat}(m::AbstractModel,
-                                    sys::Vector{System{T}},    
-                                    initial_state_draws::Matrix{T}; 
+                                    sys::Vector{System{T}},
+                                    initial_state_draws::Vector{Vector{{T}},
                                     shock_distribution::Union{Distribution, Matrix{T}}=Matrix{T}(0,0),
                                     vars_to_forecast::Vector{Symbol}=[:p1, :p2])
 
-        
+
     # numbers of useful things
     ndraws = if m.testing
         2   # TODO: make testing less hard-codey
@@ -54,17 +54,17 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
     else
         n_draws(m)
     end
-        
+
     # set up distribution of shocks if not specified
     # For now, we construct a giant vector of distirbutions of shocks and pass
     # each to computeForecast.
-    # 
+    #
     # TODO: refactor so that computeForecast
     # creates its own DegenerateMvNormal based on passing the QQ
     # matrix (which has already been computed/is taking up space)
     # rather than having to copy each Distribution across nodes. This will also be much more
     # space-efficient for if forecast_kill_shocks is true.
-        
+
     shock_distribution = if isempty(shock_distribution)
 
         # Kill shocks: make a big vector of arrays of zeros
@@ -86,20 +86,20 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
 
     end
 
-        
+
     # Forecast the states
     # todo: figure out why vars isn't working
     forecasts = pmap(i -> computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
                                           sys[i][:DD], Z_pseudo, D_pseudo,
                                           horizon, vars_to_forecast, shock_distribution[i],
                                           vec(initial_state_draws[i,:])), 1:ndraws)
-    
+
     # unpack the giant vector of dictionaries that gets returned
     states      = [x["states"] for x in forecasts]
     observables = [x["observables"] for x in forecasts]
     # pseudo      = [x["pseudo_observables"] for x in forecasts]  # not yet implemented
     # shocks      = [x["shocks"] for x in forecasts]  # not yet implemented
-        
+
     return  states, observables #, shocks
 end
 
