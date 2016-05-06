@@ -1,6 +1,6 @@
 """
 ```
-forecast_all(m::AbstractModel, data::Matrix{Float64}; cond_types::Vector{Symbol}
+forecast_all(m::AbstractModel, df::DataFrame; cond_types::Vector{Symbol}
 input_types::Vector{Symbol} output_types::Vector{Symbol}
 ```
 
@@ -10,7 +10,7 @@ output types.
 # Arguments
 
 - `m`: model object
-- `data`: matrix of data for observables
+- `df`: DataFrame of data for observables
 - `cond_types`: conditional data type, any combination of
     - `:none`: no conditional data
     - `:semi`: use "semiconditional data" - average of quarter-to-date observations for high frequency series
@@ -52,7 +52,7 @@ Outputs
 
 - todo
 """
-function forecast_all{T<:AbstractFloat}(m::AbstractModel{T}, data::Matrix{T};
+function forecast_all(m::AbstractModel, df::DataFrame;
                       cond_types::Vector{Symbol}   = Vector{Symbol}(),
                       input_types::Vector{Symbol}  = Vector{Symbol}(),
                       output_types::Vector{Symbol} = Vector{Symbol}())
@@ -60,14 +60,14 @@ function forecast_all{T<:AbstractFloat}(m::AbstractModel{T}, data::Matrix{T};
     for input_type in input_types
         for output_type in output_types
             for cond_type in cond_types
-                forecast_one(m, data; cond_type=cond_type, input_type=input_type, output_type=output_type)
+                forecast_one(m, df; cond_type=cond_type, input_type=input_type, output_type=output_type)
             end
         end
     end
 
 end
 
-function forecast_one{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T};
+function forecast_one(m::AbstractModel, df::DataFrame;
                       input_type::Symbol  = :mode,
                       output_type::Symbol = :simple,
                       cond_type::Symbol  = :none)
@@ -81,73 +81,88 @@ function forecast_one{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T};
     # Read infiles and set n_sim based on input_type type
     if input_type in [:mean, :mode]
         h5open(input_file_name, "r") do f
-            params = read(f, "params")
+            params = map(Float64, read(f, "params"))
         end
         TTT = RRR = CCC = zend = []
         n_sim = 1
+        jstep = 1
     elseif input_type == :full
-        h5open(input_file_name, "r") do f
-            params = read(f, "mhparams")
-            TTT = read(f, "mhTTT")
-            RRR = read(f, "mhRRR")
-            CCC = read(f, "mhCCC")
-            zend = read(f, "mhzend")
+        params, TTT, RRR, zend = h5open(input_file_name, "r") do f
+            params = map(Float64, read(f, "mhparams"))
+            TTT    = map(Float64, read(f, "mhTTT"))
+            RRR    = map(Float64, read(f, "mhRRR"))
+            #CCC   = map(Float64, read(f, "mhCCC"))
+            zend   = map(Float64, read(f, "mhzend"))
+            params, TTT, RRR, zend
         end
-        n_sim = size(params,1)/jstep
+        n_sim = size(params,1)
     end
 
+    n_sim_forecast = convert(Int, n_sim/jstep)
+
     # Populate systems vector
-    systems = Vector{System}(n_sim/jstep)
+    systems = Vector{System{Float64}}(n_sim_forecast)
+    initial_state_draws = Vector{Vector{Float64}}(n_sim_forecast)
 
     # If we just have one draw of parameters in mode or mean case, then we don't have the
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
     if input_type in [:mean, :mode]
         update!(m, params)
-        sys = compute_system(m; use_expected_rate_date=false)
-        kal = filter(m, data, sys; Ny0 = n_presample_periods(m))
+        sys = compute_system(m; use_expected_rate_data = true)
+        kal = filter(m, df, sys; Ny0 = n_presample_periods(m))
         zend = kal[:zend]
-        initial_state_draws = vcat(zend)
+
+        # Prepare system
+        systems[1] = sys
+        initial_state_draws[1] = vec(zend)
 
     # If we have many draws, then we must package them into a vector of System objects.
     elseif input_type in [:full]
-        for j in jstep:jstep:n_sim
+        for i in 1:n_sim_forecast
+            j = i * jstep
             # Prepare transition eq
-            TTT_j    = squeeze(TTT[j,:,:],1)
-            RRR_j   = squeeze(RRR[j,:,:],1)
-            CCC_j   = squeeze(CCC[j,:,:],1)
-            trans_j = Transition(TTT_j, RRR_j, CCC_j)
+            TTT_j  = squeeze(TTT[j,:,:],1)
+            RRR_j  = squeeze(RRR[j,:,:],1)
+            #CCC_j = squeeze(CCC[j,:,:],1)
+            trans_j = Transition(TTT_j, RRR_j)
+            CCC_j = trans_j[:CCC]
 
             # Prepare measurement eq
             params_j = vec(params[j,:])
             update!(m, params_j)
-            meas_j   = measurement(m, TTT_j, RRR_j, CCC_j; shocks = false)
+            meas_j   = measurement(m, TTT_j, RRR_j, CCC_j; shocks = true)
 
             # Prepare system
             sys_j = System(trans_j, meas_j)
-            systems[j] = sys_j
+            systems[i] = sys_j
+            initial_state_draws[i] = vec(zend[j,:])
         end
-
-        initial_state_draws = zend[jstep:jstep:n_sim,:]
     end
-
-    # Check initial_state_draws matrix, which is n_simulations x n_states
-    @assert size(initial_state_draws) == (n_sim/jstep, n_states)
 
     # Prepare conditional data matrix. All missing columns will be set to NaN.
     if cond_type in [:semi, :full]
         cond_data = load_cond_data(m, cond_type)
-        data = [data; cond_data]
+        df = [df; cond_data]
     end
 
     # Example: call forecast, unconditional data, states+observables
-    forecast(m, data, systems, initial_state_draws)
+    forecast_output = Dict{Symbol, Any}()
+
+    if output_type in [:forecast, :simple, :simple_cond]
+        forecastobs, forecaststates, forecastshocks = forecast(m, systems, initial_state_draws)
+        forecast_output[:forecastobs] = forecastobs
+        forecast_output[:forecaststates] = forecaststates
+        forecast_output[:forecastshocks] = forecastshocks
+    end
 
     # Set up outfiles
-    output_file_names = get_output_files(m, input_type, output_type, cond_type)
+    output_files = get_output_files(m, input_type, output_type, cond_type)
 
-    # Write outfiles
-    for output_file in output_file_names
-        write(output_file)
+    # Write output files
+    for (var,file) in output_files
+        h5open(file, "w") do f
+            write(f, string(var), forecast_output[var])
+        end
     end
 
 end
@@ -167,49 +182,49 @@ function get_input_file(m, input_type)
     end
 end
 
-function get_output_files(m, input_type, output_type, cond)
+function get_output_files(m, input_type, output_type, cond_type)
 
     # Add additional file strings here
-    additional_file_strings = []
+    additional_file_strings = ASCIIString[]
     push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
-    push!(additional_file_strings, "cond=" * abbrev_symbol(cond))
+    push!(additional_file_strings, "cond=" * abbrev_symbol(cond_type))
 
-    # Results prefix
+    # vars prefix
     if output_type == :states
-        results = ["histstates"]
+        vars = ["histstates"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :shocks
-        results = ["histshocks"]
+        vars = ["histshocks"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :shocks_nonstandardized
-        results = ["histshocksns"]
+        vars = ["histshocksns"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :forecast
-        results = ["forecaststates",
+        vars = ["forecaststates",
                    "forecastobs",
                    "forecastshocks"]
     elseif output_type == :shockdec
-        results = ["shockdecstates",
+        vars = ["shockdecstates",
                    "shockdecobs"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :dettrend
-        results = ["dettrendstates",
+        vars = ["dettrendstates",
                    "dettrendobs"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :counter
-        results = ["counterstates",
+        vars = ["counterstates",
                    "counterobs"]
         throw(ArgumentError("Not implemented."))
     elseif output_type in [:simple, :simple_cond]
-        results = ["histstates",
+        vars = ["histstates",
                    "forecaststates",
                    "forecastobs",
                    "forecastshocks"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :all
-        results = []
+        vars = []
         throw(ArgumentError("Not implemented."))
     end
 
-    return [rawpath(m, "forecast", x*".h5", additional_file_strings) for x in results]
+    return [symbol(x) => rawpath(m, "forecast", x*".h5", additional_file_strings) for x in vars]
 end

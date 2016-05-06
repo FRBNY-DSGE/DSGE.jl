@@ -19,7 +19,8 @@ function load_cond_data(m, cond_type)
         else
             # If this column is not found, determine nearest names for column and raise
             # warning.
-            nearest_str = string_nearest(m.observables, header)
+            candidates = map(string, m.observables)
+            nearest_str = Base.Docs.levsort(header, candidates)
             warn("Invalid conditional data column: " * header) 
             warn("\tCandidates include: " * join(nearest_str, ", ") * ".")
         end

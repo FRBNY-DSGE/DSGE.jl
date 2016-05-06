@@ -3,6 +3,10 @@ type Transition{T<:AbstractFloat}
     RRR::Matrix{T}
     CCC::Matrix{T}
 end
+function Transition{T<:AbstractFloat}(TTT::Matrix{T}, RRR::Matrix{T})
+    CCC = zeros(eltype(TTT), size(TTT, 1), 1)
+    Transition{T}(TTT, RRR, CCC)
+end
 function Base.getindex(eq::Transition, d::Symbol)
     if d in (:TTT, :RRR, :CCC)
         return getfield(eq, d)
@@ -42,4 +46,3 @@ function Base.getindex(sys::System, d::Symbol)
         throw(KeyError(d))
     end
 end
-

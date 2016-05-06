@@ -12,29 +12,6 @@ function abbrev_symbol(s::Symbol, n::Int=4)
     end
 end
 
-"""
-```
-string_nearest{T<:AbstactString}(candidates::Vector{T}, target::T)
-```
-Return the vector of strings in `candidates` that have the minimum Levenshtein distance
-from `target`.
-"""
-function string_nearest{T<:AbstractString}(candidates::Vector{T}, target::T)
-    nearest_str = []
-    nearest_dist = typemax(Int)
-    for k in keys(candidates)
-        this_str = string(k)
-        this_dist = levenshtein(this_str, target)
-        if this_dist < nearest_dist
-            nearest_str = [this_str]
-            nearest_dist = this_dist
-        elseif this_dist == nearest_dist
-            push!(nearest_str, this_str)
-        end
-    end
-    return nearest_str
-end
-
 function sorted_list_insert!{T}(v::Vector{T}, x::T)
     insert_index = 1
     for val in v
@@ -46,4 +23,3 @@ function sorted_list_insert!{T}(v::Vector{T}, x::T)
     end
     insert!(v,insert_index,x)
 end
-
