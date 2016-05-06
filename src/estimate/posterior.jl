@@ -42,6 +42,10 @@ function posterior{T<:AbstractFloat}(m::AbstractModel{T},
     like, out = likelihood(m, data; mh=mh, catch_errors=catch_errors)
     post = like + prior(m)
     if mh
+        for a in keys(out)
+            println("$a: $(size(out[a]))")
+        end
+        println("mh = $mh")
         return Posterior(post, like, out)
     else
         return Posterior(post, like)
@@ -142,11 +146,11 @@ end
 immutable Posterior{T<:AbstractFloat}
     post::T
     like::T
-    mats::Dict{Symbol, Matrix{T}}
+    mats::Dict{Symbol, Array{T}}
 end
 function Posterior{T<:AbstractFloat}(post::T = -Inf,
                                      like::T = -Inf,
-                                     mats::Dict{Symbol,Matrix{T}}    = Dict{Symbol,Matrix{T}}())
+                                     mats::Dict{Symbol,Array{T}}    = Dict{Symbol,Array{T}}())
     return Posterior{T}(post, like, mats)
 end
 function Base.getindex(P::Posterior, d::Symbol)
