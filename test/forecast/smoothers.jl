@@ -18,7 +18,9 @@ end
 
 
 # Method with all arguments provided (9)
-alpha_hat, eta_hat = kalman_smoother(A0, P0, y, pred, vpred, T, R, Q, Z, b, nant, antlags, peachcount, psize)
+kalsmooth = kalman_smoother(A0, P0, y, pred, vpred, T, R, Q, Z, b, nant, antlags, peachcount, psize)
+alpha_hat = kalsmooth.states
+eta_hat   = kalsmooth.shocks 
 
 exp_alpha_hat, exp_eta_hat = h5open("$path/../reference/kalman_smoother_out.h5", "r") do h5
     read(h5,"alpha_hat"), read(h5,"eta_hat")

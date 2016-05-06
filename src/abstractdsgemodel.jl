@@ -126,19 +126,17 @@ n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_s
 function zlb_start_index(m::AbstractModel)
     zlb_start_quarter = get_setting(m, :date_zlbregime_start)
     presample_start_quarter = get_setting(m, :date_presample_start)
-    days = zlb_start_quarter - presample_start_quarter
-    quarters = round(days.value / 365.25 * 4.0)
+    quarters = subtract_quarters(zlb_start_quarter, presample_start_quarter)
     index = quarters+1
-    return convert(Int, index)
+    return index
 end
 
 # Number of presample periods
 function n_presample_periods(m::AbstractModel)
     mainsample_start_quarter = get_setting(m, :date_mainsample_start)
     presample_start_quarter = get_setting(m, :date_presample_start)
-    days = mainsample_start_quarter - presample_start_quarter
-    quarters = round(days.value / 365.25 * 4.0)
-    return convert(Int, quarters)
+    quarters = subtract_quarters(mainsample_start_quarter, presample_start_quarter)
+    return quarters
 end
 
 # Number of a few things that are useful
@@ -157,7 +155,11 @@ spec(m::AbstractModel)         = m.spec
 subspec(m::AbstractModel)      = m.subspec
 saveroot(m::AbstractModel)     = get_setting(m, :saveroot)
 dataroot(m::AbstractModel)     = get_setting(m, :dataroot)
+
+# Interface for data
 data_vintage(m::AbstractModel) = get_setting(m, :data_vintage)
+cond_vintage(m::AbstractModel) = get_setting(m, :cond_vintage)
+cond_id(m::AbstractModel) = get_setting(m, :cond_id)
 
 # Interface for general computation settings
 use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers)
@@ -176,9 +178,20 @@ n_mh_blocks(m::AbstractModel)      =  get_setting(m, :n_mh_blocks)
 n_mh_simulations(m::AbstractModel) =  get_setting(m, :n_mh_simulations)
 n_mh_burn(m::AbstractModel)        =  get_setting(m, :n_mh_burn)
 mh_thin(m::AbstractModel)          =  get_setting(m, :mh_thin)
+n_draws(m::AbstractModel)          =  round(Int,(n_mh_blocks(m) - n_mh_burn(m)) * (n_mh_simulations(m)/mh_thin(m)))
 
 # Interface for forecast settings
 first_forecast_quarter(m::AbstractModel) = get_setting(m, :first_forecast_quarter)(m)
+forecast_tdist_df_val(m::AbstractModel)  = get_setting(m, :forecast_tdist_df_val)
+forecast_tdist_shocks(m::AbstractModel)   = get_setting(m, :forecast_tdist_shocks)
+forecast_kill_shocks(m::AbstractModel)   = get_setting(m, :forecast_kill_shocks)
+
+    
+function forecast_horizons(m::AbstractModel)
+    t0 = get_setting(m, :date_forecast_start)
+    t1 = get_setting(m, :date_forecast_end)
+    return subtract_quarters(t1, t0)
+end
 
 """
 ```

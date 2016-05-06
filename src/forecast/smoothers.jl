@@ -2,10 +2,10 @@
 ```
 kalman_smoother()
 ```
-This is a Kalman Smoothing program based on S.J. Koopman's "Disturbance
-Smoother for State Space Models" (Biometrika, 1993), as specified in
-Durbin and Koopman's "A Simple and Efficient Simulation Smoother for
-State Space Time Series Analysis" (Biometrika, 2002). The algorithm has been
+This is a Kalman Smoothing program based on S.J. Koopman's \"Disturbance
+Smoother for State Space Models\" (Biometrika, 1993), as specified in
+Durbin and Koopman's \"A Simple and Efficient Simulation Smoother for
+State Space Time Series Analysis\" (Biometrika, 2002). The algorithm has been
 simplified for the case in which there is no measurement error, and the
 model matrices do not vary with time.
 
@@ -212,5 +212,37 @@ function disturbance_smoother{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, v
     end
 
 
-    return r, eta_hat
+    return KalmanSmooth(r, eta_hat)
 end
+
+function disturbance_smoother{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, vpred::Array{S,3},
+                                                sys::System, peachcount::Int, psize::Int,
+                                                n_anticipated_shocks::Int = 0, antlags::Int = 0)
+
+    TTT = sys[:TTT]
+    RRR = sys[:RRR]
+    QQ  = sys[:QQ]
+    ZZ  = sys[:ZZ]
+    DD  = sys[:DD]
+
+    disturbance_smoother(y, pred, vpred, TTT, RRR, QQ, ZZ, DD, peachcount, psize, n_anticipated_shocks, antlags)
+end
+
+
+    
+"""
+```
+KalmanSmooth{T<:AbstractFloat}
+
+Fields
+------
+- `states::Matrix{T}`: nstates x nperiods matrix of smoothed state values 
+- `shocks::Matrix{T}`: nshocks x nperiods matrix of smoothed shock values
+```
+"""
+immutable KalmanSmooth{T<:AbstractFloat}
+    states::Matrix{T}
+    shocks::Matrix{T}
+end
+
+
