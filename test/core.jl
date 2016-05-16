@@ -103,6 +103,23 @@ m <= Setting(:n_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Has
 @test ismatch(r"^\s*_mhbk=5_vint=(\d{6})", DSGE.filestring(m))
 DSGE.filestring(m, "key=val")
 DSGE.filestring(m, ["key=val", "foo=bar"])
+m.testing = true
+
+# Overwriting settings
+a = gensym() # unlikely to clash
+b = gensym()
+m <= Setting(a, 0, true, "abcd", "a")
+m <= Setting(a, 1)
+@test m.test_settings[a].value == 1
+@test m.test_settings[a].print == true
+@test m.test_settings[a].code == "abcd"
+@test m.test_settings[a].description == "a"
+m <= Setting(b, 2, false, "", "b")
+m <= Setting(b, 3, true, "abcd", "b1")
+@test m.test_settings[b].value == 3
+@test m.test_settings[b].print == true
+@test m.test_settings[b].code == "abcd"
+@test m.test_settings[b].description == "b1"
 
 # model paths. all this should work without errors
 m.testing = true
