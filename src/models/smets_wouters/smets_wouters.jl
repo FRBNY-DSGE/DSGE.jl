@@ -417,16 +417,16 @@ function settings_smets_wouters!(m::SmetsWouters)
     default_settings!(m)
 
     # Anticipated shocks
-    m <= Setting(:n_anticipated_shocks,         0, "Number of anticipated policy shocks")
-    m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    m <= Setting(:n_anticipated_lags,  26, "Number of periods back to incorporate zero bound expectations")
+    m <= Setting(:n_anticipated_shocks, 0)
+    m <= Setting(:n_anticipated_shocks_padding, 20)
+    m <= Setting(:n_anticipated_lags, 26)
 
     # Estimation
-    m <= Setting(:reoptimize, true, true, "reop", "whether to re-find mode")
-    m <= Setting(:recalculate_hessian, true, true, "ch", "whether to calculate the hessian")
+    m <= Setting(:reoptimize, true)
+    m <= Setting(:recalculate_hessian, true)
 
     # Data vintage
-    m <= Setting(:data_vintage, "150827", true, "vint", "Date of data")
+    m <= Setting(:data_vintage, "150827")
 
     m.settings
 end

@@ -18,7 +18,7 @@ computational settings.
   `print=true`.
 - `description::AbstractString`: Short description of what the setting is used for.
 """
-immutable Setting{T}
+type Setting{T}
     key::Symbol                  # name of setting
     value::T                     # whatever the setting is
     print::Bool                  # whether or not to add this setting to the print
@@ -38,15 +38,9 @@ Base.string(s::Setting{AbstractString}) = string(s.value)
 
 to_filestring(s::Setting) = "$(s.code)=$(s.value)"
 
-
 # key, value constructor
-function Setting(key, value)
-    Setting(key, value, false, "", "")
-end
-
-function Setting(key, value, description)
-    Setting(key, value, false, "", description)
-end
+Setting(key, value) = Setting(key, value, false, "", "")
+Setting(key, value, description) = Setting(key, value, false, "", description)
 
 function Base.show(io::IO, s::Setting)
     @printf io "%s: %s" s.key s.value
@@ -54,19 +48,50 @@ end
 
 """
 ```
-(<=){T}(m::AbstractModel{T}, s::Setting)
+(<=)(m::AbstractModel, s::Setting)
 ```
-
-Syntax for adding a setting to a model/overwriting a setting: m <= setting
+Syntax for adding a setting to a model/overwriting a setting via `m <= Setting(...)`
 """
 function (<=)(m::AbstractModel, s::Setting)
     if !m.testing
-        m.settings[s.key] = s
+        setting_field_name = :settings
     else
-        m.test_settings[s.key] = s
+        setting_field_name = :test_settings
+    end
+
+    if !haskey(getfield(m, setting_field_name), s.key)
+        getfield(m, setting_field_name)[s.key] = s
+    else
+        update!(getfield(m, setting_field_name)[s.key], s)
     end
 end
 
+function update!(a::Setting, b::Setting)
+    # Make sure Setting a can appropriately be updated by b.
+    if a.key ≠ b.key
+        return
+    end
+
+    a.value = b.value
+
+    # b overrides the print boolean of a if:
+    # - a.print is false and b.print is true.
+    # - a.print is true, b.print is false, and b.code is non-empty.
+    # We must be able to tell if b was created via a constructor like `Setting(:key,
+    # value)`, in which case the print, code, and description values are set to defaults. We
+    # do not overwrite if we can't determine whether or not those fields are just the
+    # defaults.
+    if (a.print == false && b.print == true) ||
+       (a.print == true && b.print == false && !isempty(b.code))
+       a.print = b.print
+   end
+    if !isempty(b.code) && b.code ≠ a.code
+        a.code = b.code
+    end
+    if !isempty(b.description) && b.description ≠ a.description
+        a.description = b.description
+    end
+end
 
 """
 ```
