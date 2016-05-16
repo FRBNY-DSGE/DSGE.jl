@@ -9,7 +9,6 @@ module DSGE
     import Optim
     using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
     import NaNMath
-    using Levenshtein
 
     export
 
