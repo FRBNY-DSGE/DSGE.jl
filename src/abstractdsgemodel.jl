@@ -219,7 +219,7 @@ Usage: should be run before calling `estimate(m)`, e.g.:
 """
 function specify_mode!(m::AbstractModel, mode_file::AbstractString = ""; verbose=:low)
 
-    m <= Setting(:reoptimize, false, "Optimize the posterior mode. If false, reads in mode from a file.")
+    m <= Setting(:reoptimize, false)
 
     if mode_file == ""
         mode_file = inpath(m, "user", "paramsmode.h5")
@@ -253,7 +253,7 @@ function specify_hessian(m::AbstractModel, path::AbstractString=""; verbose=:low
         error("Invalid input Hessian file: $path",)
     end
 
-    m <= Setting(:calculate_hessian, false, "Calculate the Hessian at the mode")
+    m <= Setting(:calculate_hessian, false)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Specified hessian from $path.")
