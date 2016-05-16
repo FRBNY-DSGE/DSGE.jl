@@ -83,17 +83,16 @@ function forecast_one(m::AbstractModel, df::DataFrame;
         h5open(input_file_name, "r") do f
             params = map(Float64, read(f, "params"))
         end
-        TTT = RRR = CCC = zend = []
+        TTT = RRR = CCC = zend = Float64[]
         n_sim = 1
         jstep = 1
     elseif input_type == :full
-        params, TTT, RRR, zend = h5open(input_file_name, "r") do f
+        h5open(input_file_name, "r") do f
             params = map(Float64, read(f, "mhparams"))
             TTT    = map(Float64, read(f, "mhTTT"))
             RRR    = map(Float64, read(f, "mhRRR"))
             #CCC   = map(Float64, read(f, "mhCCC"))
             zend   = map(Float64, read(f, "mhzend"))
-            params, TTT, RRR, zend
         end
         n_sim = size(params,1)
     end
