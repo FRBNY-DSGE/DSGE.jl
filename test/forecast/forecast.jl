@@ -4,7 +4,7 @@
 path = dirname(@__FILE__())
 
 m = Model990()
-m.testing = true
+#m.testing = true
 
 ndraws = 2
 sys = compute_system(m)

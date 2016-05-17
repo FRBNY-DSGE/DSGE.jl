@@ -388,7 +388,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     R3[:vpred]      = out[:vpred]
 
     ## Return outputs from both regimes
-    return R2, R3 
+    return R2, R3, R1
    
 end
 

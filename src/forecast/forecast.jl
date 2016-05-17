@@ -29,13 +29,7 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
                                     vars_to_forecast::Vector{Symbol}=[:p1, :p2])
 
 
-    # numbers of useful things
-    ndraws = if m.testing
-        2   # TODO: make testing less hard-codey
-    else
-        n_draws(m)
-    end
-    @assert length(sys) == ndraws
+    ndraws = length(sys)
 
     # for now, we are ignoring pseudoobservables so these can be empty
     Z_pseudo = Matrix{Float64}(12,72)
@@ -49,12 +43,7 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
     # retrieve settings for forecast
     horizon  = forecast_horizons(m)
     nshocks  = n_shocks_exogenous(m)
-    ndraws   = if m.testing
-        2
-    else
-        n_draws(m)
-    end
-
+        
     # set up distribution of shocks if not specified
     # For now, we construct a giant vector of distirbutions of shocks and pass
     # each to computeForecast.
@@ -86,21 +75,22 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
 
     end
 
-
     # Forecast the states
     # todo: figure out why vars isn't working
     forecasts = pmap(i -> computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
                                           sys[i][:DD], Z_pseudo, D_pseudo,
-                                          horizon, vars_to_forecast, shock_distribution[i],
-                                          vec(initial_state_draws[i,:])), 1:ndraws)
+                                          horizon, vars_to_forecast, shock_distribution,
+                                          vec(initial_state_draws[i])), 1:ndraws)
 
+
+        
     # unpack the giant vector of dictionaries that gets returned
-    states      = [x["states"] for x in forecasts]
-    observables = [x["observables"] for x in forecasts]
-    # pseudo      = [x["pseudo_observables"] for x in forecasts]  # not yet implemented
+    states      = [x[:states]::Array{T} for x in forecasts]
+    observables = [x[:observables]::Array{T} for x in forecasts]
+    pseudo      = [x[:pseudo_observables]::Array{T} for x in forecasts]
     # shocks      = [x["shocks"] for x in forecasts]  # not yet implemented
 
-    return  states, observables #, shocks
+    return  states, observables, pseudo #, shocks
 end
 
 

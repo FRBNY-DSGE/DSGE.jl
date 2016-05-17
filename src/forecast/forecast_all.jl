@@ -259,14 +259,16 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     end
 
     # Example: call forecast, unconditional data, states+observables
-    forecast_output = Dict{Symbol, Any}()
+    forecast_output = Dict{Symbol, Vector{Array{Float64}}}()
 
     if output_type in [:forecast, :simple, :simple_cond]
-        forecastobs, forecaststates, forecastshocks = 
+        forecaststates, forecastobs, forecastshocks = 
             forecast(m, systems, states)
         forecast_output[:forecastobs] = forecastobs
         forecast_output[:forecaststates] = forecaststates
-        forecast_output[:forecastshocks] = forecastshocks
+        forecast_output[:forecastpseudo] = forecastpseudo
+        # forecast_output[:forecastshocks] = forecastshocks
+
     end
 
     # Set up outfiles
@@ -274,13 +276,15 @@ function forecast_one(m::AbstractModel, df::DataFrame;
 
     # Write output files
     for (var,file) in output_files
-        h5open(file, "w") do f
+        jldopen(file, "w") do f
             write(f, string(var), forecast_output[var])
         end
     end
 
 end
 
+  
+    
 function get_input_file(m, input_type)
     if input_type == :mode
         return rawpath(m,"estimate","paramsmode.h5")
@@ -313,9 +317,10 @@ function get_output_files(m, input_type, output_type, cond_type)
         vars = ["histshocksns"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :forecast
-        vars = ["forecaststates",
-                   "forecastobs",
-                   "forecastshocks"]
+       vars = ["forecaststates",
+               "forecastobs"]
+#                   "forecastobs",
+#                   "forecastshocks"]
     elseif output_type == :shockdec
         vars = ["shockdecstates",
                    "shockdecobs"]
@@ -341,5 +346,5 @@ function get_output_files(m, input_type, output_type, cond_type)
         throw(ArgumentError("Invalid input_type: $(output_type)"))
     end
 
-    return [symbol(x) => rawpath(m, "forecast", x*".h5", additional_file_strings) for x in vars]
+    return [symbol(x) => rawpath(m, "forecast", x*".jld", additional_file_strings) for x in vars]
 end

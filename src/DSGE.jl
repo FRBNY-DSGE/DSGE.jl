@@ -1,7 +1,7 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-    using Distributions, Roots.fzero, HDF5
+    using Distributions, Roots.fzero, HDF5, JLD
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using FredData, DataFrames, Base.Dates
     using QuantEcon: solve_discrete_lyapunov

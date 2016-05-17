@@ -42,7 +42,8 @@ function computeForecast(T::Array{Float64,2}, R::Array{Float64,2}, C::Array{Floa
     psuedo_observables=Z_pseudo*states'+repmat(D_pseudo,1,forecast_horizons)
     
     # return a dictionary which houses all forecasts
-    forecast=Dict("states"=>states, "observables"=>observables, "pseudo_observables"=>psuedo_observables)
+    forecast=Dict{Symbol,Array{Float64}}(:states => states, :observables => observables,
+                                         :pseudo_observables =>psuedo_observables)
     return forecast
     
 end
