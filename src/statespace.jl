@@ -7,6 +7,9 @@ function Transition{T<:AbstractFloat}(TTT::Matrix{T}, RRR::Matrix{T})
     CCC = zeros(eltype(TTT), size(TTT, 1), 1)
     Transition{T}(TTT, RRR, CCC)
 end
+function Transition{T<:AbstractFloat}(TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
+    Transition{T}(TTT, RRR, CCC)
+end
 function Base.getindex(eq::Transition, d::Symbol)
     if d in (:TTT, :RRR, :CCC)
         return getfield(eq, d)
@@ -29,6 +32,12 @@ function Base.getindex(M::Measurement, d::Symbol)
     else
         throw(KeyError(d))
     end
+end
+function measurement(m::AbstractModel, trans::Transition; shocks::Bool=true)
+    TTT = trans[:TTT]
+    RRR = trans[:RRR]
+    CCC = trans[:CCC]
+    measurement(m, TTT, RRR, CCC; shocks=shocks)
 end
 
 type System{T<:AbstractFloat}
