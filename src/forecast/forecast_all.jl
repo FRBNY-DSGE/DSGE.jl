@@ -67,88 +67,203 @@ function forecast_all(m::AbstractModel, df::DataFrame;
 
 end
 
-function forecast_one(m::AbstractModel, df::DataFrame;
-                      input_type::Symbol  = :mode,
-                      output_type::Symbol = :simple,
-                      cond_type::Symbol  = :none)
-    # Some variables
-    n_states = n_states_augmented(m)
-    jstep = get_setting(m, :forecast_jstep)
+"""
+`load_draws(m, input_type)`
 
-    # Set up infiles
+Load and return draws from Metropolis-Hastings, after some slight transformations. Single
+draws are reshaped to have additional singleton dimensions, and missing variables without
+sufficient information are initialized to null values of appropriate types.
+
+### Outputs
+- `params`: Matrix{Float64} of size (nsim, nparams)
+- `TTT`: Array{Float64,3} of size (nsim, nequations, nstates)
+- `RRR`: Array{Float64,3} of size (nsim, nequations, nshocks)
+- `CCC`: Array{Float64,3} of size (nsim, nequations, 1)
+- `zend`: Matrix{Float64} of size (nsim, nstates)
+"""
+function load_draws(m::AbstractModel, input_type::Symbol)
+
     input_file_name = get_input_file(m, input_type)
 
     # Read infiles and set n_sim based on input_type type
     if input_type in [:mean, :mode]
-        h5open(input_file_name, "r") do f
-            params = map(Float64, read(f, "params"))
+        tmp = h5open(input_file_name, "r") do f
+            map(Float64, read(f, "params"))
         end
-        TTT = RRR = CCC = zend = Float64[]
-        n_sim = 1
-        jstep = 1
-    elseif input_type == :full
-        h5open(input_file_name, "r") do f
+        params = reshape(tmp, 1, size(tmp,1))
+        TTT  = Array{Float64}(0,0,0)
+        RRR  = Array{Float64}(0,0,0)
+        CCC  = Array{Float64}(0,0,0)
+        zend = Array{Float64}(0,0)
+    elseif input_type in [:full]
+        params, TTT, RRR, CCC, zend = h5open(input_file_name, "r") do f
             params = map(Float64, read(f, "mhparams"))
             TTT    = map(Float64, read(f, "mhTTT"))
             RRR    = map(Float64, read(f, "mhRRR"))
-            #CCC   = map(Float64, read(f, "mhCCC"))
             zend   = map(Float64, read(f, "mhzend"))
+            if "mhCCC" in names(f)
+                CCC = map(Float64, read(f, "mhCCC"))
+            else
+                CCC = Array{Float64}(0,0,0)
+            end
+            params, TTT, RRR, CCC, zend
         end
-        n_sim = size(params,1)
     end
 
-    n_sim_forecast = convert(Int, n_sim/jstep)
+    return params, TTT, RRR, CCC, zend
+end
 
-    # Populate systems vector
-    systems = Vector{System{Float64}}(n_sim_forecast)
-    initial_state_draws = Vector{Vector{Float64}}(n_sim_forecast)
+function get_jstep(m, n_sim)
+    if n_sim == 1
+        jstep = 1
+    else
+        jstep = get_setting(m, :forecast_jstep)
+    end
+end
+
+"""
+```
+prepare_states(m::AbstractModel, input_type::Symbol, systems::Vector{System{Float64}},
+params::Matrix{Float64}, df::DataFrame, zend::Matrix{Float64})
+```
+"""
+function prepare_states(m::AbstractModel, input_type::Symbol,
+    systems::Vector{System{Float64}}, params::Matrix{Float64}, df::DataFrame,
+    zend::Matrix{Float64})
+
+    # Setup and preallocate
+    n_sim_forecast = size(systems,1)
+    n_sim = size(params,1)
+    jstep = convert(Int, n_sim/n_sim_forecast)
+    states = Vector{Vector{Float64}}(n_sim_forecast)
 
     # If we just have one draw of parameters in mode or mean case, then we don't have the
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
     if input_type in [:mean, :mode]
-        update!(m, params)
-        sys = compute_system(m; use_expected_rate_data = true)
-        kal = filter(m, df, sys; Ny0 = n_presample_periods(m))
+        update!(m, params[1])
+        kal = filter(m, df, systems[1]; Ny0 = n_presample_periods(m))
         zend = kal[:zend]
-
-        # Prepare system
-        systems[1] = sys
-        initial_state_draws[1] = vec(zend)
+        states[1] = vec(zend)
 
     # If we have many draws, then we must package them into a vector of System objects.
     elseif input_type in [:full]
         for i in 1:n_sim_forecast
             j = i * jstep
+            states[i] = vec(zend[j,:])
+        end
+    else
+        throw(ArgumentError("Not implemented."))
+    end
+
+    return states
+end
+
+"""
+```
+prepare_systems(m::AbstractModel, input_type::Symbol, params::Matrix{Float64},
+TTT::Array{Float64,3}, RRR::Array{Float64,3}, CCC::Array{Float64,3})
+```
+
+Return Vector of System objects constructed from the given sampling outputs. In the one-draw
+case (mode, mean), we recompute the entire system. In the many-draw case (full, or subset),
+we package the outputs only. Recomputing the entire system in the many-draw case remains to
+be implemented.
+"""
+function prepare_systems(m::AbstractModel, input_type::Symbol,
+    params::Matrix{Float64}, TTT::Array{Float64,3}, RRR::Array{Float64,3},
+    CCC::Array{Float64,3})
+
+    # Setup and preallocate
+    n_sim = size(params,1)
+    jstep = get_jstep(m, n_sim)
+    n_sim_forecast = convert(Int, n_sim/jstep)
+    systems = Vector{System{Float64}}(n_sim_forecast)
+
+    if input_type in [:mean, :mode]
+        update!(m, params)
+        systems[1] = compute_system(m; use_expected_rate_data = true)
+    elseif input_type in [:full]
+        empty = isempty(CCC)
+        for i in 1:n_sim_forecast
+            j = i * jstep
             # Prepare transition eq
             TTT_j  = squeeze(TTT[j,:,:],1)
             RRR_j  = squeeze(RRR[j,:,:],1)
-            #CCC_j = squeeze(CCC[j,:,:],1)
-            trans_j = Transition(TTT_j, RRR_j)
-            CCC_j = trans_j[:CCC]
+
+            if empty
+                trans_j = Transition(TTT_j, RRR_j)
+            else
+                CCC_j = squeeze(CCC[j,:,:],1)
+                trans_j = Transition(TTT_j, RRR_j, CCC_j)
+            end
 
             # Prepare measurement eq
             params_j = vec(params[j,:])
             update!(m, params_j)
-            meas_j   = measurement(m, TTT_j, RRR_j, CCC_j; shocks = true)
+            meas_j   = measurement(m, trans_j; shocks = true)
 
             # Prepare system
-            sys_j = System(trans_j, meas_j)
-            systems[i] = sys_j
-            initial_state_draws[i] = vec(zend[j,:])
+            systems[i] = System(trans_j, meas_j)
         end
+    else
+        throw(ArgumentError("Not implemented."))
     end
+
+    return systems
+end
+
+"""
+```
+prepare_forecast_inputs(m::AbstractModel, df::DataFrame; input_type::Symbol  = :mode,
+output_type::Symbol = :simple, cond_type::Symbol  = :none)
+```
+
+Load draws for this input type, prepare a System object for each draw, and prepare initial
+state vectors.
+"""
+function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
+                      input_type::Symbol  = :mode,
+                      output_type::Symbol = :simple,
+                      cond_type::Symbol  = :none)
+    # Some variables
+    n_states = n_states_augmented(m)
+
+    # Set up infiles
+    params, TTT, RRR, CCC, zend = load_draws(m, input_type)
+
+    n_sim = size(params,1)
+    jstep = get_jstep(m, n_sim)
+    n_sim_forecast = convert(Int, n_sim/jstep)
+
+    # Populate systems vector
+    systems = prepare_systems(m, input_type, params, TTT, RRR, CCC)
+
+    # Populate states vector
+    states = prepare_states(m, input_type, systems, params, df, zend)
+
+    return systems, states
+end
+
+function forecast_one(m::AbstractModel, df::DataFrame;
+                      input_type::Symbol  = :mode,
+                      output_type::Symbol = :simple,
+                      cond_type::Symbol  = :none)
+
+    systems, states = prepare_forecast_inputs(m, df;
+        input_type=input_type, output_type=output_type, cond_type=cond_type)
 
     # Prepare conditional data matrix. All missing columns will be set to NaN.
     if cond_type in [:semi, :full]
         cond_data = load_cond_data(m, cond_type)
-        df = [df; cond_data]
+        cond_df = [df; cond_data]
     end
 
     # Example: call forecast, unconditional data, states+observables
     forecast_output = Dict{Symbol, Any}()
 
     if output_type in [:forecast, :simple, :simple_cond]
-        forecastobs, forecaststates, forecastshocks = forecast(m, systems, initial_state_draws)
+        forecastobs, forecaststates, forecastshocks = 
+            forecast(m, systems, states)
         forecast_output[:forecastobs] = forecastobs
         forecast_output[:forecaststates] = forecaststates
         forecast_output[:forecastshocks] = forecastshocks
@@ -174,8 +289,7 @@ function get_input_file(m, input_type)
     elseif input_type == :full
         return rawpath(m,"estimate","mhsave.h5")
     elseif input_type == :subset
-        #TODO
-        return ""
+        throw(ArgumentError("Not implemented."))
     else
         throw(ArgumentError("Invalid input_type: $(input_type)"))
     end
@@ -223,6 +337,8 @@ function get_output_files(m, input_type, output_type, cond_type)
     elseif output_type == :all
         vars = []
         throw(ArgumentError("Not implemented."))
+    else
+        throw(ArgumentError("Invalid input_type: $(output_type)"))
     end
 
     return [symbol(x) => rawpath(m, "forecast", x*".h5", additional_file_strings) for x in vars]
