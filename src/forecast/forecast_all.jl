@@ -148,8 +148,8 @@ function prepare_states(m::AbstractModel, input_type::Symbol,
     # If we just have one draw of parameters in mode, mean, or init case, then we don't have the
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
     if input_type in [:mean, :mode, :init]
-        update!(m, params[1])
-        kal = filter(m, df, systems[1]; Ny0 = n_presample_periods(m))
+        update!(m, vec(params))
+        kal = filter(m, df, systems; Ny0 = n_presample_periods(m))
         zend = kal[:zend]
         states[1] = vec(zend)
 
@@ -188,7 +188,7 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
     systems = Vector{System{Float64}}(n_sim_forecast)
 
     if input_type in [:mean, :mode, :init]
-        update!(m, params)
+        update!(m, vec(params))
         systems[1] = compute_system(m; use_expected_rate_data = true)
     elseif input_type in [:full]
         empty = isempty(CCC)
