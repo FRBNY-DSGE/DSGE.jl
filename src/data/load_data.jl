@@ -18,21 +18,52 @@ and those files must be located in .csv files in `inpath(m, "data")`. To accomod
 rates and other similar transformations, more rows of data may be downloaded than otherwise
 specified by the date model settings.
 """
-function load_data(m::AbstractModel)
-    df = load_data_levels(m)
-    df = transform_data(m, df)
+function load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol=:low)
+    download_data = false
 
-    # Ensure that only appropriate rows make it into the returned DataFrame.
-    start_date = get_setting(m, :date_presample_start)
-    end_date   = get_setting(m, :date_mainsample_end)
-    df = df[start_date .<= df[:, :date] .<= end_date, :]
+    # Check if already downloaded
+    if try_disk && has_saved_data(m)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            print("Reading dataset from disk...")
+        end
+        df = read_data(m)
+        if isvalid_data(m, df)
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                println("dataset from disk valid")
+            end
+        else
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                println("dataset from disk not valid")
+            end
+            download_data = true
+        end
+    else
+        download_data = true
+    end
 
-    save_data(m, df)
+    # Download routines
+    if download_data
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            print("Creating dataset...")
+        end
+        df = load_data_levels(m; verbose=verbose)
+        df = transform_data(m, df)
+
+        # Ensure that only appropriate rows make it into the returned DataFrame.
+        start_date = get_setting(m, :date_presample_start)
+        end_date   = get_setting(m, :date_mainsample_end)
+        df = df[start_date .<= df[:, :date] .<= end_date, :]
+
+        save_data(m, df)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("dataset creation successful")
+        end
+    end
 
     return df
 end
 
-function load_data_levels(m::AbstractModel)
+function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     # Start two quarters further back than `start_date` as we need these additional
     # quarters to compute differences.
     start_date = get_setting(m, :date_presample_start) - Dates.Month(6)
@@ -68,7 +99,9 @@ function load_data_levels(m::AbstractModel)
         # Read and merge data from this source
         file = inpath(m, "data", "$(string(source))_$vint.csv")
         if isfile(file)
-            println("Reading data from $file...")
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                println("Reading data from $file...")
+            end
 
             # Read in dataset and check that the file contains data for the proper dates
             addl_data = readtable(file)
@@ -115,17 +148,72 @@ function load_data_levels(m::AbstractModel)
 end
 
 """
-```
-save_data(m::AbstractModel, df::DataFrame)
-```
+`save_data(m::AbstractModel, df::DataFrame)`
 
-Save `df` to disk as CSV. File is located in `inpath(m, "data")`. Note that this file is not
-currently used for anything besides convenient visual inspection.
+Save `df` to disk as CSV. File is located in `inpath(m, "data")`.
 """
 function save_data(m::AbstractModel, df::DataFrame)
     vint = data_vintage(m)
     filename = inpath(m, "data", "data_$vint.csv")
-    writetable(filename, df; nastring="NaN")
+    writetable(filename, df)
+end
+
+"""
+`has_saved_data(m::AbstractModel)`
+
+Determine if there is a saved dataset on disk for the required vintage.
+"""
+function has_saved_data(m::AbstractModel)
+    vint = data_vintage(m)
+    filename = inpath(m, "data", "data_$vint.csv")
+    isfile(filename)
+end
+
+"""
+`read_data(m::AbstractModel)`
+
+Read CSV from disk as DataFrame. File is located in `inpath(m, "data")`.
+"""
+function read_data(m::AbstractModel)
+    vint     = data_vintage(m)
+    filename = inpath(m, "data", "data_$vint.csv")
+    df       = readtable(filename)
+
+    # Convert date column from string to Date
+    df[:date] = map(Date, df[:date])
+
+    return df
+end
+
+"""
+`isvalid_data(m::AbstractModel, df::DataFrame)`
+
+Return if dataset is valid, ensuring that all observables are contained and that all quarters
+between the beginning of the presample and the end of the mainsample are contained.
+"""
+function isvalid_data(m::AbstractModel, df::DataFrame)
+    valid = true
+
+    # Ensure that every series in m_series is present in df_series
+    m_series = collect(keys(m.data_transforms))
+    df_series = names(df)
+    coldiff = setdiff(m_series, df_series)
+    valid = valid && isempty(coldiff)
+    if !isempty(coldiff)
+        println(coldiff)
+    end
+
+    # Ensure the dates between date_presample_start and date_mainsample_end are contained.
+    actual_dates = df[:date]
+    expected_dates = get_quarter_ends(get_setting(m, :date_presample_start),
+                                      get_setting(m, :date_mainsample_end))
+    datesdiff = setdiff(expected_dates, actual_dates)
+    valid = valid && isempty(datesdiff)
+    if !isempty(datesdiff)
+        println(datesdiff)
+    end
+
+    return valid
 end
 
 """
@@ -133,11 +221,21 @@ end
 df_to_matrix(m::AbstractModel, df::DataFrame)
 ```
 
-Return `df`, converted to matrix of floats, and discard date column.
+Return `df`, converted to matrix of floats, and discard date column. Also ensure data are
+sorted by date and that rows outside of sample are discarded.
 """
 function df_to_matrix(m::AbstractModel, df::DataFrame)
+    # Sort rows by date and discard rows outside of sample
+    df1 = sort(df; cols=[:date])
+    t_start = find(df1[:date] .== get_setting(m, :date_presample_start))[1]
+    t_end = find(df1[:date] .== get_setting(m, :date_mainsample_end))[1]
+
+    # Discard columns not used.
     #TODO sort columns as well according to observables
-    datecol = df.colindex[:date]
-    inds = setdiff(1:size(df,2), datecol)
-    return convert(Matrix{Float64}, df[:, inds])
+    datecol = df1.colindex[:date]
+    colinds = setdiff(1:size(df1,2), datecol)
+
+    df1 = df1[t_start:t_end, colinds]
+
+    return convert(Matrix{Float64}, df1)
 end
