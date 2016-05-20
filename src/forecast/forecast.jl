@@ -52,7 +52,7 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
     # creates its own DegenerateMvNormal based on passing the QQ
     # matrix (which has already been computed/is taking up space)
     # rather than having to copy each Distribution across nodes. This will also be much more
-    # space-efficient for if forecast_kill_shocks is true.
+    # space-efficient when forecast_kill_shocks is true.
 
     shock_distribution = if isempty(shock_distribution)
 
@@ -76,14 +76,21 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
     end
 
     # Forecast the states
-    # todo: figure out why vars isn't working
-    forecasts = pmap(i -> computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
-                                          sys[i][:DD], Z_pseudo, D_pseudo,
-                                          horizon, vars_to_forecast, shock_distribution,
-                                          vec(initial_state_draws[i])), 1:ndraws)
+    forecasts = if use_parallel_workers(m)
 
+        #addprocs_sge(n_available_workers())
 
-        
+        pmap(i -> computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
+                                  sys[i][:DD], Z_pseudo, D_pseudo,
+                                  horizon, vars_to_forecast, shock_distribution[i],
+                                  vec(initial_state_draws[i])), 1:10)
+    else
+        map(i -> computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
+                                 sys[i][:DD], Z_pseudo, D_pseudo,
+                                 horizon, vars_to_forecast, shock_distribution[i],
+                                 vec(initial_state_draws[i])), 1:ndraws)
+    end
+
     # unpack the giant vector of dictionaries that gets returned
     states      = [x[:states]::Array{T} for x in forecasts]
     observables = [x[:observables]::Array{T} for x in forecasts]

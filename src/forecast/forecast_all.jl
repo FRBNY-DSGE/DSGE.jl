@@ -264,6 +264,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     if output_type in [:forecast, :simple, :simple_cond]
         forecaststates, forecastobs, forecastshocks = 
             forecast(m, systems, states)
+
         forecast_output[:forecastobs] = forecastobs
         forecast_output[:forecaststates] = forecaststates
         forecast_output[:forecastpseudo] = forecastpseudo
@@ -283,7 +284,6 @@ function forecast_one(m::AbstractModel, df::DataFrame;
 
 end
 
-  
     
 function get_input_file(m, input_type)
     if input_type == :mode
@@ -318,8 +318,8 @@ function get_output_files(m, input_type, output_type, cond_type)
         throw(ArgumentError("Not implemented."))
     elseif output_type == :forecast
        vars = ["forecaststates",
-               "forecastobs"]
-#                   "forecastobs",
+               "forecastobs",
+               "forecastpseudo"]
 #                   "forecastshocks"]
     elseif output_type == :shockdec
         vars = ["shockdecstates",
