@@ -154,9 +154,7 @@ end
 
 # r, the (Nz x Nt) matrix used for state smoothing.
 # eta_hat, the optional (Ne x Nt) matrix of smoothed shocks.
-
-# Dan Greenwald, 7/7/2010.
-function disturbance_smoother{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, vpred::Array{S,3}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, peachcount::Int, psize::Int, n_anticipated_shocks::Int = 0, antlags::Int = 0)
+function disturbance_smoother_k93{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, vpred::Array{S,3}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, peachcount::Int, psize::Int, n_anticipated_shocks::Int = 0, antlags::Int = 0)
     Nt = size(y, 2)
     Nz = size(T, 1)
 
@@ -228,6 +226,73 @@ function disturbance_smoother{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, v
     disturbance_smoother(y, pred, vpred, TTT, RRR, QQ, ZZ, DD, peachcount, psize, n_anticipated_shocks, antlags)
 end
 
+
+# DRAWSTATES_DK02.M
+
+# This program is a simulation smoother based on Durbin and Koopman's
+# "A Simple and Efficient Simulation Smoother for State Space Time Series
+# Analysis" (Biometrika, 2002). The algorithm has been simplified for the
+# case in which there is no measurement error, and the model matrices do
+# not vary with time.
+    
+# Unlike other simulation smoothers (for example, that of Carter and Kohn,
+# 1994), this method does not require separate draws for each period, draws
+# of the state vectors, or even draws from a conditional distribution.
+# Instead, vectors of shocks are drawn from the unconditional distribution
+# of shocks, which is then corrected (via a Kalman Smoothing step), to
+# yield a draw of shocks conditional on the data. This is then used to
+# generate a draw of states conditional on the data. Drawing the states in
+# this way is much more efficient than other methods, as it avoids the need
+# for multiple draws of state vectors (requiring singular value
+# decompositions), as well as inverting state covariance matrices
+# (requiring the use of the computationally intensive and relatively
+# erratic Moore-Penrose pseudoinverse).
+
+# Nz will stand for the number of states, Ny for the number of observables,
+# Ne for the number of shocks, and Nt for the number of periods of data.
+        
+# The state space is assumed to take the form:
+# y(t) = Z*alpha(t) + b
+# alpha(t+1) = T*alpha(t) + R*eta(t+1)
+
+# INPUTS:
+
+# y, the (Ny x Nt) matrix of observable data.
+# T, the (Nz x Nz) transition matrix.
+# R, the (Nz x Ne) matrix translating shocks to states.
+# Q, the (Ne x Ne) covariance matrix for the shocks.
+# Z, the (Ny x Nz) measurement matrix.
+# b, the (Ny x 1) constant vector in the measurement equation.
+# A0, the (Nz x 1) initial (time 0) states vector.
+# P0, the (Nz x Nz) initial (time 0) state covariance matrix.
+
+# nant, an optional scalar for the zero bound specification indicating the
+#       number of periods ahead the interest rate is fixed.
+# antlags, an optional scalar for the zero bound specification indicating
+#       the number of periods for which interest rate expectations have
+#       been fixed
+# Ny0, an optional scalar indicating the number of periods of presample
+#       (i.e. the number of periods for which smoothed states are not
+#       required). If you want to set a value for Ny0 but not for nant or
+#       antlags then set them both empty.                 
+function drawstates_dk02!(m, data, params, A0, P0)
+
+    ##############################################################################
+    ## 1. Get system matrices
+    ##############################################################################
+
+    update!(m, params)
+    TTT, RRR, CCC, valid_a = solve(m)
+     = measurement(m)
+    
+    ##############################################################################
+    # 2. Produce "fake" states and observables (a+ and y+)
+    ##############################################################################
+
+    ## a. Draw initial state a_0+
+
+    
+end
 
     
 """
