@@ -78,14 +78,12 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
     # Forecast the states
     forecasts = if use_parallel_workers(m)
 
-        #addprocs_sge(n_available_workers())
-
-        pmap(i -> computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
+        pmap(i -> DSGE.computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
                                   sys[i][:DD], Z_pseudo, D_pseudo,
                                   horizon, vars_to_forecast, shock_distribution[i],
                                   vec(initial_state_draws[i])), 1:10)
     else
-        map(i -> computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
+        map(i -> DSGE.computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
                                  sys[i][:DD], Z_pseudo, D_pseudo,
                                  horizon, vars_to_forecast, shock_distribution[i],
                                  vec(initial_state_draws[i])), 1:ndraws)

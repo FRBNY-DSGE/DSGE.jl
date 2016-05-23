@@ -262,7 +262,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     forecast_output = Dict{Symbol, Vector{Array{Float64}}}()
 
     if output_type in [:forecast, :simple, :simple_cond]
-        forecaststates, forecastobs, forecastshocks = 
+        forecaststates, forecastobs, forecastpseudo = 
             forecast(m, systems, states)
 
         forecast_output[:forecastobs] = forecastobs
