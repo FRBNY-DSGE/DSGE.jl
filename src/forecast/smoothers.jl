@@ -257,7 +257,7 @@ end
 
 # INPUTS:
 
-# y, the (Ny x Nt) matrix of observable data.
+# df, the (Ny x Nt) DataFrame of observable data.
 # T, the (Nz x Nz) transition matrix.
 # R, the (Nz x Ne) matrix translating shocks to states.
 # Q, the (Ne x Ne) covariance matrix for the shocks.
@@ -275,23 +275,141 @@ end
 #       (i.e. the number of periods for which smoothed states are not
 #       required). If you want to set a value for Ny0 but not for nant or
 #       antlags then set them both empty.                 
-function drawstates_dk02!(m, data, params, A0, P0)
+function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
+                                            df::DataFrame, params::Vector{T},
+                                            A0::Vector{T}, P0::Matrix{T};
+                                            use_expected_rate_data = true)
 
-    ##############################################################################
-    ## 1. Get system matrices
-    ##############################################################################
+    
 
+    ## extract settings/dates/etc
+
+    n_ant_shocks  = n_anticipated_shocks(m)
+    zlb_start_ind = zlb_start_index(m)
+    mainsample_start_ind = Nt0 + 1
+
+    
+    #conditional_start_ind =
+    t0 = first_forecast_quarter(m)
+    t1 = df[end, :date]
+    n_conditional_periods = subtract_quarters(t1, t0)   
+    
+    # convert DataFrame to Matrix
+    data = df_to_matrix(df)
+
+    # call actual simulation smoother
+    drawstates_dk02(m, data, params, A0, P0,
+                    mainsample_start = mainsample_start_ind,
+                    zlb_start = zlb_start_ind,
+                    n_conditional_periods = n_conditional_periods)
+end
+
+function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
+                                            data::Matrix{T},
+                                            params::Vector{T}
+                                            A0::Matrix{T},
+                                            P0::Matrix{T};
+                                            use_expected_rate_data = true,
+                                            mainsample_start = NaN,
+                                            zlb_start = NaN,
+                                            n_conditional_periods = 0)
+
+
+    ## Get system matrices
     update!(m, params)
-    TTT, RRR, CCC, valid_a = solve(m)
-     = measurement(m)
+    sys = compute_system(m, use_expected_rate_data = true)
     
-    ##############################################################################
-    # 2. Produce "fake" states and observables (a+ and y+)
-    ##############################################################################
+    ## Get matrix dimensions
 
-    ## a. Draw initial state a_0+
-
+    Ny = size(data,1)        # number of observables
+    Nt0 = n_presample_periods(m)     
+    Nt = size(data,2) - Nt0  # number of periods of data (minus presample)
+    Nz = size(sys[:TTT],1)   # number of states
+    Ne = size(sys[:RRR],2)   # number of shocks
+    n_ant_shocks = n_anticipated_shocks(m)   # # of anticipated monetary policy shocks
     
+    # intialize
+    α_plus  = Array{T}(Nz,Nt0+Nt)
+    data_plus = Array{T}(Ny,Nt0+Nt)
+
+    # Draw initial state, a₀+
+    [U,D,V] = svd(P0)
+    ap_t = U*sqrt(D)*randn(Nz,1)
+
+    # Draw a sequence of shocks, η+
+    η_plus = sqrt(QQ)*randn(Ne,Nt0+Nt)
+
+    # Set n_ant_shocks shocks to 0 in non-ZLB time periods
+    if n_ant_shocks > 0
+        η_plus[end - n_ant_shocks + 1:end, 1:zlb_start-1] = 0
+    end
+    
+    # Produce "fake" states and observables (a+ and y+) by
+    # iterating the state-space system forward
+    for t = 1:Nt0+Nt
+        ap_t = TTT * ap_t + RRR * η_plus[:,t]
+        α_plus[:,t] = ap_t
+        data_plus[:,t] = ZZ*ap_t+DD
+    end
+    
+    # Replace fake data with NaNs wherever actual data has NaNs
+    data_plus[isnan(data)] = NaN
+    
+    # Compute y* = y - y+ - D
+    data_star = YY_all - YY_all_plus
+    
+    ## Run the kalman filter
+
+    A0, P0, pred, vpred, TTT, RRR, CCC, QQ, ZZ, DD = if use_expected_rate_data
+        
+        R2, R3, R1 = kalman_filter_2part(m, data)
+        
+        # unpack the results to pass to kalman_smoother
+
+        TTT = R3[:TTT]
+        RRR = R3[:RRR]
+        CCC = R3[:CCC] 
+        filtered_states = [R2[:filt] R3[:filt]]
+        pred            = hcat(R2[:pred], R3[:pred])
+        vpred           = cat(3, R2[:vpred], R3[:vpred])
+        zend            = R3[:zend]    # final state vector is in R3
+        PO_small        = R1[:P0]
+        A0_small        = R1[:A0]
+
+        r_tl1      = m.keys[:rm_tl1]
+        r_tlx      = r_tl1 + 1
+
+        # get expanded version of time-0 state vector
+        A0              =  zeros(Nz)
+        A0[1:r_tlx-2]   = A0[1:r_tlx-2] 
+        A0[r_tl1+n_ant_shocks:end]   = A0_small[r_tlx-1:end]
+                
+        # get expanded version of P0 matrix
+        P0              = zeros(Nz, Nz)
+
+        P0[1:r_tlx-2, 1:r_tlx-2]                  = P0_small[1:r_tlx-2, 1:r_tlx-2]
+        P0[1:r_tlx-2, 1:r_tl1+n_ant_shocks:end]   = P0_small[1:r_tlx-2, 1:r_tlx-]
+        P0[r_tl1+n_ant_shocks:end, 1:r_tlx-2]     = P0_small[r_tlx-1:end, 1:r_tlx-2]
+        P0[r_tl1+n_ant_shocks:end, r_tl1+nant:end]= P0_small[r_tlx-1:end, r_tlx-1:end]
+
+        A0, P0, pred, vpred, TTT, RRR, CCC, QQ, ZZ, DD
+    else
+        kalman_filter(...)
+
+        A0, P0, pred, vpred, TTT, RRR, CCC, QQ, ZZ, DD
+    end
+
+    ##### Step 2: Kalman smooth over everything
+    α_hat_star,η_hat_star = kalman_smoother(A0,P0,data',pred,vpred,
+                                            TTT,RRR,CCC,QQ,ZZ,DD,
+                                            n_ant_shocks,n_ant_lags)
+    
+    
+    ## Compute draw (states and shocks)
+    α_til = α_plus + α_hat_star
+    η_til = η_plus + η_hat_star
+
+    return α_til, η_til
 end
 
     
