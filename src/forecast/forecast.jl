@@ -34,11 +34,11 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
     # for now, we are ignoring pseudoobservables so these can be empty
     Z_pseudo = Matrix{Float64}(12,72)
     D_pseudo = Matrix{Float64}(12,1)
-    @everywhere Z_pseudo = remotecall_fetch(1, ()->Matrix{Float64}(12,72))
-    @everywhere D_pseudo = remotecall_fetch(1, ()->Matrix{Float64}(12,72))
+    # @everywhere Z_pseudo = remotecall_fetch(1, ()->Matrix{Float64}(12,72))
+    # @everywhere D_pseudo = remotecall_fetch(1, ()->Matrix{Float64}(12,72))
 
     # put the list of variables to forecast on every node
-    @eval @everywhere vars=$vars_to_forecast
+    # @eval @everywhere vars=$vars_to_forecast
 
     # retrieve settings for forecast
     horizon  = forecast_horizons(m)
@@ -64,29 +64,31 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
         else
             if forecast_tdist_shocks(m)                    ## use t-distributed shocks
                 @sync @parallel (vcat) for i = 1:ndraws
-                    TDist(forecast_tdist_df_val(m))
+                    Distributions.TDist(forecast_tdist_df_val(m))
                 end
             else                                           ## use normally distributed shocks
                 @sync @parallel (vcat) for i = 1:ndraws
-                    DegenerateMvNormal(zeros(nshocks),sqrt(sys[i][:QQ]))
+                    DSGE.DegenerateMvNormal(zeros(nshocks),sqrt(sys[i][:QQ]))
                 end
             end
         end
-
     end
 
     # Forecast the states
     forecasts = if use_parallel_workers(m)
-
-        pmap(i -> DSGE.computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
+        println("Using parallel workers")
+        forecastfun = (i -> DSGE.computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
                                   sys[i][:DD], Z_pseudo, D_pseudo,
                                   horizon, vars_to_forecast, shock_distribution[i],
-                                  vec(initial_state_draws[i])), 1:10)
+                                  vec(initial_state_draws[i])))
+        pmap(forecastfun, 1:2)
+        
     else
+        println("Not using parallel workers")
         map(i -> DSGE.computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
                                  sys[i][:DD], Z_pseudo, D_pseudo,
                                  horizon, vars_to_forecast, shock_distribution[i],
-                                 vec(initial_state_draws[i])), 1:ndraws)
+                                 vec(initial_state_draws[i])), 1:2)
     end
 
     # unpack the giant vector of dictionaries that gets returned
