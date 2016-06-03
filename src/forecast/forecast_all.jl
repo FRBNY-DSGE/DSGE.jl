@@ -19,6 +19,7 @@ output types.
 - `input_types`: which set of parameters to use, any combination of
     - `:mode`: forecast using the modal parameters only
     - `:mean`: forecast using the mean parameters only
+    - `:init`: forecast using the initial parameter values only
     - `:full`: forecast using all parameters (full distribution)
     - `:subset`: forecast using a well-defined user-specified subset of draws
 - `output_types`: forecast routine outputs to compute, any combination of
@@ -108,6 +109,13 @@ function load_draws(m::AbstractModel, input_type::Symbol)
             end
             params, TTT, RRR, CCC, zend
         end
+    elseif input_type in [:init]
+        tmp = Float64[α.value for α in m.parameters]
+        params = reshape(tmp, 1, size(tmp,1))
+        TTT  = Array{Float64}(0,0,0)
+        RRR  = Array{Float64}(0,0,0)
+        CCC  = Array{Float64}(0,0,0)
+        zend = Array{Float64}(0,0)
     end
 
     return params, TTT, RRR, CCC, zend
@@ -137,11 +145,11 @@ function prepare_states(m::AbstractModel, input_type::Symbol,
     jstep = convert(Int, n_sim/n_sim_forecast)
     states = Vector{Vector{Float64}}(n_sim_forecast)
 
-    # If we just have one draw of parameters in mode or mean case, then we don't have the
+    # If we just have one draw of parameters in mode, mean, or init case, then we don't have the
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
-    if input_type in [:mean, :mode]
-        update!(m, params[1])
-        kal = filter(m, df, systems[1]; Ny0 = n_presample_periods(m))
+    if input_type in [:mean, :mode, :init]
+        update!(m, vec(params))
+        kal = filter(m, df, systems; Ny0 = n_presample_periods(m))
         zend = kal[:zend]
         states[1] = vec(zend)
 
@@ -165,7 +173,7 @@ TTT::Array{Float64,3}, RRR::Array{Float64,3}, CCC::Array{Float64,3})
 ```
 
 Return Vector of System objects constructed from the given sampling outputs. In the one-draw
-case (mode, mean), we recompute the entire system. In the many-draw case (full, or subset),
+case (mode, mean, init), we recompute the entire system. In the many-draw case (full, or subset),
 we package the outputs only. Recomputing the entire system in the many-draw case remains to
 be implemented.
 """
@@ -179,8 +187,8 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
     n_sim_forecast = convert(Int, n_sim/jstep)
     systems = Vector{System{Float64}}(n_sim_forecast)
 
-    if input_type in [:mean, :mode]
-        update!(m, params)
+    if input_type in [:mean, :mode, :init]
+        update!(m, vec(params))
         systems[1] = compute_system(m; use_expected_rate_data = true)
     elseif input_type in [:full]
         empty = isempty(CCC)
@@ -282,6 +290,8 @@ function forecast_one(m::AbstractModel, df::DataFrame;
         end
     end
 
+    return forecast_output
+
 end
 
     
@@ -290,6 +300,8 @@ function get_input_file(m, input_type)
         return rawpath(m,"estimate","paramsmode.h5")
     elseif input_type == :mean
         return workpath(m,"estimate","paramsmean.h5")
+    elseif input_type == :init
+        return ""
     elseif input_type == :full
         return rawpath(m,"estimate","mhsave.h5")
     elseif input_type == :subset

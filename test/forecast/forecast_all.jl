@@ -5,8 +5,9 @@ path = dirname(@__FILE__)
 
 # 
 m = Model990()
+m.testing = true
 
-data = load_data(m)
-forecast_one(m, data; input_type=:mode, output_type=:forecast, cond_type=:none)
+df = load_data(m; try_disk=true, verbose=:none)
+forecast_one(m, df; input_type=:init, output_type=:forecast, cond_type=:none)
 
 nothing

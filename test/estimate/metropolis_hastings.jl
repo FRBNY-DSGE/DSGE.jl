@@ -17,8 +17,9 @@ ref_cov       = read(file, "ref_cov")
 close(file)
 
 # Read in the data
-filename = inpath(m, "data", "data_$(data_vintage(m)).csv")
-df = readtable(filename)
+# filename = inpath(m, "data", "data_$(data_vintage(m)).csv")
+# df = readtable(filename)
+df = load_data(m; try_disk=true, verbose=:none)
 
 # Set up and run metropolis-hastings
 specify_mode!(m, inpath(m, "user", "paramsmode.h5"), verbose=:none)
