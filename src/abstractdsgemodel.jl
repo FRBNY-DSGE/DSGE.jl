@@ -190,7 +190,7 @@ forecast_kill_shocks(m::AbstractModel)   = get_setting(m, :forecast_kill_shocks)
 function forecast_horizons(m::AbstractModel)
     t0 = get_setting(m, :date_forecast_start)
     t1 = get_setting(m, :date_forecast_end)
-    return subtract_quarters(t1, t0)
+    return 1 + subtract_quarters(t1, t0)
 end
 
 """
