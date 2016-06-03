@@ -28,21 +28,31 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
                                     shock_distribution::Union{Distribution, Matrix{T}}=Matrix{T}(0,0),
                                     vars_to_forecast::Vector{Symbol}=[:p1, :p2])
 
-
     ndraws = length(sys)
 
     # for now, we are ignoring pseudoobservables so these can be empty
     Z_pseudo = Matrix{Float64}(12,72)
     D_pseudo = Matrix{Float64}(12,1)
-    # @everywhere Z_pseudo = remotecall_fetch(1, ()->Matrix{Float64}(12,72))
-    # @everywhere D_pseudo = remotecall_fetch(1, ()->Matrix{Float64}(12,72))
-
-    # put the list of variables to forecast on every node
-    # @eval @everywhere vars=$vars_to_forecast
 
     # retrieve settings for forecast
     horizon  = forecast_horizons(m)
     nshocks  = n_shocks_exogenous(m)
+
+    # Unpack everything for call to map/pmap
+    @time begin
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("Unpacking system matrices")
+        end
+        TTTs     = [s[:TTT] for s in sys]
+        RRRs     = [s[:RRR] for s in sys]
+        CCCs     = [s[:CCC] for s in sys]
+        ZZs      = [s[:ZZ] for s in sys]
+        DDs      = [s[:DD] for s in sys]
+        ZZps     = [Z_pseudo for i in 1:ndraws]
+        DDps     = [D_pseudo for i in 1:ndraws]
+        horizons = [horizon for i in 1:ndraws]
+        vars     = [vars_to_forecast for i in 1:ndraws]
+    end
         
     # set up distribution of shocks if not specified
     # For now, we construct a giant vector of distirbutions of shocks and pass
@@ -54,7 +64,10 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
     # rather than having to copy each Distribution across nodes. This will also be much more
     # space-efficient when forecast_kill_shocks is true.
 
-    shock_distribution = if isempty(shock_distribution)
+    @time shock_distribution = if isempty(shock_distribution)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            print("Constructing shock distributions...")
+        end
 
         # Kill shocks: make a big vector of arrays of zeros
         if forecast_kill_shocks(m)
@@ -72,23 +85,24 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
                 end
             end
         end
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("done")
+        end
     end
 
     # Forecast the states
-    forecasts = if use_parallel_workers(m)
-        println("Using parallel workers")
-        forecastfun = (i -> DSGE.computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
-                                  sys[i][:DD], Z_pseudo, D_pseudo,
-                                  horizon, vars_to_forecast, shock_distribution[i],
-                                  vec(initial_state_draws[i])))
-        pmap(forecastfun, 1:2)
-        
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        print("Forecasting...")
+    end
+    @time forecasts = if use_parallel_workers(m)
+        pmap(DSGE.computeForecast, TTTs, RRRs, CCCs, ZZs, DDs, ZZps, DDps, horizons, vars,
+            shock_distribution, initial_state_draws)
     else
-        println("Not using parallel workers")
-        map(i -> DSGE.computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
-                                 sys[i][:DD], Z_pseudo, D_pseudo,
-                                 horizon, vars_to_forecast, shock_distribution[i],
-                                 vec(initial_state_draws[i])), 1:2)
+        map(DSGE.computeForecast, TTTs, RRRs, CCCs, ZZs, DDs, ZZps, DDps, horizons, vars,
+            shock_distribution, initial_state_draws)
+    end
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println("done")
     end
 
     # unpack the giant vector of dictionaries that gets returned
