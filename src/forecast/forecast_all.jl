@@ -287,6 +287,8 @@ function forecast_one(m::AbstractModel, df::DataFrame;
         end
     end
 
+    return forecast_output
+
 end
 
 function get_input_file(m, input_type)
