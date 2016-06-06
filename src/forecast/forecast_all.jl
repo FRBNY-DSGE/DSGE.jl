@@ -36,8 +36,6 @@ output types.
         conditional data types
     - `:simple`: smoothed states, forecast of states, forecast of observables for
         *unconditional* data only
-    - `:simple_cond`: smoothed states, forecast of states, forecast of observables for all
-        specified conditional data types
     - `:all`: smoothed states (history), smoothed shocks (history, standardized), smoothed
       shocks (history, non-standardized), shock decompositions (history), deterministic
       trend (history), counterfactuals (history), forecast, forecast shocks drawn, shock
@@ -237,7 +235,6 @@ function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     n_states = n_states_augmented(m)
 
     # Set up infiles
-    println("Loading draws")
     params, TTT, RRR, CCC, zend = load_draws(m, input_type)
 
     n_sim = size(params,1)
@@ -245,16 +242,21 @@ function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     n_sim_forecast = convert(Int, n_sim/jstep)
 
     # Populate systems vector
-    println("Preparing systems")
     systems = prepare_systems(m, input_type, params, TTT, RRR, CCC)
 
     # Populate states vector
-    println("Preparing states")
     states = prepare_states(m, input_type, systems, params, df, zend)
 
     return systems, states
 end
 
+"""
+```
+forecast_one(m::AbstractModel, df::DataFrame; input_type::Symbol  = :mode,
+    output_type::Symbol = :simple, cond_type::Symbol  = :none)
+```
+
+"""
 function forecast_one(m::AbstractModel, df::DataFrame;
                       input_type::Symbol  = :mode,
                       output_type::Symbol = :simple,
@@ -272,7 +274,15 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     # Example: call forecast, unconditional data, states+observables
     forecast_output = Dict{Symbol, Vector{Array{Float64}}}()
 
-    if output_type in [:forecast, :simple, :simple_cond]
+    if output_type in [:states, :simple, :all]
+        println("Calling filter and smoother")
+        histstates, histpseudo = filterandsmooth(m, df, systems)
+
+        forecast_output[:histstates] = histstates
+        forecast_output[:histpseudo] = histpseudo
+    end
+
+    if output_type in [:forecast, :simple, :all]
         println("Calling forecast")
         forecaststates, forecastobs, forecastpseudo = 
             forecast(m, systems, states)
@@ -288,7 +298,6 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     output_files = get_output_files(m, input_type, output_type, cond_type)
 
     # Write output files
-    println("Writing output files")
     for (var,file) in output_files
         jldopen(file, "w") do f
             write(f, string(var), forecast_output[var])
@@ -325,7 +334,8 @@ function get_output_files(m, input_type, output_type, cond_type)
 
     # vars prefix
     if output_type == :states
-        vars = ["histstates"]
+        vars = ["histstates",
+                "histpseudo"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :shocks
         vars = ["histshocks"]
@@ -337,24 +347,25 @@ function get_output_files(m, input_type, output_type, cond_type)
        vars = ["forecaststates",
                "forecastobs",
                "forecastpseudo"]
-#                   "forecastshocks"]
+#              "forecastshocks"]
     elseif output_type == :shockdec
         vars = ["shockdecstates",
-                   "shockdecobs"]
+                "shockdecobs"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :dettrend
         vars = ["dettrendstates",
-                   "dettrendobs"]
+                "dettrendobs"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :counter
         vars = ["counterstates",
-                   "counterobs"]
+                "counterobs"]
         throw(ArgumentError("Not implemented."))
-    elseif output_type in [:simple, :simple_cond]
+    elseif output_type in [:simple]
         vars = ["histstates",
-                   "forecaststates",
-                   "forecastobs",
-                   "forecastshocks"]
+                "histpseudo",
+                "forecaststates",
+                "forecastobs",
+                "forecastshocks"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :all
         vars = []
