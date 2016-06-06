@@ -71,13 +71,7 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
                                   use_expected_rate_data::Bool = true)
 
     # numbers of useful things
-    ndraws = if m.testing
-        2
-    else
-        n_draws(m)
-    end
-
-    @assert size(sys,1) == ndraws
+    ndraws = size(sys, 1)
     
     # Make sure the model object and the data are defined on every node
     @everywhere m    = remotecall_fetch(1, ()->m)
