@@ -262,21 +262,24 @@ function forecast_one(m::AbstractModel, df::DataFrame;
                       output_type::Symbol = :simple,
                       cond_type::Symbol  = :none)
 
-    systems, states = prepare_forecast_inputs(m, df;
-        input_type=input_type, output_type=output_type, cond_type=cond_type)
-
     # Prepare conditional data matrix. All missing columns will be set to NaN.
     if cond_type in [:semi, :full]
-        cond_data = load_cond_data(m, cond_type)
-        cond_df = [df; cond_data]
+        cond_df = load_cond_data(m, cond_type)
+        df0 = [df; cond_df]
+    elseif cond_type in [:none]
+        df0 = df
     end
+
+    # Prepare forecast inputs
+    systems, states = prepare_forecast_inputs(m, df0;
+        input_type=input_type, output_type=output_type, cond_type=cond_type)
 
     # Example: call forecast, unconditional data, states+observables
     forecast_output = Dict{Symbol, Vector{Array{Float64}}}()
 
     if output_type in [:states, :simple, :all]
         println("Calling filter and smoother")
-        histstates, histpseudo = filterandsmooth(m, df, systems)
+        histstates, histpseudo = filterandsmooth(m, df0, systems)
 
         forecast_output[:histstates] = histstates
         forecast_output[:histpseudo] = histpseudo
