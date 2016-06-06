@@ -237,6 +237,7 @@ function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     n_states = n_states_augmented(m)
 
     # Set up infiles
+    println("Loading draws")
     params, TTT, RRR, CCC, zend = load_draws(m, input_type)
 
     n_sim = size(params,1)
@@ -244,9 +245,11 @@ function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     n_sim_forecast = convert(Int, n_sim/jstep)
 
     # Populate systems vector
+    println("Preparing systems")
     systems = prepare_systems(m, input_type, params, TTT, RRR, CCC)
 
     # Populate states vector
+    println("Preparing states")
     states = prepare_states(m, input_type, systems, params, df, zend)
 
     return systems, states
@@ -270,6 +273,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     forecast_output = Dict{Symbol, Vector{Array{Float64}}}()
 
     if output_type in [:forecast, :simple, :simple_cond]
+        println("Calling forecast")
         forecaststates, forecastobs, forecastpseudo = 
             forecast(m, systems, states)
 
@@ -284,7 +288,8 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     output_files = get_output_files(m, input_type, output_type, cond_type)
 
     # Write output files
-    for (var,file) in output_files
+    println("Writing output files")
+    @time for (var,file) in output_files
         jldopen(file, "w") do f
             write(f, string(var), forecast_output[var])
         end
