@@ -141,7 +141,7 @@ to be successfully precomputed (such as full distribution input) but the data ar
 conditional data, then the final state vector is adjusted accordingly.
 
 """
-function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol
+function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     systems::Vector{System{Float64}}, params::Matrix{Float64}, df::DataFrame,
     zend::Matrix{Float64})
 
@@ -155,9 +155,9 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
     if input_type in [:mean, :mode, :init]
         update!(m, vec(params))
-        kal = filter(m, df, systems; Ny0 = n_presample_periods(m))
-        zend = kal[:zend]
-        states[1] = vec(zend)
+        filt, _, _ = filter(m, df, systems; Ny0 = n_presample_periods(m))
+        # filt is a vector of nperiods x nstates matrices of filtered states
+        states[1] = vec(filt[1][end,:])
 
     # If we have many draws, then we must package them into a vector of System objects.
     elseif input_type in [:full]
