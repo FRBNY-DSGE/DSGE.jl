@@ -11,6 +11,24 @@ function last_quarter_end()
 end
 
 """
+`prev_quarter(q::TimeType = now())`
+
+Returns Date identifying last day of the previous quarter
+"""
+function prev_quarter(q::TimeType = now())
+    Date(lastdayofquarter(firstdayofquarter(q)-Dates.Day(1)))
+end
+
+"""
+`next_quarter(q::TimeType = now())`
+
+Returns Date identifying last day of the next quarter
+"""
+function next_quarter(q::TimeType = now())
+    Date(lastdayofquarter(lastdayofquarter(q)+Dates.Day(1)))
+end
+
+"""
 `get_quarter_ends(start_date::Date,end_date::Date)`
 
 Returns a DataArray of quarter end dates between `start_date` and `end_date`.
