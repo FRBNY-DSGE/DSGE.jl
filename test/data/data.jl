@@ -1,7 +1,12 @@
 using Base.Test
 using DataFrames: DataFrame, @data
 
-DSGE.last_quarter_end()
+# Previous and next quarter arithmetic
+q = Date(1913,12,13)
+DSGE.prev_quarter()
+DSGE.next_quarter()
+@test DSGE.prev_quarter(q) == Date(1913,09,30)
+@test DSGE.next_quarter(q) == Date(1914,03,31)
 
 start_date = Date(2000,01,01)
 end_date = Date(2010,01,01)

@@ -1,16 +1,4 @@
 """
-`last_quarter_end()`
-
-Returns the last day of the previous quarter
-"""
-function last_quarter_end()
-    cqs = Dates.firstdayofquarter(now())     # current quarter start
-    lqe = cqs - Dates.Day(1)                 # last quarter end
-
-    Date(lqe)
-end
-
-"""
 `prev_quarter(q::TimeType = now())`
 
 Returns Date identifying last day of the previous quarter
