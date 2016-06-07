@@ -129,11 +129,19 @@ end
 
 """
 ```
-prepare_states(m::AbstractModel, input_type::Symbol, systems::Vector{System{Float64}},
-params::Matrix{Float64}, df::DataFrame, zend::Matrix{Float64})
+prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+               systems::Vector{System{Float64}}, params::Matrix{Float64}, df::DataFrame,
+               zend::Matrix{Float64})
 ```
+
+Return the final state vector(s) for this combination of inputs. The final state vector is
+determined to be that s_{T} such that `T == size(df,1)`. Often, the final state vector is
+computed by applying to the Kalman filter. In cases where the final state vector appears
+to be successfully precomputed (such as full distribution input) but the data are
+conditional data, then the final state vector is adjusted accordingly.
+
 """
-function prepare_states(m::AbstractModel, input_type::Symbol,
+function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol
     systems::Vector{System{Float64}}, params::Matrix{Float64}, df::DataFrame,
     zend::Matrix{Float64})
 
@@ -153,9 +161,13 @@ function prepare_states(m::AbstractModel, input_type::Symbol,
 
     # If we have many draws, then we must package them into a vector of System objects.
     elseif input_type in [:full]
-        for i in 1:n_sim_forecast
-            j = i * jstep
-            states[i] = vec(zend[j,:])
+        if cond_type in [:none]
+            for i in 1:n_sim_forecast
+                j = i * jstep
+                states[i] = vec(zend[j,:])
+            end
+        else
+            throw(ArgumentError("Not implemented."))
         end
     else
         throw(ArgumentError("Not implemented."))
@@ -245,7 +257,7 @@ function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     systems = prepare_systems(m, input_type, params, TTT, RRR, CCC)
 
     # Populate states vector
-    states = prepare_states(m, input_type, systems, params, df, zend)
+    states = prepare_states(m, input_type, cond_type, systems, params, df, zend)
 
     return systems, states
 end
@@ -255,6 +267,9 @@ end
 forecast_one(m::AbstractModel, df::DataFrame; input_type::Symbol  = :mode,
     output_type::Symbol = :simple, cond_type::Symbol  = :none)
 ```
+
+Compute, save, and return forecast outputs given by `output_type` for input draws given by
+`input_type` and conditional data case given by `cond_type`.
 
 """
 function forecast_one(m::AbstractModel, df::DataFrame;
