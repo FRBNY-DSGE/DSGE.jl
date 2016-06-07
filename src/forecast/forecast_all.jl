@@ -162,12 +162,16 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     # If we have many draws, then we must package them into a vector of System objects.
     elseif input_type in [:full]
         if cond_type in [:none]
+            # TODO if zend is empty for some reason, we should be able to recompute here
             for i in 1:n_sim_forecast
                 j = i * jstep
                 states[i] = vec(zend[j,:])
             end
-        else
-            throw(ArgumentError("Not implemented."))
+        elseif cond_type in [:semi, :full]
+            # We will need to re-run the entire filter/smoother so we can't do anything
+            # here. The reason is that while we have $s_{T|T}$ we don't have $P_{T|T}$ and
+            # thus can't "restart" the Kalman filter for the conditional data period.
+            nothing
         end
     else
         throw(ArgumentError("Not implemented."))
@@ -202,6 +206,7 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
         systems[1] = compute_system(m; use_expected_rate_data = true)
     elseif input_type in [:full]
         empty = isempty(CCC)
+        # TODO parallelize
         for i in 1:n_sim_forecast
             j = i * jstep
             # Prepare transition eq
@@ -289,10 +294,12 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     systems, states = prepare_forecast_inputs(m, df0;
         input_type=input_type, output_type=output_type, cond_type=cond_type)
 
-    # Example: call forecast, unconditional data, states+observables
+    # Prepare forecast outputs
     forecast_output = Dict{Symbol, Vector{Array{Float64}}}()
+    forecast_output_files = get_output_files(m, input_type, output_type, cond_type)
 
-    if output_type in [:states, :simple, :all]
+    # must re-run filter/smoother for conditional data in addition to explicit cases
+    if output_type in [:states, :simple, :all] || cond_type in [:semi, :full]
         println("Calling filter and smoother")
         histstates, histpseudo = filterandsmooth(m, df0, systems)
 
@@ -300,23 +307,32 @@ function forecast_one(m::AbstractModel, df::DataFrame;
         forecast_output[:histpseudo] = histpseudo
     end
 
+    # For conditional data, use the end of the hist states as the initial state
+    # vector for the forecast
+    if cond_type in [:semi, :full]
+        # TODO determine structure of histstates
+        states = histstates[end]
+    end
+
     if output_type in [:forecast, :simple, :all]
         println("Calling forecast")
-        forecaststates, forecastobs, forecastpseudo = 
+        forecaststates, forecastobs, forecastpseudo =
             forecast(m, systems, states)
 
         forecast_output[:forecastobs] = forecastobs
         forecast_output[:forecaststates] = forecaststates
         forecast_output[:forecastpseudo] = forecastpseudo
         # forecast_output[:forecastshocks] = forecastshocks
-
     end
 
-    # Set up outfiles
-    output_files = get_output_files(m, input_type, output_type, cond_type)
+    # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
+    if cond_type in [:semi, :full]
+        # TODO implement
+        nothing
+    end
 
     # Write output files
-    for (var,file) in output_files
+    for (var,file) in forecast_output_files
         jldopen(file, "w") do f
             write(f, string(var), forecast_output[var])
         end
@@ -326,7 +342,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
 
 end
 
-    
+
 function get_input_file(m, input_type)
     if input_type == :mode
         return rawpath(m,"estimate","paramsmode.h5")
