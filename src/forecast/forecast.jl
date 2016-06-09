@@ -52,9 +52,9 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
         
     # set up distribution of shocks if not specified
     # For now, we construct a giant vector of distirbutions of shocks and pass
-    # each to computeForecast.
+    # each to compute_forecast.
     #
-    # TODO: refactor so that computeForecast
+    # TODO: refactor so that compute_forecast
     # creates its own DegenerateMvNormal based on passing the QQ
     # matrix (which has already been computed/is taking up space)
     # rather than having to copy each Distribution across nodes. This will also be much more
@@ -86,7 +86,7 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
     end
 
     # Go to work!
-    forecasts =  mapfcn(DSGE.computeForecast, TTTs, RRRs, CCCs, ZZs, DDs, ZZps, DDps,
+    forecasts =  mapfcn(DSGE.compute_forecast, TTTs, RRRs, CCCs, ZZs, DDs, ZZps, DDps,
                               horizons, vars, shock_distributions, initial_state_draws)
 
     # unpack the giant vector of dictionaries that gets returned
@@ -101,7 +101,7 @@ end
 
 
 # I'm imagining that a Forecast object could be returned from
-# computeForecast rather than a dictionary. It could look something like the
+# compute_forecast rather than a dictionary. It could look something like the
 # type outlined below for a single draw.
 # Perhaps we could also add some fancy indexing to be able to index by names of states/observables/etc.
 # Question becomes: where do we store the list of observables? In the

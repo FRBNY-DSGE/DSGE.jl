@@ -7,7 +7,7 @@
 - `shocks_distribution`: specify either joint distribution from which to draw shocks
 - `z`: state vector at time T
 """
-function computeForecast(T::Array{Float64,2}, R::Array{Float64,2}, C::Array{Float64}, 
+function compute_forecast(T::Array{Float64,2}, R::Array{Float64,2}, C::Array{Float64}, 
                          Z::Array{Float64,2}, D::Array{Float64},          
                          Z_pseudo::Array{Float64,2}, D_pseudo::Array{Float64},
                          forecast_horizons::Int64,

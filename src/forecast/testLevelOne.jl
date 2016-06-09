@@ -26,7 +26,7 @@ variables_to_forecast=Any["States","Observables","Pseudo-Observables"]
 # define either shock distribution
 shocks_distribution=DSGE.DegenerateMvNormal(zeros(size(Q,1)),Q)
 
-## test computeForecast.jl
-forecast=computeForecast(T, R, C, Z, D, Z_pseudo, D_pseudo, forecast_horizons, variables_to_forecast, shocks_distribution, z_end)
+## test compute_forecast.jl
+forecast=compute_forecast(T, R, C, Z, D, Z_pseudo, D_pseudo, forecast_horizons, variables_to_forecast, shocks_distribution, z_end)
 
 
