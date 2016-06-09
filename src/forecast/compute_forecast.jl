@@ -50,8 +50,8 @@ function compute_forecast(T::Array{Float64,2}, R::Array{Float64,2}, C::Array{Flo
     end
 
     # Apply observation and pseudo-observation equations
-    observables        = D        + Z * states'
-    pseudo_observables = D_pseudo + Z * states'
+    observables        = D        .+ Z * states'
+    pseudo_observables = D_pseudo .+ Z * states'
     
     # return a dictionary which houses all forecasts
     Dict{Symbol,Array{Float64}}(:states => states,
