@@ -16,7 +16,7 @@ variables_to_forecast, shocks, z)
 - `z`: state vector at time T
 
 ## Outputs
-- `forecast`: dictionary of forecast outputs, with keys `:states`, `:observables`, and
+- dictionary of forecast outputs, with keys `:states`, `:observables`, and
     `:pseudo_observables`
 """
 function compute_forecast(T::Array{Float64,2}, R::Array{Float64,2}, C::Array{Float64}, 
@@ -36,34 +36,30 @@ function compute_forecast(T::Array{Float64,2}, R::Array{Float64,2}, C::Array{Flo
     nstates      = size(T,2)
     nobservables = size(Z,1)
     npseudo      = size(Z_pseudo,1)
-
-    states             = zeros(forecast_horizons,nstates)
-    observables        = zeros(forecast_horizons,nobservables)
-    pseudo_observables = zeros(forecast_horizons,npseudo)
+    states       = zeros(forecast_horizons,nstates)
     
-    # Define our iteration/observation functions
-    iterate(z_t1,ϵ_t)   = C + T*z_t1 + R*ϵ_t
-    observe(z_t)        = D + Z*z_t
-    observe_pseudo(z_t) = D_pseudo + Z_pseudo*z_t
+    # Define our iteration function
+    iterate(z_t1, ϵ_t) = C + T*z_t1 + R*ϵ_t
 
     # Iterate first period
     states[1, :] = iterate(z, shocks[1, :]')
     
     # Iterate remaining periods
     for t in 2:forecast_horizons
-        states[t,:]             = iterate(states[t-1,:]', shocks[t, :]')
-        observables[t,:]        = observe(states[t,:]')
-        pseudo_observables[t,:] = observe_pseudo(states[t,:]')
+        states[t,:] = iterate(states[t-1,:]', shocks[t, :]')
     end
+
+    # Apply observation and pseudo-observation equations
+    observables        = D        + Z * states'
+    pseudo_observables = D_pseudo + Z * states'
     
     # return a dictionary which houses all forecasts
-    forecast=Dict{Symbol,Array{Float64}}(:states => states,
-                                         :observables => observables,
-                                         :pseudo_observables =>pseudo_observables)
-    return forecast
+    Dict{Symbol,Array{Float64}}(:states => states,
+                                :observables => observables,
+                                :pseudo_observables =>pseudo_observables)
 end
 
-# Utility method to actual draw shocks
+# Utility method to actually draw shocks
 function compute_forecast(T::Array{Float64,2}, R::Array{Float64,2}, C::Array{Float64}, 
                          Z::Array{Float64,2}, D::Array{Float64},          
                          Z_pseudo::Array{Float64,2}, D_pseudo::Array{Float64},
@@ -71,6 +67,10 @@ function compute_forecast(T::Array{Float64,2}, R::Array{Float64,2}, C::Array{Flo
                          variables_to_forecast::Array,
                          dist::Distribution,
                          z::Array{Float64,1})
+
+    if forecast_horizons <= 0
+        throw(DomainError())
+    end
 
     nshocks = size(R,2)
     shocks = zeros(forecast_horizons, nshocks)
