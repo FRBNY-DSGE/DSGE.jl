@@ -94,7 +94,7 @@ module DSGE
     include("forecast/compute_system.jl")
 
     include("forecast/filter.jl")
-    include("forecast/forecast_all.jl")
+    include("forecast/drivers.jl")
     include("forecast/forecast.jl")
     include("forecast/computeForecast.jl")
 

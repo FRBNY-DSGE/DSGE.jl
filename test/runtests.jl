@@ -22,7 +22,7 @@ my_tests = [
             # "forecast/smoothers",
             "forecast/filter",
             "forecast/forecast",
-            "forecast/forecast_all"
+            "forecast/drivers"
             ]
 
 for test in my_tests
