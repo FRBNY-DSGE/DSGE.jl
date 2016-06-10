@@ -61,5 +61,5 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:shockdec_startindex, 190, "Index of start of shock decomposition output period")
     m <= Setting(:shockdec_endindex, 50000, "Index of end of shock decomposition output period")
     m <= Setting(:shockdec_whichshocks, :all, "Sets of shocks for which to conduct shock decomposition")
-
+    m <= Setting(:simulation_smoother_flag, true, "Use simulation smoother rather than Kalman smoother")
 end

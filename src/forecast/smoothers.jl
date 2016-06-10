@@ -276,11 +276,15 @@ end
 #       required). If you want to set a value for Ny0 but not for nant or
 #       antlags then set them both empty.                 
 function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
-                                            df::DataFrame, params::Vector{T},
+                                            df::DataFrame,
+                                            TTT::Matrix{T},
+                                            RRR::Matrix{T},
+                                            CCC::Array{T},
+                                            QQ::Matrix{T},
+                                            ZZ::Matrix{T},
+                                            DD::Matrix{T},
                                             A0::Vector{T}, P0::Matrix{T};
                                             use_expected_rate_data = true)
-
-    
 
     ## extract settings/dates/etc
 
@@ -296,57 +300,79 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
     
     # convert DataFrame to Matrix
     data = df_to_matrix(df)
-
+    
     # call actual simulation smoother
-    drawstates_dk02(m, data, params, A0, P0,
+    drawstates_dk02!(m, data, A0, P0,
                     mainsample_start = mainsample_start_ind,
                     zlb_start = zlb_start_ind,
                     n_conditional_periods = n_conditional_periods)
 end
+ 
 
 function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
                                             data::Matrix{T},
-                                            params::Vector{T}
+                                            TTT::Matrix{T},
+                                            RRR::Matrix{T},
+                                            CCC::Array{T},
+                                            QQ::Matrix{T},
+                                            ZZ::Matrix{T},
+                                            DD::Matrix{T},
                                             A0::Matrix{T},
                                             P0::Matrix{T};
                                             use_expected_rate_data = true,
                                             mainsample_start = NaN,
                                             zlb_start = NaN,
                                             n_conditional_periods = 0)
-
-
-    ## Get system matrices
-    update!(m, params)
-    sys = compute_system(m, use_expected_rate_data = true)
     
     ## Get matrix dimensions
-
+    
     Ny = size(data,1)        # number of observables
     Nt0 = n_presample_periods(m)     
     Nt = size(data,2) - Nt0  # number of periods of data (minus presample)
-    Nz = size(sys[:TTT],1)   # number of states
-    Ne = size(sys[:RRR],2)   # number of shocks
+    Nz = size(TTT,1)         # number of states
+    Ne = size(RRR,2)         # number of shocks
     n_ant_shocks = n_anticipated_shocks(m)   # # of anticipated monetary policy shocks
+
+    println("Ny: $(size(Ny))")
+    println("Nt0: $(size(Nt0))")
+    println("Nt: $(size(Nt))")
+    println("Nz: $(size(Nz))")
+    println("Ne: $(size(Ne))")
+
+   
+    # intialize matrices
+    α_plus  = Array{Float64}(Nz,Nt0+Nt)
+    data_plus = Array{Float64}(Ny,Nt0+Nt)
     
-    # intialize
-    α_plus  = Array{T}(Nz,Nt0+Nt)
-    data_plus = Array{T}(Ny,Nt0+Nt)
-
     # Draw initial state, a₀+
-    [U,D,V] = svd(P0)
-    ap_t = U*sqrt(D)*randn(Nz,1)
-
+    U,D,V = svd(P0)
+    println("U has size: $(size(U))")
+    println("D has size: $(size(D))")
+    println("V has size: $(size(V))")
+    
+    ap_t = U * diagm(sqrt(D)) * randn(Nz, Nz)
+    
     # Draw a sequence of shocks, η+
     η_plus = sqrt(QQ)*randn(Ne,Nt0+Nt)
-
-    # Set n_ant_shocks shocks to 0 in non-ZLB time periods
+    
+    # Set n_ant_shocks shocks to 0 in pre-ZLB time periods
     if n_ant_shocks > 0
-        η_plus[end - n_ant_shocks + 1:end, 1:zlb_start-1] = 0
+        # get the indices of the anticipated shocks in the m.exogenous_shocks field
+        ant1_ind = m.exogenous_shocks[:rm_shl1]
+        antn_ind = m.exogenous_shocks[symbol("rm_shl$(n_ant_shocks)")]
+
+        # set shocks to 0
+        η_plus[ant1_ind:antn_ind, 1:zlb_start-1] = 0
     end
     
     # Produce "fake" states and observables (a+ and y+) by
     # iterating the state-space system forward
     for t = 1:Nt0+Nt
+        println("TTT has size: $(size(TTT))")
+        println("ap_t has size: $(size(ap_t))")
+        println("RRR has size: $(size(RRR))")
+        println("η_plus has size: $(size(η_plus))")
+        
         ap_t = TTT * ap_t + RRR * η_plus[:,t]
         α_plus[:,t] = ap_t
         data_plus[:,t] = ZZ*ap_t+DD
@@ -356,13 +382,13 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
     data_plus[isnan(data)] = NaN
     
     # Compute y* = y - y+ - D
-    data_star = YY_all - YY_all_plus
+    data_star = data - data_plus
     
     ## Run the kalman filter
 
     A0, P0, pred, vpred, TTT, RRR, CCC, QQ, ZZ, DD = if use_expected_rate_data
         
-        R2, R3, R1 = kalman_filter_2part(m, data)
+        R2, R3, R1 = kalman_filter_2part(m, data, allout=true)
         
         # unpack the results to pass to kalman_smoother
 
@@ -388,15 +414,16 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
         P0              = zeros(Nz, Nz)
 
         P0[1:r_tlx-2, 1:r_tlx-2]                  = P0_small[1:r_tlx-2, 1:r_tlx-2]
-        P0[1:r_tlx-2, 1:r_tl1+n_ant_shocks:end]   = P0_small[1:r_tlx-2, 1:r_tlx-]
+        P0[1:r_tlx-2, (r_tl1+n_ant_shocks):end]   = P0_small[1:r_tlx-2, r_tlx-1:end]
         P0[r_tl1+n_ant_shocks:end, 1:r_tlx-2]     = P0_small[r_tlx-1:end, 1:r_tlx-2]
         P0[r_tl1+n_ant_shocks:end, r_tl1+nant:end]= P0_small[r_tlx-1:end, r_tlx-1:end]
 
         A0, P0, pred, vpred, TTT, RRR, CCC, QQ, ZZ, DD
     else
-        kalman_filter(...)
 
-        A0, P0, pred, vpred, TTT, RRR, CCC, QQ, ZZ, DD
+        kal = kalman_filter(data, 0, CCC, TTT, DD, ZZ, var, A0, P0, allout=true)
+
+        A0, P0, kal[:pred], kal[:vpred], TTT, RRR, CCC, QQ, ZZ, DD
     end
 
     ##### Step 2: Kalman smooth over everything
@@ -408,10 +435,10 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
     ## Compute draw (states and shocks)
     α_til = α_plus + α_hat_star
     η_til = η_plus + η_hat_star
-
+    
     return α_til, η_til
 end
-
+    
     
 """
 ```

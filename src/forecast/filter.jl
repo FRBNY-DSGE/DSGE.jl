@@ -157,15 +157,15 @@ end
 
 
 function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
-                                  data::Matrix{S},
-                                  sys::System,  
-                                  z0::Array{S}=Array{S}(0),
-                                  vz0::Matrix{S}=Matrix{S}(0,0);
-                                  lead::Int=0,
-                                  Ny0::Int =0,
-                                  allout::Bool = false,
-                                  use_expected_rate_data = true)
-
+                                                             data::Matrix{S},
+                                                             sys::System,  
+                                                             z0::Array{S}=Array{S}(0),
+                                                             vz0::Matrix{S}=Matrix{S}(0,0);
+                                                             lead::Int=0,
+                                                             Ny0::Int =0,
+                                                             allout::Bool = false,
+                                                             use_expected_rate_data = true)
+    
 
     ##############################################################################
     ## 1. Filter
@@ -181,25 +181,27 @@ function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
     VVall  = sys[:VVall]
 
     # Call the appropriate version of the Kalman filter
-    filtered_states, pred, vpred, zend, P0 = if use_expected_rate_data
+    filtered_states, pred, vpred, zend, A0, P0 = if use_expected_rate_data
 
         # We have 3 regimes: presample, main sample, and expected-rate sample (starting at zlb_start_index)
-        R2, R3 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0, lead=lead, Ny0=Ny0, allout=allout)
-                
+        R2, R3, R1 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0, lead=lead, Ny0=Ny0, allout=allout)
+
         filtered_states = [R2[:filt] R3[:filt]]
 
         pred            = hcat(R2[:pred], R3[:pred])
         vpred           = cat(3, R2[:vpred], R3[:vpred])
-        zend            = R3[:zend]    # final state vector is in R3
-        P0              = R2[:P0]      # initial P0 is in R2
-        
-        filtered_states', pred, vpred, zend, P0
+        zend            = R3[:zend]      # final state vector is in R3
+        # A0              = R1[:zend]      # initial state vector is the final state vector from presample
+        # P0              = R1[:Pend]      # initial P0 in R2 is the final P matrix from the presample
+        A0              = R2[:z0]      # initial state vector is the final state vector from presample
+        P0              = R2[:vz0]
+        filtered_states', pred, vpred, zend, A0, P0
         
     else
         # regular Kalman filter with no regime-switching
         kal = kalman_filter(data', lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0, allout=allout)
 
-        kal[:filt]', kal[:pred], kal[:vpred], kal[:zend], kal[:P0]
+        kal[:filt]', kal[:pred], kal[:vpred], kal[:zend], kal[:z0], kal[:vz0]
     end
 
 
@@ -209,17 +211,20 @@ function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
 
     # extract settings from model
     n_ant_shocks = n_anticipated_shocks(m)
-    n_ant_lags   = n_anticipated_lags(m)
+    # n_ant_lags   = n_anticipated_lags(m)
     n_pre_periods =  n_presample_periods(m)
+    sim_smooth = simulation_smoother_flag(m)
     
     # run simulation smoother (or kalman smoother)
-    smoothed = if disturbance_smoother_flag
-        disturbance_smoother(data, pred, vpred, sys, n_ant_shocks, n_ant_lags)
+    smoothed = if sim_smooth
+        #disturbance_smoother(data, pred, vpred, sys, n_ant_shocks, n_ant_lags)
+        drawstates_dk02!(m, data, TTT, RRR, CCC, QQ, ZZ, DD, A0, P0, use_expected_rate_data=true)
     else
         kalman_smoother(filtered_states[1], P0, data, pred, vpred,
                         sys[:TTT], sys[:RRR], sys[:QQ], sys[:ZZ], sys[:DD],
                         n_ant_shocks, n_ant_lags, Ny0=n_pre_periods)
     end
 
+    return smoothed
     # returns a KalmanSmooth object with fields "states" and "shocks"
 end

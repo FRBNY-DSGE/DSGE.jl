@@ -172,7 +172,10 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
     if allout
         rmse = sqrt(mean((yprederror.^2)', 1))
         rmsd = sqrt(mean((ystdprederror.^2)', 1))
-        return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt)
+
+        println("$(size(z0))")
+        println("$(size(vz0))")
+        return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, vz0)
     else
         return Kalman(L, zend, Pend)
     end
@@ -356,7 +359,9 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     R2[:filt]       = out[:filt]
     R2[:pred]       = out[:pred]
     R2[:vpred]      = out[:vpred]
-        
+    R2[:z0]         = out[:z0]
+    R2[:vz0]        = out[:vz0]
+
     # Run Kalman filter on ZLB period
     # This section expands the number of states to accomodate extra states for the
     # anticipated policy shocks. It does so by taking the zend and Pend for the
@@ -386,6 +391,8 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     R3[:filt]       = out[:filt]
     R3[:pred]       = out[:pred]
     R3[:vpred]      = out[:vpred]
+    R3[:z0]         = out[:z0]
+    R3[:vz0]        = out[:vz0]
 
     ## Return outputs from both regimes
     return R2, R3, R1
@@ -414,15 +421,17 @@ end
 immutable Kalman{S<:AbstractFloat}
     L::S                  # Likelihood
     zend::Matrix{S}       # last-period state vector
-    Pend::Matrix{S}
-    pred::Matrix{S}       # predicted value
-    vpred::Array{S,3}      
-    yprederror::Matrix{S}
+    Pend::Matrix{S}       # last-period variance-covariance matrix for the states
+    pred::Matrix{S}       # predicted value of states in period T+1
+    vpred::Array{S,3}     # predicted variance-covariance matrix for states in period T+1
+    yprederror::Matrix{S} 
     ystdprederror::Matrix{S}
     rmse::Matrix{S}
-    rmsd::Matrix{S}
-    filt::Matrix{S}        # filtered states?
-    vfilt::Array{S,3}      # 
+    rmsd::Matrix{S}        # 
+    filt::Matrix{S}        # filtered states
+    vfilt::Array{S,3}      # mean square errors of filtered state vectors
+    z0::Array{S}           # starting-period state vector
+    vz0::Matrix{S}         # ending-period state vector
 end
 function Kalman{S<:AbstractFloat}(L::S,
                                   zend::Matrix{S},
@@ -434,12 +443,14 @@ function Kalman{S<:AbstractFloat}(L::S,
                                   rmse::Matrix{S}          = Matrix{S}(),
                                   rmsd::Matrix{S}          = Matrix{S}(),
                                   filt::Matrix{S}          = Matrix{S}(),
-                                  vfilt::Array{S,3}        = Array{S}(0,0,0))
-    return Kalman{S}(L,zend,Pend,pred,vpred,yprederror,ystdprederror,rmse,rmsd,filt,vfilt)
+                                  vfilt::Array{S,3}        = Array{S}(0,0,0),
+                                  z0::Array{S}             = Array{S}(0),
+                                  vz0::Matrix{S}           = Array{S}(0,0))
+    return Kalman{S}(L,zend,Pend,pred,vpred,yprederror,ystdprederror,rmse,rmsd,filt,vfilt,z0,vz0)
 end
 function Base.getindex(K::Kalman, d::Symbol)
     if d in (:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse, :rmsd,
-             :filt, :vfilt)
+             :filt, :vfilt, :z0, :vz0)
         return getfield(K, d)
     else
         throw(KeyError(d))
