@@ -53,7 +53,9 @@ OUTPUTS:
 If `Ny0` is nonzero, the `α_hat` and `η_hat` matrices will be shorter by
 that number of columns (taken from the beginning).
 """
-function kalman_smoother{S<:AbstractFloat}(A0, P0, y, pred::Matrix{S}, vpred::Array{S, 3}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, n_anticipated_shocks::Int, antlags::Int, peachcount::Int, psize::Int, Ny0::Int = 0)
+function kalman_smoother{S<:AbstractFloat}(A0, P0, y, pred::Matrix{S}, vpred::Array{S, 3},
+    T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S},
+    n_anticipated_shocks::Int, antlags::Int, peachcount::Int, psize::Int, Ny0::Int = 0)
 
     Ne = size(R, 2)
     Ny = size(y, 1)
@@ -62,7 +64,8 @@ function kalman_smoother{S<:AbstractFloat}(A0, P0, y, pred::Matrix{S}, vpred::Ar
 
     alpha_hat = zeros(Nz, Nt)
 
-    r, eta_hat = disturbance_smoother(y, pred, vpred, T, R, Q, Z, b, peachcount, psize, n_anticipated_shocks, antlags)
+    r, eta_hat = disturbance_smoother(y, pred, vpred, T, R, Q, Z, b, peachcount, psize,
+        n_anticipated_shocks, antlags)
     
     ah_t = A0 + P0*r[:, 1]
     alpha_hat[:, 1] = ah_t
@@ -154,7 +157,9 @@ end
 
 # r, the (Nz x Nt) matrix used for state smoothing.
 # eta_hat, the optional (Ne x Nt) matrix of smoothed shocks.
-function disturbance_smoother_k93{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, vpred::Array{S,3}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S}, peachcount::Int, psize::Int, n_anticipated_shocks::Int = 0, antlags::Int = 0)
+function disturbance_smoother_k93{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S},
+    vpred::Array{S,3}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S}, b::Matrix{S},
+    peachcount::Int, psize::Int, n_anticipated_shocks::Int = 0, antlags::Int = 0)
     Nt = size(y, 2)
     Nz = size(T, 1)
 
@@ -213,9 +218,9 @@ function disturbance_smoother_k93{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S
     return KalmanSmooth(r, eta_hat)
 end
 
-function disturbance_smoother{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S}, vpred::Array{S,3},
-                                                sys::System, peachcount::Int, psize::Int,
-                                                n_anticipated_shocks::Int = 0, antlags::Int = 0)
+function disturbance_smoother{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S},
+    vpred::Array{S,3}, sys::System, peachcount::Int, psize::Int, n_anticipated_shocks::Int =
+    0, antlags::Int = 0)
 
     TTT = sys[:TTT]
     RRR = sys[:RRR]
@@ -257,7 +262,7 @@ end
 
 # INPUTS:
 
-# df, the (Ny x Nt) DataFrame of observable data.
+# df, the (Nt x Ny) DataFrame of observable data.
 # T, the (Nz x Nz) transition matrix.
 # R, the (Nz x Ne) matrix translating shocks to states.
 # Q, the (Ne x Ne) covariance matrix for the shocks.
@@ -319,30 +324,37 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
                                             DD::Matrix{T},
                                             A0::Matrix{T},
                                             P0::Matrix{T};
-                                            use_expected_rate_data = true,
                                             mainsample_start = NaN,
                                             zlb_start = NaN,
                                             n_conditional_periods = 0)
     
-    ## Get matrix dimensions
+    # Use consistent notation
+    # We require the full data to be obs x periods, whereas the data frame (converted to
+    # matrix) is periods x obs
+    datat = data'
+    Nt0 = n_presample_periods(m)
+    YY0 = datat[:, 1:Nt0]
+    YY  = datat[:, Nt0+1:end]
+
+    # Get matrix dimensions
     
-    Ny = size(data,1)        # number of observables
-    Nt0 = n_presample_periods(m)     
-    Nt = size(data,2) - Nt0  # number of periods of data (minus presample)
+    Ny = size(YY,1)        # number of observables
+    Nt = size(YY,2)        # number of periods of data (minus presample)
     Nz = size(TTT,1)         # number of states
     Ne = size(RRR,2)         # number of shocks
     n_ant_shocks = n_anticipated_shocks(m)   # # of anticipated monetary policy shocks
 
-    println("Ny: $(size(Ny))")
-    println("Nt0: $(size(Nt0))")
-    println("Nt: $(size(Nt))")
-    println("Nz: $(size(Nz))")
-    println("Ne: $(size(Ne))")
+    println("data: $(size(datat))")
+    println("Ny: $(Ny)")
+    println("Nt0: $(Nt0)")
+    println("Nt: $(Nt)")
+    println("Nz: $(Nz)")
+    println("Ne: $(Ne)")
 
    
     # intialize matrices
-    α_plus  = Array{Float64}(Nz,Nt0+Nt)
-    data_plus = Array{Float64}(Ny,Nt0+Nt)
+    α_all_plus = fill(NaN, Nz, Nt0+Nt)
+    YY_all_plus  = fill(NaN, Ny, Nt0+Nt)
     
     # Draw initial state, a₀+
     U,D,V = svd(P0)
@@ -350,10 +362,10 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
     println("D has size: $(size(D))")
     println("V has size: $(size(V))")
     
-    ap_t = U * diagm(sqrt(D)) * randn(Nz, Nz)
+    ap_t = U * diagm(sqrt(D)) * randn(Nz, 1)
     
     # Draw a sequence of shocks, η+
-    η_plus = sqrt(QQ)*randn(Ne,Nt0+Nt)
+    η_all_plus = sqrt(QQ)*randn(Ne,Nt0+Nt)
     
     # Set n_ant_shocks shocks to 0 in pre-ZLB time periods
     if n_ant_shocks > 0
@@ -362,33 +374,29 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
         antn_ind = m.exogenous_shocks[symbol("rm_shl$(n_ant_shocks)")]
 
         # set shocks to 0
-        η_plus[ant1_ind:antn_ind, 1:zlb_start-1] = 0
+        η_all_plus[ant1_ind:antn_ind, 1:zlb_start-1] = 0
     end
     
     # Produce "fake" states and observables (a+ and y+) by
     # iterating the state-space system forward
     for t = 1:Nt0+Nt
-        println("TTT has size: $(size(TTT))")
-        println("ap_t has size: $(size(ap_t))")
-        println("RRR has size: $(size(RRR))")
-        println("η_plus has size: $(size(η_plus))")
-        
-        ap_t = TTT * ap_t + RRR * η_plus[:,t]
-        α_plus[:,t] = ap_t
-        data_plus[:,t] = ZZ*ap_t+DD
+        ap_t             = TTT * ap_t + RRR * η_all_plus[:,t]
+        α_all_plus[:,t]  = ap_t
+        YY_all_plus[:,t] = ZZ*ap_t + DD
     end
     
     # Replace fake data with NaNs wherever actual data has NaNs
-    data_plus[isnan(data)] = NaN
+    YY_all = [YY0 YY];
+    YY_all_plus[isnan(YY_all)] = NaN
     
     # Compute y* = y - y+ - D
-    data_star = data - data_plus
+    YY_star = YY_all - YY_all_plus
     
     ## Run the kalman filter
 
-    A0, P0, pred, vpred, TTT, RRR, CCC, QQ, ZZ, DD = if use_expected_rate_data
+    A0, P0, pred, vpred, TTT, RRR, CCC, QQ, ZZ, DD = if n_ant_shocks > 0
         
-        R2, R3, R1 = kalman_filter_2part(m, data, allout=true)
+        R2, R3, R1 = kalman_filter_2part(m, YY', allout=true)
         
         # unpack the results to pass to kalman_smoother
 
@@ -420,17 +428,17 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
 
         A0, P0, pred, vpred, TTT, RRR, CCC, QQ, ZZ, DD
     else
-
-        kal = kalman_filter(data, 0, CCC, TTT, DD, ZZ, var, A0, P0, allout=true)
+        myvar = zeros(Ny+Nz,Ny+Nz)
+        myvar[1:Nz,1:Nz] = RRR*QQ*RRR'
+        kal = kalman_filter(YY', 0, CCC, TTT, DD, ZZ, myvar, A0, P0, allout=true)
 
         A0, P0, kal[:pred], kal[:vpred], TTT, RRR, CCC, QQ, ZZ, DD
     end
 
     ##### Step 2: Kalman smooth over everything
-    α_hat_star,η_hat_star = kalman_smoother(A0,P0,data',pred,vpred,
+    α_hat_star,η_hat_star = kalman_smoother(A0,P0,YY',pred,vpred,
                                             TTT,RRR,CCC,QQ,ZZ,DD,
                                             n_ant_shocks,n_ant_lags)
-    
     
     ## Compute draw (states and shocks)
     α_til = α_plus + α_hat_star
@@ -454,5 +462,3 @@ immutable KalmanSmooth{T<:AbstractFloat}
     states::Matrix{T}
     shocks::Matrix{T}
 end
-
-
