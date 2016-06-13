@@ -144,6 +144,8 @@ function default_test_settings!(m::AbstractModel)
         "Location of input files when in test mode" )
     test[:data_vintage] = Setting(:data_vintage, "REF", true, "vint",
         "Reference data identifier")
+    test[:date_mainsample_end] = Setting(:date_mainsample_end, quartertodate("2015-Q3"),
+        "End date of main sample")
     test[:use_parallel_workers] = Setting(:use_parallel_workers, false, false, "parw",
         "Use available parallel workers in computations")
     test[:n_hessian_test_params] = Setting(:n_hessian_test_params, 3, false, "mhfp",
