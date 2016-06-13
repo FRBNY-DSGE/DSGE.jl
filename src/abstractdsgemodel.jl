@@ -126,19 +126,17 @@ n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_s
 function zlb_start_index(m::AbstractModel)
     zlb_start_quarter = get_setting(m, :date_zlbregime_start)
     presample_start_quarter = get_setting(m, :date_presample_start)
-    days = zlb_start_quarter - presample_start_quarter
-    quarters = round(days.value / 365.25 * 4.0)
+    quarters = subtract_quarters(zlb_start_quarter, presample_start_quarter)
     index = quarters+1
-    return convert(Int, index)
+    return index
 end
 
 # Number of presample periods
 function n_presample_periods(m::AbstractModel)
     mainsample_start_quarter = get_setting(m, :date_mainsample_start)
     presample_start_quarter = get_setting(m, :date_presample_start)
-    days = mainsample_start_quarter - presample_start_quarter
-    quarters = round(days.value / 365.25 * 4.0)
-    return convert(Int, quarters)
+    quarters = subtract_quarters(mainsample_start_quarter, presample_start_quarter)
+    return quarters
 end
 
 # Number of a few things that are useful
