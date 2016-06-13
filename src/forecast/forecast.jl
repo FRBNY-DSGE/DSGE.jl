@@ -20,76 +20,74 @@ Outputs
 - A vector of `Forecast` objects, which contain the forecasted values of
 states, observables, and pseudoobserables, as well as the values of
 shock innovations.
-
 """
 function forecast{T<:AbstractFloat}(m::AbstractModel,
                                     sys::Vector{System{T}},
                                     initial_state_draws::Vector{Vector{T}};
-                                    shock_distribution::Union{Distribution, Matrix{T}}=Matrix{T}(0,0),
+                                    shock_distributions::Union{Distribution, Matrix{T}}=Matrix{T}(0,0),
                                     vars_to_forecast::Vector{Symbol}=[:p1, :p2])
-
 
     ndraws = length(sys)
 
-    # for now, we are ignoring pseudoobservables so these can be empty
+    # for now, we are ignoring pseudo-observables so these can be empty
     Z_pseudo = Matrix{Float64}(12,72)
     D_pseudo = Matrix{Float64}(12,1)
-    # @everywhere Z_pseudo = remotecall_fetch(1, ()->Matrix{Float64}(12,72))
-    # @everywhere D_pseudo = remotecall_fetch(1, ()->Matrix{Float64}(12,72))
-
-    # put the list of variables to forecast on every node
-    # @eval @everywhere vars=$vars_to_forecast
 
     # retrieve settings for forecast
     horizon  = forecast_horizons(m)
     nshocks  = n_shocks_exogenous(m)
+
+    # Unpack everything for call to map/pmap
+    TTTs     = [s[:TTT] for s in sys]
+    RRRs     = [s[:RRR] for s in sys]
+    CCCs     = [s[:CCC] for s in sys]
+    ZZs      = [s[:ZZ] for s in sys]
+    DDs      = [s[:DD] for s in sys]
+
+    # Prepare copies of these objects due to lack of parallel broadcast functionality
+    ZZps     = [Z_pseudo for i in 1:ndraws]
+    DDps     = [D_pseudo for i in 1:ndraws]
+    horizons = [horizon for i in 1:ndraws]
+    vars     = [vars_to_forecast for i in 1:ndraws]
         
     # set up distribution of shocks if not specified
     # For now, we construct a giant vector of distirbutions of shocks and pass
-    # each to computeForecast.
+    # each to compute_forecast.
     #
-    # TODO: refactor so that computeForecast
+    # TODO: refactor so that compute_forecast
     # creates its own DegenerateMvNormal based on passing the QQ
     # matrix (which has already been computed/is taking up space)
     # rather than having to copy each Distribution across nodes. This will also be much more
     # space-efficient when forecast_kill_shocks is true.
 
-    shock_distribution = if isempty(shock_distribution)
-
-        # Kill shocks: make a big vector of arrays of zeros
+    shock_distributions = if isempty(shock_distributions)
         if forecast_kill_shocks(m)
-            @sync @parallel (vcat) for i = 1:ndraws
-                zeros(horizon,nshocks)
-            end
+            [zeros(horizon, nshocks) for i in 1:ndraws]
         else
-            if forecast_tdist_shocks(m)                    ## use t-distributed shocks
-                @sync @parallel (vcat) for i = 1:ndraws
-                    Distributions.TDist(forecast_tdist_df_val(m))
+            # use t-distributed shocks
+            if forecast_tdist_shocks(m)
+                [Distributions.TDist(forecast_tdist_df_val(m)) for i in 1:ndraws]
+            # use normally distributed shocks
+            else
+                shock_distributions = Vector{DSGE.DegenerateMvNormal}(ndraws)
+                for i = 1:ndraws
+                    shock_distributions[i] = DSGE.DegenerateMvNormal(zeros(nshocks),sqrt(sys[i][:QQ]))
                 end
-            else                                           ## use normally distributed shocks
-                @sync @parallel (vcat) for i = 1:ndraws
-                    DSGE.DegenerateMvNormal(zeros(nshocks),sqrt(sys[i][:QQ]))
-                end
+                shock_distributions
             end
         end
     end
 
     # Forecast the states
-    forecasts = if use_parallel_workers(m)
-        println("Using parallel workers")
-        forecastfun = (i -> DSGE.computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
-                                  sys[i][:DD], Z_pseudo, D_pseudo,
-                                  horizon, vars_to_forecast, shock_distribution[i],
-                                  vec(initial_state_draws[i])))
-        pmap(forecastfun, 1:2)
-        
+    if use_parallel_workers(m)
+        mapfcn = pmap
     else
-        println("Not using parallel workers")
-        map(i -> DSGE.computeForecast(sys[i][:TTT], sys[i][:RRR], sys[i][:CCC], sys[i][:ZZ],
-                                 sys[i][:DD], Z_pseudo, D_pseudo,
-                                 horizon, vars_to_forecast, shock_distribution[i],
-                                 vec(initial_state_draws[i])), 1:2)
+        mapfcn = map
     end
+
+    # Go to work!
+    forecasts =  mapfcn(DSGE.compute_forecast, TTTs, RRRs, CCCs, ZZs, DDs, ZZps, DDps,
+                              horizons, vars, shock_distributions, initial_state_draws)
 
     # unpack the giant vector of dictionaries that gets returned
     states      = [x[:states]::Array{T} for x in forecasts]
@@ -103,7 +101,7 @@ end
 
 
 # I'm imagining that a Forecast object could be returned from
-# computeForecast rather than a dictionary. It could look something like the
+# compute_forecast rather than a dictionary. It could look something like the
 # type outlined below for a single draw.
 # Perhaps we could also add some fancy indexing to be able to index by names of states/observables/etc.
 # Question becomes: where do we store the list of observables? In the

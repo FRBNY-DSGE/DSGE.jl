@@ -48,7 +48,7 @@ module DSGE
         find_density_bands, prior,
 
         # forecast/
-        kalman_smoother, disturbance_smoother, forecast_all, forecast_one, computeForecast,
+        kalman_smoother, disturbance_smoother, forecast_all, forecast_one, compute_forecast,
 
         # models/
         steadystate!, Model990, SmetsWouters, eqcond, measurement,
@@ -94,9 +94,9 @@ module DSGE
     include("forecast/compute_system.jl")
 
     include("forecast/filter.jl")
-    include("forecast/forecast_all.jl")
+    include("forecast/drivers.jl")
     include("forecast/forecast.jl")
-    include("forecast/computeForecast.jl")
+    include("forecast/compute_forecast.jl")
 
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")

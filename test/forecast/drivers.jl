@@ -1,7 +1,4 @@
 using DSGE
-using HDF5
-
-path = dirname(@__FILE__)
 
 # 
 m = Model990()

@@ -1,5 +1,5 @@
 """
-`load_fred_data(m::AbstractModel; start_date="1959-03-31", end_date=last_quarter_end())`
+`load_fred_data(m::AbstractModel; start_date="1959-03-31", end_date=prev_quarter())`
 
 Checks in `inpath(m)` for a FRED dataset corresponding to
 `data_vintage(m)`. The appropriate vintage of necessary series
@@ -19,8 +19,8 @@ date. `load_fred_data` returns data indexed by quarter-end date for
 compatibility with other datasets.
 """
 function load_fred_data(m::AbstractModel;
-                        start_date::Date=Date("1959-01-01", "y-m-d"),
-                        end_date::Date=last_quarter_end())
+                        start_date::Date = Date("1959-01-01", "y-m-d"),
+                        end_date::Date   = prev_quarter())
 
     mnemonics = m.data_series[:fred]
     vint = data_vintage(m)

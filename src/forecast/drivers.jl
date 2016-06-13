@@ -36,8 +36,6 @@ output types.
         conditional data types
     - `:simple`: smoothed states, forecast of states, forecast of observables for
         *unconditional* data only
-    - `:simple_cond`: smoothed states, forecast of states, forecast of observables for all
-        specified conditional data types
     - `:all`: smoothed states (history), smoothed shocks (history, standardized), smoothed
       shocks (history, non-standardized), shock decompositions (history), deterministic
       trend (history), counterfactuals (history), forecast, forecast shocks drawn, shock
@@ -131,11 +129,19 @@ end
 
 """
 ```
-prepare_states(m::AbstractModel, input_type::Symbol, systems::Vector{System{Float64}},
-params::Matrix{Float64}, df::DataFrame, zend::Matrix{Float64})
+prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+               systems::Vector{System{Float64}}, params::Matrix{Float64}, df::DataFrame,
+               zend::Matrix{Float64})
 ```
+
+Return the final state vector(s) for this combination of inputs. The final state vector is
+determined to be that s_{T} such that `T == size(df,1)`. Often, the final state vector is
+computed by applying to the Kalman filter. In cases where the final state vector appears
+to be successfully precomputed (such as full distribution input) but the data are
+conditional data, then the final state vector is adjusted accordingly.
+
 """
-function prepare_states(m::AbstractModel, input_type::Symbol,
+function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     systems::Vector{System{Float64}}, params::Matrix{Float64}, df::DataFrame,
     zend::Matrix{Float64})
 
@@ -149,15 +155,23 @@ function prepare_states(m::AbstractModel, input_type::Symbol,
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
     if input_type in [:mean, :mode, :init]
         update!(m, vec(params))
-        kal = filter(m, df, systems; Ny0 = n_presample_periods(m))
-        zend = kal[:zend]
-        states[1] = vec(zend)
+        filt, _, _ = filter(m, df, systems; Ny0 = n_presample_periods(m))
+        # filt is a vector of nperiods x nstates matrices of filtered states
+        states[1] = vec(filt[1][end,:])
 
     # If we have many draws, then we must package them into a vector of System objects.
     elseif input_type in [:full]
-        for i in 1:n_sim_forecast
-            j = i * jstep
-            states[i] = vec(zend[j,:])
+        if cond_type in [:none]
+            # TODO if zend is empty for some reason, we should be able to recompute here
+            for i in 1:n_sim_forecast
+                j = i * jstep
+                states[i] = vec(zend[j,:])
+            end
+        elseif cond_type in [:semi, :full]
+            # We will need to re-run the entire filter/smoother so we can't do anything
+            # here. The reason is that while we have $s_{T|T}$ we don't have $P_{T|T}$ and
+            # thus can't "restart" the Kalman filter for the conditional data period.
+            nothing
         end
     else
         throw(ArgumentError("Not implemented."))
@@ -192,6 +206,7 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
         systems[1] = compute_system(m; use_expected_rate_data = true)
     elseif input_type in [:full]
         empty = isempty(CCC)
+        # TODO parallelize
         for i in 1:n_sim_forecast
             j = i * jstep
             # Prepare transition eq
@@ -247,44 +262,77 @@ function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     systems = prepare_systems(m, input_type, params, TTT, RRR, CCC)
 
     # Populate states vector
-    states = prepare_states(m, input_type, systems, params, df, zend)
+    states = prepare_states(m, input_type, cond_type, systems, params, df, zend)
 
     return systems, states
 end
 
+"""
+```
+forecast_one(m::AbstractModel, df::DataFrame; input_type::Symbol  = :mode,
+    output_type::Symbol = :simple, cond_type::Symbol  = :none)
+```
+
+Compute, save, and return forecast outputs given by `output_type` for input draws given by
+`input_type` and conditional data case given by `cond_type`.
+
+"""
 function forecast_one(m::AbstractModel, df::DataFrame;
                       input_type::Symbol  = :mode,
                       output_type::Symbol = :simple,
                       cond_type::Symbol  = :none)
 
-    systems, states = prepare_forecast_inputs(m, df;
-        input_type=input_type, output_type=output_type, cond_type=cond_type)
-
     # Prepare conditional data matrix. All missing columns will be set to NaN.
     if cond_type in [:semi, :full]
-        cond_data = load_cond_data(m, cond_type)
-        cond_df = [df; cond_data]
+        cond_df = load_cond_data(m, cond_type)
+        df0 = [df; cond_df]
+    elseif cond_type in [:none]
+        df0 = df
     end
 
-    # Example: call forecast, unconditional data, states+observables
-    forecast_output = Dict{Symbol, Vector{Array{Float64}}}()
+    # Prepare forecast inputs
+    systems, states = prepare_forecast_inputs(m, df0;
+        input_type=input_type, output_type=output_type, cond_type=cond_type)
 
-    if output_type in [:forecast, :simple, :simple_cond]
-        forecaststates, forecastobs, forecastpseudo = 
+    # Prepare forecast outputs
+    forecast_output = Dict{Symbol, Vector{Array{Float64}}}()
+    forecast_output_files = get_output_files(m, input_type, output_type, cond_type)
+
+    # must re-run filter/smoother for conditional data in addition to explicit cases
+    if output_type in [:states, :simple, :all] || cond_type in [:semi, :full]
+        println("Calling filter and smoother")
+        histstates, histpseudo = filterandsmooth(m, df0, systems)
+
+        forecast_output[:histstates] = histstates
+        forecast_output[:histpseudo] = histpseudo
+    end
+
+    # For conditional data, use the end of the hist states as the initial state
+    # vector for the forecast
+    if cond_type in [:semi, :full]
+        # TODO determine structure of histstates
+        states = histstates[end]
+    end
+
+    if output_type in [:forecast, :simple, :all]
+        println("Calling forecast")
+        forecaststates, forecastobs, forecastpseudo =
             forecast(m, systems, states)
 
         forecast_output[:forecastobs] = forecastobs
         forecast_output[:forecaststates] = forecaststates
         forecast_output[:forecastpseudo] = forecastpseudo
         # forecast_output[:forecastshocks] = forecastshocks
-
     end
 
-    # Set up outfiles
-    output_files = get_output_files(m, input_type, output_type, cond_type)
+    # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
+    if cond_type in [:semi, :full]
+        # TODO implement
+        nothing
+    end
 
     # Write output files
-    for (var,file) in output_files
+    for (var,file) in forecast_output_files
         jldopen(file, "w") do f
             write(f, string(var), forecast_output[var])
         end
@@ -294,7 +342,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
 
 end
 
-    
+
 function get_input_file(m, input_type)
     if input_type == :mode
         return rawpath(m,"estimate","paramsmode.h5")
@@ -320,7 +368,8 @@ function get_output_files(m, input_type, output_type, cond_type)
 
     # vars prefix
     if output_type == :states
-        vars = ["histstates"]
+        vars = ["histstates",
+                "histpseudo"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :shocks
         vars = ["histshocks"]
@@ -332,24 +381,25 @@ function get_output_files(m, input_type, output_type, cond_type)
        vars = ["forecaststates",
                "forecastobs",
                "forecastpseudo"]
-#                   "forecastshocks"]
+#              "forecastshocks"]
     elseif output_type == :shockdec
         vars = ["shockdecstates",
-                   "shockdecobs"]
+                "shockdecobs"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :dettrend
         vars = ["dettrendstates",
-                   "dettrendobs"]
+                "dettrendobs"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :counter
         vars = ["counterstates",
-                   "counterobs"]
+                "counterobs"]
         throw(ArgumentError("Not implemented."))
-    elseif output_type in [:simple, :simple_cond]
+    elseif output_type in [:simple]
         vars = ["histstates",
-                   "forecaststates",
-                   "forecastobs",
-                   "forecastshocks"]
+                "histpseudo",
+                "forecaststates",
+                "forecastobs",
+                "forecastshocks"]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :all
         vars = []

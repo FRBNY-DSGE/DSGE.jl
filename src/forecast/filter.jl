@@ -71,20 +71,19 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
                                   use_expected_rate_data::Bool = true)
 
     # numbers of useful things
-    ndraws = if m.testing
-        2
-    else
-        n_draws(m)
-    end
-
-    @assert size(sys,1) == ndraws
+    ndraws = size(sys, 1)
     
     # Make sure the model object and the data are defined on every node
-    @everywhere m    = remotecall_fetch(1, ()->m)
-    @everywhere data = remotecall_fetch(1, ()->data)
+    # @everywhere m    = remotecall_fetch(1, ()->m)
+    # @everywhere data = remotecall_fetch(1, ()->data)
 
     # Call filter over all draws
-    out   = pmap(i -> DSGE.filter(m,data,sys[i], allout=true,
+    if use_parallel_workers(m)
+        mapfcn = pmap
+    else
+        mapfcn = map
+    end
+    out   = mapfcn(i -> DSGE.filter(m,data,sys[i], allout=true,
                                             use_expected_rate_data=use_expected_rate_data), 1:ndraws)
 
     filtered_states = [Array(x[1]) for x in out]  # to make type stable
@@ -155,6 +154,22 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
     end
 end
 
+function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
+                                  df::DataFrame,
+                                  sys::Vector{System{S}},
+                                  z0::Array{S}=Array{S}(0),
+                                  vz0::Matrix{S}=Matrix{S}(0,0);
+                                  lead::Int=0,
+                                  Ny0::Int =0,
+                                  allout::Bool = false,
+                                  use_expected_rate_data = true)
+
+    output = cell(size(sys)) # hack
+    for (i,s) in enumerate(sys)
+        output[i] = filterandsmooth(m, df, sys, z0, vz0, lead=lead, Ny0=Ny0, allout=allout,
+            use_expected_rate_data = use_expected_rate_data)
+    end
+end
 
 function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
                                   data::Matrix{S},
