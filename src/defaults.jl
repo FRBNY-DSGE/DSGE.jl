@@ -28,7 +28,7 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:date_zlbregime_start, quartertodate("2008-Q4"), "Start date of zero lower bound regime")
     m <= Setting(:date_mainsample_end, Dates.lastdayofquarter(Dates.today()-Dates.Month(3)), "End date of main sample")
     m <= Setting(:date_forecast_start, Dates.lastdayofquarter(Dates.today()), "Start date of forecast period")
-    m <= Setting(:date_forecast_start, Dates.lastdayofquarter(Dates.today()+Dates.Month(60*3)), "End date of forecast period")
+    m <= Setting(:date_forecast_end, Dates.lastdayofquarter(Dates.today()+Dates.Month(60*3)), "End date of forecast period")
 
     # Anticipated shocks
     m <= Setting(:n_anticipated_shocks, 0, "Number of anticipated policy shocks")
