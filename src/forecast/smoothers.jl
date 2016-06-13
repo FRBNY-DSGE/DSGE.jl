@@ -288,8 +288,8 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
                                             QQ::Matrix{T},
                                             ZZ::Matrix{T},
                                             DD::Matrix{T},
-                                            A0::Vector{T}, P0::Matrix{T};
-                                            use_expected_rate_data = true)
+                                            A0::Vector{T},
+                                            P0::Matrix{T})
 
     ## extract settings/dates/etc
 
