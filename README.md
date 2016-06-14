@@ -79,7 +79,7 @@ conditions, etc., see [Implementation Details](#implementation-details) for more
 ## Input/Output Directory Structure
 
 The *DSGE.jl* estimation uses data files as input and produces large data files
-as outputs. One estimation saves approximately 6GB of parameter draws and
+as outputs. One estimation saves several GB of parameter draws and
 related outputs. It is useful to understand how these files are loaded/saved
 and how to control this behavior.
 
@@ -91,8 +91,7 @@ will become relevant as future features are implemented.
   - `data/`:  Macroeconomic input data series.
     - `data_<yymmdd>.csv`: Input data vintage from `yymmdd`.
   - `cond/`: Conditional data, i.e.
-    ["nowcast"](https://en.wikipedia.org/wiki/Nowcasting_%28economics%29), for
-    the current forecast quarter.
+    ["nowcast"](https://en.wikipedia.org/wiki/Nowcasting_%28economics%29).
   - `user/`: User-created or sample model input files. For instance, the user may
     specify a previously computed mode when `reoptimize(m)` is `false`, or a
     starting point for optimization when `reoptimize(m)` is `true`.
@@ -104,7 +103,8 @@ will become relevant as future features are implemented.
     - `m990/`: Input/output files for the `Model990` type. A model of type
       `SPEC` will create its own save directory `SPEC/` at this  level in the
       directory tree.
-      - `ss0/`: Subdirectory for subspec 0.
+      - `ss0/`: Subdirectory for subspec 0. A model of a different subspec will have similar
+          directories at this level of the tree.
         - `estimate/`
           - `figures/`: Plots and other figures
           - `tables/`: LaTeX tables
@@ -121,8 +121,6 @@ will become relevant as future features are implemented.
             - [`tables/`]: LaTeX tables
             - [`raw/`]: Raw output data from `xxx` step
             - [`work/`]: Derived data files created using `raw/` files as input
-      - [`ss1/`] Additional model subspecs will have subdirectories identical to
-        `ss0` at this level in the directory tree.
 
 ### Directory Paths
 
@@ -301,10 +299,10 @@ The source code directory structure follows Julia module conventions.
 
 Generally, the user will want to reoptimize the parameter vector (and
 consequently, calculate the Hessian at this new mode) every time they conduct
-posterior sampling:
-- the input data are updated with new observations or revised
+posterior sampling; that is, when:
+- the input data are updated with a new quarter of observations or revised
 - the model sub-specification is changed
-- the model is derived from an existing model with differing equilibrium
+- the model is derived from an existing model with different equilibrium
   conditions or measurement equation.
 
 This behavior can be controlled more finely.
@@ -327,7 +325,7 @@ You can provide a modal parameter vector and optionally a Hessian matrix
 calculated at that mode to skip the reoptimization entirely. These values are
 usually computed by the user previously.
 
-You can skip reoptimization the parameter vector entirely.
+You can skip reoptimization of the parameter vector entirely.
 ```julia
 m = Model990()
 specify_mode!(m, "path/to/parameter/mode/file.h5")
@@ -335,7 +333,8 @@ estimate(m)
 ```
 The `specify_mode!` function will update the parameter vector to the mode and
 skip reoptimization. Ensure that you supply an HDF5 file with a variable named
-`params` that is the correct dimension and data type.
+`params` that is the correct dimension and data type. (See also the utility function
+`load_parameters_from_file`.)
 
 You can additionally skip calculation of the Hessian matrix entirely.
 ```julia
@@ -552,75 +551,73 @@ The `Setting{T<:Any}` type has the following fields:
 
 ### Default Settings
 
-#### I/O
+See [defaults.jl](src/defaults.jl) for the complete description of default settings.
 
-- `dataroot::Setting{ASCIIString}`: The root directory for
+#### General
+
+- `dataroot`: The root directory for
   model input data.
-- `saveroot::Setting{ASCIIString}`: The root directory for model output.
-- `data_vintage::Setting{ASCIIString}`: Data vintage identifier, formatted
-  `yymmdd`. By default, `data_vintage` is set to the most recent date of the
-  files with name `<dataroot>/data/data_<yymmdd>.h5`. It is the only setting
-  printed to output filenames by default.
+- `saveroot`: The root directory for model output.
+- `use_parallel_workers`: Use available parallel workers in computaitons.
+- `data_vintage`: Data vintage identifier, formatted
+  `yymmdd`. By default, `data_vintage` is set to today's date. It is (currently) the only
+  setting printed to output filenames by default.
+
+#### Dates
+- `date_presample_start`: Start date of pre-sample.
+- `date_mainsample_start`: Start date of main sample.
+- `date_zlbregime_start`: Start date of zero lower bound regime.
+- `date_mainsample_end`: End date of main sample.
+- `date_forecast_start`: Start date of forecast period.
+- `date_forecast_end`: End date of forecast period.
 
 #### Anticipated Shocks
-- `n_anticipated_shocks::Setting{Int}`: Number of anticipated policy shocks.
-- `n_anticipated_shocks_padding::Setting{Int}`: Padding for anticipated shocks.
-- `zlb_start_index::Setting{Int}`: Index into input data matrix of first period
-  to incorporate zero bound expectations. The first observation in the sample
-  data is 1959Q3 and we assume the zero lower bound period starts in 2008Q4, so
-  we set this to `198` by default.
-- `n_presample_periods::Setting{Int}`: Number of periods in the presample.
+- `n_anticipated_shocks`: Number of anticipated policy shocks.
+- `n_anticipated_shocks_padding`: Padding for anticipated shocks.
 
 #### Estimation
-- `reoptimize::Setting{Bool}`: Whether to reoptimize the posterior mode. If
-  `true` (the default), `estimate()` begins reoptimizing from the model object's
-  parameter vector.
-- `calculate_hessian::Setting{Bool}`: Whether to compute the Hessian. If `true`
-  (the default), `estimate()` calculates the Hessian at the posterior mode.
+- `reoptimize`: Whether to reoptimize the posterior mode. If `true` (the default),
+    `estimate()` begins reoptimizing from the model object's parameter vector.
+- `calculate_hessian`: Whether to compute the Hessian. If `true` (the
+    default), `estimate()` calculates the Hessian at the posterior mode.
 
 #### Metropolis-Hastings
-- `n_mh_simulations::Setting{Int}`: Number of draws from the posterior
-  distribution per block.
-- `n_mh_blocks::Setting{Int}`: Number of blocks to run Metropolis-Hastings.
-- `n_mh_burn::Setting{Int}`: Number of blocks to discard as burn-in for
+- `n_mh_simulations`: Number of draws from the posterior
+    distribution per block.
+- `n_mh_blocks`: Number of blocks to run Metropolis-Hastings.
+- `n_mh_burn`: Number of blocks to discard as burn-in for
   Metropolis-Hastings.
-- `mh_thin::Setting{Int}`: Metropolis-Hastings thinning step.
+- `mh_thin`: Metropolis-Hastings thinning step.
 
 ### Accessing Settings
 The function `get_setting(m::AbstractModel, s::Symbol)` returns the value of the
 setting `s` in `m.settings`. Some settings also have explicit getter methods
-that take only the model object `m` as an argument:
+that take only the model object `m` as an argument. Note that not all are exported.
 
-*I/O settings:*
-`saveroot(m)`,
-`dataroot(m)`,
-`data_vintage(m)`,
-
-*Parallelization*:
-`use_parallel_workers(m)`
-
-*Estimation*:
-`reoptimize(m)`,
-`calculate_hessian(m)`,
-`n_hessian_test_params(m)`,
-
-*Metropolis-Hastings*:
-`n_mh_blocks(m)`,
-`n_mh_simulations(m)`,
-`n_mh_burn(m)`,
-`mh_thin(m)`
+- I/O:
+    - `saveroot(m)`,
+    - `dataroot(m)`,
+    - `data_vintage(m)`,
+- Parallelization:
+    - `use_parallel_workers(m)`
+- Estimation:
+    - `reoptimize(m)`,
+    - `calculate_hessian(m)`,
+- Metropolis-Hastings:
+    - `n_mh_blocks(m)`,
+    - `n_mh_simulations(m)`,
+    - `n_mh_burn(m)`,
+    - `mh_thin(m)`
 
 ### Overwriting Default Settings
 
 To overwrite default settings added during model construction, a user must
-define a new `Setting` object and overwrite the corresponding entry in the
-model's `settings` dictionary using the `<=` syntax. Individual fields of a
-pre-initialized setting object cannot be modified. This immutability enforces
-the naming convention described in the preceding paragraphs (the default
-parameters are constructed without codes and are not printed to filename outputs
-to avoid excessively long filenames). Therefore, we strongly suggest that users
-who modify settings set `print=true` and define a meaningful code when
-overwriting any default settings.
+define a new `Setting` object and update the corresponding entry in the
+model's `settings` dictionary using the `<=` syntax. If the `print`, `code`, and
+`description` fields of the new `Setting` object are not provided, the fields of the
+existing setting will be maintained. If new values for `print`, `code`, and `description`
+are specified, and if these new values are distinct from the defaults for those fields, the
+fields of the existing setting will be updated.
 
 For example, overwriting `use_parallel_workers` should look like this:
 ```julia
@@ -760,7 +757,7 @@ for `Model990` with `ss1` as an argument. For example,
 m = Model990("ss1")
 ```
 
-## Acknowledgements
+# Acknowledgements
 Developers of this package at [FRBNY](https://www.newyorkfed.org/research)
 include
 
