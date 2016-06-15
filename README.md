@@ -48,13 +48,15 @@ via the following chain:
 
 ## Running with Default Settings
 
-So far, only the estimation step of the DSGE model has been implemented. To run
-the estimation step in Julia, simply create an instance of the model object and
-pass it to the `estimate` function.
+To run the estimation step in Julia, simply create an instance of the model object and pass
+it to the `estimate` function.
 
 ```julia
 # construct a model object
 m = Model990()
+
+# use the default data vintage from 2015 Nov 27
+m <= Setting(:data_vintage, "151127")
 
 # reoptimize parameter vector, compute Hessian at mode, and full posterior
 # parameter sampling
@@ -64,10 +66,11 @@ estimate(m)
 compute_moments(m)
 ```
 
-By default, the `estimate` routine reoptimizes the initial parameter vector,
-computes the Hessian at the mode, and conducts full posterior parameter
-sampling. (The initial parameter vector used is specified in the model's
-constructor.)
+By default, the `estimate` routine loads the dataset, reoptimizes the initial parameter
+vector, computes the Hessian at the mode, and conducts full posterior parameter sampling.
+(The initial parameter vector used is specified in the model's constructor.)
+
+To use updated data or alternative user-specified datasets, see [Input Data](#input-data).
 
 The user may want to avoid reoptimizing the parameter vector and calculating the
 Hessian matrix at this new vector. Please see [Reoptimizing](#reoptimizing)
@@ -89,14 +92,9 @@ these input and outputs. Square brackets indicate directories in the tree that
 will become relevant as future features are implemented.
 - `<dataroot>/`: Root data directory.
   - `data/`:  Macroeconomic input data series.
-    - `data_<yymmdd>.csv`: Input data vintage from `yymmdd`.
   - `cond/`: Conditional data, i.e.
     ["nowcast"](https://en.wikipedia.org/wiki/Nowcasting_%28economics%29).
-  - `user/`: User-created or sample model input files. For instance, the user may
-    specify a previously computed mode when `reoptimize(m)` is `false`, or a
-    starting point for optimization when `reoptimize(m)` is `true`.
-    - `paramsmode.h5`: Sample modal parameter vector.
-    - `hessian.h5`: Sample Hessian matrix at mode.
+  - `user/`: User-created or sample model input files.
 
 - `<saveroot>/`: Root save directory.
   - `output_data/`
@@ -109,18 +107,10 @@ will become relevant as future features are implemented.
           - `figures/`: Plots and other figures
           - `tables/`: LaTeX tables
           - `raw/`: Raw output data from estimation step
-            - `paramsmode.h5`: Parameter vector mode after running optimization
-            - `hessian.h5`: Hessian at the mode
-            - `mhsave.h5`: Draws from posterior distribution
           - `work/`: Derived data files created using `raw/` files as input
-            - `cov.h5`: Covariance matrix for parameter draws from
-              Metropolis-Hastings. Can be used as proposal covariance matrix.
         - [`xxx/`]: Other model outputs, such as forecasts, impulse response
-          functions, and shock decompositions.
-            - [`figures/`]: Plots and other figures
-            - [`tables/`]: LaTeX tables
-            - [`raw/`]: Raw output data from `xxx` step
-            - [`work/`]: Derived data files created using `raw/` files as input
+          functions, and shock decompositions; subdirectory structure mirrors that of
+          `estimate`.
 
 ### Directory Paths
 
@@ -137,9 +127,13 @@ m <= Setting(:dataroot, "path/to/my/data/root")
 
 # Input data
 
-Given all of the hard work put into specifying your model, one should be able to maintain
+Given all of the hard work put into specifying the model, one should be able to maintain
 the input data painlessly. To that extent, *DSGE.jl* provides facilities to download
 appropriate vintages of data series from *FRED* (Federal Reserve Economic Data).
+
+Note that a sample input dataset is provided; see [Sample input data](#sample-input-data)
+for more details. To compile an updated dataset for the provided Model `m990`, see
+[Update sample input data](#update-sample-input-data).
 
 ## Setup
 
@@ -252,6 +246,24 @@ Street Economics posts,  is trained on data that includes six quarters of
 interest rate expectations. The user is responsible for procuring interest rate
 expectations and appending it to the provided sample data set, as discussed in
 the linked documentation here.
+
+## Update sample input data
+
+A sample dataset is provided for the 2015 Nov 27 vintage. To update this dataset, see the
+following steps:
+
+1. Follow the steps above to setup automatic data pulls using *FredData.jl*.
+2. Specify the exact data vintage desired:
+    ```
+    julia> m <= Setting(:data_vintage, "yymmdd")
+    ```
+3. Create data files for the non-FRED data sources. For model `m990`, the required data
+   files include `spf_yymmdd.csv`, `longrate_yymmdd.csv`, `fernald_yymmdd.csv`. To include
+   data on expected interest rates, the file `ois_yymmdd.csv` is also required. See
+   [Data](#doc/Data.md) for details on the series used and links to data sources.
+4. Run `load_data(m)`; series from *FRED* will be downloaded and merged with the series from
+   non-FRED data sources that you have already created. See [Common
+   pitfalls](#common-pitfalls) for some potential issues.
 
 # Implementation Details
 
