@@ -49,7 +49,7 @@ function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic
         difflog(pop_forecast[population_mnemonic]),
         length(pop_forecast[population_mnemonic])
     else
-        population_recorded[:,population_mnemonic], nothing, 1
+        population_recorded[:,population_mnemonic], [NaN], 1
     end
 
     # hp filter
