@@ -12,8 +12,9 @@ m.testing = true
 mode = h5open(inpath(m, "user", "paramsmode.h5")) do file
     read(file, "params")
 end
-data = h5open(inpath(m, "data", "data_REF.h5")) do file
-    read(file, "data")
+data = let
+    df = load_data(m; try_disk=true, verbose=:none)
+    DSGE.df_to_matrix(m, df)
 end
 hessian_expected = h5open(inpath(m, "user", "hessian.h5")) do file
     read(file, "hessian")
