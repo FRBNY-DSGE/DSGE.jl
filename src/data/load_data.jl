@@ -219,6 +219,7 @@ function isvalid_data(m::AbstractModel, df::DataFrame)
     coldiff = setdiff(m_series, df_series)
     valid = valid && isempty(coldiff)
     if !isempty(coldiff)
+        println("Columns of 'df' do not match expected.")
         println(coldiff)
     end
 
@@ -229,6 +230,7 @@ function isvalid_data(m::AbstractModel, df::DataFrame)
     datesdiff = setdiff(expected_dates, actual_dates)
     valid = valid && isempty(datesdiff)
     if !isempty(datesdiff)
+        println("Dates of 'df' do not match expected.")
         println(datesdiff)
     end
 
