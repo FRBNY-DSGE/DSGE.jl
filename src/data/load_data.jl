@@ -22,7 +22,7 @@ rates and other similar transformations, more rows of data may be downloaded tha
 specified by the date model settings.
 """
 function load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol=:low)
-    download_data = false
+    recreate_data = false
 
     # Check if already downloaded
     if try_disk && has_saved_data(m)
@@ -38,19 +38,19 @@ function load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol=:low
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println("dataset from disk not valid")
             end
-            download_data = true
+            recreate_data = true
         end
     else
-        download_data = true
+        recreate_data = true
     end
 
     # Download routines
-    if download_data
+    if recreate_data
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            print("Creating dataset...")
+            println("Creating dataset...")
         end
         df = load_data_levels(m; verbose=verbose)
-        df = transform_data(m, df)
+        df = transform_data(m, df; verbose=verbose)
 
         # Ensure that only appropriate rows make it into the returned DataFrame.
         start_date = get_setting(m, :date_presample_start)
@@ -124,7 +124,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             # during merge.
             if !in(lastdayofquarter(start_date), addl_data[:date]) ||
                !in(lastdayofquarter(end_date), addl_data[:date])
-                warn("$file does not contain the entire date range specified...you may want to update your data.")
+                warn("$file does not contain the entire date range specified; NaNs used.")
             end
 
             # Make sure each mnemonic that was specified is present
