@@ -17,8 +17,6 @@ ref_cov       = read(file, "ref_cov")
 close(file)
 
 # Read in the data
-# filename = inpath(m, "data", "data_$(data_vintage(m)).csv")
-# df = readtable(filename)
 df = load_data(m; try_disk=true, verbose=:none)
 
 # Set up and run metropolis-hastings
@@ -36,16 +34,16 @@ test_cov = h5open(workpath(m, "estimate", "parameter_covariance.h5"), "r") do fi
     read(file, "mhcov")
 end
 
+return
+
+# Test that the parameter draws and covariance matrices are equal
+@test_matrix_approx_eq ref_draws test_draws
+@test_matrix_approx_eq ref_cov test_cov
+
 # Test that the fixed parameters are all fixed
 for fixed_param in [:δ, :λ_w, :ϵ_w, :ϵ_p, :g_star]
     @test test_draws[:,m.keys[fixed_param]] == fill(Float32(m[fixed_param].value), 100)
 end
-
-# Test that the parameter draws are equal
-@test_matrix_approx_eq ref_draws test_draws
-
-# Test that the covariance matrices are equal
-@test_matrix_approx_eq ref_cov test_cov
 
 # Make sure that compute_moments runs appropriately
 compute_moments(m, verbose=:none)

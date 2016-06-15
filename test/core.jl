@@ -1,3 +1,4 @@
+using DSGE
 using Distributions
 
 # Test Parameter type

@@ -1,5 +1,4 @@
 using DSGE
-import DSGE: RootInverseGamma
 using HDF5, Base.Test, Distributions
 include("../../util.jl")
 
@@ -35,7 +34,7 @@ for θ in model.parameters
 
     prior = θ.prior.value
     
-    if isa(prior, RootInverseGamma)
+    if isa(prior, DSGE.RootInverseGamma)
         pshape[i] = 4
         (ν, τ) = params(prior)
         pmean[i] = τ

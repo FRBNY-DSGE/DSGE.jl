@@ -1,3 +1,4 @@
+using DSGE
 using HDF5, Base.Test
 include("../util.jl")
 
