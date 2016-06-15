@@ -227,12 +227,16 @@ Given the complexity of the data download, you may find that the dataset generat
 - Ensure that the `data_series` field of the model object is set as expected.
 - Double check the transformations specified in the `data_transforms` field of the model
     object.
+- Ensure that the keys of the `observables` and `data_transforms` fields of the model object
+    match.
 - Check the input files for [non-FRED data sources](#non-fred-data-sources). They should be
     in the directory indicated by `inpath(m, "data")`, be named appropriately given the
     vintage of data expected, and be formatted appropriately. One may have to copy and
     rename files of non-FRED data sources to match the specified vintage, even if the
     contents of the files would be identical.
 - Look for any immediate issues in the final dataset saved (`data_yymmdd.csv`).
+- Ensure that the column names of the data CSV match the keys of the `observables` field of
+    the model object.
 
 ## Sample input data
 
@@ -250,10 +254,9 @@ the linked documentation here.
 
 ## Update sample input data
 
-A sample dataset is provided for the 2015 Nov 27 vintage. To update this dataset, see the
-following steps:
+A sample dataset is provided for the 2015 Nov 27 vintage. To update this dataset:
 
-1. Follow the steps above to setup automatic data pulls using *FredData.jl*.
+1. See [above](#setup) to setup automatic data pulls using *FredData.jl*.
 2. Specify the exact data vintage desired:
     ```
     julia> m <= Setting(:data_vintage, "yymmdd")
@@ -261,7 +264,7 @@ following steps:
 3. Create data files for the non-FRED data sources. For model `m990`, the required data
    files include `spf_yymmdd.csv`, `longrate_yymmdd.csv`, `fernald_yymmdd.csv`. To include
    data on expected interest rates, the file `ois_yymmdd.csv` is also required. See
-   [Data](#doc/Data.md) for details on the series used and links to data sources.
+   [Data](doc/Data.md) for details on the series used and links to data sources.
 4. Run `load_data(m)`; series from *FRED* will be downloaded and merged with the series from
    non-FRED data sources that you have already created. See [Common
    pitfalls](#common-pitfalls) for some potential issues.
