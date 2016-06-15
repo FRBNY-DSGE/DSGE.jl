@@ -31,10 +31,8 @@ function estimate(m::AbstractModel;
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix())
     # Load data
-    data = h5open(inpath(m, "data","data_$(data_vintage(m)).h5"), "r") do f
-        read(f, "data")
-    end
-    estimate(m, data; verbose=verbose, proposal_covariance=proposal_covariance)
+    df = load_data(m; verbose=verbose)
+    estimate(m, df; verbose=verbose, proposal_covariance=proposal_covariance)
 end
 function estimate(m::AbstractModel, data::Matrix{Float64};
                   verbose::Symbol=:low,
