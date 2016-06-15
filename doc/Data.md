@@ -2,8 +2,8 @@
 
 ## Description
 
-The FRBNY DSGE Model takes an HDF5 file containing a matrix of data as
-input. The columns of this matrix contain transformations of the
+The FRBNY DSGE Model takes an CSV file containing a matrix of data as
+input. The columns of this file contain transformations of the
 following series (the number corresponds to the column of data matrix):
 
 1.  Output growth (Bureau of Economic Analysis)

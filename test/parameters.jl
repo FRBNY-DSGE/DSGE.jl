@@ -1,3 +1,5 @@
+using DSGE
+
 for T in subtypes(Transform)
     u = parameter(:σ_pist, 2.5230, (1e-8, 5.), (1e-8, 5.), T(), fixed=false)
     @test ( transform_to_real_line(u) |> x -> transform_to_model_space(u,x) ) == u.value

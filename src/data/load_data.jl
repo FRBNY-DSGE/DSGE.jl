@@ -1,25 +1,28 @@
 """
 ```
-load_data(m::AbstractModel)
+load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol = :low)
 ```
 
 Create a DataFrame with all data series for this model, fully transformed.  
 
-Check in `inpath(m)` for vintaged datasets corresponding to the ones in
-`keys(m.data_series)`. Load the appriopriate data series (specified in
+Check in `inpath(m, "data")` for vintaged datasets corresponding to the ones in
+`keys(m.data_series)`. Load the appropriate data series (specified in
 `m.data_series[source]`) for each data source. The start and end dates of the data returned
-are given by the date_presample_start and date_mainsample_end model settings. Save the
+are given by the `date_presample_start` and `date_mainsample_end` model settings. Save the
 resulting DataFrame to disk.
+
+If `try_disk` is `true`, check `inpath(m, "data")` to see if the data series have already
+been downloaded and transformed; if so, load them directly from disk.
 
 # Notes
 
 The name of the input data file must be the same as the source string in `m.data_series`,
-and those files must be located in .csv files in `inpath(m, "data")`. To accomodate growth
+and those files must be located in CSV files in `inpath(m, "data")`. To accomodate growth
 rates and other similar transformations, more rows of data may be downloaded than otherwise
 specified by the date model settings.
 """
 function load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol=:low)
-    download_data = false
+    recreate_data = false
 
     # Check if already downloaded
     if try_disk && has_saved_data(m)
@@ -35,19 +38,19 @@ function load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol=:low
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println("dataset from disk not valid")
             end
-            download_data = true
+            recreate_data = true
         end
     else
-        download_data = true
+        recreate_data = true
     end
 
     # Download routines
-    if download_data
+    if recreate_data
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            print("Creating dataset...")
+            println("Creating dataset...")
         end
         df = load_data_levels(m; verbose=verbose)
-        df = transform_data(m, df)
+        df = transform_data(m, df; verbose=verbose)
 
         # Ensure that only appropriate rows make it into the returned DataFrame.
         start_date = get_setting(m, :date_presample_start)
@@ -63,6 +66,14 @@ function load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol=:low
     return df
 end
 
+"""
+```
+load_data_levels(m::AbstractModel; verbose::Symbol=:low)
+```
+
+Load data in levels by appealing to the data sources specified for the model. Data from FRED
+is loaded first, by default; then, merge other custom data sources.
+"""
 function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     # Start two quarters further back than `start_date` as we need these additional
     # quarters to compute differences.
@@ -113,7 +124,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             # during merge.
             if !in(lastdayofquarter(start_date), addl_data[:date]) ||
                !in(lastdayofquarter(end_date), addl_data[:date])
-                warn("$file does not contain the entire date range specified...you may want to update your data.")
+                warn("$file does not contain the entire date range specified; NaNs used.")
             end
 
             # Make sure each mnemonic that was specified is present
@@ -148,7 +159,9 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 end
 
 """
-`save_data(m::AbstractModel, df::DataFrame)`
+```
+save_data(m::AbstractModel, df::DataFrame)
+```
 
 Save `df` to disk as CSV. File is located in `inpath(m, "data")`.
 """
@@ -159,7 +172,9 @@ function save_data(m::AbstractModel, df::DataFrame)
 end
 
 """
-`has_saved_data(m::AbstractModel)`
+```
+has_saved_data(m::AbstractModel)
+```
 
 Determine if there is a saved dataset on disk for the required vintage.
 """
@@ -170,7 +185,9 @@ function has_saved_data(m::AbstractModel)
 end
 
 """
-`read_data(m::AbstractModel)`
+```
+read_data(m::AbstractModel)
+```
 
 Read CSV from disk as DataFrame. File is located in `inpath(m, "data")`.
 """
@@ -186,7 +203,9 @@ function read_data(m::AbstractModel)
 end
 
 """
-`isvalid_data(m::AbstractModel, df::DataFrame)`
+```
+isvalid_data(m::AbstractModel, df::DataFrame)
+```
 
 Return if dataset is valid, ensuring that all observables are contained and that all quarters
 between the beginning of the presample and the end of the mainsample are contained.
@@ -200,6 +219,7 @@ function isvalid_data(m::AbstractModel, df::DataFrame)
     coldiff = setdiff(m_series, df_series)
     valid = valid && isempty(coldiff)
     if !isempty(coldiff)
+        println("Columns of 'df' do not match expected.")
         println(coldiff)
     end
 
@@ -210,6 +230,7 @@ function isvalid_data(m::AbstractModel, df::DataFrame)
     datesdiff = setdiff(expected_dates, actual_dates)
     valid = valid && isempty(datesdiff)
     if !isempty(datesdiff)
+        println("Dates of 'df' do not match expected.")
         println(datesdiff)
     end
 
@@ -222,7 +243,8 @@ df_to_matrix(m::AbstractModel, df::DataFrame)
 ```
 
 Return `df`, converted to matrix of floats, and discard date column. Also ensure data are
-sorted by date and that rows outside of sample are discarded.
+sorted by date and that rows outside of sample are discarded. The output of this function is
+suitable for direct use in `estimate`, `posterior`, etc.
 """
 function df_to_matrix(m::AbstractModel, df::DataFrame)
     # Sort rows by date and discard rows outside of sample

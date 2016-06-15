@@ -51,14 +51,48 @@ end
 yt, yf = hpfilter(y, λ::Real)
 ```
 
-Applies the Hodrick-Prescott filter. The smoothing parameter `λ` is applied to the columns
-of `y`, returning the trend component `yt` and the cyclical component `yf`.
+Applies the Hodrick-Prescott filter ("H-P filter"). The smoothing parameter `λ` is applied
+to the columns of `y`, returning the trend component `yt` and the cyclical component `yf`.  
+For quarterly data, one can use λ=1600.
+
+Consecutive missing values at the beginning or end of the time series are excluded from the
+filtering. If there are missing values within the series, the filtered values are all NaN.
+
+See also:
+```
+Hodrick, Robert; Prescott, Edward C. (1997). "Postwar U.S. Business Cycles: An Empirical
+Investigation". Journal of Money, Credit, and Banking 29 (1): 1–16.
+```
 """
 function hpfilter(y, λ::Real)
-    if !isa(y, Vector{Float64})
-        y = vec(map(Float64, y))
+    # Convert y to vector
+    if !isa(y, Vector)
+        try
+            y = vec(y)
+        catch
+            error("Series must be convertible to Vector")
+        end
     end
 
+    # Indices of consecutive NaN elements at beginning
+    i = 1
+    j = length(y)
+    while isnan(y[i])
+        i = i+1
+    end
+    while isnan(y[j])
+        j = j-1
+    end
+
+    # Filter and adjust for NaNs
+    yt_, yf_ = hpfilter_(y[i:j], λ)
+    yt = [fill(NaN, i-1); yt_; fill(NaN, length(y)-j)]
+    yf = [fill(NaN, i-1); yf_; fill(NaN, length(y)-j)]
+
+    return yt, yf
+end
+
+function hpfilter_{T<:Real}(y::Vector{T}, λ::Real)
     n = length(y)
     a = spzeros(n,n)
     for i = 3:n-2

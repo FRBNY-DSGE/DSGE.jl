@@ -31,10 +31,8 @@ function estimate(m::AbstractModel;
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix())
     # Load data
-    data = h5open(inpath(m, "data","data_$(data_vintage(m)).h5"), "r") do f
-        read(f, "data")
-    end
-    estimate(m, data; verbose=verbose, proposal_covariance=proposal_covariance)
+    df = load_data(m; verbose=verbose)
+    estimate(m, df; verbose=verbose, proposal_covariance=proposal_covariance)
 end
 function estimate(m::AbstractModel, data::Matrix{Float64};
                   verbose::Symbol=:low,
@@ -304,7 +302,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
     #                  "chunk",(n_sim,n_states_augmented(m)))
 
     # keep track of how long metropolis_hastings has been sampling
-    total_sampling_time = 0
+    total_sampling_time = 0.
 
     for block = 1:n_blocks
 
@@ -430,11 +428,11 @@ end
 
 """
 ```
-compute_parameter_covariance{T<:AbstractModel}(m::T)
+compute_parameter_covariance(m::AbstractModel)
 ```
 
 Calculates the parameter covariance matrix from saved parameter draws, and writes it to the
-parameter_covariance.h5 file in the `workpath(m)` directory.
+parameter_covariance.h5 file in the `workpath(m, "estimate")` directory.
 
 ### Arguments
 * `m::AbstractModel`: the model object

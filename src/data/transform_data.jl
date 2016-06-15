@@ -1,5 +1,8 @@
 """
-`transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic = :CNP16OV)`
+```
+transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic = :CNP16OV;
+    verbose::Symbol = :low)
+```
 
 Transform data loaded in levels and order columns appropriately for the DSGE model.
 
@@ -9,11 +12,12 @@ Transform data loaded in levels and order columns appropriately for the DSGE mod
 
 ## Optional Arguments
 
-- `population_mnemonic`: the name of the column in `levels` that holds
-  the population measure for computing per-capita values. By default,
-  it is CNP16OV (Civilian Noninstitutional Population, in thousands, obtained via the FRED API).
+- `population_mnemonic`: the name of the column in `levels` that holds the population
+    measure for computing per-capita values. By default, it is CNP16OV (Civilian
+    Noninstitutional Population, in thousands, obtained via the FRED API).
 """
-function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic = :CNP16OV)
+function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic = :CNP16OV;
+                        verbose::Symbol = :low)
 
     n_obs, _ = size(levels)
 
@@ -25,6 +29,9 @@ function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic
 
     population_recorded = levels[:,[:date, population_mnemonic]]
     population_all, dlpopulation_forecast, n_population_forecast_obs = if use_population_forecast(m)
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
+            println("Loading population forecast...")
+        end
 
         # load population forecast
         population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
@@ -36,9 +43,13 @@ function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic
 
         # use our "real" series as current value
         pop_all = [population_recorded; pop_forecast[2:end,:]]
-        pop_all[population_mnemonic], difflog(pop_forecast[population_mnemonic]), length(pop_forecast[population_mnemonic])
+
+        # return values
+        pop_all[population_mnemonic],
+        difflog(pop_forecast[population_mnemonic]),
+        length(pop_forecast[population_mnemonic])
     else
-        population_recorded[:,population_mnemonic], _, 1
+        population_recorded[:,population_mnemonic], [NaN], 1
     end
 
     # hp filter
@@ -46,12 +57,12 @@ function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic
     filtered_population, _ = hpfilter(population_all, 1600)
 
     # filtered series (levels)
-    filtered_population_recorded     = filtered_population[1:end-n_population_forecast_obs+1]     # filtered recorded population series
-    filtered_population_forecast     = filtered_population[end-n_population_forecast_obs+1:end]   # filtered forecast population series
+    filtered_population_recorded = filtered_population[1:end-n_population_forecast_obs+1]
+    filtered_population_forecast = filtered_population[end-n_population_forecast_obs+1:end]
 
     # filtered growth rates 
-    dlpopulation_recorded            = difflog(population_recorded[population_mnemonic])
-    dlfiltered_population_recorded   = difflog(filtered_population_recorded)
+    dlpopulation_recorded          = difflog(population_recorded[population_mnemonic])
+    dlfiltered_population_recorded = difflog(filtered_population_recorded)
 
     levels[:filtered_population]          = filtered_population_recorded
     levels[:filtered_population_growth]   = dlfiltered_population_recorded
@@ -62,6 +73,9 @@ function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic
     transformed[:date] = levels[:date]
 
     for series in keys(m.data_transforms)
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
+            println("Transforming series " * string(series) * "...")
+        end
         f = m.data_transforms[series]
         transformed[series] = f(levels)
     end

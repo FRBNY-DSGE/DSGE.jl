@@ -48,13 +48,16 @@ via the following chain:
 
 ## Running with Default Settings
 
-So far, only the estimation step of the DSGE model has been implemented. To run
-the estimation step in Julia, simply create an instance of the model object and
-pass it to the `estimate` function.
+To run the estimation step in Julia, simply create an instance of the model object and pass
+it to the `estimate` function --- see an [example](doc/examples/run_default.jl).
 
 ```julia
 # construct a model object
 m = Model990()
+
+# estimate as of 2015-Q3 using the default data vintage from 2015 Nov 27
+m <= Setting(:data_vintage, "151127")
+m <= Setting(:date_mainsample_end, quartertodate("2015-Q3"))
 
 # reoptimize parameter vector, compute Hessian at mode, and full posterior
 # parameter sampling
@@ -64,10 +67,11 @@ estimate(m)
 compute_moments(m)
 ```
 
-By default, the `estimate` routine reoptimizes the initial parameter vector,
-computes the Hessian at the mode, and conducts full posterior parameter
-sampling. (The initial parameter vector used is specified in the model's
-constructor.)
+By default, the `estimate` routine loads the dataset, reoptimizes the initial parameter
+vector, computes the Hessian at the mode, and conducts full posterior parameter sampling.
+(The initial parameter vector used is specified in the model's constructor.)
+
+To use updated data or alternative user-specified datasets, see [Input Data](#input-data).
 
 The user may want to avoid reoptimizing the parameter vector and calculating the
 Hessian matrix at this new vector. Please see [Reoptimizing](#reoptimizing)
@@ -79,7 +83,7 @@ conditions, etc., see [Implementation Details](#implementation-details) for more
 ## Input/Output Directory Structure
 
 The *DSGE.jl* estimation uses data files as input and produces large data files
-as outputs. One estimation saves approximately 6GB of parameter draws and
+as outputs. One estimation saves several GB of parameter draws and
 related outputs. It is useful to understand how these files are loaded/saved
 and how to control this behavior.
 
@@ -89,40 +93,25 @@ these input and outputs. Square brackets indicate directories in the tree that
 will become relevant as future features are implemented.
 - `<dataroot>/`: Root data directory.
   - `data/`:  Macroeconomic input data series.
-    - `data_<yymmdd>.h5`: Input data vintage from `yymmdd`.
   - `cond/`: Conditional data, i.e.
-    ["nowcast"](https://en.wikipedia.org/wiki/Nowcasting_%28economics%29), for
-    the current forecast quarter.
-  - `user/`: User-created or sample model input files. For instance, the user may
-    specify a previously computed mode when `reoptimize(m)` is `false`, or a
-    starting point for optimization when `reoptimize(m)` is `true`.
-    - `paramsmode.h5`: Sample modal parameter vector.
-    - `hessian.h5`: Sample Hessian matrix at mode.
+    ["nowcast"](https://en.wikipedia.org/wiki/Nowcasting_%28economics%29).
+  - `user/`: User-created or sample model input files.
 
 - `<saveroot>/`: Root save directory.
   - `output_data/`
     - `m990/`: Input/output files for the `Model990` type. A model of type
       `SPEC` will create its own save directory `SPEC/` at this  level in the
       directory tree.
-      - `ss0/`: Subdirectory for subspec 0.
+      - `ss0/`: Subdirectory for subspec 0. A model of a different subspec will have similar
+          directories at this level of the tree.
         - `estimate/`
           - `figures/`: Plots and other figures
           - `tables/`: LaTeX tables
           - `raw/`: Raw output data from estimation step
-            - `paramsmode.h5`: Parameter vector mode after running optimization
-            - `hessian.h5`: Hessian at the mode
-            - `mhsave.h5`: Draws from posterior distribution
           - `work/`: Derived data files created using `raw/` files as input
-            - `cov.h5`: Covariance matrix for parameter draws from
-              Metropolis-Hastings. Can be used as proposal covariance matrix.
         - [`xxx/`]: Other model outputs, such as forecasts, impulse response
-          functions, and shock decompositions.
-            - [`figures/`]: Plots and other figures
-            - [`tables/`]: LaTeX tables
-            - [`raw/`]: Raw output data from `xxx` step
-            - [`work/`]: Derived data files created using `raw/` files as input
-      - [`ss1/`] Additional model subspecs will have subdirectories identical to
-        `ss0` at this level in the directory tree.
+          functions, and shock decompositions; subdirectory structure mirrors that of
+          `estimate`.
 
 ### Directory Paths
 
@@ -137,7 +126,119 @@ m <= Setting(:saveroot, "path/to/my/save/root")
 m <= Setting(:dataroot, "path/to/my/data/root")
 ```
 
-# Input data used
+# Input data
+
+Given all of the hard work put into specifying the model, one should be able to maintain
+the input data painlessly. To that extent, *DSGE.jl* provides facilities to download
+appropriate vintages of data series from *FRED* (Federal Reserve Economic Data).
+
+Note that a sample input dataset is provided; see [Sample input data](#sample-input-data)
+for more details. To compile an updated dataset for the provided Model `m990`, see
+[Update sample input data](#update-sample-input-data).
+
+## Setup
+
+To take advantage of the ability to automatically download data series from FRED, set up
+your FRED API access by following the directions
+[here](https://github.com/micahjsmith/FredData.jl/blob/master/README.md).
+
+## Loading data
+
+At the most basic, loading data looks like this:
+
+```
+m = Model990()
+df = load_data(m)
+```
+
+By default, `load_data` will look on the disk first to see if an appropriate vintage of data
+is already present. If data on disk are not present, or if the data are invalid for any
+reason, a fresh vintage will be downloaded from FRED and merged with the other data sources
+specified. See `?load_data` for more details.
+
+The resulting DataFrame `df` contains all the required data series for this model, fully
+transformed. The first row is given by the Setting `date_presample_start` and the last row
+is given by `date_mainsample_end`. The first `n_presample_periods` rows of `df` are the
+presample.
+
+Driver functions including `estimate` accept this `df` as an argument and convert it into a
+`Matrix` suitable for computations using `df_to_matrix`, which sorts the data, ensures the
+full sample is present, discards the date column, and sorts the observable columns according
+to the `observables` field of the model object.
+
+## Non-FRED data sources
+
+Some data series may not be available from FRED or one may simply wish to use a different
+data source, for whatever reason. The data sources and series are specified in the
+`data_series` field of the model object. For each data source that is *not* `:fred`, a CSV
+of the form `source_yymmdd.csv` is expected in the directory indicated by `inpath(m, "data")`.
+For example, the following might be the contents of a data source for two series `:series1`
+and `:series2`:
+
+```
+date,series1,series2
+1959-06-30,1.0,NaN
+1959-09-30,1.1,0.5
+```
+
+Note that quarters are represented by the date of the *last* day of the quarter and missing
+values are specified by `NaN`.
+
+### Example
+
+Let's consider an example dataset comprised of 10 macro series sourced from FRED and one
+survey-based series sourced from, say, the Philadelphia Fed's [Survey of Professional
+Forecasters](https://www.philadelphiafed.org/research-and-data/real-time-center/survey-of-professional-forecasters/historical-data/inflation-forecasts):
+
+```
+julia> m.data_series
+Dict{Symbol,Array{Symbol,1}} with 2 entries:
+ :spf   => [:ASACX10]
+ :fred  => [:GDP, :PCE, ...] #etc
+```
+
+If the data vintage specified for the model is `151127` (Nov. 27, 2015), then the following
+files are expected in `inpath(m, "data")`:
+
+```
+spf_151127.csv
+fred_151127.csv
+```
+
+The FRED series will be downloaded and the `fred_151127.csv` file will be automatically
+generated, but the `spf_151127.csv` file must be manually compiled as shown above.
+
+Now, suppose that we set the data vintage to `151222`, to incorporate the BEA's third
+estimate of GDP. The `fred_151222.csv` file will be downloaded, but there are no updates to
+the SPF dataset during this period. Regardless, the file `spf_151222.csv` must be present to
+match the data vintage. The solution in this case is to manually copy and rename the older
+SPF dataset. Although this is not an elegant approach, it is consistent with the concept of a
+vintage as the data available at a certain point in time --- in this example, it just so
+happens that the SPF data available on Nov. 27 and Dec. 22 are the same.
+
+## Common pitfalls
+
+Given the complexity of the data download, you may find that the dataset generated by
+`load_data` is not exactly as you expect. Here are some common pitfalls to look out for:
+- Ensure that the `data_vintage` model setting is as you expect. (Try checking
+    `data_vintage(m)`.)
+- If you are having a problem using `FredData`, ensure your API key is provided correctly
+    and that there are no issues with your firewall, etc.
+- Ensure that the `data_series` field of the model object is set as expected.
+- Double check the transformations specified in the `data_transforms` field of the model
+    object.
+- Ensure that the keys of the `observables` and `data_transforms` fields of the model object
+    match.
+- Check the input files for [non-FRED data sources](#non-fred-data-sources). They should be
+    in the directory indicated by `inpath(m, "data")`, be named appropriately given the
+    vintage of data expected, and be formatted appropriately. One may have to copy and
+    rename files of non-FRED data sources to match the specified vintage, even if the
+    contents of the files would be identical.
+- Look for any immediate issues in the final dataset saved (`data_yymmdd.csv`).
+- Ensure that the column names of the data CSV match the keys of the `observables` field of
+    the model object.
+
+## Sample input data
 
 For more details on the sample input data provided, please see
 [Data](doc/Data.md).
@@ -150,6 +251,23 @@ Street Economics posts,  is trained on data that includes six quarters of
 interest rate expectations. The user is responsible for procuring interest rate
 expectations and appending it to the provided sample data set, as discussed in
 the linked documentation here.
+
+## Update sample input data
+
+A sample dataset is provided for the 2015 Nov 27 vintage. To update this dataset:
+
+1. See [above](#setup) to setup automatic data pulls using *FredData.jl*.
+2. Specify the exact data vintage desired:
+    ```
+    julia> m <= Setting(:data_vintage, "yymmdd")
+    ```
+3. Create data files for the non-FRED data sources. For model `m990`, the required data
+   files include `spf_yymmdd.csv`, `longrate_yymmdd.csv`, `fernald_yymmdd.csv`. To include
+   data on expected interest rates, the file `ois_yymmdd.csv` is also required. See
+   [Data](doc/Data.md) for details on the series used and links to data sources.
+4. Run `load_data(m)`; series from *FRED* will be downloaded and merged with the series from
+   non-FRED data sources that you have already created. See [Common
+   pitfalls](#common-pitfalls) for some potential issues.
 
 # Implementation Details
 
@@ -197,10 +315,10 @@ The source code directory structure follows Julia module conventions.
 
 Generally, the user will want to reoptimize the parameter vector (and
 consequently, calculate the Hessian at this new mode) every time they conduct
-posterior sampling:
-- the input data are updated with new observations or revised
+posterior sampling; that is, when:
+- the input data are updated with a new quarter of observations or revised
 - the model sub-specification is changed
-- the model is derived from an existing model with differing equilibrium
+- the model is derived from an existing model with different equilibrium
   conditions or measurement equation.
 
 This behavior can be controlled more finely.
@@ -223,7 +341,7 @@ You can provide a modal parameter vector and optionally a Hessian matrix
 calculated at that mode to skip the reoptimization entirely. These values are
 usually computed by the user previously.
 
-You can skip reoptimization the parameter vector entirely.
+You can skip reoptimization of the parameter vector entirely.
 ```julia
 m = Model990()
 specify_mode!(m, "path/to/parameter/mode/file.h5")
@@ -231,7 +349,8 @@ estimate(m)
 ```
 The `specify_mode!` function will update the parameter vector to the mode and
 skip reoptimization. Ensure that you supply an HDF5 file with a variable named
-`params` that is the correct dimension and data type.
+`params` that is the correct dimension and data type. (See also the utility function
+`load_parameters_from_file`.)
 
 You can additionally skip calculation of the Hessian matrix entirely.
 ```julia
@@ -448,75 +567,73 @@ The `Setting{T<:Any}` type has the following fields:
 
 ### Default Settings
 
-#### I/O
+See [defaults.jl](src/defaults.jl) for the complete description of default settings.
 
-- `dataroot::Setting{ASCIIString}`: The root directory for
+#### General
+
+- `dataroot`: The root directory for
   model input data.
-- `saveroot::Setting{ASCIIString}`: The root directory for model output.
-- `data_vintage::Setting{ASCIIString}`: Data vintage identifier, formatted
-  `yymmdd`. By default, `data_vintage` is set to the most recent date of the
-  files with name `<dataroot>/data/data_<yymmdd>.h5`. It is the only setting
-  printed to output filenames by default.
+- `saveroot`: The root directory for model output.
+- `use_parallel_workers`: Use available parallel workers in computaitons.
+- `data_vintage`: Data vintage identifier, formatted
+  `yymmdd`. By default, `data_vintage` is set to today's date. It is (currently) the only
+  setting printed to output filenames by default.
+
+#### Dates
+- `date_presample_start`: Start date of pre-sample.
+- `date_mainsample_start`: Start date of main sample.
+- `date_zlbregime_start`: Start date of zero lower bound regime.
+- `date_mainsample_end`: End date of main sample.
+- `date_forecast_start`: Start date of forecast period.
+- `date_forecast_end`: End date of forecast period.
 
 #### Anticipated Shocks
-- `n_anticipated_shocks::Setting{Int}`: Number of anticipated policy shocks.
-- `n_anticipated_shocks_padding::Setting{Int}`: Padding for anticipated shocks.
-- `zlb_start_index::Setting{Int}`: Index into input data matrix of first period
-  to incorporate zero bound expectations. The first observation in the sample
-  data is 1959Q3 and we assume the zero lower bound period starts in 2008Q4, so
-  we set this to `198` by default.
-- `n_presample_periods::Setting{Int}`: Number of periods in the presample.
+- `n_anticipated_shocks`: Number of anticipated policy shocks.
+- `n_anticipated_shocks_padding`: Padding for anticipated shocks.
 
 #### Estimation
-- `reoptimize::Setting{Bool}`: Whether to reoptimize the posterior mode. If
-  `true` (the default), `estimate()` begins reoptimizing from the model object's
-  parameter vector.
-- `calculate_hessian::Setting{Bool}`: Whether to compute the Hessian. If `true`
-  (the default), `estimate()` calculates the Hessian at the posterior mode.
+- `reoptimize`: Whether to reoptimize the posterior mode. If `true` (the default),
+    `estimate()` begins reoptimizing from the model object's parameter vector.
+- `calculate_hessian`: Whether to compute the Hessian. If `true` (the
+    default), `estimate()` calculates the Hessian at the posterior mode.
 
 #### Metropolis-Hastings
-- `n_mh_simulations::Setting{Int}`: Number of draws from the posterior
-  distribution per block.
-- `n_mh_blocks::Setting{Int}`: Number of blocks to run Metropolis-Hastings.
-- `n_mh_burn::Setting{Int}`: Number of blocks to discard as burn-in for
+- `n_mh_simulations`: Number of draws from the posterior
+    distribution per block.
+- `n_mh_blocks`: Number of blocks to run Metropolis-Hastings.
+- `n_mh_burn`: Number of blocks to discard as burn-in for
   Metropolis-Hastings.
-- `mh_thin::Setting{Int}`: Metropolis-Hastings thinning step.
+- `mh_thin`: Metropolis-Hastings thinning step.
 
 ### Accessing Settings
 The function `get_setting(m::AbstractModel, s::Symbol)` returns the value of the
 setting `s` in `m.settings`. Some settings also have explicit getter methods
-that take only the model object `m` as an argument:
+that take only the model object `m` as an argument. Note that not all are exported.
 
-*I/O settings:*
-`saveroot(m)`,
-`dataroot(m)`,
-`data_vintage(m)`,
-
-*Parallelization*:
-`use_parallel_workers(m)`
-
-*Estimation*:
-`reoptimize(m)`,
-`calculate_hessian(m)`,
-`n_hessian_test_params(m)`,
-
-*Metropolis-Hastings*:
-`n_mh_blocks(m)`,
-`n_mh_simulations(m)`,
-`n_mh_burn(m)`,
-`mh_thin(m)`
+- I/O:
+    - `saveroot(m)`,
+    - `dataroot(m)`,
+    - `data_vintage(m)`,
+- Parallelization:
+    - `use_parallel_workers(m)`
+- Estimation:
+    - `reoptimize(m)`,
+    - `calculate_hessian(m)`,
+- Metropolis-Hastings:
+    - `n_mh_blocks(m)`,
+    - `n_mh_simulations(m)`,
+    - `n_mh_burn(m)`,
+    - `mh_thin(m)`
 
 ### Overwriting Default Settings
 
 To overwrite default settings added during model construction, a user must
-define a new `Setting` object and overwrite the corresponding entry in the
-model's `settings` dictionary using the `<=` syntax. Individual fields of a
-pre-initialized setting object cannot be modified. This immutability enforces
-the naming convention described in the preceding paragraphs (the default
-parameters are constructed without codes and are not printed to filename outputs
-to avoid excessively long filenames). Therefore, we strongly suggest that users
-who modify settings set `print=true` and define a meaningful code when
-overwriting any default settings.
+define a new `Setting` object and update the corresponding entry in the
+model's `settings` dictionary using the `<=` syntax. If the `print`, `code`, and
+`description` fields of the new `Setting` object are not provided, the fields of the
+existing setting will be maintained. If new values for `print`, `code`, and `description`
+are specified, and if these new values are distinct from the defaults for those fields, the
+fields of the existing setting will be updated.
 
 For example, overwriting `use_parallel_workers` should look like this:
 ```julia
@@ -656,7 +773,7 @@ for `Model990` with `ss1` as an argument. For example,
 m = Model990("ss1")
 ```
 
-## Acknowledgements
+# Acknowledgements
 Developers of this package at [FRBNY](https://www.newyorkfed.org/research)
 include
 

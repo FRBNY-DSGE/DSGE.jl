@@ -660,18 +660,17 @@ end
 init_data_transforms!(m::Model990)
 ```
 
-This function initializes a dictionary of functions that map series
-read in in levels to the appropriate transformed value. At the time
-that the functions are initialized, data is not itself in
-memory. These functions are model-specific because they assume that
-certain series are available.
+This function initializes a dictionary of functions that map series read in in levels to the
+appropriate transformed value. At the time that the functions are initialized, data is not
+itself in memory. These functions are model-specific because they assume that certain series
+are available. The keys of data transforms should match exactly the keys of `m.observables`.
 """
 function init_data_transforms!(m::Model990)
 
     ## A. FRED
 
     # 1. Output gap
-    m.data_transforms[:gdp] = function (levels)
+    m.data_transforms[:obs_gdp] = function (levels)
         # FROM: Level of nominal GDP (FRED :GDP series)
         # TO:   Quarter-to-quarter percent change of real, per-capita GDP, adjusted for population smoothing
 
@@ -681,7 +680,7 @@ function init_data_transforms!(m::Model990)
     end
 
     # 2. Employment/Hours per capita
-    m.data_transforms[:laborsupply] = function (levels)
+    m.data_transforms[:obs_hours] = function (levels)
         # FROM: Average weekly hours (AWHNONAG) & civilian employment (CE16OV)
         # TO:   log (3 * aggregregate weekly hours / 100), per-capita
         # Note: Not sure why the 3 is there.
@@ -691,7 +690,7 @@ function init_data_transforms!(m::Model990)
     end
 
     # 3. Real wage growth
-    m.data_transforms[:wagegrowth] = function realhourlywage(levels)
+    m.data_transforms[:obs_wages] = function (levels)
         # FROM: Nominal compensation per hour (:COMPNFB from FRED)
         # TO: quarter to quarter percent change of real compensation (using GDP deflator)
 
@@ -699,7 +698,7 @@ function init_data_transforms!(m::Model990)
     end
 
     # 4. GDP deflator
-    m.data_transforms[:gdpdeflator] = function (levels)
+    m.data_transforms[:obs_gdpdeflator] = function (levels)
         # FROM: GDP deflator (index)
         # TO:   Approximate quarter-to-quarter percent change of gdp deflator,
         #       i.e.  quarterly gdp deflator inflation
@@ -708,7 +707,7 @@ function init_data_transforms!(m::Model990)
     end
 
     # 5. Core PCE
-    m.data_transforms[:corepce] = function (levels)
+    m.data_transforms[:obs_corepce] = function (levels)
         # FROM: Core PCE index
         # INTO: Approximate quarter-to-quarter percent change of Core PCE,
         # i.e. quarterly core pce inflation
@@ -717,7 +716,7 @@ function init_data_transforms!(m::Model990)
     end
 
     # 6. Nominal short-term interest rate (3 months)
-    m.data_transforms[:fedfunds] = function (levels)
+    m.data_transforms[:obs_nominalrate] = function (levels)
         # FROM: Nominal effective federal funds rate (aggregate daily data at a
         #       quarterly frequency at an annual rate)
         # TO:   Nominal effective fed funds rate, at a quarterly rate
@@ -727,7 +726,7 @@ function init_data_transforms!(m::Model990)
     end
 
     # 7. Consumption growth
-    m.data_transforms[:consumption] = function (levels)
+    m.data_transforms[:obs_consumption] = function (levels)
         # FROM: Nominal consumption
         # TO:   Real consumption, approximate quarter-to-quarter percent change,
         #       per capita, adjusted for population filtering
@@ -738,7 +737,7 @@ function init_data_transforms!(m::Model990)
     end
 
     # 8. Investment growth
-    m.data_transforms[:investment] = function (levels)
+    m.data_transforms[:obs_investment] = function (levels)
         # FROM: Nominal investment
         # INTO: Real investment, approximate quarter-to-quarter percent change,
         #       per capita, adjusted for population filtering
@@ -749,7 +748,7 @@ function init_data_transforms!(m::Model990)
     end
 
     # 9. Spread: BAA-10yr TBill
-    m.data_transforms[:spread] = function (levels)
+    m.data_transforms[:obs_spread] = function (levels)
         # FROM: Baa corporate bond yield (percent annualized), and 10-year
         #       treasury note yield (percent annualized)
         # TO:   Baa yield - 10T yield spread at a quarterly rate
@@ -760,7 +759,7 @@ function init_data_transforms!(m::Model990)
     end
 
     # 10. Long term inflation expectations (Survey of Professional Forecasters)
-    m.data_transforms[:inflation10] = function (levels)
+    m.data_transforms[:obs_longinflation] = function (levels)
         # FROM: SPF: 10-Year average yr/yr CPI inflation expectations (annual percent)
         # TO:   FROM, less 0.5
         # Note: We subtract 0.5 because 0.5% inflation corresponds to
@@ -772,7 +771,7 @@ function init_data_transforms!(m::Model990)
 
     ## # 11. Long rate
     #TODO: get yield and premia from FRED
-    m.data_transforms[:longrate] = function (levels)
+    m.data_transforms[:obs_longrate] = function (levels)
         # interim solution
         # FROM: pre-computed long rate at an annual rate
         # TO:   10T yield - 10T term premium at a quarterly rate
@@ -781,7 +780,7 @@ function init_data_transforms!(m::Model990)
     end
 
     # 12. Fernald TFP
-    m.data_transforms[:tfp] = function (levels)
+    m.data_transforms[:obs_tfp] = function (levels)
         # FROM: Fernald's unadjusted TFP series (levels)
         # TO: De-meaned unadjusted TFP series, adjusted by Fernald's
         #     estimated alpha (capacity utilization rate?)
@@ -796,7 +795,7 @@ function init_data_transforms!(m::Model990)
         # FROM: OIS expectations of $i-period-ahead interest rates at a quarterly rate
         # TO:   Same
         
-        m.data_transforms[symbol("ois$i")] = function (levels)
+        m.data_transforms[symbol("obs_ois$i")] = function (levels)
             levels[:, symbol("ant$i")]
             
         end
