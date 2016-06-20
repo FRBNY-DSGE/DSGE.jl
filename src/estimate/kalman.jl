@@ -203,11 +203,17 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
     return kalman_filter(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=allout)
 end
 
+# Methods with z0 as vector
+function kalman_filter{S<:AbstractFloat}(data::Matrix{S}, lead::Int64, a::Matrix{S},
+    F::Matrix{S}, b::Matrix{S}, H::Matrix{S}, var::Matrix{S}, z0::Vector{S}, vz0::Matrix{S},
+    Ny0::Int = 0; allout::Bool = false)
+    kalman_filter(data,lead,a,F,b,H,var,hcat(z0),vz0,Ny0; allout=allout)
+end
 
 """
 ```
 kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-     TTT::Matrix{S}, RRR::Matrix{S}, CCC::Matrix{S}, z0::Array{S},
+     TTT::Matrix{S}, RRR::Matrix{S}, CCC::Matrix{S}, z0::Matrix{S},
      vz0::Matrix{S}; lead::Int, Ny0::Int, allout::Bool,
      catch_errors::Bool)
 ```
@@ -241,11 +247,11 @@ Where:
 """
 function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
                                                data::Matrix{S},
-                                               TTT::Matrix{S} = Matrix{S}(0,0),
-                                               RRR::Matrix{S} = Matrix{S}(0,0),
-                                               CCC::Matrix{S} = Matrix{S}(0,0),
-                                               z0::Array{S}   = Array{S}(0),
-                                               vz0::Matrix{S} = Matrix{S}(0,0);
+                                               TTT::Matrix{S} = Matrix{S}(),
+                                               RRR::Matrix{S} = Matrix{S}(),
+                                               CCC::Matrix{S} = Matrix{S}(),
+                                               z0::Matrix{S}  = Matrix{S}(),
+                                               vz0::Matrix{S} = Matrix{S}();
                                                lead::Int=0,
                                                Ny0::Int =0,
                                                allout::Bool = false,

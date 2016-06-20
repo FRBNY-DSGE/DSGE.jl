@@ -104,8 +104,8 @@ end
 function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
                                   data::Matrix{S},
                                   sys::System,  
-                                  z0::Array{S}=Array{S}(0),
-                                  vz0::Matrix{S}=Matrix{S}(0,0);
+                                  z0::Vector{S}=Vector{S}(),
+                                  vz0::Matrix{S}=Matrix{S}();
                                   lead::Int=0,
                                   Ny0::Int =0,
                                   allout::Bool = false)
@@ -136,7 +136,7 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
         
     else
         # regular Kalman filter with no regime-switching
-        kal = kalman_filter(data', lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0, allout=allout)
+        kal = kalman_filter(data', lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0; allout=allout)
 
         return kal[:filt]', kal[:pred], kal[:vpred], kal[:zend], kal[:P0]
     end
