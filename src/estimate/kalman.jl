@@ -77,8 +77,16 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
     Nz = size(a, 1)
     Ny = size(b, 1)
 
-    z = z0
-    P = vz0
+    if !isempty(z0)
+        z = z0
+    else
+        z = zeros(eltype(a), Nz, 1)
+    end
+    if !isempty(vz0)
+        P = vz0
+    else
+        P = zeros(eltype(a), Nz, Nz)
+    end
 
     # Check input matrix dimensions
     @assert size(data, 1) == Ny

@@ -300,7 +300,6 @@ function forecast_one(m::AbstractModel, df::DataFrame;
 
     # must re-run filter/smoother for conditional data in addition to explicit cases
     if output_type in [:states, :simple, :all] || cond_type in [:semi, :full]
-        println("Calling filter and smoother")
         histstates, histpseudo = filterandsmooth(m, df0, systems)
 
         forecast_output[:histstates] = histstates
@@ -315,7 +314,6 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     end
 
     if output_type in [:forecast, :simple, :all]
-        println("Calling forecast")
         forecaststates, forecastobs, forecastpseudo =
             forecast(m, systems, states)
 
