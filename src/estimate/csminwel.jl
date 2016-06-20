@@ -3,6 +3,8 @@ This code is based on a routine originally copyright Chris Sims.
 See http://sims.princeton.edu/yftp/optimize/
 =#
 
+immutable Csminwel <: Optim.Optimizer end
+
 const rc_messages = Dict(0 => "Standard Iteration",
                          1 => "zero gradient",
                          2 => "back and forth on step length never finished",
@@ -119,7 +121,7 @@ function csminwel(fcn::Function,
     iteration = 0
 
     # Maintain a trace
-    tr = OptimizationTrace()
+    tr = OptimizationTrace(Csminwel())
     tracing = show_trace || store_trace || extended_trace
     @csminwelltrace
 
