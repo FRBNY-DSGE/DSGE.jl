@@ -407,7 +407,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
             block_time = toq()
             total_sampling_time += block_time
             total_sampling_time_minutes = total_sampling_time/60
-            expected_time_remaining = (total_sampling_time/block)*(n_blocks - block)
+            expected_time_remaining_sec     = (total_sampling_time/block)*(n_blocks - block)
             expected_time_remaining_minutes = expected_time_remaining_sec/60
 
             println("Completed $block of $n_blocks blocks.")
