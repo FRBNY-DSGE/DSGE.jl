@@ -49,7 +49,6 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:mh_thin, 5, "Metropolis-Hastings thinning step")
 
     # Forecast
-    m <= Setting(:use_expected_rate_data, (n_anticipated_shocks(m) > 0), "Use data on expected future interest rates")
     m <= Setting(:forecast_observables, :all, "Observables to forecast")
     m <= Setting(:forecast_kill_shocks, false, "Kill (set to 0) all shocks in forecast")
     m <= Setting(:forecast_tdist_shocks, false, "Draw Students-t distributed shocks in forecast")

@@ -116,10 +116,9 @@ end
 Distributions.logpdf(m::AbstractModel) = logpdf(m.parameters)
 Distributions.pdf(m::AbstractModel) = exp(logpdf(m))
 
-# Number of anticipated policy shocks
-n_anticipated_shocks(m::AbstractModel) = get_setting(m, :n_anticipated_shocks)
-
-# Padding for number of anticipated policy shocks
+# Anticipated policy shocks/expected rate data
+n_anticipated_shocks(m::AbstractModel)         = get_setting(m, :n_anticipated_shocks)
+use_expected_rate_data(m::AbstractModel)       = n_anticipated_shocks(m) > 0
 n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_shocks_padding)
 
 # Index into data matrix of first period to incorporate expected rate data

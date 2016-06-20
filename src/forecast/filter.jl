@@ -3,13 +3,11 @@
 
 filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::Vector{System},
                                   z0::Vector{S}=[], vz0::Matrix{S}=[];
-                                  lead::Int, Ny0::Int =0, allout::Bool = false,
-                                  use_expected_rate_data::Bool = true)
+                                  lead::Int, Ny0::Int =0, allout::Bool = false)
 
 filter{S<:AbstractFloat}(m::AbstractModel, data::DataFrame, sys::Vector{System},
                                   z0::Vector{S}=[], vz0::Matrix{S}=[];
-                                  lead::Int, Ny0::Int =0, allout::Bool = false,
-                                  use_expected_rate_data::Bool = true)
+                                  lead::Int, Ny0::Int =0, allout::Bool = false)
 
 ```
     
@@ -48,15 +46,12 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
                                   vz0::Matrix{S}=Array{S}(0,0);
                                   lead::Int=0,
                                   Ny0::Int =0,
-                                  allout::Bool = false,
-                                  use_expected_rate_data::Bool = true)
-
+                                  allout::Bool = false)
     
     # Convert the DataFrame to a data matrix without altering the original dataframe  
     data  = df_to_matrix(m,df) 
                 
-    filter(m, data, sys, z0, vz0, lead=lead, Ny0 =Ny0, allout=allout,
-           use_expected_rate_data=use_expected_rate_data)
+    filter(m, data, sys, z0, vz0, lead=lead, Ny0 =Ny0, allout=allout)
 end
 
 
@@ -67,8 +62,7 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
                                   vz0::Matrix{S}=Array{S}(0,0);
                                   lead::Int=0,
                                   Ny0::Int =0,
-                                  allout::Bool = false,
-                                  use_expected_rate_data::Bool = true)
+                                  allout::Bool = false)
 
     # numbers of useful things
     ndraws = size(sys, 1)
@@ -83,8 +77,7 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
     else
         mapfcn = map
     end
-    out   = mapfcn(i -> DSGE.filter(m,data,sys[i], allout=true,
-                                            use_expected_rate_data=use_expected_rate_data), 1:ndraws)
+    out   = mapfcn(i -> DSGE.filter(m,data,sys[i], allout=true), 1:ndraws)
 
     filtered_states = [Array(x[1]) for x in out]  # to make type stable
     pred            = [Array(x[2]) for x in out]  
@@ -101,14 +94,11 @@ function filter{T<:AbstractModel}(m::T,
                                   vz0::Matrix{Float64}=Matrix{Float64}(0,0);
                                   lead::Int=0,
                                   Ny0::Int =0,
-                                  allout::Bool = false,
-                                  use_expected_rate_data = true)
+                                  allout::Bool = false)
 
     data  = df_to_matrix(m,df) 
 
-    filter(m,data,sys,z0,vz0,lead=lead,Ny0=Ny0,allout=allout,
-           use_expected_rate_data=use_expected_rate_data)
-    
+    filter(m,data,sys,z0,vz0,lead=lead,Ny0=Ny0,allout=allout)
 end
     
 function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
@@ -118,9 +108,7 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
                                   vz0::Matrix{S}=Matrix{S}(0,0);
                                   lead::Int=0,
                                   Ny0::Int =0,
-                                  allout::Bool = false,
-                                  use_expected_rate_data = true)
-
+                                  allout::Bool = false)
     
     # pull out the elements of sys
     TTT    = sys[:TTT]
@@ -132,7 +120,7 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
     VVall  = sys[:VVall]
 
     # Call the appropriate version of the Kalman filter
-    if use_expected_rate_data
+    if use_expected_rate_data(m)
 
         # We have 3 regimes: presample, main sample, and expected-rate sample (starting at zlb_start_index)
         R2, R3, R1 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0, lead=lead, Ny0=Ny0, allout=allout)
@@ -161,13 +149,11 @@ function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
                                   vz0::Matrix{S}=Matrix{S}(0,0);
                                   lead::Int=0,
                                   Ny0::Int =0,
-                                  allout::Bool = false,
-                                  use_expected_rate_data = true)
+                                  allout::Bool = false)
 
     output = cell(size(sys)) # hack
     for (i,s) in enumerate(sys)
-        output[i] = filterandsmooth(m, df, sys, z0, vz0, lead=lead, Ny0=Ny0, allout=allout,
-            use_expected_rate_data = use_expected_rate_data)
+        output[i] = filterandsmooth(m, df, sys, z0, vz0, lead=lead, Ny0=Ny0, allout=allout)
     end
 end
 
@@ -178,9 +164,7 @@ function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
                                   vz0::Matrix{S}=Matrix{S}(0,0);
                                   lead::Int=0,
                                   Ny0::Int =0,
-                                  allout::Bool = false,
-                                  use_expected_rate_data = true)
-
+                                  allout::Bool = false)
 
     ##############################################################################
     ## 1. Filter
@@ -196,7 +180,7 @@ function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
     VVall  = sys[:VVall]
 
     # Call the appropriate version of the Kalman filter
-    filtered_states, pred, vpred, zend, P0 = if use_expected_rate_data
+    filtered_states, pred, vpred, zend, P0 = if use_expected_rate_data(m)
 
         # We have 3 regimes: presample, main sample, and expected-rate sample (starting at zlb_start_index)
         R2, R3 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0, lead=lead, Ny0=Ny0, allout=allout)

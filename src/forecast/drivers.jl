@@ -203,7 +203,7 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
 
     if input_type in [:mean, :mode, :init]
         update!(m, vec(params))
-        systems[1] = compute_system(m; use_expected_rate_data = true)
+        systems[1] = compute_system(m)
     elseif input_type in [:full]
         empty = isempty(CCC)
         # TODO parallelize
