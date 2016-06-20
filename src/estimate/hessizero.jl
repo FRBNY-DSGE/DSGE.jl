@@ -22,7 +22,7 @@ function hessizero{T<:AbstractFloat}(fcn::Function,
     hessian  = zeros(n_para, n_para)
 
     # Compute diagonal elements first
-    if distr
+    if distr && nworkers() > 1
         diag_elements = @sync @parallel (hcat) for i = 1:n_para
             hess_diag_element(fcn, x, i; check_neg_diag=check_neg_diag, verbose=verbose)
         end
