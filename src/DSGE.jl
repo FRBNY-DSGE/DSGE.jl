@@ -20,8 +20,10 @@ module DSGE
 
         # abstractdsgemodel.jl
         AbstractModel, transform_to_model_space!, transform_to_real_line!,
-        n_states, n_shocks_exogenous, n_shocks_expectational, n_parameters,
-        n_anticipated_shocks,
+        description,
+        n_states, n_states_augmented, n_shocks_exogenous, n_shocks_expectational,
+        n_equilibrium_conditions, n_observables, n_parameters, n_parameters_steady_state,
+        n_parameters_free, n_anticipated_shocks,
         spec, subspec,
         dataroot, saveroot, inpath, workpath, rawpath, tablespath, figurespath, logpath,
         reoptimize, calculate_hessian,
@@ -29,7 +31,6 @@ module DSGE
         data_vintage,
         specify_mode!, specify_hessian, load_parameters_from_file,
         use_population_forecast,
-
 
         # parameters.jl
         parameter, Transform, NullablePrior, AbstractParameter,
@@ -51,7 +52,8 @@ module DSGE
 
         # data/
         load_fred_data, load_data, transform_data, save_data_matrix!, hpfilter, difflog,
-        quartertodate
+        quartertodate, percapita, nominal_to_real, hpadjust, oneqtrpctchange,
+        annualtoquarter
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"

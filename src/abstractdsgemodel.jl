@@ -1,12 +1,14 @@
 abstract AbstractModel{T}
 
+description(m::AbstractModel) = "DSGE Model $(spec(m)) (subspec $(subspec(m)))"
+
 function Base.show{T<:AbstractModel}(io::IO, m::T)
     @printf io "Dynamic Stochastic General Equilibrium Model\n"
     @printf io "%s\n" T
+    @printf io "description:\n %s\n"          description(m)
     @printf io "no. states:             %i\n" n_states(m)
     @printf io "no. anticipated shocks: %i\n" n_anticipated_shocks(m)
     @printf io "data vintage:           %s\n" data_vintage(m)
-    @printf io "description:\n %s\n"          description(m)
 end
 
 @inline function Base.getindex(m::AbstractModel, i::Integer)
@@ -60,7 +62,6 @@ param. Otherwise, overwrites m.steady_state[i-length(m.parameters).
 end
 
 Base.setindex!(m::AbstractModel, value, k::Symbol) = Base.setindex!(m, value, m.keys[k])
-
 
 """
 ```
@@ -168,9 +169,9 @@ use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers
 use_population_forecast(m::AbstractModel) = get_setting(m, :use_population_forecast)
 
 # Interface for estimation settings
-reoptimize(m::AbstractModel)          = get_setting(m, :reoptimize)
-calculate_hessian(m::AbstractModel) = get_setting(m, :calculate_hessian)
-hessian_path(m::AbstractModel)      = get_setting(m, :hessian_path)
+reoptimize(m::AbstractModel)            = get_setting(m, :reoptimize)
+calculate_hessian(m::AbstractModel)     = get_setting(m, :calculate_hessian)
+hessian_path(m::AbstractModel)          = get_setting(m, :hessian_path)
 n_hessian_test_params(m::AbstractModel) = get_setting(m, :n_hessian_test_params)
 
 # Interface for Metropolis-Hastings settings
@@ -178,7 +179,6 @@ n_mh_blocks(m::AbstractModel)      =  get_setting(m, :n_mh_blocks)
 n_mh_simulations(m::AbstractModel) =  get_setting(m, :n_mh_simulations)
 n_mh_burn(m::AbstractModel)        =  get_setting(m, :n_mh_burn)
 mh_thin(m::AbstractModel)          =  get_setting(m, :mh_thin)
-
 
 """
 ```
