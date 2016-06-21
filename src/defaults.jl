@@ -43,7 +43,7 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:n_hessian_test_params, typemax(Int), "Max number of free params for which to calculate Hessian")
 
     # Metropolis-Hastings
-    m <= Setting(:n_mh_simulations, 10000, "Number of draws per block in Metropolis-Hastings")
+    m <= Setting(:n_mh_simulations, 5000, "Number of draws per block in Metropolis-Hastings")
     m <= Setting(:n_mh_blocks, 22, "Number of blocks for Metropolis-Hastings")
     m <= Setting(:n_mh_burn, 2, "Number of blocks to use as burn-in in Metropolis-Hastings")
     m <= Setting(:mh_thin, 5, "Metropolis-Hastings thinning step")

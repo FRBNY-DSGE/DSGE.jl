@@ -453,7 +453,7 @@ end
 update{T}(pvec::ParameterVector{T}, values::Vector{T})
 ```
 
-Returns a copy of `pvec` where non-fixed parameter values are udpated
+Returns a copy of `pvec` where non-fixed parameter values are updated
 to `values`. `pvec` remains unchanged. Length of `values` must
 equal length of `pvec`.
 """
