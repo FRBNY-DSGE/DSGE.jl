@@ -787,7 +787,8 @@ function init_data_transforms!(m::Model990)
         # Note: not sure offhand why it is multiplied by 4.
 
         tfp_unadj = levels[:dtfp]
-        (tfp_unadj - NaNMath.mean(convert(Vector{Float64}, tfp_unadj))) ./ (4*(1 - levels[:alpha]))
+        tfp_unadj_mean = mean(tfp_unadj[!isnan(tfp_unadj)])
+        (tfp_unadj - tfp_unadj_mean) ./ (4*(1 - levels[:alpha]))
     end
 
     # Columns 13 - 13 + n_anticipated_shocks
