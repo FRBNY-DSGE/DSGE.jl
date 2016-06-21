@@ -1,9 +1,9 @@
-julia 0.4-
+julia 0.4
 Calculus
 DataStructures
 Distributions
+FredData
 HDF5
 Optim 0.5
 QuantEcon
 Roots
-FredData
