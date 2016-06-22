@@ -283,29 +283,10 @@ for their model.
     `use_population_forecast`.
 
 Second, *DSGE* attempts to construct the dataset given this setup through a call to
-`load_data`.
-- *DSGE* checks the disk to see if a valid dataset is already stored. A dataset is valid if
-    every series in `m.data_transforms` is present and the entire sample is contained (from
-    `date_presample_start` to `date_mainsample_end`. If no valid dataset is already stored, the dataset will be recreated.
-- In a preliminary stage, intermediate data series, as specified in `m.data_series`, are loaded in levels using
-    `load_data_levels`. Note that these intermediate data series may contain more rows that
-    the final dataset so that growth rates and other transformations can be successfully
-    applied.
-    - Data from the `:fred` data source are downloaded using `load_fred_data`. If an
-        existing FRED vintage exists on disk, any required FRED series that is contained
-        therein will be imported; any missing series will be downloaded directly from FRED
-        using the *FredData* package.
-    - Data from non-FRED data sources are read from disk, verified, and merged.
-- The series in levels are transformed as specified in `m.data_transforms`.
-    - To prepare for per-capita transformations, population data are filtered using
-        `hpfilter`. Note that optionally, a population growth forecast from a service like
-        Macroeconomic Advisers is appended to the recorded values before the filtering. Both
-        filtered and unfiltered population levels and growth rates are added to the `levels`
-        data frame.
-    - The transformations are applied using the `levels` DataFrame as input.
-
-Finally, the resulting dataset is saved to disk for future reference as `data_<yymmdd>.csv`
-and the DataFrame is returned to the caller.
+`load_data`. See `?load_data` for more details.
+- Intermediate data in levels are loaded. See `?load_data_levels` for more details.
+- Transformations are applied to the data in levels. See `?transform_data` for more details.
+- The data are saved to disk. See `?save_data` for more details.
     
 ## Common pitfalls
 
