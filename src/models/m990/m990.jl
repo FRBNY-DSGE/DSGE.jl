@@ -184,7 +184,7 @@ function Model990(subspec::AbstractString="ss2")
                           :UNRATE, :AWHNONAG, :DFF, :BAA, :GS10, :PRS85006063, :CES0500000030, :CLF16OV,
                           :PCEPILFE, :COMPNFB, :THREEFYTP10]
     spf_series         = [:ASACX10]
-    fernald_series     = [:TFPJQ, :DTFP]
+    fernald_series     = [:TFPJQ, :TFPKQ]
     longrate_series    = [:FYCZZA]
     # ois data taken care of in load_data
     
@@ -779,9 +779,9 @@ function init_data_transforms!(m::Model990)
         # TO:   De-meaned unadjusted TFP series, adjusted by Fernald's
         #       estimated alpha
 
-        tfp_unadj      = levels[:dtfp]
+        tfp_unadj      = levels[:TFPKQ]
         tfp_unadj_mean = mean(tfp_unadj[!isnan(tfp_unadj)])
-        (tfp_unadj - tfp_unadj_mean) ./ (4*(1 - levels[:alpha]))
+        (tfp_unadj - tfp_unadj_mean) ./ (4*(1 - levels[:TFPJQ]))
     end
 
     # Columns 13 - 13 + n_anticipated_shocks
