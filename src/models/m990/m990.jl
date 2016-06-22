@@ -1,5 +1,5 @@
 """
-S```
+```
 Model990{T} <: AbstractModel{T}
 ```
 
@@ -670,7 +670,7 @@ function init_data_transforms!(m::Model990)
         # FROM: Level of nominal GDP (FRED :GDP series)
         # TO:   Quarter-to-quarter percent change of real, per-capita GDP, adjusted for population smoothing
 
-        levels[:temp] = percapita(:GDP, levels)
+        levels[:temp] = percapita(m, :GDP, levels)
         gdp = 1000 * nominal_to_real(:temp, levels)
         hpadjust(oneqtrpctchange(gdp), levels)
     end
@@ -727,7 +727,7 @@ function init_data_transforms!(m::Model990)
         # TO:   Real consumption, approximate quarter-to-quarter percent change,
         #       per capita, adjusted for population filtering
 
-        levels[:temp] = percapita(:PCE, levels)
+        levels[:temp] = percapita(m, :PCE, levels)
         cons = 1000 * nominal_to_real(:temp, levels)
         hpadjust(oneqtrpctchange(cons), levels)
     end
@@ -738,7 +738,7 @@ function init_data_transforms!(m::Model990)
         # INTO: Real investment, approximate quarter-to-quarter percent change,
         #       per capita, adjusted for population filtering
 
-        levels[:temp] = percapita(:FPI, levels)
+        levels[:temp] = percapita(m, :FPI, levels)
         inv = 10000 * nominal_to_real(:temp, levels)
         hpadjust(oneqtrpctchange(inv), levels)
     end

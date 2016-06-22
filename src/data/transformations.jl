@@ -28,21 +28,19 @@ end
 
 
 """
-`percapita(col, df; population_mnemonic=:CNP16OV)`
+`percapita(col, df, population_mnemonic)
 
 Converts data column `col` of DataFrame `df` to a per-capita value.
 
 ## Arguments
 - `col`: symbol indicating which column of data to transform
 - `df`: DataFrame containining series for proper population measure and `col`
-
-## Keyword arguments
-
-- `population_mnemonic`: a mnemonic found in df for some population
-  measure. Default value = civilian noninstitutional population age 16+ (CNP16OV).
+- `population_mnemonic`: a mnemonic found in df for some population measure.
 """
-function percapita(col, df; population_mnemonic=:CNP16OV)
-   df[col] ./ df[population_mnemonic]
+percapita(col, df, population_mnemonic) = df[col] ./ df[population_mnemonic]
+function percapita(m, col, df)
+    population_mnemonic = get_setting(m, :population_mnemonic)
+    percapita(col, df, population_mnemonic)
 end
 
 
