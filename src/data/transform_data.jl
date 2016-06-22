@@ -1,7 +1,6 @@
 """
 ```
-transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic = :CNP16OV;
-    verbose::Symbol = :low)
+transform_data(m::AbstractModel, levels::DataFrame; verbose::Symbol = :low)
 ```
 
 Transform data loaded in levels and order columns appropriately for the DSGE model. Returns
@@ -16,16 +15,10 @@ transformed as specified in `m.data_transforms`.
     filtered and unfiltered population levels and growth rates are added to the `levels`
     data frame.
 - The transformations are applied for each series using the `levels` DataFrame as input.
-
-## Optional Arguments
-
-- `population_mnemonic`: the name of the column in `levels` that holds the population
-    measure for computing per-capita values. By default, it is CNP16OV (Civilian
-    Noninstitutional Population, in thousands, obtained via the FRED API).
 """
-function transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic = :CNP16OV;
-                        verbose::Symbol = :low)
+function transform_data(m::AbstractModel, levels::DataFrame; verbose::Symbol = :low)
 
+    population_mnemonic = get_setting(m, :population_mnemonic)
     n_obs, _ = size(levels)
 
     # Step 1: HP filter population forecasts, if they're being used

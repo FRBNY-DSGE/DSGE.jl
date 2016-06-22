@@ -21,6 +21,7 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:cond_vintage, vint, "Vintage of conditional data")
     m <= Setting(:cond_id, "0000", "Identifier of conditional dataset")
     m <= Setting(:use_population_forecast, false, "Whether to use population forecasts as data")
+    m <= Setting(:population_mnemonic, :CNP16OV, "Mnemonic of FRED data series for computing per-capita values")
 
     # Dates
     m <= Setting(:date_presample_start, quartertodate("1959-Q3"), "Start date of pre-sample")
