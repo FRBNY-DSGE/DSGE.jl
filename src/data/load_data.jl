@@ -95,7 +95,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
     for source in keys(m.data_series)
 
-        # Skip FRED sources, which are handled separately
+        # Skip FRED sources, which have already been handled
         if source == :fred
             continue
         end

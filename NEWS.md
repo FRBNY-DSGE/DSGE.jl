@@ -1,4 +1,4 @@
-# DSGE.jl v0.1.2 Release Notes
+# DSGE.jl v0.1.3 Release Notes
 
 ## New features
 
@@ -6,7 +6,7 @@
 - More robust and flexible treatment of dataset- and model-related dates
 - Refactored computational settings
 - Improved infrastructure for organizing input/output files
-- Bug fixes in treatment of zero lower bound in posterior computation
+- Bug fix in treatment of zero lower bound in posterior computation
 - Improved test coverage and documentation
 
 ## Breaking changes
