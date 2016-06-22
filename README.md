@@ -224,7 +224,42 @@ SPF dataset. Although this is not an elegant approach, it is consistent with the
 vintage as the data available at a certain point in time --- in this example, it just so
 happens that the SPF data available on Nov. 27 and Dec. 22 are the same.
 
-## Implementation
+## Incorporate population forecasts
+
+Many variables enter the model in per-capita terms. To that extent, we use data on
+population levels to adjust aggregate variables into per-capita variables. Furthermore, we
+apply the [Hodrick-Prescott filter](https://en.wikipedia.org/wiki/Hodrick%E2%80%93Prescott_filter)
+("H-P filter") to the population levels to smooth cyclical components.
+
+The user will ultimately want to produce forecasts of key variables such as GDP and then
+represent these forecasts in standard terms. That is, one wants to report GDP forecasts in
+aggregate terms, which is standard, rather than per-capita terms. To do this, we either
+extrapolate from the last periods of population growth in the data, or use external
+population forecasts.
+
+Note that if external population forecasts are provided, non-forecast procedures, such as
+model estimation, are also affected because the H-P filter smoothes back from the latest
+observation.
+
+To incorporate population forecasts,
+1. Set the model setting `use_population_forecast` to `true`.
+2. Provide a file `population_forecast_<yymmdd>.csv` to `inpath(m, "data")`. Population
+   forecasts should be in levels, and represent the same series as given by the
+   `population_mnemonic` setting (defaults to `:CNP16OV`, or "Civilian Noninstitutional
+   Population, Thousands"). If your population forecast is in growth rates, convert it to
+   levels yourself. The first row of data should correspond to the last period of
+   the main sample, such that growth rates can be computed. As many additional rows of
+   forecasts as desired can be provided.
+
+The file should look like this:
+```
+date,POPULATION
+2015-12-31,250000
+2016-03-31,251000
+etc.
+```
+
+## Dataset creation implementation details
 
 Let's quickly walk through the steps *DSGE* takes to create a suitable dataset.
 
