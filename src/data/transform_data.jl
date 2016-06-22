@@ -4,11 +4,18 @@ transform_data(m::AbstractModel, levels::DataFrame, population_mnemonic = :CNP16
     verbose::Symbol = :low)
 ```
 
-Transform data loaded in levels and order columns appropriately for the DSGE model.
+Transform data loaded in levels and order columns appropriately for the DSGE model. Returns
+DataFrame of transformed data.
 
-## Parameters
-- `m::AbstractModel`: the model object
-- `levels::DataFrame`: data loaded in levels (for instance, the output of `load_data`)
+The DataFrame `levels` is output from `load_data_levels`. The series in levels are
+transformed as specified in `m.data_transforms`.
+- To prepare for per-capita transformations, population data are filtered using
+    `hpfilter`. The series in `levels` to use as the population series is given by the
+    `population_mnemonic` setting. If `use_population_forecast` is `true`, a population
+    forecast is appended to the recorded population levels before the filtering. Both
+    filtered and unfiltered population levels and growth rates are added to the `levels`
+    data frame.
+- The transformations are applied for each series using the `levels` DataFrame as input.
 
 ## Optional Arguments
 

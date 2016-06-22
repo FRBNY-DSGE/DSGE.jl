@@ -5,21 +5,20 @@ load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol = :low)
 
 Create a DataFrame with all data series for this model, fully transformed.  
 
-Check in `inpath(m, "data")` for vintaged datasets corresponding to the ones in
-`keys(m.data_series)`. Load the appropriate data series (specified in
-`m.data_series[source]`) for each data source. The start and end dates of the data returned
-are given by the `date_presample_start` and `date_mainsample_end` model settings. Save the
-resulting DataFrame to disk.
+First, check the disk to see if a valid dataset is already stored in `inpath(m, "data")`. A
+dataset is valid if every series in `m.data_transforms` is present and the entire sample is
+contained (from `date_presample_start` to `date_mainsample_end`. If no valid dataset is
+already stored, the dataset will be recreated. This check can be eliminated by passing
+`try_disk=false`.
 
-If `try_disk` is `true`, check `inpath(m, "data")` to see if the data series have already
-been downloaded and transformed; if so, load them directly from disk.
+If the dataset is to be recreated, in a preliminary stage, intermediate data series, as
+specified in `m.data_series`, are loaded in levels using `load_data_levels`. See
+`?load_data_levels` for more details.
 
-# Notes
+Then, the series in levels are transformed as specified in `m.data_transforms`. See
+`?transform_data` for more details.
 
-The name of the input data file must be the same as the source string in `m.data_series`,
-and those files must be located in CSV files in `inpath(m, "data")`. To accomodate growth
-rates and other similar transformations, more rows of data may be downloaded than otherwise
-specified by the date model settings.
+The resulting DataFrame is saved to disk as `data_<yymmdd>.csv` and returned to the caller.  
 """
 function load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol=:low)
     recreate_data = false
@@ -73,6 +72,19 @@ load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
 Load data in levels by appealing to the data sources specified for the model. Data from FRED
 is loaded first, by default; then, merge other custom data sources.
+
+Check on disk in `inpath(m, "data")` datasets, of the correct vintage, corresponding to the
+ones in `keys(m.data_series)`. Load the appropriate data series (specified in
+`m.data_series[source]`) for each data source. 
+    
+To accomodate growth rates and other similar transformations, more rows of data may be
+downloaded than otherwise specified by the date model settings. (By the end of the process,
+these rows will have been dropped.)
+
+Data from FRED (i.e. the `:fred` data source) are treated separately. These are downloaded
+using `load_fred_data`. See `?load_fred_data` for more details.
+
+Data from non-FRED data sources are read from disk, verified, and merged.
 """
 function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     # Start two quarters further back than `start_date` as we need these additional
@@ -207,8 +219,9 @@ end
 isvalid_data(m::AbstractModel, df::DataFrame)
 ```
 
-Return if dataset is valid, ensuring that all observables are contained and that all quarters
-between the beginning of the presample and the end of the mainsample are contained.
+Return if dataset is valid for this model, ensuring that all observables are contained and
+that all quarters between the beginning of the presample and the end of the mainsample are
+contained.
 """
 function isvalid_data(m::AbstractModel, df::DataFrame)
     valid = true

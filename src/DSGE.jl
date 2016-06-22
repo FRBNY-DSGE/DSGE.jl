@@ -50,9 +50,9 @@ module DSGE
         gensys, solve,
 
         # data/
-        load_fred_data, load_data, transform_data, save_data_matrix!, hpfilter, difflog,
-        quartertodate, percapita, nominal_to_real, hpadjust, oneqtrpctchange,
-        annualtoquarter 
+        load_data, load_data_levels, load_fred_data, transform_data, save_data,
+        df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
+        hpadjust, oneqtrpctchange, annualtoquarter 
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"

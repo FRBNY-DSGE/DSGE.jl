@@ -1,12 +1,13 @@
 """
-`load_fred_data(m::AbstractModel; start_date="1959-03-31", end_date=prev_quarter())`
+```
+load_fred_data(m::AbstractModel; start_date="1959-03-31", end_date=prev_quarter())
+```
 
-Checks in `inpath(m)` for a FRED dataset corresponding to
-`data_vintage(m)`. The appropriate vintage of necessary series
-(identified by series mnemonics in `m.data_series[:fred]`) that are
-not found on disk are fetched via the FRED API. The full dataset is
-written to the appropriate data vintage file and returned.
-
+Checks in `inpath(m)` for a FRED dataset corresponding to `data_vintage(m)`.
+If a FRED vintage exists on disk, any required FRED series that is contained therein will be
+imported. All missing series will be downloaded directly from FRED using the *FredData*
+package. The full dataset is written to the appropriate data vintage file and returned.
+    
 # Arguments
 - `m::AbstractModel`: the model object
 - `start_date`: starting date.
@@ -14,9 +15,8 @@ written to the appropriate data vintage file and returned.
 
 # Notes
 
-The FRED API reports observations according to the quarter-start
-date. `load_fred_data` returns data indexed by quarter-end date for
-compatibility with other datasets.
+The FRED API reports observations according to the quarter-start date. `load_fred_data`
+returns data indexed by quarter-end date for compatibility with other datasets.
 """
 function load_fred_data(m::AbstractModel;
                         start_date::Date = Date("1959-01-01", "y-m-d"),
