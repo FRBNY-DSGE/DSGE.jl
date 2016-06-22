@@ -126,6 +126,274 @@ m <= Setting(:saveroot, "path/to/my/save/root")
 m <= Setting(:dataroot, "path/to/my/data/root")
 ```
 
+# Advanced usage
+
+## Package Directory Structure
+
+The package directory structure follows Julia module conventions.
+
+  - `doc/`: Code and model documentation.
+  - `save/`: Sample input files; default input/output directories.
+  - `src/`
+     - `DSGE.jl`: The main module file.
+     - `abstractdsgemodel.jl`: Defines the `AbstractModel` type.
+     - `parameters.jl`: Implements the `AbstractParameter` type and its
+       subtypes.
+     - `settings.jl`: Implements the `Setting` type.
+     - `defaults.jl`: Specifies default `Setting`s.
+     - `distributions_ext.jl`: DSGE-specific extensions of `Distributions` functionality.
+     - `data/`: Manipulating and updating input dataset.
+     - `solve/`: Solving the model; includes `gensys.jl` code.
+     - `estimate/`: Optimization, posterior sampling, and other functionality.
+     - [`xxx/`]: Other model functionality, such as forecasts, impulse response
+       functions, and shock decompositions.
+     - `models/`
+           - `m990/`: Contains code to define and initialize version 990 of the FRBNY DSGE
+              model.
+              - `m990.jl`: Constructs a `Model990` object.
+              - `eqcond.jl`: Constructs `Model990` equilibrium condition matrices
+              - `measurement.jl`: Constructs `Model990` measurement equation matrices.
+              - `subspecs.jl`: Code for model sub-specifications is defined here. See
+                [Editing or Extending a Model](#editing-or-extending-a-model) for details on
+                constructing model sub-specifications.
+              - `augment_states.jl`: Code for augmenting the state space system after model
+                solution.
+           - [`m991/`]: Code for new models should be kept in directories at this level in
+             the directory tree
+  - `test/`: Module test suite.
+
+## Reoptimizing
+
+Generally, the user will want to reoptimize the parameter vector (and consequently,
+calculate the Hessian at this new mode) every time they conduct posterior sampling; that is,
+when:
+- the input data are updated with a new quarter of observations or revised
+- the model sub-specification is changed
+- the model is derived from an existing model with different equilibrium conditions or
+  measurement equation.
+
+This behavior can be controlled more finely.
+
+### Reoptimize from Starting Vector
+
+Reoptimize the model starting from the parameter values supplied in use in a specified file.
+Ensure that you supply an HDF5 file with a variable named `params` that is the correct
+dimension and data type.
+```julia
+m = Model990()
+params = load_parameters_from_file(m, "path/to/parameter/file.h5")
+update!(m, params)
+estimate(m)
+```
+
+### Skip Reoptimization Entirely
+
+You can provide a modal parameter vector and optionally a Hessian matrix calculated at that
+mode to skip the reoptimization entirely. These values are usually computed by the user
+previously.
+
+You can skip reoptimization of the parameter vector entirely.
+```julia
+m = Model990()
+specify_mode!(m, "path/to/parameter/mode/file.h5")
+estimate(m)
+```
+
+The `specify_mode!` function will update the parameter vector to the mode and skip
+reoptimization by setting the `reoptimize` model setting. Ensure that you supply an HDF5
+file with a variable named `params` that is the correct dimension and data type. (See also
+the utility function `load_parameters_from_file`.)
+
+You can additionally skip calculation of the Hessian matrix entirely.
+```julia
+m = Model990()
+specify_mode!(m, "path/to/parameter/mode/file.h5")
+specify_hessian(m, "path/to/Hessian/matrix/file.h5")
+estimate(m)
+```
+
+The `specify_hessian` function will cause `estimate` to read in the Hessian matrix rather
+than calculating it directly.  Ensure that you supply an HDF5 file with a variable named
+`hessian` that is the correct dimension and data type. Specifying the Hessian matrix but
+*not* the parameter mode results in undefined behavior.
+
+## Working with Settings
+
+There are many computational settings that affect how the code runs without affecting the
+mathematical definition of the model. 
+
+Below, we describe several important settings for package usage.
+
+For more details on implementation and usage of settings, see [Settings](#settings).
+
+See [defaults.jl](src/defaults.jl) for the complete description of default settings.
+
+#### General
+
+- `dataroot`: The root directory for
+  model input data.
+- `saveroot`: The root directory for model output.
+- `use_parallel_workers`: Use available parallel workers in computaitons.
+- `data_vintage`: Data vintage identifier, formatted
+  `yymmdd`. By default, `data_vintage` is set to today's date. It is (currently) the only
+  setting printed to output filenames by default.
+
+#### Dates
+- `date_presample_start`: Start date of pre-sample.
+- `date_mainsample_start`: Start date of main sample.
+- `date_zlbregime_start`: Start date of zero lower bound regime.
+- `date_mainsample_end`: End date of main sample.
+- `date_forecast_start`: Start date of forecast period.
+- `date_forecast_end`: End date of forecast period.
+
+#### Anticipated Shocks
+- `n_anticipated_shocks`: Number of anticipated policy shocks.
+- `n_anticipated_shocks_padding`: Padding for anticipated shocks.
+
+#### Estimation
+- `reoptimize`: Whether to reoptimize the posterior mode. If `true` (the default),
+    `estimate()` begins reoptimizing from the model object's parameter vector.
+- `calculate_hessian`: Whether to compute the Hessian. If `true` (the
+    default), `estimate()` calculates the Hessian at the posterior mode.
+
+#### Metropolis-Hastings
+- `n_mh_simulations`: Number of draws from the posterior distribution per block.
+- `n_mh_blocks`: Number of blocks to run Metropolis-Hastings.
+- `n_mh_burn`: Number of blocks to discard as burn-in for Metropolis-Hastings.
+- `mh_thin`: Metropolis-Hastings thinning step.
+
+### Accessing Settings
+The function `get_setting(m::AbstractModel, s::Symbol)` returns the value of the setting `s`
+in `m.settings`. Some settings also have explicit getter methods that take only the model
+object `m` as an argument. Note that not all are exported.
+
+- I/O:
+    - `saveroot(m)`,
+    - `dataroot(m)`,
+    - `data_vintage(m)`,
+- Parallelization:
+    - `use_parallel_workers(m)`
+- Estimation:
+    - `reoptimize(m)`,
+    - `calculate_hessian(m)`,
+- Metropolis-Hastings:
+    - `n_mh_blocks(m)`,
+    - `n_mh_simulations(m)`,
+    - `n_mh_burn(m)`,
+    - `mh_thin(m)`
+
+### Overwriting Default Settings
+
+To overwrite default settings added during model construction, a user must define a new
+`Setting` object and update the corresponding entry in the model's `settings` dictionary
+using the `<=` syntax. If the `print`, `code`, and `description` fields of the new `Setting`
+object are not provided, the fields of the existing setting will be maintained. If new
+values for `print`, `code`, and `description` are specified, and if these new values are
+distinct from the defaults for those fields, the fields of the existing setting will be
+updated.
+
+For example, overwriting `use_parallel_workers` should look like this:
+```julia
+m = Model990()
+m <= Setting(:use_parallel_workers, true)
+```
+
+## Editing or Extending a Model
+
+Users may want to extend or edit `Model990` in a number of different ways.  The most common
+changes are listed below, in decreasing order of complexity:
+
+1. Add new parameters
+2. Modify equilibrium conditions or measurement equations
+3. Change the values of various parameter fields (i.e. initial `value`, `prior`,
+   `transform`, etc.)
+4. Change the values of various computational settings (i.e. `reoptimize`,
+   `n_mh_blocks`)
+
+Points 1 and 2 often go together (adding a new parameter guarantees a change in equilibrium
+conditions), and are such fundamental changes that they increment the model specification
+number and require the definition of a new subtype of `AbstractModel` (for instance,
+`Model991`).  See [Model specification](#model-specification-mspec) for more details.
+
+Any changes to the initialization of preexisting parameters are defined as a new model
+*sub-specification*, or *subspec*. While less significant than a change to the model's
+equilibrium conditions, changing the values of some parameter fields (especially priors) can
+have economic significance over and above settings we use for computational purposes.
+**Parameter definitions should not be modified in the model object's constructor.** First,
+incrementing the model's sub-specification number when parameters are changed improves
+model-level (as opposed to code-level) version control. Second, it avoids potential output
+filename collisions, preventing the user from overwriting output from previous estimations
+with the original parameters. The protocol for defining new sub-specifications is described
+in [Model sub-specifications](#model-sub-specifications-msubspec).
+
+Overriding default settings is described in the [Settings](#model-settings) section above.
+
+### Model specification (`m.spec`)
+
+A particular model, which corresponds to a subtype of `AbstractModel`, is defined as a set
+of parameters, equilibrium conditions (defined by the `eqcond` function) and measurement
+equations (defined by the `measurement` function).  Therefore, the addition of new
+parameters, states, or observables, or any changes to the equilibrium conditions or
+measurement equations necessitate the creation of a new subtype of `AbstractModel.`
+
+To create a new model object, we recommend doing the following:
+
+1. Duplicate the `m990` directory within the [models](src/models/) directory. Name the new
+   directory `mXXX.jl`, where `XXX` is your chosen model specification number or string.
+   Rename `m990.jl` in this directory to `mXXX.jl`.
+
+2. In the `mXXX/` directory, change all references to `Model990` to `ModelXXX`.
+
+3. Edit the `m990.jl`, `eqcond.jl`, and `measurement.jl` files as you see fit.  If adding
+   new states, equilibrium conditions, shocks, or observables, be sure to add them to the
+   appropriate list in `init_model_indices`.
+
+4. Open the module file, `src/DSGE.jl`. Add `ModelXXX` to the list of functions to export,
+   and include each of the files in `src/model/mXXX`.
+
+### Model sub-specifications (`m.subspec`)
+
+`Model990` sub-specifications are initialized by overwriting initial parameter definitions
+before the model object is fully constructed. This happens via a call to `init_subspec` in
+the `Model990` constructor. (Clearly, an identical protocol should be followed for new model
+types as well.)
+
+To create a new sub-specification (e.g., subspec 1) of `Model990`, edit the file
+`src/models/subspecs.jl` as follows (note that this example is not actually
+sub-specification `1` of `Model990`. In the source code, our sub-specification `5` is
+provided as additional example.):
+
+1. Define a new function, `ss1`, that takes an object of type `Model990` (not
+   `AbstractModel`!) as an argument. In this function, construct new parameter objects and
+   overwrite existing model parameters using the `<=` syntax. For example,
+
+    ```julia
+    function ss1(m::Model990)
+        m <= parameter(:ι_w, 0.000, (0.0, .9999), (0.0,0.9999), DSGE.Untransformed(), Normal(0.0,1.0), fixed=false,
+                       description="ι_w: Some description.",
+                       tex_label="\\iota_w")
+        m <= parameter(:ι_p, 0.0, fixed=true,
+                       description= "ι_p: Some description"
+                       tex_label="\\iota_p")
+    end
+    ```
+
+2. Add an `elseif` condition to `init_subspec`:
+
+    ```julia
+        ...
+        elseif subspec(m) == "ss1"
+            return ss1(m)
+        ...
+    ```
+
+To construct an instance of `Model990`, `ss1`, call the constructor
+for `Model990` with `ss1` as an argument. For example,
+
+    ```julia
+    m = Model990("ss1")
+    ```
+
 # Input data
 
 Given all of the hard work put into specifying the model, one should be able to maintain
@@ -138,8 +406,8 @@ model `m990`, see [Update sample input data](#update-sample-input-data).
 
 ## Setup
 
-To take advantage of the ability to automatically download data series from FRED, set up
-your FRED API access by following the directions
+To take advantage of the ability to automatically download data series from FRED via the
+*FredData.jl* package, set up your FRED API access by following the directions
 [here](https://github.com/micahjsmith/FredData.jl/blob/master/README.md).
 
 ## Loading data
@@ -242,6 +510,7 @@ model estimation, are also affected because the H-P filter smoothes back from th
 observation.
 
 To incorporate population forecasts,
+
 1. Set the model setting `use_population_forecast` to `true`.
 2. Provide a file `population_forecast_<yymmdd>.csv` to `inpath(m, "data")`. Population
    forecasts should be in levels, and represent the same series as given by the
@@ -261,7 +530,7 @@ etc.
 
 ## Dataset creation implementation details
 
-Let's quickly walk through the steps *DSGE* takes to create a suitable dataset.
+Let's quickly walk through the steps *DSGE.jl* takes to create a suitable dataset.
 
 First, a user provides a detailed specification of the data series and transformations used
 for their model.
@@ -282,7 +551,7 @@ for their model.
     `date_presample_start`, `date_mainsample_end`, and `date_zlbregime_start`, and
     `use_population_forecast`.
 
-Second, *DSGE* attempts to construct the dataset given this setup through a call to
+Second, *DSGE.jl* attempts to construct the dataset given this setup through a call to
 `load_data`. See `?load_data` for more details.
 - Intermediate data in levels are loaded. See `?load_data_levels` for more details.
 - Transformations are applied to the data in levels. See `?transform_data` for more details.
@@ -294,8 +563,8 @@ Given the complexity of the data download, you may find that the dataset generat
 `load_data` is not exactly as you expect. Here are some common pitfalls to look out for:
 - Ensure that the `data_vintage` model setting is as you expect. (Try checking
     `data_vintage(m)`.)
-- If you are having a problem using *FredData*, ensure your API key is provided correctly
-    and that there are no issues with your firewall, etc. Any issues with *FredData* proper
+- If you are having a problem using *FredData.jl*, ensure your API key is provided correctly
+    and that there are no issues with your firewall, etc. Any issues with *FredData.jl* proper
     should be reported on that project's page.
 - Ensure that the `data_series` field of the model object is set as expected.
 - Double check the transformations specified in the `data_transforms` field of the model
@@ -331,14 +600,17 @@ A sample dataset is provided for the 2015 Nov 27 vintage. To update this dataset
 
 1. See [above](#setup) to setup automatic data pulls using *FredData.jl*.
 2. Specify the exact data vintage desired:
+
     ```
     julia> m <= Setting(:data_vintage, "yymmdd")
     ```
 3. Create data files for the non-FRED data sources. For model `m990`, the required data
    files include `spf_<yymmdd>.csv` (with column `ASACX10`), `longrate_<yymmdd>.csv` (with
    column `FYCCZA`), and `fernald_<yymmdd>.csv` (with columns `TFPJQ` and `TFPKQ`). To
-   include data on expected interest rates, the file `ois_<yymmdd>.csv` is also required. See
-   [Data](doc/Data.md) for details on the series used and links to data sources.
+   include data on expected interest rates, the file `ois_<yymmdd>.csv` is also required. To
+   include [data on population forecasts](#incorporate-population-forecasts), the file
+   `population_forecst_<yymmdd>.csv` is also required. See [Data](doc/Data.md) for details
+   on the series used and links to data sources.
 4. Run `load_data(m)`; series from *FRED* will be downloaded and merged with the series from
    non-FRED data sources that you have already created. See [Common
    pitfalls](#common-pitfalls) for some potential issues.
@@ -352,92 +624,6 @@ reproducing the forecast results, this section can be ignored.
 This section focuses on what the code does and why, while the code itself
 (including comments) provides detailed information regarding *how* these basic
 procedures are implemented.
-
-## Source Code Directory Structure
-
-The source code directory structure follows Julia module conventions.
-
-  - `doc/`: Code and model documentation
-  - `src/`
-     - `DSGE.jl`: The main module file.
-     - `abstractdsgemodel.jl`: Defines the `AbstractModel` type.
-     - `parameters.jl`: Implements the `AbstractParameter` type and its
-       subtypes.
-     - `settings.jl`: Implements the `Setting` type.
-     - `distributions_ext.jl`: Defines additional functions to return objects of
-       type Distribution.
-     - `estimate/`: Mode-finding and posterior sampling.
-     - [`xxx/`]: Other model functionality, such as forecasts, impulse response
-       functions, and shock decompositions.
-     - `models/`
-           - `m990/`: Contains code to define and initialize version 990 of the
-             FRBNY DSGE model.
-              - `eqcond.jl`: Constructs `Model990` equilibrium condition
-                matrices
-              - `m990.jl`: Code for constructing a `Model990` object.
-              - `measurement.jl`: Constructs `Model990` measurement equation
-                matrices.
-              - `subspecs.jl`: Code for model sub-specifications is defined
-                here. See [Editing or Extending a Model](#editing-or-extending-a-model)
-                for details on constructing model sub-specifications.
-           - [`m991/`]: Code for new subtypes of `AbstractModel` should be kept
-             in directories at this level in the directory tree
-     - `solve/`: Solving the model; includes `gensys.jl` code.
-  - `test/`: Module test suite.
-
-## Reoptimizing
-
-Generally, the user will want to reoptimize the parameter vector (and
-consequently, calculate the Hessian at this new mode) every time they conduct
-posterior sampling; that is, when:
-- the input data are updated with a new quarter of observations or revised
-- the model sub-specification is changed
-- the model is derived from an existing model with different equilibrium
-  conditions or measurement equation.
-
-This behavior can be controlled more finely.
-
-### Reoptimize from Starting Vector
-
-Reoptimize the model starting from the parameter values supplied in use
-in a specified file. Ensure that you supply an HDF5 file with a variable named
-`params` that is the correct dimension and data type.
-```julia
-m = Model990()
-params = load_parameters_from_file(m, "path/to/parameter/file.h5")
-update!(m, params)
-estimate(m)
-```
-
-### Skip Reoptimization Entirely
-
-You can provide a modal parameter vector and optionally a Hessian matrix
-calculated at that mode to skip the reoptimization entirely. These values are
-usually computed by the user previously.
-
-You can skip reoptimization of the parameter vector entirely.
-```julia
-m = Model990()
-specify_mode!(m, "path/to/parameter/mode/file.h5")
-estimate(m)
-```
-The `specify_mode!` function will update the parameter vector to the mode and
-skip reoptimization. Ensure that you supply an HDF5 file with a variable named
-`params` that is the correct dimension and data type. (See also the utility function
-`load_parameters_from_file`.)
-
-You can additionally skip calculation of the Hessian matrix entirely.
-```julia
-m = Model990()
-specify_mode!(m, "path/to/parameter/mode/file.h5")
-specify_hessian(m, "path/to/Hessian/matrix/file.h5")
-estimate(m)
-```
-The `specify_hessian` function will cause `estimate` to read in the Hessian
-matrix rather than calculating it directly.  Ensure that you supply an HDF5
-file with a variable named `hessian` that is the correct dimension and data
-type. Specifying the Hessian matrix but *not* the parameter mode results in
-undefined behavior.
 
 ## The `AbstractModel` Type and the Model Object
 
@@ -639,82 +825,6 @@ The `Setting{T<:Any}` type has the following fields:
 - `description::AbstractString`: Short description of what the setting is used
   for.
 
-### Default Settings
-
-See [defaults.jl](src/defaults.jl) for the complete description of default settings.
-
-#### General
-
-- `dataroot`: The root directory for
-  model input data.
-- `saveroot`: The root directory for model output.
-- `use_parallel_workers`: Use available parallel workers in computaitons.
-- `data_vintage`: Data vintage identifier, formatted
-  `yymmdd`. By default, `data_vintage` is set to today's date. It is (currently) the only
-  setting printed to output filenames by default.
-
-#### Dates
-- `date_presample_start`: Start date of pre-sample.
-- `date_mainsample_start`: Start date of main sample.
-- `date_zlbregime_start`: Start date of zero lower bound regime.
-- `date_mainsample_end`: End date of main sample.
-- `date_forecast_start`: Start date of forecast period.
-- `date_forecast_end`: End date of forecast period.
-
-#### Anticipated Shocks
-- `n_anticipated_shocks`: Number of anticipated policy shocks.
-- `n_anticipated_shocks_padding`: Padding for anticipated shocks.
-
-#### Estimation
-- `reoptimize`: Whether to reoptimize the posterior mode. If `true` (the default),
-    `estimate()` begins reoptimizing from the model object's parameter vector.
-- `calculate_hessian`: Whether to compute the Hessian. If `true` (the
-    default), `estimate()` calculates the Hessian at the posterior mode.
-
-#### Metropolis-Hastings
-- `n_mh_simulations`: Number of draws from the posterior
-    distribution per block.
-- `n_mh_blocks`: Number of blocks to run Metropolis-Hastings.
-- `n_mh_burn`: Number of blocks to discard as burn-in for
-  Metropolis-Hastings.
-- `mh_thin`: Metropolis-Hastings thinning step.
-
-### Accessing Settings
-The function `get_setting(m::AbstractModel, s::Symbol)` returns the value of the
-setting `s` in `m.settings`. Some settings also have explicit getter methods
-that take only the model object `m` as an argument. Note that not all are exported.
-
-- I/O:
-    - `saveroot(m)`,
-    - `dataroot(m)`,
-    - `data_vintage(m)`,
-- Parallelization:
-    - `use_parallel_workers(m)`
-- Estimation:
-    - `reoptimize(m)`,
-    - `calculate_hessian(m)`,
-- Metropolis-Hastings:
-    - `n_mh_blocks(m)`,
-    - `n_mh_simulations(m)`,
-    - `n_mh_burn(m)`,
-    - `mh_thin(m)`
-
-### Overwriting Default Settings
-
-To overwrite default settings added during model construction, a user must
-define a new `Setting` object and update the corresponding entry in the
-model's `settings` dictionary using the `<=` syntax. If the `print`, `code`, and
-`description` fields of the new `Setting` object are not provided, the fields of the
-existing setting will be maintained. If new values for `print`, `code`, and `description`
-are specified, and if these new values are distinct from the defaults for those fields, the
-fields of the existing setting will be updated.
-
-For example, overwriting `use_parallel_workers` should look like this:
-```julia
-m = Model990()
-m <= Setting(:use_parallel_workers, true)
-```
-
 ## Estimation
 
 Finds modal parameter values, calculate Hessian matrix at mode, and samples
@@ -744,108 +854,6 @@ vector, the estimation program also saves the resulting posterior value and
 transition equation matrices implied by each draw of the parameter vector. This
 is to save time in the forecasting step since that code can avoid recomputing
 those matrices.
-
-# Editing or Extending a Model
-
-Users may want to extend or edit `Model990` in a number of different ways.
-The most common changes are listed below, in decreasing order of complexity:
-
-1. Add new parameters
-2. Modify equilibrium conditions or measurement equations
-3. Change the values of various parameter fields (i.e. initial `value`,
-   `prior`, `transform`, etc.)
-4. Change the values of various computational settings (i.e. `reoptimize`,
-   `n_mh_blocks`)
-
-Points 1 and 2 often go together (adding a new parameter guarantees a change in
-equilibrium conditions), and are such fundamental changes that they increment
-the model specification number and require the definition of a new subtype of
-`AbstractModel` (for instance, `Model991`).
-See [Model specification](#model-specification-mspec) for more details.
-
-Any changes to the initialization of preexisting parameters are defined as a new
-model *sub-specification*, or *subspec*. While less significant than a change to
-the model's equilibrium conditions, changing the values of some parameter fields
-(especially priors) can have economic significance over and above settings we
-use for computational purposes. **Parameter definitions should not be modified
-in the model object's constructor.** First, incrementing the model's
-sub-specification number when parameters are changed improves model-level (as
-opposed to code-level) version control. Second, it avoids potential output
-filename collisions, preventing the user from overwriting output from previous
-estimations with the original parameters. The protocol for defining new
-sub-specifications is described in
-[Model sub-specifications](#model-sub-specifications-msubspec).
-
-Overriding default settings is described in the [Settings](#model-settings)
-section above.
-
-## Model specification (`m.spec`)
-
-A particular model, which corresponds to a subtype of `AbstractModel`, is
-defined as a set of parameters, equilibrium conditions (defined by the `eqcond`
-function) and measurement equations (defined by the `measurement` function).
-Therefore, the addition of new parameters, states, or observables, or any
-changes to the equilibrium conditions or measurement equations necessitate the
-creation of a new subtype of `AbstractModel.`
-
-To create a new model object, we recommend doing the following:
-
-1. Duplicate the `m990` directory within the [models](src/models/) directory. Name the
-new directory `mXXX.jl`, where `XXX` is your chosen model specification number
-or string.  Rename `m990.jl` in this directory to `mXXX.jl`.
-
-2. In the `mXXX/` directory, change all references to `Model990` to `ModelXXX`.
-
-3. Edit the `m990.jl`, `eqcond.jl`, and `measurement.jl` files as you see fit.
-If adding new states, equilibrium conditions, shocks, or observables, be sure to
-add them to the appropriate list in `init_model_indices`.
-
-4. Open the module file, `src/DSGE.jl`. Add `ModelXXX` to the list of functions
-to export, and include each of the files in `src/model/mXXX`.
-
-## Model sub-specifications (`m.subspec`)
-
-`Model990` sub-specifications are initialized by overwriting initial parameter
-definitions before the model object is fully constructed. This happens via a
-call to `init_subspec` in the `Model990` constructor. (Clearly, an identical
-protocol should be followed for new model types as well.)
-
-To create a new sub-specification (e.g., subspec 1) of `Model990`, edit the file
-`src/models/subspecs.jl` as follows (note that this example is not actually
-sub-specification `1` of `Model990`. In the source code, our sub-specification
-`5` is provided as additional example.):
-
-1. Define a new function, `ss1`, that takes an object of type `Model990` (not
-`AbstractModel`!) as an argument. In this function, construct new parameter
-objects and overwrite existing model parameters using the `<=` syntax. For
-example,
-
-```julia
-function ss1(m::Model990)
-    m <= parameter(:ι_w, 0.000, (0.0, .9999), (0.0,0.9999), DSGE.Untransformed(), Normal(0.0,1.0), fixed=false,
-                   description="ι_w: Some description.",
-                   tex_label="\\iota_w")
-    m <= parameter(:ι_p, 0.0, fixed=true,
-                   description= "ι_p: Some description"
-                   tex_label="\\iota_p")
-end
-```
-
-2. Add an `elseif` condition to `init_subspec`:
-
-```julia
-    ...
-    elseif subspec(m) == "ss1"
-        return ss1(m)
-    ...
-```
-
-To construct an instance of `Model990`, `ss1`, call the constructor
-for `Model990` with `ss1` as an argument. For example,
-
-```julia
-m = Model990("ss1")
-```
 
 # Acknowledgements
 Developers of this package at [FRBNY](https://www.newyorkfed.org/research)
