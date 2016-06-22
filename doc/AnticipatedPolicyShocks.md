@@ -2,20 +2,19 @@
 
 ## Description
 
-We treat the zero lower bound in our model by adding *anticipated policy
-shocks* and data on the market-implied Federal Funds rate path. We do this by
-giving the model the market-implied Federal Funds rate path for the next
-`n_anticipated_shocks` quarters and forcing the model's interest rate path
-to hit those values in those quarters. Afterwards, the path is unconstrained.
+We treat the zero lower bound in our model by adding *anticipated policy shocks* and data on
+the market-implied Federal Funds rate path. We do this by giving the model the
+market-implied Federal Funds rate path for the next `n_anticipated_shocks` quarters and
+forcing the model's interest rate path to hit those values in those quarters. Afterwards,
+the path is unconstrained.  
 
 ## Implementation
 
-If you are able to access data on the market-implied FFR path, you can augment
-the sample dataset or your own dataset to enable the anticipated policy shocks
-feature. We use internal data from the Federal Reserve Board on the implied
-Federal Funds Rate derived from OIS quotes. (One could also use interest rate
-expectations from Blue Chip Financial Forecasts or Survey of Professional
-Forecasters.)
+If you are able to access data on the market-implied FFR path (or another form of interest
+rate expectations), you can augment the sample dataset or your own dataset to enable the
+anticipated policy shocks feature. We use internal data from the Federal Reserve Board on
+the implied Federal Funds Rate derived from OIS quotes. (One could also use interest rate
+expectations from Blue Chip Financial Forecasts or Survey of Professional Forecasters.)
 
 1. Choose a value for `n_anticipated_shocks` (we suggest `6`):
 

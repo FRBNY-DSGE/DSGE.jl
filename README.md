@@ -132,9 +132,9 @@ Given all of the hard work put into specifying the model, one should be able to 
 the input data painlessly. To that extent, *DSGE.jl* provides facilities to download
 appropriate vintages of data series from *FRED* (Federal Reserve Economic Data).
 
-Note that a sample input dataset is provided; see [Sample input data](#sample-input-data)
-for more details. To compile an updated dataset for the provided Model `m990`, see
-[Update sample input data](#update-sample-input-data).
+Note that a sample input dataset for use with model `m990` is provided; see [Sample input
+data](#sample-input-data) for more details. To update this sample dataset for use with
+model `m990`, see [Update sample input data](#update-sample-input-data).
 
 ## Setup
 
@@ -170,15 +170,16 @@ to the `observables` field of the model object.
 
 Some data series may not be available from FRED or one may simply wish to use a different
 data source, for whatever reason. The data sources and series are specified in the
-`data_series` field of the model object. For each data source that is *not* `:fred`, a CSV
-of the form `source_yymmdd.csv` is expected in the directory indicated by `inpath(m, "data")`.
-For example, the following might be the contents of a data source for two series `:series1`
-and `:series2`:
+`data_series` field of the model object. For each data source that is *not* `:fred`, a
+well-formed CSV of the form `<source>_<yymmdd>.csv` is expected in the directory indicated
+by `inpath(m, "data")`.  For example, the following might be the contents of a data source
+for two series `:series1` and `:series2`:
 
 ```
 date,series1,series2
 1959-06-30,1.0,NaN
 1959-09-30,1.1,0.5
+etc.
 ```
 
 Note that quarters are represented by the date of the *last* day of the quarter and missing
@@ -188,7 +189,8 @@ values are specified by `NaN`.
 
 Let's consider an example dataset comprised of 10 macro series sourced from FRED and one
 survey-based series sourced from, say, the Philadelphia Fed's [Survey of Professional
-Forecasters](https://www.philadelphiafed.org/research-and-data/real-time-center/survey-of-professional-forecasters/historical-data/inflation-forecasts):
+Forecasters](https://www.philadelphiafed.org/research-and-data/real-time-center/survey-of-professional-forecasters/historical-data/inflation-forecasts)
+via Haver Analytics:
 
 ```
 julia> m.data_series
@@ -206,7 +208,13 @@ fred_151127.csv
 ```
 
 The FRED series will be downloaded and the `fred_151127.csv` file will be automatically
-generated, but the `spf_151127.csv` file must be manually compiled as shown above.
+generated, but the `spf_151127.csv` file must be manually compiled as shown above:
+
+```
+date,ASACX10
+1991-12-31,4.0
+etc.
+```
 
 Now, suppose that we set the data vintage to `151222`, to incorporate the BEA's third
 estimate of GDP. The `fred_151222.csv` file will be downloaded, but there are no updates to
@@ -216,14 +224,63 @@ SPF dataset. Although this is not an elegant approach, it is consistent with the
 vintage as the data available at a certain point in time --- in this example, it just so
 happens that the SPF data available on Nov. 27 and Dec. 22 are the same.
 
+## Implementation
+
+Let's quickly walk through the steps *DSGE* takes to create a suitable dataset.
+
+First, a user provides a detailed specification of the data series and transformations used
+for their model.
+- the user specifies `m.observables`; the keys of this dictionary name the series to be used
+    in estimating the model.
+- the user specifies `m.data_series`; the keys of this dictionary name data sources, and the
+    values of this dictionary are lists of mnemonics to be accessed from that data source.
+    Note that these mnemonics do not correspond to observables one-to-one, but rather are
+    usually series in *levels* that will be further transformed.
+- the user specifies `m.data_transforms`; the keys of this dictionary name the series to be 
+    constructed and match the keys of `m.observables` exactly; the values of this dictionary
+    are functions that operate on a single argument (`levels`) which is a DataFrame of the
+    series specified in `m.data_series`. These functions return a DataArray for a single
+    series. These functions could do nothing (e.g. return `levels[:, :SERIES1]`) or
+    perform a more complex transformation, such as converting to one quarter percent changes
+    or adjusting into per-capita terms.
+- the user adjusts data-related settings, such as `data_vintage`, `dataroot`,
+    `date_presample_start`, `date_mainsample_end`, and `date_zlbregime_start`, and
+    `use_population_forecast`.
+
+Second, *DSGE* attempts to construct the dataset given this setup through a call to
+`load_data`.
+- *DSGE* checks the disk to see if a valid dataset is already stored. A dataset is valid if
+    every series in `m.data_transforms` is present and the entire sample is contained (from
+    `date_presample_start` to `date_mainsample_end`. If no valid dataset is already stored, the dataset will be recreated.
+- In a preliminary stage, intermediate data series, as specified in `m.data_series`, are loaded in levels using
+    `load_data_levels`. Note that these intermediate data series may contain more rows that
+    the final dataset so that growth rates and other transformations can be successfully
+    applied.
+    - Data from the `:fred` data source are downloaded using `load_fred_data`. If an
+        existing FRED vintage exists on disk, any required FRED series that is contained
+        therein will be imported; any missing series will be downloaded directly from FRED
+        using the *FredData* package.
+    - Data from non-FRED data sources are read from disk, verified, and merged.
+- The series in levels are transformed as specified in `m.data_transforms`.
+    - To prepare for per-capita transformations, population data are filtered using
+        `hpfilter`. Note that optionally, a population growth forecast from a service like
+        Macroeconomic Advisers is appended to the recorded values before the filtering. Both
+        filtered and unfiltered population levels and growth rates are added to the `levels`
+        data frame.
+    - The transformations are applied using the `levels` DataFrame as input.
+
+Finally, the resulting dataset is saved to disk for future reference as `data_<yymmdd>.csv`
+and the DataFrame is returned to the caller.
+    
 ## Common pitfalls
 
 Given the complexity of the data download, you may find that the dataset generated by
 `load_data` is not exactly as you expect. Here are some common pitfalls to look out for:
 - Ensure that the `data_vintage` model setting is as you expect. (Try checking
     `data_vintage(m)`.)
-- If you are having a problem using `FredData`, ensure your API key is provided correctly
-    and that there are no issues with your firewall, etc.
+- If you are having a problem using *FredData*, ensure your API key is provided correctly
+    and that there are no issues with your firewall, etc. Any issues with *FredData* proper
+    should be reported on that project's page.
 - Ensure that the `data_series` field of the model object is set as expected.
 - Double check the transformations specified in the `data_transforms` field of the model
     object.
@@ -234,23 +291,23 @@ Given the complexity of the data download, you may find that the dataset generat
     vintage of data expected, and be formatted appropriately. One may have to copy and
     rename files of non-FRED data sources to match the specified vintage, even if the
     contents of the files would be identical.
-- Look for any immediate issues in the final dataset saved (`data_yymmdd.csv`).
+- Look for any immediate issues in the final dataset saved (`data_<yymmdd>.csv`). If a data
+    series in this file is all `NaN` values, then likely a non-FRED data source was not
+    provided correctly.
 - Ensure that the column names of the data CSV match the keys of the `observables` field of
     the model object.
 
 ## Sample input data
 
-For more details on the sample input data provided, please see
-[Data](doc/Data.md).
+For more details on the sample input data provided -- which is used to estimate the provided
+model `m990`, please see [Data](doc/Data.md).
 
-For more details on using market interest rate expectations to treat the zero
-lower bound, see
-[Anticipated Policy Shocks](doc/AnticipatedPolicyShocks.md). In particular,
-note that our model, as used to compute the forecasts referenced in Liberty
-Street Economics posts,  is trained on data that includes six quarters of
-interest rate expectations. The user is responsible for procuring interest rate
-expectations and appending it to the provided sample data set, as discussed in
-the linked documentation here.
+For more details on using market interest rate expectations to treat the zero lower bound,
+see [Anticipated Policy Shocks](doc/AnticipatedPolicyShocks.md). In particular, note that
+our model, as used to compute the forecasts referenced in Liberty Street Economics posts,
+is trained on data that includes six quarters of interest rate expectations. The user is
+responsible for procuring interest rate expectations and appending it to the provided sample
+data set, as discussed in the linked documentation here.
 
 ## Update sample input data
 
@@ -262,8 +319,9 @@ A sample dataset is provided for the 2015 Nov 27 vintage. To update this dataset
     julia> m <= Setting(:data_vintage, "yymmdd")
     ```
 3. Create data files for the non-FRED data sources. For model `m990`, the required data
-   files include `spf_yymmdd.csv`, `longrate_yymmdd.csv`, `fernald_yymmdd.csv`. To include
-   data on expected interest rates, the file `ois_yymmdd.csv` is also required. See
+   files include `spf_<yymmdd>.csv` (with column `ASACX10`), `longrate_<yymmdd>.csv` (with
+   column `FYCCZA`), and `fernald_<yymmdd>.csv` (with columns `TFPJQ` and `TFPKQ`). To
+   include data on expected interest rates, the file `ois_<yymmdd>.csv` is also required. See
    [Data](doc/Data.md) for details on the series used and links to data sources.
 4. Run `load_data(m)`; series from *FRED* will be downloaded and merged with the series from
    non-FRED data sources that you have already created. See [Common
