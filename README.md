@@ -86,8 +86,8 @@ The user may want to avoid reoptimizing the parameter vector and calculating the
 Hessian matrix at this new vector. Please see [Reoptimizing](#reoptimizing)
 below.
 
-For more detail on changing the model's default settings, parameters, equilibrium
-conditions, etc., see [Implementation Details](#implementation-details) for more specifics.
+For more details on changing the model's default settings, parameters, equilibrium
+conditions, etc., see [Advanced usage](#advanced-usage).
 
 ## Input/Output Directory Structure
 
@@ -129,11 +129,27 @@ with the source code. Default values of the input/output directory roots:
 - `saveroot(m)`: `"$(Pkg.dir())/DSGE/save"`
 - `dataroot(m)`: `"$(Pkg.dir())/DSGE/save/input_data"`
 
-Note these locations can be overridden as desired:
+Note these locations can be overridden as desired. See [Settings](#settings) below for more
+details.
 ```julia
 m <= Setting(:saveroot, "path/to/my/save/root")
 m <= Setting(:dataroot, "path/to/my/data/root")
 ```
+
+Utility functions are provided to create paths to input/output files. These should be used
+for best results.
+- `inpath`: Return path to directory/file for *input data*, input conditional data, and
+    user-provided sample files, respectively. See `?inpath` for more details.
+    - Try `inpath(m, "data")`, a helpful call that displays the containing directory of
+      input data files.
+- `rawpath`: Return path to directory/file for a given output type for *raw model output*.
+    See `?rawpath` for more details.
+- `workpath`: Return path to directory/file for a given output type for *transformed* or
+    *intermediate model output*. See `?workpath` for more details.
+- `tablespath`: Return path to directory/file for a given output type for *results tables*
+    or other *textual results*.
+- `figurespath`: Return path to directory/file for a given output type for *results
+    figures*.
 
 # Advanced usage
 
