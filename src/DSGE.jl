@@ -8,8 +8,7 @@ module DSGE
     import Calculus
     import Optim
     using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
-    import NaNMath
-
+    
     export
 
         # distributions_ext.jl
@@ -20,9 +19,11 @@ module DSGE
 
         # abstractdsgemodel.jl
         AbstractModel, transform_to_model_space!, transform_to_real_line!,
-        n_states, n_shocks_exogenous, n_shocks_expectational, n_parameters, n_observables,
-        spec, subspec, n_anticipated_shocks, n_states_augmented,
-        n_presample_periods, zlb_start_index,
+        description,
+        n_states, n_states_augmented, n_shocks_exogenous, n_shocks_expectational,
+        n_equilibrium_conditions, n_observables, n_parameters, n_parameters_steady_state,
+        n_parameters_free, n_anticipated_shocks,
+        spec, subspec,
         dataroot, saveroot, inpath, workpath, rawpath, tablespath, figurespath, logpath,
         reoptimize, calculate_hessian,
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin, specify_mh_start, n_draws,
@@ -57,8 +58,9 @@ module DSGE
         gensys, solve,
 
         # data/
-        load_fred_data, load_data, transform_data, save_data_matrix!, hpfilter, difflog,
-        quartertodate, df_to_matrix
+        load_data, load_data_levels, load_fred_data, transform_data, save_data,
+        df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
+        hpadjust, oneqtrpctchange, annualtoquarter 
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"

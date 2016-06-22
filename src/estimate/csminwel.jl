@@ -263,7 +263,7 @@ function csminwel(fcn::Function,
                 xh = x2
                 retcodeh = retcode2
             elseif ih == 3
-                xh = h3
+                xh = x3
                 retcodeh = retcode3
             end
 

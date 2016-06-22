@@ -1,5 +1,5 @@
 """
-S```
+```
 Model990{T} <: AbstractModel{T}
 ```
 
@@ -180,13 +180,12 @@ function Model990(subspec::AbstractString="ss2")
     testing            = false
 
     # Set up data sources and series
-    fred_series        = [:GDP, :GDPCTPI, :PCE, :FPI,
-                          :CNP16OV, :CE16OV, :PRS85006013, :UNRATE, :AWHNONAG, :DFF,
-                          :BAA, :GS10, :PRS85006063, :CES0500000030, :CLF16OV,
-                          :PCEPILFE, :COMPNFB]
+    fred_series        = [:GDP, :GDPCTPI, :PCE, :FPI, :CNP16OV, :CE16OV, :PRS85006013,
+                          :UNRATE, :AWHNONAG, :DFF, :BAA, :GS10, :PRS85006063, :CES0500000030, :CLF16OV,
+                          :PCEPILFE, :COMPNFB, :THREEFYTP10]
     spf_series         = [:ASACX10]
-    fernald_series     = [:alpha, :dtfp, :dtfp_util]
-    longrate_series    = [:FYCZZA, :FTPZAC]
+    fernald_series     = [:TFPJQ, :TFPKQ]
+    longrate_series    = [:FYCZZA]
     # ois data taken care of in load_data
     
     data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
@@ -651,7 +650,6 @@ function steadystate!(m::Model990)
 end
 
 function settings_m990!(m::Model990)
-
     default_settings!(m)
 end
 
@@ -667,19 +665,17 @@ are available. The keys of data transforms should match exactly the keys of `m.o
 """
 function init_data_transforms!(m::Model990)
 
-    ## A. FRED
-
-    # 1. Output gap
+    # 1. Output growth, per-capita
     m.data_transforms[:obs_gdp] = function (levels)
         # FROM: Level of nominal GDP (FRED :GDP series)
         # TO:   Quarter-to-quarter percent change of real, per-capita GDP, adjusted for population smoothing
 
-        levels[:temp] = percapita(:GDP, levels)
+        levels[:temp] = percapita(m, :GDP, levels)
         gdp = 1000 * nominal_to_real(:temp, levels)
         hpadjust(oneqtrpctchange(gdp), levels)
     end
 
-    # 2. Employment/Hours per capita
+    # 2. Aggregate hours, per-capita
     m.data_transforms[:obs_hours] = function (levels)
         # FROM: Average weekly hours (AWHNONAG) & civilian employment (CE16OV)
         # TO:   log (3 * aggregregate weekly hours / 100), per-capita
@@ -706,7 +702,7 @@ function init_data_transforms!(m::Model990)
         oneqtrpctchange(levels[:GDPCTPI])
     end
 
-    # 5. Core PCE
+    # 5. Core PCE inflation
     m.data_transforms[:obs_corepce] = function (levels)
         # FROM: Core PCE index
         # INTO: Approximate quarter-to-quarter percent change of Core PCE,
@@ -725,24 +721,24 @@ function init_data_transforms!(m::Model990)
 
     end
 
-    # 7. Consumption growth
+    # 7. Consumption growth, per-capita
     m.data_transforms[:obs_consumption] = function (levels)
         # FROM: Nominal consumption
         # TO:   Real consumption, approximate quarter-to-quarter percent change,
         #       per capita, adjusted for population filtering
 
-        levels[:temp] = percapita(:PCE, levels)
+        levels[:temp] = percapita(m, :PCE, levels)
         cons = 1000 * nominal_to_real(:temp, levels)
         hpadjust(oneqtrpctchange(cons), levels)
     end
 
-    # 8. Investment growth
+    # 8. Investment growth, per-capita
     m.data_transforms[:obs_investment] = function (levels)
         # FROM: Nominal investment
         # INTO: Real investment, approximate quarter-to-quarter percent change,
         #       per capita, adjusted for population filtering
 
-        levels[:temp] = percapita(:FPI, levels)
+        levels[:temp] = percapita(m, :FPI, levels)
         inv = 10000 * nominal_to_real(:temp, levels)
         hpadjust(oneqtrpctchange(inv), levels)
     end
@@ -758,7 +754,7 @@ function init_data_transforms!(m::Model990)
         annualtoquarter(levels[:BAA] - levels[:GS10])
     end
 
-    # 10. Long term inflation expectations (Survey of Professional Forecasters)
+    # 10. Long term inflation expectations
     m.data_transforms[:obs_longinflation] = function (levels)
         # FROM: SPF: 10-Year average yr/yr CPI inflation expectations (annual percent)
         # TO:   FROM, less 0.5
@@ -769,25 +765,23 @@ function init_data_transforms!(m::Model990)
         annualtoquarter(levels[:ASACX10]  .- 0.5)
     end
 
-    ## # 11. Long rate
-    #TODO: get yield and premia from FRED
+    # 11. Long rate (10-year, zero-coupon)
     m.data_transforms[:obs_longrate] = function (levels)
-        # interim solution
         # FROM: pre-computed long rate at an annual rate
         # TO:   10T yield - 10T term premium at a quarterly rate
 
-        annualtoquarter(levels[:FYCZZA] - levels[:FTPZAC])
+        annualtoquarter(levels[:FYCZZA] - levels[:THREEFYTP10])
     end
 
     # 12. Fernald TFP
     m.data_transforms[:obs_tfp] = function (levels)
-        # FROM: Fernald's unadjusted TFP series (levels)
-        # TO: De-meaned unadjusted TFP series, adjusted by Fernald's
-        #     estimated alpha (capacity utilization rate?)
-        # Note: not sure offhand why it is multiplied by 4.
+        # FROM: Fernald's unadjusted TFP series
+        # TO:   De-meaned unadjusted TFP series, adjusted by Fernald's
+        #       estimated alpha
 
-        tfp_unadj = levels[:dtfp]
-        (tfp_unadj - NaNMath.mean(convert(Vector{Float64}, tfp_unadj))) ./ (4*(1 - levels[:alpha]))
+        tfp_unadj      = levels[:TFPKQ]
+        tfp_unadj_mean = mean(tfp_unadj[!isnan(tfp_unadj)])
+        (tfp_unadj - tfp_unadj_mean) ./ (4*(1 - levels[:TFPJQ]))
     end
 
     # Columns 13 - 13 + n_anticipated_shocks
@@ -797,7 +791,6 @@ function init_data_transforms!(m::Model990)
         
         m.data_transforms[symbol("obs_ois$i")] = function (levels)
             levels[:, symbol("ant$i")]
-            
         end
     end
 end

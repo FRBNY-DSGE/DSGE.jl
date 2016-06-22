@@ -1,7 +1,7 @@
 """
-`function annualtoquarter(v)`
+`annualtoquarter(v)`
 
-Convert from annual to quarter by dividing by 4
+Convert from annual to quarter frequency... by dividing by 4.
 """
 function annualtoquarter(v)
     v / 4
@@ -10,8 +10,7 @@ end
 """
 `nominal_to_real(col, df; deflator_mnemonic=:GDPCTPI)`
 
-Converts nominal to real values using the specified
-deflator.
+Converts nominal to real values using the specified deflator.
 
 ## Arguments
 - `col`: symbol indicating which column of `df` to transform
@@ -28,23 +27,25 @@ end
 
 
 """
-`percapita(col, df; population_mnemonic=:CNP16OV)`
+```
+percapita(m, col, df)
+percapita(col, df, population_mnemonic)
+```
 
 Converts data column `col` of DataFrame `df` to a per-capita value.
 
 ## Arguments
 - `col`: symbol indicating which column of data to transform
 - `df`: DataFrame containining series for proper population measure and `col`
-
-## Keyword arguments
-
-- `population_mnemonic`: a mnemonic found in df for some population
-  measure. Default value = civilian noninstitutional population age 16+ (CNP16OV).
+- `population_mnemonic`: a mnemonic found in df for some population measure.
 """
-function percapita(col, df; population_mnemonic=:CNP16OV)
-   df[col] ./ df[population_mnemonic]
+function percapita(m::AbstractModel, col::Symbol, df::DataFrame)
+    population_mnemonic = get_setting(m, :population_mnemonic)
+    percapita(col, df, population_mnemonic)
 end
-
+function percapita(col::Symbol, df::DataFrame, population_mnemonic::Symbol)
+    df[col] ./ df[population_mnemonic]
+end
 
 """
 ```

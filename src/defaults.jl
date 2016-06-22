@@ -21,6 +21,7 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:cond_vintage, vint, "Vintage of conditional data")
     m <= Setting(:cond_id, "0000", "Identifier of conditional dataset")
     m <= Setting(:use_population_forecast, false, "Whether to use population forecasts as data")
+    m <= Setting(:population_mnemonic, :CNP16OV, "Mnemonic of FRED data series for computing per-capita values")
 
     # Dates
     m <= Setting(:date_presample_start, quartertodate("1959-Q3"), "Start date of pre-sample")
@@ -43,7 +44,7 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:n_hessian_test_params, typemax(Int), "Max number of free params for which to calculate Hessian")
 
     # Metropolis-Hastings
-    m <= Setting(:n_mh_simulations, 10000, "Number of draws per block in Metropolis-Hastings")
+    m <= Setting(:n_mh_simulations, 5000, "Number of draws per block in Metropolis-Hastings")
     m <= Setting(:n_mh_blocks, 22, "Number of blocks for Metropolis-Hastings")
     m <= Setting(:n_mh_burn, 2, "Number of blocks to use as burn-in in Metropolis-Hastings")
     m <= Setting(:mh_thin, 5, "Metropolis-Hastings thinning step")
