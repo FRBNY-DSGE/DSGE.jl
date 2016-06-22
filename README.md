@@ -17,9 +17,9 @@ the discretion of FRBNY.
 ## Table of contents
 
 1. [Model Design](#model-design)
-2. [Running the code](#running-the-code)
-3. [Advanced usage](#advanced-usage)
-4. [Input data](#input-data)
+2. [Running the Code](#running-the-code)
+3. [Advanced Usage](#advanced-usage)
+4. [Input Data](#input-data)
 5. [Implementation Details](#implementation-details)
 6. [Acknowledgements](#acknowledgements)
 
@@ -58,7 +58,7 @@ via the following chain:
 ## Running with Default Settings
 
 To run the estimation step in Julia, simply create an instance of the model object and pass
-it to the `estimate` function --- see an [example](doc/examples/run_default.jl).
+it to the `estimate` function -- see an [example](doc/examples/run_default.jl).
 
 ```julia
 # construct a model object
@@ -129,7 +129,7 @@ with the source code. Default values of the input/output directory roots:
 - `saveroot(m)`: `"$(Pkg.dir())/DSGE/save"`
 - `dataroot(m)`: `"$(Pkg.dir())/DSGE/save/input_data"`
 
-Note these locations can be overridden as desired. See [Settings](#settings) below for more
+Note these locations can be overridden as desired. See [Settings](#model-settings) below for more
 details.
 ```julia
 m <= Setting(:saveroot, "path/to/my/save/root")
@@ -151,7 +151,7 @@ for best results.
 - `figurespath`: Return path to directory/file for a given output type for *results
     figures*.
 
-# Advanced usage
+# Advanced Usage
 
 ## Package Directory Structure
 
@@ -249,7 +249,7 @@ mathematical definition of the model.
 
 Below, we describe several important settings for package usage.
 
-For more details on implementation and usage of settings, see [Settings](#settings).
+For more details on implementation and usage of settings, see [Settings](#model-settings).
 
 See [defaults.jl](src/defaults.jl) for the complete description of default settings.
 
@@ -419,11 +419,11 @@ for `Model990` with `ss1` as an argument. For example,
     m = Model990("ss1")
     ```
 
-# Input data
+# Input Data
 
 Given all of the hard work put into specifying the model, one should be able to maintain
 the input data painlessly. To that extent, *DSGE.jl* provides facilities to download
-appropriate vintages of data series from *FRED* (Federal Reserve Economic Data).
+appropriate vintages of data series from FRED (Federal Reserve Economic Data).
 
 Note that a sample input dataset for use with model `m990` is provided; see [Sample input
 data](#sample-input-data) for more details. To update this sample dataset for use with
@@ -629,14 +629,15 @@ A sample dataset is provided for the 2015 Nov 27 vintage. To update this dataset
     ```
     julia> m <= Setting(:data_vintage, "yymmdd")
     ```
-3. Create data files for the non-FRED data sources. For model `m990`, the required data
-   files include `spf_<yymmdd>.csv` (with column `ASACX10`), `longrate_<yymmdd>.csv` (with
-   column `FYCCZA`), and `fernald_<yymmdd>.csv` (with columns `TFPJQ` and `TFPKQ`). To
-   include data on expected interest rates, the file `ois_<yymmdd>.csv` is also required. To
-   include [data on population forecasts](#incorporate-population-forecasts), the file
-   `population_forecst_<yymmdd>.csv` is also required. See [Data](doc/Data.md) for details
-   on the series used and links to data sources.
-4. Run `load_data(m)`; series from *FRED* will be downloaded and merged with the series from
+3. Create data files for the non-FRED data sources (specified in `m.data_series`). For model
+   `m990`, the required data files include `spf_<yymmdd>.csv` (with column `ASACX10`),
+   `longrate_<yymmdd>.csv` (with column `FYCCZA`), and `fernald_<yymmdd>.csv` (with columns
+   `TFPJQ` and `TFPKQ`). To include data on expected interest rates, the file
+   `ois_<yymmdd>.csv` is also required. To include [data on population
+   forecasts](#incorporate-population-forecasts), the file `population_forecst_<yymmdd>.csv`
+   is also required. See [Data](doc/Data.md) for details on the series used and links to
+   data sources.
+4. Run `load_data(m)`; series from FRED will be downloaded and merged with the series from
    non-FRED data sources that you have already created. See [Common
    pitfalls](#common-pitfalls) for some potential issues.
 
@@ -644,7 +645,8 @@ A sample dataset is provided for the 2015 Nov 27 vintage. To update this dataset
 
 This section describes important functions and implementation features in
 greater detail. If the user is interested only in running the default model and
-reproducing the forecast results, this section can be ignored.
+reproducing the estimation results, this section can be ignored. Additional documentation
+can also be found in function documentation or in-line.
 
 This section focuses on what the code does and why, while the code itself
 (including comments) provides detailed information regarding *how* these basic
