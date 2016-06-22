@@ -14,6 +14,15 @@ FRBNY is currently working on extending the code to include forecasts and other
 features. Extensions of the DSGE model code may be released in the future at
 the discretion of FRBNY.
 
+## Table of contents
+
+1. [Model Design](#model-design)
+2. [Running the code](#running-the-code)
+3. [Advanced usage](#advanced-usage)
+4. [Input data](#input-data)
+5. [Implementation Details](#implementation-details)
+6. [Acknowledgements](#acknowledgements)
+
 # Model Design
 
 *DSGE.jl* is an object-oriented approach to solving the FRBNY DSGE model that
