@@ -588,9 +588,8 @@ Given the complexity of the data download, you may find that the dataset generat
 `load_data` is not exactly as you expect. Here are some common pitfalls to look out for:
 - Ensure that the `data_vintage` model setting is as you expect. (Try checking
     `data_vintage(m)`.)
-- If you are having a problem using *FredData.jl*, ensure your API key is provided correctly
-    and that there are no issues with your firewall, etc. Any issues with *FredData.jl* proper
-    should be reported on that project's page.
+- Ensure that the `date_mainsample_end` model setting is as you expect, and that is not
+    logically incompatible with `data_vintage`.
 - Ensure that the `data_series` field of the model object is set as expected.
 - Double check the transformations specified in the `data_transforms` field of the model
     object.
@@ -606,6 +605,14 @@ Given the complexity of the data download, you may find that the dataset generat
     provided correctly.
 - Ensure that the column names of the data CSV match the keys of the `observables` field of
     the model object.
+- You may receive a warning that an input data file "does not contain the entire date range
+    specified". This means that observations are not provided for some periods in which the
+    model requires data. This is perfectly okay if your data series starts after
+    `date_presample_start`.
+
+If you experience any problems using *FredData.jl*, ensure your API key is provided correctly
+and that there are no issues with your firewall, etc. Any issues with *FredData.jl* proper
+should be reported on that project's page.
 
 ## Sample input data
 
