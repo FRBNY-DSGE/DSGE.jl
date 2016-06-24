@@ -1,11 +1,11 @@
 """
-`init_subspec!(m::Model990)`
+`init_subspec!(m::Model1000)`
 
 Initializes a model subspecification by overwriting parameters from
 the original model object with new parameter objects. This function is
 called from within the model constructor.
 """
-function init_subspec!(m::Model990)
+function init_subspec!(m::Model1000)
     if subspec(m) == "ss2"
         return
     elseif subspec(m) == "ss5"
@@ -16,13 +16,13 @@ function init_subspec!(m::Model990)
 end
 
 """
-`ss5(m::Model990)`
+`ss5(m::Model1000)`
 
-Initializes subspecification 5 for Model990. Specifically, fixes ι_w
+Initializes subspecification 5 for Model1000. Specifically, fixes ι_w
 and ι_p to 0 (so that intermediate goods producers who do not readjust
 prices and wages in a given period do not index to inflation.)
 """
-function ss5!(m::Model990)
+function ss5!(m::Model1000)
 
     m <= parameter(:ι_p, 0.0, fixed=true,
                    description= "ι_p: The persistence of last period's inflation in
