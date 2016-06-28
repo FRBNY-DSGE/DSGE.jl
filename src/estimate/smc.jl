@@ -1,3 +1,4 @@
+function smc(m::AbstractModel, data::Matrix )
 #--------------------------------------------------------------
 #Dependencies
 #--------------------------------------------------------------
@@ -5,22 +6,8 @@
 using DataFrames
 
 #--------------------------------------------------------------
-#Setting paths
-#--------------------------------------------------------------
-
-#CAUTION: Input text files for us.txt/prior_dsge.txt require cleaning and restructuring
-
-#--------------------------------------------------------------
-#Loading data
-#--------------------------------------------------------------
-
-data = readtable("us.txt")
-
-#--------------------------------------------------------------
 #Specify parameters of prior
 #--------------------------------------------------------------
-
-prio = readtable("prior_dsge_test.txt")
 
 pshape = prio[:,1]
 pmean = prio[:,2]
@@ -29,8 +16,6 @@ pmask = prio[:,4]
 pfix = prio[:,5]
 pmaskinv = 1 - pmask
 pshape = pshape.*pmaskinv
-
-bounds = readtable("bound_dsge_test.txt")
 
 #--------------------------------------------------------------
 #Set Parameters of Algorithm
@@ -60,10 +45,6 @@ end
 #The tempering schedule is created as the last argument in the constructor TuneType()
 tune = Tune(13,1000,100,2,0.5,0.25,0.25,0.9,((collect(1:1:100)-1)/(100-1)).^2, 0, 0, 0, 0)
 
-#Define a function handle for Posterior evaluation
-
-f = objfcn_dsge
-
 #Matrices for storing
 
 parasim = zeros(tune.nphi, tune.npart, tune.npara) #parameter draws
@@ -82,7 +63,16 @@ rsmpsim = zeros(tune.nphi,1) #1 if resampled
 
 println("\n\n SMC starts ....  \n\n  ")
 
-priorsim = priodraws(prio,bounds, tune.npart);#????????????? Draw 1000x13 from prior
+#Draws from the prior
+priorsim = zeros(tune.npart,tune,npara)
+for i in 1:tune.npart
+    priodraw = []
+    for j in 1:length(m.parameters)
+        append!(priodraw, [rand(m.parameters[j].prior.value)])
+    end
+    priorsim[i,:] = priodraw'
+end
+
 parasim[1,:,:] = priorsim #Draws from prior #Lay priorsim draws on top of parasim box matrix which is 100x1000x13
 wtsim[:,1] = 1/tune.npart #Initial weights are all equal, 1000x1
 zhat[1] = sum(wtsim[:,1]) # zhat is 100x1 and its first entry is the sum of the first column of wtsim, the weights matrix
@@ -91,10 +81,14 @@ zhat[1] = sum(wtsim[:,1]) # zhat is 100x1 and its first entry is the sum of the 
 # Posterior values at prior draws
 loglh = zeros(tune.npart, 1)
 logpost = zeros(tune.npart, 1)
+logprior = zeros(tune.npart, 1)
 
 for i=1:1:tune.npart
 	p0 = priorsim[i,:]';
-	logpost[i], loglh[i] = f(p0, tune.jphi[1], prio, bounds, data)
+	#logpost[i], loglh[i] = objfcn_dsge(p0, tune.phi[1], prio, bounds, data)
+    logpost[i] = posterior(m, data)[:post]
+    logprior[i] = prior(m)
+    loglh[i] = likelihood(m, data)[1]
 end
 
 #RECURSION
@@ -123,7 +117,9 @@ for i=2:1:tune.nphi
 	# (b) Selection 
 	#------------------------------------
 	ESS = 1/sum(wtsim[:,i].^2)
+    sampled = false
 	if (ESS < tune.npart/2)
+        sampled = true
 		id, m = systematic_resampling(wtsim[:,i]')
 		parasim[i-1, :, :] = squeeze(parasim[i-1, id, :])
 		loglh = loglh[id]
@@ -131,6 +127,14 @@ for i=2:1:tune.nphi
 		wtsim[:,i] = 1/tune.npart
 		nresamp += 1
 		rsmpsim[i] = 1
+        if m.testing
+            if !sampled
+                h5open(workpath(m, "estimate","degen_dist.h5"),"w") do f
+                    f["wtsim"] = wtsim[:,i]
+                end
+                sampled = true
+            end
+        end
 	end
 
 	#------------------------------------
@@ -191,4 +195,5 @@ sig = (sqrt(sig));
 		println(param_names[n]" = ", mu[n], sig[n])
 		end
     end
+end
 end
