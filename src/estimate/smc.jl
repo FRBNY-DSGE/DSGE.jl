@@ -1,40 +1,9 @@
-<<<<<<< fa042767a57fc4adf7c72e00d0daf8abb42f35bf
 function smc(m::AbstractModel, data::Matrix )
-=======
-function smc(m::AbstractModel, data::Matrix
-
-            )
->>>>>>> after debugging reoptimize. not needed for smc, but bugs suggest model misspecification.
 #--------------------------------------------------------------
 #Dependencies
 #--------------------------------------------------------------
 
 using DataFrames
-
-#--------------------------------------------------------------
-<<<<<<< fa042767a57fc4adf7c72e00d0daf8abb42f35bf
-=======
-#Setting paths
-#--------------------------------------------------------------
-
-#CAUTION: Input text files for us.txt/prior_dsge.txt require cleaning and restructuring
-
-#--------------------------------------------------------------
-#Loading data
-#--------------------------------------------------------------
-
-#--------------------------------------------------------------
->>>>>>> after debugging reoptimize. not needed for smc, but bugs suggest model misspecification.
-#Specify parameters of prior
-#--------------------------------------------------------------
-
-pshape = prio[:,1]
-pmean = prio[:,2]
-pstdd = prio[:,3]
-pmask = prio[:,4]
-pfix = prio[:,5]
-pmaskinv = 1 - pmask
-pshape = pshape.*pmaskinv
 
 #--------------------------------------------------------------
 #Set Parameters of Algorithm
@@ -113,6 +82,7 @@ end
 #RECURSION
 
 tic()
+totaltime = 0 #Probably let's take this out
 
 println("\n\n SMC Recursion starts \n\n")
 
