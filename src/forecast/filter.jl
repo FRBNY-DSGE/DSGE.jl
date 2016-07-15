@@ -56,14 +56,16 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::Vector
     # Broadcast models and data matrices 
     models = fill(m, ndraws)
     datas = fill(data, ndraws)
-
+    allouts = fill(allout, ndraws)
+    
     # Call filter over all draws
     if use_parallel_workers(m) && nworkers() > 1
+        println("Using pmap")
         mapfcn = pmap
     else
         mapfcn = map
     end    
-    out = mapfcn(i -> DSGE.filter(models,datas,sys[i], allout=true), 1:ndraws)
+    out = mapfcn(DSGE.filter, models,datas,sys, allout=allouts)
 
     filtered_states = [Array(x[1]) for x in out]  # to make type stable
     pred            = [Array(x[2]) for x in out]  
