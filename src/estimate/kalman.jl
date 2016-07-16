@@ -173,8 +173,6 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
         rmse = sqrt(mean((yprederror.^2)', 1))
         rmsd = sqrt(mean((ystdprederror.^2)', 1))
 
-        println("$(size(z0))")
-        println("$(size(vz0))")
         return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, vz0)
     else
         return Kalman(L, zend, Pend)
@@ -338,13 +336,18 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     else
         z0
     end
+
     R1[:P0]         = solve_discrete_lyapunov(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
+    
     out             = kalman_filter(R1[:data]', 1, zeros(S, regime_states[1], 1), R1[:TTT], R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0], allout=allout)
 
     R1[:like]       = Matrix{S}(1,1)
     R1[:like][1,1]  = out[:L]
     R1[:zend]       = out[:zend]
     R1[:Pend]       = out[:Pend]
+    R1[:filt]       = out[:filt]
+    R1[:pred]       = out[:pred]
+    R1[:vpred]      = out[:vpred]
 
     # Run Kalman filter on normal period
     zprev           = R1[:zend]

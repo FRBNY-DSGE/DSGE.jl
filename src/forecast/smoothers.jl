@@ -64,9 +64,11 @@ function kalman_smoother{S<:AbstractFloat}(A0, P0, y, pred::Matrix{S}, vpred::Ar
 
     alpha_hat = zeros(Nz, Nt)
 
-    r, eta_hat = disturbance_smoother(y, pred, vpred, T, R, Q, Z, b, peachcount, psize,
+    kalsmooth = disturbance_smoother_k93(y, pred, vpred, T, R, Q, Z, b, peachcount, psize,
         n_anticipated_shocks, antlags)
-    
+    r = kalsmooth.states
+    eta_hat = kalsmooth.shocks 
+
     ah_t = A0 + P0*r[:, 1]
     alpha_hat[:, 1] = ah_t
 
@@ -170,7 +172,6 @@ function disturbance_smoother_k93{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S
     eta_hat = zeros(Ne, Nt)
 
     for t = Nt:-1:1
-
         y_t = y[:, t]
 
         # This section deals with the possibility of missing values in the y_t
@@ -213,7 +214,6 @@ function disturbance_smoother_k93{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S
             eta_hat[:, t] = Q * R' * r_t
         end
     end
-
 
     return KalmanSmooth(r, eta_hat)
 end
@@ -268,7 +268,6 @@ end
 # Q, the (Ne x Ne) covariance matrix for the shocks.
 # Z, the (Ny x Nz) measurement matrix.
 # b, the (Ny x 1) constant vector in the measurement equation.
-# A0, the (Nz x 1) initial (time 0) states vector.
 # P0, the (Nz x Nz) initial (time 0) state covariance matrix.
 
 # nant, an optional scalar for the zero bound specification indicating the
@@ -279,7 +278,7 @@ end
 # Ny0, an optional scalar indicating the number of periods of presample
 #       (i.e. the number of periods for which smoothed states are not
 #       required). If you want to set a value for Ny0 but not for nant or
-#       antlags then set them both empty.                 
+#       antlags then set them both empty.
 function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
                                             df::DataFrame,
                                             TTT::Matrix{T},
@@ -288,18 +287,16 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
                                             QQ::Matrix{T},
                                             ZZ::Matrix{T},
                                             DD::Matrix{T},
-                                            A0::Vector{T}, P0::Matrix{T};
+                                            P0::Matrix{T};
                                             use_expected_rate_data = true)
 
     ## extract settings/dates/etc
-
     n_ant_shocks  = n_anticipated_shocks(m)
     zlb_start_ind = zlb_start_index(m)
     mainsample_start_ind = Nt0 + 1
-
     
-    #conditional_start_ind =
-    t0 = first_forecast_quarter(m)
+    # conditional_start_ind =
+    t0 = date_forecast_start(m)
     t1 = df[end, :date]
     n_conditional_periods = subtract_quarters(t1, t0)   
     
@@ -307,7 +304,7 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
     data = df_to_matrix(df)
     
     # call actual simulation smoother
-    drawstates_dk02!(m, data, A0, P0,
+    drawstates_dk02!(m, data, TTT, RRR, CCC, QQ, ZZ, DD, P0,
                     mainsample_start = mainsample_start_ind,
                     zlb_start = zlb_start_ind,
                     n_conditional_periods = n_conditional_periods)
@@ -322,12 +319,11 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
                                             QQ::Matrix{T},
                                             ZZ::Matrix{T},
                                             DD::Matrix{T},
-                                            A0::Matrix{T},
                                             P0::Matrix{T};
                                             mainsample_start = NaN,
                                             zlb_start = NaN,
                                             n_conditional_periods = 0)
-    
+
     # Use consistent notation
     # We require the full data to be obs x periods, whereas the data frame (converted to
     # matrix) is periods x obs
@@ -337,35 +333,33 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
     YY  = datat[:, Nt0+1:end]
 
     # Get matrix dimensions
-    
     Ny = size(YY,1)        # number of observables
-    Nt = size(YY,2)        # number of periods of data (minus presample)
-    Nz = size(TTT,1)         # number of states
-    Ne = size(RRR,2)         # number of shocks
+    Nt = size(YY,2)        # number of (main-sample + ZLB) periods of data
+    Nz = size(TTT,1)       # number of states
+    Ne = size(RRR,2)       # number of shocks
+    
     n_ant_shocks = n_anticipated_shocks(m)   # # of anticipated monetary policy shocks
+    n_ant_lags   = n_anticipated_lags(m)     # # of periods for which rate expectations have been fixed
+    t_zlb_start  = zlb_start_index(m)
 
-    println("data: $(size(datat))")
-    println("Ny: $(Ny)")
-    println("Nt0: $(Nt0)")
-    println("Nt: $(Nt)")
-    println("Nz: $(Nz)")
-    println("Ne: $(Ne)")
-
+    Nt_main      = (t_zlb_start - 1) - Nt0   # # of main-sample periods
+    Nt_zlb       = Nt - Nt_main              # # of ZLB periods
    
-    # intialize matrices
+    # Initialize matrices
     α_all_plus = fill(NaN, Nz, Nt0+Nt)
     YY_all_plus  = fill(NaN, Ny, Nt0+Nt)
     
-    # Draw initial state, a₀+
+    # Draw initial state α_0+ and sequence of shocks η+
     U,D,V = svd(P0)
-    println("U has size: $(size(U))")
-    println("D has size: $(size(D))")
-    println("V has size: $(size(V))")
-    
-    ap_t = U * diagm(sqrt(D)) * randn(Nz, 1)
-    
-    # Draw a sequence of shocks, η+
-    η_all_plus = sqrt(QQ)*randn(Ne,Nt0+Nt)
+
+    # If testing, set initial state and all shocks to zero
+    if m.testing
+        ap_t       = U * diagm(sqrt(D)) * zeros(Nz, 1)
+        η_all_plus = sqrt(QQ) * zeros(Ne, Nt0+Nt)
+    else
+        ap_t       = U * diagm(sqrt(D)) * randn(Nz, 1)
+        η_all_plus = sqrt(QQ) * randn(Ne, Nt0+Nt)
+    end
     
     # Set n_ant_shocks shocks to 0 in pre-ZLB time periods
     if n_ant_shocks > 0
@@ -374,7 +368,7 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
         antn_ind = m.exogenous_shocks[symbol("rm_shl$(n_ant_shocks)")]
 
         # set shocks to 0
-        η_all_plus[ant1_ind:antn_ind, 1:zlb_start-1] = 0
+        η_all_plus[ant1_ind:antn_ind, 1:t_zlb_start-1] = 0
     end
     
     # Produce "fake" states and observables (a+ and y+) by
@@ -384,65 +378,96 @@ function drawstates_dk02!{T<:AbstractFloat}(m::AbstractModel,
         α_all_plus[:,t]  = ap_t
         YY_all_plus[:,t] = ZZ*ap_t + DD
     end
-    
+
     # Replace fake data with NaNs wherever actual data has NaNs
     YY_all = [YY0 YY];
     YY_all_plus[isnan(YY_all)] = NaN
     
     # Compute y* = y - y+ - D
     YY_star = YY_all - YY_all_plus
-    
-    ## Run the kalman filter
 
+    ## Run the kalman filter
     A0, P0, pred, vpred, TTT, RRR, CCC, QQ, ZZ, DD = if n_ant_shocks > 0
-        
-        R2, R3, R1 = kalman_filter_2part(m, YY', allout=true)
+
+        # R2, R3, R1 = kalman_filter_2part(m, YY_star', allout=true)
+        R2, R3, R1 = kalman_filter_2part(m, YY_star', allout=true)
         
         # unpack the results to pass to kalman_smoother
 
         TTT = R3[:TTT]
         RRR = R3[:RRR]
-        CCC = R3[:CCC] 
-        filtered_states = [R2[:filt] R3[:filt]]
-        pred            = hcat(R2[:pred], R3[:pred])
-        vpred           = cat(3, R2[:vpred], R3[:vpred])
-        zend            = R3[:zend]    # final state vector is in R3
-        PO_small        = R1[:P0]
-        A0_small        = R1[:A0]
+        CCC = R3[:CCC]
 
-        r_tl1      = m.keys[:rm_tl1]
-        r_tlx      = r_tl1 + 1
+        r_tl1 = m.endogenous_states[:rm_tl1]
+        
+        # expand pre- and main-sample matrices
+        # concatenate all (presample, main sample, ZLB) periods together
 
         # get expanded version of time-0 state vector
-        A0              =  zeros(Nz)
-        A0[1:r_tlx-2]   = A0[1:r_tlx-2] 
-        A0[r_tl1+n_ant_shocks:end]   = A0_small[r_tlx-1:end]
-                
-        # get expanded version of P0 matrix
-        P0              = zeros(Nz, Nz)
+        A0_small        = R1[:A0]
+        A0              = zeros(Nz)
+        A0[1:r_tl1-1]              = A0_small[1:r_tl1-1] 
+        A0[r_tl1+n_ant_shocks:end] = A0_small[r_tl1:end]
 
-        P0[1:r_tlx-2, 1:r_tlx-2]                  = P0_small[1:r_tlx-2, 1:r_tlx-2]
-        P0[1:r_tlx-2, (r_tl1+n_ant_shocks):end]   = P0_small[1:r_tlx-2, r_tlx-1:end]
-        P0[r_tl1+n_ant_shocks:end, 1:r_tlx-2]     = P0_small[r_tlx-1:end, 1:r_tlx-2]
-        P0[r_tl1+n_ant_shocks:end, r_tl1+nant:end]= P0_small[r_tlx-1:end, r_tlx-1:end]
+        # get expanded version of P0 matrix
+        P0_small        = R1[:P0]
+        P0              = zeros(Nz, Nz)
+        P0[1:r_tl1-1, 1:r_tl1-1]                  = P0_small[1:r_tl1-1, 1:r_tl1-1]
+        P0[1:r_tl1-1, (r_tl1+n_ant_shocks):end]   = P0_small[1:r_tl1-1, r_tl1:end]
+        P0[r_tl1+n_ant_shocks:end, 1:r_tl1-1]     = P0_small[r_tl1:end, 1:r_tl1-1]
+        P0[r_tl1+n_ant_shocks:end, (r_tl1+n_ant_shocks):end] = P0_small[r_tl1:end, r_tl1:end]
+
+        # pred (one-period-ahead predicted states)
+        R1_pred_small   = R1[:pred]
+        R1_pred         = zeros(Nz, Nt0)
+        R1_pred[1:r_tl1-1,              :] = R1_pred_small[1:r_tl1-1,   :]
+        R1_pred[r_tl1+n_ant_shocks:end, :] = R1_pred_small[r_tl1:end, :]
+
+        R2_pred_small   = R2[:pred]
+        R2_pred         = zeros(Nz, Nt_main)
+        R2_pred[1:r_tl1-1,              :] = R2_pred_small[1:r_tl1-1,   :]
+        R2_pred[r_tl1+n_ant_shocks:end, :] = R2_pred_small[r_tl1:end, :]
+
+        pred            = hcat(R1_pred, R2_pred, R3[:pred])
+
+        # vpred (mean squared errors of pred)
+        R1_vpred_small  = R1[:vpred]
+        R1_vpred        = zeros(Nz, Nz, Nt0)
+        R1_vpred[1:r_tl1-1, 1:r_tl1-1,                   :] = R1_vpred_small[1:r_tl1-1, 1:r_tl1-1, :]
+        R1_vpred[1:r_tl1-1, (r_tl1+n_ant_shocks):end,    :] = R1_vpred_small[1:r_tl1-1, r_tl1:end, :]
+        R1_vpred[r_tl1+n_ant_shocks:end, 1:r_tl1-1,      :] = R1_vpred_small[r_tl1:end, 1:r_tl1-1, :]
+        R1_vpred[r_tl1+n_ant_shocks:end, r_tl1+n_ant_shocks:end, :] = R1_vpred_small[r_tl1:end, r_tl1:end, :]
+
+        R2_vpred_small  = R2[:vpred]
+        R2_vpred        = zeros(Nz, Nz, Nt_main)
+        R2_vpred[1:r_tl1-1, 1:r_tl1-1,                   :] = R2_vpred_small[1:r_tl1-1, 1:r_tl1-1, :]
+        R2_vpred[1:r_tl1-1, (r_tl1+n_ant_shocks):end,    :] = R2_vpred_small[1:r_tl1-1, r_tl1:end, :]
+        R2_vpred[r_tl1+n_ant_shocks:end, 1:r_tl1-1,      :] = R2_vpred_small[r_tl1:end, 1:r_tl1-1, :]
+        R2_vpred[r_tl1+n_ant_shocks:end, r_tl1+n_ant_shocks:end, :] = R2_vpred_small[r_tl1:end, r_tl1:end, :]
+
+        vpred           = cat(3, R1_vpred, R2_vpred, R3[:vpred])
 
         A0, P0, pred, vpred, TTT, RRR, CCC, QQ, ZZ, DD
     else
         myvar = zeros(Ny+Nz,Ny+Nz)
         myvar[1:Nz,1:Nz] = RRR*QQ*RRR'
-        kal = kalman_filter(YY', 0, CCC, TTT, DD, ZZ, myvar, A0, P0, allout=true)
+        kal = kalman_filter(YY_star', 0, CCC, TTT, DD, ZZ, myvar, A0, P0, allout=true)
 
         A0, P0, kal[:pred], kal[:vpred], TTT, RRR, CCC, QQ, ZZ, DD
     end
 
     ##### Step 2: Kalman smooth over everything
-    α_hat_star,η_hat_star = kalman_smoother(A0,P0,YY',pred,vpred,
-                                            TTT,RRR,CCC,QQ,ZZ,DD,
-                                            n_ant_shocks,n_ant_lags)
+    peachcount = convert(Int64, n_conditional_periods > 0)
+    psize = n_conditional_periods
+
+    α_hat_star, η_hat_star = kalman_smoother(A0,P0,YY_star,pred,vpred,
+                                            TTT,RRR,QQ,ZZ,DD,
+                                            n_ant_shocks,n_ant_lags,
+                                            peachcount, psize)
     
     ## Compute draw (states and shocks)
-    α_til = α_plus + α_hat_star
-    η_til = η_plus + η_hat_star
+    α_til = α_all_plus + α_hat_star
+    η_til = η_all_plus + η_hat_star
     
     return α_til, η_til
 end

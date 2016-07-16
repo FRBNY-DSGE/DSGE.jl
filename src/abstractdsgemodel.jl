@@ -122,6 +122,14 @@ n_anticipated_shocks(m::AbstractModel) = get_setting(m, :n_anticipated_shocks)
 # Padding for number of anticipated policy shocks
 n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_shocks_padding)
 
+# Number of periods for which interest rate expectations have been fixed
+function n_anticipated_lags(m::AbstractModel)
+    zlb_start_quarter = get_setting(m, :date_zlbregime_start)
+    forecast_start_quarter = get_setting(m, :date_forecast_start)
+    quarters = subtract_quarters(forecast_start_quarter, zlb_start_quarter)
+    return quarters
+end
+
 # Index into data matrix of first period to incorporate expected rate data
 function zlb_start_index(m::AbstractModel)
     zlb_start_quarter = get_setting(m, :date_zlbregime_start)
@@ -181,10 +189,10 @@ mh_thin(m::AbstractModel)          =  get_setting(m, :mh_thin)
 n_draws(m::AbstractModel)          =  round(Int,(n_mh_blocks(m) - n_mh_burn(m)) * (n_mh_simulations(m)/mh_thin(m)))
 
 # Interface for forecast settings
-first_forecast_quarter(m::AbstractModel) = get_setting(m, :first_forecast_quarter)(m)
-forecast_tdist_df_val(m::AbstractModel)  = get_setting(m, :forecast_tdist_df_val)
-forecast_tdist_shocks(m::AbstractModel)   = get_setting(m, :forecast_tdist_shocks)
-forecast_kill_shocks(m::AbstractModel)   = get_setting(m, :forecast_kill_shocks)
+date_forecast_start(m::AbstractModel)      = get_setting(m, :date_forecast_start)
+forecast_tdist_df_val(m::AbstractModel)    = get_setting(m, :forecast_tdist_df_val)
+forecast_tdist_shocks(m::AbstractModel)    = get_setting(m, :forecast_tdist_shocks)
+forecast_kill_shocks(m::AbstractModel)     = get_setting(m, :forecast_kill_shocks)
 simulation_smoother_flag(m::AbstractModel) = get_setting(m, :simulation_smoother_flag)
     
 function forecast_horizons(m::AbstractModel)
