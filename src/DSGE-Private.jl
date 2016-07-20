@@ -1,6 +1,6 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
-module DSGE
+module DSGE-Private
     using Distributions, Roots.fzero, HDF5
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using FredData, DataFrames, Base.Dates
@@ -41,7 +41,7 @@ module DSGE
         kalman_filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, compute_moments,
-        find_density_bands, prior, mutation_RWMH,
+        find_density_bands, prior, mutation_RWMH
 
         # models/
         steadystate!, Model990, SmetsWouters, eqcond, measurement,
