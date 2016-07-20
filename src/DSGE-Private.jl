@@ -1,6 +1,6 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
-module DSGE
+module DSGE-Private
     using Distributions, Roots.fzero, HDF5
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using FredData, DataFrames, Base.Dates
@@ -8,7 +8,7 @@ module DSGE
     import Calculus
     import Optim
     using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
-
+    
     export
 
         # distributions_ext.jl
@@ -41,10 +41,10 @@ module DSGE
         kalman_filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, compute_moments,
-        find_density_bands, prior, mutation_RWMH,
+        find_density_bands, prior, mutation_RWMH
 
         # models/
-        steadystate!, Model990, Model1002, SmetsWouters, eqcond, measurement,
+        steadystate!, Model990, SmetsWouters, eqcond, measurement,
 
         # solve/
         gensys, solve,
@@ -52,7 +52,7 @@ module DSGE
         # data/
         load_data, load_data_levels, load_fred_data, transform_data, save_data,
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
-        hpadjust, oneqtrpctchange, annualtoquarter
+        hpadjust, oneqtrpctchange, annualtoquarter 
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
@@ -88,12 +88,6 @@ module DSGE
     include("models/m990/eqcond.jl")
     include("models/m990/measurement.jl")
     include("models/m990/augment_states.jl")
-
-    include("models/m1002/m1002.jl")
-    include("models/m1002/subspecs.jl")
-    include("models/m1002/eqcond.jl")
-    include("models/m1002/measurement.jl")
-    include("models/m1002/augment_states.jl")
 
     include("models/smets_wouters/smets_wouters.jl")
     include("models/smets_wouters/subspecs.jl")
