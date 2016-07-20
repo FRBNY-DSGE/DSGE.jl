@@ -41,6 +41,6 @@ The diagram below shows how `TTT` is extended to `TTT_aug`.
     |_________________________________|
 
 """
-function augment_states{T<:AbstractFloat}(m::Model1000, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
+function augment_states{T<:AbstractFloat}(m::Model990, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
     return TTT, RRR, CCC
 end
