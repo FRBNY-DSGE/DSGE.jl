@@ -1,28 +1,28 @@
-"""
-```
-estimate(m, data; verbose=:low, proposal_covariance=Matrix())
-```
 
-Estimate the DSGE parameter posterior distribution.
-
-### Arguments:
-- `m::AbstractModel`: model object
-
-### Optional Arguments:
-- `data`: well-formed data as `Matrix` or `DataFrame`. If this is not provided, the `load_data` routine will be executed.
-
-### Keyword Arguments:
-- `verbose::Symbol`: The desired frequency of function progress messages printed to standard out.
-   - `:none`: No status updates will be reported.
-   - `:low`: Status updates will be provided in csminwel and at each block in
-     Metropolis-Hastings.
-   - `:high`: Status updates provided at each iteration in Metropolis-Hastings.
-- `proposal_covariance::Matrix`: Used to test the metropolis_hastings algorithm with a precomputed
-  covariance matrix for the proposal distribution. When the Hessian is singular,
-  eigenvectors corresponding to zero eigenvectors are not well defined, so eigenvalue
-  decomposition can cause problems. Passing a precomputed matrix allows us to ensure that
-  the rest of the routine has not broken. 
-"""
+using Debug
+#"""
+#```
+#estimate(m::AbstractModel, df::DataFrame; verbose::Symbol=:low, proposal_covariance=Matrix())
+#```
+#
+#Estimate the DSGE parameter posterior distribution.
+#
+#### Arguments
+#- `m`: model object
+#- `df`: well-formed data as DataFrame
+#
+#### Optional Arguments:
+#- `verbose`: The desired frequency of function progress messages printed to standard out.
+#   - `:none`: No status updates will be reported.
+#   - `:low`: Status updates will be provided in csminwel and at each block in
+#     Metropolis-Hastings.
+#   - `:high`: Status updates provided at each iteration in Metropolis-Hastings.
+#- `proposal_covariance`: Used to test the metropolis_hastings algorithm with a precomputed
+#  covariance matrix for the proposal distribution. When the Hessian is singular,
+#  eigenvectors corresponding to zero eigenvectors are not well defined, so eigenvalue
+#  decomposition can cause problems. Passing a precomputed matrix allows us to ensure that
+#  the rest of the routine has not broken.
+#"""
 function estimate(m::AbstractModel, df::DataFrame;
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix())
@@ -161,6 +161,29 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
 
     metropolis_hastings(propdist, m, data, cc0, cc; verbose=verbose);
 
+#    println("#########################################################\n
+#            SMC STARTS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n
+#            #########################################################\n")
+#
+#    smc(m, data)
+#
     ########################################################################################
     ### Step 5: Calculate and save parameter covariance matrix
     ########################################################################################
