@@ -1,4 +1,10 @@
+<<<<<<< fa042767a57fc4adf7c72e00d0daf8abb42f35bf
 function smc(m::AbstractModel, data::Matrix )
+=======
+function smc(m::AbstractModel, data::Matrix
+
+            )
+>>>>>>> after debugging reoptimize. not needed for smc, but bugs suggest model misspecification.
 #--------------------------------------------------------------
 #Dependencies
 #--------------------------------------------------------------
@@ -6,6 +12,19 @@ function smc(m::AbstractModel, data::Matrix )
 using DataFrames
 
 #--------------------------------------------------------------
+<<<<<<< fa042767a57fc4adf7c72e00d0daf8abb42f35bf
+=======
+#Setting paths
+#--------------------------------------------------------------
+
+#CAUTION: Input text files for us.txt/prior_dsge.txt require cleaning and restructuring
+
+#--------------------------------------------------------------
+#Loading data
+#--------------------------------------------------------------
+
+#--------------------------------------------------------------
+>>>>>>> after debugging reoptimize. not needed for smc, but bugs suggest model misspecification.
 #Specify parameters of prior
 #--------------------------------------------------------------
 
