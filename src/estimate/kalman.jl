@@ -26,8 +26,11 @@ kalman_filter(data, lead, a, F, b, H, var, Ny0=0; allout=false)
 #### Optional Inputs
 - `z0`: an optional `Nz x 1` initial state vector.
 - `vz0`: an optional `Nz x Nz` covariance matrix of an initial state vector.
-- `Ny0`: an optional scalar indicating the number of periods of presample (i.e. the number
-  of periods which we don't add to the likelihood)
+- `Ny0`: an optional scalar indicating the number of periods of presample
+  (i.e. the number of periods which we don't add to the likelihood). If `Ny0 >
+  0`, then we also set the `z0` and `vz0` fields in the returned `Kalman` object
+  to be the states and variance-covariance matrices at the end of the
+  presample/beginning of the main sample
 - `allout`: an optional keyword argument indicating whether we want optional output
   variables returned as well
 
@@ -41,8 +44,8 @@ Where:
 - a `Kalman` object. See documentation for `Kalman`.
 
 
-Notes
------
+### Notes
+
 The state space model is defined as follows:
 ```
 z(t+1) = a+F*z(t)+η(t)     (state or transition equation)
@@ -155,6 +158,14 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
             filt[:, t]     = z
             vfilt[:, :, t] = P
         end
+
+        # If Ny0 > 0 (positive number of presample periods), then we reassign
+        # `z0` and `P0` to be their values at the end of the presample/beginning
+        # of the main sample
+        if t == Ny0
+            z0 = z
+            P0 = P
+        end
     end
 
     zend = z
@@ -239,6 +250,9 @@ Where:
   of periods which we don't add to the likelihood)
 - `allout`: an optional keyword argument indicating whether we want optional output
   variables returned as well
+- `augment_states`: an optional keyword argument indicating whether we want to
+  augment the pre-ZLB `filt`, `pred`, and `vpred` matrices with rows of zeros
+  for the states corresponding to anticipated policy shocks
 """
 function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
                                                data::Matrix{S},
@@ -250,7 +264,8 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
                                                lead::Int=0,
                                                Ny0::Int =0,
                                                allout::Bool = false,
-                                               catch_errors::Bool = false)
+                                               catch_errors::Bool = false,
+                                               augment_states::Bool = false)
     
     # Partition sample into three regimes, and store associated matrices:
     # - R1: presample
@@ -265,13 +280,14 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     n_T0         = n_presample_periods(m)
     n_ant        = n_anticipated_shocks(m)
     t_zlb_start  = zlb_start_index(m)
+    n_mainsample = t_zlb_start - n_T0 - 1
     n_obs_no_ant = n_observables(m) - n_anticipated_shocks(m)
     n_obs        = n_observables(m)
     n_exo        = n_shocks_exogenous(m)
 
     n_states_no_ant = n_states_augmented(m) - n_anticipated_shocks(m)
     n_states_aug    = n_states_augmented(m)
-    nstates        = n_states(m)
+    nstates         = n_states(m)
     regime_states   = [n_states_no_ant, n_states_no_ant, n_states_aug]
 
     R1[:data] = data[1:n_T0, 1:n_obs_no_ant]
@@ -343,11 +359,9 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
 
     R1[:like]       = Matrix{S}(1,1)
     R1[:like][1,1]  = out[:L]
-    R1[:zend]       = out[:zend]
-    R1[:Pend]       = out[:Pend]
-    R1[:filt]       = out[:filt]
-    R1[:pred]       = out[:pred]
-    R1[:vpred]      = out[:vpred]
+    for d in [:zend, :Pend, :filt, :pred, :vpred]
+        R1[d] = out[d]
+    end
 
     # Run Kalman filter on normal period
     zprev           = R1[:zend]
@@ -357,13 +371,9 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
         
     R2[:like]       = Matrix{S}(1,1)
     R2[:like][1,1]  = out[:L]
-    R2[:zend]       = out[:zend]
-    R2[:Pend]       = out[:Pend]
-    R2[:filt]       = out[:filt]
-    R2[:pred]       = out[:pred]
-    R2[:vpred]      = out[:vpred]
-    R2[:z0]         = out[:z0]
-    R2[:vz0]        = out[:vz0]
+    for d in [:zend, :Pend, :filt, :pred, :vpred, :z0, :vz0]
+        R2[d] = out[d]
+    end
 
     # Run Kalman filter on ZLB period
     # This section expands the number of states to accomodate extra states for the
@@ -389,13 +399,49 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
 
     R3[:like]       = Matrix{S}(1,1)
     R3[:like][1,1]  = out[:L]
-    R3[:zend]       = out[:zend]
-    R3[:Pend]       = out[:Pend]
-    R3[:filt]       = out[:filt]
-    R3[:pred]       = out[:pred]
-    R3[:vpred]      = out[:vpred]
-    R3[:z0]         = out[:z0]
-    R3[:vz0]        = out[:vz0]
+    for d in [:zend, :Pend, :filt, :pred, :vpred, :z0, :vz0]
+        R3[d] = out[d]
+    end
+
+    # TODO: Is there some way to iterate through `R1` and `R2`?
+    # If `augment_states`, then we expand the number of states in the `filt`,
+    # `pred`, and `vpred` matrices before returning
+    if augment_states
+        R1_filt_small  = R1[:filt]
+        R1[:filt]      = zeros(n_states_aug, n_T0)
+        R1[:filt][before_shocks,    :] = R1_filt_small[before_shocks,    :]
+        R1[:filt][after_shocks_new, :] = R1_filt_small[after_shocks_old, :]
+        
+        R1_pred_small  = R1[:pred]
+        R1[:pred]      = zeros(n_states_aug, n_T0)
+        R1[:pred][before_shocks,    :] = R1_pred_small[before_shocks,    :]
+        R1[:pred][after_shocks_new, :] = R1_pred_small[after_shocks_old, :]
+
+        R1_vpred_small = R1[:vpred]
+        R1[:vpred]     = zeros(n_states_aug, n_states_aug, n_T0)
+        R1[:vpred][before_shocks,    before_shocks,    :] = R1_vpred_small[before_shocks,    before_shocks,    :]
+        R1[:vpred][before_shocks,    after_shocks_new, :] = R1_vpred_small[before_shocks,    after_shocks_old, :]
+        R1[:vpred][after_shocks_new, before_shocks,    :] = R1_vpred_small[after_shocks_old, before_shocks,    :]
+        R1[:vpred][after_shocks_new, after_shocks_new, :] = R1_vpred_small[after_shocks_old, after_shocks_old, :]
+
+        R2_filt_small  = R2[:filt]
+        R2[:filt]      = zeros(n_states_aug, n_mainsample)
+        R2[:filt][before_shocks,    :] = R2_filt_small[before_shocks,    :]
+        R2[:filt][after_shocks_new, :] = R2_filt_small[after_shocks_old, :]
+        
+        R2_pred_small  = R2[:pred]
+        R2[:pred]      = zeros(n_states_aug, n_mainsample)
+        R2[:pred][before_shocks,    :] = R2_pred_small[before_shocks,    :]
+        R2[:pred][after_shocks_new, :] = R2_pred_small[after_shocks_old, :]
+
+        R2_vpred_small = R2[:vpred]
+        R2[:vpred]     = zeros(n_states_aug, n_states_aug, n_mainsample)
+        R2[:vpred][before_shocks,    before_shocks,    :] = R2_vpred_small[before_shocks,    before_shocks,    :]
+        R2[:vpred][before_shocks,    after_shocks_new, :] = R2_vpred_small[before_shocks,    after_shocks_old, :]
+        R2[:vpred][after_shocks_new, before_shocks,    :] = R2_vpred_small[after_shocks_old, before_shocks,    :]
+        R2[:vpred][after_shocks_new, after_shocks_new, :] = R2_vpred_small[after_shocks_old, after_shocks_old, :]
+end
+
 
     ## Return outputs from both regimes
     return R2, R3, R1
@@ -404,22 +450,28 @@ end
 
 
 """
+```
+Kalman{S<:AbstractFloat}
+```
 
 ### Fields:
 - `L`: value of the average log likelihood function of the SSM under assumption that
   observation noise ϵ(t) is normally distributed
-- `zend`: The state vector in the last period for which data is provided
-- `Pend`:
-
+- `zend`: state vector in the last period for which data is provided
+- `Pend`: variance-covariance matrix for `zend`
+- `z0`: starting-period state vector. If there are presample periods in the
+  data, then `z0` is the state vector at the end of the presample/beginning of
+  the main sample
+- `vz0`: variance-covariance matrix for `z0`
 
 #### Fields filled in when `allout=true` in a call to `kalman_filter`:
-- `pred`: a `Nz` x `T+lead` matrix containing one-step predicted state vectors.
+- `pred`: a `Nz` x `T+lead` matrix containing one-step predicted state vectors
 - `vpred`: a `Nz` x `Nz` x `T+lead` matrix containing mean square errors of predicted
-  state vectors.
+  state vectors
 
-- `filt`: an `Nz` x `T` matrix containing filtered state vectors.
+- `filt`: an `Nz` x `T` matrix containing filtered state vectors
 - `vfilt`: an `Nz` x `Nz` x `T` matrix containing mean square errors of filtered
-  state vectors.
+  state vectors
 """
 immutable Kalman{S<:AbstractFloat}
     L::S                  # Likelihood
@@ -434,7 +486,7 @@ immutable Kalman{S<:AbstractFloat}
     filt::Matrix{S}        # filtered states
     vfilt::Array{S,3}      # mean square errors of filtered state vectors
     z0::Array{S}           # starting-period state vector
-    vz0::Matrix{S}         # ending-period state vector
+    vz0::Matrix{S}         # starting-period variance-covariance matrix for the states
 end
 function Kalman{S<:AbstractFloat}(L::S,
                                   zend::Matrix{S},

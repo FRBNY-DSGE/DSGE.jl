@@ -12,8 +12,9 @@ for arg in ["A0", "C", "P0", "Q", "R", "T", "Z", "antlags", "b", "nant",
 end
 close(h5)
 
-alpha_hat, eta_hat = kalman_smoother(A0, P0, y, pred, vpred, T, R, Q, Z, b,
+smoothed = kalman_smoother(A0, P0, y, pred, vpred, T, R, Q, Z, b,
                                      nant, antlags, peachcount, psize)
+alpha_hat, eta_hat = smoothed.states, smoothed.shocks
 
 exp_alpha_hat, exp_eta_hat =
     h5open("$path/../reference/kalman_smoother_out.h5", "r") do h5
@@ -38,7 +39,8 @@ TTT, RRR, CCC = solve(m)
 meas = measurement(m, TTT, RRR, CCC)
 QQ, ZZ, DD = meas.QQ, meas.ZZ, meas.DD
 
-alpha_hat, eta_hat = durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, P0)
+smoothed = durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, P0; Ny0 = n_presample_periods(m))
+alpha_hat, eta_hat = smoothed.states, smoothed.shocks
 
 # exp_alpha_hat, exp_eta_hat =
 #     h5open("$path/../reference/durbin_koopman_smoother_out.h5", "r") do h5
