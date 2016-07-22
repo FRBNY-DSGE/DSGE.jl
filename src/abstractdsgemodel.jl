@@ -118,17 +118,8 @@ Distributions.pdf(m::AbstractModel) = exp(logpdf(m))
 
 # Number of anticipated policy shocks
 n_anticipated_shocks(m::AbstractModel) = get_setting(m, :n_anticipated_shocks)
-
-# Padding for number of anticipated policy shocks
 n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_shocks_padding)
-
-# Number of periods for which interest rate expectations have been fixed
-function n_anticipated_lags(m::AbstractModel)
-    zlb_start_quarter = get_setting(m, :date_zlbregime_start)
-    forecast_start_quarter = get_setting(m, :date_forecast_start)
-    quarters = subtract_quarters(forecast_start_quarter, zlb_start_quarter)
-    return quarters
-end
+n_anticipated_lags(m::AbstractModel) = get_setting(m, :n_anticipated_lags)
 
 # Index into data matrix of first period to incorporate expected rate data
 function zlb_start_index(m::AbstractModel)

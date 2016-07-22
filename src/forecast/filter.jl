@@ -217,9 +217,11 @@ function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
         durbin_koopman_smoother(m, data, sys[:TTT], sys[:RRR], sys[:CCC],
             sys[:QQ], sys[:ZZ], sys[:DD], A0, P0)
     else
-        kalman_smoother(filtered_states[1], P0, data, pred, vpred, sys[:TTT],
-            sys[:RRR], sys[:QQ], sys[:ZZ], sys[:DD], n_ant_shocks, n_ant_lags, Ny0 =
-            n_pre_periods)
+        # kalman_smoother(filtered_states[1], P0, data, pred, vpred, sys[:TTT],
+        #     sys[:RRR], sys[:QQ], sys[:ZZ], sys[:DD], n_ant_shocks, n_ant_lags, Ny0 =
+        #     n_pre_periods)
+        kalman_smoother(m, data, sys[:TTT], sys[:RRR], sys[:CCC],
+            sys[:QQ], sys[:ZZ], sys[:DD], A0, P0, pred, vpred)
     end
 
     return smoothed

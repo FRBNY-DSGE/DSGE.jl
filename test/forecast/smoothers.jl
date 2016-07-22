@@ -12,13 +12,20 @@ for arg in ["A0", "C", "P0", "Q", "R", "T", "Z", "antlags", "b", "nant",
 end
 close(h5)
 
-smoothed = kalman_smoother(A0, P0, y, pred, vpred, T, R, Q, Z, b,
-                                     nant, antlags, peachcount, psize)
+m = Model990()
+m.testing = true
+m <= Setting(:n_anticipated_shocks, 6, "Number of anticipated policy shocks")
+DSGE.init_model_indices!(m)
+m <= Setting(:date_forecast_start, quartertodate("2016-Q1"))
+m <= Setting(:n_anticipated_lags, antlags)
+
+smoothed = kalman_smoother(m, y, T, R, C, Q, Z, b, A0, P0, pred, vpred)
 alpha_hat, eta_hat = smoothed.states, smoothed.shocks
 
+Nt0 = n_presample_periods(m)
 exp_alpha_hat, exp_eta_hat =
     h5open("$path/../reference/kalman_smoother_out.h5", "r") do h5
-        read(h5, "alpha_hat"), read(h5, "eta_hat")
+        read(h5, "alpha_hat")[:, (Nt0+1):end], read(h5, "eta_hat")[:, (Nt0+1):end]
 end
 
 @test_approx_eq exp_alpha_hat alpha_hat
@@ -43,10 +50,10 @@ A0 = zeros(size(P0, 1))
 smoothed = durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, A0, P0)
 alpha_hat, eta_hat = smoothed.states, smoothed.shocks
 
-# exp_alpha_hat, exp_eta_hat =
-#     h5open("$path/../reference/durbin_koopman_smoother_out.h5", "r") do h5
-#         read(h5, "alpha_hat"), read(h5, "eta_hat")
-# end
+exp_alpha_hat, exp_eta_hat =
+    h5open("$path/../reference/durbin_koopman_smoother_out.h5", "r") do h5
+        read(h5, "alpha_hat"), read(h5, "eta_hat")
+end
 
 # @test_approx_eq exp_alpha_hat alpha_hat
 # @test_approx_eq exp_eta_hat eta_hat

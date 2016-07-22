@@ -69,24 +69,28 @@ y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
-function kalman_smoother{S<:AbstractFloat}(A0, P0, y, pred::Matrix{S},
-    vpred::Array{S, 3}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, n_anticipated_shocks::Int, n_anticipated_lags::Int,
-    peachcount::Int, n_conditional_periods::Int, Ny0::Int = 0)
-
+function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
+    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
 
     Ne = size(R, 2)
-    Ny = size(y, 1)
-    Nt = size(y, 2)
+    Ny = size(data, 1)
+    Nt = size(data, 2)
     Nz = size(T, 1)
 
-    alpha_hat = zeros(Nz, Nt)
+    n_unconditional_periods = subtract_quarters(date_forecast_start(m), date_presample_start(m))
+    n_conditional_periods = Nt - n_unconditional_periods
+    peachcount = convert(Int64, n_conditional_periods > 0)
 
-    kalsmooth = disturbance_smoother(y, pred, vpred, T, R, Q, Z, D, peachcount,
-        n_conditional_periods, n_anticipated_shocks, n_anticipated_lags)
+    n_ant_shocks = n_anticipated_shocks(m)
+    n_ant_lags = n_anticipated_lags(m)
+
+    kalsmooth = disturbance_smoother(data, pred, vpred, T, R, Q, Z, D, peachcount,
+        n_conditional_periods, n_ant_shocks, n_ant_lags)
     r = kalsmooth.states
     eta_hat = kalsmooth.shocks 
 
+    alpha_hat = zeros(Nz, Nt)
     ah_t = A0 + P0*r[:, 1]
     alpha_hat[:, 1] = ah_t
 
@@ -99,16 +103,16 @@ function kalman_smoother{S<:AbstractFloat}(A0, P0, y, pred::Matrix{S},
         # specifications with zero bound off (and hence with n_anticipated_shocks = 0), the
         # normal Q matrix can be used.
 
-        if n_anticipated_shocks > 0
+        if n_ant_shocks > 0
             # The first part of the conditional below pertains to the periods in
             # which zerobound is off. To specify this period, we must account
             # for (peachcount*n_conditional_periods) since peachdata is
             # augmented to y.
             # JC 11/30/10
-            if t < Nt - n_anticipated_lags - (peachcount*n_conditional_periods)
+            if t < Nt - n_ant_lags - (peachcount*n_conditional_periods)
                 Q_t = zeros(Ne, Ne)
-                Q_t[1:(Ne-n_anticipated_shocks), 1:(Ne-n_anticipated_shocks)] =
-                    Q[1:(Ne-n_anticipated_shocks), 1:(Ne-n_anticipated_shocks)]
+                Q_t[1:(Ne-n_ant_shocks), 1:(Ne-n_ant_shocks)] =
+                    Q[1:(Ne-n_ant_shocks), 1:(Ne-n_ant_shocks)]
                 ah_t = T*ah_t + R*Q_t*R'*r[:, t]
             else
                 ah_t = T*ah_t + R*Q*R'*r[:, t]
@@ -120,8 +124,9 @@ function kalman_smoother{S<:AbstractFloat}(A0, P0, y, pred::Matrix{S},
         alpha_hat[:, t] = ah_t
     end
 
-    alpha_hat = alpha_hat[:, (Ny0+1):end]
-    eta_hat = eta_hat[:, (Ny0+1):end]
+    Nt0 = n_presample_periods(m)
+    alpha_hat = alpha_hat[:, (Nt0+1):end]
+    eta_hat = eta_hat[:, (Nt0+1):end]
     
     return KalmanSmooth(alpha_hat, eta_hat)
 end
@@ -462,20 +467,15 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     end
 
     ##### Step 2: Kalman smooth over everything
-    n_unconditional_periods = subtract_quarters(date_forecast_start(m), date_presample_start(m))
-    n_conditional_periods = (Nt0 + Nt) - n_unconditional_periods
-    peachcount = convert(Int64, n_conditional_periods > 0)
-
-    kalsmooth = kalman_smoother(A0, P0, YY_star, pred, vpred, T, R, Q, Z, D,
-        n_ant_shocks, n_ant_lags, peachcount, n_conditional_periods)
+    kalsmooth = kalman_smoother(m, YY_star, T, R, C, Q, Z, D, A0, P0, pred, vpred)
     α_hat_star, η_hat_star = kalsmooth.states, kalsmooth.shocks
     
-    ## Compute draw (states and shocks)
-    α_til = α_all_plus + α_hat_star
-    η_til = η_all_plus + η_hat_star
-
-    α_til = α_til[:, (Nt0+1):end]
-    η_til = η_til[:, (Nt0+1):end]
+    # Compute draw (states and shocks)
+    # Since `kalman_smoother` (like `durbin_koopman_smoother`) returns smoothed
+    # states sans presample, we take only the main-sample and ZLB periods from
+    # `α_all_plus` and `η_all_plus`
+    α_til = α_all_plus[:, (Nt0+1):end] + α_hat_star
+    η_til = η_all_plus[:, (Nt0+1):end] + η_hat_star
 
     return KalmanSmooth(α_til, η_til)
 end

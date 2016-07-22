@@ -162,7 +162,7 @@ function default_test_settings!(m::AbstractModel)
         "Thinning step for testing Metropolis-Hastings")
 
     # Forecast
-    test[:date_forecast_start] = Setting(:date_forecast_end, quartertodate("2015-Q4"),
+    test[:date_forecast_start] = Setting(:date_forecast_start, quartertodate("2015-Q4"),
         "Start date of forecast period")
     test[:date_forecast_end] = Setting(:date_forecast_end, quartertodate("2016-Q1"),
         "End date of forecast period")
