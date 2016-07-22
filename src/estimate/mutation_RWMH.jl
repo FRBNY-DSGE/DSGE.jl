@@ -6,9 +6,12 @@ mutation_RWMH(p0, l0, post0, tune,i, data; rvec = [], rval = [], px = [], lx = [
 Execute one proposed move of the Metropolis-Hastings algorithm for a given parameter
 
 ### Arguments:
-- 'p0': initial prior draw. para(j,:)
-- 'l0': initial log-likelihood at the prior draw. loglh(j)
-- 'post0': initial log-posterior at the prior draw. logpost(j)
+- 'p0': para(j,:)
+        initial prior draw.
+- 'l0': loglh(j)
+        initial log-likelihood at the prior draw.
+- 'post0': logpost(j)
+           initial log-posterior at the prior draw.
 - 'tune': the tune object, which is a struct/type object that contains information about tuning the SMC and the MH algorithms
 - 'i': the index of the iteration of the SMC algorithm
 - 'data': well-formed data as DataFrame
@@ -20,34 +23,39 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 
 ### Output:
 
-- 'ind_para': 
-- 'ind_loglh': 
-- 'ind_post': 
-- 'ind_acpt':
+- 'ind_para': parasim(i,j,:) 
+              Updated parameter vector
+- 'ind_loglh': loglh(j)
+               Updated log-likelihood
+- 'ind_post': temp_acpt(j,1)
+              Updated posterior
+- 'ind_acpt': Indicator for acceptance or rejection (0 reject, 1 accept)
 
 """
-include("posterior.jl") #be sure to remove the call of f in line 20 since obj_func is 
-#being replaced by posterior() in the new code base
 
-function mutation_RWMH(p0, l0, post0, tune, i, data; rvec = [], rval = [], px = [], lx = [], postx = [])
+#change tune to be a sub-type of Tune or something in the future
+function mutation_RWMH(p0::Array{Float64,1}, l0::Float64, post0::Float64, tune, i::Int64, df::DataFrame, m::AbstractModel; rvec = [], rval = [], px = [], lx = [], postx = [])
 
-
-# If testing, set the random seeds at fixed numbers
-rvec = randn(tune.npara,1)
-rval = rand()
-
-if s.testing
+if m.testing
+    # If testing, set the random seeds at fixed numbers
     #srand(s.rng, 654)
-    rvec = 
-    rval =
+    rvec = rvec
+    rval = rval
+else
+    rvec = randn(tune.npara,1)
+    rval = rand()
 end
 
+data = df_to_matrix(m,df)
+
 #RW Proposal
-px = p0 + tune.c*chol(tune.R)'*rvec
-postx,lx = posterior(s,data)
-    
+#px = p0 + tune.c*chol(tune.R)'*rvec
+#lx = likelihood(m,data)
+#postx = posterior(m,data)[:post]
+
 # Previous posterior needs to be updated (due to tempering)
-post0 = post0+(tune.phi(i)-tune.phi(i-1))*l0
+#post0 = post0+(tune.phi(i)-tune.phi(i-1))*l0
+
 # Accept/Reject
 alp = exp(postx - post0) # this is RW, so q is canceled out
     
@@ -63,9 +71,5 @@ else
     ind_acpt   = 0
 end
 
-# # outside of function
-# parasim(i,j,:) = ind_para
-# loglh(j)       = ind_loglh
-# temp_acpt(j,1) = ind_acpt
 return ind_para, ind_loglh, ind_post, ind_acpt
 end
