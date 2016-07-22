@@ -1,3 +1,6 @@
+function smc(m::AbstractModel, data::Matrix
+
+            )
 #--------------------------------------------------------------
 #Dependencies
 #--------------------------------------------------------------
@@ -13,8 +16,6 @@ using DataFrames
 #--------------------------------------------------------------
 #Loading data
 #--------------------------------------------------------------
-
-data = readtable("us.txt")
 
 #--------------------------------------------------------------
 #Specify parameters of prior
@@ -60,10 +61,6 @@ end
 #The tempering schedule is created as the last argument in the constructor TuneType()
 tune = Tune(13,1000,100,2,0.5,0.25,0.25,0.9,((collect(1:1:100)-1)/(100-1)).^2, 0, 0, 0, 0)
 
-#Define a function handle for Posterior evaluation
-
-f = objfcn_dsge
-
 #Matrices for storing
 
 parasim = zeros(tune.nphi, tune.npart, tune.npara) #parameter draws
@@ -91,16 +88,19 @@ zhat[1] = sum(wtsim[:,1]) # zhat is 100x1 and its first entry is the sum of the 
 # Posterior values at prior draws
 loglh = zeros(tune.npart, 1)
 logpost = zeros(tune.npart, 1)
+logprior = zeros(tune.npart, 1)
 
 for i=1:1:tune.npart
 	p0 = priorsim[i,:]';
-	logpost[i], loglh[i] = f(p0, tune.jphi[1], prio, bounds, data)
+	#logpost[i], loglh[i] = objfcn_dsge(p0, tune.phi[1], prio, bounds, data)
+    logpost[i] = posterior(m, data)[:post]
+    logprior[i] = prior(m)
+    loglh[i] = likelihood(m, data)[1]
 end
 
 #RECURSION
 
 tic()
-totaltime = 0 #Probably let's take this out
 
 println("\n\n SMC Recursion starts \n\n")
 
@@ -123,7 +123,9 @@ for i=2:1:tune.nphi
 	# (b) Selection 
 	#------------------------------------
 	ESS = 1/sum(wtsim[:,i].^2)
+    sampled = false
 	if (ESS < tune.npart/2)
+        sampled = true
 		id, m = systematic_resampling(wtsim[:,i]')
 		parasim[i-1, :, :] = squeeze(parasim[i-1, id, :])
 		loglh = loglh[id]
@@ -131,6 +133,14 @@ for i=2:1:tune.nphi
 		wtsim[:,i] = 1/tune.npart
 		nresamp += 1
 		rsmpsim[i] = 1
+        if m.testing
+            if !sampled
+                h5open(workpath(m, "estimate","degen_dist.h5"),"w") do f
+                    f["wtsim"] = wtsim[:,i]
+                end
+                sampled = true
+            end
+        end
 	end
 
 	#------------------------------------
@@ -191,4 +201,5 @@ sig = (sqrt(sig));
 		println(param_names[n]" = ", mu[n], sig[n])
 		end
     end
+end
 end
