@@ -38,8 +38,9 @@ DSGE.init_model_indices!(m)
 TTT, RRR, CCC = solve(m)
 meas = measurement(m, TTT, RRR, CCC)
 QQ, ZZ, DD = meas.QQ, meas.ZZ, meas.DD
+A0 = zeros(size(P0, 1))
 
-smoothed = durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, P0; Ny0 = n_presample_periods(m))
+smoothed = durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, A0, P0)
 alpha_hat, eta_hat = smoothed.states, smoothed.shocks
 
 # exp_alpha_hat, exp_eta_hat =

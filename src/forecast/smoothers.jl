@@ -342,32 +342,18 @@ y(t) = Z*α(t) + D             (state or transition equation)
 """
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, P0::Matrix{S}; use_expected_rate_data = true, Ny0::Int = 0)
+    D::Matrix{S}, A0::Vector{S}, P0::Matrix{S})
 
-    ## extract settings/dates/etc
-    n_ant_shocks  = n_anticipated_shocks(m)
-    zlb_start_ind = zlb_start_index(m)
-    mainsample_start_ind = Ny0 + 1
-    
-    t0 = date_forecast_start(m)
-    t1 = df[end, :date]
-    n_conditional_periods = subtract_quarters(t1, t0)   
-    
     # convert DataFrame to Matrix
     data = df_to_matrix(df)
     
     # call actual simulation smoother
-    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, P0,
-                    mainsample_start = mainsample_start_ind,
-                    zlb_start = zlb_start_ind,
-                    n_conditional_periods = n_conditional_periods,
-                    Ny0 = 0)
+    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0)
 end
 
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, P0::Matrix{S}; mainsample_start = NaN, zlb_start =
-    NaN, n_conditional_periods = 0, Ny0::Int = 0)
+    D::Matrix{S}, A0::Array{S}, P0::Matrix{S})
 
     # Use consistent notation
     # We require the full data to be obs x periods, whereas the data frame (converted to
@@ -476,6 +462,8 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     end
 
     ##### Step 2: Kalman smooth over everything
+    n_unconditional_periods = subtract_quarters(date_forecast_start(m), date_presample_start(m))
+    n_conditional_periods = (Nt0 + Nt) - n_unconditional_periods
     peachcount = convert(Int64, n_conditional_periods > 0)
 
     kalsmooth = kalman_smoother(A0, P0, YY_star, pred, vpred, T, R, Q, Z, D,
@@ -486,8 +474,8 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     α_til = α_all_plus + α_hat_star
     η_til = η_all_plus + η_hat_star
 
-    α_til = α_til[:, (Ny0+1):end]
-    η_til = η_til[:, (Ny0+1):end]
+    α_til = α_til[:, (Nt0+1):end]
+    η_til = η_til[:, (Nt0+1):end]
 
     return KalmanSmooth(α_til, η_til)
 end

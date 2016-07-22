@@ -147,6 +147,11 @@ function n_presample_periods(m::AbstractModel)
     return quarters
 end
 
+date_presample_start(m::AbstractModel) = get_setting(m, :date_presample_start)
+date_mainsample_start(m::AbstractModel) = get_setting(m, :date_mainsample_start)
+date_zlbregime_start(m::AbstractModel) = get_setting(m, :date_zlbregime_start)
+date_mainsample_end(m::AbstractModel) = get_setting(m, :date_mainsample_end)
+
 # Number of a few things that are useful
 n_states(m::AbstractModel)                 = length(m.endogenous_states)
 n_states_augmented(m::AbstractModel)       = n_states(m) + length(m.endogenous_states_augmented)
@@ -168,12 +173,10 @@ dataroot(m::AbstractModel)     = get_setting(m, :dataroot)
 data_vintage(m::AbstractModel) = get_setting(m, :data_vintage)
 cond_vintage(m::AbstractModel) = get_setting(m, :cond_vintage)
 cond_id(m::AbstractModel) = get_setting(m, :cond_id)
+use_population_forecast(m::AbstractModel) = get_setting(m, :use_population_forecast)
 
 # Interface for general computation settings
 use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers)
-
-# Interface for data step
-use_population_forecast(m::AbstractModel) = get_setting(m, :use_population_forecast)
 
 # Interface for estimation settings
 reoptimize(m::AbstractModel)          = get_setting(m, :reoptimize)
