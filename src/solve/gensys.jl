@@ -79,7 +79,7 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
     select = abs(F[:alpha]) .> div * abs(F[:beta])
     FS = ordschur!(F, select)
     a, b, qt, z = FS[:S], FS[:T], FS[:Q], FS[:Z]
-    gev = vcat(diag(a), diag(b))
+    gev = hcat(diag(a), diag(b))
     qt1 = qt[:, 1:(n - nunstab)]
     qt2 = qt[:, (n - nunstab + 1):n]
     etawt = Ac_mul_B(qt2, Π)
@@ -88,7 +88,7 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
     # branch below is to handle case of no stable roots, rather than quitting with an error
     # in that case.
     if nunstab == 0
-        etawt == zeros(0, neta)
+        etawt = zeros(0, neta)
         ueta = zeros(0, 0)
         deta = zeros(0, 0)
         veta = zeros(neta, 0)
