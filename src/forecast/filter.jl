@@ -65,7 +65,10 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::Vector
     else
         mapfcn = map
     end    
-    out = mapfcn(DSGE.filter, models,datas,sys, allout=allouts)
+    #out = mapfcn(DSGE.filter, models, datas, sys, allouts)
+    out = mapfcn([models; datas; sys]) do allout  # transposes?
+        DSGE.filter()
+    end
 
     filtered_states = [Array(x[1]) for x in out]  # to make type stable
     pred            = [Array(x[2]) for x in out]  
