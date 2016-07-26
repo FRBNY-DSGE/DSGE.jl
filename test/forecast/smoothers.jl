@@ -34,7 +34,7 @@ end
 
 # Durbin Koopman smoother test
 data, P0 = h5open("$path/../reference/durbin_koopman_smoother_args.h5") do h5
-    read(h5, "YY_all")', read(h5, "P0")
+    read(h5, "YY_all"), read(h5, "P0")
 end
 
 m = Model990()

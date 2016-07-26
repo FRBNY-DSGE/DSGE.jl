@@ -1,9 +1,12 @@
 """
 ```
-function kalman_smoother{S<:AbstractFloat}(A0, P0, y, pred::Matrix{S},
-    vpred::Array{S, 3}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, n_anticipated_shocks::Int, n_anticipated_lags::Int,
-    peachcount::Int, n_conditional_periods::Int, Ny0::Int = 0)
+function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+    T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
+    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
+
+function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
+    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
 ```
 This is a Kalman Smoothing program based on S.J. Koopman's \"Disturbance
 Smoother for State Space Models\" (Biometrika, 1993), as specified in
@@ -21,29 +24,20 @@ in the `eta_hat` matrix.
 
 ### Inputs:
 
+- `m`: model object
+- `data`: the (`Ny` x `Nt`) matrix of observable data
+- `T`: the (`Nz` x `Nz`) transition matrix
+- `R`: the (`Nz` x `Ne`) matrix translating shocks to states
+- `C`: the (`Nz` x 1) constant vector in the transition equation
+- `Q`: the (`Ne` x `Ne`) covariance matrix for the shocks
+- `Z`: the (`Ny` x `Nz`) measurement matrix
+- `D`: the (`Ny` x 1) constant vector in the measurement equation
 - `A0`: the (`Nz` x 1) initial (time 0) states vector
 - `P0`: the (`Nz` x `Nz`) initial (time 0) state covariance matrix
-- `y`: the (`Ny` x `Nt`) matrix of observable data
 - `pred`: the (`Nz` x `Nt`) matrix of one-step-ahead predicted states (from the
   Kalman Filter)
 - `vpred`: the (`Nz` x `Nz` x `Nt`) matrix of one-step-ahead predicted
   covariance matrices
-- `T`: the (`Nz` x `Nz`) transition matrix
-- `R`: the (`Nz` x `Ne`) matrix translating shocks to states
-- `Q`: the (`Ne` x `Ne`) covariance matrix for the shocks
-- `Z`: the (`Ny` x `Nz`) measurement matrix
-- `D`: the (`Ny` x 1) constant vector in the measurement equation
-
-- `n_anticipated_shocks`: an optional scalar for the zero bound specification
-  indicating the number of periods ahead the interest rate is fixed
-- `n_anticipated_lags`: an optional scalar for the zero bound specification
-  indicating the number of periods for which interest rate expectations have
-  been fixed
-- `peachcount`
-- `n_conditional_periods`: number of periods for which we have conditional data
-  from Dick Peach
-- `Ny0`: an optional scalar indicating the number of periods of presample
-  (i.e. the number of periods for which smoothed states are not required)
 
 Where:
 
@@ -58,7 +52,7 @@ Where:
 - `states`: the (`Nz` x `Nt`) matrix of smoothed states
 - `shocks`: the (`Ne` x `Nt`) matrix of smoothed shocks
 
-If `Ny0` is nonzero, the `α_hat` and `η_hat` matrices will be shorter by
+If `n_presample_periods(m)` is nonzero, the `α_hat` and `η_hat` matrices will be shorter by
 that number of columns (taken from the beginning).
 
 ### Notes
@@ -69,6 +63,17 @@ y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
+function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+    T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
+    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
+
+    # convert DataFrame to Matrix
+    data = df_to_matrix(df)'
+    
+    # call actual simulation smoother
+    kalman_smoother(m, data, T, R, C, Q, Z, D, A0, P0)
+end
+
 function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
     D::Matrix{S}, A0::Array{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
@@ -133,15 +138,12 @@ end
 
 """
 ```
-function disturbance_smoother{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S},
-    vpred::Array{S,3}, T::Matrix{S}, R::Matrix{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, peachcount::Int, n_conditional_periods::Int,
-    n_anticipated_shocks::Int = 0, n_anticipated_lags::Int = 0)
+function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
+    data::Matrix{S}, sys::System, pred::Matrix{S}, vpred::Array{S, 3})
 
-function disturbance_smoother{S<:AbstractFloat}(y::Matrix{S}, pred::Matrix{S},
-    vpred::Array{S,3}, sys::System, peachcount::Int, n_conditional_periods::Int,
-    n_anticipated_shocks::Int = 0, n_anticipated_lags::Int = 0)
-
+function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
+    data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
+    Z::Matrix{S}, D::Array{S}, pred::Matrix{S}, vpred::Array{S, 3})
 ```
 
 This is a Kalman Smoothing program based on S.J. Koopman's \"Disturbance
@@ -163,21 +165,16 @@ the anticipated shocks to zero in those periods.
 
 ### Inputs:
 
-- `y`: the (`Ny` x `Nt`) matrix of observable data
-- `pred`: the (`Nz` x `Nt`) matrix of one-step-ahead predicted states (from the Kalman Filter)
-- `vpred`: the (`Nz` x `Nz` x `Nt`) matrix of one-step-ahead predicted covariance matrices
+- `m`: model object
+- `data`: the (`Ny` x `Nt`) matrix of observable data
 - `T`: the (`Nz` x `Nz`) transition matrix
 - `R`: the (`Nz` x `Ne`) matrix translating shocks to states
+- `C`: the (`Nz` x 1) constant vector in the transition equation
 - `Q`: the (`Ne` x `Ne`) covariance matrix for the shocks
 - `Z`: the (`Ny` x `Nz`) measurement matrix
 - `D`: the (`Ny` x 1) constant vector in the measurement equation
-- `peachcount`
-- `n_conditional_periods`: number of periods for which we have conditional data from Dick Peach
-
-- `n_anticipated_shocks`: an optional scalar for the zero bound specification
-  indicating the of periods ahead the interest rate is fixed
-- `n_anticipated_lags`: an optional scalar for the zero bound specification indicating the
-  number of periods for which interest rate expectations have been fixed
+- `pred`: the (`Nz` x `Nt`) matrix of one-step-ahead predicted states (from the Kalman Filter)
+- `vpred`: the (`Nz` x `Nz` x `Nt`) matrix of one-step-ahead predicted covariance matrices
 
 Where:
 
@@ -200,6 +197,19 @@ y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
+function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
+    data::Matrix{S}, sys::System, pred::Matrix{S}, vpred::Array{S, 3})
+
+    T = sys[:TTT]
+    R = sys[:RRR]
+    C = sys[:CCC]
+    Q  = sys[:QQ]
+    Z  = sys[:ZZ]
+    D  = sys[:DD]
+
+    disturbance_smoother(m, data, T, R, C, Q, Z, D, pred, vpred)
+end
+
 function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
     data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
     Z::Matrix{S}, D::Array{S}, pred::Matrix{S}, vpred::Array{S, 3})
@@ -271,30 +281,15 @@ function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
     return KalmanSmooth(r, eta_hat)
 end
 
-function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
-    data::Matrix{S}, sys::System, pred::Matrix{S}, vpred::Array{S, 3})
-
-    T = sys[:TTT]
-    R = sys[:RRR]
-    C = sys[:CCC]
-    Q  = sys[:QQ]
-    Z  = sys[:ZZ]
-    D  = sys[:DD]
-
-    disturbance_smoother(m, data, T, R, C, Q, Z, D, pred, vpred)
-end
-
 """
 ```
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    df::DataFrame, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
-    Z::Matrix{S}, D::Matrix{S}, P0::Matrix{S}; use_expected_rate_data = true,
-    Ny0::Int = 0)
+function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+    T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
+    D::Matrix{S}, A0::Array{S}, P0::Matrix{S})
 
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
-    Z::Matrix{S}, D::Matrix{S}, P0::Matrix{S}; mainsample_start = NaN, zlb_start
-    = NaN, n_conditional_periods = 0, Ny0::Int = 0)
+function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
+    D::Matrix{S}, A0::Array{S}, P0::Matrix{S})
 ```
 This program is a simulation smoother based on Durbin and Koopman's
 \"A Simple and Efficient Simulation Smoother for State Space Time Series
@@ -318,18 +313,17 @@ erratic Moore-Penrose pseudoinverse).
 ### Inputs:
 
 - `m`: model object
-- `df`: the (`Nt` x `Ny`) DataFrame of observable data
+- `data`: the (`Ny` x `Nt`) matrix of observable data
 - `T`: the (`Nz` x `Nz`) transition matrix
 - `R`: the (`Nz` x `Ne`) matrix translating shocks to states
+- `C`: the (`Nz` x 1) constant vector in the transition equation
 - `Q`: the (`Ne` x `Ne`) covariance matrix for the shocks
 - `Z`: the (`Ny` x `Nz`) measurement matrix
 - `D`: the (`Ny` x 1) constant vector in the measurement equation
+- `A0`: the (`Nz` x 1) initial (time 0) states vector
 - `P0`: the (`Nz` x `Nz`) initial (time 0) state covariance matrix. If
   `use_expected_rate_data = true`, then `P0` must include rows and columns for
   the anticipated shocks.
-- `use_expected_rate_data`
-- `Ny0`: an optional scalar indicating the number of periods of presample
-  (i.e. the number of periods for which smoothed states are not required)
 
 Where:
 
@@ -344,6 +338,9 @@ Where:
 - `states`: the (`Nz` x `Nt`) matrix of smoothed states.
 - `shocks`: the (`Ne` x `Nt`) matrix of smoothed shocks.
 
+If `n_presample_periods(m)` is nonzero, the `α_hat` and `η_hat` matrices will be shorter by
+that number of columns (taken from the beginning).
+
 ### Notes
 
 The state space model is defined as follows:
@@ -357,7 +354,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFra
     D::Matrix{S}, A0::Vector{S}, P0::Matrix{S})
 
     # convert DataFrame to Matrix
-    data = df_to_matrix(df)
+    data = df_to_matrix(df)'
     
     # call actual simulation smoother
     durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0)
@@ -370,10 +367,9 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     # Use consistent notation
     # We require the full data to be obs x periods, whereas the data frame (converted to
     # matrix) is periods x obs
-    datat = data'
     Nt0 = n_presample_periods(m)
-    YY0 = datat[:, 1:Nt0]
-    YY  = datat[:, Nt0+1:end]
+    YY0 = data[:, 1:Nt0]
+    YY  = data[:, Nt0+1:end]
 
     # Get matrix dimensions
     Ny = size(YY,1) # number of observables
