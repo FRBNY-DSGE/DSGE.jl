@@ -1,7 +1,7 @@
 """
 ```
 forecast_all(m::AbstractModel, df::DataFrame; cond_types::Vector{Symbol}
-input_types::Vector{Symbol} output_types::Vector{Symbol}
+input_types::Vector{Symbol}, output_types::Vector{Symbol}
 ```
 
 Compute forecasts for all specified combinations of conditional data, input types, and
