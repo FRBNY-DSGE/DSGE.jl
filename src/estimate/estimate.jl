@@ -88,7 +88,6 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
         h5open(rawpath(m, "estimate", "paramsmode.h5"),"w") do file
             file["params"] = params
         end
-
     end
 
     params = map(θ->θ.value, m.parameters)
