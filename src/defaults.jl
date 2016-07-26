@@ -33,7 +33,7 @@ function default_settings!(m::AbstractModel)
     # Anticipated shocks
     m <= Setting(:n_anticipated_shocks, 0, "Number of anticipated policy shocks")
     m <= Setting(:n_anticipated_shocks_padding, 20, "Padding for anticipated policy shocks")
-    m <= Setting(:n_anticipated_lags, subtract_quarters(get_setting(m, :date_zlbregime_start), get_setting(m, :date_forecast_start)), "Number of periods for which interest rate expectations have been fixed")
+    m <= Setting(:n_anticipated_lags, subtract_quarters(get_setting(m, :date_forecast_start), get_setting(m, :date_zlbregime_start)), "Number of periods for which interest rate expectations have been fixed")
 
     # General computation
     m <= Setting(:use_parallel_workers, true, "Use available parallel workers in computations")
