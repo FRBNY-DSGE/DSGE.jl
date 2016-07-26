@@ -82,7 +82,7 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
 
     # Call filter over all draws
     out = pmap(i -> DSGE.filter(m,data,sys[i], allout=true,
-                                            use_expected_rate_data=use_expected_rate_data), 1:ndraws)
+        use_expected_rate_data=use_expected_rate_data), 1:ndraws)
 
     filtered_states = [Array(x[1]) for x in out]  # to make type stable
     pred            = [Array(x[2]) for x in out]  
@@ -98,13 +98,11 @@ function filter{T<:AbstractModel}(m::T,
                                   vz0::Matrix{Float64}=Matrix{Float64}(0,0);
                                   lead::Int=0,
                                   Ny0::Int =0,
-                                  allout::Bool = false,
-                                  use_expected_rate_data = true)
+                                  allout::Bool = false)
 
     data = df_to_matrix(m,df) 
 
-    filter(m,data,sys,z0,vz0,lead=lead,Ny0=Ny0,allout=allout,
-           use_expected_rate_data=use_expected_rate_data)
+    filter(m,data,sys,z0,vz0,lead=lead,Ny0=Ny0,allout=allout)
     
 end
     
@@ -112,12 +110,11 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
                                   data::Matrix{S},
                                   sys::System,  
                                   z0::Array{S} = Array{S}(0),
-                                  vz0::Matrix{S} = Matrix{S}(0,0);
+                                  vz0::Matrix{S} = Matrix{S}(0, 0);
                                   lead::Int = 0,
                                   Ny0::Int = 0,
                                   allout::Bool = false,
                                   use_expected_rate_data = true)
-
     
     # pull out the elements of sys
     TTT    = sys[:TTT]
@@ -129,7 +126,7 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
     VVall  = sys[:VVall]
 
     # Call the appropriate version of the Kalman filter
-    if use_expected_rate_data
+    if n_anticipated_shocks(m) > 0
 
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at zlb_start_index)
@@ -158,7 +155,7 @@ function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
                                                              data::Matrix{S},
                                                              sys::System,  
                                                              z0::Array{S} = Array{S}(0),
-                                                             vz0::Matrix{S} = Matrix{S}(0,0);
+                                                             vz0::Matrix{S} = Matrix{S}(0, 0);
                                                              lead::Int = 0,
                                                              Ny0::Int = 0,
                                                              allout::Bool = false,
@@ -178,7 +175,7 @@ function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
     VVall  = sys[:VVall]
 
     # Call the appropriate version of the Kalman filter
-    filtered_states, pred, vpred, zend, A0, P0 = if use_expected_rate_data
+    filtered_states, pred, vpred, zend, A0, P0 = if n_anticipated_shocks(m) > 0
 
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at zlb_start_index)
@@ -217,9 +214,6 @@ function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
         durbin_koopman_smoother(m, data, sys[:TTT], sys[:RRR], sys[:CCC],
             sys[:QQ], sys[:ZZ], sys[:DD], A0, P0)
     else
-        # kalman_smoother(filtered_states[1], P0, data, pred, vpred, sys[:TTT],
-        #     sys[:RRR], sys[:QQ], sys[:ZZ], sys[:DD], n_ant_shocks, n_ant_lags, Ny0 =
-        #     n_pre_periods)
         kalman_smoother(m, data, sys[:TTT], sys[:RRR], sys[:CCC],
             sys[:QQ], sys[:ZZ], sys[:DD], A0, P0, pred, vpred)
     end
