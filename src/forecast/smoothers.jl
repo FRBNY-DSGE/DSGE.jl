@@ -65,33 +65,38 @@ y(t) = Z*α(t) + D             (state or transition equation)
 """
 function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
+    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    n_conditional_periods::Int = 0)
 
     # convert DataFrame to Matrix
     data = df_to_matrix(df)'
     
     # call actual simulation smoother
-    kalman_smoother(m, data, T, R, C, Q, Z, D, A0, P0)
+    kalman_smoother(m, data, T, R, C, Q, Z, D, A0, P0; n_conditional_periods =
+        n_conditional_periods)
 end
 
 function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
+    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    n_conditional_periods::Int = 0)
 
     Ne = size(R, 2)
     Ny = size(data, 1)
     Nt = size(data, 2)
     Nz = size(T, 1)
 
-    # Conditional data metadata
-    n_unconditional_periods = subtract_quarters(date_forecast_start(m), date_presample_start(m))
-    n_conditional_periods = Nt - n_unconditional_periods
-    peachcount = convert(Int64, n_conditional_periods > 0)
-    t_zlb_start  = zlb_start_index(m)
+    regime_periods = [subtract_quarters(date_mainsample_start(m), date_presample_start(m)),
+                      subtract_quarters(date_zlbregime_start(m),  date_mainsample_start(m)),
+                      subtract_quarters(date_forecast_start(m),   date_zlbregime_start(m))]
+    
+    # Check data is well-formed wrt model settings
+    @assert Ny == n_observables(m)
+    @assert Nt == regime_periods[1] + regime_periods[2] + regime_periods[3] + n_conditional_periods
 
-    # Anticipated policy shocks metadata
+    # Anticipated monetary policy shocks
     n_ant_shocks = n_anticipated_shocks(m)
-    # n_ant_lags = n_anticipated_lags(m)
+    t_zlb_start  = zlb_start_index(m)
 
     kalsmooth = disturbance_smoother(m, data, T, R, C, Q, Z, D, pred, vpred)
     r, eta_hat = kalsmooth.states, kalsmooth.shocks
@@ -115,8 +120,7 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
             # for (peachcount*n_conditional_periods) since peachdata is
             # augmented to y.
             # JC 11/30/10
-            if t < Nt - n_anticipated_lags(m) - peachcount*n_conditional_periods
-            # if t < t_zlb_start
+            if t < t_zlb_start
                 Q_t = zeros(Ne, Ne)
                 Q_t[1:(Ne-n_ant_shocks), 1:(Ne-n_ant_shocks)] =
                     Q[1:(Ne-n_ant_shocks), 1:(Ne-n_ant_shocks)]
@@ -131,9 +135,8 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         alpha_hat[:, t] = ah_t
     end
 
-    Nt0 = n_presample_periods(m)
-    alpha_hat = alpha_hat[:, (Nt0+1):end]
-    eta_hat = eta_hat[:, (Nt0+1):end]
+    alpha_hat = alpha_hat[:, n_presample_periods(m)+1:end]
+    eta_hat   = eta_hat[:,   n_presample_periods(m)+1:end]
     
     return KalmanSmooth(alpha_hat, eta_hat)
 end
@@ -225,15 +228,9 @@ function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
     Ne = size(R, 2)
     eta_hat = zeros(Ne, Nt)
 
-    # Conditional data metadata
-    n_unconditional_periods = subtract_quarters(date_forecast_start(m), date_presample_start(m))
-    n_conditional_periods = Nt - n_unconditional_periods
-    peachcount = convert(Int64, n_conditional_periods > 0)
-    t_zlb_start  = zlb_start_index(m)
-
     # Anticipated policy shocks metadata
     n_ant_shocks = n_anticipated_shocks(m)
-    # n_ant_lags = n_anticipated_lags(m)
+    t_zlb_start  = zlb_start_index(m)
 
     for t = Nt:-1:1
         data_t = data[:, t]
@@ -268,8 +265,7 @@ function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
             # which zerobound is off.  To specify this period, we must account
             # for (peachcount*n_conditional_periods) since peachdata is
             # augmented to data.  JC 11/30/10
-            if t < Nt - n_anticipated_lags(m) - peachcount*n_conditional_periods
-            # if t < t_zlb_start
+            if t < t_zlb_start
                 Q_t = zeros(Ne, Ne)
                 Q_t[1:Ne-n_ant_shocks, 1:Ne-n_ant_shocks] =
                     Q[1:Ne-n_ant_shocks, 1:Ne-n_ant_shocks]
@@ -355,54 +351,52 @@ y(t) = Z*α(t) + D             (state or transition equation)
 """
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, A0::Vector{S}, P0::Matrix{S})
+    D::Matrix{S}, A0::Vector{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
 
     # convert DataFrame to Matrix
     data = df_to_matrix(df)'
     
     # call actual simulation smoother
-    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0)
+    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0; n_conditional_periods =
+        n_conditional_periods)
 end
 
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, A0::Array{S}, P0::Matrix{S})
-
-    # Use consistent notation
-    # We require the full data to be obs x periods, whereas the data frame (converted to
-    # matrix) is periods x obs
-    Nt0 = n_presample_periods(m)
-    YY0 = data[:, 1:Nt0]
-    YY  = data[:, Nt0+1:end]
+    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
 
     # Get matrix dimensions
-    Ny = size(YY,1) # number of observables
-    Nt = size(YY,2) # number of (main-sample + ZLB) periods of data
-    Nz = size(T,1)  # number of states
-    Ne = size(R,2)  # number of shocks
-    @assert Ny == n_observables(m)
+    Ny = size(data, 1)
+    Nt = size(data, 2)
+    Nz = size(T, 1)
+    Ne = size(R, 2)
     
-    n_ant_shocks = n_anticipated_shocks(m)   # # of anticipated monetary policy shocks
+    regime_periods = [subtract_quarters(date_mainsample_start(m), date_presample_start(m)),
+                      subtract_quarters(date_zlbregime_start(m),  date_mainsample_start(m)),
+                      subtract_quarters(date_forecast_start(m),   date_zlbregime_start(m))]
+    
+    # Check data is well-formed wrt model settings
+    @assert Ny == n_observables(m)
+    @assert Nt == regime_periods[1] + regime_periods[2] + regime_periods[3] + n_conditional_periods
 
+    # Anticipated monetary policy shocks
+    n_ant_shocks = n_anticipated_shocks(m)
     t_zlb_start  = zlb_start_index(m)
-
-    Nt_main      = (t_zlb_start - 1) - Nt0   # # of main-sample periods
-    Nt_zlb       = Nt - Nt_main              # # of ZLB periods
    
     # Initialize matrices
-    α_all_plus  = fill(NaN, Nz, Nt0+Nt)
-    YY_all_plus = fill(NaN, Ny, Nt0+Nt)
+    α_all_plus  = fill(NaN, Nz, Nt)
+    YY_all_plus = fill(NaN, Ny, Nt)
     
     # Draw initial state α_0+ and sequence of shocks η+
-    U, S, V = svd(P0)
+    U, E, V = svd(P0)
 
     # If testing, set initial state and all shocks to zero
     if m.testing
-        ap_t       = U * diagm(sqrt(S)) * zeros(Nz, 1)
-        η_all_plus = sqrt(Q) * zeros(Ne, Nt0+Nt)
+        ap_t       = U * diagm(sqrt(E)) * zeros(Nz, 1)
+        η_all_plus = sqrt(Q) * zeros(Ne, Nt)
     else
-        ap_t       = U * diagm(sqrt(S)) * randn(Nz, 1)
-        η_all_plus = sqrt(Q) * randn(Ne, Nt0+Nt)
+        ap_t       = U * diagm(sqrt(E)) * randn(Nz, 1)
+        η_all_plus = sqrt(Q) * randn(Ne, Nt)
     end
     
     # Set n_ant_shocks shocks to 0 in pre-ZLB time periods
@@ -410,30 +404,30 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
         # get the indices of the anticipated shocks in the m.exogenous_shocks field
         ant1_ind = m.exogenous_shocks[:rm_shl1]
         antn_ind = m.exogenous_shocks[symbol("rm_shl$(n_ant_shocks)")]
+        shock_inds = ant1_ind:antn_ind
 
         # set shocks to 0
-        η_all_plus[ant1_ind:antn_ind, 1:t_zlb_start-1] = 0
+        η_all_plus[shock_inds, 1:t_zlb_start-1] = 0
     end
     
     # Produce "fake" states and observables (a+ and y+) by
     # iterating the state-space system forward
-    for t = 1:Nt0+Nt
+    for t = 1:Nt
         ap_t             = T * ap_t + R * η_all_plus[:,t]
         α_all_plus[:,t]  = ap_t
         YY_all_plus[:,t] = Z*ap_t + D
     end
 
     # Replace fake data with NaNs wherever actual data has NaNs
-    YY_all = [YY0 YY];
-    YY_all_plus[isnan(YY_all)] = NaN
+    YY_all_plus[isnan(data)] = NaN
     
     # Compute y* = y - y+ - D
-    YY_star = YY_all - YY_all_plus
+    YY_star = data - YY_all_plus
 
     ## Run the kalman filter
     A0, P0, pred, vpred, T, R, C, Q, Z, D = if n_ant_shocks > 0
 
-        R2, R3, R1 = kalman_filter_2part(m, YY_star', T, R, C, zeros(size(P0, 1), 1), P0, allout = true, augment_states = true)
+        R2, R3, R1 = kalman_filter_2part(m, YY_star', T, R, C, A0, P0, allout = true, augment_states = true)
         
         # unpack the results to pass to kalman_smoother
 
@@ -484,8 +478,8 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     # Since `kalman_smoother` (like `durbin_koopman_smoother`) returns smoothed
     # states sans presample, we take only the main-sample and ZLB periods from
     # `α_all_plus` and `η_all_plus`
-    α_til = α_all_plus[:, (Nt0+1):end] + α_hat_star
-    η_til = η_all_plus[:, (Nt0+1):end] + η_hat_star
+    α_til = α_all_plus[:, n_presample_periods(m)+1:end] + α_hat_star
+    η_til = η_all_plus[:, n_presample_periods(m)+1:end] + η_hat_star
 
     return KalmanSmooth(α_til, η_til)
 end
