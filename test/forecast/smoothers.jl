@@ -21,7 +21,7 @@ QQ, ZZ, DD = meas.QQ, meas.ZZ, meas.DD
 
 A0 = zeros(size(TTT, 1))
 P0 = QuantEcon.solve_discrete_lyapunov(TTT, RRR*QQ*RRR')
-R2, R3, R1 = kalman_filter_2part(m, data', TTT, RRR, CCC, A0, P0, allout = true, augment_states = true)
+R2, R3, R1 = kalman_filter_2part(m, data', TTT, RRR, CCC, A0, P0; allout = true, augment_states = true)
 pred  = hcat(R1[:pred], R2[:pred], R3[:pred])
 vpred = cat(3, R1[:vpred], R2[:vpred], R3[:vpred])
 

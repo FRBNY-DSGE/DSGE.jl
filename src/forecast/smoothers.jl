@@ -427,7 +427,8 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     ## Run the kalman filter
     A0, P0, pred, vpred, T, R, C, Q, Z, D = if n_ant_shocks > 0
 
-        R2, R3, R1 = kalman_filter_2part(m, YY_star', T, R, C, A0, P0, allout = true, augment_states = true)
+        R2, R3, R1 = kalman_filter_2part(m, YY_star', T, R, C, A0, P0;
+            DD = zeros(size(D)), allout = true, augment_states = true)
         
         # unpack the results to pass to kalman_smoother
 

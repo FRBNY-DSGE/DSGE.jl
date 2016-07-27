@@ -19,7 +19,7 @@ my_tests = [
             "models/m990/m990",
             "models/smets_wouters/smets_wouters",
             "data/data",
-            # "forecast/smoothers",
+            "forecast/smoothers",
             "forecast/filter",
             "forecast/forecast",
             "forecast/forecast_all"

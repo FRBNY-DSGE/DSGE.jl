@@ -261,6 +261,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
                                                CCC::Matrix{S} = Matrix{S}(0,0),
                                                z0::Array{S}   = Array{S}(0),
                                                vz0::Matrix{S} = Matrix{S}(0,0);
+                                               DD::Matrix{S} = Matrix{S}(0,0),
                                                lead::Int=0,
                                                Ny0::Int =0,
                                                allout::Bool = false,
@@ -319,6 +320,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     # Get normal, no ZLB matrices
     state_inds = [1:(nstates-n_ant); (nstates+1):n_states_aug]
     shock_inds = 1:(n_exo-n_ant)
+    obs_inds   = 1:(n_obs-n_ant)
 
     R2[:TTT] = R3[:TTT][state_inds, state_inds]
     R2[:RRR] = R3[:RRR][state_inds, shock_inds]
@@ -334,6 +336,14 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     for d in (:ZZ, :DD, :QQ, :VVall)
         R2[d] = measurement_R2[d]
         R3[d] = measurement_R3[d]
+    end
+
+    # If we pass in DD as a kwarg (most often a vector of zeros, as in the
+    # Durbin-Koopman smoother), we want to use that DD instead of the one
+    # calculated from the measurement equation
+    if !isempty(DD)
+        R2[:DD] = DD[obs_inds, :]
+        R3[:DD] = DD
     end
 
     # Presample measurement & transition equation matrices are same as normal period
@@ -357,9 +367,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
 
     R1[:P0]         = solve_discrete_lyapunov(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
 
-    # PZL 2016-07-25
-    # out             = kalman_filter(R1[:data]', 1, zeros(S, regime_states[1], 1), R1[:TTT], R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0], allout=allout)
-    out             = kalman_filter(R1[:data]', 0, zeros(S, regime_states[1], 1), R1[:TTT], zeros(size(R1[:DD])), R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0], allout=allout)
+    out             = kalman_filter(R1[:data]', 1, zeros(S, regime_states[1], 1), R1[:TTT], R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0], allout=allout)
 
     R1[:like]       = Matrix{S}(1,1)
     R1[:like][1,1]  = out[:L]
@@ -370,10 +378,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     # Run Kalman filter on normal period
     zprev           = R1[:zend]
     Pprev           = R1[:Pend]
-    # PZL 2016-07-25
-    # out             = kalman_filter(R2[:data]', 1, zeros(regime_states[2], 1), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev, allout=allout)
-    out             = kalman_filter(R2[:data]', 0, zeros(regime_states[2], 1), R2[:TTT], zeros(size(R2[:DD])), R2[:ZZ], R2[:VVall], zprev, Pprev, allout=allout)
-
+    out             = kalman_filter(R2[:data]', 1, zeros(regime_states[2], 1), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev, allout=allout)
         
     R2[:like]       = Matrix{S}(1,1)
     R2[:like][1,1]  = out[:L]
@@ -401,9 +406,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     Pprev[after_shocks_new, before_shocks]    = R2[:Pend][after_shocks_old, before_shocks]
     Pprev[after_shocks_new, after_shocks_new] = R2[:Pend][after_shocks_old, after_shocks_old]
 
-    # PZL 2016-07-25
-    # out             = kalman_filter(R3[:data]', 1, zeros(regime_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev, allout=allout)
-    out             = kalman_filter(R3[:data]', 0, zeros(regime_states[3], 1), R3[:TTT], zeros(size(R3[:DD])), R3[:ZZ], R3[:VVall], zprev, Pprev, allout=allout)
+    out             = kalman_filter(R3[:data]', 1, zeros(regime_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev, allout=allout)
 
     R3[:like]       = Matrix{S}(1,1)
     R3[:like][1,1]  = out[:L]
