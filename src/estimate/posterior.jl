@@ -37,10 +37,11 @@ log Pr(Θ|data)  = log Pr(data|Θ)   + log Pr(Θ)
 function posterior{T<:AbstractFloat}(m::AbstractModel{T},
                                      data::Matrix{T};
                                      mh::Bool = false,
+                                     phi_smc::Float64 = 1.,
                                      catch_errors::Bool = false)
     catch_errors = catch_errors | mh
     like, out = likelihood(m, data; mh=mh, catch_errors=catch_errors)
-    post = like + prior(m)
+    post = phi_smc*like + prior(m)
     if mh
         return Posterior(post, like, out)
     else

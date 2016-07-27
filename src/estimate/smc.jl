@@ -1,38 +1,4 @@
-function smc(m::AbstractModel, data::Matrix
-
-            )
-#--------------------------------------------------------------
-#Dependencies
-#--------------------------------------------------------------
-
-using DataFrames
-
-#--------------------------------------------------------------
-#Setting paths
-#--------------------------------------------------------------
-
-#CAUTION: Input text files for us.txt/prior_dsge.txt require cleaning and restructuring
-
-#--------------------------------------------------------------
-#Loading data
-#--------------------------------------------------------------
-
-#--------------------------------------------------------------
-#Specify parameters of prior
-#--------------------------------------------------------------
-
-prio = readtable("prior_dsge_test.txt")
-
-pshape = prio[:,1]
-pmean = prio[:,2]
-pstdd = prio[:,3]
-pmask = prio[:,4]
-pfix = prio[:,5]
-pmaskinv = 1 - pmask
-pshape = pshape.*pmaskinv
-
-bounds = readtable("bound_dsge_test.txt")
-
+function smc(m::AbstractModel, data::Matrix )
 #--------------------------------------------------------------
 #Set Parameters of Algorithm
 #--------------------------------------------------------------
@@ -79,7 +45,16 @@ rsmpsim = zeros(tune.nphi,1) #1 if resampled
 
 println("\n\n SMC starts ....  \n\n  ")
 
-priorsim = priodraws(prio,bounds, tune.npart);#????????????? Draw 1000x13 from prior
+#Draws from the prior
+priorsim = zeros(tune.npart,tune,npara)
+for i in 1:tune.npart
+    priodraw = []
+    for j in 1:length(m.parameters)
+        append!(priodraw, [rand(m.parameters[j].prior.value)])
+    end
+    priorsim[i,:] = priodraw'
+end
+
 parasim[1,:,:] = priorsim #Draws from prior #Lay priorsim draws on top of parasim box matrix which is 100x1000x13
 wtsim[:,1] = 1/tune.npart #Initial weights are all equal, 1000x1
 zhat[1] = sum(wtsim[:,1]) # zhat is 100x1 and its first entry is the sum of the first column of wtsim, the weights matrix
@@ -101,6 +76,7 @@ end
 #RECURSION
 
 tic()
+totaltime = 0 #Probably let's take this out
 
 println("\n\n SMC Recursion starts \n\n")
 
