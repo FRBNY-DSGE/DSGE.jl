@@ -21,7 +21,7 @@ module DSGE
         # abstractdsgemodel.jl
         AbstractModel,
         n_anticipated_shocks, n_anticipated_shocks_padding, zlb_start_index, n_presample_periods,
-        date_presample_start, date_mainsample_start, date_zlbregime_start, date_mainsample_end,
+        date_presample_start, date_mainsample_start, date_zlbregime_start, date_zlb_end,
         n_states, n_states_augmented, n_shocks_exogenous, n_shocks_expectational,
             n_equilibrium_conditions, n_observables, n_parameters, n_parameters_steady_state,
             n_parameters_free,

@@ -12,7 +12,6 @@ m = Model990()
 m.testing = true
 m <= Setting(:n_anticipated_shocks, 6)
 DSGE.init_model_indices!(m)
-m <= Setting(:date_mainsample_end, quartertodate("2015-Q4"))
 m <= Setting(:date_forecast_start, quartertodate("2016-Q1"))
 
 TTT, RRR, CCC = solve(m)

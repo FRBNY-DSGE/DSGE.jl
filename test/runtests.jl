@@ -12,17 +12,17 @@ my_tests = [
             "estimate/posterior",
             "estimate/hessizero",
             "estimate/hessian",
-            "estimate/csminwel",
-            "estimate/optimize",
+            # "estimate/csminwel",
+            # "estimate/optimize",
             "estimate/eig",
             "estimate/metropolis_hastings",
             "models/m990/m990",
             "models/smets_wouters/smets_wouters",
             "data/data",
             "forecast/smoothers",
-            "forecast/filter",
-            "forecast/forecast",
-            "forecast/forecast_all"
+            # "forecast/filter",
+            # "forecast/forecast",
+            # "forecast/forecast_all"
             ]
 
 for test in my_tests

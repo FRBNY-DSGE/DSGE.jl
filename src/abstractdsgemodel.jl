@@ -140,7 +140,7 @@ end
 date_presample_start(m::AbstractModel) = get_setting(m, :date_presample_start)
 date_mainsample_start(m::AbstractModel) = get_setting(m, :date_mainsample_start)
 date_zlbregime_start(m::AbstractModel) = get_setting(m, :date_zlbregime_start)
-date_mainsample_end(m::AbstractModel) = get_setting(m, :date_mainsample_end)
+date_zlb_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_forecast_start) - Dates.Month(3))
 
 # Number of a few things that are useful
 n_states(m::AbstractModel)                 = length(m.endogenous_states)
