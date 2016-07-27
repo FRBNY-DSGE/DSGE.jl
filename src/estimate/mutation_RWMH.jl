@@ -1,35 +1,35 @@
 """
-'''
+```
 mutation_RWMH(p0, l0, post0, tune,i, data; rvec = [], rval = [], px = [], lx = [], postx = [])
-'''
+```
 
 Execute one proposed move of the Metropolis-Hastings algorithm for a given parameter
 
 ### Arguments:
-- 'p0': para(j,:)
+- `p0`: para(j,:)
         initial prior draw.
-- 'l0': loglh(j)
+- `l0`: loglh(j)
         initial log-likelihood at the prior draw.
-- 'post0': logpost(j)
+- `post0`: logpost(j)
            initial log-posterior at the prior draw.
-- 'tune': the tune object, which is a struct/type object that contains information about tuning the SMC and the MH algorithms
-- 'i': the index of the iteration of the SMC algorithm
-- 'data': well-formed data as DataFrame
+- `tune`: the tune object, which is a struct/type object that contains information about tuning the SMC and the MH algorithms
+- `i`: the index of the iteration of the SMC algorithm
+- `data`: well-formed data as DataFrame
 
 ### Optional Arguments: 
-- 'rvec': A matrix of horizontally concatenated random vectors ε as in Θ* = θ + ε for the proposed move in RWMH, for the purposes of testing that mutation_RWMH.
-- 'rval': A vector of random values generated in MATLAB for the purposes of testing whether the proposed move exceeds the threshhold and is accepted (or rejected).
-- 'px', 'lx', 'postx': Proposed new prior draw, log-likelihood, and log-posterior from executing the MATLAB code
+- `rvec`: A matrix of horizontally concatenated random vectors ε as in Θ* = θ + ε for the proposed move in RWMH, for the purposes of testing that mutation_RWMH.
+- `rval`: A vector of random values generated in MATLAB for the purposes of testing whether the proposed move exceeds the threshhold and is accepted (or rejected).
+- `px`, `lx`, `postx`: Proposed new prior draw, log-likelihood, and log-posterior from executing the MATLAB code
 
 ### Output:
 
-- 'ind_para': parasim(i,j,:) 
+- `ind_para`: parasim(i,j,:) 
               Updated parameter vector
-- 'ind_loglh': loglh(j)
+- `ind_loglh`: loglh(j)
                Updated log-likelihood
-- 'ind_post': temp_acpt(j,1)
+- `ind_post`: temp_acpt(j,1)
               Updated posterior
-- 'ind_acpt': Indicator for acceptance or rejection (0 reject, 1 accept)
+- `ind_acpt`: Indicator for acceptance or rejection (0 reject, 1 accept)
 
 """
 
