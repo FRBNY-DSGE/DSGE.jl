@@ -1,3 +1,27 @@
+function mutation_RWMH(p0, l0, post0, tune, i, f)
+# RWMH for mutation step
+# INPUT
+# tune
+# p0 = para(j,:)'
+# l0 = loglh(j)
+# post0 = logpost(j)
+
+Execute one proposed move of the Metropolis-Hastings algorithm for a given parameter
+
+### Arguments:
+- `p0`: para(j,:)
+        initial prior draw.
+- `l0`: loglh(j)
+        initial log-likelihood at the prior draw.
+- `post0`: logpost(j)
+           initial log-posterior at the prior draw.
+- `tune`: the tune object, which is a struct/type object that contains information about tuning the SMC and the MH algorithms
+- `i`: the index of the iteration of the SMC algorithm
+- `data`: well-formed data as DataFrame
+
+# RW proposal
+px = p0 + tune.c*chol(tune.R)'*randn(tune.npara,1)
+[postx, lx] = f(px, tune.phi(i))
 """
 ```
 mutation_RWMH(p0, l0, post0, tune,i, data; rvec = [], rval = [], px = [], lx = [], postx = [])
@@ -57,8 +81,7 @@ postx = posterior(m,data;phi_smc=tune.phi(i))[:post] #check if this is correct?
 post0 = post0+(tune.phi(i)-tune.phi(i-1))*l0
 
 # Accept/Reject
-alp = exp(postx - post0) # this is RW, so q is canceled out
-    
+alp = exp(postx - post0) # this is RW, so q is canceled out    
 if rval .< alp # accept
     ind_para   = px
     ind_loglh  = lx
@@ -71,5 +94,9 @@ else
     ind_acpt   = 0
 end
 
+# # outside of function
+# parasim(i,j,:) = ind_para
+# loglh(j)       = ind_loglh
+# temp_acpt(j,1) = ind_acpt
 return ind_para, ind_loglh, ind_post, ind_acpt
 end
