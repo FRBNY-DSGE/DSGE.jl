@@ -12,7 +12,7 @@ module DSGE
     export
 
         # distributions_ext.jl
-        BetaAlt, GammaAlt,
+        BetaAlt, GammaAlt, RootInverseGamma,
 
         # settings.jl
         Setting, get_setting, default_settings!, default_test_settings!,
@@ -41,7 +41,7 @@ module DSGE
         kalman_filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, compute_moments,
-        find_density_bands, prior,
+        find_density_bands, prior, mutation_RWMH, systematic_resampling,
 
         # models/
         steadystate!, Model990, SmetsWouters, eqcond, measurement,
@@ -81,6 +81,8 @@ module DSGE
     include("estimate/hessizero.jl")
     include("estimate/estimate.jl")
     include("estimate/moments.jl")
+    include("estimate/mutation_RWMH.jl")
+    include("estimate/systematic_resampling.jl")
 
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")
