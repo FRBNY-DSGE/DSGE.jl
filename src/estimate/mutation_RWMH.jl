@@ -49,12 +49,12 @@ end
 data = df_to_matrix(m,df)
 
 #RW Proposal
-#px = p0 + tune.c*chol(tune.R)'*rvec
-#lx = likelihood(m,data)
-#postx = posterior(m,data)[:post]
+px = p0 + tune.c*chol(tune.R)'*rvec
+lx = likelihood(m,data)
+postx = posterior(m,data;phi_smc=tune.phi(i))[:post] #check if this is correct?
 
 # Previous posterior needs to be updated (due to tempering)
-#post0 = post0+(tune.phi(i)-tune.phi(i-1))*l0
+post0 = post0+(tune.phi(i)-tune.phi(i-1))*l0
 
 # Accept/Reject
 alp = exp(postx - post0) # this is RW, so q is canceled out
