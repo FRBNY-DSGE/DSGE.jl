@@ -281,9 +281,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     n_ant        = n_anticipated_shocks(m)
     t_zlb_start  = zlb_start_index(m)
 
-    # PZL 2016-07-25
-    # n_mainsample = t_zlb_start - n_T0 - 1
-    n_mainsample = t_zlb_start - n_T0 - 2
+    n_mainsample = t_zlb_start - n_T0 - 1
 
     n_obs_no_ant = n_observables(m) - n_anticipated_shocks(m)
     n_obs        = n_observables(m)
@@ -295,11 +293,8 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     regime_states   = [n_states_no_ant, n_states_no_ant, n_states_aug]
 
     R1[:data] = data[1:n_T0, 1:n_obs_no_ant]
-    # PZL 2016-07-25
-    # R2[:data] = data[(n_T0+1):t_zlb_start-1, 1:n_obs_no_ant]
-    # R3[:data] = data[t_zlb_start:end, :]
-    R2[:data] = data[(n_T0+1):t_zlb_start-2, 1:n_obs_no_ant]
-    R3[:data] = data[t_zlb_start-1:end, :]
+    R2[:data] = data[(n_T0+1):t_zlb_start-1, 1:n_obs_no_ant]
+    R3[:data] = data[t_zlb_start:end, :]
 
     # Step 1: solution to DSGE model - delivers transition equation for the state variables
     # transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ
@@ -357,15 +352,14 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     R1[:A0] = if isempty(z0)
         zeros(S, n_states_no_ant, 1)
     else
-        z0
+        z0[state_inds, :]
     end
 
     R1[:P0]         = solve_discrete_lyapunov(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
 
     # PZL 2016-07-25
     # out             = kalman_filter(R1[:data]', 1, zeros(S, regime_states[1], 1), R1[:TTT], R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0], allout=allout)
-    # R2[:data] = data[(n_T0+1):t_zlb_start-1, 1:n_obs_no_ant]
-    out             = kalman_filter(R1[:data]', 1, zeros(S, regime_states[1], 1), R1[:TTT], zeros(size(R1[:DD])), R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0], allout=allout)
+    out             = kalman_filter(R1[:data]', 0, zeros(S, regime_states[1], 1), R1[:TTT], zeros(size(R1[:DD])), R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0], allout=allout)
 
     R1[:like]       = Matrix{S}(1,1)
     R1[:like][1,1]  = out[:L]
@@ -378,7 +372,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     Pprev           = R1[:Pend]
     # PZL 2016-07-25
     # out             = kalman_filter(R2[:data]', 1, zeros(regime_states[2], 1), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev, allout=allout)
-    out             = kalman_filter(R2[:data]', 1, zeros(regime_states[2], 1), R2[:TTT], zeros(size(R2[:DD])), R2[:ZZ], R2[:VVall], zprev, Pprev, allout=allout)
+    out             = kalman_filter(R2[:data]', 0, zeros(regime_states[2], 1), R2[:TTT], zeros(size(R2[:DD])), R2[:ZZ], R2[:VVall], zprev, Pprev, allout=allout)
 
         
     R2[:like]       = Matrix{S}(1,1)
@@ -409,7 +403,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
 
     # PZL 2016-07-25
     # out             = kalman_filter(R3[:data]', 1, zeros(regime_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev, allout=allout)
-    out             = kalman_filter(R3[:data]', 1, zeros(regime_states[3], 1), R3[:TTT], zeros(size(R3[:DD])), R3[:ZZ], R3[:VVall], zprev, Pprev, allout=allout)
+    out             = kalman_filter(R3[:data]', 0, zeros(regime_states[3], 1), R3[:TTT], zeros(size(R3[:DD])), R3[:ZZ], R3[:VVall], zprev, Pprev, allout=allout)
 
     R3[:like]       = Matrix{S}(1,1)
     R3[:like][1,1]  = out[:L]
