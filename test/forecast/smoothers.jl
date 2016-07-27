@@ -14,9 +14,6 @@ m <= Setting(:n_anticipated_shocks, 6)
 DSGE.init_model_indices!(m)
 m <= Setting(:date_mainsample_end, quartertodate("2015-Q4"))
 m <= Setting(:date_forecast_start, quartertodate("2016-Q1"))
-m <= Setting(:n_anticipated_lags, DSGE.subtract_quarters(get_setting(m, :date_forecast_start),
-    get_setting(m, :date_zlbregime_start)) - 1)
-@assert n_anticipated_lags(m) == 28
 
 TTT, RRR, CCC = solve(m)
 meas = measurement(m, TTT, RRR, CCC)

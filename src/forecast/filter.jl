@@ -205,7 +205,6 @@ function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
 
     # # extract settings from model
     # n_ant_shocks  = n_anticipated_shocks(m)
-    # n_ant_lags    = n_anticipated_lags(m)
     # n_pre_periods = n_presample_periods(m)
     # sim_smooth    = simulation_smoother_flag(m)
     

@@ -419,7 +419,6 @@ function settings_smets_wouters!(m::SmetsWouters)
     # Anticipated shocks
     m <= Setting(:n_anticipated_shocks, 0)
     m <= Setting(:n_anticipated_shocks_padding, 20)
-    m <= Setting(:n_anticipated_lags, 26)
 
     # Estimation
     m <= Setting(:reoptimize, true)

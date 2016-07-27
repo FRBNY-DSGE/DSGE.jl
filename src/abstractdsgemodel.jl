@@ -119,7 +119,6 @@ Distributions.pdf(m::AbstractModel) = exp(logpdf(m))
 # Number of anticipated policy shocks
 n_anticipated_shocks(m::AbstractModel) = get_setting(m, :n_anticipated_shocks)
 n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_shocks_padding)
-n_anticipated_lags(m::AbstractModel) = get_setting(m, :n_anticipated_lags)
 
 # Index into data matrix of first period to incorporate expected rate data
 function zlb_start_index(m::AbstractModel)
