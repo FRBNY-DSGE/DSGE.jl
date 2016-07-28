@@ -8,9 +8,9 @@ using DSGE, DataFrames, HDF5
   
 m = Model990()
 m.testing = true
-
 path = dirname(@__FILE__)
 
+# Prepare data matrix
 data,dates = h5open("$path/../reference/filter_args.h5","r") do h5
     read(h5,"data"), read(h5, "dates")
 end
@@ -18,23 +18,19 @@ end
 df        = DataFrame(data)  
 df[:date] = Date(dates)
     
-parallel = true
-
 # Set up system matrices
 ndraws = 2
 sys = compute_system(m)
 syses = repmat([sys],ndraws)
 
-
-addprocs(ndraws)
-#@everywhere using DSGE
-# @everywhere using DataFrames
-
+# Add parallel workers, filter, and remove parallel workers 
+my_procs = addprocs(ndraws)
 filtered_states, pred, vpred  = DSGE.filter(m, df, syses, allout=true)
+rmprocs(my_procs)
 
+@time filtered_states, pred, vpred  = DSGE.filter(m, df, syses, allout=true)
 
-if isempty(filtered_states)
-    error("filtered_states is empty. There was a problem with filtering.")
-end
+# Test that filtered states are correct
+
 
 nothing

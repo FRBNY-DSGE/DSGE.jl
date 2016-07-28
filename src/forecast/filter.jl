@@ -45,7 +45,13 @@ function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, sys::Vector{S
     filter(m, data, sys, z0, vz0, lead=lead, Ny0 =Ny0, allout=allout)
 end
 
-
+# So that we can use map on functions with kwargs
+abstract FilterOutput
+immutable AllOut<:FilterOutput end
+immutable MinimumOut<:FilterOutput end
+tricky_filter(::AllOut, m::AbstractModel, data::Matrix, sys::System) = filter(m, data, sys, allout=true)
+tricky_filter(::MinimumOut, m::AbstractModel, data::Matrix, sys::System) = filter(m, data, sys, allout=false)
+    
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::Vector{System{S}},
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                   lead::Int = 0, Ny0::Int = 0, allout::Bool = false)
@@ -56,7 +62,11 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::Vector
     # Broadcast models and data matrices 
     models = fill(m, ndraws)
     datas = fill(data, ndraws)
-    allouts = fill(allout, ndraws)
+    allouts = if allout
+        fill(AllOut(), ndraws)
+    else
+        fill(MinimumOut(), ndraws)
+    end 
     
     # Call filter over all draws
     if use_parallel_workers(m) && nworkers() > 1
@@ -65,10 +75,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::Vector
     else
         mapfcn = map
     end    
-    #out = mapfcn(DSGE.filter, models, datas, sys, allouts)
-    out = mapfcn([models; datas; sys]) do allout  # transposes?
-        DSGE.filter()
-    end
+    out = mapfcn(DSGE.tricky_filter, allouts, models, datas, sys)
 
     filtered_states = [Array(x[1]) for x in out]  # to make type stable
     pred            = [Array(x[2]) for x in out]  
