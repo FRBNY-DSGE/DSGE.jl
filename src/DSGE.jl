@@ -41,7 +41,7 @@ module DSGE
         kalman_filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, compute_moments,
-        find_density_bands, prior, mutation_RWMH, systematic_resampling,
+        find_density_bands, prior, smc, mutation_RWMH, systematic_resampling,
 
         # models/
         steadystate!, Model990, SmetsWouters, eqcond, measurement,
@@ -83,6 +83,7 @@ module DSGE
     include("estimate/moments.jl")
     include("estimate/mutation_RWMH.jl")
     include("estimate/systematic_resampling.jl")
+    include("estimate/smc.jl")
 
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")
