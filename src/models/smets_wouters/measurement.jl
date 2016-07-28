@@ -41,7 +41,7 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
     end
 
     ZZ = zeros(_n_observables, _n_states)
-    DD = zeros(_n_observables, 1)
+    DD = zeros(_n_observables)
     MM = zeros(_n_observables, _n_shocks_exogenous)
     EE = zeros(_n_observables, _n_observables)
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
@@ -102,6 +102,7 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
     if any(CCC != 0)
         DD += ZZ*((UniformScaling(1) - TTT)\CCC)
+        DD = reshape(DD, size(DD, 1))
     end
 
     HH = EE + MM*QQ*MM'

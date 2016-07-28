@@ -20,7 +20,7 @@ end
 
 type Measurement{T<:AbstractFloat}
     ZZ::Matrix{T}
-    DD::Matrix{T}
+    DD::Vector{T}
     QQ::Matrix{T}
     EE::Matrix{T}
     MM::Matrix{T}

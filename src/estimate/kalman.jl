@@ -67,30 +67,28 @@ by `1E6I`.  Optionally, you can specify initial values.
 """
 function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
                                       lead::Int64,
-                                      a::Matrix{S},
+                                      a::Vector{S},
                                       F::Matrix{S},
-                                      b::Matrix{S},
+                                      b::Vector{S},
                                       H::Matrix{S},
                                       var::Matrix{S},
-                                      z0::Matrix{S},
+                                      z0::Vector{S},
                                       vz0::Matrix{S},
                                       Ny0::Int = 0;
                                       allout::Bool = false)
     T = size(data, 2)
-    Nz = size(a, 1)
-    Ny = size(b, 1)
+    Nz = length(a)
+    Ny = length(b)
 
     z = z0
     P = vz0
 
     # Check input matrix dimensions
     @assert size(data, 1) == Ny
-    @assert size(a, 2) == 1
     @assert size(F) == (Nz, Nz)
-    @assert size(b, 2) == 1
     @assert size(H) == (Ny, Nz)
     @assert size(var) == (Ny + Nz, Ny + Nz)
-    @assert size(z) == (Nz, 1)
+    @assert length(z) == Nz
     @assert size(P) == (Nz, Nz)
 
     # V(t) and R(t) are variances of η(t) and ϵ(t), respectively, and G(t) is a covariance
@@ -123,7 +121,7 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
         G_t = G[:, nonmissing]             # G_t = Cov(η_t, ϵ_t)
         R_t = R[nonmissing, nonmissing]    # R_t = Var(ϵ_t)
         Ny_t = length(data_t)              # Ny_t = T is length of time
-        b_t = b[nonmissing, :]             # b_t = DD
+        b_t = b[nonmissing]                # b_t = DD
 
 
         ## forecasting
@@ -193,14 +191,14 @@ end
 
 function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
                                       lead::Int64,
-                                      a::Matrix{S},
+                                      a::Vector{S},
                                       F::Matrix{S},
-                                      b::Matrix{S},
+                                      b::Vector{S},
                                       H::Matrix{S},
                                       var::Matrix{S},
                                       Ny0::Int = 0;
                                       allout::Bool = false)
-    Nz = size(a, 1)
+    Nz = length(a)
     V = var[1:Nz, 1:Nz]
 
     e, _ = eig(F)
@@ -256,15 +254,15 @@ Where:
 """
 function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
                                                data::Matrix{S},
-                                               TTT::Matrix{S} = Matrix{S}(0,0),
-                                               RRR::Matrix{S} = Matrix{S}(0,0),
-                                               CCC::Matrix{S} = Matrix{S}(0,0),
+                                               TTT::Matrix{S} = Matrix{S}(0, 0),
+                                               RRR::Matrix{S} = Matrix{S}(0, 0),
+                                               CCC::Matrix{S} = Matrix{S}(0, 0),
                                                z0::Array{S}   = Array{S}(0),
-                                               vz0::Matrix{S} = Matrix{S}(0,0);
-                                               DD::Matrix{S} = Matrix{S}(0,0),
-                                               lead::Int=0,
-                                               Ny0::Int =0,
-                                               allout::Bool = false,
+                                               vz0::Matrix{S} = Matrix{S}(0, 0);
+                                               DD::Array{S}   = Array{S}(0),
+                                               lead::Int      = 0,
+                                               Ny0::Int       = 0,
+                                               allout::Bool   = false,
                                                catch_errors::Bool = false,
                                                augment_states::Bool = false)
     
@@ -338,7 +336,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     # Durbin-Koopman smoother), we want to use that DD instead of the one
     # calculated from the measurement equation
     if !isempty(DD)
-        R2[:DD] = DD[obs_inds, :]
+        R2[:DD] = DD[obs_inds]
         R3[:DD] = DD
     end
 
@@ -356,14 +354,14 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
 
     # Run Kalman filter on presample
     R1[:A0] = if isempty(z0)
-        zeros(S, n_states_no_ant, 1)
+        zeros(S, n_states_no_ant)
     else
-        z0[state_inds, :]
+        z0[state_inds]
     end
 
     R1[:P0]         = solve_discrete_lyapunov(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
 
-    out             = kalman_filter(R1[:data]', 1, zeros(S, regime_states[1], 1), R1[:TTT], R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0], allout=allout)
+    out             = kalman_filter(R1[:data]', 1, zeros(S, regime_states[1]), R1[:TTT], R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0], allout=allout)
 
     R1[:like]       = Matrix{S}(1,1)
     R1[:like][1,1]  = out[:L]
@@ -374,7 +372,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     # Run Kalman filter on normal period
     zprev           = R1[:zend]
     Pprev           = R1[:Pend]
-    out             = kalman_filter(R2[:data]', 1, zeros(regime_states[2], 1), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev, allout=allout)
+    out             = kalman_filter(R2[:data]', 1, zeros(regime_states[2]), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev, allout=allout)
         
     R2[:like]       = Matrix{S}(1,1)
     R2[:like][1,1]  = out[:L]
@@ -392,9 +390,9 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     after_shocks_old = (nstates-n_ant+1):(n_states_aug-n_ant)
     after_shocks_new = (nstates+1):n_states_aug
 
-    zprev = [R2[:zend][before_shocks, :];
-             zeros(S, n_ant, 1);
-             R2[:zend][after_shocks_old, :]]
+    zprev = [R2[:zend][before_shocks];
+             zeros(S, n_ant);
+             R2[:zend][after_shocks_old]]
 
     Pprev                                     = zeros(S, n_states_aug, n_states_aug)
     Pprev[before_shocks, before_shocks]       = R2[:Pend][before_shocks, before_shocks]
@@ -402,7 +400,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     Pprev[after_shocks_new, before_shocks]    = R2[:Pend][after_shocks_old, before_shocks]
     Pprev[after_shocks_new, after_shocks_new] = R2[:Pend][after_shocks_old, after_shocks_old]
 
-    out             = kalman_filter(R3[:data]', 1, zeros(regime_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev, allout=allout)
+    out             = kalman_filter(R3[:data]', 1, zeros(regime_states[3]), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev, allout=allout)
 
     R3[:like]       = Matrix{S}(1,1)
     R3[:like][1,1]  = out[:L]
@@ -481,7 +479,7 @@ Kalman{S<:AbstractFloat}
 """
 immutable Kalman{S<:AbstractFloat}
     L::S                  # Likelihood
-    zend::Matrix{S}       # last-period state vector
+    zend::Vector{S}       # last-period state vector
     Pend::Matrix{S}       # last-period variance-covariance matrix for the states
     pred::Matrix{S}       # predicted value of states in period T+1
     vpred::Array{S,3}     # predicted variance-covariance matrix for states in period T+1
@@ -491,11 +489,11 @@ immutable Kalman{S<:AbstractFloat}
     rmsd::Matrix{S}        # 
     filt::Matrix{S}        # filtered states
     vfilt::Array{S,3}      # mean square errors of filtered state vectors
-    z0::Array{S}           # starting-period state vector
+    z0::Vector{S}           # starting-period state vector
     vz0::Matrix{S}         # starting-period variance-covariance matrix for the states
 end
 function Kalman{S<:AbstractFloat}(L::S,
-                                  zend::Matrix{S},
+                                  zend::Vector{S},
                                   Pend::Matrix{S},
                                   pred::Matrix{S}          = Matrix{S}(),
                                   vpred::Array{S,3}        = Array{S}(0,0,0),
@@ -505,7 +503,7 @@ function Kalman{S<:AbstractFloat}(L::S,
                                   rmsd::Matrix{S}          = Matrix{S}(),
                                   filt::Matrix{S}          = Matrix{S}(),
                                   vfilt::Array{S,3}        = Array{S}(0,0,0),
-                                  z0::Array{S}             = Array{S}(0),
+                                  z0::Vector{S}            = Vector{S}(0),
                                   vz0::Matrix{S}           = Array{S}(0,0))
     return Kalman{S}(L,zend,Pend,pred,vpred,yprederror,ystdprederror,rmse,rmsd,filt,vfilt,z0,vz0)
 end

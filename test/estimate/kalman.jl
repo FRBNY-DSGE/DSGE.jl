@@ -8,9 +8,9 @@ h5 = h5open("$path/../reference/kalman_filter_args.h5")
 for arg in ["data", "lead", "a", "F", "b", "H", "var", "z0", "vz0"]
     eval(parse("$arg = read(h5, \"$arg\")"))
 end
-for arg in ["a", "b", "z0"]
-    eval(parse("$arg = reshape(read(h5, \"$arg\"), length($arg), 1)"))
-end
+# for arg in ["a", "b", "z0"]
+#     eval(parse("$arg = reshape(read(h5, \"$arg\"), length($arg), 1)"))
+# end
 
 lead = round(Int,lead)
 

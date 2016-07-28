@@ -65,7 +65,7 @@ y(t) = Z*α(t) + D             (state or transition equation)
 """
 function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    D::Vector{S}, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
     n_conditional_periods::Int = 0)
 
     # convert DataFrame to Matrix
@@ -78,7 +78,7 @@ end
 
 function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    D::Vector{S}, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
     n_conditional_periods::Int = 0)
 
     Ne = size(R, 2)
@@ -213,7 +213,7 @@ end
 
 function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
     data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
-    Z::Matrix{S}, D::Array{S}, pred::Matrix{S}, vpred::Array{S, 3})
+    Z::Matrix{S}, D::Vector{S}, pred::Matrix{S}, vpred::Array{S, 3})
 
     Nt = size(data, 2)
     Nz = size(T, 1)
@@ -347,7 +347,7 @@ y(t) = Z*α(t) + D             (state or transition equation)
 """
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, A0::Vector{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
+    D::Vector{S}, A0::Vector{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
 
     # convert DataFrame to Matrix
     data = df_to_matrix(df)'
@@ -359,7 +359,7 @@ end
 
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
+    D::Vector{S}, A0::Array{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
 
     # Get matrix dimensions
     Ny = size(data, 1)
