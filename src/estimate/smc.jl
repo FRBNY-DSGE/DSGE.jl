@@ -1,4 +1,4 @@
-#Using Debug
+#using Debug
 
 #to be refactored at a later date, npara can be removed completely
 #npart through phi could be written as optional arguments
@@ -12,26 +12,28 @@ type Tune
 	lam::Int64 # bending coeff, lam = 1 means linear cooling schedule
 
 	#Tuning for MH algorithms
-	c::AbstractFloat # of random blocks
-	acpt::AbstractFloat # initial scale cov
-	trgt::AbstractFloat #initial acpt rate
-	alp::AbstractFloat #target acpt rate
+	c::Float64 # of random blocks
+	acpt::Float64 # initial scale cov
+	trgt::Float64 #initial acpt rate
+	alp::Float64 #target acpt rate
 	phi::Array{Float64}	#Mixture weight for mixture proposal
-
-	R::Array # Covariance Matrix
-	Rdiag::Array # Empty matrix but for the diagonal of R
-	Rchol::Array # Lower triangular Cholesky Decomposition of R
-	Rchol2::Array # Square root of Rdiag
+    
+    mu::Array{Float64} #Mean
+    R::Array{Float64} # Covariance Matrix
+    Rdiag::Array{Float64} # Empty matrix but for the diagonal of R
+    Rchol::Array{Float64} # Lower triangular Cholesky Decomposition of R
+    Rchol2::Array{Float64} # Square root of Rdiag
 end
 
-#Instantiating a tune type (analogous to the struct in Matlab)
-#The tempering schedule is created as the last argument in the constructor TuneType()
-tune = Tune(length(m.parameters),1000,100,2,0.5,0.25,0.25,0.9,((collect(1:1:100)-1)/(100-1)).^2, [], [], [], [])
 
-function smc(m::AbstractModel, data::Matrix, tune::Tune)
+function smc(m::AbstractModel, data::Matrix)
 #--------------------------------------------------------------
 #Set Parameters of Algorithm
 #--------------------------------------------------------------
+
+#Instantiating a tune type (analogous to the struct in Matlab)
+#The tempering schedule is created as the last argument in the constructor TuneType()
+tune = Tune(length(m.parameters),1000,100,2,0.5,0.25,0.25,0.9,((collect(1:1:100)-1)/(100-1)).^2,[], [], [], [], [])
 
 #Matrices for storing
 
@@ -111,7 +113,7 @@ for i=2:1:tune.nphi
 	if (ESS < tune.npart/2)
         sampled = true
 		id, m = systematic_resampling(wtsim[:,i]')
-        parasim[i-1, :, :] = squeeze(parasim[i-1, id, :])
+        parasim[i-1, :, :] = squeeze(parasim[i-1, id, :],1)
 		loglh = loglh[id]
 		logpost = logpost[id]
 		wtsim[:,i] = 1/tune.npart
@@ -130,8 +132,7 @@ for i=2:1:tune.nphi
 	#------------------------------------
 	# (c) Mutation
 	#------------------------------------
-	@bp
-    para = squeeze(parasim[i-1, :, :])
+    para = squeeze(parasim[i-1, :, :],1)
     wght = repmat(wtsim[:,i], 1, tune.npara)
 	tune.mu = sum(para.*wght)
 	z =  (para - repmat(tune.mu, tune.npart, 1))
@@ -172,22 +173,20 @@ sig = (sqrt(sig));
         # time calculation
 		toc()
 
-        #= To fix - string formatting
 
 		println("--------------------------")
-		println("Iteration = $i / tune.nphi")
+        println("Iteration = $(i) / $(tune.nphi)")
 		println("--------------------------")
-		println("phi = tune.phi[i]")
+        println("phi = $(tune.phi[i])")
 		println("--------------------------")
-		println("c = " tune.c)
-		println("acpt = " tune.acpt)
-		println("ESS = " tune.phi)
+        println("c = $(tune.c)")
+        println("acpt = $(tune.acpt)")
+        println("ESS = $(tune.phi)")
 		println("--------------------------")
 		param_names = ["tau", "kappa", "psil", "phi2", "rA", "piA", "gammaQ", "rho_R", "rho_G", "rho_z", "sigma_R", "sigma_g", "sigma_z"]
 		for n=1:13
-		    println(param_names[n]" = ", mu[n], sig[n])
+            println("$(param_names[n]) = ,$(mu[n]), $(sig[n])")
 		end
-        =#
     end
 end
 end
