@@ -1,4 +1,4 @@
-#using Debug
+using Debug
 
 #to be refactored at a later date, npara can be removed completely
 #npart through phi could be written as optional arguments
@@ -26,7 +26,7 @@ type Tune
 end
 
 
-function smc(m::AbstractModel, data::Matrix)
+@debug function smc(m::AbstractModel, data::Matrix)
 #--------------------------------------------------------------
 #Set Parameters of Algorithm
 #--------------------------------------------------------------
@@ -70,23 +70,25 @@ end
 
 parasim[1,:,:] = priorsim #Draws from prior #Lay priorsim draws on top of parasim box matrix which is 100x1000x13
 wtsim[:,1] = 1/tune.npart #Initial weights are all equal, 1000x1
-zhat[1] = sum(wtsim[:,1]) # zhat is 100x1 and its first entry is the sum of the first column of wtsim, the weights matrix
+zhat[1] = round(sum(wtsim[:,1]),14) # zhat is 100x1 and its first entry is the sum of the first column of wtsim, the weights matrix
 
 # Posterior values at prior draws
 loglh = zeros(tune.npart, 1)
 logpost = zeros(tune.npart, 1)
-
+@bp
 for i=1:1:tune.npart
 	p0 = priorsim[i,:]';
 	#logpost[i], loglh[i] = objfcn_dsge(p0, tune.phi[1], prio, bounds, data)
-    logpost[i] = posterior(m, data; phi_smc = tune.phi[1])[:post]
-    loglh[i] = likelihood(m,data)[1]
+    logpost[i] = posterior!(m, squeeze(p0,2), data; phi_smc = tune.phi[1])[:post]
+    loglh[i] = posterior!(m, squeeze(p0,2), data; phi_smc = tune.phi[1])[:like]
 end
 
 #RECURSION
 
 tic()
 totaltime = 0 #Probably let's take this out
+
+@bp
 
 println("\n\n SMC Recursion starts \n\n")
 
@@ -100,10 +102,12 @@ for i=2:1:tune.nphi
 	# Update weights
 	wtsim[:,i] = wtsim[:,i-1].*incwt #fill in other columns of wtsim
 	
-	zhat[i] = sum(wtsim[:,i]) # Fill in other entries of zhat with weights of each respective column of wtsim
+    zhat[i] = sum(wtsim[:,i]) # Fill in other entries of zhat with weights of each respective column of wtsim
 	
 	#Normalize weights
 	wtsim[:, i] = wtsim[:, i]/zhat[i]
+
+    @bp
 
 	#------------------------------------
 	# (b) Selection 
@@ -129,15 +133,18 @@ for i=2:1:tune.nphi
         end
 	end
 
+    @bp
+
 	#------------------------------------
 	# (c) Mutation
 	#------------------------------------
     para = squeeze(parasim[i-1, :, :],1)
     wght = repmat(wtsim[:,i], 1, tune.npara)
-	tune.mu = sum(para.*wght)
+    tune.mu = sum(para.*wght,1)
 	z =  (para - repmat(tune.mu, tune.npart, 1))
-	tune.R = (z.*wgth)'*z
-	tune.Rdiag = diag(diag(tune.R))
+	tune.R = (z.*wght)'*z
+	@bp
+    tune.Rdiag = diagm(diag(tune.R))
 	tune.Rchol = chol(tune.R, Val{:L})
 	tune.Rchol2 = sqrt(tune.Rdiag)
 
@@ -152,27 +159,25 @@ for i=2:1:tune.nphi
 		temp_acpt[j,1] = ind_acpt
 	end
 
-	tune.acpt = mean(temp_acpt) #update average acceptance rat	
-
+	tune.acpt = mean(temp_acpt) #update average acceptance rate	
 
     # store
     csim[i,:]    = tune.c; # scale parameter
     ESSsim[i,:]  = ESS; # ESS
     acptsim[i,:] = tune.acpt; # average acceptance rate
     
-    # print some information
-    if mod[i, 1] == 0
+    # print some information (is this a useless conditional? i%1 will always == 0)
+    if i % 1 == 0 
         
-        para = squeeze(parasim[i, :, :]);
-        wght = repmat(wtsim[:, i], 1, 13);
+        para = squeeze(parasim[i, :, :],1);
+        wght = repmat(wtsim[:, i], 1, length(m.parameters));
 
-mu  = sum(para.*wght);
-sig = sum((para - repmat[mu, tune.npart, 1]).^2 .*wght);
-sig = (sqrt(sig));
+        mu  = sum(para.*wght,1);
+        sig = sum((para - repmat(mu, tune.npart, 1)).^2 .*wght,1);
+        sig = (sqrt(sig));
 
         # time calculation
 		toc()
-
 
 		println("--------------------------")
         println("Iteration = $(i) / $(tune.nphi)")
@@ -183,9 +188,8 @@ sig = (sqrt(sig));
         println("acpt = $(tune.acpt)")
         println("ESS = $(tune.phi)")
 		println("--------------------------")
-		param_names = ["tau", "kappa", "psil", "phi2", "rA", "piA", "gammaQ", "rho_R", "rho_G", "rho_z", "sigma_R", "sigma_g", "sigma_z"]
-		for n=1:13
-            println("$(param_names[n]) = ,$(mu[n]), $(sig[n])")
+        for n=1:length(m.parameters)
+            println("$(m.parameters[n].key) = ,$(mu[n]), $(sig[n])")
 		end
     end
 end
