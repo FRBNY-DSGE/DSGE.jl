@@ -72,6 +72,7 @@ function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
                                       parameters::Vector{T},
                                       data::Matrix{T};
                                       mh::Bool = false,
+                                      phi_smc::Float64 = 1.,
                                       catch_errors::Bool = false)
     catch_errors = catch_errors | mh
     if mh
@@ -83,7 +84,7 @@ function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
     else
         update!(m, parameters)
     end
-    return posterior(m, data; mh=mh, catch_errors=catch_errors)
+    return posterior(m, data; mh=mh, phi_smc = phi_smc, catch_errors=catch_errors)
 
 end
 
