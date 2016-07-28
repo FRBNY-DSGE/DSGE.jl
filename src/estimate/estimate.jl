@@ -95,60 +95,60 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     ### the hessian. We find the inverse via eigenvalue decomposition.
     ########################################################################################
 
-    # Calculate the Hessian at the posterior mode
-    hessian = if calculate_hessian(m)
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Recalculating Hessian...")
-        end
+    ## Calculate the Hessian at the posterior mode
+    #hessian = if calculate_hessian(m)
+    #    if VERBOSITY[verbose] >= VERBOSITY[:low]
+    #        println("Recalculating Hessian...")
+    #    end
 
-        hessian, _ = hessian!(m, params, data; verbose=verbose)
+    #    hessian, _ = hessian!(m, params, data; verbose=verbose)
 
-        h5open(rawpath(m, "estimate","hessian.h5"),"w") do file
-            file["hessian"] = hessian
-        end
+    #    h5open(rawpath(m, "estimate","hessian.h5"),"w") do file
+    #        file["hessian"] = hessian
+    #    end
 
-        hessian
+    #    hessian
 
-    # Read in a pre-calculated Hessian
-    else
-        fn = hessian_path(m)
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Using pre-calculated Hessian from $fn")
-        end
+    ## Read in a pre-calculated Hessian
+    #else
+    #    fn = hessian_path(m)
+    #    if VERBOSITY[verbose] >= VERBOSITY[:low]
+    #        println("Using pre-calculated Hessian from $fn")
+    #    end
 
-        hessian = h5open(fn,"r") do file
-            read(file, "hessian")
-        end
+    #    hessian = h5open(fn,"r") do file
+    #        read(file, "hessian")
+    #    end
 
-        hessian
-    end
+    #    hessian
+    #end
 
-    # Compute inverse hessian and create proposal distribution, or
-    # just create it with the given cov matrix if we have it
-    propdist = if isempty(proposal_covariance)
-        # Make sure the mode and hessian have the same number of parameters
-        n = length(params)
-        @assert (n, n) == size(hessian)
+    ## Compute inverse hessian and create proposal distribution, or
+    ## just create it with the given cov matrix if we have it
+    #propdist = if isempty(proposal_covariance)
+    #    # Make sure the mode and hessian have the same number of parameters
+    #    n = length(params)
+    #    @assert (n, n) == size(hessian)
 
-        # Compute the inverse of the Hessian via eigenvalue decomposition
-        S_diag, U = eig(hessian)
-        big_eig_vals = find(x -> x > 1e-6, S_diag)
-        rank = length(big_eig_vals)
+    #    # Compute the inverse of the Hessian via eigenvalue decomposition
+    #    S_diag, U = eig(hessian)
+    #    big_eig_vals = find(x -> x > 1e-6, S_diag)
+    #    rank = length(big_eig_vals)
 
-        S_inv = zeros(n, n)
-        for i = (n-rank+1):n
-            S_inv[i, i] = 1/S_diag[i]
-        end
+    #    S_inv = zeros(n, n)
+    #    for i = (n-rank+1):n
+    #        S_inv[i, i] = 1/S_diag[i]
+    #    end
 
-        hessian_inv = U*sqrt(S_inv) #this is the inverse of the hessian
-        DSGE.DegenerateMvNormal(params, hessian_inv)
-    else
-        DSGE.DegenerateMvNormal(params, proposal_covariance)
-    end
-    
-    if DSGE.rank(propdist) != n_parameters_free(m)
-        println("problem –    shutting down dimensions")
-    end
+    #    hessian_inv = U*sqrt(S_inv) #this is the inverse of the hessian
+    #    DSGE.DegenerateMvNormal(params, hessian_inv)
+    #else
+    #    DSGE.DegenerateMvNormal(params, proposal_covariance)
+    #end
+    #
+    #if DSGE.rank(propdist) != n_parameters_free(m)
+    #    println("problem –    shutting down dimensions")
+    #end
 
     ########################################################################################
     ### Step 4: Sample from posterior using Metropolis-Hastings algorithm
@@ -158,31 +158,31 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     cc0 = 0.01
     cc = 0.09
 
-    metropolis_hastings(propdist, m, data, cc0, cc; verbose=verbose);
+    #metropolis_hastings(propdist, m, data, cc0, cc; verbose=verbose);
 
-#    println("#########################################################\n
-#            SMC STARTS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n
-#            #########################################################\n")
-#
-#    smc(m, data)
-#
+    println("#########################################################\n
+            SMC STARTS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n
+            #########################################################\n")
+
+    smc(m, data)
+
     ########################################################################################
     ### Step 5: Calculate and save parameter covariance matrix
     ########################################################################################

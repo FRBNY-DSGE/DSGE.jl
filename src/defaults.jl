@@ -49,4 +49,15 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:n_mh_burn, 2, "Number of blocks to use as burn-in in Metropolis-Hastings")
     m <= Setting(:mh_thin, 5, "Metropolis-Hastings thinning step")
 
+    #Specifically for Schorf 
+    if m.spec == "schorf"
+        m <= Setting(:data_vintage, "160706")
+        m <= Setting(:saveroot, "/Users/chrisrytting1/.julia/v0.4/DSGE/save")
+        m <= Setting(:dataroot, "/Users/chrisrytting1/.julia/v0.4/DSGE/save/input_data")
+        m <= Setting(:date_presample_start, quartertodate("1983-Q1"))
+        m <= Setting(:date_mainsample_start, quartertodate("1983-Q1"))
+        m <= Setting(:date_mainsample_end, quartertodate("2002-Q4"))
+        m <= Setting(:date_zlbregime_start, quartertodate("2002-Q4"))
+    end
+
 end
