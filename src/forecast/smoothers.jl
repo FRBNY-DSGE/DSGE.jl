@@ -64,16 +64,42 @@ y(t) = Z*α(t) + D             (state or transition equation)
 ```
 """
 function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+    sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    n_conditional_periods::Int = 0)
+
+    # extract system matrices
+    T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
+    Q, Z, D  = sys[:QQ], sys[:ZZ], sys[:DD]
+    
+    # call actual Kalman smoother
+    kalman_smoother(m, df, T, R, C, Q, Z, D, A0, P0, pred, vpred;
+        n_conditional_periods = n_conditional_periods)
+end
+
+function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    n_conditional_periods::Int = 0)
+
+    # extract system matrices
+    T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
+    Q, Z, D  = sys[:QQ], sys[:ZZ], sys[:DD]
+    
+    # call actual Kalman smoother
+    kalman_smoother(m, data, T, R, C, Q, Z, D, A0, P0, pred, vpred;
+        n_conditional_periods = n_conditional_periods)
+end
+
+function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
     D::Vector{S}, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
     n_conditional_periods::Int = 0)
 
-    # convert DataFrame to Matrix
+    # convert DataFrame to matrix
     data = df_to_matrix(df)'
     
-    # call actual simulation smoother
-    kalman_smoother(m, data, T, R, C, Q, Z, D, A0, P0; n_conditional_periods =
-        n_conditional_periods)
+    # call actual Kalman smoother
+    kalman_smoother(m, data, T, R, C, Q, Z, D, A0, P0, pred, vpred;
+        n_conditional_periods = n_conditional_periods)
 end
 
 function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
@@ -201,12 +227,8 @@ y(t) = Z*α(t) + D             (state or transition equation)
 function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
     data::Matrix{S}, sys::System, pred::Matrix{S}, vpred::Array{S, 3})
 
-    T = sys[:TTT]
-    R = sys[:RRR]
-    C = sys[:CCC]
-    Q  = sys[:QQ]
-    Z  = sys[:ZZ]
-    D  = sys[:DD]
+    T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
+    Q, Z, D  = sys[:QQ], sys[:ZZ], sys[:DD]
 
     disturbance_smoother(m, data, T, R, C, Q, Z, D, pred, vpred)
 end
@@ -345,6 +367,31 @@ y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
+function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+    sys::System, A0::Vector{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
+
+    # extract system matrices
+    T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
+    Q, Z, D  = sys[:QQ], sys[:ZZ], sys[:DD]
+    
+    # call actual Durbin-Koopman smoother
+    durbin_koopman_smoother(m, df, T, R, C, Q, Z, D, A0, P0; n_conditional_periods =
+        n_conditional_periods)
+end
+
+function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    n_conditional_periods::Int = 0)
+
+    # extract system matrices
+    T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
+    Q, Z, D  = sys[:QQ], sys[:ZZ], sys[:DD]
+    
+    # call actual Durbin-Koopman smoother
+    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0; n_conditional_periods =
+        n_conditional_periods)
+end
+
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
     D::Vector{S}, A0::Vector{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
