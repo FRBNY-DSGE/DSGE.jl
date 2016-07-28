@@ -203,20 +203,15 @@ function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
     ## 2. Smooth
     ##############################################################################
 
-    # # extract settings from model
-    # n_ant_shocks  = n_anticipated_shocks(m)
-    # n_pre_periods = n_presample_periods(m)
-    # sim_smooth    = simulation_smoother_flag(m)
+    smoother    = simulation_smoother_flag(m)
     
-    # run simulation smoother (or kalman smoother)
-    smoothed = if sim_smooth
-        durbin_koopman_smoother(m, data, sys[:TTT], sys[:RRR], sys[:CCC],
-            sys[:QQ], sys[:ZZ], sys[:DD], A0, P0)
-    else
+    alpha_hat, eta_hat = if smoother == :kalman
         kalman_smoother(m, data, sys[:TTT], sys[:RRR], sys[:CCC],
             sys[:QQ], sys[:ZZ], sys[:DD], A0, P0, pred, vpred)
+    elseif smoother == :durbin_koopman
+        durbin_koopman_smoother(m, data, sys[:TTT], sys[:RRR], sys[:CCC],
+            sys[:QQ], sys[:ZZ], sys[:DD], A0, P0)
     end
 
-    return smoothed
-    # returns a KalmanSmooth object with fields "states" and "shocks"
+    return alpha_hat, eta_hat
 end

@@ -177,11 +177,11 @@ mh_thin(m::AbstractModel)          =  get_setting(m, :mh_thin)
 n_draws(m::AbstractModel)          =  round(Int,(n_mh_blocks(m) - n_mh_burn(m)) * (n_mh_simulations(m)/mh_thin(m)))
 
 # Interface for forecast settings
-date_forecast_start(m::AbstractModel)      = get_setting(m, :date_forecast_start)
-forecast_tdist_df_val(m::AbstractModel)    = get_setting(m, :forecast_tdist_df_val)
-forecast_tdist_shocks(m::AbstractModel)    = get_setting(m, :forecast_tdist_shocks)
-forecast_kill_shocks(m::AbstractModel)     = get_setting(m, :forecast_kill_shocks)
-simulation_smoother_flag(m::AbstractModel) = get_setting(m, :simulation_smoother_flag)
+date_forecast_start(m::AbstractModel)   = get_setting(m, :date_forecast_start)
+forecast_tdist_df_val(m::AbstractModel) = get_setting(m, :forecast_tdist_df_val)
+forecast_tdist_shocks(m::AbstractModel) = get_setting(m, :forecast_tdist_shocks)
+forecast_kill_shocks(m::AbstractModel)  = get_setting(m, :forecast_kill_shocks)
+forecast_smoother(m::AbstractModel)     = get_setting(m, :forecast_smoother)
     
 function forecast_horizons(m::AbstractModel)
     t0 = get_setting(m, :date_forecast_start)
