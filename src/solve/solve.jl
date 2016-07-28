@@ -23,7 +23,7 @@ function solve(m::AbstractModel)
     TTT_gensys, CCC_gensys, RRR_gensys = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
     TTT_gensys = real(TTT_gensys)
     RRR_gensys = real(RRR_gensys)
-    CCC_gensys = reshape(CCC_gensys, length(CCC_gensys), 1)
+    CCC_gensys = reshape(CCC_gensys, size(CCC_gensys, 1))
 
     # Augment states
     TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)

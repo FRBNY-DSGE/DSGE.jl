@@ -1,7 +1,7 @@
 """
 ```
 measurement{T<:AbstractFloat}(m::Model990{T}, TTT::Matrix{T}, RRR::Matrix{T},
-                              CCC::Matrix{T}; shocks::Bool = true)
+                              CCC::Vector{T}; shocks::Bool = true)
 ```
 
 Assign measurement equation
@@ -19,7 +19,7 @@ cov(eps_t,u_t) = VV = QQ*MM'
 function measurement{T<:AbstractFloat}(m::Model990{T},
                                        TTT::Matrix{T},
                                        RRR::Matrix{T},
-                                       CCC::Matrix{T};
+                                       CCC::Vector{T};
                                        shocks::Bool = true)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
@@ -41,7 +41,7 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
     end
 
     ZZ = zeros(_n_observables, _n_states)
-    DD = zeros(_n_observables, 1)
+    DD = zeros(_n_observables)
     MM = zeros(_n_observables, _n_shocks_exogenous)
     EE = zeros(_n_observables, _n_observables)
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)

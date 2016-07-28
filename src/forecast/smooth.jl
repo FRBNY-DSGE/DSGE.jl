@@ -29,10 +29,9 @@ function smooth{S<:AbstractFloat}(m::AbstractModel,
 
     # Extract results from Kalman filter: need pred, vpred
 
-    # Extract settings from model: peachcount, psize, n_anticipated_shocks, n_anticipated_lags
+    # Extract settings from model: peachcount, psize, n_anticipated_shocks
     
     n_ant_shocks = n_anticipated_shocks(m)
-    n_ant_lags   = n_anticipated_lags(m)
     
     # Parallelize
     # Think about whether level 1 functions should return KalmanSmooth

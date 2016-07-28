@@ -13,8 +13,8 @@ output types.
 - `df`: DataFrame of data for observables
 - `cond_types`: conditional data type, any combination of
     - `:none`: no conditional data
-    - `:semi`: use "semiconditional data" - average of quarter-to-date observations for high frequency series
-    - `:full`: use "conditional data" - semiconditional plus nowcasts for desired
+    - `:semi`: use \"semiconditional data\" - average of quarter-to-date observations for high frequency series
+    - `:full`: use \"conditional data\" - semiconditional plus nowcasts for desired
       observables
 - `input_types`: which set of parameters to use, any combination of
     - `:mode`: forecast using the modal parameters only
@@ -40,7 +40,7 @@ output types.
       shocks (history, non-standardized), shock decompositions (history), deterministic
       trend (history), counterfactuals (history), forecast, forecast shocks drawn, shock
       decompositions (forecast), deterministic trend (forecast), counterfactuals (forecast)
-   Note that some similar outputs may or may not fall under the "forecast_all" framework,
+   Note that some similar outputs may or may not fall under the \"forecast_all\" framework,
    including
     - `:mats`: recompute system matrices (TTT, RRR, CCC) given parameters only
     - `:zend`: recompute final state vector (s_{T}) given parameters only

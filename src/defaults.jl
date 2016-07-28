@@ -25,9 +25,8 @@ function default_settings!(m::AbstractModel)
 
     # Dates
     m <= Setting(:date_presample_start, quartertodate("1959-Q3"), "Start date of pre-sample")
-    m <= Setting(:date_mainsample_start, quartertodate("1960-Q1"), "Start date of main sample")
-    m <= Setting(:date_zlbregime_start, quartertodate("2008-Q4"), "Start date of zero lower bound regime")
-    m <= Setting(:date_mainsample_end, Dates.lastdayofquarter(Dates.today()-Dates.Month(3)), "End date of main sample")
+    m <= Setting(:date_prezlb_start, quartertodate("1960-Q1"), "Start date of main sample")
+    m <= Setting(:date_zlb_start, quartertodate("2008-Q4"), "Start date of zero lower bound regime")
     m <= Setting(:date_forecast_start, Dates.lastdayofquarter(Dates.today()), "Start date of forecast period")
     m <= Setting(:date_forecast_end, Dates.lastdayofquarter(Dates.today()+Dates.Month(60*3)), "End date of forecast period")
 
@@ -55,11 +54,10 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:forecast_tdist_shocks, false, "Draw Students-t distributed shocks in forecast")
     m <= Setting(:forecast_tdist_draw_df, false, "Draw Students-t degrees of freedom parameter")
     m <= Setting(:forecast_tdist_df_val, 15, "Students-t degrees of freedom fixed value")
-    m <= Setting(:forecast_use_simulation_smoother, true, "Use Durbin-Koopman (2002) simulation smoother")
+    m <= Setting(:forecast_smoother, :durbin_koopman, "Choice of smoother to use during forecasting. Can be :kalman, :durbin_koopman, or eventually :carter_kohn")
     m <= Setting(:forecast_jstep, 5, "Forecast thinning step (in addition to MH thinning step")
     m <= Setting(:forecast_enforce_zlb, true, "Enforce zero lower bound in forecast periods")
     m <= Setting(:shockdec_startindex, 190, "Index of start of shock decomposition output period")
     m <= Setting(:shockdec_endindex, 50000, "Index of end of shock decomposition output period")
     m <= Setting(:shockdec_whichshocks, :all, "Sets of shocks for which to conduct shock decomposition")
-
 end

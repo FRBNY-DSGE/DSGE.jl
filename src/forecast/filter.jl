@@ -1,14 +1,12 @@
 """
 ```
-
 filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::Vector{System},
-                                  z0::Vector{S}=[], vz0::Matrix{S}=[];
-                                  lead::Int, Ny0::Int =0, allout::Bool = false)
+                                  z0::Vector{S} = [], vz0::Matrix{S} = [];
+                                  lead::Int, Ny0::Int = 0, allout::Bool = false)
 
 filter{S<:AbstractFloat}(m::AbstractModel, data::DataFrame, sys::Vector{System},
-                                  z0::Vector{S}=[], vz0::Matrix{S}=[];
-                                  lead::Int, Ny0::Int =0, allout::Bool = false)
-
+                                  z0::Vector{S} = [], vz0::Matrix{S} = [];
+                                  lead::Int, Ny0::Int = 0, allout::Bool = false)
 ```
     
 Computes and returns the filtered values of states for every state-space system in `sys`.
@@ -17,16 +15,14 @@ Computes and returns the filtered values of states for every state-space system 
 
 - `m`: model object
 - `data`: DataFrame or matrix of data for observables
-- `lead`: number of periods to forecast after the end of the data
-- `sys::Vector{System}`: a vector of `System` objects specifying state-space system matrices
-    for each draw
-- `z0`: an optional `Nz x 1` initial state vector.
-- `vz0`: an optional `Nz x Nz` covariance matrix of an initial state vector.
-- `Ny0`: an optional scalar indicating the number of periods of
-  presample (i.e. the number of periods which we don't add to the
-  likelihood)
-- `allout`: an optional keyword argument indicating whether we want optional output
-  variables returned as well
+- `sys::Vector{System}`: a vector of `System` objects specifying state-space
+  system matrices for each draw
+- `z0`: an optional `Nz x 1` initial state vector
+- `vz0`: an optional `Nz x Nz` covariance matrix of an initial state vector
+- `Ny0`: an optional scalar indicating the number of periods of presample
+  (i.e. the number of periods which we don't add to the likelihood)
+- `allout`: an optional keyword argument indicating whether we want optional
+  output variables returned as well
 
 ### Outputs
 
@@ -41,8 +37,8 @@ Computes and returns the filtered values of states for every state-space system 
     state vectors.
 """
 function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, sys::Vector{System{S}},
-                                  z0::Vector{S}=Vector{S}(), vz0::Matrix{S}=Matrix{S}();
-                                  lead::Int=0, Ny0::Int =0, allout::Bool = false)
+                                  z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
+                                  lead::Int = 0, Ny0::Int = 0, allout::Bool = false)
     
     # Convert the DataFrame to a data matrix without altering the original dataframe  
     data  = df_to_matrix(m,df) 
@@ -51,8 +47,8 @@ end
 
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::Vector{System{S}},
-                                  z0::Vector{S}=Vector{S}(), vz0::Matrix{S}=Matrix{S}();
-                                  lead::Int=0, Ny0::Int =0, allout::Bool = false)
+                                  z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
+                                  lead::Int = 0, Ny0::Int = 0, allout::Bool = false)
 
     # numbers of useful things
     ndraws = size(sys, 1)
@@ -86,26 +82,26 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System
     VVall  = sys[:VVall]
 
     # Call the appropriate version of the Kalman filter
-    if use_expected_rate_data(m)
+    if n_anticipated_shocks(m) > 0
 
-        # We have 3 regimes: presample, main sample, and expected-rate sample (starting at
-        # zlb_start_index)
-        R2, R3, R1 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0, lead=lead,
-            Ny0=Ny0, allout=allout)
+        # We have 3 regimes: presample, main sample, and expected-rate sample
+        # (starting at index_zlb_start)
+        R2, R3, R1 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0,
+            lead = lead, Ny0 = Ny0, allout = allout, augment_states = true)
                 
-        filtered_states = [R2[:filt] R3[:filt]]
-
-        pred  = hcat(R2[:pred], R3[:pred])
-        vpred = cat(3, R2[:vpred], R3[:vpred])
-        zend  = R3[:zend]      # final state vector is in R3
-        Pend  = R1[:Pend]      # initial P is in the presample...
+        filtered_states = hcat(R2[:filt], R3[:filt])
+        pred            = hcat(R2[:pred], R3[:pred])
+        vpred           = cat(3, R2[:vpred], R3[:vpred])
+        zend            = R3[:zend]    # final state vector is in R3
+        A0              = R2[:z0]      # initial state vector is the final state vector from R1
+        P0              = R2[:vz0]
    
         return filtered_states', pred, vpred, zend, Pend
         
     else
         # regular Kalman filter with no regime-switching
         kal = kalman_filter(data', lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0;
-            allout=allout)
+            allout = allout)
 
         return kal[:filt]', kal[:pred], kal[:vpred], kal[:zend], kal[:Pend]
     end
@@ -138,22 +134,22 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
     VVall  = sys[:VVall]
 
     # Call the appropriate version of the Kalman filter
-    filtered_states, pred, vpred, zend, Pend = if use_expected_rate_data(m)
+    filtered_states, pred, vpred, zend, A0, P0 = if n_anticipated_shocks(m) > 0
 
-        # We have 3 regimes: presample, main sample, and expected-rate sample (starting at
-        # zlb_start_index)
-        R2, R3 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0, lead=lead, Ny0=Ny0,
-            allout=allout)
-                
-        filtered_states = [R2[:filt] R3[:filt]]
+        # We have 3 regimes: presample, main sample, and expected-rate sample
+        # (starting at index_zlb_start)
+        R2, R3, R1 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0, lead =
+            lead, Ny0 = Ny0, allout = allout, augment_states = true)
 
+        filtered_states = hcat(R2[:filt], R3[:filt])
         pred            = hcat(R2[:pred], R3[:pred])
         vpred           = cat(3, R2[:vpred], R3[:vpred])
         zend            = R3[:zend]    # final state vector is in R3
         Pend              = R2[:Pend]      # initial Pend is in R2
+        A0              = R2[:z0]      # initial state vector is the final state vector from R1
+        P0              = R2[:vz0]
         
         filtered_states', pred, vpred, zend, Pend
-        
     else
         # regular Kalman filter with no regime-switching
         kal = kalman_filter(data', lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0,
@@ -164,19 +160,15 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
 
     ## 2. Smooth
 
-    # extract settings from model
-    n_ant_shocks = n_anticipated_shocks(m)
-    n_ant_lags   = n_anticipated_lags(m)
-    n_pre_periods =  n_presample_periods(m)
+    smoother    = smoother_flag(m)
     
-    # run simulation smoother (or kalman smoother)
-    smoothed = if disturbance_smoother_flag
-        disturbance_smoother(data, pred, vpred, sys, n_ant_shocks, n_ant_lags)
-    else
-        kalman_smoother(filtered_states[1], Pend, data, pred, vpred,
-                        sys[:TTT], sys[:RRR], sys[:QQ], sys[:ZZ], sys[:DD],
-                        n_ant_shocks, n_ant_lags, Ny0=n_pre_periods)
+    alpha_hat, eta_hat = if smoother == :kalman
+        kalman_smoother(m, data, sys[:TTT], sys[:RRR], sys[:CCC],
+            sys[:QQ], sys[:ZZ], sys[:DD], A0, P0, pred, vpred)
+    elseif smoother == :durbin_koopman
+        durbin_koopman_smoother(m, data, sys[:TTT], sys[:RRR], sys[:CCC],
+            sys[:QQ], sys[:ZZ], sys[:DD], A0, P0)
     end
 
-    # returns a KalmanSmooth object with fields "states" and "shocks"
+    return alpha_hat, eta_hat
 end

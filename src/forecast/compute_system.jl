@@ -15,7 +15,7 @@ if !use_expected_rate_data
 
     TTT = TTT[state_inds, state_inds]
     RRR = RRR[state_inds, shock_inds]
-    CCC = CCC[state_inds, :]
+    CCC = CCC[state_inds]
 end
 
 transition_equation = Transition(TTT, RRR, CCC)

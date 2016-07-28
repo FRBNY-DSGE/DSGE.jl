@@ -1,13 +1,13 @@
 type Transition{T<:AbstractFloat}
     TTT::Matrix{T}
     RRR::Matrix{T}
-    CCC::Matrix{T}
+    CCC::Vector{T}
 end
 function Transition{T<:AbstractFloat}(TTT::Matrix{T}, RRR::Matrix{T})
-    CCC = zeros(eltype(TTT), size(TTT, 1), 1)
+    CCC = zeros(eltype(TTT), size(TTT, 1))
     Transition{T}(TTT, RRR, CCC)
 end
-function Transition{T<:AbstractFloat}(TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
+function Transition{T<:AbstractFloat}(TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T})
     Transition{T}(TTT, RRR, CCC)
 end
 function Base.getindex(eq::Transition, d::Symbol)
@@ -20,7 +20,7 @@ end
 
 type Measurement{T<:AbstractFloat}
     ZZ::Matrix{T}
-    DD::Matrix{T}
+    DD::Vector{T}
     QQ::Matrix{T}
     EE::Matrix{T}
     MM::Matrix{T}

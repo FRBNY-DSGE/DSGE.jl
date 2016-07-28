@@ -5,7 +5,7 @@ load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol = :low)
 
 Create a DataFrame with all data series for this model, fully transformed.  
 
-First, check the disk to see if a valid dataset is already stored in `inpath(m, "data")`. A
+First, check the disk to see if a valid dataset is already stored in `inpath(m, \"data\")`. A
 dataset is valid if every series in `m.data_transforms` is present and the entire sample is
 contained (from `date_presample_start` to `date_mainsample_end`. If no valid dataset is
 already stored, the dataset will be recreated. This check can be eliminated by passing
@@ -52,8 +52,8 @@ function load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol=:low
         df = transform_data(m, df; verbose=verbose)
 
         # Ensure that only appropriate rows make it into the returned DataFrame.
-        start_date = get_setting(m, :date_presample_start)
-        end_date   = get_setting(m, :date_mainsample_end)
+        start_date = date_presample_start(m)
+        end_date   = date_zlb_end(m)
         df = df[start_date .<= df[:, :date] .<= end_date, :]
 
         save_data(m, df)
@@ -89,8 +89,8 @@ Data from non-FRED data sources are read from disk, verified, and merged.
 function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     # Start two quarters further back than `start_date` as we need these additional
     # quarters to compute differences.
-    start_date = get_setting(m, :date_presample_start) - Dates.Month(6)
-    end_date = get_setting(m, :date_mainsample_end)
+    start_date = date_presample_start(m) - Dates.Month(6)
+    end_date = date_zlb_end(m)
 
     # Load FRED data
     df = load_fred_data(m; start_date=firstdayofquarter(start_date), end_date=end_date)
@@ -236,10 +236,9 @@ function isvalid_data(m::AbstractModel, df::DataFrame)
         println(coldiff)
     end
 
-    # Ensure the dates between date_presample_start and date_mainsample_end are contained.
+    # Ensure the dates between date_presample_start and date_zlb_end are contained.
     actual_dates = df[:date]
-    expected_dates = get_quarter_ends(get_setting(m, :date_presample_start),
-                                      get_setting(m, :date_mainsample_end))
+    expected_dates = get_quarter_ends(date_presample_start(m), date_zlb_end(m))
     datesdiff = setdiff(expected_dates, actual_dates)
     valid = valid && isempty(datesdiff)
     if !isempty(datesdiff)
@@ -262,8 +261,8 @@ suitable for direct use in `estimate`, `posterior`, etc.
 function df_to_matrix(m::AbstractModel, df::DataFrame)
     # Sort rows by date and discard rows outside of sample
     df1 = sort(df; cols=[:date])
-    t_start = find(df1[:date] .== get_setting(m, :date_presample_start))[1]
-    t_end = find(df1[:date] .== get_setting(m, :date_mainsample_end))[1]
+    t_start = find(df1[:date] .== date_presample_start(m))[1]
+    t_end = find(df1[:date] .== date_zlb_end(m))[1]
 
     # Discard columns not used.
     #TODO sort columns as well according to observables
