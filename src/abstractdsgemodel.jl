@@ -120,27 +120,22 @@ Distributions.pdf(m::AbstractModel) = exp(logpdf(m))
 n_anticipated_shocks(m::AbstractModel) = get_setting(m, :n_anticipated_shocks)
 n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_shocks_padding)
 
-# Index into data matrix of first period to incorporate expected rate data
-function zlb_start_index(m::AbstractModel)
-    zlb_start_quarter = get_setting(m, :date_zlbregime_start)
-    presample_start_quarter = get_setting(m, :date_presample_start)
-    quarters = subtract_quarters(zlb_start_quarter, presample_start_quarter)
-    index = quarters+1
-    return index
-end
-
-# Number of presample periods
-function n_presample_periods(m::AbstractModel)
-    mainsample_start_quarter = get_setting(m, :date_mainsample_start)
-    presample_start_quarter = get_setting(m, :date_presample_start)
-    quarters = subtract_quarters(mainsample_start_quarter, presample_start_quarter)
-    return quarters
-end
-
+# Dates, indices, number of periods for each regime
 date_presample_start(m::AbstractModel) = get_setting(m, :date_presample_start)
-date_mainsample_start(m::AbstractModel) = get_setting(m, :date_mainsample_start)
-date_zlbregime_start(m::AbstractModel) = get_setting(m, :date_zlbregime_start)
+date_prezlb_start(m::AbstractModel) = get_setting(m, :date_prezlb_start)
+date_zlb_start(m::AbstractModel) = get_setting(m, :date_zlb_start)
+
+date_presample_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_prezlb_start) - Dates.Month(3))
+date_prezlb_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_zlb_start) - Dates.Month(3))
 date_zlb_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_forecast_start) - Dates.Month(3))
+
+index_presample_start(m::AbstractModel) = 1
+index_prezlb_start(m::AbstractModel) = subtract_quarters(date_prezlb_start(m), date_presample_start(m)) + 1
+index_zlb_start(m::AbstractModel) = subtract_quarters(date_zlb_start(m), date_presample_start(m)) + 1
+
+n_presample_periods(m::AbstractModel) = subtract_quarters(date_prezlb_start(m), date_presample_start(m))
+n_prezlb_periods(m::AbstractModel) = subtract_quarters(date_zlb_start(m), date_prezlb_start(m))
+n_zlb_periods(m::AbstractModel) = subtract_quarters(date_forecast_start(m), date_zlb_start(m))
 
 # Number of a few things that are useful
 n_states(m::AbstractModel)                 = length(m.endogenous_states)

@@ -276,13 +276,9 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     R2 = Dict{Symbol, Array{S}}()
     R3 = Dict{Symbol, Array{S}}()
     regime_mats = [R1, R2, R3]
-    #regime_likes = zeros(T, 3)
 
     n_T0         = n_presample_periods(m)
     n_ant        = n_anticipated_shocks(m)
-    t_zlb_start  = zlb_start_index(m)
-
-    n_mainsample = t_zlb_start - n_T0 - 1
 
     n_obs_no_ant = n_observables(m) - n_anticipated_shocks(m)
     n_obs        = n_observables(m)
@@ -293,9 +289,9 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     nstates         = n_states(m)
     regime_states   = [n_states_no_ant, n_states_no_ant, n_states_aug]
 
-    R1[:data] = data[1:n_T0, 1:n_obs_no_ant]
-    R2[:data] = data[(n_T0+1):t_zlb_start-1, 1:n_obs_no_ant]
-    R3[:data] = data[t_zlb_start:end, :]
+    R1[:data] = data[1:(index_prezlb_start(m)-1),                   1:n_obs_no_ant]
+    R2[:data] = data[index_prezlb_start(m):(index_zlb_start(m)-1), 1:n_obs_no_ant]
+    R3[:data] = data[index_zlb_start(m):end,                        :]
 
     # Step 1: solution to DSGE model - delivers transition equation for the state variables
     # transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ
@@ -436,17 +432,17 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
         R1[:vpred][after_shocks_new, after_shocks_new, :] = R1_vpred_small[after_shocks_old, after_shocks_old, :]
 
         R2_filt_small  = R2[:filt]
-        R2[:filt]      = zeros(n_states_aug, n_mainsample)
+        R2[:filt]      = zeros(n_states_aug, n_prezlb_periods(m))
         R2[:filt][before_shocks,    :] = R2_filt_small[before_shocks,    :]
         R2[:filt][after_shocks_new, :] = R2_filt_small[after_shocks_old, :]
         
         R2_pred_small  = R2[:pred]
-        R2[:pred]      = zeros(n_states_aug, n_mainsample)
+        R2[:pred]      = zeros(n_states_aug, n_prezlb_periods(m))
         R2[:pred][before_shocks,    :] = R2_pred_small[before_shocks,    :]
         R2[:pred][after_shocks_new, :] = R2_pred_small[after_shocks_old, :]
 
         R2_vpred_small = R2[:vpred]
-        R2[:vpred]     = zeros(n_states_aug, n_states_aug, n_mainsample)
+        R2[:vpred]     = zeros(n_states_aug, n_states_aug, n_prezlb_periods(m))
         R2[:vpred][before_shocks,    before_shocks,    :] = R2_vpred_small[before_shocks,    before_shocks,    :]
         R2[:vpred][before_shocks,    after_shocks_new, :] = R2_vpred_small[before_shocks,    after_shocks_old, :]
         R2[:vpred][after_shocks_new, before_shocks,    :] = R2_vpred_small[after_shocks_old, before_shocks,    :]

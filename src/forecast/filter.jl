@@ -129,7 +129,7 @@ function filter{T<:AbstractModel, S<:AbstractFloat}(m::T,
     if n_anticipated_shocks(m) > 0
 
         # We have 3 regimes: presample, main sample, and expected-rate sample
-        # (starting at zlb_start_index)
+        # (starting at index_zlb_start)
         R2, R3, R1 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0,
             lead = lead, Ny0 = Ny0, allout = allout, augment_states = true)
                 
@@ -178,7 +178,7 @@ function filterandsmooth{T<:AbstractModel, S<:AbstractFloat}(m::T,
     filtered_states, pred, vpred, zend, A0, P0 = if n_anticipated_shocks(m) > 0
 
         # We have 3 regimes: presample, main sample, and expected-rate sample
-        # (starting at zlb_start_index)
+        # (starting at index_zlb_start)
         R2, R3, R1 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0, lead =
             lead, Ny0 = Ny0, allout = allout, augment_states = true)
 

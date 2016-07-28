@@ -85,18 +85,14 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     Ny = size(data, 1)
     Nt = size(data, 2)
     Nz = size(T, 1)
-
-    regime_periods = [subtract_quarters(date_mainsample_start(m), date_presample_start(m)),
-                      subtract_quarters(date_zlbregime_start(m),  date_mainsample_start(m)),
-                      subtract_quarters(date_forecast_start(m),   date_zlbregime_start(m))]
     
     # Check data is well-formed wrt model settings
     @assert Ny == n_observables(m)
-    @assert Nt == regime_periods[1] + regime_periods[2] + regime_periods[3] + n_conditional_periods
+    @assert Nt == n_presample_periods(m) + n_prezlb_periods(m) + n_zlb_periods(m) + n_conditional_periods
 
     # Anticipated monetary policy shocks
     n_ant_shocks = n_anticipated_shocks(m)
-    t_zlb_start  = zlb_start_index(m)
+    t_zlb_start  = index_zlb_start(m)
 
     kalsmooth = disturbance_smoother(m, data, T, R, C, Q, Z, D, pred, vpred)
     r, eta_hat = kalsmooth.states, kalsmooth.shocks
@@ -135,8 +131,8 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         alpha_hat[:, t] = ah_t
     end
 
-    alpha_hat = alpha_hat[:, n_presample_periods(m)+1:end]
-    eta_hat   = eta_hat[:,   n_presample_periods(m)+1:end]
+    alpha_hat = alpha_hat[:, index_prezlb_start(m):end]
+    eta_hat   = eta_hat[:,   index_prezlb_start(m):end]
     
     return KalmanSmooth(alpha_hat, eta_hat)
 end
@@ -230,7 +226,7 @@ function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
 
     # Anticipated policy shocks metadata
     n_ant_shocks = n_anticipated_shocks(m)
-    t_zlb_start  = zlb_start_index(m)
+    t_zlb_start  = index_zlb_start(m)
 
     for t = Nt:-1:1
         data_t = data[:, t]
@@ -371,17 +367,13 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     Nz = size(T, 1)
     Ne = size(R, 2)
     
-    regime_periods = [subtract_quarters(date_mainsample_start(m), date_presample_start(m)),
-                      subtract_quarters(date_zlbregime_start(m),  date_mainsample_start(m)),
-                      subtract_quarters(date_forecast_start(m),   date_zlbregime_start(m))]
-    
     # Check data is well-formed wrt model settings
     @assert Ny == n_observables(m)
-    @assert Nt == regime_periods[1] + regime_periods[2] + regime_periods[3] + n_conditional_periods
+    @assert Nt == n_presample_periods(m) + n_prezlb_periods(m) + n_zlb_periods(m) + n_conditional_periods
 
     # Anticipated monetary policy shocks
     n_ant_shocks = n_anticipated_shocks(m)
-    t_zlb_start  = zlb_start_index(m)
+    t_zlb_start  = index_zlb_start(m)
    
     # Initialize matrices
     α_all_plus  = fill(NaN, Nz, Nt)
@@ -470,8 +462,6 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     end
 
     ##### Step 2: Kalman smooth over everything
-    # PZL 2016-07-25
-    # kalsmooth = kalman_smoother(m, YY_star, T, R, C, Q, Z, D, A0, P0, pred, vpred)
     kalsmooth = kalman_smoother(m, YY_star, T, R, C, Q, Z, zeros(size(D)), A0, P0, pred, vpred)
     α_hat_star, η_hat_star = kalsmooth.states, kalsmooth.shocks
     
@@ -479,8 +469,8 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     # Since `kalman_smoother` (like `durbin_koopman_smoother`) returns smoothed
     # states sans presample, we take only the main-sample and ZLB periods from
     # `α_all_plus` and `η_all_plus`
-    α_til = α_all_plus[:, n_presample_periods(m)+1:end] + α_hat_star
-    η_til = η_all_plus[:, n_presample_periods(m)+1:end] + η_hat_star
+    α_til = α_all_plus[:, index_prezlb_start(m):end] + α_hat_star
+    η_til = η_all_plus[:, index_prezlb_start(m):end] + η_hat_star
 
     return KalmanSmooth(α_til, η_til)
 end

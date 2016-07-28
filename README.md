@@ -461,7 +461,7 @@ The `Setting{T<:Any}` type has the following fields:
 #### Anticipated Shocks
 - `n_anticipated_shocks::Setting{Int}`: Number of anticipated policy shocks.
 - `n_anticipated_shocks_padding::Setting{Int}`: Padding for anticipated shocks.
-- `zlb_start_index::Setting{Int}`: Index into input data matrix of first period
+- `index_zlb_start::Setting{Int}`: Index into input data matrix of first period
   to incorporate zero bound expectations. The first observation in the sample
   data is 1959Q3 and we assume the zero lower bound period starts in 2008Q4, so
   we set this to `198` by default.
