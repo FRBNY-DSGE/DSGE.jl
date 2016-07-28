@@ -26,14 +26,16 @@ type Tune
 end
 
 
-function smc(m::AbstractModel, data::Matrix)
+tune = Tune(length(m.parameters),1000,100,2,0.5,0.25,0.25,0.9,((collect(1:1:100)-1)/(100-1)).^2,[], [], [], [], [])
+
+function smc(m::AbstractModel, data::Matrix, tune::Tune)
 #--------------------------------------------------------------
 #Set Parameters of Algorithm
 #--------------------------------------------------------------
 
+
 #Instantiating a tune type (analogous to the struct in Matlab)
 #The tempering schedule is created as the last argument in the constructor TuneType()
-tune = Tune(length(m.parameters),1000,100,2,0.5,0.25,0.25,0.9,((collect(1:1:100)-1)/(100-1)).^2,[], [], [], [], [])
 
 #Matrices for storing
 
