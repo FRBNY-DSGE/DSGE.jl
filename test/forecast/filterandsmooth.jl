@@ -9,9 +9,6 @@ end
 
 sys = compute_system(m)
 
-kalsmth = DSGE.filterandsmooth(m, data, sys, allout=true)
-
-smoothed_states = kalsmth.states
-smoothed_shocks = kalsmth.shocks
+alpha_hat, eta_hat = DSGE.filterandsmooth(m, data, sys, allout=true)
 
 nothing

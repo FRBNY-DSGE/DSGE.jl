@@ -56,7 +56,7 @@ module DSGE
 
         # forecast/
         kalman_smoother, disturbance_smoother, forecast_all, forecast_one, computeForecast,
-        durbin_koopman_smoother, KalmanSmooth,
+        durbin_koopman_smoother,
 
         # models/
         steadystate!, Model990, SmetsWouters, eqcond, measurement,

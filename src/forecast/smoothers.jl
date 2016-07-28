@@ -1,12 +1,22 @@
 """
 ```
 function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
+    sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    n_conditional_periods::Int = 0)
 
 function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    n_conditional_periods::Int = 0)
+
+function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
+    D::Vector{S}, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    n_conditional_periods::Int = 0)
+
+function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
+    T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
+    D::Vector{S}, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    n_conditional_periods::Int = 0)
 ```
 This is a Kalman Smoothing program based on S.J. Koopman's \"Disturbance
 Smoother for State Space Models\" (Biometrika, 1993), as specified in
@@ -38,6 +48,8 @@ in the `eta_hat` matrix.
   Kalman Filter)
 - `vpred`: the (`Nz` x `Nz` x `Nt`) matrix of one-step-ahead predicted
   covariance matrices
+- `n_conditional_periods`: optional argument indicating the number of periods of
+  conditional data in `data`
 
 Where:
 
@@ -48,9 +60,8 @@ Where:
 
 ### Outputs:
 
-`kalman_smoother` returns a `KalmanSmooth` object, which contains the following fields:
-- `states`: the (`Nz` x `Nt`) matrix of smoothed states
-- `shocks`: the (`Ne` x `Nt`) matrix of smoothed shocks
+- `alpha_hat`: the (`Nz` x `Nt`) matrix of smoothed states
+- `eta_hat`: the (`Ne` x `Nt`) matrix of smoothed shocks
 
 If `n_presample_periods(m)` is nonzero, the `α_hat` and `η_hat` matrices will be shorter by
 that number of columns (taken from the beginning).
@@ -120,8 +131,7 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     n_ant_shocks = n_anticipated_shocks(m)
     t_zlb_start  = index_zlb_start(m)
 
-    kalsmooth = disturbance_smoother(m, data, T, R, C, Q, Z, D, pred, vpred)
-    r, eta_hat = kalsmooth.states, kalsmooth.shocks
+    r, eta_hat = disturbance_smoother(m, data, T, R, C, Q, Z, D, pred, vpred)
 
     alpha_hat = zeros(Nz, Nt)
     ah_t = A0 + P0*r[:, 1]
@@ -137,11 +147,6 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         # normal Q matrix can be used.
 
         if n_ant_shocks > 0
-            # The first part of the conditional below pertains to the periods in
-            # which zerobound is off. To specify this period, we must account
-            # for (peachcount*n_conditional_periods) since peachdata is
-            # augmented to y.
-            # JC 11/30/10
             if t < t_zlb_start
                 Q_t = zeros(Ne, Ne)
                 Q_t[1:(Ne-n_ant_shocks), 1:(Ne-n_ant_shocks)] =
@@ -160,14 +165,11 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     alpha_hat = alpha_hat[:, index_prezlb_start(m):end]
     eta_hat   = eta_hat[:,   index_prezlb_start(m):end]
     
-    return KalmanSmooth(alpha_hat, eta_hat)
+    return alpha_hat, eta_hat
 end
 
 """
 ```
-function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
-    data::Matrix{S}, sys::System, pred::Matrix{S}, vpred::Array{S, 3})
-
 function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
     data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
     Z::Matrix{S}, D::Array{S}, pred::Matrix{S}, vpred::Array{S, 3})
@@ -212,9 +214,8 @@ Where:
 
 ### Outputs:
 
-`disturbance_smoother` returns a `KalmanSmooth` object, which contains the following fields:
-- `states`: the (`Nz` x `Nt`) matrix used for state smoothing
-- `shocks`: the (`Ne` x `Nt`) matrix of smoothed shocks
+- `r`: the (`Nz` x `Nt`) matrix used for state smoothing
+- `eta_hat`: the (`Ne` x `Nt`) matrix of smoothed shocks
 
 ### Notes
 
@@ -224,15 +225,6 @@ y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
-function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
-    data::Matrix{S}, sys::System, pred::Matrix{S}, vpred::Array{S, 3})
-
-    T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
-    Q, Z, D  = sys[:QQ], sys[:ZZ], sys[:DD]
-
-    disturbance_smoother(m, data, T, R, C, Q, Z, D, pred, vpred)
-end
-
 function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
     data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
     Z::Matrix{S}, D::Vector{S}, pred::Matrix{S}, vpred::Array{S, 3})
@@ -278,11 +270,6 @@ function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
         # specifications with zero bound off (and hence with
         # n_ant_shocks = 0), the normal Q matrix can be used.
         if n_ant_shocks > 0
-            
-            # The first part of the conditional below pertains to the periods in
-            # which zerobound is off.  To specify this period, we must account
-            # for (peachcount*n_conditional_periods) since peachdata is
-            # augmented to data.  JC 11/30/10
             if t < t_zlb_start
                 Q_t = zeros(Ne, Ne)
                 Q_t[1:Ne-n_ant_shocks, 1:Ne-n_ant_shocks] =
@@ -296,18 +283,24 @@ function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
         end
     end
 
-    return KalmanSmooth(r, eta_hat)
+    return r, eta_hat
 end
 
 """
 ```
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+    sys::System, A0::Vector{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
+
+function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data:Matrix{S},
+    sys::System, A0::Vector{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
+
+function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, A0::Array{S}, P0::Matrix{S})
+    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
 
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, A0::Array{S}, P0::Matrix{S})
+    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
 ```
 This program is a simulation smoother based on Durbin and Koopman's
 \"A Simple and Efficient Simulation Smoother for State Space Time Series
@@ -340,8 +333,8 @@ erratic Moore-Penrose pseudoinverse).
 - `D`: the (`Ny` x 1) constant vector in the measurement equation
 - `A0`: the (`Nz` x 1) initial (time 0) states vector
 - `P0`: the (`Nz` x `Nz`) initial (time 0) state covariance matrix. If
-  `use_expected_rate_data = true`, then `P0` must include rows and columns for
-  the anticipated shocks.
+- `n_conditional_periods`: optional argument indicating the number of periods of
+  conditional data in `data`
 
 Where:
 
@@ -352,9 +345,8 @@ Where:
 
 ### Outputs:
 
-`durbin_koopman_smoother` returns a `KalmanSmooth` object, which contains the following fields:
-- `states`: the (`Nz` x `Nt`) matrix of smoothed states.
-- `shocks`: the (`Ne` x `Nt`) matrix of smoothed shocks.
+- `alpha_hat`: the (`Nz` x `Nt`) matrix of smoothed states.
+- `eta_hat`: the (`Ne` x `Nt`) matrix of smoothed shocks.
 
 If `n_presample_periods(m)` is nonzero, the `α_hat` and `η_hat` matrices will be shorter by
 that number of columns (taken from the beginning).
@@ -466,6 +458,8 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     ## Run the kalman filter
     A0, P0, pred, vpred, T, R, C, Q, Z, D = if n_ant_shocks > 0
 
+        # Note that we pass in `zeros(size(D))` instead of `D` because the
+        # measurement equation for `YY_star` has no constant term
         R2, R3, R1 = kalman_filter_2part(m, YY_star', T, R, C, A0, P0;
             DD = zeros(size(D)), allout = true, augment_states = true)
         
@@ -509,30 +503,12 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     end
 
     ##### Step 2: Kalman smooth over everything
-    kalsmooth = kalman_smoother(m, YY_star, T, R, C, Q, Z, zeros(size(D)), A0, P0, pred, vpred)
-    α_hat_star, η_hat_star = kalsmooth.states, kalsmooth.shocks
+    α_hat_star, η_hat_star = kalman_smoother(m, YY_star, T, R, C, Q, Z,
+        zeros(size(D)), A0, P0, pred, vpred)
     
     # Compute draw (states and shocks)
-    # Since `kalman_smoother` (like `durbin_koopman_smoother`) returns smoothed
-    # states sans presample, we take only the main-sample and ZLB periods from
-    # `α_all_plus` and `η_all_plus`
-    α_til = α_all_plus[:, index_prezlb_start(m):end] + α_hat_star
-    η_til = η_all_plus[:, index_prezlb_start(m):end] + η_hat_star
+    alpha_hat = α_all_plus[:, index_prezlb_start(m):end] + α_hat_star
+    eta_hat = η_all_plus[:,   index_prezlb_start(m):end] + η_hat_star
 
-    return KalmanSmooth(α_til, η_til)
-end
-    
-"""
-```
-KalmanSmooth{T<:AbstractFloat}
-```
-
-### Fields
-
-- `states::Matrix{T}`: (`nstates` x `nperiods`) matrix of smoothed state values 
-- `shocks::Matrix{T}`: (`nshocks` x `nperiods`) matrix of smoothed shock values
-"""
-immutable KalmanSmooth{T<:AbstractFloat}
-    states::Matrix{T}
-    shocks::Matrix{T}
+    return alpha_hat, eta_hat
 end

@@ -26,8 +26,7 @@ vpred = cat(3, R1[:vpred], R2[:vpred], R3[:vpred])
 
 
 # Kalman filter test
-smoothed = kalman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, A0, P0, pred, vpred)
-alpha_hat, eta_hat = smoothed.states, smoothed.shocks
+alpha_hat, eta_hat = kalman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, A0, P0, pred, vpred)
 
 exp_alpha_hat, exp_eta_hat =
     h5open("$path/../reference/kalman_smoother_out.h5", "r") do h5
@@ -39,8 +38,7 @@ end
 
 
 # Durbin Koopman smoother test
-smoothed = durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, A0, P0)
-alpha_hat, eta_hat = smoothed.states, smoothed.shocks
+alpha_hat, eta_hat = durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, A0, P0)
 
 exp_alpha_hat, exp_eta_hat =
     h5open("$path/../reference/durbin_koopman_smoother_out.h5", "r") do h5
