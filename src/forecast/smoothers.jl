@@ -456,21 +456,21 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     YY_star = data - YY_all_plus
 
     ## Run the kalman filter
-    A0, P0, pred, vpred, T, R, C, Q, Z, D = if n_ant_shocks > 0
+    A0, P0, pred, vpred, T, R, C = if n_ant_shocks > 0
 
         # Note that we pass in `zeros(size(D))` instead of `D` because the
         # measurement equation for `YY_star` has no constant term
         k, R1, R2, R3 = kalman_filter_2part(m, YY_star', T, R, C, A0, P0;
             DD = zeros(size(D)), allout = true, include_presample = true)
         
-        k[:z0], k[:vz0], k[:pred], k[:vpred], R3[:TTT], R3[:RRR], R3[:CCC], Q, Z, D
+        k[:z0], k[:vz0], k[:pred], k[:vpred], R3[:TTT], R3[:RRR], R3[:CCC]
     else
         VVall = zeros(Ny+Nz,Ny+Nz)
         VVall[1:Nz,1:Nz] = R*Q*R'
         
         k = kalman_filter(YY_star', 0, C, T, D, Z, VVall, A0, P0, allout=true)
 
-        A0, P0, k[:pred], k[:vpred], T, R, C, Q, Z, D
+        A0, P0, k[:pred], k[:vpred], T, R, C
     end
 
     ##### Step 2: Kalman smooth over everything
@@ -479,7 +479,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     
     # Compute draw (states and shocks)
     alpha_hat = α_all_plus[:, index_prezlb_start(m):end] + α_hat_star
-    eta_hat = η_all_plus[:,   index_prezlb_start(m):end] + η_hat_star
+    eta_hat   = η_all_plus[:, index_prezlb_start(m):end] + η_hat_star
 
     return alpha_hat, eta_hat
 end

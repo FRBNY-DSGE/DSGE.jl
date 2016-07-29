@@ -86,8 +86,8 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System
 
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at index_zlb_start)
-        k, R1, R2, R3 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0,
-            lead = lead, Ny0 = Ny0, allout = allout, include_presample = false)
+        k, R1, R2, R3 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0;
+            lead = lead, allout = allout, include_presample = false)
    
         return k[:filt]', k[:pred], k[:vpred], k[:zend], k[:Pend]
     else
@@ -130,8 +130,8 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
 
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at index_zlb_start)
-        k, R1, R2, R3 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0, lead =
-            lead, Ny0 = Ny0, allout = allout, include_presample = true)
+        k, R1, R2, R3 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0; lead =
+            lead, allout = allout, include_presample = true)
 
         k[:pred], k[:vpred]
     else
@@ -144,7 +144,7 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
 
     ## 2. Smooth
 
-    smoother    = smoother_flag(m)
+    smoother = smoother_flag(m)
     
     alpha_hat, eta_hat = if smoother == :kalman
         kalman_smoother(m, data, sys[:TTT], sys[:RRR], sys[:CCC],
