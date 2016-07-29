@@ -505,71 +505,72 @@ function Base.getindex(K::Kalman, d::Symbol)
     end
 end
 
-function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S}, k2::Kalman{S}; regime_switch::Bool = false)
+function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S}, k2::Kalman{S}; regime_switch::Bool = false, allout::Bool = false)
 
     # If k1 results from calling the Kalman filter on pre-ZLB data and k2 from
     # calling it on data under the ZLB, then we must augment the fields of k1 to
     # accommodate the states and observables corresponding to anticipated policy
     # shocks
-    if regime_switch
+
+    # However, if !allout, then we don't need to augment anything because we'll
+    # only fill out L, zend, and Pend
+    if regime_switch && allout
 
         n_states_aug = n_states_augmented(m)
         n_obs        = n_observables(m)
         n_k1_periods = size(k1[:pred], 2)
 
         # Initialize fields for augmented k1
-        z0 = zeros(S, n_states_aug)
-        vz0 = zeros(S, n_states_aug, n_states_aug)
         pred = zeros(S, n_states_aug, n_k1_periods)
         vpred = zeros(S, n_states_aug, n_states_aug, n_k1_periods)
-        filt = zeros(S, n_states_aug, n_k1_periods)
-        vfilt = zeros(S, n_states_aug, n_states_aug, n_k1_periods)
         yprederror = zeros(S, n_obs, n_k1_periods)
         ystdprederror = zeros(S, n_obs, n_k1_periods)
         rmse = zeros(S, 1, n_obs)
         rmsd = zeros(S, 1, n_obs)
+        filt = zeros(S, n_states_aug, n_k1_periods)
+        vfilt = zeros(S, n_states_aug, n_states_aug, n_k1_periods)
+        z0 = zeros(S, n_states_aug)
+        vz0 = zeros(S, n_states_aug, n_states_aug)
         k1_new = Kalman(k1[:L], k1[:zend], k1[:Pend], pred, vpred, yprederror,
             ystdprederror, rmse, rmsd, filt, vfilt, z0, vz0)
 
         state_inds = inds_states_no_ant(m)
         obs_inds   = inds_obs_no_ant(m)
 
-        # vectors
-        k1_new[:z0][state_inds] = k1[:z0]
-
-        # matrices
-        k1_new[:vz0][state_inds, state_inds] = k1[:vz0]
+        # Augment fields
         k1_new[:pred][state_inds, :] = k1[:pred]
-        k1_new[:filt][state_inds, :] = k1[:pred]
+        k1_new[:vpred][state_inds, state_inds, :] = k1[:vpred]
         k1_new[:yprederror][obs_inds, :] = k1[:yprederror]
         k1_new[:ystdprederror][obs_inds, :] = k1[:ystdprederror]
         k1_new[:rmse][:, obs_inds] = k1[:rmse]
         k1_new[:rmsd][:, obs_inds] = k1[:rmsd]
-
-        # 3D arrays
-        k1_new[:vpred][state_inds, state_inds, :] = k1[:vpred]
+        k1_new[:filt][state_inds, :] = k1[:pred]
         k1_new[:vfilt][state_inds, state_inds, :] = k1[:vfilt]
+        k1_new[:z0][state_inds] = k1[:z0]
+        k1_new[:vz0][state_inds, state_inds] = k1[:vz0]
 
         # Replace k1 with augmented fields
         k1 = k1_new
     end
 
     L = k1[:L] + k2[:L]
-
-    z0   = k1[:z0]
-    vz0  = k1[:vz0]
     zend = k2[:zend]
     Pend = k2[:Pend]
-    
-    pred = hcat(k1[:pred], k2[:pred])
-    vpred = cat(3, k1[:vpred], k2[:vpred])
-    filt = hcat(k1[:filt], k2[:filt])
-    vfilt = cat(3, k1[:vfilt], k2[:vfilt])
 
-    yprederror = hcat(k1[:yprederror], k2[:yprederror])
-    ystdprederror = hcat(k1[:ystdprederror], k2[:yprederror])
-    rmse = hcat(k1[:rmse], k2[:rmse])
-    rmsd = hcat(k1[:rmsd], k2[:rmsd])
+    if allout
+        pred = hcat(k1[:pred], k2[:pred])
+        vpred = cat(3, k1[:vpred], k2[:vpred])
+        filt = hcat(k1[:filt], k2[:filt])
+        vfilt = cat(3, k1[:vfilt], k2[:vfilt])
+        yprederror = hcat(k1[:yprederror], k2[:yprederror])
+        ystdprederror = hcat(k1[:ystdprederror], k2[:yprederror])
+        rmse = hcat(k1[:rmse], k2[:rmse])
+        rmsd = hcat(k1[:rmsd], k2[:rmsd])
+        z0   = k1[:z0]
+        vz0  = k1[:vz0]
 
-    return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, vz0)
+        return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, vz0)
+    else
+        return Kalman(L, zend, Pend)
+    end
 end
