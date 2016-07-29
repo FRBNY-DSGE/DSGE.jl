@@ -271,7 +271,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
                                                Ny0::Int       = 0,
                                                allout::Bool   = false,
                                                catch_errors::Bool = false,
-                                               augment_states::Bool = false)
+                                               include_presample::Bool = false)
     
     # Partition sample into three regimes, and store associated matrices:
     # - R1: presample
@@ -288,7 +288,6 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     n_obs_no_ant = n_observables(m) - n_anticipated_shocks(m)
     n_obs        = n_observables(m)
     n_exo        = n_shocks_exogenous(m)
-
     n_states_no_ant = n_states_augmented(m) - n_anticipated_shocks(m)
     n_states_aug    = n_states_augmented(m)
     nstates         = n_states(m)
@@ -332,8 +331,8 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     ## where var(u_t) = HH = EE+MM QQ MM', cov(eps_t,u_t) = VV = QQ*MM'
 
     # Get measurement equation matrices set up for normal and zlb periods
-    measurement_R2 = measurement(m, R2[:TTT], R2[:RRR], R2[:CCC]; shocks=false)
-    measurement_R3 = measurement(m, R3[:TTT], R3[:RRR], R3[:CCC]; shocks=true)
+    measurement_R2 = measurement(m, R2[:TTT], R2[:RRR], R2[:CCC]; shocks = false)
+    measurement_R3 = measurement(m, R3[:TTT], R3[:RRR], R3[:CCC]; shocks = true)
     for d in (:ZZ, :DD, :QQ, :VVall)
         R2[d] = measurement_R2[d]
         R3[d] = measurement_R3[d]
@@ -365,78 +364,32 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     else
         z0[state_inds]
     end
-
-    R1[:P0]         = solve_discrete_lyapunov(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
-
-    out             = kalman_filter(R1[:data]', 1, zeros(S, regime_states[1]), R1[:TTT], R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0], allout=allout)
-
-    R1[:like]       = Matrix{S}(1,1)
-    R1[:like][1,1]  = out[:L]
-    for d in [:zend, :Pend, :filt, :pred, :vpred]
-        R1[d] = out[d]
-    end
+    R1[:P0] = solve_discrete_lyapunov(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
+    k1 = kalman_filter(R1[:data]', 1, zeros(S, regime_states[1]), R1[:TTT],
+        R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0], allout = allout)
 
     # Run Kalman filter on normal period
-    zprev           = R1[:zend]
-    Pprev           = R1[:Pend]
-    out             = kalman_filter(R2[:data]', 1, zeros(regime_states[2]), R2[:TTT], R2[:DD], R2[:ZZ], R2[:VVall], zprev, Pprev, allout=allout)
-        
-    R2[:like]       = Matrix{S}(1,1)
-    R2[:like][1,1]  = out[:L]
-    for d in [:zend, :Pend, :filt, :pred, :vpred, :z0, :vz0]
-        R2[d] = out[d]
-    end
+    k2 = kalman_filter(R2[:data]', 1, zeros(regime_states[2]), R2[:TTT],
+        R2[:DD], R2[:ZZ], R2[:VVall], k1[:zend], k1[:Pend], allout = allout)
 
     # Run Kalman filter on ZLB period
-    # This section expands the number of states to accomodate extra states for the
-    # anticipated policy shocks. It does so by taking the zend and Pend for the
-    # state space without anticipated policy shocks, then shoves in nant
-    # zeros in the middle of zend and Pend in the location of
-    # the anticipated shock entries.
-
     zprev = zeros(S, n_states_aug)
     Pprev = zeros(S, n_states_aug, n_states_aug)
+    zprev[state_inds] = k2[:zend]
+    Pprev[state_inds, state_inds] = k2[:Pend]
+    k3 = kalman_filter(R3[:data]', 1, zeros(regime_states[3]), R3[:TTT],
+        R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev, allout = allout)
 
-    zprev[state_inds] = R2[:zend]
-    Pprev[state_inds, state_inds] = R2[:Pend]
-
-    out             = kalman_filter(R3[:data]', 1, zeros(regime_states[3]), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev, allout=allout)
-
-    R3[:like]       = Matrix{S}(1,1)
-    R3[:like][1,1]  = out[:L]
-    for d in [:zend, :Pend, :filt, :pred, :vpred, :z0, :vz0]
-        R3[d] = out[d]
+    # Concatenate Kalman objects
+    if include_presample
+        k12 = cat(m, k1, k2; allout = allout)
+        k = cat(m, k12, k3, regime_switch = true, allout = allout)
+    else
+        k = cat(m, k2, k3; regime_switch = true, allout = allout)
     end
 
-    # TODO: Is there some way to iterate through `R1` and `R2`?
-    # If `augment_states`, then we expand the number of states in the `filt`,
-    # `pred`, and `vpred` matrices before returning
-    if augment_states
-        R1_filt_small  = R1[:filt]
-        R1_pred_small  = R1[:pred]
-        R1_vpred_small = R1[:vpred]
-        R2_filt_small  = R2[:filt]
-        R2_pred_small  = R2[:pred]
-        R2_vpred_small = R2[:vpred]
-
-        R1[:filt]      = zeros(n_states_aug, n_T0)
-        R1[:pred]      = zeros(n_states_aug, n_T0)
-        R1[:vpred]     = zeros(n_states_aug, n_states_aug, n_T0)
-        R2[:filt]      = zeros(n_states_aug, n_prezlb_periods(m))
-        R2[:pred]      = zeros(n_states_aug, n_prezlb_periods(m))
-        R2[:vpred]     = zeros(n_states_aug, n_states_aug, n_prezlb_periods(m))
-
-        R1[:filt][state_inds, :] = R1_filt_small
-        R1[:pred][state_inds, :] = R1_pred_small
-        R1[:vpred][state_inds, state_inds, :] = R1_vpred_small
-        R2[:filt][state_inds, :] = R2_filt_small
-        R2[:pred][state_inds, :] = R2_pred_small
-        R2[:vpred][state_inds, state_inds, :] = R2_vpred_small
-end
-
-    ## Return outputs from both regimes
-    return R2, R3, R1
-   
+    ## Return concatenated Kalman and system matrices for each regime
+    return k, R1, R2, R3
 end
 
 
@@ -560,12 +513,12 @@ function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S}, k2::Kalman{
     if allout
         pred = hcat(k1[:pred], k2[:pred])
         vpred = cat(3, k1[:vpred], k2[:vpred])
-        filt = hcat(k1[:filt], k2[:filt])
-        vfilt = cat(3, k1[:vfilt], k2[:vfilt])
         yprederror = hcat(k1[:yprederror], k2[:yprederror])
         ystdprederror = hcat(k1[:ystdprederror], k2[:yprederror])
-        rmse = hcat(k1[:rmse], k2[:rmse])
-        rmsd = hcat(k1[:rmsd], k2[:rmsd])
+        rmse = sqrt(mean((yprederror.^2)', 1))
+        rmsd = sqrt(mean((ystdprederror.^2)', 1))
+        filt = hcat(k1[:filt], k2[:filt])
+        vfilt = cat(3, k1[:vfilt], k2[:vfilt])
         z0   = k1[:z0]
         vz0  = k1[:vz0]
 

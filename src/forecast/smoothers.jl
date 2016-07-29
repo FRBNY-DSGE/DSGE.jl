@@ -460,46 +460,17 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
 
         # Note that we pass in `zeros(size(D))` instead of `D` because the
         # measurement equation for `YY_star` has no constant term
-        R2, R3, R1 = kalman_filter_2part(m, YY_star', T, R, C, A0, P0;
-            DD = zeros(size(D)), allout = true, augment_states = true)
+        k, R1, R2, R3 = kalman_filter_2part(m, YY_star', T, R, C, A0, P0;
+            DD = zeros(size(D)), allout = true, include_presample = true)
         
-        # unpack the results to pass to kalman_smoother
-
-        T = R3[:TTT]
-        R = R3[:RRR]
-        C = R3[:CCC]
-
-        # get expanded versions of A0 and P0
-        before_shocks    = 1:(n_states(m)-n_ant_shocks)
-        after_shocks_old = (n_states(m)-n_ant_shocks+1):(n_states_augmented(m)-n_ant_shocks)
-        after_shocks_new = (n_states(m)+1):n_states_augmented(m)
-
-        A0_small        = R1[:A0]
-        A0              = zeros(Nz)
-        A0[before_shocks]    = A0_small[before_shocks] 
-        A0[after_shocks_new] = A0_small[after_shocks_old]
-
-        P0_small        = R1[:P0]
-        P0              = zeros(Nz, Nz)
-        P0[before_shocks,    before_shocks]    = P0_small[before_shocks,    before_shocks]
-        P0[before_shocks,    after_shocks_new] = P0_small[before_shocks,    after_shocks_old]
-        P0[after_shocks_new, before_shocks]    = P0_small[after_shocks_old, before_shocks]
-        P0[after_shocks_new, after_shocks_new] = P0_small[after_shocks_old, after_shocks_old]
-
-        # concatenate all (presample, main sample, ZLB) periods together
-        pred            = hcat(R1[:pred], R2[:pred], R3[:pred])
-        vpred           = cat(3, R1[:vpred], R2[:vpred], R3[:vpred])
-
-        A0, P0, pred, vpred, T, R, C, Q, Z, D
-        
+        k[:z0], k[:vz0], k[:pred], k[:vpred], R3[:TTT], R3[:RRR], R3[:CCC], Q, Z, D
     else
+        VVall = zeros(Ny+Nz,Ny+Nz)
+        VVall[1:Nz,1:Nz] = R*Q*R'
         
-        myvar = zeros(Ny+Nz,Ny+Nz)
-        myvar[1:Nz,1:Nz] = R*Q*R'
-        kal = kalman_filter(YY_star', 0, C, T, D, Z, myvar, A0, P0, allout=true)
+        k = kalman_filter(YY_star', 0, C, T, D, Z, VVall, A0, P0, allout=true)
 
-        A0, P0, kal[:pred], kal[:vpred], T, R, C, Q, Z, D
-        
+        A0, P0, k[:pred], k[:vpred], T, R, C, Q, Z, D
     end
 
     ##### Step 2: Kalman smooth over everything

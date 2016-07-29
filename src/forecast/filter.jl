@@ -86,24 +86,16 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System
 
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at index_zlb_start)
-        R2, R3, R1 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0,
-            lead = lead, Ny0 = Ny0, allout = allout, augment_states = true)
-                
-        filtered_states = hcat(R2[:filt], R3[:filt])
-        pred            = hcat(R2[:pred], R3[:pred])
-        vpred           = cat(3, R2[:vpred], R3[:vpred])
-        zend            = R3[:zend]    # final state vector is in R3
-        A0              = R2[:z0]      # initial state vector is the final state vector from R1
-        P0              = R2[:vz0]
+        k, R1, R2, R3 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0,
+            lead = lead, Ny0 = Ny0, allout = allout, include_presample = false)
    
-        return filtered_states', pred, vpred, zend, Pend
-        
+        return k[:filt]', k[:pred], k[:vpred], k[:zend], k[:Pend]
     else
         # regular Kalman filter with no regime-switching
-        kal = kalman_filter(data', lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0;
+        k = kalman_filter(data', lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0;
             allout = allout)
 
-        return kal[:filt]', kal[:pred], kal[:vpred], kal[:zend], kal[:Pend]
+        return k[:filt]', k[:pred], k[:vpred], k[:zend], k[:Pend]
     end
 end
 
@@ -134,28 +126,20 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
     VVall  = sys[:VVall]
 
     # Call the appropriate version of the Kalman filter
-    filtered_states, pred, vpred, zend, A0, P0 = if n_anticipated_shocks(m) > 0
+    pred, vpred = if n_anticipated_shocks(m) > 0
 
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at index_zlb_start)
-        R2, R3, R1 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0, lead =
-            lead, Ny0 = Ny0, allout = allout, augment_states = true)
+        k, R1, R2, R3 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0, lead =
+            lead, Ny0 = Ny0, allout = allout, include_presample = true)
 
-        filtered_states = hcat(R2[:filt], R3[:filt])
-        pred            = hcat(R2[:pred], R3[:pred])
-        vpred           = cat(3, R2[:vpred], R3[:vpred])
-        zend            = R3[:zend]    # final state vector is in R3
-        Pend              = R2[:Pend]      # initial Pend is in R2
-        A0              = R2[:z0]      # initial state vector is the final state vector from R1
-        P0              = R2[:vz0]
-        
-        filtered_states', pred, vpred, zend, Pend
+        k[:pred], k[:vpred]
     else
         # regular Kalman filter with no regime-switching
-        kal = kalman_filter(data', lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0,
-            allout=allout)
+        k = kalman_filter(data', lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0,
+            allout = allout)
 
-        kal[:filt]', kal[:pred], kal[:vpred], kal[:zend], kal[:Pend]
+        k[:pred], k[:vpred]
     end
 
     ## 2. Smooth

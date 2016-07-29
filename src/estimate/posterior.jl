@@ -128,9 +128,12 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     end
 
     # Return total log-likelihood, excluding the presample
-    R2, R3 = kalman_filter_2part(m, data, allout=false)
-    like = R2[:like][1] + R3[:like][1]  # these are matrices with 1 element that we need to extract
-    
+    k, R1, R2, R3 = kalman_filter_2part(m, data; allout = false, include_presample = false)
+    like = k[:L]
+
+    # Add zend to the R3 dict so it can be accessed from within Metropolis-Hastings
+    R3[:zend] = k[:zend]
+
     if mh
         return like, R3
     else
@@ -146,7 +149,7 @@ immutable Posterior{T<:AbstractFloat}
 end
 function Posterior{T<:AbstractFloat}(post::T = -Inf,
                                      like::T = -Inf,
-                                     mats::Dict{Symbol,Array{T}}    = Dict{Symbol,Array{T}}())
+                                     mats::Dict{Symbol,Array{T}} = Dict{Symbol,Array{T}}())
     return Posterior{T}(post, like, mats)
 end
 function Base.getindex(P::Posterior, d::Symbol)
