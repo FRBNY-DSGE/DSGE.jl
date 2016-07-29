@@ -137,6 +137,7 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     ah_t = A0 + P0*r[:, 1]
     alpha_hat[:, 1] = ah_t
 
+    shock_inds = inds_shocks_no_ant(m)
     for t = 2:Nt
 
         # This section relates to the zero bound framework, in which no
@@ -149,8 +150,7 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         if n_ant_shocks > 0
             if t < t_zlb_start
                 Q_t = zeros(Ne, Ne)
-                Q_t[1:(Ne-n_ant_shocks), 1:(Ne-n_ant_shocks)] =
-                    Q[1:(Ne-n_ant_shocks), 1:(Ne-n_ant_shocks)]
+                Q_t[shock_inds, shock_inds] = Q[shock_inds, shock_inds]
                 ah_t = T*ah_t + R*Q_t*R'*r[:, t]
             else
                 ah_t = T*ah_t + R*Q*R'*r[:, t]
@@ -162,8 +162,9 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         alpha_hat[:, t] = ah_t
     end
 
-    alpha_hat = alpha_hat[:, index_prezlb_start(m):end]
-    eta_hat   = eta_hat[:,   index_prezlb_start(m):end]
+    period_inds = [inds_prezlb_periods(m); inds_zlb_periods(m)]
+    alpha_hat = alpha_hat[:, period_inds]
+    eta_hat   = eta_hat[:,   period_inds]
     
     return alpha_hat, eta_hat
 end
@@ -269,11 +270,11 @@ function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
         # columns of the Q matrix to zero. In other periods, or in
         # specifications with zero bound off (and hence with
         # n_ant_shocks = 0), the normal Q matrix can be used.
+        shock_inds = inds_shocks_no_ant(m)
         if n_ant_shocks > 0
             if t < t_zlb_start
                 Q_t = zeros(Ne, Ne)
-                Q_t[1:Ne-n_ant_shocks, 1:Ne-n_ant_shocks] =
-                    Q[1:Ne-n_ant_shocks, 1:Ne-n_ant_shocks]
+                Q_t[shock_inds, shock_inds] = Q[shock_inds, shock_inds]
                 eta_hat[:, t] = Q_t * R' * r_t
             else
                 eta_hat[:, t] = Q * R' * r_t
@@ -436,9 +437,10 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
         ant1_ind = m.exogenous_shocks[:rm_shl1]
         antn_ind = m.exogenous_shocks[symbol("rm_shl$(n_ant_shocks)")]
         shock_inds = ant1_ind:antn_ind
+        period_inds = [inds_presample_periods(m); inds_prezlb_periods(m)]
 
         # set shocks to 0
-        η_all_plus[shock_inds, 1:t_zlb_start-1] = 0
+        η_all_plus[shock_inds, period_inds] = 0
     end
     
     # Produce "fake" states and observables (a+ and y+) by

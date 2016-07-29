@@ -10,6 +10,7 @@ post_expected = read(h5, "obj")
 close(h5)
 
 m = Model990()
+m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 
 lh, _ = likelihood(m, data)
 @test_approx_eq lh_expected lh

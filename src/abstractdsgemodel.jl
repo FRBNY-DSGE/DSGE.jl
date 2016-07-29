@@ -132,10 +132,15 @@ date_zlb_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_for
 index_presample_start(m::AbstractModel) = 1
 index_prezlb_start(m::AbstractModel) = subtract_quarters(date_prezlb_start(m), date_presample_start(m)) + 1
 index_zlb_start(m::AbstractModel) = subtract_quarters(date_zlb_start(m), date_presample_start(m)) + 1
+index_forecast_start(m::AbstractModel) = subtract_quarters(date_forecast_start(m), date_presample_start(m)) + 1
 
 n_presample_periods(m::AbstractModel) = subtract_quarters(date_prezlb_start(m), date_presample_start(m))
 n_prezlb_periods(m::AbstractModel) = subtract_quarters(date_zlb_start(m), date_prezlb_start(m))
 n_zlb_periods(m::AbstractModel) = subtract_quarters(date_forecast_start(m), date_zlb_start(m))
+
+inds_presample_periods(m::AbstractModel) = collect(index_presample_start(m):(index_prezlb_start(m)-1))
+inds_prezlb_periods(m::AbstractModel) = collect(index_prezlb_start(m):(index_zlb_start(m)-1))
+inds_zlb_periods(m::AbstractModel) = collect(index_zlb_start(m):(index_forecast_start(m)-1))
 
 # Number of a few things that are useful
 n_states(m::AbstractModel)                 = length(m.endogenous_states)

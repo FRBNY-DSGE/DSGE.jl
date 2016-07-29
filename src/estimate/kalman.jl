@@ -296,9 +296,13 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     nstates         = n_states(m)
     regime_states   = [n_states_no_ant, n_states_no_ant, n_states_aug]
 
-    R1[:data] = data[1:(index_prezlb_start(m)-1),                  1:n_obs_no_ant]
-    R2[:data] = data[index_prezlb_start(m):(index_zlb_start(m)-1), 1:n_obs_no_ant]
-    R3[:data] = data[index_zlb_start(m):end,                       :]
+    state_inds = inds_states_no_ant(m)
+    shock_inds = inds_shocks_no_ant(m)
+    obs_inds   = inds_obs_no_ant(m)
+
+    R1[:data] = data[inds_presample_periods(m), obs_inds]
+    R2[:data] = data[inds_prezlb_periods(m),    obs_inds]
+    R3[:data] = data[inds_zlb_periods(m),       :]
 
     # Step 1: Compute the transition equation:
     #   S_t = CCC + TTT*S_{t-1} + RRR*ε_t
@@ -323,10 +327,6 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
 
     
     # Get normal, no ZLB matrices
-    state_inds = inds_states_no_ant(m)
-    shock_inds = inds_shocks_no_ant(m)
-    obs_inds   = inds_obs_no_ant(m)
-
     R2[:TTT] = R3[:TTT][state_inds, state_inds]
     R2[:RRR] = R3[:RRR][state_inds, shock_inds]
     R2[:CCC] = R3[:CCC][state_inds]
