@@ -148,6 +148,38 @@ n_parameters(m::AbstractModel)             = length(m.parameters)
 n_parameters_steady_state(m::AbstractModel)= length(m.steady_state)
 n_parameters_free(m::AbstractModel)        = sum([!α.fixed for α in m.parameters])
 
+# From an augmented state space with anticipated policy shocks, get indices
+# corresponding to pre-ZLB states, shocks, and observables
+function inds_states_no_ant(m::AbstractModel)
+    if n_anticipated_shocks(m) > 0
+        ind_ant1 = m.endogenous_states[:rm_tl1]
+        ind_antn = m.endogenous_states[symbol("rm_tl$(n_anticipated_shocks(m))")]
+        return [1:(ind_ant1-1); (ind_antn+1):n_states_augmented(m)]
+    else
+        return collect(1:n_states_augmented(m))
+    end
+end
+
+function inds_shocks_no_ant(m::AbstractModel)
+    if n_anticipated_shocks(m) > 0
+        ind_ant1 = m.exogenous_shocks[:rm_shl1]
+        ind_antn = m.exogenous_shocks[symbol("rm_shl$(n_anticipated_shocks(m))")]
+        return [1:(ind_ant1-1); (ind_antn+1):n_shocks_exogenous(m)]
+    else
+        return collect(1:n_shocks_exogenous(m))
+    end
+end
+
+function inds_obs_no_ant(m::AbstractModel)
+    if n_anticipated_shocks(m) > 0
+        ind_ant1 = m.observables[:obs_nominalrate1]
+        ind_antn = m.observables[symbol("obs_nominalrate$(n_anticipated_shocks(m))")]
+        return [1:(ind_ant1-1); (ind_antn+1):n_observables(m)]
+    else
+        return collect(1:n_observables(m))
+    end
+end
+
 # Interface for I/O settings
 spec(m::AbstractModel)         = m.spec
 subspec(m::AbstractModel)      = m.subspec

@@ -294,9 +294,9 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     nstates         = n_states(m)
     regime_states   = [n_states_no_ant, n_states_no_ant, n_states_aug]
 
-    R1[:data] = data[1:(index_prezlb_start(m)-1),                   1:n_obs_no_ant]
+    R1[:data] = data[1:(index_prezlb_start(m)-1),                  1:n_obs_no_ant]
     R2[:data] = data[index_prezlb_start(m):(index_zlb_start(m)-1), 1:n_obs_no_ant]
-    R3[:data] = data[index_zlb_start(m):end,                        :]
+    R3[:data] = data[index_zlb_start(m):end,                       :]
 
     # Step 1: solution to DSGE model - delivers transition equation for the state variables
     # transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ
@@ -319,9 +319,9 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
 
     
     # Get normal, no ZLB matrices
-    state_inds = [1:(nstates-n_ant); (nstates+1):n_states_aug]
-    shock_inds = 1:(n_exo-n_ant)
-    obs_inds   = 1:(n_obs-n_ant)
+    state_inds = inds_states_no_ant(m)
+    shock_inds = inds_shocks_no_ant(m)
+    obs_inds   = inds_obs_no_ant(m)
 
     R2[:TTT] = R3[:TTT][state_inds, state_inds]
     R2[:RRR] = R3[:RRR][state_inds, shock_inds]
@@ -393,19 +393,12 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     # state space without anticipated policy shocks, then shoves in nant
     # zeros in the middle of zend and Pend in the location of
     # the anticipated shock entries.
-    before_shocks    = 1:(nstates-n_ant)
-    after_shocks_old = (nstates-n_ant+1):(n_states_aug-n_ant)
-    after_shocks_new = (nstates+1):n_states_aug
 
-    zprev = [R2[:zend][before_shocks];
-             zeros(S, n_ant);
-             R2[:zend][after_shocks_old]]
+    zprev = zeros(S, n_states_aug)
+    Pprev = zeros(S, n_states_aug, n_states_aug)
 
-    Pprev                                     = zeros(S, n_states_aug, n_states_aug)
-    Pprev[before_shocks, before_shocks]       = R2[:Pend][before_shocks, before_shocks]
-    Pprev[before_shocks, after_shocks_new]    = R2[:Pend][before_shocks, after_shocks_old]
-    Pprev[after_shocks_new, before_shocks]    = R2[:Pend][after_shocks_old, before_shocks]
-    Pprev[after_shocks_new, after_shocks_new] = R2[:Pend][after_shocks_old, after_shocks_old]
+    zprev[state_inds] = R2[:zend]
+    Pprev[state_inds, state_inds] = R2[:Pend]
 
     out             = kalman_filter(R3[:data]', 1, zeros(regime_states[3]), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev, allout=allout)
 
@@ -420,38 +413,25 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     # `pred`, and `vpred` matrices before returning
     if augment_states
         R1_filt_small  = R1[:filt]
-        R1[:filt]      = zeros(n_states_aug, n_T0)
-        R1[:filt][before_shocks,    :] = R1_filt_small[before_shocks,    :]
-        R1[:filt][after_shocks_new, :] = R1_filt_small[after_shocks_old, :]
-        
         R1_pred_small  = R1[:pred]
-        R1[:pred]      = zeros(n_states_aug, n_T0)
-        R1[:pred][before_shocks,    :] = R1_pred_small[before_shocks,    :]
-        R1[:pred][after_shocks_new, :] = R1_pred_small[after_shocks_old, :]
-
         R1_vpred_small = R1[:vpred]
-        R1[:vpred]     = zeros(n_states_aug, n_states_aug, n_T0)
-        R1[:vpred][before_shocks,    before_shocks,    :] = R1_vpred_small[before_shocks,    before_shocks,    :]
-        R1[:vpred][before_shocks,    after_shocks_new, :] = R1_vpred_small[before_shocks,    after_shocks_old, :]
-        R1[:vpred][after_shocks_new, before_shocks,    :] = R1_vpred_small[after_shocks_old, before_shocks,    :]
-        R1[:vpred][after_shocks_new, after_shocks_new, :] = R1_vpred_small[after_shocks_old, after_shocks_old, :]
-
         R2_filt_small  = R2[:filt]
-        R2[:filt]      = zeros(n_states_aug, n_prezlb_periods(m))
-        R2[:filt][before_shocks,    :] = R2_filt_small[before_shocks,    :]
-        R2[:filt][after_shocks_new, :] = R2_filt_small[after_shocks_old, :]
-        
         R2_pred_small  = R2[:pred]
-        R2[:pred]      = zeros(n_states_aug, n_prezlb_periods(m))
-        R2[:pred][before_shocks,    :] = R2_pred_small[before_shocks,    :]
-        R2[:pred][after_shocks_new, :] = R2_pred_small[after_shocks_old, :]
-
         R2_vpred_small = R2[:vpred]
+
+        R1[:filt]      = zeros(n_states_aug, n_T0)
+        R1[:pred]      = zeros(n_states_aug, n_T0)
+        R1[:vpred]     = zeros(n_states_aug, n_states_aug, n_T0)
+        R2[:filt]      = zeros(n_states_aug, n_prezlb_periods(m))
+        R2[:pred]      = zeros(n_states_aug, n_prezlb_periods(m))
         R2[:vpred]     = zeros(n_states_aug, n_states_aug, n_prezlb_periods(m))
-        R2[:vpred][before_shocks,    before_shocks,    :] = R2_vpred_small[before_shocks,    before_shocks,    :]
-        R2[:vpred][before_shocks,    after_shocks_new, :] = R2_vpred_small[before_shocks,    after_shocks_old, :]
-        R2[:vpred][after_shocks_new, before_shocks,    :] = R2_vpred_small[after_shocks_old, before_shocks,    :]
-        R2[:vpred][after_shocks_new, after_shocks_new, :] = R2_vpred_small[after_shocks_old, after_shocks_old, :]
+
+        R1[:filt][state_inds, :] = R1_filt_small
+        R1[:pred][state_inds, :] = R1_pred_small
+        R1[:vpred][state_inds, state_inds, :] = R1_vpred_small
+        R2[:filt][state_inds, :] = R2_filt_small
+        R2[:pred][state_inds, :] = R2_pred_small
+        R2[:vpred][state_inds, state_inds, :] = R2_vpred_small
 end
 
     ## Return outputs from both regimes
@@ -489,31 +469,33 @@ immutable Kalman{S<:AbstractFloat}
     zend::Vector{S}       # last-period state vector
     Pend::Matrix{S}       # last-period variance-covariance matrix for the states
     pred::Matrix{S}       # predicted value of states in period T+1
-    vpred::Array{S,3}     # predicted variance-covariance matrix for states in period T+1
+    vpred::Array{S, 3}    # predicted variance-covariance matrix for states in period T+1
     yprederror::Matrix{S} 
     ystdprederror::Matrix{S}
     rmse::Matrix{S}
     rmsd::Matrix{S}        # 
     filt::Matrix{S}        # filtered states
-    vfilt::Array{S,3}      # mean square errors of filtered state vectors
-    z0::Vector{S}           # starting-period state vector
+    vfilt::Array{S, 3}     # mean square errors of filtered state vectors
+    z0::Vector{S}          # starting-period state vector
     vz0::Matrix{S}         # starting-period variance-covariance matrix for the states
 end
+
 function Kalman{S<:AbstractFloat}(L::S,
                                   zend::Vector{S},
                                   Pend::Matrix{S},
-                                  pred::Matrix{S}          = Matrix{S}(),
-                                  vpred::Array{S,3}        = Array{S}(0,0,0),
-                                  yprederror::Matrix{S}    = Matrix{S}(),
-                                  ystdprederror::Matrix{S} = Matrix{S}(),
-                                  rmse::Matrix{S}          = Matrix{S}(),
-                                  rmsd::Matrix{S}          = Matrix{S}(),
-                                  filt::Matrix{S}          = Matrix{S}(),
-                                  vfilt::Array{S,3}        = Array{S}(0,0,0),
+                                  pred::Matrix{S}          = Matrix{S}(0, 0),
+                                  vpred::Array{S, 3}       = Array{S}(0, 0, 0),
+                                  yprederror::Matrix{S}    = Matrix{S}(0, 0),
+                                  ystdprederror::Matrix{S} = Matrix{S}(0, 0),
+                                  rmse::Matrix{S}          = Matrix{S}(0, 0),
+                                  rmsd::Matrix{S}          = Matrix{S}(0, 0),
+                                  filt::Matrix{S}          = Matrix{S}(0, 0),
+                                  vfilt::Array{S, 3}       = Array{S}(0, 0, 0),
                                   z0::Vector{S}            = Vector{S}(0),
-                                  vz0::Matrix{S}           = Array{S}(0,0))
-    return Kalman{S}(L,zend,Pend,pred,vpred,yprederror,ystdprederror,rmse,rmsd,filt,vfilt,z0,vz0)
+                                  vz0::Matrix{S}           = Matrix{S}(0, 0))
+    return Kalman{S}(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, vz0)
 end
+
 function Base.getindex(K::Kalman, d::Symbol)
     if d in (:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse, :rmsd,
              :filt, :vfilt, :z0, :vz0)
