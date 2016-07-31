@@ -462,7 +462,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
 
         # Note that we pass in `zeros(size(D))` instead of `D` because the
         # measurement equation for `YY_star` has no constant term
-        k, R1, R2, R3 = kalman_filter_2part(m, YY_star', T, R, C, A0, P0;
+        k, _, _, R3 = kalman_filter_2part(m, YY_star', T, R, C, A0, P0;
             DD = zeros(size(D)), allout = true, include_presample = true)
         
         k[:z0], k[:vz0], k[:pred], k[:vpred], R3[:TTT], R3[:RRR], R3[:CCC]

@@ -80,7 +80,8 @@ QQ, ZZ, DD = meas.QQ, meas.ZZ, meas.DD
 A0 = zeros(size(TTT, 1))
 P0 = QuantEcon.solve_discrete_lyapunov(TTT, RRR*QQ*RRR')
 
-k, R1, R2, R3 = kalman_filter_2part(m, data', TTT, RRR, CCC, A0, P0; allout = true, include_presample = true)
+k, _, _, _ = kalman_filter_2part(m, data', TTT, RRR, CCC, A0, P0; allout = true,
+    include_presample = true)
 h5 = h5open("$path/../reference/kalman_filter_2part_out.h5", "r")
 for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
             :rmsd, :filt, :vfilt, :z0, :vz0]

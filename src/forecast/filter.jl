@@ -86,7 +86,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System
 
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at index_zlb_start)
-        k, R1, R2, R3 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0;
+        k, _, _, _ = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0;
             lead = lead, allout = allout, include_presample = false)
    
         return k[:filt]', k[:pred], k[:vpred], k[:zend], k[:Pend]
@@ -130,7 +130,7 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
 
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at index_zlb_start)
-        k, R1, R2, R3 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0; lead =
+        k, _, _, _ = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0; lead =
             lead, allout = allout, include_presample = true)
 
         k[:pred], k[:vpred]
