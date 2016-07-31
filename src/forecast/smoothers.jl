@@ -63,8 +63,8 @@ Where:
 - `alpha_hat`: the (`Nz` x `Nt`) matrix of smoothed states
 - `eta_hat`: the (`Ne` x `Nt`) matrix of smoothed shocks
 
-If `n_presample_periods(m)` is nonzero, the `α_hat` and `η_hat` matrices will be shorter by
-that number of columns (taken from the beginning).
+If `n_presample_periods(m)` is nonzero, the `α_hat` and `η_hat` matrices will be
+shorter by that number of columns (taken from the beginning).
 
 ### Notes
 
@@ -125,7 +125,8 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     
     # Check data is well-formed wrt model settings
     @assert Ny == n_observables(m)
-    @assert Nt == n_presample_periods(m) + n_prezlb_periods(m) + n_zlb_periods(m) + n_conditional_periods
+    @assert Nt == n_presample_periods(m) + n_prezlb_periods(m) +
+        n_zlb_periods(m) + n_conditional_periods
 
     # Anticipated monetary policy shocks
     n_ant_shocks = n_anticipated_shocks(m)
@@ -141,11 +142,11 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     for t = 2:Nt
 
         # This section relates to the zero bound framework, in which no
-        # anticipated shocks are supposed to occur before the model switch.
-        # In these periods, this is accomplished by setting the relevant
-        # rows and columns of the Q matrix to zero. In other periods, or in
-        # specifications with zero bound off (and hence with n_anticipated_shocks = 0), the
-        # normal Q matrix can be used.
+        # anticipated shocks are supposed to occur before the model switch.  In
+        # these periods, this is accomplished by setting the relevant rows and
+        # columns of the Q matrix to zero. In other periods, or in
+        # specifications with zero bound off (and hence with
+        # n_anticipated_shocks(m) = 0), the normal Q matrix can be used.
 
         if n_ant_shocks > 0
             if t < t_zlb_start
@@ -203,8 +204,10 @@ the anticipated shocks to zero in those periods.
 - `Q`: the (`Ne` x `Ne`) covariance matrix for the shocks
 - `Z`: the (`Ny` x `Nz`) measurement matrix
 - `D`: the (`Ny` x 1) constant vector in the measurement equation
-- `pred`: the (`Nz` x `Nt`) matrix of one-step-ahead predicted states (from the Kalman Filter)
-- `vpred`: the (`Nz` x `Nz` x `Nt`) matrix of one-step-ahead predicted covariance matrices
+- `pred`: the (`Nz` x `Nt`) matrix of one-step-ahead predicted states (from the
+  Kalman Filter)
+- `vpred`: the (`Nz` x `Nz` x `Nt`) matrix of one-step-ahead predicted
+  covariance matrices
 
 Where:
 
@@ -269,7 +272,7 @@ function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
         # these periods, this is accomplished by setting the relevant rows and
         # columns of the Q matrix to zero. In other periods, or in
         # specifications with zero bound off (and hence with
-        # n_ant_shocks = 0), the normal Q matrix can be used.
+        # n_anticipated_shocks(m) = 0), the normal Q matrix can be used.
         shock_inds = inds_shocks_no_ant(m)
         if n_ant_shocks > 0
             if t < t_zlb_start
@@ -289,19 +292,23 @@ end
 
 """
 ```
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    sys::System, A0::Vector{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
+function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
+    df::DataFrame, sys::System, A0::Vector{S}, P0::Matrix{S};
+    n_conditional_periods::Int = 0)
 
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data:Matrix{S},
-    sys::System, A0::Vector{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
+function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
+    data:Matrix{S}, sys::System, A0::Vector{S}, P0::Matrix{S};
+    n_conditional_periods::Int = 0)
 
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
+function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
+    df::DataFrame, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
+    Z::Matrix{S}, D::Matrix{S}, A0::Array{S}, P0::Matrix{S};
+    n_conditional_periods::Int = 0)
 
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Matrix{S}, A0::Array{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
+function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
+    data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
+    Z::Matrix{S}, D::Matrix{S}, A0::Array{S}, P0::Matrix{S};
+    n_conditional_periods::Int = 0)
 ```
 This program is a simulation smoother based on Durbin and Koopman's
 \"A Simple and Efficient Simulation Smoother for State Space Time Series
@@ -349,8 +356,8 @@ Where:
 - `alpha_hat`: the (`Nz` x `Nt`) matrix of smoothed states.
 - `eta_hat`: the (`Ne` x `Nt`) matrix of smoothed shocks.
 
-If `n_presample_periods(m)` is nonzero, the `α_hat` and `η_hat` matrices will be shorter by
-that number of columns (taken from the beginning).
+If `n_presample_periods(m)` is nonzero, the `α_hat` and `η_hat` matrices will be
+shorter by that number of columns (taken from the beginning).
 
 ### Notes
 
@@ -360,20 +367,8 @@ y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    sys::System, A0::Vector{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
-
-    # extract system matrices
-    T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
-    Q, Z, D  = sys[:QQ], sys[:ZZ], sys[:DD]
-    
-    # call actual Durbin-Koopman smoother
-    durbin_koopman_smoother(m, df, T, R, C, Q, Z, D, A0, P0; n_conditional_periods =
-        n_conditional_periods)
-end
-
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
+    df::DataFrame, sys::System, A0::Vector{S}, P0::Matrix{S};
     n_conditional_periods::Int = 0)
 
     # extract system matrices
@@ -381,25 +376,40 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     Q, Z, D  = sys[:QQ], sys[:ZZ], sys[:DD]
     
     # call actual Durbin-Koopman smoother
-    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0; n_conditional_periods =
-        n_conditional_periods)
+    durbin_koopman_smoother(m, df, T, R, C, Q, Z, D, A0, P0;
+        n_conditional_periods = n_conditional_periods)
 end
 
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Vector{S}, A0::Vector{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
+function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
+    data::Matrix{S}, sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S},
+    vpred::Array{S, 3}; n_conditional_periods::Int = 0)
+
+    # extract system matrices
+    T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
+    Q, Z, D  = sys[:QQ], sys[:ZZ], sys[:DD]
+    
+    # call actual Durbin-Koopman smoother
+    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0;
+        n_conditional_periods = n_conditional_periods)
+end
+
+function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
+    df::DataFrame, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
+    Z::Matrix{S}, D::Vector{S}, A0::Vector{S}, P0::Matrix{S};
+    n_conditional_periods::Int = 0)
 
     # convert DataFrame to Matrix
     data = df_to_matrix(df)'
     
     # call actual simulation smoother
-    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0; n_conditional_periods =
-        n_conditional_periods)
+    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0;
+        n_conditional_periods = n_conditional_periods)
 end
 
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Vector{S}, A0::Array{S}, P0::Matrix{S}; n_conditional_periods::Int = 0)
+function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
+    data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
+    Z::Matrix{S}, D::Vector{S}, A0::Array{S}, P0::Matrix{S};
+    n_conditional_periods::Int = 0)
 
     # Get matrix dimensions
     Ny = size(data, 1)
@@ -409,7 +419,8 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     
     # Check data is well-formed wrt model settings
     @assert Ny == n_observables(m)
-    @assert Nt == n_presample_periods(m) + n_prezlb_periods(m) + n_zlb_periods(m) + n_conditional_periods
+    @assert Nt == n_presample_periods(m) + n_prezlb_periods(m) +
+        n_zlb_periods(m) + n_conditional_periods
 
     # Anticipated monetary policy shocks
     n_ant_shocks = n_anticipated_shocks(m)
@@ -433,7 +444,8 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matri
     
     # Set n_ant_shocks shocks to 0 in pre-ZLB time periods
     if n_ant_shocks > 0
-        # get the indices of the anticipated shocks in the m.exogenous_shocks field
+        # get the indices of the anticipated shocks in the m.exogenous_shocks
+        # field
         ant1_ind = m.exogenous_shocks[:rm_shl1]
         antn_ind = m.exogenous_shocks[symbol("rm_shl$(n_ant_shocks)")]
         shock_inds = ant1_ind:antn_ind

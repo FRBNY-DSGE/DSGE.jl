@@ -20,13 +20,15 @@ QQ, ZZ, DD = meas.QQ, meas.ZZ, meas.DD
 
 A0 = zeros(size(TTT, 1))
 P0 = QuantEcon.solve_discrete_lyapunov(TTT, RRR*QQ*RRR')
-k, _, _, _ = kalman_filter_2part(m, data', TTT, RRR, CCC, A0, P0; allout = true, include_presample = true)
+k, _, _, _ = kalman_filter_2part(m, data', TTT, RRR, CCC, A0, P0; allout = true,
+    include_presample = true)
 pred  = k[:pred]
 vpred = k[:vpred]
 
 
 # Kalman filter test
-alpha_hat, eta_hat = kalman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, A0, P0, pred, vpred)
+alpha_hat, eta_hat = kalman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, A0, P0,
+    pred, vpred)
 
 exp_alpha_hat, exp_eta_hat =
     h5open("$path/../reference/kalman_smoother_out.h5", "r") do h5
@@ -38,7 +40,8 @@ end
 
 
 # Durbin Koopman smoother test
-alpha_hat, eta_hat = durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, A0, P0)
+alpha_hat, eta_hat = durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD,
+    A0, P0)
 
 exp_alpha_hat, exp_eta_hat =
     h5open("$path/../reference/durbin_koopman_smoother_out.h5", "r") do h5

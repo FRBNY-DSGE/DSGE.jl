@@ -52,7 +52,8 @@ for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
     if out == :L
         @test_approx_eq_eps expect actual 1e-4
     elseif out ∈ [:Pend, :vpred, :vfilt]
-        # These matrix entries are especially large, averaging 1e5, so we allow greater ϵ
+        # These matrix entries are especially large, averaging 1e5, so we allow
+        # greater ϵ
         @test_matrix_approx_eq_eps expect actual 1e-1 1e-2
     else
         @test_matrix_approx_eq expect actual
