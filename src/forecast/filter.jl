@@ -1,21 +1,21 @@
 """
 ```
-filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::Vector{System},
+filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vector{System},
                                   z0::Vector{S} = [], vz0::Matrix{S} = [];
                                   lead::Int, Ny0::Int = 0, allout::Bool = false)
 
-filter{S<:AbstractFloat}(m::AbstractModel, data::DataFrame, sys::Vector{System},
+filter{S<:AbstractFloat}(m::AbstractModel, data::DataFrame, syses::Vector{System},
                                   z0::Vector{S} = [], vz0::Matrix{S} = [];
                                   lead::Int, Ny0::Int = 0, allout::Bool = false)
 ```
     
-Computes and returns the filtered values of states for every state-space system in `sys`.
+Computes and returns the filtered values of states for every state-space system in `syses`.
 
 ### Inputs
 
 - `m`: model object
 - `data`: DataFrame or matrix of data for observables
-- `sys::Vector{System}`: a vector of `System` objects specifying state-space
+- `syses::Vector{System}`: a vector of `System` objects specifying state-space
   system matrices for each draw
 - `z0`: an optional `Nz x 1` initial state vector
 - `vz0`: an optional `Nz x Nz` covariance matrix of an initial state vector
@@ -36,28 +36,28 @@ Computes and returns the filtered values of states for every state-space system 
   - `vfilt`: an optional `Nz` x `Nz` x `T` matrix containing mean square errors of filtered
     state vectors.
 """
-function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, sys::Vector{System{S}},
+function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, syses::Vector{System{S}},
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                   lead::Int = 0, Ny0::Int = 0, allout::Bool = false)
     
     # Convert the DataFrame to a data matrix without altering the original dataframe  
     data  = df_to_matrix(m,df) 
-    filter(m, data, sys, z0, vz0, lead=lead, Ny0 =Ny0, allout=allout)
+    filter(m, data, syses, z0, vz0; lead = lead, Ny0 = Ny0, allout = allout)
 end
 
 # So that we can use map on functions with kwargs
 abstract FilterOutput
 immutable AllOut<:FilterOutput end
 immutable MinimumOut<:FilterOutput end
-tricky_filter(::AllOut, m::AbstractModel, data::Matrix, sys::System) = filter(m, data, sys, allout=true)
-tricky_filter(::MinimumOut, m::AbstractModel, data::Matrix, sys::System) = filter(m, data, sys, allout=false)
+tricky_filter(::AllOut, m::AbstractModel, data::Matrix, sys::System) = filter(m, data, sys; allout = true)
+tricky_filter(::MinimumOut, m::AbstractModel, data::Matrix, sys::System) = filter(m, data, sys; allout = false)
     
-function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::Vector{System{S}},
+function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vector{System{S}},
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                   lead::Int = 0, Ny0::Int = 0, allout::Bool = false)
 
     # numbers of useful things
-    ndraws = size(sys, 1)
+    ndraws = size(syses, 1)
 
     # Broadcast models and data matrices 
     models = fill(m, ndraws)
@@ -75,7 +75,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::Vector
     else
         mapfcn = map
     end    
-    out = mapfcn(DSGE.tricky_filter, allouts, models, datas, sys)
+    out = mapfcn(DSGE.tricky_filter, allouts, models, datas, syses)
 
     filtered_states = [Array(x[1]) for x in out]  # to make type stable
     pred            = [Array(x[2]) for x in out]  
@@ -85,8 +85,8 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::Vector
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System,
-                                  z0::Vector{S}=Vector{S}(), vz0::Matrix{S}=Matrix{S}();
-                                  lead::Int=0, Ny0::Int=0, allout::Bool=false)
+                                  z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
+                                  lead::Int = 0, Ny0::Int = 0, allout::Bool = false)
     
     # pull out the elements of sys
     TTT    = sys[:TTT]
@@ -117,18 +117,18 @@ end
 
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
                                            sys::Vector{System{S}},
-                                           z0::Vector{S}=Vector{S}(),
-                                           vz0::Matrix{S}=Matrix{S}();
-                                           lead::Int=0, Ny0::Int=0, allout::Bool=false)
+                                           z0::Vector{S} = Vector{S}(),
+                                           vz0::Matrix{S} = Matrix{S}();
+                                           lead::Int = 0, Ny0::Int = 0, allout::Bool = false)
     output = cell(size(sys)) # hack
     for (i,s) in enumerate(sys)
-        output[i] = filterandsmooth(m, df, sys, z0, vz0, lead=lead, Ny0=Ny0, allout=allout)
+        output[i] = filterandsmooth(m, df, sys, z0, vz0; lead = lead, Ny0 = Ny0, allout = allout)
     end
 end
 
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System,
-                                           z0::Vector{S}=Vector{S}(), vz0::Matrix{S}=Matrix{S}();
-                                           lead::Int=0, Ny0::Int =0, allout::Bool = false)
+                                           z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
+                                           lead::Int = 0, Ny0::Int = 0, allout::Bool = false)
 
     ## 1. Filter
 
