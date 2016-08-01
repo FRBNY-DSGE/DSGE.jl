@@ -44,7 +44,6 @@ function GammaAlt(μ::AbstractFloat, σ::AbstractFloat)
     return Distributions.Gamma(α, β)
 end
 
-
 """
 ```
 type RootInverseGamma <: Distribution{Univariate, Continuous}
@@ -122,8 +121,6 @@ Returns the dimension of d.
 """
 Base.length(d::DegenerateMvNormal) = length(d.μ)
 
-
-
 """
 ```
 Distributions.rand{T<:AbstractFloat}(d::DegenerateMvNormal; cc::T = 1.0)
@@ -133,6 +130,17 @@ Generate a draw from d with variance optionally scaled by cc^2.
 """
 function Distributions.rand{T<:AbstractFloat}(d::DegenerateMvNormal; cc::T = 1.0)
     return d.μ + cc*d.σ*randn(length(d))
+end
+
+"""
+```
+Distributions.rand{T<:AbstractFloat}(d::RootInverseGamma; cc::T = 1.0)
+```
+
+Generate a draw from d with variance optionally scaled by cc^2 (for a RootInverseGamma)
+"""
+function Distributions.rand{T<:AbstractFloat}(d::RootInverseGamma; cc::T = 1.0)
+    return sqrt(d.ν*(d.τ^2)^2/sum(randn(round(Int,d.ν)).^2))
 end
 
 """
