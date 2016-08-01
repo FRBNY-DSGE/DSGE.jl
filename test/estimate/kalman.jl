@@ -14,8 +14,8 @@ close(h5)
 lead = round(Int, lead)
 
 # Method with all arguments provided (9)
-out_3 = kalman_filter(data, lead, a, F, b, H, var, z0, vz0)
-out_9 = kalman_filter(data, lead, a, F, b, H, var, z0, vz0; allout=true)
+out_3 = kalman_filter(data, F, a, H, b, var, z0, vz0; lead = lead)
+out_9 = kalman_filter(data, F, a, H, b, var, z0, vz0; lead = lead, allout = true)
 
 h5 = h5open("$path/../reference/kalman_filter_out9.h5")
 for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
@@ -36,8 +36,8 @@ end
 close(h5)
 
 # Method with optional arguments omitted (7)
-out_3 = kalman_filter(data, lead, a, F, b, H, var)
-out_9 = kalman_filter(data, lead, a, F, b, H, var; allout=true)
+out_3 = kalman_filter(data, F, a, H, b, var; lead = lead)
+out_9 = kalman_filter(data, F, a, H, b, var; lead = lead, allout = true)
 
 h5 = h5open("$path/../reference/kalman_filter_out7.h5")
 for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,

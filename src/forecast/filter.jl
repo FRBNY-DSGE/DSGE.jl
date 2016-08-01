@@ -104,15 +104,13 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System
         # (starting at index_zlb_start)
         k, _, _, _ = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0;
             lead = lead, allout = allout, include_presample = false)
-   
-        return k[:filt]', k[:pred], k[:vpred], k[:zend], k[:Pend]
     else
         # regular Kalman filter with no regime-switching
-        k = kalman_filter(data', lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0;
-            allout = allout)
-
-        return k[:filt]', k[:pred], k[:vpred], k[:zend], k[:Pend]
+        k = kalman_filter(data', TTT, CCC, ZZ, DD, VVall, z0, vz0;
+            lead = lead, allout = allout, Ny0 = Ny0)
     end
+
+    return k[:filt]', k[:pred], k[:vpred], k[:zend], k[:Pend]
 end
 
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
@@ -148,15 +146,13 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
         # (starting at index_zlb_start)
         k, _, _, _ = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0; lead =
             lead, allout = allout, include_presample = true)
-
-        k[:pred], k[:vpred]
     else
         # regular Kalman filter with no regime-switching
-        k = kalman_filter(data', lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0,
-            allout = allout)
-
-        k[:pred], k[:vpred]
+        k = kalman_filter(data', TTT, CCC, ZZ, DD, VVall, z0, vz0;
+            lead = lead, allout = allout, Ny0 = Ny0)
     end
+
+    k[:pred], k[:vpred]
 
     ## 2. Smooth
 

@@ -66,16 +66,16 @@ applied, the initial state vector estimate is set to `a` and its covariance matr
 by `1E6I`.  Optionally, you can specify initial values.
 """
 function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
-                                      lead::Int64,
-                                      CCC::Vector{S},
                                       TTT::Matrix{S},
-                                      DD::Vector{S},
+                                      CCC::Vector{S},
                                       ZZ::Matrix{S},
+                                      DD::Vector{S},
                                       VVall::Matrix{S},
                                       z0::Vector{S},
-                                      vz0::Matrix{S},
-                                      Ny0::Int = 0;
-                                      allout::Bool = false)
+                                      vz0::Matrix{S};
+                                      lead::Int = 0,
+                                      allout::Bool = false,
+                                      Ny0::Int = 0)
     T = size(data, 2)
     Nz = length(CCC)
     Ny = length(DD)
@@ -198,14 +198,14 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
 end
 
 function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
-                                      lead::Int64,
-                                      a::Vector{S},
                                       F::Matrix{S},
-                                      b::Vector{S},
+                                      a::Vector{S},
                                       H::Matrix{S},
-                                      var::Matrix{S},
-                                      Ny0::Int = 0;
-                                      allout::Bool = false)
+                                      b::Vector{S},
+                                      var::Matrix{S};
+                                      lead::Int = 0,
+                                      allout::Bool = false,
+                                      Ny0::Int = 0)
     Nz = length(a)
     V = var[1:Nz, 1:Nz]
 
@@ -218,7 +218,7 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
         vz0 = eye(Nz)*1e6
     end
 
-    return kalman_filter(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=allout)
+    return kalman_filter(data, F, a, H, b, var, z0, vz0; lead = lead, allout = allout, Ny0 = Ny0)
 end
 
 """
@@ -376,20 +376,20 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
         z0[state_inds]
     end
     R1[:P0] = solve_discrete_lyapunov(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
-    k1 = kalman_filter(R1[:data]', 1, zeros(S, regime_states[1]), R1[:TTT],
-        R1[:DD], R1[:ZZ], R1[:VVall], R1[:A0], R1[:P0], allout = allout)
+    k1 = kalman_filter(R1[:data]', R1[:TTT], zeros(S, regime_states[1]),
+        R1[:ZZ], R1[:DD], R1[:VVall], R1[:A0], R1[:P0]; lead = 1, allout = allout)
 
     # Run Kalman filter on normal period
-    k2 = kalman_filter(R2[:data]', 1, zeros(regime_states[2]), R2[:TTT],
-        R2[:DD], R2[:ZZ], R2[:VVall], k1[:zend], k1[:Pend], allout = allout)
+    k2 = kalman_filter(R2[:data]', R2[:TTT], zeros(regime_states[2]),
+        R2[:ZZ], R2[:DD], R2[:VVall], k1[:zend], k1[:Pend]; lead = 1, allout = allout)
 
     # Run Kalman filter on ZLB period
     zprev = zeros(S, n_states_aug)
     Pprev = zeros(S, n_states_aug, n_states_aug)
     zprev[state_inds] = k2[:zend]
     Pprev[state_inds, state_inds] = k2[:Pend]
-    k3 = kalman_filter(R3[:data]', 1, zeros(regime_states[3]), R3[:TTT],
-        R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev, allout = allout)
+    k3 = kalman_filter(R3[:data]', R3[:TTT], zeros(regime_states[3]),
+        R3[:ZZ], R3[:DD], R3[:VVall], zprev, Pprev; lead = 1, allout = allout)
 
     # Concatenate Kalman objects
     if include_presample
