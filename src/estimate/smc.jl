@@ -52,22 +52,30 @@ rsmpsim = zeros(tune.nphi,1) #1 if resampled
 #--------------------------------------------------------------
 
 println("\n\n SMC starts ....  \n\n  ")
-
 #Draws from the prior
+@bp
 priorsim = zeros(tune.npart,tune.npara)
 for i in 1:tune.npart
     priodraw = []
     for j in 1:length(m.parameters)
         #try catch for if a parameter is fixed
-        try
-            append!(priodraw, [rand(m.parameters[j].prior.value)])
-        catch
+        if !m.parameters[j].fixed
+            prio = rand(m.parameters[j].prior.value)
+            while true
+                if m.parameters[j].valuebounds[1] < prio && prio < m.parameters[j].valuebounds[2]
+                    append!(priodraw, [prio])
+                    break
+                else
+                    prio = rand(m.parameters[j].prior.value)
+                end
+            end
+        else
             append!(priodraw, [m.parameters[j].value])
         end
     end
     priorsim[i,:] = priodraw'
 end
-
+@bp
 parasim[1,:,:] = priorsim #Draws from prior #Lay priorsim draws on top of parasim box matrix which is 100x1000x13
 wtsim[:,1] = 1/tune.npart #Initial weights are all equal, 1000x1
 zhat[1] = round(sum(wtsim[:,1]),14) # zhat is 100x1 and its first entry is the sum of the first column of wtsim, the weights matrix
@@ -75,10 +83,9 @@ zhat[1] = round(sum(wtsim[:,1]),14) # zhat is 100x1 and its first entry is the s
 # Posterior values at prior draws
 loglh = zeros(tune.npart, 1)
 logpost = zeros(tune.npart, 1)
-@bp
 for i=1:1:tune.npart
 	p0 = priorsim[i,:]';
-	#logpost[i], loglh[i] = objfcn_dsge(p0, tune.phi[1], prio, bounds, data)
+    #logpost[i], loglh[i] = objfcn_dsge(p0, tune.phi[1], prio, bounds, data)
     logpost[i] = posterior!(m, squeeze(p0,2), data; phi_smc = tune.phi[1])[:post]
     loglh[i] = posterior!(m, squeeze(p0,2), data; phi_smc = tune.phi[1])[:like]
 end
@@ -87,8 +94,6 @@ end
 
 tic()
 totaltime = 0 #Probably let's take this out
-
-@bp
 
 println("\n\n SMC Recursion starts \n\n")
 
@@ -107,7 +112,6 @@ for i=2:1:tune.nphi
 	#Normalize weights
 	wtsim[:, i] = wtsim[:, i]/zhat[i]
 
-    @bp
 
 	#------------------------------------
 	# (b) Selection 
@@ -133,8 +137,6 @@ for i=2:1:tune.nphi
         end
 	end
 
-    @bp
-
 	#------------------------------------
 	# (c) Mutation
 	#------------------------------------
@@ -143,7 +145,6 @@ for i=2:1:tune.nphi
     tune.mu = sum(para.*wght,1)
 	z =  (para - repmat(tune.mu, tune.npart, 1))
 	tune.R = (z.*wght)'*z
-	@bp
     tune.Rdiag = diagm(diag(tune.R))
 	tune.Rchol = chol(tune.R, Val{:L})
 	tune.Rchol2 = sqrt(tune.Rdiag)
