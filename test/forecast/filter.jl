@@ -25,10 +25,10 @@ syses = repmat([sys],ndraws)
 
 # Add parallel workers, filter, and remove parallel workers 
 my_procs = addprocs(ndraws)
-filtered_states, pred, vpred  = DSGE.filter(m, df, syses, allout=true)
+kals = DSGE.filter(m, df, syses, allout=true)
 rmprocs(my_procs)
 
-@time filtered_states, pred, vpred  = DSGE.filter(m, df, syses, allout=true)
+@time kals = DSGE.filter(m, df, syses, allout=true)
 
 # Test that filtered states are correct
 

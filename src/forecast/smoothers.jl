@@ -80,7 +80,7 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
 
     # extract system matrices
     T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
-    Q, Z, D  = sys[:QQ], sys[:ZZ], sys[:DD]
+    Q, Z, D = sys[:QQ], sys[:ZZ], sys[:DD]
     
     # call actual Kalman smoother
     kalman_smoother(m, df, T, R, C, Q, Z, D, A0, P0, pred, vpred;
@@ -93,7 +93,7 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 
     # extract system matrices
     T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
-    Q, Z, D  = sys[:QQ], sys[:ZZ], sys[:DD]
+    Q, Z, D = sys[:QQ], sys[:ZZ], sys[:DD]
     
     # call actual Kalman smoother
     kalman_smoother(m, data, T, R, C, Q, Z, D, A0, P0, pred, vpred;
@@ -372,7 +372,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
 
     # extract system matrices
     T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
-    Q, Z, D  = sys[:QQ], sys[:ZZ], sys[:DD]
+    Q, Z, D = sys[:QQ], sys[:ZZ], sys[:DD]
     
     # call actual Durbin-Koopman smoother
     durbin_koopman_smoother(m, df, T, R, C, Q, Z, D, A0, P0;
@@ -385,7 +385,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
 
     # extract system matrices
     T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
-    Q, Z, D  = sys[:QQ], sys[:ZZ], sys[:DD]
+    Q, Z, D = sys[:QQ], sys[:ZZ], sys[:DD]
     
     # call actual Durbin-Koopman smoother
     durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0;

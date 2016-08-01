@@ -17,37 +17,44 @@ Outputs
 - A vector of `KalmanSmooth` objects containing the smoothed states and shocks for each draw
 """
 function smooth{S<:AbstractFloat}(m::AbstractModel,
-                                  forecast_settings::Vector{Setting},
                                   data::Matrix{AbstractFloat},
-                                  sys::Vector{System},
-                                  kal::Vector{Kalman})
+                                  syses::Vector{System},
+                                  kals::Vector{Kalman})
 
     # numbers of useful things
-    ndraws   = n_draws(m)
-    @assert length(sys) == ndraws
-    @assert length(kal) == ndraws
+    ndraws = length(syses)
+    @assert length(kals) == ndraws
 
-    # Extract results from Kalman filter: need pred, vpred
+    # Broadcast models and data matrices 
+    models = fill(m, ndraws)
+    datas = fill(data, ndraws)
 
-    # Extract settings from model: peachcount, psize, n_anticipated_shocks
+    # Call smooth over all draws
+    if use_parallel_workers(m) && nworkers() > 1
+        println("Using pmap")
+        mapfcn = pmap
+    else
+        mapfcn = map
+    end    
+    out = mapfcn(smooth, models, datas, syses)
+
+    smoothed_states = [Array(x[1]) for x in out]  # to make type stable
+    smoothed_shocks = [Array(x[2]) for x in out]  
     
-    n_ant_shocks = n_anticipated_shocks(m)
-    
-    # Parallelize
-    # Think about whether level 1 functions should return KalmanSmooth
-    # objects and level 2 should return a vector of them.
-    for i = 1:ndraws
-        if disturbance_smoother_flag
-
-            smoothed[i] = disturbance_smoother(data, pred, vpred, sys,
-                                                n_ant_shocks, n_ant_lags)
-
-        else
-            smoothed[i] = kalman_smoother(...)
-        end
-    end
-
-    return smoothed
+    return smoothed_states, smoothed_shocks
 end
 
+function smooth{S<:AbstractFloat}(m::AbstractModel,
+                                  data::Matrix{AbstractFloat},
+                                  sys::System,
+                                  kal::Kalman)
+
+    alpha_hat, eta_hat = if smoother_flag(m) == :kalman
+        kalman_smoother(m, data, sys, kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+    elseif smoother_flag(m) == :durbin_koopman
+        durbin_koopman_smoother(m, data, sys, kal[:z0], kal[:vz0])
+    end
+
+    return alpha_hat, eta_hat
+end
 

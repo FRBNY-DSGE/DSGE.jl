@@ -146,7 +146,7 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     zend::Matrix{Float64})
 
     # Setup and preallocate
-    n_sim_forecast = size(systems,1)
+    n_sim_forecast = length(systems)
     n_sim = size(params,1)
     jstep = convert(Int, n_sim/n_sim_forecast)
     states = Vector{Vector{Float64}}(n_sim_forecast)
@@ -155,9 +155,9 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
     if input_type in [:mean, :mode, :init]
         update!(m, vec(params))
-        filt, _, _ = filter(m, df, systems; allout = true)
-        # filt is a vector of nperiods x nstates matrices of filtered states
-        states[1] = vec(filt[1][end,:])
+        kals = filter(m, df, systems; allout = true)
+        # `kals` is a vector of length 1
+        states[1] = kals[1][:filt][:, end]
 
     # If we have many draws, then we must package them into a vector of System objects.
     elseif input_type in [:full]
