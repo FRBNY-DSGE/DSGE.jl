@@ -2,11 +2,13 @@
 ```
 filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vector{System},
                                   z0::Vector{S} = [], vz0::Matrix{S} = [];
-                                  lead::Int, Ny0::Int = 0, allout::Bool = false)
+                                  lead::Int, allout::Bool = false,
+                                  include_presample::Bool = true)
 
 filter{S<:AbstractFloat}(m::AbstractModel, data::DataFrame, syses::Vector{System},
                                   z0::Vector{S} = [], vz0::Matrix{S} = [];
-                                  lead::Int, Ny0::Int = 0, allout::Bool = false)
+                                  lead::Int, allout::Bool = false,
+                                  include_presample::Bool = true)
 ```
     
 Computes and returns the filtered values of states for every state-space system in `syses`.
@@ -19,10 +21,10 @@ Computes and returns the filtered values of states for every state-space system 
   system matrices for each draw
 - `z0`: an optional `Nz x 1` initial state vector
 - `vz0`: an optional `Nz x Nz` covariance matrix of an initial state vector
-- `Ny0`: an optional scalar indicating the number of periods of presample
-  (i.e. the number of periods which we don't add to the likelihood)
 - `allout`: an optional keyword argument indicating whether we want optional
   output variables returned as well
+- `include_presample`: indicates whether to include presample periods in the
+  returned vector of `Kalman` objects
 
 ### Outputs
 
@@ -38,11 +40,12 @@ Computes and returns the filtered values of states for every state-space system 
 """
 function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, syses::Vector{System{S}},
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-                                  lead::Int = 0, Ny0::Int = 0, allout::Bool = false)
+                                  lead::Int = 0, allout::Bool = false,
+                                  include_presample::Bool = true)
     
     # Convert the DataFrame to a data matrix without altering the original dataframe  
     data  = df_to_matrix(m,df) 
-    filter(m, data, syses, z0, vz0; lead = lead, Ny0 = Ny0, allout = allout)
+    filter(m, data, syses, z0, vz0; lead = lead, allout = allout, include_presample = include_presample)
 end
 
 # So that we can use map on functions with kwargs
@@ -54,7 +57,7 @@ tricky_filter(::MinimumOut, m::AbstractModel, data::Matrix, sys::System) = filte
     
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vector{System{S}},
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-                                  lead::Int = 0, Ny0::Int = 0, allout::Bool = false)
+                                  lead::Int = 0, allout::Bool = false, include_presample::Bool = true)
 
     # numbers of useful things
     ndraws = size(syses, 1)
@@ -86,7 +89,7 @@ end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System,
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-                                  lead::Int = 0, Ny0::Int = 0, allout::Bool = false)
+                                  lead::Int = 0, allout::Bool = false, include_presample::Bool = true)
     
     # pull out the elements of sys
     TTT    = sys[:TTT]
@@ -103,11 +106,11 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at index_zlb_start)
         k, _, _, _ = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0;
-            lead = lead, allout = allout, include_presample = false)
+            lead = lead, allout = allout, include_presample = include_presample)
     else
         # regular Kalman filter with no regime-switching
-        k = kalman_filter(data', TTT, CCC, ZZ, DD, VVall, z0, vz0;
-            lead = lead, allout = allout, Ny0 = Ny0)
+        k = kalman_filter(m, data', TTT, CCC, ZZ, DD, VVall, z0, vz0;
+            lead = lead, allout = allout, include_presample = include_presample)
     end
 
     return k[:filt]', k[:pred], k[:vpred], k[:zend], k[:Pend]
@@ -117,16 +120,18 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
                                            sys::Vector{System{S}},
                                            z0::Vector{S} = Vector{S}(),
                                            vz0::Matrix{S} = Matrix{S}();
-                                           lead::Int = 0, Ny0::Int = 0, allout::Bool = false)
+                                           lead::Int = 0, allout::Bool = false,
+                                           include_presample::Bool = true)
     output = cell(size(sys)) # hack
     for (i,s) in enumerate(sys)
-        output[i] = filterandsmooth(m, df, sys, z0, vz0; lead = lead, Ny0 = Ny0, allout = allout)
+        output[i] = filterandsmooth(m, df, sys, z0, vz0; lead = lead, allout = allout, include_presample = include_presample)
     end
 end
 
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System,
                                            z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-                                           lead::Int = 0, Ny0::Int = 0, allout::Bool = false)
+                                           lead::Int = 0, allout::Bool = false,
+                                           include_presample::Bool = true)
 
     ## 1. Filter
 
@@ -148,8 +153,8 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
             lead, allout = allout, include_presample = true)
     else
         # regular Kalman filter with no regime-switching
-        k = kalman_filter(data', TTT, CCC, ZZ, DD, VVall, z0, vz0;
-            lead = lead, allout = allout, Ny0 = Ny0)
+        k = kalman_filter(m, data', TTT, CCC, ZZ, DD, VVall, z0, vz0;
+            lead = lead, allout = allout, include_presample = true)
     end
 
     k[:pred], k[:vpred]

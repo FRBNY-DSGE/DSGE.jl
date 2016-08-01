@@ -5,20 +5,22 @@ and written by Iskander Karibzhanov.
 
 """
 ```
-kalman_filter(data, lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0; allout=false)
-kalman_filter(data, lead, CCC, TTT, DD, ZZ, VVall, Ny0=0; allout=false)
+function kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    TTT::Matrix{S}, CCC::Vector{S}, ZZ::Matrix{S}, DD::Vector{S}, VVall::Matrix{S},
+    z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}(); lead::Int = 0,
+    allout::Bool = false, include_presample::Bool = true)
 ```
 
 ### Inputs
 
-- `data`: a `Ny x T` matrix containing data `y(1), ... , y(T)`.
-- `lead`: the number of steps to forecast after the end of the data.
-- `CCC`: an `Nz x 1` vector for a time-invariant input vector in the transition equation.
-- `TTT`: an `Nz x Nz` matrix for a time-invariant transition matrix in the transition
+- `m`: model object
+- `data`: a `Ny` x `T` matrix containing data `y(1), ... , y(T)`.
+- `TTT`: an `Nz` x `Nz` matrix for a time-invariant transition matrix in the transition
   equation.
-- `DD`: an `Ny x 1` vector for a time-invariant input vector in the measurement equation.
-- `ZZ`: an `Ny x Nz` matrix for a time-invariant measurement matrix in the measurement
+- `CCC`: an `Nz` x 1 vector for a time-invariant input vector in the transition equation.
+- `ZZ`: an `Ny` x `Nz` matrix for a time-invariant measurement matrix in the measurement
   equation.
+- `DD`: an `Ny` x 1 vector for a time-invariant input vector in the measurement equation.
 - `VVall`: an `Ny + Nz` x `Ny + Nz` matrix for a time-invariant variance matrix for the
   error in the transition equation and the error in the measurement equation, that is,
   `[η(t)', ϵ(t)']'`.
@@ -26,13 +28,15 @@ kalman_filter(data, lead, CCC, TTT, DD, ZZ, VVall, Ny0=0; allout=false)
 #### Optional Inputs
 - `z0`: an optional `Nz x 1` initial state vector.
 - `vz0`: an optional `Nz x Nz` covariance matrix of an initial state vector.
-- `Ny0`: an optional scalar indicating the number of periods of presample
-  (i.e. the number of periods which we don't add to the likelihood). If `Ny0 >
-  0`, then we also set the `z0` and `vz0` fields in the returned `Kalman` object
-  to be the states and variance-covariance matrices at the end of the
-  presample/beginning of the main sample
+- `lead`: the number of steps to forecast after the end of the data.
 - `allout`: an optional keyword argument indicating whether we want optional output
   variables returned as well
+- `include_presample`: indicates whether to include presample periods in the
+  returned Kalman object. If `!include_presample`, then we don't add presample
+  periods to the likelohood, and we also set the `z0` and `vz0` fields in the
+  returned `Kalman` object to be the states and variance-covariance matrices at
+  the end of the presample/beginning of the main sample
+
 
 Where:
 - `Nz`: number of states
@@ -65,17 +69,18 @@ circle when the state space model is stationary.  When the preceding formula can
 applied, the initial state vector estimate is set to `a` and its covariance matrix is given
 by `1E6I`.  Optionally, you can specify initial values.
 """
-function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
-                                      TTT::Matrix{S},
-                                      CCC::Vector{S},
-                                      ZZ::Matrix{S},
-                                      DD::Vector{S},
-                                      VVall::Matrix{S},
-                                      z0::Vector{S} = Vector{S}(),
-                                      vz0::Matrix{S} = Matrix{S}();
-                                      lead::Int = 0,
-                                      allout::Bool = false,
-                                      Ny0::Int = 0)
+function kalman_filter{S<:AbstractFloat}(m::AbstractModel,
+                                         data::Matrix{S},
+                                         TTT::Matrix{S},
+                                         CCC::Vector{S},
+                                         ZZ::Matrix{S},
+                                         DD::Vector{S},
+                                         VVall::Matrix{S},
+                                         z0::Vector{S} = Vector{S}(),
+                                         vz0::Matrix{S} = Matrix{S}();
+                                         lead::Int = 0,
+                                         allout::Bool = false,
+                                         include_presample::Bool = true)
     T = size(data, 2)
     Nz = length(CCC)
     Ny = length(DD)
@@ -154,7 +159,7 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
         ddy = D\dy
         # We evaluate the log likelihood function by adding values of L at every iteration
         #   step (for each t = 1,2,...T)
-        if t > Ny0
+        if include_presample || (!include_presample && t > n_presample_periods(m))
             L += -log(det(D))/2 - first(dy'*ddy/2) - Ny_t*log(2*pi)/2
         end
 
@@ -169,10 +174,9 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
             vfilt[:, :, t] = P
         end
 
-        # If Ny0 > 0 (positive number of presample periods), then we reassign
-        # `z0` and `P0` to be their values at the end of the presample/beginning
-        # of the main sample
-        if t == Ny0
+        # If !include_presample, then we reassign `z0` and `P0` to be their
+        # values at the end of the presample/beginning of the main sample
+        if !include_presample && t == n_presample_periods(m)
             z0 = z
             P0 = P
         end
@@ -208,7 +212,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     Matrix{S}(0, 0), CCC::Vector{S} = Vector{S}(0,), z0::Array{S} =
     Array{S}(0,), vz0::Matrix{S} = Matrix{S}(0, 0); DD::Array{S} = Array{S}(0,),
     lead::Int = 0, allout::Bool = false, catch_errors::Bool = false,
-    include_presample::Bool = false)
+    include_presample::Bool = true)
 ```
 
 Implements the Kalman filter, accounting for the zero lower bound.
@@ -257,7 +261,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
                                                lead::Int      = 0,
                                                allout::Bool   = false,
                                                catch_errors::Bool = false,
-                                               include_presample::Bool = false)
+                                               include_presample::Bool = true)
     
     # Partition sample into three regimes, and store associated matrices:
     # - R1: presample
@@ -356,20 +360,23 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
         z0[state_inds]
     end
     R1[:P0] = solve_discrete_lyapunov(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
-    k1 = kalman_filter(R1[:data]', R1[:TTT], zeros(S, regime_states[1]),
-        R1[:ZZ], R1[:DD], R1[:VVall], R1[:A0], R1[:P0]; lead = 1, allout = allout)
+    k1 = kalman_filter(m, R1[:data]', R1[:TTT], zeros(S, regime_states[1]),
+        R1[:ZZ], R1[:DD], R1[:VVall], R1[:A0], R1[:P0]; lead = 1, allout = allout,
+        include_presample = true)
 
     # Run Kalman filter on normal period
-    k2 = kalman_filter(R2[:data]', R2[:TTT], zeros(regime_states[2]),
-        R2[:ZZ], R2[:DD], R2[:VVall], k1[:zend], k1[:Pend]; lead = 1, allout = allout)
+    k2 = kalman_filter(m, R2[:data]', R2[:TTT], zeros(regime_states[2]), R2[:ZZ],
+        R2[:DD], R2[:VVall], k1[:zend], k1[:Pend]; lead = 1, allout = allout,
+        include_presample = true)
 
     # Run Kalman filter on ZLB period
     zprev = zeros(S, n_states_aug)
     Pprev = zeros(S, n_states_aug, n_states_aug)
     zprev[state_inds] = k2[:zend]
     Pprev[state_inds, state_inds] = k2[:Pend]
-    k3 = kalman_filter(R3[:data]', R3[:TTT], zeros(regime_states[3]),
-        R3[:ZZ], R3[:DD], R3[:VVall], zprev, Pprev; lead = 1, allout = allout)
+    k3 = kalman_filter(m, R3[:data]', R3[:TTT], zeros(regime_states[3]), R3[:ZZ],
+        R3[:DD], R3[:VVall], zprev, Pprev; lead = 1, allout = allout,
+        include_presample = true)
 
     # Concatenate Kalman objects
     if include_presample

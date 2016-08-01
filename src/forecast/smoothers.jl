@@ -480,7 +480,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
         VVall = zeros(Ny+Nz,Ny+Nz)
         VVall[1:Nz,1:Nz] = R*Q*R'
         
-        k = kalman_filter(YY_star', T, C, Z, D, VVall, A0, P0; lead = 0, allout = true)
+        k = kalman_filter(m, YY_star', T, C, Z, D, VVall, A0, P0; lead = 0, allout = true)
 
         A0, P0, k[:pred], k[:vpred], T, R, C
     end

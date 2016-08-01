@@ -155,7 +155,7 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
     if input_type in [:mean, :mode, :init]
         update!(m, vec(params))
-        filt, _, _ = filter(m, df, systems; Ny0 = n_presample_periods(m), allout = true)
+        filt, _, _ = filter(m, df, systems; allout = true)
         # filt is a vector of nperiods x nstates matrices of filtered states
         states[1] = vec(filt[1][end,:])
 
