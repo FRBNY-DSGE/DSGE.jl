@@ -26,10 +26,12 @@ type Tune
 end
 
 
+
 @debug function smc(m::AbstractModel, data::Matrix)
 #--------------------------------------------------------------
 #Set Parameters of Algorithm
 #--------------------------------------------------------------
+
 
 #Instantiating a tune type (analogous to the struct in Matlab)
 #The tempering schedule is created as the last argument in the constructor TuneType()
