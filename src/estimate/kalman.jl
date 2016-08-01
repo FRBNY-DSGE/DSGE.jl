@@ -5,21 +5,21 @@ and written by Iskander Karibzhanov.
 
 """
 ```
-kalman_filter(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=false)
-kalman_filter(data, lead, a, F, b, H, var, Ny0=0; allout=false)
+kalman_filter(data, lead, CCC, TTT, DD, ZZ, VVall, z0, vz0, Ny0; allout=false)
+kalman_filter(data, lead, CCC, TTT, DD, ZZ, VVall, Ny0=0; allout=false)
 ```
 
 ### Inputs
 
 - `data`: a `Ny x T` matrix containing data `y(1), ... , y(T)`.
 - `lead`: the number of steps to forecast after the end of the data.
-- `a`: an `Nz x 1` vector for a time-invariant input vector in the transition equation.
-- `F`: an `Nz x Nz` matrix for a time-invariant transition matrix in the transition
+- `CCC`: an `Nz x 1` vector for a time-invariant input vector in the transition equation.
+- `TTT`: an `Nz x Nz` matrix for a time-invariant transition matrix in the transition
   equation.
-- `b`: an `Ny x 1` vector for a time-invariant input vector in the measurement equation.
-- `H`: an `Ny x Nz` matrix for a time-invariant measurement matrix in the measurement
+- `DD`: an `Ny x 1` vector for a time-invariant input vector in the measurement equation.
+- `ZZ`: an `Ny x Nz` matrix for a time-invariant measurement matrix in the measurement
   equation.
-- `var`: an `Ny + Nz` x `Ny + Nz` matrix for a time-invariant variance matrix for the
+- `VVall`: an `Ny + Nz` x `Ny + Nz` matrix for a time-invariant variance matrix for the
   error in the transition equation and the error in the measurement equation, that is,
   `[η(t)', ϵ(t)']'`.
 
@@ -48,54 +48,54 @@ Where:
 
 The state space model is defined as follows:
 ```
-z(t+1) = a+F*z(t)+η(t)     (state or transition equation)
-y(t) = b+H*z(t)+ϵ(t)       (observation or measurement equation)
+z(t+1) = CCC+TTT*z(t)+η(t)     (state or transition equation)
+y(t) = DD+ZZ*z(t)+ϵ(t)       (observation or measurement equation)
 ```
 
 When `z0` and `Vz0` are omitted, the initial state vector and its covariance matrix of the
 time invariant Kalman filters are computed under the stationarity condition:
 ```
-z0 = (I-F)\a
-vz0 = (I-kron(F,F))\(V(:),Nz,Nz)
+z0 = (I-TTT)\CCC
+vz0 = (I-kron(TTT,TTT))\(V(:),Nz,Nz)
 ```
-where `F` and `V` are the time invariant transition matrix and the covariance matrix of
+where `TTT` and `V` are the time invariant transition matrix and the covariance matrix of
 transition equation noise, and `vec(V)` is an `Nz^2` x `1` column vector that is constructed
-by stacking the `Nz` columns of `V`.  Note that all eigenvalues of `F` are inside the unit
+by stacking the `Nz` columns of `V`.  Note that all eigenvalues of `TTT` are inside the unit
 circle when the state space model is stationary.  When the preceding formula cannot be
 applied, the initial state vector estimate is set to `a` and its covariance matrix is given
 by `1E6I`.  Optionally, you can specify initial values.
 """
 function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
                                       lead::Int64,
-                                      a::Vector{S},
-                                      F::Matrix{S},
-                                      b::Vector{S},
-                                      H::Matrix{S},
-                                      var::Matrix{S},
+                                      CCC::Vector{S},
+                                      TTT::Matrix{S},
+                                      DD::Vector{S},
+                                      ZZ::Matrix{S},
+                                      VVall::Matrix{S},
                                       z0::Vector{S},
                                       vz0::Matrix{S},
                                       Ny0::Int = 0;
                                       allout::Bool = false)
     T = size(data, 2)
-    Nz = length(a)
-    Ny = length(b)
+    Nz = length(CCC)
+    Ny = length(DD)
 
     if !isempty(z0)
         z = z0
     else
-        z = zeros(eltype(a), Nz)
+        z = zeros(eltype(CCC), Nz)
     end
     if !isempty(vz0)
         P = vz0
     else
-        P = zeros(eltype(a), Nz, Nz)
+        P = zeros(eltype(CCC), Nz, Nz)
     end
 
     # Check input matrix dimensions
     @assert size(data, 1) == Ny
-    @assert size(F) == (Nz, Nz)
-    @assert size(H) == (Ny, Nz)
-    @assert size(var) == (Ny + Nz, Ny + Nz)
+    @assert size(TTT) == (Nz, Nz)
+    @assert size(ZZ) == (Ny, Nz)
+    @assert size(VVall) == (Ny + Nz, Ny + Nz)
     @assert length(z) == Nz
     @assert size(P) == (Nz, Nz)
 
@@ -105,9 +105,9 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
     # --- V is same as QQ
     # --- R is same as EE
     # --- G is same as VV = QQ*MM
-    V = var[1:Nz, 1:Nz]
-    R = var[(Nz+1):end, (Nz+1):end]
-    G = var[1:Nz, (Nz+1):end]
+    V = VVall[1:Nz, 1:Nz]
+    R = VVall[(Nz+1):end, (Nz+1):end]
+    G = VVall[1:Nz, (Nz+1):end]
 
     if allout
         pred          = zeros(S, Nz, T)
@@ -125,19 +125,19 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
         #   corresponding row is ditched from the measurement equation.
         nonmissing = !isnan(data[:, t])
         data_t = data[nonmissing, t]       # data_t = Y_T = [y1, y2, ..., yT] is matrix of observable data time-series
-        H_t = H[nonmissing, :]             # H_t = DD is matrix mapping states to observables
+        ZZ_t = ZZ[nonmissing, :]           # ZZ_t is matrix mapping states to observables
         G_t = G[:, nonmissing]             # G_t = Cov(η_t, ϵ_t)
         R_t = R[nonmissing, nonmissing]    # R_t = Var(ϵ_t)
         Ny_t = length(data_t)              # Ny_t = T is length of time
-        b_t = b[nonmissing]                # b_t = DD
+        DD_t = DD[nonmissing]                # DD_t
 
 
         ## forecasting
-        z = a + F*z                        # z_{t|t-1} = a + F(Θ)*z_{t-1|t-1}
-        P = F*P*F' + V                     # P_{t|t-1} = F(Θ)*P_{t-1|t-1}*F(Θ)' + F(Θ)*Var(η_t)*F(Θ)'
-        dy = data_t - H_t*z - b_t          # dy = y_t - H(Θ)*z_{t|t-1} - DD is prediction error or innovation
-        HG = H_t*G_t                       # HG is ZZ*Cov(η_t, ϵ_t)
-        D = H_t*P*H_t' + HG + HG' + R_t    # D = ZZ*P_{t+t-1}*ZZ' + HG + HG' + R_t
+        z = CCC + TTT*z                    # z_{t|t-1} = CCC + TTT(Θ)*z_{t-1|t-1}
+        P = TTT*P*TTT' + V                 # P_{t|t-1} = TTT(Θ)*P_{t-1|t-1}*TTT(Θ)' + TTT(Θ)*Var(η_t)*TTT(Θ)'
+        dy = data_t - ZZ_t*z - DD_t        # dy = y_t - ZZ(Θ)*z_{t|t-1} - DD is prediction error or innovation
+        ZG = ZZ_t*G_t                      # ZG is ZZ*Cov(η_t, ϵ_t)
+        D = ZZ_t*P*ZZ_t' + ZG + ZG' + R_t  # D = ZZ*P_{t+t-1}*ZZ' + ZG + ZG' + R_t
         D = (D+D')/2
 
         if allout
@@ -155,12 +155,12 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
         end
 
         ## updating
-        PHG = P*H_t' + G_t
-        z = z + PHG*ddy                    # z_{t|t} = z_{t|t-1} + P_{t|t-1}*H(Θ)' + ...
-        P = P - PHG/D*PHG'                 # P_{t|t} = P_{t|t-1} - PHG*(1/D)*PHG
+        PZG = P*ZZ_t' + G_t
+        z = z + PZG*ddy                    # z_{t|t} = z_{t|t-1} + P_{t|t-1}*ZZ(Θ)' + ...
+        P = P - PZG/D*PZG'                 # P_{t|t} = P_{t|t-1} - PZG*(1/D)*PZG
 
         if allout
-            PH = P*H_t'
+            PZZ = P*ZZ_t'
             filt[:, t]     = z
             vfilt[:, :, t] = P
         end
@@ -179,8 +179,8 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
 
     if allout && lead > 1
         for t = (T+2):(T+lead)
-            z = F*z + a
-            P = F*P*F' + V
+            z = TTT*z + CCC
+            P = TTT*P*TTT' + V
             pred[:, t]     = z
             vpred[:, :, t] = P
         end
