@@ -71,25 +71,29 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
                                       ZZ::Matrix{S},
                                       DD::Vector{S},
                                       VVall::Matrix{S},
-                                      z0::Vector{S},
-                                      vz0::Matrix{S};
+                                      z0::Vector{S} = Vector{S}(),
+                                      vz0::Matrix{S} = Matrix{S}();
                                       lead::Int = 0,
                                       allout::Bool = false,
                                       Ny0::Int = 0)
     T = size(data, 2)
     Nz = length(CCC)
     Ny = length(DD)
+    V = VVall[1:Nz, 1:Nz]
 
-    if !isempty(z0)
-        z = z0
-    else
-        z = zeros(eltype(CCC), Nz)
+    if isempty(z0) || isempty(vz0)
+        e, _ = eig(TTT)
+        if countnz(e*e' - eye(Nz)) == Nz^2
+            z0 = (eye(Nz) - TTT)\CCC
+            vz0 = reshape((eye(Nz^2)-kron(TTT,TTT))\V, Nz, Nz)
+        else
+            z0 = CCC
+            vz0 = eye(Nz)*1e6
+        end
     end
-    if !isempty(vz0)
-        P = vz0
-    else
-        P = zeros(eltype(CCC), Nz, Nz)
-    end
+
+    z = z0
+    P = vz0
 
     # Check input matrix dimensions
     @assert size(data, 1) == Ny
@@ -195,30 +199,6 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
         return Kalman(L, zend, Pend)
     end
 
-end
-
-function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
-                                      F::Matrix{S},
-                                      a::Vector{S},
-                                      H::Matrix{S},
-                                      b::Vector{S},
-                                      var::Matrix{S};
-                                      lead::Int = 0,
-                                      allout::Bool = false,
-                                      Ny0::Int = 0)
-    Nz = length(a)
-    V = var[1:Nz, 1:Nz]
-
-    e, _ = eig(F)
-    if countnz(e*e' - eye(Nz)) == Nz^2
-        z0 = (eye(Nz) - F)\a
-        vz0 = reshape((eye(Nz^2)-kron(F,F))\V, Nz, Nz)
-    else
-        z0 = a
-        vz0 = eye(Nz)*1e6
-    end
-
-    return kalman_filter(data, F, a, H, b, var, z0, vz0; lead = lead, allout = allout, Ny0 = Ny0)
 end
 
 """
