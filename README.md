@@ -66,7 +66,7 @@ m = Model990()
 
 # estimate as of 2015-Q3 using the default data vintage from 2015 Nov 27
 m <= Setting(:data_vintage, "151127")
-m <= Setting(:date_mainsample_end, quartertodate("2015-Q3"))
+m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 
 # reoptimize parameter vector, compute Hessian at mode, and full posterior
 # parameter sampling
@@ -265,10 +265,9 @@ See [defaults.jl](src/defaults.jl) for the complete description of default setti
 
 #### Dates
 - `date_presample_start`: Start date of pre-sample.
-- `date_mainsample_start`: Start date of main sample.
-- `date_zlbregime_start`: Start date of zero lower bound regime.
-- `date_mainsample_end`: End date of main sample.
-- `date_forecast_start`: Start date of forecast period.
+- `date_prezlb_start`: Start date of main sample.
+- `date_zlb_start`: Start date of zero lower bound regime.
+- `date_forecast_start`: Start date of forecast period (or the period after the last period for which we have GDP data).
 - `date_forecast_end`: End date of forecast period.
 
 #### Anticipated Shocks
@@ -451,7 +450,7 @@ specified. See `?load_data` for more details.
 
 The resulting DataFrame `df` contains all the required data series for this model, fully
 transformed. The first row is given by the Setting `date_presample_start` and the last row
-is given by `date_mainsample_end`. The first `n_presample_periods` rows of `df` are the
+is given by `date_zlb_end`. The first `n_presample_periods` rows of `df` are the
 presample.
 
 Driver functions including `estimate` accept this `df` as an argument and convert it into a
@@ -573,7 +572,7 @@ for their model.
     perform a more complex transformation, such as converting to one quarter percent changes
     or adjusting into per-capita terms.
 - the user adjusts data-related settings, such as `data_vintage`, `dataroot`,
-    `date_presample_start`, `date_mainsample_end`, and `date_zlbregime_start`, and
+    `date_presample_start`, `date_zlb_start`, `date_forecast_start`, and
     `use_population_forecast`.
 
 Second, *DSGE.jl* attempts to construct the dataset given this setup through a call to
@@ -588,7 +587,7 @@ Given the complexity of the data download, you may find that the dataset generat
 `load_data` is not exactly as you expect. Here are some common pitfalls to look out for:
 - Ensure that the `data_vintage` model setting is as you expect. (Try checking
     `data_vintage(m)`.)
-- Ensure that the `date_mainsample_end` model setting is as you expect, and that is not
+- Ensure that the `date_forecast_start` model setting is as you expect, and that is not
     logically incompatible with `data_vintage`.
 - Ensure that the `data_series` field of the model object is set as expected.
 - Double check the transformations specified in the `data_transforms` field of the model
