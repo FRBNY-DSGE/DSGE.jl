@@ -1,23 +1,40 @@
 """
 ```
-smooth(...)
+smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, syses::Vector{System},
+    kals::Vector{Kalman})
+
+smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    syses::Vector{System}, kals::Vector{Kalman})
 ```
+
 Computes and returns the smoothed values of states for every parameter draw.
 
-Inputs
-------
+### Inputs
 
 - `m`: model object
-- `data`: matrix of data for observables
-- `sys::Vector{System}`: a vector of `System` objects specifying state-space system matrices for each draw
-- `kal::Vector{Kalman}`: a vector of `Kalman` objects containing the results of the Kalman filter for each draw
+- `data`: DataFrame or matrix of data for observables
+- `syses::Vector{System}`: a vector of `System` objects specifying state-space
+  system matrices for each draw
+- `kals::Vector{Kalman}`: a vector of `Kalman` objects containing the results of
+  the Kalman filter for each draw
 
-Outputs
--------
-- A vector of `KalmanSmooth` objects containing the smoothed states and shocks for each draw
+### Outputs
+
+- `smoothed_states`: a vector of `alpha_hat`s returned from the smoother
+  specified by `smoother_flag(m)`, one for each system in `syses`
+- `smoothed_shocks`: a vector of `eta_hat`s returned from the smoother, one for
+  each system in `syses`
 """
 function smooth{S<:AbstractFloat}(m::AbstractModel,
-                                  data::Matrix{AbstractFloat},
+                                  df::DataFrame,
+                                  syses::Vector{System},
+                                  kals::Vector{Kalman})
+    data = df_to_matrix(m, df)'
+    smooth(m, data, syses, kals)
+end
+
+function smooth{S<:AbstractFloat}(m::AbstractModel,
+                                  data::Matrix{S}
                                   syses::Vector{System},
                                   kals::Vector{Kalman})
 

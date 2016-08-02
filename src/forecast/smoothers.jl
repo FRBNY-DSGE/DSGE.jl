@@ -1,19 +1,19 @@
 """
 ```
-function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
     n_conditional_periods::Int = 0)
 
-function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
     n_conditional_periods::Int = 0)
 
-function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
     D::Vector{S}, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
     n_conditional_periods::Int = 0)
 
-function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
+kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
     D::Vector{S}, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
     n_conditional_periods::Int = 0)
@@ -171,7 +171,7 @@ end
 
 """
 ```
-function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
+disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
     data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
     Z::Matrix{S}, D::Array{S}, pred::Matrix{S}, vpred::Array{S, 3})
 ```
@@ -291,20 +291,20 @@ end
 
 """
 ```
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
+durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     df::DataFrame, sys::System, A0::Vector{S}, P0::Matrix{S};
     n_conditional_periods::Int = 0)
 
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
+durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     data:Matrix{S}, sys::System, A0::Vector{S}, P0::Matrix{S};
     n_conditional_periods::Int = 0)
 
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
+durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     df::DataFrame, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
     Z::Matrix{S}, D::Matrix{S}, A0::Array{S}, P0::Matrix{S};
     n_conditional_periods::Int = 0)
 
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
+durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
     Z::Matrix{S}, D::Matrix{S}, A0::Array{S}, P0::Matrix{S};
     n_conditional_periods::Int = 0)

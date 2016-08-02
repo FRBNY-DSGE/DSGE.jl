@@ -152,7 +152,7 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
                                            lead::Int = 0, allout::Bool = false,
                                            include_presample::Bool = true)
 
-    data = df_to_matrix(m,df) 
+    data = df_to_matrix(m, df)
     filterandsmooth(m, data, syses, z0, vz0; lead = lead, include_presample = include_presample)
 end
 
@@ -183,11 +183,9 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     return smoothed_states, smoothed_shocks
 end
 
-
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System,
                                            z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                            lead::Int = 0, include_presample::Bool = true)
-
     ## 1. Filter
 
     # pull out the elements of sys

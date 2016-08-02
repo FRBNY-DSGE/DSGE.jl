@@ -5,7 +5,7 @@ and written by Iskander Karibzhanov.
 
 """
 ```
-function kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     TTT::Matrix{S}, CCC::Vector{S}, ZZ::Matrix{S}, DD::Vector{S}, VVall::Matrix{S},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}(); lead::Int = 0,
     allout::Bool = false, include_presample::Bool = true)
@@ -26,8 +26,8 @@ function kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
   `[η(t)', ϵ(t)']'`.
 
 #### Optional Inputs
-- `z0`: an optional `Nz x 1` initial state vector.
-- `vz0`: an optional `Nz x Nz` covariance matrix of an initial state vector.
+- `z0`: an optional `Nz` x 1 initial state vector.
+- `vz0`: an optional `Nz` x `Nz` covariance matrix of an initial state vector.
 - `lead`: the number of steps to forecast after the end of the data.
 - `allout`: an optional keyword argument indicating whether we want optional output
   variables returned as well
@@ -52,7 +52,7 @@ Where:
 
 The state space model is defined as follows:
 ```
-z(t+1) = CCC+TTT*z(t)+η(t)     (state or transition equation)
+z(t+1) = CCC+TTT*z(t)+η(t)   (state or transition equation)
 y(t) = DD+ZZ*z(t)+ϵ(t)       (observation or measurement equation)
 ```
 
@@ -63,7 +63,7 @@ z0 = (I-TTT)\CCC
 vz0 = (I-kron(TTT,TTT))\(V(:),Nz,Nz)
 ```
 where `TTT` and `V` are the time invariant transition matrix and the covariance matrix of
-transition equation noise, and `vec(V)` is an `Nz^2` x `1` column vector that is constructed
+transition equation noise, and `vec(V)` is an `Nz^2` x 1 column vector that is constructed
 by stacking the `Nz` columns of `V`.  Note that all eigenvalues of `TTT` are inside the unit
 circle when the state space model is stationary.  When the preceding formula cannot be
 applied, the initial state vector estimate is set to `a` and its covariance matrix is given
@@ -207,7 +207,7 @@ end
 
 """
 ```
-function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
+kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     data::Matrix{S}, TTT::Matrix{S} = Matrix{S}(0, 0), RRR::Matrix{S} =
     Matrix{S}(0, 0), CCC::Vector{S} = Vector{S}(0,), z0::Array{S} =
     Array{S}(0,), vz0::Matrix{S} = Matrix{S}(0, 0); DD::Array{S} = Array{S}(0,),
