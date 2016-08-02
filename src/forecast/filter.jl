@@ -68,6 +68,8 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vect
     # Broadcast models and data matrices 
     models = fill(m, ndraws)
     datas = fill(data, ndraws)
+    z0s = fill(z0, ndraws)
+    vz0s = fill(vz0, ndraws)
     allouts = if allout
         fill(AllOut(), ndraws)
     else
@@ -87,17 +89,17 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vect
         mapfcn = map
     end    
 
-    mapfcn(DSGE.tricky_filter, allouts, include_presamples, models, datas, syses)
+    mapfcn(DSGE.tricky_filter, allouts, include_presamples, models, datas, syses, z0s, vz0s)
 end
 
-tricky_filter(::AllOut, ::IncludePresample, m::AbstractModel, data::Matrix, sys::System) =
-    filter(m, data, sys; allout = true, include_presample = true)
-tricky_filter(::AllOut, ::ExcludePresample, m::AbstractModel, data::Matrix, sys::System) =
-    filter(m, data, sys; allout = true, include_presample = false)
-tricky_filter(::MinimumOut, ::IncludePresample, m::AbstractModel, data::Matrix, sys::System) = 
-    filter(m, data, sys; allout = false, include_presample = true)
-tricky_filter(::MinimumOut, ::ExcludePresample, m::AbstractModel, data::Matrix, sys::System) = 
-    filter(m, data, sys; allout = false, include_presample = false)
+tricky_filter(::AllOut, ::IncludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) =
+    filter(m, data, sys, z0, vz0; allout = true, include_presample = true)
+tricky_filter(::AllOut, ::ExcludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) =
+    filter(m, data, sys, z0, vz0; allout = true, include_presample = false)
+tricky_filter(::MinimumOut, ::IncludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) = 
+    filter(m, data, sys, z0, vz0; allout = false, include_presample = true)
+tricky_filter(::MinimumOut, ::ExcludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) = 
+    filter(m, data, sys, z0, vz0; allout = false, include_presample = false)
     
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System,
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
@@ -183,6 +185,8 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     # Broadcast models and data matrices 
     models = fill(m, ndraws)
     datas = fill(data, ndraws)
+    z0s = fill(z0, ndraws)
+    vz0s = fill(vz0, ndraws)
     include_presamples = if include_presample
         fill(IncludePresample(), ndraws)
     else
@@ -196,7 +200,7 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     else
         mapfcn = map
     end    
-    out = mapfcn(DSGE.tricky_filterandsmooth, include_presamples, models, datas, syses)
+    out = mapfcn(DSGE.tricky_filterandsmooth, include_presamples, models, datas, syses, z0s, vz0s)
 
     smoothed_states = [Array(x[1]) for x in out] # to make type stable
     smoothed_shocks = [Array(x[2]) for x in out]
@@ -204,10 +208,10 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     return smoothed_states, smoothed_shocks
 end
 
-tricky_filterandsmooth(::IncludePresample, m::AbstractModel, data::Matrix, sys::System) = 
-    filterandsmooth(m, data, sys; include_presample = true)
-tricky_filterandsmooth(::ExcludePresample, m::AbstractModel, data::Matrix, sys::System) = 
-    filterandsmooth(m, data, sys; include_presample = false)
+tricky_filterandsmooth(::IncludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) = 
+    filterandsmooth(m, data, sys, z0, vz0; include_presample = true)
+tricky_filterandsmooth(::ExcludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) = 
+    filterandsmooth(m, data, sys, z0, vz0; include_presample = false)
 
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System,
                                            z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
