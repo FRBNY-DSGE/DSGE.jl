@@ -45,6 +45,11 @@ function smooth{S<:AbstractFloat}(m::AbstractModel,
     # Broadcast models and data matrices 
     models = fill(m, ndraws)
     datas = fill(data, ndraws)
+    include_presamples = if include_presample
+        fill(IncludePresample(), ndraws)
+    else
+        fill(ExcludePresample(), ndraws)
+    end
 
     # Call smooth over all draws
     if use_parallel_workers(m) && nworkers() > 1
@@ -53,13 +58,18 @@ function smooth{S<:AbstractFloat}(m::AbstractModel,
     else
         mapfcn = map
     end    
-    out = mapfcn(smooth, models, datas, syses)
+    out = mapfcn(DSGE.tricky_smooth, include_presamples, models, datas, syses, kals)
 
     smoothed_states = [Array(x[1]) for x in out]  # to make type stable
     smoothed_shocks = [Array(x[2]) for x in out]  
     
     return smoothed_states, smoothed_shocks
 end
+
+tricky_smooth(::IncludePresample, m::AbstractModel, data::Matrix, sys::System, kal::Kalman) = 
+    smooth(m, data, sys, kal; include_presample = true)
+tricky_smooth(::ExcludePresample, m::AbstractModel, data::Matrix, sys::System, kal::Kalman) = 
+    smooth(m, data, sys, kal; include_presample = false)
 
 function smooth{S<:AbstractFloat}(m::AbstractModel,
                                   data::Matrix{AbstractFloat},

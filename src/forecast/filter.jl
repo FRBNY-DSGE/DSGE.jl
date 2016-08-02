@@ -1,3 +1,12 @@
+# Immutable types s.t. we can use map on functions with kwargs
+abstract FilterOutput
+immutable AllOut<:FilterOutput end
+immutable MinimumOut<:FilterOutput end
+
+abstract FilterPresample
+immutable IncludePresample<:FilterPresample end
+immutable ExcludePresample<:FilterPresample end
+
 """
 ```
 filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
@@ -49,13 +58,6 @@ function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, syses::Vector
     filter(m, data, syses, z0, vz0; lead = lead, allout = allout, include_presample = include_presample)
 end
 
-# So that we can use map on functions with kwargs
-abstract FilterOutput
-immutable AllOut<:FilterOutput end
-immutable MinimumOut<:FilterOutput end
-tricky_filter(::AllOut, m::AbstractModel, data::Matrix, sys::System) = filter(m, data, sys; allout = true)
-tricky_filter(::MinimumOut, m::AbstractModel, data::Matrix, sys::System) = filter(m, data, sys; allout = false)
-    
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vector{System{S}},
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                   lead::Int = 0, allout::Bool = false, include_presample::Bool = true)
@@ -70,7 +72,12 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vect
         fill(AllOut(), ndraws)
     else
         fill(MinimumOut(), ndraws)
-    end 
+    end
+    include_presamples = if include_presample
+        fill(IncludePresample(), ndraws)
+    else
+        fill(ExcludePresample(), ndraws)
+    end
     
     # Call filter over all draws
     if use_parallel_workers(m) && nworkers() > 1
@@ -80,9 +87,18 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vect
         mapfcn = map
     end    
 
-    mapfcn(DSGE.tricky_filter, allouts, models, datas, syses)
+    mapfcn(DSGE.tricky_filter, allouts, include_presamples, models, datas, syses)
 end
 
+tricky_filter(::AllOut, ::IncludePresample, m::AbstractModel, data::Matrix, sys::System) =
+    filter(m, data, sys; allout = true, include_presample = true)
+tricky_filter(::AllOut, ::ExcludePresample, m::AbstractModel, data::Matrix, sys::System) =
+    filter(m, data, sys; allout = true, include_presample = false)
+tricky_filter(::MinimumOut, ::IncludePresample, m::AbstractModel, data::Matrix, sys::System) = 
+    filter(m, data, sys; allout = false, include_presample = true)
+tricky_filter(::MinimumOut, ::ExcludePresample, m::AbstractModel, data::Matrix, sys::System) = 
+    filter(m, data, sys; allout = false, include_presample = false)
+    
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System,
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                   lead::Int = 0, allout::Bool = false, include_presample::Bool = true)
@@ -136,7 +152,7 @@ Computes and returns the smoothed states and shocks for every state-space system
 - `z0`: an optional `Nz` x 1 initial state vector
 - `vz0`: an optional `Nz` x `Nz` covariance matrix of an initial state vector
 - `include_presample`: indicates whether to include presample periods in the
-  returned vector of `Kalman` objects
+  returned vectors of smoothed states and shocks
 
 ### Outputs
 
@@ -167,6 +183,11 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     # Broadcast models and data matrices 
     models = fill(m, ndraws)
     datas = fill(data, ndraws)
+    include_presamples = if include_presample
+        fill(IncludePresample(), ndraws)
+    else
+        fill(ExcludePresample(), ndraws)
+    end
     
     # Call filter over all draws
     if use_parallel_workers(m) && nworkers() > 1
@@ -175,13 +196,18 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     else
         mapfcn = map
     end    
-    out = mapfcn(filterandsmooth, models, datas, syses)
+    out = mapfcn(DSGE.tricky_filterandsmooth, include_presamples, models, datas, syses)
 
-    smoothed_states = [Array(x[1]) for x in out]  # to make type stable
-    smoothed_shocks = [Array(x[2]) for x in out]  
+    smoothed_states = [Array(x[1]) for x in out] # to make type stable
+    smoothed_shocks = [Array(x[2]) for x in out]
     
     return smoothed_states, smoothed_shocks
 end
+
+tricky_filterandsmooth(::IncludePresample, m::AbstractModel, data::Matrix, sys::System) = 
+    filterandsmooth(m, data, sys; include_presample = true)
+tricky_filterandsmooth(::ExcludePresample, m::AbstractModel, data::Matrix, sys::System) = 
+    filterandsmooth(m, data, sys; include_presample = false)
 
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System,
                                            z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
@@ -189,13 +215,13 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
     ## 1. Filter
 
     # pull out the elements of sys
-    TTT    = sys[:TTT]
-    RRR    = sys[:RRR]
-    CCC    = sys[:CCC]
-    QQ     = sys[:QQ]
-    ZZ     = sys[:ZZ]
-    DD     = sys[:DD]
-    VVall  = sys[:VVall]
+    TTT   = sys[:TTT]
+    RRR   = sys[:RRR]
+    CCC   = sys[:CCC]
+    QQ    = sys[:QQ]
+    ZZ    = sys[:ZZ]
+    DD    = sys[:DD]
+    VVall = sys[:VVall]
 
     # Call the appropriate version of the Kalman filter
     if n_anticipated_shocks(m) > 0
