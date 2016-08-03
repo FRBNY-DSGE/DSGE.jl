@@ -124,7 +124,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System
             lead = lead, allout = allout, include_presample = include_presample)
     else
         # regular Kalman filter with no regime-switching
-        k = kalman_filter(m, data', TTT, CCC, ZZ, DD, VVall, z0, vz0;
+        k = kalman_filter(m, data, TTT, CCC, ZZ, DD, VVall, z0, vz0;
             lead = lead, allout = allout, include_presample = include_presample)
     end
 
@@ -237,16 +237,16 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
             lead, allout = true, include_presample = true)
     else
         # regular Kalman filter with no regime-switching
-        k = kalman_filter(m, data', TTT, CCC, ZZ, DD, VVall, z0, vz0;
+        k = kalman_filter(m, data, TTT, CCC, ZZ, DD, VVall, z0, vz0;
             lead = lead, allout = true, include_presample = true)
     end
 
     ## 2. Smooth
 
     alpha_hat, eta_hat = if forecast_smoother(m) == :kalman
-        kalman_smoother(m, data', sys, k[:z0], k[:vz0], k[:pred], k[:vpred])
+        kalman_smoother(m, data, sys, k[:z0], k[:vz0], k[:pred], k[:vpred])
     elseif forecast_smoother(m) == :durbin_koopman
-        durbin_koopman_smoother(m, data', sys, k[:z0], k[:vz0])
+        durbin_koopman_smoother(m, data, sys, k[:z0], k[:vz0])
     end
 
     return alpha_hat, eta_hat

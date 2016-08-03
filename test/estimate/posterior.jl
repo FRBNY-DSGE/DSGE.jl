@@ -4,7 +4,7 @@ using HDF5, Base.Test
 path = dirname(@__FILE__)
 
 h5 = h5open("$path/../reference/posterior.h5")
-data = read(h5, "data")
+data = read(h5, "data")'
 lh_expected = read(h5, "lnpy")
 post_expected = read(h5, "obj")
 close(h5)

@@ -39,7 +39,7 @@ kals = DSGE.filter(m, df, syses, z0, vz0; allout = true)
 
 exp_kals = Vector{DSGE.Kalman{Float64}}(ndraws)
 for i = 1:ndraws
-    exp_kals[i] = kalman_filter(m, df_to_matrix(m, df)', syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ], syses[i][:DD], syses[i][:VVall]; allout = true)
+    exp_kals[i] = kalman_filter(m, df_to_matrix(m, df), syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ], syses[i][:DD], syses[i][:VVall]; allout = true)
 end
 
 for i = 1:ndraws
@@ -60,7 +60,7 @@ end
 
 exp_kals = Vector{DSGE.Kalman{Float64}}(ndraws)
 for i = 1:ndraws
-    exp_kals[i] = kalman_filter(m, df_to_matrix(m, df)', syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ], syses[i][:DD], syses[i][:VVall], z0, vz0; allout = true)
+    exp_kals[i] = kalman_filter(m, df_to_matrix(m, df), syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ], syses[i][:DD], syses[i][:VVall], z0, vz0; allout = true)
 end
 
 for i = 1:ndraws

@@ -30,7 +30,7 @@ function smooth{S<:AbstractFloat}(m::AbstractModel,
                                   syses::Vector{System{S}},
                                   kals::Vector{Kalman{S}})
 
-    data = df_to_matrix(m, df)'
+    data = df_to_matrix(m, df)
     smooth(m, data, syses, kals)
 end
 

@@ -220,15 +220,15 @@ Implements the Kalman filter, accounting for the zero lower bound.
 ### Inputs
 
 - `m`: model object
-- `data`: a `T x Ny` matrix containing data `y(1), ... , y(T)`.
-- `TTT`: an optional `Nz x Nz` matrix for a time-invariant transition matrix in
+- `data`: a `Ny` x `T` matrix containing data `y(1), ... , y(T)`.
+- `TTT`: an optional `Nz` x `Nz` matrix for a time-invariant transition matrix in
   the transition equation. If not provided, it will be calculated.
 - `RRR`: an optional `Nz` x `Nz` matrix for a time-invariant variance matrix for
   the error in the transition equation.  If not provided, it will be calculated.
-- `CCC`: an `Nz` x 1` vector for a time-invariant input vector in the transition
+- `CCC`: an `Nz` x 1 vector for a time-invariant input vector in the transition
   equation.  If not provided, it will be calculated.
-- `z0`: an optional `Nz x 1` initial state vector.
-- `vz0`: an optional `Nz x Nz` covariance matrix of an initial state vector.
+- `z0`: an optional `Nz` x 1 initial state vector.
+- `vz0`: an optional `Nz` x `Nz` covariance matrix of an initial state vector.
 
 Where:
 - `Nz`: number of states
@@ -284,9 +284,9 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     shock_inds = inds_shocks_no_ant(m)
     obs_inds   = inds_obs_no_ant(m)
 
-    R1[:data] = data[inds_presample_periods(m), obs_inds]
-    R2[:data] = data[inds_prezlb_periods(m),    obs_inds]
-    R3[:data] = data[inds_zlb_periods(m),       :]
+    R1[:data] = data[obs_inds, inds_presample_periods(m)]
+    R2[:data] = data[obs_inds, inds_prezlb_periods(m)]
+    R3[:data] = data[:,        inds_zlb_periods(m)]
 
     # Step 1: Compute the transition equation:
     #   S_t = CCC + TTT*S_{t-1} + RRR*ε_t
@@ -360,12 +360,12 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
         z0[state_inds]
     end
     R1[:P0] = solve_discrete_lyapunov(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
-    k1 = kalman_filter(m, R1[:data]', R1[:TTT], zeros(S, regime_states[1]),
+    k1 = kalman_filter(m, R1[:data], R1[:TTT], zeros(S, regime_states[1]),
         R1[:ZZ], R1[:DD], R1[:VVall], R1[:A0], R1[:P0]; lead = 1, allout = allout,
         include_presample = true)
 
     # Run Kalman filter on normal period
-    k2 = kalman_filter(m, R2[:data]', R2[:TTT], zeros(regime_states[2]), R2[:ZZ],
+    k2 = kalman_filter(m, R2[:data], R2[:TTT], zeros(regime_states[2]), R2[:ZZ],
         R2[:DD], R2[:VVall], k1[:zend], k1[:Pend]; lead = 1, allout = allout,
         include_presample = true)
 
@@ -374,7 +374,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     Pprev = zeros(S, n_states_aug, n_states_aug)
     zprev[state_inds] = k2[:zend]
     Pprev[state_inds, state_inds] = k2[:Pend]
-    k3 = kalman_filter(m, R3[:data]', R3[:TTT], zeros(regime_states[3]), R3[:ZZ],
+    k3 = kalman_filter(m, R3[:data], R3[:TTT], zeros(regime_states[3]), R3[:ZZ],
         R3[:DD], R3[:VVall], zprev, Pprev; lead = 1, allout = allout,
         include_presample = true)
 

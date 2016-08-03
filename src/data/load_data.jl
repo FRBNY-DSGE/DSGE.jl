@@ -271,5 +271,5 @@ function df_to_matrix(m::AbstractModel, df::DataFrame)
 
     df1 = df1[t_start:t_end, colinds]
 
-    return convert(Matrix{Float64}, df1)
+    return convert(Matrix{Float64}, df1)'
 end

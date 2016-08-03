@@ -106,7 +106,7 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     n_conditional_periods::Int = 0)
 
     # convert DataFrame to matrix
-    data = df_to_matrix(df)'
+    data = df_to_matrix(m, df)
     
     # call actual Kalman smoother
     kalman_smoother(m, data, T, R, C, Q, Z, D, A0, P0, pred, vpred;
@@ -398,7 +398,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     n_conditional_periods::Int = 0)
 
     # convert DataFrame to Matrix
-    data = df_to_matrix(df)'
+    data = df_to_matrix(m, df)
     
     # call actual simulation smoother
     durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0;
@@ -472,7 +472,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
 
         # Note that we pass in `zeros(size(D))` instead of `D` because the
         # measurement equation for `YY_star` has no constant term
-        k, _, _, R3 = kalman_filter_2part(m, YY_star', T, R, C, A0, P0;
+        k, _, _, R3 = kalman_filter_2part(m, YY_star, T, R, C, A0, P0;
             DD = zeros(size(D)), allout = true, include_presample = true)
         
         k[:z0], k[:vz0], k[:pred], k[:vpred], R3[:TTT], R3[:RRR], R3[:CCC]
