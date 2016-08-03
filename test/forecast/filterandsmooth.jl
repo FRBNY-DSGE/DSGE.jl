@@ -42,13 +42,13 @@ for smoother in [:durbin_koopman, :kalman]
     exp_alpha_hats = Vector{Matrix{Float64}}(ndraws)
     exp_eta_hats   = Vector{Matrix{Float64}}(ndraws)
     for i = 1:ndraws
-        kal = kalman_filter(m, data', syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ],
+        kal = kalman_filter(m, data, syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ],
                             syses[i][:DD], syses[i][:VVall]; allout = true)
 
         exp_alpha_hats[i], exp_eta_hats[i] = if forecast_smoother(m) == :durbin_koopman
-            durbin_koopman_smoother(m, data', syses[i], kal[:z0], kal[:vz0])
+            durbin_koopman_smoother(m, df, syses[i], kal[:z0], kal[:vz0])
         elseif forecast_smoother(m) == :kalman
-            kalman_smoother(m, data', syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+            kalman_smoother(m, df, syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
         end
 
         @test_matrix_approx_eq exp_alpha_hats[i] alpha_hats[i]
@@ -61,13 +61,13 @@ for smoother in [:durbin_koopman, :kalman]
     exp_alpha_hats = Vector{Matrix{Float64}}(ndraws)
     exp_eta_hats   = Vector{Matrix{Float64}}(ndraws)
     for i = 1:ndraws
-        kal = kalman_filter(m, data', syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ],
+        kal = kalman_filter(m, data, syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ],
                             syses[i][:DD], syses[i][:VVall], z0, vz0; allout = true)
 
         exp_alpha_hats[i], exp_eta_hats[i] = if forecast_smoother(m) == :durbin_koopman
-            durbin_koopman_smoother(m, data', syses[i], kal[:z0], kal[:vz0])
+            durbin_koopman_smoother(m, df, syses[i], kal[:z0], kal[:vz0])
         elseif forecast_smoother(m) == :kalman
-            kalman_smoother(m, data', syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+            kalman_smoother(m, df, syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
         end
 
         @test_matrix_approx_eq exp_alpha_hats[i] alpha_hats[i]

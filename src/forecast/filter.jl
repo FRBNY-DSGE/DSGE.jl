@@ -124,7 +124,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System
             lead = lead, allout = allout, include_presample = include_presample)
     else
         # regular Kalman filter with no regime-switching
-        k = kalman_filter(m, data', TTT, CCC, ZZ, DD, VVall, z0, vz0;
+        k = kalman_filter(m, data, TTT, CCC, ZZ, DD, VVall, z0, vz0;
             lead = lead, allout = allout, include_presample = include_presample)
     end
 
@@ -237,7 +237,7 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
             lead, allout = true, include_presample = true)
     else
         # regular Kalman filter with no regime-switching
-        k = kalman_filter(m, data', TTT, CCC, ZZ, DD, VVall, z0, vz0;
+        k = kalman_filter(m, data, TTT, CCC, ZZ, DD, VVall, z0, vz0;
             lead = lead, allout = true, include_presample = true)
     end
 
