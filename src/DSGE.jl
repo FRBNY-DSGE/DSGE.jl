@@ -102,8 +102,8 @@ module DSGE
 
     include("forecast/smoothers.jl")
     include("forecast/compute_system.jl")
-
     include("forecast/filter.jl")
+    include("forecast/smooth.jl")
     include("forecast/drivers.jl")
     include("forecast/forecast.jl")
     include("forecast/compute_forecast.jl")

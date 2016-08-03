@@ -89,7 +89,8 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vect
         mapfcn = map
     end    
 
-    mapfcn(DSGE.tricky_filter, allouts, include_presamples, models, datas, syses, z0s, vz0s)
+    kals = mapfcn(DSGE.tricky_filter, allouts, include_presamples, models, datas, syses, z0s, vz0s)
+    return convert(Vector{Kalman{S}}, kals)
 end
 
 tricky_filter(::AllOut, ::IncludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) =
@@ -101,7 +102,7 @@ tricky_filter(::MinimumOut, ::IncludePresample, m::AbstractModel, data::Matrix, 
 tricky_filter(::MinimumOut, ::ExcludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) = 
     filter(m, data, sys, z0, vz0; allout = false, include_presample = false)
     
-function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System,
+function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System{S},
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                   lead::Int = 0, allout::Bool = false, include_presample::Bool = true)
     
@@ -213,7 +214,7 @@ tricky_filterandsmooth(::IncludePresample, m::AbstractModel, data::Matrix, sys::
 tricky_filterandsmooth(::ExcludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) = 
     filterandsmooth(m, data, sys, z0, vz0; include_presample = false)
 
-function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System,
+function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System{S},
                                            z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                            lead::Int = 0, include_presample::Bool = true)
     ## 1. Filter

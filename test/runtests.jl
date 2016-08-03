@@ -23,6 +23,7 @@ my_tests = [
             "forecast/smoothers",
             "forecast/filter",
             "forecast/filterandsmooth",
+            "forecast/smooth",
             "forecast/forecast",
             "forecast/drivers",
             "forecast/compute_forecast"
