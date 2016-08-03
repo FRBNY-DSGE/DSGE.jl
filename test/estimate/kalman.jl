@@ -11,7 +11,6 @@ for arg in ["data", "lead", "a", "F", "b", "H", "var", "z0", "vz0"]
 end
 close(h5)
 
-data = data'
 lead = round(Int, lead)
 
 m = Model990()
