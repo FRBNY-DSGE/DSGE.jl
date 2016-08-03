@@ -9,6 +9,7 @@ my_tests = [
             "solve/gensys",
             "solve/solve",
             "estimate/kalman",
+            "estimate/cat",
             "estimate/posterior",
             "estimate/hessizero",
             "estimate/hessian",
