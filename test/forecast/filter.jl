@@ -29,7 +29,7 @@ z0  = (eye(n_states_augmented(m)) - syses[1][:TTT]) \ syses[1][:CCC]
 vz0 = QuantEcon.solve_discrete_lyapunov(syses[1][:TTT], syses[1][:RRR]*syses[1][:QQ]*syses[1][:RRR]')
 
 # Add parallel workers
-my_procs = addprocs(nworkers())
+my_procs = addprocs(ndraws)
 @everywhere using DSGE
 kals = DSGE.filter(m, df, syses; allout = true)
 kals = DSGE.filter(m, df, syses, z0, vz0; allout = true)

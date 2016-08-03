@@ -24,7 +24,7 @@ for i = 1:ndraws
 end
 
 # Add parallel workers
-my_procs = addprocs(nworkers())
+my_procs = addprocs(ndraws)
 @everywhere using DSGE
 
 # Run forecast
