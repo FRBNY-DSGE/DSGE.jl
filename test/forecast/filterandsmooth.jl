@@ -30,45 +30,50 @@ vz0 = QuantEcon.solve_discrete_lyapunov(syses[1][:TTT], syses[1][:RRR]*syses[1][
 # Add parallel workers
 my_procs = addprocs(ndraws)
 @everywhere using DSGE
-alpha_hat, eta_hat = DSGE.filterandsmooth(m, df, syses; allout = true)
-alpha_hat, eta_hat = DSGE.filterandsmooth(m, df, syses, z0, vz0; allout = true)
+alpha_hats, eta_hats = DSGE.filterandsmooth(m, df, syses; allout = true)
+alpha_hats, eta_hats = DSGE.filterandsmooth(m, df, syses, z0, vz0; allout = true)
 
-# Without providing z0 and vz0
-@time alpha_hats, eta_hats = DSGE.filterandsmooth(m, df, syses; allout = true)
+for smoother in [:durbin_koopman, :kalman]
+    m <= Setting(:forecast_smoother, smoother)
 
-exp_alpha_hats = Vector{Matrix{Float64}}(ndraws)
-exp_eta_hats   = Vector{Matrix{Float64}}(ndraws)
-for i = 1:ndraws
-    kal = kalman_filter(m, data', syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ],
-        syses[i][:DD], syses[i][:VVall]; allout = true)
+    # Without providing z0 and vz0
+    @time alpha_hats, eta_hats = DSGE.filterandsmooth(m, df, syses; allout = true)
 
-    exp_alpha_hats[i], exp_eta_hats[i] = if forecast_smoother(m) == :durbin_koopman
-        durbin_koopman_smoother(m, data', syses[i], kal[:z0], kal[:vz0])
-    elseif forecast_smoother(m) == :kalman
-        kalman_smoother(m, data', syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+    exp_alpha_hats = Vector{Matrix{Float64}}(ndraws)
+    exp_eta_hats   = Vector{Matrix{Float64}}(ndraws)
+    for i = 1:ndraws
+        kal = kalman_filter(m, data', syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ],
+                            syses[i][:DD], syses[i][:VVall]; allout = true)
+
+        exp_alpha_hats[i], exp_eta_hats[i] = if forecast_smoother(m) == :durbin_koopman
+            durbin_koopman_smoother(m, data', syses[i], kal[:z0], kal[:vz0])
+        elseif forecast_smoother(m) == :kalman
+            kalman_smoother(m, data', syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+        end
+
+        @test_matrix_approx_eq exp_alpha_hats[i] alpha_hats[i]
+        @test_matrix_approx_eq exp_eta_hats[i] eta_hats[i]
     end
 
-    @test_matrix_approx_eq exp_alpha_hats[i] alpha_hats[i]
-    @test_matrix_approx_eq exp_eta_hats[i] eta_hats[i]
-end
+    # Providing z0 and vz0
+    @time alpha_hats, eta_hats = DSGE.filterandsmooth(m, df, syses, z0, vz0; allout = true)
 
-# Providing z0 and vz0
-@time alpha_hats, eta_hats = DSGE.filterandsmooth(m, df, syses, z0, vz0; allout = true)
+    exp_alpha_hats = Vector{Matrix{Float64}}(ndraws)
+    exp_eta_hats   = Vector{Matrix{Float64}}(ndraws)
+    for i = 1:ndraws
+        kal = kalman_filter(m, data', syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ],
+                            syses[i][:DD], syses[i][:VVall], z0, vz0; allout = true)
 
-exp_alpha_hats = Vector{Matrix{Float64}}(ndraws)
-exp_eta_hats   = Vector{Matrix{Float64}}(ndraws)
-for i = 1:ndraws
-    kal = kalman_filter(m, data', syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ],
-        syses[i][:DD], syses[i][:VVall], z0, vz0; allout = true)
+        exp_alpha_hats[i], exp_eta_hats[i] = if forecast_smoother(m) == :durbin_koopman
+            durbin_koopman_smoother(m, data', syses[i], kal[:z0], kal[:vz0])
+        elseif forecast_smoother(m) == :kalman
+            kalman_smoother(m, data', syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+        end
 
-    exp_alpha_hats[i], exp_eta_hats[i] = if forecast_smoother(m) == :durbin_koopman
-        durbin_koopman_smoother(m, data', syses[i], kal[:z0], kal[:vz0])
-    elseif forecast_smoother(m) == :kalman
-        kalman_smoother(m, data', syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+        @test_matrix_approx_eq exp_alpha_hats[i] alpha_hats[i]
+        @test_matrix_approx_eq exp_eta_hats[i] eta_hats[i]
     end
 
-    @test_matrix_approx_eq exp_alpha_hats[i] alpha_hats[i]
-    @test_matrix_approx_eq exp_eta_hats[i] eta_hats[i]
 end
 
 # Remove parallel workers
