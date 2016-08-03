@@ -1,14 +1,42 @@
-using DSGE, HDF5
+using DSGE, DataFrames, HDF5
+include("../util.jl")
 
 path = dirname(@__FILE__())
 
+# Set up arguments
 m = Model990()
-data = h5open("$path/../reference/filter_args.h5","r") do h5
-    read(h5,"data")
+m.testing = true
+m <= Setting(:date_forecast_start, quartertodate("2016-Q1"))
+m <= Setting(:use_parallel_workers, true)
+
+data, dates, params_sim = h5open("$path/../reference/filter_args.h5","r") do h5
+    read(h5, "data"), read(h5, "dates"), read(h5, "params_sim")
 end
 
-sys = compute_system(m)
+df        = DataFrame(data)
+df[:date] = Date(dates)
 
-alpha_hat, eta_hat = DSGE.filterandsmooth(m, data, sys, allout=true)
+ndraws = size(params_sim, 1)
+syses = Vector{System{Float64}}(ndraws)
+for i = 1:ndraws
+    params = squeeze(params_sim[i, :], 1)
+    update!(m, params)
+    syses[i] = compute_system(m)
+end
+
+z0  = (eye(n_states_augmented(m)) - syses[1][:TTT]) \ syses[1][:CCC]
+vz0 = QuantEcon.solve_discrete_lyapunov(syses[1][:TTT], syses[1][:RRR]*syses[1][:QQ]*syses[1][:RRR]')
+
+# Add parallel workers
+my_procs = addprocs(nworkers())
+@everywhere using DSGE
+alpha_hat, eta_hat = DSGE.filterandsmooth(m, df, syses; allout = true)
+alpha_hat, eta_hat = DSGE.filterandsmooth(m, df, syses, z0, vz0; allout = true)
+
+# Without providing z0 and vz0
+@time alpha_hats, eta_hats = DSGE.filterandsmooth(m, df, syses; allout = true)
+
+# Providing z0 and vz0
+@time alpha_hats, eta_hats = DSGE.filterandsmooth(m, df, syses, z0, vz0; allout = true)
 
 nothing

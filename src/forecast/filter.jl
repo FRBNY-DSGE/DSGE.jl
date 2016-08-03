@@ -158,10 +158,10 @@ Computes and returns the smoothed states and shocks for every state-space system
 
 ### Outputs
 
-- `smoothed_states`: a vector of `alpha_hat`s returned from the smoother
-  specified by `smoother_flag(m)`, one for each system in `syses`
-- `smoothed_shocks`: a vector of `eta_hat`s returned from the smoother, one for
-  each system in `syses`
+- `alpha_hats`: a vector of smoothed states (`alpha_hat`s) returned from the
+  smoother specified by `smoother_flag(m)`, one for each system in `syses`
+- `eta_hats`: a vector of smoothed shocks (`eta_hat`s) returned from the
+  smoother, one for each system in `syses`
 """
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
                                            syses::Vector{System{S}},
@@ -202,10 +202,10 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     end    
     out = mapfcn(DSGE.tricky_filterandsmooth, include_presamples, models, datas, syses, z0s, vz0s)
 
-    smoothed_states = [Array(x[1]) for x in out] # to make type stable
-    smoothed_shocks = [Array(x[2]) for x in out]
-    
-    return smoothed_states, smoothed_shocks
+    alpha_hats = [Array(x[1]) for x in out] # to make type stable 
+    eta_hats   = [Array(x[2]) for x in out] 
+
+    return alpha_hats, eta_hats
 end
 
 tricky_filterandsmooth(::IncludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) = 
@@ -242,10 +242,10 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
 
     ## 2. Smooth
 
-    alpha_hat, eta_hat = if smoother_flag(m) == :kalman
-        kalman_smoother(m, data, sys, k[:z0], k[:vz0], k[:pred], k[:vpred])
-    elseif smoother_flag(m) == :durbin_koopman
-        durbin_koopman_smoother(m, data, sys, k[:z0], k[:vz0])
+    alpha_hat, eta_hat = if forecast_smoother(m) == :kalman
+        kalman_smoother(m, data', sys, k[:z0], k[:vz0], k[:pred], k[:vpred])
+    elseif forecast_smoother(m) == :durbin_koopman
+        durbin_koopman_smoother(m, data', sys, k[:z0], k[:vz0])
     end
 
     return alpha_hat, eta_hat

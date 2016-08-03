@@ -380,8 +380,8 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
 end
 
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    data::Matrix{S}, sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S},
-    vpred::Array{S, 3}; n_conditional_periods::Int = 0)
+    data::Matrix{S}, sys::System, A0::Vector{S}, P0::Matrix{S};
+    n_conditional_periods::Int = 0)
 
     # extract system matrices
     T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
@@ -480,7 +480,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
         VVall = zeros(Ny+Nz,Ny+Nz)
         VVall[1:Nz,1:Nz] = R*Q*R'
         
-        k = kalman_filter(m, YY_star', T, C, Z, D, VVall, A0, P0; lead = 0, allout = true)
+        k = kalman_filter(m, YY_star, T, C, Z, D, VVall, A0, P0; lead = 0, allout = true)
 
         A0, P0, k[:pred], k[:vpred], T, R, C
     end

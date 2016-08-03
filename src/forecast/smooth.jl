@@ -20,10 +20,10 @@ Computes and returns the smoothed values of states for every parameter draw.
 
 ### Outputs
 
-- `smoothed_states`: a vector of `alpha_hat`s returned from the smoother
-  specified by `smoother_flag(m)`, one for each system in `syses`
-- `smoothed_shocks`: a vector of `eta_hat`s returned from the smoother, one for
-  each system in `syses`
+- `alpha_hats`: a vector of smoothed states (`alpha_hat`s) returned from the
+  smoother specified by `smoother_flag(m)`, one for each system in `syses`
+- `eta_hats`: a vector of smoothed shocks (`eta_hat`s) returned from the
+  smoother, one for each system in `syses`
 """
 function smooth{S<:AbstractFloat}(m::AbstractModel,
                                   df::DataFrame,
@@ -59,11 +59,11 @@ function smooth{S<:AbstractFloat}(m::AbstractModel,
         mapfcn = map
     end    
     out = mapfcn(DSGE.tricky_smooth, include_presamples, models, datas, syses, kals)
-
-    smoothed_states = [Array(x[1]) for x in out]  # to make type stable
-    smoothed_shocks = [Array(x[2]) for x in out]  
     
-    return smoothed_states, smoothed_shocks
+    alpha_hats = [Array(x[1]) for x in out] # to make type stable 
+    eta_hats   = [Array(x[2]) for x in out] 
+
+    return alpha_hats, eta_hats
 end
 
 tricky_smooth(::IncludePresample, m::AbstractModel, data::Matrix, sys::System, kal::Kalman) = 
@@ -76,10 +76,10 @@ function smooth{S<:AbstractFloat}(m::AbstractModel,
                                   sys::System,
                                   kal::Kalman)
 
-    alpha_hat, eta_hat = if smoother_flag(m) == :kalman
-        kalman_smoother(m, data, sys, kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
-    elseif smoother_flag(m) == :durbin_koopman
-        durbin_koopman_smoother(m, data, sys, kal[:z0], kal[:vz0])
+    alpha_hat, eta_hat = if forecast_smoother(m) == :kalman
+        kalman_smoother(m, data', sys, kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+    elseif forecast_smoother(m) == :durbin_koopman
+        durbin_koopman_smoother(m, data', sys, kal[:z0], kal[:vz0])
     end
 
     return alpha_hat, eta_hat
