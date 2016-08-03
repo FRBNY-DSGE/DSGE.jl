@@ -16,7 +16,7 @@ end
 df        = DataFrame(data)
 df[:date] = Date(dates)
 
-ndraws = size(params_sim, 1)
+ndraws = 2
 syses = Vector{System{Float64}}(ndraws)
 for i = 1:ndraws
     params = squeeze(params_sim[i, :], 1)

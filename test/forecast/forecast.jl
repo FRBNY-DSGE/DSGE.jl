@@ -13,7 +13,7 @@ params_sim = h5open("$path/../reference/filter_args.h5","r") do h5
     read(h5, "params_sim")
 end
 
-ndraws = size(params_sim, 1)
+ndraws = 2
 syses = Vector{System{Float64}}(ndraws)
 z0s = Vector{Vector{Float64}}(ndraws)
 for i = 1:ndraws
