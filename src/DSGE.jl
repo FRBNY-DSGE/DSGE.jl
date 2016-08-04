@@ -15,7 +15,10 @@ module DSGE
         BetaAlt, GammaAlt, DegenerateMvNormal,
 
         # settings.jl
-        Setting, get_setting, default_settings!, default_test_settings!,
+        Setting, get_setting, 
+
+        # defaults.jl
+        default_settings!, default_test_settings!,
 
         # abstractdsgemodel.jl
         AbstractModel, description,

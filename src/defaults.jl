@@ -61,3 +61,70 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:shockdec_endindex, 50000, "Index of end of shock decomposition output period")
     m <= Setting(:shockdec_whichshocks, :all, "Sets of shocks for which to conduct shock decomposition")
 end
+
+"""
+```
+default_test_settings!(m::AbstractModel)
+```
+
+The following Settings are constructed, initialized and added to
+`m.test_settings`. Their purposes are identical to those in
+`m.settings`, but these values are used to test DSGE.jl.
+
+### I/O Locations and identifiers
+- `saveroot::Setting{ASCIIString}`: A temporary directory in /tmp/
+- `dataroot::Setting{ASCIIString}`: dsgeroot/test/reference/
+- `data_vintage::Setting{ASCIIString}`: "_REF"
+
+### Metropolis-Hastings
+- `n_mh_simulations::Setting{Int}`: 100
+- `n_mh_blocks::Setting{Int}`: 1
+- `n_mh_burn::Setting{Int}`: 0
+- `mh_thin::Setting{Int}`: 1
+"""
+function default_test_settings!(m::AbstractModel)
+
+    test = m.test_settings
+
+    # I/O
+    dataroot = normpath(joinpath(dirname(@__FILE__), "..","test","reference"))
+    saveroot = mktempdir()
+
+    #General
+    test[:saveroot] = Setting(:saveroot, saveroot,
+        "Where to write files when in test mode")
+    test[:dataroot] = Setting(:dataroot, dataroot,
+        "Location of input files when in test mode" )
+    test[:data_vintage] = Setting(:data_vintage, "REF", true, "vint",
+        "Reference data identifier")
+    test[:use_parallel_workers] = Setting(:use_parallel_workers, false, false, "parw",
+        "Use available parallel workers in computations")
+    test[:n_hessian_test_params] = Setting(:n_hessian_test_params, 3, false, "mhfp",
+        "Max number of free params for which to calculate Hessian")
+
+    # Metropolis-Hastings
+    test[:n_mh_simulations] = Setting(:n_mh_simulations, 100, false, "nsim",
+        "Number of parameter draws per block for testing Metropolis-Hastings")
+    test[:n_mh_blocks] = Setting(:n_mh_blocks, 1, false, "nblc",
+        "Number of blocks to draw parameters for testing Metropolis-Hastings")
+    test[:n_mh_burn] = Setting(:n_mh_burn, 0, false, "nbrn",
+        "Number of burn-in blocks for testing Metropolis-Hastings")
+    test[:mh_thin] = Setting(:mh_thin, 1, false, "thin",
+        "Thinning step for testing Metropolis-Hastings")
+
+    # Forecast
+    test[:date_forecast_start] = Setting(:date_forecast_start, quartertodate("2015-Q4"),
+        "Start date of forecast period")
+    test[:date_forecast_end] = Setting(:date_forecast_end, quartertodate("2016-Q1"),
+        "End date of forecast period")
+    test[:forecast_jstep] = Setting(:forecast_jstep, 1,
+        "Forecast thinning step (in addition to MH thinning step")
+    test[:shockdec_startindex] = Setting(:shockdec_startindex, 2,
+        "Index of start of shock decomposition output period")
+    test[:shockdec_endindex] = Setting(:shockdec_endindex, 4,
+        "Index of end of shock decomposition output period")
+    test[:shockdec_whichshocks] = Setting(:shockdec_whichshocks, :all, #TODO
+        "Sets of shocks for which to conduct shock decomposition")
+
+    return test
+end
