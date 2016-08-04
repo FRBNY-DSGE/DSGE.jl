@@ -1,30 +1,35 @@
-function systematic_resampling( w )
+using Debug
 
-np = length(w)
-w = w'
-cw = cumsum(w)
-uu = zeros(length(w),1)
-csi=rand(1)
+@debug function systematic_resampling( wght )
 
-for j=1:length(w)
-    uu(j) = (j-1)+csi
+#@bp
+npart = length(wght)
+wght = wght'
+cwght = cumsum(wght')
+uu = zeros(npart,1)
+csi=rand()
+
+for j=1:npart
+    uu[j] = (j-1)+csi
 end
     
-indx = zeros(np, 1)
+indx = zeros(npart, 1)
 
-@parallel for i = 1:np
-    u = uu(i)/length(w)
+#@parallel 
+for i = 1:npart
+    u = uu[i]/npart
     j=1
-    while j <= np
-        if (u < cw(j)) 
+    while j <= npart
+        if (u < cwght[j]) 
             break
         end
         j = j+1
     end
-    indx(i) = j
+    indx[i] = j
 end
 
 m = 0
 
-return indx, m
+indx = round(Int, indx)
+return vec(indx), m
 end
