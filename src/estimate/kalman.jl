@@ -23,7 +23,7 @@ kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 - `DD`: an `Ny` x 1 vector for a time-invariant input vector in the measurement equation.
 - `VVall`: an `Ny + Nz` x `Ny + Nz` matrix for a time-invariant variance matrix for the
   error in the transition equation and the error in the measurement equation, that is,
-  `[η(t)', ϵ(t)']'`.
+  `[ϵ(t)', u(t)']'`.
 
 #### Optional Inputs
 - `z0`: an optional `Nz` x 1 initial state vector.
@@ -37,8 +37,8 @@ kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
   returned `Kalman` object to be the states and variance-covariance matrices at
   the end of the presample/beginning of the main sample
 
-
 Where:
+
 - `Nz`: number of states
 - `Ny`: number of observables
 - `T`: number of time periods for which we have data
@@ -47,27 +47,32 @@ Where:
 
 - a `Kalman` object. See documentation for `Kalman`.
 
-
 ### Notes
 
 The state space model is defined as follows:
 ```
-z(t+1) = CCC+TTT*z(t)+η(t)   (state or transition equation)
-y(t) = DD+ZZ*z(t)+ϵ(t)       (observation or measurement equation)
+z(t+1) = CCC + TTT*z(t) + ϵ(t)   (state or transition equation)
+y(t) = DD + ZZ*z(t) + u(t)       (observation or measurement equation)
 ```
 
-When `z0` and `Vz0` are omitted, the initial state vector and its covariance matrix of the
-time invariant Kalman filters are computed under the stationarity condition:
+When `z0` and `Vz0` are omitted, the initial state vector and its covariance
+matrix of the time invariant Kalman filters are computed under the stationarity
+condition:
 ```
-z0 = (I-TTT)\CCC
-vz0 = (I-kron(TTT,TTT))\(V(:),Nz,Nz)
+z0  = (I - TTT)\CCC
+vz0 = reshape(I - kron(TTT, TTT))\vec(V), Nz, Nz)
 ```
-where `TTT` and `V` are the time invariant transition matrix and the covariance matrix of
-transition equation noise, and `vec(V)` is an `Nz^2` x 1 column vector that is constructed
-by stacking the `Nz` columns of `V`.  Note that all eigenvalues of `TTT` are inside the unit
-circle when the state space model is stationary.  When the preceding formula cannot be
-applied, the initial state vector estimate is set to `a` and its covariance matrix is given
-by `1E6I`.  Optionally, you can specify initial values.
+
+Where:
+
+- `kron(TTT, TTT)` is a matrix of dimension `Nz^2` x `Nz^2`, the Kronecker
+  product of `TTT`
+- `vec(V)` is the `Nz^2` x 1 column vector constructed by stacking the `Nz`
+  columns of `V`
+
+All eigenvalues of `TTT` are inside the unit circle when the state space model
+is stationary.  When the preceding formula cannot be applied, the initial state
+vector estimate is set to `CCC` and its covariance matrix is given by `1e6 * I`.
 """
 function kalman_filter{S<:AbstractFloat}(m::AbstractModel,
                                          data::Matrix{S},
@@ -84,17 +89,17 @@ function kalman_filter{S<:AbstractFloat}(m::AbstractModel,
     T = size(data, 2)
     Nz = length(CCC)
     Ny = length(DD)
-    V = VVall[1:Nz, 1:Nz]
+    V = VVall[1:Nz, 1:Nz] # V = RRR*QQ*RRR'
 
     if isempty(z0) || isempty(vz0)
-        e, _ = eig(TTT)
-        if countnz(e*e' - eye(Nz)) == Nz^2
-            z0 = (eye(Nz) - TTT)\CCC
-            vz0 = reshape((eye(Nz^2)-kron(TTT,TTT))\V, Nz, Nz)
-        else
-            z0 = CCC
-            vz0 = eye(Nz)*1e6
-        end
+        # e, _ = eig(TTT)
+        # if countnz(e*e' - eye(Nz)) == Nz^2
+            z0  = (eye(Nz) - TTT)\CCC
+            vz0 = solve_discrete_lyapunov(TTT, V)
+        # else
+        #     z0 = CCC
+        #     vz0 = eye(Nz)*1e6
+        # end
     end
 
     z = z0
@@ -353,16 +358,21 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     #   VV2 = Cov(ε2_t, u_t) = RRR*VV
     #   VVall = Var([ε2_t; u_t])    (joint variance of the two shocks)
 
-    # Run Kalman filter on presample
-    R1[:A0] = if isempty(z0)
-        zeros(S, n_states_no_ant)
+    # Run Kalman filter on presample, calculating `z0` and `vz0` in
+    # `kalman_filter` if necessary
+    if isempty(z0) || isempty(vz0)
+        k1 = kalman_filter(m, R1[:data], R1[:TTT], zeros(S, regime_states[1]),
+            R1[:ZZ], R1[:DD], R1[:VVall]; lead = 1, allout = allout,
+            include_presample = true)
+        R1[:A0] = k1[:z0]
+        R1[:P0] = k1[:vz0]
     else
-        z0[state_inds]
+        R1[:A0] = z0[state_inds]
+        R1[:P0] = vz0[state_inds, state_inds]
+        k1 = kalman_filter(m, R1[:data], R1[:TTT], zeros(S, regime_states[1]),
+            R1[:ZZ], R1[:DD], R1[:VVall], R1[:A0], R1[:P0]; lead = 1, allout = allout,
+            include_presample = true)
     end
-    R1[:P0] = solve_discrete_lyapunov(R1[:TTT], R1[:RRR]*R1[:QQ]*R1[:RRR]')
-    k1 = kalman_filter(m, R1[:data], R1[:TTT], zeros(S, regime_states[1]),
-        R1[:ZZ], R1[:DD], R1[:VVall], R1[:A0], R1[:P0]; lead = 1, allout = allout,
-        include_presample = true)
 
     # Run Kalman filter on normal period
     k2 = kalman_filter(m, R2[:data], R2[:TTT], zeros(regime_states[2]), R2[:ZZ],
@@ -389,7 +399,6 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     ## Return concatenated Kalman and system matrices for each regime
     return k, R1, R2, R3
 end
-
 
 """
 ```

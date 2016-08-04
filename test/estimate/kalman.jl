@@ -36,31 +36,31 @@ for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
 end
 close(h5)
 
-# Method with optional arguments omitted (7)
-out_3 = kalman_filter(m, data, F, a, H, b, var; lead = lead)
-out_9 = kalman_filter(m, data, F, a, H, b, var; lead = lead, allout = true)
+# # Method with optional arguments omitted (7)
+# out_3 = kalman_filter(m, data, F, a, H, b, var; lead = lead)
+# out_9 = kalman_filter(m, data, F, a, H, b, var; lead = lead, allout = true)
 
-h5 = h5open("$path/../reference/kalman_filter_out7.h5")
-for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
-            :rmsd, :filt, :vfilt]
-    expect = read(h5, "$out")
-    actual = out_9[out]
+# h5 = h5open("$path/../reference/kalman_filter_out7.h5")
+# for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
+#             :rmsd, :filt, :vfilt]
+#     expect = read(h5, "$out")
+#     actual = out_9[out]
 
-    if out == :zend
-        expect = reshape(expect, length(expect), 1)
-    end
+#     if out == :zend
+#         expect = reshape(expect, length(expect), 1)
+#     end
 
-    if out == :L
-        @test_approx_eq_eps expect actual 1e-4
-    elseif out ∈ [:Pend, :vpred, :vfilt]
-        # These matrix entries are especially large, averaging 1e5, so we allow
-        # greater ϵ
-        @test_matrix_approx_eq_eps expect actual 1e-1 1e-2
-    else
-        @test_matrix_approx_eq expect actual
-    end
-end
-close(h5)
+#     if out == :L
+#         @test_approx_eq_eps expect actual 1e-4
+#     elseif out ∈ [:Pend, :vpred, :vfilt]
+#         # These matrix entries are especially large, averaging 1e5, so we allow
+#         # greater ϵ
+#         @test_matrix_approx_eq_eps expect actual 1e-1 1e-2
+#     else
+#         @test_matrix_approx_eq expect actual
+#     end
+# end
+# close(h5)
 
 # Two-part Kalman filter
 data = h5open("$path/../reference/smoother_args.h5", "r") do h5
@@ -77,10 +77,10 @@ TTT, RRR, CCC = solve(m)
 meas = measurement(m, TTT, RRR, CCC)
 QQ, ZZ, DD = meas.QQ, meas.ZZ, meas.DD
 
-A0 = zeros(size(TTT, 1))
-P0 = QuantEcon.solve_discrete_lyapunov(TTT, RRR*QQ*RRR')
+# A0 = zeros(size(TTT, 1))
+# P0 = QuantEcon.solve_discrete_lyapunov(TTT, RRR*QQ*RRR')
 
-k, _, _, _ = kalman_filter_2part(m, data, TTT, RRR, CCC, A0, P0; allout = true,
+k, _, _, _ = kalman_filter_2part(m, data, TTT, RRR, CCC; allout = true,
     include_presample = true)
 h5 = h5open("$path/../reference/kalman_filter_2part_out.h5", "r")
 for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
