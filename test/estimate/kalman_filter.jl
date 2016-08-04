@@ -62,34 +62,4 @@ for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
 end
 close(h5)
 
-# Two-part Kalman filter
-data = h5open("$path/../reference/smoother_args.h5", "r") do h5
-    read(h5, "data")
-end
-
-m = Model990()
-m.testing = true
-m <= Setting(:n_anticipated_shocks, 6)
-DSGE.init_model_indices!(m)
-m <= Setting(:date_forecast_start, quartertodate("2016-Q1"))
-
-TTT, RRR, CCC = solve(m)
-meas = measurement(m, TTT, RRR, CCC)
-QQ, ZZ, DD = meas.QQ, meas.ZZ, meas.DD
-
-# A0 = zeros(size(TTT, 1))
-# P0 = QuantEcon.solve_discrete_lyapunov(TTT, RRR*QQ*RRR')
-
-k, _, _, _ = kalman_filter_2part(m, data, TTT, RRR, CCC; allout = true,
-    include_presample = true)
-h5 = h5open("$path/../reference/kalman_filter_2part_out.h5", "r")
-for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
-            :rmsd, :filt, :vfilt, :z0, :vz0]
-    expect = read(h5, "$out")
-    actual = k[out]
-
-    @test_approx_eq expect actual
-end
-close(h5)
-
 nothing
