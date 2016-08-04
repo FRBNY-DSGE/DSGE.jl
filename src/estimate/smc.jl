@@ -55,7 +55,6 @@ rsmpsim = zeros(tune.nphi,1) #1 if resampled
 
 println("\n\n SMC starts ....  \n\n  ")
 #Draws from the prior
-@bp
 priorsim = zeros(tune.npart,tune.npara)
 for i in 1:tune.npart
     priodraw = []
@@ -77,7 +76,6 @@ for i in 1:tune.npart
     end
     priorsim[i,:] = priodraw'
 end
-@bp
 parasim[1,:,:] = priorsim #Draws from prior #Lay priorsim draws on top of parasim box matrix which is 100x1000x13
 wtsim[:,1] = 1/tune.npart #Initial weights are all equal, 1000x1
 zhat[1] = round(sum(wtsim[:,1]),14) # zhat is 100x1 and its first entry is the sum of the first column of wtsim, the weights matrix
@@ -87,10 +85,11 @@ loglh = zeros(tune.npart, 1)
 logpost = zeros(tune.npart, 1)
 for i=1:1:tune.npart
 	p0 = priorsim[i,:]';
-    #logpost[i], loglh[i] = objfcn_dsge(p0, tune.phi[1], prio, bounds, data)
-    logpost[i] = posterior!(m, squeeze(p0,2), data; phi_smc = tune.phi[1])[:post]
-    loglh[i] = posterior!(m, squeeze(p0,2), data; phi_smc = tune.phi[1])[:like]
+    out = posterior!(m, squeeze(p0,2), data; phi_smc = tune.phi[1])
+    logpost[i] = out[:post]
+    loglh[i] = out[:like]
 end
+@bp
 
 #RECURSION
 
@@ -118,12 +117,14 @@ for i=2:1:tune.nphi
 	#------------------------------------
 	# (b) Selection 
 	#------------------------------------
+
 	ESS = 1/sum(wtsim[:,i].^2)
     sampled = false
 	if (ESS < tune.npart/2)
         sampled = true
-		id, m = systematic_resampling(wtsim[:,i]')
-        parasim[i-1, :, :] = squeeze(parasim[i-1, id, :],1)
+        ####What else does systematic_resampling return?
+		id, somethingelse = systematic_resampling(wtsim[:,i])
+        parasim[i-1, :, :] = parasim[i-1, id, :]
 		loglh = loglh[id]
 		logpost = logpost[id]
 		wtsim[:,i] = 1/tune.npart
@@ -142,11 +143,16 @@ for i=2:1:tune.nphi
 	#------------------------------------
 	# (c) Mutation
 	#------------------------------------
+    @bp
+
+    tune.c = tune.c*(0.95 + 0.10*exp(16*(tune.acpt - tune.trgt))/(1 + exp(16*(tune.acpt - tune.trgt))))
     para = squeeze(parasim[i-1, :, :],1)
     wght = repmat(wtsim[:,i], 1, tune.npara)
     tune.mu = sum(para.*wght,1)
 	z =  (para - repmat(tune.mu, tune.npart, 1))
 	tune.R = (z.*wght)'*z
+    #assure that R is symmetric
+    tune.R = (tune.R + tune.R') / 2
     tune.Rdiag = diagm(diag(tune.R))
 	tune.Rchol = chol(tune.R, Val{:L})
 	tune.Rchol2 = sqrt(tune.Rdiag)
@@ -154,8 +160,10 @@ for i=2:1:tune.nphi
 	#Particle mutation (RWMH 2)
 	temp_acpt = zeros(tune.npart, 1) # Initialize acceptance indicator
 
-	@parallel for j=1:tune.npart
-		ind_para, ind_loglh, ind_post, ind_acpt = mutation_RMWH(para[j,:]', loglh[j], logpost[j], tune, i, f)
+	#@parallel 
+    for j=1:tune.npart
+        ind_para, ind_loglh, ind_post, ind_acpt = mutation_RWMH(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data,m)
+        
 		parasim[i,j,:] = ind_para
 		loglh[j] = ind_loglh
 		logpost[j] = ind_post
@@ -180,7 +188,6 @@ for i=2:1:tune.nphi
         sig = (sqrt(sig));
 
         # time calculation
-		toc()
 
 		println("--------------------------")
         println("Iteration = $(i) / $(tune.nphi)")
@@ -189,10 +196,10 @@ for i=2:1:tune.nphi
 		println("--------------------------")
         println("c = $(tune.c)")
         println("acpt = $(tune.acpt)")
-        println("ESS = $(tune.phi)")
+        println("ESS = $(ESS)   ($(nresamp) total resamples.)")
 		println("--------------------------")
         for n=1:length(m.parameters)
-            println("$(m.parameters[n].key) = ,$(mu[n]), $(sig[n])")
+            println("$(m.parameters[n].key) = $(mu[n]), $(sig[n])")
 		end
     end
 end

@@ -1,3 +1,5 @@
+using Debug
+
 """
 `prior(m::AbstractModel{T})`
 
@@ -92,28 +94,28 @@ end
 const LIKE_NULL_DICT   = Dict{Symbol, Matrix{AbstractFloat}}()
 const LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
 
-"""
-```
-likelihood{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T};
-                              mh::Bool = false, catch_errors::Bool = false)
-```
-
-Evaluate the DSGE likelihood function. Can handle "two part" estimation where the observed
-sample contains both a normal stretch of time (in which interest rates are positive) and
-a stretch of time in which interest rates reach the zero lower bound. If there is a
-zero-lower-bound period, then we filter over the 2 periods separately.  Otherwise, we
-filter over the main sample all at once.
-
-### Arguments
-- `m`: The model object
-- `data`: matrix of data for observables
-
-### Optional Arguments
-- `mh`: Whether metropolis_hastings is the caller. If `mh=true`, the transition matrices for
-  the zero-lower-bound period are returned in a dictionary.
-- `catch_errors`: If `mh = true`, `GensysErrors` should always be caught.
-"""
-function likelihood{T<:AbstractFloat}(m::AbstractModel,
+#"""
+#```
+#likelihood{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T};
+#                              mh::Bool = false, catch_errors::Bool = false)
+#```
+#
+#Evaluate the DSGE likelihood function. Can handle "two part" estimation where the observed
+#sample contains both a normal stretch of time (in which interest rates are positive) and
+#a stretch of time in which interest rates reach the zero lower bound. If there is a
+#zero-lower-bound period, then we filter over the 2 periods separately.  Otherwise, we
+#filter over the main sample all at once.
+#
+#### Arguments
+#-`m`: The model object
+#-`data`: matrix of data for observables
+#
+#### Optional Arguments
+#-`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the transition matrices for
+#  the zero-lower-bound period are returned in a dictionary.
+#-`catch_errors`: If `mh = true`, `GensysErrors` should always be caught.
+#"""
+@debug function likelihood{T<:AbstractFloat}(m::AbstractModel,
                                       data::Matrix{T};
                                       mh::Bool = false,
                                       catch_errors::Bool = false)
@@ -238,12 +240,16 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     Pprev[after_shocks_new, before_shocks]    = R2[:Pend][after_shocks_old, before_shocks]
     Pprev[after_shocks_new, after_shocks_new] = R2[:Pend][after_shocks_old, after_shocks_old]
 
+
+    println("\n\n ONE THING \n\n ","\n",R3[:data]',"\n", 1,"\n", zeros(regime_states[3],"\n", 1),"\n", R3[:TTT],"\n", R3[:DD],"\n", R3[:ZZ],"\n", R3[:VVall],"\n", zprev,"\n", Pprev)
+
     out             = kalman_filter(R3[:data]', 1, zeros(regime_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev)
     regime_likes[3] = out[:L]
     R3[:zend]       = out[:zend]
     R3[:Pend]       = out[:Pend]
 
     # Return total log-likelihood, excluding the presample
+
     like = regime_likes[2] + regime_likes[3]
     if mh
         return like, R3
