@@ -92,14 +92,14 @@ function kalman_filter{S<:AbstractFloat}(m::AbstractModel,
     V = VVall[1:Nz, 1:Nz] # V = RRR*QQ*RRR'
 
     if isempty(z0) || isempty(vz0)
-        # e, _ = eig(TTT)
-        # if countnz(e*e' - eye(Nz)) == Nz^2
+        e, _ = eig(TTT)
+        if all(abs(e) .< 1.)
             z0  = (eye(Nz) - TTT)\CCC
             vz0 = solve_discrete_lyapunov(TTT, V)
-        # else
-        #     z0 = CCC
-        #     vz0 = eye(Nz)*1e6
-        # end
+        else
+            z0 = CCC
+            vz0 = eye(Nz)*1e6
+        end
     end
 
     z = z0
