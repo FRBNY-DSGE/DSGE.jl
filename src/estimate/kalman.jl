@@ -367,6 +367,13 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
         R1[:A0] = k1[:z0]
         R1[:P0] = k1[:vz0]
     else
+        # Check that rows and columns corresponding to anticipated shocks are zero in vz0
+        ind_ant1 = m.endogenous_states[:rm_tl1]
+        ind_antn = m.endogenous_states[symbol("rm_tl$(n_anticipated_shocks(m))")]
+        shock_inds_ant = ind_ant1:ind_antn
+        @assert all(x -> x == 0, vz0[:, ind_ant1:ind_antn])
+        @assert all(x -> x == 0, vz0[ind_ant1:ind_antn, :])
+
         R1[:A0] = z0[state_inds]
         R1[:P0] = vz0[state_inds, state_inds]
         k1 = kalman_filter(m, R1[:data], R1[:TTT], zeros(S, regime_states[1]),
