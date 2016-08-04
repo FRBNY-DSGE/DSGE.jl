@@ -48,8 +48,8 @@ exp_alpha_hat, exp_eta_hat =
     read(h5, "alpha_hat"), read(h5, "eta_hat")
 end
 
-# @test_approx_eq exp_alpha_hat alpha_hat
-# @test_approx_eq exp_eta_hat eta_hat
+@test_approx_eq exp_alpha_hat alpha_hat
+@test_approx_eq exp_eta_hat eta_hat
 
 
 nothing
