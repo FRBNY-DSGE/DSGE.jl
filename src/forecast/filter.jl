@@ -83,7 +83,6 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vect
     
     # Call filter over all draws
     if use_parallel_workers(m) && nworkers() > 1
-        println("Using pmap")
         mapfcn = pmap
     else
         mapfcn = map
@@ -196,7 +195,6 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     
     # Call filter over all draws
     if use_parallel_workers(m) && nworkers() > 1
-        println("Using pmap")
         mapfcn = pmap
     else
         mapfcn = map

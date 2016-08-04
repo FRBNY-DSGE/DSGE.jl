@@ -49,7 +49,6 @@ function smooth{S<:AbstractFloat}(m::AbstractModel,
 
     # Call smooth over all draws
     if use_parallel_workers(m) && nworkers() > 1
-        println("Using pmap")
         mapfcn = pmap
     else
         mapfcn = map
