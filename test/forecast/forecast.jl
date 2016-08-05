@@ -1,12 +1,12 @@
-using DSGE
+using DSGE, HDF5
 include("../util.jl")
 
 path = dirname(@__FILE__)
 
 # Set up arguments
 custom_settings = Dict{Symbol, Setting}(
-    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")),
-    :use_parallel_workers => Setting(:use_parallel_workers, true))
+    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")))
+    # :use_parallel_workers => Setting(:use_parallel_workers, true))
 m = Model990(custom_settings = custom_settings)
 m.testing = true
 
@@ -29,7 +29,7 @@ my_procs = addprocs(ndraws)
 @everywhere using DSGE
 
 # Run forecast
-states, observables, pseudos = DSGE.forecast(m, syses, z0s)
+states, observables, pseudos, shocks = DSGE.forecast(m, syses, z0s)
 
 # Remove parallel workers
 rmprocs(my_procs)

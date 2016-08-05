@@ -23,19 +23,16 @@ z_end = zeros(2)
 # specify forecast horizons
 forecast_horizons = 3
 
-# specify which variables to forecast 
-variables_to_forecast = ["States","Observables","Pseudo-Observables"]
-
 # define shock distribution
-dist = DSGE.DegenerateMvNormal(zeros(size(Q,1)), Q)
+dist = DSGE.DegenerateMvNormal(zeros(nshocks), Q)
 
 # test invocation supplying distribution
 forecast_dist = compute_forecast(T, R, C, Z, D, Z_pseudo, D_pseudo, forecast_horizons,
-                            variables_to_forecast, dist, z_end)
+    dist, z_end)
 
 # test invocation supplying shocks
-shocks = rand(forecast_horizons, nshocks)
+shocks = rand(nshocks, forecast_horizons)
 forecast_shocks = compute_forecast(T, R, C, Z, D, Z_pseudo, D_pseudo, forecast_horizons,
-                            variables_to_forecast, shocks, z_end)
+    shocks, z_end)
 
 nothing
