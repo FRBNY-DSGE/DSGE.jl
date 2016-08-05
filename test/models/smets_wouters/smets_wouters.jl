@@ -126,7 +126,7 @@ close(h5)
 @test_matrix_approx_eq Ψ_ref Ψ
 @test_matrix_approx_eq Π_ref Π
 
-# ### Measurement equation
+### Measurement equation
 expect = Dict{Symbol, Matrix}()
 h5 = h5open("$path/measurement.h5")
 expect[:ZZ] = read(h5, "ZZ")
@@ -142,5 +142,11 @@ actual = measurement(sw, TTT, RRR, CCC)
 for d in (:ZZ, :DD, :QQ, :EE, :MM)
     @test_matrix_approx_eq expect[d] actual[d]
 end
+
+### Custom settings
+custom_settings = Dict{Symbol, Setting}()
+custom_settings[:reoptimize] = Setting(:reoptimize, false)
+model = SmetsWouters(custom_settings = custom_settings)
+@test get_setting(model, :reoptimize) == false
 
 nothing

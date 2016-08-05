@@ -131,7 +131,7 @@ close(h5)
 @test_matrix_approx_eq Ψ_ref Ψ
 @test_matrix_approx_eq Π_ref Π
 
-# ### Measurement equation
+### Measurement equation
 expect = Dict{Symbol, Matrix}()
 h5 = h5open("$path/measurement.h5")
 expect[:ZZ] = read(h5, "ZZ")
@@ -147,5 +147,53 @@ actual = measurement(model, TTT, RRR, CCC)
 for d in (:ZZ, :DD, :QQ, :EE, :MM)
     @test_matrix_approx_eq expect[d] actual[d]
 end
+
+### Custom settings
+custom_settings = Dict{Symbol, Setting}()
+custom_settings[:n_anticipated_shocks] = Setting(:n_anticipated_shocks, 6)
+model = Model990(custom_settings = custom_settings)
+@test get_setting(model, :n_anticipated_shocks) == 6
+
+# Indices initialized correctly under custom settings
+
+# Endogenous states
+endo = model.endogenous_states
+@test length(endo) == 66
+@test endo[:rm_tl6] == 66
+
+# Exogenous shocks
+exo = model.exogenous_shocks
+@test length(exo) == 22
+@test exo[:rm_shl6] == 22
+
+# Expectation shocks
+ex = model.expected_shocks
+@test length(ex) == 13
+@test ex[:Erk_f_sh] == 13
+
+# Equations
+eq = model.equilibrium_conditions
+@test length(eq) == 66
+@test eq[:eq_rml6] == 66
+
+# Additional states
+endo_new = model.endogenous_states_augmented
+@test length(endo_new) == 12
+@test endo_new[:y_t1] == 67
+
+# Observables
+obs = model.observables
+@test length(obs) == 18
+@test obs[:obs_nominalrate6] == 18
+
+### Equilibrium conditions
+Γ0, Γ1, C, Ψ, Π = eqcond(model)
+
+# Matrices are of expected dimensions
+@test size(Γ0) == (66, 66)
+@test size(Γ1) == (66, 66)
+@test size(C) == (66, 1)
+@test size(Ψ) == (66, 22)
+@test size(Π) == (66, 13)
 
 nothing
