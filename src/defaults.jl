@@ -74,7 +74,7 @@ The following Settings are constructed, initialized and added to
 ### I/O Locations and identifiers
 - `saveroot::Setting{ASCIIString}`: A temporary directory in /tmp/
 - `dataroot::Setting{ASCIIString}`: dsgeroot/test/reference/
-- `data_vintage::Setting{ASCIIString}`: "_REF"
+- `data_vintage::Setting{ASCIIString}`: \"_REF\"
 
 ### Metropolis-Hastings
 - `n_mh_simulations::Setting{Int}`: 100

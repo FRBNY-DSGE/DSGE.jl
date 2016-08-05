@@ -44,11 +44,11 @@ the model's measurement equation matrices.
 
 #### Model Specifications and Settings
 
-* `spec::AbstractString`: The model specification identifier, "m990",
+* `spec::AbstractString`: The model specification identifier, \"smets_wouters\",
 cached here for filepath computation.
 
 * `subspec::AbstractString`: The model subspecification number,
-indicating that some parameters from the original model spec ("ss0")
+indicating that some parameters from the original model spec (\"ss0\")
 are initialized differently. Cached here for filepath computation.
 
 
@@ -87,6 +87,7 @@ type SmetsWouters{T} <: AbstractModel{T}
     subspec::ASCIIString                            # Model subspecification
     settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
+    custom_settings::Dict{Symbol,Setting}            # User-defined settings/flags
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
 end
@@ -160,7 +161,7 @@ function init_model_indices!(m::SmetsWouters)
 end
 
 
-function SmetsWouters(subspec::AbstractString="ss0")
+function SmetsWouters(subspec::AbstractString="ss0"; custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}())
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]
@@ -182,6 +183,7 @@ function SmetsWouters(subspec::AbstractString="ss0")
             subspec,
             settings,
             test_settings,
+            custom_settings,
             rng,
             testing)
 

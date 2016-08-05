@@ -86,6 +86,7 @@ type Model990{T} <: AbstractModel{T}
     subspec::ASCIIString                            # Model subspecification (eg "ss0")
     settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
+    custom_settings::Dict{Symbol,Setting}           # User-defined settings/flags
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
 
@@ -164,12 +165,12 @@ function init_model_indices!(m::Model990)
     for (i,k) in enumerate(expected_shocks);              m.expected_shocks[k]              = i end
     for (i,k) in enumerate(equilibrium_conditions);       m.equilibrium_conditions[k]       = i end
     for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
-    for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(endogenous_states) end
+    for (i,k) in enumerate(endogenous_states_augmented);  m.endogenous_states_augmented[k]  = i+length(endogenous_states) end
     for (i,k) in enumerate(observables);                  m.observables[k]                  = i end
 end
 
 
-function Model990(subspec::AbstractString="ss2")
+function Model990(subspec::AbstractString="ss2"; custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}())
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]
@@ -207,6 +208,7 @@ function Model990(subspec::AbstractString="ss2")
             subspec,
             settings,
             test_settings,
+            custom_settings,
             rng,
             testing,
             data_series,
