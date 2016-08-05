@@ -149,8 +149,8 @@ for d in (:ZZ, :DD, :QQ, :EE, :MM)
 end
 
 ### Custom settings
-custom_settings = Dict{Symbol, Setting}()
-custom_settings[:n_anticipated_shocks] = Setting(:n_anticipated_shocks, 6)
+custom_settings = Dict{Symbol, Setting}(
+    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6))
 model = Model990(custom_settings = custom_settings)
 @test get_setting(model, :n_anticipated_shocks) == 6
 

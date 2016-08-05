@@ -3,13 +3,13 @@ using Base.Test
 
 # Can we actually test? Require that the FRED_API_KEY ENV is populated.
 if haskey(ENV, "FRED_API_KEY")
-    m = Model990()
-    m.testing=true
-
     # Specify exact vintage and dates
-    m <= Setting(:data_vintage, "151127")
-    m <= Setting(:date_presample_start, quartertodate("2015-Q2"))
-    m <= Setting(:date_mainsample_end, quartertodate("2015-Q3"))
+    custom_settings = Dict{Symbol, Setting}(
+        :data_vintage         => Setting(:data_vintage, "151127"),
+        :date_presample_start => Setting(:date_presample_start, quartertodate("2015-Q2")),
+        :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")))
+    m = Model990(custom_settings = custom_settings)
+    m.testing=true
 
     df = load_data(m; try_disk=false, verbose=:none)
 

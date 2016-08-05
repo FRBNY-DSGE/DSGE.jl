@@ -144,8 +144,8 @@ for d in (:ZZ, :DD, :QQ, :EE, :MM)
 end
 
 ### Custom settings
-custom_settings = Dict{Symbol, Setting}()
-custom_settings[:reoptimize] = Setting(:reoptimize, false)
+custom_settings = Dict{Symbol, Setting}(
+    :reoptimize => Setting(:reoptimize, false))
 model = SmetsWouters(custom_settings = custom_settings)
 @test get_setting(model, :reoptimize) == false
 

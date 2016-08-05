@@ -4,10 +4,10 @@ include("../util.jl")
 path = dirname(@__FILE__)
 
 # Set up 
-m = Model990()
+custom_settings = Dict{Symbol, Setting}(
+    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6))
+m = Model990(custom_settings = custom_settings)
 m.testing = true
-m <= Setting(:n_anticipated_shocks, 6)
-DSGE.init_model_indices!(m)
 
 d1 = Dict{Symbol, Any}()
 d2 = Dict{Symbol, Any}()

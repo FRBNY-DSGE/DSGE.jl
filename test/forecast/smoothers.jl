@@ -8,11 +8,11 @@ data = h5open("$path/../reference/smoother_args.h5", "r") do h5
     read(h5, "data")
 end
 
-m = Model990()
+custom_settings = Dict{Symbol, Setting}(
+    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6),
+    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")))
+m = Model990(custom_settings = custom_settings)
 m.testing = true
-m <= Setting(:n_anticipated_shocks, 6)
-DSGE.init_model_indices!(m)
-m <= Setting(:date_forecast_start, quartertodate("2016-Q1"))
 
 TTT, RRR, CCC = solve(m)
 meas = measurement(m, TTT, RRR, CCC)

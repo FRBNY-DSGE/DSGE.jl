@@ -5,10 +5,11 @@ include("../util.jl")
 path = dirname(@__FILE__)
 
 # Set up arguments
-m = Model990()
+custom_settings = Dict{Symbol, Setting}(
+    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")),
+    :use_parallel_workers => Setting(:use_parallel_workers, true))
+m = Model990(custom_settings = custom_settings)
 m.testing = true
-m <= Setting(:date_forecast_start, quartertodate("2016-Q1"))
-m <= Setting(:use_parallel_workers, true)
 
 data, dates, params_sim = h5open("$path/../reference/filter_args.h5","r") do h5
     read(h5, "data"), read(h5, "dates"), read(h5, "params_sim")
