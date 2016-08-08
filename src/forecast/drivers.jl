@@ -305,12 +305,10 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     if output_type in [:states, :shocks, :simple, :all] || cond_type in [:semi, :full]
         # TODO: have smoothers infer `n_conditional_periods` from data matrix
         histstates, histshocks, histpseudo = filterandsmooth(m, df0, systems)
-        histobs = df_to_matrix(df0)
 
         forecast_output[:histstates] = histstates
         forecast_output[:histshocks] = histshocks
         forecast_output[:histpseudo] = histpseudo
-        forecast_output[:histobs]    = histobs
     end
 
     # For conditional data, use the end of the hist states as the initial state
@@ -333,12 +331,16 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     if cond_type in [:semi, :full]
         T = index_forecast_start(m) - 1
         
-        for var in [:states, :shocks, :pseudo, :obs]
+        for var in [:states, :shocks, :pseudo]
             hist     = forecast_output[symbol("hist$var")]
             forecast = forecast_output[symbol("forecast$var")]
             forecast_output[symbol("hist$var")]     = [x[:, 1:T]              for x      in hist]
             forecast_output[symbol("forecast$var")] = [hcat(x[:, T+1:end], y) for (x, y) in zip(hist, forecast)]
         end
+
+        data = df_to_matrix(m, df0)
+        forecastobs = forecast_output[:forecastobs]
+        forecast_output[:forecastobs] = [hcat(data[:, T+1:end], y) for y in forecastobs]
     end
 
     # Write output files
@@ -381,10 +383,8 @@ function get_output_files(m, input_type, output_type, cond_type)
     if output_type == :states
         vars = [:histstates,
                 :histpseudo]
-        throw(ArgumentError("Not implemented."))
     elseif output_type == :shocks
         vars = [:histshocks]
-        throw(ArgumentError("Not implemented."))
     elseif output_type == :shocks_nonstandardized
         vars = [:histshocksns]
         throw(ArgumentError("Not implemented."))
@@ -411,7 +411,6 @@ function get_output_files(m, input_type, output_type, cond_type)
                 :forecaststates,
                 :forecastobs,
                 :forecastshocks]
-        throw(ArgumentError("Not implemented."))
     elseif output_type == :all
         vars = []
         throw(ArgumentError("Not implemented."))
