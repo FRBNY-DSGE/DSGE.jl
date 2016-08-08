@@ -20,6 +20,7 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:data_vintage, vint, true, "vint", "Vintage of data")
     m <= Setting(:cond_vintage, vint, "Vintage of conditional data")
     m <= Setting(:cond_id, "0000", "Identifier of conditional dataset")
+    m <= Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate], "Observables used in semiconditional forecasts")
     m <= Setting(:use_population_forecast, false, "Whether to use population forecasts as data")
     m <= Setting(:population_mnemonic, :CNP16OV, "Mnemonic of FRED data series for computing per-capita values")
 
@@ -97,6 +98,8 @@ function default_test_settings!(m::AbstractModel)
         "Location of input files when in test mode" )
     test[:data_vintage] = Setting(:data_vintage, "REF", true, "vint",
         "Reference data identifier")
+    test[:cond_vintage] = Setting(:cond_vintage, "REF",
+        "Vintage of conditional data")
     test[:use_parallel_workers] = Setting(:use_parallel_workers, false, false, "parw",
         "Use available parallel workers in computations")
     test[:n_hessian_test_params] = Setting(:n_hessian_test_params, 3, false, "mhfp",
