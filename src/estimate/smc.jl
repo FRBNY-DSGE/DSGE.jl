@@ -1,5 +1,3 @@
-using Debug
-
 #to be refactored at a later date, npara can be removed completely
 #npart through phi could be written as optional arguments
 #R's can be specified in the function itself
@@ -27,7 +25,7 @@ end
 
 
 
-@debug function smc(m::AbstractModel, data::Matrix)
+function smc(m::AbstractModel, data::Matrix)
 #--------------------------------------------------------------
 #Set Parameters of Algorithm
 #--------------------------------------------------------------
@@ -159,7 +157,7 @@ for i=2:1:tune.nphi
 	temp_acpt = zeros(tune.npart, 1) # Initialize acceptance indicator
 
 
-	@parallel 
+	#@parallel 
     for j=1:tune.npart
         ind_para, ind_loglh, ind_post, ind_acpt = mutation_RWMH(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data,m)
         
@@ -180,7 +178,6 @@ for i=2:1:tune.nphi
 
     #input = [(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data, m) for j=1:tune.npart]
     #out = pmap(mutation_RWMH, input)
-    @bp
 
 	tune.acpt = mean(temp_acpt) #update average acceptance rate	
 

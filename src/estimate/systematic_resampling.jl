@@ -1,8 +1,7 @@
 using Debug
 
-@debug function systematic_resampling( wght )
+function systematic_resampling( wght )
 
-#@bp
 npart = length(wght)
 wght = wght'
 cwght = cumsum(wght')
