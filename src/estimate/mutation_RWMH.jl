@@ -50,8 +50,22 @@ end
 
 #RW Proposal
 px = p0 + tune.c*chol(tune.R)'*rvec
-lx = posterior!(m, px, data;phi_smc=tune.phi[i])[:like] 
-postx = posterior!(m, px, data;phi_smc=tune.phi[i])[:post] #check if this is correct?
+
+#while true
+#    if m.parameters[i].valuebounds[1] < px && px < m.parameters[i].valuebounds[2]
+#        break
+#    else px = p0 + tune.c*chol(tune.R)'*rvec
+#    end
+#end
+
+try
+    out = posterior!(m, vec(px), data;phi_smc=tune.phi[i]) 
+    lx = out[:like]
+    postx = out[:post]
+catch
+    lx = -Inf
+    postx = -Inf
+end
 
 # Previous posterior needs to be updated (due to tempering)
 post0 = post0+(tune.phi[i]-tune.phi[i-1])*l0
