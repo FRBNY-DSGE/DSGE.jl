@@ -36,8 +36,8 @@ function forecast{T<:AbstractFloat}(m::AbstractModel, syses::Vector{System{T}},
     ndraws = length(syses)
 
     # for now, we are ignoring pseudo-observables so these can be empty
-    Z_pseudo = Matrix{Float64}(12, n_states_augmented(m))
-    D_pseudo = Vector{Float64}(12)
+    Z_pseudo = zeros(T, 12, n_states_augmented(m))
+    D_pseudo = zeros(T, 12)
 
     # retrieve settings for forecast
     horizon  = forecast_horizons(m)

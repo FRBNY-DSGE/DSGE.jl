@@ -201,10 +201,11 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     end    
     out = mapfcn(DSGE.tricky_filterandsmooth, include_presamples, models, datas, syses, z0s, vz0s)
 
-    alpha_hats = [Array(x[1]) for x in out] # to make type stable 
-    eta_hats   = [Array(x[2]) for x in out] 
+    states = [Array(x[1]) for x in out] # to make type stable 
+    shocks = [Array(x[2]) for x in out]
+    pseudo = [Array(x[3]) for x in out]
 
-    return alpha_hats, eta_hats
+    return states, shocks, pseudo
 end
 
 tricky_filterandsmooth(::IncludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) = 
@@ -241,11 +242,19 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
 
     ## 2. Smooth
 
-    alpha_hat, eta_hat = if forecast_smoother(m) == :kalman
+    states, shocks = if forecast_smoother(m) == :kalman
         kalman_smoother(m, data, sys, k[:z0], k[:vz0], k[:pred], k[:vpred])
     elseif forecast_smoother(m) == :durbin_koopman
         durbin_koopman_smoother(m, data, sys, k[:z0], k[:vz0])
     end
 
-    return alpha_hat, eta_hat
+    ## 3. Map smoothed states to pseudo-observables
+
+    # for now, we are ignoring pseudo-observables so these can be empty
+    Z_pseudo = zeros(S, 12, n_states_augmented(m))
+    D_pseudo = zeros(S, 12)
+
+    pseudo = D_pseudo .+ Z_pseudo * states
+
+    return states, shocks, pseudo
 end

@@ -31,48 +31,50 @@ vz0 = QuantEcon.solve_discrete_lyapunov(syses[1][:TTT], syses[1][:RRR]*syses[1][
 # Add parallel workers
 my_procs = addprocs(ndraws)
 @everywhere using DSGE
-alpha_hats, eta_hats = DSGE.filterandsmooth(m, df, syses; allout = true)
-alpha_hats, eta_hats = DSGE.filterandsmooth(m, df, syses, z0, vz0; allout = true)
+states, shocks, pseudo = DSGE.filterandsmooth(m, df, syses; allout = true)
+states, shocks, pseudo = DSGE.filterandsmooth(m, df, syses, z0, vz0; allout = true)
 
 for smoother in [:durbin_koopman, :kalman]
     m <= Setting(:forecast_smoother, smoother)
 
     # Without providing z0 and vz0
-    @time alpha_hats, eta_hats = DSGE.filterandsmooth(m, df, syses; allout = true)
+    @time states, shocks, pseudo = DSGE.filterandsmooth(m, df, syses; allout = true)
 
-    exp_alpha_hats = Vector{Matrix{Float64}}(ndraws)
-    exp_eta_hats   = Vector{Matrix{Float64}}(ndraws)
+    exp_states = Vector{Matrix{Float64}}(ndraws)
+    exp_shocks = Vector{Matrix{Float64}}(ndraws)
     for i = 1:ndraws
         kal = kalman_filter(m, df_to_matrix(m, df), syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ],
                             syses[i][:DD], syses[i][:VVall]; allout = true)
 
-        exp_alpha_hats[i], exp_eta_hats[i] = if forecast_smoother(m) == :durbin_koopman
+        exp_states[i], exp_shocks[i] = if forecast_smoother(m) == :durbin_koopman
             durbin_koopman_smoother(m, df, syses[i], kal[:z0], kal[:vz0])
         elseif forecast_smoother(m) == :kalman
             kalman_smoother(m, df, syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
         end
 
-        @test_matrix_approx_eq exp_alpha_hats[i] alpha_hats[i]
-        @test_matrix_approx_eq exp_eta_hats[i] eta_hats[i]
+        @test_matrix_approx_eq exp_states[i] states[i]
+        @test_matrix_approx_eq exp_shocks[i] shocks[i]
+        @test all(x -> x == 0, pseudo[i])
     end
 
     # Providing z0 and vz0
-    @time alpha_hats, eta_hats = DSGE.filterandsmooth(m, df, syses, z0, vz0; allout = true)
+    @time states, shocks = DSGE.filterandsmooth(m, df, syses, z0, vz0; allout = true)
 
-    exp_alpha_hats = Vector{Matrix{Float64}}(ndraws)
-    exp_eta_hats   = Vector{Matrix{Float64}}(ndraws)
+    exp_states = Vector{Matrix{Float64}}(ndraws)
+    exp_shocks = Vector{Matrix{Float64}}(ndraws)
     for i = 1:ndraws
         kal = kalman_filter(m, df_to_matrix(m, df), syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ],
                             syses[i][:DD], syses[i][:VVall], z0, vz0; allout = true)
 
-        exp_alpha_hats[i], exp_eta_hats[i] = if forecast_smoother(m) == :durbin_koopman
+        exp_states[i], exp_shocks[i] = if forecast_smoother(m) == :durbin_koopman
             durbin_koopman_smoother(m, df, syses[i], kal[:z0], kal[:vz0])
         elseif forecast_smoother(m) == :kalman
             kalman_smoother(m, df, syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
         end
 
-        @test_matrix_approx_eq exp_alpha_hats[i] alpha_hats[i]
-        @test_matrix_approx_eq exp_eta_hats[i] eta_hats[i]
+        @test_matrix_approx_eq exp_states[i] states[i]
+        @test_matrix_approx_eq exp_shocks[i] shocks[i]
+        @test all(x -> x == 0, pseudo[i])
     end
 
 end

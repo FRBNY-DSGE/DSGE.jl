@@ -13,9 +13,10 @@ output types.
 - `df`: DataFrame of data for observables
 - `cond_types`: conditional data type, any combination of
     - `:none`: no conditional data
-    - `:semi`: use \"semiconditional data\" - average of quarter-to-date observations for high frequency series
-    - `:full`: use \"conditional data\" - semiconditional plus nowcasts for desired
-      observables
+    - `:semi`: use \"semiconditional data\" - average of quarter-to-date
+      observations for high frequency series
+    - `:full`: use \"conditional data\" - semiconditional plus nowcasts for
+      desired observables
 - `input_types`: which set of parameters to use, any combination of
     - `:mode`: forecast using the modal parameters only
     - `:mean`: forecast using the mean parameters only
@@ -24,18 +25,20 @@ output types.
     - `:subset`: forecast using a well-defined user-specified subset of draws
 - `output_types`: forecast routine outputs to compute, any combination of
     - `:states`: smoothed states (history) for all specified conditional data types
-    - `:shocks`: smoothed shocks (history, standardized) for all specified conditional data types
-    - `:shocks_nonstandardized`: smoothed shocks (history, non-standardized) for all
-        specified conditional data types
-    - `:forecast`: forecast of states and observables for all specified conditional data types
-    - `:shockdec`: shock decompositions (history) of states and observables for all
-        specified conditional data types
-    - `:dettrend`: deterministic trend (history) of states and observables for all specified
-        conditional data types
-    - `:counter`: counterfactuals (history) of states and observables for all specified
-        conditional data types
-    - `:simple`: smoothed states, forecast of states, forecast of observables for
-        *unconditional* data only
+    - `:shocks`: smoothed shocks (history, standardized) for all specified
+      conditional data types
+    - `:shocks_nonstandardized`: smoothed shocks (history, non-standardized) for
+      all specified conditional data types
+    - `:forecast`: forecast of states and observables for all specified
+      conditional data types, as well as shocks that produced them
+    - `:shockdec`: shock decompositions (history) of states and observables for
+      all specified conditional data types
+    - `:dettrend`: deterministic trend (history) of states and observables for
+      all specified conditional data types
+    - `:counter`: counterfactuals (history) of states and observables for all
+      specified conditional data types
+    - `:simple`: smoothed states, forecast of states, forecast of observables
+      for *unconditional* data only
     - `:all`: smoothed states (history), smoothed shocks (history, standardized), smoothed
       shocks (history, non-standardized), shock decompositions (history), deterministic
       trend (history), counterfactuals (history), forecast, forecast shocks drawn, shock
@@ -299,28 +302,31 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     forecast_output_files = get_output_files(m, input_type, output_type, cond_type)
 
     # must re-run filter/smoother for conditional data in addition to explicit cases
-    if output_type in [:states, :simple, :all] || cond_type in [:semi, :full]
-        histstates, histpseudo = filterandsmooth(m, df0, systems)
+    if output_type in [:states, :shocks, :simple, :all] || cond_type in [:semi, :full]
+        # TODO: have smoothers infer `n_conditional_periods` from data matrix
+        histstates, histshocks, histpseudo = filterandsmooth(m, df0, systems)
+        histobs = df_to_matrix(df0)
 
         forecast_output[:histstates] = histstates
+        forecast_output[:histshocks] = histshocks
         forecast_output[:histpseudo] = histpseudo
+        forecast_output[:histobs]    = histobs
     end
 
     # For conditional data, use the end of the hist states as the initial state
     # vector for the forecast
     if cond_type in [:semi, :full]
-        # TODO determine structure of histstates
-        states = histstates[end]
+        states = [x[:, end] for x in histstates]
     end
 
     if output_type in [:forecast, :simple, :all]
-        forecaststates, forecastobs, forecastpseudo =
+        forecaststates, forecastobs, forecastpseudo, forecastshocks =
             forecast(m, systems, states)
 
-        forecast_output[:forecastobs] = forecastobs
         forecast_output[:forecaststates] = forecaststates
+        forecast_output[:forecastshocks] = forecastshocks
         forecast_output[:forecastpseudo] = forecastpseudo
-        # forecast_output[:forecastshocks] = forecastshocks
+        forecast_output[:forecastobs]    = forecastobs
     end
 
     # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
