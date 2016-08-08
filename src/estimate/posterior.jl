@@ -214,6 +214,7 @@ const LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
     R1[:zend]       = out[:zend]
     R1[:Pend]       = out[:Pend]
 
+
     # Run Kalman filter on normal period
     zprev           = R1[:zend]
     Pprev           = R1[:Pend]
@@ -241,9 +242,6 @@ const LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
     Pprev[before_shocks, after_shocks_new]    = R2[:Pend][before_shocks, after_shocks_old]
     Pprev[after_shocks_new, before_shocks]    = R2[:Pend][after_shocks_old, before_shocks]
     Pprev[after_shocks_new, after_shocks_new] = R2[:Pend][after_shocks_old, after_shocks_old]
-
-
-    println("\n\n ONE THING \n\n ","\n",R3[:data]',"\n", 1,"\n", zeros(regime_states[3],"\n", 1),"\n", R3[:TTT],"\n", R3[:DD],"\n", R3[:ZZ],"\n", R3[:VVall],"\n", zprev,"\n", Pprev)
 
     out             = kalman_filter(R3[:data]', 1, zeros(regime_states[3], 1), R3[:TTT], R3[:DD], R3[:ZZ], R3[:VVall], zprev, Pprev)
     regime_likes[3] = out[:L]

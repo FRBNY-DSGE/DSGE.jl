@@ -89,7 +89,6 @@ for i=1:1:tune.npart
     logpost[i] = out[:post]
     loglh[i] = out[:like]
 end
-@bp
 
 #RECURSION
 
@@ -143,7 +142,6 @@ for i=2:1:tune.nphi
 	#------------------------------------
 	# (c) Mutation
 	#------------------------------------
-    @bp
 
     tune.c = tune.c*(0.95 + 0.10*exp(16*(tune.acpt - tune.trgt))/(1 + exp(16*(tune.acpt - tune.trgt))))
     para = squeeze(parasim[i-1, :, :],1)
@@ -160,7 +158,8 @@ for i=2:1:tune.nphi
 	#Particle mutation (RWMH 2)
 	temp_acpt = zeros(tune.npart, 1) # Initialize acceptance indicator
 
-	#@parallel 
+
+	@parallel 
     for j=1:tune.npart
         ind_para, ind_loglh, ind_post, ind_acpt = mutation_RWMH(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data,m)
         
@@ -169,6 +168,19 @@ for i=2:1:tune.nphi
 		logpost[j] = ind_post
 		temp_acpt[j,1] = ind_acpt
 	end
+
+    #out = fetch(@parallel [mutation_RWMH(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data,m) for j = 1:tune.npartd])
+    #end
+
+    #out = @parallel for j = 1:tune.npart
+    #    mutation_RWMH(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data,m)
+    #end
+
+    #out = pmap(j -> mutation_RWMH(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data,m), 1:tune.npart)
+
+    #input = [(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data, m) for j=1:tune.npart]
+    #out = pmap(mutation_RWMH, input)
+    @bp
 
 	tune.acpt = mean(temp_acpt) #update average acceptance rate	
 
