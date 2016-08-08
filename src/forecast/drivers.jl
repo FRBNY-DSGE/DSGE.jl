@@ -348,8 +348,9 @@ function forecast_one(m::AbstractModel, df::DataFrame;
         end
     end
 
+    # Return only saved elements of dict
+    filter!((k, v) -> k ∈ keys(forecast_output_files), forecast_output)
     return forecast_output
-
 end
 
 
@@ -378,38 +379,38 @@ function get_output_files(m, input_type, output_type, cond_type)
 
     # vars prefix
     if output_type == :states
-        vars = ["histstates",
-                "histpseudo"]
+        vars = [:histstates,
+                :histpseudo]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :shocks
-        vars = ["histshocks"]
+        vars = [:histshocks]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :shocks_nonstandardized
-        vars = ["histshocksns"]
+        vars = [:histshocksns]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :forecast
-       vars = ["forecaststates",
-               "forecastobs",
-               "forecastpseudo"]
-#              "forecastshocks"]
+       vars = [:forecaststates,
+               :forecastobs,
+               :forecastpseudo,
+               :forecastshocks]
     elseif output_type == :shockdec
-        vars = ["shockdecstates",
-                "shockdecobs"]
+        vars = [:shockdecstates,
+                :shockdecobs]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :dettrend
-        vars = ["dettrendstates",
-                "dettrendobs"]
+        vars = [:dettrendstates,
+                :dettrendobs]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :counter
-        vars = ["counterstates",
-                "counterobs"]
+        vars = [:counterstates,
+                :counterobs]
         throw(ArgumentError("Not implemented."))
     elseif output_type in [:simple]
-        vars = ["histstates",
-                "histpseudo",
-                "forecaststates",
-                "forecastobs",
-                "forecastshocks"]
+        vars = [:histstates,
+                :histpseudo,
+                :forecaststates,
+                :forecastobs,
+                :forecastshocks]
         throw(ArgumentError("Not implemented."))
     elseif output_type == :all
         vars = []
@@ -418,5 +419,5 @@ function get_output_files(m, input_type, output_type, cond_type)
         throw(ArgumentError("Invalid input_type: $(output_type)"))
     end
 
-    return [symbol(x) => rawpath(m, "forecast", x*".jld", additional_file_strings) for x in vars]
+    return [symbol(x) => rawpath(m, "forecast", "$x.jld", additional_file_strings) for x in vars]
 end
