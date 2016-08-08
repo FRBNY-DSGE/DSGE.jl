@@ -291,7 +291,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
 
     R1[:data] = data[obs_inds, inds_presample_periods(m)]
     R2[:data] = data[obs_inds, inds_prezlb_periods(m)]
-    R3[:data] = data[:,        inds_zlb_periods(m)]
+    R3[:data] = data[:,        index_zlb_start(m):end] # allows for conditional data
 
     # Step 1: Compute the transition equation:
     #   S_t = CCC + TTT*S_{t-1} + RRR*ε_t

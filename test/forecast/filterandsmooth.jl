@@ -58,7 +58,7 @@ for smoother in [:durbin_koopman, :kalman]
     end
 
     # Providing z0 and vz0
-    @time states, shocks = DSGE.filterandsmooth(m, df, syses, z0, vz0; allout = true)
+    @time states, shocks, pseudo = DSGE.filterandsmooth(m, df, syses, z0, vz0; allout = true)
 
     exp_states = Vector{Matrix{Float64}}(ndraws)
     exp_shocks = Vector{Matrix{Float64}}(ndraws)

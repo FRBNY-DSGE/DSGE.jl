@@ -153,8 +153,6 @@ Computes and returns the smoothed states and shocks for every state-space system
   system matrices for each draw
 - `z0`: an optional `Nz` x 1 initial state vector
 - `vz0`: an optional `Nz` x `Nz` covariance matrix of an initial state vector
-- `include_presample`: indicates whether to include presample periods in the
-  returned vectors of smoothed states and shocks
 
 ### Outputs
 
@@ -167,18 +165,17 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
                                            syses::Vector{System{S}},
                                            z0::Vector{S} = Vector{S}(),
                                            vz0::Matrix{S} = Matrix{S}();
-                                           lead::Int = 0, allout::Bool = false,
-                                           include_presample::Bool = true)
+                                           lead::Int = 0, allout::Bool = false)
 
     data = df_to_matrix(m, df)
-    filterandsmooth(m, data, syses, z0, vz0; lead = lead, include_presample = include_presample)
+    filterandsmooth(m, data, syses, z0, vz0; lead = lead)
 end
 
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
                                            syses::Vector{System{S}},
                                            z0::Vector{S} = Vector{S}(),
                                            vz0::Matrix{S} = Matrix{S}();
-                                           lead::Int = 0, include_presample::Bool = true)
+                                           lead::Int = 0)
     # numbers of useful things
     ndraws = length(syses)
 
@@ -187,11 +184,6 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     datas = fill(data, ndraws)
     z0s = fill(z0, ndraws)
     vz0s = fill(vz0, ndraws)
-    include_presamples = if include_presample
-        fill(IncludePresample(), ndraws)
-    else
-        fill(ExcludePresample(), ndraws)
-    end
     
     # Call filter over all draws
     if use_parallel_workers(m) && nworkers() > 1
@@ -199,23 +191,18 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     else
         mapfcn = map
     end    
-    out = mapfcn(DSGE.tricky_filterandsmooth, include_presamples, models, datas, syses, z0s, vz0s)
+    out = mapfcn(filterandsmooth, models, datas, syses, z0s, vz0s)
 
-    states = [Array(x[1]) for x in out] # to make type stable 
-    shocks = [Array(x[2]) for x in out]
-    pseudo = [Array(x[3]) for x in out]
+    states = convert(Vector{Matrix{S}}, [x[1] for x in out]) # to make type stable 
+    shocks = convert(Vector{Matrix{S}}, [x[2] for x in out])
+    pseudo = convert(Vector{Matrix{S}}, [x[3] for x in out])
 
     return states, shocks, pseudo
 end
 
-tricky_filterandsmooth(::IncludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) = 
-    filterandsmooth(m, data, sys, z0, vz0; include_presample = true)
-tricky_filterandsmooth(::ExcludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) = 
-    filterandsmooth(m, data, sys, z0, vz0; include_presample = false)
-
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System{S},
                                            z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-                                           lead::Int = 0, include_presample::Bool = true)
+                                           lead::Int = 0)
     ## 1. Filter
 
     # pull out the elements of sys
