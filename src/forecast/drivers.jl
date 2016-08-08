@@ -331,8 +331,14 @@ function forecast_one(m::AbstractModel, df::DataFrame;
 
     # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
     if cond_type in [:semi, :full]
-        # TODO implement
-        nothing
+        T = index_forecast_start(m) - 1
+        
+        for var in [:states, :shocks, :pseudo, :obs]
+            hist     = forecast_output[symbol("hist$var")]
+            forecast = forecast_output[symbol("forecast$var")]
+            forecast_output[symbol("hist$var")]     = [x[:, 1:T]              for x      in hist]
+            forecast_output[symbol("forecast$var")] = [hcat(x[:, T+1:end], y) for (x, y) in zip(hist, forecast)]
+        end
     end
 
     # Write output files
