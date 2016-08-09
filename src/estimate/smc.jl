@@ -33,7 +33,7 @@ function smc(m::AbstractModel, data::Matrix)
 
 #Instantiating a tune type (analogous to the struct in Matlab)
 #The tempering schedule is created as the last argument in the constructor TuneType()
-tune = Tune(length(m.parameters),1000,100,2,0.5,0.25,0.25,0.9,((collect(1:1:100)-1)/(100-1)).^2,[], [], [], [], [])
+tune = Tune(length(m.parameters),1000,500,2,0.5,0.25,0.25,0.9,((collect(1:1:500)-1)/(500-1)).^2,[], [], [], [], [])
 
 #Matrices for storing
 
@@ -157,27 +157,29 @@ for i=2:1:tune.nphi
 	temp_acpt = zeros(tune.npart, 1) # Initialize acceptance indicator
 
 
-	#@parallel 
-    for j=1:tune.npart
-        ind_para, ind_loglh, ind_post, ind_acpt = mutation_RWMH(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data,m)
-        
-		parasim[i,j,:] = ind_para
-		loglh[j] = ind_loglh
-		logpost[j] = ind_post
-		temp_acpt[j,1] = ind_acpt
-	end
+    #for j=1:tune.npart
+    #    ind_para, ind_loglh, ind_post, ind_acpt = mutation_RWMH(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data,m)
+    #    
+	#	parasim[i,j,:] = ind_para
+	#	loglh[j] = ind_loglh
+	#	logpost[j] = ind_post
+	#	temp_acpt[j,1] = ind_acpt
+	#end
 
-    #out = fetch(@parallel [mutation_RWMH(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data,m) for j = 1:tune.npartd])
-    #end
+    out = @sync @parallel (hcat) for j = 1:tune.npart 
+        mutation_RWMH(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data,m)
+    end
 
-    #out = @parallel for j = 1:tune.npart
-    #    mutation_RWMH(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data,m)
-    #end
+    parasimtemp = Array{Float64}[out[i][1] for i=1:length(out)]
+    fillmat = zeros(length(parasimtemp), length(parasimtemp[1]))
+    for j = 1:length(parasimtemp)
+        fillmat[j,:] = parasimtemp[j]
+        end
+    parasim[i,:,:] = fillmat
+    loglh = Float64[out[i][2] for i=1:length(out)]
+    logpost = Float64[out[i][3] for i=1:length(out)]
+    temp_acpt = Int[out[i][4] for i=1:length(out)]
 
-    #out = pmap(j -> mutation_RWMH(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data,m), 1:tune.npart)
-
-    #input = [(vec(para[j,:]'), loglh[j], logpost[j], tune, i, data, m) for j=1:tune.npart]
-    #out = pmap(mutation_RWMH, input)
 
 	tune.acpt = mean(temp_acpt) #update average acceptance rate	
 
