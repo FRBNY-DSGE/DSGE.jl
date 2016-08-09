@@ -1,3 +1,20 @@
+"""
+```
+systematic_resampling(wght)
+```
+
+Reindexing and reweighting samples from a degenerate distribution
+
+### Arguments:
+- `wght`: wtsim[:,i]
+        the weights of a degenerate distribution.
+
+### Output:
+
+- `vec(indx)`: id
+        the newly assigned indices of parameter draws.
+
+"""
 function systematic_resampling(wght)
 
 
@@ -44,8 +61,6 @@ parindx = @sync @parallel (hcat) for j = 1:npart
 end
 indx = parindx'
 
-m = 0
-
 indx = round(Int, indx)
-return vec(indx), m
+return vec(indx)
 end
