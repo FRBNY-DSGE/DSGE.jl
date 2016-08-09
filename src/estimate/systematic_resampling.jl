@@ -1,6 +1,5 @@
-using Debug
+function systematic_resampling(wght)
 
-function systematic_resampling( wght )
 
 npart = length(wght)
 wght = wght'
@@ -15,7 +14,19 @@ end
 indx = zeros(npart, 1)
 
 #@parallel 
-for i = 1:npart
+#for i = 1:npart
+#    u = uu[i]/npart
+#    j=1
+#    while j <= npart
+#        if (u < cwght[j]) 
+#            break
+#        end
+#        j = j+1
+#    end
+#    indx[i] = j
+#end
+
+function subsys(i)
     u = uu[i]/npart
     j=1
     while j <= npart
@@ -26,6 +37,12 @@ for i = 1:npart
     end
     indx[i] = j
 end
+
+
+parindx = @sync @parallel (hcat) for j = 1:npart 
+    subsys(j)
+end
+indx = parindx'
 
 m = 0
 

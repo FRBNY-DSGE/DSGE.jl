@@ -115,7 +115,7 @@ const LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
 #  the zero-lower-bound period are returned in a dictionary.
 #-`catch_errors`: If `mh = true`, `GensysErrors` should always be caught.
 #"""
-@debug function likelihood{T<:AbstractFloat}(m::AbstractModel,
+function likelihood{T<:AbstractFloat}(m::AbstractModel,
                                       data::Matrix{T};
                                       mh::Bool = false,
                                       catch_errors::Bool = false)

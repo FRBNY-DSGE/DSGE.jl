@@ -1,4 +1,3 @@
-using Debug
 #"""
 #```
 #mutation_RWMH(p0, l0, post0, tune,i, data; rvec = [], rval = [], px = [], lx = [], postx = [],m)
@@ -36,7 +35,7 @@ using Debug
 #"""
 
 #change tune to be a sub-type of Tune or something in the future
-@debug function mutation_RWMH(p0::Array{Float64,1}, l0::Float64, post0::Float64, tune, i::Int64, data::Matrix, m::AbstractModel; rvec = [], rval = [], px = [], lx = [], postx = [])
+function mutation_RWMH(p0::Array{Float64,1}, l0::Float64, post0::Float64, tune, i::Int64, data::Matrix, m::AbstractModel; rvec = [], rval = [], px = [], lx = [], postx = [])
 
 if m.testing
     # If testing, set the random seeds at fixed numbers
