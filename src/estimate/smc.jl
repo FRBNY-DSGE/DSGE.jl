@@ -54,6 +54,8 @@ rsmpsim = zeros(tune.nphi,1) #1 if resampled
 println("\n\n SMC starts ....  \n\n  ")
 #Draws from the prior
 priorsim = zeros(tune.npart,tune.npara)
+loglh = zeros(tune.npart, 1)
+logpost = zeros(tune.npart, 1)
 for i in 1:tune.npart
     priodraw = []
     for j in 1:length(m.parameters)
@@ -73,20 +75,13 @@ for i in 1:tune.npart
         end
     end
     priorsim[i,:] = priodraw'
+    out = posterior!(m, squeeze(priodraw,2), data; phi_smc = tune.phi[1])
+    logpost[i] = out[:post]
+    loglh[i] = out[:like]
 end
 parasim[1,:,:] = priorsim #Draws from prior #Lay priorsim draws on top of parasim box matrix which is 100x1000x13
 wtsim[:,1] = 1/tune.npart #Initial weights are all equal, 1000x1
 zhat[1] = round(sum(wtsim[:,1]),14) # zhat is 100x1 and its first entry is the sum of the first column of wtsim, the weights matrix
-
-# Posterior values at prior draws
-loglh = zeros(tune.npart, 1)
-logpost = zeros(tune.npart, 1)
-for i=1:1:tune.npart
-	p0 = priorsim[i,:]';
-    out = posterior!(m, squeeze(p0,2), data; phi_smc = tune.phi[1])
-    logpost[i] = out[:post]
-    loglh[i] = out[:like]
-end
 
 #RECURSION
 
@@ -116,25 +111,25 @@ for i=2:1:tune.nphi
 	#------------------------------------
 
 	ESS = 1/sum(wtsim[:,i].^2)
-    sampled = false
+    #sampled = false
 	if (ESS < tune.npart/2)
-        sampled = true
+        #sampled = true
         ####What else does systematic_resampling return?
-		id, somethingelse = systematic_resampling(wtsim[:,i])
+		id = systematic_resampling(wtsim[:,i])
         parasim[i-1, :, :] = parasim[i-1, id, :]
 		loglh = loglh[id]
 		logpost = logpost[id]
 		wtsim[:,i] = 1/tune.npart
 		nresamp += 1
 		rsmpsim[i] = 1
-        if m.testing
-            if !sampled
-                h5open(workpath(m, "estimate","degen_dist.h5"),"w") do f
-                    f["wtsim"] = wtsim[:,i]
-                end
-                sampled = true
-            end
-        end
+        #if m.testing
+        #    if !sampled
+        #        h5open(workpath(m, "estimate","degen_dist.h5"),"w") do f
+        #            f["wtsim"] = wtsim[:,i]
+        #        end
+        #        sampled = true
+        #    end
+        #end
 	end
 
 	#------------------------------------
