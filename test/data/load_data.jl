@@ -10,6 +10,7 @@ custom_settings = Dict{Symbol, Setting}(
     :date_presample_start => Setting(:date_presample_start, quartertodate("2015-Q2")),
     :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")))
 m = Model990(custom_settings = custom_settings)
+m.testing = true
 
 df = load_data(m; cond_type=:none, try_disk=false, verbose=:none)
 
