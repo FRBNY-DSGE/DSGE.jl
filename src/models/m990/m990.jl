@@ -187,10 +187,12 @@ function Model990(subspec::AbstractString="ss2"; custom_settings::Dict{Symbol, S
     spf_series         = [:ASACX10]
     fernald_series     = [:TFPJQ, :TFPKQ]
     longrate_series    = [:FYCZZA]
+    conditional_series = [:GDP, :GDPCTPI, :DFF, :BAA, :GS10, :PCEPILFE]
     # ois data taken care of in load_data
     
     data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
-                                              :fernald => fernald_series, :longrate => longrate_series)
+                                              :fernald => fernald_series, :longrate => longrate_series,
+                                              :conditional => conditional_series)
 
 
     # set up data transformations

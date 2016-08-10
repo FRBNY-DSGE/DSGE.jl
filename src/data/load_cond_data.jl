@@ -1,27 +1,34 @@
-function load_cond_data(m, cond_type)
-    # Preapare file name
-    cond_vintage = get_setting(m, :cond_vintage)
-    cond_id = get_setting(m, :cond_id)
-    cond_file_name = inpath(m, "cond", "cond_vint=$(cond_vintage)_cdid=$(cond_id).csv")
-
-    # Read data
-    cond_data = readtable(cond_file_name)
-    format_dates!(:date, cond_data)
-
-    # Make sure each observable in `m.observables` is present
-    for obs in keys(m.observables)
-        if !in(obs, names(cond_data) )
-            error("$(string(obs)) is missing from $cond_file_name.") 
-        end 
-    end 
-
-    # If we are using semi-conditional data only, then we must index out the
-    # semi-conditional columns and replace all other columns with NaN.
-    if cond_type == :semi
-        cond_semi_names = get_setting(m, :cond_semi_names)
-        cond_semi_names_nan = setdiff(names(cond_data), push!(cond_semi_names, :date))
-        cond_data[:, cond_semi_names_nan] = convert(eltype(cond_data), NaN)
+function load_cond_data(m, cond_type; verbose::Symbol=:low)
+    
+    if cond_type == :none
+        return DataFrame()
     end
 
-    return cond_data
+    # Prepare file name
+    cond_vintage = get_setting(m, :cond_vintage)
+    cond_id = get_setting(m, :cond_id)
+    file = inpath(m, "cond", "cond_vint=$(cond_vintage)_cdid=$(cond_id).csv")
+
+    if isfile(file)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("Reading conditional data from $file...")
+        end
+
+        # Read data
+        cond_data = readtable(file)
+        format_dates!(:date, cond_data)
+
+        # Make sure each mnemonic that was specified is present
+        mnemonics = m.data_series[:conditional]
+        for series in mnemonics
+            if !in(series, names(cond_data))
+                error("$(string(series)) is missing from $file.")
+            end
+        end
+
+        return cond_data
+    else
+        # If series not found, throw an error
+        error("Conditional data in $file not found")
+    end
 end

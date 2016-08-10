@@ -20,7 +20,7 @@ Then, the series in levels are transformed as specified in `m.data_transforms`. 
 
 The resulting DataFrame is saved to disk as `data_<yymmdd>.csv` and returned to the caller.  
 """
-function load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol=:low)
+function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool = true, verbose::Symbol=:low)
     recreate_data = false
 
     # Check if already downloaded
@@ -48,12 +48,18 @@ function load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol=:low
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("Creating dataset...")
         end
-        df = load_data_levels(m; verbose=verbose)
-        df = transform_data(m, df; verbose=verbose)
+        levels = load_data_levels(m; cond_type=cond_type, verbose=verbose)
+        df = transform_data(m, levels; cond_type=cond_type, verbose=verbose)
 
         # Ensure that only appropriate rows make it into the returned DataFrame.
         start_date = date_presample_start(m)
-        end_date   = date_zlb_end(m)
+
+        end_date   = if cond_type == :none
+            date_zlb_end(m)
+        else
+            df[end, :date]
+        end
+
         df = df[start_date .<= df[:, :date] .<= end_date, :]
 
         save_data(m, df)
@@ -73,7 +79,7 @@ load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 Load data in levels by appealing to the data sources specified for the model. Data from FRED
 is loaded first, by default; then, merge other custom data sources.
 
-Check on disk in `inpath(m, "data")` datasets, of the correct vintage, corresponding to the
+Check on disk in `inpath(m, \"data\")` datasets, of the correct vintage, corresponding to the
 ones in `keys(m.data_series)`. Load the appropriate data series (specified in
 `m.data_series[source]`) for each data source. 
     
@@ -86,7 +92,7 @@ using `load_fred_data`. See `?load_fred_data` for more details.
 
 Data from non-FRED data sources are read from disk, verified, and merged.
 """
-function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
+function load_data_levels(m::AbstractModel; cond_type::Symbol=:none, verbose::Symbol=:low)
     # Start two quarters further back than `start_date` as we need these additional
     # quarters to compute differences.
     start_date = date_presample_start(m) - Dates.Month(6)
@@ -107,11 +113,6 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
     for source in keys(m.data_series)
 
-        # Skip FRED sources, which have already been handled
-        if source == :fred
-            continue
-        end
-
         # Check that this source is actually used
         mnemonics = m.data_series[source]
         if isempty(mnemonics)
@@ -119,8 +120,22 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             continue
         end
 
+        # Skip FRED sources, which have already been handled
+        if source == :fred
+            continue
+        end
+
+        # Conditional data are handled separately because they are appended
+        # vertically, i.e. by adding new observations
+        if source == :conditional
+            cond_data = load_cond_data(m, cond_type; verbose=verbose)
+            df = vcat(df, cond_data)
+            continue
+        end
+
         # Read and merge data from this source
         file = inpath(m, "data", "$(string(source))_$vint.csv")
+
         if isfile(file)
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println("Reading data from $file...")
@@ -131,14 +146,15 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
             # Convert dates from strings to quarter-end dates for date arithmetic
             format_dates!(:date, addl_data)
-
+        
             # Warn on sources with incomplete data; missing data will be replaced with NaN
             # during merge.
             if !in(lastdayofquarter(start_date), addl_data[:date]) ||
-               !in(lastdayofquarter(end_date), addl_data[:date])
+                !in(lastdayofquarter(end_date), addl_data[:date])
+   
                 warn("$file does not contain the entire date range specified; NaNs used.")
             end
-
+            
             # Make sure each mnemonic that was specified is present
             for series in mnemonics
                 if !in(series, names(addl_data))
@@ -150,7 +166,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             # data
             cols = [:date; mnemonics]
             rows = start_date .<= addl_data[:date] .<= end_date
-
+            
             addl_data = addl_data[rows, cols]
             df = join(df, addl_data, on=:date, kind=:outer)
         else
@@ -161,7 +177,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             warn("$file was not found; NaNs used." )
         end
     end
-
+    
     # turn NAs into NaNs
     na2nan!(df)
 
