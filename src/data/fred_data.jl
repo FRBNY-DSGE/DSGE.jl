@@ -82,8 +82,18 @@ function load_fred_data(m::AbstractModel;
                                                        vintage_dates=string(vint_date))
             catch err
                 warn(err.msg)
-                warn("FRED series $s could not be fetched.")
-                continue
+                warn("FRED series $s could not be fetched at vintage $vint.")
+                
+                try
+                    println("Fetching FRED series $s without vintage...")
+                    fredseries[i] = get_data(f, string(s); frequency="q",
+                                                           observation_start=string(start_date),
+                                                           observation_end=string(end_date))
+                catch err
+                    warn(err.msg)
+                    warn("FRED series $s could not be fetched.")
+                    continue
+                end
             end
         end
 
