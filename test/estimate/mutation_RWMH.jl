@@ -26,16 +26,19 @@ include("../util.jl")
 
 # Set up models for testing
 s = Schorf()
-s.testing=true
+#s.testing=true
 
 s <= Setting(:saveroot, "$path/../../save")
 s <= Setting(:dataroot, "$path/../../save/input_data")
 s <= Setting(:data_vintage, "160718")
 s <= Setting(:date_presample_start, quartertodate("1983-Q1"))
+s <= Setting(:date_mainsample_start, quartertodate("1983-Q1"))
 s <= Setting(:date_mainsample_end, quartertodate("2002-Q4"))
+s <= Setting(:date_zlbregime_start, quartertodate("2002-Q4"))
 
 # Read in the data
 df = load_data(s)
+data = df_to_matrix(s,df)
 
 # Reading in reference stuff
 file = h5open("$path/../reference/mutation_RWMH.h5","r")
@@ -77,14 +80,14 @@ return
 
 #Quick and dirty solution only testing one accept and one reject. 
 #Think about a way to generalize this further to compare matrix output?
-atest_para, atest_loglh, atest_post, atest_acpt = mutation_RWMH(acc_init_para[:,1], acc_init_likelihoods[1], acc_init_post[1], tune, i, df, s; rvec = acc_rvecs[1], rval = acc_rvals[1], px = acc_prop_para[:,1], lx = acc_prop_likelihoods[1], postx = acc_prop_post[1])
+atest_para, atest_loglh, atest_post, atest_acpt = mutation_RWMH(acc_init_para[:,1], acc_init_likelihoods[1], acc_init_post[1], tune, i, data, s; rvec = acc_rvecs[1], rval = acc_rvals[1], px = acc_prop_para[:,1], lx = acc_prop_likelihoods[1], postx = acc_prop_post[1])
 
 @test_approx_eq acc_prop_para[:,1] atest_para
 @test_approx_eq acc_prop_likelihoods[1] atest_loglh
 @test_approx_eq acc_prop_post[1] atest_post
 @test_approx_eq atest_acpt 1
 
-rtest_para, rtest_loglh, rtest_post, rtest_acpt = mutation_RWMH(rej_init_para[:,1], rej_init_likelihoods[1], rej_init_post[1], tune, i, df, s; rvec = rej_rvecs[1], rval = rej_rvals[1], px = rej_prop_para[:,1], lx = rej_prop_likelihoods[1], postx = rej_prop_post[1])
+rtest_para, rtest_loglh, rtest_post, rtest_acpt = mutation_RWMH(rej_init_para[:,1], rej_init_likelihoods[1], rej_init_post[1], tune, i, data, s; rvec = rej_rvecs[1], rval = rej_rvals[1], px = rej_prop_para[:,1], lx = rej_prop_likelihoods[1], postx = rej_prop_post[1])
 
 @test_approx_eq rej_init_para[:,1] rtest_para
 @test_approx_eq rej_init_likelihoods[1] rtest_loglh
@@ -92,3 +95,4 @@ rtest_para, rtest_loglh, rtest_post, rtest_acpt = mutation_RWMH(rej_init_para[:,
 @test_approx_eq rtest_acpt 0
 
 nothing
+

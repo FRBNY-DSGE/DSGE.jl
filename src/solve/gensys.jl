@@ -179,10 +179,11 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, ψ, π, div)
     loose = real(z * loose)
 
     ywt=z*ywt
-
-    if eu[1] != 1 || eu[2] != 1
-        throw(GensysError("Gensys does not give existence and uniqueness."))
-    end
+   
+    #Commented out since Schorfheide's code allows for indeterminacy/non-uniqueness
+    #if eu[1] != 1 || eu[2] != 1
+    #    throw(GensysError("Gensys does not give existence and uniqueness."))
+    #end
 
     return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
 end
