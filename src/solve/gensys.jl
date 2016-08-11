@@ -165,7 +165,12 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
     impact = real(z * impact)
     loose = real(z * loose)
 
-    ywt = z * ywt
+    ywt=z*ywt
+   
+    #Commented out since Schorfheide's code allows for indeterminacy/non-uniqueness
+    #if eu[1] != 1 || eu[2] != 1
+    #    throw(GensysError("Gensys does not give existence and uniqueness."))
+    #end
 
     return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
 end
@@ -187,6 +192,3 @@ function new_div(F::Base.LinAlg.GeneralizedSchur)
 
     return div
 end
-
-
-

@@ -1,5 +1,3 @@
-using Debug
-
 """
 `prior(m::AbstractModel{T})`
 
