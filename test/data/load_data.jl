@@ -32,4 +32,28 @@ colstds  = colwise(std, df)
 @test_approx_eq_eps colstds[5][1] 0.0937 1e-4
 @test_approx_eq_eps colstds[6][1] 0.0000 1e-4
 
+# Conditional data
+cond_df = load_data(m; cond_type=:full, try_disk=false, verbose=:none)
+
+@assert cond_df[end, :date] == date_forecast_start(m)
+cond_obs = [:obs_gdp, :obs_corepce, :obs_nominalrate, :obs_spread]
+for obs in cond_obs
+    @assert !isnan(cond_df[end, obs])
+end
+for obs in setdiff(names(cond_df), [cond_obs; :date])
+    @assert isnan(cond_df[end, obs])
+end
+
+# Semiconditional data
+semicond_df = load_data(m; cond_type=:semi, try_disk=false, verbose=:none)
+
+@assert semicond_df[end, :date] == date_forecast_start(m)
+semicond_obs = get_setting(m, :cond_semi_names)
+for obs in semicond_obs
+    @assert !isnan(semicond_df[end, obs])
+end
+for obs in setdiff(names(semicond_df), [semicond_obs; :date])
+    @assert isnan(semicond_df[end, obs])
+end
+
 nothing

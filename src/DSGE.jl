@@ -69,8 +69,8 @@ module DSGE
         gensys, solve,
 
         # data/
-        load_data, load_data_levels, load_cond_data, load_cond_data_levels,
-        load_fred_data, transform_data, save_data,
+        load_data, load_data_levels, load_cond_data_levels, load_fred_data,
+        transform_data, save_data,
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
         hpadjust, oneqtrpctchange, annualtoquarter
 
@@ -89,7 +89,6 @@ module DSGE
     include("data/fred_data.jl")
     include("data/transformations.jl")
     include("data/transform_data.jl")
-    include("data/load_cond_data.jl")
     include("data/util.jl")
 
     include("solve/gensys.jl")

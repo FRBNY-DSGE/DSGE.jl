@@ -1,6 +1,6 @@
 """
 ```
-forecast_all(m::AbstractModel, df::DataFrame; cond_types::Vector{Symbol}
+forecast_all(m::AbstractModel, cond_types::Vector{Symbol}
 input_types::Vector{Symbol}, output_types::Vector{Symbol}
 ```
 
@@ -10,7 +10,6 @@ output types.
 # Arguments
 
 - `m`: model object
-- `df`: DataFrame of data for observables
 - `cond_types`: conditional data type, any combination of
     - `:none`: no conditional data
     - `:semi`: use \"semiconditional data\" - average of quarter-to-date
@@ -54,14 +53,15 @@ Outputs
 
 - todo
 """
-function forecast_all(m::AbstractModel, df::DataFrame;
+function forecast_all(m::AbstractModel,
                       cond_types::Vector{Symbol}   = Vector{Symbol}(),
                       input_types::Vector{Symbol}  = Vector{Symbol}(),
                       output_types::Vector{Symbol} = Vector{Symbol}())
 
-    for input_type in input_types
-        for output_type in output_types
-            for cond_type in cond_types
+    for cond_type in cond_types
+        df = load_data(m; cond_type=cond_type, try_disk=true, verbose=:none)
+        for input_type in input_types
+            for output_type in output_types
                 forecast_one(m, df; cond_type=cond_type, input_type=input_type, output_type=output_type)
             end
         end
@@ -285,16 +285,8 @@ function forecast_one(m::AbstractModel, df::DataFrame;
                       output_type::Symbol = :simple,
                       cond_type::Symbol  = :none)
 
-    # Prepare conditional data matrix. All missing columns will be set to NaN.
-    if cond_type in [:semi, :full]
-        cond_df = load_cond_data(m, cond_type)
-        df0 = [df; cond_df]
-    elseif cond_type in [:none]
-        df0 = df
-    end
-
     # Prepare forecast inputs
-    systems, states = prepare_forecast_inputs(m, df0;
+    systems, states = prepare_forecast_inputs(m, df;
         input_type=input_type, output_type=output_type, cond_type=cond_type)
 
     # Prepare forecast outputs
@@ -303,7 +295,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
 
     # must re-run filter/smoother for conditional data in addition to explicit cases
     if output_type in [:states, :shocks, :simple, :all] || cond_type in [:semi, :full]
-        histstates, histshocks, histpseudo = filterandsmooth(m, df0, systems)
+        histstates, histshocks, histpseudo = filterandsmooth(m, df, systems)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
@@ -332,7 +324,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
             T = DSGE.subtract_quarters(date_forecast_start(m), date_prezlb_start(m))
-            data = df_to_matrix(m, df0)
+            data = df_to_matrix(m, df)
             
             forecast_output[:forecaststates] = [hcat(x[:, T+1:end], y) for (x, y) in zip(histstates, forecaststates)]
             forecast_output[:forecastshocks] = [hcat(x[:, T+1:end], y) for (x, y) in zip(histshocks, forecastshocks)]

@@ -87,15 +87,7 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
     transformed = DataFrame()
     transformed[:date] = levels[:date]
 
-    observables = if cond_type == :none
-        keys(m.data_transforms)
-    elseif cond_type == :semi
-        cond_semi_names(m)
-    elseif cond_type == :full
-        cond_full_names(m)
-    end
-
-    for series in observables
+    for series in keys(m.data_transforms)
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             println("Transforming series $series...")
         end
@@ -104,6 +96,19 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
     end
 
     sort!(transformed, cols = :date)
+
+    # NaN out observables not used for (semi)conditional forecasts
+    if cond_type in [:semi, :full]
+        cond_names = if cond_type == :semi
+            cond_semi_names(m)
+        elseif cond_type == :full
+            cond_full_names(m)
+        end
+
+        cond_names_nan = setdiff(names(transformed), [cond_names; :date])
+        T = eltype(transformed[:, cond_names_nan])
+        transformed[transformed[:, :date] .>= date_forecast_start(m), cond_names_nan] = convert(T, NaN)
+    end
 
     return transformed
 end

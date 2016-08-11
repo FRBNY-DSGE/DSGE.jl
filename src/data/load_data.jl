@@ -21,11 +21,11 @@ Then, the series in levels are transformed as specified in `m.data_transforms`. 
 
 The resulting DataFrame is saved to disk as `data_<yymmdd>.csv` and returned to the caller.  
 """
-function load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol=:low)
+function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool = true, verbose::Symbol=:low)
     recreate_data = false
 
     # Check if already downloaded
-    if try_disk && has_saved_data(m)
+    if try_disk && has_saved_data(m; cond_type=cond_type)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             print("Reading dataset from disk...")
         end
@@ -49,16 +49,25 @@ function load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol=:low
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("Creating dataset...")
         end
+
         levels = load_data_levels(m; verbose=verbose)
-        df = transform_data(m, levels; verbose=verbose)
+        if cond_type in [:semi, :full]
+            cond_levels, date_conditional_end = load_cond_data_levels(m; verbose=verbose)
+            levels = vcat(levels, cond_levels)
+            na2nan!(levels)
+        end
+        df = transform_data(m, levels; cond_type=cond_type, verbose=verbose)
 
         # Ensure that only appropriate rows make it into the returned DataFrame.
         start_date = date_presample_start(m)
-        end_date   = date_zlb_end(m)
-
+        end_date   = if cond_type in [:semi, :full]
+            date_conditional_end
+        else
+            date_zlb_end(m)
+        end
         df = df[start_date .<= df[:, :date] .<= end_date, :]
 
-        save_data(m, df)
+        save_data(m, df; cond_type=cond_type)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("dataset creation successful")
         end
@@ -117,7 +126,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
         end
 
         # Skip FRED sources, which have already been handled
-        # Conditional data are handled in `load_cond_data`
+        # Conditional data are handled in `load_cond_data_levels`
         if source == :fred || source == :conditional
             continue
         end
@@ -171,48 +180,112 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     na2nan!(df)
 
     sort!(df, cols = :date)
-
-    save_data_levels(m, df)
-    return df
 end
 
 """
 ```
-save_data(m::AbstractModel, df::DataFrame)
+load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
+```
+
+Load conditional data in levels.
+
+Check on disk in `inpath(m, \"cond\")` for a conditional dataset of the correct
+vintage. Load the appropriate data series, specified in
+`m.data_series[:conditional]`.
+    
+The following series are also loaded from `inpath(m, \"data\")` and either
+appended or merged into the conditional data:
+
+- The last period of (unconditional) data in levels
+  (`data_levels_<yymmdd>.csv`), used to calculate growth rates
+- The first period of forecasted population
+  (`population_forecast_<yymmdd>.csv`), used for per-capita calculations
+"""
+function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
+
+    # Prepare file name
+    cond_vint = get_setting(m, :cond_vintage)
+    cond_id = get_setting(m, :cond_id)
+    file = inpath(m, "cond", "cond_vint=$(cond_vint)_cdid=$(cond_id).csv")
+
+    if isfile(file)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("Reading conditional data from $file...")
+        end
+
+        # Read data
+        cond_df = readtable(file)
+        format_dates!(:date, cond_df)
+
+        date_conditional_end = cond_df[end, :date]
+
+        # Make sure each mnemonic that was specified is present
+        mnemonics = m.data_series[:conditional]
+        for series in mnemonics
+            if !in(series, names(cond_df))
+                error("$(string(series)) is missing from $file.")
+            end
+        end
+
+        # Use population forecast as population data
+        population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
+        if isfile(population_forecast_file)
+            pop_forecast = readtable(population_forecast_file)
+
+            population_mnemonic = get_setting(m, :population_mnemonic)
+            rename!(pop_forecast, :POPULATION,  population_mnemonic)
+            DSGE.na2nan!(pop_forecast)
+            DSGE.format_dates!(:date, pop_forecast)
+
+            cond_df = join(cond_df, pop_forecast, on=:date, kind=:left)
+
+            # turn NAs into NaNs
+            na2nan!(cond_df)
+
+            sort!(cond_df, cols = :date)
+
+            return cond_df, date_conditional_end
+        else
+            error("Population forecast data in $population_forecast_file not found, but required to load conditional data")
+        end
+    else
+        # If series not found, throw an error
+        error("Conditional data in $file not found")
+    end
+end
+
+"""
+```
+save_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
 ```
 
 Save `df` to disk as CSV. File is located in `inpath(m, \"data\")`.
 """
-function save_data(m::AbstractModel, df::DataFrame)
+function save_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
     vint = data_vintage(m)
-    filename = inpath(m, "data", "data_$vint.csv")
+    filestring = "data"
+    if cond_type in [:semi, :full]
+        filestring = filestring * "_cond=$cond_type"
+    end
+    filename = inpath(m, "data", "$(filestring)_$vint.csv")
     writetable(filename, df)
 end
 
 """
 ```
-save_data_levels(m::AbstractModel, levels::DataFrame)
+has_saved_data(m::AbstractModel; cond_type::Symbol = :none)
 ```
 
-Save `levels` (data in levels) to disk as CSV. File is located in `inpath(m,
-\"data\")`.
+Determine if there is a saved dataset on disk for the required vintage and
+conditional type.
 """
-function save_data_levels(m::AbstractModel, levels::DataFrame)
+function has_saved_data(m::AbstractModel; cond_type::Symbol = :none)
     vint = data_vintage(m)
-    filename = inpath(m, "data", "data_levels_$vint.csv")
-    writetable(filename, levels)
-end
-
-"""
-```
-has_saved_data(m::AbstractModel)
-```
-
-Determine if there is a saved dataset on disk for the required vintage.
-"""
-function has_saved_data(m::AbstractModel)
-    vint = data_vintage(m)
-    filename = inpath(m, "data", "data_$vint.csv")
+    filestring = "data"
+    if cond_type in [:semi, :full]
+        filestring = filestring * "_cond=$cond_type"
+    end
+    filename = inpath(m, "data", "$(filestring)_$vint.csv")
     isfile(filename)
 end
 
