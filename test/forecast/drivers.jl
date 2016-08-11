@@ -1,7 +1,8 @@
 using DSGE
 
 custom_settings = Dict{Symbol, Setting}(
-    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
+    :date_forecast_start     => Setting(:date_forecast_start, quartertodate("2015-Q4")),
+    :use_population_forecast => Setting(:use_population_forecast, true))
 m = Model990(custom_settings = custom_settings)
 m.testing = true
 

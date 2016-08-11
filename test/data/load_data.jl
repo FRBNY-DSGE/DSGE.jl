@@ -1,5 +1,5 @@
 using DSGE
-using Base.Test, DataFrames, Debug
+using Base.Test, DataFrames
 
 # Can we actually test? Require that the FRED_API_KEY ENV is populated.
 @assert haskey(ENV, "FRED_API_KEY")
@@ -12,7 +12,7 @@ custom_settings = Dict{Symbol, Setting}(
 m = Model990(custom_settings = custom_settings)
 m.testing = true
 
-df = load_data(m; cond_type=:none, try_disk=false, verbose=:none)
+df = load_data(m; try_disk=false, verbose=:none)
 
 # Silly comparisons
 delete!(df, :date)
@@ -31,30 +31,5 @@ colstds  = colwise(std, df)
 @test_approx_eq_eps colstds[4][1] 0.1367 1e-4
 @test_approx_eq_eps colstds[5][1] 0.0937 1e-4
 @test_approx_eq_eps colstds[6][1] 0.0000 1e-4
-
-# Conditional data
-df = load_data(m; cond_type=:full, try_disk=false, verbose=:none)
-
-@assert df[end, :date] == date_forecast_start(m)
-cond_obs = [:obs_gdp, :obs_gdpdeflator, :obs_corepce, :obs_nominalrate, :obs_spread]
-for obs in cond_obs
-    @assert !isnan(df[end, obs])
-end
-for obs in setdiff(names(df), [cond_obs; :date])
-    @assert isnan(df[end, obs])
-end
-
-# Semiconditional data
-df = load_data(m; cond_type=:semi, try_disk=false, verbose=:none)
-
-@assert df[end, :date] == date_forecast_start(m)
-semicond_obs = get_setting(m, :cond_semi_names)
-for obs in semicond_obs
-    @assert !isnan(df[end, obs])
-end
-for obs in setdiff(names(df), [semicond_obs; :date])
-    @assert isnan(df[end, obs])
-end
-
 
 nothing

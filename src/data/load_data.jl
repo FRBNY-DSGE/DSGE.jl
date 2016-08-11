@@ -20,7 +20,7 @@ Then, the series in levels are transformed as specified in `m.data_transforms`. 
 
 The resulting DataFrame is saved to disk as `data_<yymmdd>.csv` and returned to the caller.  
 """
-function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool = true, verbose::Symbol=:low)
+function load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol=:low)
     recreate_data = false
 
     # Check if already downloaded
@@ -48,17 +48,12 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("Creating dataset...")
         end
-        levels = load_data_levels(m; cond_type=cond_type, verbose=verbose)
-        df = transform_data(m, levels; cond_type=cond_type, verbose=verbose)
+        levels = load_data_levels(m; verbose=verbose)
+        df = transform_data(m, levels; verbose=verbose)
 
         # Ensure that only appropriate rows make it into the returned DataFrame.
         start_date = date_presample_start(m)
-
-        end_date   = if cond_type == :none
-            date_zlb_end(m)
-        else
-            df[end, :date]
-        end
+        end_date   = date_zlb_end(m)
 
         df = df[start_date .<= df[:, :date] .<= end_date, :]
 
@@ -92,7 +87,7 @@ using `load_fred_data`. See `?load_fred_data` for more details.
 
 Data from non-FRED data sources are read from disk, verified, and merged.
 """
-function load_data_levels(m::AbstractModel; cond_type::Symbol=:none, verbose::Symbol=:low)
+function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     # Start two quarters further back than `start_date` as we need these additional
     # quarters to compute differences.
     start_date = date_presample_start(m) - Dates.Month(6)
@@ -121,15 +116,8 @@ function load_data_levels(m::AbstractModel; cond_type::Symbol=:none, verbose::Sy
         end
 
         # Skip FRED sources, which have already been handled
-        if source == :fred
-            continue
-        end
-
-        # Conditional data are handled separately because they are appended
-        # vertically, i.e. by adding new observations
-        if source == :conditional
-            cond_data = load_cond_data(m, cond_type; verbose=verbose)
-            df = vcat(df, cond_data)
+        # Conditional data are handled in `load_cond_data`
+        if source == :fred || source == :conditional
             continue
         end
 
@@ -183,6 +171,7 @@ function load_data_levels(m::AbstractModel; cond_type::Symbol=:none, verbose::Sy
 
     sort!(df, cols = :date)
 
+    save_data_levels(m, df)
     return df
 end
 
@@ -196,6 +185,12 @@ Save `df` to disk as CSV. File is located in `inpath(m, "data")`.
 function save_data(m::AbstractModel, df::DataFrame)
     vint = data_vintage(m)
     filename = inpath(m, "data", "data_$vint.csv")
+    writetable(filename, df)
+end
+
+function save_data_levels(m::AbstractModel, df::DataFrame)
+    vint = data_vintage(m)
+    filename = inpath(m, "data", "data_levels_$vint.csv")
     writetable(filename, df)
 end
 
