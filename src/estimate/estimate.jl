@@ -160,7 +160,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
 
     #metropolis_hastings(propdist, m, data, cc0, cc; verbose=verbose);
 
-    smc(m, data)
+    smc(m, data; verbose = :high)
 
     ########################################################################################
     ### Step 5: Calculate and save parameter covariance matrix
