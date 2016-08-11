@@ -171,10 +171,7 @@ for i=2:tune.nphi
 	#------------------------------------
 
 	ESS = 1/sum(wtsim[:,i].^2)
-    #sampled = false
 	if (ESS < tune.npart/2)
-        #sampled = true
-        ####What else does systematic_resampling return?
 		id = systematic_resampling(wtsim[:,i])
         parasim[i-1, :, :] = parasim[i-1, id, :]
 		loglh = loglh[id]
@@ -280,7 +277,7 @@ for i=2:tune.nphi
     loglh = Float64[out[i][2] for i=1:length(out)]
     logpost = Float64[out[i][3] for i=1:length(out)]
     temp_acpt = Int[out[i][4] for i=1:length(out)]
-    
+      
 	tune.acpt = mean(temp_acpt) #update average acceptance rate	
 
     # store
