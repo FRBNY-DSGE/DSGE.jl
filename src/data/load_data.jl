@@ -13,7 +13,8 @@ already stored, the dataset will be recreated. This check can be eliminated by p
 
 If the dataset is to be recreated, in a preliminary stage, intermediate data series, as
 specified in `m.data_series`, are loaded in levels using `load_data_levels`. See
-`?load_data_levels` for more details.
+`?load_data_levels` for more details. The DataFrame of data in levels is saved
+to disk as `data_levels_<yymmdd>.csv`.
 
 Then, the series in levels are transformed as specified in `m.data_transforms`. See
 `?transform_data` for more details.
@@ -162,7 +163,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             addl_data = DataFrame(fill(NaN, (size(df,1), length(mnemonics))))
             names!(addl_data, mnemonics)
             df = hcat(df, addl_data)
-            warn("$file was not found; NaNs used." )
+            warn("$file was not found; NaNs used.")
         end
     end
     
@@ -180,7 +181,7 @@ end
 save_data(m::AbstractModel, df::DataFrame)
 ```
 
-Save `df` to disk as CSV. File is located in `inpath(m, "data")`.
+Save `df` to disk as CSV. File is located in `inpath(m, \"data\")`.
 """
 function save_data(m::AbstractModel, df::DataFrame)
     vint = data_vintage(m)
@@ -188,10 +189,18 @@ function save_data(m::AbstractModel, df::DataFrame)
     writetable(filename, df)
 end
 
-function save_data_levels(m::AbstractModel, df::DataFrame)
+"""
+```
+save_data_levels(m::AbstractModel, levels::DataFrame)
+```
+
+Save `levels` (data in levels) to disk as CSV. File is located in `inpath(m,
+\"data\")`.
+"""
+function save_data_levels(m::AbstractModel, levels::DataFrame)
     vint = data_vintage(m)
     filename = inpath(m, "data", "data_levels_$vint.csv")
-    writetable(filename, df)
+    writetable(filename, levels)
 end
 
 """
@@ -212,7 +221,7 @@ end
 read_data(m::AbstractModel)
 ```
 
-Read CSV from disk as DataFrame. File is located in `inpath(m, "data")`.
+Read CSV from disk as DataFrame. File is located in `inpath(m, \"data\")`.
 """
 function read_data(m::AbstractModel)
     vint     = data_vintage(m)

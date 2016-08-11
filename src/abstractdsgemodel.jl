@@ -192,9 +192,11 @@ saveroot(m::AbstractModel)     = get_setting(m, :saveroot)
 dataroot(m::AbstractModel)     = get_setting(m, :dataroot)
 
 # Interface for data
-data_vintage(m::AbstractModel) = get_setting(m, :data_vintage)
-cond_vintage(m::AbstractModel) = get_setting(m, :cond_vintage)
-cond_id(m::AbstractModel) = get_setting(m, :cond_id)
+data_vintage(m::AbstractModel)    = get_setting(m, :data_vintage)
+cond_vintage(m::AbstractModel)    = get_setting(m, :cond_vintage)
+cond_id(m::AbstractModel)         = get_setting(m, :cond_id)
+cond_full_names(m::AbstractModel) = get_setting(m, :cond_full_names)
+cond_semi_names(m::AbstractModel) = get_setting(m, :cond_semi_names)
 use_population_forecast(m::AbstractModel) = get_setting(m, :use_population_forecast)
 
 # Interface for general computation settings
@@ -408,9 +410,9 @@ Returns path to specific input data file, creating containing directory as neede
 `file_name` not specified, creates and returns path to containing directory only. Valid
 `in_type` includes:
 
-* `"data"`: recorded data
-* `"cond"`: conditional data - nowcasts for the current forecast quarter, or related
-* `"user"`: user-supplied data for starting parameter vector, hessian, or related
+* `\"data\"`: recorded data
+* `\"cond\"`: conditional data - nowcasts for the current forecast quarter, or related
+* `\"user\"`: user-supplied data for starting parameter vector, hessian, or related
 
 Path built as
 ```

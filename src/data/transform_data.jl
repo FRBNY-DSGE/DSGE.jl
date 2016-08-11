@@ -1,20 +1,29 @@
 """
 ```
-transform_data(m::AbstractModel, levels::DataFrame; verbose::Symbol = :low)
+transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol = :none,
+    verbose::Symbol = :low)
 ```
 
-Transform data loaded in levels and order columns appropriately for the DSGE model. Returns
-DataFrame of transformed data.
+Transform data loaded in levels and order columns appropriately for the DSGE
+model. Returns DataFrame of transformed data.
 
 The DataFrame `levels` is output from `load_data_levels`. The series in levels are
 transformed as specified in `m.data_transforms`.
+
 - To prepare for per-capita transformations, population data are filtered using
-    `hpfilter`. The series in `levels` to use as the population series is given by the
-    `population_mnemonic` setting. If `use_population_forecast` is `true`, a population
-    forecast is appended to the recorded population levels before the filtering. Both
-    filtered and unfiltered population levels and growth rates are added to the `levels`
-    data frame.
-- The transformations are applied for each series using the `levels` DataFrame as input.
+  `hpfilter`. The series in `levels` to use as the population series is given by
+  the `population_mnemonic` setting. If `use_population_forecast(m)`, a
+  population forecast is appended to the recorded population levels before the
+  filtering. Both filtered and unfiltered population levels and growth rates are
+  added to the `levels` data frame.
+- The transformations are applied for each series using the `levels` DataFrame
+  as input.
+
+Conditional data (identified by `cond_type in [:semi, :full]`) are handled
+slightly differently: If `use_population_forecast(m)`, we drop the first period
+of the population forecast because we treat the first forecast period
+(`date_forecast_start(m)` as if it were data. We also only apply transformations
+for the observables given in `cond_full_names(m)` or `cond_semi_names(m)`.
 """
 function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol = :none, verbose::Symbol = :low)
 
@@ -41,6 +50,8 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
         DSGE.na2nan!(pop_forecast)
         DSGE.format_dates!(:date, pop_forecast)
 
+        # for conditional data, start "forecast" one period later
+        # (first real forecast period treated as data)
         if cond_type in [:semi, :full]
             pop_forecast = pop_forecast[2:end, :]
         end
@@ -79,9 +90,9 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
     observables = if cond_type == :none
         keys(m.data_transforms)
     elseif cond_type == :semi
-        get_setting(m, :cond_semi_names)
+        cond_semi_names(m)
     elseif cond_type == :full
-        get_setting(m, :cond_full_names)
+        cond_full_names(m)
     end
 
     for series in observables
