@@ -1,3 +1,4 @@
+using Debug
 #to be refactored at a later date, npara can be removed completely
 #npart through phi could be written as optional arguments
 #R's can be specified in the function itself
@@ -25,7 +26,7 @@ end
 
 
 
-function smc(m::AbstractModel, data::Matrix)
+@debug function smc(m::AbstractModel, data::Matrix)
 #--------------------------------------------------------------
 #Set Parameters of Algorithm
 #--------------------------------------------------------------
@@ -75,7 +76,7 @@ for i in 1:tune.npart
         end
     end
     priorsim[i,:] = priodraw'
-    out = posterior!(m, squeeze(priodraw,2), data; phi_smc = tune.phi[1])
+    out = posterior!(m, convert(Array{Float64,1},priodraw), data; phi_smc = tune.phi[1])
     logpost[i] = out[:post]
     loglh[i] = out[:like]
 end
