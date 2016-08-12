@@ -186,7 +186,7 @@ function Model990(subspec::AbstractString="ss2"; custom_settings::Dict{Symbol, S
                           :PCEPILFE, :COMPNFB, :THREEFYTP10]
     spf_series         = [:ASACX10]
     fernald_series     = [:TFPJQ, :TFPKQ]
-    longrate_series    = [:FYCZZA]
+    longrate_series    = [:FYCCZA]
     conditional_series = [:GDP, :GDPCTPI, :DFF, :BAA, :GS10, :PCEPILFE]
     # ois data taken care of in load_data
     
@@ -774,7 +774,7 @@ function init_data_transforms!(m::Model990)
         # FROM: pre-computed long rate at an annual rate
         # TO:   10T yield - 10T term premium at a quarterly rate
 
-        annualtoquarter(levels[:FYCZZA] - levels[:THREEFYTP10])
+        annualtoquarter(levels[:FYCCZA] - levels[:THREEFYTP10])
     end
 
     # 12. Fernald TFP
