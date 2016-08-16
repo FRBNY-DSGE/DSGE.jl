@@ -121,7 +121,7 @@ function csminwel(fcn::Function,
     iteration = 0
 
     # Maintain a trace
-    tr = OptimizationTrace(Csminwel())
+    tr = OptimizationTrace{Csminwel}()
     tracing = show_trace || store_trace || extended_trace
     @csminwelltrace
 
