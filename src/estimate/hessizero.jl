@@ -1,19 +1,19 @@
-"""
-```
-hessizero{T<:AbstractFloat}(fcn::Function, x::Vector{T};
-                            check_neg_diag::Bool=false,
-                            verbose::Symbol=:none,
-                            distr::Bool=true)
-```
+# """
+# ```
+# hessizero{T<:AbstractFloat}(fcn::Function, x::Vector{T};
+#                             check_neg_diag::Bool=false,
+#                             verbose::Symbol=:none,
+#                             distr::Bool=true)
+# ```
 
-Compute Hessian of function `fcn` evaluated at `x`.
+# Compute Hessian of function `fcn` evaluated at `x`.
 
-### Arguments
-- `check_neg_diag`: Throw an error if any negative diagonal elements are detected.
-- `verbose`: Print verbose output
-- `distr`: Use available parallel workers to increase performance.
-"""
-function hessizero{T<:AbstractFloat}(fcn::Function,
+# ### Arguments
+# - `check_neg_diag`: Throw an error if any negative diagonal elements are detected.
+# - `verbose`: Print verbose output
+# - `distr`: Use available parallel workers to increase performance.
+# """
+@debug function hessizero{T<:AbstractFloat}(fcn::Function,
                                     x::Vector{T};
                                     check_neg_diag::Bool=false,
                                     verbose::Symbol=:none,
@@ -89,7 +89,7 @@ function hessizero{T<:AbstractFloat}(fcn::Function,
 end
 
 # Compute diag element
-function hess_diag_element{T<:AbstractFloat}(fcn::Function,
+@debug function hess_diag_element{T<:AbstractFloat}(fcn::Function,
                                               x::Vector{T},
                                               i::Int;
                                               ndx::Int=6,
@@ -107,12 +107,13 @@ function hess_diag_element{T<:AbstractFloat}(fcn::Function,
     end
 
     # Diagonal element computation
-    for k = 3:4
+    for k = 5:6
         paradx    = copy(x)
         parady    = copy(x)
         paradx[i] = paradx[i] + dx[k]*dxscale[i]
         parady[i] = parady[i] - dx[k]*dxscale[i]
 
+        # @bp
         fx  = fcn(x)
         fdx = fcn(paradx)
         fdy = fcn(parady)
@@ -138,7 +139,7 @@ function hess_diag_element{T<:AbstractFloat}(fcn::Function,
 end
 
 # Compute off diag element
-function hess_offdiag_element{T<:AbstractFloat}(fcn::Function,
+@debug function hess_offdiag_element{T<:AbstractFloat}(fcn::Function,
                                                  x::Vector{T},
                                                  i::Int,
                                                  j::Int,
@@ -156,7 +157,7 @@ function hess_offdiag_element{T<:AbstractFloat}(fcn::Function,
         println("Hessian element: ($i, $j)")
     end
 
-    for k = 3:4
+    for k = 5:6
         paradx      = copy(x)
         parady      = copy(x)
         paradx[i]   = paradx[i] + dx[k]*dxscale[i]
@@ -164,6 +165,7 @@ function hess_offdiag_element{T<:AbstractFloat}(fcn::Function,
         paradxdy    = copy(paradx)
         paradxdy[j] = paradxdy[j] - dx[k]*dxscale[j]
 
+        # @bp
         fx    = fcn(x)
         fdx   = fcn(paradx)
         fdy   = fcn(parady)
