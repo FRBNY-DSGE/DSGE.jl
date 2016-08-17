@@ -52,7 +52,7 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
 
         levels = load_data_levels(m; verbose=verbose)
         if cond_type in [:semi, :full]
-            cond_levels, date_conditional_end = load_cond_data_levels(m; verbose=verbose)
+            cond_levels = load_cond_data_levels(m; verbose=verbose)
             levels = vcat(levels, cond_levels)
             na2nan!(levels)
         end
@@ -61,7 +61,7 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
         # Ensure that only appropriate rows make it into the returned DataFrame.
         start_date = date_presample_start(m)
         end_date   = if cond_type in [:semi, :full]
-            date_conditional_end
+            date_conditional_end(m)
         else
             date_zlb_end(m)
         end
@@ -239,12 +239,14 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
             cond_df = join(cond_df, pop_forecast, on=:date, kind=:left)
 
-            # turn NAs into NaNs
+            # Turn NAs into NaNs
             na2nan!(cond_df)
-
             sort!(cond_df, cols = :date)
 
-            return cond_df, date_conditional_end
+            # Update setting only if population data read successfully
+            m <= Setting(:date_conditional_end, date_conditional_end)
+
+            return cond_df
         else
             error("Population forecast data in $population_forecast_file not found, but required to load conditional data")
         end

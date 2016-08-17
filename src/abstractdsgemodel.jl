@@ -128,6 +128,7 @@ date_zlb_start(m::AbstractModel) = get_setting(m, :date_zlb_start)
 date_presample_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_prezlb_start) - Dates.Month(3))
 date_prezlb_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_zlb_start) - Dates.Month(3))
 date_zlb_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_forecast_start) - Dates.Month(3))
+date_conditional_end(m::AbstractModel) = get_setting(m, :date_conditional_end)
 
 index_presample_start(m::AbstractModel) = 1
 index_prezlb_start(m::AbstractModel) = subtract_quarters(date_prezlb_start(m), date_presample_start(m)) + 1

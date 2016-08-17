@@ -24,7 +24,7 @@ module DSGE
         AbstractModel, description,
         n_anticipated_shocks, n_anticipated_shocks_padding,
         date_presample_start, date_prezlb_start, date_zlb_start,
-            date_presample_end, date_prezlb_end, date_zlb_end,
+            date_presample_end, date_prezlb_end, date_zlb_end, date_conditional_end,
             index_presample_start, index_prezlb_start, index_zlb_start, index_forecast_start,
             n_presample_periods, n_prezlb_periods, n_zlb_periods,
             inds_presample_periods, inds_prezlb_periods, inds_zlb_periods,
