@@ -29,15 +29,11 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             print("Reading dataset from disk...")
         end
-        df = read_data(m)
-        if isvalid_data(m, df)
+        df = read_data(m; cond_type = cond_type)
+        if isvalid_data(m, df; cond_type = cond_type)
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println("dataset from disk valid")
             end
-
-            # Update setting only if valid data
-            date_cond_end = df[end, :date]
-            m <= Setting(:date_conditional_end, date_cond_end)
         else
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println("dataset from disk not valid")
@@ -249,9 +245,6 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
             na2nan!(cond_df)
             sort!(cond_df, cols = :date)
 
-            # Update setting only if population data read successfully
-            m <= Setting(:date_conditional_end, date_cond_end)
-
             return cond_df
         else
             error("Population forecast data in $population_forecast_file not found, but required to load conditional data")
@@ -299,14 +292,18 @@ end
 
 """
 ```
-read_data(m::AbstractModel)
+read_data(m::AbstractModel; cond_type::Symbol = :none)
 ```
 
 Read CSV from disk as DataFrame. File is located in `inpath(m, \"data\")`.
 """
-function read_data(m::AbstractModel)
-    vint     = data_vintage(m)
-    filename = inpath(m, "data", "data_$vint.csv")
+function read_data(m::AbstractModel; cond_type::Symbol = :none)
+    vint = data_vintage(m)
+    filestring = "data"
+    if cond_type in [:semi, :full]
+        filestring = filestring * "_cond=$cond_type"
+    end
+    filename = inpath(m, "data", "$(filestring)_$vint.csv")
     df       = readtable(filename)
 
     # Convert date column from string to Date
@@ -317,14 +314,14 @@ end
 
 """
 ```
-isvalid_data(m::AbstractModel, df::DataFrame)
+isvalid_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
 ```
 
 Return if dataset is valid for this model, ensuring that all observables are contained and
 that all quarters between the beginning of the presample and the end of the mainsample are
 contained.
 """
-function isvalid_data(m::AbstractModel, df::DataFrame)
+function isvalid_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
     valid = true
 
     # Ensure that every series in m_series is present in df_series
@@ -339,8 +336,16 @@ function isvalid_data(m::AbstractModel, df::DataFrame)
 
     # Ensure the dates between date_presample_start and date_zlb_end are contained.
     actual_dates = df[:date]
-    expected_dates = get_quarter_ends(date_presample_start(m), date_zlb_end(m))
+
+    start_date = date_presample_start(m)
+    end_date   = if cond_type in [:semi, :full]
+        date_conditional_end(m)
+    else
+        date_zlb_end(m)
+    end
+    expected_dates = get_quarter_ends(start_date, end_date)
     datesdiff = setdiff(expected_dates, actual_dates)
+
     valid = valid && isempty(datesdiff)
     if !isempty(datesdiff)
         println("Dates of 'df' do not match expected.")

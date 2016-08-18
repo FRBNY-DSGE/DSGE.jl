@@ -12,7 +12,8 @@ custom_settings = Dict{Symbol, Setting}(
     :data_vintage            => Setting(:data_vintage, "160812"),
     :cond_vintage            => Setting(:data_vintage, "160812"),
     :use_population_forecast => Setting(:use_population_forecast, true),
-    :date_forecast_start     => Setting(:date_forecast_start, quartertodate("2016-Q3")))
+    :date_forecast_start     => Setting(:date_forecast_start, quartertodate("2016-Q3")),
+    :date_conditional_end    => Setting(:date_forecast_start, quartertodate("2016-Q3")))
 m = Model990(custom_settings = custom_settings)
 m.testing = true
 

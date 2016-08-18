@@ -30,6 +30,7 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:date_prezlb_start, quartertodate("1960-Q1"), "Start date of main sample")
     m <= Setting(:date_zlb_start, quartertodate("2008-Q4"), "Start date of zero lower bound regime")
     m <= Setting(:date_forecast_start, Dates.lastdayofquarter(Dates.today()), "Start date of forecast period")
+    m <= Setting(:date_conditional_end, Dates.lastdayofquarter(Dates.today()), "End date of conditional data period")
     m <= Setting(:date_forecast_end, Dates.lastdayofquarter(Dates.today()+Dates.Month(60*3)), "End date of forecast period")
 
     # Anticipated shocks
