@@ -29,14 +29,12 @@ data = df_to_matrix(m, df)
 
 # Conditional data
 cond_df = load_data(m; cond_type=:full, try_disk=false, verbose=:none)
-cols = setdiff(names(cond_df), [:date])
-cond_data = convert(Matrix{Float64}, cond_df[cols])'
+cond_data = df_to_matrix(m, cond_df; cond_type=:full)
 @test_matrix_approx_eq exp_cond_data cond_data
 
 # Semiconditional data
 semicond_df = load_data(m; cond_type=:semi, try_disk=false, verbose=:none)
-cols = setdiff(names(semicond_df), [:date])
-semicond_data = convert(Matrix{Float64}, semicond_df[cols])'
+semicond_data = df_to_matrix(m, semicond_df; cond_type=:semi)
 @test_matrix_approx_eq exp_semicond_data semicond_data
 
 nothing

@@ -346,25 +346,29 @@ end
 
 """
 ```
-df_to_matrix(m::AbstractModel, df::DataFrame)
+df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
 ```
 
 Return `df`, converted to matrix of floats, and discard date column. Also ensure data are
 sorted by date and that rows outside of sample are discarded. The output of this function is
 suitable for direct use in `estimate`, `posterior`, etc.
 """
-function df_to_matrix(m::AbstractModel, df::DataFrame)
+function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
     # Sort rows by date and discard rows outside of sample
     df1 = sort(df; cols=[:date])
-    t_start = find(df1[:date] .== date_presample_start(m))[1]
-    t_end = find(df1[:date] .== date_zlb_end(m))[1]
+
+    start_date = date_presample_start(m)
+    end_date   = if cond_type in [:semi, :full]
+        date_conditional_end(m)
+    else
+        date_zlb_end(m)
+    end
+    df1 = df1[start_date .<= df1[:, :date] .<= end_date, :]
 
     # Discard columns not used.
-    #TODO sort columns as well according to observables
-    datecol = df1.colindex[:date]
-    colinds = setdiff(1:size(df1,2), datecol)
-
-    df1 = df1[t_start:t_end, colinds]
+    # TODO: sort columns as well according to observables
+    cols = setdiff(names(df1), [:date])
+    df1 = df1[cols]
 
     return convert(Matrix{Float64}, df1)'
 end
