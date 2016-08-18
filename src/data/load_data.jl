@@ -13,13 +13,13 @@ already stored, the dataset will be recreated. This check can be eliminated by p
 
 If the dataset is to be recreated, in a preliminary stage, intermediate data series, as
 specified in `m.data_series`, are loaded in levels using `load_data_levels`. See
-`?load_data_levels` for more details. The DataFrame of data in levels is saved
-to disk as `data_levels_<yymmdd>.csv`.
+`?load_data_levels` for more details.
 
 Then, the series in levels are transformed as specified in `m.data_transforms`. See
 `?transform_data` for more details.
 
-The resulting DataFrame is saved to disk as `data_<yymmdd>.csv` and returned to the caller.  
+If `m.testing` is false, then the resulting DataFrame is saved to disk as `data_<yymmdd>.csv`.
+The data are then returned to the caller.
 """
 function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool = true, verbose::Symbol=:low)
     recreate_data = false
@@ -67,7 +67,9 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
         end
         df = df[start_date .<= df[:, :date] .<= end_date, :]
 
-        save_data(m, df; cond_type=cond_type)
+        if !m.testing
+            save_data(m, df; cond_type=cond_type)
+        end
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("dataset creation successful")
         end
