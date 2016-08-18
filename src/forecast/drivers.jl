@@ -314,7 +314,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     # For conditional data, use the end of the hist states as the initial state
     # vector for the forecast
     if cond_type in [:semi, :full]
-        states = [Vector(x[:, end]) for x in histstates]
+        states = [Vector{Float64}(x[:, end]) for x in histstates]
     end
 
     if output_type in [:forecast, :simple, :all]

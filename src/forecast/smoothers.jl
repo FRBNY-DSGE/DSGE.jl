@@ -158,7 +158,8 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         alpha_hat[:, t] = ah_t
     end
 
-    period_inds = [inds_prezlb_periods(m); inds_zlb_periods(m)]
+    period_inds = [inds_prezlb_periods(m);
+                   index_zlb_start(m):Nt] # allows for conditional data
     alpha_hat = alpha_hat[:, period_inds]
     eta_hat   = eta_hat[:,   period_inds]
     
