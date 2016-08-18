@@ -34,6 +34,10 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println("dataset from disk valid")
             end
+
+            # Update setting only if valid data
+            date_cond_end = df[end, :date]
+            m <= Setting(:date_conditional_end, date_cond_end)
         else
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println("dataset from disk not valid")
@@ -219,7 +223,7 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
         cond_df = readtable(file)
         format_dates!(:date, cond_df)
 
-        date_conditional_end = cond_df[end, :date]
+        date_cond_end = cond_df[end, :date]
 
         # Make sure each mnemonic that was specified is present
         mnemonics = m.data_series[:conditional]
@@ -246,7 +250,7 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
             sort!(cond_df, cols = :date)
 
             # Update setting only if population data read successfully
-            m <= Setting(:date_conditional_end, date_conditional_end)
+            m <= Setting(:date_conditional_end, date_cond_end)
 
             return cond_df
         else
