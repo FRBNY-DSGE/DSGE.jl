@@ -158,7 +158,7 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
     if input_type in [:mean, :mode, :init]
         update!(m, vec(params))
-        kals = filter(m, df, systems; allout = true)
+        kals = filter(m, df, systems; cond_type = cond_type, allout = true)
         # `kals` is a vector of length 1
         states[1] = kals[1][:filt][:, end]
 
@@ -250,7 +250,7 @@ state vectors.
 function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
                       input_type::Symbol  = :mode,
                       output_type::Symbol = :simple,
-                      cond_type::Symbol  = :none)
+                      cond_type::Symbol   = :none)
     # Some variables
     n_states = n_states_augmented(m)
 
@@ -273,7 +273,7 @@ end
 """
 ```
 forecast_one(m::AbstractModel, df::DataFrame; input_type::Symbol  = :mode,
-    output_type::Symbol = :simple, cond_type::Symbol  = :none)
+    output_type::Symbol = :simple, cond_type::Symbol = :none)
 ```
 
 Compute, save, and return forecast outputs given by `output_type` for input draws given by
@@ -283,7 +283,7 @@ Compute, save, and return forecast outputs given by `output_type` for input draw
 function forecast_one(m::AbstractModel, df::DataFrame;
                       input_type::Symbol  = :mode,
                       output_type::Symbol = :simple,
-                      cond_type::Symbol  = :none)
+                      cond_type::Symbol   = :none)
 
     # Prepare forecast inputs
     systems, states = prepare_forecast_inputs(m, df;
@@ -295,7 +295,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
 
     # must re-run filter/smoother for conditional data in addition to explicit cases
     if output_type in [:states, :shocks, :simple, :all] || cond_type in [:semi, :full]
-        histstates, histshocks, histpseudo = filterandsmooth(m, df, systems)
+        histstates, histshocks, histpseudo = filterandsmooth(m, df, systems; cond_type = cond_type)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
@@ -324,7 +324,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
             T = DSGE.subtract_quarters(date_forecast_start(m), date_prezlb_start(m))
-            data = df_to_matrix(m, df)
+            data = df_to_matrix(m, df; cond_type = cond_type)
             
             forecast_output[:forecaststates] = [hcat(x[:, T+1:end], y) for (x, y) in zip(histstates, forecaststates)]
             forecast_output[:forecastshocks] = [hcat(x[:, T+1:end], y) for (x, y) in zip(histshocks, forecastshocks)]

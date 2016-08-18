@@ -11,8 +11,8 @@ immutable ExcludePresample<:FilterPresample end
 ```
 filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     syses::Vector{System{S}}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
-    Matrix{S}(); lead::Int = 0, allout::Bool = false, include_presample::Bool =
-    true)
+    Matrix{S}(); cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
+    include_presample::Bool = true)
 
 filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     syses::Vector{System{S}}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
@@ -50,11 +50,11 @@ Computes and returns the filtered values of states for every state-space system 
 """
 function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, syses::Vector{System{S}},
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-                                  lead::Int = 0, allout::Bool = false,
+                                  cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
                                   include_presample::Bool = true)
     
     # Convert the DataFrame to a data matrix without altering the original dataframe  
-    data = df_to_matrix(m, df)
+    data = df_to_matrix(m, df; cond_type = cond_type)
     filter(m, data, syses, z0, vz0; lead = lead, allout = allout, include_presample = include_presample)
 end
 
@@ -165,9 +165,10 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
                                            syses::Vector{System{S}},
                                            z0::Vector{S} = Vector{S}(),
                                            vz0::Matrix{S} = Matrix{S}();
+                                           cond_type::Symbol = :none,
                                            lead::Int = 0, allout::Bool = false)
 
-    data = df_to_matrix(m, df)
+    data = df_to_matrix(m, df; cond_type = cond_type)
     filterandsmooth(m, data, syses, z0, vz0; lead = lead)
 end
 

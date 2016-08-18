@@ -1,7 +1,7 @@
 """
 ```
 smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, syses::Vector{System},
-    kals::Vector{Kalman})
+    kals::Vector{Kalman}; cond_type::Symbol = :none)
 
 smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     syses::Vector{System}, kals::Vector{Kalman})
@@ -28,9 +28,10 @@ Computes and returns the smoothed values of states for every parameter draw.
 function smooth{S<:AbstractFloat}(m::AbstractModel,
                                   df::DataFrame,
                                   syses::Vector{System{S}},
-                                  kals::Vector{Kalman{S}})
+                                  kals::Vector{Kalman{S}};
+                                  cond_type::Symbol = :none)
 
-    data = df_to_matrix(m, df)
+    data = df_to_matrix(m, df; cond_type = cond_type)
     smooth(m, data, syses, kals)
 end
 

@@ -1,14 +1,16 @@
 """
 ```
 kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
+    sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    cond_type::Symbol = :none)
 
 kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
 
 kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Vector{S}, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
+    D::Vector{S}, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    cond_type::Symbol = :none)
 
 kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
@@ -44,6 +46,10 @@ in the `eta_hat` matrix.
   Kalman Filter)
 - `vpred`: the (`Nz` x `Nz` x `Nt`) matrix of one-step-ahead predicted
   covariance matrices
+- `cond_type`: optional keyword argument specifying the conditional data type:
+  one of `:none`, `:semi`, or `:full`. This is only necessary when a DataFrame
+  (as opposed to a data matrix) is passed in, so that `df_to_matrix` knows how
+  many periods of data to keep
 
 Where:
 
@@ -69,14 +75,16 @@ y(t) = Z*α(t) + D             (state or transition equation)
 ```
 """
 function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
+    sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    cond_type::Symbol = :none)
 
     # extract system matrices
     T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
     Q, Z, D = sys[:QQ], sys[:ZZ], sys[:DD]
     
     # call actual Kalman smoother
-    kalman_smoother(m, df, T, R, C, Q, Z, D, A0, P0, pred, vpred)
+    kalman_smoother(m, df, T, R, C, Q, Z, D, A0, P0, pred, vpred; cond_type =
+        cond_type)
 end
 
 function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
@@ -92,10 +100,11 @@ end
 
 function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Vector{S}, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
+    D::Vector{S}, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    cond_type::Symbol = :none)
 
     # convert DataFrame to matrix
-    data = df_to_matrix(m, df)
+    data = df_to_matrix(m, df; cond_type = cond_type)
     
     # call actual Kalman smoother
     kalman_smoother(m, data, T, R, C, Q, Z, D, A0, P0, pred, vpred)
@@ -279,14 +288,16 @@ end
 """
 ```
 durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    df::DataFrame, sys::System, A0::Vector{S}, P0::Matrix{S})
+    df::DataFrame, sys::System, A0::Vector{S}, P0::Matrix{S};
+    cond_type::Symbol = :none)
 
 durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     data:Matrix{S}, sys::System, A0::Vector{S}, P0::Matrix{S})
 
 durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     df::DataFrame, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
-    Z::Matrix{S}, D::Matrix{S}, A0::Array{S}, P0::Matrix{S})
+    Z::Matrix{S}, D::Matrix{S}, A0::Array{S}, P0::Matrix{S};
+    cond_type::Symbol = :none)
 
 durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
@@ -323,6 +334,10 @@ erratic Moore-Penrose pseudoinverse).
 - `D`: the (`Ny` x 1) constant vector in the measurement equation
 - `A0`: the (`Nz` x 1) initial (time 0) states vector
 - `P0`: the (`Nz` x `Nz`) initial (time 0) state covariance matrix. If
+- `cond_type`: optional keyword argument specifying the conditional data type:
+  one of `:none`, `:semi`, or `:full`. This is only necessary when a DataFrame
+  (as opposed to a data matrix) is passed in, so that `df_to_matrix` knows how
+  many periods of data to keep
 
 Where:
 
@@ -348,14 +363,16 @@ y(t) = Z*α(t) + D             (state or transition equation)
 ```
 """
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    df::DataFrame, sys::System, A0::Vector{S}, P0::Matrix{S})
+    df::DataFrame, sys::System, A0::Vector{S}, P0::Matrix{S};
+    cond_type::Symbol = :none)
 
     # extract system matrices
     T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
     Q, Z, D = sys[:QQ], sys[:ZZ], sys[:DD]
     
     # call actual Durbin-Koopman smoother
-    durbin_koopman_smoother(m, df, T, R, C, Q, Z, D, A0, P0)
+    durbin_koopman_smoother(m, df, T, R, C, Q, Z, D, A0, P0; cond_type =
+        cond_type)
 end
 
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
@@ -371,10 +388,11 @@ end
 
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     df::DataFrame, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
-    Z::Matrix{S}, D::Vector{S}, A0::Vector{S}, P0::Matrix{S})
+    Z::Matrix{S}, D::Vector{S}, A0::Vector{S}, P0::Matrix{S};
+    cond_type::Symbol = :none)
 
     # convert DataFrame to Matrix
-    data = df_to_matrix(m, df)
+    data = df_to_matrix(m, df; cond_type = cond_type)
     
     # call actual simulation smoother
     durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0)
