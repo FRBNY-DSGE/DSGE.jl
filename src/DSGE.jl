@@ -13,7 +13,7 @@ module DSGE
     export
 
         # distributions_ext.jl
-        BetaAlt, GammaAlt,
+        BetaAlt, GammaAlt, RootInverseGamma,
 
         # settings.jl
         Setting, get_setting, default_settings!, default_test_settings!,
