@@ -32,6 +32,7 @@ end
 function estimate(m::AbstractModel;
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix())
+
     # Load data
     df = load_data(m; verbose=verbose)
     estimate(m, df; verbose=verbose, proposal_covariance=proposal_covariance)
@@ -68,7 +69,9 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
         while !converged
             tic()
             out, H = optimize!(m, data;
-                ftol=ftol, iterations=n_iterations, show_trace=true, verbose=verbose)
+                               method = get_setting(m, :optimization_method),
+                               ftol=ftol,
+                               iterations=n_iterations, show_trace=true, verbose=verbose)
             converged = !out.iteration_converged
 
             total_iterations += out.iterations

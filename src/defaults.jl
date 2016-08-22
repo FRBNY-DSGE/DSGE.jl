@@ -42,7 +42,8 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:reoptimize, true, "Optimize the posterior mode. If false, reads in mode from a file.")
     m <= Setting(:calculate_hessian, true, "Calculate the hessian at the mode")
     m <= Setting(:n_hessian_test_params, typemax(Int), "Max number of free params for which to calculate Hessian")
-
+    m <= Setting(:optimization_method, :csminwel, "Method for finding the posterior mode")
+    
     # Metropolis-Hastings
     m <= Setting(:n_mh_simulations, 5000, "Number of draws per block in Metropolis-Hastings")
     m <= Setting(:n_mh_blocks, 22, "Number of blocks for Metropolis-Hastings")

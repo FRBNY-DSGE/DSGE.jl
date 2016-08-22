@@ -29,6 +29,8 @@ function optimize!(m::AbstractModel,
         # For now, only csminwel should be used
         optimizer = if method == :csminwel
             csminwel
+        elseif method == :simulatedannealing
+            simulated_annealing
         else
             error("Method ",method," is not supported.")
         end
