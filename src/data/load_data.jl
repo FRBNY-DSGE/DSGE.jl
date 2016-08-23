@@ -94,9 +94,14 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
     # Load FRED data
     df = if in(:fred, keys(m.data_series))
-         load_fred_data(m; start_date=firstdayofquarter(start_date), end_date=end_date)
+        load_fred_data(m; start_date=firstdayofquarter(start_date), end_date=end_date)
     else
-        DataFrame()
+        dr = start_date:end_date
+        dates = Dates.recur(dr) do x
+            x == Dates.lastdayofquarter(x)
+        end
+
+        DataFrame(date = dates)
     end
     
     # Set ois series to load

@@ -9,7 +9,8 @@ module DSGE
     import Optim
     using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
     using Roots: fzero, ConvergenceFailed
-
+    using Optim: OptimizationOptions, optimize, SimulatedAnnealing
+    
     export
 
         # distributions_ext.jl
