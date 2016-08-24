@@ -67,7 +67,7 @@ function forecast{T<:AbstractFloat}(m::AbstractModel, syses::Vector{System{T}},
 
     shock_distributions = if isempty(shock_distributions)
         if forecast_kill_shocks(m)
-            [zeros(horizon, nshocks) for i in 1:ndraws]
+            [zeros(nshocks, horizon) for i in 1:ndraws]
         else
             # use t-distributed shocks
             if forecast_tdist_shocks(m)
