@@ -295,7 +295,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
 
     # must re-run filter/smoother for conditional data in addition to explicit cases
     if output_type in [:states, :shocks, :simple, :all] || cond_type in [:semi, :full]
-        histstates, histshocks, histpseudo = filterandsmooth(m, df, systems; cond_type = cond_type)
+        histstates, histshocks, histpseudo, kals = filterandsmooth(m, df, systems; cond_type = cond_type)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
@@ -314,7 +314,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     # For conditional data, use the end of the hist states as the initial state
     # vector for the forecast
     if cond_type in [:semi, :full]
-        states = [Vector{Float64}(x[:, end]) for x in histstates]
+        states = convert(Vector{Vector{Float64}}, [kal[:zend] for kal in kals])
     end
 
     if output_type in [:forecast, :simple, :all]
