@@ -47,12 +47,34 @@ function optimize!(m::AbstractModel,
             return -posterior(m, data; catch_errors=true)[:post]
         end
 
+        # for simulated annealing only
+#        if method == :simulatedannealing
+            println("$optimizer")
+            function neighbor_dsge!(x::Array, x_proposal::Array)
+                @assert size(x) == size(x_proposal)
+
+                r = randn(size(x)) * .01
+                
+                para_new = transform_to_model_space!(m, x+r)
+                post_out = posterior!(m, para_new, data; mh=true)
+                while post_out == Posterior()
+                    r = randn(size(x)) * .01
+                    para_new = transform_to_model_space!(m, x+r)
+                    post_out = posterior!(m, para_new, data; mh=true)
+                end
+                
+                post_new, like_new, out = post_out[:post], post_out[:like], post_out[:mats]
+
+                x_proposal = transform_to_real_line(m,para_new)
+	    end
+#        end
+    
         rng = m.rng
 
         out, H_ = optimizer(f_opt, x_opt, H0;
             xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
             store_trace=store_trace, show_trace=show_trace, extended_trace=extended_trace,
-            verbose=verbose, rng=rng)
+            neighbor!=neighbor_dsge!, verbose=verbose, rng=rng)
 
         x_model[para_free_inds] = out.minimum
         transform_to_model_space!(m, x_model)
