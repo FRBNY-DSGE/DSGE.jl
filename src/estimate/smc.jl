@@ -116,22 +116,23 @@ loglh = zeros(tune.npart, 1)
 logpost = zeros(tune.npart, 1)
 
 for i in 1:tune.npart
-    priodraw = []
+    T = typeof(m.parameters[1].value)
+    priodraw = Array{T}(length(m.parameters))
+
     #Parameter draws per particle
     for j in 1:length(m.parameters)
-        if !m.parameters[j].fixed
+
+        priodraw[j] = if !m.parameters[j].fixed            
             prio = rand(m.parameters[j].prior.value)
-            #Ensure all prior draws are within the value bounds
-            while true
-                if m.parameters[j].valuebounds[1] < prio && prio < m.parameters[j].valuebounds[2]
-                    append!(priodraw, [prio])
-                    break
-                else
-                    prio = rand(m.parameters[j].prior.value)
-                end
+            
+            # Resample until all prior draws are within the value bounds
+            while !(m.parameters[j].valuebounds[1] < prio < m.parameters[j].valuebounds[2])
+                prio = rand(m.parameters[j].prior.value)
             end
+
+            prio
         else
-            append!(priodraw, [m.parameters[j].value])
+            m.parameters[j].value
         end
     end
     priorsim[i,:] = priodraw'
