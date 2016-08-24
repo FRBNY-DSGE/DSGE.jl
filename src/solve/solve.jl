@@ -20,7 +20,10 @@ function solve(m::AbstractModel)
     Γ0, Γ1, C, Ψ, Π  = eqcond(m)
 
     # Solve model
-    TTT_gensys, CCC_gensys, RRR_gensys = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
+    TTT_gensys, CCC_gensys, RRR_gensys, fmat, fwt, ywt, gev, eu, loose = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
+    if !((eu[1] == 1) & (eu[2] == 1))
+        throw(GensysError("Gensys does not give existence"))
+    end
     TTT_gensys = real(TTT_gensys)
     RRR_gensys = real(RRR_gensys)
     CCC_gensys = reshape(CCC_gensys, size(CCC_gensys, 1))
@@ -30,3 +33,21 @@ function solve(m::AbstractModel)
 
     return TTT, RRR, CCC
 end
+
+
+
+"""
+```
+GensysError <: Exception
+```
+A `GensysError` is thrown when Gensys does not give a unique solution, or no solution
+exists. If a `GensysError`is thrown during Metropolis-Hastings, it is caught by `posterior`.
+`posterior` then returns a value of `-Inf`, which Metropolis-Hastings always rejects.
+### Fields
+* `msg::ASCIIString`: Info message. Default = "Error in gensys." 
+"""
+type GensysError <: Exception
+    msg::ASCIIString
+end
+GensysError() = GensysError("Error in gensys.")
+Base.showerror(io::IO, ex::GensysError) = print(io, ex.msg)
