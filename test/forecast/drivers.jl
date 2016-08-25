@@ -89,8 +89,9 @@ for input_type in [:init, :mode]
         exp_forecastshocks = forecast[:shocks]
 
         if cond_type in [:semi, :full]
+            exp_histobs = data[:, index_prezlb_start(m):end]
             @test_matrix_approx_eq hcat(exp_histstates[:, T+1:end], exp_forecaststates) forecaststates
-            @test_matrix_approx_eq hcat(data[:, T+1:end],           exp_forecastobs)    forecastobs
+            @test_matrix_approx_eq hcat(exp_histobs[:, T+1:end],    exp_forecastobs)    forecastobs
             @test_matrix_approx_eq hcat(exp_histpseudo[:, T+1:end], exp_forecastpseudo) forecastpseudo
             @test_matrix_approx_eq hcat(exp_histshocks[:, T+1:end], exp_forecastshocks) forecastshocks
         else

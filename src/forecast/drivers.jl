@@ -327,12 +327,12 @@ function forecast_one(m::AbstractModel, df::DataFrame;
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
             T = DSGE.subtract_quarters(date_forecast_start(m), date_prezlb_start(m))
-            data = df_to_matrix(m, df; cond_type = cond_type)
+            histobs = df_to_matrix(m, df; cond_type = cond_type)[:, index_prezlb_start(m):end]
             
             forecast_output[:forecaststates] = [hcat(x[:, T+1:end], y) for (x, y) in zip(histstates, forecaststates)]
             forecast_output[:forecastshocks] = [hcat(x[:, T+1:end], y) for (x, y) in zip(histshocks, forecastshocks)]
             forecast_output[:forecastpseudo] = [hcat(x[:, T+1:end], y) for (x, y) in zip(histpseudo, forecastpseudo)]
-            forecast_output[:forecastobs]    = [hcat(data[:, T+1:end], y) for y in forecastobs]
+            forecast_output[:forecastobs]    = [hcat(histobs[:, T+1:end], y) for y in forecastobs]
         else
             forecast_output[:forecaststates] = forecaststates
             forecast_output[:forecastshocks] = forecastshocks
