@@ -85,8 +85,6 @@ function Distributions.logpdf(d::RootInverseGamma, x::AbstractFloat)
     return log(2) - log(gamma(ν/2)) + (ν/2)*log(ν*τ^2/2) - ((ν+1)/2)*log(x^2) - ν*τ^2/(2x^2)
 end
 
-
-
 """
 ```
 DegenerateMvNormal <: Distribution{Multivariate, Continuous}
@@ -177,7 +175,6 @@ function moments(dist::RootInverseGamma)
 
     # return μ, σ
 end
-
 
 """
 ```
