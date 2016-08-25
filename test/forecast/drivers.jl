@@ -50,44 +50,7 @@ for input_type in [:init, :mode]
         update!(m, mode_params)
     end
 
-    # 1. Test unconditional forecast
-
-    ## Historical states and shocks
-    histstates = forecast_outputs[(:none, input_type)][:histstates][1]
-    histshocks = forecast_outputs[(:none, input_type)][:histshocks][1]
-
-    df = forecast_outputs[(:none, input_type)][:df]
-    data = df_to_matrix(m, df; cond_type = :none)
-    sys  = compute_system(m)
-    exp_histstates, exp_histshocks, _, kal = DSGE.filterandsmooth(m, data, sys)
-
-    @test_matrix_approx_eq exp_histstates histstates
-    @test_matrix_approx_eq exp_histshocks histshocks
-
-    ## Forecasted states, observables, pseudos, and shocks
-    forecaststates = forecast_outputs[(:none, input_type)][:forecaststates][1]
-    forecastobs    = forecast_outputs[(:none, input_type)][:forecastobs][1]
-    forecastpseudo = forecast_outputs[(:none, input_type)][:forecastpseudo][1]
-    forecastshocks = forecast_outputs[(:none, input_type)][:forecastshocks][1]
-
-    zend = kal[:zend]
-    shocks = zeros(Float64, n_shocks_exogenous(m), forecast_horizons(m))
-    Z_pseudo = zeros(Float64, 12, n_states_augmented(m))
-    D_pseudo = zeros(Float64, 12)
-    forecast = compute_forecast(sys[:TTT], sys[:RRR], sys[:CCC], sys[:ZZ], sys[:DD], Z_pseudo, D_pseudo, 
-                                forecast_horizons(m), shocks, zend)
-    exp_forecaststates = forecast[:states]
-    exp_forecastobs    = forecast[:observables]
-    exp_forecastpseudo = forecast[:pseudo_observables]
-    exp_forecastshocks = forecast[:shocks]
-
-    @test_matrix_approx_eq exp_forecaststates forecaststates
-    @test_matrix_approx_eq exp_forecastobs    forecastobs
-    @test_matrix_approx_eq exp_forecastpseudo forecastpseudo
-    @test_matrix_approx_eq exp_forecastshocks forecastshocks
-
-    # 2. Test conditional and semiconditional forecasts
-    for cond_type in [:semi, :full]
+    for cond_type in [:none, :semi, :full]
 
         ## Historical states and shocks
         histstates = forecast_outputs[(cond_type, input_type)][:histstates][1]
@@ -97,10 +60,15 @@ for input_type in [:init, :mode]
         data = df_to_matrix(m, df; cond_type = cond_type)
         sys  = compute_system(m)
         exp_histstates, exp_histshocks, exp_histpseudo, kal = DSGE.filterandsmooth(m, data, sys)
-        T = DSGE.subtract_quarters(date_forecast_start(m), date_prezlb_start(m))
 
-        @test_matrix_approx_eq exp_histstates[:, 1:T] histstates
-        @test_matrix_approx_eq exp_histshocks[:, 1:T] histshocks
+        if cond_type in [:semi, :full]
+            T = DSGE.subtract_quarters(date_forecast_start(m), date_prezlb_start(m))
+            @test_matrix_approx_eq exp_histstates[:, 1:T] histstates
+            @test_matrix_approx_eq exp_histshocks[:, 1:T] histshocks
+        else
+            @test_matrix_approx_eq exp_histstates histstates
+            @test_matrix_approx_eq exp_histshocks histshocks
+        end            
 
         ## Forecasted states, observables, pseudos, and shocks
         forecaststates = forecast_outputs[(cond_type, input_type)][:forecaststates][1]
@@ -109,17 +77,28 @@ for input_type in [:init, :mode]
         forecastshocks = forecast_outputs[(cond_type, input_type)][:forecastshocks][1]
 
         zend = kal[:zend]
+        shocks = zeros(Float64, n_shocks_exogenous(m), forecast_horizons(m))
+        Z_pseudo = zeros(Float64, 12, n_states_augmented(m))
+        D_pseudo = zeros(Float64, 12)
         forecast = compute_forecast(sys[:TTT], sys[:RRR], sys[:CCC], sys[:ZZ], sys[:DD], Z_pseudo, D_pseudo,
                                     forecast_horizons(m), shocks, zend)
-        exp_forecaststates = hcat(exp_histstates[:, T+1:end], forecast[:states])
-        exp_forecastobs    = hcat(data[:, T+1:end],           forecast[:observables])
-        exp_forecastpseudo = hcat(exp_histpseudo[:, T+1:end], forecast[:pseudo_observables])
-        exp_forecastshocks = hcat(exp_histshocks[:, T+1:end], forecast[:shocks])
 
-        @test_matrix_approx_eq exp_forecaststates forecaststates
-        @test_matrix_approx_eq exp_forecastobs    forecastobs
-        @test_matrix_approx_eq exp_forecastpseudo forecastpseudo
-        @test_matrix_approx_eq exp_forecastshocks forecastshocks
+        exp_forecaststates = forecast[:states]
+        exp_forecastobs    = forecast[:observables]
+        exp_forecastpseudo = forecast[:pseudo_observables]
+        exp_forecastshocks = forecast[:shocks]
+
+        if cond_type in [:semi, :full]
+            @test_matrix_approx_eq hcat(exp_histstates[:, T+1:end], exp_forecaststates) forecaststates
+            @test_matrix_approx_eq hcat(data[:, T+1:end],           exp_forecastobs)    forecastobs
+            @test_matrix_approx_eq hcat(exp_histpseudo[:, T+1:end], exp_forecastpseudo) forecastpseudo
+            @test_matrix_approx_eq hcat(exp_histshocks[:, T+1:end], exp_forecastshocks) forecastshocks
+        else
+            @test_matrix_approx_eq exp_forecaststates forecaststates
+            @test_matrix_approx_eq exp_forecastobs    forecastobs
+            @test_matrix_approx_eq exp_forecastpseudo forecastpseudo
+            @test_matrix_approx_eq exp_forecastshocks forecastshocks
+        end
 
     end # cond_type
 
