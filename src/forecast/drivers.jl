@@ -61,9 +61,11 @@ function forecast_all(m::AbstractModel,
     for cond_type in cond_types
         df = load_data(m; cond_type=cond_type, try_disk=true, verbose=:none)
         for input_type in input_types
-            for output_type in output_types
-                forecast_one(m, df; cond_type=cond_type, input_type=input_type, output_type=output_type)
-            end
+            # Take the union of all output variables specified by output_types
+            all_output_vars = map(x -> get_output_vars(m, x), output_types)
+            output_vars = union(all_output_vars...)
+
+            forecast_one(m, df; cond_type=cond_type, input_type=input_type, output_vars = output_vars)
         end
     end
 
@@ -240,8 +242,8 @@ end
 
 """
 ```
-prepare_forecast_inputs(m::AbstractModel, df::DataFrame; input_type::Symbol  = :mode,
-output_type::Symbol = :simple, cond_type::Symbol  = :none)
+prepare_forecast_inputs(m::AbstractModel, df::DataFrame; input_type::Symbol =
+    :mode, cond_type::Symbol = :none)
 ```
 
 Load draws for this input type, prepare a System object for each draw, and prepare initial
@@ -249,7 +251,6 @@ state vectors.
 """
 function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
                       input_type::Symbol  = :mode,
-                      output_type::Symbol = :simple,
                       cond_type::Symbol   = :none)
     # Some variables
     n_states = n_states_augmented(m)
@@ -282,19 +283,21 @@ Compute, save, and return forecast outputs given by `output_type` for input draw
 """
 function forecast_one(m::AbstractModel, df::DataFrame;
                       input_type::Symbol  = :mode,
-                      output_type::Symbol = :simple,
+                      output_vars::Vector{Symbol} = [],
                       cond_type::Symbol   = :none)
 
     # Prepare forecast inputs
-    systems, states = prepare_forecast_inputs(m, df;
-        input_type=input_type, output_type=output_type, cond_type=cond_type)
+    systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
+        cond_type = cond_type)
 
     # Prepare forecast outputs
     forecast_output = Dict{Symbol, Vector{Array{Float64}}}()
-    forecast_output_files = get_output_files(m, input_type, output_type, cond_type)
+    forecast_output_files = get_output_files(m, input_type, output_vars, cond_type)
 
     # must re-run filter/smoother for conditional data in addition to explicit cases
-    if output_type in [:states, :shocks, :simple, :all] || cond_type in [:semi, :full]
+    if !isempty(intersect(output_vars, [:histstates, :histpseudo, :histshocks])) || 
+        cond_type in [:semi, :full]
+
         histstates, histshocks, histpseudo, kals = filterandsmooth(m, df, systems; cond_type = cond_type)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
@@ -317,7 +320,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
         states = convert(Vector{Vector{Float64}}, [kal[:zend] for kal in kals])
     end
 
-    if output_type in [:forecast, :simple, :all]
+    if !isempty(intersect(output_vars, [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks]))
         forecaststates, forecastobs, forecastpseudo, forecastshocks =
             forecast(m, systems, states)
 
@@ -346,7 +349,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     end
 
     # Return only saved elements of dict
-    filter!((k, v) -> k ∈ keys(forecast_output_files), forecast_output)
+    filter!((k, v) -> k ∈ output_vars, forecast_output)
     return forecast_output
 end
 
@@ -367,14 +370,8 @@ function get_input_file(m, input_type)
     end
 end
 
-function get_output_files(m, input_type, output_type, cond_type)
 
-    # Add additional file strings here
-    additional_file_strings = ASCIIString[]
-    push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
-    push!(additional_file_strings, "cond=" * abbrev_symbol(cond_type))
-
-    # vars prefix
+function get_output_vars(m, output_type)
     if output_type == :states
         vars = [:histstates,
                 :histpseudo]
@@ -400,10 +397,11 @@ function get_output_files(m, input_type, output_type, cond_type)
         vars = [:counterstates,
                 :counterobs]
         throw(ArgumentError("Not implemented."))
-    elseif output_type in [:simple]
+    elseif output_type == :simple
         vars = [:histstates,
                 :histpseudo,
                 :forecaststates,
+                :forecastpseudo,
                 :forecastobs,
                 :forecastshocks]
     elseif output_type == :all
@@ -412,6 +410,13 @@ function get_output_files(m, input_type, output_type, cond_type)
     else
         throw(ArgumentError("Invalid input_type: $(output_type)"))
     end
+end
 
-    return [symbol(x) => rawpath(m, "forecast", "$x.jld", additional_file_strings) for x in vars]
+
+function get_output_files(m, input_type, output_vars, cond_type)
+    additional_file_strings = ASCIIString[]
+    push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
+    push!(additional_file_strings, "cond=" * abbrev_symbol(cond_type))
+
+    return [symbol(x) => rawpath(m, "forecast", "$x.jld", additional_file_strings) for x in output_vars]
 end

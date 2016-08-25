@@ -24,15 +24,20 @@ end
 
 
 # Run forecasts
-forecast_outputs = Dict{Tuple{Symbol, Symbol, Symbol}, Dict{Symbol, Any}}()
+forecast_outputs = Dict{Tuple{Symbol, Symbol}, Dict{Symbol, Any}}()
+output_vars = [:histstates, :histpseudo, :histshocks, :forecaststates, :forecastpseudo, :forecastobs, :forecastshocks]
+
 for input_type in [:init, :mode]
     for cond_type in [:none, :semi, :full]
-    df = load_data(m; cond_type=cond_type, try_disk=true, verbose=:none)
-        for output_type in [:states, :shocks, :forecast]
-            forecast_outputs[(cond_type, input_type, output_type)] = 
-                forecast_one(m, df; input_type = input_type, output_type = output_type, cond_type = cond_type)
-            (forecast_outputs[(cond_type, input_type, output_type)])[:df] = df
-        end
+
+        forecast_output = Dict{Symbol, Any}()
+        forecast_output[:df] = load_data(m; cond_type=cond_type, try_disk=true, verbose=:none)
+
+        new_forecast = forecast_one(m, forecast_output[:df]; input_type =
+            input_type, cond_type = cond_type, output_vars = output_vars)
+        merge!(forecast_output, new_forecast)
+
+        forecast_outputs[(cond_type, input_type)] = forecast_output
     end
 end
 
@@ -48,10 +53,10 @@ for input_type in [:init, :mode]
     # 1. Test unconditional forecast
 
     ## Historical states and shocks
-    histstates = forecast_outputs[(:none, input_type, :states)][:histstates][1]
-    histshocks = forecast_outputs[(:none, input_type, :shocks)][:histshocks][1]
+    histstates = forecast_outputs[(:none, input_type)][:histstates][1]
+    histshocks = forecast_outputs[(:none, input_type)][:histshocks][1]
 
-    df = forecast_outputs[(:none, input_type, :states)][:df]
+    df = forecast_outputs[(:none, input_type)][:df]
     data = df_to_matrix(m, df; cond_type = :none)
     sys  = compute_system(m)
     exp_histstates, exp_histshocks, _, kal = DSGE.filterandsmooth(m, data, sys)
@@ -60,10 +65,10 @@ for input_type in [:init, :mode]
     @test_matrix_approx_eq exp_histshocks histshocks
 
     ## Forecasted states, observables, pseudos, and shocks
-    forecaststates = forecast_outputs[(:none, input_type, :forecast)][:forecaststates][1]
-    forecastobs    = forecast_outputs[(:none, input_type, :forecast)][:forecastobs][1]
-    forecastpseudo = forecast_outputs[(:none, input_type, :forecast)][:forecastpseudo][1]
-    forecastshocks = forecast_outputs[(:none, input_type, :forecast)][:forecastshocks][1]
+    forecaststates = forecast_outputs[(:none, input_type)][:forecaststates][1]
+    forecastobs    = forecast_outputs[(:none, input_type)][:forecastobs][1]
+    forecastpseudo = forecast_outputs[(:none, input_type)][:forecastpseudo][1]
+    forecastshocks = forecast_outputs[(:none, input_type)][:forecastshocks][1]
 
     zend = kal[:zend]
     shocks = zeros(Float64, n_shocks_exogenous(m), forecast_horizons(m))
@@ -85,10 +90,10 @@ for input_type in [:init, :mode]
     for cond_type in [:semi, :full]
 
         ## Historical states and shocks
-        histstates = forecast_outputs[(cond_type, input_type, :states)][:histstates][1]
-        histshocks = forecast_outputs[(cond_type, input_type, :shocks)][:histshocks][1]
+        histstates = forecast_outputs[(cond_type, input_type)][:histstates][1]
+        histshocks = forecast_outputs[(cond_type, input_type)][:histshocks][1]
 
-        df = forecast_outputs[(cond_type, input_type, :states)][:df]
+        df = forecast_outputs[(cond_type, input_type)][:df]
         data = df_to_matrix(m, df; cond_type = cond_type)
         sys  = compute_system(m)
         exp_histstates, exp_histshocks, exp_histpseudo, kal = DSGE.filterandsmooth(m, data, sys)
@@ -98,10 +103,10 @@ for input_type in [:init, :mode]
         @test_matrix_approx_eq exp_histshocks[:, 1:T] histshocks
 
         ## Forecasted states, observables, pseudos, and shocks
-        forecaststates = forecast_outputs[(cond_type, input_type, :forecast)][:forecaststates][1]
-        forecastobs    = forecast_outputs[(cond_type, input_type, :forecast)][:forecastobs][1]
-        forecastpseudo = forecast_outputs[(cond_type, input_type, :forecast)][:forecastpseudo][1]
-        forecastshocks = forecast_outputs[(cond_type, input_type, :forecast)][:forecastshocks][1]
+        forecaststates = forecast_outputs[(cond_type, input_type)][:forecaststates][1]
+        forecastobs    = forecast_outputs[(cond_type, input_type)][:forecastobs][1]
+        forecastpseudo = forecast_outputs[(cond_type, input_type)][:forecastpseudo][1]
+        forecastshocks = forecast_outputs[(cond_type, input_type)][:forecastshocks][1]
 
         zend = kal[:zend]
         forecast = compute_forecast(sys[:TTT], sys[:RRR], sys[:CCC], sys[:ZZ], sys[:DD], Z_pseudo, D_pseudo,
@@ -115,8 +120,9 @@ for input_type in [:init, :mode]
         @test_matrix_approx_eq exp_forecastobs    forecastobs
         @test_matrix_approx_eq exp_forecastpseudo forecastpseudo
         @test_matrix_approx_eq exp_forecastshocks forecastshocks
-    end
 
-end
+    end # cond_type
+
+end # input_type
 
 nothing
