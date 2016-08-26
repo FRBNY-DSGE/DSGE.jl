@@ -61,12 +61,13 @@ To run the estimation step in Julia, simply create an instance of the model obje
 it to the `estimate` function -- see an [example](doc/examples/run_default.jl).
 
 ```julia
-# construct a model object
-m = Model990()
-
 # estimate as of 2015-Q3 using the default data vintage from 2015 Nov 27
-m <= Setting(:data_vintage, "151127")
-m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
+custom_settings = Dict{Symbol, Setting}(
+    :data_vintage        => Setting(:data_vintage, "151127"),
+    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
+
+# construct a model object
+m = Model990(custom_settings = custom_settings)
 
 # reoptimize parameter vector, compute Hessian at mode, and full posterior
 # parameter sampling
@@ -308,18 +309,27 @@ object `m` as an argument. Note that not all are exported.
 
 ### Overwriting Default Settings
 
-To overwrite default settings added during model construction, a user must define a new
-`Setting` object and update the corresponding entry in the model's `settings` dictionary
-using the `<=` syntax. If the `print`, `code`, and `description` fields of the new `Setting`
-object are not provided, the fields of the existing setting will be maintained. If new
-values for `print`, `code`, and `description` are specified, and if these new values are
-distinct from the defaults for those fields, the fields of the existing setting will be
-updated.
+To overwrite default settings added during model construction, a user must
+create a `Dict{Symbol, Setting}` and pass that into the model constructor as the
+keyword argument `custom_settings`. If the `print`, `code`, and `description`
+fields of the new `Setting` object are not provided, the fields of the existing
+setting will be maintained. If new values for `print`, `code`, and `description`
+are specified, and if these new values are distinct from the defaults for those
+fields, the fields of the existing setting will be updated.
 
 For example, overwriting `use_parallel_workers` should look like this:
 ```julia
-m = Model990()
-m <= Setting(:use_parallel_workers, true)
+custom_settings = Dict{Symbol, Setting}(
+    :use_parallel_workers => Setting(:use_parallel_workers, true))
+m = Model990(custom_settings = custom_settings)
+```
+
+By default, passing in `custom_settings` overwrites the entries in the model
+object's `settings` field. However, with the additional keyword argument
+`testing = true`, it will overwrite the entries in `test_settings`:
+
+```julia
+m = Model990(custom_settings = custom_settings, testing = true)
 ```
 
 ## Editing or Extending a Model
@@ -712,7 +722,12 @@ See [Editing or Extending a Model](#editing-or-extending-a-model).
   seeded to ensure reproducibility in algorithms that involve randomness
   (such as Metropolis-Hastings).
 - `testing::Bool`: Indicates whether the model is in testing mode. If `true`,
-  settings from `m.test_settings` are used in place of those in `m.settings`.
+  settings from `m.test_settings` are used in place of those in
+  `m.settings`. This is set via a keyword argument to the model constructor. In
+  particular, you should not change `m.testing` after the model object has
+  already been constructed, because the value of `m.testing` determines which
+  dictionary of settings is overwritten by any `custom_settings` passed in to
+  the constructor.
 
 ## Defining Indices
 
