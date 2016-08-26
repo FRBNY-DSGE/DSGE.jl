@@ -86,7 +86,6 @@ type Model990{T} <: AbstractModel{T}
     subspec::ASCIIString                            # Model subspecification (eg "ss0")
     settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
-    custom_settings::Dict{Symbol,Setting}           # User-defined settings/flags
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
 
@@ -170,7 +169,9 @@ function init_model_indices!(m::Model990)
 end
 
 
-function Model990(subspec::AbstractString="ss2"; custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}())
+function Model990(subspec::AbstractString="ss2";
+                  custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
+                  testing = false)
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]
@@ -178,7 +179,6 @@ function Model990(subspec::AbstractString="ss2"; custom_settings::Dict{Symbol, S
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()
-    testing            = false
 
     # Set up data sources and series
     fred_series        = [:GDP, :GDPCTPI, :PCE, :FPI, :CNP16OV, :CE16OV, :PRS85006013,
@@ -210,7 +210,6 @@ function Model990(subspec::AbstractString="ss2"; custom_settings::Dict{Symbol, S
             subspec,
             settings,
             test_settings,
-            custom_settings,
             rng,
             testing,
             data_series,
@@ -219,6 +218,9 @@ function Model990(subspec::AbstractString="ss2"; custom_settings::Dict{Symbol, S
     # Set settings
     settings_m990!(m)
     default_test_settings!(m)
+    for custom_setting in values(custom_settings)
+        m <= custom_setting
+    end
 
     # Set data transformations
     init_data_transforms!(m)

@@ -11,8 +11,7 @@ end
 custom_settings = Dict{Symbol, Setting}(
     :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6),
     :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")))
-m = Model990(custom_settings = custom_settings)
-m.testing = true
+m = Model990(custom_settings = custom_settings, testing = true)
 
 TTT, RRR, CCC = solve(m)
 meas = measurement(m, TTT, RRR, CCC)

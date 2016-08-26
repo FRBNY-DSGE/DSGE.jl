@@ -4,10 +4,9 @@ include("../util.jl")
 # Initialize model object
 custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")),
-    :date_conditional_end => Setting(:date_forecast_start, quartertodate("2015-Q4")),
+    :date_conditional_end => Setting(:date_conditional_end, quartertodate("2015-Q4")),
     :forecast_kill_shocks => Setting(:forecast_kill_shocks, true))
-m = Model990(custom_settings = custom_settings)
-m.testing = true
+m = Model990(custom_settings = custom_settings, testing = true)
 init_params = map(θ -> θ.value, m.parameters)
 
 # Copy mode

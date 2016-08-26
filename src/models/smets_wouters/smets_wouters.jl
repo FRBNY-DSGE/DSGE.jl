@@ -87,7 +87,6 @@ type SmetsWouters{T} <: AbstractModel{T}
     subspec::ASCIIString                            # Model subspecification
     settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
-    custom_settings::Dict{Symbol,Setting}            # User-defined settings/flags
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
 end
@@ -161,7 +160,9 @@ function init_model_indices!(m::SmetsWouters)
 end
 
 
-function SmetsWouters(subspec::AbstractString="ss0"; custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}())
+function SmetsWouters(subspec::AbstractString="ss0";
+                      custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
+                      testing = true)
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]
@@ -183,14 +184,15 @@ function SmetsWouters(subspec::AbstractString="ss0"; custom_settings::Dict{Symbo
             subspec,
             settings,
             test_settings,
-            custom_settings,
             rng,
             testing)
 
     # Set settings
     settings_smets_wouters!(m)
     default_test_settings!(m)
-
+    for custom_setting in values(custom_settings)
+        m <= custom_setting
+    end
     # Initialize parameters
     m <= parameter(:α,      0.24, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.",

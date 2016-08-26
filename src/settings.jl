@@ -101,9 +101,7 @@ get_setting(m::AbstractModel, setting::Symbol)
 Returns the value of the setting
 """
 function get_setting(m::AbstractModel, s::Symbol)
-    if in(s, keys(m.custom_settings))
-        return m.custom_settings[s].value
-    elseif m.testing && in(s, keys(m.test_settings))
+    if m.testing && in(s, keys(m.test_settings))
         return m.test_settings[s].value
     else
         return m.settings[s].value
