@@ -1,20 +1,21 @@
-"""
-```
-optimize!(m::AbstractModel, data::Matrix;
-          method::Symbol       = :csminwel,
-          xtol::Real           = 1e-32,  # default from Optim.jl
-          ftol::Float64        = 1e-14,  # Default from csminwel
-          grtol::Real          = 1e-8,   # default from Optim.jl
-          iterations::Int      = 1000,
-          store_trace::Bool    = false,
-          show_trace::Bool     = false,
-          extended_trace::Bool = false,
-          verbose::Symbol      = :none)
-```
+using Debug
+# """
+# ```
+# optimize!(m::AbstractModel, data::Matrix;
+#           method::Symbol       = :csminwel,
+#           xtol::Real           = 1e-32,  # default from Optim.jl
+#           ftol::Float64        = 1e-14,  # Default from csminwel
+#           grtol::Real          = 1e-8,   # default from Optim.jl
+#           iterations::Int      = 1000,
+#           store_trace::Bool    = false,
+#           show_trace::Bool     = false,
+#           extended_trace::Bool = false,
+#           verbose::Symbol      = :none)
+# ```
 
-Wrapper function to send a model to csminwel (or another optimization routine).
-"""
-function optimize!(m::AbstractModel,
+# Wrapper function to send a model to csminwel (or another optimization routine).
+# """
+@debug function optimize!(m::AbstractModel,
                    data::Matrix;
                    method::Symbol       = :csminwel,
                    xtol::Real           = 1e-32,  # default from Optim.jl
@@ -46,8 +47,16 @@ function optimize!(m::AbstractModel,
         transform_to_model_space!(m,x_model)
         return -posterior(m, data; catch_errors=true)[:post]
     end
+
     
-    function neighbor_dsge!(x, x_proposal; cc = 0.01)
+    function neighbor_dsge!(x, x_proposal; cc = 0.1)
+        # This function computes a proposal "next step" during simulated annealing.
+        # Inputs:
+        # - `x`: current position (of non-fixed states)
+        # - `x_proposal`: proposed next position (of non-fixed states).
+        # Outputs:
+        # - `x_proposal`
+        
         @assert size(x) == size(x_proposal)
 
         T = eltype(x)
@@ -57,33 +66,38 @@ function optimize!(m::AbstractModel,
         prior_draws = rand_prior(m)
         prior_cov   = cov(prior_draws)
         
-        # convert x_proposal to model space
-        x_model = transform_to_model_space(m.parameters, x_proposal)
+        # Convert x_proposal to model space and expand to full parameter vector
+        x_proposal_all = T[p.value for p in m.parameters]  # to get fixed values
+        x_proposal_all[para_free_inds] = x_proposal        # this is from real line
+            
+        x_proposal_all = transform_to_model_space(m.parameters, x_proposal_all)
+        x_proposal_all_tmp = similar(x_proposal_all)
+
         success = false
         while !success
 
             # take a step in model space
-            for i = 1:npara
-                if !m.parameters[i].fixed
-                    a, b = m.parameters[i].valuebounds
-                    x_proposal[i] = x_model[i] + (((b-a)*rand() + a) * cc * prior_cov[i,i])
-                end
+            for i in para_free_inds
+                r = rand()
+                r = r * rand([-1 1])
+                x_proposal_all_tmp[i] = x_proposal_all[i] + (r * cc * prior_cov[i,i])
             end
-
-            # check that model can be solved.
+            
+            # check that parameters are inbounds, model can be solved,
+            # and parameters can be transformed to the real line.
             try
-                update!(m, x_proposal)
+                update!(m, x_proposal_all_tmp)
                 solve(m)
+                x_proposal_all_tmp = transform_to_real_line(m.parameters, x_proposal_all_tmp)
                 success = true
             catch err
-                if in(typeof(err),[ParamBoundsError, GensysError])
-                    success = false
-                end
+                success = false
+                println("There was a $(typeof(err))")
             end
         end
 
-        # convert back to real line
-        x_proposal = transform_to_real_line(m,x_model)
+        # extract free inds
+        x_proposal_all_tmp[para_free_inds]
     end
 
     rng = m.rng

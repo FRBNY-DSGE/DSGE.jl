@@ -6,11 +6,12 @@ module DSGE
     using FredData, DataFrames, Base.Dates
     using QuantEcon: solve_discrete_lyapunov
     import Calculus
-    import Optim
-    using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
     using Roots: fzero, ConvergenceFailed
-    using Optim: OptimizationOptions, optimize, SimulatedAnnealing
-    
+    import Optim: optimize, Optimizer
+    # using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
+    # using Optim: OptimizationOptions, optimize, SimulatedAnnealing, Optimizer
+    using Optim
+
     export
 
         # distributions_ext.jl

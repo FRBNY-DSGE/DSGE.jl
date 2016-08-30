@@ -87,6 +87,17 @@ end
 
 """
 ```
+Distributions.rand{T<:AbstractFloat}(d::RootInverseGamma; cc::T = 1.0)
+```
+
+Generate a draw from d with variance optionally scaled by cc^2 (for a RootInverseGamma)
+"""
+function Distributions.rand{T<:AbstractFloat}(d::RootInverseGamma; cc::T = 1.0)
+    return sqrt(d.ν*(d.τ^2)^2/sum(randn(round(Int,d.ν)).^2))
+end
+
+"""
+```
 DegenerateMvNormal <: Distribution{Multivariate, Continuous}
 ```
 
