@@ -168,7 +168,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
     @printf moments0_fid "\\caption{Parameter Estimates}\n"
     @printf moments0_fid "\\vspace*{.5cm}\n"
     @printf moments0_fid "{\\small \n"
-    @printf moments0_fid "\\begin{tabular}{lcccccc}\n"
+    @printf moments0_fid "\\begin{longtable}{lcccccc}\n"
     @printf moments0_fid "\\hline\n"
 
     # Column names
@@ -225,7 +225,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
     @printf moments_table_fid "\\caption{Parameter Estimates}\n"
     @printf moments_table_fid "\\vspace*{.2cm}\n"
     @printf moments_table_fid "{\\small \n"
-    @printf moments_table_fid "\\begin{tabular}{lcccccc}\n"
+    @printf moments_table_fid "\\begin{longtable}{lcccccc}\n"
     @printf moments_table_fid "\\hline\n"
 
     # Column names
@@ -271,7 +271,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
             @printf moments_table_fid "\\caption{Parameter Estimates}\n"
             @printf moments_table_fid "\\vspace*{.2cm}\n"
             @printf moments_table_fid "{\\small \n"
-            @printf moments_table_fid "\\begin{tabular}{lcccccc}\n"
+            @printf moments_table_fid "\\begin{longtable}{lcccccc}\n"
             @printf moments_table_fid "\\hline\n"
 
             # Column names
@@ -309,7 +309,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
     write_table_preamble(prioPostMean_fid)
     @printf prioPostMean_fid "\\caption{Parameter Estimates: Prior and Posterior Mean}\n"
     @printf prioPostMean_fid "\\vspace*{.5cm}\n"
-    @printf prioPostMean_fid "\\begin{tabular}{ccc}\\hline \n"
+    @printf prioPostMean_fid "\\begin{longtable}{ccc}\\hline \n"
     @printf prioPostMean_fid " Parameter & Prior & Posterior  \\tabularnewline \\hline\n"
 
     # Write out the results
@@ -330,7 +330,7 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
             write_table_preamble(prioPostMean_fid)
             @printf prioPostMean_fid "\\caption{Parameter Estimates: Prior and Posterior Mean}\n"
             @printf prioPostMean_fid "\\vspace*{.5cm}\n"
-            @printf prioPostMean_fid "\\begin{tabular}{ccc}\\hline \n"
+            @printf prioPostMean_fid "\\begin{longtable}{ccc}\\hline \n"
             @printf prioPostMean_fid " Parameter & Prior & Posterior  \\tabularnewline \\hline\n"
         end
 
@@ -350,6 +350,7 @@ end
 function write_table_preamble(fid::IOStream)
     @printf fid "\\documentclass[12pt]{article}\n"
     @printf fid "\\usepackage{booktabs}\n"
+    @printf fid "\\usepackage{longtable}\n"
     @printf fid "\\begin{document}\n"
     @printf fid "\\pagestyle{empty}\n"
     @printf fid "\\begin{table}[h]\n"
@@ -357,16 +358,16 @@ function write_table_preamble(fid::IOStream)
 end
 
 
-# `small`: Whether to print an additional curly bracket after "\end{tabular}" (necessary if
+# `small`: Whether to print an additional curly bracket after "\end{longtable}" (necessary if
 # the table is enclosed by "\small{}")
 
 function write_table_postamble(fid::IOStream; note::AbstractString="", small::Bool=false)
     @printf fid "\\\\ \\\hline\n"
 
     if small
-        @printf fid "\\end{tabular}}\n"
+        @printf fid "\\end{longtable}\n"
     else
-        @printf fid "\\end{tabular}\n"
+        @printf fid "\\end{longtable}\n"
     end
 
     if !isempty(note)
