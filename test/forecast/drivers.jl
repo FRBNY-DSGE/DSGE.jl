@@ -3,8 +3,15 @@ include("../util.jl")
 
 # Initialize model object
 custom_settings = Dict{Symbol, Setting}(
-    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")),
-    :date_conditional_end => Setting(:date_conditional_end, quartertodate("2015-Q4")),
+    :data_vintage            => Setting(:data_vintage, "160812"),
+    :cond_vintage            => Setting(:cond_vintage, "160812"),
+    :use_population_forecast => Setting(:use_population_forecast, true),
+    :date_forecast_start     => Setting(:date_forecast_start, quartertodate("2016-Q3")),
+    :date_conditional_end    => Setting(:date_conditional_end, quartertodate("2016-Q3")),
+    :date_forecast_end       => Setting(:date_forecast_end, quartertodate("2016-Q4")),
+    :n_anticipated_shocks    => Setting(:n_anticipated_shocks, 6),
+    # :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")),
+    # :date_conditional_end => Setting(:date_conditional_end, quartertodate("2015-Q4")),
     :forecast_kill_shocks => Setting(:forecast_kill_shocks, true))
 m = Model990(custom_settings = custom_settings, testing = true)
 init_params = map(θ -> θ.value, m.parameters)
@@ -20,7 +27,6 @@ mode_outpath = DSGE.get_input_file(m, :mode)
 h5open(mode_outpath, "w") do h5
     write(h5, "params", mode_params)
 end
-
 
 # Run forecasts
 forecast_outputs = Dict{Tuple{Symbol, Symbol}, Dict{Symbol, Any}}()

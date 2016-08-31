@@ -794,7 +794,7 @@ function init_data_transforms!(m::Model990)
         # FROM: OIS expectations of $i-period-ahead interest rates at a quarterly rate
         # TO:   Same
         
-        m.data_transforms[symbol("obs_ois$i")] = function (levels)
+        m.data_transforms[symbol("obs_nominalrate$i")] = function (levels)
             levels[:, symbol("ant$i")]
         end
     end
