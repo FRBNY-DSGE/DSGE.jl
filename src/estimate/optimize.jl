@@ -67,37 +67,38 @@ using Debug
         prior_cov   = cov(prior_draws)
         
         # Convert x_proposal to model space and expand to full parameter vector
-        x_proposal_all = T[p.value for p in m.parameters]  # to get fixed values
-        x_proposal_all[para_free_inds] = x_proposal        # this is from real line
+        x_all = T[p.value for p in m.parameters]  # to get fixed values
+        x_all[para_free_inds] = x                 # this is from real line
             
-        x_proposal_all = transform_to_model_space(m.parameters, x_proposal_all)
-        x_proposal_all_tmp = similar(x_proposal_all)
-
+        x_all_model = transform_to_model_space(m.parameters, x_all)
+        x_proposal_all = similar(x_all_model)
+        
         success = false
         while !success
 
             # take a step in model space
             for i in para_free_inds
-                r = rand()
-                r = r * rand([-1 1])
-                x_proposal_all_tmp[i] = x_proposal_all[i] + (r * cc * prior_cov[i,i])
+                r = rand([-1 1]) * rand()
+                @inbounds x_proposal_all[i] = x_all_model[i] + (r * cc * prior_cov[i,i])
             end
-            
+                   
             # check that parameters are inbounds, model can be solved,
             # and parameters can be transformed to the real line.
             try
-                update!(m, x_proposal_all_tmp)
+                update!(m, x_proposal_all)
                 solve(m)
-                x_proposal_all_tmp = transform_to_real_line(m.parameters, x_proposal_all_tmp)
+                x_proposal_all = transform_to_real_line(m.parameters, x_proposal_all)
                 success = true
             catch err
                 success = false
-                println("There was a $(typeof(err))")
+                # rethrow(err)
+                warn("There was a $(typeof(err))")
             end
         end
 
         # extract free inds
-        x_proposal_all_tmp[para_free_inds]
+        x_proposal = x_proposal_all[para_free_inds]
+        return
     end
 
     rng = m.rng
@@ -112,14 +113,17 @@ using Debug
     
     # Match original dimensions
     out.minimum = x_model
-    
+
     H = zeros(n_parameters(m), n_parameters(m))
+    if H_ != nothing
     
-    # Fill in rows/cols of zeros corresponding to location of fixed parameters
-    # For each row corresponding to a free parameter, fill in columns corresponding to
-    # free parameters. Everything else is 0.
-    for (row_free, row_full) in enumerate(para_free_inds)
-        H[row_full,para_free_inds] = H_[row_free,:]
+        # Fill in rows/cols of zeros corresponding to location of fixed parameters
+        # For each row corresponding to a free parameter, fill in columns corresponding to
+        # free parameters. Everything else is 0.
+        for (row_free, row_full) in enumerate(para_free_inds)
+            H[row_full,para_free_inds] = H_[row_free,:]
+        end
+
     end
     
     return out, H
