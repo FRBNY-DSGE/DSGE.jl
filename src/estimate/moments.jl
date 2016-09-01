@@ -217,7 +217,6 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
 
     # Write important parameters, pagebreak, unimportant parameters
     for index = [important_para; unimportant_para]
-
         param = m.parameters[index]
 
         # Print pagebreak if first unimportant parameter
@@ -228,58 +227,35 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
         # Print the parameter name and values in outmat
         @printf moments_fid "\$\%4.99s\$ & " param.tex_label
         @printf moments_fid "%s & %8.3f & %8.3f & %8.3f & %8.3f & %8.3f \\\\\n" outmat[index,:]...
-
     end
 
     # Close the file
     write_table_postamble(moments_fid; small=true)
 
-    # 4c. Write to Table 5: Prior mean and posterior mean for all parameters
-
-    # Keep track of how many tables we've made
-    table_count = 0
+    # 4b. Write to Table 5: Prior mean and posterior mean
 
     # Open the TeX file and set up the heading
-    prioPostMean_out = tablespath(m,"estimate", "moments_prioPostMean.tex")
-    prioPostMean_fid = open(prioPostMean_out,"w")
+    means_out = tablespath(m,"estimate", "prior_posterior_means.tex")
+    means_fid = open(means_out,"w")
 
-    write_table_preamble(prioPostMean_fid)
-    @printf prioPostMean_fid "\\vspace*{.5cm}\n"
-    @printf prioPostMean_fid "\\begin{longtable}{ccc}"
-    @printf prioPostMean_fid "\\caption{Parameter Estimates: Prior and Posterior Mean}\n"
-    @printf prioPostMean_fid "\\\\ \\hline\n"
-    @printf prioPostMean_fid "Parameter & Prior & Posterior  \\tabularnewline \\hline\n"
+    write_table_preamble(means_fid)
+    @printf means_fid "\\vspace*{.5cm}\n"
+    @printf means_fid "\\begin{longtable}{ccc}\n"
+    @printf means_fid "\\caption{Parameter Estimates: Prior and Posterior Means}\n"
+    @printf means_fid "\\\\ \\hline\n"
+    @printf means_fid "Parameter & Prior & Posterior\n"
+    @printf means_fid "\\\\ \\hline\n"
+    @printf means_fid "\\endhead\n"
+    @printf means_fid "\\hline\n"
+    @printf means_fid "\\endfoot\n"
 
     # Write out the results
     for (index, param) in enumerate(m.parameters)
-
-        if index % 40 == 0 && index ≠ length(m.parameters)
-
-            # Close the old file
-            write_table_postamble(prioPostMean_fid)
-
-            # Generate the new filename
-            table_count += 1
-            filename = @sprintf "moments_prioPostMean_%d.tex" table_count
-
-            # Open a new file and start the next table
-            prioPostMean_out = tablespath(m,"estimate",filename)
-            prioPostMean_fid = open(prioPostMean_out,"w")
-            write_table_preamble(prioPostMean_fid)
-            @printf prioPostMean_fid "\\vspace*{.5cm}\n"
-            @printf prioPostMean_fid "\\begin{longtable}{ccc}\n"
-            @printf prioPostMean_fid "\\caption{Parameter Estimates: Prior and Posterior Mean}\n"
-            @printf prioPostMean_fid "\\\\ \\hline\n"
-            @printf prioPostMean_fid "Parameter & Prior & Posterior  \\tabularnewline \\hline\n"
-        end
-
-        @printf prioPostMean_fid "\$\%4.99s\$ & " param.tex_label
-
-        val = outmat2[index,:]
-        @printf prioPostMean_fid "\%8.3f & \%8.3f \\\\\n" val[1] val[2]
+        @printf means_fid "\$\%4.99s\$ & " param.tex_label
+        @printf means_fid "\%8.3f & \%8.3f \\\\\n" outmat2[index,:]...
     end
 
-    write_table_postamble(prioPostMean_fid)
+    write_table_postamble(means_fid)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         @printf "Tables are saved as %s.\n" tablespath(m, "estimate", "*.tex")
@@ -289,16 +265,15 @@ end
 function write_table_preamble(fid::IOStream)
     @printf fid "\\documentclass[12pt]{article}\n"
     @printf fid "\\usepackage{booktabs}\n"
+    @printf fid "\\usepackage[justification=centering]{caption}\n"
     @printf fid "\\usepackage[margin=1in]{geometry}\n"
     @printf fid "\\usepackage{longtable}\n"
     @printf fid "\\begin{document}\n"
     @printf fid "\\pagestyle{empty}\n"
 end
 
-
 # `small`: Whether to print an additional curly bracket after "\end{longtable}" (necessary if
 # the table is enclosed by "\small{}")
-
 function write_table_postamble(fid::IOStream; small::Bool=false)
     if small
         @printf fid "\\end{longtable}}\n"
