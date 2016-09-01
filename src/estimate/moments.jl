@@ -156,40 +156,41 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
 
     # STEP 4: WRITE TABLES
 
-    # 4a. Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT
-    #     parameters
+    # 4a. Write to Table 1: prior mean, std dev, posterior mean and bands
 
     # Open and start the TeX file
-    moments0_out = tablespath(m, "estimate", "moments0.tex")
-    moments0_fid = open(moments0_out, "w")
+    moments_out = tablespath(m, "estimate", "moments.tex")
+    moments_fid = open(moments_out, "w")
 
-    write_table_preamble(moments0_fid)
+    write_table_preamble(moments_fid)
 
-    @printf moments0_fid "\\vspace*{.5cm}\n"
-    @printf moments0_fid "{\\small\n"
-    @printf moments0_fid "\\begin{longtable}{lcccccc}\n"
-    @printf moments0_fid "\\caption{Parameter Estimates}\n"
-    @printf moments0_fid "\\\\ \\hline\n"
+    @printf moments_fid "\\vspace*{.5cm}\n"
+    @printf moments_fid "{\\small\n"
+    @printf moments_fid "\\begin{longtable}{lcccccc}\n"
+    @printf moments_fid "\\caption{Parameter Estimates}\n"
+    @printf moments_fid "\\\\ \\hline\n"
 
     # Column names
-    @printf moments0_fid "\\multicolumn{%d}{c}{%s}" colnames0[1][1] colnames0[1][2]
+    @printf moments_fid "\\multicolumn{%d}{c}{%s}" colnames0[1][1] colnames0[1][2]
     for col in colnames0[2:end]
-        @printf moments0_fid " & \\multicolumn{%d}{c}{%s}" col[1] col[2]
+        @printf moments_fid " & \\multicolumn{%d}{c}{%s}" col[1] col[2]
     end
-    @printf moments0_fid " \\\\\n"
-    @printf moments0_fid "%s" colnames[1]
+    @printf moments_fid " \\\\\n"
+    @printf moments_fid "%s" colnames[1]
     for col in colnames[2:end]
-        @printf moments0_fid " & %s" col
+        @printf moments_fid " & %s" col
     end
-    @printf moments0_fid " \\\\\n"
-    @printf moments0_fid "\\cmidrule(lr){1-1}\\cmidrule(lr){2-4}\\cmidrule(lr){5-7} \\endhead\n"
-    @printf moments0_fid "\\hline \\endfoot\n"
+    @printf moments_fid " \\\\\n"
+    @printf moments_fid "\\cmidrule(lr){1-1} \\cmidrule(lr){2-4} \\cmidrule(lr){5-7}\n"
+    @printf moments_fid "\\endhead\n"
+
+    @printf moments_fid "\\hline\n"
+    @printf moments_fid "\\\\ \\multicolumn{7}{c}{\\footnotesize Note: For Inverse Gamma (IG) prior mean and SD, \$\\tau\$ and \$\\nu\$ reported.}\n"
+    @printf moments_fid "\\endfoot\n"
 
     # Keep track of indices for important parameters
     important_para = []
-
     for (index, param) in enumerate(m.parameters)
-
         if (!ismatch(r"rho_", param.tex_label) &&
             !ismatch(r"zeta_", param.tex_label) &&
             !ismatch(r"psi_", param.tex_label) &&
@@ -205,63 +206,33 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
         end
 
         #Print the parameter name and values in outmat
-        @printf moments0_fid "\$\%4.99s\$ & " param.tex_label
-        @printf moments0_fid "%s & %8.3f & %8.3f & %8.3f & %8.3f & %8.3f \\\\\n" outmat[index,:]...
+        @printf moments_fid "\$\%4.99s\$ & " param.tex_label
+        @printf moments_fid "%s & %8.3f & %8.3f & %8.3f & %8.3f & %8.3f \\\\\n" outmat[index,:]...
 
         important_para = [important_para; index]
     end
 
-    # Close the file
-    write_table_postamble(moments0_fid;
-        note="{\\footnotesize Note: For Inverse Gamma (IG) prior mean and SD, \$\\tau\$ and \$\\nu\$
-        reported.}",
-        small=true)
+    all_para = collect(1:length(m.parameters))
+    unimportant_para = setdiff(all_para, important_para)
 
-    # 4b. Write to Table 2: Prior mean, std dev and posterior mean, bands for other params
-    moments_table_out = tablespath(m, "estimate", "moments1.tex")
-    moments_table_fid = open(moments_table_out, "w")
+    # Write important parameters, pagebreak, unimportant parameters
+    for index = [important_para; unimportant_para]
 
-    write_table_preamble(moments_table_fid)
+        param = m.parameters[index]
 
-    @printf moments_table_fid "\\vspace*{.2cm}\n"
-    @printf moments_table_fid "{\\small\n"
-    @printf moments_table_fid "\\begin{longtable}{lcccccc}\n"
-    @printf moments_table_fid "\\caption{Parameter Estimates}\n"
-    @printf moments_table_fid "\\\\ \\hline\n"
-
-    # Column names
-    @printf moments_table_fid "\\multicolumn{%d}{c}{%s}" colnames0[1][1] colnames0[1][2]
-    for col in colnames0[2:end]
-        @printf moments_table_fid " & \\multicolumn{%d}{c}{%s}" col[1] col[2]
-    end
-    @printf moments_table_fid " \\\\\n"
-    @printf moments_table_fid "%s" colnames[1]
-    for col in colnames[2:end]
-        @printf moments_table_fid " & %s" col
-    end
-    @printf moments_table_fid " \\\\\n"
-    @printf moments_table_fid "\\cmidrule(lr){1-1}\\cmidrule(lr){2-4}\\cmidrule(lr){5-7} \\endhead\n"
-    @printf moments_table_fid "\\hline \\endfoot\n"
-
-    # Counter for parameters to track length of table and number of tables in excess of
-    # default (1)
-    other_para  = 1
-    table_count = 0
-
-    for (index, param) in enumerate(m.parameters)
-
-        if in(index, important_para)
-            continue
+        # Print pagebreak if first unimportant parameter
+        if index == unimportant_para[1]
+            @printf moments_fid "\\pagebreak\n"
         end
 
-        #Print the parameter name and values in outmat
-        @printf moments_table_fid "\$\%4.99s\$ & " param.tex_label
-        @printf moments_table_fid "%s & %8.3f & %8.3f & %8.3f & %8.3f & %8.3f \\\\\n" outmat[index,:]...
+        # Print the parameter name and values in outmat
+        @printf moments_fid "\$\%4.99s\$ & " param.tex_label
+        @printf moments_fid "%s & %8.3f & %8.3f & %8.3f & %8.3f & %8.3f \\\\\n" outmat[index,:]...
 
-        other_para += 1
     end
 
-    write_table_postamble(moments_table_fid; small=true)
+    # Close the file
+    write_table_postamble(moments_fid; small=true)
 
     # 4c. Write to Table 5: Prior mean and posterior mean for all parameters
 
@@ -328,15 +299,11 @@ end
 # `small`: Whether to print an additional curly bracket after "\end{longtable}" (necessary if
 # the table is enclosed by "\small{}")
 
-function write_table_postamble(fid::IOStream; note::AbstractString="", small::Bool=false)
+function write_table_postamble(fid::IOStream; small::Bool=false)
     if small
         @printf fid "\\end{longtable}}\n"
     else
         @printf fid "\\end{longtable}\n"
-    end
-
-    if !isempty(note)
-        @printf fid "%s\n" note
     end
 
     @printf fid "\\end{document}"
