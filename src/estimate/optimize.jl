@@ -97,7 +97,10 @@ using Debug
         end
 
         # extract free inds
-        x_proposal = x_proposal_all[para_free_inds]
+        for i in para_free_inds
+            x_proposal[i] = x_proposal_all[para_free_inds]
+        end
+        
         return
     end
 
