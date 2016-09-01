@@ -205,10 +205,6 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
             continue
         end
 
-        #Print the parameter name and values in outmat
-        @printf moments_fid "\$\%4.99s\$ & " param.tex_label
-        @printf moments_fid "%s & %8.3f & %8.3f & %8.3f & %8.3f & %8.3f \\\\\n" outmat[index,:]...
-
         important_para = [important_para; index]
     end
 
