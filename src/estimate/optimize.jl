@@ -45,11 +45,14 @@ using Debug
     function f_opt(x_opt)
         x_model[para_free_inds] = x_opt
         transform_to_model_space!(m,x_model)
-        return -posterior(m, data; catch_errors=true)[:post]
+        println("Calling posterior...")
+        res= -posterior(m, data; catch_errors=true)[:post]
+        println("Done calling posterior")
+        return res
     end
 
     
-    function neighbor_dsge!(x, x_proposal; cc = 0.1)
+    function neighbor_dsge!(x, x_proposal; cc = 0.01)
         # This function computes a proposal "next step" during simulated annealing.
         # Inputs:
         # - `x`: current position (of non-fixed states)
@@ -84,24 +87,31 @@ using Debug
                    
             # check that parameters are inbounds, model can be solved,
             # and parameters can be transformed to the real line.
-            try
+            #try
                 update!(m, x_proposal_all)
+                println("trying to solve model in neighbor")
                 solve(m)
+                println("done solving model in neighbor")
                 x_proposal_all = transform_to_real_line(m.parameters, x_proposal_all)
                 success = true
-            catch err
-                success = false
+            #catch err
+                #success = false
                 # rethrow(err)
-                warn("There was a $(typeof(err))")
-            end
+                #warn("There was a $(typeof(err))")
+            #end
         end
-
+    
         # extract free inds
-        for i in para_free_inds
-            x_proposal[i] = x_proposal_all[para_free_inds]
-        end
-        
-        return
+        # fixed_count = 0
+        # for i in 1:length(para_free_inds)
+        #     if !in(i, para_free_inds)
+        #         fixed_count += 1
+        #     end
+        #     x_proposal[i] = x_proposal_all[i+fixed_count]
+        # end
+        x_proposal[1:end] = x_proposal_all[para_free_inds]    
+
+       return
     end
 
     rng = m.rng
