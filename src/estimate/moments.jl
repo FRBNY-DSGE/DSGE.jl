@@ -188,39 +188,10 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
     @printf moments_fid "\\\\ \\multicolumn{7}{c}{\\footnotesize Note: For Inverse Gamma (IG) prior mean and SD, \$\\tau\$ and \$\\nu\$ reported.}\n"
     @printf moments_fid "\\endfoot\n"
 
-    # Keep track of indices for important parameters
-    important_para = []
-    for (index, param) in enumerate(m.parameters)
-        if (!ismatch(r"rho_", param.tex_label) &&
-            !ismatch(r"zeta_", param.tex_label) &&
-            !ismatch(r"psi_", param.tex_label) &&
-            !ismatch(r"nu_l", param.tex_label) &&
-            !ismatch(r"pi\^\*", param.tex_label) &&
-            !ismatch(r"sigma_{pi}\^\*",param.tex_label) &&
-            (!ismatch(r"pistar", param.tex_label)))
-            continue
-        end
-
-        if ismatch(r"rho_chi",param.tex_label)
-            continue
-        end
-
-        important_para = [important_para; index]
-    end
-
-    all_para = collect(1:length(m.parameters))
-    unimportant_para = setdiff(all_para, important_para)
-
-    # Write important parameters, pagebreak, unimportant parameters
-    for index = [important_para; unimportant_para]
-        param = m.parameters[index]
-
-        # Print pagebreak if first unimportant parameter
-        if index == unimportant_para[1]
-            @printf moments_fid "\\pagebreak\n"
-        end
-
-        # Print the parameter name and values in outmat
+    # Write parameter moments
+    sorted_parameters = sort(m.parameters, by = (x -> x.key))
+    for param in sorted_parameters
+        index = m.keys[param.key]
         @printf moments_fid "\$\%4.99s\$ & " param.tex_label
         @printf moments_fid "%s & %8.3f & %8.3f & %8.3f & %8.3f & %8.3f \\\\\n" outmat[index,:]...
     end
@@ -246,7 +217,8 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
     @printf means_fid "\\endfoot\n"
 
     # Write out the results
-    for (index, param) in enumerate(m.parameters)
+    for param in sorted_parameters
+        index = m.keys[param.key]
         @printf means_fid "\$\%4.99s\$ & " param.tex_label
         @printf means_fid "\%8.3f & \%8.3f \\\\\n" outmat2[index,:]...
     end
