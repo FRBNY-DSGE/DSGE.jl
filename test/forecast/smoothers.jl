@@ -21,7 +21,7 @@ pred, vpred, A0, P0 = h5open("$path/../reference/kalman_filter_2part_out.h5", "r
     read(h5, "pred"), read(h5, "vpred"), read(h5, "z0"), read(h5, "vz0")
 end
 
-# Kalman filter test
+# Kalman smoother test
 alpha_hat, eta_hat = kalman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, A0, P0,
     pred, vpred)
 
