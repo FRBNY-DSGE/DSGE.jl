@@ -4,8 +4,8 @@ include("../util.jl")
 
 path = dirname(@__FILE__)
 
-# Can we actually test? Require that the FRED_API_KEY ENV is populated
-@assert haskey(ENV, "FRED_API_KEY")
+# Can we actually test? Require that FRED API key exists
+@assert haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
 
 # Specify vintage and dates
 custom_settings = Dict{Symbol, Setting}(
