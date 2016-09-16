@@ -8,6 +8,16 @@ function annualtoquarter(v)
 end
 
 """
+`quartertoannual(v)`
+
+Convert from quarter to annual frequency... by multiplying by 4.
+"""
+function quartertoannual(v)
+    4 * v
+end
+
+
+"""
 `nominal_to_real(col, df; deflator_mnemonic=:GDPCTPI)`
 
 Converts nominal to real values using the specified deflator.

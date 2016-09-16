@@ -35,10 +35,14 @@ function forecast{T<:AbstractFloat}(m::AbstractModel, syses::Vector{System{T}},
 
     ndraws = length(syses)
 
-    # for now, we are ignoring pseudo-observables so these can be empty
-    Z_pseudo = zeros(T, 12, n_states_augmented(m))
-    D_pseudo = zeros(T, 12)
-
+    # Get pseudomeasurement matrices
+    Z_pseudo, D_pseudo = if forecast_pseudoobservables(m)
+        _, pseudo_mapping = pseudo_measurement(m)
+        pseudo_mapping.ZZ, pseudo_mapping.DD
+    else
+        Matrix{T}(), Vector{T}()
+    end
+    
     # retrieve settings for forecast
     horizon  = forecast_horizons(m)
     nshocks  = n_shocks_exogenous(m)
@@ -90,8 +94,9 @@ function forecast{T<:AbstractFloat}(m::AbstractModel, syses::Vector{System{T}},
     end
 
     # Go to work!
-    forecasts =  mapfcn(DSGE.compute_forecast, TTTs, RRRs, CCCs, ZZs, DDs, ZZps, DDps,
-                              horizons, shock_distributions, initial_state_draws)
+    forecasts =  mapfcn(DSGE.compute_forecast, TTTs, RRRs, CCCs, ZZs, DDs,
+                        horizons, shock_distributions, initial_state_draws,
+                        ZZps, DDps)
 
     # Unpack returned vector of tuples
     states             = [forecast[1]::Matrix{T} for forecast in forecasts]
@@ -110,8 +115,8 @@ end
 
 """
 ```
-compute_forecast(T, R, C, Z, D, Z_pseudo, D_pseudo, forecast_horizons,
-    shocks, z)
+compute_forecast(T, R, C, Z, D, forecast_horizons,
+    shocks, z,  Z_pseudo, D_pseudo)
 ```
 
 ### Inputs
@@ -137,10 +142,11 @@ sizes:
 """
 function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vector{S}, 
                                             Z::Matrix{S}, D::Vector{S},
-                                            Z_pseudo::Matrix{S}, D_pseudo::Vector{S},
                                             forecast_horizons::Int,
                                             shocks::Matrix{S},
-                                            z::Vector{S})
+                                            z::Vector{S},
+                                            Z_pseudo::Matrix{S}=Matrix{S}(),
+                                            D_pseudo::Vector{S}=Vector{S}())
 
     if forecast_horizons <= 0
         throw(DomainError())
@@ -174,11 +180,12 @@ end
 
 # Utility method to actually draw shocks
 function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vector{S}, 
-                                            Z::Matrix{S}, D::Vector{S},          
-                                            Z_pseudo::Matrix{S}, D_pseudo::Vector{S},
+                                            Z::Matrix{S}, D::Vector{S},                                             
                                             forecast_horizons::Int,
                                             dist::Distribution,
-                                            z::Vector{S})
+                                            z::Vector{S},
+					    Z_pseudo::Matrix{S}=Matrix{S}(),
+                                            D_pseudo::Vector{S}=Vector{S}())
 
     if forecast_horizons <= 0
         throw(DomainError())
@@ -208,3 +215,4 @@ end
 #     pseudoobservables::Matrix{T}
 #     shocks::Matrix{T}
 # end
+

@@ -49,8 +49,11 @@ module DSGE
         UnscaledParameter, SteadyStateParameter, transform_to_real_line, transform_to_model_space,
         update, update!, transform_to_model_space, transform_to_real_line, Interval, ParamBoundsError,
 
-        # statespace/
+        # statespace.jl
         Measurement, Transition, System, compute_system,
+
+        # observables.jl
+        PseudoObservable, PseudoObservableMapping,
 
         # estimate/
         kalman_filter, kalman_filter_2part, likelihood, posterior, posterior!,
@@ -73,7 +76,7 @@ module DSGE
         load_data, load_data_levels, load_cond_data_levels, load_fred_data,
         transform_data, save_data,
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
-        hpadjust, oneqtrpctchange, annualtoquarter
+        hpadjust, oneqtrpctchange, annualtoquarter, quartertoannual
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
@@ -84,6 +87,7 @@ module DSGE
     include("settings.jl")
     include("defaults.jl")
     include("statespace.jl")
+    include("observables.jl")
     include("util.jl")
 
     include("data/load_data.jl")
@@ -116,6 +120,7 @@ module DSGE
     include("models/m990/subspecs.jl")
     include("models/m990/eqcond.jl")
     include("models/m990/measurement.jl")
+    include("models/m990/pseudo_measurement.jl")
     include("models/m990/augment_states.jl")
 
     include("models/smets_wouters/smets_wouters.jl")

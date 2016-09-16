@@ -253,12 +253,16 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
     end
 
     ## 3. Map smoothed states to pseudo-observables
-
-    # for now, we are ignoring pseudo-observables so these can be empty
-    Z_pseudo = zeros(S, 12, n_states_augmented(m))
-    D_pseudo = zeros(S, 12)
-
-    pseudo = D_pseudo .+ Z_pseudo * states
-
+    pseudo = if forecast_pseudoobservables(m)
+        
+        _, pseudo_mapping = pseudo_measurement(m)
+        Z_pseudo = pseudo_mapping.ZZ
+        D_pseudo = pseudo_mapping.DD
+        
+        D_pseudo .+ Z_pseudo * states
+    else
+        Matrix()
+    end
+    
     return states, shocks, pseudo, kal
 end
