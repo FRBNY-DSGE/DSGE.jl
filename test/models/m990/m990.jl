@@ -1,5 +1,5 @@
 using DSGE
-using HDF5, Base.Test, Distributions
+using HDF5, Base.Test, Distributions, JLD
 include("../../util.jl")
 
 path = dirname(@__FILE__)
@@ -147,6 +147,22 @@ actual = measurement(model, TTT, RRR, CCC)
 for d in (:ZZ, :DD, :QQ, :EE, :MM)
     @test_matrix_approx_eq expect[d] actual[d]
 end
+
+
+### Pseudo-measurement equation
+expect = Dict{Symbol, Any}()
+jld = jldopen("$path/pseudo_measurement.jld")
+expect[:ZZ] = read(jld, "ZZ_pseudo")
+expect[:DD] = reshape(read(jld, "DD_pseudo"), 18, 1)
+expect[:inds] = read(jld, "inds")
+close(jld)
+
+model = Model990()
+actual = pseudo_measurement(model)[2]
+for d in (:ZZ, :DD)
+    @test_matrix_approx_eq expect[d] getfield(actual,d)
+end
+@assert isequal(expect[:inds], getfield(actual, :inds))
 
 ### Custom settings
 custom_settings = Dict{Symbol, Setting}(

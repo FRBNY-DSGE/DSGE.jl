@@ -24,13 +24,13 @@ module DSGE
         AbstractModel, description,
         n_anticipated_shocks, n_anticipated_shocks_padding,
         date_presample_start, date_prezlb_start, date_zlb_start,
-            date_presample_end, date_prezlb_end, date_zlb_end, date_conditional_end,
-            index_presample_start, index_prezlb_start, index_zlb_start, index_forecast_start,
-            n_presample_periods, n_prezlb_periods, n_zlb_periods,
-            inds_presample_periods, inds_prezlb_periods, inds_zlb_periods,
+        date_presample_end, date_prezlb_end, date_zlb_end, date_conditional_end,
+        index_presample_start, index_prezlb_start, index_zlb_start, index_forecast_start,
+        n_presample_periods, n_prezlb_periods, n_zlb_periods,
+        inds_presample_periods, inds_prezlb_periods, inds_zlb_periods,
         n_states, n_states_augmented, n_shocks_exogenous, n_shocks_expectational,
-            n_equilibrium_conditions, n_observables, n_parameters, n_parameters_steady_state,
-            n_parameters_free,
+        n_equilibrium_conditions, n_observables, n_parameters, n_parameters_steady_state,
+        n_parameters_free,
         inds_states_no_ant, inds_shocks_no_ant, inds_obs_no_ant,
         spec, subspec, saveroot, dataroot,
         data_vintage, cond_vintage, cond_id, cond_full_names, cond_semi_names, use_population_forecast,
@@ -38,7 +38,7 @@ module DSGE
         reoptimize, calculate_hessian, hessian_path, n_hessian_test_params,
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin, n_draws,
         date_forecast_start, forecast_tdist_df_val, forecast_tdist_shocks, forecast_kill_shocks,
-            forecast_smoother, forecast_input_file_overrides, forecast_horizons,
+		forecast_smoother, forecast_input_file_overrides, forecast_horizons,
         load_parameters_from_file, specify_mode!, specify_hessian,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
@@ -67,7 +67,7 @@ module DSGE
         shock_decompositions,
 
         # models/
-        init_parameters!, steadystate!, Model990, SmetsWouters, eqcond, measurement,
+        init_parameters!, steadystate!, Model990, SmetsWouters, eqcond, measurement, pseudo_measurement,
 
         # solve/
         gensys, solve,
