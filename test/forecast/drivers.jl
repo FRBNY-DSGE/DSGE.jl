@@ -3,32 +3,20 @@ include("../util.jl")
 
 # Initialize model object
 custom_settings = Dict{Symbol, Setting}(
-    :data_vintage            => Setting(:data_vintage, "160812"),
-    :cond_vintage            => Setting(:cond_vintage, "160812"),
     :use_population_forecast => Setting(:use_population_forecast, true),
-    :date_forecast_start     => Setting(:date_forecast_start, quartertodate("2016-Q3")),
-    :date_conditional_end    => Setting(:date_conditional_end, quartertodate("2016-Q3")),
-    :date_forecast_end       => Setting(:date_forecast_end, quartertodate("2016-Q4")),
+    :date_forecast_start     => Setting(:date_forecast_start, quartertodate("2015-Q4")),
+    :date_conditional_end    => Setting(:date_conditional_end, quartertodate("2015-Q4")),
+    :date_forecast_end       => Setting(:date_forecast_end, quartertodate("2016-Q1")),
     :n_anticipated_shocks    => Setting(:n_anticipated_shocks, 6),
-    :forecast_kill_shocks    => Setting(:forecast_kill_shocks, true))
+    :forecast_kill_shocks    => Setting(:forecast_kill_shocks, true),
+    :saveroot                => Setting(:saveroot, normpath(joinpath(dirname(@__FILE__), "..", "reference"))))
 m = Model990(custom_settings = custom_settings, testing = true)
 init_params = map(θ -> θ.value, m.parameters)
-
-# Copy mode
-mode_infile = "paramsmode_m990_ss2_nant=0_vint=151127.h5"
-mode_inpath = joinpath(m.settings[:saveroot].value, "input_data/user", mode_infile)
-mode_params = h5open(mode_inpath, "r") do h5
-    read(h5, "params")
-end
-
-mode_outpath = DSGE.get_input_file(m, :mode)
-h5open(mode_outpath, "w") do h5
-    write(h5, "params", mode_params)
-end
 
 # Run forecasts
 forecast_outputs = Dict{Tuple{Symbol, Symbol}, Dict{Symbol, Any}}()
 output_vars = [:histstates, :histpseudo, :histshocks, :forecaststates, :forecastpseudo, :forecastobs, :forecastshocks, :shockdecstates, :shockdecpseudo, :shockdecobs]
+output_files = []
 
 for input_type in [:init, :mode]
     for cond_type in [:none, :semi, :full]
@@ -41,6 +29,9 @@ for input_type in [:init, :mode]
         merge!(forecast_output, new_forecast)
 
         forecast_outputs[(cond_type, input_type)] = forecast_output
+
+        new_output_files = collect(values(DSGE.get_output_files(m, input_type, output_vars, cond_type)))
+        append!(output_files, new_output_files)
     end
 end
 
@@ -50,7 +41,7 @@ for input_type in [:init, :mode]
     if input_type == :init
         update!(m, init_params)
     elseif input_type == :mode
-        update!(m, mode_params)
+        specify_mode!(m, DSGE.get_input_file(m, :mode))
     end
 
     for cond_type in [:none, :semi, :full]
@@ -116,5 +107,8 @@ for input_type in [:init, :mode]
     end # cond_type
 
 end # input_type
+
+# Delete all files written by forecast_one
+map(rm, unique(output_files))
 
 nothing
