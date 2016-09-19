@@ -30,14 +30,14 @@ vz0 = QuantEcon.solve_discrete_lyapunov(syses[1][:TTT], syses[1][:RRR]*syses[1][
 # Add parallel workers
 my_procs = addprocs(ndraws)
 @everywhere using DSGE
-states, shocks, pseudo = DSGE.filterandsmooth(m, df, syses; allout = true)
-states, shocks, pseudo = DSGE.filterandsmooth(m, df, syses, z0, vz0; allout = true)
+states, shocks, pseudo = filterandsmooth(m, df, syses; allout = true)
+states, shocks, pseudo = filterandsmooth(m, df, syses, z0, vz0; allout = true)
 
 for smoother in [:durbin_koopman, :kalman]
     m <= Setting(:forecast_smoother, smoother)
 
     # Without providing z0 and vz0
-    @time states, shocks, pseudo = DSGE.filterandsmooth(m, df, syses; allout = true)
+    @time states, shocks, pseudo = filterandsmooth(m, df, syses; allout = true)
 
     exp_states = Vector{Matrix{Float64}}(ndraws)
     exp_shocks = Vector{Matrix{Float64}}(ndraws)
@@ -57,7 +57,7 @@ for smoother in [:durbin_koopman, :kalman]
     end
 
     # Providing z0 and vz0
-    @time states, shocks, pseudo = DSGE.filterandsmooth(m, df, syses, z0, vz0; allout = true)
+    @time states, shocks, pseudo = filterandsmooth(m, df, syses, z0, vz0; allout = true)
 
     exp_states = Vector{Matrix{Float64}}(ndraws)
     exp_shocks = Vector{Matrix{Float64}}(ndraws)

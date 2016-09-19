@@ -27,12 +27,12 @@ forecast_horizons = 3
 dist = DSGE.DegenerateMvNormal(zeros(nshocks), Q)
 
 # test invocation supplying distribution
-forecast_dist = compute_forecast(T, R, C, Z, D, Z_pseudo, D_pseudo, forecast_horizons,
-    dist, z_end)
+forecast_dist = DSGE.compute_forecast(T, R, C, Z, D, Z_pseudo, D_pseudo,
+    forecast_horizons, dist, z_end)
 
 # test invocation supplying shocks
 shocks = rand(nshocks, forecast_horizons)
-forecast_shocks = compute_forecast(T, R, C, Z, D, Z_pseudo, D_pseudo, forecast_horizons,
-    shocks, z_end)
+forecast_shocks = DSGE.compute_forecast(T, R, C, Z, D, Z_pseudo, D_pseudo,
+    forecast_horizons, shocks, z_end)
 
 nothing

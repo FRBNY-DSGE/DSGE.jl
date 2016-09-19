@@ -31,13 +31,13 @@ kals = DSGE.filter(m, df, syses, z0, vz0; allout = true)
 # Add parallel workers
 my_procs = addprocs(ndraws)
 @everywhere using DSGE
-alpha_hats, eta_hats = DSGE.smooth(m, df, syses, kals)
+alpha_hats, eta_hats = smooth(m, df, syses, kals)
 
 # Call smoother and test
 for smoother in [:durbin_koopman, :kalman]
     m <= Setting(:forecast_smoother, smoother)
 
-    @time alpha_hats, eta_hats = DSGE.smooth(m, df, syses, kals)
+    @time alpha_hats, eta_hats = smooth(m, df, syses, kals)
 
     exp_alpha_hats = Vector{Matrix{Float64}}(ndraws)
     exp_eta_hats   = Vector{Matrix{Float64}}(ndraws)

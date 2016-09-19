@@ -59,8 +59,9 @@ module DSGE
         find_density_bands, prior,
 
         # forecast/
-        kalman_smoother, disturbance_smoother, forecast_all, forecast_one, compute_forecast,
-        durbin_koopman_smoother, shock_decompositions,
+        filter, filterandsmooth, smooth, kalman_smoother,
+        durbin_koopman_smoother, forecast_all, forecast_one, forecast,
+        shock_decompositions,
 
         # models/
         steadystate!, Model990, SmetsWouters, eqcond, measurement,
