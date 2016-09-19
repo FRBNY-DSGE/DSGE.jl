@@ -296,6 +296,14 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     forecast_output = Dict{Symbol, Array{Float64}}()
     forecast_output_files = get_output_files(m, input_type, output_vars, cond_type)
 
+    # Set forecast_pseudoobservables properly
+    for output in output_vars
+        if contains(string(output), "pseudo")
+            update!(m.settings[:forecast_pseudoobservables], Setting(:forecast_pseudoobservables, true))
+            break
+        end
+    end
+        
     # must re-run filter/smoother for conditional data in addition to explicit cases
     if !isempty(intersect(output_vars, [:histstates, :histpseudo, :histshocks, :shockdecstates, :shockdecpseudo, :shockdecobs])) || cond_type in [:semi, :full]
 
@@ -307,11 +315,15 @@ function forecast_one(m::AbstractModel, df::DataFrame;
 
             forecast_output[:histstates] = histstates[:, 1:T, :]
             forecast_output[:histshocks] = histshocks[:, 1:T, :]
-            forecast_output[:histpseudo] = histpseudo[:, 1:T, :]
+			if :histpseudo in output_vars            
+				forecast_output[:histpseudo] = histpseudo[:, 1:T, :]
+			end	
         else
             forecast_output[:histstates] = histstates
             forecast_output[:histshocks] = histshocks
-            forecast_output[:histpseudo] = histpseudo
+            if :histpseudo in output_vars
+                forecast_output[:histpseudo] = histpseudo
+            end
         end            
     end
 
@@ -329,17 +341,23 @@ function forecast_one(m::AbstractModel, df::DataFrame;
         if cond_type in [:semi, :full]
             T = DSGE.subtract_quarters(date_forecast_start(m), date_prezlb_start(m))
             histobs = df_to_matrix(m, df; cond_type = cond_type)[:, index_prezlb_start(m):end]
+<<<<<<< HEAD
             histobs = repeat(histobs, outer = [1, 1, ndraws])
 
             forecast_output[:forecaststates] = cat(2, histstates[:, T+1:end, :], forecaststates)
             forecast_output[:forecastshocks] = cat(2, histshocks[:, T+1:end, :], forecastshocks)
-            forecast_output[:forecastpseudo] = cat(2, histpseudo[:, T+1:end, :], forecastpseudo)
             forecast_output[:forecastobs]    = cat(2, histobs[:,    T+1:end, :], forecastobs)
+			if :forecastpseudo in output_vars
+	            forecast_output[:forecastpseudo] = cat(2, histpseudo[:, T+1:end, :], forecastpseudo)
+			end
         else
             forecast_output[:forecaststates] = forecaststates
             forecast_output[:forecastshocks] = forecastshocks
-            forecast_output[:forecastpseudo] = forecastpseudo
             forecast_output[:forecastobs]    = forecastobs
+            
+            if :forecastpseudo in output_vars
+                forecast_output[:forecastpseudo] = forecastpseudo
+            end
         end
     end
 

@@ -85,9 +85,10 @@ for input_type in [:init, :mode]
         forecastshocks = forecast_outputs[(cond_type, input_type)][:forecastshocks]
 
         zend = kal[:zend]
-        shocks   = zeros(Float64, n_shocks_exogenous(m), forecast_horizons(m))
-        Z_pseudo = zeros(Float64, 12, n_states_augmented(m))
-        D_pseudo = zeros(Float64, 12)
+		shocks = zeros(Float64, n_shocks_exogenous(m), forecast_horizons(m))
+        _, pseudo_measur = pseudo_measurement(m)
+        Z_pseudo = pseudo_measur.ZZ
+        D_pseudo = pseudo_measur.DD        
         exp_forecaststates, exp_forecastobs, exp_forecastpseudo, exp_forecastshocks =
             DSGE.compute_forecast(sys[:TTT], sys[:RRR], sys[:CCC], sys[:ZZ], sys[:DD],
                                   Z_pseudo, D_pseudo, forecast_horizons(m), shocks, zend)
