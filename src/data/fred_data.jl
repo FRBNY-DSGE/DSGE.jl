@@ -26,13 +26,6 @@ function load_fred_data(m::AbstractModel;
     vint = data_vintage(m)
     dateformat = "yymmdd"
 
-    # Have to do this wacky parsing to prepend the century to the data vintage
-    vint_date = if parse(Int,vint[1:2]) < 59
-        Year(2000) + Date(vint, dateformat)
-    else
-        Year(1900) + Date(vint, dateformat)
-    end
-
     # Set up dataset and labels
     missing_series = Vector{Symbol}()
     data = []
@@ -69,6 +62,13 @@ function load_fred_data(m::AbstractModel;
 
     # Get the missing data series
     if !isempty(missing_series)
+
+        # Have to do this wacky parsing to prepend the century to the data vintage
+        vint_date = if parse(Int,vint[1:2]) < 59
+            Year(2000) + Date(vint, dateformat)
+        else
+            Year(1900) + Date(vint, dateformat)
+        end
 
         fredseries = Array{FredSeries, 1}(length(missing_series))
         f = Fred()
