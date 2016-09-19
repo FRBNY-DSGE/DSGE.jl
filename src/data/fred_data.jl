@@ -114,9 +114,11 @@ function load_fred_data(m::AbstractModel;
         for i = 1:n_rows
             data[i,:date] = Dates.lastdayofquarter(data[i,:date])
         end
-
-        writetable(datafile, data)
-        println("Updated data from FRED written to $datafile.")
+        
+        if !m.testing
+            writetable(datafile, data)
+            println("Updated data from FRED written to $datafile.")
+        end
     end
 
     # Make sure to only return the series and dates that are specified for this
