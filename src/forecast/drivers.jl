@@ -295,8 +295,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     forecast_output_files = get_output_files(m, input_type, output_vars, cond_type)
 
     # must re-run filter/smoother for conditional data in addition to explicit cases
-    if !isempty(intersect(output_vars, [:histstates, :histpseudo, :histshocks])) || 
-        cond_type in [:semi, :full]
+    if !isempty(intersect(output_vars, [:histstates, :histpseudo, :histshocks, :shockdecstates, :shockdecpseudo, :shockdecobs])) || cond_type in [:semi, :full]
 
         histstates, histshocks, histpseudo, kals = filterandsmooth(m, df, systems; cond_type = cond_type)
 
@@ -339,6 +338,13 @@ function forecast_one(m::AbstractModel, df::DataFrame;
             forecast_output[:forecastpseudo] = forecastpseudo
             forecast_output[:forecastobs]    = forecastobs
         end
+    end
+
+    if !isempty(intersect(output_vars, [:shockdecstates, :shockdecobs, :shockdecpseudo]))
+        shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, systems, histshocks)
+        forecast_output[:shockdecstates] = shockdecstates
+        forecast_output[:shockdecpseudo] = shockdecpseudo
+        forecast_output[:shockdecobs]    = shockdecobs
     end
 
     # Write output files
@@ -387,8 +393,8 @@ function get_output_vars(m, output_type)
                :forecastshocks]
     elseif output_type == :shockdec
         vars = [:shockdecstates,
+                :shockdecpseudo,
                 :shockdecobs]
-        throw(ArgumentError("Not implemented."))
     elseif output_type == :dettrend
         vars = [:dettrendstates,
                 :dettrendobs]

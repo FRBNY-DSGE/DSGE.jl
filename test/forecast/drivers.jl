@@ -10,9 +10,7 @@ custom_settings = Dict{Symbol, Setting}(
     :date_conditional_end    => Setting(:date_conditional_end, quartertodate("2016-Q3")),
     :date_forecast_end       => Setting(:date_forecast_end, quartertodate("2016-Q4")),
     :n_anticipated_shocks    => Setting(:n_anticipated_shocks, 6),
-    # :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")),
-    # :date_conditional_end => Setting(:date_conditional_end, quartertodate("2015-Q4")),
-    :forecast_kill_shocks => Setting(:forecast_kill_shocks, true))
+    :forecast_kill_shocks    => Setting(:forecast_kill_shocks, true))
 m = Model990(custom_settings = custom_settings, testing = true)
 init_params = map(θ -> θ.value, m.parameters)
 
@@ -30,7 +28,7 @@ end
 
 # Run forecasts
 forecast_outputs = Dict{Tuple{Symbol, Symbol}, Dict{Symbol, Any}}()
-output_vars = [:histstates, :histpseudo, :histshocks, :forecaststates, :forecastpseudo, :forecastobs, :forecastshocks]
+output_vars = [:histstates, :histpseudo, :histshocks, :forecaststates, :forecastpseudo, :forecastobs, :forecastshocks, :shockdecstates, :shockdecpseudo, :shockdecobs]
 
 for input_type in [:init, :mode]
     for cond_type in [:none, :semi, :full]
@@ -105,6 +103,19 @@ for input_type in [:init, :mode]
             @test_matrix_approx_eq exp_forecastpseudo forecastpseudo
             @test_matrix_approx_eq exp_forecastshocks forecastshocks
         end
+
+        ## Shock decompositions of states, pseudo-observables, and observables
+        shockdecstates = forecast_outputs[(cond_type, input_type)][:shockdecstates][1]
+        shockdecobs    = forecast_outputs[(cond_type, input_type)][:shockdecobs][1]
+        shockdecpseudo = forecast_outputs[(cond_type, input_type)][:shockdecpseudo][1]
+
+        exp_shockdecstates, exp_shockdecobs, exp_shockdecpseudo =
+            DSGE.compute_shock_decompositions(sys[:TTT], sys[:RRR], sys[:ZZ],
+                                              sys[:DD], Z_pseudo, D_pseudo, forecast_horizons(m), exp_histshocks)
+
+        @test_matrix_approx_eq exp_shockdecstates shockdecstates
+        @test_matrix_approx_eq exp_shockdecobs    shockdecobs
+        @test_matrix_approx_eq exp_shockdecpseudo shockdecpseudo
 
     end # cond_type
 

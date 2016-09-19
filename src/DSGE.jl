@@ -60,7 +60,7 @@ module DSGE
 
         # forecast/
         kalman_smoother, disturbance_smoother, forecast_all, forecast_one, compute_forecast,
-        durbin_koopman_smoother,
+        durbin_koopman_smoother, shock_decompositions,
 
         # models/
         steadystate!, Model990, SmetsWouters, eqcond, measurement,
@@ -110,6 +110,7 @@ module DSGE
     include("forecast/drivers.jl")
     include("forecast/forecast.jl")
     include("forecast/compute_forecast.jl")
+    include("forecast/shock_decompositions.jl")
 
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")
