@@ -51,9 +51,9 @@ for smoother in [:durbin_koopman, :kalman]
             kalman_smoother(m, df, syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
         end
 
-        @test_matrix_approx_eq exp_states[i] states[i]
-        @test_matrix_approx_eq exp_shocks[i] shocks[i]
-        @test all(x -> x == 0, pseudo[i])
+        @test_matrix_approx_eq exp_states[i] states[:, :, i]
+        @test_matrix_approx_eq exp_shocks[i] shocks[:, :, i]
+        @test all(x -> x == 0, pseudo[:, :, i])
     end
 
     # Providing z0 and vz0
@@ -71,9 +71,9 @@ for smoother in [:durbin_koopman, :kalman]
             kalman_smoother(m, df, syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
         end
 
-        @test_matrix_approx_eq exp_states[i] states[i]
-        @test_matrix_approx_eq exp_shocks[i] shocks[i]
-        @test all(x -> x == 0, pseudo[i])
+        @test_matrix_approx_eq exp_states[i] states[:, :, i]
+        @test_matrix_approx_eq exp_shocks[i] shocks[:, :, i]
+        @test all(x -> x == 0, pseudo[:, :, i])
     end
 
 end

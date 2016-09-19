@@ -7,7 +7,8 @@ smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     syses::Vector{System}, kals::Vector{Kalman})
 ```
 
-Computes and returns the smoothed values of states for every parameter draw.
+Computes and returns the smoothed values of states and shocks for every
+parameter draw.
 
 ### Inputs
 
@@ -20,10 +21,13 @@ Computes and returns the smoothed values of states for every parameter draw.
 
 ### Outputs
 
-- `alpha_hats`: a vector of smoothed states (`alpha_hat`s) returned from the
-  smoother specified by `smoother_flag(m)`, one for each system in `syses`
-- `eta_hats`: a vector of smoothed shocks (`eta_hat`s) returned from the
-  smoother, one for each system in `syses`
+- `states`: 3-dimensional array of size `nstates` x `hist_periods` x `ndraws`
+  consisting of smoothed states for each draw
+- `shocks`: 3-dimensional array of size `nshocks` x `hist_periods` x `ndraws`
+  consisting of smoothed shocks for each draw
+
+where `states` and `shocks` are returned from the smoother specified by
+`smoother_flag(m)`.
 """
 function smooth{S<:AbstractFloat}(m::AbstractModel,
                                   df::DataFrame,
@@ -55,11 +59,16 @@ function smooth{S<:AbstractFloat}(m::AbstractModel,
         mapfcn = map
     end    
     out = mapfcn(DSGE.smooth, models, datas, syses, kals)
-    
-    alpha_hats = [Array(x[1]) for x in out] # to make type stable 
-    eta_hats   = [Array(x[2]) for x in out] 
 
-    return alpha_hats, eta_hats
+    # Unpack returned vector of tuples
+    states = [x[1]::Matrix{S} for x in out]
+    shocks = [x[2]::Matrix{S} for x in out]
+
+    # Splat vectors of matrices into 3-D arrays
+    states = cat(3, states...)
+    shocks = cat(3, shocks...)
+
+    return states, shocks
 end
 
 function smooth{S<:AbstractFloat}(m::AbstractModel,

@@ -19,14 +19,14 @@ matrix of shocks or a distribution of shocks
 
 ### Outputs
 
--`states`: vector of length `ndraws`, whose elements are the `nstates` x
- `horizon` matrices of forecasted states
--`observables`: vector of length `ndraws`, whose elements are the `nobs` x
- `horizon` matrices of forecasted observables
--`pseudo_observables`: vector of length `ndraws`, whose elements are the
- `npseudo` x `horizon` matrices of forecasted pseudo-observables
--`shocks`: vector of length `ndraws`, whose elements are the `npseudo` x
- `horizon` matrices of shock innovations
+- `states`: 3-dimensional array of size `nstates` x `horizon` x `ndraws`
+  consisting of forecasted states for each draw
+- `observables`: 3-dimensional array of size `nobs` x `horizon` x `ndraws`
+  consisting of forecasted observables for each draw
+- `pseudo_observables`: 3-dimensional array of size `npseudo` x `horizon` x `ndraws`
+  consisting of forecasted pseudo-observables for each draw
+- `shocks`: 3-dimensional array of size `nshocks` x `horizon` x `ndraws`
+  consisting of forecasted shocks for each draw
 """
 function forecast{T<:AbstractFloat}(m::AbstractModel, syses::Vector{System{T}},
                                     initial_state_draws::Vector{Vector{T}};
@@ -83,7 +83,6 @@ function forecast{T<:AbstractFloat}(m::AbstractModel, syses::Vector{System{T}},
         end
     end
 
-    # Forecast the states
     if use_parallel_workers(m)
         mapfcn = pmap
     else
@@ -94,13 +93,19 @@ function forecast{T<:AbstractFloat}(m::AbstractModel, syses::Vector{System{T}},
     forecasts =  mapfcn(DSGE.compute_forecast, TTTs, RRRs, CCCs, ZZs, DDs, ZZps, DDps,
                               horizons, shock_distributions, initial_state_draws)
 
-    # unpack the giant vector of dictionaries that gets returned
-    states      = [x[:states]::Matrix{T} for x in forecasts]
-    observables = [x[:observables]::Matrix{T} for x in forecasts]
-    pseudo      = [x[:pseudo_observables]::Matrix{T} for x in forecasts]
-    shocks      = [x[:shocks]::Matrix{T} for x in forecasts]
+    # Unpack returned vector of tuples
+    states             = [forecast[1]::Matrix{T} for forecast in forecasts]
+    observables        = [forecast[2]::Matrix{T} for forecast in forecasts]
+    pseudo_observables = [forecast[3]::Matrix{T} for forecast in forecasts]
+    shocks             = [forecast[4]::Matrix{T} for forecast in forecasts]
 
-    return states, observables, pseudo, shocks
+    # Splat vectors of matrices into 3-D arrays
+    states             = cat(3, states...)
+    observables        = cat(3, observables...)
+    pseudo_observables = cat(3, pseudo_observables...)
+    shocks             = cat(3, shocks...)
+
+    return states, observables, pseudo_observables, shocks
 end
 
 """
@@ -122,12 +127,13 @@ compute_forecast(T, R, C, Z, D, Z_pseudo, D_pseudo, forecast_horizons,
 
 ### Outputs
 
-`compute_forecast` returns a dictionary of forecast outputs, with keys:
+`compute_forecast` returns a 4-tuple of forecast outputs, whose elements have
+sizes:
 
--`:states`
--`:observables`
--`:pseudo_observables`
--`:shocks`
+- `states`: `nstates` x `forecast_horizons`
+- `observables`: `nobs` x `forecast_horizons`
+- `pseudo_observables`: `npseudo` x `forecast_horizons`
+- `shocks`: `nshocks` x `forecast_horizons`
 """
 function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vector{S}, 
                                             Z::Matrix{S}, D::Vector{S},
@@ -163,11 +169,7 @@ function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vecto
     pseudo_observables = D_pseudo .+ Z_pseudo * states
     
     # Return a dictionary of forecasts
-    Dict{Symbol, Matrix{S}}(
-        :states             => states,
-        :observables        => observables,
-        :pseudo_observables => pseudo_observables,
-        :shocks             => shocks)
+    return states, observables, pseudo_observables, shocks
 end
 
 # Utility method to actually draw shocks

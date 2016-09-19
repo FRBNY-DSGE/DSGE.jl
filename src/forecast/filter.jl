@@ -89,7 +89,8 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vect
     end    
 
     kals = mapfcn(DSGE.tricky_filter, allouts, include_presamples, models, datas, syses, z0s, vz0s)
-    return convert(Vector{Kalman{S}}, kals)
+    
+    return [kal::Kalman{S} for kal in kals]
 end
 
 tricky_filter(::AllOut, ::IncludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) =
@@ -143,7 +144,8 @@ filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     true)
 ```
     
-Computes and returns the smoothed states and shocks for every state-space system in `syses`.
+Computes and returns the smoothed states, shocks, and pseudo-observables, as
+well as the Kalman filter outputs, for every state-space system in `syses`.
 
 ### Inputs
 
@@ -156,10 +158,17 @@ Computes and returns the smoothed states and shocks for every state-space system
 
 ### Outputs
 
-- `alpha_hats`: a vector of smoothed states (`alpha_hat`s) returned from the
-  smoother specified by `smoother_flag(m)`, one for each system in `syses`
-- `eta_hats`: a vector of smoothed shocks (`eta_hat`s) returned from the
-  smoother, one for each system in `syses`
+- `states`: 3-dimensional array of size `nstates` x `hist_periods` x `ndraws`
+  consisting of smoothed states for each draw
+- `shocks`: 3-dimensional array of size `nshocks` x `hist_periods` x `ndraws`
+  consisting of smoothed shocks for each draw
+- `pseudo`: 3-dimensional array of size `npseudo` x `hist_periods` x `ndraws`
+  consisting of pseudo-observables computed from the smoothed states for each
+  draw
+- `kals`: vector of Kalman objects, of length `ndraws`
+
+where `states` and `shocks` are returned from the smoother specified by
+`smoother_flag(m)`.
 """
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
                                            syses::Vector{System{S}},
@@ -194,10 +203,16 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     end    
     out = mapfcn(filterandsmooth, models, datas, syses, z0s, vz0s)
 
-    states = convert(Vector{Matrix{S}}, [x[1] for x in out]) # to make type stable 
-    shocks = convert(Vector{Matrix{S}}, [x[2] for x in out])
-    pseudo = convert(Vector{Matrix{S}}, [x[3] for x in out])
-    kals   = convert(Vector{Kalman{S}}, [x[4] for x in out])
+    # Unpack returned vector of tuples
+    states = [x[1]::Matrix{S} for x in out]
+    shocks = [x[2]::Matrix{S} for x in out]
+    pseudo = [x[3]::Matrix{S} for x in out]
+    kals   = [x[4]::Kalman{S} for x in out]
+
+    # Splat vectors of matrices into 3-D arrays
+    states = cat(3, states...)
+    shocks = cat(3, shocks...)
+    pseudo = cat(3, pseudo...)
 
     return states, shocks, pseudo, kals
 end

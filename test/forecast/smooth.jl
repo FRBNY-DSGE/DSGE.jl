@@ -48,8 +48,8 @@ for smoother in [:durbin_koopman, :kalman]
             kalman_smoother(m, df, syses[i], kals[i][:z0], kals[i][:vz0], kals[i][:pred], kals[i][:vpred])
         end
 
-        @test_matrix_approx_eq exp_alpha_hats[i] alpha_hats[i]
-        @test_matrix_approx_eq exp_eta_hats[i] eta_hats[i]
+        @test_matrix_approx_eq exp_alpha_hats[i] alpha_hats[:, :, i]
+        @test_matrix_approx_eq exp_eta_hats[i] eta_hats[:, :, i]
     end
 end
 
