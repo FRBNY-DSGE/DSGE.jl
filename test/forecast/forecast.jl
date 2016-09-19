@@ -5,8 +5,9 @@ path = dirname(@__FILE__)
 
 # Set up arguments
 custom_settings = Dict{Symbol, Setting}(
-    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")))
-    # :use_parallel_workers => Setting(:use_parallel_workers, true))
+    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")),
+    :use_parallel_workers => Setting(:use_parallel_workers, true),
+    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6))
 m = Model990(custom_settings = custom_settings)
 m.testing = true
 
@@ -27,9 +28,10 @@ end
 # Add parallel workers
 my_procs = addprocs(ndraws)
 @everywhere using DSGE
+states, observables, pseudos, shocks = DSGE.forecast(m, syses, z0s)
 
 # Run forecast
-states, observables, pseudos, shocks = DSGE.forecast(m, syses, z0s)
+@time states, observables, pseudos, shocks = DSGE.forecast(m, syses, z0s)
 
 # Remove parallel workers
 rmprocs(my_procs)
