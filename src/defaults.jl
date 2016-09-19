@@ -128,7 +128,7 @@ function default_test_settings!(m::AbstractModel)
     test = m.test_settings
 
     # I/O
-    dataroot = normpath(joinpath(dirname(@__FILE__), "..","test","reference"))
+    dataroot = normpath(joinpath(dirname(@__FILE__), "..", "test", "reference", "input_data"))
     saveroot = mktempdir()
 
     #General
