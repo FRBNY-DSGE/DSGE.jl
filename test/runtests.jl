@@ -26,9 +26,10 @@ my_tests = [
             "forecast/filter",
             "forecast/filterandsmooth",
             "forecast/smooth",
+            "forecast/compute_forecast",
             "forecast/forecast",
-            "forecast/drivers",
-            "forecast/compute_forecast"
+            "forecast/shock_decompositions",
+            "forecast/drivers"
             ]
 
 for test in my_tests
