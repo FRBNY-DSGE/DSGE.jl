@@ -109,7 +109,6 @@ module DSGE
     include("forecast/smooth.jl")
     include("forecast/drivers.jl")
     include("forecast/forecast.jl")
-    include("forecast/compute_forecast.jl")
     include("forecast/shock_decompositions.jl")
 
     include("models/m990/m990.jl")
