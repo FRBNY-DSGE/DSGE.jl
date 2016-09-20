@@ -9,22 +9,35 @@ custom_settings = Dict{Symbol, Setting}(
     :date_forecast_end       => Setting(:date_forecast_end, quartertodate("2016-Q1")),
     :n_anticipated_shocks    => Setting(:n_anticipated_shocks, 6),
     :forecast_kill_shocks    => Setting(:forecast_kill_shocks, true),
-    :saveroot                => Setting(:saveroot, normpath(joinpath(dirname(@__FILE__), "..", "reference"))))
+    :saveroot                => Setting(:saveroot, normpath(joinpath(dirname(@__FILE__), "..", "reference"))),
+    :use_parallel_workers    => Setting(:use_parallel_workers, true))
 m = Model990(custom_settings = custom_settings, testing = true)
-init_params = map(θ -> θ.value, m.parameters)
+
+# Add parallel workers
+my_procs = addprocs(10)
+@everywhere using DSGE
 
 # Run forecasts
 forecast_outputs = Dict{Tuple{Symbol, Symbol}, Dict{Symbol, Any}}()
-output_vars = [:histstates, :histpseudo, :histshocks, :forecaststates, :forecastpseudo, :forecastobs, :forecastshocks, :shockdecstates, :shockdecpseudo, :shockdecobs]
+output_vars = [:histstates, :histpseudo, :histshocks, :forecaststates,
+               :forecastpseudo, :forecastobs, :forecastshocks, :shockdecstates,
+               :shockdecpseudo, :shockdecobs]
 output_files = []
 
-for input_type in [:init, :mode]
+for input_type in [:init, :mode, :full]
+
+    # Call forecast_one once without timing
+    df = load_data(m; verbose = :none)
+    forecast_one(m, df; input_type = :full, cond_type = :none, output_vars = output_vars)
+
     for cond_type in [:none, :semi, :full]
+
+        println("input_type = $(input_type), cond_type = $(cond_type)")
 
         forecast_output = Dict{Symbol, Any}()
         forecast_output[:df] = load_data(m; cond_type=cond_type, try_disk=true, verbose=:none)
 
-        new_forecast = forecast_one(m, forecast_output[:df]; input_type =
+        @time new_forecast = forecast_one(m, forecast_output[:df]; input_type =
             input_type, cond_type = cond_type, output_vars = output_vars)
         merge!(forecast_output, new_forecast)
 
@@ -39,7 +52,8 @@ end
 for input_type in [:init, :mode]
 
     if input_type == :init
-        update!(m, init_params)
+        DSGE.init_parameters!(m)
+        DSGE.steadystate!(m)
     elseif input_type == :mode
         specify_mode!(m, DSGE.get_input_file(m, :mode))
     end
@@ -110,5 +124,8 @@ end # input_type
 
 # Delete all files written by forecast_one
 map(rm, unique(output_files))
+
+# Remove parallel workers
+rmprocs(my_procs)
 
 nothing
