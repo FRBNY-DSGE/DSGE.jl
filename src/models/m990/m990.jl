@@ -226,6 +226,24 @@ function Model990(subspec::AbstractString="ss2";
     init_data_transforms!(m)
 
     # Initialize parameters
+    init_parameters!(m)
+
+    init_model_indices!(m)
+    init_subspec!(m)
+    steadystate!(m)
+    return m
+end
+
+"""
+```
+init_parameters!(m::Model990)
+```
+
+Initializes the model's parameters, as well as empty values for the steady-state
+parameters (in preparation for `steadystate!(m)` being called to initialize
+those).
+"""
+function init_parameters!(m::Model990)
     m <= parameter(:α,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",
                    tex_label="\\alpha")
@@ -503,11 +521,6 @@ function Model990(subspec::AbstractString="ss2";
     m <= SteadyStateParameter(:ζ_nn,      NaN, description="No description available.", tex_label="\\zeta_{nn}")
     m <= SteadyStateParameter(:ζ_nμ_e,    NaN, description="No description available.", tex_label="\\zeta_{n_{\\mu_e}}")
     m <= SteadyStateParameter(:ζ_nσ_ω,   NaN, description="No description available.", tex_label="\\zeta_{n_{\\sigma_\\omega}}")
-
-    init_model_indices!(m)
-    init_subspec!(m)
-    steadystate!(m)
-    return m
 end
 
 # functions that are used to compute financial frictions

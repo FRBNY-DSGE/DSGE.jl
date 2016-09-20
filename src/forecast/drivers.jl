@@ -113,6 +113,7 @@ function load_draws(m::AbstractModel, input_type::Symbol)
             params, TTT, RRR, CCC, zend
         end
     elseif input_type in [:init]
+        init_parameters!(m)
         tmp = Float64[α.value for α in m.parameters]
         params = reshape(tmp, 1, size(tmp,1))
         TTT  = Array{Float64}(0,0,0)

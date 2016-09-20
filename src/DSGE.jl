@@ -64,7 +64,7 @@ module DSGE
         shock_decompositions,
 
         # models/
-        steadystate!, Model990, SmetsWouters, eqcond, measurement,
+        init_parameters!, steadystate!, Model990, SmetsWouters, eqcond, measurement,
 
         # solve/
         gensys, solve,

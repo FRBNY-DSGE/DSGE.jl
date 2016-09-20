@@ -193,7 +193,25 @@ function SmetsWouters(subspec::AbstractString="ss0";
     for custom_setting in values(custom_settings)
         m <= custom_setting
     end
+
     # Initialize parameters
+
+    init_model_indices!(m)
+    init_subspec!(m)
+    steadystate!(m)
+    return m
+end
+
+"""
+```
+init_parameters!(m::SmetsWouters)
+```
+
+Initializes the model's parameters, as well as empty values for the steady-state
+parameters (in preparation for `steadystate!(m)` being called to initialize
+those).
+"""
+function init_parameters!(m::SmetsWouters)
     m <= parameter(:α,      0.24, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.",
                    tex_label="\\alpha")
@@ -383,11 +401,6 @@ function SmetsWouters(subspec::AbstractString="ss0";
     m <= SteadyStateParameter(:ystar,  NaN, description="steady-state something something", tex_label="\\y_*")
     m <= SteadyStateParameter(:cstar,  NaN, description="steady-state something something", tex_label="\\c_*")
     m <= SteadyStateParameter(:wl_c,   NaN, description="steady-state something something", tex_label="\\wl_c")
-
-    init_model_indices!(m)
-    init_subspec!(m)
-    steadystate!(m)
-    return m
 end
 
 
