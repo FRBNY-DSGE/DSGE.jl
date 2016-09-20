@@ -366,6 +366,16 @@ end
 
 
 function get_input_file(m, input_type)
+    overrides = forecast_input_file_overrides(m)
+    if haskey(overrides, input_type)
+        override_file = overrides[input_type]
+        if ispath(override_file)
+            return override_file
+        else
+            error("Invalid input file override for input_type = $input_type: $override_file")
+        end
+    end
+
     if input_type == :mode
         return rawpath(m,"estimate","paramsmode.h5")
     elseif input_type == :mean

@@ -222,6 +222,7 @@ forecast_tdist_df_val(m::AbstractModel) = get_setting(m, :forecast_tdist_df_val)
 forecast_tdist_shocks(m::AbstractModel) = get_setting(m, :forecast_tdist_shocks)
 forecast_kill_shocks(m::AbstractModel)  = get_setting(m, :forecast_kill_shocks)
 forecast_smoother(m::AbstractModel)     = get_setting(m, :forecast_smoother)
+forecast_input_file_overrides(m::AbstractModel) = get_setting(m, :forecast_input_file_overrides)
     
 function forecast_horizons(m::AbstractModel)
     t0 = get_setting(m, :date_forecast_start)

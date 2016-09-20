@@ -38,7 +38,7 @@ module DSGE
         reoptimize, calculate_hessian, hessian_path, n_hessian_test_params,
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin, n_draws,
         date_forecast_start, forecast_tdist_df_val, forecast_tdist_shocks, forecast_kill_shocks,
-            forecast_smoother, forecast_horizons,
+            forecast_smoother, forecast_input_file_overrides, forecast_horizons,
         load_parameters_from_file, specify_mode!, specify_hessian,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
