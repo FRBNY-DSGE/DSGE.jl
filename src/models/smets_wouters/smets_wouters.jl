@@ -170,7 +170,6 @@ function SmetsWouters(subspec::AbstractString="ss0";
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()        # Random Number Generator
-    testing            = false
 
     # initialize empty model
     m = SmetsWouters{Float64}(
@@ -195,7 +194,7 @@ function SmetsWouters(subspec::AbstractString="ss0";
     end
 
     # Initialize parameters
-
+    init_parameters!(m)
     init_model_indices!(m)
     init_subspec!(m)
     steadystate!(m)
