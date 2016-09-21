@@ -126,7 +126,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     for source in keys(data_series)
 
         # Check that this source is actually used
-        mnemonics = m.data_series[source]
+        mnemonics = data_series[source]
         if isempty(mnemonics)
             warn("No series were specified from $(string(source))")
             continue
@@ -205,7 +205,7 @@ appended or merged into the conditional data:
 - The first period of forecasted population
   (`population_forecast_<yymmdd>.csv`), used for per-capita calculations
 """
-function load_cond_data_levels(m::AbstractModel, verbose::Symbol=:low)
+function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
     # Prepare file name
     cond_vint = get_setting(m, :cond_vintage)
@@ -406,4 +406,5 @@ function parse_data_series(m::AbstractModel)
             end
         end
     end
+    data_series
 end

@@ -22,7 +22,8 @@ function load_fred_data(m::AbstractModel;
                         start_date::Date = Date("1959-01-01", "y-m-d"),
                         end_date::Date   = prev_quarter())
 
-    mnemonics = m.data_series[:fred]
+    data_series = parse_data_series(m)
+    mnemonics = data_series[:FRED]
     vint = data_vintage(m)
     dateformat = "yymmdd"
 

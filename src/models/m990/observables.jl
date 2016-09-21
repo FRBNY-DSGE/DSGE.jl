@@ -226,7 +226,7 @@ function init_observable_mappings!(m::Model990)
     
     longrate_rev_transform = quartertoannualpercent
     
-    observables[:obs_longrate] = Observable(:obs_longrate, [:FYCCZA__LONGRATE, :THREEFYP10__FRED],
+    observables[:obs_longrate] = Observable(:obs_longrate, [:FYCCZA__LONGRATE, :THREEFYTP10__FRED],
                                             longrate_fwd_transform, longrate_rev_transform,
                                             "Long term interest rate expectations",
                                             "10T yield - 10T term premium")

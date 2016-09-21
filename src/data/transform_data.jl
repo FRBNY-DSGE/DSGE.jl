@@ -121,7 +121,7 @@ function collect_data_transforms(m; direction=:fwd)
 
     # Parse vector of observable mappings into data_transforms dictionary
     for obs in keys(m.observable_mappings)
-        data_transforms[obs] = getfield(m.observable_mappings, symbol(string(direction) * "_transform"))
+        data_transforms[obs] = getfield(m.observable_mappings[obs], symbol(string(direction) * "_transform"))
     end
     
     data_transforms    
