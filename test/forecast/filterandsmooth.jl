@@ -5,16 +5,15 @@ path = dirname(@__FILE__())
 
 # Set up arguments
 custom_settings = Dict{Symbol, Setting}(
-    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")),
+    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")),
     :use_parallel_workers => Setting(:use_parallel_workers, true))
 m = Model990(custom_settings = custom_settings, testing = true)
 
-data, dates, params_sim = h5open("$path/../reference/filter_args.h5","r") do h5
-    read(h5, "data"), read(h5, "dates"), read(h5, "params_sim")
+params_sim = h5open("$path/../reference/filter_args.h5","r") do h5
+    read(h5, "params_sim")
 end
 
-df        = DataFrame(data)
-df[:date] = Date(dates)
+df = load_data(m; try_disk = true, verbose = :none)
 
 ndraws = 2
 syses = Vector{System{Float64}}(ndraws)
