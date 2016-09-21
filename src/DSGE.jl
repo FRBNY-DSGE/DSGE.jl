@@ -76,10 +76,14 @@ module DSGE
         load_data, load_data_levels, load_cond_data_levels, load_fred_data,
         transform_data, save_data,
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
-        hpadjust, oneqtrpctchange, annualtoquarter, quartertoannual
+        hpadjust, oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
+        logtopct_annualized_percapita, logtopct_annualized, loglevelto4qpct_annualized,
+        loglevelto4qpct_annualized,
+        parse_data_series, collect_data_transforms
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
+    const DSGE_DATASERIES_DELIM = "__"
 
     include("parameters.jl")
     include("distributions_ext.jl")
@@ -119,6 +123,7 @@ module DSGE
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")
     include("models/m990/eqcond.jl")
+    include("models/m990/observables.jl")
     include("models/m990/measurement.jl")
     include("models/m990/pseudo_measurement.jl")
     include("models/m990/augment_states.jl")

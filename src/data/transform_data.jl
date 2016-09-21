@@ -8,7 +8,7 @@ Transform data loaded in levels and order columns appropriately for the DSGE
 model. Returns DataFrame of transformed data.
 
 The DataFrame `levels` is output from `load_data_levels`. The series in levels are
-transformed as specified in `m.data_transforms`.
+transformed as specified in `m.observable_mappings`.
 
 - To prepare for per-capita transformations, population data are filtered using
   `hpfilter`. The series in `levels` to use as the population series is given by
@@ -27,7 +27,7 @@ for the observables given in `cond_full_names(m)` or `cond_semi_names(m)`.
 """
 function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol = :none, verbose::Symbol = :low)
 
-    population_mnemonic = get_setting(m, :population_mnemonic)
+    population_mnemonic = parse_population_mnemonic(m)[1] 
     n_obs, _ = size(levels)
 
     # Step 1: HP filter population forecasts, if they're being used
@@ -87,11 +87,13 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
     transformed = DataFrame()
     transformed[:date] = levels[:date]
 
-    for series in keys(m.data_transforms)
+    data_transforms = collect_data_transforms(m)
+    
+    for series in keys(data_transforms)
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             println("Transforming series $series...")
         end
-        f = m.data_transforms[series]
+        f = data_transforms[series]
         transformed[series] = f(levels)
     end
 
@@ -111,4 +113,16 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
     end
 
     return transformed
+end
+
+function collect_data_transforms(m; direction=:fwd)
+
+    data_transforms = OrderedDict{Symbol,Function}()
+
+    # Parse vector of observable mappings into data_transforms dictionary
+    for obs in keys(m.observable_mappings)
+        data_transforms[obs] = getfield(m.observable_mappings, symbol(string(direction) * "_transform"))
+    end
+    
+    data_transforms    
 end

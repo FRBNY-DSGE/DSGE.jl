@@ -154,6 +154,11 @@ n_parameters(m::AbstractModel)             = length(m.parameters)
 n_parameters_steady_state(m::AbstractModel)= length(m.steady_state)
 n_parameters_free(m::AbstractModel)        = sum([!α.fixed for α in m.parameters])
 
+# Parse population mnemonic into 2 symbols from one
+function parse_population_mnemonic(m::AbstractModel)
+    map(symbol, split(string(get_setting(m, :population_mnemonic)), DSGE_DATASERIES_DELIM))
+end
+    
 # From an augmented state space with anticipated policy shocks, get indices
 # corresponding to pre-ZLB states, shocks, and observables
 function inds_states_no_ant(m::AbstractModel)
