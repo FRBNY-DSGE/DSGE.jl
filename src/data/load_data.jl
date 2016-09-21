@@ -377,8 +377,8 @@ function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
     df1 = df1[start_date .<= df1[:, :date] .<= end_date, :]
 
     # Discard columns not used.
-    # TODO: sort columns as well according to observables
-    cols = setdiff(names(df1), [:date])
+    cols = collect(keys(m.observables))
+    sort!(cols, by = x -> m.observables[x])
     df1 = df1[cols]
 
     return convert(Matrix{Float64}, df1)'
