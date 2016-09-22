@@ -92,12 +92,12 @@ function forecast_one_new(m::AbstractModel, df::DataFrame;
         if cond_type in [:semi, :full]
             T = DSGE.subtract_quarters(date_forecast_start(m), date_prezlb_start(m))
             histobs = df_to_matrix(m, df; cond_type = cond_type)[:, index_prezlb_start(m):end]
-            histobs = repeat(histobs, outer = [1, 1, ndraws])
+            histobs_cond = repeat(histobs[:, T+1:end], outer = [1, 1, ndraws])
 
             forecast_output[:forecaststates] = cat(2, histstates[:, T+1:end, :], forecaststates)
             forecast_output[:forecastshocks] = cat(2, histshocks[:, T+1:end, :], forecastshocks)
             forecast_output[:forecastpseudo] = cat(2, histpseudo[:, T+1:end, :], forecastpseudo)
-            forecast_output[:forecastobs]    = cat(2, histobs[:,    T+1:end, :], forecastobs)
+            forecast_output[:forecastobs]    = cat(2, histobs_cond, forecastobs)
         else
             forecast_output[:forecaststates] = forecaststates
             forecast_output[:forecastshocks] = forecastshocks
