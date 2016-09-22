@@ -11,9 +11,12 @@ performance against the existing `forecast_one`. Eventually these changes will
 be merged back into `forecast_one`.
 """
 function forecast_one_new(m::AbstractModel, df::DataFrame;
-                          input_type::Symbol  = :mode,
+                          input_type::Symbol = :mode,
                           output_vars::Vector{Symbol} = [],
-                          cond_type::Symbol   = :none)
+                          cond_type::Symbol = :none,
+                          verbose::Symbol = :low)
+
+    ### 1. Setup
 
     # Prepare forecast inputs
     systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
@@ -23,6 +26,11 @@ function forecast_one_new(m::AbstractModel, df::DataFrame;
     # Prepare forecast outputs
     forecast_output = Dict{Symbol, Array{Float64}}()
     forecast_output_files = get_output_files(m, input_type, output_vars, cond_type)
+    output_dir = rawpath(m, "forecast")
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println("\nForecasting input_type = $input_type, cond_type = $cond_type...")
+        println("Forecast outputs will be saved in $output_dir")
+    end
 
     # Inline definition s.t. the dicts forecast_output and forecast_output_files are accessible
     function write_forecast_outputs(vars::Vector{Symbol})
@@ -30,10 +38,15 @@ function forecast_one_new(m::AbstractModel, df::DataFrame;
             file = forecast_output_files[var]
             jldopen(file, "w") do f
                 write(f, string(var), forecast_output[var])
-                println(" * Wrote $(basename(file))")
+                if VERBOSITY[verbose] >= VERBOSITY[:high]
+                    println(" * Wrote $(basename(file))")
+                end
             end
         end
     end
+
+
+    ### 2. Smoothed Histories
 
     # must re-run filter/smoother for conditional data in addition to explicit cases
     hist_vars = [:histstates, :histpseudo, :histshocks]
@@ -55,10 +68,13 @@ function forecast_one_new(m::AbstractModel, df::DataFrame;
             forecast_output[:histstates] = histstates
             forecast_output[:histshocks] = histshocks
             forecast_output[:histpseudo] = histpseudo
-        end            
+        end
 
         write_forecast_outputs(hist_vars)
     end
+
+
+    ### 3. Forecasts
 
     # For conditional data, use the end of the hist states as the initial state
     # vector for the forecast
@@ -91,6 +107,9 @@ function forecast_one_new(m::AbstractModel, df::DataFrame;
 
         write_forecast_outputs(forecast_vars)
     end
+
+
+    ### 4. Shock Decompositions
 
     if !isempty(intersect(output_vars, [:shockdecstates, :shockdecobs, :shockdecpseudo]))
         histshocks = [histshocks[:, :, i]::Matrix{Float64} for i = 1:ndraws]
