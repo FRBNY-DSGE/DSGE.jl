@@ -61,7 +61,7 @@ module DSGE
         # forecast/
         filter, filterandsmooth, smooth, kalman_smoother,
         durbin_koopman_smoother, forecast_all, forecast_one, forecast,
-        shock_decompositions,
+        shock_decompositions, forecast_one_new,
 
         # models/
         init_parameters!, steadystate!, Model990, SmetsWouters, eqcond, measurement,
@@ -108,7 +108,7 @@ module DSGE
     include("forecast/compute_system.jl")
     include("forecast/filter.jl")
     include("forecast/smooth.jl")
-    include("forecast/drivers.jl")
+    include("forecast/drivers_new.jl")
     include("forecast/forecast.jl")
     include("forecast/shock_decompositions.jl")
 
