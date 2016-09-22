@@ -24,8 +24,23 @@ function forecast_one_new(m::AbstractModel, df::DataFrame;
     forecast_output = Dict{Symbol, Array{Float64}}()
     forecast_output_files = get_output_files(m, input_type, output_vars, cond_type)
 
+    # Inline definition s.t. the dicts forecast_output and forecast_output_files are accessible
+    function write_forecast_outputs(vars::Vector{Symbol})
+        for var in vars
+            file = forecast_output_files[var]
+            jldopen(file, "w") do f
+                write(f, string(var), forecast_output[var])
+                println(" * Wrote $(basename(file))")
+            end
+        end
+    end
+
     # must re-run filter/smoother for conditional data in addition to explicit cases
-    if !isempty(intersect(output_vars, [:histstates, :histpseudo, :histshocks, :shockdecstates, :shockdecpseudo, :shockdecobs])) || cond_type in [:semi, :full]
+    hist_vars = [:histstates, :histpseudo, :histshocks]
+    shockdec_vars = [:shockdecstates, :shockdecpseudo, :shockdecobs]
+    filterandsmooth_vars = vcat(hist_vars, shockdec_vars)
+
+    if !isempty(intersect(output_vars, filterandsmooth_vars)) || cond_type in [:semi, :full]
 
         histstates, histshocks, histpseudo, kals = filterandsmooth(m, df, systems; cond_type = cond_type)
 
@@ -41,6 +56,8 @@ function forecast_one_new(m::AbstractModel, df::DataFrame;
             forecast_output[:histshocks] = histshocks
             forecast_output[:histpseudo] = histpseudo
         end            
+
+        write_forecast_outputs(hist_vars)
     end
 
     # For conditional data, use the end of the hist states as the initial state
@@ -49,7 +66,9 @@ function forecast_one_new(m::AbstractModel, df::DataFrame;
         states = [kal[:zend]::Vector{Float64} for kal in kals]
     end
 
-    if !isempty(intersect(output_vars, [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks]))
+    forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks]
+
+    if !isempty(intersect(output_vars, forecast_vars))
         forecaststates, forecastobs, forecastpseudo, forecastshocks =
             forecast(m, systems, states)
 
@@ -69,6 +88,8 @@ function forecast_one_new(m::AbstractModel, df::DataFrame;
             forecast_output[:forecastpseudo] = forecastpseudo
             forecast_output[:forecastobs]    = forecastobs
         end
+
+        write_forecast_outputs(forecast_vars)
     end
 
     if !isempty(intersect(output_vars, [:shockdecstates, :shockdecobs, :shockdecpseudo]))
@@ -78,14 +99,10 @@ function forecast_one_new(m::AbstractModel, df::DataFrame;
         forecast_output[:shockdecstates] = shockdecstates
         forecast_output[:shockdecpseudo] = shockdecpseudo
         forecast_output[:shockdecobs]    = shockdecobs
+
+        write_forecast_outputs(shockdec_vars)
     end
 
-    # Write output files
-    for (var,file) in forecast_output_files
-        jldopen(file, "w") do f
-            write(f, string(var), forecast_output[var])
-        end
-    end
 
     # Return only saved elements of dict
     filter!((k, v) -> k ∈ output_vars, forecast_output)
