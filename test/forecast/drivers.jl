@@ -1,4 +1,4 @@
-using DSGE, Base.Test, HDF5
+using DSGE, Base.Test, HDF5, ClusterManagers
 include("../util.jl")
 
 # Initialize model object
@@ -14,7 +14,7 @@ custom_settings = Dict{Symbol, Setting}(
 m = Model990(custom_settings = custom_settings, testing = true)
 
 # Add parallel workers
-my_procs = addprocs(10)
+my_procs = addprocs(5)
 @everywhere using DSGE
 
 # Run forecasts
@@ -28,7 +28,7 @@ for input_type in [:init, :mode, :full]
 
     # Call forecast_one once without timing
     df = load_data(m; verbose = :none)
-    forecast_one(m, df; input_type = :full, cond_type = :none, output_vars = output_vars)
+    forecast_one(m, df; input_type = :full, cond_type = :none, output_vars = output_vars, verbose = :none)
 
     for cond_type in [:none, :semi, :full]
 
@@ -38,7 +38,7 @@ for input_type in [:init, :mode, :full]
         forecast_output[:df] = load_data(m; cond_type=cond_type, try_disk=true, verbose=:none)
 
         @time new_forecast = forecast_one(m, forecast_output[:df]; input_type =
-            input_type, cond_type = cond_type, output_vars = output_vars)
+            input_type, cond_type = cond_type, output_vars = output_vars, verbose = :none)
         merge!(forecast_output, new_forecast)
 
         forecast_outputs[(cond_type, input_type)] = forecast_output
@@ -67,7 +67,7 @@ for input_type in [:init, :mode]
         df = forecast_outputs[(cond_type, input_type)][:df]
         data = df_to_matrix(m, df; cond_type = cond_type)
         sys  = compute_system(m)
-        exp_histstates, exp_histshocks, exp_histpseudo, kal = DSGE.filterandsmooth(m, data, sys)
+        exp_histstates, exp_histshocks, exp_histpseudo, zend = DSGE.filterandsmooth(m, data, sys)
 
         if cond_type in [:semi, :full]
             T = DSGE.subtract_quarters(date_forecast_start(m), date_prezlb_start(m))
@@ -84,7 +84,6 @@ for input_type in [:init, :mode]
         forecastpseudo = forecast_outputs[(cond_type, input_type)][:forecastpseudo][1]
         forecastshocks = forecast_outputs[(cond_type, input_type)][:forecastshocks][1]
 
-        zend = kal[:zend]
         shocks = zeros(Float64, n_shocks_exogenous(m), forecast_horizons(m))
         Z_pseudo = zeros(Float64, 12, n_states_augmented(m))
         D_pseudo = zeros(Float64, 12)
@@ -97,9 +96,9 @@ for input_type in [:init, :mode]
         exp_forecastshocks = forecast[:shocks]
 
         if cond_type in [:semi, :full]
-            exp_histobs = data[:, index_prezlb_start(m):end]
+            exp_histobs_cond = data[:, index_prezlb_start(m)+T:end]
             @test_matrix_approx_eq hcat(exp_histstates[:, T+1:end], exp_forecaststates) forecaststates
-            @test_matrix_approx_eq hcat(exp_histobs[:, T+1:end],    exp_forecastobs)    forecastobs
+            @test_matrix_approx_eq hcat(exp_histobs_cond,           exp_forecastobs)    forecastobs
             @test_matrix_approx_eq hcat(exp_histpseudo[:, T+1:end], exp_forecastpseudo) forecastpseudo
             @test_matrix_approx_eq hcat(exp_histshocks[:, T+1:end], exp_forecastshocks) forecastshocks
         else
