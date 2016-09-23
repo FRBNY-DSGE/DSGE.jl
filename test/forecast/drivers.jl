@@ -61,8 +61,8 @@ for input_type in [:init, :mode]
     for cond_type in [:none, :semi, :full]
 
         ## Historical states and shocks
-        histstates = forecast_outputs[(cond_type, input_type)][:histstates]
-        histshocks = forecast_outputs[(cond_type, input_type)][:histshocks]
+        histstates = forecast_outputs[(cond_type, input_type)][:histstates][1]
+        histshocks = forecast_outputs[(cond_type, input_type)][:histshocks][1]
 
         df = forecast_outputs[(cond_type, input_type)][:df]
         data = df_to_matrix(m, df; cond_type = cond_type)
@@ -79,18 +79,22 @@ for input_type in [:init, :mode]
         end            
 
         ## Forecasted states, observables, pseudos, and shocks
-        forecaststates = forecast_outputs[(cond_type, input_type)][:forecaststates]
-        forecastobs    = forecast_outputs[(cond_type, input_type)][:forecastobs]
-        forecastpseudo = forecast_outputs[(cond_type, input_type)][:forecastpseudo]
-        forecastshocks = forecast_outputs[(cond_type, input_type)][:forecastshocks]
+        forecaststates = forecast_outputs[(cond_type, input_type)][:forecaststates][1]
+        forecastobs    = forecast_outputs[(cond_type, input_type)][:forecastobs][1]
+        forecastpseudo = forecast_outputs[(cond_type, input_type)][:forecastpseudo][1]
+        forecastshocks = forecast_outputs[(cond_type, input_type)][:forecastshocks][1]
 
         zend = kal[:zend]
-        shocks   = zeros(Float64, n_shocks_exogenous(m), forecast_horizons(m))
+        shocks = zeros(Float64, n_shocks_exogenous(m), forecast_horizons(m))
         Z_pseudo = zeros(Float64, 12, n_states_augmented(m))
         D_pseudo = zeros(Float64, 12)
-        exp_forecaststates, exp_forecastobs, exp_forecastpseudo, exp_forecastshocks =
-            DSGE.compute_forecast(sys[:TTT], sys[:RRR], sys[:CCC], sys[:ZZ], sys[:DD],
-                                  Z_pseudo, D_pseudo, forecast_horizons(m), shocks, zend)
+        forecast = DSGE.compute_forecast(sys[:TTT], sys[:RRR], sys[:CCC], sys[:ZZ], sys[:DD], Z_pseudo, D_pseudo,
+                                    forecast_horizons(m), shocks, zend)
+
+        exp_forecaststates = forecast[:states]
+        exp_forecastobs    = forecast[:observables]
+        exp_forecastpseudo = forecast[:pseudo_observables]
+        exp_forecastshocks = forecast[:shocks]
 
         if cond_type in [:semi, :full]
             exp_histobs = data[:, index_prezlb_start(m):end]
@@ -106,9 +110,9 @@ for input_type in [:init, :mode]
         end
 
         ## Shock decompositions of states, pseudo-observables, and observables
-        shockdecstates = forecast_outputs[(cond_type, input_type)][:shockdecstates]
-        shockdecobs    = forecast_outputs[(cond_type, input_type)][:shockdecobs]
-        shockdecpseudo = forecast_outputs[(cond_type, input_type)][:shockdecpseudo]
+        shockdecstates = forecast_outputs[(cond_type, input_type)][:shockdecstates][1]
+        shockdecobs    = forecast_outputs[(cond_type, input_type)][:shockdecobs][1]
+        shockdecpseudo = forecast_outputs[(cond_type, input_type)][:shockdecpseudo][1]
 
         exp_shockdecstates, exp_shockdecobs, exp_shockdecpseudo =
             DSGE.compute_shock_decompositions(sys[:TTT], sys[:RRR], sys[:ZZ],

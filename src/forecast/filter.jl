@@ -209,11 +209,6 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     pseudo = [x[3]::Matrix{S} for x in out]
     zends  = [x[4]::Vector{S} for x in out]
 
-    # Splat vectors of matrices into 3-D arrays
-    states = cat(3, states...)
-    shocks = cat(3, shocks...)
-    pseudo = cat(3, pseudo...)
-
     return states, shocks, pseudo, zends
 end
 

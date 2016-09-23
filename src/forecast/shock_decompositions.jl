@@ -17,13 +17,13 @@ historical smoothed shocks.
 
 ### Outputs
 
-- `states`: 4-dimensional array of size `nstates` x `nperiods` x `nshocks` x
- `ndraws` consisting of state shock decompositions for each draw
-- `observables`: 4-dimensional array of size `nobs` x `nperiods` x `nshocks` x
- `ndraws` consisting of observable shock decompositions for each draw
-- `pseudo_observables`: 4-dimensional array of size `npseudo` x `nperiods` x
- `nshocks` x `ndraws` consisting of pseudo-observable shock decompositions for
- each draw
+-`states`: vector of length `ndraws`, whose elements are the `nstates` x
+ `nperiods` x `nshocks` matrices of state shock decompositions
+-`observables`: vector of length `ndraws`, whose elements are the `nobs` x
+ `nperiods` x `nshocks` matrices of observable shock decompositions
+-`pseudo_observables`: vector of length `ndraws`, whose elements are the
+ `npseudo` x `nperiods` x `nshocks` matrices of pseudo-observable shock
+ decompositions
 
 where `nperiods = hist_periods + forecast_horizon`.
 """
@@ -66,11 +66,6 @@ function shock_decompositions{T<:AbstractFloat}(m::AbstractModel,
     observables        = [shockdec[2]::Array{T, 3} for shockdec in shockdecs]
     pseudo_observables = [shockdec[3]::Array{T, 3} for shockdec in shockdecs]
 
-    # Splat vectors of 3-D arrays into 4-D arrays
-    states             = cat(4, states...)
-    observables        = cat(4, observables...)
-    pseudo_observables = cat(4, pseudo_observables...)
-
     return states, observables, pseudo_observables
 end
 
@@ -93,12 +88,12 @@ compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
 
 ### Outputs
 
-`compute_shock_decompositions` returns a 3-tuple of shock decompositions over
-the both the history and the forecast period, whose elements have sizes:
+`compute_shock_decompositions` returns a dictionary of shock decompositions over
+the both the history and the forecast period, with keys:
 
-- `:states`: `nstates` x `nperiods` x `nshocks`
-- `:observables`: `nobs` x `nperiods` x `nshocks`
-- `:pseudo_observables`: `npseudo` x `nperiods` x `nshocks`
+-`:states`: `nstates` x `nperiods` x `nshocks`
+-`:observables`: `nobservables` x `nperiods` x `nshocks`
+-`:pseudo_observables`: `npseudo` x `nperiods` x `nshocks`
 
 where `nperiods = hist_periods + forecast_horizon`.
 """

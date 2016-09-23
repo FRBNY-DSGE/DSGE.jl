@@ -290,10 +290,9 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     # Prepare forecast inputs
     systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
         cond_type = cond_type)
-    ndraws = length(systems)
 
     # Prepare forecast outputs
-    forecast_output = Dict{Symbol, Array{Float64}}()
+    forecast_output = Dict{Symbol, Vector{Array{Float64}}}()
     forecast_output_files = get_output_files(m, input_type, output_vars, cond_type)
 
     # must re-run filter/smoother for conditional data in addition to explicit cases
@@ -305,9 +304,9 @@ function forecast_one(m::AbstractModel, df::DataFrame;
         if cond_type in [:semi, :full]
             T = DSGE.subtract_quarters(date_forecast_start(m), date_prezlb_start(m))
 
-            forecast_output[:histstates] = histstates[:, 1:T, :]
-            forecast_output[:histshocks] = histshocks[:, 1:T, :]
-            forecast_output[:histpseudo] = histpseudo[:, 1:T, :]
+            forecast_output[:histstates] = [x[:, 1:T] for x in histstates]
+            forecast_output[:histshocks] = [x[:, 1:T] for x in histshocks]
+            forecast_output[:histpseudo] = [x[:, 1:T] for x in histpseudo]
         else
             forecast_output[:histstates] = histstates
             forecast_output[:histshocks] = histshocks
@@ -318,7 +317,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     # For conditional data, use the end of the hist states as the initial state
     # vector for the forecast
     if cond_type in [:semi, :full]
-        states = [kal[:zend]::Vector{Float64} for kal in kals]
+        states = convert(Vector{Vector{Float64}}, [kal[:zend] for kal in kals])
     end
 
     if !isempty(intersect(output_vars, [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks]))
@@ -329,12 +328,11 @@ function forecast_one(m::AbstractModel, df::DataFrame;
         if cond_type in [:semi, :full]
             T = DSGE.subtract_quarters(date_forecast_start(m), date_prezlb_start(m))
             histobs = df_to_matrix(m, df; cond_type = cond_type)[:, index_prezlb_start(m):end]
-            histobs = repeat(histobs, outer = [1, 1, ndraws])
-
-            forecast_output[:forecaststates] = cat(2, histstates[:, T+1:end, :], forecaststates)
-            forecast_output[:forecastshocks] = cat(2, histshocks[:, T+1:end, :], forecastshocks)
-            forecast_output[:forecastpseudo] = cat(2, histpseudo[:, T+1:end, :], forecastpseudo)
-            forecast_output[:forecastobs]    = cat(2, histobs[:,    T+1:end, :], forecastobs)
+            
+            forecast_output[:forecaststates] = [hcat(x[:, T+1:end], y) for (x, y) in zip(histstates, forecaststates)]
+            forecast_output[:forecastshocks] = [hcat(x[:, T+1:end], y) for (x, y) in zip(histshocks, forecastshocks)]
+            forecast_output[:forecastpseudo] = [hcat(x[:, T+1:end], y) for (x, y) in zip(histpseudo, forecastpseudo)]
+            forecast_output[:forecastobs]    = [hcat(histobs[:, T+1:end], y) for y in forecastobs]
         else
             forecast_output[:forecaststates] = forecaststates
             forecast_output[:forecastshocks] = forecastshocks
@@ -344,9 +342,7 @@ function forecast_one(m::AbstractModel, df::DataFrame;
     end
 
     if !isempty(intersect(output_vars, [:shockdecstates, :shockdecobs, :shockdecpseudo]))
-        histshocks = [histshocks[:, :, i]::Matrix{Float64} for i = 1:ndraws]
         shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, systems, histshocks)
-
         forecast_output[:shockdecstates] = shockdecstates
         forecast_output[:shockdecpseudo] = shockdecpseudo
         forecast_output[:shockdecobs]    = shockdecobs
