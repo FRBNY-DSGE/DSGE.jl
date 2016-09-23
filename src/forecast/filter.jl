@@ -200,21 +200,21 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         mapfcn = pmap
     else
         mapfcn = map
-    end    
+    end
     out = mapfcn(filterandsmooth, models, datas, syses, z0s, vz0s)
 
     # Unpack returned vector of tuples
     states = [x[1]::Matrix{S} for x in out]
     shocks = [x[2]::Matrix{S} for x in out]
     pseudo = [x[3]::Matrix{S} for x in out]
-    kals   = [x[4]::Kalman{S} for x in out]
+    zends  = [x[4]::Vector{S} for x in out]
 
     # Splat vectors of matrices into 3-D arrays
     states = cat(3, states...)
     shocks = cat(3, shocks...)
     pseudo = cat(3, pseudo...)
 
-    return states, shocks, pseudo, kals
+    return states, shocks, pseudo, zends
 end
 
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System{S},
@@ -260,5 +260,5 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
 
     pseudo = D_pseudo .+ Z_pseudo * states
 
-    return states, shocks, pseudo, kal
+    return states, shocks, pseudo, kal[:zend]
 end

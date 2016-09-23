@@ -55,7 +55,7 @@ function forecast_one_new(m::AbstractModel, df::DataFrame;
 
     if !isempty(intersect(output_vars, filterandsmooth_vars)) || cond_type in [:semi, :full]
 
-        histstates, histshocks, histpseudo, kals = filterandsmooth(m, df, systems; cond_type = cond_type)
+        histstates, histshocks, histpseudo, zends = filterandsmooth(m, df, systems; cond_type = cond_type)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
@@ -79,7 +79,7 @@ function forecast_one_new(m::AbstractModel, df::DataFrame;
     # For conditional data, use the end of the hist states as the initial state
     # vector for the forecast
     if cond_type in [:semi, :full]
-        states = [kal[:zend]::Vector{Float64} for kal in kals]
+        states = zends
     end
 
     forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks]
