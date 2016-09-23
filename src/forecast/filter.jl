@@ -202,7 +202,7 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         mapfcn = map
     end    
     out = mapfcn(filterandsmooth, models, datas, syses, z0s, vz0s)
-
+    
     # Unpack returned vector of tuples
     states = [x[1]::Matrix{S} for x in out]
     shocks = [x[2]::Matrix{S} for x in out]
@@ -261,7 +261,7 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
         
         D_pseudo .+ Z_pseudo * states
     else
-        Matrix()
+        Matrix{S}()
     end
     
     return states, shocks, pseudo, kal

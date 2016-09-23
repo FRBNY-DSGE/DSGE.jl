@@ -32,10 +32,14 @@ function shock_decompositions{T<:AbstractFloat}(m::AbstractModel,
 
     ndraws = length(syses)
 
-    # for now, we are ignoring pseudo-observables so these can be empty
-    Z_pseudo = zeros(T, 12, n_states_augmented(m))
-    D_pseudo = zeros(T, 12)
-
+    # Get pseudomeasurement matrices
+    Z_pseudo, D_pseudo = if forecast_pseudoobservables(m)
+        _, pseudo_mapping = pseudo_measurement(m)
+        pseudo_mapping.ZZ, pseudo_mapping.DD
+    else
+        Matrix{T}(), Vector{T}()
+    end
+    
     # retrieve settings for forecast
     horizon  = forecast_horizons(m)
     nshocks  = n_shocks_exogenous(m)
@@ -59,7 +63,7 @@ function shock_decompositions{T<:AbstractFloat}(m::AbstractModel,
 
     # Go to work!
     shockdecs = mapfcn(DSGE.compute_shock_decompositions, TTTs, RRRs, ZZs, DDs,
-        ZZps, DDps, horizons, histshocks)
+                       horizons, histshocks, ZZps, DDps)
 
     # Unpack returned vector of tuples
     states             = [shockdec[1]::Array{T, 3} for shockdec in shockdecs]
@@ -78,8 +82,9 @@ end
 """
 ```
 compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
-    C::Vector{S}, Z::Matrix{S}, D::Vector{S}, Z_pseudo::Matrix{S},
-    D_pseudo::Vector{S}, forecast_horizons::Int, histshocks::Matrix{S})
+    C::Vector{S}, Z::Matrix{S}, D::Vector{S}, forecast_horizons::Int,
+    histshocks::Matrix{S}, Z_pseudo::Matrix{S}=Matrix{S}(),
+    D_pseudo::Vector{S}=Vector{S}())
 ```
 
 ### Inputs
@@ -102,9 +107,12 @@ the both the history and the forecast period, whose elements have sizes:
 
 where `nperiods = hist_periods + forecast_horizon`.
 """
-function compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
-    R::Matrix{S}, Z::Matrix{S}, D::Vector{S}, Z_pseudo::Matrix{S},
-    D_pseudo::Vector{S}, forecast_horizons::Int, histshocks::Matrix{S})
+function compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
+                                                        Z::Matrix{S}, D::Vector{S},
+                                                        forecast_horizons::Int,
+                                                        histshocks::Matrix{S},
+                                                        Z_pseudo::Matrix{S},
+                                                        D_pseudo::Vector{S})
 
     if forecast_horizons <= 0
         throw(DomainError())
@@ -121,7 +129,7 @@ function compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
     states             = zeros(S, nstates,      nperiods, nshocks)
     observables        = zeros(S, nobservables, nperiods, nshocks)
     pseudo_observables = zeros(S, npseudo,      nperiods, nshocks)
-    
+   
     # Define our iteration function
     iterate(z_t1, ϵ_t) = T*z_t1 + R*ϵ_t
     z0 = zeros(S, nstates)
@@ -139,7 +147,10 @@ function compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
 
         # Apply observation and pseudo-observation equations
         observables[:, :, i]        = D        .+ Z        * states[:, :, i]
-        pseudo_observables[:, :, i] = D_pseudo .+ Z_pseudo * states[:, :, i]
+        pseudo_observables[:, :, i] = if !(isempty(Z_pseudo) || isempty(D_pseudo))
+            D_pseudo .+ Z_pseudo * states[:, :, i]
+        end
+
     end
     
     # Return shock decompositions

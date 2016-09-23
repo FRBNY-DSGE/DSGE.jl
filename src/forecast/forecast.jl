@@ -172,7 +172,11 @@ function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vecto
 
     # Apply observation and pseudo-observation equations
     observables        = D        .+ Z        * states
-    pseudo_observables = D_pseudo .+ Z_pseudo * states
+    pseudo_observables = if isempty(Z_pseudo) || isempty(D_pseudo)
+        Matrix{S}()
+    else
+        D_pseudo .+ Z_pseudo * states
+    end
     
     # Return a dictionary of forecasts
     return states, observables, pseudo_observables, shocks
@@ -180,7 +184,7 @@ end
 
 # Utility method to actually draw shocks
 function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vector{S}, 
-                                            Z::Matrix{S}, D::Vector{S},                                             
+                                            Z::Matrix{S}, D::Vector{S},  
                                             forecast_horizons::Int,
                                             dist::Distribution,
                                             z::Vector{S},
@@ -198,8 +202,8 @@ function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vecto
         shocks[:, t] = rand(dist)
     end
 
-    compute_forecast(T, R, C, Z, D, Z_pseudo, D_pseudo, forecast_horizons,
-        shocks, z)
+    compute_forecast(T, R, C, Z, D, forecast_horizons, shocks, z,
+                     Z_pseudo, D_pseudo)
 end
 
 # I'm imagining that a Forecast object could be returned from

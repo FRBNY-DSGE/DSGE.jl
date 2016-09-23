@@ -85,13 +85,13 @@ for input_type in [:init, :mode]
         forecastshocks = forecast_outputs[(cond_type, input_type)][:forecastshocks]
 
         zend = kal[:zend]
-		shocks = zeros(Float64, n_shocks_exogenous(m), forecast_horizons(m))
+	shocks = zeros(Float64, n_shocks_exogenous(m), forecast_horizons(m))
         _, pseudo_measur = pseudo_measurement(m)
         Z_pseudo = pseudo_measur.ZZ
         D_pseudo = pseudo_measur.DD        
         exp_forecaststates, exp_forecastobs, exp_forecastpseudo, exp_forecastshocks =
             DSGE.compute_forecast(sys[:TTT], sys[:RRR], sys[:CCC], sys[:ZZ], sys[:DD],
-                                  Z_pseudo, D_pseudo, forecast_horizons(m), shocks, zend)
+                                  forecast_horizons(m), shocks, zend, Z_pseudo, D_pseudo)
 
         if cond_type in [:semi, :full]
             exp_histobs = data[:, index_prezlb_start(m):end]
@@ -113,7 +113,8 @@ for input_type in [:init, :mode]
 
         exp_shockdecstates, exp_shockdecobs, exp_shockdecpseudo =
             DSGE.compute_shock_decompositions(sys[:TTT], sys[:RRR], sys[:ZZ],
-                                              sys[:DD], Z_pseudo, D_pseudo, forecast_horizons(m), exp_histshocks)
+                                              sys[:DD], forecast_horizons(m), exp_histshocks,
+                                              Z_pseudo, D_pseudo)
 
         @test_matrix_approx_eq exp_shockdecstates shockdecstates
         @test_matrix_approx_eq exp_shockdecobs    shockdecobs

@@ -315,9 +315,9 @@ function forecast_one(m::AbstractModel, df::DataFrame;
 
             forecast_output[:histstates] = histstates[:, 1:T, :]
             forecast_output[:histshocks] = histshocks[:, 1:T, :]
-			if :histpseudo in output_vars            
-				forecast_output[:histpseudo] = histpseudo[:, 1:T, :]
-			end	
+	    if :histpseudo in output_vars            
+		forecast_output[:histpseudo] = histpseudo[:, 1:T, :]
+	    end	
         else
             forecast_output[:histstates] = histstates
             forecast_output[:histshocks] = histshocks
@@ -340,16 +340,18 @@ function forecast_one(m::AbstractModel, df::DataFrame;
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
             T = DSGE.subtract_quarters(date_forecast_start(m), date_prezlb_start(m))
-            histobs = df_to_matrix(m, df; cond_type = cond_type)[:, index_prezlb_start(m):end]
-<<<<<<< HEAD
-            histobs = repeat(histobs, outer = [1, 1, ndraws])
 
+            # copy history of observables to make correct size
+            histobs = df_to_matrix(m, df; cond_type = cond_type)[:, index_prezlb_start(m):end]
+            histobs = repeat(histobs, outer = [1,1,ndraws])
+            
             forecast_output[:forecaststates] = cat(2, histstates[:, T+1:end, :], forecaststates)
             forecast_output[:forecastshocks] = cat(2, histshocks[:, T+1:end, :], forecastshocks)
             forecast_output[:forecastobs]    = cat(2, histobs[:,    T+1:end, :], forecastobs)
-			if :forecastpseudo in output_vars
-	            forecast_output[:forecastpseudo] = cat(2, histpseudo[:, T+1:end, :], forecastpseudo)
-			end
+
+	    if :forecastpseudo in output_vars
+	        forecast_output[:forecastpseudo] = cat(2, histpseudo[:, T+1:end, :], forecastpseudo)
+	    end
         else
             forecast_output[:forecaststates] = forecaststates
             forecast_output[:forecastshocks] = forecastshocks
