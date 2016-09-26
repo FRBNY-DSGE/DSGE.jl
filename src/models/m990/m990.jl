@@ -669,6 +669,10 @@ end
 
 function settings_m990!(m::Model990)
     default_settings!(m)
+
+    # Set start date from which to save shock decompositions
+    shockdec_startdate(m::Model990) = quartertodate("2007-Q1")
+    m <= Setting(:shockdec_startdate, shockdec_startdate)
 end
 
 """

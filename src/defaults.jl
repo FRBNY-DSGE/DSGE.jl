@@ -95,10 +95,10 @@ function default_settings!(m::AbstractModel)
         "Forecast thinning step (in addition to MH thinning step")
     settings[:forecast_enforce_zlb] = Setting(:forecast_enforce_zlb, true,
         "Enforce zero lower bound in forecast periods")
-    settings[:shockdec_startindex] = Setting(:shockdec_startindex, 190,
-        "Index of start of shock decomposition output period")
-    settings[:shockdec_endindex] = Setting(:shockdec_endindex, 50000,
-        "Index of end of shock decomposition output period")
+    settings[:shockdec_startdate] = Setting(:shockdec_startdate, date_presample_start,
+        "Function (of type AbstractModel -> Date) giving start of shock decomposition output period")
+    settings[:shockdec_enddate] = Setting(:shockdec_enddate, date_forecast_end,
+        "Function (of type AbstractModel -> Date) giving end of shock decomposition output period")
     settings[:shockdec_whichshocks] = Setting(:shockdec_whichshocks, :all,
         "Sets of shocks for which to conduct shock decomposition")
     
@@ -164,10 +164,10 @@ function default_test_settings!(m::AbstractModel)
         "End date of forecast period")
     test[:forecast_jstep] = Setting(:forecast_jstep, 1,
         "Forecast thinning step (in addition to MH thinning step")
-    test[:shockdec_startindex] = Setting(:shockdec_startindex, 2,
-        "Index of start of shock decomposition output period")
-    test[:shockdec_endindex] = Setting(:shockdec_endindex, 4,
-        "Index of end of shock decomposition output period")
+    test[:shockdec_startdate] = Setting(:shockdec_startdate, date_presample_start,
+        "Function (of type AbstractModel -> Date) giving start of shock decomposition output period")
+    test[:shockdec_enddate] = Setting(:shockdec_enddate, date_forecast_end,
+        "Function (of type AbstractModel -> Date) giving end of shock decomposition output period")
     test[:shockdec_whichshocks] = Setting(:shockdec_whichshocks, :all, #TODO
         "Sets of shocks for which to conduct shock decomposition")
 
