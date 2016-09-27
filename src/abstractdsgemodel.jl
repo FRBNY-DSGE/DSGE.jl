@@ -218,6 +218,7 @@ n_draws(m::AbstractModel)          =  round(Int,(n_mh_blocks(m) - n_mh_burn(m)) 
 
 # Interface for forecast settings
 date_forecast_start(m::AbstractModel)   = get_setting(m, :date_forecast_start)
+date_forecast_end(m::AbstractModel)     = get_setting(m, :date_forecast_end)
 forecast_tdist_df_val(m::AbstractModel) = get_setting(m, :forecast_tdist_df_val)
 forecast_tdist_shocks(m::AbstractModel) = get_setting(m, :forecast_tdist_shocks)
 forecast_kill_shocks(m::AbstractModel)  = get_setting(m, :forecast_kill_shocks)
