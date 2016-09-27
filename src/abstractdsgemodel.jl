@@ -129,7 +129,6 @@ date_presample_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :da
 date_prezlb_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_zlb_start) - Dates.Month(3))
 date_zlb_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_forecast_start) - Dates.Month(3))
 date_conditional_end(m::AbstractModel) = get_setting(m, :date_conditional_end)
-date_forecast_end(m::AbstractModel) = get_setting(m, :date_forecast_end)
 
 index_presample_start(m::AbstractModel) = 1
 index_prezlb_start(m::AbstractModel) = subtract_quarters(date_prezlb_start(m), date_presample_start(m)) + 1
@@ -224,8 +223,6 @@ forecast_tdist_shocks(m::AbstractModel) = get_setting(m, :forecast_tdist_shocks)
 forecast_kill_shocks(m::AbstractModel)  = get_setting(m, :forecast_kill_shocks)
 forecast_smoother(m::AbstractModel)     = get_setting(m, :forecast_smoother)
 forecast_input_file_overrides(m::AbstractModel) = get_setting(m, :forecast_input_file_overrides)
-shockdec_startdate(m::AbstractModel)    = get_setting(m, :shockdec_startdate)(m)
-shockdec_enddate(m::AbstractModel)      = get_setting(m, :shockdec_enddate)(m)
     
 function forecast_horizons(m::AbstractModel)
     t0 = get_setting(m, :date_forecast_start)
