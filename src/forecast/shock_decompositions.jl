@@ -63,7 +63,7 @@ function shock_decompositions{T<:AbstractFloat}(m::AbstractModel,
         end_index = subtract_quarters(get(shockdec_enddate(m)), date_prezlb_start(m)) + 1
         fill(end_index, ndraws)
     else
-        [(size(histshocks_draw, 2) + horizon)::Int for histshocks_draw in histshocks]
+        map(draw -> size(draw, 2) + horizon, histshocks)
     end
 
     # Go to work!
