@@ -189,7 +189,7 @@ function Model990(subspec::AbstractString="ss2";
     longrate_series    = [:FYCCZA]
     conditional_series = [:GDP, :GDPCTPI, :DFF, :BAA, :GS10, :PCEPILFE]
     # ois data taken care of in load_data
-    
+
     data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
                                               :fernald => fernald_series, :longrate => longrate_series,
                                               :conditional => conditional_series)
@@ -669,6 +669,8 @@ end
 
 function settings_m990!(m::Model990)
     default_settings!(m)
+
+    m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")))
 end
 
 """
@@ -806,7 +808,7 @@ function init_data_transforms!(m::Model990)
     for i = 1:n_anticipated_shocks(m)
         # FROM: OIS expectations of $i-period-ahead interest rates at a quarterly rate
         # TO:   Same
-        
+
         m.data_transforms[symbol("obs_nominalrate$i")] = function (levels)
             levels[:, symbol("ant$i")]
         end

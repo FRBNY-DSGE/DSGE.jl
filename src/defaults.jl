@@ -19,7 +19,7 @@ function default_settings!(m::AbstractModel)
     # Data settings for released and conditional data. Default behavior is to set vintage
     # of data to today's date.
     vint = Dates.format(now(), DSGE_DATE_FORMAT)
-    settings[:data_vintage] = Setting(:data_vintage, vint, true, 
+    settings[:data_vintage] = Setting(:data_vintage, vint, true,
         "vint", "Vintage of data")
     settings[:cond_vintage] = Setting(:cond_vintage, vint,
         "Vintage of conditional data")
@@ -95,13 +95,13 @@ function default_settings!(m::AbstractModel)
         "Forecast thinning step (in addition to MH thinning step")
     settings[:forecast_enforce_zlb] = Setting(:forecast_enforce_zlb, true,
         "Enforce zero lower bound in forecast periods")
-    settings[:shockdec_startindex] = Setting(:shockdec_startindex, 190,
-        "Index of start of shock decomposition output period")
-    settings[:shockdec_endindex] = Setting(:shockdec_endindex, 50000,
-        "Index of end of shock decomposition output period")
+    settings[:shockdec_startdate] = Setting(:shockdec_startdate, Nullable{Date}(),
+        "Date of start of shock decomposition output period. If null, then shockdec starts at date_prezlb_start")
+    settings[:shockdec_enddate] = Setting(:shockdec_enddate, Nullable{Date}(),
+        "Date of end of shock decomposition output period. If null, then shockdec ends at date_forecast_end")
     settings[:shockdec_whichshocks] = Setting(:shockdec_whichshocks, :all,
         "Sets of shocks for which to conduct shock decomposition")
-    
+
     return settings
 end
 
@@ -164,10 +164,6 @@ function default_test_settings!(m::AbstractModel)
         "End date of forecast period")
     test[:forecast_jstep] = Setting(:forecast_jstep, 1,
         "Forecast thinning step (in addition to MH thinning step")
-    test[:shockdec_startindex] = Setting(:shockdec_startindex, 2,
-        "Index of start of shock decomposition output period")
-    test[:shockdec_endindex] = Setting(:shockdec_endindex, 4,
-        "Index of end of shock decomposition output period")
     test[:shockdec_whichshocks] = Setting(:shockdec_whichshocks, :all, #TODO
         "Sets of shocks for which to conduct shock decomposition")
 
