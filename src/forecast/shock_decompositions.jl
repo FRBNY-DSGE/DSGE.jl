@@ -41,10 +41,10 @@ function shock_decompositions{T<:AbstractFloat}(m::AbstractModel,
     nshocks = n_shocks_exogenous(m)
 
     # Unpack everything for call to map/pmap
-    TTTs   = [s[:TTT] for s in syses]
-    RRRs   = [s[:RRR] for s in syses]
-    ZZs    = [s[:ZZ]  for s in syses]
-    DDs    = [s[:DD]  for s in syses]
+    TTTs     = map(s -> s[:TTT], syses)
+    RRRs     = map(s -> s[:RRR], syses)
+    ZZs      = map(s -> s[:ZZ],  syses)
+    DDs      = map(s -> s[:DD],  syses)
 
     # Prepare copies of these objects due to lack of parallel broadcast functionality
     ZZps     = fill(Z_pseudo, ndraws)

@@ -44,17 +44,17 @@ function forecast{T<:AbstractFloat}(m::AbstractModel, syses::Vector{System{T}},
     nshocks  = n_shocks_exogenous(m)
 
     # Unpack everything for call to map/pmap
-    TTTs     = [s[:TTT] for s in syses]
-    RRRs     = [s[:RRR] for s in syses]
-    CCCs     = [s[:CCC] for s in syses]
-    ZZs      = [s[:ZZ] for s in syses]
-    DDs      = [s[:DD] for s in syses]
+    TTTs     = map(s -> s[:TTT], syses)
+    RRRs     = map(s -> s[:RRR], syses)
+    CCCs     = map(s -> s[:CCC], syses)
+    ZZs      = map(s -> s[:ZZ],  syses)
+    DDs      = map(s -> s[:DD],  syses)
 
     # Prepare copies of these objects due to lack of parallel broadcast functionality
-    ZZps     = [Z_pseudo for i in 1:ndraws]
-    DDps     = [D_pseudo for i in 1:ndraws]
-    horizons = [horizon for i in 1:ndraws]
-        
+    ZZps     = fill(Z_pseudo, ndraws)
+    DDps     = fill(D_pseudo, ndraws)
+    horizons = fill(horizon,  ndraws)
+
     # set up distribution of shocks if not specified
     # For now, we construct a giant vector of distirbutions of shocks and pass
     # each to compute_forecast.
@@ -129,7 +129,7 @@ compute_forecast(T, R, C, Z, D, Z_pseudo, D_pseudo, forecast_horizons,
 -`:pseudo_observables`
 -`:shocks`
 """
-function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vector{S}, 
+function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vector{S},
                                             Z::Matrix{S}, D::Vector{S},
                                             Z_pseudo::Matrix{S}, D_pseudo::Vector{S},
                                             forecast_horizons::Int,
@@ -139,20 +139,20 @@ function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vecto
     if forecast_horizons <= 0
         throw(DomainError())
     end
-                                    
+
     # Setup
     nshocks      = size(R, 2)
     nstates      = size(T, 2)
     nobservables = size(Z, 1)
     npseudo      = size(Z_pseudo, 1)
     states       = zeros(nstates, forecast_horizons)
-    
+
     # Define our iteration function
     iterate(z_t1, ϵ_t) = C + T*z_t1 + R*ϵ_t
 
     # Iterate first period
     states[:, 1] = iterate(z, shocks[:, 1])
-    
+
     # Iterate remaining periods
     for t in 2:forecast_horizons
         states[:, t] = iterate(states[:, t-1], shocks[:, t])
@@ -161,7 +161,7 @@ function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vecto
     # Apply observation and pseudo-observation equations
     observables        = D        .+ Z        * states
     pseudo_observables = D_pseudo .+ Z_pseudo * states
-    
+
     # Return a dictionary of forecasts
     Dict{Symbol, Matrix{S}}(
         :states             => states,
@@ -171,8 +171,8 @@ function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vecto
 end
 
 # Utility method to actually draw shocks
-function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vector{S}, 
-                                            Z::Matrix{S}, D::Vector{S},          
+function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vector{S},
+                                            Z::Matrix{S}, D::Vector{S},
                                             Z_pseudo::Matrix{S}, D_pseudo::Vector{S},
                                             forecast_horizons::Int,
                                             dist::Distribution,
