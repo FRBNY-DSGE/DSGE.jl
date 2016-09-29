@@ -1,6 +1,7 @@
 julia 0.4
 Calculus
 DataStructures
+DistributedArrays
 Distributions
 FredData
 HDF5
