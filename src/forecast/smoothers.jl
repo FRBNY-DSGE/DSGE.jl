@@ -70,7 +70,7 @@ shorter by that number of columns (taken from the beginning).
 
 The state space model is defined as follows:
 ```
-y(t) = Z*α(t) + D             (state or transition equation) 
+y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
@@ -81,7 +81,7 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     # extract system matrices
     T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
     Q, Z, D = sys[:QQ], sys[:ZZ], sys[:DD]
-    
+
     # call actual Kalman smoother
     kalman_smoother(m, df, T, R, C, Q, Z, D, A0, P0, pred, vpred; cond_type =
         cond_type)
@@ -93,7 +93,7 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     # extract system matrices
     T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
     Q, Z, D = sys[:QQ], sys[:ZZ], sys[:DD]
-    
+
     # call actual Kalman smoother
     kalman_smoother(m, data, T, R, C, Q, Z, D, A0, P0, pred, vpred)
 end
@@ -105,7 +105,7 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
 
     # convert DataFrame to matrix
     data = df_to_matrix(m, df; cond_type = cond_type)
-    
+
     # call actual Kalman smoother
     kalman_smoother(m, data, T, R, C, Q, Z, D, A0, P0, pred, vpred)
 end
@@ -118,7 +118,7 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     Ny = size(data, 1)
     Nt = size(data, 2)
     Nz = size(T, 1)
-    
+
     # Check data is well-formed wrt model settings
     @assert Ny == n_observables(m)
     @assert Nt >= n_presample_periods(m) + n_prezlb_periods(m) + n_zlb_periods(m)
@@ -162,7 +162,7 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
                    index_zlb_start(m):Nt] # allows for conditional data
     alpha_hat = alpha_hat[:, period_inds]
     eta_hat   = eta_hat[:,   period_inds]
-    
+
     return alpha_hat, eta_hat
 end
 
@@ -221,7 +221,7 @@ Where:
 
 The state space model is defined as follows:
 ```
-y(t) = Z*α(t) + D             (state or transition equation) 
+y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
@@ -309,7 +309,7 @@ This program is a simulation smoother based on Durbin and Koopman's
 Analysis\" (Biometrika, 2002). The algorithm has been simplified for the
 case in which there is no measurement error, and the model matrices do
 not vary with time.
-    
+
 Unlike other simulation smoothers (for example, that of Carter and Kohn,
 1994), this method does not require separate draws for each period, draws
 of the state vectors, or even draws from a conditional distribution.
@@ -359,7 +359,7 @@ shorter by that number of columns (taken from the beginning).
 
 The state space model is defined as follows:
 ```
-y(t) = Z*α(t) + D             (state or transition equation) 
+y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
@@ -370,7 +370,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     # extract system matrices
     T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
     Q, Z, D = sys[:QQ], sys[:ZZ], sys[:DD]
-    
+
     # call actual Durbin-Koopman smoother
     durbin_koopman_smoother(m, df, T, R, C, Q, Z, D, A0, P0; cond_type =
         cond_type)
@@ -382,7 +382,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     # extract system matrices
     T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
     Q, Z, D = sys[:QQ], sys[:ZZ], sys[:DD]
-    
+
     # call actual Durbin-Koopman smoother
     durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0)
 end
@@ -394,7 +394,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
 
     # convert DataFrame to Matrix
     data = df_to_matrix(m, df; cond_type = cond_type)
-    
+
     # call actual simulation smoother
     durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0)
 end
@@ -408,7 +408,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     Nt = size(data, 2)
     Nz = size(T, 1)
     Ne = size(R, 2)
-    
+
     # Check data is well-formed wrt model settings
     @assert Ny == n_observables(m)
     @assert Nt >= n_presample_periods(m) + n_prezlb_periods(m) + n_zlb_periods(m)
@@ -416,11 +416,11 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     # Anticipated monetary policy shocks
     n_ant_shocks = n_anticipated_shocks(m)
     t_zlb_start  = index_zlb_start(m)
-   
+
     # Initialize matrices
     α_all_plus  = fill(NaN, Nz, Nt)
     YY_all_plus = fill(NaN, Ny, Nt)
-    
+
     # Draw initial state α_0+ and sequence of shocks η+
     U, E, V = svd(P0)
 
@@ -432,7 +432,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
         ap_t       = U * diagm(sqrt(E)) * randn(Nz, 1)
         η_all_plus = sqrt(Q) * randn(Ne, Nt)
     end
-    
+
     # Set n_ant_shocks shocks to 0 in pre-ZLB time periods
     if n_ant_shocks > 0
         # get the indices of the anticipated shocks in the m.exogenous_shocks
@@ -445,7 +445,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
         # set shocks to 0
         η_all_plus[shock_inds, period_inds] = 0
     end
-    
+
     # Produce "fake" states and observables (a+ and y+) by
     # iterating the state-space system forward
     for t = 1:Nt
@@ -456,7 +456,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
 
     # Replace fake data with NaNs wherever actual data has NaNs
     YY_all_plus[isnan(data)] = NaN
-    
+
     # Compute y* = y - y+ - D
     YY_star = data - YY_all_plus
 
@@ -467,13 +467,13 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
         # measurement equation for `YY_star` has no constant term
         k, _, _, R3 = kalman_filter_2part(m, YY_star, T, R, C, A0, P0;
             DD = zeros(size(D)), allout = true, include_presample = true)
-        
+
         k[:z0], k[:vz0], k[:pred], k[:vpred], R3[:TTT], R3[:RRR], R3[:CCC]
     else
         VVall = zeros(Ny+Nz,Ny+Nz)
         VVall[1:Nz,1:Nz] = R*Q*R'
-        
-        k = kalman_filter(m, YY_star, T, C, Z, D, VVall, A0, P0; lead = 0, allout = true)
+
+        k = kalman_filter(m, YY_star, T, C, Z, zeros(size(D)), VVall, A0, P0; lead = 0, allout = true)
 
         A0, P0, k[:pred], k[:vpred], T, R, C
     end
@@ -481,7 +481,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     ##### Step 2: Kalman smooth over everything
     α_hat_star, η_hat_star = kalman_smoother(m, YY_star, T, R, C, Q, Z,
         zeros(size(D)), A0, P0, pred, vpred)
-    
+
     # Compute draw (states and shocks)
     alpha_hat = α_all_plus[:, index_prezlb_start(m):end] + α_hat_star
     eta_hat   = η_all_plus[:, index_prezlb_start(m):end] + η_hat_star
