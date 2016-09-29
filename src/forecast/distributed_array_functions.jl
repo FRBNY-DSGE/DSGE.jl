@@ -1,0 +1,133 @@
+function filterandsmooth_dist{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+                                                syses::DArray{System{S}, 1},
+                                                z0::Vector{S} = Vector{S}(),
+                                                vz0::Matrix{S} = Matrix{S}();
+                                                lead::Int = 0,
+                                                my_procs::Vector{Int} = [myid()])
+
+    # Numbers of useful things
+    ndraws = length(syses)
+    nprocs = length(my_procs)
+    nperiods = size(data, 2) - n_presample_periods(m)
+
+    nstates = n_states_augmented(m)
+    npseudo = 12
+    nshocks = n_shocks_exogenous(m)
+
+    states_range = 1:nstates
+    shocks_range = (nstates + 1):(nstates + nshocks)
+    pseudo_range = (nstates + nshocks + 1):(nstates + nshocks + npseudo)
+    zend_range   = nstates + nshocks + npseudo + 1
+
+    # Broadcast models and data matrices
+    models = dfill(m,    (ndraws,), my_procs, [nprocs])
+    datas  = dfill(data, (ndraws,), my_procs, [nprocs])
+    z0s    = dfill(z0,   (ndraws,), my_procs, [nprocs])
+    vz0s   = dfill(vz0,  (ndraws,), my_procs, [nprocs])
+
+    # Construct distributed array of smoothed states, shocks, and pseudo-observables
+    out = DArray((ndraws, nstates + nshocks + npseudo + 1, nperiods), my_procs, [nprocs, 1, 1]) do I
+        localpart = zeros(map(length, I)...)
+        draw_inds = first(I)
+        ndraws_local = Int(ndraws / nprocs)
+
+        for i in draw_inds
+            states, shocks, pseudo, zend = filterandsmooth(models[i], datas[i], syses[i], z0s[i], vz0s[i])
+
+            i_local = mod(i-1, ndraws_local) + 1
+
+            localpart[i_local, states_range, :] = states
+            localpart[i_local, shocks_range, :] = shocks
+            localpart[i_local, pseudo_range, :] = pseudo
+            localpart[i_local, zend_range,   1:nstates] = zend
+        end
+        return localpart
+    end
+
+    # Index out SubArray for each smoothed type
+    return out[:, states_range, :], out[:, shocks_range, :], out[:, pseudo_range, :], out[:, zend_range, 1:nstates]
+end
+
+
+function forecast_dist{T<:AbstractFloat}(m::AbstractModel, syses::DArray{System{T}, 1},
+                                         initial_state_draws::DArray{Vector{T}, 1};
+                                         shock_distributions::Union{Distribution,Matrix{T}} = Matrix{T}(),
+                                         my_procs::Vector{Int} = [myid()])
+
+
+    # Numbers of useful things
+    ndraws = length(syses)
+    nprocs = length(my_procs)
+    horizon = forecast_horizons(m)
+
+    nstates = n_states_augmented(m)
+    nobs    = n_observables(m)
+    npseudo = 12
+    nshocks = n_shocks_exogenous(m)
+
+    states_range = 1:nstates
+    obs_range    = (nstates + 1):(nstates + nobs)
+    pseudo_range = (nstates + nobs + 1):(nstates + nobs + npseudo)
+    shocks_range = (nstates + nobs + npseudo + 1):(nstates + nobs + npseudo + nshocks)
+
+    # For now, we are ignoring pseudo-observables so these can be empty
+    Z_pseudo = zeros(T, npseudo, nstates)
+    D_pseudo = zeros(T, npseudo)
+
+    # Unpack system matrices
+    TTTs = DArray(I -> [s[:TTT]::Matrix{T} for s in syses[I...]], (ndraws,), my_procs, [nprocs])
+    RRRs = DArray(I -> [s[:RRR]::Matrix{T} for s in syses[I...]], (ndraws,), my_procs, [nprocs])
+    CCCs = DArray(I -> [s[:CCC]::Vector{T} for s in syses[I...]], (ndraws,), my_procs, [nprocs])
+    ZZs  = DArray(I -> [s[:ZZ]::Matrix{T} for s in syses[I...]],  (ndraws,), my_procs, [nprocs])
+    DDs  = DArray(I -> [s[:DD]::Vector{T} for s in syses[I...]],  (ndraws,), my_procs, [nprocs])
+    ZZps = dfill(Z_pseudo,                                        (ndraws,), my_procs, [nprocs])
+    DDps = dfill(D_pseudo,                                        (ndraws,), my_procs, [nprocs])
+
+    # set up distribution of shocks if not specified
+    # For now, we construct a giant vector of distirbutions of shocks and pass
+    # each to compute_forecast.
+    #
+    # TODO: refactor so that compute_forecast
+    # creates its own DegenerateMvNormal based on passing the QQ
+    # matrix (which has already been computed/is taking up space)
+    # rather than having to copy each Distribution across nodes. This will also be much more
+    # space-efficient when forecast_kill_shocks is true.
+
+    shock_distributions = if isempty(shock_distributions)
+        if forecast_kill_shocks(m)
+            dfill(zeros(nshocks, horizon), (ndraws,), my_procs, [nprocs])
+        else
+            # use t-distributed shocks
+            if forecast_tdist_shocks(m)
+                dfill(Distributions.TDist(forecast_tdist_df_val(m)), (ndraws,), my_procs, [nprocs])
+            # use normally distributed shocks
+            else
+                DArray(I -> [DSGE.DegenerateMvNormal(zeros(nshocks), sqrt(s[:QQ])) for s in syses[I...]],
+                       (ndraws,), my_procs, [nprocs])
+            end
+        end
+    end
+
+    # Construct distributed array of forecast outputs
+    out = DArray((ndraws, nstates + nobs + npseudo + nshocks, horizon), my_procs, [nprocs, 1, 1]) do I
+        localpart = zeros(map(length, I)...)
+        draw_inds = first(I)
+        ndraws_local = Int(ndraws / nprocs)
+
+        for i in draw_inds
+            dict = DSGE.compute_forecast(TTTs[i], RRRs[i], CCCs[i], ZZs[i], DDs[i], ZZps[i], DDps[i],
+                       horizon, shock_distributions[i], initial_state_draws[i])
+
+            i_local = mod(i-1, ndraws_local) + 1
+
+            localpart[i_local, states_range, :] = dict[:states]
+            localpart[i_local, obs_range,    :] = dict[:observables]
+            localpart[i_local, pseudo_range, :] = dict[:pseudo_observables]
+            localpart[i_local, shocks_range, :] = dict[:shocks]
+        end
+        return localpart
+    end
+
+    # Index out SubArray for each forecast type
+    return out[:, states_range, :], out[:, obs_range, :], out[:, pseudo_range, :], out[:, shocks_range, :]
+end
