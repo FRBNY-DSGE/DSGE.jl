@@ -1,7 +1,7 @@
-function filterandsmooth_dist{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T},
-                                                syses::DArray{System{T}, 1},
-                                                z0::Vector{T} = Vector{T}(),
-                                                vz0::Matrix{T} = Matrix{T}();
+function filterandsmooth_dist{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+                                                syses::DArray{System{S}, 1},
+                                                z0::Vector{S} = Vector{S}(),
+                                                vz0::Matrix{S} = Matrix{S}();
                                                 lead::Int = 0,
                                                 my_procs::Vector{Int} = [myid()])
 
@@ -25,15 +25,6 @@ function filterandsmooth_dist{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T
     z0s    = dfill(z0,   (ndraws,), my_procs, [nprocs])
     vz0s   = dfill(vz0,  (ndraws,), my_procs, [nprocs])
 
-    # Unpack system matrices
-    TTTs = DArray(I -> [s[:TTT]::Matrix{T} for s in syses[I...]], (ndraws,), my_procs, [nprocs])
-    RRRs = DArray(I -> [s[:RRR]::Matrix{T} for s in syses[I...]], (ndraws,), my_procs, [nprocs])
-    CCCs = DArray(I -> [s[:CCC]::Vector{T} for s in syses[I...]], (ndraws,), my_procs, [nprocs])
-    QQs  = DArray(I -> [s[:QQ]::Matrix{T} for s in syses[I...]],  (ndraws,), my_procs, [nprocs])
-    ZZs  = DArray(I -> [s[:ZZ]::Matrix{T} for s in syses[I...]],  (ndraws,), my_procs, [nprocs])
-    DDs  = DArray(I -> [s[:DD]::Vector{T} for s in syses[I...]],  (ndraws,), my_procs, [nprocs])
-    VValls = DArray(I -> [s[:VVall]::Matrix{T} for s in syses[I...]],  (ndraws,), my_procs, [nprocs])
-
     # Construct distributed array of smoothed states, shocks, and pseudo-observables
     out = DArray((ndraws, nstates + nshocks + npseudo + 1, nperiods), my_procs, [nprocs, 1, 1]) do I
         localpart = zeros(map(length, I)...)
@@ -41,8 +32,7 @@ function filterandsmooth_dist{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T
         ndraws_local = Int(ndraws / nprocs)
 
         for i in draw_inds
-            states, shocks, pseudo, zend = filterandsmooth(models[i], datas[i], TTTs[i], RRRs[i], CCCs[i],
-                                               QQs[i], ZZs[i], DDs[i], VValls[i], z0s[i], vz0s[i])
+            states, shocks, pseudo, zend = filterandsmooth(models[i], datas[i], syses[i], z0s[i], vz0s[i])
 
             i_local = mod(i-1, ndraws_local) + 1
 
