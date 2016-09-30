@@ -187,7 +187,7 @@ function Model990(subspec::AbstractString="ss2")
     fernald_series     = [:TFPJQ, :TFPKQ]
     longrate_series    = [:FYCZZA]
     # ois data taken care of in load_data
-    
+
     data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
                                               :fernald => fernald_series, :longrate => longrate_series)
 
@@ -575,12 +575,19 @@ function steadystate!(m::Model990)
     # FINANCIAL FRICTIONS ADDITIONS
     # solve for σ_ω_star and zω_star
     zω_star = quantile(Normal(), m[:Fω].scaledvalue)
+
     σ_ω_star = SIGWSTAR_ZERO
     try
         σ_ω_star = fzero(sigma -> ζ_spb_fn(zω_star, sigma, m[:spr]) - m[:ζ_spb], 0.5)
-    catch
+    catch ex
         σ_ω_star = SIGWSTAR_ZERO
+        if !isa(ex, ConvergenceFailed)
+            rethrow(ex)
+        else
+            σ_ω_star = SIGWSTAR_ZERO
+        end
     end
+
     # evaluate ωbarstar
     ωbarstar = ω_fn(zω_star, σ_ω_star)
 
@@ -787,7 +794,7 @@ function init_data_transforms!(m::Model990)
     for i = 1:n_anticipated_shocks(m)
         # FROM: OIS expectations of $i-period-ahead interest rates at a quarterly rate
         # TO:   Same
-        
+
         m.data_transforms[symbol("obs_ois$i")] = function (levels)
             levels[:, symbol("ant$i")]
         end

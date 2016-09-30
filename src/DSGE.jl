@@ -1,14 +1,15 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-    using Distributions, Roots.fzero, HDF5
+    using Distributions, HDF5
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using FredData, DataFrames, Base.Dates
     using QuantEcon: solve_discrete_lyapunov
     import Calculus
     import Optim
     using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
-    
+    using Roots: fzero, ConvergenceFailed
+
     export
 
         # distributions_ext.jl
@@ -52,7 +53,7 @@ module DSGE
         # data/
         load_data, load_data_levels, load_fred_data, transform_data, save_data,
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
-        hpadjust, oneqtrpctchange, annualtoquarter 
+        hpadjust, oneqtrpctchange, annualtoquarter
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
