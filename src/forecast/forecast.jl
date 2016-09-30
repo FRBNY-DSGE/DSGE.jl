@@ -129,6 +129,26 @@ compute_forecast(T, R, C, Z, D, Z_pseudo, D_pseudo, forecast_horizons,
 -`:pseudo_observables`
 -`:shocks`
 """
+function compute_forecast{S<:AbstractFloat}(sys::System{S},
+                                            forecast_horizons::Int,
+                                            shocks::Matrix{S},
+                                            z::Vector{S})
+    TTT = sys[:TTT]
+    RRR = sys[:RRR]
+    CCC = sys[:CCC]
+    ZZ  = sys[:ZZ]
+    DD  = sys[:DD]
+
+    # for now, we are ignoring pseudo-observables so these can be empty
+    nstates = size(TTT, 1)
+    npseudo = 12
+
+    ZZp = zeros(S, npseudo, nstates)
+    DDp = zeros(S, npseudo)
+
+    compute_forecast(TTT, RRR, CCC, ZZ, DD, ZZp, DDp, forecast_horizons, shocks, z)
+end
+
 function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vector{S},
                                             Z::Matrix{S}, D::Vector{S},
                                             Z_pseudo::Matrix{S}, D_pseudo::Vector{S},
@@ -171,6 +191,26 @@ function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vecto
 end
 
 # Utility method to actually draw shocks
+function compute_forecast{S<:AbstractFloat}(sys::System{S},
+                                            forecast_horizons::Int,
+                                            dist::Distribution,
+                                            z::Vector{S})
+    TTT = sys[:TTT]
+    RRR = sys[:RRR]
+    CCC = sys[:CCC]
+    ZZ  = sys[:ZZ]
+    DD  = sys[:DD]
+
+    # for now, we are ignoring pseudo-observables so these can be empty
+    nstates = size(TTT, 1)
+    npseudo = 12
+
+    ZZp = zeros(S, npseudo, nstates)
+    DDp = zeros(S, npseudo)
+
+    compute_forecast(TTT, RRR, CCC, ZZ, DD, ZZp, DDp, forecast_horizons, dist, z)
+end
+
 function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vector{S},
                                             Z::Matrix{S}, D::Vector{S},
                                             Z_pseudo::Matrix{S}, D_pseudo::Vector{S},

@@ -116,6 +116,26 @@ compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
 
 where `nperiods` is `end_index - start_index + 1`.
 """
+function compute_shock_decompositions{S<:AbstractFloat}(sys::System{S},
+    forecast_horizons::Int, histshocks::Matrix{S},
+    start_index::Int, end_index::Int)
+
+    TTT = sys[:TTT]
+    RRR = sys[:RRR]
+    ZZ  = sys[:ZZ]
+    DD  = sys[:DD]
+
+    # for now, we are ignoring pseudo-observables so these can be empty
+    nstates = size(TTT, 1)
+    npseudo = 12
+
+    ZZp = zeros(S, npseudo, nstates)
+    DDp = zeros(S, npseudo)
+
+    compute_shock_decompositions(TTT, RRR, ZZ, DD, ZZp, DDp,
+        forecast_horizons, histshocks, start_index, end_index)
+end
+
 function compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
     R::Matrix{S}, Z::Matrix{S}, D::Vector{S}, Z_pseudo::Matrix{S},
     D_pseudo::Vector{S}, forecast_horizons::Int, histshocks::Matrix{S},
