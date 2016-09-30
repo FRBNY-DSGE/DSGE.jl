@@ -54,8 +54,14 @@ function filterandsmooth_dist{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T
         return localpart
     end
 
+    # Convert SubArrays to DArrays and return
+    states = convert(DArray, out[1:ndraws, states_range, 1:nperiods])
+    shocks = convert(DArray, out[1:ndraws, shocks_range, 1:nperiods])
+    pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods])
+    zend   = convert(DArray, out[1:ndraws, zend_range,   1:nstates])
+
     # Index out SubArray for each smoothed type
-    return out[:, states_range, :], out[:, shocks_range, :], out[:, pseudo_range, :], out[:, zend_range, 1:nstates]
+    return states, shocks, pseudo, zend
 end
 
 
@@ -138,6 +144,12 @@ function forecast_dist{T<:AbstractFloat}(m::AbstractModel, syses::DArray{System{
         return localpart
     end
 
-    # Index out SubArray for each forecast type
-    return out[:, states_range, :], out[:, obs_range, :], out[:, pseudo_range, :], out[:, shocks_range, :]
+    # Convert SubArrays to DArrays and return
+    states = convert(DArray, out[1:ndraws, states_range, 1:horizon])
+    obs    = convert(DArray, out[1:ndraws, obs_range,    1:horizon])
+    pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:horizon])
+    shocks = convert(DArray, out[1:ndraws, shocks_range, 1:horizon])
+
+    return states, obs, pseudo, shocks
+end
 end
