@@ -19,7 +19,7 @@ filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     Matrix{S}(); lead::Int = 0, allout::Bool = false, include_presample::Bool =
     true)
 ```
-    
+
 Computes and returns the filtered values of states for every state-space system in `syses`.
 
 ### Inputs
@@ -52,8 +52,8 @@ function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, syses::Vector
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                   cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
                                   include_presample::Bool = true)
-    
-    # Convert the DataFrame to a data matrix without altering the original dataframe  
+
+    # Convert the DataFrame to a data matrix without altering the original dataframe
     data = df_to_matrix(m, df; cond_type = cond_type)
     filter(m, data, syses, z0, vz0; lead = lead, allout = allout, include_presample = include_presample)
 end
@@ -65,7 +65,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vect
     # numbers of useful things
     ndraws = size(syses, 1)
 
-    # Broadcast models and data matrices 
+    # Broadcast models and data matrices
     models = fill(m, ndraws)
     datas = fill(data, ndraws)
     z0s = fill(z0, ndraws)
@@ -80,16 +80,16 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vect
     else
         fill(ExcludePresample(), ndraws)
     end
-    
+
     # Call filter over all draws
     if use_parallel_workers(m) && nworkers() > 1
         mapfcn = pmap
     else
         mapfcn = map
-    end    
+    end
 
     kals = mapfcn(DSGE.tricky_filter, allouts, include_presamples, models, datas, syses, z0s, vz0s)
-    
+
     return [kal::Kalman{S} for kal in kals]
 end
 
@@ -97,15 +97,15 @@ tricky_filter(::AllOut, ::IncludePresample, m::AbstractModel, data::Matrix, sys:
     filter(m, data, sys, z0, vz0; allout = true, include_presample = true)
 tricky_filter(::AllOut, ::ExcludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) =
     filter(m, data, sys, z0, vz0; allout = true, include_presample = false)
-tricky_filter(::MinimumOut, ::IncludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) = 
+tricky_filter(::MinimumOut, ::IncludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) =
     filter(m, data, sys, z0, vz0; allout = false, include_presample = true)
-tricky_filter(::MinimumOut, ::ExcludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) = 
+tricky_filter(::MinimumOut, ::ExcludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) =
     filter(m, data, sys, z0, vz0; allout = false, include_presample = false)
-    
+
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System{S},
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                   lead::Int = 0, allout::Bool = false, include_presample::Bool = true)
-    
+
     # pull out the elements of sys
     TTT    = sys[:TTT]
     RRR    = sys[:RRR]
@@ -143,7 +143,7 @@ filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     Matrix{S}(); lead::Int = 0, allout::Bool = false, include_presample::Bool =
     true)
 ```
-    
+
 Computes and returns the smoothed states, shocks, and pseudo-observables, as
 well as the Kalman filter outputs, for every state-space system in `syses`.
 
@@ -189,12 +189,12 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     # numbers of useful things
     ndraws = length(syses)
 
-    # Broadcast models and data matrices 
+    # Broadcast models and data matrices
     models = fill(m, ndraws)
     datas = fill(data, ndraws)
     z0s = fill(z0, ndraws)
     vz0s = fill(vz0, ndraws)
-    
+
     # Call filter over all draws
     if use_parallel_workers(m) && nworkers() > 1
         mapfcn = pmap
@@ -215,9 +215,7 @@ end
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System{S},
                                            z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                            lead::Int = 0)
-    ## 1. Filter
 
-    # pull out the elements of sys
     TTT   = sys[:TTT]
     RRR   = sys[:RRR]
     CCC   = sys[:CCC]
@@ -225,6 +223,16 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
     ZZ    = sys[:ZZ]
     DD    = sys[:DD]
     VVall = sys[:VVall]
+
+    filterandsmooth(m, data, TTT, RRR, CCC, QQ, ZZ, DD, VVall, z0, vz0; lead = lead)
+end
+
+function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+                                           TTT::Matrix{S}, RRR::Matrix{S}, CCC::Vector{S},
+                                           QQ::Matrix{S}, ZZ::Matrix{S}, DD::Vector{S}, VVall::Matrix{S},
+                                           z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
+                                           lead::Int = 0)
+    ## 1. Filter
 
     # Call the appropriate version of the Kalman filter
     if n_anticipated_shocks(m) > 0
@@ -242,9 +250,11 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sy
     ## 2. Smooth
 
     states, shocks = if forecast_smoother(m) == :kalman
-        kalman_smoother(m, data, sys, kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+        kalman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD,
+                        kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
     elseif forecast_smoother(m) == :durbin_koopman
-        durbin_koopman_smoother(m, data, sys, kal[:z0], kal[:vz0])
+        durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD,
+                                kal[:z0], kal[:vz0])
     end
 
     ## 3. Map smoothed states to pseudo-observables
