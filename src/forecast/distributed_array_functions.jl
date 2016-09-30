@@ -76,19 +76,6 @@ function forecast_dist{T<:AbstractFloat}(m::AbstractModel, syses::DArray{System{
     pseudo_range = (nstates + nobs + 1):(nstates + nobs + npseudo)
     shocks_range = (nstates + nobs + npseudo + 1):(nstates + nobs + npseudo + nshocks)
 
-    # For now, we are ignoring pseudo-observables so these can be empty
-    Z_pseudo = zeros(T, npseudo, nstates)
-    D_pseudo = zeros(T, npseudo)
-
-    # Unpack system matrices
-    TTTs = DArray(I -> [s[:TTT]::Matrix{T} for s in syses[I...]], (ndraws,), my_procs, [nprocs])
-    RRRs = DArray(I -> [s[:RRR]::Matrix{T} for s in syses[I...]], (ndraws,), my_procs, [nprocs])
-    CCCs = DArray(I -> [s[:CCC]::Vector{T} for s in syses[I...]], (ndraws,), my_procs, [nprocs])
-    ZZs  = DArray(I -> [s[:ZZ]::Matrix{T} for s in syses[I...]],  (ndraws,), my_procs, [nprocs])
-    DDs  = DArray(I -> [s[:DD]::Vector{T} for s in syses[I...]],  (ndraws,), my_procs, [nprocs])
-    ZZps = dfill(Z_pseudo,                                        (ndraws,), my_procs, [nprocs])
-    DDps = dfill(D_pseudo,                                        (ndraws,), my_procs, [nprocs])
-
     # set up distribution of shocks if not specified
     # For now, we construct a giant vector of distirbutions of shocks and pass
     # each to compute_forecast.
@@ -121,8 +108,7 @@ function forecast_dist{T<:AbstractFloat}(m::AbstractModel, syses::DArray{System{
         ndraws_local = Int(ndraws / nprocs)
 
         for i in draw_inds
-            dict = DSGE.compute_forecast(TTTs[i], RRRs[i], CCCs[i], ZZs[i], DDs[i], ZZps[i], DDps[i],
-                       horizon, shock_distributions[i], initial_state_draws[i])
+            dict = DSGE.compute_forecast(syses[i], horizon, shock_distributions[i], initial_state_draws[i])
 
             i_local = mod(i-1, ndraws_local) + 1
 
@@ -145,7 +131,8 @@ end
 
 
 function shock_decompositions_dist{T<:AbstractFloat}(m::AbstractModel,
-    syses::DArray{System{T}, 1}, histshocks::DArray{T, 3})
+    syses::DArray{System{T}, 1}, histshocks::DArray{T, 3};
+    my_procs::Vector{Int} = [myid()])
 
     # Numbers of useful things
     ndraws = length(syses)
@@ -160,18 +147,6 @@ function shock_decompositions_dist{T<:AbstractFloat}(m::AbstractModel,
     states_range = 1:nstates
     obs_range    = (nstates + 1):(nstates + nobs)
     pseudo_range = (nstates + nobs + 1):(nstates + nobs + npseudo)
-
-    # for now, we are ignoring pseudo-observables so these can be empty
-    Z_pseudo = zeros(T, npseudo, nstates)
-    D_pseudo = zeros(T, npseudo)
-
-    # Unpack system matrices
-    TTTs = DArray(I -> [s[:TTT]::Matrix{T} for s in syses[I...]], (ndraws,), my_procs, [nprocs])
-    RRRs = DArray(I -> [s[:RRR]::Matrix{T} for s in syses[I...]], (ndraws,), my_procs, [nprocs])
-    ZZs  = DArray(I -> [s[:ZZ]::Matrix{T} for s in syses[I...]],  (ndraws,), my_procs, [nprocs])
-    DDs  = DArray(I -> [s[:DD]::Vector{T} for s in syses[I...]],  (ndraws,), my_procs, [nprocs])
-    ZZps = dfill(Z_pseudo,                                        (ndraws,), my_procs, [nprocs])
-    DDps = dfill(D_pseudo,                                        (ndraws,), my_procs, [nprocs])
 
     # Determine periods for which to return shock decompositions
     start_ind = if !isnull(shockdec_startdate(m))
@@ -195,8 +170,8 @@ function shock_decompositions_dist{T<:AbstractFloat}(m::AbstractModel,
         ndraws_local = Int(ndraws / nprocs)
 
         for i in draw_inds
-            states, obs, pseudo = DSGE.compute_shock_decompositions(TTTs[i], RRRs[i], ZZs[i], DDs[i],
-                       ZZps[i], DDps[i], horizon, convert(Array, slice(histshocks, i, :, :)), start_ind, end_ind)
+            states, obs, pseudo = DSGE.compute_shock_decompositions(syses[i], horizon,
+                convert(Array, slice(histshocks, i, :, :)), start_ind, end_ind)
 
             i_local = mod(i-1, ndraws_local) + 1
 
