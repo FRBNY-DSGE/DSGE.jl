@@ -152,4 +152,75 @@ function forecast_dist{T<:AbstractFloat}(m::AbstractModel, syses::DArray{System{
 
     return states, obs, pseudo, shocks
 end
+
+
+function shock_decompositions_dist{T<:AbstractFloat}(m::AbstractModel,
+    syses::DArray{System{T}, 1}, histshocks::DArray{T, 3})
+
+    # Numbers of useful things
+    ndraws = length(syses)
+    nprocs = length(my_procs)
+    horizon = forecast_horizons(m)
+
+    nstates = n_states_augmented(m)
+    nobs    = n_observables(m)
+    npseudo = 12
+    nshocks = n_shocks_exogenous(m)
+
+    states_range = 1:nstates
+    obs_range    = (nstates + 1):(nstates + nobs)
+    pseudo_range = (nstates + nobs + 1):(nstates + nobs + npseudo)
+
+    # for now, we are ignoring pseudo-observables so these can be empty
+    Z_pseudo = zeros(T, npseudo, nstates)
+    D_pseudo = zeros(T, npseudo)
+
+    # Unpack system matrices
+    TTTs = DArray(I -> [s[:TTT]::Matrix{T} for s in syses[I...]], (ndraws,), my_procs, [nprocs])
+    RRRs = DArray(I -> [s[:RRR]::Matrix{T} for s in syses[I...]], (ndraws,), my_procs, [nprocs])
+    ZZs  = DArray(I -> [s[:ZZ]::Matrix{T} for s in syses[I...]],  (ndraws,), my_procs, [nprocs])
+    DDs  = DArray(I -> [s[:DD]::Vector{T} for s in syses[I...]],  (ndraws,), my_procs, [nprocs])
+    ZZps = dfill(Z_pseudo,                                        (ndraws,), my_procs, [nprocs])
+    DDps = dfill(D_pseudo,                                        (ndraws,), my_procs, [nprocs])
+
+    # Determine periods for which to return shock decompositions
+    start_ind = if !isnull(shockdec_startdate(m))
+        DSGE.subtract_quarters(get(shockdec_startdate(m)), date_prezlb_start(m)) + 1
+    else
+        1
+    end
+
+    end_ind = if !isnull(shockdec_enddate(m))
+        DSGE.subtract_quarters(get(shockdec_enddate(m)), date_prezlb_start(m)) + 1
+    else
+        size(histshocks, 3) + horizon
+    end
+
+    nperiods = end_ind - start_ind + 1
+
+    # Construct distributed array of shock decompositions
+    out = DArray((ndraws, nstates + nobs + npseudo, nperiods, nshocks), my_procs, [nprocs, 1, 1, 1]) do I
+        localpart = zeros(map(length, I)...)
+        draw_inds = first(I)
+        ndraws_local = Int(ndraws / nprocs)
+
+        for i in draw_inds
+            states, obs, pseudo = DSGE.compute_shock_decompositions(TTTs[i], RRRs[i], ZZs[i], DDs[i],
+                       ZZps[i], DDps[i], horizon, convert(Array, slice(histshocks, i, :, :)), start_ind, end_ind)
+
+            i_local = mod(i-1, ndraws_local) + 1
+
+            localpart[i_local, states_range, :, :] = states
+            localpart[i_local, obs_range,    :, :] = obs
+            localpart[i_local, pseudo_range, :, :] = pseudo
+        end
+        return localpart
+    end
+
+    # Convert SubArrays to DArrays and return
+    states = convert(DArray, out[1:ndraws, states_range, 1:nperiods, 1:nshocks])
+    obs    = convert(DArray, out[1:ndraws, obs_range,    1:nperiods, 1:nshocks])
+    pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods, 1:nshocks])
+
+    return states, obs, pseudo
 end
