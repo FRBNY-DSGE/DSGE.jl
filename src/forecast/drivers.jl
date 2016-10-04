@@ -304,6 +304,11 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     ### 1. Setup
 
+    # Use only one process for a single draw
+    if input_type in [:init, :mode, :mean]
+        my_procs = [myid()]
+    end
+
     # Prepare forecast inputs
     systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
         cond_type = cond_type, my_procs = my_procs)
