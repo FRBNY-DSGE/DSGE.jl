@@ -28,32 +28,25 @@ matrix of shocks or a distribution of shocks
 -`shocks`: vector of length `ndraws`, whose elements are the `npseudo` x
  `horizon` matrices of shock innovations
 """
-function forecast{T<:AbstractFloat}(m::AbstractModel, syses::Vector{System{T}},
-                                    initial_state_draws::Vector{Vector{T}};
-                                    shock_distributions::Union{Distribution,
-                                    Matrix{T}} = Matrix{T}())
+function forecast{T<:AbstractFloat}(m::AbstractModel,
+    syses::DArray{System{T}, 1}, initial_state_draws::DArray{Vector{T}, 1};
+    shock_distributions::Union{Distribution,Matrix{T}} = Matrix{T}(),
+    my_procs::Vector{Int} = [myid()])
 
+    # Numbers of useful things
     ndraws = length(syses)
+    nprocs = length(my_procs)
+    horizon = forecast_horizons(m)
 
-    # for now, we are ignoring pseudo-observables so these can be empty
-    Z_pseudo = zeros(T, 12, n_states_augmented(m))
-    D_pseudo = zeros(T, 12)
+    nstates = n_states_augmented(m)
+    nobs    = n_observables(m)
+    npseudo = 12
+    nshocks = n_shocks_exogenous(m)
 
-    # retrieve settings for forecast
-    horizon  = forecast_horizons(m)
-    nshocks  = n_shocks_exogenous(m)
-
-    # Unpack everything for call to map/pmap
-    TTTs     = map(s -> s[:TTT], syses)
-    RRRs     = map(s -> s[:RRR], syses)
-    CCCs     = map(s -> s[:CCC], syses)
-    ZZs      = map(s -> s[:ZZ],  syses)
-    DDs      = map(s -> s[:DD],  syses)
-
-    # Prepare copies of these objects due to lack of parallel broadcast functionality
-    ZZps     = fill(Z_pseudo, ndraws)
-    DDps     = fill(D_pseudo, ndraws)
-    horizons = fill(horizon,  ndraws)
+    states_range = 1:nstates
+    obs_range    = (nstates + 1):(nstates + nobs)
+    pseudo_range = (nstates + nobs + 1):(nstates + nobs + npseudo)
+    shocks_range = (nstates + nobs + npseudo + 1):(nstates + nobs + npseudo + nshocks)
 
     # set up distribution of shocks if not specified
     # For now, we construct a giant vector of distirbutions of shocks and pass
@@ -67,40 +60,45 @@ function forecast{T<:AbstractFloat}(m::AbstractModel, syses::Vector{System{T}},
 
     shock_distributions = if isempty(shock_distributions)
         if forecast_kill_shocks(m)
-            [zeros(nshocks, horizon) for i in 1:ndraws]
+            dfill(zeros(nshocks, horizon), (ndraws,), my_procs, [nprocs])
         else
             # use t-distributed shocks
             if forecast_tdist_shocks(m)
-                [Distributions.TDist(forecast_tdist_df_val(m)) for i in 1:ndraws]
+                dfill(Distributions.TDist(forecast_tdist_df_val(m)), (ndraws,), my_procs, [nprocs])
             # use normally distributed shocks
             else
-                shock_distributions = Vector{DSGE.DegenerateMvNormal}(ndraws)
-                for i = 1:ndraws
-                    shock_distributions[i] = DSGE.DegenerateMvNormal(zeros(nshocks),sqrt(syses[i][:QQ]))
-                end
-                shock_distributions
+                DArray(I -> [DegenerateMvNormal(zeros(nshocks), sqrt(s[:QQ])) for s in syses[I...]],
+                       (ndraws,), my_procs, [nprocs])
             end
         end
     end
 
-    # Forecast the states
-    if use_parallel_workers(m)
-        mapfcn = pmap
-    else
-        mapfcn = map
+    # Construct distributed array of forecast outputs
+    out = DArray((ndraws, nstates + nobs + npseudo + nshocks, horizon), my_procs, [nprocs, 1, 1]) do I
+        localpart = zeros(map(length, I)...)
+        draw_inds = first(I)
+        ndraws_local = Int(ndraws / nprocs)
+
+        for i in draw_inds
+            dict = compute_forecast(syses[i], horizon, shock_distributions[i], initial_state_draws[i])
+
+            i_local = mod(i-1, ndraws_local) + 1
+
+            localpart[i_local, states_range, :] = dict[:states]
+            localpart[i_local, obs_range,    :] = dict[:observables]
+            localpart[i_local, pseudo_range, :] = dict[:pseudo_observables]
+            localpart[i_local, shocks_range, :] = dict[:shocks]
+        end
+        return localpart
     end
 
-    # Go to work!
-    forecasts =  mapfcn(DSGE.compute_forecast, TTTs, RRRs, CCCs, ZZs, DDs, ZZps, DDps,
-                              horizons, shock_distributions, initial_state_draws)
+    # Convert SubArrays to DArrays and return
+    states = convert(DArray, out[1:ndraws, states_range, 1:horizon])
+    obs    = convert(DArray, out[1:ndraws, obs_range,    1:horizon])
+    pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:horizon])
+    shocks = convert(DArray, out[1:ndraws, shocks_range, 1:horizon])
 
-    # unpack the giant vector of dictionaries that gets returned
-    states      = [x[:states]::Matrix{T} for x in forecasts]
-    observables = [x[:observables]::Matrix{T} for x in forecasts]
-    pseudo      = [x[:pseudo_observables]::Matrix{T} for x in forecasts]
-    shocks      = [x[:shocks]::Matrix{T} for x in forecasts]
-
-    return states, observables, pseudo, shocks
+    return states, obs, pseudo, shocks
 end
 
 """

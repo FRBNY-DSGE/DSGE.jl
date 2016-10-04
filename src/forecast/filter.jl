@@ -179,46 +179,71 @@ well as the Kalman filter outputs, for every state-space system in `syses`.
 where `states` and `shocks` are returned from the smoother specified by
 `smoother_flag(m)`.
 """
-function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-                                           syses::Vector{System{S}},
-                                           z0::Vector{S} = Vector{S}(),
-                                           vz0::Matrix{S} = Matrix{S}();
-                                           cond_type::Symbol = :none,
-                                           lead::Int = 0, allout::Bool = false)
+function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+    syses::DArray{System{T}, 1, Vector{System{T}}},
+    z0::Vector{T} = Vector{T}(), vz0::Matrix{T} = Matrix{T}();
+    cond_type::Symbol = :none, lead::Int = 0,
+    my_procs::Vector{Int} = [myid()])
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filterandsmooth(m, data, syses, z0, vz0; lead = lead)
+    filterandsmooth(m, data, syses, z0, vz0; lead = lead, my_procs = my_procs)
 end
 
-function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-                                           syses::Vector{System{S}},
-                                           z0::Vector{S} = Vector{S}(),
-                                           vz0::Matrix{S} = Matrix{S}();
-                                           lead::Int = 0)
-    # numbers of useful things
+
+function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T},
+    syses::DArray{System{T}, 1, Vector{System{T}}},
+    z0::Vector{T} = Vector{T}(), vz0::Matrix{T} = Matrix{T}();
+    lead::Int = 0, my_procs::Vector{Int} = [myid()])
+
+    # Numbers of useful things
     ndraws = length(syses)
+    nprocs = length(my_procs)
+    nperiods = size(data, 2) - n_presample_periods(m)
+
+    nstates = n_states_augmented(m)
+    npseudo = 12
+    nshocks = n_shocks_exogenous(m)
+
+    states_range = 1:nstates
+    shocks_range = (nstates + 1):(nstates + nshocks)
+    pseudo_range = (nstates + nshocks + 1):(nstates + nshocks + npseudo)
+    zend_range   = nstates + nshocks + npseudo + 1
 
     # Broadcast models and data matrices
-    models = fill(m, ndraws)
-    datas = fill(data, ndraws)
-    z0s = fill(z0, ndraws)
-    vz0s = fill(vz0, ndraws)
+    models = dfill(m,    (ndraws,), my_procs, [nprocs])
+    datas  = dfill(data, (ndraws,), my_procs, [nprocs])
+    z0s    = dfill(z0,   (ndraws,), my_procs, [nprocs])
+    vz0s   = dfill(vz0,  (ndraws,), my_procs, [nprocs])
 
-    # Call filter over all draws
-    if use_parallel_workers(m) && nworkers() > 1
-        mapfcn = pmap
-    else
-        mapfcn = map
+    # Construct distributed array of smoothed states, shocks, and pseudo-observables
+    out = DArray((ndraws, nstates + nshocks + npseudo + 1, nperiods), my_procs, [nprocs, 1, 1]) do I
+        localpart = zeros(map(length, I)...)
+        draw_inds = first(I)
+        ndraws_local = Int(ndraws / nprocs)
+
+        for i in draw_inds
+            states, shocks, pseudo, zend = filterandsmooth(models[i], datas[i], syses[i], z0s[i], vz0s[i])
+
+            i_local = mod(i-1, ndraws_local) + 1
+
+            localpart[i_local, states_range, :] = states
+            localpart[i_local, shocks_range, :] = shocks
+            localpart[i_local, pseudo_range, :] = pseudo
+            localpart[i_local, zend_range,   1:nstates] = zend
+        end
+        return localpart
     end
-    out = mapfcn(filterandsmooth, models, datas, syses, z0s, vz0s)
 
-    # Unpack returned vector of tuples
-    states = [x[1]::Matrix{S} for x in out]
-    shocks = [x[2]::Matrix{S} for x in out]
-    pseudo = [x[3]::Matrix{S} for x in out]
-    zends  = [x[4]::Vector{S} for x in out]
+    # Convert SubArrays to DArrays and return
+    states = convert(DArray, out[1:ndraws, states_range, 1:nperiods])
+    shocks = convert(DArray, out[1:ndraws, shocks_range, 1:nperiods])
+    pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods])
+    zend   = DArray((ndraws,), my_procs, [nprocs]) do I
+        Vector{T}[convert(Array, slice(out, i, zend_range, 1:nstates)) for i in first(I)]
+    end
 
-    return states, shocks, pseudo, zends
+    # Index out SubArray for each smoothed type
+    return states, shocks, pseudo, zend
 end
 
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System{S},
