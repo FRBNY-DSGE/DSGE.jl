@@ -355,13 +355,14 @@ function forecast_one_dist(m::AbstractModel{Float64}, df::DataFrame;
     function write_forecast_outputs(vars::Vector{Symbol})
         for var in vars
             file = forecast_output_files[var]
-            jldopen(file, "w") do f
-                out = convert(Array, forecast_output[var])
-                write(f, string(var), out)
-                # if VERBOSITY[verbose] >= VERBOSITY[:high]
-                    println(" * Wrote $(basename(file))")
-                # end
-            end
+            # jldopen(file, "w") do f
+            #     out = convert(Array, forecast_output[var])
+            #     write(f, string(var), out)
+            # end
+            write_darray(file, forecast_output[var])
+            # if VERBOSITY[verbose] >= VERBOSITY[:high]
+                println(" * Wrote $(basename(file))")
+            # end
         end
     end
 
@@ -466,4 +467,38 @@ function forecast_one_dist(m::AbstractModel{Float64}, df::DataFrame;
     # Return only saved elements of dict
     filter!((k, v) -> k in output_vars, forecast_output)
     return forecast_output
+end
+
+
+function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T})
+    function write_localpart(pid::Int)
+        jldopen(filepath, "r+") do file
+            write(file, "inds$pid", collect(localindexes(darr)))
+            write(file, "arr$pid", localpart(darr))
+        end
+    end
+
+    jldopen(filepath, "w") do file
+        write(file, "dims", darr.dims)
+        write(file, "pids", collect(darr.pids))
+    end
+
+    for pid in darr.pids
+        remotecall_wait(pid, write_localpart, pid)
+        sleep(0.001)
+    end
+end
+
+function read_darray(filepath::AbstractString)
+    file = jldopen(filepath, "r")
+    dims = read(file, "dims")
+    pids = read(file, "pids")
+
+    out = zeros(dims...)
+    for pid in pids
+        inds = read(file, "inds$pid")
+        out[inds...] = read(file, "arr$pid")
+    end
+    close(file)
+    return out
 end
