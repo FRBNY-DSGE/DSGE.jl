@@ -1,12 +1,3 @@
-# Immutable types s.t. we can use map on functions with kwargs
-abstract FilterOutput
-immutable AllOut<:FilterOutput end
-immutable MinimumOut<:FilterOutput end
-
-abstract FilterPresample
-immutable IncludePresample<:FilterPresample end
-immutable ExcludePresample<:FilterPresample end
-
 """
 ```
 filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
@@ -48,59 +39,48 @@ Computes and returns the filtered values of states for every state-space system 
 - `vfilt`: an optional `Nz` x `Nz` x `T` matrix containing mean square errors of filtered
   state vectors.
 """
-function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, syses::Vector{System{S}},
-                                  z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-                                  cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
-                                  include_presample::Bool = true)
+function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+    syses::DArray{System{S}, 1, Vector{System{S}}},
+    z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
+    cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
+    include_presample::Bool = true, my_procs::Vector{Int} = [myid()])
 
     # Convert the DataFrame to a data matrix without altering the original dataframe
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filter(m, data, syses, z0, vz0; lead = lead, allout = allout, include_presample = include_presample)
+    filter(m, data, syses, z0, vz0; lead = lead, allout = allout,
+           include_presample = include_presample, my_procs = my_procs)
 end
 
-function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syses::Vector{System{S}},
-                                  z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-                                  lead::Int = 0, allout::Bool = false, include_presample::Bool = true)
+function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    syses::DArray{System{S}, 1, Vector{System{S}}},
+    z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
+    lead::Int = 0, allout::Bool = false, include_presample::Bool = true,
+    my_procs::Vector{Int} = [myid()])
 
-    # numbers of useful things
-    ndraws = size(syses, 1)
+    # Numbers of useful things
+    ndraws = length(syses)
+    nprocs = length(my_procs)
 
     # Broadcast models and data matrices
-    models = fill(m, ndraws)
-    datas = fill(data, ndraws)
-    z0s = fill(z0, ndraws)
-    vz0s = fill(vz0, ndraws)
-    allouts = if allout
-        fill(AllOut(), ndraws)
-    else
-        fill(MinimumOut(), ndraws)
-    end
-    include_presamples = if include_presample
-        fill(IncludePresample(), ndraws)
-    else
-        fill(ExcludePresample(), ndraws)
-    end
+    models = dfill(m,    (ndraws,), my_procs, [nprocs])
+    datas  = dfill(data, (ndraws,), my_procs, [nprocs])
+    z0s    = dfill(z0,   (ndraws,), my_procs, [nprocs])
+    vz0s   = dfill(vz0,  (ndraws,), my_procs, [nprocs])
 
-    # Call filter over all draws
-    if use_parallel_workers(m) && nworkers() > 1
-        mapfcn = pmap
-    else
-        mapfcn = map
+    # Construct distributed array of Kalman objects
+    kals = DArray((ndraws,), my_procs, [nprocs]) do I
+        draw_inds = first(I)
+        ndraws_local = length(draw_inds)
+        localpart = Vector{Kalman{S}}(ndraws_local)
+
+        for i in draw_inds
+            i_local = mod(i-1, ndraws_local) + 1
+            localpart[i_local] = filter(models[i], datas[i], syses[i], z0s[i], vz0s[i];
+                                        allout = allout, include_presample = include_presample)
+        end
+        return localpart
     end
-
-    kals = mapfcn(DSGE.tricky_filter, allouts, include_presamples, models, datas, syses, z0s, vz0s)
-
-    return [kal::Kalman{S} for kal in kals]
 end
-
-tricky_filter(::AllOut, ::IncludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) =
-    filter(m, data, sys, z0, vz0; allout = true, include_presample = true)
-tricky_filter(::AllOut, ::ExcludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) =
-    filter(m, data, sys, z0, vz0; allout = true, include_presample = false)
-tricky_filter(::MinimumOut, ::IncludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) =
-    filter(m, data, sys, z0, vz0; allout = false, include_presample = true)
-tricky_filter(::MinimumOut, ::ExcludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) =
-    filter(m, data, sys, z0, vz0; allout = false, include_presample = false)
 
 function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, sys::System{S},
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
@@ -219,7 +199,7 @@ function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T},
     out = DArray((ndraws, nstates + nshocks + npseudo + 1, nperiods), my_procs, [nprocs, 1, 1]) do I
         localpart = zeros(map(length, I)...)
         draw_inds = first(I)
-        ndraws_local = Int(ndraws / nprocs)
+        ndraws_local = length(draw_inds)
 
         for i in draw_inds
             states, shocks, pseudo, zend = filterandsmooth(models[i], datas[i], syses[i], z0s[i], vz0s[i])

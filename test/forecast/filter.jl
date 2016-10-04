@@ -1,5 +1,5 @@
 import Base.filter
-using DSGE, DataFrames, HDF5
+using DSGE, DataFrames, HDF5, DistributedArrays
 include("../util.jl")
 
 path = dirname(@__FILE__)
@@ -16,20 +16,34 @@ end
 
 df = load_data(m; try_disk = true, verbose = :none)
 
+# Add parallel workers
 ndraws = 2
-syses = Vector{System{Float64}}(ndraws)
-for i = 1:ndraws
-    params = squeeze(params_sim[i, :], 1)
-    update!(m, params)
-    syses[i] = compute_system(m)
+my_procs = addprocs(ndraws)
+@everywhere using DSGE
+
+# Set up systems
+function init_systems(m, params_sim, ndraws, my_procs)
+    DArray((ndraws,), my_procs, [length(my_procs)]) do I
+        draw_inds = first(I)
+        ndraws_local = length(draw_inds)
+        localpart = Vector{System{Float64}}(ndraws_local)
+
+        for i in draw_inds
+            i_local = mod(i-1, ndraws_local) + 1
+
+            params = squeeze(params_sim[i, :], 1)
+            update!(m, params)
+            localpart[i_local] = compute_system(m)
+        end
+        return localpart
+    end
 end
+syses = init_systems(m, params_sim, ndraws, my_procs)
 
 z0  = (eye(n_states_augmented(m)) - syses[1][:TTT]) \ syses[1][:CCC]
 vz0 = QuantEcon.solve_discrete_lyapunov(syses[1][:TTT], syses[1][:RRR]*syses[1][:QQ]*syses[1][:RRR]')
 
-# Add parallel workers
-my_procs = addprocs(ndraws)
-@everywhere using DSGE
+# Run to compile before timing
 kals = DSGE.filter(m, df, syses; allout = true)
 kals = DSGE.filter(m, df, syses, z0, vz0; allout = true)
 
