@@ -1,4 +1,4 @@
-using DSGE, Base.Test, HDF5, ClusterManagers
+using DSGE, Base.Test, HDF5, DistributedArrays
 include("../util.jl")
 
 # Initialize model object
@@ -28,7 +28,8 @@ for input_type in [:init, :mode, :full]
 
     # Call forecast_one once without timing
     df = load_data(m; verbose = :none)
-    forecast_one(m, df; input_type = :full, cond_type = :none, output_vars = output_vars, verbose = :none)
+    forecast_one(m, df; input_type = :full, cond_type = :none, output_vars = output_vars,
+                 verbose = :none, my_procs = my_procs)
 
     for cond_type in [:none, :semi, :full]
 
@@ -37,8 +38,9 @@ for input_type in [:init, :mode, :full]
         forecast_output = Dict{Symbol, Any}()
         forecast_output[:df] = load_data(m; cond_type=cond_type, try_disk=true, verbose=:none)
 
-        @time new_forecast = forecast_one(m, forecast_output[:df]; input_type =
-            input_type, cond_type = cond_type, output_vars = output_vars, verbose = :none)
+        @time new_forecast = forecast_one(m, forecast_output[:df];
+            input_type = input_type, cond_type = cond_type, output_vars = output_vars,
+            verbose = :none, my_procs = my_procs)
         merge!(forecast_output, new_forecast)
 
         forecast_outputs[(cond_type, input_type)] = forecast_output
@@ -61,8 +63,8 @@ for input_type in [:init, :mode]
     for cond_type in [:none, :semi, :full]
 
         ## Historical states and shocks
-        histstates = forecast_outputs[(cond_type, input_type)][:histstates][1]
-        histshocks = forecast_outputs[(cond_type, input_type)][:histshocks][1]
+        histstates = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:histstates], 1, :, :))
+        histshocks = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:histshocks], 1, :, :))
 
         df = forecast_outputs[(cond_type, input_type)][:df]
         data = df_to_matrix(m, df; cond_type = cond_type)
@@ -76,13 +78,13 @@ for input_type in [:init, :mode]
         else
             @test_matrix_approx_eq exp_histstates histstates
             @test_matrix_approx_eq exp_histshocks histshocks
-        end            
+        end
 
         ## Forecasted states, observables, pseudos, and shocks
-        forecaststates = forecast_outputs[(cond_type, input_type)][:forecaststates][1]
-        forecastobs    = forecast_outputs[(cond_type, input_type)][:forecastobs][1]
-        forecastpseudo = forecast_outputs[(cond_type, input_type)][:forecastpseudo][1]
-        forecastshocks = forecast_outputs[(cond_type, input_type)][:forecastshocks][1]
+        forecaststates = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:forecaststates], 1, :, :))
+        forecastobs    = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:forecastobs], 1, :, :))
+        forecastpseudo = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:forecastpseudo], 1, :, :))
+        forecastshocks = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:forecastshocks], 1, :, :))
 
         shocks = zeros(Float64, n_shocks_exogenous(m), forecast_horizons(m))
         Z_pseudo = zeros(Float64, 12, n_states_augmented(m))
@@ -109,13 +111,18 @@ for input_type in [:init, :mode]
         end
 
         ## Shock decompositions of states, pseudo-observables, and observables
-        shockdecstates = forecast_outputs[(cond_type, input_type)][:shockdecstates][1]
-        shockdecobs    = forecast_outputs[(cond_type, input_type)][:shockdecobs][1]
-        shockdecpseudo = forecast_outputs[(cond_type, input_type)][:shockdecpseudo][1]
+        shockdecstates = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:shockdecstates], 1, :, :, :))
+        shockdecobs    = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:shockdecobs], 1, :, :, :))
+        shockdecpseudo = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:shockdecpseudo], 1, :, :, :))
 
+        end_ind = if cond_type == :none
+            225
+        else
+            226
+        end
         exp_shockdecstates, exp_shockdecobs, exp_shockdecpseudo =
-            DSGE.compute_shock_decompositions(sys[:TTT], sys[:RRR], sys[:ZZ],
-                                              sys[:DD], Z_pseudo, D_pseudo, forecast_horizons(m), exp_histshocks)
+            DSGE.compute_shock_decompositions(sys[:TTT], sys[:RRR], sys[:ZZ], sys[:DD],
+                Z_pseudo, D_pseudo, forecast_horizons(m), exp_histshocks, 189, end_ind)
 
         @test_matrix_approx_eq exp_shockdecstates shockdecstates
         @test_matrix_approx_eq exp_shockdecobs    shockdecobs
