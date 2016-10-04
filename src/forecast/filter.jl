@@ -102,6 +102,15 @@ tricky_filter(::MinimumOut, ::IncludePresample, m::AbstractModel, data::Matrix, 
 tricky_filter(::MinimumOut, ::ExcludePresample, m::AbstractModel, data::Matrix, sys::System, z0::Vector, vz0::Matrix) =
     filter(m, data, sys, z0, vz0; allout = false, include_presample = false)
 
+function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, sys::System{S},
+                                  z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
+                                  cond_type::Symbol = :none, lead::Int = 0,
+                                  allout::Bool = false, include_presample::Bool = true)
+
+    data = df_to_matrix(m, df; cond_type = cond_type)
+    filter(m, data, sys, z0, vz0; lead = lead, allout = allout, include_presample = include_presample)
+end
+
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System{S},
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                   lead::Int = 0, allout::Bool = false, include_presample::Bool = true)
