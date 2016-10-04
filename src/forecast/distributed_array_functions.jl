@@ -1,8 +1,134 @@
 using DataFrames, JLD
 
-function filterandsmooth_dist{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    syses::DArray{System{S}, 1}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
-    Matrix{S}(); cond_type::Symbol = :none, lead::Int = 0,
+function prepare_systems_dist(m::AbstractModel, input_type::Symbol,
+    params::Matrix{Float64}, TTT::Array{Float64,3}, RRR::Array{Float64,3},
+    CCC::Array{Float64,3}; my_procs::Vector{Int} = [myid()])
+
+    # Setup
+    n_sim = size(params,1)
+    jstep = DSGE.get_jstep(m, n_sim)
+    n_sim_forecast = convert(Int, n_sim/jstep)
+
+    if input_type in [:mean, :mode, :init]
+        update!(m, vec(params))
+        systems = dfill(compute_system(m), (1,), my_procs)
+    elseif input_type in [:full]
+        empty = isempty(CCC)
+        nprocs = length(my_procs);
+        systems = DArray((n_sim_forecast,), my_procs, [nprocs]) do I
+            draw_inds = first(I)
+            ndraws_local = Int(n_sim_forecast / nprocs)
+            localpart = Vector{System{Float64}}(ndraws_local)
+
+            for i in draw_inds
+                j = i * jstep
+                i_local = mod(i-1, ndraws_local) + 1
+
+                # Prepare transition eq
+                TTT_j = squeeze(TTT[j, :, :], 1)
+                RRR_j = squeeze(RRR[j, :, :], 1)
+
+                if empty
+                    trans_j = Transition(TTT_j, RRR_j)
+                else
+                    CCC_j = squeeze(CCC[j, :, :], 1)
+                    trans_j = Transition(TTT_j, RRR_j, CCC_j)
+                end
+
+                # Prepare measurement eq
+                params_j = vec(params[j,:])
+                update!(m, params_j)
+                meas_j   = measurement(m, trans_j; shocks = true)
+
+                # Prepare system
+                localpart[i_local] = System(trans_j, meas_j)
+            end
+            return localpart
+        end
+    else
+        throw(ArgumentError("Not implemented."))
+    end
+
+    return systems
+end
+
+
+function prepare_states_dist(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+    systems::DArray{System{Float64}, 1, Vector{System{Float64}}}, params::Matrix{Float64}, df::DataFrame,
+    zend::Matrix{Float64}; my_procs::Vector{Int} = [myid()])
+
+    # Setup
+    n_sim_forecast = length(systems)
+    n_sim = size(params, 1)
+    jstep = convert(Int, n_sim/n_sim_forecast)
+
+    # If we just have one draw of parameters in mode, mean, or init case, then we don't have the
+    # pre-computed system matrices. We now recompute them here by running the Kalman filter.
+    if input_type in [:mean, :mode, :init]
+        update!(m, vec(params))
+        kal = DSGE.filter(m, df, systems[1]; cond_type = cond_type, allout = true)
+        # `kals` is a vector of length 1
+        states = dfill(kal[:filt][:, end], (1,), my_procs);
+
+    # If we have many draws, then we must package them into a vector of System objects.
+    elseif input_type in [:full]
+        if cond_type in [:none]
+            nprocs = length(my_procs)
+            states = DArray((n_sim_forecast,), my_procs, [nprocs]) do I
+                draw_inds = first(I)
+                ndraws_local = Int(n_sim_forecast / nprocs)
+                localpart = Vector{Vector{Float64}}(ndraws_local)
+
+                for i in draw_inds
+                    j = i * jstep
+                    i_local = mod(i-1, ndraws_local) + 1
+
+                    localpart[i_local] = vec(zend[j, :])
+                end
+                return localpart
+            end
+        elseif cond_type in [:semi, :full]
+            # We will need to re-run the entire filter/smoother so we can't do anything
+            # here. The reason is that while we have $s_{T|T}$ we don't have $P_{T|T}$ and
+            # thus can't "restart" the Kalman filter for the conditional data period.
+            states = dfill(Vector{Float64}(), (0,), my_procs)
+        end
+    else
+        throw(ArgumentError("Not implemented."))
+    end
+
+    return states
+end
+
+
+function prepare_forecast_inputs_dist(m::AbstractModel, df::DataFrame;
+                      input_type::Symbol  = :mode,
+                      cond_type::Symbol   = :none,
+                      my_procs::Vector{Int} = [myid()])
+    # Some variables
+    n_states = n_states_augmented(m)
+
+    # Set up infiles
+    params, TTT, RRR, CCC, zend = DSGE.load_draws(m, input_type)
+
+    n_sim = size(params,1)
+    jstep = DSGE.get_jstep(m, n_sim)
+    n_sim_forecast = convert(Int, n_sim/jstep)
+
+    # Populate systems vector
+    systems = prepare_systems_dist(m, input_type, params, TTT, RRR, CCC; my_procs = my_procs)
+
+    # Populate states vector
+    states = prepare_states_dist(m, input_type, cond_type, systems, params, df, zend; my_procs = my_procs)
+
+    return systems, states
+end
+
+
+function filterandsmooth_dist{T<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+    syses::DArray{System{T}, 1, Vector{System{T}}},
+    z0::Vector{T} = Vector{T}(), vz0::Matrix{T} = Matrix{T}();
+    cond_type::Symbol = :none, lead::Int = 0,
     my_procs::Vector{Int} = [myid()])
 
     data = df_to_matrix(m, df; cond_type = cond_type)
@@ -10,9 +136,10 @@ function filterandsmooth_dist{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
 end
 
 
-function filterandsmooth_dist{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    syses::DArray{System{S}, 1}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
-    Matrix{S}(); lead::Int = 0, my_procs::Vector{Int} = [myid()])
+function filterandsmooth_dist{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T},
+    syses::DArray{System{T}, 1, Vector{System{T}}},
+    z0::Vector{T} = Vector{T}(), vz0::Matrix{T} = Matrix{T}();
+    lead::Int = 0, my_procs::Vector{Int} = [myid()])
 
     # Numbers of useful things
     ndraws = length(syses)
@@ -58,7 +185,7 @@ function filterandsmooth_dist{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S
     shocks = convert(DArray, out[1:ndraws, shocks_range, 1:nperiods])
     pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods])
     zend   = DArray((ndraws,), my_procs, [nprocs]) do I
-        Vector{Float64}[convert(Array, slice(out, i, zend_range, 1:nstates)) for i in first(I)]
+        Vector{T}[convert(Array, slice(out, i, zend_range, 1:nstates)) for i in first(I)]
     end
 
     # Index out SubArray for each smoothed type
@@ -201,7 +328,7 @@ function shock_decompositions_dist{T<:AbstractFloat}(m::AbstractModel,
 end
 
 
-function forecast_one_dist(m::AbstractModel, df::DataFrame;
+function forecast_one_dist(m::AbstractModel{Float64}, df::DataFrame;
     input_type::Symbol = :mode, cond_type::Symbol = :none,
     output_vars::Vector{Symbol} = [], verbose::Symbol = :low,
     my_procs::Vector{Int} = [myid()])
@@ -209,15 +336,10 @@ function forecast_one_dist(m::AbstractModel, df::DataFrame;
     ### 1. Setup
 
     # Prepare forecast inputs
-    systems, states = DSGE.prepare_forecast_inputs(m, df; input_type = input_type,
-        cond_type = cond_type)
+    systems, states = prepare_forecast_inputs_dist(m, df; input_type = input_type,
+        cond_type = cond_type, my_procs = my_procs)
 
     nprocs = length(my_procs)
-    systems = distribute(systems; procs = my_procs, dist = [nprocs])
-    if cond_type == :none
-        states  = distribute(states;  procs = my_procs, dist = [nprocs])
-    end
-
     ndraws = length(systems)
 
     # Prepare forecast outputs
@@ -234,7 +356,8 @@ function forecast_one_dist(m::AbstractModel, df::DataFrame;
         for var in vars
             file = forecast_output_files[var]
             jldopen(file, "w") do f
-                write(f, string(var), forecast_output[var])
+                out = convert(Array, forecast_output[var])
+                write(f, string(var), out)
                 # if VERBOSITY[verbose] >= VERBOSITY[:high]
                     println(" * Wrote $(basename(file))")
                 # end
