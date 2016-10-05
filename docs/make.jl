@@ -1,3 +1,3 @@
-using Documenter, DSGE, Distributions
+using Documenter, DSGE, Distributions, DataFrames
 
-makedocs()
+makedocs(modules = [DSGE])
