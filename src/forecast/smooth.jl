@@ -25,41 +25,57 @@ Computes and returns the smoothed values of states for every parameter draw.
 - `eta_hats`: a vector of smoothed shocks (`eta_hat`s) returned from the
   smoother, one for each system in `syses`
 """
-function smooth{S<:AbstractFloat}(m::AbstractModel,
-                                  df::DataFrame,
-                                  syses::Vector{System{S}},
-                                  kals::Vector{Kalman{S}};
-                                  cond_type::Symbol = :none)
+function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+    syses::DArray{System{S}, 1, Vector{System{S}}},
+    kals::DArray{Kalman{S}, 1}; cond_type::Symbol = :none,
+    my_procs::Vector{Int} = [myid()])
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    smooth(m, data, syses, kals)
+    smooth(m, data, syses, kals; my_procs = my_procs)
 end
 
-function smooth{S<:AbstractFloat}(m::AbstractModel,
-                                  data::Matrix{S},
-                                  syses::Vector{System{S}},
-                                  kals::Vector{Kalman{S}})
+function smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    syses::DArray{System{S}, 1, Vector{System{S}}},
+    kals::DArray{Kalman{S}, 1}; my_procs::Vector{Int} = [myid()])
 
     # numbers of useful things
+    nprocs = length(my_procs)
     ndraws = length(syses)
     @assert length(kals) == ndraws
 
-    # Broadcast models and data matrices 
-    models = fill(m, ndraws)
-    datas = fill(data, ndraws)
+    nstates = n_states_augmented(m)
+    nshocks = n_shocks_exogenous(m)
+    nperiods = size(data, 2) - n_presample_periods(m)
 
-    # Call smooth over all draws
-    if use_parallel_workers(m) && nworkers() > 1
-        mapfcn = pmap
-    else
-        mapfcn = map
-    end    
-    out = mapfcn(DSGE.smooth, models, datas, syses, kals)
-    
-    alpha_hats = [Array(x[1]) for x in out] # to make type stable 
-    eta_hats   = [Array(x[2]) for x in out] 
+    states_range = 1:nstates
+    shocks_range = (nstates + 1):(nstates + nshocks)
 
-    return alpha_hats, eta_hats
+    # Broadcast models and data matrices
+    models = dfill(m,    (ndraws,), my_procs, [nprocs])
+    datas  = dfill(data, (ndraws,), my_procs, [nprocs])
+
+    # Construct distributed array of smoothed states and shocks
+    out = DArray((ndraws, nstates + nshocks, nperiods), my_procs, [nprocs, 1, 1]) do I
+        localpart = zeros(map(length, I)...)
+        draw_inds = first(I)
+        ndraws_local = length(draw_inds)
+
+        for i in draw_inds
+            states, shocks = smooth(models[i], datas[i], syses[i], kals[i])
+
+            i_local = mod(i-1, ndraws_local) + 1
+
+            localpart[i_local, states_range, :] = states
+            localpart[i_local, shocks_range, :] = shocks
+        end
+        return localpart
+    end
+
+    # Convert SubArrays to DArrays and return
+    states = convert(DArray, out[1:ndraws, states_range, 1:nperiods])
+    shocks = convert(DArray, out[1:ndraws, shocks_range, 1:nperiods])
+
+    return states, shocks
 end
 
 function smooth{S<:AbstractFloat}(m::AbstractModel,
