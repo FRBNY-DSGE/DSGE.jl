@@ -1,4 +1,4 @@
-using DSGE, HDF5
+using DSGE, HDF5, DistributedArrays
 include("../util.jl")
 
 path = dirname(@__FILE__)
@@ -15,20 +15,20 @@ eta_hat = h5open("$path/../reference/durbin_koopman_smoother_out.h5", "r") do h5
     read(h5, "eta_hat")
 end
 
-ndraws = 2
-syses = Vector{System{Float64}}(ndraws)
-histshocks = Vector{Matrix{Float64}}(ndraws)
-for i = 1:ndraws
-    syses[i] = compute_system(m)
-    histshocks[i] = eta_hat
-end
-
 # Add parallel workers
+ndraws = 2
 my_procs = addprocs(ndraws)
 @everywhere using DSGE
+
+system = compute_system(m)
+syses = dfill(system, (ndraws,), my_procs, [ndraws])
+histshocks = repeat(reshape(eta_hat, (1, size(eta_hat)...)), outer = [ndraws, 1, 1])
+histshocks = distribute(histshocks; procs = my_procs, dist = [ndraws, 1, 1])
+
+# Run to compile before timing
 states, observables, pseudos = DSGE.shock_decompositions(m, syses, histshocks)
 
-# Run forecast
+# Run shock decompositions
 @time states, observables, pseudos = DSGE.shock_decompositions(m, syses, histshocks)
 
 @assert !isnull(shockdec_startdate(m))
@@ -39,9 +39,9 @@ npseudo  = 12
 nshocks  = n_shocks_exogenous(m)
 
 for i = 1:ndraws
-    @assert size(states[i])      == (nstates, nperiods, nshocks)
-    @assert size(observables[i]) == (nobs,    nperiods, nshocks)
-    @assert size(pseudos[i])     == (npseudo, nperiods, nshocks)
+    @assert size(slice(states,      i, :, :, :)) == (nstates, nperiods, nshocks)
+    @assert size(slice(observables, i, :, :, :)) == (nobs,    nperiods, nshocks)
+    @assert size(slice(pseudos,     i, :, :, :)) == (npseudo, nperiods, nshocks)
 end
 
 # Run forecast again, with shockdec_startdate null
@@ -50,9 +50,9 @@ m <= Setting(:shockdec_startdate, Nullable{Date}())
 
 nperiods = DSGE.subtract_quarters(date_forecast_end(m), date_prezlb_start(m)) + 1
 for i = 1:ndraws
-    @assert size(states[i])      == (nstates, nperiods, nshocks)
-    @assert size(observables[i]) == (nobs,    nperiods, nshocks)
-    @assert size(pseudos[i])     == (npseudo, nperiods, nshocks)
+    @assert size(slice(states,      i, :, :, :)) == (nstates, nperiods, nshocks)
+    @assert size(slice(observables, i, :, :, :)) == (nobs,    nperiods, nshocks)
+    @assert size(slice(pseudos,     i, :, :, :)) == (npseudo, nperiods, nshocks)
 end
 
 # Remove parallel workers

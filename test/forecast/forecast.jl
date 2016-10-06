@@ -1,4 +1,4 @@
-using DSGE, HDF5
+using DSGE, HDF5, DistributedArrays
 include("../util.jl")
 
 path = dirname(@__FILE__)
@@ -15,19 +15,39 @@ params_sim = h5open("$path/../reference/filter_args.h5","r") do h5
     read(h5, "params_sim")
 end
 
-ndraws = 2
-syses = Vector{System{Float64}}(ndraws)
-z0s = Vector{Vector{Float64}}(ndraws)
-for i = 1:ndraws
-    params = squeeze(params_sim[i, :], 1)
-    update!(m, params)
-    syses[i] = compute_system(m)
-    z0s[i] = (eye(n_states_augmented(m)) - syses[i][:TTT]) \ syses[i][:CCC]
-end
-
 # Add parallel workers
+ndraws = 2
 my_procs = addprocs(ndraws)
 @everywhere using DSGE
+
+# Set up systems
+function init_systems(m, params_sim, ndraws, my_procs)
+    DArray((ndraws,), my_procs, [length(my_procs)]) do I
+        draw_inds = first(I)
+        ndraws_local = length(draw_inds)
+        localpart = Vector{System{Float64}}(ndraws_local)
+
+        for i in draw_inds
+            i_local = mod(i-1, ndraws_local) + 1
+
+            params = squeeze(params_sim[i, :], 1)
+            update!(m, params)
+            localpart[i_local] = compute_system(m)
+        end
+        return localpart
+    end
+end
+syses = init_systems(m, params_sim, ndraws, my_procs)
+
+function init_states(m, syses, ndraws, my_procs)
+    nstates = n_states_augmented(m)
+    DArray((ndraws,), my_procs, [length(my_procs)]) do I
+        [((eye(nstates) - syses[i][:TTT]) \ syses[i][:CCC])::Vector{Float64} for i in first(I)]
+    end
+end
+z0s = init_states(m, syses, ndraws, my_procs)
+
+# Run to compile before timing
 states, observables, pseudos, shocks = DSGE.forecast(m, syses, z0s)
 
 # Run forecast
