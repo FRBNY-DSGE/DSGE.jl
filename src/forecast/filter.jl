@@ -40,7 +40,7 @@ Computes and returns the filtered values of states for every state-space system 
   state vectors.
 """
 function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    systems::DArray{System{S}, 1, Vector{System{S}}},
+    systems::DVector{System{S}, Vector{System{S}}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
     include_presample::Bool = true, procs::Vector{Int} = [myid()])
@@ -51,7 +51,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    systems::DArray{System{S}, 1, Vector{System{S}}},
+    systems::DVector{System{S}, Vector{System{S}}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     lead::Int = 0, allout::Bool = false, include_presample::Bool = true,
     procs::Vector{Int} = [myid()])
@@ -155,7 +155,7 @@ where `states` and `shocks` are returned from the smoother specified by
 `smoother_flag(m)`.
 """
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    systems::DArray{System{S}, 1, Vector{System{S}}},
+    systems::DVector{System{S}, Vector{System{S}}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     cond_type::Symbol = :none, lead::Int = 0,
     procs::Vector{Int} = [myid()])
@@ -166,7 +166,7 @@ end
 
 
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    systems::DArray{System{S}, 1, Vector{System{S}}},
+    systems::DVector{System{S}, Vector{System{S}}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     lead::Int = 0, procs::Vector{Int} = [myid()])
 

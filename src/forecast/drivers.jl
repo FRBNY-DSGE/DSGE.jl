@@ -203,7 +203,7 @@ conditional data, then the final state vector is adjusted accordingly.
 
 """
 function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
-    systems::DArray{System{Float64}, 1, Vector{System{Float64}}},
+    systems::DVector{System{Float64}, Vector{System{Float64}}},
     params::Matrix{Float64}, df::DataFrame, zend::Matrix{Float64};
     procs::Vector{Int} = [myid()])
 

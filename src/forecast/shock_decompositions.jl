@@ -28,7 +28,7 @@ historical smoothed shocks.
 where `nperiods = hist_periods + forecast_horizon`.
 """
 function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
-    systems::DArray{System{S}, 1}, histshocks::DArray{S, 3};
+    systems::DVector{System{S}}, histshocks::DArray{S, 3};
     procs::Vector{Int} = [myid()])
 
     # Numbers of useful things

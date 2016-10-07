@@ -98,6 +98,10 @@ function get_output_files(m, input_type, output_vars, cond_type)
 end
 
 
+typealias DVector{T, A} DArray{T, 1, A}
+typealias DMatrix{T, A} DArray{T, 2, A}
+
+
 function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T})
     function write_localpart(pid::Int)
         jldopen(filepath, "r+") do file
