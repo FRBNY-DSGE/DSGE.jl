@@ -38,21 +38,21 @@ function init_systems(m, params_sim, ndraws, my_procs)
         return localpart
     end
 end
-syses = init_systems(m, params_sim, ndraws, my_procs)
+systems = init_systems(m, params_sim, ndraws, my_procs)
 
-function init_states(m, syses, ndraws, my_procs)
+function init_states(m, systems, ndraws, my_procs)
     nstates = n_states_augmented(m)
     DArray((ndraws,), my_procs, [length(my_procs)]) do I
-        [((eye(nstates) - syses[i][:TTT]) \ syses[i][:CCC])::Vector{Float64} for i in first(I)]
+        [((eye(nstates) - systems[i][:TTT]) \ systems[i][:CCC])::Vector{Float64} for i in first(I)]
     end
 end
-z0s = init_states(m, syses, ndraws, my_procs)
+z0s = init_states(m, systems, ndraws, my_procs)
 
 # Run to compile before timing
-states, observables, pseudos, shocks = DSGE.forecast(m, syses, z0s)
+states, observables, pseudos, shocks = DSGE.forecast(m, systems, z0s)
 
 # Run forecast
-@time states, observables, pseudos, shocks = DSGE.forecast(m, syses, z0s)
+@time states, observables, pseudos, shocks = DSGE.forecast(m, systems, z0s)
 
 # Remove parallel workers
 rmprocs(my_procs)

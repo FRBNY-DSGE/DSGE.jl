@@ -1,11 +1,11 @@
 """
 ```
 kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    system::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
     cond_type::Symbol = :none)
 
 kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
+    system::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
 
 kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
@@ -75,12 +75,12 @@ y(t) = Z*α(t) + D             (state or transition equation)
 ```
 """
 function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    system::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
     cond_type::Symbol = :none)
 
     # extract system matrices
-    T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
-    Q, Z, D = sys[:QQ], sys[:ZZ], sys[:DD]
+    T, R, C = system[:TTT], system[:RRR], system[:CCC]
+    Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
 
     # call actual Kalman smoother
     kalman_smoother(m, df, T, R, C, Q, Z, D, A0, P0, pred, vpred; cond_type =
@@ -88,11 +88,11 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
 end
 
 function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    sys::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
+    system::System, A0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3})
 
     # extract system matrices
-    T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
-    Q, Z, D = sys[:QQ], sys[:ZZ], sys[:DD]
+    T, R, C = system[:TTT], system[:RRR], system[:CCC]
+    Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
 
     # call actual Kalman smoother
     kalman_smoother(m, data, T, R, C, Q, Z, D, A0, P0, pred, vpred)
@@ -289,11 +289,11 @@ end
 """
 ```
 durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    df::DataFrame, sys::System, A0::Vector{S}, P0::Matrix{S};
+    df::DataFrame, system::System, A0::Vector{S}, P0::Matrix{S};
     cond_type::Symbol = :none)
 
 durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    data:Matrix{S}, sys::System, A0::Vector{S}, P0::Matrix{S})
+    data:Matrix{S}, system::System, A0::Vector{S}, P0::Matrix{S})
 
 durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     df::DataFrame, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
@@ -364,12 +364,12 @@ y(t) = Z*α(t) + D             (state or transition equation)
 ```
 """
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    df::DataFrame, sys::System, A0::Vector{S}, P0::Matrix{S};
+    df::DataFrame, system::System, A0::Vector{S}, P0::Matrix{S};
     cond_type::Symbol = :none)
 
     # extract system matrices
-    T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
-    Q, Z, D = sys[:QQ], sys[:ZZ], sys[:DD]
+    T, R, C = system[:TTT], system[:RRR], system[:CCC]
+    Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
 
     # call actual Durbin-Koopman smoother
     durbin_koopman_smoother(m, df, T, R, C, Q, Z, D, A0, P0; cond_type =
@@ -377,11 +377,11 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
 end
 
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    data::Matrix{S}, sys::System, A0::Vector{S}, P0::Matrix{S})
+    data::Matrix{S}, system::System, A0::Vector{S}, P0::Matrix{S})
 
     # extract system matrices
-    T, R, C = sys[:TTT], sys[:RRR], sys[:CCC]
-    Q, Z, D = sys[:QQ], sys[:ZZ], sys[:DD]
+    T, R, C = system[:TTT], system[:RRR], system[:CCC]
+    Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
 
     # call actual Durbin-Koopman smoother
     durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0)

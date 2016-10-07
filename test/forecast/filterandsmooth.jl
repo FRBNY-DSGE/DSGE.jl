@@ -38,32 +38,32 @@ function init_systems(m, params_sim, ndraws, my_procs)
         return localpart
     end
 end
-syses = init_systems(m, params_sim, ndraws, my_procs)
+systems = init_systems(m, params_sim, ndraws, my_procs)
 
-z0  = (eye(n_states_augmented(m)) - syses[1][:TTT]) \ syses[1][:CCC]
-vz0 = QuantEcon.solve_discrete_lyapunov(syses[1][:TTT], syses[1][:RRR]*syses[1][:QQ]*syses[1][:RRR]')
+z0  = (eye(n_states_augmented(m)) - systems[1][:TTT]) \ systems[1][:CCC]
+vz0 = QuantEcon.solve_discrete_lyapunov(systems[1][:TTT], systems[1][:RRR]*systems[1][:QQ]*systems[1][:RRR]')
 
 # Run to compile before timing
-states, shocks, pseudo = filterandsmooth(m, df, syses; procs = my_procs)
-states, shocks, pseudo = filterandsmooth(m, df, syses, z0, vz0; procs = my_procs)
+states, shocks, pseudo = filterandsmooth(m, df, systems; procs = my_procs)
+states, shocks, pseudo = filterandsmooth(m, df, systems, z0, vz0; procs = my_procs)
 
 for smoother in [:durbin_koopman, :kalman]
     m <= Setting(:forecast_smoother, smoother)
 
     # Without providing z0 and vz0
-    @time states, shocks, pseudo = filterandsmooth(m, df, syses; procs = my_procs)
+    @time states, shocks, pseudo = filterandsmooth(m, df, systems; procs = my_procs)
 
     exp_states = Vector{Matrix{Float64}}(ndraws)
     exp_shocks = Vector{Matrix{Float64}}(ndraws)
     exp_pseudo = Vector{Matrix{Float64}}(ndraws)
     for i = 1:ndraws
-        kal = kalman_filter(m, df_to_matrix(m, df), syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ],
-                            syses[i][:DD], syses[i][:VVall]; allout = true)
+        kal = kalman_filter(m, df_to_matrix(m, df), systems[i][:TTT], systems[i][:CCC], systems[i][:ZZ],
+                            systems[i][:DD], systems[i][:VVall]; allout = true)
 
         exp_states[i], exp_shocks[i] = if forecast_smoother(m) == :durbin_koopman
-            durbin_koopman_smoother(m, df, syses[i], kal[:z0], kal[:vz0])
+            durbin_koopman_smoother(m, df, systems[i], kal[:z0], kal[:vz0])
         elseif forecast_smoother(m) == :kalman
-            kalman_smoother(m, df, syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+            kalman_smoother(m, df, systems[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
         end
 
         _, pseudo_mapping = pseudo_measurement(m)
@@ -75,19 +75,19 @@ for smoother in [:durbin_koopman, :kalman]
     end
 
     # Providing z0 and vz0
-    @time states, shocks, pseudo = filterandsmooth(m, df, syses, z0, vz0; procs = my_procs)
+    @time states, shocks, pseudo = filterandsmooth(m, df, systems, z0, vz0; procs = my_procs)
 
     exp_states = Vector{Matrix{Float64}}(ndraws)
     exp_shocks = Vector{Matrix{Float64}}(ndraws)
     exp_pseudo = Vector{Matrix{Float64}}(ndraws)
     for i = 1:ndraws
-        kal = kalman_filter(m, df_to_matrix(m, df), syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ],
-                            syses[i][:DD], syses[i][:VVall], z0, vz0; allout = true)
+        kal = kalman_filter(m, df_to_matrix(m, df), systems[i][:TTT], systems[i][:CCC], systems[i][:ZZ],
+                            systems[i][:DD], systems[i][:VVall], z0, vz0; allout = true)
 
         exp_states[i], exp_shocks[i] = if forecast_smoother(m) == :durbin_koopman
-            durbin_koopman_smoother(m, df, syses[i], kal[:z0], kal[:vz0])
+            durbin_koopman_smoother(m, df, systems[i], kal[:z0], kal[:vz0])
         elseif forecast_smoother(m) == :kalman
-            kalman_smoother(m, df, syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+            kalman_smoother(m, df, systems[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
         end
 
         _, pseudo_mapping = pseudo_measurement(m)

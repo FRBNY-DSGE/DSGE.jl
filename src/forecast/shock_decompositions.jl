@@ -1,7 +1,7 @@
 """
 ```
 shock_decompositions{T<:AbstractFloat}(m::AbstractModel,
-    syses::Vector{System{S}}, histshocks::Vector{Matrix{S}})
+    systems::Vector{System{S}}, histshocks::Vector{Matrix{S}})
 ```
 
 Computes shock decompositions for all draws, given a model object, system matrices, and
@@ -10,7 +10,7 @@ historical smoothed shocks.
 ### Inputs
 
 - `m`: model object
-- `syses::Vector{System}`: vector of length `ndraws`, whose elements are
+- `systems::Vector{System}`: vector of length `ndraws`, whose elements are
   `System` objects specifying state-space system matrices for each draw
 - `histshocks`::Vector{Matrix{S}}`: vector of length `ndraws`, whose elements
   are the `nshocks` x `hist_periods` matrices of historical smoothed shocks
@@ -28,11 +28,11 @@ historical smoothed shocks.
 where `nperiods = hist_periods + forecast_horizon`.
 """
 function shock_decompositions{T<:AbstractFloat}(m::AbstractModel,
-    syses::DArray{System{T}, 1}, histshocks::DArray{T, 3};
+    systems::DArray{System{T}, 1}, histshocks::DArray{T, 3};
     procs::Vector{Int} = [myid()])
 
     # Numbers of useful things
-    ndraws = length(syses)
+    ndraws = length(systems)
     nprocs = length(procs)
     horizon = forecast_horizons(m)
 
@@ -75,7 +75,7 @@ function shock_decompositions{T<:AbstractFloat}(m::AbstractModel,
                 Matrix{T}(), Vector{T}()
             end
 
-            states, obs, pseudo = compute_shock_decompositions(syses[i], horizon,
+            states, obs, pseudo = compute_shock_decompositions(systems[i], horizon,
                 convert(Array, slice(histshocks, i, :, :)), start_ind, end_ind, Z_pseudo, D_pseudo)
 
             i_local = mod(i-1, ndraws_local) + 1
@@ -127,15 +127,15 @@ compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
 
 where `nperiods` is `end_index - start_index + 1`.
 """
-function compute_shock_decompositions{S<:AbstractFloat}(sys::System{S},
+function compute_shock_decompositions{S<:AbstractFloat}(system::System{S},
     forecast_horizons::Int, histshocks::Matrix{S},
     start_index::Int, end_index::Int, Z_pseudo::Matrix{S} = Matrix{S}(),
     D_pseudo::Vector{S} = Vector{S}())
 
-    TTT = sys[:TTT]
-    RRR = sys[:RRR]
-    ZZ  = sys[:ZZ]
-    DD  = sys[:DD]
+    TTT = system[:TTT]
+    RRR = system[:RRR]
+    ZZ  = system[:ZZ]
+    DD  = system[:DD]
 
     compute_shock_decompositions(TTT, RRR, ZZ, DD,
         forecast_horizons, histshocks, start_index, end_index,

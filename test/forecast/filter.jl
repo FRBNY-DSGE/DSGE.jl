@@ -38,21 +38,21 @@ function init_systems(m, params_sim, ndraws, my_procs)
         return localpart
     end
 end
-syses = init_systems(m, params_sim, ndraws, my_procs)
+systems = init_systems(m, params_sim, ndraws, my_procs)
 
-z0  = (eye(n_states_augmented(m)) - syses[1][:TTT]) \ syses[1][:CCC]
-vz0 = QuantEcon.solve_discrete_lyapunov(syses[1][:TTT], syses[1][:RRR]*syses[1][:QQ]*syses[1][:RRR]')
+z0  = (eye(n_states_augmented(m)) - systems[1][:TTT]) \ systems[1][:CCC]
+vz0 = QuantEcon.solve_discrete_lyapunov(systems[1][:TTT], systems[1][:RRR]*systems[1][:QQ]*systems[1][:RRR]')
 
 # Run to compile before timing
-kals = DSGE.filter(m, df, syses; allout = true)
-kals = DSGE.filter(m, df, syses, z0, vz0; allout = true)
+kals = DSGE.filter(m, df, systems; allout = true)
+kals = DSGE.filter(m, df, systems, z0, vz0; allout = true)
 
 # Without providing z0 and vz0
-@time kals = DSGE.filter(m, df, syses; allout = true)
+@time kals = DSGE.filter(m, df, systems; allout = true)
 
 exp_kals = Vector{DSGE.Kalman{Float64}}(ndraws)
 for i = 1:ndraws
-    exp_kals[i] = kalman_filter(m, df_to_matrix(m, df), syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ], syses[i][:DD], syses[i][:VVall]; allout = true)
+    exp_kals[i] = kalman_filter(m, df_to_matrix(m, df), systems[i][:TTT], systems[i][:CCC], systems[i][:ZZ], systems[i][:DD], systems[i][:VVall]; allout = true)
 end
 
 for i = 1:ndraws
@@ -69,11 +69,11 @@ for i = 1:ndraws
 end
 
 # Providing z0 and vz0
-@time kals = DSGE.filter(m, df, syses, z0, vz0; allout = true)
+@time kals = DSGE.filter(m, df, systems, z0, vz0; allout = true)
 
 exp_kals = Vector{DSGE.Kalman{Float64}}(ndraws)
 for i = 1:ndraws
-    exp_kals[i] = kalman_filter(m, df_to_matrix(m, df), syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ], syses[i][:DD], syses[i][:VVall], z0, vz0; allout = true)
+    exp_kals[i] = kalman_filter(m, df_to_matrix(m, df), systems[i][:TTT], systems[i][:CCC], systems[i][:ZZ], systems[i][:DD], systems[i][:VVall], z0, vz0; allout = true)
 end
 
 for i = 1:ndraws

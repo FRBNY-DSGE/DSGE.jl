@@ -37,28 +37,28 @@ function init_systems(m, params_sim, ndraws, my_procs)
         return localpart
     end
 end
-syses = init_systems(m, params_sim, ndraws, my_procs)
+systems = init_systems(m, params_sim, ndraws, my_procs)
 
-z0  = (eye(n_states_augmented(m)) - syses[1][:TTT]) \ syses[1][:CCC]
-vz0 = QuantEcon.solve_discrete_lyapunov(syses[1][:TTT], syses[1][:RRR]*syses[1][:QQ]*syses[1][:RRR]')
-kals = DSGE.filter(m, df, syses, z0, vz0; allout = true, procs = my_procs)
+z0  = (eye(n_states_augmented(m)) - systems[1][:TTT]) \ systems[1][:CCC]
+vz0 = QuantEcon.solve_discrete_lyapunov(systems[1][:TTT], systems[1][:RRR]*systems[1][:QQ]*systems[1][:RRR]')
+kals = DSGE.filter(m, df, systems, z0, vz0; allout = true, procs = my_procs)
 
 # Run to compile before timing
-alpha_hats, eta_hats = smooth(m, df, syses, kals; procs = my_procs)
+alpha_hats, eta_hats = smooth(m, df, systems, kals; procs = my_procs)
 
 # Call smoother and test
 for smoother in [:durbin_koopman, :kalman]
     m <= Setting(:forecast_smoother, smoother)
 
-    @time alpha_hats, eta_hats = smooth(m, df, syses, kals; procs = my_procs)
+    @time alpha_hats, eta_hats = smooth(m, df, systems, kals; procs = my_procs)
 
     exp_alpha_hats = Vector{Matrix{Float64}}(ndraws)
     exp_eta_hats   = Vector{Matrix{Float64}}(ndraws)
     for i = 1:ndraws
         exp_alpha_hats[i], exp_eta_hats[i] = if forecast_smoother(m) == :durbin_koopman
-            durbin_koopman_smoother(m, df, syses[i], kals[i][:z0], kals[i][:vz0])
+            durbin_koopman_smoother(m, df, systems[i], kals[i][:z0], kals[i][:vz0])
         elseif forecast_smoother(m) == :kalman
-            kalman_smoother(m, df, syses[i], kals[i][:z0], kals[i][:vz0], kals[i][:pred], kals[i][:vpred])
+            kalman_smoother(m, df, systems[i], kals[i][:z0], kals[i][:vz0], kals[i][:pred], kals[i][:vpred])
         end
 
         @test_matrix_approx_eq exp_alpha_hats[i] convert(Array, slice(alpha_hats, i, :, :))

@@ -1,6 +1,6 @@
 """
 ```
-forecast{T<:AbstractFloat}(m::AbstractModel, sys::Vector{System{T}},
+forecast{T<:AbstractFloat}(m::AbstractModel, system::Vector{System{T}},
     initial_state_draws::Vector{Vector{T}}; shock_distributions::Union{Distribution,
     Matrix{T}} = Matrix{T}())
 ```
@@ -11,7 +11,7 @@ matrix of shocks or a distribution of shocks
 ### Inputs
 
 - `m`: model object
-- `syses::Vector{System}`: a vector of `System` objects specifying state-space
+- `systems::Vector{System}`: a vector of `System` objects specifying state-space
   system matrices for each draw
 - `initial_state_draws`: a vector of state vectors in the final historical period
 - `shock_distributions`: a `Distribution` to draw shock values from, or
@@ -29,12 +29,12 @@ matrix of shocks or a distribution of shocks
  `horizon` matrices of shock innovations
 """
 function forecast{T<:AbstractFloat}(m::AbstractModel,
-    syses::DArray{System{T}, 1}, initial_state_draws::DArray{Vector{T}, 1};
+    systems::DArray{System{T}, 1}, initial_state_draws::DArray{Vector{T}, 1};
     shock_distributions::Union{Distribution,Matrix{T}} = Matrix{T}(),
     procs::Vector{Int} = [myid()])
 
     # Numbers of useful things
-    ndraws = length(syses)
+    ndraws = length(systems)
     nprocs = length(procs)
     horizon = forecast_horizons(m)
 
@@ -67,7 +67,7 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
                 dfill(Distributions.TDist(forecast_tdist_df_val(m)), (ndraws,), procs, [nprocs])
             # use normally distributed shocks
             else
-                DArray(I -> [DegenerateMvNormal(zeros(nshocks), sqrt(s[:QQ])) for s in syses[I...]],
+                DArray(I -> [DegenerateMvNormal(zeros(nshocks), sqrt(s[:QQ])) for s in systems[I...]],
                        (ndraws,), procs, [nprocs])
             end
         end
@@ -88,7 +88,7 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
                 Matrix{T}(), Vector{T}()
             end
 
-            dict = compute_forecast(syses[i], horizon, shock_distributions[i], initial_state_draws[i], ZZp, DDp)
+            dict = compute_forecast(systems[i], horizon, shock_distributions[i], initial_state_draws[i], ZZp, DDp)
 
             i_local = mod(i-1, ndraws_local) + 1
 
@@ -135,17 +135,17 @@ compute_forecast(T, R, C, Z, D, forecast_horizons,
 - `:pseudo_observables`
 - `:shocks`
 """
-function compute_forecast{S<:AbstractFloat}(sys::System{S},
+function compute_forecast{S<:AbstractFloat}(system::System{S},
                                             forecast_horizons::Int,
                                             shocks::Matrix{S},
                                             z::Vector{S},
                                             Z_pseudo::Matrix{S} = Matrix{S}(),
                                             D_pseudo::Vector{S} = Vector{S}())
-    TTT = sys[:TTT]
-    RRR = sys[:RRR]
-    CCC = sys[:CCC]
-    ZZ  = sys[:ZZ]
-    DD  = sys[:DD]
+    TTT = system[:TTT]
+    RRR = system[:RRR]
+    CCC = system[:CCC]
+    ZZ  = system[:ZZ]
+    DD  = system[:DD]
 
     compute_forecast(TTT, RRR, CCC, ZZ, DD, forecast_horizons, shocks, z, Z_pseudo, D_pseudo)
 end
@@ -197,17 +197,17 @@ function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vecto
 end
 
 # Utility method to actually draw shocks
-function compute_forecast{S<:AbstractFloat}(sys::System{S},
+function compute_forecast{S<:AbstractFloat}(system::System{S},
                                             forecast_horizons::Int,
                                             dist::Distribution,
                                             z::Vector{S},
                                             Z_pseudo::Matrix{S}=Matrix{S}(),
                                             D_pseudo::Vector{S}=Vector{S}())
-    TTT = sys[:TTT]
-    RRR = sys[:RRR]
-    CCC = sys[:CCC]
-    ZZ  = sys[:ZZ]
-    DD  = sys[:DD]
+    TTT = system[:TTT]
+    RRR = system[:RRR]
+    CCC = system[:CCC]
+    ZZ  = system[:ZZ]
+    DD  = system[:DD]
 
     compute_forecast(TTT, RRR, CCC, ZZ, DD, forecast_horizons, dist, z, Z_pseudo, D_pseudo)
 end

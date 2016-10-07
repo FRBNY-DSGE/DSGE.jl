@@ -1,10 +1,10 @@
 """
 ```
-smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, syses::Vector{System},
+smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, systems::Vector{System},
     kals::Vector{Kalman}; cond_type::Symbol = :none)
 
 smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    syses::Vector{System}, kals::Vector{Kalman})
+    systems::Vector{System}, kals::Vector{Kalman})
 ```
 
 Computes and returns the smoothed values of states for every parameter draw.
@@ -13,7 +13,7 @@ Computes and returns the smoothed values of states for every parameter draw.
 
 - `m`: model object
 - `data`: DataFrame or matrix of data for observables
-- `syses::Vector{System}`: a vector of `System` objects specifying state-space
+- `systems::Vector{System}`: a vector of `System` objects specifying state-space
   system matrices for each draw
 - `kals::Vector{Kalman}`: a vector of `Kalman` objects containing the results of
   the Kalman filter for each draw
@@ -21,26 +21,26 @@ Computes and returns the smoothed values of states for every parameter draw.
 ### Outputs
 
 - `alpha_hats`: a vector of smoothed states (`alpha_hat`s) returned from the
-  smoother specified by `smoother_flag(m)`, one for each system in `syses`
+  smoother specified by `smoother_flag(m)`, one for each system in `systems`
 - `eta_hats`: a vector of smoothed shocks (`eta_hat`s) returned from the
-  smoother, one for each system in `syses`
+  smoother, one for each system in `systems`
 """
 function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    syses::DArray{System{S}, 1, Vector{System{S}}},
+    systems::DArray{System{S}, 1, Vector{System{S}}},
     kals::DArray{Kalman{S}, 1}; cond_type::Symbol = :none,
     procs::Vector{Int} = [myid()])
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    smooth(m, data, syses, kals; procs = procs)
+    smooth(m, data, systems, kals; procs = procs)
 end
 
 function smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    syses::DArray{System{S}, 1, Vector{System{S}}},
+    systems::DArray{System{S}, 1, Vector{System{S}}},
     kals::DArray{Kalman{S}, 1}; procs::Vector{Int} = [myid()])
 
     # numbers of useful things
     nprocs = length(procs)
-    ndraws = length(syses)
+    ndraws = length(systems)
     @assert length(kals) == ndraws
 
     nstates = n_states_augmented(m)
@@ -61,7 +61,7 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         ndraws_local = length(draw_inds)
 
         for i in draw_inds
-            states, shocks = smooth(models[i], datas[i], syses[i], kals[i])
+            states, shocks = smooth(models[i], datas[i], systems[i], kals[i])
 
             i_local = mod(i-1, ndraws_local) + 1
 
@@ -80,13 +80,13 @@ end
 
 function smooth{S<:AbstractFloat}(m::AbstractModel,
                                   data::Matrix{S},
-                                  sys::System{S},
+                                  system::System{S},
                                   kal::Kalman{S})
 
     alpha_hat, eta_hat = if forecast_smoother(m) == :kalman
-        kalman_smoother(m, data, sys, kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+        kalman_smoother(m, data, system, kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
     elseif forecast_smoother(m) == :durbin_koopman
-        durbin_koopman_smoother(m, data, sys, kal[:z0], kal[:vz0])
+        durbin_koopman_smoother(m, data, system, kal[:z0], kal[:vz0])
     end
 
     return alpha_hat, eta_hat

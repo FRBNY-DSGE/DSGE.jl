@@ -1,23 +1,23 @@
 """
 ```
 filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    syses::Vector{System{S}}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
+    systems::Vector{System{S}}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
     Matrix{S}(); cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
     include_presample::Bool = true)
 
 filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    syses::Vector{System{S}}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
+    systems::Vector{System{S}}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
     Matrix{S}(); lead::Int = 0, allout::Bool = false, include_presample::Bool =
     true)
 ```
 
-Computes and returns the filtered values of states for every state-space system in `syses`.
+Computes and returns the filtered values of states for every state-space system in `systems`.
 
 ### Inputs
 
 - `m`: model object
 - `data`: DataFrame or matrix of data for observables
-- `syses`: a vector of `System` objects specifying state-space
+- `systems`: a vector of `System` objects specifying state-space
   system matrices for each draw
 - `z0`: an optional `Nz` x 1 initial state vector
 - `vz0`: an optional `Nz` x `Nz` covariance matrix of an initial state vector
@@ -40,25 +40,25 @@ Computes and returns the filtered values of states for every state-space system 
   state vectors.
 """
 function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    syses::DArray{System{S}, 1, Vector{System{S}}},
+    systems::DArray{System{S}, 1, Vector{System{S}}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
     include_presample::Bool = true, procs::Vector{Int} = [myid()])
 
     # Convert the DataFrame to a data matrix without altering the original dataframe
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filter(m, data, syses, z0, vz0; lead = lead, allout = allout,
+    filter(m, data, systems, z0, vz0; lead = lead, allout = allout,
            include_presample = include_presample, procs = procs)
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    syses::DArray{System{S}, 1, Vector{System{S}}},
+    systems::DArray{System{S}, 1, Vector{System{S}}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     lead::Int = 0, allout::Bool = false, include_presample::Bool = true,
     procs::Vector{Int} = [myid()])
 
     # Numbers of useful things
-    ndraws = length(syses)
+    ndraws = length(systems)
     nprocs = length(procs)
 
     # Broadcast models and data matrices
@@ -75,34 +75,35 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 
         for i in draw_inds
             i_local = mod(i-1, ndraws_local) + 1
-            localpart[i_local] = filter(models[i], datas[i], syses[i], z0s[i], vz0s[i];
+            localpart[i_local] = filter(models[i], datas[i], systems[i], z0s[i], vz0s[i];
                                         allout = allout, include_presample = include_presample)
         end
         return localpart
     end
 end
 
-function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, sys::System{S},
+function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::System{S},
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                   cond_type::Symbol = :none, lead::Int = 0,
                                   allout::Bool = false, include_presample::Bool = true)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filter(m, data, sys, z0, vz0; lead = lead, allout = allout, include_presample = include_presample)
+    filter(m, data, system, z0, vz0; lead = lead, allout = allout,
+           include_presample = include_presample)
 end
 
-function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System{S},
+function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::System{S},
                                   z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                   lead::Int = 0, allout::Bool = false, include_presample::Bool = true)
 
     # pull out the elements of sys
-    TTT    = sys[:TTT]
-    RRR    = sys[:RRR]
-    CCC    = sys[:CCC]
-    QQ     = sys[:QQ]
-    ZZ     = sys[:ZZ]
-    DD     = sys[:DD]
-    VVall  = sys[:VVall]
+    TTT    = system[:TTT]
+    RRR    = system[:RRR]
+    CCC    = system[:CCC]
+    QQ     = system[:QQ]
+    ZZ     = system[:ZZ]
+    DD     = system[:DD]
+    VVall  = system[:VVall]
 
     # Call the appropriate version of the Kalman filter
     if n_anticipated_shocks(m) > 0
@@ -123,24 +124,24 @@ end
 """
 ```
 filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    syses::Vector{System{S}}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
+    systems::Vector{System{S}}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
     Matrix{S}(); lead::Int = 0, allout::Bool = false, include_presample::Bool =
     true)
 
 filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    syses::Vector{System{S}}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
+    systems::Vector{System{S}}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
     Matrix{S}(); lead::Int = 0, allout::Bool = false, include_presample::Bool =
     true)
 ```
 
 Computes and returns the smoothed states, shocks, and pseudo-observables, as
-well as the Kalman filter outputs, for every state-space system in `syses`.
+well as the Kalman filter outputs, for every state-space system in `systems`.
 
 ### Inputs
 
 - `m`: model object
 - `data`: DataFrame or matrix of data for observables
-- `syses`: a vector of `System` objects specifying state-space
+- `systems`: a vector of `System` objects specifying state-space
   system matrices for each draw
 - `z0`: an optional `Nz` x 1 initial state vector
 - `vz0`: an optional `Nz` x `Nz` covariance matrix of an initial state vector
@@ -160,23 +161,23 @@ where `states` and `shocks` are returned from the smoother specified by
 `smoother_flag(m)`.
 """
 function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    syses::DArray{System{T}, 1, Vector{System{T}}},
+    systems::DArray{System{T}, 1, Vector{System{T}}},
     z0::Vector{T} = Vector{T}(), vz0::Matrix{T} = Matrix{T}();
     cond_type::Symbol = :none, lead::Int = 0,
     procs::Vector{Int} = [myid()])
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filterandsmooth(m, data, syses, z0, vz0; lead = lead, procs = procs)
+    filterandsmooth(m, data, systems, z0, vz0; lead = lead, procs = procs)
 end
 
 
 function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T},
-    syses::DArray{System{T}, 1, Vector{System{T}}},
+    systems::DArray{System{T}, 1, Vector{System{T}}},
     z0::Vector{T} = Vector{T}(), vz0::Matrix{T} = Matrix{T}();
     lead::Int = 0, procs::Vector{Int} = [myid()])
 
     # Numbers of useful things
-    ndraws = length(syses)
+    ndraws = length(systems)
     nprocs = length(procs)
     nperiods = size(data, 2) - n_presample_periods(m)
 
@@ -202,7 +203,7 @@ function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T},
         ndraws_local = length(draw_inds)
 
         for i in draw_inds
-            states, shocks, pseudo, zend = filterandsmooth(models[i], datas[i], syses[i], z0s[i], vz0s[i])
+            states, shocks, pseudo, zend = filterandsmooth(models[i], datas[i], systems[i], z0s[i], vz0s[i])
 
             i_local = mod(i-1, ndraws_local) + 1
 
@@ -226,17 +227,17 @@ function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T},
     return states, shocks, pseudo, zend
 end
 
-function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, sys::System{S},
+function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::System{S},
                                            z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
                                            lead::Int = 0)
 
-    TTT   = sys[:TTT]
-    RRR   = sys[:RRR]
-    CCC   = sys[:CCC]
-    QQ    = sys[:QQ]
-    ZZ    = sys[:ZZ]
-    DD    = sys[:DD]
-    VVall = sys[:VVall]
+    TTT   = system[:TTT]
+    RRR   = system[:RRR]
+    CCC   = system[:CCC]
+    QQ    = system[:QQ]
+    ZZ    = system[:ZZ]
+    DD    = system[:DD]
+    VVall = system[:VVall]
 
     filterandsmooth(m, data, TTT, RRR, CCC, QQ, ZZ, DD, VVall, z0, vz0; lead = lead)
 end
