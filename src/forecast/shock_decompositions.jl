@@ -29,11 +29,11 @@ where `nperiods = hist_periods + forecast_horizon`.
 """
 function shock_decompositions{T<:AbstractFloat}(m::AbstractModel,
     syses::DArray{System{T}, 1}, histshocks::DArray{T, 3};
-    my_procs::Vector{Int} = [myid()])
+    procs::Vector{Int} = [myid()])
 
     # Numbers of useful things
     ndraws = length(syses)
-    nprocs = length(my_procs)
+    nprocs = length(procs)
     horizon = forecast_horizons(m)
 
     nstates = n_states_augmented(m)
@@ -61,7 +61,7 @@ function shock_decompositions{T<:AbstractFloat}(m::AbstractModel,
     nperiods = end_ind - start_ind + 1
 
     # Construct distributed array of shock decompositions
-    out = DArray((ndraws, nstates + nobs + npseudo, nperiods, nshocks), my_procs, [nprocs, 1, 1, 1]) do I
+    out = DArray((ndraws, nstates + nobs + npseudo, nperiods, nshocks), procs, [nprocs, 1, 1, 1]) do I
         localpart = zeros(map(length, I)...)
         draw_inds = first(I)
         ndraws_local = Int(ndraws / nprocs)

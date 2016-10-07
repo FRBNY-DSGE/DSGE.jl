@@ -138,7 +138,7 @@ be implemented.
 """
 function prepare_systems(m::AbstractModel, input_type::Symbol,
     params::Matrix{Float64}, TTT::Array{Float64, 3}, RRR::Array{Float64, 3},
-    CCC::Array{Float64, 3}; my_procs::Vector{Int} = [myid()])
+    CCC::Array{Float64, 3}; procs::Vector{Int} = [myid()])
 
     # Setup
     n_sim = size(params,1)
@@ -147,11 +147,11 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
 
     if input_type in [:mean, :mode, :init]
         update!(m, vec(params))
-        systems = dfill(compute_system(m), (1,), my_procs)
+        systems = dfill(compute_system(m), (1,), procs)
     elseif input_type in [:full]
         empty = isempty(CCC)
-        nprocs = length(my_procs);
-        systems = DArray((n_sim_forecast,), my_procs, [nprocs]) do I
+        nprocs = length(procs);
+        systems = DArray((n_sim_forecast,), procs, [nprocs]) do I
             draw_inds = first(I)
             ndraws_local = Int(n_sim_forecast / nprocs)
             localpart = Vector{System{Float64}}(ndraws_local)
@@ -205,7 +205,7 @@ conditional data, then the final state vector is adjusted accordingly.
 function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     systems::DArray{System{Float64}, 1, Vector{System{Float64}}},
     params::Matrix{Float64}, df::DataFrame, zend::Matrix{Float64};
-    my_procs::Vector{Int} = [myid()])
+    procs::Vector{Int} = [myid()])
 
     # Setup
     n_sim_forecast = length(systems)
@@ -218,13 +218,13 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
         update!(m, vec(params))
         kal = filter(m, df, systems[1]; cond_type = cond_type, allout = true)
         # `kals` is a vector of length 1
-        states = dfill(kal[:filt][:, end], (1,), my_procs);
+        states = dfill(kal[:filt][:, end], (1,), procs);
 
     # If we have many draws, then we must package them into a vector of System objects.
     elseif input_type in [:full]
         if cond_type in [:none]
-            nprocs = length(my_procs)
-            states = DArray((n_sim_forecast,), my_procs, [nprocs]) do I
+            nprocs = length(procs)
+            states = DArray((n_sim_forecast,), procs, [nprocs]) do I
                 draw_inds = first(I)
                 ndraws_local = Int(n_sim_forecast / nprocs)
                 localpart = Vector{Vector{Float64}}(ndraws_local)
@@ -241,7 +241,7 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
             # We will need to re-run the entire filter/smoother so we can't do anything
             # here. The reason is that while we have $s_{T|T}$ we don't have $P_{T|T}$ and
             # thus can't "restart" the Kalman filter for the conditional data period.
-            states = dfill(Vector{Float64}(), (0,), my_procs)
+            states = dfill(Vector{Float64}(), (0,), procs)
         end
     else
         throw(ArgumentError("Not implemented."))
@@ -261,7 +261,7 @@ state vectors.
 """
 function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     input_type::Symbol = :mode, cond_type::Symbol = :none,
-    my_procs::Vector{Int} = [myid()])
+    procs::Vector{Int} = [myid()])
 
     # Set up infiles
     params, TTT, RRR, CCC, zend = load_draws(m, input_type)
@@ -271,10 +271,10 @@ function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     n_sim_forecast = convert(Int, n_sim/jstep)
 
     # Populate systems vector
-    systems = prepare_systems(m, input_type, params, TTT, RRR, CCC; my_procs = my_procs)
+    systems = prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = procs)
 
     # Populate states vector
-    states = prepare_states(m, input_type, cond_type, systems, params, df, zend; my_procs = my_procs)
+    states = prepare_states(m, input_type, cond_type, systems, params, df, zend; procs = procs)
 
     return systems, states
 end
@@ -292,20 +292,20 @@ Compute, save, and return forecast outputs given by `output_type` for input draw
 function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     input_type::Symbol = :mode, cond_type::Symbol = :none,
     output_vars::Vector{Symbol} = [], verbose::Symbol = :low,
-    my_procs::Vector{Int} = [myid()])
+    procs::Vector{Int} = [myid()])
 
     ### 1. Setup
 
     # Use only one process for a single draw
     if input_type in [:init, :mode, :mean]
-        my_procs = [myid()]
+        procs = [myid()]
     end
 
     # Prepare forecast inputs
     systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
-        cond_type = cond_type, my_procs = my_procs)
+        cond_type = cond_type, procs = procs)
 
-    nprocs = length(my_procs)
+    nprocs = length(procs)
     ndraws = length(systems)
 
     # Prepare forecast outputs
@@ -348,7 +348,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     if !isempty(intersect(output_vars, filterandsmooth_vars)) || cond_type in [:semi, :full]
 
         histstates, histshocks, histpseudo, zends =
-            filterandsmooth(m, df, systems; cond_type = cond_type, my_procs = my_procs)
+            filterandsmooth(m, df, systems; cond_type = cond_type, procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
@@ -383,7 +383,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     if !isempty(intersect(output_vars, forecast_vars))
         forecaststates, forecastobs, forecastpseudo, forecastshocks =
-            forecast(m, systems, states; my_procs = my_procs)
+            forecast(m, systems, states; procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
@@ -398,7 +398,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
             function cat_conditional(histvars::DArray{Float64, 3}, forecastvars::DArray{Float64, 3})
                 nvars = size(histvars, 2)
-                return DArray((ndraws, nvars, nperiods), my_procs, [nprocs, 1, 1]) do I
+                return DArray((ndraws, nvars, nperiods), procs, [nprocs, 1, 1]) do I
                     draw_inds = first(I)
                     hist_cond = convert(Array, histvars[draw_inds, :, T+1:end])
                     forecast  = convert(Array, forecastvars[draw_inds, :, :])
@@ -412,7 +412,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
                 forecast_output[:forecastpseudo] = cat_conditional(histpseudo, forecastpseudo)
             end
             forecast_output[:forecastobs]    =
-                DArray((ndraws, nobs, nperiods), my_procs, [nprocs, 1, 1]) do I
+                DArray((ndraws, nobs, nperiods), procs, [nprocs, 1, 1]) do I
                     draw_inds = first(I)
                     ndraws_local = length(draw_inds)
                     hist_cond = repeat(histobs_cond, outer = [ndraws_local, 1, 1])
@@ -436,7 +436,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     if !isempty(intersect(output_vars, shockdec_vars))
         shockdecstates, shockdecobs, shockdecpseudo =
-            shock_decompositions(m, systems, histshocks; my_procs = my_procs)
+            shock_decompositions(m, systems, histshocks; procs = procs)
 
         forecast_output[:shockdecstates] = shockdecstates
         forecast_output[:shockdecobs]    = shockdecobs

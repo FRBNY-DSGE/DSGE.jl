@@ -31,11 +31,11 @@ matrix of shocks or a distribution of shocks
 function forecast{T<:AbstractFloat}(m::AbstractModel,
     syses::DArray{System{T}, 1}, initial_state_draws::DArray{Vector{T}, 1};
     shock_distributions::Union{Distribution,Matrix{T}} = Matrix{T}(),
-    my_procs::Vector{Int} = [myid()])
+    procs::Vector{Int} = [myid()])
 
     # Numbers of useful things
     ndraws = length(syses)
-    nprocs = length(my_procs)
+    nprocs = length(procs)
     horizon = forecast_horizons(m)
 
     nstates = n_states_augmented(m)
@@ -60,21 +60,21 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
 
     shock_distributions = if isempty(shock_distributions)
         if forecast_kill_shocks(m)
-            dfill(zeros(nshocks, horizon), (ndraws,), my_procs, [nprocs])
+            dfill(zeros(nshocks, horizon), (ndraws,), procs, [nprocs])
         else
             # use t-distributed shocks
             if forecast_tdist_shocks(m)
-                dfill(Distributions.TDist(forecast_tdist_df_val(m)), (ndraws,), my_procs, [nprocs])
+                dfill(Distributions.TDist(forecast_tdist_df_val(m)), (ndraws,), procs, [nprocs])
             # use normally distributed shocks
             else
                 DArray(I -> [DegenerateMvNormal(zeros(nshocks), sqrt(s[:QQ])) for s in syses[I...]],
-                       (ndraws,), my_procs, [nprocs])
+                       (ndraws,), procs, [nprocs])
             end
         end
     end
 
     # Construct distributed array of forecast outputs
-    out = DArray((ndraws, nstates + nobs + npseudo + nshocks, horizon), my_procs, [nprocs, 1, 1]) do I
+    out = DArray((ndraws, nstates + nobs + npseudo + nshocks, horizon), procs, [nprocs, 1, 1]) do I
         localpart = zeros(map(length, I)...)
         draw_inds = first(I)
         ndraws_local = Int(ndraws / nprocs)

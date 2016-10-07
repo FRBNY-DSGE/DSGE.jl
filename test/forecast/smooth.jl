@@ -41,16 +41,16 @@ syses = init_systems(m, params_sim, ndraws, my_procs)
 
 z0  = (eye(n_states_augmented(m)) - syses[1][:TTT]) \ syses[1][:CCC]
 vz0 = QuantEcon.solve_discrete_lyapunov(syses[1][:TTT], syses[1][:RRR]*syses[1][:QQ]*syses[1][:RRR]')
-kals = DSGE.filter(m, df, syses, z0, vz0; allout = true, my_procs = my_procs)
+kals = DSGE.filter(m, df, syses, z0, vz0; allout = true, procs = my_procs)
 
 # Run to compile before timing
-alpha_hats, eta_hats = smooth(m, df, syses, kals; my_procs = my_procs)
+alpha_hats, eta_hats = smooth(m, df, syses, kals; procs = my_procs)
 
 # Call smoother and test
 for smoother in [:durbin_koopman, :kalman]
     m <= Setting(:forecast_smoother, smoother)
 
-    @time alpha_hats, eta_hats = smooth(m, df, syses, kals; my_procs = my_procs)
+    @time alpha_hats, eta_hats = smooth(m, df, syses, kals; procs = my_procs)
 
     exp_alpha_hats = Vector{Matrix{Float64}}(ndraws)
     exp_eta_hats   = Vector{Matrix{Float64}}(ndraws)

@@ -44,14 +44,14 @@ z0  = (eye(n_states_augmented(m)) - syses[1][:TTT]) \ syses[1][:CCC]
 vz0 = QuantEcon.solve_discrete_lyapunov(syses[1][:TTT], syses[1][:RRR]*syses[1][:QQ]*syses[1][:RRR]')
 
 # Run to compile before timing
-states, shocks, pseudo = filterandsmooth(m, df, syses; my_procs = my_procs)
-states, shocks, pseudo = filterandsmooth(m, df, syses, z0, vz0; my_procs = my_procs)
+states, shocks, pseudo = filterandsmooth(m, df, syses; procs = my_procs)
+states, shocks, pseudo = filterandsmooth(m, df, syses, z0, vz0; procs = my_procs)
 
 for smoother in [:durbin_koopman, :kalman]
     m <= Setting(:forecast_smoother, smoother)
 
     # Without providing z0 and vz0
-    @time states, shocks, pseudo = filterandsmooth(m, df, syses; my_procs = my_procs)
+    @time states, shocks, pseudo = filterandsmooth(m, df, syses; procs = my_procs)
 
     exp_states = Vector{Matrix{Float64}}(ndraws)
     exp_shocks = Vector{Matrix{Float64}}(ndraws)
@@ -75,7 +75,7 @@ for smoother in [:durbin_koopman, :kalman]
     end
 
     # Providing z0 and vz0
-    @time states, shocks, pseudo = filterandsmooth(m, df, syses, z0, vz0; my_procs = my_procs)
+    @time states, shocks, pseudo = filterandsmooth(m, df, syses, z0, vz0; procs = my_procs)
 
     exp_states = Vector{Matrix{Float64}}(ndraws)
     exp_shocks = Vector{Matrix{Float64}}(ndraws)

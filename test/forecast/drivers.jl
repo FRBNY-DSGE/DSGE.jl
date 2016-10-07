@@ -30,7 +30,7 @@ for input_type in [:init, :mode, :full]
     # Call forecast_one once without timing
     df = load_data(m; verbose = :none)
     forecast_one(m, df; input_type = :full, cond_type = :none, output_vars = output_vars,
-                 verbose = :none, my_procs = my_procs)
+                 verbose = :none, procs = my_procs)
 
     for cond_type in [:none, :semi, :full]
 
@@ -41,7 +41,7 @@ for input_type in [:init, :mode, :full]
 
         @time new_forecast = forecast_one(m, forecast_output[:df];
             input_type = input_type, cond_type = cond_type, output_vars = output_vars,
-            verbose = :none, my_procs = my_procs)
+            verbose = :none, procs = my_procs)
         merge!(forecast_output, new_forecast)
 
         forecast_outputs[(cond_type, input_type)] = forecast_output

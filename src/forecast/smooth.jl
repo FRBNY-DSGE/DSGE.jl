@@ -28,18 +28,18 @@ Computes and returns the smoothed values of states for every parameter draw.
 function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     syses::DArray{System{S}, 1, Vector{System{S}}},
     kals::DArray{Kalman{S}, 1}; cond_type::Symbol = :none,
-    my_procs::Vector{Int} = [myid()])
+    procs::Vector{Int} = [myid()])
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    smooth(m, data, syses, kals; my_procs = my_procs)
+    smooth(m, data, syses, kals; procs = procs)
 end
 
 function smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     syses::DArray{System{S}, 1, Vector{System{S}}},
-    kals::DArray{Kalman{S}, 1}; my_procs::Vector{Int} = [myid()])
+    kals::DArray{Kalman{S}, 1}; procs::Vector{Int} = [myid()])
 
     # numbers of useful things
-    nprocs = length(my_procs)
+    nprocs = length(procs)
     ndraws = length(syses)
     @assert length(kals) == ndraws
 
@@ -51,11 +51,11 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     shocks_range = (nstates + 1):(nstates + nshocks)
 
     # Broadcast models and data matrices
-    models = dfill(m,    (ndraws,), my_procs, [nprocs])
-    datas  = dfill(data, (ndraws,), my_procs, [nprocs])
+    models = dfill(m,    (ndraws,), procs, [nprocs])
+    datas  = dfill(data, (ndraws,), procs, [nprocs])
 
     # Construct distributed array of smoothed states and shocks
-    out = DArray((ndraws, nstates + nshocks, nperiods), my_procs, [nprocs, 1, 1]) do I
+    out = DArray((ndraws, nstates + nshocks, nperiods), procs, [nprocs, 1, 1]) do I
         localpart = zeros(map(length, I)...)
         draw_inds = first(I)
         ndraws_local = length(draw_inds)

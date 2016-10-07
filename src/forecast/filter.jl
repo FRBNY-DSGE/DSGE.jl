@@ -43,32 +43,32 @@ function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     syses::DArray{System{S}, 1, Vector{System{S}}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
-    include_presample::Bool = true, my_procs::Vector{Int} = [myid()])
+    include_presample::Bool = true, procs::Vector{Int} = [myid()])
 
     # Convert the DataFrame to a data matrix without altering the original dataframe
     data = df_to_matrix(m, df; cond_type = cond_type)
     filter(m, data, syses, z0, vz0; lead = lead, allout = allout,
-           include_presample = include_presample, my_procs = my_procs)
+           include_presample = include_presample, procs = procs)
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     syses::DArray{System{S}, 1, Vector{System{S}}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     lead::Int = 0, allout::Bool = false, include_presample::Bool = true,
-    my_procs::Vector{Int} = [myid()])
+    procs::Vector{Int} = [myid()])
 
     # Numbers of useful things
     ndraws = length(syses)
-    nprocs = length(my_procs)
+    nprocs = length(procs)
 
     # Broadcast models and data matrices
-    models = dfill(m,    (ndraws,), my_procs, [nprocs])
-    datas  = dfill(data, (ndraws,), my_procs, [nprocs])
-    z0s    = dfill(z0,   (ndraws,), my_procs, [nprocs])
-    vz0s   = dfill(vz0,  (ndraws,), my_procs, [nprocs])
+    models = dfill(m,    (ndraws,), procs, [nprocs])
+    datas  = dfill(data, (ndraws,), procs, [nprocs])
+    z0s    = dfill(z0,   (ndraws,), procs, [nprocs])
+    vz0s   = dfill(vz0,  (ndraws,), procs, [nprocs])
 
     # Construct distributed array of Kalman objects
-    kals = DArray((ndraws,), my_procs, [nprocs]) do I
+    kals = DArray((ndraws,), procs, [nprocs]) do I
         draw_inds = first(I)
         ndraws_local = length(draw_inds)
         localpart = Vector{Kalman{S}}(ndraws_local)
@@ -163,21 +163,21 @@ function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     syses::DArray{System{T}, 1, Vector{System{T}}},
     z0::Vector{T} = Vector{T}(), vz0::Matrix{T} = Matrix{T}();
     cond_type::Symbol = :none, lead::Int = 0,
-    my_procs::Vector{Int} = [myid()])
+    procs::Vector{Int} = [myid()])
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filterandsmooth(m, data, syses, z0, vz0; lead = lead, my_procs = my_procs)
+    filterandsmooth(m, data, syses, z0, vz0; lead = lead, procs = procs)
 end
 
 
 function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T},
     syses::DArray{System{T}, 1, Vector{System{T}}},
     z0::Vector{T} = Vector{T}(), vz0::Matrix{T} = Matrix{T}();
-    lead::Int = 0, my_procs::Vector{Int} = [myid()])
+    lead::Int = 0, procs::Vector{Int} = [myid()])
 
     # Numbers of useful things
     ndraws = length(syses)
-    nprocs = length(my_procs)
+    nprocs = length(procs)
     nperiods = size(data, 2) - n_presample_periods(m)
 
     nstates = n_states_augmented(m)
@@ -190,13 +190,13 @@ function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T},
     zend_range   = nstates + nshocks + npseudo + 1
 
     # Broadcast models and data matrices
-    models = dfill(m,    (ndraws,), my_procs, [nprocs])
-    datas  = dfill(data, (ndraws,), my_procs, [nprocs])
-    z0s    = dfill(z0,   (ndraws,), my_procs, [nprocs])
-    vz0s   = dfill(vz0,  (ndraws,), my_procs, [nprocs])
+    models = dfill(m,    (ndraws,), procs, [nprocs])
+    datas  = dfill(data, (ndraws,), procs, [nprocs])
+    z0s    = dfill(z0,   (ndraws,), procs, [nprocs])
+    vz0s   = dfill(vz0,  (ndraws,), procs, [nprocs])
 
     # Construct distributed array of smoothed states, shocks, and pseudo-observables
-    out = DArray((ndraws, nstates + nshocks + npseudo + 1, nperiods), my_procs, [nprocs, 1, 1]) do I
+    out = DArray((ndraws, nstates + nshocks + npseudo + 1, nperiods), procs, [nprocs, 1, 1]) do I
         localpart = zeros(map(length, I)...)
         draw_inds = first(I)
         ndraws_local = length(draw_inds)
@@ -218,7 +218,7 @@ function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T},
     states = convert(DArray, out[1:ndraws, states_range, 1:nperiods])
     shocks = convert(DArray, out[1:ndraws, shocks_range, 1:nperiods])
     pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods])
-    zend   = DArray((ndraws,), my_procs, [nprocs]) do I
+    zend   = DArray((ndraws,), procs, [nprocs]) do I
         Vector{T}[convert(Array, slice(out, i, zend_range, 1:nstates)) for i in first(I)]
     end
 
