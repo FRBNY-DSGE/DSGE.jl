@@ -116,12 +116,12 @@ module DSGE
     include("estimate/moments.jl")
 
     include("forecast/smoothers.jl")
-    include("forecast/compute_system.jl")
     include("forecast/filter.jl")
     include("forecast/smooth.jl")
-    include("forecast/drivers.jl")
     include("forecast/forecast.jl")
     include("forecast/shock_decompositions.jl")
+    include("forecast/util.jl")
+    include("forecast/drivers.jl")
 
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")
