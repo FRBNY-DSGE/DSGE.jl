@@ -28,9 +28,9 @@ matrix of shocks or a distribution of shocks
 -`shocks`: vector of length `ndraws`, whose elements are the `npseudo` x
  `horizon` matrices of shock innovations
 """
-function forecast{T<:AbstractFloat}(m::AbstractModel,
-    systems::DArray{System{T}, 1}, initial_state_draws::DArray{Vector{T}, 1};
-    shock_distributions::Union{Distribution,Matrix{T}} = Matrix{T}(),
+function forecast{S<:AbstractFloat}(m::AbstractModel,
+    systems::DArray{System{S}, 1}, z0s::DArray{Vector{S}, 1};
+    shock_distributions::Union{Distribution,Matrix{S}} = Matrix{S}(),
     procs::Vector{Int} = [myid()])
 
     # Numbers of useful things
@@ -81,21 +81,22 @@ function forecast{T<:AbstractFloat}(m::AbstractModel,
 
         for i in draw_inds
             # Get pseudomeasurement matrices
-            ZZp, DDp = if forecast_pseudoobservables(m)
+            Z_pseudo, D_pseudo = if forecast_pseudoobservables(m)
                 _, pseudo_mapping = pseudo_measurement(m)
                 pseudo_mapping.ZZ, pseudo_mapping.DD
             else
-                Matrix{T}(), Vector{T}()
+                Matrix{S}(), Vector{S}()
             end
 
-            dict = compute_forecast(systems[i], horizon, shock_distributions[i], initial_state_draws[i], ZZp, DDp)
+            states, obs, pseudo, shocks = compute_forecast(systems[i], horizon,
+                shock_distributions[i], z0s[i], Z_pseudo, D_pseudo)
 
             i_local = mod(i-1, ndraws_local) + 1
 
-            localpart[i_local, states_range, :] = dict[:states]
-            localpart[i_local, obs_range,    :] = dict[:observables]
-            localpart[i_local, pseudo_range, :] = dict[:pseudo_observables]
-            localpart[i_local, shocks_range, :] = dict[:shocks]
+            localpart[i_local, states_range, :] = states
+            localpart[i_local, obs_range,    :] = obs
+            localpart[i_local, pseudo_range, :] = pseudo
+            localpart[i_local, shocks_range, :] = shocks
         end
         return localpart
     end
@@ -136,89 +137,68 @@ compute_forecast(T, R, C, Z, D, forecast_horizons,
 - `:shocks`
 """
 function compute_forecast{S<:AbstractFloat}(system::System{S},
-                                            forecast_horizons::Int,
-                                            shocks::Matrix{S},
-                                            z::Vector{S},
-                                            Z_pseudo::Matrix{S} = Matrix{S}(),
-                                            D_pseudo::Vector{S} = Vector{S}())
-    TTT = system[:TTT]
-    RRR = system[:RRR]
-    CCC = system[:CCC]
-    ZZ  = system[:ZZ]
-    DD  = system[:DD]
+    forecast_horizons::Int, shocks::Matrix{S}, z0::Vector{S},
+    Z_pseudo::Matrix{S} = Matrix{S}(), D_pseudo::Vector{S} = Vector{S}())
 
-    compute_forecast(TTT, RRR, CCC, ZZ, DD, forecast_horizons, shocks, z, Z_pseudo, D_pseudo)
+    # Unpack system
+    T, R, C = system[:TTT], system[:RRR], system[:CCC]
+    Z, D = system[:ZZ], system[:DD]
+
+    compute_forecast(T, R, C, Z, D, forecast_horizons, shocks, z0, Z_pseudo, D_pseudo)
 end
 
 function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vector{S},
-                                            Z::Matrix{S}, D::Vector{S},
-                                            forecast_horizons::Int,
-                                            shocks::Matrix{S},
-                                            z::Vector{S},
-                                            Z_pseudo::Matrix{S} = Matrix{S}(),
-                                            D_pseudo::Vector{S} = Vector{S}())
+    Z::Matrix{S}, D::Vector{S}, forecast_horizons::Int, shocks::Matrix{S},
+    z0::Vector{S}, Z_pseudo::Matrix{S} = Matrix{S}(), D_pseudo::Vector{S} = Vector{S}())
 
     if forecast_horizons <= 0
         throw(DomainError())
     end
 
     # Setup
-    nshocks      = size(R, 2)
-    nstates      = size(T, 2)
-    nobservables = size(Z, 1)
-    npseudo      = size(Z_pseudo, 1)
-    states       = zeros(nstates, forecast_horizons)
+    nshocks = size(R, 2)
+    nstates = size(T, 2)
+    nobs    = size(Z, 1)
+    npseudo = size(Z_pseudo, 1)
+
+    states = zeros(nstates, forecast_horizons)
 
     # Define our iteration function
     iterate(z_t1, ϵ_t) = C + T*z_t1 + R*ϵ_t
 
-    # Iterate first period
-    states[:, 1] = iterate(z, shocks[:, 1])
-
-    # Iterate remaining periods
+    # Iterate state space forward
+    states[:, 1] = iterate(z0, shocks[:, 1])
     for t in 2:forecast_horizons
         states[:, t] = iterate(states[:, t-1], shocks[:, t])
     end
 
-    # Apply observation and pseudo-observation equations
-    observables        = D        .+ Z        * states
-    pseudo_observables = if isempty(Z_pseudo) || isempty(D_pseudo)
-        Matrix{S}()
-    else
+    # Apply measurement and pseudo-measurement equations
+    obs    = D .+ Z*states
+    pseudo = if !isempty(Z_pseudo) && !isempty(D_pseudo)
         D_pseudo .+ Z_pseudo * states
+    else
+        Matrix{S}()
     end
 
-    # Return a dictionary of forecasts
-    Dict{Symbol, Matrix{S}}(
-        :states             => states,
-        :observables        => observables,
-        :pseudo_observables => pseudo_observables,
-        :shocks             => shocks)
+    # Return forecasts
+    return states, obs, pseudo, shocks
 end
 
 # Utility method to actually draw shocks
 function compute_forecast{S<:AbstractFloat}(system::System{S},
-                                            forecast_horizons::Int,
-                                            dist::Distribution,
-                                            z::Vector{S},
-                                            Z_pseudo::Matrix{S}=Matrix{S}(),
-                                            D_pseudo::Vector{S}=Vector{S}())
-    TTT = system[:TTT]
-    RRR = system[:RRR]
-    CCC = system[:CCC]
-    ZZ  = system[:ZZ]
-    DD  = system[:DD]
+    forecast_horizons::Int, dist::Distribution, z0::Vector{S},
+    Z_pseudo::Matrix{S} = Matrix{S}(), D_pseudo::Vector{S} = Vector{S}())
 
-    compute_forecast(TTT, RRR, CCC, ZZ, DD, forecast_horizons, dist, z, Z_pseudo, D_pseudo)
+    # Unpack system
+    T, R, C = system[:TTT], system[:RRR], system[:CCC]
+    Z, D    = system[:ZZ], system[:DD]
+
+    compute_forecast(T, R, C, Z, D, forecast_horizons, dist, z0, Z_pseudo, D_pseudo)
 end
 
 function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vector{S},
-                                            Z::Matrix{S}, D::Vector{S},
-                                            forecast_horizons::Int,
-                                            dist::Distribution,
-                                            z::Vector{S},
-					                        Z_pseudo::Matrix{S}=Matrix{S}(),
-                                            D_pseudo::Vector{S}=Vector{S}())
+    Z::Matrix{S}, D::Vector{S}, forecast_horizons::Int, dist::Distribution,
+    z0::Vector{S}, Z_pseudo::Matrix{S} = Matrix{S}(), D_pseudo::Vector{S} = Vector{S}())
 
     if forecast_horizons <= 0
         throw(DomainError())
@@ -231,20 +211,6 @@ function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vecto
         shocks[:, t] = rand(dist)
     end
 
-    compute_forecast(T, R, C, Z, D, forecast_horizons, shocks, z,
+    compute_forecast(T, R, C, Z, D, forecast_horizons, shocks, z0,
                      Z_pseudo, D_pseudo)
 end
-
-# I'm imagining that a Forecast object could be returned from
-# compute_forecast rather than a dictionary. It could look something like the
-# type outlined below for a single draw.
-# Perhaps we could also add some fancy indexing to be able to index by names of states/observables/etc.
-# Question becomes: where do we store the list of observables? In the
-# model object? In a separate forecastSettings vector that we also
-# pass to forecast?
-# immutable Forecast{T<:AbstractFloat}
-#     states::Matrix{T}
-#     observables::Matrix{T}
-#     pseudoobservables::Matrix{T}
-#     shocks::Matrix{T}
-# end

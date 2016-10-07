@@ -18,7 +18,7 @@ D_pseudo = zeros(npseudos)
 Q        = eye(nshocks,nshocks)
 
 # load state vector at time T
-z_end = zeros(2)
+z0 = zeros(2)
 
 # specify forecast horizons
 horizons = 3
@@ -27,12 +27,12 @@ horizons = 3
 dist = DSGE.DegenerateMvNormal(zeros(nshocks), Q)
 
 # test invocation supplying distribution
-forecast_dist = compute_forecast(T, R, C, Z, D, horizons, dist, z_end,
-                                 Z_pseudo, D_pseudo)
+states, obs, pseudo, shocks = compute_forecast(T, R, C, Z, D, horizons, dist,
+    z0, Z_pseudo, D_pseudo)
 
 # test invocation supplying shocks
 shocks = rand(nshocks, horizons)
-forecast_shocks = compute_forecast(T, R, C, Z, D, horizons, shocks, z_end,
-                                   Z_pseudo, D_pseudo)
+states, obs, pseudo, shocks = compute_forecast(T, R, C, Z, D, horizons, shocks,
+    z0, Z_pseudo, D_pseudo)
 
 nothing

@@ -49,10 +49,10 @@ end
 z0s = init_states(m, systems, ndraws, my_procs)
 
 # Run to compile before timing
-states, observables, pseudos, shocks = DSGE.forecast(m, systems, z0s)
+states, obs, pseudo, shocks = DSGE.forecast(m, systems, z0s)
 
 # Run forecast
-@time states, observables, pseudos, shocks = DSGE.forecast(m, systems, z0s)
+@time states, obs, pseudo, shocks = DSGE.forecast(m, systems, z0s)
 
 # Remove parallel workers
 rmprocs(my_procs)

@@ -1,6 +1,6 @@
 """
 ```
-shock_decompositions{T<:AbstractFloat}(m::AbstractModel,
+shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
     systems::Vector{System{S}}, histshocks::Vector{Matrix{S}})
 ```
 
@@ -19,7 +19,7 @@ historical smoothed shocks.
 
 -`states`: vector of length `ndraws`, whose elements are the `nstates` x
  `nperiods` x `nshocks` matrices of state shock decompositions
--`observables`: vector of length `ndraws`, whose elements are the `nobs` x
+-`obs`: vector of length `ndraws`, whose elements are the `nobs` x
  `nperiods` x `nshocks` matrices of observable shock decompositions
 -`pseudo_observables`: vector of length `ndraws`, whose elements are the
  `npseudo` x `nperiods` x `nshocks` matrices of pseudo-observable shock
@@ -27,8 +27,8 @@ historical smoothed shocks.
 
 where `nperiods = hist_periods + forecast_horizon`.
 """
-function shock_decompositions{T<:AbstractFloat}(m::AbstractModel,
-    systems::DArray{System{T}, 1}, histshocks::DArray{T, 3};
+function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
+    systems::DArray{System{S}, 1}, histshocks::DArray{S, 3};
     procs::Vector{Int} = [myid()])
 
     # Numbers of useful things
@@ -72,7 +72,7 @@ function shock_decompositions{T<:AbstractFloat}(m::AbstractModel,
                 _, pseudo_mapping = pseudo_measurement(m)
                 pseudo_mapping.ZZ, pseudo_mapping.DD
             else
-                Matrix{T}(), Vector{T}()
+                Matrix{S}(), Vector{S}()
             end
 
             states, obs, pseudo = compute_shock_decompositions(systems[i], horizon,
@@ -132,14 +132,12 @@ function compute_shock_decompositions{S<:AbstractFloat}(system::System{S},
     start_index::Int, end_index::Int, Z_pseudo::Matrix{S} = Matrix{S}(),
     D_pseudo::Vector{S} = Vector{S}())
 
-    TTT = system[:TTT]
-    RRR = system[:RRR]
-    ZZ  = system[:ZZ]
-    DD  = system[:DD]
+    # Unpack system
+    T, R = system[:TTT], system[:RRR]
+    Z, D = system[:ZZ], system[:DD]
 
-    compute_shock_decompositions(TTT, RRR, ZZ, DD,
-        forecast_horizons, histshocks, start_index, end_index,
-        Z_pseudo, D_pseudo)
+    compute_shock_decompositions(T, R, Z, D, forecast_horizons,
+        histshocks, start_index, end_index, Z_pseudo, D_pseudo)
 end
 
 function compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
@@ -150,18 +148,24 @@ function compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
     # Setup
     nshocks      = size(R, 2)
     nstates      = size(T, 2)
-    nobservables = size(Z, 1)
+    nobs         = size(Z, 1)
     npseudo      = size(Z_pseudo, 1)
     histperiods  = size(histshocks, 2)
     allperiods   = histperiods + forecast_horizons
+
+    forecast_pseudo = !isempty(Z_pseudo) && !isempty(D_pseudo)
 
     if forecast_horizons <= 0 || start_index < 1 || end_index > allperiods
         throw(DomainError())
     end
 
-    states             = zeros(S, nstates,      allperiods, nshocks)
-    observables        = zeros(S, nobservables, allperiods, nshocks)
-    pseudo_observables = zeros(S, npseudo,      allperiods, nshocks)
+    states = zeros(S, nstates,      allperiods, nshocks)
+    obs    = zeros(S, nobs, allperiods, nshocks)
+    pseudo = if forecast_pseudo
+        zeros(S, npseudo, allperiods, nshocks)
+    else
+        Array{S, 3}()
+    end
 
     # Define our iteration function
     iterate(z_t1, ϵ_t) = T*z_t1 + R*ϵ_t
@@ -178,19 +182,23 @@ function compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
             states[:, t, i] = iterate(states[:, t-1, i], shocks[:, t])
         end
 
-        # Apply observation and pseudo-observation equations
-        observables[:, :, i]        = D        .+ Z        * states[:, :, i]
-        pseudo_observables[:, :, i] = if !(isempty(Z_pseudo) || isempty(D_pseudo))
-            D_pseudo .+ Z_pseudo * states[:, :, i]
+        # Apply measurement and pseudo-measurement equations
+        obs[:, :, i] = D .+ Z * states[:, :, i]
+        if forecast_pseudo
+            pseudo[:, :, i] = D_pseudo .+ Z_pseudo * states[:, :, i]
         end
 
     end
 
     # Return shock decompositions in appropriate range
     if start_index == 1 && end_index == allperiods
-        return states, observables, pseudo_observables
+        return states, obs, pseudo
     else
         range = start_index:end_index
-        return states[:, range, :], observables[:, range, :], pseudo_observables[:, range, :]
+        if forecast_pseudo
+            return states[:, range, :], obs[:, range, :], pseudo[:, range, :]
+        else
+            return states[:, range, :], obs[:, range, :], pseudo
+        end
     end
 end

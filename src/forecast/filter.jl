@@ -45,7 +45,6 @@ function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
     include_presample::Bool = true, procs::Vector{Int} = [myid()])
 
-    # Convert the DataFrame to a data matrix without altering the original dataframe
     data = df_to_matrix(m, df; cond_type = cond_type)
     filter(m, data, systems, z0, vz0; lead = lead, allout = allout,
            include_presample = include_presample, procs = procs)
@@ -83,9 +82,9 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::System{S},
-                                  z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-                                  cond_type::Symbol = :none, lead::Int = 0,
-                                  allout::Bool = false, include_presample::Bool = true)
+    z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
+    cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
+    include_presample::Bool = true)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
     filter(m, data, system, z0, vz0; lead = lead, allout = allout,
@@ -93,28 +92,23 @@ function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::Syste
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::System{S},
-                                  z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-                                  lead::Int = 0, allout::Bool = false, include_presample::Bool = true)
+    z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
+    lead::Int = 0, allout::Bool = false, include_presample::Bool = true)
 
-    # pull out the elements of sys
-    TTT    = system[:TTT]
-    RRR    = system[:RRR]
-    CCC    = system[:CCC]
-    QQ     = system[:QQ]
-    ZZ     = system[:ZZ]
-    DD     = system[:DD]
-    VVall  = system[:VVall]
+    # Unpack system
+    T, R, C = system[:TTT], system[:RRR], system[:CCC]
+    Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
+    V_all   = system[:VVall]
 
-    # Call the appropriate version of the Kalman filter
     if n_anticipated_shocks(m) > 0
 
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at index_zlb_start)
-        kal, _, _, _ = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0;
+        kal, _, _, _ = kalman_filter_2part(m, data, T, R, C, z0, vz0;
             lead = lead, allout = allout, include_presample = include_presample)
     else
-        # regular Kalman filter with no regime-switching
-        kal = kalman_filter(m, data, TTT, CCC, ZZ, DD, VVall, z0, vz0;
+        # Regular Kalman filter with no regime-switching
+        kal = kalman_filter(m, data, T, C, Z, D, V_all, z0, vz0;
             lead = lead, allout = allout, include_presample = include_presample)
     end
 
@@ -160,9 +154,9 @@ well as the Kalman filter outputs, for every state-space system in `systems`.
 where `states` and `shocks` are returned from the smoother specified by
 `smoother_flag(m)`.
 """
-function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    systems::DArray{System{T}, 1, Vector{System{T}}},
-    z0::Vector{T} = Vector{T}(), vz0::Matrix{T} = Matrix{T}();
+function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+    systems::DArray{System{S}, 1, Vector{System{S}}},
+    z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     cond_type::Symbol = :none, lead::Int = 0,
     procs::Vector{Int} = [myid()])
 
@@ -171,9 +165,9 @@ function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, df::DataFrame,
 end
 
 
-function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T},
-    systems::DArray{System{T}, 1, Vector{System{T}}},
-    z0::Vector{T} = Vector{T}(), vz0::Matrix{T} = Matrix{T}();
+function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    systems::DArray{System{S}, 1, Vector{System{S}}},
+    z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     lead::Int = 0, procs::Vector{Int} = [myid()])
 
     # Numbers of useful things
@@ -220,55 +214,52 @@ function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T},
     shocks = convert(DArray, out[1:ndraws, shocks_range, 1:nperiods])
     pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods])
     zend   = DArray((ndraws,), procs, [nprocs]) do I
-        Vector{T}[convert(Array, slice(out, i, zend_range, 1:nstates)) for i in first(I)]
+        Vector{S}[convert(Array, slice(out, i, zend_range, 1:nstates)) for i in first(I)]
     end
 
     # Index out SubArray for each smoothed type
     return states, shocks, pseudo, zend
 end
 
-function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::System{S},
-                                           z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-                                           lead::Int = 0)
+function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    system::System{S}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
+    lead::Int = 0)
 
-    TTT   = system[:TTT]
-    RRR   = system[:RRR]
-    CCC   = system[:CCC]
-    QQ    = system[:QQ]
-    ZZ    = system[:ZZ]
-    DD    = system[:DD]
-    VVall = system[:VVall]
+    # Unpack system
+    T, R, C = system[:TTT], system[:RRR], system[:CCC]
+    Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
+    V_all   = system[:VVall]
 
-    filterandsmooth(m, data, TTT, RRR, CCC, QQ, ZZ, DD, VVall, z0, vz0; lead = lead)
+    filterandsmooth(m, data, T, R, C, Q, Z, D, V_all, z0, vz0; lead = lead)
 end
 
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-                                           TTT::Matrix{S}, RRR::Matrix{S}, CCC::Vector{S},
-                                           QQ::Matrix{S}, ZZ::Matrix{S}, DD::Vector{S}, VVall::Matrix{S},
-                                           z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-                                           lead::Int = 0)
+    T::Matrix{S}, R::Matrix{S}, C::Vector{S},
+    Q::Matrix{S}, Z::Matrix{S}, D::Vector{S}, V_all::Matrix{S},
+    z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
+    lead::Int = 0)
+
     ## 1. Filter
 
-    # Call the appropriate version of the Kalman filter
     if n_anticipated_shocks(m) > 0
 
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at index_zlb_start)
-        kal, _, _, _ = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, vz0; lead =
+        kal, _, _, _ = kalman_filter_2part(m, data, T, R, C, z0, vz0; lead =
             lead, allout = true, include_presample = true)
     else
-        # regular Kalman filter with no regime-switching
-        kal = kalman_filter(m, data, TTT, CCC, ZZ, DD, VVall, z0, vz0;
+        # Regular Kalman filter with no regime-switching
+        kal = kalman_filter(m, data, T, C, Z, D, V_all, z0, vz0;
             lead = lead, allout = true, include_presample = true)
     end
 
     ## 2. Smooth
 
     states, shocks = if forecast_smoother(m) == :kalman
-        kalman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD,
+        kalman_smoother(m, data, T, R, C, Q, Z, D,
                         kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
     elseif forecast_smoother(m) == :durbin_koopman
-        durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD,
+        durbin_koopman_smoother(m, data, T, R, C, Q, Z, D,
                                 kal[:z0], kal[:vz0])
     end
 

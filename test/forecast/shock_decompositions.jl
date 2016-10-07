@@ -27,10 +27,10 @@ histshocks = repeat(reshape(eta_hat, (1, size(eta_hat)...)), outer = [ndraws, 1,
 histshocks = distribute(histshocks; procs = my_procs, dist = [ndraws, 1, 1])
 
 # Run to compile before timing
-states, observables, pseudos = DSGE.shock_decompositions(m, systems, histshocks)
+states, obs, pseudo = DSGE.shock_decompositions(m, systems, histshocks)
 
 # Run shock decompositions
-@time states, observables, pseudos = DSGE.shock_decompositions(m, systems, histshocks)
+@time states, obs, pseudo = DSGE.shock_decompositions(m, systems, histshocks)
 
 @assert !isnull(shockdec_startdate(m))
 nperiods = DSGE.subtract_quarters(date_forecast_end(m), get(shockdec_startdate(m))) + 1
@@ -40,20 +40,20 @@ npseudo  = n_pseudoobservables(m)
 nshocks  = n_shocks_exogenous(m)
 
 for i = 1:ndraws
-    @assert size(slice(states,      i, :, :, :)) == (nstates, nperiods, nshocks)
-    @assert size(slice(observables, i, :, :, :)) == (nobs,    nperiods, nshocks)
-    @assert size(slice(pseudos,     i, :, :, :)) == (npseudo, nperiods, nshocks)
+    @assert size(slice(states, i, :, :, :)) == (nstates, nperiods, nshocks)
+    @assert size(slice(obs,    i, :, :, :)) == (nobs,    nperiods, nshocks)
+    @assert size(slice(pseudo, i, :, :, :)) == (npseudo, nperiods, nshocks)
 end
 
 # Run forecast again, with shockdec_startdate null
 m <= Setting(:shockdec_startdate, Nullable{Date}())
-@time states, observables, pseudos = DSGE.shock_decompositions(m, systems, histshocks)
+@time states, obs, pseudo = DSGE.shock_decompositions(m, systems, histshocks)
 
 nperiods = DSGE.subtract_quarters(date_forecast_end(m), date_prezlb_start(m)) + 1
 for i = 1:ndraws
-    @assert size(slice(states,      i, :, :, :)) == (nstates, nperiods, nshocks)
-    @assert size(slice(observables, i, :, :, :)) == (nobs,    nperiods, nshocks)
-    @assert size(slice(pseudos,     i, :, :, :)) == (npseudo, nperiods, nshocks)
+    @assert size(slice(states, i, :, :, :)) == (nstates, nperiods, nshocks)
+    @assert size(slice(obs,    i, :, :, :)) == (nobs,    nperiods, nshocks)
+    @assert size(slice(pseudo, i, :, :, :)) == (npseudo, nperiods, nshocks)
 end
 
 # Remove parallel workers

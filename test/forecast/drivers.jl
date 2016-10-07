@@ -91,13 +91,9 @@ for input_type in [:init, :mode]
         _, pseudo_measur = pseudo_measurement(m)
         Z_pseudo = pseudo_measur.ZZ
         D_pseudo = pseudo_measur.DD
-        forecast = DSGE.compute_forecast(sys[:TTT], sys[:RRR], sys[:CCC], sys[:ZZ], sys[:DD],
-                                    forecast_horizons(m), shocks, zend, Z_pseudo, D_pseudo)
-
-        exp_forecaststates = forecast[:states]
-        exp_forecastobs    = forecast[:observables]
-        exp_forecastpseudo = forecast[:pseudo_observables]
-        exp_forecastshocks = forecast[:shocks]
+        exp_forecaststates, exp_forecastobs, exp_forecastpseudo, exp_forecastshocks =
+            DSGE.compute_forecast(sys[:TTT], sys[:RRR], sys[:CCC], sys[:ZZ], sys[:DD],
+                                  forecast_horizons(m), shocks, zend, Z_pseudo, D_pseudo)
 
         if cond_type in [:semi, :full]
             exp_histobs_cond = data[:, index_prezlb_start(m)+T:end]
