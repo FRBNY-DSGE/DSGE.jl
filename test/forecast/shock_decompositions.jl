@@ -1,19 +1,19 @@
-using DSGE, HDF5, DistributedArrays
+using DSGE, JLD, DistributedArrays
 include("../util.jl")
 
 path = dirname(@__FILE__)
 
 # Set up arguments
 custom_settings = Dict{Symbol, Setting}(
+    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6),
     :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")),
     :date_forecast_end    => Setting(:date_forecast_end, quartertodate("2016-Q2")),
     :use_parallel_workers => Setting(:use_parallel_workers, true),
-    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6),
     :forecast_pseudoobservables => Setting(:forecast_pseudoobservables, true))
 m = Model990(custom_settings = custom_settings, testing = true)
 
-eta_hat = h5open("$path/../reference/durbin_koopman_smoother_out.h5", "r") do h5
-    read(h5, "eta_hat")
+systems, histshocks = jldopen("$path/../reference/forecast_args.jld","r") do file
+    read(file, "systems"), read(file, "histshocks")
 end
 
 # Add parallel workers
@@ -21,40 +21,31 @@ ndraws = 2
 my_procs = addprocs(ndraws)
 @everywhere using DSGE
 
-system = compute_system(m)
-systems = dfill(system, (ndraws,), my_procs, [ndraws])
-histshocks = repeat(reshape(eta_hat, (1, size(eta_hat)...)), outer = [ndraws, 1, 1])
+systems    = distribute(systems; procs = my_procs, dist = [ndraws])
 histshocks = distribute(histshocks; procs = my_procs, dist = [ndraws, 1, 1])
 
 # Run to compile before timing
 states, obs, pseudo = DSGE.shock_decompositions(m, systems, histshocks)
 
-# Run shock decompositions
-@time states, obs, pseudo = DSGE.shock_decompositions(m, systems, histshocks)
-
-@assert !isnull(shockdec_startdate(m))
-nperiods = DSGE.subtract_quarters(date_forecast_end(m), get(shockdec_startdate(m))) + 1
-nstates  = n_states_augmented(m)
-nobs     = n_observables(m)
-npseudo  = n_pseudoobservables(m)
-nshocks  = n_shocks_exogenous(m)
-
-for i = 1:ndraws
-    @assert size(slice(states, i, :, :, :)) == (nstates, nperiods, nshocks)
-    @assert size(slice(obs,    i, :, :, :)) == (nobs,    nperiods, nshocks)
-    @assert size(slice(pseudo, i, :, :, :)) == (npseudo, nperiods, nshocks)
+# Read expected output
+exp_states, exp_obs, exp_pseudo = jldopen("$path/../reference/shock_decompositions_out.jld", "r") do file
+    read(file, "exp_states"), read(file, "exp_obs"), read(file, "exp_pseudo")
 end
 
-# Run forecast again, with shockdec_startdate null
+# With shockdec_startdate not null
+@time states, obs, pseudo = DSGE.shock_decompositions(m, systems, histshocks)
+
+@test_matrix_approx_eq exp_states[:startdate] convert(Array, states)
+@test_matrix_approx_eq exp_obs[:startdate]    convert(Array, obs)
+@test_matrix_approx_eq exp_pseudo[:startdate] convert(Array, pseudo)
+
+# With shockdec_startdate null
 m <= Setting(:shockdec_startdate, Nullable{Date}())
 @time states, obs, pseudo = DSGE.shock_decompositions(m, systems, histshocks)
 
-nperiods = DSGE.subtract_quarters(date_forecast_end(m), date_prezlb_start(m)) + 1
-for i = 1:ndraws
-    @assert size(slice(states, i, :, :, :)) == (nstates, nperiods, nshocks)
-    @assert size(slice(obs,    i, :, :, :)) == (nobs,    nperiods, nshocks)
-    @assert size(slice(pseudo, i, :, :, :)) == (npseudo, nperiods, nshocks)
-end
+@test_matrix_approx_eq exp_states[:no_startdate] convert(Array, states)
+@test_matrix_approx_eq exp_obs[:no_startdate]    convert(Array, obs)
+@test_matrix_approx_eq exp_pseudo[:no_startdate] convert(Array, pseudo)
 
 # Remove parallel workers
 rmprocs(my_procs)

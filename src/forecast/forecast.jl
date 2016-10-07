@@ -29,7 +29,8 @@ matrix of shocks or a distribution of shocks
  `horizon` matrices of shock innovations
 """
 function forecast{S<:AbstractFloat}(m::AbstractModel,
-    systems::DVector{System{S}}, z0s::DVector{Vector{S}};
+    systems::DVector{System{S}, Vector{System{S}}},
+    z0s::DVector{Vector{S}, Vector{Vector{S}}};
     shock_distributions::Union{Distribution,Matrix{S}} = Matrix{S}(),
     procs::Vector{Int} = [myid()])
 

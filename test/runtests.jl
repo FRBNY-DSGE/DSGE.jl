@@ -29,7 +29,7 @@ my_tests = [
             "forecast/compute_forecast",
             "forecast/forecast",
             "forecast/shock_decompositions",
-            "forecast/drivers"
+            "forecast/forecast_one"
             ]
 
 for test in my_tests
