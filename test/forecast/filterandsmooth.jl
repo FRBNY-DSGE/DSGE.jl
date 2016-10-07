@@ -6,7 +6,8 @@ path = dirname(@__FILE__())
 # Set up arguments
 custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")),
-    :use_parallel_workers => Setting(:use_parallel_workers, true))
+    :use_parallel_workers => Setting(:use_parallel_workers, true),
+    :forecast_pseudoobservables => Setting(:forecast_pseudoobservables, true))
 m = Model990(custom_settings = custom_settings, testing = true)
 
 params_sim = h5open("$path/../reference/filter_args.h5","r") do h5
@@ -54,6 +55,7 @@ for smoother in [:durbin_koopman, :kalman]
 
     exp_states = Vector{Matrix{Float64}}(ndraws)
     exp_shocks = Vector{Matrix{Float64}}(ndraws)
+    exp_pseudo = Vector{Matrix{Float64}}(ndraws)
     for i = 1:ndraws
         kal = kalman_filter(m, df_to_matrix(m, df), syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ],
                             syses[i][:DD], syses[i][:VVall]; allout = true)
@@ -64,9 +66,12 @@ for smoother in [:durbin_koopman, :kalman]
             kalman_smoother(m, df, syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
         end
 
+        _, pseudo_mapping = pseudo_measurement(m)
+        exp_pseudo[i] = pseudo_mapping.ZZ * exp_states[i] .+ pseudo_mapping.DD
+
         @test_matrix_approx_eq exp_states[i] convert(Array, slice(states, i, :, :))
         @test_matrix_approx_eq exp_shocks[i] convert(Array, slice(shocks, i, :, :))
-        @test all(x -> x == 0, convert(Array, slice(pseudo, i, :, :)))
+        @test_matrix_approx_eq exp_pseudo[i] convert(Array, slice(pseudo, i, :, :))
     end
 
     # Providing z0 and vz0
@@ -74,6 +79,7 @@ for smoother in [:durbin_koopman, :kalman]
 
     exp_states = Vector{Matrix{Float64}}(ndraws)
     exp_shocks = Vector{Matrix{Float64}}(ndraws)
+    exp_pseudo = Vector{Matrix{Float64}}(ndraws)
     for i = 1:ndraws
         kal = kalman_filter(m, df_to_matrix(m, df), syses[i][:TTT], syses[i][:CCC], syses[i][:ZZ],
                             syses[i][:DD], syses[i][:VVall], z0, vz0; allout = true)
@@ -84,9 +90,12 @@ for smoother in [:durbin_koopman, :kalman]
             kalman_smoother(m, df, syses[i], kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
         end
 
+        _, pseudo_mapping = pseudo_measurement(m)
+        exp_pseudo[i] = pseudo_mapping.ZZ * exp_states[i] .+ pseudo_mapping.DD
+
         @test_matrix_approx_eq exp_states[i] convert(Array, slice(states, i, :, :))
         @test_matrix_approx_eq exp_shocks[i] convert(Array, slice(shocks, i, :, :))
-        @test all(x -> x == 0, convert(Array, slice(pseudo, i, :, :)))
+        @test_matrix_approx_eq exp_pseudo[i] convert(Array, slice(pseudo, i, :, :))
     end
 
 end

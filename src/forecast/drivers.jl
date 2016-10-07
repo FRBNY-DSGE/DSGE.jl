@@ -320,6 +320,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     forecast_output = Dict{Symbol, DArray{Float64}}()
     forecast_output_files = get_output_files(m, input_type, output_vars, cond_type)
     output_dir = rawpath(m, "forecast")
+
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("\nForecasting input_type = $input_type, cond_type = $cond_type...")
         println("Forecast outputs will be saved in $output_dir")
@@ -339,6 +340,14 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     ### 2. Smoothed Histories
 
+    # Set forecast_pseudoobservables properly
+    for output in output_vars
+        if contains(string(output), "pseudo")
+            update!(m.settings[:forecast_pseudoobservables], Setting(:forecast_pseudoobservables, true))
+            break
+        end
+    end
+
     # Must re-run filter/smoother for conditional data in addition to explicit cases
     hist_vars = [:histstates, :histpseudo, :histshocks]
     shockdec_vars = [:shockdecstates, :shockdecpseudo, :shockdecobs]
@@ -346,7 +355,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     if !isempty(intersect(output_vars, filterandsmooth_vars)) || cond_type in [:semi, :full]
 
-        @time histstates, histshocks, histpseudo, zends =
+        histstates, histshocks, histpseudo, zends =
             filterandsmooth(m, df, systems; cond_type = cond_type, my_procs = my_procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
@@ -355,11 +364,15 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
             forecast_output[:histstates] = convert(DArray, histstates[1:end, 1:end, 1:T])
             forecast_output[:histshocks] = convert(DArray, histshocks[1:end, 1:end, 1:T])
-            forecast_output[:histpseudo] = convert(DArray, histpseudo[1:end, 1:end, 1:T])
+	        if :histpseudo in output_vars
+                forecast_output[:histpseudo] = convert(DArray, histpseudo[1:end, 1:end, 1:T])
+            end
         else
             forecast_output[:histstates] = histstates
             forecast_output[:histshocks] = histshocks
-            forecast_output[:histpseudo] = histpseudo
+            if :histpseudo in output_vars
+                forecast_output[:histpseudo] = histpseudo
+            end
         end
 
         write_forecast_outputs(hist_vars)
@@ -377,12 +390,14 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks]
 
     if !isempty(intersect(output_vars, forecast_vars))
-        @time forecaststates, forecastobs, forecastpseudo, forecastshocks =
+        forecaststates, forecastobs, forecastpseudo, forecastshocks =
             forecast(m, systems, states; my_procs = my_procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
             T = DSGE.subtract_quarters(date_forecast_start(m), date_prezlb_start(m))
+
+            # Copy history of observables to make correct size
             histobs_cond = df_to_matrix(m, df; cond_type = cond_type)[:, index_prezlb_start(m)+T:end]
             histobs_cond = reshape(histobs_cond, (1, size(histobs_cond)...))
 
@@ -401,7 +416,9 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
             forecast_output[:forecaststates] = cat_conditional(histstates, forecaststates)
             forecast_output[:forecastshocks] = cat_conditional(histshocks, forecastshocks)
-            forecast_output[:forecastpseudo] = cat_conditional(histpseudo, forecastpseudo)
+	        if :forecastpseudo in output_vars
+                forecast_output[:forecastpseudo] = cat_conditional(histpseudo, forecastpseudo)
+            end
             forecast_output[:forecastobs]    =
                 DArray((ndraws, nobs, nperiods), my_procs, [nprocs, 1, 1]) do I
                     draw_inds = first(I)
@@ -413,8 +430,10 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         else
             forecast_output[:forecaststates] = forecaststates
             forecast_output[:forecastshocks] = forecastshocks
-            forecast_output[:forecastpseudo] = forecastpseudo
             forecast_output[:forecastobs]    = forecastobs
+            if :forecastpseudo in output_vars
+                forecast_output[:forecastpseudo] = forecastpseudo
+            end
         end
 
         write_forecast_outputs(forecast_vars)
@@ -424,12 +443,14 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     ### 4. Shock Decompositions
 
     if !isempty(intersect(output_vars, shockdec_vars))
-        @time shockdecstates, shockdecobs, shockdecpseudo =
+        shockdecstates, shockdecobs, shockdecpseudo =
             shock_decompositions(m, systems, histshocks; my_procs = my_procs)
 
         forecast_output[:shockdecstates] = shockdecstates
-        forecast_output[:shockdecpseudo] = shockdecpseudo
         forecast_output[:shockdecobs]    = shockdecobs
+        if :forecastpseudo in output_vars
+            forecast_output[:shockdecpseudo] = shockdecpseudo
+        end
 
         write_forecast_outputs(shockdec_vars)
     end

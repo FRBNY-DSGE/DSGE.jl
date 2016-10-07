@@ -8,6 +8,25 @@ function annualtoquarter(v)
 end
 
 """
+`quartertoannual(v)`
+
+Convert from quarter to annual frequency... by multiplying by 4.
+"""
+function quartertoannual(v)
+    4 * v
+end
+
+"""
+`quartertoannualpercent(v)`
+
+Convert from quarter to annual frequency in percent... by multiplying by 400.
+"""
+function quartertoannualpercent(v)
+    400 * v
+end
+
+
+"""
 `nominal_to_real(col, df; deflator_mnemonic=:GDPCTPI)`
 
 Converts nominal to real values using the specified deflator.
@@ -40,7 +59,7 @@ Converts data column `col` of DataFrame `df` to a per-capita value.
 - `population_mnemonic`: a mnemonic found in df for some population measure.
 """
 function percapita(m::AbstractModel, col::Symbol, df::DataFrame)
-    population_mnemonic = get_setting(m, :population_mnemonic)
+    population_mnemonic = parse_population_mnemonic(m)[1]
     percapita(col, df, population_mnemonic)
 end
 function percapita(col::Symbol, df::DataFrame, population_mnemonic::Symbol)
@@ -174,3 +193,68 @@ function hpadjust(y, df; filtered_mnemonic=:filtered_population_growth,
                          unfiltered_mnemonic=:unfiltered_population_growth)
     y + 100 * (df[unfiltered_mnemonic] - df[filtered_mnemonic])
 end
+
+
+
+
+## REVERSE TRANSFORMS
+
+"""
+```
+logtopct_annualized_percapita(y, q_adj = 100)
+```
+Transform from log growth rates to % growth rates (annualized).
+
+This should only be used for output, consumption, investment
+and GDP deflator (inflation).  
+"""
+function logtopct_annualized_percapita(y, q_adj = 100)
+    100 * ((exp(y/q_adj)).^4-1)
+end
+
+"""
+```
+logtopct_annualized(y, population_forecast, q_adj = 100)
+```
+
+Transform from log growth rates to total (not per-capita) % growth
+rates (annualized).
+"""
+function logtopct_annualized(y, pop_fcast, q_adj = 100)
+    100 * ((exp(y/q_adj + pop_fcast)).^4-1)
+end
+
+"""
+```
+loglevelto4qpct_annualized(y, y_data, current_index)
+```
+
+Transform from log level to 4-quarter annualized percent change.
+
+*Note:* This is usually applied to labor
+  supply (hours worked per hour), and probably shouldn't be used for
+  any other observables.
+
+### Arguments
+
+- `y`: The series we wish to transform to 4 quarter annualized percent
+  change from 1-quarter log-levels. 
+
+- `y_data`: The actual data series corresponding to the `y` variable
+  (state or observable) in the model. This is necessary to get the
+  last data point so that a percent change can be computed for the
+  first period.
+
+- `current_index`: Index of the last period of data for this
+  variable. Could use `end` if not using conditional data, otherwise
+  use `end-1`.
+""" 
+function loglevelto4qpct_annualized(y, y_data, current_index)
+# Repmat is used to put the data point in each row of the simulations.  The
+# log levels are subtracted to get the log percent changes and
+# then the exponential is used to remove the log from the
+# levels.
+    
+    ((exp(y[:,1:end]/100 - [repmat(y_data[current_index], size(y)) y[:,1:end-1]]/100).^4)-1)*100
+end
+

@@ -7,7 +7,8 @@ path = dirname(@__FILE__)
 custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")),
     :use_parallel_workers => Setting(:use_parallel_workers, true),
-    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6))
+    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6),
+    :forecast_pseudoobservables => Setting(:forecast_pseudoobservables, true))
 m = Model990(custom_settings = custom_settings)
 m.testing = true
 

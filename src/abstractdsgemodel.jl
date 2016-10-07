@@ -154,6 +154,16 @@ n_parameters(m::AbstractModel)             = length(m.parameters)
 n_parameters_steady_state(m::AbstractModel)= length(m.steady_state)
 n_parameters_free(m::AbstractModel)        = sum([!α.fixed for α in m.parameters])
 
+function n_pseudoobservables(m::AbstractModel)
+    pseudo, _ = pseudo_measurement(m)
+    return length(pseudo)
+end
+
+# Parse population mnemonic into 2 symbols from one
+function parse_population_mnemonic(m::AbstractModel)
+    map(symbol, split(string(get_setting(m, :population_mnemonic)), DSGE_DATASERIES_DELIM))
+end
+
 # From an augmented state space with anticipated policy shocks, get indices
 # corresponding to pre-ZLB states, shocks, and observables
 function inds_states_no_ant(m::AbstractModel)
@@ -226,6 +236,7 @@ forecast_smoother(m::AbstractModel)     = get_setting(m, :forecast_smoother)
 forecast_input_file_overrides(m::AbstractModel) = get_setting(m, :forecast_input_file_overrides)
 shockdec_startdate(m::AbstractModel)    = get_setting(m, :shockdec_startdate)
 shockdec_enddate(m::AbstractModel)      = get_setting(m, :shockdec_enddate)
+forecast_pseudoobservables(m::AbstractModel) = get_setting(m, :forecast_pseudoobservables)
 
 function forecast_horizons(m::AbstractModel)
     t0 = get_setting(m, :date_forecast_start)

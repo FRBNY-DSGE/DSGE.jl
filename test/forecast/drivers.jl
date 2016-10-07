@@ -10,7 +10,8 @@ custom_settings = Dict{Symbol, Setting}(
     :n_anticipated_shocks    => Setting(:n_anticipated_shocks, 6),
     :forecast_kill_shocks    => Setting(:forecast_kill_shocks, true),
     :saveroot                => Setting(:saveroot, normpath(joinpath(dirname(@__FILE__), "..", "reference"))),
-    :use_parallel_workers    => Setting(:use_parallel_workers, true))
+    :use_parallel_workers    => Setting(:use_parallel_workers, true),
+    :forecast_pseudoobservables => Setting(:forecast_pseudoobservables, true))
 m = Model990(custom_settings = custom_settings, testing = true)
 
 # Add parallel workers
@@ -87,10 +88,11 @@ for input_type in [:init, :mode]
         forecastshocks = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:forecastshocks], 1, :, :))
 
         shocks = zeros(Float64, n_shocks_exogenous(m), forecast_horizons(m))
-        Z_pseudo = zeros(Float64, 12, n_states_augmented(m))
-        D_pseudo = zeros(Float64, 12)
-        forecast = DSGE.compute_forecast(sys[:TTT], sys[:RRR], sys[:CCC], sys[:ZZ], sys[:DD], Z_pseudo, D_pseudo,
-                                    forecast_horizons(m), shocks, zend)
+        _, pseudo_measur = pseudo_measurement(m)
+        Z_pseudo = pseudo_measur.ZZ
+        D_pseudo = pseudo_measur.DD
+        forecast = DSGE.compute_forecast(sys[:TTT], sys[:RRR], sys[:CCC], sys[:ZZ], sys[:DD],
+                                    forecast_horizons(m), shocks, zend, Z_pseudo, D_pseudo)
 
         exp_forecaststates = forecast[:states]
         exp_forecastobs    = forecast[:observables]
@@ -122,7 +124,7 @@ for input_type in [:init, :mode]
         end
         exp_shockdecstates, exp_shockdecobs, exp_shockdecpseudo =
             DSGE.compute_shock_decompositions(sys[:TTT], sys[:RRR], sys[:ZZ], sys[:DD],
-                Z_pseudo, D_pseudo, forecast_horizons(m), exp_histshocks, 189, end_ind)
+                forecast_horizons(m), exp_histshocks, 189, end_ind, Z_pseudo, D_pseudo)
 
         @test_matrix_approx_eq exp_shockdecstates shockdecstates
         @test_matrix_approx_eq exp_shockdecobs    shockdecobs

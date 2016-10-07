@@ -21,18 +21,18 @@ Q        = eye(nshocks,nshocks)
 z_end = zeros(2)
 
 # specify forecast horizons
-forecast_horizons = 3
+horizons = 3
 
 # define shock distribution
 dist = DSGE.DegenerateMvNormal(zeros(nshocks), Q)
 
 # test invocation supplying distribution
-forecast_dist = DSGE.compute_forecast(T, R, C, Z, D, Z_pseudo, D_pseudo,
-    forecast_horizons, dist, z_end)
+forecast_dist = compute_forecast(T, R, C, Z, D, horizons, dist, z_end,
+                                 Z_pseudo, D_pseudo)
 
 # test invocation supplying shocks
-shocks = rand(nshocks, forecast_horizons)
-forecast_shocks = DSGE.compute_forecast(T, R, C, Z, D, Z_pseudo, D_pseudo,
-    forecast_horizons, shocks, z_end)
+shocks = rand(nshocks, horizons)
+forecast_shocks = compute_forecast(T, R, C, Z, D, horizons, shocks, z_end,
+                                   Z_pseudo, D_pseudo)
 
 nothing

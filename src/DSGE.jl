@@ -25,13 +25,13 @@ module DSGE
         AbstractModel, description,
         n_anticipated_shocks, n_anticipated_shocks_padding,
         date_presample_start, date_prezlb_start, date_zlb_start,
-            date_presample_end, date_prezlb_end, date_zlb_end, date_conditional_end,
-            index_presample_start, index_prezlb_start, index_zlb_start, index_forecast_start,
-            n_presample_periods, n_prezlb_periods, n_zlb_periods,
-            inds_presample_periods, inds_prezlb_periods, inds_zlb_periods,
+        date_presample_end, date_prezlb_end, date_zlb_end, date_conditional_end,
+        index_presample_start, index_prezlb_start, index_zlb_start, index_forecast_start,
+        n_presample_periods, n_prezlb_periods, n_zlb_periods,
+        inds_presample_periods, inds_prezlb_periods, inds_zlb_periods,
         n_states, n_states_augmented, n_shocks_exogenous, n_shocks_expectational,
-            n_equilibrium_conditions, n_observables, n_parameters, n_parameters_steady_state,
-            n_parameters_free,
+        n_equilibrium_conditions, n_observables, n_parameters, n_parameters_steady_state,
+        n_parameters_free, n_pseudoobservables,
         inds_states_no_ant, inds_shocks_no_ant, inds_obs_no_ant,
         spec, subspec, saveroot, dataroot,
         data_vintage, cond_vintage, cond_id, cond_full_names, cond_semi_names, use_population_forecast,
@@ -39,9 +39,9 @@ module DSGE
         reoptimize, calculate_hessian, hessian_path, n_hessian_test_params,
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin, n_draws,
         date_forecast_start, date_forecast_end, forecast_tdist_df_val,
-            forecast_tdist_shocks, forecast_kill_shocks, forecast_smoother,
-            forecast_input_file_overrides, shockdec_startdate, shockdec_enddate,
-            forecast_horizons,
+        forecast_tdist_shocks, forecast_kill_shocks, forecast_smoother,
+        forecast_input_file_overrides, shockdec_startdate, shockdec_enddate,
+        forecast_horizons,
         load_parameters_from_file, specify_mode!, specify_hessian,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
@@ -52,8 +52,11 @@ module DSGE
         UnscaledParameter, SteadyStateParameter, transform_to_real_line, transform_to_model_space,
         update, update!, transform_to_model_space, transform_to_real_line, Interval, ParamBoundsError,
 
-        # statespace/
+        # statespace.jl
         Measurement, Transition, System, compute_system,
+
+        # observables.jl
+        PseudoObservable, PseudoObservableMapping,
 
         # estimate/
         kalman_filter, kalman_filter_2part, likelihood, posterior, posterior!,
@@ -62,12 +65,12 @@ module DSGE
         find_density_bands, prior,
 
         # forecast/
-        filter, filterandsmooth, smooth, kalman_smoother,
-        durbin_koopman_smoother, forecast_all, forecast_one, forecast,
+        filter, filterandsmooth, smooth, kalman_smoother, durbin_koopman_smoother,
+        forecast_all, forecast_one, forecast, compute_forecast,
         shock_decompositions,
 
         # models/
-        init_parameters!, steadystate!, Model990, SmetsWouters, eqcond, measurement,
+        init_parameters!, steadystate!, Model990, SmetsWouters, eqcond, measurement, pseudo_measurement,
 
         # solve/
         gensys, solve,
@@ -76,10 +79,14 @@ module DSGE
         load_data, load_data_levels, load_cond_data_levels, load_fred_data,
         transform_data, save_data,
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
-        hpadjust, oneqtrpctchange, annualtoquarter
+        hpadjust, oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
+        logtopct_annualized_percapita, logtopct_annualized, loglevelto4qpct_annualized,
+        loglevelto4qpct_annualized,
+        parse_data_series, collect_data_transforms
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
+    const DSGE_DATASERIES_DELIM = "__"
 
     include("parameters.jl")
     include("distributions_ext.jl")
@@ -87,6 +94,7 @@ module DSGE
     include("settings.jl")
     include("defaults.jl")
     include("statespace.jl")
+    include("observables.jl")
     include("util.jl")
 
     include("data/load_data.jl")
@@ -118,7 +126,9 @@ module DSGE
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")
     include("models/m990/eqcond.jl")
+    include("models/m990/observables.jl")
     include("models/m990/measurement.jl")
+    include("models/m990/pseudo_measurement.jl")
     include("models/m990/augment_states.jl")
 
     include("models/smets_wouters/smets_wouters.jl")

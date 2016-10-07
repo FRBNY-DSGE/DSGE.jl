@@ -31,7 +31,7 @@ function default_settings!(m::AbstractModel)
         "Observables used in semiconditional forecasts")
     settings[:use_population_forecast] = Setting(:use_population_forecast, false,
         "Whether to use population forecasts as data")
-    settings[:population_mnemonic] = Setting(:population_mnemonic, :CNP16OV,
+    settings[:population_mnemonic] = Setting(:population_mnemonic, :CNP16OV__FRED,
         "Mnemonic of FRED data series for computing per-capita values")
 
     # Dates
@@ -81,6 +81,8 @@ function default_settings!(m::AbstractModel)
         "Observables to forecast")
     settings[:forecast_input_file_overrides] = Setting(:forecast_input_file_overrides,
         Dict{Symbol, ASCIIString}())
+    settings[:forecast_pseudoobservables] = Setting(:forecast_pseudoobservables, false,
+        "Pseudo-observables to forecast")
     settings[:forecast_kill_shocks] = Setting(:forecast_kill_shocks, false,
         "Kill (set to 0) all shocks in forecast")
     settings[:forecast_tdist_shocks] = Setting(:forecast_tdist_shocks, false,

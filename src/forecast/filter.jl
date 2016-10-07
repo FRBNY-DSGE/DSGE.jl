@@ -181,7 +181,7 @@ function filterandsmooth{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T},
     nperiods = size(data, 2) - n_presample_periods(m)
 
     nstates = n_states_augmented(m)
-    npseudo = 12
+    npseudo = n_pseudoobservables(m)
     nshocks = n_shocks_exogenous(m)
 
     states_range = 1:nstates
@@ -273,11 +273,16 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 
     ## 3. Map smoothed states to pseudo-observables
 
-    # for now, we are ignoring pseudo-observables so these can be empty
-    Z_pseudo = zeros(S, 12, n_states_augmented(m))
-    D_pseudo = zeros(S, 12)
+    pseudo = if forecast_pseudoobservables(m)
 
-    pseudo = D_pseudo .+ Z_pseudo * states
+        _, pseudo_mapping = pseudo_measurement(m)
+        Z_pseudo = pseudo_mapping.ZZ
+        D_pseudo = pseudo_mapping.DD
+
+        D_pseudo .+ Z_pseudo * states
+    else
+        Matrix{S}()
+    end
 
     return states, shocks, pseudo, kal[:zend]
 end

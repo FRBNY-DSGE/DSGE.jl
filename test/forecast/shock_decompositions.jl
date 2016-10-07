@@ -8,7 +8,8 @@ custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")),
     :date_forecast_end    => Setting(:date_forecast_end, quartertodate("2016-Q2")),
     :use_parallel_workers => Setting(:use_parallel_workers, true),
-    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6))
+    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6),
+    :forecast_pseudoobservables => Setting(:forecast_pseudoobservables, true))
 m = Model990(custom_settings = custom_settings, testing = true)
 
 eta_hat = h5open("$path/../reference/durbin_koopman_smoother_out.h5", "r") do h5
@@ -35,7 +36,7 @@ states, observables, pseudos = DSGE.shock_decompositions(m, syses, histshocks)
 nperiods = DSGE.subtract_quarters(date_forecast_end(m), get(shockdec_startdate(m))) + 1
 nstates  = n_states_augmented(m)
 nobs     = n_observables(m)
-npseudo  = 12
+npseudo  = n_pseudoobservables(m)
 nshocks  = n_shocks_exogenous(m)
 
 for i = 1:ndraws
