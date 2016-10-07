@@ -8,8 +8,7 @@ custom_settings = Dict{Symbol, Setting}(
     :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6),
     :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")),
     :date_forecast_end    => Setting(:date_forecast_end, quartertodate("2016-Q2")),
-    :use_parallel_workers => Setting(:use_parallel_workers, true),
-    :forecast_pseudoobservables => Setting(:forecast_pseudoobservables, true))
+    :use_parallel_workers => Setting(:use_parallel_workers, true))
 m = Model990(custom_settings = custom_settings, testing = true)
 
 systems, histshocks = jldopen("$path/../reference/forecast_args.jld","r") do file

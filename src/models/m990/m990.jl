@@ -161,7 +161,7 @@ function init_model_indices!(m::Model990)
     #     [symbol("obs_nominalrate$i") for i=1:n_anticipated_shocks(m)]] # compounded nominal rates
 
     observables = keys(m.observable_mappings)
-    
+
     for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
     for (i,k) in enumerate(exogenous_shocks);             m.exogenous_shocks[k]             = i end
     for (i,k) in enumerate(expected_shocks);              m.expected_shocks[k]              = i end
@@ -192,7 +192,7 @@ function Model990(subspec::AbstractString="ss2";
     # longrate_series    = [:FYCCZA]
     # conditional_series = [:GDP, :GDPCTPI, :DFF, :BAA, :GS10, :PCEPILFE]
     # # ois data taken care of in load_data
-    
+
     # data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
     #                                           :fernald => fernald_series, :longrate => longrate_series,
     #                                           :conditional => conditional_series)
@@ -680,6 +680,7 @@ function settings_m990!(m::Model990)
     default_settings!(m)
 
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")))
+    m <= Setting(:forecast_pseudoobservables, true)
 end
 
 # """
@@ -817,7 +818,7 @@ end
 #     for i = 1:n_anticipated_shocks(m)
 #         # FROM: OIS expectations of $i-period-ahead interest rates at a quarterly rate
 #         # TO:   Same
-        
+
 #         m.data_transforms[symbol("obs_nominalrate$i")] = function (levels)
 #             levels[:, symbol("ant$i")]
 #         end

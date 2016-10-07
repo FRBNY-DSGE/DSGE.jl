@@ -10,8 +10,7 @@ custom_settings = Dict{Symbol, Setting}(
     :date_forecast_end       => Setting(:date_forecast_end, quartertodate("2016-Q1")),
     :forecast_kill_shocks    => Setting(:forecast_kill_shocks, true),
     :saveroot                => Setting(:saveroot, normpath(joinpath(dirname(@__FILE__), "..", "reference"))),
-    :use_parallel_workers    => Setting(:use_parallel_workers, true),
-    :forecast_pseudoobservables => Setting(:forecast_pseudoobservables, true))
+    :use_parallel_workers    => Setting(:use_parallel_workers, true))
 m = Model990(custom_settings = custom_settings, testing = true)
 
 # Add parallel workers
