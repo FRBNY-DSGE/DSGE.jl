@@ -14,7 +14,7 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
     endo = m.endogenous_states
     pseudo_names = [:y_t, :y_f_t, :NaturalRate, :π_t, :OutputGap, :ExAnteRealRate, :LongRunInflation,
                     :MarginalCost, :Wages, :FlexibleWages, :Hours, :FlexibleHours, :z_t, :Z_t, :ztil_t,
-                    :NominalFFR, :RealFFR, :NaturalRate, :ExAnteNaturalRate]
+                    :NominalFFR, :RealFFR, :ExpectedNominalNaturalRate]
 
     # Map pseudoobservables to indices
     pseudo_inds = Dict{Symbol,Int}()
@@ -43,8 +43,8 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
 
     ## Flexible Output
     ZZ_pseudo[pseudo_inds[:y_f_t],endo[:y_f_t]] = 1.
-    pseudo[:y_t].name = "Flexible Output Growth"
-    pseudo[:y_t].longname = "Output that would obtain in a flexible-price economy."
+    pseudo[:y_f_t].name = "Flexible Output Growth"
+    pseudo[:y_f_t].longname = "Output that would obtain in a flexible-price economy."
    
     ## Natural Rate
     ZZ_pseudo[pseudo_inds[:NaturalRate],endo[:r_f_t]] = 1.
@@ -115,8 +115,46 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
     pseudo[:FlexibleHours].name     = "Flexible Hours"
     pseudo[:FlexibleHours].longname = "Flexible Hours"
 
+    ## z_t
+    ZZ_pseudo[pseudo_inds[:z_t], endo[:z_t]] = 1.
+    pseudo[:z_t].name     = "z_t"
+    pseudo[:z_t].longname = "z_t"
+
+    ## Z_t
+    ZZ_pseudo[pseudo_inds[:Z_t], endo[:z_t]] = 1.
+    DD_pseudo[pseudo_inds[:Z_t]]             = 100. * exp(m[:z_star]-1)
+    pseudo[:Z_t].name     = "Z_t"
+    pseudo[:Z_t].longname = "Z_t"
+
+    ## ztil_t
+    ZZ_pseudo[pseudo_inds[:ztil_t], endo[:ztil_t]] = 1.
+    pseudo[:z_t].name     = "ztil_t"
+    pseudo[:z_t].longname = "ztil_t"
+
+    ## Nominal FFR
+    ZZ_pseudo[pseudo_inds[:NominalFFR], endo[:R_t]] = 1.
+    DD_pseudo[pseudo_inds[:NominalFFR]] = m[:Rstarn]
+    pseudo[:NominalFFR].name     = "Nominal FFR"
+    pseudo[:NominalFFR].longname = "Nominal FFR at an annual rate"
+    pseudo[:ExAnteRealRate].rev_transform = quartertoannual
+
+    ## Real FFR
+    ZZ_pseudo[pseudo_inds[:RealFFR], endo[:R_t]] = 1.
+    ZZ_pseudo[pseudo_inds[:RealFFR], endo[:π_t]] = -1.
+    DD_pseudo[pseudo_inds[:RealFFR]] =  m[:Rstarn] - (100. * (m[:π_star] - 1.))
+    pseudo[:RealFFR].name     = "Real FFR"
+    pseudo[:RealFFR].longname = "Real FFR at an annual rate"
+    pseudo[:RealFFR].rev_transform = quartertoannual
+    
+    ## Expected nominal natural rate
+    ZZ_pseudo[pseudo_inds[:ExpectedNominalNaturalRate], endo[:r_f_t]] = 1.
+    ZZ_pseudo[pseudo_inds[:ExpectedNominalNaturalRate], endo[:Eπ_t]]  = 1.
+    DD_pseudo[pseudo_inds[:ExpectedNominalNaturalRate]]               =  m[:Rstarn]
+    pseudo[:ExpectedNominalNaturalRate].name  = "Expected Nominal Natural Rate"
+    pseudo[:ExpectedNominalNaturalRate].longname = "Natural Rate + Expected Inflation"
+    pseudo[:ExpectedNominalNaturalRate].rev_transform = quartertoannual
+
     # Collect indices and transforms
     return pseudo, PseudoObservableMapping(pseudo_inds, ZZ_pseudo, DD_pseudo)
 end
-
 
