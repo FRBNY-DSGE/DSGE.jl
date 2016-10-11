@@ -66,11 +66,10 @@ function forecast_all(m::AbstractModel,
             # Take the union of all output variables specified by output_types
             all_output_vars = map(x -> get_output_vars(m, x), output_types)
             output_vars = union(all_output_vars...)
-
+         
             forecast_one(m, df; cond_type=cond_type, input_type=input_type, output_vars = output_vars)
         end
-    end
-
+    end 
 end
 
 """
@@ -210,12 +209,11 @@ end
 
 """
 ```
-prepare_states(m, input_type, cond_type, systems, params, df::DataFrame,
-               zend::Matrix{Float64})
+prepare_states(m, input_type, cond_type, systems, params, df, zend)
 ```
 
-Return the final historical state vector(s) for this combination of
-inputs. The final state vector is assumed to be from the period
+Prepare the final historical state vector(s) for this combination of
+forecast inputs. The final state vector is assumed to be from the period
 corresponding to the final row of `df`. In the single-draw and
 conditional cases, the final state vector is computed by running the
 Kalman filter. In the multi-draw, unconditional cases, where the final
@@ -224,21 +222,28 @@ are repackaged for inputs to the forecast.
 
 ### Inputs
 
-- `m::AbstractModel`
-- `input_type::Symbol`
-- `cond_type::Symbol`:
-- `systems::DArray{System{Float64}, 1, Vector{System{Float64}}}`:
+- `m::AbstractModel`: model object
+- `input_type::Symbol`: See documentation for `forecast_all`
+- `cond_type::Symbol`: See documentation for `forecast_all`
+- `systems::DVector{System{Float64}, Vector{System{Float64}}}`:
   vector of `System` objects corresponding to `params`
 - `params::Matrix{Float64}`: matrix of parameter draws from estimation.
 - `df::DataFrame`: Historical data. If `cond_type={semi,full}`, then
    the final row of `df` should be the period containing conditional
    data.
+- `zend::Matrix{Float64}`: a possibly empty matrix of final state
+  vectors read in from the sampling step.
+
+### Keyword arguments
+
+- `procs::Vector{Int}`: list of worker processes that have been
+  previously added by the user. Defaults to `[myid()]`
 
 ### Outputs 
 
 - A `DVector` of final historical state vectors.
 
-### Notes
+### Note
 
 - In all cases, the initial values in the forecast are the final
   historical state vectors that are returned from the Kalman filter,
@@ -291,9 +296,11 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
             # here. The reason is that while we have $s_{T|T}$ we don't have $P_{T|T}$ and
             # thus can't "restart" the Kalman filter for the conditional data period.
             states = dfill(Vector{Float64}(), (0,), procs)
+        else
+            throw(ArgumentError("Not implemented for this `cond_type`."))
         end
     else
-        throw(ArgumentError("Not implemented."))
+        throw(ArgumentError("Not implemented for this `input_type`."))
     end
 
     return states
@@ -301,12 +308,16 @@ end
 
 """
 ```
-prepare_forecast_inputs(m::AbstractModel, df::DataFrame; input_type::Symbol =
-    :mode, cond_type::Symbol = :none)
+prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
+                        input_type::Symbol = :mode, cond_type::Symbol = :none,
+                        procs::Vector{Int} = [myid()])
 ```
 
-Load draws for this input type, prepare a System object for each draw, and prepare initial
-state vectors.
+Load draws for this input type, prepare a System object for each draw, and prepare initial state vectors.
+
+## Notes
+- Calls `prepare_systems` and `prepare_states`. See those functions for thorough documentation.
+- See `forecast_all` for documentation of `input_type` and `cond_type`.
 """
 function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     input_type::Symbol = :mode, cond_type::Symbol = :none,
@@ -330,13 +341,46 @@ end
 
 """
 ```
-forecast_one(m::AbstractModel, df::DataFrame; input_type::Symbol  = :mode,
-    output_type::Symbol = :simple, cond_type::Symbol = :none)
+forecast_one(m::AbstractModel, df::DataFrame;
+            input_type::Symbol  = :mode, output_type::Symbol = :simple,
+            cond_type::Symbol = :none, procs::Vector{Int})
 ```
 
-Compute, save, and return forecast outputs given by `output_type` for input draws given by
-`input_type` and conditional data case given by `cond_type`.
+Compute, save, and return forecast outputs given by `output_type` for
+input draws given by `input_type` and conditional data case given by
+`cond_type`. 
 
+### Inputs
+
+- `df::DataFrame`: Historical data. If `cond_type={semi,full}`, then
+   the final row of `df` should be the period containing conditional
+   data.
+- `procs::Vector{Int}`: list of worker processes that have been
+  previously added by the user. Defaults to `[myid()]`
+
+### Output
+
+- A `Dict{Symbol,DArray}` containing the desired `output_var` series for `cond_type`. Entries are a subset of:
+  - `:histstates`: smoothed historical states
+  - `:histobs`: smoothed historical data
+  - `:histpseudo`: smoothed historical pseudoobservables (if a pseudomeasurement equation has been provided for this model type)
+  - `:histshocks`: smoothed historical shocks
+  - `:forecaststates`: forecasted states
+  - `:forecastobs`: forecasted observables
+  - `:forecastpseudo`: forecasted pseudoobservables
+  - `:forecastshocks`: forecasted shocks
+
+### Notes
+
+- See `forecast_all` for documentation of `{input,output,cond}_type`.
+- `forecast_one` prepares inputs to the forecast for a particular
+  combination of input, output and cond types by distributing system
+  matrices and final historical state vectors across `procs`. The user
+  must add processes separately and pass the worker identification
+  numbers here.
+- if `ndraws % length(procs) != 0`, `forecast_one` truncates `procs`
+  so that the draws can be evenly distributed across workers. This is
+  required by the `DistributedArrays` package.
 """
 function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     input_type::Symbol = :mode, cond_type::Symbol = :none,
