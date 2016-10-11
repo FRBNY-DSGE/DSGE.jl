@@ -51,7 +51,9 @@ output types.
 Outputs
 -------
 
-- todo
+None. Output is saved to files returned by
+`get_output_files(m, input_type, output_vars, cond_type)`
+for each combination of `input_type`, `output_var`, and `cond_type`.
 """
 function forecast_all(m::AbstractModel,
                       cond_types::Vector{Symbol}   = Vector{Symbol}(),
@@ -72,11 +74,15 @@ function forecast_all(m::AbstractModel,
 end
 
 """
-`load_draws(m, input_type)`
+`load_draws(m::AbstractModel, input_type::Symbol)`
 
-Load and return draws from Metropolis-Hastings, after some slight transformations. Single
-draws are reshaped to have additional singleton dimensions, and missing variables without
-sufficient information are initialized to null values of appropriate types.
+Load and return parameter draws, transition matrices, and final state
+vectors from Metropolis-Hastings. Single draws are reshaped to have additional
+singleton dimensions, and missing variables without sufficient
+information are initialized to null values of appropriate types.
+
+### Inputs
+- `input_type`: one of the options for `input_type` described in the documentation for `forecast_all`.
 
 ### Outputs
 - `params`: Matrix{Float64} of size (nsim, nparams)
@@ -84,6 +90,10 @@ sufficient information are initialized to null values of appropriate types.
 - `RRR`: Array{Float64,3} of size (nsim, nequations, nshocks)
 - `CCC`: Array{Float64,3} of size (nsim, nequations, 1)
 - `zend`: Matrix{Float64} of size (nsim, nstates)
+
+Where
+- `nsim` = number of draws saved in Metropolis-Hastings
+- `nequations` = number of equilibrium conditions
 """
 function load_draws(m::AbstractModel, input_type::Symbol)
 
@@ -128,13 +138,23 @@ end
 """
 ```
 prepare_systems(m::AbstractModel, input_type::Symbol, params::Matrix{Float64},
-TTT::Array{Float64,3}, RRR::Array{Float64,3}, CCC::Array{Float64,3})
+                TTT::Array{Float64,3}, RRR::Array{Float64,3}, CCC::Array{Float64,3})
 ```
 
-Return Vector of System objects constructed from the given sampling outputs. In the one-draw
-case (mode, mean, init), we recompute the entire system. In the many-draw case (full, or subset),
-we package the outputs only. Recomputing the entire system in the many-draw case remains to
-be implemented.
+Returns a `Vector` of `System` objects constructed from the given
+sampling outputs that is suitable for input to forecasting. In the
+one-draw case (`input_type = {mode,mean,init}`), the model is
+re-solved and the state-space system is recomputed. In the many-draw
+case (`input_type = {full,subset}), the outputs from sampling are
+simply repackaged to the appropriate shape.
+
+
+### Inputs
+- `input_type`: one of the options for `input_type` described in the documentation for `forecast_all`.
+- `params`: matrix of parameter draws
+
+### Output
+- a vector of `System`
 """
 function prepare_systems(m::AbstractModel, input_type::Symbol,
     params::Matrix{Float64}, TTT::Array{Float64, 3}, RRR::Array{Float64, 3},
@@ -190,17 +210,46 @@ end
 
 """
 ```
-prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
-               systems::Vector{System{Float64}}, params::Matrix{Float64}, df::DataFrame,
+prepare_states(m, input_type, cond_type, systems, params, df::DataFrame,
                zend::Matrix{Float64})
 ```
 
-Return the final state vector(s) for this combination of inputs. The final state vector is
-determined to be that s_{T} such that `T == size(df,1)`. Often, the final state vector is
-computed by applying to the Kalman filter. In cases where the final state vector appears
-to be successfully precomputed (such as full distribution input) but the data are
-conditional data, then the final state vector is adjusted accordingly.
+Return the final historical state vector(s) for this combination of
+inputs. The final state vector is assumed to be from the period
+corresponding to the final row of `df`. In the single-draw and
+conditional cases, the final state vector is computed by running the
+Kalman filter. In the multi-draw, unconditional cases, where the final
+state vector has been successfully precomputed, final state vectors
+are repackaged for inputs to the forecast.
 
+### Inputs
+
+- `m::AbstractModel`
+- `input_type::Symbol`
+- `cond_type::Symbol`:
+- `systems::DArray{System{Float64}, 1, Vector{System{Float64}}}`:
+  vector of `System` objects corresponding to `params`
+- `params::Matrix{Float64}`: matrix of parameter draws from estimation.
+- `df::DataFrame`: Historical data. If `cond_type={semi,full}`, then
+   the final row of `df` should be the period containing conditional
+   data.
+
+### Outputs 
+
+- A `DVector` of final historical state vectors.
+
+### Notes
+
+- In all cases, the initial values in the forecast are the final
+  historical state vectors that are returned from the Kalman filter,
+  not the Kalman or simulation smoother (though these are the same in
+  the case of the Kalman smoother). These are the correct values to
+  use because the Kalman filter returns the actual mean (`s_{T|T}`)
+  and variance (`P_{T|T}`) of the states given the parameter draw,
+  while the simulation smoother takes into account the uncertainty in
+  the parameter draw. Since we only compute one final historical state
+  vector for each parameter draw, we want to use the analytical mean
+  and variance as the starting points in the forecast.
 """
 function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     systems::DVector{System{Float64}, Vector{System{Float64}}},
