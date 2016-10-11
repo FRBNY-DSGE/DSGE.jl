@@ -394,50 +394,87 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands(draws::Matrix, percent::AbstractFloat; minimize::Bool=true)
+function find_density_bands{T<:AbstractFloat}(draws::Matrix, percent::T; minimize::Bool=true)
 
     if !(0 < percent < 1)
         error("percent must be between 0 and 1")
     end
 
-    n_draws, n_draw_dimensions = size(draws)
-    band = zeros(2, n_draw_dimensions)
-    n_in_band  = round(Int, percent * n_draws)
-
-    for i in 1:n_draw_dimensions
+    ndraws, nperiods = size(draws)
+    band = zeros(2, nperiods)
+    n_in_band  = round(Int, percent * ndraws)  # number of draws in the band
+    
+    for i in 1:nperiods
 
         # Sort response for parameter i such that 1st element is largest
         draw_variable_i = draws[:,i]
         sort!(draw_variable_i, rev=true)
 
-        # Search to find the interval containing the minimum # of observations
-        # comprising `percent` of the mass
-        if minimize
+        # Search to find the shortest interval containing `percent` of
+        # the mass `low` is the index of the largest draw in the band
+        # (but the first index to take in `draw_variable_i`, `high` is
+        # the smallest (but the highest index to take)
 
-            upper_index = 1
+        low = if minimize
+
+            low         = 1
             done        = 0
             j           = 2
             minwidth = draw_variable_i[1] - draw_variable_i[n_in_band]
 
-            while j <= (n_draws - n_in_band + 1)
+            while j <= (ndraws - n_in_band + 1)
 
                 newwidth = draw_variable_i[j] - draw_variable_i[j + n_in_band - 1]
 
                 if newwidth < minwidth
-                    upper_index = j
+                    low = j
                     minwidth = newwidth
                 end
 
                 j += 1
             end
 
+            low
         else
-            upper_index = n_draws - nwidth - floor(.5*n_draws-n_in_band)
+            # Chop off lowest and highest percent/2
+            ndraws - n_in_band - round(Int, floor(.5*(ndraws-n_in_band)))
         end
 
-        band[2,i] = draw_variable_i[upper_index]
-        band[1,i] = draw_variable_i[upper_index + n_in_band - 1]
+        high = low + n_in_band - 1
+        
+        band[2,i] = draw_variable_i[low]
+        band[1,i] = draw_variable_i[high]
     end
 
     return band
+end
+
+"""
+```
+find_density_bands{T<:AbstractFloat}(draws::Matrix, percents::Vector{T}; minimize::Bool=true)
+```
+
+Returns a `2` x `cols(draws)` matrix `bands` such that `percent` of the mass of `draws[:,i]`
+is above `bands[1,i]` and below `bands[2,i]`.
+
+### Arguments
+- `draws`: Matrix of parameter draws (from Metropolis-Hastings, for example)
+- `percent`: percent of data within bands (e.g. .9 to get 90% of mass within bands)
+
+### Optional Arguments
+- `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
+  highest (percent/2)
+"""
+function find_density_bands{T<:AbstractFloat}(draws::Matrix, percents::Vector{T}; minimize::Bool=true)
+
+    bands = DataFrame()
+
+    for p in percents
+        out = find_density_bands(draws, p, minimize = false)
+        
+        bands[symbol("$(100*p)\% UB")] = vec(out[2,:])
+        bands[symbol("$(100*p)\% LB")] = vec(out[1,:])
+    end
+
+    bands
 end
