@@ -14,16 +14,14 @@ kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 ### Inputs
 
 - `m`: model object
-- `data`: a `Ny` x `T` matrix containing data `y(1), ... , y(T)`.
-- `TTT`: an `Nz` x `Nz` matrix for a time-invariant transition matrix in the transition
+- `data`: a `Ny` x `T` `Matrix` containing data `y(1), ... , y(T)`.
+- `TTT`: an `Nz` x `Nz` `Matrix` for a time-invariant transition matrix in the transition
   equation.
-- `CCC`: an `Nz` x 1 vector for a time-invariant input vector in the transition equation.
-- `ZZ`: an `Ny` x `Nz` matrix for a time-invariant measurement matrix in the measurement
+- `CCC`: an `Nz` x 1 `Vector` for a time-invariant input vector in the transition equation.
+- `ZZ`: an `Ny` x `Nz` `Matrix` for a time-invariant measurement matrix in the measurement
   equation.
-- `DD`: an `Ny` x 1 vector for a time-invariant input vector in the measurement equation.
-- `VVall`: an `Ny + Nz` x `Ny + Nz` matrix for a time-invariant variance matrix for the
-  error in the transition equation and the error in the measurement equation, that is,
-  `[ϵ(t)', u(t)']'`.
+- `DD`: an `Ny` x 1 constant vector in measurement equation
+- `VVall`: See `Measurement` type for description
 
 #### Optional Inputs
 - `z0`: an optional `Nz` x 1 initial state vector.
@@ -51,8 +49,8 @@ Where:
 
 The state space model is defined as follows:
 ```
-z(t+1) = CCC + TTT*z(t) + ϵ(t)   (state or transition equation)
-y(t) = DD + ZZ*z(t) + u(t)       (observation or measurement equation)
+z(t+1) = CCC + TTT*z(t) + RRR*ϵ(t)   (state or transition equation)
+y(t) = DD + ZZ*z(t) + u(t)           (observation or measurement equation)
 ```
 
 When `z0` and `Vz0` are omitted, the initial state vector and its covariance

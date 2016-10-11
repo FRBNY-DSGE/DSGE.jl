@@ -6,14 +6,17 @@ measurement{T<:AbstractFloat}(m::Model990{T}, TTT::Matrix{T}, RRR::Matrix{T},
 
 Assign measurement equation
 ```
-X_t = ZZ*S_t + DD + u_t
+y_t = ZZ*s_t + DD + u_t
 ```
 where
 ```
-u_t = eta_t + MM*eps_t
-var(eta_t) = EE
+u_t = η_t + MM*ϵ_t     
+```
+is error composed of measurement error and a contribution from underlying shocks, and
+```
+var(η_t) = EE
 var(u_t) = HH = EE + MM*QQ*MM'
-cov(eps_t,u_t) = VV = QQ*MM'
+cov(ϵ_t,u_t) = VV = QQ*MM'
 ```
 """
 function measurement{T<:AbstractFloat}(m::Model990{T},
