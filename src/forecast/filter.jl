@@ -1,43 +1,36 @@
 """
 ```
-filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    systems::Vector{System{S}}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
-    Matrix{S}(); cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
-    include_presample::Bool = true)
-
-filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    systems::Vector{System{S}}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
-    Matrix{S}(); lead::Int = 0, allout::Bool = false, include_presample::Bool =
-    true)
+filter{S<:AbstractFloat}(m::AbstraceModel, data, systems, z0, vz0; cond_type = :none,
+                        lead = 0, allout = false, include_presample = true,
+                        procs = [myid()])
 ```
 
 Computes and returns the filtered values of states for every state-space system in `systems`.
 
 ### Inputs
 
-- `m`: model object
-- `data`: DataFrame or matrix of data for observables
-- `systems`: a vector of `System` objects specifying state-space
+- `m::AbstractModel`: model object
+- `data`: `DataFrame` or `Matrix{S}` of data for observables
+- `systems`: a DVector{System{S}, Vector{System{S}}} of `System` objects, or a single `System` object, specifying state-space
   system matrices for each draw
-- `z0`: an optional `Nz` x 1 initial state vector
-- `vz0`: an optional `Nz` x `Nz` covariance matrix of an initial state vector
-- `allout`: an optional keyword argument indicating whether we want optional
-  output variables returned as well
-- `include_presample`: indicates whether to include presample periods in the
-  returned vector of `Kalman` objects
+- `z0::Matrix{S}`: an optional `Nz` x 1 initial state vector
+- `vz0::Matrix{S}`: an optional `Nz` x `Nz` covariance matrix of an initial state vector
+
+## Keyword arguments
+
+- `cond_type`: conditional case. See `forecast_all` for documentation of all cond_type options.
+- `lead`: the number of steps to forecast after the end of the data. Defaults to 0.
+- `allout::Bool`: an optional keyword argument indicating whether we want optional
+  output variables returned as well. Defaults to `false`.
+- `include_presample::Bool`: indicates whether to include presample periods in the
+  returned vector of `Kalman` objects. Defaults to `true`.
+- `procs`: list of worker processes over which to distribute draws. Defaults to `[myid()]`
+
+where `S<:AbstractFloat`.
 
 ### Outputs
 
-`filter` returns a vector of `Kalman` objects, which each contain the following fields:
-
-- `logl`: value of the average log likelihood function of the SSM under assumption that
-  observation noise ϵ(t) is normally distributed
-- `pred`: a `Nz` x `T+lead` matrix containing one-step predicted state vectors.
-- `vpred`: a `Nz` x `Nz` x `T+lead` matrix containing mean square errors of predicted
-  state vectors.
-- `filt`: an optional `Nz` x `T` matrix containing filtered state vectors.
-- `vfilt`: an optional `Nz` x `Nz` x `T` matrix containing mean square errors of filtered
-  state vectors.
+`filter` returns a vector of `Kalman` objects. See `Kalman` documentation for more details.
 """
 function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     systems::DVector{System{S}, Vector{System{S}}},
@@ -117,42 +110,45 @@ end
 
 """
 ```
-filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    systems::Vector{System{S}}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
-    Matrix{S}(); lead::Int = 0, allout::Bool = false, include_presample::Bool =
-    true)
-
-filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    systems::Vector{System{S}}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} =
-    Matrix{S}(); lead::Int = 0, allout::Bool = false, include_presample::Bool =
-    true)
+filterandsmooth{S<:AbstractFloat}(m, data, systems, z0, vz0; lead, allout, include_presample)
 ```
 
-Computes and returns the smoothed states, shocks, and pseudo-observables, as
-well as the Kalman filter outputs, for every state-space system in `systems`.
+Computes and returns the smoothed states, shocks, and
+pseudo-observables, as well as the Kalman filter outputs, for every
+state-space system in `systems`. 
 
 ### Inputs
 
 - `m`: model object
-- `data`: DataFrame or matrix of data for observables
-- `systems`: a vector of `System` objects specifying state-space
-  system matrices for each draw
+- `data`: `DataFrame` or `Matrix` of data for observables
+- `systems`: a `DVector{System{S}, Vector{System{S}}}` of `System`
+  objects, or a single `System` object, specifying state-space system
+  matrices for each draw
 - `z0`: an optional `Nz` x 1 initial state vector
 - `vz0`: an optional `Nz` x `Nz` covariance matrix of an initial state vector
 
 ### Outputs
 
-- `states`: 3-dimensional array of size `nstates` x `hist_periods` x `ndraws`
+- `states`: 3-dimensional (possibly distributed) array of size `nstates` x `hist_periods` x `ndraws`
   consisting of smoothed states for each draw
-- `shocks`: 3-dimensional array of size `nshocks` x `hist_periods` x `ndraws`
+- `shocks`: 3-dimensional (possibly distributed) array of size `nshocks` x `hist_periods` x `ndraws`
   consisting of smoothed shocks for each draw
-- `pseudo`: 3-dimensional array of size `npseudo` x `hist_periods` x `ndraws`
+- `pseudo`: 3-dimensional (possibly distributed) array of size `npseudo` x `hist_periods` x `ndraws`
   consisting of pseudo-observables computed from the smoothed states for each
   draw
-- `kals`: vector of Kalman objects, of length `ndraws`
+- `zends`: (possibly distributed) matrix of final state vectors for all draws
 
-where `states` and `shocks` are returned from the smoother specified by
-`smoother_flag(m)`.
+### Notes
+
+- Outputs are `DArray`s if the `systems` input is of type `DVector`. If
+`systems` is a single `System` object, outputs are ordinary arrays.
+
+- `states` and `shocks` are returned from the smoother specified by
+`forecast_smoother(m)`, which defaults to `:durbin_koopman`. This can be overridden by calling 
+
+`update!(m.settings[:forecast_smoother], Setting(:forecast_smoother, :kalman_smoother))`
+
+before calling `filterandsmooth`.
 """
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     systems::DVector{System{S}, Vector{System{S}}},
