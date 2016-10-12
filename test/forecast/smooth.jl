@@ -23,7 +23,7 @@ systems = distribute(systems; procs = my_procs, dist = [ndraws])
 kals    = distribute(kals;    procs = my_procs, dist = [ndraws])
 
 # Run to compile before timing
-states, shocks = smooth(m, df, systems, kals; procs = my_procs)
+states, shocks = smooth_all(m, df, systems, kals; procs = my_procs)
 
 # Read expected output
 exp_states, exp_shocks = jldopen("$path/../reference/smooth_out.jld", "r") do file
@@ -34,7 +34,7 @@ end
 for smoother in [:durbin_koopman, :kalman]
     m <= Setting(:forecast_smoother, smoother)
 
-    @time states, shocks = smooth(m, df, systems, kals; procs = my_procs)
+    @time states, shocks = smooth_all(m, df, systems, kals; procs = my_procs)
 
     @test_matrix_approx_eq exp_states[smoother] convert(Array, states)
     @test_matrix_approx_eq exp_shocks[smoother] convert(Array, shocks)

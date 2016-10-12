@@ -441,7 +441,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     if !isempty(intersect(output_vars, filterandsmooth_vars)) || cond_type in [:semi, :full]
 
         histstates, histshocks, histpseudo, zends =
-            filterandsmooth(m, df, systems; cond_type = cond_type, procs = procs)
+            filterandsmooth_all(m, df, systems; cond_type = cond_type, procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]

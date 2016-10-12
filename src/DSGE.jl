@@ -65,7 +65,8 @@ module DSGE
         find_density_bands, prior,
 
         # forecast/
-        filter, filterandsmooth, smooth, kalman_smoother, durbin_koopman_smoother,
+        filter, filter_all, filterandsmooth_all, filterandsmooth,
+        smooth, smooth_all, kalman_smoother, durbin_koopman_smoother,
         forecast_all, forecast_one, forecast, compute_forecast,
         shock_decompositions,
 

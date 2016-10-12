@@ -39,7 +39,7 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
     ## Output
     ZZ_pseudo[pseudo_inds[:y_t],endo[:y_t]] = 1.
     pseudo[:y_t].name = "Output Growth"
-    pseudo[:y_t].longname = "Output Growth"
+    pseudo[:y_t].longname = "Output Growth Per Capita"
 
     ## Flexible Output
     ZZ_pseudo[pseudo_inds[:y_f_t],endo[:y_f_t]] = 1.
@@ -51,7 +51,7 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
     DD_pseudo[pseudo_inds[:NaturalRate]]              = 100.*(m[:rstar]-1.)
 
     pseudo[:NaturalRate].name = "Real Natural Rate"
-    pseudo[:NaturalRate].longname = "The interest rate that would prevail in a flexible-price economy."
+    pseudo[:NaturalRate].longname = "The real interest rate that would prevail in a flexible-price economy."
     pseudo[:NaturalRate].rev_transform = quartertoannual
     
     ## π_t 

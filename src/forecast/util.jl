@@ -1,3 +1,9 @@
+"""
+`compute_system(m)`
+
+Given the current model parameters, compute the state-space system
+corresponding to model `m`. Returns a `System` object.
+"""
 function compute_system(m)
     # Solve model
     TTT, RRR, CCC = solve(m)
@@ -10,7 +16,12 @@ function compute_system(m)
     return System(transition_equation, measurement_equation)
 end
 
+"""
+`get_jstep(m, n_sim)`
 
+Retrieve `forecast_jstep` setting (thinning step size for forecast
+step) from `m.settings`. If `n_sim ==  1`, returns 1. 
+"""
 function get_jstep(m, n_sim)
     if n_sim == 1
         jstep = 1
@@ -19,7 +30,14 @@ function get_jstep(m, n_sim)
     end
 end
 
+"""
+`get_input_file(m, input_type)`
 
+Computes the appropriate forecast input filenames for model `m` and
+forecast input type `input_type`. For example, the default file containing the parameter mode is ``
+
+Default input file 
+"""
 function get_input_file(m, input_type)
     overrides = forecast_input_file_overrides(m)
     if haskey(overrides, input_type)
@@ -98,7 +116,18 @@ function get_output_files(m, input_type, output_vars, cond_type)
 end
 
 
+"""
+`DVector{T, A}`
+
+typalias for `DArray{T, 1, A}`
+"""
 typealias DVector{T, A} DArray{T, 1, A}
+
+"""
+`DMatrix{T, A}`
+
+typealias for `DArray{T, 2, A}`
+"""
 typealias DMatrix{T, A} DArray{T, 2, A}
 
 

@@ -22,7 +22,7 @@ my_procs = addprocs(ndraws)
 systems = distribute(systems; procs = my_procs, dist = [ndraws])
 
 # Run to compile before timing
-states, shocks, pseudo = filterandsmooth(m, df, systems; procs = my_procs)
+states, shocks, pseudo = filterandsmooth_all(m, df, systems; procs = my_procs)
 
 # Read in expected output
 exp_states, exp_shocks, exp_pseudo, exp_zend =
@@ -37,7 +37,7 @@ for smoother in [:durbin_koopman, :kalman]
     m <= Setting(:forecast_smoother, smoother)
 
     # Without providing z0 and vz0
-    @time states, shocks, pseudo, zend = filterandsmooth(m, df, systems; procs = my_procs)
+    @time states, shocks, pseudo, zend = filterandsmooth_all(m, df, systems; procs = my_procs)
 
     @test_matrix_approx_eq exp_states[(smoother, :no_z0)] convert(Array, states)
     @test_matrix_approx_eq exp_shocks[(smoother, :no_z0)] convert(Array, shocks)
@@ -47,11 +47,12 @@ for smoother in [:durbin_koopman, :kalman]
     end
 
     # Providing z0 and vz0
-    @time states, shocks, pseudo, zend = filterandsmooth(m, df, systems, z0, vz0; procs = my_procs)
+    @time states, shocks, pseudo, zend = filterandsmooth_all(m, df, systems, z0, vz0; procs = my_procs)
 
     @test_matrix_approx_eq exp_states[(smoother, :z0)] convert(Array, states)
     @test_matrix_approx_eq exp_shocks[(smoother, :z0)] convert(Array, shocks)
     @test_matrix_approx_eq exp_pseudo[(smoother, :z0)] convert(Array, pseudo)
+
     for i = 1:ndraws
         @test_matrix_approx_eq exp_zend[(smoother, :z0)][i] zend[i]
     end
@@ -59,5 +60,6 @@ end
 
 # Remove parallel workers
 rmprocs(my_procs)
+
 
 nothing
