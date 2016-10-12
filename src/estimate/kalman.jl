@@ -267,7 +267,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
                                                allout::Bool   = false,
                                                catch_errors::Bool = false,
                                                include_presample::Bool = true)
-    
+
     # Partition sample into three regimes, and store associated matrices:
     # - R1: presample
     # - R2: normal
@@ -314,7 +314,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
         R3[:TTT], R3[:RRR], R3[:CCC] = TTT, RRR, CCC
     end
 
-    
+
     # Get normal, no ZLB matrices
     R2[:TTT] = R3[:TTT][state_inds, state_inds]
     R2[:RRR] = R3[:RRR][state_inds, shock_inds]
@@ -437,10 +437,10 @@ immutable Kalman{S<:AbstractFloat}
     Pend::Matrix{S}       # last-period variance-covariance matrix for the states
     pred::Matrix{S}       # predicted value of states in period T+1
     vpred::Array{S, 3}    # predicted variance-covariance matrix for states in period T+1
-    yprederror::Matrix{S} 
+    yprederror::Matrix{S}
     ystdprederror::Matrix{S}
     rmse::Matrix{S}
-    rmsd::Matrix{S}        # 
+    rmsd::Matrix{S}        #
     filt::Matrix{S}        # filtered states
     vfilt::Array{S, 3}     # mean square errors of filtered state vectors
     z0::Vector{S}          # starting-period state vector
@@ -512,7 +512,7 @@ function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
         k1_new[:ystdprederror][obs_inds, :] = k1[:ystdprederror]
         k1_new[:rmse][:, obs_inds] = k1[:rmse]
         k1_new[:rmsd][:, obs_inds] = k1[:rmsd]
-        k1_new[:filt][state_inds, :] = k1[:pred]
+        k1_new[:filt][state_inds, :] = k1[:filt]
         k1_new[:vfilt][state_inds, state_inds, :] = k1[:vfilt]
         k1_new[:z0][state_inds] = k1[:z0]
         k1_new[:vz0][state_inds, state_inds] = k1[:vz0]
