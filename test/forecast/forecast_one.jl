@@ -1,6 +1,8 @@
 using DSGE, Base.Test, JLD, DistributedArrays
 include("../util.jl")
 
+path = dirname(@__FILE__)
+
 # Initialize model object
 custom_settings = Dict{Symbol, Setting}(
     :n_anticipated_shocks    => Setting(:n_anticipated_shocks, 6),
