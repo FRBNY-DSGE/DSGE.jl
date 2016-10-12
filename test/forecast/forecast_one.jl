@@ -73,10 +73,11 @@ for input_type in [:init, :mode]
         ## Historical states and shocks
         histstates = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:histstates], 1, :, :))
         histshocks = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:histshocks], 1, :, :))
-
+        histpseudo = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:histpseudo], 1, :, :))
+        
         @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:histstates] histstates
         @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:histshocks] histshocks
-
+        @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:histpseudo] histpseudo
 
         ## Forecasted states, observables, pseudos, and shocks
         forecaststates = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:forecaststates], 1, :, :))
@@ -101,6 +102,7 @@ for input_type in [:init, :mode]
     end # cond_type
 
 end # input_type
+
 
 # Delete all files written by forecast_one
 map(rm, unique(output_files))
