@@ -23,8 +23,8 @@ my_procs = addprocs(ndraws)
 systems = distribute(systems; procs = my_procs, dist = [ndraws])
 
 # Run to compile before timing
-kals = DSGE.filter(m, df, systems; allout = true)
-kals = DSGE.filter(m, df, systems, z0, vz0; allout = true)
+kals = DSGE.filter(m, df, systems; allout = true, procs = my_procs)
+kals = DSGE.filter(m, df, systems, z0, vz0; allout = true, procs = my_procs)
 
 # Read expected output
 exp_kals_no_z0, exp_kals_z0 = jldopen("$path/../reference/filter_out.jld","r") do file
@@ -32,7 +32,7 @@ exp_kals_no_z0, exp_kals_z0 = jldopen("$path/../reference/filter_out.jld","r") d
 end
 
 # Without providing z0 and vz0
-@time kals = DSGE.filter(m, df, systems; allout = true)
+@time kals = DSGE.filter(m, df, systems; allout = true, procs = my_procs)
 for i = 1:ndraws
     for out in fieldnames(kals[1])
         expect = exp_kals_no_z0[i][out]
@@ -47,7 +47,7 @@ for i = 1:ndraws
 end
 
 # Providing z0 and vz0
-@time kals = DSGE.filter(m, df, systems, z0, vz0; allout = true)
+@time kals = DSGE.filter(m, df, systems, z0, vz0; allout = true, procs = my_procs)
 for i = 1:ndraws
     for out in fieldnames(kals[1])
         expect = exp_kals_z0[i][out]
