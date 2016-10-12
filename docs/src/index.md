@@ -1,5 +1,8 @@
 # DSGE.jl Documentation
 
+```@contents
+```
+
 ## Solving the model
 ```@docs
 solve(m::AbstractModel)
@@ -13,4 +16,7 @@ DSGE.estimate(m::AbstractModel, data::Matrix{Float64}; verbose::Symbol=:low, pro
 metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractModel, data::Matrix{T}, cc0::T, cc::T; verbose::Symbol=:low)
 ```
 
+## Index 
 
+```@index
+```
