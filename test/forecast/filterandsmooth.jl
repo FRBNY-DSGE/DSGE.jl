@@ -52,7 +52,6 @@ for smoother in [:durbin_koopman, :kalman]
     @test_matrix_approx_eq exp_states[(smoother, :z0)] convert(Array, states)
     @test_matrix_approx_eq exp_shocks[(smoother, :z0)] convert(Array, shocks)
     @test_matrix_approx_eq exp_pseudo[(smoother, :z0)] convert(Array, pseudo)
-
     for i = 1:ndraws
         @test_matrix_approx_eq exp_zend[(smoother, :z0)][i] zend[i]
     end

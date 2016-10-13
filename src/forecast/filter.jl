@@ -149,7 +149,7 @@ filterandsmooth_all(m, data, systems, z0, vz0; lead, allout, include_presample)
 
 Computes and returns the smoothed states, shocks, and
 pseudo-observables, as well as the Kalman filter outputs, for every
-state-space system in `systems`. 
+state-space system in `systems`.
 
 ### Inputs
 
@@ -180,7 +180,7 @@ Outputs are `DArray`s if the `systems` input is of type `DVector`. If
 `systems` is a single `System` object, outputs are ordinary arrays.
 
 - `states` and `shocks` are returned from the smoother specified by
-`forecast_smoother(m)`, which defaults to `:durbin_koopman`. This can be overridden by calling 
+`forecast_smoother(m)`, which defaults to `:durbin_koopman`. This can be overridden by calling
 
 `update!(m.settings[:forecast_smoother], Setting(:forecast_smoother, :kalman_smoother))`
 
@@ -262,12 +262,19 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
     V_all   = system[:VVall]
 
-    filterandsmooth(m, data, T, R, C, Q, Z, D, V_all, z0, vz0; lead = lead)
+    Z_pseudo, D_pseudo = if forecast_pseudoobservables(m)
+        system[:ZZ_pseudo], system[:DD_pseudo]
+    else
+        Matrix{S}(), Vector{S}()
+    end
+
+    filterandsmooth(m, data, T, R, C, Q, Z, D, V_all, Z_pseudo, D_pseudo, z0, vz0; lead = lead)
 end
 
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     T::Matrix{S}, R::Matrix{S}, C::Vector{S},
     Q::Matrix{S}, Z::Matrix{S}, D::Vector{S}, V_all::Matrix{S},
+    Z_pseudo::Matrix{S}, D_pseudo::Vector{S},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     lead::Int = 0)
 
@@ -298,11 +305,6 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     ## 3. Map smoothed states to pseudo-observables
 
     pseudo = if forecast_pseudoobservables(m)
-
-        _, pseudo_mapping = pseudo_measurement(m)
-        Z_pseudo = pseudo_mapping.ZZ
-        D_pseudo = pseudo_mapping.DD
-
         D_pseudo .+ Z_pseudo * states
     else
         Matrix{S}()

@@ -58,14 +58,6 @@ function forecast{S<:AbstractFloat}(m::AbstractModel,
         ndraws_local = Int(ndraws / nprocs)
 
         for i in draw_inds
-            # Get pseudomeasurement matrices
-            Z_pseudo, D_pseudo = if forecast_pseudoobservables(m)
-                _, pseudo_mapping = pseudo_measurement(m)
-                pseudo_mapping.ZZ, pseudo_mapping.DD
-            else
-                Matrix{S}(), Vector{S}()
-            end
-
             # Index out shocks for draw i
             shocks_i = if shocks_provided
                 convert(Array, slice(shocks, i, :, :))
@@ -74,7 +66,7 @@ function forecast{S<:AbstractFloat}(m::AbstractModel,
             end
 
             states, obs, pseudo, shocks = compute_forecast(m, systems[i],
-                z0s[i], Z_pseudo, D_pseudo; shocks = shocks_i)
+                z0s[i]; shocks = shocks_i)
 
             i_local = mod(i-1, ndraws_local) + 1
 
@@ -122,8 +114,7 @@ compute_forecast(T, R, C, Z, D, forecast_horizons,
 - `:shocks`
 """
 function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
-    z0::Vector{S}, Z_pseudo::Matrix{S} = Matrix{S}(),
-    D_pseudo::Vector{S} = Vector{S}(); shocks::Matrix{S} = Matrix{S}())
+    z0::Vector{S}; shocks::Matrix{S} = Matrix{S}())
 
     # Numbers of things
     nshocks = n_shocks_exogenous(m)
@@ -149,25 +140,29 @@ function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
         end
     end
 
-    compute_forecast(system, z0, shocks, Z_pseudo, D_pseudo)
+    compute_forecast(system, z0, shocks)
 end
 
 
 function compute_forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
-    shocks::Matrix{S}, Z_pseudo::Matrix{S} = Matrix{S}(), D_pseudo::Vector{S} =
-    Vector{S}())
+    shocks::Matrix{S})
 
     # Unpack system
     T, R, C = system[:TTT], system[:RRR], system[:CCC]
     Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
 
-    compute_forecast(T, R, C, Q, Z, D, z0, shocks, Z_pseudo, D_pseudo)
+    Z_pseudo, D_pseudo = if !isnull(system.pseudo_measurement)
+        system[:ZZ_pseudo], system[:DD_pseudo]
+    else
+        Matrix{S}(), Vector{S}()
+    end
+
+    compute_forecast(T, R, C, Q, Z, D, Z_pseudo, D_pseudo, z0, shocks)
 end
 
 function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
-    C::Vector{S}, Q::Matrix{S}, Z::Matrix{S}, D::Vector{S}, z0::Vector{S},
-    shocks::Matrix{S}, Z_pseudo::Matrix{S} = Matrix{S}(),
-    D_pseudo::Vector{S} = Vector{S}())
+    C::Vector{S}, Q::Matrix{S}, Z::Matrix{S}, D::Vector{S}, Z_pseudo::Matrix{S},
+    D_pseudo::Vector{S}, z0::Vector{S}, shocks::Matrix{S})
 
     # Setup
     nshocks = size(R, 2)

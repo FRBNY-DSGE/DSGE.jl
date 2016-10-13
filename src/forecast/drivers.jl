@@ -66,10 +66,10 @@ function forecast_all(m::AbstractModel,
             # Take the union of all output variables specified by output_types
             all_output_vars = map(x -> get_output_vars(m, x), output_types)
             output_vars = union(all_output_vars...)
-         
+
             forecast_one(m, df; cond_type=cond_type, input_type=input_type, output_vars = output_vars)
         end
-    end 
+    end
 end
 
 """
@@ -195,8 +195,16 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
                 update!(m, params_j)
                 meas_j   = measurement(m, trans_j; shocks = true)
 
+                # Prepare pseudo-measurement eq
+                pseudo_meas_j = if forecast_pseudoobservables(m)
+                    _, pseudo_mapping = pseudo_measurement(m)
+                    Nullable(pseudo_mapping)
+                else
+                    Nullable{PseudoObservableMapping{Float64}}()
+                end
+
                 # Prepare system
-                localpart[i_local] = System(trans_j, meas_j)
+                localpart[i_local] = System(trans_j, meas_j, pseudo_meas_j)
             end
             return localpart
         end
@@ -239,7 +247,7 @@ are repackaged for inputs to the forecast.
 - `procs::Vector{Int}`: list of worker processes that have been
   previously added by the user. Defaults to `[myid()]`
 
-### Outputs 
+### Outputs
 
 - A `DVector` of final historical state vectors.
 
@@ -348,7 +356,7 @@ forecast_one(m::AbstractModel, df::DataFrame;
 
 Compute, save, and return forecast outputs given by `output_type` for
 input draws given by `input_type` and conditional data case given by
-`cond_type`. 
+`cond_type`.
 
 ### Inputs
 

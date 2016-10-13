@@ -67,16 +67,8 @@ function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
         ndraws_local = Int(ndraws / nprocs)
 
         for i in draw_inds
-            # Get pseudomeasurement matrices
-            Z_pseudo, D_pseudo = if forecast_pseudoobservables(m)
-                _, pseudo_mapping = pseudo_measurement(m)
-                pseudo_mapping.ZZ, pseudo_mapping.DD
-            else
-                Matrix{S}(), Vector{S}()
-            end
-
             states, obs, pseudo = compute_shock_decompositions(systems[i], horizon,
-                convert(Array, slice(histshocks, i, :, :)), start_ind, end_ind, Z_pseudo, D_pseudo)
+                convert(Array, slice(histshocks, i, :, :)), start_ind, end_ind)
 
             i_local = mod(i-1, ndraws_local) + 1
 
@@ -129,21 +121,26 @@ where `nperiods` is `end_index - start_index + 1`.
 """
 function compute_shock_decompositions{S<:AbstractFloat}(system::System{S},
     forecast_horizons::Int, histshocks::Matrix{S},
-    start_index::Int, end_index::Int, Z_pseudo::Matrix{S} = Matrix{S}(),
-    D_pseudo::Vector{S} = Vector{S}())
+    start_index::Int, end_index::Int)
 
     # Unpack system
     T, R = system[:TTT], system[:RRR]
     Z, D = system[:ZZ], system[:DD]
 
-    compute_shock_decompositions(T, R, Z, D, forecast_horizons,
-        histshocks, start_index, end_index, Z_pseudo, D_pseudo)
+    Z_pseudo, D_pseudo = if !isnull(system.pseudo_measurement)
+        system[:ZZ_pseudo], system[:DD_pseudo]
+    else
+        Matrix{S}(), Vector{S}()
+    end
+
+    compute_shock_decompositions(T, R, Z, D, Z_pseudo, D_pseudo,
+        forecast_horizons, histshocks, start_index, end_index)
 end
 
 function compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
-    R::Matrix{S}, Z::Matrix{S}, D::Vector{S}, forecast_horizons::Int, histshocks::Matrix{S},
-    start_index::Int, end_index::Int, Z_pseudo::Matrix{S} = Matrix{S}(),
-    D_pseudo::Vector{S} = Vector{S}())
+    R::Matrix{S}, Z::Matrix{S}, D::Vector{S}, Z_pseudo::Matrix{S},
+    D_pseudo::Vector{S}, forecast_horizons::Int, histshocks::Matrix{S},
+    start_index::Int, end_index::Int)
 
     # Setup
     nshocks      = size(R, 2)
