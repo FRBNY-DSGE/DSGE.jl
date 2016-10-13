@@ -155,8 +155,12 @@ n_parameters_steady_state(m::AbstractModel)= length(m.steady_state)
 n_parameters_free(m::AbstractModel)        = sum([!α.fixed for α in m.parameters])
 
 function n_pseudoobservables(m::AbstractModel)
-    pseudo, _ = pseudo_measurement(m)
-    return length(pseudo)
+    if forecast_pseudoobservables(m)
+        pseudo, _ = pseudo_measurement(m)
+        return length(pseudo)
+    else
+        return 0
+    end
 end
 
 # Parse population mnemonic into 2 symbols from one
