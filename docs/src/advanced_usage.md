@@ -4,43 +4,17 @@
 
 The package directory structure follows Julia module conventions. Directories in square brackets indicate future additions. 
 
-* [`DSGE.jl`](https://github.com/FRBNY-DSGE/DSGE.jl)
-
-  * `doc/`: Code and model documentation.
-   `save/`: Sample input files; default input/output directories.
-  * `src/`
-  
-    * `DSGE.jl`: The main module file.
-    * `abstractdsgemodel.jl`: Defines the `AbstractModel` type.
-    * `parameters.jl`: Implements the `AbstractParameter` type and its
-       subtypes.
-    * `settings.jl`: Implements the `Setting` type.
-    * `defaults.jl`: Specifies default `Setting`s.
-    * `distributions_ext.jl`: DSGE-specific extensions of `Distributions` functionality.
-    * `data/`: Manipulating and updating input dataset.
-    * `solve/`: Solving the model; includes `gensys.jl` code.
-    * `estimate/`: Optimization, posterior sampling, and other functionality.
-    * [`xxx/`]: Other model functionality, such as forecasts, impulse response functions, and shock decompositions.
-    *  `models/`
-    
-      * `m990/`: Contains code to define and initialize version 990 of the FRBNY DSGE model.
-      
-        * `m990.jl`: Constructs a `Model990` object.
-        * `eqcond.jl`: Constructs `Model990` equilibrium condition matrices
-        * `measurement.jl`: Constructs `Model990` measurement equation matrices.
-        * `subspecs.jl`: Code for model sub-specifications is defined here. See [`Editing or Extending a Model`](@ref) for details on constructing model sub-specifications.
-        * `augment_states.jl`: Code for augmenting the state space system after model solution.
-
-* [`[m991/]`]: Code for new models should be kept in directories at this level in the directory tree
-
-* `test/`: Module test suite.
-
+```@contents
+Pages = ["pkg_structure.md"]
+Depth = 5
+```
 
 ## Reoptimizing
 
 Generally, the user will want to reoptimize the parameter vector (and consequently,
 calculate the Hessian at this new mode) every time they conduct posterior sampling; that is,
 when:
+
 - the input data are updated with a new quarter of observations or revised
 - the model sub-specification is changed
 - the model is derived from an existing model with different equilibrium conditions or
@@ -98,9 +72,9 @@ mathematical definition of the model.
 
 Below, we describe several important settings for package usage.
 
-For more details on implementation and usage of settings, see [Settings](#model-settings).
+For more details on implementation and usage of settings, see [Model Settings](@ref).
 
-See [defaults.jl](src/defaults.jl) for the complete description of default settings.
+See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults.jl) for the complete description of default settings.
 
 #### General
 
@@ -141,20 +115,27 @@ The function `get_setting(m::AbstractModel, s::Symbol)` returns the value of the
 in `m.settings`. Some settings also have explicit getter methods that take only the model
 object `m` as an argument. Note that not all are exported.
 
-- I/O:
-    - `saveroot(m)`,
-    - `dataroot(m)`,
-    - `data_vintage(m)`,
-- Parallelization:
-    - `use_parallel_workers(m)`
-- Estimation:
-    - `reoptimize(m)`,
-    - `calculate_hessian(m)`,
-- Metropolis-Hastings:
-    - `n_mh_blocks(m)`,
-    - `n_mh_simulations(m)`,
-    - `n_mh_burn(m)`,
-    - `mh_thin(m)`
+*I/O*:
+
+  * `saveroot(m)`,
+  * `dataroot(m)`,
+  * `data_vintage(m)`,
+
+*Parallelization*:
+
+  * `use_parallel_workers(m)`
+
+*Estimation*:
+
+  * `reoptimize(m)`,
+  * `calculate_hessian(m)`,
+
+*Metropolis-Hastings*:
+
+  * `n_mh_blocks(m)`,
+  * `n_mh_simulations(m)`,
+  * `n_mh_burn(m)`,
+  * `mh_thin(m)`
 
 ### Overwriting Default Settings
 
@@ -187,7 +168,7 @@ changes are listed below, in decreasing order of complexity:
 Points 1 and 2 often go together (adding a new parameter guarantees a change in equilibrium
 conditions), and are such fundamental changes that they increment the model specification
 number and require the definition of a new subtype of `AbstractModel` (for instance,
-`Model991`).  See [Model specification](#model-specification-mspec) for more details.
+`Model991`).  See [Model specification](@ref model-specification-mspec) for more details.
 
 Any changes to the initialization of preexisting parameters are defined as a new model
 *sub-specification*, or *subspec*. While less significant than a change to the model's
@@ -198,11 +179,11 @@ incrementing the model's sub-specification number when parameters are changed im
 model-level (as opposed to code-level) version control. Second, it avoids potential output
 filename collisions, preventing the user from overwriting output from previous estimations
 with the original parameters. The protocol for defining new sub-specifications is described
-in [Model sub-specifications](#model-sub-specifications-msubspec).
+in [Model sub-specifications](@ref model-sub-specifications-msubspec).
 
-Overriding default settings is described in the [Settings](#model-settings) section above.
+Overriding default settings is described in the [Model Settings](@ref) section above.
 
-### Model specification (`m.spec`)
+### [Model specification (`m.spec`)](@id model-specification-mspec)
 
 A particular model, which corresponds to a subtype of `AbstractModel`, is defined as a set
 of parameters, equilibrium conditions (defined by the `eqcond` function) and measurement
@@ -225,7 +206,7 @@ To create a new model object, we recommend doing the following:
 4. Open the module file, `src/DSGE.jl`. Add `ModelXXX` to the list of functions to export,
    and include each of the files in `src/model/mXXX`.
 
-### Model sub-specifications (`m.subspec`)
+### [Model sub-specifications (`m.subspec`)](@id model-sub-specifications-msubspec)
 
 `Model990` sub-specifications are initialized by overwriting initial parameter definitions
 before the model object is fully constructed. This happens via a call to `init_subspec` in

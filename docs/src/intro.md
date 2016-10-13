@@ -10,12 +10,6 @@ included in the Liberty Street Economics blog post
 
 FRBNY is currently working on extending the code to include forecasts and other features. Extensions of the DSGE model code may be released in the future at the discretion of FRBNY.
 
-# Table of contents
-
-```@contents
-Depth = 4
-```
-
 # Acknowledgements
 Developers of this package at [FRBNY](https://www.newyorkfed.org/research) include
 
@@ -38,4 +32,4 @@ The `kalman_filter` routine is loosely based on a version of the
 Kalman filter algorithm originally copyright Federal Reserve Bank of Atlanta
 and written by [Iskander Karibzhanov](http://karibzhanov.com). The files are
 released here with permission of the Federal Reserve Bank of Atlanta under the
-BSD-3 [license](LICENSE).
+BSD-3 [License](@ref).

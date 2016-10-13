@@ -5,8 +5,8 @@ the input data painlessly. To that extent, *DSGE.jl* provides facilities to down
 appropriate vintages of data series from FRED (Federal Reserve Economic Data).
 
 Note that a sample input dataset for use with model `m990` is provided; see [Sample input
-data](#sample-input-data) for more details. To update this sample dataset for use with
-model `m990`, see [Update sample input data](#update-sample-input-data).
+data](@ref) for more details. To update this sample dataset for use with
+model `m990`, see [Update sample input data](@ref).
 
 ## Setup
 
@@ -18,7 +18,7 @@ To take advantage of the ability to automatically download data series from FRED
 
 At the most basic, loading data looks like this:
 
-```
+```julia
 m = Model990()
 df = load_data(m)
 ```
@@ -193,17 +193,6 @@ If you experience any problems using *FredData.jl*, ensure your API key is provi
 and that there are no issues with your firewall, etc. Any issues with *FredData.jl* proper
 should be reported on that project's page.
 
-## Sample input data
-
-For more details on the sample input data provided -- which is used to estimate the provided
-model `m990`, please see [Data](doc/Data.md).
-
-For more details on using market interest rate expectations to treat the zero lower bound,
-see [Anticipated Policy Shocks](doc/AnticipatedPolicyShocks.md). In particular, note that
-our model, as used to compute the forecasts referenced in Liberty Street Economics posts,
-is trained on data that includes six quarters of interest rate expectations. The user is
-responsible for procuring interest rate expectations and appending it to the provided sample
-data set, as discussed in the linked documentation here.
 
 ## Update sample input data
 
@@ -212,9 +201,10 @@ A sample dataset is provided for the 2015 Nov 27 vintage. To update this dataset
 1. See [above](#setup) to setup automatic data pulls using *FredData.jl*.
 2. Specify the exact data vintage desired:
 
-    ```
-    julia> m <= Setting(:data_vintage, "yymmdd")
-    ```
+```julia
+julia>  m <= Setting(:data_vintage, "yymmdd")
+```
+
 3. Create data files for the non-FRED data sources (specified in `m.data_series`). For model
    `m990`, the required data files include `spf_<yymmdd>.csv` (with column `ASACX10`),
    `longrate_<yymmdd>.csv` (with column `FYCCZA`), and `fernald_<yymmdd>.csv` (with columns
@@ -224,5 +214,5 @@ A sample dataset is provided for the 2015 Nov 27 vintage. To update this dataset
    is also required. See [Data](doc/Data.md) for details on the series used and links to
    data sources.
 4. Run `load_data(m)`; series from FRED will be downloaded and merged with the series from
-   non-FRED data sources that you have already created. See [Common
-   pitfalls](#common-pitfalls) for some potential issues.
+   non-FRED data sources that you have already created. See [Common Pitfalls](@ref) for some potential issues.
+

@@ -10,11 +10,13 @@ makedocs(modules = [DSGE],
          pages = Any[
                      "Home" => "intro.md",
                      "Model Design" => "model_design.md",
-                     "Replicating the FRBNY DSGE Model" => "replicating_frbny.md",
+                     "Running An Existing Model" => "running_existing_model.md",
                      "Advanced Usage" => "advanced_usage.md",
                      "Input Data" => "input_data.md",
+                     "FRBNY Model Input Data" => "frbny_data.md",
                      "Implementation Details" => "implementation_details.md",
-                     "Full API" => "index.md"
+                     "Full API" => "index.md",
+                     "License" => "license.md"
          ],
          doctest = false # for now
 )

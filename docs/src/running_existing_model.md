@@ -1,9 +1,18 @@
-# Running the Code
+# Running an Existing Model
+
+The DSGE.jl package provides 2 example models:
+
+- The well-known [Smets and Wouters (2007)](https://www.aeaweb.org/articles?id=10.1257/aer.97.3.586) Model
+- The FRBNY DSGE Model (version 990.2), which was introduced in [this blog post](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html)
+
+You can run these models using the description provided here. If you
+were to implement another model using DSGE.jl, these procedures can also be used to
+estimate those models.
 
 ## Running with Default Settings
 
 To run the estimation step in Julia, simply create an instance of the model object and pass
-it to the `estimate` function -- see an [example](doc/examples/run_default.jl).
+it to the `estimate` function -- see an [example](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/doc/examples/run_default.jl).
 
 ```julia
 # construct a model object
@@ -25,14 +34,14 @@ By default, the `estimate` routine loads the dataset, reoptimizes the initial pa
 vector, computes the Hessian at the mode, and conducts full posterior parameter sampling.
 (The initial parameter vector used is specified in the model's constructor.)
 
-To use updated data or alternative user-specified datasets, see [Input Data](#input-data).
+To use updated data or alternative user-specified datasets, see [Input Data](@ref).
 
 The user may want to avoid reoptimizing the parameter vector and calculating the
-Hessian matrix at this new vector. Please see [Reoptimizing](#reoptimizing)
+Hessian matrix at this new vector. Please see [Reoptimizing](@ref)
 below.
 
 For more details on changing the model's default settings, parameters, equilibrium
-conditions, etc., see [Advanced usage](#advanced-usage).
+conditions, etc., see [Advanced Usage](@ref).
 
 ## Input/Output Directory Structure
 
@@ -45,37 +54,23 @@ and how to control this behavior.
 The following subdirectory tree indicates the default locations of
 these input and outputs. Square brackets indicate directories in the tree that
 will become relevant as future features are implemented.
-- `<dataroot>/`: Root data directory.
-  - `data/`:  Macroeconomic input data series.
-  - `cond/`: Conditional data, i.e.
-    ["nowcast"](https://en.wikipedia.org/wiki/Nowcasting_%28economics%29).
-  - `user/`: User-created or sample model input files.
 
-- `<saveroot>/`: Root save directory.
-  - `output_data/`
-    - `m990/`: Input/output files for the `Model990` type. A model of type
-      `SPEC` will create its own save directory `SPEC/` at this  level in the
-      directory tree.
-      - `ss0/`: Subdirectory for subspec 0. A model of a different subspec will have similar
-          directories at this level of the tree.
-        - `estimate/`
-          - `figures/`: Plots and other figures
-          - `tables/`: LaTeX tables
-          - `raw/`: Raw output data from estimation step
-          - `work/`: Derived data files created using `raw/` files as input
-        - [`xxx/`]: Other model outputs, such as forecasts, impulse response
-          functions, and shock decompositions; subdirectory structure mirrors that of
-          `estimate`.
+```@contents
+Pages = ["io_dirtree.md"]
+Depth = 5
+```
 
 ### Directory Paths
 
 By default, input/output directories are located in the *DSGE.jl* package, along
 with the source code. Default values of the input/output directory roots:
+
 - `saveroot(m)`: `"$(Pkg.dir())/DSGE/save"`
 - `dataroot(m)`: `"$(Pkg.dir())/DSGE/save/input_data"`
 
-Note these locations can be overridden as desired. See [Settings](#model-settings) below for more
+Note these locations can be overridden as desired. See [Model Settings](@ref) for more
 details.
+
 ```julia
 m <= Setting(:saveroot, "path/to/my/save/root")
 m <= Setting(:dataroot, "path/to/my/data/root")
@@ -83,10 +78,11 @@ m <= Setting(:dataroot, "path/to/my/data/root")
 
 Utility functions are provided to create paths to input/output files. These should be used
 for best results.
-- `inpath`: Return path to directory/file for *input data*, input conditional data, and
-    user-provided sample files, respectively. See `?inpath` for more details.
-    - Try `inpath(m, "data")`, a helpful call that displays the containing directory of
-      input data files.
+
+- `inpath`: Return path to directory/file for *input data*, input
+  conditional data, and user-provided sample files, respectively. Try
+  `inpath(m, "data")`, a helpful call that displays the containing
+  directory of input data files. See `?inpath` for more details.
 - `rawpath`: Return path to directory/file for a given output type for *raw model output*.
     See `?rawpath` for more details.
 - `workpath`: Return path to directory/file for a given output type for *transformed* or
