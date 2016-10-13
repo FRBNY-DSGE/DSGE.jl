@@ -15,7 +15,7 @@ makedocs(modules = [DSGE],
 
 
 deploydocs(
-     repo = "github.com/FRBNY-DSGE/DSGE.jl",
+     repo = "github.com/FRBNY-DSGE/DSGE.jl.git",
      target = "build",
      deps = nothing,
      julia = "0.4",
