@@ -19,13 +19,13 @@ trspec = zeros(82, 4)
 
 # keys to skip (used to be fixed_parameters)
 fixed_parameters = [:δ, :λ_w, :ϵ_p, :ϵ_w, :g_star]
-    
+
 # not all parameters appear in model.parameters
 i = 1
 for θ in model.parameters
     !isa(θ,AbstractParameter) && error()
     in(θ.key, fixed_parameters) && continue
-    
+
     para[i] = θ.value
 
     (left, right) = θ.valuebounds
@@ -33,7 +33,7 @@ for θ in model.parameters
     bounds[i, 2] = right
 
     prior = θ.prior.value
-    
+
     if isa(prior, DSGE.RootInverseGamma)
         pshape[i] = 4
         (ν, τ) = params(prior)
@@ -49,7 +49,7 @@ for θ in model.parameters
         end
         pmean[i] = mean(prior)
         pstdd[i] = std(prior)
-        
+
     end
 
     if θ.transform == DSGE.Untransformed()
@@ -57,11 +57,11 @@ for θ in model.parameters
     elseif θ.transform == DSGE.SquareRoot()
         trspec[i, 1] = 1
     elseif  θ.transform == DSGE.Exponential()()
-        trspec[i, 1] = 2        
+        trspec[i, 1] = 2
     else
-       throw(error("This kind of transform not allowed")) 
+       throw(error("This kind of transform not allowed"))
     end
-        
+
     (left, right) = θ.transform_parameterization
     trspec[i, 2] = left
     trspec[i, 3] = right
@@ -152,14 +152,14 @@ end
 ### Pseudo-measurement equation
 expect = Dict{Symbol, Any}()
 jld = jldopen("$path/pseudo_measurement.jld")
-expect[:ZZ] = read(jld, "ZZ_pseudo")
-expect[:DD] = reshape(read(jld, "DD_pseudo"), 18, 1)
+expect[:ZZ_pseudo] = read(jld, "ZZ_pseudo")
+expect[:DD_pseudo] = reshape(read(jld, "DD_pseudo"), 18, 1)
 expect[:inds] = read(jld, "inds")
 close(jld)
 
 model = Model990()
 actual = pseudo_measurement(model)[2]
-for d in (:ZZ, :DD)
+for d in (:ZZ_pseudo, :DD_pseudo)
     @test_matrix_approx_eq expect[d] getfield(actual,d)
 end
 @assert isequal(expect[:inds], getfield(actual, :inds))
