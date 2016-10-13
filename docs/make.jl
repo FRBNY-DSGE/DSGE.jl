@@ -2,15 +2,21 @@ using Documenter, DSGE, Distributions, DataFrames
 
 makedocs(modules = [DSGE],
          clean = false,
-         format = :html,
+         format = Documenter.Formats.HTML,
          sitename = "DSGE.jl",
          authors = "FRBNY-DSGE",
          linkcheck = !("skiplinks" in ARGS),
-         strict = true
+         strict = true,
          pages = Any[
-             "Home" => "index.md",
+                     "Home" => "intro.md",
+                     "Model Design" => "model_design.md",
+                     "Replicating the FRBNY DSGE Model" => "replicating_frbny.md",
+                     "Advanced Usage" => "advanced_usage.md",
+                     "Input Data" => "input_data.md",
+                     "Implementation Details" => "implementation_details.md",
+                     "Full API" => "index.md"
          ],
-         doctest=  false # for now
+         doctest = false # for now
 )
 
 
