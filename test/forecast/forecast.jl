@@ -32,8 +32,16 @@ exp_states, exp_obs, exp_pseudo, exp_shocks = jldopen("$path/../reference/foreca
     read(file, "exp_states"), read(file, "exp_obs"), read(file, "exp_pseudo"), read(file, "exp_shocks")
 end
 
-# Run forecast
+# Run forecast without supplying shocks
 @time states, obs, pseudo, shocks = DSGE.forecast(m, systems, z0s; procs = my_procs)
+
+@test_matrix_approx_eq exp_states convert(Array, states)
+@test_matrix_approx_eq exp_obs    convert(Array, obs)
+@test_matrix_approx_eq exp_pseudo convert(Array, pseudo)
+@test_matrix_approx_eq exp_shocks convert(Array, shocks)
+
+# Run forecast, supplying shocks
+@time states, obs, pseudo, shocks = DSGE.forecast(m, systems, z0s; procs = my_procs, shocks = shocks)
 
 @test_matrix_approx_eq exp_states convert(Array, states)
 @test_matrix_approx_eq exp_obs    convert(Array, obs)

@@ -31,7 +31,7 @@ matrix of shocks or a distribution of shocks
 function forecast{S<:AbstractFloat}(m::AbstractModel,
     systems::DVector{System{S}, Vector{System{S}}},
     z0s::DVector{Vector{S}, Vector{Vector{S}}};
-    shock_distributions::Union{Distribution,Matrix{S}} = Matrix{S}(),
+    shocks::DArray{S, 3} = dzeros(S, (0, 0, 0), [myid()]),
     procs::Vector{Int} = [myid()])
 
     # Numbers of useful things
@@ -49,30 +49,7 @@ function forecast{S<:AbstractFloat}(m::AbstractModel,
     pseudo_range = (nstates + nobs + 1):(nstates + nobs + npseudo)
     shocks_range = (nstates + nobs + npseudo + 1):(nstates + nobs + npseudo + nshocks)
 
-    # set up distribution of shocks if not specified
-    # For now, we construct a giant vector of distirbutions of shocks and pass
-    # each to compute_forecast.
-    #
-    # TODO: refactor so that compute_forecast
-    # creates its own DegenerateMvNormal based on passing the QQ
-    # matrix (which has already been computed/is taking up space)
-    # rather than having to copy each Distribution across nodes. This will also be much more
-    # space-efficient when forecast_kill_shocks is true.
-
-    shock_distributions = if isempty(shock_distributions)
-        if forecast_kill_shocks(m)
-            dfill(zeros(nshocks, horizon), (ndraws,), procs, [nprocs])
-        else
-            # use t-distributed shocks
-            if forecast_tdist_shocks(m)
-                dfill(Distributions.TDist(forecast_tdist_df_val(m)), (ndraws,), procs, [nprocs])
-            # use normally distributed shocks
-            else
-                DArray(I -> [DegenerateMvNormal(zeros(nshocks), sqrt(s[:QQ])) for s in systems[I...]],
-                       (ndraws,), procs, [nprocs])
-            end
-        end
-    end
+    shocks_provided = !isempty(shocks)
 
     # Construct distributed array of forecast outputs
     out = DArray((ndraws, nstates + nobs + npseudo + nshocks, horizon), procs, [nprocs, 1, 1]) do I
@@ -89,8 +66,15 @@ function forecast{S<:AbstractFloat}(m::AbstractModel,
                 Matrix{S}(), Vector{S}()
             end
 
-            states, obs, pseudo, shocks = compute_forecast(systems[i], horizon,
-                shock_distributions[i], z0s[i], Z_pseudo, D_pseudo)
+            # Index out shocks for draw i
+            shocks_i = if shocks_provided
+                convert(Array, slice(shocks, i, :, :))
+            else
+                Matrix{S}()
+            end
+
+            states, obs, pseudo, shocks = compute_forecast(m, systems[i],
+                z0s[i], Z_pseudo, D_pseudo; shocks = shocks_i)
 
             i_local = mod(i-1, ndraws_local) + 1
 
@@ -137,39 +121,68 @@ compute_forecast(T, R, C, Z, D, forecast_horizons,
 - `:pseudo_observables`
 - `:shocks`
 """
-function compute_forecast{S<:AbstractFloat}(system::System{S},
-    forecast_horizons::Int, shocks::Matrix{S}, z0::Vector{S},
-    Z_pseudo::Matrix{S} = Matrix{S}(), D_pseudo::Vector{S} = Vector{S}())
+function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
+    z0::Vector{S}, Z_pseudo::Matrix{S} = Matrix{S}(),
+    D_pseudo::Vector{S} = Vector{S}(); shocks::Matrix{S} = Matrix{S}())
+
+    # Numbers of things
+    nshocks = n_shocks_exogenous(m)
+    horizon = forecast_horizons(m)
+
+    # Populate shocks matrix
+    if isempty(shocks)
+        shocks = zeros(nshocks, horizon)
+
+        # Draw shocks if necessary
+        if !forecast_kill_shocks(m)
+            dist = if forecast_tdist_shocks(m)
+                # Use t-distributed shocks
+                Distributions.TDist(forecast_tdist_df_val(m))
+            else
+                # Use normally distributed shocks
+                DegenerateMvNormal(zeros(nshocks), sqrt(system[:QQ]))
+            end
+
+            for t in 1:horizon
+                shocks[:, t] = rand(dist)
+            end
+        end
+    end
+
+    compute_forecast(system, z0, shocks, Z_pseudo, D_pseudo)
+end
+
+
+function compute_forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
+    shocks::Matrix{S}, Z_pseudo::Matrix{S} = Matrix{S}(), D_pseudo::Vector{S} =
+    Vector{S}())
 
     # Unpack system
     T, R, C = system[:TTT], system[:RRR], system[:CCC]
-    Z, D = system[:ZZ], system[:DD]
+    Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
 
-    compute_forecast(T, R, C, Z, D, forecast_horizons, shocks, z0, Z_pseudo, D_pseudo)
+    compute_forecast(T, R, C, Q, Z, D, z0, shocks, Z_pseudo, D_pseudo)
 end
 
-function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vector{S},
-    Z::Matrix{S}, D::Vector{S}, forecast_horizons::Int, shocks::Matrix{S},
-    z0::Vector{S}, Z_pseudo::Matrix{S} = Matrix{S}(), D_pseudo::Vector{S} = Vector{S}())
-
-    if forecast_horizons <= 0
-        throw(DomainError())
-    end
+function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
+    C::Vector{S}, Q::Matrix{S}, Z::Matrix{S}, D::Vector{S}, z0::Vector{S},
+    shocks::Matrix{S}, Z_pseudo::Matrix{S} = Matrix{S}(),
+    D_pseudo::Vector{S} = Vector{S}())
 
     # Setup
     nshocks = size(R, 2)
     nstates = size(T, 2)
     nobs    = size(Z, 1)
     npseudo = size(Z_pseudo, 1)
-
-    states = zeros(nstates, forecast_horizons)
+    horizon = size(shocks, 2)
 
     # Define our iteration function
     iterate(z_t1, ϵ_t) = C + T*z_t1 + R*ϵ_t
 
     # Iterate state space forward
+    states = zeros(nstates, horizon)
     states[:, 1] = iterate(z0, shocks[:, 1])
-    for t in 2:forecast_horizons
+    for t in 2:horizon
         states[:, t] = iterate(states[:, t-1], shocks[:, t])
     end
 
@@ -183,35 +196,4 @@ function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vecto
 
     # Return forecasts
     return states, obs, pseudo, shocks
-end
-
-# Utility method to actually draw shocks
-function compute_forecast{S<:AbstractFloat}(system::System{S},
-    forecast_horizons::Int, dist::Distribution, z0::Vector{S},
-    Z_pseudo::Matrix{S} = Matrix{S}(), D_pseudo::Vector{S} = Vector{S}())
-
-    # Unpack system
-    T, R, C = system[:TTT], system[:RRR], system[:CCC]
-    Z, D    = system[:ZZ], system[:DD]
-
-    compute_forecast(T, R, C, Z, D, forecast_horizons, dist, z0, Z_pseudo, D_pseudo)
-end
-
-function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S}, C::Vector{S},
-    Z::Matrix{S}, D::Vector{S}, forecast_horizons::Int, dist::Distribution,
-    z0::Vector{S}, Z_pseudo::Matrix{S} = Matrix{S}(), D_pseudo::Vector{S} = Vector{S}())
-
-    if forecast_horizons <= 0
-        throw(DomainError())
-    end
-
-    nshocks = size(R, 2)
-    shocks = zeros(nshocks, forecast_horizons)
-
-    for t in 1:forecast_horizons
-        shocks[:, t] = rand(dist)
-    end
-
-    compute_forecast(T, R, C, Z, D, forecast_horizons, shocks, z0,
-                     Z_pseudo, D_pseudo)
 end

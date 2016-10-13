@@ -1,38 +1,37 @@
-# include necessary packages
 using DSGE
-using Distributions
+# using Distributions
 
-# Prepare system matrices, for the following hypothetical system
-nstates      = 2
-nequations   = 2
-nshocks      = 1
-nobservables = 1
-npseudos     = 2
-T        = eye(nequations,nstates)
-R        = ones(nequations,nshocks)
-C        = zeros(nequations)
-Z        = ones(nobservables,nstates)
-D        = zeros(nobservables)
-Z_pseudo = ones(npseudos,nstates)
-D_pseudo = zeros(npseudos)
-Q        = eye(nshocks,nshocks)
+# Set up arguments
+custom_settings = Dict{Symbol, Setting}(
+    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6),
+    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")),
+    :use_parallel_workers => Setting(:use_parallel_workers, true),
+    :forecast_kill_shocks => Setting(:forecast_kill_shocks, true))
+m = Model990(custom_settings = custom_settings, testing = true)
 
-# load state vector at time T
-z0 = zeros(2)
+nstates = n_states_augmented(m)
+nshocks = n_shocks_exogenous(m)
+npseudo = n_pseudoobservables(m)
+horizon = forecast_horizons(m)
 
-# specify forecast horizons
-horizons = 3
+system = compute_system(m)
+z0 = zeros(nstates)
 
-# define shock distribution
-dist = DSGE.DegenerateMvNormal(zeros(nshocks), Q)
+Z_pseudo = ones(npseudo, nstates)
+D_pseudo = zeros(npseudo)
 
-# test invocation supplying distribution
-states, obs, pseudo, shocks = compute_forecast(T, R, C, Z, D, horizons, dist,
-    z0, Z_pseudo, D_pseudo)
+# Test invocations supplying shocks
+shocks = rand(nshocks, horizon)
+states, obs, pseudo, shocks = compute_forecast(m, system, z0, Z_pseudo, D_pseudo; shocks = shocks)
+states, obs, pseudo, shocks = compute_forecast(system, z0, shocks, Z_pseudo, D_pseudo)
 
-# test invocation supplying shocks
-shocks = rand(nshocks, horizons)
-states, obs, pseudo, shocks = compute_forecast(T, R, C, Z, D, horizons, shocks,
-    z0, Z_pseudo, D_pseudo)
+# Test invocations not supplying shocks
+states, obs, pseudo, shocks = compute_forecast(m, system, z0, Z_pseudo, D_pseudo)
+
+m <= Setting(:forecast_tdist_shocks, true)
+states, obs, pseudo, shocks = compute_forecast(m, system, z0, Z_pseudo, D_pseudo)
+
+m <= Setting(:forecast_kill_shocks, true)
+states, obs, pseudo, shocks = compute_forecast(m, system, z0, Z_pseudo, D_pseudo)
 
 nothing
