@@ -4,7 +4,7 @@
 The transition equation of the state-space model takes the form
 
    `s_{t} = TTT*s_{t-1} + RRR*ε_{t} + CCC`
-   
+
 The `Transition` type stores the coefficient `Matrix{T}`s (`TTT`, `RRR`) and constant `Vector{T} CCC`.
 """
 type Transition{T<:AbstractFloat}
@@ -86,15 +86,26 @@ returns `sys.transition.TTT`, etc.
 type System{T<:AbstractFloat}
     transition::Transition{T}
     measurement::Measurement{T}
+    pseudo_measurement::Nullable{PseudoObservableMapping{T}}
 end
 function Base.getindex(system::System, d::Symbol)
-    if d in (:transition, :measurement)
+    if d in (:transition, :measurement, :pseudo_measurement)
         return getfield(system, d)
     elseif d in fieldnames(system.transition)
         return getfield(system.transition, d)
     elseif d in fieldnames(system.measurement)
         return getfield(system.measurement, d)
+    elseif !isnull(system.pseudo_measurement) && d in [:ZZ_pseudo, :DD_pseudo]
+        return getfield(get(system.pseudo_measurement), d)
+    elseif isnull(system.pseudo_measurement) && d in [:ZZ_pseudo, :DD_pseudo]
+        throw(PseudoMeasurementUndefError())
     else
         throw(KeyError(d))
     end
 end
+
+type PseudoMeasurementUndefError <: Exception
+end
+
+Base.showerror(io::IO, e::PseudoMeasurementUndefError) = print(io, "A pseudo-measurement
+    equation was not defined for the model from which this state-space system was computed.")

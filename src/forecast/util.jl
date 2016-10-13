@@ -4,7 +4,7 @@
 Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` object.
 """
-function compute_system(m)
+function compute_system{T<:AbstractFloat}(m::AbstractModel{T})
     # Solve model
     TTT, RRR, CCC = solve(m)
     transition_equation = Transition(TTT, RRR, CCC)
@@ -13,14 +13,22 @@ function compute_system(m)
     shocks = n_anticipated_shocks(m) > 0
     measurement_equation = measurement(m, TTT, RRR, CCC; shocks = shocks)
 
-    return System(transition_equation, measurement_equation)
+    # Solve pseudo-measurement equation
+    pseudo_measurement_equation = if method_exists(pseudo_measurement, (typeof(m),)) && forecast_pseudoobservables(m)
+        _, pseudo_mapping = pseudo_measurement(m)
+        Nullable(pseudo_mapping)
+    else
+        Nullable{PseudoObservableMapping{T}}()
+    end
+
+    return System(transition_equation, measurement_equation, pseudo_measurement_equation)
 end
 
 """
 `get_jstep(m, n_sim)`
 
 Retrieve `forecast_jstep` setting (thinning step size for forecast
-step) from `m.settings`. If `n_sim ==  1`, returns 1. 
+step) from `m.settings`. If `n_sim ==  1`, returns 1.
 """
 function get_jstep(m, n_sim)
     if n_sim == 1
@@ -36,7 +44,7 @@ end
 Computes the appropriate forecast input filenames for model `m` and
 forecast input type `input_type`. For example, the default file containing the parameter mode is ``
 
-Default input file 
+Default input file
 """
 function get_input_file(m, input_type)
     overrides = forecast_input_file_overrides(m)
