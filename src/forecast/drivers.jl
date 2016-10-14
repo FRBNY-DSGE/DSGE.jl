@@ -1,28 +1,33 @@
 """
 ```
-forecast_all(m::AbstractModel, cond_types::Vector{Symbol}
-input_types::Vector{Symbol}, output_types::Vector{Symbol}
+forecast_all(m, cond_types, input_types, output_types)
 ```
 
-Compute forecasts for all specified combinations of conditional data, input types, and
-output types.
+Compute forecasts for all specified combinations of conditional data, input
+types, and output types.
 
-# Arguments
+### Inputs
 
-- `m`: model object
-- `cond_types`: conditional data type, any combination of
+- `m::AbstractModel`: model object
+
+- `cond_types::Vector{Symbol}`: conditional data types, any combination of
+
     - `:none`: no conditional data
     - `:semi`: use \"semiconditional data\" - average of quarter-to-date
       observations for high frequency series
     - `:full`: use \"conditional data\" - semiconditional plus nowcasts for
       desired observables
-- `input_types`: which set of parameters to use, any combination of
+
+- `input_types::Vector{Symbol}`: which set of parameters to use, any combination of
+
     - `:mode`: forecast using the modal parameters only
     - `:mean`: forecast using the mean parameters only
     - `:init`: forecast using the initial parameter values only
     - `:full`: forecast using all parameters (full distribution)
     - `:subset`: forecast using a well-defined user-specified subset of draws
+
 - `output_types`: forecast routine outputs to compute, any combination of
+
     - `:states`: smoothed states (history) for all specified conditional data types
     - `:shocks`: smoothed shocks (history, standardized) for all specified
       conditional data types
@@ -42,18 +47,17 @@ output types.
       shocks (history, non-standardized), shock decompositions (history), deterministic
       trend (history), counterfactuals (history), forecast, forecast shocks drawn, shock
       decompositions (forecast), deterministic trend (forecast), counterfactuals (forecast)
+
    Note that some similar outputs may or may not fall under the \"forecast_all\" framework,
    including
     - `:mats`: recompute system matrices (TTT, RRR, CCC) given parameters only
     - `:zend`: recompute final state vector (s_{T}) given parameters only
     - `:irfs`: impulse response functions
 
-Outputs
--------
+### Outputs
 
-None. Output is saved to files returned by
-`get_output_files(m, input_type, output_vars, cond_type)`
-for each combination of `input_type`, `output_var`, and `cond_type`.
+None. Output is saved to files returned by `get_output_files(m, input_type,
+output_vars, cond_type)` for each combination of `input_type` and `cond_type`.
 """
 function forecast_all(m::AbstractModel,
                       cond_types::Vector{Symbol}   = Vector{Symbol}(),
@@ -73,26 +77,33 @@ function forecast_all(m::AbstractModel,
 end
 
 """
-`load_draws(m::AbstractModel, input_type::Symbol)`
+`load_draws(m, input_type)`
 
-Load and return parameter draws, transition matrices, and final state
-vectors from Metropolis-Hastings. Single draws are reshaped to have additional
-singleton dimensions, and missing variables without sufficient
-information are initialized to null values of appropriate types.
+Load and return parameter draws, transition matrices, and final state vectors
+from Metropolis-Hastings. Single draws are reshaped to have additional singleton
+dimensions, and missing variables without sufficient information are initialized
+to null values of appropriate types.
 
 ### Inputs
-- `input_type`: one of the options for `input_type` described in the documentation for `forecast_all`.
+
+- `m::AbstractModel`: model object
+- `input_type::Symbol`: one of the options for `input_type` described in the
+  documentation for `forecast_all`
 
 ### Outputs
-- `params`: Matrix{Float64} of size (nsim, nparams)
-- `TTT`: Array{Float64,3} of size (nsim, nequations, nstates)
-- `RRR`: Array{Float64,3} of size (nsim, nequations, nshocks)
-- `CCC`: Array{Float64,3} of size (nsim, nequations, 1)
-- `zend`: Matrix{Float64} of size (nsim, nstates)
 
-Where
-- `nsim` = number of draws saved in Metropolis-Hastings
-- `nequations` = number of equilibrium conditions
+- `params::Matrix{Float64}`: matrix of size `nsim` x `nparams` of parameter
+  draws
+- `TTT::Array{Float64, 3}`: array of size `nsim` x `nstates` x `nstates` of
+  transition matrix draws
+- `RRR::Array{Float64, 3}`: array of size `nsim` x `nstates` x `nshocks` of
+  transition matrix draws
+- `CCC::Array{Float64, 3}`: array of size `nsim` x `nstates` x 1 of transition
+  matrix draws
+- `zend::Matrix{Float64}`: matrix of size `nsim` x `nstates` of final historical
+  period state vector draws
+
+where `nsim` is the number of draws saved in Metropolis-Hastings.
 """
 function load_draws(m::AbstractModel, input_type::Symbol)
 
@@ -136,24 +147,42 @@ end
 
 """
 ```
-prepare_systems(m::AbstractModel, input_type::Symbol, params::Matrix{Float64},
-                TTT::Array{Float64,3}, RRR::Array{Float64,3}, CCC::Array{Float64,3})
+prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = [myid()])
 ```
 
-Returns a `Vector` of `System` objects constructed from the given
-sampling outputs that is suitable for input to forecasting. In the
-one-draw case (`input_type = {mode,mean,init}`), the model is
-re-solved and the state-space system is recomputed. In the many-draw
-case (`input_type = {full,subset}), the outputs from sampling are
-simply repackaged to the appropriate shape.
-
+Returns a `DVector{System{Float64}}` of `System` objects constructed from the
+given sampling outputs that is suitable for input to forecasting. In the
+one-draw case (`input_type in [:mode, :mean, :init]`), the model is re-solved
+and the state-space system is recomputed. In the many-draw case (`input_type in
+[:full, :subset]`), the outputs from sampling are simply repackaged to the
+appropriate shape.
 
 ### Inputs
-- `input_type`: one of the options for `input_type` described in the documentation for `forecast_all`.
-- `params`: matrix of parameter draws
 
-### Output
-- a vector of `System`
+- `m::AbstractModel`: model object
+- `input_type`: one of the options for `input_type` described in the
+  documentation for `forecast_all`.
+- `params::Matrix{Float64}`: matrix of size `nsim` x `nparams` of parameter
+  draws
+- `TTT::Array{Float64, 3}`: array of size `nsim` x `nstates` x `nstates` of
+  transition matrix draws
+- `RRR::Array{Float64, 3}`: array of size `nsim` x `nstates` x `nshocks` of
+  transition matrix draws
+- `CCC::Array{Float64, 3}`: array of size `nsim` x `nstates` x 1 of transition
+  matrix draws
+
+### Keyword Arguments
+
+- `procs::Vector{Int}`: list of worker processes over which to distribute
+  draws. Defaults to `[myid()]`.
+
+### Outputs
+
+- `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
+  objects, one for each draw
+
+where `n_sim_forecast = n_sim / jstep` is the number of draws after thinning a
+second time.
 """
 function prepare_systems(m::AbstractModel, input_type::Symbol,
     params::Matrix{Float64}, TTT::Array{Float64, 3}, RRR::Array{Float64, 3},
@@ -217,7 +246,8 @@ end
 
 """
 ```
-prepare_states(m, input_type, cond_type, systems, params, df, zend)
+prepare_states(m, input_type, cond_type, systems, params, df, zend;
+    procs = [myid()])
 ```
 
 Prepare the final historical state vector(s) for this combination of
@@ -233,14 +263,18 @@ are repackaged for inputs to the forecast.
 - `m::AbstractModel`: model object
 - `input_type::Symbol`: See documentation for `forecast_all`
 - `cond_type::Symbol`: See documentation for `forecast_all`
-- `systems::DVector{System{Float64}, Vector{System{Float64}}}`:
-  vector of `System` objects corresponding to `params`
-- `params::Matrix{Float64}`: matrix of parameter draws from estimation.
-- `df::DataFrame`: Historical data. If `cond_type={semi,full}`, then
-   the final row of `df` should be the period containing conditional
-   data.
-- `zend::Matrix{Float64}`: a possibly empty matrix of final state
-  vectors read in from the sampling step.
+- `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
+  objects
+- `params::Matrix{Float64}`: matrix of size `n_sim` x `nstates` of parameter
+  draws from estimation. `systems[i]` is the `System` computed using
+  `params[i*jstep, :]`
+- `df::DataFrame`: historical data. If `cond_type in [:semi, :full]`, then the
+   final row of `df` should be the period containing conditional data
+- `zend::Matrix{Float64}`: matrix, either empty or of size `n_sim` x `nstates`,
+  of final state vectors read in from `load_draws`
+
+where `n_sim_forecast = n_sim / jstep` is the number of draws after thinning a
+second time.
 
 ### Keyword arguments
 
@@ -249,20 +283,20 @@ are repackaged for inputs to the forecast.
 
 ### Outputs
 
-- A `DVector` of final historical state vectors.
+- `states::DVector{Vector{Float64}}`: vector of `n_sim` many final historical
+  state vectors
 
-### Note
+### Notes
 
-- In all cases, the initial values in the forecast are the final
-  historical state vectors that are returned from the Kalman filter,
-  not the Kalman or simulation smoother (though these are the same in
-  the case of the Kalman smoother). These are the correct values to
-  use because the Kalman filter returns the actual mean (`s_{T|T}`)
-  and variance (`P_{T|T}`) of the states given the parameter draw,
-  while the simulation smoother takes into account the uncertainty in
-  the parameter draw. Since we only compute one final historical state
-  vector for each parameter draw, we want to use the analytical mean
-  and variance as the starting points in the forecast.
+In all cases, the initial values in the forecast are the final historical state
+vectors that are returned from the Kalman filter, not the Kalman or
+Durbin-Koopman smoother (though these are the same in the case of the Kalman
+smoother). These are the correct values to use because the Kalman filter returns
+the actual mean (`s_{T|T}`) and variance (`P_{T|T}`) of the states given the
+parameter draw, while the simulation smoother takes into account the uncertainty
+in the parameter draw. Since we only compute one final historical state vector
+for each parameter draw, we want to use the analytical mean and variance as the
+starting points in the forecast.
 """
 function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     systems::DVector{System{Float64}, Vector{System{Float64}}},
@@ -316,16 +350,38 @@ end
 
 """
 ```
-prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
-                        input_type::Symbol = :mode, cond_type::Symbol = :none,
-                        procs::Vector{Int} = [myid()])
+prepare_forecast_inputs(m, df; input_type = :mode, cond_type = :none,
+    procs = [myid()])
 ```
 
-Load draws for this input type, prepare a System object for each draw, and prepare initial state vectors.
+Load draws for this input type, prepare a System object for each draw, and
+prepare initial state vectors.
 
-## Notes
-- Calls `prepare_systems` and `prepare_states`. See those functions for thorough documentation.
-- See `forecast_all` for documentation of `input_type` and `cond_type`.
+### Inputs
+
+- `m::AbstractModel`: model object
+- `df::DataFrame`: historical data. If `cond_type in [:semi, :full]`, then the
+   final row of `df` should be the period containing conditional data
+
+### Keyword Arguments
+
+- `input_type::Symbol`: See documentation for `forecast_all`. Defaults to
+  `:mode`
+- `cond_type::Symbol`: See documentation for `forecast_all`. Defaults to `:none`
+- `procs::Vector{Int}`: list of worker processes that have been
+  previously added by the user. Defaults to `[myid()]`
+
+### Outputs
+
+- `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
+  objects, one for each draw
+- `states::DVector{Vector{Float64}}`: vector of `n_sim` many final historical
+  state vectors
+
+### Notes
+
+`prepare_forecast_inputs` calls `prepare_systems` and `prepare_states`. See
+  those functions for thorough documentation.
 """
 function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     input_type::Symbol = :mode, cond_type::Symbol = :none,
@@ -349,46 +405,59 @@ end
 
 """
 ```
-forecast_one(m::AbstractModel, df::DataFrame;
-            input_type::Symbol  = :mode, output_type::Symbol = :simple,
-            cond_type::Symbol = :none, procs::Vector{Int})
+forecast_one(m, df; input_type = :mode, cond_type = :none, output_vars = [],
+    verbose = :low, procs = [myid()])
 ```
 
-Compute, save, and return forecast outputs given by `output_type` for
-input draws given by `input_type` and conditional data case given by
-`cond_type`.
+Compute, save, and return `output_vars` for input draws given by `input_type`
+and conditional data case given by `cond_type`.
 
 ### Inputs
 
-- `df::DataFrame`: Historical data. If `cond_type={semi,full}`, then
-   the final row of `df` should be the period containing conditional
-   data.
-- `procs::Vector{Int}`: list of worker processes that have been
-  previously added by the user. Defaults to `[myid()]`
+- `m::AbstractModel`: model object
+- `df::DataFrame`: Historical data. If `cond_type in [:semi, :full]`, then the
+   final row of `df` should be the period containing conditional data.
+
+### Keyword Arguments
+
+- `input_type::Symbol`: See documentation for `forecast_all`. Defaults to
+  `:mode`
+- `cond_type::Symbol`: See documentation for `forecast_all`. Defaults to `:none`
+- `output_vars::Vector{Symbol}`: vector of desired output variables. See Outputs
+  section
+- `procs::Vector{Int}`: list of worker processes that have been previously added
+  by the user. Defaults to `[myid()]`
 
 ### Output
 
-- A `Dict{Symbol,DArray}` containing the desired `output_var` series for `cond_type`. Entries are a subset of:
-  - `:histstates`: smoothed historical states
-  - `:histobs`: smoothed historical data
-  - `:histpseudo`: smoothed historical pseudoobservables (if a pseudomeasurement equation has been provided for this model type)
-  - `:histshocks`: smoothed historical shocks
-  - `:forecaststates`: forecasted states
-  - `:forecastobs`: forecasted observables
-  - `:forecastpseudo`: forecasted pseudoobservables
-  - `:forecastshocks`: forecasted shocks
+- `forecast_outputs::Dict{Symbol, DArray{Float64}}`: dictionary of forecast
+  outputs. Keys are `output_vars`, which is some subset of:
+
+  + `:histstates::DArray{Float64, 3}`: smoothed historical states
+  + `:histobs::DArray{Float64, 3}`: smoothed historical data
+  + `:histpseudo::DArray{Float64, 3}`: smoothed historical pseudo-observables
+    (if a pseudomeasurement equation has been provided for this model type)
+  + `:histshocks::DArray{Float64, 3}`: smoothed historical shocks
+  + `:forecaststates::DArray{Float64, 3}`: forecasted states
+  + `:forecastobs::DArray{Float64, 3}`: forecasted observables
+  + `:forecastpseudo::DArray{Float64, 3}`: forecasted pseudo-observables (if a
+    pseudomeasurement equation has been provided for this model type)
+  + `:forecastshocks::DArray{Float64, 3}`: forecasted shocks
+  + `:shockdecstates::DArray{Float64, 4}`: state shock decompositions
+  + `:shockdecobs::DArray{Float64, 4}`: observable shock decompositions
+  + `:shockdecpseudo::DArray{Float64, 4}`: pseudo-observable shock
+    decompositions (if a pseudomeasurement equation has been provided for this
+    model type)
 
 ### Notes
 
-- See `forecast_all` for documentation of `{input,output,cond}_type`.
-- `forecast_one` prepares inputs to the forecast for a particular
-  combination of input, output and cond types by distributing system
-  matrices and final historical state vectors across `procs`. The user
-  must add processes separately and pass the worker identification
-  numbers here.
-- if `ndraws % length(procs) != 0`, `forecast_one` truncates `procs`
-  so that the draws can be evenly distributed across workers. This is
-  required by the `DistributedArrays` package.
+- `forecast_one` prepares inputs to the forecast for a particular combination of
+  input, output and cond types by distributing system matrices and final
+  historical state vectors across `procs`. The user must add processes
+  separately and pass the worker identification numbers here.
+- if `ndraws % length(procs) != 0`, `forecast_one` truncates `procs` so that the
+  draws can be evenly distributed across workers. This is required by the
+  `DistributedArrays` package.
 """
 function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     input_type::Symbol = :mode, cond_type::Symbol = :none,
@@ -436,7 +505,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     # Set forecast_pseudoobservables properly
     for output in output_vars
         if contains(string(output), "pseudo")
-            update!(m.settings[:forecast_pseudoobservables], Setting(:forecast_pseudoobservables, true))
+            m <= Setting(:forecast_pseudoobservables, true)
             break
         end
     end

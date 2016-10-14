@@ -1,32 +1,40 @@
 """
 ```
-forecast{T<:AbstractFloat}(m::AbstractModel, system::Vector{System{T}},
-    initial_state_draws::Vector{Vector{T}}; shock_distributions::Union{Distribution,
-    Matrix{T}} = Matrix{T}())
+forecast(m, systems, z0s; shocks = dzeros(S, (0, 0, 0), [myid()]),
+    procs = [myid()])
 ```
 
-Computes forecasts for all draws, given a model object, system matrices, and a
-matrix of shocks or a distribution of shocks
+Computes forecasts for all draws, given a model object, system matrices, initial
+state vectors, and optionally an array of shocks.
 
 ### Inputs
 
-- `m`: model object
-- `systems::Vector{System}`: a vector of `System` objects specifying state-space
-  system matrices for each draw
-- `initial_state_draws`: a vector of state vectors in the final historical period
-- `shock_distributions`: a `Distribution` to draw shock values from, or
-  a matrix specifying the shock innovations in each period
+- `m::AbstractModel`: model object
+- `systems::DVector{System{S}}`: vector of `System` objects specifying
+  state-space system matrices for each draw
+- `z0s::DVector{Vector{S}}`: vector of state vectors in the final historical
+  period (aka inital forecast period)
+
+where `S<:AbstractFloat`.
+
+### Keyword Arguments
+
+- `shocks::DArray{S, 3}`: array of size `ndraws` x `nshocks` x `horizon`, whose
+  elements are the shock innovations for each time period, for draw
+- `procs::Vector{Int}`: list of worker processes over which to distribute
+  draws. Defaults to `[myid()]`
 
 ### Outputs
 
--`states`: vector of length `ndraws`, whose elements are the `nstates` x
- `horizon` matrices of forecasted states
--`observables`: vector of length `ndraws`, whose elements are the `nobs` x
- `horizon` matrices of forecasted observables
--`pseudo_observables`: vector of length `ndraws`, whose elements are the
- `npseudo` x `horizon` matrices of forecasted pseudo-observables
--`shocks`: vector of length `ndraws`, whose elements are the `npseudo` x
- `horizon` matrices of shock innovations
+- `states::DArray{S, 3}`: array of size `ndraws` x `nstates` x `horizon` of
+  forecasted states for each draw
+- `obs::DArray{S, 3}`: array of size `ndraws` x `nobs` x `horizon` of forecasted
+  observables for each draw
+- `pseudo::DArray{S, 3}`: array of size `ndraws` x `npseudo` x `horizon` of
+  forecasted pseudo-observables for each draw. If
+  `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
+- `shocks::DArray{S, 3}`: array of size `ndraws` x `nshocks` x `horizon` of
+  shock innovations for each draw
 """
 function forecast{S<:AbstractFloat}(m::AbstractModel,
     systems::DVector{System{S}, Vector{System{S}}},
@@ -89,29 +97,45 @@ end
 
 """
 ```
-compute_forecast(T, R, C, Z, D, forecast_horizons,
-    shocks, z, Z_pseudo, D_pseudo)
+compute_forecast(m, system, z0; shocks = Matrix{S}())
+
+compute_forecast(system, z0, shocks)
+
+compute_forecast(T, R, C, Q, Z, D, Z_pseudo, D_pseudo, z0, shocks)
 ```
 
 ### Inputs
 
-- `T`, `R`, `C`: transition equation matrices
-- `Z`, `D`: observation equation matrices
-- `Z_pseudo`, `D_pseudo`: matrices mapping states to pseudo-observables
-- `forecast_horizons`: number of quarters ahead to forecast output
-- `shocks`: joint distribution (type `Distribution`) from which to draw
-  time-invariant shocks or matrix of drawn shocks (size `nshocks` x
-  `forecast_horizons`)
-- `z`: state vector at time `T`, i.e. at the beginning of the forecast
+- `m::AbstractModel`: model object. Only needed for the method in which `shocks`
+  are not provided.
+- `system::System{S}`: state-space system matrices. Alternatively, provide
+  transition equation matrices `T`, `R`, `C`; measurement equation matrices `Q`,
+  `Z`, `D`; and (possibly empty) pseudo-measurement equation matrices `Z_pseudo`
+  and `D_pseudo`.
+- `z0`: state vector in the final historical period (aka inital forecast period)
+
+where `S<:AbstractFloat`.
+
+### Keyword Arguments
+
+- `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
+  under which to forecast. If not provided, shocks are drawn according to:
+
+  1. If `forecast_killshocks(m)`, `shocks` is set to a `nshocks` x `horizon`
+     matrix of zeros
+  2. Otherwise, if `forecast_tdist_shocks(m)`, draw `horizons` many shocks from a
+     `Distributions.TDist(forecast_tdist_df_val(m))`
+  3. Otherwise, draw `horizons` many shocks from a
+     `DegenerateMvNormal(zeros(nshocks), sqrt(system[:QQ]))`
 
 ### Outputs
 
-`compute_forecast` returns a dictionary of forecast outputs, with keys:
-
-- `:states`
-- `:observables`
-- `:pseudo_observables`
-- `:shocks`
+- `states::Matrix{S}`: matrix of size `nstates` x `horizon` of forecasted states
+- `obs::Matrix{S}`: matrix of size `nobs` x `horizon` of forecasted observables
+- `pseudo::Matrix{S}`: matrix of size `npseudo` x `horizon` of forecasted
+  pseudo-observables. If `!forecast_pseudoobservables(m)` or the provided
+  `Z_pseudo` and `D_pseudo` matrices are empty, then `pseudo` will be empty.
+- `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
 function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     z0::Vector{S}; shocks::Matrix{S} = Matrix{S}())

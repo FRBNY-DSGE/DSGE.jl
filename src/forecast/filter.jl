@@ -11,27 +11,33 @@ the filtered values of states for every state-space system in
 ### Inputs
 
 - `m::AbstractModel`: model object
-- `data`: `DataFrame` or `Matrix{S}` of data for observables
-- `systems`: a DVector{System{S}, Vector{System{S}}} of `System` objects specifying state-space
-  system matrices for each draw
-- `z0::Matrix{S}`: an optional `Nz` x 1 initial state vector
-- `vz0::Matrix{S}`: an optional `Nz` x `Nz` covariance matrix of an initial state vector
+- `data`: `DataFrame` or `nobs` x `hist_periods` `Matrix{S}` of data for
+  observables. This should include the conditional period if `cond_type in
+  [:semi, :full]`
+- `systems::DVector{System{S}}` vector of `System` objects specifying
+  state-space system matrices for each draw
+- `z0::Matrix{S}`: optional `Nz` x 1 initial state vector
+- `vz0::Matrix{S}`: optional `Nz` x `Nz` initial state covariance matrix
 
 where `S<:AbstractFloat`.
 
-## Keyword arguments
+### Keyword Arguments
 
-- `cond_type::Symbol`: conditional case. See `forecast_all` for documentation of all cond_type options.
-- `lead::Int`: the number of steps to forecast after the end of the data. Defaults to 0.
-- `allout::Bool`: an optional keyword argument indicating whether we want optional
+- `cond_type::Symbol`: conditional case. See `forecast_all` for documentation of
+  all cond_type options.
+- `lead::Int`: number of steps to forecast after the end of the data. Defaults
+  to 0.
+- `allout::Bool`: optional keyword argument indicating whether we want optional
   output variables returned as well. Defaults to `false`.
-- `include_presample::Bool`: indicates whether to include presample periods in the
-  returned vector of `Kalman` objects. Defaults to `true`.
-- `procs::Vector{Int}`: list of worker processes over which to distribute draws. Defaults to `[myid()]`
+- `include_presample::Bool`: indicates whether to include presample periods in
+  the returned vector of `Kalman` objects. Defaults to `true`.
+- `procs::Vector{Int}`: list of worker processes over which to distribute
+  draws. Defaults to `[myid()]`
 
 ### Outputs
 
-`filter_all` returns an `ndraws` x 1 `DVector` of `Kalman` objects. See `Kalman` documentation for more details.
+- `kals::DVector{Kalman{S}`: vector of `ndraws` many `Kalman` objects. See
+  `Kalman` documentation for more details.
 """
 function filter_all{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     systems::DVector{System{S}, Vector{System{S}}},
@@ -78,35 +84,40 @@ end
 
 """
 ```
-filter(m::AbstractModel, data, system, z0, vz0; cond_type = :none,
-      lead = 0, allout = false, include_presample = true)
+filter(m, data, system, z0, vz0; cond_type = :none, lead = 0, allout = false,
+      include_presample = true)
 ```
 
 Computes and returns the filtered values of states for the state-space
-system correpsonding to the current parameter values of model `m`.
+system corresponding to the current parameter values of model `m`.
 
 ### Inputs
 
 - `m::AbstractModel`: model object
-- `data`: `DataFrame` or `Matrix{S}` of data for observables
-- `system::System`: a `System` objsect specifying state-space system matrices for the model
-- `z0::Matrix{S}`: an optional `Nz` x 1 initial state vector
-- `vz0::Matrix{S}`: an optional `Nz` x `Nz` covariance matrix of an initial state vector
+- `data`: `DataFrame` or `nobs` x `hist_periods` `Matrix{S}` of data for
+  observables. This should include the conditional period if `cond_type in
+  [:semi, :full]`
+- `system::System`: `System` object specifying state-space system matrices for
+  the model
+- `z0::Vector{S}`: optional `Nz` x 1 initial state vector
+- `vz0::Matrix{S}`: optional `Nz` x `Nz` initial state covariance matrix
 
 where `S<:AbstractFloat`.
 
-## Keyword arguments
+### Keyword Arguments
 
-- `cond_type::Symbol`: conditional case. See `forecast_all` for documentation of all cond_type options.
-- `lead::Int`: the number of steps to forecast after the end of the data. Defaults to 0.
-- `allout::Bool`: an optional keyword argument indicating whether we want optional
+- `cond_type::Symbol`: conditional case. See `forecast_all` for documentation of
+  all `cond_type` options.
+- `lead::Int`: number of steps to forecast after the end of the data. Defaults
+  to 0.
+- `allout::Bool`: optional keyword argument indicating whether we want optional
   output variables returned as well. Defaults to `false`.
-- `include_presample::Bool`: indicates whether to include presample periods in the
-  returned vector of `Kalman` objects. Defaults to `true`.
+- `include_presample::Bool`: indicates whether to include presample periods in
+  the returned vector of `Kalman` objects. Defaults to `true`.
 
 ### Outputs
 
-- A `Kalman` object. See `Kalman` documentation for more details.
+- `kal::Kalman`: see `Kalman` documentation for more details.
 """
 function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::System{S},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
@@ -144,47 +155,50 @@ end
 
 """
 ```
-filterandsmooth_all(m, data, systems, z0, vz0; lead, allout, include_presample)
+filterandsmooth_all(m, data, systems, z0 = Vector{S}(), vz0 = Matrix{S}();
+    cond_type = :none, lead = 0, procs = [myid()])
 ```
 
-Computes and returns the smoothed states, shocks, and
-pseudo-observables, as well as the Kalman filter outputs, for every
+Computes and returns the smoothed states, shocks, and pseudo-observables, as
+well as the filtered states for the last historical period, for every
 state-space system in `systems`.
 
 ### Inputs
 
-- `m`: model object
-- `data`: `DataFrame` or `Matrix` of data for observables
-- `systems::DVector{System{S}, Vector{System{S}}}`: a distributed vector of `System`
-  objects specifying state-space system matrices for each draw
-- `z0`: an optional `Nz` x 1 initial state vector
-- `vz0`: an optional `Nz` x `Nz` covariance matrix of an initial state vector
+- `m::AbstractModel`: model object
+- `data`: `DataFrame` or `nobs` x `hist_periods` `Matrix{S}` of data for
+  observables. This should include the conditional period if `cond_type in
+  [:semi, :full]`
+- `systems::DVector{System{S}}`: vector of `System` objects specifying
+  state-space system matrices for each draw
+- `z0::Vector{S}`: optional `Nz` x 1 initial state vector
+- `vz0::Matrix{S}`: optional `Nz` x `Nz` initial state covariance matrix
 
 where `S<:AbstractFloat`.
 
 ### Outputs
 
-- `states`: 3-dimensional `DArray` of size `nstates` x `hist_periods` x `ndraws`
-  consisting of smoothed states for each draw
-- `shocks`: 3-dimensional `DArray` of size `nshocks` x `hist_periods` x `ndraws`
-  consisting of smoothed shocks for each draw
-- `pseudo`: 3-dimensional `DArray` of size `npseudo` x `hist_periods` x `ndraws`
-  consisting of pseudo-observables computed from the smoothed states for each
-  draw
-- `zends`: `DVector` of length `ndraws`. Each element is the
-  `nstates`-length final state vector for the corresponding draw.
+- `states::DArray{S, 3}`: array of size `ndraws` x `nstates` x `hist_periods` of
+  smoothed states for each draw
+- `shocks::DArray{S, 3}`: array of size `ndraws` x `nshocks` x `hist_periods` of
+  smoothed shocks for each draw
+- `pseudo::DArray{S, 3}`: array of size `ndraws` x `npseudo` x `hist_periods` of
+  pseudo-observables computed from the smoothed states for each draw. If
+  `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
+- `zends::DVector{Vector{S}}`: vector of `ndraws` many final state vectors (each
+  length `nstates`) for the corresponding draws
 
 ### Notes
 
-Outputs are `DArray`s if the `systems` input is of type `DVector`. If
-`systems` is a single `System` object, outputs are ordinary arrays.
+`states` and `shocks` are returned from the smoother specified by
+`forecast_smoother(m)`, which defaults to `:durbin_koopman`. This can be
+overridden by calling
 
-- `states` and `shocks` are returned from the smoother specified by
-`forecast_smoother(m)`, which defaults to `:durbin_koopman`. This can be overridden by calling
+```
+m <= Setting(:forecast_smoother, :kalman_smoother))
+```
 
-`update!(m.settings[:forecast_smoother], Setting(:forecast_smoother, :kalman_smoother))`
-
-before calling `filterandsmooth`.
+before calling `filterandsmooth_all`.
 """
 function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     systems::DVector{System{S}, Vector{System{S}}},
@@ -195,7 +209,6 @@ function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     data = df_to_matrix(m, df; cond_type = cond_type)
     filterandsmooth_all(m, data, systems, z0, vz0; lead = lead, procs = procs)
 end
-
 
 function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     systems::DVector{System{S}, Vector{System{S}}},
@@ -253,6 +266,50 @@ function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
     return states, shocks, pseudo, zend
 end
 
+"""
+```
+filterandsmooth(m, data, system, z0 = Vector{S}(), vz0 = Matrix{S}(); lead = 0)
+```
+
+Computes and returns the smoothed states, shocks, and pseudo-observables, as
+well as the filtered states for the last historical period, for the state-space
+system given by `system`.
+
+### Inputs
+
+- `m::AbstractModel`: model object
+- `data`: `DataFrame` or `nobs` x `hist_periods` `Matrix{S}` of data for
+  observables. This should include the conditional period if `cond_type in
+  [:semi, :full]`
+- `system::System{S}`: `System` objects specifying state-space system matrices
+- `z0::Vector{S}`: optional `Nz` x 1 initial state vector
+- `vz0::Matrix{S}`: optional `Nz` x `Nz` initial state covariance matrix
+
+where `S<:AbstractFloat`.
+
+### Outputs
+
+- `states::Matrix{S}`: matrix of size `nstates` x `hist_periods` of smoothed
+  states
+- `shocks::Matrix{S}`: matrix of size `nshocks` x `hist_periods` of smoothed
+  shocks
+- `pseudo::Matrix{S}`: matrix of size `npseudo` x `hist_periods` of
+  pseudo-observables computed from the smoothed states. If
+  `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
+- `zend::Vector{S}`: final state vector of length `nstates`
+
+### Notes
+
+`states` and `shocks` are returned from the smoother specified by
+`forecast_smoother(m)`, which defaults to `:durbin_koopman`. This can be
+overridden by calling
+
+```
+m <= Setting(:forecast_smoother, :kalman_smoother))
+```
+
+before calling `filterandsmooth`.
+"""
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     system::System{S}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     lead::Int = 0)

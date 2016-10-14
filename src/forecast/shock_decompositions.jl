@@ -1,31 +1,41 @@
 """
 ```
-shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
-    systems::Vector{System{S}}, histshocks::Vector{Matrix{S}})
+shock_decompositions(m, systems, histshocks; procs = [myid()])
 ```
 
-Computes shock decompositions for all draws, given a model object, system matrices, and
-historical smoothed shocks.
+Computes shock decompositions for all draws, given a model object, system
+matrices, and historical smoothed shocks.
 
 ### Inputs
 
-- `m`: model object
-- `systems::Vector{System}`: vector of length `ndraws`, whose elements are
-  `System` objects specifying state-space system matrices for each draw
-- `histshocks`::Vector{Matrix{S}}`: vector of length `ndraws`, whose elements
-  are the `nshocks` x `hist_periods` matrices of historical smoothed shocks
+- `m::AbstractModel`: model object
+- `systems::DVector{System{S}}`: vector of `System` objects specifying
+  state-space system matrices for each draw
+- `histshocks`::DArray{S, 3}`: array of size `ndraws` x `nshocks` x
+  `hist_periods` of smoothed historical shocks for each draw
+
+where `S<:AbstractFloat`.
+
+### Keyword Arguments
+
+- `procs::Vector{Int}`: list of worker processes over which to distribute
+  draws. Defaults to `[myid()]`
 
 ### Outputs
 
--`states`: vector of length `ndraws`, whose elements are the `nstates` x
- `nperiods` x `nshocks` matrices of state shock decompositions
--`obs`: vector of length `ndraws`, whose elements are the `nobs` x
- `nperiods` x `nshocks` matrices of observable shock decompositions
--`pseudo_observables`: vector of length `ndraws`, whose elements are the
- `npseudo` x `nperiods` x `nshocks` matrices of pseudo-observable shock
- decompositions
+- `states::DArray{S, 3}`: array of size `ndraws` x `nstates` x `nperiods` of
+  state shock decompositions for each draw
+- `obs::DArray{S, 3}`: array of size `ndraws` x `nobs` x `nperiods` of
+  observable shock decompositions for each draw
+- `pseudo::DArray{S, 3}`: array of size `ndraws` x `npseudo` x `nperiods` of
+  pseudo-observable shock decompositions for each draw. If
+  `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
 
-where `nperiods = hist_periods + forecast_horizon`.
+where `nperiods` is the number of quarters between `shockdec_startdate(m)` and
+`shockdec_enddate(m)`, inclusive. If `shockdec_startdate(m)` is null, shock
+decompositions are returned beginning from `date_prezlb_start(m)`. Likewise, if
+`shockdec_enddate(m)` is null, shock decompositions are returned up to
+`date_forecast_end(m)`.
 """
 function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
     systems::DVector{System{S}}, histshocks::DArray{S, 3};
@@ -89,35 +99,39 @@ end
 
 """
 ```
-compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
-    C::Vector{S}, Z::Matrix{S}, D::Vector{S}, forecast_horizons::Int,
-    histshocks::Matrix{S}, start_index::Nullable{Int},
-    end_index::Nullable{Int}, Z_pseudo::Matrix{S}=Matrix{S}(),
-    D_pseudo::Vector{S}=Vector{S}())
+compute_shock_decompositions(system, forecast_horizons, histshocks, start_index,
+    end_index)
+
+compute_shock_decompositions(T, R, Z, D, Z_pseudo, D_pseudo, z0, shocks,
+    forecast_horizons, histshocks, start_index, end_index)
 ```
 
 ### Inputs
 
-- `T`, `R`: transition equation matrices
-- `Z`, `D`: observation equation matrices
-- `Z_pseudo`, `D_pseudo`: matrices mapping states to pseudo-observables
-- `forecast_horizons`: number of quarters ahead to forecast output
-- `histshocks`: matrix of smoothed historical shocks (size `nshocks` x
-  `hist_periods`)
-- `start_index`: indicates the first index from which to return computed shock
+- `system::System{S}`: state-space system matrices. Alternatively, provide
+  transition equation matrices `T`, `R`; measurement equation matrices `Z`, `D`;
+  and (possibly empty) pseudo-measurement equation matrices `Z_pseudo` and
+  `D_pseudo`.
+- `forecast_horizons::Int`: number of periods ahead to forecast
+- `histshocks::Matrix{S}`: matrix of size `nshocks` x `hist_periods` of
+  historical smoothed shocks
+- `start_index::Int`: first index from which to return computed shock
   decompositions
-- `end_index`: incidates the last index for which to return computed shock
-  decompositions
+- `end_index::Int`: last index for which to return computed shock decompositions
+
+where `S<:AbstractFloat`.
 
 ### Outputs
 
-`compute_shock_decompositions` returns a 3-tuple of shock decompositions:
+- `states::Matrix{S}`: matrix of size `nstates` x `nperiods` of state shock
+  decompositions
+- `obs::Matrix{S}`: matrix of size `nobs` x `nperiods` of observable shock
+  decompositions
+- `pseudo::Matrix{S}`: matrix of size `npseudo` x `nperiods` of
+  pseudo-observable shock decompositions. If the provided `Z_pseudo` and
+  `D_pseudo` matrices are empty, then `pseudo` will be empty.
 
--`:states`: `nstates` x `nperiods` x `nshocks`
--`:observables`: `nobservables` x `nperiods` x `nshocks`
--`:pseudo_observables`: `npseudo` x `nperiods` x `nshocks`
-
-where `nperiods` is `end_index - start_index + 1`.
+where `nperiods = `end_index - start_index + 1`.
 """
 function compute_shock_decompositions{S<:AbstractFloat}(system::System{S},
     forecast_horizons::Int, histshocks::Matrix{S},

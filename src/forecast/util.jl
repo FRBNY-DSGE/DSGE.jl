@@ -1,5 +1,7 @@
 """
-`compute_system(m)`
+```
+compute_system(m)
+```
 
 Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` object.
@@ -25,7 +27,9 @@ function compute_system{T<:AbstractFloat}(m::AbstractModel{T})
 end
 
 """
-`get_jstep(m, n_sim)`
+```
+get_jstep(m, n_sim)
+```
 
 Retrieve `forecast_jstep` setting (thinning step size for forecast
 step) from `m.settings`. If `n_sim ==  1`, returns 1.
@@ -39,12 +43,21 @@ function get_jstep(m, n_sim)
 end
 
 """
-`get_input_file(m, input_type)`
+```
+get_input_file(m, input_type)
+```
 
-Computes the appropriate forecast input filenames for model `m` and
-forecast input type `input_type`. For example, the default file containing the parameter mode is ``
+Compute the appropriate forecast input filenames for model `m` and
+forecast input type `input_type`.
 
-Default input file
+The default input files for each `input_type` can be overriden by adding entries
+to the `Dict{Symbol, ASCIIString}` returned from
+`forecast_input_file_overrides(m)`. For example:
+
+```
+overrides = forecast_input_file_overrides(m)
+overrides[:mode] = \"path/to/input/file.h5\"
+```
 """
 function get_input_file(m, input_type)
     overrides = forecast_input_file_overrides(m)
@@ -72,7 +85,14 @@ function get_input_file(m, input_type)
     end
 end
 
+"""
+```
+get_output_vars(m, output_type)
+```
 
+Returns a vector of `output_vars` corresponding to the `output_type`. See the
+`forecast_all` documentation for a complete list of possible `output_type`s.
+"""
 function get_output_vars(m, output_type)
     if output_type == :states
         vars = [:histstates,
@@ -114,7 +134,15 @@ function get_output_vars(m, output_type)
     end
 end
 
+"""
+```
+get_output_files(m, input_type, output_vars, cond_type)
+```
 
+Compute the appropriate forecast output filenames for model `m`, forecast input
+type `input_type`, and conditional type `cond_type`, for each output variable in
+`output_vars`.
+"""
 function get_output_files(m, input_type, output_vars, cond_type)
     additional_file_strings = ASCIIString[]
     push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
@@ -123,22 +151,23 @@ function get_output_files(m, input_type, output_vars, cond_type)
     return [symbol(x) => rawpath(m, "forecast", "$x.jld", additional_file_strings) for x in output_vars]
 end
 
-
-"""
-`DVector{T, A}`
-
-typalias for `DArray{T, 1, A}`
-"""
 typealias DVector{T, A} DArray{T, 1, A}
-
-"""
-`DMatrix{T, A}`
-
-typealias for `DArray{T, 2, A}`
-"""
 typealias DMatrix{T, A} DArray{T, 2, A}
 
+"""
+```
+write_darray(filepath, darr)
+```
 
+Write the contents of the `DArray` `darr` to the JLD file `filepath` without
+converting `darr` back to an `Array` or copying local parts to the originator
+process. `darr` can then be read back in as an `Array` using `read_darray`.
+
+Each worker process `pid` writes its own local part and local indices to the
+file as `arr$pid` and `inds$pid`. The dimensions `dims` of `darr` and the vector
+of processes `pids` over which `darr` is distributed are also written to
+`filepath` in order to facilitate reading back in.
+"""
 function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T})
     function write_localpart(pid::Int)
         jldopen(filepath, "r+") do file
@@ -154,11 +183,17 @@ function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T
 
     for pid in darr.pids
         remotecall_wait(pid, write_localpart, pid)
-        sleep(0.001)
+        sleep(0.001) # Need this, or else HDF5 complains that the new object already exists
     end
 end
 
+"""
+```
+read_darray(filepath)
+```
 
+Read the `DArray` saved in `filepath` by `write_darray`. Returns an `Array`.
+"""
 function read_darray(filepath::AbstractString)
     file = jldopen(filepath, "r")
     dims = read(file, "dims")
