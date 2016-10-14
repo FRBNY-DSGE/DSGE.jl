@@ -164,8 +164,8 @@ converting `darr` back to an `Array` or copying local parts to the originator
 process. `darr` can then be read back in as an `Array` using `read_darray`.
 
 Each worker process `pid` writes its own local part and local indices to the
-file as `arr$pid` and `inds$pid`. The dimensions `dims` of `darr` and the vector
-of processes `pids` over which `darr` is distributed are also written to
+file as `arr\$pid` and `inds\$pid`. The dimensions `dims` of `darr` and the
+vector of processes `pids` over which `darr` is distributed are also written to
 `filepath` in order to facilitate reading back in.
 """
 function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T})
