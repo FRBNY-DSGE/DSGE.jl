@@ -539,7 +539,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             end
         end
 
-        write_forecast_outputs(hist_vars)
+        write_forecast_outputs(intersect(output_vars, hist_vars))
     end
 
 
@@ -600,7 +600,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             end
         end
 
-        write_forecast_outputs(forecast_vars)
+        write_forecast_outputs(intersect(output_vars, forecast_vars))
     end
 
 
@@ -616,7 +616,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             forecast_output[:shockdecpseudo] = shockdecpseudo
         end
 
-        write_forecast_outputs(shockdec_vars)
+        write_forecast_outputs(intersect(output_vars, shockdec_vars))
     end
 
     # Return only saved elements of dict
