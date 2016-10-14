@@ -37,7 +37,7 @@ function default_settings!(m::AbstractModel)
     # Dates
     settings[:date_presample_start] = Setting(:date_presample_start, quartertodate("1959-Q3"),
         "Start date of pre-sample")
-    settings[:date_prezlb_start] = Setting(:date_prezlb_start, quartertodate("1960-Q1"),
+    settings[:date_mainsample_start] = Setting(:date_mainsample_start, quartertodate("1960-Q1"),
         "Start date of main sample")
     settings[:date_zlb_start] = Setting(:date_zlb_start, quartertodate("2008-Q4"),
         "Start date of zero lower bound regime")
@@ -98,7 +98,7 @@ function default_settings!(m::AbstractModel)
     settings[:forecast_enforce_zlb] = Setting(:forecast_enforce_zlb, true,
         "Enforce zero lower bound in forecast periods")
     settings[:shockdec_startdate] = Setting(:shockdec_startdate, Nullable{Date}(),
-        "Date of start of shock decomposition output period. If null, then shockdec starts at date_prezlb_start")
+        "Date of start of shock decomposition output period. If null, then shockdec starts at date_mainsample_start")
     settings[:shockdec_enddate] = Setting(:shockdec_enddate, Nullable{Date}(),
         "Date of end of shock decomposition output period. If null, then shockdec ends at date_forecast_end")
     settings[:shockdec_whichshocks] = Setting(:shockdec_whichshocks, :all,

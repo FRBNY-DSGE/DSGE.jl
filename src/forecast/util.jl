@@ -227,12 +227,12 @@ forecast output array. The saved dictionaries include:
 function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbol)
     # Write date range
     dates = if contains(string(var), "hist")
-        quarter_range(date_prezlb_start(m), date_zlb_end(m))
+        quarter_range(date_mainsample_start(m), date_mainsample_end(m))
     elseif contains(string(var), "forecast")
         quarter_range(date_forecast_start(m), date_forecast_end(m))
     elseif contains(string(var), "shockdec")
         date_shockdec_start = if isnull(shockdec_startdate(m))
-            date_prezlb_start(m)
+            date_mainsample_start(m)
         else
             get(shockdec_startdate(m))
         end

@@ -3,7 +3,7 @@
 load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol = :low)
 ```
 
-Create a DataFrame with all data series for this model, fully transformed.  
+Create a DataFrame with all data series for this model, fully transformed.
 
 First, check the disk to see if a valid dataset is already stored in `inpath(m, \"data\")`. A
 dataset is valid if every series in `m.observable_mappings` is present and the entire sample is
@@ -64,7 +64,7 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
         end_date   = if cond_type in [:semi, :full]
             date_conditional_end(m)
         else
-            date_zlb_end(m)
+            date_mainsample_end(m)
         end
         df = df[start_date .<= df[:, :date] .<= end_date, :]
 
@@ -91,7 +91,7 @@ Check on disk in `inpath(m, \"data\")` datasets, of the correct
 vintage, corresponding to the ones required by the entries in
 `m.observable_mappings`. Load the appropriate data series (specified
 in `m.observable_mappings[key].input_series`) for each data source.
-    
+
 To accomodate growth rates and other similar transformations, more rows of data may be
 downloaded than otherwise specified by the date model settings. (By the end of the process,
 these rows will have been dropped.)
@@ -105,11 +105,11 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     # Start two quarters further back than `start_date` as we need these additional
     # quarters to compute differences.
     start_date = date_presample_start(m) - Dates.Month(6)
-    end_date = date_zlb_end(m)
+    end_date = date_mainsample_end(m)
 
     # Parse m.observable_mappings for data series
     data_series = parse_data_series(m)
-    
+
     # Load FRED data
     df = load_fred_data(m; start_date=firstdayofquarter(start_date), end_date=end_date)
 
@@ -151,15 +151,15 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
             # Convert dates from strings to quarter-end dates for date arithmetic
             format_dates!(:date, addl_data)
-        
+
             # Warn on sources with incomplete data; missing data will be replaced with NaN
             # during merge.
             if !in(lastdayofquarter(start_date), addl_data[:date]) ||
                 !in(lastdayofquarter(end_date), addl_data[:date])
-   
+
                 warn("$file does not contain the entire date range specified; NaNs used.")
             end
-            
+
             # Make sure each mnemonic that was specified is present
             for series in mnemonics
                 if !in(series, names(addl_data))
@@ -171,7 +171,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             # data
             cols = [:date; mnemonics]
             rows = start_date .<= addl_data[:date] .<= end_date
-            
+
             addl_data = addl_data[rows, cols]
             df = join(df, addl_data, on=:date, kind=:outer)
         else
@@ -182,7 +182,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             warn("$file was not found; NaNs used.")
         end
     end
-    
+
     # turn NAs into NaNs
     na2nan!(df)
 
@@ -196,7 +196,7 @@ load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
 Check on disk in `inpath(m, \"cond\")` for a conditional dataset (in levels) of the correct
 vintage and load it.
-    
+
 The following series are also loaded from `inpath(m, \"data\")` and either
 appended or merged into the conditional data:
 
@@ -328,14 +328,14 @@ function isvalid_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
         println(coldiff)
     end
 
-    # Ensure the dates between date_presample_start and date_zlb_end are contained.
+    # Ensure the dates between date_presample_start and date_mainsample_end are contained.
     actual_dates = df[:date]
 
     start_date = date_presample_start(m)
     end_date   = if cond_type in [:semi, :full]
         date_conditional_end(m)
     else
-        date_zlb_end(m)
+        date_mainsample_end(m)
     end
     expected_dates = get_quarter_ends(start_date, end_date)
     datesdiff = setdiff(expected_dates, actual_dates)
@@ -366,7 +366,7 @@ function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
     end_date   = if cond_type in [:semi, :full]
         date_conditional_end(m)
     else
-        date_zlb_end(m)
+        date_mainsample_end(m)
     end
     df1 = df1[start_date .<= df1[:, :date] .<= end_date, :]
 

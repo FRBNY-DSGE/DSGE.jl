@@ -122,26 +122,28 @@ n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_s
 
 # Dates, indices, number of periods for each regime
 date_presample_start(m::AbstractModel) = get_setting(m, :date_presample_start)
-date_prezlb_start(m::AbstractModel) = get_setting(m, :date_prezlb_start)
+date_mainsample_start(m::AbstractModel) = get_setting(m, :date_mainsample_start)
 date_zlb_start(m::AbstractModel) = get_setting(m, :date_zlb_start)
 
-date_presample_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_prezlb_start) - Dates.Month(3))
+date_presample_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_mainsample_start) - Dates.Month(3))
 date_prezlb_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_zlb_start) - Dates.Month(3))
-date_zlb_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_forecast_start) - Dates.Month(3))
+date_mainsample_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_forecast_start) - Dates.Month(3))
 date_conditional_end(m::AbstractModel) = get_setting(m, :date_conditional_end)
 
 index_presample_start(m::AbstractModel) = 1
-index_prezlb_start(m::AbstractModel) = subtract_quarters(date_prezlb_start(m), date_presample_start(m)) + 1
+index_mainsample_start(m::AbstractModel) = subtract_quarters(date_mainsample_start(m), date_presample_start(m)) + 1
 index_zlb_start(m::AbstractModel) = subtract_quarters(date_zlb_start(m), date_presample_start(m)) + 1
 index_forecast_start(m::AbstractModel) = subtract_quarters(date_forecast_start(m), date_presample_start(m)) + 1
 
-n_presample_periods(m::AbstractModel) = subtract_quarters(date_prezlb_start(m), date_presample_start(m))
-n_prezlb_periods(m::AbstractModel) = subtract_quarters(date_zlb_start(m), date_prezlb_start(m))
+n_presample_periods(m::AbstractModel) = subtract_quarters(date_mainsample_start(m), date_presample_start(m))
+n_prezlb_periods(m::AbstractModel) = subtract_quarters(date_zlb_start(m), date_mainsample_start(m))
 n_zlb_periods(m::AbstractModel) = subtract_quarters(date_forecast_start(m), date_zlb_start(m))
+n_mainsample_periods(m::AbstractModel) = subtract_quarters(date_forecast_start(m), date_mainsample_start(m))
 
-inds_presample_periods(m::AbstractModel) = collect(index_presample_start(m):(index_prezlb_start(m)-1))
-inds_prezlb_periods(m::AbstractModel) = collect(index_prezlb_start(m):(index_zlb_start(m)-1))
+inds_presample_periods(m::AbstractModel) = collect(index_presample_start(m):(index_mainsample_start(m)-1))
+inds_prezlb_periods(m::AbstractModel) = collect(index_mainsample_start(m):(index_zlb_start(m)-1))
 inds_zlb_periods(m::AbstractModel) = collect(index_zlb_start(m):(index_forecast_start(m)-1))
+inds_mainsample_periods(m::AbstractModel) = collect(index_mainsample_start(m):(index_forecast_start(m)-1))
 
 # Number of a few things that are useful
 n_states(m::AbstractModel)                 = length(m.endogenous_states)

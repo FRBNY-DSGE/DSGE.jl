@@ -526,7 +526,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
-            T = DSGE.subtract_quarters(date_forecast_start(m), date_prezlb_start(m))
+            T = n_mainsample_periods(m)
 
             forecast_output[:histstates] = convert(DArray, histstates[1:end, 1:end, 1:T])
             forecast_output[:histshocks] = convert(DArray, histshocks[1:end, 1:end, 1:T])
@@ -561,10 +561,10 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
-            T = DSGE.subtract_quarters(date_forecast_start(m), date_prezlb_start(m))
+            T = n_mainsample_periods(m)
 
             # Copy history of observables to make correct size
-            histobs_cond = df_to_matrix(m, df; cond_type = cond_type)[:, index_prezlb_start(m)+T:end]
+            histobs_cond = df_to_matrix(m, df; cond_type = cond_type)[:, index_mainsample_start(m)+T:end]
             histobs_cond = reshape(histobs_cond, (1, size(histobs_cond)...))
 
             nperiods = (size(histstates, 3) - T) + size(forecaststates, 3)

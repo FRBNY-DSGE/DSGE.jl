@@ -483,8 +483,8 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
         zeros(size(D)), A0, P0, pred, vpred)
 
     # Compute draw (states and shocks)
-    alpha_hat = α_all_plus[:, index_prezlb_start(m):end] + α_hat_star
-    eta_hat   = η_all_plus[:, index_prezlb_start(m):end] + η_hat_star
+    alpha_hat = α_all_plus[:, index_mainsample_start(m):end] + α_hat_star
+    eta_hat   = η_all_plus[:, index_mainsample_start(m):end] + η_hat_star
 
     return alpha_hat, eta_hat
 end
