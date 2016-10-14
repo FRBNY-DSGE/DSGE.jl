@@ -45,6 +45,9 @@ function filter_all{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
     include_presample::Bool = true, procs::Vector{Int} = [myid()])
 
+    # Reset procs to [myid()] if necessary
+    procs = reset_procs(m, procs)
+
     data = df_to_matrix(m, df; cond_type = cond_type)
     filter_all(m, data, systems, z0, vz0; lead = lead, allout = allout,
            include_presample = include_presample, procs = procs)
@@ -55,6 +58,9 @@ function filter_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     lead::Int = 0, allout::Bool = false, include_presample::Bool = true,
     procs::Vector{Int} = [myid()])
+
+    # Reset procs to [myid()] if necessary
+    procs = reset_procs(m, procs)
 
     # Numbers of useful things
     ndraws = length(systems)
@@ -206,6 +212,9 @@ function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     cond_type::Symbol = :none, lead::Int = 0,
     procs::Vector{Int} = [myid()])
 
+    # Reset procs to [myid()] if necessary
+    procs = reset_procs(m, procs)
+
     data = df_to_matrix(m, df; cond_type = cond_type)
     filterandsmooth_all(m, data, systems, z0, vz0; lead = lead, procs = procs)
 end
@@ -214,6 +223,9 @@ function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
     systems::DVector{System{S}, Vector{System{S}}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     lead::Int = 0, procs::Vector{Int} = [myid()])
+
+    # Reset procs to [myid()] if necessary
+    procs = reset_procs(m, procs)
 
     # Numbers of useful things
     ndraws = length(systems)

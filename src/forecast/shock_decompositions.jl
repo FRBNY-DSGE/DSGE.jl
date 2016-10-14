@@ -41,6 +41,9 @@ function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
     systems::DVector{System{S}}, histshocks::DArray{S, 3};
     procs::Vector{Int} = [myid()])
 
+    # Reset procs to [myid()] if necessary
+    procs = reset_procs(m, procs)
+
     # Numbers of useful things
     ndraws = length(systems)
     nprocs = length(procs)

@@ -47,6 +47,9 @@ function smooth_all{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     kals::DVector{Kalman{S}}; cond_type::Symbol = :none,
     procs::Vector{Int} = [myid()])
 
+    # Reset procs to [myid()] if necessary
+    procs = reset_procs(m, procs)
+
     data = df_to_matrix(m, df; cond_type = cond_type)
     smooth_all(m, data, systems, kals; procs = procs)
 end
@@ -54,6 +57,9 @@ end
 function smooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     systems::DVector{System{S}, Vector{System{S}}},
     kals::DVector{Kalman{S}}; procs::Vector{Int} = [myid()])
+
+    # Reset procs to [myid()] if necessary
+    procs = reset_procs(m, procs)
 
     # numbers of useful things
     nprocs = length(procs)

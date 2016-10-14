@@ -43,9 +43,10 @@ for input_type in [:init, :mode, :full]
         forecast_output = Dict{Symbol, Any}()
         forecast_output[:df] = load_data(m; cond_type=cond_type, try_disk=true, verbose=:none)
 
+        procs = input_type == :full ? my_procs : [myid()]
         @time new_forecast = forecast_one(m, forecast_output[:df];
             input_type = input_type, cond_type = cond_type, output_vars = output_vars,
-            verbose = :none, procs = my_procs)
+            verbose = :none, procs = procs)
         merge!(forecast_output, new_forecast)
 
         forecast_outputs[(cond_type, input_type)] = forecast_output
@@ -76,7 +77,7 @@ for input_type in [:init, :mode]
         histstates = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:histstates], 1, :, :))
         histshocks = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:histshocks], 1, :, :))
         histpseudo = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:histpseudo], 1, :, :))
-        
+
         @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:histstates] histstates
         @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:histshocks] histshocks
         @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:histpseudo] histpseudo

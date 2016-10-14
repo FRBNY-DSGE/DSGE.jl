@@ -42,6 +42,9 @@ function forecast{S<:AbstractFloat}(m::AbstractModel,
     shocks::DArray{S, 3} = dzeros(S, (0, 0, 0), [myid()]),
     procs::Vector{Int} = [myid()])
 
+    # Reset procs to [myid()] if necessary
+    procs = reset_procs(m, procs)
+
     # Numbers of useful things
     ndraws = length(systems)
     nprocs = length(procs)

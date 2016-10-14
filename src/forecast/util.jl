@@ -28,6 +28,29 @@ end
 
 """
 ```
+reset_procs(m, procs, input_type = Nullable{Symbol}())
+```
+
+Reset `procs` to `[myid()]` if either:
+
+- `input_type` is non-null and one of `[:init, :mode, :mean]`
+- `use_parallel_workers(m) = false`
+"""
+function reset_procs(m::AbstractModel, procs::Vector{Int}, input_type::Nullable{Symbol} = Nullable{Symbol}())
+    if procs != [myid()]
+        if !isnull(input_type) && get(input_type) in [:init, :mode, :mean]
+            warn("Processes $procs passed in, but input_type = $input_type. Using only process $(myid()) instead.")
+            procs = [myid()]
+        elseif !use_parallel_workers(m)
+            warn("Processes $procs passed in, but use_parallel_workers(m) = false. Using only process $(myid()) instead.")
+            procs = [myid()]
+        end
+    end
+    return procs
+end
+
+"""
+```
 get_jstep(m, n_sim)
 ```
 

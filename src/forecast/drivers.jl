@@ -188,6 +188,9 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
     params::Matrix{Float64}, TTT::Array{Float64, 3}, RRR::Array{Float64, 3},
     CCC::Array{Float64, 3}; procs::Vector{Int} = [myid()])
 
+    # Reset procs to [myid()] if necessary
+    procs = reset_procs(m, procs, Nullable(input_type))
+
     # Setup
     n_sim = size(params,1)
     jstep = get_jstep(m, n_sim)
@@ -303,6 +306,9 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     params::Matrix{Float64}, df::DataFrame, zend::Matrix{Float64};
     procs::Vector{Int} = [myid()])
 
+    # Reset procs to [myid()] if necessary
+    procs = reset_procs(m, procs, Nullable(input_type))
+
     # Setup
     n_sim_forecast = length(systems)
     n_sim = size(params, 1)
@@ -387,6 +393,9 @@ function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     input_type::Symbol = :mode, cond_type::Symbol = :none,
     procs::Vector{Int} = [myid()])
 
+    # Reset procs to [myid()] if necessary
+    procs = reset_procs(m, procs, Nullable(input_type))
+
     # Set up infiles
     params, TTT, RRR, CCC, zend = load_draws(m, input_type)
 
@@ -466,10 +475,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     ### 1. Setup
 
-    # Use only one process for a single draw
-    if input_type in [:init, :mode, :mean]
-        procs = [myid()]
-    end
+    # Reset procs to [myid()] if necessary
+    procs = reset_procs(m, procs, Nullable(input_type))
 
     # Prepare forecast inputs
     systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
