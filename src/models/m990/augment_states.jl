@@ -62,13 +62,13 @@ function augment_states{T<:AbstractFloat}(m::Model990, TTT::Matrix{T}, RRR::Matr
     ### TTT modifications
 
     # Track Lags
-    TTT_aug[endo_new[:y_t1], endo[:y_t]] = 1.0
-    TTT_aug[endo_new[:c_t1], endo[:c_t]] = 1.0
-    TTT_aug[endo_new[:i_t1], endo[:i_t]] = 1.0
-    TTT_aug[endo_new[:w_t1], endo[:w_t]] = 1.0
-    TTT_aug[endo_new[:π_t1], endo[:π_t]] = 1.0
-    TTT_aug[endo_new[:L_t1], endo[:L_t]] = 1.0
-    TTT_aug[endo_new[:u_t1], endo[:u_t]] = 1.0
+    TTT_aug[endo_new[:y_t1],     endo[:y_t]] = 1.0
+    TTT_aug[endo_new[:c_t1],     endo[:c_t]] = 1.0
+    TTT_aug[endo_new[:i_t1],     endo[:i_t]] = 1.0
+    TTT_aug[endo_new[:w_t1],     endo[:w_t]] = 1.0
+    TTT_aug[endo_new[:π_t1_dup], endo[:π_t]] = 1.0
+    TTT_aug[endo_new[:L_t1],     endo[:L_t]] = 1.0
+    TTT_aug[endo_new[:u_t1],     endo[:u_t]] = 1.0
 
     # Expected inflation
     TTT_aug[endo_new[:Et_π_t], 1:n_endo] = (TTT^2)[endo[:π_t], :]
