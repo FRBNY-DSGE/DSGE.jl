@@ -491,12 +491,14 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     # Inline definition s.t. the dicts forecast_output and forecast_output_files are accessible
     function write_forecast_outputs(vars::Vector{Symbol})
         for var in vars
-            file = forecast_output_files[var]
-            write_darray(file, forecast_output[var])
-            write_forecast_metadata(m, file, var)
+            filepath = forecast_output_files[var]
+            jldopen(filepath, "w") do file
+                write_forecast_metadata(m, file, var)
+            end
+            write_darray(filepath, forecast_output[var])
 
             if VERBOSITY[verbose] >= VERBOSITY[:high]
-                println(" * Wrote $(basename(file))")
+                println(" * Wrote $(basename(filepath))")
             end
         end
     end

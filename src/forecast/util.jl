@@ -156,7 +156,7 @@ typealias DMatrix{T, A} DArray{T, 2, A}
 
 """
 ```
-write_darray(filepath, darr)
+write_darray(filepath::AbstractString, darr::DArray)
 ```
 
 Write the contents of the `DArray` `darr` to the JLD file `filepath` without
@@ -176,7 +176,8 @@ function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T
         end
     end
 
-    jldopen(filepath, "w") do file
+    mode = isfile(filepath) ? "r+" : "w"
+    jldopen(filepath, mode) do file
         write(file, "dims", darr.dims)
         write(file, "pids", collect(darr.pids))
     end
@@ -189,13 +190,12 @@ end
 
 """
 ```
-read_darray(filepath)
+read_darray(file::JldFile)
 ```
 
-Read the `DArray` saved in `filepath` by `write_darray`. Returns an `Array`.
+Read the `DArray` saved to `file` by `write_darray`. Returns an `Array`.
 """
-function read_darray(filepath::AbstractString)
-    file = jldopen(filepath, "r")
+function read_darray(file::JLD.JldFile)
     dims = read(file, "dims")
     pids = read(file, "pids")
 
@@ -204,13 +204,12 @@ function read_darray(filepath::AbstractString)
         inds = read(file, "inds$pid")
         out[inds...] = read(file, "arr$pid")
     end
-    close(file)
     return out
 end
 
 """
 ```
-write_forecast_metadata(m, filepath, var)
+write_forecast_metadata(m::AbstractModel, file::JldFile, var::Symbol)
 ```
 
 Write metadata about the saved forecast output `var` to `filepath`.
@@ -225,9 +224,7 @@ forecast output array. The saved dictionaries include:
 - `pseudoobservable_names::Dict{Symbol, Int}`: saved for `var in [:histpseudo, :forecastpseudo, :shockdecpseudo]`
 - `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
 """
-function write_forecast_metadata(m::AbstractModel, filepath::AbstractString, var::Symbol)
-    file = jldopen(filepath, "r+")
-
+function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbol)
     # Write date range
     dates = if contains(string(var), "hist")
         quarter_range(date_prezlb_start(m), date_zlb_end(m))
@@ -268,6 +265,4 @@ function write_forecast_metadata(m::AbstractModel, filepath::AbstractString, var
     elseif contains(string(var), "shocks") || contains(string(var), "shockdec")
         write(file, "shock_indices", m.exogenous_shocks)
     end
-
-    close(file)
 end
