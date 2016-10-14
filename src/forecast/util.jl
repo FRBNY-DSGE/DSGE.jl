@@ -207,3 +207,67 @@ function read_darray(filepath::AbstractString)
     close(file)
     return out
 end
+
+"""
+```
+write_forecast_metadata(m, filepath, var)
+```
+
+Write metadata about the saved forecast output `var` to `filepath`.
+
+Specifically, we save dictionaries mapping dates, as well as state, observable,
+pseudo-observable, and shock names, to their respective indices in the saved
+forecast output array. The saved dictionaries include:
+
+- `date_indices::Dict{Date, Int}`: saved for all forecast outputs
+- `state_names::Dict{Symbol, Int}`: saved for `var in [:histstates, :forecaststates, :shockdecstates]`
+- `observable_names::Dict{Symbol, Int}`: saved for `var in [:forecastobs, :shockdecobs]`
+- `pseudoobservable_names::Dict{Symbol, Int}`: saved for `var in [:histpseudo, :forecastpseudo, :shockdecpseudo]`
+- `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
+"""
+function write_forecast_metadata(m::AbstractModel, filepath::AbstractString, var::Symbol)
+    file = jldopen(filepath, "r+")
+
+    # Write date range
+    dates = if contains(string(var), "hist")
+        quarter_range(date_prezlb_start(m), date_zlb_end(m))
+    elseif contains(string(var), "forecast")
+        quarter_range(date_forecast_start(m), date_forecast_end(m))
+    elseif contains(string(var), "shockdec")
+        date_shockdec_start = if isnull(shockdec_startdate(m))
+            date_prezlb_start(m)
+        else
+            get(shockdec_startdate(m))
+        end
+        date_shockdec_end = if isnull(shockdec_enddate(m))
+            date_forecast_end(m)
+        else
+            get(shockdec_enddate(m))
+        end
+        quarter_range(date_shockdec_start, date_shockdec_end)
+    end
+    date_indices = [d::Date => i::Int for (i, d) in enumerate(dates)]
+    write(file, "date_indices", date_indices)
+
+    # Write state names
+    if contains(string(var), "states")
+        state_indices = merge(m.endogenous_states, m.endogenous_states_augmented)
+        @assert length(state_indices) == n_states_augmented(m) # assert no duplicate keys
+        write(file, "state_indices", state_indices)
+
+    # Write observable names
+    elseif contains(string(var), "obs")
+        write(file, "observable_indices", m.observables)
+
+    # Write pseudo-observable names
+    elseif contains(string(var), "pseudo")
+        _, pseudo_mapping = pseudo_measurement(m)
+        write(file, "pseudoobservable_indices", pseudo_mapping.inds)
+
+    # Write shock names
+    elseif contains(string(var), "shocks") || contains(string(var), "shockdec")
+        write(file, "shock_indices", m.exogenous_shocks)
+    end
+
+    close(file)
+end

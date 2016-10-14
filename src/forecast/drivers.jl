@@ -493,6 +493,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         for var in vars
             file = forecast_output_files[var]
             write_darray(file, forecast_output[var])
+            write_forecast_metadata(m, file, var)
+
             if VERBOSITY[verbose] >= VERBOSITY[:high]
                 println(" * Wrote $(basename(file))")
             end
