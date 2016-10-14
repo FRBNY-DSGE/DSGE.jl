@@ -68,7 +68,7 @@ module DSGE
         filter, filter_all, filterandsmooth_all, filterandsmooth,
         smooth, smooth_all, kalman_smoother, durbin_koopman_smoother,
         forecast_all, forecast_one, forecast, compute_forecast,
-        shock_decompositions,
+        shock_decompositions, compute_shock_decompositions,
 
         # models/
         init_parameters!, steadystate!, Model990, SmetsWouters, eqcond, measurement, pseudo_measurement,
