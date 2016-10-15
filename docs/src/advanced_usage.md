@@ -1,69 +1,17 @@
 # Advanced Usage
 
+```@meta
+CurrentModule = DSGE
+```
+
 ## Package Directory Structure
 
-The package directory structure follows Julia module conventions. Directories in square brackets indicate future additions. 
+The package directory structure follows Julia module conventions. Directories in square brackets indicate future additions. *Note that this directory tree is not linked, although it appears to be.*
 
 ```@contents
 Pages = ["pkg_structure.md"]
 Depth = 5
 ```
-
-## Reoptimizing
-
-Generally, the user will want to reoptimize the parameter vector (and consequently,
-calculate the Hessian at this new mode) every time they conduct posterior sampling; that is,
-when:
-
-- the input data are updated with a new quarter of observations or revised
-- the model sub-specification is changed
-- the model is derived from an existing model with different equilibrium conditions or
-  measurement equation.
-
-This behavior can be controlled more finely.
-
-### Reoptimize from Starting Vector
-
-Reoptimize the model starting from the parameter values supplied in use in a specified file.
-Ensure that you supply an HDF5 file with a variable named `params` that is the correct
-dimension and data type.
-```julia
-m = Model990()
-params = load_parameters_from_file(m, "path/to/parameter/file.h5")
-update!(m, params)
-estimate(m)
-```
-
-### Skip Reoptimization Entirely
-
-You can provide a modal parameter vector and optionally a Hessian matrix calculated at that
-mode to skip the reoptimization entirely. These values are usually computed by the user
-previously.
-
-You can skip reoptimization of the parameter vector entirely.
-```julia
-m = Model990()
-specify_mode!(m, "path/to/parameter/mode/file.h5")
-estimate(m)
-```
-
-The `specify_mode!` function will update the parameter vector to the mode and skip
-reoptimization by setting the `reoptimize` model setting. Ensure that you supply an HDF5
-file with a variable named `params` that is the correct dimension and data type. (See also
-the utility function `load_parameters_from_file`.)
-
-You can additionally skip calculation of the Hessian matrix entirely.
-```julia
-m = Model990()
-specify_mode!(m, "path/to/parameter/mode/file.h5")
-specify_hessian(m, "path/to/Hessian/matrix/file.h5")
-estimate(m)
-```
-
-The `specify_hessian` function will cause `estimate` to read in the Hessian matrix rather
-than calculating it directly.  Ensure that you supply an HDF5 file with a variable named
-`hessian` that is the correct dimension and data type. Specifying the Hessian matrix but
-*not* the parameter mode results in undefined behavior.
 
 ## Working with Settings
 
@@ -99,8 +47,10 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults
 - `n_anticipated_shocks_padding`: Padding for anticipated shocks.
 
 #### Estimation
-- `reoptimize`: Whether to reoptimize the posterior mode. If `true` (the default),
-    `estimate()` begins reoptimizing from the model object's parameter vector.
+- `reoptimize`: Whether to reoptimize the posterior mode. If `true`
+    (the default), `estimate()` begins reoptimizing from the model
+    object's parameter vector. See [Optimizing or Reoptimizing](@ref
+    estimation-reoptimizing) for more details.
 - `calculate_hessian`: Whether to compute the Hessian. If `true` (the
     default), `estimate()` calculates the Hessian at the posterior mode.
 
@@ -153,7 +103,7 @@ m = Model990()
 m <= Setting(:use_parallel_workers, true)
 ```
 
-## Editing or Extending a Model
+## [Editing or Extending a Model](@id editing-extending-model)
 
 Users may want to extend or edit `Model990` in a number of different ways.  The most common
 changes are listed below, in decreasing order of complexity:
@@ -181,7 +131,7 @@ filename collisions, preventing the user from overwriting output from previous e
 with the original parameters. The protocol for defining new sub-specifications is described
 in [Model sub-specifications](@ref model-sub-specifications-msubspec).
 
-Overriding default settings is described in the [Model Settings](@ref) section above.
+Overriding default settings is described in the [Model Settings](@ref) section.
 
 ### [Model specification (`m.spec`)](@id model-specification-mspec)
 
@@ -193,16 +143,13 @@ measurement equations necessitate the creation of a new subtype of `AbstractMode
 
 To create a new model object, we recommend doing the following:
 
-1. Duplicate the `m990` directory within the [models](src/models/) directory. Name the new
+1. Duplicate the `m990` directory within the [models](https://github.com/FRBNY-DSGE/DSGE.jl/tree/master/src/models) directory. Name the new
    directory `mXXX.jl`, where `XXX` is your chosen model specification number or string.
    Rename `m990.jl` in this directory to `mXXX.jl`.
-
 2. In the `mXXX/` directory, change all references to `Model990` to `ModelXXX`.
-
 3. Edit the `m990.jl`, `eqcond.jl`, and `measurement.jl` files as you see fit.  If adding
    new states, equilibrium conditions, shocks, or observables, be sure to add them to the
    appropriate list in `init_model_indices`.
-
 4. Open the module file, `src/DSGE.jl`. Add `ModelXXX` to the list of functions to export,
    and include each of the files in `src/model/mXXX`.
 
@@ -218,33 +165,32 @@ To create a new sub-specification (e.g., subspec 1) of `Model990`, edit the file
 sub-specification `1` of `Model990`. In the source code, our sub-specification `5` is
 provided as additional example.):
 
-1. Define a new function, `ss1`, that takes an object of type `Model990` (not
+**Step 1.** Define a new function, `ss1`, that takes an object of type `Model990` (not
    `AbstractModel`!) as an argument. In this function, construct new parameter objects and
    overwrite existing model parameters using the `<=` syntax. For example,
 
-    ```julia
-    function ss1(m::Model990)
-        m <= parameter(:ι_w, 0.000, (0.0, .9999), (0.0,0.9999), DSGE.Untransformed(), Normal(0.0,1.0), fixed=false,
-                       description="ι_w: Some description.",
-                       tex_label="\\iota_w")
-        m <= parameter(:ι_p, 0.0, fixed=true,
-                       description= "ι_p: Some description"
-                       tex_label="\\iota_p")
-    end
-    ```
+```julia
+function ss1(m::Model990)
+    m <= parameter(:ι_w, 0.000, (0.0, .9999), (0.0,0.9999), DSGE.Untransformed(), Normal(0.0,1.0), fixed=false,
+                   description="ι_w: Some description.",
+                   tex_label="\\iota_w")
+    m <= parameter(:ι_p, 0.0, fixed=true,
+                   description= "ι_p: Some description"
+                   tex_label="\\iota_p")
+end
+```
 
-2. Add an `elseif` condition to `init_subspec`:
+**Step 2.** Add an `elseif` condition to `init_subspec`:
 
-    ```julia
-        ...
-        elseif subspec(m) == "ss1"
-            return ss1(m)
-        ...
-    ```
-
+```julia
+    ...
+    elseif subspec(m) == "ss1"
+        return ss1(m)
+    ...
+```
 To construct an instance of `Model990`, `ss1`, call the constructor
 for `Model990` with `ss1` as an argument. For example,
 
-    ```julia
-    m = Model990("ss1")
-    ```
+```julia
+m = Model990("ss1")
+```

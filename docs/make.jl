@@ -15,7 +15,11 @@ makedocs(modules = [DSGE],
                      "Input Data" => "input_data.md",
                      "FRBNY Model Input Data" => "frbny_data.md",
                      "Implementation Details" => "implementation_details.md",
-                     "Full API" => "index.md",
+                     "Solving the Model"      => "solving.md",
+                     "Estimating the Model"   => "estimation.md",
+                     "Algorithms"             => "algorithms.md",
+                     "Contributing to DSGE.jl" => "contributing.md",
+                     "MATLAB to Julia Transition" => "MatlabToJuliaTransition.md",
                      "License" => "license.md"
          ],
          doctest = false # for now

@@ -1,11 +1,15 @@
 # Implementation Details
 
+```@meta
+CurrentModule = DSGE
+```
+
 This section describes important functions and implementation features in
 greater detail. If the user is interested only in running the default model and
 reproducing the estimation results, this section can be ignored. Additional documentation
 can also be found in function documentation or in-line.
 
-This section focuses on what the code does and why, while the code itself
+This section focuses on what the code does and why.  Docstrings and the code itself
 (including comments) provides detailed information regarding *how* these basic
 procedures are implemented.
 
@@ -17,53 +21,15 @@ concrete subtype of `AbstractModel` can be passed to any function defined for
 `AbstractModel`, provided that the concrete type has the fields that the
 function expects to be available.
 
-`Model990` is one example of a concrete subtype of `AbstractModel` that
-implements a single specification of the FRBNY DSGE model.
-See [Editing or Extending a Model](#editing-or-extending-a-model).
+`Model990` is one example of a concrete subtype of `AbstractModel`
+that implements a single specification of the FRBNY DSGE model. All
+model objects must have these fields so that the interface for
+`AbstractModel` objects works correctly.  See [Editing or Extending a
+Model](@ref editing-extending-model) for more detail.
 
-### Parameters and Steady-States
-- `parameters::Vector{AbstractParameter}`: Vector of all time-invariant model
-  parameters.
-- `steady_state::Vector`: Model steady-state values, computed as a function of
-  elements of `parameters`.
-- `keys::Dict{Symbol,Int}`: Maps human-readable names for all model parameters
-  and steady-states to their indices in `parameters` and
-  `steady_state`.
-
-### Inputs to the Measurement and Equilibrium Condition Equations
-- `endogenous_states::Dict{Symbol,Int}`: Maps each state to a column in the
-  measurement and equilibrium condition matrices.
-- `exogenous_shocks::Dict{Symbol,Int}`: Maps each shock to a column in the
-  measurement and equilibrium condition matrices.
-- `expected_shocks::Dict{Symbol,Int}`: Maps each expected shock to a column in
-  the measurement and equilibrium condition matrices.
-- `equilibrium_conditions::Dict{Symbol,Int}`: Maps each equilibrium condition to
-  a row in the model's equilibrium condition matrices.
-- `endogenous_states_augmented::Dict{Symbol,Int}`: Maps lagged states to their
-  columns in the measurement and equilibrium condition equations. These are
-  added after `gensys` solves the model.
-- `observables::Dict{Symbol,Int}`: Maps each observable to a row in the model's
-  measurement equation matrices.
-
-### Model Specification and Settings
-- `spec::ASCIIString`: Model specification number (e.g. `"m990"`). Identifies a
-  particular set of parameters, equilibrium conditions, and measurement equation
-  (equivalently, a concrete model type - for example, models of type `Model990`
-  would have `spec = "m990"`.)
-- `subspec::ASCIIString`: Model sub-specification (e.g. `"ss0"`). Indicates any
-  changes to parameter initialization from `spec`.
-  See [Editing or Extending a Model](#editing-or-extending-a-model) for more
-  details.
-- `settings::Dict{Symbol,Setting}`: Settings/flags that affect computation
-  without changing the economic or mathematical setup of the model.
-- `test_settings::Dict{Symbol,Setting}`: Settings/flags for testing mode
-
-### Other Fields
-- `rng::MersenneTwister`: Random number generator. By default, it is
-  seeded to ensure reproducibility in algorithms that involve randomness
-  (such as Metropolis-Hastings).
-- `testing::Bool`: Indicates whether the model is in testing mode. If `true`,
-  settings from `m.test_settings` are used in place of those in `m.settings`.
+```@docs
+Model990
+```
 
 ## Defining Indices
 
@@ -131,25 +97,11 @@ hierarchy.
     - `SteadyStateParameter{T<:Number}`: Concrete type for steady-state
       parameters.
 
-All `Parameter`s have the following fields:
+All `Parameter`s have the fields defined in `UnscaledParameter`:
 
-- `key::Symbol`: Parameter name. For maximum clarity, `key` should conform to
-  the guidelines established in [CONTRIBUTING.md](CONTRIBUTING.md).
-- `value::T`: Parameter value. Initialized in model space (guaranteed to be
-  between `valuebounds`), but can be transformed between model space and the
-  real line via calls to `transform_to_real_line` and
-  `transform_to_model_space`.
-- `valuebounds::Interval{T}`: Bounds for the parameter's value in model space.
-- `transform_parameterization::Interval{T}`: Parameters used to transform
-  `value` between model space and the real line.
-- `transform::U`: Transformation used to transform `value` between model space
-  and real line.
-- `prior::NullablePrior`: Prior distribution for parameter value.
-- `fixed::Bool`: Indicates whether the parameter's value is fixed rather than
-  estimated.
-- `description::AbstractString`: A short description of the parameter's economic
-  significance.
-- `tex_label::AbstractString`: String for printing the parameter name to LaTeX.
+```@docs
+UnscaledParameter
+```
 
 `ScaledParameters` also have the following fields:
 
@@ -164,10 +116,9 @@ Because the values of `SteadyStateParameter`s are directly computed as a
 function of `ScaledParameter`s and `UnscaledParameter`s, they only require 4
 fields:
 
-- `key::Symbol`
-- `value::T`
-- `description::AbstractString`
-- `tex_label::AbstractString`
+```@docs
+SteadyStateParameter
+```
 
 ## Model Settings
 
@@ -197,45 +148,45 @@ Specifically, when a setting takes on a non-default value, a user-defined
 setting code (along with the setting's value) are appended to all output files
 generated during execution.
 
-The `Setting{T<:Any}` type has the following fields:
+The `Setting{T<:Any}` type is defined as follows:
 
-- `key::Symbol`: Name of setting
-- `value::T`: Value of setting
-- `print::Bool`: Indicates whether to append this setting's code and value to
-  output file names. If true, output file names will include a suffix of the
-  form `_key1=val1_key2=val2` etc. where codes are listed in alphabetical order.
-- `code::AbstractString`: short string (4 characters or less) to print to output
-  file names when `print=true`.
-- `description::AbstractString`: Short description of what the setting is used
-  for.
+```@docs
+Setting
+```
 
-## Estimation
+To update the value of an existing function, the user has two
+options. First, the user may use the `<=` syntax as shown in
+the [Running with Default Settings](@ref) section. However, for this
+to work properly, it is essential that the setting's `key` field be
+exactly the same as that of an existing entry in
+`m.settings`. Otherwise, an additional entry will be added to
+`m.settings` and the old setting will be the one accessed from other
+all routines. A potentially safer, though clunkier, option is to use the [`update!`](@ref) method.
 
-Finds modal parameter values, calculate Hessian matrix at mode, and samples
-from posterior distribution. See `estimate` in
-[estimate.jl](src/estimate/estimate.jl).
+## Type Interfaces
 
-**Main Steps**:
+### `AbstractModel` Interface
 
-- *Initialization*: Read in and transform raw data from `save/input_data/`.
+```@docs
+DSGE.update!
+DSGE.transform_to_model_space!
+DSGE.load_parameters_from_file
+DSGE.specify_mode!
+DSGE.specify_hessian
+```
 
-- *Reoptimize parameter vector*: The main program will call the `csminwel`
-  optimization routine (located in `csminwel.jl`) to find modal parameter
-  estimates.
+### `Parameter` Interface
 
-- *Compute Hessian matrix*: Computing the Hessian matrix to scale the
-  proposal distribution in the Metropolis-Hastings algorithm.
+```@autodocs
+Modules = [DSGE]
+Pages = ["parameters.jl"]
+Order = [:function]
+```
 
-- *Sample from Posterior*: Posterior sampling is performed using the
-  Metropolis-Hastings algorithm. A proposal distribution is constructed centered
-  at the posterior mode and with proposal covariance scaled by the inverse of
-  the Hessian matrix. Settings for the number of sampling blocks and the size of
-  those blocks can be altered as described in
-  [Editing or Extending a Model](#editing-or-extending-a-model).
+### `Setting` Interface
 
-**Remark**: In addition to saving each `mh_thin`-th draw of the parameter
-vector, the estimation program also saves the resulting posterior value and
-transition equation matrices implied by each draw of the parameter vector. This
-is to save time in the forecasting step since that code can avoid recomputing
-those matrices.
-
+```@autodocs
+Modules = [DSGE]
+Pages = ["settings.jl"]
+Order = [:function]
+```

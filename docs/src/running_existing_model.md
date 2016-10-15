@@ -37,8 +37,7 @@ vector, computes the Hessian at the mode, and conducts full posterior parameter 
 To use updated data or alternative user-specified datasets, see [Input Data](@ref).
 
 The user may want to avoid reoptimizing the parameter vector and calculating the
-Hessian matrix at this new vector. Please see [Reoptimizing](@ref)
-below.
+Hessian matrix at this new vector. Please see [Reoptimizing](@ref estimation-reoptimizing).
 
 For more details on changing the model's default settings, parameters, equilibrium
 conditions, etc., see [Advanced Usage](@ref).
@@ -54,6 +53,8 @@ and how to control this behavior.
 The following subdirectory tree indicates the default locations of
 these input and outputs. Square brackets indicate directories in the tree that
 will become relevant as future features are implemented.
+
+*Note that this directory tree is not linked, although it appears to be.*
 
 ```@contents
 Pages = ["io_dirtree.md"]
@@ -79,16 +80,11 @@ m <= Setting(:dataroot, "path/to/my/data/root")
 Utility functions are provided to create paths to input/output files. These should be used
 for best results.
 
-- `inpath`: Return path to directory/file for *input data*, input
-  conditional data, and user-provided sample files, respectively. Try
-  `inpath(m, "data")`, a helpful call that displays the containing
-  directory of input data files. See `?inpath` for more details.
-- `rawpath`: Return path to directory/file for a given output type for *raw model output*.
-    See `?rawpath` for more details.
-- `workpath`: Return path to directory/file for a given output type for *transformed* or
-    *intermediate model output*. See `?workpath` for more details.
-- `tablespath`: Return path to directory/file for a given output type for *results tables*
-    or other *textual results*.
-- `figurespath`: Return path to directory/file for a given output type for *results
-    figures*.
-
+```@docs
+DSGE.inpath
+DSGE.rawpath
+DSGE.logpath
+DSGE.workpath
+DSGE.tablespath
+DSGE.figurespath
+```

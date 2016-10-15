@@ -12,7 +12,7 @@ computational settings.
 - `key::Symbol`: Name of setting
 - `value::T`: Value of setting
 - `print::Bool`: Indicates whether to append this setting's code and value to output file
-  names. If true, output file names will include a suffix of the form _code1=val1_code2=val2
+  names. If true, output file names will include a suffix of the form `_code1=val1_code2=val2`
   etc. where codes are listed in alphabetical order.
 - `code::AbstractString`: string of <=4 characters to print to output file suffixes when
   `print=true`.
@@ -66,6 +66,19 @@ function (<=)(m::AbstractModel, s::Setting)
     end
 end
 
+"""
+```
+update!(a::Setting, b::Setting)
+```
+
+Update `a` with the fields of `b` if:
+
+- The `key` field is updated if `a.key == b.key` 
+- The `print` boolean and `code` string are overwritten if `a.print` is false and
+  `b.print` is true, or `a.print` is true, `b.print` is false, and
+  b.code is non-empty.
+- The `description` field is updated if `b.description` is nonempty
+"""
 function update!(a::Setting, b::Setting)
     # Make sure Setting a can appropriately be updated by b.
     if a.key ≠ b.key

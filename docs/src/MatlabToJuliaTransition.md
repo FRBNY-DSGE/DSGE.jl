@@ -1,5 +1,7 @@
 # The DSGE MATLAB to Julia Transition: Improvements and Challenges
+
 *Zac Cranko, Pearl Li, Spencer Lyon, Erica Moszkowski, Micah Smith, Pablo Winant*  
+
 *December 3, 2015*
 
 The FRBNY DSGE model is a relatively large New Keynesian model augmented with
@@ -7,8 +9,8 @@ financial frictions and a variety of innovations. Here at the Fed, we use it
 both for forecasting and policy analysis. Research using this model includes
 looking at the dynamics of [inflation during the great recession](https://www.newyorkfed.org/medialibrary/media/research/staff_reports/sr618.pdf),
 the effects of [forward guidance](https://www.newyorkfed.org/medialibrary/media/research/staff_reports/sr574.pdf),
-[and](libertystreeteconomics.newyorkfed.org/2015/05/why-are-interest-rates-so-low.html)
-[much](libertystreeteconomics.newyorkfed.org/2014/09/an-assessment-of-the-frbny-dsge-models-real-time-forecasts.html)
+[and](http://libertystreeteconomics.newyorkfed.org/2015/05/why-are-interest-rates-so-low.html)
+[much](http://libertystreeteconomics.newyorkfed.org/2014/09/an-assessment-of-the-frbny-dsge-models-real-time-forecasts.html)
 [more](https://www.newyorkfed.org/medialibrary/media/research/staff_reports/sr695.pdf).
 
 When we were approached by the folks at
@@ -85,7 +87,7 @@ arguments, a serious challenge for usage and human-readability:
     trspec,pmean,pstdd,pshape,TTT_new,RRR_new,CCC_new,valid_new,para_mask,...
     coint,cointadd,cointall,YYcoint0,args_nant_antlags{:});
 ```
-While several of these arguments (`*coint*`) relate to a feature not-implemented
+While several of these arguments (e.g., `coint`) relate to a feature not-implemented
 in Julia, one can still see the excesses of providing so much information about
 the model separately in function calls.
 
@@ -163,7 +165,7 @@ interfaces.)
 
 With a clear interface in place, running new model specifications
 using *DSGE.jl* is relatively straightforward. (See
-[here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/README.md#extending-or-editing-a-model)
+[here](@ref editing-extending-model)
 for detailed instructions).
 
 Julia's JIT compilation provides significant performance boosts in some
@@ -223,8 +225,7 @@ We acknowledge that our package is far from perfect. Possible improvements to
 numerical routines to improve speed. Ultimately, powerful metaprogramming
 support would allow user to specify model equations more literally, in
 mathematical notation. We
-[welcome](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/CONTRIBUTING.md)
-improvements to the existing code from the community.
+[welcome](@ref contributing) improvements to the existing code from the community.
 
 ## Challenges
 

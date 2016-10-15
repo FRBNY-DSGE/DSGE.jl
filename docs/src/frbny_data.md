@@ -1,4 +1,8 @@
-# FRBNY Model 990 Data
+# [FRBNY Model 990 Data](@id frbny-data)
+
+```@meta
+CurrentModule = DSGE
+```
 
 ## Data Series
 
@@ -34,8 +38,8 @@ Louis). Other data sources include:
     found as series `TFPJQ@USECON` (`alpha`) and `TFPKQ@USECON` (`dtfp`) via Haver Analytics. For more details on the series, see
 
 ```
-Fernald, John. "A quarterly, utilization-adjusted series on total factor productivity."
-Federal reserve bank of San Francisco working paper 19 (2012): 20912.
+Fernald, John. "A Quarterly, Utilization-Adjusted Series on Total Factor Productivity."
+Federal Reserve Bank of San Francisco Working Paper 19 (2012): 20912.
 ```
 
 - The *10-year Inflation Expectations* series from the *Survey of Professional
@@ -57,6 +61,7 @@ Gurkaynak, Refet S., Brian Sack, and Jonathan H. Wright. "The U.S. Treasury Yiel
 
 For additional details on the series, including mnemonics and transformations used,
 please see Appendix A.I of
+
 ```
 Del Negro, Marco, Marc P. Giannoni, and Frank Schorfheide. "Inflation in the
 Great Recession and New Keynesian Models." American Economic Journal:
@@ -95,6 +100,7 @@ m <= Setting(:n_anticipated_shocks, 6, true, "nant", "Number of ant. pol. shocks
 
 **2a.** Append `n_anticipated_shocks` columns of `NaN` values to the end of the
        `data` matrix.
+       
 **2b.** Construct a matrix of data, say `ImpliedFFR`, on anticipated policy
        shocks. Define
 

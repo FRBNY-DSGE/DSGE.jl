@@ -18,7 +18,7 @@
 ##### `m990.jl`: Constructs a `Model990` object.
 ##### `eqcond.jl`: Constructs `Model990` equilibrium condition matrices
 ##### `measurement.jl`: Constructs `Model990` measurement equation matrices.
-##### `subspecs.jl`: Code for model sub-specifications is defined here. See [`Editing or Extending a Model`](@ref editing_extending_model) for details on constructing model sub-specifications.
+##### `subspecs.jl`: Code for model sub-specifications is defined here. See [Editing or Extending a Model](@ref editing-extending-model) for details on constructing model sub-specifications.
 ##### `augment_states.jl`: Code for augmenting the state space system after model solution.
 #### [`[m991/]`]: Code for new models should be kept in directories at this level in the directory tree
 ## `test/`: Module test suite.
