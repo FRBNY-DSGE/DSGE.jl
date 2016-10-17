@@ -2,7 +2,7 @@ using Documenter, DSGE, Distributions, DataFrames
 
 makedocs(modules = [DSGE],
          clean = false,
-         format = Documenter.Formats.HTML,
+         format = :html,
          sitename = "DSGE.jl",
          authors = "FRBNY-DSGE",
          linkcheck = !("skiplinks" in ARGS),
