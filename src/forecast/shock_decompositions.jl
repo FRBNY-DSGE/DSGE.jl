@@ -87,7 +87,9 @@ function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
 
             localpart[i_local, states_range, :, :] = states
             localpart[i_local, obs_range,    :, :] = obs
-            localpart[i_local, pseudo_range, :, :] = pseudo
+            if forecast_pseudoobservables(m)
+                localpart[i_local, pseudo_range, :, :] = pseudo
+            end
         end
         return localpart
     end
@@ -178,7 +180,7 @@ function compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
     pseudo = if forecast_pseudo
         zeros(S, npseudo, allperiods, nshocks)
     else
-        Array{S, 3}()
+        zeros(S, 0, 0, 0)
     end
 
     # Define our iteration function

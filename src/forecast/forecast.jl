@@ -83,7 +83,9 @@ function forecast{S<:AbstractFloat}(m::AbstractModel,
 
             localpart[i_local, states_range, :] = states
             localpart[i_local, obs_range,    :] = obs
-            localpart[i_local, pseudo_range, :] = pseudo
+            if forecast_pseudoobservables(m)
+                localpart[i_local, pseudo_range, :] = pseudo
+            end
             localpart[i_local, shocks_range, :] = shocks
         end
         return localpart

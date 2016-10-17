@@ -260,7 +260,9 @@ function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
 
             localpart[i_local, states_range, :] = states
             localpart[i_local, shocks_range, :] = shocks
-            localpart[i_local, pseudo_range, :] = pseudo
+            if forecast_pseudoobservables(m)
+                localpart[i_local, pseudo_range, :] = pseudo
+            end
             localpart[i_local, zend_range,   1:nstates] = zend
         end
         return localpart
