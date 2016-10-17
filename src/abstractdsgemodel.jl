@@ -425,8 +425,8 @@ Transforms `values` from the real line to the model space, and assigns `values[i
 paramter values.
 
 ### Arguments
--`m`: the model object
--`values`: the new values to assign to non-steady-state parameters.
+- `m`: the model object
+- `values`: the new values to assign to non-steady-state parameters.
 """
 function transform_to_model_space!{T<:AbstractFloat}(m::AbstractModel, values::Vector{T})
     new_values = transform_to_model_space(m.parameters, values)
@@ -442,8 +442,8 @@ update!{T<:AbstractFloat}(m::AbstractModel, values::Vector{T})
 Update `m.parameters` with `values`, recomputing the steady-state parameter values.
 
 ### Arguments:
--`m`: the model object
--`values`: the new values to assign to non-steady-state parameters.
+- `m`: the model object
+- `values`: the new values to assign to non-steady-state parameters.
 """
 function update!{T<:AbstractFloat}(m::AbstractModel, values::Vector{T})
     update!(m.parameters, values)
