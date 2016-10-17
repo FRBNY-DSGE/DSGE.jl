@@ -245,6 +245,7 @@ forecast output array. The saved dictionaries include:
 - `state_names::Dict{Symbol, Int}`: saved for `var in [:histstates, :forecaststates, :shockdecstates]`
 - `observable_names::Dict{Symbol, Int}`: saved for `var in [:forecastobs, :shockdecobs]`
 - `pseudoobservable_names::Dict{Symbol, Int}`: saved for `var in [:histpseudo, :forecastpseudo, :shockdecpseudo]`
+- `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for pseudoobservables
 - `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
 """
 function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbol)
