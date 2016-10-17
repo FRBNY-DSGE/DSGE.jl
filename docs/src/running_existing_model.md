@@ -12,7 +12,7 @@ estimate those models.
 ## Running with Default Settings
 
 To run the estimation step in Julia, simply create an instance of the model object and pass
-it to the `estimate` function -- see an [example](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/doc/examples/run_default.jl).
+it to the `estimate` function -- see an [example](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/run_default.jl).
 
 ```julia
 # construct a model object
