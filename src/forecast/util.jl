@@ -279,11 +279,13 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     elseif contains(string(var), "obs")
         write(file, "observable_indices", m.observables)
 
-    # Write pseudo-observable names
+    # Write pseudo-observable names and transforms
     elseif contains(string(var), "pseudo")
-        _, pseudo_mapping = pseudo_measurement(m)
+        pseudo, pseudo_mapping = pseudo_measurement(m)
         write(file, "pseudoobservable_indices", pseudo_mapping.inds)
-
+        rev_transforms = Dict{Symbol,Symbol}([x => symbol(pseudo[x].rev_transform) for x in keys(pseudo)])
+        write(file, "pseudoobservable_revtransforms", rev_transforms)
+        
     # Write shock names
     elseif contains(string(var), "shocks") || contains(string(var), "shockdec")
         write(file, "shock_indices", m.exogenous_shocks)
