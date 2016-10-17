@@ -113,10 +113,42 @@ end
 get_output_vars(m, output_type)
 ```
 
-Returns a vector of `output_vars` corresponding to the `output_type`. See the
-`forecast_all` documentation for a complete list of possible `output_type`s.
+Returns a vector of `output_vars` corresponding to the `output_type`.
+
+### Inputs
+
+- `m::AbstractModel`: model object
+
+- `output_type::Symbol`: forecast routine output to compute. One of:
+
+    - `:states`: smoothed states (history) for all specified conditional data types
+    - `:shocks`: smoothed shocks (history, standardized) for all specified
+      conditional data types
+    - `:shocks_nonstandardized`: smoothed shocks (history, non-standardized) for
+      all specified conditional data types
+    - `:forecast`: forecast of states and observables for all specified
+      conditional data types, as well as shocks that produced them
+    - `:shockdec`: shock decompositions (history) of states and observables for
+      all specified conditional data types
+    - `:dettrend`: deterministic trend (history) of states and observables for
+      all specified conditional data types
+    - `:counter`: counterfactuals (history) of states and observables for all
+      specified conditional data types
+    - `:simple`: smoothed states, forecast of states, forecast of observables
+      for *unconditional* data only
+    - `:all`: smoothed states (history), smoothed shocks (history, standardized), smoothed
+      shocks (history, non-standardized), shock decompositions (history), deterministic
+      trend (history), counterfactuals (history), forecast, forecast shocks drawn, shock
+      decompositions (forecast), deterministic trend (forecast), counterfactuals (forecast)
+
+   Note that some similar outputs may or may not fall under the \"forecast_all\" framework,
+   including:
+
+    - `:mats`: recompute system matrices (TTT, RRR, CCC) given parameters only
+    - `:zend`: recompute final state vector (s_{T}) given parameters only
+    - `:irfs`: impulse response functions
 """
-function get_output_vars(m, output_type)
+function get_output_vars(m::AbstractModel, output_type::Symbol)
     if output_type == :states
         vars = [:histstates,
                 :histpseudo]
@@ -155,6 +187,20 @@ function get_output_vars(m, output_type)
     else
         throw(ArgumentError("Invalid input_type: $(output_type)"))
     end
+end
+
+"""
+```
+get_all_output_vars(m, output_types)
+```
+
+Returns a vector of all output variables corresponding to the vector
+`output_types`. See `get_output_vars` for documentation of all possible elements
+of `output_types`.
+"""
+function get_all_output_vars(m::AbstractModel, output_types::Vector{Symbol})
+    all_output_vars = map(x -> get_output_vars(m, x), output_types)
+    output_vars = union(all_output_vars...)
 end
 
 """
@@ -286,7 +332,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
         write(file, "pseudoobservable_indices", pseudo_mapping.inds)
         rev_transforms = Dict{Symbol,Symbol}([x => symbol(pseudo[x].rev_transform) for x in keys(pseudo)])
         write(file, "pseudoobservable_revtransforms", rev_transforms)
-        
+
     # Write shock names
     elseif contains(string(var), "shocks") || contains(string(var), "shockdec")
         write(file, "shock_indices", m.exogenous_shocks)

@@ -26,52 +26,24 @@ types, and output types.
     - `:full`: forecast using all parameters (full distribution)
     - `:subset`: forecast using a well-defined user-specified subset of draws
 
-- `output_types`: forecast routine outputs to compute, any combination of
-
-    - `:states`: smoothed states (history) for all specified conditional data types
-    - `:shocks`: smoothed shocks (history, standardized) for all specified
-      conditional data types
-    - `:shocks_nonstandardized`: smoothed shocks (history, non-standardized) for
-      all specified conditional data types
-    - `:forecast`: forecast of states and observables for all specified
-      conditional data types, as well as shocks that produced them
-    - `:shockdec`: shock decompositions (history) of states and observables for
-      all specified conditional data types
-    - `:dettrend`: deterministic trend (history) of states and observables for
-      all specified conditional data types
-    - `:counter`: counterfactuals (history) of states and observables for all
-      specified conditional data types
-    - `:simple`: smoothed states, forecast of states, forecast of observables
-      for *unconditional* data only
-    - `:all`: smoothed states (history), smoothed shocks (history, standardized), smoothed
-      shocks (history, non-standardized), shock decompositions (history), deterministic
-      trend (history), counterfactuals (history), forecast, forecast shocks drawn, shock
-      decompositions (forecast), deterministic trend (forecast), counterfactuals (forecast)
-
-   Note that some similar outputs may or may not fall under the \"forecast_all\" framework,
-   including
-    - `:mats`: recompute system matrices (TTT, RRR, CCC) given parameters only
-    - `:zend`: recompute final state vector (s_{T}) given parameters only
-    - `:irfs`: impulse response functions
+- `output_vars::Vector{Symbol}`: vector of desired output variables. See
+  `forecast_one` for documentation of all possible `output_vars`
 
 ### Outputs
 
-None. Output is saved to files returned by `get_output_files(m, input_type,
-output_vars, cond_type)` for each combination of `input_type` and `cond_type`.
+None. Output is saved to files returned by
+`get_output_files(m, input_type, output_vars, cond_type)`
+for each combination of `input_type` and `cond_type`.
 """
 function forecast_all(m::AbstractModel,
-                      cond_types::Vector{Symbol}   = Vector{Symbol}(),
-                      input_types::Vector{Symbol}  = Vector{Symbol}(),
-                      output_types::Vector{Symbol} = Vector{Symbol}())
+                      cond_types::Vector{Symbol}  = Vector{Symbol}(),
+                      input_types::Vector{Symbol} = Vector{Symbol}(),
+                      output_vars::Vector{Symbol} = Vector{Symbol}())
 
     for cond_type in cond_types
         df = load_data(m; cond_type=cond_type, try_disk=true, verbose=:none)
         for input_type in input_types
-            # Take the union of all output variables specified by output_types
-            all_output_vars = map(x -> get_output_vars(m, x), output_types)
-            output_vars = union(all_output_vars...)
-
-            forecast_one(m, df; cond_type=cond_type, input_type=input_type, output_vars = output_vars)
+            forecast_one(m, df; cond_type=cond_type, input_type=input_type, output_vars=output_vars)
         end
     end
 end
