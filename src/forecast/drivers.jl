@@ -38,12 +38,18 @@ for each combination of `input_type` and `cond_type`.
 function forecast_all(m::AbstractModel,
                       cond_types::Vector{Symbol}  = Vector{Symbol}(),
                       input_types::Vector{Symbol} = Vector{Symbol}(),
-                      output_vars::Vector{Symbol} = Vector{Symbol}())
+                      output_vars::Vector{Symbol} = Vector{Symbol}();
+                      procs::Vector{Int}          = [myid()])
 
     for cond_type in cond_types
         df = load_data(m; cond_type=cond_type, try_disk=true, verbose=:none)
         for input_type in input_types
-            forecast_one(m, df; cond_type=cond_type, input_type=input_type, output_vars=output_vars)
+            my_procs = if input_type in [:init, :mode, :mean]
+                [myid()]
+            else
+                procs
+            end
+            forecast_one(m, df; cond_type=cond_type, input_type=input_type, output_vars=output_vars, procs=my_procs)
         end
     end
 end
