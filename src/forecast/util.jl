@@ -210,7 +210,7 @@ get_output_files(m, input_type, output_vars, cond_type)
 
 Compute the appropriate forecast output filenames for model `m`, forecast input
 type `input_type`, and conditional type `cond_type`, for each output variable in
-`output_vars`.
+`output_vars`. Returns a dictionary of file names with one entry for each output_var.
 """
 function get_output_files(m, input_type, output_vars, cond_type)
     additional_file_strings = ASCIIString[]
