@@ -68,6 +68,11 @@ to null values of appropriate types.
 - `input_type::Symbol`: one of the options for `input_type` described in the
   documentation for `forecast_all`
 
+### Keyword Arguments
+
+- `procs::Vector{Int}`: list of worker processes over which to distribute
+  draws. Defaults to `[myid()]`.
+
 ### Outputs
 
 - `params::Matrix{Float64}`: matrix of size `nsim` x `nparams` of parameter
@@ -82,12 +87,21 @@ to null values of appropriate types.
   period state vector draws
 
 where `nsim` is the number of draws saved in Metropolis-Hastings.
+
+### Notes
+
+If `nsim` is not divisible by `jstep * nprocs`, where:
+
+- `jstep = get_jstep(m, nsim)` is the thinning step size for the forecast step
+- `nprocs = length(procs)` is the number of processes over which we distribute draws
+
+then we truncate the draws so that `mod(nsim_new, jstep * nprocs) == 0`.
 """
-function load_draws(m::AbstractModel, input_type::Symbol)
+function load_draws(m::AbstractModel, input_type::Symbol; procs::Vector{Int} = [myid()])
 
     input_file_name = get_input_file(m, input_type)
 
-    # Read infiles and set n_sim based on input_type type
+    # Read infiles
     if input_type in [:mean, :mode]
         tmp = h5open(input_file_name, "r") do f
             map(Float64, read(f, "params"))
@@ -98,7 +112,7 @@ function load_draws(m::AbstractModel, input_type::Symbol)
         CCC  = Array{Float64}(0,0,0)
         zend = Array{Float64}(0,0)
     elseif input_type in [:full]
-        params, TTT, RRR, CCC, zend = h5open(input_file_name, "r") do f
+        h5open(input_file_name, "r") do f
             params = map(Float64, read(f, "mhparams"))
             TTT    = map(Float64, read(f, "mhTTT"))
             RRR    = map(Float64, read(f, "mhRRR"))
@@ -108,7 +122,24 @@ function load_draws(m::AbstractModel, input_type::Symbol)
             else
                 CCC = Array{Float64}(0,0,0)
             end
-            params, TTT, RRR, CCC, zend
+        end
+
+        # Truncate number of draws if necessary
+        nsim = size(params,1)
+        jstep = get_jstep(m, nsim)
+        nprocs = length(procs)
+        remainder = mod(nsim, jstep * nprocs)
+        if remainder != 0
+            nsim_new = nsim - remainder
+            warn("Number of draws read in, $nsim, is not divisible by jstep * nprocs = $(jstep * nprocs). Taking the first $nsim_new draws instead.")
+
+            params = params[1:nsim_new, :]
+            TTT    = TTT[1:nsim_new, :, :]
+            RRR    = RRR[1:nsim_new, :, :]
+            zend   = zend[1:nsim_new, :]
+            if !isempty(CCC)
+                CCC = CCC[1:nsim_new, :, :]
+            end
         end
     elseif input_type in [:init]
         init_parameters!(m)
@@ -375,11 +406,7 @@ function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     procs = reset_procs(m, procs, Nullable(input_type))
 
     # Set up infiles
-    params, TTT, RRR, CCC, zend = load_draws(m, input_type)
-
-    n_sim = size(params,1)
-    jstep = get_jstep(m, n_sim)
-    n_sim_forecast = convert(Int, n_sim/jstep)
+    params, TTT, RRR, CCC, zend = load_draws(m, input_type; procs = procs)
 
     # Populate systems vector
     systems = prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = procs)
