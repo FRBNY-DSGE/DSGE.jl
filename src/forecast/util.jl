@@ -342,3 +342,43 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
         write(file, "shock_indices", m.exogenous_shocks)
     end
 end
+
+function compile_forecast_one(m, df; cond_type = :none, output_vars = [], verbose = :low, procs = [myid()])
+    # Compute mininum number of draws for given jstep and procs
+    jstep = get_setting(m, :forecast_jstep)
+    nprocs = length(procs)
+    min_draws = jstep * nprocs
+
+    # Save temporary input file with min_draws many draws
+    filename      = DSGE.get_input_file(m, :full)
+    filename_temp = joinpath(tempdir(), basename(filename))
+    file      = h5open(filename, "r")
+    file_temp = h5open(filename_temp, "w")
+    for var in names(file)
+        temp = read(file, var)
+        temp = if ndims(temp) == 2
+            temp[1:min_draws, :]
+        elseif ndims(temp) == 3
+            temp[1:min_draws, :, :]
+        end
+        write(file_temp, var, temp)
+    end
+    close(file)
+    close(file_temp)
+
+    # Update forecast input file overrides
+    overrides = forecast_input_file_overrides(m)
+    had_override = haskey(overrides, :full)
+    overrides[:full] = filename_temp
+
+    # Forecast once using small number of draws
+    forecast_outputs = forecast_one(m, df; input_type = :full, cond_type = cond_type,
+                           output_vars = output_vars, verbose = verbose, procs = procs)
+
+    # Revert forecast input file overrides
+    if had_override
+        overrides[:full] = filename
+    else
+        delete!(overrides, :full)
+    end
+end
