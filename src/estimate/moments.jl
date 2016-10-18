@@ -403,7 +403,7 @@ function find_density_bands{T<:AbstractFloat}(draws::Matrix, percent::T; minimiz
     ndraws, nperiods = size(draws)
     band = zeros(2, nperiods)
     n_in_band  = round(Int, percent * ndraws)  # number of draws in the band
-    
+
     for i in 1:nperiods
 
         # Sort response for parameter i such that 1st element is largest
@@ -441,7 +441,7 @@ function find_density_bands{T<:AbstractFloat}(draws::Matrix, percent::T; minimiz
         end
 
         high = low + n_in_band - 1
-        
+
         band[2,i] = draw_variable_i[low]
         band[1,i] = draw_variable_i[high]
     end
@@ -471,7 +471,7 @@ function find_density_bands{T<:AbstractFloat}(draws::Matrix, percents::Vector{T}
 
     for p in percents
         out = find_density_bands(draws, p, minimize = false)
-        
+
         bands[symbol("$(100*p)\% UB")] = vec(out[2,:])
         bands[symbol("$(100*p)\% LB")] = vec(out[1,:])
     end

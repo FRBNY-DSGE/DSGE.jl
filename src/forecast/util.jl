@@ -290,6 +290,7 @@ forecast output array. The saved dictionaries include:
 - `date_indices::Dict{Date, Int}`: saved for all forecast outputs
 - `state_names::Dict{Symbol, Int}`: saved for `var in [:histstates, :forecaststates, :shockdecstates]`
 - `observable_names::Dict{Symbol, Int}`: saved for `var in [:forecastobs, :shockdecobs]`
+- `observable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for observables
 - `pseudoobservable_names::Dict{Symbol, Int}`: saved for `var in [:histpseudo, :forecastpseudo, :shockdecpseudo]`
 - `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for pseudoobservables
 - `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
@@ -325,6 +326,9 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     # Write observable names
     elseif contains(string(var), "obs")
         write(file, "observable_indices", m.observables)
+        rev_transforms =
+            Dict{Symbol,Symbol}([x => symbol(m.observables[x].rev_transform) for x in keys(m.observables)])
+        write(file, "observable_revtransforms", rev_transforms)
 
     # Write pseudo-observable names and transforms
     elseif contains(string(var), "pseudo")
