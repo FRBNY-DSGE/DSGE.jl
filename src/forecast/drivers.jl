@@ -73,7 +73,7 @@ function forecast_all(m::AbstractModel,
 end
 
 """
-`load_draws(m, input_type; verbose = :low, procs = [myid()])`
+`load_draws(m, input_type; subset_inds = [], verbose = :low, procs = [myid()])`
 
 Load and return parameter draws, transition matrices, and final state vectors
 from Metropolis-Hastings. Single draws are reshaped to have additional singleton
@@ -88,6 +88,8 @@ to null values of appropriate types.
 
 ### Keyword Arguments
 
+- `subset_inds::Vector{Int}`: indices specifying the draws we want to use. See
+  `forecast_one` for more detail.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`. If `:low` or greater, prints
   location of input file.
@@ -119,7 +121,8 @@ If `nsim` is not divisible by `jstep * nprocs`, where:
 then we truncate the draws so that `mod(nsim_new, jstep * nprocs) == 0`.
 """
 function load_draws(m::AbstractModel, input_type::Symbol;
-    verbose::Symbol = :low, procs::Vector{Int} = [myid()])
+    subset_inds::Vector{Int} = Vector{Int}(), verbose::Symbol = :low,
+    procs::Vector{Int} = [myid()])
 
     input_file_name = get_input_file(m, input_type)
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -137,16 +140,33 @@ function load_draws(m::AbstractModel, input_type::Symbol;
         CCC  = Array{Float64}(0,0,0)
         zend = Array{Float64}(0,0)
 
-    elseif input_type in [:full]
-        h5open(input_file_name, "r") do f
-            params = map(Float64, read(f, "mhparams"))
-            TTT    = map(Float64, read(f, "mhTTT"))
-            RRR    = map(Float64, read(f, "mhRRR"))
-            zend   = map(Float64, read(f, "mhzend"))
-            if "mhCCC" in names(f)
-                CCC = map(Float64, read(f, "mhCCC"))
-            else
-                CCC = Array{Float64}(0,0,0)
+    elseif input_type in [:full, :subset]
+        if input_type == :full
+            h5open(input_file_name, "r") do f
+                params = map(Float64, read(f, "mhparams"))
+                TTT    = map(Float64, read(f, "mhTTT"))
+                RRR    = map(Float64, read(f, "mhRRR"))
+                zend   = map(Float64, read(f, "mhzend"))
+                if "mhCCC" in names(f)
+                    CCC = map(Float64, read(f, "mhCCC"))
+                else
+                    CCC = Array{Float64}(0,0,0)
+                end
+            end
+        else
+            if isempty(subset_inds)
+                error("Must supply nonempty vector of subset_inds if input_type = subset")
+            end
+            h5open(input_file_name, "r") do f
+                params = map(Float64, read(f, "mhparams")[subset_inds, :])
+                TTT    = map(Float64, read(f, "mhTTT")[subset_inds, :, :])
+                RRR    = map(Float64, read(f, "mhRRR")[subset_inds, :, :])
+                zend   = map(Float64, read(f, "mhzend")[subset_inds, :])
+                if "mhCCC" in names(f)
+                    CCC = map(Float64, read(f, "mhCCC")[subset_inds, :])
+                else
+                    CCC = Array{Float64}(0,0,0)
+                end
             end
         end
 
@@ -235,7 +255,7 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
     if input_type in [:mean, :mode, :init]
         update!(m, vec(params))
         systems = dfill(compute_system(m), (1,), procs)
-    elseif input_type in [:full]
+    elseif input_type in [:full, :subset]
         empty = isempty(CCC)
         nprocs = length(procs);
         systems = DArray((n_sim_forecast,), procs, [nprocs]) do I
@@ -350,7 +370,8 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     n_sim = size(params, 1)
     jstep = convert(Int, n_sim/n_sim_forecast)
 
-    # If we just have one draw of parameters in mode, mean, or init case, then we don't have the
+    # If we just have one draw of parameters in mode, mean, or init case, then we don't have th
+e
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
     if input_type in [:mean, :mode, :init]
         update!(m, vec(params))
@@ -359,7 +380,7 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
         states = dfill(kal[:filt][:, end], (1,), procs);
 
     # If we have many draws, then we must package them into a vector of System objects.
-    elseif input_type in [:full]
+    elseif input_type in [:full, :subset]
         if cond_type in [:none]
             nprocs = length(procs)
             states = DArray((n_sim_forecast,), procs, [nprocs]) do I
@@ -393,7 +414,7 @@ end
 """
 ```
 prepare_forecast_inputs(m, df; input_type = :mode, cond_type = :none,
-    verbose = :low, procs = [myid()])
+    subset_inds = [], verbose = :low, procs = [myid()])
 ```
 
 Load draws for this input type, prepare a System object for each draw, and
@@ -410,6 +431,8 @@ prepare initial state vectors.
 - `input_type::Symbol`: See documentation for `forecast_all`. Defaults to
   `:mode`
 - `cond_type::Symbol`: See documentation for `forecast_all`. Defaults to `:none`
+- `subset_inds::Vector{Int}`: indices specifying the draws we want to use. See
+  `forecast_one` for more detail.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`. If `:low` or greater, prints
   location of input file.
@@ -430,13 +453,15 @@ prepare initial state vectors.
 """
 function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     input_type::Symbol = :mode, cond_type::Symbol = :none,
-    verbose::Symbol = :low, procs::Vector{Int} = [myid()])
+    subset_inds::Vector{Int} = Vector{Int}(), verbose::Symbol = :low,
+    procs::Vector{Int} = [myid()])
 
     # Reset procs to [myid()] if necessary
     procs = reset_procs(m, procs, Nullable(input_type))
 
     # Set up infiles
-    params, TTT, RRR, CCC, zend = load_draws(m, input_type; verbose = verbose, procs = procs)
+    params, TTT, RRR, CCC, zend = load_draws(m, input_type; subset_inds = subset_inds,
+                                      verbose = verbose, procs = procs)
 
     # Populate systems vector
     systems = prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = procs)
@@ -450,7 +475,7 @@ end
 """
 ```
 forecast_one(m, df; input_type = :mode, cond_type = :none, output_vars = [],
-    verbose = :low, procs = [myid()])
+    subset_inds = [], verbose = :low, procs = [myid()])
 ```
 
 Compute, save, and return `output_vars` for input draws given by `input_type`
@@ -469,6 +494,13 @@ and conditional data case given by `cond_type`.
 - `cond_type::Symbol`: See documentation for `forecast_all`. Defaults to `:none`
 - `output_vars::Vector{Symbol}`: vector of desired output variables. See Outputs
   section
+- `subset_inds::Vector{Int}`: indices specifying the draws we want to use. If a
+  more sophisticated selection criterion is desired, the user is responsible for
+  determining the indices corresponding to that criterion. If `input_type` is
+  not `subset`, `subset_inds` will be ignored.
+- `subset_string::AbstractString`: short string identifying the subset to be
+  appended to the output filenames. If `input_type == :subset` and
+  `subset_string` is empty, an error is thrown.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of:
 
@@ -515,7 +547,9 @@ and conditional data case given by `cond_type`.
 """
 function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     input_type::Symbol = :mode, cond_type::Symbol = :none,
-    output_vars::Vector{Symbol} = [], verbose::Symbol = :low,
+    output_vars::Vector{Symbol} = Vector{Symbol}(),
+    subset_inds::Vector{Int} = Vector{Int}(),
+    subset_string::AbstractString = "", verbose::Symbol = :low,
     procs::Vector{Int} = [myid()])
 
     ### 1. Setup
@@ -525,7 +559,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     # Prepare forecast outputs
     forecast_output = Dict{Symbol, DArray{Float64}}()
-    forecast_output_files = get_output_files(m, input_type, output_vars, cond_type)
+    forecast_output_files = get_output_files(m, input_type, output_vars, cond_type;
+                                subset_string = subset_string)
     output_dir = rawpath(m, "forecast")
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -540,10 +575,12 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     end
     if VERBOSITY[verbose] >= VERBOSITY[:high]
         @time systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
-            cond_type = cond_type, procs = procs)
+            cond_type = cond_type, subset_inds = subset_inds, verbose = verbose,
+            procs = procs)
     else
         systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
-            cond_type = cond_type, procs = procs)
+            cond_type = cond_type, subset_inds = subset_inds, verbose = verbose,
+            procs = procs)
     end
 
     nprocs = length(procs)

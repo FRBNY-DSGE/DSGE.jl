@@ -99,10 +99,8 @@ function get_input_file(m, input_type)
         return workpath(m,"estimate","paramsmean.h5")
     elseif input_type == :init
         return ""
-    elseif input_type == :full
+    elseif input_type in [:full, :subset]
         return rawpath(m,"estimate","mhsave.h5")
-    elseif input_type == :subset
-        throw(ArgumentError("Not implemented."))
     else
         throw(ArgumentError("Invalid input_type: $(input_type)"))
     end
@@ -205,16 +203,27 @@ end
 
 """
 ```
-get_output_files(m, input_type, output_vars, cond_type)
+get_output_files(m, input_type, output_vars, cond_type; subset_string = "")
 ```
 
 Compute the appropriate forecast output filenames for model `m`, forecast input
 type `input_type`, and conditional type `cond_type`, for each output variable in
 `output_vars`. Returns a dictionary of file names with one entry for each output_var.
+
+If `input_type == :subset`, then the `subset_string` is also appended to the
+filenames. If in this case `subset_string` is empty, `get_output_files` throws
+an error.
 """
-function get_output_files(m, input_type, output_vars, cond_type)
+function get_output_files(m, input_type, output_vars, cond_type; subset_string = "")
     additional_file_strings = ASCIIString[]
     push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
+    if input_type == :subset
+        if isempty(subset_string)
+            error("Must supply a nonempty subset_string if input_type = subset")
+        else
+            push!(additional_file_strings, "sub=" * subset_string)
+        end
+    end
     push!(additional_file_strings, "cond=" * abbrev_symbol(cond_type))
 
     return [symbol(x) => rawpath(m, "forecast", "$x.jld", additional_file_strings) for x in output_vars]
@@ -327,7 +336,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     elseif contains(string(var), "obs")
         write(file, "observable_indices", m.observables)
         rev_transforms =
-            Dict{Symbol,Symbol}([x => symbol(m.observables[x].rev_transform) for x in keys(m.observables)])
+            Dict{Symbol,Symbol}([x => symbol(m.observable_mappings[x].rev_transform) for x in keys(m.observables)])
         write(file, "observable_revtransforms", rev_transforms)
 
     # Write pseudo-observable names and transforms
@@ -343,42 +352,31 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     end
 end
 
+"""
+```
+compile_forecast_one(m, df; cond_type = :none, output_vars = [], verbose = :low,
+    procs = [myid()])
+```
+
+Run `forecast_one` once to just-in-time compile it, before running a
+full-distribution forecast. `compile_forecast_one` computes the minimum number
+of draws necessary given the forecast thinning step size (`jstep`) and number of
+processes (`nprocs`), i.e. `jstep * nprocs`, and runs a full forecast on those
+draws.
+"""
 function compile_forecast_one(m, df; cond_type = :none, output_vars = [], verbose = :low, procs = [myid()])
     # Compute mininum number of draws for given jstep and procs
     jstep = get_setting(m, :forecast_jstep)
     nprocs = length(procs)
     min_draws = jstep * nprocs
 
-    # Save temporary input file with min_draws many draws
-    filename      = DSGE.get_input_file(m, :full)
-    filename_temp = joinpath(tempdir(), basename(filename))
-    file      = h5open(filename, "r")
-    file_temp = h5open(filename_temp, "w")
-    for var in names(file)
-        temp = read(file, var)
-        temp = if ndims(temp) == 2
-            temp[1:min_draws, :]
-        elseif ndims(temp) == 3
-            temp[1:min_draws, :, :]
-        end
-        write(file_temp, var, temp)
-    end
-    close(file)
-    close(file_temp)
+    # Call forecast_one with init_type = :subset
+    subset_inds = collect(1:min_draws)
+    forecast_outputs = forecast_one(m, df; input_type = :subset, cond_type = cond_type,
+                           output_vars = output_vars, subset_inds = subset_inds,
+                           subset_string = "compile", verbose = verbose, procs = procs)
 
-    # Update forecast input file overrides
-    overrides = forecast_input_file_overrides(m)
-    had_override = haskey(overrides, :full)
-    overrides[:full] = filename_temp
-
-    # Forecast once using small number of draws
-    forecast_outputs = forecast_one(m, df; input_type = :full, cond_type = cond_type,
-                           output_vars = output_vars, verbose = verbose, procs = procs)
-
-    # Revert forecast input file overrides
-    if had_override
-        overrides[:full] = filename
-    else
-        delete!(overrides, :full)
-    end
+    # Delete output files
+    output_files = get_output_files(m, :subset, output_vars, cond_type, subset_string = "compile")
+    map(rm, collect(values(output_files)))
 end
