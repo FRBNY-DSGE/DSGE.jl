@@ -1,6 +1,7 @@
 """
 ```
-forecast_all(m, cond_types, input_types, output_types)
+forecast_all(m, cond_types, input_types, output_types; verbose = :low,
+    procs = [myid()])
 ```
 
 Compute forecasts for all specified combinations of conditional data, input
@@ -29,6 +30,21 @@ types, and output types.
 - `output_vars::Vector{Symbol}`: vector of desired output variables. See
   `forecast_one` for documentation of all possible `output_vars`
 
+### Keyword Arguments
+
+- `verbose::Symbol`: desired frequency of function progress messages printed to
+  standard out. One of:
+
+   - `:none`: No status updates will be reported.
+   - `:low`: Function will report forecast start and input/output locations, as
+     well as when each step (preparing inputs, filtering and smoothing,
+     forecasting, and shock decompositions) is started.
+   - `:high`: Function will report everything in `:low`, as well as elapsed
+     times for each step and the file names being written to.
+
+- `procs::Vector{Int}`: list of worker processes that have been previously added
+  by the user. Defaults to `[myid()]`
+
 ### Outputs
 
 None. Output is saved to files returned by
@@ -39,6 +55,7 @@ function forecast_all(m::AbstractModel,
                       cond_types::Vector{Symbol}  = Vector{Symbol}(),
                       input_types::Vector{Symbol} = Vector{Symbol}(),
                       output_vars::Vector{Symbol} = Vector{Symbol}();
+                      verbose::Symbol             = :low,
                       procs::Vector{Int}          = [myid()])
 
     for cond_type in cond_types
@@ -49,13 +66,14 @@ function forecast_all(m::AbstractModel,
             else
                 procs
             end
-            forecast_one(m, df; cond_type=cond_type, input_type=input_type, output_vars=output_vars, procs=my_procs)
+            forecast_one(m, df; cond_type=cond_type, input_type=input_type,
+                output_vars=output_vars, verbose=verbose, procs=my_procs)
         end
     end
 end
 
 """
-`load_draws(m, input_type)`
+`load_draws(m, input_type; verbose = :low, procs = [myid()])`
 
 Load and return parameter draws, transition matrices, and final state vectors
 from Metropolis-Hastings. Single draws are reshaped to have additional singleton
@@ -70,6 +88,9 @@ to null values of appropriate types.
 
 ### Keyword Arguments
 
+- `verbose::Symbol`: desired frequency of function progress messages printed to
+  standard out. One of `:none`, `:low`, or `:high`. If `:low` or greater, prints
+  location of input file.
 - `procs::Vector{Int}`: list of worker processes over which to distribute
   draws. Defaults to `[myid()]`.
 
@@ -97,9 +118,13 @@ If `nsim` is not divisible by `jstep * nprocs`, where:
 
 then we truncate the draws so that `mod(nsim_new, jstep * nprocs) == 0`.
 """
-function load_draws(m::AbstractModel, input_type::Symbol; procs::Vector{Int} = [myid()])
+function load_draws(m::AbstractModel, input_type::Symbol;
+    verbose::Symbol = :low, procs::Vector{Int} = [myid()])
 
     input_file_name = get_input_file(m, input_type)
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println("Loading draws from $input_file_name")
+    end
 
     # Read infiles
     if input_type in [:mean, :mode]
@@ -111,6 +136,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; procs::Vector{Int} = [
         RRR  = Array{Float64}(0,0,0)
         CCC  = Array{Float64}(0,0,0)
         zend = Array{Float64}(0,0)
+
     elseif input_type in [:full]
         h5open(input_file_name, "r") do f
             params = map(Float64, read(f, "mhparams"))
@@ -141,6 +167,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; procs::Vector{Int} = [
                 CCC = CCC[1:nsim_new, :, :]
             end
         end
+
     elseif input_type in [:init]
         init_parameters!(m)
         tmp = Float64[α.value for α in m.parameters]
@@ -366,7 +393,7 @@ end
 """
 ```
 prepare_forecast_inputs(m, df; input_type = :mode, cond_type = :none,
-    procs = [myid()])
+    verbose = :low, procs = [myid()])
 ```
 
 Load draws for this input type, prepare a System object for each draw, and
@@ -383,6 +410,9 @@ prepare initial state vectors.
 - `input_type::Symbol`: See documentation for `forecast_all`. Defaults to
   `:mode`
 - `cond_type::Symbol`: See documentation for `forecast_all`. Defaults to `:none`
+- `verbose::Symbol`: desired frequency of function progress messages printed to
+  standard out. One of `:none`, `:low`, or `:high`. If `:low` or greater, prints
+  location of input file.
 - `procs::Vector{Int}`: list of worker processes that have been
   previously added by the user. Defaults to `[myid()]`
 
@@ -400,13 +430,13 @@ prepare initial state vectors.
 """
 function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     input_type::Symbol = :mode, cond_type::Symbol = :none,
-    procs::Vector{Int} = [myid()])
+    verbose::Symbol = :low, procs::Vector{Int} = [myid()])
 
     # Reset procs to [myid()] if necessary
     procs = reset_procs(m, procs, Nullable(input_type))
 
     # Set up infiles
-    params, TTT, RRR, CCC, zend = load_draws(m, input_type; procs = procs)
+    params, TTT, RRR, CCC, zend = load_draws(m, input_type; verbose = verbose, procs = procs)
 
     # Populate systems vector
     systems = prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = procs)
@@ -439,6 +469,16 @@ and conditional data case given by `cond_type`.
 - `cond_type::Symbol`: See documentation for `forecast_all`. Defaults to `:none`
 - `output_vars::Vector{Symbol}`: vector of desired output variables. See Outputs
   section
+- `verbose::Symbol`: desired frequency of function progress messages printed to
+  standard out. One of:
+
+   - `:none`: No status updates will be reported.
+   - `:low`: Function will report forecast start and input/output locations, as
+     well as when each step (preparing inputs, filtering and smoothing,
+     forecasting, and shock decompositions) is started.
+   - `:high`: Function will report everything in `:low`, as well as elapsed
+     times for each step and the file names being written to.
+
 - `procs::Vector{Int}`: list of worker processes that have been previously added
   by the user. Defaults to `[myid()]`
 
@@ -483,13 +523,6 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     # Reset procs to [myid()] if necessary
     procs = reset_procs(m, procs, Nullable(input_type))
 
-    # Prepare forecast inputs
-    systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
-        cond_type = cond_type, procs = procs)
-
-    nprocs = length(procs)
-    ndraws = length(systems)
-
     # Prepare forecast outputs
     forecast_output = Dict{Symbol, DArray{Float64}}()
     forecast_output_files = get_output_files(m, input_type, output_vars, cond_type)
@@ -497,8 +530,24 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("\nForecasting input_type = $input_type, cond_type = $cond_type...")
+        println("Start time: $(now())")
         println("Forecast outputs will be saved in $output_dir")
     end
+
+    # Prepare forecast inputs
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println("\nPreparing forecast inputs...")
+    end
+    if VERBOSITY[verbose] >= VERBOSITY[:high]
+        @time systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
+            cond_type = cond_type, procs = procs)
+    else
+        systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
+            cond_type = cond_type, procs = procs)
+    end
+
+    nprocs = length(procs)
+    ndraws = length(systems)
 
     # Inline definition s.t. the dicts forecast_output and forecast_output_files are accessible
     function write_forecast_outputs(vars::Vector{Symbol})
@@ -533,8 +582,16 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     if !isempty(intersect(output_vars, filterandsmooth_vars)) || cond_type in [:semi, :full]
 
-        histstates, histshocks, histpseudo, zends =
-            filterandsmooth_all(m, df, systems; cond_type = cond_type, procs = procs)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("\nFiltering and smoothing $(intersect(output_vars, hist_vars))...")
+        end
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
+            @time histstates, histshocks, histpseudo, zends =
+                filterandsmooth_all(m, df, systems; cond_type = cond_type, procs = procs)
+        else
+            histstates, histshocks, histpseudo, zends =
+                filterandsmooth_all(m, df, systems; cond_type = cond_type, procs = procs)
+        end
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
@@ -568,8 +625,16 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks]
 
     if !isempty(intersect(output_vars, forecast_vars))
-        forecaststates, forecastobs, forecastpseudo, forecastshocks =
-            forecast(m, systems, states; procs = procs)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("\nForecasting $(intersect(output_vars, forecast_vars))...")
+        end
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
+            @time forecaststates, forecastobs, forecastpseudo, forecastshocks =
+                forecast(m, systems, states; procs = procs)
+        else
+            forecaststates, forecastobs, forecastpseudo, forecastshocks =
+                forecast(m, systems, states; procs = procs)
+        end
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
@@ -621,8 +686,16 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     ### 4. Shock Decompositions
 
     if !isempty(intersect(output_vars, shockdec_vars))
-        shockdecstates, shockdecobs, shockdecpseudo =
-            shock_decompositions(m, systems, histshocks; procs = procs)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("\nComputing shock decompositions for $(intersect(output_vars, shockdec_vars))...")
+        end
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
+            @time shockdecstates, shockdecobs, shockdecpseudo =
+                shock_decompositions(m, systems, histshocks; procs = procs)
+        else
+            shockdecstates, shockdecobs, shockdecpseudo =
+                shock_decompositions(m, systems, histshocks; procs = procs)
+        end
 
         forecast_output[:shockdecstates] = shockdecstates
         forecast_output[:shockdecobs]    = shockdecobs
@@ -635,5 +708,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     # Return only saved elements of dict
     filter!((k, v) -> k in output_vars, forecast_output)
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println("\nForecast complete: $(now())")
+    end
     return forecast_output
 end
