@@ -113,12 +113,14 @@ where `nsim` is the number of draws saved in Metropolis-Hastings.
 
 ### Notes
 
-If `nsim` is not divisible by `jstep * nprocs`, where:
+If `nsim_thinned` is not divisible by `nprocs`, where:
 
 - `jstep = get_jstep(m, nsim)` is the thinning step size for the forecast step
+- `nsim_thinned = convert(Int, floor(nsim / jstep))` is the number of draws
+  after thinning in the forecast step
 - `nprocs = length(procs)` is the number of processes over which we distribute draws
 
-then we truncate the draws so that `mod(nsim_new, jstep * nprocs) == 0`.
+then we truncate the draws so that `mod(nsim_thinned, nprocs) == 0`.
 """
 function load_draws(m::AbstractModel, input_type::Symbol;
     subset_inds::Vector{Int} = Vector{Int}(), verbose::Symbol = :low,
@@ -173,11 +175,12 @@ function load_draws(m::AbstractModel, input_type::Symbol;
         # Truncate number of draws if necessary
         nsim = size(params,1)
         jstep = get_jstep(m, nsim)
+        nsim_thinned = convert(Int, floor(nsim / jstep))
         nprocs = length(procs)
-        remainder = mod(nsim, jstep * nprocs)
+        remainder = mod(nsim_thinned, nprocs)
         if remainder != 0
             nsim_new = nsim - remainder
-            warn("Number of draws read in, $nsim, is not divisible by jstep * nprocs = $(jstep * nprocs). Taking the first $nsim_new draws instead.")
+            warn("After thinning by $jstep, the number of draws read in, $nsim, is not divisible by nprocs = $nprocs. Taking the first $nsim_new draws instead.")
 
             params = params[1:nsim_new, :]
             TTT    = TTT[1:nsim_new, :, :]
@@ -250,7 +253,7 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
     # Setup
     n_sim = size(params,1)
     jstep = get_jstep(m, n_sim)
-    n_sim_forecast = convert(Int, n_sim/jstep)
+    n_sim_forecast = convert(Int, floor(n_sim / jstep))
 
     if input_type in [:mean, :mode, :init]
         update!(m, vec(params))
@@ -368,7 +371,7 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     # Setup
     n_sim_forecast = length(systems)
     n_sim = size(params, 1)
-    jstep = convert(Int, n_sim/n_sim_forecast)
+    jstep = convert(Int, floor(n_sim / n_sim_forecast))
 
     # If we just have one draw of parameters in mode, mean, or init case, then we don't have th
 e

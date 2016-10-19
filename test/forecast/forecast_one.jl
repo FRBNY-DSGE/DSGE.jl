@@ -34,10 +34,10 @@ DSGE.compile_forecast_one(m, df; cond_type = :none, output_vars = output_vars,
 # Check error handling for input_type = :subset
 @test_throws ErrorException forecast_one(m, df; input_type = :subset, cond_type = :none,
                                 output_vars = output_vars, subset_inds = collect(1:10),
-                                subset_string = "", verbose = :none)
+                                subset_string = "", verbose = :none, procs = my_procs)
 @test_throws ErrorException forecast_one(m, df; input_type = :subset, cond_type = :none,
                                 output_vars = output_vars, subset_inds = Vector{Int}(),
-                                subset_string = "test", verbose = :none)
+                                subset_string = "test", verbose = :none, procs = my_procs)
 
 # Run all forecast combinations
 for input_type in [:init, :mode, :full]
