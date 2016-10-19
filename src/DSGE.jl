@@ -61,8 +61,8 @@ module DSGE
         # estimate/
         kalman_filter, kalman_filter_2part, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
-        metropolis_hastings, compute_parameter_covariance, compute_moments,
-        find_density_bands, prior,
+        metropolis_hastings, compute_parameter_covariance,
+        prior,
 
         # forecast/
         filter, filter_all, filterandsmooth_all, filterandsmooth,
@@ -84,7 +84,10 @@ module DSGE
         hpadjust, oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
         logtopct_annualized_percapita, logtopct_annualized, loglevelto4qpct_annualized,
         loglevelto4qpct_annualized,
-        parse_data_series, collect_data_transforms
+        parse_data_series, collect_data_transforms,
+
+        # analysis/
+        find_density_bands, compute_moments, compute_means_bands
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
@@ -124,6 +127,9 @@ module DSGE
     include("forecast/forecast.jl")
     include("forecast/shock_decompositions.jl")
     include("forecast/drivers.jl")
+
+    include("analysis/moments.jl")
+    include("analysis/compute_means_bands.jl")
 
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")
