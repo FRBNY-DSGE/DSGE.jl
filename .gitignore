@@ -17,3 +17,7 @@
 **/**/*.*~
 **/**/\#*\#
 **/**/.juliahistory
+
+# Documenter.jl related
+docs/build
+docs/site
