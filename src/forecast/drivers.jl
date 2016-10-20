@@ -373,8 +373,7 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     n_sim = size(params, 1)
     jstep = convert(Int, floor(n_sim / n_sim_forecast))
 
-    # If we just have one draw of parameters in mode, mean, or init case, then we don't have th
-e
+    # If we just have one draw of parameters in mode, mean, or init case, then we don't have the
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
     if input_type in [:mean, :mode, :init]
         update!(m, vec(params))
@@ -451,8 +450,8 @@ prepare initial state vectors.
 
 ### Notes
 
-`prepare_forecast_inputs` calls `prepare_systems` and `prepare_states`. See
-  those functions for thorough documentation.
+`prepare_forecast_inputs` calls `load_draws`, `prepare_systems`, and
+  `prepare_states`. See those functions for thorough documentation.
 """
 function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     input_type::Symbol = :mode, cond_type::Symbol = :none,

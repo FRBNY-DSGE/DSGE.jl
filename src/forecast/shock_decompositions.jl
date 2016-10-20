@@ -23,12 +23,12 @@ where `S<:AbstractFloat`.
 
 ### Outputs
 
-- `states::DArray{S, 3}`: array of size `ndraws` x `nstates` x `nperiods` of
-  state shock decompositions for each draw
-- `obs::DArray{S, 3}`: array of size `ndraws` x `nobs` x `nperiods` of
-  observable shock decompositions for each draw
-- `pseudo::DArray{S, 3}`: array of size `ndraws` x `npseudo` x `nperiods` of
-  pseudo-observable shock decompositions for each draw. If
+- `states::DArray{S, 4}`: array of size `ndraws` x `nstates` x `nperiods` x
+  `nshocks` of state shock decompositions for each draw
+- `obs::DArray{S, 4}`: array of size `ndraws` x `nobs` x `nperiods` x `nshocks`
+  of observable shock decompositions for each draw
+- `pseudo::DArray{S, 4}`: array of size `ndraws` x `npseudo` x `nperiods` x
+  `nshocks` of pseudo-observable shock decompositions for each draw. If
   `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
 
 where `nperiods` is the number of quarters between `shockdec_startdate(m)` and
@@ -128,11 +128,11 @@ where `S<:AbstractFloat`.
 
 ### Outputs
 
-- `states::Matrix{S}`: matrix of size `nstates` x `nperiods` of state shock
-  decompositions
-- `obs::Matrix{S}`: matrix of size `nobs` x `nperiods` of observable shock
-  decompositions
-- `pseudo::Matrix{S}`: matrix of size `npseudo` x `nperiods` of
+- `states::Array{S, 3}`: matrix of size `nstates` x `nperiods` x `nshocks` of
+  state shock decompositions
+- `obs::Array{S, 3}`: matrix of size `nobs` x `nperiods` x `nshocks` of
+  observable shock decompositions
+- `pseudo::Array{S, 3}`: matrix of size `npseudo` x `nperiods` x `nshocks` of
   pseudo-observable shock decompositions. If the provided `Z_pseudo` and
   `D_pseudo` matrices are empty, then `pseudo` will be empty.
 

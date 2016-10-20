@@ -201,7 +201,7 @@ where `S<:AbstractFloat`.
 overridden by calling
 
 ```
-m <= Setting(:forecast_smoother, :kalman_smoother))
+m <= Setting(:forecast_smoother, :kalman_smoother)
 ```
 
 before calling `filterandsmooth_all`.
