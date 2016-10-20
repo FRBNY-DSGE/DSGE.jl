@@ -207,18 +207,45 @@ end
 
 """
 ```
-get_output_files(m, input_type, output_vars, cond_type; subset_string = "")
+get_output_files(m, base, input_type, output_vars, cond_type; subset_string = "")
 ```
 
-Compute the appropriate forecast output filenames for model `m`, forecast input
+Compute the appropriate output filenames for model `m`, forecast input
 type `input_type`, and conditional type `cond_type`, for each output variable in
 `output_vars`. Returns a dictionary of file names with one entry for each output_var.
 
-If `input_type == :subset`, then the `subset_string` is also appended to the
+### Notes
+- If `input_type == :subset`, then the `subset_string` is also appended to the
 filenames. If in this case `subset_string` is empty, `get_output_files` throws
 an error.
+
+- `base` can be any string, but is likely \"forecast\" or \"meansbands\". An example use case is given below:
+
+```julia
+output_files = get_output_files(m, \"forecast\", :mode, [:forecastpseudo], :none)
+```
+
+The entry corresponding to the `:forecastpseudo` key will look something like:
+
+```julia
+\"$saveroot/m990/ss2/forecast/raw/forecastpseudo_cond=none_para=mode_vint=REF.jld\"
+```
+
+Another example:
+
+```julia
+output_files = get_output_files(m, \"forecast\", :mode, [:forecastpseudo], :none, workpath)
+```
+
+The entry corresponding to the `:forecastpseudo` key will look something like:
+
+```julia
+\"$saveroot/m990/ss2/forecast/work/forecastpseudo_cond=none_para=mode_vint=REF.jld\"
+```
 """
-function get_output_files(m, input_type, output_vars, cond_type; subset_string = "")
+function get_output_files{S<:AbstractString}(m::AbstractModel, base::S,
+                     input_type::Symbol, output_vars::Vector{Symbol}, cond_type::Symbol;
+                     pathfcn::Function = rawpath, subset_string::S = "")
     additional_file_strings = ASCIIString[]
     push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
     if input_type == :subset
@@ -230,7 +257,7 @@ function get_output_files(m, input_type, output_vars, cond_type; subset_string =
     end
     push!(additional_file_strings, "cond=" * abbrev_symbol(cond_type))
 
-    return [symbol(x) => rawpath(m, "forecast", "$x.jld", additional_file_strings) for x in output_vars]
+    return [symbol(x) => pathfcn(m, base, "$x.jld", additional_file_strings) for x in output_vars]
 end
 
 typealias DVector{T, A} DArray{T, 1, A}

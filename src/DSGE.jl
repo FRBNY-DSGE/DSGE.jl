@@ -87,7 +87,7 @@ module DSGE
         parse_data_series, collect_data_transforms,
 
         # analysis/
-        find_density_bands, compute_moments, compute_means_bands
+        find_density_bands, compute_moments, compute_means_bands, compute_means_bands_all, MeansBands
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
@@ -118,7 +118,6 @@ module DSGE
     include("estimate/hessian.jl")
     include("estimate/hessizero.jl")
     include("estimate/estimate.jl")
-    include("estimate/moments.jl")
 
     include("forecast/util.jl")
     include("forecast/smoothers.jl")
