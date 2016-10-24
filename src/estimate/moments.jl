@@ -69,10 +69,8 @@ Tabulates parameter moments in 3 LaTeX tables:
 
 1. For MAIN parameters, a list of prior means, prior standard deviations, posterior means,
    and 90% bands for posterior draws
-
 2. For LESS IMPORTANT parameters, a list of the prior means, prior standard deviations,
    posterior means and 90% bands for posterior draws.
-
 3. A list of prior means and posterior means
 
 ### Arguments

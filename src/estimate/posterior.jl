@@ -26,8 +26,8 @@ log Pr(Θ|data)  = log Pr(data|Θ)   + log Pr(Θ)
 ```
 
 ### Arguments
--`m`: the model object
--`data`: matrix of data for observables
+- `m`: the model object
+- `data`: matrix of data for observables
 
 ### Optional Arguments
 -`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the log likelihood and the
@@ -57,14 +57,14 @@ posterior!{T<:AbstractFloat}(m::AbstractModel{T}, parameters::Vector{T}, data::M
 Evaluates the log posterior density at `parameters`.
 
 ### Arguments
--`m`: The model object
--`parameters`: New values for the model parameters
+- `m`: The model object
+- `parameters`: New values for the model parameters
 - `data`: Matrix of input data for observables
 
 ### Optional Arguments
--`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the log likelihood and the
+- `mh`: Whether metropolis_hastings is the caller. If `mh=true`, the log likelihood and the
   transition matrices for the zero-lower-bound period are also returned.
--`catch_errors`: Whether or not to catch errors of type `GensysError` or `ParamBoundsError`.
+- `catch_errors`: Whether or not to catch errors of type `GensysError` or `ParamBoundsError`.
   If `mh = true`, both should always be caught.
 """
 function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
@@ -103,13 +103,13 @@ zero-lower-bound period, then we filter over the 2 periods separately.  Otherwis
 filter over the main sample all at once.
 
 ### Arguments
--`m`: The model object
--`data`: matrix of data for observables
+- `m`: The model object
+- `data`: matrix of data for observables
 
 ### Optional Arguments
--`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the transition matrices for
+- `mh`: Whether metropolis_hastings is the caller. If `mh=true`, the transition matrices for
   the zero-lower-bound period are returned in a dictionary.
--`catch_errors`: If `mh = true`, `GensysErrors` should always be caught.
+- `catch_errors`: If `mh = true`, `GensysErrors` should always be caught.
 """
 function likelihood{T<:AbstractFloat}(m::AbstractModel,
                                       data::Matrix{T};
