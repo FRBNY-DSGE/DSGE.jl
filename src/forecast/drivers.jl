@@ -1,6 +1,6 @@
 """
 ```
-forecast_all(m, cond_types, input_types, output_types; verbose = :low,
+forecast_all(m, cond_types, input_types, output_vars; verbose = :low,
     procs = [myid()])
 ```
 
@@ -13,19 +13,23 @@ types, and output types.
 
 - `cond_types::Vector{Symbol}`: conditional data types, any combination of
 
-    - `:none`: no conditional data
-    - `:semi`: use \"semiconditional data\" - average of quarter-to-date
-      observations for high frequency series
-    - `:full`: use \"conditional data\" - semiconditional plus nowcasts for
-      desired observables
+```
+  - `:none`: no conditional data
+  - `:semi`: use \"semiconditional data\" - average of quarter-to-date
+    observations for high frequency series
+  - `:full`: use \"conditional data\" - semiconditional plus nowcasts for
+    desired observables
+```
 
 - `input_types::Vector{Symbol}`: which set of parameters to use, any combination of
 
-    - `:mode`: forecast using the modal parameters only
-    - `:mean`: forecast using the mean parameters only
-    - `:init`: forecast using the initial parameter values only
-    - `:full`: forecast using all parameters (full distribution)
-    - `:subset`: forecast using a well-defined user-specified subset of draws
+```
+  - `:mode`: forecast using the modal parameters only
+  - `:mean`: forecast using the mean parameters only
+  - `:init`: forecast using the initial parameter values only
+  - `:full`: forecast using all parameters (full distribution)
+  - `:subset`: forecast using a well-defined user-specified subset of draws
+```
 
 - `output_vars::Vector{Symbol}`: vector of desired output variables. See
   `forecast_one` for documentation of all possible `output_vars`
@@ -35,12 +39,14 @@ types, and output types.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of:
 
-   - `:none`: No status updates will be reported.
-   - `:low`: Function will report forecast start and input/output locations, as
-     well as when each step (preparing inputs, filtering and smoothing,
-     forecasting, and shock decompositions) is started.
-   - `:high`: Function will report everything in `:low`, as well as elapsed
-     times for each step and the file names being written to.
+```
+  - `:none`: No status updates will be reported.
+  - `:low`: Function will report forecast start and input/output locations, as
+    well as when each step (preparing inputs, filtering and smoothing,
+    forecasting, and shock decompositions) is started.
+  - `:high`: Function will report everything in `:low`, as well as elapsed
+    times for each step and the file names being written to.
+```
 
 - `procs::Vector{Int}`: list of worker processes that have been previously added
   by the user. Defaults to `[myid()]`
@@ -501,17 +507,19 @@ and conditional data case given by `cond_type`.
   determining the indices corresponding to that criterion. If `input_type` is
   not `subset`, `subset_inds` will be ignored.
 - `subset_string::AbstractString`: short string identifying the subset to be
-  appended to the output filenames. If `input_type == :subset` and
+  appended to the output filenames. If `input_type = :subset` and
   `subset_string` is empty, an error is thrown.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of:
 
-   - `:none`: No status updates will be reported.
-   - `:low`: Function will report forecast start and input/output locations, as
-     well as when each step (preparing inputs, filtering and smoothing,
-     forecasting, and shock decompositions) is started.
-   - `:high`: Function will report everything in `:low`, as well as elapsed
-     times for each step and the file names being written to.
+```
+  - `:none`: No status updates will be reported.
+  - `:low`: Function will report forecast start and input/output locations, as
+    well as when each step (preparing inputs, filtering and smoothing,
+    forecasting, and shock decompositions) is started.
+  - `:high`: Function will report everything in `:low`, as well as elapsed
+    times for each step and the file names being written to.
+```
 
 - `procs::Vector{Int}`: list of worker processes that have been previously added
   by the user. Defaults to `[myid()]`
@@ -521,21 +529,24 @@ and conditional data case given by `cond_type`.
 - `forecast_outputs::Dict{Symbol, DArray{Float64}}`: dictionary of forecast
   outputs. Keys are `output_vars`, which is some subset of:
 
-  + `:histstates::DArray{Float64, 3}`: smoothed historical states
-  + `:histobs::DArray{Float64, 3}`: smoothed historical data
-  + `:histpseudo::DArray{Float64, 3}`: smoothed historical pseudo-observables
-    (if a pseudomeasurement equation has been provided for this model type)
-  + `:histshocks::DArray{Float64, 3}`: smoothed historical shocks
-  + `:forecaststates::DArray{Float64, 3}`: forecasted states
-  + `:forecastobs::DArray{Float64, 3}`: forecasted observables
-  + `:forecastpseudo::DArray{Float64, 3}`: forecasted pseudo-observables (if a
-    pseudomeasurement equation has been provided for this model type)
-  + `:forecastshocks::DArray{Float64, 3}`: forecasted shocks
-  + `:shockdecstates::DArray{Float64, 4}`: state shock decompositions
-  + `:shockdecobs::DArray{Float64, 4}`: observable shock decompositions
-  + `:shockdecpseudo::DArray{Float64, 4}`: pseudo-observable shock
-    decompositions (if a pseudomeasurement equation has been provided for this
+```
+  - `:histstates`: `DArray{Float64, 3}` of smoothed historical states
+  - `:histobs`: `DArray{Float64, 3}` of smoothed historical data
+  - `:histpseudo`: `DArray{Float64, 3}` of smoothed historical
+    pseudo-observables (if a pseudo-measurement equation has been provided for
+    this model type)
+  - `:histshocks`: `DArray{Float64, 3}` of smoothed historical shocks
+  - `:forecaststates`: `DArray{Float64, 3}` of forecasted states
+  - `:forecastobs`: `DArray{Float64, 3}` of forecasted observables
+  - `:forecastpseudo`: `DArray{Float64, 3}` of forecasted pseudo-observables (if
+    a pseudo-measurement equation has been provided for this model type)
+  - `:forecastshocks`: `DArray{Float64, 3}` of forecasted shocks
+  - `:shockdecstates`: `DArray{Float64, 4}` of state shock decompositions
+  - `:shockdecobs`: `DArray{Float64, 4}` of observable shock decompositions
+  - `:shockdecpseudo`: `DArray{Float64, 4}` of pseudo-observable shock
+    decompositions (if a pseudo-measurement equation has been provided for this
     model type)
+```
 
 ### Notes
 

@@ -119,32 +119,36 @@ Returns a vector of `output_vars` corresponding to the `output_type`.
 
 - `output_type::Symbol`: forecast routine output to compute. One of:
 
-    - `:states`: smoothed states (history) for all specified conditional data types
-    - `:shocks`: smoothed shocks (history, standardized) for all specified
-      conditional data types
-    - `:shocks_nonstandardized`: smoothed shocks (history, non-standardized) for
-      all specified conditional data types
-    - `:forecast`: forecast of states and observables for all specified
-      conditional data types, as well as shocks that produced them
-    - `:shockdec`: shock decompositions (history) of states and observables for
-      all specified conditional data types
-    - `:dettrend`: deterministic trend (history) of states and observables for
-      all specified conditional data types
-    - `:counter`: counterfactuals (history) of states and observables for all
-      specified conditional data types
-    - `:simple`: smoothed states, forecast of states, forecast of observables
-      for *unconditional* data only
-    - `:all`: smoothed states (history), smoothed shocks (history, standardized), smoothed
-      shocks (history, non-standardized), shock decompositions (history), deterministic
-      trend (history), counterfactuals (history), forecast, forecast shocks drawn, shock
-      decompositions (forecast), deterministic trend (forecast), counterfactuals (forecast)
+```
+  - `:states`: smoothed states (history) for all specified conditional data types
+  - `:shocks`: smoothed shocks (history, standardized) for all specified
+    conditional data types
+  - `:shocks_nonstandardized`: smoothed shocks (history, non-standardized) for
+    all specified conditional data types
+  - `:forecast`: forecast of states and observables for all specified
+    conditional data types, as well as shocks that produced them
+  - `:shockdec`: shock decompositions (history) of states and observables for
+    all specified conditional data types
+  - `:dettrend`: deterministic trend (history) of states and observables for
+    all specified conditional data types
+  - `:counter`: counterfactuals (history) of states and observables for all
+    specified conditional data types
+  - `:simple`: smoothed states, forecast of states, forecast of observables
+    for *unconditional* data only
+  - `:all`: smoothed states (history), smoothed shocks (history, standardized), smoothed
+    shocks (history, non-standardized), shock decompositions (history), deterministic
+    trend (history), counterfactuals (history), forecast, forecast shocks drawn, shock
+    decompositions (forecast), deterministic trend (forecast), counterfactuals (forecast)
+```
 
-   Note that some similar outputs may or may not fall under the \"forecast_all\" framework,
-   including:
+  Note that some similar outputs may or may not fall under the `forecast_all` framework,
+  including:
 
-    - `:mats`: recompute system matrices (TTT, RRR, CCC) given parameters only
-    - `:zend`: recompute final state vector (s_{T}) given parameters only
-    - `:irfs`: impulse response functions
+```
+  - `:mats`: recompute system matrices (TTT, RRR, CCC) given parameters only
+  - `:zend`: recompute final state vector (s_{T}) given parameters only
+  - `:irfs`: impulse response functions
+```
 """
 function get_output_vars(m::AbstractModel, output_type::Symbol)
     if output_type == :states

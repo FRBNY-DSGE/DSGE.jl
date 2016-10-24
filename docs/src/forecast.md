@@ -7,11 +7,11 @@ CurrentModule = DSGE
 ## Procedure
 
 In the forecast step, we compute smoothed histories, forecast, and compute shock
-decompositions for states, observables, shocks, and so-called
-pseudo-observables. (Like observables, pseudo-observables are linear
-combinations of the states, but we may not necessarily have historical data for
-them. The canonical example is the output gap, the difference between GDP and
-potential output.) The main function used in the forecast step is `forecast_one`.
+decompositions for states, observables, shocks, and pseudo-observables. To run a
+forecast on one combination of input parameter type (e.g. modal parameters or
+full-distribution) and conditional type, call `forecast_one`. To run several
+combinations, use `forecast_all`, which iterates through all combinations,
+calling `forecast_one` on each.
 
 **Main Steps:**
 
@@ -29,11 +29,10 @@ potential output.) The main function used in the forecast step is `forecast_one`
 
 It is not necessary to do all of filtering and smoothing, forecasting, and
 computing shock decompositions in one call to `forecast_one`. Which steps are
-run depends on the keyword argument `output_vars` passed in. To forecast using
-one combination of input type, conditional data type, and output variables,
-specify the keyword arguments as below:
+run depends on which `output_vars` are passed in.
 
 ```@docs
+DSGE.forecast_all
 DSGE.forecast_one
 ```
 
@@ -45,6 +44,14 @@ m = Model990()
 df = load_data(m)
 forecast_outputs = forecast_one(m, df; input_type = :mode, cond_type = :none,
                        output_vars = [:forecaststates, forecastobs])
+```
+
+To forecast states and observables at the mode for all conditional types, call:
+
+
+```julia
+m = Model990()
+forecast_all(m, [:none, :semi, :full], [:mode], [:forecaststates, :forecastobs])
 ```
 
 **Full-Distribution Forecasts**
@@ -82,7 +89,7 @@ DSGE.prepare_forecast_inputs
 ```
 
 By default, the draws are loaded from the file whose path is given by
-`get_input_file(m, input_type)`. However, you can override the default input
+[`get_input_file`](@ref). However, you can override the default input
 file for a given input type by adding entries to the `Dict{Symbol, ASCIIString}`
 returned from `forecast_input_file_overrides(m)`. For example:
 

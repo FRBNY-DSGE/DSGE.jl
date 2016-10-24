@@ -11,8 +11,10 @@ estimate those models.
 
 ## Running with Default Settings
 
-To run the estimation step in Julia, simply create an instance of the model object and pass
-it to the `estimate` function -- see an [example](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/run_default.jl).
+To estimate and forecast in Julia, simply create an instance of the model object
+and call `estimate` and `forecast_all`. A minimal
+[example](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/examples/run_default.jl)
+is reproduced below:
 
 ```julia
 # estimate as of 2015-Q3 using the default data vintage from 2015 Nov 27
@@ -29,19 +31,34 @@ estimate(m)
 
 # produce LaTeX tables of parameter moments
 compute_moments(m)
+
+# forecast using 10 processes
+my_procs = addprocs(10)
+@everywhere using DSGE
+
+m <= Setting(:use_parallel_workers, true)
+output_vars = get_output_vars(m, :simple)
+forecast_all(m, [:none, :semi, :full], [:mode, :full], output_vars; procs = my_procs)
+rmprocs(my_procs)
 ```
+
+For more details on changing the model's default settings, parameters, equilibrium
+conditions, etc., see [Advanced Usage](@ref).
 
 By default, the `estimate` routine loads the dataset, reoptimizes the initial parameter
 vector, computes the Hessian at the mode, and conducts full posterior parameter sampling.
 (The initial parameter vector used is specified in the model's constructor.)
+Further options for estimation are described in [Estimating the Model](@ref):
 
-To use updated data or alternative user-specified datasets, see [Input Data](@ref).
+- To use updated data or alternative user-specified datasets, see [Input Data](@ref).
+- The user may want to avoid reoptimizing the parameter vector and calculating
+  the Hessian matrix at this new vector. Please see [Reoptimizing](@ref
+  estimation-reoptimizing).
 
-The user may want to avoid reoptimizing the parameter vector and calculating the
-Hessian matrix at this new vector. Please see [Reoptimizing](@ref estimation-reoptimizing).
+For more information on the many types of forecasts that can be run on an
+existing or user-defined model, see [Forecasting](@ref).
 
-For more details on changing the model's default settings, parameters, equilibrium
-conditions, etc., see [Advanced Usage](@ref).
+
 
 ## Input/Output Directory Structure
 
