@@ -128,6 +128,7 @@ module DSGE
     include("forecast/drivers.jl")
 
     include("analysis/moments.jl")
+    include("analysis/meansbands.jl")
     include("analysis/compute_means_bands.jl")
 
     include("models/m990/m990.jl")
