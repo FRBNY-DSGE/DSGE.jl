@@ -207,19 +207,35 @@ end
 
 """
 ```
-get_output_files(m, base, input_type, output_vars, cond_type; subset_string = "")
+get_output_files(m, base, input_type, output_vars, cond_type;
+                 [pathfcn = rawpath], [subset_string = ""], [fileformat = :jld])
 ```
 
 Compute the appropriate output filenames for model `m`, forecast input
 type `input_type`, and conditional type `cond_type`, for each output variable in
 `output_vars`. Returns a dictionary of file names with one entry for each output_var.
 
+### Arguments
+
+- `base::AbstractString`: the output subdirectory corresponding to
+  this general stage of the DSGE procedure. Examples could be `estimate` or `forecast`.
+- See `forecast_one` for descriptions of other non-keyword arguments.
+
+### Optional Arguments
+
+- `pathfcn::Function`: should be one of `rawpath`, `workpath`,
+  `inpath`, `figurespath`, `logpath`. Defaults to `rawpath`.
+- `subset_string::AbstractString`: subset identifier for when `input_type=:subset`
+- `fileformat::Symbol`: file extension, without a period. Defaults to
+  `:jld`, though `:h5` is another common option.
+
+
 ### Notes
 - If `input_type == :subset`, then the `subset_string` is also appended to the
 filenames. If in this case `subset_string` is empty, `get_output_files` throws
 an error.
 
-- `base` can be any string, but is likely \"forecast\" or \"meansbands\". An example use case is given below:
+- `base` can be any string, but is likely \"forecast\". An example use case is given below:
 
 ```julia
 output_files = get_output_files(m, \"forecast\", :mode, [:forecastpseudo], :none)
@@ -245,7 +261,8 @@ The entry corresponding to the `:forecastpseudo` key will look something like:
 """
 function get_output_files{S<:AbstractString}(m::AbstractModel, base::S,
                      input_type::Symbol, output_vars::Vector{Symbol}, cond_type::Symbol;
-                     pathfcn::Function = rawpath, subset_string::S = "")
+                     pathfcn::Function = rawpath, subset_string::S = "",
+                     fileformat = :jld)
     additional_file_strings = ASCIIString[]
     push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
     if input_type == :subset
@@ -257,7 +274,8 @@ function get_output_files{S<:AbstractString}(m::AbstractModel, base::S,
     end
     push!(additional_file_strings, "cond=" * abbrev_symbol(cond_type))
 
-    return [symbol(x) => pathfcn(m, base, "$x.jld", additional_file_strings) for x in output_vars]
+    return convert(Dict{Symbol, ASCIIString},
+                   [symbol(x) => pathfcn(m, base, "$x.$fileformat", additional_file_strings) for x in output_vars])
 end
 
 typealias DVector{T, A} DArray{T, 1, A}
@@ -401,13 +419,13 @@ function compile_forecast_one(m, df; cond_type = :none, output_vars = [], verbos
     nprocs = length(procs)
     min_draws = jstep * nprocs
 
-    # Call forecast_one with init_type = :subset
+    # Call forecast_one with input_type = :subset
     subset_inds = collect(1:min_draws)
     forecast_outputs = forecast_one(m, df; input_type = :subset, cond_type = cond_type,
                            output_vars = output_vars, subset_inds = subset_inds,
                            subset_string = "compile", verbose = verbose, procs = procs)
 
     # Delete output files
-    output_files = get_output_files(m, :subset, output_vars, cond_type, subset_string = "compile")
+    output_files = get_output_files(m, "forecast", :subset, output_vars, cond_type, subset_string = "compile")
     map(rm, collect(values(output_files)))
 end

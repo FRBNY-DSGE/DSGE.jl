@@ -572,7 +572,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     # Prepare forecast outputs
     forecast_output = Dict{Symbol, DArray{Float64}}()
-    forecast_output_files = get_output_files(m, input_type, output_vars, cond_type;
+    forecast_output_files = get_output_files(m, "forecast", input_type, output_vars, cond_type;
                                 subset_string = subset_string)
     output_dir = rawpath(m, "forecast")
 

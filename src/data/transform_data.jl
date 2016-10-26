@@ -27,7 +27,7 @@ for the observables given in `cond_full_names(m)` or `cond_semi_names(m)`.
 """
 function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol = :none, verbose::Symbol = :low)
 
-    population_mnemonic = parse_population_mnemonic(m)[1] 
+    population_mnemonic = parse_population_mnemonic(m)[1]
     n_obs, _ = size(levels)
 
     # Step 1: HP filter population forecasts, if they're being used
@@ -41,7 +41,7 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             println("Loading population forecast...")
         end
-        
+
         # load population forecast
         population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
         pop_forecast = readtable(population_forecast_file)
@@ -75,7 +75,7 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
     filtered_population_recorded = filtered_population[1:end-n_population_forecast_obs+1]
     filtered_population_forecast = filtered_population[end-n_population_forecast_obs+1:end]
 
-    # filtered growth rates 
+    # filtered growth rates
     dlpopulation_recorded          = difflog(population_recorded[population_mnemonic])
     dlfiltered_population_recorded = difflog(filtered_population_recorded)
 
@@ -88,7 +88,7 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
     transformed[:date] = levels[:date]
 
     data_transforms = collect_data_transforms(m)
-    
+
     for series in keys(data_transforms)
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             println("Transforming series $series...")
@@ -123,6 +123,6 @@ function collect_data_transforms(m; direction=:fwd)
     for obs in keys(m.observable_mappings)
         data_transforms[obs] = getfield(m.observable_mappings[obs], symbol(string(direction) * "_transform"))
     end
-    
-    data_transforms    
+
+    data_transforms
 end
