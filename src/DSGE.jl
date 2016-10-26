@@ -87,7 +87,8 @@ module DSGE
         parse_data_series, collect_data_transforms,
 
         # analysis/
-        find_density_bands, compute_moments, compute_means_bands, compute_means_bands_all, MeansBands
+        find_density_bands, compute_moments, compute_means_bands, compute_means_bands_all, MeansBands,
+        meansbands_matrix_all, meansbands_matrix
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
@@ -130,6 +131,7 @@ module DSGE
     include("analysis/moments.jl")
     include("analysis/meansbands.jl")
     include("analysis/compute_means_bands.jl")
+    include("analysis/meansbands_to_matrix.jl")
 
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")
