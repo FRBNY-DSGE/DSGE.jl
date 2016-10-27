@@ -206,7 +206,6 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
     end
 
     # make DataFrames for means and bands
-    sort!(date_list)
     means = DataFrame(date = date_list)
     bands = Dict{Symbol,DataFrame}()
 
