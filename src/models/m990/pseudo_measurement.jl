@@ -35,7 +35,7 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
     ##########################################################
     ## PSEUDO-OBSERVABLE EQUATIONS
     ##########################################################
-    
+
     ## Output
     ZZ_pseudo[pseudo_inds[:y_t],endo[:y_t]] = 1.
     pseudo[:y_t].name = "Output Growth"
@@ -45,7 +45,7 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
     ZZ_pseudo[pseudo_inds[:y_f_t],endo[:y_f_t]] = 1.
     pseudo[:y_f_t].name = "Flexible Output Growth"
     pseudo[:y_f_t].longname = "Output that would obtain in a flexible-price economy."
-   
+
     ## Natural Rate
     ZZ_pseudo[pseudo_inds[:NaturalRate],endo[:r_f_t]] = 1.
     DD_pseudo[pseudo_inds[:NaturalRate]]              = 100.*(m[:rstar]-1.)
@@ -53,22 +53,22 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
     pseudo[:NaturalRate].name = "Real Natural Rate"
     pseudo[:NaturalRate].longname = "The real interest rate that would prevail in a flexible-price economy."
     pseudo[:NaturalRate].rev_transform = quartertoannual
-    
-    ## π_t 
+
+    ## π_t
     ZZ_pseudo[pseudo_inds[:π_t],endo[:π_t]] = 1.
     DD_pseudo[pseudo_inds[:π_t]]            = 100*(m[:π_star]-1);
 
     pseudo[:π_t].name = "Inflation"
     pseudo[:π_t].longname = "Inflation"
     pseudo[:π_t].rev_transform = quartertoannual
-    
+
     ## Output Gap
     ZZ_pseudo[pseudo_inds[:OutputGap],endo[:y_t]] = 1;
     ZZ_pseudo[pseudo_inds[:OutputGap],endo[:y_f_t]] = -1;
 
     pseudo[:OutputGap].name = "Output Gap"
     pseudo[:OutputGap].longname = "Output Gap"
-    
+
     ## Ex Ante Real Rate
     ZZ_pseudo[pseudo_inds[:ExAnteRealRate],endo[:R_t]]  = 1;
     ZZ_pseudo[pseudo_inds[:ExAnteRealRate],endo[:Eπ_t]] = -1;
@@ -78,7 +78,7 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
     pseudo[:ExAnteRealRate].longname = "Ex Ante Real Rate"
     pseudo[:ExAnteRealRate].rev_transform = quartertoannual
 
-    ## Long Run Inflation 
+    ## Long Run Inflation
     ZZ_pseudo[pseudo_inds[:LongRunInflation],endo[:π_star_t]] = 1.
     DD_pseudo[pseudo_inds[:LongRunInflation]]                 = 100. *(m[:π_star]-1.)
 
@@ -97,7 +97,7 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
 
     pseudo[:Wages].name = "Wages"
     pseudo[:Wages].longname = "Wages"
-    
+
     ## Flexible Wages
     ZZ_pseudo[pseudo_inds[:FlexibleWages],endo[:w_f_t]] = 1.
 
@@ -136,7 +136,7 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
     DD_pseudo[pseudo_inds[:NominalFFR]] = m[:Rstarn]
     pseudo[:NominalFFR].name     = "Nominal FFR"
     pseudo[:NominalFFR].longname = "Nominal FFR at an annual rate"
-    pseudo[:ExAnteRealRate].rev_transform = quartertoannual
+    pseudo[:NominalFFR].rev_transform = quartertoannual
 
     ## Real FFR
     ZZ_pseudo[pseudo_inds[:RealFFR], endo[:R_t]] = 1.
@@ -145,7 +145,7 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
     pseudo[:RealFFR].name     = "Real FFR"
     pseudo[:RealFFR].longname = "Real FFR at an annual rate"
     pseudo[:RealFFR].rev_transform = quartertoannual
-    
+
     ## Expected nominal natural rate
     ZZ_pseudo[pseudo_inds[:ExpectedNominalNaturalRate], endo[:r_f_t]] = 1.
     ZZ_pseudo[pseudo_inds[:ExpectedNominalNaturalRate], endo[:Eπ_t]]  = 1.
