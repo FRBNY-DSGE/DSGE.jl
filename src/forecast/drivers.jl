@@ -119,14 +119,12 @@ where `nsim` is the number of draws saved in Metropolis-Hastings.
 
 ### Notes
 
-If `nsim_thinned` is not divisible by `nprocs`, where:
+If `nsim` is not divisible by `jstep * nprocs`, where:
 
 - `jstep = get_jstep(m, nsim)` is the thinning step size for the forecast step
-- `nsim_thinned = convert(Int, floor(nsim / jstep))` is the number of draws
-  after thinning in the forecast step
 - `nprocs = length(procs)` is the number of processes over which we distribute draws
 
-then we truncate the draws so that `mod(nsim_thinned, nprocs) == 0`.
+then we truncate the draws so that `mod(nsim_new, jstep * nprocs) == 0`.
 """
 function load_draws(m::AbstractModel, input_type::Symbol;
     subset_inds::Vector{Int} = Vector{Int}(), verbose::Symbol = :low,
@@ -181,12 +179,11 @@ function load_draws(m::AbstractModel, input_type::Symbol;
         # Truncate number of draws if necessary
         nsim = size(params,1)
         jstep = get_jstep(m, nsim)
-        nsim_thinned = convert(Int, floor(nsim / jstep))
         nprocs = length(procs)
-        remainder = mod(nsim_thinned, nprocs)
+        remainder = mod(nsim, jstep * nprocs)
         if remainder != 0
             nsim_new = nsim - remainder
-            warn("After thinning by $jstep, the number of draws read in, $nsim, is not divisible by nprocs = $nprocs. Taking the first $nsim_new draws instead.")
+            warn("Number of draws read in, $nsim, is not divisible by jstep * nprocs = $(jstep * nprocs). Taking the first $nsim_new draws instead.")
 
             params = params[1:nsim_new, :]
             TTT    = TTT[1:nsim_new, :, :]
@@ -259,7 +256,7 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
     # Setup
     n_sim = size(params,1)
     jstep = get_jstep(m, n_sim)
-    n_sim_forecast = convert(Int, floor(n_sim / jstep))
+    n_sim_forecast = convert(Int, n_sim/jstep)
 
     if input_type in [:mean, :mode, :init]
         update!(m, vec(params))
@@ -269,7 +266,7 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
         nprocs = length(procs);
         systems = DArray((n_sim_forecast,), procs, [nprocs]) do I
             draw_inds = first(I)
-            ndraws_local = Int(n_sim_forecast / nprocs)
+            ndraws_local = convert(Int, n_sim_forecast/nprocs)
             localpart = Vector{System{Float64}}(ndraws_local)
 
             for i in draw_inds
@@ -377,7 +374,7 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
     # Setup
     n_sim_forecast = length(systems)
     n_sim = size(params, 1)
-    jstep = convert(Int, floor(n_sim / n_sim_forecast))
+    jstep = convert(Int, n_sim/n_sim_forecast)
 
     # If we just have one draw of parameters in mode, mean, or init case, then we don't have the
     # pre-computed system matrices. We now recompute them here by running the Kalman filter.
@@ -393,7 +390,7 @@ function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
             nprocs = length(procs)
             states = DArray((n_sim_forecast,), procs, [nprocs]) do I
                 draw_inds = first(I)
-                ndraws_local = Int(n_sim_forecast / nprocs)
+                ndraws_local = convert(Int, n_sim_forecast/nprocs)
                 localpart = Vector{Vector{Float64}}(ndraws_local)
 
                 for i in draw_inds
