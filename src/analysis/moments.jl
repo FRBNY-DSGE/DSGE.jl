@@ -399,6 +399,12 @@ function find_density_bands{T<:AbstractFloat}(draws::Matrix, percent::T; minimiz
     end
 
     ndraws, nperiods = size(draws)
+
+    if ndraws == 1
+        band = repmat(draws, 2, 1)
+        return band
+    end
+
     band = zeros(2, nperiods)
     n_in_band  = round(Int, percent * ndraws)  # number of draws in the band
 
