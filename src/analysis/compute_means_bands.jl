@@ -185,9 +185,11 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
     end
 
     # make sure date lists are valid
-    date_list       = collect(keys(date_inds))   # array of actual dates
-    date_inds_order = collect(values(date_inds)) # array of date indices
+    date_list       = collect(keys(date_inds))   # unsorted array of actual dates
+    date_inds_order = collect(values(date_inds)) # unsorted array of date indices
     check_consistent_order(date_list, date_inds_order)
+    sort!(date_list, by = x -> date_inds[x])
+    sort!(date_inds_order)
 
     # TODO
     if product == :shockdec
