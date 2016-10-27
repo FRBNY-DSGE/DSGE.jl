@@ -132,6 +132,7 @@ module DSGE
     include("analysis/meansbands.jl")
     include("analysis/compute_means_bands.jl")
     include("analysis/meansbands_to_matrix.jl")
+    include("analysis/util.jl")
 
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")

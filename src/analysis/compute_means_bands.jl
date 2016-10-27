@@ -1,12 +1,16 @@
 """
 ```
-compute_means_bands{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
+compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                                                output_vars::Vector{Symbol}, cond_type::Symbol;
-                                               density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9])
+                                               density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                                               subset_string = "", population_forecast_file = "")
 
 compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol, output_vars::Vector{Symbol},
                                                cond_type::Symbol, forecast_files::Dict{Symbol,S};
-                                               density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9])
+                                               density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                                               subset_string = "", output_dir = "",
+                                               population_forecast_file = "")
+
 ```
 
 Computes means and bands for pseudoobservables and observables, and writes results to a file. Two
@@ -16,6 +20,7 @@ appeals to the second method. Users can optionally skip construction
 of a model object and manually enter `forecast_files`.
 
 ### Input Arguments
+
 - `m`: model object
 - `input_type`: see `forecast_all`
 - `output_vars`: see `forecast_one`
@@ -23,18 +28,42 @@ of a model object and manually enter `forecast_files`.
 - `forecast_files`: dictionary mapping an output_var to the filename
   containing forecasts for that output_var. Keys should be one of the following:
   `:histpseudo, :forecastpseudo, :shockdecpseudo, :forecastobs, :shockdecobs`.
+
+### Keyword Arguments
+
+- `density_bands`: a vector of percent values (between 0 and 1) for which to compute density bands.
+- `subset_string`: subset identifier string (the value "subs=value" in the forecast output file identifier string). Only
+  to be used when `input_type == :subset`.
+- `population_forecast_file:` if you have population forecast data,
+  this is the filepath identifying where it is stored. In the method
+  that accepts a model object, if `use_population_forecast(m) ==
+  true`, the following file is used, if it exists:
 """
 function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                                                output_vars::Vector{Symbol}, cond_type::Symbol;
                                                density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
-                                               subset_string = "", population_forecast_file = "")
+                                               subset_string = "", population_forecast_file = "",
+                                               load_dataset::Bool = true)
 
     # Get population forecast file
     population_forecast_file = if isempty(population_forecast_file)
-        guess = inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
-        isfile(guess) ? guess : ""
+        guess = if use_population_forecast(m)
+            inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
+        else
+            ""
+        end
+
+        guess
     else
         population_forecast_file
+    end
+
+    # Load main dataset - required for some transformations
+    data = load_dataset ? df_to_matrix(m, load_data(m)) : Matrix{T}()
+    hist_end_index = if cond_type in [:semi, :full]
+        n_mainsample_periods(m) - 1
+    else
+        n_mainsample_periods(m)
     end
 
     # Get names of files that the forecast wrote
@@ -45,23 +74,24 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
     compute_means_bands_all(input_type, output_vars, cond_type, forecast_output_files,
                             density_bands = density_bands, subset_string = subset_string,
                             output_dir = workpath(m,"forecast",""),
-                            population_forecast_file = population_forecast_file)
+                            population_forecast_file = population_forecast_file,
+                            hist_end_index = hist_end_index, data = data)
 end
-
-
 function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                                                output_vars::Vector{Symbol},
                                                cond_type::Symbol,
                                                forecast_output_files::Dict{Symbol,S};
-                                               density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                                               density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                                subset_string = "",
                                                output_dir = "",
-                                               population_forecast_file = "")
+                                               population_forecast_file = "",
+                                               hist_end_index::Int = 0,
+                                               data = Matrix{T}())
 
     # read in population forecast file (if it's provided)
     pop_forecast = if !isempty(population_forecast_file)
         println("Reading population forecasts from $population_forecast_file\n")
-        readcsv(population_forecast_file)
+        convert(Array{Float64}, readtable(population_forecast_file)[:POPULATION])
     else
         warn("No population forecast supplied.")
         []
@@ -88,7 +118,9 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
         mb = compute_means_bands(input_type, output_var, cond_type,
                                  forecast_output_files, density_bands = density_bands,
                                  subset_string = subset_string,
-                                 population_forecast = pop_forecast)
+                                 population_forecast = pop_forecast,
+                                 hist_end_index = hist_end_index,
+                                 data = data)
 
         # write to file
         filepath = mb_files[output_vars[i]]
@@ -99,13 +131,15 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
     end
 end
 
-function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
+function compute_means_bands{S<:AbstractString}(input_type::Symbol,
                                                     output_var::Symbol,
                                                     cond_type::Symbol,
                                                     forecast_output_files::Dict{Symbol,S};
-                                                    density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                                                    density_bands = [0.5, 0.6, 0.7, 0.8, 0.9],
                                                     subset_string::S = "",
-                                                    population_forecast = [])
+                                                    population_forecast = [],
+                                                    hist_end_index::Int = 0,
+                                                    data = Matrix())
 
     # Determine whether we should compute means and bands for pseudos or observables
     class = if contains(string(output_var), "pseudo")
@@ -130,15 +164,15 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
 
     # open correct input file
     forecast_output_file = forecast_output_files[output_var]
-    metadata, data = jldopen(forecast_output_file, "r") do jld
+    metadata, fcast_output = jldopen(forecast_output_file, "r") do jld
 
         # read metadata
         metadata = read_forecast_metadata(jld)
 
         # read the DArray using read_darray
-        data = DSGE.read_darray(jld)
+        fcast_output = DSGE.read_darray(jld)
 
-        metadata, data
+        metadata, fcast_output
     end
 
     transforms, inds, date_inds = if class == :pseudo
@@ -157,7 +191,16 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
 
     # TODO
     if product == :shockdec
-        return compute_means_bands_shockdec(data, transforms, inds, date_list, date_inds_order)
+        return compute_means_bands_shockdec(fcast_output, transforms, inds, date_list, date_inds_order)
+    end
+
+    # Ensure population forecast is same length as fcast_output.
+    # For forecasts, the third dimension of the fcast_output matrix is the number of periods.
+    population_forecast = if product in [:forecast]
+        nperiods = size(fcast_output, 3)
+        resize_population_forecast(population_forecast, nperiods)
+    else
+        population_forecast
     end
 
     # make DataFrames for means and bands
@@ -171,20 +214,25 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
     for (series, ind) in inds
         # apply transformation to all draws
         transform = parse_transform(transforms[series])
-        println(transform)
         ex = if transform in [:logtopct_annualized]
-            Expr(:call, :map, transform, squeeze(data[:,ind,date_inds_order],2), population_forecast)
+            Expr(:call, transform, squeeze(fcast_output[:,ind,date_inds_order],2), population_forecast')
+        elseif transform in [:loglevelto4qpct_annualized]
+            println("size of data: $(size(data))")
+            println(size(squeeze(fcast_output[:,ind,date_inds_order],2)))
+            println("end_index: $hist_end_index")
+            Expr(:call, transform, squeeze(fcast_output[:,ind,date_inds_order],2), data[ind,:], hist_end_index)
         else
-            Expr(:call, :map, transform, squeeze(data[:,ind,date_inds_order],2))
+            Expr(:call, :map, transform, squeeze(fcast_output[:,ind,date_inds_order],2))
         end
-        transformed_data = eval(ex)
+
+        transformed_fcast_output = eval(ex)
 
         # compute bands
-        bands_one = find_density_bands(transformed_data, density_bands, minimize=false)
+        bands_one = find_density_bands(transformed_fcast_output, density_bands, minimize=false)
         bands_one[:date] = date_list
 
         # compute the mean and bands across draws and add to dataframe
-        means[series] = vec(mean(transformed_data,1))
+        means[series] = vec(mean(transformed_fcast_output,1))
         bands[series] = bands_one
     end
 
@@ -200,7 +248,7 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
 end
 
 
-function compute_means_bands_shockdec(data, transforms, inds, date_list, date_inds_order)
+function compute_means_bands_shockdec(fcast_output, transforms, inds, date_list, date_inds_order)
 
     # do *not* apply transform
 
