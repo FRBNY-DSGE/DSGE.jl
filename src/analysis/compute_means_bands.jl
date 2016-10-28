@@ -141,6 +141,11 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
                                                     hist_end_index::Int = 0,
                                                     data = Matrix())
 
+    # Return only one set of bands if we read in only one draw
+    if input_type in [:init, :mode, :mean]
+        density_bands = [1.]
+    end
+
     # Determine whether we should compute means and bands for pseudos or observables
     class = if contains(string(output_var), "pseudo")
         :pseudo
