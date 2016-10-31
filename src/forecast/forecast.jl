@@ -151,7 +151,7 @@ function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
 
     # Populate shocks matrix
     if isempty(shocks)
-        shocks = zeros(nshocks, horizon)
+        shocks = zeros(S, nshocks, horizon)
 
         # Draw shocks if necessary
         if !forecast_kill_shocks(m)
@@ -160,7 +160,7 @@ function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
                 Distributions.TDist(forecast_tdist_df_val(m))
             else
                 # Use normally distributed shocks
-                DegenerateMvNormal(zeros(nshocks), sqrt(system[:QQ]))
+                DegenerateMvNormal(zeros(S, nshocks), sqrt(system[:QQ]))
             end
 
             for t in 1:horizon
@@ -169,12 +169,20 @@ function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
         end
     end
 
-    compute_forecast(system, z0, shocks)
+    # Determine whether to enforce the zero lower bound in the forecast
+    enforce_zlb = forecast_enforce_zlb(m)
+    ind_r = m.observables[:obs_nominalrate]
+    ind_r_sh = m.exogenous_shocks[:rm_sh]
+    zlb_value = forecast_zlb_value(m)
+
+    compute_forecast(system, z0, shocks; enforce_zlb = enforce_zlb,
+        ind_r = ind_r, ind_r_sh = ind_r_sh, zlb_value = zlb_value)
 end
 
 
 function compute_forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
-    shocks::Matrix{S})
+    shocks::Matrix{S}; enforce_zlb::Bool = false, ind_r::Int = -1,
+    ind_r_sh::Int = -1, zlb_value::S = 0.13/4)
 
     # Unpack system
     T, R, C = system[:TTT], system[:RRR], system[:CCC]
@@ -186,12 +194,15 @@ function compute_forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
         Matrix{S}(), Vector{S}()
     end
 
-    compute_forecast(T, R, C, Q, Z, D, Z_pseudo, D_pseudo, z0, shocks)
+    compute_forecast(T, R, C, Q, Z, D, Z_pseudo, D_pseudo, z0, shocks;
+        enforce_zlb = enforce_zlb, ind_r = ind_r, ind_r_sh = ind_r_sh,
+        zlb_value = zlb_value)
 end
 
 function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
     C::Vector{S}, Q::Matrix{S}, Z::Matrix{S}, D::Vector{S}, Z_pseudo::Matrix{S},
-    D_pseudo::Vector{S}, z0::Vector{S}, shocks::Matrix{S})
+    D_pseudo::Vector{S}, z0::Vector{S}, shocks::Matrix{S}; enforce_zlb::Bool = false,
+    ind_r::Int = -1, ind_r_sh::Int = -1, zlb_value::S = 0.13/4)
 
     # Setup
     nshocks = size(R, 2)
@@ -204,10 +215,26 @@ function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
     iterate(z_t1, ϵ_t) = C + T*z_t1 + R*ϵ_t
 
     # Iterate state space forward
-    states = zeros(nstates, horizon)
+    states = zeros(S, nstates, horizon)
     states[:, 1] = iterate(z0, shocks[:, 1])
     for t in 2:horizon
         states[:, t] = iterate(states[:, t-1], shocks[:, t])
+
+        # Change monetary policy shock to account for 0.25 interest rate bound
+        interest_rate_forecast = getindex(D + Z*states[:, t], ind_r)
+        if enforce_zlb && interest_rate_forecast[1] < zlb_value
+            # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
+            shocks[ind_r_sh, t] = 0.
+            shocks[ind_r_sh, t] = (zlb_value - D[ind_r] - Z[ind_r, :]*iterate(states[:, t-1], shocks[:, t])) /
+                                      (Z[ind_r, :]*RRR[:, ind_r_sh])
+
+            # Forecast again with new shocks
+            states[:, t] = iterate(states[:, t-1], shocks[:, t])
+
+            # Confirm procedure worked
+            interest_rate_forecast = getindex(D + Z*states[:, t], ind_r)
+            @assert interest_rate_forecast >= zlb_value
+        end
     end
 
     # Apply measurement and pseudo-measurement equations

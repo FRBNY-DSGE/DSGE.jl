@@ -97,6 +97,8 @@ function default_settings!(m::AbstractModel)
         "Forecast thinning step (in addition to MH thinning step")
     settings[:forecast_enforce_zlb] = Setting(:forecast_enforce_zlb, true,
         "Enforce zero lower bound in forecast periods")
+    settings[:forecast_zlb_value] = Setting(:forecast_zlb_value, 0.13/4,
+        "Value of the zero lower bound in forecast periods, if we choose to enforce it")
     settings[:shockdec_startdate] = Setting(:shockdec_startdate, Nullable{Date}(),
         "Date of start of shock decomposition output period. If null, then shockdec starts at date_mainsample_start")
     settings[:shockdec_enddate] = Setting(:shockdec_enddate, Nullable{Date}(),
