@@ -69,12 +69,8 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
     population_mnemonic = Nullable(parse_population_mnemonic(m)[1])
 
     ## Step 2: Load main dataset - required for some transformations
-    data = load_dataset ? df_to_matrix(m, load_data(m)) : Matrix{T}()
-    hist_end_index = if cond_type in [:semi, :full]
-        n_mainsample_periods(m) - 1
-    else
-        n_mainsample_periods(m)
-    end
+    data = load_dataset ? df_to_matrix(m, load_data(m, cond_type = cond_type)) : Matrix{T}()
+    hist_end_index = index_forecast_start(m) - 1
 
     ## Step 3: Get names of files that the forecast wrote
     forecast_output_files = DSGE.get_output_files(m, "forecast", input_type,
@@ -289,11 +285,12 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
     for (series, ind) in variable_indices
         # apply transformation to all draws
         transform = parse_transform(transforms[series])
-        ex = if transform in [:logtopct_annualized]
+        ex = if transform in [:logtopct_annualized_percapita]
             pop_fcast = convert(Array{Float64}, population_forecast[mnemonic]')
             Expr(:call, transform, squeeze(fcast_output[:,ind,date_indices_order],2), pop_fcast)
-        elseif transform in [:loglevelto4qpct_annualized]
-            Expr(:call, transform, squeeze(fcast_output[:,ind,date_indices_order],2), data[ind,:], hist_end_index)
+        elseif transform in [:loglevelto4qpct_annualized_percapita]
+            pop_fcast = convert(Array{Float64}, population_forecast[mnemonic]')
+            Expr(:call, transform, squeeze(fcast_output[:,ind,date_indices_order],2), data[ind,:], hist_end_index, pop_fcast)
         else
             Expr(:call, :map, transform, squeeze(fcast_output[:,ind,date_indices_order],2))
         end
