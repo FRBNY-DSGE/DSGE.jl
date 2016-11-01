@@ -59,7 +59,7 @@ for input_type in [:init, :mode, :full]
 
         forecast_outputs[(cond_type, input_type)] = forecast_output
 
-        new_output_files = collect(values(DSGE.get_output_files(m, input_type, output_vars, cond_type)))
+        new_output_files = collect(values(DSGE.get_output_files(m, "forecast", input_type, output_vars, cond_type)))
         append!(output_files, new_output_files)
     end
 end

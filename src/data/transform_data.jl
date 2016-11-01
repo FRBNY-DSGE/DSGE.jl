@@ -39,13 +39,13 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
 
     population_mnemonic = parse_population_mnemonic(m)[1]
 
-    population_data = transform_population_data(levels, population_mnemonic,
+    population_data, population_forecast = transform_population_data(levels, population_mnemonic,
                                                 cond_type = cond_type,
                                                 population_forecast_file = population_forecast_file,
                                                 verbose = verbose)
 
     levels = join(levels, population_data, on = :date, kind = :left)
-    rename!(levels, [:filtered_population_recorded, :dlfiltered_population_growth, :dlpopulation_recorded],
+    rename!(levels, [:filtered_population_recorded, :dlfiltered_population_recorded, :dlpopulation_recorded],
             [:filtered_population, :filtered_population_growth, :unfiltered_population_growth])
 
     # Step 2: apply transformations to each series
@@ -185,35 +185,36 @@ function transform_population_data(population_data::DataFrame, population_mnemon
     filtered_population, _ = hpfilter(population_all, 1600)
 
     ## Setup output dictionary
-    out = Dict{Symbol, Array{Any,1}}()
+    population_data_out = DataFrame()
 
     ## recorded series
     n_population_forecast_obs = size(population_forecast,1)
 
     # dates
-    out[:dates_recorded] = convert(Array{Date}, population_recorded[:date])
+    population_data_out[:date] = convert(Array{Date}, population_recorded[:date])
 
     # filtered series (levels)
     filt_pop_recorded = filtered_population[1:end-n_population_forecast_obs]
-    out[:filtered_population_recorded] = filt_pop_recorded
+    population_data_out[:filtered_population_recorded] = filt_pop_recorded
 
     # filtered growth rates
-    out[:dlpopulation_recorded]          = difflog(population_recorded[population_mnemonic])
-    out[:dlfiltered_population_recorded] = difflog(filt_pop_recorded)
+    population_data_out[:dlpopulation_recorded]          = difflog(population_recorded[population_mnemonic])
+    population_data_out[:dlfiltered_population_recorded] = difflog(filt_pop_recorded)
 
     ## forecasts
+    population_forecast_out = DataFrame()
     if n_population_forecast_obs > 0
 
         # dates
-        out[:dates_forecast] = convert(Array{Date}, population_forecast[:date])
+        population_forecast_out[:date] = convert(Array{Date}, population_forecast[:date])
 
         # return filtered series (levels), filtered forecast growth rates, filtered data growth rates
         filt_pop_fcast = filtered_population[end-n_population_forecast_obs:end]
-        out[:filtered_population_forecast]    = filt_pop_fcast[2:end]
-        out[:dlpopulation_forecast]           = difflog(population_forecast[population_mnemonic])
-        out[:dlfiltered_population_forecast]  = difflog(filt_pop_fcast)[2:end]
+        population_forecast_out[:filtered_population_forecast]    = filt_pop_fcast[2:end]
+        population_forecast_out[:dlpopulation_forecast]       = difflog(population_forecast[population_mnemonic])
+        population_forecast_out[:dlfiltered_population_forecast]  = difflog(filt_pop_fcast)[2:end]
 
     end
 
-    out
+    population_data_out, population_forecast_out
 end

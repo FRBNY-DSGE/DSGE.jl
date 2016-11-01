@@ -109,16 +109,17 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
         if !(isempty(population_data) || isnull(population_mnemonic))
 
             # get all of the population data
-            population_data = transform_population_data(population_data, get(population_mnemonic),
-                                                        population_forecast_file = population_forecast_file)
+            population_data, population_forecast =
+                transform_population_data(population_data, get(population_mnemonic),
+                                          population_forecast_file = population_forecast_file)
 
-            DataFrame(date = @data(convert(Array{Date}, population_data[:dates_recorded])),
+            DataFrame(date = @data(convert(Array{Date}, population_data[:date])),
                                  population_growth = @data(convert(Array{Float64},
                                  population_data[:dlfiltered_population_recorded]))),
 
-            DataFrame(date = @data(convert(Array{Date}, population_data[:dates_forecast])),
+            DataFrame(date = @data(convert(Array{Date}, population_forecast[:date])),
                               population_growth = @data(convert(Array{Float64},
-                              population_data[:dlfiltered_population_forecast])))
+                              population_forecast[:dlfiltered_population_forecast])))
 
         else
             isempty(population_data) ? warn("No population data provided") : nothing
@@ -225,7 +226,7 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
         metadata, fcast_output
     end
 
-    transforms, inds, date_inds = if class == :pseudo
+    transforms, variable_indices, date_indices = if class == :pseudo
         metadata[:pseudoobservable_revtransforms], metadata[:pseudoobservable_indices],
         metadata[:date_indices]
     elseif class == :obs
@@ -235,11 +236,11 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
     end
 
     # make sure date lists are valid
-    date_list       = collect(keys(date_inds))   # unsorted array of actual dates
-    date_inds_order = collect(values(date_inds)) # unsorted array of date indices
-    check_consistent_order(date_list, date_inds_order)
-    sort!(date_list, by = x -> date_inds[x])
-    sort!(date_inds_order)
+    date_list       = collect(keys(date_indices))   # unsorted array of actual dates
+    date_indices_order = collect(values(date_indices)) # unsorted array of date indices
+    check_consistent_order(date_list, date_indices_order)
+    sort!(date_list, by = x -> date_indices[x])
+    sort!(date_indices_order)
 
     # get population mnemonic
     mnemonic = if isnull(population_mnemonic)
@@ -266,13 +267,14 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
 
         # concatenate population histories and forecasts together
         population_series = if isempty(end_ind)
-            population_data[start_ind:end]
+            convert(Array{Float64}, population_data[start_ind:end, mnemonic])
         else
-            [population_data[start_ind:end]; population_forecast[1:end_ind]]
+            tmp = [population_data[start_ind:end, mnemonic]; population_forecast[1:end_ind, mnemonic]]
+            convert(Array{Float64}, tmp)
         end
 
         # compute means and bands for shock decomposition
-        return compute_means_bands_shockdec(fcast_output[:,:,date_inds_order,:], transforms, inds, date_list,
+        return compute_means_bands_shockdec(fcast_output[:,:,date_indices_order,:], transforms, variable_indices, date_list,
                                             data = data, population_series = population_series,
                                             hist_end_index = hist_end_index)
     end
@@ -284,16 +286,16 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
     # for each series (ie each pseudoobs, each obs, or each state):
     # 1. apply the appropriate transform
     # 2. add to DataFrame
-    for (series, ind) in inds
+    for (series, ind) in variable_indices
         # apply transformation to all draws
         transform = parse_transform(transforms[series])
         ex = if transform in [:logtopct_annualized]
             pop_fcast = convert(Array{Float64}, population_forecast[mnemonic]')
-            Expr(:call, transform, squeeze(fcast_output[:,ind,date_inds_order],2), pop_fcast)
+            Expr(:call, transform, squeeze(fcast_output[:,ind,date_indices_order],2), pop_fcast)
         elseif transform in [:loglevelto4qpct_annualized]
-            Expr(:call, transform, squeeze(fcast_output[:,ind,date_inds_order],2), data[ind,:], hist_end_index)
+            Expr(:call, transform, squeeze(fcast_output[:,ind,date_indices_order],2), data[ind,:], hist_end_index)
         else
-            Expr(:call, :map, transform, squeeze(fcast_output[:,ind,date_inds_order],2))
+            Expr(:call, :map, transform, squeeze(fcast_output[:,ind,date_indices_order],2))
         end
 
         transformed_fcast_output = eval(ex)
@@ -312,7 +314,7 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
                    :cond_type  => cond_type,
                    :product    => product,
                    :class      => class,
-                   :indices    => inds,
+                   :indices    => variable_indices,
                    :subset_string => subset_string)
 
     return MeansBands(mb_metadata, means, bands)
@@ -328,13 +330,21 @@ compute_means_bands_shockdec(fcast_output, transforms, var_inds, shock_inds, dat
 ### Inputs
 
 - `fcast_output`: an `ndraws` x `nvars` x `nperiods` x `nshocks`
-  matrix of shock decompositions from the output of the forecast
+  array of shock decompositions from the output of the forecast
 
 """
 
-function compute_means_bands_shockdec(fcast_output, transforms, var_inds, shock_inds, date_list;
-                                      data = [], population_data = [], population_forecast = DataFrame(),
-                                      hist_end_index = 0)
+function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
+                                                        transforms::Array{Function},
+                                                        variable_indices,
+                                                        shock_inds,
+                                                        date_list;
+                                                        data = [],
+                                                        population_data = [],
+                                                        population_forecast = Vector{T},
+                                                        hist_end_index = 0)
+
+    # extract population series
 
     # set up means and bands structures
     sort!(date_list)
@@ -346,7 +356,7 @@ function compute_means_bands_shockdec(fcast_output, transforms, var_inds, shock_
     # 2. add to DataFrame
     for (shock, shock_ind) in shock_inds
 
-        for (var, var_ind) in var_inds
+        for (var, var_ind) in variable_indices
 
             for period in [:past, :future]
                 transform = parse_transform(transforms[var])
@@ -356,7 +366,7 @@ function compute_means_bands_shockdec(fcast_output, transforms, var_inds, shock_
                     Expr(:call, transform, squeeze(fcast_output[:,var_ind,:,shock_ind],2),
                          data[var_ind,:], hist_end_index)
                 else
-                    Expr(:call, :map, transform, squeeze(fcast_output[:,ind,date_inds_order],2))
+                    Expr(:call, :map, transform, squeeze(fcast_output[:,var_ind,date_indices_order],2))
                 end
             end
 
