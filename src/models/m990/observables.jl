@@ -119,7 +119,7 @@ function init_observable_mappings!(m::Model990)
         annualtoquarter(levels[:DFF])
     end
 
-    nominalrate_rev_transform = quartertoannualpercent
+    nominalrate_rev_transform = quartertoannual
 
     observables[:obs_nominalrate] = Observable(:obs_nominalrate, [:DFF__FRED],
                                                nominalrate_fwd_transform, nominalrate_rev_transform,
@@ -224,7 +224,7 @@ function init_observable_mappings!(m::Model990)
         annualtoquarter(levels[:FYCCZA] - levels[:THREEFYTP10])
     end
 
-    longrate_rev_transform = quartertoannualpercent
+    longrate_rev_transform = quartertoannual
 
     observables[:obs_longrate] = Observable(:obs_longrate, [:FYCCZA__LONGRATE, :THREEFYTP10__FRED],
                                             longrate_fwd_transform, longrate_rev_transform,
@@ -245,7 +245,7 @@ function init_observable_mappings!(m::Model990)
         (tfp_unadj - tfp_unadj_mean) ./ (4*(1 - levels[:TFPJQ]))
     end
 
-    tfp_rev_transform = quartertoannualpercent
+    tfp_rev_transform = quartertoannual
 
     observables[:obs_tfp] = Observable(:obs_tfp, [:TFPKQ__FERNALD, :TFPJQ__FERNALD],
                                        tfp_fwd_transform, tfp_rev_transform,
@@ -266,7 +266,7 @@ function init_observable_mappings!(m::Model990)
             levels[:, symbol("ant$i")]
         end
 
-        ant_rev_transform = quartertoannualpercent
+        ant_rev_transform = quartertoannual
 
         observables[symbol("obs_nominalrate$i")] = Observable(symbol("obs_ant$i"), [symbol("ant$(i)__OIS")],
                                                       ant_fwd_transform, ant_rev_transform,

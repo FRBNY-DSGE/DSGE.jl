@@ -43,8 +43,8 @@ of a model object and manually enter `forecast_files`.
 function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                                                output_vars::Vector{Symbol}, cond_type::Symbol;
                                                density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
-                                               subset_string = "", load_dataset::Bool = true
-                                               load_population_data::Bool = false,
+                                               subset_string = "", load_dataset::Bool = true,
+                                               load_population_data::Bool = true,
                                                population_forecast_file = "",
                                                verbose::Symbol = :low)
 
@@ -61,10 +61,12 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
         population_forecast_file
     end
 
-    # load population level data, which happens in load_data_levels
+    # load population level data, which was saved in load_data_levels
     level_data = if load_population_data
-        load_data_levels(m, verbose = verbose)
+        read_population_data(m)
     end
+
+    population_mnemonic = Nullable(parse_population_mnemonic(m)[1])
 
     ## Step 2: Load main dataset - required for some transformations
     data = load_dataset ? df_to_matrix(m, load_data(m)) : Matrix{T}()
@@ -83,6 +85,7 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
                             density_bands = density_bands, subset_string = subset_string,
                             output_dir = workpath(m,"forecast",""),
                             population_data = level_data,
+                            population_mnemonic = population_mnemonic,
                             population_forecast_file = population_forecast_file,
                             hist_end_index = hist_end_index, data = data)
 end
@@ -94,7 +97,7 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
                                                subset_string = "",
                                                output_dir = "",
                                                population_data::DataFrame = DataFrame(),
-                                               population_mnemonic::Symbol = symbol(""),
+                                               population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                population_forecast_file = "",
                                                hist_end_index::Int = 0,
                                                data = Matrix{T}())
@@ -103,15 +106,24 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
     ## Step 1: Filter population history and forecast and compute growth rates
 
     dlfiltered_population_data, dlfiltered_population_forecast =
-        if !isempty(population_data) && !isempty(population_mnemonic)
+        if !(isempty(population_data) || isnull(population_mnemonic))
 
             # get all of the population data
-            population_data = transform_population_data(population_data, population_mnemonic,
+            population_data = transform_population_data(population_data, get(population_mnemonic),
                                                         population_forecast_file = population_forecast_file)
 
-            population_data[:,[:date, :dlfiltered_population_recorded]],
-            population_data[:,[:date, :dlfiltered_population_forecast]]
+            DataFrame(date = @data(convert(Array{Date}, population_data[:dates_recorded])),
+                                 population_growth = @data(convert(Array{Float64},
+                                 population_data[:dlfiltered_population_recorded]))),
+
+            DataFrame(date = @data(convert(Array{Date}, population_data[:dates_forecast])),
+                              population_growth = @data(convert(Array{Float64},
+                              population_data[:dlfiltered_population_forecast])))
+
         else
+            isempty(population_data) ? warn("No population data provided") : nothing
+            isnull(population_mnemonic) ? warn("No population mnemonic provided") : nothing
+
             DataFrame(), DataFrame()
         end
 
@@ -139,7 +151,8 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
                                  forecast_output_files, density_bands = density_bands,
                                  subset_string = subset_string,
                                  population_data = dlfiltered_population_data,
-                                 population_forecast = dlfiltered_population_forecast
+                                 population_mnemonic = Nullable(:population_growth),
+                                 population_forecast = dlfiltered_population_forecast,
                                  hist_end_index = hist_end_index,
                                  data = data)
 
@@ -153,15 +166,23 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
 end
 
 function compute_means_bands{S<:AbstractString}(input_type::Symbol,
-                                                    output_var::Symbol,
-                                                    cond_type::Symbol,
-                                                    forecast_output_files::Dict{Symbol,S};
-                                                    density_bands = [0.5, 0.6, 0.7, 0.8, 0.9],
-                                                    subset_string::S = "",
-                                                    population_data = DataFrame(),
-                                                    population_forecast = DataFrame(),
-                                                    hist_end_index::Int = 0,
-                                                    data = Matrix())
+                                                output_var::Symbol,
+                                                cond_type::Symbol,
+                                                forecast_output_files::Dict{Symbol,S};
+                                                density_bands = [0.5, 0.6, 0.7, 0.8, 0.9],
+                                                subset_string::S = "",
+                                                population_data = DataFrame(),
+                                                population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
+                                                population_forecast = DataFrame(),
+                                                hist_end_index::Int = 0,
+                                                data = Matrix())
+
+    ## Step 0: If we are doing a modal case, then it makes no sense to write a zillion bands.
+    density_bands = if input_type == mode
+        [1.]
+    else
+        density_bands
+    end
 
     # Return only one set of bands if we read in only one draw
     if input_type in [:init, :mode, :mean]
@@ -220,16 +241,21 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
     sort!(date_list, by = x -> date_inds[x])
     sort!(date_inds_order)
 
+    # get population mnemonic
+    mnemonic = if isnull(population_mnemonic)
+        Symbol()
+    else
+        get(population_mnemonic)
+    end
     # Ensure population forecast is same length as fcast_output.
     # For forecasts, the third dimension of the fcast_output matrix is the number of periods.
     population_forecast = if product in [:forecast]
-        nperiods = size(fcast_output, 3)
-        resize_population_forecast(population_forecast, nperiods)
-    else
-        population_forecast
+        n_fcast_periods = size(fcast_output, 3)
+        resize_population_forecast(population_forecast, n_fcast_periods,
+                                   population_mnemonic = mnemonic)
     end
 
-    if product == :shockdec
+    if product in [:shockdec]
 
         # make sure population series corresponds with saved shockdec dates
         shockdec_start = date_list[1]
@@ -262,7 +288,8 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
         # apply transformation to all draws
         transform = parse_transform(transforms[series])
         ex = if transform in [:logtopct_annualized]
-            Expr(:call, transform, squeeze(fcast_output[:,ind,date_inds_order],2), population_forecast')
+            pop_fcast = convert(Array{Float64}, population_forecast[mnemonic]')
+            Expr(:call, transform, squeeze(fcast_output[:,ind,date_inds_order],2), pop_fcast)
         elseif transform in [:loglevelto4qpct_annualized]
             Expr(:call, transform, squeeze(fcast_output[:,ind,date_inds_order],2), data[ind,:], hist_end_index)
         else
@@ -294,7 +321,7 @@ end
 """
 ```
 compute_means_bands_shockdec(fcast_output, transforms, var_inds, shock_inds, date_list,
-                             data = [], population_forecast = [], hist_end_index = 0)
+                             data = [], population_forecast = DataFrame(), hist_end_index = 0)
 ```
 
 
@@ -306,7 +333,8 @@ compute_means_bands_shockdec(fcast_output, transforms, var_inds, shock_inds, dat
 """
 
 function compute_means_bands_shockdec(fcast_output, transforms, var_inds, shock_inds, date_list;
-                                      data = [], population_data = [], population_forecast = [], hist_end_index = 0)
+                                      data = [], population_data = [], population_forecast = DataFrame(),
+                                      hist_end_index = 0)
 
     # set up means and bands structures
     sort!(date_list)

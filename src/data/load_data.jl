@@ -187,6 +187,14 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     na2nan!(df)
 
     sort!(df, cols = :date)
+
+    # print population level data to a file
+    filename = inpath(m, "data", "population_data_levels_$vint.csv")
+
+    mnemonic = parse_population_mnemonic(m)[1]
+    writetable(filename, df[:,[:date,mnemonic]])
+
+    df
 end
 
 """
@@ -407,4 +415,31 @@ function parse_data_series(m::AbstractModel)
         end
     end
     data_series
+end
+
+"""
+```
+read_population_data(m)
+```
+
+Read in population data stored in levels from inpath(m, "data", "population_data_levels_[vint].csv").
+"""
+function read_population_data(m::AbstractModel, verbose::Symbol = :low)
+    vint = data_vintage(m)
+    filename = inpath(m, "data", "population_data_levels_$vint.csv")
+
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        print("Reading population data from $filename...")
+    end
+
+    df = readtable(filename)
+
+    # Convert date column from string to Date
+    df[:date] = map(Date, df[:date])
+
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println("finished reading population data\n")
+    end
+
+    df
 end

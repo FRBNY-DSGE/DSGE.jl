@@ -22,7 +22,7 @@ transformed as specified in `m.observable_mappings`.
 Conditional data (identified by `cond_type in [:semi, :full]`) are handled
 slightly differently: If `use_population_forecast(m)`, we drop the first period
 of the population forecast because we treat the first forecast period
-(`date_forecast_start(m)` as if it were data. We also only apply transformations
+`date_forecast_start(m)` as if it were data. We also only apply transformations
 for the observables given in `cond_full_names(m)` or `cond_semi_names(m)`.
 """
 function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol = :none, verbose::Symbol = :low)
@@ -40,11 +40,13 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
     population_mnemonic = parse_population_mnemonic(m)[1]
 
     population_data = transform_population_data(levels, population_mnemonic,
-                                            population_forecast_file = population_forecast_file)
+                                                cond_type = cond_type,
+                                                population_forecast_file = population_forecast_file,
+                                                verbose = verbose)
 
-    levels[:filtered_population]          = population_data[:filtered_population_recorded]
-    levels[:filtered_population_growth]   = population_data[:dlfiltered_population_recorded]
-    levels[:unfiltered_population_growth] = population_data[:dlpopulation_recorded]
+    levels = join(levels, population_data, on = :date, kind = :left)
+    rename!(levels, [:filtered_population_recorded, :dlfiltered_population_growth, :dlpopulation_recorded],
+            [:filtered_population, :filtered_population_growth, :unfiltered_population_growth])
 
     # Step 2: apply transformations to each series
     transformed = DataFrame()
@@ -75,7 +77,7 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
         transformed[transformed[:, :date] .>= date_forecast_start(m), cond_names_nan] = convert(T, NaN)
     end
 
-    return transformed
+    transformed
 end
 
 function collect_data_transforms(m; direction=:fwd)
@@ -94,17 +96,24 @@ end
 ```
 load_population_data{S<:AbstractString}(population_data::DataFrame,
                                                  population_mnemonic::Symbol;
+                                                 cond_type::Symbol = :none,
                                                  population_forecast_file::S = "")
 ```
 
-Load, filter, and compute growth rates from population data in levels. Optionally do the same for forecasts.
+Load, HP-filter, and compute growth rates from population data in levels. Optionally do the same for forecasts.
 
 ### Inputs
-- `population_data`: pre-loaded DataFrame containing the columns `:date` and `population_mnemonic`
+
+- `population_data`: pre-loaded DataFrame of historical population
+  data containing the columns `:date` and
+  `population_mnemonic`. Assumes this is sorted by date.
 - `population_mnemonic`: column name for population series in `population_data`
 
 ### Keyword Arguments
-- `population_forecast_file`: filepath to a properly-formatted population forecast file.
+- `cond_type`: type of conditional data being used
+- `population_forecast_file`: filepath to a properly-formatted
+  population forecast CSV (with :date and :POPULATION columns, sorted
+  by date).
 
 ### Output
 A dictionary containing the following keys:
@@ -118,12 +127,12 @@ A dictionary containing the following keys:
 
 Note: the r"*forecast" fields will be empty if population_forecast_file is not provided.
 """
-function transform_population_data{S<:AbstractString}(population_data::DataFrame,
-                                                 population_mnemonic::Symbol;
-                                                 population_forecast_file::S = "")
+function transform_population_data(population_data::DataFrame, population_mnemonic::Symbol;
+                                   cond_type::Symbol = :none,  population_forecast_file = "",
+                                   verbose = :low)
 
     # load historical, unfiltered population series
-    population_recorded = levels[:,[:date, population_mnemonic]]
+    population_recorded = population_data[:,[:date, population_mnemonic]]
 
     # population_all: full unfiltered series (including forecast)
     # population_forecast: unfiltered population forecast series
@@ -132,69 +141,79 @@ function transform_population_data{S<:AbstractString}(population_data::DataFrame
 
         @assert isfile(population_forecast_file) "$population_forecast_file does not exist."
 
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            println("Loading population forecast...")
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("Loading population forecast from $population_forecast_file...")
         end
 
         # load population forecast
         pop_forecast = readtable(population_forecast_file)
-
         rename!(pop_forecast, :POPULATION,  population_mnemonic)
         DSGE.na2nan!(pop_forecast)
         DSGE.format_dates!(:date, pop_forecast)
 
+        # make sure first population forecast number is the period after the current value
+        last_recorded_date  = population_recorded[end,:date]
+        first_forecast_date = population_recorded[1,:date]
+
+        if last_recorded_date >= first_forecast_date
+            delta = DSGE.subtract_quarters(pop_forecast[1,:date], population_recorded[end,:date])
+            pop_forecast = pop_forecast[delta+2:end, :]
+        else
+            @assert DSGE.subtract_quarters(pop_forecast[1,:date], population_recorded[end,:date]) == 1
+        end
+
         # for conditional data, start "forecast" one period later
         # (first real forecast period treated as data)
-        if cond_type in [:semi, :full]
-            pop_forecast = pop_forecast[2:end, :]
+        pop_forecast = if cond_type in [:semi, :full]
+            pop_forecast[2:end, :]
+        else
+            pop_forecast
         end
 
         # use our "real" series as current value
-        pop_all = vcat(population_recorded, pop_forecast[2:end, :])
+        pop_all = [population_recorded; pop_forecast]
 
         # return values
-        pop_all[population_mnemonic],
-        pop_forecast[population_mnemonic]
+        pop_all[population_mnemonic], pop_forecast[:,[:date, population_mnemonic]]
     else
-        population_recorded[:,population_mnemonic], []
+        population_recorded[:,[:date,population_mnemonic]], DataFrame()
     end
 
-    n_population_forecast_obs = length(population_forecast[population_mnemonic]),
 
     # hp filter
-    population_all = convert(Array, population_all)
+    population_all = convert(Array{Float64}, population_all)
     filtered_population, _ = hpfilter(population_all, 1600)
 
+    ## Setup output dictionary
+    out = Dict{Symbol, Array{Any,1}}()
+
     ## recorded series
+    n_population_forecast_obs = size(population_forecast,1)
+
+    # dates
+    out[:dates_recorded] = convert(Array{Date}, population_recorded[:date])
+
     # filtered series (levels)
-    filtered_population_recorded = filtered_population[1:end-n_population_forecast_obs+1]
+    filt_pop_recorded = filtered_population[1:end-n_population_forecast_obs]
+    out[:filtered_population_recorded] = filt_pop_recorded
 
     # filtered growth rates
-    dlpopulation_recorded          = difflog(population_recorded[population_mnemonic])
-    dlfiltered_population_recorded = difflog(filtered_population_recorded)
+    out[:dlpopulation_recorded]          = difflog(population_recorded[population_mnemonic])
+    out[:dlfiltered_population_recorded] = difflog(filt_pop_recorded)
 
     ## forecasts
-    filtered_population_forecast, dlpopulation_forecast, dlfiltered_population_forecast =
-        if n_population_forecast_obs > 0
-            # filtered series (levels)
-            filtered_population[end-n_population_forecast_obs+1:end],
+    if n_population_forecast_obs > 0
 
-            # filtered growth rates
-            difflog(population_forecast[population_mnemonic]),
-            difflog(filtered_population_forecast)
-        else
-            [],[],[]
-        end
+        # dates
+        out[:dates_forecast] = convert(Array{Date}, population_forecast[:date])
 
-    T = eltype(filtered_population_recorded)
-    out = Dict{Symbol, Array{T}}(
-        :filtered_population_recorded   => filtered_population_recorded,
-        :dlfiltered_population_recorded => dlfiltered_population_recorded,
-        :dlpopulation_recorded          => dlpopulation_recorded,
-        :filtered_population_forecast   => filtered_population_forecast,
-        :dlfiltered_population_forecast => dlfiltered_population_forecast,
-        :dlpopulation_forecast          => dlpopulation_forecast
-    )
+        # return filtered series (levels), filtered forecast growth rates, filtered data growth rates
+        filt_pop_fcast = filtered_population[end-n_population_forecast_obs:end]
+        out[:filtered_population_forecast]    = filt_pop_fcast[2:end]
+        out[:dlpopulation_forecast]           = difflog(population_forecast[population_mnemonic])
+        out[:dlfiltered_population_forecast]  = difflog(filt_pop_fcast)[2:end]
+
+    end
 
     out
 end
