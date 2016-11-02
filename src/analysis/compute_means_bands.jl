@@ -246,7 +246,8 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
         end
 
         # compute means and bands for shock decomposition
-        return compute_means_bands_shockdec(fcast_output[:,:,date_indices_order,:], transforms, variable_indices, date_list,
+        return compute_means_bands_shockdec(fcast_output[:,:,date_indices_order,:], transforms,
+                                            variable_indices, date_list,
                                             data = data, population_series = population_series,
                                             hist_end_index = hist_end_index)
     end
@@ -308,15 +309,15 @@ compute_means_bands_shockdec(fcast_output, transforms, var_inds, shock_inds, dat
 
 function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
                                                         transforms::Array{Function},
-                                                        variable_indices,
-                                                        shock_inds,
-                                                        date_list;
-                                                        data = [],
-                                                        population_data = [],
+                                                        variable_indices::Dict{Symbol,Int},
+                                                        shock_inds::Dict{Symbol,Int},
+                                                        date_list::Array{Date};
+                                                        data::DataFrame = DataFrame(),
+                                                        population_data::DataFrame = DataFrame(),
+                                                        population_mnemonic::Symbol = Symbol(),
                                                         population_forecast = Vector{T},
                                                         hist_end_index = 0)
 
-    # extract population series
 
     # set up means and bands structures
     sort!(date_list)
@@ -333,8 +334,10 @@ function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
             for period in [:past, :future]
                 transform = parse_transform(transforms[var])
                 ex = if transform in [:logtopct_annualized]
+                    pop_fcast = convert(Array{Float64}, population_forecast[population_mnemonic]')
                     Expr(:call, transform, squeeze(fcast_output[:,var_ind,:,shock_ind],2), population_series')
                 elseif transform in [:loglevelto4qpct_annualized]
+                    pop_fcast = convert(Array{Float64}, population_forecast[population_mnemonic]')
                     Expr(:call, transform, squeeze(fcast_output[:,var_ind,:,shock_ind],2),
                          data[var_ind,:], hist_end_index)
                 else

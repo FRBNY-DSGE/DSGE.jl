@@ -16,7 +16,7 @@ function resize_population_forecast(population_forecast::DataFrame, nperiods::In
     else
         population_mnemonic
     end
-    println("population mnemonic: $mnemonic")
+
     last_provided = population_forecast[end,:date]
 
     # create date range. There are on average 91.25 days in a quarter.
