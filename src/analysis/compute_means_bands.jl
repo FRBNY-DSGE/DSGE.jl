@@ -49,21 +49,17 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
                                                verbose::Symbol = :low)
 
     ## Step 1: Get population forecast file
-    population_forecast_file = if isempty(population_forecast_file)
-        guess = if use_population_forecast(m)
+    if isempty(population_forecast_file)
+        population_forecast_file = if use_population_forecast(m)
             inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
         else
             ""
         end
-
-        guess
-    else
-        population_forecast_file
     end
 
     # load population level data, which was saved in load_data_levels
-    level_data = if load_population_data
-        read_population_data(m)
+    if load_population_data
+        level_data = read_population_data(m)
     end
 
     population_mnemonic = Nullable(parse_population_mnemonic(m)[1])
@@ -103,7 +99,6 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
 
     dlfiltered_population_data, dlfiltered_population_forecast =
         if !(isempty(population_data) || isnull(population_mnemonic))
-
             # get all of the population data
             population_data, population_forecast =
                 transform_population_data(population_data, get(population_mnemonic),
@@ -129,8 +124,7 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
     mb_output_vars = [symbol("mb$x") for x in output_vars]
 
     mb_files = Dict{Symbol,AbstractString}()
-    for x in keys(forecast_output_files)
-        fn = forecast_output_files[x]
+    for (x, fn) in forecast_output_files
         base = "mb" * basename(fn)
         mb_files[x] = if isempty(output_dir)
             dir  = dirname(fn)
@@ -141,7 +135,7 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
     end
 
     ## Step 3: Compute means and bands for each output variable, and write to a file.
-    for (i,output_var) in enumerate(output_vars)
+    for output_var in output_vars
 
         # compute means and bands object
         mb = compute_means_bands(input_type, output_var, cond_type,
@@ -154,7 +148,7 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
                                  data = data)
 
         # write to file
-        filepath = mb_files[output_vars[i]]
+        filepath = mb_files[output_var]
         jldopen(filepath, "w") do file
             write(file, "mb", mb)
         end
@@ -173,13 +167,6 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
                                                 population_forecast = DataFrame(),
                                                 hist_end_index::Int = 0,
                                                 data = Matrix())
-
-    ## Step 0: If we are doing a modal case, then it makes no sense to write a zillion bands.
-    density_bands = if input_type == mode
-        [1.]
-    else
-        density_bands
-    end
 
     # Return only one set of bands if we read in only one draw
     if input_type in [:init, :mode, :mean]
@@ -212,14 +199,7 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
     # open correct input file
     forecast_output_file = forecast_output_files[output_var]
     metadata, fcast_output = jldopen(forecast_output_file, "r") do jld
-
-        # read metadata
-        metadata = read_forecast_metadata(jld)
-
-        # read the DArray using read_darray
-        fcast_output = DSGE.read_darray(jld)
-
-        metadata, fcast_output
+        read_forecast_metadata(jld), DSGE.read_darray(jld)
     end
 
     transforms, variable_indices, date_indices = if class == :pseudo
@@ -228,22 +208,19 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
     elseif class == :obs
         metadata[:observable_revtransforms], metadata[:observable_indices], metadata[:date_indices]
     else
-        error("means and bands are only calculated for observables and pseudoobservables")
+        error("means and bands are only calculated for observables and pseudo-observables")
     end
 
     # make sure date lists are valid
-    date_list       = collect(keys(date_indices))   # unsorted array of actual dates
+    date_list          = collect(keys(date_indices))   # unsorted array of actual dates
     date_indices_order = collect(values(date_indices)) # unsorted array of date indices
     check_consistent_order(date_list, date_indices_order)
     sort!(date_list, by = x -> date_indices[x])
     sort!(date_indices_order)
 
     # get population mnemonic
-    mnemonic = if isnull(population_mnemonic)
-        Symbol()
-    else
-        get(population_mnemonic)
-    end
+    mnemonic = isnull(population_mnemonic) ? Symbol() : get(population_mnemonic)
+
     # Ensure population forecast is same length as fcast_output.
     # For forecasts, the third dimension of the fcast_output matrix is the number of periods.
     population_forecast = if product in [:forecast]
@@ -252,8 +229,7 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
                                    population_mnemonic = mnemonic)
     end
 
-    if product in [:shockdec]
-
+    if product == :shockdec
         # make sure population series corresponds with saved shockdec dates
         shockdec_start = date_list[1]
         shockdec_end   = date_list[end]
@@ -294,7 +270,6 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
         else
             Expr(:call, :map, transform, squeeze(fcast_output[:,ind,date_indices_order],2))
         end
-
         transformed_fcast_output = eval(ex)
 
         # compute bands
@@ -401,7 +376,7 @@ function read_forecast_metadata(file::JLD.JldFile)
         metadata[symbol(field)] = read(file, field)
     end
 
-    metadata
+    return metadata
 end
 
 """
@@ -411,9 +386,7 @@ parse_transform(t::Symbol)
 
 Parse the module name out of a Symbol to recover the transform associated with an observable or pseudoobservable.
 """
-function parse_transform(t::Symbol)
-    symbol(split(string(t),".")[end])
-end
+parse_transform(t::Symbol) = symbol(split(string(t),".")[end])
 
 """
 ```
