@@ -239,9 +239,18 @@ function init_observable_mappings!(m::Model990)
         # FROM: Fernald's unadjusted TFP series
         # TO:   De-meaned unadjusted TFP series, adjusted by Fernald's
         #       estimated alpha
+        # Note: We only want to calculate the mean of unadjusted TFP over the
+        #       periods between date_presample_start(m) - 1 and
+        #       date_mainsample_end(m), though we may end up transforming
+        #       additional periods of data.
+
+        start_date = Dates.lastdayofquarter(date_presample_start(m) - Dates.Month(3))
+        end_date   = date_mainsample_end(m)
+        date_range = start_date .<= levels[:, :date] .<= end_date
+        tfp_unadj_inrange = levels[date_range, :TFPKQ]
 
         tfp_unadj      = levels[:TFPKQ]
-        tfp_unadj_mean = mean(tfp_unadj[!isnan(tfp_unadj)])
+        tfp_unadj_mean = mean(tfp_unadj_inrange[!isnan(tfp_unadj_inrange)])
         (tfp_unadj - tfp_unadj_mean) ./ (4*(1 - levels[:TFPJQ]))
     end
 
