@@ -115,7 +115,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
     # Set ois series to load
     if n_anticipated_shocks(m) > 0
-        data_series[:ois] = [symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
+        data_series[:OIS] = [symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
     end
 
     # For each additional source, search for the file with the proper name. Open
@@ -134,7 +134,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
         # Skip FRED sources, which have already been handled
         # Conditional data are handled in `load_cond_data_levels`
-        if source == :fred || source == :conditional
+        if source in [:FRED, :conditional]
             continue
         end
 
