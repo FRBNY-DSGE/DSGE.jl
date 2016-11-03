@@ -354,6 +354,7 @@ forecast output array. The saved dictionaries include:
 - `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
 """
 function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbol)
+
     # Write date range
     dates = if contains(string(var), "hist")
         quarter_range(date_mainsample_start(m), date_mainsample_end(m))
@@ -380,26 +381,56 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
         state_indices = merge(m.endogenous_states, m.endogenous_states_augmented)
         @assert length(state_indices) == n_states_augmented(m) # assert no duplicate keys
         write(file, "state_indices", state_indices)
+    end
 
     # Write observable names
-    elseif contains(string(var), "obs")
+    if contains(string(var), "obs")
         write(file, "observable_indices", m.observables)
         rev_transforms =
             Dict{Symbol,Symbol}([x => symbol(m.observable_mappings[x].rev_transform) for x in keys(m.observables)])
         write(file, "observable_revtransforms", rev_transforms)
+    end
 
     # Write pseudo-observable names and transforms
-    elseif contains(string(var), "pseudo")
+    if contains(string(var), "pseudo")
         pseudo, pseudo_mapping = pseudo_measurement(m)
         write(file, "pseudoobservable_indices", pseudo_mapping.inds)
         rev_transforms = Dict{Symbol,Symbol}([x => symbol(pseudo[x].rev_transform) for x in keys(pseudo)])
         write(file, "pseudoobservable_revtransforms", rev_transforms)
+    end
 
     # Write shock names
-    elseif contains(string(var), "shocks") || contains(string(var), "shockdec")
+    if contains(string(var), "shocks") || contains(string(var), "shockdec")
         write(file, "shock_indices", m.exogenous_shocks)
     end
 end
+
+"""
+```
+read_forecast_metadata(file::JLD.JldFile)
+```
+
+Read metadata from forecast output files. This includes dictionaries mapping dates, as well as state, observable,
+pseudo-observable, and shock names, to their respective indices in the saved
+forecast output array. The saved dictionaries include:
+
+- `date_indices::Dict{Date, Int}`: saved for all forecast outputs
+- `state_names::Dict{Symbol, Int}`: saved for `var in [:histstates, :forecaststates, :shockdecstates]`
+- `observable_names::Dict{Symbol, Int}`: saved for `var in [:forecastobs, :shockdecobs]`
+- `observable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for observables
+- `pseudoobservable_names::Dict{Symbol, Int}`: saved for `var in [:histpseudo, :forecastpseudo, :shockdecpseudo]`
+- `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for pseudoobservables
+- `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
+"""
+function read_forecast_metadata(file::JLD.JldFile)
+    metadata = Dict{Symbol, Any}()
+    for field in names(file)
+        metadata[symbol(field)] = read(file, field)
+    end
+
+    metadata
+end
+
 
 """
 ```

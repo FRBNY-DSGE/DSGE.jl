@@ -259,7 +259,7 @@ end
 
 """
 ```
-loglevelto4qpct_annualized_percapita(y, y_data, current_index, pop_fcast)
+loglevelto4qpct_annualized_percapita(y, y_data, current_index, population)
 ```
 
 Transform from log level to 4-quarter annualized percent change, adjusting for
@@ -282,8 +282,8 @@ population growth.
   variable. Could use `end` if not using conditional data, otherwise
   use `end-1`.
 
-- `pop_fcast`: The length `nperiods` array of population growth rates.
+- `population`: The length `nperiods` array of population growth rates.
 """
-function loglevelto4qpct_annualized_percapita(matrix, data, hist_end_index, pop_fcast)
-    ((exp(matrix./100 - hcat(fill(data[hist_end_index], (size(matrix,1),1)), matrix[:,1:end-1])./100 + pop_fcast).^4)-1)*100
+function loglevelto4qpct_annualized_percapita(matrix, data, hist_end_index, population)
+    ((exp(matrix./100 - hcat(fill(data[hist_end_index], (size(matrix,1),1)), matrix[:,1:end-1])./100 + population).^4)-1)*100
 end

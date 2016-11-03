@@ -223,7 +223,7 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
 
     # Ensure population forecast is same length as fcast_output.
     # For forecasts, the third dimension of the fcast_output matrix is the number of periods.
-    population_forecast = if product in [:forecast]
+    population_forecast = if product in [:forecast, :shockdec]
         n_fcast_periods = size(fcast_output, 3)
         resize_population_forecast(population_forecast, n_fcast_periods,
                                    population_mnemonic = mnemonic)
@@ -245,9 +245,11 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
             convert(Array{Float64}, tmp)
         end
 
+        # get shock indices
+        shock_inds = metadata[:shock_inds]
         # compute means and bands for shock decomposition
         return compute_means_bands_shockdec(fcast_output[:,:,date_indices_order,:], transforms,
-                                            variable_indices, date_list,
+                                            variable_indices, shock_inds, date_list,
                                             data = data, population_series = population_series,
                                             hist_end_index = hist_end_index)
     end
@@ -293,128 +295,3 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
     return MeansBands(mb_metadata, means, bands)
 end
 
-"""
-```
-compute_means_bands_shockdec(fcast_output, transforms, var_inds, shock_inds, date_list,
-                             data = [], population_forecast = DataFrame(), hist_end_index = 0)
-```
-
-
-### Inputs
-
-- `fcast_output`: an `ndraws` x `nvars` x `nperiods` x `nshocks`
-  array of shock decompositions from the output of the forecast
-
-"""
-
-function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
-                                                        transforms::Array{Function},
-                                                        variable_indices::Dict{Symbol,Int},
-                                                        shock_inds::Dict{Symbol,Int},
-                                                        date_list::Array{Date};
-                                                        data::DataFrame = DataFrame(),
-                                                        population_data::DataFrame = DataFrame(),
-                                                        population_mnemonic::Symbol = Symbol(),
-                                                        population_forecast = Vector{T},
-                                                        hist_end_index = 0)
-
-
-    # set up means and bands structures
-    sort!(date_list)
-    means = DataFrame(date = date_list)
-    bands = Dict{Symbol,DataFrame}()
-
-    # for each element of shock x variable (variable = each pseudoobs, obs, or state):
-    # 1. apply the appropriate transform
-    # 2. add to DataFrame
-    for (shock, shock_ind) in shock_inds
-
-        for (var, var_ind) in variable_indices
-
-            for period in [:past, :future]
-                transform = parse_transform(transforms[var])
-                ex = if transform in [:logtopct_annualized]
-                    pop_fcast = convert(Array{Float64}, population_forecast[population_mnemonic]')
-                    Expr(:call, transform, squeeze(fcast_output[:,var_ind,:,shock_ind],2), population_series')
-                elseif transform in [:loglevelto4qpct_annualized]
-                    pop_fcast = convert(Array{Float64}, population_forecast[population_mnemonic]')
-                    Expr(:call, transform, squeeze(fcast_output[:,var_ind,:,shock_ind],2),
-                         data[var_ind,:], hist_end_index)
-                else
-                    Expr(:call, :map, transform, squeeze(fcast_output[:,var_ind,date_indices_order],2))
-                end
-            end
-
-        end
-
-    end
-    # apply transform to historical and forecast periods separately usind different dlpop values
-
-    # include shock_inds in mb.metadata
-    mb.metadata[:shock_inds] = shock_inds
-
-    error("Todo: implement compute_means_bands_shockdec")
-end
-
-"""
-```
-read_forecast_metadata(file::JLD.JldFile)
-```
-
-Read metadata from forecast output files. This includes dictionaries mapping dates, as well as state, observable,
-pseudo-observable, and shock names, to their respective indices in the saved
-forecast output array. The saved dictionaries include:
-
-- `date_indices::Dict{Date, Int}`: saved for all forecast outputs
-- `state_names::Dict{Symbol, Int}`: saved for `var in [:histstates, :forecaststates, :shockdecstates]`
-- `observable_names::Dict{Symbol, Int}`: saved for `var in [:forecastobs, :shockdecobs]`
-- `observable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for observables
-- `pseudoobservable_names::Dict{Symbol, Int}`: saved for `var in [:histpseudo, :forecastpseudo, :shockdecpseudo]`
-- `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for pseudoobservables
-- `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
-"""
-function read_forecast_metadata(file::JLD.JldFile)
-    metadata = Dict{Symbol, Any}()
-    for field in names(file)
-        metadata[symbol(field)] = read(file, field)
-    end
-
-    return metadata
-end
-
-"""
-```
-parse_transform(t::Symbol)
-```
-
-Parse the module name out of a Symbol to recover the transform associated with an observable or pseudoobservable.
-"""
-parse_transform(t::Symbol) = symbol(split(string(t),".")[end])
-
-"""
-```
-check_consistent_order(l1, l2)
-```
-
-Checks to make sure that l1 and l2 are ordered consistently.
-"""
-function check_consistent_order(l1, l2)
-    @assert length(l1) == length(l2)
-
-    # cache old pairs in a Dict
-    original_pairs = Dict{eltype(l1), eltype(l2)}()
-    for (i,item) in enumerate(l1)
-        original_pairs[item] = l2[i]
-    end
-
-    # sort
-    l1_sorted = sort(l1)
-    l2_sorted = sort(l2)
-
-    # make sure each pair has same pair as before
-    for i in length(l1)
-        @assert original_pairs[l1_sorted[i]] == l2_sorted[i] "Lists not consistently ordered"
-    end
-
-    return true
-end

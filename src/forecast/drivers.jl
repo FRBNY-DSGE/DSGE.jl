@@ -603,6 +603,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             jldopen(filepath, "w") do file
                 write_forecast_metadata(m, file, var)
             end
+            println(keys(forecast_output))
+            println(var)
             write_darray(filepath, forecast_output[var])
 
             if VERBOSITY[verbose] >= VERBOSITY[:high]
@@ -646,7 +648,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
             forecast_output[:histstates] = convert(DArray, histstates[1:end, 1:end, 1:T])
             forecast_output[:histshocks] = convert(DArray, histshocks[1:end, 1:end, 1:T])
-	        if :histpseudo in output_vars
+	    if :histpseudo in output_vars
                 forecast_output[:histpseudo] = convert(DArray, histpseudo[1:end, 1:end, 1:T])
             end
         else
@@ -746,7 +748,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
         forecast_output[:shockdecstates] = shockdecstates
         forecast_output[:shockdecobs]    = shockdecobs
-        if :forecastpseudo in output_vars
+        if :shockdecpseudo in output_vars
             forecast_output[:shockdecpseudo] = shockdecpseudo
         end
 

@@ -88,11 +88,12 @@ module DSGE
 
         # analysis/
         find_density_bands, compute_moments, compute_means_bands, compute_means_bands_all, MeansBands,
-        meansbands_matrix_all, meansbands_matrix
+        meansbands_matrix_all, meansbands_matrix, get_shockdec_means, get_shockdec_bands
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
     const DSGE_DATASERIES_DELIM = "__"
+    const DSGE_SHOCKDEC_DELIM = "__"
 
     include("parameters.jl")
     include("distributions_ext.jl")
@@ -131,6 +132,7 @@ module DSGE
     include("analysis/moments.jl")
     include("analysis/meansbands.jl")
     include("analysis/compute_means_bands.jl")
+    include("analysis/means_bands_shockdec.jl")
     include("analysis/meansbands_to_matrix.jl")
     include("analysis/util.jl")
 
