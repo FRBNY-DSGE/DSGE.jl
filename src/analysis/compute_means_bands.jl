@@ -229,7 +229,16 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
                                    population_mnemonic = mnemonic)
     end
 
-    if product == :shockdec
+
+    mb_metadata = Dict{Symbol,Any}(
+                   :para       => input_type,
+                   :cond_type  => cond_type,
+                   :product    => product,
+                   :class      => class,
+                   :indices    => variable_indices,
+                   :subset_string => subset_string)
+
+    means, bands = if product == :shockdec
         # make sure population series corresponds with saved shockdec dates
         shockdec_start = date_list[1]
         shockdec_end   = date_list[end]
@@ -246,51 +255,47 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
         end
 
         # get shock indices
-        shock_inds = metadata[:shock_inds]
+        mb_metadata[:shock_inds] = metadata[:shock_inds]
+
         # compute means and bands for shock decomposition
-        return compute_means_bands_shockdec(fcast_output[:,:,date_indices_order,:], transforms,
-                                            variable_indices, shock_inds, date_list,
-                                            data = data, population_series = population_series,
-                                            hist_end_index = hist_end_index)
-    end
+        compute_means_bands_shockdec(fcast_output[:,:,date_indices_order,:], transforms,
+                                     variable_indices, metadata[:shock_inds], date_list,
+                                     data = data, population_series = population_series,
+                                     hist_end_index = hist_end_index)
 
-    # make DataFrames for means and bands
-    means = DataFrame(date = date_list)
-    bands = Dict{Symbol,DataFrame}()
+    else
 
-    # for each series (ie each pseudoobs, each obs, or each state):
-    # 1. apply the appropriate transform
-    # 2. add to DataFrame
-    for (series, ind) in variable_indices
-        # apply transformation to all draws
-        transform = parse_transform(transforms[series])
-        ex = if transform in [:logtopct_annualized_percapita]
-            pop_fcast = convert(Array{Float64}, population_forecast[mnemonic]')
-            Expr(:call, transform, squeeze(fcast_output[:,ind,date_indices_order],2), pop_fcast)
-        elseif transform in [:loglevelto4qpct_annualized_percapita]
-            pop_fcast = convert(Array{Float64}, population_forecast[mnemonic]')
-            Expr(:call, transform, squeeze(fcast_output[:,ind,date_indices_order],2), data[ind,:], hist_end_index, pop_fcast)
-        else
-            Expr(:call, :map, transform, squeeze(fcast_output[:,ind,date_indices_order],2))
+        # make DataFrames for means and bands
+        means = DataFrame(date = date_list)
+        bands = Dict{Symbol,DataFrame}()
+
+        # for each series (ie each pseudoobs, each obs, or each state):
+        # 1. apply the appropriate transform
+        # 2. add to DataFrame
+        for (series, ind) in variable_indices
+            # apply transformation to all draws
+            transform = parse_transform(transforms[series])
+            ex = if transform in [:logtopct_annualized_percapita]
+                pop_fcast = convert(Array{Float64}, population_forecast[mnemonic]')
+                Expr(:call, transform, squeeze(fcast_output[:,ind,date_indices_order],2), pop_fcast)
+            elseif transform in [:loglevelto4qpct_annualized_percapita]
+                pop_fcast = convert(Array{Float64}, population_forecast[mnemonic]')
+                Expr(:call, transform, squeeze(fcast_output[:,ind,date_indices_order],2), data[ind,:], hist_end_index, pop_fcast)
+            else
+                Expr(:call, :map, transform, squeeze(fcast_output[:,ind,date_indices_order],2))
+            end
+            transformed_fcast_output = eval(ex)
+
+            # compute bands
+            bands_one = find_density_bands(transformed_fcast_output, density_bands, minimize=false)
+            bands_one[:date] = date_list
+
+            # compute the mean and bands across draws and add to dataframe
+            means[series] = vec(mean(transformed_fcast_output,1))
+            bands[series] = bands_one
         end
-        transformed_fcast_output = eval(ex)
 
-        # compute bands
-        bands_one = find_density_bands(transformed_fcast_output, density_bands, minimize=false)
-        bands_one[:date] = date_list
-
-        # compute the mean and bands across draws and add to dataframe
-        means[series] = vec(mean(transformed_fcast_output,1))
-        bands[series] = bands_one
     end
-
-    mb_metadata = Dict{Symbol,Any}(
-                   :para       => input_type,
-                   :cond_type  => cond_type,
-                   :product    => product,
-                   :class      => class,
-                   :indices    => variable_indices,
-                   :subset_string => subset_string)
 
     return MeansBands(mb_metadata, means, bands)
 end

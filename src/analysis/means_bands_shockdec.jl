@@ -50,23 +50,7 @@ function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
         end
     end
 
-    # include shock_inds in mb.metadata
-    input_type = :full
-    cond_type = :none
-    product = :shockdec
-    class = :pseudo
-    subset_string = ""
-
-    mb_metadata = Dict{Symbol,Any}(
-                   :para       => input_type,
-                   :cond_type  => cond_type,
-                   :product    => product,
-                   :class      => class,
-                   :indices    => variable_indices,
-                   :shock_inds => shock_inds,
-                   :subset_string => subset_string)
-
-    return MeansBands(mb_metadata, means, bands)
+    return means, bands
 end
 
 
