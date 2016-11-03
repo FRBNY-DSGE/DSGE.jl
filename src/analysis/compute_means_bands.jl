@@ -65,7 +65,7 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
     population_mnemonic = Nullable(parse_population_mnemonic(m)[1])
 
     ## Step 2: Load main dataset - required for some transformations
-    data = load_dataset ? df_to_matrix(m, load_data(m, cond_type = cond_type)) : Matrix{T}()
+    data = load_dataset ? df_to_matrix(m, load_data(m)) : Matrix{T}()
     hist_end_index = index_forecast_start(m) - 1
 
     ## Step 3: Get names of files that the forecast wrote

@@ -679,10 +679,10 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         end
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             @time forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                forecast(m, systems, states; procs = procs)
+                forecast(m, systems, states; cond_type = cond_type, procs = procs)
         else
             forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                forecast(m, systems, states; procs = procs)
+                forecast(m, systems, states; cond_type = cond_type, procs = procs)
         end
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
