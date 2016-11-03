@@ -243,8 +243,11 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
         shockdec_start = date_list[1]
         shockdec_end   = date_list[end]
 
-        start_ind = find(population_data[:date] .== shockdec_start)
-        end_ind   = find(population_forecast[:date] .== shockdec_end)
+        start_ind = find(population_data[:date] .== shockdec_start)[1]
+        end_ind   = find(population_forecast[:date] .== shockdec_end)[1]
+
+        println(start_ind)
+        println(end_ind)
 
         # concatenate population histories and forecasts together
         population_series = if isempty(end_ind)
@@ -255,13 +258,13 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
         end
 
         # get shock indices
-        mb_metadata[:shock_inds] = metadata[:shock_inds]
+        mb_metadata[:shock_indices] = metadata[:shock_indices]
 
         # compute means and bands for shock decomposition
         compute_means_bands_shockdec(fcast_output[:,:,date_indices_order,:], transforms,
-                                     variable_indices, metadata[:shock_inds], date_list,
+                                     variable_indices, metadata[:shock_indices], date_list,
                                      data = data, population_series = population_series,
-                                     hist_end_index = hist_end_index)
+                                     hist_end_index = hist_end_index, density_bands = density_bands)
 
     else
 

@@ -85,8 +85,8 @@ function meansbands_matrix{S<:AbstractString}(mb::MeansBands, outfile::S)
 
         means, bands
     elseif prod in [:shockdec]
-        # TODO
-        shock_inds = mb.metadata[:shock_inds]
+        # TODO - REFACTOR ALL OF THIS
+        shock_inds = mb.metadata[:shock_indices]
         nshocks = length(shock_inds)
 
         # construct means and bands arrays

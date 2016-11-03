@@ -18,7 +18,8 @@ function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
                                                         date_list::Vector{Date};
                                                         data::Matrix{T} = Matrix{T}(),
                                                         population_series = Array{T},
-                                                        hist_end_index::Int = 0)
+                                                        hist_end_index::Int = 0,
+                                                        density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9])
 
 
     # set up means and bands structures
