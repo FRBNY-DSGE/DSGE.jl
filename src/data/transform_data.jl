@@ -30,7 +30,6 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
     n_obs, _ = size(levels)
 
     # Step 1: HP filter population forecasts, if they're being used
-
     population_forecast_file = if use_population_forecast(m)
         inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
     else
@@ -77,7 +76,7 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
         transformed[transformed[:, :date] .>= date_forecast_start(m), cond_names_nan] = convert(T, NaN)
     end
 
-    transformed
+    return transformed
 end
 
 function collect_data_transforms(m; direction=:fwd)
@@ -153,30 +152,21 @@ function transform_population_data(population_data::DataFrame, population_mnemon
 
         # make sure first population forecast number is the period after the current value
         last_recorded_date  = population_recorded[end,:date]
-        first_forecast_date = population_recorded[1,:date]
+        first_forecast_date = pop_forecast[1,:date]
 
         if last_recorded_date >= first_forecast_date
-            delta = DSGE.subtract_quarters(pop_forecast[1,:date], population_recorded[end,:date])
-            pop_forecast = pop_forecast[delta+2:end, :]
-        else
-            @assert DSGE.subtract_quarters(pop_forecast[1,:date], population_recorded[end,:date]) == 1
+            first_forecast_ind = find(pop_forecast[:date] .== last_recorded_date)[1] + 1
+            pop_forecast = pop_forecast[first_forecast_ind:end, :]
         end
-
-        # for conditional data, start "forecast" one period later
-        # (first real forecast period treated as data)
-        pop_forecast = if cond_type in [:semi, :full]
-            pop_forecast[2:end, :]
-        else
-            pop_forecast
-        end
+        @assert DSGE.subtract_quarters(pop_forecast[1,:date], population_recorded[end,:date]) == 1
 
         # use our "real" series as current value
-        pop_all = [population_recorded; pop_forecast]
+        pop_all = vcat(population_recorded, pop_forecast[2:end])
 
         # return values
         pop_all[population_mnemonic], pop_forecast[:,[:date, population_mnemonic]]
     else
-        population_recorded[:,[:date,population_mnemonic]], DataFrame()
+        population_recorded[population_mnemonic], DataFrame()
     end
 
 
@@ -216,5 +206,5 @@ function transform_population_data(population_data::DataFrame, population_mnemon
 
     end
 
-    population_data_out, population_forecast_out
+    return population_data_out, population_forecast_out
 end

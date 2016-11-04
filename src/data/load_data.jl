@@ -236,7 +236,7 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
         if isfile(population_forecast_file)
             pop_forecast = readtable(population_forecast_file)
 
-            population_mnemonic = get_setting(m, :population_mnemonic)
+            population_mnemonic = parse_population_mnemonic(m)[1]
             rename!(pop_forecast, :POPULATION,  population_mnemonic)
             DSGE.na2nan!(pop_forecast)
             DSGE.format_dates!(:date, pop_forecast)
