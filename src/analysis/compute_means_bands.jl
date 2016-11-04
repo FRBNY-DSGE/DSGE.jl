@@ -81,6 +81,7 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
                             population_forecast_file = population_forecast_file,
                             hist_end_index = hist_end_index, data = data)
 end
+
 function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                                                output_vars::Vector{Symbol},
                                                cond_type::Symbol,
@@ -94,9 +95,7 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
                                                hist_end_index::Int = 0,
                                                data = Matrix{T}())
 
-
     ## Step 1: Filter population history and forecast and compute growth rates
-
     dlfiltered_population_data, dlfiltered_population_forecast =
         if !(isempty(population_data) || isnull(population_mnemonic))
             # get all of the population data
@@ -229,7 +228,6 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
                                    population_mnemonic = mnemonic)
     end
 
-
     mb_metadata = Dict{Symbol,Any}(
                    :para       => input_type,
                    :cond_type  => cond_type,
@@ -265,9 +263,7 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
                                      variable_indices, metadata[:shock_indices], date_list,
                                      data = data, population_series = population_series,
                                      hist_end_index = hist_end_index, density_bands = density_bands)
-
     else
-
         # make DataFrames for means and bands
         means = DataFrame(date = date_list)
         bands = Dict{Symbol,DataFrame}()
@@ -298,6 +294,7 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
             bands[series] = bands_one
         end
 
+        means, bands
     end
 
     return MeansBands(mb_metadata, means, bands)
