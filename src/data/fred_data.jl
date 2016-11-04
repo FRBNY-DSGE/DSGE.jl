@@ -7,7 +7,7 @@ Checks in `inpath(m)` for a FRED dataset corresponding to `data_vintage(m)`.
 If a FRED vintage exists on disk, any required FRED series that is contained therein will be
 imported. All missing series will be downloaded directly from FRED using the *FredData*
 package. The full dataset is written to the appropriate data vintage file and returned.
-    
+
 # Arguments
 - `m::AbstractModel`: the model object
 - `start_date`: starting date.
@@ -82,16 +82,24 @@ function load_fred_data(m::AbstractModel;
                                                        observation_end=string(end_date),
                                                        vintage_dates=string(vint_date))
             catch err
-                warn(err.msg)
+                if :msg in fieldnames(err)
+                    warn(err.msg)
+                else
+                    show(err)
+                end
                 warn("FRED series $s could not be fetched at vintage $vint.")
-                
+
                 try
                     println("Fetching FRED series $s without vintage...")
                     fredseries[i] = get_data(f, string(s); frequency="q",
                                                            observation_start=string(start_date),
                                                            observation_end=string(end_date))
                 catch err
-                    warn(err.msg)
+                    if :msg in fieldnames(err)
+                        warn(err.msg)
+                    else
+                        show(err)
+                    end
                     warn("FRED series $s could not be fetched.")
                     continue
                 end
@@ -115,7 +123,7 @@ function load_fred_data(m::AbstractModel;
         for i = 1:n_rows
             data[i,:date] = Dates.lastdayofquarter(data[i,:date])
         end
-        
+
         if !m.testing
             writetable(datafile, data)
             println("Updated data from FRED written to $datafile.")

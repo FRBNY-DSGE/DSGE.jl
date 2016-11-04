@@ -394,11 +394,17 @@ is above `bands[1,i]` and below `bands[2,i]`.
 """
 function find_density_bands{T<:AbstractFloat}(draws::Matrix, percent::T; minimize::Bool=true)
 
-    if !(0 < percent < 1)
+    if !(0 < percent <= 1)
         error("percent must be between 0 and 1")
     end
 
     ndraws, nperiods = size(draws)
+
+    if ndraws == 1
+        band = repmat(draws, 2, 1)
+        return band
+    end
+
     band = zeros(2, nperiods)
     n_in_band  = round(Int, percent * ndraws)  # number of draws in the band
 

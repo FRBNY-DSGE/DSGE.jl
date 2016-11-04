@@ -246,8 +246,12 @@ shockdec_startdate(m::AbstractModel)    = get_setting(m, :shockdec_startdate)
 shockdec_enddate(m::AbstractModel)      = get_setting(m, :shockdec_enddate)
 forecast_pseudoobservables(m::AbstractModel) = get_setting(m, :forecast_pseudoobservables)
 
-function forecast_horizons(m::AbstractModel)
-    t0 = get_setting(m, :date_forecast_start)
+function forecast_horizons(m::AbstractModel; cond_type = :none)
+    t0 = if cond_type == :none
+        get_setting(m, :date_forecast_start)
+    else
+        Dates.lastdayofquarter(get_setting(m, :date_conditional_end) + Dates.Month(3))
+    end
     t1 = get_setting(m, :date_forecast_end)
     return 1 + subtract_quarters(t1, t0)
 end

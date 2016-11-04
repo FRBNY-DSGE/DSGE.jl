@@ -19,6 +19,10 @@ where `S<:AbstractFloat`.
 
 ### Keyword Arguments
 
+- `cond_type::Symbol`: one of `:none`, `:semi`, or `:full`, used to determine
+  how many periods to forecast ahead. If `cond_type in [:semi, :full]`, the
+  forecast horizon is reduced by the number of periods of conditional
+  data. Defaults to `:none`.
 - `shocks::DArray{S, 3}`: array of size `ndraws` x `nshocks` x `horizon`, whose
   elements are the shock innovations for each time period, for draw
 - `procs::Vector{Int}`: list of worker processes over which to distribute
@@ -39,6 +43,7 @@ where `S<:AbstractFloat`.
 function forecast{S<:AbstractFloat}(m::AbstractModel,
     systems::DVector{System{S}, Vector{System{S}}},
     z0s::DVector{Vector{S}, Vector{Vector{S}}};
+    cond_type::Symbol = :none,
     shocks::DArray{S, 3} = dzeros(S, (0, 0, 0), [myid()]),
     procs::Vector{Int} = [myid()])
 
@@ -48,7 +53,7 @@ function forecast{S<:AbstractFloat}(m::AbstractModel,
     # Numbers of useful things
     ndraws = length(systems)
     nprocs = length(procs)
-    horizon = forecast_horizons(m)
+    horizon = forecast_horizons(m; cond_type = cond_type)
 
     nstates = n_states_augmented(m)
     nobs    = n_observables(m)
@@ -77,7 +82,7 @@ function forecast{S<:AbstractFloat}(m::AbstractModel,
             end
 
             states, obs, pseudo, shocks = compute_forecast(m, systems[i],
-                z0s[i]; shocks = shocks_i)
+                z0s[i]; cond_type = cond_type, shocks = shocks_i)
 
             i_local = mod(i-1, ndraws_local) + 1
 
@@ -123,6 +128,10 @@ where `S<:AbstractFloat`.
 
 ### Keyword Arguments
 
+- `cond_type::Symbol`: one of `:none`, `:semi`, or `:full`, used to determine
+  how many periods to forecast ahead. If `cond_type in [:semi, :full]`, the
+  forecast horizon is reduced by the number of periods of conditional
+  data. Defaults to `:none`.
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
   under which to forecast. If not provided, shocks are drawn according to:
 
@@ -143,11 +152,11 @@ where `S<:AbstractFloat`.
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
 function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
-    z0::Vector{S}; shocks::Matrix{S} = Matrix{S}())
+    z0::Vector{S}; cond_type::Symbol = :none, shocks::Matrix{S} = Matrix{S}())
 
     # Numbers of things
     nshocks = n_shocks_exogenous(m)
-    horizon = forecast_horizons(m)
+    horizon = forecast_horizons(m; cond_type = cond_type)
 
     # Populate shocks matrix
     if isempty(shocks)

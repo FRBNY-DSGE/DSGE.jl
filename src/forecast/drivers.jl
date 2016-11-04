@@ -569,7 +569,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     # Prepare forecast outputs
     forecast_output = Dict{Symbol, DArray{Float64}}()
-    forecast_output_files = get_output_files(m, input_type, output_vars, cond_type;
+    forecast_output_files = get_output_files(m, "forecast", input_type, output_vars, cond_type;
                                 subset_string = subset_string)
     output_dir = rawpath(m, "forecast")
 
@@ -603,6 +603,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             jldopen(filepath, "w") do file
                 write_forecast_metadata(m, file, var)
             end
+            println(keys(forecast_output))
+            println(var)
             write_darray(filepath, forecast_output[var])
 
             if VERBOSITY[verbose] >= VERBOSITY[:high]
@@ -646,7 +648,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
             forecast_output[:histstates] = convert(DArray, histstates[1:end, 1:end, 1:T])
             forecast_output[:histshocks] = convert(DArray, histshocks[1:end, 1:end, 1:T])
-	        if :histpseudo in output_vars
+	    if :histpseudo in output_vars
                 forecast_output[:histpseudo] = convert(DArray, histpseudo[1:end, 1:end, 1:T])
             end
         else
@@ -677,10 +679,10 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         end
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             @time forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                forecast(m, systems, states; procs = procs)
+                forecast(m, systems, states; cond_type = cond_type, procs = procs)
         else
             forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                forecast(m, systems, states; procs = procs)
+                forecast(m, systems, states; cond_type = cond_type, procs = procs)
         end
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
@@ -746,7 +748,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
         forecast_output[:shockdecstates] = shockdecstates
         forecast_output[:shockdecobs]    = shockdecobs
-        if :forecastpseudo in output_vars
+        if :shockdecpseudo in output_vars
             forecast_output[:shockdecpseudo] = shockdecpseudo
         end
 

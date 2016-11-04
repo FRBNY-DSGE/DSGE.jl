@@ -207,18 +207,62 @@ end
 
 """
 ```
-get_output_files(m, input_type, output_vars, cond_type; subset_string = "")
+get_output_files(m, base, input_type, output_vars, cond_type;
+                 [pathfcn = rawpath], [subset_string = ""], [fileformat = :jld])
 ```
 
-Compute the appropriate forecast output filenames for model `m`, forecast input
+Compute the appropriate output filenames for model `m`, forecast input
 type `input_type`, and conditional type `cond_type`, for each output variable in
 `output_vars`. Returns a dictionary of file names with one entry for each output_var.
 
-If `input_type == :subset`, then the `subset_string` is also appended to the
+### Arguments
+
+- `base::AbstractString`: the output subdirectory corresponding to
+  this general stage of the DSGE procedure. Examples could be `estimate` or `forecast`.
+- See `forecast_one` for descriptions of other non-keyword arguments.
+
+### Optional Arguments
+
+- `pathfcn::Function`: should be one of `rawpath`, `workpath`,
+  `inpath`, `figurespath`, `logpath`. Defaults to `rawpath`.
+- `subset_string::AbstractString`: subset identifier for when `input_type=:subset`
+- `fileformat::Symbol`: file extension, without a period. Defaults to
+  `:jld`, though `:h5` is another common option.
+
+
+### Notes
+- If `input_type == :subset`, then the `subset_string` is also appended to the
 filenames. If in this case `subset_string` is empty, `get_output_files` throws
 an error.
+
+- `base` can be any string, but is likely \"forecast\". An example use case is given below:
+
+```julia
+output_files = get_output_files(m, \"forecast\", :mode, [:forecastpseudo], :none)
+```
+
+The entry corresponding to the `:forecastpseudo` key will look something like:
+
+```julia
+\"$saveroot/m990/ss2/forecast/raw/forecastpseudo_cond=none_para=mode_vint=REF.jld\"
+```
+
+Another example:
+
+```julia
+output_files = get_output_files(m, \"forecast\", :mode, [:forecastpseudo], :none, workpath)
+```
+
+The entry corresponding to the `:forecastpseudo` key will look something like:
+
+```julia
+\"$saveroot/m990/ss2/forecast/work/forecastpseudo_cond=none_para=mode_vint=REF.jld\"
+```
 """
-function get_output_files(m, input_type, output_vars, cond_type; subset_string = "")
+function get_output_files{S<:AbstractString}(m::AbstractModel, base::S,
+                     input_type::Symbol, output_vars::Vector{Symbol}, cond_type::Symbol;
+                     pathfcn::Function = rawpath, subset_string::S = "",
+                     fileformat = :jld)
     additional_file_strings = ASCIIString[]
     push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
     if input_type == :subset
@@ -230,7 +274,8 @@ function get_output_files(m, input_type, output_vars, cond_type; subset_string =
     end
     push!(additional_file_strings, "cond=" * abbrev_symbol(cond_type))
 
-    return [symbol(x) => rawpath(m, "forecast", "$x.jld", additional_file_strings) for x in output_vars]
+    return convert(Dict{Symbol, ASCIIString},
+                   [symbol(x) => pathfcn(m, base, "$x.$fileformat", additional_file_strings) for x in output_vars])
 end
 
 typealias DVector{T, A} DArray{T, 1, A}
@@ -309,6 +354,7 @@ forecast output array. The saved dictionaries include:
 - `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
 """
 function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbol)
+
     # Write date range
     dates = if contains(string(var), "hist")
         quarter_range(date_mainsample_start(m), date_mainsample_end(m))
@@ -335,26 +381,56 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
         state_indices = merge(m.endogenous_states, m.endogenous_states_augmented)
         @assert length(state_indices) == n_states_augmented(m) # assert no duplicate keys
         write(file, "state_indices", state_indices)
+    end
 
     # Write observable names
-    elseif contains(string(var), "obs")
+    if contains(string(var), "obs")
         write(file, "observable_indices", m.observables)
         rev_transforms =
             Dict{Symbol,Symbol}([x => symbol(m.observable_mappings[x].rev_transform) for x in keys(m.observables)])
         write(file, "observable_revtransforms", rev_transforms)
+    end
 
     # Write pseudo-observable names and transforms
-    elseif contains(string(var), "pseudo")
+    if contains(string(var), "pseudo")
         pseudo, pseudo_mapping = pseudo_measurement(m)
         write(file, "pseudoobservable_indices", pseudo_mapping.inds)
         rev_transforms = Dict{Symbol,Symbol}([x => symbol(pseudo[x].rev_transform) for x in keys(pseudo)])
         write(file, "pseudoobservable_revtransforms", rev_transforms)
+    end
 
     # Write shock names
-    elseif contains(string(var), "shocks") || contains(string(var), "shockdec")
+    if contains(string(var), "shocks") || contains(string(var), "shockdec")
         write(file, "shock_indices", m.exogenous_shocks)
     end
 end
+
+"""
+```
+read_forecast_metadata(file::JLD.JldFile)
+```
+
+Read metadata from forecast output files. This includes dictionaries mapping dates, as well as state, observable,
+pseudo-observable, and shock names, to their respective indices in the saved
+forecast output array. The saved dictionaries include:
+
+- `date_indices::Dict{Date, Int}`: saved for all forecast outputs
+- `state_names::Dict{Symbol, Int}`: saved for `var in [:histstates, :forecaststates, :shockdecstates]`
+- `observable_names::Dict{Symbol, Int}`: saved for `var in [:forecastobs, :shockdecobs]`
+- `observable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for observables
+- `pseudoobservable_names::Dict{Symbol, Int}`: saved for `var in [:histpseudo, :forecastpseudo, :shockdecpseudo]`
+- `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for pseudoobservables
+- `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
+"""
+function read_forecast_metadata(file::JLD.JldFile)
+    metadata = Dict{Symbol, Any}()
+    for field in names(file)
+        metadata[symbol(field)] = read(file, field)
+    end
+
+    metadata
+end
+
 
 """
 ```
@@ -374,13 +450,13 @@ function compile_forecast_one(m, df; cond_type = :none, output_vars = [], verbos
     nprocs = length(procs)
     min_draws = jstep * nprocs
 
-    # Call forecast_one with init_type = :subset
+    # Call forecast_one with input_type = :subset
     subset_inds = collect(1:min_draws)
     forecast_outputs = forecast_one(m, df; input_type = :subset, cond_type = cond_type,
                            output_vars = output_vars, subset_inds = subset_inds,
                            subset_string = "compile", verbose = verbose, procs = procs)
 
     # Delete output files
-    output_files = get_output_files(m, :subset, output_vars, cond_type, subset_string = "compile")
+    output_files = get_output_files(m, "forecast", :subset, output_vars, cond_type, subset_string = "compile")
     map(rm, collect(values(output_files)))
 end

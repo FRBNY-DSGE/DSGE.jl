@@ -72,7 +72,7 @@ yt, yf = hpfilter(y, λ::Real)
 ```
 
 Applies the Hodrick-Prescott filter ("H-P filter"). The smoothing parameter `λ` is applied
-to the columns of `y`, returning the trend component `yt` and the cyclical component `yf`.  
+to the columns of `y`, returning the trend component `yt` and the cyclical component `yf`.
 For quarterly data, one can use λ=1600.
 
 Consecutive missing values at the beginning or end of the time series are excluded from the
@@ -206,10 +206,10 @@ logtopct_annualized_percapita(y, q_adj = 100)
 Transform from log growth rates to % growth rates (annualized).
 
 This should only be used for output, consumption, investment
-and GDP deflator (inflation).  
+and GDP deflator (inflation).
 """
-function logtopct_annualized_percapita(y, q_adj = 100)
-    100 * ((exp(y/q_adj)).^4-1)
+function logtopct_annualized_percapita(y, pop_fcast, q_adj = 100)
+    100 * ((exp(y/q_adj .+ pop_fcast)).^4-1)
 end
 
 """
@@ -220,8 +220,8 @@ logtopct_annualized(y, population_forecast, q_adj = 100)
 Transform from log growth rates to total (not per-capita) % growth
 rates (annualized).
 """
-function logtopct_annualized(y, pop_fcast, q_adj = 100)
-    100 * ((exp(y/q_adj + pop_fcast)).^4-1)
+function logtopct_annualized(y, q_adj = 100)
+    100 * ((exp(y/q_adj)).^4-1)
 end
 
 """
@@ -231,30 +231,59 @@ loglevelto4qpct_annualized(y, y_data, current_index)
 
 Transform from log level to 4-quarter annualized percent change.
 
-*Note:* This is usually applied to labor
-  supply (hours worked per hour), and probably shouldn't be used for
-  any other observables.
+*Note:* This is usually applied to labor supply (hours worked per hour), and
+  probably shouldn't be used for any other observables.
 
 ### Arguments
 
-- `y`: The series we wish to transform to 4 quarter annualized percent
-  change from 1-quarter log-levels. 
+- `matrix`: The `ndraws` x `nperiods` matrix we wish to transform to 4 quarter annualized percent
+  change from 1-quarter log-levels.
 
-- `y_data`: The actual data series corresponding to the `y` variable
+- `data`: The actual data series corresponding to the `y` variable
   (state or observable) in the model. This is necessary to get the
   last data point so that a percent change can be computed for the
   first period.
 
-- `current_index`: Index of the last period of data for this
+- `hist_end_index`: Index of the last period of data for this
   variable. Could use `end` if not using conditional data, otherwise
   use `end-1`.
-""" 
-function loglevelto4qpct_annualized(y, y_data, current_index)
+"""
+function loglevelto4qpct_annualized(matrix, data, hist_end_index)
 # Repmat is used to put the data point in each row of the simulations.  The
 # log levels are subtracted to get the log percent changes and
 # then the exponential is used to remove the log from the
 # levels.
-    
-    ((exp(y[:,1:end]/100 - [repmat(y_data[current_index], size(y)) y[:,1:end-1]]/100).^4)-1)*100
+
+    ((exp(matrix./100 - hcat(fill(data[hist_end_index], (size(matrix,1),1)), matrix[:,1:end-1])./100).^4)-1)*100
 end
 
+"""
+```
+loglevelto4qpct_annualized_percapita(y, y_data, current_index, population)
+```
+
+Transform from log level to 4-quarter annualized percent change, adjusting for
+population growth.
+
+*Note:* This is usually applied to labor supply (hours worked per hour), and
+  probably shouldn't be used for any other observables.
+
+### Arguments
+
+- `matrix`: The `ndraws` x `nperiods` matrix we wish to transform to 4 quarter annualized percent
+  change from 1-quarter log-levels.
+
+- `data`: The actual data series corresponding to the `y` variable
+  (state or observable) in the model. This is necessary to get the
+  last data point so that a percent change can be computed for the
+  first period.
+
+- `hist_end_index`: Index of the last period of data for this
+  variable. Could use `end` if not using conditional data, otherwise
+  use `end-1`.
+
+- `population`: The length `nperiods` array of population growth rates.
+"""
+function loglevelto4qpct_annualized_percapita(matrix, data, hist_end_index, population)
+    ((exp(matrix./100 - hcat(fill(data[hist_end_index], (size(matrix,1),1)), matrix[:,1:end-1])./100 + population).^4)-1)*100
+end
