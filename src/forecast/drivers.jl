@@ -603,8 +603,6 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             jldopen(filepath, "w") do file
                 write_forecast_metadata(m, file, var)
             end
-            println(keys(forecast_output))
-            println(var)
             write_darray(filepath, forecast_output[var])
 
             if VERBOSITY[verbose] >= VERBOSITY[:high]
@@ -688,19 +686,16 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
             T = n_mainsample_periods(m)
-
-            # Copy history of observables to make correct size
-            histobs_cond = df_to_matrix(m, df; cond_type = cond_type)[:, index_mainsample_start(m)+T:end]
-            histobs_cond = reshape(histobs_cond, (1, size(histobs_cond)...))
-
-            nperiods = (size(histstates, 3) - T) + size(forecaststates, 3)
+            ncondperiods = size(histstates, 3) - T
+            cond_range = (T+1):(T+ncondperiods)
+            nperiods = ncondperiods + size(forecaststates, 3)
             nobs = n_observables(m)
 
             function cat_conditional(histvars::DArray{Float64, 3}, forecastvars::DArray{Float64, 3})
                 nvars = size(histvars, 2)
                 return DArray((ndraws, nvars, nperiods), procs, [nprocs, 1, 1]) do I
                     draw_inds = first(I)
-                    hist_cond = convert(Array, histvars[draw_inds, :, T+1:end])
+                    hist_cond = convert(Array, histvars[draw_inds, :, cond_range])
                     forecast  = convert(Array, forecastvars[draw_inds, :, :])
                     return cat(3, hist_cond, forecast)
                 end
@@ -711,12 +706,19 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 	        if :forecastpseudo in output_vars
                 forecast_output[:forecastpseudo] = cat_conditional(histpseudo, forecastpseudo)
             end
-            forecast_output[:forecastobs]    =
+            forecast_output[:forecastobs] =
                 DArray((ndraws, nobs, nperiods), procs, [nprocs, 1, 1]) do I
                     draw_inds = first(I)
                     ndraws_local = length(draw_inds)
-                    hist_cond = repeat(histobs_cond, outer = [ndraws_local, 1, 1])
-                    forecast  = convert(Array, forecastobs[draw_inds, :, :])
+
+                    # Map conditional period smoothed states to observables
+                    hist_cond = zeros(ndraws_local, nobs, ncondperiods)
+                    for i in draw_inds
+                        i_local = mod(i-1, ndraws_local) + 1
+                        hist_cond[i, :, :] = systems[i][:ZZ] * convert(Array, slice(histstates, i, :, cond_range)) + systems[i][:DD]
+                    end
+
+                    forecast = convert(Array, forecastobs[draw_inds, :, :])
                     return cat(3, hist_cond, forecast)
                 end
         else
