@@ -7,9 +7,10 @@ compute_means_bands_shockdec(fcast_output, transforms, var_inds, shock_inds, dat
 
 ### Inputs
 
-- `fcast_output`: an `ndraws` x `nvars` x `nperiods` x `nshocks`
+* `fcast_output`: an `ndraws` x `nvars` x `nperiods` x `nshocks`
   array of shock decompositions from the output of the forecast
 
+* `data`: an `nperiods` x `nobs` matrix of data
 """
 function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
                                                         transforms::Dict{Symbol,Symbol},
@@ -17,7 +18,7 @@ function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
                                                         shock_inds::Dict{Symbol,Int},
                                                         date_list::Vector{Date};
                                                         data::Matrix{T} = Matrix{T}(),
-                                                        population_series = Array{T},
+                                                        population_series = Vector{T}(),
                                                         hist_end_index::Int = 0,
                                                         density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9])
 
@@ -33,13 +34,14 @@ function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
     for (shock, shock_ind) in shock_inds
         for (var, var_ind) in variable_indices
             transform = DSGE.parse_transform(transforms[var])
+
             ex = if transform in [:logtopct_annualized_percapita]
                 Expr(:call, transform, squeeze(fcast_output[:,var_ind,:,shock_ind],2), population_series)
             elseif transform in [:loglevelto4qpct_annualized_percapita]
                 Expr(:call, transform, squeeze(fcast_output[:,var_ind,:,shock_ind],2),
-                     data[ind,:], hist_end_index, population_series)
+                     data[var_ind,:], population_series)
             else
-                Expr(:call, :map, transform, squeeze(fcast_output[:,var_ind,:,shock_ind],2))
+                Expr(:call, transform, squeeze(fcast_output[:,var_ind,:,shock_ind],2))
             end
 
             transformed_fcast_output = eval(ex)

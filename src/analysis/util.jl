@@ -31,16 +31,20 @@ n_vars_means(mb::MeansBands)
 
 Get number of variables (`:y_t`, `:OutputGap`, etc) in `mb.means`
 """
-n_vars_means(mb::MeansBands) = length(get_vars_means(mb))
+function n_vars_means(mb::MeansBands)
+    length(get_vars_means(mb))
+end
 
 """
 ```
 get_vars_means(mb::MeansBands)
 ````
 
-Get variables (`:y_t`, `:OutputGap`, etc) in `mb.means`
+Get variables (`:y_t`, `:OutputGap`, etc) in `mb.means`, sorted by `mb.metadata[:indices]`
 """
-get_vars_means(mb::MeansBands) = setdiff(names(mb.means), [:date])
+function get_vars_means(mb::MeansBands)
+    unzip(sort_by_value(mb.metadata[:indices]))[2]
+end
 
 
 """
@@ -118,7 +122,7 @@ enddate_bands(mb::MeansBands) = mb.bands[:date]
 
 """
 ```
-get_density_bands(mb)
+get_density_bands(mb, uniqueify=false)
 ```
 
 Return a list of the bands stored in mb.bands.
@@ -143,7 +147,7 @@ function get_density_bands(mb::MeansBands; uniqueify=false, ordered=true)
 
     # return both upper and lower bands, or just percents, as desired
     strs = if uniqueify
-        unique([split(x, " ")[1] for x in [lowers; uppers]])
+        sort(unique([split(x, " ")[1] for x in [lowers; uppers]]))
     else
         [lowers; uppers]
     end
@@ -244,4 +248,40 @@ function check_consistent_order(l1, l2)
     end
 
     return true
+end
+
+"""
+```
+parse_mb_colname(s::Symbol)
+```
+
+`MeansBands` column names are saved in the format
+`\$var\$DSGE_SHOCKDEC_DELIM\$shock`. `parse_mb_colname` returns (`var`,
+`shock`).
+
+"""
+function parse_mb_colname(s::Symbol)
+    map(symbol, split(string(s), DSGE_SHOCKDEC_DELIM))
+end
+
+"""
+```
+sort_by_value(d::Dict)
+```
+
+Sort a dictionary by value.
+"""
+function sort_by_value(d::Dict)
+    sort(collect(zip(values(d),keys(d))))
+end
+
+function unzip{T<:Tuple}(A::Array{T})
+    res = map(x -> x[], T.parameters)
+    res_len = length(res)
+    for t in A
+        for i in 1:res_len
+            push!(res[i], t[i])
+        end
+    end
+    res
 end

@@ -104,6 +104,7 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
     end
 
     ## Step 1: Filter population history and forecast and compute growth rates
+
     dlfiltered_population_data, dlfiltered_population_forecast =
         if !(isempty(population_data) || isnull(population_mnemonic))
             # get all of the population data
@@ -152,6 +153,7 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
                                  population_data = dlfiltered_population_data,
                                  population_mnemonic = Nullable(:population_growth),
                                  population_forecast = dlfiltered_population_forecast,
+                                 hist_end_index = hist_end_index,
                                  data = data)
 
         # write to file
@@ -178,11 +180,12 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
                                                 population_data = DataFrame(),
                                                 population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                 population_forecast = DataFrame(),
+                                                hist_end_index::Int = 0,
                                                 data = Matrix())
 
     # Return only one set of bands if we read in only one draw
     if input_type in [:init, :mode, :mean]
-        density_bands = [1.]
+        density_bands = [.5]
     end
 
     ## Step 1: Determine the class of variable we are working with (pseudos? observables? etc)
@@ -247,7 +250,7 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
                    :indices    => variable_indices,
                    :subset_string => subset_string)
 
-    means, bands = if product == :shockdec
+    means, bands = if product in [:shockdec]
         # make sure population series corresponds with saved shockdec dates
         shockdec_start = date_list[1]
         shockdec_end   = date_list[end]
@@ -255,15 +258,12 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
         start_ind = find(population_data[:date] .== shockdec_start)[1]
         end_ind   = find(population_forecast[:date] .== shockdec_end)[1]
 
-        println(start_ind)
-        println(end_ind)
-
         # concatenate population histories and forecasts together
         population_series = if isempty(end_ind)
-            convert(Array{Float64}, population_data[start_ind:end, mnemonic])
+            convert(Vector{Float64}, population_data[start_ind:end, mnemonic])
         else
             tmp = [population_data[start_ind:end, mnemonic]; population_forecast[1:end_ind, mnemonic]]
-            convert(Array{Float64}, tmp)
+            convert(Vector{Float64}, tmp)
         end
 
         # get shock indices
@@ -296,13 +296,6 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
             else
                 map(transform, fcast_series)
             end
-
-            # # PZL 2016-11-09
-            # myfile = "/data/dsge_data_dir/dsgejl/tests_vs_matlab/forecast/comparison_files/transformed_draws/$(output_var)_$series.h5"
-            # h5open(myfile, "w") do h5
-            #     write(h5, "$series", transformed_fcast_output)
-            # end
-            # println("Wrote $myfile")
 
             # compute the mean and bands across draws and add to dataframe
             means[series] = vec(mean(transformed_fcast_output,1))

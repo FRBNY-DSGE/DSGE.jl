@@ -71,7 +71,10 @@ function meansbands_matrix{S<:AbstractString}(mb::MeansBands, outfile::S; verbos
     # extract useful info
     vars     = get_vars_means(mb)             # get names of variables
     nvars    = length(vars)                   # get number of variables
-    T        = eltype(mb.means[vars[1]])      # type of elements of mb structure
+
+    tmp      = setdiff(names(mb.means), [:date])[1]
+    T        = eltype(mb.means[tmp])          # type of elements of mb structure
+
     nperiods = n_periods_means(mb)            # get number of periods
     prod     = product(mb)                    # history? forecast? shockdec?
     cl       = class(mb)                      # pseudo? obs? state?
@@ -104,14 +107,21 @@ function meansbands_matrix{S<:AbstractString}(mb::MeansBands, outfile::S; verbos
         nshocks = length(shock_inds)
 
         # construct means and bands arrays
-        means = Array{T,3}(nvars, nperiods, nshocks)
-        bands = Array{T,4}(nbands, nvars, nperiods, nshocks)
+        means = Array{T}(nvars, nperiods, nshocks)
+        bands = Array{T}(nbands, nvars, nperiods, nshocks)
 
         for series in setdiff(names(mb.means), [:date])
-            ind = inds[series]
+
+            var, shock = DSGE.parse_mb_colname(series)
+            ind = inds[var]
 
             for shock in keys(shock_inds)
-                means[ind,:,shock] = mb.means[series]
+                shock_ind = shock_inds[shock]
+                means[ind,:,shock_ind] = convert(Array{T}, mb.means[series])
+
+                for (band_ind, band) in enumerate(bands_list)
+                    bands[band_ind, ind, :, shock_ind] = convert(Array{T}, mb.bands[series][symbol(band)])
+                end
             end
         end
 
