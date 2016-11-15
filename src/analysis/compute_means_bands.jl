@@ -66,7 +66,6 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
 
     ## Step 2: Load main dataset - required for some transformations
     data = load_dataset ? df_to_matrix(m, load_data(m)) : Matrix{T}()
-    hist_end_index = index_forecast_start(m) - 1
 
     ## Step 3: Get names of files that the forecast wrote
     forecast_output_files = DSGE.get_output_files(m, "forecast", input_type,
@@ -79,7 +78,7 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
                             population_data = level_data,
                             population_mnemonic = population_mnemonic,
                             population_forecast_file = population_forecast_file,
-                            hist_end_index = hist_end_index, data = data)
+                            data = data)
 end
 
 function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
@@ -92,7 +91,6 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
                                                population_data::DataFrame = DataFrame(),
                                                population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                population_forecast_file = "",
-                                               hist_end_index::Int = 0,
                                                data = Matrix{T}())
 
     ## Step 1: Filter population history and forecast and compute growth rates
@@ -143,7 +141,6 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
                                  population_data = dlfiltered_population_data,
                                  population_mnemonic = Nullable(:population_growth),
                                  population_forecast = dlfiltered_population_forecast,
-                                 hist_end_index = hist_end_index,
                                  data = data)
 
         # write to file
@@ -164,7 +161,6 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
                                                 population_data = DataFrame(),
                                                 population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                 population_forecast = DataFrame(),
-                                                hist_end_index::Int = 0,
                                                 data = Matrix())
 
     # Return only one set of bands if we read in only one draw
@@ -262,7 +258,7 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
         compute_means_bands_shockdec(fcast_output[:,:,date_indices_order,:], transforms,
                                      variable_indices, metadata[:shock_indices], date_list,
                                      data = data, population_series = population_series,
-                                     hist_end_index = hist_end_index, density_bands = density_bands)
+                                     density_bands = density_bands)
     else
         # make DataFrames for means and bands
         means = DataFrame(date = date_list)
@@ -274,14 +270,16 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
         for (series, ind) in variable_indices
             # apply transformation to all draws
             transform = parse_transform(transforms[series])
+            fcast_series = squeeze(fcast_output[:, ind, date_indices_order], 2)
             ex = if transform in [:logtopct_annualized_percapita]
-                pop_fcast = convert(Array{Float64}, population_forecast[mnemonic]')
-                Expr(:call, transform, squeeze(fcast_output[:,ind,date_indices_order],2), pop_fcast)
+                pop_fcast = convert(Vector{Float64}, population_forecast[mnemonic])
+                Expr(:call, transform, fcast_series, pop_fcast)
             elseif transform in [:loglevelto4qpct_annualized_percapita]
-                pop_fcast = convert(Array{Float64}, population_forecast[mnemonic]')
-                Expr(:call, transform, squeeze(fcast_output[:,ind,date_indices_order],2), data[ind,:], hist_end_index, pop_fcast)
+                pop_fcast = convert(Vector{Float64}, population_forecast[mnemonic])
+                hist_series = vec(data[ind, :])
+                Expr(:call, transform, fcast_series, hist_series, pop_fcast)
             else
-                Expr(:call, :map, transform, squeeze(fcast_output[:,ind,date_indices_order],2))
+                Expr(:call, :map, transform, fcast_series)
             end
             transformed_fcast_output = eval(ex)
 

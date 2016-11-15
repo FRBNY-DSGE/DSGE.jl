@@ -201,32 +201,32 @@ end
 
 """
 ```
-logtopct_annualized_percapita(y, q_adj = 100)
+logtopct_annualized_percapita(y, pop_fcast, q_adj = 100)
 ```
 Transform from log growth rates to % growth rates (annualized).
 
 This should only be used for output, consumption, investment
 and GDP deflator (inflation).
 """
-function logtopct_annualized_percapita(y, pop_fcast, q_adj = 100)
-    100 * ((exp(y/q_adj .+ pop_fcast)).^4-1)
+function logtopct_annualized_percapita(y::Matrix, pop_fcast::Vector, q_adj = 100)
+    100 * ((exp(y/q_adj .+ pop_fcast')).^4-1)
 end
 
 """
 ```
-logtopct_annualized(y, population_forecast, q_adj = 100)
+logtopct_annualized(y, q_adj = 100)
 ```
 
 Transform from log growth rates to total (not per-capita) % growth
 rates (annualized).
 """
-function logtopct_annualized(y, q_adj = 100)
+function logtopct_annualized(y::Matrix, q_adj = 100)
     100 * ((exp(y/q_adj)).^4-1)
 end
 
 """
 ```
-loglevelto4qpct_annualized(y, y_data, current_index)
+loglevelto4qpct_annualized(y, y_data)
 ```
 
 Transform from log level to 4-quarter annualized percent change.
@@ -236,30 +236,28 @@ Transform from log level to 4-quarter annualized percent change.
 
 ### Arguments
 
-- `matrix`: The `ndraws` x `nperiods` matrix we wish to transform to 4 quarter annualized percent
-  change from 1-quarter log-levels.
+- `y::Matrix`: The `ndraws` x `nperiods` series we wish to transform to 4 quarter
+  annualized percent change from 1-quarter log-levels.
 
-- `data`: The actual data series corresponding to the `y` variable
-  (state or observable) in the model. This is necessary to get the
-  last data point so that a percent change can be computed for the
-  first period.
-
-- `hist_end_index`: Index of the last period of data for this
-  variable. Could use `end` if not using conditional data, otherwise
-  use `end-1`.
+- `y_data::Vector`: The actual data series corresponding to the `y` variable (state or
+  observable) in the model. This is necessary to get the last data point so that
+  a percent change can be computed for the first period.
 """
-function loglevelto4qpct_annualized(matrix, data, hist_end_index)
+function loglevelto4qpct_annualized(y::Matrix, y_data::Vector)
 # Repmat is used to put the data point in each row of the simulations.  The
 # log levels are subtracted to get the log percent changes and
 # then the exponential is used to remove the log from the
 # levels.
+    ndraws = size(y, 1)
+    y_t1 = hcat(fill(y_data[end], ndraws, 1),
+                y[:, 1:end-1])
 
-    ((exp(matrix./100 - hcat(fill(data[hist_end_index], (size(matrix,1),1)), matrix[:,1:end-1])./100).^4)-1)*100
+    return ((exp(y./100 - y_t1./100).^4) .- 1)*100
 end
 
 """
 ```
-loglevelto4qpct_annualized_percapita(y, y_data, current_index, population)
+loglevelto4qpct_annualized_percapita(y, y_data, population)
 ```
 
 Transform from log level to 4-quarter annualized percent change, adjusting for
@@ -270,20 +268,19 @@ population growth.
 
 ### Arguments
 
-- `matrix`: The `ndraws` x `nperiods` matrix we wish to transform to 4 quarter annualized percent
-  change from 1-quarter log-levels.
+- `y::Matrix`: The `ndraws` x `nperiods` series we wish to transform to 4
+  quarter annualized percent change from 1-quarter log-levels.
 
-- `data`: The actual data series corresponding to the `y` variable
-  (state or observable) in the model. This is necessary to get the
-  last data point so that a percent change can be computed for the
-  first period.
+- `y_data::Vector`: The actual data series corresponding to the `y` variable
+  (state or observable) in the model. This is necessary to get the last data
+  point so that a percent change can be computed for the first period.
 
-- `hist_end_index`: Index of the last period of data for this
-  variable. Could use `end` if not using conditional data, otherwise
-  use `end-1`.
-
-- `population`: The length `nperiods` array of population growth rates.
+- `population::Vector`: The length `nperiods` vector of population growth rates.
 """
-function loglevelto4qpct_annualized_percapita(matrix, data, hist_end_index, population)
-    ((exp(matrix./100 - hcat(fill(data[hist_end_index], (size(matrix,1),1)), matrix[:,1:end-1])./100 + population).^4)-1)*100
+function loglevelto4qpct_annualized_percapita(y::Matrix, y_data::Vector, population::Vector)
+    ndraws = size(y, 1)
+    y_t1 = hcat(fill(y_data[end], ndraws, 1),
+                y[:, 1:end-1])
+
+    return ((exp(y./100 - y_t1./100 .+ population').^4) .- 1)*100
 end
