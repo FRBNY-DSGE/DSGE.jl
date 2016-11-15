@@ -646,7 +646,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
             forecast_output[:histstates] = convert(DArray, histstates[1:end, 1:end, 1:T])
             forecast_output[:histshocks] = convert(DArray, histshocks[1:end, 1:end, 1:T])
-	    if :histpseudo in output_vars
+            if :histpseudo in output_vars
                 forecast_output[:histpseudo] = convert(DArray, histpseudo[1:end, 1:end, 1:T])
             end
         else
@@ -715,7 +715,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
                     hist_cond = zeros(ndraws_local, nobs, ncondperiods)
                     for i in draw_inds
                         i_local = mod(i-1, ndraws_local) + 1
-                        hist_cond[i, :, :] = systems[i][:ZZ] * convert(Array, slice(histstates, i, :, cond_range)) + systems[i][:DD]
+                        hist_cond[i_local, :, :] = systems[i][:ZZ] * convert(Array, slice(histstates, i, :, cond_range)) + systems[i][:DD]
                     end
 
                     forecast = convert(Array, forecastobs[draw_inds, :, :])
