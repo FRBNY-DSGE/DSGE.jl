@@ -596,6 +596,14 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     nprocs = length(procs)
     ndraws = length(systems)
 
+    # Set forecast_pseudoobservables properly
+    for output in output_vars
+        if contains(string(output), "pseudo")
+            m <= Setting(:forecast_pseudoobservables, true)
+            break
+        end
+    end
+
     # Inline definition s.t. the dicts forecast_output and forecast_output_files are accessible
     function write_forecast_outputs(vars::Vector{Symbol})
         for var in vars
@@ -613,14 +621,6 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
 
     ### 2. Smoothed Histories
-
-    # Set forecast_pseudoobservables properly
-    for output in output_vars
-        if contains(string(output), "pseudo")
-            m <= Setting(:forecast_pseudoobservables, true)
-            break
-        end
-    end
 
     # Must re-run filter/smoother for conditional data in addition to explicit cases
     hist_vars = [:histstates, :histpseudo, :histshocks]
@@ -762,5 +762,6 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("\nForecast complete: $(now())")
     end
+
     return forecast_output
 end
