@@ -22,7 +22,7 @@ my_procs = addprocs(ndraws)
 systems = distribute(systems; procs = my_procs, dist = [ndraws])
 
 # Run to compile before timing
-states, shocks, pseudo = filterandsmooth_all(m, df, systems; procs = my_procs)
+filterandsmooth_all(m, df, systems; procs = my_procs)
 
 # Read in expected output
 exp_states, exp_shocks, exp_pseudo, exp_zend =

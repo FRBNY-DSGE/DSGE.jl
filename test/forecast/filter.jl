@@ -23,8 +23,8 @@ my_procs = addprocs(ndraws)
 systems = distribute(systems; procs = my_procs, dist = [ndraws])
 
 # Run to compile before timing
-kals = DSGE.filter_all(m, df, systems; allout = true)
-kals = DSGE.filter_all(m, df, systems, z0, vz0; allout = true)
+DSGE.filter_all(m, df, systems; allout = true)
+DSGE.filter_all(m, df, systems, z0, vz0; allout = true)
 
 # Read expected output
 exp_kals_no_z0, exp_kals_z0 = jldopen("$path/../reference/filter_out.jld","r") do file
@@ -38,11 +38,7 @@ for i = 1:ndraws
         expect = exp_kals_no_z0[i][out]
         actual = kals[i][out]
 
-        if ndims(expect) == 0
-            @test_approx_eq expect actual
-        else
-            @test_matrix_approx_eq expect actual
-        end
+        ndims(expect) == 0 ? @test_approx_eq(expect, actual) : @test_matrix_approx_eq(expect, actual)
     end
 end
 
@@ -53,11 +49,7 @@ for i = 1:ndraws
         expect = exp_kals_z0[i][out]
         actual = kals[i][out]
 
-        if ndims(expect) == 0
-            @test_approx_eq expect actual
-        else
-            @test_matrix_approx_eq expect actual
-        end
+        ndims(expect) == 0 ? @test_approx_eq(expect, actual) : @test_matrix_approx_eq(expect, actual)
     end
 end
 
