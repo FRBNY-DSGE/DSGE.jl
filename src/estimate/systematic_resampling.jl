@@ -62,5 +62,11 @@ end
 indx = parindx'
 
 indx = round(Int, indx)
+
+open("resamples.csv","a") do x
+    writecsv(x,indx')
+end 
+
+
 return vec(indx)
 end

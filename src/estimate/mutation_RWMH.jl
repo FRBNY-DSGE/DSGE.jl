@@ -1,3 +1,4 @@
+#=
 """
 ```
 mutation_RWMH(p0, l0, post0, tune,i, data; rvec = [], rval = [], px = [], lx = [], postx = [],m)
@@ -33,8 +34,9 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 - `ind_acpt`: Indicator for acceptance or rejection (0 reject, 1 accept)
 
 """
-
+=#
 #change tune to be a sub-type of Tune or something in the future
+#@debug
 function mutation_RWMH(p0::Array{Float64,1}, l0::Float64, post0::Float64, tune, i::Int64, data::Matrix{Float64}, m::AbstractModel; rvec = [], rval = [], px = [], lx = [], postx = [])
 
 if m.testing
@@ -84,8 +86,24 @@ end
     end
     
 # Accept/Reject
-alp = exp(postx - post0) # this is RW, so q is canceled out
+    alp = exp(postx - post0) # this is RW, so q is canceled out
+    # println("alp: $(trunc(alp,4)) post0: $(trunc(post0,4)) l0:
+    # $(trunc(l0,4)) postx: $(trunc(postx,4)) phi_factor:
+    # $(trunc(tune.phi[i]-tune.phi[i-1],4))")
+    # println("px: $px \n")
 
+
+    open("output.txt","a") do x
+        write(x,"alp: $(trunc(alp,4)) l0: $(trunc(l0,4)) post0: $(trunc(post0,4)) lx: $(trunc(lx,4)) postx: $(trunc(postx,4)) phi_factor: $(trunc(tune.phi[i]-tune.phi[i-1],4))\n")
+        write(x,"px: $px \n")
+        write(x,"p0: $p0 \n\n")
+    end
+    open("draws.csv","a") do x
+        writecsv(x,reshape(px,(1,tune.npara)))
+    end 
+ 
+#@bp
+rval = .5
 if rval .< alp # accept
     ind_para   = px 
     ind_loglh  = lx
