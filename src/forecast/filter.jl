@@ -140,16 +140,16 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::Sys
     lead::Int = 0, allout::Bool = false, include_presample::Bool = true)
 
     # Unpack system
-    T, R, C = system[:TTT], system[:RRR], system[:CCC]
-    Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
-    V_all   = system[:VVall]
+    T, R, C     = system[:TTT], system[:RRR], system[:CCC]
+    Q, Z, D     = system[:QQ], system[:ZZ], system[:DD]
+    M, E, V_all = system[:MM], system[:EE], system[:VVall]
 
     if n_anticipated_shocks(m) > 0
-
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at index_zlb_start)
         kal, _, _, _ = kalman_filter_2part(m, data, T, R, C, z0, vz0;
-            lead = lead, allout = allout, include_presample = include_presample)
+                           ZZ = Z, DD = D, QQ = Q, MM = M, EE = E, VVall = V_all,
+                           lead = lead, allout = true, include_presample = true)
     else
         # Regular Kalman filter with no regime-switching
         kal = kalman_filter(m, data, T, C, Z, D, V_all, z0, vz0;
@@ -282,7 +282,8 @@ end
 
 """
 ```
-filterandsmooth(m, data, system, z0 = Vector{S}(), vz0 = Matrix{S}(); lead = 0)
+filterandsmooth(m, data, system, z0 = Vector{S}(), vz0 = Matrix{S}();
+    cond_type = :none, lead = 0)
 ```
 
 Computes and returns the smoothed states, shocks, and pseudo-observables, as
@@ -300,6 +301,13 @@ system given by `system`.
 - `vz0::Matrix{S}`: optional `Nz` x `Nz` initial state covariance matrix
 
 where `S<:AbstractFloat`.
+
+### Keyword Arguments
+
+- `cond_type::Symbol`: conditional case. See `forecast_all` for documentation of
+  all cond_type options.
+- `lead::Int`: number of steps to forecast after the end of the data. Defaults
+  to 0.
 
 ### Outputs
 
@@ -324,11 +332,19 @@ m <= Setting(:forecast_smoother, :kalman_smoother))
 
 before calling `filterandsmooth`.
 """
+function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+    system::System{S}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
+    cond_type::Symbol = :none, lead::Int = 0)
+
+    data = df_to_matrix(m, df; cond_type = cond_type)
+    filterandsmooth(m, data, system, z0, vz0; lead = lead)
+end
+
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     system::System{S}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     lead::Int = 0)
 
-    # Unpack system
+    # 0. Unpack system
     T, R, C     = system[:TTT], system[:RRR], system[:CCC]
     Q, Z, D     = system[:QQ], system[:ZZ], system[:DD]
     M, E, V_all = system[:MM], system[:EE], system[:VVall]
@@ -339,21 +355,9 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         Matrix{S}(), Vector{S}()
     end
 
-    filterandsmooth(m, data, T, R, C, Q, Z, D, M, E, V_all, Z_pseudo, D_pseudo, z0, vz0; lead = lead)
-end
-
-function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    T::Matrix{S}, R::Matrix{S}, C::Vector{S},
-    Q::Matrix{S}, Z::Matrix{S}, D::Vector{S},
-    M::Matrix{S}, E::Matrix{S}, V_all::Matrix{S},
-    Z_pseudo::Matrix{S}, D_pseudo::Vector{S},
-    z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-    lead::Int = 0)
-
     ## 1. Filter
 
     if n_anticipated_shocks(m) > 0
-
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at index_zlb_start)
         kal, _, _, _ = kalman_filter_2part(m, data, T, R, C, z0, vz0;
