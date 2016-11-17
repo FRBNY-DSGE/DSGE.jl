@@ -210,12 +210,13 @@ end
 
 """
 ```
-kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
-    data::Matrix{S}, TTT::Matrix{S} = Matrix{S}(0, 0), RRR::Matrix{S} =
-    Matrix{S}(0, 0), CCC::Vector{S} = Vector{S}(0,), z0::Array{S} =
-    Array{S}(0,), vz0::Matrix{S} = Matrix{S}(0, 0); DD::Array{S} = Array{S}(0,),
-    lead::Int = 0, allout::Bool = false, catch_errors::Bool = false,
-    include_presample::Bool = true)
+kalman_filter_2part{S<:AbstractFloat}(m, data,
+    TTT = Matrix{S}(0, 0), RRR = Matrix{S}(0, 0), CCC = Vector{S}(0,),
+    z0 = Vector{S}(0,), vz0 = Matrix{S}(0, 0);
+    ZZ = Matrix{S}(0, 0), DD = Vector{S}(0,), QQ = Matrix{S}(0, 0),
+    MM = Matrix{S}(0, 0), EE = Matrix{S}(0, 0), VVall = Matrix{S}(0, 0),
+    lead = 0, allout = false, catch_errors = false,
+    include_presample = true)
 ```
 
 Implements the Kalman filter, accounting for the zero lower bound.
@@ -223,46 +224,56 @@ Implements the Kalman filter, accounting for the zero lower bound.
 ### Inputs
 
 - `m`: model object
-- `data`: a `Ny` x `T` matrix containing data `y(1), ... , y(T)`.
-- `TTT`: an optional `Nz` x `Nz` matrix for a time-invariant transition matrix in
-  the transition equation. If not provided, it will be calculated.
-- `RRR`: an optional `Nz` x `Nz` matrix for a time-invariant variance matrix for
-  the error in the transition equation.  If not provided, it will be calculated.
-- `CCC`: an `Nz` x 1 vector for a time-invariant input vector in the transition
-  equation.  If not provided, it will be calculated.
-- `z0`: an optional `Nz` x 1 initial state vector.
-- `vz0`: an optional `Nz` x `Nz` covariance matrix of an initial state vector.
+- `data`: `Ny` x `T` matrix containing data `y(1), ... , y(T)`.
+- `TTT`: optional `Nz` x `Nz` matrix for a time-invariant transition matrix in
+  the transition equation. If not provided, it will be calculated from `m`
+- `RRR`: optional `Nz` x `Ne` matrix mapping exogenous shocks to states in the
+  transition equation. If not provided, it will be calculated from `m`
+- `CCC`: `Nz` x 1 vector, the constant term in the transition equation. If
+  not provided, it will be calculated from `m`
+- `z0`: optional `Nz` x 1 initial state vector
+- `vz0`: optional `Nz` x `Nz` covariance matrix of the initial state vector
 
-Where:
+where:
+
 - `Nz`: number of states
 - `Ny`: number of observables
+- `Ne`: number of shocks
 - `T`: number of periods of data
 
 #### Keyword arguments
 
-- `DD`: optional override for the constant term in the measurement equation. We
-  use this in `durbin_koopman_smoother` because the data matrix we pass in is
-  related to the states by a measurement equation with no constant term.
-- `lead`: the number of steps to forecast after the end of the data.
+- `ZZ`: `Ny` x `Nz` matrix mapping states to observables
+- `DD`: `Ny` x 1 vector, the constant term in the measurement equation
+- `QQ`: `Ne` x `Ne` matrix of exogenous shock covariances
+- `MM`: `Ny` x `Ne` matrix. See `Measurement` type for description
+- `EE`: `Ny` x `Ny` matrix. See `Measurement` type for description
+- `VVall`: `Nz + Ny` x `Nz + Ny` matrix. See `Measurement` type for description
+- `lead`: number of steps to forecast after the end of the data
 - `allout`: indicates whether we want optional output variables returned as well
 - `include_presample`: indicates whether to include presample periods in the
   returned Kalman object. If true, we concatenate Kalman objects from all three
-  regimes; else only R2 and R3.
+  regimes, else only R2 and R3
 
 ### Outputs
 
-- a `Kalman` object. See documentation for `Kalman`.
+- a `Kalman` object. See documentation for `Kalman`
 """
 function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
                                                data::Matrix{S},
-                                               TTT::Matrix{S} = Matrix{S}(0, 0),
-                                               RRR::Matrix{S} = Matrix{S}(0, 0),
-                                               CCC::Vector{S} = Vector{S}(0,),
-                                               z0::Array{S}   = Array{S}(0,),
-                                               vz0::Matrix{S} = Matrix{S}(0, 0);
-                                               DD::Array{S}   = Array{S}(0,),
-                                               lead::Int      = 0,
-                                               allout::Bool   = false,
+                                               TTT::Matrix{S}   = Matrix{S}(0, 0),
+                                               RRR::Matrix{S}   = Matrix{S}(0, 0),
+                                               CCC::Vector{S}   = Vector{S}(0,),
+                                               z0::Vector{S}    = Vector{S}(0,),
+                                               vz0::Matrix{S}   = Matrix{S}(0, 0);
+                                               ZZ::Matrix{S}    = Matrix{S}(0, 0),
+                                               DD::Vector{S}    = Vector{S}(0,),
+                                               QQ::Matrix{S}    = Matrix{S}(0, 0),
+                                               MM::Matrix{S}    = Matrix{S}(0, 0),
+                                               EE::Matrix{S}    = Matrix{S}(0, 0),
+                                               VVall::Matrix{S} = Matrix{S}(0, 0),
+                                               lead::Int        = 0,
+                                               allout::Bool     = false,
                                                catch_errors::Bool = false,
                                                include_presample::Bool = true)
 
@@ -277,11 +288,11 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     n_T0  = n_presample_periods(m)
     n_ant = n_anticipated_shocks(m)
 
-    n_obs_no_ant = n_observables(m) - n_anticipated_shocks(m)
-    n_states_no_ant = n_states_augmented(m) - n_anticipated_shocks(m)
-    n_states_aug    = n_states_augmented(m)
-    nstates         = n_states(m)
-    regime_states   = [n_states_no_ant, n_states_no_ant, n_states_aug]
+    nstates        = n_states_augmented(m)
+    nstates_no_ant = nstates - n_anticipated_shocks(m)
+    nobs           = n_observables(m)
+    nobs_no_ant    = nobs - n_anticipated_shocks(m)
+    regime_states  = [nstates_no_ant, nstates_no_ant, nstates]
 
     state_inds = inds_states_no_ant(m)
     shock_inds = inds_shocks_no_ant(m)
@@ -312,8 +323,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
         R3[:TTT], R3[:RRR], R3[:CCC] = TTT, RRR, CCC
     end
 
-
-    # Get normal, no ZLB matrices
+    # Matrices without anticipated shocks
     R2[:TTT] = R3[:TTT][state_inds, state_inds]
     R2[:RRR] = R3[:RRR][state_inds, shock_inds]
     R2[:CCC] = R3[:CCC][state_inds]
@@ -325,22 +335,29 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     #   u_t = η_t + MM*ε_t
     #   Var(u_t) = HH = EE+MM QQ MM'
     #   Cov(ε_t,u_t) = VV = QQ*MM'
+    if isempty(ZZ) || isempty(DD) || isempty(QQ) || isempty(MM) || isempty(EE) || isempty(VVall)
+        meas = measurement(m, R3[:TTT], R3[:RRR], R3[:CCC]; shocks = true)
+        R3[:ZZ], R3[:QQ], R3[:VVall] = meas[:ZZ], meas[:QQ], meas[:VVall]
+        MM, EE = meas[:MM], meas[:EE]
 
-    # Get measurement equation matrices set up for normal and zlb periods
-    measurement_R2 = measurement(m, R2[:TTT], R2[:RRR], R2[:CCC]; shocks = false)
-    measurement_R3 = measurement(m, R3[:TTT], R3[:RRR], R3[:CCC]; shocks = true)
-    for d in (:ZZ, :DD, :QQ, :VVall)
-        R2[d] = measurement_R2[d]
-        R3[d] = measurement_R3[d]
+        # If DD specifically is nonempty (most often a vector of zeros, as in
+        # the Durbin-Koopman smoother), we want to use that DD instead of the
+        # one calculated from the measurement equation
+        R3[:DD] = isempty(DD) ? meas[:DD] : DD
+    else
+        R3[:ZZ], R3[:DD], R3[:QQ], R3[:VVall] = ZZ, DD, QQ, VVall
     end
 
-    # If we pass in DD as a kwarg (most often a vector of zeros, as in the
-    # Durbin-Koopman smoother), we want to use that DD instead of the one
-    # calculated from the measurement equation
-    if !isempty(DD)
-        R2[:DD] = DD[obs_inds]
-        R3[:DD] = DD
-    end
+    # Matrices without anticipated shocks
+    R2[:ZZ] = R3[:ZZ][obs_inds, state_inds]
+    R2[:DD] = R3[:DD][obs_inds]
+    R2[:QQ] = R3[:QQ][shock_inds, shock_inds]
+
+    # R2[:VVall] must be recomputed from the other matrices without anticipated shocks
+    MM = MM[obs_inds, shock_inds]
+    EE = EE[obs_inds, obs_inds]
+    R2[:VVall] = [[R2[:RRR]*R2[:QQ]*R2[:RRR]' R2[:RRR]*R2[:QQ]*MM'];
+                  [MM*R2[:QQ]*R2[:RRR]'       EE+MM*R2[:QQ]*MM']]
 
     # Presample measurement & transition equation matrices are same as normal
     # period
@@ -385,8 +402,8 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
         include_presample = true)
 
     # Run Kalman filter on ZLB period
-    zprev = zeros(S, n_states_aug)
-    Pprev = zeros(S, n_states_aug, n_states_aug)
+    zprev = zeros(S, nstates)
+    Pprev = zeros(S, nstates, nstates)
     zprev[state_inds] = k2[:zend]
     Pprev[state_inds, state_inds] = k2[:Pend]
     k3 = kalman_filter(m, R3[:data], R3[:TTT], zeros(regime_states[3]), R3[:ZZ],
@@ -482,21 +499,21 @@ function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
     # only fill out L, zend, and Pend
     if regime_switch && allout
 
-        n_states_aug = n_states_augmented(m)
-        n_obs        = n_observables(m)
+        nstates      = n_states_augmented(m)
+        nobs         = n_observables(m)
         n_k1_periods = size(k1[:pred], 2)
 
         # Initialize fields for augmented k1
-        pred = zeros(S, n_states_aug, n_k1_periods)
-        vpred = zeros(S, n_states_aug, n_states_aug, n_k1_periods)
-        yprederror = zeros(S, n_obs, n_k1_periods)
-        ystdprederror = zeros(S, n_obs, n_k1_periods)
-        rmse = zeros(S, 1, n_obs)
-        rmsd = zeros(S, 1, n_obs)
-        filt = zeros(S, n_states_aug, n_k1_periods)
-        vfilt = zeros(S, n_states_aug, n_states_aug, n_k1_periods)
-        z0 = zeros(S, n_states_aug)
-        vz0 = zeros(S, n_states_aug, n_states_aug)
+        pred = zeros(S, nstates, n_k1_periods)
+        vpred = zeros(S, nstates, nstates, n_k1_periods)
+        yprederror = zeros(S, nobs, n_k1_periods)
+        ystdprederror = zeros(S, nobs, n_k1_periods)
+        rmse = zeros(S, 1, nobs)
+        rmsd = zeros(S, 1, nobs)
+        filt = zeros(S, nstates, n_k1_periods)
+        vfilt = zeros(S, nstates, nstates, n_k1_periods)
+        z0 = zeros(S, nstates)
+        vz0 = zeros(S, nstates, nstates)
         k1_new = Kalman(k1[:L], k1[:zend], k1[:Pend], pred, vpred, yprederror,
             ystdprederror, rmse, rmsd, filt, vfilt, z0, vz0)
 
