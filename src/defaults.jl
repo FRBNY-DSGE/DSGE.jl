@@ -58,6 +58,8 @@ function default_settings!(m::AbstractModel)
         m <= Setting(:date_mainsample_start, quartertodate("1983-Q1"))
         m <= Setting(:date_mainsample_end, quartertodate("2002-Q4"))
         m <= Setting(:date_zlbregime_start, quartertodate("2002-Q4"))
+        m <= Setting(:date_forecast_start, quartertodate("2003-Q1"))
+  
     end
 
 end

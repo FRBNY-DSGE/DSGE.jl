@@ -1,4 +1,4 @@
-using Debug
+#using Debug
 #=
 This code is loosely based on a routine originally copyright Federal Reserve Bank of Atlanta
 and written by Iskander Karibzhanov.
@@ -65,7 +65,7 @@ and written by Iskander Karibzhanov.
 #applied, the initial state vector estimate is set to `a` and its covariance matrix is given
 #by `1E6I`.  Optionally, you can specify initial values.
 #"""
-@debug function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
+function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
                                       lead::Int64,
                                       a::Matrix{S},
                                       F::Matrix{S},
