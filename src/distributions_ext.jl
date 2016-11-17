@@ -92,7 +92,9 @@ end
 DegenerateMvNormal <: Distribution{Multivariate, Continuous}
 ```
 
-The DegenerateMvNormal type implements a degenerate multivariate normal distribution.
+The `DegenerateMvNormal` type implements a degenerate multivariate normal
+distribution. The covariance matrix may not be full rank (hence degenerate).
+
 See [Multivariate normal distribution - Degenerate case](en.wikipedia.org/wiki/Multivariate_normal_distribution#Degenerate_case).
 """
 type DegenerateMvNormal <: Distribution{Multivariate, Continuous}
@@ -100,36 +102,32 @@ type DegenerateMvNormal <: Distribution{Multivariate, Continuous}
     σ::Matrix          # standard deviation
 end
 
-
 """
 ```
 rank(d::DegenerateMvNormal)
 ```
 
-Returns the rank of d.σ.
+Returns the rank of `d.σ`.
 """
 function rank(d::DegenerateMvNormal)
     return rank(d.σ)
 end
-
 
 """
 ```
 length(d::DegenerateMvNormal)
 ```
 
-Returns the dimension of d.
+Returns the dimension of `d`.
 """
 Base.length(d::DegenerateMvNormal) = length(d.μ)
-
-
 
 """
 ```
 Distributions.rand{T<:AbstractFloat}(d::DegenerateMvNormal; cc::T = 1.0)
 ```
 
-Generate a draw from d with variance optionally scaled by cc^2.
+Generate a draw from `d` with variance optionally scaled by `cc^2`.
 """
 function Distributions.rand{T<:AbstractFloat}(d::DegenerateMvNormal; cc::T = 1.0)
     return d.μ + cc*d.σ*randn(length(d))
@@ -140,10 +138,74 @@ end
 moments(dist::DegenerateMvNormal)
 ```
 
-Compute the mean μ and standard deviation σ of a DSGE.DegenerateMvNormal object.
+Compute the mean `μ` and standard deviation `σ` of a `DSGE.DegenerateMvNormal` object.
 """
 function moments(dist::DegenerateMvNormal)
     return dist.μ, dist.σ
+end
+
+"""
+```
+DegenerateDiagMvTDist <: Distribution{Multivariate, Continuous}
+```
+
+The `DegenerateDiagMvTDist` type implements a degenerate multivariate Student's t
+distribution, where the covariance matrix is diagonal. The covariance matrix may
+not be full rank (hence degenerate).
+"""
+type DegenerateDiagMvTDist <: Distribution{Multivariate, Continuous}
+    μ::Vector          # mean
+    σ::Matrix          # standard deviation
+    ν::Int             # degrees of freedom
+
+    function DegenerateDiagMvTDist(μ::Vector, σ::Matrix, ν::Int)
+        ν > 0       ? nothing : error("Degrees of freedom (ν) must be positive")
+        isdiag(σ^2) ? nothing : error("Covariance matrix (σ^2) must be diagonal")
+        return new(μ, σ, ν)
+    end
+end
+
+"""
+```
+rank(d::DegenerateDiagMvTDist)
+```
+
+Returns the rank of `d.σ`.
+"""
+function rank(d::DegenerateDiagMvTDist)
+    return rank(d.σ)
+end
+
+"""
+```
+length(d::DegenerateDiagMvTDist)
+```
+
+Returns the dimension of `d`.
+"""
+Base.length(d::DegenerateDiagMvTDist) = length(d.μ)
+
+"""
+```
+Distributions.rand(d::DegenerateDiagMvTDist)
+```
+
+Generate a draw from `d`.
+"""
+function Distributions.rand(d::DegenerateDiagMvTDist)
+    return d.μ + d.σ*rand(TDist(d.ν), length(d))
+end
+
+"""
+```
+moments(dist::DegenerateDiagMvTDist)
+```
+
+Compute the mean `μ`, standard deviation `σ`, and degrees of freedom `ν` of a
+`DSGE.DegenerateDiagMvTDist` object.
+"""
+function moments(d::DegenerateDiagMvTDist)
+    return d.μ, d.σ, d.ν
 end
 
 """

@@ -164,12 +164,15 @@ function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
 
         # Draw shocks if necessary
         if !forecast_kill_shocks(m)
+            μ = zeros(S, nshocks)
+            σ = sqrt(system[:QQ])
             dist = if forecast_tdist_shocks(m)
                 # Use t-distributed shocks
-                Distributions.TDist(forecast_tdist_df_val(m))
+                ν = forecast_tdist_df_val(m)
+                DegenerateDiagMvTDist(μ, σ, ν)
             else
                 # Use normally distributed shocks
-                DegenerateMvNormal(zeros(S, nshocks), sqrt(system[:QQ]))
+                DegenerateMvNormal(μ, σ)
             end
 
             for t in 1:horizon
