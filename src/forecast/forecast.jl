@@ -228,21 +228,22 @@ function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
         z_t = C + T*z_t1 + R*ϵ_t
 
         # Change monetary policy shock to account for 0.13 interest rate bound
-        interest_rate_forecast = getindex(D + Z*z_t, ind_r)
-        if enforce_zlb && interest_rate_forecast < zlb_value
-            # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
-            ϵ_t[ind_r_sh] = 0.
-            z_t = C + T*z_t1 + R*ϵ_t
-            ϵ_t[ind_r_sh] = getindex((zlb_value - D[ind_r] - Z[ind_r, :]*z_t) / (Z[ind_r, :]*R[:, ind_r_sh]), 1)
-
-            # Forecast again with new shocks
-            z_t = C + T*z_t1 + R*ϵ_t
-
-            # Confirm procedure worked
+        if enforce_zlb
             interest_rate_forecast = getindex(D + Z*z_t, ind_r)
-            @assert interest_rate_forecast >= zlb_value - 0.01
-        end
+            if interest_rate_forecast < zlb_value
+                # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
+                ϵ_t[ind_r_sh] = 0.
+                z_t = C + T*z_t1 + R*ϵ_t
+                ϵ_t[ind_r_sh] = getindex((zlb_value - D[ind_r] - Z[ind_r, :]*z_t) / (Z[ind_r, :]*R[:, ind_r_sh]), 1)
 
+                # Forecast again with new shocks
+                z_t = C + T*z_t1 + R*ϵ_t
+
+                # Confirm procedure worked
+                interest_rate_forecast = getindex(D + Z*z_t, ind_r)
+                @assert interest_rate_forecast >= zlb_value - 0.01
+            end
+        end
         return z_t, ϵ_t
     end
 
