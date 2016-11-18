@@ -1,56 +1,72 @@
 """
 meansbands_matrix_all{S<:AbstractString}(m::AbstractModel, input_type::Symbol.
-                     output_vars = Vector{Symbol};
-                               subset_string = "")
+    output_vars = Vector{Symbol}; subset_string = "", verbose::Symbol = :low)
 
-Reformat MeansBands object in Julia into a matrix.
+Reformat `MeansBands` object into a matrix.
 
 ### Inputs
+
 - `m::AbstractModel`: model object
+- `input_type`: same as input into `forecast_all`
 - `output_vars`: same as input into `forecast_all`
-- `subset_string`: if `input_type==:subset`, this is a subset
-  identified string. Otherwise, it should be left empty.
+- `cond_type`: same as input into `forecast_all`
+
+### Keyword Arguments
+
+- `subset_string`: if `input_type == :subset`, this is a subset identified
+  string. Otherwise, it should be left empty.
+- `verbose::Symbol`: desired frequency of function progress messages printed to
+  standard out. One of `:none`, `:low`, or `:high`
 """
-function meansbands_matrix_all(m::AbstractModel, input_var::Symbol,
+function meansbands_matrix_all(m::AbstractModel, input_type::Symbol,
                                output_vars::Vector{Symbol}, cond_type::Symbol;
-                               subset_string = "")
+                               subset_string = "", verbose::Symbol = :low)
 
     output_vars = [symbol("mb", x) for x in output_vars]
-    outfiles = DSGE.get_output_files(m, "forecast", input_var, output_vars, cond_type,
+    output_dir = workpath(m, "forecast", "")
+    outfiles = DSGE.get_output_files(m, "forecast", input_type, output_vars, cond_type,
                                      pathfcn = workpath, subset_string = subset_string)
+
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println()
+        info("Converting means and bands to matrices for input_type = $input_type, cond_type = $cond_type...")
+        println("Start time: $(now())")
+        println("Means and bands matrices will be saved in $output_dir")
+    end
 
     mbs = Dict{Symbol,MeansBands}()
     for input in keys(outfiles)
-
-        fn = outfiles[input]
-        mbs[input] = jldopen(fn, "r") do f
+        mbs[input] = jldopen(outfiles[input], "r") do f
             read(f, "mb")
         end
     end
 
+    meansbands_matrix_all(m, mbs; verbose = verbose)
 
-    meansbands_matrix_all(m, mbs)
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println("\nConversion of means and bands complete: $(now())")
+    end
 end
 
-function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands})
+function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
+                               verbose::Symbol = :low)
 
     for mb in values(mbs)
-        meansbands_matrix(m, mb)
+        meansbands_matrix(m, mb; verbose = verbose)
     end
-
 end
 
-function meansbands_matrix(m::AbstractModel, mb::MeansBands)
+function meansbands_matrix(m::AbstractModel, mb::MeansBands; verbose::Symbol = :low)
 
     output_var = symbol("mb_matrix_", product(mb), class(mb))
     outfile = DSGE.get_output_files(m, "forecast", para(mb), [output_var], cond_type(mb),
                                     pathfcn = workpath, subset_string = mb.metadata[:subset_string],
                                     fileformat = :h5)
 
-    meansbands_matrix(mb, outfile[output_var])
+    meansbands_matrix(mb, outfile[output_var]; verbose = verbose)
 end
 
-function meansbands_matrix{S<:AbstractString}(mb::MeansBands, outfile::S)
+function meansbands_matrix{S<:AbstractString}(mb::MeansBands, outfile::S; verbose::Symbol = :low)
 
     # extract useful info
     vars     = get_vars_means(mb)             # get names of variables
@@ -63,8 +79,6 @@ function meansbands_matrix{S<:AbstractString}(mb::MeansBands, outfile::S)
     bands_list = get_density_bands(mb)        # which bands are stored
     nbands   = length(bands_list)             # how many bands are stored
     condtype = cond_type(mb)
-
-    print("* Extracting means and bands matrices for $prod...")
 
     # extract  matrices from MeansBands structure
     means, bands = if prod in [:hist, :forecast]
@@ -111,7 +125,9 @@ function meansbands_matrix{S<:AbstractString}(mb::MeansBands, outfile::S)
         f["bands"] = bands
     end
 
-    println("wrote matrix-form means and bands for ($prod$cl, $condtype) to $outfile\n")
+    if VERBOSITY[verbose] >= VERBOSITY[:high]
+        println(" * Wrote $(basename(outfile))")
+    end
 
     # return matrix
     means

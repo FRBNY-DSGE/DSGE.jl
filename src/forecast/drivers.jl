@@ -574,7 +574,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     output_dir = rawpath(m, "forecast")
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("\nForecasting input_type = $input_type, cond_type = $cond_type...")
+        println()
+        info("Forecasting input_type = $input_type, cond_type = $cond_type...")
         println("Start time: $(now())")
         println("Forecast outputs will be saved in $output_dir")
     end

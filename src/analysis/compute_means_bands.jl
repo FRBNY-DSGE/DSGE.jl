@@ -1,23 +1,22 @@
 """
 ```
 compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
-                                               output_vars::Vector{Symbol}, cond_type::Symbol;
-                                               density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
-                                               subset_string = "", population_forecast_file = "")
+    output_vars::Vector{Symbol}, cond_type::Symbol;
+    density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9], subset_string = "",
+    population_forecast_file = "", verbose::Symbol = :low)
 
-compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol, output_vars::Vector{Symbol},
-                                               cond_type::Symbol, forecast_files::Dict{Symbol,S};
-                                               density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
-                                               subset_string = "", output_dir = "",
-                                               population_forecast_file = "")
+compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
+    output_vars::Vector{Symbol}, cond_type::Symbol, forecast_files::Dict{Symbol,S};
+    density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9], subset_string = "",
+    output_dir = "", population_forecast_file = "", verbose::Symbol = :low)
 
 ```
 
-Computes means and bands for pseudoobservables and observables, and writes results to a file. Two
-methods are provided. The method that accepts a model object as an
-argument uses the model's settings to infer `forecast_files`; then
-appeals to the second method. Users can optionally skip construction
-of a model object and manually enter `forecast_files`.
+Computes means and bands for pseudoobservables and observables, and writes
+results to a file. Two methods are provided. The method that accepts a model
+object as an argument uses the model's settings to infer `forecast_files`; then
+appeals to the second method. Users can optionally skip construction of a model
+object and manually enter `forecast_files`.
 
 ### Input Arguments
 
@@ -31,14 +30,17 @@ of a model object and manually enter `forecast_files`.
 
 ### Keyword Arguments
 
-- `density_bands`: a vector of percent values (between 0 and 1) for which to compute density bands.
-- `subset_string`: subset identifier string (the value "subs=value" in
-  the forecast output file identifier string). Only to be used when
+- `density_bands`: a vector of percent values (between 0 and 1) for which to
+  compute density bands.
+- `subset_string`: subset identifier string (the value "subs=value" in the
+  forecast output file identifier string). Only to be used when
   `input_type == :subset`.
-- `population_forecast_file:` if you have population forecast data,
-  this is the filepath identifying where it is stored. In the method
-  that accepts a model object, if `use_population_forecast(m) ==
-  true`, the following file is used, if it exists:
+- `population_forecast_file:` if you have population forecast data, this is the
+  filepath identifying where it is stored. In the method that accepts a model
+  object, if `use_population_forecast(m) == true`, the following file is used,
+  if it exists:
+- `verbose::Symbol`: desired frequency of function progress messages printed to
+  standard out. One of `:none`, `:low`, or `:high`
 """
 function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                                                output_vars::Vector{Symbol}, cond_type::Symbol;
@@ -65,7 +67,7 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
     population_mnemonic = Nullable(parse_population_mnemonic(m)[1])
 
     ## Step 2: Load main dataset - required for some transformations
-    data = load_dataset ? df_to_matrix(m, load_data(m)) : Matrix{T}()
+    data = load_dataset ? df_to_matrix(m, load_data(m; verbose = :none)) : Matrix{T}()
 
     ## Step 3: Get names of files that the forecast wrote
     forecast_output_files = DSGE.get_output_files(m, "forecast", input_type,
@@ -78,7 +80,7 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
                             population_data = level_data,
                             population_mnemonic = population_mnemonic,
                             population_forecast_file = population_forecast_file,
-                            data = data)
+                            data = data, verbose = verbose)
 end
 
 function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
@@ -91,7 +93,15 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
                                                population_data::DataFrame = DataFrame(),
                                                population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                population_forecast_file = "",
-                                               data = Matrix{T}())
+                                               data = Matrix{T}(),
+                                               verbose::Symbol = :low)
+
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println()
+        info("Computing means and bands for input_type = $input_type, cond_type = $cond_type...")
+        println("Start time: $(now())")
+        println("Means and bands will be saved in $output_dir")
+    end
 
     ## Step 1: Filter population history and forecast and compute growth rates
     dlfiltered_population_data, dlfiltered_population_forecast =
@@ -99,7 +109,8 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
             # get all of the population data
             population_data, population_forecast =
                 transform_population_data(population_data, get(population_mnemonic),
-                                          population_forecast_file = population_forecast_file)
+                                          population_forecast_file = population_forecast_file,
+                                          verbose = :none)
 
             DataFrame(date = @data(convert(Array{Date}, population_data[:date])),
                                  population_growth = @data(convert(Array{Float64},
@@ -148,7 +159,13 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
         jldopen(filepath, "w") do file
             write(file, "mb", mb)
         end
-        println("wrote means and bands for ($output_var, $cond_type) to $filepath.\n")
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
+            println(" * Wrote $(basename(filepath))")
+        end
+    end
+
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println("\nComputation of means and bands complete: $(now())")
     end
 end
 
@@ -187,8 +204,6 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
     elseif contains(string(output_var), "shockdec")
         :shockdec
     end
-
-    print("* Computing means and bands for $output_var...")
 
     ## Step 2: Read in raw forecast output and metadata (transformations, mappings from symbols to indices, etc)
     # open correct input file
@@ -282,6 +297,12 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
                 map(transform, fcast_series)
             end
 
+            # # PZL 2016-11-09
+            # myfile = "/data/dsge_data_dir/dsgejl/tests_vs_matlab/forecast/comparison_files/transformed_draws/$(output_var)_$series.h5"
+            # h5open(myfile, "w") do h5
+            #     write(h5, "$series", transformed_fcast_output)
+            # end
+            # println("Wrote $myfile")
 
             # compute the mean and bands across draws and add to dataframe
             means[series] = vec(mean(transformed_fcast_output,1))
