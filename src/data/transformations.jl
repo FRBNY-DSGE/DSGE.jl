@@ -220,7 +220,7 @@ logtopct_annualized(y, q_adj = 100)
 Transform from log growth rates to total (not per-capita) % growth
 rates (annualized).
 """
-function logtopct_annualized(y::Matrix, q_adj = 100)
+function logtopct_annualized(y, q_adj = 100)
     100 * ((exp(y/q_adj)).^4-1)
 end
 

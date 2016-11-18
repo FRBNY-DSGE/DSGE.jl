@@ -213,11 +213,10 @@ end
 parse_transform(t::Symbol)
 ```
 
-Parse the module name out of a Symbol to recover the transform associated with an observable or pseudoobservable.
+Parse the module name out of a Symbol to recover the transform associated with
+an observable or pseudoobservable. Returns a function.
 """
-function parse_transform(t::Symbol)
-    symbol(split(string(t),".")[end])
-end
+parse_transform(t::Symbol) = eval(symbol(split(string(t),".")[end]))
 
 """
 ```
