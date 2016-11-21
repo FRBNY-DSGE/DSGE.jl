@@ -16,3 +16,10 @@ FRBNY is currently working on extending the code to include forecasts and other
 features. Extensions of the DSGE model code may be released in the future at
 the discretion of FRBNY.
 
+## Installation
+
+`DSGE.jl` is a registered Julia package. To install it, open your Julia REPL and run
+
+```julia
+julia> Pkg.add("DSGE")
+```
