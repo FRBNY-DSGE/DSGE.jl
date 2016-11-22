@@ -208,7 +208,7 @@ Transform from log growth rates to % growth rates (annualized).
 This should only be used for output, consumption, investment
 and GDP deflator (inflation).
 """
-function logtopct_annualized_percapita{T<:AbstractFloat}(y::Array{T}, pop_fcast::Vector{T}, q_adj::T = 100.)
+function logtopct_annualized_percapita{T<:AbstractFloat}(y::Array{T}, pop_fcast::Array{T}, q_adj::T = 100.)
     @assert length(pop_fcast) == length(y)
     if size(pop_fcast) != size(y)
         pop_fcast_new = pop_fcast'
@@ -242,12 +242,17 @@ Transform from log level to 4-quarter annualized percent change.
 
 ### Arguments
 
-- `y::Matrix`: The `ndraws` x `nperiods` series we wish to transform to 4 quarter
-  annualized percent change from 1-quarter log-levels.
+- `matrix`: The `ndraws` x `nperiods` matrix we wish to transform to 4 quarter annualized percent
+  change from 1-quarter log-levels.
 
-- `y_data::Vector`: The actual data series corresponding to the `y` variable (state or
-  observable) in the model. This is necessary to get the last data point so that
-  a percent change can be computed for the first period.
+- `data`: The actual data series corresponding to the `y` variable
+  (state or observable) in the model. This is necessary to get the
+  last data point so that a percent change can be computed for the
+  first period.
+
+- `hist_end_index`: Index of the last period of data for this
+  variable. Could use `end` if not using conditional data, otherwise
+  use `end-1`.
 """
 function loglevelto4qpct_annualized{T<:AbstractFloat}(y::Matrix{T}, y_data::Matrix{T})
 # Repmat is used to put the data point in each row of the simulations.  The
@@ -286,9 +291,8 @@ population growth.
 
 - `population::Vector`: The length `nperiods` vector of population growth rates.
 """
-function loglevelto4qpct_annualized_percapita(y::Matrix, y_data::Matrix, population::Vector)
-
+function loglevelto4qpct_annualized_percapita{T<:AbstractFloat}(y::Matrix, y_data::T, population::Array)
     ndraws = size(y, 1)
-    y_t1 = hcat(fill(y_data[end], ndraws, 1), y[:, 1:end-1])
+    y_t1 = hcat(fill(y_data, ndraws, 1), y[:, 1:end-1])
     ((exp(y./100.0) - y_t1./100.0 .+ population).^4 .- 1.)*100.0
 end

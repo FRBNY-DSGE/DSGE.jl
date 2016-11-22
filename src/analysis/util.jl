@@ -1,6 +1,42 @@
-###################################
-## Useful methods for MeansBands
-###################################
+#########################################
+## Extract class and product from a symbol
+#########################################
+
+function get_class(s::Symbol)
+    class = if contains(string(s), "pseudo")
+        :pseudo
+    elseif contains(string(s), "obs")
+        :obs
+    elseif contains(string(s), "state")
+        :state
+    elseif contains(string(s), "shock")
+        :shock
+    end
+
+    class
+end
+
+function get_product(s::Symbol)
+    product = if contains(string(s), "hist")
+        :hist
+    elseif contains(string(s), "forecast")
+        :forecast
+    elseif contains(string(s), "shockdec")
+        :shockdec
+    elseif contains(string(s), "dettrend")
+        :dettrend
+    elseif contains(string(s), "trend")
+        :trend
+    end
+
+    product
+end
+
+
+
+#########################################
+## Useful methods for MeansBands objects
+#########################################
 
 
 class(mb::MeansBands) = mb.metadata[:class]
@@ -19,6 +55,19 @@ function Base.show(io::IO, mb::MeansBands)
     @printf io "  bands: %s\n" get_density_bands(mb, uniqueify=true)
 end
 
+"""
+```
+function read_mb{S<:AbstractString}(fn::S)
+```
+Read in a `MeansBands` object saved in `fn`.
+"""
+function read_mb{S<:AbstractString}(fn::S)
+    @assert isfile(fn) "File $fn could not be found"
+    mb = jldopen(fn, "r") do f
+        read(f, "mb")
+    end
+    mb
+end
 
 ###################################
 ## MEANS
@@ -75,6 +124,36 @@ Get last period for which `mb` stores means. Assumes `mb.means[product]` is alre
 enddate_means(mb::MeansBands) = mb.means[:date][end]
 
 
+"""
+```
+get_shockdec_means(mb::MeansBands, var::Symbol; shocks::Vector{Symbol}=Vector{Symbol}())
+```
+
+Return the mean value of each shock requested in the shock decomposition of a particular variable.
+If `shocks` is empty, returns all shocks.
+"""
+
+function get_shockdec_means(mb::MeansBands, var::Symbol; shocks::Vector{Symbol}=Vector{Symbol}())
+
+    # Extract the subset of columns relating to the variable `var` and the shocks listed in `shocks.`
+    # If `shocks` not provided, give all the shocks
+    var_cols = collect(names(mb.means))[find([contains(string(col), string(var)) for col in names(mb.means)])]
+    if !isempty(shocks)
+        var_cols = [col -> contains(string(col), string(shock)) ? col : nothing for shock in shocks]
+    end
+
+    # Make a new DataFrame with column the column names
+    out = DataFrame()
+    for col in var_cols
+        shockname = split(string(col), DSGE_SHOCKDEC_DELIM)[2]
+        out[symbol(shockname)] = mb.means[col]
+    end
+
+    out
+end
+
+
+
 ###################################
 ## BANDS
 ###################################
@@ -125,7 +204,8 @@ enddate_bands(mb::MeansBands) = mb.bands[:date]
 get_density_bands(mb, uniqueify=false)
 ```
 
-Return a list of the bands stored in mb.bands.
+Return a list of the bands stored in mb.bands. If `uniqueify=true`,
+strips "upper" and "lower" band tags and returns unique list of percentage values.
 """
 function get_density_bands(mb::MeansBands; uniqueify=false, ordered=true)
 
@@ -153,6 +233,54 @@ function get_density_bands(mb::MeansBands; uniqueify=false, ordered=true)
     end
 
     return strs
+end
+
+
+"""
+```
+get_shockdec_bands(mb::MeansBands, var::Symbol;
+       shocks::Vector{Symbol}=Vector{Symbol}(), bands::Vector{Symbol}()=Vector{Symbol}())
+```
+
+Return bands stored in this MeansBands object for all variables.
+
+### Inputs
+- `mb`: MeansBands object
+- `var`: the variable of interest (eg the state `:y_t`, or observable `:obs_hours`)
+
+### Optional arguments
+- `shocks`: subset of shock names for which to return bands. If empty, `get_shockdec_bands` returns all bands.
+- `bands`: subset of bands stored in the DataFrames of `mb.bands` to return.
+
+### Outputs
+
+A `Dict{Symbol, DataFrame}` mapping names of shocks to the bands of `var` corresponding to each shock.
+"""
+function get_shockdec_bands(mb::MeansBands, var::Symbol;
+                            shocks::Vector{Symbol}=Vector{Symbol}(), bands::Vector{Symbol}=Vector{Symbol}())
+
+    # Extract the subset of columns relating to the variable `var` and the shocks listed in `shocks.`
+    # If `shocks` not provided, give all the shocks
+    var_cols = collect(keys(mb.bands))[find([contains(string(col), string(var)) for col in keys(mb.bands)])]
+    if !isempty(shocks)
+        var_cols = [col -> contains(string(col), string(shock)) ? col : nothing for shock in shocks]
+    end
+
+    # Extract the subset of bands we want to return. Return all bands if `bands` not provided.
+    bands_keys = if isempty(bands)
+        names(mb.bands[var_cols[1]])
+    else
+        [[symbol("$(100x)% LB") for x in bands]; [symbol("$(100x)% UB") for x in bands]]
+    end
+
+    # Make a new dictionary mapping shock names to bands
+    out = Dict{Symbol, DataFrame}()
+    for col in var_cols
+        shockname = split(string(col), DSGE_SHOCKDEC_DELIM)[2]
+        out[shockname] = mb.bands[col][bands_keys]
+    end
+
+    out
 end
 
 
@@ -285,3 +413,4 @@ function unzip{T<:Tuple}(A::Array{T})
     end
     res
 end
+

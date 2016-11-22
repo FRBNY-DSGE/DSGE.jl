@@ -256,7 +256,25 @@ function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
     states = zeros(S, nstates, horizon)
     states[:, 1], shocks[:, 1] = iterate(z0, shocks[:, 1])
     for t in 2:horizon
-        states[:, t], shocks[:, t] = iterate(states[:, t-1], shocks[:, t])
+        states[:, t] = iterate(states[:, t-1], shocks[:, t])
+
+        # Change monetary policy shock to account for 0.25 interest rate bound
+        if enforce_zlb
+            interest_rate_forecast = getindex(D + Z*states[:, t], ind_r)
+            if interest_rate_forecast[1] < zlb_value
+                # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
+                shocks[ind_r_sh, t] = 0.
+                shocks[ind_r_sh, t] = (zlb_value - D[ind_r] - Z[ind_r, :]*iterate(states[:, t-1], shocks[:, t])) /
+                                      (Z[ind_r, :]*RRR[:, ind_r_sh])
+
+                # Forecast again with new shocks
+                states[:, t] = iterate(states[:, t-1], shocks[:, t])
+
+                # Confirm procedure worked
+                interest_rate_forecast = getindex(D + Z*states[:, t], ind_r)
+                @assert interest_rate_forecast >= zlb_value
+            end
+        end
     end
 
     # Apply measurement and pseudo-measurement equations

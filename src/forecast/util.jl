@@ -372,6 +372,10 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
             get(shockdec_enddate(m))
         end
         quarter_range(date_shockdec_start, date_shockdec_end)
+    elseif contains(string(var), "dettrend")
+        quarter_range(date_mainsample_start(m), date_forecast_end(m))
+    elseif contains(string(var), "trend") # after "dettrend" b/c elseif short-circuits
+        Vector{Date}()
     end
     date_indices = [d::Date => i::Int for (i, d) in enumerate(dates)]
     write(file, "date_indices", date_indices)
@@ -459,4 +463,43 @@ function compile_forecast_one(m, df; cond_type = :none, output_vars = [], verbos
     # Delete output files
     output_files = get_output_files(m, "forecast", :subset, output_vars, cond_type, subset_string = "compile")
     map(rm, collect(values(output_files)))
+end
+
+"""
+```
+add_dependent_output_vars(output_vars::Vector{Symbol})
+```
+
+Based on the given output_vars, this function determines which
+additional output_vars must be computed and stored for future
+plotting.
+
+Specifically, when plotting a shock decomposition, the trend and
+deterministic trend series are required (the trend is subtracted from
+the value of each shock, and the deterministic trend represents
+deviations from steady-state that would realize even in the absence of
+shocks). For example, if `output_vars` contains `shockdecobs`, the
+variables `dettrendobs` and `trendobs` will be added to `output_vars`.
+
+Note that this case is distinct from a case in which computing a
+different product is required to compute the desired `output_var`. For
+example, smoothed historical states (`histstates`) must be computed in
+order to compute a shock decomposition for a state variable, but need
+not be saved to produce plots later on. Therefore, `histstates` is not
+added to `output_vars` when calling
+`add_requisite_output_vars([shockdecstates])`.
+"""
+function add_requisite_output_vars(output_vars::Vector{Symbol})
+
+    shockdec_outputs = find([contains(str, "shockdec")
+                             for str in map(string, output_vars)])
+
+    if !isempty(shockdec_outputs)
+        classes = [get_class(output_vars[i]) for i in shockdec_outputs]
+        dettrend_vars = [symbol("dettrend$c") for c in classes]
+        trend_vars = [symbol("trend$c") for c in classes]
+        output_vars = unique(vcat(output_vars, dettrend_vars, trend_vars))
+    end
+
+    output_vars
 end

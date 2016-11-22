@@ -1,15 +1,16 @@
 """
-```
-compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
-    output_vars::Vector{Symbol}, cond_type::Symbol;
-    density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9], subset_string = "",
-    population_forecast_file = "", verbose::Symbol = :low)
+compute_means_bands_all(m, input_type, output_vars, cond_type;
+                        density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], subset_string = "",
+                        load_dataset = true, load_population_data = true,
+                        population_forecast_file = "", verbose :low)
 
-compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
-    output_vars::Vector{Symbol}, cond_type::Symbol, forecast_files::Dict{Symbol,S};
-    density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9], subset_string = "",
-    output_dir = "", population_forecast_file = "", verbose::Symbol = :low)
 
+compute_means_bands_all(input_type, output_vars, cond_type, forecast_output_files;
+                       density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], subset_string = "",
+                       output_dir = "", population_data = DataFrame(),
+                       population_mnemonic = Nullable{Symbol}(),
+                       population_forecast_file = "", y0_indexes = Dict{Symbol,Nullable{Int}}(),
+                       data = Matrix{T}(), verbose::Symbol = :low)
 ```
 
 Computes means and bands for pseudoobservables and observables, and writes
@@ -18,29 +19,77 @@ object as an argument uses the model's settings to infer `forecast_files`; then
 appeals to the second method. Users can optionally skip construction of a model
 object and manually enter `forecast_files`.
 
+Below, `T<:AbstractFloat` and `S<:AbstractString`:
+
 ### Input Arguments
 
 - `m`: model object
-- `input_type`: see `forecast_all`
-- `output_vars`: see `forecast_one`
-- `cond_type`: see `forecast_all`
-- `forecast_files`: dictionary mapping an output_var to the filename
-  containing forecasts for that output_var. Keys should be one of the following:
+- `input_type::Symbol`: see `forecast_all`
+- `output_vars::Vector{Symbol}`: see `forecast_one`
+- `cond_type::Symbol`: see `forecast_all`
+
+#### Method 2:
+
+- `forecast_output_files::Dict{Symbol,S}`: dictionary mapping an output_var to the filename
+  containing forecasts for that output_var (where `S<:AbstractString)`. Keys should be one of the following:
   `:histpseudo, :forecastpseudo, :shockdecpseudo, :forecastobs, :shockdecobs`.
 
 ### Keyword Arguments
 
-- `density_bands`: a vector of percent values (between 0 and 1) for which to
-  compute density bands.
-- `subset_string`: subset identifier string (the value "subs=value" in the
-  forecast output file identifier string). Only to be used when
+- `density_bands::Vector{T}`: a vector of percent values (between 0 and 1) for which to compute density bands.
+
+- `subset_string::S`: subset identifier string (the value "subs=value" in
+  the forecast output file identifier string). Only to be used when
   `input_type == :subset`.
-- `population_forecast_file:` if you have population forecast data, this is the
-  filepath identifying where it is stored. In the method that accepts a model
-  object, if `use_population_forecast(m) == true`, the following file is used,
-  if it exists:
-- `verbose::Symbol`: desired frequency of function progress messages printed to
-  standard out. One of `:none`, `:low`, or `:high`
+
+- `population_forecast_file::S`: if you have population forecast data,
+  this is the filepath identifying where it is stored. In the method
+  that accepts a model object, if `use_population_forecast(m) ==
+  true`, the following file is used, if it exists:
+  `inpath(m, "data", "population_forecast_(data_vintage(m)).csv")`
+
+- `verbose`: level of error messages to be printed to screen. Options
+  are `:none`, `:low`, `:high`
+
+### Method 1:
+
+- `load_dataset::Bool`: indicates whether or not to load the
+  data using `load_data(m)`. Loading the dataset is required only when using
+  transformations that convert values from log-levels to growth
+  rates. Defaults to `true.`
+
+- `load_population_data::Bool`: indicates whether or not to load the
+  population growth rate data. This is required only when a series
+  requires either the `:loglevelto4qpct_annualized_percapita` or
+  `:loglegelto4qpct_annualized` transformation.
+
+#### Method 2:
+
+- `y0_indexes::Dict{Symbol,Int}`: A `Dict` storing the mapping of products to the index
+  of the period prior to the first period for which that
+  product is computed. This is used to compute growth rates of
+  forecasted or counterfactual variables, such as the deterministic
+  trend (for forecasts, `y0_index` should correspond to the last
+  historical period; for the deterministic trend, it should correspond
+  to the last presample period). It is required for only those
+  observables and pseudoobservables that employ the
+  `loglevelto4qpct_annualized_percapita` transformation.
+
+- `output_dir::S`: Directory in which to write means and bands files. Defaults to `""`.
+
+- `population_data::DataFrame`: `DataFrame` containing the columns
+   `:dlfiltered_population_recorded` and `date`.
+   (`dlfiltered_population_recorded` refers to the log difference of
+   the filtered population series, or the computed filtered population
+   growth rate). Defaults to an empty `DataFrame` and is required in
+   the same cases as the `load_population_data` argument in Method 1.
+
+- `population_mnemonic::Nullable{Symbol}`: The name of the series holding the desired
+  population series in `population_data`. Defaults to a `Nullable{Symbol}()`.
+
+- `population_forecast_file::S`: Name of file in which to find population_data.
+
+- `data::Matrix{T}`: pre-loaded `nobs x nperiods` matrix containing the transformed data matrix.
 """
 function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                                                output_vars::Vector{Symbol}, cond_type::Symbol;
@@ -50,7 +99,14 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
                                                population_forecast_file = "",
                                                verbose::Symbol = :low)
 
-    ## Step 1: Get population forecast file
+    ## Step 0: Determine full set of output_vars necessary for plotting desired results
+    #          Specifically, if output_vars contains shockdecs but not trend or deterministic trends,
+    #          add those
+    output_vars = add_requisite_output_vars(output_vars)
+
+    ## Step 1: Load population data in levels
+
+    # get population forecast file
     if isempty(population_forecast_file)
         population_forecast_file = if use_population_forecast(m)
             inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
@@ -60,14 +116,42 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
     end
 
     # load population level data, which was saved in load_data_levels
-    if load_population_data
-        level_data = read_population_data(m)
+    level_data = if load_population_data
+        read_population_data(m)
+    else
+        DataFrame()
     end
 
+    # reformat population_mnemonic
     population_mnemonic = Nullable(parse_population_mnemonic(m)[1])
 
-    ## Step 2: Load main dataset - required for some transformations
-    data = load_dataset ? df_to_matrix(m, load_data(m; verbose = :none)) : Matrix{T}()
+    ## Step 2: Load main dataset (required for some transformations) and
+    ##         specify which period to use as first t-1 period for computing
+    ##         growth rates
+
+    data, y0_indexes = if load_dataset
+
+        # load dataset if required
+        data = df_to_matrix(m, load_data(m))
+
+        # specify first t-1 period for each product
+        products = unique(map(get_product, output_vars))
+
+        y0_indexes = Dict{Symbol,Nullable{Int}}()
+        for prod in intersect(products, [:hist, :forecast])
+            y0_indexes[prod] = Nullable(index_forecast_start(m) - 1)
+        end
+        for prod in intersect(products, [:shockdec, :dettrend])
+            y0_indexes[prod] = Nullable(index_mainsample_start(m) - 1)
+        end
+        for prod in intersect(products, [:trend])
+            y0_indexes[prod] = Nullable{Int}()
+        end
+
+        data, y0_indexes
+    else
+        Matrix{T}, Dict{Symbol,Int}()
+    end
 
     ## Step 3: Get names of files that the forecast wrote
     forecast_output_files = DSGE.get_output_files(m, "forecast", input_type,
@@ -80,7 +164,8 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
                             population_data = level_data,
                             population_mnemonic = population_mnemonic,
                             population_forecast_file = population_forecast_file,
-                            data = data, verbose = verbose)
+                            y0_indexes = y0_indexes, data = data,
+                            verbose = verbose)
 end
 
 function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
@@ -93,10 +178,11 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
                                                population_data::DataFrame = DataFrame(),
                                                population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                population_forecast_file = "",
+                                               y0_indexes::Dict{Symbol,Nullable{Int}} = Dict{Symbol,Nullable{Int}}(),
                                                data = Matrix{T}(),
                                                verbose::Symbol = :low)
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
+	if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
         info("Computing means and bands for input_type = $input_type, cond_type = $cond_type...")
         println("Start time: $(now())")
@@ -122,8 +208,11 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
                               population_forecast[:dlfiltered_population_forecast])))
 
         else
-            isempty(population_data) ? warn("No population data provided") : nothing
-            isnull(population_mnemonic) ? warn("No population mnemonic provided") : nothing
+            isempty(population_data) && VERBOSITY[verbose] >= VERBOSITY[:low] ?
+                warn("No population data provided") : nothing
+
+            isnull(population_mnemonic) && VERBOSITY[verbose] >= VERBOSITY[:low] ?
+                warn("No population mnemonic provided") : nothing
 
             DataFrame(), DataFrame()
         end
@@ -144,7 +233,11 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
     end
 
     ## Step 3: Compute means and bands for each output variable, and write to a file.
+
     for output_var in output_vars
+
+        # Which product are we dealing with? Need this to index out of y0_indexes.
+        prod = get_product(output_var)
 
         # compute means and bands object
         mb = compute_means_bands(input_type, output_var, cond_type,
@@ -153,14 +246,15 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
                                  population_data = dlfiltered_population_data,
                                  population_mnemonic = Nullable(:population_growth),
                                  population_forecast = dlfiltered_population_forecast,
-                                 hist_end_index = hist_end_index,
+                                 y0_index = y0_indexes[prod],
                                  data = data)
 
         # write to file
         filepath = mb_files[output_var]
         jldopen(filepath, "w") do file
-            write(file, "mb", mb)
+        	write(file, "mb", mb)
         end
+
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             println(" * Wrote $(basename(filepath))")
         end
@@ -171,17 +265,42 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
     end
 end
 
-function compute_means_bands{S<:AbstractString}(input_type::Symbol,
-                                                output_var::Symbol,
-                                                cond_type::Symbol,
-                                                forecast_output_files::Dict{Symbol,S};
-                                                density_bands = [0.5, 0.6, 0.7, 0.8, 0.9],
-                                                subset_string::S = "",
-                                                population_data = DataFrame(),
-                                                population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
-                                                population_forecast = DataFrame(),
-                                                hist_end_index::Int = 0,
-                                                data = Matrix())
+"""
+```
+compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
+                                                     output_var::Symbol,
+                                                     cond_type::Symbol,
+                                                     forecast_output_files::Dict{Symbol,S};
+                                                     density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                                                     subset_string::S = "",
+                                                     population_data = DataFrame(),
+                                                     population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
+                                                     population_forecast = DataFrame(),
+                                                     y0_index::Nullable{Int} = Nullable{Int}(),
+                                                     data = Matrix{T}(),
+                                                     verbose::Symbol = :low)
+```
+
+Computes means and bands for a single `output_var`.
+
+### Input Arguments
+
+All inputs are exactly the same as the second
+`compute_means_bands_all` method, except that `output_var` is a single
+`Symbol` rather than `Array{Symbol}`.
+"""
+function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
+                                                     output_var::Symbol,
+                                                     cond_type::Symbol,
+                                                     forecast_output_files::Dict{Symbol,S};
+                                                     density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                                                     subset_string::S = "",
+                                                     population_data = DataFrame(),
+                                                     population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
+                                                     population_forecast = DataFrame(),
+                                                     y0_index::Nullable{Int} = Nullable{Int}(),
+                                                     data = Matrix{T}(),
+                                                     verbose::Symbol = :low)
 
     # Return only one set of bands if we read in only one draw
     if input_type in [:init, :mode, :mean]
@@ -190,27 +309,20 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
 
     ## Step 1: Determine the class of variable we are working with (pseudos? observables? etc)
     ##         and the product we are computing (forecast? history? shockdec?)
-    class = if contains(string(output_var), "pseudo")
-        :pseudo
-    elseif contains(string(output_var), "obs")
-        :obs
-    elseif contains(string(output_var), "state")
-        :state
-    elseif contains(string(output_var), "shock")
-        :shock
-    end
 
-    product = if contains(string(output_var), "hist")
-        :hist
-    elseif contains(string(output_var), "forecast")
-        :forecast
-    elseif contains(string(output_var), "shockdec")
-        :shockdec
+    class = get_class(output_var)
+    product = get_product(output_var)
+
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println("* Computing means and bands for $output_var...")
     end
 
     ## Step 2: Read in raw forecast output and metadata (transformations, mappings from symbols to indices, etc)
     # open correct input file
     forecast_output_file = forecast_output_files[output_var]
+    if VERBOSITY[verbose] >= VERBOSITY[:high]
+        println("Reading forecast metdatata from $forecast_output_file")
+    end
     metadata, fcast_output = jldopen(forecast_output_file, "r") do jld
         read_forecast_metadata(jld), DSGE.read_darray(jld)
     end
@@ -224,19 +336,24 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
         error("means and bands are only calculated for observables and pseudo-observables")
     end
 
-    # make sure date lists are valid
-    date_list          = collect(keys(date_indices))   # unsorted array of actual dates
-    date_indices_order = collect(values(date_indices)) # unsorted array of date indices
-    check_consistent_order(date_list, date_indices_order)
-    sort!(date_list, by = x -> date_indices[x])
-    sort!(date_indices_order)
+    # make sure date lists are valid. This is irrelevant for the trend, which is not time-dependent.
+    if !(product in [:trend])
+        date_list          = collect(keys(date_indices))   # unsorted array of actual dates
+        date_indices_order = collect(values(date_indices)) # unsorted array of date indices
+        check_consistent_order(date_list, date_indices_order)
+        sort!(date_list, by = x -> date_indices[x])
+        sort!(date_indices_order)
+    else
+        println("Size of trend fcast_output: $(size(fcast_output))")
+        date_indices_order = [1]
+    end
 
     # get population mnemonic
     mnemonic = isnull(population_mnemonic) ? Symbol() : get(population_mnemonic)
 
     # Ensure population forecast is same length as fcast_output.
     # For forecasts, the third dimension of the fcast_output matrix is the number of periods.
-    population_forecast = if product in [:forecast, :shockdec]
+    population_forecast = if product in [:forecast, :shockdec, :dettrend]
         n_fcast_periods = size(fcast_output, 3)
         resize_population_forecast(population_forecast, n_fcast_periods,
                                    population_mnemonic = mnemonic)
@@ -250,7 +367,76 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
                    :indices    => variable_indices,
                    :subset_string => subset_string)
 
-    means, bands = if product in [:shockdec]
+    means, bands = if product in [:hist, :forecast, :trend, :dettrend]
+
+        # make DataFrame for means and Dict for bands
+        means = if pr	oduct != :trend
+            DataFrame(date = date_list)
+        else
+            DataFrame()
+        end
+        bands = Dict{Symbol,DataFrame}()
+
+        # for each series (ie each pseudoobs, each obs, or each state):
+        # 1. apply the appropriate transform
+        # 2. add to DataFrame
+        for (series, ind) in variable_indices
+
+            # apply transformation to all draws
+            transform = parse_transform(transforms[series])
+            fcast_series = squeeze(fcast_output[:, ind, :], 2)
+            transformed_fcast_output = if transform in [logtopct_annualized_percapita]
+                pop_fcast = convert(Array{Float64}, population_forecast[mnemonic])
+                transform(fcast_series, pop_fcast)
+            elseif transform in [loglevelto4qpct_annualized_percapita]
+                pop_fcast = convert(Array{Float64}, population_forecast[mnemonic])
+                hist_data = data[ind, get(y0_index)]
+                transform(fcast_series, hist_data, pop_fcast)
+            else
+                map(transform, fcast_series)
+            end
+
+            # compute the mean and bands across draws and add to dataframe
+            means[series] = vec(mean(transformed_fcast_output,1))
+            bands[series] = find_density_bands(transformed_fcast_output, density_bands, minimize=false)
+            bands[series][:date] = date_list
+        end
+
+        means, bands
+
+    elseif product in [:trend]
+
+        # for each series (ie each pseudoobs, each obs, or each state):
+        # 1. apply the appropriate transform
+        # 2. add to DataFrame
+        for (series, ind) in variable_indices
+
+            # apply transformation to all draws
+            transform = parse_transform(transforms[series])
+
+            transformed_fcast_output = if transform in [logtopct_annualized_percapita]
+                pop_fcast = convert(Array{Float64}, population_forecast[mnemonic]')
+                transform(fcast_output[ind], pop_fcast)
+            elseif transform in [loglevelto4qpct_annualized_percapita]
+                pop_fcast = convert(Array{Float64}, population_forecast[mnemonic]')
+                hist_data = data[ind, get(y0_index)]
+                transform(fcast_output[ind], hist_data, pop_fcast)
+            else
+                transform(fcast_output[ind])
+            end
+
+            # compute bands
+            bands_one = find_density_bands(transformed_fcast_output, density_bands, minimize=false)
+            bands_one[:date] = date_list
+
+            # compute the mean and bands across draws and add to dataframe
+            means[series] = vec(mean(transformed_fcast_output,1))
+            bands[series] = bands_one
+        end
+
+        means, bands
+
+    elseif product in [:shockdec]
         # make sure population series corresponds with saved shockdec dates
         shockdec_start = date_list[1]
         shockdec_end   = date_list[end]
@@ -270,42 +456,12 @@ function compute_means_bands{S<:AbstractString}(input_type::Symbol,
         mb_metadata[:shock_indices] = metadata[:shock_indices]
 
         # compute means and bands for shock decomposition
-        compute_means_bands_shockdec(fcast_output, transforms,
+        compute_means_bands_shockdec(fcast_output[:,:,date_indices_order,:], transforms,
                                      variable_indices, metadata[:shock_indices], date_list,
                                      data = data, population_series = population_series,
-                                     density_bands = density_bands)
-    else
-        # make DataFrames for means and bands
-        means = DataFrame(date = date_list)
-        bands = Dict{Symbol,DataFrame}()
+                                     y0_index = y0_index, density_bands = density_bands)
 
-        # for each series (ie each pseudoobs, each obs, or each state):
-        # 1. apply the appropriate transform
-        # 2. add to DataFrame
-        for (series, ind) in variable_indices
-            # apply transformation to all draws
-            transform = parse_transform(transforms[series])
-            fcast_series = squeeze(fcast_output[:, ind, :], 2)
-            transformed_fcast_output = if transform in [logtopct_annualized_percapita]
-                pop_fcast = convert(Vector{Float64}, population_forecast[mnemonic])
-                transform(fcast_series, pop_fcast)
-            elseif transform in [loglevelto4qpct_annualized_percapita]
-                pop_fcast = convert(Vector{Float64}, population_forecast[mnemonic])
-                hist_series = vec(data[ind, :])
-                transform(fcast_series, hist_series, pop_fcast)
-            else
-                map(transform, fcast_series)
-            end
-
-            # compute the mean and bands across draws and add to dataframe
-            means[series] = vec(mean(transformed_fcast_output,1))
-            bands[series] = find_density_bands(transformed_fcast_output, density_bands, minimize=false)
-            bands[series][:date] = date_list
-        end
-
-        means, bands
     end
 
     return MeansBands(mb_metadata, means, bands)
 end
-

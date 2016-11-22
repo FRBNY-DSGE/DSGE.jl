@@ -36,9 +36,8 @@ function meansbands_matrix_all(m::AbstractModel, input_type::Symbol,
 
     mbs = Dict{Symbol,MeansBands}()
     for input in keys(outfiles)
-        mbs[input] = jldopen(outfiles[input], "r") do f
-            read(f, "mb")
-        end
+        fn = outfiles[input]
+        mbs[input] = read_mb(fn)
     end
 
     meansbands_matrix_all(m, mbs; verbose = verbose)
@@ -84,7 +83,7 @@ function meansbands_matrix{S<:AbstractString}(mb::MeansBands, outfile::S; verbos
     condtype = cond_type(mb)
 
     # extract  matrices from MeansBands structure
-    means, bands = if prod in [:hist, :forecast]
+    means, bands = if prod in [:hist, :forecast, :dettrend]
 
         # construct means and bands arrays
         means = Array{T,2}(nvars, nperiods)
@@ -101,8 +100,9 @@ function meansbands_matrix{S<:AbstractString}(mb::MeansBands, outfile::S; verbos
         end
 
         means, bands
+
     elseif prod in [:shockdec]
-        # TODO - REFACTOR ALL OF THIS
+
         shock_inds = mb.metadata[:shock_indices]
         nshocks = length(shock_inds)
 
@@ -124,6 +124,13 @@ function meansbands_matrix{S<:AbstractString}(mb::MeansBands, outfile::S; verbos
                 end
             end
         end
+
+        means, bands
+
+    elseif prod in [:trend]
+
+        means = df_to_matrix(mb.means)
+        bands = df_to_matrix(mb.bands)
 
         means, bands
     end

@@ -1,7 +1,7 @@
 """
 ```
 compute_means_bands_shockdec(fcast_output, transforms, var_inds, shock_inds, date_list,
-                             data = [], population_forecast = DataFrame(), hist_end_index = 0)
+                             data = [], population_forecast = DataFrame(), y0_index = 0)
 ```
 
 
@@ -19,7 +19,7 @@ function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
                                                         date_list::Vector{Date};
                                                         data::Matrix{T} = Matrix{T}(),
                                                         population_series = Vector{T}(),
-                                                        hist_end_index::Int = 0,
+                                                        y0_index::Nullable{Int} = Nullable{Int}(),
                                                         density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9])
 
 
@@ -38,8 +38,9 @@ function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
             ex = if transform in [:logtopct_annualized_percapita]
                 Expr(:call, transform, squeeze(fcast_output[:,var_ind,:,shock_ind],2), population_series)
             elseif transform in [:loglevelto4qpct_annualized_percapita]
+                println(y0_index)
                 Expr(:call, transform, squeeze(fcast_output[:,var_ind,:,shock_ind],2),
-                     data[var_ind,:], population_series)
+                     data[var_ind, get(y0_index)], population_series)
             else
                 Expr(:call, transform, squeeze(fcast_output[:,var_ind,:,shock_ind],2))
             end
@@ -54,44 +55,4 @@ function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
     end
 
     return means, bands
-end
-
-
-function get_shockdec_means(mb::MeansBands,shock::Symbol; vars::Vector{Symbol}=Vector{Symbol}())
-
-    vars = if isempty(vars)
-        collect(names(mb.means))[find([contains(string(col), string(shock)) for col in names(mb.means)])]
-    else
-        vars
-    end
-
-    out = DataFrame()
-    for var in vars
-        varname = split(string(var), DSGE_SHOCKDEC_DELIM)[1]
-        out[symbol(varname)] = mb.means[var]
-    end
-
-    out
-end
-
-
-function get_shockdec_bands(mb::MeansBands, shock::Symbol; vars::Vector{Symbol}=Vector{Symbol}(), bands=[])
-
-    # If var is not supplied, return all variables
-    if isempty(vars)
-        vars = collect(keys(mb.bands))[find([contains(string(col), string(shock)) for col in keys(mb.bands)])]
-    end
-
-    bands_keys = if isempty(bands)
-        names(mb.bands[vars[1]])
-    else
-        [[symbol("$(100x)% LB") for x in bands]; [symbol("$(100x)% UB") for x in bands]]
-    end
-
-    out = Dict{Symbol, DataFrame}()
-    for var in vars
-        out[var] = mb.bands[var][bands_keys]
-    end
-
-    out
 end

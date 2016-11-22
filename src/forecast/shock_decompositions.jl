@@ -74,17 +74,22 @@ function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
     nperiods = end_ind - start_ind + 1
 
     # Construct distributed array of shock decompositions
-    out = DArray((ndraws, nstates + nobs + npseudo, nperiods, nshocks), procs, [nprocs, 1, 1, 1]) do I
-        localpart = zeros(map(length, I)...)
+    out = DArray((ndraws, nstates + nobs + npseudo, nperiods, nshocks), procs, [nprocs, 1, 1, 1]) do I # I is a tuple of indices for given localpart
+
+        # Compute shock decomposition for each draw
+        localpart = zeros(map(length, I)...)  # Regular array. In this DArray constructor, each process has one localpart.
         draw_inds = first(I)
-        ndraws_local = Int(ndraws / nprocs)
+        ndraws_local = Int(ndraws / nprocs)   # Number of draws that localpart stores data for
 
         for i in draw_inds
             states, obs, pseudo = compute_shock_decompositions(systems[i], horizon,
                 convert(Array, slice(histshocks, i, :, :)), start_ind, end_ind)
 
+            # Assign the i-th index of systems (the draw)
+            # to the i_local-th index of the localpart array
             i_local = mod(i-1, ndraws_local) + 1
 
+            # Assign return values from compute_shock_decompositions to a slice of localpart
             localpart[i_local, states_range, :, :] = states
             localpart[i_local, obs_range,    :, :] = obs
             if forecast_pseudoobservables(m)
@@ -94,7 +99,7 @@ function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
         return localpart
     end
 
-    # Convert SubArrays to DArrays and return
+    # Convert SubArrays (returned when indexing `out`) to DArrays and return
     states = convert(DArray, out[1:ndraws, states_range, 1:nperiods, 1:nshocks])
     obs    = convert(DArray, out[1:ndraws, obs_range,    1:nperiods, 1:nshocks])
     pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods, 1:nshocks])

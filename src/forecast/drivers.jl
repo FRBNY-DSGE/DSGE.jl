@@ -567,10 +567,16 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     # Reset procs to [myid()] if necessary
     procs = reset_procs(m, procs, Nullable(input_type))
 
+    # Compute everything that will be needed to plot original output_vars
+    output_vars = add_requisite_output_vars(output_vars)
+    println("OUTPUT_VARS: $output_vars")
+
     # Prepare forecast outputs
     forecast_output = Dict{Symbol, DArray{Float64}}()
     forecast_output_files = get_output_files(m, "forecast", input_type, output_vars, cond_type;
                                 subset_string = subset_string)
+    println("forecast_output_files = $(collect(keys(forecast_output_files)))")
+
     output_dir = rawpath(m, "forecast")
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -626,12 +632,14 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     # Must re-run filter/smoother for conditional data in addition to explicit cases
     hist_vars = [:histstates, :histpseudo, :histshocks]
     shockdec_vars = [:shockdecstates, :shockdecpseudo, :shockdecobs]
-    filterandsmooth_vars = vcat(hist_vars, shockdec_vars)
+    dettrend_vars = [:dettrendstates, :dettrendpseudo, :dettrendobs]
+    filterandsmooth_vars = vcat(hist_vars, shockdec_vars, dettrend_vars)
 
+    hists_to_compute = intersect(output_vars, hist_vars)
     if !isempty(intersect(output_vars, filterandsmooth_vars)) || cond_type in [:semi, :full]
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("\nFiltering and smoothing $(intersect(output_vars, hist_vars))...")
+            println("\nFiltering and smoothing $hists_to_compute)...")
         end
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             @time histstates, histshocks, histpseudo, zends =
@@ -658,7 +666,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             end
         end
 
-        write_forecast_outputs(intersect(output_vars, hist_vars))
+        write_forecast_outputs(hists_to_compute)
     end
 
 
@@ -671,8 +679,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     end
 
     forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks]
-
-    if !isempty(intersect(output_vars, forecast_vars))
+    forecasts_to_compute = intersect(output_vars, forecast_vars)
+    if !isempty(forecasts_to_compute)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("\nForecasting $(intersect(output_vars, forecast_vars))...")
         end
@@ -731,13 +739,13 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             end
         end
 
-        write_forecast_outputs(intersect(output_vars, forecast_vars))
+        write_forecast_outputs(forecasts_to_compute)
     end
 
 
     ### 4. Shock Decompositions
-
-    if !isempty(intersect(output_vars, shockdec_vars))
+    shockdecs_to_compute = intersect(output_vars, shockdec_vars)
+    if !isempty(shockdecs_to_compute)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("\nComputing shock decompositions for $(intersect(output_vars, shockdec_vars))...")
         end
@@ -755,8 +763,71 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             forecast_output[:shockdecpseudo] = shockdecpseudo
         end
 
-        write_forecast_outputs(intersect(output_vars, shockdec_vars))
+        write_forecast_outputs(shockdecs_to_compute)
     end
+
+
+    ### 5. Trend
+
+    trend_vars = vcat([:trendstates, :trendobs, :trendpseudo])
+    trends_to_compute = intersect(output_vars, trend_vars)
+
+    if !isempty(trends_to_compute)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("\nComputing trend for $(intersect(output_vars, trend_vars))...")
+        end
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
+            @time trendstates, trendobs, trendpseudo =
+                trends(m, systems; procs = procs)
+        else
+            trendstates, trendobs, trendpseudo =
+                trends(m, systems; procs = procs)
+        end
+
+        forecast_output[:trendstates] = trendstates
+        forecast_output[:trendobs]    = trendobs
+        if :trendpseudo in output_vars
+            forecast_output[:trendpseudo] = trendpseudo
+        end
+
+        write_forecast_outputs(trends_to_compute)
+    end
+
+    ### 6. Deterministic Trend
+
+    dettrends_to_compute = intersect(output_vars, dettrend_vars)
+    if !isempty(dettrends_to_compute)
+
+        # Extract first smoothed historical state vectors for each
+        # draw. This code will keep everything on its local node
+        # rather than copying across nodes. The result is a
+        # DVector{Vector{Float64}}.
+        z0s = DArray(I->[convert(Vector{Float64}, slice(histstates, i, :, 1))::Vector{Float64} for i in first(I)],
+                     (ndraws,), procs, [nprocs])
+        println("z0s: $(typeof(z0s))")
+
+        # Compute deterministic trend
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("\nComputing deterministic trend for $dettrends_to_compute...")
+        end
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
+            @time dettrendstates, dettrendobs, dettrendpseudo =
+                deterministic_trends(m, systems, z0s; procs = procs)
+        else
+            dettrendstates, dettrendobs, dettrendpseudo =
+                deterministic_trends(m, systems, z0s; procs = procs)
+        end
+
+        forecast_output[:dettrendstates] = dettrendstates
+        forecast_output[:dettrendobs]    = dettrendobs
+        if :dettrendpseudo in output_vars
+            forecast_output[:dettrendpseudo] = dettrendpseudo
+        end
+
+        dettrend_write_vars = [symbol("dettrend$c") for c in unique(map(get_class, dettrends_to_compute))]
+        write_forecast_outputs(dettrends_to_compute)
+    end
+
 
     # Return only saved elements of dict
     filter!((k, v) -> k in output_vars, forecast_output)

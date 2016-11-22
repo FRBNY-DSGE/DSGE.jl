@@ -21,7 +21,7 @@ Estimate the DSGE parameter posterior distribution.
   covariance matrix for the proposal distribution. When the Hessian is singular,
   eigenvectors corresponding to zero eigenvectors are not well defined, so eigenvalue
   decomposition can cause problems. Passing a precomputed matrix allows us to ensure that
-  the rest of the routine has not broken. 
+  the rest of the routine has not broken.
 """
 function estimate(m::AbstractModel, df::DataFrame;
                   verbose::Symbol=:low,
@@ -84,9 +84,9 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
             end
         end
     end
-    
+
     params = map(θ->θ.value, m.parameters)
-    
+
     ########################################################################################
     ### Step 3: Compute proposal distribution
     ###
@@ -146,7 +146,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     else
         DSGE.DegenerateMvNormal(params, proposal_covariance)
     end
-    
+
     if DSGE.rank(propdist) != n_parameters_free(m)
         println("problem –    shutting down dimensions")
     end
@@ -252,8 +252,8 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
         end
 
     end
-    
-    # Report number of blocks that will be used 
+
+    # Report number of blocks that will be used
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Blocks: $n_blocks")

@@ -69,6 +69,9 @@ module DSGE
         smooth, smooth_all, kalman_smoother, durbin_koopman_smoother,
         forecast_all, forecast_one, forecast, compute_forecast,
         shock_decompositions, compute_shock_decompositions,
+        trends, compute_trends, compute_trend,
+        deterministic_trends, compute_deterministic_trends, compute_deterministic_trend,
+        get_output_files,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
@@ -88,7 +91,7 @@ module DSGE
 
         # analysis/
         find_density_bands, compute_moments, compute_means_bands, compute_means_bands_all, MeansBands,
-        meansbands_matrix_all, meansbands_matrix, get_shockdec_means, get_shockdec_bands
+        meansbands_matrix_all, meansbands_matrix, read_mb
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
@@ -127,6 +130,8 @@ module DSGE
     include("forecast/smooth.jl")
     include("forecast/forecast.jl")
     include("forecast/shock_decompositions.jl")
+    include("forecast/trends.jl")
+    include("forecast/deterministic_trends.jl")
     include("forecast/drivers.jl")
 
     include("analysis/moments.jl")
