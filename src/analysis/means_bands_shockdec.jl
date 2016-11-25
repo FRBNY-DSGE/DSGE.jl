@@ -38,7 +38,6 @@ function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
             ex = if transform in [:logtopct_annualized_percapita]
                 Expr(:call, transform, squeeze(fcast_output[:,var_ind,:,shock_ind],2), population_series)
             elseif transform in [:loglevelto4qpct_annualized_percapita]
-                println(y0_index)
                 Expr(:call, transform, squeeze(fcast_output[:,var_ind,:,shock_ind],2),
                      data[var_ind, get(y0_index)], population_series)
             else

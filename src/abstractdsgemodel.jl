@@ -134,6 +134,8 @@ index_presample_start(m::AbstractModel) = 1
 index_mainsample_start(m::AbstractModel) = subtract_quarters(date_mainsample_start(m), date_presample_start(m)) + 1
 index_zlb_start(m::AbstractModel) = subtract_quarters(date_zlb_start(m), date_presample_start(m)) + 1
 index_forecast_start(m::AbstractModel) = subtract_quarters(date_forecast_start(m), date_presample_start(m)) + 1
+index_shockdec_start(m::AbstractModel) = subtract_quarters(date_shockdec_start(m), date_presample_start(m)) + 1
+index_shockdec_end(m::AbstractModel) = subtract_quarters(date_shockdec_end(m), date_presample_start(m)) + 1
 
 n_presample_periods(m::AbstractModel) = subtract_quarters(date_mainsample_start(m), date_presample_start(m))
 n_prezlb_periods(m::AbstractModel) = subtract_quarters(date_zlb_start(m), date_mainsample_start(m))
@@ -242,8 +244,25 @@ forecast_smoother(m::AbstractModel)     = get_setting(m, :forecast_smoother)
 forecast_enforce_zlb(m::AbstractModel)  = get_setting(m, :forecast_enforce_zlb)
 forecast_zlb_value(m::AbstractModel)    = get_setting(m, :forecast_zlb_value)
 forecast_input_file_overrides(m::AbstractModel) = get_setting(m, :forecast_input_file_overrides)
-shockdec_startdate(m::AbstractModel)    = get_setting(m, :shockdec_startdate)
-shockdec_enddate(m::AbstractModel)      = get_setting(m, :shockdec_enddate)
+
+function date_shockdec_start(m::AbstractModel)
+    startdate = get_setting(m, :shockdec_startdate)
+    if !isnull(startdate)
+        return get(startdate)
+    else
+        return date_mainsample_start(m)
+    end
+end
+
+function date_shockdec_end(m::AbstractModel)
+    enddate =  get_setting(m, :shockdec_enddate)
+    if !isnull(enddate)
+        return get(enddate)
+    else
+        return date_forecast_end(m)
+    end
+end
+
 forecast_pseudoobservables(m::AbstractModel) = get_setting(m, :forecast_pseudoobservables)
 
 function forecast_horizons(m::AbstractModel; cond_type = :none)

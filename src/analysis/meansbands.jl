@@ -41,9 +41,6 @@ type MeansBands
 
         if !isempty(bands)
 
-            println("$(key[:product])")
-            println("$(names(means))")
-
             # assert that means and bands fields have the same keys (provide info for same products)
             @assert sort(setdiff(names(means),[:date])) == sort(collect(keys(bands)))
 

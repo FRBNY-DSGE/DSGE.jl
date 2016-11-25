@@ -40,7 +40,7 @@ module DSGE
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin, n_draws,
         date_forecast_start, date_forecast_end, forecast_tdist_df_val,
         forecast_tdist_shocks, forecast_kill_shocks, forecast_smoother, forecast_enforce_zlb, forecast_zlb_value,
-        forecast_input_file_overrides, shockdec_startdate, shockdec_enddate,
+        forecast_input_file_overrides, shockdec_startdate, date_shockdec_end,
         forecast_horizons,
         load_parameters_from_file, specify_mode!, specify_hessian,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,

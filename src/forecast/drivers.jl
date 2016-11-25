@@ -569,13 +569,11 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     # Compute everything that will be needed to plot original output_vars
     output_vars = add_requisite_output_vars(output_vars)
-    println("OUTPUT_VARS: $output_vars")
 
     # Prepare forecast outputs
     forecast_output = Dict{Symbol, DArray{Float64}}()
     forecast_output_files = get_output_files(m, "forecast", input_type, output_vars, cond_type;
                                 subset_string = subset_string)
-    println("forecast_output_files = $(collect(keys(forecast_output_files)))")
 
     output_dir = rawpath(m, "forecast")
 
@@ -804,7 +802,6 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         # DVector{Vector{Float64}}.
         z0s = DArray(I->[convert(Vector{Float64}, slice(histstates, i, :, 1))::Vector{Float64} for i in first(I)],
                      (ndraws,), procs, [nprocs])
-        println("z0s: $(typeof(z0s))")
 
         # Compute deterministic trend
         if VERBOSITY[verbose] >= VERBOSITY[:low]

@@ -31,10 +31,10 @@ where `S<:AbstractFloat`.
   `nshocks` of pseudo-observable shock decompositions for each draw. If
   `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
 
-where `nperiods` is the number of quarters between `shockdec_startdate(m)` and
-`shockdec_enddate(m)`, inclusive. If `shockdec_startdate(m)` is null, shock
+where `nperiods` is the number of quarters between `date_shockdec_start(m)` and
+`date_shockdec_end(m)`, inclusive. If `date_shockdec_start(m)` is null, shock
 decompositions are returned beginning from `date_mainsample_start(m)`. Likewise, if
-`shockdec_enddate(m)` is null, shock decompositions are returned up to
+`date_shockdec_end(m)` is null, shock decompositions are returned up to
 `date_forecast_end(m)`.
 """
 function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
@@ -59,19 +59,9 @@ function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
     pseudo_range = (nstates + nobs + 1):(nstates + nobs + npseudo)
 
     # Determine periods for which to return shock decompositions
-    start_ind = if !isnull(shockdec_startdate(m))
-        DSGE.subtract_quarters(get(shockdec_startdate(m)), date_mainsample_start(m)) + 1
-    else
-        1
-    end
-
-    end_ind = if !isnull(shockdec_enddate(m))
-        DSGE.subtract_quarters(get(shockdec_enddate(m)), date_mainsample_start(m)) + 1
-    else
-        size(histshocks, 3) + horizon
-    end
-
-    nperiods = end_ind - start_ind + 1
+    start_ind = index_shockdec_start(m) - n_presample_periods(m)
+    end_ind   = index_shockdec_end(m) - n_presample_periods(m)
+    nperiods  = end_ind - start_ind + 1
 
     # Construct distributed array of shock decompositions
     out = DArray((ndraws, nstates + nobs + npseudo, nperiods, nshocks), procs, [nprocs, 1, 1, 1]) do I # I is a tuple of indices for given localpart

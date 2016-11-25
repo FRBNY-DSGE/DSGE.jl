@@ -50,7 +50,9 @@ function Base.show(io::IO, mb::MeansBands)
     @printf io "  product: %s\n" product(mb)
     @printf io "  cond: %s\n" cond_type(mb)
     @printf io "  para: %s\n" para(mb)
-    @printf io "  dates: %s - %s\n" startdate_means(mb) enddate_means(mb)
+    if mb.metadata[:product] != :trend
+        @printf io "  dates: %s - %s\n" startdate_means(mb) enddate_means(mb)
+    end
     @printf io "  # of variables: %s\n" n_vars_means(mb)
     @printf io "  bands: %s\n" get_density_bands(mb, uniqueify=true)
 end

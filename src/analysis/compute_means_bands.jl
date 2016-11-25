@@ -1,4 +1,5 @@
 """
+```
 compute_means_bands_all(m, input_type, output_vars, cond_type;
                         density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], subset_string = "",
                         load_dataset = true, load_population_data = true,
@@ -69,9 +70,9 @@ Below, `T<:AbstractFloat` and `S<:AbstractString`:
   of the period prior to the first period for which that
   product is computed. This is used to compute growth rates of
   forecasted or counterfactual variables, such as the deterministic
-  trend (for forecasts, `y0_index` should correspond to the last
-  historical period; for the deterministic trend, it should correspond
-  to the last presample period). It is required for only those
+  trend. `y0_indexes[:forecast]` should correspond to the last
+  historical period; `y0_indexes[:dettrend]` should correspond
+  to the last presample period. It is required for only those
   observables and pseudoobservables that employ the
   `loglevelto4qpct_annualized_percapita` transformation.
 
@@ -102,6 +103,7 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
     ## Step 0: Determine full set of output_vars necessary for plotting desired results
     #          Specifically, if output_vars contains shockdecs but not trend or deterministic trends,
     #          add those
+
     output_vars = add_requisite_output_vars(output_vars)
 
     ## Step 1: Load population data in levels
@@ -138,10 +140,13 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
         products = unique(map(get_product, output_vars))
 
         y0_indexes = Dict{Symbol,Nullable{Int}}()
-        for prod in intersect(products, [:hist, :forecast])
+        for prod in intersect(products, [:forecast])
             y0_indexes[prod] = Nullable(index_forecast_start(m) - 1)
         end
-        for prod in intersect(products, [:shockdec, :dettrend])
+        for prod in intersect(products, [:shockdec])
+            y0_indexes[prod] = Nullable(index_shockdec_start(m) - 1)
+        end
+        for prod in intersect(products, [:hist, :dettrend])
             y0_indexes[prod] = Nullable(index_mainsample_start(m) - 1)
         end
         for prod in intersect(products, [:trend])
@@ -343,9 +348,6 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
         check_consistent_order(date_list, date_indices_order)
         sort!(date_list, by = x -> date_indices[x])
         sort!(date_indices_order)
-    else
-        println("Size of trend fcast_output: $(size(fcast_output))")
-        date_indices_order = [1]
     end
 
     # get population mnemonic
@@ -353,7 +355,7 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
 
     # Ensure population forecast is same length as fcast_output.
     # For forecasts, the third dimension of the fcast_output matrix is the number of periods.
-    population_forecast = if product in [:forecast, :shockdec, :dettrend]
+    population_forecast = if product in [:forecast, :shockdec, :trend, :dettrend]
         n_fcast_periods = size(fcast_output, 3)
         resize_population_forecast(population_forecast, n_fcast_periods,
                                    population_mnemonic = mnemonic)
@@ -367,14 +369,10 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
                    :indices    => variable_indices,
                    :subset_string => subset_string)
 
-    means, bands = if product in [:hist, :forecast, :trend, :dettrend]
+    means, bands = if product in [:hist, :forecast, :dettrend]
 
         # make DataFrame for means and Dict for bands
-        means = if pr	oduct != :trend
-            DataFrame(date = date_list)
-        else
-            DataFrame()
-        end
+        means = DataFrame(date = date_list)
         bands = Dict{Symbol,DataFrame}()
 
         # for each series (ie each pseudoobs, each obs, or each state):
@@ -406,12 +404,16 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
 
     elseif product in [:trend]
 
+        # make DataFrame for means and Dict for bands
+        means = DataFrame()
+        bands = Dict{Symbol,DataFrame}()
+
         # for each series (ie each pseudoobs, each obs, or each state):
         # 1. apply the appropriate transform
         # 2. add to DataFrame
         for (series, ind) in variable_indices
 
-            # apply transformation to all draws
+            # apply transformation to all draws.
             transform = parse_transform(transforms[series])
 
             transformed_fcast_output = if transform in [logtopct_annualized_percapita]
@@ -425,9 +427,12 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
                 transform(fcast_output[ind])
             end
 
-            # compute bands
+
+            # compute bands. note that because the trend is just a
+            # number, not a series, the transformed result is just a
+            # number, so we need to put it into a matrix to calculate bands.
+            transformed_fcast_output = reshape([transformed_fcast_output], (1,1))
             bands_one = find_density_bands(transformed_fcast_output, density_bands, minimize=false)
-            bands_one[:date] = date_list
 
             # compute the mean and bands across draws and add to dataframe
             means[series] = vec(mean(transformed_fcast_output,1))
@@ -437,6 +442,7 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
         means, bands
 
     elseif product in [:shockdec]
+
         # make sure population series corresponds with saved shockdec dates
         shockdec_start = date_list[1]
         shockdec_end   = date_list[end]

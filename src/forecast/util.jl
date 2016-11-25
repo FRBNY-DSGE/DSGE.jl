@@ -361,17 +361,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     elseif contains(string(var), "forecast")
         quarter_range(date_forecast_start(m), date_forecast_end(m))
     elseif contains(string(var), "shockdec")
-        date_shockdec_start = if isnull(shockdec_startdate(m))
-            date_mainsample_start(m)
-        else
-            get(shockdec_startdate(m))
-        end
-        date_shockdec_end = if isnull(shockdec_enddate(m))
-            date_forecast_end(m)
-        else
-            get(shockdec_enddate(m))
-        end
-        quarter_range(date_shockdec_start, date_shockdec_end)
+        quarter_range(date_shockdec_start(m), date_shockdec_end(m))
     elseif contains(string(var), "dettrend")
         quarter_range(date_mainsample_start(m), date_forecast_end(m))
     elseif contains(string(var), "trend") # after "dettrend" b/c elseif short-circuits
