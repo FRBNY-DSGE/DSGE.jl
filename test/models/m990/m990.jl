@@ -1,6 +1,5 @@
 using DSGE
 using HDF5, Base.Test, Distributions
-include("../../util.jl")
 
 path = dirname(@__FILE__)
 
@@ -19,13 +18,13 @@ trspec = zeros(82, 4)
 
 # keys to skip (used to be fixed_parameters)
 fixed_parameters = [:δ, :λ_w, :ϵ_p, :ϵ_w, :g_star]
-    
+
 # not all parameters appear in model.parameters
 i = 1
 for θ in model.parameters
     !isa(θ,AbstractParameter) && error()
     in(θ.key, fixed_parameters) && continue
-    
+
     para[i] = θ.value
 
     (left, right) = θ.valuebounds
@@ -33,7 +32,7 @@ for θ in model.parameters
     bounds[i, 2] = right
 
     prior = θ.prior.value
-    
+
     if isa(prior, DSGE.RootInverseGamma)
         pshape[i] = 4
         (ν, τ) = params(prior)
@@ -49,19 +48,19 @@ for θ in model.parameters
         end
         pmean[i] = mean(prior)
         pstdd[i] = std(prior)
-        
+
     end
 
     if θ.transform == DSGE.Untransformed()
         trspec[i, 1] = 0
     elseif θ.transform == DSGE.SquareRoot()
         trspec[i, 1] = 1
-    elseif  θ.transform == DSGE.Exponential()()
-        trspec[i, 1] = 2        
+    elseif  θ.transform == DSGE.Exponential()
+        trspec[i, 1] = 2
     else
-       throw(error("This kind of transform not allowed")) 
+       throw(error("This kind of transform not allowed"))
     end
-        
+
     (left, right) = θ.transform_parameterization
     trspec[i, 2] = left
     trspec[i, 3] = right

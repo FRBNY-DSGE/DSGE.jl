@@ -82,8 +82,8 @@ type Model990{T} <: AbstractModel{T}
     endogenous_states_augmented::Dict{Symbol,Int}   #
     observables::Dict{Symbol,Int}                   #
 
-    spec::ASCIIString                               # Model specification number (eg "m990")
-    subspec::ASCIIString                            # Model subspecification (eg "ss0")
+    spec::String                               # Model specification number (eg "m990")
+    subspec::String                            # Model subspecification (eg "ss0")
     settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
@@ -187,7 +187,7 @@ function Model990(subspec::AbstractString="ss2")
     fernald_series     = [:TFPJQ, :TFPKQ]
     longrate_series    = [:FYCZZA]
     # ois data taken care of in load_data
-    
+
     data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
                                               :fernald => fernald_series, :longrate => longrate_series)
 
@@ -432,12 +432,12 @@ function Model990(subspec::AbstractString="ss2")
     # standard deviations of the anticipated policy shocks
     for i = 1:n_anticipated_shocks_padding(m)
         if i < 13
-            m <= parameter(symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(),
+            m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(),
                            RootInverseGamma(4., .2), fixed=false,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
         else
-            m <= parameter(symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.),
+            m <= parameter(Symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.),
                            DSGE.Exponential(), RootInverseGamma(4., .2), fixed=true,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
@@ -787,7 +787,7 @@ function init_data_transforms!(m::Model990)
     for i = 1:n_anticipated_shocks(m)
         # FROM: OIS expectations of $i-period-ahead interest rates at a quarterly rate
         # TO:   Same
-        
+
         m.data_transforms[symbol("obs_ois$i")] = function (levels)
             levels[:, symbol("ant$i")]
         end

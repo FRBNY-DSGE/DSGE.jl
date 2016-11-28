@@ -119,9 +119,9 @@ The following Settings are constructed, initialized and added to
 `m.settings`, but these values are used to test DSGE.jl.
 
 ### I/O Locations and identifiers
-- `saveroot::Setting{ASCIIString}`: A temporary directory in /tmp/
-- `dataroot::Setting{ASCIIString}`: dsgeroot/test/reference/
-- `data_vintage::Setting{ASCIIString}`: "_REF"
+- `saveroot::Setting{String}`: A temporary directory in /tmp/
+- `dataroot::Setting{String}`: dsgeroot/test/reference/
+- `data_vintage::Setting{String}`: "_REF"
 
 ### Metropolis-Hastings
 - `n_mh_simulations::Setting{Int}`: 100

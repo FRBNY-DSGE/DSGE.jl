@@ -24,9 +24,9 @@ Base.show(io::IO, t::Untransformed) = @printf io "x -> x\n"
 Base.show(io::IO, t::SquareRoot)    = @printf io "x -> (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)\n"
 Base.show(io::IO, t::Exponential)   = @printf io "x -> b + (1/c) * log(x-a)\n"
 
-Base.call(t::Untransformed) = Untransformed()
-Base.call(t::SquareRoot) = SquareRoot()
-Base.call(t::Exponential) = Exponential()
+#Base.call(t::Untransformed) = Untransformed()
+#Base.call(t::SquareRoot) = SquareRoot()
+#Base.call(t::Exponential) = Exponential()
 
 """
 ```
@@ -38,7 +38,7 @@ parameters, including steady-state values.  Its subtype structure is
 as follows:
 
 -`AbstractParameter{T<:Number}`: The common abstract supertype for all parameters.
-    -`Parameter{T<:Number, U<:Transform}`: The abstract supertype for parameters that are directly estimated. 
+    -`Parameter{T<:Number, U<:Transform}`: The abstract supertype for parameters that are directly estimated.
         -`UnscaledParameter{T<:Number, U:<Transform}`: Concrete type for parameters that do not need to be scaled for equilibrium conditions.
         -`ScaledParameter{T<:Number, U:<Transform}`: Concrete type for parameters that are scaled for equilibrium conditions.
     -`SteadyStateParameter{T<:Number}`: Concrete type for steady-state parameters.
@@ -399,11 +399,11 @@ Base.convert{T<:Number}(::Type{T}, p::SteadyStateParameter)  = convert(T,p.value
 
 Base.promote_rule{T<:Number,U<:Number}(::Type{AbstractParameter{T}}, ::Type{U}) = promote_rule(T,U)
 
-for op in (:(Base.(:+)),
-           :(Base.(:-)),
-           :(Base.(:*)),
-           :(Base.(:/)),
-           :(Base.(:^)))
+for op in (:(Base.:+),
+           :(Base.:-),
+           :(Base.:*),
+           :(Base.:/),
+           :(Base.:^))
 
     @eval ($op)(p::UnscaledOrSteadyState, q::UnscaledOrSteadyState) = ($op)(p.value, q.value)
     @eval ($op)(p::UnscaledOrSteadyState, x::Integer)            = ($op)(p.value, x)
@@ -418,20 +418,20 @@ for op in (:(Base.(:+)),
     @eval ($op)(p::ScaledParameter, q::UnscaledOrSteadyState) = ($op)(p.scaledvalue, q.value)
     @eval ($op)(p::UnscaledOrSteadyState, q::ScaledParameter) = ($op)(p.value, q.scaledvalue)
 end
-
+@eval Base.:-(p::UnscaledOrSteadyState) = -(p.value)
+@eval Base.:-(p::ScaledParameter) = -(p.scaledvalue)
 for f in (:(Base.exp),
           :(Base.log),
-          :(Base.(:-)),
-          :(Base.(:<)),
-          :(Base.(:>)),
-          :(Base.(:<=)),
-          :(Base.(:>=)))
+          :(Base.:<),
+          :(Base.:>),
+          :(Base.:<=),
+          :(Base.:>=))
 
     @eval ($f)(p::UnscaledOrSteadyState) = ($f)(p.value)
     @eval ($f)(p::ScaledParameter) = ($f)(p.scaledvalue)
 
     @eval ($f)(p::UnscaledOrSteadyState, x::Number) = ($f)(p.value, x)
-    @eval ($f)(p::ScaledParameter, x::Number) = ($f)(p.scaledvalue, x)  
+    @eval ($f)(p::ScaledParameter, x::Number) = ($f)(p.scaledvalue, x)
 end
 
 """

@@ -1,6 +1,5 @@
 using DSGE
 using HDF5, Base.Test
-include("../util.jl")
 
 path = dirname(@__FILE__)
 

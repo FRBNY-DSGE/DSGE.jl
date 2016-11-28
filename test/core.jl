@@ -89,9 +89,9 @@ reoptimize = Setting(:reoptimize, false)
 vint = Setting(:data_vintage, "REF", true, "vint", "Date of data") # full constructor
 @test promote_rule(Setting{Float64}, Float16) == Float64
 @test promote_rule(Setting{Bool}, Bool) == Bool
-@test promote_rule(Setting{ASCIIString}, AbstractString) == UTF8String
+@test promote_rule(Setting{String}, AbstractString) == String
 @test convert(Int64, n_mh_blocks) == 22
-@test convert(ASCIIString, vint) == "REF"
+@test convert(String, vint) == "REF"
 
 @test get_setting(m, :n_mh_blocks) == m.settings[:n_mh_blocks].value
 m.testing = true
