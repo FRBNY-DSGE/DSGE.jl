@@ -296,7 +296,7 @@ function logpath(m::AbstractModel)
 end
 
 strs = [:work, :raw, :tables, :figures]
-fns = [symbol(x, "path") for x in strs]
+fns = [Symbol(x, "path") for x in strs]
 for (str, fn) in zip(strs, fns)
     @eval begin
         # First eval function

@@ -99,7 +99,7 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
     DD[obs[:obs_longinflation]]    = 100*(m[:π_star]-1)
 
     ## Long Rate
-    ZZ[obs[:obs_longrate], :]               = ZZ[6, :]*TTT10
+    ZZ[obs[:obs_longrate], :]               = ZZ[6, :]'*TTT10
     ZZ[obs[:obs_longrate], endo_new[:lr_t]] = 1.0
     DD[obs[:obs_longrate]]                  = m[:Rstarn]
 

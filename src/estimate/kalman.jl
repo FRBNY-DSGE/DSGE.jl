@@ -174,9 +174,9 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
     if allout
         rmse = sqrt(mean((yprederror.^2)', 1))
         rmsd = sqrt(mean((ystdprederror.^2)', 1))
-        return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt)
+        return KalmanFunc(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt)
     else
-        return Kalman(L, zend, Pend)
+        return KalmanFunc(L, zend, Pend)
     end
 
 end
@@ -218,7 +218,7 @@ immutable Kalman{S<:AbstractFloat}
     filt::Matrix{S}
     vfilt::Array{S,3}
 end
-function Kalman{S<:AbstractFloat}(L::S,
+function KalmanFunc{S<:AbstractFloat}(L::S,
                                   zend::Matrix{S},
                                   Pend::Matrix{S},
                                   pred::Matrix{S}          = Matrix{S}(),

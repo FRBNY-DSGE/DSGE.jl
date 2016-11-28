@@ -696,11 +696,11 @@ See [Editing or Extending a Model](#editing-or-extending-a-model).
   measurement equation matrices.
 
 ### Model Specification and Settings
-- `spec::ASCIIString`: Model specification number (e.g. `"m990"`). Identifies a
+- `spec::String`: Model specification number (e.g. `"m990"`). Identifies a
   particular set of parameters, equilibrium conditions, and measurement equation
   (equivalently, a concrete model type - for example, models of type `Model990`
   would have `spec = "m990"`.)
-- `subspec::ASCIIString`: Model sub-specification (e.g. `"ss0"`). Indicates any
+- `subspec::String`: Model sub-specification (e.g. `"ss0"`). Indicates any
   changes to parameter initialization from `spec`.
   See [Editing or Extending a Model](#editing-or-extending-a-model) for more
   details.

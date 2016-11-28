@@ -44,10 +44,10 @@ A `GensysError` is thrown when Gensys does not give a unique solution, or no sol
 exists. If a `GensysError`is thrown during Metropolis-Hastings, it is caught by `posterior`.
 `posterior` then returns a value of `-Inf`, which Metropolis-Hastings always rejects.
 ### Fields
-* `msg::ASCIIString`: Info message. Default = "Error in gensys." 
+* `msg::String`: Info message. Default = "Error in gensys." 
 """
 type GensysError <: Exception
-    msg::ASCIIString
+    msg::String
 end
 GensysError() = GensysError("Error in gensys.")
 Base.showerror(io::IO, ex::GensysError) = print(io, ex.msg)
