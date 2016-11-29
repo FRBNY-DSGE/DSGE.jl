@@ -178,6 +178,14 @@ function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
             for t in 1:horizon
                 shocks[:, t] = rand(dist)
             end
+
+            # Forecast without anticipated shocks
+            if n_anticipated_shocks(m) > 0
+                ind_ant1 = m.exogenous_shocks[:rm_shl1]
+                ind_antn = m.exogenous_shocks[symbol("rm_shl$(n_anticipated_shocks(m))")]
+                ant_shock_inds = ind_ant1:ind_antn
+                shocks[ant_shock_inds, :] = 0
+            end
         end
     end
 
