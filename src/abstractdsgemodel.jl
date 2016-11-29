@@ -30,7 +30,7 @@ end
 end
 
 @inline function Base.setindex!{T<:Number}(m::AbstractModel, value::T, i::Integer)
-    if i <=OD (j = length(m.parameters))
+    if i <= (j = length(m.parameters))
         param = m.parameters[i]
         param.value = value
         if isa(param, ScaledParameter)

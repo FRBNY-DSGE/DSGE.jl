@@ -23,20 +23,25 @@ Optional Arguments:
 """
 function estimate(m::AbstractModel, df::DataFrame;
                   verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix())
+                  proposal_covariance::Matrix=Matrix(),method::Symbol=:SMC)
     data = df_to_matrix(m, df)
-    estimate(m, data; verbose=verbose, proposal_covariance=proposal_covariance)
+    estimate(m, data; verbose=verbose, proposal_covariance=proposal_covariance, method=method)
 end
 function estimate(m::AbstractModel;
                   verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix())
+                  proposal_covariance::Matrix=Matrix(),method::Symbol=:SMC)
     # Load data
     df = load_data(m; verbose=verbose)
-    estimate(m, df; verbose=verbose, proposal_covariance=proposal_covariance)
+    estimate(m, df; verbose=verbose, proposal_covariance=proposal_covariance, method=method)
 end
 function estimate(m::AbstractModel, data::Matrix{Float64};
                   verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix())
+                  proposal_covariance::Matrix=Matrix(),
+                  method::Symbol=:SMC)
+
+    if !(method in [:SMC,:MH])
+        error("method must be :SMC or :MH")
+    end
 
     ########################################################################################
     ### Step 1: Initialize
@@ -51,7 +56,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     # Specify starting mode
     
     vint = get_setting(m, :data_vintage)
-    if reoptimize(m)
+    if reoptimize(m) && method == :MH
         println("Reoptimizing...")
         
         # Inputs to optimization algorithm
@@ -85,84 +90,97 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     
     params = map(θ->θ.value, m.parameters)
     
+
+
+    if method == :MH
+        ########################################################################################
+        ### Step 3: Compute proposal distribution for Markov Chain Monte Carlo (MCMC)
+        ###
+        ### In Metropolis-Hastings, we draw sample parameter vectors from
+        ### the proposal distribution, which is a degenerate multivariate
+        ### normal centered at the mode. Its variance is the inverse of
+        ### the hessian. We find the inverse via eigenvalue decomposition.
+        ########################################################################################
+
+        ## Calculate the Hessian at the posterior mode
+        hessian = if calculate_hessian(m)
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                println("Recalculating Hessian...")
+            end
+
+            hessian, _ = hessian!(m, params, data; verbose=verbose)
+
+            h5open(rawpath(m, "estimate","hessian.h5"),"w") do file
+                file["hessian"] = hessian
+            end
+
+            hessian
+
+            ## Read in a pre-calculated Hessian
+        else
+            fn = hessian_path(m)
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                println("Using pre-calculated Hessian from $fn")
+            end
+
+            hessian = h5open(fn,"r") do file
+                read(file, "hessian")
+            end
+
+            hessian
+        end
+
+        ## Compute inverse hessian and create proposal distribution, or
+        ## just create it with the given cov matrix if we have it
+        propdist = if isempty(proposal_covariance)
+            # Make sure the mode and hessian have the same number of parameters
+            n = length(params)
+            @assert (n, n) == size(hessian)
+
+            # Compute the inverse of the Hessian via eigenvalue decomposition
+            S_diag, U = eig(hessian)
+            big_eig_vals = find(x -> x > 1e-6, S_diag)
+            rank = length(big_eig_vals)
+
+            S_inv = zeros(n, n)
+            for i = (n-rank+1):n
+                S_inv[i, i] = 1/S_diag[i]
+            end
+
+            hessian_inv = U*sqrt(S_inv) #this is the inverse of the hessian
+            DSGE.DegenerateMvNormal(params, hessian_inv)
+        else
+            DSGE.DegenerateMvNormal(params, proposal_covariance)
+        end
+        
+        if DSGE.rank(propdist) != n_parameters_free(m)
+            println("problem –    shutting down dimensions")
+        end
+
+        ########################################################################################
+        ### Step 3.5: Sample from posterior using Metropolis-Hastings algorithm
+        ########################################################################################
+
+        # Set the jump size for sampling
+        cc0 = 0.01
+        cc = 0.09
+
+        metropolis_hastings(propdist, m, data, cc0, cc; verbose=verbose);
+
+    elseif method == :SMC
+        ########################################################################################
+        ### Step 3: Run Sequential Monte Carlo (SMC)
+        ###
+        ### In Sequential Monte Carlo, a large number of Markov Chains
+        ### are simulated iteratively to create a particle approximation
+        ### of the posterior. Portions of this method are executed in 
+        ### parallel.
+        ########################################################################################
+        smc(m, data; verbose = verbose)
+    end
+
     ########################################################################################
-    ### Step 3: Compute proposal distribution
-    ###
-    ### In Metropolis-Hastings, we draw sample parameter vectors from
-    ### the proposal distribution, which is a degenerate multivariate
-    ### normal centered at the mode. Its variance is the inverse of
-    ### the hessian. We find the inverse via eigenvalue decomposition.
-    ########################################################################################
-
-    ## Calculate the Hessian at the posterior mode
-    #hessian = if calculate_hessian(m)
-    #    if VERBOSITY[verbose] >= VERBOSITY[:low]
-    #        println("Recalculating Hessian...")
-    #    end
-
-    #    hessian, _ = hessian!(m, params, data; verbose=verbose)
-
-    #    h5open(rawpath(m, "estimate","hessian.h5"),"w") do file
-    #        file["hessian"] = hessian
-    #    end
-
-    #    hessian
-
-    ## Read in a pre-calculated Hessian
-    #else
-    #    fn = hessian_path(m)
-    #    if VERBOSITY[verbose] >= VERBOSITY[:low]
-    #        println("Using pre-calculated Hessian from $fn")
-    #    end
-
-    #    hessian = h5open(fn,"r") do file
-    #        read(file, "hessian")
-    #    end
-
-    #    hessian
-    #end
-
-    ## Compute inverse hessian and create proposal distribution, or
-    ## just create it with the given cov matrix if we have it
-    #propdist = if isempty(proposal_covariance)
-    #    # Make sure the mode and hessian have the same number of parameters
-    #    n = length(params)
-    #    @assert (n, n) == size(hessian)
-
-    #    # Compute the inverse of the Hessian via eigenvalue decomposition
-    #    S_diag, U = eig(hessian)
-    #    big_eig_vals = find(x -> x > 1e-6, S_diag)
-    #    rank = length(big_eig_vals)
-
-    #    S_inv = zeros(n, n)
-    #    for i = (n-rank+1):n
-    #        S_inv[i, i] = 1/S_diag[i]
-    #    end
-
-    #    hessian_inv = U*sqrt(S_inv) #this is the inverse of the hessian
-    #    DSGE.DegenerateMvNormal(params, hessian_inv)
-    #else
-    #    DSGE.DegenerateMvNormal(params, proposal_covariance)
-    #end
-    #
-    #if DSGE.rank(propdist) != n_parameters_free(m)
-    #    println("problem –    shutting down dimensions")
-    #end
-
-    ########################################################################################
-    ### Step 4: Sample from posterior using Metropolis-Hastings algorithm
-    ########################################################################################
-
-    # Set the jump size for sampling
-    cc0 = 0.01
-    cc = 0.09
-
-    #metropolis_hastings(propdist, m, data, cc0, cc; verbose=verbose);
-
-    smc(m, data; verbose = :high)
-
-    ########################################################################################
-    ### Step 5: Calculate and save parameter covariance matrix
+    ### Step 4: Calculate and save parameter covariance matrix
     ########################################################################################
 
     compute_parameter_covariance(m);
