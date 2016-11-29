@@ -375,7 +375,7 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         kalman_smoother(m, data, T, R, C, Q, Z, D,
                         kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
     elseif forecast_smoother(m) == :durbin_koopman
-        durbin_koopman_smoother(m, data, T, R, C, Q, Z, D,
+        durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, M, E, V_all,
                                 kal[:z0], kal[:vz0])
     end
 

@@ -370,10 +370,11 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     # extract system matrices
     T, R, C = system[:TTT], system[:RRR], system[:CCC]
     Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
+    M, E, V_all = system[:MM], system[:EE], system[:VVall]
 
     # call actual Durbin-Koopman smoother
-    durbin_koopman_smoother(m, df, T, R, C, Q, Z, D, A0, P0; cond_type =
-        cond_type)
+    durbin_koopman_smoother(m, df, T, R, C, Q, Z, D, M, E, V_all, A0, P0;
+        cond_type = cond_type)
 end
 
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
@@ -382,26 +383,31 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     # extract system matrices
     T, R, C = system[:TTT], system[:RRR], system[:CCC]
     Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
+    M, E, V_all = system[:MM], system[:EE], system[:VVall]
 
     # call actual Durbin-Koopman smoother
-    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0)
+    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, M, E, V_all, A0, P0)
 end
 
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    df::DataFrame, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
-    Z::Matrix{S}, D::Vector{S}, A0::Vector{S}, P0::Matrix{S};
+    df::DataFrame, T::Matrix{S}, R::Matrix{S}, C::Array{S},
+    Q::Matrix{S}, Z::Matrix{S}, D::Vector{S},
+    M::Matrix{S}, E::Matrix{S}, V_all::Matrix{S},
+    A0::Vector{S}, P0::Matrix{S};
     cond_type::Symbol = :none)
 
     # convert DataFrame to Matrix
     data = df_to_matrix(m, df; cond_type = cond_type)
 
     # call actual simulation smoother
-    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, A0, P0)
+    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, M, E, V_all, A0, P0)
 end
 
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
-    Z::Matrix{S}, D::Vector{S}, A0::Array{S}, P0::Matrix{S})
+    data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S},
+    Q::Matrix{S}, Z::Matrix{S}, D::Vector{S},
+    M::Matrix{S}, E::Matrix{S}, V_all::Matrix{S},
+    A0::Array{S}, P0::Matrix{S})
 
     # Get matrix dimensions
     Ny = size(data, 1)
@@ -422,14 +428,14 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     YY_all_plus = fill(NaN, Ny, Nt)
 
     # Draw initial state α_0+ and sequence of shocks η+
-    U, E, V = svd(P0)
+    U, eig, V = svd(P0)
 
     # If testing, set initial state and all shocks to zero
     if m.testing
-        ap_t       = U * diagm(sqrt(E)) * zeros(Nz, 1)
-        η_all_plus = sqrt(Q) * zeros(Ne, Nt)
+        ap_t       = U * diagm(sqrt(eig)) * zeros(S, Nz, 1)
+        η_all_plus = sqrt(Q) * zeros(S, Ne, Nt)
     else
-        ap_t       = U * diagm(sqrt(E)) * randn(Nz, 1)
+        ap_t       = U * diagm(sqrt(eig)) * randn(Nz, 1)
         η_all_plus = sqrt(Q) * randn(Ne, Nt)
     end
 
@@ -440,7 +446,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
         ant1_ind = m.exogenous_shocks[:rm_shl1]
         antn_ind = m.exogenous_shocks[symbol("rm_shl$(n_ant_shocks)")]
         shock_inds = ant1_ind:antn_ind
-        period_inds = [inds_presample_periods(m); inds_prezlb_periods(m)]
+        period_inds = vcat(inds_presample_periods(m), inds_prezlb_periods(m))
 
         # set shocks to 0
         η_all_plus[shock_inds, period_inds] = 0
@@ -457,7 +463,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     # Replace fake data with NaNs wherever actual data has NaNs
     YY_all_plus[isnan(data)] = NaN
 
-    # Compute y* = y - y+ - D
+    # Compute y* = y - y+
     YY_star = data - YY_all_plus
 
     ## Run the kalman filter
@@ -466,14 +472,12 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
         # Note that we pass in `zeros(size(D))` instead of `D` because the
         # measurement equation for `YY_star` has no constant term
         k, _, _, R3 = kalman_filter_2part(m, YY_star, T, R, C, A0, P0;
-            DD = zeros(size(D)), allout = true, include_presample = true)
+            ZZ = Z, DD = zeros(size(D)), QQ = Q, MM = M, EE = E, VVall = V_all,
+            allout = true, include_presample = true)
 
         k[:z0], k[:vz0], k[:pred], k[:vpred], R3[:TTT], R3[:RRR], R3[:CCC]
     else
-        VVall = zeros(Ny+Nz,Ny+Nz)
-        VVall[1:Nz,1:Nz] = R*Q*R'
-
-        k = kalman_filter(m, YY_star, T, C, Z, zeros(size(D)), VVall, A0, P0; lead = 0, allout = true)
+        k = kalman_filter(m, YY_star, T, C, Z, zeros(size(D)), V_all, A0, P0; lead = 0, allout = true)
 
         A0, P0, k[:pred], k[:vpred], T, R, C
     end
