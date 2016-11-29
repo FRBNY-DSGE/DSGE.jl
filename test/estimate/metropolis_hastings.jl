@@ -24,7 +24,7 @@ specify_mode!(m, inpath(m, "user", "paramsmode.h5"), verbose=:none)
 specify_hessian(m, inpath(m, "user", "hessian.h5"), verbose=:none)
 
 # Note Distributions (used in earlier test) also exports `estimate`.
-DSGE.estimate(m, df; verbose=:none, proposal_covariance = propdist_cov)
+DSGE.estimate(m, df; verbose=:none, proposal_covariance = propdist_cov, method = :MH)
 
 # Read in the parameter draws and covariance just generated from estimate.
 test_draws = h5open(rawpath(m, "estimate", "mhsave.h5"), "r") do file

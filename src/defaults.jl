@@ -49,17 +49,13 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:n_mh_burn, 2, "Number of blocks to use as burn-in in Metropolis-Hastings")
     m <= Setting(:mh_thin, 5, "Metropolis-Hastings thinning step")
 
-    #Specifically for Schorf 
-    if m.spec == "schorf"
-        m <= Setting(:data_vintage, "160706")
-        m <= Setting(:saveroot, "/Users/chrisrytting1/.julia/v0.4/DSGE/save")
-        m <= Setting(:dataroot, "/Users/chrisrytting1/.julia/v0.4/DSGE/save/input_data")
-        m <= Setting(:date_presample_start, quartertodate("1983-Q1"))
-        m <= Setting(:date_mainsample_start, quartertodate("1983-Q1"))
-        m <= Setting(:date_mainsample_end, quartertodate("2002-Q4"))
-        m <= Setting(:date_zlbregime_start, quartertodate("2002-Q4"))
-        m <= Setting(:date_forecast_start, quartertodate("2003-Q1"))
-  
-    end
+    # Sequential Monte Carlo
+    m <= Setting(:n_particles, 100, "Number of particles for use in SMC")
+    m <= Setting(:n_Φ, 25, "Number of stages in the tempering schedule")
+    m <= Setting(:λ, 2.0, "The 'bending coefficient' λ in Φ(n) = (n/N(Φ))^λ")
+    m <= Setting(:n_smc_blocks, 6, "The number of parameter blocks in SMC")
+    m <= Setting(:c, .5, "The scaling factor for the covariance, constructed from acpt and tgt during mutation")
+    m <= Setting(:acpt, .25, "The initial average acceptance rate for new particles during mutation")
+    m <= Setting(:trgt, .25, "The initial target acceptance rate for new particles during mutation")
 
 end
