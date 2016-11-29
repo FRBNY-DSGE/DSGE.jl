@@ -77,7 +77,7 @@ function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
         try
             update!(m, parameters)
         catch err
-            return Posterior()
+            return PosteriorFunc()
         end
     else
         update!(m, parameters)
