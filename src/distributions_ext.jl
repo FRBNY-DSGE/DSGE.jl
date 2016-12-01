@@ -135,6 +135,18 @@ end
 
 """
 ```
+Distributions.rand(d::DegenerateMvNormal, n::Int)
+```
+
+Generate `n` draws from `d`. This returns a matrix of size `(length(d), n)`,
+where each column is a sample.
+"""
+function Distributions.rand(d::DegenerateMvNormal, n::Int)
+    return d.μ .+ d.σ*randn(length(d), n)
+end
+
+"""
+```
 moments(dist::DegenerateMvNormal)
 ```
 
@@ -194,6 +206,18 @@ Generate a draw from `d`.
 """
 function Distributions.rand(d::DegenerateDiagMvTDist)
     return d.μ + d.σ*rand(TDist(d.ν), length(d))
+end
+
+"""
+```
+Distributions.rand(d::DegenerateDiagMvTDist, n::Int)
+```
+
+Generate `n` draws from `d`. This returns a matrix of size `(length(d), n)`,
+where each column is a sample.
+"""
+function Distributions.rand(d::DegenerateDiagMvTDist, n::Int)
+    return d.μ .+ d.σ*rand(TDist(d.ν), (length(d), n))
 end
 
 """

@@ -423,72 +423,68 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     n_ant_shocks = n_anticipated_shocks(m)
     t_zlb_start  = index_zlb_start(m)
 
-    # Initialize matrices
-    α_all_plus  = fill(NaN, Nz, Nt)
-    YY_all_plus = fill(NaN, Ny, Nt)
-
     # Draw initial state α_0+ and sequence of shocks η+
-    U, eig, V = svd(P0)
+    U, eig, _ = svd(P0)
+    dist_α = DegenerateMvNormal(zeros(S, Nz), U * diagm(sqrt(eig)))
+    dist_η = DegenerateMvNormal(zeros(S, Ne), sqrt(Q))
 
-    # If testing, set initial state and all shocks to zero
     if m.testing
-        ap_t       = U * diagm(sqrt(eig)) * zeros(S, Nz, 1)
-        η_all_plus = sqrt(Q) * zeros(S, Ne, Nt)
+        α_plus_0 = zeros(S, Nz)
+        η_plus   = zeros(S, Ne, Nt)
     else
-        ap_t       = U * diagm(sqrt(eig)) * randn(Nz, 1)
-        η_all_plus = sqrt(Q) * randn(Ne, Nt)
+        α_plus_0 = rand(dist_α)
+        η_plus   = rand(dist_η, Nt)
     end
 
     # Set n_ant_shocks shocks to 0 in pre-ZLB time periods
     if n_ant_shocks > 0
-        # get the indices of the anticipated shocks in the m.exogenous_shocks
-        # field
         ant1_ind = m.exogenous_shocks[:rm_shl1]
         antn_ind = m.exogenous_shocks[symbol("rm_shl$(n_ant_shocks)")]
         shock_inds = ant1_ind:antn_ind
         period_inds = vcat(inds_presample_periods(m), inds_prezlb_periods(m))
-
-        # set shocks to 0
-        η_all_plus[shock_inds, period_inds] = 0
+        η_plus[shock_inds, period_inds] = 0
     end
 
     # Produce "fake" states and observables (a+ and y+) by
     # iterating the state-space system forward
-    for t = 1:Nt
-        ap_t             = T * ap_t + R * η_all_plus[:,t]
-        α_all_plus[:,t]  = ap_t
-        YY_all_plus[:,t] = Z*ap_t + D
+    iterate(α_plus_t1, η_plus_t) = C + T*α_plus_t1 + R*η_plus_t
+
+    α_plus       = zeros(S, Nz, Nt)
+    α_plus[:, 1] = iterate(α_plus_0, η_plus[:, 1])
+    for t = 2:Nt
+        α_plus[:, t] = iterate(α_plus[:, t-1], η_plus[:, t])
     end
+    data_plus = D .+ Z*α_plus
 
     # Replace fake data with NaNs wherever actual data has NaNs
-    YY_all_plus[isnan(data)] = NaN
+    data_plus[isnan(data)] = NaN
 
     # Compute y* = y - y+
-    YY_star = data - YY_all_plus
+    data_star = data - data_plus
 
     ## Run the kalman filter
     A0, P0, pred, vpred, T, R, C = if n_ant_shocks > 0
 
         # Note that we pass in `zeros(size(D))` instead of `D` because the
-        # measurement equation for `YY_star` has no constant term
-        k, _, _, R3 = kalman_filter_2part(m, YY_star, T, R, C, A0, P0;
+        # measurement equation for `data_star` has no constant term
+        k, _, _, R3 = kalman_filter_2part(m, data_star, T, R, C, A0, P0;
             ZZ = Z, DD = zeros(size(D)), QQ = Q, MM = M, EE = E, VVall = V_all,
             allout = true, include_presample = true)
 
         k[:z0], k[:vz0], k[:pred], k[:vpred], R3[:TTT], R3[:RRR], R3[:CCC]
     else
-        k = kalman_filter(m, YY_star, T, C, Z, zeros(size(D)), V_all, A0, P0; lead = 0, allout = true)
+        k = kalman_filter(m, data_star, T, C, Z, zeros(size(D)), V_all, A0, P0; lead = 0, allout = true)
 
         A0, P0, k[:pred], k[:vpred], T, R, C
     end
 
     ##### Step 2: Kalman smooth over everything
-    α_hat_star, η_hat_star = kalman_smoother(m, YY_star, T, R, C, Q, Z,
+    α_hat_star, η_hat_star = kalman_smoother(m, data_star, T, R, C, Q, Z,
         zeros(size(D)), A0, P0, pred, vpred)
 
     # Compute draw (states and shocks)
-    alpha_hat = α_all_plus[:, index_mainsample_start(m):end] + α_hat_star
-    eta_hat   = η_all_plus[:, index_mainsample_start(m):end] + η_hat_star
+    α_hat = α_plus[:, index_mainsample_start(m):end] + α_hat_star
+    η_hat = η_plus[:, index_mainsample_start(m):end] + η_hat_star
 
-    return alpha_hat, eta_hat
+    return α_hat, η_hat
 end

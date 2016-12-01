@@ -160,10 +160,9 @@ function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
 
     # Populate shocks matrix
     if isempty(shocks)
-        shocks = zeros(S, nshocks, horizon)
-
-        # Draw shocks if necessary
-        if !forecast_kill_shocks(m)
+        if forecast_kill_shocks(m)
+            shocks = zeros(S, nshocks, horizon)
+        else
             μ = zeros(S, nshocks)
             σ = sqrt(system[:QQ])
             dist = if forecast_tdist_shocks(m)
@@ -175,9 +174,7 @@ function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
                 DegenerateMvNormal(μ, σ)
             end
 
-            for t in 1:horizon
-                shocks[:, t] = rand(dist)
-            end
+            shocks = rand(dist, horizon)
 
             # Forecast without anticipated shocks
             if n_anticipated_shocks(m) > 0

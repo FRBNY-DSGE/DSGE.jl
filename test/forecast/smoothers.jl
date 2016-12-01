@@ -15,7 +15,7 @@ m = Model990(custom_settings = custom_settings, testing = true)
 
 TTT, RRR, CCC = solve(m)
 meas = measurement(m, TTT, RRR, CCC)
-QQ, ZZ, DD = meas.QQ, meas.ZZ, meas.DD
+QQ, ZZ, DD, MM, EE, VVall = meas.QQ, meas.ZZ, meas.DD, meas.MM, meas.EE, meas.VVall
 
 pred, vpred, A0, P0 = h5open("$path/../reference/kalman_filter_2part_out.h5", "r") do h5
     read(h5, "pred"), read(h5, "vpred"), read(h5, "z0"), read(h5, "vz0")
@@ -40,7 +40,7 @@ kal, _, _, _ = kalman_filter_2part(m, data, TTT, RRR, CCC, A0, P0; allout = true
 
 # Durbin-Koopman smoother with anticipated shocks
 alpha_hat, eta_hat = durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD,
-    A0, P0)
+    MM, EE, VVall, A0, P0)
 
 exp_alpha_hat, exp_eta_hat =
     h5open("$path/../reference/durbin_koopman_smoother_out.h5", "r") do h5
