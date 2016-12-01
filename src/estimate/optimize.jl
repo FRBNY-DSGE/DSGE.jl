@@ -35,13 +35,13 @@ using Debug
     else
         error("Method ",method," is not supported.")
     end
-    
+
     # Inputs to optimization
     H0             = 1e-4 * eye(n_parameters_free(m))
     para_free_inds = find([!θ.fixed for θ in m.parameters])
     x_model        = transform_to_real_line(m.parameters)
     x_opt          = x_model[para_free_inds]
-    
+
     function f_opt(x_opt)
         x_model[para_free_inds] = x_opt
         transform_to_model_space!(m,x_model)
@@ -51,7 +51,7 @@ using Debug
         return res
     end
 
-    
+
     function neighbor_dsge!(x, x_proposal; cc = 0.01)
         # This function computes a proposal "next step" during simulated annealing.
         # Inputs:
@@ -59,7 +59,7 @@ using Debug
         # - `x_proposal`: proposed next position (of non-fixed states).
         # Outputs:
         # - `x_proposal`
-        
+
         @assert size(x) == size(x_proposal)
 
         T = eltype(x)
@@ -68,14 +68,14 @@ using Debug
         # get covariance matrix from prior
         prior_draws = rand_prior(m)
         prior_cov   = cov(prior_draws)
-        
+
         # Convert x_proposal to model space and expand to full parameter vector
         x_all = T[p.value for p in m.parameters]  # to get fixed values
         x_all[para_free_inds] = x                 # this is from real line
-            
+
         x_all_model = transform_to_model_space(m.parameters, x_all)
         x_proposal_all = similar(x_all_model)
-        
+
         success = false
         while !success
 
@@ -84,7 +84,7 @@ using Debug
                 r = rand([-1 1]) * rand()
                 @inbounds x_proposal_all[i] = x_all_model[i] + (r * cc * prior_cov[i,i])
             end
-                   
+
             # check that parameters are inbounds, model can be solved,
             # and parameters can be transformed to the real line.
             #try
@@ -100,7 +100,7 @@ using Debug
                 #warn("There was a $(typeof(err))")
             #end
         end
-    
+
         # extract free inds
         # fixed_count = 0
         # for i in 1:length(para_free_inds)
@@ -109,7 +109,7 @@ using Debug
         #     end
         #     x_proposal[i] = x_proposal_all[i+fixed_count]
         # end
-        x_proposal[1:end] = x_proposal_all[para_free_inds]    
+        x_proposal[1:end] = x_proposal_all[para_free_inds]
 
        return
     end
@@ -120,16 +120,16 @@ using Debug
                         xtol = xtol, ftol = ftol, grtol = grtol, iterations = iterations,
                         store_trace = store_trace, show_trace = show_trace, extended_trace = extended_trace,
                         neighbor! = neighbor_dsge!, verbose = verbose, rng = rng)
-    
+
     x_model[para_free_inds] = out.minimum
     transform_to_model_space!(m, x_model)
-    
+
     # Match original dimensions
     out.minimum = x_model
 
     H = zeros(n_parameters(m), n_parameters(m))
     if H_ != nothing
-    
+
         # Fill in rows/cols of zeros corresponding to location of fixed parameters
         # For each row corresponding to a free parameter, fill in columns corresponding to
         # free parameters. Everything else is 0.
@@ -138,6 +138,6 @@ using Debug
         end
 
     end
-    
+
     return out, H
 end
