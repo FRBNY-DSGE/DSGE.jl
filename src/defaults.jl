@@ -55,7 +55,7 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:λ, 2.0, "The 'bending coefficient' λ in Φ(n) = (n/N(Φ))^λ")
     m <= Setting(:n_smc_blocks, 6, "The number of parameter blocks in SMC")
     m <= Setting(:c, .5, "The scaling factor for the covariance, constructed from acpt and tgt during mutation")
-    m <= Setting(:acpt, .25, "The initial average acceptance rate for new particles during mutation")
-    m <= Setting(:trgt, .25, "The initial target acceptance rate for new particles during mutation")
+    m <= Setting(:init_accept, .25, "The initial average acceptance rate for new particles during mutation")
+    m <= Setting(:target_accept, .25, "The initial target acceptance rate for new particles during mutation")
 
 end

@@ -47,7 +47,9 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     ### Step 1: Initialize
     ########################################################################################
 
-    post = posterior(m, data)[:post]
+    if method == :MH
+        post = posterior(m, data)[:post]
+    end
 
     ########################################################################################
     ### Step 2: Find posterior mode (if reoptimizing, run csminwel)
