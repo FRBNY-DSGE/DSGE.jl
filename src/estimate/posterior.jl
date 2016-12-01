@@ -92,27 +92,27 @@ end
 const LIKE_NULL_DICT   = Dict{Symbol, Matrix{AbstractFloat}}()
 const LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
 
-#"""
-#```
-#likelihood{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T};
-#                              mh::Bool = false, catch_errors::Bool = false)
-#```
-#
-#Evaluate the DSGE likelihood function. Can handle "two part" estimation where the observed
-#sample contains both a normal stretch of time (in which interest rates are positive) and
-#a stretch of time in which interest rates reach the zero lower bound. If there is a
-#zero-lower-bound period, then we filter over the 2 periods separately.  Otherwise, we
-#filter over the main sample all at once.
-#
-#### Arguments
-#-`m`: The model object
-#-`data`: matrix of data for observables
-#
-#### Optional Arguments
-#-`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the transition matrices for
-#  the zero-lower-bound period are returned in a dictionary.
-#-`catch_errors`: If `mh = true`, `GensysErrors` should always be caught.
-#"""
+"""
+```
+likelihood{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T};
+                              mh::Bool = false, catch_errors::Bool = false)
+```
+
+Evaluate the DSGE likelihood function. Can handle "two part" estimation where the observed
+sample contains both a normal stretch of time (in which interest rates are positive) and
+a stretch of time in which interest rates reach the zero lower bound. If there is a
+zero-lower-bound period, then we filter over the 2 periods separately.  Otherwise, we
+filter over the main sample all at once.
+
+### Arguments
+- `m`: The model object
+- `data`: matrix of data for observables
+
+### Optional Arguments
+- `mh`: Whether metropolis_hastings is the caller. If `mh=true`, the transition matrices for
+  the zero-lower-bound period are returned in a dictionary.
+- `catch_errors`: If `mh = true`, `GensysErrors` should always be caught.
+"""
 function likelihood{T<:AbstractFloat}(m::AbstractModel,
                                       data::Matrix{T};
                                       mh::Bool = false,
