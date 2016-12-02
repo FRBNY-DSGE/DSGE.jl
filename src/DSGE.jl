@@ -44,7 +44,7 @@ module DSGE
         find_density_bands, prior, mutation_RWMH, systematic_resampling, smc, nearestSPD,
 
         # models/
-        steadystate!, Model990, SmetsWouters, eqcond, measurement,
+        steadystate!, Model990, SmetsWouters, AnSchorfheide, eqcond, measurement,
 
         # solve/
         gensys, solve,
@@ -97,5 +97,11 @@ module DSGE
     include("models/smets_wouters/eqcond.jl")
     include("models/smets_wouters/measurement.jl")
     include("models/smets_wouters/augment_states.jl")
+
+    include("models/AnSchorfheide/AnSchorfheide.jl")
+    include("models/AnSchorfheide/subspecs.jl")
+    include("models/AnSchorfheide/eqcond.jl")
+    include("models/AnSchorfheide/measurement.jl")
+    include("models/AnSchorfheide/augment_states.jl")
 
 end

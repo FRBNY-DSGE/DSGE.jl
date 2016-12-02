@@ -156,7 +156,10 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	println("\n\n SMC Recursion starts \n\n")
     end
 
+    total_sampling_time = 0.0
+
     for i=2:n_Φ
+        tic()
 	#------------------------------------
 	# (a) Correction
 	#------------------------------------
@@ -236,10 +239,19 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         μ  = sum(para.*weight,1);
         σ = sum((para - repmat(μ, n_part, 1)).^2 .*weight,1);
         σ = (sqrt(σ));
+
+        # timekeeping
+        block_time = toq()
+        total_sampling_time += block_time
+        total_sampling_time_minutes = total_sampling_time/60
+        expected_time_remaining_sec = (total_sampling_time/i)*(n_Φ - i)
+        expected_time_remaining_minutes = expected_time_remaining_sec/60
         
         if VERBOSITY[verbose] >= VERBOSITY[:low]
 	    println("--------------------------")
             println("Iteration = $(i) / $(n_Φ)")
+            println("time elapsed: $total_sampling_time_minutes minutes")
+            println("estimated time remaining: $expected_time_remaining_minutes minutes")
 	    println("--------------------------")
             println("phi = $(tempering_schedule[i])")
 	    println("--------------------------")
@@ -265,6 +277,9 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     # Saving parameter draws
     #------------------------------------
     if !m.testing
+
+        println("\n saving output \n ")
+        
         save_file = h5open(rawpath(m,"estimate","mhsave.h5"),"w")
         n_saved_obs = n_part
         n_chunks = max(floor(n_saved_obs/5000),1)

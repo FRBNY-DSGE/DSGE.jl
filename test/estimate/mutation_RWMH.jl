@@ -1,6 +1,5 @@
 
 using DSGE
-using DSGEModels
 using HDF5, Base.Test
 using DataFrames
 
