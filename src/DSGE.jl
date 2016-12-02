@@ -104,10 +104,10 @@ module DSGE
     include("models/smets_wouters/measurement.jl")
     include("models/smets_wouters/augment_states.jl")
 
-    include("models/AnSchorfheide/AnSchorfheide.jl")
-    include("models/AnSchorfheide/subspecs.jl")
-    include("models/AnSchorfheide/eqcond.jl")
-    include("models/AnSchorfheide/measurement.jl")
-    include("models/AnSchorfheide/augment_states.jl")
+    include("models/an_schorfheide/an_schorfheide.jl")
+    include("models/an_schorfheide/subspecs.jl")
+    include("models/an_schorfheide/eqcond.jl")
+    include("models/an_schorfheide/measurement.jl")
+    include("models/an_schorfheide/augment_states.jl")
 
 end

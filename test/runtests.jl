@@ -1,4 +1,4 @@
-Busing Base.Test
+using Base.Test
 using DSGE
 
 include(joinpath(dirname(@__FILE__()),"util.jl"))
@@ -20,7 +20,7 @@ my_tests = [
             "estimate/mutation_RWMH",
             "models/m990/m990",
             "models/m1002/m1002",
-            "models/AnSchorfheide/AnSchorfheide",
+            "models/an_schorfheide/an_schorfheide",
             "models/smets_wouters/smets_wouters",
             "data/misc",
             "data/load_data"
