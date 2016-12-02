@@ -17,11 +17,11 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 - `data`: well-formed data as DataFrame
 - `m`: model of type AbstractModel being estimated.
 
-### Optional Arguments: 
+### Keyword Arguments: 
 - `rvec`: A matrix of horizontally concatenated random vectors ε as in Θ* = θ + ε for the proposed move in RWMH, for the purposes of testing that mutation_RWMH.
 - `rval`: A vector of random values generated in MATLAB for the purposes of testing whether the proposed move exceeds the threshhold and is accepted (or rejected).
 
-### Output:
+### Outputs:
 
 - `ind_para`: para_sim[i,j,:]
               Updated parameter vector
@@ -49,18 +49,16 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, p0::Array{Float6
     rvec = isempty(rvec) ? randn(n_para-length(fixed_para_inds),1): rvec
     rval = isempty(rval) ? rand() : rval
     
-    #RW Proposal
+    # attempt Cholesky factorization of R
     cov_mat = eye(size(R,1),size(R,2))
     try
         cov_mat = chol(R)'
     catch
-        # info("Cholesky factorization failed. Using SVD.")
-        # R = nearestSPD(R)
         U, E, V = svd(R)
         cov_mat = U * diagm(sqrt(E))
     end
 
-    px_draw = p0 + squeeze(c*cov_mat*rvec,2) #modify to be of the dimension of the original # of paras
+    px_draw = p0 + squeeze(c*cov_mat*rvec,2) # reshape to be of the dimension of the original # of paras
     px_draw = reverse(px_draw)
     px = []
     for p in 1:n_para
@@ -76,11 +74,12 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, p0::Array{Float6
     lx = -Inf
     postx = -Inf
     try
-        out = posterior!(m,px,data;phi_smc=tempering_schedule[i])
+        out = posterior!(m,px,data;φ_smc=tempering_schedule[i])
         lx = out[:like]
         postx = out[:post] 
     catch
-        #in the event that the proposed move is outside of the bounds
+        # in the event that the proposed move is outside of the bounds or
+        # otherwise inappropriate
         lx = -Inf
         postx = -Inf
     end
@@ -115,8 +114,5 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, p0::Array{Float6
         ind_accept = 0
     end
 
-    if postx==-Inf
-        @assert ind_accept == 0
-    end
     return ind_para, ind_loglh, ind_post, ind_accept
 end

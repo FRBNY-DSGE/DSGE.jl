@@ -1,6 +1,6 @@
 """
 ```
-estimate(m, data; verbose=:low, proposal_covariance=Matrix())
+estimate(m, data; verbose=:low, proposal_covariance=Matrix(), method=:SMC)
 ```
 
 Estimate the DSGE parameter posterior distribution.
@@ -22,6 +22,9 @@ Estimate the DSGE parameter posterior distribution.
   eigenvectors corresponding to zero eigenvectors are not well defined, so eigenvalue
   decomposition can cause problems. Passing a precomputed matrix allows us to ensure that
   the rest of the routine has not broken. 
+- `method::Symbol`: The method to use when sampling from the posterior distribution. Can 
+    be either `:MH` for standard Metropolis Hastings Markov Chain Monte Carlo, or `:SMC`
+    for Sequential Monte Carlo. 
 """
 function estimate(m::AbstractModel, df::DataFrame;
                   verbose::Symbol=:low,
@@ -259,7 +262,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
         n_burn   = n_mh_burn(m)
         mhthin   = mh_thin(m)
 
-        post_out = posterior!(m, para_old, data; mh=true)
+        post_out = posterior!(m, para_old, data; sampler=true)
         post_old, like_old, out = post_out[:post], post_out[:like], post_out[:mats]
 
         if post_old > -Inf
@@ -337,7 +340,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
 
             # Solves the model, check that parameters are within bounds, gensys returns a
             # meaningful system, and evaluate the posterior.
-            post_out = posterior!(m, para_new, data; mh=true)
+            post_out = posterior!(m, para_new, data; sampler=true)
             post_new, like_new, out = post_out[:post], post_out[:like], post_out[:mats]
 
             if VERBOSITY[verbose] >= VERBOSITY[:high]

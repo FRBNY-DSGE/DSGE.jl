@@ -34,7 +34,7 @@ rej_post = h5read("$path/../reference/mutation_RWMH.h5","Rej_post")
 prior_draw = h5read("$path/../reference/mutation_RWMH.h5","initial_para")
 data = h5read("$path/../reference/smc.h5","data")
 
-out = posterior!(s, prior_draw, data, phi_smc = 1.)
+out = posterior!(s, prior_draw, data, φ_smc = 1.)
 loglh = out[:like]
 post = out[:post]
 tempering_schedule = vec([.5 .6])
