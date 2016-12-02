@@ -65,7 +65,7 @@ applied, the initial state vector estimate is set to `a` and its covariance matr
 by `1E6I`.  Optionally, you can specify initial values.
 """
 function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
-                                      lead::Int64,
+                                      lead::Integer,
                                       a::Matrix{S},
                                       F::Matrix{S},
                                       b::Matrix{S},
@@ -182,7 +182,7 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
 end
 
 function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
-                                      lead::Int64,
+                                      lead::Integer,
                                       a::Matrix{S},
                                       F::Matrix{S},
                                       b::Matrix{S},
