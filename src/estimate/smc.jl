@@ -3,12 +3,12 @@
 smc(m,data)
 ```
 
-### Inputs
+### Arguments:
 
 - `m`: A model object, from which its parameters values, prior dists, and bounds will be referenced
 - `data`: A matrix containing time series of the observables to be used in the calculation of the posterior/likelihood
 
-### Optional Inputs
+### Keyword Arguments:
 - `verbose`: The desired frequency of function progress messages printed to standard out.
 	- `:none`: No status updates will be reported.
 	- `:low`: Status updates for SMC initialization and recursion will be included.
@@ -48,21 +48,21 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 
     parallel = get_setting(m, :use_parallel_workers)
 
-    #Creating the tempering schedule
+    # Creating the tempering schedule
     λ = get_setting(m, :λ)
     tempering_schedule = ((collect(1:1:n_Φ)-1)/(n_Φ-1)).^λ
 
     #Matrices for storing
 
-    para_sim = zeros(n_Φ, n_part, n_params) #parameter draws
-    weight_sim = zeros(n_part, n_Φ) #weights
-    zhat = zeros(n_Φ, 1) #normalization constant
-    nresamp = 0 #record # of iteration resampled
+    para_sim = zeros(n_Φ, n_part, n_params) # parameter draws
+    weight_sim = zeros(n_part, n_Φ) # weights
+    zhat = zeros(n_Φ, 1) # normalization constant
+    nresamp = 0 # record # of iteration resampled
 
-    c_sim = zeros(n_Φ,1) #scale parameter
-    ESS_sim = zeros(n_Φ,1) #ESS
-    accept_sim = zeros(n_Φ,1) #average acceptance rate
-    rsmp_sim = zeros(n_Φ,1) #1 if resampled
+    c_sim = zeros(n_Φ,1) # scale parameter
+    ESS_sim = zeros(n_Φ,1) # ESS
+    accept_sim = zeros(n_Φ,1) # average acceptance rate
+    rsmp_sim = zeros(n_Φ,1) # 1 if resampled
 
     #--------------------------------------------------------------
     #Initialize Algorithm: Draws from prior
@@ -72,7 +72,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	println("\n\n SMC starts ....  \n\n  ")
     end
 
-    #Particle draws from the parameter's marginal priors
+    # Particle draws from the parameter's marginal priors
     prior_sim = zeros(n_part,n_params)
 
     # Posterior values at prior draws
@@ -85,7 +85,6 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         srand(42)
     end
 
-    #for i in 1:n_part
     i = 1
     while i <= n_part
         try
@@ -109,17 +108,16 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
                 end
             end
             prior_sim[i,:] = priodraw'
-            out = posterior!(m, convert(Array{Float64,1},priodraw), data; phi_smc = tempering_schedule[1])
+            out = posterior!(m, convert(Array{Float64,1},priodraw), data; φ_smc = tempering_schedule[1])
             logpost[i] = out[:post]
             loglh[i] = out[:like]
-            #@assert exp(out[:like]) > 0.0
             i += 1
         end
     end
 
     para_sim[1,:,:] = prior_sim # Draws from prior 
     weight_sim[:,1] = 1/n_part 
-    zhat[1] = sum(weight_sim[:,1]) #round(sum(weight_sim[:,1]),14)
+    zhat[1] = sum(weight_sim[:,1]) 
 
     i = 1
     para = squeeze(para_sim[i, :, :],1);
@@ -169,7 +167,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	weight_sim[:,i] = weight_sim[:,i-1].*incweight 
         zhat[i] = sum(weight_sim[:,i]) 
 
-	#Normalize weights
+	# Normalize weights
 	weight_sim[:, i] = weight_sim[:, i]/zhat[i]
 	#------------------------------------
 	# (b) Selection 
@@ -205,7 +203,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         μ = sum(para.*weight,1)
 	z =  (para - repmat(μ, n_part, 1))
         R_temp = (z.*weight)'*z
-        R = (R_temp + R_temp')/2 # can also use nearestSPD(R_temp) 
+        R = (R_temp + R_temp')/2 # one can also use nearestSPD(R_temp) 
 
 	temp_accept = zeros(n_part, 1) # Initialize acceptance indicator
         
@@ -238,8 +236,6 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         μ  = sum(para.*weight,1);
         σ = sum((para - repmat(μ, n_part, 1)).^2 .*weight,1);
         σ = (sqrt(σ));
-        
-        # time calculation        
         
         if VERBOSITY[verbose] >= VERBOSITY[:low]
 	    println("--------------------------")
@@ -290,10 +286,10 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         
         if parallel
             out = @sync @parallel (hcat) for j = 1:n_part 
-                posterior!(m, vec(para[j,:]'), data, mh=true)
+                posterior!(m, vec(para[j,:]'), data, sampler=true)
             end
         else
-            out = [posterior!(m, vec(para[j,:]'), data, mh=true)  for j = 1:n_part]
+            out = [posterior!(m, vec(para[j,:]'), data, sampler=true)  for j = 1:n_part]
         end
         
         for i = 1:n_part

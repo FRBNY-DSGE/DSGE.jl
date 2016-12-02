@@ -16,7 +16,7 @@ end
 """
 ```
 posterior{T<:AbstractFloat}(m::AbstractModel{T}, data::Matrix{T};
-                             mh::Bool = false, catch_errors::Bool = false)
+                             sampler::Bool = false, catch_errors::Bool = false, φ_smc = 1)
 ```
 
 Calculates and returns the log of the posterior distribution for m.parameters:
@@ -30,19 +30,21 @@ log Pr(Θ|data)  = log Pr(data|Θ)   + log Pr(Θ)
 - `data`: matrix of data for observables
 
 ### Optional Arguments
--`mh`: Whether metropolis_hastings is the caller. If `mh=true`, the log likelihood and the
+-`sampler`: Whether metropolis_hastings or smc is the caller. If `sampler=true`, the log likelihood and the
   transition matrices for the zero-lower-bound period are also returned.
 -`catch_errors`: Whether or not to catch errors of type `GensysError` or `ParamBoundsError`
+- `φ_smc`: a tempering factor to change the relative weighting of the prior and the 
+    likelihood when calculating the posterior. It is used primarily in SMC. 
 """
 function posterior{T<:AbstractFloat}(m::AbstractModel{T},
                                      data::Matrix{T};
-                                     mh::Bool = false,
-                                     phi_smc::Float64 = 1.,
+                                     sampler::Bool = false,
+                                     φ_smc::Float64 = 1.,
                                      catch_errors::Bool = false)
-    catch_errors = catch_errors | mh
-    like, out = likelihood(m, data; mh=mh, catch_errors=catch_errors)
-    post = phi_smc*like + prior(m)
-    if mh
+    catch_errors = catch_errors | sampler
+    like, out = likelihood(m, data; sampler=sampler, catch_errors=catch_errors)
+    post = φ_smc*like + prior(m)
+    if sampler
         return Posterior(post, like, out)
     else
         return Posterior(post, like)
@@ -52,7 +54,7 @@ end
 """
 ```
 posterior!{T<:AbstractFloat}(m::AbstractModel{T}, parameters::Vector{T}, data::Matrix{T};
-                              mh::Bool = false, catch_errors::Bool = false)
+                                  sampler::Bool = false, catch_errors::Bool = false, φ_smc = 1)
 ```
 
 Evaluates the log posterior density at `parameters`.
@@ -63,19 +65,21 @@ Evaluates the log posterior density at `parameters`.
 - `data`: Matrix of input data for observables
 
 ### Optional Arguments
-- `mh`: Whether metropolis_hastings is the caller. If `mh=true`, the log likelihood and the
+- `sampler`: Whether metropolis_hastings or smc is the caller. If `sampler=true`, the log likelihood and the
   transition matrices for the zero-lower-bound period are also returned.
 - `catch_errors`: Whether or not to catch errors of type `GensysError` or `ParamBoundsError`.
-  If `mh = true`, both should always be caught.
+  If `sampler = true`, both should always be caught.
+- `φ_smc`: a tempering factor to change the relative weighting of the prior and the 
+    likelihood when calculating the posterior. It is used primarily in SMC. 
 """
 function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
                                       parameters::Vector{T},
                                       data::Matrix{T};
-                                      mh::Bool = false,
-                                      phi_smc::Float64 = 1.,
+                                      sampler::Bool = false,
+                                      φ_smc::Float64 = 1.,
                                       catch_errors::Bool = false)
-    catch_errors = catch_errors | mh
-    if mh
+    catch_errors = catch_errors | sampler
+    if sampler
         try
             update!(m, parameters)
         catch err
@@ -84,7 +88,7 @@ function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
     else
         update!(m, parameters)
     end
-    return posterior(m, data; mh=mh, phi_smc = phi_smc, catch_errors=catch_errors)
+    return posterior(m, data; sampler=sampler, φ_smc = φ_smc, catch_errors=catch_errors)
 
 end
 
@@ -95,7 +99,7 @@ const LIKE_NULL_OUTPUT = (-Inf, LIKE_NULL_DICT)
 """
 ```
 likelihood{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T};
-                              mh::Bool = false, catch_errors::Bool = false)
+                              sampler::Bool = false, catch_errors::Bool = false)
 ```
 
 Evaluate the DSGE likelihood function. Can handle "two part" estimation where the observed
@@ -109,18 +113,18 @@ filter over the main sample all at once.
 - `data`: matrix of data for observables
 
 ### Optional Arguments
-- `mh`: Whether metropolis_hastings is the caller. If `mh=true`, the transition matrices for
+- `sampler`: Whether metropolis_hastings or smc is the caller. If `sampler=true`, the transition matrices for
   the zero-lower-bound period are returned in a dictionary.
-- `catch_errors`: If `mh = true`, `GensysErrors` should always be caught.
+- `catch_errors`: If `sampler = true`, `GensysErrors` should always be caught.
 """
 function likelihood{T<:AbstractFloat}(m::AbstractModel,
                                       data::Matrix{T};
-                                      mh::Bool = false,
+                                      sampler::Bool = false,
                                       catch_errors::Bool = false)
-    catch_errors = catch_errors | mh
+    catch_errors = catch_errors | sampler
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
-    if mh
+    if sampler
         for θ in m.parameters
             (left, right) = θ.valuebounds
             if !θ.fixed && !(left <= θ.value <= right)
@@ -157,7 +161,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
 
     # Step 1: solution to DSGE model - delivers transition equation for the state variables
     # transition equation: S_t = TC+TTT S_{t-1} +RRR eps_t, where var(eps_t) = QQ
-    # If we are in MH, then any errors coming out of gensys should be caught and a -Inf
+    # If we are in MH or SMC, then any errors coming out of gensys should be caught and a -Inf
     # posterior should be returned.
     try
         R3[:TTT], R3[:RRR], R3[:CCC] = solve(m)
@@ -247,7 +251,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     # Return total log-likelihood, excluding the presample
 
     like = regime_likes[2] + regime_likes[3]
-    if mh
+    if sampler
         return like, R3
     else
         return like, LIKE_NULL_DICT
