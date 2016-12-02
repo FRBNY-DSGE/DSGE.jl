@@ -1,12 +1,12 @@
 """
 ```
-systematic_resampling(wght)
+systematic_resampling(m, weight)
 ```
 
 Reindexing and reweighting samples from a degenerate distribution
 
 ### Arguments:
-- `wght`: wtsim[:,i]
+- `weight`: wtsim[:,i]
         the weights of a degenerate distribution.
 
 ### Output:
@@ -15,12 +15,12 @@ Reindexing and reweighting samples from a degenerate distribution
         the newly assigned indices of parameter draws.
 
 """
-function systematic_resampling(m, wght)
+function systematic_resampling(m, weight)
 
 
-    npart = length(wght)
-    wght = wght'
-    cwght = cumsum(wght')
+    npart = length(weight)
+    weight = weight'
+    cweight = cumsum(weight')
     uu = zeros(npart,1)
     csi=rand()
     
@@ -34,7 +34,7 @@ function systematic_resampling(m, wght)
         u = uu[i]/npart
         j=1
         while j <= npart
-            if (u < cwght[j]) 
+            if (u < cweight[j]) 
                 break
             end
             j = j+1

@@ -1,4 +1,4 @@
-using DSGE, DSGEModels
+using DSGE
 using HDF5, Base.Test
 using DataFrames
 
