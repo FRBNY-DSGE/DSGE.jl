@@ -1,6 +1,6 @@
 """
 ```
-eqcond(m::Schorf)
+eqcond(m::AnSchorfheide)
 ```
 
 Expresses the equilibrium conditions in canonical form using Γ0, Γ1, C, Ψ, and Π matrices.

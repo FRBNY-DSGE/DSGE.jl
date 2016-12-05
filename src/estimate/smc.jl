@@ -1,12 +1,14 @@
 """
 ```
-smc(m,data)
+smc(m::AbstractModel,data::Matrix)
+smc(m::AbstractModel,data::DataFrame)
+smc(m::AbstractModel)
 ```
 
 ### Arguments:
 
 - `m`: A model object, from which its parameters values, prior dists, and bounds will be referenced
-- `data`: A matrix containing time series of the observables to be used in the calculation of the posterior/likelihood
+- `data`: A matrix or data frame containing time series of the observables to be used in the calculation of the posterior/likelihood
 
 ### Keyword Arguments:
 - `verbose`: The desired frequency of function progress messages printed to standard out.
@@ -252,8 +254,8 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
 	    println("--------------------------")
             println("Iteration = $(i) / $(n_Φ)")
-            println("time elapsed: $total_sampling_time_minutes minutes")
-            println("estimated time remaining: $expected_time_remaining_minutes minutes")
+            println("time elapsed: $(round(total_sampling_time_minutes,4)) minutes")
+            println("estimated time remaining: $(round(expected_time_remaining_minutes,4)) minutes")
 	    println("--------------------------")
             println("phi = $(tempering_schedule[i])")
 	    println("--------------------------")
@@ -320,3 +322,15 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     end
         
 end
+
+function smc(m::AbstractModel, data::DataFrame; verbose::Symbol=:low)
+    data_mat = df_to_matrix(m, data)
+    return smc(m, data_mat, verbose=verbose)
+end
+
+function smc(m::AbstractModel; verbose::Symbol=:low)
+    data = load_data(m)
+    data_mat = df_to_matrix(m, data)
+    return smc(m, data_mat, verbose=verbose)
+end
+

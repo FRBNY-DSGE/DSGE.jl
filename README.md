@@ -1,4 +1,4 @@
-# FRBNY DSGE Model (Version 990.2)
+# FRBNY DSGE Model (Version 990.2), Sequential Monte Carlo Development Branch
 [![Build Status](https://travis-ci.org/FRBNY-DSGE/DSGE.jl.svg)](https://travis-ci.org/FRBNY-DSGE/DSGE.jl)
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://FRBNY-DSGE.github.io/DSGE.jl/stable)
 [![](https://img.shields.io/badge/docs-latest-blue.svg)](https://FRBNY-DSGE.github.io/DSGE.jl/latest)
@@ -19,3 +19,8 @@ small-scale New Keynesian DSGE model presented in Sungbae An and Frank Schorfhei
 currently working on extending the code so that SMC may be used with medium-scale DSGE models. This and other extensions of the DSGE model code 
 may be released in the future at the discretion of FRBNY.
 
+## Usage
+
+Once you've followed the installation instructions for the main `DSGE.jl` package, you can switch the the SMC branch by opening your terminal, navigating to the top level `DSGE.jl` directory, and running `git checkout smc`. To return to the original *DSGE.jl* package, run `git checkout master`. The file `test_smc.jl` in  `DSGE\docs\examples\` is the appropriate place for a new user to start. It initializes a new model, sets some SMC-related parameters, runs SMC, and generates a Latex document documenting parameter moments. 
+
+Currently, SMC works only on the small-scale An Schorfheide model. On medium-scale models such as model 990, SMC frequently fails after the first stage, as the initial particles are usually all from regions of such low likelihood than none of them receive non-zero weights after the first stage. Current work on this branch is focused on addressing this issue, as well as implementing blocked parameter sampling and an adaptive tuning schedule (as discussed in "Sequential Monte Carlo Sampling for DSGE Models"). 

@@ -1,70 +1,69 @@
-#using Debug
 #=
 This code is loosely based on a routine originally copyright Federal Reserve Bank of Atlanta
 and written by Iskander Karibzhanov.
 =#
 
-#"""
-#```
-#kalman_filter(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=false)
-#kalman_filter(data, lead, a, F, b, H, var, Ny0=0; allout=false)
-#```
-#
-#Inputs
-#------
-#
-#- `data`: a `Ny x T` matrix containing data `y(1), ... , y(T)`.
-#- `lead`: the number of steps to forecast after the end of the data.
-#- `a`: an `Nz x 1` vector for a time-invariant input vector in the transition equation.
-#- `F`: an `Nz x Nz` matrix for a time-invariant transition matrix in the transition
-#  equation.
-#- `b`: an `Ny x 1` vector for a time-invariant input vector in the measurement equation.
-#- `H`: an `Ny x Nz` matrix for a time-invariant measurement matrix in the measurement
-#  equation.
-#- `var`: an `Ny + Nz` x `Ny + Nz` matrix for a time-invariant variance matrix for the
-#  error in the transition equation and the error in the measurement equation, that is,
-#  `[η(t)', ϵ(t)']'`.
-#- `z0`: an optional `Nz x 1` initial state vector.
-#- `vz0`: an optional `Nz x Nz` covariance matrix of an initial state vector.
-#- `Ny0`: an optional scalar indicating the number of periods of presample (i.e. the number
-#  of periods which we don't add to the likelihood)
-#- `allout`: an optional keyword argument indicating whether we want optional output
-#  variables returned as well
-#
-#Outputs
-#-------
-#
-#- `logl`: value of the average log likelihood function of the SSM under assumption that
-#  observation noise ϵ(t) is normally distributed
-#- `pred`: a `Nz` x `T+lead` matrix containing one-step predicted state vectors.
-#- `vpred`: a `Nz` x `Nz` x `T+lead` matrix containing mean square errors of predicted
-#  state vectors.
-#- `filt`: an optional `Nz` x `T` matrix containing filtered state vectors.
-#- `vfilt`: an optional `Nz` x `Nz` x `T` matrix containing mean square errors of filtered
-#  state vectors.
-#
-#
-#Notes
-#-----
-#The state space model is defined as follows:
-#```
-#z(t+1) = a+F*z(t)+η(t)     (state or transition equation)
-#y(t) = b+H*z(t)+ϵ(t)       (observation or measurement equation)
-#```
-#
-#When `z0` and `Vz0` are omitted, the initial state vector and its covariance matrix of the
-#time invariant Kalman filters are computed under the stationarity condition:
-#```
-#z0 = (I-F)\a
-#vz0 = (I-kron(F,F))\(V(:),Nz,Nz)
-#```
-#where `F` and `V` are the time invariant transition matrix and the covariance matrix of
-#transition equation noise, and `vec(V)` is an `Nz^2` x `1` column vector that is constructed
-#by stacking the `Nz` columns of `V`.  Note that all eigenvalues of `F` are inside the unit
-#circle when the state space model is stationary.  When the preceding formula cannot be
-#applied, the initial state vector estimate is set to `a` and its covariance matrix is given
-#by `1E6I`.  Optionally, you can specify initial values.
-#"""
+"""
+```
+kalman_filter(data, lead, a, F, b, H, var, z0, vz0, Ny0; allout=false)
+kalman_filter(data, lead, a, F, b, H, var, Ny0=0; allout=false)
+```
+
+Inputs
+------
+
+- `data`: a `Ny x T` matrix containing data `y(1), ... , y(T)`.
+- `lead`: the number of steps to forecast after the end of the data.
+- `a`: an `Nz x 1` vector for a time-invariant input vector in the transition equation.
+- `F`: an `Nz x Nz` matrix for a time-invariant transition matrix in the transition
+ equation.
+- `b`: an `Ny x 1` vector for a time-invariant input vector in the measurement equation.
+- `H`: an `Ny x Nz` matrix for a time-invariant measurement matrix in the measurement
+ equation.
+- `var`: an `Ny + Nz` x `Ny + Nz` matrix for a time-invariant variance matrix for the
+ error in the transition equation and the error in the measurement equation, that is,
+ `[η(t)', ϵ(t)']'`.
+- `z0`: an optional `Nz x 1` initial state vector.
+- `vz0`: an optional `Nz x Nz` covariance matrix of an initial state vector.
+- `Ny0`: an optional scalar indicating the number of periods of presample (i.e. the number
+ of periods which we don't add to the likelihood)
+- `allout`: an optional keyword argument indicating whether we want optional output
+ variables returned as well
+
+Outputs
+-------
+
+- `logl`: value of the average log likelihood function of the SSM under assumption that
+ observation noise ϵ(t) is normally distributed
+- `pred`: a `Nz` x `T+lead` matrix containing one-step predicted state vectors.
+- `vpred`: a `Nz` x `Nz` x `T+lead` matrix containing mean square errors of predicted
+ state vectors.
+- `filt`: an optional `Nz` x `T` matrix containing filtered state vectors.
+- `vfilt`: an optional `Nz` x `Nz` x `T` matrix containing mean square errors of filtered
+ state vectors.
+
+
+Notes
+-----
+The state space model is defined as follows:
+```
+z(t+1) = a+F*z(t)+η(t)     (state or transition equation)
+y(t) = b+H*z(t)+ϵ(t)       (observation or measurement equation)
+```
+
+When `z0` and `Vz0` are omitted, the initial state vector and its covariance matrix of the
+time invariant Kalman filters are computed under the stationarity condition:
+```
+z0 = (I-F)\a
+vz0 = (I-kron(F,F))\(V(:),Nz,Nz)
+```
+where `F` and `V` are the time invariant transition matrix and the covariance matrix of
+transition equation noise, and `vec(V)` is an `Nz^2` x `1` column vector that is constructed
+by stacking the `Nz` columns of `V`.  Note that all eigenvalues of `F` are inside the unit
+circle when the state space model is stationary.  When the preceding formula cannot be
+applied, the initial state vector estimate is set to `a` and its covariance matrix is given
+by `1E6I`.  Optionally, you can specify initial values.
+"""
 function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
                                       lead::Int64,
                                       a::Matrix{S},
