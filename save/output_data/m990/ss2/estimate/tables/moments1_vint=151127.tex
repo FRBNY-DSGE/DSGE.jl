@@ -1,0 +1,45 @@
+\documentclass[12pt]{article}
+\usepackage{booktabs}
+\begin{document}
+\pagestyle{empty}
+\begin{table}[h]
+\centering
+\caption{Parameter Estimates}
+\vspace*{.2cm}
+{\small 
+\begin{tabular}{lcccccc}
+\hline
+\multicolumn{1}{c}{} & \multicolumn{3}{c}{Prior} & \multicolumn{3}{c}{Posterior}\\ 
+Parameter & Type & Mean & SD & Mean & 90.0\% {\tiny Lower Band} & 90.0\% {\tiny Upper Band}\\ 
+\cmidrule(lr){1-1}\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+$\sigma_{\mu}$ & IG &    0.100 &    2.000 &    0.590 &    0.485 &    0.697 \\
+$\sigma_{z}$ & IG &    0.100 &    2.000 &    0.665 &    0.594 &    0.739 \\
+$\sigma_{\lambda_f}$ & IG &    0.100 &    2.000 &    0.085 &    0.069 &    0.101 \\
+$\sigma_{\lambda_w}$ & IG &    0.100 &    2.000 &    0.385 &    0.339 &    0.429 \\
+$\sigma_{rm}$ & IG &    0.100 &    2.000 &    0.237 &    0.213 &    0.260 \\
+$\sigma_{\sigma_\omega}$ & IG &    0.050 &    4.000 &    0.040 &    0.033 &    0.047 \\
+$\sigma_{\mu_e}$ & - &    0.000 &    0.000 &   -0.000 &   -0.000 &    0.000 \\
+$\sigma_{\gamma}$ & - &    0.000 &    0.000 &    0.000 &   -0.000 &    0.000 \\
+$\sigma_{lr}$ & IG &    0.750 &    2.000 &    0.115 &    0.101 &    0.128 \\
+$\sigma_{z^p}$ & IG &    0.100 &    2.000 &    0.308 &    0.158 &    0.442 \\
+$\sigma_{tfp}$ & IG &    0.100 &    2.000 &    0.812 &    0.737 &    0.883 \\
+$\sigma_{gdpdef}$ & IG &    0.100 &    2.000 &    0.159 &    0.141 &    0.178 \\
+$\sigma_{corepce}$ & IG &    0.100 &    2.000 &    0.102 &    0.083 &    0.120 \\
+$\sigma_{ant1}$ & IG &    0.200 &    4.000 &    0.249 &    0.105 &    0.397 \\
+$\sigma_{ant2}$ & IG &    0.200 &    4.000 &    0.247 &    0.110 &    0.410 \\
+$\sigma_{ant3}$ & IG &    0.200 &    4.000 &    0.245 &    0.107 &    0.386 \\
+$\sigma_{ant4}$ & IG &    0.200 &    4.000 &    0.233 &    0.110 &    0.370 \\
+$\sigma_{ant5}$ & IG &    0.200 &    4.000 &    0.241 &    0.106 &    0.388 \\
+$\sigma_{ant6}$ & IG &    0.200 &    4.000 &    0.233 &    0.112 &    0.360 \\
+$\sigma_{ant7}$ & IG &    0.200 &    4.000 &    0.239 &    0.109 &    0.370 \\
+$\sigma_{ant8}$ & IG &    0.200 &    4.000 &    0.245 &    0.107 &    0.390 \\
+$\sigma_{ant9}$ & IG &    0.200 &    4.000 &    0.247 &    0.108 &    0.400 \\
+$\sigma_{ant10}$ & IG &    0.200 &    4.000 &    0.238 &    0.109 &    0.366 \\
+$\sigma_{ant11}$ & IG &    0.200 &    4.000 &    0.259 &    0.107 &    0.413 \\
+$\sigma_{ant12}$ & IG &    0.200 &    4.000 &    0.234 &    0.112 &    0.363 \\
+\\ \hline
+\end{tabular}}
+{\footnotesize Note: For Inverse Gamma (IG) prior mean and SD, $\tau^2$ and $\nu$
+                reported.}
+\end{table}
+\end{document}
