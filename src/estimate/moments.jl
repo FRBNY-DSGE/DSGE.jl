@@ -93,6 +93,8 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
     distid(::Distributions.Gamma)   = "G"
     distid(::Distributions.Normal)  = "N"
     distid(::DSGE.RootInverseGamma) = "IG"
+    distid(::Distributions.Uniform) = "U"
+
 
     for (i,k) in enumerate(m.keys)
 
