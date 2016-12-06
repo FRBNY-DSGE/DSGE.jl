@@ -30,13 +30,14 @@ Once you've followed the installation instructions for the main
 terminal, navigating to the top level `DSGE.jl` directory, and running
 `git checkout smc`. To return to the original *DSGE.jl* package, run
 `git checkout master`. The file `test_smc.jl` in
-`DSGE\docs\examples\` is the appropriate place for a new user to
+`DSGE/docs/examples/` is the appropriate place for a new user to
 start. It initializes a new model, sets some SMC-related parameters,
-runs SMC, and generates a Latex document documenting parameter moments. 
+runs SMC, and generates a LaTeX document documenting parameter moments. 
 
-Currently, SMC works only on the small-scale An Schorfheide model. On
-medium-scale models such as model 990, SMC frequently fails. Current
+Currently, SMC works only on the small-scale `AnSchorfheide` model. On
+medium-scale models such as `Model990`, SMC frequently fails. Current
 work on this branch is focused on addressing this issue, as well as
 implementing blocked parameter sampling and an adaptive tuning
 schedule (as discussed in "Sequential Monte Carlo Sampling for DSGE
-Models"). Comments and suggestions are welcome.
+Models"). Comments and suggestions are welcome, and best submitted
+as either an issue or a pull request to this branch. 
