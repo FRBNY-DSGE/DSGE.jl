@@ -42,9 +42,13 @@ function systematic_resampling(m, weight)
         indx[i] = j
     end
     
-    
-    parindx = @sync @parallel (hcat) for j = 1:npart 
-        subsys(j)
+    parallel = get_setting(m,:use_parallel_workers)
+    if parallel
+        parindx = @sync @parallel (hcat) for j = 1:npart 
+            subsys(j)
+        end
+    else
+        parindx = [subsys(j) for j = 1:npart]'
     end
     indx = parindx'
     

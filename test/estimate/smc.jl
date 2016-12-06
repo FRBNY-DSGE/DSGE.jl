@@ -8,6 +8,7 @@ path = dirname(@__FILE__)
 # Set up model for testing
 s = AnSchorfheide()
 s.testing=true
+s <= Setting(:use_parallel_workers,false)
 
 s <= Setting(:saveroot, "$path/../../save")
 s <= Setting(:dataroot, "$path/../../save/input_data")

@@ -52,7 +52,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     ### Step 1: Initialize
     ########################################################################################
 
-    if method == :MH
+    if reoptimize(m)
         post = posterior(m, data)[:post]
     end
 
@@ -63,7 +63,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     # Specify starting mode
     
     vint = get_setting(m, :data_vintage)
-    if reoptimize(m) && method == :MH
+    if reoptimize(m)
         println("Reoptimizing...")
         
         # Inputs to optimization algorithm
