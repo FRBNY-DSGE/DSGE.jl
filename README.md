@@ -43,11 +43,11 @@ Once you've followed the installation instructions for the main
 machine. If you do not, you can download it from
 [https://git-scm.com/](https://git-scm.com/). Once Git is installed,
 you can switch to the SMC branch by opening your
-Julia REPL and running `julia Pkg.checkout("DSGE","smc")`. To return to the
-original *DSGE.jl* package, run `julia Pkg.checkout("DSGE")` from
+Julia REPL and running ```julia Pkg.checkout("DSGE","smc")````. To return to the
+original *DSGE.jl* package, run ```julia Pkg.checkout("DSGE")``` from
 the REPL. The file `test_smc.jl` in `DSGE/docs/examples/` is the
 appropriate place for a new user to start. It initializes a new model,
 sets some SMC-related parameters, runs SMC, and generates a LaTeX
 document documenting parameter moments. You can run this file by
-running `julia include("$(Pkg.dir("DSGE"))/docs/examples/test_smc.jl")` from
+running ```julia include("$(Pkg.dir("DSGE"))/docs/examples/test_smc.jl")``` from
 the REPL. 
