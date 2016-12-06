@@ -11,7 +11,7 @@ based upon Edward Herbst and Frank Schorfheide's paper ["Sequential
 Monte Carlo Sampling for DSGE
 Models"](http://dx.doi.org/10.1002/jae.2397) and the code accompanying
 their book *Bayesian Estimation of DSGE Models*. More information and
-the original Matlab scripts that this code replicates can be found at
+the original MATLAB scripts that this code replicates can be found at
 Frank Schorfheide's
 [website](https://sites.sas.upenn.edu/schorf/pages/bayesian-estimation-dsge-models).
 Currently, FRBNY's implementation of SMC works on the small-scale New
@@ -43,11 +43,11 @@ Once you've followed the installation instructions for the main
 machine. If you do not, you can download it from
 [https://git-scm.com/](https://git-scm.com/). Once Git is installed,
 you can switch to the SMC branch by opening your
-Julia REPL and running `Pkg.checkout("DSGE","smc")`. To return to the
-original *DSGE.jl* package, run `Pkg.checkout("DSGE")` from
+Julia REPL and running `julia Pkg.checkout("DSGE","smc")`. To return to the
+original *DSGE.jl* package, run `julia Pkg.checkout("DSGE")` from
 the REPL. The file `test_smc.jl` in `DSGE/docs/examples/` is the
 appropriate place for a new user to start. It initializes a new model,
 sets some SMC-related parameters, runs SMC, and generates a LaTeX
 document documenting parameter moments. You can run this file by
-running `include("$(Pkg.dir("DSGE"))/docs/examples/test_smc.jl")` from
+running `julia include("$(Pkg.dir("DSGE"))/docs/examples/test_smc.jl")` from
 the REPL. 
