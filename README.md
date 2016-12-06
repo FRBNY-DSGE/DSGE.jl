@@ -17,3 +17,10 @@ features. Ongoing work on implementing Sequential Monte Carlo (SMC) sampling can
 on the `smc` branch. Further extensions of the DSGE model code may be released in the 
 future at the discretion of FRBNY.
 
+## Installation
+
+`DSGE.jl` is a registered Julia package. To install it, open your Julia REPL and run
+
+```julia
+julia> Pkg.add("DSGE")
+```
