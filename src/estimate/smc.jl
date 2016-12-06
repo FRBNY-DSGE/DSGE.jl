@@ -89,34 +89,18 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         srand(42)
     end
 
-    i = 1
-    while i <= n_part
-        try
-            T = typeof(m.parameters[1].value)
-            priodraw = Array{T}(n_params)
-
-            #Parameter draws per particle
-            for j in 1:n_params
-
-                priodraw[j] = if !m.parameters[j].fixed            
-                    prio = rand(m.parameters[j].prior.value)
-                    
-                    # Resample until all prior draws are within the value bounds
-                    while !(m.parameters[j].valuebounds[1] < prio < m.parameters[j].valuebounds[2])
-                        prio = rand(m.parameters[j].prior.value)
-                    end
-                    
-                    prio
-                else
-                    m.parameters[j].value
-                end
-            end
-            prior_sim[i,:] = priodraw'
-            out = posterior!(m, convert(Array{Float64,1},priodraw), data; φ_smc = tempering_schedule[1])
-            logpost[i] = out[:post]
-            loglh[i] = out[:like]
-            i += 1
+    if parallel
+        draws = @sync @parallel (hcat) for j = 1:n_part 
+            draw_from_prior(m, data, tempering_schedule)
         end
+    else
+        draws = [draw_from_prior(m, data, tempering_schedule)  for j = 1:n_part]
+    end
+
+    for i = 1:n_part
+        prior_sim[i,:] = draws[i][1]
+        logpost[i]     = draws[i][2]
+        loglh[i]       = draws[i][3]
     end
 
     para_sim[1,:,:] = prior_sim # Draws from prior 
@@ -181,14 +165,8 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	#------------------------------------
 
 	ESS = 1/sum(weight_sim[:,i].^2)
-        if isnan(ESS)
-            writecsv("loglh.csv",loglh)
-            writecsv("wtsim.csv",weight_sim)
-            println("incweight: $incweight")
-            println("zhat: $(zhat[i])")
-            println("weights: $(weight_sim[:,i-1].*incweight)")
-            error("ESS is NaN")
-        end
+        @assert !isnan(ESS) "no particles have non-zero weight"
+
 	if (ESS < n_part/2)
 	    id = systematic_resampling(m, weight_sim[:,i])
             para_sim[i-1, :, :] = para_sim[i-1, id, :]
@@ -281,8 +259,6 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     # Saving parameter draws
     #------------------------------------
     if !m.testing
-
-        println("\n saving output \n ")
         
         save_file = h5open(rawpath(m,"estimate","mhsave.h5"),"w")
         n_saved_obs = n_part
@@ -302,6 +278,8 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         zend_save = d_create(save_file, "mhzend", datatype(Float32),
                              dataspace(n_saved_obs,n_states_augmented(m)),
                              "chunk", (n_chunks,n_states_augmented(m)))
+
+        print("\n calculating transition matrices \n ")
         
         if parallel
             out = @sync @parallel (hcat) for j = 1:n_part 
@@ -311,6 +289,8 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
             out = [posterior!(m, vec(para[j,:]'), data, sampler=true)  for j = 1:n_part]
         end
         
+        print("\n saving output \n ")
+
         for i = 1:n_part
             para_save[i,:]  = map(Float32,para[i,:])
             post_save[i,:]  = map(Float32,out[i][:post])
@@ -334,3 +314,51 @@ function smc(m::AbstractModel; verbose::Symbol=:low)
     return smc(m, data_mat, verbose=verbose)
 end
 
+
+"""
+```
+draw_from_prior(m::AbstractModel, data::Matrix, tempering_schedule::Array)
+```
+
+Draw from prior distribution and resample if certain conditions are not met.
+Returns a tuple (prior_draw, logpost, loglh). 
+
+"""
+function draw_from_prior(m::AbstractModel, data::Matrix, tempering_schedule::Array)
+    success = false
+    n_params = n_parameters(m)
+    T = typeof(m.parameters[1].value)
+    prior_draw = Array{T}(n_params)
+    logpost = 0
+    loglh = 0
+    likelihood_threshold = get_setting(m, :enforce_likelihood_threshold)
+
+    while !success
+        try            
+            for j in 1:n_params    
+                prior_draw[j] = if !m.parameters[j].fixed            
+                    prior = rand(m.parameters[j].prior.value)
+                    
+                    # Resample until all prior draws are within the value bounds
+                    while !(m.parameters[j].valuebounds[1] < prior < m.parameters[j].valuebounds[2])
+                        prior = rand(m.parameters[j].prior.value)
+                    end     
+                    prior
+                else
+                    m.parameters[j].value
+                end
+            end
+            out = posterior!(m, convert(Array{Float64,1},prior_draw), data; φ_smc = tempering_schedule[1])
+            if likelihood_threshold
+                @assert exp(out[:like]) > 0
+            end
+            logpost = out[:post]
+            loglh   = out[:like]
+            success = true
+        end
+    end
+
+    return (prior_draw, logpost, loglh)
+end
+                                    
+ 

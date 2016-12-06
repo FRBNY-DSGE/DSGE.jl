@@ -57,5 +57,6 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:c, .5, "The scaling factor for the covariance, constructed from acpt and tgt during mutation")
     m <= Setting(:init_accept, .25, "The initial average acceptance rate for new particles during mutation")
     m <= Setting(:target_accept, .25, "The initial target acceptance rate for new particles during mutation")
+    m <= Setting(:enforce_likelihood_threshold, false, "Require that exp(loglh)>0 for each initial particle")
 
 end
