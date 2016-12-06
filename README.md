@@ -13,6 +13,7 @@ included in the Liberty Street Economics blog post
 [The FRBNY DSGE Model Forecast](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html).
 
 FRBNY is currently working on extending the code to include forecasts and other
-features. Extensions of the DSGE model code may be released in the future at
-the discretion of FRBNY.
+features. Ongoing work on implementing Sequential Monte Carlo (SMC) sampling can be found 
+on the `smc` branch. Further extensions of the DSGE model code may be released in the 
+future at the discretion of FRBNY.
 
