@@ -49,5 +49,5 @@ the REPL. The file `test_smc.jl` in `DSGE/docs/examples/` is the
 appropriate place for a new user to start. It initializes a new model,
 sets some SMC-related parameters, runs SMC, and generates a LaTeX
 document documenting parameter moments. You can run this file by
-running `include("$(Pkg.dir("DSGE"))/docs/examples/test_smc.jl` from
+running `include("$(Pkg.dir("DSGE"))/docs/examples/test_smc.jl")` from
 the REPL. 
