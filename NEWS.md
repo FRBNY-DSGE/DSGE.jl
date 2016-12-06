@@ -1,3 +1,10 @@
+# DSGE.jl SMC-replication Release Notes
+
+## New Features
+- The AnSchorfheide model, a small scale NK DSGE model, is now included.
+- Sequential Monte Carlo is implemented and works with the AnSchorfheide model.
+
+
 # DSGE.jl v0.1.4 Release Notes
 
 ## New Features
