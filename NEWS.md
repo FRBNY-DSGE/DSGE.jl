@@ -1,12 +1,8 @@
-# DSGE.jl v0.1.5 Release Notes
+# DSGE.jl SMC-replication Release Notes
 
 ## New Features
-- Added Model 1002, an updated version of Model 990.
-- Added documentation for Model 1002 at docs/DSGE_Model_Documentation_1002.pdf.
-  This pdf includes an overview of the economic theory underlying the model, a
-  summary of the model's main equations, a description of
-  the data used, a table of priors for the model's parameters,
-  and more.
+- The AnSchorfheide model, a small scale NK DSGE model, is now included.
+- Sequential Monte Carlo is implemented and works with the AnSchorfheide model.
 
 
 # DSGE.jl v0.1.4 Release Notes
