@@ -23,8 +23,8 @@ function meansbands_matrix_all(m::AbstractModel, input_type::Symbol,
                                subset_string = "", verbose::Symbol = :low)
 
     ## Step 0: Determine full set of output_vars necessary for plotting desired results
-    #          Specifically, if output_vars contains shockdecs but not trend or deterministic trends,
-    #          add those
+    #          Specifically, if output_vars contains shockdecs but not
+    #          trend or deterministic trends, add those
 
     output_vars = add_requisite_output_vars(output_vars)
     output_vars = [symbol("mb", x) for x in output_vars]
@@ -54,8 +54,6 @@ end
 function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
                                verbose::Symbol = :low)
 
-    output_vars = collect(keys(mbs))
-
     for output_var in keys(mbs)
 
         mb = mbs[output_var]
@@ -68,12 +66,14 @@ function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
                     pathfcn = workpath, subset_string = mb.metadata[:subset_string],
                     fileformat = :h5)[output_var]
 
+        base = basename(outfile)[3:end]
+        outfile = joinpath(dirname(outfile), "mb_matrix_"*base)
+
         ## Convert MeansBands objects to matrices
         print("* Extracting means and bands matrices for $prod...")
         means, bands = meansbands_matrix(mb)
 
         ## Save to file
-
         h5open(outfile, "w") do f
             f["means"] = means
             f["bands"] = bands
