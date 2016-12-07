@@ -208,7 +208,7 @@ Transform from log growth rates to % growth rates (annualized).
 This should only be used for output, consumption, investment
 and GDP deflator (inflation).
 """
-function logtopct_annualized_percapita{T<:AbstractFloat}(y::Array{T}, pop_fcast::Array{T}, q_adj::T = 100.)
+function logtopct_annualized_percapita(y, pop_fcast, q_adj = 100.)
     @assert length(pop_fcast) == length(y)
     if size(pop_fcast) != size(y)
         pop_fcast_new = pop_fcast'
@@ -254,7 +254,7 @@ Transform from log level to 4-quarter annualized percent change.
   variable. Could use `end` if not using conditional data, otherwise
   use `end-1`.
 """
-function loglevelto4qpct_annualized{T<:AbstractFloat}(y::Matrix{T}, y_data::Matrix{T})
+function loglevelto4qpct_annualized(y, y_data)
 # Repmat is used to put the data point in each row of the simulations.  The
 # log levels are subtracted to get the log percent changes and
 # then the exponential is used to remove the log from the
@@ -277,21 +277,15 @@ population growth.
 
 ### Arguments
 
-- `matrix`: The `ndraws` x `nperiods` matrix we wish to transform to 4 quarter annualized percent
-  change from 1-quarter log-levels.
+- `y`: The data we wish to transform to 4 quarter annualized percent
+  change from 1-quarter log-levels. If `y` is a Matrix, it should be `ndraws` x `nperiods`.
 
-- `data`: The actual data series corresponding to the `y` variable
-  (state or observable) in the model. This is necessary to get the
-  last data point so that a percent change can be computed for the
-  first period. Size should be (1 x `nperiods`).
-
-- `y_data::Vector`: The actual data series corresponding to the `y` variable
-  (state or observable) in the model. This is necessary to get the last data
-  point so that a percent change can be computed for the first period.
+- `y_data`: The last data point in the history (of state or observable) corresponding to the `y` variable.
+  This is required to compute a percentage change for the first period.
 
 - `population::Vector`: The length `nperiods` vector of population growth rates.
 """
-function loglevelto4qpct_annualized_percapita{T<:AbstractFloat}(y::Matrix, y_data::T, population::Array)
+function loglevelto4qpct_annualized_percapita{T<:AbstractFloat}(y::Matrix{T}, y_data::T, population)
     ndraws = size(y, 1)
     y_t1 = hcat(fill(y_data, ndraws, 1), y[:, 1:end-1])
     ((exp(y./100.0) - y_t1./100.0 .+ population).^4 .- 1.)*100.0

@@ -256,7 +256,7 @@ function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
     states = zeros(S, nstates, horizon)
     states[:, 1], shocks[:, 1] = iterate(z0, shocks[:, 1])
     for t in 2:horizon
-        states[:, t] = iterate(states[:, t-1], shocks[:, t])
+        states[:, t], shocks[:, t] = iterate(states[:, t-1], shocks[:, t])
 
         # Change monetary policy shock to account for 0.25 interest rate bound
         if enforce_zlb
