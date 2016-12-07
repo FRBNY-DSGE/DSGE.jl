@@ -332,7 +332,6 @@ function draw_from_prior(m::AbstractModel, data::Matrix, tempering_schedule::Arr
     prior_draw = Array{T}(n_params)
     logpost = 0
     loglh = 0
-    likelihood_threshold = get_setting(m, :enforce_likelihood_threshold)
 
     while !success
         try            
@@ -350,9 +349,6 @@ function draw_from_prior(m::AbstractModel, data::Matrix, tempering_schedule::Arr
                 end
             end
             out = posterior!(m, convert(Array{Float64,1},prior_draw), data; φ_smc = tempering_schedule[1])
-            if likelihood_threshold
-                @assert exp(out[:like]) > 0
-            end
             logpost = out[:post]
             loglh   = out[:like]
             success = true
