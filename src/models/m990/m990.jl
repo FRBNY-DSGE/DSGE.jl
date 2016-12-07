@@ -113,13 +113,13 @@ function init_model_indices!(m::Model990)
         :Eπ_t, :EL_t, :Erk_t, :Ew_t, :ERtil_k_t, :y_f_t, :c_f_t, :i_f_t, :qk_f_t, :k_f_t,
         :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :r_f_t, :Ec_f_t, :Eqk_f_t, :Ei_f_t,
         :EL_f_t, :Erk_f_t, :ztil_t, :π_t1, :π_t2, :π_a_t, :R_t1, :zp_t, :Ez_t];
-        [symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]]
+        [Symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]]
 
     # Exogenous shocks
     exogenous_shocks = [[
         :g_sh, :b_sh, :μ_sh, :z_sh, :λ_f_sh, :λ_w_sh, :rm_sh, :σ_ω_sh, :μ_e_sh,
         :γ_sh, :π_star_sh, :lr_sh, :zp_sh, :tfp_sh, :gdpdef_sh, :corepce_sh];
-        [symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
+        [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
 
     # Expectations shocks
     expected_shocks = [
@@ -135,7 +135,7 @@ function init_model_indices!(m::Model990)
         :eq_capval_f, :eq_output_f, :eq_caputl_f, :eq_capsrv_f, :eq_capev_f, :eq_mkupp_f,
         :eq_caprnt_f, :eq_msub_f, :eq_res_f, :eq_Ec_f, :eq_Eqk_f, :eq_Ei_f, :eq_EL_f, :eq_Erk_f,
         :eq_ztil, :eq_π_star, :eq_π1, :eq_π2, :eq_π_a, :eq_Rt1, :eq_zp, :eq_Ez];
-        [symbol("eq_rml$i") for i=1:n_anticipated_shocks(m)]]
+        [Symbol("eq_rml$i") for i=1:n_anticipated_shocks(m)]]
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
@@ -157,7 +157,7 @@ function init_model_indices!(m::Model990)
         :obs_longinflation,    # 10-year inflation expectation
         :obs_longrate,         # long-term rate
         :obs_tfp];             # total factor productivity
-        [symbol("obs_nominalrate$i") for i=1:n_anticipated_shocks(m)]] # compounded nominal rates
+        [Symbol("obs_nominalrate$i") for i=1:n_anticipated_shocks(m)]] # compounded nominal rates
 
     for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
     for (i,k) in enumerate(exogenous_shocks);             m.exogenous_shocks[k]             = i end
@@ -564,7 +564,8 @@ function steadystate!(m::Model990)
     m[:Rstarn]   = 100*(m[:rstar]*m[:π_star] - 1)
     m[:r_k_star]   = m[:spr]*m[:rstar]*m[:Upsilon] - (1-m[:δ])
     m[:wstar]    = (m[:α]^m[:α] * (1-m[:α])^(1-m[:α]) * m[:r_k_star]^(-m[:α]) / m[:Φ])^(1/(1-m[:α]))
-    m[:Lstar]    = 1.
+    m[:Lstar]    = (m[:wstar]/m[:λ_w]/((1-m[:g_star])*(m[:α]/(1-m[:α])*m[:wstar]/m[:r_k_star])^m[:α]/m[:Φ]-
+     (1-(1-m[:δ])/m[:Upsilon]*exp(-m[:z_star]))*m[:Upsilon]*exp(m[:z_star])*m[:α]/(1-m[:α])*m[:wstar]/m[:r_k_star])/(1-m[:h]*exp(-m[:z_star])))^(1/(1+m[:ν_l]))
     m[:kstar]    = (m[:α]/(1-m[:α])) * m[:wstar] * m[:Lstar] / m[:r_k_star]
     m[:kbarstar] = m[:kstar] * (1+m[:γ]) * m[:Upsilon]^(1 / (1-m[:α]))
     m[:istar]    = m[:kbarstar] * (1-((1-m[:δ])/((1+m[:γ]) * m[:Upsilon]^(1/(1-m[:α])))))
@@ -602,12 +603,13 @@ function steadystate!(m::Model990)
     Rhostar       = 1/nkstar - 1
 
     # evaluate wekstar and vkstar
-    wekstar       = (1-m[:γ_star]/m[:β])*nkstar - m[:γ_star]/m[:β]*(m[:spr]*(1-μ_estar*Gstar) - 1)
+    betbar        = m[:β]*exp((1-m[:σ_c])*m[:z_star])
+    wekstar       = (1-m[:γ_star]/betbar)*nkstar - m[:γ_star]/betbar*(m[:spr]*(1-μ_estar*Gstar) - 1)
     vkstar        = (nkstar-wekstar)/m[:γ_star]
 
     # evaluate nstar and vstar
-    m[:nstar]       = nkstar*m[:kstar]
-    m[:vstar]       = vkstar*m[:kstar]
+    m[:nstar]       = nkstar*m[:kbarstar]
+    m[:vstar]       = vkstar*m[:kbarstar]
 
     # a couple of combinations
     ΓμG      = Γstar - μ_estar*Gstar
@@ -627,7 +629,7 @@ function steadystate!(m::Model990)
     m[:ζ_spσ_ω] = (ζ_bw_zw*ζ_zσ_ω - ζ_bσ_ω) / (1-ζ_bw_zw)
 
     # elasticities wrt μ_e
-    ζ_bμ_e      = μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
+    ζ_bμ_e      = -μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
         ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
     ζ_zμ_e      = -μ_estar*Gstar/ΓμG
     m[:ζ_spμ_e] = (ζ_bw_zw*ζ_zμ_e - ζ_bμ_e) / (1-ζ_bw_zw)
@@ -639,9 +641,9 @@ function steadystate!(m::Model990)
 
     # elasticities for the net worth evolution
     m[:ζ_nRk]    = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1 - ζ_gw/ζ_zw))
-    m[:ζ_nR]     = m[:γ_star]/m[:β]*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
-    m[:ζ_nqk]    = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]/m[:β]*(1+Rhostar)
-    m[:ζ_nn]     = m[:γ_star]/m[:β] + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
+    m[:ζ_nR]     = m[:γ_star]/betbar*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
+    m[:ζ_nqk]    = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]/betbar*(1+Rhostar)
+    m[:ζ_nn]     = m[:γ_star]/betbar + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
     m[:ζ_nμ_e]   = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*(1 - ζ_gw*ζ_zμ_e/ζ_zw)
     m[:ζ_nσ_ω]  = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*(ζ_Gσ_ω-ζ_gw/ζ_zw*ζ_zσ_ω)
 
@@ -788,8 +790,8 @@ function init_data_transforms!(m::Model990)
         # FROM: OIS expectations of $i-period-ahead interest rates at a quarterly rate
         # TO:   Same
 
-        m.data_transforms[symbol("obs_ois$i")] = function (levels)
-            levels[:, symbol("ant$i")]
+        m.data_transforms[Symbol("obs_ois$i")] = function (levels)
+            levels[:, Symbol("ant$i")]
         end
     end
 end

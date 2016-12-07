@@ -108,7 +108,7 @@ function eqcond(m::Model990)
     Γ1[eq[:eq_nevol], endo[:kbar_t]]   = m[:ζ_nqk]
     Γ1[eq[:eq_nevol], endo[:n_t]]      = m[:ζ_nn]
     Γ1[eq[:eq_nevol], endo[:R_t]]      = -m[:ζ_nR]
-    Γ1[eq[:eq_nevol], endo[:b_t]]      = -m[:ζ_nR]
+    Γ1[eq[:eq_nevol], endo[:b_t]]      = -m[:ζ_nR]*(-(m[:σ_c]*(1 + m[:h]*exp(-m[:z_star])))/(1 - m[:h]*exp(-m[:z_star]))) # BUG FIXED -- TERM NORMALIZED ON 9/15/16
 
     # Flexible prices and wages - ASSUME NO FINANCIAL FRICTIONS
     Γ0[eq[:eq_capval_f], endo[:Erk_f_t]] = -m[:r_k_star]/(1 + m[:r_k_star] - m[:δ])
@@ -236,9 +236,10 @@ function eqcond(m::Model990)
     Γ0[eq[:eq_wage], endo[:μ_ω_t]] = (1 - m[:ζ_w]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))*
         (1 - m[:ζ_w])/(m[:ζ_w]*((m[:λ_w] - 1)*m[:ϵ_w] + 1))/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
     Γ0[eq[:eq_wage], endo[:π_t]]   = (1 + m[:ι_w]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+    Γ0[eq[:eq_wage], endo[:z_t]]   = (1 + m[:ι_w]*m[:β]*exp((1 - m[:σ_c])*m[:z_star]))/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star])) # BUG FIXED -- TERM CORRECTED ON 9/15/16
     Γ1[eq[:eq_wage], endo[:w_t]]   = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
-    Γ0[eq[:eq_wage], endo[:z_t]]   = 1/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
     Γ1[eq[:eq_wage], endo[:π_t]]   = m[:ι_w]/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
+    Γ1[eq[:eq_wage], endo[:z_t]]   = m[:ι_w]/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star])) # BUG FIXED -- TERM ADDED ON 9/15/16
     Γ0[eq[:eq_wage], endo[:Ew_t]]  = -m[:β]*exp((1 - m[:σ_c])*m[:z_star])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
     Γ0[eq[:eq_wage], endo[:Ez_t]]  = -m[:β]*exp((1 - m[:σ_c])*m[:z_star])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
     Γ0[eq[:eq_wage], endo[:Eπ_t]]  = -m[:β]*exp((1 - m[:σ_c])*m[:z_star])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:z_star]))
@@ -397,9 +398,9 @@ function eqcond(m::Model990)
 
         if n_anticipated_shocks(m) > 1
             for i = 2:n_anticipated_shocks(m)
-                Γ1[eq[symbol("eq_rml$(i-1)")], endo[symbol("rm_tl$i")]] = 1.
-                Γ0[eq[symbol("eq_rml$i")], endo[symbol("rm_tl$i")]]     = 1.
-                Ψ[eq[symbol("eq_rml$i")], exo[symbol("rm_shl$i")]]      = 1.
+                Γ1[eq[Symbol("eq_rml$(i-1)")], endo[Symbol("rm_tl$i")]] = 1.
+                Γ0[eq[Symbol("eq_rml$i")], endo[Symbol("rm_tl$i")]]     = 1.
+                Ψ[eq[Symbol("eq_rml$i")], exo[Symbol("rm_shl$i")]]      = 1.
             end
         end
     end

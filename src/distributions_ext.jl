@@ -70,7 +70,8 @@ Compute the pdf of a RootInverseGamma distribution at x.
 """
 function Distributions.pdf(d::RootInverseGamma, x::AbstractFloat)
     (ν, τ) = params(d)
-    return 2 * (ν*τ^2/2)^(ν/2) * exp((-ν*τ^2)/(2x^2)) / gamma(ν/2) / x^(ν+1)
+    return (ν*τ^2/2)^(ν/2) * exp((-ν*τ^2)/(2x^2)) / gamma(ν/2) / x^(ν+2)
+#    return 2 * (ν*τ^2/2)^(ν/2) * exp((-ν*τ^2)/(2x^2)) / gamma(ν/2) / x^(ν+1)
 end
 
 """
@@ -82,7 +83,8 @@ Compute the log pdf of a RootInverseGamma distribution at x.
 """
 function Distributions.logpdf(d::RootInverseGamma, x::AbstractFloat)
     (ν, τ) = params(d)
-    return log(2) - log(gamma(ν/2)) + (ν/2)*log(ν*τ^2/2) - ((ν+1)/2)*log(x^2) - ν*τ^2/(2x^2)
+    return -lgamma(ν/2) + (ν/2)*log(ν*τ^2/2) - (ν+2)*log(x) - ν*τ^2/(2x^2)
+#    return log(2) - log(gamma(ν/2)) + (ν/2)*log(ν*τ^2/2) - ((ν+1)/2)*log(x^2) - ν*τ^2/(2x^2)
 end
 
 

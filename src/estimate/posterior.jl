@@ -167,7 +167,6 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
             rethrow(err)
         end
     end
-
     # Get normal, no ZLB matrices
     state_inds = [1:(n_states-n_ant); (n_states+1):n_states_aug]
     shock_inds = 1:(n_exo-n_ant)
@@ -240,7 +239,15 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     regime_likes[3] = out[:L]
     R3[:zend]       = out[:zend]
     R3[:Pend]       = out[:Pend]
-
+#=
+file = matopen("R123.mat", "w")
+write(file, "R1", Dict(string(key) => val for (key,val) in R1))
+write(file, "R2", Dict(string(key) => val for (key,val) in R2))
+write(file, "R3", Dict(string(key) => val for (key,val) in R3))
+write(file, "regime_likes", regime_likes)
+close(file)
+quit()
+=#
     # Return total log-likelihood, excluding the presample
     like = regime_likes[2] + regime_likes[3]
     if mh

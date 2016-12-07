@@ -3,7 +3,7 @@
 load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol = :low)
 ```
 
-Create a DataFrame with all data series for this model, fully transformed.  
+Create a DataFrame with all data series for this model, fully transformed.
 
 First, check the disk to see if a valid dataset is already stored in `inpath(m, "data")`. A
 dataset is valid if every series in `m.data_transforms` is present and the entire sample is
@@ -18,7 +18,7 @@ specified in `m.data_series`, are loaded in levels using `load_data_levels`. See
 Then, the series in levels are transformed as specified in `m.data_transforms`. See
 `?transform_data` for more details.
 
-The resulting DataFrame is saved to disk as `data_<yymmdd>.csv` and returned to the caller.  
+The resulting DataFrame is saved to disk as `data_<yymmdd>.csv` and returned to the caller.
 """
 function load_data(m::AbstractModel; try_disk::Bool = true, verbose::Symbol=:low)
     recreate_data = false
@@ -75,8 +75,8 @@ is loaded first, by default; then, merge other custom data sources.
 
 Check on disk in `inpath(m, "data")` datasets, of the correct vintage, corresponding to the
 ones in `keys(m.data_series)`. Load the appropriate data series (specified in
-`m.data_series[source]`) for each data source. 
-    
+`m.data_series[source]`) for each data source.
+
 To accomodate growth rates and other similar transformations, more rows of data may be
 downloaded than otherwise specified by the date model settings. (By the end of the process,
 these rows will have been dropped.)
@@ -97,7 +97,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
     # Set ois series to load
     if n_anticipated_shocks(m) > 0
-        m.data_series[:ois] = [symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
+        m.data_series[:ois] = [Symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
     end
 
     # For each additional source, search for the file with the proper name. Open

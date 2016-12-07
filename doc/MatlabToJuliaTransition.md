@@ -182,9 +182,9 @@ end
 Julia's faster evaluation of such statements reduces this performance
 hit, as these symbols can be associated with the model object.
 ```julia
-[symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]
+[Symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]
 # ...
-[symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]
+[Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]
 ```
 
 Granted, there may be better solutions to our problem in both languages,

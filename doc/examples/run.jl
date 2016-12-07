@@ -2,7 +2,6 @@ using DSGE
 
 # construct a model object
 m = Model990()
-m <= Setting(:n_anticipated_shocks, 6);
 #save = saveroot(m);
 #specify_mode!(m, "$save/output_data/m990/ss2/estimate/raw/paramsmode_vint=151127.h5")
 #m <= Setting(:reoptimize, true)
