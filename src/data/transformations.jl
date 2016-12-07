@@ -278,7 +278,7 @@ population growth.
 ### Arguments
 
 - `y`: The data we wish to transform to 4 quarter annualized percent
-  change from 1-quarter log-levels. If `y` is a Matrix, it should be `ndraws` x `nperiods`.
+  change from 1-quarter log-levels. If `y` should be `ndraws` x `nperiods`.
 
 - `y_data`: The last data point in the history (of state or observable) corresponding to the `y` variable.
   This is required to compute a percentage change for the first period.

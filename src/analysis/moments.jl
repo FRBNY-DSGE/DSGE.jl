@@ -385,7 +385,7 @@ Returns a `2` x `cols(draws)` matrix `bands` such that `percent` of the mass of 
 is above `bands[1,i]` and below `bands[2,i]`.
 
 ### Arguments
-- `draws`: Matrix of parameter draws (from Metropolis-Hastings, for example)
+- `draws`: `ndraws` by `nperiods` matrix of parameter draws (from Metropolis-Hastings, for example)
 - `percent`: percent of data within bands (e.g. .9 to get 90% of mass within bands)
 
 ### Optional Arguments

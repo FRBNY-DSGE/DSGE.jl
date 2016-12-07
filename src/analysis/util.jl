@@ -290,6 +290,16 @@ end
 ## OTHER UTILS
 #####################################
 
+"""
+```
+resize_population_forecast(population_forecast::DataFrame, nperiods::Int;
+                                           population_mnemonic::Symbol = Symbol())
+```
+
+Extends or shrinks the population forecasts to be `nperiods` in
+length. If `population_forecast` must be extended, the last value is
+simply repeated as many times as necessary.
+"""
 function resize_population_forecast(population_forecast::DataFrame, nperiods::Int;
                                            population_mnemonic::Symbol = Symbol())
 

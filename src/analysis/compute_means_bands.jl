@@ -352,20 +352,28 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
     mnemonic = isnull(population_mnemonic) ? Symbol() : get(population_mnemonic)
 
     # Ensure population series is same length as fcast_output.
-    # For forecasts, the third dimension of the fcast_output matrix is the number of periods.
-    if product in [:forecast]
+    population_series = if product in [:forecast]
+
+        # For forecasts, the third dimension of the fcast_output
+        # matrix is the number of periods.
 
         n_fcast_periods = size(fcast_output, 3)
         population_series = resize_population_forecast(population_forecast, n_fcast_periods,
-                                                         population_mnemonic = mnemonic)
+                                                       population_mnemonic = mnemonic)
+
+        convert(Vector{Float64}, population_series[mnemonic])
+
     elseif product in [:shockdec, :dettrend, :trend]
 
-        # make sure population series corresponds with saved shockdec dates
+        # For shockdecs, deterministic trend, and trend, we want to
+        # make sure population series corresponds with the saved dates.
+
         start_date = date_list[1]
         end_date   = date_list[end]
-
-        start_ind = find(population_data[:date] .== start_date)[1]
+        start_ind  = find(population_data[:date] .== start_date)[1]
         population_data = population_data[start_ind:end, mnemonic]
+
+        # calculate number of periods that are in the future
         n_fcast_periods = length(date_list) - length(population_data)
 
         # Extend population forecast by the right number of periods
@@ -382,9 +390,14 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
             convert(Vector{Float64}, tmp)
         end
 
-    end
+        population_series
 
-    println("resized population forecast: $(size(population_forecast))")
+    elseif product in [:hist]
+
+        # For history, the population series is just the data
+
+        convert(Vector{Float64}, population_data[mnemonic])
+    end
 
     mb_metadata = Dict{Symbol,Any}(
                    :para       => input_type,
@@ -410,12 +423,10 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
             transform = parse_transform(transforms[series])
             fcast_series = squeeze(fcast_output[:, ind, :], 2)
             transformed_fcast_output = if transform in [logtopct_annualized_percapita]
-                pop_fcast = convert(Array{Float64}, population_forecast[mnemonic])
-                transform(fcast_series, pop_fcast)
+                transform(fcast_series, population_series)
             elseif transform in [loglevelto4qpct_annualized_percapita]
-                pop_fcast = convert(Array{Float64}, population_forecast[mnemonic])
                 hist_data = data[ind, get(y0_index)]
-                transform(fcast_series, hist_data, pop_fcast)
+                transform(fcast_series, hist_data, population_series)
             else
                 map(transform, fcast_series)
             end
@@ -434,6 +445,11 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
         means = DataFrame()
         bands = Dict{Symbol,DataFrame}()
 
+        # we need to repmat the trend because population adjustments
+        # will be different in each period. Now we have something
+        # that's nperiods x nvars
+        fcast_output = repmat(fcast_output, length(date_list), 1)
+
         # for each series (ie each pseudoobs, each obs, or each state):
         # 1. apply the appropriate transform
         # 2. add to DataFrame
@@ -443,10 +459,12 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
             transform = parse_transform(transforms[series])
 
             transformed_fcast_output = if transform in [logtopct_annualized_percapita]
-                pop_fcast = convert(Array{Float64}, population_forecast[mnemonic])
-                transform(fcast_output[ind], pop_fcast)
+                println("fcast_output: $size(fcast_output)")
+                println("y: $(size(fcast_output[ind]))")
+                println("y: $(size(population_series))")
+
+                transform(fcast_output[:, ind], population_series)
             elseif transform in [loglevelto4qpct_annualized_percapita]
-                pop_fcast = convert(Array{Float64}, population_forecast[mnemonic])
                 hist_data = data[ind, get(y0_index)]
 
                 println(transform)
@@ -454,18 +472,15 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
                 println("fcast_output: $(size(fcast_output))")
                 println("fcast_output[$ind] = $(fcast_output[ind])")
                 println("hist_data: $(hist_data)")
-                println("pop_fcast: $(size(pop_fcast))")
+                println("population_series: $(size(population_series))")
 
-                transform(fcast_output[ind], hist_data, pop_fcast)
+                transform(fcast_output[:, ind]', hist_data, population_series')
             else
-                transform(fcast_output[ind])
+                transform(fcast_output[:, ind])
             end
 
-
-            # compute bands. note that because the trend is just a
-            # number, not a series, the transformed result is just a
-            # number, so we need to put it into a matrix to calculate bands.
-            transformed_fcast_output = reshape(collect(transformed_fcast_output), (1,1))
+            println("transformed_fcast_output: $(size(transformed_fcast_output))")
+            transformed_fcast_output = reshape(transformed_fcast_output, 1, length(transformed_fcast_output))
             bands_one = find_density_bands(transformed_fcast_output, density_bands, minimize=false)
 
             # compute the mean and bands across draws and add to dataframe
