@@ -283,6 +283,25 @@ typealias DMatrix{T, A} DArray{T, 2, A}
 
 """
 ```
+@time_verbose ex
+```
+
+A macro that calls `@time ex` if `VERBOSITY[verbose] >= VERBOSITY[:high]`, else
+just calls `ex`.
+"""
+macro time_verbose(ex)
+    quote
+        local val = if VERBOSITY[verbose] >= VERBOSITY[:high]
+            $(@time esc(ex))
+        else
+            $(esc(ex))
+        end
+        val
+    end
+end
+
+"""
+```
 write_darray(filepath::AbstractString, darr::DArray)
 ```
 
