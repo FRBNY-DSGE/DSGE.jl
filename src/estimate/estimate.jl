@@ -58,7 +58,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
         println("Reoptimizing...")
 
         # Inputs to optimization algorithm
-        n_iterations       = 100
+        n_iterations       = get_setting(m, :optimization_iterations)
         ftol               = 1e-10
         converged          = false
 
@@ -98,7 +98,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     ### normal centered at the mode. Its variance is the inverse of
     ### the hessian. We find the inverse via eigenvalue decomposition.
     ########################################################################################
-
+    @assert false
     # Calculate the Hessian at the posterior mode
     hessian = if calculate_hessian(m)
         if VERBOSITY[verbose] >= VERBOSITY[:low]

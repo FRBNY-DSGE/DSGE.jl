@@ -30,7 +30,7 @@ using Debug
     # For now, only csminwel should be used
     optimizer = if method == :csminwel
         csminwel
-    elseif method == :simulatedannealing
+    elseif method == :simulated_annealing
         simulated_annealing
     else
         error("Method ",method," is not supported.")
@@ -45,9 +45,9 @@ using Debug
     function f_opt(x_opt)
         x_model[para_free_inds] = x_opt
         transform_to_model_space!(m,x_model)
-        println("Calling posterior...")
+        #println("Calling posterior...")
         res= -posterior(m, data; catch_errors=true)[:post]
-        println("Done calling posterior")
+        #println("Done calling posterior")
         return res
     end
 
@@ -65,10 +65,6 @@ using Debug
         T = eltype(x)
         npara = length(x)
 
-        # get covariance matrix from prior
-        prior_draws = rand_prior(m)
-        prior_cov   = cov(prior_draws)
-
         # Convert x_proposal to model space and expand to full parameter vector
         x_all = T[p.value for p in m.parameters]  # to get fixed values
         x_all[para_free_inds] = x                 # this is from real line
@@ -82,23 +78,28 @@ using Debug
             # take a step in model space
             for i in para_free_inds
                 r = rand([-1 1]) * rand()
-                @inbounds x_proposal_all[i] = x_all_model[i] + (r * cc * prior_cov[i,i])
+                prior_cov = !isnull(m.parameters[i].prior) ? moments(get(m.parameters[i].prior))[2] : 0.0
+                @inbounds x_proposal_all[i] = x_all_model[i] + (r * cc * prior_cov)
             end
 
             # check that parameters are inbounds, model can be solved,
             # and parameters can be transformed to the real line.
-            #try
+            try
                 update!(m, x_proposal_all)
-                println("trying to solve model in neighbor")
+                #x_proposal_all = transform_to_real_line(m.parameters, x_proposal_all) 
+                #println("trying to solve model in neighbor")
                 solve(m)
-                println("done solving model in neighbor")
+                #println("done solving model in neighbor")
+                #println("checking bounds")
                 x_proposal_all = transform_to_real_line(m.parameters, x_proposal_all)
+                #println("bounds checked")
                 success = true
-            #catch err
+            #catch 
+                #info("something went wrong")
                 #success = false
                 # rethrow(err)
                 #warn("There was a $(typeof(err))")
-            #end
+            end
         end
 
         # extract free inds
