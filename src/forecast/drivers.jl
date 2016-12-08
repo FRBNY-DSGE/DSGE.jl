@@ -64,16 +64,27 @@ function forecast_all(m::AbstractModel,
                       verbose::Symbol             = :low,
                       procs::Vector{Int}          = [myid()])
 
-    for cond_type in cond_types
-        df = load_data(m; cond_type=cond_type, try_disk=true, verbose=:none)
-        for input_type in input_types
-            my_procs = if input_type in [:init, :mode, :mean]
-                [myid()]
-            else
-                procs
-            end
-            forecast_one(m, df; cond_type=cond_type, input_type=input_type,
-                output_vars=output_vars, verbose=verbose, procs=my_procs)
+    for input_type in input_types
+
+        # Set up infiles
+        params, TTT, RRR, CCC, zend = load_draws(m, input_type; subset_inds = subset_inds,
+                                                 verbose = verbose, procs = procs)
+
+        # Populate systems vector
+        systems = prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = procs)
+
+        for cond_type in cond_types
+
+            # Load data
+            df = load_data(m; cond_type = cond_type, try_disk = true, verbose = :none)
+
+            # Populate states vector
+            states = prepare_states(m, input_type, cond_type, systems, params,
+                                    df, zend; procs = procs)
+
+            forecast_one(m, df, systems, states; cond_type = cond_type,
+                         input_type = input_type, output_vars = output_vars,
+                         verbose = verbose, procs = procs)
         end
     end
 end
@@ -418,67 +429,6 @@ end
 
 """
 ```
-prepare_forecast_inputs(m, df; input_type = :mode, cond_type = :none,
-    subset_inds = [], verbose = :low, procs = [myid()])
-```
-
-Load draws for this input type, prepare a System object for each draw, and
-prepare initial state vectors.
-
-### Inputs
-
-- `m::AbstractModel`: model object
-- `df::DataFrame`: historical data. If `cond_type in [:semi, :full]`, then the
-   final row of `df` should be the period containing conditional data
-
-### Keyword Arguments
-
-- `input_type::Symbol`: See documentation for `forecast_all`. Defaults to
-  `:mode`
-- `cond_type::Symbol`: See documentation for `forecast_all`. Defaults to `:none`
-- `subset_inds::Vector{Int}`: indices specifying the draws we want to use. See
-  `forecast_one` for more detail.
-- `verbose::Symbol`: desired frequency of function progress messages printed to
-  standard out. One of `:none`, `:low`, or `:high`. If `:low` or greater, prints
-  location of input file.
-- `procs::Vector{Int}`: list of worker processes that have been
-  previously added by the user. Defaults to `[myid()]`
-
-### Outputs
-
-- `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
-  objects, one for each draw
-- `states::DVector{Vector{Float64}}`: vector of `n_sim` many final historical
-  state vectors
-
-### Notes
-
-`prepare_forecast_inputs` calls `load_draws`, `prepare_systems`, and
-  `prepare_states`. See those functions for thorough documentation.
-"""
-function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
-    input_type::Symbol = :mode, cond_type::Symbol = :none,
-    subset_inds::Vector{Int} = Vector{Int}(), verbose::Symbol = :low,
-    procs::Vector{Int} = [myid()])
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs, Nullable(input_type))
-
-    # Set up infiles
-    params, TTT, RRR, CCC, zend = load_draws(m, input_type; subset_inds = subset_inds,
-                                      verbose = verbose, procs = procs)
-
-    # Populate systems vector
-    systems = prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = procs)
-
-    # Populate states vector
-    states = prepare_states(m, input_type, cond_type, systems, params, df, zend; procs = procs)
-
-    return systems, states
-end
-
-"""
-```
 forecast_one(m, df; input_type = :mode, cond_type = :none, output_vars = [],
     subset_inds = [], verbose = :low, procs = [myid()])
 ```
@@ -489,20 +439,25 @@ and conditional data case given by `cond_type`.
 ### Inputs
 
 - `m::AbstractModel`: model object
-- `df::DataFrame`: Historical data. If `cond_type in [:semi, :full]`, then the
-   final row of `df` should be the period containing conditional data.
+- `input_type::Symbol`: See documentation for `forecast_all`
+- `cond_type::Symbol`: See documentation for `forecast_all`
+- `output_vars::Vector{Symbol}`: vector of desired output variables. See Outputs
+  section
 
 ### Keyword Arguments
 
-- `input_type::Symbol`: See documentation for `forecast_all`. Defaults to
-  `:mode`
-- `cond_type::Symbol`: See documentation for `forecast_all`. Defaults to `:none`
-- `output_vars::Vector{Symbol}`: vector of desired output variables. See Outputs
-  section
+- `df::DataFrame`: Historical data. If `cond_type in [:semi, :full]`, then the
+   final row of `df` should be the period containing conditional data. If not
+   provided, will be loaded using `load_data` with the appropriate `cond_type`
+- `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
+  objects, one for each draw. If not provided, will be loaded using
+  `prepare_systems`
+- `states::DVector{Vector{Float64}}`: vector of `n_sim` many final historical
+  state vectors. If not provided, will be loaded using `prepare_states`
 - `subset_inds::Vector{Int}`: indices specifying the draws we want to use. If a
   more sophisticated selection criterion is desired, the user is responsible for
   determining the indices corresponding to that criterion. If `input_type` is
-  not `subset`, `subset_inds` will be ignored.
+  not `subset`, `subset_inds` will be ignored
 - `subset_string::AbstractString`: short string identifying the subset to be
   appended to the output filenames. If `input_type = :subset` and
   `subset_string` is empty, an error is thrown.
@@ -555,17 +510,16 @@ and conditional data case given by `cond_type`.
   draws can be evenly distributed across workers. This is required by the
   `DistributedArrays` package.
 """
-function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
-    input_type::Symbol = :mode, cond_type::Symbol = :none,
-    output_vars::Vector{Symbol} = Vector{Symbol}(),
+function forecast_one(m::AbstractModel{Float64},
+    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+    df::DataFrame = DataFrame(),
+    systems::DVector{System{Float64}} = dinit(System{Float64}, 0),
+    states::DVector{Vector{Float64}} = dinit(Vector{Float64}, 0),
     subset_inds::Vector{Int} = Vector{Int}(),
     subset_string::AbstractString = "", verbose::Symbol = :low,
     procs::Vector{Int} = [myid()])
 
     ### 1. Setup
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs, Nullable(input_type))
 
     # Prepare forecast outputs
     forecast_output = Dict{Symbol, DArray{Float64}}()
@@ -580,24 +534,15 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         println("Forecast outputs will be saved in $output_dir")
     end
 
-    # Prepare forecast inputs
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("\nPreparing forecast inputs...")
-    end
-    @time_verbose systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
-            cond_type = cond_type, subset_inds = subset_inds, verbose = verbose,
-            procs = procs)
+    # Check that provided forecast inputs are well-formed
+    # If an input is not provided, load it
+    @time_verbose df, systems, states, procs =
+        prepare_forecast_inputs!(m, input_type, cond_type, output_vars; df = df,
+            systems = systems, states = states, subset_inds = subset_inds,
+            verbose = verbose, procs = procs)
 
     nprocs = length(procs)
     ndraws = length(systems)
-
-    # Set forecast_pseudoobservables properly
-    for output in output_vars
-        if contains(string(output), "pseudo")
-            m <= Setting(:forecast_pseudoobservables, true)
-            break
-        end
-    end
 
     # Inline definition s.t. the dicts forecast_output and forecast_output_files are accessible
     function write_forecast_outputs(vars::Vector{Symbol})
