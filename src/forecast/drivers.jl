@@ -588,15 +588,9 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("\nPreparing forecast inputs...")
     end
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        @time systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
+    @time_verbose systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
             cond_type = cond_type, subset_inds = subset_inds, verbose = verbose,
             procs = procs)
-    else
-        systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
-            cond_type = cond_type, subset_inds = subset_inds, verbose = verbose,
-            procs = procs)
-    end
 
     nprocs = length(procs)
     ndraws = length(systems)
@@ -639,13 +633,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("\nFiltering and smoothing $hists_to_compute)...")
         end
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            @time histstates, histshocks, histpseudo, zends =
-                filterandsmooth_all(m, df, systems; cond_type = cond_type, procs = procs)
-        else
-            histstates, histshocks, histpseudo, zends =
-                filterandsmooth_all(m, df, systems; cond_type = cond_type, procs = procs)
-        end
+        @time_verbose histstates, histshocks, histpseudo, zends =
+            filterandsmooth_all(m, df, systems; cond_type = cond_type, procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
@@ -682,13 +671,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("\nForecasting $(intersect(output_vars, forecast_vars))...")
         end
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            @time forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                forecast(m, systems, states; cond_type = cond_type, procs = procs)
-        else
-            forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                forecast(m, systems, states; cond_type = cond_type, procs = procs)
-        end
+        @time_verbose forecaststates, forecastobs, forecastpseudo, forecastshocks =
+            forecast(m, systems, states; cond_type = cond_type, procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
@@ -747,13 +731,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("\nComputing shock decompositions for $(intersect(output_vars, shockdec_vars))...")
         end
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            @time shockdecstates, shockdecobs, shockdecpseudo =
-                shock_decompositions(m, systems, histshocks; procs = procs)
-        else
-            shockdecstates, shockdecobs, shockdecpseudo =
-                shock_decompositions(m, systems, histshocks; procs = procs)
-        end
+        @time_verbose shockdecstates, shockdecobs, shockdecpseudo =
+            shock_decompositions(m, systems, histshocks; procs = procs)
 
         forecast_output[:shockdecstates] = shockdecstates
         forecast_output[:shockdecobs]    = shockdecobs
