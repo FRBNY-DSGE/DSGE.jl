@@ -60,6 +60,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
         # Inputs to optimization algorithm
         n_iterations       = get_setting(m, :optimization_iterations)
         ftol               = 1e-10
+        step_size          = get_setting(m, :optimization_step_size)
         converged          = false
 
         # If the algorithm stops only because we have exceeded the maximum number of
@@ -71,8 +72,9 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
             out, H = optimize!(m, data;
                                method = get_setting(m, :optimization_method),
                                ftol=ftol,
-                               iterations=n_iterations, show_trace=true, verbose=verbose)
-            converged = !out.iteration_converged
+                               iterations=n_iterations, show_trace=true, step_size=step_size,
+                               verbose=verbose)
+            converged = true#!out.iteration_converged
 
             total_iterations += out.iterations
             if VERBOSITY[verbose] >= VERBOSITY[:low]

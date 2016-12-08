@@ -10,6 +10,7 @@ using Debug
 #           store_trace::Bool    = false,
 #           show_trace::Bool     = false,
 #           extended_trace::Bool = false,
+#           step_size::Float64   = .01,
 #           verbose::Symbol      = :none)
 # ```
 
@@ -25,6 +26,7 @@ using Debug
                    store_trace::Bool    = false,
                    show_trace::Bool     = false,
                    extended_trace::Bool = false,
+                   step_size::Float64   = .01,
                    verbose::Symbol      = :none)
 
     # For now, only csminwel should be used
@@ -52,7 +54,7 @@ using Debug
     end
 
 
-    function neighbor_dsge!(x, x_proposal; cc = 0.01)
+    function neighbor_dsge!(x, x_proposal)
         # This function computes a proposal "next step" during simulated annealing.
         # Inputs:
         # - `x`: current position (of non-fixed states)
@@ -79,14 +81,13 @@ using Debug
             for i in para_free_inds
                 r = rand([-1 1]) * rand()
                 prior_cov = !isnull(m.parameters[i].prior) ? moments(get(m.parameters[i].prior))[2] : 0.0
-                @inbounds x_proposal_all[i] = x_all_model[i] + (r * cc * prior_cov)
+                @inbounds x_proposal_all[i] = x_all_model[i] + (r * step_size * prior_cov)
             end
 
             # check that parameters are inbounds, model can be solved,
             # and parameters can be transformed to the real line.
             try
                 update!(m, x_proposal_all)
-                #x_proposal_all = transform_to_real_line(m.parameters, x_proposal_all) 
                 #println("trying to solve model in neighbor")
                 solve(m)
                 #println("done solving model in neighbor")
@@ -94,22 +95,10 @@ using Debug
                 x_proposal_all = transform_to_real_line(m.parameters, x_proposal_all)
                 #println("bounds checked")
                 success = true
-            #catch 
-                #info("something went wrong")
-                #success = false
-                # rethrow(err)
-                #warn("There was a $(typeof(err))")
             end
+            
         end
 
-        # extract free inds
-        # fixed_count = 0
-        # for i in 1:length(para_free_inds)
-        #     if !in(i, para_free_inds)
-        #         fixed_count += 1
-        #     end
-        #     x_proposal[i] = x_proposal_all[i+fixed_count]
-        # end
         x_proposal[1:end] = x_proposal_all[para_free_inds]
 
        return
@@ -118,7 +107,7 @@ using Debug
     rng = m.rng
 
     out, H_ = optimizer(f_opt, x_opt, H0;
-                        xtol = xtol, ftol = ftol, grtol = grtol, iterations = iterations,
+                        xtol = xtol, ftol = ftol, grtol = grtol, iterations = iterations, step_size = step_size,
                         store_trace = store_trace, show_trace = show_trace, extended_trace = extended_trace,
                         neighbor! = neighbor_dsge!, verbose = verbose, rng = rng)
 
