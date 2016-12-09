@@ -139,19 +139,16 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
         # specify the t-1 period for each product
         products = unique(map(get_product, output_vars))
 
-        y0_indexes = Dict{Symbol,Nullable{Int}}()
+        y0_indexes = Dict{Symbol,Int}()
         for prod in intersect(products, [:forecast])
-            y0_indexes[prod] = Nullable(index_forecast_start(m) - 1)
+            y0_indexes[prod] = index_forecast_start(m) - 1
         end
         for prod in intersect(products, [:shockdec])
-            y0_indexes[prod] = Nullable(index_shockdec_start(m) - 1)
+            y0_indexes[prod] = index_shockdec_start(m) - 1
         end
         for prod in intersect(products, [:hist, :dettrend, :trend])
-            y0_indexes[prod] = Nullable(index_mainsample_start(m) - 1)
+            y0_indexes[prod] = index_mainsample_start(m) - 1
         end
-        # for prod in intersect(products, [:trend])
-        #     y0_indexes[prod] = Nullable{Int}()
-        # end
 
         data, y0_indexes
     else
@@ -183,7 +180,7 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
                                                population_data::DataFrame = DataFrame(),
                                                population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                population_forecast_file = "",
-                                               y0_indexes::Dict{Symbol,Nullable{Int}} = Dict{Symbol,Nullable{Int}}(),
+                                               y0_indexes::Dict{Symbol,Int} = Dict{Symbol,Int}(),
                                                data = Matrix{T}(),
                                                verbose::Symbol = :low)
 
@@ -281,7 +278,7 @@ compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                                                      population_data = DataFrame(),
                                                      population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                      population_forecast = DataFrame(),
-                                                     y0_index::Nullable{Int} = Nullable{Int}(),
+                                                     y0_index::Int = -1,
                                                      data = Matrix{T}(),
                                                      verbose::Symbol = :low)
 ```
@@ -303,7 +300,7 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
                                                      population_data = DataFrame(),
                                                      population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                      population_forecast = DataFrame(),
-                                                     y0_index::Nullable{Int} = Nullable{Int}(),
+                                                     y0_index::Int = -1,
                                                      data = Matrix{T}(),
                                                      verbose::Symbol = :low)
 
@@ -426,7 +423,7 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
             transformed_fcast_output = if transform in [logtopct_annualized_percapita]
                 transform(fcast_series, population_series)
             elseif transform in [loglevelto4qpct_annualized_percapita]
-                hist_data = data[ind, get(y0_index)]
+                hist_data = data[ind, y0_index]
                 transform(fcast_series, hist_data, population_series)
             else
                 transform(fcast_series)
@@ -467,7 +464,7 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
 
                 transform(fcast_series, population_series)
             elseif transform in [loglevelto4qpct_annualized_percapita]
-                hist_data = data[ind, get(y0_index)]
+                hist_data = data[ind, y0_index]
 
                 println(transform)
                 println("fcast_output: $(typeof(fcast_output))")

@@ -1,7 +1,7 @@
 """
 ```
 compute_means_bands_shockdec(fcast_output, transforms, var_inds, shock_inds, date_list,
-                             data = [], population_forecast = DataFrame(), y0_index = 0)
+                             data = [], population_forecast = DataFrame(), y0_index = -1)
 ```
 
 
@@ -19,7 +19,7 @@ function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
                                                         date_list::Vector{Date};
                                                         data::Matrix{T} = Matrix{T}(),
                                                         population_series = Vector{T}(),
-                                                        y0_index::Nullable{Int} = Nullable{Int}(),
+                                                        y0_index::Int = -1,
                                                         density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9])
 
 
@@ -39,7 +39,7 @@ function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
             transformed_fcast_output = if transform in [logtopct_annualized_percapita]
                 transform(fcast_series, population_series)
             elseif transform in [loglevelto4qpct_annualized_percapita]
-                hist_data = data[var_ind, get(y0_index)]
+                hist_data = data[var_ind, y0_index]
                 transform(fcast_series, hist_data, population_series)
             else
                 transform(fcast_series)

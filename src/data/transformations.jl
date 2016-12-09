@@ -271,8 +271,6 @@ probably shouldn't be used for any other observables.
 - `y0`: The last data point in the history (of state or observable)
   corresponding to the `y` variable.  This is required to compute a percentage
   change for the first period.
-
-- `pop_growth::Vector`: The length `nperiods` vector of population growth rates.
 """
 function loglevelto4qpct_annualized{T<:AbstractFloat}(y::Array, y0::T)
     # `y_t1` is an array of the same size as `y`, representing the previous
