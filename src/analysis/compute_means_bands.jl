@@ -422,13 +422,14 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
             # apply transformation to all draws
             transform = parse_transform(transforms[series])
             fcast_series = squeeze(fcast_output[:, ind, :], 2)
+
             transformed_fcast_output = if transform in [logtopct_annualized_percapita]
                 transform(fcast_series, population_series)
             elseif transform in [loglevelto4qpct_annualized_percapita]
                 hist_data = data[ind, get(y0_index)]
                 transform(fcast_series, hist_data, population_series)
             else
-                map(transform, fcast_series)
+                transform(fcast_series)
             end
 
             # compute the mean and bands across draws and add to dataframe
@@ -445,10 +446,10 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
         means = DataFrame()
         bands = Dict{Symbol,DataFrame}()
 
-        # we need to repmat the trend because population adjustments
-        # will be different in each period. Now we have something
-        # that's nperiods x nvars
-        fcast_output = repmat(fcast_output, length(date_list), 1)
+        # `fcast_output` is of size `ndraws` x `nvars`. We need to use `repeat`
+        # below because population adjustments will be different in each
+        # period. Now we have something of size `ndraws` x `nvars` x `nperiods`
+        fcast_output = repeat(fcast_output, outer = [1, 1, length(date_list)])
 
         # for each series (ie each pseudoobs, each obs, or each state):
         # 1. apply the appropriate transform
@@ -457,13 +458,14 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
 
             # apply transformation to all draws.
             transform = parse_transform(transforms[series])
+            fcast_series = squeeze(fcast_output[:, ind, :], 2)
 
             transformed_fcast_output = if transform in [logtopct_annualized_percapita]
                 println("fcast_output: $size(fcast_output)")
                 println("y: $(size(fcast_output[ind]))")
                 println("y: $(size(population_series))")
 
-                transform(fcast_output[:, ind], population_series)
+                transform(fcast_series, population_series)
             elseif transform in [loglevelto4qpct_annualized_percapita]
                 hist_data = data[ind, get(y0_index)]
 
@@ -474,18 +476,18 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
                 println("hist_data: $(hist_data)")
                 println("population_series: $(size(population_series))")
 
-                transform(fcast_output[:, ind]', hist_data, population_series')
+                transform(fcast_series, hist_data, population_series)
             else
-                transform(fcast_output[:, ind])
+                transform(fcast_series)
             end
 
             println("transformed_fcast_output: $(size(transformed_fcast_output))")
             transformed_fcast_output = reshape(transformed_fcast_output, 1, length(transformed_fcast_output))
-            bands_one = find_density_bands(transformed_fcast_output, density_bands, minimize=false)
 
             # compute the mean and bands across draws and add to dataframe
             means[series] = vec(mean(transformed_fcast_output,1))
-            bands[series] = bands_one
+            bands[series] = find_density_bands(transformed_fcast_output, density_bands, minimize=false)
+            bands[series][:date] = date_list
         end
 
         means, bands

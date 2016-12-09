@@ -34,14 +34,15 @@ function compute_means_bands_shockdec{T<:AbstractFloat}(fcast_output::Array{T},
     for (shock, shock_ind) in shock_inds
         for (var, var_ind) in variable_indices
             transform = DSGE.parse_transform(transforms[var])
+            fcast_series = squeeze(fcast_output[:, var_ind, :, shock_ind], 2)
 
             transformed_fcast_output = if transform in [logtopct_annualized_percapita]
-                transform(squeeze(fcast_output[:,var_ind,:,shock_ind],2), population_series)
+                transform(fcast_series, population_series)
             elseif transform in [loglevelto4qpct_annualized_percapita]
-                transform(squeeze(fcast_output[:,var_ind,:,shock_ind],2),
-                          data[var_ind, get(y0_index)], population_series)
+                hist_data = data[var_ind, get(y0_index)]
+                transform(fcast_series, hist_data, population_series)
             else
-                transform(squeeze(fcast_output[:,var_ind,:,shock_ind],2))
+                transform(fcast_series)
             end
 
             means[symbol("$var$DSGE_SHOCKDEC_DELIM$shock")] = vec(mean(transformed_fcast_output,1))
