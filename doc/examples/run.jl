@@ -2,9 +2,9 @@ using DSGE
 
 # construct a model object
 m = Model990()
-#save = saveroot(m);
-#specify_mode!(m, "$save/output_data/m990/ss2/estimate/raw/paramsmode_vint=151127.h5")
-#m <= Setting(:reoptimize, true)
+save = saveroot(m);
+specify_mode!(m, "$save/output_data/m990/ss2/estimate/raw/paramsmode_vint=150102_iris.h5")
+m <= Setting(:reoptimize, true)
 #specify_hessian(m, "$save/output_data/m990/ss2/estimate/raw/hessian_vint=151127.h5")
 #m <= Setting(:calculate_hessian, true)
 
