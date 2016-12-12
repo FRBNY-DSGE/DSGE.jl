@@ -78,10 +78,6 @@ function smooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     shocks_range = (nstates + 1):(nstates + nshocks)
     pseudo_range = (nstates + nshocks + 1):(nstates + nshocks + npseudo)
 
-    # Broadcast models and data matrices
-    models = dfill(m,    (ndraws,), procs, [nprocs])
-    datas  = dfill(data, (ndraws,), procs, [nprocs])
-
     # Construct distributed array of smoothed states and shocks
     out = DArray((ndraws, nstates + nshocks + npseudo, nperiods), procs, [nprocs, 1, 1]) do I
         localpart = zeros(map(length, I)...)
@@ -89,7 +85,7 @@ function smooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         ndraws_local = length(draw_inds)
 
         for i in draw_inds
-            states, shocks, pseudo = smooth(models[i], datas[i], systems[i], kals[i])
+            states, shocks, pseudo = smooth(m, data, systems[i], kals[i])
 
             i_local = mod(i-1, ndraws_local) + 1
 

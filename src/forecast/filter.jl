@@ -66,24 +66,9 @@ function filter_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     ndraws = length(systems)
     nprocs = length(procs)
 
-    # Broadcast models and data matrices
-    models = dfill(m,    (ndraws,), procs, [nprocs])
-    datas  = dfill(data, (ndraws,), procs, [nprocs])
-    z0s    = dfill(z0,   (ndraws,), procs, [nprocs])
-    vz0s   = dfill(vz0,  (ndraws,), procs, [nprocs])
-
     # Construct distributed array of Kalman objects
-    kals = DArray((ndraws,), procs, [nprocs]) do I
-        draw_inds = first(I)
-        ndraws_local = length(draw_inds)
-        localpart = Vector{Kalman{S}}(ndraws_local)
-
-        for i in draw_inds
-            i_local = mod(i-1, ndraws_local) + 1
-            localpart[i_local] = filter(models[i], datas[i], systems[i], z0s[i], vz0s[i];
-                                        allout = allout, include_presample = include_presample)
-        end
-        return localpart
+    kals = map(systems) do system
+        filter(m, data, system, z0, vz0; allout = allout, include_presample = include_presample)
     end
 end
 
@@ -238,12 +223,6 @@ function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
     shocks_range = (nstates + 1):(nstates + nshocks)
     pseudo_range = (nstates + nshocks + 1):(nstates + nshocks + npseudo)
 
-    # Broadcast models and data matrices
-    models = dfill(m,    (ndraws,), procs, [nprocs])
-    datas  = dfill(data, (ndraws,), procs, [nprocs])
-    z0s    = dfill(z0,   (ndraws,), procs, [nprocs])
-    vz0s   = dfill(vz0,  (ndraws,), procs, [nprocs])
-
     # Construct distributed array of smoothed states, shocks, and pseudo-observables
     out = DArray((ndraws, nstates + nshocks + npseudo, nperiods), procs, [nprocs, 1, 1]) do I
         localpart = zeros(map(length, I)...)
@@ -251,7 +230,7 @@ function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
         ndraws_local = length(draw_inds)
 
         for i in draw_inds
-            states, shocks, pseudo = filterandsmooth(models[i], datas[i], systems[i], z0s[i], vz0s[i])
+            states, shocks, pseudo = filterandsmooth(m, data, systems[i], z0, vz0)
 
             i_local = mod(i-1, ndraws_local) + 1
 
