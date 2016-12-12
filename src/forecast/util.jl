@@ -203,6 +203,106 @@ end
 
 """
 ```
+transplant_history(cond_type, last_hist_period, history)
+```
+
+Remove the smoothed states, shocks, or pseudo-observables corresponding to
+conditional data periods. This is necessary because when we forecast with
+conditional data, we smooth beyond the last historical period. If
+`cond_type == :none`, `history` is returned unchanged.
+"""
+function transplant_history{T<:AbstractFloat}(cond_type::Symbol,
+    last_hist_period::Int, history::DArray{T, 3})
+
+    if cond_type in [:full, :semi]
+        return convert(DArray, history[1:end, 1:end, 1:last_hist_period])
+    else
+        return history
+    end
+end
+
+"""
+```
+transplant_forecast(cond_type, last_hist_period, history, forecast)
+```
+
+Transplant the smoothed states, shocks, or pseudo-observables corresponding to
+conditional data periods from the history to the forecast. If `cond_type == :none`,
+`forecast` is returned unchanged.
+"""
+function transplant_forecast{T<:AbstractFloat}(cond_type::Symbol,
+    last_hist_period::Int, history::DArray{T, 3}, forecast::DArray{T, 3})
+
+    if cond_type in [:full, :semi]
+        procs  = collect(history.pids)
+        nprocs = length(procs)
+
+        (ndraws, nvars, nfcastperiods) = size(forecast)
+        ncondperiods = size(history, 3) - last_hist_period
+        nperiods     = ncondperiods + nfcastperiods
+        cond_range   = (last_hist_period + 1):(last_hist_period + ncondperiods)
+
+        return DArray((ndraws, nvars, nperiods), procs, [nprocs, 1, 1]) do I
+            draw_inds    = first(I)
+            cond_draws   = convert(Array, history[draw_inds, :, cond_range])
+            fcast_draws  = convert(Array, forecast[draw_inds, :, :])
+            return cat(3, cond_draws, fcast_draws)
+        end
+    else
+        return forecast
+    end
+end
+
+"""
+```
+transplant_forecast_observables(cond_type, last_hist_period, histstates, forecastobs)
+```
+
+Transplant the observables implied by `histstates` corresponding to
+conditional data periods from the history to the forecast. If `cond_type == :none`,
+`forecastobs` is returned unchanged.
+
+This exists as a separate function from `transplant_forecast` because we don't
+usually map the smoothed historical states into observables, since they would
+just give us back the data. However, in the conditional data periods, we only
+have data for a subset of observables, so we need to get the remaining
+observables by mapping the smoothed states.
+"""
+function transplant_forecast_observables{T<:AbstractFloat}(cond_type::Symbol,
+    last_hist_period::Int, histstates::DArray{T, 3}, forecastobs::DArray{T, 3},
+    systems::DVector{System{T}})
+
+    if cond_type in [:full, :semi]
+        procs  = collect(histstates.pids)
+        nprocs = length(procs)
+
+        (ndraws, nvars, nfcastperiods) = size(forecastobs)
+        ncondperiods = size(histstates, 3) - last_hist_period
+        nperiods     = ncondperiods + nfcastperiods
+        cond_range   = (last_hist_period + 1):(last_hist_period + ncondperiods)
+
+        return DArray((ndraws, nvars, nperiods), procs, [nprocs, 1, 1]) do I
+            draw_inds = first(I)
+            ndraws_local = length(draw_inds)
+
+            # Map conditional period smoothed states to observables
+            cond_draws = zeros(ndraws_local, nvars, ncondperiods)
+            for i in draw_inds
+                i_local = mod(i-1, ndraws_local) + 1
+                states_i = convert(Array, slice(histstates, i, :, cond_range))
+                cond_draws[i_local, :, :] = systems[i][:ZZ]*states_i .+ systems[i][:DD]
+            end
+
+            fcast_draws = convert(Array, forecastobs[draw_inds, :, :])
+            return cat(3, cond_draws, fcast_draws)
+        end
+    else
+        return forecastobs
+    end
+end
+
+"""
+```
 write_darray(filepath::AbstractString, darr::DArray)
 ```
 

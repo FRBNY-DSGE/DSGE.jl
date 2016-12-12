@@ -507,14 +507,14 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     ### 2. Smoothed Histories
 
-    # Must re-run filter/smoother for conditional data in addition to explicit cases
+    # Must run smoother for conditional data in addition to explicit cases
     hist_vars = [:histstates, :histpseudo, :histshocks]
     shockdec_vars = [:shockdecstates, :shockdecpseudo, :shockdecobs]
     dettrend_vars = [:dettrendstates, :dettrendpseudo, :dettrendobs]
-    filterandsmooth_vars = vcat(hist_vars, shockdec_vars, dettrend_vars)
+    smooth_vars = vcat(hist_vars, shockdec_vars, dettrend_vars)
 
     hists_to_compute = intersect(output_vars, hist_vars)
-    if !isempty(intersect(output_vars, filterandsmooth_vars)) || cond_type in [:semi, :full]
+    if !isempty(intersect(output_vars, smooth_vars)) || cond_type in [:semi, :full]
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("\nFiltering and smoothing $hists_to_compute)...")
@@ -523,20 +523,11 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             smooth_all(m, df, systems, kals; cond_type = cond_type, procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
-        if cond_type in [:semi, :full]
-            T = n_mainsample_periods(m)
-
-            forecast_output[:histstates] = convert(DArray, histstates[1:end, 1:end, 1:T])
-            forecast_output[:histshocks] = convert(DArray, histshocks[1:end, 1:end, 1:T])
-            if :histpseudo in output_vars
-                forecast_output[:histpseudo] = convert(DArray, histpseudo[1:end, 1:end, 1:T])
-            end
-        else
-            forecast_output[:histstates] = histstates
-            forecast_output[:histshocks] = histshocks
-            if :histpseudo in output_vars
-                forecast_output[:histpseudo] = histpseudo
-            end
+        T = n_mainsample_periods(m)
+        forecast_output[:histstates] = transplant_history(cond_type, T, histstates)
+        forecast_output[:histshocks] = transplant_history(cond_type, T, histshocks)
+	    if :histpseudo in output_vars
+            forecast_output[:histpseudo] = transplant_history(cond_type, T, histpseudo)
         end
 
         write_forecast_outputs(hists_to_compute)
@@ -555,51 +546,13 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             forecast(m, systems, kals; cond_type = cond_type, procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
-        if cond_type in [:semi, :full]
-            T = n_mainsample_periods(m)
-            ncondperiods = size(histstates, 3) - T
-            cond_range = (T+1):(T+ncondperiods)
-            nperiods = ncondperiods + size(forecaststates, 3)
-            nobs = n_observables(m)
-
-            function cat_conditional(histvars::DArray{Float64, 3}, forecastvars::DArray{Float64, 3})
-                nvars = size(histvars, 2)
-                return DArray((ndraws, nvars, nperiods), procs, [nprocs, 1, 1]) do I
-                    draw_inds = first(I)
-                    hist_cond = convert(Array, histvars[draw_inds, :, cond_range])
-                    forecast  = convert(Array, forecastvars[draw_inds, :, :])
-                    return cat(3, hist_cond, forecast)
-                end
-            end
-
-            forecast_output[:forecaststates] = cat_conditional(histstates, forecaststates)
-            forecast_output[:forecastshocks] = cat_conditional(histshocks, forecastshocks)
-	        if :forecastpseudo in output_vars
-                forecast_output[:forecastpseudo] = cat_conditional(histpseudo, forecastpseudo)
-            end
-            forecast_output[:forecastobs] =
-                DArray((ndraws, nobs, nperiods), procs, [nprocs, 1, 1]) do I
-                    draw_inds = first(I)
-                    ndraws_local = length(draw_inds)
-
-                    # Map conditional period smoothed states to observables
-                    hist_cond = zeros(ndraws_local, nobs, ncondperiods)
-                    for i in draw_inds
-                        i_local = mod(i-1, ndraws_local) + 1
-                        hist_cond[i_local, :, :] = systems[i][:ZZ] * convert(Array, slice(histstates, i, :, cond_range)) + systems[i][:DD]
-                    end
-
-                    forecast = convert(Array, forecastobs[draw_inds, :, :])
-                    return cat(3, hist_cond, forecast)
-                end
-        else
-            forecast_output[:forecaststates] = forecaststates
-            forecast_output[:forecastshocks] = forecastshocks
-            forecast_output[:forecastobs]    = forecastobs
-            if :forecastpseudo in output_vars
-                forecast_output[:forecastpseudo] = forecastpseudo
-            end
+        forecast_output[:forecaststates] = transplant_forecast(cond_type, T, histstates, forecaststates)
+        forecast_output[:forecastshocks] = transplant_forecast(cond_type, T, histshocks, forecastshocks)
+	    if :forecastpseudo in output_vars
+            forecast_output[:forecastpseudo] = transplant_forecast(cond_type, T, histpseudo, forecastpseudo)
         end
+        forecast_output[:forecastobs] = transplant_forecast_observables(cond_type, T,
+                                            histstates, forecastobs, systems)
 
         write_forecast_outputs(forecasts_to_compute)
     end
