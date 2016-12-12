@@ -303,6 +303,33 @@ end
 
 """
 ```
+write_forecast_outputs(m, output_vars, forecast_output_files, forecast_output; verbose = :low)
+```
+
+Writes the elements of `forecast_output` indexed by `output_vars` to file, given
+`forecast_output_files`, which maps `output_vars` to file names. Calls
+`write_darray`.
+"""
+function write_forecast_outputs(m::AbstractModel, output_vars::Vector{Symbol},
+                                forecast_output_files::Dict{Symbol,ASCIIString},
+                                forecast_output::Dict{Symbol, DArray{Float64}};
+                                verbose::Symbol = :low)
+
+    for var in output_vars
+        filepath = forecast_output_files[var]
+        jldopen(filepath, "w") do file
+            write_forecast_metadata(m, file, var)
+        end
+        write_darray(filepath, forecast_output[var])
+
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
+            println(" * Wrote $(basename(filepath))")
+        end
+    end
+end
+
+"""
+```
 write_darray(filepath::AbstractString, darr::DArray)
 ```
 

@@ -460,7 +460,6 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     forecast_output = Dict{Symbol, DArray{Float64}}()
     forecast_output_files = get_output_files(m, "forecast", input_type, output_vars, cond_type;
                                 subset_string = subset_string)
-
     output_dir = rawpath(m, "forecast")
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -486,21 +485,6 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         if contains(string(output), "pseudo")
             m <= Setting(:forecast_pseudoobservables, true)
             break
-        end
-    end
-
-    # Inline definition s.t. the dicts forecast_output and forecast_output_files are accessible
-    function write_forecast_outputs(vars::Vector{Symbol})
-        for var in vars
-            filepath = forecast_output_files[var]
-            jldopen(filepath, "w") do file
-                write_forecast_metadata(m, file, var)
-            end
-            write_darray(filepath, forecast_output[var])
-
-            if VERBOSITY[verbose] >= VERBOSITY[:high]
-                println(" * Wrote $(basename(filepath))")
-            end
         end
     end
 
@@ -530,7 +514,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             forecast_output[:histpseudo] = transplant_history(cond_type, T, histpseudo)
         end
 
-        write_forecast_outputs(hists_to_compute)
+        write_forecast_outputs(m, hists_to_compute, forecast_output_files, forecast_output; verbose = verbose)
     end
 
 
@@ -554,7 +538,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         forecast_output[:forecastobs] = transplant_forecast_observables(cond_type, T,
                                             histstates, forecastobs, systems)
 
-        write_forecast_outputs(forecasts_to_compute)
+        write_forecast_outputs(m, forecasts_to_compute, forecast_output_files, forecast_output; verbose = verbose)
     end
 
 
@@ -573,7 +557,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             forecast_output[:shockdecpseudo] = shockdecpseudo
         end
 
-        write_forecast_outputs(shockdecs_to_compute)
+        write_forecast_outputs(m, shockdecs_to_compute, forecast_output_files, forecast_output; verbose = verbose)
     end
 
 
@@ -595,7 +579,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             forecast_output[:trendpseudo] = trendpseudo
         end
 
-        write_forecast_outputs(trends_to_compute)
+        write_forecast_outputs(m, trends_to_compute, forecast_output_files, forecast_output; verbose = verbose)
     end
 
     ### 6. Deterministic Trend
@@ -624,7 +608,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         end
 
         dettrend_write_vars = [symbol("dettrend$c") for c in unique(map(get_class, dettrends_to_compute))]
-        write_forecast_outputs(dettrends_to_compute)
+        write_forecast_outputs(m, dettrends_to_compute, forecast_output_files, forecast_output; verbose = verbose)
     end
 
 
