@@ -753,13 +753,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("\nComputing trend for $(intersect(output_vars, trend_vars))...")
         end
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            @time trendstates, trendobs, trendpseudo =
-                trends(m, systems; procs = procs)
-        else
-            trendstates, trendobs, trendpseudo =
-                trends(m, systems; procs = procs)
-        end
+        @time_verbose trendstates, trendobs, trendpseudo =
+            trends(m, systems; procs = procs)
 
         forecast_output[:trendstates] = trendstates
         forecast_output[:trendobs]    = trendobs
@@ -786,13 +781,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("\nComputing deterministic trend for $dettrends_to_compute...")
         end
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            @time dettrendstates, dettrendobs, dettrendpseudo =
-                deterministic_trends(m, systems, z0s; procs = procs)
-        else
-            dettrendstates, dettrendobs, dettrendpseudo =
-                deterministic_trends(m, systems, z0s; procs = procs)
-        end
+        @time_verbose dettrendstates, dettrendobs, dettrendpseudo =
+            deterministic_trends(m, systems, z0s; procs = procs)
 
         forecast_output[:dettrendstates] = dettrendstates
         forecast_output[:dettrendobs]    = dettrendobs
