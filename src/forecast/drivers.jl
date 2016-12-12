@@ -112,8 +112,6 @@ to null values of appropriate types.
   transition matrix draws
 - `CCC::Array{Float64, 3}`: array of size `nsim` x `nstates` x 1 of transition
   matrix draws
-- `zend::Matrix{Float64}`: matrix of size `nsim` x `nstates` of final historical
-  period state vector draws
 
 where `nsim` is the number of draws saved in Metropolis-Hastings.
 
@@ -144,7 +142,6 @@ function load_draws(m::AbstractModel, input_type::Symbol;
         TTT  = Array{Float64}(0,0,0)
         RRR  = Array{Float64}(0,0,0)
         CCC  = Array{Float64}(0,0,0)
-        zend = Array{Float64}(0,0)
 
     elseif input_type in [:full, :subset]
         if input_type == :full
@@ -152,7 +149,6 @@ function load_draws(m::AbstractModel, input_type::Symbol;
                 params = map(Float64, read(f, "mhparams"))
                 TTT    = map(Float64, read(f, "mhTTT"))
                 RRR    = map(Float64, read(f, "mhRRR"))
-                zend   = map(Float64, read(f, "mhzend"))
                 if "mhCCC" in names(f)
                     CCC = map(Float64, read(f, "mhCCC"))
                 else
@@ -167,7 +163,6 @@ function load_draws(m::AbstractModel, input_type::Symbol;
                 params = map(Float64, read(f, "mhparams")[subset_inds, :])
                 TTT    = map(Float64, read(f, "mhTTT")[subset_inds, :, :])
                 RRR    = map(Float64, read(f, "mhRRR")[subset_inds, :, :])
-                zend   = map(Float64, read(f, "mhzend")[subset_inds, :])
                 if "mhCCC" in names(f)
                     CCC = map(Float64, read(f, "mhCCC")[subset_inds, :])
                 else
@@ -188,7 +183,6 @@ function load_draws(m::AbstractModel, input_type::Symbol;
             params = params[1:nsim_new, :]
             TTT    = TTT[1:nsim_new, :, :]
             RRR    = RRR[1:nsim_new, :, :]
-            zend   = zend[1:nsim_new, :]
             if !isempty(CCC)
                 CCC = CCC[1:nsim_new, :, :]
             end
@@ -201,10 +195,9 @@ function load_draws(m::AbstractModel, input_type::Symbol;
         TTT  = Array{Float64}(0,0,0)
         RRR  = Array{Float64}(0,0,0)
         CCC  = Array{Float64}(0,0,0)
-        zend = Array{Float64}(0,0)
     end
 
-    return params, TTT, RRR, CCC, zend
+    return params, TTT, RRR, CCC
 end
 
 """
@@ -311,113 +304,6 @@ end
 
 """
 ```
-prepare_states(m, input_type, cond_type, systems, params, df, zend;
-    procs = [myid()])
-```
-
-Prepare the final historical state vector(s) for this combination of
-forecast inputs. The final state vector is assumed to be from the period
-corresponding to the final row of `df`. In the single-draw and
-conditional cases, the final state vector is computed by running the
-Kalman filter. In the multi-draw, unconditional cases, where the final
-state vector has been successfully precomputed, final state vectors
-are repackaged for inputs to the forecast.
-
-### Inputs
-
-- `m::AbstractModel`: model object
-- `input_type::Symbol`: See documentation for `forecast_all`
-- `cond_type::Symbol`: See documentation for `forecast_all`
-- `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
-  objects
-- `params::Matrix{Float64}`: matrix of size `n_sim` x `nstates` of parameter
-  draws from estimation. `systems[i]` is the `System` computed using
-  `params[i*jstep, :]`
-- `df::DataFrame`: historical data. If `cond_type in [:semi, :full]`, then the
-   final row of `df` should be the period containing conditional data
-- `zend::Matrix{Float64}`: matrix, either empty or of size `n_sim` x `nstates`,
-  of final state vectors read in from `load_draws`
-
-where `n_sim_forecast = n_sim / jstep` is the number of draws after thinning a
-second time.
-
-### Keyword arguments
-
-- `procs::Vector{Int}`: list of worker processes that have been
-  previously added by the user. Defaults to `[myid()]`
-
-### Outputs
-
-- `states::DVector{Vector{Float64}}`: vector of `n_sim` many final historical
-  state vectors
-
-### Notes
-
-In all cases, the initial values in the forecast are the final historical state
-vectors that are returned from the Kalman filter, not the Kalman or
-Durbin-Koopman smoother (though these are the same in the case of the Kalman
-smoother). These are the correct values to use because the Kalman filter returns
-the actual mean (`s_{T|T}`) and variance (`P_{T|T}`) of the states given the
-parameter draw, while the simulation smoother takes into account the uncertainty
-in the parameter draw. Since we only compute one final historical state vector
-for each parameter draw, we want to use the analytical mean and variance as the
-starting points in the forecast.
-"""
-function prepare_states(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
-    systems::DVector{System{Float64}, Vector{System{Float64}}},
-    params::Matrix{Float64}, df::DataFrame, zend::Matrix{Float64};
-    procs::Vector{Int} = [myid()])
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs, Nullable(input_type))
-
-    # Setup
-    n_sim_forecast = length(systems)
-    n_sim = size(params, 1)
-    jstep = convert(Int, n_sim/n_sim_forecast)
-
-    # If we just have one draw of parameters in mode, mean, or init case, then we don't have the
-    # pre-computed system matrices. We now recompute them here by running the Kalman filter.
-    if input_type in [:mean, :mode, :init]
-        update!(m, vec(params))
-        kal = filter(m, df, systems[1]; cond_type = cond_type, allout = true)
-        # `kals` is a vector of length 1
-        states = dfill(kal[:filt][:, end], (1,), procs);
-
-    # If we have many draws, then we must package them into a vector of System objects.
-    elseif input_type in [:full, :subset]
-        if cond_type in [:none]
-            nprocs = length(procs)
-            states = DArray((n_sim_forecast,), procs, [nprocs]) do I
-                draw_inds = first(I)
-                ndraws_local = convert(Int, n_sim_forecast/nprocs)
-                localpart = Vector{Vector{Float64}}(ndraws_local)
-
-                for i in draw_inds
-                    j = i * jstep
-                    i_local = mod(i-1, ndraws_local) + 1
-
-                    localpart[i_local] = vec(zend[j, :])
-                end
-                return localpart
-            end
-        elseif cond_type in [:semi, :full]
-            # We will need to re-run the entire filter/smoother so we can't do anything
-            # here. The reason is that while we have $s_{T|T}$ we don't have $P_{T|T}$ and
-            # thus can't "restart" the Kalman filter for the conditional data period.
-            states = dfill(Vector{Float64}(), (0,), procs)
-        else
-            throw(ArgumentError("Not implemented for this `cond_type`."))
-        end
-    else
-        throw(ArgumentError("Not implemented for this `input_type`."))
-    end
-
-    return states
-end
-
-"""
-```
 prepare_forecast_inputs(m, df; input_type = :mode, cond_type = :none,
     subset_inds = [], verbose = :low, procs = [myid()])
 ```
@@ -465,16 +351,16 @@ function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     procs = reset_procs(m, procs, Nullable(input_type))
 
     # Set up infiles
-    params, TTT, RRR, CCC, zend = load_draws(m, input_type; subset_inds = subset_inds,
+    params, TTT, RRR, CCC = load_draws(m, input_type; subset_inds = subset_inds,
                                       verbose = verbose, procs = procs)
 
     # Populate systems vector
     systems = prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = procs)
 
     # Populate states vector
-    states = prepare_states(m, input_type, cond_type, systems, params, df, zend; procs = procs)
+    kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
 
-    return systems, states
+    return systems, kals
 end
 
 """
@@ -588,7 +474,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("\nPreparing forecast inputs...")
     end
-    @time_verbose systems, states = prepare_forecast_inputs(m, df; input_type = input_type,
+    @time_verbose systems, kals = prepare_forecast_inputs(m, df; input_type = input_type,
             cond_type = cond_type, subset_inds = subset_inds, verbose = verbose,
             procs = procs)
 
@@ -633,8 +519,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("\nFiltering and smoothing $hists_to_compute)...")
         end
-        @time_verbose histstates, histshocks, histpseudo, zends =
-            filterandsmooth_all(m, df, systems; cond_type = cond_type, procs = procs)
+        @time_verbose histstates, histshocks, histpseudo =
+            smooth_all(m, df, systems, kals; cond_type = cond_type, procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]
@@ -659,12 +545,6 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     ### 3. Forecasts
 
-    # For conditional data, use the end of the hist states as the initial state
-    # vector for the forecast
-    if cond_type in [:semi, :full]
-        states = zends
-    end
-
     forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks]
     forecasts_to_compute = intersect(output_vars, forecast_vars)
     if !isempty(forecasts_to_compute)
@@ -672,7 +552,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             println("\nForecasting $(intersect(output_vars, forecast_vars))...")
         end
         @time_verbose forecaststates, forecastobs, forecastpseudo, forecastshocks =
-            forecast(m, systems, states; cond_type = cond_type, procs = procs)
+            forecast(m, systems, kals; cond_type = cond_type, procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:semi, :full]

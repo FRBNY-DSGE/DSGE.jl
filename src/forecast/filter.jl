@@ -191,8 +191,6 @@ where `S<:AbstractFloat`.
 - `pseudo::DArray{S, 3}`: array of size `ndraws` x `npseudo` x `hist_periods` of
   pseudo-observables computed from the smoothed states for each draw. If
   `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
-- `zends::DVector{Vector{S}}`: vector of `ndraws` many final state vectors (each
-  length `nstates`) for the corresponding draws
 
 ### Notes
 
@@ -233,13 +231,12 @@ function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
     nperiods = size(data, 2) - n_presample_periods(m)
 
     nstates = n_states_augmented(m)
-    npseudo = n_pseudoobservables(m)
     nshocks = n_shocks_exogenous(m)
+    npseudo = n_pseudoobservables(m)
 
     states_range = 1:nstates
     shocks_range = (nstates + 1):(nstates + nshocks)
     pseudo_range = (nstates + nshocks + 1):(nstates + nshocks + npseudo)
-    zend_range   = nstates + nshocks + npseudo + 1
 
     # Broadcast models and data matrices
     models = dfill(m,    (ndraws,), procs, [nprocs])
@@ -248,13 +245,13 @@ function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
     vz0s   = dfill(vz0,  (ndraws,), procs, [nprocs])
 
     # Construct distributed array of smoothed states, shocks, and pseudo-observables
-    out = DArray((ndraws, nstates + nshocks + npseudo + 1, nperiods), procs, [nprocs, 1, 1]) do I
+    out = DArray((ndraws, nstates + nshocks + npseudo, nperiods), procs, [nprocs, 1, 1]) do I
         localpart = zeros(map(length, I)...)
         draw_inds = first(I)
         ndraws_local = length(draw_inds)
 
         for i in draw_inds
-            states, shocks, pseudo, zend = filterandsmooth(models[i], datas[i], systems[i], z0s[i], vz0s[i])
+            states, shocks, pseudo = filterandsmooth(models[i], datas[i], systems[i], z0s[i], vz0s[i])
 
             i_local = mod(i-1, ndraws_local) + 1
 
@@ -263,7 +260,6 @@ function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
             if forecast_pseudoobservables(m)
                 localpart[i_local, pseudo_range, :] = pseudo
             end
-            localpart[i_local, zend_range,   1:nstates] = zend
         end
         return localpart
     end
@@ -272,12 +268,9 @@ function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
     states = convert(DArray, out[1:ndraws, states_range, 1:nperiods])
     shocks = convert(DArray, out[1:ndraws, shocks_range, 1:nperiods])
     pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods])
-    zend   = DArray((ndraws,), procs, [nprocs]) do I
-        Vector{S}[convert(Array, slice(out, i, zend_range, 1:nstates)) for i in first(I)]
-    end
 
     # Index out SubArray for each smoothed type
-    return states, shocks, pseudo, zend
+    return states, shocks, pseudo
 end
 
 """
@@ -318,7 +311,6 @@ where `S<:AbstractFloat`.
 - `pseudo::Matrix{S}`: matrix of size `npseudo` x `hist_periods` of
   pseudo-observables computed from the smoothed states. If
   `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
-- `zend::Vector{S}`: final state vector of length `nstates`
 
 ### Notes
 
@@ -387,5 +379,5 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         Matrix{S}()
     end
 
-    return states, shocks, pseudo, kal[:zend]
+    return states, shocks, pseudo
 end

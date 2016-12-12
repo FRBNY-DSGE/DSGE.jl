@@ -1,5 +1,8 @@
 """
 ```
+forecast(m, systems, kals; shocks = dzeros(S, (0, 0, 0), [myid()]),
+    procs = [myid()])
+
 forecast(m, systems, z0s; shocks = dzeros(S, (0, 0, 0), [myid()]),
     procs = [myid()])
 ```
@@ -12,8 +15,9 @@ state vectors, and optionally an array of shocks.
 - `m::AbstractModel`: model object
 - `systems::DVector{System{S}}`: vector of `System` objects specifying
   state-space system matrices for each draw
-- `z0s::DVector{Vector{S}}`: vector of state vectors in the final historical
-  period (aka inital forecast period)
+- `kals::DVector{Kalman{S}}` or `z0s::DVector{Vector{S}}`: either a vector of
+  `Kalman` objects or a vector of state vectors in the final historical period
+  (aka inital forecast period)
 
 where `S<:AbstractFloat`.
 
@@ -40,6 +44,17 @@ where `S<:AbstractFloat`.
 - `shocks::DArray{S, 3}`: array of size `ndraws` x `nshocks` x `horizon` of
   shock innovations for each draw
 """
+function forecast{S<:AbstractFloat}(m::AbstractModel,
+    systems::DVector{System{S}, Vector{System{S}}},
+    kals::DVector{Kalman{S}, Vector{Kalman{S}}};
+    cond_type::Symbol = :none,
+    shocks::DArray{S, 3} = dzeros(S, (0, 0, 0), [myid()]),
+    procs::Vector{Int} = [myid()])
+
+    z0s = map(kal -> kal[:zend], kals)
+    forecast(m, systems, z0s; cond_type = cond_type, shocks = shocks, procs = procs)
+end
+
 function forecast{S<:AbstractFloat}(m::AbstractModel,
     systems::DVector{System{S}, Vector{System{S}}},
     z0s::DVector{Vector{S}, Vector{Vector{S}}};

@@ -29,6 +29,9 @@ Computes and returns the smoothed values of states for every parameter draw.
   smoothed states for each draw
 - `shocks::DArray{S, 3}`: array of size `ndraws` x `nshocks` x `hist_periods` of
   smoothed shocks for each draw
+- `pseudo::DArray{S, 3}`: array of size `ndraws` x `npseudo` x `hist_periods` of
+  pseudo-observables computed from the smoothed states for each draw. If
+  `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
 
 ### Notes
 
@@ -68,28 +71,31 @@ function smooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 
     nstates = n_states_augmented(m)
     nshocks = n_shocks_exogenous(m)
+    npseudo = n_pseudoobservables(m)
     nperiods = size(data, 2) - n_presample_periods(m)
 
     states_range = 1:nstates
     shocks_range = (nstates + 1):(nstates + nshocks)
+    pseudo_range = (nstates + nshocks + 1):(nstates + nshocks + npseudo)
 
     # Broadcast models and data matrices
     models = dfill(m,    (ndraws,), procs, [nprocs])
     datas  = dfill(data, (ndraws,), procs, [nprocs])
 
     # Construct distributed array of smoothed states and shocks
-    out = DArray((ndraws, nstates + nshocks, nperiods), procs, [nprocs, 1, 1]) do I
+    out = DArray((ndraws, nstates + nshocks + npseudo, nperiods), procs, [nprocs, 1, 1]) do I
         localpart = zeros(map(length, I)...)
         draw_inds = first(I)
         ndraws_local = length(draw_inds)
 
         for i in draw_inds
-            states, shocks = smooth(models[i], datas[i], systems[i], kals[i])
+            states, shocks, pseudo = smooth(models[i], datas[i], systems[i], kals[i])
 
             i_local = mod(i-1, ndraws_local) + 1
 
             localpart[i_local, states_range, :] = states
             localpart[i_local, shocks_range, :] = shocks
+            localpart[i_local, pseudo_range, :] = pseudo
         end
         return localpart
     end
@@ -97,8 +103,9 @@ function smooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     # Convert SubArrays to DArrays and return
     states = convert(DArray, out[1:ndraws, states_range, 1:nperiods])
     shocks = convert(DArray, out[1:ndraws, shocks_range, 1:nperiods])
+    pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods])
 
-    return states, shocks
+    return states, shocks, pseudo
 end
 
 
@@ -132,6 +139,9 @@ Computes and returns the smoothed values of states and shocks for the system
   states
 - `shocks::Matrix{S}`: array of size `nshocks` x `hist_nperiods` of smoothed
   shocks
+- `pseudo::Matrix{S}`: matrix of size `npseudo` x `hist_periods` of
+  pseudo-observables computed from the smoothed states. If
+  `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
 
 ### Notes
 
@@ -155,11 +165,18 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
 function smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     system::System{S}, kal::Kalman{S})
 
-    alpha_hat, eta_hat = if forecast_smoother(m) == :kalman
+    states, shocks = if forecast_smoother(m) == :kalman
         kalman_smoother(m, data, system, kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
     elseif forecast_smoother(m) == :durbin_koopman
         durbin_koopman_smoother(m, data, system, kal[:z0], kal[:vz0])
     end
 
-    return alpha_hat, eta_hat
+    ## Map smoothed states to pseudo-observables
+    pseudo = if forecast_pseudoobservables(m)
+        system[:DD_pseudo] .+ system[:ZZ_pseudo] * states
+    else
+        Matrix{S}()
+    end
+
+    return states, shocks, pseudo
 end
