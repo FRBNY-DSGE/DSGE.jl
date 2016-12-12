@@ -507,11 +507,19 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             smooth_all(m, df, systems, kals; cond_type = cond_type, procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
-        T = n_mainsample_periods(m)
-        forecast_output[:histstates] = transplant_history(cond_type, T, histstates)
-        forecast_output[:histshocks] = transplant_history(cond_type, T, histshocks)
-	    if :histpseudo in output_vars
-            forecast_output[:histpseudo] = transplant_history(cond_type, T, histpseudo)
+        if cond_type in [:full, :semi]
+            T = n_mainsample_periods(m)
+            forecast_output[:histstates] = transplant_history(cond_type, T, histstates)
+            forecast_output[:histshocks] = transplant_history(cond_type, T, histshocks)
+	        if :histpseudo in output_vars
+                forecast_output[:histpseudo] = transplant_history(cond_type, T, histpseudo)
+            end
+        else
+            forecast_output[:histstates] = histstates
+            forecast_output[:histshocks] = histshocks
+	        if :histpseudo in output_vars
+                forecast_output[:histpseudo] = histpseudo
+            end
         end
 
         write_forecast_outputs(m, hists_to_compute, forecast_output_files, forecast_output; verbose = verbose)
@@ -530,13 +538,21 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             forecast(m, systems, kals; cond_type = cond_type, procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
-        forecast_output[:forecaststates] = transplant_forecast(cond_type, T, histstates, forecaststates)
-        forecast_output[:forecastshocks] = transplant_forecast(cond_type, T, histshocks, forecastshocks)
-	    if :forecastpseudo in output_vars
-            forecast_output[:forecastpseudo] = transplant_forecast(cond_type, T, histpseudo, forecastpseudo)
+        if cond_type in [:full, :semi]
+            forecast_output[:forecaststates] = transplant_forecast(cond_type, T, histstates, forecaststates)
+            forecast_output[:forecastshocks] = transplant_forecast(cond_type, T, histshocks, forecastshocks)
+	        if :forecastpseudo in output_vars
+                forecast_output[:forecastpseudo] = transplant_forecast(cond_type, T, histpseudo, forecastpseudo)
+            end
+            forecast_output[:forecastobs] = transplant_forecast_observables(cond_type, T, histstates, forecastobs, systems)
+        else
+            forecast_output[:forecaststates] = forecaststates
+            forecast_output[:forecastshocks] = forecastshocks
+	        if :forecastpseudo in output_vars
+                forecast_output[:forecastpseudo] = forecastpseudo
+            end
+            forecast_output[:forecastobs] = forecastobs
         end
-        forecast_output[:forecastobs] = transplant_forecast_observables(cond_type, T,
-                                            histstates, forecastobs, systems)
 
         write_forecast_outputs(m, forecasts_to_compute, forecast_output_files, forecast_output; verbose = verbose)
     end
