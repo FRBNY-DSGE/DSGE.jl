@@ -25,36 +25,29 @@ systems = distribute(systems; procs = my_procs, dist = [ndraws])
 filterandsmooth_all(m, df, systems; procs = my_procs)
 
 # Read in expected output
-exp_states, exp_shocks, exp_pseudo, exp_zend =
+exp_states, exp_shocks, exp_pseudo =
     jldopen("$path/../reference/filterandsmooth_out.jld", "r") do file
         read(file, "exp_states"),
         read(file, "exp_shocks"),
-        read(file, "exp_pseudo"),
-        read(file, "exp_zend")
+        read(file, "exp_pseudo")
     end
 
 for smoother in [:durbin_koopman, :kalman]
     m <= Setting(:forecast_smoother, smoother)
 
     # Without providing z0 and vz0
-    @time states, shocks, pseudo, zend = filterandsmooth_all(m, df, systems; procs = my_procs)
+    @time states, shocks, pseudo = filterandsmooth_all(m, df, systems; procs = my_procs)
 
     @test_matrix_approx_eq exp_states[(smoother, :no_z0)] convert(Array, states)
     @test_matrix_approx_eq exp_shocks[(smoother, :no_z0)] convert(Array, shocks)
     @test_matrix_approx_eq exp_pseudo[(smoother, :no_z0)] convert(Array, pseudo)
-    for i = 1:ndraws
-        @test_matrix_approx_eq exp_zend[(smoother, :no_z0)][i] zend[i]
-    end
 
     # Providing z0 and vz0
-    @time states, shocks, pseudo, zend = filterandsmooth_all(m, df, systems, z0, vz0; procs = my_procs)
+    @time states, shocks, pseudo = filterandsmooth_all(m, df, systems, z0, vz0; procs = my_procs)
 
     @test_matrix_approx_eq exp_states[(smoother, :z0)] convert(Array, states)
     @test_matrix_approx_eq exp_shocks[(smoother, :z0)] convert(Array, shocks)
     @test_matrix_approx_eq exp_pseudo[(smoother, :z0)] convert(Array, pseudo)
-    for i = 1:ndraws
-        @test_matrix_approx_eq exp_zend[(smoother, :z0)][i] zend[i]
-    end
 end
 
 # Remove parallel workers
