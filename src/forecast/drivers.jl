@@ -429,6 +429,10 @@ and conditional data case given by `cond_type`.
   - `:shockdecpseudo`: `DArray{Float64, 4}` of pseudo-observable shock
     decompositions (if a pseudo-measurement equation has been provided for this
     model type)
+  - `:irfstates`: `Darray{Float64, 4}` of state impulse responses
+  - `:irfobs`: `Darray{Float64, 4}` of observable impulse responses
+  - `:irfpseudo`: `Darray{Float64, 4}` of pseudo observable impulse responses 
+      (if a pseudo-measurement equation has been provided)
 ```
 
 ### Notes
@@ -609,6 +613,25 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
         dettrend_write_vars = [symbol("dettrend$c") for c in unique(map(get_class, dettrends_to_compute))]
         write_forecast_outputs(m, dettrends_to_compute, forecast_output_files, forecast_output; verbose = verbose)
+    end
+
+    ### 7. Impulse Responses
+    irf_vars = [:irfstates, :irfobs, :irfpseudo]
+    irfs_to_compute = intersect(output_vars, irf_vars)
+    if !isempty(irfs_to_compute)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("\nComputing impulse responses for $(irfs_to_compute)...")
+        end
+        @time_verbose irfs_states, irfs_obs, irfs_pseudo =
+            irfs(m, systems; procs = procs)
+        
+        forecast_output[:irfstates] = irfs_states
+        forecast_output[:irfobs] = irfs_obs
+        if :irfpseudo in output_vars
+            forecast_output[:irfpseudo] = irfs_pseudo
+        end
+
+        write_forecast_outputs(m, irfs_to_compute, forecast_output_files, forecast_output; verbose = verbose)
     end
 
 
