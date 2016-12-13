@@ -410,6 +410,12 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
         # make DataFrame for means and Dict for bands
         means = DataFrame(date = date_list)
         bands = Dict{Symbol,DataFrame}()
+        if product == :dettrend
+            println("size of means: $(size(means))")
+            println(means[1,:date])
+            println(means[end,:date])
+            println("size of fcast_output: $(size(fcast_output))")
+        end
 
         # for each series (ie each pseudoobs, each obs, or each state):
         # 1. apply the appropriate transform
@@ -430,6 +436,10 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
             end
 
             # compute the mean and bands across draws and add to dataframe
+            if product == :dettrend
+                println("size of transformed_fcast_output: $(size(transformed_fcast_output))")
+            end
+
             means[series] = vec(mean(transformed_fcast_output,1))
             bands[series] = find_density_bands(transformed_fcast_output, density_bands, minimize=false)
             bands[series][:date] = date_list

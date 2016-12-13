@@ -497,7 +497,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     elseif contains(string(var), "shockdec")
         quarter_range(date_shockdec_start(m), date_shockdec_end(m))
     elseif contains(string(var), "trend") # trend and dettrend
-        quarter_range(date_mainsample_start(m), date_forecast_end(m))
+        quarter_range(date_shockdec_start(m), date_shockdec_end(m))
     end
     date_indices = [d::Date => i::Int for (i, d) in enumerate(dates)]
     write(file, "date_indices", date_indices)
