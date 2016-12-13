@@ -203,64 +203,53 @@ end
 
 """
 ```
-transplant_history(cond_type, last_hist_period, history)
+transplant_history(history, last_hist_period)
 ```
 
 Remove the smoothed states, shocks, or pseudo-observables corresponding to
 conditional data periods. This is necessary because when we forecast with
-conditional data, we smooth beyond the last historical period. If
-`cond_type == :none`, `history` is returned unchanged.
+conditional data, we smooth beyond the last historical period.
 """
-function transplant_history{T<:AbstractFloat}(cond_type::Symbol,
-    last_hist_period::Int, history::DArray{T, 3})
+function transplant_history{T<:AbstractFloat}(history::DArray{T, 3},
+    last_hist_period::Int,)
 
-    if cond_type in [:full, :semi]
-        return convert(DArray, history[1:end, 1:end, 1:last_hist_period])
-    else
-        return history
-    end
+    return convert(DArray, history[1:end, 1:end, 1:last_hist_period])
 end
 
 """
 ```
-transplant_forecast(cond_type, last_hist_period, history, forecast)
+transplant_forecast(history, forecast, last_hist_period)
 ```
 
 Transplant the smoothed states, shocks, or pseudo-observables corresponding to
-conditional data periods from the history to the forecast. If `cond_type == :none`,
-`forecast` is returned unchanged.
+conditional data periods from the history to the forecast.
 """
-function transplant_forecast{T<:AbstractFloat}(cond_type::Symbol,
-    last_hist_period::Int, history::DArray{T, 3}, forecast::DArray{T, 3})
+function transplant_forecast{T<:AbstractFloat}(history::DArray{T, 3},
+    forecast::DArray{T, 3}, last_hist_period::Int)
 
-    if cond_type in [:full, :semi]
-        procs  = collect(history.pids)
-        nprocs = length(procs)
+    procs  = collect(history.pids)
+    nprocs = length(procs)
 
-        (ndraws, nvars, nfcastperiods) = size(forecast)
-        ncondperiods = size(history, 3) - last_hist_period
-        nperiods     = ncondperiods + nfcastperiods
-        cond_range   = (last_hist_period + 1):(last_hist_period + ncondperiods)
+    (ndraws, nvars, nfcastperiods) = size(forecast)
+    ncondperiods = size(history, 3) - last_hist_period
+    nperiods     = ncondperiods + nfcastperiods
+    cond_range   = (last_hist_period + 1):(last_hist_period + ncondperiods)
 
-        return DArray((ndraws, nvars, nperiods), procs, [nprocs, 1, 1]) do I
-            draw_inds    = first(I)
-            cond_draws   = convert(Array, history[draw_inds, :, cond_range])
-            fcast_draws  = convert(Array, forecast[draw_inds, :, :])
-            return cat(3, cond_draws, fcast_draws)
-        end
-    else
-        return forecast
+    return DArray((ndraws, nvars, nperiods), procs, [nprocs, 1, 1]) do I
+        draw_inds    = first(I)
+        cond_draws   = convert(Array, history[draw_inds, :, cond_range])
+        fcast_draws  = convert(Array, forecast[draw_inds, :, :])
+        return cat(3, cond_draws, fcast_draws)
     end
 end
 
 """
 ```
-transplant_forecast_observables(cond_type, last_hist_period, histstates, forecastobs)
+transplant_forecast_observables(histstates, forecastobs, systems, last_hist_period)
 ```
 
 Transplant the observables implied by `histstates` corresponding to
-conditional data periods from the history to the forecast. If `cond_type == :none`,
-`forecastobs` is returned unchanged.
+conditional data periods from the history to the forecast.
 
 This exists as a separate function from `transplant_forecast` because we don't
 usually map the smoothed historical states into observables, since they would
@@ -268,36 +257,31 @@ just give us back the data. However, in the conditional data periods, we only
 have data for a subset of observables, so we need to get the remaining
 observables by mapping the smoothed states.
 """
-function transplant_forecast_observables{T<:AbstractFloat}(cond_type::Symbol,
-    last_hist_period::Int, histstates::DArray{T, 3}, forecastobs::DArray{T, 3},
-    systems::DVector{System{T}})
+function transplant_forecast_observables{T<:AbstractFloat}(histstates::DArray{T, 3},
+    forecastobs::DArray{T, 3}, systems::DVector{System{T}}, last_hist_period::Int)
 
-    if cond_type in [:full, :semi]
-        procs  = collect(histstates.pids)
-        nprocs = length(procs)
+    procs  = collect(histstates.pids)
+    nprocs = length(procs)
 
-        (ndraws, nvars, nfcastperiods) = size(forecastobs)
-        ncondperiods = size(histstates, 3) - last_hist_period
-        nperiods     = ncondperiods + nfcastperiods
-        cond_range   = (last_hist_period + 1):(last_hist_period + ncondperiods)
+    (ndraws, nvars, nfcastperiods) = size(forecastobs)
+    ncondperiods = size(histstates, 3) - last_hist_period
+    nperiods     = ncondperiods + nfcastperiods
+    cond_range   = (last_hist_period + 1):(last_hist_period + ncondperiods)
 
-        return DArray((ndraws, nvars, nperiods), procs, [nprocs, 1, 1]) do I
-            draw_inds = first(I)
-            ndraws_local = length(draw_inds)
+    return DArray((ndraws, nvars, nperiods), procs, [nprocs, 1, 1]) do I
+        draw_inds = first(I)
+        ndraws_local = length(draw_inds)
 
-            # Map conditional period smoothed states to observables
-            cond_draws = zeros(ndraws_local, nvars, ncondperiods)
-            for i in draw_inds
-                i_local = mod(i-1, ndraws_local) + 1
-                states_i = convert(Array, slice(histstates, i, :, cond_range))
-                cond_draws[i_local, :, :] = systems[i][:ZZ]*states_i .+ systems[i][:DD]
-            end
-
-            fcast_draws = convert(Array, forecastobs[draw_inds, :, :])
-            return cat(3, cond_draws, fcast_draws)
+        # Map conditional period smoothed states to observables
+        cond_draws = zeros(ndraws_local, nvars, ncondperiods)
+        for i in draw_inds
+            i_local = mod(i-1, ndraws_local) + 1
+            states_i = convert(Array, slice(histstates, i, :, cond_range))
+            cond_draws[i_local, :, :] = systems[i][:ZZ]*states_i .+ systems[i][:DD]
         end
-    else
-        return forecastobs
+
+        fcast_draws = convert(Array, forecastobs[draw_inds, :, :])
+        return cat(3, cond_draws, fcast_draws)
     end
 end
 
@@ -502,7 +486,7 @@ end
 
 """
 ```
-add_dependent_output_vars(output_vars::Vector{Symbol})
+add_requisite_output_vars(m::AbstractModel, output_vars::Vector{Symbol})
 ```
 
 Based on the given output_vars, this function determines which
@@ -526,15 +510,13 @@ added to `output_vars` when calling
 """
 function add_requisite_output_vars(output_vars::Vector{Symbol})
 
-    shockdec_outputs = find([contains(str, "shockdec")
-                             for str in map(string, output_vars)])
-
+    shockdec_outputs = Base.filter(output -> contains(string(output), "shockdec"), output_vars)
     if !isempty(shockdec_outputs)
-        classes = [get_class(output_vars[i]) for i in shockdec_outputs]
+        classes = [get_class(output) for output in shockdec_outputs]
         dettrend_vars = [symbol("dettrend$c") for c in classes]
         trend_vars = [symbol("trend$c") for c in classes]
         output_vars = unique(vcat(output_vars, dettrend_vars, trend_vars))
     end
 
-    output_vars
+    return output_vars
 end

@@ -509,10 +509,10 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
             T = n_mainsample_periods(m)
-            forecast_output[:histstates] = transplant_history(cond_type, T, histstates)
-            forecast_output[:histshocks] = transplant_history(cond_type, T, histshocks)
+            forecast_output[:histstates] = transplant_history(histstates, T)
+            forecast_output[:histshocks] = transplant_history(histshocks, T)
 	        if :histpseudo in output_vars
-                forecast_output[:histpseudo] = transplant_history(cond_type, T, histpseudo)
+                forecast_output[:histpseudo] = transplant_history(histpseudo, T)
             end
         else
             forecast_output[:histstates] = histstates
@@ -539,12 +539,12 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
-            forecast_output[:forecaststates] = transplant_forecast(cond_type, T, histstates, forecaststates)
-            forecast_output[:forecastshocks] = transplant_forecast(cond_type, T, histshocks, forecastshocks)
+            forecast_output[:forecaststates] = transplant_forecast(histstates, forecaststates, T)
+            forecast_output[:forecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
 	        if :forecastpseudo in output_vars
-                forecast_output[:forecastpseudo] = transplant_forecast(cond_type, T, histpseudo, forecastpseudo)
+                forecast_output[:forecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
             end
-            forecast_output[:forecastobs] = transplant_forecast_observables(cond_type, T, histstates, forecastobs, systems)
+            forecast_output[:forecastobs] = transplant_forecast_observables(histstates, forecastobs, systems, T)
         else
             forecast_output[:forecaststates] = forecaststates
             forecast_output[:forecastshocks] = forecastshocks
