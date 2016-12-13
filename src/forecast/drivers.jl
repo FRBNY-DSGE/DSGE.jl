@@ -509,6 +509,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
             T = n_mainsample_periods(m)
+
             forecast_output[:histstates] = transplant_history(histstates, T)
             forecast_output[:histshocks] = transplant_history(histshocks, T)
 	        if :histpseudo in output_vars
@@ -528,6 +529,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     ### 3. Forecasts
 
+    # 3A. Unbounded forecasts
+
     forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks]
     forecasts_to_compute = intersect(output_vars, forecast_vars)
     if !isempty(forecasts_to_compute)
@@ -535,7 +538,8 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             println("\nForecasting $(forecasts_to_compute)...")
         end
         @time_verbose forecaststates, forecastobs, forecastpseudo, forecastshocks =
-            forecast(m, systems, kals; cond_type = cond_type, procs = procs)
+            forecast(m, systems, kals; cond_type = cond_type, enforce_zlb = false,
+                     procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
@@ -552,6 +556,39 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
                 forecast_output[:forecastpseudo] = forecastpseudo
             end
             forecast_output[:forecastobs] = forecastobs
+        end
+
+        write_forecast_outputs(m, forecasts_to_compute, forecast_output_files, forecast_output; verbose = verbose)
+    end
+
+
+    # 3B. Bounded forecasts
+
+    forecast_vars_bdd = [:forecaststatesbdd, :forecastobsbdd, :forecastpseudobdd, :forecastshocksbdd]
+    forecasts_to_compute = intersect(output_vars, forecast_vars_bdd)
+    if !isempty(forecasts_to_compute)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("\nForecasting $(forecasts_to_compute)...")
+        end
+        @time_verbose forecaststates, forecastobs, forecastpseudo, forecastshocks =
+            forecast(m, systems, kals; cond_type = cond_type, enforce_zlb = true,
+                     procs = procs)
+
+        # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
+        if cond_type in [:full, :semi]
+            forecast_output[:forecaststatesbdd] = transplant_forecast(histstates, forecaststates, T)
+            forecast_output[:forecastshocksbdd] = transplant_forecast(histshocks, forecastshocks, T)
+	        if :forecastpseudobdd in output_vars
+                forecast_output[:forecastpseudobdd] = transplant_forecast(histpseudo, forecastpseudo, T)
+            end
+            forecast_output[:forecastobsbdd] = transplant_forecast_observables(histstates, forecastobs, systems, T)
+        else
+            forecast_output[:forecaststatesbdd] = forecaststates
+            forecast_output[:forecastshocksbdd] = forecastshocks
+	        if :forecastpseudobdd in output_vars
+                forecast_output[:forecastpseudobdd] = forecastpseudo
+            end
+            forecast_output[:forecastobsbdd] = forecastobs
         end
 
         write_forecast_outputs(m, forecasts_to_compute, forecast_output_files, forecast_output; verbose = verbose)
