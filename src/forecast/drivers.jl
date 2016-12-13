@@ -501,7 +501,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     if !isempty(intersect(output_vars, smooth_vars)) || cond_type in [:semi, :full]
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("\nFiltering and smoothing $hists_to_compute)...")
+            println("\nSmoothing $(hists_to_compute)...")
         end
         @time_verbose histstates, histshocks, histpseudo =
             smooth_all(m, df, systems, kals; cond_type = cond_type, procs = procs)
@@ -532,7 +532,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     forecasts_to_compute = intersect(output_vars, forecast_vars)
     if !isempty(forecasts_to_compute)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("\nForecasting $(intersect(output_vars, forecast_vars))...")
+            println("\nForecasting $(forecasts_to_compute)...")
         end
         @time_verbose forecaststates, forecastobs, forecastpseudo, forecastshocks =
             forecast(m, systems, kals; cond_type = cond_type, procs = procs)
@@ -562,7 +562,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     shockdecs_to_compute = intersect(output_vars, shockdec_vars)
     if !isempty(shockdecs_to_compute)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("\nComputing shock decompositions for $(intersect(output_vars, shockdec_vars))...")
+            println("\nComputing shock decompositions for $(shockdecs_to_compute)...")
         end
         @time_verbose shockdecstates, shockdecobs, shockdecpseudo =
             shock_decompositions(m, systems, histshocks; procs = procs)
@@ -584,7 +584,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     if !isempty(trends_to_compute)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("\nComputing trend for $(intersect(output_vars, trend_vars))...")
+            println("\nComputing trend for $(trends_to_compute)...")
         end
         @time_verbose trendstates, trendobs, trendpseudo =
             trends(m, systems; procs = procs)
@@ -612,7 +612,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
         # Compute deterministic trend
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("\nComputing deterministic trend for $dettrends_to_compute...")
+            println("\nComputing deterministic trend for $(dettrends_to_compute)...")
         end
         @time_verbose dettrendstates, dettrendobs, dettrendpseudo =
             deterministic_trends(m, systems, z0s; procs = procs)
