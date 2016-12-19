@@ -29,7 +29,7 @@ for a set of shocks across all draws.
   `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
 
     where `horizon` is the forecast horizon for the model as given by
-    `forecast_horizon(m)` and `nshocks` is the number of shocks in
+    `irf_horizons(m)` and `nshocks` is the number of shocks in
     `irf_shocks`.
 
 """
@@ -53,7 +53,7 @@ function irfs{S<:AbstractFloat}(m::AbstractModel,
     # Numbers of useful things
     ndraws = length(systems)
     nprocs = length(procs)
-    horizon = forecast_horizons(m)
+    horizon = irf_horizons(m)
 
     nstates = n_states_augmented(m)
     nobs    = n_observables(m)
@@ -182,9 +182,9 @@ function compute_irf{S<:AbstractFloat}(T::Matrix{S},
         end
 
         # Apply measurement and pseudo-measurement equations
-        obs[:, :, i] = D .+ Z * states[:, :, i]
+        obs[:, :, i] = Z * states[:, :, i]
         if forecast_pseudo
-            pseudo[:, :, i] = D_pseudo .+ Z_pseudo * states[:, :, i]
+            pseudo[:, :, i] = Z_pseudo * states[:, :, i]
         end
     end
 

@@ -41,7 +41,7 @@ module DSGE
         date_forecast_start, date_forecast_end, forecast_tdist_df_val,
         forecast_tdist_shocks, forecast_kill_shocks, forecast_smoother, forecast_enforce_zlb, forecast_zlb_value,
         forecast_input_file_overrides, shockdec_startdate, date_shockdec_end,
-        forecast_horizons,
+        forecast_horizons, irf_horizons,
         load_parameters_from_file, specify_mode!, specify_hessian,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
@@ -139,6 +139,7 @@ module DSGE
     include("analysis/meansbands.jl")
     include("analysis/compute_means_bands.jl")
     include("analysis/means_bands_shockdec.jl")
+    include("analysis/means_bands_irf.jl")
     include("analysis/meansbands_to_matrix.jl")
     include("analysis/util.jl")
 

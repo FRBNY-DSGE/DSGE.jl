@@ -27,6 +27,8 @@ function get_product(s::Symbol)
         :dettrend
     elseif contains(string(s), "trend")
         :trend
+    elseif contains(string(s), "irf")
+        :irf
     end
 
     product
@@ -50,7 +52,7 @@ function Base.show(io::IO, mb::MeansBands)
     @printf io "  product: %s\n" product(mb)
     @printf io "  cond: %s\n" cond_type(mb)
     @printf io "  para: %s\n" para(mb)
-    if mb.metadata[:product] != :trend
+    if mb.metadata[:product] != :trend && mb.metadata[:product] != :irf
         @printf io "  dates: %s - %s\n" startdate_means(mb) enddate_means(mb)
     end
     @printf io "  # of variables: %s\n" n_vars_means(mb)

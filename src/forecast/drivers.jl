@@ -631,6 +631,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
             forecast_output[:irfpseudo] = irfs_pseudo
         end
 
+        println("\nWriting forecast outputs...")
         write_forecast_outputs(m, irfs_to_compute, forecast_output_files, forecast_output; verbose = verbose)
     end
 

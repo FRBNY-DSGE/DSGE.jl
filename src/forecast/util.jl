@@ -412,10 +412,13 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     elseif contains(string(var), "trend") # trend and dettrend
         quarter_range(date_mainsample_start(m), date_forecast_end(m))
     elseif contains(string(var), "irf")
-        quarter_range(date_forecast_start(m), date_forecast_end(m))
+        NaN
     end
-    date_indices = [d::Date => i::Int for (i, d) in enumerate(dates)]
-    write(file, "date_indices", date_indices)
+
+    if typeof(dates) == Array{Date,1}
+        date_indices = [d::Date => i::Int for (i, d) in enumerate(dates)]
+        write(file, "date_indices", date_indices)
+    end
 
     # Write state names
     if contains(string(var), "states")
@@ -441,7 +444,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     end
 
     # Write shock names
-    if contains(string(var), "shocks") || contains(string(var), "shockdec")
+    if contains(string(var), "shocks") || contains(string(var), "shockdec") || contains(string(var), "irf")
         write(file, "shock_indices", m.exogenous_shocks)
     end
 end

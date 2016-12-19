@@ -240,6 +240,11 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
 
         # Which product are we dealing with? Need this to index out of y0_indexes.
         prod = get_product(output_var)
+        if !isempty(y0_indexes)
+            y0_index = y0_indexes[prod]
+        else
+            y0_index = -1
+        end
 
         # compute means and bands object
         mb = compute_means_bands(input_type, output_var, cond_type,
@@ -248,7 +253,7 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
                                  population_data = dlfiltered_population_data,
                                  population_mnemonic = Nullable(:population_growth),
                                  population_forecast = dlfiltered_population_forecast,
-                                 y0_index = y0_indexes[prod],
+                                 y0_index = y0_index,
                                  data = data)
 
         # write to file
@@ -329,21 +334,35 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
         read_forecast_metadata(jld), DSGE.read_darray(jld)
     end
 
-    transforms, variable_indices, date_indices = if class == :pseudo
+    transforms, variable_indices, date_indices = if product == :irf
+        if class == :state
+            identity, metadata[:state_indices], Dict()
+        elseif class == :obs
+            metadata[:observable_revtransforms], metadata[:observable_indices], Dict()
+        elseif class == :pseudo
+            metadata[:pseudoobservable_revtransforms], metadata[:pseudoobservable_indices],
+            Dict() 
+        else
+            error("invalid class provided")
+        end
+    elseif class == :pseudo
         metadata[:pseudoobservable_revtransforms], metadata[:pseudoobservable_indices],
-        metadata[:date_indices]
+        metadata[:date_indices] 
     elseif class == :obs
-        metadata[:observable_revtransforms], metadata[:observable_indices], metadata[:date_indices]
+        metadata[:observable_revtransforms], metadata[:observable_indices], metadata[:date_indices]        
     else
         error("means and bands are only calculated for observables and pseudo-observables")
     end
 
+    
     # make sure date lists are valid. This is irrelevant for the trend, which is not time-dependent.
-    date_list          = collect(keys(date_indices))   # unsorted array of actual dates
-    date_indices_order = collect(values(date_indices)) # unsorted array of date indices
-    check_consistent_order(date_list, date_indices_order)
-    sort!(date_list, by = x -> date_indices[x])
-    sort!(date_indices_order)
+    if !isempty(date_indices)
+        date_list          = collect(keys(date_indices))   # unsorted array of actual dates
+        date_indices_order = collect(values(date_indices)) # unsorted array of date indices
+        check_consistent_order(date_list, date_indices_order)
+        sort!(date_list, by = x -> date_indices[x])
+        sort!(date_indices_order)
+    end
 
     # get population mnemonic
     mnemonic = isnull(population_mnemonic) ? Symbol() : get(population_mnemonic)
@@ -499,6 +518,16 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
                                      variable_indices, metadata[:shock_indices], date_list,
                                      data = data, population_series = population_series,
                                      y0_index = y0_index, density_bands = density_bands)
+
+    elseif product in [:irf]
+
+        # get shock indices
+        mb_metadata[:shock_indices] = metadata[:shock_indices]
+        
+        # compute means and bands for shock decomposition
+        compute_means_bands_irf(fcast_output, metadata[:shock_indices], variable_indices,
+                                density_bands = density_bands)
+        
 
     end
 
