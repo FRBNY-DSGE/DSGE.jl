@@ -106,12 +106,6 @@ to null values of appropriate types.
 
 - `params::Matrix{Float64}`: matrix of size `nsim` x `nparams` of parameter
   draws
-- `TTT::Array{Float64, 3}`: array of size `nsim` x `nstates` x `nstates` of
-  transition matrix draws
-- `RRR::Array{Float64, 3}`: array of size `nsim` x `nstates` x `nshocks` of
-  transition matrix draws
-- `CCC::Array{Float64, 3}`: array of size `nsim` x `nstates` x 1 of transition
-  matrix draws
 
 where `nsim` is the number of draws saved in Metropolis-Hastings.
 
@@ -139,21 +133,11 @@ function load_draws(m::AbstractModel, input_type::Symbol;
             map(Float64, read(f, "params"))
         end
         params = reshape(tmp, 1, size(tmp,1))
-        TTT  = Array{Float64}(0,0,0)
-        RRR  = Array{Float64}(0,0,0)
-        CCC  = Array{Float64}(0,0,0)
 
     elseif input_type in [:full, :subset]
         if input_type == :full
             h5open(input_file_name, "r") do f
                 params = map(Float64, read(f, "mhparams"))
-                TTT    = map(Float64, read(f, "mhTTT"))
-                RRR    = map(Float64, read(f, "mhRRR"))
-                if "mhCCC" in names(f)
-                    CCC = map(Float64, read(f, "mhCCC"))
-                else
-                    CCC = Array{Float64}(0,0,0)
-                end
             end
         else
             if isempty(subset_inds)
@@ -161,13 +145,6 @@ function load_draws(m::AbstractModel, input_type::Symbol;
             end
             h5open(input_file_name, "r") do f
                 params = map(Float64, read(f, "mhparams")[subset_inds, :])
-                TTT    = map(Float64, read(f, "mhTTT")[subset_inds, :, :])
-                RRR    = map(Float64, read(f, "mhRRR")[subset_inds, :, :])
-                if "mhCCC" in names(f)
-                    CCC = map(Float64, read(f, "mhCCC")[subset_inds, :])
-                else
-                    CCC = Array{Float64}(0,0,0)
-                end
             end
         end
 
@@ -179,30 +156,21 @@ function load_draws(m::AbstractModel, input_type::Symbol;
         if remainder != 0
             nsim_new = nsim - remainder
             warn("Number of draws read in, $nsim, is not divisible by jstep * nprocs = $(jstep * nprocs). Taking the first $nsim_new draws instead.")
-
             params = params[1:nsim_new, :]
-            TTT    = TTT[1:nsim_new, :, :]
-            RRR    = RRR[1:nsim_new, :, :]
-            if !isempty(CCC)
-                CCC = CCC[1:nsim_new, :, :]
-            end
         end
 
     elseif input_type in [:init]
         init_parameters!(m)
         tmp = Float64[α.value for α in m.parameters]
         params = reshape(tmp, 1, size(tmp,1))
-        TTT  = Array{Float64}(0,0,0)
-        RRR  = Array{Float64}(0,0,0)
-        CCC  = Array{Float64}(0,0,0)
     end
 
-    return params, TTT, RRR, CCC
+    return params
 end
 
 """
 ```
-prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = [myid()])
+prepare_systems(m, input_type, params; procs = [myid()])
 ```
 
 Returns a `DVector{System{Float64}}` of `System` objects constructed from the
@@ -219,12 +187,6 @@ appropriate shape.
   documentation for `forecast_all`.
 - `params::Matrix{Float64}`: matrix of size `nsim` x `nparams` of parameter
   draws
-- `TTT::Array{Float64, 3}`: array of size `nsim` x `nstates` x `nstates` of
-  transition matrix draws
-- `RRR::Array{Float64, 3}`: array of size `nsim` x `nstates` x `nshocks` of
-  transition matrix draws
-- `CCC::Array{Float64, 3}`: array of size `nsim` x `nstates` x 1 of transition
-  matrix draws
 
 ### Keyword Arguments
 
@@ -240,8 +202,7 @@ where `n_sim_forecast = n_sim / jstep` is the number of draws after thinning a
 second time.
 """
 function prepare_systems(m::AbstractModel, input_type::Symbol,
-    params::Matrix{Float64}, TTT::Array{Float64, 3}, RRR::Array{Float64, 3},
-    CCC::Array{Float64, 3}; procs::Vector{Int} = [myid()])
+    params::Matrix{Float64}; procs::Vector{Int} = [myid()])
 
     # Reset procs to [myid()] if necessary
     procs = reset_procs(m, procs, Nullable(input_type))
@@ -255,7 +216,6 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
         update!(m, vec(params))
         systems = dfill(compute_system(m), (1,), procs)
     elseif input_type in [:full, :subset]
-        empty = isempty(CCC)
         nprocs = length(procs);
         systems = DArray((n_sim_forecast,), procs, [nprocs]) do I
             draw_inds = first(I)
@@ -266,32 +226,9 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
                 j = i * jstep
                 i_local = mod(i-1, ndraws_local) + 1
 
-                # Prepare transition eq
-                TTT_j = squeeze(TTT[j, :, :], 1)
-                RRR_j = squeeze(RRR[j, :, :], 1)
-
-                if empty
-                    trans_j = Transition(TTT_j, RRR_j)
-                else
-                    CCC_j = squeeze(CCC[j, :, :], 1)
-                    trans_j = Transition(TTT_j, RRR_j, CCC_j)
-                end
-
-                # Prepare measurement eq
                 params_j = vec(params[j,:])
                 update!(m, params_j)
-                meas_j   = measurement(m, trans_j; shocks = true)
-
-                # Prepare pseudo-measurement eq
-                pseudo_meas_j = if forecast_pseudoobservables(m)
-                    _, pseudo_mapping = pseudo_measurement(m)
-                    Nullable(pseudo_mapping)
-                else
-                    Nullable{PseudoObservableMapping{Float64}}()
-                end
-
-                # Prepare system
-                localpart[i_local] = System(trans_j, meas_j, pseudo_meas_j)
+                localpart[i_local] = compute_system(m)
             end
             return localpart
         end
@@ -334,13 +271,12 @@ prepare initial state vectors.
 
 - `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
   objects, one for each draw
-- `states::DVector{Vector{Float64}}`: vector of `n_sim` many final historical
-  state vectors
+- `kals::DVector{Kalman{Float64}}`: vector of `n_sim` many `Kalman` objects
 
 ### Notes
 
 `prepare_forecast_inputs` calls `load_draws`, `prepare_systems`, and
-  `prepare_states`. See those functions for thorough documentation.
+`filter_all`. See those functions for thorough documentation.
 """
 function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     input_type::Symbol = :mode, cond_type::Symbol = :none,
@@ -351,11 +287,11 @@ function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
     procs = reset_procs(m, procs, Nullable(input_type))
 
     # Set up infiles
-    params, TTT, RRR, CCC = load_draws(m, input_type; subset_inds = subset_inds,
-                                      verbose = verbose, procs = procs)
+    params = load_draws(m, input_type; subset_inds = subset_inds,
+                        verbose = verbose, procs = procs)
 
     # Populate systems vector
-    systems = prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = procs)
+    systems = prepare_systems(m, input_type, params; procs = procs)
 
     # Populate states vector
     kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
