@@ -386,6 +386,7 @@ function transform_to_real_line{T}(p::Parameter{T,SquareRoot}, x::T = p.value)
         println("b is $b")
         println("x is $x")
         println("cx is $cx")
+        error("invalid paramter value")
     end
     (1/c)*cx/sqrt(1 - cx^2)
 end

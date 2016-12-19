@@ -364,11 +364,11 @@ function Model990(subspec::AbstractString="ss2")
                    description="ρ_rm: AR(1) coefficient in the monetary policy shock process.",
                    tex_label="\\rho_{rm}")
 
-    m <= parameter(:ρ_σ_w,   0.9898, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=false,
+    m <= parameter(:ρ_σ_w,   0.9898, (1e-5, 0.99999), (1e-5, 0.99999),  DSGE.SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=false,
                    description="ρ_σ_w: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with mean ρ_σ_w. Innovations to the process are called _spread shocks_.",
                    tex_label="\\rho_{\\sigma_\\omega}")
 
-    m <= parameter(:ρ_μ_e,    0.7500, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=true,
+    m <= parameter(:ρ_μ_e,    0.7500, (1e-5, 0.99999), (1e-5, 0.99999),  DSGE.SquareRoot(),    BetaAlt(0.75, 0.15),         fixed=true,
                    description="ρ_μ_e: Verification costs are a fraction μ_e of the amount the bank extracts from an entrepreneur in case of bankruptcy???? This doesn't seem right because μ_e isn't a process (p12 of PDF)",
                    tex_label="\\rho_{\\mu_e}")
 

@@ -85,6 +85,8 @@ function csminwel(fcn::Function,
                   extended_trace::Bool = false,
                   verbose::Symbol      = :none,
                   rng::AbstractRNG     = MersenneTwister(),
+                  #step_size::Float64   = 0.1,
+                  #neighbor!::Function  = identity,
                   kwargs...)
 
     if show_trace
@@ -324,7 +326,7 @@ function csminwel(fcn::Function,
 
     return MultivariateOptimizationResults("csminwel", x0, x, convert(Float64, f_x),
         iteration, iteration==iterations, x_converged, xtol, f_converged, ftol, gr_converged,
-        grtol, tr, f_calls, g_calls), H  # also return H
+        grtol, tr, f_calls, g_calls, 0), H  # also return H
 end
 
 

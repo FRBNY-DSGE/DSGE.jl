@@ -47,10 +47,7 @@ using Debug
     function f_opt(x_opt)
         x_model[para_free_inds] = x_opt
         transform_to_model_space!(m,x_model)
-        #println("Calling posterior...")
-        res= -posterior(m, data; catch_errors=true)[:post]
-        #println("Done calling posterior")
-        return res
+        return -posterior(m, data; catch_errors=true)[:post]
     end
 
 
@@ -58,7 +55,8 @@ using Debug
         # This function computes a proposal "next step" during simulated annealing.
         # Inputs:
         # - `x`: current position (of non-fixed states)
-        # - `x_proposal`: proposed next position (of non-fixed states).
+        # - `x_proposal`: proposed next position (of non-fixed states). 
+        #                 (passed in for pre-allocation purposes)
         # Outputs:
         # - `x_proposal`
 
@@ -75,25 +73,34 @@ using Debug
         x_proposal_all = similar(x_all_model)
 
         success = false
+        count = 1
         while !success
 
             # take a step in model space
             for i in para_free_inds
-                r = rand([-1 1]) * rand()
-                prior_cov = !isnull(m.parameters[i].prior) ? moments(get(m.parameters[i].prior))[2] : 0.0
-                @inbounds x_proposal_all[i] = x_all_model[i] + (r * step_size * prior_cov)
+                prior_var = moments(get(m.parameters[i].prior))[2]
+                proposal_in_bounds = false
+                proposal = x_all_model[i]
+                # draw a new parameter value, and redraw if out of bounds
+                while !proposal_in_bounds
+                    r = rand([-1 1]) * rand()
+                    proposal = x_all_model[i] + (r * step_size * prior_var)
+                    if m.parameters[i].valuebounds[1] < proposal &&
+                        m.parameters[i].valuebounds[2] > proposal
+                        proposal_in_bounds = true
+                    end
+                end
+                @inbounds x_proposal_all[i] = proposal
+            
             end
 
-            # check that parameters are inbounds, model can be solved,
-            # and parameters can be transformed to the real line.
+            # check that model can be solved
             try
                 update!(m, x_proposal_all)
                 #println("trying to solve model in neighbor")
                 solve(m)
                 #println("done solving model in neighbor")
-                #println("checking bounds")
                 x_proposal_all = transform_to_real_line(m.parameters, x_proposal_all)
-                #println("bounds checked")
                 success = true
             end
             
@@ -105,17 +112,25 @@ using Debug
     end
 
     rng = m.rng
+    temperature = get_setting(m, :simulated_annealing_temperature)
 
-    out, H_ = optimizer(f_opt, x_opt, H0;
+    if method == :simulated_annealing
+        out, H_ = optimizer(f_opt, x_opt, H0;
                         xtol = xtol, ftol = ftol, grtol = grtol, iterations = iterations, step_size = step_size,
                         store_trace = store_trace, show_trace = show_trace, extended_trace = extended_trace,
-                        neighbor! = neighbor_dsge!, verbose = verbose, rng = rng)
+                        neighbor! = neighbor_dsge!, verbose = verbose, rng = rng, temperature = temperature)
+    elseif method == :csminwel
+        out, H_ = optimizer(f_opt, x_opt, H0;
+                        xtol = xtol, ftol = ftol, grtol = grtol, iterations = iterations,
+                        store_trace = store_trace, show_trace = show_trace, extended_trace = extended_trace,
+                        verbose = verbose, rng = rng)
+    end
 
-    x_model[para_free_inds] = out.minimum
+    x_model[para_free_inds] = out.minimizer
     transform_to_model_space!(m, x_model)
 
     # Match original dimensions
-    out.minimum = x_model
+    out.minimizer = x_model
 
     H = zeros(n_parameters(m), n_parameters(m))
     if H_ != nothing

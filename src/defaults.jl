@@ -45,6 +45,7 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:optimization_method, :csminwel, "Method for finding the posterior mode")
     m <= Setting(:optimization_iterations, 100, "Number of iterations the optimizer should run for")
     m <= Setting(:optimization_step_size, .01, "step size scaling factor for optimization")
+    m <= Setting(:simulated_annealing_temperature, Optim.log_temperature, "The temperature function for simulated annealing")
 
     # Metropolis-Hastings
     m <= Setting(:n_mh_simulations, 5000, "Number of draws per block in Metropolis-Hastings")
