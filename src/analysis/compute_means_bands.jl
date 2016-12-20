@@ -521,7 +521,7 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
         mb_metadata[:shock_indices] = metadata[:shock_indices]
         
         # compute means and bands for shock decomposition
-        compute_means_bands_irf(fcast_output, metadata[:shock_indices], variable_indices,
+        compute_means_bands_impulse_response(fcast_output, metadata[:shock_indices], variable_indices,
                                 density_bands = density_bands)
         
 

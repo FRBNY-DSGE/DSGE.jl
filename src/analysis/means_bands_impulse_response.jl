@@ -12,7 +12,7 @@ compute_means_bands_irf(fcast_output, shock_inds)
 * `shock_inds`: a dictionary mapping shocks to indices
 * `variables_inds`: a dictionary mapping variables to indices
 """
-function compute_means_bands_irf{T<:AbstractFloat}(fcast_output::Array{T}, 
+function compute_means_bands_impulse_response{T<:AbstractFloat}(fcast_output::Array{T}, 
                                                   shock_inds::Dict{Symbol,Int},
                                                   variable_inds::Dict{Symbol,Int};
                                                   density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9])

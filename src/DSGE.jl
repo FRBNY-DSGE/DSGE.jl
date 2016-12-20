@@ -41,7 +41,7 @@ module DSGE
         date_forecast_start, date_forecast_end, forecast_tdist_df_val,
         forecast_tdist_shocks, forecast_kill_shocks, forecast_smoother, forecast_enforce_zlb, forecast_zlb_value,
         forecast_input_file_overrides, shockdec_startdate, date_shockdec_end,
-        forecast_horizons, irf_horizons,
+        forecast_horizons, impulse_response_horizons,
         load_parameters_from_file, specify_mode!, specify_hessian,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
@@ -71,7 +71,7 @@ module DSGE
         shock_decompositions, compute_shock_decompositions,
         trends, compute_trends, compute_trend,
         deterministic_trends, compute_deterministic_trends, compute_deterministic_trend,
-        get_output_files, irfs, compute_irf,
+        get_output_files, impulse_responses, compute_impulse_response,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
@@ -133,13 +133,13 @@ module DSGE
     include("forecast/trends.jl")
     include("forecast/deterministic_trends.jl")
     include("forecast/drivers.jl")
-    include("forecast/irfs.jl")
+    include("forecast/impulse_responses.jl")
 
     include("analysis/moments.jl")
     include("analysis/meansbands.jl")
     include("analysis/compute_means_bands.jl")
     include("analysis/means_bands_shockdec.jl")
-    include("analysis/means_bands_irf.jl")
+    include("analysis/means_bands_impulse_response.jl")
     include("analysis/meansbands_to_matrix.jl")
     include("analysis/util.jl")
 

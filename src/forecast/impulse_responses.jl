@@ -1,7 +1,7 @@
 """
 ```
-irfs(m, systems; procs = [myid()])
-irfs(m, systems, irf_shocks; procs = [myid()])
+impulse_responses(m, systems; procs = [myid()])
+impulse_responses(m, systems, impulse_response_shocks; procs = [myid()])
 ```
 
 computes impulse responses for all states, pseudo-observables, or observables
@@ -11,7 +11,7 @@ for a set of shocks across all draws.
 - `m::AbstractModel`: model object
 - `systems::DVector{System{S}}`: vector of `System` objects specifying
   state-space system matrices for each draw
-- `irf_shocks`: a Dict mapping the desired shocks to their indices
+- `impulse_response_shocks`: a Dict mapping the desired shocks to their indices
 
 ### Keyword Arguments
 
@@ -29,22 +29,22 @@ for a set of shocks across all draws.
   `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
 
     where `horizon` is the forecast horizon for the model as given by
-    `irf_horizons(m)` and `nshocks` is the number of shocks in
-    `irf_shocks`.
+    `impulse_response_horizons(m)` and `nshocks` is the number of shocks in
+    `impulse_response_shocks`.
 
 """
-function irfs{S<:AbstractFloat}(m::AbstractModel,
+function impulse_responses{S<:AbstractFloat}(m::AbstractModel,
                                 systems::DVector{System{S}, Vector{System{S}}};
                                 procs::Vector{Int} = [myid()])
 
-    irf_shocks = m.exogenous_shocks
+    impulse_response_shocks = m.exogenous_shocks
 
-    return irfs(m, systems, irf_shocks; procs = procs)
+    return impulse_responses(m, systems, impulse_response_shocks; procs = procs)
 end
 
-function irfs{S<:AbstractFloat}(m::AbstractModel,
+function impulse_responses{S<:AbstractFloat}(m::AbstractModel,
                                 systems::DVector{System{S}, Vector{System{S}}},
-                                irf_shocks::Dict{Symbol,Int64};
+                                impulse_response_shocks::Dict{Symbol,Int64};
                                 procs::Vector{Int} = [myid()])
     
     # Reset procs to [myid()] if necessary
@@ -53,12 +53,12 @@ function irfs{S<:AbstractFloat}(m::AbstractModel,
     # Numbers of useful things
     ndraws = length(systems)
     nprocs = length(procs)
-    horizon = irf_horizons(m)
+    horizon = impulse_response_horizons(m)
 
     nstates = n_states_augmented(m)
     nobs    = n_observables(m)
     npseudo = n_pseudoobservables(m)
-    nshocks = length(irf_shocks)
+    nshocks = length(impulse_response_shocks)
 
     states_range = 1:nstates
     obs_range    = (nstates + 1):(nstates + nobs)
@@ -73,7 +73,7 @@ function irfs{S<:AbstractFloat}(m::AbstractModel,
         ndraws_local = Int(ndraws / nprocs)   # Number of draws that localpart stores data for
 
         for i in draw_inds
-            states, obs, pseudo = compute_irf(systems[i], horizon, irf_shocks)
+            states, obs, pseudo = compute_impulse_response(systems[i], horizon, impulse_response_shocks)
 
             # Assign the i-th index of systems (the draw)
             # to the i_local-th index of the localpart array
@@ -100,9 +100,9 @@ end
     
 """
 ```
-compute_irf(system, horizon, irf_shocks)
+compute_impulse_response(system, horizon, impulse_response_shocks)
 
-compute_irf(T, R, Z, D, Z_pseudo, D_pseudo, QQ, horizon, irf_shocks)
+compute_impulse_response(T, R, Z, D, Z_pseudo, D_pseudo, QQ, horizon, impulse_response_shocks)
 ```
 
 compute impulse responses for a single 
@@ -114,7 +114,7 @@ compute impulse responses for a single
   and (possibly empty) pseudo-measurement equation matrices `Z_pseudo` and
   `D_pseudo`.
 - `horizon::Int`: number of periods ahead to forecast
-- `irf_shocks`: Dictionary mapping shocks to indices.
+- `impulse_response_shocks`: Dictionary mapping shocks to indices.
    where `S<:AbstractFloat`.
 
 ### Outputs
@@ -127,10 +127,10 @@ compute impulse responses for a single
   pseudo-observable shock decompositions. If the provided `Z_pseudo` and
   `D_pseudo` matrices are empty, then `pseudo` will be empty.
 
-Only the irfs corresponding to those in `irf_shocks` will be calculated and returned. 
+Only the impulse_responses corresponding to those in `impulse_response_shocks` will be calculated and returned. 
 """
-function compute_irf{S<:AbstractFloat}(system::System{S},
-    horizon::Int, irf_shocks::Dict{Symbol,Int64})
+function compute_impulse_response{S<:AbstractFloat}(system::System{S},
+    horizon::Int, impulse_response_shocks::Dict{Symbol,Int64})
 
     # Unpack system
     T, R = system[:TTT], system[:RRR]
@@ -143,14 +143,14 @@ function compute_irf{S<:AbstractFloat}(system::System{S},
         Matrix{S}(), Vector{S}()
     end
 
-    compute_irf(T, R, Z, D, Z_pseudo, D_pseudo,
-        Q, horizon, irf_shocks)
+    compute_impulse_response(T, R, Z, D, Z_pseudo, D_pseudo,
+        Q, horizon, impulse_response_shocks)
 end
 
-function compute_irf{S<:AbstractFloat}(T::Matrix{S},
+function compute_impulse_response{S<:AbstractFloat}(T::Matrix{S},
     R::Matrix{S}, Z::Matrix{S}, D::Vector{S}, Z_pseudo::Matrix{S},
     D_pseudo::Vector{S}, Q::Matrix{S}, horizon::Int,
-    irf_shocks::Dict{Symbol,Int64})
+    impulse_response_shocks::Dict{Symbol,Int64})
 
     # Setup
     nshocks      = size(Q, 1)
@@ -171,7 +171,7 @@ function compute_irf{S<:AbstractFloat}(T::Matrix{S},
     # Define iterate function, matrix of shocks
     iterate(z_t1, ϵ_t) = T*z_t1 + R*ϵ_t
     z0 = zeros(S, nstates)
-    shock_indices = collect(values(irf_shocks))
+    shock_indices = collect(values(impulse_response_shocks))
     impact = -diagm(sqrt(diag(Q))) # a negative 1 s.d. shock
 
     for i in shock_indices               

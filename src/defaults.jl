@@ -106,7 +106,7 @@ function default_settings!(m::AbstractModel)
     settings[:shockdec_whichshocks] = Setting(:shockdec_whichshocks, :all,
         "Sets of shocks for which to conduct shock decomposition")
 
-    settings[:irf_horizons] = Setting(:irf_horizons, 40, "Number of periods for which to calculate an impulse response.")
+    settings[:impulse_response_horizons] = Setting(:impulse_response_horizons, 40, "Number of periods for which to calculate an impulse response.")
 
     return settings
 end

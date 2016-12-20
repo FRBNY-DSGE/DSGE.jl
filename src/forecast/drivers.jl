@@ -556,7 +556,7 @@ function forecast_one(m::AbstractModel{Float64},
             println("\nComputing impulse responses for $(irfs_to_compute)...")
         end
         @time_verbose irfs_states, irfs_obs, irfs_pseudo =
-            irfs(m, systems; procs = procs)
+            impulse_responses(m, systems; procs = procs)
         
         forecast_output[:irfstates] = irfs_states
         forecast_output[:irfobs] = irfs_obs
