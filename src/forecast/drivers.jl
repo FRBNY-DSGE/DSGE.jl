@@ -70,7 +70,7 @@ function forecast_all(m::AbstractModel,
         params = load_draws(m, input_type; verbose = verbose, procs = procs)
 
         # Populate systems vector
-        systems = prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = procs)
+        systems = prepare_systems(m, input_type, params; procs = procs)
 
         for cond_type in cond_types
 
