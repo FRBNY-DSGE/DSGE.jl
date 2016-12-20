@@ -52,11 +52,11 @@ function optimize!(m::AbstractModel,
             store_trace=store_trace, show_trace=show_trace, extended_trace=extended_trace,
             verbose=verbose, rng=rng)
 
-        x_model[para_free_inds] = out.minimum
+        x_model[para_free_inds] = out.minimizer
         transform_to_model_space!(m, x_model)
 
         # Match original dimensions
-        out.minimum = x_model
+        out.minimizer = x_model
 
         H = zeros(n_parameters(m), n_parameters(m))
 
