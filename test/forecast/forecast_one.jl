@@ -19,45 +19,33 @@ m = Model990(custom_settings = custom_settings, testing = true)
 my_procs = addprocs(5)
 @everywhere using DSGE
 
-# Run forecasts
-forecast_outputs = Dict{Tuple{Symbol, Symbol}, Dict{Symbol, Any}}()
 output_vars = [:histstates, :histpseudo, :histshocks,
                :forecaststates, :forecastpseudo, :forecastobs, :forecastshocks,
                :shockdecstates, :shockdecpseudo, :shockdecobs]
 output_files = []
 
 # Call forecast_one once without timing
-df = load_data(m; verbose = :none)
-DSGE.compile_forecast_one(m, df; cond_type = :none, output_vars = output_vars,
-             verbose = :none, procs = my_procs)
+DSGE.compile_forecast_one(m, output_vars, verbose = :none, procs = my_procs)
 
 # Check error handling for input_type = :subset
-@test_throws ErrorException forecast_one(m, df; input_type = :subset, cond_type = :none,
-                                output_vars = output_vars, subset_inds = collect(1:10),
-                                subset_string = "", verbose = :none, procs = my_procs)
-@test_throws ErrorException forecast_one(m, df; input_type = :subset, cond_type = :none,
-                                output_vars = output_vars, subset_inds = Vector{Int}(),
-                                subset_string = "test", verbose = :none, procs = my_procs)
+@test_throws ErrorException forecast_one(m, :subset, :none, output_vars,
+                                subset_inds = collect(1:10), subset_string = "",
+                                verbose = :none, procs = my_procs)
+@test_throws ErrorException forecast_one(m, :subset, :none, output_vars,
+                                subset_inds = Vector{Int}(), subset_string = "test",
+                                verbose = :none, procs = my_procs)
 
 # Run all forecast combinations
-for input_type in [:init, :mode, :full]
-
-    df = load_data(m; verbose = :none)
-
+forecast_outputs = Dict{Tuple{Symbol, Symbol}, Dict{Symbol, Any}}()
+for input_type in [:init, :mode] #, :full]
     for cond_type in [:none, :semi, :full]
 
         println("input_type = $(input_type), cond_type = $(cond_type)")
 
-        forecast_output = Dict{Symbol, Any}()
-        forecast_output[:df] = load_data(m; cond_type=cond_type, try_disk=true, verbose=:none)
-
         procs = input_type == :full ? my_procs : [myid()]
-        @time new_forecast = forecast_one(m, forecast_output[:df];
-            input_type = input_type, cond_type = cond_type, output_vars = output_vars,
-            verbose = :none, procs = procs)
-        merge!(forecast_output, new_forecast)
-
-        forecast_outputs[(cond_type, input_type)] = forecast_output
+        @time forecast_outputs[(cond_type, input_type)] =
+            forecast_one(m, input_type, cond_type, output_vars,
+                         verbose = :none, procs = procs)
 
         new_output_files = collect(values(DSGE.get_output_files(m, "forecast", input_type, output_vars, cond_type)))
         append!(output_files, new_output_files)

@@ -1,6 +1,6 @@
 """
 ```
-forecast_all(m, cond_types, input_types, output_vars; verbose = :low,
+forecast_all(m, input_types, cond_types, output_vars; verbose = :low,
     procs = [myid()])
 ```
 
@@ -11,16 +11,6 @@ types, and output types.
 
 - `m::AbstractModel`: model object
 
-- `cond_types::Vector{Symbol}`: conditional data types, any combination of
-
-```
-  - `:none`: no conditional data
-  - `:semi`: use \"semiconditional data\" - average of quarter-to-date
-    observations for high frequency series
-  - `:full`: use \"conditional data\" - semiconditional plus nowcasts for
-    desired observables
-```
-
 - `input_types::Vector{Symbol}`: which set of parameters to use, any combination of
 
 ```
@@ -29,6 +19,16 @@ types, and output types.
   - `:init`: forecast using the initial parameter values only
   - `:full`: forecast using all parameters (full distribution)
   - `:subset`: forecast using a well-defined user-specified subset of draws
+```
+
+- `cond_types::Vector{Symbol}`: conditional data types, any combination of
+
+```
+  - `:none`: no conditional data
+  - `:semi`: use \"semiconditional data\" - average of quarter-to-date
+    observations for high frequency series
+  - `:full`: use \"conditional data\" - semiconditional plus nowcasts for
+    desired observables
 ```
 
 - `output_vars::Vector{Symbol}`: vector of desired output variables. See
@@ -58,22 +58,32 @@ None. Output is saved to files returned by
 for each combination of `input_type` and `cond_type`.
 """
 function forecast_all(m::AbstractModel,
-                      cond_types::Vector{Symbol}  = Vector{Symbol}(),
                       input_types::Vector{Symbol} = Vector{Symbol}(),
+                      cond_types::Vector{Symbol}  = Vector{Symbol}(),
                       output_vars::Vector{Symbol} = Vector{Symbol}();
                       verbose::Symbol             = :low,
                       procs::Vector{Int}          = [myid()])
 
-    for cond_type in cond_types
-        df = load_data(m; cond_type=cond_type, try_disk=true, verbose=:none)
-        for input_type in input_types
-            my_procs = if input_type in [:init, :mode, :mean]
-                [myid()]
-            else
-                procs
-            end
-            forecast_one(m, df; cond_type=cond_type, input_type=input_type,
-                output_vars=output_vars, verbose=verbose, procs=my_procs)
+    for input_type in input_types
+
+        # Set up infiles
+        params, TTT, RRR, CCC, zend = load_draws(m, input_type; verbose = verbose, procs = procs)
+
+        # Populate systems vector
+        systems = prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = procs)
+
+        for cond_type in cond_types
+
+            # Load data
+            df = load_data(m; cond_type = cond_type, try_disk = true, verbose = :none)
+
+            # Run Kalman filter to get s_{T|T}
+            kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
+
+            # Call forecast_one
+            forecast_one(m, input_type, cond_type, output_vars;
+                         df = df, systems = systems, kals = kals,
+                         verbose = verbose, procs = [myid()])
         end
     end
 end
@@ -81,10 +91,7 @@ end
 """
 `load_draws(m, input_type; subset_inds = [], verbose = :low, procs = [myid()])`
 
-Load and return parameter draws, transition matrices, and final state vectors
-from Metropolis-Hastings. Single draws are reshaped to have additional singleton
-dimensions, and missing variables without sufficient information are initialized
-to null values of appropriate types.
+Load and return parameter draws from Metropolis-Hastings.
 
 ### Inputs
 
@@ -173,12 +180,8 @@ end
 prepare_systems(m, input_type, params; procs = [myid()])
 ```
 
-Returns a `DVector{System{Float64}}` of `System` objects constructed from the
-given sampling outputs that is suitable for input to forecasting. In the
-one-draw case (`input_type in [:mode, :mean, :init]`), the model is re-solved
-and the state-space system is recomputed. In the many-draw case (`input_type in
-[:full, :subset]`), the outputs from sampling are simply repackaged to the
-appropriate shape.
+Returns a `DVector{System{Float64}}` of `System` objects, one for each draw in
+`params` (after thinning), by recomputing the state-space system.
 
 ### Inputs
 
@@ -241,68 +244,10 @@ end
 
 """
 ```
-prepare_forecast_inputs(m, df; input_type = :mode, cond_type = :none,
-    subset_inds = [], verbose = :low, procs = [myid()])
-```
-
-Load draws for this input type, prepare a System object for each draw, and
-prepare initial state vectors.
-
-### Inputs
-
-- `m::AbstractModel`: model object
-- `df::DataFrame`: historical data. If `cond_type in [:semi, :full]`, then the
-   final row of `df` should be the period containing conditional data
-
-### Keyword Arguments
-
-- `input_type::Symbol`: See documentation for `forecast_all`. Defaults to
-  `:mode`
-- `cond_type::Symbol`: See documentation for `forecast_all`. Defaults to `:none`
-- `subset_inds::Vector{Int}`: indices specifying the draws we want to use. See
-  `forecast_one` for more detail.
-- `verbose::Symbol`: desired frequency of function progress messages printed to
-  standard out. One of `:none`, `:low`, or `:high`. If `:low` or greater, prints
-  location of input file.
-- `procs::Vector{Int}`: list of worker processes that have been
-  previously added by the user. Defaults to `[myid()]`
-
-### Outputs
-
-- `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
-  objects, one for each draw
-- `kals::DVector{Kalman{Float64}}`: vector of `n_sim` many `Kalman` objects
-
-### Notes
-
-`prepare_forecast_inputs` calls `load_draws`, `prepare_systems`, and
-`filter_all`. See those functions for thorough documentation.
-"""
-function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
-    input_type::Symbol = :mode, cond_type::Symbol = :none,
-    subset_inds::Vector{Int} = Vector{Int}(), verbose::Symbol = :low,
-    procs::Vector{Int} = [myid()])
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs, Nullable(input_type))
-
-    # Set up infiles
-    params = load_draws(m, input_type; subset_inds = subset_inds,
-                        verbose = verbose, procs = procs)
-
-    # Populate systems vector
-    systems = prepare_systems(m, input_type, params; procs = procs)
-
-    # Populate states vector
-    kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
-
-    return systems, kals
-end
-
-"""
-```
-forecast_one(m, df; input_type = :mode, cond_type = :none, output_vars = [],
-    subset_inds = [], verbose = :low, procs = [myid()])
+forecast_one(m, input_type, cond_type, output_vars;
+    df = DataFrame(), systems = dinit(System{Float64}, 0},
+    kals = dinit(Kalman{Float64}, 0), subset_inds = [],
+    subset_string = "", verbose = :low, procs = [myid()])
 ```
 
 Compute, save, and return `output_vars` for input draws given by `input_type`
@@ -311,20 +256,25 @@ and conditional data case given by `cond_type`.
 ### Inputs
 
 - `m::AbstractModel`: model object
-- `df::DataFrame`: Historical data. If `cond_type in [:semi, :full]`, then the
-   final row of `df` should be the period containing conditional data.
+- `input_type::Symbol`: See documentation for `forecast_all`
+- `cond_type::Symbol`: See documentation for `forecast_all`
+- `output_vars::Vector{Symbol}`: vector of desired output variables. See Outputs
+  section
 
 ### Keyword Arguments
 
-- `input_type::Symbol`: See documentation for `forecast_all`. Defaults to
-  `:mode`
-- `cond_type::Symbol`: See documentation for `forecast_all`. Defaults to `:none`
-- `output_vars::Vector{Symbol}`: vector of desired output variables. See Outputs
-  section
+- `df::DataFrame`: Historical data. If `cond_type in [:semi, :full]`, then the
+   final row of `df` should be the period containing conditional data. If not
+   provided, will be loaded using `load_data` with the appropriate `cond_type`
+- `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
+  objects, one for each draw. If not provided, will be loaded using
+  `prepare_systems`
+- `kals::DVector{Kalman{Float64}}`: vector of `n_sim_forecast` many `Kalman`
+  objects. If not provided, will be loaded using `filter_all`
 - `subset_inds::Vector{Int}`: indices specifying the draws we want to use. If a
   more sophisticated selection criterion is desired, the user is responsible for
   determining the indices corresponding to that criterion. If `input_type` is
-  not `subset`, `subset_inds` will be ignored.
+  not `subset`, `subset_inds` will be ignored
 - `subset_string::AbstractString`: short string identifying the subset to be
   appended to the output filenames. If `input_type = :subset` and
   `subset_string` is empty, an error is thrown.
@@ -377,17 +327,16 @@ and conditional data case given by `cond_type`.
   draws can be evenly distributed across workers. This is required by the
   `DistributedArrays` package.
 """
-function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
-    input_type::Symbol = :mode, cond_type::Symbol = :none,
-    output_vars::Vector{Symbol} = Vector{Symbol}(),
+function forecast_one(m::AbstractModel{Float64},
+    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+    df::DataFrame = DataFrame(),
+    systems::DVector{System{Float64}} = dinit(System{Float64}, 0),
+    kals::DVector{Kalman{Float64}} = dinit(Kalman{Float64}, 0),
     subset_inds::Vector{Int} = Vector{Int}(),
     subset_string::AbstractString = "", verbose::Symbol = :low,
     procs::Vector{Int} = [myid()])
 
     ### 1. Setup
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs, Nullable(input_type))
 
     # Compute everything that will be needed to plot original output_vars
     output_vars = add_requisite_output_vars(output_vars)
@@ -405,24 +354,18 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         println("Forecast outputs will be saved in $output_dir")
     end
 
-    # Prepare forecast inputs
+    # Check that provided forecast inputs are well-formed
+    # If an input is not provided, load it
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("\nPreparing forecast inputs...")
     end
-    @time_verbose systems, kals = prepare_forecast_inputs(m, df; input_type = input_type,
-            cond_type = cond_type, subset_inds = subset_inds, verbose = verbose,
-            procs = procs)
+    @time_verbose df, systems, kals, procs =
+        prepare_forecast_inputs!(m, input_type, cond_type, output_vars; df = df,
+            systems = systems, kals = kals, subset_inds = subset_inds,
+            verbose = verbose, procs = procs)
 
     nprocs = length(procs)
     ndraws = length(systems)
-
-    # Set forecast_pseudoobservables properly
-    for output in output_vars
-        if contains(string(output), "pseudo")
-            m <= Setting(:forecast_pseudoobservables, true)
-            break
-        end
-    end
 
 
     ### 2. Smoothed Histories
@@ -532,6 +475,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
 
     ### 4. Shock Decompositions
+
     shockdecs_to_compute = intersect(output_vars, shockdec_vars)
     if !isempty(shockdecs_to_compute)
         if VERBOSITY[verbose] >= VERBOSITY[:low]

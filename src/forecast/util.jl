@@ -184,6 +184,19 @@ typealias DMatrix{T, A} DArray{T, 2, A}
 
 """
 ```
+dinit(T, dims)
+
+dinit(T, dims...)
+```
+
+Initialize a `DArray{T, N, Array{T, N}}` (where `N = length(dims)`), distributed
+over only the current process `myid()`.
+"""
+dinit(T, dims::Tuple) = DArray(I -> Array(T, map(length, I)), dims, [myid()])
+dinit(T, dims...)     = dinit(T, dims)
+
+"""
+```
 @time_verbose ex
 ```
 
@@ -310,6 +323,96 @@ function write_forecast_outputs(m::AbstractModel, output_vars::Vector{Symbol},
             println(" * Wrote $(basename(filepath))")
         end
     end
+end
+
+"""
+```
+prepare_forecast_inputs!(m, input_type, cond_type, output_vars;
+    df = DataFrame(), systems = dinit(System, 0), kals = dinit(Kalman{S}, 0),
+    subset_inds = Vector{Int}(), verbose = :none, procs = [myid()])
+```
+
+Check that the provided inputs `df`, `systems`, `states`, `subset_inds`, and
+`procs` are well-formed with respect to the provided `input_type`, `cond_type`,
+and `output_vars`. If an input is not provided to the function, it is loaded
+using the appropriate getter function.
+
+### Inputs
+
+- `m::AbstractModel`: model object
+- `input_type::Symbol`: See documentation for `forecast_all`. Defaults to
+  `:mode`
+- `cond_type::Symbol`: See documentation for `forecast_all`. Defaults to `:none`
+- `subset_inds::Vector{Int}`: indices specifying the draws we want to use. See
+  `forecast_one` for more detail
+- `output_vars::Vector{Symbol}`: vector of desired output variables. See
+  `forecast_one`
+
+### Keyword Arguments
+
+- `df::DataFrame`: historical data. If `cond_type in [:semi, :full]`, then the
+   final row of `df` should be the period containing conditional data. If not
+   provided, then `df` will be loaded using `load_data` with the appropriate
+   `cond_type`
+- `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
+  objects, one for each draw. If not provided, will be loaded using
+  `prepare_systems`
+- `kals::DVector{Kalman{Float64}}`: vector of `n_sim_forecast` many `Kalman`
+  objects. If not provided, will be loaded using `filter_all`
+- `subset_inds::Vector{Int}`: indices specifying the draws we want to use. If
+  `input_type` is not `subset`, `subset_inds` will be ignored
+- `verbose::Symbol`: desired frequency of function progress messages printed to
+  standard out. One of `:none`, `:low`, or `:high`
+- `procs::Vector{Int}`: list of worker processes that have been
+  previously added by the user. Defaults to `[myid()]`
+
+### Outputs
+
+- `df`
+- `systems`
+- `kals`
+- `procs`
+"""
+function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
+    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+    df::DataFrame = DataFrame(),
+    systems::DVector{System{S}} = dinit(System{S}, 0),
+    kals::DVector{Kalman{S}} = dinit(Kalman{S}, 0),
+    subset_inds::Vector{Int} = Vector{Int}(),
+    verbose::Symbol = :none, procs::Vector{Int} = [myid()])
+
+    # Set forecast_pseudoobservables properly
+    for output in output_vars
+        if contains(string(output), "pseudo")
+            m <= Setting(:forecast_pseudoobservables, true)
+            break
+        end
+    end
+
+    # Load data if not provided
+    if isempty(df)
+        df = load_data(m; cond_type = cond_type, try_disk = true, verbose = :none)
+    else
+        @assert df[1, :date] == date_presample_start(m)
+        @assert df[end, :date] == (cond_type == :none ? date_mainsample_end(m) : date_conditional_end(m))
+    end
+
+    # Compute systems and run Kalman filter if not provided
+    if isempty(systems) || isempty(kals)
+        procs = reset_procs(m, procs, Nullable(input_type))
+        params = load_draws(m, input_type; subset_inds = subset_inds,
+                            verbose = verbose, procs = procs)
+        systems = prepare_systems(m, input_type, params; procs = procs)
+        kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
+    else
+        @assert length(systems) == length(kals)
+        @assert procs(systems) == procs(kals) == procs
+        if input_type == :subset
+            @assert length(subset_inds) == length(systems)
+        end
+    end
+
+    return df, systems, kals, procs
 end
 
 """
@@ -457,8 +560,7 @@ end
 
 """
 ```
-compile_forecast_one(m, df; cond_type = :none, output_vars = [], verbose = :low,
-    procs = [myid()])
+compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
 ```
 
 Run `forecast_one` once to just-in-time compile it, before running a
@@ -467,7 +569,7 @@ of draws necessary given the forecast thinning step size (`jstep`) and number of
 processes (`nprocs`), i.e. `jstep * nprocs`, and runs a full forecast on those
 draws.
 """
-function compile_forecast_one(m, df; cond_type = :none, output_vars = [], verbose = :low, procs = [myid()])
+function compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
     # Compute mininum number of draws for given jstep and procs
     jstep = get_setting(m, :forecast_jstep)
     nprocs = length(procs)
@@ -475,12 +577,12 @@ function compile_forecast_one(m, df; cond_type = :none, output_vars = [], verbos
 
     # Call forecast_one with input_type = :subset
     subset_inds = collect(1:min_draws)
-    forecast_outputs = forecast_one(m, df; input_type = :subset, cond_type = cond_type,
-                           output_vars = output_vars, subset_inds = subset_inds,
-                           subset_string = "compile", verbose = verbose, procs = procs)
+    forecast_outputs = forecast_one(m, :subset, :none, output_vars;
+                                    subset_inds = subset_inds, subset_string = "compile",
+                                    verbose = verbose, procs = procs)
 
     # Delete output files
-    output_files = get_output_files(m, "forecast", :subset, output_vars, cond_type, subset_string = "compile")
+    output_files = get_output_files(m, "forecast", :subset, output_vars, :none, subset_string = "compile")
     map(rm, collect(values(output_files)))
 end
 
