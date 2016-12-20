@@ -57,8 +57,7 @@ function deterministic_trends{S<:AbstractFloat}(m::AbstractModel, systems::DVect
     # compute shock decompositions, we truncate and only store
     # results for periods corresponding to the shockdec period.
     nperiods  = DSGE.subtract_quarters(date_shockdec_end(m), date_mainsample_start(m)) + 1
-    n_presample = n_presample_periods(m)
-    date_range = (index_shockdec_start(m) - n_presample):(index_shockdec_end(m) - n_presample)
+    date_range = index_shockdec_start(m):index_shockdec_end(m)
 
     # Assign ranges for DArray
     states_range = 1:nstates

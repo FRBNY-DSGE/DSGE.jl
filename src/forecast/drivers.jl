@@ -530,6 +530,7 @@ function forecast_one(m::AbstractModel{Float64},
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("\nComputing deterministic trend for $(dettrends_to_compute)...")
         end
+
         @time_verbose dettrendstates, dettrendobs, dettrendpseudo =
             deterministic_trends(m, systems, z0s; procs = procs)
 

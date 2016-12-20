@@ -134,8 +134,24 @@ index_presample_start(m::AbstractModel) = 1
 index_mainsample_start(m::AbstractModel) = subtract_quarters(date_mainsample_start(m), date_presample_start(m)) + 1
 index_zlb_start(m::AbstractModel) = subtract_quarters(date_zlb_start(m), date_presample_start(m)) + 1
 index_forecast_start(m::AbstractModel) = subtract_quarters(date_forecast_start(m), date_presample_start(m)) + 1
-index_shockdec_start(m::AbstractModel) = subtract_quarters(date_shockdec_start(m), date_presample_start(m)) + 1
-index_shockdec_end(m::AbstractModel) = subtract_quarters(date_shockdec_end(m), date_presample_start(m)) + 1
+
+"""
+```
+index_shockdec_start(m::AbstractModel)
+```
+
+Returns the index starting from which the shock decomposition is saved, where 1 is the index corresponding to date_mainsample_start(m).
+"""
+index_shockdec_start(m::AbstractModel) = subtract_quarters(date_shockdec_start(m), date_mainsample_start(m)) + 1
+
+"""
+```
+index_shockdec_end(m::AbstractModel)
+```
+
+Returns the last index for which the shock decomposition is saved, where 1 is the index corresponding to date_mainsample_start(m).
+"""
+index_shockdec_end(m::AbstractModel) = subtract_quarters(date_shockdec_end(m), date_mainsample_start(m)) + 1
 
 n_presample_periods(m::AbstractModel) = subtract_quarters(date_mainsample_start(m), date_presample_start(m))
 n_prezlb_periods(m::AbstractModel) = subtract_quarters(date_zlb_start(m), date_mainsample_start(m))

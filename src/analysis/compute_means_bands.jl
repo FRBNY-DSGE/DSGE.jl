@@ -152,7 +152,7 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
 
         data, y0_indexes
     else
-        Matrix{T}(), Dict{Symbol,Int}()
+        Matrix{T}(), Dict{Symbol,Nullable{Int}}()
     end
 
     ## Step 3: Get names of files that the forecast wrote
@@ -468,27 +468,13 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
             fcast_series = squeeze(fcast_output[:, ind, :], 2)
 
             transformed_fcast_output = if transform in [logtopct_annualized_percapita]
-                println("fcast_output: $size(fcast_output)")
-                println("y: $(size(fcast_output[ind]))")
-                println("y: $(size(population_series))")
-
                 transform(fcast_series, population_series)
             elseif transform in [loglevelto4qpct_annualized_percapita]
                 hist_data = data[ind, y0_index]
-
-                println(transform)
-                println("fcast_output: $(typeof(fcast_output))")
-                println("fcast_output: $(size(fcast_output))")
-                println("fcast_output[$ind] = $(fcast_output[ind])")
-                println("hist_data: $(hist_data)")
-                println("population_series: $(size(population_series))")
-
                 transform(fcast_series, hist_data, population_series)
             else
                 transform(fcast_series)
             end
-
-            println("transformed_fcast_output: $(size(transformed_fcast_output))")
             transformed_fcast_output = reshape(transformed_fcast_output, 1, length(transformed_fcast_output))
 
             # compute the mean and bands across draws and add to dataframe
