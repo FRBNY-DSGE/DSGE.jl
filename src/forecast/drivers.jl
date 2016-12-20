@@ -67,7 +67,7 @@ function forecast_all(m::AbstractModel,
     for input_type in input_types
 
         # Set up infiles
-        params, TTT, RRR, CCC, zend = load_draws(m, input_type; verbose = verbose, procs = procs)
+        params = load_draws(m, input_type; verbose = verbose, procs = procs)
 
         # Populate systems vector
         systems = prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = procs)
@@ -366,7 +366,6 @@ function forecast_one(m::AbstractModel{Float64},
 
     nprocs = length(procs)
     ndraws = length(systems)
-
 
     ### 2. Smoothed Histories
 
