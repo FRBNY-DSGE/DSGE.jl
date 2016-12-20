@@ -406,7 +406,7 @@ function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
         kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
     else
         @assert length(systems) == length(kals)
-        @assert procs(systems) == procs(kals) == procs
+        @assert DistributedArrays.procs(systems) == DistributedArrays.procs(kals) == procs
         if input_type == :subset
             @assert length(subset_inds) == length(systems)
         end
