@@ -33,11 +33,9 @@ shocks[ind_r_sh, :] = -10.
 states, obs, pseudo, shocks = compute_forecast(m, system, z0; shocks = shocks)
 @assert all(x -> x < zlb_value, obs[ind_r, :])
 
-m <= Setting(:forecast_enforce_zlb, true)
-states, obs, pseudo, shocks = compute_forecast(m, system, z0; shocks = shocks)
+states, obs, pseudo, shocks = compute_forecast(m, system, z0; shocks = shocks, enforce_zlb = true)
 @assert all(x -> abs(x - zlb_value) < 0.01, obs[ind_r, :])
 @assert all(x -> x != -10.,                 shocks[ind_r_sh, :])
-m <= Setting(:forecast_enforce_zlb, false)
 
 
 ### 2. Shocks not supplied => draw all zeros
