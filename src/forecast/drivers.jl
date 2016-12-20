@@ -1,6 +1,6 @@
 """
 ```
-forecast_all(m, cond_types, input_types, output_vars; verbose = :low,
+forecast_all(m, input_types, cond_types, output_vars; verbose = :low,
     procs = [myid()])
 ```
 
@@ -11,16 +11,6 @@ types, and output types.
 
 - `m::AbstractModel`: model object
 
-- `cond_types::Vector{Symbol}`: conditional data types, any combination of
-
-```
-  - `:none`: no conditional data
-  - `:semi`: use \"semiconditional data\" - average of quarter-to-date
-    observations for high frequency series
-  - `:full`: use \"conditional data\" - semiconditional plus nowcasts for
-    desired observables
-```
-
 - `input_types::Vector{Symbol}`: which set of parameters to use, any combination of
 
 ```
@@ -29,6 +19,16 @@ types, and output types.
   - `:init`: forecast using the initial parameter values only
   - `:full`: forecast using all parameters (full distribution)
   - `:subset`: forecast using a well-defined user-specified subset of draws
+```
+
+- `cond_types::Vector{Symbol}`: conditional data types, any combination of
+
+```
+  - `:none`: no conditional data
+  - `:semi`: use \"semiconditional data\" - average of quarter-to-date
+    observations for high frequency series
+  - `:full`: use \"conditional data\" - semiconditional plus nowcasts for
+    desired observables
 ```
 
 - `output_vars::Vector{Symbol}`: vector of desired output variables. See
@@ -58,22 +58,32 @@ None. Output is saved to files returned by
 for each combination of `input_type` and `cond_type`.
 """
 function forecast_all(m::AbstractModel,
-                      cond_types::Vector{Symbol}  = Vector{Symbol}(),
                       input_types::Vector{Symbol} = Vector{Symbol}(),
+                      cond_types::Vector{Symbol}  = Vector{Symbol}(),
                       output_vars::Vector{Symbol} = Vector{Symbol}();
                       verbose::Symbol             = :low,
                       procs::Vector{Int}          = [myid()])
 
-    for cond_type in cond_types
-        df = load_data(m; cond_type=cond_type, try_disk=true, verbose=:none)
-        for input_type in input_types
-            my_procs = if input_type in [:init, :mode, :mean]
-                [myid()]
-            else
-                procs
-            end
-            forecast_one(m, df; cond_type=cond_type, input_type=input_type,
-                output_vars=output_vars, verbose=verbose, procs=my_procs)
+    for input_type in input_types
+
+        # Set up infiles
+        params = load_draws(m, input_type; verbose = verbose, procs = procs)
+
+        # Populate systems vector
+        systems = prepare_systems(m, input_type, params; procs = procs)
+
+        for cond_type in cond_types
+
+            # Load data
+            df = load_data(m; cond_type = cond_type, try_disk = true, verbose = :none)
+
+            # Run Kalman filter to get s_{T|T}
+            kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
+
+            # Call forecast_one
+            forecast_one(m, input_type, cond_type, output_vars;
+                         df = df, systems = systems, kals = kals,
+                         verbose = verbose, procs = [myid()])
         end
     end
 end
@@ -81,10 +91,7 @@ end
 """
 `load_draws(m, input_type; subset_inds = [], verbose = :low, procs = [myid()])`
 
-Load and return parameter draws, transition matrices, and final state vectors
-from Metropolis-Hastings. Single draws are reshaped to have additional singleton
-dimensions, and missing variables without sufficient information are initialized
-to null values of appropriate types.
+Load and return parameter draws from Metropolis-Hastings.
 
 ### Inputs
 
@@ -106,12 +113,6 @@ to null values of appropriate types.
 
 - `params::Matrix{Float64}`: matrix of size `nsim` x `nparams` of parameter
   draws
-- `TTT::Array{Float64, 3}`: array of size `nsim` x `nstates` x `nstates` of
-  transition matrix draws
-- `RRR::Array{Float64, 3}`: array of size `nsim` x `nstates` x `nshocks` of
-  transition matrix draws
-- `CCC::Array{Float64, 3}`: array of size `nsim` x `nstates` x 1 of transition
-  matrix draws
 
 where `nsim` is the number of draws saved in Metropolis-Hastings.
 
@@ -139,21 +140,11 @@ function load_draws(m::AbstractModel, input_type::Symbol;
             map(Float64, read(f, "params"))
         end
         params = reshape(tmp, 1, size(tmp,1))
-        TTT  = Array{Float64}(0,0,0)
-        RRR  = Array{Float64}(0,0,0)
-        CCC  = Array{Float64}(0,0,0)
 
     elseif input_type in [:full, :subset]
         if input_type == :full
             h5open(input_file_name, "r") do f
                 params = map(Float64, read(f, "mhparams"))
-                TTT    = map(Float64, read(f, "mhTTT"))
-                RRR    = map(Float64, read(f, "mhRRR"))
-                if "mhCCC" in names(f)
-                    CCC = map(Float64, read(f, "mhCCC"))
-                else
-                    CCC = Array{Float64}(0,0,0)
-                end
             end
         else
             if isempty(subset_inds)
@@ -161,13 +152,6 @@ function load_draws(m::AbstractModel, input_type::Symbol;
             end
             h5open(input_file_name, "r") do f
                 params = map(Float64, read(f, "mhparams")[subset_inds, :])
-                TTT    = map(Float64, read(f, "mhTTT")[subset_inds, :, :])
-                RRR    = map(Float64, read(f, "mhRRR")[subset_inds, :, :])
-                if "mhCCC" in names(f)
-                    CCC = map(Float64, read(f, "mhCCC")[subset_inds, :])
-                else
-                    CCC = Array{Float64}(0,0,0)
-                end
             end
         end
 
@@ -179,38 +163,25 @@ function load_draws(m::AbstractModel, input_type::Symbol;
         if remainder != 0
             nsim_new = nsim - remainder
             warn("Number of draws read in, $nsim, is not divisible by jstep * nprocs = $(jstep * nprocs). Taking the first $nsim_new draws instead.")
-
             params = params[1:nsim_new, :]
-            TTT    = TTT[1:nsim_new, :, :]
-            RRR    = RRR[1:nsim_new, :, :]
-            if !isempty(CCC)
-                CCC = CCC[1:nsim_new, :, :]
-            end
         end
 
     elseif input_type in [:init]
         init_parameters!(m)
         tmp = Float64[α.value for α in m.parameters]
         params = reshape(tmp, 1, size(tmp,1))
-        TTT  = Array{Float64}(0,0,0)
-        RRR  = Array{Float64}(0,0,0)
-        CCC  = Array{Float64}(0,0,0)
     end
 
-    return params, TTT, RRR, CCC
+    return params
 end
 
 """
 ```
-prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = [myid()])
+prepare_systems(m, input_type, params; procs = [myid()])
 ```
 
-Returns a `DVector{System{Float64}}` of `System` objects constructed from the
-given sampling outputs that is suitable for input to forecasting. In the
-one-draw case (`input_type in [:mode, :mean, :init]`), the model is re-solved
-and the state-space system is recomputed. In the many-draw case (`input_type in
-[:full, :subset]`), the outputs from sampling are simply repackaged to the
-appropriate shape.
+Returns a `DVector{System{Float64}}` of `System` objects, one for each draw in
+`params` (after thinning), by recomputing the state-space system.
 
 ### Inputs
 
@@ -219,12 +190,6 @@ appropriate shape.
   documentation for `forecast_all`.
 - `params::Matrix{Float64}`: matrix of size `nsim` x `nparams` of parameter
   draws
-- `TTT::Array{Float64, 3}`: array of size `nsim` x `nstates` x `nstates` of
-  transition matrix draws
-- `RRR::Array{Float64, 3}`: array of size `nsim` x `nstates` x `nshocks` of
-  transition matrix draws
-- `CCC::Array{Float64, 3}`: array of size `nsim` x `nstates` x 1 of transition
-  matrix draws
 
 ### Keyword Arguments
 
@@ -240,8 +205,7 @@ where `n_sim_forecast = n_sim / jstep` is the number of draws after thinning a
 second time.
 """
 function prepare_systems(m::AbstractModel, input_type::Symbol,
-    params::Matrix{Float64}, TTT::Array{Float64, 3}, RRR::Array{Float64, 3},
-    CCC::Array{Float64, 3}; procs::Vector{Int} = [myid()])
+    params::Matrix{Float64}; procs::Vector{Int} = [myid()])
 
     # Reset procs to [myid()] if necessary
     procs = reset_procs(m, procs, Nullable(input_type))
@@ -255,7 +219,6 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
         update!(m, vec(params))
         systems = dfill(compute_system(m), (1,), procs)
     elseif input_type in [:full, :subset]
-        empty = isempty(CCC)
         nprocs = length(procs);
         systems = DArray((n_sim_forecast,), procs, [nprocs]) do I
             draw_inds = first(I)
@@ -266,32 +229,9 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
                 j = i * jstep
                 i_local = mod(i-1, ndraws_local) + 1
 
-                # Prepare transition eq
-                TTT_j = squeeze(TTT[j, :, :], 1)
-                RRR_j = squeeze(RRR[j, :, :], 1)
-
-                if empty
-                    trans_j = Transition(TTT_j, RRR_j)
-                else
-                    CCC_j = squeeze(CCC[j, :, :], 1)
-                    trans_j = Transition(TTT_j, RRR_j, CCC_j)
-                end
-
-                # Prepare measurement eq
                 params_j = vec(params[j,:])
                 update!(m, params_j)
-                meas_j   = measurement(m, trans_j; shocks = true)
-
-                # Prepare pseudo-measurement eq
-                pseudo_meas_j = if forecast_pseudoobservables(m)
-                    _, pseudo_mapping = pseudo_measurement(m)
-                    Nullable(pseudo_mapping)
-                else
-                    Nullable{PseudoObservableMapping{Float64}}()
-                end
-
-                # Prepare system
-                localpart[i_local] = System(trans_j, meas_j, pseudo_meas_j)
+                localpart[i_local] = compute_system(m)
             end
             return localpart
         end
@@ -304,69 +244,10 @@ end
 
 """
 ```
-prepare_forecast_inputs(m, df; input_type = :mode, cond_type = :none,
-    subset_inds = [], verbose = :low, procs = [myid()])
-```
-
-Load draws for this input type, prepare a System object for each draw, and
-prepare initial state vectors.
-
-### Inputs
-
-- `m::AbstractModel`: model object
-- `df::DataFrame`: historical data. If `cond_type in [:semi, :full]`, then the
-   final row of `df` should be the period containing conditional data
-
-### Keyword Arguments
-
-- `input_type::Symbol`: See documentation for `forecast_all`. Defaults to
-  `:mode`
-- `cond_type::Symbol`: See documentation for `forecast_all`. Defaults to `:none`
-- `subset_inds::Vector{Int}`: indices specifying the draws we want to use. See
-  `forecast_one` for more detail.
-- `verbose::Symbol`: desired frequency of function progress messages printed to
-  standard out. One of `:none`, `:low`, or `:high`. If `:low` or greater, prints
-  location of input file.
-- `procs::Vector{Int}`: list of worker processes that have been
-  previously added by the user. Defaults to `[myid()]`
-
-### Outputs
-
-- `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
-  objects, one for each draw
-- `states::DVector{Vector{Float64}}`: vector of `n_sim` many final historical
-  state vectors
-
-### Notes
-
-`prepare_forecast_inputs` calls `load_draws`, `prepare_systems`, and
-  `prepare_states`. See those functions for thorough documentation.
-"""
-function prepare_forecast_inputs(m::AbstractModel, df::DataFrame;
-    input_type::Symbol = :mode, cond_type::Symbol = :none,
-    subset_inds::Vector{Int} = Vector{Int}(), verbose::Symbol = :low,
-    procs::Vector{Int} = [myid()])
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs, Nullable(input_type))
-
-    # Set up infiles
-    params, TTT, RRR, CCC = load_draws(m, input_type; subset_inds = subset_inds,
-                                      verbose = verbose, procs = procs)
-
-    # Populate systems vector
-    systems = prepare_systems(m, input_type, params, TTT, RRR, CCC; procs = procs)
-
-    # Populate states vector
-    kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
-
-    return systems, kals
-end
-
-"""
-```
-forecast_one(m, df; input_type = :mode, cond_type = :none, output_vars = [],
-    subset_inds = [], verbose = :low, procs = [myid()])
+forecast_one(m, input_type, cond_type, output_vars;
+    df = DataFrame(), systems = dinit(System{Float64}, 0},
+    kals = dinit(Kalman{Float64}, 0), subset_inds = [],
+    subset_string = "", verbose = :low, procs = [myid()])
 ```
 
 Compute, save, and return `output_vars` for input draws given by `input_type`
@@ -375,20 +256,25 @@ and conditional data case given by `cond_type`.
 ### Inputs
 
 - `m::AbstractModel`: model object
-- `df::DataFrame`: Historical data. If `cond_type in [:semi, :full]`, then the
-   final row of `df` should be the period containing conditional data.
+- `input_type::Symbol`: See documentation for `forecast_all`
+- `cond_type::Symbol`: See documentation for `forecast_all`
+- `output_vars::Vector{Symbol}`: vector of desired output variables. See Outputs
+  section
 
 ### Keyword Arguments
 
-- `input_type::Symbol`: See documentation for `forecast_all`. Defaults to
-  `:mode`
-- `cond_type::Symbol`: See documentation for `forecast_all`. Defaults to `:none`
-- `output_vars::Vector{Symbol}`: vector of desired output variables. See Outputs
-  section
+- `df::DataFrame`: Historical data. If `cond_type in [:semi, :full]`, then the
+   final row of `df` should be the period containing conditional data. If not
+   provided, will be loaded using `load_data` with the appropriate `cond_type`
+- `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
+  objects, one for each draw. If not provided, will be loaded using
+  `prepare_systems`
+- `kals::DVector{Kalman{Float64}}`: vector of `n_sim_forecast` many `Kalman`
+  objects. If not provided, will be loaded using `filter_all`
 - `subset_inds::Vector{Int}`: indices specifying the draws we want to use. If a
   more sophisticated selection criterion is desired, the user is responsible for
   determining the indices corresponding to that criterion. If `input_type` is
-  not `subset`, `subset_inds` will be ignored.
+  not `subset`, `subset_inds` will be ignored
 - `subset_string::AbstractString`: short string identifying the subset to be
   appended to the output filenames. If `input_type = :subset` and
   `subset_string` is empty, an error is thrown.
@@ -445,17 +331,16 @@ and conditional data case given by `cond_type`.
   draws can be evenly distributed across workers. This is required by the
   `DistributedArrays` package.
 """
-function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
-    input_type::Symbol = :mode, cond_type::Symbol = :none,
-    output_vars::Vector{Symbol} = Vector{Symbol}(),
+function forecast_one(m::AbstractModel{Float64},
+    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+    df::DataFrame = DataFrame(),
+    systems::DVector{System{Float64}} = dinit(System{Float64}, 0),
+    kals::DVector{Kalman{Float64}} = dinit(Kalman{Float64}, 0),
     subset_inds::Vector{Int} = Vector{Int}(),
     subset_string::AbstractString = "", verbose::Symbol = :low,
     procs::Vector{Int} = [myid()])
 
     ### 1. Setup
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs, Nullable(input_type))
 
     # Compute everything that will be needed to plot original output_vars
     output_vars = add_requisite_output_vars(output_vars)
@@ -473,25 +358,18 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
         println("Forecast outputs will be saved in $output_dir")
     end
 
-    # Prepare forecast inputs
+    # Check that provided forecast inputs are well-formed
+    # If an input is not provided, load it
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("\nPreparing forecast inputs...")
     end
-    @time_verbose systems, kals = prepare_forecast_inputs(m, df; input_type = input_type,
-            cond_type = cond_type, subset_inds = subset_inds, verbose = verbose,
-            procs = procs)
+    @time_verbose df, systems, kals, procs =
+        prepare_forecast_inputs!(m, input_type, cond_type, output_vars; df = df,
+            systems = systems, kals = kals, subset_inds = subset_inds,
+            verbose = verbose, procs = procs)
 
     nprocs = length(procs)
     ndraws = length(systems)
-
-    # Set forecast_pseudoobservables properly
-    for output in output_vars
-        if contains(string(output), "pseudo")
-            m <= Setting(:forecast_pseudoobservables, true)
-            break
-        end
-    end
-
 
     ### 2. Smoothed Histories
 
@@ -505,17 +383,26 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
     if !isempty(intersect(output_vars, smooth_vars)) || cond_type in [:semi, :full]
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("\nFiltering and smoothing $hists_to_compute)...")
+            println("\nSmoothing $(hists_to_compute)...")
         end
         @time_verbose histstates, histshocks, histpseudo =
             smooth_all(m, df, systems, kals; cond_type = cond_type, procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
-        T = n_mainsample_periods(m)
-        forecast_output[:histstates] = transplant_history(cond_type, T, histstates)
-        forecast_output[:histshocks] = transplant_history(cond_type, T, histshocks)
-	    if :histpseudo in output_vars
-            forecast_output[:histpseudo] = transplant_history(cond_type, T, histpseudo)
+        if cond_type in [:full, :semi]
+            T = n_mainsample_periods(m)
+
+            forecast_output[:histstates] = transplant_history(histstates, T)
+            forecast_output[:histshocks] = transplant_history(histshocks, T)
+	        if :histpseudo in output_vars
+                forecast_output[:histpseudo] = transplant_history(histpseudo, T)
+            end
+        else
+            forecast_output[:histstates] = histstates
+            forecast_output[:histshocks] = histshocks
+	        if :histpseudo in output_vars
+                forecast_output[:histpseudo] = histpseudo
+            end
         end
 
         write_forecast_outputs(m, hists_to_compute, forecast_output_files, forecast_output; verbose = verbose)
@@ -524,33 +411,78 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     ### 3. Forecasts
 
+    # 3A. Unbounded forecasts
+
     forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks]
     forecasts_to_compute = intersect(output_vars, forecast_vars)
     if !isempty(forecasts_to_compute)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("\nForecasting $(intersect(output_vars, forecast_vars))...")
+            println("\nForecasting $(forecasts_to_compute)...")
         end
         @time_verbose forecaststates, forecastobs, forecastpseudo, forecastshocks =
-            forecast(m, systems, kals; cond_type = cond_type, procs = procs)
+            forecast(m, systems, kals; cond_type = cond_type, enforce_zlb = false,
+                     procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
-        forecast_output[:forecaststates] = transplant_forecast(cond_type, T, histstates, forecaststates)
-        forecast_output[:forecastshocks] = transplant_forecast(cond_type, T, histshocks, forecastshocks)
-	    if :forecastpseudo in output_vars
-            forecast_output[:forecastpseudo] = transplant_forecast(cond_type, T, histpseudo, forecastpseudo)
+        if cond_type in [:full, :semi]
+            forecast_output[:forecaststates] = transplant_forecast(histstates, forecaststates, T)
+            forecast_output[:forecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
+	        if :forecastpseudo in output_vars
+                forecast_output[:forecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
+            end
+            forecast_output[:forecastobs] = transplant_forecast_observables(histstates, forecastobs, systems, T)
+        else
+            forecast_output[:forecaststates] = forecaststates
+            forecast_output[:forecastshocks] = forecastshocks
+	        if :forecastpseudo in output_vars
+                forecast_output[:forecastpseudo] = forecastpseudo
+            end
+            forecast_output[:forecastobs] = forecastobs
         end
-        forecast_output[:forecastobs] = transplant_forecast_observables(cond_type, T,
-                                            histstates, forecastobs, systems)
+
+        write_forecast_outputs(m, forecasts_to_compute, forecast_output_files, forecast_output; verbose = verbose)
+    end
+
+
+    # 3B. Bounded forecasts
+
+    forecast_vars_bdd = [:forecaststatesbdd, :forecastobsbdd, :forecastpseudobdd, :forecastshocksbdd]
+    forecasts_to_compute = intersect(output_vars, forecast_vars_bdd)
+    if !isempty(forecasts_to_compute)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("\nForecasting $(forecasts_to_compute)...")
+        end
+        @time_verbose forecaststates, forecastobs, forecastpseudo, forecastshocks =
+            forecast(m, systems, kals; cond_type = cond_type, enforce_zlb = true,
+                     procs = procs)
+
+        # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
+        if cond_type in [:full, :semi]
+            forecast_output[:forecaststatesbdd] = transplant_forecast(histstates, forecaststates, T)
+            forecast_output[:forecastshocksbdd] = transplant_forecast(histshocks, forecastshocks, T)
+	        if :forecastpseudobdd in output_vars
+                forecast_output[:forecastpseudobdd] = transplant_forecast(histpseudo, forecastpseudo, T)
+            end
+            forecast_output[:forecastobsbdd] = transplant_forecast_observables(histstates, forecastobs, systems, T)
+        else
+            forecast_output[:forecaststatesbdd] = forecaststates
+            forecast_output[:forecastshocksbdd] = forecastshocks
+	        if :forecastpseudobdd in output_vars
+                forecast_output[:forecastpseudobdd] = forecastpseudo
+            end
+            forecast_output[:forecastobsbdd] = forecastobs
+        end
 
         write_forecast_outputs(m, forecasts_to_compute, forecast_output_files, forecast_output; verbose = verbose)
     end
 
 
     ### 4. Shock Decompositions
+
     shockdecs_to_compute = intersect(output_vars, shockdec_vars)
     if !isempty(shockdecs_to_compute)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("\nComputing shock decompositions for $(intersect(output_vars, shockdec_vars))...")
+            println("\nComputing shock decompositions for $(shockdecs_to_compute)...")
         end
         @time_verbose shockdecstates, shockdecobs, shockdecpseudo =
             shock_decompositions(m, systems, histshocks; procs = procs)
@@ -572,7 +504,7 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
     if !isempty(trends_to_compute)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("\nComputing trend for $(intersect(output_vars, trend_vars))...")
+            println("\nComputing trend for $(trends_to_compute)...")
         end
         @time_verbose trendstates, trendobs, trendpseudo =
             trends(m, systems; procs = procs)
@@ -600,8 +532,9 @@ function forecast_one(m::AbstractModel{Float64}, df::DataFrame;
 
         # Compute deterministic trend
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("\nComputing deterministic trend for $dettrends_to_compute...")
+            println("\nComputing deterministic trend for $(dettrends_to_compute)...")
         end
+
         @time_verbose dettrendstates, dettrendobs, dettrendpseudo =
             deterministic_trends(m, systems, z0s; procs = procs)
 

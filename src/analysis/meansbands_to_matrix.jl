@@ -137,14 +137,12 @@ function meansbands_matrix(mb::MeansBands)
             var, shock = DSGE.parse_mb_colname(series)
             ind = inds[var]
 
-            for shock in keys(shock_inds)
-                shock_ind = shock_inds[shock]
-                means[ind,:,shock_ind] = convert(Array{T}, mb.means[series])
+            shock_ind = shock_inds[shock]
+            means[ind,:,shock_ind] = convert(Array{T}, mb.means[series])
 
-                for (band_ind, band) in enumerate(bands_list)
-                    bands[band_ind, ind, :, shock_ind] =
-                        convert(Array{T}, mb.bands[series][symbol(band)])
-                end
+            for (band_ind, band) in enumerate(bands_list)
+                bands[band_ind, ind, :, shock_ind] =
+                    convert(Array{T}, mb.bands[series][symbol(band)])
             end
         end
 

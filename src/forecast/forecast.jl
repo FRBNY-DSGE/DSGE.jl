@@ -1,10 +1,10 @@
 """
 ```
-forecast(m, systems, kals; shocks = dzeros(S, (0, 0, 0), [myid()]),
-    procs = [myid()])
+forecast(m, systems, kals; cond_type = :none, enforce_zlb = false, shocks =
+    dzeros(S, (0, 0, 0), [myid()]), procs = [myid()])
 
-forecast(m, systems, z0s; shocks = dzeros(S, (0, 0, 0), [myid()]),
-    procs = [myid()])
+forecast(m, systems, z0s; cond_type = :none, enforce_zlb = false, shocks =
+    dzeros(S, (0, 0, 0), [myid()]), procs = [myid()])
 ```
 
 Computes forecasts for all draws, given a model object, system matrices, initial
@@ -27,6 +27,8 @@ where `S<:AbstractFloat`.
   how many periods to forecast ahead. If `cond_type in [:semi, :full]`, the
   forecast horizon is reduced by the number of periods of conditional
   data. Defaults to `:none`.
+- `enforce_zlb::Bool`: whether to enforce the zero lower bound. Defaults to
+  `false`.
 - `shocks::DArray{S, 3}`: array of size `ndraws` x `nshocks` x `horizon`, whose
   elements are the shock innovations for each time period, for draw
 - `procs::Vector{Int}`: list of worker processes over which to distribute
@@ -47,18 +49,19 @@ where `S<:AbstractFloat`.
 function forecast{S<:AbstractFloat}(m::AbstractModel,
     systems::DVector{System{S}, Vector{System{S}}},
     kals::DVector{Kalman{S}, Vector{Kalman{S}}};
-    cond_type::Symbol = :none,
+    cond_type::Symbol = :none, enforce_zlb::Bool = false,
     shocks::DArray{S, 3} = dzeros(S, (0, 0, 0), [myid()]),
     procs::Vector{Int} = [myid()])
 
     z0s = map(kal -> kal[:zend], kals)
-    forecast(m, systems, z0s; cond_type = cond_type, shocks = shocks, procs = procs)
+    forecast(m, systems, z0s; cond_type = cond_type, enforce_zlb = enforce_zlb,
+             shocks = shocks, procs = procs)
 end
 
 function forecast{S<:AbstractFloat}(m::AbstractModel,
     systems::DVector{System{S}, Vector{System{S}}},
     z0s::DVector{Vector{S}, Vector{Vector{S}}};
-    cond_type::Symbol = :none,
+    cond_type::Symbol = :none, enforce_zlb::Bool = false,
     shocks::DArray{S, 3} = dzeros(S, (0, 0, 0), [myid()]),
     procs::Vector{Int} = [myid()])
 
@@ -96,8 +99,8 @@ function forecast{S<:AbstractFloat}(m::AbstractModel,
                 Matrix{S}()
             end
 
-            states, obs, pseudo, shocks = compute_forecast(m, systems[i],
-                z0s[i]; cond_type = cond_type, shocks = shocks_i)
+            states, obs, pseudo, shocks = compute_forecast(m, systems[i], z0s[i];
+                cond_type = cond_type, enforce_zlb = enforce_zlb, shocks = shocks_i)
 
             i_local = mod(i-1, ndraws_local) + 1
 
@@ -122,11 +125,11 @@ end
 
 """
 ```
-compute_forecast(m, system, z0; shocks = Matrix{S}())
+compute_forecast(m, system, z0; enforce_zlb = false, shocks = Matrix{S}())
 
-compute_forecast(system, z0, shocks)
+compute_forecast(system, z0, shocks; enforce_zlb = false)
 
-compute_forecast(T, R, C, Q, Z, D, Z_pseudo, D_pseudo, z0, shocks)
+compute_forecast(T, R, C, Q, Z, D, Z_pseudo, D_pseudo, z0, shocks; enforce_zlb = false)
 ```
 
 ### Inputs
@@ -147,6 +150,8 @@ where `S<:AbstractFloat`.
   how many periods to forecast ahead. If `cond_type in [:semi, :full]`, the
   forecast horizon is reduced by the number of periods of conditional
   data. Defaults to `:none`.
+- `enforce_zlb::Bool`: whether to enforce the zero lower bound. Defaults to
+  `false`.
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
   under which to forecast. If not provided, shocks are drawn according to:
 
@@ -167,7 +172,8 @@ where `S<:AbstractFloat`.
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
 function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
-    z0::Vector{S}; cond_type::Symbol = :none, shocks::Matrix{S} = Matrix{S}())
+    z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
+    shocks::Matrix{S} = Matrix{S}())
 
     # Numbers of things
     nshocks = n_shocks_exogenous(m)
@@ -201,8 +207,7 @@ function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
         end
     end
 
-    # Determine whether to enforce the zero lower bound in the forecast
-    enforce_zlb = forecast_enforce_zlb(m)
+    # Get variables necessary to enforce the zero lower bound in the forecast
     ind_r = m.observables[:obs_nominalrate]
     ind_r_sh = m.exogenous_shocks[:rm_sh]
     zlb_value = forecast_zlb_value(m)

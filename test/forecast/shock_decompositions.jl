@@ -6,8 +6,8 @@ path = dirname(@__FILE__)
 # Set up arguments
 custom_settings = Dict{Symbol, Setting}(
     :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6),
-    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")),
-    :date_forecast_end    => Setting(:date_forecast_end, quartertodate("2016-Q2")),
+    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")),
+    :date_forecast_end    => Setting(:date_forecast_end, quartertodate("2016-Q1")),
     :use_parallel_workers => Setting(:use_parallel_workers, true))
 m = Model990(custom_settings = custom_settings, testing = true)
 
@@ -20,7 +20,7 @@ ndraws = 2
 my_procs = addprocs(ndraws)
 @everywhere using DSGE
 
-systems    = distribute(systems; procs = my_procs, dist = [ndraws])
+systems    = distribute(systems;    procs = my_procs, dist = [ndraws])
 histshocks = distribute(histshocks; procs = my_procs, dist = [ndraws, 1, 1])
 
 # Run to compile before timing

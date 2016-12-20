@@ -59,8 +59,8 @@ function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
     pseudo_range = (nstates + nobs + 1):(nstates + nobs + npseudo)
 
     # Determine periods for which to return shock decompositions
-    start_ind = index_shockdec_start(m) - n_presample_periods(m)
-    end_ind   = index_shockdec_end(m) - n_presample_periods(m)
+    start_ind = index_shockdec_start(m)
+    end_ind   = index_shockdec_end(m)
     nperiods  = end_ind - start_ind + 1
 
     # Construct distributed array of shock decompositions

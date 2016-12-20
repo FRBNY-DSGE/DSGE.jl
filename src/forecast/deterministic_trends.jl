@@ -51,7 +51,13 @@ function deterministic_trends{S<:AbstractFloat}(m::AbstractModel, systems::DVect
     nobs    = n_observables(m)
     npseudo = n_pseudoobservables(m)
     nshocks = n_shocks_exogenous(m)
-    nperiods  = DSGE.subtract_quarters(date_forecast_end(m), date_mainsample_start(m)) + 1
+
+    # Dates: We compute the deterministic trend starting from the
+    # first historical period.  However, since it is only used to
+    # compute shock decompositions, we truncate and only store
+    # results for periods corresponding to the shockdec period.
+    nperiods  = DSGE.subtract_quarters(date_shockdec_end(m), date_mainsample_start(m)) + 1
+    date_range = index_shockdec_start(m):index_shockdec_end(m)
 
     # Assign ranges for DArray
     states_range = 1:nstates
@@ -85,9 +91,9 @@ function deterministic_trends{S<:AbstractFloat}(m::AbstractModel, systems::DVect
     end
 
     # Convert SubArrays (returned when indexing `out`) to DArrays and return
-    states = convert(DArray, out[1:ndraws, states_range, 1:nperiods])
-    obs    = convert(DArray, out[1:ndraws, obs_range,    1:nperiods])
-    pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods])
+    states = convert(DArray, out[1:ndraws, states_range, date_range])
+    obs    = convert(DArray, out[1:ndraws, obs_range,    date_range])
+    pseudo = convert(DArray, out[1:ndraws, pseudo_range, date_range])
 
     return states, obs, pseudo
 end
