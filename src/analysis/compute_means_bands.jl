@@ -335,15 +335,15 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
     end
 
     if class == :pseudo
-        transforms       = product == :irf ? identity : metadata[:pseudoobservable_revtransforms]
+        transforms       = metadata[:pseudoobservable_revtransforms]
         variable_indices = metadata[:pseudoobservable_indices]
     elseif class == :obs
-        transforms       = product == :irf ? identity : metadata[:observable_revtransforms]
+        transforms       = metadata[:observable_revtransforms]
         variable_indices = metadata[:observable_indices]
     else
         error("Means and bands are only calculated for observables and pseudo-observables")
     end
-    date_indices         = product == :irf ? Dict()   : metadata[:date_indices]
+    date_indices         = product == :irf ? Dict{Date,Int}() : metadata[:date_indices]
 
     # Make sure date lists are valid. This is vacuously true for trend and IRFs,
     # which are not time-dependent and hence have empty `date_indices`.

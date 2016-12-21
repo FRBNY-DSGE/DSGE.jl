@@ -519,21 +519,24 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     # Write observable names and transforms
     if contains(var, "obs")
         write(file, "observable_indices", m.observables)
-        if !contains(var, "irf")
-            rev_transforms =
-                Dict{Symbol,Symbol}([x => symbol(m.observable_mappings[x].rev_transform) for x in keys(m.observables)])
-            write(file, "observable_revtransforms", rev_transforms)
+        rev_transforms = if !contains(var, "irf")
+            Dict{Symbol,Symbol}([x => symbol(m.observable_mappings[x].rev_transform) for x in keys(m.observables)])
+        else
+            Dict{Symbol,Symbol}([x => symbol("DSGE.identity") for x in keys(m.observables)])
         end
+        write(file, "observable_revtransforms", rev_transforms)
     end
 
     # Write pseudo-observable names and transforms
     if contains(var, "pseudo")
         pseudo, pseudo_mapping = pseudo_measurement(m)
         write(file, "pseudoobservable_indices", pseudo_mapping.inds)
-        if !contains(var, "irf")
-            rev_transforms = Dict{Symbol,Symbol}([x => symbol(pseudo[x].rev_transform) for x in keys(pseudo)])
-            write(file, "pseudoobservable_revtransforms", rev_transforms)
+        rev_transforms = if !contains(var, "irf")
+            Dict{Symbol,Symbol}([x => symbol(pseudo[x].rev_transform) for x in keys(pseudo)])
+        else
+            Dict{Symbol,Symbol}([x => symbol("DSGE.identity") for x in keys(pseudo)])
         end
+        write(file, "pseudoobservable_revtransforms", rev_transforms)
     end
 
     # Write shock names
