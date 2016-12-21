@@ -1,11 +1,10 @@
 """
 ```
 impulse_responses(m, systems; procs = [myid()])
-impulse_responses(m, systems, impulse_response_shocks; procs = [myid()])
 ```
 
-computes impulse responses for all states, pseudo-observables, or observables
-for a set of shocks across all draws. 
+Computes impulse responses for all states, pseudo-observables, or observables
+across all draws.
 
 ### Inputs
 - `m::AbstractModel`: model object
@@ -28,25 +27,13 @@ for a set of shocks across all draws.
   `nshocks` of pseudo-observable shock decompositions for each draw. If
   `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
 
-    where `horizon` is the forecast horizon for the model as given by
-    `impulse_response_horizons(m)` and `nshocks` is the number of shocks in
-    `impulse_response_shocks`.
-
+where `horizon` is the forecast horizon for the model as given by
+`impulse_response_horizons(m)`
 """
 function impulse_responses{S<:AbstractFloat}(m::AbstractModel,
-                                systems::DVector{System{S}, Vector{System{S}}};
-                                procs::Vector{Int} = [myid()])
+                                             systems::DVector{System{S}, Vector{System{S}}};
+                                             procs::Vector{Int} = [myid()])
 
-    impulse_response_shocks = m.exogenous_shocks
-
-    return impulse_responses(m, systems, impulse_response_shocks; procs = procs)
-end
-
-function impulse_responses{S<:AbstractFloat}(m::AbstractModel,
-                                systems::DVector{System{S}, Vector{System{S}}},
-                                impulse_response_shocks::Dict{Symbol,Int64};
-                                procs::Vector{Int} = [myid()])
-    
     # Reset procs to [myid()] if necessary
     procs = reset_procs(m, procs)
 
@@ -58,7 +45,7 @@ function impulse_responses{S<:AbstractFloat}(m::AbstractModel,
     nstates = n_states_augmented(m)
     nobs    = n_observables(m)
     npseudo = n_pseudoobservables(m)
-    nshocks = length(impulse_response_shocks)
+    nshocks = n_shocks_exogenous(m)
 
     states_range = 1:nstates
     obs_range    = (nstates + 1):(nstates + nobs)
@@ -73,7 +60,7 @@ function impulse_responses{S<:AbstractFloat}(m::AbstractModel,
         ndraws_local = Int(ndraws / nprocs)   # Number of draws that localpart stores data for
 
         for i in draw_inds
-            states, obs, pseudo = compute_impulse_response(systems[i], horizon, impulse_response_shocks)
+            states, obs, pseudo = compute_impulse_response(systems[i], horizon)
 
             # Assign the i-th index of systems (the draw)
             # to the i_local-th index of the localpart array
@@ -97,15 +84,13 @@ function impulse_responses{S<:AbstractFloat}(m::AbstractModel,
     return states, obs, pseudo
 end
 
-    
+
 """
 ```
-compute_impulse_response(system, horizon, impulse_response_shocks)
-
-compute_impulse_response(T, R, Z, D, Z_pseudo, D_pseudo, QQ, horizon, impulse_response_shocks)
+compute_impulse_response(system, horizon)
 ```
 
-compute impulse responses for a single 
+Compute impulse responses for a single draw.
 
 ### Inputs
 
@@ -114,8 +99,6 @@ compute impulse responses for a single
   and (possibly empty) pseudo-measurement equation matrices `Z_pseudo` and
   `D_pseudo`.
 - `horizon::Int`: number of periods ahead to forecast
-- `impulse_response_shocks`: Dictionary mapping shocks to indices.
-   where `S<:AbstractFloat`.
 
 ### Outputs
 
@@ -126,39 +109,26 @@ compute impulse responses for a single
 - `pseudo::Array{S, 3}`: matrix of size `npseudo` x `horizon` x `nshocks` of
   pseudo-observable shock decompositions. If the provided `Z_pseudo` and
   `D_pseudo` matrices are empty, then `pseudo` will be empty.
-
-Only the impulse_responses corresponding to those in `impulse_response_shocks` will be calculated and returned. 
 """
-function compute_impulse_response{S<:AbstractFloat}(system::System{S},
-    horizon::Int, impulse_response_shocks::Dict{Symbol,Int64})
+function compute_impulse_response{S<:AbstractFloat}(system::System{S}, horizon::Int)
 
     # Unpack system
     T, R = system[:TTT], system[:RRR]
-    Z, D = system[:ZZ], system[:DD]
-    Q    = system[:QQ]
+    Q, Z = system[:QQ], system[:ZZ]
 
-    Z_pseudo, D_pseudo = if !isnull(system.pseudo_measurement)
-        system[:ZZ_pseudo], system[:DD_pseudo]
+    Z_pseudo = if !isnull(system.pseudo_measurement)
+        system[:ZZ_pseudo]
     else
-        Matrix{S}(), Vector{S}()
+        Matrix{S}()
     end
 
-    compute_impulse_response(T, R, Z, D, Z_pseudo, D_pseudo,
-        Q, horizon, impulse_response_shocks)
-end
-
-function compute_impulse_response{S<:AbstractFloat}(T::Matrix{S},
-    R::Matrix{S}, Z::Matrix{S}, D::Vector{S}, Z_pseudo::Matrix{S},
-    D_pseudo::Vector{S}, Q::Matrix{S}, horizon::Int,
-    impulse_response_shocks::Dict{Symbol,Int64})
-
     # Setup
-    nshocks      = size(Q, 1)
-    nstates      = size(T, 2)
+    nshocks      = size(R, 2)
+    nstates      = size(T, 1)
     nobs         = size(Z, 1)
     npseudo      = size(Z_pseudo, 1)
- 
-    forecast_pseudo = !isempty(Z_pseudo) && !isempty(D_pseudo)
+
+    forecast_pseudo = !isempty(Z_pseudo)
 
     states = zeros(S, nstates, horizon, nshocks)
     obs    = zeros(S, nobs,    horizon, nshocks)
@@ -171,14 +141,13 @@ function compute_impulse_response{S<:AbstractFloat}(T::Matrix{S},
     # Define iterate function, matrix of shocks
     iterate(z_t1, ϵ_t) = T*z_t1 + R*ϵ_t
     z0 = zeros(S, nstates)
-    shock_indices = collect(values(impulse_response_shocks))
     impact = -diagm(sqrt(diag(Q))) # a negative 1 s.d. shock
 
-    for i in shock_indices               
+    for i = 1:nshocks
         # Iterate state space forward
-        states[:, 1, i] = iterate(z0, impact[:,i])
+        states[:, 1, i] = iterate(z0, impact[:, i])
         for t in 2:horizon
-            states[:, t, i] = iterate(states[:, t-1, i], zeros(size(Q,1)))
+            states[:, t, i] = iterate(states[:, t-1, i], zeros(nshocks))
         end
 
         # Apply measurement and pseudo-measurement equations
@@ -188,13 +157,5 @@ function compute_impulse_response{S<:AbstractFloat}(T::Matrix{S},
         end
     end
 
-    # states = states[:,:,shock_indices]
-    # obs    = obs[:,:,shock_indices]
-    # if forecast_pseudo
-    #     pseudo = pseudo[:,:,shock_indices]
-    # end
-    
     return states, obs, pseudo
 end
-
-

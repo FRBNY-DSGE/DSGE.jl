@@ -132,8 +132,8 @@ module DSGE
     include("forecast/shock_decompositions.jl")
     include("forecast/trends.jl")
     include("forecast/deterministic_trends.jl")
-    include("forecast/drivers.jl")
     include("forecast/impulse_responses.jl")
+    include("forecast/drivers.jl")
 
     include("analysis/moments.jl")
     include("analysis/meansbands.jl")
