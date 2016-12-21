@@ -1,17 +1,17 @@
 """
 ```
-compute_means_bands_all(m, input_type, output_vars, cond_type;
-                        density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], subset_string = "",
-                        load_dataset = true, load_population_data = true,
-                        population_forecast_file = "", verbose :low)
+means_bands_all(m, input_type, output_vars, cond_type;
+                density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], subset_string = "",
+                load_dataset = true, load_population_data = true,
+                population_forecast_file = "", verbose :low)
 
 
-compute_means_bands_all(input_type, output_vars, cond_type, forecast_output_files;
-                       density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], subset_string = "",
-                       output_dir = "", population_data = DataFrame(),
-                       population_mnemonic = Nullable{Symbol}(),
-                       population_forecast_file = "", y0_indexes = Dict{Symbol,Nullable{Int}}(),
-                       data = Matrix{T}(), verbose::Symbol = :low)
+means_bands_all(input_type, output_vars, cond_type, forecast_output_files;
+                density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], subset_string = "",
+                output_dir = "", population_data = DataFrame(),
+                population_mnemonic = Nullable{Symbol}(),
+                population_forecast_file = "", y0_indexes = Dict{Symbol,Nullable{Int}}(),
+                data = Matrix{T}(), verbose::Symbol = :low)
 ```
 
 Computes means and bands for pseudoobservables and observables, and writes
@@ -92,13 +92,13 @@ Below, `T<:AbstractFloat` and `S<:AbstractString`:
 
 - `data::Matrix{T}`: pre-loaded `nobs x nperiods` matrix containing the transformed data matrix.
 """
-function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
-                                               output_vars::Vector{Symbol}, cond_type::Symbol;
-                                               density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
-                                               subset_string = "", load_dataset::Bool = true,
-                                               load_population_data::Bool = true,
-                                               population_forecast_file = "",
-                                               verbose::Symbol = :low)
+function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
+                                           output_vars::Vector{Symbol}, cond_type::Symbol;
+                                           density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                                           subset_string = "", load_dataset::Bool = true,
+                                           load_population_data::Bool = true,
+                                           population_forecast_file = "",
+                                           verbose::Symbol = :low)
 
     ## Step 0: Determine full set of output_vars necessary for plotting desired results
     #          Specifically, if output_vars contains shockdecs but not trend or deterministic trends,
@@ -160,7 +160,7 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
                                                   output_vars, cond_type, subset_string = subset_string)
 
     ## Step 4: We have everything we need; appeal to model-object-agnostic function
-    compute_means_bands_all(input_type, output_vars, cond_type, forecast_output_files,
+    means_bands_all(input_type, output_vars, cond_type, forecast_output_files,
                             density_bands = density_bands, subset_string = subset_string,
                             output_dir = workpath(m,"forecast",""),
                             population_data = level_data,
@@ -170,7 +170,7 @@ function compute_means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type:
                             verbose = verbose)
 end
 
-function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
+function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                                                output_vars::Vector{Symbol},
                                                cond_type::Symbol,
                                                forecast_output_files::Dict{Symbol,S};
@@ -247,7 +247,7 @@ function compute_means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type
         end
 
         # compute means and bands object
-        mb = compute_means_bands(input_type, output_var, cond_type,
+        mb = means_bands(input_type, output_var, cond_type,
                                  forecast_output_files, density_bands = density_bands,
                                  subset_string = subset_string,
                                  population_data = dlfiltered_population_data,
@@ -274,18 +274,18 @@ end
 
 """
 ```
-compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
-                                                     output_var::Symbol,
-                                                     cond_type::Symbol,
-                                                     forecast_output_files::Dict{Symbol,S};
-                                                     density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
-                                                     subset_string::S = "",
-                                                     population_data = DataFrame(),
-                                                     population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
-                                                     population_forecast = DataFrame(),
-                                                     y0_index::Int = -1,
-                                                     data = Matrix{T}(),
-                                                     verbose::Symbol = :low)
+means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
+                                                 output_var::Symbol,
+                                                 cond_type::Symbol,
+                                                 forecast_output_files::Dict{Symbol,S};
+                                                 density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                                                 subset_string::S = "",
+                                                 population_data = DataFrame(),
+                                                 population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
+                                                 population_forecast = DataFrame(),
+                                                 y0_index::Int = -1,
+                                                 data = Matrix{T}(),
+                                                 verbose::Symbol = :low)
 ```
 
 Computes means and bands for a single `output_var`.
@@ -293,21 +293,21 @@ Computes means and bands for a single `output_var`.
 ### Input Arguments
 
 All inputs are exactly the same as the second
-`compute_means_bands_all` method, except that `output_var` is a single
+`means_bands_all` method, except that `output_var` is a single
 `Symbol` rather than `Array{Symbol}`.
 """
-function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
-                                                     output_var::Symbol,
-                                                     cond_type::Symbol,
-                                                     forecast_output_files::Dict{Symbol,S};
-                                                     density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
-                                                     subset_string::S = "",
-                                                     population_data = DataFrame(),
-                                                     population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
-                                                     population_forecast = DataFrame(),
-                                                     y0_index::Int = -1,
-                                                     data = Matrix{T}(),
-                                                     verbose::Symbol = :low)
+function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
+                                                          output_var::Symbol,
+                                                          cond_type::Symbol,
+                                                          forecast_output_files::Dict{Symbol,S};
+                                                          density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                                                          subset_string::S = "",
+                                                          population_data = DataFrame(),
+                                                          population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
+                                                          population_forecast = DataFrame(),
+                                                          y0_index::Int = -1,
+                                                          data = Matrix{T}(),
+                                                          verbose::Symbol = :low)
 
     # Return only one set of bands if we read in only one draw
     if input_type in [:init, :mode, :mean]
@@ -423,10 +423,10 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
             fcast_output = repeat(fcast_output, outer = [1, 1, length(date_list)])
         end
 
-        compute_means_bands_2d(fcast_output, transforms, variable_indices;
-                               date_list = date_list, data = data,
-                               population_series = population_series, y0_index =
-                               y0_index, density_bands = density_bands)
+        compute_means_bands(fcast_output, transforms, variable_indices;
+                            date_list = date_list, data = data,
+                            population_series = population_series, y0_index =
+                            y0_index, density_bands = density_bands)
 
     elseif product in [:shockdec, :irf]
 
@@ -434,11 +434,10 @@ function compute_means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Sy
         mb_metadata[:shock_indices] = metadata[:shock_indices]
 
         # compute means and bands for shock decomposition
-        compute_means_bands_3d(fcast_output, transforms, variable_indices,
-                               metadata[:shock_indices]; date_list = date_list,
-                               data = data, population_series =
-                               population_series, y0_index = y0_index,
-                               density_bands = density_bands)
+        compute_means_bands(fcast_output, transforms, variable_indices,
+                            metadata[:shock_indices]; date_list = date_list,
+                            data = data, population_series = population_series,
+                            y0_index = y0_index, density_bands = density_bands)
     end
 
     return MeansBands(mb_metadata, means, bands)
@@ -446,22 +445,22 @@ end
 
 """
 ```
-compute_means_bands_2d(fcast_output, transforms, variable_inds;
+compute_means_bands(fcast_output::Array{T, 3}, transforms, variable_inds;
     date_list = [], data = [], population_series = [], y0_index = -1,
     density_bands = [0.5, 0.6, 0.7, 0.8, 0.9])
 ```
 
-Compute means and bands for 2-dimensional (variable x time) products: histories,
-forecasts, deterministic trends, and trends.
+Compute means and bands for 3-dimensional (draw x variable x time) products:
+histories, forecasts, deterministic trends, and trends.
 """
-function compute_means_bands_2d{T<:AbstractFloat}(fcast_output::Array{T},
-                                                  transforms::Dict{Symbol,Symbol},
-                                                  variable_inds::Dict{Symbol,Int},
-                                                  date_list::Vector{Date} = Vector{Date}(),
-                                                  data::Matrix{T} = Matrix{T}(),
-                                                  population_series = Vector{T}(),
-                                                  y0_index::Int = -1,
-                                                  density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9])
+function compute_means_bands{T<:AbstractFloat}(fcast_output::Array{T, 3},
+                                               transforms::Dict{Symbol,Symbol},
+                                               variable_inds::Dict{Symbol,Int},
+                                               date_list::Vector{Date} = Vector{Date}(),
+                                               data::Matrix{T} = Matrix{T}(),
+                                               population_series = Vector{T}(),
+                                               y0_index::Int = -1,
+                                               density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9])
 
     # Set up means and bands structures
     means = DataFrame(date = date_list)
@@ -497,23 +496,25 @@ end
 
 """
 ```
-compute_means_bands_3d(fcast_output, transforms, variable_inds, shock_inds;
+compute_means_bands(fcast_output::Array{T, 4}, transforms, variable_inds, shock_inds;
     date_list = [], data = [], population_series = [], y0_index = -1,
     density_bands = [0.5, 0.6, 0.7, 0.8, 0.9])
 ```
 
-Compute means and bands for 3-dimensional (variable x time x shock) products:
-shock decompositions and impulse responses.
+Compute means and bands for 4-dimensional (draw x variable x time x shock)
+products: shock decompositions and impulse responses. Note the extra input
+argument `shock_inds` which is not present in the 2-dimensional method of
+`compute_means_bands`.
 """
-function compute_means_bands_3d{T<:AbstractFloat}(fcast_output::Array{T},
-                                                  transforms::Dict{Symbol,Symbol},
-                                                  variable_inds::Dict{Symbol,Int},
-                                                  shock_inds::Dict{Symbol,Int};
-                                                  date_list::Vector{Date} = Vector{Date}(),
-                                                  data::Matrix{T} = Matrix{T}(),
-                                                  population_series = Vector{T}(),
-                                                  y0_index::Int = -1,
-                                                  density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9])
+function compute_means_bands{T<:AbstractFloat}(fcast_output::Array{T, 4},
+                                               transforms::Dict{Symbol,Symbol},
+                                               variable_inds::Dict{Symbol,Int},
+                                               shock_inds::Dict{Symbol,Int};
+                                               date_list::Vector{Date} = Vector{Date}(),
+                                               data::Matrix{T} = Matrix{T}(),
+                                               population_series = Vector{T}(),
+                                               y0_index::Int = -1,
+                                               density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9])
 
 
     # Set up means and bands structures

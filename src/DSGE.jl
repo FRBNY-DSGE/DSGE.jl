@@ -90,7 +90,7 @@ module DSGE
         parse_data_series, collect_data_transforms,
 
         # analysis/
-        find_density_bands, compute_moments, compute_means_bands, compute_means_bands_all, MeansBands,
+        find_density_bands, compute_moments, means_bands, means_bands_all, compute_means_bands, MeansBands,
         meansbands_matrix_all, meansbands_matrix, read_mb
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
