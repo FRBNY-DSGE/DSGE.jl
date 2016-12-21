@@ -56,7 +56,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
 
         # Inputs to optimization algorithm
         n_iterations       = 100
-        ftol               = 1e-10
+        ftol               = 1e-14
         converged          = false
 
         # If the algorithm stops only because we have exceeded the maximum number of
@@ -82,9 +82,9 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
             end
         end
     end
-    
+
     params = map(θ->θ.value, m.parameters)
-    
+
     ########################################################################################
     ### Step 3: Compute proposal distribution
     ###
@@ -144,7 +144,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     else
         DSGE.DegenerateMvNormal(params, proposal_covariance)
     end
-    
+
     if DSGE.rank(propdist) != n_parameters_free(m)
         println("problem –    shutting down dimensions")
     end
@@ -253,8 +253,8 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
         end
 
     end
-    
-    # Report number of blocks that will be used 
+
+    # Report number of blocks that will be used
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Blocks: $n_blocks")

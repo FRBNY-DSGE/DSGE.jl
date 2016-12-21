@@ -145,7 +145,6 @@ function csminwel(fcn::Function,
         f1, x1, fc, retcode1 = csminit(fcn, x, f_x, gr, badg, H, args...;
                                        verbose=verbose, kwargs...)
         f_calls += fc
-
         if retcode1 != 1
             if retcode1 == 2 || retcode1 == 4
                 wall1, badg1 = true, true
@@ -287,7 +286,7 @@ function csminwel(fcn::Function,
         end
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
-            @printf "Improvement on iteration %d = %18.9f\n" iteration fh-f_x
+            @printf "Improvement on iteration %d = %18.9e\n" iteration fh-f_x
         end
 
         if stuck
@@ -418,7 +417,7 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
         end
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
-            @printf "Predicted Improvement: %18.9f\n" (-dfhat/2)
+            @printf "Predicted Improvement: %18.9e\n" (-dfhat/2)
         end
         # Have OK dx, now adjust length of step (lambda) until min and max improvement rate
         # criteria are met.
@@ -441,7 +440,7 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
             f = fcn(dxtest, args...; kwargs...)
 
             if VERBOSITY[verbose] >= VERBOSITY[:high]
-                @printf "lambda = %10.5f; f = %20.7f\n" lambda f
+                @printf "lambda = %10.5e; f = %20.16g\n" lambda f
             end
 
             if f < fhat
@@ -536,7 +535,7 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
     end
 
     if VERBOSITY[verbose] >= VERBOSITY[:high]
-        @printf "Norm of dx %10.5f\n" dxnorm
+        @printf "Norm of dx %10.5e\n" dxnorm
     end
 
     return fhat, xhat, f_calls, retcode
