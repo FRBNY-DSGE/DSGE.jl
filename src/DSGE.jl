@@ -138,8 +138,6 @@ module DSGE
     include("analysis/moments.jl")
     include("analysis/meansbands.jl")
     include("analysis/compute_means_bands.jl")
-    include("analysis/means_bands_shockdec.jl")
-    include("analysis/means_bands_impulse_response.jl")
     include("analysis/meansbands_to_matrix.jl")
     include("analysis/util.jl")
 

@@ -486,52 +486,58 @@ forecast output array. The saved dictionaries include:
 - `pseudoobservable_names::Dict{Symbol, Int}`: saved for `var in [:histpseudo, :forecastpseudo, :shockdecpseudo]`
 - `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for pseudoobservables
 - `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
+
+Note that we don't save dates or transformations for impulse response functions.
 """
 function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbol)
 
-    # Write date range
-    dates = if contains(string(var), "hist")
-        quarter_range(date_mainsample_start(m), date_mainsample_end(m))
-    elseif contains(string(var), "forecast")
-        quarter_range(date_forecast_start(m), date_forecast_end(m))
-    elseif contains(string(var), "shockdec")
-        quarter_range(date_shockdec_start(m), date_shockdec_end(m))
-    elseif contains(string(var), "trend") # trend and dettrend
-        quarter_range(date_mainsample_start(m), date_forecast_end(m))
-    elseif contains(string(var), "irf")
-        NaN
-    end
+    var = string(var)
 
-    if typeof(dates) == Array{Date,1}
+    # Write date range
+    if !contains(var, "irf")
+        dates = if contains(var, "hist")
+            quarter_range(date_mainsample_start(m), date_mainsample_end(m))
+        elseif contains(var, "forecast")
+            quarter_range(date_forecast_start(m), date_forecast_end(m))
+        elseif contains(var, "shockdec")
+            quarter_range(date_shockdec_start(m), date_shockdec_end(m))
+        elseif contains(var, "trend") # trend and dettrend
+            quarter_range(date_mainsample_start(m), date_forecast_end(m))
+        end
+
         date_indices = [d::Date => i::Int for (i, d) in enumerate(dates)]
         write(file, "date_indices", date_indices)
     end
 
     # Write state names
-    if contains(string(var), "states")
+    if contains(var, "states")
         state_indices = merge(m.endogenous_states, m.endogenous_states_augmented)
         @assert length(state_indices) == n_states_augmented(m) # assert no duplicate keys
         write(file, "state_indices", state_indices)
     end
 
-    # Write observable names
-    if contains(string(var), "obs")
+    # Write observable names and transforms
+    if contains(var, "obs")
         write(file, "observable_indices", m.observables)
-        rev_transforms =
-            Dict{Symbol,Symbol}([x => symbol(m.observable_mappings[x].rev_transform) for x in keys(m.observables)])
-        write(file, "observable_revtransforms", rev_transforms)
+        if !contains(var, "irf")
+            rev_transforms =
+                Dict{Symbol,Symbol}([x => symbol(m.observable_mappings[x].rev_transform) for x in keys(m.observables)])
+            write(file, "observable_revtransforms", rev_transforms)
+        end
     end
 
     # Write pseudo-observable names and transforms
-    if contains(string(var), "pseudo")
+    if contains(var, "pseudo")
         pseudo, pseudo_mapping = pseudo_measurement(m)
         write(file, "pseudoobservable_indices", pseudo_mapping.inds)
-        rev_transforms = Dict{Symbol,Symbol}([x => symbol(pseudo[x].rev_transform) for x in keys(pseudo)])
-        write(file, "pseudoobservable_revtransforms", rev_transforms)
+        if !contains(var, "irf")
+            rev_transforms = Dict{Symbol,Symbol}([x => symbol(pseudo[x].rev_transform) for x in keys(pseudo)])
+            write(file, "pseudoobservable_revtransforms", rev_transforms)
+        end
     end
 
     # Write shock names
-    if contains(string(var), "shocks") || contains(string(var), "shockdec") || contains(string(var), "irf")
+    if contains(var, "shocks") || contains(var, "shockdec") || contains(var, "irf")
         write(file, "shock_indices", m.exogenous_shocks)
     end
 end
