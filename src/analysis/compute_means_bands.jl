@@ -265,6 +265,9 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
 
         # write to file
         filepath = mb_files[output_var]
+        if !isfile(filepath)
+            mkdir(basename(filepath))
+        end
         jldopen(filepath, "w") do file
                write(file, "mb", mb)
         end
