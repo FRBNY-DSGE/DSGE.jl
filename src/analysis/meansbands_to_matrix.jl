@@ -70,7 +70,6 @@ function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
         outfile = joinpath(dirname(outfile), "mb_matrix_"*base)
 
         ## Convert MeansBands objects to matrices
-        print("* Extracting means and bands matrices for $prod...")
         means, bands = meansbands_matrix(mb)
 
         ## Save to file
@@ -78,7 +77,10 @@ function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
             f["means"] = means
             f["bands"] = bands
         end
-        println("wrote matrix-form means and bands for ($prod$cl, $condtype) to $outfile\n")
+
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
+            println(" * Wrote $(basename(outfile))")
+        end
     end
 end
 
@@ -92,20 +94,20 @@ Convert a `MeansBands` object to matrix form.
 function meansbands_matrix(mb::MeansBands)
 
     # extract useful info
-    vars     = get_vars_means(mb)             # get names of variables
-    nvars    = length(vars)                   # get number of variables
+    vars       = get_vars_means(mb)             # get names of variables
+    nvars      = length(vars)                   # get number of variables
 
-    tmp      = setdiff(names(mb.means), [:date])[1]
-    T        = eltype(mb.means[tmp])          # type of elements of mb structure
+    tmp        = setdiff(names(mb.means), [:date])[1]
+    T          = eltype(mb.means[tmp])          # type of elements of mb structure
 
-    nperiods = n_periods_means(mb)            # get number of periods
-    prod     = product(mb)                    # history? forecast? shockdec?
-    inds     = mb.metadata[:indices]          # mapping from names of vars to indices
-    bands_list = get_density_bands(mb)        # which bands are stored
-    nbands   = length(bands_list)             # how many bands are stored
+    nperiods   = n_periods_means(mb)            # get number of periods
+    prod       = product(mb)                    # history? forecast? shockdec?
+    inds       = mb.metadata[:indices]          # mapping from names of vars to indices
+    bands_list = get_density_bands(mb)          # which bands are stored
+    nbands     = length(bands_list)             # how many bands are stored
 
     # extract  matrices from MeansBands structure
-    means, bands = if prod in [:hist, :forecast, :dettrend, :trend]
+    if prod in [:hist, :forecast, :dettrend, :trend]
 
         # construct means and bands arrays
         means = Array{T,2}(nvars, nperiods)
@@ -121,9 +123,7 @@ function meansbands_matrix(mb::MeansBands)
             end
         end
 
-        means, bands
-
-    elseif prod in [:shockdec]
+    elseif prod in [:shockdec, :irf]
 
         shock_inds = mb.metadata[:shock_indices]
         nshocks = length(shock_inds)
@@ -145,24 +145,9 @@ function meansbands_matrix(mb::MeansBands)
                     convert(Array{T}, mb.bands[series][symbol(band)])
             end
         end
-
-        means, bands
-
-    # elseif prod in [:trend]
-
-    #     means = convert(Matrix{Float64}, mb.means)
-
-    #     bands = Array{T}(nbands, nvars)
-    #     for var in keys(mb.bands)
-    #         ind = inds[var]
-    #         bands[:, ind] = convert(Matrix{T}, mb.bands[var])
-    #     end
-
-    #     means, bands
-
     end
 
     # return matrix
-    means, bands
+    return means, bands
 end
 

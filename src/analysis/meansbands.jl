@@ -13,6 +13,7 @@ Specifically, forecasts can be made for any element in the Cartesian product of 
   - `hist`: smoothed histories
   - `forecast`: forecasted values
   - `shockdec`: shock decompositions
+  - `irf`: impulse responses
 4. variable *class*: the category in which a particular variable, like `:y_t`, falls. Options are:
   - `state`: state (from `m.endogenous_states` or `m.endogenous_states_augmented`)
   - `obs`: observable (from `m.observables`)

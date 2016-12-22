@@ -291,6 +291,8 @@ function forecast_horizons(m::AbstractModel; cond_type = :none)
     return 1 + subtract_quarters(t1, t0)
 end
 
+impulse_response_horizons(m::AbstractModel) = get_setting(m, :impulse_response_horizons)
+
 """
 ```
 load_parameters_from_file(m::AbstractModel,path::AbstractString)

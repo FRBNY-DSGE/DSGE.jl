@@ -381,20 +381,26 @@ function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
     subset_inds::Vector{Int} = Vector{Int}(),
     verbose::Symbol = :none, procs::Vector{Int} = [myid()])
 
+    # Convert output_vars to a vector of strings
+    output_strs = map(string, output_vars)
+
     # Set forecast_pseudoobservables properly
-    for output in output_vars
-        if contains(string(output), "pseudo")
-            m <= Setting(:forecast_pseudoobservables, true)
-            break
-        end
+    if any(output -> contains(output, "pseudo"), output_strs)
+        m <= Setting(:forecast_pseudoobservables, true)
     end
 
+    # Determine if we are only running IRFs. If so, we won't need to load data
+    # or run the Kalman filter below
+    irfs_only = all(output -> contains(output, "irf"), output_strs)
+
     # Load data if not provided
-    if isempty(df)
-        df = load_data(m; cond_type = cond_type, try_disk = true, verbose = :none)
-    else
-        @assert df[1, :date] == date_presample_start(m)
-        @assert df[end, :date] == (cond_type == :none ? date_mainsample_end(m) : date_conditional_end(m))
+    if !irfs_only
+        if isempty(df)
+            df = load_data(m; cond_type = cond_type, try_disk = true, verbose = :none)
+        else
+            @assert df[1, :date] == date_presample_start(m)
+            @assert df[end, :date] == (cond_type == :none ? date_mainsample_end(m) : date_conditional_end(m))
+        end
     end
 
     # Compute systems and run Kalman filter if not provided
@@ -403,7 +409,9 @@ function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
         params = load_draws(m, input_type; subset_inds = subset_inds,
                             verbose = verbose, procs = procs)
         systems = prepare_systems(m, input_type, params; procs = procs)
-        kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
+        if !irfs_only
+            kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
+        end
     else
         @assert length(systems) == length(kals)
         @assert DistributedArrays.procs(systems) == DistributedArrays.procs(kals) == procs
@@ -486,47 +494,61 @@ forecast output array. The saved dictionaries include:
 - `pseudoobservable_names::Dict{Symbol, Int}`: saved for `var in [:histpseudo, :forecastpseudo, :shockdecpseudo]`
 - `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for pseudoobservables
 - `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
+
+Note that we don't save dates or transformations for impulse response functions.
 """
 function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbol)
 
+    var = string(var)
+
     # Write date range
-    dates = if contains(string(var), "hist")
-        quarter_range(date_mainsample_start(m), date_mainsample_end(m))
-    elseif contains(string(var), "forecast")
-        quarter_range(date_forecast_start(m), date_forecast_end(m))
-    elseif contains(string(var), "shockdec")
-        quarter_range(date_shockdec_start(m), date_shockdec_end(m))
-    elseif contains(string(var), "trend") # trend and dettrend
-        quarter_range(date_shockdec_start(m), date_shockdec_end(m))
+    if !contains(var, "irf")
+        dates = if contains(var, "hist")
+            quarter_range(date_mainsample_start(m), date_mainsample_end(m))
+        elseif contains(var, "forecast")
+            quarter_range(date_forecast_start(m), date_forecast_end(m))
+        elseif contains(var, "shockdec")
+            quarter_range(date_shockdec_start(m), date_shockdec_end(m))
+        elseif contains(var, "trend") # trend and dettrend
+            quarter_range(date_mainsample_start(m), date_forecast_end(m))
+        end
+
+        date_indices = [d::Date => i::Int for (i, d) in enumerate(dates)]
+        write(file, "date_indices", date_indices)
     end
-    date_indices = [d::Date => i::Int for (i, d) in enumerate(dates)]
-    write(file, "date_indices", date_indices)
 
     # Write state names
-    if contains(string(var), "states")
+    if contains(var, "states")
         state_indices = merge(m.endogenous_states, m.endogenous_states_augmented)
         @assert length(state_indices) == n_states_augmented(m) # assert no duplicate keys
         write(file, "state_indices", state_indices)
     end
 
-    # Write observable names
-    if contains(string(var), "obs")
+    # Write observable names and transforms
+    if contains(var, "obs")
         write(file, "observable_indices", m.observables)
-        rev_transforms =
+        rev_transforms = if !contains(var, "irf")
             Dict{Symbol,Symbol}([x => symbol(m.observable_mappings[x].rev_transform) for x in keys(m.observables)])
+        else
+            Dict{Symbol,Symbol}([x => symbol("DSGE.identity") for x in keys(m.observables)])
+        end
         write(file, "observable_revtransforms", rev_transforms)
     end
 
     # Write pseudo-observable names and transforms
-    if contains(string(var), "pseudo")
+    if contains(var, "pseudo")
         pseudo, pseudo_mapping = pseudo_measurement(m)
         write(file, "pseudoobservable_indices", pseudo_mapping.inds)
-        rev_transforms = Dict{Symbol,Symbol}([x => symbol(pseudo[x].rev_transform) for x in keys(pseudo)])
+        rev_transforms = if !contains(var, "irf")
+            Dict{Symbol,Symbol}([x => symbol(pseudo[x].rev_transform) for x in keys(pseudo)])
+        else
+            Dict{Symbol,Symbol}([x => symbol("DSGE.identity") for x in keys(pseudo)])
+        end
         write(file, "pseudoobservable_revtransforms", rev_transforms)
     end
 
     # Write shock names
-    if contains(string(var), "shocks") || contains(string(var), "shockdec")
+    if contains(var, "shocks") || contains(var, "shockdec") || contains(var, "irf")
         write(file, "shock_indices", m.exogenous_shocks)
     end
 end
