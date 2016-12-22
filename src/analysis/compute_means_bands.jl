@@ -1,12 +1,12 @@
 """
 ```
-means_bands_all(m, input_type, output_vars, cond_type;
+means_bands_all(m, input_type, cond_type, output_vars;
                 density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], subset_string = "",
                 load_dataset = true, load_population_data = true,
                 population_forecast_file = "", verbose :low)
 
 
-means_bands_all(input_type, output_vars, cond_type, forecast_output_files;
+means_bands_all(input_type, cond_type, output_vars, forecast_output_files;
                 density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], subset_string = "",
                 output_dir = "", population_data = DataFrame(),
                 population_mnemonic = Nullable{Symbol}(),
@@ -26,8 +26,8 @@ Below, `T<:AbstractFloat` and `S<:AbstractString`:
 
 - `m`: model object
 - `input_type::Symbol`: see `forecast_all`
-- `output_vars::Vector{Symbol}`: see `forecast_one`
 - `cond_type::Symbol`: see `forecast_all`
+- `output_vars::Vector{Symbol}`: see `forecast_one`
 
 #### Method 2:
 
@@ -62,7 +62,7 @@ Below, `T<:AbstractFloat` and `S<:AbstractString`:
 - `load_population_data::Bool`: indicates whether or not to load the
   population growth rate data. This is required only when a series
   requires either the `:loglevelto4qpct_annualized_percapita` or
-  `:loglegelto4qpct_annualized` transformation.
+  `:loglevelto4qpct_annualized` transformation.
 
 #### Method 2:
 
@@ -93,7 +93,7 @@ Below, `T<:AbstractFloat` and `S<:AbstractString`:
 - `data::Matrix{T}`: pre-loaded `nobs x nperiods` matrix containing the transformed data matrix.
 """
 function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
-                                           output_vars::Vector{Symbol}, cond_type::Symbol;
+                                           cond_type::Symbol, output_vars::Vector{Symbol};
                                            density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                            subset_string = "", load_dataset::Bool = true,
                                            load_population_data::Bool = true,
@@ -156,11 +156,11 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
     end
 
     ## Step 3: Get names of files that the forecast wrote
-    forecast_output_files = DSGE.get_output_files(m, "forecast", input_type,
-                                                  output_vars, cond_type, subset_string = subset_string)
+    forecast_output_files = DSGE.get_output_files(m, "forecast", input_type, cond_type,
+                                                  output_vars; subset_string = subset_string)
 
     ## Step 4: We have everything we need; appeal to model-object-agnostic function
-    means_bands_all(input_type, output_vars, cond_type, forecast_output_files,
+    means_bands_all(input_type, cond_type, output_vars, forecast_output_files,
                     density_bands = density_bands, subset_string = subset_string,
                     output_dir = workpath(m,"forecast",""),
                     population_data = level_data,
@@ -171,8 +171,8 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
 end
 
 function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
-                                               output_vars::Vector{Symbol},
                                                cond_type::Symbol,
+                                               output_vars::Vector{Symbol},
                                                forecast_output_files::Dict{Symbol,S};
                                                density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                                subset_string = "",
@@ -247,7 +247,7 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
         end
 
         # compute means and bands object
-        mb = means_bands(input_type, output_var, cond_type,
+        mb = means_bands(input_type, cond_type, output_var,
                          forecast_output_files, density_bands = density_bands,
                          subset_string = subset_string,
                          population_data = dlfiltered_population_data,
@@ -275,8 +275,8 @@ end
 """
 ```
 means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
-                                                 output_var::Symbol,
                                                  cond_type::Symbol,
+                                                 output_var::Symbol,
                                                  forecast_output_files::Dict{Symbol,S};
                                                  density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                                  subset_string::S = "",
@@ -296,8 +296,8 @@ All inputs are exactly the same as the second
 `Symbol` rather than `Array{Symbol}`.
 """
 function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
-                                                          output_var::Symbol,
                                                           cond_type::Symbol,
+                                                          output_var::Symbol,
                                                           forecast_output_files::Dict{Symbol,S};
                                                           density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                                           subset_string::S = "",

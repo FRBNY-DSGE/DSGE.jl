@@ -54,7 +54,7 @@ types, and output types.
 ### Outputs
 
 None. Output is saved to files returned by
-`get_output_files(m, input_type, output_vars, cond_type)`
+`get_output_files(m, input_type, cond_type, output_vars)`
 for each combination of `input_type` and `cond_type`.
 """
 function forecast_all(m::AbstractModel,
@@ -347,7 +347,7 @@ function forecast_one(m::AbstractModel{Float64},
 
     # Prepare forecast outputs
     forecast_output = Dict{Symbol, DArray{Float64}}()
-    forecast_output_files = get_output_files(m, "forecast", input_type, output_vars, cond_type;
+    forecast_output_files = get_output_files(m, "forecast", input_type, cond_type, output_vars;
                                 subset_string = subset_string)
     output_dir = rawpath(m, "forecast")
 

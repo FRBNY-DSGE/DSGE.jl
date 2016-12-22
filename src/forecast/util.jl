@@ -108,7 +108,7 @@ end
 
 """
 ```
-get_output_files(m, base, input_type, output_vars, cond_type;
+get_output_files(m, base, input_type, cond_type, output_vars;
                  [pathfcn = rawpath], [subset_string = ""], [fileformat = :jld])
 ```
 
@@ -139,7 +139,7 @@ an error.
 - `base` can be any string, but is likely \"forecast\". An example use case is given below:
 
 ```julia
-output_files = get_output_files(m, \"forecast\", :mode, [:forecastpseudo], :none)
+output_files = get_output_files(m, \"forecast\", :mode, :none, [:forecastpseudo])
 ```
 
 The entry corresponding to the `:forecastpseudo` key will look something like:
@@ -151,7 +151,7 @@ The entry corresponding to the `:forecastpseudo` key will look something like:
 Another example:
 
 ```julia
-output_files = get_output_files(m, \"forecast\", :mode, [:forecastpseudo], :none, workpath)
+output_files = get_output_files(m, \"forecast\", :mode, :none, [:forecastpseudo], workpath)
 ```
 
 The entry corresponding to the `:forecastpseudo` key will look something like:
@@ -161,7 +161,7 @@ The entry corresponding to the `:forecastpseudo` key will look something like:
 ```
 """
 function get_output_files{S<:AbstractString}(m::AbstractModel, base::S,
-                     input_type::Symbol, output_vars::Vector{Symbol}, cond_type::Symbol;
+                     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
                      pathfcn::Function = rawpath, subset_string::S = "",
                      fileformat = :jld)
     additional_file_strings = ASCIIString[]
@@ -604,7 +604,7 @@ function compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
                                     verbose = verbose, procs = procs)
 
     # Delete output files
-    output_files = get_output_files(m, "forecast", :subset, output_vars, :none, subset_string = "compile")
+    output_files = get_output_files(m, "forecast", :subset, :none, output_vars; subset_string = "compile")
     map(rm, collect(values(output_files)))
 end
 
