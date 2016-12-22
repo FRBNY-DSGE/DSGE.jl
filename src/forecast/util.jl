@@ -381,20 +381,26 @@ function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
     subset_inds::Vector{Int} = Vector{Int}(),
     verbose::Symbol = :none, procs::Vector{Int} = [myid()])
 
+    # Convert output_vars to a vector of strings
+    output_strs = map(string, output_vars)
+
     # Set forecast_pseudoobservables properly
-    for output in output_vars
-        if contains(string(output), "pseudo")
-            m <= Setting(:forecast_pseudoobservables, true)
-            break
-        end
+    if any(output -> contains(output, "pseudo"), output_strs)
+        m <= Setting(:forecast_pseudoobservables, true)
     end
 
+    # Determine if we are only running IRFs. If so, we won't need to load data
+    # or run the Kalman filter below
+    irfs_only = all(output -> contains(output, "irf"), output_strs)
+
     # Load data if not provided
-    if isempty(df)
-        df = load_data(m; cond_type = cond_type, try_disk = true, verbose = :none)
-    else
-        @assert df[1, :date] == date_presample_start(m)
-        @assert df[end, :date] == (cond_type == :none ? date_mainsample_end(m) : date_conditional_end(m))
+    if !irfs_only
+        if isempty(df)
+            df = load_data(m; cond_type = cond_type, try_disk = true, verbose = :none)
+        else
+            @assert df[1, :date] == date_presample_start(m)
+            @assert df[end, :date] == (cond_type == :none ? date_mainsample_end(m) : date_conditional_end(m))
+        end
     end
 
     # Compute systems and run Kalman filter if not provided
@@ -403,7 +409,9 @@ function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
         params = load_draws(m, input_type; subset_inds = subset_inds,
                             verbose = verbose, procs = procs)
         systems = prepare_systems(m, input_type, params; procs = procs)
-        kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
+        if !irfs_only
+            kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
+        end
     else
         @assert length(systems) == length(kals)
         @assert DistributedArrays.procs(systems) == DistributedArrays.procs(kals) == procs
