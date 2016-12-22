@@ -3,14 +3,12 @@
 impulse_responses(m, systems; procs = [myid()])
 ```
 
-Computes impulse responses for all states, pseudo-observables, or observables
-across all draws.
+Compute impulse responses across all draws.
 
 ### Inputs
 - `m::AbstractModel`: model object
 - `systems::DVector{System{S}}`: vector of `System` objects specifying
   state-space system matrices for each draw
-- `impulse_response_shocks`: a Dict mapping the desired shocks to their indices
 
 ### Keyword Arguments
 
@@ -20,11 +18,11 @@ across all draws.
 ### Outputs
 
 - `states::DArray{S, 4}`: array of size `ndraws` x `nstates` x `horizon` x
-  `nshocks` of state shock decompositions for each draw
+  `nshocks` of state impulse response functions for each draw
 - `obs::DArray{S, 4}`: array of size `ndraws` x `nobs` x `horizon` x `nshocks`
-  of observable shock decompositions for each draw
+  of observable impulse response functions for each draw
 - `pseudo::DArray{S, 4}`: array of size `ndraws` x `npseudo` x `horizon` x
-  `nshocks` of pseudo-observable shock decompositions for each draw. If
+  `nshocks` of pseudo-observable impulse response functions for each draw. If
   `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
 
 where `horizon` is the forecast horizon for the model as given by
@@ -51,7 +49,7 @@ function impulse_responses{S<:AbstractFloat}(m::AbstractModel,
     obs_range    = (nstates + 1):(nstates + nobs)
     pseudo_range = (nstates + nobs + 1):(nstates + nobs + npseudo)
 
-    # Construct distributed array of shock decompositions
+    # Construct distributed array of impulse response functions
     out = DArray((ndraws, nstates + nobs + npseudo, horizon, nshocks), procs, [nprocs, 1, 1, 1]) do I # I is a tuple of indices for given localpart
 
         # Compute shock decomposition for each draw
@@ -94,21 +92,18 @@ Compute impulse responses for a single draw.
 
 ### Inputs
 
-- `system::System{S}`: state-space system matrices. Alternatively, provide
-  transition equation matrices `T`, `R`; measurement equation matrices `Z`, `D`;
-  and (possibly empty) pseudo-measurement equation matrices `Z_pseudo` and
-  `D_pseudo`.
+- `system::System{S}`: state-space system matrices
 - `horizon::Int`: number of periods ahead to forecast
 
 ### Outputs
 
 - `states::Array{S, 3}`: matrix of size `nstates` x `horizon` x `nshocks` of
-  state shock decompositions
+  state impulse response functions
 - `obs::Array{S, 3}`: matrix of size `nobs` x `horizon` x `nshocks` of
-  observable shock decompositions
+  observable impulse response functions
 - `pseudo::Array{S, 3}`: matrix of size `npseudo` x `horizon` x `nshocks` of
-  pseudo-observable shock decompositions. If the provided `Z_pseudo` and
-  `D_pseudo` matrices are empty, then `pseudo` will be empty.
+  pseudo-observable impulse response functions. If the pseudo-measurement equation
+  matrices in `system` are empty, then `pseudo` will be empty.
 """
 function compute_impulse_response{S<:AbstractFloat}(system::System{S}, horizon::Int)
 
