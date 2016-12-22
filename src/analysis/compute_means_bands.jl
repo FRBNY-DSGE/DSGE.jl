@@ -134,7 +134,7 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
     data, y0_indexes = if load_dataset
 
         # load dataset
-        data = df_to_matrix(m, load_data(m))
+        data = df_to_matrix(m, load_data(m, verbose = :none))
 
         # specify the t-1 period for each product
         products = unique(map(get_product, output_vars))
@@ -161,13 +161,13 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
 
     ## Step 4: We have everything we need; appeal to model-object-agnostic function
     means_bands_all(input_type, output_vars, cond_type, forecast_output_files,
-                            density_bands = density_bands, subset_string = subset_string,
-                            output_dir = workpath(m,"forecast",""),
-                            population_data = level_data,
-                            population_mnemonic = population_mnemonic,
-                            population_forecast_file = population_forecast_file,
-                            y0_indexes = y0_indexes, data = data,
-                            verbose = verbose)
+                    density_bands = density_bands, subset_string = subset_string,
+                    output_dir = workpath(m,"forecast",""),
+                    population_data = level_data,
+                    population_mnemonic = population_mnemonic,
+                    population_forecast_file = population_forecast_file,
+                    y0_indexes = y0_indexes, data = data,
+                    verbose = verbose)
 end
 
 function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
@@ -248,13 +248,14 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
 
         # compute means and bands object
         mb = means_bands(input_type, output_var, cond_type,
-                                 forecast_output_files, density_bands = density_bands,
-                                 subset_string = subset_string,
-                                 population_data = dlfiltered_population_data,
-                                 population_mnemonic = Nullable(:population_growth),
-                                 population_forecast = dlfiltered_population_forecast,
-                                 y0_index = y0_index,
-                                 data = data)
+                         forecast_output_files, density_bands = density_bands,
+                         subset_string = subset_string,
+                         population_data = dlfiltered_population_data,
+                         population_mnemonic = Nullable(:population_growth),
+                         population_forecast = dlfiltered_population_forecast,
+                         y0_index = y0_index,
+                         data = data,
+                         verbose = verbose)
 
         # write to file
         filepath = mb_files[output_var]

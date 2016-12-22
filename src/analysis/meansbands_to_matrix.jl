@@ -70,7 +70,9 @@ function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
         outfile = joinpath(dirname(outfile), "mb_matrix_"*base)
 
         ## Convert MeansBands objects to matrices
-        print("* Extracting means and bands matrices for $prod...")
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            print("* Extracting means and bands matrices for $prod...")
+        end
         means, bands = meansbands_matrix(mb)
 
         ## Save to file
@@ -78,7 +80,10 @@ function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
             f["means"] = means
             f["bands"] = bands
         end
-        println("wrote matrix-form means and bands for ($prod$cl, $condtype) to $outfile\n")
+
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("wrote matrix-form means and bands for ($prod$cl, $condtype) to $outfile\n")
+        end
     end
 end
 
