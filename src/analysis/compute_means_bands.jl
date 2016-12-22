@@ -254,8 +254,7 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
                          population_mnemonic = Nullable(:population_growth),
                          population_forecast = dlfiltered_population_forecast,
                          y0_index = y0_index,
-                         data = data,
-                         verbose = verbose)
+                         data = data)
 
         # write to file
         filepath = mb_files[output_var]
@@ -285,8 +284,7 @@ means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                                                  population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                  population_forecast = DataFrame(),
                                                  y0_index::Int = -1,
-                                                 data = Matrix{T}(),
-                                                 verbose::Symbol = :low)
+                                                 data = Matrix{T}())
 ```
 
 Computes means and bands for a single `output_var`.
@@ -307,8 +305,7 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                                                           population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                           population_forecast = DataFrame(),
                                                           y0_index::Int = -1,
-                                                          data = Matrix{T}(),
-                                                          verbose::Symbol = :low)
+                                                          data = Matrix{T}())
 
     # Return only one set of bands if we read in only one draw
     if input_type in [:init, :mode, :mean]
@@ -321,16 +318,9 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
     class = get_class(output_var)
     product = get_product(output_var)
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("* Computing means and bands for $output_var...")
-    end
-
     ## Step 2: Read in raw forecast output and metadata (transformations, mappings from symbols to indices, etc)
     # open correct input file
     forecast_output_file = forecast_output_files[output_var]
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        println("Reading forecast metdatata from $forecast_output_file")
-    end
     metadata, fcast_output = jldopen(forecast_output_file, "r") do jld
         read_forecast_metadata(jld), DSGE.read_darray(jld)
     end
