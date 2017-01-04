@@ -127,17 +127,23 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
         end
     end
 
-    # Return total log-likelihood, excluding the presample
-    k, _, _, R3 = kalman_filter_2part(m, data; allout = false, include_presample = false)
-    like = k[:L]
+    try
+        # Return total log-likelihood, excluding the presample
+        k, _, _, R3 = kalman_filter_2part(m, data; allout = false, include_presample = false)
+        like = k[:L]
 
-    # Add zend to the R3 dict so it can be accessed from within Metropolis-Hastings
-    R3[:zend] = k[:zend]
+        # Add zend to the R3 dict so it can be accessed from within Metropolis-Hastings
+        R3[:zend] = k[:zend]
 
-    if mh
-        return like, R3
-    else
-        return like, LIKE_NULL_DICT
+        if mh
+            return like, R3
+        else
+            return like, LIKE_NULL_DICT
+        end
+    catch err
+        if !(catch_errors && isa(err, GensysError))
+            throw(err)
+        end
     end
 end
 
