@@ -592,6 +592,11 @@ processes (`nprocs`), i.e. `jstep * nprocs`, and runs a full forecast on those
 draws.
 """
 function compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println()
+        info("Compiling forecast_one...")
+    end
+
     # Compute mininum number of draws for given jstep and procs
     jstep = get_setting(m, :forecast_jstep)
     nprocs = length(procs)
@@ -601,7 +606,7 @@ function compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
     subset_inds = collect(1:min_draws)
     forecast_outputs = forecast_one(m, :subset, :none, output_vars;
                                     subset_inds = subset_inds, subset_string = "compile",
-                                    verbose = verbose, procs = procs)
+                                    verbose = :none, procs = procs)
 
     # Delete output files
     output_files = get_output_files(m, "forecast", :subset, :none, output_vars; subset_string = "compile")
