@@ -183,6 +183,39 @@ function n_pseudoobservables(m::AbstractModel)
     end
 end
 
+"""
+```
+get_key(m, class, index)
+```
+
+Returns the name of the state (`class = :state`), observable (`obs`),
+pseudo-observable (`pseudo`), or shock (`shock`) corresponding to the given
+`index`.
+"""
+function get_key(m::AbstractModel, class::Symbol, index::Int)
+    dict = if class == :state
+        m.endogenous_states
+    elseif class == :obs
+        m.observables
+    elseif class == :pseudo
+        _, pseudo_mapping = pseudo_measurement(m)
+        pseudo_mapping.inds
+    elseif class == :shock
+        m.exogenous_shocks
+    else
+        throw(ArgumentError("Invalid class :$class. Must be :state, :obs, :pseudo, or :shock"))
+    end
+
+    out = Base.filter(key -> dict[key] == index, collect(keys(dict)))
+    if length(out) == 0
+        error("Key corresponding to index $index not found for class :$class")
+    elseif length(out) > 1
+        error("Multiple keys corresponding to index $index found for class :$class")
+    else
+        return out[1]
+    end
+end
+
 # Parse population mnemonic into 2 symbols from one
 function parse_population_mnemonic(m::AbstractModel)
     map(symbol, split(string(get_setting(m, :population_mnemonic)), DSGE_DATASERIES_DELIM))
