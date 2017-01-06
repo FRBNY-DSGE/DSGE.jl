@@ -340,9 +340,9 @@ using the appropriate getter function.
 ### Inputs
 
 - `m::AbstractModel`: model object
-- `input_type::Symbol`: See documentation for `forecast_all`. Defaults to
+- `input_type::Symbol`: See documentation for `forecast_all`
   `:mode`
-- `cond_type::Symbol`: See documentation for `forecast_all`. Defaults to `:none`
+- `cond_type::Symbol`: See documentation for `forecast_all`
 - `subset_inds::Vector{Int}`: indices specifying the draws we want to use. See
   `forecast_one` for more detail
 - `output_vars::Vector{Symbol}`: vector of desired output variables. See

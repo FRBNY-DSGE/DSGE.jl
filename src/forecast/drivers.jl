@@ -66,10 +66,8 @@ function forecast_all(m::AbstractModel,
 
     for input_type in input_types
 
-        # Set up infiles
-        params = load_draws(m, input_type; verbose = verbose, procs = procs)
-
-        # Populate systems vector
+        # Load draws and solve system for each draw
+        params  = load_draws(m, input_type; verbose = verbose, procs = procs)
         systems = prepare_systems(m, input_type, params; procs = procs)
 
         for cond_type in cond_types
@@ -219,7 +217,7 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
         update!(m, vec(params))
         systems = dfill(compute_system(m), (1,), procs)
     elseif input_type in [:full, :subset]
-        nprocs = length(procs);
+        nprocs = length(procs)
         systems = DArray((n_sim_forecast,), procs, [nprocs]) do I
             draw_inds = first(I)
             ndraws_local = convert(Int, n_sim_forecast/nprocs)
@@ -310,6 +308,9 @@ and conditional data case given by `cond_type`.
   - `:forecastpseudo`: `DArray{Float64, 3}` of forecasted pseudo-observables (if
     a pseudo-measurement equation has been provided for this model type)
   - `:forecastshocks`: `DArray{Float64, 3}` of forecasted shocks
+  - `:forecaststatesbdd`, `:forecastobsbdd`, `:forecastpseudobdd`, and
+    `:forecastshocksbdd`: `DArray{Float64, 3}`s of forecasts where we enforce
+    the zero lower bound to be `forecast_zlb_value(m)`
   - `:shockdecstates`: `DArray{Float64, 4}` of state shock decompositions
   - `:shockdecobs`: `DArray{Float64, 4}` of observable shock decompositions
   - `:shockdecpseudo`: `DArray{Float64, 4}` of pseudo-observable shock
