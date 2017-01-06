@@ -141,7 +141,9 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
             return like, LIKE_NULL_DICT
         end
     catch err
-        if !(catch_errors && isa(err, GensysError))
+        if catch_errors && isa(err, GensysError)
+            return LIKE_NULL_OUTPUT
+        else
             throw(err)
         end
     end
