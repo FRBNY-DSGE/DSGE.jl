@@ -157,6 +157,7 @@ n_presample_periods(m::AbstractModel) = subtract_quarters(date_mainsample_start(
 n_prezlb_periods(m::AbstractModel) = subtract_quarters(date_zlb_start(m), date_mainsample_start(m))
 n_zlb_periods(m::AbstractModel) = subtract_quarters(date_forecast_start(m), date_zlb_start(m))
 n_mainsample_periods(m::AbstractModel) = subtract_quarters(date_forecast_start(m), date_mainsample_start(m))
+n_conditional_periods(m::AbstractModel) = subtract_quarters(date_conditional_end(m), date_mainsample_end(m))
 
 inds_presample_periods(m::AbstractModel) = collect(index_presample_start(m):(index_mainsample_start(m)-1))
 inds_prezlb_periods(m::AbstractModel) = collect(index_mainsample_start(m):(index_zlb_start(m)-1))
@@ -285,7 +286,6 @@ n_draws(m::AbstractModel)          =  round(Int,(n_mh_blocks(m) - n_mh_burn(m)) 
 
 # Interface for forecast settings
 date_forecast_start(m::AbstractModel)   = get_setting(m, :date_forecast_start)
-date_forecast_end(m::AbstractModel)     = get_setting(m, :date_forecast_end)
 forecast_tdist_df_val(m::AbstractModel) = get_setting(m, :forecast_tdist_df_val)
 forecast_tdist_shocks(m::AbstractModel) = get_setting(m, :forecast_tdist_shocks)
 forecast_kill_shocks(m::AbstractModel)  = get_setting(m, :forecast_kill_shocks)
@@ -293,6 +293,19 @@ forecast_smoother(m::AbstractModel)     = get_setting(m, :forecast_smoother)
 forecast_enforce_zlb(m::AbstractModel)  = get_setting(m, :forecast_enforce_zlb)
 forecast_zlb_value(m::AbstractModel)    = get_setting(m, :forecast_zlb_value)
 forecast_input_file_overrides(m::AbstractModel) = get_setting(m, :forecast_input_file_overrides)
+function date_forecast_end(m::AbstractModel)
+    date = date_forecast_start(m) + Dates.Month(3 * (forecast_horizons(m)-1))
+    return Dates.lastdayofquarter(date)
+end
+
+function forecast_horizons(m::AbstractModel; cond_type::Symbol = :none)
+    horizons = get_setting(m, :forecast_horizons)
+    if cond_type == :none
+        return horizons
+    else
+        return horizons - n_conditional_periods(m)
+    end
+end
 
 function date_shockdec_start(m::AbstractModel)
     startdate = get_setting(m, :shockdec_startdate)
@@ -314,15 +327,6 @@ end
 
 forecast_pseudoobservables(m::AbstractModel) = get_setting(m, :forecast_pseudoobservables)
 
-function forecast_horizons(m::AbstractModel; cond_type = :none)
-    t0 = if cond_type == :none
-        get_setting(m, :date_forecast_start)
-    else
-        Dates.lastdayofquarter(get_setting(m, :date_conditional_end) + Dates.Month(3))
-    end
-    t1 = get_setting(m, :date_forecast_end)
-    return 1 + subtract_quarters(t1, t0)
-end
 
 impulse_response_horizons(m::AbstractModel) = get_setting(m, :impulse_response_horizons)
 

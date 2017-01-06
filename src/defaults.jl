@@ -45,8 +45,6 @@ function default_settings!(m::AbstractModel)
         "Start date of forecast period")
     settings[:date_conditional_end] = Setting(:date_conditional_end, Dates.lastdayofquarter(Dates.today()),
         "End date of conditional data period")
-    settings[:date_forecast_end] = Setting(:date_forecast_end, Dates.lastdayofquarter(Dates.today()+Dates.Month(60*3)),
-        "End date of forecast period")
 
     # Anticipated shocks
     settings[:n_anticipated_shocks] = Setting(:n_anticipated_shocks, 0,
@@ -83,6 +81,8 @@ function default_settings!(m::AbstractModel)
         Dict{Symbol, ASCIIString}())
     settings[:forecast_pseudoobservables] = Setting(:forecast_pseudoobservables, false,
         "Pseudo-observables to forecast")
+    settings[:forecast_horizons] = Setting(:forecast_horizons, 60,
+        "Number of periods to forecast ahead")
     settings[:forecast_kill_shocks] = Setting(:forecast_kill_shocks, false,
         "Kill (set to 0) all shocks in forecast")
     settings[:forecast_tdist_shocks] = Setting(:forecast_tdist_shocks, false,
@@ -166,8 +166,8 @@ function default_test_settings!(m::AbstractModel)
     # Forecast
     test[:date_forecast_start] = Setting(:date_forecast_start, quartertodate("2015-Q4"),
         "Start date of forecast period")
-    test[:date_forecast_end] = Setting(:date_forecast_end, quartertodate("2016-Q1"),
-        "End date of forecast period")
+    test[:forecast_horizons] = Setting(:forecast_horizons, 2,
+        "Number of periods to forecast ahead")
     test[:forecast_jstep] = Setting(:forecast_jstep, 1,
         "Forecast thinning step (in addition to MH thinning step")
     test[:shockdec_whichshocks] = Setting(:shockdec_whichshocks, :all, #TODO

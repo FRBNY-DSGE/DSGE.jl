@@ -9,7 +9,6 @@ custom_settings = Dict{Symbol, Setting}(
     :use_population_forecast => Setting(:use_population_forecast, true),
     :date_forecast_start     => Setting(:date_forecast_start, quartertodate("2015-Q4")),
     :date_conditional_end    => Setting(:date_conditional_end, quartertodate("2015-Q4")),
-    :date_forecast_end       => Setting(:date_forecast_end, quartertodate("2016-Q1")),
     :forecast_kill_shocks    => Setting(:forecast_kill_shocks, true),
     :saveroot                => Setting(:saveroot, normpath(joinpath(dirname(@__FILE__), "..", "reference"))),
     :use_parallel_workers    => Setting(:use_parallel_workers, true))
