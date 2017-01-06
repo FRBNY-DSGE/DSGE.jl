@@ -153,10 +153,10 @@ Returns the last index for which the shock decomposition is saved, where 1 is th
 """
 index_shockdec_end(m::AbstractModel) = subtract_quarters(date_shockdec_end(m), date_mainsample_start(m)) + 1
 
-n_presample_periods(m::AbstractModel) = subtract_quarters(date_mainsample_start(m), date_presample_start(m))
-n_prezlb_periods(m::AbstractModel) = subtract_quarters(date_zlb_start(m), date_mainsample_start(m))
-n_zlb_periods(m::AbstractModel) = subtract_quarters(date_forecast_start(m), date_zlb_start(m))
-n_mainsample_periods(m::AbstractModel) = subtract_quarters(date_forecast_start(m), date_mainsample_start(m))
+n_presample_periods(m::AbstractModel)   = subtract_quarters(date_mainsample_start(m), date_presample_start(m))
+n_prezlb_periods(m::AbstractModel)      = subtract_quarters(date_zlb_start(m), date_mainsample_start(m))
+n_zlb_periods(m::AbstractModel)         = subtract_quarters(date_forecast_start(m), date_zlb_start(m))
+n_mainsample_periods(m::AbstractModel)  = subtract_quarters(date_forecast_start(m), date_mainsample_start(m))
 n_conditional_periods(m::AbstractModel) = subtract_quarters(date_conditional_end(m), date_mainsample_end(m))
 
 inds_presample_periods(m::AbstractModel) = collect(index_presample_start(m):(index_mainsample_start(m)-1))
@@ -286,13 +286,15 @@ n_draws(m::AbstractModel)          =  round(Int,(n_mh_blocks(m) - n_mh_burn(m)) 
 
 # Interface for forecast settings
 date_forecast_start(m::AbstractModel)   = get_setting(m, :date_forecast_start)
+forecast_input_file_overrides(m::AbstractModel) = get_setting(m, :forecast_input_file_overrides)
+forecast_pseudoobservables(m::AbstractModel) = get_setting(m, :forecast_pseudoobservables)
+forecast_smoother(m::AbstractModel)     = get_setting(m, :forecast_smoother)
+forecast_kill_shocks(m::AbstractModel)  = get_setting(m, :forecast_kill_shocks)
 forecast_tdist_df_val(m::AbstractModel) = get_setting(m, :forecast_tdist_df_val)
 forecast_tdist_shocks(m::AbstractModel) = get_setting(m, :forecast_tdist_shocks)
-forecast_kill_shocks(m::AbstractModel)  = get_setting(m, :forecast_kill_shocks)
-forecast_smoother(m::AbstractModel)     = get_setting(m, :forecast_smoother)
-forecast_enforce_zlb(m::AbstractModel)  = get_setting(m, :forecast_enforce_zlb)
 forecast_zlb_value(m::AbstractModel)    = get_setting(m, :forecast_zlb_value)
-forecast_input_file_overrides(m::AbstractModel) = get_setting(m, :forecast_input_file_overrides)
+impulse_response_horizons(m::AbstractModel) = get_setting(m, :impulse_response_horizons)
+
 function date_forecast_end(m::AbstractModel)
     date = date_forecast_start(m) + Dates.Month(3 * (forecast_horizons(m)-1))
     return Dates.lastdayofquarter(date)
@@ -324,11 +326,6 @@ function date_shockdec_end(m::AbstractModel)
         return date_forecast_end(m)
     end
 end
-
-forecast_pseudoobservables(m::AbstractModel) = get_setting(m, :forecast_pseudoobservables)
-
-
-impulse_response_horizons(m::AbstractModel) = get_setting(m, :impulse_response_horizons)
 
 """
 ```

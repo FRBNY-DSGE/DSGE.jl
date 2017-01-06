@@ -75,38 +75,30 @@ function default_settings!(m::AbstractModel)
         "Metropolis-Hastings thinning step")
 
     # Forecast
-    settings[:forecast_observables] = Setting(:forecast_observables, :all,
-        "Observables to forecast")
     settings[:forecast_input_file_overrides] = Setting(:forecast_input_file_overrides,
         Dict{Symbol, ASCIIString}())
+    settings[:forecast_jstep] = Setting(:forecast_jstep, 5,
+        "Forecast thinning step (in addition to MH thinning step")
     settings[:forecast_pseudoobservables] = Setting(:forecast_pseudoobservables, false,
-        "Pseudo-observables to forecast")
+        "Whether to forecast pseudo-observables")
+    settings[:forecast_smoother] = Setting(:forecast_smoother, :durbin_koopman,
+        "Choice of smoother to use during forecasting. Can be :kalman, :durbin_koopman, or eventually :carter_kohn")
     settings[:forecast_horizons] = Setting(:forecast_horizons, 60,
         "Number of periods to forecast ahead")
     settings[:forecast_kill_shocks] = Setting(:forecast_kill_shocks, false,
         "Kill (set to 0) all shocks in forecast")
     settings[:forecast_tdist_shocks] = Setting(:forecast_tdist_shocks, false,
         "Draw Students-t distributed shocks in forecast")
-    settings[:forecast_tdist_draw_df] = Setting(:forecast_tdist_draw_df, false,
-        "Draw Students-t degrees of freedom parameter")
     settings[:forecast_tdist_df_val] = Setting(:forecast_tdist_df_val, 15,
         "Students-t degrees of freedom fixed value")
-    settings[:forecast_smoother] = Setting(:forecast_smoother, :durbin_koopman,
-        "Choice of smoother to use during forecasting. Can be :kalman, :durbin_koopman, or eventually :carter_kohn")
-    settings[:forecast_jstep] = Setting(:forecast_jstep, 5,
-        "Forecast thinning step (in addition to MH thinning step")
-    settings[:forecast_enforce_zlb] = Setting(:forecast_enforce_zlb, true,
-        "Enforce zero lower bound in forecast periods")
     settings[:forecast_zlb_value] = Setting(:forecast_zlb_value, 0.13/4,
         "Value of the zero lower bound in forecast periods, if we choose to enforce it")
     settings[:shockdec_startdate] = Setting(:shockdec_startdate, Nullable{Date}(),
         "Date of start of shock decomposition output period. If null, then shockdec starts at date_mainsample_start")
     settings[:shockdec_enddate] = Setting(:shockdec_enddate, Nullable{Date}(),
         "Date of end of shock decomposition output period. If null, then shockdec ends at date_forecast_end")
-    settings[:shockdec_whichshocks] = Setting(:shockdec_whichshocks, :all,
-        "Sets of shocks for which to conduct shock decomposition")
-
-    settings[:impulse_response_horizons] = Setting(:impulse_response_horizons, 40, "Number of periods for which to calculate an impulse response.")
+    settings[:impulse_response_horizons] = Setting(:impulse_response_horizons, 40,
+        "Number of periods for which to calculate an impulse response")
 
     return settings
 end
@@ -170,8 +162,8 @@ function default_test_settings!(m::AbstractModel)
         "Number of periods to forecast ahead")
     test[:forecast_jstep] = Setting(:forecast_jstep, 1,
         "Forecast thinning step (in addition to MH thinning step")
-    test[:shockdec_whichshocks] = Setting(:shockdec_whichshocks, :all, #TODO
-        "Sets of shocks for which to conduct shock decomposition")
+    test[:impulse_response_horizons] = Setting(:impulse_response_horizons, 2,
+        "Number of periods for which to calculate an impulse response")
 
     return test
 end
