@@ -70,13 +70,22 @@ function forecast_all(m::AbstractModel,
         params  = load_draws(m, input_type; verbose = verbose, procs = procs)
         systems = prepare_systems(m, input_type, params; procs = procs)
 
+        # Are we only running IRFs?
+        irfs_only = all(x -> contains(string(x), "irf"), output_vars)
+
         for cond_type in cond_types
 
-            # Load data
-            df = load_data(m; cond_type = cond_type, try_disk = true, verbose = :none)
+            if irfs_only
+                # If only running IRFs, don't need to load data or run Kalman filter
+                df   = DataFrame()
+                kals = dinit(Kalman{S}, 0)
+            else
+                # Load data
+                df = load_data(m; cond_type = cond_type, try_disk = true, verbose = :none)
 
-            # Run Kalman filter to get s_{T|T}
-            kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
+                # Run Kalman filter to get s_{T|T}
+                kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
+            end
 
             # Call forecast_one
             forecast_one(m, input_type, cond_type, output_vars;
