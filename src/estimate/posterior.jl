@@ -74,7 +74,7 @@ function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
         try
             update!(m, parameters)
         catch err
-            if isa(GensysError, err) || isa(ParamsBoundError, err)
+            if isa(err, GensysError) || isa(err, ParamBoundsError)
                 return -Inf
             else
                 throw(err)
