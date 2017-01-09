@@ -10,102 +10,71 @@ custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start     => Setting(:date_forecast_start, quartertodate("2015-Q4")),
     :date_conditional_end    => Setting(:date_conditional_end, quartertodate("2015-Q4")),
     :forecast_kill_shocks    => Setting(:forecast_kill_shocks, true),
-    :saveroot                => Setting(:saveroot, normpath(joinpath(dirname(@__FILE__), "..", "reference"))),
-    :use_parallel_workers    => Setting(:use_parallel_workers, true))
+    :saveroot                => Setting(:saveroot, normpath(joinpath(dirname(@__FILE__), "..", "reference"))))
 m = Model990(custom_settings = custom_settings, testing = true)
 
-# Add parallel workers
-my_procs = addprocs(5)
-@everywhere using DSGE
-
-output_vars = [:histstates, :histpseudo, :histshocks,
-               :forecaststates, :forecastpseudo, :forecastobs, :forecastshocks,
-               :shockdecstates, :shockdecpseudo, :shockdecobs]
-output_files = []
-
-# Call forecast_one once without timing
-DSGE.compile_forecast_one(m, output_vars, verbose = :none, procs = my_procs)
+output_vars = [:histpseudo, :forecastpseudo, :forecastobs,
+               :shockdecpseudo, :shockdecobs, :dettrendpseudo, :dettrendobs, :trendpseudo, :trendobs,
+               :irfpseudo, :irfobs]
 
 # Check error handling for input_type = :subset
 @test_throws ErrorException forecast_one(m, :subset, :none, output_vars,
                                 subset_inds = collect(1:10), subset_string = "",
-                                verbose = :none, procs = my_procs)
+                                verbose = :none)
 @test_throws ErrorException forecast_one(m, :subset, :none, output_vars,
                                 subset_inds = Vector{Int}(), subset_string = "test",
-                                verbose = :none, procs = my_procs)
+                                verbose = :none)
 
 # Run all forecast combinations
-forecast_outputs = Dict{Tuple{Symbol, Symbol}, Dict{Symbol, Any}}()
-for input_type in [:init, :mode] #, :full]
-    for cond_type in [:none, :semi, :full]
+out = Dict{Symbol, Dict{Symbol, Any}}()
+input_type = :mode
+output_files = []
 
-        println("input_type = $(input_type), cond_type = $(cond_type)")
+for cond_type in [:none, :semi, :full]
+    @time dtemp = forecast_one(m, input_type, cond_type, output_vars, verbose = :none)
 
-        procs = input_type == :full ? my_procs : [myid()]
-        @time forecast_outputs[(cond_type, input_type)] =
-            forecast_one(m, input_type, cond_type, output_vars,
-                         verbose = :none, procs = procs)
-
-        new_output_files = collect(values(DSGE.get_output_files(m, "forecast", input_type, output_vars, cond_type)))
-        append!(output_files, new_output_files)
+    # Convert to Dict of regular arrays
+    temp = Dict{Symbol, Array}()
+    for x in keys(dtemp)
+        temp[x] = squeeze(convert(Array, dtemp[x]), 1)
     end
+    out[cond_type] = temp
+
+    # Save output file name
+    new_output_files = collect(values(DSGE.get_output_files(m, "forecast", input_type, cond_type, output_vars)))
+    append!(output_files, new_output_files)
 end
 
 # Read expected output
-exp_forecast_outputs = jldopen("$path/../reference/forecast_one_out.jld", "r") do file
-    read(file, "exp_forecast_outputs")
+exp_out = jldopen("$path/../reference/forecast_one_out.jld", "r") do file
+    read(file, "exp_out")
 end
 
 # Test forecast outputs
-for input_type in [:init, :mode]
+specify_mode!(m, DSGE.get_input_file(m, :mode); verbose = :none)
 
-    if input_type == :init
-        DSGE.init_parameters!(m)
-        DSGE.steadystate!(m)
-    elseif input_type == :mode
-        specify_mode!(m, DSGE.get_input_file(m, :mode))
-    end
+for cond_type in [:none, :semi, :full]
+    # Histories
+    @test_matrix_approx_eq exp_out[cond_type][:histpseudo]     out[cond_type][:histpseudo]
 
-    for cond_type in [:none, :semi, :full]
+    # Forecasts
+    @test_matrix_approx_eq exp_out[cond_type][:forecastobs]    out[cond_type][:forecastobs]
+    @test_matrix_approx_eq exp_out[cond_type][:forecastpseudo] out[cond_type][:forecastpseudo]
 
-        ## Historical states and shocks
-        histstates = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:histstates], 1, :, :))
-        histshocks = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:histshocks], 1, :, :))
-        histpseudo = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:histpseudo], 1, :, :))
+    # Shock decompositions, deterministic trends, trends
+    @test_matrix_approx_eq exp_out[cond_type][:shockdecobs]    out[cond_type][:shockdecobs]
+    @test_matrix_approx_eq exp_out[cond_type][:shockdecpseudo] out[cond_type][:shockdecpseudo]
+    @test_matrix_approx_eq exp_out[cond_type][:dettrendobs]    out[cond_type][:dettrendobs]
+    @test_matrix_approx_eq exp_out[cond_type][:dettrendpseudo] out[cond_type][:dettrendpseudo]
+    @test_matrix_approx_eq exp_out[cond_type][:trendobs]       out[cond_type][:trendobs]
+    @test_matrix_approx_eq exp_out[cond_type][:trendpseudo]    out[cond_type][:trendpseudo]
 
-        @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:histstates] histstates
-        @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:histshocks] histshocks
-        @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:histpseudo] histpseudo
-
-        ## Forecasted states, observables, pseudos, and shocks
-        forecaststates = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:forecaststates], 1, :, :))
-        forecastobs    = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:forecastobs], 1, :, :))
-        forecastpseudo = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:forecastpseudo], 1, :, :))
-        forecastshocks = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:forecastshocks], 1, :, :))
-
-        @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:forecaststates] forecaststates
-        @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:forecastobs]    forecastobs
-        @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:forecastpseudo] forecastpseudo
-        @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:forecastshocks] forecastshocks
-
-        ## Shock decompositions of states, pseudo-observables, and observables
-        shockdecstates = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:shockdecstates], 1, :, :, :))
-        shockdecobs    = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:shockdecobs], 1, :, :, :))
-        shockdecpseudo = convert(Array, slice(forecast_outputs[(cond_type, input_type)][:shockdecpseudo], 1, :, :, :))
-
-        @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:shockdecstates] shockdecstates
-        @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:shockdecobs]    shockdecobs
-        @test_matrix_approx_eq exp_forecast_outputs[(cond_type, input_type)][:shockdecpseudo] shockdecpseudo
-
-    end # cond_type
-
-end # input_type
-
+    # IRFs
+    @test_matrix_approx_eq exp_out[cond_type][:irfobs]         out[cond_type][:irfobs]
+    @test_matrix_approx_eq exp_out[cond_type][:irfpseudo]      out[cond_type][:irfpseudo]
+end
 
 # Delete all files written by forecast_one
 map(rm, unique(output_files))
-
-# Remove parallel workers
-rmprocs(my_procs)
 
 nothing
