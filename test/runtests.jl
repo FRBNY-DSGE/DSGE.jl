@@ -29,6 +29,7 @@ my_tests = [
             "forecast/compute_forecast",
             "forecast/forecast",
             "forecast/shock_decompositions",
+            "forecast/impulse_responses",
             "forecast/forecast_one"
             ]
 
