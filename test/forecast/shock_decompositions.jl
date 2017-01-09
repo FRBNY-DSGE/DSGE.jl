@@ -23,7 +23,7 @@ systems    = distribute(systems;    procs = my_procs, dist = [ndraws])
 histshocks = distribute(histshocks; procs = my_procs, dist = [ndraws, 1, 1])
 
 # Run to compile before timing
-states, obs, pseudo = DSGE.shock_decompositions(m, systems, histshocks)
+states, obs, pseudo = DSGE.shock_decompositions(m, systems, histshocks; procs = my_procs)
 
 # Read expected output
 exp_states, exp_obs, exp_pseudo = jldopen("$path/../reference/shock_decompositions_out.jld", "r") do file
@@ -31,7 +31,7 @@ exp_states, exp_obs, exp_pseudo = jldopen("$path/../reference/shock_decompositio
 end
 
 # With shockdec_startdate not null
-@time states, obs, pseudo = DSGE.shock_decompositions(m, systems, histshocks)
+@time states, obs, pseudo = DSGE.shock_decompositions(m, systems, histshocks; procs = my_procs)
 
 @test_matrix_approx_eq exp_states[:startdate] convert(Array, states)
 @test_matrix_approx_eq exp_obs[:startdate]    convert(Array, obs)
@@ -39,7 +39,7 @@ end
 
 # With shockdec_startdate null
 m <= Setting(:shockdec_startdate, Nullable{Date}())
-@time states, obs, pseudo = DSGE.shock_decompositions(m, systems, histshocks)
+@time states, obs, pseudo = DSGE.shock_decompositions(m, systems, histshocks; procs = my_procs)
 
 @test_matrix_approx_eq exp_states[:no_startdate] convert(Array, states)
 @test_matrix_approx_eq exp_obs[:no_startdate]    convert(Array, obs)
