@@ -4,13 +4,9 @@
 Calculates log joint prior density of m.parameters.
 """
 function prior{T<:AbstractFloat}(m::AbstractModel{T})
-    x = zero(T)
-    for θ in m.parameters
-        if !θ.fixed
-            x += logpdf(θ)
-        end
-    end
-    return x
+    free_params = Base.filter(θ -> !θ.fixed, m.parameters)
+    logpdfs = map(logpdf, free_params)
+    return sum(logpdfs)
 end
 
 """
