@@ -13,19 +13,19 @@ custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
 m = Model990(custom_settings = custom_settings)
 
-lh, _ = likelihood(m, data)
+lh = likelihood(m, data)
 @test_approx_eq lh_expected lh
 
-post = posterior(m, data)[:post]
+post = posterior(m, data)
 @test_approx_eq post_expected post
 
 x = map(α->α.value, m.parameters)
-post_at_start = posterior!(m, x, data)[:post]
+post_at_start = posterior!(m, x, data)
 @test_approx_eq post_expected post_at_start
 
 # Ensure if we are not evaluating at start vector, then we do not get the reference
 # posterior
 y = x .+ 0.01
-post_not_at_start = posterior!(m, y, data)[:post]
+post_not_at_start = posterior!(m, y, data)
 ϵ = 1.0
 @test abs(post_at_start - post_not_at_start) > ϵ

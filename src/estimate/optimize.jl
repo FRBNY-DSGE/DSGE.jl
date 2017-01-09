@@ -42,7 +42,7 @@ function optimize!(m::AbstractModel,
         function f_opt(x_opt)
             x_model[para_free_inds] = x_opt
             transform_to_model_space!(m,x_model)
-            return -posterior(m, data; catch_errors=true)[:post]
+            return -posterior(m, data; catch_errors = true)
         end
 
         rng = m.rng

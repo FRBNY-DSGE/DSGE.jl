@@ -34,8 +34,6 @@ test_cov = h5open(workpath(m, "estimate", "parameter_covariance.h5"), "r") do fi
     read(file, "mhcov")
 end
 
-return
-
 # Test that the parameter draws and covariance matrices are equal
 @test_matrix_approx_eq ref_draws test_draws
 @test_matrix_approx_eq ref_cov test_cov
