@@ -294,6 +294,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
             if x < min(1.0, r)
                 # Accept proposed jump
                 para_old = para_new
+                post_old = post_new
                 propdist.μ = para_new
 
                 if VERBOSITY[verbose] >= VERBOSITY[:high]

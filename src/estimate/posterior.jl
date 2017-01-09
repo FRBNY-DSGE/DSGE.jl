@@ -22,8 +22,8 @@ posterior{T<:AbstractFloat}(m::AbstractModel{T}, data::Matrix{T};
 Calculates and returns the log of the posterior distribution for `m.parameters`:
 
 ```
-log posterior  ∝ log likelihood + log prior
-log Pr(Θ|data) ∝ log Pr(data|Θ) + log Pr(Θ)
+log posterior  = log likelihood + log prior + const
+log Pr(Θ|data) = log Pr(data|Θ) + log Pr(Θ) + const
 ```
 
 ### Arguments
@@ -43,7 +43,7 @@ function posterior{T<:AbstractFloat}(m::AbstractModel{T},
                                      mh::Bool = false,
                                      catch_errors::Bool = false)
     catch_errors = catch_errors || mh
-    post = prior(m) + likelihood(m, data; mh = mh, catch_errors = catch_errors)
+    post = likelihood(m, data; mh = mh, catch_errors = catch_errors) + prior(m)
     return post
 end
 
