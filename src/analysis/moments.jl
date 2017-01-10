@@ -26,12 +26,7 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
                        subset_inds::Vector{Int} = Vector{Int}(), subset_string::AbstractString = "",
                        verbose::Symbol = :low)
 
-    ### 1. Collect prior information
-
-    prior_means, prior_std, prior_dist = collect_prior_info(m)
-
-
-    ### 2. Load parameter draws from Metropolis-Hastings
+    ### 1. Load parameter draws from Metropolis-Hastings
 
     filename = get_input_file(m, :full)
     params = if !isempty(subset_inds)
@@ -46,7 +41,7 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
     end
 
 
-    ### 3. Compute posterior moments
+    ### 2. Compute posterior moments
 
     post_means = vec(mean(params, 1))
     post_bands = find_density_bands(params, percent; minimize = true)'
@@ -62,11 +57,11 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
     end
 
 
-    ### 4. Produce TeX tables
+    ### 3. Produce TeX tables
 
-    prior_posterior_moments_table(m, prior_dist, prior_means, prior_std, post_means, post_bands;
+    prior_posterior_moments_table(m, post_means, post_bands;
                                   percent = percent, subset_string = subset_string)
-    prior_posterior_means_table(m, prior_means, post_means; subset_string = subset_string)
+    prior_posterior_means_table(m, post_means; subset_string = subset_string)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         @printf "Tables are saved as %s.\n" tablespath(m, "estimate", "*.tex")
@@ -75,54 +70,8 @@ end
 
 """
 ```
-collect_prior_info(m)
-```
-
-### Inputs
-
-- `m::AbstractModel`: model object
-
-### Outputs
-
-- `prior_means::Vector{AbstractFloat}`
-- `prior_std::Vector{AbstractFloat}`
-- `prior_dist::Vector{AbstractString}`
-"""
-function collect_prior_info(m::AbstractModel)
-    n_params    = length(m.parameters)
-    prior_means = zeros(n_params)
-    prior_std   = zeros(n_params)
-    prior_dist  = Vector{AbstractString}(n_params)
-
-    # Map prior distributions to identifying strings
-    distid(::Distributions.Beta)    = "B"
-    distid(::Distributions.Gamma)   = "G"
-    distid(::Distributions.Normal)  = "N"
-    distid(::DSGE.RootInverseGamma) = "IG"
-
-    for i = 1:n_params
-        θ = m.parameters[i]
-        if θ.fixed
-            # If param is fixed, we simply set mean to its value and std to 0
-            prior_means[i] = θ.value
-            prior_std[i]   = 0
-            prior_dist[i]  = "-"
-        else
-            prior = get(θ.prior)
-            α, β  = moments(prior)
-            prior_means[i] = α
-            prior_std[i]   = β
-            prior_dist[i]  = distid(prior)
-        end
-    end
-
-    return prior_means, prior_std, prior_dist
-end
-
-"""
-```
-prior_posterior_moments_table(m, prior_dist, prior_means, prior_std, post_means,
-    post_bands; percent = 0.9, subset_string = "")
+prior_posterior_moments_table(m, post_means, post_bands; percent = 0.9,
+    subset_string = "")
 ```
 
 Produces a table of prior means, prior standard deviations, posterior means, and
@@ -133,13 +82,9 @@ tablespath(m, \"estimate\", \"moments[_sub=\$subset_string].tex\")
 ```
 """
 function prior_posterior_moments_table(m::AbstractModel,
-                                       prior_dist::Vector, prior_means::Vector, prior_std::Vector,
                                        post_means::Vector, post_bands::Matrix;
                                        percent::AbstractFloat = 0.9,
                                        subset_string::AbstractString = "")
-    # Collect inputs into one matrix
-    outmat = hcat(prior_dist, prior_means, prior_std, post_means, post_bands)
-
     # Open the TeX file
     basename = "moments"
     if !isempty(subset_string)
@@ -181,12 +126,30 @@ function prior_posterior_moments_table(m::AbstractModel,
     @printf moments_fid "\\\\ \\multicolumn{7}{c}{\\footnotesize Note: For Inverse Gamma (IG) prior mean and SD, \$\\tau\$ and \$\\nu\$ reported.}\n"
     @printf moments_fid "\\endfoot\n"
 
+    # Map prior distributions to identifying strings
+    distid(::Distributions.Beta)    = "B"
+    distid(::Distributions.Gamma)   = "G"
+    distid(::Distributions.Normal)  = "N"
+    distid(::DSGE.RootInverseGamma) = "IG"
+
     # Write parameter moments
     sorted_parameters = sort(m.parameters, by = (x -> x.key))
     for param in sorted_parameters
         index = m.keys[param.key]
         @printf moments_fid "\$\%4.99s\$ & " param.tex_label
-        @printf moments_fid "%s & %8.3f & %8.3f & %8.3f & %8.3f & %8.3f \\\\\n" outmat[index,:]...
+        if param.fixed
+            @printf moments_fid "%s & " "-"
+            @printf moments_fid "%8.3f & " param.value
+            @printf moments_fid "%8.3f & " 0.0
+        else
+            prior = get(param.prior)
+            is_rig = isa(prior, RootInverseGamma)
+            @printf moments_fid "%s & " distid(prior)
+            @printf moments_fid "%8.3f & " (is_rig ? prior.τ : mean(prior))
+            @printf moments_fid "%8.3f & " (is_rig ? prior.ν : std(prior))
+        end
+        @printf moments_fid "%8.3f & " post_means[index]
+        @printf moments_fid "%8.3f & %8.3f \\\\\n" post_bands[index, :]...
     end
 
     # Write footer
@@ -198,7 +161,7 @@ end
 
 """
 ```
-prior_posterior_means_table(m, prior_means, post_means; subset_string = "")
+prior_posterior_means_table(m, post_means; subset_string = "")
 ```
 
 Produces a table of prior means and posterior means. Saves to:
@@ -208,11 +171,8 @@ tablespath(m, \"estimate\", \"prior_posterior_means[_sub=\$subset_string].tex\")
 ```
 """
 function prior_posterior_means_table(m::AbstractModel,
-                                     prior_means::Vector, post_means::Vector;
+                                     post_means::Vector;
                                      subset_string::AbstractString = "")
-    # Collect inputs into one matrix
-    outmat = [prior_means post_means]
-
     # Open the TeX file
     basename = "prior_posterior_means"
     if !isempty(subset_string)
@@ -237,8 +197,17 @@ function prior_posterior_means_table(m::AbstractModel,
     sorted_parameters = sort(m.parameters, by = (x -> x.key))
     for param in sorted_parameters
         index = m.keys[param.key]
+
+        post_mean = if param.fixed
+            param.value
+        else
+            prior = get(param.prior)
+            isa(prior, RootInverseGamma) ? prior.τ : mean(prior)
+        end
+
         @printf means_fid "\$\%4.99s\$ & " param.tex_label
-        @printf means_fid "\%8.3f & \%8.3f \\\\\n" outmat[index,:]...
+        @printf means_fid "%8.3f & " post_mean
+        @printf means_fid "\%8.3f \\\\\n" post_means[index]
     end
 
     # Write footer
