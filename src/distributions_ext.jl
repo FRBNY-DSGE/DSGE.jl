@@ -286,14 +286,14 @@ end
 moments(dist::Distributions.Gamma)
 ```
 
-Compute the mean μ and standard deviation σ of a Distributions.Gamma object.
+Compute the mean μ and standard deviation σ of a Distributions.Gamma object with shape α and scale θ.
 """
 function moments(dist::Distributions.Gamma)
     α = dist.α
     θ = dist.θ
 
-    μ = α / θ
-    σ = α / θ^2
+    μ = α * θ
+    σ = α * θ^2
     return μ, σ
 end
 

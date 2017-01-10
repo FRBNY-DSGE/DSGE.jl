@@ -154,191 +154,74 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
 
     # STEP 4: WRITE TABLES
 
-    # 4a. Write to Table 1: prior mean, std dev, posterior mean and bands for IMPORTANT
-    #     parameters
+    # 4a. Write to Table 1: prior mean, std dev, posterior mean and bands
 
     # Open and start the TeX file
-    moments0_out = tablespath(m, "estimate", "moments0.tex")
-    moments0_fid = open(moments0_out, "w")
+    moments_out = tablespath(m, "estimate", "moments.tex")
+    moments_fid = open(moments_out, "w")
 
-    write_table_preamble(moments0_fid)
+    write_table_preamble(moments_fid)
 
-    @printf moments0_fid "\\caption{Parameter Estimates}\n"
-    @printf moments0_fid "\\vspace*{.5cm}\n"
-    @printf moments0_fid "{\\small \n"
-    @printf moments0_fid "\\begin{tabular}{lcccccc}\n"
-    @printf moments0_fid "\\hline\n"
+    @printf moments_fid "\\vspace*{.5cm}\n"
+    @printf moments_fid "{\\small\n"
+    @printf moments_fid "\\begin{longtable}{lcccccc}\n"
+    @printf moments_fid "\\caption{Parameter Estimates}\n"
+    @printf moments_fid "\\\\ \\hline\n"
 
     # Column names
-    @printf moments0_fid "\\multicolumn{%d}{c}{%s}" colnames0[1][1] colnames0[1][2]
+    @printf moments_fid "\\multicolumn{%d}{c}{%s}" colnames0[1][1] colnames0[1][2]
     for col in colnames0[2:end]
-        @printf moments0_fid " & \\multicolumn{%d}{c}{%s}" col[1] col[2]
+        @printf moments_fid " & \\multicolumn{%d}{c}{%s}" col[1] col[2]
     end
-    @printf moments0_fid "\\\\ \n"
-    @printf moments0_fid "%s" colnames[1]
+    @printf moments_fid " \\\\\n"
+    @printf moments_fid "%s" colnames[1]
     for col in colnames[2:end]
-        @printf moments0_fid " & %s" col
+        @printf moments_fid " & %s" col
     end
-    @printf moments0_fid "\\\\ \n"
-    @printf moments0_fid "\\cmidrule(lr){1-1}\\cmidrule(lr){2-4}\\cmidrule(lr){5-7}\n"
+    @printf moments_fid " \\\\\n"
+    @printf moments_fid "\\cmidrule(lr){1-1} \\cmidrule(lr){2-4} \\cmidrule(lr){5-7}\n"
+    @printf moments_fid "\\endhead\n"
 
-    # Keep track of indices for important parameters
-    important_para = []
+    @printf moments_fid "\\hline\n"
+    @printf moments_fid "\\\\ \\multicolumn{7}{c}{\\footnotesize Note: For Inverse Gamma (IG) prior mean and SD, \$\\tau\$ and \$\\nu\$ reported.}\n"
+    @printf moments_fid "\\endfoot\n"
 
-    for (index, param) in enumerate(m.parameters)
-
-        if (!ismatch(r"rho_", param.tex_label) &&
-            !ismatch(r"zeta_", param.tex_label) &&
-            !ismatch(r"psi_", param.tex_label) &&
-            !ismatch(r"nu_l", param.tex_label) &&
-            !ismatch(r"pi\^\*", param.tex_label) &&
-            !ismatch(r"sigma_{pi}\^\*",param.tex_label) &&
-            (!ismatch(r"pistar", param.tex_label)))
-            continue
-        end
-
-        if ismatch(r"rho_chi",param.tex_label)
-            continue
-        end
-
-        #Print the parameter name and values in outmat
-        @printf moments0_fid "\$\%4.99s\$ & " param.tex_label
-        @printf moments0_fid "%s & %8.3f & %8.3f & %8.3f & %8.3f & %8.3f \\\\\n" outmat[index,:]...
-
-        important_para = [important_para; index]
+    # Write parameter moments
+    sorted_parameters = sort(m.parameters, by = (x -> x.key))
+    for param in sorted_parameters
+        index = m.keys[param.key]
+        @printf moments_fid "\$\%4.99s\$ & " param.tex_label
+        @printf moments_fid "%s & %8.3f & %8.3f & %8.3f & %8.3f & %8.3f \\\\\n" outmat[index,:]...
     end
 
     # Close the file
-    write_table_postamble(moments0_fid;
-        note="{\\footnotesize Note: For Inverse Gamma (IG) prior mean and SD, \$\\tau^2\$ and \$\\nu\$
-        reported.}",
-        small=true)
+    write_table_postamble(moments_fid; small=true)
 
-    # 4b. Write to Table 2: Prior mean, std dev and posterior mean, bands for other params
-    moments_table_out = tablespath(m, "estimate", "moments1.tex")
-    moments_table_fid = open(moments_table_out, "w")
-
-    write_table_preamble(moments_table_fid)
-
-    @printf moments_table_fid "\\caption{Parameter Estimates}\n"
-    @printf moments_table_fid "\\vspace*{.2cm}\n"
-    @printf moments_table_fid "{\\small \n"
-    @printf moments_table_fid "\\begin{tabular}{lcccccc}\n"
-    @printf moments_table_fid "\\hline\n"
-
-    # Column names
-    for col in colnames0
-        @printf moments_table_fid "\\multicolumn{%d}{c}{%s} &" col[1] col[2]
-    end
-    @printf moments_table_fid "\\\n"
-    for col in colnames
-        @printf moments_table_fid "%s & " col
-    end
-    @printf moments_table_fid "\\\n"
-    @printf moments_table_fid "\\cmidrule(lr){1-1}\\cmidrule(lr){2-4}\\cmidrule(lr){5-7}\n"
-
-    # Counter for parameters to track length of table and number of tables in excess of
-    # default (1)
-    other_para  = 1
-    table_count = 0
-
-    for (index, param) in enumerate(m.parameters)
-
-        if in(index, important_para)
-            continue
-        end
-
-        # Make a new table if the current one is too large
-        if other_para % 25 == 0 && index ≠ length(m.parameters)
-
-            # Close the file
-            write_table_postamble(moments_table_fid;
-                note="{\\footnotesize Note: For Inverse Gamma (IG) prior mean and SD, \$\\tau^2\$ and \$\\nu\$
-                reported.}",
-                small=true)
-
-            # Update table counter
-            table_count += 1
-
-            # Start the new file
-            filename = @sprintf "moments%d.tex" table_count
-            moments_table_out = tablespath(m,"estimate",filename)
-            moments_table_fid = open(moments_table_out,"w")
-
-            write_table_preamble(moments_table_fid)
-            @printf moments_table_fid "\\caption{Parameter Estimates}\n"
-            @printf moments_table_fid "\\vspace*{.2cm}\n"
-            @printf moments_table_fid "{\\small \n"
-            @printf moments_table_fid "\\begin{tabular}{lcccccc}\n"
-            @printf moments_table_fid "\\hline\n"
-
-            # Column names
-            @printf moments_table_fid "\\multicolumn{%d}{c}{%s}" colnames0[1][1] colnames0[1][2]
-            for col in colnames0[2:end]
-                @printf moments_table_fid " & \\multicolumn{%d}{c}{%s}" col[1] col[2]
-            end
-            @printf moments_table_fid "\\\\ \n"
-            @printf moments_table_fid "%s" colnames[1]
-            for col in colnames[2:end]
-                @printf moments_table_fid " & %s" col
-            end
-            @printf moments_table_fid "\\\\ \n"
-            @printf moments_table_fid "\\cmidrule(lr){1-1}\\cmidrule(lr){2-4}\\cmidrule(lr){5-7}\n"
-        end
-
-        #Print the parameter name and values in outmat
-        @printf moments_table_fid "\$\%4.99s\$ & " param.tex_label
-        @printf moments_table_fid "%s & %8.3f & %8.3f & %8.3f & %8.3f & %8.3f \\\\\n" outmat[index,:]...
-
-        other_para += 1
-    end
-
-    write_table_postamble(moments_table_fid; small=true)
-
-    # 4c. Write to Table 5: Prior mean and posterior mean for all parameters
-
-    # Keep track of how many tables we've made
-    table_count = 0
+    # 4b. Write to Table 5: Prior mean and posterior mean
 
     # Open the TeX file and set up the heading
-    prioPostMean_out = tablespath(m,"estimate", "moments_prioPostMean.tex")
-    prioPostMean_fid = open(prioPostMean_out,"w")
+    means_out = tablespath(m,"estimate", "prior_posterior_means.tex")
+    means_fid = open(means_out,"w")
 
-    write_table_preamble(prioPostMean_fid)
-    @printf prioPostMean_fid "\\caption{Parameter Estimates: Prior and Posterior Mean}\n"
-    @printf prioPostMean_fid "\\vspace*{.5cm}\n"
-    @printf prioPostMean_fid "\\begin{tabular}{ccc}\\hline \n"
-    @printf prioPostMean_fid " Parameter & Prior & Posterior  \\tabularnewline \\hline\n"
+    write_table_preamble(means_fid)
+    @printf means_fid "\\vspace*{.5cm}\n"
+    @printf means_fid "\\begin{longtable}{ccc}\n"
+    @printf means_fid "\\caption{Parameter Estimates: Prior and Posterior Means}\n"
+    @printf means_fid "\\\\ \\hline\n"
+    @printf means_fid "Parameter & Prior & Posterior\n"
+    @printf means_fid "\\\\ \\hline\n"
+    @printf means_fid "\\endhead\n"
+    @printf means_fid "\\hline\n"
+    @printf means_fid "\\endfoot\n"
 
     # Write out the results
-    for (index, param) in enumerate(m.parameters)
-
-        if index % 40 == 0 && index ≠ length(m.parameters)
-
-            # Close the old file
-            write_table_postamble(prioPostMean_fid)
-
-            # Generate the new filename
-            table_count += 1
-            filename = @sprintf "moments_prioPostMean_%d.tex" table_count
-
-            # Open a new file and start the next table
-            prioPostMean_out = tablespath(m,"estimate",filename)
-            prioPostMean_fid = open(prioPostMean_out,"w")
-            write_table_preamble(prioPostMean_fid)
-            @printf prioPostMean_fid "\\caption{Parameter Estimates: Prior and Posterior Mean}\n"
-            @printf prioPostMean_fid "\\vspace*{.5cm}\n"
-            @printf prioPostMean_fid "\\begin{tabular}{ccc}\\hline \n"
-            @printf prioPostMean_fid " Parameter & Prior & Posterior  \\tabularnewline \\hline\n"
-        end
-
-        @printf prioPostMean_fid "\$\%4.99s\$ & " param.tex_label
-
-        val = outmat2[index,:]
-        @printf prioPostMean_fid "\%8.3f & \%8.3f \\\\\n" val[1] val[2]
+    for param in sorted_parameters
+        index = m.keys[param.key]
+        @printf means_fid "\$\%4.99s\$ & " param.tex_label
+        @printf means_fid "\%8.3f & \%8.3f \\\\\n" outmat2[index,:]...
     end
 
-    write_table_postamble(prioPostMean_fid)
+    write_table_postamble(means_fid)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         @printf "Tables are saved as %s.\n" tablespath(m, "estimate", "*.tex")
@@ -348,30 +231,22 @@ end
 function write_table_preamble(fid::IOStream)
     @printf fid "\\documentclass[12pt]{article}\n"
     @printf fid "\\usepackage{booktabs}\n"
+    @printf fid "\\usepackage[justification=centering]{caption}\n"
+    @printf fid "\\usepackage[margin=1in]{geometry}\n"
+    @printf fid "\\usepackage{longtable}\n"
     @printf fid "\\begin{document}\n"
     @printf fid "\\pagestyle{empty}\n"
-    @printf fid "\\begin{table}[h]\n"
-    @printf fid "\\centering\n"
 end
 
-
-# `small`: Whether to print an additional curly bracket after "\end{tabular}" (necessary if
+# `small`: Whether to print an additional curly bracket after "\end{longtable}" (necessary if
 # the table is enclosed by "\small{}")
-
-function write_table_postamble(fid::IOStream; note::AbstractString="", small::Bool=false)
-    @printf fid "\\\\ \\\hline\n"
-
+function write_table_postamble(fid::IOStream; small::Bool=false)
     if small
-        @printf fid "\\end{tabular}}\n"
+        @printf fid "\\end{longtable}}\n"
     else
-        @printf fid "\\end{tabular}\n"
+        @printf fid "\\end{longtable}\n"
     end
 
-    if !isempty(note)
-        @printf fid "%s\n" note
-    end
-
-    @printf fid "\\end{table}\n"
     @printf fid "\\end{document}"
     close(fid)
 end
