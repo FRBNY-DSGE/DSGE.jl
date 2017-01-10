@@ -615,7 +615,7 @@ end
 
 """
 ```
-add_requisite_output_vars(m::AbstractModel, output_vars::Vector{Symbol})
+add_requisite_output_vars(output_vars::Vector{Symbol})
 ```
 
 Based on the given output_vars, this function determines which

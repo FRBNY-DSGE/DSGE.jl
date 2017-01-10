@@ -460,7 +460,7 @@ histories, forecasts, deterministic trends, and trends.
 """
 function compute_means_bands{T<:AbstractFloat}(fcast_output::Array{T, 3},
                                                transforms::Dict{Symbol,Symbol},
-                                               variable_inds::Dict{Symbol,Int},
+                                               variable_inds::Dict{Symbol,Int};
                                                date_list::Vector{Date} = Vector{Date}(),
                                                data::Matrix{T} = Matrix{T}(),
                                                population_series = Vector{T}(),
@@ -476,7 +476,7 @@ function compute_means_bands{T<:AbstractFloat}(fcast_output::Array{T, 3},
     # 1. Apply the appropriate transform
     # 2. Compute means and density bands of transformed output
     # 3. Add to DataFrames
-    for (var, ind) in variable_indices
+    for (var, ind) in variable_inds
 
         # apply transformation to all draws
         transform = parse_transform(transforms[var])

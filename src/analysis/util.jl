@@ -385,7 +385,7 @@ function check_consistent_order(l1, l2)
     l2_sorted = sort(l2)
 
     # make sure each pair has same pair as before
-    for i in l1
+    for i in 1:length(l1)
         @assert original_pairs[l1_sorted[i]] == l2_sorted[i] "Lists not consistently ordered"
     end
 
