@@ -1,61 +1,79 @@
 """
 ```
-compute_moments(m::AbstractModel, percent::Float64 = 0.90; verbose::Symbol=:none)
+compute_moments(m, percent = 0.90; subset_inds = [], subset_string = "",
+    verbose = :none)
 ```
 
 Computes prior and posterior parameter moments. Tabulates prior mean, posterior mean, and
 bands in various LaTeX tables stored `tablespath(m)`.
 
-### Arguments
-- `m`: the model object
-- `percent`: the percentage of the mass of draws from Metropolis-Hastings included between
-  the bands displayed in output tables.
+### Inputs
+
+- `m::AbstractModel`: the model object
+- `percent::AbstractFloat`: the percentage of the mass of draws from
+  Metropolis-Hastings included between the bands displayed in output tables.
+
+### Keyword Arguments
+
+- `subset_inds::Vector{Int}`: indices specifying the draws we want to use
+- `subset_string::AbstractString`: short string identifying the subset to be
+  appended to the output filenames. If `subset_inds` is nonempty but
+  `subset_string` is empty, an error is thrown
+- `verbose::Symbol`: desired frequency of function progress messages printed to
+  standard out. One of `:none`, `:low`, or `:high`
 """
-function compute_moments(m::AbstractModel, percent::AbstractFloat = 0.90; verbose::Symbol=:none)
+function compute_moments(m::AbstractModel, percent::AbstractFloat = 0.90;
+                         subset_inds::Vector{Int} = Vector{Int}(), subset_string::AbstractString = "",
+                         verbose::Symbol = :low)
 
-    # Read in the matrix of parameter draws from metropolis-hastings
-    filename = rawpath(m, "estimate", "mhsave.h5")
-
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        @printf "Reading parameter draws from %s\n" filename
-    end
-
-    param_draws = []
-    try
-        h5open(filename, "r") do f
-            param_draws = read(f, "mhparams")
+    # Read in the matrix of parameter draws from Metropolis-Hastings
+    filename = get_input_file(m, :full)
+    params = if !isempty(subset_inds)
+        # Use subset of draws
+        if isempty(subset_string)
+            error("Must supply a nonempty subset_string if subset_inds is nonempty")
         end
-    catch
-        @printf "Could not open file %s\n" filename
-        return
+        load_draws(m, :subset; subset_inds = subset_inds, verbose = verbose)
+    else
+        # Use all draws
+        load_draws(m, :full; verbose = verbose)
     end
-
-    n_draws = size(param_draws,1)
 
     # Save mean parameter vector
-    save_mean_parameters(m, param_draws)
+    save_mean_parameters(m, params; subset_string = subset_string)
 
     # Produce TeX table of moments
-    make_moment_tables(m, param_draws, percent, verbose=verbose)
+    make_moment_tables(m, params, percent; verbose = verbose)
 end
 
 """
 ```
-save_mean_parameters{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T})
+save_mean_parameters(m, draws; subset_string = "")
 ```
 
 Computes and saves the posterior mean of the parameters.
 
 ### Arguments
-- `m`
-- `draws`: n_draws x n_parameters matrix holding the posterior draws from
-  Metropolis-Hastings
+
+- `m::AbstractModel`: model object
+- `draws::Matrix{T}`: `n_draws` x `n_parameters` matrix holding the parameter draws from the
+  posterior saved during Metropolis-Hastings
+
+### Keyword Arguments
+
+- `subset_string::AbstractString`: short string identifying the subset to be
+  appended to the output filenames
 """
-function save_mean_parameters{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T})
+function save_mean_parameters{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T};
+                                                subset_string = "")
     post_means = mean(draws,1)'
-    filename = workpath(m, "estimate", "paramsmean.h5")
-    h5open(filename, "w") do f
-        f["params"] = post_means
+    basename = "paramsmean"
+    if !isempty(subset_string)
+        basename *= "_sub=$(subset_string)"
+    end
+    filename = workpath(m, "estimate", "$basename.h5")
+    h5open(filename, "w") do file
+        write(file, "post_means", post_means)
     end
 end
 
