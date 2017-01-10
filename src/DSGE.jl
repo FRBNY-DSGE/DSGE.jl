@@ -8,7 +8,7 @@ module DSGE
     import Calculus
     import Optim
     using Optim: OptimizationTrace, OptimizationState, MultivariateOptimizationResults
-    
+
     export
 
         # distributions_ext.jl
@@ -44,7 +44,7 @@ module DSGE
         find_density_bands, prior,
 
         # models/
-        steadystate!, Model990, SmetsWouters, eqcond, measurement,
+        steadystate!, Model990, Model1002, SmetsWouters, eqcond, measurement,
 
         # solve/
         gensys, solve,
@@ -52,7 +52,7 @@ module DSGE
         # data/
         load_data, load_data_levels, load_fred_data, transform_data, save_data,
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
-        hpadjust, oneqtrpctchange, annualtoquarter 
+        hpadjust, oneqtrpctchange, annualtoquarter
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
@@ -87,6 +87,12 @@ module DSGE
     include("models/m990/eqcond.jl")
     include("models/m990/measurement.jl")
     include("models/m990/augment_states.jl")
+
+    include("m1002/m1002.jl")
+    include("m1002/subspecs.jl")
+    include("m1002/eqcond.jl")
+    include("m1002/measurement.jl")
+    include("m1002/augment_states.jl")
 
     include("models/smets_wouters/smets_wouters.jl")
     include("models/smets_wouters/subspecs.jl")
