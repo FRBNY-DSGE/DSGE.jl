@@ -70,6 +70,136 @@ end
 
 """
 ```
+moments(θ::Parameter)
+```
+
+If θ's prior is a `DSGE.RootInverseGamma`, τ and ν. Otherwise, returns the mean
+and standard deviation of the prior. If θ is fixed, returns `(θ.value, 0.0)`.
+"""
+function moments(θ::Parameter)
+    if θ.fixed
+        return θ.value, 0.0
+    else
+        prior = get(θ.prior)
+        if isa(prior, RootInverseGamma)
+            return prior.τ, prior.ν
+        else
+            return mean(prior), std(prior)
+        end
+    end
+end
+
+"""
+```
+prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}())
+```
+"""
+function prior_table{S<:AbstractString}(m::AbstractModel; subset_string::S = "",
+             groupings::Associative{S, Vector{Parameter}} = Dict{ASCIIString, Vector{Parameter}}())
+
+    if isempty(groupings)
+        sorted_parameters = sort(m.parameters, by = (x -> x.key))
+        groupings[""] = sorted_parameters
+    end
+
+    # Open the TeX file
+    basename = "priors"
+    if !isempty(subset_string)
+        basename *= "_sub=$(subset_string)"
+    end
+    priors_out = tablespath(m, "estimate", "$basename.tex")
+    priors_fid = open(priors_out, "w")
+
+    # Write header
+    write_table_preamble(priors_fid)
+
+    @printf priors_fid "\\renewcommand*\\footnoterule{}"
+    @printf priors_fid "\\vspace*{.5cm}\n"
+    @printf priors_fid "{\\small\n"
+    @printf priors_fid "\\begin{longtable}{rlrr@{\\hspace{1in}}rlrr}\n"
+    @printf priors_fid "\\caption{Priors}\n"
+    @printf priors_fid "\\\\ \\hline\n"
+
+    @printf priors_fid "& Dist & Mean & Std Dev & & Dist & Mean & Std Dev \\\\ \\hline\n"
+    @printf priors_fid "\\endhead\n"
+
+    @printf priors_fid "\\hline \\\\\n"
+    @printf priors_fid "\\multicolumn{8}{c}{\\footnotesize Note: For Inverse Gamma prior mean and SD, \$\\tau\$ and \$\\nu\$ reported.}\n"
+    @printf priors_fid "\\endfoot\n"
+
+    # Map prior distributions to identifying strings
+    distid(::Distributions.Beta)    = "Beta"
+    distid(::Distributions.Gamma)   = "Gamma"
+    distid(::Distributions.Normal)  = "Normal"
+    distid(::DSGE.RootInverseGamma) = "InvG"
+
+    # Write priors
+    for group_desc in keys(groupings)
+        params = groupings[group_desc]
+        n_params = length(params)
+        n_rows = convert(Int, ceil(n_params/2))
+
+        # Write grouping description if not empty
+        if !isempty(group_desc)
+            @printf priors_fid "\\multicolumn{8}{l}{\\textit{%s}} \\\\[3pt]\n" group_desc
+        end
+
+        # Write footnote about standard deviations of anticipated policy shocks
+        function anticipated_shock_footnote(θ::Parameter)
+            if n_anticipated_shocks(m) > 0 && θ.key == :σ_r_m1
+                nantpad          = n_anticipated_shocks_padding(m)
+                all_sigmas       = [m[symbol("σ_r_m$i")]::Parameter for i = 1:nantpad]
+                nonzero_sigmas   = Base.filter(θ -> !(θ.fixed && θ.value == 0), all_sigmas)
+                n_nonzero_sigmas = length(nonzero_sigmas)
+
+                if n_nonzero_sigmas > 1
+                    text = "\$\\sigma_{ant1}\$ through \$\\sigma_{ant$(n_nonzero_sigmas)}\$ all have the same distribution."
+                    @printf priors_fid "\\let\\thefootnote\\relax\\footnote{\\centering %s}" text
+                end
+            end
+        end
+
+        for i = 1:n_rows
+            # Write left column
+            θ = params[i]
+            (prior_mean, prior_std) = moments(θ)
+            @printf priors_fid "\$%s\$ & " θ.tex_label
+            @printf priors_fid "%s & " (θ.fixed ? "-" : distid(get(θ.prior)))
+            @printf priors_fid "%0.2f & " prior_mean
+            @printf priors_fid "%0.2f & " prior_std
+            anticipated_shock_footnote(θ)
+
+            # Write right column if it exists
+            if n_rows + i <= n_params
+                θ = params[n_rows + i]
+                (prior_mean, prior_std) = moments(θ)
+                @printf priors_fid "\$%s\$ & " θ.tex_label
+                @printf priors_fid "%s & " (θ.fixed ? "-" : distid(get(θ.prior)))
+                @printf priors_fid "%0.2f & " prior_mean
+                @printf priors_fid "%0.2f" prior_std
+                anticipated_shock_footnote(θ)
+            else
+                @printf priors_fid "& & &"
+            end
+
+            # Add padding after last row in a grouping
+            if i == n_rows
+                @printf priors_fid " \\\\[3pt]\n"
+            else
+                @printf priors_fid " \\\\\n"
+            end
+        end
+    end
+
+    # Write footer
+    write_table_postamble(priors_fid; small = true)
+
+    # Close file
+    close(priors_fid)
+end
+
+"""
+```
 prior_posterior_moments_table(m, post_means, post_bands; percent = 0.9,
     subset_string = "")
 ```
@@ -136,18 +266,12 @@ function prior_posterior_moments_table(m::AbstractModel,
     sorted_parameters = sort(m.parameters, by = (x -> x.key))
     for param in sorted_parameters
         index = m.keys[param.key]
+        (prior_mean, prior_std) = moments(param)
+
         @printf moments_fid "\$\%4.99s\$ & " param.tex_label
-        if param.fixed
-            @printf moments_fid "%s & " "-"
-            @printf moments_fid "%8.3f & " param.value
-            @printf moments_fid "%8.3f & " 0.0
-        else
-            prior = get(param.prior)
-            is_rig = isa(prior, RootInverseGamma)
-            @printf moments_fid "%s & " distid(prior)
-            @printf moments_fid "%8.3f & " (is_rig ? prior.τ : mean(prior))
-            @printf moments_fid "%8.3f & " (is_rig ? prior.ν : std(prior))
-        end
+        @printf moments_fid "%s & " (param.fixed ? "-" : distid(get(param.prior)))
+        @printf moments_fid "%8.3f & " prior_mean
+        @printf moments_fid "%8.3f & " prior_std
         @printf moments_fid "%8.3f & " post_means[index]
         @printf moments_fid "%8.3f & %8.3f \\\\\n" post_bands[index, :]...
     end
