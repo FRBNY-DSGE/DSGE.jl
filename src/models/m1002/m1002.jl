@@ -228,10 +228,27 @@ function Model1002(subspec::AbstractString="ss2";
 
     # Set observable transformations
     init_observable_mappings!(m)
-    # # Set data transformations
-    # init_data_transforms!(m)
 
     # Initialize parameters
+    init_parameters!(m)
+
+    init_model_indices!(m)
+    init_subspec!(m)
+    steadystate!(m)
+    return m
+end
+
+
+"""
+```
+init_parameters!(m::Model1002)
+```
+
+Initializes the model's parameters, as well as empty values for the steady-state
+parameters (in preparation for `steadystate!(m)` being called to initialize
+those).
+"""
+function init_parameters!(m::Model1002)
     m <= parameter(:α,      0.1596, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",
                    tex_label="\\alpha")
@@ -511,9 +528,6 @@ function Model1002(subspec::AbstractString="ss2";
                    description="δ_gdi: No description available.",
                    tex_label="\\delta_{gdi}")
 
-
-
-
     # steady states
     m <= SteadyStateParameter(:z_star,  NaN, description="No description available.", tex_label="\\z_*")
     m <= SteadyStateParameter(:rstar,   NaN, description="No description available.", tex_label="\\r_*")
@@ -537,11 +551,6 @@ function Model1002(subspec::AbstractString="ss2";
     m <= SteadyStateParameter(:ζ_nn,      NaN, description="No description available.", tex_label="\\zeta_{nn}")
     m <= SteadyStateParameter(:ζ_nμ_e,    NaN, description="No description available.", tex_label="\\zeta_{n_{\\mu_e}}")
     m <= SteadyStateParameter(:ζ_nσ_ω,   NaN, description="No description available.", tex_label="\\zeta_{n_{\\sigma_\\omega}}")
-
-    init_model_indices!(m)
-    init_subspec!(m)
-    steadystate!(m)
-    return m
 end
 
 # functions that are used to compute financial frictions
