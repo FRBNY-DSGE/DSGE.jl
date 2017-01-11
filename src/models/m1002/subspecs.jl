@@ -60,14 +60,14 @@ function ss9!(m::Model1002)
                    description = "h: Consumption habit persistence.", tex_label = "h")
 
     m <= parameter(:ppsi, 0.6862, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.15), fixed = false,
-                   description = "ppsi: Utilization costs.", tex_label = "ppsi")
+                   description = "ppsi: Utilization costs.", tex_label = "\\psi")
 
     m <= parameter(:ζ_w, 0.9291, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.1), fixed = false,
                    description = "ζ_w: (1-ζ_w) is the probability with which households can freely choose wages in each period. With probability ζ_w, wages increase at a geometrically weighted average of the steady state rate of wage increases and last period's productivity times last period's inflation.",
                    tex_label = "\\zeta_w")
 
     m <= parameter(:ι_w, 0.2992, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.15), fixed = false,
-                   description = "ι_w: No description available.",
+                   description = "ι_w: The weight attributed to last period's wage in wage indexation. (1-ι_w) is the weight attributed to steady-state wages.",
                    tex_label = "\\iota_w")
 
     m <= parameter(:ρ, 0.7126, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.75, 0.10), fixed = false,
@@ -87,7 +87,7 @@ function ss9!(m::Model1002)
 
     m <= parameter(:γ_star, 0.9900, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.99, 0.002),
                    fixed = true,
-                   description = "γ_star: No description available.",
+                   description = "γ_star: Fraction of entrepreneurs who survive and continue operating for another period.",
                    tex_label = "\\gamma_*")
 
     m <= parameter(:ρ_g, 0.9863, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
@@ -137,7 +137,7 @@ function ss9!(m::Model1002)
                    description = "ρ_lr: No description available.", tex_label = "\\rho_{lr}")
 
     m <= parameter(:ρ_z_p, 0.8910, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
-                   description = "ρ_z_p: No description available.", tex_label = "\\rho_{z^p}")
+                   description = "ρ_z_p: AR(1) coefficient in the process describing the permanent component of productivity.", tex_label = "\\rho_{z^p}")
 
     m <= parameter(:ρ_tfp, 0.1953, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
                    description = "ρ_tfp: No description available.", tex_label = "\\rho_{tfp}")
