@@ -685,3 +685,43 @@ function settings_m1002!(m::Model1002)
 
     nothing
 end
+
+"""
+```
+parameter_groupings(m::Model1002)
+```
+
+Returns an `OrderedDict{ASCIIString, Vector{Parameter}}` mapping descriptions of
+parameter groupings (e.g. \"Policy Parameters\") to vectors of
+`Parameter`s. This dictionary is passed in as a keyword argument to
+`prior_table`.
+"""
+function parameter_groupings(m::Model1002)
+    policy     = [:ψ1, :ψ2, :ψ3, :ρ, :ρ_rm, :σ_r_m, :σ_r_m1]
+    sticky     = [:ζ_p, :ζ_w, :λ_w, :ρ_λ_f, :ρ_λ_w, :σ_λ_f, :σ_λ_w, :η_λ_f, :η_λ_w]
+    other_endo = [:α, :ι_p, :δ, :Upsilon, :Φ, :S′′, :h, :ppsi, :ν_l, :ι_w, :β,
+                  :π_star, :σ_c, :ϵ_p, :ϵ_w, :γ, :Iendoα, :Γ_gdpdef, :δ_gdpdef, :γ_gdi,
+                  :δ_gdi, :γ, :Lmean, :g_star]
+    financial  = [:Fω, :spr, :ζ_spb, :γ_star]
+    processes  = [:ρ_g, :ρ_b, :ρ_μ, :ρ_z, :ρ_σ_w, :ρ_μ_e, :ρ_γ, :ρ_π_star,
+                  :ρ_lr, :ρ_z_p, :ρ_tfp, :ρ_gdpdef, :ρ_corepce,
+                  :σ_g, :σ_b, :σ_μ, :σ_z, :σ_σ_ω, :σ_π_star, :σ_lr, :σ_z_p,
+                  :σ_tfp, :σ_gdpdef, :σ_corepce, :η_gz]
+    error      = [:me_level, :ρ_gdp, :ρ_gdi, :ρ_gdpvar, :σ_gdp, :σ_gdi]
+
+    all_keys     = Vector[policy, sticky, other_endo, financial, processes, error]
+    all_params   = map(keys -> [m[θ]::Parameter for θ in keys], all_keys)
+    descriptions = ["Policy Parameters", "Nominal Rigidities Parameters",
+                    "Other Endogenous Propagation and Steady State Parameters",
+                    "Financial Frictions Parameters", "Exogenous Process Parameters",
+                    "Measurement Error Parameters"]
+
+    groupings = OrderedDict{ASCIIString, Vector{Parameter}}(zip(descriptions, all_params))
+
+    # Ensure no parameters missing
+    incl_params = vcat(collect(values(groupings))...)
+    excl_params = [m[θ] for θ in vcat([:σ_μ_e, :σ_γ], [symbol("σ_r_m$i") for i=2:20])]
+    @assert isempty(setdiff(m.parameters, vcat(incl_params, excl_params)))
+
+    return groupings
+end
