@@ -381,10 +381,10 @@ function init_parameters!(m::Model1002)
 
     m <= parameter(:ρ_π_star, 0.9900, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=true,
                    description="ρ_π_star: AR(1) coefficient in the time-varying inflation target process.",
-                   tex_label="\\rho_{\\pi^*}")
+                   tex_label="\\rho_{\\pi_*}")
 
     m <= parameter(:ρ_lr, 0.6936, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
-                   tex_label="\\rho_{lr}")
+                   tex_label="\\rho_{10y}")
 
     m <= parameter(:ρ_z_p, 0.8910, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_z_p: AR(1) coefficient in the process describing the permanent component of productivity.",
@@ -453,10 +453,10 @@ function init_parameters!(m::Model1002)
 
     m <= parameter(:σ_π_star, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(6., 0.03), fixed=false,
                    description="σ_π_star: The standard deviation of the inflation target.",
-                   tex_label="\\sigma_{\\pi^*}")
+                   tex_label="\\sigma_{\\pi_*}")
 
     m <= parameter(:σ_lr, 0.1766, (1e-8,10.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.75), fixed=false,
-                   tex_label="\\sigma_{lr}")
+                   tex_label="\\sigma_{10y}")
 
     m <= parameter(:σ_z_p, 0.1662, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
@@ -470,7 +470,7 @@ function init_parameters!(m::Model1002)
 
     m <= parameter(:σ_corepce, 0.0999, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
                    fixed=false,
-                   tex_label="\\sigma_{corepce}")
+                   tex_label="\\sigma_{pce}")
 
     m <= parameter(:σ_gdp, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
                    fixed=false,
@@ -722,18 +722,14 @@ parameter groupings (e.g. \"Policy Parameters\") to vectors of
 """
 function parameter_groupings(m::Model1002)
     policy     = [:ψ1, :ψ2, :ψ3, :ρ, :ρ_rm, :σ_r_m, :σ_r_m1]
-    sticky     = [:ζ_p, :ζ_w, :ι_p, :ι_w, :ϵ_p, :ϵ_w, :ρ_λ_f, :ρ_λ_w, :σ_λ_f,
-                  :σ_λ_w, :η_λ_f, :η_λ_w]
-    other_endo = [:γ, :α, :β, :σ_c, :h, :ν_l, :δ, :Upsilon, :Φ, :S′′, :ppsi,
-                  :π_star, :Iendoα, :Γ_gdpdef, :δ_gdpdef, :γ_gdi,
-                  :δ_gdi, :Lmean, :λ_w, :g_star]
+    sticky     = [:ζ_p, :ι_p, :ϵ_p, :ζ_w, :ι_w, :ϵ_w]
+    other_endo = [:γ, :α, :β, :σ_c, :h, :ν_l, :δ, :Φ, :S′′, :ppsi, :π_star,
+                  :Γ_gdpdef, :δ_gdpdef, :Lmean, :λ_w, :g_star]
     financial  = [:Fω, :spr, :ζ_spb, :γ_star]
-    processes  = [:ρ_g, :ρ_b, :ρ_μ, :ρ_z, :ρ_σ_w, :ρ_μ_e, :ρ_γ, :ρ_π_star,
-                  :ρ_z_p, :σ_g, :σ_b, :σ_μ, :σ_z, :σ_σ_ω, :σ_π_star, :σ_z_p,
-                  :η_gz]
-    error      = [:me_level, :ρ_gdp, :ρ_gdi, :ρ_gdpvar, :σ_gdp, :σ_gdi, :ρ_lr,
-                  :ρ_tfp, :ρ_gdpdef, :ρ_corepce, :σ_lr, :σ_tfp, :σ_gdpdef,
-                  :σ_corepce]
+    processes  = [:ρ_g, :ρ_b, :ρ_μ, :ρ_z, :ρ_σ_w, :ρ_π_star, :ρ_z_p, :ρ_λ_f, :ρ_λ_w, :η_λ_f, :η_λ_w,
+                  :σ_g, :σ_b, :σ_μ, :σ_z, :σ_σ_ω, :σ_π_star, :σ_z_p, :σ_λ_f, :σ_λ_w, :η_gz]
+    error      = [:me_level, :ρ_gdp, :ρ_gdi, :ρ_lr, :ρ_tfp, :ρ_gdpdef, :ρ_corepce,
+                  :ρ_gdpvar, :σ_gdp, :σ_gdi, :σ_lr, :σ_tfp, :σ_gdpdef, :σ_corepce]
 
     all_keys     = Vector[policy, sticky, other_endo, financial, processes, error]
     all_params   = map(keys -> [m[θ]::Parameter for θ in keys], all_keys)
@@ -746,7 +742,8 @@ function parameter_groupings(m::Model1002)
 
     # Ensure no parameters missing
     incl_params = vcat(collect(values(groupings))...)
-    excl_params = [m[θ] for θ in vcat([:σ_μ_e, :σ_γ], [symbol("σ_r_m$i") for i=2:20])]
+    excl_params = [m[θ] for θ in vcat([:Upsilon, :ρ_μ_e, :ρ_γ, :σ_μ_e, :σ_γ, :Iendoα, :γ_gdi, :δ_gdi],
+                                      [symbol("σ_r_m$i") for i=2:20])]
     @assert isempty(setdiff(m.parameters, vcat(incl_params, excl_params)))
 
     return groupings

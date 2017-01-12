@@ -57,10 +57,12 @@ function ss9!(m::Model1002)
                    tex_label = "\\iota_p")
 
     m <= parameter(:h, 0.5347, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.7, 0.1), fixed = false,
-                   description = "h: Consumption habit persistence.", tex_label = "h")
+                   description = "h: Consumption habit persistence.",
+                   tex_label = "h")
 
     m <= parameter(:ppsi, 0.6862, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.15), fixed = false,
-                   description = "ppsi: Utilization costs.", tex_label = "\\psi")
+                   description = "ppsi: Utilization costs.",
+                   tex_label = "\\psi")
 
     m <= parameter(:ζ_w, 0.9291, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.1), fixed = false,
                    description = "ζ_w: (1-ζ_w) is the probability with which households can freely choose wages in each period. With probability ζ_w, wages increase at a geometrically weighted average of the steady state rate of wage increases and last period's productivity times last period's inflation.",
@@ -80,8 +82,7 @@ function ss9!(m::Model1002)
                    description = "F(ω): The cumulative distribution function of ω (idiosyncratic iid shock that increases or decreases entrepreneurs' capital).",
                    tex_label = "F(\\bar{\\omega})")
 
-    m <= parameter(:ζ_spb, 0.0559, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.05, 0.005),
-                   fixed = false,
+    m <= parameter(:ζ_spb, 0.0559, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.05, 0.005), fixed = false,
                    description = "ζ_spb: The elasticity of the expected exess return on capital (or 'spread') with respect to leverage.",
                    tex_label = "\\zeta_{sp,b}")
 
@@ -131,13 +132,15 @@ function ss9!(m::Model1002)
                    tex_label = "\\rho_{\\gamma}")
 
     m <= parameter(:ρ_π_star, 0.9900, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = true,
-                   description = "ρ_π_star: AR(1) coefficient in the time-varying inflation target process.", tex_label = "\\rho_{\\pi^*}")
+                   description = "ρ_π_star: AR(1) coefficient in the time-varying inflation target process.",
+                   tex_label = "\\rho_{\\pi_*}")
 
     m <= parameter(:ρ_lr, 0.6936, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
-                   tex_label = "\\rho_{lr}")
+                   tex_label = "\\rho_{10y}")
 
     m <= parameter(:ρ_z_p, 0.8910, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
-                   description = "ρ_z_p: AR(1) coefficient in the process describing the permanent component of productivity.", tex_label = "\\rho_{z^p}")
+                   description = "ρ_z_p: AR(1) coefficient in the process describing the permanent component of productivity.",
+                   tex_label = "\\rho_{z^p}")
 
     m <= parameter(:ρ_tfp, 0.1953, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
                    tex_label = "\\rho_{tfp}")
@@ -159,8 +162,7 @@ function ss9!(m::Model1002)
                    description = "η_λ_w: AR(2) coefficient on wage markup shock process.",
                    tex_label = "\\eta_{\\lambda_w}")
 
-    m <= parameter(:Iendoα, 0.0000, (0.0, 1.0), (0.0, 0.0), DSGE.Untransformed(), BetaAlt(0.50, 0.20),
-                   fixed = true,
+    m <= parameter(:Iendoα, 0.0000, (0.0, 1.0), (0.0, 0.0), DSGE.Untransformed(), BetaAlt(0.50, 0.20), fixed = true,
                    description = "Iendoα: Indicates whether to use the model's endogenous α in the capacity utilization adjustment of total factor productivity.",
                    tex_label = "I\\{\\alpha^{model}\\}")
 
