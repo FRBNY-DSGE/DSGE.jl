@@ -600,9 +600,9 @@ function steadystate!(m::Model1002)
     SIGWSTAR_ZERO = 0.5
 
     m[:z_star]   = log(1+m[:γ]) + m[:α]/(1-m[:α])*log(m[:Upsilon])
-    m[:rstar]    = exp(m[:σ_c]*m[:z_star]) / (m[:β] * bstar)
+    m[:rstar]    = exp(m[:σ_c]*m[:z_star]) / (m[:β])
     m[:Rstarn]   = 100*(m[:rstar]*m[:π_star] - 1)
-    m[:r_k_star]   = m[:spr]*m[:rstar]*m[:Upsilon] - (1-m[:δ])
+    m[:r_k_star] = m[:spr]*m[:rstar]*m[:Upsilon] - (1-m[:δ])
     m[:wstar]    = (m[:α]^m[:α] * (1-m[:α])^(1-m[:α]) * m[:r_k_star]^(-m[:α]) / m[:Φ])^(1/(1-m[:α]))
     m[:Lstar]    = 1.
     m[:kstar]    = (m[:α]/(1-m[:α])) * m[:wstar] * m[:Lstar] / m[:r_k_star]
@@ -642,14 +642,22 @@ function steadystate!(m::Model1002)
     Rhostar       = 1/nkstar - 1
 
     # evaluate wekstar and vkstar
-    betabar       = exp( (σ_ω_star -1) * m[:z_star]) \ m[:β]
-    wekstar       = (1-(m[:γ_star]*betabar))*nkstar - m[:γ_star]*betabar*(m[:spr]*(1-μ_estar*Gstar) - 1)
+    if subspec(m) in ["ss2", "ss8"]
+        wekstar       = (1-m[:γ_star]/m[:β])*nkstar - m[:γ_star]/m[:β]*(m[:spr]*(1-μ_estar*Gstar) - 1)
+    else
+        betabar       = exp( (σ_ω_star -1) * m[:z_star]) / m[:β]
+        wekstar       = (1-(m[:γ_star]*betabar))*nkstar - m[:γ_star]*betabar*(m[:spr]*(1-μ_estar*Gstar) - 1)
+    end
     vkstar        = (nkstar-wekstar)/m[:γ_star]
 
     # evaluate nstar and vstar
-    m[:nstar]       = nkstar*m[:kbarstar]
-    m[:vstar]       = vkstar*m[:kbarstar]
-
+    if subspec(m) in ["ss2", "ss8"]
+        m[:nstar]       = nkstar*m[:kstar]
+        m[:vstar]       = vkstar*m[:kstar]
+    else
+        m[:nstar]       = nkstar*m[:kbarstar]
+        m[:vstar]       = vkstar*m[:kbarstar]
+    end
     # a couple of combinations
     ΓμG      = Γstar - μ_estar*Gstar
     ΓμGprime = dΓdω_star - μ_estar*dGdω_star
@@ -680,9 +688,16 @@ function steadystate!(m::Model1002)
 
     # elasticities for the net worth evolution
     m[:ζ_nRk]    = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1 - ζ_gw/ζ_zw))
-    m[:ζ_nR]     = m[:γ_star]*betabar*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
-    m[:ζ_nqk]    = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]*betabar*(1+Rhostar)
-    m[:ζ_nn]     = m[:γ_star]*betabar + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
+    if subspec(m) in ["ss2", "ss8"]
+        m[:ζ_nR]     = m[:γ_star]/m[:β]*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
+        m[:ζ_nqk]    = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]/m[:β]*(1+Rhostar)
+        m[:ζ_nn]     = m[:γ_star]/m[:β] + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
+    else
+        m[:ζ_nR]     = m[:γ_star]*betabar*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
+        m[:ζ_nqk]    = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]*betabar*(1+Rhostar)
+        m[:ζ_nn]     = m[:γ_star]*betabar + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
+    end
+
     m[:ζ_nμ_e]   = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*(1 - ζ_gw*ζ_zμ_e/ζ_zw)
     m[:ζ_nσ_ω]  = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*(ζ_Gσ_ω-ζ_gw/ζ_zw*ζ_zσ_ω)
 
