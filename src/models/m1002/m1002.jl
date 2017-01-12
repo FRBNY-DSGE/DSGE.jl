@@ -268,7 +268,7 @@ function init_parameters!(m::Model1002)
     m <= parameter(:β, 0.1402, (1e-5, 10.), (1e-5, 10.), DSGE.Exponential(), GammaAlt(0.25, 0.1), fixed=false,
                    scaling = x -> 1/(1 + x/100),
                    description="β: Discount rate.",
-                   tex_label="\\beta ")
+                   tex_label="100(\\beta^{-1} - 1)")
 
     m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), DSGE.Exponential(), Normal(1.5, 0.25), fixed=false,
                    description="ψ₁: Weight on inflation gap in monetary policy rule.",
