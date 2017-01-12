@@ -234,10 +234,10 @@ function init_parameters!(m::Model1002)
 
     m <= parameter(:Φ,   1.1066, (1., 10.),     (1.00, 10.00),   DSGE.Exponential(),    Normal(1.25, 0.12),         fixed=false,
                    description="Φ: Fixed costs.",
-                   tex_label="\\Phi")
+                   tex_label="\\Phi_p")
 
     m <= parameter(:S′′,       2.7314, (-15., 15.),   (-15., 15.),     DSGE.Untransformed(),  Normal(4., 1.5),            fixed=false,
-                   description="S'': The second derivative of households' cost of adjusting investment.", tex_label="S\\prime\\prime")
+                   description="S'': The second derivative of households' cost of adjusting investment.", tex_label="S''")
 
     m <= parameter(:h,        0.5347, (1e-5, 0.999), (1e-5, 0.999),   DSGE.SquareRoot(),     BetaAlt(0.7, 0.1),          fixed=false,
                    description="h: Consumption habit persistence.", tex_label="h")
@@ -291,17 +291,17 @@ function init_parameters!(m::Model1002)
 
     m <= parameter(:ϵ_p,     10.000,                                                                               fixed=true,
                    description="ϵ_p: Curvature parameter in the Kimball aggregator for prices.",
-                   tex_label="\\varepsilon_{p}")
+                   tex_label="\\epsilon_{p}")
 
     m <= parameter(:ϵ_w,     10.000,                                                                               fixed=true,
                    description="ϵ_w: Curvature parameter in the Kimball aggregator for wages.",
-                   tex_label="\\varepsilon_{w}")
+                   tex_label="\\epsilon_{w}")
 
 
     # financial frictions parameters
     m <= parameter(:Fω,      0.0300, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(),    BetaAlt(0.03, 0.01),         fixed=true,    scaling = x -> 1 - (1-x)^0.25,
                    description="F(ω): The cumulative distribution function of ω (idiosyncratic iid shock that increases or decreases entrepreneurs' capital).",
-                   tex_label="F(\\omega)")
+                   tex_label="F(\\bar{\\omega})")
 
     m <= parameter(:spr,     1.7444, (0., 100.),      (1e-5, 0.),    DSGE.Exponential(),   GammaAlt(2., 0.1),           fixed=false,  scaling = x -> (1 + x/100)^0.25,
                    description="spr_*: Steady-state level of spread.",
@@ -309,7 +309,7 @@ function init_parameters!(m::Model1002)
 
     m <= parameter(:ζ_spb, 0.0559, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(),    BetaAlt(0.05, 0.005),        fixed=false,
                    description="ζ_spb: The elasticity of the expected exess return on capital (or 'spread') with respect to leverage.",
-                   tex_label="\\zeta_{spb}")
+                   tex_label="\\zeta_{sp,b}")
 
     m <= parameter(:γ_star, 0.9900, (1e-5, 0.99999), (1e-5, 0.99),  DSGE.SquareRoot(),    BetaAlt(0.99, 0.002),        fixed=true,
                    description="γ_star: Fraction of entrepreneurs who survive and continue operating for another period.",
@@ -372,11 +372,11 @@ function init_parameters!(m::Model1002)
     m <= parameter(:ρ_z_p,     0.8910, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_z_p: AR(1) coefficient in the process describing the permanent component of productivity.",             tex_label="\\rho_{z^p}")
     m <= parameter(:ρ_tfp,    0.1953, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_tfp: No description available.",            tex_label="\\rho_{tfp}")
     m <= parameter(:ρ_gdpdef, 0.5379, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_gdpdef: GDP deflator.",                            tex_label="\\rho_{gdpdef}")
-    m <= parameter(:ρ_corepce,    0.2320, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_corepce: No description available.",            tex_label="\\rho_{corepce}")
+    m <= parameter(:ρ_corepce,    0.2320, (1e-5, 0.999),   (1e-5, 0.999), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_corepce: No description available.",            tex_label="\\rho_{pce}")
     m <= parameter(:ρ_gdp,    0., (-0.999, 0.999),   (-0.999, 0.999), DSGE.SquareRoot(),    Normal(0.0, 0.2),           fixed=false, description="ρ_gdp: No description available.",            tex_label="\\rho_{gdp}")
     m <= parameter(:ρ_gdi,    0., (-0.999, 0.999),   (-0.999, 0.999), DSGE.SquareRoot(),    Normal(0.0, 0.2),           fixed=false, description="ρ_gdi: No description available.",            tex_label="\\rho_{gdi}")
     m <= parameter(:ρ_gdpvar, 0., (-0.999, 0.999),   (-0.999, 0.999), DSGE.SquareRoot(),    Normal(0.0, 0.4),           fixed=false, description="ρ_gdpvar: No description available.",            tex_label="\\varrho_{gdp}")
-    m <= parameter(:me_level, 1., (-0.999, 0.999),   (-0.999, 0.999), DSGE.Untransformed(),    Normal(0.0, 0.4),           fixed=true, description="me_level: Steady-state GDP-GDI measurement error.",            tex_label="me\_{level}")
+    m <= parameter(:me_level, 1., (-0.999, 0.999),   (-0.999, 0.999), DSGE.Untransformed(),    Normal(0.0, 0.4),           fixed=true, description="me_level: Indicator of cointegration of GDP and GDI.",            tex_label="\\mathcal{C}_{me}")
 
     # exogenous processes - standard deviation
     m <= parameter(:σ_g,      2.5230, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   DSGE.RootInverseGamma(2., 0.10),  fixed=false,
@@ -476,7 +476,7 @@ function init_parameters!(m::Model1002)
     m <= parameter(:Γ_gdpdef,  1.0354, (-10., 10.), (-10., -10.),  DSGE.Untransformed(),
                    Normal(1.00, 2.), fixed=false,
                    description="Γ_gdpdef: No description available.",
-                   tex_label="\\Gamma_{gdpdef}")
+                   tex_label="\\gamma_{gdpdef}")
 
     m <= parameter(:δ_gdpdef,   0.0181, (-10., 10.), (-10., -10.),  DSGE.Untransformed(),
                    Normal(0.00, 2.),            fixed=false,
@@ -698,16 +698,18 @@ parameter groupings (e.g. \"Policy Parameters\") to vectors of
 """
 function parameter_groupings(m::Model1002)
     policy     = [:ψ1, :ψ2, :ψ3, :ρ, :ρ_rm, :σ_r_m, :σ_r_m1]
-    sticky     = [:ζ_p, :ζ_w, :λ_w, :ρ_λ_f, :ρ_λ_w, :σ_λ_f, :σ_λ_w, :η_λ_f, :η_λ_w]
-    other_endo = [:α, :ι_p, :δ, :Upsilon, :Φ, :S′′, :h, :ppsi, :ν_l, :ι_w, :β,
-                  :π_star, :σ_c, :ϵ_p, :ϵ_w, :γ, :Iendoα, :Γ_gdpdef, :δ_gdpdef, :γ_gdi,
-                  :δ_gdi, :γ, :Lmean, :g_star]
+    sticky     = [:ζ_p, :ζ_w, :ι_p, :ι_w, :ϵ_p, :ϵ_w, :ρ_λ_f, :ρ_λ_w, :σ_λ_f,
+                  :σ_λ_w, :η_λ_f, :η_λ_w]
+    other_endo = [:γ, :α, :β, :σ_c, :h, :ν_l, :δ, :Upsilon, :Φ, :S′′, :ppsi,
+                  :π_star, :Iendoα, :Γ_gdpdef, :δ_gdpdef, :γ_gdi,
+                  :δ_gdi, :Lmean, :λ_w, :g_star]
     financial  = [:Fω, :spr, :ζ_spb, :γ_star]
     processes  = [:ρ_g, :ρ_b, :ρ_μ, :ρ_z, :ρ_σ_w, :ρ_μ_e, :ρ_γ, :ρ_π_star,
-                  :ρ_lr, :ρ_z_p, :ρ_tfp, :ρ_gdpdef, :ρ_corepce,
-                  :σ_g, :σ_b, :σ_μ, :σ_z, :σ_σ_ω, :σ_π_star, :σ_lr, :σ_z_p,
-                  :σ_tfp, :σ_gdpdef, :σ_corepce, :η_gz]
-    error      = [:me_level, :ρ_gdp, :ρ_gdi, :ρ_gdpvar, :σ_gdp, :σ_gdi]
+                  :ρ_z_p, :σ_g, :σ_b, :σ_μ, :σ_z, :σ_σ_ω, :σ_π_star, :σ_z_p,
+                  :η_gz]
+    error      = [:me_level, :ρ_gdp, :ρ_gdi, :ρ_gdpvar, :σ_gdp, :σ_gdi, :ρ_lr,
+                  :ρ_tfp, :ρ_gdpdef, :ρ_corepce, :σ_lr, :σ_tfp, :σ_gdpdef,
+                  :σ_corepce]
 
     all_keys     = Vector[policy, sticky, other_endo, financial, processes, error]
     all_params   = map(keys -> [m[θ]::Parameter for θ in keys], all_keys)
