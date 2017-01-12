@@ -176,6 +176,9 @@ where `S<:AbstractFloat`.
 - `pseudo::DArray{S, 3}`: array of size `ndraws` x `npseudo` x `hist_periods` of
   pseudo-observables computed from the smoothed states for each draw. If
   `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
+- `initial_states::DVector{Vector{{S}}`: vector of length `ndraws`, where each
+  element is a vector of smoothed states in the last presample period. These are
+  used as the initial state for computing the deterministic trend.
 
 ### Notes
 
@@ -222,23 +225,23 @@ function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
     states_range = 1:nstates
     shocks_range = (nstates + 1):(nstates + nshocks)
     pseudo_range = (nstates + nshocks + 1):(nstates + nshocks + npseudo)
+    states0_range = nstates + nshocks + npseudo + 1
 
     # Construct distributed array of smoothed states, shocks, and pseudo-observables
-    out = DArray((ndraws, nstates + nshocks + npseudo, nperiods), procs, [nprocs, 1, 1]) do I
+    out = DArray((ndraws, nstates + nshocks + npseudo + 1, nperiods), procs, [nprocs, 1, 1]) do I
         localpart = zeros(map(length, I)...)
         draw_inds = first(I)
         ndraws_local = length(draw_inds)
 
         for i in draw_inds
-            states, shocks, pseudo = filterandsmooth(m, data, systems[i], z0, vz0)
+            states, shocks, pseudo, initial_states = filterandsmooth(m, data, systems[i], z0, vz0)
 
             i_local = mod(i-1, ndraws_local) + 1
 
-            localpart[i_local, states_range, :] = states
-            localpart[i_local, shocks_range, :] = shocks
-            if forecast_pseudoobservables(m)
-                localpart[i_local, pseudo_range, :] = pseudo
-            end
+            localpart[i_local, states_range,  :] = states
+            localpart[i_local, shocks_range,  :] = shocks
+            localpart[i_local, pseudo_range,  :] = pseudo
+            localpart[i_local, states0_range, states_range] = initial_states
         end
         return localpart
     end
@@ -247,9 +250,13 @@ function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
     states = convert(DArray, out[1:ndraws, states_range, 1:nperiods])
     shocks = convert(DArray, out[1:ndraws, shocks_range, 1:nperiods])
     pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods])
+    initial_states = DArray((ndraws,), procs, [nprocs]) do I
+        Vector{S}[convert(Array, slice(out, i, states0_range, 1:nstates)) for i in first(I)]
+    end
+
 
     # Index out SubArray for each smoothed type
-    return states, shocks, pseudo
+    return states, shocks, pseudo, initial_states
 end
 
 """
@@ -344,11 +351,20 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 
     states, shocks = if forecast_smoother(m) == :kalman
         kalman_smoother(m, data, T, R, C, Q, Z, D,
-                        kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+                        kal[:z0], kal[:vz0], kal[:pred], kal[:vpred];
+                        include_presample = true)
     elseif forecast_smoother(m) == :durbin_koopman
         durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, M, E, V_all,
-                                kal[:z0], kal[:vz0])
+                                kal[:z0], kal[:vz0];
+                                include_presample = true)
     end
+
+    # Index out last presample states, used to compute the deterministic trend
+    t0 = n_presample_periods(m)
+    t1 = index_mainsample_start(m)
+    initial_states = states[:, t0]
+    states = states[:, t1:end]
+    shocks = shocks[:, t1:end]
 
     ## 3. Map smoothed states to pseudo-observables
 
@@ -358,5 +374,5 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         Matrix{S}()
     end
 
-    return states, shocks, pseudo
+    return states, shocks, pseudo, initial_states
 end

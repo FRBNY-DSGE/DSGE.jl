@@ -395,7 +395,7 @@ function forecast_one(m::AbstractModel{Float64},
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("\nSmoothing $(hists_to_compute)...")
         end
-        @time_verbose histstates, histshocks, histpseudo =
+        @time_verbose histstates, histshocks, histpseudo, initial_states =
             smooth_all(m, df, systems, kals; cond_type = cond_type, procs = procs)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
@@ -533,20 +533,13 @@ function forecast_one(m::AbstractModel{Float64},
     dettrends_to_compute = intersect(output_vars, dettrend_vars)
     if !isempty(dettrends_to_compute)
 
-        # Extract first smoothed historical state vectors for each
-        # draw. This code will keep everything on its local node
-        # rather than copying across nodes. The result is a
-        # DVector{Vector{Float64}}.
-        z0s = DArray(I->[convert(Vector{Float64}, slice(histstates, i, :, 1))::Vector{Float64} for i in first(I)],
-                     (ndraws,), procs, [nprocs])
-
         # Compute deterministic trend
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("\nComputing deterministic trend for $(dettrends_to_compute)...")
         end
 
         @time_verbose dettrendstates, dettrendobs, dettrendpseudo =
-            deterministic_trends(m, systems, z0s; procs = procs)
+            deterministic_trends(m, systems, initial_states; procs = procs)
 
         forecast_output[:dettrendstates] = dettrendstates
         forecast_output[:dettrendobs]    = dettrendobs
