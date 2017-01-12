@@ -147,10 +147,10 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
         for prod in intersect(products, [:forecast])
             y0_indexes[prod] = index_forecast_start(m) - 1
         end
-        for prod in intersect(products, [:shockdec])
+        for prod in intersect(products, [:shockdec, :dettrend, :trend])
             y0_indexes[prod] = index_shockdec_start(m) - 1
         end
-        for prod in intersect(products, [:hist, :dettrend, :trend])
+        for prod in intersect(products, [:hist])
             y0_indexes[prod] = index_mainsample_start(m) - 1
         end
 
@@ -265,8 +265,9 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
 
         # write to file
         filepath = mb_files[output_var]
-        if !isfile(filepath)
-            mkdir(basename(filepath))
+        dirpath  = dirname(filepath)
+        if !isdir(dirpath)
+            mkdir(dirpath)
         end
         jldopen(filepath, "w") do file
                write(file, "mb", mb)
