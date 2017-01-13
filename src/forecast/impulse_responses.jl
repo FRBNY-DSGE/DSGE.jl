@@ -76,6 +76,7 @@ function impulse_responses{S<:AbstractFloat}(m::AbstractModel,
     states = convert(DArray, out[1:ndraws, states_range, 1:horizon, 1:nshocks])
     obs    = convert(DArray, out[1:ndraws, obs_range,    1:horizon, 1:nshocks])
     pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:horizon, 1:nshocks])
+    close(out)
 
     return states, obs, pseudo
 end

@@ -92,6 +92,7 @@ function deterministic_trends{S<:AbstractFloat}(m::AbstractModel, systems::DVect
     states = convert(DArray, out[1:ndraws, states_range, date_range])
     obs    = convert(DArray, out[1:ndraws, obs_range,    date_range])
     pseudo = convert(DArray, out[1:ndraws, pseudo_range, date_range])
+    close(out)
 
     return states, obs, pseudo
 end

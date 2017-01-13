@@ -117,6 +117,7 @@ function forecast{S<:AbstractFloat}(m::AbstractModel,
     obs    = convert(DArray, out[1:ndraws, obs_range,    1:horizon])
     pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:horizon])
     shocks = convert(DArray, out[1:ndraws, shocks_range, 1:horizon])
+    close(out)
 
     return states, obs, pseudo, shocks
 end

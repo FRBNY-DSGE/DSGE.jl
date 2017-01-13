@@ -80,6 +80,7 @@ function trends{S<:AbstractFloat}(m::AbstractModel, systems::DVector{System{S}};
     states = convert(DArray, out[1:ndraws, states_range])
     obs    = convert(DArray, out[1:ndraws, obs_range   ])
     pseudo = convert(DArray, out[1:ndraws, pseudo_range])
+    close(out)
 
     return states, obs, pseudo
 end

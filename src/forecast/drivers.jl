@@ -350,7 +350,7 @@ function forecast_one(m::AbstractModel{Float64},
     subset_string::AbstractString = "", verbose::Symbol = :low,
     procs::Vector{Int} = [myid()])
 
-    ### 1. Setup
+    ### 0. Setup
 
     # Compute everything that will be needed to plot original output_vars
     output_vars = add_requisite_output_vars(output_vars)
@@ -381,7 +381,8 @@ function forecast_one(m::AbstractModel{Float64},
     nprocs = length(procs)
     ndraws = length(systems)
 
-    ### 2. Smoothed Histories
+
+    ### 1. Smoothed Histories
 
     # Must run smoother for conditional data in addition to explicit cases
     hist_vars = [:histstates, :histpseudo, :histshocks]
@@ -419,9 +420,9 @@ function forecast_one(m::AbstractModel{Float64},
     end
 
 
-    ### 3. Forecasts
+    ### 2. Forecasts
 
-    # 3A. Unbounded forecasts
+    # 2A. Unbounded forecasts
 
     forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks]
     forecasts_to_compute = intersect(output_vars, forecast_vars)
@@ -454,7 +455,7 @@ function forecast_one(m::AbstractModel{Float64},
     end
 
 
-    # 3B. Bounded forecasts
+    # 2B. Bounded forecasts
 
     forecast_vars_bdd = [:forecaststatesbdd, :forecastobsbdd, :forecastpseudobdd, :forecastshocksbdd]
     forecasts_to_compute = intersect(output_vars, forecast_vars_bdd)
@@ -487,7 +488,7 @@ function forecast_one(m::AbstractModel{Float64},
     end
 
 
-    ### 4. Shock Decompositions
+    ### 3. Shock Decompositions
 
     shockdecs_to_compute = intersect(output_vars, shockdec_vars)
     if !isempty(shockdecs_to_compute)
@@ -507,7 +508,7 @@ function forecast_one(m::AbstractModel{Float64},
     end
 
 
-    ### 5. Trend
+    ### 4. Trend
 
     trend_vars = vcat([:trendstates, :trendobs, :trendpseudo])
     trends_to_compute = intersect(output_vars, trend_vars)
@@ -528,7 +529,7 @@ function forecast_one(m::AbstractModel{Float64},
         write_forecast_outputs(m, trends_to_compute, forecast_output_files, forecast_output; verbose = verbose)
     end
 
-    ### 6. Deterministic Trend
+    ### 5. Deterministic Trend
 
     dettrends_to_compute = intersect(output_vars, dettrend_vars)
     if !isempty(dettrends_to_compute)
@@ -551,7 +552,7 @@ function forecast_one(m::AbstractModel{Float64},
         write_forecast_outputs(m, dettrends_to_compute, forecast_output_files, forecast_output; verbose = verbose)
     end
 
-    ### 7. Impulse Responses
+    ### 6. Impulse Responses
     irf_vars = [:irfstates, :irfobs, :irfpseudo]
     irfs_to_compute = intersect(output_vars, irf_vars)
     if !isempty(irfs_to_compute)
@@ -570,8 +571,14 @@ function forecast_one(m::AbstractModel{Float64},
     end
 
 
-    # Return only saved elements of dict
-    filter!((k, v) -> k in output_vars, forecast_output)
+    # Return only desired output_vars
+    for key in keys(forecast_output)
+        if !(key in output_vars)
+            close(forecast_output[key])   # Explicitly garbage-collect DArray
+            delete!(forecast_output, key) # Remove from Dict
+        end
+    end
+
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("\nForecast complete: $(now())")
     end

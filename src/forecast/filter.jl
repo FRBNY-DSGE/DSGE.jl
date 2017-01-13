@@ -253,7 +253,7 @@ function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
     initial_states = DArray((ndraws,), procs, [nprocs]) do I
         Vector{S}[convert(Array, slice(out, i, states0_range, 1:nstates)) for i in first(I)]
     end
-
+    close(out)
 
     # Index out SubArray for each smoothed type
     return states, shocks, pseudo, initial_states
