@@ -327,7 +327,7 @@ function init_parameters!(m::Model1002)
     m <= parameter(:γ, 0.3673, (-5.0, 5.0), (-5., 5.), DSGE.Untransformed(), Normal(0.4, 0.1), fixed=false,
                    scaling = x -> x/100,
                    description="γ: The log of the steady-state growth rate of technology.",
-                   tex_label="\\gamma")
+                   tex_label="100\\gamma")
 
     m <= parameter(:Lmean, -45.9364, (-1000., 1000.), (-1e3, 1e3), DSGE.Untransformed(), Normal(-45., 5.), fixed=false,
                    description="Lmean: Mean level of hours.",
