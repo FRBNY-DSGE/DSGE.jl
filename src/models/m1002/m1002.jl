@@ -64,11 +64,11 @@ conditions.
 * `testing::Bool`: Indicates whether the model is in testing mode. If `true`, settings from
   `m.test_settings` are used in place of those in `m.settings`.
 
-* `data_series::Dict{Symbol,Vector{Symbol}}`: A dictionary that stores
-  data sources (keys) and lists of series mnemonics (values). DSGE.jl
-  will fetch data from the Federal Reserve Bank of St. Louis's FRED
-  database; all other data must be downloaded by the user. See
-  `load_data` for further details.
+* `observable_mappings::OrderedDict{Symbol, Observable}`: An ordered
+  dictionary mapping the names of observables to `Observable` objects,
+  which store the series used to construct the observable and the
+  transformations applied to convert the data to model units and back
+  to reported units.
 """
 type Model1002{T} <: AbstractModel{T}
     parameters::ParameterVector{T}                  # vector of all time-invariant model parameters
@@ -622,16 +622,16 @@ function steadystate!(m::Model1002)
     ωbarstar = ω_fn(zω_star, σ_ω_star)
 
     # evaluate all BGG function elasticities
-    Gstar       = G_fn(zω_star, σ_ω_star)
-    Γstar       = Γ_fn(zω_star, σ_ω_star)
-    dGdω_star   = dG_dω_fn(zω_star, σ_ω_star)
-    d2Gdω2star  = d2G_dω2_fn(zω_star, σ_ω_star)
-    dΓdω_star   = dΓ_dω_fn(zω_star)
-    d2Γdω2star  = d2Γ_dω2_fn(zω_star, σ_ω_star)
-    dGdσstar    = dG_dσ_fn(zω_star, σ_ω_star)
-    d2Gdωdσstar = d2G_dωdσ_fn(zω_star, σ_ω_star)
-    dΓdσstar    = dΓ_dσ_fn(zω_star, σ_ω_star)
-    d2Γdωdσstar = d2Γ_dωdσ_fn(zω_star, σ_ω_star)
+    Gstar           = G_fn(zω_star, σ_ω_star)
+    Γstar           = Γ_fn(zω_star, σ_ω_star)
+    dGdω_star       = dG_dω_fn(zω_star, σ_ω_star)
+    d2Gdω2star      = d2G_dω2_fn(zω_star, σ_ω_star)
+    dΓdω_star       = dΓ_dω_fn(zω_star)
+    d2Γdω2star      = d2Γ_dω2_fn(zω_star, σ_ω_star)
+    dGdσstar        = dG_dσ_fn(zω_star, σ_ω_star)
+    d2Gdωdσstar     = d2G_dωdσ_fn(zω_star, σ_ω_star)
+    dΓdσstar        = dΓ_dσ_fn(zω_star, σ_ω_star)
+    d2Γdωdσstar     = d2Γ_dωdσ_fn(zω_star, σ_ω_star)
 
     # evaluate μ, nk, and Rhostar
     μ_estar     = μ_fn(zω_star, σ_ω_star, m[:spr])
@@ -639,12 +639,22 @@ function steadystate!(m::Model1002)
     Rhostar     = 1/nkstar - 1
 
     # evaluate wekstar and vkstar
-    wekstar     = (1-m[:γ_star]/m[:β])*nkstar - m[:γ_star]/m[:β]*(m[:spr]*(1-μ_estar*Gstar) - 1)
-    vkstar      = (nkstar-wekstar)/m[:γ_star]
+    if subspec(m) in ["ss2", "ss8"]
+        wekstar       = (1-m[:γ_star]/m[:β])*nkstar - m[:γ_star]/m[:β]*(m[:spr]*(1-μ_estar*Gstar) - 1)
+    else
+        betabar       = exp( (σ_ω_star -1) * m[:z_star]) / m[:β]
+        wekstar       = (1-(m[:γ_star]*betabar))*nkstar - m[:γ_star]*betabar*(m[:spr]*(1-μ_estar*Gstar) - 1)
+    end
+    vkstar        = (nkstar-wekstar)/m[:γ_star]
 
     # evaluate nstar and vstar
-    m[:nstar]   = nkstar*m[:kstar]
-    m[:vstar]   = vkstar*m[:kstar]
+    if subspec(m) in ["ss2", "ss8"]
+        m[:nstar]       = nkstar*m[:kstar]
+        m[:vstar]       = vkstar*m[:kstar]
+    else
+        m[:nstar]       = nkstar*m[:kbarstar]
+        m[:vstar]       = vkstar*m[:kbarstar]
+    end
 
     # a couple of combinations
     ΓμG         = Γstar - μ_estar*Gstar
@@ -664,22 +674,29 @@ function steadystate!(m::Model1002)
     m[:ζ_spσ_ω] = (ζ_bw_zw*ζ_zσ_ω - ζ_bσ_ω) / (1-ζ_bw_zw)
 
     # elasticities wrt μ_e
-    ζ_bμ_e      = μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
+    ζ_bμ_e      = -μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
         ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
     ζ_zμ_e      = -μ_estar*Gstar/ΓμG
     m[:ζ_spμ_e] = (ζ_bw_zw*ζ_zμ_e - ζ_bμ_e) / (1-ζ_bw_zw)
 
     # some ratios/elasticities
-    Rkstar      = m[:spr]*m[:π_star]*m[:rstar] # (r_k_star+1-δ)/Upsilon*π_star
-    ζ_gw        = dGdω_star/Gstar*ωbarstar
-    ζ_Gσ_ω      = dGdσstar/Gstar*σ_ω_star
+    Rkstar     = m[:spr]*m[:π_star]*m[:rstar] # (r_k_star+1-δ)/Upsilon*π_star
+    ζ_gw       = dGdω_star/Gstar*ωbarstar
+    ζ_Gσ_ω     = dGdσstar/Gstar*σ_ω_star
 
     # elasticities for the net worth evolution
-    m[:ζ_nRk]   = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1 - ζ_gw/ζ_zw))
-    m[:ζ_nR]    = m[:γ_star]/m[:β]*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
-    m[:ζ_nqk]   = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]/m[:β]*(1+Rhostar)
-    m[:ζ_nn]    = m[:γ_star]/m[:β] + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
-    m[:ζ_nμ_e]  = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*(1 - ζ_gw*ζ_zμ_e/ζ_zw)
+    m[:ζ_nRk]    = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1 - ζ_gw/ζ_zw))
+    if subspec(m) in ["ss2", "ss8"]
+        m[:ζ_nR]     = m[:γ_star]/m[:β]*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
+        m[:ζ_nqk]    = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]/m[:β]*(1+Rhostar)
+        m[:ζ_nn]     = m[:γ_star]/m[:β] + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
+    else
+        m[:ζ_nR]     = m[:γ_star]*betabar*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
+        m[:ζ_nqk]    = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]*betabar*(1+Rhostar)
+        m[:ζ_nn]     = m[:γ_star]*betabar + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
+    end
+
+    m[:ζ_nμ_e]   = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*(1 - ζ_gw*ζ_zμ_e/ζ_zw)
     m[:ζ_nσ_ω]  = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*(ζ_Gσ_ω-ζ_gw/ζ_zw*ζ_zσ_ω)
 
     return m
