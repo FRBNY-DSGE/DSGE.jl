@@ -1,165 +1,229 @@
 """
 ```
-compute_moments(m::AbstractModel, percent::Float64 = 0.90; verbose::Symbol=:none)
+moment_tables(m; percent = 0.90, subset_inds = [], subset_string = "",
+    verbose = :none)
 ```
 
 Computes prior and posterior parameter moments. Tabulates prior mean, posterior mean, and
 bands in various LaTeX tables stored `tablespath(m)`.
 
-### Arguments
-- `m`: the model object
-- `percent`: the percentage of the mass of draws from Metropolis-Hastings included between
-  the bands displayed in output tables.
-"""
-function compute_moments(m::AbstractModel, percent::AbstractFloat = 0.90; verbose::Symbol=:none)
+### Inputs
 
-    # Read in the matrix of parameter draws from metropolis-hastings
-    filename = rawpath(m, "estimate", "mhsave.h5")
+- `m::AbstractModel`: model object
+
+### Keyword Arguments
+
+- `percent::AbstractFloat`: the percentage of the mass of draws from
+  Metropolis-Hastings included between the bands displayed in output tables.
+- `subset_inds::Vector{Int}`: indices specifying the draws we want to use
+- `subset_string::AbstractString`: short string identifying the subset to be
+  appended to the output filenames. If `subset_inds` is nonempty but
+  `subset_string` is empty, an error is thrown
+- `verbose::Symbol`: desired frequency of function progress messages printed to
+  standard out. One of `:none`, `:low`, or `:high`
+"""
+function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
+                       subset_inds::Vector{Int} = Vector{Int}(), subset_string::AbstractString = "",
+                       verbose::Symbol = :low)
+
+    ### 1. Load parameter draws from Metropolis-Hastings
+
+    filename = get_input_file(m, :full)
+    params = if !isempty(subset_inds)
+        # Use subset of draws
+        if isempty(subset_string)
+            error("Must supply a nonempty subset_string if subset_inds is nonempty")
+        end
+        load_draws(m, :subset; subset_inds = subset_inds, verbose = verbose)
+    else
+        # Use all draws
+        load_draws(m, :full; verbose = verbose)
+    end
+
+
+    ### 2. Compute posterior moments
+
+    post_means = vec(mean(params, 1))
+    post_bands = find_density_bands(params, percent; minimize = true)'
+
+    # Save posterior means
+    basename = "paramsmean"
+    if !isempty(subset_string)
+        basename *= "_sub=$(subset_string)"
+    end
+    filename = workpath(m, "estimate", "$basename.h5")
+    h5open(filename, "w") do file
+        write(file, "post_means", post_means)
+    end
+
+
+    ### 3. Produce TeX tables
+
+    prior_posterior_moments_table(m, post_means, post_bands;
+                                  percent = percent, subset_string = subset_string)
+    prior_posterior_means_table(m, post_means; subset_string = subset_string)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        @printf "Reading parameter draws from %s\n" filename
-    end
-
-    param_draws = []
-    try
-        h5open(filename, "r") do f
-            param_draws = read(f, "mhparams")
-        end
-    catch
-        @printf "Could not open file %s\n" filename
-        return
-    end
-
-    n_draws = size(param_draws,1)
-
-    # Save mean parameter vector
-    save_mean_parameters(m, param_draws)
-
-    # Produce TeX table of moments
-    make_moment_tables(m, param_draws, percent, verbose=verbose)
-end
-
-"""
-```
-save_mean_parameters{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T})
-```
-
-Computes and saves the posterior mean of the parameters.
-
-### Arguments
-- `m`
-- `draws`: n_draws x n_parameters matrix holding the posterior draws from
-  Metropolis-Hastings
-"""
-function save_mean_parameters{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T})
-    post_means = mean(draws,1)'
-    filename = workpath(m, "estimate", "paramsmean.h5")
-    h5open(filename, "w") do f
-        f["params"] = post_means
+        @printf "Tables are saved as %s.\n" tablespath(m, "estimate", "*.tex")
     end
 end
 
 """
 ```
-make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T},
-    percent::AbstractFloat; verbose::Symbol = :none)
+moments(θ::Parameter)
 ```
 
-Tabulates parameter moments in 3 LaTeX tables:
-
-1. For MAIN parameters, a list of prior means, prior standard deviations, posterior means,
-   and 90% bands for posterior draws
-2. For LESS IMPORTANT parameters, a list of the prior means, prior standard deviations,
-   posterior means and 90% bands for posterior draws.
-3. A list of prior means and posterior means
-
-### Arguments
-- `draws`: [n_draws x n_parameters] matrix holding the posterior draws from
-  Metropolis-Hastings from save/mhsave.h5
-- `percent`: the mass of observations we want; 0 <= percent <= 1
+If θ's prior is a `DSGE.RootInverseGamma`, τ and ν. Otherwise, returns the mean
+and standard deviation of the prior. If θ is fixed, returns `(θ.value, 0.0)`.
 """
-function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T},
-                                              percent::AbstractFloat;
-                                              verbose::Symbol = :none)
-
-    # STEP 1: Extract moments of prior distribution from m.parameters
-    n_params    = length(m.parameters)
-    prior_means = zeros(n_params,1)
-    prior_std   = zeros(n_params,1)
-
-    # Track prior distributions
-    prior_dist  = Vector{AbstractString}(n_params)
-    distid(::Distributions.Beta)    = "B"
-    distid(::Distributions.Gamma)   = "G"
-    distid(::Distributions.Normal)  = "N"
-    distid(::DSGE.RootInverseGamma) = "IG"
-
-    for (i,k) in enumerate(m.keys)
-
-        if i > n_params
-            continue
-        end
-
-        param = getindex(m,i)
-
-        # If param is fixed, we simply set mean to its value and std to 0
-        if param.fixed
-            prior_means[i]  = param.value
-            prior_std[i] = 0
-            prior_dist[i] = "-"
+function moments(θ::Parameter)
+    if θ.fixed
+        return θ.value, 0.0
+    else
+        prior = get(θ.prior)
+        if isa(prior, RootInverseGamma)
+            return prior.τ, prior.ν
         else
-            pri = get(param.prior)
-            α, β = moments(pri)
-            prior_means[i] = α
-            prior_std[i] = β
-            prior_dist[i] = distid(pri)
+            return mean(prior), std(prior)
+        end
+    end
+end
+
+"""
+```
+prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}())
+```
+"""
+function prior_table{S<:AbstractString}(m::AbstractModel; subset_string::S = "",
+             groupings::Associative{S, Vector{Parameter}} = Dict{ASCIIString, Vector{Parameter}}())
+
+    if isempty(groupings)
+        sorted_parameters = sort(m.parameters, by = (x -> x.key))
+        groupings[""] = sorted_parameters
+    end
+
+    # Open the TeX file
+    basename = "priors"
+    if !isempty(subset_string)
+        basename *= "_sub=$(subset_string)"
+    end
+    priors_out = tablespath(m, "estimate", "$basename.tex")
+    priors_fid = open(priors_out, "w")
+
+    # Write header
+    write_table_preamble(priors_fid)
+
+    @printf priors_fid "\\renewcommand*\\footnoterule{}"
+    @printf priors_fid "\\vspace*{.5cm}\n"
+    @printf priors_fid "{\\small\n"
+    @printf priors_fid "\\begin{longtable}{rlrr@{\\hspace{1in}}rlrr}\n"
+    @printf priors_fid "\\caption{Priors}\n"
+    @printf priors_fid "\\\\ \\hline\n"
+
+    @printf priors_fid "& Dist & Mean & Std Dev & & Dist & Mean & Std Dev \\\\ \\hline\n"
+    @printf priors_fid "\\endhead\n"
+
+    @printf priors_fid "\\hline \\\\\n"
+    @printf priors_fid "\\multicolumn{8}{c}{\\footnotesize Note: For Inverse Gamma prior mean and SD, \$\\tau\$ and \$\\nu\$ reported.}\n"
+    @printf priors_fid "\\endfoot\n"
+
+    # Map prior distributions to identifying strings
+    distid(::Distributions.Beta)    = "Beta"
+    distid(::Distributions.Gamma)   = "Gamma"
+    distid(::Distributions.Normal)  = "Normal"
+    distid(::DSGE.RootInverseGamma) = "InvG"
+
+    # Write priors
+    for group_desc in keys(groupings)
+        params = groupings[group_desc]
+        n_params = length(params)
+        n_rows = convert(Int, ceil(n_params/2))
+
+        # Write grouping description if not empty
+        if !isempty(group_desc)
+            @printf priors_fid "\\multicolumn{8}{l}{\\textit{%s}} \\\\[3pt]\n" group_desc
+        end
+
+        # Write footnote about standard deviations of anticipated policy shocks
+        function anticipated_shock_footnote(θ::Parameter)
+            if n_anticipated_shocks(m) > 0 && θ.key == :σ_r_m1
+                nantpad          = n_anticipated_shocks_padding(m)
+                all_sigmas       = [m[symbol("σ_r_m$i")]::Parameter for i = 1:nantpad]
+                nonzero_sigmas   = Base.filter(θ -> !(θ.fixed && θ.value == 0), all_sigmas)
+                n_nonzero_sigmas = length(nonzero_sigmas)
+
+                if n_nonzero_sigmas > 1
+                    text = "\$\\sigma_{ant1}\$ through \$\\sigma_{ant$(n_nonzero_sigmas)}\$ all have the same distribution."
+                    @printf priors_fid "\\let\\thefootnote\\relax\\footnote{\\centering %s}" text
+                end
+            end
+        end
+
+        for i = 1:n_rows
+            # Write left column
+            θ = params[i]
+            (prior_mean, prior_std) = moments(θ)
+            @printf priors_fid "\$%s\$ & " θ.tex_label
+            @printf priors_fid "%s & " (θ.fixed ? "-" : distid(get(θ.prior)))
+            @printf priors_fid "%0.2f & " prior_mean
+            @printf priors_fid "%0.2f & " prior_std
+            anticipated_shock_footnote(θ)
+
+            # Write right column if it exists
+            if n_rows + i <= n_params
+                θ = params[n_rows + i]
+                (prior_mean, prior_std) = moments(θ)
+                @printf priors_fid "\$%s\$ & " θ.tex_label
+                @printf priors_fid "%s & " (θ.fixed ? "-" : distid(get(θ.prior)))
+                @printf priors_fid "%0.2f & " prior_mean
+                @printf priors_fid "%0.2f" prior_std
+                anticipated_shock_footnote(θ)
+            else
+                @printf priors_fid "& & &"
+            end
+
+            # Add padding after last row in a grouping
+            if i == n_rows
+                @printf priors_fid " \\\\[3pt]\n"
+            else
+                @printf priors_fid " \\\\\n"
+            end
         end
     end
 
-    # STEP 2: Compute moments and `percent' bands from parameter draws
+    # Write footer
+    write_table_postamble(priors_fid; small = true)
 
-    # Posterior mean for each
-    post_means = mean(draws,1)'
+    # Close file
+    close(priors_fid)
+end
 
-    # Covariance: Note that this has already been computed and saved
-    # in $workpath(m)/parameter_covariance.h5.
-    # parameter θ_sig = cov(θ, mean=θ_hat')
+"""
+```
+prior_posterior_moments_table(m, post_means, post_bands; percent = 0.9,
+    subset_string = "")
+```
 
-    # Bands for each
-    post_bands = []
-    try
-        post_bands = find_density_bands(draws, percent, minimize=true)
-    catch
-        println("percent must be between 0 and 1")
-        return -1
+Produces a table of prior means, prior standard deviations, posterior means, and
+90% bands for posterior draws. Saves to:
+
+```
+tablespath(m, \"estimate\", \"moments[_sub=\$subset_string].tex\")
+```
+"""
+function prior_posterior_moments_table(m::AbstractModel,
+                                       post_means::Vector, post_bands::Matrix;
+                                       percent::AbstractFloat = 0.9,
+                                       subset_string::AbstractString = "")
+    # Open the TeX file
+    basename = "moments"
+    if !isempty(subset_string)
+        basename *= "_sub=$(subset_string)"
     end
-
-    # We need the transpose
-    post_bands = post_bands'
-
-    # STEP 3: Create variables for writing to output table
-
-    # Two-row column names. First row is multicolumn, where entries (i,str) are `i` columns
-    # with content `str`.
-    colnames0 = [(1,""), (3,"Prior"),(3,"Posterior")]
-    colnames = ["Parameter", "Type", "Mean", "SD", "Mean",
-                "$(100*percent)\\% {\\tiny Lower Band}",
-                "$(100*percent)\\% {\\tiny Upper Band}"]
-
-    # prior type, mean, std dev; posterior mean, 90% lower band, 90% upper bands
-    outmat = [prior_dist prior_means prior_std post_means post_bands]
-
-    # prior mean and posterior mean (n_params x 2)
-    outmat2 = [prior_means post_means]
-
-    # STEP 4: WRITE TABLES
-
-    # 4a. Write to Table 1: prior mean, std dev, posterior mean and bands
-
-    # Open and start the TeX file
-    moments_out = tablespath(m, "estimate", "moments.tex")
+    moments_out = tablespath(m, "estimate", "$basename.tex")
     moments_fid = open(moments_out, "w")
 
+    # Write header
     write_table_preamble(moments_fid)
 
     @printf moments_fid "\\vspace*{.5cm}\n"
@@ -168,7 +232,13 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
     @printf moments_fid "\\caption{Parameter Estimates}\n"
     @printf moments_fid "\\\\ \\hline\n"
 
-    # Column names
+    # Two-row column names. First row is multicolumn, where entries (i,str) are `i` columns
+    # with content `str`.
+    colnames0 = [(1,""), (3,"Prior"),(3,"Posterior")]
+    colnames = ["Parameter", "Type", "Mean", "SD", "Mean",
+                "$(100*percent)\\% {\\tiny Lower Band}",
+                "$(100*percent)\\% {\\tiny Upper Band}"]
+
     @printf moments_fid "\\multicolumn{%d}{c}{%s}" colnames0[1][1] colnames0[1][2]
     for col in colnames0[2:end]
         @printf moments_fid " & \\multicolumn{%d}{c}{%s}" col[1] col[2]
@@ -186,23 +256,56 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
     @printf moments_fid "\\\\ \\multicolumn{7}{c}{\\footnotesize Note: For Inverse Gamma (IG) prior mean and SD, \$\\tau\$ and \$\\nu\$ reported.}\n"
     @printf moments_fid "\\endfoot\n"
 
+    # Map prior distributions to identifying strings
+    distid(::Distributions.Beta)    = "B"
+    distid(::Distributions.Gamma)   = "G"
+    distid(::Distributions.Normal)  = "N"
+    distid(::DSGE.RootInverseGamma) = "IG"
+
     # Write parameter moments
     sorted_parameters = sort(m.parameters, by = (x -> x.key))
     for param in sorted_parameters
         index = m.keys[param.key]
+        (prior_mean, prior_std) = moments(param)
+
         @printf moments_fid "\$\%4.99s\$ & " param.tex_label
-        @printf moments_fid "%s & %8.3f & %8.3f & %8.3f & %8.3f & %8.3f \\\\\n" outmat[index,:]...
+        @printf moments_fid "%s & " (param.fixed ? "-" : distid(get(param.prior)))
+        @printf moments_fid "%8.3f & " prior_mean
+        @printf moments_fid "%8.3f & " prior_std
+        @printf moments_fid "%8.3f & " post_means[index]
+        @printf moments_fid "%8.3f & %8.3f \\\\\n" post_bands[index, :]...
     end
 
-    # Close the file
+    # Write footer
     write_table_postamble(moments_fid; small=true)
 
-    # 4b. Write to Table 5: Prior mean and posterior mean
+    # Close file
+    close(moments_fid)
+end
 
-    # Open the TeX file and set up the heading
-    means_out = tablespath(m,"estimate", "prior_posterior_means.tex")
-    means_fid = open(means_out,"w")
+"""
+```
+prior_posterior_means_table(m, post_means; subset_string = "")
+```
 
+Produces a table of prior means and posterior means. Saves to:
+
+```
+tablespath(m, \"estimate\", \"prior_posterior_means[_sub=\$subset_string].tex\")
+```
+"""
+function prior_posterior_means_table(m::AbstractModel,
+                                     post_means::Vector;
+                                     subset_string::AbstractString = "")
+    # Open the TeX file
+    basename = "prior_posterior_means"
+    if !isempty(subset_string)
+        basename *= "_sub=$(subset_string)"
+    end
+    means_out = tablespath(m, "estimate", "$basename.tex")
+    means_fid = open(means_out, "w")
+
+    # Write header
     write_table_preamble(means_fid)
     @printf means_fid "\\vspace*{.5cm}\n"
     @printf means_fid "\\begin{longtable}{ccc}\n"
@@ -214,41 +317,28 @@ function make_moment_tables{T<:AbstractFloat}(m::AbstractModel, draws::Matrix{T}
     @printf means_fid "\\hline\n"
     @printf means_fid "\\endfoot\n"
 
-    # Write out the results
+    # Write results
+    sorted_parameters = sort(m.parameters, by = (x -> x.key))
     for param in sorted_parameters
         index = m.keys[param.key]
+
+        post_mean = if param.fixed
+            param.value
+        else
+            prior = get(param.prior)
+            isa(prior, RootInverseGamma) ? prior.τ : mean(prior)
+        end
+
         @printf means_fid "\$\%4.99s\$ & " param.tex_label
-        @printf means_fid "\%8.3f & \%8.3f \\\\\n" outmat2[index,:]...
+        @printf means_fid "%8.3f & " post_mean
+        @printf means_fid "\%8.3f \\\\\n" post_means[index]
     end
 
+    # Write footer
     write_table_postamble(means_fid)
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        @printf "Tables are saved as %s.\n" tablespath(m, "estimate", "*.tex")
-    end
-end
-
-function write_table_preamble(fid::IOStream)
-    @printf fid "\\documentclass[12pt]{article}\n"
-    @printf fid "\\usepackage{booktabs}\n"
-    @printf fid "\\usepackage[justification=centering]{caption}\n"
-    @printf fid "\\usepackage[margin=1in]{geometry}\n"
-    @printf fid "\\usepackage{longtable}\n"
-    @printf fid "\\begin{document}\n"
-    @printf fid "\\pagestyle{empty}\n"
-end
-
-# `small`: Whether to print an additional curly bracket after "\end{longtable}" (necessary if
-# the table is enclosed by "\small{}")
-function write_table_postamble(fid::IOStream; small::Bool=false)
-    if small
-        @printf fid "\\end{longtable}}\n"
-    else
-        @printf fid "\\end{longtable}\n"
-    end
-
-    @printf fid "\\end{document}"
-    close(fid)
+    # Close file
+    close(means_fid)
 end
 
 """
@@ -360,4 +450,26 @@ function find_density_bands{T<:AbstractFloat}(draws::Matrix, percents::Vector{T}
     end
 
     bands
+end
+
+function write_table_preamble(fid::IOStream)
+    @printf fid "\\documentclass[12pt]{article}\n"
+    @printf fid "\\usepackage{booktabs}\n"
+    @printf fid "\\usepackage[justification=centering]{caption}\n"
+    @printf fid "\\usepackage[margin=1in]{geometry}\n"
+    @printf fid "\\usepackage{longtable}\n"
+    @printf fid "\\begin{document}\n"
+    @printf fid "\\pagestyle{empty}\n"
+end
+
+# `small`: Whether to print an additional curly bracket after "\end{longtable}" (necessary if
+# the table is enclosed by "\small{}")
+function write_table_postamble(fid::IOStream; small::Bool=false)
+    if small
+        @printf fid "\\end{longtable}}\n"
+    else
+        @printf fid "\\end{longtable}\n"
+    end
+
+    @printf fid "\\end{document}"
 end

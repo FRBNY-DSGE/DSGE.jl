@@ -28,10 +28,10 @@ and δ_gdi are fixed at 1 and 0 respectively.
 function ss8!(m::Model1002)
 
     m <= parameter(:γ_gdi, 1., (-10., 10.), (-10., -10.), DSGE.Untransformed(), Normal(1., 2.), fixed = true,
-                   description = "γ_gdi: No description available.", tex_label = "\\gamma_{gdi}")
+                   tex_label = "\\gamma_{gdi}")
 
     m <= parameter(:δ_gdi, 0., (-10., 10.), (-10., -10.), DSGE.Untransformed(), Normal(0.00, 2.), fixed = true,
-                   description = "δ_gdi: No description available.", tex_label = "\\delta_{gdi}")
+                   tex_label = "\\delta_{gdi}")
 
 end
 
@@ -57,37 +57,38 @@ function ss9!(m::Model1002)
                    tex_label = "\\iota_p")
 
     m <= parameter(:h, 0.5347, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.7, 0.1), fixed = false,
-                   description = "h: Consumption habit persistence.", tex_label = "h")
+                   description = "h: Consumption habit persistence.",
+                   tex_label = "h")
 
     m <= parameter(:ppsi, 0.6862, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.15), fixed = false,
-                   description = "ppsi: Utilization costs.", tex_label = "ppsi")
+                   description = "ppsi: Utilization costs.",
+                   tex_label = "\\psi")
 
     m <= parameter(:ζ_w, 0.9291, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.1), fixed = false,
                    description = "ζ_w: (1-ζ_w) is the probability with which households can freely choose wages in each period. With probability ζ_w, wages increase at a geometrically weighted average of the steady state rate of wage increases and last period's productivity times last period's inflation.",
                    tex_label = "\\zeta_w")
 
     m <= parameter(:ι_w, 0.2992, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.15), fixed = false,
-                   description = "ι_w: No description available.",
+                   description = "ι_w: The weight attributed to last period's wage in wage indexation. (1-ι_w) is the weight attributed to steady-state wages.",
                    tex_label = "\\iota_w")
 
     m <= parameter(:ρ, 0.7126, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.75, 0.10), fixed = false,
                    description = "ρ: The degree of inertia in the monetary policy rule.",
-                   tex_label = "\\rho")
+                   tex_label = "\\rho_R")
 
     # Financial frictions parameters
     m <= parameter(:Fω, 0.0300, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.03, 0.01), fixed = true,
                    scaling = x -> 1 - (1-x)^0.25,
                    description = "F(ω): The cumulative distribution function of ω (idiosyncratic iid shock that increases or decreases entrepreneurs' capital).",
-                   tex_label = "F(\\omega)")
+                   tex_label = "F(\\bar{\\omega})")
 
-    m <= parameter(:ζ_spb, 0.0559, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.05, 0.005),
-                   fixed = false,
+    m <= parameter(:ζ_spb, 0.0559, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.05, 0.005), fixed = false,
                    description = "ζ_spb: The elasticity of the expected exess return on capital (or 'spread') with respect to leverage.",
-                   tex_label = "\\zeta_{spb}")
+                   tex_label = "\\zeta_{sp,b}")
 
     m <= parameter(:γ_star, 0.9900, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.99, 0.002),
                    fixed = true,
-                   description = "γ_star: No description available.",
+                   description = "γ_star: Fraction of entrepreneurs who survive and continue operating for another period.",
                    tex_label = "\\gamma_*")
 
     m <= parameter(:ρ_g, 0.9863, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
@@ -116,7 +117,7 @@ function ss9!(m::Model1002)
 
     m <= parameter(:ρ_rm, 0.2135, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
                    description = "ρ_rm: AR(1) coefficient in the monetary policy shock process.",
-                   tex_label = "\\rho_{rm}")
+                   tex_label = "\\rho_{r^m}")
 
     m <= parameter(:ρ_σ_w, 0.9898, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.75, 0.15), fixed = false,
                    description = "ρ_σ_w: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with mean ρ_σ_w. Innovations to the process are called _spread shocks_.",
@@ -131,40 +132,37 @@ function ss9!(m::Model1002)
                    tex_label = "\\rho_{\\gamma}")
 
     m <= parameter(:ρ_π_star, 0.9900, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = true,
-                   description = "ρ_π_star: No description available.", tex_label = "\\rho_{\\pi^*}")
+                   description = "ρ_π_star: AR(1) coefficient in the time-varying inflation target process.",
+                   tex_label = "\\rho_{\\pi_*}")
 
     m <= parameter(:ρ_lr, 0.6936, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
-                   description = "ρ_lr: No description available.", tex_label = "\\rho_{lr}")
+                   tex_label = "\\rho_{10y}")
 
     m <= parameter(:ρ_z_p, 0.8910, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
-                   description = "ρ_z_p: No description available.", tex_label = "\\rho_{z^p}")
+                   description = "ρ_z_p: AR(1) coefficient in the process describing the permanent component of productivity.",
+                   tex_label = "\\rho_{z^p}")
 
     m <= parameter(:ρ_tfp, 0.1953, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
-                   description = "ρ_tfp: No description available.", tex_label = "\\rho_{tfp}")
+                   tex_label = "\\rho_{tfp}")
 
-    m <= parameter(:ρ_gdpdef, 0.5379, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2),
-                   fixed = false,
-                   description = "ρ_gdpdef: GDP deflator.",
+    m <= parameter(:ρ_gdpdef, 0.5379, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
                    tex_label = "\\rho_{gdpdef}")
 
-    m <= parameter(:ρ_corepce, 0.2320, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2),
-                   fixed = false, description = "ρ_corepce: No description available.",
-                   tex_label = "\\rho_{corepce}")
+    m <= parameter(:ρ_corepce, 0.2320, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
+                   tex_label = "\\rho_{pce}")
 
     m <= parameter(:η_gz, 0.8400, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.50, 0.20), fixed = false,
                    description = "η_gz: Correlate g and z shocks.",
                    tex_label = "\\eta_{gz}")
 
     m <= parameter(:η_λ_f, 0.7892, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.50, 0.20), fixed = false,
-                   description = "η_λ_f: No description available.",
                    tex_label = "\\eta_{\\lambda_f}")
 
     m <= parameter(:η_λ_w, 0.4226, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.50, 0.20), fixed = false,
                    description = "η_λ_w: AR(2) coefficient on wage markup shock process.",
                    tex_label = "\\eta_{\\lambda_w}")
 
-    m <= parameter(:Iendoα, 0.0000, (0.0, 1.0), (0.0, 0.0), DSGE.Untransformed(), BetaAlt(0.50, 0.20),
-                   fixed = true,
+    m <= parameter(:Iendoα, 0.0000, (0.0, 1.0), (0.0, 0.0), DSGE.Untransformed(), BetaAlt(0.50, 0.20), fixed = true,
                    description = "Iendoα: Indicates whether to use the model's endogenous α in the capacity utilization adjustment of total factor productivity.",
                    tex_label = "I\\{\\alpha^{model}\\}")
 

@@ -44,6 +44,6 @@ for fixed_param in [:δ, :λ_w, :ϵ_w, :ϵ_p, :g_star]
 end
 
 # Make sure that compute_moments runs appropriately
-compute_moments(m, verbose=:none)
+moment_tables(m, verbose=:none)
 
 nothing
