@@ -67,9 +67,7 @@ function impulse_responses{S<:AbstractFloat}(m::AbstractModel,
             # Assign return values from compute_shock_decompositions to a slice of localpart
             localpart[i_local, states_range, :, :] = states
             localpart[i_local, obs_range,    :, :] = obs
-            if forecast_pseudoobservables(m)
-                localpart[i_local, pseudo_range, :, :] = pseudo
-            end
+            localpart[i_local, pseudo_range, :, :] = pseudo
         end
         return localpart
     end

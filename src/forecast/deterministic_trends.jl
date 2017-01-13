@@ -81,11 +81,9 @@ function deterministic_trends{S<:AbstractFloat}(m::AbstractModel, systems::DVect
             i_local = mod(i-1, ndraws_local) + 1
 
             # Assign return values from compute_shock_decompositions to a slice of localpart
-            localpart[i_local, states_range, :, :] = dettrend_states
-            localpart[i_local, obs_range,    :, :] = dettrend_obs
-            if forecast_pseudoobservables(m)
-                localpart[i_local, pseudo_range, :, :] = dettrend_pseudo
-            end
+            localpart[i_local, states_range, :] = dettrend_states
+            localpart[i_local, obs_range,    :] = dettrend_obs
+            localpart[i_local, pseudo_range, :] = dettrend_pseudo
         end
         return localpart
     end

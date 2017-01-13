@@ -106,7 +106,7 @@ function smooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     shocks = convert(DArray, out[1:ndraws, shocks_range, 1:nperiods])
     pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods])
     initial_states = DArray((ndraws,), procs, [nprocs]) do I
-        Vector{S}[convert(Array, slice(out, i, states0_range, 1:nstates)) for i in first(I)]
+        Vector{S}[convert(Array, slice(out, i, states0_range, states_range)) for i in first(I)]
     end
 
     return states, shocks, pseudo, initial_states
