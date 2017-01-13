@@ -90,8 +90,6 @@ type Model990{T} <: AbstractModel{T}
     testing::Bool                                   # Whether we are in testing mode or not
 
     observable_mappings::OrderedDict{Symbol, Observable}
-#    data_series::Dict{Symbol,Vector{Symbol}}       # Keys = data sources, values = vector of series mnemonics
-#    data_transforms::OrderedDict{Symbol,Function}  # functions to transform raw data into input matrix
 end
 
 description(m::Model990) = "FRBNY DSGE Model m990, $(m.subspec)"
@@ -182,24 +180,6 @@ function Model990(subspec::AbstractString="ss2";
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()
-
-    # # Set up data sources and series
-    # fred_series        = [:GDP, :GDPCTPI, :PCE, :FPI, :CNP16OV, :CE16OV, :PRS85006013,
-    #                       :UNRATE, :AWHNONAG, :DFF, :BAA, :GS10, :PRS85006063, :CES0500000030, :CLF16OV,
-    #                       :PCEPILFE, :COMPNFB, :THREEFYTP10]
-    # spf_series         = [:ASACX10]
-    # fernald_series     = [:TFPJQ, :TFPKQ]
-    # longrate_series    = [:FYCCZA]
-    # conditional_series = [:GDP, :GDPCTPI, :DFF, :BAA, :GS10, :PCEPILFE]
-    # # ois data taken care of in load_data
-
-    # data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
-    #                                           :fernald => fernald_series, :longrate => longrate_series,
-    #                                           :conditional => conditional_series)
-
-    # set up data transformations
-    # data_transforms = OrderedDict{Symbol,Function}()
-    # observable_mappings = Dict{Symbol,Observable}()
 
     # initialize empty model
     m = Model990{Float64}(

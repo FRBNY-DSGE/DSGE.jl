@@ -64,11 +64,11 @@ conditions.
 * `testing::Bool`: Indicates whether the model is in testing mode. If `true`, settings from
   `m.test_settings` are used in place of those in `m.settings`.
 
-* `data_series::Dict{Symbol,Vector{Symbol}}`: A dictionary that stores
-  data sources (keys) and lists of series mnemonics (values). DSGE.jl
-  will fetch data from the Federal Reserve Bank of St. Louis's FRED
-  database; all other data must be downloaded by the user. See
-  `load_data` for further details.
+* `observable_mappings::OrderedDict{Symbol, Observable}`: An ordered
+  dictionary mapping the names of observables to `Observable` objects,
+  which store the series used to construct the observable and the
+  transformations applied to convert the data to model units and back
+  to reported units.
 """
 type Model1002{T} <: AbstractModel{T}
     parameters::ParameterVector{T}                  # vector of all time-invariant model parameters
