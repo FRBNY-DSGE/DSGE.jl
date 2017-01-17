@@ -179,7 +179,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             addl_data = DataFrame(fill(NaN, (size(df,1), length(mnemonics))))
             names!(addl_data, mnemonics)
             df = hcat(df, addl_data)
-            warn("$file was not found; NaNs used.")
+            warn("$file was not found; NaNs used")
         end
     end
 
@@ -193,6 +193,8 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
     mnemonic = parse_population_mnemonic(m)[1]
     writetable(filename, df[:,[:date,mnemonic]])
+
+    isvalid_data(m, df)
 
     df
 end
@@ -321,7 +323,7 @@ isvalid_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
 
 Return if dataset is valid for this model, ensuring that all observables are contained and
 that all quarters between the beginning of the presample and the end of the mainsample are
-contained.
+contained. Also checks to make sure that expected interest rate data is available if `n_anticipated_shocks(m) > 0`.
 """
 function isvalid_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
     valid = true
@@ -352,6 +354,13 @@ function isvalid_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
     if !isempty(datesdiff)
         println("Dates of 'df' do not match expected.")
         println(datesdiff)
+    end
+
+    # Ensure that no series is all NaN
+    for col in setdiff(names(df), [:date])
+        if all(isnan(df[col]))
+            error("df[$col] is all NaN.")
+        end
     end
 
     return valid
