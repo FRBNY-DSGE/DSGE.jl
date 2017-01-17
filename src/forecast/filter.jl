@@ -1,7 +1,7 @@
 """
 ```
 filter_all(m::AbstractModel, data, systems, z0, vz0; cond_type = :none,
-      lead = 0, allout = false, include_presample = true, procs = [myid()])
+      allout = false, include_presample = true, procs = [myid()])
 ```
 
 Distributes input arguments over `procs`; then computes and returns
@@ -25,8 +25,6 @@ where `S<:AbstractFloat`.
 
 - `cond_type::Symbol`: conditional case. See `forecast_all` for documentation of
   all cond_type options.
-- `lead::Int`: number of steps to forecast after the end of the data. Defaults
-  to 0.
 - `allout::Bool`: optional keyword argument indicating whether we want optional
   output variables returned as well. Defaults to `false`.
 - `include_presample::Bool`: indicates whether to include presample periods in
@@ -42,21 +40,21 @@ where `S<:AbstractFloat`.
 function filter_all{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     systems::DVector{System{S}, Vector{System{S}}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-    cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
+    cond_type::Symbol = :none, allout::Bool = false,
     include_presample::Bool = true, procs::Vector{Int} = [myid()])
 
     # Reset procs to [myid()] if necessary
     procs = reset_procs(m, procs)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filter_all(m, data, systems, z0, vz0; lead = lead, allout = allout,
+    filter_all(m, data, systems, z0, vz0; allout = allout,
            include_presample = include_presample, procs = procs)
 end
 
 function filter_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     systems::DVector{System{S}, Vector{System{S}}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-    lead::Int = 0, allout::Bool = false, include_presample::Bool = true,
+    allout::Bool = false, include_presample::Bool = true,
     procs::Vector{Int} = [myid()])
 
     # Reset procs to [myid()] if necessary
@@ -75,7 +73,7 @@ end
 
 """
 ```
-filter(m, data, system, z0, vz0; cond_type = :none, lead = 0, allout = false,
+filter(m, data, system, z0, vz0; cond_type = :none, allout = false,
       include_presample = true)
 ```
 
@@ -99,8 +97,6 @@ where `S<:AbstractFloat`.
 
 - `cond_type::Symbol`: conditional case. See `forecast_all` for documentation of
   all `cond_type` options.
-- `lead::Int`: number of steps to forecast after the end of the data. Defaults
-  to 0.
 - `allout::Bool`: optional keyword argument indicating whether we want optional
   output variables returned as well. Defaults to `false`.
 - `include_presample::Bool`: indicates whether to include presample periods in
@@ -112,17 +108,17 @@ where `S<:AbstractFloat`.
 """
 function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::System{S},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-    cond_type::Symbol = :none, lead::Int = 0, allout::Bool = false,
+    cond_type::Symbol = :none, allout::Bool = false,
     include_presample::Bool = true)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filter(m, data, system, z0, vz0; lead = lead, allout = allout,
+    filter(m, data, system, z0, vz0; allout = allout,
            include_presample = include_presample)
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::System{S},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-    lead::Int = 0, allout::Bool = false, include_presample::Bool = true)
+    allout::Bool = false, include_presample::Bool = true)
 
     # Unpack system
     T, R, C     = system[:TTT], system[:RRR], system[:CCC]
@@ -134,11 +130,11 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::Sys
         # (starting at index_zlb_start)
         kal, _, _, _ = kalman_filter_2part(m, data, T, R, C, z0, vz0;
                            ZZ = Z, DD = D, QQ = Q, MM = M, EE = E, VVall = V_all,
-                           lead = lead, allout = true, include_presample = true)
+                           allout = true, include_presample = true)
     else
         # Regular Kalman filter with no regime-switching
         kal = kalman_filter(m, data, T, C, Z, D, V_all, z0, vz0;
-            lead = lead, allout = allout, include_presample = include_presample)
+            allout = allout, include_presample = include_presample)
     end
 
     return kal
@@ -147,7 +143,7 @@ end
 """
 ```
 filterandsmooth_all(m, data, systems, z0 = Vector{S}(), vz0 = Matrix{S}();
-    cond_type = :none, lead = 0, procs = [myid()])
+    cond_type = :none, procs = [myid()])
 ```
 
 Computes and returns the smoothed states, shocks, and pseudo-observables, as
@@ -195,20 +191,19 @@ before calling `filterandsmooth_all`.
 function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     systems::DVector{System{S}, Vector{System{S}}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-    cond_type::Symbol = :none, lead::Int = 0,
-    procs::Vector{Int} = [myid()])
+    cond_type::Symbol = :none, procs::Vector{Int} = [myid()])
 
     # Reset procs to [myid()] if necessary
     procs = reset_procs(m, procs)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filterandsmooth_all(m, data, systems, z0, vz0; lead = lead, procs = procs)
+    filterandsmooth_all(m, data, systems, z0, vz0; procs = procs)
 end
 
 function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     systems::DVector{System{S}, Vector{System{S}}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-    lead::Int = 0, procs::Vector{Int} = [myid()])
+    procs::Vector{Int} = [myid()])
 
     # Reset procs to [myid()] if necessary
     procs = reset_procs(m, procs)
@@ -262,7 +257,7 @@ end
 """
 ```
 filterandsmooth(m, data, system, z0 = Vector{S}(), vz0 = Matrix{S}();
-    cond_type = :none, lead = 0)
+    cond_type = :none)
 ```
 
 Computes and returns the smoothed states, shocks, and pseudo-observables, as
@@ -285,8 +280,6 @@ where `S<:AbstractFloat`.
 
 - `cond_type::Symbol`: conditional case. See `forecast_all` for documentation of
   all cond_type options.
-- `lead::Int`: number of steps to forecast after the end of the data. Defaults
-  to 0.
 
 ### Outputs
 
@@ -312,15 +305,14 @@ before calling `filterandsmooth`.
 """
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     system::System{S}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-    cond_type::Symbol = :none, lead::Int = 0)
+    cond_type::Symbol = :none)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filterandsmooth(m, data, system, z0, vz0; lead = lead)
+    filterandsmooth(m, data, system, z0, vz0)
 end
 
 function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    system::System{S}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-    lead::Int = 0)
+    system::System{S}, z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}())
 
     # 0. Unpack system
     T, R, C     = system[:TTT], system[:RRR], system[:CCC]
@@ -340,11 +332,11 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         # (starting at index_zlb_start)
         kal, _, _, _ = kalman_filter_2part(m, data, T, R, C, z0, vz0;
                            ZZ = Z, DD = D, QQ = Q, MM = M, EE = E, VVall = V_all,
-                           lead = lead, allout = true, include_presample = true)
+                           allout = true, include_presample = true)
     else
         # Regular Kalman filter with no regime-switching
         kal = kalman_filter(m, data, T, C, Z, D, V_all, z0, vz0;
-                  lead = lead, allout = true, include_presample = true)
+                  allout = true, include_presample = true)
     end
 
     ## 2. Smooth
