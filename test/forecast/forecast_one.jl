@@ -13,7 +13,7 @@ custom_settings = Dict{Symbol, Setting}(
     :saveroot                => Setting(:saveroot, normpath(joinpath(dirname(@__FILE__), "..", "reference"))))
 m = Model990(custom_settings = custom_settings, testing = true)
 
-output_vars = [:histpseudo, :forecastpseudo, :forecastobs,
+output_vars = [:histpseudo, :forecastpseudo, :forecastobs, :forecastpseudobdd, :forecastobsbdd,
                :shockdecpseudo, :shockdecobs, :dettrendpseudo, :dettrendobs, :trendpseudo, :trendobs,
                :irfpseudo, :irfobs]
 
