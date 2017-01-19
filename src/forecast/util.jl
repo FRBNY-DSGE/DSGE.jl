@@ -91,6 +91,9 @@ function get_input_file(m, input_type)
         else
             error("Invalid input file override for input_type = $input_type: $override_file")
         end
+    # If input_type = :subset, also check for existence of overrides[:full]
+    elseif input_type == :subset
+        return get_input_file(m, :full)
     end
 
     if input_type == :mode
@@ -162,16 +165,16 @@ The entry corresponding to the `:forecastpseudo` key will look something like:
 """
 function get_output_files{S<:AbstractString}(m::AbstractModel, base::S,
                      input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                     pathfcn::Function = rawpath, subset_string::S = "",
+                     pathfcn::Function = rawpath, forecast_string::S = "",
                      fileformat = :jld)
     additional_file_strings = ASCIIString[]
     push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
-    if input_type == :subset
-        if isempty(subset_string)
-            error("Must supply a nonempty subset_string if input_type = subset")
-        else
-            push!(additional_file_strings, "sub=" * subset_string)
+    if isempty(forecast_string)
+        if input_type == :subset
+            error("Must supply a nonempty forecast_string if input_type = subset")
         end
+    else
+        push!(additional_file_strings, "fcid=" * forecast_string)
     end
     push!(additional_file_strings, "cond=" * abbrev_symbol(cond_type))
 
@@ -603,11 +606,11 @@ function compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
     # Call forecast_one with input_type = :subset
     subset_inds = collect(1:min_draws)
     forecast_outputs = forecast_one(m, :subset, :none, output_vars;
-                                    subset_inds = subset_inds, subset_string = "compile",
+                                    subset_inds = subset_inds, forecast_string = "compile",
                                     verbose = :none, procs = procs)
 
     # Delete output files
-    output_files = get_output_files(m, "forecast", :subset, :none, output_vars; subset_string = "compile")
+    output_files = get_output_files(m, "forecast", :subset, :none, output_vars; forecast_string = "compile")
     map(rm, collect(values(output_files)))
 end
 
