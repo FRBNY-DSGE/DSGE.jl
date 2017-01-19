@@ -74,6 +74,8 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("dataset creation successful")
         end
+        # check that dataset is valid
+        isvalid_data(m, df)
     end
 
     return df
@@ -193,8 +195,6 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
     mnemonic = parse_population_mnemonic(m)[1]
     writetable(filename, df[:,[:date,mnemonic]])
-
-    isvalid_data(m, df)
 
     df
 end
