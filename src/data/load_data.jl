@@ -191,12 +191,13 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     sort!(df, cols = :date)
 
     # print population level data to a file
-    filename = inpath(m, "data", "population_data_levels_$vint.csv")
+    if !m.testing
+        filename = inpath(m, "data", "population_data_levels_$vint.csv")
+        mnemonic = parse_population_mnemonic(m)[1]
+        writetable(filename, df[:,[:date,mnemonic]])
+    end
 
-    mnemonic = parse_population_mnemonic(m)[1]
-    writetable(filename, df[:,[:date,mnemonic]])
-
-    df
+    return df
 end
 
 """
