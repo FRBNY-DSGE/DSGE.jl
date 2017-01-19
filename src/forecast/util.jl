@@ -112,7 +112,7 @@ end
 """
 ```
 get_output_files(m, base, input_type, cond_type, output_vars;
-                 [pathfcn = rawpath], [subset_string = ""], [fileformat = :jld])
+                 [pathfcn = rawpath], [forecast_string = ""], [fileformat = :jld])
 ```
 
 Compute the appropriate output filenames for model `m`, forecast input
@@ -129,14 +129,14 @@ type `input_type`, and conditional type `cond_type`, for each output variable in
 
 - `pathfcn::Function`: should be one of `rawpath`, `workpath`,
   `inpath`, `figurespath`, `logpath`. Defaults to `rawpath`.
-- `subset_string::AbstractString`: subset identifier for when `input_type=:subset`
+- `forecast_string::AbstractString`: subset identifier for when `input_type=:subset`
 - `fileformat::Symbol`: file extension, without a period. Defaults to
   `:jld`, though `:h5` is another common option.
 
 
 ### Notes
-- If `input_type == :subset`, then the `subset_string` is also appended to the
-filenames. If in this case `subset_string` is empty, `get_output_files` throws
+- If `input_type == :subset`, then the `forecast_string` is also appended to the
+filenames. If in this case `forecast_string` is empty, `get_output_files` throws
 an error.
 
 - `base` can be any string, but is likely \"forecast\". An example use case is given below:

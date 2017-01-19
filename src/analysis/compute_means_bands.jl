@@ -2,13 +2,13 @@
 ```
 means_bands_all(m, input_type, cond_type, output_vars;
                 density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], minimize = false,
-                subset_string = "", load_dataset = true, load_population_data = true,
+                forecast_string = "", load_dataset = true, load_population_data = true,
                 population_forecast_file = "", verbose :low)
 
 
 means_bands_all(input_type, cond_type, output_vars, forecast_output_files;
                 density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], minimize = false,
-                subset_string = "", output_dir = "", population_data = DataFrame(),
+                forecast_string = "", output_dir = "", population_data = DataFrame(),
                 population_mnemonic = Nullable{Symbol}(),
                 population_forecast_file = "", y0_indexes = Dict{Symbol,Nullable{Int}}(),
                 data = Matrix{T}(), verbose::Symbol = :low)
@@ -42,15 +42,14 @@ Below, `T<:AbstractFloat` and `S<:AbstractString`:
 - `minimize::Bool`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 
-- `subset_string::S`: subset identifier string (the value "subs=value" in
-  the forecast output file identifier string). Only to be used when
-  `input_type == :subset`.
+- `forecast_string::S`: forecast identifier string (the value \"fcid=value\" in
+  the forecast output filename). Required when `input_type == :subset`.
 
 - `population_forecast_file::S`: if you have population forecast data,
   this is the filepath identifying where it is stored. In the method
   that accepts a model object, if `use_population_forecast(m) ==
   true`, the following file is used, if it exists:
-  `inpath(m, "data", "population_forecast_(data_vintage(m)).csv")`
+  `inpath(m, \"data\", \"population_forecast_(data_vintage(m)).csv\")`
 
 - `verbose`: level of error messages to be printed to screen. Options
   are `:none`, `:low`, `:high`
@@ -99,7 +98,7 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                                            cond_type::Symbol, output_vars::Vector{Symbol};
                                            density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                            minimize::Bool = false,
-                                           subset_string = "", load_dataset::Bool = true,
+                                           forecast_string = "", load_dataset::Bool = true,
                                            load_population_data::Bool = true,
                                            population_forecast_file = "",
                                            verbose::Symbol = :low)
@@ -161,12 +160,12 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
 
     ## Step 3: Get names of files that the forecast wrote
     forecast_output_files = DSGE.get_output_files(m, "forecast", input_type, cond_type,
-                                                  output_vars; subset_string = subset_string)
+                                                  output_vars; forecast_string = forecast_string)
 
     ## Step 4: We have everything we need; appeal to model-object-agnostic function
     means_bands_all(input_type, cond_type, output_vars, forecast_output_files,
                     density_bands = density_bands, minimize = minimize,
-                    subset_string = subset_string,
+                    forecast_string = forecast_string,
                     output_dir = workpath(m,"forecast",""),
                     population_data = level_data,
                     population_mnemonic = population_mnemonic,
@@ -181,7 +180,7 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
                                                forecast_output_files::Dict{Symbol,S};
                                                density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                                minimize::Bool = false,
-                                               subset_string = "",
+                                               forecast_string = "",
                                                output_dir = "",
                                                population_data::DataFrame = DataFrame(),
                                                population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
@@ -256,7 +255,7 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
         mb = means_bands(input_type, cond_type, output_var,
                          forecast_output_files, density_bands = density_bands,
                          minimize = minimize,
-                         subset_string = subset_string,
+                         forecast_string = forecast_string,
                          population_data = dlfiltered_population_data,
                          population_mnemonic = Nullable(:population_growth),
                          population_forecast = dlfiltered_population_forecast,
@@ -291,7 +290,7 @@ means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                                                  forecast_output_files::Dict{Symbol,S};
                                                  density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                                  minimize::Bool = false,
-                                                 subset_string::S = "",
+                                                 forecast_string::S = "",
                                                  population_data = DataFrame(),
                                                  population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                  population_forecast = DataFrame(),
@@ -313,7 +312,7 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                                                           forecast_output_files::Dict{Symbol,S};
                                                           density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                                           minimize::Bool = false,
-                                                          subset_string::S = "",
+                                                          forecast_string::S = "",
                                                           population_data = DataFrame(),
                                                           population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                           population_forecast = DataFrame(),
@@ -414,7 +413,7 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                    :product    => product,
                    :class      => class,
                    :indices    => variable_indices,
-                   :subset_string => subset_string,
+                   :forecast_string => forecast_string,
                    :date_inds  => date_indices)
 
     means, bands = if product in [:hist, :forecast, :dettrend, :trend]

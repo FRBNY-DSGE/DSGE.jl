@@ -254,7 +254,7 @@ end
 forecast_one(m, input_type, cond_type, output_vars;
     df = DataFrame(), systems = dinit(System{Float64}, 0},
     kals = dinit(Kalman{Float64}, 0), subset_inds = [],
-    subset_string = "", verbose = :low, procs = [myid()])
+    forecast_string = "", verbose = :low, procs = [myid()])
 ```
 
 Compute, save, and return `output_vars` for input draws given by `input_type`
@@ -282,9 +282,9 @@ and conditional data case given by `cond_type`.
   more sophisticated selection criterion is desired, the user is responsible for
   determining the indices corresponding to that criterion. If `input_type` is
   not `subset`, `subset_inds` will be ignored
-- `subset_string::AbstractString`: short string identifying the subset to be
+- `forecast_string::AbstractString`: short string identifying the subset to be
   appended to the output filenames. If `input_type = :subset` and
-  `subset_string` is empty, an error is thrown.
+  `forecast_string` is empty, an error is thrown.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of:
 
@@ -347,7 +347,7 @@ function forecast_one(m::AbstractModel{Float64},
     systems::DVector{System{Float64}} = dinit(System{Float64}, 0),
     kals::DVector{Kalman{Float64}} = dinit(Kalman{Float64}, 0),
     subset_inds::Vector{Int} = Vector{Int}(),
-    subset_string::AbstractString = "", verbose::Symbol = :low,
+    forecast_string::AbstractString = "", verbose::Symbol = :low,
     procs::Vector{Int} = [myid()])
 
     ### 0. Setup
@@ -358,7 +358,7 @@ function forecast_one(m::AbstractModel{Float64},
     # Prepare forecast outputs
     forecast_output = Dict{Symbol, DArray{Float64}}()
     forecast_output_files = get_output_files(m, "forecast", input_type, cond_type, output_vars;
-                                subset_string = subset_string)
+                                forecast_string = forecast_string)
     output_dir = rawpath(m, "forecast")
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]

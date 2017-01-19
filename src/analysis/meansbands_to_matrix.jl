@@ -1,7 +1,7 @@
 """
 meansbands_matrix_all{S<:AbstractString}(m::AbstractModel,
     input_type::Symbol, cond_type::Symbol, output_vars = Vector{Symbol};
-    subset_string = "", verbose::Symbol = :low)
+    forecast_string = "", verbose::Symbol = :low)
 
 Reformat `MeansBands` object into matrices, and save to individual files.
 
@@ -14,14 +14,14 @@ Reformat `MeansBands` object into matrices, and save to individual files.
 
 ### Keyword Arguments
 
-- `subset_string`: if `input_type == :subset`, this is a subset identified
-  string. Otherwise, it should be left empty.
+- `forecast_string`: identifies the forecast (if desired). Required if
+  `input_type == :subset`
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
 """
 function meansbands_matrix_all(m::AbstractModel, input_type::Symbol,
                                cond_type::Symbol, output_vars::Vector{Symbol};
-                               subset_string = "", verbose::Symbol = :low)
+                               forecast_string = "", verbose::Symbol = :low)
 
     ## Step 0: Determine full set of output_vars necessary for plotting desired results
     #          Specifically, if output_vars contains shockdecs but not
@@ -31,7 +31,7 @@ function meansbands_matrix_all(m::AbstractModel, input_type::Symbol,
     output_vars = [symbol("mb", x) for x in output_vars]
     output_dir = workpath(m, "forecast", "")
     outfiles = DSGE.get_output_files(m, "forecast", input_type, cond_type, output_vars,
-                                     pathfcn = workpath, subset_string = subset_string)
+                                     pathfcn = workpath, forecast_string = forecast_string)
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
         info("Converting means and bands to matrices for input_type = $input_type, cond_type = $cond_type...")
@@ -64,7 +64,7 @@ function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
 
         ## Get name of file to write
         outfile = DSGE.get_output_files(m, "forecast", para(mb), cond_type(mb), [output_var],
-                    pathfcn = workpath, subset_string = mb.metadata[:subset_string],
+                    pathfcn = workpath, forecast_string = mb.metadata[:forecast_string],
                     fileformat = :h5)[output_var]
 
         base = basename(outfile)[3:end]
