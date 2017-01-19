@@ -641,7 +641,8 @@ added to `output_vars` when calling
 function add_requisite_output_vars(output_vars::Vector{Symbol})
 
     # Add :forecast<class>bdd if :forecast<class> is in output_vars
-    forecast_outputs = Base.filter(output -> contains(string(output), "forecast"), output_vars)
+    forecast_outputs = Base.filter(output -> contains(string(output), "forecast") && !contains(string(output), "bdd"),
+                                   output_vars)
     if !isempty(forecast_outputs)
         bdd_vars = [symbol("$(var)bdd") for var in forecast_outputs]
         output_vars = unique(vcat(output_vars, bdd_vars))
