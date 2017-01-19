@@ -640,6 +640,14 @@ added to `output_vars` when calling
 """
 function add_requisite_output_vars(output_vars::Vector{Symbol})
 
+    # Add :forecast<class>bdd if :forecast<class> is in output_vars
+    forecast_outputs = Base.filter(output -> contains(string(output), "forecast"), output_vars)
+    if !isempty(forecast_outputs)
+        bdd_vars = [symbol("$(var)bdd") for var in forecast_outputs]
+        output_vars = unique(vcat(output_vars, bdd_vars))
+    end
+
+    # Add :trend<class> and :dettrend<class> if :shockdec<class> is in output_vars
     shockdec_outputs = Base.filter(output -> contains(string(output), "shockdec"), output_vars)
     if !isempty(shockdec_outputs)
         classes = [get_class(output) for output in shockdec_outputs]
