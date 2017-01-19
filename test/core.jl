@@ -9,7 +9,7 @@ using Distributions
 @test α.key == :α
 @test isa(α.prior.value, Normal)
 @test α.prior.value.μ == 0.3
-@test α.description == ""
+@test α.description == "No description available."
 @test α.tex_label == ""
 @test isa(α.transform, DSGE.SquareRoot)
 
