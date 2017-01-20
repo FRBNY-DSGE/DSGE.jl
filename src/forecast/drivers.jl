@@ -143,22 +143,17 @@ function load_draws(m::AbstractModel, input_type::Symbol;
 
     # Read infiles
     if input_type in [:mean, :mode]
-        tmp = h5open(input_file_name, "r") do f
-            map(Float64, read(f, "params"))
-        end
-        params = reshape(tmp, 1, size(tmp,1))
+        tmp = map(Float64, h5read(input_file_name, "params"))
+        params = reshape(tmp, 1, size(tmp, 1))
 
     elseif input_type in [:full, :subset]
         if input_type == :full
-            h5open(input_file_name, "r") do f
-                params = map(Float64, read(f, "mhparams"))
-            end
+            params = map(Float64, h5read(input_file_name, "mhparams"))
         else
             if isempty(subset_inds)
-                error("Must supply nonempty vector of subset_inds if input_type = subset")
-            end
-            h5open(input_file_name, "r") do f
-                params = map(Float64, read(f, "mhparams")[subset_inds, :])
+                error("Must supply nonempty range of subset_inds if input_type = subset")
+            else
+                params = map(Float64, h5read(input_file_name, "mhparams", (subset_inds, :)))
             end
         end
 
