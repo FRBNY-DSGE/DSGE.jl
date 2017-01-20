@@ -286,6 +286,7 @@ n_draws(m::AbstractModel)          =  round(Int,(n_mh_blocks(m) - n_mh_burn(m)) 
 
 # Interface for forecast settings
 date_forecast_start(m::AbstractModel)   = get_setting(m, :date_forecast_start)
+forecast_blocking(m::AbstractModel)     = get_setting(m, :forecast_blocking)
 forecast_input_file_overrides(m::AbstractModel) = get_setting(m, :forecast_input_file_overrides)
 forecast_pseudoobservables(m::AbstractModel) = get_setting(m, :forecast_pseudoobservables)
 forecast_smoother(m::AbstractModel)     = get_setting(m, :forecast_smoother)

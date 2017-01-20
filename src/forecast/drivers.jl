@@ -341,7 +341,7 @@ function forecast_one(m::AbstractModel{Float64},
     df::DataFrame = DataFrame(),
     systems::DVector{System{Float64}} = dinit(System{Float64}, 0),
     kals::DVector{Kalman{Float64}} = dinit(Kalman{Float64}, 0),
-    blocking::Bool = false, block_number::Int = -1,
+    block_number::Int = -1,
     subset_inds::Range{Int64} = 1:0,
     forecast_string::AbstractString = "", verbose::Symbol = :low,
     procs::Vector{Int} = [myid()])
@@ -365,7 +365,7 @@ function forecast_one(m::AbstractModel{Float64},
     end
 
     # If forecasting in blocks, call forecast_one with input_type = :block
-    if blocking && input_type == :full
+    if forecast_blocking(m) && input_type == :full
         nblocks = n_mh_blocks(m) - n_mh_burn(m)
         draws_per_block = n_mh_simulations(m)
         total_forecast_time = 0.0
