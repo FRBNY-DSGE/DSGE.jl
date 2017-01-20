@@ -19,10 +19,10 @@ output_vars = [:histpseudo, :forecastpseudo, :forecastobs, :forecastpseudobdd, :
 
 # Check error handling for input_type = :subset
 @test_throws ErrorException forecast_one(m, :subset, :none, output_vars,
-                                subset_inds = collect(1:10), forecast_string = "",
+                                subset_inds = 1:10, forecast_string = "",
                                 verbose = :none)
 @test_throws ErrorException forecast_one(m, :subset, :none, output_vars,
-                                subset_inds = Vector{Int}(), forecast_string = "test",
+                                forecast_string = "test",
                                 verbose = :none)
 
 # Run all forecast combinations

@@ -96,7 +96,7 @@ function forecast_all(m::AbstractModel,
 end
 
 """
-`load_draws(m, input_type; subset_inds = [], verbose = :low, procs = [myid()])`
+`load_draws(m, input_type; subset_inds = 1:0, verbose = :low, procs = [myid()])`
 
 Load and return parameter draws from Metropolis-Hastings.
 
@@ -108,7 +108,7 @@ Load and return parameter draws from Metropolis-Hastings.
 
 ### Keyword Arguments
 
-- `subset_inds::Vector{Int}`: indices specifying the draws we want to use. See
+- `subset_inds::Range{Int64}`: indices specifying the draws we want to use. See
   `forecast_one` for more detail.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`. If `:low` or greater, prints
@@ -133,8 +133,8 @@ If `nsim` is not divisible by `jstep * nprocs`, where:
 then we truncate the draws so that `mod(nsim_new, jstep * nprocs) == 0`.
 """
 function load_draws(m::AbstractModel, input_type::Symbol;
-    subset_inds::Vector{Int} = Vector{Int}(), verbose::Symbol = :low,
-    procs::Vector{Int} = [myid()])
+    subset_inds::Range{Int64} = 1:0,
+    verbose::Symbol = :low, procs::Vector{Int} = [myid()])
 
     input_file_name = get_input_file(m, input_type)
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -253,7 +253,7 @@ end
 ```
 forecast_one(m, input_type, cond_type, output_vars;
     df = DataFrame(), systems = dinit(System{Float64}, 0},
-    kals = dinit(Kalman{Float64}, 0), subset_inds = [],
+    kals = dinit(Kalman{Float64}, 0), subset_inds = 1:0,
     forecast_string = "", verbose = :low, procs = [myid()])
 ```
 
@@ -278,7 +278,7 @@ and conditional data case given by `cond_type`.
   `prepare_systems`
 - `kals::DVector{Kalman{Float64}}`: vector of `n_sim_forecast` many `Kalman`
   objects. If not provided, will be loaded using `filter_all`
-- `subset_inds::Vector{Int}`: indices specifying the draws we want to use. If a
+- `subset_inds::Range{Int64}`: indices specifying the draws we want to use. If a
   more sophisticated selection criterion is desired, the user is responsible for
   determining the indices corresponding to that criterion. If `input_type` is
   not `subset`, `subset_inds` will be ignored
@@ -346,7 +346,7 @@ function forecast_one(m::AbstractModel{Float64},
     df::DataFrame = DataFrame(),
     systems::DVector{System{Float64}} = dinit(System{Float64}, 0),
     kals::DVector{Kalman{Float64}} = dinit(Kalman{Float64}, 0),
-    subset_inds::Vector{Int} = Vector{Int}(),
+    subset_inds::Range{Int64} = 1:0,
     forecast_string::AbstractString = "", verbose::Symbol = :low,
     procs::Vector{Int} = [myid()])
 

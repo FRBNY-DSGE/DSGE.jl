@@ -1,6 +1,6 @@
 """
 ```
-moment_tables(m; percent = 0.90, subset_inds = [], subset_string = "",
+moment_tables(m; percent = 0.90, subset_inds = 1:0, subset_string = "",
     verbose = :none)
 ```
 
@@ -15,7 +15,7 @@ bands in various LaTeX tables stored `tablespath(m)`.
 
 - `percent::AbstractFloat`: the percentage of the mass of draws from
   Metropolis-Hastings included between the bands displayed in output tables.
-- `subset_inds::Vector{Int}`: indices specifying the draws we want to use
+- `subset_inds::Range{Int64}`: indices specifying the draws we want to use
 - `subset_string::AbstractString`: short string identifying the subset to be
   appended to the output filenames. If `subset_inds` is nonempty but
   `subset_string` is empty, an error is thrown
@@ -23,7 +23,7 @@ bands in various LaTeX tables stored `tablespath(m)`.
   standard out. One of `:none`, `:low`, or `:high`
 """
 function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
-                       subset_inds::Vector{Int} = Vector{Int}(), subset_string::AbstractString = "",
+                       subset_inds::Range{Int64} = 1:0, subset_string::AbstractString = "",
                        verbose::Symbol = :low)
 
     ### 1. Load parameter draws from Metropolis-Hastings

@@ -332,7 +332,7 @@ end
 ```
 prepare_forecast_inputs!(m, input_type, cond_type, output_vars;
     df = DataFrame(), systems = dinit(System, 0), kals = dinit(Kalman{S}, 0),
-    subset_inds = Vector{Int}(), verbose = :none, procs = [myid()])
+    subset_inds = 1:0, verbose = :none, procs = [myid()])
 ```
 
 Check that the provided inputs `df`, `systems`, `states`, `subset_inds`, and
@@ -346,7 +346,7 @@ using the appropriate getter function.
 - `input_type::Symbol`: See documentation for `forecast_all`
   `:mode`
 - `cond_type::Symbol`: See documentation for `forecast_all`
-- `subset_inds::Vector{Int}`: indices specifying the draws we want to use. See
+- `subset_inds::Range{Int64}`: indices specifying the draws we want to use. See
   `forecast_one` for more detail
 - `output_vars::Vector{Symbol}`: vector of desired output variables. See
   `forecast_one`
@@ -362,7 +362,7 @@ using the appropriate getter function.
   `prepare_systems`
 - `kals::DVector{Kalman{Float64}}`: vector of `n_sim_forecast` many `Kalman`
   objects. If not provided, will be loaded using `filter_all`
-- `subset_inds::Vector{Int}`: indices specifying the draws we want to use. If
+- `subset_inds::Range{Int64}`: indices specifying the draws we want to use. If
   `input_type` is not `subset`, `subset_inds` will be ignored
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
@@ -381,7 +381,7 @@ function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
     df::DataFrame = DataFrame(),
     systems::DVector{System{S}} = dinit(System{S}, 0),
     kals::DVector{Kalman{S}} = dinit(Kalman{S}, 0),
-    subset_inds::Vector{Int} = Vector{Int}(),
+    subset_inds::Range{Int64} = 1:0,
     verbose::Symbol = :none, procs::Vector{Int} = [myid()])
 
     # Convert output_vars to a vector of strings
@@ -604,7 +604,7 @@ function compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
     min_draws = jstep * nprocs
 
     # Call forecast_one with input_type = :subset
-    subset_inds = collect(1:min_draws)
+    subset_inds = 1:min_draws
     forecast_outputs = forecast_one(m, :subset, :none, output_vars;
                                     subset_inds = subset_inds, forecast_string = "compile",
                                     verbose = :none, procs = procs)
