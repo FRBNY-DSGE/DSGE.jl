@@ -653,6 +653,8 @@ function compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
     # Delete output files
     output_files = get_output_files(m, "forecast", :subset, :none, output_vars; forecast_string = "compile")
     map(rm, collect(values(output_files)))
+    darray_closeall()
+    gc()
 end
 
 """

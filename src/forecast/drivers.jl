@@ -381,6 +381,7 @@ function forecast_one(m::AbstractModel{Float64},
                 subset_inds = subset_inds,
                 verbose = :none, procs = procs)
             darray_closeall()
+            gc()
 
             # Calculate time to complete this block, average block time, and
             # expected time to completion
