@@ -359,27 +359,28 @@ function forecast_one(m::AbstractModel{Float64},
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
-        info("Forecasting input_type = $input_type, cond_type = $cond_type...")
-        println("Start time: $(now())")
-        println("Forecast outputs will be saved in $output_dir")
+        if input_type == :block
+            info("Forecasting block $(block_number) of $(n_forecast_blocks(m))...")
+        else
+            info("Forecasting input_type = $input_type, cond_type = $cond_type...")
+            println("Start time: $(now())")
+            println("Forecast outputs will be saved in $output_dir")
+        end
     end
 
     # If forecasting in blocks, call forecast_one with input_type = :block
     if forecast_blocking(m) && input_type == :full
-        nblocks = n_mh_blocks(m) - n_mh_burn(m)
-        draws_per_block = n_mh_simulations(m)
+        block_inds = forecast_block_inds(m; procs = procs)
+        nblocks = n_forecast_blocks(m)
+        block_verbose = verbose == :none ? :none : :low
         total_forecast_time = 0.0
 
         for block = 1:nblocks
             tic()
-            start_ind   = (block-1)*draws_per_block + 1
-            end_ind     = block*draws_per_block
-            subset_inds = start_ind:end_ind
-
             forecast_one(m, :block, cond_type, output_vars;
                 df = df, block_number = block,
-                subset_inds = subset_inds,
-                verbose = :none, procs = procs)
+                subset_inds = block_inds[block],
+                verbose = block_verbose, procs = procs)
             darray_closeall()
             gc()
 

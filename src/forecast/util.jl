@@ -67,6 +67,50 @@ end
 
 """
 ```
+forecast_block_inds(m; procs = [myid()])
+```
+
+Returns a `Vector{Range{Int64}}` of length `n_forecast_blocks(m)`,
+where `block_inds[i]` is the range of indices for block `i`.
+"""
+function forecast_block_inds(m::AbstractModel;
+                             procs::Vector{Int} = [myid()])
+
+    nblocks = n_forecast_blocks(m)
+    ndraws  = n_draws(m)
+    jstep   = get_jstep(m, ndraws)
+    nprocs  = length(procs)
+    min_draws_per_block = jstep * nprocs
+
+    # If there are not enough total draws for each block to have at least
+    # `min_draws_per_block` blocks, decrease `nblocks` until there are
+    while ndraws < nblocks * min_draws_per_block
+        nblocks -= 1
+    end
+
+    # Number of draws in each of the first `nblocks-1` blocks
+    avg_draws_per_block = if nblocks != n_forecast_blocks(m)
+        m <= Setting(:n_forecast_blocks(m), nblocks)
+        warn("Decreased n_forecast_blocks to $nblocks")
+        min_draws_per_block
+    else
+        convert(Int64, round(ndraws / (nblocks*min_draws_per_block))) * min_draws_per_block
+    end
+
+    # Fill in draw indices for each block
+    block_inds  = Vector{Range{Int64}}(nblocks)
+    current_draw = 0
+    for i = 1:(nblocks-1)
+        block_inds[i] = (current_draw+1):(current_draw+avg_draws_per_block)
+        current_draw += avg_draws_per_block
+    end
+    block_inds[end] = (current_draw+1):ndraws
+
+    return block_inds
+end
+
+"""
+```
 get_input_file(m, input_type)
 ```
 
@@ -488,12 +532,15 @@ function read_darray(file::JLD.JldFile)
     # Read DArrays in blocks
     if exists(file, "nblocks")
         nblocks = read(file, "nblocks")
-
-        dims = collect(read(file, "block1_dims"))
         pids = collect(read(file, "block1_pids"))
 
-        offset_draws_per_block = dims[1]
-        dims[1] *= nblocks
+        # Determine total dimension of DArray
+        block_draws = zeros(nblocks)
+        for block = 1:nblocks
+            block_draws[block] = read(file, "block$(block)_dims")[1]
+        end
+        dims = collect(read(file, "block1_dims"))
+        dims[1] = sum(block_draws)
 
         offset_draws = 0
         out = zeros(dims...)
@@ -503,8 +550,9 @@ function read_darray(file::JLD.JldFile)
                 inds[1] += offset_draws
                 out[inds...] = read(file, "block$(block)_arr$pid")
             end
-            offset_draws += offset_draws_per_block
+            offset_draws += block_draws[block]
         end
+
     # Don't read in blocks
     else
         dims = read(file, "dims")
