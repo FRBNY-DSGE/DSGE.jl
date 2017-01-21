@@ -87,7 +87,7 @@ module DSGE
 
         # data/
         load_data, load_data_levels, load_cond_data_levels, load_fred_data,
-        transform_data, save_data,
+        transform_data, save_data, get_data_filename,
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
         hpadjust, oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
         logtopct_annualized_percapita, logtopct_annualized, loglevelto4qpct_annualized_percapita,

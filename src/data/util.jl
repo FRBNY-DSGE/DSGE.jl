@@ -116,3 +116,47 @@ function na2nan!(v::DataArray)
         v[i] = isna(v[i]) ?  NaN : v[i]
     end
 end
+
+"""
+```
+nan_cond_vars!(m, df; cond_type = :none)
+```
+
+NaN out conditional period variables not in `cond_semi_names(m)` or
+`cond_full_names(m)` if necessary.
+"""
+function nan_cond_vars!(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
+    if cond_type in [:semi, :full]
+        cond_names = if cond_type == :semi
+            cond_semi_names(m)
+        elseif cond_type == :full
+            cond_full_names(m)
+        end
+
+        cond_names_nan = setdiff(names(df), [cond_names; :date])
+        T = eltype(df[:, cond_names_nan])
+        df[df[:, :date] .>= date_forecast_start(m), cond_names_nan] = convert(T, NaN)
+    end
+end
+
+"""
+```
+get_data_filename(m, cond_type)
+```
+
+Returns the data file for `m`, which depends on `data_vintage(m)`, and if
+`cond_type in [:semi, :full]`, also on `cond_vintage(m)` and `cond_id(m)`.
+"""
+function get_data_filename(m::AbstractModel, cond_type::Symbol)
+    vint = data_vintage(m)
+    filestring = "data"
+
+    # If writing conditional data, append conditional vintage and ID to filename
+    if cond_type in [:semi, :full]
+        cond_vint  = cond_vintage(m)
+        cond_idno  = cond_id(m)
+        filestring = filestring * "_cdvt=$(cond_vint)_cdid=$(cond_idno)"
+    end
+
+    return inpath(m, "data", "$(filestring)_$vint.csv")
+end

@@ -27,8 +27,9 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
 
     # Check if already downloaded
     if try_disk && has_saved_data(m; cond_type=cond_type)
+        filename = get_data_filename(m, cond_type)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            print("Reading dataset from disk...")
+            print("Reading dataset $(filename) from disk...")
         end
         df = read_data(m; cond_type = cond_type)
         if isvalid_data(m, df; cond_type = cond_type)
@@ -74,6 +75,11 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("dataset creation successful")
         end
+
+        # NaN out conditional period variables not in `cond_semi_names(m)` or
+        # `cond_full_names(m)` if necessary
+        nan_cond_vars!(m, df; cond_type = cond_type)
+
         # check that dataset is valid
         isvalid_data(m, df)
     end
@@ -219,9 +225,9 @@ appended or merged into the conditional data:
 function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
     # Prepare file name
-    cond_vint = get_setting(m, :cond_vintage)
-    cond_id = get_setting(m, :cond_id)
-    file = inpath(m, "cond", "cond_vint=$(cond_vint)_cdid=$(cond_id).csv")
+    cond_vint = cond_vintage(m)
+    cond_idno = cond_id(m)
+    file = inpath(m, "cond", "cond_vint=$(cond_vint)_cdid=$(cond_idno).csv")
 
     if isfile(file)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -268,12 +274,7 @@ save_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
 Save `df` to disk as CSV. File is located in `inpath(m, \"data\")`.
 """
 function save_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
-    vint = data_vintage(m)
-    filestring = "data"
-    if cond_type in [:semi, :full]
-        filestring = filestring * "_cond=$cond_type"
-    end
-    filename = inpath(m, "data", "$(filestring)_$vint.csv")
+    filename = get_data_filename(m, cond_type)
     writetable(filename, df)
 end
 
@@ -286,13 +287,8 @@ Determine if there is a saved dataset on disk for the required vintage and
 conditional type.
 """
 function has_saved_data(m::AbstractModel; cond_type::Symbol = :none)
-    vint = data_vintage(m)
-    filestring = "data"
-    if cond_type in [:semi, :full]
-        filestring = filestring * "_cond=$cond_type"
-    end
-    filename = inpath(m, "data", "$(filestring)_$vint.csv")
-    isfile(filename)
+    filename = get_data_filename(m, cond_type)
+    return isfile(filename)
 end
 
 """
@@ -303,16 +299,15 @@ read_data(m::AbstractModel; cond_type::Symbol = :none)
 Read CSV from disk as DataFrame. File is located in `inpath(m, \"data\")`.
 """
 function read_data(m::AbstractModel; cond_type::Symbol = :none)
-    vint = data_vintage(m)
-    filestring = "data"
-    if cond_type in [:semi, :full]
-        filestring = filestring * "_cond=$cond_type"
-    end
-    filename = inpath(m, "data", "$(filestring)_$vint.csv")
+    filename = get_data_filename(m, cond_type)
     df       = readtable(filename)
 
     # Convert date column from string to Date
     df[:date] = map(Date, df[:date])
+
+    # NaN out conditional period variables not in `cond_semi_names(m)` or
+    # `cond_full_names(m)` if necessary
+    nan_cond_vars!(m, df; cond_type = cond_type)
 
     return df
 end

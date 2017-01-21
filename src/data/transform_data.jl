@@ -63,19 +63,6 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
 
     sort!(transformed, cols = :date)
 
-    # NaN out observables not used for (semi)conditional forecasts
-    if cond_type in [:semi, :full]
-        cond_names = if cond_type == :semi
-            cond_semi_names(m)
-        elseif cond_type == :full
-            cond_full_names(m)
-        end
-
-        cond_names_nan = setdiff(names(transformed), [cond_names; :date])
-        T = eltype(transformed[:, cond_names_nan])
-        transformed[transformed[:, :date] .>= date_forecast_start(m), cond_names_nan] = convert(T, NaN)
-    end
-
     return transformed
 end
 
