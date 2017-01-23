@@ -179,10 +179,10 @@ end
 
 """
 ```
-prepare_systems(m, input_type, params; procs = [myid()])
+prepare_systems(m, input_type, params)
 ```
 
-Returns a `DVector{System{Float64}}` of `System` objects, one for each draw in
+Returns a `Vector{System{Float64}}` of `System` objects, one for each draw in
 `params` (after thinning), by recomputing the state-space system.
 
 ### Inputs
@@ -193,24 +193,16 @@ Returns a `DVector{System{Float64}}` of `System` objects, one for each draw in
 - `params::Matrix{Float64}`: matrix of size `nsim` x `nparams` of parameter
   draws
 
-### Keyword Arguments
-
-- `procs::Vector{Int}`: list of worker processes over which to distribute
-  draws. Defaults to `[myid()]`.
-
 ### Outputs
 
-- `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
+- `systems::Vector{System{Float64}}`: vector of `n_sim_forecast` many `System`
   objects, one for each draw
 
 where `n_sim_forecast = n_sim / jstep` is the number of draws after thinning a
 second time.
 """
 function prepare_systems(m::AbstractModel, input_type::Symbol,
-    params::Matrix{Float64}; procs::Vector{Int} = [myid()])
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs, Nullable(input_type))
+    params::Matrix{Float64})
 
     # Setup
     n_sim = size(params,1)
@@ -219,23 +211,14 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
 
     if input_type in [:mean, :mode, :init]
         update!(m, vec(params))
-        systems = dfill(compute_system(m), (1,), procs)
+        systems = [compute_system(m)]
     elseif input_type in [:full, :subset, :block]
-        nprocs = length(procs)
-        systems = DArray((n_sim_forecast,), procs, [nprocs]) do I
-            draw_inds = first(I)
-            ndraws_local = convert(Int, n_sim_forecast/nprocs)
-            localpart = Vector{System{Float64}}(ndraws_local)
-
-            for i in draw_inds
-                j = i * jstep
-                i_local = mod(i-1, ndraws_local) + 1
-
-                params_j = vec(params[j,:])
-                update!(m, params_j)
-                localpart[i_local] = compute_system(m)
-            end
-            return localpart
+        systems = Vector{System}(n_sim_forecast)
+        for i = 1:n_sim_forecast
+            j = i * jstep
+            params_j = vec(params[j, :])
+            update!(m, params_j)
+            systems[i] = compute_system(m)
         end
     else
         throw(ArgumentError("Not implemented."))
@@ -247,9 +230,9 @@ end
 """
 ```
 forecast_one(m, input_type, cond_type, output_vars;
-    df = DataFrame(), systems = dinit(System{Float64}, 0},
-    kals = dinit(Kalman{Float64}, 0), subset_inds = 1:0,
-    forecast_string = "", verbose = :low, procs = [myid()])
+    df = DataFrame(), systems = Vector{System{Float64}}(),
+    kals = Vector{Kalman{Float64}}(), subset_inds = 1:0,
+    forecast_string = "", verbose = :low)
 ```
 
 Compute, save, and return `output_vars` for input draws given by `input_type`
@@ -268,10 +251,10 @@ and conditional data case given by `cond_type`.
 - `df::DataFrame`: Historical data. If `cond_type in [:semi, :full]`, then the
    final row of `df` should be the period containing conditional data. If not
    provided, will be loaded using `load_data` with the appropriate `cond_type`
-- `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
+- `systems::Vector{System{Float64}}`: vector of `n_sim_forecast` many `System`
   objects, one for each draw. If not provided, will be loaded using
   `prepare_systems`
-- `kals::DVector{Kalman{Float64}}`: vector of `n_sim_forecast` many `Kalman`
+- `kals::Vector{Kalman{Float64}}`: vector of `n_sim_forecast` many `Kalman`
   objects. If not provided, will be loaded using `filter_all`
 - `subset_inds::Range{Int64}`: indices specifying the draws we want to use. If a
   more sophisticated selection criterion is desired, the user is responsible for
@@ -292,59 +275,44 @@ and conditional data case given by `cond_type`.
     times for each step and the file names being written to.
 ```
 
-- `procs::Vector{Int}`: list of worker processes that have been previously added
-  by the user. Defaults to `[myid()]`
-
 ### Output
 
-- `forecast_outputs::Dict{Symbol, DArray{Float64}}`: dictionary of forecast
+- `forecast_outputs::Dict{Symbol, Array{Float64}}`: dictionary of forecast
   outputs. Keys are `output_vars`, which is some subset of:
 
 ```
-  - `:histstates`: `DArray{Float64, 3}` of smoothed historical states
-  - `:histobs`: `DArray{Float64, 3}` of smoothed historical data
-  - `:histpseudo`: `DArray{Float64, 3}` of smoothed historical
+  - `:histstates`: `Array{Float64, 3}` of smoothed historical states
+  - `:histobs`: `Array{Float64, 3}` of smoothed historical data
+  - `:histpseudo`: `Array{Float64, 3}` of smoothed historical
     pseudo-observables (if a pseudo-measurement equation has been provided for
     this model type)
-  - `:histshocks`: `DArray{Float64, 3}` of smoothed historical shocks
-  - `:forecaststates`: `DArray{Float64, 3}` of forecasted states
-  - `:forecastobs`: `DArray{Float64, 3}` of forecasted observables
-  - `:forecastpseudo`: `DArray{Float64, 3}` of forecasted pseudo-observables (if
+  - `:histshocks`: `Array{Float64, 3}` of smoothed historical shocks
+  - `:forecaststates`: `Array{Float64, 3}` of forecasted states
+  - `:forecastobs`: `Array{Float64, 3}` of forecasted observables
+  - `:forecastpseudo`: `Array{Float64, 3}` of forecasted pseudo-observables (if
     a pseudo-measurement equation has been provided for this model type)
-  - `:forecastshocks`: `DArray{Float64, 3}` of forecasted shocks
+  - `:forecastshocks`: `Array{Float64, 3}` of forecasted shocks
   - `:forecaststatesbdd`, `:forecastobsbdd`, `:forecastpseudobdd`, and
-    `:forecastshocksbdd`: `DArray{Float64, 3}`s of forecasts where we enforce
+    `:forecastshocksbdd`: `Array{Float64, 3}`s of forecasts where we enforce
     the zero lower bound to be `forecast_zlb_value(m)`
-  - `:shockdecstates`: `DArray{Float64, 4}` of state shock decompositions
-  - `:shockdecobs`: `DArray{Float64, 4}` of observable shock decompositions
-  - `:shockdecpseudo`: `DArray{Float64, 4}` of pseudo-observable shock
+  - `:shockdecstates`: `Array{Float64, 4}` of state shock decompositions
+  - `:shockdecobs`: `Array{Float64, 4}` of observable shock decompositions
+  - `:shockdecpseudo`: `Array{Float64, 4}` of pseudo-observable shock
     decompositions (if a pseudo-measurement equation has been provided for this
     model type)
-  - `:irfstates`: `DArray{Float64, 4}` of state impulse responses
-  - `:irfobs`: `DArray{Float64, 4}` of observable impulse responses
-  - `:irfpseudo`: `DArray{Float64, 4}` of pseudo observable impulse responses
+  - `:irfstates`: `Array{Float64, 4}` of state impulse responses
+  - `:irfobs`: `Array{Float64, 4}` of observable impulse responses
+  - `:irfpseudo`: `Array{Float64, 4}` of pseudo observable impulse responses
       (if a pseudo-measurement equation has been provided)
 ```
-
-### Notes
-
-- `forecast_one` prepares inputs to the forecast for a particular combination of
-  input, output and cond types by distributing system matrices and final
-  historical state vectors across `procs`. The user must add processes
-  separately and pass the worker identification numbers here.
-- if `ndraws % length(procs) != 0`, `forecast_one` truncates `procs` so that the
-  draws can be evenly distributed across workers. This is required by the
-  `DistributedArrays` package.
 """
 function forecast_one(m::AbstractModel{Float64},
     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
     df::DataFrame = DataFrame(),
-    systems::DVector{System{Float64}} = dinit(System{Float64}, 0),
-    kals::DVector{Kalman{Float64}} = dinit(Kalman{Float64}, 0),
-    block_number::Int = -1,
-    subset_inds::Range{Int64} = 1:0,
-    forecast_string::AbstractString = "", verbose::Symbol = :low,
-    procs::Vector{Int} = [myid()])
+    systems::Vector{System{Float64}} = Vector{System{Float64}}(),
+    kals::Vector{Kalman{Float64}} = Vector{Kalman{Float64}}(),
+    block_number::Int = -1, subset_inds::Range{Int64} = 1:0,
+    forecast_string::AbstractString = "", verbose::Symbol = :low)
 
     ### 0. Setup
 
@@ -352,15 +320,16 @@ function forecast_one(m::AbstractModel{Float64},
     output_vars = add_requisite_output_vars(output_vars)
 
     # Prepare forecast outputs
-    forecast_output = Dict{Symbol, DArray{Float64}}()
+    forecast_output = Dict{Symbol, Array{Float64}}()
     forecast_output_files = get_output_files(m, "forecast", input_type, cond_type, output_vars;
                                 forecast_string = forecast_string)
+    map(file -> isfile(file) ? rm(file) : nothing, values(forecast_output_files))
     output_dir = rawpath(m, "forecast")
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
         if input_type == :block
-            info("Forecasting block $(block_number) of $(n_forecast_blocks(m))...")
+            info("Forecasting block $(block_number)...")
         else
             info("Forecasting input_type = $input_type, cond_type = $cond_type...")
             println("Start time: $(now())")
@@ -369,36 +338,28 @@ function forecast_one(m::AbstractModel{Float64},
     end
 
     # If forecasting in blocks, call forecast_one with input_type = :block
-    if forecast_blocking(m) && input_type == :full
-        block_inds = forecast_block_inds(m; procs = procs)
-        nblocks = n_forecast_blocks(m)
-        block_verbose = verbose == :none ? :none : :low
-        total_forecast_time = 0.0
+    if input_type == :full
+        block_inds = forecast_block_inds(m)
+        nblocks = length(block_inds)
 
-        for block = 1:nblocks
-            tic()
+        futures = @parallel for block = 1:nblocks
             forecast_one(m, :block, cond_type, output_vars;
-                df = df, block_number = block,
-                subset_inds = block_inds[block],
-                verbose = block_verbose, procs = procs)
-            darray_closeall()
-            gc()
+                         df = df, block_number = block,
+                         subset_inds = block_inds[block])
+            info("Block $block completed")
+        end
 
-            # Calculate time to complete this block, average block time, and
-            # expected time to completion
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                block_time = toq()
-                total_forecast_time += block_time
-                total_forecast_time_min = total_forecast_time/60
-                expected_time_remaining     = (total_forecast_time/block)*(nblocks - block)
-                expected_time_remaining_min = expected_time_remaining/60
-
-                println("\nCompleted $block of $nblocks blocks.")
-                println("Total time to compute $block blocks: $total_forecast_time_min minutes")
-                println("Expected time remaining in forecast: $expected_time_remaining_min minutes")
+        while !all(x -> x == 0, futures)
+            for i in 1:length(futures)
+                channel = futures[i]
+                if isready(channel)
+                    take!(channel)
+                    futures[i] = 0
+                end
             end
         end
-        return forecast_output
+
+        return
     end
 
     # Check that provided forecast inputs are well-formed
@@ -406,12 +367,11 @@ function forecast_one(m::AbstractModel{Float64},
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("\nPreparing forecast inputs...")
     end
-    @time_verbose df, systems, kals, procs =
+    @time_verbose df, systems, kals =
         prepare_forecast_inputs!(m, input_type, cond_type, output_vars; df = df,
             systems = systems, kals = kals, subset_inds = subset_inds,
-            verbose = verbose, procs = procs)
+            verbose = verbose)
 
-    nprocs = length(procs)
     ndraws = length(systems)
 
 
@@ -430,7 +390,7 @@ function forecast_one(m::AbstractModel{Float64},
             println("\nSmoothing $(hists_to_compute)...")
         end
         @time_verbose histstates, histshocks, histpseudo, initial_states =
-            smooth_all(m, df, systems, kals; cond_type = cond_type, procs = procs)
+            smooth_all(m, df, systems, kals; cond_type = cond_type)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
@@ -449,7 +409,8 @@ function forecast_one(m::AbstractModel{Float64},
             end
         end
 
-        write_forecast_outputs(m, hists_to_compute, forecast_output_files, forecast_output;
+        write_forecast_outputs(m, hists_to_compute, forecast_output_files,
+                               forecast_output; subset_inds = subset_inds,
                                block_number = block_number, verbose = verbose)
     end
 
@@ -465,8 +426,7 @@ function forecast_one(m::AbstractModel{Float64},
             println("\nForecasting $(forecasts_to_compute)...")
         end
         @time_verbose forecaststates, forecastobs, forecastpseudo, forecastshocks =
-            forecast(m, systems, kals; cond_type = cond_type, enforce_zlb = false,
-                     procs = procs)
+            forecast(m, systems, kals; cond_type = cond_type, enforce_zlb = false)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
@@ -485,7 +445,8 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:forecastobs] = forecastobs
         end
 
-        write_forecast_outputs(m, forecasts_to_compute, forecast_output_files, forecast_output;
+        write_forecast_outputs(m, forecasts_to_compute, forecast_output_files,
+                               forecast_output; subset_inds = subset_inds,
                                block_number = block_number, verbose = verbose)
     end
 
@@ -499,8 +460,7 @@ function forecast_one(m::AbstractModel{Float64},
             println("\nForecasting $(forecasts_to_compute)...")
         end
         @time_verbose forecaststates, forecastobs, forecastpseudo, forecastshocks =
-            forecast(m, systems, kals; cond_type = cond_type, enforce_zlb = true,
-                     procs = procs)
+            forecast(m, systems, kals; cond_type = cond_type, enforce_zlb = true)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
@@ -519,7 +479,8 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:forecastobsbdd] = forecastobs
         end
 
-        write_forecast_outputs(m, forecasts_to_compute, forecast_output_files, forecast_output;
+        write_forecast_outputs(m, forecasts_to_compute, forecast_output_files,
+                               forecast_output; subset_inds = subset_inds,
                                block_number = block_number, verbose = verbose)
     end
 
@@ -532,7 +493,7 @@ function forecast_one(m::AbstractModel{Float64},
             println("\nComputing shock decompositions for $(shockdecs_to_compute)...")
         end
         @time_verbose shockdecstates, shockdecobs, shockdecpseudo =
-            shock_decompositions(m, systems, histshocks; procs = procs)
+            shock_decompositions(m, systems, histshocks)
 
         forecast_output[:shockdecstates] = shockdecstates
         forecast_output[:shockdecobs]    = shockdecobs
@@ -540,7 +501,8 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:shockdecpseudo] = shockdecpseudo
         end
 
-        write_forecast_outputs(m, shockdecs_to_compute, forecast_output_files, forecast_output;
+        write_forecast_outputs(m, shockdecs_to_compute, forecast_output_files,
+                               forecast_output; subset_inds = subset_inds,
                                block_number = block_number, verbose = verbose)
     end
 
@@ -555,7 +517,7 @@ function forecast_one(m::AbstractModel{Float64},
             println("\nComputing trend for $(trends_to_compute)...")
         end
         @time_verbose trendstates, trendobs, trendpseudo =
-            trends(m, systems; procs = procs)
+            trends(m, systems)
 
         forecast_output[:trendstates] = trendstates
         forecast_output[:trendobs]    = trendobs
@@ -563,7 +525,8 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:trendpseudo] = trendpseudo
         end
 
-        write_forecast_outputs(m, trends_to_compute, forecast_output_files, forecast_output;
+        write_forecast_outputs(m, trends_to_compute, forecast_output_files,
+                               forecast_output; subset_inds = subset_inds,
                                block_number = block_number, verbose = verbose)
     end
 
@@ -578,7 +541,7 @@ function forecast_one(m::AbstractModel{Float64},
         end
 
         @time_verbose dettrendstates, dettrendobs, dettrendpseudo =
-            deterministic_trends(m, systems, initial_states; procs = procs)
+            deterministic_trends(m, systems, initial_states)
 
         forecast_output[:dettrendstates] = dettrendstates
         forecast_output[:dettrendobs]    = dettrendobs
@@ -587,7 +550,9 @@ function forecast_one(m::AbstractModel{Float64},
         end
 
         dettrend_write_vars = [symbol("dettrend$c") for c in unique(map(get_class, dettrends_to_compute))]
-        write_forecast_outputs(m, dettrends_to_compute, forecast_output_files, forecast_output;
+
+        write_forecast_outputs(m, dettrends_to_compute, forecast_output_files,
+                               forecast_output; subset_inds = subset_inds,
                                block_number = block_number, verbose = verbose)
     end
 
@@ -598,7 +563,7 @@ function forecast_one(m::AbstractModel{Float64},
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("\nComputing impulse responses for $(irfs_to_compute)...")
         end
-        @time_verbose irfstates, irfobs, irfpseudo = impulse_responses(m, systems; procs = procs)
+        @time_verbose irfstates, irfobs, irfpseudo = impulse_responses(m, systems)
 
         forecast_output[:irfstates] = irfstates
         forecast_output[:irfobs] = irfobs
@@ -606,7 +571,8 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:irfpseudo] = irfpseudo
         end
 
-        write_forecast_outputs(m, irfs_to_compute, forecast_output_files, forecast_output;
+        write_forecast_outputs(m, irfs_to_compute, forecast_output_files,
+                               forecast_output; subset_inds = subset_inds,
                                block_number = block_number, verbose = verbose)
     end
 
@@ -614,7 +580,6 @@ function forecast_one(m::AbstractModel{Float64},
     # Return only desired output_vars
     for key in keys(forecast_output)
         if !(key in output_vars)
-            close(forecast_output[key])   # Explicitly garbage-collect DArray
             delete!(forecast_output, key) # Remove from Dict
         end
     end
