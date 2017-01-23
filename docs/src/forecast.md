@@ -300,7 +300,7 @@ DSGE.compute_system
 DSGE.reset_procs
 DSGE.get_jstep
 DSGE.get_input_file
-DSGE.get_output_files
+DSGE.get_forecast_output_files
 DSGE.write_forecast_outputs
 DSGE.write_forecast_metadata
 DSGE.read_forecast_metadata

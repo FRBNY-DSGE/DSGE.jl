@@ -76,7 +76,7 @@ module DSGE
         trends, compute_trends, compute_trend,
         deterministic_trends, compute_deterministic_trends, compute_deterministic_trend,
         impulse_responses, compute_impulse_response,
-        get_output_files, read_darray, write_darray, compile_forecast_one,
+        get_forecast_output_files, get_forecast_filename, read_darray, write_darray, compile_forecast_one,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
@@ -93,10 +93,12 @@ module DSGE
         logtopct_annualized_percapita, logtopct_annualized, loglevelto4qpct_annualized_percapita,
         loglevelto4qpct_annualized,
         parse_data_series, collect_data_transforms,
+        subtract_quarters, iterate_quarters,
 
         # analysis/
         find_density_bands, moment_tables, means_bands, means_bands_all, compute_means_bands, MeansBands,
-        meansbands_matrix_all, meansbands_matrix, read_mb
+        meansbands_matrix_all, meansbands_matrix, read_mb,
+        get_meansbands_input_files
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"

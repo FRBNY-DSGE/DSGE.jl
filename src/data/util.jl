@@ -116,3 +116,28 @@ function na2nan!(v::DataArray)
         v[i] = isna(v[i]) ?  NaN : v[i]
     end
 end
+
+
+"""
+
+- `quarters`: number of quarters to iterate forward or backward
+"""
+function iterate_quarters(start::Date, quarters::Int)
+
+    next = start
+    if quarters < 0
+        for n = 1:-quarters
+            next = Dates.toprev(next) do x
+                Dates.lastdayofquarter(x) == x
+            end
+        end
+    elseif quarters > 0
+        for n = 1:quarters
+            next = Dates.tonext(next) do x
+                Dates.lastdayofquarter(x) == x
+            end
+        end
+    end
+
+    next
+end

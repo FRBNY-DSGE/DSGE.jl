@@ -30,7 +30,7 @@ function meansbands_matrix_all(m::AbstractModel, input_type::Symbol,
     output_vars = add_requisite_output_vars(output_vars)
     output_vars = [symbol("mb", x) for x in output_vars]
     output_dir = workpath(m, "forecast", "")
-    outfiles = DSGE.get_output_files(m, "forecast", input_type, cond_type, output_vars,
+    outfiles = DSGE.get_meansbands_input_files(m, input_type, cond_type, output_vars,
                                      pathfcn = workpath, forecast_string = forecast_string)
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
@@ -63,7 +63,7 @@ function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
         condtype = cond_type(mb)
 
         ## Get name of file to write
-        outfile = DSGE.get_output_files(m, "forecast", para(mb), cond_type(mb), [output_var],
+        outfile = DSGE.get_forecast_filename(m, para(mb), cond_type(mb), output_var,
                     pathfcn = workpath, forecast_string = mb.metadata[:forecast_string],
                     fileformat = :h5)[output_var]
 

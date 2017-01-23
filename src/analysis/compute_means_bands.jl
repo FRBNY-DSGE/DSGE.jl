@@ -6,7 +6,7 @@ means_bands_all(m, input_type, cond_type, output_vars;
                 population_forecast_file = "", verbose :low)
 
 
-means_bands_all(input_type, cond_type, output_vars, forecast_output_files;
+means_bands_all(input_type, cond_type, output_vars, meansbands_input_files;
                 density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], minimize = false,
                 forecast_string = "", output_dir = "", population_data = DataFrame(),
                 population_mnemonic = Nullable{Symbol}(),
@@ -31,7 +31,7 @@ Below, `T<:AbstractFloat` and `S<:AbstractString`:
 
 #### Method 2:
 
-- `forecast_output_files::Dict{Symbol,S}`: dictionary mapping an output_var to the filename
+- `meansbands_input_files::Dict{Symbol,S}`: dictionary mapping an output_var to the filename
   containing forecasts for that output_var (where `S<:AbstractString)`. Keys should be one of the following:
   `:histpseudo, :forecastpseudo, :shockdecpseudo, :forecastobs, :shockdecobs`.
 
@@ -146,6 +146,9 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
         for prod in intersect(products, [:forecast])
             y0_indexes[prod] = index_forecast_start(m) - 1
         end
+        for prod in intersect(products, [:forecast4q])
+            y0_indexes[prod] = index_forecast_start(m) - 3
+        end
         for prod in intersect(products, [:shockdec, :dettrend, :trend])
             y0_indexes[prod] = index_shockdec_start(m) - 1
         end
@@ -159,11 +162,12 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
     end
 
     ## Step 3: Get names of files that the forecast wrote
-    forecast_output_files = DSGE.get_output_files(m, "forecast", input_type, cond_type,
-                                                  output_vars; forecast_string = forecast_string)
+    meansbands_input_files = DSGE.get_meansbands_input_files(m, input_type, cond_type,
+                                                   output_vars; forecast_string = forecast_string)
+
 
     ## Step 4: We have everything we need; appeal to model-object-agnostic function
-    means_bands_all(input_type, cond_type, output_vars, forecast_output_files,
+    means_bands_all(input_type, cond_type, output_vars, meansbands_input_files,
                     density_bands = density_bands, minimize = minimize,
                     forecast_string = forecast_string,
                     output_dir = workpath(m,"forecast",""),
@@ -177,7 +181,7 @@ end
 function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                                                cond_type::Symbol,
                                                output_vars::Vector{Symbol},
-                                               forecast_output_files::Dict{Symbol,S};
+                                               meansbands_input_files::Dict{Symbol,S};
                                                density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                                minimize::Bool = false,
                                                forecast_string = "",
@@ -229,7 +233,7 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
     mb_output_vars = [symbol("mb$x") for x in output_vars]
 
     mb_files = Dict{Symbol,AbstractString}()
-    for (x, fn) in forecast_output_files
+    for (x, fn) in meansbands_input_files
         base = "mb" * basename(fn)
         mb_files[x] = if isempty(output_dir)
             dir  = dirname(fn)
@@ -253,7 +257,7 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
 
         # compute means and bands object
         mb = means_bands(input_type, cond_type, output_var,
-                         forecast_output_files, density_bands = density_bands,
+                         meansbands_input_files, density_bands = density_bands,
                          minimize = minimize,
                          forecast_string = forecast_string,
                          population_data = dlfiltered_population_data,
@@ -287,7 +291,7 @@ end
 means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                                                  cond_type::Symbol,
                                                  output_var::Symbol,
-                                                 forecast_output_files::Dict{Symbol,S};
+                                                 meansbands_input_files::Dict{Symbol,S};
                                                  density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                                  minimize::Bool = false,
                                                  forecast_string::S = "",
@@ -309,7 +313,7 @@ All inputs are exactly the same as the second
 function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                                                           cond_type::Symbol,
                                                           output_var::Symbol,
-                                                          forecast_output_files::Dict{Symbol,S};
+                                                          meansbands_input_files::Dict{Symbol,S};
                                                           density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                                           minimize::Bool = false,
                                                           forecast_string::S = "",
@@ -332,7 +336,7 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
 
     ## Step 2: Read in raw forecast output and metadata (transformations, mappings from symbols to indices, etc)
     # open correct input file
-    forecast_output_file = forecast_output_files[output_var]
+    forecast_output_file = meansbands_input_files[output_var]
     metadata, fcast_output = jldopen(forecast_output_file, "r") do jld
         read_forecast_metadata(jld), DSGE.read_darray(jld)
     end
@@ -371,14 +375,30 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
 
         convert(Vector{Float64}, population_series[mnemonic])
 
-    elseif product in [:shockdec, :dettrend, :trend]
+    elseif product in [:shockdec, :dettrend, :trend, :forecast4q]
 
-        # For shockdecs, deterministic trend, and trend, we want to
-        # make sure population series corresponds with the saved dates.
+        if product == :forecast4q
+            # For forecast4q, we want the last 3 historical periods + the forecast
+            # date_list is the date_list for forecast, so date_list[1] corresponds to date_forecast_start.
 
-        start_date = date_list[1]
-        end_date   = date_list[end]
-        start_ind  = find(population_data[:date] .== start_date)[1]
+            start_date = iterate_quarters(date_list[1], -3)
+            end_date   = date_list[end]
+
+            println(population_data[:date])
+            println("meansbands input file: $(meansbands_input_files[output_var])")
+            println("start_date: $start_date")
+            println("end_date: $end_date")
+
+
+            start_ind  = find(population_data[:date] .== start_date)[1]
+        else
+            # For shockdecs, deterministic trend, and trend, we want to
+            # make sure population series corresponds with the saved dates.
+            start_date = date_list[1]
+            end_date   = date_list[end]
+            start_ind  = find(population_data[:date] .== start_date)[1]
+        end
+
         population_data = population_data[start_ind:end, mnemonic]
 
         # calculate number of periods that are in the future
@@ -416,7 +436,10 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                    :forecast_string => forecast_string,
                    :date_inds  => date_indices)
 
-    means, bands = if product in [:hist, :forecast, :dettrend, :trend]
+    means, bands = if product in [:hist, :forecast, :dettrend, :trend, :forecast4q]
+
+        # indicate whether we are getting a 4q forecast or regular annualized forecast
+        fourquarter = product == :forecast4q ? true : false
 
         # The `fcast_output` for trends only is of size `ndraws` x `nvars`. We
         # need to use `repeat` below because population adjustments will be
@@ -430,7 +453,7 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                             date_list = date_list, data = data,
                             population_series = population_series, y0_index =
                             y0_index, density_bands = density_bands,
-                            minimize = minimize)
+                            minimize = minimize, fourquarter = fourquarter)
 
     elseif product in [:shockdec, :irf]
 
@@ -466,7 +489,8 @@ function compute_means_bands{T<:AbstractFloat}(fcast_output::Array{T, 3},
                                                population_series = Vector{T}(),
                                                y0_index::Int = -1,
                                                density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9],
-                                               minimize::Bool = false)
+                                               minimize::Bool = false,
+                                               fourquarter::Bool = false)
 
     # Set up means and bands structures
     means = DataFrame(date = date_list)
@@ -482,13 +506,45 @@ function compute_means_bands{T<:AbstractFloat}(fcast_output::Array{T, 3},
         transform = parse_transform(transforms[var])
         fcast_series = squeeze(fcast_output[:, ind, :], 2)
 
-        transformed_fcast_output = if transform in [logtopct_annualized_percapita]
-            transform(fcast_series, population_series)
-        elseif transform in [loglevelto4qpct_annualized_percapita]
-            hist_data = data[ind, y0_index]
-            transform(fcast_series, hist_data, population_series)
+        transformed_fcast_output = if fourquarter
+            transform4q = get_transform4q(transform)
+
+            # transform
+            result = if transform4q in [logtopct_4q_percapita]
+                hist_data = data[ind, y0_index:end]
+                println("fcast_series: $(size(fcast_series))")
+                println("data: $(size(data))")
+                println("hist_data: $(size(hist_data))")
+                println("population_series: $(size(population_series))")
+
+                transform4q(fcast_series, hist_data, population_series)
+            elseif transform4q in [loglevelto4qpct_4q_percapita]
+                println("fcast_series: $(size(fcast_series))")
+                println("data: $(size(data))")
+                println("hist_data: $(size(hist_data))")
+                println("population_series: $(size(population_series))")
+
+                hist_data = data[ind, y0_index:end]
+                transform4q(fcast_series, hist_data, population_series)
+            else
+                println("fcast_series: $(size(fcast_series))")
+                println("data: $(size(data))")
+
+                transform4q(fcast_series)
+            end
+
+            result
         else
-            transform(fcast_series)
+            result = if transform in [logtopct_annualized_percapita]
+                transform(fcast_series, population_series)
+            elseif transform in [loglevelto4qpct_annualized_percapita]
+                hist_data = data[ind, y0_index]
+                transform(fcast_series, hist_data, population_series)
+            else
+                transform(fcast_series)
+            end
+
+            result
         end
 
         # compute the mean and bands across draws and add to dataframe
@@ -499,6 +555,11 @@ function compute_means_bands{T<:AbstractFloat}(fcast_output::Array{T, 3},
 
     return means, bands
 end
+
+
+
+
+
 
 """
 ```

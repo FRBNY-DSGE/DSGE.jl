@@ -12,13 +12,17 @@ function get_class(s::Symbol)
     elseif contains(string(s), "shock")
         :shock
     end
-
-    class
 end
 
 function get_product(s::Symbol)
     product = if contains(string(s), "hist")
         :hist
+    elseif contains(string(s), "bddforecast4q")
+        :bddforecast4q
+    elseif contains(string(s), "forecast4q")
+        :forecast4q
+    elseif contains(string(s), "bddforecast")
+        :bddforecast
     elseif contains(string(s), "forecast")
         :forecast
     elseif contains(string(s), "shockdec")
@@ -30,8 +34,6 @@ function get_product(s::Symbol)
     elseif contains(string(s), "irf")
         :irf
     end
-
-    product
 end
 
 
@@ -291,6 +293,28 @@ end
 #####################################
 ## OTHER UTILS
 #####################################
+
+function get_meansbands_input_files{S<:AbstractString}(m::AbstractModel,
+                     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+                     pathfcn::Function = rawpath, forecast_string::S = "",
+                     fileformat = :jld)
+
+    input_files = Dict{Symbol, S}()
+
+    for var in output_vars
+        input_files[var] = get_forecast_filename(m, input_type, cond_type, var,
+                                                 pathfcn = pathfcn, forecast_string =
+                                                 forecast_string, fileformat = fileformat)
+
+        if contains(string(var), "4q")
+            input_files[var] = replace(input_files[var], "forecast4q", "forecast")
+        end
+    end
+
+
+    input_files
+end
+
 
 """
 ```
