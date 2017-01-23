@@ -65,7 +65,7 @@ function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
         ## Get name of file to write
         outfile = DSGE.get_forecast_filename(m, para(mb), cond_type(mb), output_var,
                     pathfcn = workpath, forecast_string = mb.metadata[:forecast_string],
-                    fileformat = :h5)[output_var]
+                    fileformat = :h5)
 
         base = basename(outfile)[3:end]
         outfile = joinpath(dirname(outfile), "mb_matrix_"*base)
@@ -108,7 +108,7 @@ function meansbands_matrix(mb::MeansBands)
     nbands     = length(bands_list)             # how many bands are stored
 
     # extract  matrices from MeansBands structure
-    if prod in [:hist, :forecast, :dettrend, :trend]
+    if prod in [:hist, :forecast, :forecast4q, :bddforecast, :bddforecast4q, :dettrend, :trend]
 
         # construct means and bands arrays
         means = Array{T,2}(nvars, nperiods)

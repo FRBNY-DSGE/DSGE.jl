@@ -352,22 +352,26 @@ function get_transform4q(transform::Function)
         loglevelto4qpct_4q_percapita
     elseif transform == quartertoannual
         quartertoannual
+    elseif transform == identity
+        identity
     else
-        error("4q transformation not implemented for this function")
+        error("4q equivalent not implemented for $transform")
     end
 
 end
 
 """
 ```
-logtopct_4q(y, q_adj = 100)
+logtopct_4q(y, data, q_adj = 100)
 ```
 
 Transform from log growth rates to total (not per-capita) % growth
 rates (4-quarter values).
 """
-function logtopct_4q(y, data, q_adj = 100)
+function logtopct_4q(y, data, q_adj = 100.)
 
+    println("y: $(size(y))")
+    println("data: $(size(data))")
     y    = prepend_data(y, data)
     y_4q = y[:,  1:end-3] + y[:, 2:end-2] + y[:, 3:end-1] + y[:, 4:end]
 
@@ -423,13 +427,56 @@ function logtopct_4q_percapita(y::Array, data::Array, pop_growth::Vector, q_adj 
 end
 
 
-function prepend_data(y, data)
+"""
+```
+loglevelto4qpct_4q_percapita(y, y0, pop_growth, q_adj)
+```
+
+Transform from log level to 4-quarter percent change, adjusting for
+population growth.
+
+### Note
+
+This is usually applied to labor supply (hours worked per hour), and
+probably shouldn't be used for any other observables.
+
+### Inputs
+
+- `y`: The data we wish to transform to 4 quarter annualized percent change from
+  1-quarter log-levels. `y` is either a vector of length `nperiods` or an
+  `ndraws x `nperiods` matrix.
+
+- `y0`: The last data point in the history (of state or observable)
+  corresponding to the `y` variable.  This is required to compute a percentage
+  change for the first period.
+
+- `pop_growth::Vector`: The length `nperiods` vector of population growth rates.
+"""
+function loglevelto4qpct_4q_percapita{T<:AbstractFloat}(y::Array, data::Array, pop_growth::Vector, q_adj::T = 100.)
+
+    y_prepended = prepend_data(y, data)[1:length(y)]
+    yp_4q       = y - y_prepended'
+
+    # Transpose `pop_growth` to a 1 x `nperiods` row vector so it can be
+    # broadcasted to match the dimensions of `y`
+    pop_growth = pop_growth'
+
+    pop_growth_4q = pop_growth[1:end-3] + pop_growth[2:end-2] + pop_growth[3:end-1] + pop_growth[4:end]
+
+    # Subtract log levels to get log growth rates, then add up previous 4 quarters to get growth rates
+
+    100. * (exp(y./q_adj .+ pop_growth_4q) .- 1.)
+end
+
+
+function prepend_data{T<:AbstractFloat}(y::Array{T,3}, data::Array{T})
 
     # prepend the last 3 data entries onto the beginning of the
     # forecast (we need these to cumulate the last 4 quarters
     # for each period). In order to do this we need to copy
     # the data for the last 3 quarters for all the draws and
     # make sure the dimensions line up with y.
+
     ndraws, nvars, nperiods = size(y)
     tmp    = repeat(data, [1,1,ndraws])
     last_data = Array(T, ndraws, nvars, 3)
@@ -437,4 +484,56 @@ function prepend_data(y, data)
 
     # prepend on the nperiods dimension
     y_extended = cat(3, last_data, y)
+end
+
+"""
+```
+prepend_data{T<:AbstractFloat}(y, data::Array{T})
+```
+
+Prepends data necessary for running 4q transformations.
+
+### Inputs:
+
+- `y`: `1 x t` array representing a timeseries for variable `y`
+- `data`: `1 x n` array representing a timeseries to prepend to `y`
+"""
+function prepend_data{T<:AbstractFloat}(y::Array{T,2}, data::Array{T})
+
+    # prepend the last 3 data entries onto the beginning of the
+    # forecast (we need these to cumulate the last 4 quarters
+    # for each period). In order to do this we need to copy
+    # the data for the last 3 quarters for all the draws and
+    # make sure the dimensions line up with y.
+
+    nperiods = length(y)
+
+    # prepend on the nperiods dimension
+    y_extended = cat(2, data, y)
+end
+
+"""
+```
+prepend_data{T<:AbstractFloat}(y, data::Array{T})
+```
+
+Prepends data to y.
+
+### Inputs:
+
+- `y`: vector representing a timeseries for variable `y`
+- `data`: vector representing a timeseries to prepend to `y`
+"""
+function prepend_data{T<:AbstractFloat}(y::Vector{T}, data::Vector{T})
+
+    # prepend the last 3 data entries onto the beginning of the
+    # forecast (we need these to cumulate the last 4 quarters
+    # for each period). In order to do this we need to copy
+    # the data for the last 3 quarters for all the draws and
+    # make sure the dimensions line up with y.
+
+    nperiods = length(y)
+
+    # prepend on the nperiods dimension
+    y_extended = cat(1, data, y)
 end

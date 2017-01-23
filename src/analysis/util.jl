@@ -315,6 +315,33 @@ function get_meansbands_input_files{S<:AbstractString}(m::AbstractModel,
     input_files
 end
 
+function get_meansbands_output_files{S<:AbstractString}(m::AbstractModel,
+                     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+                     pathfcn::Function = rawpath, forecast_string::S = "",
+                     fileformat = :jld)
+
+    mb_output_vars = [symbol("mb$x") for x in output_vars]
+
+    input_files = get_meansbands_input_files(m, input_type, cond_type, output_vars,
+                                             pathfcn = pathfcn, forecast_string = forecast_string,
+                                             fileformat = fileformat)
+
+    output_files = Dict{Symbol,AbstractString}()
+
+    for (x, fn) in input_files
+        base = "mb" * basename(fn)
+        if contains(string(x), "forecast4q")
+            base = replace(base, "forecast", "forecast4q")
+        end
+        mb_files[x] = if isempty(output_dir)
+            dir  = dirname(fn)
+            joinpath(dir,base)
+        else
+            joinpath(output_dir,base)
+        end
+    end
+
+end
 
 """
 ```

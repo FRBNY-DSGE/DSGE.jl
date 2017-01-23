@@ -119,7 +119,14 @@ end
 
 
 """
+```
+iterate_quarters(start::Date, quarters::Int)
+```
 
+Returns the date corresponding to `start` + `quarters` quarters.
+
+### Inputs
+- `start`: starting date
 - `quarters`: number of quarters to iterate forward or backward
 """
 function iterate_quarters(start::Date, quarters::Int)
