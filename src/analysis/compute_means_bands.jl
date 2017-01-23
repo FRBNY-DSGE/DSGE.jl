@@ -147,7 +147,12 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
             y0_indexes[prod] = index_forecast_start(m) - 1
         end
         for prod in intersect(products, [:forecast4q, :bddforecast4q])
-            y0_indexes[prod] = index_forecast_start(m) - 3
+
+            # we subtract 4 because there is 1 transform that actually
+            # needs us to go 4 periods. Later, we can use y0_index + 1
+            # to index out the data we need for all the other forecasts.
+
+            y0_indexes[prod] = index_forecast_start(m) - 4
         end
         for prod in intersect(products, [:shockdec, :dettrend, :trend])
             y0_indexes[prod] = index_shockdec_start(m) - 1
@@ -514,13 +519,19 @@ function compute_means_bands{T<:AbstractFloat}(fcast_output::Array{T, 3},
             transform4q = get_transform4q(transform)
 
             # transform
-            result = if transform4q in [logtopct_4q_percapita, loglevelto4qpct_4q_percapita]
+            result = if transform4q in [logtopct_4q_percapita]
+                # we use y0_index+1 when we want to sum the last 4 periods
+                hist_data = data[ind, y0_index+1:end]
+                transform4q(fcast_series, hist_data, population_series)
+            elseif transform in [loglevelto4qpct_4q_percapita]
+                # we use y0_index for computing growth rates
                 hist_data = data[ind, y0_index:end]
                 transform4q(fcast_series, hist_data, population_series)
             elseif transform4q in [quartertoannual]
                 transform4q(fcast_series)
             elseif transform4q in [logtopct_4q]
-                hist_data = data[ind, y0_index:end]
+                # we use y0_index+1 when we want to sum the last 4 periods
+                hist_data = data[ind, y0_index+1:end]
                 transform4q(fcast_series, hist_data)
             elseif transform4q in [identity]
                 fcast_series
