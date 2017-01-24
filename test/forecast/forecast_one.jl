@@ -13,7 +13,7 @@ custom_settings = Dict{Symbol, Setting}(
     :saveroot                => Setting(:saveroot, normpath(joinpath(dirname(@__FILE__), "..", "reference"))))
 m = Model990(custom_settings = custom_settings, testing = true)
 
-output_vars = [:histpseudo, :forecastpseudo, :forecastobs, :forecastpseudobdd, :forecastobsbdd,
+output_vars = [:histpseudo, :forecastpseudo, :forecastobs, :bddforecastpseudo, :bddforecastobs,
                :shockdecpseudo, :shockdecobs, :dettrendpseudo, :dettrendobs, :trendpseudo, :trendobs,
                :irfpseudo, :irfobs]
 
@@ -41,7 +41,7 @@ for cond_type in [:none, :semi, :full]
     out[cond_type] = temp
 
     # Save output file name
-    new_output_files = collect(values(DSGE.get_output_files(m, "forecast", input_type, cond_type, output_vars)))
+    new_output_files = collect(values(get_forecast_output_files(m, input_type, cond_type, output_vars)))
     append!(output_files, new_output_files)
 end
 
