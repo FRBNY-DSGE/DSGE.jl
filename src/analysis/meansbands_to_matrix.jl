@@ -28,10 +28,9 @@ function meansbands_matrix_all(m::AbstractModel, input_type::Symbol,
     #          trend or deterministic trends, add those
 
     output_vars = add_requisite_output_vars(output_vars)
-    output_vars = [symbol("mb", x) for x in output_vars]
     output_dir = workpath(m, "forecast", "")
-    outfiles = DSGE.get_output_files(m, "forecast", input_type, cond_type, output_vars,
-                                     pathfcn = workpath, forecast_string = forecast_string)
+    outfiles = DSGE.get_meansbands_output_files(m, input_type, cond_type, output_vars,
+                                                forecast_string = forecast_string)
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
         info("Converting means and bands to matrices for input_type = $input_type, cond_type = $cond_type...")
@@ -57,15 +56,15 @@ function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
 
     for output_var in keys(mbs)
 
-        mb = mbs[output_var]
+        mb       = mbs[output_var]
         prod     = product(mb)                    # history? forecast? shockdec?
         cl       = class(mb)                      # pseudo? obs? state?
         condtype = cond_type(mb)
 
         ## Get name of file to write
-        outfile = DSGE.get_output_files(m, "forecast", para(mb), cond_type(mb), [output_var],
+        outfile = DSGE.get_forecast_filename(m, para(mb), cond_type(mb), output_var,
                     pathfcn = workpath, forecast_string = mb.metadata[:forecast_string],
-                    fileformat = :h5)[output_var]
+                    fileformat = :h5)
 
         base = basename(outfile)[3:end]
         outfile = joinpath(dirname(outfile), "mb_matrix_"*base)
@@ -108,7 +107,7 @@ function meansbands_matrix(mb::MeansBands)
     nbands     = length(bands_list)             # how many bands are stored
 
     # extract  matrices from MeansBands structure
-    if prod in [:hist, :forecast, :dettrend, :trend]
+    if prod in [:hist, :forecast, :forecast4q, :bddforecast, :bddforecast4q, :dettrend, :trend]
 
         # construct means and bands arrays
         means = Array{T,2}(nvars, nperiods)

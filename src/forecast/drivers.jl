@@ -54,7 +54,7 @@ types, and output types.
 ### Outputs
 
 None. Output is saved to files returned by
-`get_output_files(m, input_type, cond_type, output_vars)`
+`get_forecast_output_files(m, input_type, cond_type, output_vars)`
 for each combination of `input_type` and `cond_type`.
 """
 function forecast_all(m::AbstractModel,
@@ -312,8 +312,8 @@ and conditional data case given by `cond_type`.
   - `:forecastpseudo`: `DArray{Float64, 3}` of forecasted pseudo-observables (if
     a pseudo-measurement equation has been provided for this model type)
   - `:forecastshocks`: `DArray{Float64, 3}` of forecasted shocks
-  - `:forecaststatesbdd`, `:forecastobsbdd`, `:forecastpseudobdd`, and
-    `:forecastshocksbdd`: `DArray{Float64, 3}`s of forecasts where we enforce
+  - `:bddforecaststates`, `:bddforecastobs`, `:bddforecastpseudo`, and
+    `:bddforecastshocks`: `DArray{Float64, 3}`s of forecasts where we enforce
     the zero lower bound to be `forecast_zlb_value(m)`
   - `:shockdecstates`: `DArray{Float64, 4}` of state shock decompositions
   - `:shockdecobs`: `DArray{Float64, 4}` of observable shock decompositions
@@ -352,7 +352,7 @@ function forecast_one(m::AbstractModel{Float64},
 
     # Prepare forecast outputs
     forecast_output = Dict{Symbol, DArray{Float64}}()
-    forecast_output_files = get_output_files(m, "forecast", input_type, cond_type, output_vars;
+    forecast_output_files = get_forecast_output_files(m, input_type, cond_type, output_vars;
                                 forecast_string = forecast_string)
     output_dir = rawpath(m, "forecast")
 
@@ -452,7 +452,7 @@ function forecast_one(m::AbstractModel{Float64},
 
     # 2B. Bounded forecasts
 
-    forecast_vars_bdd = [:forecaststatesbdd, :forecastobsbdd, :forecastpseudobdd, :forecastshocksbdd]
+    forecast_vars_bdd = [:bddforecaststates, :bddforecastobs, :bddforecastpseudo, :bddforecastshocks]
     forecasts_to_compute = intersect(output_vars, forecast_vars_bdd)
     if !isempty(forecasts_to_compute)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -464,19 +464,19 @@ function forecast_one(m::AbstractModel{Float64},
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
-            forecast_output[:forecaststatesbdd] = transplant_forecast(histstates, forecaststates, T)
-            forecast_output[:forecastshocksbdd] = transplant_forecast(histshocks, forecastshocks, T)
-	        if :forecastpseudobdd in output_vars
-                forecast_output[:forecastpseudobdd] = transplant_forecast(histpseudo, forecastpseudo, T)
+            forecast_output[:bddforecaststates] = transplant_forecast(histstates, forecaststates, T)
+            forecast_output[:bddforecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
+	        if :bddforecastpseudo in output_vars
+                forecast_output[:bddforecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
             end
-            forecast_output[:forecastobsbdd] = transplant_forecast_observables(histstates, forecastobs, systems, T)
+            forecast_output[:bddforecastobs] = transplant_forecast_observables(histstates, forecastobs, systems, T)
         else
-            forecast_output[:forecaststatesbdd] = forecaststates
-            forecast_output[:forecastshocksbdd] = forecastshocks
-	        if :forecastpseudobdd in output_vars
-                forecast_output[:forecastpseudobdd] = forecastpseudo
+            forecast_output[:bddforecaststates] = forecaststates
+            forecast_output[:bddforecastshocks] = forecastshocks
+	        if :bddforecastpseudo in output_vars
+                forecast_output[:bddforecastpseudo] = forecastpseudo
             end
-            forecast_output[:forecastobsbdd] = forecastobs
+            forecast_output[:bddforecastobs] = forecastobs
         end
 
         write_forecast_outputs(m, forecasts_to_compute, forecast_output_files, forecast_output; verbose = verbose)

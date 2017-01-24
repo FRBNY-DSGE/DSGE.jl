@@ -111,7 +111,7 @@ end
 
 """
 ```
-get_output_files(m, base, input_type, cond_type, output_vars;
+get_forecast_output_files(m, input_type, cond_type, output_vars;
                  [pathfcn = rawpath], [forecast_string = ""], [fileformat = :jld])
 ```
 
@@ -121,8 +121,6 @@ type `input_type`, and conditional type `cond_type`, for each output variable in
 
 ### Arguments
 
-- `base::AbstractString`: the output subdirectory corresponding to
-  this general stage of the DSGE procedure. Examples could be `estimate` or `forecast`.
 - See `forecast_one` for descriptions of other non-keyword arguments.
 
 ### Optional Arguments
@@ -135,17 +133,44 @@ type `input_type`, and conditional type `cond_type`, for each output variable in
 
 
 ### Notes
-- If `input_type == :subset`, then the `forecast_string` is also appended to the
-filenames. If in this case `forecast_string` is empty, `get_output_files` throws
-an error.
+See `get_forecast_filename` for more information.
+"""
+function get_forecast_output_files{S<:AbstractString}(m::AbstractModel,
+                     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+                     pathfcn::Function = rawpath, forecast_string::S = "",
+                     fileformat = :jld)
 
-- `base` can be any string, but is likely \"forecast\". An example use case is given below:
+    output_files = Dict{Symbol, S}()
+    for var in output_vars
+        output_files[var] = get_forecast_filename(m, input_type, cond_type, var,
+                                                  pathfcn = pathfcn, forecast_string =
+                                                  forecast_string, fileformat = fileformat)
+    end
 
-```julia
-output_files = get_output_files(m, \"forecast\", :mode, :none, [:forecastpseudo])
+    output_files
+end
+
+
+"""
+```
+get_forecast_filename(m, input_type, cond_type, output_var;
+                 [pathfcn = rawpath], [forecast_string = ""], [fileformat = :jld])
 ```
 
-The entry corresponding to the `:forecastpseudo` key will look something like:
+
+### Notes
+
+- If `input_type == :subset`, then the `forecast_string` is also appended to the
+filenames. If in this case `forecast_string` is empty, `get_forecast_filename` throws
+an error.
+
+
+```julia
+output_file = get_forecast_filename(m, :mode, :none, :forecastpseudo)
+```
+
+The result will be something like:
+
 
 ```julia
 \"$saveroot/m990/ss2/forecast/raw/forecastpseudo_cond=none_para=mode_vint=REF.jld\"
@@ -154,19 +179,20 @@ The entry corresponding to the `:forecastpseudo` key will look something like:
 Another example:
 
 ```julia
-output_files = get_output_files(m, \"forecast\", :mode, :none, [:forecastpseudo], workpath)
+output_file = get_forecast_filename(m, :mode, :none, :forecastpseudo, workpath)
 ```
 
-The entry corresponding to the `:forecastpseudo` key will look something like:
+The result will be something like:
 
 ```julia
 \"$saveroot/m990/ss2/forecast/work/forecastpseudo_cond=none_para=mode_vint=REF.jld\"
 ```
 """
-function get_output_files{S<:AbstractString}(m::AbstractModel, base::S,
-                     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+function get_forecast_filename{S<:AbstractString}(m::AbstractModel,
+                     input_type::Symbol, cond_type::Symbol, output_var::Symbol;
                      pathfcn::Function = rawpath, forecast_string::S = "",
                      fileformat = :jld)
+
     additional_file_strings = ASCIIString[]
     push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
     if isempty(forecast_string)
@@ -178,8 +204,7 @@ function get_output_files{S<:AbstractString}(m::AbstractModel, base::S,
     end
     push!(additional_file_strings, "cond=" * abbrev_symbol(cond_type))
 
-    return convert(Dict{Symbol, ASCIIString},
-                   [symbol(x) => pathfcn(m, base, "$x.$fileformat", additional_file_strings) for x in output_vars])
+    pathfcn(m, "forecast", "$output_var.$fileformat", additional_file_strings)
 end
 
 typealias DVector{T, A} DArray{T, 1, A}
@@ -610,7 +635,7 @@ function compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
                                     verbose = :none, procs = procs)
 
     # Delete output files
-    output_files = get_output_files(m, "forecast", :subset, :none, output_vars; forecast_string = "compile")
+    output_files = get_forecast_output_files(m, :subset, :none, output_vars; forecast_string = "compile")
     map(rm, collect(values(output_files)))
 end
 
@@ -644,7 +669,7 @@ function add_requisite_output_vars(output_vars::Vector{Symbol})
     forecast_outputs = Base.filter(output -> contains(string(output), "forecast") && !contains(string(output), "bdd"),
                                    output_vars)
     if !isempty(forecast_outputs)
-        bdd_vars = [symbol("$(var)bdd") for var in forecast_outputs]
+        bdd_vars = [symbol("bdd$(var)") for var in forecast_outputs]
         output_vars = unique(vcat(output_vars, bdd_vars))
     end
 
