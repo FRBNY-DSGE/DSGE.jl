@@ -67,6 +67,50 @@ end
 
 """
 ```
+forecast_block_inds(m; procs = [myid()])
+```
+
+Returns a `Vector{Range{Int64}}` of length `n_forecast_blocks(m)`,
+where `block_inds[i]` is the range of indices for block `i`.
+"""
+function forecast_block_inds(m::AbstractModel;
+                             procs::Vector{Int} = [myid()])
+
+    nblocks = n_forecast_blocks(m)
+    ndraws  = n_draws(m)
+    jstep   = get_jstep(m, ndraws)
+    nprocs  = length(procs)
+    min_draws_per_block = jstep * nprocs
+
+    # If there are not enough total draws for each block to have at least
+    # `min_draws_per_block` blocks, decrease `nblocks` until there are
+    while ndraws < nblocks * min_draws_per_block
+        nblocks -= 1
+    end
+
+    # Number of draws in each of the first `nblocks-1` blocks
+    avg_draws_per_block = if nblocks != n_forecast_blocks(m)
+        m <= Setting(:n_forecast_blocks(m), nblocks)
+        warn("Decreased n_forecast_blocks to $nblocks")
+        min_draws_per_block
+    else
+        convert(Int64, round(ndraws / (nblocks*min_draws_per_block))) * min_draws_per_block
+    end
+
+    # Fill in draw indices for each block
+    block_inds  = Vector{Range{Int64}}(nblocks)
+    current_draw = 0
+    for i = 1:(nblocks-1)
+        block_inds[i] = (current_draw+1):(current_draw+avg_draws_per_block)
+        current_draw += avg_draws_per_block
+    end
+    block_inds[end] = (current_draw+1):ndraws
+
+    return block_inds
+end
+
+"""
+```
 get_input_file(m, input_type)
 ```
 
@@ -91,8 +135,8 @@ function get_input_file(m, input_type)
         else
             error("Invalid input file override for input_type = $input_type: $override_file")
         end
-    # If input_type = :subset, also check for existence of overrides[:full]
-    elseif input_type == :subset
+    # If input_type = :subset or :block, also check for existence of overrides[:full]
+    elseif input_type in [:subset, :block]
         return get_input_file(m, :full)
     end
 
@@ -102,7 +146,7 @@ function get_input_file(m, input_type)
         return workpath(m,"estimate","paramsmean.h5")
     elseif input_type == :init
         return ""
-    elseif input_type in [:full, :subset]
+    elseif input_type in [:full, :subset, :block]
         return rawpath(m,"estimate","mhsave.h5")
     else
         throw(ArgumentError("Invalid input_type: $(input_type)"))
@@ -194,6 +238,10 @@ function get_forecast_filename{S<:AbstractString}(m::AbstractModel,
                      fileformat = :jld)
 
     additional_file_strings = ASCIIString[]
+
+    if input_type == :block
+        input_type = :full
+    end
     push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
     if isempty(forecast_string)
         if input_type == :subset
@@ -338,14 +386,17 @@ Writes the elements of `forecast_output` indexed by `output_vars` to file, given
 function write_forecast_outputs(m::AbstractModel, output_vars::Vector{Symbol},
                                 forecast_output_files::Dict{Symbol,ASCIIString},
                                 forecast_output::Dict{Symbol, DArray{Float64}};
+                                block_number::Int = -1,
                                 verbose::Symbol = :low)
 
     for var in output_vars
         filepath = forecast_output_files[var]
-        jldopen(filepath, "w") do file
-            write_forecast_metadata(m, file, var)
+        if block_number == -1 || block_number == 1
+            jldopen(filepath, "w") do file
+                write_forecast_metadata(m, file, var)
+            end
         end
-        write_darray(filepath, forecast_output[var])
+        write_darray(filepath, forecast_output[var]; block_number = block_number)
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             println(" * Wrote $(basename(filepath))")
@@ -465,18 +516,27 @@ file as `arr\$pid` and `inds\$pid`. The dimensions `dims` of `darr` and the
 vector of processes `pids` over which `darr` is distributed are also written to
 `filepath` in order to facilitate reading back in.
 """
-function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T})
+function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T}; block_number::Int = -1)
+    blockstr = block_number == -1 ? "" : "block$(block_number)_"
+
     function write_localpart(pid::Int)
         jldopen(filepath, "r+") do file
-            write(file, "inds$pid", collect(localindexes(darr)))
-            write(file, "arr$pid", localpart(darr))
+            write(file, blockstr * "inds$pid", collect(localindexes(darr)))
+            write(file, blockstr * "arr$pid", localpart(darr))
         end
     end
 
     mode = isfile(filepath) ? "r+" : "w"
     jldopen(filepath, mode) do file
-        write(file, "dims", darr.dims)
-        write(file, "pids", collect(darr.pids))
+        write(file, blockstr * "dims", darr.dims)
+        write(file, blockstr * "pids", collect(darr.pids))
+
+        if block_number != -1
+            if exists(file, "nblocks")
+                delete!(file, "nblocks")
+            end
+            write(file, "nblocks", block_number)
+        end
     end
 
     for pid in darr.pids
@@ -493,14 +553,42 @@ read_darray(file::JldFile)
 Read the `DArray` saved to `file` by `write_darray`. Returns an `Array`.
 """
 function read_darray(file::JLD.JldFile)
-    dims = read(file, "dims")
-    pids = read(file, "pids")
+    # Read DArrays in blocks
+    if exists(file, "nblocks")
+        nblocks = read(file, "nblocks")
+        pids = collect(read(file, "block1_pids"))
 
-    out = zeros(dims...)
-    for pid in pids
-        inds = read(file, "inds$pid")
-        out[inds...] = read(file, "arr$pid")
+        # Determine total dimension of DArray
+        block_draws = zeros(nblocks)
+        for block = 1:nblocks
+            block_draws[block] = read(file, "block$(block)_dims")[1]
+        end
+        dims = collect(read(file, "block1_dims"))
+        dims[1] = sum(block_draws)
+
+        offset_draws = 0
+        out = zeros(dims...)
+        for block = 1:nblocks
+            for pid in pids
+                inds = collect(read(file, "block$(block)_inds$pid"))
+                inds[1] += offset_draws
+                out[inds...] = read(file, "block$(block)_arr$pid")
+            end
+            offset_draws += block_draws[block]
+        end
+
+    # Don't read in blocks
+    else
+        dims = read(file, "dims")
+        pids = read(file, "pids")
+
+        out = zeros(dims...)
+        for pid in pids
+            inds = read(file, "inds$pid")
+            out[inds...] = read(file, "arr$pid")
+        end
     end
+
     return out
 end
 
@@ -637,6 +725,8 @@ function compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
     # Delete output files
     output_files = get_forecast_output_files(m, :subset, :none, output_vars; forecast_string = "compile")
     map(rm, collect(values(output_files)))
+    darray_closeall()
+    gc()
 end
 
 """

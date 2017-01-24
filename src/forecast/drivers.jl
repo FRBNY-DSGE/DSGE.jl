@@ -146,12 +146,12 @@ function load_draws(m::AbstractModel, input_type::Symbol;
         tmp = map(Float64, h5read(input_file_name, "params"))
         params = reshape(tmp, 1, size(tmp, 1))
 
-    elseif input_type in [:full, :subset]
+    elseif input_type in [:full, :subset, :block]
         if input_type == :full
             params = map(Float64, h5read(input_file_name, "mhparams"))
         else
             if isempty(subset_inds)
-                error("Must supply nonempty range of subset_inds if input_type = subset")
+                error("Must supply nonempty range of subset_inds if input_type = subset or block")
             else
                 params = map(Float64, h5read(input_file_name, "mhparams", (subset_inds, :)))
             end
@@ -220,7 +220,7 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
     if input_type in [:mean, :mode, :init]
         update!(m, vec(params))
         systems = dfill(compute_system(m), (1,), procs)
-    elseif input_type in [:full, :subset]
+    elseif input_type in [:full, :subset, :block]
         nprocs = length(procs)
         systems = DArray((n_sim_forecast,), procs, [nprocs]) do I
             draw_inds = first(I)
@@ -341,6 +341,7 @@ function forecast_one(m::AbstractModel{Float64},
     df::DataFrame = DataFrame(),
     systems::DVector{System{Float64}} = dinit(System{Float64}, 0),
     kals::DVector{Kalman{Float64}} = dinit(Kalman{Float64}, 0),
+    block_number::Int = -1,
     subset_inds::Range{Int64} = 1:0,
     forecast_string::AbstractString = "", verbose::Symbol = :low,
     procs::Vector{Int} = [myid()])
@@ -358,9 +359,46 @@ function forecast_one(m::AbstractModel{Float64},
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
-        info("Forecasting input_type = $input_type, cond_type = $cond_type...")
-        println("Start time: $(now())")
-        println("Forecast outputs will be saved in $output_dir")
+        if input_type == :block
+            info("Forecasting block $(block_number) of $(n_forecast_blocks(m))...")
+        else
+            info("Forecasting input_type = $input_type, cond_type = $cond_type...")
+            println("Start time: $(now())")
+            println("Forecast outputs will be saved in $output_dir")
+        end
+    end
+
+    # If forecasting in blocks, call forecast_one with input_type = :block
+    if forecast_blocking(m) && input_type == :full
+        block_inds = forecast_block_inds(m; procs = procs)
+        nblocks = n_forecast_blocks(m)
+        block_verbose = verbose == :none ? :none : :low
+        total_forecast_time = 0.0
+
+        for block = 1:nblocks
+            tic()
+            forecast_one(m, :block, cond_type, output_vars;
+                df = df, block_number = block,
+                subset_inds = block_inds[block],
+                verbose = block_verbose, procs = procs)
+            darray_closeall()
+            gc()
+
+            # Calculate time to complete this block, average block time, and
+            # expected time to completion
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                block_time = toq()
+                total_forecast_time += block_time
+                total_forecast_time_min = total_forecast_time/60
+                expected_time_remaining     = (total_forecast_time/block)*(nblocks - block)
+                expected_time_remaining_min = expected_time_remaining/60
+
+                println("\nCompleted $block of $nblocks blocks.")
+                println("Total time to compute $block blocks: $total_forecast_time_min minutes")
+                println("Expected time remaining in forecast: $expected_time_remaining_min minutes")
+            end
+        end
+        return forecast_output
     end
 
     # Check that provided forecast inputs are well-formed
@@ -411,7 +449,8 @@ function forecast_one(m::AbstractModel{Float64},
             end
         end
 
-        write_forecast_outputs(m, hists_to_compute, forecast_output_files, forecast_output; verbose = verbose)
+        write_forecast_outputs(m, hists_to_compute, forecast_output_files, forecast_output;
+                               block_number = block_number, verbose = verbose)
     end
 
 
@@ -446,7 +485,8 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:forecastobs] = forecastobs
         end
 
-        write_forecast_outputs(m, forecasts_to_compute, forecast_output_files, forecast_output; verbose = verbose)
+        write_forecast_outputs(m, forecasts_to_compute, forecast_output_files, forecast_output;
+                               block_number = block_number, verbose = verbose)
     end
 
 
@@ -479,7 +519,8 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:bddforecastobs] = forecastobs
         end
 
-        write_forecast_outputs(m, forecasts_to_compute, forecast_output_files, forecast_output; verbose = verbose)
+        write_forecast_outputs(m, forecasts_to_compute, forecast_output_files, forecast_output;
+                               block_number = block_number, verbose = verbose)
     end
 
 
@@ -499,7 +540,8 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:shockdecpseudo] = shockdecpseudo
         end
 
-        write_forecast_outputs(m, shockdecs_to_compute, forecast_output_files, forecast_output; verbose = verbose)
+        write_forecast_outputs(m, shockdecs_to_compute, forecast_output_files, forecast_output;
+                               block_number = block_number, verbose = verbose)
     end
 
 
@@ -521,7 +563,8 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:trendpseudo] = trendpseudo
         end
 
-        write_forecast_outputs(m, trends_to_compute, forecast_output_files, forecast_output; verbose = verbose)
+        write_forecast_outputs(m, trends_to_compute, forecast_output_files, forecast_output;
+                               block_number = block_number, verbose = verbose)
     end
 
     ### 5. Deterministic Trend
@@ -544,7 +587,8 @@ function forecast_one(m::AbstractModel{Float64},
         end
 
         dettrend_write_vars = [symbol("dettrend$c") for c in unique(map(get_class, dettrends_to_compute))]
-        write_forecast_outputs(m, dettrends_to_compute, forecast_output_files, forecast_output; verbose = verbose)
+        write_forecast_outputs(m, dettrends_to_compute, forecast_output_files, forecast_output;
+                               block_number = block_number, verbose = verbose)
     end
 
     ### 6. Impulse Responses
@@ -562,7 +606,8 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:irfpseudo] = irfpseudo
         end
 
-        write_forecast_outputs(m, irfs_to_compute, forecast_output_files, forecast_output; verbose = verbose)
+        write_forecast_outputs(m, irfs_to_compute, forecast_output_files, forecast_output;
+                               block_number = block_number, verbose = verbose)
     end
 
 
