@@ -296,14 +296,14 @@ end
 
 function get_meansbands_input_files{S<:AbstractString}(m::AbstractModel,
                      input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                     pathfcn::Function = rawpath, forecast_string::S = "",
+                     forecast_string::S = "",
                      fileformat = :jld)
 
     input_files = Dict{Symbol, S}()
 
     for var in output_vars
         input_files[var] = get_forecast_filename(m, input_type, cond_type, var,
-                                                 pathfcn = pathfcn, forecast_string =
+                                                 pathfcn = rawpath, forecast_string =
                                                  forecast_string, fileformat = fileformat)
 
         if contains(string(var), "4q")
@@ -311,36 +311,25 @@ function get_meansbands_input_files{S<:AbstractString}(m::AbstractModel,
         end
     end
 
-
     input_files
 end
 
 function get_meansbands_output_files{S<:AbstractString}(m::AbstractModel,
                      input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                     pathfcn::Function = rawpath, forecast_string::S = "",
+                     forecast_string::S = "",
                      fileformat = :jld)
 
     mb_output_vars = [symbol("mb$x") for x in output_vars]
-
-    input_files = get_meansbands_input_files(m, input_type, cond_type, output_vars,
-                                             pathfcn = pathfcn, forecast_string = forecast_string,
-                                             fileformat = fileformat)
-
     output_files = Dict{Symbol,AbstractString}()
 
-    for (x, fn) in input_files
-        base = "mb" * basename(fn)
-        if contains(string(x), "forecast4q")
-            base = replace(base, "forecast", "forecast4q")
-        end
-        mb_files[x] = if isempty(output_dir)
-            dir  = dirname(fn)
-            joinpath(dir,base)
-        else
-            joinpath(output_dir,base)
-        end
+    for var in mb_output_vars
+        output_files[var] = get_forecast_filename(m, input_type, cond_type, var,
+                                                 pathfcn = workpath,
+                                                 forecast_string = forecast_string,
+                                                 fileformat = fileformat)
     end
 
+    output_files
 end
 
 """

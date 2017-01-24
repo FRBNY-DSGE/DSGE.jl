@@ -457,18 +457,19 @@ function loglevelto4qpct_4q_percapita{T<:AbstractFloat}(y::Array, data::Vector, 
 
     # `y_t4` is an array of the same size as `y`, representing the t-4
     # period observations for each draw
-    nperiods = length(y)
+
     y_t4 = if ndims(y) == 1
+        nperiods = length(y)
         prepend_data(y[1:nperiods-4], data)
     else
+        nperiods = size(y, 2)
         prepend_data(y[:, 1:nperiods-4], data)
     end
     y_4q = y - y_t4
 
     # Transpose `pop_growth` to a 1 x `nperiods` row vector so it can be
     # broadcasted to match the dimensions of `y`
-    pop_growth = pop_growth'
-    pop_growth_4q = pop_growth[1:end-3] + pop_growth[2:end-2] + pop_growth[3:end-1] + pop_growth[4:end]
+    pop_growth_4q = (pop_growth[1:end-3] + pop_growth[2:end-2] + pop_growth[3:end-1] + pop_growth[4:end])'
 
     # Subtract log levels to get log growth rates, then exponentiate to get growth rates
     100. * (exp(y_4q./q_adj .+ pop_growth_4q) .- 1.)
@@ -491,7 +492,7 @@ function prepend_data(y::Array, data::Vector)
         y_extended = vcat(data, y)
     else
         ndraws = size(y, 1)
-        datas  = repeat(data, ndraws, 1)
+        datas  = repmat(data', ndraws, 1)
         y_extended = hcat(datas, y)
     end
 

@@ -235,21 +235,8 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
 
     ## Step 2: Set up filenames for MeansBands output files.
     # MeansBands output filenames are the same as forecast output filenames, but with an "mb" prefix.
-    mb_output_vars = [symbol("mb$x") for x in output_vars]
-
-    mb_files = Dict{Symbol,AbstractString}()
-    for (x, fn) in meansbands_input_files
-        base = "mb" * basename(fn)
-        if contains(string(x), "forecast4q")
-            base = replace(base, "forecast", "forecast4q")
-        end
-        mb_files[x] = if isempty(output_dir)
-            dir  = dirname(fn)
-            joinpath(dir,base)
-        else
-            joinpath(output_dir,base)
-        end
-    end
+    mb_files = get_meansbands_output_files(m, input_type, cond_type, output_vars,
+                                           forecast_string = forecast_string)
 
     ## Step 3: Compute means and bands for each output variable, and write to a file.
 
@@ -521,17 +508,17 @@ function compute_means_bands{T<:AbstractFloat}(fcast_output::Array{T, 3},
             # transform
             result = if transform4q in [logtopct_4q_percapita]
                 # we use y0_index+1 when we want to sum the last 4 periods
-                hist_data = data[ind, y0_index+1:end]
+                hist_data = squeeze(data[ind, y0_index+1:end],1)
                 transform4q(fcast_series, hist_data, population_series)
-            elseif transform in [loglevelto4qpct_4q_percapita]
+            elseif transform4q in [loglevelto4qpct_4q_percapita]
                 # we use y0_index for computing growth rates
-                hist_data = data[ind, y0_index:end]
+                hist_data = squeeze(data[ind, y0_index:end],1)
                 transform4q(fcast_series, hist_data, population_series)
             elseif transform4q in [quartertoannual]
                 transform4q(fcast_series)
             elseif transform4q in [logtopct_4q]
                 # we use y0_index+1 when we want to sum the last 4 periods
-                hist_data = data[ind, y0_index+1:end]
+                hist_data = squeeze(data[ind, y0_index+1:end], 1)
                 transform4q(fcast_series, hist_data)
             elseif transform4q in [identity]
                 fcast_series
