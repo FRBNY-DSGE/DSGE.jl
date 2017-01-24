@@ -76,7 +76,7 @@ function default_settings!(m::AbstractModel)
 
     # Forecast
     settings[:forecast_blocking] = Setting(:forecast_blocking, false,
-        "Whether to divide forecast step into n_mh_blocks(m) - n_mh_burn(m) blocks")
+        "Whether to divide forecast step into n_forecast_blocks(m) blocks")
     settings[:n_forecast_blocks] = Setting(:n_forecast_blocks, 4,
         "Number of blocks for forecast step")
     settings[:forecast_input_file_overrides] = Setting(:forecast_input_file_overrides,
@@ -89,6 +89,8 @@ function default_settings!(m::AbstractModel)
         "Choice of smoother to use during forecasting. Can be :kalman, :durbin_koopman, or eventually :carter_kohn")
     settings[:forecast_horizons] = Setting(:forecast_horizons, 60,
         "Number of periods to forecast ahead")
+    settings[:forecast_draw_z0] = Setting(:forecast_draw_z0, false,
+        "Whether to draw an initial state from N(s_{T|T}, P_{T|T}) to start the forecast")
     settings[:forecast_kill_shocks] = Setting(:forecast_kill_shocks, false,
         "Kill (set to 0) all shocks in forecast")
     settings[:forecast_tdist_shocks] = Setting(:forecast_tdist_shocks, false,

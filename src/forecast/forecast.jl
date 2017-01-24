@@ -53,7 +53,13 @@ function forecast{S<:AbstractFloat}(m::AbstractModel,
     shocks::DArray{S, 3} = dzeros(S, (0, 0, 0), [myid()]),
     procs::Vector{Int} = [myid()])
 
-    z0s = map(kal -> kal[:zend], kals)
+    draw_z0(kal::Kalman) = rand(DegenerateMvNormal(kal[:zend], kal[:Pend]))
+    z0s = if forecast_draw_z0(m)
+        map(draw_z0, kals)
+    else
+        map(kal -> kal[:zend], kals)
+    end
+
     forecast(m, systems, z0s; cond_type = cond_type, enforce_zlb = enforce_zlb,
              shocks = shocks, procs = procs)
 end

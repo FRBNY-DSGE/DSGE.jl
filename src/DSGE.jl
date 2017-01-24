@@ -41,7 +41,7 @@ module DSGE
         reoptimize, calculate_hessian, hessian_path, n_hessian_test_params,
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin, n_draws,
         date_forecast_start, date_forecast_end, forecast_tdist_df_val,
-        forecast_tdist_shocks, forecast_kill_shocks, forecast_smoother, forecast_zlb_value,
+        forecast_tdist_shocks, forecast_kill_shocks, forecast_smoother, forecast_draw_z0, forecast_zlb_value,
         forecast_blocking, n_forecast_blocks,
         forecast_input_file_overrides, shockdec_startdate, date_shockdec_end,
         forecast_horizons, impulse_response_horizons,
