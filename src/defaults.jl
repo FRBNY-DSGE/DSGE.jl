@@ -75,8 +75,10 @@ function default_settings!(m::AbstractModel)
         "Metropolis-Hastings thinning step")
 
     # Forecast
-    settings[:forecast_block_size] = Setting(:forecast_block_size, 200,
-        "Number of draws (after thinning by forecast_jstep(m) per block in forecast step")
+    settings[:forecast_blocking] = Setting(:forecast_blocking, false,
+        "Whether to divide forecast step into n_mh_blocks(m) - n_mh_burn(m) blocks")
+    settings[:n_forecast_blocks] = Setting(:n_forecast_blocks, 4,
+        "Number of blocks for forecast step")
     settings[:forecast_input_file_overrides] = Setting(:forecast_input_file_overrides,
         Dict{Symbol, ASCIIString}())
     settings[:forecast_jstep] = Setting(:forecast_jstep, 5,

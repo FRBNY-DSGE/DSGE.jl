@@ -1,32 +1,43 @@
 """
 ```
-impulse_responses(m, systems)
+impulse_responses(m, systems; procs = [myid()])
 ```
 
 Compute impulse responses across all draws.
 
 ### Inputs
 - `m::AbstractModel`: model object
-- `systems::Vector{System{S}}`: vector of `System` objects specifying
+- `systems::DVector{System{S}}`: vector of `System` objects specifying
   state-space system matrices for each draw
+
+### Keyword Arguments
+
+- `procs::Vector{Int}`: list of worker processes over which to distribute
+  draws. Defaults to `[myid()]`
 
 ### Outputs
 
-- `states::Array{S, 4}`: array of size `ndraws` x `nstates` x `horizon` x
+- `states::DArray{S, 4}`: array of size `ndraws` x `nstates` x `horizon` x
   `nshocks` of state impulse response functions for each draw
-- `obs::Array{S, 4}`: array of size `ndraws` x `nobs` x `horizon` x `nshocks`
+- `obs::DArray{S, 4}`: array of size `ndraws` x `nobs` x `horizon` x `nshocks`
   of observable impulse response functions for each draw
-- `pseudo::Array{S, 4}`: array of size `ndraws` x `npseudo` x `horizon` x
+- `pseudo::DArray{S, 4}`: array of size `ndraws` x `npseudo` x `horizon` x
   `nshocks` of pseudo-observable impulse response functions for each draw. If
   `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
 
 where `horizon` is the forecast horizon for the model as given by
 `impulse_response_horizons(m)`
 """
-function impulse_responses{S<:AbstractFloat}(m::AbstractModel, systems::Vector{System{S}})
+function impulse_responses{S<:AbstractFloat}(m::AbstractModel,
+                                             systems::DVector{System{S}, Vector{System{S}}};
+                                             procs::Vector{Int} = [myid()])
+
+    # Reset procs to [myid()] if necessary
+    procs = reset_procs(m, procs)
 
     # Numbers of useful things
     ndraws = length(systems)
+    nprocs = length(procs)
     horizon = impulse_response_horizons(m)
 
     nstates = n_states_augmented(m)
@@ -34,20 +45,42 @@ function impulse_responses{S<:AbstractFloat}(m::AbstractModel, systems::Vector{S
     npseudo = n_pseudoobservables(m)
     nshocks = n_shocks_exogenous(m)
 
-    states = zeros(ndraws, states, horizon, nshocks)
-    obs    = zeros(ndraws, obs,    horizon, nshocks)
-    pseudo = zeros(ndraws, pseudo, horizon, nshocks)
+    states_range = 1:nstates
+    obs_range    = (nstates + 1):(nstates + nobs)
+    pseudo_range = (nstates + nobs + 1):(nstates + nobs + npseudo)
 
-    for i = 1:ndraws
-        states_i, obs_i, pseudo_i = compute_impulse_response(systems[i], horizon)
+    # Construct distributed array of impulse response functions
+    out = DArray((ndraws, nstates + nobs + npseudo, horizon, nshocks), procs, [nprocs, 1, 1, 1]) do I # I is a tuple of indices for given localpart
 
-        states[i, :, :, :] = states_i
-        obs[i,    :, :, :] = obs_i
-        pseudo[i, :, :, :] = pseudo_i
+        # Compute shock decomposition for each draw
+        localpart = zeros(map(length, I)...)  # Regular array. In this DArray constructor, each process has one localpart.
+        draw_inds = first(I)
+        ndraws_local = Int(ndraws / nprocs)   # Number of draws that localpart stores data for
+
+        for i in draw_inds
+            states, obs, pseudo = compute_impulse_response(systems[i], horizon)
+
+            # Assign the i-th index of systems (the draw)
+            # to the i_local-th index of the localpart array
+            i_local = mod(i-1, ndraws_local) + 1
+
+            # Assign return values from compute_shock_decompositions to a slice of localpart
+            localpart[i_local, states_range, :, :] = states
+            localpart[i_local, obs_range,    :, :] = obs
+            localpart[i_local, pseudo_range, :, :] = pseudo
+        end
+        return localpart
     end
+
+    # Convert SubArrays (returned when indexing `out`) to DArrays and return
+    states = convert(DArray, out[1:ndraws, states_range, 1:horizon, 1:nshocks])
+    obs    = convert(DArray, out[1:ndraws, obs_range,    1:horizon, 1:nshocks])
+    pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:horizon, 1:nshocks])
+    close(out)
 
     return states, obs, pseudo
 end
+
 
 """
 ```

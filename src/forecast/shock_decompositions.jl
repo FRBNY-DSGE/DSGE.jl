@@ -1,6 +1,6 @@
 """
 ```
-shock_decompositions(m, systems, histshocks)
+shock_decompositions(m, systems, histshocks; procs = [myid()])
 ```
 
 Computes shock decompositions for all draws, given a model object, system
@@ -9,20 +9,25 @@ matrices, and historical smoothed shocks.
 ### Inputs
 
 - `m::AbstractModel`: model object
-- `systems::Vector{System{S}}`: vector of `System` objects specifying
+- `systems::DVector{System{S}}`: vector of `System` objects specifying
   state-space system matrices for each draw
-- `histshocks`::Array{S, 3}`: array of size `ndraws` x `nshocks` x
+- `histshocks`::DArray{S, 3}`: array of size `ndraws` x `nshocks` x
   `hist_periods` of smoothed historical shocks for each draw
 
 where `S<:AbstractFloat`.
 
+### Keyword Arguments
+
+- `procs::Vector{Int}`: list of worker processes over which to distribute
+  draws. Defaults to `[myid()]`
+
 ### Outputs
 
-- `states::Array{S, 4}`: array of size `ndraws` x `nstates` x `nperiods` x
+- `states::DArray{S, 4}`: array of size `ndraws` x `nstates` x `nperiods` x
   `nshocks` of state shock decompositions for each draw
-- `obs::Array{S, 4}`: array of size `ndraws` x `nobs` x `nperiods` x `nshocks`
+- `obs::DArray{S, 4}`: array of size `ndraws` x `nobs` x `nperiods` x `nshocks`
   of observable shock decompositions for each draw
-- `pseudo::Array{S, 4}`: array of size `ndraws` x `npseudo` x `nperiods` x
+- `pseudo::DArray{S, 4}`: array of size `ndraws` x `npseudo` x `nperiods` x
   `nshocks` of pseudo-observable shock decompositions for each draw. If
   `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
 
@@ -32,11 +37,16 @@ decompositions are returned beginning from `date_mainsample_start(m)`. Likewise,
 `date_shockdec_end(m)` is null, shock decompositions are returned up to
 `date_forecast_end(m)`.
 """
-function shock_decompositions{S<:AbstractFloat}(m::AbstractModel{S},
-    systems::Vector{System{S}}, histshocks::Array{S, 3})
+function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
+    systems::DVector{System{S}}, histshocks::DArray{S, 3};
+    procs::Vector{Int} = [myid()])
+
+    # Reset procs to [myid()] if necessary
+    procs = reset_procs(m, procs)
 
     # Numbers of useful things
     ndraws = length(systems)
+    nprocs = length(procs)
     horizon = forecast_horizons(m)
 
     nstates = n_states_augmented(m)
@@ -44,24 +54,44 @@ function shock_decompositions{S<:AbstractFloat}(m::AbstractModel{S},
     npseudo = n_pseudoobservables(m)
     nshocks = n_shocks_exogenous(m)
 
+    states_range = 1:nstates
+    obs_range    = (nstates + 1):(nstates + nobs)
+    pseudo_range = (nstates + nobs + 1):(nstates + nobs + npseudo)
+
     # Determine periods for which to return shock decompositions
     start_ind = index_shockdec_start(m)
     end_ind   = index_shockdec_end(m)
     nperiods  = end_ind - start_ind + 1
 
-    states = zeros(ndraws, nstates, nperiods, nshocks)
-    obs    = zeros(ndraws, nobs,    nperiods, nshocks)
-    pseudo = zeros(ndraws, npseudo, nperiods, nshocks)
+    # Construct distributed array of shock decompositions
+    out = DArray((ndraws, nstates + nobs + npseudo, nperiods, nshocks), procs, [nprocs, 1, 1, 1]) do I # I is a tuple of indices for given localpart
 
-    for i = 1:ndraws
-        shocks_i = squeeze(histshocks[i, :, :], 1)
-        states_i, obs_i, pseudo_i = compute_shock_decompositions(systems[i], horizon,
-            shocks_i, start_ind, end_ind)
+        # Compute shock decomposition for each draw
+        localpart = zeros(map(length, I)...)  # Regular array. In this DArray constructor, each process has one localpart.
+        draw_inds = first(I)
+        ndraws_local = Int(ndraws / nprocs)   # Number of draws that localpart stores data for
 
-        states[i, :, :, :] = states_i
-        obs[i,    :, :, :] = obs_i
-        pseudo[i, :, :, :] = pseudo_i
+        for i in draw_inds
+            states, obs, pseudo = compute_shock_decompositions(systems[i], horizon,
+                convert(Array, slice(histshocks, i, :, :)), start_ind, end_ind)
+
+            # Assign the i-th index of systems (the draw)
+            # to the i_local-th index of the localpart array
+            i_local = mod(i-1, ndraws_local) + 1
+
+            # Assign return values from compute_shock_decompositions to a slice of localpart
+            localpart[i_local, states_range, :, :] = states
+            localpart[i_local, obs_range,    :, :] = obs
+            localpart[i_local, pseudo_range, :, :] = pseudo
+        end
+        return localpart
     end
+
+    # Convert SubArrays (returned when indexing `out`) to DArrays and return
+    states = convert(DArray, out[1:ndraws, states_range, 1:nperiods, 1:nshocks])
+    obs    = convert(DArray, out[1:ndraws, obs_range,    1:nperiods, 1:nshocks])
+    pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods, 1:nshocks])
+    close(out)
 
     return states, obs, pseudo
 end
