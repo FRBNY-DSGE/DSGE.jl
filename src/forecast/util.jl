@@ -708,9 +708,13 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
         write(file, "pseudoobservable_revtransforms", rev_transforms)
     end
 
-    # Write shock names
+    # Write shock names and transforms
     if contains(var, "shocks") || contains(var, "shockdec") || contains(var, "irf")
         write(file, "shock_indices", m.exogenous_shocks)
+        if contains(var, "shocks")
+            rev_transforms = Dict{Symbol,Symbol}([x => symbol("DSGE.identity") for x in keys(m.exogenous_shocks)])
+        end
+        write(file, "shock_revtransforms", rev_transforms)
     end
 end
 

@@ -358,8 +358,11 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
     elseif class == :obs
         transforms       = metadata[:observable_revtransforms]
         variable_indices = metadata[:observable_indices]
+    elseif class == :shock
+        transforms       = metadata[:shock_revtransforms]
+        variable_indices = metadata[:shock_indices]
     else
-        error("Means and bands are only calculated for observables and pseudo-observables")
+        error("Means and bands are only calculated for observables, pseudo-observables, and shocks")
     end
     date_indices         = product == :irf ? Dict{Date,Int}() : metadata[:date_indices]
 
