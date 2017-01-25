@@ -606,7 +606,7 @@ function read_darray(file::JLD.JldFile)
         pids = collect(read(file, "block1_pids"))
 
         # Determine total dimension of DArray
-        block_draws = zeros(nblocks)
+        block_draws = zeros(Int64, nblocks)
         for block = 1:nblocks
             block_draws[block] = read(file, "block$(block)_dims")[1]
         end
