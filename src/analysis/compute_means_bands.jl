@@ -166,8 +166,7 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
         Matrix{T}(), Dict{Symbol,Nullable{Int}}()
     end
 
-
-    ## Step 4: fetch the model string and the input and output directories we'll read from/write to
+    ## Step 3: Fetch the model string and the input and output directories we'll read from/write to
 
     tmp          = rawpath(m, "forecast", "foo")
     input_dir    = dirname(tmp)
@@ -175,11 +174,6 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
     output_dir   = dirname(workpath(m, "forecast", "foo"))
 
     ## Step 4: We have everything we need; appeal to model-object-agnostic function
-    println("output_vars: $(typeof(output_vars))")
-    println("input_dir: $(typeof(input_dir))")
-    println("output_dir: $(typeof(output_dir))")
-    println("model_string: $(typeof(model_string))")
-    println("model_string: $(model_string)")
 
     means_bands_all(input_type, cond_type, output_vars,
                     input_dir, output_dir;
@@ -259,7 +253,7 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
     mb_output_files = get_meansbands_output_files(output_dir, input_type, cond_type, output_vars,
                                                   model_string = model_string,
                                                   forecast_string = forecast_string)
-    println(keys(mb_output_files))
+
     ## Step 3: Compute means and bands for each output variable, and write to a file.
 
     for output_var in output_vars
@@ -461,10 +455,6 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
         # `nvars` x `nperiods`
         if product == :trend
             fcast_output = repeat(fcast_output, outer = [1, 1, length(date_list)])
-        end
-
-        if product in [:bddforecast4q]
-            println("population series: $(size(population_series))")
         end
 
         compute_means_bands(fcast_output, transforms, variable_indices;
