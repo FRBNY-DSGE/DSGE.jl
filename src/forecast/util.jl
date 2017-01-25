@@ -283,9 +283,13 @@ function get_forecast_filename{S<:AbstractString}(directory::S,
                      input_type::Symbol, cond_type::Symbol, output_var::Symbol;
                      model_string = "", forecast_string = "", fileformat = :jld)
 
+    # cast the strings so they're all the same type
     model_string = S(model_string)
     forecast_string = S(forecast_string)
 
+    input_type = input_type == :block ? :full : input_type
+
+    # gather all of the file strings into an array
     additional_file_strings = [model_string]
     push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
     if isempty(forecast_string)
