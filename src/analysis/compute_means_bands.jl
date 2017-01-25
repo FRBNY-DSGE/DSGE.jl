@@ -166,16 +166,26 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
         Matrix{T}(), Dict{Symbol,Nullable{Int}}()
     end
 
-    ## Step 3: Get names of files that the forecast wrote
-    meansbands_input_files = DSGE.get_meansbands_input_files(m, input_type, cond_type,
-                                                   output_vars; forecast_string = forecast_string)
 
+    ## Step 4: fetch the model string and the input and output directories we'll read from/write to
+
+    tmp          = rawpath(m, "forecast", "foo")
+    input_dir    = dirname(tmp)
+    model_string = replace(basename(tmp), "foo_", "")
+    output_dir   = dirname(workpath(m, "forecast", "foo"))
 
     ## Step 4: We have everything we need; appeal to model-object-agnostic function
-    means_bands_all(input_type, cond_type, output_vars,  meansbands_input_files,
+    println("output_vars: $(typeof(output_vars))")
+    println("input_dir: $(typeof(input_dir))")
+    println("output_dir: $(typeof(output_dir))")
+    println("model_string: $(typeof(model_string))")
+    println("model_string: $(model_string)")
+
+    means_bands_all(input_type, cond_type, output_vars,
+                    input_dir, output_dir;
                     density_bands = density_bands, minimize = minimize,
+                    model_string  = model_string,
                     forecast_string = forecast_string,
-                    output_dir = workpath(m,"forecast",""),
                     population_data = level_data,
                     population_mnemonic = population_mnemonic,
                     population_forecast_file = population_forecast_file,
@@ -186,11 +196,12 @@ end
 function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                                                cond_type::Symbol,
                                                output_vars::Vector{Symbol},
-                                               meansbands_input_files::Dict{Symbol,S};
+                                               input_dir::S,
+                                               output_dir::S;
                                                density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                                minimize::Bool = false,
+                                               model_string = "",
                                                forecast_string = "",
-                                               output_dir = "",
                                                population_data::DataFrame = DataFrame(),
                                                population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                population_forecast_file = "",
@@ -204,6 +215,10 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
         println("Start time: $(now())")
         println("Means and bands will be saved in $output_dir")
     end
+
+    ## Preliminary step: if string arguments aren't of type S, force them to be
+    forecast_string = S(forecast_string)
+    model_string    = S(model_string)
 
     ## Step 1: Filter population history and forecast and compute growth rates
 
@@ -233,11 +248,18 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
             DataFrame(), DataFrame()
         end
 
-    ## Step 2: Set up filenames for MeansBands output files.
+    ## Step 2: Set up filenames for MeansBands input and output files.
     # MeansBands output filenames are the same as forecast output filenames, but with an "mb" prefix.
-    mb_files = get_meansbands_output_files(m, input_type, cond_type, output_vars,
-                                           forecast_string = forecast_string)
 
+    mb_input_files = get_meansbands_input_files(input_dir, input_type, cond_type,
+                                                output_vars; model_string = model_string,
+                                                forecast_string = forecast_string)
+
+
+    mb_output_files = get_meansbands_output_files(output_dir, input_type, cond_type, output_vars,
+                                                  model_string = model_string,
+                                                  forecast_string = forecast_string)
+    println(keys(mb_output_files))
     ## Step 3: Compute means and bands for each output variable, and write to a file.
 
     for output_var in output_vars
@@ -252,7 +274,7 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
 
         # compute means and bands object
         mb = means_bands(input_type, cond_type, output_var,
-                         meansbands_input_files, density_bands = density_bands,
+                         mb_input_files, density_bands = density_bands,
                          minimize = minimize,
                          forecast_string = forecast_string,
                          population_data = dlfiltered_population_data,
@@ -262,7 +284,7 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
                          data = data)
 
         # write to file
-        filepath = mb_files[output_var]
+        filepath = mb_output_files[output_var]
         dirpath  = dirname(filepath)
         if !isdir(dirpath)
             mkdir(dirpath)

@@ -566,6 +566,11 @@ function filestring{T<:AbstractString}(m::AbstractModel,
     end
 end
 
+function filestring{T<:AbstractString}(d::Vector{T})
+    sort!(d)
+    return "_"*join(d, "_")
+end
+
 """
 ```
 transform_to_model_space!{T<:AbstractFloat}(m::AbstractModel, values::Vector{T})

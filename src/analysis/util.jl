@@ -296,15 +296,28 @@ end
 
 function get_meansbands_input_files{S<:AbstractString}(m::AbstractModel,
                      input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                     forecast_string::S = "",
+                     model_string::S = S(""), forecast_string::S = S(""),
                      fileformat = :jld)
+
+    dir = rawpath(m, "forecast", "")
+    get_meansbands_input_files(dir, input_type, cond_type, output_vars,
+                               model_string = model_string,
+                               forecast_string = forecast_string,
+                               fileformat = fileformat)
+end
+
+function get_meansbands_input_files{S<:AbstractString}(directory::S,
+                     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+                     model_string::S = S(""), forecast_string::S = S(""),
+                     fileformat::Symbol = :jld)
 
     input_files = Dict{Symbol, S}()
 
     for var in output_vars
-        input_files[var] = get_forecast_filename(m, input_type, cond_type, var,
-                                                 pathfcn = rawpath, forecast_string =
-                                                 forecast_string, fileformat = fileformat)
+        input_files[var] = get_forecast_filename(directory, input_type, cond_type, var,
+                                                 model_string = model_string,
+                                                 forecast_string = forecast_string,
+                                                 fileformat = fileformat)
 
         if contains(string(var), "4q")
             input_files[var] = replace(input_files[var], "forecast4q", "forecast")
@@ -314,23 +327,38 @@ function get_meansbands_input_files{S<:AbstractString}(m::AbstractModel,
     input_files
 end
 
-function get_meansbands_output_files{S<:AbstractString}(m::AbstractModel,
+function get_meansbands_output_files(m::AbstractModel,
                      input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                     forecast_string::S = "",
-                     fileformat = :jld)
+                     model_string = "", forecast_string = "",
+                     fileformat::Symbol = :jld)
+
+    dir = workpath(m, "forecast", "")
+    get_meansbands_output_files(dir, input_type, cond_type, output_vars,
+                                model_string = model_string,
+                                forecast_string = forecast_string, fileformat = fileformat)
+end
+
+function get_meansbands_output_files{S<:AbstractString}(directory::S,
+                     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+                     model_string = "", forecast_string = "", fileformat = :jld)
+
+    model_string = S(model_string)
+    forecast_string = S(forecast_string)
 
     mb_output_vars = [symbol("mb$x") for x in output_vars]
     output_files = Dict{Symbol,AbstractString}()
 
-    for var in mb_output_vars
-        output_files[var] = get_forecast_filename(m, input_type, cond_type, var,
-                                                 pathfcn = workpath,
-                                                 forecast_string = forecast_string,
-                                                 fileformat = fileformat)
+    for var in output_vars
+        output_files[var] = get_forecast_filename(directory, input_type, cond_type, symbol("mb$var"),
+                                                  model_string = model_string,
+                                                  forecast_string = forecast_string,
+                                                  fileformat = fileformat)
     end
 
     output_files
 end
+
+
 
 """
 ```

@@ -179,28 +179,50 @@ type `input_type`, and conditional type `cond_type`, for each output variable in
 ### Notes
 See `get_forecast_filename` for more information.
 """
-function get_forecast_output_files{S<:AbstractString}(m::AbstractModel,
+function get_forecast_output_files(m::AbstractModel,
                      input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                     pathfcn::Function = rawpath, forecast_string::S = "",
-                     fileformat = :jld)
+                     forecast_string = "", fileformat = :jld)
+
+    dir = rawpath(m, "forecast", "")
+    model_string = get_model_string(m)
+
+    get_forecast_output_files(dir, input_type, cond_type, output_vars,
+                              model_string = model_string,
+                              forecast_string = forecast_string,
+                              fileformat = fileformat)
+end
+
+function get_forecast_output_files{S<:AbstractString}(directory::S,
+                     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+                     model_string = "", forecast_string = "", fileformat = :jld)
 
     output_files = Dict{Symbol, S}()
     for var in output_vars
-        output_files[var] = get_forecast_filename(m, input_type, cond_type, var,
-                                                  pathfcn = pathfcn, forecast_string =
-                                                  forecast_string, fileformat = fileformat)
+        output_files[var] = get_forecast_filename(directory, input_type, cond_type, var,
+                                                  model_string=  model_string,
+                                                  forecast_string = forecast_string,
+                                                  fileformat = fileformat)
     end
 
     output_files
 end
 
+function get_model_string(m)
+
+    tmp          = workpath(m, "forecast", "foo")
+    output_dir   = dirname(tmp)
+    replace(basename(tmp), "foo_", "")
+end
 
 """
 ```
 get_forecast_filename(m, input_type, cond_type, output_var;
                  [pathfcn = rawpath], [forecast_string = ""], [fileformat = :jld])
-```
 
+
+get_forecast_filename(directory, input_type, cond_type, output_var;
+                 [forecast_string = ""], [fileformat = :jld])
+```
 
 ### Notes
 
@@ -208,6 +230,15 @@ get_forecast_filename(m, input_type, cond_type, output_var;
 filenames. If in this case `forecast_string` is empty, `get_forecast_filename` throws
 an error.
 
+- In the second method, `directory` should be something of the form
+
+```
+\"\$saveroot/m990/ss2/forecast/raw/\"
+```
+
+Note that a `pathfcn` is therefore not required.
+
+### Usage
 
 ```julia
 output_file = get_forecast_filename(m, :mode, :none, :forecastpseudo)
@@ -215,9 +246,8 @@ output_file = get_forecast_filename(m, :mode, :none, :forecastpseudo)
 
 The result will be something like:
 
-
 ```julia
-\"$saveroot/m990/ss2/forecast/raw/forecastpseudo_cond=none_para=mode_vint=REF.jld\"
+\"\$saveroot/m990/ss2/forecast/raw/forecastpseudo_cond=none_para=mode_vint=REF.jld\"
 ```
 
 Another example:
@@ -229,19 +259,34 @@ output_file = get_forecast_filename(m, :mode, :none, :forecastpseudo, workpath)
 The result will be something like:
 
 ```julia
-\"$saveroot/m990/ss2/forecast/work/forecastpseudo_cond=none_para=mode_vint=REF.jld\"
+\"\$saveroot/m990/ss2/forecast/work/forecastpseudo_cond=none_para=mode_vint=REF.jld\"
 ```
 """
-function get_forecast_filename{S<:AbstractString}(m::AbstractModel,
+function get_forecast_filename(m::AbstractModel,
                      input_type::Symbol, cond_type::Symbol, output_var::Symbol;
-                     pathfcn::Function = rawpath, forecast_string::S = "",
-                     fileformat = :jld)
+                     pathfcn::Function = rawpath, model_string = "",
+                     forecast_string = "", fileformat = :jld)
 
-    additional_file_strings = ASCIIString[]
+    # first, we need to make sure we get all of the settings that have been printed to this filestring
+    fake_filename = pathfcn(m, "forecast", "foo")
+    dir           = dirname(fake_filename)
+    modelstring   = replace(basename(fake_filename), "foo_", "")
 
-    if input_type == :block
-        input_type = :full
-    end
+    # now we can find the filestring we are looking for
+    get_forecast_filename(dir, input_type, cond_type, output_var,
+                          model_string = model_string, forecast_string = forecast_string,
+                          fileformat = fileformat)
+end
+
+
+function get_forecast_filename{S<:AbstractString}(directory::S,
+                     input_type::Symbol, cond_type::Symbol, output_var::Symbol;
+                     model_string = "", forecast_string = "", fileformat = :jld)
+
+    model_string = S(model_string)
+    forecast_string = S(forecast_string)
+
+    additional_file_strings = [model_string]
     push!(additional_file_strings, "para=" * abbrev_symbol(input_type))
     if isempty(forecast_string)
         if input_type == :subset
@@ -252,8 +297,10 @@ function get_forecast_filename{S<:AbstractString}(m::AbstractModel,
     end
     push!(additional_file_strings, "cond=" * abbrev_symbol(cond_type))
 
-    pathfcn(m, "forecast", "$output_var.$fileformat", additional_file_strings)
+    sorted_model_string = filestring(additional_file_strings)
+    joinpath(directory, "$output_var$(sorted_model_string).$fileformat")
 end
+
 
 typealias DVector{T, A} DArray{T, 1, A}
 typealias DMatrix{T, A} DArray{T, 2, A}
@@ -383,8 +430,8 @@ Writes the elements of `forecast_output` indexed by `output_vars` to file, given
 `forecast_output_files`, which maps `output_vars` to file names. Calls
 `write_darray`.
 """
-function write_forecast_outputs(m::AbstractModel, output_vars::Vector{Symbol},
-                                forecast_output_files::Dict{Symbol,ASCIIString},
+function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, output_vars::Vector{Symbol},
+                                forecast_output_files::Dict{Symbol,S},
                                 forecast_output::Dict{Symbol, DArray{Float64}};
                                 block_number::Int = -1,
                                 verbose::Symbol = :low)
@@ -711,6 +758,13 @@ function compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
         info("Compiling forecast_one...")
     end
 
+    # since the forecast doesn't write 4q or q4q4 results, we don't need to include these.
+    # their presence will also cause problems when we try to remove the output files.
+    my_output_vars = setdiff(output_vars, [:forecast4qpseudo, :forecast4qobs,
+                                           :bddforecast4qpseudo, :bddforecast4qobs,
+                                           :forecastq4q4obs, :forecastq4q4pseudo,
+                                           :bddforecastq4q4obs, :bddforecastq4q4pseudo])
+
     # Compute mininum number of draws for given jstep and procs
     jstep = get_setting(m, :forecast_jstep)
     nprocs = length(procs)
@@ -718,12 +772,12 @@ function compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
 
     # Call forecast_one with input_type = :subset
     subset_inds = 1:min_draws
-    forecast_outputs = forecast_one(m, :subset, :none, output_vars;
+    forecast_outputs = forecast_one(m, :subset, :none, my_output_vars;
                                     subset_inds = subset_inds, forecast_string = "compile",
                                     verbose = :none, procs = procs)
 
     # Delete output files
-    output_files = get_forecast_output_files(m, :subset, :none, output_vars; forecast_string = "compile")
+    output_files = get_forecast_output_files(m, :subset, :none, my_output_vars; forecast_string = "compile")
     map(rm, collect(values(output_files)))
     darray_closeall()
     gc()

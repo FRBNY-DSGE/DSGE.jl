@@ -1,5 +1,5 @@
 """
-meansbands_matrix_all{S<:AbstractString}(m::AbstractModel,
+meansbands_matrix_all(m::AbstractModel,
     input_type::Symbol, cond_type::Symbol, output_vars = Vector{Symbol};
     forecast_string = "", verbose::Symbol = :low)
 
@@ -27,10 +27,13 @@ function meansbands_matrix_all(m::AbstractModel, input_type::Symbol,
     #          Specifically, if output_vars contains shockdecs but not
     #          trend or deterministic trends, add those
 
-    output_vars = add_requisite_output_vars(output_vars)
-    output_dir = workpath(m, "forecast", "")
-    outfiles = DSGE.get_meansbands_output_files(m, input_type, cond_type, output_vars,
-                                                forecast_string = forecast_string)
+    output_vars  = add_requisite_output_vars(output_vars)
+    tmp          = workpath(m, "forecast", "foo")
+    output_dir   = dirname(tmp)
+    model_string = replace(basename(tmp), "foo_", "")
+    outfiles = get_meansbands_output_files(m, input_type, cond_type, output_vars,
+                                           model_string = model_string,
+                                           forecast_string = forecast_string)
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
         info("Converting means and bands to matrices for input_type = $input_type, cond_type = $cond_type...")
@@ -54,6 +57,8 @@ end
 function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
                                verbose::Symbol = :low)
 
+    model_string = filestring(m)[2:end]
+
     for output_var in keys(mbs)
 
         mb       = mbs[output_var]
@@ -64,9 +69,9 @@ function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
         ## Get name of file to write
         outfile = DSGE.get_forecast_filename(m, para(mb), cond_type(mb), output_var,
                     pathfcn = workpath, forecast_string = mb.metadata[:forecast_string],
-                    fileformat = :h5)
+                    model_string = model_string, fileformat = :h5)
 
-        base = basename(outfile)[3:end]
+        base = basename(outfile)
         outfile = joinpath(dirname(outfile), "mb_matrix_"*base)
 
         ## Convert MeansBands objects to matrices
@@ -86,7 +91,7 @@ end
 
 """
 ```
-meansbands_matrix{S<:AbstractString}(mb::MeansBands)
+meansbands_matrix(mb::MeansBands)
 ```
 
 Convert a `MeansBands` object to matrix form.
