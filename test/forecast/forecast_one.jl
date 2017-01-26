@@ -10,8 +10,13 @@ custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start     => Setting(:date_forecast_start, quartertodate("2015-Q4")),
     :date_conditional_end    => Setting(:date_conditional_end, quartertodate("2015-Q4")),
     :forecast_kill_shocks    => Setting(:forecast_kill_shocks, true),
-    :saveroot                => Setting(:saveroot, normpath(joinpath(dirname(@__FILE__), "..", "reference"))))
+    :saveroot                => Setting(:saveroot, tempdir()))
 m = Model990(custom_settings = custom_settings, testing = true)
+
+estroot = normpath(joinpath(dirname(@__FILE__), "..", "reference", "output_data", "m990", "ss2", "estimate", "raw"))
+overrides = forecast_input_file_overrides(m)
+overrides[:mode] = joinpath(estroot, "paramsmode_test.h5")
+overrides[:full] = joinpath(estroot, "mhsave_test.h5")
 
 output_vars = [:histpseudo, :forecastpseudo, :forecastobs, :bddforecastpseudo, :bddforecastobs,
                :shockdecpseudo, :shockdecobs, :dettrendpseudo, :dettrendobs, :trendpseudo, :trendobs,
@@ -28,8 +33,6 @@ output_vars = [:histpseudo, :forecastpseudo, :forecastobs, :bddforecastpseudo, :
 # Run all forecast combinations
 out = Dict{Symbol, Dict{Symbol, Any}}()
 input_type = :mode
-output_files = []
-
 for cond_type in [:none, :semi, :full]
     @time dtemp = forecast_one(m, input_type, cond_type, output_vars, verbose = :none)
 
@@ -39,10 +42,6 @@ for cond_type in [:none, :semi, :full]
         temp[x] = squeeze(convert(Array, dtemp[x]), 1)
     end
     out[cond_type] = temp
-
-    # Save output file name
-    new_output_files = collect(values(get_forecast_output_files(m, input_type, cond_type, output_vars)))
-    append!(output_files, new_output_files)
 end
 
 # Read expected output
@@ -73,8 +72,5 @@ for cond_type in [:none, :semi, :full]
     @test_matrix_approx_eq exp_out[cond_type][:irfobs]         out[cond_type][:irfobs]
     @test_matrix_approx_eq exp_out[cond_type][:irfpseudo]      out[cond_type][:irfpseudo]
 end
-
-# Delete all files written by forecast_one
-map(rm, unique(output_files))
 
 nothing
