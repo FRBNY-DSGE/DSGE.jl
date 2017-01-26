@@ -437,12 +437,12 @@ Writes the elements of `forecast_output` indexed by `output_vars` to file, given
 function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, output_vars::Vector{Symbol},
                                 forecast_output_files::Dict{Symbol,S},
                                 forecast_output::Dict{Symbol, DArray{Float64}};
-                                block_number::Int = -1,
+                                block_number::Nullable{Int64} = Nullable{Int64}(),
                                 verbose::Symbol = :low)
 
     for var in output_vars
         filepath = forecast_output_files[var]
-        if block_number == -1 || block_number == 1
+        if isnull(block_number) || get(block_number) == 1
             jldopen(filepath, "w") do file
                 write_forecast_metadata(m, file, var)
             end
@@ -567,8 +567,10 @@ file as `arr\$pid` and `inds\$pid`. The dimensions `dims` of `darr` and the
 vector of processes `pids` over which `darr` is distributed are also written to
 `filepath` in order to facilitate reading back in.
 """
-function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T}; block_number::Int = -1)
-    blockstr = block_number == -1 ? "" : "block$(block_number)_"
+function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T};
+                                        block_number::Nullable{Int64} = Nullable{Int64}())
+
+    blockstr = isnull(block_number) ? "" : "block$(get(block_number))_"
 
     function write_localpart(pid::Int)
         jldopen(filepath, "r+") do file
@@ -582,11 +584,11 @@ function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T
         write(file, blockstr * "dims", darr.dims)
         write(file, blockstr * "pids", collect(darr.pids))
 
-        if block_number != -1
+        if !isnull(block_number)
             if exists(file, "nblocks")
                 delete!(file, "nblocks")
             end
-            write(file, "nblocks", block_number)
+            write(file, "nblocks", get(block_number))
         end
     end
 

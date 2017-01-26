@@ -341,7 +341,7 @@ function forecast_one(m::AbstractModel{Float64},
     df::DataFrame = DataFrame(),
     systems::DVector{System{Float64}} = dinit(System{Float64}, 0),
     kals::DVector{Kalman{Float64}} = dinit(Kalman{Float64}, 0),
-    block_number::Int = -1,
+    block_number::Nullable{Int64} = Nullable{Int64}(),
     subset_inds::Range{Int64} = 1:0,
     forecast_string::AbstractString = "", verbose::Symbol = :low,
     procs::Vector{Int} = [myid()])
@@ -360,7 +360,8 @@ function forecast_one(m::AbstractModel{Float64},
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
         if input_type == :block
-            info("Forecasting block $(block_number) of $(n_forecast_blocks(m))...")
+            block_num = get(block_number)
+            info("Forecasting block $(block_num) of $(n_forecast_blocks(m))...")
         else
             info("Forecasting input_type = $input_type, cond_type = $cond_type...")
             println("Start time: $(now())")
@@ -378,7 +379,7 @@ function forecast_one(m::AbstractModel{Float64},
         for block = 1:nblocks
             tic()
             forecast_one(m, :block, cond_type, output_vars;
-                df = df, block_number = block,
+                df = df, block_number = Nullable(block),
                 subset_inds = block_inds[block],
                 verbose = block_verbose, procs = procs)
             darray_closeall()
