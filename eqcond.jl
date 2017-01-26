@@ -355,13 +355,33 @@ function eqcond(m::Model1010)
     Ψ[eq[:eq_g], exo[:z_sh]]  = m[:η_gz]
 
     # Asset shock
-    Γ0[eq[:eq_b_liq], endo[:b_liq_t]] = 1.
-    Γ1[eq[:eq_b_liq], endo[:b_liq_t]] = m[:ρ_b_liq]
-    Ψ[eq[:eq_b_liq], exo[:b_liq_sh]]   = 1.
+    # Liquidity
+    Γ0[eq[:eq_b_liqtil], endo[:b_liqtil_t]] = 1.  # transient component
+    Γ1[eq[:eq_b_liqtil], endo[:b_liqtil_t]] = m[:ρ_b_liqtil]
+    Ψ[eq[:eq_b_liqtil], exo[:b_liqtil_sh]]   = 1.
 
-    Γ0[eq[:eq_b_safe], endo[:b_safe_t]] = 1.
-    Γ1[eq[:eq_b_safe], endo[:b_safe_t]] = m[:ρ_b_safe]
-    Ψ[eq[:eq_b_safe], exo[:b_safe_sh]]   = 1.
+    Γ0[eq[:eq_b_liqp], endo[:b_liqp_t]] = 1.  # permanent component
+    Γ1[eq[:eq_b_liqp], endo[:b_liqp_t]] = m[:ρ_b_liqp]
+    Ψ[eq[:eq_b_liqp], exo[:b_liqp_sh]]   = 1.
+
+    Γ0[eq[:eq_b_liq], endo[:b_liq_t]] = 1.
+    Γ0[eq[:eq_b_liq], endo[:b_liqtil_t]] = -1.
+    Γ0[eq[:eq_b_liq], endo[:b_liqp_t]]   = -1.
+
+    # Safety
+
+    Γ0[eq[:eq_b_safetil], endo[:b_safetil_t]] = 1.
+    Γ1[eq[:eq_b_safetil], endo[:b_safetil_t]] = m[:ρ_b_safetil]
+    Ψ[eq[:eq_b_safetil], exo[:b_safetil_sh]]   = 1.
+
+    Γ0[eq[:eq_b_safep], endo[:b_safep_t]] = 1.
+    Γ1[eq[:eq_b_safep], endo[:b_safep_t]] = m[:ρ_b_safep]
+    Ψ[eq[:eq_b_safep], exo[:b_safep_sh]]   = 1.
+
+    Γ0[eq[:eq_b_safe], endo[:b_safe_t]]    = 1.
+    Γ0[eq[:eq_b_safe], endo[:b_safetil_t]] = -1.
+    Γ0[eq[:eq_b_safe], endo[:b_safep_t]]    = -1.
+
 
     # Investment-specific technology
     Γ0[eq[:eq_μ], endo[:μ_t]] = 1.

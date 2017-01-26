@@ -96,7 +96,7 @@ type Model1010{T} <: AbstractModel{T}
 end
 
 
-description(m::Model1010) = "FRBNY DSGE Model m1010, $(m.subspec). Adds the AAA-20T spread in addition to the BBB-20T spread."
+description(m::Model1010) = "FRBNY DSGE Model m1010, $(m.subspec). Model1009, with trend and stationary components in the safety and liquidity premia processes."
 
 """
 `init_model_indices!(m::Model1010)`
@@ -115,14 +115,15 @@ function init_model_indices!(m::Model1010)
         :λ_w_t, :λ_w_t1, :rm_t, :σ_ω_t, :μ_e_t, :γ_t, :π_star_t, :Ec_t, :Eqk_t, :Ei_t,
         :Eπ_t, :EL_t, :Erk_t, :Ew_t, :ERtil_k_t, :ERktil_f_t, :y_f_t, :c_f_t, :i_f_t, :qk_f_t, :k_f_t,
         :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :r_f_t, :Ec_f_t, :Eqk_f_t, :Ei_f_t,
-        :EL_f_t,  :ztil_t, :π_t1, :π_t2, :π_a_t, :R_t1, :zp_t, :Ez_t, :rktil_f_t, :n_f_t];
+        :EL_f_t,  :ztil_t, :π_t1, :π_t2, :π_a_t, :R_t1, :zp_t, :Ez_t, :rktil_f_t, :n_f_t,
+        :b_liqtil_t, :b_liqp_t, :b_safetil_t, :b_safep_t];
         [symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]]
 
     # Exogenous shocks
     exogenous_shocks = [[
-        :g_sh, :b_liq_sh, :b_safe_sh, :μ_sh, :z_sh, :λ_f_sh, :λ_w_sh, :rm_sh, :σ_ω_sh, :μ_e_sh,
-        :γ_sh, :π_star_sh, :lr_sh, :zp_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh,
-        :BBB_sh, :AAA_sh];
+        :g_sh, :b_liqtil_sh, :b_liqp_sh, :b_safetil_sh, :b_safep_sh, :μ_sh, :z_sh,
+        :λ_f_sh, :λ_w_sh, :rm_sh, :σ_ω_sh, :μ_e_sh, :γ_sh, :π_star_sh, :lr_sh, :zp_sh,
+        :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh, :BBB_sh, :AAA_sh];
         [symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
 
     # Expectations shocks
@@ -139,7 +140,7 @@ function init_model_indices!(m::Model1010)
         :eq_capval_f, :eq_output_f, :eq_caputl_f, :eq_capsrv_f, :eq_capev_f, :eq_mkupp_f,
         :eq_caprnt_f, :eq_msub_f, :eq_res_f, :eq_Ec_f, :eq_Eqk_f, :eq_Ei_f, :eq_EL_f,
         :eq_ztil, :eq_π_star, :eq_π1, :eq_π2, :eq_π_a, :eq_Rt1, :eq_zp, :eq_Ez, :eq_spread_f,:eq_nevol_f,
-        :eq_Erktil_f];
+        :eq_Erktil_f, :eq_b_liqtil, :eq_b_liqp, :eq_b_safetil, :eq_b_safep];
         [symbol("eq_rml$i") for i=1:n_anticipated_shocks(m)]]
 
     # Additional states added after solving model
@@ -335,13 +336,17 @@ function Model1010(subspec::AbstractString="ss1";
                    description="ρ_g: AR(1) coefficient in the government spending process.",
                    tex_label="\\rho_g")
 
-    m <= parameter(:ρ_b_liq,      0.9410, (0.0, 1.0),   (0.0, 1.0), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),
-                   fixed=false, description="ρ_b_liq: AR(1) coefficient in the intertemporal preference
-                   shifter process for liquid assets.", tex_label="\\rho_{b,liq}")
+    m <= parameter(:ρ_b_liqtil,     0.9410, (0.0, 1.0),   (0.0, 1.0), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),
+                   fixed=false, description="ρ_b_liqtil: AR(1) coefficient in the non-permanent component of the intertemporal preference shifter process for liquid assets.", tex_label="\\rho_{\\tilde{b},liq}")
 
-    m <= parameter(:ρ_b_safe,      0.9410, (0.0, 1.0),   (0.0, 1.0), DSGE.SquareRoot(),  BetaAlt(0.5, 0.2),
-                   fixed=false,  description="ρ_b_safe: AR(1) coefficient in the intertemporal preference
-                   shifter process for safe assets.", tex_label="\\rho_{b,safe}")
+    m <= parameter(:ρ_b_liqp,       0.99, (0.0, 1.0),  (0.0, 1.0), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),
+                   fixed=true, description="ρ_b_liqp: AR(1) coefficient in the permanent component of the intertemporal preference shifter process for liquid assets.", tex_label="\\rho_{b^p,liq}")
+
+    m <= parameter(:ρ_b_safetil,    0.9410, (0.0, 1.0),   (0.0, 1.0), DSGE.SquareRoot(),  BetaAlt(0.5, 0.2),
+                   fixed=false,  description="ρ_b_safetil: AR(1) coefficient in the non-permanent component of the intertemporal preference shifter process for safe assets.", tex_label="\\rho_{\\tilde{b},safe}")
+
+    m <= parameter(:ρ_b_safep,      0.99, (0.0, 1.0),   (0.0, 1.0), DSGE.SquareRoot(),  BetaAlt(0.5, 0.2),
+                   fixed=true,  description="ρ_b_safep: AR(1) coefficient in the permanent component of the intertemporal preference shifter process for safe assets.", tex_label="\\rho_{b^p,safe}")
 
     m <= parameter(:ρ_μ,     0.8735, (0.0, 1.0),   (0.0, 1.0), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),
                    fixed=false,
@@ -419,15 +424,25 @@ m <= parameter(:ρ_tfp,     0.1953, (0.0, 1.0),      (0.0, 1.0), DSGE.SquareRoot
                    description="σ_g: The standard deviation of the government spending process.",
                    tex_label="\\sigma_{g}")
 
-    m <= parameter(:σ_b_liq, 0.0292, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_b_liqtil, 0.0292, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10),
                    fixed=false,
-                   description="σ_b_liq: Standard deviation of liquid asset preference shifter process.",
-                   tex_label="\\sigma_{b, liq}")
+                   description="σ_b_liqtil: Standard deviation of non-stationary component of liquid asset preference shifter process.",
+                   tex_label="\\sigma_{\\tilde{b}, liq}")
 
-    m <= parameter(:σ_b_safe, 0.0292, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_b_liqp, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(6., 0.03),
                    fixed=false,
-                   description="σ_b_safe: Standard deviation of safe asset preference shifter process.",
-                   tex_label="\\sigma_{b, safe}")
+                   description="σ_b_liqp: Standard deviation of stationary component of liquid asset preference shifter process.",
+                   tex_label="\\sigma_{b^p, liq}")
+
+    m <= parameter(:σ_b_safetil, 0.0292, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10),
+                   fixed=false,
+                   description="σ_b_safetil: Standard deviation of non-stationary component of safe asset preference shifter process.",
+                   tex_label="\\sigma_{\\tilde{b}, safe}")
+
+    m <= parameter(:σ_b_safep, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(6., 0.03),
+                   fixed=false,
+                   description="σ_b_safep: Standard deviation of stationary component of safe asset preference shifter process.",
+                   tex_label="\\sigma_{b^p, safe}")
 
 
     m <= parameter(:σ_μ,     0.4559, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   DSGE.RootInverseGamma(2., 0.10),  fixed=false,

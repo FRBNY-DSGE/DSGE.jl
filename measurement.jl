@@ -144,25 +144,27 @@ function measurement{T<:AbstractFloat}(m::Model1010{T},
     ZZ[obs[:obs_tfp], endo[:u_t]]       = m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα] )
     ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
 
-    QQ[exo[:g_sh], exo[:g_sh]]            = m[:σ_g]^2
-    QQ[exo[:b_liq_sh], exo[:b_liq_sh]]    = m[:σ_b_liq]^2
-    QQ[exo[:b_safe_sh], exo[:b_safe_sh]]  = m[:σ_b_safe]^2
-    QQ[exo[:μ_sh], exo[:μ_sh]]            = m[:σ_μ]^2
-    QQ[exo[:z_sh], exo[:z_sh]]            = m[:σ_z]^2
-    QQ[exo[:λ_f_sh], exo[:λ_f_sh]]        = m[:σ_λ_f]^2
-    QQ[exo[:λ_w_sh], exo[:λ_w_sh]]        = m[:σ_λ_w]^2
-    QQ[exo[:rm_sh], exo[:rm_sh]]          = m[:σ_r_m]^2
-    QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]        = m[:σ_σ_ω]^2
-    QQ[exo[:μ_e_sh], exo[:μ_e_sh]]        = m[:σ_μ_e]^2
-    QQ[exo[:γ_sh], exo[:γ_sh]]            = m[:σ_γ]^2
-    QQ[exo[:π_star_sh], exo[:π_star_sh]]  = m[:σ_π_star]^2
-    QQ[exo[:lr_sh], exo[:lr_sh]]          = m[:σ_lr]^2
-    QQ[exo[:zp_sh], exo[:zp_sh]]          = m[:σ_z_p]^2
-    QQ[exo[:tfp_sh], exo[:tfp_sh]]        = m[:σ_tfp]^2
-    QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]]  = m[:σ_gdpdef]^2
-    QQ[exo[:corepce_sh], exo[:corepce_sh]]= m[:σ_corepce]^2
-    QQ[exo[:gdp_sh], exo[:gdp_sh]]        = m[:σ_gdp]^2
-    QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi]^2
+    QQ[exo[:g_sh], exo[:g_sh]]                  = m[:σ_g]^2
+    QQ[exo[:b_liqtil_sh], exo[:b_liqtil_sh]]    = m[:σ_b_liqtil]^2
+    QQ[exo[:b_liqp_sh], exo[:b_liqp_sh]]        = m[:σ_b_liqp]^2
+    QQ[exo[:b_safetil_sh], exo[:b_safetil_sh]]  = m[:σ_b_safetil]^2
+    QQ[exo[:b_safep_sh], exo[:b_safep_sh]]      = m[:σ_b_safep]^2
+    QQ[exo[:μ_sh], exo[:μ_sh]]                  = m[:σ_μ]^2
+    QQ[exo[:z_sh], exo[:z_sh]]                  = m[:σ_z]^2
+    QQ[exo[:λ_f_sh], exo[:λ_f_sh]]              = m[:σ_λ_f]^2
+    QQ[exo[:λ_w_sh], exo[:λ_w_sh]]              = m[:σ_λ_w]^2
+    QQ[exo[:rm_sh], exo[:rm_sh]]                = m[:σ_r_m]^2
+    QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]              = m[:σ_σ_ω]^2
+    QQ[exo[:μ_e_sh], exo[:μ_e_sh]]              = m[:σ_μ_e]^2
+    QQ[exo[:γ_sh], exo[:γ_sh]]                  = m[:σ_γ]^2
+    QQ[exo[:π_star_sh], exo[:π_star_sh]]        = m[:σ_π_star]^2
+    QQ[exo[:lr_sh], exo[:lr_sh]]                = m[:σ_lr]^2
+    QQ[exo[:zp_sh], exo[:zp_sh]]                = m[:σ_z_p]^2
+    QQ[exo[:tfp_sh], exo[:tfp_sh]]              = m[:σ_tfp]^2
+    QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]]        = m[:σ_gdpdef]^2
+    QQ[exo[:corepce_sh], exo[:corepce_sh]]      = m[:σ_corepce]^2
+    QQ[exo[:gdp_sh], exo[:gdp_sh]]              = m[:σ_gdp]^2
+    QQ[exo[:gdi_sh], exo[:gdi_sh]]              = m[:σ_gdi]^2
 
     # These lines set the standard deviations for the anticipated shocks. They
     # are here no longer calibrated to the std dev of contemporaneous shocks,
