@@ -376,7 +376,8 @@ function forecast_one(m::AbstractModel{Float64},
         block_verbose = verbose == :none ? :none : :low
         total_forecast_time = 0.0
 
-        for block = 1:nblocks
+        start_block = isnull(forecast_start_block(m)) ? 1 : get(forecast_start_block(m))
+        for block = start_block:nblocks
             tic()
             forecast_one(m, :block, cond_type, output_vars;
                 df = df, block_number = Nullable(block),
