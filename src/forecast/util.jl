@@ -604,20 +604,37 @@ function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T
 
     mode = isfile(filepath) ? "r+" : "w"
     jldopen(filepath, mode) do file
+        # Check if current block has already been written
+        if exists(file, blockstr * "dims")
+            if read(file, "nblocks") >= get(block_number)
+                # Current block was already written successfully
+                error("Block $(get(block_number)) has already been written to $filepath. Try restarting your forecast from a later block or from the beginning")
+            else
+                # Writing of current block was started, but did not complete
+                block_names = Base.filter(x -> contains(x, blockstr), names(file))
+                map(x -> delete!(file, x), block_names)
+            end
+        end
+
+        # Write block metadata
         write(file, blockstr * "dims", darr.dims)
         write(file, blockstr * "pids", collect(darr.pids))
+    end
 
-        if !isnull(block_number)
+    # Write block localparts
+    for pid in darr.pids
+        remotecall_wait(pid, write_localpart, pid)
+        sleep(0.001) # Need this, or else HDF5 complains that the new object already exists
+    end
+
+    # Update `nblocks`, indicating that the block was written successfully
+    if !isnull(block_number)
+        jldopen(filepath, "r+") do file
             if exists(file, "nblocks")
                 delete!(file, "nblocks")
             end
             write(file, "nblocks", get(block_number))
         end
-    end
-
-    for pid in darr.pids
-        remotecall_wait(pid, write_localpart, pid)
-        sleep(0.001) # Need this, or else HDF5 complains that the new object already exists
     end
 end
 
