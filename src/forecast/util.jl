@@ -594,6 +594,7 @@ function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T
                                         block_number::Nullable{Int64} = Nullable{Int64}())
 
     blockstr = isnull(block_number) ? "" : "block$(get(block_number))_"
+    mode = isfile(filepath) ? "r+" : "w"
 
     function write_localpart(pid::Int)
         jldopen(filepath, "r+") do file
@@ -602,38 +603,56 @@ function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T
         end
     end
 
-    mode = isfile(filepath) ? "r+" : "w"
-    jldopen(filepath, mode) do file
-        # Check if current block has already been written
-        if exists(file, blockstr * "dims")
-            if read(file, "nblocks") >= get(block_number)
-                # Current block was already written successfully
-                error("Block $(get(block_number)) has already been written to $filepath. Try restarting your forecast from a later block or from the beginning")
-            else
-                # Writing of current block was started, but did not complete
-                block_names = Base.filter(x -> contains(x, blockstr), names(file))
-                map(x -> delete!(file, x), block_names)
-            end
-        end
+    ### A) Write forecast output without blocks
+    if isnull(block_number)
 
         # Write block metadata
-        write(file, blockstr * "dims", darr.dims)
-        write(file, blockstr * "pids", collect(darr.pids))
-    end
+        jldopen(filepath, mode) do file
+            write(file, "dims", darr.dims)
+            write(file, "pids", collect(darr.pids))
+        end
 
-    # Write block localparts
-    for pid in darr.pids
-        remotecall_wait(pid, write_localpart, pid)
-        sleep(0.001) # Need this, or else HDF5 complains that the new object already exists
-    end
+        # Write block localparts
+        for pid in darr.pids
+            remotecall_wait(pid, write_localpart, pid)
+            sleep(0.001) # Need this, or else HDF5 complains that the new object already exists
+        end
 
-    # Update `nblocks`, indicating that the block was written successfully
-    if !isnull(block_number)
+    ### B) Write forecast output block
+    else
+
+        block = get(block_number)
+        jldopen(filepath, mode) do file
+
+            # Check if current block has already been written
+            if exists(file, blockstr * "dims")
+                if read(file, "nblocks") >= block
+                    # Current block was already written successfully
+                    error("Block $(get(block_number)) has already been written to $filepath. Try restarting your forecast from a later block or from the beginning")
+                else
+                    # Writing of current block was started, but did not complete
+                    block_names = Base.filter(x -> contains(x, blockstr), names(file))
+                    map(x -> delete!(file, x), block_names)
+                end
+            end
+
+            # Write block metadata
+            write(file, blockstr * "dims", darr.dims)
+            write(file, blockstr * "pids", collect(darr.pids))
+        end
+
+        # Write block localparts
+        for pid in darr.pids
+            remotecall_wait(pid, write_localpart, pid)
+            sleep(0.001) # Need this, or else HDF5 complains that the new object already exists
+        end
+
+        # Update `nblocks`, indicating that the block was written successfully
         jldopen(filepath, "r+") do file
             if exists(file, "nblocks")
                 delete!(file, "nblocks")
             end
-            write(file, "nblocks", get(block_number))
+            write(file, "nblocks", block)
         end
     end
 end
