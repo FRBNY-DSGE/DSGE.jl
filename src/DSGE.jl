@@ -39,7 +39,7 @@ module DSGE
         data_vintage, cond_vintage, cond_id, cond_full_names, cond_semi_names, use_population_forecast,
         use_parallel_workers,
         reoptimize, calculate_hessian, hessian_path, n_hessian_test_params,
-        n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin, n_draws,
+        n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin,
         date_forecast_start, date_forecast_end, forecast_tdist_df_val,
         forecast_tdist_shocks, forecast_kill_shocks, forecast_smoother, forecast_draw_z0, forecast_zlb_value,
         forecast_blocking, n_forecast_blocks, forecast_start_block,
@@ -77,7 +77,8 @@ module DSGE
         trends, compute_trends, compute_trend,
         deterministic_trends, compute_deterministic_trends, compute_deterministic_trend,
         impulse_responses, compute_impulse_response,
-        get_forecast_output_files, get_forecast_filename, read_darray, write_darray, compile_forecast_one,
+        n_forecast_draws, get_forecast_output_files, get_forecast_filename,
+        read_darray, write_darray, compile_forecast_one,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,

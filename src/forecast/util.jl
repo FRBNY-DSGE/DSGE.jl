@@ -67,6 +67,29 @@ end
 
 """
 ```
+n_forecast_draws(m, input_type)
+```
+
+Returns the number of forecast draws in the file
+`get_input_file(m, input_type)`.
+"""
+function n_forecast_draws(m::AbstractModel, input_type::Symbol)
+    if input_type in [:mean, :mode, :init]
+        return 1
+    elseif input_type in [:full, :subset, :block]
+        input_file = get_input_file(m, input_type)
+        draws = h5open(input_file, "r") do file
+            dataset = HDF5.o_open(file, "mhparams")
+            size(dataset)[1]
+        end
+        return draws
+    else
+        throw(ArgumentError("Invalid input_type: $(input_type)"))
+    end
+end
+
+"""
+```
 forecast_block_inds(m; procs = [myid()])
 ```
 
@@ -77,7 +100,7 @@ function forecast_block_inds(m::AbstractModel;
                              procs::Vector{Int} = [myid()])
 
     nblocks = n_forecast_blocks(m)
-    ndraws  = n_draws(m)
+    ndraws  = n_forecast_draws(m, :full)
     jstep   = get_jstep(m, ndraws)
     nprocs  = length(procs)
     min_draws_per_block = jstep * nprocs
