@@ -180,13 +180,21 @@ function init_observable_mappings!(m::Model1002)
         # TO:   Baa yield - 10T yield spread at a quarterly rate
         # Note: Moody's corporate bond yields on the H15 are based on corporate
         #       bonds with remaining maturities of at least 20 years.
+        #       The Moody's series (BAA) ends partway through 2016-Q4. Hence
+        #       beginning in 2016-Q4, we replace it with a similar series from
+        #       Bank of America (BAMLC8A0C15PYEY).
 
-        annualtoquarter(levels[:BAA] - levels[:GS10])
+        splice_date   = quartertodate("2016-Q4") # quarter at which we start using new series
+        old_series    = levels[levels[:date] .<  splice_date, :BAA]
+        new_series    = levels[levels[:date] .>= splice_date, :BAMLC8A0C15PYEY]
+        levels[:temp] = vcat(old_series, new_series)
+
+        annualtoquarter(levels[:temp] - levels[:GS10])
     end
 
     spread_rev_transform = quartertoannual
 
-    observables[:obs_spread] = Observable(:obs_spread, [:BAA__FRED, :GS10__FRED],
+    observables[:obs_spread] = Observable(:obs_spread, [:BAA__FRED, :BAMLC8A0C15PYEY__FRED, :GS10__FRED],
                                           spread_fwd_transform, spread_rev_transform,
                                           "BAA - 10yr Treasury Spread",
                                           "BAA - 10yr Treasury Spread")
