@@ -30,11 +30,10 @@ output_vars = [:histpseudo, :forecastpseudo, :forecastobs, :bddforecastpseudo, :
                                 forecast_string = "test",
                                 verbose = :none)
 
-# Run all forecast combinations
+# Run modal forecasts
 out = Dict{Symbol, Dict{Symbol, Any}}()
-input_type = :mode
 for cond_type in [:none, :semi, :full]
-    @time dtemp = forecast_one(m, input_type, cond_type, output_vars, verbose = :none)
+    @time dtemp = forecast_one(m, :mode, cond_type, output_vars, verbose = :none)
 
     # Convert to Dict of regular arrays
     temp = Dict{Symbol, Array}()
@@ -49,7 +48,7 @@ exp_out = jldopen("$path/../reference/forecast_one_out.jld", "r") do file
     read(file, "exp_out")
 end
 
-# Test forecast outputs
+# Test modal forecast outputs
 specify_mode!(m, DSGE.get_input_file(m, :mode); verbose = :none)
 
 for cond_type in [:none, :semi, :full]
@@ -72,5 +71,16 @@ for cond_type in [:none, :semi, :full]
     @test_matrix_approx_eq exp_out[cond_type][:irfobs]         out[cond_type][:irfobs]
     @test_matrix_approx_eq exp_out[cond_type][:irfpseudo]      out[cond_type][:irfpseudo]
 end
+
+# Test full-distribution blocking
+m <= Setting(:forecast_blocking, false)
+@time forecast_one(m, :full, :none, output_vars, verbose = :none)
+
+m <= Setting(:forecast_blocking, true)
+@time forecast_one(m, :full, :none, output_vars, verbose = :none)
+
+m <= Setting(:forecast_start_block, Nullable(2))
+@test_throws ErrorException forecast_one(m, :full, :none, output_vars, verbose = :none)
+
 
 nothing
