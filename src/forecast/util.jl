@@ -549,7 +549,8 @@ function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
     # Load data if not provided
     if !irfs_only
         if isempty(df)
-            df = load_data(m; cond_type = cond_type, try_disk = true, verbose = :low)
+            data_verbose = verbose == :none ? :none : :low
+            df = load_data(m; cond_type = cond_type, try_disk = true, verbose = data_verbose)
         else
             @assert df[1, :date] == date_presample_start(m)
             @assert df[end, :date] == (cond_type == :none ? date_mainsample_end(m) : date_conditional_end(m))
