@@ -1,13 +1,12 @@
-using Debug
-# """
-# ```
-# hessian!{T<:AbstractFloat}(m::AbstractModel, x::Vector{T}, data::Matrix{T};
-#                            verbose::Symbol = :none)
-# ```
+"""
+```
+hessian!{T<:AbstractFloat}(m::AbstractModel, x::Vector{T}, data::Matrix{T};
+                           verbose::Symbol = :none)
+```
 
-# Compute Hessian of DSGE posterior function evaluated at x.
-# """
-@debug function hessian!{T<:AbstractFloat}(m::AbstractModel,
+Compute Hessian of DSGE posterior function evaluated at x.
+"""
+function hessian!{T<:AbstractFloat}(m::AbstractModel,
                                     x::Vector{T},
                                     data::Matrix{T};
                                     verbose::Symbol = :none)

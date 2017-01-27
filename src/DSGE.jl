@@ -1,4 +1,4 @@
-# isdefined(Base, :__precompile__) && __precompile__()
+isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
     using Distributions, HDF5
