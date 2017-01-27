@@ -106,6 +106,9 @@ function default_settings!(m::AbstractModel)
     settings[:impulse_response_horizons] = Setting(:impulse_response_horizons, 40,
         "Number of periods for which to calculate an impulse response")
 
+    # Alternative policy
+    settings[:alternative_policy] = Setting(:alternative_policy, identity)
+
     return settings
 end
 

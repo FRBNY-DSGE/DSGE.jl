@@ -303,6 +303,9 @@ forecast_zlb_value(m::AbstractModel)    = get_setting(m, :forecast_zlb_value)
 impulse_response_horizons(m::AbstractModel) = get_setting(m, :impulse_response_horizons)
 n_shockdec_periods(m::AbstractModel)    = index_shockdec_end(m) - index_shockdec_start(m) + 1
 
+# Interface for alternative policy settings
+alternative_policy(m::AbstractModel) = get_setting(m, :alternative_policy)
+
 function date_forecast_end(m::AbstractModel)
     date = date_forecast_start(m) + Dates.Month(3 * (forecast_horizons(m)-1))
     return Dates.lastdayofquarter(date)
