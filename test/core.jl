@@ -55,13 +55,13 @@ cx = 2 * (α - 1/2)
 @test_approx_eq_eps(transform_to_real_line(α), cx / sqrt(1 - cx^2), 0.001)
 @test transform_to_real_line(δ) == 0.025
 
-m = Model990()
+m = AnSchorfheide()
 lastparam = parameter(:p, 0.0)
 for θ in m.parameters
     isa(θ, Parameter) && (lastparam = θ)
 end
 @test isa(lastparam, Parameter)
-@test lastparam.value == 0.0181
+@test lastparam.value == 0.9247
 
 # transform_to_real_line and transform_to_model_space, acting on the entire parameter vector. they should be inverses!
 pvec = m.parameters
