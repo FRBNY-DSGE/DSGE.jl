@@ -66,3 +66,9 @@ function Base.getindex(eq::PseudoObservableMapping, d::Symbol)
         throw(KeyError(d))
     end
 end
+
+function check_mnemonics(levels::DataFrame, mnemonics::Symbol)
+    for mnemonic in mnemonics
+        @assert in(mnemonic, names(levels)) "Dataframe is missing $(mnemonic)"
+    end
+end
