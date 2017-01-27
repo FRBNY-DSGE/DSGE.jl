@@ -45,7 +45,7 @@ module DSGE
         find_density_bands, prior,
 
         # models/
-        steadystate!, Model990, SmetsWouters, eqcond, measurement,
+        steadystate!, Model990, SmetsWouters, AnSchorfheide, eqcond, measurement,
 
         # solve/
         gensys, solve,
@@ -94,5 +94,11 @@ module DSGE
     include("models/smets_wouters/eqcond.jl")
     include("models/smets_wouters/measurement.jl")
     include("models/smets_wouters/augment_states.jl")
+
+    include("models/an_schorfheide/an_schorfheide.jl")
+    include("models/an_schorfheide/subspecs.jl")
+    include("models/an_schorfheide/eqcond.jl")
+    include("models/an_schorfheide/measurement.jl")
+    include("models/an_schorfheide/augment_states.jl")
 
 end
