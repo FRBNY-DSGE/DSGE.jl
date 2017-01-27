@@ -28,7 +28,7 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
 
     ### 1. Load parameter draws from Metropolis-Hastings
 
-    filename = get_input_file(m, :full)
+    filename = get_forecast_input_file(m, :full)
     params = if !isempty(subset_inds)
         # Use subset of draws
         if isempty(subset_string)

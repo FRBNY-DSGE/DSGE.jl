@@ -77,7 +77,7 @@ module DSGE
         trends, compute_trends, compute_trend,
         deterministic_trends, compute_deterministic_trends, compute_deterministic_trend,
         impulse_responses, compute_impulse_response,
-        n_forecast_draws, get_forecast_output_files, get_forecast_filename,
+        n_forecast_draws, get_forecast_input_file, get_forecast_output_files, get_forecast_filename,
         read_darray, write_darray, compile_forecast_one,
 
         # models/

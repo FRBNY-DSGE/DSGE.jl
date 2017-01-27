@@ -136,7 +136,7 @@ function load_draws(m::AbstractModel, input_type::Symbol;
     subset_inds::Range{Int64} = 1:0,
     verbose::Symbol = :low, procs::Vector{Int} = [myid()])
 
-    input_file_name = get_input_file(m, input_type)
+    input_file_name = get_forecast_input_file(m, input_type)
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Loading draws from $input_file_name")
     end

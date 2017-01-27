@@ -71,13 +71,13 @@ n_forecast_draws(m, input_type)
 ```
 
 Returns the number of forecast draws in the file
-`get_input_file(m, input_type)`.
+`get_forecast_input_file(m, input_type)`.
 """
 function n_forecast_draws(m::AbstractModel, input_type::Symbol)
     if input_type in [:mean, :mode, :init]
         return 1
     elseif input_type in [:full, :subset, :block]
-        input_file = get_input_file(m, input_type)
+        input_file = get_forecast_input_file(m, input_type)
         draws = h5open(input_file, "r") do file
             dataset = HDF5.o_open(file, "mhparams")
             size(dataset)[1]
@@ -134,7 +134,7 @@ end
 
 """
 ```
-get_input_file(m, input_type)
+get_forecast_input_file(m, input_type)
 ```
 
 Compute the appropriate forecast input filenames for model `m` and
@@ -149,7 +149,7 @@ overrides = forecast_input_file_overrides(m)
 overrides[:mode] = \"path/to/input/file.h5\"
 ```
 """
-function get_input_file(m, input_type)
+function get_forecast_input_file(m, input_type)
     overrides = forecast_input_file_overrides(m)
     if haskey(overrides, input_type)
         override_file = overrides[input_type]
@@ -160,7 +160,7 @@ function get_input_file(m, input_type)
         end
     # If input_type = :subset or :block, also check for existence of overrides[:full]
     elseif input_type in [:subset, :block]
-        return get_input_file(m, :full)
+        return get_forecast_input_file(m, :full)
     end
 
     if input_type == :mode

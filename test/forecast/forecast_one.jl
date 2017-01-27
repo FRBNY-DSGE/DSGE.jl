@@ -49,7 +49,7 @@ exp_out = jldopen("$path/../reference/forecast_one_out.jld", "r") do file
 end
 
 # Test modal forecast outputs
-specify_mode!(m, DSGE.get_input_file(m, :mode); verbose = :none)
+specify_mode!(m, DSGE.get_forecast_input_file(m, :mode); verbose = :none)
 
 for cond_type in [:none, :semi, :full]
     # Histories

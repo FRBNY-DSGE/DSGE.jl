@@ -116,7 +116,7 @@ DSGE.prepare_forecast_inputs!
 ```
 
 By default, the draws are loaded from the file whose path is given by
-[`get_input_file`](@ref). However, you can override the default input
+[`get_forecast_input_file`](@ref). However, you can override the default input
 file for a given input type by adding entries to the `Dict{Symbol, ASCIIString}`
 returned from `forecast_input_file_overrides(m)`. For example:
 
@@ -299,7 +299,7 @@ Other functions used during the forecast step include:
 DSGE.compute_system
 DSGE.reset_procs
 DSGE.get_jstep
-DSGE.get_input_file
+DSGE.get_forecast_input_file
 DSGE.get_forecast_output_files
 DSGE.write_forecast_outputs
 DSGE.write_forecast_metadata
