@@ -13,17 +13,12 @@ m = Model990(custom_settings = custom_settings, testing = true)
 df, systems, kals = jldopen("$path/../reference/forecast_args.jld","r") do file
     read(file, "df"), read(file, "systems"), read(file, "kals")
 end
-
-# Add parallel workers
 ndraws = length(systems) # 2
-my_procs = addprocs(ndraws)
-@everywhere using DSGE
-
-systems = distribute(systems; procs = my_procs, dist = [ndraws])
-kals    = distribute(kals;    procs = my_procs, dist = [ndraws])
+systems = distribute(systems; procs = [myid()])
+kals    = distribute(kals;    procs = [myid()])
 
 # Run to compile before timing
-states, shocks, pseudo = smooth_all(m, df, systems, kals; procs = my_procs)
+smooth_all(m, df, systems, kals)
 
 # Read expected output
 exp_states, exp_shocks, exp_pseudo = jldopen("$path/../reference/smooth_out.jld", "r") do file
@@ -36,14 +31,11 @@ end
 for smoother in [:durbin_koopman, :kalman]
     m <= Setting(:forecast_smoother, smoother)
 
-    @time states, shocks, pseudo = smooth_all(m, df, systems, kals; procs = my_procs)
+    @time states, shocks, pseudo = smooth_all(m, df, systems, kals)
 
     @test_matrix_approx_eq exp_states[smoother] convert(Array, states)
     @test_matrix_approx_eq exp_shocks[smoother] convert(Array, shocks)
     @test_matrix_approx_eq exp_pseudo[smoother] convert(Array, pseudo)
 end
-
-# Remove parallel workers
-rmprocs(my_procs)
 
 nothing

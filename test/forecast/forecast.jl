@@ -15,20 +15,14 @@ m = Model990(custom_settings = custom_settings, testing = true)
 systems, z0s, kals = jldopen("$path/../reference/forecast_args.jld","r") do file
     read(file, "systems"), read(file, "states"), read(file, "kals")
 end
-
-# Add parallel workers
-ndraws = length(systems) # 2
-my_procs = addprocs(ndraws)
-@everywhere using DSGE
-
-# Distribute systems and states
-systems = distribute(systems; procs = my_procs, dist = [ndraws])
-z0s     = distribute(z0s;     procs = my_procs, dist = [ndraws])
-kals    = distribute(kals;    procs = my_procs, dist = [ndraws])
+ndraws  = length(systems) # 2
+systems = distribute(systems; procs = [myid()])
+z0s     = distribute(z0s;     procs = [myid()])
+kals    = distribute(kals;    procs = [myid()])
 
 # Run to compile before timing
-states, obs, pseudo, shocks = DSGE.forecast(m, systems, z0s; procs = my_procs)
-states, obs, pseudo, shocks = DSGE.forecast(m, systems, kals; procs = my_procs)
+forecast(m, systems, z0s)
+forecast(m, systems, kals)
 
 # Read expected output
 exp_states, exp_obs, exp_pseudo, exp_shocks = jldopen("$path/../reference/forecast_out.jld", "r") do file
@@ -36,7 +30,7 @@ exp_states, exp_obs, exp_pseudo, exp_shocks = jldopen("$path/../reference/foreca
 end
 
 # Run forecast without supplying shocks
-@time states, obs, pseudo, shocks = DSGE.forecast(m, systems, z0s; procs = my_procs)
+@time states, obs, pseudo, shocks = forecast(m, systems, z0s)
 
 @test_matrix_approx_eq exp_states convert(Array, states)
 @test_matrix_approx_eq exp_obs    convert(Array, obs)
@@ -44,7 +38,7 @@ end
 @test_matrix_approx_eq exp_shocks convert(Array, shocks)
 
 # Run forecast, supplying shocks
-@time states, obs, pseudo, shocks = DSGE.forecast(m, systems, z0s; procs = my_procs, shocks = shocks)
+@time states, obs, pseudo, shocks = forecast(m, systems, z0s; shocks = shocks)
 
 @test_matrix_approx_eq exp_states convert(Array, states)
 @test_matrix_approx_eq exp_obs    convert(Array, obs)
@@ -53,9 +47,6 @@ end
 
 # Run forecast, drawing z0s
 m <= Setting(:forecast_draw_z0, true)
-@time states, obs, pseudo, shocks = DSGE.forecast(m, systems, kals; procs = my_procs)
-
-# Remove parallel workers
-rmprocs(my_procs)
+@time states, obs, pseudo, shocks = forecast(m, systems, kals)
 
 nothing
