@@ -105,15 +105,15 @@ function forecast{S<:AbstractFloat}(m::AbstractModel,
                 Matrix{S}()
             end
 
-            states, obs, pseudo, shocks = compute_forecast(m, systems[i], z0s[i];
+            states_i, obs_i, pseudo_i, shocks_i = compute_forecast(m, systems[i], z0s[i];
                 cond_type = cond_type, enforce_zlb = enforce_zlb, shocks = shocks_i)
 
             i_local = mod(i-1, ndraws_local) + 1
 
-            localpart[i_local, states_range, :] = states
-            localpart[i_local, obs_range,    :] = obs
-            localpart[i_local, pseudo_range, :] = pseudo
-            localpart[i_local, shocks_range, :] = shocks
+            localpart[i_local, states_range, :] = states_i
+            localpart[i_local, obs_range,    :] = obs_i
+            localpart[i_local, pseudo_range, :] = pseudo_i
+            localpart[i_local, shocks_range, :] = shocks_i
         end
         return localpart
     end
