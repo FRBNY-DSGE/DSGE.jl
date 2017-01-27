@@ -839,18 +839,23 @@ function compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
     jstep = get_setting(m, :forecast_jstep)
     nprocs = length(procs)
     min_draws = jstep * nprocs
+    subset_inds = 1:min_draws
 
     # Call forecast_one with input_type = :subset
-    subset_inds = 1:min_draws
-    forecast_outputs = forecast_one(m, :subset, :none, my_output_vars;
-                                    subset_inds = subset_inds, forecast_string = "compile",
-                                    verbose = :none, procs = procs)
-
-    # Delete output files
-    output_files = get_forecast_output_files(m, :subset, :none, my_output_vars; forecast_string = "compile")
-    map(rm, collect(values(output_files)))
-    darray_closeall()
-    gc()
+    old_overrides = copy(forecast_input_file_overrides(m))
+    old_saveroot  = get_setting(m, :saveroot)
+    try
+        forecast_input_file_overrides(m)[:full] = get_forecast_input_file(m, :full)
+        m <= Setting(:saveroot, tempdir())
+        forecast_one(m, :subset, :none, my_output_vars;
+                     subset_inds = subset_inds, forecast_string = "compile",
+                     verbose = :none, procs = procs)
+    finally
+        m <= Setting(:forecast_input_file_overrides, old_overrides)
+        m <= Setting(:saveroot, old_saveroot)
+        darray_closeall()
+        gc()
+    end
 end
 
 """
