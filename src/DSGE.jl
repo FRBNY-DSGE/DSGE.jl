@@ -89,11 +89,11 @@ module DSGE
     include("models/m990/measurement.jl")
     include("models/m990/augment_states.jl")
 
-    include("m1002/m1002.jl")
-    include("m1002/subspecs.jl")
-    include("m1002/eqcond.jl")
-    include("m1002/measurement.jl")
-    include("m1002/augment_states.jl")
+    include("models/m1002/m1002.jl")
+    include("models/m1002/subspecs.jl")
+    include("models/m1002/eqcond.jl")
+    include("models/m1002/measurement.jl")
+    include("models/m1002/augment_states.jl")
 
     include("models/smets_wouters/smets_wouters.jl")
     include("models/smets_wouters/subspecs.jl")
