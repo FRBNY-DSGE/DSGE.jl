@@ -38,14 +38,16 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
 
     population_mnemonic = parse_population_mnemonic(m)[1]
 
-    population_data, population_forecast = transform_population_data(levels, population_mnemonic,
-                                                cond_type = cond_type,
-                                                population_forecast_file = population_forecast_file,
-                                                verbose = verbose)
+    if population_mnemonic != Symbol()
+        population_data, population_forecast = transform_population_data(levels, population_mnemonic,
+                                                    cond_type = cond_type,
+                                                    population_forecast_file = population_forecast_file,
+                                                    verbose = verbose)
 
-    levels = join(levels, population_data, on = :date, kind = :left)
-    rename!(levels, [:filtered_population_recorded, :dlfiltered_population_recorded, :dlpopulation_recorded],
-            [:filtered_population, :filtered_population_growth, :unfiltered_population_growth])
+        levels = join(levels, population_data, on = :date, kind = :left)
+        rename!(levels, [:filtered_population_recorded, :dlfiltered_population_recorded, :dlpopulation_recorded],
+                [:filtered_population, :filtered_population_growth, :unfiltered_population_growth])
+    end
 
     # Step 2: apply transformations to each series
     transformed = DataFrame()

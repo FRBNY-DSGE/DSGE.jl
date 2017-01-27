@@ -200,7 +200,9 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     if !m.testing
         filename = inpath(m, "data", "population_data_levels_$vint.csv")
         mnemonic = parse_population_mnemonic(m)[1]
-        writetable(filename, df[:,[:date,mnemonic]])
+        if mnemonic != Symbol()
+            writetable(filename, df[:,[:date,mnemonic]])
+        end
     end
 
     return df
