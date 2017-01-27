@@ -82,7 +82,7 @@ module DSGE
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
-        Model990, Model1002, SmetsWouters, eqcond, measurement, pseudo_measurement,
+        Model990, Model1002, SmetsWouters, AnSchorfheide, eqcond, measurement, pseudo_measurement,
 
         # solve/
         gensys, solve,
@@ -172,4 +172,10 @@ module DSGE
     include("models/smets_wouters/measurement.jl")
     include("models/smets_wouters/augment_states.jl")
 
+    include("models/an_schorfheide/an_schorfheide.jl")
+    include("models/an_schorfheide/subspecs.jl")
+    include("models/an_schorfheide/eqcond.jl")
+    include("models/an_schorfheide/observables.jl")
+    include("models/an_schorfheide/measurement.jl")
+    include("models/an_schorfheide/augment_states.jl")
 end
