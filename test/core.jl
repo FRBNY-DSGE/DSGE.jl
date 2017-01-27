@@ -1,5 +1,6 @@
 using DSGE
 using Distributions
+using Base.Test
 
 # Test Parameter type
 
