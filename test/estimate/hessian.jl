@@ -5,7 +5,7 @@ include("../util.jl")
 path = dirname(@__FILE__)
 
 # Test hessian! in context of model
-m = Model990()
+m = AnSchorfheide()
 m.testing = true
 
 # Setup paths
