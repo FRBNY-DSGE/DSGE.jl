@@ -73,14 +73,11 @@ forecast_block_inds(m)
 Returns a `Vector{Range{Int64}}` of length `n_forecast_blocks(m)`,
 where `block_inds[i]` is the range of indices for block `i`.
 """
-function forecast_block_inds(m::AbstractModel;
-                             procs::Vector{Int} = [myid()])
+function forecast_block_inds(m::AbstractModel)
 
     nblocks = n_forecast_blocks(m)
     ndraws  = n_forecast_draws(m, :full)
-    jstep   = get_jstep(m, ndraws)
-    nprocs  = length(procs)
-    min_draws_per_block = jstep * nprocs
+    min_draws_per_block = get_jstep(m, ndraws)
 
     # If there are not enough total draws for each block to have at least
     # `min_draws_per_block` blocks, decrease `nblocks` until there are
@@ -88,16 +85,21 @@ function forecast_block_inds(m::AbstractModel;
         nblocks -= 1
     end
 
-    # Calculate number of blocks necessary
-    n_sim_forecast = convert(Int, floor(ndraws / jstep))
-    nblocks = convert(Int, ceil(n_sim_forecast / block_size))
+    # Number of draws in each of the first `nblocks-1` blocks
+    avg_draws_per_block = if nblocks != n_forecast_blocks(m)
+        m <= Setting(:n_forecast_blocks(m), nblocks)
+        warn("Decreased n_forecast_blocks to $nblocks")
+        min_draws_per_block
+    else
+        convert(Int64, round(ndraws / (nblocks*min_draws_per_block))) * min_draws_per_block
+    end
 
     # Fill in draw indices for each block
     block_inds  = Vector{Range{Int64}}(nblocks)
     current_draw = 0
     for i = 1:(nblocks-1)
-        block_inds[i] = (current_draw+1):(current_draw+block_size)
-        current_draw += block_size
+        block_inds[i] = (current_draw+1):(current_draw+avg_draws_per_block)
+        current_draw += avg_draws_per_block
     end
     block_inds[end] = (current_draw+1):ndraws
 
@@ -395,6 +397,7 @@ function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, output_vars
                                 forecast_output_files::Dict{Symbol,S},
                                 forecast_output::Dict{Symbol, Array{Float64}};
                                 block_number::Nullable{Int64} = Nullable{Int64}(),
+                                subset_inds::Range{Int64} = 1:0,
                                 verbose::Symbol = :low)
 
     for var in output_vars
@@ -406,10 +409,10 @@ function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, output_vars
         end
 
         jldopen(filepath, "r+") do file
-            if block_number == -1
+            if isnull(block_number)
                 write(file, "arr", forecast_output[var])
             else
-                write_forecast_block(file, forecast_output[var], block_number, subset_inds)
+                write_forecast_block(file, forecast_output[var], get(block_number), subset_inds)
             end
         end
 
@@ -511,6 +514,26 @@ function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
     end
 
     return df, systems, kals
+end
+
+"""
+```
+assemble_block_outputs(dicts)
+```
+
+Given a vector `dicts` of forecast output dictionaries, concatenate each output
+along the draw dimension and return a new dictionary of the concatenated
+outputs.
+"""
+function assemble_block_outputs(dicts::Vector{Dict{Symbol, Array{Float64}}})
+    out = Dict{Symbol, Array{Float64}}()
+    if !isempty(dicts)
+        for var in keys(dicts[1])
+            outputs  = map(dict -> dict[var], dicts)
+            out[var] = cat(1, outputs...)
+        end
+    end
+    return out
 end
 
 """
@@ -623,7 +646,8 @@ write_forecast_block(file::JLD.JldFile, arr::Array, block_number::Int,
     subset_inds::Range{Int64})
 ```
 
-Writes `arr` as \"arr\$(block_number)\" and `subset_inds` as \"draws\$(block_number)\" to `file`, and updates `nblocks` and `ndraws`.
+Writes `arr` as \"arr\$(block_number)\" and `subset_inds` as
+\"draws\$(block_number)\" to `file`, and updates `nblocks` and `ndraws`.
 """
 function write_forecast_block(file::JLD.JldFile, arr::Array,
                               block_number::Int, subset_inds::Range{Int64})

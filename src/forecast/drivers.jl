@@ -1,7 +1,6 @@
 """
 ```
-forecast_all(m, input_types, cond_types, output_vars; verbose = :low,
-    procs = [myid()])
+forecast_all(m, input_types, cond_types, output_vars; verbose = :low)
 ```
 
 Compute forecasts for all specified combinations of conditional data, input
@@ -48,9 +47,6 @@ types, and output types.
     times for each step and the file names being written to.
 ```
 
-- `procs::Vector{Int}`: list of worker processes that have been previously added
-  by the user. Defaults to `[myid()]`
-
 ### Outputs
 
 None. Output is saved to files returned by
@@ -61,14 +57,13 @@ function forecast_all(m::AbstractModel,
                       input_types::Vector{Symbol} = Vector{Symbol}(),
                       cond_types::Vector{Symbol}  = Vector{Symbol}(),
                       output_vars::Vector{Symbol} = Vector{Symbol}();
-                      verbose::Symbol             = :low,
-                      procs::Vector{Int}          = [myid()])
+                      verbose::Symbol             = :low)
 
     for input_type in input_types
 
         # Load draws and solve system for each draw
-        params  = load_draws(m, input_type; verbose = verbose, procs = procs)
-        systems = prepare_systems(m, input_type, params; procs = procs)
+        params  = load_draws(m, input_type; verbose = verbose)
+        systems = prepare_systems(m, input_type, params)
 
         # Are we only running IRFs?
         irfs_only = all(x -> contains(string(x), "irf"), output_vars)
@@ -84,19 +79,21 @@ function forecast_all(m::AbstractModel,
                 df = load_data(m; cond_type = cond_type, try_disk = true, verbose = :none)
 
                 # Run Kalman filter to get s_{T|T}
-                kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
+                kals = filter_all(m, df, systems; cond_type = cond_type)
             end
 
             # Call forecast_one
             forecast_one(m, input_type, cond_type, output_vars;
                          df = df, systems = systems, kals = kals,
-                         verbose = verbose, procs = [myid()])
+                         verbose = verbose)
         end
     end
 end
 
 """
-`load_draws(m, input_type; subset_inds = 1:0, verbose = :low, procs = [myid()])`
+```
+load_draws(m, input_type; subset_inds = 1:0, verbose = :low)
+```
 
 Load and return parameter draws from Metropolis-Hastings.
 
@@ -113,8 +110,6 @@ Load and return parameter draws from Metropolis-Hastings.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`. If `:low` or greater, prints
   location of input file.
-- `procs::Vector{Int}`: list of worker processes over which to distribute
-  draws. Defaults to `[myid()]`.
 
 ### Outputs
 
@@ -122,19 +117,9 @@ Load and return parameter draws from Metropolis-Hastings.
   draws
 
 where `nsim` is the number of draws saved in Metropolis-Hastings.
-
-### Notes
-
-If `nsim` is not divisible by `jstep * nprocs`, where:
-
-- `jstep = get_jstep(m, nsim)` is the thinning step size for the forecast step
-- `nprocs = length(procs)` is the number of processes over which we distribute draws
-
-then we truncate the draws so that `mod(nsim_new, jstep * nprocs) == 0`.
 """
 function load_draws(m::AbstractModel, input_type::Symbol;
-    subset_inds::Range{Int64} = 1:0,
-    verbose::Symbol = :low, procs::Vector{Int} = [myid()])
+    subset_inds::Range{Int64} = 1:0, verbose::Symbol = :low)
 
     input_file_name = get_forecast_input_file(m, input_type)
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -160,11 +145,10 @@ function load_draws(m::AbstractModel, input_type::Symbol;
         # Truncate number of draws if necessary
         nsim = size(params,1)
         jstep = get_jstep(m, nsim)
-        nprocs = length(procs)
-        remainder = mod(nsim, jstep * nprocs)
+        remainder = mod(nsim, jstep)
         if remainder != 0
             nsim_new = nsim - remainder
-            warn("Number of draws read in, $nsim, is not divisible by jstep * nprocs = $(jstep * nprocs). Taking the first $nsim_new draws instead.")
+            warn("Number of draws read in, $nsim, is not divisible by jstep = $jstep.. Taking the first $nsim_new draws instead.")
             params = params[1:nsim_new, :]
         end
 
@@ -213,7 +197,7 @@ function prepare_systems(m::AbstractModel, input_type::Symbol,
         update!(m, vec(params))
         systems = [compute_system(m)]
     elseif input_type in [:full, :subset, :block]
-        systems = Vector{System}(n_sim_forecast)
+        systems = Vector{System{Float64}}(n_sim_forecast)
         for i = 1:n_sim_forecast
             j = i * jstep
             params_j = vec(params[j, :])
@@ -311,10 +295,8 @@ function forecast_one(m::AbstractModel{Float64},
     df::DataFrame = DataFrame(),
     systems::Vector{System{Float64}} = Vector{System{Float64}}(),
     kals::Vector{Kalman{Float64}} = Vector{Kalman{Float64}}(),
-    block_number::Nullable{Int64} = Nullable{Int64}(),
     subset_inds::Range{Int64} = 1:0,
-    forecast_string::AbstractString = "", verbose::Symbol = :low,
-    procs::Vector{Int} = [myid()])
+    forecast_string::AbstractString = "", verbose::Symbol = :low)
 
     ### 0. Setup
 
@@ -325,36 +307,46 @@ function forecast_one(m::AbstractModel{Float64},
     forecast_output = Dict{Symbol, Array{Float64}}()
     forecast_output_files = get_forecast_output_files(m, input_type, cond_type, output_vars;
                                                       forecast_string = forecast_string)
-    map(file -> isfile(file) ? rm(file) : nothing, values(forecast_output_files))
     output_dir = rawpath(m, "forecast")
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println()
-        if input_type == :block
-            block_num = get(block_number)
-            info("Forecasting block $(block_num) of $(n_forecast_blocks(m))...")
-        else
-            info("Forecasting input_type = $input_type, cond_type = $cond_type...")
-            println("Start time: $(now())")
-            println("Forecast outputs will be saved in $output_dir")
-        end
+    if input_type != :block && VERBOSITY[verbose] >= VERBOSITY[:low]
+        info("Forecasting input_type = $input_type, cond_type = $cond_type...")
+        println("Start time: $(now())")
+        println("Forecast outputs will be saved in $output_dir")
     end
 
     # If forecasting in blocks, call forecast_one with input_type = :block
     if forecast_blocking(m) && input_type == :full
-        block_inds = forecast_block_inds(m; procs = procs)
+        block_inds = forecast_block_inds(m)
         nblocks = n_forecast_blocks(m)
         block_verbose = verbose == :none ? :none : :low
         total_forecast_time = 0.0
-
         start_block = isnull(forecast_start_block(m)) ? 1 : get(forecast_start_block(m))
+
         for block = start_block:nblocks
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                println()
+                info("Forecasting block $block of $(n_forecast_blocks(m))...")
+            end
             tic()
-            forecast_one(m, :block, cond_type, output_vars;
-                df = df, block_number = Nullable(block),
-                subset_inds = block_inds[block],
-                verbose = block_verbose, procs = procs)
-            darray_closeall()
+
+            forecast_one_draw(ind::Int) = forecast_one(m, :block, cond_type, output_vars;
+                df = df, subset_inds = ind:ind, verbose = :none)
+            forecast_outputs = pmap(forecast_one_draw, block_inds[block])
+
+            # If some element of forecast_outputs is a RemoteException, rethrow the exception
+            ind_ex = findfirst(x -> isa(x, RemoteException), forecast_outputs)
+            if ind_ex > 0
+                ex = forecast_outputs[ind_ex].captured
+                throw(ex)
+            else
+                forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
+            end
+
+            forecast_output = assemble_block_outputs(forecast_outputs)
+            write_forecast_outputs(m, output_vars, forecast_output_files,
+                                   forecast_output; block_number = Nullable(block),
+                                   verbose = block_verbose, subset_inds = block_inds[block])
             gc()
 
             # Calculate time to complete this block, average block time, and
@@ -370,6 +362,10 @@ function forecast_one(m::AbstractModel{Float64},
                 println("Total time to compute $block blocks: $total_forecast_time_min minutes")
                 println("Expected time remaining in forecast: $expected_time_remaining_min minutes")
             end
+        end
+
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("\nForecast complete: $(now())")
         end
 
         return
@@ -422,9 +418,11 @@ function forecast_one(m::AbstractModel{Float64},
             end
         end
 
-        write_forecast_outputs(m, hists_to_compute, forecast_output_files,
-                               forecast_output; subset_inds = subset_inds,
-                               block_number = block_number, verbose = verbose)
+        if input_type != :block
+            write_forecast_outputs(m, hists_to_compute, forecast_output_files,
+                                   forecast_output; subset_inds = subset_inds,
+                                   verbose = verbose)
+        end
     end
 
 
@@ -458,9 +456,11 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:forecastobs] = forecastobs
         end
 
-        write_forecast_outputs(m, forecasts_to_compute, forecast_output_files,
-                               forecast_output; subset_inds = subset_inds,
-                               block_number = block_number, verbose = verbose)
+        if input_type != :block
+            write_forecast_outputs(m, forecasts_to_compute, forecast_output_files,
+                                   forecast_output; subset_inds = subset_inds,
+                                   verbose = verbose)
+        end
     end
 
 
@@ -492,9 +492,11 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:bddforecastobs] = forecastobs
         end
 
-        write_forecast_outputs(m, forecasts_to_compute, forecast_output_files,
-                               forecast_output; subset_inds = subset_inds,
-                               block_number = block_number, verbose = verbose)
+        if input_type != :block
+            write_forecast_outputs(m, forecasts_to_compute, forecast_output_files,
+                                   forecast_output; subset_inds = subset_inds,
+                                   verbose = verbose)
+        end
     end
 
 
@@ -514,9 +516,11 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:shockdecpseudo] = shockdecpseudo
         end
 
-        write_forecast_outputs(m, shockdecs_to_compute, forecast_output_files,
-                               forecast_output; subset_inds = subset_inds,
-                               block_number = block_number, verbose = verbose)
+        if input_type != :block
+            write_forecast_outputs(m, shockdecs_to_compute, forecast_output_files,
+                                   forecast_output; subset_inds = subset_inds,
+                                   verbose = verbose)
+        end
     end
 
 
@@ -538,9 +542,11 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:trendpseudo] = trendpseudo
         end
 
-        write_forecast_outputs(m, trends_to_compute, forecast_output_files,
-                               forecast_output; subset_inds = subset_inds,
-                               block_number = block_number, verbose = verbose)
+        if input_type != :block
+            write_forecast_outputs(m, trends_to_compute, forecast_output_files,
+                                   forecast_output; subset_inds = subset_inds,
+                                   verbose = verbose)
+        end
     end
 
     ### 5. Deterministic Trend
@@ -564,9 +570,11 @@ function forecast_one(m::AbstractModel{Float64},
 
         dettrend_write_vars = [symbol("dettrend$c") for c in unique(map(get_class, dettrends_to_compute))]
 
-        write_forecast_outputs(m, dettrends_to_compute, forecast_output_files,
-                               forecast_output; subset_inds = subset_inds,
-                               block_number = block_number, verbose = verbose)
+        if input_type != :block
+            write_forecast_outputs(m, dettrends_to_compute, forecast_output_files,
+                                   forecast_output; subset_inds = subset_inds,
+                                   verbose = verbose)
+        end
     end
 
     ### 6. Impulse Responses
@@ -584,11 +592,12 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output[:irfpseudo] = irfpseudo
         end
 
-        write_forecast_outputs(m, irfs_to_compute, forecast_output_files,
-                               forecast_output; subset_inds = subset_inds,
-                               block_number = block_number, verbose = verbose)
+        if input_type != :block
+            write_forecast_outputs(m, irfs_to_compute, forecast_output_files,
+                                   forecast_output; subset_inds = subset_inds,
+                                   verbose = verbose)
+        end
     end
-
 
     # Return only desired output_vars
     for key in keys(forecast_output)
