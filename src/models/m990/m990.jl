@@ -43,11 +43,11 @@ conditions.
 
 #### Model Specifications and Settings
 
-* `spec::AbstractString`: The model specification identifier, "m990", cached here for
+* `spec::AbstractString`: The model specification identifier, \"m990\", cached here for
   filepath computation.
 
 * `subspec::AbstractString`: The model subspecification number, indicating that some
-  parameters from the original model spec ("ss0") are initialized differently. Cached here for
+  parameters from the original model spec (\"ss0\") are initialized differently. Cached here for
   filepath computation.
 
 * `settings::Dict{Symbol,Setting}`: Settings/flags that affect computation without changing
@@ -143,30 +143,15 @@ function init_model_indices!(m::Model990)
         :e_corepce_t, :u_t1]
 
     # Measurement equation observables
-    # observables = [[
-    #     :obs_gdp,              # quarterly output growth
-    #     :obs_hours,            # aggregate hours growth
-    #     :obs_wages,            # real wage growth
-    #     :obs_gdpdeflator,      # inflation (GDP deflator)
-    #     :obs_corepce,          # inflation (core PCE)
-    #     :obs_nominalrate,      # nominal interest rate
-    #     :obs_consumption,      # consumption growth
-    #     :obs_investment,       # investment growth
-    #     :obs_spread,           # spreads
-    #     :obs_longinflation,    # 10-year inflation expectation
-    #     :obs_longrate,         # long-term rate
-    #     :obs_tfp];             # total factor productivity
-    #     [symbol("obs_nominalrate$i") for i=1:n_anticipated_shocks(m)]] # compounded nominal rates
-
     observables = keys(m.observable_mappings)
 
-    for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
-    for (i,k) in enumerate(exogenous_shocks);             m.exogenous_shocks[k]             = i end
-    for (i,k) in enumerate(expected_shocks);              m.expected_shocks[k]              = i end
-    for (i,k) in enumerate(equilibrium_conditions);       m.equilibrium_conditions[k]       = i end
-    for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
-    for (i,k) in enumerate(endogenous_states_augmented);  m.endogenous_states_augmented[k]  = i+length(endogenous_states) end
-    for (i,k) in enumerate(observables);                  m.observables[k]                  = i end
+    for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
+    for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
+    for (i,k) in enumerate(expected_shocks);             m.expected_shocks[k]             = i end
+    for (i,k) in enumerate(equilibrium_conditions);      m.equilibrium_conditions[k]      = i end
+    for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
+    for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(endogenous_states) end
+    for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
 end
 
 
@@ -213,6 +198,7 @@ function Model990(subspec::AbstractString="ss2";
     init_model_indices!(m)
     init_subspec!(m)
     steadystate!(m)
+
     return m
 end
 
@@ -662,145 +648,3 @@ function settings_m990!(m::Model990)
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")))
     m <= Setting(:forecast_pseudoobservables, true)
 end
-
-# """
-# ```
-# init_data_transforms!(m::Model990)
-# ```
-
-# This function initializes a dictionary of functions that map series read in in levels to the
-# appropriate transformed value. At the time that the functions are initialized, data is not
-# itself in memory. These functions are model-specific because they assume that certain series
-# are available. The keys of data transforms should match exactly the keys of `m.observables`.
-# """
-# function init_data_transforms!(m::Model990)
-
-#     # 1. Output growth, per-capita
-#     m.data_transforms[:obs_gdp] = function (levels)
-#         # FROM: Level of nominal GDP (FRED :GDP series)
-#         # TO:   Quarter-to-quarter percent change of real, per-capita GDP, adjusted for population smoothing
-
-#         levels[:temp] = percapita(m, :GDP, levels)
-#         gdp = 1000 * nominal_to_real(:temp, levels)
-#         hpadjust(oneqtrpctchange(gdp), levels)
-#     end
-
-#     # 2. Aggregate hours, per-capita
-#     m.data_transforms[:obs_hours] = function (levels)
-#         # FROM: Average weekly hours (AWHNONAG) & civilian employment (CE16OV)
-#         # TO:   log (3 * aggregregate weekly hours / 100), per-capita
-#         # Note: Not sure why the 3 is there.
-
-#         aggregateweeklyhours = levels[:AWHNONAG] .* levels[:CE16OV]
-#         100*(log(3 * aggregateweeklyhours / 100) - log(levels[:filtered_population]))
-#     end
-
-#     # 3. Real wage growth
-#     m.data_transforms[:obs_wages] = function (levels)
-#         # FROM: Nominal compensation per hour (:COMPNFB from FRED)
-#         # TO: quarter to quarter percent change of real compensation (using GDP deflator)
-
-#         oneqtrpctchange(nominal_to_real(:COMPNFB, levels))
-#     end
-
-#     # 4. GDP deflator
-#     m.data_transforms[:obs_gdpdeflator] = function (levels)
-#         # FROM: GDP deflator (index)
-#         # TO:   Approximate quarter-to-quarter percent change of gdp deflator,
-#         #       i.e.  quarterly gdp deflator inflation
-
-#         oneqtrpctchange(levels[:GDPCTPI])
-#     end
-
-#     # 5. Core PCE inflation
-#     m.data_transforms[:obs_corepce] = function (levels)
-#         # FROM: Core PCE index
-#         # INTO: Approximate quarter-to-quarter percent change of Core PCE,
-#         # i.e. quarterly core pce inflation
-
-#         oneqtrpctchange(levels[:PCEPILFE])
-#     end
-
-#     # 6. Nominal short-term interest rate (3 months)
-#     m.data_transforms[:obs_nominalrate] = function (levels)
-#         # FROM: Nominal effective federal funds rate (aggregate daily data at a
-#         #       quarterly frequency at an annual rate)
-#         # TO:   Nominal effective fed funds rate, at a quarterly rate
-
-#         annualtoquarter(levels[:DFF])
-
-#     end
-
-#     # 7. Consumption growth, per-capita
-#     m.data_transforms[:obs_consumption] = function (levels)
-#         # FROM: Nominal consumption
-#         # TO:   Real consumption, approximate quarter-to-quarter percent change,
-#         #       per capita, adjusted for population filtering
-
-#         levels[:temp] = percapita(m, :PCE, levels)
-#         cons = 1000 * nominal_to_real(:temp, levels)
-#         hpadjust(oneqtrpctchange(cons), levels)
-#     end
-
-#     # 8. Investment growth, per-capita
-#     m.data_transforms[:obs_investment] = function (levels)
-#         # FROM: Nominal investment
-#         # INTO: Real investment, approximate quarter-to-quarter percent change,
-#         #       per capita, adjusted for population filtering
-
-#         levels[:temp] = percapita(m, :FPI, levels)
-#         inv = 10000 * nominal_to_real(:temp, levels)
-#         hpadjust(oneqtrpctchange(inv), levels)
-#     end
-
-#     # 9. Spread: BAA-10yr TBill
-#     m.data_transforms[:obs_spread] = function (levels)
-#         # FROM: Baa corporate bond yield (percent annualized), and 10-year
-#         #       treasury note yield (percent annualized)
-#         # TO:   Baa yield - 10T yield spread at a quarterly rate
-#         # Note: Moody's corporate bond yields on the H15 are based on corporate
-#         #       bonds with remaining maturities of at least 20 years.
-
-#         annualtoquarter(levels[:BAA] - levels[:GS10])
-#     end
-
-#     # 10. Long term inflation expectations
-#     m.data_transforms[:obs_longinflation] = function (levels)
-#         # FROM: SPF: 10-Year average yr/yr CPI inflation expectations (annual percent)
-#         # TO:   FROM, less 0.5
-#         # Note: We subtract 0.5 because 0.5% inflation corresponds to
-#         #       the assumed long-term rate of 2 percent inflation, but the
-#         #       data are measuring expectations of actual inflation.
-
-#         annualtoquarter(levels[:ASACX10]  .- 0.5)
-#     end
-
-#     # 11. Long rate (10-year, zero-coupon)
-#     m.data_transforms[:obs_longrate] = function (levels)
-#         # FROM: pre-computed long rate at an annual rate
-#         # TO:   10T yield - 10T term premium at a quarterly rate
-
-#         annualtoquarter(levels[:FYCCZA] - levels[:THREEFYTP10])
-#     end
-
-#     # 12. Fernald TFP
-#     m.data_transforms[:obs_tfp] = function (levels)
-#         # FROM: Fernald's unadjusted TFP series
-#         # TO:   De-meaned unadjusted TFP series, adjusted by Fernald's
-#         #       estimated alpha
-
-#         tfp_unadj      = levels[:TFPKQ]
-#         tfp_unadj_mean = mean(tfp_unadj[!isnan(tfp_unadj)])
-#         (tfp_unadj - tfp_unadj_mean) ./ (4*(1 - levels[:TFPJQ]))
-#     end
-
-#     # Columns 13 - 13 + n_anticipated_shocks
-#     for i = 1:n_anticipated_shocks(m)
-#         # FROM: OIS expectations of $i-period-ahead interest rates at a quarterly rate
-#         # TO:   Same
-
-#         m.data_transforms[symbol("obs_nominalrate$i")] = function (levels)
-#             levels[:, symbol("ant$i")]
-#         end
-#     end
-# end

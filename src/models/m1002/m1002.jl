@@ -144,15 +144,16 @@ function init_model_indices!(m::Model1002)
         :y_t1, :c_t1, :i_t1, :w_t1, :π_t1_dup, :L_t1, :u_t1, :Et_π_t, :lr_t, :tfp_t, :e_gdpdef_t,
         :e_corepce_t, :e_gdp_t, :e_gdi_t, :e_gdp_t1, :e_gdi_t1]
 
+    # Measurement equation observables
     observables = keys(m.observable_mappings)
 
-    for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
-    for (i,k) in enumerate(exogenous_shocks);             m.exogenous_shocks[k]             = i end
-    for (i,k) in enumerate(expected_shocks);              m.expected_shocks[k]              = i end
-    for (i,k) in enumerate(equilibrium_conditions);       m.equilibrium_conditions[k]       = i end
-    for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
-    for (i,k) in enumerate(endogenous_states_augmented);  m.endogenous_states_augmented[k] = i+length(endogenous_states) end
-    for (i,k) in enumerate(observables);                  m.observables[k]                  = i end
+    for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
+    for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
+    for (i,k) in enumerate(expected_shocks);             m.expected_shocks[k]             = i end
+    for (i,k) in enumerate(equilibrium_conditions);      m.equilibrium_conditions[k]      = i end
+    for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
+    for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(endogenous_states) end
+    for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
 end
 
 

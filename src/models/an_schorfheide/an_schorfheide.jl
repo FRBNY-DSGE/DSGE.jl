@@ -124,18 +124,15 @@ function init_model_indices!(m::AnSchorfheide)
     endogenous_states_augmented = []
 
     # Measurement equation observables
-    observables = collect([
-        :obs_gdp,              # quarterly output growth
-        :obs_corepce,          # inflation (core PCE)
-        :obs_nominalrate])     # federal funds rate
+    observables = keys(m.observable_mappings)
 
-    for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
-    for (i,k) in enumerate(exogenous_shocks);             m.exogenous_shocks[k]             = i end
-    for (i,k) in enumerate(expected_shocks);              m.expected_shocks[k]              = i end
-    for (i,k) in enumerate(equilibrium_conditions);       m.equilibrium_conditions[k]       = i end
-    for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
+    for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
+    for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
+    for (i,k) in enumerate(expected_shocks);             m.expected_shocks[k]             = i end
+    for (i,k) in enumerate(equilibrium_conditions);      m.equilibrium_conditions[k]      = i end
+    for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
     for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(endogenous_states) end
-    for (i,k) in enumerate(observables);                  m.observables[k]                  = i end
+    for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
 end
 
 
@@ -149,10 +146,6 @@ function AnSchorfheide(subspec::AbstractString="ss0";
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()
-
-    # fred_series        = [:GDPC1, :PCEPILFE, :DFF]#, :CNP16OV]
-    # data_series        = Dict(:us =>[:obs_gdp, :obs_corepce, :obs_ffr]) # Dict(:fred => fred_series)
-    # data_transforms    = OrderedDict{Symbol,Function}()
 
     # initialize empty model
     m = AnSchorfheide{Float64}(
