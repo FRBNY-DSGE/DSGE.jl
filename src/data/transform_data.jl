@@ -27,46 +27,48 @@ function transform_data(m::AbstractModel, levels::DataFrame; verbose::Symbol = :
     # population_all: full unfiltered series (including forecast)
     # dlpopulation_forecast: growth rates of population forecasts pre-filtering
 
-    population_recorded = levels[:,[:date, population_mnemonic]]
-    population_all, dlpopulation_forecast, n_population_forecast_obs = if use_population_forecast(m)
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            println("Loading population forecast...")
+    if population_mnemonic != Symbol() # if population_mnemonic is not empty
+        population_recorded = levels[:,[:date, population_mnemonic]]
+        population_all, dlpopulation_forecast, n_population_forecast_obs = if use_population_forecast(m)
+            if VERBOSITY[verbose] >= VERBOSITY[:high]
+                println("Loading population forecast...")
+            end
+
+            # load population forecast
+            population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
+            pop_forecast = readtable(population_forecast_file)
+
+            rename!(pop_forecast, :POPULATION,  population_mnemonic)
+            DSGE.na2nan!(pop_forecast)
+            DSGE.format_dates!(:date, pop_forecast)
+
+            # use our "real" series as current value
+            pop_all = [population_recorded; pop_forecast[2:end,:]]
+
+            # return values
+            pop_all[population_mnemonic],
+            difflog(pop_forecast[population_mnemonic]),
+            length(pop_forecast[population_mnemonic])
+        else
+            population_recorded[:,population_mnemonic], [NaN], 1
         end
 
-        # load population forecast
-        population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
-        pop_forecast = readtable(population_forecast_file)
+        # hp filter
+        population_all = convert(Array, population_all)
+        filtered_population, _ = hpfilter(population_all, 1600)
 
-        rename!(pop_forecast, :POPULATION,  population_mnemonic)
-        DSGE.na2nan!(pop_forecast)
-        DSGE.format_dates!(:date, pop_forecast)
+        # filtered series (levels)
+        filtered_population_recorded = filtered_population[1:end-n_population_forecast_obs+1]
+        filtered_population_forecast = filtered_population[end-n_population_forecast_obs+1:end]
 
-        # use our "real" series as current value
-        pop_all = [population_recorded; pop_forecast[2:end,:]]
+        # filtered growth rates
+        dlpopulation_recorded          = difflog(population_recorded[population_mnemonic])
+        dlfiltered_population_recorded = difflog(filtered_population_recorded)
 
-        # return values
-        pop_all[population_mnemonic],
-        difflog(pop_forecast[population_mnemonic]),
-        length(pop_forecast[population_mnemonic])
-    else
-        population_recorded[:,population_mnemonic], [NaN], 1
+        levels[:filtered_population]          = filtered_population_recorded
+        levels[:filtered_population_growth]   = dlfiltered_population_recorded
+        levels[:unfiltered_population_growth] = dlpopulation_recorded
     end
-
-    # hp filter
-    population_all = convert(Array, population_all)
-    filtered_population, _ = hpfilter(population_all, 1600)
-
-    # filtered series (levels)
-    filtered_population_recorded = filtered_population[1:end-n_population_forecast_obs+1]
-    filtered_population_forecast = filtered_population[end-n_population_forecast_obs+1:end]
-
-    # filtered growth rates 
-    dlpopulation_recorded          = difflog(population_recorded[population_mnemonic])
-    dlfiltered_population_recorded = difflog(filtered_population_recorded)
-
-    levels[:filtered_population]          = filtered_population_recorded
-    levels[:filtered_population_growth]   = dlfiltered_population_recorded
-    levels[:unfiltered_population_growth] = dlpopulation_recorded
 
     # Step 2: apply transformations to each series
     transformed = DataFrame()
