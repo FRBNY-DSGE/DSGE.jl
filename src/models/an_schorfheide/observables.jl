@@ -8,12 +8,15 @@ function init_observable_mappings!(m::AnSchorfheide)
     gdp_fwd_transform = function (levels)
         # FROM: Level of real GDP (from FRED)
         # TO: Quarter-to-quarter percent change of real GDP
-        oneqtrpctchange(levels[:GDPC1])
+
+        levels[:temp] = percapita(m, :GDP, levels)
+        gdp = 1000 * nominal_to_real(:temp, levels)
+        hpadjust(oneqtrpctchange(gdp), levels)
     end
 
-    gdp_rev_transform = DSGE.logtopct_annualized
+    gdp_rev_transform = DSGE.logtopct_annualized_percapita
 
-    observables[:obs_gdp] = Observable(:obs_gdp, [:GDPC1__FRED],
+    observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, :CNP16OV__FRED, :GDPCTPI__FRED],
                                        gdp_fwd_transform, gdp_rev_transform,
                                        "Real GDP Growth", "Real GDP Growth Per Capita")
 
