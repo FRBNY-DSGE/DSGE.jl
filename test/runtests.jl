@@ -4,8 +4,8 @@ using DSGE
 include(joinpath(dirname(@__FILE__()),"util.jl"))
 
 my_tests = [
-            "core",
-            "parameters",
+            "core",  # done
+            "parameters", # done
             "solve/gensys",
             "solve/solve",
             "estimate/kalman",
@@ -18,8 +18,8 @@ my_tests = [
             "estimate/metropolis_hastings",
             "models/m990/m990",
             "models/smets_wouters/smets_wouters",
-            "data/misc",
-            "data/load_data"
+            "data/misc"
+            # "data/load_data"
             ]
 
 for test in my_tests
