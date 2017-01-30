@@ -1,10 +1,10 @@
 """
 ```
 forecast(m, systems, kals; cond_type = :none, enforce_zlb = false, shocks =
-    dzeros(S, (0, 0, 0), [myid()]), procs = [myid()])
+    Array{S, 3}())
 
 forecast(m, systems, z0s; cond_type = :none, enforce_zlb = false, shocks =
-    dzeros(S, (0, 0, 0), [myid()]), procs = [myid()])
+    Array{S, 3}())
 ```
 
 Computes forecasts for all draws, given a model object, system matrices, initial
@@ -13,9 +13,9 @@ state vectors, and optionally an array of shocks.
 ### Inputs
 
 - `m::AbstractModel`: model object
-- `systems::DVector{System{S}}`: vector of `System` objects specifying
+- `systems::Vector{System{S}}`: vector of `System` objects specifying
   state-space system matrices for each draw
-- `kals::DVector{Kalman{S}}` or `z0s::DVector{Vector{S}}`: either a vector of
+- `kals::Vector{Kalman{S}}` or `z0s::Vector{Vector{S}}`: either a vector of
   `Kalman` objects or a vector of state vectors in the final historical period
   (aka inital forecast period)
 
@@ -29,29 +29,25 @@ where `S<:AbstractFloat`.
   data. Defaults to `:none`.
 - `enforce_zlb::Bool`: whether to enforce the zero lower bound. Defaults to
   `false`.
-- `shocks::DArray{S, 3}`: array of size `ndraws` x `nshocks` x `horizon`, whose
+- `shocks::Array{S, 3}`: array of size `ndraws` x `nshocks` x `horizon`, whose
   elements are the shock innovations for each time period, for draw
-- `procs::Vector{Int}`: list of worker processes over which to distribute
-  draws. Defaults to `[myid()]`
 
 ### Outputs
 
-- `states::DArray{S, 3}`: array of size `ndraws` x `nstates` x `horizon` of
+- `states::Array{S, 3}`: array of size `ndraws` x `nstates` x `horizon` of
   forecasted states for each draw
-- `obs::DArray{S, 3}`: array of size `ndraws` x `nobs` x `horizon` of forecasted
+- `obs::Array{S, 3}`: array of size `ndraws` x `nobs` x `horizon` of forecasted
   observables for each draw
-- `pseudo::DArray{S, 3}`: array of size `ndraws` x `npseudo` x `horizon` of
+- `pseudo::Array{S, 3}`: array of size `ndraws` x `npseudo` x `horizon` of
   forecasted pseudo-observables for each draw. If
   `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
-- `shocks::DArray{S, 3}`: array of size `ndraws` x `nshocks` x `horizon` of
+- `shocks::Array{S, 3}`: array of size `ndraws` x `nshocks` x `horizon` of
   shock innovations for each draw
 """
-function forecast{S<:AbstractFloat}(m::AbstractModel,
-    systems::DVector{System{S}, Vector{System{S}}},
-    kals::DVector{Kalman{S}, Vector{Kalman{S}}};
+function forecast{S<:AbstractFloat}(m::AbstractModel{S},
+    systems::Vector{System{S}}, kals::Vector{Kalman{S}};
     cond_type::Symbol = :none, enforce_zlb::Bool = false,
-    shocks::DArray{S, 3} = dzeros(S, (0, 0, 0), [myid()]),
-    procs::Vector{Int} = [myid()])
+    shocks::Array{S, 3} = Array{S}(0, 0, 0))
 
     draw_z0(kal::Kalman) = rand(DegenerateMvNormal(kal[:zend], kal[:Pend]))
     z0s = if forecast_draw_z0(m)
@@ -61,22 +57,16 @@ function forecast{S<:AbstractFloat}(m::AbstractModel,
     end
 
     forecast(m, systems, z0s; cond_type = cond_type, enforce_zlb = enforce_zlb,
-             shocks = shocks, procs = procs)
+             shocks = shocks)
 end
 
-function forecast{S<:AbstractFloat}(m::AbstractModel,
-    systems::DVector{System{S}, Vector{System{S}}},
-    z0s::DVector{Vector{S}, Vector{Vector{S}}};
+function forecast{S<:AbstractFloat}(m::AbstractModel{S},
+    systems::Vector{System{S}}, z0s::Vector{Vector{S}};
     cond_type::Symbol = :none, enforce_zlb::Bool = false,
-    shocks::DArray{S, 3} = dzeros(S, (0, 0, 0), [myid()]),
-    procs::Vector{Int} = [myid()])
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs)
+    shocks::Array{S, 3} = Array{S}(0, 0, 0))
 
     # Numbers of useful things
     ndraws = length(systems)
-    nprocs = length(procs)
     horizon = forecast_horizons(m; cond_type = cond_type)
 
     nstates = n_states_augmented(m)
@@ -84,46 +74,32 @@ function forecast{S<:AbstractFloat}(m::AbstractModel,
     npseudo = n_pseudoobservables(m)
     nshocks = n_shocks_exogenous(m)
 
-    states_range = 1:nstates
-    obs_range    = (nstates + 1):(nstates + nobs)
-    pseudo_range = (nstates + nobs + 1):(nstates + nobs + npseudo)
-    shocks_range = (nstates + nobs + npseudo + 1):(nstates + nobs + npseudo + nshocks)
-
     shocks_provided = !isempty(shocks)
 
-    # Construct distributed array of forecast outputs
-    out = DArray((ndraws, nstates + nobs + npseudo + nshocks, horizon), procs, [nprocs, 1, 1]) do I
-        localpart = zeros(map(length, I)...)
-        draw_inds = first(I)
-        ndraws_local = Int(ndraws / nprocs)
-
-        for i in draw_inds
-            # Index out shocks for draw i
-            shocks_i = if shocks_provided
-                convert(Array, slice(shocks, i, :, :))
-            else
-                Matrix{S}()
-            end
-
-            states_i, obs_i, pseudo_i, shocks_i = compute_forecast(m, systems[i], z0s[i];
-                cond_type = cond_type, enforce_zlb = enforce_zlb, shocks = shocks_i)
-
-            i_local = mod(i-1, ndraws_local) + 1
-
-            localpart[i_local, states_range, :] = states_i
-            localpart[i_local, obs_range,    :] = obs_i
-            localpart[i_local, pseudo_range, :] = pseudo_i
-            localpart[i_local, shocks_range, :] = shocks_i
-        end
-        return localpart
+    # Initialize arrays of forecast outputs
+    states = zeros(S, ndraws, nstates, horizon)
+    obs    = zeros(S, ndraws, nobs,    horizon)
+    pseudo = zeros(S, ndraws, npseudo, horizon)
+    if !shocks_provided
+        shocks = zeros(S, ndraws, nshocks, horizon)
     end
 
-    # Convert SubArrays to DArrays and return
-    states = convert(DArray, out[1:ndraws, states_range, 1:horizon])
-    obs    = convert(DArray, out[1:ndraws, obs_range,    1:horizon])
-    pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:horizon])
-    shocks = convert(DArray, out[1:ndraws, shocks_range, 1:horizon])
-    close(out)
+    for i = 1:ndraws
+        # Index out shocks for draw i
+        shocks_i = if shocks_provided
+            squeeze(shocks[i, :, :], 1)
+        else
+            Matrix{S}()
+        end
+
+        states_i, obs_i, pseudo_i, shocks_i = compute_forecast(m, systems[i], z0s[i];
+            cond_type = cond_type, enforce_zlb = enforce_zlb, shocks = shocks_i)
+
+        states[i, :, :] = states_i
+        obs[i,    :, :] = obs_i
+        pseudo[i, :, :] = pseudo_i
+        shocks[i, :, :] = shocks_i
+    end
 
     return states, obs, pseudo, shocks
 end

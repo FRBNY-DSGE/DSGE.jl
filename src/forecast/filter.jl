@@ -1,12 +1,11 @@
 """
 ```
 filter_all(m::AbstractModel, data, systems, z0, vz0; cond_type = :none,
-      allout = false, include_presample = true, procs = [myid()])
+      allout = false, include_presample = true)
 ```
 
-Distributes input arguments over `procs`; then computes and returns
-the filtered values of states for every state-space system in
-`systems`.
+Computes and returns the filtered values of states for every state-space system
+in `systems`.
 
 ### Inputs
 
@@ -14,7 +13,7 @@ the filtered values of states for every state-space system in
 - `data`: `DataFrame` or `nobs` x `hist_periods` `Matrix{S}` of data for
   observables. This should include the conditional period if `cond_type in
   [:semi, :full]`
-- `systems::DVector{System{S}}` vector of `System` objects specifying
+- `systems::Vector{System{S}}` vector of `System` objects specifying
   state-space system matrices for each draw
 - `z0::Matrix{S}`: optional `Nz` x 1 initial state vector
 - `vz0::Matrix{S}`: optional `Nz` x `Nz` initial state covariance matrix
@@ -29,40 +28,27 @@ where `S<:AbstractFloat`.
   output variables returned as well. Defaults to `false`.
 - `include_presample::Bool`: indicates whether to include presample periods in
   the returned vector of `Kalman` objects. Defaults to `true`.
-- `procs::Vector{Int}`: list of worker processes over which to distribute
-  draws. Defaults to `[myid()]`
 
 ### Outputs
 
-- `kals::DVector{Kalman{S}`: vector of `ndraws` many `Kalman` objects. See
+- `kals::Vector{Kalman{S}`: vector of `ndraws` many `Kalman` objects. See
   `Kalman` documentation for more details.
 """
-function filter_all{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    systems::DVector{System{S}, Vector{System{S}}},
+function filter_all{S<:AbstractFloat}(m::AbstractModel{S}, df::DataFrame,
+    systems::Vector{System{S}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
     cond_type::Symbol = :none, allout::Bool = false,
-    include_presample::Bool = true, procs::Vector{Int} = [myid()])
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs)
+    include_presample::Bool = true)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
     filter_all(m, data, systems, z0, vz0; allout = allout,
-           include_presample = include_presample, procs = procs)
+           include_presample = include_presample)
 end
 
-function filter_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    systems::DVector{System{S}, Vector{System{S}}},
+function filter_all{S<:AbstractFloat}(m::AbstractModel{S}, data::Matrix{S},
+    systems::Vector{System{S}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-    allout::Bool = false, include_presample::Bool = true,
-    procs::Vector{Int} = [myid()])
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs)
-
-    # Numbers of useful things
-    ndraws = length(systems)
-    nprocs = length(procs)
+    allout::Bool = false, include_presample::Bool = true)
 
     # Construct distributed array of Kalman objects
     kals = map(systems) do system
@@ -143,7 +129,7 @@ end
 """
 ```
 filterandsmooth_all(m, data, systems, z0 = Vector{S}(), vz0 = Matrix{S}();
-    cond_type = :none, procs = [myid()])
+    cond_type = :none)
 ```
 
 Computes and returns the smoothed states, shocks, and pseudo-observables, as
@@ -156,7 +142,7 @@ state-space system in `systems`.
 - `data`: `DataFrame` or `nobs` x `hist_periods` `Matrix{S}` of data for
   observables. This should include the conditional period if `cond_type in
   [:semi, :full]`
-- `systems::DVector{System{S}}`: vector of `System` objects specifying
+- `systems::Vector{System{S}}`: vector of `System` objects specifying
   state-space system matrices for each draw
 - `z0::Vector{S}`: optional `Nz` x 1 initial state vector
 - `vz0::Matrix{S}`: optional `Nz` x `Nz` initial state covariance matrix
@@ -165,14 +151,14 @@ where `S<:AbstractFloat`.
 
 ### Outputs
 
-- `states::DArray{S, 3}`: array of size `ndraws` x `nstates` x `hist_periods` of
+- `states::Array{S, 3}`: array of size `ndraws` x `nstates` x `hist_periods` of
   smoothed states for each draw
-- `shocks::DArray{S, 3}`: array of size `ndraws` x `nshocks` x `hist_periods` of
+- `shocks::Array{S, 3}`: array of size `ndraws` x `nshocks` x `hist_periods` of
   smoothed shocks for each draw
-- `pseudo::DArray{S, 3}`: array of size `ndraws` x `npseudo` x `hist_periods` of
+- `pseudo::Array{S, 3}`: array of size `ndraws` x `npseudo` x `hist_periods` of
   pseudo-observables computed from the smoothed states for each draw. If
   `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
-- `initial_states::DVector{Vector{{S}}`: vector of length `ndraws`, where each
+- `initial_states::Vector{Vector{{S}}`: vector of length `ndraws`, where each
   element is a vector of smoothed states in the last presample period. These are
   used as the initial state for computing the deterministic trend.
 
@@ -188,69 +174,41 @@ m <= Setting(:forecast_smoother, :kalman_smoother)
 
 before calling `filterandsmooth_all`.
 """
-function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    systems::DVector{System{S}, Vector{System{S}}},
+function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel{S},
+    df::DataFrame, systems::Vector{System{S}},
     z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-    cond_type::Symbol = :none, procs::Vector{Int} = [myid()])
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs)
+    cond_type::Symbol = :none)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filterandsmooth_all(m, data, systems, z0, vz0; procs = procs)
+    filterandsmooth_all(m, data, systems, z0, vz0)
 end
 
-function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    systems::DVector{System{S}, Vector{System{S}}},
-    z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}();
-    procs::Vector{Int} = [myid()])
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs)
+function filterandsmooth_all{S<:AbstractFloat}(m::AbstractModel{S},
+    data::Matrix{S}, systems::Vector{System{S}},
+    z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}())
 
     # Numbers of useful things
     ndraws = length(systems)
-    nprocs = length(procs)
     nperiods = size(data, 2) - n_presample_periods(m)
 
     nstates = n_states_augmented(m)
     nshocks = n_shocks_exogenous(m)
     npseudo = n_pseudoobservables(m)
 
-    states_range = 1:nstates
-    shocks_range = (nstates + 1):(nstates + nshocks)
-    pseudo_range = (nstates + nshocks + 1):(nstates + nshocks + npseudo)
-    states0_range = nstates + nshocks + npseudo + 1
+    states = zeros(S, ndraws, nstates, nperiods)
+    shocks = zeros(S, ndraws, nshocks, nperiods)
+    pseudo = zeros(S, ndraws, npseudo, nperiods)
+    initial_states = Vector{Vector{S}}(ndraws)
 
-    # Construct distributed array of smoothed states, shocks, and pseudo-observables
-    out = DArray((ndraws, nstates + nshocks + npseudo + 1, nperiods), procs, [nprocs, 1, 1]) do I
-        localpart = zeros(map(length, I)...)
-        draw_inds = first(I)
-        ndraws_local = length(draw_inds)
+    for i = 1:ndraws
+        states_i, shocks_i, pseudo_i, initial_states_i = filterandsmooth(m, data, systems[i], z0, vz0)
 
-        for i in draw_inds
-            states, shocks, pseudo, initial_states = filterandsmooth(m, data, systems[i], z0, vz0)
-
-            i_local = mod(i-1, ndraws_local) + 1
-
-            localpart[i_local, states_range,  :] = states
-            localpart[i_local, shocks_range,  :] = shocks
-            localpart[i_local, pseudo_range,  :] = pseudo
-            localpart[i_local, states0_range, states_range] = initial_states
-        end
-        return localpart
+        states[i, :, :] = states_i
+        shocks[i, :, :] = shocks_i
+        pseudo[i, :, :] = pseudo_i
+        initial_states[i] = initial_states_i
     end
 
-    # Convert SubArrays to DArrays and return
-    states = convert(DArray, out[1:ndraws, states_range, 1:nperiods])
-    shocks = convert(DArray, out[1:ndraws, shocks_range, 1:nperiods])
-    pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods])
-    initial_states = DArray((ndraws,), procs, [nprocs]) do I
-        Vector{S}[convert(Array, slice(out, i, states0_range, 1:nstates)) for i in first(I)]
-    end
-    close(out)
-
-    # Index out SubArray for each smoothed type
     return states, shocks, pseudo, initial_states
 end
 

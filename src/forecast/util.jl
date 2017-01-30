@@ -28,29 +28,6 @@ end
 
 """
 ```
-reset_procs(m, procs, input_type = Nullable{Symbol}())
-```
-
-Reset `procs` to `[myid()]` if either:
-
-- `input_type` is non-null and one of `[:init, :mode, :mean]`
-- `use_parallel_workers(m) = false`
-"""
-function reset_procs(m::AbstractModel, procs::Vector{Int}, input_type::Nullable{Symbol} = Nullable{Symbol}())
-    if procs != [myid()]
-        if !isnull(input_type) && get(input_type) in [:init, :mode, :mean]
-            warn("Processes $procs passed in, but input_type = $input_type. Using only process $(myid()) instead.")
-            procs = [myid()]
-        elseif !use_parallel_workers(m)
-            warn("Processes $procs passed in, but use_parallel_workers(m) = false. Using only process $(myid()) instead.")
-            procs = [myid()]
-        end
-    end
-    return procs
-end
-
-"""
-```
 get_jstep(m, n_sim)
 ```
 
@@ -90,7 +67,7 @@ end
 
 """
 ```
-forecast_block_inds(m; procs = [myid()])
+forecast_block_inds(m)
 ```
 
 Returns a `Vector{Range{Int64}}` of length `n_forecast_blocks(m)`,
@@ -111,21 +88,16 @@ function forecast_block_inds(m::AbstractModel;
         nblocks -= 1
     end
 
-    # Number of draws in each of the first `nblocks-1` blocks
-    avg_draws_per_block = if nblocks != n_forecast_blocks(m)
-        m <= Setting(:n_forecast_blocks(m), nblocks)
-        warn("Decreased n_forecast_blocks to $nblocks")
-        min_draws_per_block
-    else
-        convert(Int64, round(ndraws / (nblocks*min_draws_per_block))) * min_draws_per_block
-    end
+    # Calculate number of blocks necessary
+    n_sim_forecast = convert(Int, floor(ndraws / jstep))
+    nblocks = convert(Int, ceil(n_sim_forecast / block_size))
 
     # Fill in draw indices for each block
     block_inds  = Vector{Range{Int64}}(nblocks)
     current_draw = 0
     for i = 1:(nblocks-1)
-        block_inds[i] = (current_draw+1):(current_draw+avg_draws_per_block)
-        current_draw += avg_draws_per_block
+        block_inds[i] = (current_draw+1):(current_draw+block_size)
+        current_draw += block_size
     end
     block_inds[end] = (current_draw+1):ndraws
 
@@ -328,23 +300,6 @@ function get_forecast_filename{S<:AbstractString}(directory::S,
     joinpath(directory, "$output_var$(sorted_model_string).$fileformat")
 end
 
-
-typealias DVector{T, A} DArray{T, 1, A}
-typealias DMatrix{T, A} DArray{T, 2, A}
-
-"""
-```
-dinit(T, dims)
-
-dinit(T, dims...)
-```
-
-Initialize a `DArray{T, N, Array{T, N}}` (where `N = length(dims)`), distributed
-over only the current process `myid()`.
-"""
-dinit(T, dims::Tuple) = DArray(I -> Array(T, map(length, I)), dims, [myid()])
-dinit(T, dims...)     = dinit(T, dims)
-
 """
 ```
 @time_verbose ex
@@ -373,10 +328,10 @@ Remove the smoothed states, shocks, or pseudo-observables corresponding to
 conditional data periods. This is necessary because when we forecast with
 conditional data, we smooth beyond the last historical period.
 """
-function transplant_history{T<:AbstractFloat}(history::DArray{T, 3},
-    last_hist_period::Int,)
+function transplant_history{T<:AbstractFloat}(history::Array{T, 3},
+    last_hist_period::Int)
 
-    return convert(DArray, history[1:end, 1:end, 1:last_hist_period])
+    return history[1:end, 1:end, 1:last_hist_period]
 end
 
 """
@@ -387,23 +342,14 @@ transplant_forecast(history, forecast, last_hist_period)
 Transplant the smoothed states, shocks, or pseudo-observables corresponding to
 conditional data periods from the history to the forecast.
 """
-function transplant_forecast{T<:AbstractFloat}(history::DArray{T, 3},
-    forecast::DArray{T, 3}, last_hist_period::Int)
+function transplant_forecast{T<:AbstractFloat}(history::Array{T, 3},
+    forecast::Array{T, 3}, last_hist_period::Int)
 
-    procs  = collect(history.pids)
-    nprocs = length(procs)
-
-    (ndraws, nvars, nfcastperiods) = size(forecast)
     ncondperiods = size(history, 3) - last_hist_period
-    nperiods     = ncondperiods + nfcastperiods
     cond_range   = (last_hist_period + 1):(last_hist_period + ncondperiods)
+    cond_draws   = history[:, :, cond_range]
 
-    return DArray((ndraws, nvars, nperiods), procs, [nprocs, 1, 1]) do I
-        draw_inds    = first(I)
-        cond_draws   = convert(Array, history[draw_inds, :, cond_range])
-        fcast_draws  = convert(Array, forecast[draw_inds, :, :])
-        return cat(3, cond_draws, fcast_draws)
-    end
+    return cat(3, cond_draws, forecast)
 end
 
 """
@@ -420,32 +366,21 @@ just give us back the data. However, in the conditional data periods, we only
 have data for a subset of observables, so we need to get the remaining
 observables by mapping the smoothed states.
 """
-function transplant_forecast_observables{T<:AbstractFloat}(histstates::DArray{T, 3},
-    forecastobs::DArray{T, 3}, systems::DVector{System{T}}, last_hist_period::Int)
+function transplant_forecast_observables{T<:AbstractFloat}(histstates::Array{T, 3},
+    forecastobs::Array{T, 3}, systems::Vector{System{T}}, last_hist_period::Int)
 
-    procs  = collect(histstates.pids)
-    nprocs = length(procs)
-
-    (ndraws, nvars, nfcastperiods) = size(forecastobs)
+    ndraws       = length(systems)
+    nvars        = size(forecastobs, 2)
     ncondperiods = size(histstates, 3) - last_hist_period
-    nperiods     = ncondperiods + nfcastperiods
     cond_range   = (last_hist_period + 1):(last_hist_period + ncondperiods)
 
-    return DArray((ndraws, nvars, nperiods), procs, [nprocs, 1, 1]) do I
-        draw_inds = first(I)
-        ndraws_local = length(draw_inds)
-
-        # Map conditional period smoothed states to observables
-        cond_draws = zeros(ndraws_local, nvars, ncondperiods)
-        for i in draw_inds
-            i_local = mod(i-1, ndraws_local) + 1
-            states_i = convert(Array, slice(histstates, i, :, cond_range))
-            cond_draws[i_local, :, :] = systems[i][:ZZ]*states_i .+ systems[i][:DD]
-        end
-
-        fcast_draws = convert(Array, forecastobs[draw_inds, :, :])
-        return cat(3, cond_draws, fcast_draws)
+    cond_draws   = zeros(ndraws, nvars, ncondperiods)
+    for i = 1:ndraws
+        states_i = squeeze(histstates[i, :, cond_range], 1)
+        cond_draws[i, :, :] = systems[i][:ZZ]*states_i .+ systems[i][:DD]
     end
+
+    return cat(3, cond_draws, forecastobs)
 end
 
 """
@@ -454,12 +389,11 @@ write_forecast_outputs(m, output_vars, forecast_output_files, forecast_output; v
 ```
 
 Writes the elements of `forecast_output` indexed by `output_vars` to file, given
-`forecast_output_files`, which maps `output_vars` to file names. Calls
-`write_darray`.
+`forecast_output_files`, which maps `output_vars` to file names.
 """
 function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, output_vars::Vector{Symbol},
                                 forecast_output_files::Dict{Symbol,S},
-                                forecast_output::Dict{Symbol, DArray{Float64}};
+                                forecast_output::Dict{Symbol, Array{Float64}};
                                 block_number::Nullable{Int64} = Nullable{Int64}(),
                                 verbose::Symbol = :low)
 
@@ -470,7 +404,14 @@ function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, output_vars
                 write_forecast_metadata(m, file, var)
             end
         end
-        write_darray(filepath, forecast_output[var]; block_number = block_number)
+
+        jldopen(filepath, "r+") do file
+            if block_number == -1
+                write(file, "arr", forecast_output[var])
+            else
+                write_forecast_block(file, forecast_output[var], block_number, subset_inds)
+            end
+        end
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             println(" * Wrote $(basename(filepath))")
@@ -481,12 +422,12 @@ end
 """
 ```
 prepare_forecast_inputs!(m, input_type, cond_type, output_vars;
-    df = DataFrame(), systems = dinit(System, 0), kals = dinit(Kalman{S}, 0),
-    subset_inds = 1:0, verbose = :none, procs = [myid()])
+    df = DataFrame(), systems = Vector{System{S}}(), kals = Vector{Kalman{S}}(),
+    subset_inds = 1:0, verbose = :none)
 ```
 
-Check that the provided inputs `df`, `systems`, `states`, `subset_inds`, and
-`procs` are well-formed with respect to the provided `input_type`, `cond_type`,
+Check that the provided inputs `df`, `systems`, `states`, and `subset_inds`
+are well-formed with respect to the provided `input_type`, `cond_type`,
 and `output_vars`. If an input is not provided to the function, it is loaded
 using the appropriate getter function.
 
@@ -507,32 +448,29 @@ using the appropriate getter function.
    final row of `df` should be the period containing conditional data. If not
    provided, then `df` will be loaded using `load_data` with the appropriate
    `cond_type`
-- `systems::DVector{System{Float64}}`: vector of `n_sim_forecast` many `System`
+- `systems::Vector{System{Float64}}`: vector of `n_sim_forecast` many `System`
   objects, one for each draw. If not provided, will be loaded using
   `prepare_systems`
-- `kals::DVector{Kalman{Float64}}`: vector of `n_sim_forecast` many `Kalman`
+- `kals::Vector{Kalman{Float64}}`: vector of `n_sim_forecast` many `Kalman`
   objects. If not provided, will be loaded using `filter_all`
 - `subset_inds::Range{Int64}`: indices specifying the draws we want to use. If
   `input_type` is not `subset`, `subset_inds` will be ignored
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
-- `procs::Vector{Int}`: list of worker processes that have been
-  previously added by the user. Defaults to `[myid()]`
 
 ### Outputs
 
 - `df`
 - `systems`
 - `kals`
-- `procs`
 """
 function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
     df::DataFrame = DataFrame(),
-    systems::DVector{System{S}} = dinit(System{S}, 0),
-    kals::DVector{Kalman{S}} = dinit(Kalman{S}, 0),
+    systems::Vector{System{S}} = Vector{System{S}}(),
+    kals::Vector{Kalman{S}} = Vector{Kalman{S}}(),
     subset_inds::Range{Int64} = 1:0,
-    verbose::Symbol = :none, procs::Vector{Int} = [myid()])
+    verbose::Symbol = :none)
 
     # Convert output_vars to a vector of strings
     output_strs = map(string, output_vars)
@@ -559,150 +497,20 @@ function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
 
     # Compute systems and run Kalman filter if not provided
     if isempty(systems) || isempty(kals)
-        procs = reset_procs(m, procs, Nullable(input_type))
         params = load_draws(m, input_type; subset_inds = subset_inds,
-                            verbose = verbose, procs = procs)
-        systems = prepare_systems(m, input_type, params; procs = procs)
+                            verbose = verbose)
+        systems = prepare_systems(m, input_type, params)
         if !irfs_only
-            kals = filter_all(m, df, systems; cond_type = cond_type, procs = procs)
+            kals = filter_all(m, df, systems; cond_type = cond_type)
         end
     else
         @assert length(systems) == length(kals)
-        @assert DistributedArrays.procs(systems) == DistributedArrays.procs(kals) == procs
         if input_type == :subset
             @assert length(subset_inds) == length(systems)
         end
     end
 
-    return df, systems, kals, procs
-end
-
-"""
-```
-write_darray(filepath::AbstractString, darr::DArray)
-```
-
-Write the contents of the `DArray` `darr` to the JLD file `filepath` without
-converting `darr` back to an `Array` or copying local parts to the originator
-process. `darr` can then be read back in as an `Array` using `read_darray`.
-
-Each worker process `pid` writes its own local part and local indices to the
-file as `arr\$pid` and `inds\$pid`. The dimensions `dims` of `darr` and the
-vector of processes `pids` over which `darr` is distributed are also written to
-`filepath` in order to facilitate reading back in.
-"""
-function write_darray{T<:AbstractFloat}(filepath::AbstractString, darr::DArray{T};
-                                        block_number::Nullable{Int64} = Nullable{Int64}())
-
-    blockstr = isnull(block_number) ? "" : "block$(get(block_number))_"
-    mode = isfile(filepath) ? "r+" : "w"
-
-    function write_localpart(pid::Int)
-        jldopen(filepath, "r+") do file
-            write(file, blockstr * "inds$pid", collect(localindexes(darr)))
-            write(file, blockstr * "arr$pid", localpart(darr))
-        end
-    end
-
-    ### A) Write forecast output without blocks
-    if isnull(block_number)
-
-        # Write block metadata
-        jldopen(filepath, mode) do file
-            write(file, "dims", darr.dims)
-            write(file, "pids", collect(darr.pids))
-        end
-
-        # Write block localparts
-        for pid in darr.pids
-            remotecall_wait(pid, write_localpart, pid)
-            sleep(0.001) # Need this, or else HDF5 complains that the new object already exists
-        end
-
-    ### B) Write forecast output block
-    else
-
-        block = get(block_number)
-        jldopen(filepath, mode) do file
-
-            # Check if current block has already been written
-            if exists(file, blockstr * "dims")
-                if read(file, "nblocks") >= block
-                    # Current block was already written successfully
-                    error("Block $(get(block_number)) has already been written to $filepath. Try restarting your forecast from a later block or from the beginning")
-                else
-                    # Writing of current block was started, but did not complete
-                    block_names = Base.filter(x -> contains(x, blockstr), names(file))
-                    map(x -> delete!(file, x), block_names)
-                end
-            end
-
-            # Write block metadata
-            write(file, blockstr * "dims", darr.dims)
-            write(file, blockstr * "pids", collect(darr.pids))
-        end
-
-        # Write block localparts
-        for pid in darr.pids
-            remotecall_wait(pid, write_localpart, pid)
-            sleep(0.001) # Need this, or else HDF5 complains that the new object already exists
-        end
-
-        # Update `nblocks`, indicating that the block was written successfully
-        jldopen(filepath, "r+") do file
-            if exists(file, "nblocks")
-                delete!(file, "nblocks")
-            end
-            write(file, "nblocks", block)
-        end
-    end
-end
-
-"""
-```
-read_darray(file::JldFile)
-```
-
-Read the `DArray` saved to `file` by `write_darray`. Returns an `Array`.
-"""
-function read_darray(file::JLD.JldFile)
-    # Read DArrays in blocks
-    if exists(file, "nblocks")
-        nblocks = read(file, "nblocks")
-        pids = collect(read(file, "block1_pids"))
-
-        # Determine total dimension of DArray
-        block_draws = zeros(Int64, nblocks)
-        for block = 1:nblocks
-            block_draws[block] = read(file, "block$(block)_dims")[1]
-        end
-        dims = collect(read(file, "block1_dims"))
-        dims[1] = sum(block_draws)
-
-        offset_draws = 0
-        out = zeros(dims...)
-        for block = 1:nblocks
-            for pid in pids
-                inds = collect(read(file, "block$(block)_inds$pid"))
-                inds[1] += offset_draws
-                out[inds...] = read(file, "block$(block)_arr$pid")
-            end
-            offset_draws += block_draws[block]
-        end
-
-    # Don't read in blocks
-    else
-        dims = read(file, "dims")
-        pids = read(file, "pids")
-
-        out = zeros(dims...)
-        for pid in pids
-            inds = read(file, "inds$pid")
-            out[inds...] = read(file, "arr$pid")
-        end
-    end
-
-    return out
+    return df, systems, kals
 end
 
 """
@@ -806,57 +614,62 @@ function read_forecast_metadata(file::JLD.JldFile)
     for field in names(file)
         metadata[symbol(field)] = read(file, field)
     end
-
-    metadata
+    return metadata
 end
 
+"""
+```
+write_forecast_block(file::JLD.JldFile, arr::Array, block_number::Int,
+    subset_inds::Range{Int64})
+```
+
+Writes `arr` as \"arr\$(block_number)\" and `subset_inds` as \"draws\$(block_number)\" to `file`, and updates `nblocks` and `ndraws`.
+"""
+function write_forecast_block(file::JLD.JldFile, arr::Array,
+                              block_number::Int, subset_inds::Range{Int64})
+
+    write(file, "arr$(block_number)", arr)
+    write(file, "draws$(block_number)", subset_inds)
+
+    # Update nblocks and dims if necessary
+    if exists(file, "nblocks")
+        nblocks = read(file, "nblocks")
+        delete!(file, "nblocks")
+        write(file, "nblocks", nblocks + 1)
+    else
+        write(file, "nblocks", 1)
+    end
+
+    if exists(file, "dims")
+        dims = read(file, "dims")
+        dims[1] += length(subset_inds)
+        delete!(file, "dims")
+        write(file, "dims", dims)
+    else
+        write(file, "dims", collect(size(arr)))
+    end
+end
 
 """
 ```
-compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
+read_forecast_blocks(file::JLD.JldFile)
 ```
 
-Run `forecast_one` once to just-in-time compile it, before running a
-full-distribution forecast. `compile_forecast_one` computes the minimum number
-of draws necessary given the forecast thinning step size (`jstep`) and number of
-processes (`nprocs`), i.e. `jstep * nprocs`, and runs a full forecast on those
-draws.
+Reads a JLD file written by `write_forecast_outputs` calling
+`write_forecast_block`. Returns an `Array`.
 """
-function compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println()
-        info("Compiling forecast_one...")
+function read_forecast_blocks(file::JLD.JldFile)
+    @assert exists(file, "nblocks") && exists(file, "dims")
+    nblocks = read(file, "nblocks")
+    dims    = read(file, "dims")
+    ndims   = length(dims)
+
+    arr = zeros(dims...)
+    for block = 1:nblocks
+        block_draws = read(file, "draws$block")
+        arr[block_draws, fill(:, ndims-1)...] = read(file, "arr$block")
     end
-
-    # since the forecast doesn't write 4q or q4q4 results, we don't need to include these.
-    # their presence will also cause problems when we try to remove the output files.
-    my_output_vars = setdiff(output_vars, [:forecast4qpseudo, :forecast4qobs,
-                                           :bddforecast4qpseudo, :bddforecast4qobs,
-                                           :forecastq4q4obs, :forecastq4q4pseudo,
-                                           :bddforecastq4q4obs, :bddforecastq4q4pseudo])
-
-    # Compute mininum number of draws for given jstep and procs
-    jstep = get_setting(m, :forecast_jstep)
-    nprocs = length(procs)
-    min_draws = jstep * nprocs
-    subset_inds = 1:min_draws
-
-    # Call forecast_one with input_type = :subset
-    old_overrides = copy(forecast_input_file_overrides(m))
-    old_saveroot  = get_setting(m, :saveroot)
-    try
-        forecast_input_file_overrides(m)[:full] = get_forecast_input_file(m, :full)
-        m <= Setting(:saveroot, mktempdir(old_saveroot))
-        forecast_one(m, :subset, :none, my_output_vars;
-                     subset_inds = subset_inds, forecast_string = "compile",
-                     verbose = :none, procs = procs)
-    finally
-        rm(get_setting(m, :saveroot), recursive = true)
-        m <= Setting(:forecast_input_file_overrides, old_overrides)
-        m <= Setting(:saveroot, old_saveroot)
-        darray_closeall()
-        gc()
-    end
+    return arr
 end
 
 """
