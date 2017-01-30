@@ -846,11 +846,12 @@ function compile_forecast_one(m, output_vars; verbose = :low, procs = [myid()])
     old_saveroot  = get_setting(m, :saveroot)
     try
         forecast_input_file_overrides(m)[:full] = get_forecast_input_file(m, :full)
-        m <= Setting(:saveroot, tempdir())
+        m <= Setting(:saveroot, mktempdir(old_saveroot))
         forecast_one(m, :subset, :none, my_output_vars;
                      subset_inds = subset_inds, forecast_string = "compile",
                      verbose = :none, procs = procs)
     finally
+        rm(get_setting(m, :saveroot), recursive = true)
         m <= Setting(:forecast_input_file_overrides, old_overrides)
         m <= Setting(:saveroot, old_saveroot)
         darray_closeall()
