@@ -139,15 +139,7 @@ function init_model_indices!(m::SmetsWouters)
         :y_t1, :c_t1, :i_t1, :w_t1, :π_t1, :L_t1, :Et_π_t]
 
     # Measurement equation observables
-    observables = [[
-        :obs_gdp,              # quarterly output growth
-        :obs_hours,            # aggregate hours growth
-        :obs_wages,            # real wage growth
-        :obs_gdpdeflator,      # inflation (GDP deflator)
-        :obs_nominalrate,      # nominal interest rate
-        :obs_consumption,      # consumption growth
-        :obs_investment];       # investment growth
-        [symbol("obs_nominalrate$i") for i=1:n_anticipated_shocks(m)]] # compounded nominal rates
+    observables = keys(m.observable_mappings)
 
 
     for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
@@ -442,6 +434,4 @@ function settings_smets_wouters!(m::SmetsWouters)
 
     # Data vintage
     m <= Setting(:data_vintage, "150827")
-
-    m.settings
 end

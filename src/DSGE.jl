@@ -169,6 +169,7 @@ module DSGE
     include("models/smets_wouters/smets_wouters.jl")
     include("models/smets_wouters/subspecs.jl")
     include("models/smets_wouters/eqcond.jl")
+    include("models/smets_wouters/observables.jl")
     include("models/smets_wouters/measurement.jl")
     include("models/smets_wouters/augment_states.jl")
 
