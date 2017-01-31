@@ -16,20 +16,29 @@ Driver to compute the model solution and augment transition matrices.
 """
 function solve(m::AbstractModel)
 
-    # Get equilibrium condition matrices
-    Γ0, Γ1, C, Ψ, Π  = eqcond(m)
+    altpolicy = alternative_policy(m)
 
-    # Solve model
-    TTT_gensys, CCC_gensys, RRR_gensys, fmat, fwt, ywt, gev, eu, loose = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
-    if !((eu[1] == 1) & (eu[2] == 1))
-        throw(GensysError("Gensys does not give existence"))
+    if altpolicy == identity
+
+        # Get equilibrium condition matrices
+        Γ0, Γ1, C, Ψ, Π  = eqcond(m)
+
+        # Solve model
+        TTT_gensys, CCC_gensys, RRR_gensys, fmat, fwt, ywt, gev, eu, loose = gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6)
+        if !((eu[1] == 1) & (eu[2] == 1))
+            throw(GensysError("Gensys does not give existence"))
+        end
+        TTT_gensys = real(TTT_gensys)
+        RRR_gensys = real(RRR_gensys)
+        CCC_gensys = reshape(CCC_gensys, size(CCC_gensys, 1))
+
+        # Augment states
+        TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
+
+    else
+        # Change the policy rule
+        TTT, RRR, CCC = altpolicy(m)
     end
-    TTT_gensys = real(TTT_gensys)
-    RRR_gensys = real(RRR_gensys)
-    CCC_gensys = reshape(CCC_gensys, size(CCC_gensys, 1))
-
-    # Augment states
-    TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
 
     return TTT, RRR, CCC
 end
@@ -44,7 +53,7 @@ A `GensysError` is thrown when Gensys does not give a unique solution, or no sol
 exists. If a `GensysError`is thrown during Metropolis-Hastings, it is caught by `posterior`.
 `posterior` then returns a value of `-Inf`, which Metropolis-Hastings always rejects.
 ### Fields
-* `msg::ASCIIString`: Info message. Default = "Error in gensys." 
+* `msg::ASCIIString`: Info message. Default = "Error in gensys."
 """
 type GensysError <: Exception
     msg::ASCIIString
