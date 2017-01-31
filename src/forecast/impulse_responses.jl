@@ -1,8 +1,8 @@
 """
 ```
-compute_impulse_response(m, system)
+impulse_responses(m, system)
 
-compute_impulse_response(system, horizon)
+impulse_responses(system, horizon)
 ```
 
 Compute impulse responses for a single draw.
@@ -23,12 +23,12 @@ Compute impulse responses for a single draw.
   pseudo-observable impulse response functions. If the pseudo-measurement equation
   matrices in `system` are empty, then `pseudo` will be empty.
 """
-function compute_impulse_response{S<:AbstractFloat}(m::AbstractModel, system::System{S})
+function impulse_responses{S<:AbstractFloat}(m::AbstractModel, system::System{S})
     horizon = impulse_response_horizons(m)
-    compute_impulse_response(system, horizon)
+    impulse_responses(system, horizon)
 end
 
-function compute_impulse_response{S<:AbstractFloat}(system::System{S}, horizon::Int)
+function impulse_responses{S<:AbstractFloat}(system::System{S}, horizon::Int)
 
     # Unpack system
     T, R = system[:TTT], system[:RRR]

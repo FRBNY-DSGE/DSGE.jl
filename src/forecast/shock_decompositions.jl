@@ -1,9 +1,9 @@
 """
 ```
-compute_shock_decompositions(system, forecast_horizons, histshocks, start_index,
+shock_decompositions(system, forecast_horizons, histshocks, start_index,
     end_index)
 
-compute_shock_decompositions(T, R, Z, D, Z_pseudo, D_pseudo, z0, shocks,
+shock_decompositions(T, R, Z, D, Z_pseudo, D_pseudo, z0, shocks,
     forecast_horizons, histshocks, start_index, end_index)
 ```
 
@@ -34,7 +34,7 @@ where `S<:AbstractFloat`.
 
 where `nperiods = `end_index - start_index + 1`.
 """
-function compute_shock_decompositions{S<:AbstractFloat}(system::System{S},
+function shock_decompositions{S<:AbstractFloat}(system::System{S},
     forecast_horizons::Int, histshocks::Matrix{S},
     start_index::Int, end_index::Int)
 
@@ -48,11 +48,11 @@ function compute_shock_decompositions{S<:AbstractFloat}(system::System{S},
         Matrix{S}(), Vector{S}()
     end
 
-    compute_shock_decompositions(T, R, Z, D, Z_pseudo, D_pseudo,
+    shock_decompositions(T, R, Z, D, Z_pseudo, D_pseudo,
         forecast_horizons, histshocks, start_index, end_index)
 end
 
-function compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
+function shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
     R::Matrix{S}, Z::Matrix{S}, D::Vector{S}, Z_pseudo::Matrix{S},
     D_pseudo::Vector{S}, forecast_horizons::Int, histshocks::Matrix{S},
     start_index::Int, end_index::Int)
@@ -117,9 +117,9 @@ end
 
 """
 ```
-compute_deterministic_trend(m, system, z0)
+deterministic_trends(m, system, z0)
 
-compute_deterministic_trend(system, z0, nperiods)
+deterministic_trends(system, z0, nperiods)
 ```
 
 Compute deterministic trend values of states, observables, and
@@ -158,30 +158,30 @@ function deterministic_trends{S<:AbstractFloat}(m::AbstractModel{S},
     # results for periods corresponding to the shockdec period.
     nperiods = subtract_quarters(date_shockdec_end(m), date_mainsample_start(m)) + 1
 
-    compute_deterministic_trend(system, z0, nperiods)
+    deterministic_trends(system, z0, nperiods)
 end
 
-function compute_deterministic_trend{S<:AbstractFloat}(system::System{S}, z0::Vector{S}, nperiods::Int)
+function deterministic_trends{S<:AbstractFloat}(system::System{S}, z0::Vector{S}, nperiods::Int)
 
     # construct matrix of 0 shocks for entire history and forecast horizon
     nshocks  = size(system[:RRR], 2)
     shocks   = zeros(S, nshocks, nperiods)
 
-    # use compute_forecast to iterate state-space system forward without shocks or the ZLB procedure
-    states, obs, pseudo, _ = compute_forecast(system, z0, shocks)
+    # use forecast to iterate state-space system forward without shocks or the ZLB procedure
+    states, obs, pseudo, _ = forecast(system, z0, shocks)
 
     states, obs, pseudo
 end
 
 """
 ```
-compute_trend{S<:AbstractFloat}(system::System{S})
+trends{S<:AbstractFloat}(system::System{S})
 ```
 
 Compute trend (steady-state) states, observables, and pseudo-observables. The
 trend is used for plotting shock decompositions.
 """
-function compute_trend{S<:AbstractFloat}(system::System{S})
+function trends{S<:AbstractFloat}(system::System{S})
 
     # Unpack system
     C, D = system[:CCC], system[:DD]

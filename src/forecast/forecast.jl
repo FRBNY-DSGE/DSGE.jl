@@ -1,22 +1,17 @@
 """
 ```
-compute_forecast(m, system, kal; enforce_zlb = false, shocks = Matrix{S}())
+forecast(m, system, kal; enforce_zlb = false, shocks = Matrix{S}())
 
-compute_forecast(m, system, z0; enforce_zlb = false, shocks = Matrix{S}())
+forecast(m, system, z0; enforce_zlb = false, shocks = Matrix{S}())
 
-compute_forecast(system, z0, shocks; enforce_zlb = false)
-
-compute_forecast(T, R, C, Q, Z, D, Z_pseudo, D_pseudo, z0, shocks; enforce_zlb = false)
+forecast(system, z0, shocks; enforce_zlb = false)
 ```
 
 ### Inputs
 
 - `m::AbstractModel`: model object. Only needed for the method in which `shocks`
   are not provided.
-- `system::System{S}`: state-space system matrices. Alternatively, provide
-  transition equation matrices `T`, `R`, `C`; measurement equation matrices `Q`,
-  `Z`, `D`; and (possibly empty) pseudo-measurement equation matrices `Z_pseudo`
-  and `D_pseudo`.
+- `system::System{S}`: state-space system matrices
 - `kal::Kalman{S}` or `z0::Vector{S}`: result of running the Kalman filter or
   state vector in the final historical period (aka initial forecast period)
 
@@ -49,7 +44,7 @@ where `S<:AbstractFloat`.
   `Z_pseudo` and `D_pseudo` matrices are empty, then `pseudo` will be empty.
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
-function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
+function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     kal::Kalman{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
     shocks::Matrix{S} = Matrix{S}())
 
@@ -60,11 +55,11 @@ function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
         kal[:zend]
     end
 
-    compute_forecast(m, system, z0; cond_type = cond_type, enforce_zlb = enforce_zlb,
+    forecast(m, system, z0; cond_type = cond_type, enforce_zlb = enforce_zlb,
                      shocks = shocks)
 end
 
-function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
+function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
     shocks::Matrix{S} = Matrix{S}())
 
@@ -105,12 +100,11 @@ function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     ind_r_sh = m.exogenous_shocks[:rm_sh]
     zlb_value = forecast_zlb_value(m)
 
-    compute_forecast(system, z0, shocks; enforce_zlb = enforce_zlb,
+    forecast(system, z0, shocks; enforce_zlb = enforce_zlb,
         ind_r = ind_r, ind_r_sh = ind_r_sh, zlb_value = zlb_value)
 end
 
-
-function compute_forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
+function forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
     shocks::Matrix{S}; enforce_zlb::Bool = false, ind_r::Int = -1,
     ind_r_sh::Int = -1, zlb_value::S = 0.13/4)
 
@@ -123,16 +117,6 @@ function compute_forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
     else
         Matrix{S}(), Vector{S}()
     end
-
-    compute_forecast(T, R, C, Q, Z, D, Z_pseudo, D_pseudo, z0, shocks;
-        enforce_zlb = enforce_zlb, ind_r = ind_r, ind_r_sh = ind_r_sh,
-        zlb_value = zlb_value)
-end
-
-function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
-    C::Vector{S}, Q::Matrix{S}, Z::Matrix{S}, D::Vector{S}, Z_pseudo::Matrix{S},
-    D_pseudo::Vector{S}, z0::Vector{S}, shocks::Matrix{S}; enforce_zlb::Bool = false,
-    ind_r::Int = -1, ind_r_sh::Int = -1, zlb_value::S = 0.13/4)
 
     # Setup
     nshocks = size(R, 2)

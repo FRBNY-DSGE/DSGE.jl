@@ -1,9 +1,8 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-    using Distributions, HDF5, JLD
+    using Base.Dates, DataFrames, Distributions, FredData, HDF5, JLD
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
-    using FredData, DataFrames, Base.Dates, DistributedArrays
     using QuantEcon: solve_discrete_lyapunov
     import Calculus
     import Optim
@@ -70,8 +69,7 @@ module DSGE
         # forecast/
         load_draws, forecast_one,
         filter, filterandsmooth, smooth, kalman_smoother, durbin_koopman_smoother,
-        compute_forecast, compute_shock_decompositions, compute_deterministic_trend, compute_trend,
-        compute_impulse_response,
+        forecast, shock_decompositions, deterministic_trends, trends, impulse_responses,
         compute_system, n_forecast_draws, get_forecast_input_file, get_forecast_output_files, get_forecast_filename,
         add_requisite_output_vars,
 

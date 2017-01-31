@@ -409,7 +409,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     if !isempty(forecasts_to_compute)
         forecaststates, forecastobs, forecastpseudo, forecastshocks =
-            compute_forecast(m, system, kal; cond_type = cond_type, enforce_zlb = false)
+            forecast(m, system, kal; cond_type = cond_type, enforce_zlb = false)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
@@ -455,8 +455,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     shockdecs_to_compute = intersect(output_vars, shockdec_vars)
 
     if !isempty(shockdecs_to_compute)
-        shockdecstates, shockdecobs, shockdecpseudo =
-            compute_shock_decompositions(m, system, histshocks)
+        shockdecstates, shockdecobs, shockdecpseudo = shock_decompositions(m, system, histshocks)
 
         forecast_output[:shockdecstates] = shockdecstates
         forecast_output[:shockdecobs]    = shockdecobs
@@ -470,7 +469,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     trends_to_compute = intersect(output_vars, trend_vars)
 
     if !isempty(trends_to_compute)
-        trendstates, trendobs, trendpseudo = compute_trend(m, system)
+        trendstates, trendobs, trendpseudo = trends(m, system)
 
         forecast_output[:trendstates] = trendstates
         forecast_output[:trendobs]    = trendobs
@@ -483,8 +482,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     dettrends_to_compute = intersect(output_vars, dettrend_vars)
 
     if !isempty(dettrends_to_compute)
-        dettrendstates, dettrendobs, dettrendpseudo =
-            compute_deterministic_trend(m, system, initial_states)
+        dettrendstates, dettrendobs, dettrendpseudo = deterministic_trends(m, system, initial_states)
 
         forecast_output[:dettrendstates] = dettrendstates
         forecast_output[:dettrendobs]    = dettrendobs
@@ -498,7 +496,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     irfs_to_compute = intersect(output_vars, irf_vars)
 
     if !isempty(irfs_to_compute)
-        irfstates, irfobs, irfpseudo = compute_impulse_response(m, system)
+        irfstates, irfobs, irfpseudo = impulse_responses(m, system)
 
         forecast_output[:irfstates] = irfstates
         forecast_output[:irfobs] = irfobs
