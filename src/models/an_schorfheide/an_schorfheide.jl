@@ -149,9 +149,10 @@ function AnSchorfheide(subspec::AbstractString="ss0")
     rng                = MersenneTwister()
     testing            = false
 
-    fred_series        = [:GDPC1, :PCEPILFE, :DFF]#, :CNP16OV]
+    fred_series        = [:GDPC1, :PCEPILFE, :DFF, :CNP16OV]
 
-    data_series        = Dict(:us =>[:obs_gdp, :obs_corepce, :obs_ffr]) # Dict(:fred => fred_series)
+    # data_series        = Dict(:us =>[:obs_gdp, :obs_corepce, :obs_ffr])
+    data_series        = Dict(:fred => fred_series)
     data_transforms    = OrderedDict{Symbol,Function}()
 
     # initialize empty model
@@ -172,7 +173,7 @@ function AnSchorfheide(subspec::AbstractString="ss0")
             data_transforms)
 
     # Set settings
-    settings_AnSchorfheide!(m)
+    settings_an_schorfheide!(m)
     default_test_settings!(m)
 
     # Set data transformations
@@ -238,56 +239,40 @@ function steadystate!(m::AnSchorfheide)
     return m
 end
 
-function settings_AnSchorfheide!(m::AnSchorfheide)
+function settings_an_schorfheide!(m::AnSchorfheide)
     default_settings!(m)
 end
-# """
-# ```
-# init_data_transforms!(m::AnSchorfheide)
-# ```
+"""
+```
+init_data_transforms!(m::AnSchorfheide)
+```
 
-# This function initializes a dictionary of functions that map series read in in levels to the
-# appropriate transformed value. At the time that the functions are initialized, data is not
-# itself in memory. These functions are model-specific because they assume that certain series
-# are available. The keys of data transforms should match exactly the keys of `m.observables`.
-# """
-# function init_data_transforms!(m::AnSchorfheide)
-
-#     m.data_transforms[:obs_gdp] = function (levels)
-#         # FROM: Level of real GDP (from FRED)
-#         # TO: Quarter-to-quter percent change of real GDP
-#         oneqtrpercentchange(levels[:GDPC1])
-#     end
-
-#     m.data_transforms[:obs_corepce] = function (levels)
-#         # FROM: Core PCE index (from FRED)
-#         # TO: Quarter-to-quter percent change of core PCE, i.e. quarterly inflation
-#         oneqtrpercentchange(levels[:PCEPILFE])
-#     end
-
-#     m.data_transforms[:obs_ffr] = function (levels)
-#         # FROM: Nominal effective federal funds rate (aggregate daily data at a
-#         #       quarterly frequency at an annual rate)
-#         # TO:   Nominal effective fed funds rate, at a quarterly rate
-
-#         annualtoquarter(levels[:DFF])
-
-#     end
-# end
-
-
-function transform_data(m::AnSchorfheide, levels::DataFrame; verbose::Symbol = :low)
-    return levels
-end
-
+This function initializes a dictionary of functions that map series read in in levels to the
+appropriate transformed value. At the time that the functions are initialized, data is not
+itself in memory. These functions are model-specific because they assume that certain series
+are available. The keys of data transforms should match exactly the keys of `m.observables`.
+"""
 function init_data_transforms!(m::AnSchorfheide)
 
     m.data_transforms[:obs_gdp] = function (levels)
+        # FROM: Level of real GDP (from FRED)
+        # TO: Quarter-to-quter percent change of real GDP
+        percapita_GDP = percapita(m, :GDPC1, levels)
+        oneqtrpctchange(percapita_GDP)
     end
 
     m.data_transforms[:obs_corepce] = function (levels)
+        # FROM: Core PCE index (from FRED)
+        # TO: Quarter-to-quter percent change of core PCE, i.e. quarterly inflation
+        oneqtrpctchange(levels[:PCEPILFE])
     end
 
     m.data_transforms[:obs_ffr] = function (levels)
+        # FROM: Nominal effective federal funds rate (aggregate daily data at a
+        #       quarterly frequency at an annual rate)
+        # TO:   Nominal effective fed funds rate, at a quarterly rate
+
+        annualtoquarter(levels[:DFF])
+
     end
 end
