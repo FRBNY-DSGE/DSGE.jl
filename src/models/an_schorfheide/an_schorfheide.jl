@@ -149,9 +149,8 @@ function AnSchorfheide(subspec::AbstractString="ss0")
     rng                = MersenneTwister()
     testing            = false
 
-    fred_series        = [:GDPC1, :PCEPILFE, :DFF, :CNP16OV]
+    fred_series        = [:GDP, :PCEPILFE, :DFF, :CNP16OV, :GDPCTPI]
 
-    # data_series        = Dict(:us =>[:obs_gdp, :obs_corepce, :obs_ffr])
     data_series        = Dict(:fred => fred_series)
     data_transforms    = OrderedDict{Symbol,Function}()
 
@@ -256,9 +255,10 @@ function init_data_transforms!(m::AnSchorfheide)
 
     m.data_transforms[:obs_gdp] = function (levels)
         # FROM: Level of real GDP (from FRED)
-        # TO: Quarter-to-quter percent change of real GDP
-        percapita_GDP = percapita(m, :GDPC1, levels)
-        oneqtrpctchange(percapita_GDP)
+        # TO: Quarter-to-quter percent change of real GDP per capita
+        levels[:temp] = percapita(m, :GDP, levels)
+        gdp = 1000 * nominal_to_real(:temp, levels)
+        hpadjust(oneqtrpctchange(gdp), levels)
     end
 
     m.data_transforms[:obs_corepce] = function (levels)
