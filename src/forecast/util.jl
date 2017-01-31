@@ -53,7 +53,7 @@ Returns the number of forecast draws in the file
 function n_forecast_draws(m::AbstractModel, input_type::Symbol)
     if input_type in [:mean, :mode, :init]
         return 1
-    elseif input_type in [:full, :subset, :block]
+    elseif input_type in [:full, :subset]
         input_file = get_forecast_input_file(m, input_type)
         draws = h5open(input_file, "r") do file
             dataset = HDF5.o_open(file, "mhparams")
@@ -67,41 +67,45 @@ end
 
 """
 ```
-forecast_block_inds(m)
+forecast_block_inds(m, input_type; subset_inds = 1:0)
 ```
 
-Returns a `Vector{Range{Int64}}` of length `n_forecast_blocks(m)`,
-where `block_inds[i]` is the range of indices for block `i`.
+Returns a `Vector{Range{Int64}}` of length equal to the number of forecast
+blocks, where `block_inds[i]` is the range of indices (after thinning by
+`jstep`) for block `i`.
 """
-function forecast_block_inds(m::AbstractModel)
+function forecast_block_inds(m::AbstractModel, input_type::Symbol; subset_inds::Range{Int64} = 1:0)
 
-    nblocks = n_forecast_blocks(m)
-    ndraws  = n_forecast_draws(m, :full)
-    min_draws_per_block = get_jstep(m, ndraws)
-
-    # If there are not enough total draws for each block to have at least
-    # `min_draws_per_block` blocks, decrease `nblocks` until there are
-    while ndraws < nblocks * min_draws_per_block
-        nblocks -= 1
-    end
-
-    # Number of draws in each of the first `nblocks-1` blocks
-    avg_draws_per_block = if nblocks != n_forecast_blocks(m)
-        m <= Setting(:n_forecast_blocks(m), nblocks)
-        warn("Decreased n_forecast_blocks to $nblocks")
-        min_draws_per_block
+    if input_type == :full
+        ndraws = n_forecast_draws(m, :full)
+        jstep = get_jstep(m, ndraws)
+        start_ind = 1
+        end_ind   = ndraws
+    elseif input_type == :subset
+        ndraws    = length(subset_inds)
+        jstep     = get_jstep(m, ndraws)
+        start_ind = first(subset_inds)
+        end_ind   = last(subset_inds)
     else
-        convert(Int64, round(ndraws / (nblocks*min_draws_per_block))) * min_draws_per_block
+        throw(ArgumentError("Cannot call forecast_block_inds with input_type = $input_type."))
     end
+    all_inds  = start_ind:jstep:end_ind
+
+    # Make sure block_size is a multiple of jstep
+    block_size = forecast_block_size(m)
+    if block_size % jstep != 0
+        error("forecast_block_size(m) must be a multiple of jstep = $jstep")
+    end
+    nblocks = convert(Int64, ceil(ndraws / block_size))
 
     # Fill in draw indices for each block
     block_inds  = Vector{Range{Int64}}(nblocks)
-    current_draw = 0
+    current_draw = start_ind - 1
     for i = 1:(nblocks-1)
-        block_inds[i] = (current_draw+1):(current_draw+avg_draws_per_block)
-        current_draw += avg_draws_per_block
+        block_inds[i] = (current_draw+jstep-1):jstep:(current_draw+block_size)
+        current_draw += block_size
     end
-    block_inds[end] = (current_draw+1):ndraws
+    block_inds[end] = (current_draw+1):end_ind
 
     return block_inds
 end
@@ -304,25 +308,6 @@ end
 
 """
 ```
-@time_verbose ex
-```
-
-A macro that calls `@time ex` if `VERBOSITY[verbose] >= VERBOSITY[:high]`, else
-just calls `ex`.
-"""
-macro time_verbose(ex)
-    quote
-        local val = if VERBOSITY[verbose] >= VERBOSITY[:high]
-            $(@time esc(ex))
-        else
-            $(esc(ex))
-        end
-        val
-    end
-end
-
-"""
-```
 transplant_history(history, last_hist_period)
 ```
 
@@ -330,10 +315,10 @@ Remove the smoothed states, shocks, or pseudo-observables corresponding to
 conditional data periods. This is necessary because when we forecast with
 conditional data, we smooth beyond the last historical period.
 """
-function transplant_history{T<:AbstractFloat}(history::Array{T, 3},
+function transplant_history{T<:AbstractFloat}(history::Matrix{T},
     last_hist_period::Int)
 
-    return history[1:end, 1:end, 1:last_hist_period]
+    return history[:, 1:last_hist_period]
 end
 
 """
@@ -344,19 +329,19 @@ transplant_forecast(history, forecast, last_hist_period)
 Transplant the smoothed states, shocks, or pseudo-observables corresponding to
 conditional data periods from the history to the forecast.
 """
-function transplant_forecast{T<:AbstractFloat}(history::Array{T, 3},
-    forecast::Array{T, 3}, last_hist_period::Int)
+function transplant_forecast{T<:AbstractFloat}(history::Matrix{T},
+    forecast::Matrix{T}, last_hist_period::Int)
 
-    ncondperiods = size(history, 3) - last_hist_period
+    ncondperiods = size(history, 2) - last_hist_period
     cond_range   = (last_hist_period + 1):(last_hist_period + ncondperiods)
-    cond_draws   = history[:, :, cond_range]
+    condhist     = history[:, cond_range]
 
-    return cat(3, cond_draws, forecast)
+    return hcat(condhist, forecast)
 end
 
 """
 ```
-transplant_forecast_observables(histstates, forecastobs, systems, last_hist_period)
+transplant_forecast_observables(histstates, forecastobs, system, last_hist_period)
 ```
 
 Transplant the observables implied by `histstates` corresponding to
@@ -368,21 +353,17 @@ just give us back the data. However, in the conditional data periods, we only
 have data for a subset of observables, so we need to get the remaining
 observables by mapping the smoothed states.
 """
-function transplant_forecast_observables{T<:AbstractFloat}(histstates::Array{T, 3},
-    forecastobs::Array{T, 3}, systems::Vector{System{T}}, last_hist_period::Int)
+function transplant_forecast_observables{T<:AbstractFloat}(histstates::Matrix{T},
+    forecastobs::Matrix{T}, system::System{T}, last_hist_period::Int)
 
-    ndraws       = length(systems)
-    nvars        = size(forecastobs, 2)
-    ncondperiods = size(histstates, 3) - last_hist_period
+    nvars        = size(forecastobs, 1)
+    ncondperiods = size(histstates, 2) - last_hist_period
     cond_range   = (last_hist_period + 1):(last_hist_period + ncondperiods)
 
-    cond_draws   = zeros(ndraws, nvars, ncondperiods)
-    for i = 1:ndraws
-        states_i = squeeze(histstates[i, :, cond_range], 1)
-        cond_draws[i, :, :] = systems[i][:ZZ]*states_i .+ systems[i][:DD]
-    end
+    condstates   = histstates[:, cond_range]
+    condobs      = system[:ZZ]*condstates .+ system[:DD]
 
-    return cat(3, cond_draws, forecastobs)
+    return hcat(cond_draws, forecastobs)
 end
 
 """
@@ -420,100 +401,6 @@ function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, output_vars
             println(" * Wrote $(basename(filepath))")
         end
     end
-end
-
-"""
-```
-prepare_forecast_inputs!(m, input_type, cond_type, output_vars;
-    df = DataFrame(), systems = Vector{System{S}}(), kals = Vector{Kalman{S}}(),
-    subset_inds = 1:0, verbose = :none)
-```
-
-Check that the provided inputs `df`, `systems`, `states`, and `subset_inds`
-are well-formed with respect to the provided `input_type`, `cond_type`,
-and `output_vars`. If an input is not provided to the function, it is loaded
-using the appropriate getter function.
-
-### Inputs
-
-- `m::AbstractModel`: model object
-- `input_type::Symbol`: See documentation for `forecast_all`
-  `:mode`
-- `cond_type::Symbol`: See documentation for `forecast_all`
-- `subset_inds::Range{Int64}`: indices specifying the draws we want to use. See
-  `forecast_one` for more detail
-- `output_vars::Vector{Symbol}`: vector of desired output variables. See
-  `forecast_one`
-
-### Keyword Arguments
-
-- `df::DataFrame`: historical data. If `cond_type in [:semi, :full]`, then the
-   final row of `df` should be the period containing conditional data. If not
-   provided, then `df` will be loaded using `load_data` with the appropriate
-   `cond_type`
-- `systems::Vector{System{Float64}}`: vector of `n_sim_forecast` many `System`
-  objects, one for each draw. If not provided, will be loaded using
-  `prepare_systems`
-- `kals::Vector{Kalman{Float64}}`: vector of `n_sim_forecast` many `Kalman`
-  objects. If not provided, will be loaded using `filter_all`
-- `subset_inds::Range{Int64}`: indices specifying the draws we want to use. If
-  `input_type` is not `subset`, `subset_inds` will be ignored
-- `verbose::Symbol`: desired frequency of function progress messages printed to
-  standard out. One of `:none`, `:low`, or `:high`
-
-### Outputs
-
-- `df`
-- `systems`
-- `kals`
-"""
-function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
-    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-    df::DataFrame = DataFrame(),
-    systems::Vector{System{S}} = Vector{System{S}}(),
-    kals::Vector{Kalman{S}} = Vector{Kalman{S}}(),
-    subset_inds::Range{Int64} = 1:0,
-    verbose::Symbol = :none)
-
-    # Convert output_vars to a vector of strings
-    output_strs = map(string, output_vars)
-
-    # Set forecast_pseudoobservables properly
-    if any(output -> contains(output, "pseudo"), output_strs)
-        m <= Setting(:forecast_pseudoobservables, true)
-    end
-
-    # Determine if we are only running IRFs. If so, we won't need to load data
-    # or run the Kalman filter below
-    irfs_only = all(output -> contains(output, "irf"), output_strs)
-
-    # Load data if not provided
-    if !irfs_only
-        if isempty(df)
-            data_verbose = verbose == :none ? :none : :low
-            df = load_data(m; cond_type = cond_type, try_disk = true, verbose = data_verbose)
-        else
-            @assert df[1, :date] == date_presample_start(m)
-            @assert df[end, :date] == (cond_type == :none ? date_mainsample_end(m) : date_conditional_end(m))
-        end
-    end
-
-    # Compute systems and run Kalman filter if not provided
-    if isempty(systems) || isempty(kals)
-        params = load_draws(m, input_type; subset_inds = subset_inds,
-                            verbose = verbose)
-        systems = prepare_systems(m, input_type, params)
-        if !irfs_only
-            kals = filter_all(m, df, systems; cond_type = cond_type)
-        end
-    else
-        @assert length(systems) == length(kals)
-        if input_type == :subset
-            @assert length(subset_inds) == length(systems)
-        end
-    end
-
-    return df, systems, kals
 end
 
 """

@@ -106,6 +106,8 @@ end
 
 """
 ```
+compute_forecast(m, system, kal; enforce_zlb = false, shocks = Matrix{S}())
+
 compute_forecast(m, system, z0; enforce_zlb = false, shocks = Matrix{S}())
 
 compute_forecast(system, z0, shocks; enforce_zlb = false)
@@ -121,7 +123,8 @@ compute_forecast(T, R, C, Q, Z, D, Z_pseudo, D_pseudo, z0, shocks; enforce_zlb =
   transition equation matrices `T`, `R`, `C`; measurement equation matrices `Q`,
   `Z`, `D`; and (possibly empty) pseudo-measurement equation matrices `Z_pseudo`
   and `D_pseudo`.
-- `z0`: state vector in the final historical period (aka inital forecast period)
+- `kal::Kalman{S}` or `z0::Vector{S}`: result of running the Kalman filter or
+  state vector in the final historical period (aka initial forecast period)
 
 where `S<:AbstractFloat`.
 
@@ -152,6 +155,21 @@ where `S<:AbstractFloat`.
   `Z_pseudo` and `D_pseudo` matrices are empty, then `pseudo` will be empty.
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
+function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
+    kal::Kalman{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
+    shocks::Matrix{S} = Matrix{S}())
+
+    draw_z0(kal::Kalman) = rand(DegenerateMvNormal(kal[:zend], kal[:Pend]))
+    z0 = if forecast_draw_z0(m)
+        draw_z0(kal)
+    else
+        kal[:zend]
+    end
+
+    compute_forecast(m, system, z0; cond_type = cond_type, enforce_zlb = enforce_zlb,
+                     shocks = shocks)
+end
+
 function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
     shocks::Matrix{S} = Matrix{S}())
