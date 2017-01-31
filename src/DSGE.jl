@@ -68,17 +68,12 @@ module DSGE
         prior,
 
         # forecast/
-        forecast_all, forecast_one,
-        load_draws, prepare_systems, compute_system,
-        filter, filter_all, filterandsmooth_all, filterandsmooth,
-        smooth, smooth_all, kalman_smoother, durbin_koopman_smoother,
-        forecast, compute_forecast,
-        shock_decompositions, compute_shock_decompositions,
-        trends, compute_trends, compute_trend,
-        deterministic_trends, compute_deterministic_trends, compute_deterministic_trend,
-        impulse_responses, compute_impulse_response,
-        n_forecast_draws, get_forecast_input_file, get_forecast_output_files, get_forecast_filename,
-        read_darray, write_darray, compile_forecast_one,
+        load_draws, forecast_one,
+        filter, filterandsmooth, smooth, kalman_smoother, durbin_koopman_smoother,
+        compute_forecast, compute_shock_decompositions, compute_deterministic_trend, compute_trend,
+        compute_impulse_response,
+        compute_system, n_forecast_draws, get_forecast_input_file, get_forecast_output_files, get_forecast_filename,
+        add_requisite_output_vars,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
@@ -139,8 +134,6 @@ module DSGE
     include("forecast/smooth.jl")
     include("forecast/forecast.jl")
     include("forecast/shock_decompositions.jl")
-    include("forecast/trends.jl")
-    include("forecast/deterministic_trends.jl")
     include("forecast/impulse_responses.jl")
     include("forecast/drivers.jl")
 

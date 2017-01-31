@@ -1,56 +1,7 @@
 """
 ```
-impulse_responses(m, systems)
-```
+compute_impulse_response(m, system)
 
-Compute impulse responses across all draws.
-
-### Inputs
-- `m::AbstractModel`: model object
-- `systems::Vector{System{S}}`: vector of `System` objects specifying
-  state-space system matrices for each draw
-
-### Outputs
-
-- `states::Array{S, 4}`: array of size `ndraws` x `nstates` x `horizon` x
-  `nshocks` of state impulse response functions for each draw
-- `obs::Array{S, 4}`: array of size `ndraws` x `nobs` x `horizon` x `nshocks`
-  of observable impulse response functions for each draw
-- `pseudo::Array{S, 4}`: array of size `ndraws` x `npseudo` x `horizon` x
-  `nshocks` of pseudo-observable impulse response functions for each draw. If
-  `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
-
-where `horizon` is the forecast horizon for the model as given by
-`impulse_response_horizons(m)`
-"""
-function impulse_responses{S<:AbstractFloat}(m::AbstractModel, systems::Vector{System{S}})
-
-    # Numbers of useful things
-    ndraws = length(systems)
-    horizon = impulse_response_horizons(m)
-
-    nstates = n_states_augmented(m)
-    nobs    = n_observables(m)
-    npseudo = n_pseudoobservables(m)
-    nshocks = n_shocks_exogenous(m)
-
-    states = zeros(ndraws, states, horizon, nshocks)
-    obs    = zeros(ndraws, obs,    horizon, nshocks)
-    pseudo = zeros(ndraws, pseudo, horizon, nshocks)
-
-    for i = 1:ndraws
-        states_i, obs_i, pseudo_i = compute_impulse_response(systems[i], horizon)
-
-        states[i, :, :, :] = states_i
-        obs[i,    :, :, :] = obs_i
-        pseudo[i, :, :, :] = pseudo_i
-    end
-
-    return states, obs, pseudo
-end
-
-"""
-```
 compute_impulse_response(system, horizon)
 ```
 
@@ -58,6 +9,7 @@ Compute impulse responses for a single draw.
 
 ### Inputs
 
+- `m::AbstractModel`: model object
 - `system::System{S}`: state-space system matrices
 - `horizon::Int`: number of periods ahead to forecast
 
@@ -71,6 +23,11 @@ Compute impulse responses for a single draw.
   pseudo-observable impulse response functions. If the pseudo-measurement equation
   matrices in `system` are empty, then `pseudo` will be empty.
 """
+function compute_impulse_response{S<:AbstractFloat}(m::AbstractModel, system::System{S})
+    horizon = impulse_response_horizons(m)
+    compute_impulse_response(system, horizon)
+end
+
 function compute_impulse_response{S<:AbstractFloat}(system::System{S}, horizon::Int)
 
     # Unpack system
