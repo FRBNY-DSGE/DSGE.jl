@@ -1,4 +1,4 @@
-using DSGE, Base.Test, JLD, DistributedArrays
+using DSGE, Base.Test, HDF5, JLD, DistributedArrays
 include("../util.jl")
 
 path = dirname(@__FILE__)
@@ -18,9 +18,10 @@ overrides = forecast_input_file_overrides(m)
 overrides[:mode] = joinpath(estroot, "paramsmode_test.h5")
 overrides[:full] = joinpath(estroot, "mhsave_test.h5")
 
-output_vars = [:histpseudo, :forecastpseudo, :forecastobs, :bddforecastpseudo, :bddforecastobs,
-               :shockdecpseudo, :shockdecobs, :dettrendpseudo, :dettrendobs, :trendpseudo, :trendobs,
-               :irfpseudo, :irfobs]
+output_vars = add_requisite_output_vars([:histpseudo,
+                                         :forecastpseudo, :forecastobs,
+                                         :shockdecpseudo, :shockdecobs,
+                                         :irfpseudo, :irfobs])
 
 # Check error handling for input_type = :subset
 @test_throws ErrorException forecast_one(m, :subset, :none, output_vars,
@@ -31,16 +32,16 @@ output_vars = [:histpseudo, :forecastpseudo, :forecastobs, :bddforecastpseudo, :
                                 verbose = :none)
 
 # Run modal forecasts
-out = Dict{Symbol, Dict{Symbol, Any}}()
+out = Dict{Symbol, Dict{Symbol, Array{Float64}}}()
 for cond_type in [:none, :semi, :full]
-    @time dtemp = forecast_one(m, :mode, cond_type, output_vars, verbose = :none)
+    @time forecast_one(m, :mode, cond_type, output_vars, verbose = :none)
 
-    # Convert to Dict of regular arrays
-    temp = Dict{Symbol, Array}()
-    for x in keys(dtemp)
-        temp[x] = squeeze(convert(Array, dtemp[x]), 1)
+    # Read output
+    out[cond_type] = Dict{Symbol, Array{Float64}}()
+    output_files = get_forecast_output_files(m, :mode, cond_type, output_vars)
+    for var in keys(output_files)
+        out[cond_type][var] = h5read(output_files[var], "arr")
     end
-    out[cond_type] = temp
 end
 
 # Read expected output
@@ -73,14 +74,8 @@ for cond_type in [:none, :semi, :full]
 end
 
 # Test full-distribution blocking
-m <= Setting(:forecast_blocking, false)
+m <= Setting(:forecast_block_size, 5)
 @time forecast_one(m, :full, :none, output_vars, verbose = :none)
-
-m <= Setting(:forecast_blocking, true)
-@time forecast_one(m, :full, :none, output_vars, verbose = :none)
-
-m <= Setting(:forecast_start_block, Nullable(2))
-@test_throws ErrorException forecast_one(m, :full, :none, output_vars, verbose = :none)
 
 
 nothing
