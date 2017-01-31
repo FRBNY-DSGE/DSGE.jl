@@ -102,7 +102,7 @@ function forecast_block_inds(m::AbstractModel, input_type::Symbol; subset_inds::
     block_inds  = Vector{Range{Int64}}(nblocks)
     current_draw = start_ind - 1
     for i = 1:(nblocks-1)
-        block_inds[i] = (current_draw+jstep-1):jstep:(current_draw+block_size)
+        block_inds[i] = (current_draw+jstep):jstep:(current_draw+block_size)
         current_draw += block_size
     end
     block_inds[end] = (current_draw+1):end_ind
@@ -138,15 +138,14 @@ added to `output_vars` when calling
 function add_requisite_output_vars(output_vars::Vector{Symbol})
 
     # Add :forecast<class>bdd if :forecast<class> is in output_vars
-    forecast_outputs = Base.filter(output -> contains(string(output), "forecast") && !contains(string(output), "bdd"),
-                                   output_vars)
+    forecast_outputs = Base.filter(output -> get_product(output) == :forecast, output_vars)
     if !isempty(forecast_outputs)
         bdd_vars = [symbol("bdd$(var)") for var in forecast_outputs]
         output_vars = unique(vcat(output_vars, bdd_vars))
     end
 
     # Add :trend<class> and :dettrend<class> if :shockdec<class> is in output_vars
-    shockdec_outputs = Base.filter(output -> contains(string(output), "shockdec"), output_vars)
+    shockdec_outputs = Base.filter(output -> get_product(output) == :shockdec, output_vars)
     if !isempty(shockdec_outputs)
         classes = [get_class(output) for output in shockdec_outputs]
         dettrend_vars = [symbol("dettrend$c") for c in classes]
@@ -410,7 +409,7 @@ function transplant_forecast_observables{T<:AbstractFloat}(histstates::Matrix{T}
     condstates   = histstates[:, cond_range]
     condobs      = system[:ZZ]*condstates .+ system[:DD]
 
-    return hcat(cond_draws, forecastobs)
+    return hcat(condobs, forecastobs)
 end
 
 """
@@ -532,7 +531,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     if class == :pseudo
         pseudo, pseudo_mapping = pseudo_measurement(m)
         write(file, "pseudoobservable_indices", pseudo_mapping.inds)
-        rev_transforms = if !contains(var, "irf")
+        rev_transforms = if prod != :irf
             Dict{Symbol,Symbol}([x => symbol(pseudo[x].rev_transform) for x in keys(pseudo)])
         else
             Dict{Symbol,Symbol}([x => symbol("DSGE.identity") for x in keys(pseudo)])

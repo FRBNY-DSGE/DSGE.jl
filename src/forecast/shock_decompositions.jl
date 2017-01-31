@@ -34,6 +34,16 @@ where `S<:AbstractFloat`.
 
 where `nperiods = `end_index - start_index + 1`.
 """
+function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
+    system::System{S}, histshocks::Matrix{S})
+
+    horizon   = forecast_horizons(m)
+    start_ind = index_shockdec_start(m)
+    end_ind   = index_shockdec_end(m)
+
+    shock_decompositions(system, horizon, histshocks, start_ind, end_ind)
+end
+
 function shock_decompositions{S<:AbstractFloat}(system::System{S},
     forecast_horizons::Int, histshocks::Matrix{S},
     start_index::Int, end_index::Int)
@@ -119,7 +129,7 @@ end
 ```
 deterministic_trends(m, system, z0)
 
-deterministic_trends(system, z0, nperiods)
+deterministic_trends(system, z0, nperiods, start_index, end_index)
 ```
 
 Compute deterministic trend values of states, observables, and
@@ -147,7 +157,7 @@ where `S<:AbstractFloat`.
   `pseudo` will be empty.
 
 where `nperiods` is the number of quarters between
-`date_mainsample_start(m)` and `date_shockdec_end(m)`, inclusive.
+`date_shockdec_start(m)` and `date_shockdec_end(m)`, inclusive.
 """
 function deterministic_trends{S<:AbstractFloat}(m::AbstractModel{S},
     system::System{S}, z0::Vector{S})
@@ -156,12 +166,15 @@ function deterministic_trends{S<:AbstractFloat}(m::AbstractModel{S},
     # first historical period.  However, since it is only used to
     # compute shock decompositions, we truncate and only store
     # results for periods corresponding to the shockdec period.
-    nperiods = subtract_quarters(date_shockdec_end(m), date_mainsample_start(m)) + 1
+    nperiods    = subtract_quarters(date_forecast_end(m), date_mainsample_start(m)) + 1
+    start_index = index_shockdec_start(m)
+    end_index   = index_shockdec_end(m)
 
-    deterministic_trends(system, z0, nperiods)
+    deterministic_trends(system, z0, nperiods, start_index, end_index)
 end
 
-function deterministic_trends{S<:AbstractFloat}(system::System{S}, z0::Vector{S}, nperiods::Int)
+function deterministic_trends{S<:AbstractFloat}(system::System{S}, z0::Vector{S}, nperiods::Int,
+    start_index::Int, end_index::Int)
 
     # construct matrix of 0 shocks for entire history and forecast horizon
     nshocks  = size(system[:RRR], 2)
@@ -170,7 +183,18 @@ function deterministic_trends{S<:AbstractFloat}(system::System{S}, z0::Vector{S}
     # use forecast to iterate state-space system forward without shocks or the ZLB procedure
     states, obs, pseudo, _ = forecast(system, z0, shocks)
 
-    states, obs, pseudo
+    # Return deterministic trends in appropriate range
+    forecast_pseudo = !isnull(system.pseudo_measurement)
+    if start_index == 1 && end_index == allperiods
+        return states, obs, pseudo
+    else
+        range = start_index:end_index
+        if forecast_pseudo
+            return states[:, range, :], obs[:, range, :], pseudo[:, range, :]
+        else
+            return states[:, range, :], obs[:, range, :], pseudo
+        end
+    end
 end
 
 """

@@ -31,7 +31,8 @@ necessary.
 """
 function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-    df::DataFrame = DataFrame(), verbose::Symbol = :none)
+    df::DataFrame = DataFrame(), subset_inds::Range{Int64} = 1:0,
+    verbose::Symbol = :none)
 
     # Compute everything that will be needed to plot original output_vars
     output_vars = add_requisite_output_vars(output_vars)
@@ -43,6 +44,11 @@ function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
     # Set forecast_pseudoobservables properly
     if any(class -> class == :pseudo, output_classes)
         m <= Setting(:forecast_pseudoobservables, true)
+    end
+
+    # Throw error if input_type = :subset but no subset_inds provided
+    if input_type == :subset && isempty(subset_inds)
+        error("Must supply nonempty subset_inds if input_type = :subset")
     end
 
     # Determine if we are only running IRFs. If so, we won't need to load data
@@ -101,8 +107,7 @@ function load_draws(m::AbstractModel, input_type::Symbol;
     # Load single draw
     if input_type in [:mean, :mode]
 
-        tmp = map(Float64, h5read(input_file_name, "params"))
-        params = reshape(tmp, 1, size(tmp, 1))
+        params = convert(Vector{Float64}, h5read(input_file_name, "params"))
 
     # Load multiple draws, indexing by jstep if necessary
     elseif input_type in [:full, :subset]
@@ -113,7 +118,7 @@ function load_draws(m::AbstractModel, input_type::Symbol;
             ndraws = length(block_inds)
             params = Vector{Vector{Float64}}(ndraws)
             for (i, j) in zip(1:ndraws, block_inds)
-                params[i] = map(Float64, h5read(input_file_name, "mhparams", (j, :)))
+                params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
             end
         end
 
@@ -121,8 +126,8 @@ function load_draws(m::AbstractModel, input_type::Symbol;
     elseif input_type in [:init]
 
         init_parameters!(m)
-        tmp = Float64[α.value for α in m.parameters]
-        params = reshape(tmp, 1, size(tmp,1))
+        tmp = map(α -> α.value, m.parameters)
+        params = convert(Vector{Float64}, tmp)
 
     end
 
@@ -253,7 +258,7 @@ function forecast_one(m::AbstractModel{Float64},
             tic()
 
             # Get to work!
-            params = load_draws(m, input_type; block_inds = block_inds, verbose = verbose)
+            params = load_draws(m, input_type; block_inds = block_inds[block], verbose = verbose)
 
             forecast_outputs = pmap(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
                                                                param, df, verbose = verbose),
@@ -355,7 +360,7 @@ es  - `:histpseudo`: `Matrix{Float64}` of smoothed historical
 ```
 """
 function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_type::Symbol,
-    output_vars::Vector{Symbol}, params::Vector{Float64}, df::DataFrame, verbose::Symbol = :low)
+    output_vars::Vector{Symbol}, params::Vector{Float64}, df::DataFrame; verbose::Symbol = :low)
 
     ### Setup
 
@@ -369,6 +374,9 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     if !irfs_only
         kal = filter(m, df, system; cond_type = cond_type)
     end
+
+    # Initialize dictionary
+    forecast_output = Dict{Symbol, Array{Float64}}()
 
 
     ### 1. Smoothed Histories
@@ -469,7 +477,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     trends_to_compute = intersect(output_vars, trend_vars)
 
     if !isempty(trends_to_compute)
-        trendstates, trendobs, trendpseudo = trends(m, system)
+        trendstates, trendobs, trendpseudo = trends(system)
 
         forecast_output[:trendstates] = trendstates
         forecast_output[:trendobs]    = trendobs
