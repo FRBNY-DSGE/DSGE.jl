@@ -70,8 +70,9 @@ module DSGE
         load_draws, forecast_one,
         filter, filterandsmooth, smooth, kalman_smoother, durbin_koopman_smoother,
         forecast, shock_decompositions, deterministic_trends, trends, impulse_responses,
-        compute_system, n_forecast_draws, get_forecast_input_file, get_forecast_output_files, get_forecast_filename,
-        add_requisite_output_vars,
+        compute_system, add_requisite_output_vars, n_forecast_draws,
+        get_forecast_input_file, get_forecast_output_files, get_forecast_filename,
+        read_forecast_output,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,

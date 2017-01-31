@@ -110,6 +110,53 @@ function forecast_block_inds(m::AbstractModel, input_type::Symbol; subset_inds::
     return block_inds
 end
 
+
+"""
+```
+add_requisite_output_vars(output_vars::Vector{Symbol})
+```
+
+Based on the given output_vars, this function determines which
+additional output_vars must be computed and stored for future
+plotting.
+
+Specifically, when plotting a shock decomposition, the trend and
+deterministic trend series are required (the trend is subtracted from
+the value of each shock, and the deterministic trend represents
+deviations from steady-state that would realize even in the absence of
+shocks). For example, if `output_vars` contains `shockdecobs`, the
+variables `dettrendobs` and `trendobs` will be added to `output_vars`.
+
+Note that this case is distinct from a case in which computing a
+different product is required to compute the desired `output_var`. For
+example, smoothed historical states (`histstates`) must be computed in
+order to compute a shock decomposition for a state variable, but need
+not be saved to produce plots later on. Therefore, `histstates` is not
+added to `output_vars` when calling
+`add_requisite_output_vars([shockdecstates])`.
+"""
+function add_requisite_output_vars(output_vars::Vector{Symbol})
+
+    # Add :forecast<class>bdd if :forecast<class> is in output_vars
+    forecast_outputs = Base.filter(output -> contains(string(output), "forecast") && !contains(string(output), "bdd"),
+                                   output_vars)
+    if !isempty(forecast_outputs)
+        bdd_vars = [symbol("bdd$(var)") for var in forecast_outputs]
+        output_vars = unique(vcat(output_vars, bdd_vars))
+    end
+
+    # Add :trend<class> and :dettrend<class> if :shockdec<class> is in output_vars
+    shockdec_outputs = Base.filter(output -> contains(string(output), "shockdec"), output_vars)
+    if !isempty(shockdec_outputs)
+        classes = [get_class(output) for output in shockdec_outputs]
+        dettrend_vars = [symbol("dettrend$c") for c in classes]
+        trend_vars = [symbol("trend$c") for c in classes]
+        output_vars = unique(vcat(output_vars, dettrend_vars, trend_vars))
+    end
+
+    return output_vars
+end
+
 """
 ```
 get_forecast_input_file(m, input_type)
@@ -368,6 +415,26 @@ end
 
 """
 ```
+assemble_block_outputs(dicts)
+```
+
+Given a vector `dicts` of forecast output dictionaries, concatenate each output
+along the draw dimension and return a new dictionary of the concatenated
+outputs.
+"""
+function assemble_block_outputs(dicts::Vector{Dict{Symbol, Array{Float64}}})
+    out = Dict{Symbol, Array{Float64}}()
+    if !isempty(dicts)
+        for var in keys(dicts[1])
+            outputs  = map(dict -> dict[var], dicts)
+            out[var] = cat(1, outputs...)
+        end
+    end
+    return out
+end
+
+"""
+```
 write_forecast_outputs(m, output_vars, forecast_output_files, forecast_output; verbose = :low)
 ```
 
@@ -405,26 +472,6 @@ end
 
 """
 ```
-assemble_block_outputs(dicts)
-```
-
-Given a vector `dicts` of forecast output dictionaries, concatenate each output
-along the draw dimension and return a new dictionary of the concatenated
-outputs.
-"""
-function assemble_block_outputs(dicts::Vector{Dict{Symbol, Array{Float64}}})
-    out = Dict{Symbol, Array{Float64}}()
-    if !isempty(dicts)
-        for var in keys(dicts[1])
-            outputs  = map(dict -> dict[var], dicts)
-            out[var] = cat(1, outputs...)
-        end
-    end
-    return out
-end
-
-"""
-```
 write_forecast_metadata(m::AbstractModel, file::JldFile, var::Symbol)
 ```
 
@@ -446,15 +493,16 @@ Note that we don't save dates or transformations for impulse response functions.
 """
 function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbol)
 
-    var = string(var)
+    prod  = get_product(var)
+    class = get_class(var)
 
     # Write date range
-    if !contains(var, "irf")
-        dates = if contains(var, "hist")
+    if prod != :irf
+        dates = if prod == :hist
             quarter_range(date_mainsample_start(m), date_mainsample_end(m))
-        elseif contains(var, "forecast")
+        elseif prod in [:forecast, :bddforecast]
             quarter_range(date_forecast_start(m), date_forecast_end(m))
-        elseif contains(var, "shockdec") || contains(var, "trend") # trend and dettrend
+        elseif prod in [:shockdec, :dettrend, :trend]
             quarter_range(date_shockdec_start(m), date_shockdec_end(m))
         end
 
@@ -463,16 +511,16 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     end
 
     # Write state names
-    if contains(var, "states")
+    if class == :state
         state_indices = merge(m.endogenous_states, m.endogenous_states_augmented)
         @assert length(state_indices) == n_states_augmented(m) # assert no duplicate keys
         write(file, "state_indices", state_indices)
     end
 
     # Write observable names and transforms
-    if contains(var, "obs")
+    if class == :obs
         write(file, "observable_indices", m.observables)
-        rev_transforms = if !contains(var, "irf")
+        rev_transforms = if prod != :irf
             Dict{Symbol,Symbol}([x => symbol(m.observable_mappings[x].rev_transform) for x in keys(m.observables)])
         else
             Dict{Symbol,Symbol}([x => symbol("DSGE.identity") for x in keys(m.observables)])
@@ -481,7 +529,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     end
 
     # Write pseudo-observable names and transforms
-    if contains(var, "pseudo")
+    if class == :pseudo
         pseudo, pseudo_mapping = pseudo_measurement(m)
         write(file, "pseudoobservable_indices", pseudo_mapping.inds)
         rev_transforms = if !contains(var, "irf")
@@ -493,38 +541,13 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     end
 
     # Write shock names and transforms
-    if contains(var, "shocks") || contains(var, "shockdec") || contains(var, "irf")
+    if class == :shock || prod in [:shockdec, :irf]
         write(file, "shock_indices", m.exogenous_shocks)
-        if contains(var, "shocks")
+        if class == :shock
             rev_transforms = Dict{Symbol,Symbol}([x => symbol("DSGE.identity") for x in keys(m.exogenous_shocks)])
         end
         write(file, "shock_revtransforms", rev_transforms)
     end
-end
-
-"""
-```
-read_forecast_metadata(file::JLD.JldFile)
-```
-
-Read metadata from forecast output files. This includes dictionaries mapping dates, as well as state, observable,
-pseudo-observable, and shock names, to their respective indices in the saved
-forecast output array. The saved dictionaries include:
-
-- `date_indices::Dict{Date, Int}`: saved for all forecast outputs
-- `state_names::Dict{Symbol, Int}`: saved for `var in [:histstates, :forecaststates, :shockdecstates]`
-- `observable_names::Dict{Symbol, Int}`: saved for `var in [:forecastobs, :shockdecobs]`
-- `observable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for observables
-- `pseudoobservable_names::Dict{Symbol, Int}`: saved for `var in [:histpseudo, :forecastpseudo, :shockdecpseudo]`
-- `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for pseudoobservables
-- `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
-"""
-function read_forecast_metadata(file::JLD.JldFile)
-    metadata = Dict{Symbol, Any}()
-    for field in names(file)
-        metadata[symbol(field)] = read(file, field)
-    end
-    return metadata
 end
 
 """
@@ -563,6 +586,49 @@ end
 
 """
 ```
+read_forecast_output(file::JLD.JldFile)
+```
+
+Returns the metadata dictionary and forecast output array in `file`.
+"""
+function read_forecast_output(file::JLD.JldFile)
+    metadata = read_forecast_metadata(file)
+    arr = if exists(file, "nblocks")
+        read_forecast_blocks(file)
+    else
+        read(file, "arr")
+    end
+
+    return metadata, arr
+end
+
+"""
+```
+read_forecast_metadata(file::JLD.JldFile)
+```
+
+Read metadata from forecast output files. This includes dictionaries mapping dates, as well as state, observable,
+pseudo-observable, and shock names, to their respective indices in the saved
+forecast output array. The saved dictionaries include:
+
+- `date_indices::Dict{Date, Int}`: saved for all forecast outputs
+- `state_names::Dict{Symbol, Int}`: saved for `var in [:histstates, :forecaststates, :shockdecstates]`
+- `observable_names::Dict{Symbol, Int}`: saved for `var in [:forecastobs, :shockdecobs]`
+- `observable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for observables
+- `pseudoobservable_names::Dict{Symbol, Int}`: saved for `var in [:histpseudo, :forecastpseudo, :shockdecpseudo]`
+- `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for pseudoobservables
+- `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
+"""
+function read_forecast_metadata(file::JLD.JldFile)
+    metadata = Dict{Symbol, Any}()
+    for field in names(file)
+        metadata[symbol(field)] = read(file, field)
+    end
+    return metadata
+end
+
+"""
+```
 read_forecast_blocks(file::JLD.JldFile)
 ```
 
@@ -581,50 +647,4 @@ function read_forecast_blocks(file::JLD.JldFile)
         arr[block_draws, fill(:, ndims-1)...] = read(file, "arr$block")
     end
     return arr
-end
-
-"""
-```
-add_requisite_output_vars(output_vars::Vector{Symbol})
-```
-
-Based on the given output_vars, this function determines which
-additional output_vars must be computed and stored for future
-plotting.
-
-Specifically, when plotting a shock decomposition, the trend and
-deterministic trend series are required (the trend is subtracted from
-the value of each shock, and the deterministic trend represents
-deviations from steady-state that would realize even in the absence of
-shocks). For example, if `output_vars` contains `shockdecobs`, the
-variables `dettrendobs` and `trendobs` will be added to `output_vars`.
-
-Note that this case is distinct from a case in which computing a
-different product is required to compute the desired `output_var`. For
-example, smoothed historical states (`histstates`) must be computed in
-order to compute a shock decomposition for a state variable, but need
-not be saved to produce plots later on. Therefore, `histstates` is not
-added to `output_vars` when calling
-`add_requisite_output_vars([shockdecstates])`.
-"""
-function add_requisite_output_vars(output_vars::Vector{Symbol})
-
-    # Add :forecast<class>bdd if :forecast<class> is in output_vars
-    forecast_outputs = Base.filter(output -> contains(string(output), "forecast") && !contains(string(output), "bdd"),
-                                   output_vars)
-    if !isempty(forecast_outputs)
-        bdd_vars = [symbol("bdd$(var)") for var in forecast_outputs]
-        output_vars = unique(vcat(output_vars, bdd_vars))
-    end
-
-    # Add :trend<class> and :dettrend<class> if :shockdec<class> is in output_vars
-    shockdec_outputs = Base.filter(output -> contains(string(output), "shockdec"), output_vars)
-    if !isempty(shockdec_outputs)
-        classes = [get_class(output) for output in shockdec_outputs]
-        dettrend_vars = [symbol("dettrend$c") for c in classes]
-        trend_vars = [symbol("trend$c") for c in classes]
-        output_vars = unique(vcat(output_vars, dettrend_vars, trend_vars))
-    end
-
-    return output_vars
 end
