@@ -105,7 +105,7 @@ function forecast_block_inds(m::AbstractModel, input_type::Symbol; subset_inds::
         block_inds[i] = (current_draw+jstep):jstep:(current_draw+block_size)
         current_draw += block_size
     end
-    block_inds[end] = (current_draw+1):end_ind
+    block_inds[end] = (current_draw+jstep):jstep:end_ind
 
     return block_inds
 end
@@ -425,11 +425,60 @@ function assemble_block_outputs(dicts::Vector{Dict{Symbol, Array{Float64}}})
     out = Dict{Symbol, Array{Float64}}()
     if !isempty(dicts)
         for var in keys(dicts[1])
-            outputs  = map(dict -> dict[var], dicts)
+            outputs  = map(dict -> reshape(dict[var], (1, size(dict[var])...)), dicts)
             out[var] = cat(1, outputs...)
         end
     end
     return out
+end
+
+"""
+```
+get_forecast_output_dims(m, input_type, output_var)
+```
+
+Returns the dimension of the forecast output specified by `input_type` and
+`output_var`.
+"""
+function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_var::Symbol)
+    prod  = get_product(output_var)
+    class = get_class(output_var)
+
+    ndraws = if input_type in [:mode, :mean, :init]
+        1
+    elseif input_type in [:full, :subset]
+        block_inds = forecast_block_inds(m, input_type)
+        sum(map(length, block_inds))
+    end
+
+    nvars = if class == :state
+        n_states_augmented(m)
+    elseif class == :obs
+        n_observables(m)
+    elseif class == :pseudo
+        n_pseudoobservables(m)
+    elseif class == :shock
+        n_shocks_exogenous(m)
+    end
+
+    nperiods = if prod == :hist
+        n_mainsample_periods(m)
+    elseif prod in [:forecast, :bddforecast]
+        forecast_horizons(m)
+    elseif prod in [:shockdec, :dettrend]
+        n_shockdec_periods(m)
+    elseif prod == :irf
+        impulse_response_horizons(m)
+    end
+
+    if prod == :trend
+        return (ndraws, nvars)
+    elseif prod in [:hist, :forecast, :bddforecast, :dettrend]
+        return (ndraws, nvars, nperiods)
+    elseif prod in [:shockdec, :irf]
+        nshocks = n_shocks_exogenous(m)
+        return (ndraws, nvars, nperiods, nshocks)
+    end
 end
 
 """
@@ -440,11 +489,12 @@ write_forecast_outputs(m, output_vars, forecast_output_files, forecast_output; v
 Writes the elements of `forecast_output` indexed by `output_vars` to file, given
 `forecast_output_files`, which maps `output_vars` to file names.
 """
-function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, output_vars::Vector{Symbol},
+function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, input_type::Symbol,
+                                output_vars::Vector{Symbol},
                                 forecast_output_files::Dict{Symbol,S},
                                 forecast_output::Dict{Symbol, Array{Float64}};
                                 block_number::Nullable{Int64} = Nullable{Int64}(),
-                                subset_inds::Range{Int64} = 1:0,
+                                block_inds::Range{Int64} = 1:0,
                                 verbose::Symbol = :low)
 
     for var in output_vars
@@ -452,6 +502,7 @@ function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, output_vars
         if isnull(block_number) || get(block_number) == 1
             jldopen(filepath, "w") do file
                 write_forecast_metadata(m, file, var)
+                write(file, "dims", get_forecast_output_dims(m, input_type, var))
             end
         end
 
@@ -459,7 +510,7 @@ function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, output_vars
             if isnull(block_number)
                 write(file, "arr", forecast_output[var])
             else
-                write_forecast_block(file, forecast_output[var], get(block_number), subset_inds)
+                write_forecast_block(file, forecast_output[var], get(block_number), block_inds)
             end
         end
 
@@ -552,34 +603,29 @@ end
 """
 ```
 write_forecast_block(file::JLD.JldFile, arr::Array, block_number::Int,
-    subset_inds::Range{Int64})
+    block_inds::Range{Int64})
 ```
 
-Writes `arr` as \"arr\$(block_number)\" and `subset_inds` as
+Writes `arr` as \"arr\$(block_number)\" and `block_inds` as
 \"draws\$(block_number)\" to `file`, and updates `nblocks` and `ndraws`.
 """
 function write_forecast_block(file::JLD.JldFile, arr::Array,
-                              block_number::Int, subset_inds::Range{Int64})
+                              block_number::Int, block_inds::Range{Int64})
+
+    # If datasets already exist, delete them
+    exists(file, "arr$(block_number)")   ? delete!(file, "arr$(block_number)")   : nothing
+    exists(file, "draws$(block_number)") ? delete!(file, "draws$(block_number)") : nothing
 
     write(file, "arr$(block_number)", arr)
-    write(file, "draws$(block_number)", subset_inds)
+    write(file, "draws$(block_number)", block_inds)
 
-    # Update nblocks and dims if necessary
+    # Update nblocks if necessary
     if exists(file, "nblocks")
         nblocks = read(file, "nblocks")
         delete!(file, "nblocks")
-        write(file, "nblocks", nblocks + 1)
+        write(file, "nblocks", block_number)
     else
         write(file, "nblocks", 1)
-    end
-
-    if exists(file, "dims")
-        dims = read(file, "dims")
-        dims[1] += length(subset_inds)
-        delete!(file, "dims")
-        write(file, "dims", dims)
-    else
-        write(file, "dims", collect(size(arr)))
     end
 end
 
@@ -641,9 +687,15 @@ function read_forecast_blocks(file::JLD.JldFile)
     ndims   = length(dims)
 
     arr = zeros(dims...)
+    current_draw = 0
     for block = 1:nblocks
-        block_draws = read(file, "draws$block")
-        arr[block_draws, fill(:, ndims-1)...] = read(file, "arr$block")
+        block_draws  = read(file, "draws$block")
+        ndraws_block = length(block_draws)
+        block_draws_thin = (current_draw+1):(current_draw+ndraws_block)
+
+        arr[block_draws_thin, fill(Colon(), ndims-1)...] = read(file, "arr$block")
+
+        current_draw += ndraws_block
     end
     return arr
 end

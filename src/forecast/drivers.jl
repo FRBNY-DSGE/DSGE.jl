@@ -225,7 +225,7 @@ function forecast_one(m::AbstractModel{Float64},
         forecast_output = forecast_one_draw(m, input_type, cond_type, output_vars,
                                             params, df, verbose = verbose)
 
-        write_forecast_outputs(m, output_vars, forecast_output_files,
+        write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                forecast_output; block_number = Nullable{Int64}(),
                                verbose = verbose)
 
@@ -275,9 +275,9 @@ function forecast_one(m::AbstractModel{Float64},
 
             # Assemble outputs from this block and write to file
             forecast_output = assemble_block_outputs(forecast_outputs)
-            write_forecast_outputs(m, output_vars, forecast_output_files,
+            write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; block_number = Nullable(block),
-                                   verbose = block_verbose, subset_inds = block_inds[block])
+                                   verbose = block_verbose, block_inds = block_inds[block])
             gc()
 
             # Calculate time to complete this block, average block time, and
