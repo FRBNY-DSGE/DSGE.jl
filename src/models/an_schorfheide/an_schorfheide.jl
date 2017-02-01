@@ -2,7 +2,8 @@
 ```
 AnSchorfheide{T} <: AbstractModel{T}
 ```
-The `AnSchorfheide` type defines the structure of the model described in 'Bayesian Estimation of DSGE Models' by Edward P. Herbst and Frank Schorfheide
+The `AnSchorfheide` type defines the structure of the simple New Keynesian DSGE model described in 'Bayesian Estimation
+of DSGE Models' by Sungbae An and Frank Schorfheide.
 
 ### Fields
 
@@ -91,7 +92,7 @@ type AnSchorfheide{T} <: AbstractModel{T}
     data_transforms::OrderedDict{Symbol,Function}  # functions to transform raw data into input matrix
 end
 
-description(m::AnSchorfheide) = "Julia implementation of model defined in 'Bayesian Estimation of DSGE Models' by Edward P. Herbst and Frank Schorfheide: AnSchorfheide, $(m.subspec)"
+description(m::AnSchorfheide) = "Julia implementation of model defined in 'Bayesian Estimation of DSGE Models' by Sungbae An and Frank Schorfheide: AnSchorfheide, $(m.subspec)"
 
 """
 `init_model_indices!(m::AnSchorfheide)`
