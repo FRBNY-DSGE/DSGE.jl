@@ -98,9 +98,7 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                                            cond_type::Symbol, output_vars::Vector{Symbol};
                                            density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                            minimize::Bool = false,
-                                           forecast_string = "", load_dataset::Bool = true,
-                                           load_population_data::Bool = true,
-                                           population_forecast_file = "",
+                                           forecast_string = "",
                                            verbose::Symbol = :low)
 
     ## Step 0: Determine full set of output_vars necessary for plotting desired results
@@ -109,63 +107,38 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
 
     output_vars = add_requisite_output_vars(output_vars)
 
-    ## Step 1: Load population data in levels
 
-    # get population forecast file
-    if isempty(population_forecast_file)
-        population_forecast_file = if use_population_forecast(m)
-            inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
-        else
-            ""
-        end
-    end
+    ## Step 1: Population data
 
-    # load population level data, which was saved in load_data_levels
-    level_data = if load_population_data
-        read_population_data(m)
+    # Parse population mnemonic
+    tmp = parse_population_mnemonic(m)[1]
+    population_mnemonic = tmp == Symbol() ? Nullable{Symbol}() : Nullable(tmp)
+
+    # Get filenames for population data and forecast
+    if !isnull(population_mnemonic)
+        vint = data_vintage(m)
+        population_data_file     = inpath(m, "data", "population_data_levels_$vint.csv")
+        population_forecast_file = inpath(m, "data", "population_forecast_$vint.csv")
     else
-        DataFrame()
+        population_data_file = ""
+        population_forecast_file = ""
     end
 
-    # reformat population_mnemonic
-    population_mnemonic = Nullable(parse_population_mnemonic(m)[1])
 
     ## Step 2: Load main dataset (required for some transformations),
     ##         specify which period to use as first t-1 period for computing
     ##         growth rates, and which period is the last historical period
 
-    data, y0_indexes = if load_dataset
+    # Load dataset
+    data = df_to_matrix(m, load_data(m, verbose = :none))
 
-        # load dataset
-        data = df_to_matrix(m, load_data(m, verbose = :none))
-
-        # specify the t-1 period for each product
-        products = unique(map(get_product, output_vars))
-
-        y0_indexes = Dict{Symbol,Int}()
-        for prod in intersect(products, [:forecast, :bddforecast])
-            y0_indexes[prod] = index_forecast_start(m) - 1
-        end
-        for prod in intersect(products, [:forecast4q, :bddforecast4q])
-
-            # we subtract 4 because there is 1 transform that actually
-            # needs us to go 4 periods. Later, we can use y0_index + 1
-            # to index out the data we need for all the other forecasts.
-
-            y0_indexes[prod] = index_forecast_start(m) - 4
-        end
-        for prod in intersect(products, [:shockdec, :dettrend, :trend])
-            # remember index_shockdec_start(m) doesn't take presample into account
-            y0_indexes[prod] = n_presample_periods(m) + index_shockdec_start(m) - 1
-        end
-        for prod in intersect(products, [:hist])
-            y0_indexes[prod] = index_mainsample_start(m) - 1
-        end
-
-        data, y0_indexes
-    else
-        Matrix{T}(), Dict{Symbol,Nullable{Int}}()
+    # Specify the t-1 period for each product
+    y0_indexes = Dict{Symbol,Int}()
+    products   = unique(map(get_product, output_vars))
+    for prod in products
+        y0_indexes[prod] = get_y0_index(m, prod)
     end
+
 
     ## Step 3: Fetch the model string and the input and output directories we'll read from/write to
 
@@ -174,6 +147,7 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
     model_string = replace(basename(tmp), "foo_", "")
     output_dir   = dirname(workpath(m, "forecast", "foo"))
 
+
     ## Step 4: We have everything we need; appeal to model-object-agnostic function
 
     means_bands_all(input_type, cond_type, output_vars,
@@ -181,8 +155,8 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                     density_bands = density_bands, minimize = minimize,
                     model_string  = model_string,
                     forecast_string = forecast_string,
-                    population_data = level_data,
                     population_mnemonic = population_mnemonic,
+                    population_data_file = population_data_file,
                     population_forecast_file = population_forecast_file,
                     y0_indexes = y0_indexes, data = data,
                     verbose = verbose)
@@ -197,8 +171,8 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
                                                minimize::Bool = false,
                                                model_string = "",
                                                forecast_string = "",
-                                               population_data::DataFrame = DataFrame(),
                                                population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
+                                               population_data_file = "",
                                                population_forecast_file = "",
                                                y0_indexes::Dict{Symbol,Int} = Dict{Symbol,Int}(),
                                                data = Matrix{T}(),
@@ -218,30 +192,8 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
     ## Step 1: Filter population history and forecast and compute growth rates
 
     dlfiltered_population_data, dlfiltered_population_forecast =
-        if !(isempty(population_data) || isnull(population_mnemonic))
-            # get all of the population data
-            population_data, population_forecast =
-                transform_population_data(population_data, get(population_mnemonic),
-                                          population_forecast_file = population_forecast_file,
-                                          verbose = :none)
-
-            DataFrame(date = @data(convert(Array{Date}, population_data[:date])),
-                      population_growth = @data(convert(Array{Float64},
-                                                        population_data[:dlfiltered_population_recorded]))),
-
-            DataFrame(date = @data(convert(Array{Date}, population_forecast[:date])),
-                      population_growth = @data(convert(Array{Float64},
-                                                        population_forecast[:dlfiltered_population_forecast])))
-
-        else
-            isempty(population_data) && VERBOSITY[verbose] >= VERBOSITY[:low] ?
-                warn("No population data provided") : nothing
-
-            isnull(population_mnemonic) && VERBOSITY[verbose] >= VERBOSITY[:low] ?
-                warn("No population mnemonic provided") : nothing
-
-            DataFrame(), DataFrame()
-        end
+        load_population_growth(population_data_file, population_forecast_file,
+                               population_mnemonic; verbose = verbose)
 
     ## Step 2: Set up filenames for MeansBands input and output files.
     # MeansBands output filenames are the same as forecast output filenames, but with an "mb" prefix.
@@ -249,8 +201,6 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
     mb_input_files = get_meansbands_input_files(input_dir, input_type, cond_type,
                                                 output_vars; model_string = model_string,
                                                 forecast_string = forecast_string)
-
-
     mb_output_files = get_meansbands_output_files(output_dir, input_type, cond_type, output_vars,
                                                   model_string = model_string,
                                                   forecast_string = forecast_string)
@@ -260,32 +210,24 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
     for output_var in output_vars
 
         # Which product are we dealing with? Need this to index out of y0_indexes.
-        prod = get_product(output_var)
-        if !isempty(y0_indexes)
-            y0_index = y0_indexes[prod]
-        else
-            y0_index = -1
-        end
+        prod     = get_product(output_var)
+        y0_index = isempty(y0_indexes) ? -1 : y0_indexes[prod]
 
         # compute means and bands object
         mb = means_bands(input_type, cond_type, output_var,
-                         mb_input_files, density_bands = density_bands,
-                         minimize = minimize,
+                         mb_input_files, density_bands = density_bands, minimize = minimize,
                          forecast_string = forecast_string,
                          population_data = dlfiltered_population_data,
-                         population_mnemonic = Nullable(:population_growth),
                          population_forecast = dlfiltered_population_forecast,
-                         y0_index = y0_index,
-                         data = data)
+                         population_mnemonic = Nullable(:population_growth),
+                         y0_index = y0_index, data = data)
 
         # write to file
         filepath = mb_output_files[output_var]
         dirpath  = dirname(filepath)
-        if !isdir(dirpath)
-            mkdir(dirpath)
-        end
+        !isdir(dirpath) ? mkdir(dirpath) : nothing
         jldopen(filepath, "w") do file
-               write(file, "mb", mb)
+            write(file, "mb", mb)
         end
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
@@ -330,8 +272,8 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
                                                           minimize::Bool = false,
                                                           forecast_string::S = "",
                                                           population_data = DataFrame(),
-                                                          population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                           population_forecast = DataFrame(),
+                                                          population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                                           y0_index::Int = -1,
                                                           data = Matrix{T}())
 
@@ -349,108 +291,14 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
     ## Step 2: Read in raw forecast output and metadata (transformations, mappings from symbols to indices, etc)
     # open correct input file
     forecast_output_file = meansbands_input_files[output_var]
-    metadata, fcast_output = jldopen(forecast_output_file, "r") do jld
-        read_forecast_output(jld)
-    end
+    fcast_output, metadata, mb_metadata, transforms =
+        get_mb_metadata(input_type, cond_type, output_var, forecast_output_file;
+                        forecast_string = forecast_string)
 
-    # Reshape one-draw forecast outputs so they have a leading singleton (draw) dimension
-    if input_type in [:init, :mode, :mean]
-        fcast_output = reshape(fcast_output, (1, size(fcast_output)...))
-    end
-
-    if class == :pseudo
-        transforms       = metadata[:pseudoobservable_revtransforms]
-        variable_indices = metadata[:pseudoobservable_indices]
-    elseif class == :obs
-        transforms       = metadata[:observable_revtransforms]
-        variable_indices = metadata[:observable_indices]
-    elseif class == :shock
-        transforms       = metadata[:shock_revtransforms]
-        variable_indices = metadata[:shock_indices]
-    else
-        error("Means and bands are only calculated for observables, pseudo-observables, and shocks")
-    end
-    date_indices         = product == :irf ? Dict{Date,Int}() : metadata[:date_indices]
-
-    # Make sure date lists are valid. This is vacuously true for trend and IRFs,
-    # which are not time-dependent and hence have empty `date_indices`.
-    date_list          = collect(keys(date_indices))   # unsorted array of actual dates
-    date_indices_order = collect(values(date_indices)) # unsorted array of date indices
-    check_consistent_order(date_list, date_indices_order)
-    sort!(date_list, by = x -> date_indices[x])
-    sort!(date_indices_order)
-
-    # get population mnemonic
-    mnemonic = isnull(population_mnemonic) ? Symbol() : get(population_mnemonic)
-
-    # Ensure population series is same length as fcast_output.
-    population_series = if product in [:forecast, :bddforecast]
-
-        # For forecasts, the third dimension of the fcast_output
-        # matrix is the number of periods.
-
-        n_fcast_periods = size(fcast_output, 3)
-        population_series = resize_population_forecast(population_forecast, n_fcast_periods,
-                                                       population_mnemonic = mnemonic)
-
-        convert(Vector{Float64}, population_series[mnemonic])
-
-    elseif product in [:shockdec, :dettrend, :trend, :forecast4q, :bddforecast4q]
-
-        if product in [:forecast4q, :bddforecast4q]
-            # For forecast4q, we want the last 3 historical periods + the forecast
-            # date_list is the date_list for forecast, so date_list[1] corresponds to date_forecast_start.
-
-            start_date = iterate_quarters(date_list[1], -3)
-            end_date   = date_list[end]
-            start_ind  = find(population_data[:date] .== start_date)[1]
-        else
-            # For shockdecs, deterministic trend, and trend, we want to
-            # make sure population series corresponds with the saved dates.
-            start_date = date_list[1]
-            end_date   = date_list[end]
-            start_ind  = find(population_data[:date] .== start_date)[1]
-        end
-
-        population_data = population_data[start_ind:end, mnemonic]
-
-        # calculate number of periods that are in the future
-        n_fcast_periods = if product in [:forecast4q, :bddforecast4q]
-            length(date_list)
-        else
-            length(date_list) - length(population_data)
-        end
-        # Extend population forecast by the right number of periods
-        population_forecast = resize_population_forecast(population_forecast, n_fcast_periods,
-                                                         population_mnemonic = mnemonic)
-
-        end_ind   = find(population_forecast[:date] .== end_date)[1]
-
-        # concatenate population histories and forecasts together
-        population_series = if isempty(end_ind)
-            convert(Vector{Float64}, population_data)
-        else
-            tmp = [population_data; population_forecast[1:end_ind, mnemonic]]
-            convert(Vector{Float64}, tmp)
-        end
-
-        population_series
-
-    elseif product in [:hist]
-
-        # For history, the population series is just the data
-
-        convert(Vector{Float64}, population_data[mnemonic])
-    end
-
-    mb_metadata = Dict{Symbol,Any}(
-                   :para       => input_type,
-                   :cond_type  => cond_type,
-                   :product    => product,
-                   :class      => class,
-                   :indices    => variable_indices,
-                   :forecast_string => forecast_string,
-                   :date_inds  => date_indices)
+    date_list         = collect(keys(mb_metadata[:date_inds]))
+    variable_indices  = mb_metadata[:indices]
+    population_series = get_mb_population_series(product, population_mnemonic, population_data,
+                                                 population_forecast, date_list)
 
     means, bands = if product in [:hist, :forecast, :dettrend, :trend, :forecast4q,
                                   :bddforecast, :bddforecast4q]

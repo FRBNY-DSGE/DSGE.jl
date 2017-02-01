@@ -30,19 +30,11 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
     n_obs, _ = size(levels)
 
     # Step 1: HP filter population forecasts, if they're being used
-    population_forecast_file = if use_population_forecast(m)
-        inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
-    else
-        ""
-    end
-
     population_mnemonic = parse_population_mnemonic(m)[1]
-
     if population_mnemonic != Symbol()
-        population_data, population_forecast = transform_population_data(levels, population_mnemonic,
-                                                    cond_type = cond_type,
-                                                    population_forecast_file = population_forecast_file,
-                                                    verbose = verbose)
+        population_forecast_levels = read_population_forecast(m; verbose = verbose)
+        population_data, _ = transform_population_data(levels, population_forecast_levels,
+                                                       population_mnemonic; verbose = verbose)
 
         levels = join(levels, population_data, on = :date, kind = :left)
         rename!(levels, [:filtered_population_recorded, :dlfiltered_population_recorded, :dlpopulation_recorded],
@@ -82,28 +74,29 @@ end
 
 """
 ```
-load_population_data{S<:AbstractString}(population_data::DataFrame,
-                                                 population_mnemonic::Symbol;
-                                                 cond_type::Symbol = :none,
-                                                 population_forecast_file::S = "")
+transform_population_data(population_data, population_forecast,
+    population_mnemonic; verbose = :low)
 ```
 
-Load, HP-filter, and compute growth rates from population data in levels. Optionally do the same for forecasts.
+Load, HP-filter, and compute growth rates from population data in
+levels. Optionally do the same for forecasts.
 
 ### Inputs
 
-- `population_data`: pre-loaded DataFrame of historical population
-  data containing the columns `:date` and
-  `population_mnemonic`. Assumes this is sorted by date.
+- `population_data`: pre-loaded DataFrame of historical population data
+  containing the columns `:date` and `population_mnemonic`. Assumes this is
+  sorted by date.
+- `population_forecast`: pre-loaded `DataFrame` of population forecast
+  containing the columns `:date` and `population_mnemonic`
 - `population_mnemonic`: column name for population series in `population_data`
+  and `population_forecast`
 
 ### Keyword Arguments
-- `cond_type`: type of conditional data being used
-- `population_forecast_file`: filepath to a properly-formatted
-  population forecast CSV (with :date and :POPULATION columns, sorted
-  by date).
+
+- `verbose`: one of `:none`, `:low`, or `:high`
 
 ### Output
+
 A dictionary containing the following keys:
 
 - `:filtered_population_recorded`: HP-filtered historical population series (levels)
@@ -113,51 +106,29 @@ A dictionary containing the following keys:
 - `:dlfiltered_population_forecast`: HP-filtered population forecast series (growth rates)
 - `:dlpopulation_forecast`: Non-filtered historical population series (growth rates)
 
-Note: the r"*forecast" fields will be empty if population_forecast_file is not provided.
+Note: the r\"*forecast\" fields will be empty if population_forecast_file is not provided.
 """
-function transform_population_data(population_data::DataFrame, population_mnemonic::Symbol;
-                                   cond_type::Symbol = :none,  population_forecast_file = "",
-                                   verbose = :low)
+function transform_population_data(population_data::DataFrame, population_forecast::DataFrame,
+                                   population_mnemonic::Symbol; verbose = :low)
 
-    # load historical, unfiltered population series
+    # Unfiltered population data
     population_recorded = population_data[:,[:date, population_mnemonic]]
 
-    # population_all: full unfiltered series (including forecast)
-    # population_forecast: unfiltered population forecast series
-
-    population_all, population_forecast = if !isempty(population_forecast_file)
-
-        @assert isfile(population_forecast_file) "$population_forecast_file does not exist."
-
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Loading population forecast from $population_forecast_file...")
-        end
-
-        # load population forecast
-        pop_forecast = readtable(population_forecast_file)
-        rename!(pop_forecast, :POPULATION,  population_mnemonic)
-        DSGE.na2nan!(pop_forecast)
-        DSGE.format_dates!(:date, pop_forecast)
-
-        # make sure first population forecast number is the period after the current value
-        last_recorded_date  = population_recorded[end,:date]
-        first_forecast_date = pop_forecast[1,:date]
-
-        if last_recorded_date >= first_forecast_date
-            first_forecast_ind = find(pop_forecast[:date] .== last_recorded_date)[1] + 1
-            pop_forecast = pop_forecast[first_forecast_ind:end, :]
-        end
-        @assert DSGE.subtract_quarters(pop_forecast[1,:date], population_recorded[end,:date]) == 1
-
-        # use our "real" series as current value
-        pop_all = vcat(population_recorded, pop_forecast[2:end])
-
-        # return values
-        pop_all[population_mnemonic], pop_forecast[:,[:date, population_mnemonic]]
-    else
-        population_recorded[population_mnemonic], DataFrame()
+    # Make sure first period of unfiltered population forecast is the first forecast quarter
+    last_recorded_date = population_recorded[end, :date]
+    if population_forecast[1, :date] <= last_recorded_date
+        last_recorded_ind   = find(population_forecast[:date] .== last_recorded_date)[1]
+        population_forecast = population_forecast[(last_recorded_ind+1):end, :]
     end
+    @assert subtract_quarters(population_forecast[1, :date], last_recorded_date) == 1
 
+    # population_all: full unfiltered series (including forecast)
+    population_all = if isempty(population_forecast)
+        population_recorded[population_mnemonic]
+    else
+        pop_all = vcat(population_recorded, population_forecast)
+        pop_all[population_mnemonic]
+    end
 
     # hp filter
     population_all = convert(Array{Float64}, population_all)
@@ -183,7 +154,6 @@ function transform_population_data(population_data::DataFrame, population_mnemon
     ## forecasts
     population_forecast_out = DataFrame()
     if n_population_forecast_obs > 0
-
         # dates
         population_forecast_out[:date] = convert(Array{Date}, population_forecast[:date])
 

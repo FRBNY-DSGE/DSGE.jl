@@ -37,11 +37,9 @@ function get_product(s::Symbol)
 end
 
 
-
 #########################################
 ## Useful methods for MeansBands objects
 #########################################
-
 
 class(mb::MeansBands) = mb.metadata[:class]
 product(mb::MeansBands) = mb.metadata[:product]
@@ -496,3 +494,180 @@ function unzip{T<:Tuple}(A::Array{T})
     res
 end
 
+"""
+```
+load_population_growth(data_file, forecast_file, population_mnemonic; verbose = :low)
+```
+
+Returns `DataFrame`s of growth rates for HP-filtered population data and forecast.
+"""
+function load_population_growth{S<:AbstractString}(data_file::S, forecast_file::S,
+                                                   population_mnemonic::Nullable{Symbol};
+                                                   verbose::Symbol = :low)
+    if isnull(population_mnemonic)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            warn("No population mnemonic provided")
+        end
+
+        return DataFrame(), DataFrame()
+    else
+        mnemonic = get(population_mnemonic)
+
+        # Read in unfiltered series
+        unfiltered_data     = read_population_data(data_file; verbose = :low)
+        unfiltered_forecast = read_population_forecast(forecast_file, mnemonic; verbose = :low)
+
+        # HP filter
+        data, forecast = transform_population_data(unfiltered_data, unfiltered_forecast,
+                                                   mnemonic; verbose = :none)
+        dlfiltered_data =
+            DataFrame(date = @data(convert(Array{Date}, data[:date])),
+                      population_growth = @data(convert(Array{Float64},
+                                                        data[:dlfiltered_population_recorded])))
+        dlfiltered_forecast =
+            DataFrame(date = @data(convert(Array{Date}, forecast[:date])),
+                      population_growth = @data(convert(Array{Float64},
+                                                        forecast[:dlfiltered_population_forecast])))
+
+        return dlfiltered_data, dlfiltered_forecast
+    end
+end
+
+"""
+```
+get_mb_population_series(product, population_mnemonic, population_data, population_forecast, date_list)
+```
+
+Returns the appropriate population series for the `product`.
+"""
+function get_mb_population_series(product::Symbol, population_mnemonic::Nullable{Symbol},
+                               population_data::DataFrame, population_forecast::DataFrame,
+                               date_list::Vector{Date})
+    # Unpack population mnemonic
+    mnemonic = isnull(population_mnemonic) ? Symbol() : get(population_mnemonic)
+
+    if product in [:forecast, :bddforecast]
+
+        # For forecasts, we repeat the last forecast period's population
+        # forecast until we have n_fcast_periods of population forecasts
+        n_fcast_periods = length(date_list)
+        population_series = resize_population_forecast(population_forecast, n_fcast_periods,
+                                                       population_mnemonic = mnemonic)
+        population_series = convert(Vector{Float64}, population_series[mnemonic])
+
+    elseif product in [:shockdec, :dettrend, :trend, :forecast4q, :bddforecast4q]
+
+        if product in [:forecast4q, :bddforecast4q]
+            # For forecast4q, we want the last 3 historical periods + the forecast
+            # date_list is the date_list for forecast, so date_list[1] corresponds to date_forecast_start.
+            start_date = iterate_quarters(date_list[1], -3)
+            end_date   = date_list[end]
+            start_ind  = find(population_data[:date] .== start_date)[1]
+        else
+            # For shockdecs, deterministic trend, and trend, we want to
+            # make sure population series corresponds with the saved dates.
+            start_date = date_list[1]
+            end_date   = date_list[end]
+            start_ind  = find(population_data[:date] .== start_date)[1]
+        end
+        population_data = population_data[start_ind:end, mnemonic]
+
+        # Calculate number of periods that are in the future
+        n_fcast_periods = if product in [:forecast4q, :bddforecast4q]
+            length(date_list)
+        else
+            length(date_list) - length(population_data)
+        end
+
+        # Extend population forecast by the right number of periods
+        population_forecast = resize_population_forecast(population_forecast, n_fcast_periods,
+                                                         population_mnemonic = mnemonic)
+        end_ind = find(population_forecast[:date] .== end_date)[1]
+
+        # Concatenate population histories and forecasts together
+        population_series = if isempty(end_ind)
+            convert(Vector{Float64}, population_data)
+        else
+            tmp = [population_data; population_forecast[1:end_ind, mnemonic]]
+            convert(Vector{Float64}, tmp)
+        end
+
+    elseif product == :hist
+
+        # For history, the population series is just the data
+        population_series = convert(Vector{Float64}, population_data[mnemonic])
+
+    end
+
+    return population_series
+end
+
+"""
+```
+get_mb_metadata(input_type, cond_type, output_var, forecast_output_file; forecast_string = "")
+```
+
+Returns the `metadata` dictionary from `read_forecast_metadata`, as well as
+`mb_metadata`, the dictionary that we will save to the means and bands file.
+"""
+function get_mb_metadata{S<:AbstractString}(input_type::Symbol, cond_type::Symbol,
+                                            output_var::Symbol, forecast_output_file::S;
+                                            forecast_string = "")
+    class   = get_class(output_var)
+    product = get_product(output_var)
+
+    metadata, fcast_output = jldopen(forecast_output_file, "r") do jld
+        read_forecast_metadata(jld), read_forecast_output(jld)
+    end
+
+    if class == :pseudo
+        transforms       = metadata[:pseudoobservable_revtransforms]
+        variable_indices = metadata[:pseudoobservable_indices]
+    elseif class == :obs
+        transforms       = metadata[:observable_revtransforms]
+        variable_indices = metadata[:observable_indices]
+    elseif class == :shock
+        transforms       = metadata[:shock_revtransforms]
+        variable_indices = metadata[:shock_indices]
+    else
+        error("Means and bands are only calculated for observables, pseudo-observables, and shocks")
+    end
+    date_indices         = product == :irf ? Dict{Date,Int}() : metadata[:date_indices]
+
+    # Make sure date lists are valid. This is vacuously true for trend and IRFs,
+    # which are not time-dependent and hence have empty `date_indices`.
+    date_list          = collect(keys(date_indices))   # unsorted array of actual dates
+    date_indices_order = collect(values(date_indices)) # unsorted array of date indices
+    check_consistent_order(date_list, date_indices_order)
+    sort!(date_list, by = x -> date_indices[x])
+
+    mb_metadata = Dict{Symbol,Any}(
+                   :para            => input_type,
+                   :cond_type       => cond_type,
+                   :product         => product,
+                   :class           => class,
+                   :indices         => variable_indices,
+                   :forecast_string => forecast_string,
+                   :date_inds       => date_indices)
+
+    return fcast_output, metadata, mb_metadata, transforms
+end
+
+function get_y0_index(m::AbstractModel, product::Symbol)
+    if product in [:forecast, :bddforecast]
+        return index_forecast_start(m) - 1
+    elseif product in [:forecast4q, :bddforecast4q]
+        # We subtract 4 because there is 1 transform that actually
+        # needs us to go 4 periods. Later, we can use y0_index + 1
+        # to index out the data we need for all the other forecasts.
+        return index_forecast_start(m) - 4
+    elseif product in [:shockdec, :dettrend, :trend]
+        return index_shockdec_start(m) - 1
+    elseif product == :hist
+        return index_mainsample_start(m) - 1
+    elseif product == :irf
+        return -1
+    else
+        error("get_y0_index not implemented for product = $product")
+    end
+end

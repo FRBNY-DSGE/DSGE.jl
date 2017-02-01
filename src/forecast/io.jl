@@ -347,17 +347,16 @@ end
 read_forecast_output(file::JLD.JldFile)
 ```
 
-Returns the metadata dictionary and forecast output array in `file`.
+Returns the forecast output array in `file`.
 """
 function read_forecast_output(file::JLD.JldFile)
-    metadata = read_forecast_metadata(file)
     arr = if exists(file, "nblocks")
         read_forecast_blocks(file)
     else
         read(file, "arr")
     end
 
-    return metadata, arr
+    return arr
 end
 
 """
