@@ -128,6 +128,7 @@ module DSGE
     include("estimate/estimate.jl")
 
     include("forecast/util.jl")
+    include("forecast/io.jl")
     include("forecast/smoothers.jl")
     include("forecast/filter.jl")
     include("forecast/smooth.jl")
