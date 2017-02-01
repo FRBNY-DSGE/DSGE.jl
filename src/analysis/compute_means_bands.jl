@@ -155,7 +155,8 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
             y0_indexes[prod] = index_forecast_start(m) - 4
         end
         for prod in intersect(products, [:shockdec, :dettrend, :trend])
-            y0_indexes[prod] = index_shockdec_start(m) - 1
+            # remember index_shockdec_start(m) doesn't take presample into account
+            y0_indexes[prod] = n_presample_periods(m) + index_shockdec_start(m) - 1
         end
         for prod in intersect(products, [:hist])
             y0_indexes[prod] = index_mainsample_start(m) - 1
