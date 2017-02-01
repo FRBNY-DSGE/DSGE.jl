@@ -1,107 +1,9 @@
 """
 ```
-shock_decompositions(m, systems, histshocks; procs = [myid()])
-```
-
-Computes shock decompositions for all draws, given a model object, system
-matrices, and historical smoothed shocks.
-
-### Inputs
-
-- `m::AbstractModel`: model object
-- `systems::DVector{System{S}}`: vector of `System` objects specifying
-  state-space system matrices for each draw
-- `histshocks`::DArray{S, 3}`: array of size `ndraws` x `nshocks` x
-  `hist_periods` of smoothed historical shocks for each draw
-
-where `S<:AbstractFloat`.
-
-### Keyword Arguments
-
-- `procs::Vector{Int}`: list of worker processes over which to distribute
-  draws. Defaults to `[myid()]`
-
-### Outputs
-
-- `states::DArray{S, 4}`: array of size `ndraws` x `nstates` x `nperiods` x
-  `nshocks` of state shock decompositions for each draw
-- `obs::DArray{S, 4}`: array of size `ndraws` x `nobs` x `nperiods` x `nshocks`
-  of observable shock decompositions for each draw
-- `pseudo::DArray{S, 4}`: array of size `ndraws` x `npseudo` x `nperiods` x
-  `nshocks` of pseudo-observable shock decompositions for each draw. If
-  `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
-
-where `nperiods` is the number of quarters between `date_shockdec_start(m)` and
-`date_shockdec_end(m)`, inclusive. If `date_shockdec_start(m)` is null, shock
-decompositions are returned beginning from `date_mainsample_start(m)`. Likewise, if
-`date_shockdec_end(m)` is null, shock decompositions are returned up to
-`date_forecast_end(m)`.
-"""
-function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
-    systems::DVector{System{S}}, histshocks::DArray{S, 3};
-    procs::Vector{Int} = [myid()])
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs)
-
-    # Numbers of useful things
-    ndraws = length(systems)
-    nprocs = length(procs)
-    horizon = forecast_horizons(m)
-
-    nstates = n_states_augmented(m)
-    nobs    = n_observables(m)
-    npseudo = n_pseudoobservables(m)
-    nshocks = n_shocks_exogenous(m)
-
-    states_range = 1:nstates
-    obs_range    = (nstates + 1):(nstates + nobs)
-    pseudo_range = (nstates + nobs + 1):(nstates + nobs + npseudo)
-
-    # Determine periods for which to return shock decompositions
-    start_ind = index_shockdec_start(m)
-    end_ind   = index_shockdec_end(m)
-    nperiods  = end_ind - start_ind + 1
-
-    # Construct distributed array of shock decompositions
-    out = DArray((ndraws, nstates + nobs + npseudo, nperiods, nshocks), procs, [nprocs, 1, 1, 1]) do I # I is a tuple of indices for given localpart
-
-        # Compute shock decomposition for each draw
-        localpart = zeros(map(length, I)...)  # Regular array. In this DArray constructor, each process has one localpart.
-        draw_inds = first(I)
-        ndraws_local = Int(ndraws / nprocs)   # Number of draws that localpart stores data for
-
-        for i in draw_inds
-            states, obs, pseudo = compute_shock_decompositions(systems[i], horizon,
-                convert(Array, slice(histshocks, i, :, :)), start_ind, end_ind)
-
-            # Assign the i-th index of systems (the draw)
-            # to the i_local-th index of the localpart array
-            i_local = mod(i-1, ndraws_local) + 1
-
-            # Assign return values from compute_shock_decompositions to a slice of localpart
-            localpart[i_local, states_range, :, :] = states
-            localpart[i_local, obs_range,    :, :] = obs
-            localpart[i_local, pseudo_range, :, :] = pseudo
-        end
-        return localpart
-    end
-
-    # Convert SubArrays (returned when indexing `out`) to DArrays and return
-    states = convert(DArray, out[1:ndraws, states_range, 1:nperiods, 1:nshocks])
-    obs    = convert(DArray, out[1:ndraws, obs_range,    1:nperiods, 1:nshocks])
-    pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:nperiods, 1:nshocks])
-    close(out)
-
-    return states, obs, pseudo
-end
-
-"""
-```
-compute_shock_decompositions(system, forecast_horizons, histshocks, start_index,
+shock_decompositions(system, forecast_horizons, histshocks, start_index,
     end_index)
 
-compute_shock_decompositions(T, R, Z, D, Z_pseudo, D_pseudo, z0, shocks,
+shock_decompositions(T, R, Z, D, Z_pseudo, D_pseudo, z0, shocks,
     forecast_horizons, histshocks, start_index, end_index)
 ```
 
@@ -132,7 +34,17 @@ where `S<:AbstractFloat`.
 
 where `nperiods = `end_index - start_index + 1`.
 """
-function compute_shock_decompositions{S<:AbstractFloat}(system::System{S},
+function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
+    system::System{S}, histshocks::Matrix{S})
+
+    horizon   = forecast_horizons(m)
+    start_ind = index_shockdec_start(m)
+    end_ind   = index_shockdec_end(m)
+
+    shock_decompositions(system, horizon, histshocks, start_ind, end_ind)
+end
+
+function shock_decompositions{S<:AbstractFloat}(system::System{S},
     forecast_horizons::Int, histshocks::Matrix{S},
     start_index::Int, end_index::Int)
 
@@ -146,11 +58,11 @@ function compute_shock_decompositions{S<:AbstractFloat}(system::System{S},
         Matrix{S}(), Vector{S}()
     end
 
-    compute_shock_decompositions(T, R, Z, D, Z_pseudo, D_pseudo,
+    shock_decompositions(T, R, Z, D, Z_pseudo, D_pseudo,
         forecast_horizons, histshocks, start_index, end_index)
 end
 
-function compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
+function shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
     R::Matrix{S}, Z::Matrix{S}, D::Vector{S}, Z_pseudo::Matrix{S},
     D_pseudo::Vector{S}, forecast_horizons::Int, histshocks::Matrix{S},
     start_index::Int, end_index::Int)
@@ -211,4 +123,98 @@ function compute_shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
             return states[:, range, :], obs[:, range, :], pseudo
         end
     end
+end
+
+"""
+```
+deterministic_trends(m, system, z0)
+
+deterministic_trends(system, z0, nperiods, start_index, end_index)
+```
+
+Compute deterministic trend values of states, observables, and
+pseudoobservables, given a model object and system matrices. The deterministic
+trend for a single draw is simply the series that would be obtained by iterating
+the state-space system forward, beginning from a state vector `z0` in the last
+presample period.
+
+### Inputs
+
+- `m::AbstractModel`: model object
+- `system::System{S}`: state-space system matrices
+- `z0`::Vector{S}: initial state vector
+
+where `S<:AbstractFloat`.
+
+### Outputs
+
+- `states::Matrix{S}`: matrix of size `nstates` x `nperiods` of state
+  steady-state values
+- `obs::Matrix{S}`: matrix of size `nobs` x `nperiods` of observable
+  steady-state values
+- `pseudo::Matrix{S}`: matrix of size `npseudo` x `nperiods` of
+  pseudo-observable steady-state values. If `!forecast_pseudoobservables(m)`,
+  `pseudo` will be empty.
+
+where `nperiods` is the number of quarters between
+`date_shockdec_start(m)` and `date_shockdec_end(m)`, inclusive.
+"""
+function deterministic_trends{S<:AbstractFloat}(m::AbstractModel{S},
+    system::System{S}, z0::Vector{S})
+
+    # Dates: We compute the deterministic trend starting from the
+    # first historical period.  However, since it is only used to
+    # compute shock decompositions, we truncate and only store
+    # results for periods corresponding to the shockdec period.
+    nperiods    = subtract_quarters(date_forecast_end(m), date_mainsample_start(m)) + 1
+    start_index = index_shockdec_start(m)
+    end_index   = index_shockdec_end(m)
+
+    deterministic_trends(system, z0, nperiods, start_index, end_index)
+end
+
+function deterministic_trends{S<:AbstractFloat}(system::System{S}, z0::Vector{S}, nperiods::Int,
+    start_index::Int, end_index::Int)
+
+    # construct matrix of 0 shocks for entire history and forecast horizon
+    nshocks  = size(system[:RRR], 2)
+    shocks   = zeros(S, nshocks, nperiods)
+
+    # use forecast to iterate state-space system forward without shocks or the ZLB procedure
+    states, obs, pseudo, _ = forecast(system, z0, shocks)
+
+    # Return deterministic trends in appropriate range
+    forecast_pseudo = !isnull(system.pseudo_measurement)
+    if start_index == 1 && end_index == allperiods
+        return states, obs, pseudo
+    else
+        range = start_index:end_index
+        if forecast_pseudo
+            return states[:, range, :], obs[:, range, :], pseudo[:, range, :]
+        else
+            return states[:, range, :], obs[:, range, :], pseudo
+        end
+    end
+end
+
+"""
+```
+trends{S<:AbstractFloat}(system::System{S})
+```
+
+Compute trend (steady-state) states, observables, and pseudo-observables. The
+trend is used for plotting shock decompositions.
+"""
+function trends{S<:AbstractFloat}(system::System{S})
+
+    # Unpack system
+    C, D = system[:CCC], system[:DD]
+
+    D_pseudo = if !isnull(system.pseudo_measurement)
+        system[:DD_pseudo]
+    else
+        Vector{S}()
+    end
+
+    C, D, D_pseudo
 end

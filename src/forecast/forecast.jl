@@ -1,151 +1,19 @@
 """
 ```
-forecast(m, systems, kals; cond_type = :none, enforce_zlb = false, shocks =
-    dzeros(S, (0, 0, 0), [myid()]), procs = [myid()])
+forecast(m, system, kal; enforce_zlb = false, shocks = Matrix{S}())
 
-forecast(m, systems, z0s; cond_type = :none, enforce_zlb = false, shocks =
-    dzeros(S, (0, 0, 0), [myid()]), procs = [myid()])
-```
+forecast(m, system, z0; enforce_zlb = false, shocks = Matrix{S}())
 
-Computes forecasts for all draws, given a model object, system matrices, initial
-state vectors, and optionally an array of shocks.
-
-### Inputs
-
-- `m::AbstractModel`: model object
-- `systems::DVector{System{S}}`: vector of `System` objects specifying
-  state-space system matrices for each draw
-- `kals::DVector{Kalman{S}}` or `z0s::DVector{Vector{S}}`: either a vector of
-  `Kalman` objects or a vector of state vectors in the final historical period
-  (aka inital forecast period)
-
-where `S<:AbstractFloat`.
-
-### Keyword Arguments
-
-- `cond_type::Symbol`: one of `:none`, `:semi`, or `:full`, used to determine
-  how many periods to forecast ahead. If `cond_type in [:semi, :full]`, the
-  forecast horizon is reduced by the number of periods of conditional
-  data. Defaults to `:none`.
-- `enforce_zlb::Bool`: whether to enforce the zero lower bound. Defaults to
-  `false`.
-- `shocks::DArray{S, 3}`: array of size `ndraws` x `nshocks` x `horizon`, whose
-  elements are the shock innovations for each time period, for draw
-- `procs::Vector{Int}`: list of worker processes over which to distribute
-  draws. Defaults to `[myid()]`
-
-### Outputs
-
-- `states::DArray{S, 3}`: array of size `ndraws` x `nstates` x `horizon` of
-  forecasted states for each draw
-- `obs::DArray{S, 3}`: array of size `ndraws` x `nobs` x `horizon` of forecasted
-  observables for each draw
-- `pseudo::DArray{S, 3}`: array of size `ndraws` x `npseudo` x `horizon` of
-  forecasted pseudo-observables for each draw. If
-  `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
-- `shocks::DArray{S, 3}`: array of size `ndraws` x `nshocks` x `horizon` of
-  shock innovations for each draw
-"""
-function forecast{S<:AbstractFloat}(m::AbstractModel,
-    systems::DVector{System{S}, Vector{System{S}}},
-    kals::DVector{Kalman{S}, Vector{Kalman{S}}};
-    cond_type::Symbol = :none, enforce_zlb::Bool = false,
-    shocks::DArray{S, 3} = dzeros(S, (0, 0, 0), [myid()]),
-    procs::Vector{Int} = [myid()])
-
-    draw_z0(kal::Kalman) = rand(DegenerateMvNormal(kal[:zend], kal[:Pend]))
-    z0s = if forecast_draw_z0(m)
-        map(draw_z0, kals)
-    else
-        map(kal -> kal[:zend], kals)
-    end
-
-    forecast(m, systems, z0s; cond_type = cond_type, enforce_zlb = enforce_zlb,
-             shocks = shocks, procs = procs)
-end
-
-function forecast{S<:AbstractFloat}(m::AbstractModel,
-    systems::DVector{System{S}, Vector{System{S}}},
-    z0s::DVector{Vector{S}, Vector{Vector{S}}};
-    cond_type::Symbol = :none, enforce_zlb::Bool = false,
-    shocks::DArray{S, 3} = dzeros(S, (0, 0, 0), [myid()]),
-    procs::Vector{Int} = [myid()])
-
-    # Reset procs to [myid()] if necessary
-    procs = reset_procs(m, procs)
-
-    # Numbers of useful things
-    ndraws = length(systems)
-    nprocs = length(procs)
-    horizon = forecast_horizons(m; cond_type = cond_type)
-
-    nstates = n_states_augmented(m)
-    nobs    = n_observables(m)
-    npseudo = n_pseudoobservables(m)
-    nshocks = n_shocks_exogenous(m)
-
-    states_range = 1:nstates
-    obs_range    = (nstates + 1):(nstates + nobs)
-    pseudo_range = (nstates + nobs + 1):(nstates + nobs + npseudo)
-    shocks_range = (nstates + nobs + npseudo + 1):(nstates + nobs + npseudo + nshocks)
-
-    shocks_provided = !isempty(shocks)
-
-    # Construct distributed array of forecast outputs
-    out = DArray((ndraws, nstates + nobs + npseudo + nshocks, horizon), procs, [nprocs, 1, 1]) do I
-        localpart = zeros(map(length, I)...)
-        draw_inds = first(I)
-        ndraws_local = Int(ndraws / nprocs)
-
-        for i in draw_inds
-            # Index out shocks for draw i
-            shocks_i = if shocks_provided
-                convert(Array, slice(shocks, i, :, :))
-            else
-                Matrix{S}()
-            end
-
-            states_i, obs_i, pseudo_i, shocks_i = compute_forecast(m, systems[i], z0s[i];
-                cond_type = cond_type, enforce_zlb = enforce_zlb, shocks = shocks_i)
-
-            i_local = mod(i-1, ndraws_local) + 1
-
-            localpart[i_local, states_range, :] = states_i
-            localpart[i_local, obs_range,    :] = obs_i
-            localpart[i_local, pseudo_range, :] = pseudo_i
-            localpart[i_local, shocks_range, :] = shocks_i
-        end
-        return localpart
-    end
-
-    # Convert SubArrays to DArrays and return
-    states = convert(DArray, out[1:ndraws, states_range, 1:horizon])
-    obs    = convert(DArray, out[1:ndraws, obs_range,    1:horizon])
-    pseudo = convert(DArray, out[1:ndraws, pseudo_range, 1:horizon])
-    shocks = convert(DArray, out[1:ndraws, shocks_range, 1:horizon])
-    close(out)
-
-    return states, obs, pseudo, shocks
-end
-
-"""
-```
-compute_forecast(m, system, z0; enforce_zlb = false, shocks = Matrix{S}())
-
-compute_forecast(system, z0, shocks; enforce_zlb = false)
-
-compute_forecast(T, R, C, Q, Z, D, Z_pseudo, D_pseudo, z0, shocks; enforce_zlb = false)
+forecast(system, z0, shocks; enforce_zlb = false)
 ```
 
 ### Inputs
 
 - `m::AbstractModel`: model object. Only needed for the method in which `shocks`
   are not provided.
-- `system::System{S}`: state-space system matrices. Alternatively, provide
-  transition equation matrices `T`, `R`, `C`; measurement equation matrices `Q`,
-  `Z`, `D`; and (possibly empty) pseudo-measurement equation matrices `Z_pseudo`
-  and `D_pseudo`.
-- `z0`: state vector in the final historical period (aka inital forecast period)
+- `system::System{S}`: state-space system matrices
+- `kal::Kalman{S}` or `z0::Vector{S}`: result of running the Kalman filter or
+  state vector in the final historical period (aka initial forecast period)
 
 where `S<:AbstractFloat`.
 
@@ -176,7 +44,22 @@ where `S<:AbstractFloat`.
   `Z_pseudo` and `D_pseudo` matrices are empty, then `pseudo` will be empty.
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
-function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
+function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
+    kal::Kalman{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
+    shocks::Matrix{S} = Matrix{S}())
+
+    draw_z0(kal::Kalman) = rand(DegenerateMvNormal(kal[:zend], kal[:Pend]))
+    z0 = if forecast_draw_z0(m)
+        draw_z0(kal)
+    else
+        kal[:zend]
+    end
+
+    forecast(m, system, z0; cond_type = cond_type, enforce_zlb = enforce_zlb,
+                     shocks = shocks)
+end
+
+function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
     shocks::Matrix{S} = Matrix{S}())
 
@@ -217,12 +100,11 @@ function compute_forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     ind_r_sh = m.exogenous_shocks[:rm_sh]
     zlb_value = forecast_zlb_value(m)
 
-    compute_forecast(system, z0, shocks; enforce_zlb = enforce_zlb,
+    forecast(system, z0, shocks; enforce_zlb = enforce_zlb,
         ind_r = ind_r, ind_r_sh = ind_r_sh, zlb_value = zlb_value)
 end
 
-
-function compute_forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
+function forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
     shocks::Matrix{S}; enforce_zlb::Bool = false, ind_r::Int = -1,
     ind_r_sh::Int = -1, zlb_value::S = 0.13/4)
 
@@ -235,16 +117,6 @@ function compute_forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
     else
         Matrix{S}(), Vector{S}()
     end
-
-    compute_forecast(T, R, C, Q, Z, D, Z_pseudo, D_pseudo, z0, shocks;
-        enforce_zlb = enforce_zlb, ind_r = ind_r, ind_r_sh = ind_r_sh,
-        zlb_value = zlb_value)
-end
-
-function compute_forecast{S<:AbstractFloat}(T::Matrix{S}, R::Matrix{S},
-    C::Vector{S}, Q::Matrix{S}, Z::Matrix{S}, D::Vector{S}, Z_pseudo::Matrix{S},
-    D_pseudo::Vector{S}, z0::Vector{S}, shocks::Matrix{S}; enforce_zlb::Bool = false,
-    ind_r::Int = -1, ind_r_sh::Int = -1, zlb_value::S = 0.13/4)
 
     # Setup
     nshocks = size(R, 2)

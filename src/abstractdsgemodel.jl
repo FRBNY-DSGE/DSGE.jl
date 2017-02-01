@@ -285,8 +285,7 @@ mh_thin(m::AbstractModel)          =  get_setting(m, :mh_thin)
 
 # Interface for forecast settings
 date_forecast_start(m::AbstractModel)   = get_setting(m, :date_forecast_start)
-forecast_blocking(m::AbstractModel)     = get_setting(m, :forecast_blocking)
-n_forecast_blocks(m::AbstractModel)     = get_setting(m, :n_forecast_blocks)
+forecast_block_size(m::AbstractModel)   = get_setting(m, :forecast_block_size)
 forecast_start_block(m::AbstractModel)  = get_setting(m, :forecast_start_block)
 forecast_input_file_overrides(m::AbstractModel) = get_setting(m, :forecast_input_file_overrides)
 forecast_pseudoobservables(m::AbstractModel) = get_setting(m, :forecast_pseudoobservables)
@@ -297,6 +296,7 @@ forecast_tdist_df_val(m::AbstractModel) = get_setting(m, :forecast_tdist_df_val)
 forecast_tdist_shocks(m::AbstractModel) = get_setting(m, :forecast_tdist_shocks)
 forecast_zlb_value(m::AbstractModel)    = get_setting(m, :forecast_zlb_value)
 impulse_response_horizons(m::AbstractModel) = get_setting(m, :impulse_response_horizons)
+n_shockdec_periods(m::AbstractModel)    = index_shockdec_end(m) - index_shockdec_start(m) + 1
 
 function date_forecast_end(m::AbstractModel)
     date = date_forecast_start(m) + Dates.Month(3 * (forecast_horizons(m)-1))

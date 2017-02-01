@@ -1,9 +1,8 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-    using Distributions, HDF5, JLD
+    using Base.Dates, DataFrames, Distributions, FredData, HDF5, JLD
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
-    using FredData, DataFrames, Base.Dates, DistributedArrays
     using QuantEcon: solve_discrete_lyapunov
     import Calculus
     import Optim
@@ -42,9 +41,9 @@ module DSGE
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin,
         date_forecast_start, date_forecast_end, forecast_tdist_df_val,
         forecast_tdist_shocks, forecast_kill_shocks, forecast_smoother, forecast_draw_z0, forecast_zlb_value,
-        forecast_blocking, n_forecast_blocks, forecast_start_block,
+        forecast_block_size, forecast_start_block,
         forecast_input_file_overrides, shockdec_startdate, date_shockdec_end,
-        forecast_horizons, impulse_response_horizons,
+        forecast_horizons, n_shockdec_periods, impulse_response_horizons,
         load_parameters_from_file, specify_mode!, specify_hessian,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
@@ -68,17 +67,12 @@ module DSGE
         prior,
 
         # forecast/
-        forecast_all, forecast_one,
-        load_draws, prepare_systems, compute_system,
-        filter, filter_all, filterandsmooth_all, filterandsmooth,
-        smooth, smooth_all, kalman_smoother, durbin_koopman_smoother,
-        forecast, compute_forecast,
-        shock_decompositions, compute_shock_decompositions,
-        trends, compute_trends, compute_trend,
-        deterministic_trends, compute_deterministic_trends, compute_deterministic_trend,
-        impulse_responses, compute_impulse_response,
-        n_forecast_draws, get_forecast_input_file, get_forecast_output_files, get_forecast_filename,
-        read_darray, write_darray, compile_forecast_one,
+        load_draws, forecast_one,
+        filter, filterandsmooth, smooth, kalman_smoother, durbin_koopman_smoother,
+        forecast, shock_decompositions, deterministic_trends, trends, impulse_responses,
+        compute_system, add_requisite_output_vars, n_forecast_draws,
+        get_forecast_input_file, get_forecast_output_files, get_forecast_filename,
+        read_forecast_output,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
@@ -139,8 +133,6 @@ module DSGE
     include("forecast/smooth.jl")
     include("forecast/forecast.jl")
     include("forecast/shock_decompositions.jl")
-    include("forecast/trends.jl")
-    include("forecast/deterministic_trends.jl")
     include("forecast/impulse_responses.jl")
     include("forecast/drivers.jl")
 

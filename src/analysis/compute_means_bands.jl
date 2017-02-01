@@ -349,7 +349,7 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
     # open correct input file
     forecast_output_file = meansbands_input_files[output_var]
     metadata, fcast_output = jldopen(forecast_output_file, "r") do jld
-        read_forecast_metadata(jld), DSGE.read_darray(jld)
+        read_forecast_output(jld)
     end
 
     if class == :pseudo
