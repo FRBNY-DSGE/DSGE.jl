@@ -2,7 +2,8 @@
 ```
 AnSchorfheide{T} <: AbstractModel{T}
 ```
-The `AnSchorfheide` type defines the structure of the model described in 'Bayesian Estimation of DSGE Models' by Edward P. Herbst and Frank Schorfheide
+The `AnSchorfheide` type defines the structure of the simple New Keynesian DSGE model described in 'Bayesian Estimation
+of DSGE Models' by Sungbae An and Frank Schorfheide
 
 ### Fields
 
@@ -91,7 +92,7 @@ type AnSchorfheide{T} <: AbstractModel{T}
     data_transforms::OrderedDict{Symbol,Function}  # functions to transform raw data into input matrix
 end
 
-description(m::AnSchorfheide) = "Julia implementation of model defined in 'Bayesian Estimation of DSGE Models' by Edward P. Herbst and Frank Schorfheide: AnSchorfheide, $(m.subspec)"
+description(m::AnSchorfheide) = "Julia implementation of model defined in 'Bayesian Estimation of DSGE Models' by Sungbae An and Frank Schorfheide: AnSchorfheide, $(m.subspec)"
 
 """
 `init_model_indices!(m::AnSchorfheide)`
@@ -149,9 +150,8 @@ function AnSchorfheide(subspec::AbstractString="ss0")
     rng                = MersenneTwister()
     testing            = false
 
-    fred_series        = [:GDPC1, :PCEPILFE, :DFF]#, :CNP16OV]
+    fred_series        = [:GDP, :PCEPILFE, :DFF, :CNP16OV, :GDPCTPI]
 
-    # data_series        = Dict(:us =>[:obs_gdp, :obs_corepce, :obs_ffr]) #
     data_series        = Dict(:fred => fred_series)
     data_transforms    = OrderedDict{Symbol,Function}()
 
@@ -173,7 +173,7 @@ function AnSchorfheide(subspec::AbstractString="ss0")
             data_transforms)
 
     # Set settings
-    settings_AnSchorfheide!(m)
+    settings_an_schorfheide!(m)
     default_test_settings!(m)
 
     # Set data transformations
@@ -239,7 +239,7 @@ function steadystate!(m::AnSchorfheide)
     return m
 end
 
-function settings_AnSchorfheide!(m::AnSchorfheide)
+function settings_an_schorfheide!(m::AnSchorfheide)
     default_settings!(m)
     m <= Setting(:population_mnemonic, Symbol())
 end
@@ -257,9 +257,11 @@ are available. The keys of data transforms should match exactly the keys of `m.o
 function init_data_transforms!(m::AnSchorfheide)
 
     m.data_transforms[:obs_gdp] = function (levels)
-        # FROM: Level of real GDP (from FRED)
-        # TO: Quarter-to-quter percent change of real GDP
-        oneqtrpctchange(levels[:GDPC1])
+        # FROM: Level of GDP (from FRED)
+        # TO: Quarter-to-quter percent change of real GDP per capita
+        levels[:temp] = percapita(m, :GDP, levels)
+        gdp = 1000 * nominal_to_real(:temp, levels)
+        hpadjust(oneqtrpctchange(gdp), levels)
     end
 
     m.data_transforms[:obs_corepce] = function (levels)
