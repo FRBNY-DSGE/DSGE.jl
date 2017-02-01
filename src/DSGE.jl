@@ -43,7 +43,7 @@ module DSGE
         forecast_tdist_shocks, forecast_kill_shocks, forecast_smoother, forecast_draw_z0, forecast_zlb_value,
         forecast_block_size, forecast_start_block,
         forecast_input_file_overrides, shockdec_startdate, date_shockdec_end,
-        forecast_horizons, impulse_response_horizons,
+        forecast_horizons, n_shockdec_periods, impulse_response_horizons,
         load_parameters_from_file, specify_mode!, specify_hessian,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,

@@ -296,6 +296,7 @@ forecast_tdist_df_val(m::AbstractModel) = get_setting(m, :forecast_tdist_df_val)
 forecast_tdist_shocks(m::AbstractModel) = get_setting(m, :forecast_tdist_shocks)
 forecast_zlb_value(m::AbstractModel)    = get_setting(m, :forecast_zlb_value)
 impulse_response_horizons(m::AbstractModel) = get_setting(m, :impulse_response_horizons)
+n_shockdec_periods(m::AbstractModel)    = index_shockdec_end(m) - index_shockdec_start(m) + 1
 
 function date_forecast_end(m::AbstractModel)
     date = date_forecast_start(m) + Dates.Month(3 * (forecast_horizons(m)-1))
