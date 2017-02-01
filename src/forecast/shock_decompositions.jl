@@ -185,7 +185,7 @@ function deterministic_trends{S<:AbstractFloat}(system::System{S}, z0::Vector{S}
 
     # Return deterministic trends in appropriate range
     forecast_pseudo = !isnull(system.pseudo_measurement)
-    if start_index == 1 && end_index == allperiods
+    if start_index == 1 && end_index == nperiods
         return states, obs, pseudo
     else
         range = start_index:end_index
