@@ -288,7 +288,7 @@ function forecast_one(m::AbstractModel{Float64},
             tic()
 
             # Get to work!
-            params = load_draws(m, input_type; block_inds = block_inds[block], verbose = verbose)
+            params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
 
             forecast_outputs = pmap(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
                                                                param, df, verbose = verbose),
