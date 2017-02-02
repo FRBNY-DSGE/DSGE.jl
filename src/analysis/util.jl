@@ -614,7 +614,7 @@ function get_y0_index(m::AbstractModel, product::Symbol)
         # to index out the data we need for all the other forecasts.
         return index_forecast_start(m) - 4
     elseif product in [:shockdec, :dettrend, :trend]
-        return index_shockdec_start(m) - 1
+        return n_presample_periods(m) + index_shockdec_start(m) - 1
     elseif product == :hist
         return index_mainsample_start(m) - 1
     elseif product == :irf
