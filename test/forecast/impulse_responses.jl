@@ -1,4 +1,4 @@
-using DSGE, JLD, DistributedArrays
+using DSGE, JLD
 include("../util.jl")
 
 path = dirname(@__FILE__)
