@@ -560,6 +560,15 @@ function get_mb_population_series(product::Symbol, mnemonic::Symbol,
         # For history, the population series is just the data
         population_series = convert(Vector{Float64}, population_data[mnemonic])
 
+    elseif product == :irf
+
+        # Return empty vector for IRFs, which don't correspond to real dates
+        population_series = Vector{Float64}()
+
+    else
+
+        error("Invalid product: $product")
+
     end
 
     return population_series

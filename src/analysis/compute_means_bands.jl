@@ -291,7 +291,7 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
     ## Step 1: Determine the class of variable we are working with (pseudos? observables? etc)
     ##         and the product we are computing (forecast? history? shockdec?)
 
-    class = get_class(output_var)
+    class   = get_class(output_var)
     product = get_product(output_var)
 
     ## Step 2: Read in raw forecast output and metadata (transformations, mappings from symbols to indices, etc)
@@ -300,7 +300,7 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
         get_mb_metadata(input_type, cond_type, output_var, forecast_output_file;
                         forecast_string = forecast_string)
 
-    date_list         = collect(keys(mb_metadata[:date_inds]))
+    date_list         = product == :irf ? Vector{Date}() : collect(keys(mb_metadata[:date_inds]))
     variable_names    = collect(keys(mb_metadata[:indices]))
     population_series = if isnull(population_mnemonic)
         Vector{T}()
@@ -336,7 +336,7 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
 
     elseif product in [:shockdec, :irf]
 
-        means = DataFrame(date = date_list)
+        means = product == :irf ? DataFrame() : DataFrame(date = date_list)
         bands = Dict{Symbol,DataFrame}()
 
         mb_metadata[:shock_indices] = metadata[:shock_indices]
@@ -402,7 +402,11 @@ function compute_means_bands{T<:AbstractFloat}(class::Symbol,
         var_ind = indices[var_name]
 
         # Read date list
-        date_list = collect(keys(read(file, "date_indices")))
+        date_list = if product != :irf
+            collect(keys(read(file, "date_indices")))
+        else
+            Vector{Date}()
+        end
 
         fcast_series, transform, var_ind, date_list
     end
