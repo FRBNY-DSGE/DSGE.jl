@@ -36,6 +36,18 @@ function get_product(s::Symbol)
     end
 end
 
+function get_class_longname(class::Symbol)
+    longname = if class == :pseudo
+        :pseudoobservable
+    elseif class == :obs
+        :observable
+    elseif class == :state
+        :state
+    elseif class == :shock
+        :shock
+    end
+end
+
 
 #########################################
 ## Useful methods for MeansBands objects
@@ -93,10 +105,12 @@ end
 get_vars_means(mb::MeansBands)
 ````
 
-Get variables (`:y_t`, `:OutputGap`, etc) in `mb.means`, sorted by `mb.metadata[:indices]`
+Get variables (`:y_t`, `:OutputGap`, etc) in `mb.means`. Note that
+`mb.metadata[:indices]` is an `OrderedDict`, so the keys will be in the correct
+order.
 """
 function get_vars_means(mb::MeansBands)
-    unzip(sort_by_value(mb.metadata[:indices]))[2]
+    collect(keys(mb.metadata[:indices]))
 end
 
 
@@ -361,7 +375,7 @@ end
 """
 ```
 resize_population_forecast(population_forecast::DataFrame, nperiods::Int;
-                                           population_mnemonic::Symbol = Symbol())
+    population_mnemonic::Symbol = Symbol())
 ```
 
 Extends or shrinks the population forecasts to be `nperiods` in
@@ -470,28 +484,6 @@ parse_mb_colname(s::Symbol)
 """
 function parse_mb_colname(s::Symbol)
     map(symbol, split(string(s), DSGE_SHOCKDEC_DELIM))
-end
-
-"""
-```
-sort_by_value(d::Dict)
-```
-
-Sort a dictionary by value.
-"""
-function sort_by_value(d::Dict)
-    sort(collect(zip(values(d),keys(d))))
-end
-
-function unzip{T<:Tuple}(A::Array{T})
-    res = map(x -> x[], T.parameters)
-    res_len = length(res)
-    for t in A
-        for i in 1:res_len
-            push!(res[i], t[i])
-        end
-    end
-    res
 end
 
 """
@@ -616,41 +608,30 @@ function get_mb_metadata{S<:AbstractString}(input_type::Symbol, cond_type::Symbo
     class   = get_class(output_var)
     product = get_product(output_var)
 
-    metadata, fcast_output = jldopen(forecast_output_file, "r") do jld
-        read_forecast_metadata(jld), read(jld, "arr")
+    metadata = jldopen(forecast_output_file, "r") do jld
+        read_forecast_metadata(jld)
     end
 
-    if class == :pseudo
-        transforms       = metadata[:pseudoobservable_revtransforms]
-        variable_indices = metadata[:pseudoobservable_indices]
-    elseif class == :obs
-        transforms       = metadata[:observable_revtransforms]
-        variable_indices = metadata[:observable_indices]
-    elseif class == :shock
-        transforms       = metadata[:shock_revtransforms]
-        variable_indices = metadata[:shock_indices]
-    else
-        error("Means and bands are only calculated for observables, pseudo-observables, and shocks")
-    end
-    date_indices         = product == :irf ? Dict{Date,Int}() : metadata[:date_indices]
+    class_long = get_class_longname(class)
+    variable_indices = metadata[symbol("$(class_long)_indices")]
+    date_indices     = product == :irf ? Dict{Date,Int}() : metadata[:date_indices]
 
-    # Make sure date lists are valid. This is vacuously true for trend and IRFs,
-    # which are not time-dependent and hence have empty `date_indices`.
+    # Make sure date lists are valid. This is vacuously true for and IRFs, which
+    # are not time-dependent and hence have empty `date_indices`.
     date_list          = collect(keys(date_indices))   # unsorted array of actual dates
     date_indices_order = collect(values(date_indices)) # unsorted array of date indices
     check_consistent_order(date_list, date_indices_order)
-    sort!(date_list, by = x -> date_indices[x])
 
     mb_metadata = Dict{Symbol,Any}(
                    :para            => input_type,
                    :cond_type       => cond_type,
                    :product         => product,
                    :class           => class,
-                   :indices         => variable_indices,
-                   :forecast_string => forecast_string,
-                   :date_inds       => date_indices)
+                   :indices         => sort(variable_indices, by = x -> variable_indices[x]),
+                   :date_inds       => sort(date_indices, by = x -> date_indices[x]),
+                   :forecast_string => forecast_string)
 
-    return fcast_output, metadata, mb_metadata, transforms
+    return metadata, mb_metadata
 end
 
 function get_y0_index(m::AbstractModel, product::Symbol)
