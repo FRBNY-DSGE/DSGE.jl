@@ -498,6 +498,11 @@ function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, input_type:
                                 verbose::Symbol = :low)
 
     for var in output_vars
+        # Nothing to write for output_vars in [:forecast4q, :bddforecast4q]
+        if get_product(var) in [:forecast4q, :bddforecast4q]
+            continue
+        end
+
         filepath = forecast_output_files[var]
         if isnull(block_number) || get(block_number) == 1
             jldopen(filepath, "w") do file
@@ -554,6 +559,8 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
             quarter_range(date_forecast_start(m), date_forecast_end(m))
         elseif prod in [:shockdec, :dettrend, :trend]
             quarter_range(date_shockdec_start(m), date_shockdec_end(m))
+        else
+            error("Invalid product: $prod")
         end
 
         date_indices = [d::Date => i::Int for (i, d) in enumerate(dates)]
