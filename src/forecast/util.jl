@@ -70,9 +70,10 @@ end
 forecast_block_inds(m, input_type; subset_inds = 1:0)
 ```
 
-Returns a `Vector{Range{Int64}}` of length equal to the number of forecast
-blocks, where `block_inds[i]` is the range of indices (after thinning by
-`jstep`) for block `i`.
+Returns a pair of `Vector{Range{Int64}}`s, `block_inds` and `block_inds_thin`,
+each of length equal to the number of forecast blocks. `block_inds[i]` is the
+range of indices for block `i` before thinning by `jstep` and
+`block_inds_thin[i]` is the range after thinning.
 """
 function forecast_block_inds(m::AbstractModel, input_type::Symbol; subset_inds::Range{Int64} = 1:0)
 
@@ -89,25 +90,32 @@ function forecast_block_inds(m::AbstractModel, input_type::Symbol; subset_inds::
     else
         throw(ArgumentError("Cannot call forecast_block_inds with input_type = $input_type."))
     end
-    all_inds  = start_ind:jstep:end_ind
+    all_inds = start_ind:jstep:end_ind
+    end_ind_thin = convert(Int64, floor(end_ind / jstep))
 
     # Make sure block_size is a multiple of jstep
     block_size = forecast_block_size(m)
     if block_size % jstep != 0
         error("forecast_block_size(m) must be a multiple of jstep = $jstep")
     end
+    block_size_thin = convert(Int64, block_size / jstep)
     nblocks = convert(Int64, ceil(ndraws / block_size))
 
     # Fill in draw indices for each block
-    block_inds  = Vector{Range{Int64}}(nblocks)
-    current_draw = start_ind - 1
+    block_inds      = Vector{Range{Int64}}(nblocks)
+    block_inds_thin = Vector{Range{Int64}}(nblocks)
+    current_draw      = start_ind - 1
+    current_draw_thin = start_ind - 1
     for i = 1:(nblocks-1)
-        block_inds[i] = (current_draw+jstep):jstep:(current_draw+block_size)
-        current_draw += block_size
+        block_inds[i]      = (current_draw+jstep):jstep:(current_draw+block_size)
+        block_inds_thin[i] = (current_draw_thin+1):(current_draw_thin+block_size_thin)
+        current_draw      += block_size
+        current_draw_thin += block_size_thin
     end
-    block_inds[end] = (current_draw+jstep):jstep:end_ind
+    block_inds[end]      = (current_draw+jstep):jstep:end_ind
+    block_inds_thin[end] = (current_draw_thin+1):end_ind_thin
 
-    return block_inds
+    return block_inds, block_inds_thin
 end
 
 
@@ -251,8 +259,8 @@ function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_v
     ndraws = if input_type in [:mode, :mean, :init]
         1
     elseif input_type in [:full, :subset]
-        block_inds = forecast_block_inds(m, input_type)
-        sum(map(length, block_inds))
+        _, block_inds_thin = forecast_block_inds(m, input_type)
+        sum(map(length, block_inds_thin))
     end
 
     nvars = if class == :state
