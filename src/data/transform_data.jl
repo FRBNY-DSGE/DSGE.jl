@@ -31,10 +31,10 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
 
     # Step 1: HP filter population forecasts, if they're being used
     population_mnemonic = parse_population_mnemonic(m)[1]
-    if population_mnemonic != Symbol()
+    if !isnull(population_mnemonic)
         population_forecast_levels = read_population_forecast(m; verbose = verbose)
         population_data, _ = transform_population_data(levels, population_forecast_levels,
-                                                       population_mnemonic; verbose = verbose)
+                                                       get(population_mnemonic); verbose = verbose)
 
         levels = join(levels, population_data, on = :date, kind = :left)
         rename!(levels, [:filtered_population_recorded, :dlfiltered_population_recorded, :dlpopulation_recorded],

@@ -374,36 +374,22 @@ end
 
 """
 ```
-resize_population_forecast(population_forecast::DataFrame, nperiods::Int;
-    population_mnemonic::Symbol = Symbol())
+resize_population_forecast(population_forecast::DataFrame, nperiods::Int,
+    mnemonic::Symbol)
 ```
 
 Extends or shrinks the population forecasts to be `nperiods` in
 length. If `population_forecast` must be extended, the last value is
 simply repeated as many times as necessary.
 """
-function resize_population_forecast(population_forecast::DataFrame, nperiods::Int;
-                                           population_mnemonic::Symbol = Symbol())
+function resize_population_forecast(population_forecast::DataFrame, nperiods::Int,
+                                    mnemonic::Symbol)
 
     # number of periods to extend population forecast
     n_filler_periods = nperiods - size(population_forecast,1)
 
-    # Extract population mnemonic from Nullable object (if not null). If null,
-    # take a guess or throw an error if you can't tell.
-    mnemonic = if population_mnemonic == Symbol()
-        if size(population_forecast,2) > 2
-            error("Please indicate which column contains population
-                forecasts using the population_mnemonic keyword argument")
-        end
-
-        setdiff(names(population_forecast), [:date])[1]
-    else
-        population_mnemonic
-    end
-
-    last_provided = population_forecast[end,:date]
-
     # create date range. There are on average 91.25 days in a quarter.
+    last_provided = population_forecast[end,:date]
     dr = last_provided:(last_provided+Dates.Day(93 * n_filler_periods))
 
     islastdayofquarter = x->Dates.lastdayofquarter(x) == x
@@ -420,7 +406,6 @@ function resize_population_forecast(population_forecast::DataFrame, nperiods::In
 
     # resize population forecast by adding n_filler_periods to the given forecast.
     resized = if n_filler_periods > 0
-
         extra_stuff = fill(population_forecast[end,mnemonic], n_filler_periods)
         extra[mnemonic] = extra_stuff
 
@@ -430,8 +415,6 @@ function resize_population_forecast(population_forecast::DataFrame, nperiods::In
     else
         population_forecast
     end
-
-    resized
 end
 
 """
@@ -488,55 +471,43 @@ end
 
 """
 ```
-load_population_growth(data_file, forecast_file, population_mnemonic; verbose = :low)
+load_population_growth(data_file, forecast_file, mnemonic; verbose = :low)
 ```
 
 Returns `DataFrame`s of growth rates for HP-filtered population data and forecast.
 """
 function load_population_growth{S<:AbstractString}(data_file::S, forecast_file::S,
-                                                   population_mnemonic::Nullable{Symbol};
+                                                   mnemonic::Symbol;
                                                    verbose::Symbol = :low)
-    if isnull(population_mnemonic)
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            warn("No population mnemonic provided")
-        end
+    # Read in unfiltered series
+    unfiltered_data     = read_population_data(data_file; verbose = :low)
+    unfiltered_forecast = read_population_forecast(forecast_file, mnemonic; verbose = :low)
 
-        return DataFrame(), DataFrame()
-    else
-        mnemonic = get(population_mnemonic)
+    # HP filter
+    data, forecast = transform_population_data(unfiltered_data, unfiltered_forecast,
+                                               mnemonic; verbose = :none)
+    dlfiltered_data =
+        DataFrame(date = @data(convert(Array{Date}, data[:date])),
+                  population_growth = @data(convert(Array{Float64},
+                                                    data[:dlfiltered_population_recorded])))
+    dlfiltered_forecast =
+        DataFrame(date = @data(convert(Array{Date}, forecast[:date])),
+                  population_growth = @data(convert(Array{Float64},
+                                                    forecast[:dlfiltered_population_forecast])))
 
-        # Read in unfiltered series
-        unfiltered_data     = read_population_data(data_file; verbose = :low)
-        unfiltered_forecast = read_population_forecast(forecast_file, mnemonic; verbose = :low)
-
-        # HP filter
-        data, forecast = transform_population_data(unfiltered_data, unfiltered_forecast,
-                                                   mnemonic; verbose = :none)
-        dlfiltered_data =
-            DataFrame(date = @data(convert(Array{Date}, data[:date])),
-                      population_growth = @data(convert(Array{Float64},
-                                                        data[:dlfiltered_population_recorded])))
-        dlfiltered_forecast =
-            DataFrame(date = @data(convert(Array{Date}, forecast[:date])),
-                      population_growth = @data(convert(Array{Float64},
-                                                        forecast[:dlfiltered_population_forecast])))
-
-        return dlfiltered_data, dlfiltered_forecast
-    end
+    return dlfiltered_data, dlfiltered_forecast
 end
 
 """
 ```
-get_mb_population_series(product, population_mnemonic, population_data, population_forecast, date_list)
+get_mb_population_series(product, mnemonic, population_data, population_forecast, date_list)
 ```
 
 Returns the appropriate population series for the `product`.
 """
-function get_mb_population_series(product::Symbol, population_mnemonic::Nullable{Symbol},
-                               population_data::DataFrame, population_forecast::DataFrame,
-                               date_list::Vector{Date})
-    # Unpack population mnemonic
-    mnemonic = isnull(population_mnemonic) ? Symbol() : get(population_mnemonic)
+function get_mb_population_series(product::Symbol, mnemonic::Symbol,
+                                  population_data::DataFrame, population_forecast::DataFrame,
+                                  date_list::Vector{Date})
 
     if product in [:forecast, :bddforecast]
 
@@ -544,7 +515,7 @@ function get_mb_population_series(product::Symbol, population_mnemonic::Nullable
         # forecast until we have n_fcast_periods of population forecasts
         n_fcast_periods = length(date_list)
         population_series = resize_population_forecast(population_forecast, n_fcast_periods,
-                                                       population_mnemonic = mnemonic)
+                                                       mnemonic)
         population_series = convert(Vector{Float64}, population_series[mnemonic])
 
     elseif product in [:shockdec, :dettrend, :trend, :forecast4q, :bddforecast4q]
@@ -573,7 +544,7 @@ function get_mb_population_series(product::Symbol, population_mnemonic::Nullable
 
         # Extend population forecast by the right number of periods
         population_forecast = resize_population_forecast(population_forecast, n_fcast_periods,
-                                                         population_mnemonic = mnemonic)
+                                                         mnemonic)
         end_ind = find(population_forecast[:date] .== end_date)[1]
 
         # Concatenate population histories and forecasts together

@@ -111,8 +111,7 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
     ## Step 1: Population data
 
     # Parse population mnemonic
-    tmp = parse_population_mnemonic(m)[1]
-    population_mnemonic = tmp == Symbol() ? Nullable{Symbol}() : Nullable(tmp)
+    population_mnemonic = parse_population_mnemonic(m)[1]
 
     # Get filenames for population data and forecast
     if !isnull(population_mnemonic)
@@ -193,8 +192,12 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
     ## Step 1: Filter population history and forecast and compute growth rates
 
     dlfiltered_population_data, dlfiltered_population_forecast =
-        load_population_growth(population_data_file, population_forecast_file,
-                               population_mnemonic; verbose = verbose)
+        if isnull(population_mnemonic)
+            DataFrame(), DataFrame()
+        else
+            load_population_growth(population_data_file, population_forecast_file,
+                                   get(population_mnemonic); verbose = verbose)
+        end
 
     ## Step 2: Set up filenames for MeansBands input and output files.
     # MeansBands output filenames are the same as forecast output filenames, but with an "mb" prefix.
@@ -299,8 +302,12 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
 
     date_list         = collect(keys(mb_metadata[:date_inds]))
     variable_names    = collect(keys(mb_metadata[:indices]))
-    population_series = get_mb_population_series(product, population_mnemonic, population_data,
-                                                 population_forecast, date_list)
+    population_series = if isnull(population_mnemonic)
+        Vector{T}()
+    else
+        get_mb_population_series(product, get(population_mnemonic), population_data,
+                                 population_forecast, date_list)
+    end
 
     ## Step 3: Compute means and bands
     if product in [:hist, :forecast, :dettrend, :trend, :forecast4q,

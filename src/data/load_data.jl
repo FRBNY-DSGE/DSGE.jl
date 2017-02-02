@@ -200,8 +200,8 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     if !m.testing
         filename = inpath(m, "data", "population_data_levels_$vint.csv")
         mnemonic = parse_population_mnemonic(m)[1]
-        if mnemonic != Symbol()
-            writetable(filename, df[:,[:date,mnemonic]])
+        if !isnull(mnemonic)
+            writetable(filename, df[:,[:date, get(mnemonic)]])
         end
     end
 
@@ -244,10 +244,10 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
         # Use population forecast as population data
         population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
-        if isfile(population_forecast_file)
+        if isfile(population_forecast_file) && !isnull(get_setting(m, :population_mnemonic))
             pop_forecast = readtable(population_forecast_file)
 
-            population_mnemonic = parse_population_mnemonic(m)[1]
+            population_mnemonic = get(parse_population_mnemonic(m)[1])
             rename!(pop_forecast, :POPULATION,  population_mnemonic)
             DSGE.na2nan!(pop_forecast)
             DSGE.format_dates!(:date, pop_forecast)
@@ -470,13 +470,17 @@ function read_population_forecast(m::AbstractModel; verbose::Symbol = :low)
     population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
     population_mnemonic = parse_population_mnemonic(m)[1]
 
-    read_population_forecast(population_forecast_file, population_mnemonic; verbose = verbose)
+    if isnull(population_mnemonic)
+        error("No population mnemonic provided")
+    else
+        read_population_forecast(population_forecast_file, get(population_mnemonic); verbose = verbose)
+    end
 end
 
 function read_population_forecast(filename::AbstractString, population_mnemonic::Symbol;
                                   verbose::Symbol = :low)
 
-    if isfile(filename) && population_mnemonic != Symbol()
+    if isfile(filename)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("Loading population forecast from $filename...")
         end

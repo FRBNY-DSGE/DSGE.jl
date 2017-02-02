@@ -217,9 +217,14 @@ function get_key(m::AbstractModel, class::Symbol, index::Int)
     end
 end
 
-# Parse population mnemonic into 2 symbols from one
+# Parse population mnemonic into 2 Nullable{Symbol}s from one
 function parse_population_mnemonic(m::AbstractModel)
-    map(symbol, split(string(get_setting(m, :population_mnemonic)), DSGE_DATASERIES_DELIM))
+    mnemonic = get_setting(m, :population_mnemonic)
+    if isnull(mnemonic)
+        return [Nullable{Symbol}(), Nullable{Symbol}()]
+    else
+        return map(s -> Nullable(symbol(s)), split(string(get(mnemonic)), DSGE_DATASERIES_DELIM))
+    end
 end
 
 # From an augmented state space with anticipated policy shocks, get indices

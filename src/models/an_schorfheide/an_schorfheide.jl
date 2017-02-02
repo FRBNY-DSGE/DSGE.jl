@@ -249,6 +249,4 @@ end
 
 function settings_an_schorfheide!(m::AnSchorfheide)
     default_settings!(m)
-
-    m <= Setting(:population_mnemonic, Symbol())
 end
