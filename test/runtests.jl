@@ -29,7 +29,8 @@ my_tests = [
             "forecast/forecast",
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
-            "forecast/forecast_one"
+            "forecast/forecast_one",
+            "analysis/means_bands"
             ]
 
 for test in my_tests
