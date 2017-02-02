@@ -15,8 +15,12 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
     endo_addl = m.endogenous_states_augmented
     pseudo_names = [:y_t, :y_f_t, :NaturalRate, :π_t, :OutputGap, :ExAnteRealRate, :LongRunInflation,
                     :MarginalCost, :Wages, :FlexibleWages, :Hours, :FlexibleHours, :z_t,
-                    :Expected10YearRateGap, :NominalFFR, :Expected10YearRate, :Expected10YearNaturalRate,
-                    :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth]
+                    :Expected10YearRateGap, :NominalFFR, :Expected10YearNominalRate,
+                    :Expected10YearNominalNaturalRate,
+                    :ExpectedNominalNaturalRate, :NominalRateGap, :LaborProductivityGrowth,
+                    :Expected5YearRealRate, :Expected5YearRealNaturalRate, :Expected5YearRateGap,
+                    :Expected5YearNominalRate, :Expected5YearNominalNaturalRate, :Expected10YearRealRate,
+                    :Expected10YearRealNaturalRate]
 
     # Map pseudoobservables to indices
     pseudo_inds = Dict{Symbol,Int}()
@@ -33,6 +37,8 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
     # Compute TTT^10, used for Expected10YearRateGap, Expected10YearRate, and Expected10YearNaturalRate
     TTT, _, _ = solve(m)
     TTT10 = (1/40)*((UniformScaling(1.) - TTT)\(UniformScaling(1.) - TTT^40))
+    TTT5 = (1/20)*((UniformScaling(1.) - TTT)\(UniformScaling(1.) - TTT^20))
+
 
     # Initialize pseudo ZZ and DD matrices
     ZZ_pseudo = zeros(length(pseudo), n_states_augmented(m))
@@ -139,19 +145,19 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
     pseudo[:NominalFFR].longname = "Nominal FFR at an annual rate"
     pseudo[:NominalFFR].rev_transform = quartertoannual
 
-    ## Expected 10-Year Interest Rate
-    ZZ_pseudo[pseudo_inds[:Expected10YearRate], :] = TTT10[endo[:R_t], :]
-    DD_pseudo[pseudo_inds[:Expected10YearRate]]    = m[:Rstarn]
-    pseudo[:Expected10YearRate].name     = "Expected 10-Year Rate"
-    pseudo[:Expected10YearRate].longname = "Expected 10-Year Interest Rate"
-    pseudo[:Expected10YearRate].rev_transform = quartertoannual
+    ## Expected 10-Year Nominal Interest Rate
+    ZZ_pseudo[pseudo_inds[:Expected10YearNominalRate], :] = TTT10[endo[:R_t], :]
+    DD_pseudo[pseudo_inds[:Expected10YearNominalRate]]    = m[:Rstarn]
+    pseudo[:Expected10YearNominalRate].name     = "Expected 10-Year Nominal Rate"
+    pseudo[:Expected10YearNominalRate].longname = "Expected 10-Year Nominal Interest Rate"
+    pseudo[:Expected10YearNominalRate].rev_transform = quartertoannual
 
-    ## Expected 10-Year Natural Rate
-    ZZ_pseudo[pseudo_inds[:Expected10YearNaturalRate], :] = TTT10[endo[:r_f_t], :] + TTT10[endo[:Eπ_t], :]
-    DD_pseudo[pseudo_inds[:Expected10YearNaturalRate]]    = m[:Rstarn]
-    pseudo[:Expected10YearNaturalRate].name     = "Expected 10-Year Natural Rate"
-    pseudo[:Expected10YearNaturalRate].longname = "Expected 10-Year Natural Rate of Interest"
-    pseudo[:Expected10YearNaturalRate].rev_transform = quartertoannual
+    ## Expected 10-Year Nominal Natural Rate
+    ZZ_pseudo[pseudo_inds[:Expected10YearNominalNaturalRate], :] = TTT10[endo[:r_f_t], :] + TTT10[endo[:Eπ_t], :]
+    DD_pseudo[pseudo_inds[:Expected10YearNominalNaturalRate]]    = m[:Rstarn]
+    pseudo[:Expected10YearNominalNaturalRate].name     = "Expected 10-Year Nominal Natural Rate"
+    pseudo[:Expected10YearNominalNaturalRate].longname = "Expected 10-Year Nominal Natural Rate of Interest"
+    pseudo[:Expected10YearNominalNaturalRate].rev_transform = quartertoannual
 
     ## Expected Nominal Natural Rate
     ZZ_pseudo[pseudo_inds[:ExpectedNominalNaturalRate], endo[:r_f_t]] = 1.
@@ -181,6 +187,57 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
     pseudo[:LaborProductivityGrowth].name     = "Labor Productivity Growth"
     pseudo[:LaborProductivityGrowth].longname = "Labor Productivity Growth Rate"
     pseudo[:LaborProductivityGrowth].rev_transform = quartertoannual
+
+    ## Expected 5-Year Real Interest Rate
+    ZZ_pseudo[pseudo_inds[:Expected5YearRealRate], :] = TTT5[endo[:R_t], :] - TTT5[endo[:Eπ_t], :]
+    DD_pseudo[pseudo_inds[:Expected5YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+
+    pseudo[:Expected5YearRealRate].name     = "Expected 5-Year Real Rate"
+    pseudo[:Expected5YearRealRate].longname = "Expected 5-Year Real Interest Rate"
+    pseudo[:Expected5YearRealRate].rev_transform = quartertoannual
+
+    ## Expected 5-Year Real Natural Rate
+    ZZ_pseudo[pseudo_inds[:Expected5YearRealNaturalRate], :] = TTT5[endo[:r_f_t], :]
+    DD_pseudo[pseudo_inds[:Expected5YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+    pseudo[:Expected5YearRealNaturalRate].name     = "Expected 5-Year Real Natural Rate"
+    pseudo[:Expected5YearRealNaturalRate].longname = "Expected 5-Year Real Natural Rate of Interest"
+    pseudo[:Expected5YearRealNaturalRate].rev_transform = quartertoannual
+
+    ## Expected 5-Year Rate Gap
+    ZZ_pseudo[pseudo_inds[:Expected5YearRateGap], :] = TTT5[endo[:R_t], :] -
+        TTT5[endo[:r_f_t], :] - TTT5[endo[:Eπ_t], :]
+    pseudo[:Expected5YearRateGap].name     = "Expected 5-Year Rate Gap"
+    pseudo[:Expected5YearRateGap].longname = "Expected 5-Year Rate Gap"
+    pseudo[:Expected5YearRateGap].rev_transform = quartertoannual
+
+    ## Expected 5-Year Nominal Interest Rate
+    ZZ_pseudo[pseudo_inds[:Expected5YearNominalRate], :] = TTT5[endo[:R_t], :]
+    DD_pseudo[pseudo_inds[:Expected5YearNominalRate]]    = m[:Rstarn]
+    pseudo[:Expected5YearNominalRate].name     = "Expected 5-Year Rate"
+    pseudo[:Expected5YearNominalRate].longname = "Expected 5-Year Interest Rate"
+    pseudo[:Expected5YearNominalRate].rev_transform = quartertoannual
+
+    ## Expected 5-Year Nominal Natural Rate
+    ZZ_pseudo[pseudo_inds[:Expected5YearNominalNaturalRate], :] = TTT5[endo[:r_f_t], :] + TTT5[endo[:Eπ_t], :]
+    DD_pseudo[pseudo_inds[:Expected5YearNominalNaturalRate]]    = m[:Rstarn]
+    pseudo[:Expected5YearNominalNaturalRate].name     = "Expected 5-Year Natural Rate"
+    pseudo[:Expected5YearNominalNaturalRate].longname = "Expected 5-Year Natural Rate of Interest"
+    pseudo[:Expected5YearNominalNaturalRate].rev_transform = quartertoannual
+
+    ## Expected 10-Year Real Interest Rate
+    ZZ_pseudo[pseudo_inds[:Expected10YearRealRate], :] = TTT10[endo[:R_t], :] - TTT10[endo[:Eπ_t], :]
+    DD_pseudo[pseudo_inds[:Expected10YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+
+    pseudo[:Expected10YearRealRate].name     = "Expected 10-Year Real Rate"
+    pseudo[:Expected10YearRealRate].longname = "Expected 10-Year Real Interest Rate"
+    pseudo[:Expected10YearRealRate].rev_transform = quartertoannual
+
+    ## Expected 10-Year Real Natural Rate
+    ZZ_pseudo[pseudo_inds[:Expected10YearRealNaturalRate], :] = TTT10[endo[:r_f_t], :]
+    DD_pseudo[pseudo_inds[:Expected10YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+    pseudo[:Expected10YearRealNaturalRate].name     = "Expected 10-Year Real Natural Rate"
+    pseudo[:Expected10YearRealNaturalRate].longname = "Expected 10-Year Real Natural Rate of Interest"
+    pseudo[:Expected10YearRealNaturalRate].rev_transform = quartertoannual
 
     # Collect indices and transforms
     return pseudo, PseudoObservableMapping(pseudo_inds, ZZ_pseudo, DD_pseudo)
