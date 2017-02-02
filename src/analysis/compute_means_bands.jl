@@ -353,6 +353,11 @@ function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
         read_forecast_output(jld)
     end
 
+    # Reshape one-draw forecast outputs so they have a leading singleton (draw) dimension
+    if input_type in [:init, :mode, :mean]
+        fcast_output = reshape(fcast_output, (1, size(fcast_output)...))
+    end
+
     if class == :pseudo
         transforms       = metadata[:pseudoobservable_revtransforms]
         variable_indices = metadata[:pseudoobservable_indices]
