@@ -215,7 +215,18 @@ function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, input_type:
         if isnull(block_number) || get(block_number) == 1
             jldopen(filepath, "w") do file
                 write_forecast_metadata(m, file, var)
-                write(file, "dims", get_forecast_output_dims(m, input_type, var))
+
+                if !isnull(block_number) && get(block_number) == 1
+                    # Determine forecast output size
+                    dims  = get_forecast_output_dims(m, input_type, var)
+                    block_size = forecast_block_size(m)
+                    chunk_dims = collect(dims)
+                    chunk_dims[1] = block_size
+
+                    # Initialize dataset
+                    pfile = file.plain
+                    dataset = HDF5.d_create(pfile, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
+                end
             end
         end
 
@@ -223,7 +234,7 @@ function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, input_type:
             if isnull(block_number)
                 write(file, "arr", forecast_output[var])
             else
-                write_forecast_block(file, forecast_output[var], get(block_number), block_inds)
+                write_forecast_block(file, forecast_output[var], block_inds)
             end
         end
 
@@ -319,44 +330,14 @@ write_forecast_block(file::JLD.JldFile, arr::Array, block_number::Int,
     block_inds::Range{Int64})
 ```
 
-Writes `arr` as \"arr\$(block_number)\" and `block_inds` as
-\"draws\$(block_number)\" to `file`, and updates `nblocks` and `ndraws`.
+Writes `arr` to the subarray of `file` indicated by `block_inds`.
 """
 function write_forecast_block(file::JLD.JldFile, arr::Array,
-                              block_number::Int, block_inds::Range{Int64})
-
-    # If datasets already exist, delete them
-    exists(file, "arr$(block_number)")   ? delete!(file, "arr$(block_number)")   : nothing
-    exists(file, "draws$(block_number)") ? delete!(file, "draws$(block_number)") : nothing
-
-    write(file, "arr$(block_number)", arr)
-    write(file, "draws$(block_number)", block_inds)
-
-    # Update nblocks if necessary
-    if exists(file, "nblocks")
-        nblocks = read(file, "nblocks")
-        delete!(file, "nblocks")
-        write(file, "nblocks", block_number)
-    else
-        write(file, "nblocks", 1)
-    end
-end
-
-"""
-```
-read_forecast_output(file::JLD.JldFile)
-```
-
-Returns the forecast output array in `file`.
-"""
-function read_forecast_output(file::JLD.JldFile)
-    arr = if exists(file, "nblocks")
-        read_forecast_blocks(file)
-    else
-        read(file, "arr")
-    end
-
-    return arr
+                              block_inds::Range{Int64})
+    pfile = file.plain
+    dataset = HDF5.d_open(pfile, "arr")
+    ndims = length(size(dataset))
+    dataset[block_inds, fill(Colon(), ndims-1)...] = arr
 end
 
 """
@@ -386,28 +367,36 @@ end
 
 """
 ```
-read_forecast_blocks(file::JLD.JldFile)
+read_forecast_output(file, class, var_name[, shock_name])
 ```
 
-Reads a JLD file written by `write_forecast_outputs` calling
-`write_forecast_block`. Returns an `Array`.
+Read only the forecast output for a particular variable (e.g. for a particular
+observable) and possibly a particular shock.
 """
-function read_forecast_blocks(file::JLD.JldFile)
-    @assert exists(file, "nblocks") && exists(file, "dims")
-    nblocks = read(file, "nblocks")
-    dims    = read(file, "dims")
-    ndims   = length(dims)
+function read_forecast_output(file::JLD.JldFile, class::Symbol, var_name::Symbol)
+    # Get index corresponding to var_name
+    class_long = get_class_longname(class)
+    indices = read(file, "$(class_long)_indices")
+    var_ind = indices[var_name]
 
-    arr = zeros(dims...)
-    current_draw = 0
-    for block = 1:nblocks
-        block_draws  = read(file, "draws$block")
-        ndraws_block = length(block_draws)
-        block_draws_thin = (current_draw+1):(current_draw+ndraws_block)
+    # Read only var_name draws
+    pfile = file.plain
+    dataset = HDF5.d_open(pfile, "arr")
+    ndims = length(size(dataset))
+    arr = h5read(pfile.filename, "arr", (Colon(), var_ind, fill(Colon(), ndims-2)...))
+    return squeeze(arr, 2)
+end
 
-        arr[block_draws_thin, fill(Colon(), ndims-1)...] = read(file, "arr$block")
+function read_forecast_output(file::JLD.JldFile, class::Symbol, var_name::Symbol, shock_name::Symbol)
+    # Get indices corresponding to var_name and shock_name
+    class_long = get_class_longname(class)
+    indices = read(file, "$(class_long)_indices")
+    var_ind = indices[var_name]
 
-        current_draw += ndraws_block
-    end
-    return arr
+    shock_indices = read(file, "shock_indices")
+    shock_ind = shock_indices[shock_name]
+
+    # Read only var_name and shock_name draws
+    arr = h5read(file.plain.filename, "arr", (Colon(), var_ind, Colon(), shock_ind))
+    return squeeze(arr, (2, 4))
 end

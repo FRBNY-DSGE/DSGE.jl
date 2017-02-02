@@ -617,7 +617,7 @@ function get_mb_metadata{S<:AbstractString}(input_type::Symbol, cond_type::Symbo
     product = get_product(output_var)
 
     metadata, fcast_output = jldopen(forecast_output_file, "r") do jld
-        read_forecast_metadata(jld), read_forecast_output(jld)
+        read_forecast_metadata(jld), read(jld, "arr")
     end
 
     if class == :pseudo
