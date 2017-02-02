@@ -71,7 +71,9 @@ end
 
 """
 ```
-load_draws(m, input_type; block_inds = 1:0, verbose = :low)
+load_draws(m, input_type; subset_inds = 1:0, verbose = :low)
+
+load_draws(m, input_type, block_inds; verbose = :low)
 ```
 
 Load and return parameter draws from Metropolis-Hastings.
@@ -80,24 +82,26 @@ Load and return parameter draws from Metropolis-Hastings.
 
 - `m::AbstractModel`: model object
 - `input_type::Symbol`: one of the options for `input_type` described in the
-  documentation for `forecast_all`
+  documentation for `forecast_one`
+- `block_inds::Range{Int64}`: indices of the current block (already indexed by
+  `jstep`) to be read in. Only used in second method
 
 ### Keyword Arguments
 
-- `block_inds::Range{Int64}`: required for `input_type in [:full, :subset]`.
-  Indices specifying the draws for this particular block that we should read in.
+- `subset_inds::Range{Int64}`: indices specifying the subset of draws to be read
+  in. Only used in first method
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`. If `:low` or greater, prints
   location of input file.
 
 ### Outputs
 
-- `params`: either a single parameter draw of type `Vector{Float64}` (if
-  `input_type in [:mean, :mode, :init]`) or a `Vector{Vector{Float64}}` of
-  parameter draws for this block (if `input_type in [:full, :subset]`)
+- `params`: first method returns a single parameter draw of type
+  `Vector{Float64}`. Second method returns a `Vector{Vector{Float64}}` of
+  parameter draws for this block.
 """
-function load_draws(m::AbstractModel, input_type::Symbol;
-    block_inds::Range{Int64} = 1:0, verbose::Symbol = :low)
+function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::Range{Int64} = 1:0,
+    verbose::Symbol = :low)
 
     input_file_name = get_forecast_input_file(m, input_type)
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -109,21 +113,22 @@ function load_draws(m::AbstractModel, input_type::Symbol;
 
         params = convert(Vector{Float64}, h5read(input_file_name, "params"))
 
-    # Load multiple draws, indexing by jstep if necessary
-    elseif input_type in [:full, :subset]
+    # Load full distribution
+    elseif input_type == :full
 
-        if isempty(block_inds)
-            error("Must supply nonempty range of block_inds if input_type in [:full, :subset]")
+        params = map(Float64, h5read(input_file_name, "mhparams"))
+
+    # Load subset of full distribution
+    elseif input_type == :subset
+
+        if isempty(subset_inds)
+            error("Must supply nonempty range of subset_inds if input_type == :subset")
         else
-            ndraws = length(block_inds)
-            params = Vector{Vector{Float64}}(ndraws)
-            for (i, j) in zip(1:ndraws, block_inds)
-                params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
-            end
+            params = map(Float64, h5read(input_file_name, "mhparams", (subset_inds, :)))
         end
 
     # Return initial parameters of model object
-    elseif input_type in [:init]
+    elseif input_type == :init
 
         init_parameters!(m)
         tmp = map(α -> α.value, m.parameters)
@@ -132,6 +137,31 @@ function load_draws(m::AbstractModel, input_type::Symbol;
     end
 
     return params
+end
+
+function load_draws(m::AbstractModel, input_type::Symbol, block_inds::Range{Int64};
+                    verbose::Symbol = :low)
+
+    input_file_name = get_forecast_input_file(m, input_type)
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        println("Loading draws from $input_file_name")
+    end
+
+    if input_type in [:full, :subset]
+        if isempty(block_inds)
+            error("Must supply nonempty range of block_inds for this load_draws method")
+        else
+            ndraws = length(block_inds)
+            params = Vector{Vector{Float64}}(ndraws)
+            for (i, j) in zip(1:ndraws, block_inds)
+                params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
+            end
+            return params
+        end
+    else
+        error("This load_draws method can only be called with input_type in [:full, :subset]")
+    end
+
 end
 
 """
