@@ -387,9 +387,9 @@ function compute_means_bands{T<:AbstractFloat}(class::Symbol,
     fcast_series, transform, var_ind, date_list = jldopen(filename, "r") do file
         # Read forecast output
         fcast_series = if isnull(shock_name)
-            read_forecast_output(file, class, var_name)
+            read_forecast_output(file, class, product, var_name)
         else
-            read_forecast_output(file, class, var_name, get(shock_name))
+            read_forecast_output(file, class, product, var_name, get(shock_name))
         end
 
         # Parse transform

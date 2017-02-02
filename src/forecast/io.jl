@@ -371,32 +371,66 @@ read_forecast_output(file, class, var_name[, shock_name])
 ```
 
 Read only the forecast output for a particular variable (e.g. for a particular
-observable) and possibly a particular shock.
+observable) and possibly a particular shock. Result should be a matrix of size
+`ndraws` x `nperiods`.
 """
-function read_forecast_output(file::JLD.JldFile, class::Symbol, var_name::Symbol)
+function read_forecast_output(file::JLD.JldFile, class::Symbol, product::Symbol, var_name::Symbol)
     # Get index corresponding to var_name
     class_long = get_class_longname(class)
     indices = read(file, "$(class_long)_indices")
     var_ind = indices[var_name]
 
-    # Read only var_name draws
     pfile = file.plain
+    filename = pfile.filename
     dataset = HDF5.d_open(pfile, "arr")
     ndims = length(size(dataset))
-    arr = h5read(pfile.filename, "arr", (Colon(), var_ind, fill(Colon(), ndims-2)...))
-    return squeeze(arr, 2)
+
+    # Trends are ndraws x nvars
+    if product == :trend
+        if ndims == 1 # one draw
+            arr = h5read(filename, "arr", (var_ind,))
+            arr = reshape(arr, (1, 1))
+        elseif ndims == 2 # many draws
+            arr = h5read(filename, "arr", (Colon(), var_ind))
+        end
+
+    # Other products are ndraws x nvars x nperiods
+    elseif product in [:hist, :forecast, :forecast4q, :bddforecast, :bddforecast4q, :dettrend]
+        inds_to_read = if ndims == 2 # one draw
+            arr = h5read(filename, "arr", (var_ind, Colon()))
+        elseif ndims == 3 # many draws
+            arr = h5read(filename, "arr", (Colon(), var_ind, Colon()))
+            arr = squeeze(arr, 2)
+        end
+    else
+        error("Invalid product: $product for this method")
+    end
+
+    return arr
 end
 
-function read_forecast_output(file::JLD.JldFile, class::Symbol, var_name::Symbol, shock_name::Symbol)
+function read_forecast_output(file::JLD.JldFile, class::Symbol, product::Symbol, var_name::Symbol,
+                              shock_name::Symbol)
     # Get indices corresponding to var_name and shock_name
     class_long = get_class_longname(class)
     indices = read(file, "$(class_long)_indices")
     var_ind = indices[var_name]
-
     shock_indices = read(file, "shock_indices")
     shock_ind = shock_indices[shock_name]
 
-    # Read only var_name and shock_name draws
-    arr = h5read(file.plain.filename, "arr", (Colon(), var_ind, Colon(), shock_ind))
-    return squeeze(arr, (2, 4))
+    pfile = file.plain
+    filename = pfile.filename
+    dataset = HDF5.d_open(pfile, "arr")
+    ndims = length(size(dataset))
+
+    if ndims == 3 # one draw
+        arr = h5read(filename, "arr", (var_ind, Colon(), shock_ind))
+        arr = squeeze(arr, (1, 3))
+        arr = reshape(arr, (1, length(arr)))
+    elseif ndims == 4 # many draws
+        arr = h5read(filename, "arr", (Colon(), var_ind, Colon(), shock_ind))
+        arr = squeeze(arr, (2, 4))
+    end
+
+    return arr
 end
