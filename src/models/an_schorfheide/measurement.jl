@@ -46,75 +46,35 @@ end
     EE = zeros(_n_observables, _n_observables)
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
 
-    ## Output growth - Quarterly!
 
-    tau = m.parameters[1]
-    kappa = m.parameters[2]
-    psi1 = m.parameters[3]
-    psi2 = m.parameters[4]
-    rA = m.parameters[5]
-    piA = m.parameters[6]
-    gammaQ = m.parameters[7]
-    rho_R = m.parameters[8]
-    rho_g = m.parameters[9]
-    rho_z = m.parameters[10]
-    sigma_R = m.parameters[11]
-    sigma_g = m.parameters[12]
-    sigma_z = m.parameters[13]
+    ## Output growth
+    ZZ[obs[:obs_gdp], endo[:y_t]]       = 1.0
+    ZZ[obs[:obs_gdp], endo[:y_t1]]      = -1.0
+    ZZ[obs[:obs_gdp], endo[:z_t]]       = 1.0
+    DD[obs[:obs_gdp]]                   = m[:γ_Q]
 
-    eq_y = 1
-    eq_pi = 2
-    eq_ffr = 3
+    ## Inflation
+    ZZ[obs[:obs_infl], endo[:π_t]]   = 4.0
+    DD[obs[:obs_infl]]               = m[:π_star]
 
-    #  number of observation variables
+    ## Federal Funds Rate
+    ZZ[obs[:obs_ffr], endo[:R_t]]       = 4.0
+    DD[obs[:obs_ffr]]                   = m[:π_star] + m[:rA] + 4.0*m[:γ_Q]
 
-    ny = 3
+    # Measurement error
+    EE[obs[:obs_gdp], endo[:y_t]]     = m[:e_y]^2
+    EE[obs[:obs_infl], endo[:π_t]] = m[:e_π]^2
+    EE[obs[:obs_ffr], endo[:R_t]]     = m[:e_R]^2
 
-    #  model variable indices
+    # Variance of innovations
+    QQ[exo[:z_sh],exo[:z_sh]] = (m[:σ_z])^2
+    QQ[exo[:g_sh],exo[:g_sh]] = (m[:σ_g])^2
+    QQ[exo[:R_sh],exo[:R_sh]] = (m[:σ_R])^2
 
-    y_t   = 1
-    pi_t   = 2
-    R_t   = 3
-    y1_t  = 4
-    g_t   = 5
-    z_t   = 6
-    Ey_t1   = 7
-    Epi_t1  = 8
-
-    #  shock indices
-
-    z_sh = 1
-    g_sh = 2
-    R_sh = 3
-
-    DD[eq_y,1] = gammaQ
-    DD[eq_pi,1] = piA
-    DD[eq_ffr,1] = piA+rA+4*gammaQ
-
-    ZZ[eq_y,y_t] =  1
-    ZZ[eq_y,y1_t] =  -1
-    ZZ[eq_y, z_t] = 1
-
-    ZZ[eq_pi,pi_t] =  4
-
-    ZZ[eq_ffr,R_t] = 4
-
-    # with measurement errors (from dsge1_me.yaml)
-    HH = zeros(ny,ny)
-    HH[eq_y, y_t] = (0.20*0.579923)^2
-    HH[eq_pi, pi_t] = (0.20*1.470832)^2
-    HH[eq_ffr, R_t] = (0.20*2.237937)^2
-
-    #Don't square h
-    QQ[z_sh,z_sh] = (sigma_z)^2
-    QQ[g_sh,g_sh] = (sigma_g)^2
-    QQ[R_sh,R_sh] = (sigma_R)^2
-
+    HH = EE + MM*QQ*MM'
     VV    = QQ*MM'
     VVall = [[RRR*QQ*RRR' RRR*VV];
              [VV'*RRR'    HH]]
-
-    #VVall *= 0
 
     return Measurement(ZZ, DD, QQ, EE, MM, VVall)
 end

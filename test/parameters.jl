@@ -1,9 +1,9 @@
-using DSGE
+using DSGE, Base.Test
 
 for T in subtypes(Transform)
     u = parameter(:σ_pist, 2.5230, (1e-8, 5.), (1e-8, 5.), T(), fixed=false)
     @test ( transform_to_real_line(u) |> x -> transform_to_model_space(u,x) ) == u.value
-    
+
     if !isa(T,Type{DSGE.Untransformed})
         # check transform_to_real_line and transform_to_model_space to different things if T is not DSGE.Untransformed
         @test transform_to_real_line(u,u.value) != transform_to_model_space(u,u.value)
@@ -49,40 +49,34 @@ for w in [parameter(:moop, 3.0, fixed=false), parameter(:moop, 3.0; scaling = lo
 end
 
 # subspecs
-function sstest(m::Model990)
+function sstest(m::AnSchorfheide)
 
     # Change all the fields of an unfixed parameter
     m <= parameter(:ι_w, 0.000, (0.0, .9999), (0.0,0.9999), DSGE.Untransformed(), Normal(0.0,1.0), fixed=false,
-                   description="ι_w: No description available.",
+                   description="ι_w: A new parameter.",
                    tex_label="\\iota_w")
 
 
     # Change an unfixed parameter to be fixed
     m <= parameter(:ι_p, 0.000, fixed=true,
-                   description= "ι_p: The persistence of last period's inflation in
-                   the equation that describes the intertemporal
-                   change in prices for intermediate goods producers
-                   who cannot adjust prices. The change in prices is a
-                   geometric average of steady-state inflation
-                   (π_star, with weight (1-ι_p)) and last period's
-                   inflation (π_{t-1})).",
+                   description= "ι_p: Another new parameter",
                    tex_label="\\iota_p")
 
 
     # Change a fixed parameter
     m <= parameter(:δ, 0.02,  fixed=true,
-                   description="δ: The capital depreciation rate.", tex_label="\\delta" )     
+                   description="δ: The capital depreciation rate.", tex_label="\\delta" )
 
 
     # Overwrite a fixed parameter with an unfixed parameter
     m <= parameter(:ϵ_p, 0.750, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    GammaAlt(0.75, 0.4),        fixed=false,  scaling = x -> 1 + x/100,
                    description="ϵ_p: No description available.",
-                   tex_label="\\varepsilon_{p}")     
+                   tex_label="\\varepsilon_{p}")
 
     steadystate!(m)
 end
 
-m = Model990()
+m = AnSchorfheide()
 sstest(m)
 
 @test m[:ι_w].value == 0.0

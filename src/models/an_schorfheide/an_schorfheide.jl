@@ -106,7 +106,7 @@ Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 function init_model_indices!(m::AnSchorfheide)
     # Endogenous states
     endogenous_states = collect([
-        :y_t, :π_t, :R_t, :y1_t, :g_t, :z_t, :Ey_t1, :Eπ_t1])
+        :y_t, :π_t, :R_t, :y_t1, :g_t, :z_t, :Ey_t1, :Eπ_t1])
 
     # Exogenous shocks
     exogenous_shocks = collect([
@@ -118,7 +118,7 @@ function init_model_indices!(m::AnSchorfheide)
 
     # Equilibrium conditions
     equilibrium_conditions = collect([
-        :eq_euler, :nk_pcurve, :mp_rule, :shock_1, :shock_2, :shock_3, :shock_4, :shock_5])
+        :eq_euler, :eq_phillips, :eq_mp, :eq_y_t1, :eq_g, :eq_z, :eq_Ey, :eq_Eπ])
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
@@ -127,7 +127,7 @@ function init_model_indices!(m::AnSchorfheide)
     # Measurement equation observables
     observables = collect([
         :obs_gdp,              # quarterly output growth
-        :obs_corepce,          # inflation (core PCE)
+        :obs_infl,             # inflation (CPI)
         :obs_ffr])             # federal funds rate
 
     for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
@@ -150,7 +150,9 @@ function AnSchorfheide(subspec::AbstractString="ss0")
     rng                = MersenneTwister()
     testing            = false
 
-    fred_series        = [:GDP, :PCEPILFE, :DFF, :CNP16OV, :GDPCTPI]
+    # In addition to nominal GDP, CPI, and FFR, we need population and the GDP
+    # deflator to create per capita real GDP growth
+    fred_series        = [:GDP, :DFF, :CNP16OV, :GDPCTPI, :CPIAUCSL]
 
     data_series        = Dict(:fred => fred_series)
     data_transforms    = OrderedDict{Symbol,Function}()
@@ -181,45 +183,53 @@ function AnSchorfheide(subspec::AbstractString="ss0")
 
     # Initialize parameters
     m <= parameter(:τ,      1.9937, (1e-20, 1e5), (1e-20, 1e5),   DSGE.Exponential(),     GammaAlt(2., 0.5),         fixed=false,
-                   description="The intertemporal elasticity of substitution is 1/τ.",
+                   description="τ: The inverse of the intemporal elasticity of substitution.",
                    tex_label="\\tau")
     m <= parameter(:κ,      0.7306, (1e-20, 1e1), (1e-20, 1e1),   DSGE.SquareRoot(),     Uniform(0,1),         fixed=false,
-                   description="",
+                   description="κ: Composite parameter in New Keynesian Phillips Curve.",
                    tex_label="\\kappa")
     m <= parameter(:ψ_1,      1.1434, (1 + 1e-20, 1e5), (1+1e-20, 1e5),   DSGE.Exponential(), GammaAlt(1.5, 0.25),         fixed=false,
-                   description="",
+                   description="ψ_1: The weight on inflation in the monetary policy rule.",
                    tex_label="\\psi_1")
     m <= parameter(:ψ_2,      0.4536, (1e-20, 1e5), (1e-20, 1e5),   DSGE.Exponential(),     GammaAlt(0.5, 0.25),         fixed=false,
-                   description="",
+                   description="ψ_2: The weight on the output gap in the monetary policy rule.",
                    tex_label="\\psi_2")
     m <= parameter(:rA,      0.0313, (1e-20, 1e5), (1e-20, 1e5),   DSGE.Exponential(),     GammaAlt(0.5, 0.5),         fixed=false,
-                   description="β (discount factor) =  1/(1+ rA/400)",
+                   description="rA: β (discount factor) =  1/(1+ rA/400).",
                    tex_label="\\rA")
-    m <= parameter(:π,      8.1508, (1e-20, 1e5), (1e-20, 1e5),   DSGE.Exponential(),     GammaAlt(7., 2.),         fixed=false,
-                   description="Target inflation rate",
-                   tex_label="\\pi")
+    m <= parameter(:π_star,      8.1508, (1e-20, 1e5), (1e-20, 1e5),   DSGE.Exponential(),     GammaAlt(7., 2.),         fixed=false,
+                   description="π_star: Target inflation rate.",
+                   tex_label="\\pi^*")
     m <= parameter(:γ_Q,      1.5, (1e-20, 1e5), (1e-20, 1e5),   DSGE.Exponential(),     Normal(0.40, 0.20),         fixed=false,
 
-                   description="Growth rate of technology",
+                   description="γ_Q: Steady state growth rate of technology.",
                    tex_label="\\gamma_Q")
     m <= parameter(:ρ_R,      0.3847, (1e-20, 1-1e-7), (1e-20, 1-1e-7),   DSGE.SquareRoot(),     Uniform(0,1),         fixed=false,
-                   description="AR(1) coefficient on interest rate",
+                   description="ρ_R: AR(1) coefficient on interest rate.",
                    tex_label="\\rho_R")
     m <= parameter(:ρ_g,      0.3777, (1e-20, 1-1e-7), (1e-20, 1-1e-7),   DSGE.SquareRoot(),     Uniform(0,1),         fixed=false,
-                   description="AR(1) coefficient on g_t = 1/(1 - ζ_t), where ζ_t is government spending as a fraction of output.",
+                   description="ρ_g: AR(1) coefficient on g_t = 1/(1 - ζ_t), where ζ_t is government spending as a fraction of output.",
                    tex_label="\\rho_g")
     m <= parameter(:ρ_z,      0.9579, (1e-20, 1-1e-7), (1e-20, 1-1e-7),   DSGE.SquareRoot(),     Uniform(0,1),         fixed=false,
-                   description="",
+                   description="ρ_z: AR(1) coefficient on shocks to the technology growth rate.",
                    tex_label="\\rho_z")
     m <= parameter(:σ_R,      0.4900, (1e-20, 1e5), (1e-20, 1e5),   DSGE.Exponential(),     DSGE.RootInverseGamma(4, .4),         fixed=false,
-                   description="",
+                   description="σ_R: Standard deviation of shocks to the nominal interest rate.",
                    tex_label="\\sigma_R")
     m <= parameter(:σ_g,      1.4594, (1e-20, 1e5), (1e-20, 1e5),   DSGE.Exponential(),     DSGE.RootInverseGamma(4, 1.),         fixed=false,
-                   description="",
+                   description="σ_g: Standard deviation of shocks to the government spending process.",
                    tex_label="\\sigma_g")
     m <= parameter(:σ_z,      0.9247, (1e-20, 1e5), (1e-20, 1e5),   DSGE.Exponential(),     DSGE.RootInverseGamma(4, 0.5),         fixed=false,
-                   description="",
+                   description="σ_z: Standard deviation of shocks to the technology growth rate process.",
                    tex_label="\\sigma_z")
+
+    m <= parameter(:e_y,      0.20*0.579923,  fixed=true,
+                   description="e_y: Measurement error on GDP growth.", tex_label="e_y" )
+    m <= parameter(:e_π,      0.20*1.470832,  fixed=true,
+                   description="e_π: Measurement error on inflation.", tex_label="e_\\pi" )
+    m <= parameter(:e_R,      0.20*2.237937,  fixed=true,
+                   description="e_R: Measurement error on the interest rate.", tex_label="e_R" )
+
 
     init_model_indices!(m)
     init_subspec!(m)
@@ -242,6 +252,7 @@ end
 function settings_an_schorfheide!(m::AnSchorfheide)
     default_settings!(m)
 end
+
 """
 ```
 init_data_transforms!(m::AnSchorfheide)
@@ -255,25 +266,26 @@ are available. The keys of data transforms should match exactly the keys of `m.o
 function init_data_transforms!(m::AnSchorfheide)
 
     m.data_transforms[:obs_gdp] = function (levels)
-        # FROM: Level of real GDP (from FRED)
+        # FROM: Level of GDP (from FRED)
         # TO: Quarter-to-quter percent change of real GDP per capita
         levels[:temp] = percapita(m, :GDP, levels)
         gdp = 1000 * nominal_to_real(:temp, levels)
         hpadjust(oneqtrpctchange(gdp), levels)
     end
 
-    m.data_transforms[:obs_corepce] = function (levels)
-        # FROM: Core PCE index (from FRED)
-        # TO: Quarter-to-quter percent change of core PCE, i.e. quarterly inflation
-        oneqtrpctchange(levels[:PCEPILFE])
+    m.data_transforms[:obs_infl] = function (levels)
+        # FROM: CPI urban consumers index (from FRED)
+        # TO: Annualized quarter-to-quarter percent change of CPI index
+        4.0 * oneqtrpctchange(levels[:CPIAUCSL])
     end
 
     m.data_transforms[:obs_ffr] = function (levels)
         # FROM: Nominal effective federal funds rate (aggregate daily data at a
         #       quarterly frequency at an annual rate)
-        # TO:   Nominal effective fed funds rate, at a quarterly rate
 
-        annualtoquarter(levels[:DFF])
+        # TO:   Nominal effective fed funds rate
+
+        levels[:DFF]
 
     end
 end

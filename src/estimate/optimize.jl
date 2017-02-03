@@ -56,7 +56,7 @@ function optimize!(m::AbstractModel,
         transform_to_model_space!(m, x_model)
 
         # Match original dimensions
-        out.minimizer = x_model
+        out.minimizer = map(θ -> θ.value, m.parameters)
 
         H = zeros(n_parameters(m), n_parameters(m))
 

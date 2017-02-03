@@ -4,21 +4,15 @@ using HDF5, Base.Test
 include("../util.jl")
 path = dirname(@__FILE__)
 
-# Test hessian! in context of model
-m = Model990()
+# # Test hessian! in context of model
+m = AnSchorfheide()
 m.testing = true
 
 # Setup paths
-mode = h5open(inpath(m, "user", "paramsmode.h5")) do file
-    read(file, "params")
-end
-data = let
-    df = load_data(m; try_disk=true, verbose=:none)
-    DSGE.df_to_matrix(m, df)
-end
-hessian_expected = h5open(inpath(m, "user", "hessian.h5")) do file
-    read(file, "hessian")
-end
+
+data = h5read("$path/../reference/hessian.h5","data")
+mode = h5read("$path/../reference/hessian.h5","paramsmode")
+hessian_expected = h5read("$path/../reference/hessian.h5","hessian")
 
 # Test subset of hessian elements.
 para_free      = [!θ.fixed for θ in m.parameters]

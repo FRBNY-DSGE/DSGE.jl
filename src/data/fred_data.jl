@@ -7,7 +7,7 @@ Checks in `inpath(m)` for a FRED dataset corresponding to `data_vintage(m)`.
 If a FRED vintage exists on disk, any required FRED series that is contained therein will be
 imported. All missing series will be downloaded directly from FRED using the *FredData*
 package. The full dataset is written to the appropriate data vintage file and returned.
-    
+
 # Arguments
 - `m::AbstractModel`: the model object
 - `start_date`: starting date.
