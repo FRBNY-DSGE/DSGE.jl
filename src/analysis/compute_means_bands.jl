@@ -96,9 +96,9 @@ Below, `T<:AbstractFloat` and `S<:AbstractString`:
 """
 function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                                            cond_type::Symbol, output_vars::Vector{Symbol};
+                                           forecast_string::AbstractString = "",
                                            density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                            minimize::Bool = false,
-                                           forecast_string = "",
                                            verbose::Symbol = :low)
 
     ## Step 0: Determine full set of output_vars necessary for plotting desired results
@@ -138,22 +138,18 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
         y0_indexes[prod] = get_y0_index(m, prod)
     end
 
-
     ## Step 3: Fetch the model string and the input and output directories we'll read from/write to
 
-    tmp          = rawpath(m, "forecast", "foo")
-    input_dir    = dirname(tmp)
-    model_string = replace(basename(tmp), "foo_", "")
-    output_dir   = dirname(workpath(m, "forecast", "foo"))
-
+    input_dir       = rawpath(m, "forecast")
+    output_dir      = workpath(m, "forecast")
+    filestring_base = filestring(m)
 
     ## Step 4: We have everything we need; appeal to model-object-agnostic function
 
     means_bands_all(input_type, cond_type, output_vars,
-                    input_dir, output_dir;
-                    density_bands = density_bands, minimize = minimize,
-                    model_string  = model_string,
+                    input_dir, output_dir, filestring_base;
                     forecast_string = forecast_string,
+                    density_bands = density_bands, minimize = minimize,
                     population_mnemonic = population_mnemonic,
                     population_data_file = population_data_file,
                     population_forecast_file = population_forecast_file,
@@ -161,21 +157,18 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                     verbose = verbose)
 end
 
-function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
-                                               cond_type::Symbol,
-                                               output_vars::Vector{Symbol},
-                                               input_dir::S,
-                                               output_dir::S;
-                                               density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
-                                               minimize::Bool = false,
-                                               model_string = "",
-                                               forecast_string = "",
-                                               population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
-                                               population_data_file = "",
-                                               population_forecast_file = "",
-                                               y0_indexes::Dict{Symbol,Int} = Dict{Symbol,Int}(),
-                                               data = Matrix{T}(),
-                                               verbose::Symbol = :low)
+function means_bands_all{T<:AbstractFloat}(input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol},
+                                           input_dir::AbstractString, output_dir::AbstractString,
+                                           filestring_base::AbstractString;
+                                           forecast_string::AbstractString = "",
+                                           density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                                           minimize::Bool = false,
+                                           population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
+                                           population_data_file::AbstractString = "",
+                                           population_forecast_file::AbstractString = "",
+                                           y0_indexes::Dict{Symbol,Int} = Dict{Symbol,Int}(),
+                                           data = Matrix{T}(),
+                                           verbose::Symbol = :low)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
@@ -184,10 +177,6 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
         println("Means and bands will be saved in $output_dir")
         tic()
     end
-
-    ## Preliminary step: if string arguments aren't of type S, force them to be
-    forecast_string = S(forecast_string)
-    model_string    = S(model_string)
 
     ## Step 1: Filter population history and forecast and compute growth rates
 
@@ -202,11 +191,11 @@ function means_bands_all{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol
     ## Step 2: Set up filenames for MeansBands input and output files.
     # MeansBands output filenames are the same as forecast output filenames, but with an "mb" prefix.
 
-    mb_input_files = get_meansbands_input_files(input_dir, input_type, cond_type,
-                                                output_vars; model_string = model_string,
+    mb_input_files = get_meansbands_input_files(input_dir, filestring_base,
+                                                input_type, cond_type, output_vars;
                                                 forecast_string = forecast_string)
-    mb_output_files = get_meansbands_output_files(output_dir, input_type, cond_type, output_vars,
-                                                  model_string = model_string,
+    mb_output_files = get_meansbands_output_files(output_dir, filestring_base,
+                                                  input_type, cond_type, output_vars,
                                                   forecast_string = forecast_string)
 
     ## Step 3: Compute means and bands for each output variable, and write to a file.
@@ -269,19 +258,19 @@ means_bands(input_type, cond_type, output_var, meansbands_input_files::Dict{Symb
 
 Computes means and bands for a single `output_var`.
 """
-function means_bands{T<:AbstractFloat, S<:AbstractString}(input_type::Symbol,
-                                                          cond_type::Symbol,
-                                                          output_var::Symbol,
-                                                          meansbands_input_files::Dict{Symbol,S};
-                                                          density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
-                                                          minimize::Bool = false,
-                                                          forecast_string::S = "",
-                                                          population_data::DataFrame = DataFrame(),
-                                                          population_forecast::DataFrame = DataFrame(),
-                                                          population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
-                                                          y0_index::Int = -1,
-                                                          data::Matrix{T} = Matrix{T}(),
-                                                          verbose::Symbol = :none)
+function means_bands{T<:AbstractFloat}(input_type::Symbol,
+                                       cond_type::Symbol,
+                                       output_var::Symbol,
+                                       meansbands_input_files::Dict{Symbol, ASCIIString};
+                                       forecast_string::AbstractString = "",
+                                       density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                                       minimize::Bool = false,
+                                       population_data::DataFrame = DataFrame(),
+                                       population_forecast::DataFrame = DataFrame(),
+                                       population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
+                                       y0_index::Int = -1,
+                                       data::Matrix{T} = Matrix{T}(),
+                                       verbose::Symbol = :none)
 
     # Return only one set of bands if we read in only one draw
     if input_type in [:init, :mode, :mean]

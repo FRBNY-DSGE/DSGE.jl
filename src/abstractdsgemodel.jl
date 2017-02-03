@@ -456,9 +456,9 @@ for (str, fn) in zip(strs, fns)
     @eval begin
         # First eval function
         function $fn{T<:AbstractString}(m::AbstractModel,
-                                             out_type::T,
-                                             file_name::T="",
-                                             filestring_addl::Vector{T}=Vector{T}())
+                                        out_type::T,
+                                        file_name::T="",
+                                        filestring_addl::Vector{T}=Vector{T}())
             return savepath(m, out_type, $(string(str)), file_name, filestring_addl)
         end
 
@@ -484,27 +484,36 @@ end
 function savepath{T<:AbstractString}(m::AbstractModel,
                                      out_type::T,
                                      sub_type::T,
-                                     file_name::T="",
-                                     filestring_addl::Vector{T}=Vector{T}())
-    # Containing dir
-    path = joinpath(saveroot(m), "output_data", spec(m), subspec(m), out_type, sub_type)
-    if !isdir(path)
-        mkpath(path)
-    end
+                                     file_name::T = "",
+                                     filestring_addl::Vector{T} = Vector{T}())
+    # Containing directory
+    dir = joinpath(saveroot(m), "output_data", spec(m), subspec(m), out_type, sub_type)
 
-    # File with model string inserted
     if !isempty(file_name)
-        if isempty(filestring_addl)
-            myfilestring = filestring(m)
-        else
-            myfilestring = filestring(m, filestring_addl)
-        end
-        (base, ext) = splitext(file_name)
-        file_name_detail = base * myfilestring * ext
-        path = joinpath(path, file_name_detail)
+        filestring_base = filestring(m)
+        return savepath(dir, file_name, filestring_base, filestring_addl)
+    else
+        return dir
+    end
+end
+
+function savepath{T<:AbstractString}(dir::T,
+                                     file_name::T = "",
+                                     filestring_base::T = "",
+                                     filestring_addl::Vector{T} = Vector{T}())
+    if !isdir(dir)
+        mkpath(dir)
     end
 
-    return path
+    if !isempty(file_name)
+        (base, ext) = splitext(file_name)
+        myfilestring = filestring(filestring_base, filestring_addl)
+        file_name_detail = base * myfilestring * ext
+
+        return joinpath(dir, file_name_detail)
+    else
+        return dir
+    end
 end
 
 
@@ -552,10 +561,9 @@ function inpath{T<:AbstractString}(m::AbstractModel, in_type::T, file_name::T=""
     return path
 end
 
-filestring(m::AbstractModel) = filestring(m, Vector{AbstractString}())
-filestring(m::AbstractModel, d::AbstractString) = filestring(m, [d])
-function filestring{T<:AbstractString}(m::AbstractModel,
-                                        d::Vector{T})
+filestring(m::AbstractModel) = filestring(m, Vector{ASCIIString}())
+filestring(m::AbstractModel, d::AbstractString) = filestring(m, [ASCIIString(d)])
+function filestring{T<:AbstractString}(m::AbstractModel, d::Vector{T})
     if !m.testing
         filestrings = Vector{T}()
         for (skey, sval) in m.settings
@@ -563,12 +571,18 @@ function filestring{T<:AbstractString}(m::AbstractModel,
                 push!(filestrings, to_filestring(sval))
             end
         end
-        append!(filestrings, d)
-        sort!(filestrings)
-        return "_"*join(filestrings, "_")
+        base = "_" * join(filestrings, "_")
+        return filestring(base, d)
     else
         return "_test"
     end
+end
+
+function filestring{T<:AbstractString}(base::T, d::Vector{T})
+    filestrings = Vector{T}()
+    append!(filestrings, d)
+    sort!(filestrings)
+    return "_" * join(filestrings, "_")
 end
 
 function filestring{T<:AbstractString}(d::Vector{T})
