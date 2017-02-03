@@ -471,9 +471,11 @@ Returns `DataFrame`s of growth rates for HP-filtered population data and forecas
 function load_population_growth{S<:AbstractString}(data_file::S, forecast_file::S,
                                                    mnemonic::Symbol;
                                                    verbose::Symbol = :low)
+    data_verbose = verbose == :none ? :none : :low
+
     # Read in unfiltered series
-    unfiltered_data     = read_population_data(data_file; verbose = :low)
-    unfiltered_forecast = read_population_forecast(forecast_file, mnemonic; verbose = :low)
+    unfiltered_data     = read_population_data(data_file; verbose = data_verbose)
+    unfiltered_forecast = read_population_forecast(forecast_file, mnemonic; verbose = data_verbose)
 
     # HP filter
     data, forecast = transform_population_data(unfiltered_data, unfiltered_forecast,
