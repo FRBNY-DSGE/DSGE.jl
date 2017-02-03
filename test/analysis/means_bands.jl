@@ -22,6 +22,7 @@ output_vars = add_requisite_output_vars([:histpseudo,
                                          :forecastpseudo, :forecastobs,
                                          :shockdecpseudo, :shockdecobs,
                                          :irfpseudo, :irfobs])
+@everywhere using DSGE
 
 # Modal
 @time forecast_one(m, :mode, :none, output_vars, verbose = :none)

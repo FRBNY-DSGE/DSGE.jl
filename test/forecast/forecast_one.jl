@@ -74,6 +74,7 @@ for cond_type in [:none, :semi, :full]
 end
 
 # Test full-distribution blocking
+@everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
 @time forecast_one(m, :full, :none, output_vars, verbose = :none)
 
