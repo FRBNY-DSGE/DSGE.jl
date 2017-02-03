@@ -311,14 +311,13 @@ function get_meansbands_input_files(m::AbstractModel, input_type::Symbol,
                                     forecast_string::AbstractString = "", fileformat = :jld)
 
     directory = rawpath(m, "forecast")
-    filestring_base = filestring(m)
-    get_meansbands_input_files(directory, filestring_base,
-                               input_type, cond_type, output_vars;
+    base = filestring_base(m)
+    get_meansbands_input_files(directory, base, input_type, cond_type, output_vars;
                                forecast_string = forecast_string,
                                fileformat = fileformat)
 end
 
-function get_meansbands_input_files(directory::AbstractString, filestring_base::AbstractString,
+function get_meansbands_input_files(directory::AbstractString, filestring_base::Vector{ASCIIString},
                                     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
                                     forecast_string::AbstractString = "", fileformat::Symbol = :jld)
 
@@ -342,14 +341,13 @@ function get_meansbands_output_files(m::AbstractModel, input_type::Symbol,
                                      fileformat::Symbol = :jld)
 
     directory = workpath(m, "forecast")
-    filestring_base = filestring(m)
-    get_meansbands_output_files(directory, filestring_base,
-                                input_type, cond_type, output_vars;
+    base = filestring_base(m)
+    get_meansbands_output_files(directory, base, input_type, cond_type, output_vars;
                                 forecast_string = forecast_string, fileformat = fileformat)
 end
 
 function get_meansbands_output_files(directory::AbstractString,
-                                     filestring_base::AbstractString,
+                                     filestring_base::Vector{ASCIIString},
                                      input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
                                      forecast_string::AbstractString = "", fileformat = :jld)
 

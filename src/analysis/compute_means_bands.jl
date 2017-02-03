@@ -33,8 +33,8 @@ Below, `T<:AbstractFloat`:
   be read in
 - `output_dir::AbstractString`: directory to which the means and bands are to be
   saved
-- `filestring_base::AbstractString`: should be equivalent to the result of
-  `filestring(m)`
+- `filestring_base::Vector{ASCIIString}`: should be equivalent to the result of
+  `filestring_base(m)`
 
 ### Keyword Arguments
 
@@ -118,14 +118,14 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
 
     ## Step 3: Fetch the model string and the input and output directories we'll read from/write to
 
-    input_dir       = rawpath(m, "forecast")
-    output_dir      = workpath(m, "forecast")
-    filestring_base = filestring(m)
+    input_dir  = rawpath(m, "forecast")
+    output_dir = workpath(m, "forecast")
+    base       = filestring_base(m)
 
     ## Step 4: We have everything we need; appeal to model-object-agnostic function
 
     means_bands_all(input_type, cond_type, output_vars,
-                    input_dir, output_dir, filestring_base;
+                    input_dir, output_dir, base;
                     forecast_string = forecast_string,
                     density_bands = density_bands, minimize = minimize,
                     population_mnemonic = population_mnemonic,
@@ -137,7 +137,7 @@ end
 
 function means_bands_all{T<:AbstractFloat}(input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol},
                                            input_dir::AbstractString, output_dir::AbstractString,
-                                           filestring_base::AbstractString;
+                                           filestring_base::Vector{ASCIIString};
                                            forecast_string::AbstractString = "",
                                            density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                            minimize::Bool = false,

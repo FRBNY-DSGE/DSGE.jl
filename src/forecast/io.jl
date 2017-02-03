@@ -61,29 +61,28 @@ an error.
 - In the second method, `directory` should be a string of the form
   `\"\$saveroot/m990/ss2/forecast/raw/\"`. (Note that a `pathfcn` is therefore
   not required.) `filestring_base` should be equivalent to the result of
-  `filestring(m)`.
+  `filestring_base(m)`.
 """
-function get_forecast_filename(m::AbstractModel,
-                               input_type::Symbol, cond_type::Symbol, output_var::Symbol;
+function get_forecast_filename(m::AbstractModel, input_type::Symbol,
+                               cond_type::Symbol, output_var::Symbol;
                                pathfcn::Function = rawpath,
                                forecast_string::AbstractString = "", fileformat = :jld)
 
     # First, we need to make sure we get all of the settings that have been printed to this filestring
-    directory       = pathfcn(m, "forecast")
-    filestring_base = filestring(m)
+    directory = pathfcn(m, "forecast")
+    base      = filestring_base(m)
 
     # Now we can find the filestring we are looking for
-    get_forecast_filename(directory, filestring_base, input_type, cond_type, output_var;
+    get_forecast_filename(directory, base, input_type, cond_type, output_var;
                           forecast_string = forecast_string, fileformat = fileformat)
 end
 
-function get_forecast_filename(directory::AbstractString, filestring_base::AbstractString,
+function get_forecast_filename(directory::AbstractString, filestring_base::Vector{ASCIIString},
                                input_type::Symbol, cond_type::Symbol, output_var::Symbol;
                                forecast_string::AbstractString = "", fileformat = :jld)
 
     # Cast the strings so they're all the same type
     directory       = ASCIIString(directory)
-    filestring_base = ASCIIString(filestring_base)
     forecast_string = ASCIIString(forecast_string)
 
     # Base file name
@@ -131,21 +130,21 @@ type `input_type`, and conditional type `cond_type`, for each output variable in
 
 See `get_forecast_filename` for more information.
 """
-function get_forecast_output_files(m::AbstractModel,
-                                   input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+function get_forecast_output_files(m::AbstractModel, input_type::Symbol,
+                                   cond_type::Symbol, output_vars::Vector{Symbol};
                                    forecast_string::AbstractString = "", fileformat = :jld)
 
     directory = rawpath(m, "forecast")
-    filestring_base = filestring(m)
+    base      = filestring_base(m)
 
-    get_forecast_output_files(directory, filestring_base, input_type, cond_type, output_vars,
+    get_forecast_output_files(directory, base, input_type, cond_type, output_vars,
                               forecast_string = forecast_string,
                               fileformat = fileformat)
 end
 
-function get_forecast_output_files(directory::AbstractString, filestring_base::AbstractString,
-                     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                     forecast_string::AbstractString = "", fileformat = :jld)
+function get_forecast_output_files(directory::AbstractString, filestring_base::Vector{ASCIIString},
+                                   input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
+                                   forecast_string::AbstractString = "", fileformat = :jld)
 
     output_files = Dict{Symbol, ASCIIString}()
     for var in output_vars

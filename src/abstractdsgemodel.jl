@@ -457,7 +457,7 @@ for (str, fn) in zip(strs, fns)
         # First eval function
         function $fn{T<:AbstractString}(m::AbstractModel,
                                         out_type::T,
-                                        file_name::T="",
+                                        file_name::T = "",
                                         filestring_addl::Vector{T}=Vector{T}())
             return savepath(m, out_type, $(string(str)), file_name, filestring_addl)
         end
@@ -487,11 +487,11 @@ function savepath{T<:AbstractString}(m::AbstractModel,
                                      file_name::T = "",
                                      filestring_addl::Vector{T} = Vector{T}())
     # Containing directory
-    dir = joinpath(saveroot(m), "output_data", spec(m), subspec(m), out_type, sub_type)
+    dir = ASCIIString(joinpath(saveroot(m), "output_data", spec(m), subspec(m), out_type, sub_type))
 
     if !isempty(file_name)
-        filestring_base = filestring(m)
-        return savepath(dir, file_name, filestring_base, filestring_addl)
+        base = filestring_base(m)
+        return savepath(dir, file_name, base, filestring_addl)
     else
         return dir
     end
@@ -499,7 +499,7 @@ end
 
 function savepath{T<:AbstractString}(dir::T,
                                      file_name::T = "",
-                                     filestring_base::T = "",
+                                     filestring_base::Vector{T} = Vector{T}(),
                                      filestring_addl::Vector{T} = Vector{T}())
     if !isdir(dir)
         mkpath(dir)
@@ -561,33 +561,36 @@ function inpath{T<:AbstractString}(m::AbstractModel, in_type::T, file_name::T=""
     return path
 end
 
-filestring(m::AbstractModel) = filestring(m, Vector{ASCIIString}())
-filestring(m::AbstractModel, d::AbstractString) = filestring(m, [ASCIIString(d)])
-function filestring{T<:AbstractString}(m::AbstractModel, d::Vector{T})
+function filestring_base(m::AbstractModel)
     if !m.testing
-        filestrings = Vector{T}()
+        base = Vector{ASCIIString}()
         for (skey, sval) in m.settings
             if sval.print
-                push!(filestrings, to_filestring(sval))
+                push!(base, to_filestring(sval))
             end
         end
-        base = "_" * join(filestrings, "_")
-        return filestring(base, d)
+        return base
     else
-        return "_test"
+        return ["test"]
     end
 end
 
-function filestring{T<:AbstractString}(base::T, d::Vector{T})
-    filestrings = Vector{T}()
-    append!(filestrings, d)
+filestring(m::AbstractModel) = filestring(m, Vector{ASCIIString}())
+filestring(m::AbstractModel, d::AbstractString) = filestring(m, [ASCIIString(d)])
+function filestring{T<:AbstractString}(m::AbstractModel, d::Vector{T})
+    base = filestring_base(m)
+    return filestring(base, d)
+end
+
+function filestring{T<:AbstractString}(base::Vector{T}, d::Vector{T})
+    filestrings = vcat(base, d)
     sort!(filestrings)
     return "_" * join(filestrings, "_")
 end
 
 function filestring{T<:AbstractString}(d::Vector{T})
     sort!(d)
-    return "_"*join(d, "_")
+    return "_" * join(d, "_")
 end
 
 """
