@@ -62,7 +62,7 @@ for θ in m.parameters
     isa(θ, Parameter) && (lastparam = θ)
 end
 @test isa(lastparam, Parameter)
-@test lastparam.value == 0.9247
+@test lastparam.value == 0.20*2.237937
 
 # transform_to_real_line and transform_to_model_space, acting on the entire parameter vector. they should be inverses!
 pvec = m.parameters

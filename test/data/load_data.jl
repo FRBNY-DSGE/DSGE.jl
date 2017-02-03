@@ -4,7 +4,7 @@ using Base.Test
 # Can we actually test? Require that the FRED API key exists.
 if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
 
-    for m in [AnSchorfheide(), Model990()]
+    for m in [AnSchorfheide()]
 
         m.testing=true
 

@@ -9,69 +9,12 @@ model = Model990()
 
 ### Parameters
 
-# Parameters match parameters, bounds, etc. vectors from reference (ϵ = 1e-4)
-para = zeros(82)
-bounds = zeros(82, 2)
-pshape = zeros(82)
-pmean = zeros(82)
-pstdd = zeros(82)
-trspec = zeros(82, 4)
-
-# keys to skip (used to be fixed_parameters)
-fixed_parameters = [:δ, :λ_w, :ϵ_p, :ϵ_w, :g_star]
-    
-# not all parameters appear in model.parameters
-i = 1
 for θ in model.parameters
     !isa(θ,AbstractParameter) && error()
-    in(θ.key, fixed_parameters) && continue
-    
-    para[i] = θ.value
+    θ.fixed && continue
 
     (left, right) = θ.valuebounds
-    bounds[i, 1] = left
-    bounds[i, 2] = right
-
-    prior = θ.prior.value
-    
-    if isa(prior, DSGE.RootInverseGamma)
-        pshape[i] = 4
-        (ν, τ) = params(prior)
-        pmean[i] = τ
-        pstdd[i] = ν
-    else
-        if isa(prior, Distributions.Beta)
-            pshape[i] = 1
-        elseif isa(prior, Distributions.Gamma)
-            pshape[i] = 2
-        elseif isa(prior, Distributions.Normal)
-            pshape[i] = 3
-        end
-        pmean[i] = mean(prior)
-        pstdd[i] = std(prior)
-        
-    end
-
-    if θ.transform == DSGE.Untransformed()
-        trspec[i, 1] = 0
-    elseif θ.transform == DSGE.SquareRoot()
-        trspec[i, 1] = 1
-    elseif  θ.transform == DSGE.Exponential()()
-        trspec[i, 1] = 2        
-    else
-       throw(error("This kind of transform not allowed")) 
-    end
-        
-    (left, right) = θ.transform_parameterization
-    trspec[i, 2] = left
-    trspec[i, 3] = right
-    if θ == model[:Iendoα]
-        trspec[i, 4] = 0
-    else
-        trspec[i, 4] = 1
-    end
-
-    i += 1
+    @test left < θ.value < right
 end
 
 ### Model indices

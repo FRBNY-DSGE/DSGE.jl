@@ -3,13 +3,13 @@ using HDF5, Base.Test
 
 path = dirname(@__FILE__)
 
-h5 = h5open("$path/../reference/posterior.h5")
-data = read(h5, "data")
-lh_expected = read(h5, "lnpy")
-post_expected = read(h5, "obj")
-close(h5)
+m = AnSchorfheide()
+m.testing = true
 
-m = Model990()
+file = "$path/../reference/posterior.h5"
+data = h5read(file, "data")
+lh_expected = h5read(file, "likelihood")
+post_expected = h5read(file, "posterior")
 
 lh, _ = likelihood(m, data)
 @test_approx_eq lh_expected lh
