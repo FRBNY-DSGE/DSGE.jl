@@ -258,4 +258,9 @@ end
 
 function settings_an_schorfheide!(m::AnSchorfheide)
     default_settings!(m)
+
+    m <= Setting(:use_population_forecast, true,
+                 "Whether to use population forecasts as data")
+    m <= Setting(:forecast_pseudoobservables, true,
+                 "Whether to forecast pseudo-observables")
 end
