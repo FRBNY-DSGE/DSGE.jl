@@ -1,4 +1,5 @@
-using DSGE, Base.Test
+using DSGE
+using Base.Test, Distributions
 
 for T in subtypes(Transform)
     u = parameter(:σ_pist, 2.5230, (1e-8, 5.), (1e-8, 5.), T(), fixed=false)
