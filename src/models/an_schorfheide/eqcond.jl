@@ -20,7 +20,7 @@ function eqcond(m::AnSchorfheide)
     exo  = m.exogenous_shocks
     ex   = m.expected_shocks
     eq   = m.equilibrium_conditions
-    
+
     #SUMMARY
     neq = 8
     neta = 2
@@ -32,7 +32,6 @@ function eqcond(m::AnSchorfheide)
     Ψ  = zeros(neq,neps)
     Π  = zeros(neq,neta)
 
-    bet = 1/(1+m[:rA]/400)
     ### ENDOGENOUS STATES ###
 
     ### 1. Consumption Euler Equation
@@ -46,49 +45,49 @@ function eqcond(m::AnSchorfheide)
 
     ### 2. NK Phillips Curve
 
-    # Sticky prices and wages
-    Γ0[eq[:nk_pcurve], endo[:y_t]] = -m[:κ]
-    Γ0[eq[:nk_pcurve], endo[:π_t]] = 1
-    Γ0[eq[:nk_pcurve], endo[:g_t]] = m[:κ]
-    Γ0[eq[:nk_pcurve], endo[:Eπ_t1]] = -bet
+    β = 1/(1+m[:rA]/400)
+    Γ0[eq[:eq_phillips], endo[:y_t]] = -m[:κ]
+    Γ0[eq[:eq_phillips], endo[:π_t]] = 1
+    Γ0[eq[:eq_phillips], endo[:g_t]] = m[:κ]
+    Γ0[eq[:eq_phillips], endo[:Eπ_t1]] = -β
 
     ### 3. Monetary Policy Rule
 
-    Γ0[eq[:mp_rule], endo[:y_t]] = -(1-m[:ρ_R])*m[:ψ_2]
-    Γ0[eq[:mp_rule], endo[:π_t]] = -(1-m[:ρ_R])*m[:ψ_1]
-    Γ0[eq[:mp_rule], endo[:R_t]] = 1
-    Γ0[eq[:mp_rule], endo[:g_t]] = (1-m[:ρ_R])*m[:ψ_2]
-    Γ1[eq[:mp_rule], endo[:R_t]] = m[:ρ_R]
-    Ψ[eq[:mp_rule], exo[:R_sh]] = 1
+    Γ0[eq[:eq_mp], endo[:y_t]] = -(1-m[:ρ_R])*m[:ψ_2]
+    Γ0[eq[:eq_mp], endo[:π_t]] = -(1-m[:ρ_R])*m[:ψ_1]
+    Γ0[eq[:eq_mp], endo[:R_t]] = 1
+    Γ0[eq[:eq_mp], endo[:g_t]] = (1-m[:ρ_R])*m[:ψ_2]
+    Γ1[eq[:eq_mp], endo[:R_t]] = m[:ρ_R]
+    Ψ[eq[:eq_mp], exo[:R_sh]] = 1
 
-    ### 4. Shock 1
+    ### 4. Output lag
 
-    Γ0[eq[:shock_1], endo[:y1_t]] = 1
-    Γ1[eq[:shock_1], endo[:y_t]] = 1
+    Γ0[eq[:eq_y_t1], endo[:y_t1]] = 1
+    Γ1[eq[:eq_y_t1], endo[:y_t]] = 1
 
-    ### 5. Shock 2
+    ### 5. Government spending
 
-    Γ0[eq[:shock_2], endo[:g_t]] = 1
-    Γ1[eq[:shock_2], endo[:g_t]] = m[:ρ_g]
-    Ψ[eq[:shock_2], exo[:g_sh]] = 1
+    Γ0[eq[:eq_g], endo[:g_t]] = 1
+    Γ1[eq[:eq_g], endo[:g_t]] = m[:ρ_g]
+    Ψ[eq[:eq_g], exo[:g_sh]] = 1
 
-    ### 6. Shock 3
+    ### 6. Technology
 
-    Γ0[eq[:shock_3], endo[:z_t]] = 1
-    Γ1[eq[:shock_3], endo[:z_t]] = m[:ρ_z]
-    Ψ[eq[:shock_3], exo[:z_sh]] = 1
+    Γ0[eq[:eq_z], endo[:z_t]] = 1
+    Γ1[eq[:eq_z], endo[:z_t]] = m[:ρ_z]
+    Ψ[eq[:eq_z], exo[:z_sh]] = 1
 
-    ### 7. Shock 4
+    ### 7. Expected output
 
-    Γ0[eq[:shock_4], endo[:y_t]] = 1
-    Γ1[eq[:shock_4], endo[:Ey_t1]] = 1
-    Π[eq[:shock_4], ex[:Ey_sh]] = 1
+    Γ0[eq[:eq_Ey], endo[:y_t]] = 1
+    Γ1[eq[:eq_Ey], endo[:Ey_t1]] = 1
+    Π[eq[:eq_Ey], ex[:Ey_sh]] = 1
 
-    ### 8. Shock 5
+    ### 8. Expected inflation
 
-    Γ0[eq[:shock_5], endo[:π_t]] = 1
-    Γ1[eq[:shock_5], endo[:Eπ_t1]] = 1
-    Π[eq[:shock_5], ex[:Eπ_sh]] = 1
+    Γ0[eq[:eq_Eπ], endo[:π_t]] = 1
+    Γ1[eq[:eq_Eπ], endo[:Eπ_t1]] = 1
+    Π[eq[:eq_Eπ], ex[:Eπ_sh]] = 1
 
     return Γ0, Γ1, C, Ψ, Π
 
