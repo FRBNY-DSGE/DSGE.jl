@@ -89,6 +89,8 @@ type SmetsWouters{T} <: AbstractModel{T}
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
+
+    observable_mappings::OrderedDict{Symbol, Observable}
 end
 
 description(m::SmetsWouters) = "Smets-Wouters Model"
@@ -176,7 +178,8 @@ function SmetsWouters(subspec::AbstractString="ss0";
             settings,
             test_settings,
             rng,
-            testing)
+            testing,
+            Dict{Symbol,Observable}())
 
     # Set settings
     settings_smets_wouters!(m)
@@ -184,6 +187,9 @@ function SmetsWouters(subspec::AbstractString="ss0";
     for custom_setting in values(custom_settings)
         m <= custom_setting
     end
+
+    # Set observable transformations
+    init_observable_mappings!(m)
 
     # Initialize parameters
     init_parameters!(m)

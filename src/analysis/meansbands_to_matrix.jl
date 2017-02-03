@@ -1,39 +1,36 @@
 """
-meansbands_matrix_all(m::AbstractModel,
-    input_type::Symbol, cond_type::Symbol, output_vars = Vector{Symbol};
-    forecast_string = "", verbose::Symbol = :low)
+meansbands_matrix_all(m, input_type, cond_type, output_vars;
+    forecast_string = "", verbose = :low)
 
 Reformat `MeansBands` object into matrices, and save to individual files.
 
 ### Inputs
 
 - `m::AbstractModel`: model object
-- `input_type`: same as input into `forecast_all`
-- `cond_type`: same as input into `forecast_all`
-- `output_vars`: same as input into `forecast_all`
+- `input_type::Symbol`: same as input into `forecast_one`
+- `cond_type::Symbol`: same as input into `forecast_one`
+- `output_vars::Symbol`: same as input into `forecast_one`
 
 ### Keyword Arguments
 
-- `forecast_string`: identifies the forecast (if desired). Required if
-  `input_type == :subset`
+- `forecast_string::AbstractString`: identifies the forecast (if
+  desired). Required if `input_type == :subset`
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
 """
 function meansbands_matrix_all(m::AbstractModel, input_type::Symbol,
                                cond_type::Symbol, output_vars::Vector{Symbol};
-                               forecast_string = "", verbose::Symbol = :low)
+                               forecast_string::AbstractString = "", verbose::Symbol = :low)
 
     ## Step 0: Determine full set of output_vars necessary for plotting desired results
     #          Specifically, if output_vars contains shockdecs but not
     #          trend or deterministic trends, add those
 
-    output_vars  = add_requisite_output_vars(output_vars)
-    tmp          = workpath(m, "forecast", "foo")
-    output_dir   = dirname(tmp)
-    model_string = replace(basename(tmp), "foo_", "")
-    outfiles = get_meansbands_output_files(m, input_type, cond_type, output_vars,
-                                           model_string = model_string,
-                                           forecast_string = forecast_string)
+    output_vars = add_requisite_output_vars(output_vars)
+    output_dir  = workpath(m, "forecast")
+    outfiles    = get_meansbands_output_files(m, input_type, cond_type, output_vars;
+                                              forecast_string = forecast_string)
+
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
         info("Converting means and bands to matrices for input_type = $input_type, cond_type = $cond_type...")
@@ -41,7 +38,7 @@ function meansbands_matrix_all(m::AbstractModel, input_type::Symbol,
         println("Means and bands matrices will be saved in $output_dir")
     end
 
-    mbs = Dict{Symbol,MeansBands}()
+    mbs = Dict{Symbol, MeansBands}()
     for input in keys(outfiles)
         fn = outfiles[input]
         mbs[input] = read_mb(fn)
@@ -57,8 +54,6 @@ end
 function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
                                verbose::Symbol = :low)
 
-    model_string = filestring(m)[2:end]
-
     for output_var in keys(mbs)
 
         mb       = mbs[output_var]
@@ -67,20 +62,20 @@ function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
         condtype = cond_type(mb)
 
         ## Get name of file to write
-        outfile = DSGE.get_forecast_filename(m, para(mb), cond_type(mb), output_var,
-                    pathfcn = workpath, forecast_string = mb.metadata[:forecast_string],
-                    model_string = model_string, fileformat = :h5)
-
-        base = basename(outfile)
-        outfile = joinpath(dirname(outfile), "mb_matrix_"*base)
+        outfile = get_forecast_filename(m, para(mb), cond_type(mb), output_var;
+                                        pathfcn = workpath,
+                                        forecast_string = mb.metadata[:forecast_string],
+                                        fileformat = :h5)
+        base    = basename(outfile)
+        outfile = joinpath(dirname(outfile), "mb_matrix_" * base)
 
         ## Convert MeansBands objects to matrices
         means, bands = meansbands_matrix(mb)
 
         ## Save to file
-        h5open(outfile, "w") do f
-            f["means"] = means
-            f["bands"] = bands
+        h5open(outfile, "w") do file
+            write(file, "means", means)
+            write(file, "bands", bands)
         end
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]

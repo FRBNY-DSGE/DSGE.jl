@@ -200,8 +200,8 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     if !m.testing
         filename = inpath(m, "data", "population_data_levels_$vint.csv")
         mnemonic = parse_population_mnemonic(m)[1]
-        if mnemonic != Symbol()
-            writetable(filename, df[:,[:date,mnemonic]])
+        if !isnull(mnemonic)
+            writetable(filename, df[:,[:date, get(mnemonic)]])
         end
     end
 
@@ -244,10 +244,10 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
         # Use population forecast as population data
         population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
-        if isfile(population_forecast_file)
+        if isfile(population_forecast_file) && !isnull(get_setting(m, :population_mnemonic))
             pop_forecast = readtable(population_forecast_file)
 
-            population_mnemonic = parse_population_mnemonic(m)[1]
+            population_mnemonic = get(parse_population_mnemonic(m)[1])
             rename!(pop_forecast, :POPULATION,  population_mnemonic)
             DSGE.na2nan!(pop_forecast)
             DSGE.format_dates!(:date, pop_forecast)
@@ -426,27 +426,78 @@ end
 
 """
 ```
-read_population_data(m)
+read_population_data(m; verbose = :low)
+
+read_population_data(filename; verbose = :low)
 ```
 
-Read in population data stored in levels from inpath(m, "data", "population_data_levels_[vint].csv").
+Read in population data stored in levels, either from
+`inpath(m, \"data\", \"population_data_levels_[vint].csv\"`) or `filename`.
 """
-function read_population_data(m::AbstractModel, verbose::Symbol = :low)
+function read_population_data(m::AbstractModel; verbose::Symbol = :low)
     vint = data_vintage(m)
     filename = inpath(m, "data", "population_data_levels_$vint.csv")
+    read_population_data(filename; verbose = verbose)
+end
 
+function read_population_data(filename::AbstractString; verbose::Symbol = :low)
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        print("Reading population data from $filename...")
+        println("Reading population data from $filename...")
     end
 
     df = readtable(filename)
 
-    # Convert date column from string to Date
-    df[:date] = map(Date, df[:date])
+    DSGE.na2nan!(df)
+    DSGE.format_dates!(:date, df)
+    sort!(df, cols = :date)
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("finished reading population data\n")
+    return df
+end
+
+"""
+```
+read_population_forecast(m; verbose = :low)
+
+read_population_forecast(filename, population_mnemonic, last_recorded_date; verbose = :low)
+```
+
+Read in population forecast in levels, either from
+`inpath(m, \"data\", \"population_forecast_[vint].csv\")` or `filename`.
+If that file does not exist, return an empty `DataFrame`.
+
+"""
+function read_population_forecast(m::AbstractModel; verbose::Symbol = :low)
+    population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
+    population_mnemonic = parse_population_mnemonic(m)[1]
+
+    if isnull(population_mnemonic)
+        error("No population mnemonic provided")
+    else
+        read_population_forecast(population_forecast_file, get(population_mnemonic); verbose = verbose)
     end
+end
 
-    df
+function read_population_forecast(filename::AbstractString, population_mnemonic::Symbol;
+                                  verbose::Symbol = :low)
+
+    if isfile(filename)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("Loading population forecast from $filename...")
+        end
+
+        df = readtable(filename)
+
+        rename!(df, :POPULATION, population_mnemonic)
+        DSGE.na2nan!(df)
+        DSGE.format_dates!(:date, df)
+        sort!(df, cols = :date)
+
+        return df[:, [:date, population_mnemonic]]
+    else
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            warn("No population forecast found")
+        end
+
+        return DataFrame()
+    end
 end

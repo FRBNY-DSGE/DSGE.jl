@@ -31,8 +31,8 @@ function default_settings!(m::AbstractModel)
         "Observables used in semiconditional forecasts")
     settings[:use_population_forecast] = Setting(:use_population_forecast, false,
         "Whether to use population forecasts as data")
-    settings[:population_mnemonic] = Setting(:population_mnemonic, :CNP16OV__FRED,
-        "Mnemonic of FRED data series for computing per-capita values")
+    settings[:population_mnemonic] = Setting(:population_mnemonic, Nullable(:CNP16OV__FRED),
+        "Mnemonic of FRED data series for computing per-capita values (a Nullable{Symbol})")
 
     # Dates
     settings[:date_presample_start] = Setting(:date_presample_start, quartertodate("1959-Q3"),

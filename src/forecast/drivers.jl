@@ -272,7 +272,7 @@ function forecast_one(m::AbstractModel{Float64},
     elseif input_type in [:full, :subset]
 
         # Block info
-        block_inds = forecast_block_inds(m, input_type; subset_inds = subset_inds)
+        block_inds, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
         nblocks = length(block_inds)
         start_block = isnull(forecast_start_block(m)) ? 1 : get(forecast_start_block(m))
 
@@ -289,6 +289,7 @@ function forecast_one(m::AbstractModel{Float64},
 
             # Get to work!
             params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
+            @everywhere using DSGE
 
             forecast_outputs = pmap(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
                                                                param, df, verbose = verbose),
@@ -307,7 +308,7 @@ function forecast_one(m::AbstractModel{Float64},
             forecast_output = assemble_block_outputs(forecast_outputs)
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; block_number = Nullable(block),
-                                   verbose = block_verbose, block_inds = block_inds[block])
+                                   verbose = block_verbose, block_inds = block_inds_thin[block])
             gc()
 
             # Calculate time to complete this block, average block time, and

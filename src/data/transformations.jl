@@ -60,7 +60,11 @@ Converts data column `col` of DataFrame `df` to a per-capita value.
 """
 function percapita(m::AbstractModel, col::Symbol, df::DataFrame)
     population_mnemonic = parse_population_mnemonic(m)[1]
-    percapita(col, df, population_mnemonic)
+    if isnull(population_mnemonic)
+        error("No population mnemonic provided")
+    else
+        percapita(col, df, get(population_mnemonic))
+    end
 end
 function percapita(col::Symbol, df::DataFrame, population_mnemonic::Symbol)
     df[col] ./ df[population_mnemonic]

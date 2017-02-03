@@ -190,9 +190,9 @@ function deterministic_trends{S<:AbstractFloat}(system::System{S}, z0::Vector{S}
     else
         range = start_index:end_index
         if forecast_pseudo
-            return states[:, range, :], obs[:, range, :], pseudo[:, range, :]
+            return states[:, range], obs[:, range], pseudo[:, range]
         else
-            return states[:, range, :], obs[:, range, :], pseudo
+            return states[:, range], obs[:, range], pseudo
         end
     end
 end

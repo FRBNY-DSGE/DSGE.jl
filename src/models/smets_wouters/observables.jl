@@ -1,7 +1,7 @@
 function init_observable_mappings!(m::SmetsWouters)
 
     observables = OrderedDict{Symbol,Observable}()
-    population_mnemonic = get_setting(m, :population_mnemonic)
+    population_mnemonic = get(get_setting(m, :population_mnemonic))
 
     ############################################################################
     ## 1. GDP
@@ -17,7 +17,7 @@ function init_observable_mappings!(m::SmetsWouters)
 
     gdp_rev_transform = DSGE.logtopct_annualized_percapita
 
-    observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, :CNP16OV__FRED, :GDPCTPI__FRED],
+    observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPCTPI__FRED],
                                        gdp_fwd_transform, gdp_rev_transform,
                                        "Real GDP Growth", "Real GDP Growth Per Capita")
 
