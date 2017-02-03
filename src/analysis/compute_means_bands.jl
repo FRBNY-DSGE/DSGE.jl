@@ -1,98 +1,77 @@
 """
 ```
-means_bands_all(m, input_type, cond_type, output_vars;
-                density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], minimize = false,
-                forecast_string = "", load_dataset = true, load_population_data = true,
-                population_forecast_file = "", verbose :low)
+means_bands_all(m, input_type, cond_type, output_vars; forecast_string = "",
+    density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], minimize = false, verbose :low)
 
 
-means_bands_all(input_type, cond_type, output_vars, meansbands_input_files;
-                density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], minimize = false,
-                forecast_string = "", output_dir = "", population_data = DataFrame(),
-                population_mnemonic = Nullable{Symbol}(),
-                population_forecast_file = "", y0_indexes = Dict{Symbol,Nullable{Int}}(),
-                data = Matrix{T}(), verbose::Symbol = :low)
+means_bands_all(input_type, cond_type, output_vars, input_dir, output_dir,
+    filestring_base; forecast_string = "", density_bands = [0.5, 0.6, 0.7, 0.8, 0.9],
+    minimize = false, population_mnemonic = Nullable{Symbol}(),
+    population_data_file = "", population_forecast_file = "",
+    y0_indexes = Dict{Symbol, Int}(), data = Matrix{T}(),
+    verbose = :low)
 ```
 
-Computes means and bands for pseudoobservables and observables, and writes
-results to a file. Two methods are provided. The method that accepts a model
-object as an argument uses the model's settings to infer `forecast_files`; then
-appeals to the second method. Users can optionally skip construction of a model
-object and manually enter `forecast_files`.
+Computes means and bands for pseudo-observables, observables, and shocks, and writes
+the results to a file. Two methods are provided. The method that accepts a model
+object as an argument uses the model's settings to infer the arguments to the
+second method. Users can optionally skip construction of a model object and
+manually enter the directory and file names.
 
-Below, `T<:AbstractFloat` and `S<:AbstractString`:
+Below, `T<:AbstractFloat`:
 
 ### Input Arguments
 
-- `m`: model object
-- `input_type::Symbol`: see `forecast_all`
-- `cond_type::Symbol`: see `forecast_all`
+- `m::AbstractModel`: model object
+- `input_type::Symbol`: see `forecast_one`
+- `cond_type::Symbol`: see `forecast_one`
 - `output_vars::Vector{Symbol}`: see `forecast_one`
 
-#### Method 2:
+**Method 2 only:**
 
-- `meansbands_input_files::Dict{Symbol,S}`: dictionary mapping an output_var to the filename
-  containing forecasts for that output_var (where `S<:AbstractString)`. Keys should be one of the following:
-  `:histpseudo, :forecastpseudo, :shockdecpseudo, :forecastobs, :shockdecobs`.
+- `input_dir::AbstractString`: directory from which the forecast outputs are to
+  be read in
+- `output_dir::AbstractString`: directory to which the means and bands are to be
+  saved
+- `filestring_base::AbstractString`: should be equivalent to the result of
+  `filestring(m)`
 
 ### Keyword Arguments
 
-- `density_bands::Vector{T}`: a vector of percent values (between 0 and 1) for which to compute density bands.
+- `forecast_string::AbstractString`: forecast identifier string (the value
+  \"fcid=value\" in the forecast output filename). Required when
+  `input_type == :subset`
 
-- `minimize::Bool`: if `true`, choose shortest interval, otherwise just chop off lowest and
-  highest (percent/2)
+- `density_bands::Vector{T}`: a vector of percent values (between 0 and 1) for
+  which to compute density bands
 
-- `forecast_string::S`: forecast identifier string (the value \"fcid=value\" in
-  the forecast output filename). Required when `input_type == :subset`.
+- `minimize::Bool`: if `true`, choose shortest interval, otherwise just chop off
+  lowest and highest (percent/2)
 
-- `population_forecast_file::S`: if you have population forecast data,
-  this is the filepath identifying where it is stored. In the method
-  that accepts a model object, if `use_population_forecast(m) ==
-  true`, the following file is used, if it exists:
+- `verbose`: level of error messages to be printed to screen. One of `:none`,
+  `:low`, `:high`
+
+**Method 2 only:**
+
+- `population_mnemonic::Nullable{Symbol}`: the result of
+   `get_setting(m, :population_mnemonic`. Typically `Nullable(:CNP16OV__FRED)`.
+
+- `population_data_file::AbstractString`: path to population data (in levels)
+  file. In the first method, the following file is used, if it exists:
+  `inpath(m, \"data\", \"population_data_levels_(data_vintage(m)).csv\")`
+
+- `population_forecast_file::S`: path to population forecast (in levels)
+  file. In the first method, if `use_population_forecast(m)`, the following file
+  is used, if it exists:
   `inpath(m, \"data\", \"population_forecast_(data_vintage(m)).csv\")`
 
-- `verbose`: level of error messages to be printed to screen. Options
-  are `:none`, `:low`, `:high`
+- `y0_indexes::Dict{Symbol, Int}`: A `Dict` storing the mapping of products to
+  the index of the first period of data needed to compute the product's
+  transformation. This is used to compute growth rates and four-quarter
+  cumulations (among others). See `get_y0_index`.
 
-### Method 1:
-
-- `load_dataset::Bool`: indicates whether or not to load the
-  data using `load_data(m)`. Loading the dataset is required only when using
-  transformations that convert values from log-levels to growth
-  rates. Defaults to `true.`
-
-- `load_population_data::Bool`: indicates whether or not to load the
-  population growth rate data. This is required only when a series
-  requires either the `:loglevelto4qpct_annualized_percapita` or
-  `:loglevelto4qpct_annualized` transformation.
-
-#### Method 2:
-
-- `y0_indexes::Dict{Symbol,Int}`: A `Dict` storing the mapping of products to the index
-  of the period prior to the first period for which that
-  product is computed. This is used to compute growth rates of
-  forecasted or counterfactual variables, such as the deterministic
-  trend. `y0_indexes[:forecast]` should correspond to the last
-  historical period; `y0_indexes[:dettrend]` should correspond
-  to the last presample period. It is required for only those
-  observables and pseudoobservables that employ the
-  `loglevelto4qpct_annualized_percapita` transformation.
-
-- `output_dir::S`: Directory in which to write means and bands files. Defaults to `""`.
-
-- `population_data::DataFrame`: `DataFrame` containing the columns
-   `:dlfiltered_population_recorded` and `date`.
-   (`dlfiltered_population_recorded` refers to the log difference of
-   the filtered population series, or the computed filtered population
-   growth rate). Defaults to an empty `DataFrame` and is required in
-   the same cases as the `load_population_data` argument in Method 1.
-
-- `population_mnemonic::Nullable{Symbol}`: The name of the series holding the desired
-  population series in `population_data`. Defaults to a `Nullable{Symbol}()`.
-
-- `population_forecast_file::S`: Name of file in which to find population_data.
-
-- `data::Matrix{T}`: pre-loaded `nobs x nperiods` matrix containing the transformed data matrix.
+- `data::Matrix{T}`: pre-loaded `nobs x nperiods` matrix containing the
+  (untransformed) data matrix.
 """
 function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                                            cond_type::Symbol, output_vars::Vector{Symbol};
@@ -122,7 +101,6 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
         population_data_file = ""
         population_forecast_file = ""
     end
-
 
     ## Step 2: Load main dataset (required for some transformations),
     ##         specify which period to use as first t-1 period for computing
@@ -250,10 +228,12 @@ end
 
 """
 ```
-means_bands(input_type, cond_type, output_var, meansbands_input_files::Dict{Symbol, AbstractString};
-    density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], minimize = false, forecast_string = "",
-    population_mnemonic = Nullable{Symbol}(), population_data = DataFrame(), population_forecast = DataFrame(),
-    y0_index = -1, data = Matrix{T}(), verbose = :low)
+means_bands(input_type, cond_type, output_var,
+    meansbands_input_files::Dict{Symbol, AbstractString}; forecast_string = "",
+    density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], minimize = false,
+    population_mnemonic = Nullable{Symbol}(), population_data = DataFrame(),
+    population_forecast = DataFrame(), y0_index = -1, data = Matrix{T}(),
+    verbose = :low)
 ```
 
 Computes means and bands for a single `output_var`.
@@ -277,13 +257,16 @@ function means_bands{T<:AbstractFloat}(input_type::Symbol,
         density_bands = [.5]
     end
 
-    ## Step 1: Determine the class of variable we are working with (pseudos? observables? etc)
-    ##         and the product we are computing (forecast? history? shockdec?)
+    ## Step 1: Determine the class of variable we are working with (pseudos?
+    ##         observables? etc) and the product we are computing (forecast?
+    ##         history? shockdec?)
 
     class   = get_class(output_var)
     product = get_product(output_var)
 
-    ## Step 2: Read in raw forecast output and metadata (transformations, mappings from symbols to indices, etc)
+    ## Step 2: Read in raw forecast output and metadata (transformations,
+    ##         mappings from symbols to indices, etc)
+
     forecast_output_file = meansbands_input_files[output_var]
     metadata, mb_metadata =
         get_mb_metadata(input_type, cond_type, output_var, forecast_output_file;
@@ -299,6 +282,7 @@ function means_bands{T<:AbstractFloat}(input_type::Symbol,
     end
 
     ## Step 3: Compute means and bands
+
     if product in [:hist, :forecast, :dettrend, :trend, :forecast4q,
                                   :bddforecast, :bddforecast4q]
 

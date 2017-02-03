@@ -1,21 +1,20 @@
 """
-meansbands_matrix_all(m::AbstractModel,
-    input_type::Symbol, cond_type::Symbol, output_vars = Vector{Symbol};
-    forecast_string = "", verbose::Symbol = :low)
+meansbands_matrix_all(m, input_type, cond_type, output_vars;
+    forecast_string = "", verbose = :low)
 
 Reformat `MeansBands` object into matrices, and save to individual files.
 
 ### Inputs
 
 - `m::AbstractModel`: model object
-- `input_type`: same as input into `forecast_all`
-- `cond_type`: same as input into `forecast_all`
-- `output_vars`: same as input into `forecast_all`
+- `input_type::Symbol`: same as input into `forecast_one`
+- `cond_type::Symbol`: same as input into `forecast_one`
+- `output_vars::Symbol`: same as input into `forecast_one`
 
 ### Keyword Arguments
 
-- `forecast_string`: identifies the forecast (if desired). Required if
-  `input_type == :subset`
+- `forecast_string::AbstractString`: identifies the forecast (if
+  desired). Required if `input_type == :subset`
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
 """
