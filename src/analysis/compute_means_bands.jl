@@ -287,6 +287,7 @@ function means_bands{T<:AbstractFloat}(input_type::Symbol,
                                   :bddforecast, :bddforecast4q]
 
         # Get to work!
+        @everywhere using DSGE
         mb_vec = pmap(var_name -> compute_means_bands(class, product, var_name, forecast_output_file;
                           data = data, population_series = population_series, y0_index = y0_index,
                           density_bands = density_bands, minimize = minimize),
@@ -315,6 +316,7 @@ function means_bands{T<:AbstractFloat}(input_type::Symbol,
         mb_metadata[:shock_indices] = metadata[:shock_indices]
 
         # Get to work!
+        @everywhere using DSGE
         for shock_name in keys(mb_metadata[:shock_indices])
             if VERBOSITY[verbose] >= VERBOSITY[:high]
                 println("  * $(shock_name)")
