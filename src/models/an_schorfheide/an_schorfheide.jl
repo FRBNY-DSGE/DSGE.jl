@@ -2,6 +2,7 @@
 ```
 AnSchorfheide{T} <: AbstractModel{T}
 ```
+
 The `AnSchorfheide` type defines the structure of the simple New Keynesian DSGE model described in 'Bayesian Estimation
 of DSGE Models' by Sungbae An and Frank Schorfheide.
 
@@ -63,11 +64,11 @@ conditions.
 * `testing::Bool`: Indicates whether the model is in testing mode. If `true`, settings from
   `m.test_settings` are used in place of those in `m.settings`.
 
-* `data_series::Dict{Symbol,Vector{Symbol}}`: A dictionary that
-  stores data sources (keys) and lists of series mnemonics
-  (values). DSGE.jl will fetch data from the Federal Reserve Bank of
+* `observable_mappings::OrderedDict{Symbol,Observable}`: A dictionary that
+  stores data sources, series mnemonics, and transformations to/from model units.
+  DSGE.jl will fetch data from the Federal Reserve Bank of
   St. Louis's FRED database; all other data must be downloaded by the
-  user. See `load_data` for further details.
+  user. See `load_data` and `Observable` for further details.
 """
 type AnSchorfheide{T} <: AbstractModel{T}
     parameters::ParameterVector{T}                  # vector of all time-invariant model parameters
@@ -88,8 +89,7 @@ type AnSchorfheide{T} <: AbstractModel{T}
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
-    data_series::Dict{Symbol,Vector{Symbol}}       # Keys = data sources, values = vector of series mnemonics
-    data_transforms::OrderedDict{Symbol,Function}  # functions to transform raw data into input matrix
+    observable_mappings::OrderedDict{Symbol, Observable}
 end
 
 description(m::AnSchorfheide) = "Julia implementation of model defined in 'Bayesian Estimation of DSGE Models' by Sungbae An and Frank Schorfheide: AnSchorfheide, $(m.subspec)"
@@ -125,22 +125,21 @@ function init_model_indices!(m::AnSchorfheide)
     endogenous_states_augmented = []
 
     # Measurement equation observables
-    observables = collect([
-        :obs_gdp,              # quarterly output growth
-        :obs_infl,             # inflation (CPI)
-        :obs_ffr])             # federal funds rate
+    observables = keys(m.observable_mappings)
 
-    for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
-    for (i,k) in enumerate(exogenous_shocks);             m.exogenous_shocks[k]             = i end
-    for (i,k) in enumerate(expected_shocks);              m.expected_shocks[k]              = i end
-    for (i,k) in enumerate(equilibrium_conditions);       m.equilibrium_conditions[k]       = i end
-    for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
+    for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
+    for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
+    for (i,k) in enumerate(expected_shocks);             m.expected_shocks[k]             = i end
+    for (i,k) in enumerate(equilibrium_conditions);      m.equilibrium_conditions[k]      = i end
+    for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
     for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(endogenous_states) end
-    for (i,k) in enumerate(observables);                  m.observables[k]                  = i end
+    for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
 end
 
 
-function AnSchorfheide(subspec::AbstractString="ss0")
+function AnSchorfheide(subspec::AbstractString="ss0";
+                       custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
+                       testing = false)
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]
@@ -148,14 +147,6 @@ function AnSchorfheide(subspec::AbstractString="ss0")
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister()
-    testing            = false
-
-    # In addition to nominal GDP, CPI, and FFR, we need population and the GDP
-    # deflator to create per capita real GDP growth
-    fred_series        = [:GDP, :DFF, :CNP16OV, :GDPCTPI, :CPIAUCSL]
-
-    data_series        = Dict(:fred => fred_series)
-    data_transforms    = OrderedDict{Symbol,Function}()
 
     # initialize empty model
     m = AnSchorfheide{Float64}(
@@ -171,16 +162,38 @@ function AnSchorfheide(subspec::AbstractString="ss0")
             test_settings,
             rng,
             testing,
-            data_series,
-            data_transforms)
+            Dict{Symbol,Observable}())
 
     # Set settings
     settings_an_schorfheide!(m)
     default_test_settings!(m)
+    for custom_setting in values(custom_settings)
+        m <= custom_setting
+    end
 
-    # Set data transformations
-    init_data_transforms!(m)
+    # Set observable transformations
+    init_observable_mappings!(m)
 
+    # Initialize parameters
+    init_parameters!(m)
+
+    init_model_indices!(m)
+    init_subspec!(m)
+    steadystate!(m)
+
+    return m
+end
+
+"""
+```
+init_parameters!(m::AnSchorfheide)
+```
+
+Initializes the model's parameters, as well as empty values for the steady-state
+parameters (in preparation for `steadystate!(m)` being called to initialize
+those).
+"""
+function init_parameters!(m::AnSchorfheide)
     # Initialize parameters
     m <= parameter(:τ,      1.9937, (1e-20, 1e5), (1e-20, 1e5),   DSGE.Exponential(),     GammaAlt(2., 0.5),         fixed=false,
                    description="τ: The inverse of the intemporal elasticity of substitution.",
@@ -229,12 +242,6 @@ function AnSchorfheide(subspec::AbstractString="ss0")
                    description="e_π: Measurement error on inflation.", tex_label="e_\\pi" )
     m <= parameter(:e_R,      0.20*2.237937,  fixed=true,
                    description="e_R: Measurement error on the interest rate.", tex_label="e_R" )
-
-
-    init_model_indices!(m)
-    init_subspec!(m)
-    steadystate!(m)
-    return m
 end
 
 """
@@ -251,41 +258,4 @@ end
 
 function settings_an_schorfheide!(m::AnSchorfheide)
     default_settings!(m)
-end
-
-"""
-```
-init_data_transforms!(m::AnSchorfheide)
-```
-
-This function initializes a dictionary of functions that map series read in in levels to the
-appropriate transformed value. At the time that the functions are initialized, data is not
-itself in memory. These functions are model-specific because they assume that certain series
-are available. The keys of data transforms should match exactly the keys of `m.observables`.
-"""
-function init_data_transforms!(m::AnSchorfheide)
-
-    m.data_transforms[:obs_gdp] = function (levels)
-        # FROM: Level of GDP (from FRED)
-        # TO: Quarter-to-quter percent change of real GDP per capita
-        levels[:temp] = percapita(m, :GDP, levels)
-        gdp = 1000 * nominal_to_real(:temp, levels)
-        hpadjust(oneqtrpctchange(gdp), levels)
-    end
-
-    m.data_transforms[:obs_infl] = function (levels)
-        # FROM: CPI urban consumers index (from FRED)
-        # TO: Annualized quarter-to-quarter percent change of CPI index
-        4.0 * oneqtrpctchange(levels[:CPIAUCSL])
-    end
-
-    m.data_transforms[:obs_ffr] = function (levels)
-        # FROM: Nominal effective federal funds rate (aggregate daily data at a
-        #       quarterly frequency at an annual rate)
-
-        # TO:   Nominal effective fed funds rate
-
-        levels[:DFF]
-
-    end
 end

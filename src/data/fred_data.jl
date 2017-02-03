@@ -22,16 +22,10 @@ function load_fred_data(m::AbstractModel;
                         start_date::Date = Date("1959-01-01", "y-m-d"),
                         end_date::Date   = prev_quarter())
 
-    mnemonics = m.data_series[:fred]
+    data_series = parse_data_series(m)
+    mnemonics = data_series[:FRED]
     vint = data_vintage(m)
     dateformat = "yymmdd"
-
-    # Have to do this wacky parsing to prepend the century to the data vintage
-    vint_date = if parse(Int,vint[1:2]) < 59
-        Year(2000) + Date(vint, dateformat)
-    else
-        Year(1900) + Date(vint, dateformat)
-    end
 
     # Set up dataset and labels
     missing_series = Vector{Symbol}()
@@ -70,6 +64,13 @@ function load_fred_data(m::AbstractModel;
     # Get the missing data series
     if !isempty(missing_series)
 
+        # Have to do this wacky parsing to prepend the century to the data vintage
+        vint_date = if parse(Int,vint[1:2]) < 59
+            Year(2000) + Date(vint, dateformat)
+        else
+            Year(1900) + Date(vint, dateformat)
+        end
+
         fredseries = Array{FredSeries, 1}(length(missing_series))
         f = Fred()
 
@@ -81,9 +82,27 @@ function load_fred_data(m::AbstractModel;
                                                        observation_end=string(end_date),
                                                        vintage_dates=string(vint_date))
             catch err
-                warn(err.msg)
-                warn("FRED series $s could not be fetched.")
-                continue
+                if :msg in fieldnames(err)
+                    warn(err.msg)
+                else
+                    show(err)
+                end
+                warn("FRED series $s could not be fetched at vintage $vint.")
+
+                try
+                    println("Fetching FRED series $s without vintage...")
+                    fredseries[i] = get_data(f, string(s); frequency="q",
+                                                           observation_start=string(start_date),
+                                                           observation_end=string(end_date))
+                catch err
+                    if :msg in fieldnames(err)
+                        warn(err.msg)
+                    else
+                        show(err)
+                    end
+                    warn("FRED series $s could not be fetched.")
+                    continue
+                end
             end
         end
 
@@ -105,8 +124,10 @@ function load_fred_data(m::AbstractModel;
             data[i,:date] = Dates.lastdayofquarter(data[i,:date])
         end
 
-        writetable(datafile, data)
-        println("Updated data from FRED written to $datafile.")
+        if !m.testing
+            writetable(datafile, data)
+            println("Updated data from FRED written to $datafile.")
+        end
     end
 
     # Make sure to only return the series and dates that are specified for this

@@ -46,32 +46,31 @@ end
     EE = zeros(_n_observables, _n_observables)
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
 
-
     ## Output growth
-    ZZ[obs[:obs_gdp], endo[:y_t]]       = 1.0
-    ZZ[obs[:obs_gdp], endo[:y_t1]]      = -1.0
-    ZZ[obs[:obs_gdp], endo[:z_t]]       = 1.0
-    DD[obs[:obs_gdp]]                   = m[:γ_Q]
+    ZZ[obs[:obs_gdp], endo[:y_t]]  = 1.0
+    ZZ[obs[:obs_gdp], endo[:y_t1]] = -1.0
+    ZZ[obs[:obs_gdp], endo[:z_t]]  = 1.0
+    DD[obs[:obs_gdp]]              = m[:γ_Q]
 
     ## Inflation
-    ZZ[obs[:obs_infl], endo[:π_t]]   = 4.0
-    DD[obs[:obs_infl]]               = m[:π_star]
+    ZZ[obs[:obs_infl], endo[:π_t]] = 4.0
+    DD[obs[:obs_infl]]             = m[:π_star]
 
     ## Federal Funds Rate
-    ZZ[obs[:obs_ffr], endo[:R_t]]       = 4.0
-    DD[obs[:obs_ffr]]                   = m[:π_star] + m[:rA] + 4.0*m[:γ_Q]
+    ZZ[obs[:obs_ffr], endo[:R_t]] = 4.0
+    DD[obs[:obs_ffr]]             = m[:π_star] + m[:rA] + 4.0*m[:γ_Q]
 
     # Measurement error
-    EE[obs[:obs_gdp], endo[:y_t]]     = m[:e_y]^2
+    EE[obs[:obs_gdp], endo[:y_t]]  = m[:e_y]^2
     EE[obs[:obs_infl], endo[:π_t]] = m[:e_π]^2
-    EE[obs[:obs_ffr], endo[:R_t]]     = m[:e_R]^2
+    EE[obs[:obs_ffr], endo[:R_t]]  = m[:e_R]^2
 
     # Variance of innovations
     QQ[exo[:z_sh],exo[:z_sh]] = (m[:σ_z])^2
     QQ[exo[:g_sh],exo[:g_sh]] = (m[:σ_g])^2
     QQ[exo[:R_sh],exo[:R_sh]] = (m[:σ_R])^2
 
-    HH = EE + MM*QQ*MM'
+    HH    = EE + MM*QQ*MM'
     VV    = QQ*MM'
     VVall = [[RRR*QQ*RRR' RRR*VV];
              [VV'*RRR'    HH]]

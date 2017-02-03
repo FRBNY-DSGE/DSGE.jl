@@ -66,7 +66,7 @@ values are specified by `NaN`.
 
 Let's consider an example dataset comprised of 10 macro series sourced from FRED and one
 survey-based series sourced from, say, the Philadelphia Fed's [Survey of Professional
-Forecasters](https://www.philadelphiafed.org/research-and-data/real-time-center/survey-of-professional-forecasters/historical-data/inflation-forecasts)
+Forecasters](http://www.philadelphiafed.org/research-and-data/real-time-center/survey-of-professional-forecasters/historical-data/inflation-forecasts)
 via Haver Analytics:
 
 ```
@@ -146,7 +146,7 @@ for their model.
 
 - the user specifies `m.observables`; the keys of this dictionary name
     the series to be used in estimating the model.
-    
+
 - the user specifies `m.data_series`; the keys of this dictionary name data sources, and the
     values of this dictionary are lists of mnemonics to be accessed from that data source.
     Note that these mnemonics do not correspond to observables one-to-one, but rather are
@@ -164,7 +164,7 @@ for their model.
     of use when defining series-specific transformations.
 
 - the user adjusts data-related settings, such as `data_vintage`, `dataroot`,
-    `date_presample_start`, `date_mainsample_end`, and `date_zlbregime_start`, and
+    `date_presample_start`, `date_zlb_start`, `date_forecast_start`, and
     `use_population_forecast`.
 
 Second, *DSGE.jl* attempts to construct the dataset given this setup through a call to
@@ -182,7 +182,7 @@ Given the complexity of the data download, you may find that the dataset generat
 
 - Ensure that the `data_vintage` model setting is as you expect. (Try checking
     `data_vintage(m)`.)
-- Ensure that the `date_mainsample_end` model setting is as you expect, and that is not
+- Ensure that the `date_forecast_start` model setting is as you expect, and that is not
     logically incompatible with `data_vintage`.
 - Ensure that the `data_series` field of the model object is set as expected.
 - Double check the transformations specified in the `data_transforms` field of the model

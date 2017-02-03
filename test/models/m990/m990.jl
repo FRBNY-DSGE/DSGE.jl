@@ -1,5 +1,5 @@
 using DSGE
-using HDF5, Base.Test, Distributions
+using HDF5, Base.Test, Distributions, JLD
 include("../../util.jl")
 
 path = dirname(@__FILE__)
@@ -74,7 +74,7 @@ close(h5)
 @test_matrix_approx_eq Ψ_ref Ψ
 @test_matrix_approx_eq Π_ref Π
 
-# ### Measurement equation
+### Measurement equation
 expect = Dict{Symbol, Matrix}()
 h5 = h5open("$path/measurement.h5")
 expect[:ZZ] = read(h5, "ZZ")
@@ -90,5 +90,69 @@ actual = measurement(model, TTT, RRR, CCC)
 for d in (:ZZ, :DD, :QQ, :EE, :MM)
     @test_matrix_approx_eq expect[d] actual[d]
 end
+
+
+### Pseudo-measurement equation
+expect = Dict{Symbol, Any}()
+jld = jldopen("$path/pseudo_measurement.jld")
+expect[:ZZ_pseudo] = read(jld, "ZZ_pseudo")
+expect[:DD_pseudo] = reshape(read(jld, "DD_pseudo"), 18, 1)
+expect[:inds] = read(jld, "inds")
+close(jld)
+
+model = Model990()
+actual = pseudo_measurement(model)[2]
+for d in (:ZZ_pseudo, :DD_pseudo)
+    @test_matrix_approx_eq expect[d] getfield(actual,d)
+end
+@assert isequal(expect[:inds], getfield(actual, :inds))
+
+### Custom settings
+custom_settings = Dict{Symbol, Setting}(
+    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6))
+model = Model990(custom_settings = custom_settings)
+@test get_setting(model, :n_anticipated_shocks) == 6
+
+# Indices initialized correctly under custom settings
+
+# Endogenous states
+endo = model.endogenous_states
+@test length(endo) == 66
+@test endo[:rm_tl6] == 66
+
+# Exogenous shocks
+exo = model.exogenous_shocks
+@test length(exo) == 22
+@test exo[:rm_shl6] == 22
+
+# Expectation shocks
+ex = model.expected_shocks
+@test length(ex) == 13
+@test ex[:Erk_f_sh] == 13
+
+# Equations
+eq = model.equilibrium_conditions
+@test length(eq) == 66
+@test eq[:eq_rml6] == 66
+
+# Additional states
+endo_new = model.endogenous_states_augmented
+@test length(endo_new) == 12
+@test endo_new[:y_t1] == 67
+
+# Observables
+obs = model.observables
+@test length(obs) == 18
+@test obs[:obs_nominalrate6] == 18
+
+### Equilibrium conditions
+Γ0, Γ1, C, Ψ, Π = eqcond(model)
+
+# Matrices are of expected dimensions
+@test size(Γ0) == (66, 66)
+@test size(Γ1) == (66, 66)
+@test size(C) == (66, 1)
+@test size(Ψ) == (66, 22)
+@test size(Π) == (66, 13)
 
 nothing

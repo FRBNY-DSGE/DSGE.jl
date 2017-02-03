@@ -10,7 +10,7 @@ using Base.Test
 @test α.key == :α
 @test isa(α.prior.value, Normal)
 @test α.prior.value.μ == 0.3
-@test α.description == ""
+@test α.description == "No description available."
 @test α.tex_label == ""
 @test isa(α.transform, DSGE.SquareRoot)
 
@@ -131,5 +131,19 @@ for fn in [:rawpath, :workpath, :tablespath, :figurespath]
     @eval $(fn)(m, "test", "temp")
     @eval $(fn)(m, "test", "temp", addl_strings)
 end
+
+# Pseudo-measurement equation matrices in Systems
+system = compute_system(m)
+@test !isnull(system.pseudo_measurement)
+system[:ZZ_pseudo]
+system[:DD_pseudo]
+
+m <= Setting(:forecast_pseudoobservables, false)
+system = compute_system(m)
+@test isnull(system.pseudo_measurement)
+@test_throws DSGE.PseudoMeasurementUndefError system[:ZZ_pseudo]
+@test_throws DSGE.PseudoMeasurementUndefError system[:DD_pseudo]
+m <= Setting(:forecast_pseudoobservables, true)
+
 
 nothing

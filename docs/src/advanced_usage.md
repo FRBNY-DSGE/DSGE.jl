@@ -16,7 +16,7 @@ Depth = 5
 ## Working with Settings
 
 There are many computational settings that affect how the code runs without affecting the
-mathematical definition of the model. 
+mathematical definition of the model.
 
 Below, we describe several important settings for package usage.
 
@@ -37,9 +37,8 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults
 #### Dates
 - `date_presample_start`: Start date of pre-sample.
 - `date_mainsample_start`: Start date of main sample.
-- `date_zlbregime_start`: Start date of zero lower bound regime.
-- `date_mainsample_end`: End date of main sample.
-- `date_forecast_start`: Start date of forecast period.
+- `date_zlb_start`: Start date of zero lower bound regime.
+- `date_forecast_start`: Start date of forecast period (or the period after the last period for which we have GDP data).
 - `date_forecast_end`: End date of forecast period.
 
 #### Anticipated Shocks
@@ -49,8 +48,9 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults
 #### Estimation
 - `reoptimize`: Whether to reoptimize the posterior mode. If `true`
     (the default), `estimate()` begins reoptimizing from the model
-    object's parameter vector. See [Optimizing or Reoptimizing](@ref
-    estimation-reoptimizing) for more details.
+    object's parameter vector.
+    See [Optimizing or Reoptimizing](@ref estimation-reoptimizing)
+    for more details.
 - `calculate_hessian`: Whether to compute the Hessian. If `true` (the
     default), `estimate()` calculates the Hessian at the posterior mode.
 
@@ -89,18 +89,27 @@ object `m` as an argument. Note that not all are exported.
 
 ### Overwriting Default Settings
 
-To overwrite default settings added during model construction, a user must define a new
-`Setting` object and update the corresponding entry in the model's `settings` dictionary
-using the `<=` syntax. If the `print`, `code`, and `description` fields of the new `Setting`
-object are not provided, the fields of the existing setting will be maintained. If new
-values for `print`, `code`, and `description` are specified, and if these new values are
-distinct from the defaults for those fields, the fields of the existing setting will be
-updated.
+To overwrite default settings added during model construction, a user must
+create a `Dict{Symbol, Setting}` and pass that into the model constructor as the
+keyword argument `custom_settings`. If the `print`, `code`, and `description`
+fields of the new `Setting` object are not provided, the fields of the existing
+setting will be maintained. If new values for `print`, `code`, and `description`
+are specified, and if these new values are distinct from the defaults for those
+fields, the fields of the existing setting will be updated.
 
 For example, overwriting `use_parallel_workers` should look like this:
 ```julia
-m = Model990()
-m <= Setting(:use_parallel_workers, true)
+custom_settings = Dict{Symbol, Setting}(
+    :use_parallel_workers => Setting(:use_parallel_workers, true))
+m = Model990(custom_settings = custom_settings)
+```
+
+By default, passing in `custom_settings` overwrites the entries in the model
+object's `settings` field. However, with the additional keyword argument
+`testing = true`, it will overwrite the entries in `test_settings`:
+
+```julia
+m = Model990(custom_settings = custom_settings, testing = true)
 ```
 
 ## [Editing or Extending a Model](@id editing-extending-model)

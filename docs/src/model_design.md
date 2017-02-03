@@ -18,7 +18,7 @@ The following objects define a model:
   model in canonical form).
 - **Measurement Equation**: A function mapping states to observables.
 
-These are enough to define the model structure. _Everything else_ is essentially
+These are enough to define the model structure. *Everything else* is essentially
 a function of these basics, and we can solve the model and forecast observables
 via the following chain:
 
@@ -27,4 +27,3 @@ via the following chain:
 - Transition matrices + Data -> Estimated parameter values
 - Estimated parameters + Transition matrices + Data -> Forecast (not yet
   implemented)
-

@@ -21,11 +21,6 @@ function eqcond(m::AnSchorfheide)
     ex   = m.expected_shocks
     eq   = m.equilibrium_conditions
 
-    #SUMMARY
-    neq = 8
-    neta = 2
-    neps = 3
-
     Γ0 = zeros(neq,neq)
     Γ1 = zeros(neq,neq)
     C  = zeros(neq, 1)
@@ -45,11 +40,10 @@ function eqcond(m::AnSchorfheide)
 
     ### 2. NK Phillips Curve
 
-    β = 1/(1+m[:rA]/400)
     Γ0[eq[:eq_phillips], endo[:y_t]] = -m[:κ]
     Γ0[eq[:eq_phillips], endo[:π_t]] = 1
     Γ0[eq[:eq_phillips], endo[:g_t]] = m[:κ]
-    Γ0[eq[:eq_phillips], endo[:Eπ_t1]] = -β
+    Γ0[eq[:eq_phillips], endo[:Eπ_t1]] = -1/(1+m[:rA]/400)
 
     ### 3. Monetary Policy Rule
 
@@ -90,5 +84,4 @@ function eqcond(m::AnSchorfheide)
     Π[eq[:eq_Eπ], ex[:Eπ_sh]] = 1
 
     return Γ0, Γ1, C, Ψ, Π
-
 end

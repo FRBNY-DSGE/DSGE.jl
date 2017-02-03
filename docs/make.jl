@@ -17,6 +17,7 @@ makedocs(modules = [DSGE],
                      "Implementation Details" => "implementation_details.md",
                      "Solving the Model"      => "solving.md",
                      "Estimating the Model"   => "estimation.md",
+                     "Forecasting"            => "forecast.md",
                      "Algorithms"             => "algorithms.md",
                      "Contributing to DSGE.jl" => "contributing.md",
                      "MATLAB to Julia Transition" => "MatlabToJuliaTransition.md",
@@ -31,6 +32,6 @@ deploydocs(
      target = "build",
      deps = nothing,
      julia = "0.4",
-     osname = "osx",      
+     osname = "osx",
      make = nothing
 )
