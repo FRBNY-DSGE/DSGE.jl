@@ -322,7 +322,7 @@ forecast output array. The saved dictionaries include:
 """
 function read_forecast_metadata(file::JLD.JldFile)
     metadata = Dict{Symbol, Any}()
-    for field in names(file)
+    for field in setdiff(names(file), "arr")
         metadata[symbol(field)] = read(file, field)
     end
     return metadata
