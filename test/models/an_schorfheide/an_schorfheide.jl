@@ -47,7 +47,7 @@ endo_new = model.endogenous_states_augmented
 # Observables
 obs = model.observables
 @test length(obs) == 3
-@test obs[:obs_ffr] == 3
+@test obs[:obs_nominalrate] == 3
 
 ### Equilibrium conditions
 Γ0, Γ1, C, Ψ, Π = eqcond(model)
@@ -59,16 +59,16 @@ meas = measurement(model, TTT, RRR, CCC)
 # Matrices are of expected dimensions
 @test size(Γ0) == (8, 8)
 @test size(Γ1) == (8, 8)
-@test size(C) == (8, 1)
+@test size(C) == (8,)
 @test size(Ψ) == (8, 3)
 @test size(Π) == (8, 2)
 
-@test size(meas[:ZZ]) == (3,8)
-@test size(meas[:DD]) == (3,1)
-@test size(meas[:QQ]) == (3,3)
-@test size(meas[:EE]) == (3,3)
-@test size(meas[:MM]) == (3,3)
+@test size(meas[:ZZ]) == (3, 8)
+@test size(meas[:DD]) == (3,)
+@test size(meas[:QQ]) == (3, 3)
+@test size(meas[:EE]) == (3, 3)
+@test size(meas[:MM]) == (3, 3)
 
 @test size(TTT) == (8,8)
 @test size(RRR) == (8,3)
-@test size(CCC) == (8,1)
+@test size(CCC) == (8,)

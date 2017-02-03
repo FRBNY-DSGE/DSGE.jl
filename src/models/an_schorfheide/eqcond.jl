@@ -21,11 +21,11 @@ function eqcond(m::AnSchorfheide)
     ex   = m.expected_shocks
     eq   = m.equilibrium_conditions
 
-    Γ0 = zeros(neq,neq)
-    Γ1 = zeros(neq,neq)
-    C  = zeros(neq, 1)
-    Ψ  = zeros(neq,neps)
-    Π  = zeros(neq,neta)
+    Γ0 = zeros(n_states(m), n_states(m))
+    Γ1 = zeros(n_states(m), n_states(m))
+    C  = zeros(n_states(m))
+    Ψ  = zeros(n_states(m), n_shocks_exogenous(m))
+    Π  = zeros(n_states(m), n_shocks_expectational(m))
 
     ### ENDOGENOUS STATES ###
 

@@ -133,6 +133,7 @@ for fn in [:rawpath, :workpath, :tablespath, :figurespath]
 end
 
 # Pseudo-measurement equation matrices in Systems
+m = Model990()
 system = compute_system(m)
 @test !isnull(system.pseudo_measurement)
 system[:ZZ_pseudo]

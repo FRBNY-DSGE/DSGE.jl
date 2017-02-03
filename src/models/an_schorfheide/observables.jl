@@ -25,17 +25,17 @@ function init_observable_mappings!(m::AnSchorfheide)
     ## 2. CPI Inflation
     ############################################################################
 
-    infl_fwd_transform = function (levels)
+    cpi_fwd_transform = function (levels)
         # FROM: CPI urban consumers index (from FRED)
         # TO: Annualized quarter-to-quarter percent change of CPI index
 
         quartertoannual(oneqtrpctchange(levels[:CPIAUCSL]))
     end
 
-    infl_rev_transform = logtopct_annualized
+    cpi_rev_transform = logtopct_annualized
 
-    observables[:obs_infl] = Observable(:obs_infl, [:CPIAUCSL__FRED],
-                                        infl_fwd_transform, infl_rev_transform,
+    observables[:obs_cpi] = Observable(:obs_cpi, [:CPIAUCSL__FRED],
+                                        cpi_fwd_transform, cpi_rev_transform,
                                         "CPI Inflation",
                                         "CPI Inflation")
 
