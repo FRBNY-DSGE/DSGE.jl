@@ -9,7 +9,7 @@ m.testing = true
 
 file = "$path/../reference/optimize.h5"
 x0 = h5read(file, "params")
-data = h5read(file, "data")
+data = h5read(file, "data")'
 minimizer = h5read(file, "minimizer")
 minimum = h5read(file, "minimum")
 H_expected = h5read(file, "H")

@@ -10,7 +10,7 @@ m.testing = true
 
 # Setup paths
 
-data = h5read("$path/../reference/hessian.h5","data")
+data = h5read("$path/../reference/hessian.h5","data")'
 mode = h5read("$path/../reference/hessian.h5","paramsmode")
 hessian_expected = h5read("$path/../reference/hessian.h5","hessian")
 

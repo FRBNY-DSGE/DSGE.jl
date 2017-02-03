@@ -11,8 +11,7 @@ m.testing=true
 
 # Read in the data, mode, and hessian
 mode = h5read("$path/../reference/hessian.h5","paramsmode")
-hessian = h5read("$path/../reference/hessian.h5","hessian")
-data = h5read("$path/../reference/hessian.h5","data")
+data = h5read("$path/../reference/hessian.h5","data")'
 
 # Read in the covariance matrix for Metropolis-Hastings and reference parameter draws
 hessian_inv   = h5read("$path/../reference/metropolis_hastings.h5", "hessian_inv")

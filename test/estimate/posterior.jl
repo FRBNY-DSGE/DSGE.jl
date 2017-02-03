@@ -7,7 +7,7 @@ m = AnSchorfheide()
 m.testing = true
 
 file = "$path/../reference/posterior.h5"
-data = h5read(file, "data")
+data = h5read(file, "data")'
 lh_expected = h5read(file, "likelihood")
 post_expected = h5read(file, "posterior")
 
