@@ -20,7 +20,8 @@ returns data indexed by quarter-end date for compatibility with other datasets.
 """
 function load_fred_data(m::AbstractModel;
                         start_date::Date = Date("1959-01-01", "y-m-d"),
-                        end_date::Date   = prev_quarter())
+                        end_date::Date   = prev_quarter(),
+                        verbose::Symbol  = :low)
 
     data_series = parse_data_series(m)
     mnemonics = data_series[:FRED]
@@ -44,7 +45,9 @@ function load_fred_data(m::AbstractModel;
         qend = lastdayofquarter(end_date)
 
         if !in(qstart, data[:date]) || !in(qend, data[:date])
-            println("FRED dataset on disk missing start or end date. Fetching data from FRED.")
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                println("FRED dataset on disk missing start or end date. Fetching data from FRED.")
+            end
             data = DataFrame(date = get_quarter_ends(start_date,end_date))
             missing_series = mnemonics
         else
@@ -75,7 +78,9 @@ function load_fred_data(m::AbstractModel;
         f = Fred()
 
         for (i,s) in enumerate(missing_series)
-            println("Fetching FRED series $s...")
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                println("Fetching FRED series $s...")
+            end
             try
                 fredseries[i] = get_data(f, string(s); frequency="q",
                                                        observation_start=string(start_date),
@@ -90,7 +95,9 @@ function load_fred_data(m::AbstractModel;
                 warn("FRED series $s could not be fetched at vintage $vint.")
 
                 try
-                    println("Fetching FRED series $s without vintage...")
+                    if VERBOSITY[verbose] >= VERBOSITY[:low]
+                        println("Fetching FRED series $s without vintage...")
+                    end
                     fredseries[i] = get_data(f, string(s); frequency="q",
                                                            observation_start=string(start_date),
                                                            observation_end=string(end_date))
@@ -126,7 +133,9 @@ function load_fred_data(m::AbstractModel;
 
         if !m.testing
             writetable(datafile, data)
-            println("Updated data from FRED written to $datafile.")
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                println("Updated data from FRED written to $datafile.")
+            end
         end
     end
 
