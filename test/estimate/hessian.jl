@@ -5,8 +5,9 @@ include("../util.jl")
 path = dirname(@__FILE__)
 
 # # Test hessian! in context of model
-m = AnSchorfheide()
-m.testing = true
+custom_settings = Dict{Symbol, Setting}(
+    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")))
+m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 # Setup paths
 

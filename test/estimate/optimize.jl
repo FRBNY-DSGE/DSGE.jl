@@ -4,8 +4,10 @@ path = dirname(@__FILE__)
 include("../util.jl")
 
 # Test in model optimization
-m = AnSchorfheide()
-m.testing = true
+custom_settings = Dict{Symbol, Setting}(
+    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")))
+m = AnSchorfheide(custom_settings = custom_settings, testing = true)
+
 
 file = "$path/../reference/optimize.h5"
 x0 = h5read(file, "params")

@@ -3,8 +3,9 @@ using HDF5, Base.Test
 
 path = dirname(@__FILE__)
 
-m = AnSchorfheide()
-m.testing = true
+custom_settings = Dict{Symbol, Setting}(
+    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")))
+m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 file = "$path/../reference/posterior.h5"
 data = h5read(file, "data")'
