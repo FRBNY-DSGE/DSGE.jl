@@ -402,7 +402,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     update!(m, params)
     system = compute_system(m)
     if !irfs_only
-        kal = filter(m, df, system; cond_type = cond_type)
+        kal = filter(m, df, system; cond_type = cond_type, allout = true)
     end
 
     # Initialize dictionary
