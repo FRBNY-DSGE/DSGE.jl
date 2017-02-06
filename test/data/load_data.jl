@@ -18,8 +18,8 @@ custom_settings = Dict{Symbol, Setting}(
 m = Model990(custom_settings = custom_settings, testing = true)
 
 # Read expected results
-exp_data, exp_cond_data, exp_semicond_data = 
-    h5open("$path/../reference/load_data_out.h5") do h5
+exp_data, exp_cond_data, exp_semicond_data =
+    h5open("$path/../reference/load_data_out.h5", "r") do h5
         read(h5, "data"), read(h5, "cond_data"), read(h5, "semicond_data")
 end
 
