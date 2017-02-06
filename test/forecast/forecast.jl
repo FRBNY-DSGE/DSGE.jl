@@ -4,13 +4,10 @@ include("../util.jl")
 path = dirname(@__FILE__)
 
 # Set up arguments
-custom_settings = Dict{Symbol, Setting}(
-    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6),
-    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2016-Q1")),
-    :forecast_horizons    => Setting(:forecast_horizons, 1),
-    :use_parallel_workers => Setting(:use_parallel_workers, true),
-    :forecast_kill_shocks => Setting(:forecast_kill_shocks, true))
-m = Model990(custom_settings = custom_settings, testing = true)
+m = AnSchorfheide(testing = true)
+m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
+m <= Setting(:forecast_horizons, 1)
+m <= Setting(:forecast_kill_shocks, true)
 
 system, kal = jldopen("$path/../reference/forecast_args.jld","r") do file
     read(file, "system"), read(file, "kal")
@@ -18,25 +15,29 @@ end
 z0 = zeros(n_states_augmented(m))
 
 # Read expected output
-exp_states, exp_obs, exp_pseudo, exp_shocks = jldopen("$path/../reference/forecast_out.jld", "r") do file
-    read(file, "exp_states"), read(file, "exp_obs"), read(file, "exp_pseudo"), read(file, "exp_shocks")
-end
+exp_states, exp_obs, exp_pseudo, exp_shocks =
+    jldopen("$path/../reference/forecast_out.jld", "r") do file
+        read(file, "exp_states"),
+        read(file, "exp_obs"),
+        read(file, "exp_pseudo"),
+        read(file, "exp_shocks")
+    end
 
 # Run forecast without supplying shocks
 states, obs, pseudo, shocks = forecast(m, system, z0)
 
-@test_matrix_approx_eq squeeze(exp_states[1, :, :], 1) states
-@test_matrix_approx_eq squeeze(exp_obs[1, :, :],    1) obs
-@test_matrix_approx_eq squeeze(exp_pseudo[1, :, :], 1) pseudo
-@test_matrix_approx_eq squeeze(exp_shocks[1, :, :], 1) shocks
+@test_matrix_approx_eq exp_states states
+@test_matrix_approx_eq exp_obs    obs
+@test_matrix_approx_eq exp_pseudo pseudo
+@test_matrix_approx_eq exp_shocks shocks
 
 # Run forecast, supplying shocks
 states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks)
 
-@test_matrix_approx_eq squeeze(exp_states[1, :, :], 1) states
-@test_matrix_approx_eq squeeze(exp_obs[1, :, :],    1) obs
-@test_matrix_approx_eq squeeze(exp_pseudo[1, :, :], 1) pseudo
-@test_matrix_approx_eq squeeze(exp_shocks[1, :, :], 1) shocks
+@test_matrix_approx_eq exp_states states
+@test_matrix_approx_eq exp_obs    obs
+@test_matrix_approx_eq exp_pseudo pseudo
+@test_matrix_approx_eq exp_shocks shocks
 
 # Normally distributed shocks
 m <= Setting(:forecast_kill_shocks, false)

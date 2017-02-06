@@ -16,15 +16,18 @@ mode = h5read("$path/../reference/hessian.h5","paramsmode")
 data = h5read("$path/../reference/hessian.h5","data")'
 
 # Read in the covariance matrix for Metropolis-Hastings and reference parameter draws
-hessian_inv   = h5read("$path/../reference/metropolis_hastings.h5", "hessian_inv")
-ref_draws     = h5read("$path/../reference/metropolis_hastings.h5", "ref_draws")
-ref_cov       = h5read("$path/../reference/metropolis_hastings.h5", "ref_cov")
+hessian_inv, ref_draws, ref_cov =
+    h5open("$path/../reference/metropolis_hastings.h5", "r") do file
+        read(file, "hessian_inv"),
+        read(file, "mhparams"),
+        read(file, "ref_cov")
+    end
 
 # Set up and run metropolis-hastings
 update!(m, mode)
-prop_cov = DSGE.DegenerateMvNormal(mode, hessian_inv)
+prop_cov = DegenerateMvNormal(mode, hessian_inv)
 
-DSGE.metropolis_hastings(prop_cov, m, data, .01, .09, verbose=:none)
+metropolis_hastings(prop_cov, m, data, .01, .09, verbose=:none)
 compute_parameter_covariance(m)
 
 # Read in the parameter draws and covariance just generated from estimate.
