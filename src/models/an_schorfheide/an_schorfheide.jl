@@ -110,7 +110,7 @@ function init_model_indices!(m::AnSchorfheide)
 
     # Exogenous shocks
     exogenous_shocks = collect([
-        :z_sh, :g_sh, :R_sh])
+        :z_sh, :g_sh, :rm_sh])
 
     # Expectations shocks
     expected_shocks = collect([
@@ -267,4 +267,6 @@ function settings_an_schorfheide!(m::AnSchorfheide)
         "Observables used in semiconditional forecasts")
     m <= Setting(:forecast_pseudoobservables, true,
                  "Whether to forecast pseudo-observables")
+    m <= Setting(:forecast_zlb_value, 0.13,
+        "Value of the zero lower bound in forecast periods, if we choose to enforce it")
 end

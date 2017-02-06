@@ -52,7 +52,7 @@ function eqcond(m::AnSchorfheide)
     Γ0[eq[:eq_mp], endo[:R_t]] = 1
     Γ0[eq[:eq_mp], endo[:g_t]] = (1-m[:ρ_R])*m[:ψ_2]
     Γ1[eq[:eq_mp], endo[:R_t]] = m[:ρ_R]
-    Ψ[eq[:eq_mp], exo[:R_sh]] = 1
+    Ψ[eq[:eq_mp], exo[:rm_sh]] = 1
 
     ### 4. Output lag
 
