@@ -261,6 +261,10 @@ function settings_an_schorfheide!(m::AnSchorfheide)
 
     m <= Setting(:use_population_forecast, true,
                  "Whether to use population forecasts as data")
+    m <= Setting(:cond_full_names, [:obs_gdp, :obs_nominalrate],
+        "Observables used in conditional forecasts")
+    m <= Setting(:cond_semi_names, [:obs_nominalrate],
+        "Observables used in semiconditional forecasts")
     m <= Setting(:forecast_pseudoobservables, true,
                  "Whether to forecast pseudo-observables")
 end
