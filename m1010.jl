@@ -290,8 +290,9 @@ function Model1010(subspec::AbstractString="ss1";
                    description="F(ω): The cumulative distribution function of ω (idiosyncratic iid shock that increases or decreases entrepreneurs' capital).",
                    tex_label="F(\\omega)")
 
-    m <= parameter(:spr,     1.0, (0., 100.), (1e-5, 0.),    DSGE.Exponential(),   GammaAlt(1., 0.1),           fixed=false,  scaling = x -> (1 + x/100)^0.25,
-                   description="spr_*: steady-state spread.",
+    m <= parameter(:spr,     1.0, (0., 100.), (1e-5, 0.), DSGE.Exponential(), GammaAlt(1., 0.1), fixed=false,
+                   scaling = x -> (1 + x/100)^0.25,
+                   description="spr_*: steady-state spread (in percent annualized).",
                    tex_label="spr_*")
 
     m <= parameter(:lnb_liq, 0.47/4, (1e-5, 10.),   (1e-5, 10.), DSGE.Exponential(), GammaAlt(0.47/4, 0.05),
