@@ -499,7 +499,7 @@ m <= parameter(:ρ_tfp,     0.1953, (0.0, 1.0),      (0.0, 1.0), DSGE.SquareRoot
 
     m <= parameter(:σ_BBB, 0.0, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
                    fixed=true,
-                   description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the AAA spread.",
+                   description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
 
     m <= parameter(:σ_AAA, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
