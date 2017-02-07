@@ -9,7 +9,7 @@ end
 function init_observable_mappings!(m::Model1010)
 
     observables = OrderedDict{Symbol,Observable}()
-    population_mnemonic = get_setting(m, :population_mnemonic)
+    population_mnemonic = get(get_setting(m, :population_mnemonic))
 
     ############################################################################
     ## 1. GDP
