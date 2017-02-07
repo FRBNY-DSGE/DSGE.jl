@@ -128,10 +128,6 @@ function measurement{T<:AbstractFloat}(m::Model1010{T},
     ZZ[obs[:obs_AAAspread], endo_new[:e_AAA_t]]   = 1.0
     DD[obs[:obs_AAAspread]]                       = 100*log(m[:lnb_liq]) + 100*m[:λ_AAA]*log(m[:spr]*m[:lnb_safe])
 
-    if subspec(m) == "ss3"
-        DD[obs[:obs_AAAspread]]                  = 2*100*log(m[:lnb_liq]) + 100*m[:λ_AAA]*log(m[:spr]*m[:lnb_safe])
-    end
-
     ## 10 yrs infl exp
     TTT10                          = (1/40)*((UniformScaling(1.) - TTT)\(UniformScaling(1.) - TTT^40))
     ZZ[obs[:obs_longinflation], :] = TTT10[endo[:π_t], :]
