@@ -32,6 +32,19 @@ end
 @test_approx_eq exp_eta_hat eta_hat
 @test_approx_eq kal[:zend] alpha_hat[:, end]
 
+# Hamilton smoother with anticipated shocks
+system = compute_system(m)
+alpha_hat, eta_hat = Hamilton_smoother(m, data, system, kal)
+
+
+exp_alpha_hat, exp_eta_hat = h5open("$path/../reference/Hamilton_smoother_out.h5", "r") do h5
+    read(h5, "alpha_hat"), read(h5, "eta_hat")
+end
+
+@test_approx_eq exp_alpha_hat alpha_hat
+@test_approx_eq exp_eta_hat eta_hat
+@test_approx_eq kal[:zend] alpha_hat[:, end]
+
 
 # Durbin-Koopman smoother with anticipated shocks
 alpha_hat, eta_hat = durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD,
@@ -43,7 +56,6 @@ end
 
 @test_approx_eq exp_alpha_hat alpha_hat
 @test_approx_eq exp_eta_hat eta_hat
-
 
 # Kalman smoother without anticipated shocks
 custom_settings = Dict{Symbol, Setting}(
@@ -63,5 +75,10 @@ alpha_hat, eta_hat = kalman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, A0, P0,
     kal[:pred], kal[:vpred])
 @test_matrix_approx_eq kal[:zend] alpha_hat[:, end]
 
+# Hamilton smoother without anticipated shocks
+system = compute_system(m)
+alpha_hat, eta_hat = Hamilton_smoother(m, data, system, kal)
+
+@test_approx_eq kal[:zend] alpha_hat[:, end]
 
 nothing

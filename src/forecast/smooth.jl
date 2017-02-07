@@ -62,6 +62,9 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     elseif forecast_smoother(m) == :durbin_koopman
         durbin_koopman_smoother(m, data, system, kal[:z0], kal[:vz0];
             include_presample = true)
+    elseif forecast_smoother(m) == :Hamilton
+        Hamilton_smoother(m, data, system, kal,
+            include_presample = true)
     end
 
     # Index out last presample states, used to compute the deterministic trend
