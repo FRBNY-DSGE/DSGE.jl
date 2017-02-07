@@ -124,8 +124,8 @@ end
 add_requisite_output_vars(output_vars::Vector{Symbol})
 ```
 
-Based on the given output_vars, this function determines which
-additional output_vars must be computed and stored for future
+Based on the given `output_vars`, this function determines which
+additional `output_vars` must be computed and stored for future
 plotting.
 
 Specifically, when plotting a shock decomposition, the trend and

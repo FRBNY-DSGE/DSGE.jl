@@ -7,20 +7,33 @@ Stores the means and bands of results for a particular set of outputs from the f
 
 Specifically, forecasts can be made for any element in the Cartesian product of 4 sets:
 
-1. `input_type`: some subset of the parameter draws from the estimation step. See `forecast_all` for all possible options.
-2. `cond_type`: conditional type. See `forecast_all` for all possible options.
-3. *product*: a particular result computed in the forecast. This could be one of the following:
+1. `input_type`: some subset of the parameter draws from the estimation
+   step. See `forecast_one` for all possible options.
+
+2. `cond_type`: conditional type. See `forecast_one` for all possible options.
+
+3. *product*: a particular result computed in the forecast. This could be one of
+   the following:
+
+```
   - `hist`: smoothed histories
   - `forecast`: forecasted values
   - `shockdec`: shock decompositions
   - `irf`: impulse responses
-4. variable *class*: the category in which a particular variable, like `:y_t`, falls. Options are:
+```
+
+4. variable *class*: the category in which a particular variable, like `:y_t`,
+   falls. Options are:
+
+```
   - `state`: state (from `m.endogenous_states` or `m.endogenous_states_augmented`)
   - `obs`: observable (from `m.observables`)
   - `pseudo`: pseudoobservable (from `pseudo_measurement` equation)
   - `shock`: shock (from `m.exogenous_shocks`)
+```
 
-Note that the Cartesian product (product x class) is the set of options for `output_vars` in the `forecast_one` function signature.
+Note that the Cartesian product (product x class) is the set of options for
+`output_vars` in the `forecast_one` function signature.
 
 ### Fields
 

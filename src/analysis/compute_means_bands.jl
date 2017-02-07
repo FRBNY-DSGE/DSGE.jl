@@ -1,8 +1,7 @@
 """
 ```
 means_bands_all(m, input_type, cond_type, output_vars; forecast_string = "",
-    density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], minimize = false, verbose :low)
-
+    density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], minimize = false, verbose = :low)
 
 means_bands_all(input_type, cond_type, output_vars, input_dir, output_dir,
     filestring_base; forecast_string = "", density_bands = [0.5, 0.6, 0.7, 0.8, 0.9],

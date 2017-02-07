@@ -170,8 +170,8 @@ forecast_one(m, input_type, cond_type, output_vars; df = DataFrame(),
     subset_inds = 1:0, forecast_string = "", verbose = :low)
 ```
 
-Compute, save, and return `output_vars` for input draws given by `input_type`
-and conditional data case given by `cond_type`.
+Compute and save `output_vars` for input draws given by `input_type` and
+conditional data case given by `cond_type`.
 
 ### Inputs
 
@@ -361,7 +361,7 @@ Compute `output_vars` for a single parameter draw, `params`. Called by
 ```
   - `:histstates`: `Matrix{Float64}` of smoothed historical states
   - `:histobs`: `Matrix{Float64}` of smoothed historical data
-es  - `:histpseudo`: `Matrix{Float64}` of smoothed historical
+  - `:histpseudo`: `Matrix{Float64}` of smoothed historical
     pseudo-observables (if a pseudo-measurement equation has been provided for
     this model type)
   - `:histshocks`: `Matrix{Float64}` of smoothed historical shocks

@@ -10,32 +10,22 @@ In the forecast step, we compute smoothed histories, forecast, compute shock
 decompositions, and compute impulse response functions (IRFs) for states,
 observables, shocks, and pseudo-observables. To run a forecast on one
 combination of input parameter type (e.g. modal parameters or full-distribution)
-and conditional type, call `forecast_one`. To run several combinations, use
-`forecast_all`, which iterates through all combinations, calling `forecast_one`
-on each.
+and conditional type, call `forecast_one`.
 
 **Main Steps:**
 
-- *Prepare forecast inputs:* Load draws of parameter vectors saved from the
-  estimation step and solve the system for each draw. If necessary for the
-  desired forecast output, load data and run the Kalman filter on each draw.
+- *Prepare forecast inputs:* Add required output types, load data, and load
+  draws of parameter vectors saved from the estimation step.
 
-- *Smooth histories:* Get smoothed historical states and shocks.
+- *Compute forecast outputs:* Carry out desired combination of smoothing,
+  forecasting, computing shock decompositions, and computing IRFs. See
+  [Forecast Outputs](@ref forecast-outputs) for a list of possible forecast
+  outputs.
 
-- *Forecast:* Iterate the state space forward from the last historical state.
-
-- *Compute shock decompositions:* Iterate the state space forward from the first
-  historical state, shutting down all but one shock at a time.
-
-- *Compute IRFs:* For each shock, calculate the response to a shock of size -1
-  standard deviation.
-
-It is not necessary to do all of filtering and smoothing, forecasting, computing
-shock decompositions, and computing IRFs in one call to `forecast_one`. Which
-steps are run depends on which `output_vars` are passed in.
+- *Save forecast outputs:* Save each forecast output as an array to its own
+  file, along with some metadata.
 
 ```@docs
-DSGE.forecast_all
 DSGE.forecast_one
 ```
 
@@ -43,77 +33,106 @@ For example, to do an unconditional forecast of states and observables using the
 modal parameters, call:
 
 ```julia
-m = Model990()
-forecast_outputs = forecast_one(m, :mode, :none, [:forecaststates, forecastobs])
+m = AnSchorfheide()
+forecast_one(m, :mode, :none, [:forecaststates, forecastobs])
 ```
 
-To forecast states and observables at the mode for all conditional types, call:
+**Full-Distribution Forecasts:**
 
+Full-distribution forecasts are computed in blocks. The size of each block
+defaults to 5000 draws (before thinning by `get_setting(m, :forecast_jstep)`),
+but can be set using the `:forecast_block_size` `Setting`. For each block, draws
+are read in on the originator process, then computation proceeds in parallel
+using `pmap`. When all draws in the block are finished, the forecast outputs are
+reassembled on the originator process and appended to the HDF5 dataset in their
+respective output files.
+
+To fully take advantage of the parallelization, the user is responsible for
+adding processes before calling `forecast_one`, either by calling `addprocs` or
+using one of the functions defined in
+[ClusterManagers.jl](https://github.com/JuliaParallel/ClusterManagers.jl). For
+example, to run a full-distribution unconditional forecast using 10 processes:
 
 ```julia
-m = Model990()
-forecast_all(m, [:mode], [:none, :semi, :full], [:forecaststates, :forecastobs])
+my_procs = addprocs(10)
+@everywhere using DSGE
+
+m = AnSchorfheide()
+forecast_one(m, :full, :none, [:forecaststates, forecastobs])
+
+rmprocs(my_procs)
 ```
 
-**Full-Distribution Forecasts**
+Notice that it is necessary to load DSGE on all processes using
+`@everywhere using DSGE` before calling `forecast_one`.
 
-Since Julia is just-in-time compiled, a function `f` is compiled only on the
-first call to `f` in a given Julia session. On this first call, `f` both takes
-longer to run and allocates more memory than in future calls. (See
-[Performance Tips](http://docs.julialang.org/en/latest/manual/performance-tips/)
-in the Julia manual for more details.) For this reason, it is important to
-compile `forecast_one` by running it once with `input_type = :full` or
-`input_type = :subset` on a small set of draws before running it again on your
-full set of draws. The function [`compile_forecast_one`](@ref) is provided to
-simplify this step. Call it using the same `output_vars` that you plan to call
-`forecast_one` with. For example:
+By default, full-distribution forecasts start from the first block. However, if
+you want to start the forecast from a later block, you can also do so. For
+example:
 
-```julia
-m = Model990()
-compile_forecast_one(m, [:forecaststates, :forecastobs])
-forecast_outputs = forecast_one(m, :full, :none, [:forecaststates, :forecastobs])
+``` julia
+m <= Setting(:forecast_start_block, Nullable{Int64}(2),
+    "Block at which to resume forecasting (possibly null)")
 ```
+
+## Forecast Outputs
+
+A forecast output (i.e. an `output_var`) is a combination of what we call a
+"product" and a "class". The possible classes are states (`:states`), observables
+(`:obs`), pseudo-observables (`:pseudo`), and shocks (`:shock`). The possible
+forecast products are:
+
+- Smoothed histories (`:hist`): use the smoother specified by
+  `forecast_smoother(m)` to get smoothed histories of each class.
+
+- Forecasts (`:forecast`): iterate the state space forward from the last
+  filtered state, either using a specified set of shock innovations or by
+  drawing these from a distribution. Forecasts in which we enforce the zero
+  lower bound are denoted as `:bddforecast`.
+
+- Shock decompositions (`:shockdec`): starting from an initial state of zero,
+  iterate the state space forward from the first historical period up through
+  the last forecast horizon. Use the smoothed historical shocks for one shock at
+  a time during the historical periods and no shocks during the forecast
+  periods.
+
+- Deterministic trends (`:dettrend`): iterate the state space forward from first
+  historical state up through the last forecast horizon without any shocks.
+
+- Trends (`:trend`): for each class, just the constant term in that class's
+  equation, i.e. the `CCC` vector from the transition equation for states, the
+  `DD` vector from the measurement equation for observables, and the `DD_pseudo`
+  vector from the pseuodo-measurement equation for pseudo-observables.
+
+- IRFs (`:irf`): see
+  [Impulse response](https://en.wikipedia.org/wiki/Impulse_response). Our IRFs are
+  in response to a shock of size -1 standard deviation.
+
+An `output_var` is then just a `Symbol` with a product and class concatenated,
+e.g. `:histstates` for smoothed historical states.
+
+It is not necessary to compute all forecast outputs in one call to
+`forecast_one`. Which steps are run depends on which `output_vars` are passed
+in.
 
 
 ## Preparing Forecast Inputs
 
-Before running the main functions called by `forecast_one`, we must:
+**Adding Required `output_var`s:**
 
-1. Call `load_data` with the appropriate `cond_type`
-2. Load the parameter draw or draws using `load_draws`
-3. Compute state-space systems for each draw using `prepare_systems`
-4. Run the Kalman filter on each draw using `filter_all` to get
-   last-historical-period filtered states from which to begin the forecast
+This step is done by `add_requisite_output_vars`:
 
-Not all of these steps are necessary for all `output_vars`; which steps get run
-depends on the `output_vars` provided to `forecast_one`.
+- If `:forecast<class>` is in `output_vars`, then `:bddforecast<class>` is also
+  added. Hence we always forecast both with and without enforcing the ZLB.
+- If `:shockdec<class>` is in `output_vars`, then `:dettrend<class>` and
+  `:trend<class>` are also added. This is because to plot shock decompositions,
+  we also need the trend and the deterministic trend.
 
-The function `prepare_forecast_inputs!` ensures that the provided keyword
-arguments to `forecast_one` are well-formed, and loads the ones that are not
-provided.
+**Loading Data:**
 
-Why aren't all forecast inputs required arguments to `forecast_one`? For
-example, if you want to run both conditional and unconditional full-distribution
-forecasts, you will need to load the data and run the Kalman filter separately
-for each conditional case, since conditional data has an additional
-period. However, you don't need to load the draws twice, since they are not
-affected by the `cond_type`. Hence you can load the draws once and pass in
-`systems` as a keyword argument, but have `prepare_forecast_inputs!` call
-`load_draws` and `filter_all` for you inside each `forecast_one` call:
+This is done the usual way, using `load_data` with the appropriate `cond_type`.
 
-```julia
-m = Model990()
-params = load_draws(m, :full)
-systems = prepare_systems(m, :full, params)
-
-for cond_type in [:none, :full]
-    forecast_one(m, :full, cond_type, [:forecastobs]; systems = systems)
-end
-```
-
-```@docs
-DSGE.prepare_forecast_inputs!
-```
+**Loading Draws:**
 
 By default, the draws are loaded from the file whose path is given by
 [`get_forecast_input_file`](@ref). However, you can override the default input
@@ -125,75 +144,35 @@ overrides = forecast_input_file_overrides(m)
 overrides[:mode] = "path/to/input/file.h5"
 ```
 
-`prepare_forecast_inputs!` calls [`load_data`](@ref), `load_draws`, `prepare_systems`, and
-`filter_all`:
-
-```@docs
-DSGE.load_draws
-DSGE.prepare_systems
-DSGE.filter_all
-```
+Note that `load_draws` expects an HDF5 dataset called either `params` (for
+`input_type in [:mode, :mean]`) or `mhparams` (for `input_type in [:full, :subset]`).
 
 
-## Smoothing
+## Computing Forecast Outputs
 
-In `smooth_all`, we use the smoother specified by `forecast_smoother(m)` to get
-smoothed historical states and shocks. We then apply the measurement and
-pseudo-measurement equations to get smoothed observables and pseudo-observables,
-respectively.
+**Smoothing:**
 
-Smoothing is necessary if:
+Smoothing is necessary if either:
 
-- You explicitly want the smoothed histories
-- You want to compute shock decompositions, which use the smoothed historical
-  shocks
+- You explicitly want the smoothed histories, or
+- You want to compute shock decompositions or deterministic trends, which use
+  the smoothed historical shocks
 
 It is not necessary to keep track of these cases, however - `forecast_one` will
 deduce from the specified `output_vars` whether or not it is necessary to filter
 and smooth in order to produce your `output_vars`.
 
-To smooth over many draws, call `smooth_all`, which in turn calls `smooth` on
-each draw. You can also just call `smooth` on one draw.
+**Forecasting:**
 
-```@docs
-DSGE.smooth_all
-DSGE.smooth
-```
-
-
-## Forecasting
-
-In `forecast`, we iterate the state space forward from the last filtered state,
-either using a specified set of shock innovations or by drawing these from a
-distribution. For each draw, the end filtered states were obtained by running
-the Kalman filter in the preparing inputs stage. After forecasting states by
-iterating forward from the last filtered state, we again apply the measurement
-and pseudo-measurement equations to get the forecasted observables and
-pseudo-observables.
-
-We can choose whether or not to enforce the zero lower bound by setting the
-keyword argument `enforce_zlb` to `forecast` appropriately. If `enforce_zlb =
+Forecasting begins from the last filtered historical state, which is obtained
+from the Kalman filter. `forecast` accepts a keyword argument `enforce_zlb`,
+which indicates whether to enforce the zero lower bound. If `enforce_zlb =
 true`, then if in a given period, the forecasted interest rate goes below
 `forecast_zlb_value(m)`, we solve for the interest rate shock necessary to push
-it up to the ZLB. At the `forecast_one` level, we specify enforcing the ZLB by
-using the `output_vars` `:forecaststatesbdd`, `:forecastobsbdd`,
-`:forecastpseudobdd`, and `forecastshocksbdd`.
+it up to the ZLB. A forecast in which the ZLB is enforced corresponds to the
+product `:bddforecast`.
 
-As in the previous step, you have the option of forecasting over many draws with
-`forecast` or using one draw with `compute_forecast`:
-
-```@docs
-DSGE.forecast
-DSGE.compute_forecast
-```
-
-
-## Shock Decompositions
-
-To get shock decompositions, we iterate the state space forward from the first
-historical state up through the last forecast horizon, using the smoothed
-histories for one shock at a time. As before, we decompose the observables and
-pseudo-observables by apply the respective measurement equations.
+**Shock Decompositions, Deterministic Trends, and Trends:**
 
 Since shock decompositions have an additional dimension (e.g. `nstates` x
 `nperiods` x `nshocks` for a single draw of state shock decompositions, compared
@@ -202,107 +181,51 @@ wish to truncate some periods before returning. This behavior is governed by the
 `Settings` `:shockdec_starttdate` and `:shockdec_enddate`, which are of type
 `Nullable{Date}`.
 
-Shock decompositions are computed over many draws using `shock_decompositions`,
-and on one draw using `compute_shock_decompositions`:
+Deterministic trends are also saved only for `date_shockdec_start(m)` and
+`date_shockdec_end(m)`. Trends are not time-dependent.
 
-```@docs
-DSGE.shock_decompositions
-DSGE.compute_shock_decompositions
-```
+**Impulse Response Functions:**
 
-
-## Impulse Response Functions
-
-See [Impulse response](https://en.wikipedia.org/wiki/Impulse_response). Our IRFs
-are in response to a shock of size -1 standard deviation. Like shock
-decompositions, IRFs have three dimensions (e.g. `nstates` x `nperiods` x
-`nshocks`) for each draw.
-
-As before, we can compute IRFs for all draws using `impulse_responses`, and for
-one draw using `compute_impulse_response`:
-
-``` @docs
-DSGE.impulse_responses
-DSGE.compute_impulse_response
-```
+Like shock decompositions, IRFs have three dimensions (e.g. `nstates` x
+`nperiods` x `nshocks`) for each draw.
 
 
-## Distributed Arrays
+## Saving Forecast Outputs
 
-Distributed arrays (`DArray`s), provided by
-[DistributedArrays.jl](https://github.com/JuliaParallel/DistributedArrays.jl),
-are a datastructure in which large arrays are distributed over several
-processes, reducing the memory load on any single process. This is important for
-full-distribution forecasts because we perform filtering and smoothing,
-forecasting, computing shock decompositions, and computing IRFs over a large
-number of draws, which is very memory-intensive. Draws are distributed in
-`prepare_systems`, and remain distributed throughout the forecast step,
-including while saving forecast outputs to file.
+Forecast outputs are saved in the location specified by
+`get_forecast_output_files(m)`, which is typically a subdirectory of
+`saveroot(m)`. Each `output_var` is saved in its own JLD file, which contains
+the following datasets:
 
-The keyword argument `procs` to `forecast_one` and other forecast-step functions
-specifies the process IDs over which to distribute the various `DArrays`. The user
-is responsible for adding processes before calling `forecast_one`, either by
-calling `addprocs` or using one of the functions defined in
-[ClusterManagers.jl](https://github.com/JuliaParallel/ClusterManagers.jl). For
-example, to run a full-distribution unconditional forecast using 10 processes:
+- `arr::Array`: actual array of forecast outputs. For trends, this array is of
+  size `ndraws` x `nvars`. For histories, forecasts, and deterministic trends,
+  it is `ndraws` x `nvars` x `nperiods`. For shock decompositions and IRFs, it
+  is `ndraws` x `nvars` x `nperiods` x `nshocks`. (In all of these, `nvars`
+  refers to the number of variables of the output class.)
 
-```julia
-my_procs = addprocs(10)
-@everywhere using DSGE
+- `date_indices::Dict{Date, Int}`: maps `Date`s to their indices along the
+  `nperiods` dimension of `arr`. Not saved for IRFs.
 
-m = Model990()
-m <= Setting(:use_parallel_workers, true)
-compile_forecast_one(m, [:forecaststates, :forecastobs]; procs = my_procs)
-forecast_one(m, :full, :none, [:forecaststates, forecastobs]; procs = my_procs)
+- `<class>_names::Dict{Symbol, Int}`: maps names of variables of the output
+  class (e.g. `:OutputGap`) into their indices along the `nvars` dimension of
+  `arr`.
 
-rmprocs(my_procs)
-```
+- `<class>_revtransforms::Dict{Symbol, Symbol}`: maps names of variables to the
+  names of the reverse transforms (from model units into plotting units)
+  associated with those variables. For example,
+  `pseudoobservable_revtransforms[:π_t] = :quartertoannual`.
 
-Notice that it is necessary to load DSGE on all processes using
-`@everywhere using DSGE` before calling `forecast_one`. The same `procs` should
-be used in the call to `compile_forecast_one`.
+- `shock_names::Dict{Symbol, Int}`: for shock decompositions and IRFs only, maps
+  names of shocks into their indices along the `nshocks` dimension of `arr`.
 
-If `procs` is not provided, the default value is `[myid()]`, the current process
-ID. Moreover, before distributing draws, `forecast_one` (or any other function
-taking the keyword argument `procs`) calls [`reset_procs`](@ref), which will reset
-`procs` to `[myid()]` if one of:
+Some helpful functions for getting file names, as well as reading and writing
+forecast outputs, include:
 
-- `input_type` is one of `[:init, :mode, :mean]`. That is, we have only one draw
-  and hence don't want to distribute it over many processes.
-- `use_parallel_workers(m) = false`, i.e. if the user has not specifically
-  updated the `Setting` `:use_parallel_workers` to `true`.
-
-Furthermore, DistributedArrays requires that the dimensions of a given `DArray`
-distribute evenly over the given `procs`. Since we only distribute `DArray`s
-over the draw dimension, this means that the number of draws (after thinning in
-the forecast step) must be divisible by the number of `procs`. If this is not
-the case, a warning is thrown and the draws are truncated to ensure
-divisibility. (See [`load_draws`](@ref) for further clarification.)
-
-Each forecast output (for example, forecasts of observables) is returned from
-its respective function as a `DArray`, and each of these is written to file
-without ever converting back to an `Array` (that is, without copying the local
-parts of the `DArray` back to the originator process). I/O with `DArray`s in
-DSGE is handled by `write_darray` and `read_darray`:
-
-```@docs
-DSGE.write_darray
-DSGE.read_darray
-```
-
-
-## Forecast Utilities
-
-Other functions used during the forecast step include:
-
-```@docs
-DSGE.compute_system
-DSGE.reset_procs
-DSGE.get_jstep
-DSGE.get_forecast_input_file
-DSGE.get_forecast_output_files
-DSGE.write_forecast_outputs
-DSGE.write_forecast_metadata
-DSGE.read_forecast_metadata
-DSGE.compile_forecast_one
-```
+- `get_forecast_input_file`
+- `get_forecast_filename`
+- `get_forecast_output_files`
+- `write_forecast_outputs`
+- `write_forecast_block`
+- `write_forecast_metadata`
+- `read_forecast_metadata`
+- `read_forecast_output`
