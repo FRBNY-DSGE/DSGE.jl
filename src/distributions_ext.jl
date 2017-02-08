@@ -53,6 +53,8 @@ type RootInverseGamma <: Distribution{Univariate, Continuous}
 If x ~ RootInverseGamma(ν, τ²), then
   x² ~ ScaledInverseChiSquared(ν, τ²)
   x² ~ InverseGamma(ν/2, ντ²/2)
+
+ν represents the degrees of freedom.
 """
 type RootInverseGamma <: Distribution{Univariate, Continuous}
     ν::Float64
