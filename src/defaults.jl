@@ -105,7 +105,7 @@ function default_settings!(m::AbstractModel)
         "Date of end of shock decomposition output period. If null, then shockdec ends at date_forecast_end")
     settings[:impulse_response_horizons] = Setting(:impulse_response_horizons, 40,
         "Number of periods for which to calculate an impulse response")
-
+    settings[:compute_shockdec_bands] = Setting(:compute_shockdec_bands, false, "Whether or not to compute bands for shock decomposition. Setting to false saves signficant storage space.")
     return settings
 end
 

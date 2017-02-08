@@ -121,7 +121,10 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
     output_dir = workpath(m, "forecast")
     base       = filestring_base(m)
 
-    ## Step 4: We have everything we need; appeal to model-object-agnostic function
+    ## Step 4: Do we want to compute bands for the shockdec?
+    compute_shockdec_bands = get_setting(m, :compute_shockdec_bands)
+
+    ## Step 5: We have everything we need; appeal to model-object-agnostic function
 
     means_bands_all(input_type, cond_type, output_vars,
                     input_dir, output_dir, base;
@@ -131,7 +134,8 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                     population_data_file = population_data_file,
                     population_forecast_file = population_forecast_file,
                     y0_indexes = y0_indexes, data = data,
-                    verbose = verbose)
+                    verbose = verbose,
+                    compute_shockdec_bands = compute_shockdec_bands)
 end
 
 function means_bands_all{T<:AbstractFloat}(input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol},
@@ -145,7 +149,8 @@ function means_bands_all{T<:AbstractFloat}(input_type::Symbol, cond_type::Symbol
                                            population_forecast_file::AbstractString = "",
                                            y0_indexes::Dict{Symbol,Int} = Dict{Symbol,Int}(),
                                            data = Matrix{T}(),
-                                           verbose::Symbol = :low)
+                                           verbose::Symbol = :low,
+                                           compute_shockdec_bands::Bool = false)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
@@ -198,7 +203,8 @@ function means_bands_all{T<:AbstractFloat}(input_type::Symbol, cond_type::Symbol
                          population_data = dlfiltered_population_data,
                          population_forecast = dlfiltered_population_forecast,
                          population_mnemonic = Nullable(:population_growth),
-                         y0_index = y0_index, data = data, verbose = verbose)
+                         y0_index = y0_index, data = data, verbose = verbose,
+                         compute_shockdec_bands = compute_shockdec_bands)
 
         # write to file
         filepath = mb_output_files[output_var]
@@ -249,7 +255,8 @@ function means_bands{T<:AbstractFloat}(input_type::Symbol,
                                        population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                                        y0_index::Int = -1,
                                        data::Matrix{T} = Matrix{T}(),
-                                       verbose::Symbol = :none)
+                                       verbose::Symbol = :none,
+                                       compute_shockdec_bands::Bool = false)
 
     # Return only one set of bands if we read in only one draw
     if input_type in [:init, :mode, :mean]
@@ -288,7 +295,8 @@ function means_bands{T<:AbstractFloat}(input_type::Symbol,
         # Get to work!
         mb_vec = pmap(var_name -> compute_means_bands(class, product, var_name, forecast_output_file;
                           data = data, population_series = population_series, y0_index = y0_index,
-                          density_bands = density_bands, minimize = minimize),
+                          density_bands = density_bands, minimize = minimize,
+                          compute_shockdec_bands = compute_shockdec_bands),
                       variable_names)
 
         # If some element of mb_vec is a RemoteException, rethrow the exception
@@ -322,7 +330,7 @@ function means_bands{T<:AbstractFloat}(input_type::Symbol,
             mb_vec = pmap(var_name -> compute_means_bands(class, product, var_name, forecast_output_file;
                               data = data, population_series = population_series, y0_index = y0_index,
                               shock_name = Nullable(shock_name), density_bands = density_bands,
-                              minimize = minimize),
+                              minimize = minimize, compute_shockdec_bands = compute_shockdec_bands),
                           variable_names)
 
             # If some element of mb_vec is a RemoteException, rethrow the exception
@@ -354,7 +362,8 @@ function compute_means_bands{T<:AbstractFloat}(class::Symbol,
                                                y0_index::Int = -1,
                                                shock_name::Nullable{Symbol} = Nullable{Symbol}(),
                                                density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9],
-                                               minimize::Bool = false)
+                                               minimize::Bool = false,
+                                               compute_shockdec_bands::Bool = false)
 
     fcast_series, transform, var_ind, date_list = jldopen(filename, "r") do file
         # Read forecast output
@@ -425,6 +434,10 @@ function compute_means_bands{T<:AbstractFloat}(class::Symbol,
     end
 
     means = vec(mean(transformed_series, 1))
-    bands = find_density_bands(transformed_series, density_bands, minimize = minimize)
+    bands = if product in [:shockdec, :dettrend, :trend] && compute_shockdec_bands
+        Dict{Symbol,DataFrame}()
+    else
+        find_density_bands(transformed_series, density_bands, minimize = minimize)
+    end
     return means, bands
 end
