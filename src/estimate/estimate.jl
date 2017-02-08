@@ -51,14 +51,9 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
                   mle::Bool = false,
                   run_MH::Bool = true)
 
-    ########################################################################################
-    ### Step 1: Initialize
-    ########################################################################################
-
-    post = posterior(m, data)
 
     ########################################################################################
-    ### Step 2: Find posterior mode (if reoptimizing, run optimization routine)
+    ### Step 1: Find posterior/likelihood mode (if reoptimizing, run optimization routine)
     ########################################################################################
 
     # Specify starting mode
@@ -121,7 +116,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     end
 
     ########################################################################################
-    ### Step 3: Compute proposal distribution
+    ### Step 2: Compute proposal distribution
     ###
     ### In Metropolis-Hastings, we draw sample parameter vectors from
     ### the proposal distribution, which is a degenerate multivariate
@@ -185,7 +180,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     end
 
     ########################################################################################
-    ### Step 4: Sample from posterior using Metropolis-Hastings algorithm
+    ### Step 3: Sample from posterior using Metropolis-Hastings algorithm
     ########################################################################################
 
     # Set the jump size for sampling
@@ -195,7 +190,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     metropolis_hastings(propdist, m, data, cc0, cc; verbose=verbose)
 
     ########################################################################################
-    ### Step 5: Calculate and save parameter covariance matrix
+    ### Step 4: Calculate and save parameter covariance matrix
     ########################################################################################
 
     compute_parameter_covariance(m)
