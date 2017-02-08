@@ -42,6 +42,7 @@ function optimize!(m::AbstractModel,
                    store_trace::Bool    = false,
                    show_trace::Bool     = false,
                    extended_trace::Bool = false,
+                   mle::Bool            = false, # default from estimate.jl
                    step_size::Float64   = .01,
                    verbose::Symbol      = :none)
 
@@ -80,7 +81,11 @@ function optimize!(m::AbstractModel,
         catch
             return Inf
         end
-        out = -posterior(m, data; catch_errors=true)
+        if mle
+            out = -likelihood(m, data; catch_errors = true)
+        else
+            out = -posterior(m, data; catch_errors=true)
+        end
         out = !isnan(out) ? out : Inf
         return out
     end

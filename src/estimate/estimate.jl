@@ -22,24 +22,34 @@ Estimate the DSGE parameter posterior distribution.
   eigenvectors corresponding to zero eigenvectors are not well defined, so eigenvalue
   decomposition can cause problems. Passing a precomputed matrix allows us to ensure that
   the rest of the routine has not broken.
+- `mle`: Set to true if parameters should be estimated by maximum likelihood directly.
+    If this is set to true, this function will return after estimating parameters.
+- `run_MH`: Set to false to disable sampling from the posterior.
 """
 function estimate(m::AbstractModel, df::DataFrame;
                   verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix())
+                  proposal_covariance::Matrix=Matrix(),
+                  mle::Bool = false,
+                  run_MH::Bool = true)
     data = df_to_matrix(m, df)
-    estimate(m, data; verbose=verbose, proposal_covariance=proposal_covariance)
+    estimate(m, data; verbose=verbose, proposal_covariance=proposal_covariance,
+             mle = mle, run_MH = run_MH)
 end
 function estimate(m::AbstractModel;
                   verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix())
-
+                  proposal_covariance::Matrix=Matrix(),
+                  mle::Bool = false,
+                  run_MH::Bool = true)
     # Load data
     df = load_data(m; verbose=verbose)
-    estimate(m, df; verbose=verbose, proposal_covariance=proposal_covariance)
+    estimate(m, df; verbose=verbose, proposal_covariance=proposal_covariance,
+             mle = mle, run_MH = run_MH)
 end
 function estimate(m::AbstractModel, data::Matrix{Float64};
                   verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix())
+                  proposal_covariance::Matrix=Matrix(),
+                  mle::Bool = false,
+                  run_MH::Bool = true)
 
     ########################################################################################
     ### Step 1: Initialize
@@ -78,7 +88,8 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
                                method = get_setting(m, :optimization_method),
                                ftol=ftol, grtol = gtol, xtol = xtol,
                                iterations=n_iterations, show_trace=true, step_size=step_size,
-                               verbose=verbose)
+                               verbose=verbose,
+                               mle = mle)
 
             attempts += 1
             total_iterations += out.iterations
@@ -103,6 +114,11 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     end
 
     params = map(θ->θ.value, m.parameters)
+
+    # Sampling does not make sense if mle=true
+    if mle || !run_MH
+        return nothing
+    end
 
     ########################################################################################
     ### Step 3: Compute proposal distribution
