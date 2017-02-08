@@ -59,7 +59,9 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
 
         # Inputs to optimization algorithm
         n_iterations       = get_setting(m, :optimization_iterations)
-        ftol               = 1e-10
+        ftol               = get_setting(m, :optimization_ftol)
+        xtol               = get_setting(m, :optimization_xtol)
+        gtol               = get_setting(m, :optimization_gtol)
         step_size          = get_setting(m, :optimization_step_size)
         converged          = false
 
@@ -67,16 +69,21 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
         # iterations, continue improving guess of modal parameters
         total_iterations = 0
         optimization_time = 0
+        max_attempts = get_setting(m, :optimization_attempts)
+        attempts = 1
+
         while !converged
             tic()
             out, H = optimize!(m, data;
                                method = get_setting(m, :optimization_method),
-                               ftol=ftol,
+                               ftol=ftol, grtol = gtol, xtol = xtol,
                                iterations=n_iterations, show_trace=true, step_size=step_size,
                                verbose=verbose)
-            converged = true#!out.iteration_converged
 
+            attempts += 1
             total_iterations += out.iterations
+            converged = out.converged || attempts > max_attempts
+
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 @printf "Total iterations completed: %d\n" total_iterations
                 @printf "Optimization time elapsed: %5.2f\n" optimization_time += toq()

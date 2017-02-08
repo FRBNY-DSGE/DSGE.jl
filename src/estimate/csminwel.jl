@@ -85,8 +85,6 @@ function csminwel(fcn::Function,
                   extended_trace::Bool = false,
                   verbose::Symbol      = :none,
                   rng::AbstractRNG     = MersenneTwister(),
-                  #step_size::Float64   = 0.1,
-                  #neighbor!::Function  = identity,
                   kwargs...)
 
     if show_trace
