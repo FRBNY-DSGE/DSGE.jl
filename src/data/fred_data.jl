@@ -7,7 +7,7 @@ Checks in `inpath(m)` for a FRED dataset corresponding to `data_vintage(m)`.
 If a FRED vintage exists on disk, any required FRED series that is contained therein will be
 imported. All missing series will be downloaded directly from FRED using the *FredData*
 package. The full dataset is written to the appropriate data vintage file and returned.
-    
+
 # Arguments
 - `m::AbstractModel`: the model object
 - `start_date`: starting date.
@@ -20,18 +20,13 @@ returns data indexed by quarter-end date for compatibility with other datasets.
 """
 function load_fred_data(m::AbstractModel;
                         start_date::Date = Date("1959-01-01", "y-m-d"),
-                        end_date::Date   = prev_quarter())
+                        end_date::Date   = prev_quarter(),
+                        verbose::Symbol  = :low)
 
-    mnemonics = m.data_series[:fred]
+    data_series = parse_data_series(m)
+    mnemonics = data_series[:FRED]
     vint = data_vintage(m)
     dateformat = "yymmdd"
-
-    # Have to do this wacky parsing to prepend the century to the data vintage
-    vint_date = if parse(Int,vint[1:2]) < 59
-        Year(2000) + Date(vint, dateformat)
-    else
-        Year(1900) + Date(vint, dateformat)
-    end
 
     # Set up dataset and labels
     missing_series = Vector{Symbol}()
@@ -50,7 +45,9 @@ function load_fred_data(m::AbstractModel;
         qend = lastdayofquarter(end_date)
 
         if !in(qstart, data[:date]) || !in(qend, data[:date])
-            println("FRED dataset on disk missing start or end date. Fetching data from FRED.")
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                println("FRED dataset on disk missing start or end date. Fetching data from FRED.")
+            end
             data = DataFrame(date = get_quarter_ends(start_date,end_date))
             missing_series = mnemonics
         else
@@ -70,20 +67,49 @@ function load_fred_data(m::AbstractModel;
     # Get the missing data series
     if !isempty(missing_series)
 
+        # Have to do this wacky parsing to prepend the century to the data vintage
+        vint_date = if parse(Int,vint[1:2]) < 59
+            Year(2000) + Date(vint, dateformat)
+        else
+            Year(1900) + Date(vint, dateformat)
+        end
+
         fredseries = Array{FredSeries, 1}(length(missing_series))
         f = Fred()
 
         for (i,s) in enumerate(missing_series)
-            println("Fetching FRED series $s...")
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                println("Fetching FRED series $s...")
+            end
             try
                 fredseries[i] = get_data(f, string(s); frequency="q",
                                                        observation_start=string(start_date),
                                                        observation_end=string(end_date),
                                                        vintage_dates=string(vint_date))
             catch err
-                warn(err.msg)
-                warn("FRED series $s could not be fetched.")
-                continue
+                if :msg in fieldnames(err)
+                    warn(err.msg)
+                else
+                    show(err)
+                end
+                warn("FRED series $s could not be fetched at vintage $vint.")
+
+                try
+                    if VERBOSITY[verbose] >= VERBOSITY[:low]
+                        println("Fetching FRED series $s without vintage...")
+                    end
+                    fredseries[i] = get_data(f, string(s); frequency="q",
+                                                           observation_start=string(start_date),
+                                                           observation_end=string(end_date))
+                catch err
+                    if :msg in fieldnames(err)
+                        warn(err.msg)
+                    else
+                        show(err)
+                    end
+                    warn("FRED series $s could not be fetched.")
+                    continue
+                end
             end
         end
 
@@ -105,8 +131,12 @@ function load_fred_data(m::AbstractModel;
             data[i,:date] = Dates.lastdayofquarter(data[i,:date])
         end
 
-        writetable(datafile, data)
-        println("Updated data from FRED written to $datafile.")
+        if !m.testing
+            writetable(datafile, data)
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                println("Updated data from FRED written to $datafile.")
+            end
+        end
     end
 
     # Make sure to only return the series and dates that are specified for this

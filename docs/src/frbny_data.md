@@ -45,7 +45,7 @@ Federal Reserve Bank of San Francisco Working Paper 19 (2012): 20912.
 - The *10-year Inflation Expectations* series from the *Survey of Professional
     Forecasters* is made available by the Federal Reserve Bank of Philadelphia, and
     can be found
-    [here](https://www.philadelphiafed.org/research-and-data/real-time-center/survey-of-professional-forecasters/historical-data/inflation-forecasts)
+    [here](http://www.philadelphiafed.org/research-and-data/real-time-center/survey-of-professional-forecasters/historical-data/inflation-forecasts/)
     (series `INFCPI10YR` from the linked spreadsheet). Alternatively, it can be found as series
     `ASACX10@SURVEYS` via Haver Analytics.
 - The *10-year Treasury Yield* (zero-coupon, continuously compounded) series is made
@@ -100,7 +100,7 @@ m <= Setting(:n_anticipated_shocks, 6, true, "nant", "Number of ant. pol. shocks
 
 **2a.** Append `n_anticipated_shocks` columns of `NaN` values to the end of the
        `data` matrix.
-       
+
 **2b.** Construct a matrix of data, say `ImpliedFFR`, on anticipated policy
        shocks. Define
 

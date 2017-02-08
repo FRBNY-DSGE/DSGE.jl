@@ -38,7 +38,7 @@ parameters, including steady-state values.  Its subtype structure is
 as follows:
 
 -`AbstractParameter{T<:Number}`: The common abstract supertype for all parameters.
-    -`Parameter{T<:Number, U<:Transform}`: The abstract supertype for parameters that are directly estimated. 
+    -`Parameter{T<:Number, U<:Transform}`: The abstract supertype for parameters that are directly estimated.
         -`UnscaledParameter{T<:Number, U:<Transform}`: Concrete type for parameters that do not need to be scaled for equilibrium conditions.
         -`ScaledParameter{T<:Number, U:<Transform}`: Concrete type for parameters that are scaled for equilibrium conditions.
     -`SteadyStateParameter{T<:Number}`: Concrete type for steady-state parameters.
@@ -216,7 +216,7 @@ function parameter{T,U<:Transform}(key::Symbol,
                                    prior::NullableOrPrior   = NullablePrior();
                                    fixed::Bool              = true,
                                    scaling::Function        = identity,
-                                   description::AbstractString = "",
+                                   description::AbstractString = "No description available.",
                                    tex_label::AbstractString = "")
 
     # If fixed=true, force bounds to match and leave prior as null.  We need to define new
@@ -265,7 +265,7 @@ SteadyStateParameter constructor with optional `description` and `tex_label` arg
 """
 function SteadyStateParameter{T<:Number}(key::Symbol,
                                        value::T;
-                                       description::AbstractString = "",
+                                       description::AbstractString = "No description available",
                                        tex_label::AbstractString = "")
 
     return SteadyStateParameter(key, value, description, tex_label)
@@ -439,7 +439,7 @@ for f in (:(Base.exp),
     @eval ($f)(p::ScaledParameter) = ($f)(p.scaledvalue)
 
     @eval ($f)(p::UnscaledOrSteadyState, x::Number) = ($f)(p.value, x)
-    @eval ($f)(p::ScaledParameter, x::Number) = ($f)(p.scaledvalue, x)  
+    @eval ($f)(p::ScaledParameter, x::Number) = ($f)(p.scaledvalue, x)
 end
 
 """

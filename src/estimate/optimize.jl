@@ -1,22 +1,20 @@
-using Debug
-# """
-# ```
-# optimize!(m::AbstractModel, data::Matrix;
-#           method::Symbol       = :csminwel,
-#           xtol::Real           = 1e-32,  # default from Optim.jl
-#           ftol::Float64        = 1e-14,  # Default from csminwel
-#           grtol::Real          = 1e-8,   # default from Optim.jl
-#           iterations::Int      = 1000,
-#           store_trace::Bool    = false,
-#           show_trace::Bool     = false,
-#           extended_trace::Bool = false,
-#           step_size::Float64   = .01,
-#           verbose::Symbol      = :none)
-# ```
+"""
+```
+optimize!(m::AbstractModel, data::Matrix;
+          method::Symbol       = :csminwel,
+          xtol::Real           = 1e-32,  # default from Optim.jl
+          ftol::Float64        = 1e-14,  # Default from csminwel
+          grtol::Real          = 1e-8,   # default from Optim.jl
+          iterations::Int      = 1000,
+          store_trace::Bool    = false,
+          show_trace::Bool     = false,
+          extended_trace::Bool = false,
+          verbose::Symbol      = :none)
+```
 
-# Wrapper function to send a model to csminwel (or another optimization routine).
-# """
-@debug function optimize!(m::AbstractModel,
+Wrapper function to send a model to csminwel (or another optimization routine).
+"""
+function optimize!(m::AbstractModel,
                    data::Matrix;
                    method::Symbol       = :csminwel,
                    xtol::Real           = 1e-32,  # default from Optim.jl
@@ -47,7 +45,7 @@ using Debug
     function f_opt(x_opt)
         x_model[para_free_inds] = x_opt
         transform_to_model_space!(m,x_model)
-        return -posterior(m, data; catch_errors=true)[:post]
+        return -posterior(m, data; catch_errors=true)
     end
 
 
@@ -55,7 +53,7 @@ using Debug
         # This function computes a proposal "next step" during simulated annealing.
         # Inputs:
         # - `x`: current position (of non-fixed states)
-        # - `x_proposal`: proposed next position (of non-fixed states). 
+        # - `x_proposal`: proposed next position (of non-fixed states).
         #                 (passed in for pre-allocation purposes)
         # Outputs:
         # - `x_proposal`
@@ -91,7 +89,7 @@ using Debug
                     end
                 end
                 @inbounds x_proposal_all[i] = proposal
-            
+
             end
 
             # check that model can be solved
@@ -103,7 +101,7 @@ using Debug
                 x_proposal_all = transform_to_real_line(m.parameters, x_proposal_all)
                 success = true
             end
-            
+
         end
 
         x_proposal[1:end] = x_proposal_all[para_free_inds]
@@ -126,11 +124,11 @@ using Debug
                         verbose = verbose, rng = rng)
     end
 
-    x_model[para_free_inds] = out.minimizer
-    transform_to_model_space!(m, x_model)
+        x_model[para_free_inds] = out.minimizer
+        transform_to_model_space!(m, x_model)
 
-    # Match original dimensions
-    out.minimizer = x_model
+        # Match original dimensions
+        out.minimizer = map(θ -> θ.value, m.parameters)
 
     H = zeros(n_parameters(m), n_parameters(m))
     if H_ != nothing

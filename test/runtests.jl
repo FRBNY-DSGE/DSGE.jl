@@ -6,9 +6,16 @@ include(joinpath(dirname(@__FILE__()),"util.jl"))
 my_tests = [
             "core",
             "parameters",
+            "models/m990/m990",
+            "models/smets_wouters/smets_wouters",
+            "models/an_schorfheide/an_schorfheide",
+            "data/misc",
+            "data/load_data",
             "solve/gensys",
             "solve/solve",
-            "estimate/kalman",
+            "estimate/kalman_filter",
+            "estimate/kalman_filter_2part",
+            "estimate/cat",
             "estimate/posterior",
             "estimate/hessizero",
             "estimate/hessian",
@@ -16,10 +23,15 @@ my_tests = [
             "estimate/optimize",
             "estimate/eig",
             "estimate/metropolis_hastings",
-            "models/m990/m990",
-            "models/smets_wouters/smets_wouters",
-            "data/misc",
-            "data/load_data"
+            "forecast/smoothers",
+            "forecast/filter",
+            "forecast/filterandsmooth",
+            "forecast/smooth",
+            "forecast/forecast",
+            "forecast/shock_decompositions",
+            "forecast/impulse_responses",
+            "forecast/forecast_one",
+            "analysis/means_bands"
             ]
 
 for test in my_tests

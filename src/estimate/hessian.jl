@@ -32,7 +32,7 @@ function hessian!{T<:AbstractFloat}(m::AbstractModel,
     x_hessian = x_model[para_free_inds]
     function f_hessian(x_hessian)
         x_model[para_free_inds] = x_hessian
-        return -posterior!(m, x_model, data)[:post]
+        return -posterior!(m, x_model, data)
     end
 
     distr=use_parallel_workers(m)

@@ -9,8 +9,8 @@ greater detail. If the user is interested only in running the default model and
 reproducing the estimation results, this section can be ignored. Additional documentation
 can also be found in function documentation or in-line.
 
-This section focuses on what the code does and why.  Docstrings and the code itself
-(including comments) provides detailed information regarding *how* these basic
+This section focuses on what the code does and why. Docstrings and the code itself
+(including comments) provide detailed information regarding *how* these basic
 procedures are implemented.
 
 ## The `AbstractModel` Type and the Model Object

@@ -24,3 +24,15 @@ function sorted_list_insert!{T}(v::Vector{T}, x::T)
     insert!(v,insert_index,x)
 end
 
+"""
+```
+quarter_range(t0::Date, t1::Date)
+```
+
+Returns a vector of `Dates`, consisting of the last days of each quarter between
+`t0` and `t1`, inclusive.
+"""
+function quarter_range(t0::Date, t1::Date)
+    dr = t0:t1
+    return Dates.recur(d -> Dates.lastdayofquarter(d) == d, dr)
+end
