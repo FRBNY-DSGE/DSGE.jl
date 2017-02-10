@@ -95,7 +95,8 @@ module DSGE
         # analysis/
         find_density_bands, moment_tables, means_bands, means_bands_all, compute_means_bands, MeansBands,
         meansbands_matrix_all, meansbands_matrix, read_mb,
-        get_meansbands_input_files, get_meansbands_output_files, get_product, get_class
+        get_meansbands_input_files, get_meansbands_output_files, get_product, get_class,
+        get_density_bands, write_meansbands_table
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
@@ -145,6 +146,7 @@ module DSGE
     include("analysis/meansbands.jl")
     include("analysis/compute_means_bands.jl")
     include("analysis/meansbands_to_matrix.jl")
+    include("analysis/write_meansbands_tables.jl")
     include("analysis/util.jl")
 
     include("models/m990/m990.jl")
