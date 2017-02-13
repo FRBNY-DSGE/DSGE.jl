@@ -165,6 +165,8 @@ function measurement{T<:AbstractFloat}(m::Model1010{T},
     QQ[exo[:corepce_sh], exo[:corepce_sh]]      = m[:σ_corepce]^2
     QQ[exo[:gdp_sh], exo[:gdp_sh]]              = m[:σ_gdp]^2
     QQ[exo[:gdi_sh], exo[:gdi_sh]]              = m[:σ_gdi]^2
+    QQ[exo[:AAA_sh], exo[:AAA_sh]]              = m[:σ_AAA]^2
+    QQ[exo[:BBB_sh], exo[:BBB_sh]]              = m[:σ_BBB]^2
 
     # These lines set the standard deviations for the anticipated shocks. They
     # are here no longer calibrated to the std dev of contemporaneous shocks,
