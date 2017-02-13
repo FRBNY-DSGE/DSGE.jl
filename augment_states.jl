@@ -113,13 +113,7 @@ function augment_states{T<:AbstractFloat}(m::Model1010, TTT::Matrix{T}, RRR::Mat
 
     # Measurement Error on spreads
     RRR_aug[endo_new[:e_BBB_t], exo[:BBB_sh]] = 1.0
-    RRR_aug[endo_new[:e_BBB_t], exo[:BBB_sh]] = m[:ρ_BBB] * m[:σ_BBB] ^ 2
-
     RRR_aug[endo_new[:e_AAA_t], exo[:AAA_sh]] = 1.0
-    RRR_aug[endo_new[:e_AAA_t], exo[:AAA_sh]] = m[:ρ_AAA] * m[:σ_AAA] ^ 2
-
-
-
 
     ### CCC Modifications
 
