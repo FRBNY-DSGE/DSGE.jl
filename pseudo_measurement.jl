@@ -25,7 +25,7 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
 	                 :π_t, :LongRunInflation,
 	                 :Wages, :FlexibleWages, :z_t, :Hours, :FlexibleHours,
 	                 :RealNaturalRate, :ExAnteRealRate,
-	                 :NominalFFR,  :ExpectedAvgNominalNaturalRate, :NominalRateGap,
+	                 :NominalFFR, :ExpectedAvgNominalNaturalRate, :NominalRateGap,
 	                 :ExpectedAvg10YearRealRate,    :ExpectedAvg10YearRealNaturalRate,
 	                 :ExpectedAvg10YearNominalRate, :ExpectedAvg10YearNominalNaturalRate,:ExpectedAvg10YearRateGap,
 	                 :ExpectedAvg5YearNominalRate,  :ExpectedAvg5YearNominalNaturalRate,
@@ -329,7 +329,7 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
 
     else # more limited set of pseudoobservables for running shock decs
 	 pseudo_names = [:y_t, :y_f_t, :OutputGap, :Hours, :RealNaturalRate,
-                         :ExAnteRealRate, :NominalFFR,
+                         :ExAnteRealRate, :NominalNaturalRate, :NominalFFR,
                          :ExpectedAvg5YearRealRate, :ExpectedAvg5YearRealNaturalRate,
                          :ExpectedAvg10YearRealRate,:ExpectedAvg10YearRealNaturalRate,
                          :ExpectedAvg20YearRealRate, :ExpectedAvg20YearRealNaturalRate,
@@ -397,6 +397,14 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
 	 pseudo[:ExAnteRealRate].name = "Ex Ante Real Rate"
 	 pseudo[:ExAnteRealRate].longname = "Ex Ante Real Rate"
 	 pseudo[:ExAnteRealRate].rev_transform = quartertoannual
+
+	 ## Nominal Natural Rate
+	 ZZ_pseudo[pseudo_inds[:NominalNaturalRate], endo[:r_f_t]] = 1.
+	 ZZ_pseudo[pseudo_inds[:NominalNaturalRate], endo[:Eπ_t]]  = 1.
+	 DD_pseudo[pseudo_inds[:NominalNaturalRate]]               = m[:Rstarn]
+	 pseudo[:NominalNaturalRate].name     = "Nominal Natural Rate"
+	 pseudo[:NominalNaturalRate].longname = "Natural Rate + Expected Inflation"
+	 pseudo[:NominalNaturalRate].rev_transform = quartertoannual
 
 	 ## Nominal FFR
 	 ZZ_pseudo[pseudo_inds[:NominalFFR], endo[:R_t]] = 1.
