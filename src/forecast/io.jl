@@ -22,7 +22,7 @@ function get_forecast_input_file(m, input_type)
         if ispath(override_file)
             return override_file
         else
-            error("Invalid input file override for input_type = $input_type: $override_file")
+            error("Input file $override_file does not exist")
         end
     # If input_type = :subset or :block, also check for existence of overrides[:full]
     elseif input_type in [:subset, :block]
