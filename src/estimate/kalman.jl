@@ -282,7 +282,7 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
         catch err
             if catch_errors && isa(err, GensysError)
                 info(err.msg)
-                return LIKE_NULL_OUTPUT
+                return Kalman(-Inf, Vector{S}(), Matrix{S}())
             else
             rethrow(err)
             end
