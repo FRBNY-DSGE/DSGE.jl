@@ -128,7 +128,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
 
     try
         # Return total log-likelihood, excluding the presample
-        kal, _, _, _ = kalman_filter_2part(m, data; allout = false, include_presample = false)
+        kal = kalman_filter_2part(m, data; allout = false, include_presample = false)
         return kal[:L]
     catch err
         if catch_errors && isa(err, GensysError)

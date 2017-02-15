@@ -20,13 +20,15 @@ meas = measurement(m, TTT, RRR, CCC)
 QQ, ZZ, DD, MM, EE, VVall = meas.QQ, meas.ZZ, meas.DD, meas.MM, meas.EE, meas.VVall
 
 
-# Kalman smoother with anticipated shocks
-alpha_hat, eta_hat = kalman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, kal[:z0], kal[:vz0],
-    kal[:pred], kal[:vpred])
-
+# Read expected output
 exp_alpha_hat, exp_eta_hat = h5open("$path/../reference/kalman_smoother_out.h5", "r") do h5
     read(h5, "alpha_hat"), read(h5, "eta_hat")
 end
+
+
+# Kalman smoother with anticipated shocks
+alpha_hat, eta_hat = kalman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, kal[:z0], kal[:vz0],
+    kal[:pred], kal[:vpred])
 
 @test_approx_eq exp_alpha_hat alpha_hat
 @test_approx_eq exp_eta_hat eta_hat
@@ -62,10 +64,6 @@ end
 # Durbin-Koopman smoother with anticipated shocks
 alpha_hat, eta_hat = durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD,
     MM, EE, VVall, kal[:z0], kal[:vz0])
-
-exp_alpha_hat, exp_eta_hat = h5open("$path/../reference/durbin_koopman_smoother_out.h5", "r") do h5
-    read(h5, "alpha_hat"), read(h5, "eta_hat")
-end
 
 @test_approx_eq exp_alpha_hat alpha_hat
 @test_approx_eq exp_eta_hat eta_hat

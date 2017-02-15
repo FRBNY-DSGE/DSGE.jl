@@ -52,15 +52,15 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::Sys
     Q, Z, D     = system[:QQ], system[:ZZ], system[:DD]
     M, E, V_all = system[:MM], system[:EE], system[:VVall]
 
-    if n_anticipated_shocks(m) > 0
+    kal = if n_anticipated_shocks(m) > 0
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at index_zlb_start)
-        kal, _, _, _ = kalman_filter_2part(m, data, T, R, C, z0, vz0;
-                           ZZ = Z, DD = D, QQ = Q, MM = M, EE = E, VVall = V_all,
-                           allout = true, include_presample = true)
+        kalman_filter_2part(m, data, T, R, C, z0, vz0;
+            ZZ = Z, DD = D, QQ = Q, MM = M, EE = E, VVall = V_all,
+            allout = true, include_presample = true)
     else
         # Regular Kalman filter with no regime-switching
-        kal = kalman_filter(m, data, T, C, Z, D, V_all, z0, vz0;
+        kalman_filter(m, data, T, C, Z, D, V_all, z0, vz0;
             allout = allout, include_presample = include_presample)
     end
 
@@ -140,16 +140,16 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 
     ## 1. Filter
 
-    if n_anticipated_shocks(m) > 0
+    kal = if n_anticipated_shocks(m) > 0
         # We have 3 regimes: presample, main sample, and expected-rate sample
         # (starting at index_zlb_start)
-        kal, _, _, _ = kalman_filter_2part(m, data, T, R, C, z0, vz0;
-                           ZZ = Z, DD = D, QQ = Q, MM = M, EE = E, VVall = V_all,
-                           allout = true, include_presample = true)
+        kalman_filter_2part(m, data, T, R, C, z0, vz0;
+            ZZ = Z, DD = D, QQ = Q, MM = M, EE = E, VVall = V_all,
+            allout = true, include_presample = true)
     else
         # Regular Kalman filter with no regime-switching
-        kal = kalman_filter(m, data, T, C, Z, D, V_all, z0, vz0;
-                  allout = true, include_presample = true)
+        kalman_filter(m, data, T, C, Z, D, V_all, z0, vz0;
+            allout = true, include_presample = true)
     end
 
     ## 2. Smooth

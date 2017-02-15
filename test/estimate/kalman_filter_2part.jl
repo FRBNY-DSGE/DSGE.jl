@@ -17,11 +17,11 @@ custom_settings = Dict{Symbol, Setting}(
 m = Model990(custom_settings = custom_settings, testing = true)
 
 # Kalman filter with all arguments provided
-kal1, _, _, _ = kalman_filter_2part(m, data, TTT, RRR, CCC, A0, P0; allout = true,
+kal1 = kalman_filter_2part(m, data, TTT, RRR, CCC, A0, P0; allout = true,
     include_presample = true)
 
 # Kalman filter without z0 and vz0
-kal2, _, _, _ = kalman_filter_2part(m, data, TTT, RRR, CCC; allout = true,
+kal2 = kalman_filter_2part(m, data, TTT, RRR, CCC; allout = true,
     include_presample = true)
 
 # Test against expected output
@@ -29,8 +29,8 @@ exp_kal = jldopen("$path/../reference/kalman_filter_2part_out.jld", "r") do file
     read(file, "exp_kal")
 end
 
-for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
-            :rmsd, :filt, :vfilt, :z0, :vz0]
+for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror,
+            :rmse, :rmsd, :filt, :vfilt, :z0, :vz0]
     @test_approx_eq exp_kal[out] kal1[out]
     @test_approx_eq exp_kal[out] kal2[out]
 end

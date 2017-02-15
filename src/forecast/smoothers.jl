@@ -477,25 +477,20 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     # Compute y* = y - y+
     data_star = data - data_plus
 
-    ## Run the kalman filter
-    A0, P0, pred, vpred, T, R, C = if n_ant_shocks > 0
-
+    # Run the Kalman filter
+    kal = if n_ant_shocks > 0
         # Note that we pass in `zeros(size(D))` instead of `D` because the
         # measurement equation for `data_star` has no constant term
-        k, _, _, R3 = kalman_filter_2part(m, data_star, T, R, C, A0, P0;
+        kalman_filter_2part(m, data_star, T, R, C, A0, P0;
             ZZ = Z, DD = zeros(size(D)), QQ = Q, MM = M, EE = E, VVall = V_all,
             allout = true, include_presample = true)
-
-        k[:z0], k[:vz0], k[:pred], k[:vpred], R3[:TTT], R3[:RRR], R3[:CCC]
     else
-        k = kalman_filter(m, data_star, T, C, Z, zeros(size(D)), V_all, A0, P0; lead = 0, allout = true)
-
-        A0, P0, k[:pred], k[:vpred], T, R, C
+        kalman_filter(m, data_star, T, C, Z, zeros(size(D)), V_all, A0, P0; lead = 0, allout = true)
     end
 
-    ##### Step 2: Kalman smooth over everything
+    # Kalman smooth
     α_hat_star, η_hat_star = kalman_smoother(m, data_star, T, R, C, Q, Z,
-        zeros(size(D)), A0, P0, pred, vpred; include_presample = true)
+        zeros(size(D)), A0, P0, kal[:pred], kal[:vpred]; include_presample = true)
 
     # Compute draw (states and shocks)
     α_hat = α_plus + α_hat_star
@@ -650,8 +645,6 @@ function hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 
     return α_hat, η_hat
 end
-
-
 
 """
 ```
@@ -808,4 +801,3 @@ function carter_kohn_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S
 
     return α_hat, η_hat
 end
-
