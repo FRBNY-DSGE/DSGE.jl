@@ -35,34 +35,22 @@ where `S<:AbstractFloat`.
 """
 function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::System{S},
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
-    cond_type::Symbol = :none, allout::Bool = false,
-    include_presample::Bool = true)
+    cond_type::Symbol = :none)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filter(m, data, system, z0, P0; allout = allout,
-           include_presample = include_presample)
+    filter(m, data, system, z0, P0)
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::System{S},
-    z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
-    allout::Bool = false, include_presample::Bool = true)
+    z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}())
 
     # Unpack system
     T, R, C = system[:TTT], system[:RRR], system[:CCC]
     Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
     M, E    = system[:MM], system[:EE]
 
-    kal = if n_anticipated_shocks(m) > 0
-        # We have 3 regimes: presample, main sample, and expected-rate sample
-        # (starting at index_zlb_start)
-        kalman_filter_2part(m, data, T, R, C, z0, P0;
-            QQ = Q, ZZ = Z, DD = D, MM = M, EE = E,
-            allout = true, include_presample = true)
-    else
-        # Regular Kalman filter with no regime-switching
-        kalman_filter(m, data, T, R, C, Q, Z, D, M, E, z0, P0;
-            allout = allout, include_presample = include_presample)
-    end
+    kalman_filter(m, data, T, R, C, Q, Z, D, M, E, z0, P0;
+        allout = true, include_presample = true)
 end
 
 """
@@ -138,17 +126,8 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 
     ## 1. Filter
 
-    kal = if n_anticipated_shocks(m) > 0
-        # We have 3 regimes: presample, main sample, and expected-rate sample
-        # (starting at index_zlb_start)
-        kalman_filter_2part(m, data, T, R, C, z0, P0;
-            QQ = Q, ZZ = Z, DD = D, MM = M, EE = E,
-            allout = true, include_presample = true)
-    else
-        # Regular Kalman filter with no regime-switching
-        kalman_filter(m, data, T, R, C, Q, Z, D, M, E, z0, P0;
-            allout = true, include_presample = true)
-    end
+    kal = kalman_filter(m, data, T, R, C, Q, Z, D, M, E, z0, P0;
+              allout = true, include_presample = true)
 
     ## 2. Smooth
 

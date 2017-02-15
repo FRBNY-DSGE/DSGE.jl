@@ -477,16 +477,11 @@ function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     data_star = data - data_plus
 
     # Run the Kalman filter
-    kal = if n_ant_shocks > 0
-        # Note that we pass in `zeros(size(D))` instead of `D` because the
-        # measurement equation for `data_star` has no constant term
-        kalman_filter_2part(m, data_star, T, R, C, z0, P0;
-            QQ = Q, ZZ = Z, DD = zeros(size(D)), MM = M, EE = E,
-            allout = true, include_presample = true)
-    else
-        kalman_filter(m, data_star, T, R, C, Q, Z, zeros(size(D)), M, E, z0, P0;
-            allout = true)
-    end
+    # Note that we pass in `zeros(size(D))` instead of `D` because the
+    # measurement equation for `data_star` has no constant term
+    kal = kalman_filter(m, data_star, T, R, C,
+             Q, Z, zeros(size(D)), M, E, z0, P0;
+             allout = true, include_presample = true)
 
     # Kalman smooth
     α_hat_star, η_hat_star = kalman_smoother(m, data_star, T, R, C, Q, Z,

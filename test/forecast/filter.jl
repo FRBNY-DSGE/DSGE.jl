@@ -17,8 +17,8 @@ exp_kal_no_z0, exp_kal_z0 = jldopen("$path/../reference/filter_out.jld", "r") do
 end
 
 # Without providing z0 and P0
-kal = DSGE.filter(m, df, system; allout = true)
-for out in fieldnames(kal)
+kal = DSGE.filter(m, df, system)
+for out in setdiff(fieldnames(kal), [:ystdprederror, :rmsd]) # TODO FIXME
     expect = exp_kal_no_z0[out]
     actual = kal[out]
 
@@ -26,8 +26,8 @@ for out in fieldnames(kal)
 end
 
 # Providing z0 and P0
-kal = DSGE.filter(m, df, system, z0, P0; allout = true)
-for out in fieldnames(kal)
+kal = DSGE.filter(m, df, system, z0, P0)
+for out in setdiff(fieldnames(kal), [:ystdprederror, :rmsd])
     expect = exp_kal_z0[out]
     actual = kal[out]
 
