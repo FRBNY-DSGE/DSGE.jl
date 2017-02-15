@@ -75,9 +75,9 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
     regime_indices = Range{Int64}[1:T]
 
     kalman_filter(regime_indices, data, Matrix{S}[TTT], Matrix{S}[RRR], Vector{S}[CCC],
-                  Matrix{S}[QQ], Matrix{S}[ZZ], Vector{S}[DD],
-                  Matrix{S}[MM], Matrix{S}[EE], z0, P0;
-                  allout = allout, n_presample_periods = n_presample_periods)
+        Matrix{S}[QQ], Matrix{S}[ZZ], Vector{S}[DD],
+        Matrix{S}[MM], Matrix{S}[EE], z0, P0;
+        allout = allout, n_presample_periods = n_presample_periods)
 end
 
 function kalman_filter{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
@@ -139,17 +139,17 @@ function kalman_filter{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
             # If an element of the vector y_t is missing (NaN) for the observation t, the
             # corresponding row is ditched from the measurement equation
             nonmissing = !isnan(data[:, t])
-            data_t = data[nonmissing, t]
+            y_t  = data[nonmissing, t]
             ZZ_t = ZZ[nonmissing, :]
             G_t  = G[:, nonmissing]
             R_t  = R[nonmissing, nonmissing]
-            Ny_t = length(data_t)
+            Ny_t = length(y_t)
             DD_t = DD[nonmissing]
 
             ## Forecast
             z = CCC + TTT*z                    # z_{t|t-1} = CCC + TTT*z_{t-1|t-1}
             P = TTT*P*TTT' + V                 # P_{t|t-1} = TTT*P_{t-1|t-1}*TTT' + TTT*Var(η_t)*TTT'
-            dy = data_t - ZZ_t*z - DD_t        # dy = y_t - ZZ*z_{t|t-1} - DD is prediction error or innovation
+            dy = y_t - ZZ_t*z - DD_t           # dy = y_t - ZZ*z_{t|t-1} - DD is prediction error or innovation
             ZG = ZZ_t*G_t                      # ZG is ZZ*Cov(η_t, ϵ_t)
             D = ZZ_t*P*ZZ_t' + ZG + ZG' + R_t  # D = ZZ*P_{t|t-1}*ZZ' + ZG + ZG' + R_t
             D = (D+D')/2
@@ -179,20 +179,29 @@ function kalman_filter{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
                 vfilt[:, :, t] = P
             end
 
-            # If we choose to discard presample periods, then we reassign `z0`
-            # and `P0` to be their values at the end of the presample/beginning
-            # of the main sample
-            if t == n_presample_periods
-                z0 = z
-                P0 = P
-            end
-
         end # of loop through this regime's periods
 
     end # of loop through regimes
 
     zend = z
     Pend = P
+
+    if allout && n_presample_periods > 0
+        mainsample_periods = n_presample_periods+1:T
+
+        # If we choose to discard presample periods, then we reassign `z0`
+        # and `P0` to be their values at the end of the presample/beginning
+        # of the main sample
+        z0 = squeeze(filt[:,     n_presample_periods], 2)
+        P0 = squeeze(vfilt[:, :, n_presample_periods], 3)
+
+        pred          = pred[:,     mainsample_periods]
+        vpred         = vpred[:, :, mainsample_periods]
+        yprederror    = yprederror[:,       mainsample_periods]
+        ystdprederror = ypredstderror[:, :, mainsample_periods]
+        filt          = filt[:,      mainsample_periods]
+        vfilt         = vfilt[:, :, mainsample_periods]
+    end
 
     if allout
         rmse = sqrt(mean((yprederror.^2)', 1))
