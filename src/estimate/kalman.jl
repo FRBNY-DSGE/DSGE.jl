@@ -69,20 +69,38 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
     TTT::Matrix{S}, RRR::Matrix{S}, CCC::Vector{S},
     QQ::Matrix{S}, ZZ::Matrix{S}, DD::Vector{S}, MM::Matrix{S}, EE::Matrix{S},
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
-    allout::Bool = false)
+    allout::Bool = false, n_presample_periods::Int = 0)
+
+    T = size(data, 2)
+    regime_indices = Range{Int64}[1:T]
+
+    kalman_filter(regime_indices, data, Matrix{S}[TTT], Matrix{S}[RRR], Vector{S}[CCC],
+                  Matrix{S}[QQ], Matrix{S}[ZZ], Vector{S}[DD],
+                  Matrix{S}[MM], Matrix{S}[EE], z0, P0;
+                  allout = allout, n_presample_periods = n_presample_periods)
+end
+
+function kalman_filter{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
+    data::Matrix{S}, TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}},
+    QQs::Vector{Matrix{S}}, ZZs::Vector{Matrix{S}}, DDs::Vector{Vector{S}},
+    MMs::Vector{Matrix{S}}, EEs::Vector{Matrix{S}},
+    z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
+    allout::Bool = false, n_presample_periods::Int = 0)
+
+    n_regimes = length(regime_indices)
 
     # Dimensions
-    T  = size(data, 2) # number of periods of data
-    Nz = size(TTT, 1)  # number of states
-    Ne = size(RRR, 2)  # number of shocks
-    Ny = size(ZZ, 1)   # number of observables
+    T  = size(data,    2) # number of periods of data
+    Nz = size(TTTs[1], 1) # number of states
+    Ne = size(RRRs[1], 2) # number of shocks
+    Ny = size(ZZs[1],  1) # number of observables
 
     # Populate initial conditions if they are empty
     if isempty(z0) || isempty(P0)
-        e, _ = eig(TTT)
+        e, _ = eig(TTTs[1])
         if all(abs(e) .< 1.)
-            z0 = (UniformScaling(1) - TTT)\CCC
-            P0 = solve_discrete_lyapunov(TTT, RRR*QQ*RRR')
+            z0 = (UniformScaling(1) - TTTs[1])\CCCs[1]
+            P0 = solve_discrete_lyapunov(TTTs[1], RRRs[1]*QQs[1]*RRRs[1]')
         else
             z0 = CCC
             P0 = 1e6 * eye(Nz)
@@ -92,19 +110,7 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
     z = z0
     P = P0
 
-    # Check input matrix dimensions
-    @assert size(data, 1) == Ny
-    @assert size(TTT) == (Nz, Nz)
-    @assert size(RRR) == (Nz, Ne)
-    @assert size(CCC) == (Nz,)
-    @assert size(QQ)  == (Ne, Ne)
-    @assert size(ZZ)  == (Ny, Nz)
-    @assert size(DD)  == (Ny,)
-    @assert size(MM)  == (Ny, Ne)
-    @assert size(EE)  == (Ny, Ny)
-    @assert size(z)   == (Nz,)
-    @assert size(P)   == (Nz, Nz)
-
+    # Initialize outputs
     if allout
         pred          = zeros(S, Nz, T)
         vpred         = zeros(S, Nz, Nz, T)
@@ -114,55 +120,76 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
         vfilt         = zeros(Nz, Nz, T)
     end
 
-    V = RRR*QQ*RRR'    # V = Var(z_t) = Var(Rϵ_t)
-    R = EE + MM*QQ*MM' # R = Var(y_t) = Var(u_t)
-    G = RRR*QQ*MM'     # G = Cov(z_t, y_t)
+    log_likelihood = 0.0
 
-    L = zero(S)
+    for i = 1:n_regimes
+        # Get state-space system matrices for this regime
+        regime_periods = regime_indices[i]
+        regime_data = data[:, regime_periods]
 
-    for t = 1:T
-        # If an element of the vector y(t) is missing (NaN) for the observation t, the
-        # corresponding row is ditched from the measurement equation
-        nonmissing = !isnan(data[:, t])
-        data_t = data[nonmissing, t]
-        ZZ_t = ZZ[nonmissing, :]
-        G_t  = G[:, nonmissing]
-        R_t  = R[nonmissing, nonmissing]
-        Ny_t = length(data_t)
-        DD_t = DD[nonmissing]
+        TTT, RRR, CCC = TTTs[i], RRRs[i], CCCs[i]
+        QQ,  ZZ,  DD  = QQs[i],  ZZs[i],  DDs[i]
+        MM,  EE       = MMs[i],  EEs[i]
 
-        ## Forecast
-        z = CCC + TTT*z                    # z_{t|t-1} = CCC + TTT(Θ)*z_{t-1|t-1}
-        P = TTT*P*TTT' + V                 # P_{t|t-1} = TTT(Θ)*P_{t-1|t-1}*TTT(Θ)' + TTT(Θ)*Var(η_t)*TTT(Θ)'
-        dy = data_t - ZZ_t*z - DD_t        # dy = y_t - ZZ(Θ)*z_{t|t-1} - DD is prediction error or innovation
-        ZG = ZZ_t*G_t                      # ZG is ZZ*Cov(η_t, ϵ_t)
-        D = ZZ_t*P*ZZ_t' + ZG + ZG' + R_t  # D = ZZ*P_{t|t-1}*ZZ' + ZG + ZG' + R_t
-        D = (D+D')/2
+        V = RRR*QQ*RRR'    # V = Var(z_t) = Var(Rϵ_t)
+        R = EE + MM*QQ*MM' # R = Var(y_t) = Var(u_t)
+        G = RRR*QQ*MM'     # G = Cov(z_t, y_t)
 
-        if allout
-            pred[:, t]                   = z
-            vpred[:, :, t]               = P
-            yprederror[nonmissing, t]    = dy
-            ystdprederror[nonmissing, t] = dy./sqrt(diag(D))
-        end
+        for t in regime_periods
+            # If an element of the vector y_t is missing (NaN) for the observation t, the
+            # corresponding row is ditched from the measurement equation
+            nonmissing = !isnan(data[:, t])
+            data_t = data[nonmissing, t]
+            ZZ_t = ZZ[nonmissing, :]
+            G_t  = G[:, nonmissing]
+            R_t  = R[nonmissing, nonmissing]
+            Ny_t = length(data_t)
+            DD_t = DD[nonmissing]
 
-        ddy = D\dy
+            ## Forecast
+            z = CCC + TTT*z                    # z_{t|t-1} = CCC + TTT*z_{t-1|t-1}
+            P = TTT*P*TTT' + V                 # P_{t|t-1} = TTT*P_{t-1|t-1}*TTT' + TTT*Var(η_t)*TTT'
+            dy = data_t - ZZ_t*z - DD_t        # dy = y_t - ZZ*z_{t|t-1} - DD is prediction error or innovation
+            ZG = ZZ_t*G_t                      # ZG is ZZ*Cov(η_t, ϵ_t)
+            D = ZZ_t*P*ZZ_t' + ZG + ZG' + R_t  # D = ZZ*P_{t|t-1}*ZZ' + ZG + ZG' + R_t
+            D = (D+D')/2
 
-        # We evaluate the log likelihood function by adding values of L at every iteration
-        # step (for each t = 1,2,...T)
-        L += -log(det(D))/2 - first(dy'*ddy/2) - Ny_t*log(2*pi)/2
+            if allout
+                pred[:, t]                   = z
+                vpred[:, :, t]               = P
+                yprederror[nonmissing, t]    = dy
+                ystdprederror[nonmissing, t] = dy ./ sqrt(diag(D))
+            end
 
-        ## Update
-        PZG = P*ZZ_t' + G_t
-        z = z + PZG*ddy                    # z_{t|t} = z_{t|t-1} + P_{t|t-1}*ZZ(Θ)' + ...
-        P = P - PZG/D*PZG'                 # P_{t|t} = P_{t|t-1} - PZG*(1/D)*PZG
+            ddy = D\dy
 
-        if allout
-            PZZ = P*ZZ_t'
-            filt[:, t]     = z
-            vfilt[:, :, t] = P
-        end
-    end
+            # We evaluate the log likelihood function by adding values of L at every iteration
+            # step (for each t = 1,2,...T)
+            if t > n_presample_periods
+                log_likelihood += -log(det(D))/2 - first(dy'*ddy/2) - Ny_t*log(2*pi)/2
+            end
+
+            ## Update
+            PZG = P*ZZ_t' + G_t
+            z = z + PZG*ddy                    # z_{t|t} = z_{t|t-1} + P_{t|t-1}*ZZ(Θ)' + ...
+            P = P - PZG/D*PZG'                 # P_{t|t} = P_{t|t-1} - PZG*(1/D)*PZG
+
+            if allout
+                filt[:, t]     = z
+                vfilt[:, :, t] = P
+            end
+
+            # If we choose to discard presample periods, then we reassign `z0`
+            # and `P0` to be their values at the end of the presample/beginning
+            # of the main sample
+            if t == n_presample_periods
+                z0 = z
+                P0 = P
+            end
+
+        end # of loop through this regime's periods
+
+    end # of loop through regimes
 
     zend = z
     Pend = P
@@ -171,11 +198,10 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
         rmse = sqrt(mean((yprederror.^2)', 1))
         rmsd = sqrt(mean((ystdprederror.^2)', 1))
 
-        return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, P0)
+        return log_likelihood, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, P0
     else
-        return Kalman(L, zend, Pend)
+        return log_likelihood
     end
-
 end
 
 """

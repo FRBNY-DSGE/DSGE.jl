@@ -10,52 +10,40 @@ for arg in ["data", "TTT", "RRR", "CCC", "QQ", "ZZ", "DD", "MM", "EE", "z0", "P0
 end
 close(h5)
 
-# Method with all arguments provided (9)
-out_3 = kalman_filter(data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, z0, P0)
-out_9 = kalman_filter(data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, z0, P0, allout = true)
+# Method with all arguments provided
+out = kalman_filter(data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, z0, P0, allout = true)
 
 h5 = h5open("$path/../reference/kalman_filter_out9.h5")
-for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
-            :rmsd, :filt, :vfilt]
-    expect = read(h5, "$out")
-    actual = out_9[out]
-
-    if out == :zend
-        expect = reshape(expect, length(expect), 1)
-    end
-
-    if ndims(expect) == 0
-        @test_approx_eq expect actual
-    else
-        @test_matrix_approx_eq expect actual
-    end
-end
+@test_approx_eq        read(h5, "L")             out[1]
+@test_matrix_approx_eq read(h5, "zend")          out[2]
+@test_matrix_approx_eq read(h5, "Pend")          out[3]
+@test_matrix_approx_eq read(h5, "pred")          out[4]
+@test_matrix_approx_eq read(h5, "vpred")         out[5]
+@test_matrix_approx_eq read(h5, "yprederror")    out[6]
+@test_matrix_approx_eq read(h5, "ystdprederror") out[7]
+@test_matrix_approx_eq read(h5, "rmse")          out[8]
+@test_matrix_approx_eq read(h5, "rmsd")          out[9]
+@test_matrix_approx_eq read(h5, "filt")          out[10]
+@test_matrix_approx_eq read(h5, "vfilt")         out[11]
 close(h5)
 
-# Method with optional arguments omitted (7)
-out_3 = kalman_filter(data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE)
-out_9 = kalman_filter(data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE; allout = true)
+# Method with initial conditions omitted
+out = kalman_filter(data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE; allout = true)
 
-h5 = h5open("$path/../reference/kalman_filter_out7.h5")
-for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
-            :rmsd, :filt, :vfilt]
-    expect = read(h5, "$out")
-    actual = out_9[out]
-
-    if out == :zend
-        expect = reshape(expect, length(expect), 1)
-    end
-
-    if out == :L
-        @test_approx_eq_eps expect actual 1e-4
-    elseif out in [:Pend, :vpred, :vfilt]
-        # These matrix entries are especially large, averaging 1e5, so we allow
-        # greater ϵ
-        @test_matrix_approx_eq_eps expect actual 1e-1 1e-2
-    else
-        @test_matrix_approx_eq expect actual
-    end
-end
+# Pend, vpred, and vfilt matrix entries are especially large, averaging 1e5, so
+# we allow greater ϵ
+h5 = h5open("$path/../reference/kalman_filter_out9.h5")
+@test_approx_eq_eps        read(h5, "L")             out[1]  1e-4
+@test_matrix_approx_eq     read(h5, "zend")          out[2]
+@test_matrix_approx_eq_eps read(h5, "Pend")          out[3]  1e-1 1e-2
+@test_matrix_approx_eq     read(h5, "pred")          out[4]
+@test_matrix_approx_eq_eps read(h5, "vpred")         out[5]  1e-1 1e-2
+@test_matrix_approx_eq     read(h5, "yprederror")    out[6]
+@test_matrix_approx_eq     read(h5, "ystdprederror") out[7]
+@test_matrix_approx_eq     read(h5, "rmse")          out[8]
+@test_matrix_approx_eq     read(h5, "rmsd")          out[9]
+@test_matrix_approx_eq     read(h5, "filt")          out[10]
+@test_matrix_approx_eq_eps read(h5, "vfilt")         out[11] 1e-1 1e-2
 close(h5)
 
 nothing
