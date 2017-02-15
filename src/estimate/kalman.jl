@@ -296,35 +296,6 @@ function kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
     allout::Bool = false, include_presample::Bool = true)
 
-    # Partition sample into three regimes, and store associated matrices:
-    # - R1: presample
-    # - R2: normal
-    # - R3: zero lower bound and beyond
-    # Note that the R3 matrices may be empty if there is no ZLB period
-    R1 = Dict{Symbol, Array{S}}()
-    R2 = Dict{Symbol, Array{S}}()
-    R3 = Dict{Symbol, Array{S}}()
-
-    R1[:data] = data[:, inds_presample_periods(m)]
-    if n_anticipated_shocks(m) > 0
-        R2[:data] = data[:, inds_prezlb_periods(m)]
-        R3[:data] = data[:, index_zlb_start(m):end] # allows for conditional data
-    else
-        R2[:data] = data[:, index_mainsample_start(m):end]
-        R3[:data] = data[:, 1:0]
-    end
-
-    # For the pre-ZLB periods, we must zero out the shocks corresponding to anticipated shocks
-    R2[:QQ] = copy(QQ)
-
-    ant_shock_inds = setdiff(1:n_shocks_exogenous(m), inds_shocks_no_ant(m))
-    for i in ant_shock_inds
-        R2[:QQ][i, i] = 0
-    end
-
-    R1[:QQ] = R2[:QQ]
-
-    # Run Kalman filter on presample
     # If z0 and P0 provided, check that rows and columns corresponding to
     # anticipated shocks are zero in P0
     if !isempty(z0) && !isempty(P0)
@@ -332,24 +303,39 @@ function kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         @assert all(x -> x == 0, P0[:, ant_state_inds])
         @assert all(x -> x == 0, P0[ant_state_inds, :])
     end
-    k1 = kalman_filter(R1[:data], TTT, RRR, CCC, R1[:QQ], ZZ, DD, MM, EE, z0, P0;
-                       allout = allout)
 
-    # Run Kalman filter on normal period
-    k2 = kalman_filter(R2[:data], TTT, RRR, CCC, R2[:QQ], ZZ, DD, MM, EE, k1[:zend], k1[:Pend];
-                       allout = allout)
+    # Partition sample into pre- and post-ZLB regimes
+    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
+    T = size(data, 2)
 
-    # Run Kalman filter on ZLB period
-    k3 = kalman_filter(R3[:data], TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, k2[:zend], k2[:Pend];
-                       allout = allout)
-
-    # Concatenate Kalman objects and return
-    kal = if include_presample
-        k12 = cat(m, k1, k2; allout = allout)
-        cat(m, k12, k3; allout = allout)
+    regime_indices = Vector{Range{Int64}}(2)
+    if n_anticipated_shocks(m) > 0
+        regime_indices[1] = 1:index_zlb_start(m)-1
+        regime_indices[2] = index_zlb_start(m):T # allows for conditional data
     else
-        cat(m, k2, k3; allout = allout)
+        regime_indices[1] = 1:T
+        regime_indices[2] = 1:0
     end
+
+    # For the pre-ZLB periods, we must zero out the shocks corresponding to
+    # anticipated shocks
+    QQ_preZLB = copy(QQ)
+
+    ant_shock_inds = setdiff(1:n_shocks_exogenous(m), inds_shocks_no_ant(m))
+    for i in ant_shock_inds
+        QQ_preZLB[i, i] = 0
+    end
+
+    # Specify number of presample periods if we don't want to include them in
+    # the final results
+    T0 = include_presample ? 0 : n_presample_periods(m)
+
+    # Run Kalman filter, construct Kalman object, and return
+    out = kalman_filter(regime_indices, data, fill(TTT, 2), fill(RRR, 2), fill(CCC, 2),
+              Matrix{S}[QQ_preZLB, QQ], fill(ZZ, 2), fill(DD, 2), fill(MM, 2), fill(EE, 2),
+              z0, P0; allout = allout, n_presample_periods = T0)
+
+    return Kalman(out...)
 end
 
 """
@@ -387,24 +373,24 @@ immutable Kalman{S<:AbstractFloat}
     rmse::Matrix{S}
     rmsd::Matrix{S}
     filt::Matrix{S}        # filtered states
-    vfilt::Array{S, 3}     # mean square errors of filtered state vectors
+    vfilt::Array{S, 3}     # mean squared errors of filtered state vectors
     z0::Vector{S}          # starting-period state vector
     vz0::Matrix{S}         # starting-period variance-covariance matrix for the states
 end
 
 function Kalman{S<:AbstractFloat}(L::S,
-                                  zend::Vector{S},
-                                  Pend::Matrix{S},
-                                  pred::Matrix{S}          = Matrix{S}(0, 0),
-                                  vpred::Array{S, 3}       = Array{S}(0, 0, 0),
-                                  yprederror::Matrix{S}    = Matrix{S}(0, 0),
-                                  ystdprederror::Matrix{S} = Matrix{S}(0, 0),
-                                  rmse::Matrix{S}          = Matrix{S}(0, 0),
-                                  rmsd::Matrix{S}          = Matrix{S}(0, 0),
-                                  filt::Matrix{S}          = Matrix{S}(0, 0),
+                                  zend::Vector{S}          = Vector{S}(),
+                                  Pend::Matrix{S}          = Matrix{S}(),
+                                  pred::Matrix{S}          = Matrix{S}(),
+                                  vpred::Array{S, 3}       = Array{S}(0, 0, 0);
+                                  yprederror::Matrix{S}    = Matrix{S}(),
+                                  ystdprederror::Matrix{S} = Matrix{S}(),
+                                  rmse::Matrix{S}          = Matrix{S}(),
+                                  rmsd::Matrix{S}          = Matrix{S}(),
+                                  filt::Matrix{S}          = Matrix{S}(),
                                   vfilt::Array{S, 3}       = Array{S}(0, 0, 0),
-                                  z0::Vector{S}            = Vector{S}(0),
-                                  P0::Matrix{S}           = Matrix{S}(0, 0))
+                                  z0::Vector{S}            = Vector{S}(),
+                                  P0::Matrix{S}            = Matrix{S}())
     return Kalman{S}(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, P0)
 end
 
