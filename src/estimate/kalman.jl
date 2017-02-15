@@ -5,7 +5,7 @@ and written by Iskander Karibzhanov.
 
 """
 ```
-kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+kalman_filter{S<:AbstractFloat}(data::Matrix{S},
     TTT::Matrix{S}, CCC::Vector{S}, ZZ::Matrix{S}, DD::Vector{S}, VVall::Matrix{S},
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
     allout::Bool = false, include_presample::Bool = true)
@@ -13,7 +13,6 @@ kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 
 ### Inputs
 
-- `m`: model object
 - `data`: a `Ny` x `T` `Matrix` containing data `y(1), ... , y(T)`.
 - `TTT`: an `Nz` x `Nz` `Matrix` for a time-invariant transition matrix in the transition
   equation.
@@ -71,7 +70,7 @@ All eigenvalues of `TTT` are inside the unit circle when the state space model
 is stationary.  When the preceding formula cannot be applied, the initial state
 vector estimate is set to `CCC` and its covariance matrix is given by `1e6 * I`.
 """
-function kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
     TTT::Matrix{S}, RRR::Matrix{S}, CCC::Vector{S},
     QQ::Matrix{S}, ZZ::Matrix{S}, DD::Vector{S}, MM::Matrix{S}, EE::Matrix{S},
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();

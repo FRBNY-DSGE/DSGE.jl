@@ -10,11 +10,9 @@ for arg in ["data", "TTT", "RRR", "CCC", "QQ", "ZZ", "DD", "MM", "EE", "z0", "P0
 end
 close(h5)
 
-m = Model990()
-
 # Method with all arguments provided (9)
-out_3 = kalman_filter(m, data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, z0, P0)
-out_9 = kalman_filter(m, data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, z0, P0, allout = true)
+out_3 = kalman_filter(data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, z0, P0)
+out_9 = kalman_filter(data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, z0, P0, allout = true)
 
 h5 = h5open("$path/../reference/kalman_filter_out9.h5")
 for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
@@ -35,8 +33,8 @@ end
 close(h5)
 
 # Method with optional arguments omitted (7)
-out_3 = kalman_filter(m, data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE)
-out_9 = kalman_filter(m, data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE; allout = true)
+out_3 = kalman_filter(data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE)
+out_9 = kalman_filter(data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE; allout = true)
 
 h5 = h5open("$path/../reference/kalman_filter_out7.h5")
 for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
