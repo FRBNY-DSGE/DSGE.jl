@@ -17,7 +17,7 @@ custom_settings = Dict{Symbol, Setting}(
 m = Model990(custom_settings = custom_settings, testing = true)
 
 meas = measurement(m, TTT, RRR, CCC)
-QQ, ZZ, DD, MM, EE, VVall = meas.QQ, meas.ZZ, meas.DD, meas.MM, meas.EE, meas.VVall
+QQ, ZZ, DD, MM, EE = meas.QQ, meas.ZZ, meas.DD, meas.MM, meas.EE
 
 
 # Read expected output
@@ -63,7 +63,7 @@ end
 
 # Durbin-Koopman smoother with anticipated shocks
 alpha_hat, eta_hat = durbin_koopman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD,
-    MM, EE, VVall, kal[:z0], kal[:vz0])
+    MM, EE, kal[:z0], kal[:vz0])
 
 @test_approx_eq exp_alpha_hat alpha_hat
 @test_approx_eq exp_eta_hat eta_hat
@@ -77,12 +77,12 @@ data = data[inds_obs_no_ant(m), :]
 
 TTT, RRR, CCC = solve(m)
 meas = measurement(m, TTT, RRR, CCC)
-QQ, ZZ, DD, VVall = meas.QQ, meas.ZZ, meas.DD, meas.VVall
-A0 = zeros(n_states_augmented(m))
+QQ, ZZ, DD, MM, EE = meas.QQ, meas.ZZ, meas.DD, meas.MM, meas.EE
+z0 = zeros(n_states_augmented(m))
 P0 = QuantEcon.solve_discrete_lyapunov(TTT, RRR*QQ*RRR')
 
-kal = kalman_filter(m, data, TTT, CCC, ZZ, DD, VVall, A0, P0, allout = true, include_presample = true)
-alpha_hat, eta_hat = kalman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, A0, P0,
+kal = kalman_filter(m, data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, z0, P0, allout = true, include_presample = true)
+alpha_hat, eta_hat = kalman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, z0, P0,
     kal[:pred], kal[:vpred])
 @test_matrix_approx_eq kal[:zend] alpha_hat[:, end]
 

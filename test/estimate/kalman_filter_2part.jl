@@ -4,7 +4,7 @@ include("../util.jl")
 path = dirname(@__FILE__)
 
 # Set up
-data, TTT, RRR, CCC, A0, P0 =
+data, TTT, RRR, CCC, z0, P0 =
     h5open("$path/../reference/kalman_filter_2part_args.h5", "r") do file
         read(file, "data"),
         read(file, "TTT"), read(file, "RRR"), read(file, "CCC"),
@@ -17,10 +17,10 @@ custom_settings = Dict{Symbol, Setting}(
 m = Model990(custom_settings = custom_settings, testing = true)
 
 # Kalman filter with all arguments provided
-kal1 = kalman_filter_2part(m, data, TTT, RRR, CCC, A0, P0; allout = true,
+kal1 = kalman_filter_2part(m, data, TTT, RRR, CCC, z0, P0; allout = true,
     include_presample = true)
 
-# Kalman filter without z0 and vz0
+# Kalman filter without z0 and P0
 kal2 = kalman_filter_2part(m, data, TTT, RRR, CCC; allout = true,
     include_presample = true)
 

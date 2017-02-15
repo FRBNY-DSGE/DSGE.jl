@@ -5,7 +5,7 @@ path = dirname(@__FILE__)
 
 # Initialize arguments to function
 h5 = h5open("$path/../reference/kalman_filter_args.h5")
-for arg in ["data", "a", "F", "b", "H", "var", "z0", "vz0"]
+for arg in ["data", "TTT", "RRR", "CCC", "QQ", "ZZ", "DD", "MM", "EE", "z0", "P0"]
     eval(parse("$arg = read(h5, \"$arg\")"))
 end
 close(h5)
@@ -13,8 +13,8 @@ close(h5)
 m = Model990()
 
 # Method with all arguments provided (9)
-out_3 = kalman_filter(m, data, F, a, H, b, var, z0, vz0)
-out_9 = kalman_filter(m, data, F, a, H, b, var, z0, vz0, allout = true)
+out_3 = kalman_filter(m, data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, z0, P0)
+out_9 = kalman_filter(m, data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, z0, P0, allout = true)
 
 h5 = h5open("$path/../reference/kalman_filter_out9.h5")
 for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,
@@ -35,8 +35,8 @@ end
 close(h5)
 
 # Method with optional arguments omitted (7)
-out_3 = kalman_filter(m, data, F, a, H, b, var)
-out_9 = kalman_filter(m, data, F, a, H, b, var; allout = true)
+out_3 = kalman_filter(m, data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE)
+out_9 = kalman_filter(m, data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE; allout = true)
 
 h5 = h5open("$path/../reference/kalman_filter_out7.h5")
 for out in [:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse,

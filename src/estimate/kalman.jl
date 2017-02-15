@@ -7,7 +7,7 @@ and written by Iskander Karibzhanov.
 ```
 kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     TTT::Matrix{S}, CCC::Vector{S}, ZZ::Matrix{S}, DD::Vector{S}, VVall::Matrix{S},
-    z0::Vector{S} = Vector{S}(), vz0::Matrix{S} = Matrix{S}(); lead::Int = 0,
+    z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
     allout::Bool = false, include_presample::Bool = true)
 ```
 
@@ -25,13 +25,12 @@ kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 
 #### Optional Inputs
 - `z0`: an optional `Nz` x 1 initial state vector.
-- `vz0`: an optional `Nz` x `Nz` covariance matrix of an initial state vector.
-- `lead`: the number of steps to forecast after the end of the data.
+- `P0`: an optional `Nz` x `Nz` covariance matrix of an initial state vector.
 - `allout`: an optional keyword argument indicating whether we want optional output
   variables returned as well
 - `include_presample`: indicates whether to include presample periods in the
   returned Kalman object. If `!include_presample`, then we don't add presample
-  periods to the likelohood, and we also set the `z0` and `vz0` fields in the
+  periods to the likelohood, and we also set the `z0` and `P0` fields in the
   returned `Kalman` object to be the states and variance-covariance matrices at
   the end of the presample/beginning of the main sample
 
@@ -53,12 +52,12 @@ z(t+1) = CCC + TTT*z(t) + RRR*ϵ(t)   (state or transition equation)
 y(t) = DD + ZZ*z(t) + u(t)           (observation or measurement equation)
 ```
 
-When `z0` and `Vz0` are omitted, the initial state vector and its covariance
+When `z0` and `P0` are omitted, the initial state vector and its covariance
 matrix of the time invariant Kalman filters are computed under the stationarity
 condition:
 ```
 z0  = (I - TTT)\CCC
-vz0 = reshape(I - kron(TTT, TTT))\vec(V), Nz, Nz)
+P0 = reshape(I - kron(TTT, TTT))\vec(V), Nz, Nz)
 ```
 
 Where:
@@ -72,54 +71,45 @@ All eigenvalues of `TTT` are inside the unit circle when the state space model
 is stationary.  When the preceding formula cannot be applied, the initial state
 vector estimate is set to `CCC` and its covariance matrix is given by `1e6 * I`.
 """
-function kalman_filter{S<:AbstractFloat}(m::AbstractModel,
-                                         data::Matrix{S},
-                                         TTT::Matrix{S},
-                                         CCC::Vector{S},
-                                         ZZ::Matrix{S},
-                                         DD::Vector{S},
-                                         VVall::Matrix{S},
-                                         z0::Vector{S} = Vector{S}(),
-                                         vz0::Matrix{S} = Matrix{S}();
-                                         lead::Int = 0,
-                                         allout::Bool = false,
-                                         include_presample::Bool = true)
-    T = size(data, 2)
-    Nz = length(CCC)
-    Ny = length(DD)
-    V = VVall[1:Nz, 1:Nz] # V = RRR*QQ*RRR'
+function kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    TTT::Matrix{S}, RRR::Matrix{S}, CCC::Vector{S},
+    QQ::Matrix{S}, ZZ::Matrix{S}, DD::Vector{S}, MM::Matrix{S}, EE::Matrix{S},
+    z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
+    allout::Bool = false, include_presample::Bool = true)
 
-    if isempty(z0) || isempty(vz0)
+    # Dimensions
+    T  = size(data, 2) # number of periods of data
+    Nz = size(TTT, 1)  # number of states
+    Ne = size(RRR, 2)  # number of shocks
+    Ny = size(ZZ, 1)   # number of observables
+
+    # Populate initial conditions if they are empty
+    if isempty(z0) || isempty(P0)
         e, _ = eig(TTT)
         if all(abs(e) .< 1.)
-            z0  = (eye(Nz) - TTT)\CCC
-            vz0 = solve_discrete_lyapunov(TTT, V)
+            z0 = (UniformScaling(1) - TTT)\CCC
+            P0 = solve_discrete_lyapunov(TTT, RRR*QQ*RRR')
         else
             z0 = CCC
-            vz0 = eye(Nz)*1e6
+            P0 = 1e6 * eye(Nz)
         end
     end
 
     z = z0
-    P = vz0
+    P = P0
 
     # Check input matrix dimensions
     @assert size(data, 1) == Ny
     @assert size(TTT) == (Nz, Nz)
-    @assert size(ZZ) == (Ny, Nz)
-    @assert size(VVall) == (Ny + Nz, Ny + Nz)
-    @assert length(z) == Nz
-    @assert size(P) == (Nz, Nz)
-
-    # V(t) and R(t) are variances of η(t) and ϵ(t), respectively, and G(t) is a covariance
-    # of η(t) and ϵ(t)
-    # In dsgelh :
-    # --- V is same as QQ
-    # --- R is same as EE
-    # --- G is same as VV = QQ*MM
-    V = VVall[1:Nz, 1:Nz]
-    R = VVall[(Nz+1):end, (Nz+1):end]
-    G = VVall[1:Nz, (Nz+1):end]
+    @assert size(RRR) == (Nz, Ne)
+    @assert size(CCC) == (Nz,)
+    @assert size(QQ)  == (Ne, Ne)
+    @assert size(ZZ)  == (Ny, Nz)
+    @assert size(DD)  == (Ny,)
+    @assert size(MM)  == (Ny, Ne)
+    @assert size(EE)  == (Ny, Ny)
+    @assert size(z)   == (Nz,)
+    @assert size(P)   == (Nz, Nz)
 
     if allout
         pred          = zeros(S, Nz, T)
@@ -130,21 +120,24 @@ function kalman_filter{S<:AbstractFloat}(m::AbstractModel,
         vfilt         = zeros(Nz, Nz, T)
     end
 
+    V = RRR*QQ*RRR'    # V = Var(z_t) = Var(Rϵ_t)
+    R = EE + MM*QQ*MM' # R = Var(y_t) = Var(u_t)
+    G = RRR*QQ*MM'     # G = Cov(z_t, y_t)
+
     L = zero(S)
 
     for t = 1:T
         # If an element of the vector y(t) is missing (NaN) for the observation t, the
-        #   corresponding row is ditched from the measurement equation.
+        # corresponding row is ditched from the measurement equation
         nonmissing = !isnan(data[:, t])
-        data_t = data[nonmissing, t]       # data_t = Y_T = [y1, y2, ..., yT] is matrix of observable data time-series
-        ZZ_t = ZZ[nonmissing, :]           # ZZ_t is matrix mapping states to observables
-        G_t = G[:, nonmissing]             # G_t = Cov(η_t, ϵ_t)
-        R_t = R[nonmissing, nonmissing]    # R_t = Var(ϵ_t)
-        Ny_t = length(data_t)              # Ny_t = T is length of time
-        DD_t = DD[nonmissing]              # DD_t
+        data_t = data[nonmissing, t]
+        ZZ_t = ZZ[nonmissing, :]
+        G_t  = G[:, nonmissing]
+        R_t  = R[nonmissing, nonmissing]
+        Ny_t = length(data_t)
+        DD_t = DD[nonmissing]
 
-
-        ## forecasting
+        ## Forecast
         z = CCC + TTT*z                    # z_{t|t-1} = CCC + TTT(Θ)*z_{t-1|t-1}
         P = TTT*P*TTT' + V                 # P_{t|t-1} = TTT(Θ)*P_{t-1|t-1}*TTT(Θ)' + TTT(Θ)*Var(η_t)*TTT(Θ)'
         dy = data_t - ZZ_t*z - DD_t        # dy = y_t - ZZ(Θ)*z_{t|t-1} - DD is prediction error or innovation
@@ -160,13 +153,14 @@ function kalman_filter{S<:AbstractFloat}(m::AbstractModel,
         end
 
         ddy = D\dy
+
         # We evaluate the log likelihood function by adding values of L at every iteration
-        #   step (for each t = 1,2,...T)
+        # step (for each t = 1,2,...T)
         if include_presample || (!include_presample && t > n_presample_periods(m))
             L += -log(det(D))/2 - first(dy'*ddy/2) - Ny_t*log(2*pi)/2
         end
 
-        ## updating
+        ## Update
         PZG = P*ZZ_t' + G_t
         z = z + PZG*ddy                    # z_{t|t} = z_{t|t-1} + P_{t|t-1}*ZZ(Θ)' + ...
         P = P - PZG/D*PZG'                 # P_{t|t} = P_{t|t-1} - PZG*(1/D)*PZG
@@ -188,20 +182,11 @@ function kalman_filter{S<:AbstractFloat}(m::AbstractModel,
     zend = z
     Pend = P
 
-    if allout && lead > 1
-        for t = (T+2):(T+lead)
-            z = TTT*z + CCC
-            P = TTT*P*TTT' + V
-            pred[:, t]     = z
-            vpred[:, :, t] = P
-        end
-    end
-
     if allout
         rmse = sqrt(mean((yprederror.^2)', 1))
         rmsd = sqrt(mean((ystdprederror.^2)', 1))
 
-        return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, vz0)
+        return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, P0)
     else
         return Kalman(L, zend, Pend)
     end
@@ -212,10 +197,10 @@ end
 ```
 kalman_filter_2part{S<:AbstractFloat}(m, data,
     TTT = Matrix{S}(0, 0), RRR = Matrix{S}(0, 0), CCC = Vector{S}(0,),
-    z0 = Vector{S}(0,), vz0 = Matrix{S}(0, 0);
+    z0 = Vector{S}(0,), P0 = Matrix{S}(0, 0);
     ZZ = Matrix{S}(0, 0), DD = Vector{S}(0,), QQ = Matrix{S}(0, 0),
     MM = Matrix{S}(0, 0), EE = Matrix{S}(0, 0), VVall = Matrix{S}(0, 0),
-    lead = 0, allout = false, catch_errors = false,
+    allout = false, catch_errors = false,
     include_presample = true)
 ```
 
@@ -232,7 +217,7 @@ Implements the Kalman filter, accounting for the zero lower bound.
 - `CCC`: `Nz` x 1 vector, the constant term in the transition equation. If
   not provided, it will be calculated from `m`
 - `z0`: optional `Nz` x 1 initial state vector
-- `vz0`: optional `Nz` x `Nz` covariance matrix of the initial state vector
+- `P0`: optional `Nz` x `Nz` covariance matrix of the initial state vector
 
 where:
 
@@ -248,8 +233,6 @@ where:
 - `QQ`: `Ne` x `Ne` matrix of exogenous shock covariances
 - `MM`: `Ny` x `Ne` matrix. See `Measurement` type for description
 - `EE`: `Ny` x `Ny` matrix. See `Measurement` type for description
-- `VVall`: `Nz + Ny` x `Nz + Ny` matrix. See `Measurement` type for description
-- `lead`: number of steps to forecast after the end of the data
 - `allout`: indicates whether we want optional output variables returned as well
 - `include_presample`: indicates whether to include presample periods in the
   returned Kalman object. If true, we concatenate Kalman objects from all three
@@ -261,19 +244,17 @@ where:
 """
 function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
                                                data::Matrix{S},
-                                               TTT::Matrix{S}   = Matrix{S}(0, 0),
-                                               RRR::Matrix{S}   = Matrix{S}(0, 0),
-                                               CCC::Vector{S}   = Vector{S}(0,),
-                                               z0::Vector{S}    = Vector{S}(0,),
-                                               vz0::Matrix{S}   = Matrix{S}(0, 0);
-                                               ZZ::Matrix{S}    = Matrix{S}(0, 0),
-                                               DD::Vector{S}    = Vector{S}(0,),
-                                               QQ::Matrix{S}    = Matrix{S}(0, 0),
-                                               MM::Matrix{S}    = Matrix{S}(0, 0),
-                                               EE::Matrix{S}    = Matrix{S}(0, 0),
-                                               VVall::Matrix{S} = Matrix{S}(0, 0),
-                                               lead::Int        = 0,
-                                               allout::Bool     = false,
+                                               TTT::Matrix{S} = Matrix{S}(0, 0),
+                                               RRR::Matrix{S} = Matrix{S}(0, 0),
+                                               CCC::Vector{S} = Vector{S}(0,),
+                                               z0::Vector{S}  = Vector{S}(0,),
+                                               P0::Matrix{S}  = Matrix{S}(0, 0);
+                                               QQ::Matrix{S}  = Matrix{S}(0, 0),
+                                               ZZ::Matrix{S}  = Matrix{S}(0, 0),
+                                               DD::Vector{S}  = Vector{S}(0,),
+                                               MM::Matrix{S}  = Matrix{S}(0, 0),
+                                               EE::Matrix{S}  = Matrix{S}(0, 0),
+                                               allout::Bool   = false,
                                                catch_errors::Bool = false,
                                                include_presample::Bool = true)
 
@@ -311,14 +292,11 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     # Step 2: Define the measurement equation:
     #   Y_t = DD + ZZ*S_t + u_t
     # where
-    #   Var(η_t) = EE
     #   u_t = η_t + MM*ε_t
-    #   Var(u_t) = HH = EE+MM QQ MM'
-    #   Cov(ε_t,u_t) = VV = QQ*MM'
-    if isempty(ZZ) || isempty(DD) || isempty(QQ) || isempty(MM) || isempty(EE) || isempty(VVall)
+    #   Var(η_t) = EE
+    if isempty(QQ) || isempty(ZZ) || isempty(DD) || isempty(MM) || isempty(EE)
         meas = measurement(m, TTT, RRR, CCC; shocks = true)
-        ZZ, QQ, VVall = meas[:ZZ], meas[:QQ], meas[:VVall]
-        MM, EE = meas[:MM], meas[:EE]
+        QQ, ZZ, MM, EE = meas[:QQ], meas[:ZZ], meas[:MM], meas[:EE]
 
         # If DD specifically is nonempty (most often a vector of zeros, as in
         # the Durbin-Koopman smoother), we want to use that DD instead of the
@@ -332,42 +310,32 @@ function kalman_filter_2part{S<:AbstractFloat}(m::AbstractModel,
     for i in ant_shock_inds
         R2[:QQ][i, i] = 0
     end
-    R2[:VVall] = [[RRR*R2[:QQ]*RRR'  RRR*R2[:QQ]*MM'];
-                  [MM*R2[:QQ]*RRR'   EE+MM*R2[:QQ]*MM']]
 
-    for d in [:QQ, :VVall]
-        R1[d] = R2[d]
-    end
+    R1[:QQ] = R2[:QQ]
 
-    # Step 3: Compute log-likelihood using the Kalman filter.
-    # Note that `kalman_filter` assumes a transition equation of the form:
-    #   S_t = TTT*S_{t-1} + ε2_t
-    # where ε2_t = RRR*ε_t. Therefore redefine:
-    #   QQ2 = Var(ε2_t) = RRR*QQ*RRR'
-    #   VV2 = Cov(ε2_t, u_t) = RRR*VV
-    #   VVall = Var([ε2_t; u_t])    (joint variance of the two shocks)
+    # Step 3: Compute log-likelihood using the Kalman filter
 
-    # Run Kalman filter on presample, calculating `z0` and `vz0` in
+    # Run Kalman filter on presample, calculating `z0` and `P0` in
     # `kalman_filter` if necessary
-    if isempty(z0) || isempty(vz0)
-        k1 = kalman_filter(m, R1[:data], TTT, CCC, ZZ, DD, R1[:VVall];
+    if isempty(z0) || isempty(P0)
+        k1 = kalman_filter(m, R1[:data], TTT, RRR, CCC, R1[:QQ], ZZ, DD, MM, EE,
             allout = allout, include_presample = true)
     else
-        # Check that rows and columns corresponding to anticipated shocks are zero in vz0
+        # Check that rows and columns corresponding to anticipated shocks are zero in P0
         ant_state_inds = setdiff(1:n_states_augmented(m), inds_states_no_ant(m))
-        @assert all(x -> x == 0, vz0[:, ant_state_inds])
-        @assert all(x -> x == 0, vz0[ant_state_inds, :])
+        @assert all(x -> x == 0, P0[:, ant_state_inds])
+        @assert all(x -> x == 0, P0[ant_state_inds, :])
 
-        k1 = kalman_filter(m, R1[:data], TTT, CCC, ZZ, DD, R1[:VVall], z0, vz0;
+        k1 = kalman_filter(m, R1[:data], TTT, RRR, CCC, R1[:QQ], ZZ, DD, MM, EE, z0, P0;
                            allout = allout, include_presample = true)
     end
 
     # Run Kalman filter on normal period
-    k2 = kalman_filter(m, R2[:data], TTT, CCC, ZZ, DD, R2[:VVall], k1[:zend], k1[:Pend];
+    k2 = kalman_filter(m, R2[:data], TTT, RRR, CCC, R2[:QQ], ZZ, DD, MM, EE, k1[:zend], k1[:Pend];
                        allout = allout, include_presample = true)
 
     # Run Kalman filter on ZLB period
-    k3 = kalman_filter(m, R3[:data], TTT, CCC, ZZ, DD, VVall, k2[:zend], k2[:Pend];
+    k3 = kalman_filter(m, R3[:data], TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, k2[:zend], k2[:Pend];
                        allout = allout, include_presample = true)
 
     # Concatenate Kalman objects
@@ -395,11 +363,11 @@ Kalman{S<:AbstractFloat}
 - `z0`: starting-period state vector. If there are presample periods in the
   data, then `z0` is the state vector at the end of the presample/beginning of
   the main sample
-- `vz0`: variance-covariance matrix for `z0`
+- `P0`: variance-covariance matrix for `z0`
 
 #### Fields filled in when `allout=true` in a call to `kalman_filter`:
-- `pred`: a `Nz` x `T+lead` matrix containing one-step predicted state vectors
-- `vpred`: a `Nz` x `Nz` x `T+lead` matrix containing mean square errors of predicted
+- `pred`: a `Nz` x `T` matrix containing one-step predicted state vectors
+- `vpred`: a `Nz` x `Nz` x `T` matrix containing mean square errors of predicted
   state vectors
 
 - `filt`: an `Nz` x `T` matrix containing filtered state vectors
@@ -434,8 +402,8 @@ function Kalman{S<:AbstractFloat}(L::S,
                                   filt::Matrix{S}          = Matrix{S}(0, 0),
                                   vfilt::Array{S, 3}       = Array{S}(0, 0, 0),
                                   z0::Vector{S}            = Vector{S}(0),
-                                  vz0::Matrix{S}           = Matrix{S}(0, 0))
-    return Kalman{S}(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, vz0)
+                                  P0::Matrix{S}           = Matrix{S}(0, 0))
+    return Kalman{S}(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, P0)
 end
 
 function Base.getindex(K::Kalman, d::Symbol)
@@ -464,10 +432,10 @@ function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
         filt  = hcat(k1[:filt], k2[:filt])
         vfilt = cat(3, k1[:vfilt], k2[:vfilt])
         z0    = k1[:z0]
-        vz0   = k1[:vz0]
+        P0    = k1[:vz0]
 
         return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror,
-            rmse, rmsd, filt, vfilt, z0, vz0)
+            rmse, rmsd, filt, vfilt, z0, P0)
     else
         return Kalman(L, zend, Pend)
     end
