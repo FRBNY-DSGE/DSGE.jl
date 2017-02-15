@@ -539,7 +539,11 @@ function get_mb_population_series(product::Symbol, mnemonic::Symbol,
         # Extend population forecast by the right number of periods
         population_forecast = resize_population_forecast(population_forecast, n_fcast_periods,
                                                          mnemonic)
-        end_ind = find(population_forecast[:date] .== end_date)[1]
+        end_ind = if isempty(population_forecast[:date])
+            []
+        else
+            find(population_forecast[:date] .== end_date)[1]
+        end
 
         # Concatenate population histories and forecasts together
         population_series = if isempty(end_ind)
