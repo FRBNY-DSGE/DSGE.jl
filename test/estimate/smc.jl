@@ -35,7 +35,6 @@ resamples = h5read("$path/../reference/smc.h5","resamples")
 wtsim = h5read("$path/../reference/smc.h5","wtsim")
 draws = h5read("$path/../reference/smc.h5","draws")
 
-
 smc(s,data_mat)
 
 @test_approx_eq resamples readcsv("resamples.csv")
@@ -47,5 +46,3 @@ rm("wtsim.csv")
 rm("draws.csv")
 
 nothing
-
-

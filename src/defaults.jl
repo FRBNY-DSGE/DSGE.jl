@@ -50,13 +50,12 @@ function default_settings!(m::AbstractModel)
     m <= Setting(:mh_thin, 5, "Metropolis-Hastings thinning step")
 
     # Sequential Monte Carlo
-    m <= Setting(:n_particles, 1000, "Number of particles for use in SMC")
-    m <= Setting(:n_Φ, 100, "Number of stages in the tempering schedule")
-    m <= Setting(:λ, 2.0, "The 'bending coefficient' λ in Φ(n) = (n/N(Φ))^λ")
+    m <= Setting(:n_particles, 10000, "Number of particles for use in SMC")
+    m <= Setting(:n_Φ, 200, "Number of stages in the tempering schedule")
+    m <= Setting(:λ, 3.0, "The 'bending coefficient' λ in Φ(n) = (n/N(Φ))^λ")
     m <= Setting(:n_smc_blocks, 1, "The number of parameter blocks in SMC")
     m <= Setting(:c, .5, "The scaling factor for the covariance, constructed from acpt and tgt during mutation")
     m <= Setting(:init_accept, .25, "The initial average acceptance rate for new particles during mutation")
     m <= Setting(:target_accept, .25, "The initial target acceptance rate for new particles during mutation")
-    m <= Setting(:enforce_likelihood_threshold, false, "Require that exp(loglh)>0 for each initial particle")
 
 end

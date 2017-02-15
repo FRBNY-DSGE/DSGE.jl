@@ -182,6 +182,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	#------------------------------------
 
         c = c*(0.95 + 0.10*exp(16*(accept - target))/(1 + exp(16*(accept - target))))
+        m <= Setting(:c, c)
         
         para = squeeze(para_sim[i-1, :, :][:,:,free_para_inds],1)
         weight = repmat(weight_sim[:,i], 1, n_params)[:,free_para_inds]

@@ -49,11 +49,15 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, p0::Array{Float6
     rvec = isempty(rvec) ? randn(n_para-length(fixed_para_inds),1): rvec
     rval = isempty(rval) ? rand() : rval
     
-    cov_mat = chol(R)'
-    # SVD is a potential alternative to Cholesky factorization.
-    # U, E, V = svd(R)
-    # cov_mat = U * diagm(sqrt(E))
-
+    cov_mat = zeros(size(R,1),size(R,2))
+    if n_para < 20
+        cov_mat = chol(R)'
+    else
+        # SVD is a potential alternative to Cholesky factorization.
+        U, E, V = svd(R)
+        cov_mat = U * diagm(sqrt(E))
+    end
+    
     px_draw = p0 + squeeze(c*cov_mat*rvec,2) # reshape to be of the dimension of the original # of paras
     px_draw = reverse(px_draw)
     px = []
