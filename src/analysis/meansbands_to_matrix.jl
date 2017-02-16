@@ -103,7 +103,7 @@ function meansbands_matrix(mb::MeansBands)
     nperiods   = n_periods_means(mb)            # get number of periods
     prod       = get_product(mb)                    # history? forecast? shockdec?
     inds       = mb.metadata[:indices]          # mapping from names of vars to indices
-    bands_list = get_density_bands(mb)          # which bands are stored
+    bands_list = which_density_bands(mb)        # which bands are stored
     nbands     = length(bands_list)             # how many bands are stored
 
     # extract  matrices from MeansBands structure
