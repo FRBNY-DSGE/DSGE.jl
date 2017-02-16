@@ -19,8 +19,13 @@ exp_states, exp_shocks, exp_pseudo = jldopen("$path/../reference/smooth_out.jld"
 end
 
 # Call smoother and test
-for smoother in [:durbin_koopman, :kalman]
+for smoother in [:durbin_koopman, :koopman]
     m <= Setting(:forecast_smoother, smoother)
+
+    # Temporary (during renaming)
+    if smoother == :koopman
+        smoother = :kalman
+    end
 
     states, shocks, pseudo = smooth(m, df, system, kal)
 

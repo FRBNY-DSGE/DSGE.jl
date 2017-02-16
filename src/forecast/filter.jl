@@ -87,7 +87,7 @@ where `S<:AbstractFloat`.
 overridden by calling
 
 ```
-m <= Setting(:forecast_smoother, :kalman_smoother))
+m <= Setting(:forecast_smoother, :koopman_smoother))
 ```
 
 before calling `filterandsmooth`.
@@ -105,8 +105,8 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
 
     ## 2. Smooth
 
-    states, shocks = if forecast_smoother(m) == :kalman
-        kalman_smoother(m, data, system, kal[:z0], kal[:vz0], kal[:pred], kal[:vpred];
+    states, shocks = if forecast_smoother(m) == :koopman
+        koopman_smoother(m, data, system, kal[:z0], kal[:vz0], kal[:pred], kal[:vpred];
             include_presample = true)
     elseif forecast_smoother(m) == :durbin_koopman
         durbin_koopman_smoother(m, data, system, kal[:z0], kal[:vz0];

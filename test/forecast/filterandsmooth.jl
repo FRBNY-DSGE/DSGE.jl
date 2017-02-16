@@ -19,8 +19,13 @@ exp_states, exp_shocks, exp_pseudo =
         read(file, "exp_pseudo")
     end
 
-for smoother in [:durbin_koopman, :kalman]
+for smoother in [:durbin_koopman, :koopman]
     m <= Setting(:forecast_smoother, smoother)
+
+    # Temporary (during renaming)
+    if smoother == :koopman
+        smoother = :kalman
+    end
 
     # Without providing z0 and P0
     states, shocks, pseudo = filterandsmooth(m, df, system)

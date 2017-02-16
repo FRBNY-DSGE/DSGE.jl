@@ -97,7 +97,7 @@ function default_settings!(m::AbstractModel)
     settings[:forecast_pseudoobservables] = Setting(:forecast_pseudoobservables, false,
         "Whether to forecast pseudo-observables")
     settings[:forecast_smoother] = Setting(:forecast_smoother, :durbin_koopman,
-        "Choice of smoother to use during forecasting. Can be :kalman, :durbin_koopman, :carter_kohn, or :hamilton")
+        "Choice of smoother to use during forecasting. Can be :hamilton, :koopman, :carter_kohn, or :durbin_koopman")
     settings[:forecast_horizons] = Setting(:forecast_horizons, 60,
         "Number of periods to forecast ahead")
     settings[:forecast_draw_z0] = Setting(:forecast_draw_z0, false,

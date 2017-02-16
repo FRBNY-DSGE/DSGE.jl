@@ -1,19 +1,19 @@
 """
 ```
-kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     system::System, z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
     cond_type::Symbol = :none, include_presample::Bool = false)
 
-kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     system::System, z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
     include_presample::Bool = false)
 
-kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+koopman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
     D::Vector{S}, z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
     cond_type::Symbol = :none, include_presample::Bool = false)
 
-kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
+koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}
     T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
     D::Vector{S}, z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
     include_presample::Bool = false)
@@ -78,7 +78,7 @@ y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
-function kalman_smoother{S<:AbstractFloat}(data::Matrix{S},
+function koopman_smoother{S<:AbstractFloat}(data::Matrix{S},
     TTT::Matrix{S}, RRR::Matrix{S}, CCC::Vector{S},
     QQ::Matrix{S}, ZZ::Matrix{S}, DD::Vector{S},
     z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
@@ -87,12 +87,12 @@ function kalman_smoother{S<:AbstractFloat}(data::Matrix{S},
     T = size(data, 2)
     regime_indices = Range{Int64}[1:T]
 
-    kalman_smoother(regime_indices, data, Matrix{S}[TTT], Matrix{S}[RRR], Vector{S}[CCC],
+    koopman_smoother(regime_indices, data, Matrix{S}[TTT], Matrix{S}[RRR], Vector{S}[CCC],
         Matrix{S}[QQ], Matrix{S}[ZZ], Vector{S}[DD], z0, P0, pred, vpred;
         n_presample_periods = n_presample_periods)
 end
 
-function kalman_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
+function koopman_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
     data::Matrix{S}, TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}},
     QQs::Vector{Matrix{S}}, ZZs::Vector{Matrix{S}}, DDs::Vector{Vector{S}},
     z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
@@ -105,7 +105,7 @@ function kalman_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
     Nz = size(TTTs[1], 1) # number of states
 
     # Call disturbance smoother
-    smoothed_disturbances, smoothed_shocks = disturbance_smoother(regime_indices, data,
+    smoothed_disturbances, smoothed_shocks = koopman_disturbance_smoother(regime_indices, data,
                                                  TTTs, RRRs, QQs, ZZs, DDs, pred, vpred)
 
     # Initialize outputs
@@ -144,7 +144,7 @@ function kalman_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
     return smoothed_states, smoothed_shocks
 end
 
-function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+function koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     system::System, z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
     cond_type::Symbol = :none, include_presample::Bool = false)
 
@@ -160,14 +160,14 @@ function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     T0 = include_presample ? 0 : n_presample_periods(m)
 
     # Call Kalman smoother
-    kalman_smoother(regime_inds, data, TTTs, RRRs, CCCs,
+    koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs,
         QQs, ZZs, DDs, z0, P0, pred, vpred;
         n_presample_periods = T0)
 end
 
 """
 ```
-disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
+koopman_disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
     data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
     Z::Matrix{S}, D::Array{S}, pred::Matrix{S}, vpred::Array{S, 3})
 ```
@@ -180,7 +180,7 @@ simplified for the case in which there is no measurement error, and the
 model matrices do not vary with time.
 
 This disturbance smoother is intended for use with the state smoother
-`kalman_smoother` from the same papers (Koopman 1993, Durbin and Koopman
+`koopman_smoother` from the same papers (Koopman 1993, Durbin and Koopman
 2002). It produces a matrix of vectors, `r`, that is used for state
 smoothing, and an optional matrix, `eta_hat`, containing the smoothed
 shocks. It has been adjusted to account for the possibility of missing
@@ -224,7 +224,7 @@ y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
-function disturbance_smoother{S<:AbstractFloat}(data::Matrix{S},
+function koopman_disturbance_smoother{S<:AbstractFloat}(data::Matrix{S},
     TTT::Matrix{S}, RRR::Matrix{S},
     QQ::Matrix{S}, ZZ::Matrix{S}, DD::Vector{S},
     pred::Matrix{S}, vpred::Array{S, 3},
@@ -233,12 +233,12 @@ function disturbance_smoother{S<:AbstractFloat}(data::Matrix{S},
     T = size(data, 2)
     regime_indices = Range{Int64}[1:T]
 
-    disturbance_smoother(regime_indices, data, Matrix{S}[TTT], Matrix{S}[RRR],
+    koopman_disturbance_smoother(regime_indices, data, Matrix{S}[TTT], Matrix{S}[RRR],
         Matrix{S}[QQ], Matrix{S}[ZZ], Vector{S}[DD], pred, vpred;
         n_presample_periods = n_presample_periods)
 end
 
-function disturbance_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
+function koopman_disturbance_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
     data::Matrix{S}, TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}},
     QQs::Vector{Matrix{S}}, ZZs::Vector{Matrix{S}}, DDs::Vector{Vector{S}},
     pred::Matrix{S}, vpred::Array{S, 3}; n_presample_periods::Int = 0)
@@ -453,7 +453,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{
                                   z0, P0; allout = true)
 
     # Kalman smooth
-    α_hat_star, η_hat_star = kalman_smoother(regime_indices, y_star, TTTs, RRRs, CCCs,
+    α_hat_star, η_hat_star = koopman_smoother(regime_indices, y_star, TTTs, RRRs, CCCs,
                                  QQs, ZZs, fill(zeros(Ny), n_regimes),
                                  z0, P0, pred, vpred)
 
