@@ -147,9 +147,9 @@ module DSGE
 
     include("analysis/moments.jl")
     include("analysis/meansbands.jl")
-    include("analysis/compute_means_bands.jl")
+    include("analysis/compute_meansbands.jl")
     include("analysis/meansbands_to_matrix.jl")
-    include("analysis/write_meansbands_tables.jl")
+    include("analysis/io.jl")
     include("analysis/util.jl")
 
     include("models/m990/m990.jl")
