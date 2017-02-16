@@ -511,15 +511,15 @@ end
 
 """
 ```
-Hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     system::System, kal::Kalman{S};
     cond_type::Symbol = :none, include_presample::Bool = false)
 
-Hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     system::System, kal::Kalman{S};
     include_presample::Bool = false)
 
-Hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     T::Matrix{S}, R::Matrix{S}, z0::Vector{S},
     pred::Matrix{S}, vpred::Array{S, 3},
     filt::Matrix{S}, vfilt::Array{S, 3};
@@ -576,18 +576,18 @@ y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
-function Hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+function hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     system::System, kal::Kalman{S};
     cond_type::Symbol = :none, include_presample::Bool = false)
 
     # convert dataframe to matrix
     data = df_to_matrix(m, df, cond_type = cond_type)
 
-    Hamilton_smoother(m, data, system, kal;
+    hamilton_smoother(m, data, system, kal;
                       include_presample = include_presample)
 end
 
-function Hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+function hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     system::System, kal::Kalman{S};
     include_presample::Bool = false)
 
@@ -600,11 +600,11 @@ function Hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     z0 = kal[:z0]
 
     # call actual Kalman smoother
-    Hamilton_smoother(m, data, T, R, z0, pred, vpred, filt, vfilt;
+    hamilton_smoother(m, data, T, R, z0, pred, vpred, filt, vfilt;
         include_presample = include_presample)
 end
 
-function Hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+function hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     T::Matrix{S}, R::Matrix{S}, z0::Vector{S},
     pred::Matrix{S}, vpred::Array{S, 3},
     filt::Matrix{S}, vfilt::Array{S, 3};
@@ -654,7 +654,3 @@ function Hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 
     return α_hat, η_hat
 end
-
-# This is a Kalman Smoothing program based on the treatment in James Hamilton's
-# \"Time Series Analysis\". Unlike the disturbance smoother, this one does
-# rely on inverting singualr matrices using the Moore-Penrose pseudoinverse.
