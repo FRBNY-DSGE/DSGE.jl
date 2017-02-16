@@ -61,6 +61,7 @@ type Measurement{T<:AbstractFloat}
     MM::Matrix{T}
     VVall::Matrix{T}
 end
+
 function Base.getindex(M::Measurement, d::Symbol)
     if d in (:ZZ, :DD, :QQ, :EE, :MM, :VVall)
         return getfield(M, d)
@@ -68,13 +69,13 @@ function Base.getindex(M::Measurement, d::Symbol)
         throw(KeyError(d))
     end
 end
+
 function measurement(m::AbstractModel, trans::Transition; shocks::Bool=true)
     TTT = trans[:TTT]
     RRR = trans[:RRR]
     CCC = trans[:CCC]
     measurement(m, TTT, RRR, CCC; shocks=shocks)
 end
-
 
 """
 `System{T<:AbstractFloat}`
@@ -88,6 +89,11 @@ type System{T<:AbstractFloat}
     measurement::Measurement{T}
     pseudo_measurement::Nullable{PseudoObservableMapping{T}}
 end
+
+function System{T<:AbstractFloat}(transition::Transition{T}, measurement::Measurement{T})
+    return System(transition, measurement, Nullable{PseudoObservableMapping{T}}())
+end
+
 function Base.getindex(system::System, d::Symbol)
     if d in (:transition, :measurement, :pseudo_measurement)
         return getfield(system, d)
