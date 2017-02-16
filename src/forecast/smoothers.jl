@@ -619,13 +619,9 @@ function hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     @assert Ny == n_observables(m)
     @assert Nt >= n_presample_periods(m) + n_prezlb_periods(m) + n_zlb_periods(m)
 
-    # Anticipated monetary policy shocks
-    n_ant_shocks = n_anticipated_shocks(m)
-    t_zlb_start  = index_zlb_start(m)
-
+    # smooth the states recursively, starting at the Nt-1 period and going backwards
     α_hat = copy(filt)
 
-    # smooth the states recursively, starting at the Nt-1 period and going backwards
     for t in (Nt-1):-1:1
         J_t = vfilt[:,:,t] * T' * pinv(vpred[:,:,t+1])
         α_hat[:,t] = filt[:,t] + J_t * (α_hat[:,t+1] - pred[:,t+1])
