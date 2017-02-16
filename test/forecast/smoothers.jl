@@ -46,11 +46,12 @@ alpha_hat, eta_hat = hamilton_smoother(m, data, system, kal[:z0], kal[:pred], ka
 @test_approx_eq     kal[:zend] alpha_hat[:, end]
 
 # Carter and Kohn smoother with anticipated shocks
-alpha_hat, eta_hat = carter_kohn_smoother(m, data, system, kal)
+alpha_hat, eta_hat = carter_kohn_smoother(m, data, system, kal[:z0], kal[:pred], kal[:vpred], kal[:filt], kal[:vfilt])
 
 @test_approx_eq_eps exp_alpha_hat alpha_hat 2e-2
 @test_approx_eq_eps exp_eta_hat eta_hat 1e-3
 @test_approx_eq     kal[:zend] alpha_hat[:, end]
+
 
 # Kalman smoother without anticipated shocks
 custom_settings = Dict{Symbol, Setting}(
