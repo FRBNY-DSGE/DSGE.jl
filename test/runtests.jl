@@ -25,7 +25,6 @@ my_tests = [
             "estimate/metropolis_hastings",
             "forecast/smoothers",
             "forecast/filter",
-            "forecast/filterandsmooth",
             "forecast/smooth",
             "forecast/forecast",
             "forecast/shock_decompositions",
