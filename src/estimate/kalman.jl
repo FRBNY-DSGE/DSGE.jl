@@ -291,6 +291,13 @@ function kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syst
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
     allout::Bool = false, include_presample::Bool = true)
 
+    # Partition sample into pre- and post-ZLB regimes
+    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
+    regime_inds = zlb_regime_indices(m, data)
+
+    # Get system matrices for each regime
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs = zlb_regime_matrices(m, system)
+
     # If z0 and P0 provided, check that rows and columns corresponding to
     # anticipated shocks are zero in P0
     if !isempty(z0) && !isempty(P0)
@@ -299,36 +306,14 @@ function kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, syst
         @assert all(x -> x == 0, P0[ant_state_inds, :])
     end
 
-    # Partition sample into pre- and post-ZLB regimes
-    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
-    T = size(data, 2)
-
-    regime_indices = Vector{Range{Int64}}(2)
-    if n_anticipated_shocks(m) > 0
-        regime_indices[1] = 1:index_zlb_start(m)-1
-        regime_indices[2] = index_zlb_start(m):T # allows for conditional data
-    else
-        regime_indices[1] = 1:T
-        regime_indices[2] = 1:0
-    end
-
-    # For the pre-ZLB periods, we must zero out the shocks corresponding to
-    # anticipated shocks
-    QQ_preZLB = copy(QQ)
-
-    ant_shock_inds = setdiff(1:n_shocks_exogenous(m), inds_shocks_no_ant(m))
-    for i in ant_shock_inds
-        QQ_preZLB[i, i] = 0
-    end
-
     # Specify number of presample periods if we don't want to include them in
     # the final results
     T0 = include_presample ? 0 : n_presample_periods(m)
 
     # Run Kalman filter, construct Kalman object, and return
-    out = kalman_filter(regime_indices, data, fill(TTT, 2), fill(RRR, 2), fill(CCC, 2),
-              Matrix{S}[QQ_preZLB, QQ], fill(ZZ, 2), fill(DD, 2), fill(MM, 2), fill(EE, 2),
-              z0, P0; allout = allout, n_presample_periods = T0)
+    out = kalman_filter(regime_inds, data, TTTs, RRRs, CCCs,
+              QQs, ZZs, DDs, MMs, EEs, z0, P0;
+              allout = allout, n_presample_periods = T0)
 
     return Kalman(out...)
 end
@@ -422,4 +407,46 @@ function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
     else
         return Kalman(L, zend, Pend)
     end
+end
+
+"""
+```
+zlb_regime_indices(m, data)
+```
+
+Returns a Vector{Range{Int64}} of index ranges for the pre- and post-ZLB regimes.
+"""
+function zlb_regime_indices{S<:AbstractFloat}(m::AbstractModel{S}, data::Matrix{S})
+    T = size(data, 2)
+
+    regime_inds = Vector{Range{Int64}}(2)
+    if n_anticipated_shocks(m) > 0
+        regime_inds[1] = 1:index_zlb_start(m)-1
+        regime_inds[2] = index_zlb_start(m):T # allows for conditional data
+    else
+        regime_inds[1] = 1:T
+        regime_inds[2] = 1:0
+    end
+
+    return regime_inds
+end
+
+"""
+```
+zlb_regime_matrices(m, system)
+```
+
+Returns `TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs`, an 8-tuple of
+`Vector{Matrix{S}}`s and `Vector{Vector{S}}`s of system matrices for the pre-
+and post-ZLB regimes. Of these, only `QQ` changes from pre- to post-ZLB: the
+entries corresponding to anticipated shock variances are zeroed out pre-ZLB.
+"""
+function zlb_regime_matrices{S<:AbstractFloat}(m::AbstractModel{S}, system::System{S})
+    shock_inds = inds_shocks_no_ant(m)
+    QQ_ZLB = system[:QQ]
+    QQ_preZLB = zeros(size(QQ_ZLB))
+    QQ_preZLB[shock_inds, shock_inds] = QQ_ZLB[shock_inds, shock_inds]
+    QQs = Matrix{S}[QQ_preZLB, QQ_ZLB]
+
+    return fill(system[:TTT], 2), fill(system[:RRR], 2), fill(system[:CCC], 2), QQs, fill(system[:ZZ], 2), fill(system[:DD], 2), fill(system[:MM], 2), fill(system[:EE], 2)
 end
