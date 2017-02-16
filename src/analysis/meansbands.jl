@@ -519,7 +519,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     df_shockdec[:dettrend] = df_shockdec[:dettrend] - df_shockdec[:trend]
 
     # rename columns to just the shock names
-    map(x -> rename!(df, x, parse_mb_colname(x)[2])), setdiff(names(df), [:date, :trend, :dettrend]))
+    map(x -> rename!(df, x, parse_mb_colname(x)[2]), setdiff(names(df), [:date, :trend, :dettrend]))
 
     df
 end
