@@ -5,7 +5,7 @@ module DSGE
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
     import Calculus
-    import Base: isempty
+    import Base: isempty, cat
     using Roots: fzero, ConvergenceFailed
     import Optim: optimize, Optimizer
     using Optim
@@ -99,7 +99,7 @@ module DSGE
         meansbands_matrix_all, meansbands_matrix, read_mb,
         get_meansbands_input_files, get_meansbands_output_files, get_product, get_class,
         which_density_bands, write_meansbands_tables, prepare_meansbands_tables_timeseries,
-        prepare_meansbands_tables_shockdec
+        prepare_meansbands_tables_shockdec, write_meansbands_tables_all
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
