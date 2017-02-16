@@ -4,11 +4,9 @@ include("../util.jl")
 path = dirname(@__FILE__)
 
 # Set up
-data, TTT, RRR, CCC, z0, P0 =
+data, z0, P0 =
     h5open("$path/../reference/kalman_filter_2part_args.h5", "r") do file
-        read(file, "data"),
-        read(file, "TTT"), read(file, "RRR"), read(file, "CCC"),
-        read(file, "A0"), read(file, "P0")
+        read(file, "data"), read(file, "A0"), read(file, "P0")
     end
 
 custom_settings = Dict{Symbol, Setting}(

@@ -38,19 +38,9 @@ function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::Syste
     cond_type::Symbol = :none)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filter(m, data, system, z0, P0)
-end
 
-function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::System{S},
-    z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}())
-
-    # Unpack system
-    T, R, C = system[:TTT], system[:RRR], system[:CCC]
-    Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
-    M, E    = system[:MM], system[:EE]
-
-    kalman_filter(m, data, T, R, C, Q, Z, D, M, E, z0, P0;
-        allout = true, include_presample = true)
+    kal = kalman_filter(m, data, system, z0, P0;
+              allout = true, include_presample = true)
 end
 
 """
@@ -107,26 +97,10 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     cond_type::Symbol = :none)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filterandsmooth(m, data, system, z0, P0)
-end
-
-function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    system::System{S}, z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}())
-
-    # 0. Unpack system
-    T, R, C = system[:TTT], system[:RRR], system[:CCC]
-    Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
-    M, E    = system[:MM], system[:EE]
-
-    Z_pseudo, D_pseudo = if forecast_pseudoobservables(m)
-        system[:ZZ_pseudo], system[:DD_pseudo]
-    else
-        Matrix{S}(), Vector{S}()
-    end
 
     ## 1. Filter
 
-    kal = kalman_filter(m, data, T, R, C, Q, Z, D, M, E, z0, P0;
+    kal = kalman_filter(m, data, system, z0, P0;
               allout = true, include_presample = true)
 
     ## 2. Smooth

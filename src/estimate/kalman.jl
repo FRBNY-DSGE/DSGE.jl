@@ -266,42 +266,28 @@ function kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
     catch_errors::Bool = false, allout::Bool = false, include_presample::Bool = true)
 
-    # Compute the transition equation:
-    #   S_t = CCC + TTT*S_{t-1} + RRR*ε_t
-    # where
-    #   Var(ε_t) = QQ
     # If we are in Metropolis-Hastings, then any errors coming out of `gensys`
     # should be caught and a -Inf posterior should be returned.
-    TTT, RRR, CCC = Matrix{S}(), Matrix{S}(), Vector{S}()
-
-    try
-        TTT, RRR, CCC = solve(m)
+    system = try
+        Nullable{System}(compute_system(m))
     catch err
         if catch_errors && isa(err, GensysError)
-            info(err.msg)
-            return Kalman(-Inf, Vector{S}(), Matrix{S}())
+            warn(err.msg)
+            Nullable{System}()
         else
             rethrow(err)
         end
     end
 
-    # Define the measurement equation:
-    #   Y_t = DD + ZZ*S_t + u_t
-    # where
-    #   u_t = η_t + MM*ε_t
-    #   Var(η_t) = EE
-    meas = measurement(m, TTT, RRR, CCC; shocks = true)
-    QQ, ZZ, DD = meas[:QQ], meas[:ZZ], meas[:DD]
-    MM, EE     = meas[:MM], meas[:EE]
-
-    # Compute the likelihood using the Kalman filter
-    kalman_filter(m, data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, z0, P0;
-        allout = allout, include_presample = include_presample)
+    if isnull(system)
+        return Kalman(-Inf)
+    else
+        kalman_filter(m, data, get(system), z0, P0;
+            allout = allout, include_presample = include_presample)
+    end
 end
 
-function kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    TTT::Matrix{S}, RRR::Matrix{S}, CCC::Vector{S},
-    QQ::Matrix{S}, ZZ::Matrix{S}, DD::Vector{S}, MM::Matrix{S}, EE::Matrix{S},
+function kalman_filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::System,
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
     allout::Bool = false, include_presample::Bool = true)
 
