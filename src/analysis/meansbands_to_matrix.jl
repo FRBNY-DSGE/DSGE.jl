@@ -57,9 +57,9 @@ function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
     for output_var in keys(mbs)
 
         mb       = mbs[output_var]
-        prod     = product(mb)                    # history? forecast? shockdec?
-        cl       = class(mb)                      # pseudo? obs? state?
-        condtype = cond_type(mb)
+        prod     = get_product(mb)                    # history? forecast? shockdec?
+        cl       = get_class(mb)                      # pseudo? obs? state?
+        condtype = get_cond_type(mb)
 
         ## Get name of file to write
         outfile = get_forecast_filename(m, para(mb), cond_type(mb), output_var;
@@ -101,7 +101,7 @@ function meansbands_matrix(mb::MeansBands)
     T          = eltype(mb.means[tmp])          # type of elements of mb structure
 
     nperiods   = n_periods_means(mb)            # get number of periods
-    prod       = product(mb)                    # history? forecast? shockdec?
+    prod       = get_product(mb)                    # history? forecast? shockdec?
     inds       = mb.metadata[:indices]          # mapping from names of vars to indices
     bands_list = get_density_bands(mb)          # which bands are stored
     nbands     = length(bands_list)             # how many bands are stored

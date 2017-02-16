@@ -70,4 +70,456 @@ type MeansBands
         new(key, means, bands)
     end
 end
+# A dummy MeansBands object
+function MeansBands()
 
+    metadata   = Dict(:class => :none, :product => :none,
+                      :cond_type => :none, :para => :none,
+                      :indices => Dict{Symbol, Int}(:none => 1))
+
+    means = DataFrame(date = [Date(0)], none = [0.0])
+    bands = Dict{Symbol,DataFrame}(:none => DataFrame(date = [Date(0)]))
+
+    MeansBands(metadata, means, bands)
+end
+
+function Base.show(io::IO, mb::MeansBands)
+    @printf io "MeansBands\n"
+    @printf io "  class: %s\n"   get_class(mb)
+    @printf io "  product: %s\n" get_product(mb)
+    @printf io "  cond: %s\n"    get_cond_type(mb)
+    @printf io "  para: %s\n"    get_para(mb)
+    if mb.metadata[:product] != :trend && mb.metadata[:product] != :irf
+        @printf io "  dates: %s - %s\n" startdate_means(mb) enddate_means(mb)
+    end
+    @printf io "  # of variables: %s\n" n_vars_means(mb)
+    @printf io "  bands: %s\n" which_density_bands(mb, uniqueify=true)
+end
+
+"""
+```
+isempty(mb::MeansBands)
+```
+
+Returns whether the `mb` object in question is a dummy.
+"""
+function isempty(mb::MeansBands)
+
+    return get_class(mb) == :none && get_product(mb) == :none &&
+        startdate_means(mb) == Date(0) &&
+        collect(names(mb.means)) ==  [:date, :none] &&
+        collect(keys(mb.bands)) ==  [:none]
+end
+
+"""
+```
+cat(mb1::MeansBands, mb2::MeansBands)
+```
+
+Concatenate 2 compatible `MeansBands` objects together by date.
+"""
+function cat(mb1::MeansBands, mb2::MeansBands)
+
+    for k in keys(mb1.metadata)
+        @assert mb1.metadata[k] == mb2.metadata[k] "Cannot cat these 2 MeansBands: metadata[$k] does not match"
+    end
+
+    last_mb1_date = mb1.means[:date][end]
+    first_mb2_date = mb2.means[:date][1]
+    @assert iterate_quarters(last_mb1_date, 1) == first_mb2_date
+
+    means = vcat(mb1.means, mb2.means)
+    bands = vcat(mb1.bands, mb2.bands)
+
+    MeansBands(mb1.metadata, means, bands)
+end
+
+###################################
+## METADATA
+###################################
+
+"""
+```
+get_class(mb::MeansBands)
+```
+Returns the class of variables contained this `MeansBands` object (observables, pseudoobservables)
+"""
+get_class(mb::MeansBands) = mb.metadata[:class]
+
+"""
+```
+get_product(mb::MeansBands)
+```
+Returns the product stored in this `MeansBands` object (history, forecast, shock decompostion, etc).
+"""
+get_product(mb::MeansBands) = mb.metadata[:product]
+
+"""
+```
+get_cond_type(mb::MeansBands)
+```
+Returns the conditional type of the forecast used to create this `MeansBands` object.
+"""
+get_cond_type(mb::MeansBands) = mb.metadata[:cond_type]
+
+"""
+```
+get_para(mb::MeansBands)
+```
+Returns the `input_type` from the forecast used to create this `MeansBands` object.
+"""
+get_para(mb::MeansBands) = mb.metadata[:para]
+
+"""
+```
+get_shocks(mb::MeansBands)
+```
+
+Returns a list of shock names that are used for the shock
+decomposition stored in a shock decomposition MeansBands object `mb`.
+"""
+function get_shocks(mb::MeansBands)
+    @assert get_product(mb) == :shockdec "Function only for shockdec MeansBands objects"
+    varshocks = setdiff(names(mb.means), [:date])
+    unique(map(x -> symbol(split(string(x), DSGE_SHOCKDEC_DELIM)[2]), varshocks))
+end
+
+"""
+```
+parse_mb_colname(s::Symbol)
+```
+
+`MeansBands` column names are saved in the format
+`\$var\$DSGE_SHOCKDEC_DELIM\$shock`. `parse_mb_colname` returns (`var`,
+`shock`).
+"""
+function parse_mb_colname(s::Symbol)
+    map(symbol, split(string(s), DSGE_SHOCKDEC_DELIM))
+end
+
+
+###################################
+## MEANS
+###################################
+
+"""
+```
+n_vars_means(mb::MeansBands)
+````
+
+Get number of variables (`:y_t`, `:OutputGap`, etc) in `mb.means`.
+"""
+function n_vars_means(mb::MeansBands)
+    length(get_vars_means(mb))
+end
+
+"""
+```
+get_vars_means(mb::MeansBands)
+````
+
+Get variables (`:y_t`, `:OutputGap`, etc) in `mb.means`. Note that
+`mb.metadata[:indices]` is an `OrderedDict`, so the keys will be in the correct
+order.
+"""
+function get_vars_means(mb::MeansBands)
+    collect(keys(mb.metadata[:indices]))
+end
+
+
+"""
+```
+n_periods_means(mb::MeansBands)
+```
+
+Get number of periods in `mb.means`.
+"""
+n_periods_means(mb::MeansBands) = size(mb.means,1)
+
+"""
+```
+startdate_means(mb::MeansBands)
+```
+
+Get first period in`mb.means`. Assumes `mb.means[product]` is already sorted by date.
+"""
+startdate_means(mb::MeansBands) = mb.means[:date][1]
+
+"""
+```
+enddate_means(mb::MeansBands)
+```
+
+Get last period for which `mb` stores means. Assumes `mb.means[product]` is already sorted by date.
+"""
+enddate_means(mb::MeansBands) = mb.means[:date][end]
+
+
+"""
+```
+get_shockdec_means(mb::MeansBands, var::Symbol; shocks::Vector{Symbol}=Vector{Symbol}())
+```
+
+Return the mean value of each shock requested in the shock decomposition of a particular variable.
+If `shocks` is empty, returns all shocks.
+"""
+
+function get_shockdec_means(mb::MeansBands, var::Symbol; shocks::Vector{Symbol}=Vector{Symbol}())
+
+    # Extract the subset of columns relating to the variable `var` and the shocks listed in `shocks.`
+    # If `shocks` not provided, give all the shocks
+    var_cols = collect(names(mb.means))[find([contains(string(col), string(var)) for col in names(mb.means)])]
+    if !isempty(shocks)
+        var_cols = [col -> contains(string(col), string(shock)) ? col : nothing for shock in shocks]
+    end
+
+    # Make a new DataFrame with column the column names
+    out = DataFrame()
+    for col in var_cols
+        shockname = split(string(col), DSGE_SHOCKDEC_DELIM)[2]
+        out[symbol(shockname)] = mb.means[col]
+    end
+
+    out
+end
+
+
+
+###################################
+## BANDS
+###################################
+
+"""
+```
+n_vars_bands(mb::MeansBands)
+```
+
+Get number of variables (`:y_t`, `:OutputGap`, etc) for which `mb`
+stores bands for the specified `product` (`hist`, `forecast`, `shockdec`, etc).
+"""
+n_vars_bands(mb::MeansBands) = length(mb.bands)
+
+
+"""
+```
+n_periods_bands(mb::MeansBands)
+```
+
+Get number of periods for which `mb` stores bands for the specified
+product` (`hist`, `forecast`, `shockdec`, etc).
+"""
+function n_periods_bands(mb::MeansBands)
+    size(mb.bands[collect(keys(mb.bands))[1]],1)
+end
+
+"""
+```
+startdate_bands(mb::MeansBands)
+```
+
+Get first period for which `mb` stores bands. Assumes `mb.bands` is already sorted by date.
+"""
+startdate_bands(mb::MeansBands) = mb.bands[collect(keys(mb.bands))][:date][1]
+
+"""
+```
+enddate_bands(mb::MeansBands)
+```
+
+Get last period in `mb.bands`. Assumes `mb.bands` is already sorted by date.
+"""
+enddate_bands(mb::MeansBands) = mb.bands[:date][end]
+
+"""
+```
+which_density_bands(mb, uniqueify=false)
+```
+
+Return a list of the bands stored in mb.bands. If `uniqueify=true`,
+strips "upper" and "lower" band tags and returns unique list of percentage values.
+"""
+function which_density_bands(mb::MeansBands; uniqueify=false, ordered=true)
+
+    # extract one of the keys in mb.bands
+    var  = collect(keys(mb.bands))[1]
+
+    # get all the columns in the corresponding dataframe that aren't dates
+    strs = map(string,names(mb.bands[var]))
+    strs = setdiff(strs, ["date"])
+
+    lowers = strs[map(ismatch, repmat([r"LB"], length(strs)), strs)]
+    uppers = strs[map(ismatch, repmat([r"UB"], length(strs)), strs)]
+
+    # sort
+    if ordered
+        sort!(lowers, rev=true)
+        sort!(uppers)
+    end
+
+    # return both upper and lower bands, or just percents, as desired
+    strs = if uniqueify
+        sort(unique([split(x, " ")[1] for x in [lowers; uppers]]))
+    else
+        [lowers; uppers]
+    end
+
+    return strs
+end
+
+
+"""
+```
+get_shockdec_bands(mb::MeansBands, var::Symbol;
+       shocks::Vector{Symbol}=Vector{Symbol}(), bands::Vector{Symbol}()=Vector{Symbol}())
+```
+
+Return a `Dict{Symbol,DataFrame}` mapping shock names to bands for a particular variable.
+
+### Inputs
+- `mb`: MeansBands object
+- `var`: the variable of interest (eg the state `:y_t`, or observable `:obs_hours`)
+
+### Optional arguments
+- `shocks`: subset of shock names for which to return bands. If empty, `get_shockdec_bands` returns all bands.
+- `bands`: subset of bands stored in the DataFrames of `mb.bands` to return.
+
+### Outputs
+
+A `Dict{Symbol, DataFrame}` mapping names of shocks to the bands of `var` corresponding to each shock.
+"""
+function get_shockdec_bands(mb::MeansBands, var::Symbol;
+                            shocks::Vector{Symbol}=Vector{Symbol}(), bands::Vector{Symbol}=Vector{Symbol}())
+
+    @assert get_product(mb) == :shockdec
+
+    # Extract the subset of columns relating to the variable `var` and the shocks listed in `shocks.`
+    # If `shocks` not provided, give all the shocks
+    var_cols = collect(keys(mb.bands))[find([contains(string(col), string(var)) for col in keys(mb.bands)])]
+    if !isempty(shocks)
+        var_cols = [col -> contains(string(col), string(shock)) ? col : nothing for shock in shocks]
+    end
+
+    # Extract the subset of bands we want to return. Return all bands if `bands` not provided.
+    bands_keys = if isempty(bands)
+        names(mb.bands[var_cols[1]])
+    else
+        [[symbol("$(100x)% LB") for x in bands]; [symbol("$(100x)% UB") for x in bands]]
+    end
+
+    # Make a new dictionary mapping shock names to bands
+    out = Dict{Symbol, DataFrame}()
+    for col in var_cols
+        shockname = parse_mb_colname(col)[2]
+        out[shockname] = mb.bands[col][bands_keys]
+    end
+
+    out
+end
+
+
+################################################
+## EXTRACTING VARIABLES
+################################################
+
+"""
+```
+prepare_meansbands_table_timeseries(mb, var)
+```
+
+Returns a `DataFrame` of means and bands for a particular time series
+variable (either `hist` or `forecast` of some type). Columns are
+sorted such that the bands are ordered from smallest to largest, and
+the means are on the far right. For example, a MeansBands object
+containing 50\% and 68\% bands would be ordered as follows: [68\%
+lower, 50\% lower, 50\% upper, 68\% upper, mean].
+
+### Inputs
+- `mb::MeansBands`: time-series MeansBands object
+- `var::Symbol`: an economic variable stored in `mb`. If `mb` stores
+  observables, `var` would be an element of `names(m.observables)`. If
+  it stores pseudoobservables, `var` would be the name of a
+  pseudoobservable defined in the pseudomeasurement equation.
+"""
+function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol)
+
+    @assert get_product(mb) in [:hist, :forecast, :forecast4q, :bddforecast, :bddforecast4q] "prepare_meansbands_table_timeseries can only be used for time-series products"
+
+    @assert var in get_vars_means(mb) "$var is not stored in this MeansBands object"
+
+    # Extract this variable from Means and bands
+    means = mb.means[[:date, var]]
+    bands = mb.bands[var][[:date; map(symbol, which_density_bands(mb))]]
+
+    # Join so mean is on far right and date is on far left
+    df = join(bands, means, on = :date)
+    rename!(df, var, symbol("mean"))
+
+    return df
+end
+
+"""
+```
+prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBands,
+                                      mb_dettrend::MeansBands, var::Symbol;
+                                      shocks::Vector{Symbol} = Vector{Symbol}())
+
+Returns a `DataFrame` representing a detrended shock decompostion for
+the variable `var`. The columns of this dataframe represent the
+contributions of each shock in `shocks` (or all shocks, if the keyword
+argument is omitted) and the deterministic trend.
+
+### Inputs
+- `mb_shockdec::MeansBands`: a `MeansBands` object for a shock decomposition
+- `mb_trend::MeansBands`: a `MeansBands` object for a trend  product.
+- `mb_dettrend::MeansBands`: a `MeansBands` object for a deterministic trend
+  product.
+  a shock decomposition.
+- `var::Symbol`: name of economic variable for which to return the means and bands table
+
+### Keyword Arguments
+- `shocks::Vector{Symbol}`: If `mb` is a shock decomposition, this is
+  an optional list of shocks to print to the table. If omitted, all
+  shocks will be printed.
+```
+"""
+function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBands,
+                                      mb_dettrend::MeansBands, var::Symbol;
+                                      shocks::Vector{Symbol} = Vector{Symbol}())
+
+    @assert get_product(mb_shockdec) == :shockdec "The first argument must be a MeansBands object for a shockdec"
+    @assert get_product(mb_trend)    == :trend    "The second argument must be a MeansBands object for a trend"
+    @assert get_product(mb_dettrend) == :dettrend "The third argument must be a MeansBands object for a deterministic trend"
+
+    # Print all shocks by default
+    if isempty(shocks)
+        shocks = DSGE.get_shocks(mb_shockdec)
+    end
+
+    # get the variable-shock combinations we want to print
+    varshocks = Symbol["$var" * DSGE_SHOCKDEC_DELIM * "$shock" for shock in shocks]
+
+    # fetch the columns corresponding to varshocks
+    df_shockdec = mb_shockdec.means[union([:date], varshocks)]
+    df_trend    = mb_trend.means[[:date, var]]
+    df_dettrend = mb_dettrend.means[[:date, var]]
+
+    # line up dates between trend, dettrend and shockdec
+    df_shockdec = join(df_shockdec, df_trend, on = :date, kind = :inner)
+    rename!(df_shockdec, var, :trend)
+    df_shockdec = join(df_shockdec, df_dettrend, on = :date, kind = :inner)
+    rename!(df_shockdec, var, :dettrend)
+
+    # de-trend each shock's contribution and add to the output dataframe
+    df = DataFrame(date = df_shockdec[:date])
+    for col in setdiff(names(df_shockdec), [:date, :trend])
+        df[col] = df_shockdec[col] - df_shockdec[:trend]
+    end
+
+    # add the de-trended deterministic trend
+    df_shockdec[:dettrend] = df_shockdec[:dettrend] - df_shockdec[:trend]
+
+    # rename columns to just the shock names
+    map(x -> rename!(df, x, parse_mb_colname(x)[2])), setdiff(names(df), [:date, :trend, :dettrend]))
+
+    df
+end
