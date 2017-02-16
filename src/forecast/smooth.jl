@@ -65,6 +65,9 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     elseif forecast_smoother(m) == :hamilton
         hamilton_smoother(m, data, system, kal,
             include_presample = true)
+    elseif forecast_smoother(m) == :carter_kohn
+        carter_kohn_smoother(m, data, system, kal,
+            include_presample = true)
     end
 
     # Index out last presample states, used to compute the deterministic trend

@@ -34,7 +34,20 @@ end
 
 # Hamilton smoother with anticipated shocks
 system = compute_system(m)
-alpha_hat, eta_hat = Hamilton_smoother(m, data, system, kal)
+alpha_hat, eta_hat = hamilton_smoother(m, data, system, kal)
+
+exp_alpha_hat, exp_eta_hat = h5open("$path/../reference/Hamilton_smoother_out.h5", "r") do h5
+    read(h5, "alpha_hat"), read(h5, "eta_hat")
+end
+
+@test_approx_eq exp_alpha_hat alpha_hat
+@test_approx_eq exp_eta_hat eta_hat
+@test_approx_eq kal[:zend] alpha_hat[:, end]
+
+
+# Carter and Kohn smoother with anticipated shocks
+system = compute_system(m)
+alpha_hat, eta_hat = carter_kohn_smoother(m, data, system, kal)
 
 
 exp_alpha_hat, exp_eta_hat = h5open("$path/../reference/Hamilton_smoother_out.h5", "r") do h5
@@ -77,7 +90,7 @@ alpha_hat, eta_hat = kalman_smoother(m, data, TTT, RRR, CCC, QQ, ZZ, DD, A0, P0,
 
 # Hamilton smoother without anticipated shocks
 system = compute_system(m)
-alpha_hat, eta_hat = Hamilton_smoother(m, data, system, kal)
+alpha_hat, eta_hat = hamilton_smoother(m, data, system, kal)
 
 @test_approx_eq kal[:zend] alpha_hat[:, end]
 

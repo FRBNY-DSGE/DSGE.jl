@@ -527,11 +527,11 @@ hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 ```
 This is a Kalman Smoothing program based on the treatment in James Hamilton's
 \"Time Series Analysis\". Unlike the disturbance smoother, this one does
-rely on inverting singular matrices using the Moore-Penrose pseudoinverse.
+rely on inverting potentially singular matrices using the Moore-Penrose pseudoinverse.
 
 Smoothed shocks are extracted by mapping the forecast errors implied by the
-smoothed states back into shocks. If R is rank-deficient, then this mapping
-will not exist.
+smoothed states back into shocks. As such, this routine assumes that R has
+sufficient rank to have a left inverse (i.e. that there are more states than shocks).
 
 ### Inputs:
 
@@ -650,3 +650,162 @@ function hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 
     return α_hat, η_hat
 end
+
+
+
+"""
+```
+carter_kohn_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+    system::System, kal::Kalman{S};
+    cond_type::Symbol = :none, include_presample::Bool = false)
+
+carter_kohn_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    system::System, kal::Kalman{S};
+    include_presample::Bool = false)
+
+carter_kohn_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    T::Matrix{S}, R::Matrix{S}, z0::Vector{S},
+    pred::Matrix{S}, vpred::Array{S, 3},
+    filt::Matrix{S}, vfilt::Array{S, 3};
+    include_presample::Bool = false)
+```
+This program is a simulation smoother based on Carter and Kohn's
+\"On Gibbs Sampling for State Space Modeks\" (Biometrika, 1994).
+It recursively sampling from the conditional distribution of time t
+states given the full set of observables and states from time t+1 to
+time T. Unlike the Durbin Koopman simulation smoother, this one does
+rely on inverting potentially singular matrices using the Moore-Penrose
+pseudoinverse.
+
+Smoothed shocks are extracted by mapping the forecast errors implied by the
+smoothed states back into shocks. As such, this routine assumes that R has
+sufficient rank to have a left inverse (i.e. that there are more states than shocks).
+
+### Inputs:
+
+- `m`: model object
+- `data`: the (`Ny` x `Nt`) matrix of observable data
+- `T`: the (`Nz` x `Nz`) transition matrix
+- `R`: the (`Nz` x `Ne`) matrix translating shocks to states
+- `z0`: the (`Nz` x 1) initial (time 0) states vector
+- `pred`: the (`Nz` x `Nt`) matrix of one-step-ahead predicted states (from the
+  Kalman Filter)
+- `vpred`: the (`Nz` x `Nz` x `Nt`) matrix of one-step-ahead predicted
+  covariance matrices
+- `filt`: the (`Nz` x `Nt`) matrix of filtered states
+- `vfilt`: the (`Nz` x `Nz` x `Nt`) matrix of filtered covariance matrices
+- `cond_type`: optional keyword argument specifying the conditional data type:
+  one of `:none`, `:semi`, or `:full`. This is only necessary when a DataFrame
+  (as opposed to a data matrix) is passed in, so that `df_to_matrix` knows how
+  many periods of data to keep
+- `include_presample`: indicates whether or not to return presample periods in
+  the returned smoothed states and shocks. Defaults to `false`
+
+Where:
+
+- `Nz`: number of states
+- `Ny`: number of observables
+- `Ne`: number of shocks
+- `Nt`: number of periods for which we have data
+
+### Outputs:
+
+- `α_hat`: the (`Nz` x `Nt`) matrix of smoothed states
+- `η_hat`: the (`Ne` x `Nt`) matrix of smoothed shocks
+
+If `n_presample_periods(m)` is nonzero, the `α_hat` and `η_hat` matrices will be
+shorter by that number of columns (taken from the beginning).
+
+### Notes
+
+The state space model is defined as follows:
+```
+y(t) = Z*α(t) + D             (state or transition equation)
+α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
+```
+"""
+function carter_kohn_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
+    system::System, kal::Kalman{S};
+    cond_type::Symbol = :none, include_presample::Bool = false)
+
+    # convert dataframe to matrix
+    data = df_to_matrix(m, df, cond_type = cond_type)
+
+    carter_kohn_smoother(m, data, system, kal;
+                      include_presample = include_presample)
+end
+
+function carter_kohn_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    system::System, kal::Kalman{S};
+    include_presample::Bool = false)
+
+    # extract system matrices
+    T, R = system[:TTT], system[:RRR]
+    # extract filtered and predicted states and variances
+    filt, vfilt = kal[:filt], kal[:vfilt]
+    pred, vpred = kal[:pred], kal[:vpred]
+    # extract initial state
+    z0 = kal[:z0]
+
+    # call actual Kalman smoother
+    carter_kohn_smoother(m, data, T, R, z0, pred, vpred, filt, vfilt;
+        include_presample = include_presample)
+end
+
+function carter_kohn_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    T::Matrix{S}, R::Matrix{S}, z0::Vector{S},
+    pred::Matrix{S}, vpred::Array{S, 3},
+    filt::Matrix{S}, vfilt::Array{S, 3};
+    include_presample::Bool = false)
+
+    Ne = size(R, 2)
+    Ny = size(data, 1)
+    Nt = size(data, 2)
+    Nz = size(T, 1)
+
+    # Check data is well-formed wrt model settings
+    @assert Ny == n_observables(m)
+    @assert Nt >= n_presample_periods(m) + n_prezlb_periods(m) + n_zlb_periods(m)
+
+    # draw from distribution of α_t|T = α_T|T
+    U, D, _ = svd(vfilt[:,:,Nt])
+    dist_α = DegenerateMvNormal(filt[:,Nt], U * diagm(sqrt(D)))
+    α_TT = m.testing ? filt[:,Nt] : rand(dist_α)
+
+    # smooth the states recursively, starting at the Nt-1 period and going backwards
+    α_hat = copy(filt)
+    α_hat[:,Nt] = α_TT
+    for t in (Nt-1):-1:1
+        J_t = vfilt[:,:,t] * T' * pinv(vpred[:,:,t+1])
+        μ = filt[:,t] + J_t * (α_hat[:,t+1] - pred[:,t+1])
+        Σ = vfilt[:,:,t] - J_t * T * vfilt[:,:,t]
+
+        U, D, _ = svd(Σ)
+        dist_α = DegenerateMvNormal(μ, U * diagm(sqrt(D)))
+        α_hat[:,t] = m.testing ? μ : rand(dist_α)
+    end
+
+    # R must have rank >= n_shocks_exogenous
+    if rank(R) < n_shocks_exogenous(m)
+        warn("R is not sufficient rank to map forecast errors uniquely onto shocks")
+    end
+
+    η_hat = zeros((Ne,Nt))
+    R_inv = pinv(R)
+
+    # We can map the forecast errors implied by the smoothed states back to shocks
+    for t in 1:Nt
+        s_t = α_hat[:,t]
+        s_t1 = (t == 1) ? z0 : α_hat[:,t-1]
+        η_hat[:,t] = R_inv * (s_t - T * s_t1)
+    end
+
+    # trim the presample if needed
+    if !include_presample
+        α_hat = α_hat[:, index_mainsample_start(m):end]
+        η_hat = η_hat[:, index_mainsample_start(m):end]
+    end
+
+    return α_hat, η_hat
+end
+
