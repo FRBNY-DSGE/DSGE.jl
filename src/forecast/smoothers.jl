@@ -133,6 +133,7 @@ function kalman_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
         end
     end
 
+    # Trim the presample if needed
     if n_presample_periods > 0
         mainsample_periods = n_presample_periods+1:T
 
@@ -287,6 +288,7 @@ function disturbance_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int
 
     end # of loop backward through regimes
 
+    # Trim the presample if needed
     if n_presample_periods > 0
         mainsample_periods = n_presample_periods+1:T
 
@@ -459,6 +461,7 @@ function durbin_koopman_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{
     smoothed_states = α_plus + α_hat_star
     smoothed_shocks = η_plus + η_hat_star
 
+    # Trim the presample if needed
     if n_presample_periods > 0
         mainsample_periods = n_presample_periods+1:T
 
@@ -557,79 +560,102 @@ y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
-function hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    system::System, kal::Kalman{S};
-    cond_type::Symbol = :none, include_presample::Bool = false)
+function hamilton_smoother{S<:AbstractFloat}(data::Matrix{S},
+    TTT::Matrix{S}, RRR::Matrix{S}, z0::Vector{S},
+    pred::Matrix{S}, vpred::Array{S, 3}, filt::Matrix{S}, vfilt::Array{S, 3};
+    n_presample_periods::Int = 0)
 
-    # convert dataframe to matrix
-    data = df_to_matrix(m, df, cond_type = cond_type)
+    T = size(data, 2)
+    regime_indices = Range{Int64}[1:T]
 
-    hamilton_smoother(m, data, system, kal;
-                      include_presample = include_presample)
+    hamilton_smoother(regime_indices, data, Matrix{S}[TTT], Matrix{S}[RRR],
+        z0, pred, vpred, filt, vfilt;
+        n_presample_periods = n_presample_periods)
 end
 
-function hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    system::System, kal::Kalman{S};
-    include_presample::Bool = false)
-
-    # extract system matrices
-    T, R = system[:TTT], system[:RRR]
-    # extract filtered and predicted states and variances
-    filt, vfilt = kal[:filt], kal[:vfilt]
-    pred, vpred = kal[:pred], kal[:vpred]
-    # extract initial state
-    z0 = kal[:z0]
-
-    # call actual Kalman smoother
-    hamilton_smoother(m, data, T, R, z0, pred, vpred, filt, vfilt;
-        include_presample = include_presample)
-end
-
-function hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    T::Matrix{S}, R::Matrix{S}, z0::Vector{S},
-    pred::Matrix{S}, vpred::Array{S, 3},
+function hamilton_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
+    data::Matrix{S}, TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}},
+    z0::Vector{S}, pred::Matrix{S}, vpred::Array{S, 3},
     filt::Matrix{S}, vfilt::Array{S, 3};
+    n_presample_periods::Int = 0)
+
+    n_regimes = length(regime_indices)
+
+    # Dimensions
+    T  = size(data,    2) # number of periods of data
+    Nz = size(TTTs[1], 1) # number of states
+    Ne = size(RRRs[1], 2) # number of shocks
+
+    # Smooth the states recursively, starting at t = T-1 and going backwards
+    smoothed_states = copy(filt)
+
+    for i = n_regimes:-1:1
+        # Get state-space system matrices for this regime
+        regime_periods = regime_indices[i]
+
+        # The smoothed state in t = T is the same as the filtered state
+        if i == n_regimes
+            regime_periods = regime_periods[1:end-1]
+        end
+
+        TTT = TTTs[i]
+
+        for t in reverse(regime_periods)
+            J = vfilt[:, :, t] * TTT' * pinv(vpred[:, :, t+1])
+            smoothed_states[:, t] = filt[:, t] + J*(smoothed_states[:, t+1] - pred[:, t+1])
+        end
+    end
+
+    # Map the forecast errors implied by the smoothed states back to shocks
+    smoothed_shocks = zeros(Ne, T)
+
+    for i = n_regimes:-1:1
+        # Get state-space system matrices for this regime
+        regime_periods = regime_indices[i]
+        TTT, RRR = TTTs[i], RRRs[i]
+
+        if rank(RRR) < Ne
+            warn("RRR is not sufficient rank to map forecast errors uniquely onto shocks")
+        end
+        RRR_inv = pinv(RRR)
+
+        for t in regime_periods
+            z_t = smoothed_states[:,t]
+            z_t1 = (t == 1) ? z0 : smoothed_states[:, t-1]
+            smoothed_shocks[:, t] = RRR_inv*(z_t - TTT*z_t1)
+        end
+    end
+
+    # Trim the presample if needed
+    if n_presample_periods > 0
+        mainsample_periods = n_presample_periods+1:T
+
+        smoothed_states = smoothed_states[:, mainsample_periods]
+        smoothed_shocks = smoothed_shocks[:, mainsample_periods]
+    end
+
+    return smoothed_states, smoothed_shocks
+end
+
+function hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    system::System, z0::Vector{S}, P0::Matrix{S},
+    pred::Matrix{S}, vpred::Array{S, 3}, filt::Matrix{S}, vfilt::Array{S, 3};
     include_presample::Bool = false)
 
-    Ne = size(R, 2)
-    Ny = size(data, 1)
-    Nt = size(data, 2)
-    Nz = size(T, 1)
+    # Partition sample into pre- and post-ZLB regimes
+    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
+    regime_inds = zlb_regime_indices(m, data)
 
-    # Check data is well-formed wrt model settings
-    @assert Ny == n_observables(m)
-    @assert Nt >= n_presample_periods(m) + n_prezlb_periods(m) + n_zlb_periods(m)
+    # Get system matrices for each regime
+    TTTs, RRRs, _ = zlb_regime_matrices(m, system)
 
-    # smooth the states recursively, starting at the Nt-1 period and going backwards
-    α_hat = copy(filt)
+    # Specify number of presample periods if we don't want to include them in
+    # the final results
+    T0 = include_presample ? 0 : n_presample_periods(m)
 
-    for t in (Nt-1):-1:1
-        J_t = vfilt[:,:,t] * T' * pinv(vpred[:,:,t+1])
-        α_hat[:,t] = filt[:,t] + J_t * (α_hat[:,t+1] - pred[:,t+1])
-    end
-
-    # R must have rank >= n_shocks_exogenous
-    if rank(R) < n_shocks_exogenous(m)
-        warn("R is not sufficient rank to map forecast errors uniquely onto shocks")
-    end
-
-    η_hat = zeros((Ne,Nt))
-    R_inv = pinv(R)
-
-    # We can map the forecast errors implied by the smoothed states back to shocks
-    for t in 1:Nt
-        s_t = α_hat[:,t]
-        s_t1 = (t == 1) ? z0 : α_hat[:,t-1]
-        η_hat[:,t] = R_inv * (s_t - T * s_t1)
-    end
-
-    # trim the presample if needed
-    if !include_presample
-        α_hat = α_hat[:, index_mainsample_start(m):end]
-        η_hat = η_hat[:, index_mainsample_start(m):end]
-    end
-
-    return α_hat, η_hat
+    # Call Hamilton smoother
+    hamilton_smoother(regime_inds, data, TTTs, RRRs, z0, pred, vpred,
+        filt, vfilt; n_presample_periods = T0);
 end
 
 """
