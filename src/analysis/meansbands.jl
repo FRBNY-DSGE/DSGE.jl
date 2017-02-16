@@ -98,12 +98,12 @@ end
 
 """
 ```
-isempty(mb::MeansBands)
+Base.isempty(mb::MeansBands)
 ```
 
 Returns whether the `mb` object in question is a dummy.
 """
-function isempty(mb::MeansBands)
+function Base.isempty(mb::MeansBands)
 
     return get_class(mb) == :none && get_product(mb) == :none &&
         startdate_means(mb) == Date(0) &&
@@ -113,12 +113,12 @@ end
 
 """
 ```
-cat(mb1::MeansBands, mb2::MeansBands)
+Base.cat(mb1::MeansBands, mb2::MeansBands)
 ```
 
 Concatenate 2 compatible `MeansBands` objects together by date.
 """
-function cat(mb1::MeansBands, mb2::MeansBands)
+function Base.cat(mb1::MeansBands, mb2::MeansBands)
 
     for k in keys(mb1.metadata)
         @assert mb1.metadata[k] == mb2.metadata[k] "Cannot cat these 2 MeansBands: metadata[$k] does not match"
