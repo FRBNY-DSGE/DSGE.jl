@@ -39,8 +39,8 @@ function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::Syste
 
     data = df_to_matrix(m, df; cond_type = cond_type)
 
-    kal = kalman_filter(m, data, system, z0, P0;
-              allout = true, include_presample = true)
+    kalman_filter(m, data, system, z0, P0;
+        allout = true, include_presample = true)
 end
 
 """
@@ -106,13 +106,11 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     ## 2. Smooth
 
     states, shocks = if forecast_smoother(m) == :kalman
-        kalman_smoother(m, data, T, R, C, Q, Z, D,
-                        kal[:z0], kal[:vz0], kal[:pred], kal[:vpred];
-                        include_presample = true)
+        kalman_smoother(m, data, system, kal[:z0], kal[:vz0], kal[:pred], kal[:vpred];
+            include_presample = true)
     elseif forecast_smoother(m) == :durbin_koopman
-        durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, M, E,
-                                kal[:z0], kal[:vz0];
-                                include_presample = true)
+        durbin_koopman_smoother(m, data, system, kal[:z0], kal[:vz0];
+            include_presample = true)
     end
 
     # Index out last presample states, used to compute the deterministic trend
@@ -125,7 +123,7 @@ function filterandsmooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     ## 3. Map smoothed states to pseudo-observables
 
     pseudo = if forecast_pseudoobservables(m)
-        D_pseudo .+ Z_pseudo * states
+        system[:ZZ_pseudo] * states .+ system[:DD_pseudo]
     else
         Matrix{S}()
     end

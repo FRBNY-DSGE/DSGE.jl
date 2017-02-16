@@ -50,11 +50,6 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     system::System{S}, kal::Kalman{S}; cond_type::Symbol = :none)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    smooth(m, data, system, kal)
- end
-
-function smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    system::System{S}, kal::Kalman{S})
 
     states, shocks = if forecast_smoother(m) == :kalman
         kalman_smoother(m, data, system, kal[:z0], kal[:vz0], kal[:pred], kal[:vpred];
@@ -79,7 +74,7 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 
     # Map smoothed states to pseudo-observables
     pseudo = if forecast_pseudoobservables(m)
-        system[:DD_pseudo] .+ system[:ZZ_pseudo] * states
+        system[:ZZ_pseudo] * states .+ system[:DD_pseudo]
     else
         Matrix{S}()
     end

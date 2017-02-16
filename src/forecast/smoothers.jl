@@ -78,100 +78,90 @@ y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
-function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    system::System, z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
-    cond_type::Symbol = :none, include_presample::Bool = false)
+function kalman_smoother{S<:AbstractFloat}(data::Matrix{S},
+    TTT::Matrix{S}, RRR::Matrix{S}, CCC::Vector{S},
+    QQ::Matrix{S}, ZZ::Matrix{S}, DD::Vector{S},
+    z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    n_presample_periods::Int = 0)
 
-    # extract system matrices
-    T, R, C = system[:TTT], system[:RRR], system[:CCC]
-    Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
+    T = size(data, 2)
+    regime_indices = Range{Int64}[1:T]
 
-    # call actual Kalman smoother
-    kalman_smoother(m, df, T, R, C, Q, Z, D, z0, P0, pred, vpred; cond_type =
-        cond_type, include_presample = include_presample)
+    kalman_smoother(regime_indices, data, Matrix{S}[TTT], Matrix{S}[RRR], Vector{S}[CCC],
+        Matrix{S}[QQ], Matrix{S}[ZZ], Vector{S}[DD], z0, P0, pred, vpred;
+        n_presample_periods = n_presample_periods)
 end
 
-function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    system::System, z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
-    include_presample::Bool = false)
+function kalman_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
+    data::Matrix{S}, TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}},
+    QQs::Vector{Matrix{S}}, ZZs::Vector{Matrix{S}}, DDs::Vector{Vector{S}},
+    z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    n_presample_periods::Int = 0)
 
-    # extract system matrices
-    T, R, C = system[:TTT], system[:RRR], system[:CCC]
-    Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
+    n_regimes = length(regime_indices)
 
-    # call actual Kalman smoother
-    kalman_smoother(m, data, T, R, C, Q, Z, D, z0, P0, pred, vpred;
-        include_presample = include_presample)
-end
+    # Dimensions
+    T  = size(data,    2) # number of periods of data
+    Nz = size(TTTs[1], 1) # number of states
 
-function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Vector{S}, z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
-    cond_type::Symbol = :none, include_presample::Bool = false)
+    # Call disturbance smoother
+    smoothed_disturbances, smoothed_shocks = disturbance_smoother(regime_indices, data,
+                                                 TTTs, RRRs, QQs, ZZs, DDs, pred, vpred)
 
-    # convert DataFrame to matrix
-    data = df_to_matrix(m, df; cond_type = cond_type)
+    # Initialize outputs
+    smoothed_states = zeros(S, Nz, T)
 
-    # call actual Kalman smoother
-    kalman_smoother(m, data, T, R, C, Q, Z, D, z0, P0, pred, vpred;
-        include_presample = include_presample)
-end
+    r     = smoothed_disturbances[:, 1]
+    α_hat = z0 + P0*r
+    smoothed_states[:, 1] = α_hat
 
-function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S}, Z::Matrix{S},
-    D::Vector{S}, z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
-    include_presample::Bool = false)
+    for i = 1:n_regimes
+        # Get state-space system matrices for this regime
+        regime_periods = regime_indices[i]
 
-    Ne = size(R, 2)
-    Ny = size(data, 1)
-    Nt = size(data, 2)
-    Nz = size(T, 1)
+        TTT, RRR     = TTTs[i], RRRs[i]
+        QQ,  ZZ,  DD = QQs[i],  ZZs[i],  DDs[i]
 
-    # Check data is well-formed wrt model settings
-    @assert Ny == n_observables(m)
-    @assert Nt >= n_presample_periods(m) + n_prezlb_periods(m) + n_zlb_periods(m)
+        for t in regime_periods
+            # t = 1 has already been initialized
+            t == 1 ? continue : nothing
 
-    # Anticipated monetary policy shocks
-    n_ant_shocks = n_anticipated_shocks(m)
-    t_zlb_start  = index_zlb_start(m)
+            r     = smoothed_disturbances[:, t]
+            α_hat = TTT*α_hat + RRR*QQ*RRR'*r
 
-    r, η_hat = disturbance_smoother(m, data, T, R, C, Q, Z, D, pred, vpred)
-
-    α_hat = zeros(Nz, Nt)
-    ah_t = z0 + P0*r[:, 1]
-    α_hat[:, 1] = ah_t
-
-    shock_inds = inds_shocks_no_ant(m)
-    for t = 2:Nt
-
-        # This section relates to the zero bound framework, in which no
-        # anticipated shocks are supposed to occur before the model switch.  In
-        # these periods, this is accomplished by setting the relevant rows and
-        # columns of the Q matrix to zero. In other periods, or in
-        # specifications with zero bound off (and hence with
-        # n_anticipated_shocks(m) = 0), the normal Q matrix can be used.
-
-        if n_ant_shocks > 0
-            if t < t_zlb_start
-                Q_t = zeros(Ne, Ne)
-                Q_t[shock_inds, shock_inds] = Q[shock_inds, shock_inds]
-                ah_t = T*ah_t + R*Q_t*R'*r[:, t]
-            else
-                ah_t = T*ah_t + R*Q*R'*r[:, t]
-            end
-        else
-            ah_t = T*ah_t + R*Q*R'*r[:, t]
+            smoothed_states[:, t] = α_hat
         end
-
-        α_hat[:, t] = ah_t
     end
 
-    if !include_presample
-        α_hat = α_hat[:, index_mainsample_start(m):end]
-        η_hat = η_hat[:, index_mainsample_start(m):end]
+    if n_presample_periods > 0
+        mainsample_periods = n_presample_periods+1:T
+
+        smoothed_states = smoothed_states[:, mainsample_periods]
+        smoothed_shocks = smoothed_shocks[:, mainsample_periods]
     end
 
-    return α_hat, η_hat
+    return smoothed_states, smoothed_shocks
+end
+
+function kalman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
+    system::System, z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
+    cond_type::Symbol = :none, include_presample::Bool = false)
+
+    # Partition sample into pre- and post-ZLB regimes
+    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
+    regime_inds = zlb_regime_indices(m, data)
+
+    # Get system matrices for each regime
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, _ = zlb_regime_matrices(m, system)
+
+    # Specify number of presample periods if we don't want to include them in
+    # the final results
+    T0 = include_presample ? 0 : n_presample_periods(m)
+
+    # Call Kalman smoother
+    kalman_smoother(regime_inds, data, TTTs, RRRs, CCCs,
+        QQs, ZZs, DDs, z0, P0, pred, vpred;
+        n_presample_periods = T0)
 end
 
 """
@@ -233,65 +223,78 @@ y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
-function disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
-    data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S}, Q::Matrix{S},
-    Z::Matrix{S}, D::Vector{S}, pred::Matrix{S}, vpred::Array{S, 3})
+function disturbance_smoother{S<:AbstractFloat}(data::Matrix{S},
+    TTT::Matrix{S}, RRR::Matrix{S},
+    QQ::Matrix{S}, ZZ::Matrix{S}, DD::Vector{S},
+    pred::Matrix{S}, vpred::Array{S, 3},
+    n_presample_periods::Int = 0)
 
-    Nt = size(data, 2)
-    Nz = size(T, 1)
+    T = size(data, 2)
+    regime_indices = Range{Int64}[1:T]
 
-    r = zeros(Nz, Nt) # holds r_{T-1}, ..., r_0
-    r_t = zeros(Nz, 1)
+    disturbance_smoother(regime_indices, data, Matrix{S}[TTT], Matrix{S}[RRR],
+        Matrix{S}[QQ], Matrix{S}[ZZ], Vector{S}[DD], pred, vpred;
+        n_presample_periods = n_presample_periods)
+end
 
-    Ne = size(R, 2)
-    η_hat = zeros(Ne, Nt)
+function disturbance_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
+    data::Matrix{S}, TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}},
+    QQs::Vector{Matrix{S}}, ZZs::Vector{Matrix{S}}, DDs::Vector{Vector{S}},
+    pred::Matrix{S}, vpred::Array{S, 3}; n_presample_periods::Int = 0)
 
-    # Anticipated policy shocks metadata
-    n_ant_shocks = n_anticipated_shocks(m)
-    t_zlb_start  = index_zlb_start(m)
+    n_regimes = length(regime_indices)
 
-    for t = Nt:-1:1
-        data_t = data[:, t]
+    # Dimensions
+    T  = size(data,    2) # number of periods of data
+    Nz = size(TTTs[1], 1) # number of states
+    Ne = size(RRRs[1], 2) # number of shocks
 
-        # This section deals with the possibility of missing values in the y_t
-        # vector (especially relevant for smoothing over peachdata).
-        nonmissing = !isnan(data_t)
-        data_t = data_t[nonmissing]
-        Z_t = Z[nonmissing, :]
-        D_t = D[nonmissing]
+    # Initialize outputs
+    smoothed_disturbances = zeros(S, Nz, T)
+    smoothed_shocks       = zeros(S, Ne, T)
 
-        a = pred[:, t]
-        P = vpred[:, :, t]
+    r = zeros(S, Nz)
 
-        F = Z_t*P*Z_t'
-        v = data_t - Z_t*a - D_t
-        K = T*P*Z_t'/F
-        L = T - K*Z_t
+    for i = n_regimes:-1:1
+        # Get state-space system matrices for this regime
+        regime_periods = regime_indices[i]
 
-        r_t = Z_t'/F*v + L'*r_t
-        r[:, t] = r_t
+        TTT, RRR     = TTTs[i], RRRs[i]
+        QQ,  ZZ,  DD = QQs[i],  ZZs[i],  DDs[i]
 
-        # This section relates to the zero bound framework, in which no
-        # anticipated shocks are supposed to occur before the model switch.  In
-        # these periods, this is accomplished by setting the relevant rows and
-        # columns of the Q matrix to zero. In other periods, or in
-        # specifications with zero bound off (and hence with
-        # n_anticipated_shocks(m) = 0), the normal Q matrix can be used.
-        shock_inds = inds_shocks_no_ant(m)
-        if n_ant_shocks > 0
-            if t < t_zlb_start
-                Q_t = zeros(Ne, Ne)
-                Q_t[shock_inds, shock_inds] = Q[shock_inds, shock_inds]
-                η_hat[:, t] = Q_t * R' * r_t
-            else
-                η_hat[:, t] = Q * R' * r_t
-            end
-        else
-            η_hat[:, t] = Q * R' * r_t
-        end
+        for t in reverse(regime_periods)
+            # If an element of the vector y_t is missing (NaN) for the observation t, the
+            # corresponding row is ditched from the measurement equation
+            nonmissing = !isnan(data[:, t])
+            y_t  = data[nonmissing, t]
+            ZZ_t = ZZ[nonmissing, :]
+            DD_t = DD[nonmissing]
+
+            a = pred[:, t]
+            P = vpred[:, :, t]
+
+            F = ZZ_t*P*ZZ_t'
+            v = y_t - ZZ_t*a - DD_t
+            K = TTT*P*ZZ_t'/F
+            L = TTT - K*ZZ_t
+
+            r = ZZ_t'/F*v + L'*r
+            smoothed_disturbances[:, t] = r
+
+            smoothed_shocks[:, t] = QQ*RRR'*r
+
+        end # of loop backward through this regime's periods
+
+    end # of loop backward through regimes
+
+    if n_presample_periods > 0
+        mainsample_periods = n_presample_periods+1:T
+
+        smoothed_disturbances = smoothed_disturbances[:, mainsample_periods]
+        smoothed_shocks       = smoothed_shocks[:,       mainsample_periods]
     end
 
-    return r, η_hat
+    return smoothed_disturbances, smoothed_shocks
 end
 
 """
@@ -375,128 +378,116 @@ y(t) = Z*α(t) + D             (state or transition equation)
 α(t+1) = T*α(t) + R*η(t+1)    (measurement or observation equation)
 ```
 """
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    df::DataFrame, system::System, z0::Vector{S}, P0::Matrix{S};
-    cond_type::Symbol = :none, include_presample::Bool = false)
+function durbin_koopman_smoother{S<:AbstractFloat}(data::Matrix{S},
+    TTT::Matrix{S}, RRR::Matrix{S}, CCC::Vector{S},
+    QQ::Matrix{S}, ZZ::Matrix{S}, DD::Vector{S},
+    MM::Matrix{S}, EE::Matrix{S}, z0::Vector{S}, P0::Matrix{S};
+    n_presample_periods::Int = 0, draw_states::Bool = true)
 
-    # extract system matrices
-    T, R, C = system[:TTT], system[:RRR], system[:CCC]
-    Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
-    M, E    = system[:MM], system[:EE]
+    T = size(data, 2)
+    regime_indices = Range{Int64}[1:T]
 
-    # call actual Durbin-Koopman smoother
-    durbin_koopman_smoother(m, df, T, R, C, Q, Z, D, M, E, z0, P0;
-        cond_type = cond_type, include_presample = include_presample)
+    durbin_koopman_smoother(regime_indices, data, Matrix{S}[TTT], Matrix{S}[RRR], Vector{S}[CCC],
+        Matrix{S}[QQ], Matrix{S}[ZZ], Vector{S}[DD], Vector{S}[MM], Vector{S}[EE], z0, P0;
+        n_presample_periods = n_presample_periods, draw_states = draw_states)
+end
+
+function durbin_koopman_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
+    data::Matrix{S}, TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}},
+    QQs::Vector{Matrix{S}}, ZZs::Vector{Matrix{S}}, DDs::Vector{Vector{S}},
+    MMs::Vector{Matrix{S}}, EEs::Vector{Matrix{S}}, z0::Vector{S}, P0::Matrix{S};
+    n_presample_periods::Int = 0, draw_states::Bool = true)
+
+    n_regimes = length(regime_indices)
+
+    # Dimensions
+    T  = size(data,    2) # number of periods of data
+    Nz = size(TTTs[1], 1) # number of states
+    Ne = size(RRRs[1], 2) # number of shocks
+    Ny = size(ZZs[1],  1) # number of observables
+
+    # Draw initial state α_0+ and sequence of shocks η+
+    if draw_states
+        U, eig, _ = svd(P0)
+        α_plus_t  = U * diagm(sqrt(eig)) * randn(Nz)
+        η_plus    = sqrt(QQs[1]) * randn(Ne, Nt)
+    else
+        α_plus_t  = zeros(S, Nz)
+        η_plus    = zeros(S, Ne, T)
+    end
+
+    # Produce "fake" states and observables (α+ and y+) by
+    # iterating the state-space system forward
+    α_plus       = zeros(S, Nz, T)
+    y_plus       = zeros(S, Ny, T)
+
+    for i = 1:n_regimes
+        # Get state-space system matrices for this regime
+        regime_periods = regime_indices[i]
+
+        TTT, RRR, CCC = TTTs[i], RRRs[i], CCCs[i]
+        QQ,  ZZ,  DD  = QQs[i],  ZZs[i],  DDs[i]
+
+        for t in regime_periods
+            η_plus_t = η_plus[:, t]
+            α_plus_t = TTT*α_plus_t + RRR*η_plus_t + CCC
+
+            α_plus[:, t] = α_plus_t
+            y_plus[:, t] = ZZ*α_plus_t + DD
+        end
+    end
+
+    # Replace fake data with NaNs wherever actual data has NaNs
+    y_plus[isnan(data)] = NaN
+
+    # Compute y* = y - y+
+    y_star = data - y_plus
+
+    # Run the Kalman filter
+    # Note that we pass in `zeros(size(D))` instead of `D` because the
+    # measurement equation for `data_star` has no constant term
+    _, _, _, pred, vpred, _ = kalman_filter(regime_indices, y_star, TTTs, RRRs, CCCs,
+                                  QQs, ZZs, fill(zeros(Ny), n_regimes), MMs, EEs,
+                                  z0, P0; allout = true)
+
+    # Kalman smooth
+    α_hat_star, η_hat_star = kalman_smoother(regime_indices, y_star, TTTs, RRRs, CCCs,
+                                 QQs, ZZs, fill(zeros(Ny), n_regimes),
+                                 z0, P0, pred, vpred)
+
+    # Compute draw (states and shocks)
+    smoothed_states = α_plus + α_hat_star
+    smoothed_shocks = η_plus + η_hat_star
+
+    if n_presample_periods > 0
+        mainsample_periods = n_presample_periods+1:T
+
+        smoothed_states = smoothed_states[:, mainsample_periods]
+        smoothed_shocks = smoothed_shocks[:, mainsample_periods]
+    end
+
+    return smoothed_states, smoothed_shocks
 end
 
 function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
     data::Matrix{S}, system::System, z0::Vector{S}, P0::Matrix{S};
     include_presample::Bool = false)
 
-    # extract system matrices
-    T, R, C = system[:TTT], system[:RRR], system[:CCC]
-    Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
-    M, E    = system[:MM], system[:EE]
+    # Partition sample into pre- and post-ZLB regimes
+    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
+    regime_inds = zlb_regime_indices(m, data)
 
-    # call actual Durbin-Koopman smoother
-    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, M, E, z0, P0;
-        include_presample = include_presample)
-end
+    # Get system matrices for each regime
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs = zlb_regime_matrices(m, system)
 
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    df::DataFrame, T::Matrix{S}, R::Matrix{S}, C::Array{S},
-    Q::Matrix{S}, Z::Matrix{S}, D::Vector{S},
-    M::Matrix{S}, E::Matrix{S}, V_all::Matrix{S},
-    z0::Vector{S}, P0::Matrix{S};
-    cond_type::Symbol = :none, include_presample::Bool = false)
+    # Specify number of presample periods if we don't want to include them in
+    # the final results
+    T0 = include_presample ? 0 : n_presample_periods(m)
 
-    # convert DataFrame to Matrix
-    data = df_to_matrix(m, df; cond_type = cond_type)
-
-    # call actual simulation smoother
-    durbin_koopman_smoother(m, data, T, R, C, Q, Z, D, M, E, z0, P0;
-        include_presample = include_presample)
-end
-
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    data::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Array{S},
-    Q::Matrix{S}, Z::Matrix{S}, D::Vector{S}, M::Matrix{S}, E::Matrix{S},
-    z0::Array{S}, P0::Matrix{S}; include_presample::Bool = false)
-
-    # Get matrix dimensions
-    Ny = size(data, 1)
-    Nt = size(data, 2)
-    Nz = size(T, 1)
-    Ne = size(R, 2)
-
-    # Check data is well-formed wrt model settings
-    @assert Ny == n_observables(m)
-    @assert Nt >= n_presample_periods(m) + n_prezlb_periods(m) + n_zlb_periods(m)
-
-    # Anticipated monetary policy shocks
-    n_ant_shocks = n_anticipated_shocks(m)
-    t_zlb_start  = index_zlb_start(m)
-
-    # Draw initial state α_0+ and sequence of shocks η+
-    U, eig, _ = svd(P0)
-    dist_α = DegenerateMvNormal(zeros(S, Nz), U * diagm(sqrt(eig)))
-    dist_η = DegenerateMvNormal(zeros(S, Ne), sqrt(Q))
-
-    if m.testing
-        α_plus_0 = zeros(S, Nz)
-        η_plus   = zeros(S, Ne, Nt)
-    else
-        α_plus_0 = rand(dist_α)
-        η_plus   = rand(dist_η, Nt)
-    end
-
-    # Set n_ant_shocks shocks to 0 in pre-ZLB time periods
-    if n_ant_shocks > 0
-        ant1_ind = m.exogenous_shocks[:rm_shl1]
-        antn_ind = m.exogenous_shocks[symbol("rm_shl$(n_ant_shocks)")]
-        shock_inds = ant1_ind:antn_ind
-        period_inds = vcat(inds_presample_periods(m), inds_prezlb_periods(m))
-        η_plus[shock_inds, period_inds] = 0
-    end
-
-    # Produce "fake" states and observables (a+ and y+) by
-    # iterating the state-space system forward
-    iterate(α_plus_t1, η_plus_t) = C + T*α_plus_t1 + R*η_plus_t
-
-    α_plus       = zeros(S, Nz, Nt)
-    α_plus[:, 1] = iterate(α_plus_0, η_plus[:, 1])
-    for t = 2:Nt
-        α_plus[:, t] = iterate(α_plus[:, t-1], η_plus[:, t])
-    end
-    data_plus = D .+ Z*α_plus
-
-    # Replace fake data with NaNs wherever actual data has NaNs
-    data_plus[isnan(data)] = NaN
-
-    # Compute y* = y - y+
-    data_star = data - data_plus
-
-    # Run the Kalman filter
-    # Note that we pass in `zeros(size(D))` instead of `D` because the
-    # measurement equation for `data_star` has no constant term
-    kal = kalman_filter(m, data_star, T, R, C,
-             Q, Z, zeros(size(D)), M, E, z0, P0;
-             allout = true, include_presample = true)
-
-    # Kalman smooth
-    α_hat_star, η_hat_star = kalman_smoother(m, data_star, T, R, C, Q, Z,
-        zeros(size(D)), z0, P0, kal[:pred], kal[:vpred]; include_presample = true)
-
-    # Compute draw (states and shocks)
-    α_hat = α_plus + α_hat_star
-    η_hat = η_plus + η_hat_star
-
-    if !include_presample
-        α_hat = α_hat[:, index_mainsample_start(m):end]
-        η_hat = η_hat[:, index_mainsample_start(m):end]
-    end
-
-    return α_hat, η_hat
+    # Call Durbin-Koopman smoother
+    durbin_koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs,
+        QQs, ZZs, DDs, MMs, EEs, z0, P0;
+        n_presample_periods = T0, draw_states = !m.testing)
 end
 
 """
