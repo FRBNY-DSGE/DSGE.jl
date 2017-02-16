@@ -51,18 +51,29 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
 
     data = df_to_matrix(m, df; cond_type = cond_type)
 
-    states, shocks = if forecast_smoother(m) == :koopman
-        koopman_smoother(m, data, system, kal[:z0], kal[:vz0], kal[:pred], kal[:vpred];
-            include_presample = true)
-    elseif forecast_smoother(m) == :durbin_koopman
-        durbin_koopman_smoother(m, data, system, kal[:z0], kal[:vz0];
-            include_presample = true)
-    elseif forecast_smoother(m) == :hamilton
-        hamilton_smoother(m, data, system, kal,
-            include_presample = true)
+    # Partition sample into pre- and post-ZLB regimes
+    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
+    regime_inds = zlb_regime_indices(m, data)
+
+    # Get system matrices for each regime
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs = zlb_regime_matrices(m, system)
+
+    # Call smoother
+    states, shocks = if forecast_smoother(m) == :hamilton
+        hamilton_smoother(regime_inds, data, TTTs, RRRs, kal[:z0], kal[:pred], kal[:vpred],
+            kal[:filt], kal[:vfilt])
+
+    elseif forecast_smoother(m) == :koopman
+        koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs,
+            kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+
     elseif forecast_smoother(m) == :carter_kohn
-        carter_kohn_smoother(m, data, system, kal,
-            include_presample = true)
+        carter_kohn_smoother(regime_inds, data, TTTs, RRRs, kal[:z0], kal[:pred], kal[:vpred],
+            kal[:filt], kal[:vfilt]; draw_states = !m.testing)
+
+    elseif forecast_smoother(m) == :durbin_koopman
+        durbin_koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs,
+            kal[:z0], kal[:vz0]; draw_states = !m.testing)
     end
 
     # Index out last presample states, used to compute the deterministic trend

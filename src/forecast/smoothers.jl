@@ -144,27 +144,6 @@ function koopman_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}}
     return smoothed_states, smoothed_shocks
 end
 
-function koopman_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    system::System, z0::Vector{S}, P0::Matrix{S}, pred::Matrix{S}, vpred::Array{S, 3};
-    cond_type::Symbol = :none, include_presample::Bool = false)
-
-    # Partition sample into pre- and post-ZLB regimes
-    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
-    regime_inds = zlb_regime_indices(m, data)
-
-    # Get system matrices for each regime
-    TTTs, RRRs, CCCs, QQs, ZZs, DDs, _ = zlb_regime_matrices(m, system)
-
-    # Specify number of presample periods if we don't want to include them in
-    # the final results
-    T0 = include_presample ? 0 : n_presample_periods(m)
-
-    # Call Kalman smoother
-    koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs,
-        QQs, ZZs, DDs, z0, P0, pred, vpred;
-        n_presample_periods = T0)
-end
-
 """
 ```
 koopman_disturbance_smoother{S<:AbstractFloat}(m::AbstractModel,
@@ -472,27 +451,6 @@ function durbin_koopman_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{
     return smoothed_states, smoothed_shocks
 end
 
-function durbin_koopman_smoother{S<:AbstractFloat}(m::AbstractModel,
-    data::Matrix{S}, system::System, z0::Vector{S}, P0::Matrix{S};
-    include_presample::Bool = false)
-
-    # Partition sample into pre- and post-ZLB regimes
-    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
-    regime_inds = zlb_regime_indices(m, data)
-
-    # Get system matrices for each regime
-    TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs = zlb_regime_matrices(m, system)
-
-    # Specify number of presample periods if we don't want to include them in
-    # the final results
-    T0 = include_presample ? 0 : n_presample_periods(m)
-
-    # Call Durbin-Koopman smoother
-    durbin_koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs,
-        QQs, ZZs, DDs, MMs, EEs, z0, P0;
-        n_presample_periods = T0, draw_states = !m.testing)
-end
-
 """
 ```
 hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
@@ -618,27 +576,6 @@ function hamilton_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}
     end
 
     return smoothed_states, smoothed_shocks
-end
-
-function hamilton_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    system::System, z0::Vector{S}, pred::Matrix{S}, vpred::Array{S, 3},
-    filt::Matrix{S}, vfilt::Array{S, 3};
-    include_presample::Bool = false)
-
-    # Partition sample into pre- and post-ZLB regimes
-    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
-    regime_inds = zlb_regime_indices(m, data)
-
-    # Get system matrices for each regime
-    TTTs, RRRs, _ = zlb_regime_matrices(m, system)
-
-    # Specify number of presample periods if we don't want to include them in
-    # the final results
-    T0 = include_presample ? 0 : n_presample_periods(m)
-
-    # Call Hamilton smoother
-    hamilton_smoother(regime_inds, data, TTTs, RRRs, z0, pred, vpred,
-        filt, vfilt; n_presample_periods = T0)
 end
 
 """
@@ -775,27 +712,6 @@ function carter_kohn_smoother{S<:AbstractFloat}(regime_indices::Vector{Range{Int
     end
 
     return smoothed_states, smoothed_shocks
-end
-
-function carter_kohn_smoother{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    system::System, z0::Vector{S}, pred::Matrix{S}, vpred::Array{S, 3},
-    filt::Matrix{S}, vfilt::Array{S, 3};
-    include_presample::Bool = false)
-
-    # Partition sample into pre- and post-ZLB regimes
-    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
-    regime_inds = zlb_regime_indices(m, data)
-
-    # Get system matrices for each regime
-    TTTs, RRRs, _ = zlb_regime_matrices(m, system)
-
-    # Specify number of presample periods if we don't want to include them in
-    # the final results
-    T0 = include_presample ? 0 : n_presample_periods(m)
-
-    # Call Carter-Kohn smoother
-    carter_kohn_smoother(regime_inds, data, TTTs, RRRs, z0, pred, vpred,
-        filt, vfilt; n_presample_periods = T0, draw_states = !m.testing)
 end
 
 function solve_smoothed_shocks{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
