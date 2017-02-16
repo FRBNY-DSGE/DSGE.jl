@@ -62,15 +62,14 @@ module DSGE
 
         # estimate/
         simulated_annealing, combined_optimizer, LBFGS_wrapper,
-        kalman_filter, likelihood, posterior, posterior!,
+        kalman_filter, filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance,
         prior,
 
         # forecast/
         load_draws, forecast_one,
-        filter, smooth,
-        koopman_smoother, durbin_koopman_smoother, hamilton_smoother, carter_kohn_smoother,
+        smooth, koopman_smoother, durbin_koopman_smoother, hamilton_smoother, carter_kohn_smoother,
         forecast, shock_decompositions, deterministic_trends, trends, impulse_responses,
         compute_system, add_requisite_output_vars, n_forecast_draws,
         get_forecast_input_file, get_forecast_output_files, get_forecast_filename,
@@ -124,6 +123,7 @@ module DSGE
     include("solve/solve.jl")
 
     include("estimate/kalman.jl")
+    include("estimate/filter.jl")
     include("estimate/posterior.jl")
     include("estimate/optimize.jl")
     include("estimate/csminwel.jl")
@@ -137,7 +137,6 @@ module DSGE
     include("forecast/util.jl")
     include("forecast/io.jl")
     include("forecast/smoothers.jl")
-    include("forecast/filter.jl")
     include("forecast/smooth.jl")
     include("forecast/forecast.jl")
     include("forecast/shock_decompositions.jl")

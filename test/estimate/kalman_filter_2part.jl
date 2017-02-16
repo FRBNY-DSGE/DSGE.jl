@@ -15,10 +15,10 @@ custom_settings = Dict{Symbol, Setting}(
 m = Model990(custom_settings = custom_settings, testing = true)
 
 # Kalman filter with z0 and P0 provided
-kal1 = kalman_filter(m, data, z0, P0; allout = true, include_presample = true)
+kal1 = DSGE.filter(m, data, z0, P0; allout = true, include_presample = true)
 
 # Kalman filter without z0 and P0
-kal2 = kalman_filter(m, data; allout = true, include_presample = true)
+kal2 = DSGE.filter(m, data; allout = true, include_presample = true)
 
 # Test against expected output
 exp_kal = jldopen("$path/../reference/kalman_filter_2part_out.jld", "r") do file
