@@ -62,7 +62,7 @@ function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
         condtype = get_cond_type(mb)
 
         ## Get name of file to write
-        outfile = get_forecast_filename(m, para(mb), cond_type(mb), output_var;
+        outfile = get_forecast_filename(m, get_para(mb), get_cond_type(mb), output_var;
                                         pathfcn = workpath,
                                         forecast_string = mb.metadata[:forecast_string],
                                         fileformat = :h5)
