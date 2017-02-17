@@ -113,24 +113,105 @@ end
 
 """
 ```
-Base.cat(mb1::MeansBands, mb2::MeansBands)
+Base.cat(mb1::MeansBands, mb2::MeansBands;
+                  [out_product = Symbol()], [forecast_string = ""])
+
 ```
 
-Concatenate 2 compatible `MeansBands` objects together by date.
+Concatenate 2 compatible `MeansBands` objects together by date. 2
+`MeansBands` objects are defined to be compatible if the class of
+variables is the same, the conditional type is the same, and the
+input_type for the forecast used to create the two `MeansBands` object
+is the same. Furthermore, we require that the dates covered by each
+`MeansBands` object form a continguous interval. If `mb1` and `mb2` do
+not represent a history and a forecast respectively, we require the
+user
+
+### Input arguments
+- `mb1`: a MeansBands object. The dates in the first MeansBands
+  argument should come chronologically first.
+- `mb2`: a MeansBands object. The dates in the second MeansBands
+  argument should begin 1 period after the final period in `mb1`.
+
+### Keyword arguments
+- TODO
 """
-function Base.cat(mb1::MeansBands, mb2::MeansBands)
+function Base.cat(mb1::MeansBands, mb2::MeansBands;
+                  out_product::Symbol = Symbol(),
+                  forecast_string = "")
 
-    for k in keys(mb1.metadata)
-        @assert mb1.metadata[k] == mb2.metadata[k] "Cannot cat these 2 MeansBands: metadata[$k] does not match"
-    end
+    # Assert class, cond type and para are the same
+    @assert get_class(mb1) == get_class(mb2)
+    @assert get_cond_type(mb1) == get_cond_type(mb2)
+    @assert get_para(mb1) == get_para(mb2)
 
-    last_mb1_date = mb1.means[:date][end]
-    first_mb2_date = mb2.means[:date][1]
+    # Assert dates are contiguous
+    last_mb1_date  = enddate_means(mb1)
+    first_mb2_date = startdate_means(mb2)
+
+    println(last_mb1_date)
+    println(first_mb2_date)
+    println(iterate_quarters(last_mb1_date, 1))
+
     @assert iterate_quarters(last_mb1_date, 1) == first_mb2_date
 
+    # compute means field
     means = vcat(mb1.means, mb2.means)
-    bands = vcat(mb1.bands, mb2.bands)
 
+    # compute bands field
+    bands = Dict{Symbol, DataFrame}()
+
+    mb1vars = collect(keys(mb1.bands))
+    mb2vars = collect(keys(mb2.bands))
+    nperiods_mb1 = length(mb1.metadata[:date_inds])
+    nperiods_mb2 = length(mb2.metadata[:date_inds])
+
+    bothvars = intersect(mb1vars, mb2vars)
+    for var in union(keys(mb1.bands), keys(mb2.bands))
+        bands[var] = if var in bothvars
+            vcat(mb1.bands[var], mb2.bands[var])
+        elseif var in setdiff(mb1vars, mb2vars)
+            vcat(mb1vars[var], fill(NaN, nperiods_mb2))
+        else
+            vcat(fill(NaN, nperiods_mb1), mb2vars[var])
+        end
+    end
+
+    # compute metadata
+    # product
+    mb1_product = get_product(mb1)
+    mb2_product = get_product(mb2)
+    product = if mb1_product == :hist && contains(string(mb2_product), "forecast")
+        symbol(string(mb1_product)*string(mb2_product))
+    elseif mb1_product == mb2_product
+        mb1_product
+    else
+        @assert !isempty(out_product) "Please supply a product name for the output MeansBands"
+        out_product
+    end
+
+    # date indices
+    date_indices = [d::Date => i::Int for (i, d) in enumerate(means[:date])]
+
+    # variable indices
+    indices = [var::Symbol => i::Int for (i, var) in enumerate(names(means))]
+
+    # forecast string
+    if isempty(forecast_string) && (mb1.metadata[:forecast_string] == mb2.metadata[:forecast_string])
+        warn("No forecast_string provided: using $(mb1.metadata[:forecast_string])")
+    end
+    forecast_string = mb1.metadata[:forecast_string]
+
+    metadata = Dict{Symbol, Any}(
+                   :para            => get_para(mb1),
+                   :cond_type       => get_cond_type(mb1),
+                   :class           => get_class(mb1),
+                   :product         => product,
+                   :indices         => indices,
+                   :forecast_string => forecast_string,
+                   :date_inds       => sort(date_indices, by = x -> date_indices[x]))
+
+    # construct the new MeansBands object and return
     MeansBands(mb1.metadata, means, bands)
 end
 
@@ -460,8 +541,9 @@ end
 """
 ```
 prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBands,
-                                      mb_dettrend::MeansBands, var::Symbol;
-                                      shocks::Vector{Symbol} = Vector{Symbol}())
+           mb_dettrend::MeansBands, var::Symbol; [shocks = Vector{Symbol}()],
+           [mb_forecast = MeansBands()], [mb_hist = MeansBands()])
+```
 
 Returns a `DataFrame` representing a detrended shock decompostion for
 the variable `var`. The columns of this dataframe represent the
@@ -480,11 +562,14 @@ argument is omitted) and the deterministic trend.
 - `shocks::Vector{Symbol}`: If `mb` is a shock decomposition, this is
   an optional list of shocks to print to the table. If omitted, all
   shocks will be printed.
-```
+- `mb_forecast::MeansBands`: a `MeansBands` object for a forecast.
+- `mb_hist::MeansBands`: a `MeansBands` object for smoothed states.
 """
 function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBands,
                                       mb_dettrend::MeansBands, var::Symbol;
-                                      shocks::Vector{Symbol} = Vector{Symbol}())
+                                      shocks::Vector{Symbol} = Vector{Symbol}(),
+                                      mb_forecast::MeansBands = MeansBands(),
+                                      mb_hist::MeansBands = MeansBands())
 
     @assert get_product(mb_shockdec) == :shockdec "The first argument must be a MeansBands object for a shockdec"
     @assert get_product(mb_trend)    == :trend    "The second argument must be a MeansBands object for a trend"
@@ -520,6 +605,21 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
 
     # rename columns to just the shock names
     map(x -> rename!(df, x, parse_mb_colname(x)[2]), setdiff(names(df), [:date, :trend, :dettrend]))
+
+    # last, if mb_forecast and mb_hist are passed in, add the
+    # detrended time series mean of var to the table
+    if !isempty(mb_forecast) && !isempty(mb_hist)
+
+        mb_timeseries = cat(mb_hist, mb_forecast)
+
+        # truncate to just the dates we want
+        startdate = df[:date][1]
+        enddate   = df[:date][end]
+        df_mean   = mb_timeseries.means[startdate .<= mb_timeseries.means[:date] .<= enddate, [:date, var]]
+
+        df_shockdec = join(df_shockdec, df_mean, on = :date, kind = :inner)
+        df[:detrendedMean] = df_shockdec[var] - df_shockdec[:trend]
+    end
 
     df
 end
