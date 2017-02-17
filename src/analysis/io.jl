@@ -180,6 +180,8 @@ function write_meansbands_tables(m::AbstractModel, mb::MeansBands, var::Symbol;
                                  forecast_string::AbstractString = "",
                                  mb_trend::MeansBands = MeansBands(),
                                  mb_dettrend::MeansBands = MeansBands(),
+                                 mb_forecast::MeansBands = MeansBands(),
+                                 mb_hist::MeansBands = MeansBands(),
                                  shocks::Vector{Symbol} = Vector{Symbol}())
 
     # Use model object to compute output directory and settings suffix
@@ -189,12 +191,15 @@ function write_meansbands_tables(m::AbstractModel, mb::MeansBands, var::Symbol;
     # Call lower-level function
     write_meansbands_tables(dir, mb, var, shocks = shocks, filestring_base = base,
                             forecast_string = forecast_string,
-                            mb_trend = mb_trend, mb_dettrend = mb_dettrend)
+                            mb_trend = mb_trend, mb_dettrend = mb_dettrend,
+                            mb_forecast = mb_forecast, mb_hist = mb_hist)
 end
 function write_meansbands_tables(m::AbstractModel, mb::MeansBands;
                                  vars::Vector{Symbol} = Vector{Symbol}(),
                                  mb_trend::MeansBands = MeansBands(),
                                  mb_dettrend::MeansBands = MeansBands(),
+                                 mb_forecast::MeansBands = MeansBands(),
+                                 mb_hist::MeansBands = MeansBands(),
                                  shocks::Vector{Symbol} = Vector{Symbol}())
 
     # Use all vars by default
@@ -205,7 +210,8 @@ function write_meansbands_tables(m::AbstractModel, mb::MeansBands;
     # Write table for each var
     for var in vars
         write_meansbands_tables(m, mb, var,
-                                mb_trend = mb_trend, mb_dettrend = mb_dettrend, shocks = shocks)
+                                mb_trend = mb_trend, mb_dettrend = mb_dettrend,
+                                mb_forecast = mb_forecast, mb_hist = mb_hist, shocks = shocks)
     end
 end
 function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands;
@@ -214,6 +220,8 @@ function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands;
                                                     forecast_string::AbstractString = "",
                                                     mb_trend::MeansBands = MeansBands(),
                                                     mb_dettrend::MeansBands = MeansBands(),
+                                                    mb_forecast::MeansBands = MeansBands(),
+                                                    mb_hist::MeansBands = MeansBands(),
                                                     shocks::Vector{Symbol} = Vector{Symbol}())
     # Use all vars by default
     if isempty(vars)
@@ -225,7 +233,7 @@ function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands;
         write_meansbands_tables(dirname, mb, var, filestring_base = filestring_base,
                                 forecast_string = forecast_string,
                                 mb_trend = mb_trend, mb_dettrend = mb_dettrend,
-                                shocks = shocks)
+                                shocks = shocks, mb_forecast = mb_forecast, mb_hist = mb_hist)
     end
 end
 function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands, var::Symbol;
@@ -233,6 +241,8 @@ function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands, 
                                                     forecast_string::AbstractString = "",
                                                     mb_trend::MeansBands = MeansBands(),
                                                     mb_dettrend::MeansBands = MeansBands(),
+                                                    mb_forecast::MeansBands = MeansBands(),
+                                                    mb_hist::MeansBands = MeansBands(),
                                                     shocks::Vector{Symbol} = Vector{Symbol}())
     # What product are we making here?
     prod = get_product(mb)
@@ -249,7 +259,9 @@ function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands, 
         @assert !isempty(mb_trend)    "Please pass in mb_trend"
         @assert !isempty(mb_dettrend) "Please pass in mb_dettrend"
 
-        prepare_means_table_shockdec(mb, mb_trend, mb_dettrend, var, shocks = shocks)
+        prepare_means_table_shockdec(mb, mb_trend, mb_dettrend, var, shocks = shocks,
+                                     mb_forecast = mb_forecast, mb_hist = mb_hist)
+
     end
 
     # Write to file
@@ -292,14 +304,12 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
     mbs = Dict{Symbol, MeansBands}()
 
     # # Figure out stuff for filename
-    # base = DSGE.filestring_base(m)
     filestring_addl = DSGE.get_forecast_filestring_addl(input_type, cond_type,
                                                         forecast_string = forecast_string)
-    # dirname = tablespath(m, "forecast")
-    # filename = DSGE.savepath(dirname, filename, base, filestring_addl)
 
     # Read in appropriate means and bands
-    my_output_vars = add_requisite_output_vars(output_vars)
+    my_output_vars = add_requisite_output_vars_meansbands(output_vars)
+    println(my_output_vars)
     for class in [:pseudo, :obs]
         if !isempty(intersect(my_output_vars, [symbol("hist$class"), symbol("histforecast$class")]))
             mbs[symbol("hist$class")] =
@@ -354,9 +364,26 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
             mb_shockdec = mbs[symbol("shockdec$(class)")]
             mb_trend    = mbs[symbol("trend$(class)")]
             mb_dettrend = mbs[symbol("dettrend$(class)")]
+            mb_forecast = mbs[symbol("forecast$(class)")]
+            mb_hist     = mbs[symbol("hist$(class)")]
 
             write_meansbands_tables(m, mb_shockdec, mb_trend = mb_trend, mb_dettrend = mb_dettrend,
+                                    mb_hist = mb_hist, mb_forecast = mb_forecast,
                                     vars = vars, shocks = shocks)
         end
     end
+end
+
+function add_requisite_output_vars_meansbands(output_vars)
+
+    all_output_vars  = add_requisite_output_vars(output_vars)
+
+    if :shockdecpseudo in all_output_vars
+        push!(all_output_vars, :histforecastpseudo)
+    end
+    if :shockdecobs in all_output_vars
+        push!(all_output_vars, :histforecastobs)
+    end
+
+    all_output_vars
 end
