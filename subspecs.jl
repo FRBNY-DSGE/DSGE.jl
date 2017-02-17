@@ -315,6 +315,34 @@ function init_subspec!(m::Model1010)
                        description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                        tex_label="\\sigma_{BBB}")
 
+    elseif subspec(m) == "ss16"
+       # ss13, but not adjusting for maturities in the measurement equation
+
+        m <= parameter(:ρ_AAA, 0.5, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.1),
+                       fixed=false,
+                       description="ρ_AAA: AR(1) coefficient in the AAA spread process.",
+                       tex_label="\\rho_{AAA}")
+
+        m <= parameter(:ρ_BBB, 0.5, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.1),
+                       fixed=false,
+                       description="ρ_BBB: AR(1) coefficient in the BBB spread process.",
+                       tex_label="\\rho_{BBB}")
+
+        m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+                       fixed=false,
+                       description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
+                       tex_label="\\sigma_{BBB}")
+
+        m <= parameter(:σ_b_liqp, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+                   fixed=false,
+                   description="σ_b_liqp: Standard deviation of stationary component of liquid asset preference shifter process.",
+                   tex_label="\\sigma_{b^p, liq}")
+
+        m <= parameter(:σ_b_safep, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+                   fixed=false,
+                   description="σ_b_safep: Standard deviation of stationary component of safe asset preference shifter process.",
+                   tex_label="\\sigma_{b^p, safe}")
+
     else
         error("This subspec is not defined.")
     end

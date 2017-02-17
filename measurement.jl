@@ -99,8 +99,11 @@ function measurement{T<:AbstractFloat}(m::Model1010{T},
     DD[obs[:obs_investment]]                  = 100*(exp(m[:z_star])-1)
 
     ## 20 yrs forward transition matrix
-    TTT20                          = (1/80)*((UniformScaling(1.) - TTT) \ (UniformScaling(1.) - TTT^80))
-
+    TTT20 = if subspec(m) == "ss16"
+        eye(size(TTT,1))
+    else
+        (1/80)*((UniformScaling(1.) - TTT) \ (UniformScaling(1.) - TTT^80))
+    end
     ## BAA or BBB Spread
     ZZ[obs[:obs_BBBspread], endo[:ERtil_k_t]]    = 1.0
     ZZ[obs[:obs_BBBspread], endo[:R_t]]          = -1.0
