@@ -41,7 +41,7 @@ end
 
 function Kalman{S<:AbstractFloat}(L::S,
                                   pred::Matrix{S}          = Matrix{S}(),
-                                  vpred::Array{S, 3}       = Array{S}(0, 0, 0);
+                                  vpred::Array{S, 3}       = Array{S}(0, 0, 0),
                                   yprederror::Matrix{S}    = Matrix{S}(),
                                   ystdprederror::Matrix{S} = Matrix{S}(),
                                   rmse::Matrix{S}          = Matrix{S}(),
