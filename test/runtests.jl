@@ -13,7 +13,6 @@ my_tests = [
             "data/load_data",
             "solve/gensys",
             "solve/solve",
-            "estimate/kalman_filter_2part",
             "estimate/cat",
             "estimate/filter",
             "estimate/posterior",
