@@ -8,7 +8,7 @@ and written by Iskander Karibzhanov.
 kalman_filter{S<:AbstractFloat}(data::Matrix{S},
     TTT::Matrix{S}, CCC::Vector{S}, ZZ::Matrix{S}, DD::Vector{S}, VVall::Matrix{S},
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
-    allout::Bool = false)
+    likelihood_only::Bool = false)
 ```
 
 ### Inputs
@@ -25,7 +25,7 @@ kalman_filter{S<:AbstractFloat}(data::Matrix{S},
 #### Optional Inputs
 - `z0`: an optional `Nz` x 1 initial state vector.
 - `P0`: an optional `Nz` x `Nz` covariance matrix of an initial state vector.
-- `allout`: an optional keyword argument indicating whether we want optional output
+- `likelihood_only`: an optional keyword argument indicating whether we want optional output
   variables returned as well
 
 Where:
@@ -69,7 +69,7 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
     TTT::Matrix{S}, RRR::Matrix{S}, CCC::Vector{S},
     QQ::Matrix{S}, ZZ::Matrix{S}, DD::Vector{S}, MM::Matrix{S}, EE::Matrix{S},
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
-    allout::Bool = false, n_presample_periods::Int = 0)
+    likelihood_only::Bool = false, n_presample_periods::Int = 0)
 
     T = size(data, 2)
     regime_indices = Range{Int64}[1:T]
@@ -77,7 +77,7 @@ function kalman_filter{S<:AbstractFloat}(data::Matrix{S},
     kalman_filter(regime_indices, data, Matrix{S}[TTT], Matrix{S}[RRR], Vector{S}[CCC],
         Matrix{S}[QQ], Matrix{S}[ZZ], Vector{S}[DD],
         Matrix{S}[MM], Matrix{S}[EE], z0, P0;
-        allout = allout, n_presample_periods = n_presample_periods)
+        likelihood_only = likelihood_only, n_presample_periods = n_presample_periods)
 end
 
 function kalman_filter{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
@@ -85,7 +85,7 @@ function kalman_filter{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
     QQs::Vector{Matrix{S}}, ZZs::Vector{Matrix{S}}, DDs::Vector{Vector{S}},
     MMs::Vector{Matrix{S}}, EEs::Vector{Matrix{S}},
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
-    allout::Bool = false, n_presample_periods::Int = 0)
+    likelihood_only::Bool = false, n_presample_periods::Int = 0)
 
     n_regimes = length(regime_indices)
 
@@ -111,7 +111,7 @@ function kalman_filter{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
     P = P0
 
     # Initialize outputs
-    if allout
+    if !likelihood_only
         pred          = zeros(S, Nz, T)
         vpred         = zeros(S, Nz, Nz, T)
         yprederror    = NaN*zeros(S, Ny, T)
@@ -154,7 +154,7 @@ function kalman_filter{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
             D = ZZ_t*P*ZZ_t' + ZG + ZG' + R_t  # D = ZZ*P_{t|t-1}*ZZ' + ZG + ZG' + R_t
             D = (D+D')/2
 
-            if allout
+            if !likelihood_only
                 pred[:, t]                   = z
                 vpred[:, :, t]               = P
                 yprederror[nonmissing, t]    = dy
@@ -174,7 +174,7 @@ function kalman_filter{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
             z = z + PZG*ddy                    # z_{t|t} = z_{t|t-1} + P_{t|t-1}*ZZ(Θ)' + ...
             P = P - PZG/D*PZG'                 # P_{t|t} = P_{t|t-1} - PZG*(1/D)*PZG
 
-            if allout
+            if !likelihood_only
                 filt[:, t]     = z
                 vfilt[:, :, t] = P
             end
@@ -186,7 +186,7 @@ function kalman_filter{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
     zend = z
     Pend = P
 
-    if allout && n_presample_periods > 0
+    if !likelihood_only && n_presample_periods > 0
         mainsample_periods = n_presample_periods+1:T
 
         # If we choose to discard presample periods, then we reassign `z0`
@@ -203,7 +203,7 @@ function kalman_filter{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
         vfilt         = vfilt[:, :, mainsample_periods]
     end
 
-    if allout
+    if !likelihood_only
         rmse = sqrt(mean((yprederror.^2)', 1))
         rmsd = sqrt(mean((ystdprederror.^2)', 1))
 
@@ -219,23 +219,24 @@ Kalman{S<:AbstractFloat}
 ```
 
 ### Fields:
+
 - `L`: value of the average log likelihood function of the SSM under assumption that
   observation noise ϵ(t) is normally distributed
+
+#### Fields filled in when `!likelihood_only` in a call to `kalman_filter`:
+
 - `zend`: state vector in the last period for which data is provided
 - `Pend`: variance-covariance matrix for `zend`
+- `pred`: a `Nz` x `T` matrix containing one-step predicted state vectors
+- `vpred`: a `Nz` x `Nz` x `T` matrix containing mean square errors of predicted
+  state vectors
+- `filt`: an `Nz` x `T` matrix containing filtered state vectors
+- `vfilt`: an `Nz` x `Nz` x `T` matrix containing mean square errors of filtered
+  state vectors
 - `z0`: starting-period state vector. If there are presample periods in the
   data, then `z0` is the state vector at the end of the presample/beginning of
   the main sample
 - `P0`: variance-covariance matrix for `z0`
-
-#### Fields filled in when `allout=true` in a call to `kalman_filter`:
-- `pred`: a `Nz` x `T` matrix containing one-step predicted state vectors
-- `vpred`: a `Nz` x `Nz` x `T` matrix containing mean square errors of predicted
-  state vectors
-
-- `filt`: an `Nz` x `T` matrix containing filtered state vectors
-- `vfilt`: an `Nz` x `Nz` x `T` matrix containing mean square errors of filtered
-  state vectors
 """
 immutable Kalman{S<:AbstractFloat}
     L::S                  # likelihood
@@ -279,13 +280,15 @@ function Base.getindex(K::Kalman, d::Symbol)
 end
 
 function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
-    k2::Kalman{S}; allout::Bool = false)
+    k2::Kalman{S}; likelihood_only::Bool = false)
 
     L = k1[:L] + k2[:L]
     zend = k2[:zend]
     Pend = k2[:Pend]
 
-    if allout
+    if likelihood_only
+        return Kalman(L)
+    else
         pred  = hcat(k1[:pred], k2[:pred])
         vpred = cat(3, k1[:vpred], k2[:vpred])
         yprederror    = hcat(k1[:yprederror], k2[:yprederror])
@@ -299,8 +302,6 @@ function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
 
         return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror,
             rmse, rmsd, filt, vfilt, z0, P0)
-    else
-        return Kalman(L, zend, Pend)
     end
 end
 

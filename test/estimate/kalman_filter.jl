@@ -11,7 +11,7 @@ end
 close(h5)
 
 # Method with all arguments provided
-out = kalman_filter(data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, z0, P0, allout = true)
+out = kalman_filter(data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE, z0, P0)
 
 h5 = h5open("$path/../reference/kalman_filter_out9.h5")
 @test_approx_eq        read(h5, "L")             out[1]
@@ -28,7 +28,7 @@ h5 = h5open("$path/../reference/kalman_filter_out9.h5")
 close(h5)
 
 # Method with initial conditions omitted
-out = kalman_filter(data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE; allout = true)
+out = kalman_filter(data, TTT, RRR, CCC, QQ, ZZ, DD, MM, EE)
 
 # Pend, vpred, and vfilt matrix entries are especially large, averaging 1e5, so
 # we allow greater ϵ

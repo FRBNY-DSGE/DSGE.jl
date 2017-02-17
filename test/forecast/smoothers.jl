@@ -65,7 +65,7 @@ z0 = zeros(n_states_augmented(m))
 P0 = QuantEcon.solve_discrete_lyapunov(system[:TTT], system[:RRR]*system[:QQ]*system[:RRR]')
 
 m <= Setting(:forecast_smoother, :koopman)
-kal = DSGE.filter(m, data, system, z0, P0, allout = true, include_presample = true)
+kal = DSGE.filter(m, data, system, z0, P0, include_presample = true)
 alpha_hat, eta_hat = smooth(m, df, system, kal)
 @test_matrix_approx_eq kal[:zend] alpha_hat[:, end]
 

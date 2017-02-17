@@ -13,7 +13,7 @@ kal1, kal2 = jldopen("$path/../reference/kalman_cat_args.jld", "r") do file
 end
 
 # Concatenate Kalmans
-kal12 = cat(m, kal1, kal2; allout = true)
+kal12 = cat(m, kal1, kal2)
 
 # Test equality
 exp_kal12 = jldopen("$path/../reference/kalman_cat_out.jld", "r") do file
