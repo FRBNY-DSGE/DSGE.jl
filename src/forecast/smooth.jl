@@ -70,7 +70,7 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
             kal[:z0], kal[:vz0])
 
     elseif forecast_smoother(m) == :koopman
-        koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs,
+        koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs,
             kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
 
     elseif forecast_smoother(m) == :carter_kohn
@@ -78,8 +78,11 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
             kal[:z0], kal[:vz0]; draw_states = draw_states)
 
     elseif forecast_smoother(m) == :durbin_koopman
-        durbin_koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs,
+        durbin_koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs,
             kal[:z0], kal[:vz0]; draw_states = draw_states)
+
+    else
+        error("Invalid smoother: $(forecast_smoother(m))")
     end
 
     # Index out last presample states, used to compute the deterministic trend
