@@ -23,7 +23,7 @@ end
 for smoother in [:durbin_koopman, :koopman]
     m <= Setting(:forecast_smoother, smoother)
 
-    states, shocks, pseudo = smooth(m, df, system, kal)
+    states, shocks, pseudo = smooth(m, df, system, kal; draw_states = false)
 
     @test_matrix_approx_eq exp_states states
     @test_matrix_approx_eq exp_shocks shocks

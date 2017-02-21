@@ -7,7 +7,6 @@ path = dirname(@__FILE__)
 m = AnSchorfheide(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:forecast_horizons, 1)
-m <= Setting(:forecast_kill_shocks, true)
 
 system, kal = jldopen("$path/../reference/forecast_args.jld","r") do file
     read(file, "system"), read(file, "kal")
@@ -23,15 +22,15 @@ exp_states, exp_obs, exp_pseudo, exp_shocks =
         read(file, "exp_shocks")
     end
 
-# Run forecast without supplying shocks
-states, obs, pseudo, shocks = forecast(m, system, z0)
+# Without shocks
+states, obs, pseudo, shocks = forecast(m, system, z0; draw_shocks = false)
 
 @test_matrix_approx_eq exp_states states
 @test_matrix_approx_eq exp_obs    obs
 @test_matrix_approx_eq exp_pseudo pseudo
 @test_matrix_approx_eq exp_shocks shocks
 
-# Run forecast, supplying shocks
+# Supplying shocks
 states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks)
 
 @test_matrix_approx_eq exp_states states
@@ -39,13 +38,12 @@ states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks)
 @test_matrix_approx_eq exp_pseudo pseudo
 @test_matrix_approx_eq exp_shocks shocks
 
-# Normally distributed shocks
-m <= Setting(:forecast_kill_shocks, false)
-states, obs, pseudo, shocks = forecast(m, system, z0)
+# Draw normally distributed shocks
+states, obs, pseudo, shocks = forecast(m, system, z0; draw_shocks = true)
 
-# t-distributed shocks
+# Draw t-distributed shocks
 m <= Setting(:forecast_tdist_shocks, true)
-states, obs, pseudo, shocks = forecast(m, system, z0)
+states, obs, pseudo, shocks = forecast(m, system, z0; draw_shocks = true)
 m <= Setting(:forecast_tdist_shocks, false)
 
 # Enforce ZLB
