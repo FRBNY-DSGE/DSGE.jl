@@ -78,7 +78,7 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
             kal[:z0], kal[:vz0]; draw_states = draw_states)
 
     elseif forecast_smoother(m) == :durbin_koopman
-        durbin_koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs,
+        durbin_koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs,
             kal[:z0], kal[:vz0]; draw_states = draw_states)
     end
 

@@ -42,12 +42,12 @@ end
 function Kalman{S<:AbstractFloat}(L::S,
                                   pred::Matrix{S}          = Matrix{S}(),
                                   vpred::Array{S, 3}       = Array{S}(0, 0, 0),
+                                  filt::Matrix{S}          = Matrix{S}(),
+                                  vfilt::Array{S, 3}       = Array{S}(0, 0, 0),
                                   yprederror::Matrix{S}    = Matrix{S}(),
                                   ystdprederror::Matrix{S} = Matrix{S}(),
                                   rmse::Matrix{S}          = Matrix{S}(),
                                   rmsd::Matrix{S}          = Matrix{S}(),
-                                  filt::Matrix{S}          = Matrix{S}(),
-                                  vfilt::Array{S, 3}       = Array{S}(0, 0, 0),
                                   z0::Vector{S}            = Vector{S}(),
                                   P0::Matrix{S}            = Matrix{S}())
 
