@@ -107,13 +107,12 @@ Returns a Vector{Range{Int64}} of index ranges for the pre- and post-ZLB regimes
 function zlb_regime_indices{S<:AbstractFloat}(m::AbstractModel{S}, data::Matrix{S})
     T = size(data, 2)
 
-    regime_inds = Vector{Range{Int64}}(2)
     if n_anticipated_shocks(m) > 0
+        regime_inds = Vector{Range{Int64}}(2)
         regime_inds[1] = 1:index_zlb_start(m)-1
         regime_inds[2] = index_zlb_start(m):T # allows for conditional data
     else
-        regime_inds[1] = 1:T
-        regime_inds[2] = 1:0
+        regime_inds = Range{Int64}[1:T]
     end
 
     return regime_inds
@@ -130,11 +129,27 @@ and post-ZLB regimes. Of these, only `QQ` changes from pre- to post-ZLB: the
 entries corresponding to anticipated shock variances are zeroed out pre-ZLB.
 """
 function zlb_regime_matrices{S<:AbstractFloat}(m::AbstractModel{S}, system::System{S})
-    shock_inds = inds_shocks_no_ant(m)
-    QQ_ZLB = system[:QQ]
-    QQ_preZLB = zeros(size(QQ_ZLB))
-    QQ_preZLB[shock_inds, shock_inds] = QQ_ZLB[shock_inds, shock_inds]
-    QQs = Matrix{S}[QQ_preZLB, QQ_ZLB]
+    if n_anticipated_shocks(m) > 0
+        n_regimes = 2
 
-    return fill(system[:TTT], 2), fill(system[:RRR], 2), fill(system[:CCC], 2), QQs, fill(system[:ZZ], 2), fill(system[:DD], 2), fill(system[:MM], 2), fill(system[:EE], 2)
+        shock_inds = inds_shocks_no_ant(m)
+        QQ_ZLB = system[:QQ]
+        QQ_preZLB = zeros(size(QQ_ZLB))
+        QQ_preZLB[shock_inds, shock_inds] = QQ_ZLB[shock_inds, shock_inds]
+        QQs = Matrix{S}[QQ_preZLB, QQ_ZLB]
+    else
+        n_regimes = 1
+
+        QQs = Matrix{S}[system[:QQ]]
+    end
+
+    TTTs = fill(system[:TTT], n_regimes)
+    RRRs = fill(system[:RRR], n_regimes)
+    CCCs = fill(system[:CCC], n_regimes)
+    ZZs  = fill(system[:ZZ], n_regimes)
+    DDs  = fill(system[:DD], n_regimes)
+    MMs  = fill(system[:MM], n_regimes)
+    EEs  = fill(system[:EE], n_regimes)
+
+    return TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs
 end
