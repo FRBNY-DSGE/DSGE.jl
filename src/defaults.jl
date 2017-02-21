@@ -99,7 +99,7 @@ function default_settings!(m::AbstractModel)
     settings[:forecast_smoother] = Setting(:forecast_smoother, :durbin_koopman,
         "Choice of smoother to use during forecasting. Can be :hamilton, :koopman, :carter_kohn, or :durbin_koopman")
     settings[:smoother_draw_states_override] = Setting(:smoother_draw_states_override, Nullable{Bool}(),
-        "If non-null, overrides default smoother behavior to draw or not draw smoothed states from N(s_{T|T}, P_{T|T}. Only affects simulation smoothers :carter_kohn and :durbin_koopman")
+        "If non-null, overrides default smoother behavior to draw or not draw smoothed states from N(s_{t|T}, P_{t|T}. Only affects simulation smoothers :carter_kohn and :durbin_koopman")
     settings[:forecast_horizons] = Setting(:forecast_horizons, 60,
         "Number of periods to forecast ahead")
     settings[:forecast_draw_z0] = Setting(:forecast_draw_z0, false,

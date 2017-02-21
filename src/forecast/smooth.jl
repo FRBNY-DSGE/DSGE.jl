@@ -22,8 +22,8 @@ Computes and returns the smoothed values of states and shocks for the system
   `cond_type` options
 - `draw_states`: if using a simulation smoother (i.e.
   `forecast_smoother(m) in [:carter_kohn, :durbin_koopman]`), indicates whether
-   to draw smoothed states from the distribution `N(z_{t|t}, P_{t|t})` or to use
-   the mean `z_{t|t}`. Defaults to `true`. If not using a simulation smoother,
+   to draw smoothed states from the distribution `N(z_{t|T}, P_{t|T})` or to use
+   the mean `z_{t|T}`. Defaults to `true`. If not using a simulation smoother,
    this flag has no effect
 
 ### Outputs
