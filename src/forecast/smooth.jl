@@ -60,16 +60,16 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
 
     # Call smoother
     states, shocks = if forecast_smoother(m) == :hamilton
-        hamilton_smoother(regime_inds, data, TTTs, RRRs, kal[:z0], kal[:pred], kal[:vpred],
-            kal[:filt], kal[:vfilt])
+        hamilton_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs,
+            kal[:z0], kal[:vz0])
 
     elseif forecast_smoother(m) == :koopman
         koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs,
             kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
 
     elseif forecast_smoother(m) == :carter_kohn
-        carter_kohn_smoother(regime_inds, data, TTTs, RRRs, kal[:z0], kal[:pred], kal[:vpred],
-            kal[:filt], kal[:vfilt]; draw_states = !m.testing)
+        carter_kohn_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs,
+            kal[:z0], kal[:vz0])
 
     elseif forecast_smoother(m) == :durbin_koopman
         durbin_koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs,
