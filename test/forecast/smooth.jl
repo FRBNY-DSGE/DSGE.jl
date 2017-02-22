@@ -19,14 +19,19 @@ exp_states, exp_shocks, exp_pseudo = jldopen("$path/../reference/smooth_out.jld"
 end
 
 # Call smoother and test
+states = Dict{Symbol, Matrix{Float64}}()
+shocks = Dict{Symbol, Matrix{Float64}}()
+pseudo = Dict{Symbol, Matrix{Float64}}()
+
 for smoother in [:hamilton, :koopman, :carter_kohn, :durbin_koopman]
     m <= Setting(:forecast_smoother, smoother)
 
-    states, shocks, pseudo = smooth(m, df, system, kal; draw_states = false)
+    states[smoother], shocks[smoother], pseudo[smoother] =
+        smooth(m, df, system, kal; draw_states = false)
 
-    @test_matrix_approx_eq exp_states states
-    @test_matrix_approx_eq exp_shocks shocks
-    @test_matrix_approx_eq exp_pseudo pseudo
+    @test_matrix_approx_eq exp_states states[smoother]
+    @test_matrix_approx_eq exp_shocks shocks[smoother]
+    @test_matrix_approx_eq exp_pseudo pseudo[smoother]
 end
 
 
