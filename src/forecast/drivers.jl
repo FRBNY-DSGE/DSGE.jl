@@ -402,7 +402,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     update!(m, params)
     system = compute_system(m)
     if !irfs_only
-        kal = filter(m, df, system; cond_type = cond_type, allout = true)
+        kal = filter(m, df, system; cond_type = cond_type)
     end
 
     # Initialize dictionary
@@ -410,6 +410,18 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
 
     ### 1. Smoothed Histories
+
+    # Decide whether to draw smoothed states
+    draw_states_override = smoother_draw_states_override(m)
+    draw_states = if isnull(draw_states_override)
+        if input_type in [:init, :mode, :mean]
+            true
+        elseif input_type in [:full, :subset]
+            false
+        end
+    else
+        get(draw_states_override)
+    end
 
     # Must run smoother for conditional data in addition to explicit cases
     hist_vars = [:histstates, :histpseudo, :histshocks]
@@ -421,7 +433,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     if !isempty(intersect(output_vars, smooth_vars)) || cond_type in [:semi, :full]
 
         histstates, histshocks, histpseudo, initial_states =
-            smooth(m, df, system, kal; cond_type = cond_type)
+            smooth(m, df, system, kal; cond_type = cond_type, draw_states = draw_states)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
@@ -440,6 +452,18 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     ### 2. Forecasts
 
+    # Decide whether to draw shocks
+    draw_shocks_override = forecast_draw_shocks_override(m)
+    draw_shocks = if isnull(draw_shocks_override)
+        if input_type in [:init, :mode, :mean]
+            true
+        elseif input_type in [:full, :subset]
+            false
+        end
+    else
+        get(draw_shocks_override)
+    end
+
     # 2A. Unbounded forecasts
 
     forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks]
@@ -447,7 +471,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     if !isempty(forecasts_to_compute)
         forecaststates, forecastobs, forecastpseudo, forecastshocks =
-            forecast(m, system, kal; cond_type = cond_type, enforce_zlb = false)
+            forecast(m, system, kal; cond_type = cond_type, enforce_zlb = false, draw_shocks = draw_shocks)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
@@ -471,7 +495,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     if !isempty(forecasts_to_compute)
         forecaststates, forecastobs, forecastpseudo, forecastshocks =
-            forecast(m, system, kal; cond_type = cond_type, enforce_zlb = true)
+            forecast(m, system, kal; cond_type = cond_type, enforce_zlb = true, draw_shocks = draw_shocks)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]

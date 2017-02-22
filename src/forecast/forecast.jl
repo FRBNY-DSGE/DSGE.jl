@@ -26,14 +26,18 @@ where `S<:AbstractFloat`.
 - `enforce_zlb::Bool`: whether to enforce the zero lower bound. Defaults to
   `false`.
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
-  under which to forecast. If not provided, shocks are drawn according to:
+  under which to forecast.
+- `draw_shocks::Bool`: if `isempty(shocks)`, indicates whether to draw shocks
+  according to:
 
-  1. If `forecast_killshocks(m)`, `shocks` is set to a `nshocks` x `horizon`
-     matrix of zeros
-  2. Otherwise, if `forecast_tdist_shocks(m)`, draw `horizons` many shocks from a
+  1. If `forecast_tdist_shocks(m)`, draw `horizons` many shocks from a
      `Distributions.TDist(forecast_tdist_df_val(m))`
-  3. Otherwise, draw `horizons` many shocks from a
+  2. Otherwise, draw `horizons` many shocks from a
      `DegenerateMvNormal(zeros(nshocks), sqrt(system[:QQ]))`
+
+  or to set `shocks` to a `nshocks` x `horizon` matrix of zeros. Defaults to
+  `false`. If `shocks` is provided as a keyword argument, this flag has no
+  effect.
 
 ### Outputs
 
@@ -46,7 +50,7 @@ where `S<:AbstractFloat`.
 """
 function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     kal::Kalman{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
-    shocks::Matrix{S} = Matrix{S}())
+    shocks::Matrix{S} = Matrix{S}(), draw_shocks::Bool = false)
 
     draw_z0(kal::Kalman) = rand(DegenerateMvNormal(kal[:zend], kal[:Pend]))
     z0 = if forecast_draw_z0(m)
@@ -61,7 +65,7 @@ end
 
 function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
-    shocks::Matrix{S} = Matrix{S}())
+    shocks::Matrix{S} = Matrix{S}(), draw_shocks::Bool = false)
 
     # Numbers of things
     nshocks = n_shocks_exogenous(m)
@@ -69,9 +73,7 @@ function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
 
     # Populate shocks matrix
     if isempty(shocks)
-        if forecast_kill_shocks(m)
-            shocks = zeros(S, nshocks, horizon)
-        else
+        if draw_shocks
             μ = zeros(S, nshocks)
             σ = sqrt(system[:QQ])
             dist = if forecast_tdist_shocks(m)
@@ -92,6 +94,8 @@ function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
                 ant_shock_inds = ind_ant1:ind_antn
                 shocks[ant_shock_inds, :] = 0
             end
+        else
+            shocks = zeros(S, nshocks, horizon)
         end
     end
 

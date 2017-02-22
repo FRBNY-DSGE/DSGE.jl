@@ -8,7 +8,8 @@ m = AnSchorfheide(testing = true)
 m <= Setting(:saveroot, tempdir())
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:date_conditional_end, quartertodate("2015-Q4"))
-m <= Setting(:forecast_kill_shocks, true)
+m <= Setting(:smoother_draw_states_override, Nullable(false))
+m <= Setting(:forecast_draw_shocks_override, Nullable(false))
 m <= Setting(:use_population_forecast, true)
 m <= Setting(:forecast_pseudoobservables, true)
 
@@ -55,5 +56,6 @@ for (var, mb_var) in zip(output_vars, mb_matrix_vars)
     @test_matrix_approx_eq exp_full_means[var] h5read(filename, "means")
     @test_matrix_approx_eq exp_full_bands[var] h5read(filename, "bands")
 end
+
 
 nothing

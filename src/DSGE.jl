@@ -1,13 +1,12 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-    using Base.Dates, DataFrames, Distributions, FredData, HDF5, JLD
+    using Base.Dates, DataFrames, Distributions, FredData, HDF5, JLD, Optim, StateSpaceRoutines
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
-    import Calculus
     using Roots: fzero, ConvergenceFailed
+    import Calculus
     import Optim: optimize, Optimizer
-    using Optim
 
     export
 
@@ -40,7 +39,8 @@ module DSGE
         reoptimize, calculate_hessian, hessian_path, n_hessian_test_params,
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin,
         date_forecast_start, date_forecast_end, forecast_tdist_df_val,
-        forecast_tdist_shocks, forecast_kill_shocks, forecast_smoother, forecast_draw_z0, forecast_zlb_value,
+        forecast_smoother, smoother_draw_states_override,
+        forecast_draw_z0, forecast_draw_shocks_override, forecast_zlb_value, forecast_tdist_shocks,
         forecast_block_size, forecast_start_block,
         forecast_input_file_overrides, shockdec_startdate, date_shockdec_end,
         forecast_horizons, n_shockdec_periods, impulse_response_horizons,
@@ -62,16 +62,14 @@ module DSGE
 
         # estimate/
         simulated_annealing, combined_optimizer, LBFGS_wrapper,
-        kalman_filter, kalman_filter_2part, likelihood, posterior, posterior!,
+        filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance,
         prior,
 
         # forecast/
         load_draws, forecast_one,
-        filter, filterandsmooth, smooth,
-        kalman_smoother, durbin_koopman_smoother, hamilton_smoother, carter_kohn_smoother,
-        forecast, shock_decompositions, deterministic_trends, trends, impulse_responses,
+        smooth, forecast, shock_decompositions, deterministic_trends, trends, impulse_responses,
         compute_system, add_requisite_output_vars, n_forecast_draws,
         get_forecast_input_file, get_forecast_output_files, get_forecast_filename,
         read_forecast_output,
@@ -124,6 +122,7 @@ module DSGE
     include("solve/solve.jl")
 
     include("estimate/kalman.jl")
+    include("estimate/filter.jl")
     include("estimate/posterior.jl")
     include("estimate/optimize.jl")
     include("estimate/csminwel.jl")
@@ -136,8 +135,6 @@ module DSGE
 
     include("forecast/util.jl")
     include("forecast/io.jl")
-    include("forecast/smoothers.jl")
-    include("forecast/filter.jl")
     include("forecast/smooth.jl")
     include("forecast/forecast.jl")
     include("forecast/shock_decompositions.jl")
