@@ -22,7 +22,7 @@ n_iterations = 3
 
 x0 = Float64[p.value for p in m.parameters]
 
-@time out, H = optimize!(m, data; iterations=n_iterations)
+out, H = optimize!(m, data; iterations=n_iterations)
 
 @test_matrix_approx_eq minimizer out.minimizer
 @test_approx_eq_eps minimum out.minimum 5e-7
