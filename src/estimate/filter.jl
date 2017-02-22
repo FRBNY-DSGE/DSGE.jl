@@ -78,7 +78,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::Sys
     regime_inds = zlb_regime_indices(m, data)
 
     # Get system matrices for each regime
-    TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs = zlb_regime_matrices(m, system)
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_regime_matrices(m, system)
 
     # If z0 and P0 provided, check that rows and columns corresponding to
     # anticipated shocks are zero in P0
@@ -94,7 +94,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::Sys
 
     # Run Kalman filter, construct Kalman object, and return
     out = kalman_filter(regime_inds, data, TTTs, RRRs, CCCs,
-              QQs, ZZs, DDs, MMs, EEs, z0, P0;
+              QQs, ZZs, DDs, EEs, z0, P0;
               likelihood_only = likelihood_only,
               n_presample_periods = T0)
 

@@ -123,12 +123,16 @@ end
 zlb_regime_matrices(m, system)
 ```
 
-Returns `TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs`, an 8-tuple of
+Returns `TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs`, an 8-tuple of
 `Vector{Matrix{S}}`s and `Vector{Vector{S}}`s of system matrices for the pre-
 and post-ZLB regimes. Of these, only `QQ` changes from pre- to post-ZLB: the
 entries corresponding to anticipated shock variances are zeroed out pre-ZLB.
 """
 function zlb_regime_matrices{S<:AbstractFloat}(m::AbstractModel{S}, system::System{S})
+    if !all(x -> x == 0, system[:MM])
+        error("Kalman filter and smoothers not implemented for nonzero MM")
+    end
+
     if n_anticipated_shocks(m) > 0
         n_regimes = 2
 
@@ -148,8 +152,7 @@ function zlb_regime_matrices{S<:AbstractFloat}(m::AbstractModel{S}, system::Syst
     CCCs = fill(system[:CCC], n_regimes)
     ZZs  = fill(system[:ZZ], n_regimes)
     DDs  = fill(system[:DD], n_regimes)
-    MMs  = fill(system[:MM], n_regimes)
     EEs  = fill(system[:EE], n_regimes)
 
-    return TTTs, RRRs, CCCs, QQs, ZZs, DDs, MMs, EEs
+    return TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs
 end
