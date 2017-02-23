@@ -316,12 +316,13 @@ function forecast_one(m::AbstractModel{Float64},
                 block_time = toq()
                 total_forecast_time += block_time
                 total_forecast_time_min     = total_forecast_time/60
-                expected_time_remaining     = (total_forecast_time/block)*(nblocks - block)
+                blocks_elapsed              = block - start_block + 1
+                expected_time_remaining     = (total_forecast_time/blocks_elapsed)*(nblocks - block)
                 expected_time_remaining_min = expected_time_remaining/60
 
                 println("\nCompleted $block of $nblocks blocks.")
-                println("Total time to compute $block blocks: $total_forecast_time_min minutes")
-                println("Expected time remaining in forecast: $expected_time_remaining_min minutes")
+                println("Total time elapsed: $total_forecast_time_min minutes")
+                println("Expected time remaining: $expected_time_remaining_min minutes")
             end
         end # of loop through blocks
 
