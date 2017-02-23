@@ -281,7 +281,7 @@ period. For shockdecs, this is one period before
 the presample.
 """
 function get_y0_index(m::AbstractModel, product::Symbol)
-    if product in [:forecast, :bddforecast, :forecast4q, :bddforecast4q, :forecastq4q4, :bddforecastq4q4]
+    if product in [:forecast, :bddforecast]
         return index_forecast_start(m) - 1
     elseif product in [:forecast4q, :bddforecast4q]
         # We subtract 4 because there is 1 transform that actually
