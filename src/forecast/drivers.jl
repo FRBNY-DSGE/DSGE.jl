@@ -431,7 +431,8 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     smooth_vars = vcat(hist_vars, shockdec_vars, dettrend_vars)
     hists_to_compute = intersect(output_vars, hist_vars)
 
-    if !isempty(intersect(output_vars, smooth_vars)) || cond_type in [:semi, :full]
+    if !isempty(intersect(output_vars, smooth_vars)) ||
+        (cond_type in [:semi, :full] && !irfs_only)
 
         histstates, histshocks, histpseudo, initial_states =
             smooth(m, df, system, kal; cond_type = cond_type, draw_states = draw_states)
