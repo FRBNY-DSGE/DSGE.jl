@@ -21,10 +21,6 @@ function get_product(s::Symbol)
         :bddforecast4q
     elseif contains(string(s), "forecast4q")
         :forecast4q
-    elseif contains(string(s), "bddforecastq4q4")
-        :bddforecastq4q4
-    elseif contains(string(s), "forecastq4q4")
-        :forecastq4q4
     elseif contains(string(s), "bddforecast")
         :bddforecast
     elseif contains(string(s), "forecast")
