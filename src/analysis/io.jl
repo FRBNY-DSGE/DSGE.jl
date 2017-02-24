@@ -69,7 +69,7 @@ end
 
 """
 ```
-get_meansbands_input_files(m, input_type, cond_type, output_vars;
+get_meansbands_output_files(m, input_type, cond_type, output_vars;
                                     [forecast_string = ""], [fileformat = :jld])
 ```
 
