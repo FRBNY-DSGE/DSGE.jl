@@ -183,9 +183,9 @@ function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, input_type:
 
     for var in output_vars
         prod = get_product(var)
-        if prod in [:forecast4q, :bddforecast4q, :forecastq4q4, :bddforecastq4q4]
-            # these are computed and saved in means and bands, not
-            # during the forecast itself.
+        if prod in [:forecast4q, :bddforecast4q]
+            # These are computed and saved in means and bands, not
+            # during the forecast itself
             continue
         end
         filepath = forecast_output_files[var]
@@ -292,9 +292,9 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     end
 
     # Write shock names and transforms
-    if class == :shock || prod in [:shockdec, :irf]
+    if class in [:shock, :stdshock] || prod in [:shockdec, :irf]
         write(file, "shock_indices", m.exogenous_shocks)
-        if class == :shock
+        if class in [:shock, :stdshock]
             rev_transforms = Dict{Symbol,Symbol}([x => symbol("DSGE.identity") for x in keys(m.exogenous_shocks)])
         end
         write(file, "shock_revtransforms", rev_transforms)

@@ -226,6 +226,23 @@ end
 
 """
 ```
+standardize_shocks(shocks, QQ)
+```
+
+Normalize shocks by their standard deviations. Shocks with zero standard
+deviation will be set to zero.
+"""
+function standardize_shocks{T<:AbstractFloat}(shocks::Matrix{T}, QQ::Matrix{T})
+    stdshocks = shocks ./ sqrt(diag(QQ))
+
+    zeroed_shocks = find(diag(QQ) .== 0)
+    stdshocks[zeroed_shocks, :] = 0
+
+    return stdshocks
+end
+
+"""
+```
 assemble_block_outputs(dicts)
 ```
 
@@ -269,7 +286,7 @@ function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_v
         n_observables(m)
     elseif class == :pseudo
         n_pseudoobservables(m)
-    elseif class == :shock
+    elseif class in [:shock, :stdshock]
         n_shocks_exogenous(m)
     end
 

@@ -425,7 +425,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     end
 
     # Must run smoother for conditional data in addition to explicit cases
-    hist_vars = [:histstates, :histpseudo, :histshocks]
+    hist_vars = [:histstates, :histpseudo, :histshocks, :histstdshocks]
     shockdec_vars = [:shockdecstates, :shockdecpseudo, :shockdecobs]
     dettrend_vars = [:dettrendstates, :dettrendpseudo, :dettrendobs]
     smooth_vars = vcat(hist_vars, shockdec_vars, dettrend_vars)
@@ -449,6 +449,11 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
             forecast_output[:histshocks] = histshocks
             forecast_output[:histpseudo] = histpseudo
         end
+
+        # Standardize shocks if desired
+        if :histstdshocks in output_vars
+            forecast_output[:histstdshocks] = standardize_shocks(forecast_output[:histshocks], system[:QQ])
+        end
     end
 
 
@@ -468,7 +473,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     # 2A. Unbounded forecasts
 
-    forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks]
+    forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks, :forecaststdshocks]
     forecasts_to_compute = intersect(output_vars, forecast_vars)
 
     if !isempty(forecasts_to_compute)
@@ -487,12 +492,17 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
             forecast_output[:forecastpseudo] = forecastpseudo
             forecast_output[:forecastobs]    = forecastobs
         end
+
+        # Standardize shocks if desired
+        if :forecaststdshocks in output_vars
+            forecast_output[:forecaststdshocks] = standardize_shocks(forecast_output[:forecastshocks], system[:QQ])
+        end
     end
 
 
     # 2B. Bounded forecasts
 
-    forecast_vars_bdd = [:bddforecaststates, :bddforecastobs, :bddforecastpseudo, :bddforecastshocks]
+    forecast_vars_bdd = [:bddforecaststates, :bddforecastobs, :bddforecastpseudo, :bddforecastshocks, :bddforecaststdshocks]
     forecasts_to_compute = intersect(output_vars, forecast_vars_bdd)
 
     if !isempty(forecasts_to_compute)
@@ -510,6 +520,11 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
             forecast_output[:bddforecastshocks] = forecastshocks
             forecast_output[:bddforecastpseudo] = forecastpseudo
             forecast_output[:bddforecastobs]    = forecastobs
+        end
+
+        # Standardize shocks if desired
+        if :bddforecaststdshocks in output_vars
+            forecast_output[:bddforecaststdshocks] = standardize_shocks(forecast_output[:bddforecastshocks], system[:QQ])
         end
     end
 

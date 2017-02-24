@@ -289,8 +289,7 @@ function means_bands{T<:AbstractFloat}(input_type::Symbol,
 
     ## Step 3: Compute means and bands
 
-    if product in [:hist, :forecast, :dettrend, :trend, :forecast4q,
-                                  :bddforecast, :bddforecast4q]
+    if product in [:hist, :forecast, :dettrend, :trend, :forecast4q, :bddforecast, :bddforecast4q]
 
         # Get to work!
         mb_vec = pmap(var_name -> compute_means_bands(class, product, var_name, forecast_output_file;

@@ -201,7 +201,7 @@ function get_key(m::AbstractModel, class::Symbol, index::Int)
     elseif class == :pseudo
         _, pseudo_mapping = pseudo_measurement(m)
         pseudo_mapping.inds
-    elseif class == :shock
+    elseif class in [:shock, :stdshock]
         m.exogenous_shocks
     else
         throw(ArgumentError("Invalid class :$class. Must be :state, :obs, :pseudo, or :shock"))

@@ -9,6 +9,8 @@ function get_class(s::Symbol)
         :obs
     elseif contains(string(s), "state")
         :state
+    elseif contains(string(s), "stdshock")
+        :stdshock
     elseif contains(string(s), "shock")
         :shock
     end
@@ -43,7 +45,7 @@ function get_class_longname(class::Symbol)
         :observable
     elseif class == :state
         :state
-    elseif class == :shock
+    elseif class in [:shock, :stdshock]
         :shock
     end
 end
