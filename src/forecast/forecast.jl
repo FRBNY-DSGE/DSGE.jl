@@ -60,7 +60,7 @@ function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     end
 
     forecast(m, system, z0; cond_type = cond_type, enforce_zlb = enforce_zlb,
-                     shocks = shocks)
+                     shocks = shocks, draw_shocks = draw_shocks)
 end
 
 function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
