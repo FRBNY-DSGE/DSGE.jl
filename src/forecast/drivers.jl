@@ -416,9 +416,9 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     draw_states_override = smoother_draw_states_override(m)
     draw_states = if isnull(draw_states_override)
         if input_type in [:init, :mode, :mean]
-            true
-        elseif input_type in [:full, :subset]
             false
+        elseif input_type in [:full, :subset]
+            true
         end
     else
         get(draw_states_override)
@@ -458,9 +458,9 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     draw_shocks_override = forecast_draw_shocks_override(m)
     draw_shocks = if isnull(draw_shocks_override)
         if input_type in [:init, :mode, :mean]
-            true
-        elseif input_type in [:full, :subset]
             false
+        elseif input_type in [:full, :subset]
+            true
         end
     else
         get(draw_shocks_override)
