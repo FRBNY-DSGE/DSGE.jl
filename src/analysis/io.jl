@@ -253,7 +253,7 @@ function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands, 
     fullfilename = DSGE.savepath(dirname, filename, filestring_base, filestring_addl)
 
     # Extract dataframe
-    df = if prod in [:hist, :forecast, :forecast4q, :bddforecast, :bddforecast4q]
+    df = if prod in [:hist, :forecast, :forecast4q, :bddforecast, :bddforecast4q, :trend]
         prepare_meansbands_table_timeseries(mb, var)
     elseif prod in [:shockdec]
         @assert !isempty(mb_trend)    "Please pass in mb_trend"
@@ -261,7 +261,6 @@ function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands, 
 
         prepare_means_table_shockdec(mb, mb_trend, mb_dettrend, var, shocks = shocks,
                                      mb_forecast = mb_forecast, mb_hist = mb_hist)
-
     end
 
     # Write to file
@@ -350,7 +349,8 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
 
         class = get_class(output)
 
-        df = if output in [:histpseudo, :histobs, :forecastpseudo, :forecastobs]
+        df = if output in [:histpseudo, :histobs, :forecastpseudo, :forecastobs,
+                           :trendpseudo, :trendobs]
 
             write_meansbands_tables(m, mbs[output], vars = vars)
 

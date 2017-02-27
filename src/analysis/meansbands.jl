@@ -523,7 +523,8 @@ lower, 50\% lower, 50\% upper, 68\% upper, mean].
 """
 function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol)
 
-    @assert get_product(mb) in [:hist, :forecast, :forecast4q, :bddforecast, :bddforecast4q] "prepare_meansbands_table_timeseries can only be used for time-series products"
+    @assert get_product(mb) in [:hist, :forecast, :forecast4q, :bddforecast,
+         :bddforecast4q, :trend] "prepare_meansbands_table_timeseries can only be used for time-series products"
 
     @assert var in get_vars_means(mb) "$var is not stored in this MeansBands object"
 
