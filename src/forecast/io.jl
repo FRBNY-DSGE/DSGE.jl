@@ -179,6 +179,7 @@ function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, input_type:
                                 forecast_output::Dict{Symbol, Array{Float64}};
                                 block_number::Nullable{Int64} = Nullable{Int64}(),
                                 block_inds::Range{Int64} = 1:0,
+                                subset_inds::Range{Int64} = 1:0,
                                 verbose::Symbol = :low)
 
     for var in output_vars
@@ -195,7 +196,7 @@ function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, input_type:
 
                 if !isnull(block_number) && get(block_number) == 1
                     # Determine forecast output size
-                    dims  = get_forecast_output_dims(m, input_type, var)
+                    dims  = get_forecast_output_dims(m, input_type, var; subset_inds = subset_inds)
                     block_size = forecast_block_size(m)
                     chunk_dims = collect(dims)
                     chunk_dims[1] = block_size

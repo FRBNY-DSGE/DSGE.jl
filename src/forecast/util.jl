@@ -269,14 +269,15 @@ get_forecast_output_dims(m, input_type, output_var)
 Returns the dimension of the forecast output specified by `input_type` and
 `output_var`.
 """
-function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_var::Symbol)
+function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_var::Symbol;
+                                  subset_inds::Range{Int64} = 1:0)
     prod  = get_product(output_var)
     class = get_class(output_var)
 
     ndraws = if input_type in [:mode, :mean, :init]
         1
     elseif input_type in [:full, :subset]
-        _, block_inds_thin = forecast_block_inds(m, input_type)
+        _, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
         sum(map(length, block_inds_thin))
     end
 
