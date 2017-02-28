@@ -52,7 +52,9 @@ function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     kal::Kalman{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
     shocks::Matrix{S} = Matrix{S}(), draw_shocks::Bool = false)
 
-    draw_z0(kal::Kalman) = rand(DegenerateMvNormal(kal[:zend], sqrt(kal[:Pend])))
+    Nz = size(system[:TTT],1)
+    U, eig, _ = svd(kal[:Pend])
+    draw_z0(kal::Kalman) = U * diagm(sqrt(eig)) * randn(Nz) + kal[:zend]
     z0 = if forecast_draw_z0(m)
         draw_z0(kal)
     else
