@@ -167,16 +167,21 @@ end
 
 """
 ```
-write_forecast_outputs(m, output_vars, forecast_output_files, forecast_output; verbose = :low)
+write_forecast_outputs(m, output_vars, forecast_output_files, forecast_output;
+    df = DataFrame(), block_number = Nullable{Int64}(), block_inds = 1:0,
+    verbose = :low)
 ```
 
 Writes the elements of `forecast_output` indexed by `output_vars` to file, given
 `forecast_output_files`, which maps `output_vars` to file names.
+
+If `output_vars` contains `:histobs`, data must be passed in as `df`.
 """
 function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, input_type::Symbol,
                                 output_vars::Vector{Symbol},
                                 forecast_output_files::Dict{Symbol, S},
                                 forecast_output::Dict{Symbol, Array{Float64}};
+                                df::DataFrame = DataFrame(),
                                 block_number::Nullable{Int64} = Nullable{Int64}(),
                                 block_inds::Range{Int64} = 1:0,
                                 subset_inds::Range{Int64} = 1:0,
@@ -194,25 +199,38 @@ function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, input_type:
             jldopen(filepath, "w") do file
                 write_forecast_metadata(m, file, var)
 
-                if !isnull(block_number) && get(block_number) == 1
-                    # Determine forecast output size
-                    dims  = get_forecast_output_dims(m, input_type, var; subset_inds = subset_inds)
-                    block_size = forecast_block_size(m)
-                    chunk_dims = collect(dims)
-                    chunk_dims[1] = block_size
+                if var == :histobs
+                    # :histobs just refers to data, so we only write one draw
+                    # (as all draws would be the same)
+                    @assert !isempty(df) "df cannot be empty if trying to write :histobs"
+                    data = df_to_matrix(m, df; include_presample = false)
+                    write(file, "arr", data)
 
-                    # Initialize dataset
-                    pfile = file.plain
-                    dataset = HDF5.d_create(pfile, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
+                else
+                    # Otherwise, pre-allocate HDF5 dataset which will contain
+                    # all draws
+                    if !isnull(block_number) && get(block_number) == 1
+                        # Determine forecast output size
+                        dims  = get_forecast_output_dims(m, input_type, var)
+                        block_size = forecast_block_size(m)
+                        chunk_dims = collect(dims)
+                        chunk_dims[1] = block_size
+
+                        # Initialize dataset
+                        pfile = file.plain
+                        HDF5.d_create(pfile, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
+                    end
                 end
             end
         end
 
-        jldopen(filepath, "r+") do file
-            if isnull(block_number)
-                write(file, "arr", forecast_output[var])
-            else
-                write_forecast_block(file, forecast_output[var], block_inds)
+        if var != :histobs
+            jldopen(filepath, "r+") do file
+                if isnull(block_number)
+                    write(file, "arr", forecast_output[var])
+                else
+                    write_forecast_block(file, forecast_output[var], block_inds)
+                end
             end
         end
 

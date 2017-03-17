@@ -257,7 +257,7 @@ function forecast_one(m::AbstractModel{Float64},
                                             params, df, verbose = verbose)
 
         write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
-                               forecast_output; block_number = Nullable{Int64}(),
+                               forecast_output; df = df, block_number = Nullable{Int64}(),
                                verbose = verbose)
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -307,7 +307,7 @@ function forecast_one(m::AbstractModel{Float64},
             # Assemble outputs from this block and write to file
             forecast_output = assemble_block_outputs(forecast_outputs)
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
-                                   forecast_output; block_number = Nullable(block),
+                                   forecast_output; df = df, block_number = Nullable(block),
                                    verbose = block_verbose, block_inds = block_inds_thin[block],
                                    subset_inds = subset_inds)
             gc()
