@@ -367,18 +367,23 @@ end
 
 """
 ```
-df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
+df_to_matrix(m, df; cond_type = :none, include_presample = true)
 ```
 
 Return `df`, converted to matrix of floats, and discard date column. Also ensure data are
 sorted by date and that rows outside of sample are discarded. The output of this function is
 suitable for direct use in `estimate`, `posterior`, etc.
 """
-function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
+function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none,
+                      include_presample::Bool = true)
     # Sort rows by date and discard rows outside of sample
     df1 = sort(df; cols=[:date])
 
-    start_date = date_presample_start(m)
+    start_date = if include_presample
+        date_presample_start(m)
+    else
+        date_mainsample_start(m)
+    end
     end_date   = if cond_type in [:semi, :full]
         date_conditional_end(m)
     else
