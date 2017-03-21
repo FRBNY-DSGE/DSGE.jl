@@ -280,7 +280,7 @@ function loglevelto4qpct_annualized{T<:AbstractFloat}(y::Array, y0::T)
     # `y_t1` is an array of the same size as `y`, representing the previous
     # period observations for each draw
     if ndims(y) == 1
-        y_t1 = vcat([y0], y)
+        y_t1 = vcat([y0], y[1:end-1])
     else
         ndraws = size(y, 1)
         y0s  = fill(y0, ndraws, 1)
@@ -322,7 +322,7 @@ function loglevelto4qpct_annualized_percapita{T<:AbstractFloat}(y::Array, y0::T,
     # period observations for each draw
     if ndims(y) == 1
         nperiods = length(y)
-        y_t1 = vcat([y0], y)
+        y_t1 = vcat([y0], y[1:end-1])
     else
         (ndraws, nperiods) = size(y)
         y0s  = fill(y0, ndraws, 1)
