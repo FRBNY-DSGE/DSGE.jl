@@ -88,7 +88,7 @@ module DSGE
         hpadjust, oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
         logtopct_annualized_percapita, logtopct_annualized, loglevelto4qpct_annualized_percapita,
         loglevelto4qpct_annualized,
-        parse_data_series, collect_data_transforms,
+        parse_data_series, collect_data_transforms, reverse_transform,
         subtract_quarters, iterate_quarters,
 
         # analysis/
@@ -116,6 +116,7 @@ module DSGE
     include("data/fred_data.jl")
     include("data/transformations.jl")
     include("data/transform_data.jl")
+    include("data/reverse_transform.jl")
     include("data/util.jl")
 
     include("solve/gensys.jl")
