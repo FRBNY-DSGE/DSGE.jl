@@ -406,7 +406,7 @@ function compute_means_bands{T<:AbstractFloat}(class::Symbol,
             # we use y0_index+1 when we want to sum the last 4 periods
             hist_data = squeeze(data[var_ind, y0_index+1:end],1)
             transform4q(fcast_series, hist_data, population_series)
-        elseif transform4q in [loglevelto4qpct_4q_percapita]
+        elseif transform4q in [logleveltopct_4q_percapita]
             # we use y0_index for computing growth rates
             hist_data = squeeze(data[var_ind, y0_index:end],1)
             transform4q(fcast_series, hist_data, population_series)
@@ -424,7 +424,7 @@ function compute_means_bands{T<:AbstractFloat}(class::Symbol,
     else
         transformed_series = if transform in [logtopct_annualized_percapita]
             transform(fcast_series, population_series)
-        elseif transform in [loglevelto4qpct_annualized_percapita]
+        elseif transform in [logleveltopct_annualized_percapita]
             hist_data = data[var_ind, y0_index]
             transform(fcast_series, hist_data, population_series)
         else

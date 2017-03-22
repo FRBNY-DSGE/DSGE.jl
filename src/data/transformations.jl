@@ -256,7 +256,7 @@ end
 
 """
 ```
-loglevelto4qpct_annualized(y, y0)
+logleveltopct_annualized(y, y0)
 ```
 
 Transform from log level to 4-quarter annualized percent change
@@ -276,7 +276,7 @@ probably shouldn't be used for any other observables.
   corresponding to the `y` variable.  This is required to compute a percentage
   change for the first period.
 """
-function loglevelto4qpct_annualized{T<:AbstractFloat}(y::Array, y0::T)
+function logleveltopct_annualized{T<:AbstractFloat}(y::Array, y0::T)
     # `y_t1` is an array of the same size as `y`, representing the previous
     # period observations for each draw
     if ndims(y) == 1
@@ -294,7 +294,7 @@ end
 
 """
 ```
-loglevelto4qpct_annualized_percapita(y, y0, pop_growth)
+logleveltopct_annualized_percapita(y, y0, pop_growth)
 ```
 
 Transform from log level to 4-quarter annualized percent change, adjusting for
@@ -317,7 +317,7 @@ probably shouldn't be used for any other observables.
 
 - `pop_growth::Vector`: The length `nperiods` vector of population growth rates.
 """
-function loglevelto4qpct_annualized_percapita{T<:AbstractFloat}(y::Array, y0::T, pop_growth::Vector)
+function logleveltopct_annualized_percapita{T<:AbstractFloat}(y::Array, y0::T, pop_growth::Vector)
     # `y_t1` is an array of the same size as `y`, representing the previous
     # period observations for each draw
     if ndims(y) == 1
@@ -352,8 +352,8 @@ function get_transform4q(transform::Function)
         logtopct_4q_percapita
     elseif transform == logtopct_annualized
         logtopct_4q
-    elseif transform == loglevelto4qpct_annualized_percapita
-        loglevelto4qpct_4q_percapita
+    elseif transform == logleveltopct_annualized_percapita
+        logleveltopct_4q_percapita
     elseif transform == quartertoannual
         quartertoannual
     elseif transform == identity
@@ -434,7 +434,7 @@ end
 
 """
 ```
-loglevelto4qpct_4q_percapita(y, y0, pop_growth, q_adj)
+logleveltopct_4q_percapita(y, y0, pop_growth, q_adj)
 ```
 
 Transform from log level to 4-quarter percent change, adjusting for
@@ -457,7 +457,7 @@ probably shouldn't be used for any other observables.
 
 - `pop_growth::Vector`: The length `nperiods` vector of population growth rates.
 """
-function loglevelto4qpct_4q_percapita{T<:AbstractFloat}(y::Array, data::Vector, pop_growth::Vector, q_adj::T = 100.)
+function logleveltopct_4q_percapita{T<:AbstractFloat}(y::Array, data::Vector, pop_growth::Vector, q_adj::T = 100.)
 
     # `y_t4` is an array of the same size as `y`, representing the t-4
     # period observations for each draw
