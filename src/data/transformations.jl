@@ -466,7 +466,7 @@ Transform from log levels to 4-quarter percent change.
   `data = [y_{t-4}, y_{t-3}, y_{t-2}, y_{t-1}]`. This is necessary to compute
   4-quarter percent changes for the first three periods.
 """
-function logleveltopct_4q{T<:AbstractFloat}(y::Array, data::Vector)
+function logleveltopct_4q(y::Array, data::Vector)
     @assert length(data) == 4 "Length of data ($(length(data))) must be 4"
 
     # `y_t4` is an array of the same size as `y`, representing the t-4
@@ -510,7 +510,7 @@ be used for any other observables.
 - `pop_growth::Vector`: the length `nperiods` vector of log population growth
   rates.
 """
-function logleveltopct_4q_percapita{T<:AbstractFloat}(y::Array, data::Vector, pop_growth::Vector)
+function logleveltopct_4q_percapita(y::Array, data::Vector, pop_growth::Vector)
     @assert length(data) == 4 "Length of data ($(length(data))) must be 4"
 
     # Four-quarter population growth

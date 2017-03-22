@@ -166,7 +166,7 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
                                                          mnemonic)
     end
 
-    population_insample = if population_data[1, :date] < start_date < population_data[end, :date]
+    population_insample = if population_data[1, :date] <= start_date <= population_data[end, :date]
         if population_data[1, :date] < end_date < population_data[end, :date]
             # Dates entirely in past
             population_data[start_date .<= population_data[:, :date] .<= end_date, :]
@@ -178,7 +178,7 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
             vcat(data, fcast)
         end
 
-    elseif population_forecast[1, :date] < start_date < population_forecast[end, :date]
+    elseif population_forecast[1, :date] <= start_date <= population_forecast[end, :date]
         # Dates entirely in forecast
         population_forecast[start_date .<= population_forecast[:, :date] .<= end_date, :]
 

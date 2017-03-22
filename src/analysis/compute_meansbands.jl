@@ -399,37 +399,29 @@ function compute_means_bands{T<:AbstractFloat}(class::Symbol,
         fcast_series = repeat(fcast_series, outer = [1, length(date_list)])
     end
 
+    # Do we want to use the data for y0 and y0s?
+    use_data = class == :obs && product != :irf
+
     if product in [:forecast4q, :bddforecast4q]
         transform4q = get_transform4q(transform)
 
-        transformed_series = if transform4q in [loggrowthtopct_4q_percapita]
-            # we use y0_index+1 when we want to sum the last 4 periods
-            hist_data = squeeze(data[var_ind, y0_index+1:end],1)
-            transform4q(fcast_series, hist_data, population_series)
-        elseif transform4q in [logleveltopct_4q_percapita]
-            # we use y0_index for computing growth rates
-            hist_data = squeeze(data[var_ind, y0_index:end],1)
-            transform4q(fcast_series, hist_data, population_series)
-        elseif transform4q in [loggrowthtopct_4q]
-            # we use y0_index+1 when we want to sum the last 4 periods
-            hist_data = squeeze(data[var_ind, y0_index+1:end], 1)
-            transform4q(fcast_series, hist_data)
-        elseif transform4q in [quartertoannual]
-            transform4q(fcast_series)
-        elseif transform4q in [identity]
-            fcast_series
+        y0s = if transform4q in [loggrowthtopct_4q_percapita, loggrowthtopct_4q]
+            # Sum growth rates y_{t-3}, y_{t-2}, y_{t-1}, and y_t
+            use_data ? squeeze(data[var_ind, y0_index+1:end], 1) : fill(NaN, 3)
+        elseif transform4q in [logleveltopct_4q_percapita, logleveltopct_4q]
+            # Divide log levels y_t by y_{t-4}
+            use_data ? squeeze(data[var_ind, y0_index:end], 1) : fill(NaN, 4)
         else
-            error("Please provide an invocation for $transform4q in $(@__FILE__())")
+            Vector{T}()
         end
+
+        transformed_series = reverse_transform(fcast_series, transform4q;
+                                               fourquarter = true,
+                                               y0s = y0s, pop_growth = population_series)
     else
-        transformed_series = if transform in [loggrowthtopct_annualized_percapita]
-            transform(fcast_series, population_series)
-        elseif transform in [logleveltopct_annualized_percapita]
-            hist_data = data[var_ind, y0_index]
-            transform(fcast_series, hist_data, population_series)
-        else
-            transform(fcast_series)
-        end
+        y0 = use_data ? data[var_ind, y0_index] : NaN
+        transformed_series = reverse_transform(fcast_series, transform;
+                                               y0 = y0, pop_growth = population_series)
     end
 
     means = vec(mean(transformed_series, 1))

@@ -1,21 +1,21 @@
 """
 ```
-reverse_transform(m, untransformed, class; verbose = :low)
+reverse_transform(m, untransformed, class; fourquarter = false, verbose = :low)
 
-reverse_transform(series, rev_transform; data_series = [],
-    population_series = [], y0_index = -1))
+reverse_transform(y, rev_transform; fourquarter = false, y0 = NaN, y0s = [],
+    pop_growth = [])
 ```
 
 The first method takes a dated `DataFrame` of series in model units. It uses the
-model object to load data and population data, as well as look up the
-appropriate reverse transformations for each series. It returns a `DataFrame` of
-the transformed series.
+model object to load population data, as well as look up the appropriate reverse
+transformations for each series. It returns a `DataFrame` of the transformed
+series.
 
 The second method takes a single series and reverse transformation, applies it,
 and returns a vector.
 """
 function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Symbol;
-                           verbose::Symbol = :low)
+                           fourquarter::Bool = false, verbose::Symbol = :low)
     # Dates
     @assert (:date in names(untransformed)) "untransformed must have a date column"
     date_list  = convert(Vector{Date}, untransformed[:date])
@@ -31,23 +31,16 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
         error("Class $class does not have reverse transformations")
     end
 
-    # Load data
-    data = load_data(m; verbose = verbose)
-
     # Prepare population series
-    population_mnemonic = DSGE.parse_population_mnemonic(m)[1]
+    population_mnemonic = parse_population_mnemonic(m)[1]
     vint = data_vintage(m)
     population_data_file     = inpath(m, "data", "population_data_levels_$vint.csv")
     population_forecast_file = inpath(m, "data", "population_forecast_$vint.csv")
     population_data, population_forecast =
-        DSGE.load_population_growth(population_data_file, population_forecast_file,
+        load_population_growth(population_data_file, population_forecast_file,
                                get(population_mnemonic); verbose = verbose)
-    population_series = DSGE.get_population_series(:population_growth, population_data,
+    population_series = get_population_series(:population_growth, population_data,
                                               population_forecast, start_date, end_date)
-
-    # Calculate y0 index
-    y0_date  = iterate_quarters(start_date, -1)
-    y0_index = findfirst(data[:date], y0_date)
 
     # Apply reverse transform
     transformed = DataFrame()
@@ -55,30 +48,52 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
 
     var_names = setdiff(names(untransformed), [:date])
     for var in var_names
-        rev_transform = dict[var].rev_transform
         y = convert(Vector{Float64}, untransformed[var])
-        y0 = if y0_index > 0 && class == :obs
-            data[y0_index, var]
-        else
-            NaN
+        rev_transform = dict[var].rev_transform
+        if fourquarter
+            rev_transform = get_transform4q(rev_transform)
         end
-
-        transformed[var] = reverse_transform(y, rev_transform;
-                               y0 = y0, pop_growth = population_series)
+        transformed[var] = reverse_transform(y, rev_transform; fourquarter = fourqarter,
+                                             pop_growth = population_series)
     end
     return transformed
 end
 
-function reverse_transform{T<:AbstractFloat}(y, rev_transform::Function;
-                                             y0::T = NaN,
-                                             pop_growth::Vector{T} = Vector{T}(),
-                                             y0_index::Int = -1)
-
-    if rev_transform in [loggrowthtopct_annualized_percapita]
-        rev_transform(y, pop_growth)
-    elseif rev_transform in [logleveltopct_annualized_percapita]
-        rev_transform(y, y0, pop_growth)
+function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Function;
+                                             fourquarter::Bool = false,
+                                             y0::T = NaN, y0s::Vector{T} = Vector{T}(),
+                                             pop_growth::Vector{T} = Vector{T}())
+    if fourquarter
+        if rev_transform in [loggrowthtopct_4q_percapita, loggrowthtopct_4q]
+            # Sum growth rates y_{t-3}, y_{t-2}, y_{t-1}, and y_t
+            y0s = isempty(y0s) ? fill(NaN, 3) : y0s
+            if rev_transform == loggrowthtopct_4q_percapita
+                rev_transform(y, y0s, pop_growth)
+            else
+                rev_transform(y, y0s)
+            end
+        elseif rev_transform in [logleveltopct_4q_percapita, logleveltopct_4q]
+            # Divide log levels y_t by y_{t-4}
+            y0s = isempty(y0s) ? fill(NaN, 4) : y0s
+            if rev_transform == logleveltopct_4q_percapita
+                rev_transform(y, y0s, pop_growth)
+            else
+                rev_transform(y, y0s)
+            end
+        elseif rev_transform in [quartertoannual, identity]
+            rev_transform(y)
+        else
+            error("Invalid 4-quarter reverse transform: $rev_transform")
+        end
     else
-        rev_transform(y)
+        if rev_transform in [loggrowthtopct_annualized_percapita]
+            rev_transform(y, pop_growth)
+        elseif rev_transform in [logleveltopct_annualized_percapita]
+            rev_transform(y, y0, pop_growth)
+        elseif rev_transform in [loggrowthtopct_annualized, logleveltopct_annualized, quartertoannual, identity]
+            rev_transform(y)
+        else
+            error("Invalid reverse transform: $rev_transform")
+        end
     end
 end
