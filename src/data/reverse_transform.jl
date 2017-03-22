@@ -1,6 +1,6 @@
 """
 ```
-reverse_transform(m, untransformed, class, product; verbose = :low)
+reverse_transform(m, untransformed, class; verbose = :low)
 
 reverse_transform(series, rev_transform; data_series = [],
     population_series = [], y0_index = -1))
@@ -14,11 +14,13 @@ the transformed series.
 The second method takes a single series and reverse transformation, applies it,
 and returns a vector.
 """
-function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Symbol, product::Symbol;
+function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Symbol;
                            verbose::Symbol = :low)
     # Dates
     @assert (:date in names(untransformed)) "untransformed must have a date column"
-    date_list = convert(Vector{Date}, untransformed[:date])
+    date_list  = convert(Vector{Date}, untransformed[:date])
+    start_date = date_list[1]
+    end_date   = date_list[end]
 
     # Get mapping from variable name to Observable or PseudoObservable instance
     if class == :obs
@@ -40,38 +42,43 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     population_data, population_forecast =
         DSGE.load_population_growth(population_data_file, population_forecast_file,
                                get(population_mnemonic); verbose = verbose)
-    population_series = DSGE.get_mb_population_series(product, :population_growth, population_data,
-                                                 population_forecast, date_list)
+    population_series = DSGE.get_population_series(:population_growth, population_data,
+                                              population_forecast, start_date, end_date)
+
+    # Calculate y0 index
+    y0_date  = iterate_quarters(start_date, -1)
+    y0_index = findfirst(data[:date], y0_date)
 
     # Apply reverse transform
     transformed = DataFrame()
     transformed[:date] = untransformed[:date]
-    y0_index = DSGE.get_y0_index(m, product)
 
     var_names = setdiff(names(untransformed), [:date])
     for var in var_names
-        series = convert(Vector{Float64}, untransformed[var])
         rev_transform = dict[var].rev_transform
-        data_series = convert(Vector{Float64}, data[var])
+        y = convert(Vector{Float64}, untransformed[var])
+        y0 = if y0_index > 0 && class == :obs
+            data[y0_index, var]
+        else
+            NaN
+        end
 
-        transformed[var] = reverse_transform(series, rev_transform;
-                               data_series = data_series,
-                               population_series = population_series,
-                               y0_index = y0_index)
+        transformed[var] = reverse_transform(y, rev_transform;
+                               y0 = y0, pop_growth = population_series)
     end
     return transformed
 end
 
-function reverse_transform{T<:AbstractFloat}(series, rev_transform::Function;
-                                             data_series::Vector{T} = Vector{T}(),
-                                             population_series::Vector{T} = Vector{T}(),
+function reverse_transform{T<:AbstractFloat}(y, rev_transform::Function;
+                                             y0::T = NaN,
+                                             pop_growth::Vector{T} = Vector{T}(),
                                              y0_index::Int = -1)
 
     if rev_transform in [loggrowthtopct_annualized_percapita]
-        rev_transform(series, population_series)
+        rev_transform(y, pop_growth)
     elseif rev_transform in [logleveltopct_annualized_percapita]
-        rev_transform(series, data_series[y0_index], population_series)
+        rev_transform(y, y0, pop_growth)
     else
-        rev_transform(series)
+        rev_transform(y)
     end
 end

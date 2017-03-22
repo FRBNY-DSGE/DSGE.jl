@@ -142,6 +142,56 @@ end
 
 """
 ```
+get_population_series(mnemonic, population_data, population_forecast,
+    start_date, end_date)
+```
+
+Returns the population series between `start_date` and `end_date`. If `end_date`
+is after the last period in `population_forecast`, the last forecasted
+population is repeated until `end_date` using
+`resize_population_forecast`. Returns a `Vector{Float64}`.
+"""
+function get_population_series(mnemonic::Symbol, population_data::DataFrame,
+                               population_forecast::DataFrame, start_date::Date,
+                               end_date::Date)
+
+    last_historical_date = population_data[end, :date]
+    last_forecast_date   = population_forecast[end, :date]
+
+    # Calculate number of periods that are in the future and extend
+    # population forecast by the right number of periods
+    if end_date > last_forecast_date
+        n_fcast_periods = subtract_quarters(end_date, last_historical_date)
+        population_forecast = resize_population_forecast(population_forecast, n_fcast_periods,
+                                                         mnemonic)
+    end
+
+    population_insample = if population_data[1, :date] < start_date < population_data[end, :date]
+        if population_data[1, :date] < end_date < population_data[end, :date]
+            # Dates entirely in past
+            population_data[start_date .<= population_data[:, :date] .<= end_date, :]
+
+        else
+            # Dates span past and forecast
+            data  = population_data[start_date .<= population_data[:, :date], :]
+            fcast = population_forecast[population_forecast[:, :date] .<= end_date, :]
+            vcat(data, fcast)
+        end
+
+    elseif population_forecast[1, :date] < start_date < population_forecast[end, :date]
+        # Dates entirely in forecast
+        population_forecast[start_date .<= population_forecast[:, :date] .<= end_date, :]
+
+    else
+        # Start date is before population data
+        error("Start date $start_date is before population data begin")
+    end
+
+    return convert(Vector{Float64}, population_insample[mnemonic])
+end
+
+"""
+```
 get_mb_population_series(product, mnemonic, population_data, population_forecast, date_list)
 ```
 
@@ -151,72 +201,22 @@ function get_mb_population_series(product::Symbol, mnemonic::Symbol,
                                   population_data::DataFrame, population_forecast::DataFrame,
                                   date_list::Vector{Date})
 
-    if product in [:forecast, :bddforecast]
-
-        # For forecasts, we repeat the last forecast period's population
-        # forecast until we have n_fcast_periods of population forecasts
-        n_fcast_periods = length(date_list)
-        population_series = resize_population_forecast(population_forecast, n_fcast_periods,
-                                                       mnemonic)
-        population_series = convert(Vector{Float64}, population_series[mnemonic])
-
-    elseif product in [:shockdec, :dettrend, :trend, :forecast4q, :bddforecast4q]
-
-        # Index out desired periods of population data
-        start_date = if product in [:forecast4q, :bddforecast4q]
-            # For forecast4q, we want the last 3 historical periods + the forecast
-            # date_list is the date_list for forecast, so date_list[1] corresponds to date_forecast_start.
-            iterate_quarters(date_list[1], -3)
-        else
-            # For shockdecs, deterministic trend, and trend, we want to
-            # make sure population series corresponds with the saved dates.
-            date_list[1]
-        end
-        population_data = population_data[start_date .<= population_data[:, :date], mnemonic]
-
-        # Calculate number of periods that are in the future and extend
-        # population forecast by the right number of periods
-        n_fcast_periods = if product in [:forecast4q, :bddforecast4q]
-            length(date_list)
-        else
-            length(date_list) - length(population_data)
-        end
-        population_forecast = resize_population_forecast(population_forecast, n_fcast_periods,
-                                                         mnemonic)
-
-        # Index out desired periods of population forecasts
-        end_date = date_list[end]
-        population_forecast = if isempty(population_forecast)
-            DataArray{Float64,1}()
-        else
-            population_forecast[population_forecast[:, :date] .<= end_date, mnemonic]
-        end
-
-        # Concatenate population histories and forecasts together
-        tmp = vcat(population_data, population_forecast)
-        population_series = convert(Vector{Float64}, tmp)
-
-    elseif product == :hist
-
-        # For history, the population series is just the data
-        start_date = date_list[1]
-        end_date   = date_list[end]
-        population_data_insample = population_data[start_date .<= population_data[:, :date] .<= end_date, :]
-
-        population_series = convert(Vector{Float64}, population_data_insample[mnemonic])
-
-    elseif product == :irf
-
+    if product == :irf
         # Return empty vector for IRFs, which don't correspond to real dates
-        population_series = Vector{Float64}()
-
+        return Vector{Float64}()
     else
+        start_date = if product in [:forecast4q, :bddforecast4q]
+            iterate_quarters(date_list[1], -3)
+        elseif product in [:hist, :forecast, :bddforecast, :shockdec, :dettrend, :trend]
+            date_list[1]
+        else
+            error("Invalid product: $product")
+        end
+        end_date = date_list[end]
 
-        error("Invalid product: $product")
-
+        return get_population_series(mnemonic, population_data, population_forecast,
+                                     start_date, end_date)
     end
-
-    return population_series
 end
 
 
