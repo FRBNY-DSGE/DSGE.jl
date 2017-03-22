@@ -15,7 +15,7 @@ function init_observable_mappings!(m::SmetsWouters)
         hpadjust(oneqtrpctchange(gdp), levels)
     end
 
-    gdp_rev_transform = DSGE.logtopct_annualized_percapita
+    gdp_rev_transform = loggrowthtopct_annualized_percapita
 
     observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPCTPI__FRED],
                                        gdp_fwd_transform, gdp_rev_transform,
@@ -51,7 +51,7 @@ function init_observable_mappings!(m::SmetsWouters)
         oneqtrpctchange(nominal_to_real(:COMPNFB, levels))
     end
 
-    wages_rev_transform = logtopct_annualized
+    wages_rev_transform = loggrowthtopct_annualized
 
     observables[:obs_wages] = Observable(:obs_wages, [:COMPNFB__FRED, :GDPCTPI__FRED],
                                          wages_fwd_transform, wages_rev_transform,
@@ -71,7 +71,7 @@ function init_observable_mappings!(m::SmetsWouters)
     end
 
 
-    gdpdeflator_rev_transform = logtopct_annualized
+    gdpdeflator_rev_transform = loggrowthtopct_annualized
 
     observables[:obs_gdpdeflator] = Observable(:obs_gdpdeflator, [:GDPCTPI__FRED],
                                                gdpdeflator_fwd_transform, gdpdeflator_rev_transform,
@@ -111,7 +111,7 @@ function init_observable_mappings!(m::SmetsWouters)
         hpadjust(oneqtrpctchange(cons), levels)
     end
 
-    consumption_rev_transform = logtopct_annualized_percapita
+    consumption_rev_transform = loggrowthtopct_annualized_percapita
 
     observables[:obs_consumption] = Observable(:obs_consumption, [:PCE__FRED, population_mnemonic],
                                                consumption_fwd_transform, consumption_rev_transform,
@@ -132,7 +132,7 @@ function init_observable_mappings!(m::SmetsWouters)
         hpadjust(oneqtrpctchange(inv), levels)
     end
 
-    investment_rev_transform  = logtopct_annualized_percapita
+    investment_rev_transform  = loggrowthtopct_annualized_percapita
 
     observables[:obs_investment] = Observable(:obs_investment, [:FPI__FRED, population_mnemonic],
                                               investment_fwd_transform, investment_rev_transform,

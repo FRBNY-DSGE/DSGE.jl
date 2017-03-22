@@ -67,7 +67,7 @@ function reverse_transform{T<:AbstractFloat}(series, rev_transform::Function;
                                              population_series::Vector{T} = Vector{T}(),
                                              y0_index::Int = -1)
 
-    if rev_transform in [logtopct_annualized_percapita]
+    if rev_transform in [loggrowthtopct_annualized_percapita]
         rev_transform(series, population_series)
     elseif rev_transform in [logleveltopct_annualized_percapita]
         rev_transform(series, data_series[y0_index], population_series)
