@@ -205,7 +205,7 @@ end
 
 """
 ```
-logtopct_annualized_percapita(y, pop_growth, q_adj = 100)
+logtopct_annualized_percapita(y, pop_growth)
 ```
 Transform from log growth rates to % growth rates (annualized).
 
@@ -221,10 +221,8 @@ and GDP deflator (inflation).
   `ndraws x `nperiods` matrix.
 
 - `pop_growth::Vector`: The length `nperiods` vector of population growth rates.
-
-- `q_adj`: Optional argument defaulting to 100.
 """
-function logtopct_annualized_percapita(y::Array, pop_growth::Vector, q_adj = 100.)
+function logtopct_annualized_percapita(y::Array, pop_growth::Vector)
     # `y` is either a vector of length `nperiods` or an
     # `ndraws` x `nperiods` matrix
     if ndims(y) == 1
@@ -239,19 +237,19 @@ function logtopct_annualized_percapita(y::Array, pop_growth::Vector, q_adj = 100
 
     @assert length(pop_growth) == nperiods
 
-    100. * (exp(y/q_adj .+ pop_growth).^4 - 1.)
+    100. * (exp(y/100. .+ pop_growth).^4 - 1.)
 end
 
 """
 ```
-logtopct_annualized(y, q_adj = 100)
+logtopct_annualized(y)
 ```
 
 Transform from log growth rates to total (not per-capita) % growth
 rates (annualized).
 """
-function logtopct_annualized(y, q_adj = 100.)
-    100. * (exp(y/q_adj).^4 - 1.)
+function logtopct_annualized(y)
+    100. * (exp(y/100.).^4 - 1.)
 end
 
 """
@@ -366,13 +364,13 @@ end
 
 """
 ```
-logtopct_4q(y, data, q_adj = 100)
+logtopct_4q(y, data)
 ```
 
 Transform from log growth rates to total (not per-capita) % growth
 rates (4-quarter values).
 """
-function logtopct_4q(y::Array, data::Vector, q_adj = 100.)
+function logtopct_4q(y::Array, data::Vector)
     y = prepend_data(y, data)
 
     if ndims(y) == 1
@@ -381,12 +379,12 @@ function logtopct_4q(y::Array, data::Vector, q_adj = 100.)
         y_4q = y[:,  1:end-3] + y[:, 2:end-2] + y[:, 3:end-1] + y[:, 4:end]
     end
 
-    100. * (exp(y_4q/q_adj) - 1.)
+    100. * (exp(y_4q/100.) - 1.)
 end
 
 """
 ```
-logtopct_4q_percapita(y, pop_growth, q_adj = 100)
+logtopct_4q_percapita(y, pop_growth)
 ```
 Transform from log growth rates to 4-quarter % growth rates.
 
@@ -402,10 +400,8 @@ and GDP deflator (inflation).
   `ndraws x `nperiods` matrix.
 
 - `pop_growth::Vector`: The length `nperiods` vector of population growth rates.
-
-- `q_adj`: Optional argument defaulting to 100.
 """
-function logtopct_4q_percapita(y::Array, data::Vector, pop_growth::Vector, q_adj = 100)
+function logtopct_4q_percapita(y::Array, data::Vector, pop_growth::Vector)
 
     y = prepend_data(y, data)
     # y is now 1 x 3+H, where H is the number of forecast periods.
@@ -428,13 +424,13 @@ function logtopct_4q_percapita(y::Array, data::Vector, pop_growth::Vector, q_adj
 
     @assert length(pop_growth_4q) == nperiods
 
-    100. * (exp(y_4q/q_adj .+ pop_growth_4q) - 1.)
+    100. * (exp(y_4q/100. .+ pop_growth_4q) - 1.)
 end
 
 
 """
 ```
-logleveltopct_4q_percapita(y, y0, pop_growth, q_adj)
+logleveltopct_4q_percapita(y, y0, pop_growth)
 ```
 
 Transform from log level to 4-quarter percent change, adjusting for
@@ -457,7 +453,7 @@ probably shouldn't be used for any other observables.
 
 - `pop_growth::Vector`: The length `nperiods` vector of population growth rates.
 """
-function logleveltopct_4q_percapita{T<:AbstractFloat}(y::Array, data::Vector, pop_growth::Vector, q_adj::T = 100.)
+function logleveltopct_4q_percapita{T<:AbstractFloat}(y::Array, data::Vector, pop_growth::Vector)
 
     # `y_t4` is an array of the same size as `y`, representing the t-4
     # period observations for each draw
@@ -476,7 +472,7 @@ function logleveltopct_4q_percapita{T<:AbstractFloat}(y::Array, data::Vector, po
     pop_growth_4q = (pop_growth[1:end-3] + pop_growth[2:end-2] + pop_growth[3:end-1] + pop_growth[4:end])'
 
     # Subtract log levels to get log growth rates, then exponentiate to get growth rates
-    100. * (exp(y_4q./q_adj .+ pop_growth_4q) .- 1.)
+    100. * (exp(y_4q./100. .+ pop_growth_4q) .- 1.)
 end
 
 """
