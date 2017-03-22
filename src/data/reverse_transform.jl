@@ -14,6 +14,23 @@ series.
 The second method takes a single series and reverse transformation, applies it,
 and returns a vector.
 """
+function reverse_transform(m::AbstractModel, untransformed::Matrix, start_date::Date,
+                           var_names::Vector{Symbol}, class::Symbol;
+                           fourquarter::Bool = false,
+                           verbose::Symbol = :low)
+    df = DataFrame()
+    nperiods = size(untransformed, 2)
+    end_date = iterate_quarters(start_date, nperiods - 1)
+    df[:date] = quarter_range(start_date, end_date)
+
+    for (ind, var) in enumerate(var_names)
+        series = squeeze(untransformed[ind, :], 1)
+        df[var] = series
+    end
+
+    reverse_transform(m, df, class; fourquarter = fourquarter, verbose = verbose)
+end
+
 function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Symbol;
                            fourquarter::Bool = false, verbose::Symbol = :low)
     # Dates
@@ -53,7 +70,7 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
         if fourquarter
             rev_transform = get_transform4q(rev_transform)
         end
-        transformed[var] = reverse_transform(y, rev_transform; fourquarter = fourqarter,
+        transformed[var] = reverse_transform(y, rev_transform; fourquarter = fourquarter,
                                              pop_growth = population_series)
     end
     return transformed
