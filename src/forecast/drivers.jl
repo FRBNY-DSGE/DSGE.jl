@@ -473,6 +473,16 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
         get(draw_shocks_override)
     end
 
+    # Use the last smoothed state or last filtered state to initialize the forecast
+    initial_forecast_state = if draw_states || (cond_type in [:semi, :full] && !irfs_only)
+        if !isdefined(:histstates)
+            histstates, _, _, _ = smooth(m, df, system, kal; cond_type = cond_type, draw_states = draw_states)
+        end
+        histstates[:,end]
+    else
+        kal.filt[:,end]
+    end
+
     # 2A. Unbounded forecasts
 
     forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks, :forecaststdshocks]
@@ -480,7 +490,8 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     if !isempty(forecasts_to_compute)
         forecaststates, forecastobs, forecastpseudo, forecastshocks =
-            forecast(m, system, kal; cond_type = cond_type, enforce_zlb = false, draw_shocks = draw_shocks)
+            forecast(m, system, initial_forecast_state;
+                     cond_type = cond_type, enforce_zlb = false, draw_shocks = draw_shocks)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
@@ -509,7 +520,8 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     if !isempty(forecasts_to_compute)
         forecaststates, forecastobs, forecastpseudo, forecastshocks =
-            forecast(m, system, kal; cond_type = cond_type, enforce_zlb = true, draw_shocks = draw_shocks)
+            forecast(m, system, initial_forecast_state;
+                     cond_type = cond_type, enforce_zlb = true, draw_shocks = draw_shocks)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]

@@ -60,9 +60,5 @@ states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks, enforce_z
 @assert all(x -> abs(x - zlb_value) < 0.01, obs[ind_r, :])
 @assert all(x -> x != -10.,                 shocks[ind_r_sh, :])
 
-# Draw z0
-m <= Setting(:forecast_draw_z0, true)
-states, obs, pseudo, shocks = forecast(m, system, kal)
-
 
 nothing

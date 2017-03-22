@@ -1,7 +1,5 @@
 """
 ```
-forecast(m, system, kal; enforce_zlb = false, shocks = Matrix{S}())
-
 forecast(m, system, z0; enforce_zlb = false, shocks = Matrix{S}())
 
 forecast(system, z0, shocks; enforce_zlb = false)
@@ -48,23 +46,6 @@ where `S<:AbstractFloat`.
   `Z_pseudo` and `D_pseudo` matrices are empty, then `pseudo` will be empty.
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
-function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
-    kal::Kalman{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
-    shocks::Matrix{S} = Matrix{S}(), draw_shocks::Bool = false)
-
-    Nz = size(system[:TTT],1)
-    U, eig, _ = svd(kal[:Pend])
-    draw_z0(kal::Kalman) = U * diagm(sqrt(eig)) * randn(Nz) + kal[:zend]
-    z0 = if forecast_draw_z0(m)
-        draw_z0(kal)
-    else
-        kal[:zend]
-    end
-
-    forecast(m, system, z0; cond_type = cond_type, enforce_zlb = enforce_zlb,
-                     shocks = shocks, draw_shocks = draw_shocks)
-end
-
 function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
     shocks::Matrix{S} = Matrix{S}(), draw_shocks::Bool = false)

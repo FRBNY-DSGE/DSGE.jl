@@ -104,7 +104,7 @@ function default_settings!(m::AbstractModel)
         "Number of periods to forecast ahead")
     settings[:forecast_draw_z0] = Setting(:forecast_draw_z0, false,
         "Whether to draw an initial state from N(s_{T|T}, P_{T|T}) to start the forecast")
-    settings[:forecast_draw_shocks_override] = Setting(:forecast_draw_shocks, Nullable{Bool}(),
+    settings[:forecast_draw_shocks_override] = Setting(:forecast_draw_shocks_override, Nullable{Bool}(),
         "If non-null, overrides default forecast behavior to draw or not draw shocks")
     settings[:forecast_tdist_shocks] = Setting(:forecast_tdist_shocks, false,
         "Draw Students-t distributed shocks in forecast")
