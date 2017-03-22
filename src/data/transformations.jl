@@ -205,9 +205,22 @@ end
 
 """
 ```
+loggrowthtopct_annualized(y)
+```
+
+Transform from log growth rates to annualized quarter-over-quarter percent change.
+"""
+function loggrowthtopct_annualized(y)
+    100. * (exp(y/100.).^4 - 1.)
+end
+
+"""
+```
 loggrowthtopct_annualized_percapita(y, pop_growth)
 ```
-Transform from log growth rates to % growth rates (annualized).
+
+Transform from log per-capita growth rates to annualized aggregate (not
+per-capita) quarter-over-quarter percent change.
 
 ### Note
 
@@ -216,11 +229,12 @@ and GDP deflator (inflation).
 
 ### Inputs
 
-- `y`: The data we wish to transform to 4 quarter annualized percent change from
-  1-quarter log-levels. `y` is either a vector of length `nperiods` or an
-  `ndraws x `nperiods` matrix.
+- `y`: the data we wish to transform to annualized percent change from
+  quarter-over-quarter log growth rates. `y` is either a vector of length
+  `nperiods` or an `ndraws x `nperiods` matrix.
 
-- `pop_growth::Vector`: The length `nperiods` vector of population growth rates.
+- `pop_growth::Vector`: the length `nperiods` vector of log population growth
+  rates.
 """
 function loggrowthtopct_annualized_percapita(y::Array, pop_growth::Vector)
     # `y` is either a vector of length `nperiods` or an
@@ -235,21 +249,9 @@ function loggrowthtopct_annualized_percapita(y::Array, pop_growth::Vector)
         pop_growth = pop_growth'
     end
 
-    @assert length(pop_growth) == nperiods
+    @assert length(pop_growth) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
 
     100. * (exp(y/100. .+ pop_growth).^4 - 1.)
-end
-
-"""
-```
-loggrowthtopct_annualized(y)
-```
-
-Transform from log growth rates to total (not per-capita) % growth
-rates (annualized).
-"""
-function loggrowthtopct_annualized(y)
-    100. * (exp(y/100.).^4 - 1.)
 end
 
 """
@@ -257,21 +259,16 @@ end
 logleveltopct_annualized(y, y0)
 ```
 
-Transform from log level to 4-quarter annualized percent change
-
-### Note
-
-This is usually applied to labor supply (hours worked per hour), and
-probably shouldn't be used for any other observables.
+Transform from log levels to annualized quarter-over-quarter percent change.
 
 ### Inputs
 
-- `y`: The data we wish to transform to 4 quarter annualized percent change from
-  1-quarter log-levels. `y` is either a vector of length `nperiods` or an
+- `y`: the data we wish to transform to annualized quarter-over-quarter percent
+  change from log levels. `y` is either a vector of length `nperiods` or an
   `ndraws x `nperiods` matrix.
 
-- `y0`: The last data point in the history (of state or observable)
-  corresponding to the `y` variable.  This is required to compute a percentage
+- `y0`: the last data point in the history (of state or observable)
+  corresponding to the `y` variable. This is required to compute a percent
   change for the first period.
 """
 function logleveltopct_annualized{T<:AbstractFloat}(y::Array, y0::T)
@@ -295,8 +292,8 @@ end
 logleveltopct_annualized_percapita(y, y0, pop_growth)
 ```
 
-Transform from log level to 4-quarter annualized percent change, adjusting for
-population growth.
+Transform from per-capita log levels to annualized aggregate (not per-capita)
+quarter-over-quarter percent change.
 
 ### Note
 
@@ -305,15 +302,16 @@ probably shouldn't be used for any other observables.
 
 ### Inputs
 
-- `y`: The data we wish to transform to 4 quarter annualized percent change from
-  1-quarter log-levels. `y` is either a vector of length `nperiods` or an
-  `ndraws x `nperiods` matrix.
+- `y`: the data we wish to transform to annualized aggregate
+  quarter-over-quarter percent change from per-capita log levels. `y` is either
+  a vector of length `nperiods` or an `ndraws x `nperiods` matrix.
 
 - `y0`: The last data point in the history (of state or observable)
-  corresponding to the `y` variable.  This is required to compute a percentage
+  corresponding to the `y` variable. This is required to compute a percent
   change for the first period.
 
-- `pop_growth::Vector`: The length `nperiods` vector of population growth rates.
+- `pop_growth::Vector`: the length `nperiods` vector of log population growth
+  rates.
 """
 function logleveltopct_annualized_percapita{T<:AbstractFloat}(y::Array, y0::T, pop_growth::Vector)
     # `y_t1` is an array of the same size as `y`, representing the previous
@@ -331,7 +329,7 @@ function logleveltopct_annualized_percapita{T<:AbstractFloat}(y::Array, y0::T, p
         pop_growth = pop_growth'
     end
 
-    @assert length(pop_growth) == nperiods
+    @assert length(pop_growth) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
 
     # Subtract log levels to get log growth rates, then take the exponential to
     # get growth rates
@@ -352,6 +350,8 @@ function get_transform4q(transform::Function)
         loggrowthtopct_4q
     elseif transform == logleveltopct_annualized_percapita
         logleveltopct_4q_percapita
+    elseif transform == logleveltopct_annualized
+        logleveltopct_4q
     elseif transform == quartertoannual
         quartertoannual
     elseif transform == identity
@@ -367,14 +367,28 @@ end
 loggrowthtopct_4q(y, data)
 ```
 
-Transform from log growth rates to total (not per-capita) % growth
-rates (4-quarter values).
+Transform from log growth rates to 4-quarter percent change.
+
+### Inputs
+
+- `y`: the data we wish to transform to aggregate 4-quarter percent change from
+  log per-capita growth rates. `y` is either a vector of length `nperiods` or an
+  `ndraws x `nperiods` matrix.
+
+- `data`: if `y = [y_t, y_{t+1}, ..., y_{t+nperiods-1}]`, then
+  `data = [y_{t-3}, y_{t-2}, y_{t-1}]`. This is necessary to compute
+  4-quarter percent changes for the first three periods.
 """
 function loggrowthtopct_4q(y::Array, data::Vector)
+    @assert length(data) == 3 "Length of data ($(length(data))) must be 3"
+
+    # Prepend previous three periods to `y`
     y = prepend_data(y, data)
 
+    # `y` is either a vector of length `nperiods+3` or an
+    # `ndraws` x `nperiods+3` matrix
     if ndims(y) == 1
-        y_4q = y[1:end-3] + y[2:end-2] + y[3:end-1] + y[ 4:end]
+        y_4q = y[1:end-3] + y[2:end-2] + y[3:end-1] + y[4:end]
     else
         y_4q = y[:,  1:end-3] + y[:, 2:end-2] + y[:, 3:end-1] + y[:, 4:end]
     end
@@ -384,32 +398,40 @@ end
 
 """
 ```
-loggrowthtopct_4q_percapita(y, pop_growth)
+loggrowthtopct_4q_percapita(y, data, pop_growth)
 ```
-Transform from log growth rates to 4-quarter % growth rates.
+Transform from log per-capita growth rates to aggregate 4-quarter percent
+change.
 
 ### Note
 
-This should only be used for output, consumption, investment
-and GDP deflator (inflation).
+This should only be used for output, consumption, investment, and GDP deflator
+(inflation).
 
 ### Inputs
 
-- `y`: The data we wish to transform to 4 quarter annualized percent change from
-  1-quarter log-levels. `y` is either a vector of length `nperiods` or an
+- `y`: the data we wish to transform to aggregate 4-quarter percent change from
+  log per-capita growth rates. `y` is either a vector of length `nperiods` or an
   `ndraws x `nperiods` matrix.
 
-- `pop_growth::Vector`: The length `nperiods` vector of population growth rates.
+- `data`: if `y = [y_t, y_{t+1}, ..., y_{t+nperiods-1}]`, then
+  `data = [y_{t-3}, y_{t-2}, y_{t-1}]`. This is necessary to compute
+  4-quarter percent changes for the first three periods.
+
+- `pop_growth::Vector`: the length `nperiods` vector of log population growth
+  rates.
 """
 function loggrowthtopct_4q_percapita(y::Array, data::Vector, pop_growth::Vector)
+    @assert length(data) == 3 "Length of data ($(length(data))) must be 3"
 
-    y = prepend_data(y, data)
-    # y is now 1 x 3+H, where H is the number of forecast periods.
-
+    # Four-quarter population growth
     pop_growth_4q = pop_growth[1:end-3] + pop_growth[2:end-2] + pop_growth[3:end-1] + pop_growth[4:end]
 
-    # `y` is either a vector of length `nperiods` or an
-    # `ndraws` x `nperiods` matrix
+    # Prepend previous three periods to `y`
+    y = prepend_data(y, data)
+
+    # `y` is either a vector of length `nperiods+3` or an
+    # `ndraws` x `nperiods+3` matrix
     if ndims(y) == 1
         y_4q = y[1:end-3] + y[2:end-2] + y[3:end-1] + y[4:end]
         nperiods = length(y_4q)
@@ -418,7 +440,7 @@ function loggrowthtopct_4q_percapita(y::Array, data::Vector, pop_growth::Vector)
         nperiods = size(y_4q, 2)
 
         # Transpose `pop_growth` to a 1 x `nperiods` row vector so it can be
-        # broadcasted to match the dimensions of `y`
+        # broadcasted to match the dimensions of `y_4q`
         pop_growth_4q = pop_growth_4q'
     end
 
@@ -427,37 +449,28 @@ function loggrowthtopct_4q_percapita(y::Array, data::Vector, pop_growth::Vector)
     100. * (exp(y_4q/100. .+ pop_growth_4q) - 1.)
 end
 
-
 """
 ```
-logleveltopct_4q_percapita(y, y0, pop_growth)
+logleveltopct_4q(y, data)
 ```
 
-Transform from log level to 4-quarter percent change, adjusting for
-population growth.
-
-### Note
-
-This is usually applied to labor supply (hours worked per hour), and
-probably shouldn't be used for any other observables.
+Transform from log levels to 4-quarter percent change.
 
 ### Inputs
 
-- `y`: The data we wish to transform to 4 quarter annualized percent change from
-  1-quarter log-levels. `y` is either a vector of length `nperiods` or an
-  `ndraws x `nperiods` matrix.
+- `y`: the data we wish to transform to 4-quarter percent change from log
+  levels. `y` is either a vector of length `nperiods` or an `ndraws x `nperiods`
+  matrix.
 
-- `y0`: The last data point in the history (of state or observable)
-  corresponding to the `y` variable.  This is required to compute a percentage
-  change for the first period.
-
-- `pop_growth::Vector`: The length `nperiods` vector of population growth rates.
+- `data`: if `y = [y_t, y_{t+1}, ..., y_{t+nperiods-1}]`, then
+  `data = [y_{t-4}, y_{t-3}, y_{t-2}, y_{t-1}]`. This is necessary to compute
+  4-quarter percent changes for the first three periods.
 """
-function logleveltopct_4q_percapita{T<:AbstractFloat}(y::Array, data::Vector, pop_growth::Vector)
+function logleveltopct_4q{T<:AbstractFloat}(y::Array, data::Vector)
+    @assert length(data) == 4 "Length of data ($(length(data))) must be 4"
 
     # `y_t4` is an array of the same size as `y`, representing the t-4
-    # period observations for each draw
-
+    # period observations for each t
     y_t4 = if ndims(y) == 1
         nperiods = length(y)
         prepend_data(y[1:nperiods-4], data)
@@ -467,9 +480,56 @@ function logleveltopct_4q_percapita{T<:AbstractFloat}(y::Array, data::Vector, po
     end
     y_4q = y - y_t4
 
-    # Transpose `pop_growth` to a 1 x `nperiods` row vector so it can be
-    # broadcasted to match the dimensions of `y`
-    pop_growth_4q = (pop_growth[1:end-3] + pop_growth[2:end-2] + pop_growth[3:end-1] + pop_growth[4:end])'
+    # Subtract log levels to get log growth rates, then exponentiate to get
+    # growth rates
+    100. * (exp(y_4q./100.) .- 1.)
+end
+
+"""
+```
+logleveltopct_4q_percapita(y, data, pop_growth)
+```
+
+Transform from per-capita log levels to 4-quarter aggregate percent change.
+
+### Note
+
+This is usually applied to labor supply (hours worked), and probably shouldn't
+be used for any other observables.
+
+### Inputs
+
+- `y`: the data we wish to transform to 4-quarter aggregate percent change from
+  per-capita log levels. `y` is either a vector of length `nperiods` or an
+  `ndraws x `nperiods` matrix.
+
+- `data`: if `y = [y_t, y_{t+1}, ..., y_{t+nperiods-1}]`, then
+  `data = [y_{t-4}, y_{t-3}, y_{t-2}, y_{t-1}]`. This is necessary to compute
+  4-quarter percent changes for the first three periods.
+
+- `pop_growth::Vector`: the length `nperiods` vector of log population growth
+  rates.
+"""
+function logleveltopct_4q_percapita{T<:AbstractFloat}(y::Array, data::Vector, pop_growth::Vector)
+    @assert length(data) == 4 "Length of data ($(length(data))) must be 4"
+
+    # Four-quarter population growth
+    pop_growth_4q = pop_growth[1:end-3] + pop_growth[2:end-2] + pop_growth[3:end-1] + pop_growth[4:end]
+
+    # `y_t4` is an array of the same size as `y`, representing the t-4
+    # period observations for each t
+    y_t4 = if ndims(y) == 1
+        nperiods = length(y)
+        prepend_data(y[1:nperiods-4], data)
+    else
+        nperiods = size(y, 2)
+        prepend_data(y[:, 1:nperiods-4], data)
+
+        # Transpose `pop_growth` to a 1 x `nperiods` row vector so it can be
+        # broadcasted to match the dimensions of `y`
+        pop_growth_4q = pop_growth_4q'
+    end
+    y_4q = y - y_t4
 
     # Subtract log levels to get log growth rates, then exponentiate to get growth rates
     100. * (exp(y_4q./100. .+ pop_growth_4q) .- 1.)
