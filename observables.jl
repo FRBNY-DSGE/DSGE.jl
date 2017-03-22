@@ -23,7 +23,7 @@ function init_observable_mappings!(m::Model1010)
         hpadjust(oneqtrpctchange(gdp), levels)
     end
 
-    gdp_rev_transform = DSGE.logtopct_annualized_percapita
+    gdp_rev_transform = loggrowthtopct_annualized_percapita
 
     observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPCTPI__FRED],
                                        gdp_fwd_transform, gdp_rev_transform,
@@ -60,7 +60,7 @@ function init_observable_mappings!(m::Model1010)
         oneqtrpctchange(nominal_to_real(:COMPNFB, levels))
     end
 
-    wages_rev_transform = logtopct_annualized
+    wages_rev_transform = loggrowthtopct_annualized
 
     observables[:obs_wages] = Observable(:obs_wages, [:COMPNFB__FRED, :GDPCTPI__FRED],
                                          wages_fwd_transform, wages_rev_transform,
@@ -80,7 +80,7 @@ function init_observable_mappings!(m::Model1010)
     end
 
 
-    gdpdeflator_rev_transform = logtopct_annualized
+    gdpdeflator_rev_transform = loggrowthtopct_annualized
 
     observables[:obs_gdpdeflator] = Observable(:obs_gdpdeflator, [:GDPCTPI__FRED],
                                                gdpdeflator_fwd_transform, gdpdeflator_rev_transform,
@@ -99,7 +99,7 @@ function init_observable_mappings!(m::Model1010)
         oneqtrpctchange(levels[:PCEPILFE])
     end
 
-    pce_rev_transform = logtopct_annualized
+    pce_rev_transform = loggrowthtopct_annualized
 
     observables[:obs_corepce] = Observable(:obs_corepce, [:PCEPILFE__FRED],
                                            pce_fwd_transform, pce_rev_transform,
@@ -140,7 +140,7 @@ function init_observable_mappings!(m::Model1010)
         hpadjust(oneqtrpctchange(cons), levels)
     end
 
-    consumption_rev_transform = logtopct_annualized_percapita
+    consumption_rev_transform = loggrowthtopct_annualized_percapita
 
     observables[:obs_consumption] = Observable(:obs_consumption, [:PCE__FRED, population_mnemonic],
                                                consumption_fwd_transform, consumption_rev_transform,
@@ -162,7 +162,7 @@ function init_observable_mappings!(m::Model1010)
         hpadjust(oneqtrpctchange(inv), levels)
     end
 
-    investment_rev_transform  = logtopct_annualized_percapita
+    investment_rev_transform  = loggrowthtopct_annualized_percapita
 
     observables[:obs_investment] = Observable(:obs_investment, [:FPI__FRED, population_mnemonic],
                                               investment_fwd_transform, investment_rev_transform,
@@ -218,7 +218,7 @@ function init_observable_mappings!(m::Model1010)
         annualtoquarter(levels[:ASACX10]  .- 0.5)
     end
 
-    longinflation_rev_transform = logtopct_annualized
+    longinflation_rev_transform = loggrowthtopct_annualized
 
     observables[:obs_longinflation] = Observable(:obs_longinflation, [:ASACX10__SPF],
                                                  longinflation_fwd_transform, longinflation_rev_transform,
@@ -286,7 +286,7 @@ function init_observable_mappings!(m::Model1010)
         hpadjust(oneqtrpctchange(gdi), levels)
     end
 
-    gdi_rev_transform = DSGE.logtopct_annualized_percapita
+    gdi_rev_transform = loggrowthtopct_annualized_percapita
 
     observables[:obs_gdi] = Observable(:obs_gdi, [:GDI__FRED],
                                        gdi_fwd_transform, gdi_rev_transform,
