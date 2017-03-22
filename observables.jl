@@ -42,7 +42,7 @@ function init_observable_mappings!(m::Model1010)
         100*(log(3 * aggregateweeklyhours / 100) - log(levels[:filtered_population]))
     end
 
-    hrs_rev_transform = loglevelto4qpct_annualized_percapita
+    hrs_rev_transform = logleveltopct_annualized_percapita
 
     observables[:obs_hours] = Observable(:obs_hours, [:AWHNONAG__FRED, :CE16OV__FRED],
                                          hrs_fwd_transform, hrs_rev_transform,
