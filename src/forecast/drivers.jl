@@ -433,9 +433,10 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     smooth_vars = vcat(hist_vars, shockdec_vars, dettrend_vars)
     hists_to_compute = intersect(output_vars, hist_vars)
 
-    if !isempty(intersect(output_vars, smooth_vars)) ||
+    run_smoother = !isempty(intersect(output_vars, smooth_vars)) ||
         (cond_type in [:semi, :full] && !irfs_only)
 
+    if run_smoother
         histstates, histshocks, histpseudo, initial_states =
             smooth(m, df, system, kal; cond_type = cond_type, draw_states = draw_states)
 
@@ -473,22 +474,25 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
         get(draw_shocks_override)
     end
 
-    # Use the last smoothed state or last filtered state to initialize the forecast
-    initial_forecast_state = if draw_states || (cond_type in [:semi, :full] && !irfs_only)
-        if !isdefined(:histstates)
-            histstates, _, _, _ = smooth(m, df, system, kal; cond_type = cond_type, draw_states = draw_states)
-        end
-        histstates[:,end]
-    else
-        kal.filt[:,end]
-    end
-
     # 2A. Unbounded forecasts
 
     forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks, :forecaststdshocks]
     forecasts_to_compute = intersect(output_vars, forecast_vars)
 
     if !isempty(forecasts_to_compute)
+        # Use the last smoothed state or last filtered state to initialize the forecast
+        initial_forecast_state = if draw_states
+            if run_smoother
+                histstates[:,end]
+            else
+                U, singular_values, _ = svd(kal[:Pend])
+                dist = DegenerateMvNormal(zeros(n_states_augmented(m)), U*diagm(sqrt(singular_values)))
+                rand(dist)
+            end
+        else
+            kal[:zend]
+        end
+
         forecaststates, forecastobs, forecastpseudo, forecastshocks =
             forecast(m, system, initial_forecast_state;
                      cond_type = cond_type, enforce_zlb = false, draw_shocks = draw_shocks)
