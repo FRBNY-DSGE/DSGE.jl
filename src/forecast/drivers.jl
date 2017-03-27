@@ -480,7 +480,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
             histstates[:,end]
         else
             U, singular_values, _ = svd(kal[:Pend])
-            dist = DegenerateMvNormal(zeros(n_states_augmented(m)), U*diagm(sqrt(singular_values)))
+            dist = DegenerateMvNormal(kal[:zend], U*diagm(sqrt(singular_values)))
             rand(dist)
         end
     else
