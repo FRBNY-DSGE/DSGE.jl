@@ -161,7 +161,6 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::Range{Int6
     else
         error("This load_draws method can only be called with input_type in [:full, :subset]")
     end
-
 end
 
 """
@@ -431,9 +430,9 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     shockdec_vars = [:shockdecstates, :shockdecpseudo, :shockdecobs]
     dettrend_vars = [:dettrendstates, :dettrendpseudo, :dettrendobs]
     smooth_vars = vcat(hist_vars, shockdec_vars, dettrend_vars)
-    hists_to_compute = intersect(output_vars, hist_vars)
+    hists_to_compute = intersect(output_vars, smooth_vars)
 
-    run_smoother = !isempty(intersect(output_vars, smooth_vars)) ||
+    run_smoother = !isempty(hists_to_compute) ||
         (cond_type in [:semi, :full] && !irfs_only)
 
     if run_smoother
@@ -474,18 +473,25 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
         get(draw_shocks_override)
     end
 
-    # Use the last smoothed state or last filtered state to initialize the forecast
+    # Get initial forecast state vector s_T
     initial_forecast_state = if draw_states
         if run_smoother
-            histstates[:,end]
+            # If we want to draw s_T and have already run the smoother, use the
+            # last smoothed state, which was already drawn from N(s_{T|T},
+            # P_{T|T}) in the simulation smoother
+            histstates[:, end]
         else
+            # If we want to draw s_T but haven't run the smoother, draw from
+            # N(s_{T|T}, P_{T|T}) directly
             U, singular_values, _ = svd(kal[:Pend])
             dist = DegenerateMvNormal(kal[:zend], U*diagm(sqrt(singular_values)))
             rand(dist)
         end
     else
+        # If we don't want to draw s_T, simply use the mean s_{T|T}
         kal[:zend]
     end
+
 
     # 2A. Unbounded forecasts
 
