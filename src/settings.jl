@@ -73,7 +73,7 @@ update!(a::Setting, b::Setting)
 
 Update `a` with the fields of `b` if:
 
-- The `key` field is updated if `a.key == b.key` 
+- The `key` field is updated if `a.key == b.key`
 - The `print` boolean and `code` string are overwritten if `a.print` is false and
   `b.print` is true, or `a.print` is true, `b.print` is false, and
   b.code is non-empty.
@@ -95,9 +95,9 @@ function update!(a::Setting, b::Setting)
     # do not overwrite if we can't determine whether or not those fields are just the
     # defaults.
     if (a.print == false && b.print == true) ||
-       (a.print == true && b.print == false && !isempty(b.code))
-       a.print = b.print
-   end
+        (a.print == true && b.print == false && !isempty(b.code))
+        a.print = b.print
+    end
     if !isempty(b.code) && b.code ≠ a.code
         a.code = b.code
     end
