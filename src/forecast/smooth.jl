@@ -1,6 +1,6 @@
 """
 ```
-smooth(m, data, system, kal; cond_type = :none)
+smooth(m, df, system, kal; cond_type = :none, draw_states = true)
 ```
 
 Computes and returns the smoothed values of states and shocks for the system
@@ -9,9 +9,8 @@ Computes and returns the smoothed values of states and shocks for the system
 ### Inputs
 
 - `m::AbstractModel`: model object
-- `data`: `DataFrame` or `nobs` x `hist_periods` `Matrix{S}` of data for
-  observables. This should include the conditional period if `cond_type in
-  [:semi, :full]`
+- `df`: `DataFrame` of data for observables. This should include the conditional
+  period if `cond_type in [:semi, :full]`
 - `system::System`: `System` object representing the state-space system
 - `kal::Kalman`: `Kalman` object containing the results of the Kalman filter for
   this system
