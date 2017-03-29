@@ -399,6 +399,34 @@ function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
     return convert(Matrix{Float64}, df1)'
 end
 
+"""
+```
+data_to_df(m, data, start_date)
+```
+
+Create a `DataFrame` out of the matrix `data`, including a `:date` column
+beginning in `start_date`.  Variable names and indices are obtained from
+`m.observables`.
+"""
+function data_to_df{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T}, start_date::Date)
+    # Check number of rows = number of observables
+    nobs = n_observables(m)
+    @assert size(data, 1) == nobs "Number of rows of data matrix ($(size(data, 1))) must equal number of observables ($nobs)"
+
+    # Initialize DataFrame and add dates
+    nperiods = size(data, 2)
+    end_date = iterate_quarters(start_date, nperiods - 1)
+    dates = quarter_range(start_date, end_date)
+    df = DataFrame(date = dates)
+
+    # Add observables
+    for var in keys(m.observables)
+        ind = m.observables[var]
+        df[var] = vec(data[ind, :])
+    end
+
+    return df
+end
 
 """
 ```
