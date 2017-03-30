@@ -413,18 +413,6 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     ### 1. Smoothed Histories
 
-    # Decide whether to draw smoothed states
-    draw_states_override = smoother_draw_states_override(m)
-    draw_states = if isnull(draw_states_override)
-        if input_type in [:init, :mode, :mean]
-            false
-        elseif input_type in [:full, :subset]
-            true
-        end
-    else
-        get(draw_states_override)
-    end
-
     # Must run smoother for conditional data in addition to explicit cases
     hist_vars = [:histstates, :histpseudo, :histshocks, :histstdshocks]
     shockdec_vars = [:shockdecstates, :shockdecpseudo, :shockdecobs]
@@ -436,6 +424,19 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
         (cond_type in [:semi, :full] && !irfs_only)
 
     if run_smoother
+        # Decide whether to draw smoothed states
+        draw_states_override = smoother_draw_states_override(m)
+        draw_states = if isnull(draw_states_override)
+            if input_type in [:init, :mode, :mean]
+                false
+            elseif input_type in [:full, :subset]
+                true
+            end
+        else
+            get(draw_states_override)
+        end
+
+        # Call smoother
         histstates, histshocks, histpseudo, initial_states =
             smooth(m, df, system, kal; cond_type = cond_type, draw_states = draw_states)
 
@@ -461,94 +462,95 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     ### 2. Forecasts
 
-    # Decide whether to draw shocks
-    draw_shocks_override = forecast_draw_shocks_override(m)
-    draw_shocks = if isnull(draw_shocks_override)
-        if input_type in [:init, :mode, :mean]
-            false
-        elseif input_type in [:full, :subset]
-            true
-        end
-    else
-        get(draw_shocks_override)
-    end
-
-    # Get initial forecast state vector s_T
-    initial_forecast_state = if draw_states
-        if run_smoother
-            # If we want to draw s_T and have already run the smoother, use the
-            # last smoothed state, which was already drawn from N(s_{T|T},
-            # P_{T|T}) in the simulation smoother
-            histstates[:, end]
-        else
-            # If we want to draw s_T but haven't run the smoother, draw from
-            # N(s_{T|T}, P_{T|T}) directly
-            U, singular_values, _ = svd(kal[:Pend])
-            dist = DegenerateMvNormal(kal[:zend], U*diagm(sqrt(singular_values)))
-            rand(dist)
-        end
-    else
-        # If we don't want to draw s_T, simply use the mean s_{T|T}
-        kal[:zend]
-    end
-
-
-    # 2A. Unbounded forecasts
-
-    forecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks, :forecaststdshocks]
+    unbddforecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks, :forecaststdshocks]
+    bddforecast_vars = [:bddforecaststates, :bddforecastobs, :bddforecastpseudo, :bddforecastshocks, :bddforecaststdshocks]
+    forecast_vars = vcat(unbddforecast_vars, bddforecast_vars)
     forecasts_to_compute = intersect(output_vars, forecast_vars)
 
     if !isempty(forecasts_to_compute)
-        forecaststates, forecastobs, forecastpseudo, forecastshocks =
-            forecast(m, system, initial_forecast_state;
-                     cond_type = cond_type, enforce_zlb = false, draw_shocks = draw_shocks)
-
-        # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
-        if cond_type in [:full, :semi]
-            forecast_output[:forecaststates] = transplant_forecast(histstates, forecaststates, T)
-            forecast_output[:forecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
-            forecast_output[:forecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
-            forecast_output[:forecastobs]    = transplant_forecast_observables(histstates, forecastobs, system, T)
+        # Decide whether to draw shocks
+        draw_shocks_override = forecast_draw_shocks_override(m)
+        draw_shocks = if isnull(draw_shocks_override)
+            if input_type in [:init, :mode, :mean]
+                false
+            elseif input_type in [:full, :subset]
+                true
+            end
         else
-            forecast_output[:forecaststates] = forecaststates
-            forecast_output[:forecastshocks] = forecastshocks
-            forecast_output[:forecastpseudo] = forecastpseudo
-            forecast_output[:forecastobs]    = forecastobs
+            get(draw_shocks_override)
         end
 
-        # Standardize shocks if desired
-        if :forecaststdshocks in output_vars
-            forecast_output[:forecaststdshocks] = standardize_shocks(forecast_output[:forecastshocks], system[:QQ])
-        end
-    end
-
-
-    # 2B. Bounded forecasts
-
-    forecast_vars_bdd = [:bddforecaststates, :bddforecastobs, :bddforecastpseudo, :bddforecastshocks, :bddforecaststdshocks]
-    forecasts_to_compute = intersect(output_vars, forecast_vars_bdd)
-
-    if !isempty(forecasts_to_compute)
-        forecaststates, forecastobs, forecastpseudo, forecastshocks =
-            forecast(m, system, initial_forecast_state;
-                     cond_type = cond_type, enforce_zlb = true, draw_shocks = draw_shocks)
-
-        # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
-        if cond_type in [:full, :semi]
-            forecast_output[:bddforecaststates] = transplant_forecast(histstates, forecaststates, T)
-            forecast_output[:bddforecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
-            forecast_output[:bddforecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
-            forecast_output[:bddforecastobs]    = transplant_forecast_observables(histstates, forecastobs, system, T)
+        # Get initial forecast state vector s_T
+        initial_forecast_state = if draw_states
+            if run_smoother
+                # If we want to draw s_T and have already run the smoother, use the
+                # last smoothed state, which was already drawn from N(s_{T|T},
+                # P_{T|T}) in the simulation smoother
+                histstates[:, end]
+            else
+                # If we want to draw s_T but haven't run the smoother, draw from
+                # N(s_{T|T}, P_{T|T}) directly
+                U, singular_values, _ = svd(kal[:Pend])
+                dist = DegenerateMvNormal(kal[:zend], U*diagm(sqrt(singular_values)))
+                rand(dist)
+            end
         else
-            forecast_output[:bddforecaststates] = forecaststates
-            forecast_output[:bddforecastshocks] = forecastshocks
-            forecast_output[:bddforecastpseudo] = forecastpseudo
-            forecast_output[:bddforecastobs]    = forecastobs
+            # If we don't want to draw s_T, simply use the mean s_{T|T}
+            kal[:zend]
         end
 
-        # Standardize shocks if desired
-        if :bddforecaststdshocks in output_vars
-            forecast_output[:bddforecaststdshocks] = standardize_shocks(forecast_output[:bddforecastshocks], system[:QQ])
+
+        # 2A. Unbounded forecasts
+
+        if !isempty(intersect(output_vars, unbddforecast_vars))
+            forecaststates, forecastobs, forecastpseudo, forecastshocks =
+                forecast(m, system, initial_forecast_state;
+                         cond_type = cond_type, enforce_zlb = false, draw_shocks = draw_shocks)
+
+            # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
+            if cond_type in [:full, :semi]
+                forecast_output[:forecaststates] = transplant_forecast(histstates, forecaststates, T)
+                forecast_output[:forecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
+                forecast_output[:forecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
+                forecast_output[:forecastobs]    = transplant_forecast_observables(histstates, forecastobs, system, T)
+            else
+                forecast_output[:forecaststates] = forecaststates
+                forecast_output[:forecastshocks] = forecastshocks
+                forecast_output[:forecastpseudo] = forecastpseudo
+                forecast_output[:forecastobs]    = forecastobs
+            end
+
+            # Standardize shocks if desired
+            if :forecaststdshocks in output_vars
+                forecast_output[:forecaststdshocks] = standardize_shocks(forecast_output[:forecastshocks], system[:QQ])
+            end
+        end
+
+
+        # 2B. Bounded forecasts
+
+        if !isempty(output_vars, bddforecast_vars)
+            forecaststates, forecastobs, forecastpseudo, forecastshocks =
+                forecast(m, system, initial_forecast_state;
+                         cond_type = cond_type, enforce_zlb = true, draw_shocks = draw_shocks)
+
+            # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
+            if cond_type in [:full, :semi]
+                forecast_output[:bddforecaststates] = transplant_forecast(histstates, forecaststates, T)
+                forecast_output[:bddforecastshocks] = transplant_forecast(histshocks, forecastshocks, T)
+                forecast_output[:bddforecastpseudo] = transplant_forecast(histpseudo, forecastpseudo, T)
+                forecast_output[:bddforecastobs]    = transplant_forecast_observables(histstates, forecastobs, system, T)
+            else
+                forecast_output[:bddforecaststates] = forecaststates
+                forecast_output[:bddforecastshocks] = forecastshocks
+                forecast_output[:bddforecastpseudo] = forecastpseudo
+                forecast_output[:bddforecastobs]    = forecastobs
+            end
+
+            # Standardize shocks if desired
+            if :bddforecaststdshocks in output_vars
+                forecast_output[:bddforecaststdshocks] = standardize_shocks(forecast_output[:bddforecastshocks], system[:QQ])
+            end
         end
     end
 
