@@ -1,6 +1,6 @@
-#########################################
+##########################################
 ## Extract class and product from a symbol
-#########################################
+##########################################
 
 function get_class(s::Symbol)
     class = if contains(string(s), "pseudo")
@@ -51,9 +51,10 @@ function get_class_longname(class::Symbol)
 end
 
 
-#########################################
+#####################################
 ## Preparing data for transformations
-#########################################
+#####################################
+
 """
 ```
 resize_population_forecast(population_forecast::DataFrame, nperiods::Int,
@@ -220,9 +221,9 @@ function get_mb_population_series(product::Symbol, mnemonic::Symbol,
 end
 
 
-#########################################
+##############
 ## Other utils
-#########################################
+##############
 
 """
 ```
@@ -296,7 +297,6 @@ function get_y0_index(m::AbstractModel, product::Symbol)
     end
 end
 
-
 """
 ```
 check_consistent_order(l1, l2)
@@ -324,4 +324,3 @@ function check_consistent_order(l1, l2)
 
     return true
 end
-

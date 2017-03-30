@@ -70,9 +70,9 @@ type MeansBands
         new(key, means, bands)
     end
 end
+
 # A dummy MeansBands object
 function MeansBands()
-
     metadata   = Dict(:class => :none, :product => :none,
                       :cond_type => :none, :para => :none,
                       :indices => Dict{Symbol, Int}(:none => 1))
@@ -113,9 +113,8 @@ end
 
 """
 ```
-Base.cat(mb1::MeansBands, mb2::MeansBands;
-                  [out_product = Symbol()], [forecast_string = ""])
-
+Base.cat(mb1::MeansBands, mb2::MeansBands; out_product = Symbol(),
+    forecast_string = "")
 ```
 
 Concatenate 2 compatible `MeansBands` objects together by date. 2
@@ -123,22 +122,29 @@ Concatenate 2 compatible `MeansBands` objects together by date. 2
 variables is the same, the conditional type is the same, and the
 input_type for the forecast used to create the two `MeansBands` object
 is the same. Furthermore, we require that the dates covered by each
-`MeansBands` object form a continguous interval. If `mb1` and `mb2` do
-not represent a history and a forecast respectively, we require the
-user
+`MeansBands` object form a continguous interval.
 
-### Input arguments
-- `mb1`: a MeansBands object. The dates in the first MeansBands
-  argument should come chronologically first.
-- `mb2`: a MeansBands object. The dates in the second MeansBands
-  argument should begin 1 period after the final period in `mb1`.
+### Inputs
 
-### Keyword arguments
-- TODO
+- `mb1::MeansBands`
+- `mb2::MeansBands`
+
+Note that the dates in `mb1` should come chronologically first, with the dates
+in `mb2` beginning 1 period after the final period in `mb1`.
+
+### Keyword Arguments
+
+- `out_product::Symbol`: desired product of the resulting concatenated
+`MeansBands` object. This argument is required if `mb1` and `mb2` do not
+represent a history and a forecast respectively
+- `forecast_string::AbstractString`: desired `forecast_string` of the resulting
+  concatenated `MeansBands`. This argument is recommended (but not required) if
+  the `forecast_string`s of `mb1` and `mb2` do not match. If this is the case
+  but `forecast_string` is not provided, `mb1`'s `forecast_string` will be used.
 """
 function Base.cat(mb1::MeansBands, mb2::MeansBands;
                   out_product::Symbol = Symbol(),
-                  forecast_string = "")
+                  forecast_string::AbstractString = "")
 
     # Assert class, cond type and para are the same
     @assert get_class(mb1) == get_class(mb2)
@@ -148,10 +154,6 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     # Assert dates are contiguous
     last_mb1_date  = enddate_means(mb1)
     first_mb2_date = startdate_means(mb2)
-
-    println(last_mb1_date)
-    println(first_mb2_date)
-    println(iterate_quarters(last_mb1_date, 1))
 
     @assert iterate_quarters(last_mb1_date, 1) == first_mb2_date
 
@@ -197,7 +199,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     indices = [var::Symbol => i::Int for (i, var) in enumerate(names(means))]
 
     # forecast string
-    if isempty(forecast_string) && (mb1.metadata[:forecast_string] == mb2.metadata[:forecast_string])
+    if isempty(forecast_string) && (mb1.metadata[:forecast_string] != mb2.metadata[:forecast_string])
         warn("No forecast_string provided: using $(mb1.metadata[:forecast_string])")
     end
     forecast_string = mb1.metadata[:forecast_string]
@@ -214,6 +216,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     # construct the new MeansBands object and return
     MeansBands(mb1.metadata, means, bands)
 end
+
 
 ###################################
 ## METADATA
@@ -322,7 +325,8 @@ n_periods_means(mb::MeansBands) = size(mb.means,1)
 startdate_means(mb::MeansBands)
 ```
 
-Get first period in`mb.means`. Assumes `mb.means[product]` is already sorted by date.
+Get first period in`mb.means`. Assumes `mb.means[product]` is already sorted by
+date.
 """
 startdate_means(mb::MeansBands) = mb.means[:date][1]
 
@@ -331,21 +335,22 @@ startdate_means(mb::MeansBands) = mb.means[:date][1]
 enddate_means(mb::MeansBands)
 ```
 
-Get last period for which `mb` stores means. Assumes `mb.means[product]` is already sorted by date.
+Get last period for which `mb` stores means. Assumes `mb.means[product]` is
+already sorted by date.
 """
 enddate_means(mb::MeansBands) = mb.means[:date][end]
 
 
 """
 ```
-get_shockdec_means(mb::MeansBands, var::Symbol; shocks::Vector{Symbol}=Vector{Symbol}())
+get_shockdec_means(mb::MeansBands, var::Symbol;
+    shocks::Vector{Symbol} = Vector{Symbol}())
 ```
 
-Return the mean value of each shock requested in the shock decomposition of a particular variable.
-If `shocks` is empty, returns all shocks.
+Return the mean value of each shock requested in the shock decomposition of a
+particular variable. If `shocks` is empty, returns all shocks.
 """
-
-function get_shockdec_means(mb::MeansBands, var::Symbol; shocks::Vector{Symbol}=Vector{Symbol}())
+function get_shockdec_means(mb::MeansBands, var::Symbol; shocks::Vector{Symbol} = Vector{Symbol}())
 
     # Extract the subset of columns relating to the variable `var` and the shocks listed in `shocks.`
     # If `shocks` not provided, give all the shocks
@@ -361,7 +366,7 @@ function get_shockdec_means(mb::MeansBands, var::Symbol; shocks::Vector{Symbol}=
         out[symbol(shockname)] = mb.means[col]
     end
 
-    out
+    return out
 end
 
 
@@ -416,10 +421,10 @@ enddate_bands(mb::MeansBands) = mb.bands[:date][end]
 which_density_bands(mb, uniqueify=false)
 ```
 
-Return a list of the bands stored in mb.bands. If `uniqueify=true`,
-strips "upper" and "lower" band tags and returns unique list of percentage values.
+Return a list of the bands stored in mb.bands. If `uniquify = true`,
+strips \"upper\" and \"lower\" band tags and returns unique list of percentage values.
 """
-function which_density_bands(mb::MeansBands; uniqueify=false, ordered=true)
+function which_density_bands(mb::MeansBands; uniquify=false, ordered=true)
 
     # extract one of the keys in mb.bands
     var  = collect(keys(mb.bands))[1]
@@ -438,7 +443,7 @@ function which_density_bands(mb::MeansBands; uniqueify=false, ordered=true)
     end
 
     # return both upper and lower bands, or just percents, as desired
-    strs = if uniqueify
+    strs = if uniquify
         sort(unique([split(x, " ")[1] for x in [lowers; uppers]]))
     else
         [lowers; uppers]
@@ -450,26 +455,28 @@ end
 
 """
 ```
-get_shockdec_bands(mb::MeansBands, var::Symbol;
-       shocks::Vector{Symbol}=Vector{Symbol}(), bands::Vector{Symbol}()=Vector{Symbol}())
+get_shockdec_bands(mb, var; shocks = Vector{Symbol}(), bands = Vector{Symbol}())
 ```
 
-Return a `Dict{Symbol,DataFrame}` mapping shock names to bands for a particular variable.
+Return a `Dict{Symbol,DataFrame}` mapping shock names to bands for a particular
+variable.
 
 ### Inputs
-- `mb`: MeansBands object
-- `var`: the variable of interest (eg the state `:y_t`, or observable `:obs_hours`)
 
-### Optional arguments
-- `shocks`: subset of shock names for which to return bands. If empty, `get_shockdec_bands` returns all bands.
-- `bands`: subset of bands stored in the DataFrames of `mb.bands` to return.
+- `mb::MeansBands`
+- `var::Symbol`: the variable of interest (eg the state `:y_t`, or observable
+  `:obs_hours`)
 
-### Outputs
+### Keyword Arguments
 
-A `Dict{Symbol, DataFrame}` mapping names of shocks to the bands of `var` corresponding to each shock.
+- `shocks::Vector{Symbol}`: subset of shock names for which to return bands. If
+  empty, `get_shockdec_bands` returns all bands
+- `bands::Vector{Symbol}`: subset of bands stored in the DataFrames of
+  `mb.bands` to return
 """
 function get_shockdec_bands(mb::MeansBands, var::Symbol;
-                            shocks::Vector{Symbol}=Vector{Symbol}(), bands::Vector{Symbol}=Vector{Symbol}())
+                            shocks::Vector{Symbol} = Vector{Symbol}(),
+                            bands::Vector{Symbol} = Vector{Symbol}())
 
     @assert get_product(mb) == :shockdec
 
@@ -494,7 +501,7 @@ function get_shockdec_bands(mb::MeansBands, var::Symbol;
         out[shockname] = mb.bands[col][bands_keys]
     end
 
-    out
+    return out
 end
 
 
@@ -507,19 +514,19 @@ end
 prepare_meansbands_table_timeseries(mb, var)
 ```
 
-Returns a `DataFrame` of means and bands for a particular time series
-variable (either `hist` or `forecast` of some type). Columns are
-sorted such that the bands are ordered from smallest to largest, and
-the means are on the far right. For example, a MeansBands object
-containing 50\% and 68\% bands would be ordered as follows: [68\%
-lower, 50\% lower, 50\% upper, 68\% upper, mean].
+Returns a `DataFrame` of means and bands for a particular time series variable
+(either `hist` or `forecast` of some type). Columns are sorted such that the
+bands are ordered from smallest to largest, and the means are on the far
+right. For example, a `MeansBands` containing 50\% and 68\% bands would be
+ordered as follows: [68\% lower, 50\% lower, 50\% upper, 68\% upper, mean].
 
 ### Inputs
+
 - `mb::MeansBands`: time-series MeansBands object
 - `var::Symbol`: an economic variable stored in `mb`. If `mb` stores
   observables, `var` would be an element of `names(m.observables)`. If
-  it stores pseudoobservables, `var` would be the name of a
-  pseudoobservable defined in the pseudomeasurement equation.
+  it stores pseudo-observables, `var` would be the name of a
+  pseudo-observable defined in the pseudo-measurement equation.
 """
 function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol)
 
@@ -541,9 +548,9 @@ end
 
 """
 ```
-prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBands,
-           mb_dettrend::MeansBands, var::Symbol; [shocks = Vector{Symbol}()],
-           [mb_forecast = MeansBands()], [mb_hist = MeansBands()])
+prepare_means_table_shockdec(mb_shockdec, mb_trend, mb_dettrend, var;
+    shocks = Vector{Symbol}(), mb_forecast = MeansBands(),
+    mb_hist = MeansBands())
 ```
 
 Returns a `DataFrame` representing a detrended shock decompostion for
@@ -552,19 +559,18 @@ contributions of each shock in `shocks` (or all shocks, if the keyword
 argument is omitted) and the deterministic trend.
 
 ### Inputs
-- `mb_shockdec::MeansBands`: a `MeansBands` object for a shock decomposition
-- `mb_trend::MeansBands`: a `MeansBands` object for a trend  product.
-- `mb_dettrend::MeansBands`: a `MeansBands` object for a deterministic trend
-  product.
-  a shock decomposition.
+
+- `mb_shockdec::MeansBands`
+- `mb_trend::MeansBands`
+- `mb_dettrend::MeansBands`
 - `var::Symbol`: name of economic variable for which to return the means and bands table
 
 ### Keyword Arguments
-- `shocks::Vector{Symbol}`: If `mb` is a shock decomposition, this is
-  an optional list of shocks to print to the table. If omitted, all
-  shocks will be printed.
-- `mb_forecast::MeansBands`: a `MeansBands` object for a forecast.
-- `mb_hist::MeansBands`: a `MeansBands` object for smoothed states.
+
+- `shocks::Vector{Symbol}`: optional list of shocks to print to the table. If
+  omitted, all shocks will be printed.
+- `mb_forecast::MeansBands`
+- `mb_hist::MeansBands`
 """
 function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBands,
                                       mb_dettrend::MeansBands, var::Symbol;
@@ -622,5 +628,5 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
         df[:detrendedMean] = df_shockdec[var] - df_shockdec[:trend]
     end
 
-    df
+    return df
 end

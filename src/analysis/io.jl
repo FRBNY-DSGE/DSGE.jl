@@ -5,30 +5,33 @@
 """
 ```
 get_meansbands_input_files(m, input_type, cond_type, output_vars;
-                                    [forecast_string = ""], [fileformat = :jld])
+    forecast_string = "", fileformat = :jld)
 ```
 
 ```
 get_meansbands_input_files(directory, filestring_base, input_type, cond_type, output_vars;
-                                    [forecast_string = ""], [fileformat = :jld])
+    forecast_string = "", fileformat = :jld)
 ```
 
-Returns a dictionary of raw forecast output files to read in to
-compute means and bands.
+Returns a dictionary of raw forecast output files to read in to compute means
+and bands.
 
-### Input Arguments
+### Inputs
 
-#### Method 1:
-- `m::AbstractModel`: Model object
+**Method 1:**
 
-#### Method 2:
+- `m::AbstractModel`
+
+**Method 2:**
+
 - `directory::AbstractString`: directory location of input files to read
-- `filestring_base::Vector{AbstractString}`: a vector of strings to be
-  added as a suffix. These usually come from model settings for which
-  print=true. It should *not* include entries for `cond_type` and
-  `input_type` (these will be added automatically).
+- `filestring_base::Vector{AbstractString}`: a vector of strings to be added as
+  a suffix. These usually come from model settings for which `print = true`. It
+  should *not* include entries for `cond_type` and `input_type` (these will be
+  added automatically).
 
-#### Both methods:
+**Both methods:**
+
 - `input_type::Symbol`: See `?forecast_one`
 - `cond_type::Symbol`: See `?forecast_one`
 - `output_vars::Symbol`: See `?forecast_one`
@@ -45,6 +48,7 @@ function get_meansbands_input_files(m::AbstractModel, input_type::Symbol,
                                forecast_string = forecast_string,
                                fileformat = fileformat)
 end
+
 function get_meansbands_input_files(directory::AbstractString, filestring_base::Vector{ASCIIString},
                                     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
                                     forecast_string::AbstractString = "", fileformat::Symbol = :jld)
@@ -63,6 +67,7 @@ function get_meansbands_input_files(directory::AbstractString, filestring_base::
     return input_files
 end
 
+
 ################################################################
 ## I/O for actual MeansBands objects
 ################################################################
@@ -70,30 +75,33 @@ end
 """
 ```
 get_meansbands_output_files(m, input_type, cond_type, output_vars;
-                                    [forecast_string = ""], [fileformat = :jld])
+    forecast_string = "", fileformat = :jld)
 ```
 
 ```
 get_meansbands_output_files(directory, filestring_base, input_type, cond_type, output_vars;
-                                    [forecast_string = ""], [fileformat = :jld])
+    forecast_string = "", fileformat = :jld)
 ```
 
 Returns a dictionary of raw forecast output files in which to save
 computed means and bands.
 
-### Input Arguments
+### Inputs
 
-#### Method 1:
+**Method 1:**
+
 - `m::AbstractModel`: Model object
 
-#### Method 2:
+**Method 2:**
+
 - `directory::AbstractString`: directory location of input files to read
 - `filestring_base::Vector{AbstractString}`: a vector of strings to be
   added as a suffix. These usually come from model settings for which
   print=true. It should *not* include entries for `cond_type` and
   `input_type` (these will be added automatically).
 
-#### Both methods:
+**Both methods:**
+
 - `input_type::Symbol`: See `?forecast_one`
 - `cond_type::Symbol`: See `?forecast_one`
 - `output_vars::Symbol`: See `?forecast_one`
@@ -110,6 +118,7 @@ function get_meansbands_output_files(m::AbstractModel, input_type::Symbol,
     get_meansbands_output_files(directory, base, input_type, cond_type, output_vars;
                                 forecast_string = forecast_string, fileformat = fileformat)
 end
+
 function get_meansbands_output_files(directory::AbstractString,
                                      filestring_base::Vector{ASCIIString},
                                      input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
@@ -126,7 +135,6 @@ function get_meansbands_output_files(directory::AbstractString,
     return output_files
 end
 
-
 """
 ```
 function read_mb{S<:AbstractString}(fn::S)
@@ -141,27 +149,29 @@ function read_mb{S<:AbstractString}(fn::S)
     mb
 end
 
+
 ################################################################
 ## I/O for human-readable csvs
 ################################################################
+
 """
 ```
-write_meansbands_tables(dirname, mb, [vars = []], [forecast_string = ""],
-           [mb_trend = MeansBands()], [mb_dettrend = MeansBands()], [shocks = []])
+write_meansbands_tables(dirname, mb, vars = [], forecast_string = "",
+           mb_trend = MeansBands(), mb_dettrend = MeansBands(), shocks = [])
+
+write_meansbands_tables(m, mb, vars = vars, forecast_string = forecast_string,
+              mb_trend = MeansBands(), mb_dettrend = MeansBands(), shocks = [])
 ```
 
-```
-write_meansbands_tables(m, mb, [vars = vars], [forecast_string = forecast_string],
-              [mb_trend = MeansBands()], [mb_dettrend = MeansBands()], [shocks = []])
-```
-
-Write means and bands (ordered) to a csv file in `tablespath(m, "forecast")`
+Write means and bands (ordered) to a csv file in `tablespath(m, \"forecast\")`
 
 ### Inputs
-- `m`: Model object
-- `mb`: a meansbands object
+
+- `m::AbstractModel`
+- `mb::MeansBands`
 
 ### Keyword arguments
+
 - `vars`: a `Symbol` or `Vector{Symbol}` indicating which variable in
   `mb` you want to print means and bands for. If left out or empty,
   means and bands for all variables in `mb` will be printed.
@@ -194,6 +204,7 @@ function write_meansbands_tables(m::AbstractModel, mb::MeansBands, var::Symbol;
                             mb_trend = mb_trend, mb_dettrend = mb_dettrend,
                             mb_forecast = mb_forecast, mb_hist = mb_hist)
 end
+
 function write_meansbands_tables(m::AbstractModel, mb::MeansBands;
                                  vars::Vector{Symbol} = Vector{Symbol}(),
                                  mb_trend::MeansBands = MeansBands(),
@@ -214,6 +225,7 @@ function write_meansbands_tables(m::AbstractModel, mb::MeansBands;
                                 mb_forecast = mb_forecast, mb_hist = mb_hist, shocks = shocks)
     end
 end
+
 function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands;
                                                     vars::Vector{Symbol} = Vector{Symbol}(),
                                                     filestring_base::Vector{S} = Vector{S}(),
@@ -236,6 +248,7 @@ function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands;
                                 shocks = shocks, mb_forecast = mb_forecast, mb_hist = mb_hist)
     end
 end
+
 function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands, var::Symbol;
                                                     filestring_base::Vector{S} = Vector{S}(),
                                                     forecast_string::AbstractString = "",
@@ -273,18 +286,20 @@ end
 """
 ```
 write_meansbands_tables_all(m, input_type, cond_type, output_vars;
-                              [forecast_string = ""], [vars = []], [shocks = shocks])
+    forecast_string = "", vars = [], shocks = shocks)
 ```
 
 Writes all `output_vars` corresponding to model `m` to tables in `tablespath(m, \"forecast\")`.
 
-### Input arguments
-- `m::AbstractModel`: Model object
+### Inputs
+
+- `m::AbstractModel`
 - `input_type::Symbol`: See `?forecast_one`
 - `cond_type::Symbol`: See `?forecast_one`
 - `output_vars::Symbol`: See `?forecast_one`
 
-### Keyword arguments
+### Keyword Arguments
+
 - `forecast_string::AbstractString`: See `?forecast_one`
 - `vars`::Vector{Symbol}: Vector of economic variables for which to
   print `output_vars` to tables. If omitted, all shocks will be
@@ -376,7 +391,7 @@ end
 
 function add_requisite_output_vars_meansbands(output_vars)
 
-    all_output_vars  = add_requisite_output_vars(output_vars)
+    all_output_vars = add_requisite_output_vars(output_vars)
 
     if :shockdecpseudo in all_output_vars
         push!(all_output_vars, :histforecastpseudo)
@@ -385,5 +400,5 @@ function add_requisite_output_vars_meansbands(output_vars)
         push!(all_output_vars, :histforecastobs)
     end
 
-    all_output_vars
+    return all_output_vars
 end
