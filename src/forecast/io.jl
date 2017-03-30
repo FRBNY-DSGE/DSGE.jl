@@ -285,6 +285,8 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
         state_indices = merge(m.endogenous_states, m.endogenous_states_augmented)
         @assert length(state_indices) == n_states_augmented(m) # assert no duplicate keys
         write(file, "state_indices", state_indices)
+        rev_transforms = Dict{Symbol,Symbol}([x => symbol("DSGE.identity") for x in keys(state_indices)])
+        write(file, "state_revtransforms", rev_transforms)
     end
 
     # Write observable names and transforms
