@@ -529,7 +529,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
         # 2B. Bounded forecasts
 
-        if !isempty(output_vars, bddforecast_vars)
+        if !isempty(intersect(output_vars, bddforecast_vars))
             forecaststates, forecastobs, forecastpseudo, forecastshocks =
                 forecast(m, system, initial_forecast_state;
                          cond_type = cond_type, enforce_zlb = true, draw_shocks = draw_shocks)
