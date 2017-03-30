@@ -22,10 +22,6 @@ function plot_irfs(shock::Symbol, vars::Vector{Symbol}, mb::MeansBands;
         save_plots = true
     end
 
-    nperiods = size(mb.means, 1)
-    periods = 0:nperiods
-
-    nplots = length(vars)
     allplots = OrderedDict{Symbol, Plot}()
 
     # Iterate through variables
@@ -35,15 +31,13 @@ function plot_irfs(shock::Symbol, vars::Vector{Symbol}, mb::MeansBands;
 
         # Plot 90% bands
         for pct in bands
-            ub = vcat([0.0], mb.bands[varshock][Symbol("$pct UB")])
-            lb = vcat([0.0], mb.bands[varshock][Symbol("$pct LB")])
-            plot!(p, periods, ub, fillto = lb,
+            plot!(p, mb.bands[varshock][Symbol("$pct UB")],
+                  fillto = mb.bands[varshock][Symbol("$pct LB")],
                   label = "", color = :blue, α = 0.10)
         end
 
         # Plot mean
-        mean = vcat([0.0], mb.means[varshock])
-        plot!(p, periods, mean, label = "", linewidth = 2, linecolor = :black)
+        plot!(p, mb.means[varshock], label = "", linewidth = 2, linecolor = :black)
 
         # Save if `output_file` provided
         if save_plots
