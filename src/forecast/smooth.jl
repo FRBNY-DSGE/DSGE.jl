@@ -67,10 +67,14 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     # Call smoother
     smoother = eval(symbol(forecast_smoother(m), "_smoother"))
 
-    states, shocks = if smoother in [hamilton_smoother, koopman_smoother]
+    states, shocks = if smoother == hamilton_smoother
         draw_states ? warn("$smoother called with draw_states = true") : nothing
         smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
             kal[:z0], kal[:vz0])
+    elseif smoother == koopman_smoother
+        draw_states ? warn("$smoother called with draw_states = true") : nothing
+        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+            kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
     elseif smoother in [carter_kohn_smoother, durbin_koopman_smoother]
         smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
             kal[:z0], kal[:vz0]; draw_states = draw_states)
