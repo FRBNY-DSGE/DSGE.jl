@@ -5,7 +5,6 @@ path = dirname(@__FILE__)
 
 # Initialize model object
 m = AnSchorfheide(testing = true)
-m <= Setting(:saveroot, tempdir())
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:date_conditional_end, quartertodate("2015-Q4"))
 m <= Setting(:forecast_uncertainty_override, Nullable(false))
@@ -73,9 +72,24 @@ for cond_type in [:none, :semi, :full]
 end
 
 # Test full-distribution blocking
-@everywhere using DSGE
+# @everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
 @time forecast_one(m, :full, :none, output_vars, verbose = :none)
+
+
+# Test read_forecast_output
+for input_type in [:mode, :full]
+    output_files = get_forecast_output_files(m, input_type, :none, output_vars)
+    jldopen(output_files[:trendobs], "r") do file
+        @test ndims(read_forecast_output(file, :obs, :trend, :obs_gdp)) == 2
+    end
+    jldopen(output_files[:forecastobs], "r") do file
+        @test ndims(read_forecast_output(file, :obs, :forecast, :obs_gdp)) == 2
+    end
+    jldopen(output_files[:irfobs], "r") do file
+        @test ndims(read_forecast_output(file, :obs, :irf, :obs_gdp, :rm_sh)) == 2
+    end
+end
 
 
 nothing
