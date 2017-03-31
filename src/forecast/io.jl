@@ -342,17 +342,22 @@ end
 read_forecast_metadata(file::JLD.JldFile)
 ```
 
-Read metadata from forecast output files. This includes dictionaries mapping dates, as well as state, observable,
-pseudo-observable, and shock names, to their respective indices in the saved
-forecast output array. The saved dictionaries include:
+Read metadata from forecast output files. This includes dictionaries mapping
+dates, as well as state, observable, pseudo-observable, and shock names, to
+their respective indices in the saved forecast output array. Depending on the
+`output_var`, the saved dictionaries might include:
 
-- `date_indices::Dict{Date, Int}`: saved for all forecast outputs
-- `state_names::Dict{Symbol, Int}`: saved for `var in [:histstates, :forecaststates, :shockdecstates]`
-- `observable_names::Dict{Symbol, Int}`: saved for `var in [:forecastobs, :shockdecobs]`
-- `observable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for observables
-- `pseudoobservable_names::Dict{Symbol, Int}`: saved for `var in [:histpseudo, :forecastpseudo, :shockdecpseudo]`
-- `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for pseudoobservables
-- `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
+- `date_indices::Dict{Date, Int}`: not saved for IRFs
+- `state_indices::Dict{Symbol, Int}`
+- `observable_indices::Dict{Symbol, Int}`
+- `pseudoobservable_indices::Dict{Symbol, Int}`
+- `shock_indices::Dict{Symbol, Int}`
+- `state_revtransforms::Dict{Symbol, Symbol}`: states are not transformed, so
+  all values are `:identity`
+- `observable_revtransforms::Dict{Symbol, Symbol}`
+- `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`
+- `shock_revtransforms::Dict{Symbol, Symbol}`: shocks are not transformed, so
+  all values are `:identity`
 """
 function read_forecast_metadata(file::JLD.JldFile)
     metadata = Dict{Symbol, Any}()
