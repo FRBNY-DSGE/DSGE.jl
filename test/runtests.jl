@@ -26,6 +26,7 @@ my_tests = [
             "forecast/forecast",
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
+            "forecast/io",
             "forecast/forecast_one",
             "analysis/means_bands"
             ]
