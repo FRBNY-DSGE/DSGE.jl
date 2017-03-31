@@ -407,8 +407,20 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
         kal = filter(m, df, system; cond_type = cond_type)
     end
 
-    # Initialize dictionary
+    # Initialize output dictionary
     forecast_output = Dict{Symbol, Array{Float64}}()
+
+    # Decide whether to draw states/shocks in smoother/forecast
+    uncertainty_override = forecast_uncertainty_override(m)
+    uncertainty = if isnull(uncertainty_override)
+        if input_type in [:init, :mode, :mean]
+            false
+        elseif input_type in [:full, :subset]
+            true
+        end
+    else
+        get(uncertainty_override)
+    end
 
 
     ### 1. Smoothed Histories
@@ -424,21 +436,9 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
         (cond_type in [:semi, :full] && !irfs_only)
 
     if run_smoother
-        # Decide whether to draw smoothed states
-        draw_states_override = smoother_draw_states_override(m)
-        draw_states = if isnull(draw_states_override)
-            if input_type in [:init, :mode, :mean]
-                false
-            elseif input_type in [:full, :subset]
-                true
-            end
-        else
-            get(draw_states_override)
-        end
-
         # Call smoother
         histstates, histshocks, histpseudo, initial_states =
-            smooth(m, df, system, kal; cond_type = cond_type, draw_states = draw_states)
+            smooth(m, df, system, kal; cond_type = cond_type, draw_states = uncertainty)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
@@ -468,20 +468,8 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     forecasts_to_compute = intersect(output_vars, forecast_vars)
 
     if !isempty(forecasts_to_compute)
-        # Decide whether to draw shocks
-        draw_shocks_override = forecast_draw_shocks_override(m)
-        draw_shocks = if isnull(draw_shocks_override)
-            if input_type in [:init, :mode, :mean]
-                false
-            elseif input_type in [:full, :subset]
-                true
-            end
-        else
-            get(draw_shocks_override)
-        end
-
         # Get initial forecast state vector s_T
-        initial_forecast_state = if draw_states
+        initial_forecast_state = if uncertainty
             if run_smoother
                 # If we want to draw s_T and have already run the smoother, use the
                 # last smoothed state, which was already drawn from N(s_{T|T},
@@ -505,7 +493,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
         if !isempty(intersect(output_vars, unbddforecast_vars))
             forecaststates, forecastobs, forecastpseudo, forecastshocks =
                 forecast(m, system, initial_forecast_state;
-                         cond_type = cond_type, enforce_zlb = false, draw_shocks = draw_shocks)
+                         cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
 
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
             if cond_type in [:full, :semi]
@@ -532,7 +520,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
         if !isempty(intersect(output_vars, bddforecast_vars))
             forecaststates, forecastobs, forecastpseudo, forecastshocks =
                 forecast(m, system, initial_forecast_state;
-                         cond_type = cond_type, enforce_zlb = true, draw_shocks = draw_shocks)
+                         cond_type = cond_type, enforce_zlb = true, draw_shocks = uncertainty)
 
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
             if cond_type in [:full, :semi]

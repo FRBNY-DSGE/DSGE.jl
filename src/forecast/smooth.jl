@@ -65,10 +65,12 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
 
     # Call smoother
     states, shocks = if forecast_smoother(m) == :hamilton
+        draw_states ? warn("Hamilton smoother called with draw_states = true") : nothing
         hamilton_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
             kal[:z0], kal[:vz0])
 
     elseif forecast_smoother(m) == :koopman
+        draw_states ? warn("Koopman smoother called with draw_states = true") : nothing
         koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
             kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
 
