@@ -7,7 +7,6 @@ path = dirname(@__FILE__)
 m = AnSchorfheide(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:date_conditional_end, quartertodate("2015-Q4"))
-m <= Setting(:forecast_uncertainty_override, Nullable(false))
 m <= Setting(:use_population_forecast, true)
 m <= Setting(:forecast_pseudoobservables, true)
 
@@ -16,7 +15,7 @@ overrides = forecast_input_file_overrides(m)
 overrides[:mode] = joinpath(estroot, "optimize.h5")
 overrides[:full] = joinpath(estroot, "metropolis_hastings.h5")
 
-output_vars = add_requisite_output_vars([:histpseudo,
+output_vars = add_requisite_output_vars([:histpseudo, :histobs,
                                          :forecastpseudo, :forecastobs,
                                          :shockdecpseudo, :shockdecobs,
                                          :irfpseudo, :irfobs])
