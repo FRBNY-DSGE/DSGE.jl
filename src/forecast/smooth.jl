@@ -22,8 +22,9 @@ Computes and returns the smoothed values of states and shocks for the system
 - `draw_states`: if using a simulation smoother (i.e.
   `forecast_smoother(m) in [:carter_kohn, :durbin_koopman]`), indicates whether
    to draw smoothed states from the distribution `N(z_{t|T}, P_{t|T})` or to use
-   the mean `z_{t|T}`. Defaults to `true`. If not using a simulation smoother,
-   this flag has no effect
+   the mean `z_{t|T}`. Defaults to `false`. If not using a simulation smoother,
+   this flag has no effect (though the user will be warned if
+   `draw_states = true`)
 
 ### Outputs
 
@@ -52,7 +53,7 @@ before calling `smooth`.
 """
 function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     system::System{S}, kal::Kalman{S}; cond_type::Symbol = :none,
-    draw_states::Bool = true)
+    draw_states::Bool = false)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
 
