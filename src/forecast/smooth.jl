@@ -65,29 +65,20 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_regime_matrices(m, system)
 
     # Call smoother
-    states, shocks = if forecast_smoother(m) == :hamilton
-        draw_states ? warn("Hamilton smoother called with draw_states = true") : nothing
-        hamilton_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+    smoother = eval(symbol(forecast_smoother(m), "_smoother"))
+
+    states, shocks = if smoother in [hamilton_smoother, koopman_smoother]
+        draw_states ? warn("$smoother called with draw_states = true") : nothing
+        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
             kal[:z0], kal[:vz0])
-
-    elseif forecast_smoother(m) == :koopman
-        draw_states ? warn("Koopman smoother called with draw_states = true") : nothing
-        koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-            kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
-
-    elseif forecast_smoother(m) == :carter_kohn
-        carter_kohn_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+    elseif smoother in [carter_kohn_smoother, durbin_koopman_smoother]
+        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
             kal[:z0], kal[:vz0]; draw_states = draw_states)
-
-    elseif forecast_smoother(m) == :durbin_koopman
-        durbin_koopman_smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-            kal[:z0], kal[:vz0]; draw_states = draw_states)
-
     else
         error("Invalid smoother: $(forecast_smoother(m))")
     end
 
-    # Index out last presample states, used to compute the deterministic trend
+    # Index out last presample period, used to compute the deterministic trend
     t0 = n_presample_periods(m)
     t1 = index_mainsample_start(m)
     initial_states = states[:, t0]
