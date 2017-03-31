@@ -24,8 +24,8 @@ function get_forecast_input_file(m, input_type)
         else
             error("Input file $override_file does not exist")
         end
-    # If input_type = :subset or :block, also check for existence of overrides[:full]
-    elseif input_type in [:subset, :block]
+    elseif input_type == :subset
+        # If input_type == :subset, also check for existence of overrides[:full]
         return get_forecast_input_file(m, :full)
     end
 
@@ -35,7 +35,7 @@ function get_forecast_input_file(m, input_type)
         return workpath(m,"estimate","paramsmean.h5")
     elseif input_type == :init
         return ""
-    elseif input_type in [:full, :subset, :block]
+    elseif input_type in [:full, :subset]
         return rawpath(m,"estimate","mhsave.h5")
     else
         throw(ArgumentError("Invalid input_type: $(input_type)"))
@@ -46,7 +46,6 @@ end
 ```
 get_forecast_filename(m, input_type, cond_type, output_var;
     pathfcn = rawpath, forecast_string = "", fileformat = :jld)
-
 
 get_forecast_filename(directory, filestring_base, input_type, cond_type,
     output_var; forecast_string = "", fileformat = :jld)
