@@ -166,7 +166,7 @@ function Model1002(subspec::AbstractString="ss2";
     subspec            = subspec
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
-    rng                = MersenneTwister()
+    rng                = MersenneTwister(0)
 
     # Initialize empty model
     m = Model1002{Float64}(

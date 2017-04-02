@@ -164,7 +164,7 @@ function Model990(subspec::AbstractString="ss2";
     subspec            = subspec
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
-    rng                = MersenneTwister()
+    rng                = MersenneTwister(0)
 
     # initialize empty model
     m = Model990{Float64}(

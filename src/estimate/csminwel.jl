@@ -42,7 +42,7 @@ end
 csminwel(fcn::Function, grad::Function, x0::Vector, H0::Matrix=1e-5.*eye(length(x0)), args...;
          xtol::Real=1e-32, ftol::Float64=1e-14, grtol::Real=1e-8, iterations::Int=1000,
          store_trace::Bool = false, show_trace::Bool = false, extended_trace::Bool = false,
-         verbose::Symbol = :none, rng::AbstractRNG = MersenneTwister(), kwargs...)
+         verbose::Symbol = :none, rng::AbstractRNG = MersenneTwister(0), kwargs...)
 ```
 
 Minimizes `fcn` using the csminwel algorithm.
@@ -84,7 +84,7 @@ function csminwel(fcn::Function,
                   show_trace::Bool     = false,
                   extended_trace::Bool = false,
                   verbose::Symbol      = :none,
-                  rng::AbstractRNG     = MersenneTwister(),
+                  rng::AbstractRNG     = MersenneTwister(0),
                   kwargs...)
 
     if show_trace
@@ -346,7 +346,7 @@ function csminwel(fcn::Function,
                   show_trace::Bool     = false,
                   extended_trace::Bool = false,
                   verbose::Symbol      = :none,
-                  rng::AbstractRNG     = MersenneTwister(),
+                  rng::AbstractRNG     = MersenneTwister(0),
                   kwargs...)
 
     grad{T<:Number}(x::Array{T}) = csminwell_grad(fcn, x, args...; kwargs...)
