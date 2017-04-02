@@ -176,7 +176,7 @@ function Model990(subspec::AbstractString="ss2")
     subspec            = subspec
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
-    rng                = MersenneTwister()
+    rng                = MersenneTwister(0)
     testing            = false
 
     # Set up data sources and series
@@ -187,7 +187,7 @@ function Model990(subspec::AbstractString="ss2")
     fernald_series     = [:TFPJQ, :TFPKQ]
     longrate_series    = [:FYCZZA]
     # ois data taken care of in load_data
-    
+
     data_series = Dict{Symbol,Vector{Symbol}}(:fred => fred_series, :spf => spf_series,
                                               :fernald => fernald_series, :longrate => longrate_series)
 
@@ -787,7 +787,7 @@ function init_data_transforms!(m::Model990)
     for i = 1:n_anticipated_shocks(m)
         # FROM: OIS expectations of $i-period-ahead interest rates at a quarterly rate
         # TO:   Same
-        
+
         m.data_transforms[symbol("obs_ois$i")] = function (levels)
             levels[:, symbol("ant$i")]
         end

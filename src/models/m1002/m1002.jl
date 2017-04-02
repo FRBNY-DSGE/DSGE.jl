@@ -179,7 +179,7 @@ function Model1002(subspec::AbstractString="ss2")
     subspec            = subspec
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
-    rng                = MersenneTwister()
+    rng                = MersenneTwister(0)
     testing            = false
 
     # Set up data sources and series
