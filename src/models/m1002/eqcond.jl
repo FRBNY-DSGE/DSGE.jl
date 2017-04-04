@@ -94,7 +94,7 @@ function eqcond(m::Model1002)
     Γ0[eq[:eq_spread], endo[:n_t]]       = m[:ζ_spb]
     Γ0[eq[:eq_spread], endo[:σ_ω_t]]     = -1.
     Γ0[eq[:eq_spread], endo[:μ_e_t]]     = -1.
-    
+
     # Flexible prices and wages
     Γ0[eq[:eq_spread_f], endo[:ERktil_f_t]] = 1.
     Γ0[eq[:eq_spread_f], endo[:r_f_t]]       = -1.
@@ -119,7 +119,7 @@ function eqcond(m::Model1002)
     Γ1[eq[:eq_nevol], endo[:n_t]]      = m[:ζ_nn]
     Γ1[eq[:eq_nevol], endo[:R_t]]      = -m[:ζ_nR]
     Γ1[eq[:eq_nevol], endo[:b_t]]      = m[:ζ_nR]*((m[:σ_c]*(1.+m[:h]*exp(-m[:z_star])))/(1.-m[:h]*exp(-m[:z_star])))
-    
+
     # Flexible prices and wages
     Γ0[eq[:eq_nevol_f], endo[:n_f_t]]      = 1.
     Γ0[eq[:eq_nevol_f], endo[:z_t]]      = m[:γ_star]*m[:vstar]/m[:nstar]
