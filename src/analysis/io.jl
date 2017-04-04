@@ -156,14 +156,27 @@ end
 
 """
 ```
-write_meansbands_tables(dirname, mb, vars = [], forecast_string = "",
-           mb_trend = MeansBands(), mb_dettrend = MeansBands(), shocks = [])
+write_meansbands_tables(dirname, mb, tablevar, [forecast_string = ""],
+           [mb_trend = MeansBands()], [mb_dettrend = MeansBands()], [columnvars = []])
 
-write_meansbands_tables(m, mb, vars = vars, forecast_string = forecast_string,
-              mb_trend = MeansBands(), mb_dettrend = MeansBands(), shocks = [])
+write_meansbands_tables(m, mb, [tablevars = tablevars], [forecast_string = forecast_string],
+              [mb_trend = MeansBands()], [mb_dettrend = MeansBands()], [columnvars = []])
 ```
 
-Write means and bands (ordered) to a csv file in `tablespath(m, \"forecast\")`
+Write means and bands (ordered) to a csv file in `tablespath(m, "forecast")`.
+
+To produce results that can be printed to a flat csv file, we must
+choose exactly which dimensions we want to print to each file. For
+instance, when we print a shock decomposition, we would like to print
+one table for each economic variable in question, with columns
+representing the response of that variable to a particular
+shock. However, when printing irfs, we would like to group first by
+the shock in question, and then print tables for variables responding
+to that shock (note, however, that because we print bands for irfs,
+each file will represent a particular shock-variable pair). This
+function groups first by the elements of `tablevar`, and then by the
+elements of `columnvars`.
+>>>>>>> add irfs to write_meansbands_all functions
 
 ### Inputs
 
@@ -171,10 +184,12 @@ Write means and bands (ordered) to a csv file in `tablespath(m, \"forecast\")`
 - `mb::MeansBands`
 
 ### Keyword arguments
-
-- `vars`: a `Symbol` or `Vector{Symbol}` indicating which variable in
-  `mb` you want to print means and bands for. If left out or empty,
-  means and bands for all variables in `mb` will be printed.
+- `tablevars`: a `Symbol` or `Vector{Symbol}` indicating which
+  variable in `mb` you want to print means and bands for. For
+  shockdecs, histories, and forecasts, this should be a vector of
+  economic variable names (either pseudoobservables or
+  observables). For irfs, this should be names of shocks. If left out or
+  empty, means and bands for all variables in `mb` will be printed.
 - `forecast_string::AbstractString`: See `?forecast_one`
 - `mb_trend::MeansBands`: a `MeansBands` object for a trend
   product. This is required when `mb` contains means and bands for
@@ -182,103 +197,118 @@ Write means and bands (ordered) to a csv file in `tablespath(m, \"forecast\")`
 - `mb_dettrend::MeansBands`: a `MeansBands` object for a deterministic trend
   product. This is required when `mb` contains means and bands for
   a shock decomposition.
-- `shocks::Vector{Symbol}`: If `mb` is a shock decomposition, this is
+- `columnvars::Vector{Symbol}`: If `mb` is a shock decomposition, this is
   an optional list of shocks to print to the table. If omitted, all
-  shocks will be printed.
+  shocks will be printed. For irfs, this is an optional list of variables to print to separate tables.
 """
-function write_meansbands_tables(m::AbstractModel, mb::MeansBands, var::Symbol;
+function write_meansbands_tables(m::AbstractModel, mb::MeansBands, tablevar::Symbol;
                                  forecast_string::AbstractString = "",
                                  mb_trend::MeansBands = MeansBands(),
                                  mb_dettrend::MeansBands = MeansBands(),
                                  mb_forecast::MeansBands = MeansBands(),
                                  mb_hist::MeansBands = MeansBands(),
-                                 shocks::Vector{Symbol} = Vector{Symbol}())
+                                 columnvars::Vector{Symbol} = Vector{Symbol}())
 
     # Use model object to compute output directory and settings suffix
     dir = tablespath(m, "forecast")
     base = DSGE.filestring_base(m)
 
     # Call lower-level function
-    write_meansbands_tables(dir, mb, var, shocks = shocks, filestring_base = base,
+    write_meansbands_tables(dir, mb, tablevar, columnvars = columnvars, filestring_base = base,
                             forecast_string = forecast_string,
                             mb_trend = mb_trend, mb_dettrend = mb_dettrend,
                             mb_forecast = mb_forecast, mb_hist = mb_hist)
 end
 
 function write_meansbands_tables(m::AbstractModel, mb::MeansBands;
-                                 vars::Vector{Symbol} = Vector{Symbol}(),
+                                 tablevars::Vector{Symbol} = Vector{Symbol}(),
                                  mb_trend::MeansBands = MeansBands(),
                                  mb_dettrend::MeansBands = MeansBands(),
                                  mb_forecast::MeansBands = MeansBands(),
                                  mb_hist::MeansBands = MeansBands(),
-                                 shocks::Vector{Symbol} = Vector{Symbol}())
+                                 columnvars::Vector{Symbol} = Vector{Symbol}())
 
     # Use all vars by default
-    if isempty(vars)
+    if isempty(tablevars)
         vars = setdiff(names(mb.means), [:date])
     end
 
     # Write table for each var
-    for var in vars
-        write_meansbands_tables(m, mb, var,
+    for tablevar in tablevars
+        write_meansbands_tables(m, mb, tablevar,
                                 mb_trend = mb_trend, mb_dettrend = mb_dettrend,
-                                mb_forecast = mb_forecast, mb_hist = mb_hist, shocks = shocks)
+                                mb_forecast = mb_forecast, mb_hist = mb_hist, columnvars = columnvars)
     end
 end
 
 function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands;
-                                                    vars::Vector{Symbol} = Vector{Symbol}(),
+                                                    tablevars::Vector{Symbol} = Vector{Symbol}(),
                                                     filestring_base::Vector{S} = Vector{S}(),
                                                     forecast_string::AbstractString = "",
                                                     mb_trend::MeansBands = MeansBands(),
                                                     mb_dettrend::MeansBands = MeansBands(),
                                                     mb_forecast::MeansBands = MeansBands(),
                                                     mb_hist::MeansBands = MeansBands(),
-                                                    shocks::Vector{Symbol} = Vector{Symbol}())
+                                                    columnvars::Vector{Symbol} = Vector{Symbol}())
     # Use all vars by default
-    if isempty(vars)
+    if isempty(tablevars)
         vars = setdiff(names(mb.means), [:date])
     end
 
     # Write table for each var
-    for var in vars
+    for var in tablevars
         write_meansbands_tables(dirname, mb, var, filestring_base = filestring_base,
                                 forecast_string = forecast_string,
                                 mb_trend = mb_trend, mb_dettrend = mb_dettrend,
-                                shocks = shocks, mb_forecast = mb_forecast, mb_hist = mb_hist)
+                                columnvars = columnvars, mb_forecast = mb_forecast, mb_hist = mb_hist)
     end
 end
 
-function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands, var::Symbol;
+function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands, tablevar::Symbol;
                                                     filestring_base::Vector{S} = Vector{S}(),
                                                     forecast_string::AbstractString = "",
                                                     mb_trend::MeansBands = MeansBands(),
                                                     mb_dettrend::MeansBands = MeansBands(),
                                                     mb_forecast::MeansBands = MeansBands(),
                                                     mb_hist::MeansBands = MeansBands(),
-                                                    shocks::Vector{Symbol} = Vector{Symbol}())
+                                                    columnvars::Vector{Symbol} = Vector{Symbol}())
     # What product are we making here?
     prod = get_product(mb)
 
     # Compute output filename
-    filename = "$prod" * "$var.csv"
+    filename = "$prod" * "$tablevar.csv"
     filestring_addl = DSGE.get_forecast_filestring_addl(get_para(mb), get_cond_type(mb), forecast_string = forecast_string)
     fullfilename = DSGE.savepath(dirname, filename, filestring_base, filestring_addl)
 
     # Extract dataframe
-    df = if prod in [:hist, :forecast, :forecast4q, :bddforecast, :bddforecast4q, :trend, :dettrend]
-        prepare_meansbands_table_timeseries(mb, var)
+    if prod in [:hist, :forecast, :forecast4q, :bddforecast, :bddforecast4q, :trend, :dettrend]
+        df = prepare_meansbands_table_timeseries(mb, tablevar)
+
+        # Write to file
+        writetable(fullfilename, df)
+        println(" * Wrote means and bands for $tablevar to $fullfilename")
+
     elseif prod in [:shockdec]
         @assert !isempty(mb_trend)    "Please pass in mb_trend"
         @assert !isempty(mb_dettrend) "Please pass in mb_dettrend"
 
-        prepare_means_table_shockdec(mb, mb_trend, mb_dettrend, var, shocks = shocks,
+        df = prepare_means_table_shockdec(mb, mb_trend, mb_dettrend, tablevar, shocks = columnvars,
                                      mb_forecast = mb_forecast, mb_hist = mb_hist)
+
+        # Write to file
+        writetable(fullfilename, df)
+        println(" * Wrote means and bands for $tablevar to $fullfilename")
+    elseif prod in [:irf]
+        # for irfs, we group first by shock, then by variable
+        for columnvar in columnvars
+            df = prepare_meansbands_table_irf(mb, tablevar, columnvar)
+
+            # Write to file
+            writetable(fullfilename, df)
+            println(" * Wrote means and bands for $tablevar, $columnvar to $fullfilename")
+        end
     end
 
-    # Write to file
-    writetable(fullfilename, df)
-    println(" * Wrote means and bands for $var to $fullfilename")
 
     return df
 end
@@ -323,7 +353,7 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
 
     # Read in appropriate means and bands
     my_output_vars = add_requisite_output_vars_meansbands(output_vars)
-    println(my_output_vars)
+
     for class in [:pseudo, :obs]
         if !isempty(intersect(my_output_vars, [symbol("hist$class"), symbol("histforecast$class")]))
             mbs[symbol("hist$class")] =
@@ -357,6 +387,11 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
             mbs[symbol("trend$class")] =
                 read_mb(workpath(m, "forecast", "mbtrend$class.jld", filestring_addl))
         end
+        if symbol("irf$class") in my_output_vars
+            mbs[symbol("irf$class")] =
+                read_mb(workpath(m, "forecast", "mbirf$class.jld", filestring_addl))
+        end
+
     end
 
     # write each output to CSV
@@ -367,12 +402,12 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
         df = if output in [:histpseudo, :histobs, :forecastpseudo, :forecastobs,
                            :trendpseudo, :trendobs, :dettrendpseudo, :dettrendobs]
 
-            write_meansbands_tables(m, mbs[output], vars = vars)
+            write_meansbands_tables(m, mbs[output], tablevars = vars)
 
         elseif output in [:histforecastpseudo, :histforecastobs]
 
             mb_histforecast = cat(mb[symbol("hist$(class)")], mb[symbol("forecast$class")])
-            write_meansbands_tables(m, mb_histforecast, vars = vars)
+            write_meansbands_tables(m, mb_histforecast, tablevars = vars)
 
         elseif output in [:shockdecpseudo, :shockdecobs]
 
@@ -384,7 +419,10 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
 
             write_meansbands_tables(m, mb_shockdec, mb_trend = mb_trend, mb_dettrend = mb_dettrend,
                                     mb_hist = mb_hist, mb_forecast = mb_forecast,
-                                    vars = vars, shocks = shocks)
+                                    tablevars = vars, columnvars = shocks)
+        elseif output in [:irfpseudo, :irfobs]
+
+            write_meansbands_tables(m, mbs[output], tablevars = shocks, columnvars = vars)
         end
     end
 end

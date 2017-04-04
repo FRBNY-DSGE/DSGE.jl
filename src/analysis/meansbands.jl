@@ -260,10 +260,10 @@ get_shocks(mb::MeansBands)
 ```
 
 Returns a list of shock names that are used for the shock
-decomposition stored in a shock decomposition MeansBands object `mb`.
+decomposition stored in a shock decomposition or irf MeansBands object `mb`.
 """
 function get_shocks(mb::MeansBands)
-    @assert get_product(mb) == :shockdec "Function only for shockdec MeansBands objects"
+    @assert get_product(mb) in [:shockdec, :irf] "Function only for shockdec or irf MeansBands objects"
     varshocks = setdiff(names(mb.means), [:date])
     unique(map(x -> symbol(split(string(x), DSGE_SHOCKDEC_DELIM)[2]), varshocks))
 end
@@ -281,6 +281,19 @@ function parse_mb_colname(s::Symbol)
     map(symbol, split(string(s), DSGE_SHOCKDEC_DELIM))
 end
 
+"""
+```
+get_variables(mb::MeansBands)
+```
+
+Returns a list of variable names that are used for the shock
+decomposition stored in a shock decomposition or irf MeansBands object `mb`.
+"""
+function get_variables(mb::MeansBands)
+    @assert get_product(mb) in [:shockdec, :irf] "Function only for shockdec or irf MeansBands objects"
+    varshocks = setdiff(names(mb.means), [:date])
+    unique(map(x -> symbol(split(string(x), DSGE_SHOCKDEC_DELIM)[1]), varshocks))
+end
 
 ###################################
 ## MEANS
@@ -548,9 +561,61 @@ end
 
 """
 ```
-prepare_means_table_shockdec(mb_shockdec, mb_trend, mb_dettrend, var;
-    shocks = Vector{Symbol}(), mb_forecast = MeansBands(),
-    mb_hist = MeansBands())
+prepare_meansbands_table_irf(mb, var, shock)
+```
+
+Returns a `DataFrame` of means and bands for a particular impulse
+response function of variable (observable, pseudoobservable, or state)
+`v` to shock `s`. Columns are sorted such that the bands are ordered from
+smallest to largest, and the means are on the far right. For example,
+a MeansBands object containing 50\% and 68\% bands would be ordered as
+follows: [68\% lower, 50\% lower, 50\% upper, 68\% upper, mean].
+
+### Inputs
+- `mb::MeansBands`: time-series MeansBands object
+- `var::Symbol`: an economic variable stored in `mb`. If `mb` stores
+  observables, `var` would be an element of `names(m.observables)`. If
+  it stores pseudoobservables, `var` would be the name of a
+  pseudoobservable defined in the pseudomeasurement equation.
+"""
+function prepare_meansbands_table_irf(mb::MeansBands, shock::Symbol, var::Symbol)
+
+    @assert get_product(mb) in [:irf] "prepare_meansbands_table_irf can only be used for irfs"
+    @assert var in get_vars_means(mb) "$var is not stored in this MeansBands object"
+
+    # get the variable-shock combination we want to print
+    # varshock = Symbol["$var" * DSGE_SHOCKDEC_DELIM * "$shock" for var in vars]
+    varshock = Symbol("$var" * DSGE_SHOCKDEC_DELIM * "$shock")
+
+    # extract the means and bands for this irf
+    df = mb.bands[varshock][map(symbol, which_density_bands(mb))]
+    df[:mean] = mb.means[varshock]
+
+    return df
+end
+function prepare_meansbands_table_irf(mb::MeansBands, shock::Symbol, vars::Vector{Symbol})
+
+    # Print all vars by default
+    if isempty(vars)
+        vars = DSGE.get_variables(mb)
+    end
+
+    # Make dictionary to return
+    irfs = Dict{Symbol, DataFrame}()
+
+    # Make tables for each irf
+    for var in vars
+        irfs[var] = prepare_meansbands_table_irf(mb, shock, var)
+    end
+
+    return irfs
+end
+
+"""
+```
+prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBands,
+           mb_dettrend::MeansBands, var::Symbol; [shocks = Vector{Symbol}()],
+           [mb_forecast = MeansBands()], [mb_hist = MeansBands()])
 ```
 
 Returns a `DataFrame` representing a detrended shock decompostion for
@@ -559,18 +624,18 @@ contributions of each shock in `shocks` (or all shocks, if the keyword
 argument is omitted) and the deterministic trend.
 
 ### Inputs
-
-- `mb_shockdec::MeansBands`
-- `mb_trend::MeansBands`
-- `mb_dettrend::MeansBands`
+- `mb_shockdec::MeansBands`: a `MeansBands` object for a shock decomposition
+- `mb_trend::MeansBands`: a `MeansBands` object for a trend  product.
+- `mb_dettrend::MeansBands`: a `MeansBands` object for a deterministic trend
+  product.
 - `var::Symbol`: name of economic variable for which to return the means and bands table
 
 ### Keyword Arguments
-
-- `shocks::Vector{Symbol}`: optional list of shocks to print to the table. If
-  omitted, all shocks will be printed.
-- `mb_forecast::MeansBands`
-- `mb_hist::MeansBands`
+- `shocks::Vector{Symbol}`: If `mb` is a shock decomposition, this is
+  an optional list of shocks to print to the table. If omitted, all
+  shocks will be printed.
+- `mb_forecast::MeansBands`: a `MeansBands` object for a forecast.
+- `mb_hist::MeansBands`: a `MeansBands` object for smoothed states.
 """
 function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBands,
                                       mb_dettrend::MeansBands, var::Symbol;
