@@ -7,11 +7,11 @@ Kalman{S<:AbstractFloat}
 
 - `L`: value of the average log likelihood function of the SSM under assumption that
   observation noise ϵ(t) is normally distributed
-
-#### Fields filled in when `!likelihood_only` in a call to `kalman_filter`:
-
 - `zend`: state vector in the last period for which data is provided
 - `Pend`: variance-covariance matrix for `zend`
+
+#### Fields filled in when `allout` in a call to `kalman_filter`:
+
 - `pred`: a `Nz` x `T` matrix containing one-step predicted state vectors
 - `vpred`: a `Nz` x `Nz` x `T` matrix containing mean square errors of predicted
   state vectors
@@ -40,6 +40,8 @@ immutable Kalman{S<:AbstractFloat}
 end
 
 function Kalman{S<:AbstractFloat}(L::S,
+                                  zend::Vector{S}          = Vector{S}(),
+                                  Pend::Matrix{S}          = Matrix{S}(),
                                   pred::Matrix{S}          = Matrix{S}(),
                                   vpred::Array{S, 3}       = Array{S}(0, 0, 0),
                                   filt::Matrix{S}          = Matrix{S}(),
@@ -50,14 +52,6 @@ function Kalman{S<:AbstractFloat}(L::S,
                                   rmsd::Matrix{S}          = Matrix{S}(),
                                   z0::Vector{S}            = Vector{S}(),
                                   P0::Matrix{S}            = Matrix{S}())
-
-    if !isempty(filt) && !isempty(vfilt)
-        zend = filt[:, end]
-        Pend = vfilt[:, :, end]
-    else
-        zend = Vector{S}()
-        Pend = Matrix{S}()
-    end
 
     return Kalman{S}(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, P0)
 end
@@ -72,15 +66,13 @@ function Base.getindex(K::Kalman, d::Symbol)
 end
 
 function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
-    k2::Kalman{S}; likelihood_only::Bool = false)
+    k2::Kalman{S}; allout::Bool = true)
 
     L = k1[:L] + k2[:L]
     zend = k2[:zend]
     Pend = k2[:Pend]
 
-    if likelihood_only
-        return Kalman(L)
-    else
+    if allout
         pred  = hcat(k1[:pred], k2[:pred])
         vpred = cat(3, k1[:vpred], k2[:vpred])
         yprederror    = hcat(k1[:yprederror], k2[:yprederror])
@@ -94,6 +86,8 @@ function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
 
         return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror,
             rmse, rmsd, filt, vfilt, z0, P0)
+    else
+        return Kalman(L, zend, Pend)
     end
 end
 

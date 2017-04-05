@@ -127,7 +127,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
     end
 
     # Return total log-likelihood, excluding the presample
-    kal = filter(m, data; catch_errors = catch_errors, likelihood_only = true, include_presample = false)
+    kal = filter(m, data; catch_errors = catch_errors, allout = false, include_presample = false)
 
     return kal[:L]
 end
