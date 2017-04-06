@@ -8,6 +8,9 @@
   the data used, a table of priors for the model's parameters,
   and more.
 
+## Deprecation Fixes
+- Optim.jl's `MultivariateOptimizationResults` type requires `f_increased` field
+- `MersenneTwister` must be constructed with a seed
 
 # DSGE.jl v0.1.4 Release Notes
 
