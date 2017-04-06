@@ -436,20 +436,20 @@ Creates the proper directory structure for input and output files, treating the 
 
 Note: we refer to the savepathroot/output_data/<spec>/<subspec>/ directory as saveroot.
 =#
-"""
-```
-logpath(model)
-```
-Returns path to log file. Path built as
-```
-<output root>/output_data/<spec>/<subspec>/log/log_<filestring>.log
-```
-"""
-function logpath(m::AbstractModel)
-    return savepath(m, "log", "log.log")
-end
+# """
+# ```
+# logpath(model)
+# ```
+# Returns path to log file. Path built as
+# ```
+# <output root>/output_data/<spec>/<subspec>/log/log_<filestring>.log
+# ```
+# """
+# function logpath(m::AbstractModel)
+#     return savepath(m, "log", "log.log")
+# end
 
-strs = [:work, :raw, :tables, :figures]
+strs = [:work, :raw, :tables, :figures, :log]
 fns = [symbol(x, "path") for x in strs]
 for (str, fn) in zip(strs, fns)
     @eval begin
