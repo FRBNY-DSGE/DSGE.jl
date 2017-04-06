@@ -645,6 +645,128 @@ end
 function settings_m990!(m::Model990)
     default_settings!(m)
 
+<<<<<<< HEAD
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")))
     m <= Setting(:forecast_pseudoobservables, true)
 end
+=======
+    # 2. Aggregate hours, per-capita
+    m.data_transforms[:obs_hours] = function (levels)
+        # FROM: Average weekly hours (AWHNONAG) & civilian employment (CE16OV)
+        # TO:   log (3 * aggregregate weekly hours / 100), per-capita
+        # Note: Not sure why the 3 is there.
+
+        aggregateweeklyhours = levels[:AWHNONAG] .* levels[:CE16OV]
+        100*(log(3 * aggregateweeklyhours / 100) - log(levels[:filtered_population]))
+    end
+
+    # 3. Real wage growth
+    m.data_transforms[:obs_wages] = function (levels)
+        # FROM: Nominal compensation per hour (:COMPNFB from FRED)
+        # TO: quarter to quarter percent change of real compensation (using GDP deflator)
+
+        oneqtrpctchange(nominal_to_real(:COMPNFB, levels))
+    end
+
+    # 4. GDP deflator
+    m.data_transforms[:obs_gdpdeflator] = function (levels)
+        # FROM: GDP deflator (index)
+        # TO:   Approximate quarter-to-quarter percent change of gdp deflator,
+        #       i.e.  quarterly gdp deflator inflation
+
+        oneqtrpctchange(levels[:GDPCTPI])
+    end
+
+    # 5. Core PCE inflation
+    m.data_transforms[:obs_corepce] = function (levels)
+        # FROM: Core PCE index
+        # INTO: Approximate quarter-to-quarter percent change of Core PCE,
+        # i.e. quarterly core pce inflation
+
+        oneqtrpctchange(levels[:PCEPILFE])
+    end
+
+    # 6. Nominal short-term interest rate (3 months)
+    m.data_transforms[:obs_nominalrate] = function (levels)
+        # FROM: Nominal effective federal funds rate (aggregate daily data at a
+        #       quarterly frequency at an annual rate)
+        # TO:   Nominal effective fed funds rate, at a quarterly rate
+
+        annualtoquarter(levels[:DFF])
+
+    end
+
+    # 7. Consumption growth, per-capita
+    m.data_transforms[:obs_consumption] = function (levels)
+        # FROM: Nominal consumption
+        # TO:   Real consumption, approximate quarter-to-quarter percent change,
+        #       per capita, adjusted for population filtering
+
+        levels[:temp] = percapita(m, :PCE, levels)
+        cons = 1000 * nominal_to_real(:temp, levels)
+        hpadjust(oneqtrpctchange(cons), levels)
+    end
+
+    # 8. Investment growth, per-capita
+    m.data_transforms[:obs_investment] = function (levels)
+        # FROM: Nominal investment
+        # INTO: Real investment, approximate quarter-to-quarter percent change,
+        #       per capita, adjusted for population filtering
+
+        levels[:temp] = percapita(m, :FPI, levels)
+        inv = 10000 * nominal_to_real(:temp, levels)
+        hpadjust(oneqtrpctchange(inv), levels)
+    end
+
+    # 9. Spread: BAA-10yr TBill
+    m.data_transforms[:obs_spread] = function (levels)
+        # FROM: Baa corporate bond yield (percent annualized), and 10-year
+        #       treasury note yield (percent annualized)
+        # TO:   Baa yield - 10T yield spread at a quarterly rate
+        # Note: Moody's corporate bond yields on the H15 are based on corporate
+        #       bonds with remaining maturities of at least 20 years.
+
+        annualtoquarter(levels[:BAA] - levels[:GS10])
+    end
+
+    # 10. Long term inflation expectations
+    m.data_transforms[:obs_longinflation] = function (levels)
+        # FROM: SPF: 10-Year average yr/yr CPI inflation expectations (annual percent)
+        # TO:   FROM, less 0.5
+        # Note: We subtract 0.5 because 0.5% inflation corresponds to
+        #       the assumed long-term rate of 2 percent inflation, but the
+        #       data are measuring expectations of actual inflation.
+
+        annualtoquarter(levels[:ASACX10]  .- 0.5)
+    end
+
+    # 11. Long rate (10-year, zero-coupon)
+    m.data_transforms[:obs_longrate] = function (levels)
+        # FROM: pre-computed long rate at an annual rate
+        # TO:   10T yield - 10T term premium at a quarterly rate
+
+        annualtoquarter(levels[:FYCZZA] - levels[:THREEFYTP10])
+    end
+
+    # 12. Fernald TFP
+    m.data_transforms[:obs_tfp] = function (levels)
+        # FROM: Fernald's unadjusted TFP series
+        # TO:   De-meaned unadjusted TFP series, adjusted by Fernald's
+        #       estimated alpha
+
+        tfp_unadj      = levels[:TFPKQ]
+        tfp_unadj_mean = mean(tfp_unadj[!isnan(tfp_unadj)])
+        (tfp_unadj - tfp_unadj_mean) ./ (4*(1 - levels[:TFPJQ]))
+    end
+
+    # Columns 13 - 13 + n_anticipated_shocks
+    for i = 1:n_anticipated_shocks(m)
+        # FROM: OIS expectations of $i-period-ahead interest rates at a quarterly rate
+        # TO:   Same
+
+        m.data_transforms[symbol("obs_ois$i")] = function (levels)
+            levels[:, symbol("ant$i")]
+        end
+    end
+end
+>>>>>>> 466b325... Merge pull request #10 from rfourquet/rf/MT-seed
