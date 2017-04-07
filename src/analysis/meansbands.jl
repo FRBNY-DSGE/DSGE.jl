@@ -93,7 +93,7 @@ function Base.show(io::IO, mb::MeansBands)
         @printf io "  dates: %s - %s\n" startdate_means(mb) enddate_means(mb)
     end
     @printf io "  # of variables: %s\n" n_vars_means(mb)
-    @printf io "  bands: %s\n" which_density_bands(mb, uniqueify=true)
+    @printf io "  bands: %s\n" which_density_bands(mb, uniquify=true)
 end
 
 """
@@ -431,7 +431,7 @@ enddate_bands(mb::MeansBands) = mb.bands[:date][end]
 
 """
 ```
-which_density_bands(mb, uniqueify=false)
+which_density_bands(mb, uniquify=false)
 ```
 
 Return a list of the bands stored in mb.bands. If `uniquify = true`,

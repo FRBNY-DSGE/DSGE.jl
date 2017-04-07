@@ -230,7 +230,7 @@ function write_meansbands_tables(m::AbstractModel, mb::MeansBands;
 
     # Use all vars by default
     if isempty(tablevars)
-        vars = setdiff(names(mb.means), [:date])
+        tablevars = setdiff(names(mb.means), [:date])
     end
 
     # Write table for each var
@@ -252,7 +252,7 @@ function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands;
                                                     columnvars::Vector{Symbol} = Vector{Symbol}())
     # Use all vars by default
     if isempty(tablevars)
-        vars = setdiff(names(mb.means), [:date])
+        tablevars = setdiff(names(mb.means), [:date])
     end
 
     # Write table for each var
