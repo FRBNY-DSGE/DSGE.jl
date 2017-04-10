@@ -95,7 +95,7 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
     # unanticipated policy shock
     if shocks
         for i = 1:n_anticipated_shocks(m)
-            QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_rm$i")]^2
+            QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_rm")]^2
         end
     end
 
