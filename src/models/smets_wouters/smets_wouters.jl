@@ -156,7 +156,7 @@ end
 
 function SmetsWouters(subspec::AbstractString="ss0";
                       custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
-                      testing = true)
+                      testing = false)
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]
