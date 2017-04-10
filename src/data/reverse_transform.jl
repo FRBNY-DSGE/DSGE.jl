@@ -13,6 +13,14 @@ series.
 
 The second method takes a single series and reverse transformation, applies it,
 and returns a vector.
+
+## Inputs
+- `m::AbstractModel`
+- `untransformed`: `nperiods` x `nseries` `Matrix` or `DataFrame` of series in model units.
+
+## Keyword arguments
+- `fourquarter::Bool`: produce four-quarter
+   results instead of annualized quarter-to-quarter results
 """
 function reverse_transform(m::AbstractModel, untransformed::Matrix, start_date::Date,
                            var_names::Vector{Symbol}, class::Symbol;
