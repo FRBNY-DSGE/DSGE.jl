@@ -74,6 +74,7 @@ Below, `T<:AbstractFloat`:
 """
 function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                                            cond_type::Symbol, output_vars::Vector{Symbol};
+                                           df::DataFrame = DataFrame(),
                                            forecast_string::AbstractString = "",
                                            density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                            minimize::Bool = false,
@@ -105,8 +106,11 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
     ##         specify which period to use as first t-1 period for computing
     ##         growth rates, and which period is the last historical period
 
-    # Load dataset
-    data = df_to_matrix(m, load_data(m, verbose = :none))
+    # Load dataset if not provided
+    if isempty(df)
+        df = load_data(m, verbose = :none)
+    end
+    data = df_to_matrix(m, df)
 
     # Specify the t-1 period for each product
     y0_indexes = Dict{Symbol,Int}()
