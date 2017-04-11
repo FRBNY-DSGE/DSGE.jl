@@ -95,6 +95,8 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
     # unanticipated policy shock
     if shocks
         for i = 1:n_anticipated_shocks(m)
+            ZZ[obs[symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]*(TTT^i)
+            DD[obs[symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
             QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_rm")]^2
         end
     end
@@ -104,8 +106,8 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
         DD += ZZ*((UniformScaling(1) - TTT)\CCC)
     end
 
-    HH = EE + MM*QQ*MM'
-    VV = QQ*MM'
+    HH    = EE + MM*QQ*MM'
+    VV    = QQ*MM'
     VVall = [[RRR*QQ*RRR' RRR*VV];
              [VV'*RRR'    HH]]
 
