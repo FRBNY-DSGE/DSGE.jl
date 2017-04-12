@@ -1,29 +1,85 @@
 """
+Methods that read in all draws of forecast output:
 ```
-reverse_transform(m, untransformed, class; fourquarter = false, verbose = :low)
+reverse_transform(m, input_type, cond_type, class, product, vars;
+                           population_series = [], forecast_string = "",
+                           fourquarter = false, verbose = :low)
 
+reverse_transform(path, class, product, var, rev_transform;
+                           pop_growth = [], fourquarter = false, verbose = :low)
+```
+
+Methods that take a single draw of a forecast output that is already in memory:
+```
+function reverse_transform(m::AbstractModel, untransformed::Matrix, start_date::Date,
+                           vars::Vector{Symbol}, class::Symbol;
+                           fourquarter::Bool = false,
+                           verbose::Symbol = :low)
+
+
+reverse_transform(m, untransformed, class; fourquarter = false, verbose = :low)
+```
+
+Lowest level:
+```
 reverse_transform(y, rev_transform; fourquarter = false, y0 = NaN, y0s = [],
     pop_growth = [])
 ```
 
-The first method takes a dated `DataFrame` of series in model units. It uses the
-model object to load population data, as well as look up the appropriate reverse
-transformations for each series. It returns a `DataFrame` of the transformed
-series.
+The purpose of the `reverse_transform` function is to transform raw
+forecast outputs from model units into final output units. We
+provide methods at various levels of abstraction.
 
-The second method takes a single series and reverse transformation, applies it,
-and returns a vector.
+At the highest level, the first two methods listed above read in raw
+forecast output from a file and transform all draws corresponding to
+the given `vars` or `var`. The model-agnostic function takes the name of the
+file containing the forecast output and a reverse transform
+function. The model-dependent function determines the filepath and
+appropriate reverse transform from the information contained in the
+model.
+
+The second two methods take in raw forecast output that is already in
+memory corresponding to a single draw. The model-agnostic method takes
+a single series and reverse transformation, applies it, and returns a
+vector. It relies on the user to provide population data if
+necessary. The model-dependent method loads population data, and
+transforms all series corresponding to the given `vars` (or all
+series if none are provided), returning a `DataFrame` of all
+transformed series.
+
+The lowest-level method requires the caller to provide additional
+information. It is applied to one or many draws of a single
+series. This method is called by the higher-level functions as well as
+`compute_means_bands`.
 
 ## Inputs
 - `m::AbstractModel`
-- `untransformed`: `nperiods` x `nseries` `Matrix` or `DataFrame` of series in model units.
+- `input_type::Symbol`: see `?forecast_one`
+- `cond_type::Symbol`: see `?forecast_one`
+- `class::Symbol`: Indicates whether the reverse transform should be
+                   applied to observables or pseudo observables
+- `product::Symbol`: Indicates the product the reverse transform should be applied to (e.g. `:hist`,
+                    `:forecast`)
+- `vars::Vector{Symbol}`: Names of specific series for which to apply the reverse transform
+- `untransformed`: `nperiods` x `nseries` `Matrix` or `DataFrame` of
+                   series in model units.
+- `y`:`ndraws` x `nperiods` array of a series in model units.
+- `rev_transform::Function`: a function used to to transform a variable
 
 ## Keyword arguments
-- `fourquarter::Bool`: produce four-quarter
-   results instead of annualized quarter-to-quarter results
+- `fourquarter::Bool`: produce four-quarter results instead of annualized quarter-to-quarter results
+- `verbose::Symbol`: level of verbosity: `:high`, `:low`, `:none`
+- `y0::AbstractFloat`: value of `y` in the period prior to the
+  first period. This is used to compute growth rates for the first
+  period.
+- `y0s::Vector{AbstractFloat}`: contains the value of `y` in the `n`
+  periods prior to the first period that `y` contains.
+- `pop_growth::Vector{AbstractFloat}`: a vector of population growth
+  data. This is required when the reverse transform associated with
+  `untransformed` or `y` adjusts for population.
 """
 function reverse_transform(m::AbstractModel, untransformed::Matrix, start_date::Date,
-                           var_names::Vector{Symbol}, class::Symbol;
+                           vars::Vector{Symbol}, class::Symbol;
                            fourquarter::Bool = false,
                            verbose::Symbol = :low)
     df = DataFrame()
@@ -31,14 +87,13 @@ function reverse_transform(m::AbstractModel, untransformed::Matrix, start_date::
     end_date = iterate_quarters(start_date, nperiods - 1)
     df[:date] = quarter_range(start_date, end_date)
 
-    for (ind, var) in enumerate(var_names)
+    for (ind, var) in enumerate(vars)
         series = squeeze(untransformed[ind, :], 1)
         df[var] = series
     end
 
     reverse_transform(m, df, class; fourquarter = fourquarter, verbose = verbose)
 end
-
 function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Symbol;
                            fourquarter::Bool = false, verbose::Symbol = :low)
     # Dates
@@ -71,8 +126,8 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     transformed = DataFrame()
     transformed[:date] = untransformed[:date]
 
-    var_names = setdiff(names(untransformed), [:date])
-    for var in var_names
+    vars = setdiff(names(untransformed), [:date])
+    for var in vars
         y = convert(Vector{Float64}, untransformed[var])
         rev_transform = dict[var].rev_transform
         if fourquarter
@@ -83,7 +138,6 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     end
     return transformed
 end
-
 function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Function;
                                              fourquarter::Bool = false,
                                              y0::T = NaN, y0s::Vector{T} = Vector{T}(),
@@ -122,3 +176,41 @@ function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Functio
         end
     end
 end
+function reverse_transform(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+                           class::Symbol, product::Symbol, vars::Vector{Symbol};
+                           population_series::Vector{Float64} = Vector{Float64}(),
+                           forecast_string = "", fourquarter::Bool = false, verbose::Symbol = :low)
+
+    results    = Dict{Symbol, Array{Float64,2}}()
+    pseudos, _ = pseudo_measurement(m)
+    path       = get_forecast_filename(m, input_type, cond_type, symbol(product, class);
+                                 forecast_string = forecast_string)
+
+    for var in vars
+        pseudo = pseudos[var]
+        transformed = reverse_transform(path, class, product,
+                                        var, pseudo.rev_transform, population_series = population_series,
+                                        fourquarter = fourquarter, verbose = verbose)
+        results[var] = transformed
+    end
+
+    return results
+end
+
+function reverse_transform(path::AbstractString, class::Symbol, product::Symbol,
+                           var::Symbol, rev_transform::Function,
+                           pop_growth::Vector{Float64} = Vector{Float64}(),
+                           fourquarter::Bool = false, verbose::Symbol = :low)
+
+    # Read in the draws for this variable
+    draws = jldopen(path, "r") do jld
+        read_forecast_output(jld, class, product, var)
+    end
+
+    # Transform and return
+    transformed = reverse_transform(draws, rev_transform, pop_growth = population_series,
+                                    fourquarter = fourquarter, verbose = verbose)
+
+    return transformed
+end
+
