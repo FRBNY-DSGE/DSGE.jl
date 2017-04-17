@@ -97,7 +97,7 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
         for i = 1:n_anticipated_shocks(m)
             ZZ[obs[symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]*(TTT^i)
             DD[obs[symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
-            QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_rm")]^2
+            QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_rm")]^2 / 16
         end
     end
 
