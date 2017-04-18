@@ -518,16 +518,16 @@ function logleveltopct_4q_percapita(y::Array, data::Vector, pop_growth::Vector)
 
     # `y_t4` is an array of the same size as `y`, representing the t-4
     # period observations for each t
-    y_t4 = if ndims(y) == 1
+    if ndims(y) == 1
         nperiods = length(y)
-        prepend_data(y[1:nperiods-4], data)
+        y_t4 = prepend_data(y[1:nperiods-4], data)
     else
-        nperiods = size(y, 2)
-        prepend_data(y[:, 1:nperiods-4], data)
-
         # Transpose `pop_growth` to a 1 x `nperiods` row vector so it can be
         # broadcasted to match the dimensions of `y`
         pop_growth_4q = pop_growth_4q'
+
+        nperiods = size(y, 2)
+        y_t4 = prepend_data(y[:, 1:nperiods-4], data)
     end
     y_4q = y - y_t4
 
