@@ -2,8 +2,7 @@
 Methods that read in all draws of forecast output:
 ```
 reverse_transform(m, input_type, cond_type, class, product, vars;
-                           population_series = [], forecast_string = "",
-                           fourquarter = false, verbose = :low)
+                           forecast_string = "", fourquarter = false, verbose = :low)
 
 reverse_transform(path, class, product, var, rev_transform;
                            pop_growth = [], fourquarter = false, verbose = :low)
@@ -11,13 +10,11 @@ reverse_transform(path, class, product, var, rev_transform;
 
 Methods that take a single draw of a forecast output that is already in memory:
 ```
-function reverse_transform(m::AbstractModel, untransformed::Matrix, start_date::Date,
-                           vars::Vector{Symbol}, class::Symbol;
-                           fourquarter::Bool = false,
-                           verbose::Symbol = :low)
+reverse_transform(m::AbstractModel, untransformed::Matrix, start_date,
+                           vars, class; fourquarter = false,
+                           verbose = :low)
 
-
-reverse_transform(m, untransformed, class; fourquarter = false, verbose = :low)
+reverse_transform(m, untransformed::DataFrame, class; fourquarter = false, verbose = :low)
 ```
 
 Lowest level:
@@ -178,19 +175,43 @@ function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Functio
 end
 function reverse_transform(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                            class::Symbol, product::Symbol, vars::Vector{Symbol};
-                           population_series::Vector{Float64} = Vector{Float64}(),
                            forecast_string = "", fourquarter::Bool = false, verbose::Symbol = :low)
+    # Figure out dates
+    start_date, end_date  = if product in [:hist]
+        date_mainsample_start(m), date_mainsample_end(m)
+    elseif product in [:forecast, :bddforecast, :forecast4q, :bddforecast4q]
+        date_forecast_start(m), date_forecast_start(m)
+    elseif product in [:shockdec, :trend, :dettrend]
+        date_shockdec_start(m), date_shockdec_end(m)
+    else
+        error("reverse_transform not supported for product $product")
+    end
 
-    results    = Dict{Symbol, Array{Float64,2}}()
+    # Load population series
+    population_mnemonic = parse_population_mnemonic(m)[1]
+    vint = data_vintage(m)
+    population_data_file     = inpath(m, "data", "population_data_levels_$vint.csv")
+    population_forecast_file = inpath(m, "data", "population_forecast_$vint.csv")
+    population_data, population_forecast =
+        load_population_growth(population_data_file, population_forecast_file,
+                               get(population_mnemonic); verbose = verbose)
+    population_series = get_population_series(:population_growth, population_data,
+                                              population_forecast, start_date, end_date)
+
+    # Compute pseudomeasurement equation
     pseudos, _ = pseudo_measurement(m)
+
+    # Determine which file to read in
     path       = get_forecast_filename(m, input_type, cond_type, symbol(product, class);
                                  forecast_string = forecast_string)
 
+    # Apply reverse transform to each desired variable
+    results    = Dict{Symbol, Array{Float64,2}}()
     for var in vars
         pseudo = pseudos[var]
         transformed = reverse_transform(path, class, product,
-                                        var, pseudo.rev_transform, population_series = population_series,
-                                        fourquarter = fourquarter, verbose = verbose)
+                                        var, pseudo.rev_transform, pop_growth = population_series,
+                                        fourquarter = fourquarter)
         results[var] = transformed
     end
 
@@ -198,9 +219,9 @@ function reverse_transform(m::AbstractModel, input_type::Symbol, cond_type::Symb
 end
 
 function reverse_transform(path::AbstractString, class::Symbol, product::Symbol,
-                           var::Symbol, rev_transform::Function,
+                           var::Symbol, rev_transform::Function;
                            pop_growth::Vector{Float64} = Vector{Float64}(),
-                           fourquarter::Bool = false, verbose::Symbol = :low)
+                           fourquarter::Bool = false)
 
     # Read in the draws for this variable
     draws = jldopen(path, "r") do jld
@@ -208,8 +229,8 @@ function reverse_transform(path::AbstractString, class::Symbol, product::Symbol,
     end
 
     # Transform and return
-    transformed = reverse_transform(draws, rev_transform, pop_growth = population_series,
-                                    fourquarter = fourquarter, verbose = verbose)
+    transformed = reverse_transform(draws, rev_transform, pop_growth = pop_growth,
+                                    fourquarter = fourquarter)
 
     return transformed
 end
