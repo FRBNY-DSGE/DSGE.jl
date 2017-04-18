@@ -316,8 +316,8 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
         write(file, "shock_indices", m.exogenous_shocks)
         if class in [:shock, :stdshock]
             rev_transforms = Dict{Symbol,Symbol}([x => symbol("DSGE.identity") for x in keys(m.exogenous_shocks)])
+            write(file, "shock_revtransforms", rev_transforms)
         end
-        write(file, "shock_revtransforms", rev_transforms)
     end
 end
 
@@ -369,7 +369,7 @@ end
 
 """
 ```
-read_forecast_output(file, class, var_name[, shock_name])
+read_forecast_output(file, class, product, var_name[, shock_name])
 ```
 
 Read only the forecast output for a particular variable (e.g. for a particular
@@ -410,7 +410,6 @@ function read_forecast_output(file::JLD.JldFile, class::Symbol, product::Symbol,
 
     return arr
 end
-
 function read_forecast_output(file::JLD.JldFile, class::Symbol, product::Symbol, var_name::Symbol,
                               shock_name::Symbol)
     # Get indices corresponding to var_name and shock_name
