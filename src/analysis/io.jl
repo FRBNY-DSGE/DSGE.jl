@@ -276,7 +276,7 @@ function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands, 
     prod = get_product(mb)
 
     # Compute output filename
-    filename = "$prod" * "$tablevar.csv"
+    filename = detexify("$prod" * "$tablevar.csv")
     filestring_addl = DSGE.get_forecast_filestring_addl(get_para(mb), get_cond_type(mb), forecast_string = forecast_string)
     fullfilename = DSGE.savepath(dirname, filename, filestring_base, filestring_addl)
 

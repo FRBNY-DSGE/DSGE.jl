@@ -36,3 +36,11 @@ function quarter_range(t0::Date, t1::Date)
     dr = t0:t1
     return Dates.recur(d -> Dates.lastdayofquarter(d) == d, dr)
 end
+
+function detexify(s::UTF8String)
+    replace(s, "π", "pi")
+end
+
+function detexify(s::ASCIIString)
+    s
+end
