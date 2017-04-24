@@ -22,8 +22,9 @@ bands in various LaTeX tables stored `tablespath(m)`.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
 """
-function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
+function moment_tables{S<:AbstractString}(m::AbstractModel; percent::AbstractFloat = 0.90,
                        subset_inds::Range{Int64} = 1:0, subset_string::AbstractString = "",
+                       groupings::Associative{S, Vector{Parameter}} = Dict{ASCIIString, Vector{Parameter}}(),
                        verbose::Symbol = :low)
 
     ### 1. Load parameter draws from Metropolis-Hastings
@@ -60,8 +61,8 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
     ### 3. Produce TeX tables
 
     prior_posterior_moments_table(m, post_means, post_bands;
-                                  percent = percent, subset_string = subset_string)
-    prior_posterior_means_table(m, post_means; subset_string = subset_string)
+                                  percent = percent, subset_string = subset_string, groupings = groupings)
+    prior_posterior_means_table(m, post_means; subset_string = subset_string, groupings = groupings)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         @printf "Tables are saved as %s.\n" tablespath(m, "estimate", "*.tex")
@@ -211,10 +212,17 @@ Produces a table of prior means, prior standard deviations, posterior means, and
 tablespath(m, \"estimate\", \"moments[_sub=\$subset_string].tex\")
 ```
 """
-function prior_posterior_moments_table(m::AbstractModel,
-                                       post_means::Vector, post_bands::Matrix;
-                                       percent::AbstractFloat = 0.9,
-                                       subset_string::AbstractString = "")
+function prior_posterior_moments_table{S<:AbstractString}(m::AbstractModel,
+                 post_means::Vector, post_bands::Matrix;
+                 percent::AbstractFloat = 0.9,
+                 subset_string::AbstractString = "",
+                 groupings::Associative{S, Vector{Parameter}} = Dict{ASCIIString, Vector{Parameter}}())
+
+    if isempty(groupings)
+        sorted_parameters = sort(m.parameters, by = (x -> x.key))
+        groupings[""] = sorted_parameters
+    end
+
     # Open the TeX file
     basename = "moments"
     if !isempty(subset_string)
@@ -263,17 +271,26 @@ function prior_posterior_moments_table(m::AbstractModel,
     distid(::DSGE.RootInverseGamma) = "IG"
 
     # Write parameter moments
-    sorted_parameters = sort(m.parameters, by = (x -> x.key))
-    for param in sorted_parameters
-        index = m.keys[param.key]
-        (prior_mean, prior_std) = moments(param)
+    # sorted_parameters = sort(m.parameters, by = (x -> x.key))
+    for group_desc in keys(groupings)
+        params = groupings[group_desc]
 
-        @printf moments_fid "\$\%4.99s\$ & " param.tex_label
-        @printf moments_fid "%s & " (param.fixed ? "-" : distid(get(param.prior)))
-        @printf moments_fid "%8.3f & " prior_mean
-        @printf moments_fid "%8.3f & " prior_std
-        @printf moments_fid "%8.3f & " post_means[index]
-        @printf moments_fid "%8.3f & %8.3f \\\\\n" post_bands[index, :]...
+        # Write grouping description if not empty
+        if !isempty(group_desc)
+            @printf moments_fid "\\multicolumn{7}{c}{\\textit{%s}} \\\\[3pt]\n" group_desc
+        end
+
+        for param in params
+            index = m.keys[param.key]
+            (prior_mean, prior_std) = moments(param)
+
+            @printf moments_fid "\$\%4.99s\$ & " param.tex_label
+            @printf moments_fid "%s & " (param.fixed ? "-" : distid(get(param.prior)))
+            @printf moments_fid "%8.3f & " prior_mean
+            @printf moments_fid "%8.3f & " prior_std
+            @printf moments_fid "%8.3f & " post_means[index]
+            @printf moments_fid "%8.3f & %8.3f \\\\\n" post_bands[index, :]...
+        end
     end
 
     # Write footer
@@ -294,9 +311,16 @@ Produces a table of prior means and posterior means. Saves to:
 tablespath(m, \"estimate\", \"prior_posterior_means[_sub=\$subset_string].tex\")
 ```
 """
-function prior_posterior_means_table(m::AbstractModel,
-                                     post_means::Vector;
-                                     subset_string::AbstractString = "")
+function prior_posterior_means_table{S<:AbstractString}(m::AbstractModel,
+                 post_means::Vector;
+                 subset_string::AbstractString = "",
+                 groupings::Associative{S, Vector{Parameter}} = Dict{ASCIIString, Vector{Parameter}}())
+
+    if isempty(groupings)
+        sorted_parameters = sort(m.parameters, by = (x -> x.key))
+        groupings[""] = sorted_parameters
+    end
+
     # Open the TeX file
     basename = "prior_posterior_means"
     if !isempty(subset_string)
@@ -318,20 +342,30 @@ function prior_posterior_means_table(m::AbstractModel,
     @printf means_fid "\\endfoot\n"
 
     # Write results
-    sorted_parameters = sort(m.parameters, by = (x -> x.key))
-    for param in sorted_parameters
-        index = m.keys[param.key]
+    # sorted_parameters = sort(m.parameters, by = (x -> x.key))
 
-        post_mean = if param.fixed
-            param.value
-        else
-            prior = get(param.prior)
-            isa(prior, RootInverseGamma) ? prior.τ : mean(prior)
+    for group_desc in keys(groupings)
+        params = groupings[group_desc]
+
+        # Write grouping description if not empty
+        if !isempty(group_desc)
+            @printf means_fid "\\multicolumn{7}{c}{\\textit{%s}} \\\\[3pt]\n" group_desc
         end
 
-        @printf means_fid "\$\%4.99s\$ & " param.tex_label
-        @printf means_fid "%8.3f & " post_mean
-        @printf means_fid "\%8.3f \\\\\n" post_means[index]
+        for param in params
+            index = m.keys[param.key]
+
+            post_mean = if param.fixed
+                param.value
+            else
+                prior = get(param.prior)
+                isa(prior, RootInverseGamma) ? prior.τ : mean(prior)
+            end
+
+            @printf means_fid "\$\%4.99s\$ & " param.tex_label
+            @printf means_fid "%8.3f & " post_mean
+            @printf means_fid "\%8.3f \\\\\n" post_means[index]
+        end
     end
 
     # Write footer
