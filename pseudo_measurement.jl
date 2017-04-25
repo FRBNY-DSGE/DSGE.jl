@@ -338,6 +338,13 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
                          :Forward20YearRealRate, :Forward20YearRealNaturalRate,
                          :Forward30YearRealRate, :Forward30YearRealNaturalRate]
 
+
+         if subspec(m) in ["ss13", "ss18"]
+             push!(pseudo_names, :LiquidityConvenienceYield, :SafetyConvenienceYield,
+                   :Forward20YearLiquidityConvenienceYield, :Forward20YearSafetyConvenienceYield,
+                   :SDF, :Forward20YearSDF)
+         end
+
          # Map pseudoobservables to indices
 	 pseudo_inds = Dict{Symbol,Int}()
 	 for (i,k) in enumerate(pseudo_names)
@@ -518,6 +525,47 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
 	 pseudo[:Forward30YearRealNaturalRate].longname = "Forward 30-Year Real Natural Rate of Interest (not the average, computed by projecting TTT foreward 80 periods)"
 	 pseudo[:Forward30YearRealNaturalRate].rev_transform = quartertoannual
 
+         if subspec(m) in ["ss13", "ss18"]
+             ZZ_pseudo[pseudo_inds[:LiquidityConvenienceYield], endo[:b_liq_t]] = 1.
+             DD_pseudo[pseudo_inds[:LiquidityConvenienceYield]] = 100*log(m[:lnb_liq])
+             pseudo[:LiquidityConvenienceYield].name = "Liquidity convenience yield"
+             pseudo[:LiquidityConvenienceYield].longname = "Liquidity convenience yield"
+             pseudo[:LiquidityConvenienceYield].rev_transform = quartertoannual
+
+             ZZ_pseudo[pseudo_inds[:SafetyConvenienceYield], endo[:b_safe_t]] = 1.
+             DD_pseudo[pseudo_inds[:SafetyConvenienceYield]] = 100*log(m[:lnb_safe])
+             pseudo[:SafetyConvenienceYield].name = "Safety convenience yield"
+             pseudo[:SafetyConvenienceYield].longname = "Safety convenience yield"
+             pseudo[:SafetyConvenienceYield].rev_transform = quartertoannual
+
+             ZZ_pseudo[pseudo_inds[:SDF], endo[:r_f_t]]    = 1.
+             ZZ_pseudo[pseudo_inds[:SDF], endo[:b_liq_t]]  = 1.
+             ZZ_pseudo[pseudo_inds[:SDF], endo[:b_safe_t]] = 1.
+             DD_pseudo[pseudo_inds[:SDF]] =  m[:Rstarn] - 100*(m[:π_star]-1) + 100*log(m[:lnb_liq]) + 100*log(m[:lnb_safe])
+             pseudo[:SDF].name = "Stochastic discount factor"
+             pseudo[:SDF].longname = "Stochastic discount factor"
+             pseudo[:SDF].rev_transform = quartertoannual
+
+             ZZ_pseudo[pseudo_inds[:Forward20YearLiquidityConvenienceYield], :] = ZZ_pseudo[pseudo_inds[:LiquidityConvenienceYield], :] * TTT20_fwd
+             DD_pseudo[pseudo_inds[:Forward20YearLiquidityConvenienceYield]] = 100*log(m[:lnb_liq])
+             pseudo[:Forward20YearLiquidityConvenienceYield].name = "20-year forward liquidity convenience yield"
+             pseudo[:Forward20YearLiquidityConvenienceYield].longname = "20-year forward liquidity convenience yield"
+             pseudo[:Forward20YearLiquidityConvenienceYield].rev_transform = quartertoannual
+
+             ZZ_pseudo[pseudo_inds[:Forward20YearSafetyConvenienceYield], :] = ZZ_pseudo[pseudo_inds[:SafetyConvenienceYield], :] * TTT20_fwd
+             DD_pseudo[pseudo_inds[:Forward20YearSafetyConvenienceYield]] = 100*log(m[:lnb_safe])
+             pseudo[:Forward20YearSafetyConvenienceYield].name = "20-year forward safety convenience yield"
+             pseudo[:Forward20YearSafetyConvenienceYield].longname = "20-year forward safety convenience yield"
+             pseudo[:Forward20YearSafetyConvenienceYield].rev_transform = quartertoannual
+
+
+             ZZ_pseudo[pseudo_inds[:Forward20YearSDF], :] = ZZ_pseudo[pseudo_inds[:SDF], :] * TTT20_fwd
+             DD_pseudo[pseudo_inds[:Forward20YearSDF]]    = m[:Rstarn] - 100*(m[:π_star]-1) + 100*log(m[:lnb_liq]) + 100*log(m[:lnb_safe])
+             pseudo[:Forward20YearSDF].name = "20-year forward stochastic discount factor"
+             pseudo[:Forward20YearSDF].longname = "20-year forward stochastic discount factor"
+             pseudo[:Forward20YearSDF].rev_transform = quartertoannual
+
+         end
     end
 
     # Collect indices and transforms
