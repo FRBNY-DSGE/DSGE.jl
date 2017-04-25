@@ -220,7 +220,7 @@ function Model1010(subspec::AbstractString="ss1";
 
     m <= parameter(:Φ,   1.000071, (1., 10.),     (1.00, 10.00),   DSGE.Exponential(),    Normal(1.25, 0.12),         fixed=true,
                    description="Φ: Fixed costs.",
-                   tex_label="\\Phi")
+                   tex_label="\\Phi_p")
 
     m <= parameter(:S′′,       2.7314, (-15., 15.),   (-15., 15.),     DSGE.Untransformed(),  Normal(4., 1.5),            fixed=false,
                    description="S'': The second derivative of households' cost of adjusting investment.", tex_label="S\\prime\\prime")
@@ -229,7 +229,7 @@ function Model1010(subspec::AbstractString="ss1";
                    description="h: Consumption habit persistence.", tex_label="h")
 
     m <= parameter(:ppsi,     0.6862, (0.0, 1.0), (0.0, 1.0),   DSGE.SquareRoot(),     BetaAlt(0.5, 0.15),         fixed=false,
-                   description="ppsi: Utilization costs.", tex_label="ppsi")
+                   description="ppsi: Utilization costs.", tex_label="\\psi")
 
     m <= parameter(:ν_l,     2.5975, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    Normal(2, 0.75),            fixed=false,
                    description="ν_l: The coefficient of relative risk aversion on the labor
@@ -249,7 +249,7 @@ function Model1010(subspec::AbstractString="ss1";
 
     m <= parameter(:β,      0.1402, (1e-5, 10.),   (1e-5, 10.),     DSGE.Exponential(),    GammaAlt(0.25, 0.1),        fixed=false,  scaling = x -> 1/(1 + x/100),
                    description="β: Discount rate in quarterly terms.",
-                   tex_label="\\beta ")
+                   tex_label="100(\\beta^{-1} - 1)")
 
     m <= parameter(:ψ1,     1.3679, (1e-5, 10.),   (1e-5, 10.00),   DSGE.Exponential(),    Normal(1.5, 0.25),          fixed=false,
                    description="ψ₁: Weight on inflation gap in monetary policy rule.",
@@ -273,27 +273,27 @@ function Model1010(subspec::AbstractString="ss1";
 
     m <= parameter(:ρ,      0.7126, (0.0, 1.0), (0.0, 1.0),   DSGE.SquareRoot(),     BetaAlt(0.75, 0.10),        fixed=false,
                    description="ρ: The degree of inertia in the monetary policy rule.",
-                   tex_label="\\rho")
+                   tex_label="\\rho_R")
 
     m <= parameter(:ϵ_p,     10.000,                                                                               fixed=true,
                    description="ϵ_p: No description available.",
-                   tex_label="\\varepsilon_{p}")
+                   tex_label="\\epsilon_{p}")
 
     m <= parameter(:ϵ_w,     10.000,                                                                               fixed=true,
                    description="ϵ_w: No description available.",
-                   tex_label="\\varepsilon_{w}")
+                   tex_label="\\epsilon_{w}")
 
 
     # financial frictions parameters
     m <= parameter(:Fω,      0.0300, (0.0, 1.0), (0.0, 1.0),  DSGE.SquareRoot(),    BetaAlt(0.03, 0.01),
                    fixed=true,    scaling = x -> 1 - (1-x)^0.25,
                    description="F(ω): The cumulative distribution function of ω (idiosyncratic iid shock that increases or decreases entrepreneurs' capital).",
-                   tex_label="F(\\omega)")
+                   tex_label="F(\\bar{\\omega})")
 
     m <= parameter(:spr,     1.0, (0., 100.), (1e-5, 0.), DSGE.Exponential(), GammaAlt(1., 0.1), fixed=false,
                    scaling = x -> (1 + x/100)^0.25,
                    description="spr_*: steady-state spread (in percent annualized).",
-                   tex_label="spr_*")
+                   tex_label="SP_*")
 
     m <= parameter(:lnb_liq, 0.47/4, (1e-5, 10.),   (1e-5, 10.), DSGE.Exponential(), GammaAlt(0.47/4, 0.05),
                    fixed=true, scaling = x -> (1 + x/100),
@@ -308,11 +308,11 @@ function Model1010(subspec::AbstractString="ss1";
     m <= parameter(:λ_AAA, 0.0, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5,0.2),
                    fixed=true,
                    description="λ_AAA: No description available.",
-                   tex_label="\lambda_{AAA}")
+                   tex_label="\\lambda_{AAA}")
 
     m <= parameter(:ζ_spb, 0.0559, (0.0, 1.0), (0.0, 1.0),  DSGE.SquareRoot(),    BetaAlt(0.05, 0.005),        fixed=false,
                    description="ζ_spb: The elasticity of the expected exess return on capital (or 'spread') with respect to leverage.",
-                   tex_label="\\zeta_{spb}")
+                   tex_label="\\zeta_{sp,b}")
 
     m <= parameter(:γ_star, 0.9900, (0.0, 1.0), (0.0, 1.0),  DSGE.SquareRoot(),    BetaAlt(0.99, 0.002),        fixed=true,
                    description="γ_star: No description available.",
@@ -321,11 +321,11 @@ function Model1010(subspec::AbstractString="ss1";
     # exogenous processes - level
     m <= parameter(:γ,      0.3673, (-5.0, 5.0),     (-5., 5.),     DSGE.Untransformed(), Normal(0.4, 0.1),            fixed=false, scaling = x -> x/100,
                    description="γ: The log of the steady-state growth rate of technology.",
-                   tex_label="\\gamma")
+                   tex_label="100\\gamma")
 
     m <= parameter(:Lmean,  -45.9364, (-1000., 1000.), (-1e3, 1e3),   DSGE.Untransformed(), Normal(-45., 5.),              fixed=false,
                    description="Lmean: No description available.",
-                   tex_label="Lmean")
+                   tex_label="\\bar{L}")
 
     m <= parameter(:g_star,    0.1800,                                                                               fixed=true,
                    description="g_star: No description available.",
@@ -371,7 +371,7 @@ function Model1010(subspec::AbstractString="ss1";
     m <= parameter(:ρ_rm,     0.2135, (0.0, 1.0),   (0.0, 1.0), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),
                    fixed=false,
                    description="ρ_rm: AR(1) coefficient in the monetary policy shock process.",
-                   tex_label="\\rho_{rm}")
+                   tex_label="\\rho_{r^m}")
 
     m <= parameter(:ρ_σ_w,   0.9898, (0.0, 1.0), (0.0, 1.0),  DSGE.SquareRoot(),    BetaAlt(0.75, 0.15),
                    fixed=false,
@@ -396,17 +396,17 @@ function Model1010(subspec::AbstractString="ss1";
                    tex_label="\\rho_{\\pi^*}")
 
     m <= parameter(:ρ_lr,      0.6936, (0.0, 1.0),      (0.0, 1.0), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),
-                   fixed=false, description="ρ_lr: No description available.",  tex_label="\\rho_{lr}")
+                   fixed=false, description="ρ_lr: No description available.",  tex_label="\\rho_{10y}")
 
     m <= parameter(:ρ_z_p,     0.8910, (0.0, 1.0),      (0.0, 1.0), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),
                    fixed=false, description="ρ_z_p: No description available.", tex_label="\\rho_{z^p}")
 
 m <= parameter(:ρ_tfp,     0.1953, (0.0, 1.0),      (0.0, 1.0), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_tfp: No description available.",            tex_label="\\rho_{tfp}")
     m <= parameter(:ρ_gdpdef,  0.5379, (0.0, 1.0),      (0.0, 1.0), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_gdpdef: GDP deflator.",                            tex_label="\\rho_{gdpdef}")
-    m <= parameter(:ρ_corepce, 0.2320, (0.0, 1.0),      (0.0, 1.0), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_corepce: No description available.",            tex_label="\\rho_{corepce}")
+    m <= parameter(:ρ_corepce, 0.2320, (0.0, 1.0),      (0.0, 1.0), DSGE.SquareRoot(),    BetaAlt(0.5, 0.2),           fixed=false, description="ρ_corepce: No description available.",            tex_label="\\rho_{pce}")
     m <= parameter(:ρ_gdp,     0.,     (-1.0, 1.0),     (-0.999, 0.999), DSGE.SquareRoot(),    Normal(0.0, 0.2),           fixed=false, description="ρ_gdp: No description available.",            tex_label="\\rho_{gdp}")
     m <= parameter(:ρ_gdi,     0.,     (-0.999, 0.999), (-0.999, 0.999), DSGE.SquareRoot(),    Normal(0.0, 0.2),           fixed=false, description="ρ_gdi: No description available.",            tex_label="\\rho_{gdi}")
-    m <= parameter(:ρ_gdpvar,  0.,     (-0.999, 0.999),   (-0.999, 0.999), DSGE.SquareRoot(),    Normal(0.0, 0.4),           fixed=false, description="ρ_gdpvar: No description available.",            tex_label="\\rho_{gdpvar}")
+    m <= parameter(:ρ_gdpvar,  0.,     (-0.999, 0.999),   (-0.999, 0.999), DSGE.SquareRoot(),    Normal(0.0, 0.4),           fixed=false, description="ρ_gdpvar: No description available.",            tex_label="\\varrho_{gdp}")
 
     m <= parameter(:ρ_BBB,     0.,     fixed=true,
                    description="ρ_BBB: AR(1) coefficient in the BBB spread process.",
@@ -464,7 +464,7 @@ m <= parameter(:ρ_tfp,     0.1953, (0.0, 1.0),      (0.0, 1.0), DSGE.SquareRoot
 
     m <= parameter(:σ_r_m,     0.2380, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   DSGE.RootInverseGamma(2., 0.10),  fixed=false,
                    description="σ_r_m: No description available.",
-                   tex_label="\\sigma_{rm}")
+                   tex_label="\\sigma_{r^m}")
 
     m <= parameter(:σ_σ_ω,   0.0428, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(),   DSGE.RootInverseGamma(4., 0.05),  fixed=false,
                    description="σ_σ_ω: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_ω.",
@@ -472,9 +472,9 @@ m <= parameter(:ρ_tfp,     0.1953, (0.0, 1.0),      (0.0, 1.0), DSGE.SquareRoot
 
     m <= parameter(:σ_μ_e,    0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(), DSGE.RootInverseGamma(4., 0.05),  fixed=true,  description="σ_μ_e: Exogenous bankrupcy costs follow an exogenous process with standard deviation σ_μ_e.",           tex_label="\\sigma_{\\mu_e}")
     m <= parameter(:σ_γ,   0.0000, (1e-7,100.),     (1e-5, 0.),    DSGE.Exponential(),   DSGE.RootInverseGamma(4., 0.01),  fixed=true,  description="σ_γ: The fraction of entrepreneurs surviving period t follows an exogenous process with standard deviation σ_γ.",             tex_label="\\sigma_{\\gamma}")
-    m <= parameter(:σ_π_star,   0.0269, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(), DSGE.RootInverseGamma(6., 0.03),  fixed=false, description="σ_π_star: No description available.",        tex_label="\\sigma_{\\pi^*}")
+    m <= parameter(:σ_π_star,   0.0269, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(), DSGE.RootInverseGamma(6., 0.03),  fixed=false, description="σ_π_star: No description available.",        tex_label="\\sigma_{\\pi_*}")
     m <= parameter(:σ_lr,     0.1766, (1e-8,10.),      (1e-8, 5.),    DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.75),  fixed=false, description="σ_lr: No description available.",
-                   tex_label="\\sigma_{lr}")
+                   tex_label="\\sigma_{10y}")
     m <= parameter(:σ_z_p,     0.1662, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   DSGE.RootInverseGamma(2., 0.10),  fixed=false, description="σ_z_p: No description available.",            tex_label="\\sigma_{z^p}")
     m <= parameter(:σ_tfp,    0.9391, (1e-8, 5.),      (1e-8, 5.),    DSGE.Exponential(),   DSGE.RootInverseGamma(2., 0.10),  fixed=false, description="σ_tfp: No description available.",           tex_label="\\sigma_{tfp}")
     m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.), (1e-8, 5.),DSGE.Exponential(),
@@ -485,7 +485,7 @@ m <= parameter(:ρ_tfp,     0.1953, (0.0, 1.0),      (0.0, 1.0), DSGE.SquareRoot
     m <= parameter(:σ_corepce, 0.0999, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
                    fixed=false,
                    description="σ_corepce: No description available.",
-                   tex_label="\\sigma_{corepce}")
+                   tex_label="\\sigma_{pce}")
 
     m <= parameter(:σ_gdp, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
                    fixed=false,
@@ -514,12 +514,12 @@ m <= parameter(:ρ_tfp,     0.1953, (0.0, 1.0),      (0.0, 1.0), DSGE.SquareRoot
             m <= parameter(symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(),
                            DSGE.RootInverseGamma(4., .2), fixed=false,
                            description="σ_r_m$i: No description available.",
-                           tex_label=@sprintf("\\sigma_{ant%d}",i))
+                           tex_label=@sprintf("\\sigma_{%d,r}",i))
         else
             m <= parameter(symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.),
                            DSGE.Exponential(), DSGE.RootInverseGamma(4., .2), fixed=true,
                            description="σ_r_m$i: No description available.",
-                           tex_label=@sprintf("\\sigma_{ant%d}",i))
+                           tex_label=@sprintf("\\sigma_{%d,r}",i))
         end
     end
 
@@ -765,3 +765,51 @@ function settings_m1010!(m::Model1010)
     nothing
 end
 
+
+"""
+```
+parameter_groupings(m::Model1010)
+```
+
+Returns an `OrderedDict{ASCIIString, Vector{Parameter}}` mapping descriptions of
+parameter groupings (e.g. \"Policy Parameters\") to vectors of
+`Parameter`s. This dictionary is passed in as a keyword argument to
+`prior_table`.
+"""
+function parameter_groupings(m::Model1010)
+    steadystate = [:γ, :α, :β, :σ_c, :h, :ν_l, :δ, :Φ, :S′′, :ppsi,
+                    :δ_gdpdef, :Lmean, :λ_w, :π_star, :g_star]
+
+    sticky     = [:ζ_p, :ζ_w, :ι_p, :ι_w, :ϵ_p, :ϵ_w]
+
+    policy     = [:ψ1, :ψ2, :ψ3, :ρ, :ρ_rm]
+
+    financial  = [:Fω, :spr, :ζ_spb, :γ_star, :lnb_safe, :lnb_liq, :λ_AAA]
+
+    processes = [[:ρ_g, :ρ_μ, :ρ_z_p, :ρ_z, :ρ_b_liqp, :ρ_b_liqtil, :ρ_b_safep, :ρ_b_safetil, :ρ_σ_w,
+                 :ρ_π_star,  :ρ_λ_f, :ρ_λ_w, :η_λ_f, :η_λ_w, :η_gz, :σ_g, :σ_μ,
+                 :σ_z_p, :σ_z, :σ_b_liqp, :σ_b_liqtil, :σ_b_safep, :σ_b_safetil, :σ_σ_ω, :σ_π_star,
+                 :σ_λ_f, :σ_λ_w, :σ_r_m];
+                 [symbol("σ_r_m$i") for i in 1:n_anticipated_shocks(m)]]
+
+    error      = [:δ_gdpdef, :Γ_gdpdef, :ρ_gdp, :ρ_gdi, :ρ_gdpvar, :ρ_gdpdef, :ρ_corepce, :ρ_AAA,
+                  :ρ_BBB, :ρ_lr, :ρ_tfp, :σ_gdp, :σ_gdi, :σ_gdpdef, :σ_corepce, :σ_AAA, :σ_BBB,
+                  :σ_lr, :σ_tfp]
+
+    all_keys     = Vector[steadystate, sticky, policy, financial, processes, error]
+    all_params   = map(keys -> [m[θ]::Parameter for θ in keys], all_keys)
+    descriptions = ["Steady State",  "Nominal Rigidities", "Policy",
+                    "Financial Frictions", "Exogenous Processes",
+                    "Measurement"]
+
+
+    groupings = OrderedDict{ASCIIString, Vector{Parameter}}(zip(descriptions, all_params))
+
+    # Ensure no parameters missing
+    incl_params = vcat(collect(values(groupings))...)
+    excl_params = [m[θ] for θ in vcat([:Upsilon, :ρ_μ_e, :ρ_γ, :σ_μ_e, :σ_γ, :Iendoα, :γ_gdi, :δ_gdi, :me_level],
+                                      [symbol("σ_r_m$i") for i=2:20])]
+    @assert isempty(setdiff(m.parameters, vcat(incl_params, excl_params)))
+
+    return groupings
+end
