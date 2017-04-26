@@ -36,19 +36,21 @@ language, have improved the process of running a DSGE forecast.
 
 These tests were conducted on a single core on an Intel® Xeon® E5-2697 v2
 2.70GHz CPU running GNU/Linux. The exception is computing all the
-full-distribution results, which was done using 50 parallel workers. A time is
-not reported for running the full-distribution forecast step in MATLAB 2014a
-because that MATLAB code is 2009a-specific.
+full-distribution results, which was done using 50 parallel workers.
 
 **Benchmark Times Relative to MATLAB 2009a (Smaller is Better)**
 
-| Test                                                           | MATLAB (2009a) | MATLAB (2014a) | Julia (0.4.5) |
-| -------------------------------------------------------------- | -------------- | -------------- | ------------- |
-| Simulation smoothing                                           | 1.00           | 1.15           | 0.44          |
-| Forecasting                                                    | 1.00           | 1.52           | 0.36          |
-| Computing shock decompositions                                 | 1.00           | 1.66           | 0.19          |
-| Full set of forecast outputs (modal parameters)                | 1.00           | 1.16           | 0.12          |
-| Full set of forecast outputs (full distribution of parameters) | 1.00           | -              | 0.22          |
+| Test                                                           | MATLAB (2014a) | Julia (0.4.5) |
+| -------------------------------------------------------------- | -------------- | ------------- |
+| Simulation smoothing                                           | 1.00           | 0.38          |
+| Forecasting                                                    | 1.00           | 0.24          |
+| Computing shock decompositions                                 | 1.00           | 0.12          |
+| Full set of forecast outputs (modal parameters)                | 1.00           | 0.10          |
+| Full set of forecast outputs (full distribution of parameters) | 1.00*          | 0.22          |
+
+*Unlike the other steps being tested, the full-distribution forecast timing was
+run in MATLAB 2009a. Our code relies on MATLAB parallelization features that
+were deprecated with the introduction of the Parallel Computing Toolbox.
 
 Post estimation, we produce a number of forecast-related outputs, either at the
 mode or using the full estimated posterior distribution. The tasks involved
@@ -56,11 +58,11 @@ include smoothing, forecasting (both enforcing the zero lower bound and not),
 and computing shock decompositions (exercises that allow us to account for the
 evolution of observed variables in terms of their driving forces).
 
-With our most recent model, which is available in *DSGE.jl*, we can
-compute all the full-distribution forecast outputs in approximately fifteen
-minutes. In comparison, the same computations in MATLAB typically take about
-seventy minutes. As a result, we can experiment with different options and
-correct mistakes much more flexibly than we could previously.
+With our most recent model, which is available in *DSGE.jl*, we can compute all
+the full-distribution forecast outputs in approximately fifteen minutes. In
+comparison, the same computations in MATLAB typically take about seventy
+minutes. As a result, we can experiment with different options and correct
+mistakes much more flexibly than we could previously.
 
 In the next sections, we discuss the design principles that guided our port, as
 well as the Julia parallel programming tools that enabled us to write efficient
