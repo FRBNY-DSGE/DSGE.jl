@@ -56,7 +56,7 @@ obs = sw.observables
 # Matrices are of expected dimensions
 @test size(Γ0) == (47, 47)
 @test size(Γ1) == (47, 47)
-@test size(C) == (47, 1)
+@test size(C) == (47,)
 @test size(Ψ) == (47, 7)
 @test size(Π) == (47, 12)
 

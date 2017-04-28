@@ -9,7 +9,7 @@ model = Model1002()
 
 ### Parameters
 
-for θ in m.parameters
+for θ in model.parameters
     @test isa(θ, AbstractParameter)
     if !θ.fixed
         (left, right) = θ.valuebounds
@@ -60,16 +60,16 @@ meas = measurement(model, TTT, RRR, CCC)
 # Matrices are of expected dimensions
 @test size(Γ0) == (68, 68)
 @test size(Γ1) == (68, 68)
-@test size(C) == (68, 1)
+@test size(C) == (68,)
 @test size(Ψ) == (68, 24)
 @test size(Π) == (68, 13)
 
 @test size(meas[:ZZ]) == (19,84)
-@test size(meas[:DD]) == (19,1)
+@test size(meas[:DD]) == (19,)
 @test size(meas[:QQ]) == (24,24)
 @test size(meas[:EE]) == (19,19)
 @test size(meas[:MM]) == (19,24)
 
 @test size(TTT) == (84,84)
 @test size(RRR) == (84,24)
-@test size(CCC) == (84,1)
+@test size(CCC) == (84,)

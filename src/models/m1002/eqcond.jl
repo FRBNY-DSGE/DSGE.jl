@@ -23,7 +23,7 @@ function eqcond(m::Model1002)
 
     Γ0 = zeros(n_states(m), n_states(m))
     Γ1 = zeros(n_states(m), n_states(m))
-    C  = zeros(n_states(m), 1)
+    C  = zeros(n_states(m))
     Ψ  = zeros(n_states(m), n_shocks_exogenous(m))
     Π  = zeros(n_states(m), n_shocks_expectational(m))
 
