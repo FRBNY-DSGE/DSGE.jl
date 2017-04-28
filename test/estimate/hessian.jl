@@ -4,21 +4,16 @@ using HDF5, Base.Test
 include("../util.jl")
 path = dirname(@__FILE__)
 
-# Test hessian! in context of model
-m = Model990()
-m.testing = true
+# # Test hessian! in context of model
+custom_settings = Dict{Symbol, Setting}(
+    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")))
+m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 # Setup paths
-mode = h5open(inpath(m, "user", "paramsmode.h5")) do file
-    read(file, "params")
-end
-data = let
-    df = load_data(m; try_disk=true, verbose=:none)
-    DSGE.df_to_matrix(m, df)
-end
-hessian_expected = h5open(inpath(m, "user", "hessian.h5")) do file
-    read(file, "hessian")
-end
+
+data = h5read("$path/../reference/hessian.h5","data")'
+mode = h5read("$path/../reference/hessian.h5","paramsmode")
+hessian_expected = h5read("$path/../reference/hessian.h5","hessian")
 
 # Test subset of hessian elements.
 para_free      = [!θ.fixed for θ in m.parameters]
@@ -29,7 +24,7 @@ if max_free_ind < maximum(para_free_inds)
     para_free_inds = para_free_inds[1:max_free_ind]
 end
 
-@time hessian, _ = hessian!(m, mode, data; verbose=:none)
+hessian, _ = hessian!(m, mode, data; verbose=:none)
 
 # The values here are liable to differ between machines, based on different
 # architectures/multithreading. Hessian values tend to be large, so these larger tolerances

@@ -1,7 +1,7 @@
 """
 ```
 measurement{T<:AbstractFloat}(m::SmetsWouters{T}, TTT::Matrix{T}, RRR::Matrix{T},
-                              CCC::Matrix{T}; shocks::Bool = true)
+                              CCC::Vector{T}; shocks::Bool = true)
 ```
 
 Assign measurement equation
@@ -19,7 +19,7 @@ cov(eps_t,u_t) = VV = QQ*MM'
 function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
                                        TTT::Matrix{T},
                                        RRR::Matrix{T},
-                                       CCC::Matrix{T};
+                                       CCC::Vector{T};
                                        shocks::Bool = true)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
@@ -41,7 +41,7 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
     end
 
     ZZ = zeros(_n_observables, _n_states)
-    DD = zeros(_n_observables, 1)
+    DD = zeros(_n_observables)
     MM = zeros(_n_observables, _n_shocks_exogenous)
     EE = zeros(_n_observables, _n_observables)
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
@@ -95,7 +95,9 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
     # unanticipated policy shock
     if shocks
         for i = 1:n_anticipated_shocks(m)
-            QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_rm$i")]^2
+            ZZ[obs[symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]*(TTT^i)
+            DD[obs[symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
+            QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_rm")]^2 / 16
         end
     end
 
@@ -104,8 +106,8 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
         DD += ZZ*((UniformScaling(1) - TTT)\CCC)
     end
 
-    HH = EE + MM*QQ*MM'
-    VV = QQ*MM'
+    HH    = EE + MM*QQ*MM'
+    VV    = QQ*MM'
     VVall = [[RRR*QQ*RRR' RRR*VV];
              [VV'*RRR'    HH]]
 

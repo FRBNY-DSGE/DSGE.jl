@@ -19,7 +19,7 @@ cov(eps_t,u_t) = VV = QQ*MM'
 function measurement{T<:AbstractFloat}(m::Model1002{T},
                                        TTT::Matrix{T},
                                        RRR::Matrix{T},
-                                       CCC::Matrix{T};
+                                       CCC::Vector{T};
                                        shocks::Bool = true)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
@@ -41,7 +41,7 @@ function measurement{T<:AbstractFloat}(m::Model1002{T},
     end
 
     ZZ = zeros(_n_observables, _n_states)
-    DD = zeros(_n_observables, 1)
+    DD = zeros(_n_observables)
     MM = zeros(_n_observables, _n_shocks_exogenous)
     EE = zeros(_n_observables, _n_observables)
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
@@ -61,7 +61,7 @@ function measurement{T<:AbstractFloat}(m::Model1002{T},
     ZZ[obs[:obs_gdi], endo_new[:e_gdi_t]]  = 1.0
     ZZ[obs[:obs_gdi], endo_new[:e_gdi_t1]] = -m[:me_level]
     DD[obs[:obs_gdi]]                      = 100*(exp(m[:z_star])-1) + m[:δ_gdi]
-    
+
     ## Hours growth
     ZZ[obs[:obs_hours], endo[:L_t]] = 1.0
     DD[obs[:obs_hours]]             = m[:Lmean]
@@ -137,7 +137,7 @@ function measurement{T<:AbstractFloat}(m::Model1002{T},
     QQ[exo[:corepce_sh], exo[:corepce_sh]]= m[:σ_corepce]^2
     QQ[exo[:gdp_sh], exo[:gdp_sh]]        = m[:σ_gdp]^2
     QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi]^2
-    
+
     # These lines set the standard deviations for the anticipated shocks. They
     # are here no longer calibrated to the std dev of contemporaneous shocks,
     # as we had in 904

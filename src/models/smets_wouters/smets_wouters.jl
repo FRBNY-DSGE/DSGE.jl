@@ -44,11 +44,11 @@ the model's measurement equation matrices.
 
 #### Model Specifications and Settings
 
-* `spec::AbstractString`: The model specification identifier, "m990",
+* `spec::AbstractString`: The model specification identifier, \"smets_wouters\",
 cached here for filepath computation.
 
 * `subspec::AbstractString`: The model subspecification number,
-indicating that some parameters from the original model spec ("ss0")
+indicating that some parameters from the original model spec (\"ss0\")
 are initialized differently. Cached here for filepath computation.
 
 
@@ -89,6 +89,8 @@ type SmetsWouters{T} <: AbstractModel{T}
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
     testing::Bool                                   # Whether we are in testing mode or not
+
+    observable_mappings::OrderedDict{Symbol, Observable}
 end
 
 description(m::SmetsWouters) = "Smets-Wouters Model"
@@ -139,28 +141,22 @@ function init_model_indices!(m::SmetsWouters)
         :y_t1, :c_t1, :i_t1, :w_t1, :π_t1, :L_t1, :Et_π_t]
 
     # Measurement equation observables
-    observables = [[
-        :obs_gdp,              # quarterly output growth
-        :obs_hours,            # aggregate hours growth
-        :obs_wages,            # real wage growth
-        :obs_gdpdeflator,      # inflation (GDP deflator)
-        :obs_nominalrate,      # nominal interest rate
-        :obs_consumption,      # consumption growth
-        :obs_investment];       # investment growth
-        [symbol("obs_nominalrate$i") for i=1:n_anticipated_shocks(m)]] # compounded nominal rates
+    observables = keys(m.observable_mappings)
 
 
-    for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
-    for (i,k) in enumerate(exogenous_shocks);             m.exogenous_shocks[k]             = i end
-    for (i,k) in enumerate(expected_shocks);              m.expected_shocks[k]              = i end
-    for (i,k) in enumerate(equilibrium_conditions);       m.equilibrium_conditions[k]       = i end
-    for (i,k) in enumerate(endogenous_states);            m.endogenous_states[k]            = i end
+    for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
+    for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
+    for (i,k) in enumerate(expected_shocks);             m.expected_shocks[k]             = i end
+    for (i,k) in enumerate(equilibrium_conditions);      m.equilibrium_conditions[k]      = i end
+    for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
     for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(endogenous_states) end
-    for (i,k) in enumerate(observables);                  m.observables[k]                  = i end
+    for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
 end
 
 
-function SmetsWouters(subspec::AbstractString="ss0")
+function SmetsWouters(subspec::AbstractString="ss0";
+                      custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
+                      testing = false)
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]
@@ -168,7 +164,6 @@ function SmetsWouters(subspec::AbstractString="ss0")
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
     rng                = MersenneTwister(0)        # Random Number Generator
-    testing            = false
 
     # initialize empty model
     m = SmetsWouters{Float64}(
@@ -183,13 +178,37 @@ function SmetsWouters(subspec::AbstractString="ss0")
             settings,
             test_settings,
             rng,
-            testing)
+            testing,
+            Dict{Symbol,Observable}())
 
     # Set settings
     settings_smets_wouters!(m)
     default_test_settings!(m)
+    for custom_setting in values(custom_settings)
+        m <= custom_setting
+    end
+
+    # Set observable transformations
+    init_observable_mappings!(m)
 
     # Initialize parameters
+    init_parameters!(m)
+    init_model_indices!(m)
+    init_subspec!(m)
+    steadystate!(m)
+    return m
+end
+
+"""
+```
+init_parameters!(m::SmetsWouters)
+```
+
+Initializes the model's parameters, as well as empty values for the steady-state
+parameters (in preparation for `steadystate!(m)` being called to initialize
+those).
+"""
+function init_parameters!(m::SmetsWouters)
     m <= parameter(:α,      0.24, (1e-5, 0.999), (1e-5, 0.999),   SquareRoot(),     Normal(0.30, 0.05),         fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.",
                    tex_label="\\alpha")
@@ -379,11 +398,6 @@ function SmetsWouters(subspec::AbstractString="ss0")
     m <= SteadyStateParameter(:ystar,  NaN, description="steady-state something something", tex_label="\\y_*")
     m <= SteadyStateParameter(:cstar,  NaN, description="steady-state something something", tex_label="\\c_*")
     m <= SteadyStateParameter(:wl_c,   NaN, description="steady-state something something", tex_label="\\wl_c")
-
-    init_model_indices!(m)
-    init_subspec!(m)
-    steadystate!(m)
-    return m
 end
 
 
@@ -419,7 +433,6 @@ function settings_smets_wouters!(m::SmetsWouters)
     # Anticipated shocks
     m <= Setting(:n_anticipated_shocks, 0)
     m <= Setting(:n_anticipated_shocks_padding, 20)
-    m <= Setting(:n_anticipated_lags, 26)
 
     # Estimation
     m <= Setting(:reoptimize, true)
@@ -427,6 +440,4 @@ function settings_smets_wouters!(m::SmetsWouters)
 
     # Data vintage
     m <= Setting(:data_vintage, "150827")
-
-    m.settings
 end

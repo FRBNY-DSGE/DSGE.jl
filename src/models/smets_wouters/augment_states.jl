@@ -1,4 +1,4 @@
-function augment_states{T<:AbstractFloat}(m::SmetsWouters{T}, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
+function augment_states{T<:AbstractFloat}(m::SmetsWouters{T}, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T})
     endo = m.endogenous_states
     endo_addl = m.endogenous_states_augmented
     exo = m.exogenous_shocks
@@ -7,7 +7,7 @@ function augment_states{T<:AbstractFloat}(m::SmetsWouters{T}, TTT::Matrix{T}, RR
     n_exo = n_shocks_exogenous(m)
     @assert (n_endo, n_endo) == size(TTT)
     @assert (n_endo, n_exo) == size(RRR)
-    @assert (n_endo, 1) == size(CCC)
+    @assert n_endo == length(CCC)
     
     # Initialize augmented matrices
     n_addl_states = length(m.endogenous_states_augmented)
@@ -15,7 +15,7 @@ function augment_states{T<:AbstractFloat}(m::SmetsWouters{T}, TTT::Matrix{T}, RR
     TTT_aug = zeros(n_endo + n_addl_eqs, n_endo + n_addl_states)
     TTT_aug[1:n_endo, 1:n_endo] = TTT
     RRR_aug = [RRR; zeros(n_addl_eqs, n_exo)]
-    CCC_aug = [CCC; zeros(n_addl_eqs, 1)]
+    CCC_aug = [CCC; zeros(n_addl_eqs)]
 
     ### TTT modifications
 

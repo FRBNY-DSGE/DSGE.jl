@@ -1,5 +1,5 @@
 using DSGE
-using HDF5, Base.Test, Distributions
+using HDF5, Base.Test, Distributions, JLD
 include("../../util.jl")
 
 path = dirname(@__FILE__)
@@ -9,69 +9,12 @@ model = Model990()
 
 ### Parameters
 
-# Parameters match parameters, bounds, etc. vectors from reference (ϵ = 1e-4)
-para = zeros(82)
-bounds = zeros(82, 2)
-pshape = zeros(82)
-pmean = zeros(82)
-pstdd = zeros(82)
-trspec = zeros(82, 4)
-
-# keys to skip (used to be fixed_parameters)
-fixed_parameters = [:δ, :λ_w, :ϵ_p, :ϵ_w, :g_star]
-    
-# not all parameters appear in model.parameters
-i = 1
 for θ in model.parameters
     !isa(θ,AbstractParameter) && error()
-    in(θ.key, fixed_parameters) && continue
-    
-    para[i] = θ.value
+    θ.fixed && continue
 
     (left, right) = θ.valuebounds
-    bounds[i, 1] = left
-    bounds[i, 2] = right
-
-    prior = θ.prior.value
-    
-    if isa(prior, DSGE.RootInverseGamma)
-        pshape[i] = 4
-        (ν, τ) = params(prior)
-        pmean[i] = τ
-        pstdd[i] = ν
-    else
-        if isa(prior, Distributions.Beta)
-            pshape[i] = 1
-        elseif isa(prior, Distributions.Gamma)
-            pshape[i] = 2
-        elseif isa(prior, Distributions.Normal)
-            pshape[i] = 3
-        end
-        pmean[i] = mean(prior)
-        pstdd[i] = std(prior)
-        
-    end
-
-    if θ.transform == DSGE.Untransformed()
-        trspec[i, 1] = 0
-    elseif θ.transform == DSGE.SquareRoot()
-        trspec[i, 1] = 1
-    elseif  θ.transform == DSGE.Exponential()()
-        trspec[i, 1] = 2        
-    else
-       throw(error("This kind of transform not allowed")) 
-    end
-        
-    (left, right) = θ.transform_parameterization
-    trspec[i, 2] = left
-    trspec[i, 3] = right
-    if θ == model[:Iendoα]
-        trspec[i, 4] = 0
-    else
-        trspec[i, 4] = 1
-    end
-
-    i += 1
+    @test left < θ.value < right
 end
 
 ### Model indices
@@ -112,7 +55,7 @@ obs = model.observables
 # Matrices are of expected dimensions
 @test size(Γ0) == (60, 60)
 @test size(Γ1) == (60, 60)
-@test size(C) == (60, 1)
+@test size(C) == (60,)
 @test size(Ψ) == (60, 16)
 @test size(Π) == (60, 13)
 
@@ -131,7 +74,7 @@ close(h5)
 @test_matrix_approx_eq Ψ_ref Ψ
 @test_matrix_approx_eq Π_ref Π
 
-# ### Measurement equation
+### Measurement equation
 expect = Dict{Symbol, Matrix}()
 h5 = h5open("$path/measurement.h5")
 expect[:ZZ] = read(h5, "ZZ")
@@ -147,5 +90,69 @@ actual = measurement(model, TTT, RRR, CCC)
 for d in (:ZZ, :DD, :QQ, :EE, :MM)
     @test_matrix_approx_eq expect[d] actual[d]
 end
+
+
+### Pseudo-measurement equation
+expect = Dict{Symbol, Any}()
+jld = jldopen("$path/pseudo_measurement.jld")
+expect[:ZZ_pseudo] = read(jld, "ZZ_pseudo")
+expect[:DD_pseudo] = reshape(read(jld, "DD_pseudo"), 18, 1)
+expect[:inds] = read(jld, "inds")
+close(jld)
+
+model = Model990()
+actual = pseudo_measurement(model)[2]
+for d in (:ZZ_pseudo, :DD_pseudo)
+    @test_matrix_approx_eq expect[d] getfield(actual,d)
+end
+@assert isequal(expect[:inds], getfield(actual, :inds))
+
+### Custom settings
+custom_settings = Dict{Symbol, Setting}(
+    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6))
+model = Model990(custom_settings = custom_settings)
+@test get_setting(model, :n_anticipated_shocks) == 6
+
+# Indices initialized correctly under custom settings
+
+# Endogenous states
+endo = model.endogenous_states
+@test length(endo) == 66
+@test endo[:rm_tl6] == 66
+
+# Exogenous shocks
+exo = model.exogenous_shocks
+@test length(exo) == 22
+@test exo[:rm_shl6] == 22
+
+# Expectation shocks
+ex = model.expected_shocks
+@test length(ex) == 13
+@test ex[:Erk_f_sh] == 13
+
+# Equations
+eq = model.equilibrium_conditions
+@test length(eq) == 66
+@test eq[:eq_rml6] == 66
+
+# Additional states
+endo_new = model.endogenous_states_augmented
+@test length(endo_new) == 12
+@test endo_new[:y_t1] == 67
+
+# Observables
+obs = model.observables
+@test length(obs) == 18
+@test obs[:obs_nominalrate6] == 18
+
+### Equilibrium conditions
+Γ0, Γ1, C, Ψ, Π = eqcond(model)
+
+# Matrices are of expected dimensions
+@test size(Γ0) == (66, 66)
+@test size(Γ1) == (66, 66)
+@test size(C) == (66,)
+@test size(Ψ) == (66, 22)
+@test size(Π) == (66, 13)
 
 nothing

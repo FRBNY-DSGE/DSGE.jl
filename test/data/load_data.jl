@@ -1,33 +1,46 @@
 using DSGE
-using Base.Test
+using Base.Test, DataFrames, HDF5
+include("../util.jl")
 
-# Can we actually test? Require that the FRED_API_KEY ENV is populated.
-if haskey(ENV, "FRED_API_KEY")
-    m = Model990()
-    m.testing=true
+path = dirname(@__FILE__)
 
-    # Specify exact vintage and dates
-    m <= Setting(:data_vintage, "151127")
-    m <= Setting(:date_presample_start, quartertodate("2015-Q2"))
-    m <= Setting(:date_mainsample_end, quartertodate("2015-Q3"))
+# Can we actually test? Require that FRED API key exists
+@assert haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
 
-    df = load_data(m; try_disk=false, verbose=:none)
+# Specify vintage and dates
+custom_settings = Dict{Symbol, Setting}(
+    :data_vintage            => Setting(:data_vintage, "160812"),
+    :cond_vintage            => Setting(:cond_vintage, "160812"),
+    :use_population_forecast => Setting(:use_population_forecast, true),
+    :date_forecast_start     => Setting(:date_forecast_start, quartertodate("2016-Q3")),
+    :date_conditional_end    => Setting(:date_forecast_start, quartertodate("2016-Q3")),
+    :n_anticipated_shocks    => Setting(:n_anticipated_shocks, 6))
+m = Model990(custom_settings = custom_settings, testing = true)
 
-    # Silly comparisons
-    delete!(df, :date)
-    colmeans = colwise(mean, df)
-    @test_approx_eq_eps colmeans[1][1] 0.4435 1e-4
-    @test_approx_eq_eps colmeans[2][1] -51.2707 1e-4
-    @test_approx_eq_eps colmeans[3][1] 0.1582 1e-4
-    @test_approx_eq_eps colmeans[4][1] 0.4271 1e-4
-    @test_approx_eq_eps colmeans[5][1] 0.3979 1e-4
-    @test_approx_eq_eps colmeans[6][1] 0.0325 1e-4
-
-    colstds  = colwise(std, df)
-    @test_approx_eq_eps colstds[1][1] 0.3205 1e-4
-    @test_approx_eq_eps colstds[2][1] 0.1015 1e-4
-    @test_approx_eq_eps colstds[3][1] 0.3692 1e-4
-    @test_approx_eq_eps colstds[4][1] 0.1367 1e-4
-    @test_approx_eq_eps colstds[5][1] 0.0937 1e-4
-    @test_approx_eq_eps colstds[6][1] 0.0000 1e-4
+# Read expected results
+exp_data, exp_cond_data, exp_semicond_data =
+    h5open("$path/../reference/load_data_out.h5", "r") do h5
+        read(h5, "data"), read(h5, "cond_data"), read(h5, "semicond_data")
 end
+
+# Unconditional data
+println("The following warnings are expected test behavior:")
+df = load_data(m; try_disk=false, verbose=:none)
+data = df_to_matrix(m, df)
+@test_matrix_approx_eq exp_data data
+
+# Conditional data
+cond_df = load_data(m; cond_type=:full, try_disk=false, verbose=:none)
+cond_data = df_to_matrix(m, cond_df; cond_type=:full)
+@test_matrix_approx_eq exp_cond_data cond_data
+
+# Semiconditional data
+semicond_df = load_data(m; cond_type=:semi, try_disk=false, verbose=:none)
+semicond_data = df_to_matrix(m, semicond_df; cond_type=:semi)
+@test_matrix_approx_eq exp_semicond_data semicond_data
+
+# include_presample flag
+data = df_to_matrix(m, df; include_presample = false)
+@test_matrix_approx_eq exp_data[:, 3:end] data
+
+nothing

@@ -1,25 +1,28 @@
 """
 ```
 measurement{T<:AbstractFloat}(m::Model990{T}, TTT::Matrix{T}, RRR::Matrix{T},
-                              CCC::Matrix{T}; shocks::Bool = true)
+                              CCC::Vector{T}; shocks::Bool = true)
 ```
 
 Assign measurement equation
 ```
-X_t = ZZ*S_t + DD + u_t
+y_t = ZZ*s_t + DD + u_t
 ```
 where
 ```
-u_t = eta_t + MM*eps_t
-var(eta_t) = EE
+u_t = η_t + MM*ϵ_t     
+```
+is error composed of measurement error and a contribution from underlying shocks, and
+```
+var(η_t) = EE
 var(u_t) = HH = EE + MM*QQ*MM'
-cov(eps_t,u_t) = VV = QQ*MM'
+cov(ϵ_t,u_t) = VV = QQ*MM'
 ```
 """
 function measurement{T<:AbstractFloat}(m::Model990{T},
                                        TTT::Matrix{T},
                                        RRR::Matrix{T},
-                                       CCC::Matrix{T};
+                                       CCC::Vector{T};
                                        shocks::Bool = true)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
@@ -41,7 +44,7 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
     end
 
     ZZ = zeros(_n_observables, _n_states)
-    DD = zeros(_n_observables, 1)
+    DD = zeros(_n_observables)
     MM = zeros(_n_observables, _n_shocks_exogenous)
     EE = zeros(_n_observables, _n_observables)
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
@@ -148,20 +151,4 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
              [VV'*RRR'    HH]]
 
     return Measurement(ZZ, DD, QQ, EE, MM, VVall)
-end
-
-type Measurement{T<:AbstractFloat}
-    ZZ::Matrix{T}
-    DD::Matrix{T}
-    QQ::Matrix{T}
-    EE::Matrix{T}
-    MM::Matrix{T}
-    VVall::Matrix{T}
-end
-function Base.getindex(M::Measurement, d::Symbol)
-    if d in (:ZZ, :DD, :QQ, :EE, :MM, :VVall)
-        return getfield(M, d)
-    else
-        throw(KeyError(d))
-    end
 end

@@ -1,14 +1,12 @@
 abstract AbstractModel{T}
 
-description(m::AbstractModel) = "DSGE Model $(spec(m)) (subspec $(subspec(m)))"
-
 function Base.show{T<:AbstractModel}(io::IO, m::T)
     @printf io "Dynamic Stochastic General Equilibrium Model\n"
     @printf io "%s\n" T
-    @printf io "description:\n %s\n"          description(m)
     @printf io "no. states:             %i\n" n_states(m)
     @printf io "no. anticipated shocks: %i\n" n_anticipated_shocks(m)
     @printf io "data vintage:           %s\n" data_vintage(m)
+    @printf io "description:\n %s\n"          description(m)
 end
 
 @inline function Base.getindex(m::AbstractModel, i::Integer)
@@ -62,6 +60,7 @@ param. Otherwise, overwrites m.steady_state[i-length(m.parameters).
 end
 
 Base.setindex!(m::AbstractModel, value, k::Symbol) = Base.setindex!(m, value, m.keys[k])
+
 
 """
 ```
@@ -119,26 +118,51 @@ Distributions.pdf(m::AbstractModel) = exp(logpdf(m))
 
 # Number of anticipated policy shocks
 n_anticipated_shocks(m::AbstractModel) = get_setting(m, :n_anticipated_shocks)
-
-# Padding for number of anticipated policy shocks
 n_anticipated_shocks_padding(m::AbstractModel) = get_setting(m, :n_anticipated_shocks_padding)
 
-# Index into data matrix of first period to incorporate expected rate data
-function zlb_start_index(m::AbstractModel)
-    zlb_start_quarter = get_setting(m, :date_zlbregime_start)
-    presample_start_quarter = get_setting(m, :date_presample_start)
-    quarters = subtract_quarters(zlb_start_quarter, presample_start_quarter)
-    index = quarters+1
-    return index
-end
+# Dates, indices, number of periods for each regime
+date_presample_start(m::AbstractModel) = get_setting(m, :date_presample_start)
+date_mainsample_start(m::AbstractModel) = get_setting(m, :date_mainsample_start)
+date_zlb_start(m::AbstractModel) = get_setting(m, :date_zlb_start)
 
-# Number of presample periods
-function n_presample_periods(m::AbstractModel)
-    mainsample_start_quarter = get_setting(m, :date_mainsample_start)
-    presample_start_quarter = get_setting(m, :date_presample_start)
-    quarters = subtract_quarters(mainsample_start_quarter, presample_start_quarter)
-    return quarters
-end
+date_presample_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_mainsample_start) - Dates.Month(3))
+date_prezlb_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_zlb_start) - Dates.Month(3))
+date_mainsample_end(m::AbstractModel) = Dates.lastdayofquarter(get_setting(m, :date_forecast_start) - Dates.Month(3))
+date_conditional_end(m::AbstractModel) = get_setting(m, :date_conditional_end)
+
+index_presample_start(m::AbstractModel) = 1
+index_mainsample_start(m::AbstractModel) = subtract_quarters(date_mainsample_start(m), date_presample_start(m)) + 1
+index_zlb_start(m::AbstractModel) = subtract_quarters(date_zlb_start(m), date_presample_start(m)) + 1
+index_forecast_start(m::AbstractModel) = subtract_quarters(date_forecast_start(m), date_presample_start(m)) + 1
+
+"""
+```
+index_shockdec_start(m::AbstractModel)
+```
+
+Returns the index starting from which the shock decomposition is saved, where 1 is the index corresponding to date_mainsample_start(m).
+"""
+index_shockdec_start(m::AbstractModel) = subtract_quarters(date_shockdec_start(m), date_mainsample_start(m)) + 1
+
+"""
+```
+index_shockdec_end(m::AbstractModel)
+```
+
+Returns the last index for which the shock decomposition is saved, where 1 is the index corresponding to date_mainsample_start(m).
+"""
+index_shockdec_end(m::AbstractModel) = subtract_quarters(date_shockdec_end(m), date_mainsample_start(m)) + 1
+
+n_presample_periods(m::AbstractModel)   = subtract_quarters(date_mainsample_start(m), date_presample_start(m))
+n_prezlb_periods(m::AbstractModel)      = subtract_quarters(date_zlb_start(m), date_mainsample_start(m))
+n_zlb_periods(m::AbstractModel)         = subtract_quarters(date_forecast_start(m), date_zlb_start(m))
+n_mainsample_periods(m::AbstractModel)  = subtract_quarters(date_forecast_start(m), date_mainsample_start(m))
+n_conditional_periods(m::AbstractModel) = subtract_quarters(date_conditional_end(m), date_mainsample_end(m))
+
+inds_presample_periods(m::AbstractModel) = collect(index_presample_start(m):(index_mainsample_start(m)-1))
+inds_prezlb_periods(m::AbstractModel) = collect(index_mainsample_start(m):(index_zlb_start(m)-1))
+inds_zlb_periods(m::AbstractModel) = collect(index_zlb_start(m):(index_forecast_start(m)-1))
+inds_mainsample_periods(m::AbstractModel) = collect(index_mainsample_start(m):(index_forecast_start(m)-1))
 
 # Number of a few things that are useful
 n_states(m::AbstractModel)                 = length(m.endogenous_states)
@@ -151,6 +175,90 @@ n_parameters(m::AbstractModel)             = length(m.parameters)
 n_parameters_steady_state(m::AbstractModel)= length(m.steady_state)
 n_parameters_free(m::AbstractModel)        = sum([!α.fixed for α in m.parameters])
 
+function n_pseudoobservables(m::AbstractModel)
+    if forecast_pseudoobservables(m)
+        pseudo, _ = pseudo_measurement(m)
+        return length(pseudo)
+    else
+        return 0
+    end
+end
+
+"""
+```
+get_key(m, class, index)
+```
+
+Returns the name of the state (`class = :state`), observable (`obs`),
+pseudo-observable (`pseudo`), or shock (`shock`) corresponding to the given
+`index`.
+"""
+function get_key(m::AbstractModel, class::Symbol, index::Int)
+    dict = if class == :state
+        m.endogenous_states
+    elseif class == :obs
+        m.observables
+    elseif class == :pseudo
+        _, pseudo_mapping = pseudo_measurement(m)
+        pseudo_mapping.inds
+    elseif class in [:shock, :stdshock]
+        m.exogenous_shocks
+    else
+        throw(ArgumentError("Invalid class :$class. Must be :state, :obs, :pseudo, or :shock"))
+    end
+
+    out = Base.filter(key -> dict[key] == index, collect(keys(dict)))
+    if length(out) == 0
+        error("Key corresponding to index $index not found for class :$class")
+    elseif length(out) > 1
+        error("Multiple keys corresponding to index $index found for class :$class")
+    else
+        return out[1]
+    end
+end
+
+# Parse population mnemonic into 2 Nullable{Symbol}s from one
+function parse_population_mnemonic(m::AbstractModel)
+    mnemonic = get_setting(m, :population_mnemonic)
+    if isnull(mnemonic)
+        return [Nullable{Symbol}(), Nullable{Symbol}()]
+    else
+        return map(s -> Nullable(symbol(s)), split(string(get(mnemonic)), DSGE_DATASERIES_DELIM))
+    end
+end
+
+# From an augmented state space with anticipated policy shocks, get indices
+# corresponding to pre-ZLB states, shocks, and observables
+function inds_states_no_ant(m::AbstractModel)
+    if n_anticipated_shocks(m) > 0
+        ind_ant1 = m.endogenous_states[:rm_tl1]
+        ind_antn = m.endogenous_states[symbol("rm_tl$(n_anticipated_shocks(m))")]
+        return [1:(ind_ant1-1); (ind_antn+1):n_states_augmented(m)]
+    else
+        return collect(1:n_states_augmented(m))
+    end
+end
+
+function inds_shocks_no_ant(m::AbstractModel)
+    if n_anticipated_shocks(m) > 0
+        ind_ant1 = m.exogenous_shocks[:rm_shl1]
+        ind_antn = m.exogenous_shocks[symbol("rm_shl$(n_anticipated_shocks(m))")]
+        return [1:(ind_ant1-1); (ind_antn+1):n_shocks_exogenous(m)]
+    else
+        return collect(1:n_shocks_exogenous(m))
+    end
+end
+
+function inds_obs_no_ant(m::AbstractModel)
+    if n_anticipated_shocks(m) > 0
+        ind_ant1 = m.observables[:obs_nominalrate1]
+        ind_antn = m.observables[symbol("obs_nominalrate$(n_anticipated_shocks(m))")]
+        return [1:(ind_ant1-1); (ind_antn+1):n_observables(m)]
+    else
+        return collect(1:n_observables(m))
+    end
+end
+
 # Interface for I/O settings
 spec(m::AbstractModel)         = m.spec
 subspec(m::AbstractModel)      = m.subspec
@@ -158,20 +266,20 @@ saveroot(m::AbstractModel)     = get_setting(m, :saveroot)
 dataroot(m::AbstractModel)     = get_setting(m, :dataroot)
 
 # Interface for data
-data_vintage(m::AbstractModel) = get_setting(m, :data_vintage)
-cond_vintage(m::AbstractModel) = get_setting(m, :cond_vintage)
-cond_id(m::AbstractModel) = get_setting(m, :cond_id)
+data_vintage(m::AbstractModel)    = get_setting(m, :data_vintage)
+cond_vintage(m::AbstractModel)    = get_setting(m, :cond_vintage)
+cond_id(m::AbstractModel)         = get_setting(m, :cond_id)
+cond_full_names(m::AbstractModel) = get_setting(m, :cond_full_names)
+cond_semi_names(m::AbstractModel) = get_setting(m, :cond_semi_names)
+use_population_forecast(m::AbstractModel) = get_setting(m, :use_population_forecast)
 
 # Interface for general computation settings
 use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers)
 
-# Interface for data step
-use_population_forecast(m::AbstractModel) = get_setting(m, :use_population_forecast)
-
 # Interface for estimation settings
-reoptimize(m::AbstractModel)            = get_setting(m, :reoptimize)
-calculate_hessian(m::AbstractModel)     = get_setting(m, :calculate_hessian)
-hessian_path(m::AbstractModel)          = get_setting(m, :hessian_path)
+reoptimize(m::AbstractModel)          = get_setting(m, :reoptimize)
+calculate_hessian(m::AbstractModel) = get_setting(m, :calculate_hessian)
+hessian_path(m::AbstractModel)      = get_setting(m, :hessian_path)
 n_hessian_test_params(m::AbstractModel) = get_setting(m, :n_hessian_test_params)
 
 # Interface for Metropolis-Hastings settings
@@ -179,6 +287,52 @@ n_mh_blocks(m::AbstractModel)      =  get_setting(m, :n_mh_blocks)
 n_mh_simulations(m::AbstractModel) =  get_setting(m, :n_mh_simulations)
 n_mh_burn(m::AbstractModel)        =  get_setting(m, :n_mh_burn)
 mh_thin(m::AbstractModel)          =  get_setting(m, :mh_thin)
+
+# Interface for forecast settings
+date_forecast_start(m::AbstractModel)   = get_setting(m, :date_forecast_start)
+forecast_block_size(m::AbstractModel)   = get_setting(m, :forecast_block_size)
+forecast_start_block(m::AbstractModel)  = get_setting(m, :forecast_start_block)
+forecast_input_file_overrides(m::AbstractModel) = get_setting(m, :forecast_input_file_overrides)
+forecast_pseudoobservables(m::AbstractModel) = get_setting(m, :forecast_pseudoobservables)
+forecast_uncertainty_override(m::AbstractModel) = get_setting(m, :forecast_uncertainty_override)
+forecast_smoother(m::AbstractModel)     = get_setting(m, :forecast_smoother)
+forecast_tdist_df_val(m::AbstractModel) = get_setting(m, :forecast_tdist_df_val)
+forecast_tdist_shocks(m::AbstractModel) = get_setting(m, :forecast_tdist_shocks)
+forecast_zlb_value(m::AbstractModel)    = get_setting(m, :forecast_zlb_value)
+impulse_response_horizons(m::AbstractModel) = get_setting(m, :impulse_response_horizons)
+n_shockdec_periods(m::AbstractModel)    = index_shockdec_end(m) - index_shockdec_start(m) + 1
+
+function date_forecast_end(m::AbstractModel)
+    date = date_forecast_start(m) + Dates.Month(3 * (forecast_horizons(m)-1))
+    return Dates.lastdayofquarter(date)
+end
+
+function forecast_horizons(m::AbstractModel; cond_type::Symbol = :none)
+    horizons = get_setting(m, :forecast_horizons)
+    if cond_type == :none
+        return horizons
+    else
+        return horizons - n_conditional_periods(m)
+    end
+end
+
+function date_shockdec_start(m::AbstractModel)
+    startdate = get_setting(m, :shockdec_startdate)
+    if !isnull(startdate)
+        return get(startdate)
+    else
+        return date_mainsample_start(m)
+    end
+end
+
+function date_shockdec_end(m::AbstractModel)
+    enddate =  get_setting(m, :shockdec_enddate)
+    if !isnull(enddate)
+        return get(enddate)
+    else
+        return date_forecast_end(m)
+    end
+end
 
 """
 ```
@@ -282,28 +436,28 @@ Creates the proper directory structure for input and output files, treating the 
 
 Note: we refer to the savepathroot/output_data/<spec>/<subspec>/ directory as saveroot.
 =#
-"""
-```
-logpath(model)
-```
-Returns path to log file. Path built as
-```
-<output root>/output_data/<spec>/<subspec>/log/log_<filestring>.log
-```
-"""
-function logpath(m::AbstractModel)
-    return savepath(m, "log", "log.log")
-end
+# """
+# ```
+# logpath(model)
+# ```
+# Returns path to log file. Path built as
+# ```
+# <output root>/output_data/<spec>/<subspec>/log/log_<filestring>.log
+# ```
+# """
+# function logpath(m::AbstractModel)
+#     return savepath(m, "log", "log.log")
+# end
 
-strs = [:work, :raw, :tables, :figures]
+strs = [:work, :raw, :tables, :figures, :log]
 fns = [symbol(x, "path") for x in strs]
 for (str, fn) in zip(strs, fns)
     @eval begin
         # First eval function
         function $fn{T<:AbstractString}(m::AbstractModel,
-                                             out_type::T,
-                                             file_name::T="",
-                                             filestring_addl::Vector{T}=Vector{T}())
+                                        out_type::T,
+                                        file_name::T = "",
+                                        filestring_addl::Vector{T}=Vector{T}())
             return savepath(m, out_type, $(string(str)), file_name, filestring_addl)
         end
 
@@ -329,28 +483,38 @@ end
 function savepath{T<:AbstractString}(m::AbstractModel,
                                      out_type::T,
                                      sub_type::T,
-                                     file_name::T="",
-                                     filestring_addl::Vector{T}=Vector{T}())
-    # Containing dir
-    path = joinpath(saveroot(m), "output_data", spec(m), subspec(m), out_type, sub_type)
-    if !isdir(path)
-        mkpath(path)
-    end
+                                     file_name::T = "",
+                                     filestring_addl::Vector{T} = Vector{T}())
+    # Containing directory
+    dir = ASCIIString(joinpath(saveroot(m), "output_data", spec(m), subspec(m), out_type, sub_type))
 
-    # File with model string inserted
     if !isempty(file_name)
-        if isempty(filestring_addl)
-            myfilestring = filestring(m)
-        else
-            myfilestring = filestring(m, filestring_addl)
-        end
-        (base, ext) = splitext(file_name)
-        file_name_detail = base * myfilestring * ext
-        path = joinpath(path, file_name_detail)
+        base = filestring_base(m)
+        return savepath(dir, file_name, base, filestring_addl)
+    else
+        return dir
+    end
+end
+
+function savepath{T<:AbstractString}(dir::T,
+                                     file_name::T = "",
+                                     filestring_base::Vector{T} = Vector{T}(),
+                                     filestring_addl::Vector{T} = Vector{T}())
+    if !isdir(dir)
+        mkpath(dir)
     end
 
-    return path
+    if !isempty(file_name)
+        (base, ext) = splitext(file_name)
+        myfilestring = filestring(filestring_base, filestring_addl)
+        file_name_detail = base * myfilestring * ext
+
+        return joinpath(dir, file_name_detail)
+    else
+        return dir
+    end
 end
+
 
 # Input data handled slightly differently, because it is not model-specific.
 """
@@ -362,9 +526,9 @@ Returns path to specific input data file, creating containing directory as neede
 `file_name` not specified, creates and returns path to containing directory only. Valid
 `in_type` includes:
 
-* `"data"`: recorded data
-* `"cond"`: conditional data - nowcasts for the current forecast quarter, or related
-* `"user"`: user-supplied data for starting parameter vector, hessian, or related
+* `\"data\"`: recorded data
+* `\"cond\"`: conditional data - nowcasts for the current forecast quarter, or related
+* `\"user\"`: user-supplied data for starting parameter vector, hessian, or related
 
 Path built as
 ```
@@ -396,23 +560,36 @@ function inpath{T<:AbstractString}(m::AbstractModel, in_type::T, file_name::T=""
     return path
 end
 
-filestring(m::AbstractModel) = filestring(m, Vector{AbstractString}())
-filestring(m::AbstractModel, d::AbstractString) = filestring(m, [d])
-function filestring{T<:AbstractString}(m::AbstractModel,
-                                        d::Vector{T})
+function filestring_base(m::AbstractModel)
     if !m.testing
-        filestrings = Vector{T}()
+        base = Vector{ASCIIString}()
         for (skey, sval) in m.settings
             if sval.print
-                push!(filestrings, to_filestring(sval))
+                push!(base, to_filestring(sval))
             end
         end
-        append!(filestrings, d)
-        sort!(filestrings)
-        return "_"*join(filestrings, "_")
+        return base
     else
-        return "_test"
+        return ["test"]
     end
+end
+
+filestring(m::AbstractModel) = filestring(m, Vector{ASCIIString}())
+filestring(m::AbstractModel, d::AbstractString) = filestring(m, [ASCIIString(d)])
+function filestring{T<:AbstractString}(m::AbstractModel, d::Vector{T})
+    base = filestring_base(m)
+    return filestring(base, d)
+end
+
+function filestring{T<:AbstractString}(base::Vector{T}, d::Vector{T})
+    filestrings = vcat(base, d)
+    sort!(filestrings)
+    return "_" * join(filestrings, "_")
+end
+
+function filestring{T<:AbstractString}(d::Vector{T})
+    sort!(d)
+    return "_" * join(d, "_")
 end
 
 """
@@ -461,3 +638,37 @@ function rand{T<:AbstractFloat, U<:AbstractModel}(d::DegenerateMvNormal, m::U; c
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
 
+"""
+`rand_prior(m::AbstractModel; ndraws::Int = 100_000)`
+
+Draw a random sample from the model's prior distribution.
+"""
+function rand_prior(m::AbstractModel; ndraws::Int = 100_000)
+    T = typeof(m.parameters[1].value)
+    npara = length(m.parameters)
+    priorsim = Array{T}(ndraws, npara)
+
+    for i in 1:ndraws
+        priodraw = Array{T}(npara)
+
+        #Parameter draws per particle
+        for j in 1:length(m.parameters)
+
+            priodraw[j] = if !m.parameters[j].fixed
+                prio = rand(m.parameters[j].prior.value)
+
+                # Resample until all prior draws are within the value bounds
+                while !(m.parameters[j].valuebounds[1] < prio < m.parameters[j].valuebounds[2])
+                    prio = rand(m.parameters[j].prior.value)
+                end
+
+                prio
+            else
+                m.parameters[j].value
+            end
+        end
+        priorsim[i,:] = priodraw'
+    end
+
+    priorsim
+end

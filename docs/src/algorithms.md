@@ -31,9 +31,6 @@ Order   = [:function, :type]
 metropolis_hastings
 ```
 
-## State Space Routines
-```@autodocs
-Modules = [DSGE]
-Pages   = ["kalman.jl"]
-Order   = [:function, :type]
-```
+## State Space Filters and Smoothers
+
+See [StateSpaceRoutines.jl](https://github.com/FRBNY-DSGE/StateSpaceRoutines.jl).
