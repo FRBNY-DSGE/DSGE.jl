@@ -13,7 +13,7 @@ This section focuses on what the code does and why. Docstrings and the code itse
 (including comments) provide detailed information regarding *how* these basic
 procedures are implemented.
 
-## The `AbstractModel` Type and the Model Object
+## The `AbstractModel` Type
 
 The `AbstractModel` type provides a common interface for all model objects,
 which greatly facilitates the implementation of new model specifications. Any
@@ -68,7 +68,7 @@ name the consumption Euler equation `:euler`). States (columns of `Γ0` and
 `Γ1`), exogenous shocks (columns of `Ψ`), and expectational shocks (columns
 `Π`) also have names.
 
-## Parameters: The `AbstractParameter` Type
+## The `AbstractParameter` Type
 
 The `AbstractParameter` type implements our notion of a model parameter: a
 time-invariant, unobserved value that has economic significance in the model's
@@ -119,6 +119,37 @@ fields:
 ```@docs
 SteadyStateParameter
 ```
+
+
+## The `Observable` and `PseudoObservable` Types
+
+We similarly encapsulate information about observables and pseudo-observables
+(unobserved linear combinations of states, e.g. the output gap) into the
+`Observable` and `PseudoObservable` types. Each type has identifier fields
+`key`, `name`, and `longname`.
+
+Most importantly, both `Observable`s and `PseudoObservable`s include the
+information needed for transformations to and from model units. For
+`Observable`s, these are the `input_series`, `fwd_transform`, and
+`rev_transform` fields. "Forward transformations" are applied to transform
+the raw input data series specified in `input_series` to model units. The
+model is estimated and forecasted in model units, and then we apply "reverse
+transformations" to get human-readable units before computing means and bands or
+plotting. Pseudo-observables are not observed, so they do not have
+`input_series` or `fwd_transform`s, but they may however have `rev_transform`s.
+
+As an example, the `:obs_gdp` `Observable` uses as `input_series` aggregate
+nominal GDP in levels, the GDP price index, and population in levels, all from
+FRED. These series are `fwd_transform`ed to get quarter-over-quarter log growth
+rates of per-capita real GDP, which are the `Observable`'s model units. The
+reverse transformation then converts `:obs_gdp` into annualized
+quarter-over-quarter percent changes of *aggregate* real GDP.
+
+```@docs
+Observable
+PseudoObservable
+```
+
 
 ## Model Settings
 

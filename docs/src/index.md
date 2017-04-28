@@ -26,6 +26,8 @@ Pages = [
   "implementation_details.md",
   "solving.md",
   "estimation.md",
+  "forecast.md",
+  "means_bands.md",
   "contributing.md",
   "license.md"
 ]

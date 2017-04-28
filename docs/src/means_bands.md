@@ -19,9 +19,9 @@ plot our estimation of the full distribution of the forecast outputs.
   [`forecast_one`](@ref), one variable (e.g. one observable) and one
   `output_type` at a time.
 
-- *Transform forecast outputs:* If necessary, apply transformations specified in
-  the `Observable` or `PseudoObservable` type to the given forecast output
-  series.
+- *Transform forecast outputs:* If necessary, use `reverse_transform` to apply
+  transformations specified in the `Observable` or `PseudoObservable` type to
+  the given forecast output series.
 
 - *Compute means and bands:* Compute the means and density bands of the forecast
   output.
