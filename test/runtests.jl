@@ -6,9 +6,10 @@ include(joinpath(dirname(@__FILE__()),"util.jl"))
 my_tests = [
             "core",
             "parameters",
-            "models/m990/m990",
-            "models/smets_wouters/smets_wouters",
             "models/an_schorfheide/an_schorfheide",
+            "models/smets_wouters/smets_wouters",
+            "models/m990/m990",
+            "models/m1002/m1002",
             "data/misc",
             "data/load_data",
             "solve/gensys",
