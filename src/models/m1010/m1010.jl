@@ -161,7 +161,7 @@ function init_model_indices!(m::Model1010)
 end
 
 
-function Model1010(subspec::AbstractString="ss1";
+function Model1010(subspec::AbstractString="ss18";
                    custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                    testing = false)
 
