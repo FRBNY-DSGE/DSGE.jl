@@ -10,6 +10,7 @@ my_tests = [
             "models/smets_wouters/smets_wouters",
             "models/m990/m990",
             "models/m1002/m1002",
+            "models/m1010/m1010",
             "data/misc",
             "data/load_data",
             "solve/gensys",
