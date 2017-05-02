@@ -109,7 +109,7 @@ function measurement{T<:AbstractFloat}(m::Model1002{T},
     DD[obs[:obs_longinflation]]    = 100*(m[:π_star]-1)
 
     ## Long Rate
-    ZZ[obs[:obs_longrate], :]               = ZZ[6, :]*TTT10
+    ZZ[obs[:obs_longrate], :]               = ZZ[6, :]' * TTT10
     ZZ[obs[:obs_longrate], endo_new[:lr_t]] = 1.0
     DD[obs[:obs_longrate]]                  = m[:Rstarn]
 
@@ -143,7 +143,7 @@ function measurement{T<:AbstractFloat}(m::Model1002{T},
     # as we had in 904
     if shocks
         for i = 1:n_anticipated_shocks(m)
-            ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]*(TTT^i)
+            ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
             DD[obs[Symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
             QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
         end

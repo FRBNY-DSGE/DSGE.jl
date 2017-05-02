@@ -113,7 +113,7 @@ function measurement{T<:AbstractFloat}(m::Model1010{T},
     # bond, and reassign the result to the BBB spread row of the ZZ
     # matrix, overwriting the original coefficients. Then we add a
     # coefficient for the measurement error.
-    ZZ[obs[:obs_BBBspread], :]                   = ZZ[obs[:obs_BBBspread], :] * TTT20
+    ZZ[obs[:obs_BBBspread], :]                   = ZZ[obs[:obs_BBBspread], :]' * TTT20
     ZZ[obs[:obs_BBBspread], endo_new[:e_BBB_t]]  = 1.0
     DD[obs[:obs_BBBspread]]                      = 100*log(m[:spr]*m[:lnb_safe]*m[:lnb_liq])
 
@@ -127,7 +127,7 @@ function measurement{T<:AbstractFloat}(m::Model1010{T},
     # bond, and reassign the result to the AAA spread row of the ZZ
     # matrix, overwriting the original coefficients. Then we add a
     # coefficient for the measurement error.
-    ZZ[obs[:obs_AAAspread], :]                    = ZZ[obs[:obs_AAAspread], :] * TTT20
+    ZZ[obs[:obs_AAAspread], :]                    = ZZ[obs[:obs_AAAspread], :]' * TTT20
     ZZ[obs[:obs_AAAspread], endo_new[:e_AAA_t]]   = 1.0
     DD[obs[:obs_AAAspread]]                       = 100*log(m[:lnb_liq]) + 100*m[:λ_AAA]*log(m[:spr]*m[:lnb_safe])
 
@@ -137,7 +137,7 @@ function measurement{T<:AbstractFloat}(m::Model1010{T},
     DD[obs[:obs_longinflation]]    = 100*(m[:π_star]-1)
 
     ## Long Rate
-    ZZ[obs[:obs_longrate], :]               = ZZ[obs[:obs_nominalrate], :]*TTT10
+    ZZ[obs[:obs_longrate], :]               = ZZ[obs[:obs_nominalrate], :]' * TTT10
     ZZ[obs[:obs_longrate], endo_new[:lr_t]] = 1.0
     DD[obs[:obs_longrate]]                  = m[:Rstarn]
 
@@ -176,7 +176,7 @@ function measurement{T<:AbstractFloat}(m::Model1010{T},
     # as we had in 904
     if shocks
         for i = 1:n_anticipated_shocks(m)
-            ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]*(TTT^i)
+            ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
             DD[obs[Symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
             QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
         end
