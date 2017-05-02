@@ -56,6 +56,9 @@ obs = model.observables
 TTT, RRR, CCC = solve(model)
 meas = measurement(model, TTT, RRR, CCC)
 
+### Pseudo-measurement equation
+pseudo, mapping = pseudo_measurement(model)
+
 # Matrices are of expected dimensions
 @test size(Γ0) == (68, 68)
 @test size(Γ1) == (68, 68)
