@@ -418,9 +418,9 @@ function eqcond(m::Model1002)
 
         if n_anticipated_shocks(m) > 1
             for i = 2:n_anticipated_shocks(m)
-                Γ1[eq[symbol("eq_rml$(i-1)")], endo[symbol("rm_tl$i")]] = 1.
-                Γ0[eq[symbol("eq_rml$i")], endo[symbol("rm_tl$i")]]     = 1.
-                Ψ[eq[symbol("eq_rml$i")], exo[symbol("rm_shl$i")]]      = 1.
+                Γ1[eq[Symbol("eq_rml$(i-1)")], endo[Symbol("rm_tl$i")]] = 1.
+                Γ0[eq[Symbol("eq_rml$i")], endo[Symbol("rm_tl$i")]]     = 1.
+                Ψ[eq[Symbol("eq_rml$i")], exo[Symbol("rm_shl$i")]]      = 1.
             end
         end
     end

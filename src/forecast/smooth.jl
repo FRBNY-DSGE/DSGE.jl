@@ -65,7 +65,7 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_regime_matrices(m, system)
 
     # Call smoother
-    smoother = eval(symbol(forecast_smoother(m), "_smoother"))
+    smoother = eval(Symbol(forecast_smoother(m), "_smoother"))
 
     states, shocks = if smoother == hamilton_smoother
         draw_states ? warn("$smoother called with draw_states = true") : nothing

@@ -202,7 +202,7 @@ function reverse_transform(m::AbstractModel, input_type::Symbol, cond_type::Symb
     pseudos, _ = pseudo_measurement(m)
 
     # Determine which file to read in
-    path       = get_forecast_filename(m, input_type, cond_type, symbol(product, class);
+    path       = get_forecast_filename(m, input_type, cond_type, Symbol(product, class);
                                  forecast_string = forecast_string)
 
     # Apply reverse transform to each desired variable

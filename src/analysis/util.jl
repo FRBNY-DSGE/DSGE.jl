@@ -1,5 +1,5 @@
 ##########################################
-## Extract class and product from a symbol
+## Extract class and product from a Symbol
 ##########################################
 
 function get_class(s::Symbol)
@@ -108,7 +108,7 @@ parse_transform(t::Symbol)
 Parse the module name out of a Symbol to recover the transform associated with
 an observable or pseudoobservable. Returns a function.
 """
-parse_transform(t::Symbol) = eval(symbol(split(string(t),".")[end]))
+parse_transform(t::Symbol) = eval(Symbol(split(string(t),".")[end]))
 
 """
 ```
@@ -244,7 +244,7 @@ function get_mb_metadata{S<:String}(input_type::Symbol, cond_type::Symbol,
     end
 
     class_long = get_class_longname(class)
-    variable_indices = metadata[symbol("$(class_long)_indices")]
+    variable_indices = metadata[Symbol("$(class_long)_indices")]
     date_indices     = product == :irf ? Dict{Date,Int}() : metadata[:date_indices]
 
     # Make sure date lists are valid. This is vacuously true for and IRFs, which

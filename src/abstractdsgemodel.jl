@@ -223,7 +223,7 @@ function parse_population_mnemonic(m::AbstractModel)
     if isnull(mnemonic)
         return [Nullable{Symbol}(), Nullable{Symbol}()]
     else
-        return map(s -> Nullable(symbol(s)), split(string(get(mnemonic)), DSGE_DATASERIES_DELIM))
+        return map(s -> Nullable(Symbol(s)), split(string(get(mnemonic)), DSGE_DATASERIES_DELIM))
     end
 end
 
@@ -232,7 +232,7 @@ end
 function inds_states_no_ant(m::AbstractModel)
     if n_anticipated_shocks(m) > 0
         ind_ant1 = m.endogenous_states[:rm_tl1]
-        ind_antn = m.endogenous_states[symbol("rm_tl$(n_anticipated_shocks(m))")]
+        ind_antn = m.endogenous_states[Symbol("rm_tl$(n_anticipated_shocks(m))")]
         return [1:(ind_ant1-1); (ind_antn+1):n_states_augmented(m)]
     else
         return collect(1:n_states_augmented(m))
@@ -242,7 +242,7 @@ end
 function inds_shocks_no_ant(m::AbstractModel)
     if n_anticipated_shocks(m) > 0
         ind_ant1 = m.exogenous_shocks[:rm_shl1]
-        ind_antn = m.exogenous_shocks[symbol("rm_shl$(n_anticipated_shocks(m))")]
+        ind_antn = m.exogenous_shocks[Symbol("rm_shl$(n_anticipated_shocks(m))")]
         return [1:(ind_ant1-1); (ind_antn+1):n_shocks_exogenous(m)]
     else
         return collect(1:n_shocks_exogenous(m))
@@ -252,7 +252,7 @@ end
 function inds_obs_no_ant(m::AbstractModel)
     if n_anticipated_shocks(m) > 0
         ind_ant1 = m.observables[:obs_nominalrate1]
-        ind_antn = m.observables[symbol("obs_nominalrate$(n_anticipated_shocks(m))")]
+        ind_antn = m.observables[Symbol("obs_nominalrate$(n_anticipated_shocks(m))")]
         return [1:(ind_ant1-1); (ind_antn+1):n_observables(m)]
     else
         return collect(1:n_observables(m))
@@ -450,7 +450,7 @@ Note: we refer to the savepathroot/output_data/<spec>/<subspec>/ directory as sa
 # end
 
 strs = [:work, :raw, :tables, :figures, :log]
-fns = [symbol(x, "path") for x in strs]
+fns = [Symbol(x, "path") for x in strs]
 for (str, fn) in zip(strs, fns)
     @eval begin
         # First eval function

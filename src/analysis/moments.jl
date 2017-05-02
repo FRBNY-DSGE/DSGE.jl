@@ -149,7 +149,7 @@ function prior_table(m::AbstractModel; subset_string::String = "",
         function anticipated_shock_footnote(θ::Parameter)
             if n_anticipated_shocks(m) > 0 && θ.key == :σ_r_m1
                 nantpad          = n_anticipated_shocks_padding(m)
-                all_sigmas       = [m[symbol("σ_r_m$i")]::Parameter for i = 1:nantpad]
+                all_sigmas       = [m[Symbol("σ_r_m$i")]::Parameter for i = 1:nantpad]
                 nonzero_sigmas   = Base.filter(θ -> !(θ.fixed && θ.value == 0), all_sigmas)
                 n_nonzero_sigmas = length(nonzero_sigmas)
 
@@ -478,8 +478,8 @@ function find_density_bands{T<:AbstractFloat}(draws::Matrix, percents::Vector{T}
     for p in percents
         out = find_density_bands(draws, p, minimize = minimize)
 
-        bands[symbol("$(100*p)\% UB")] = vec(out[2,:])
-        bands[symbol("$(100*p)\% LB")] = vec(out[1,:])
+        bands[Symbol("$(100*p)\% UB")] = vec(out[2,:])
+        bands[Symbol("$(100*p)\% LB")] = vec(out[1,:])
     end
 
     bands

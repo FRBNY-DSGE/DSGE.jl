@@ -119,7 +119,7 @@ function meansbands_matrix(mb::MeansBands)
             means[ind,:] = convert(Array{T},mb.means[series])
 
             for (i,band) in enumerate(bands_list)  # these are ordered properly already
-                bands[i,ind,:] = convert(Array{T},mb.bands[series][symbol(band)])
+                bands[i,ind,:] = convert(Array{T},mb.bands[series][Symbol(band)])
             end
         end
 
@@ -142,7 +142,7 @@ function meansbands_matrix(mb::MeansBands)
 
             for (band_ind, band) in enumerate(bands_list)
                 bands[band_ind, ind, :, shock_ind] =
-                    convert(Array{T}, mb.bands[series][symbol(band)])
+                    convert(Array{T}, mb.bands[series][Symbol(band)])
             end
         end
     end

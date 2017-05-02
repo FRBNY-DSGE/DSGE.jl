@@ -10,7 +10,7 @@ y_t = ZZ*s_t + DD + u_t
 ```
 where
 ```
-u_t = η_t + MM*ϵ_t     
+u_t = η_t + MM*ϵ_t
 ```
 is error composed of measurement error and a contribution from underlying shocks, and
 ```
@@ -134,9 +134,9 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
     # as we had in 904
     if shocks
         for i = 1:n_anticipated_shocks(m)
-            ZZ[obs[symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]*(TTT^i)
-            DD[obs[symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
-            QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_r_m$i")]^2
+            ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]*(TTT^i)
+            DD[obs[Symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
         end
     end
 

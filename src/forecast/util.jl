@@ -148,7 +148,7 @@ function add_requisite_output_vars(output_vars::Vector{Symbol})
     # Add :bddforecast<class> if :forecast<class> is in output_vars
     forecast_outputs = Base.filter(output -> get_product(output) in [:forecast, :forecast4q], output_vars)
     if !isempty(forecast_outputs)
-        bdd_vars = [symbol("bdd$(var)") for var in forecast_outputs]
+        bdd_vars = [Symbol("bdd$(var)") for var in forecast_outputs]
         output_vars = unique(vcat(output_vars, bdd_vars))
     end
 
@@ -156,8 +156,8 @@ function add_requisite_output_vars(output_vars::Vector{Symbol})
     shockdec_outputs = Base.filter(output -> get_product(output) == :shockdec, output_vars)
     if !isempty(shockdec_outputs)
         classes = [get_class(output) for output in shockdec_outputs]
-        dettrend_vars = [symbol("dettrend$c") for c in classes]
-        trend_vars = [symbol("trend$c") for c in classes]
+        dettrend_vars = [Symbol("dettrend$c") for c in classes]
+        trend_vars = [Symbol("trend$c") for c in classes]
         output_vars = unique(vcat(output_vars, dettrend_vars, trend_vars))
     end
 

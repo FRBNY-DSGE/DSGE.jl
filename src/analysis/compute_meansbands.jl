@@ -273,7 +273,7 @@ function means_bands(input_type::Symbol,
     product = get_product(output_var)
 
     ## Step 2: Read in raw forecast output and metadata (transformations,
-    ##         mappings from symbols to indices, etc)
+    ##         mappings from Symbols to indices, etc)
 
     forecast_output_file = meansbands_input_files[output_var]
     metadata, mb_metadata =
@@ -342,10 +342,10 @@ function means_bands(input_type::Symbol,
 
             # Re-assemble pmap outputs
             for (var_name, (var_means, var_bands)) in zip(variable_names, mb_vec)
-                means[symbol("$var_name$DSGE_SHOCKDEC_DELIM$shock_name")] = var_means
-                bands[symbol("$var_name$DSGE_SHOCKDEC_DELIM$shock_name")] = var_bands
+                means[Symbol("$var_name$DSGE_SHOCKDEC_DELIM$shock_name")] = var_means
+                bands[Symbol("$var_name$DSGE_SHOCKDEC_DELIM$shock_name")] = var_bands
                 if product != :irf
-                    bands[symbol("$var_name$DSGE_SHOCKDEC_DELIM$shock_name")][:date] = date_list
+                    bands[Symbol("$var_name$DSGE_SHOCKDEC_DELIM$shock_name")][:date] = date_list
                 end
             end
         end

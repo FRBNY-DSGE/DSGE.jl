@@ -117,14 +117,14 @@ function init_model_indices!(m::Model1010)
         :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :r_f_t, :Ec_f_t, :Eqk_f_t, :Ei_f_t,
         :EL_f_t,  :ztil_t, :π_t1, :π_t2, :π_a_t, :R_t1, :zp_t, :Ez_t, :rktil_f_t, :n_f_t,
         :b_liqtil_t, :b_liqp_t, :b_safetil_t, :b_safep_t];
-        [symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]]
+        [Symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]]
 
     # Exogenous shocks
     exogenous_shocks = [[
         :g_sh, :b_liqtil_sh, :b_liqp_sh, :b_safetil_sh, :b_safep_sh, :μ_sh, :z_sh,
         :λ_f_sh, :λ_w_sh, :rm_sh, :σ_ω_sh, :μ_e_sh, :γ_sh, :π_star_sh, :lr_sh, :zp_sh,
         :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh, :BBB_sh, :AAA_sh];
-        [symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
+        [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
 
     # Expectations shocks
     expected_shocks = [
@@ -141,7 +141,7 @@ function init_model_indices!(m::Model1010)
         :eq_caprnt_f, :eq_msub_f, :eq_res_f, :eq_Ec_f, :eq_Eqk_f, :eq_Ei_f, :eq_EL_f,
         :eq_ztil, :eq_π_star, :eq_π1, :eq_π2, :eq_π_a, :eq_Rt1, :eq_zp, :eq_Ez, :eq_spread_f,:eq_nevol_f,
         :eq_Erktil_f, :eq_b_liqtil, :eq_b_liqp, :eq_b_safetil, :eq_b_safep];
-        [symbol("eq_rml$i") for i=1:n_anticipated_shocks(m)]]
+        [Symbol("eq_rml$i") for i=1:n_anticipated_shocks(m)]]
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
@@ -511,12 +511,12 @@ m <= parameter(:ρ_tfp,     0.1953, (0.0, 1.0),      (0.0, 1.0), DSGE.SquareRoot
     # standard deviations of the anticipated policy shocks
     for i = 1:DSGE.n_anticipated_shocks_padding(m)
         if i < 13
-            m <= parameter(symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(),
+            m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(),
                            DSGE.RootInverseGamma(4., .2), fixed=false,
                            description="σ_r_m$i: No description available.",
                            tex_label=@sprintf("\\sigma_{%d,r}",i))
         else
-            m <= parameter(symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.),
+            m <= parameter(Symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.),
                            DSGE.Exponential(), DSGE.RootInverseGamma(4., .2), fixed=true,
                            description="σ_r_m$i: No description available.",
                            tex_label=@sprintf("\\sigma_{%d,r}",i))
@@ -746,7 +746,7 @@ function parameter_groupings(m::Model1010)
                  :ρ_π_star,  :ρ_λ_f, :ρ_λ_w, :η_λ_f, :η_λ_w, :η_gz, :σ_g, :σ_μ,
                  :σ_z_p, :σ_z, :σ_b_liqp, :σ_b_liqtil, :σ_b_safep, :σ_b_safetil, :σ_σ_ω, :σ_π_star,
                  :σ_λ_f, :σ_λ_w, :σ_r_m];
-                 [symbol("σ_r_m$i") for i in 1:n_anticipated_shocks(m)]]
+                 [Symbol("σ_r_m$i") for i in 1:n_anticipated_shocks(m)]]
 
     error      = [:δ_gdpdef, :Γ_gdpdef, :ρ_gdp, :ρ_gdi, :ρ_gdpvar, :ρ_gdpdef, :ρ_corepce, :ρ_AAA,
                   :ρ_BBB, :ρ_lr, :ρ_tfp, :σ_gdp, :σ_gdi, :σ_gdpdef, :σ_corepce, :σ_AAA, :σ_BBB,
@@ -764,7 +764,7 @@ function parameter_groupings(m::Model1010)
     # Ensure no parameters missing
     incl_params = vcat(collect(values(groupings))...)
     excl_params = [m[θ] for θ in vcat([:Upsilon, :ρ_μ_e, :ρ_γ, :σ_μ_e, :σ_γ, :Iendoα, :γ_gdi, :δ_gdi, :me_level],
-                                      [symbol("σ_r_m$i") for i=2:20])]
+                                      [Symbol("σ_r_m$i") for i=2:20])]
     @assert isempty(setdiff(m.parameters, vcat(incl_params, excl_params)))
 
     return groupings

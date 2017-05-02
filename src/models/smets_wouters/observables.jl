@@ -148,12 +148,12 @@ function init_observable_mappings!(m::SmetsWouters)
         # TO:   Same
 
         ant_fwd_transform = function (levels)
-            levels[:, symbol("ant$i")]
+            levels[:, Symbol("ant$i")]
         end
 
         ant_rev_transform = quartertoannual
 
-        observables[symbol("obs_nominalrate$i")] = Observable(symbol("obs_ant$i"), [symbol("ant$(i)__OIS")],
+        observables[Symbol("obs_nominalrate$i")] = Observable(Symbol("obs_ant$i"), [Symbol("ant$(i)__OIS")],
                                                       ant_fwd_transform, ant_rev_transform,
                                                       "Anticipated Shock $i",
                                                       "$i-period ahead anticipated monetary policy shock")

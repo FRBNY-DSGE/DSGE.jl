@@ -184,7 +184,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     mb1_product = get_product(mb1)
     mb2_product = get_product(mb2)
     product = if mb1_product == :hist && contains(string(mb2_product), "forecast")
-        symbol(string(mb1_product)*string(mb2_product))
+        Symbol(string(mb1_product)*string(mb2_product))
     elseif mb1_product == mb2_product
         mb1_product
     else
@@ -265,7 +265,7 @@ decomposition stored in a shock decomposition or irf MeansBands object `mb`.
 function get_shocks(mb::MeansBands)
     @assert get_product(mb) in [:shockdec, :irf] "Function only for shockdec or irf MeansBands objects"
     varshocks = setdiff(names(mb.means), [:date])
-    unique(map(x -> symbol(split(string(x), DSGE_SHOCKDEC_DELIM)[2]), varshocks))
+    unique(map(x -> Symbol(split(string(x), DSGE_SHOCKDEC_DELIM)[2]), varshocks))
 end
 
 """
@@ -278,7 +278,7 @@ parse_mb_colname(s::Symbol)
 `shock`).
 """
 function parse_mb_colname(s::Symbol)
-    map(symbol, split(string(s), DSGE_SHOCKDEC_DELIM))
+    map(Symbol, split(string(s), DSGE_SHOCKDEC_DELIM))
 end
 
 """
@@ -292,7 +292,7 @@ decomposition stored in a shock decomposition or irf MeansBands object `mb`.
 function get_variables(mb::MeansBands)
     @assert get_product(mb) in [:shockdec, :irf] "Function only for shockdec or irf MeansBands objects"
     varshocks = setdiff(names(mb.means), [:date])
-    unique(map(x -> symbol(split(string(x), DSGE_SHOCKDEC_DELIM)[1]), varshocks))
+    unique(map(x -> Symbol(split(string(x), DSGE_SHOCKDEC_DELIM)[1]), varshocks))
 end
 
 ###################################
@@ -376,7 +376,7 @@ function get_shockdec_means(mb::MeansBands, var::Symbol; shocks::Vector{Symbol} 
     out = DataFrame()
     for col in var_cols
         shockname = split(string(col), DSGE_SHOCKDEC_DELIM)[2]
-        out[symbol(shockname)] = mb.means[col]
+        out[Symbol(shockname)] = mb.means[col]
     end
 
     return out
@@ -504,7 +504,7 @@ function get_shockdec_bands(mb::MeansBands, var::Symbol;
     bands_keys = if isempty(bands)
         names(mb.bands[var_cols[1]])
     else
-        [[symbol("$(100x)% LB") for x in bands]; [symbol("$(100x)% UB") for x in bands]]
+        [[Symbol("$(100x)% LB") for x in bands]; [Symbol("$(100x)% UB") for x in bands]]
     end
 
     # Make a new dictionary mapping shock names to bands
@@ -550,11 +550,11 @@ function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol)
 
     # Extract this variable from Means and bands
     means = mb.means[[:date, var]]
-    bands = mb.bands[var][[:date; map(symbol, which_density_bands(mb))]]
+    bands = mb.bands[var][[:date; map(Symbol, which_density_bands(mb))]]
 
     # Join so mean is on far right and date is on far left
     df = join(bands, means, on = :date)
-    rename!(df, var, symbol("mean"))
+    rename!(df, var, Symbol("mean"))
 
     return df
 end
@@ -588,7 +588,7 @@ function prepare_meansbands_table_irf(mb::MeansBands, shock::Symbol, var::Symbol
     varshock = Symbol("$var" * DSGE_SHOCKDEC_DELIM * "$shock")
 
     # extract the means and bands for this irf
-    df = mb.bands[varshock][map(symbol, which_density_bands(mb))]
+    df = mb.bands[varshock][map(Symbol, which_density_bands(mb))]
     df[:mean] = mb.means[varshock]
 
     return df

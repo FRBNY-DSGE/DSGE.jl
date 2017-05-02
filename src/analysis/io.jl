@@ -124,11 +124,11 @@ function get_meansbands_output_files(directory::String,
                                      input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
                                      forecast_string::String = "", fileformat = :jld)
 
-    mb_output_vars = [symbol("mb$x") for x in output_vars]
+    mb_output_vars = [Symbol("mb$x") for x in output_vars]
     output_files = Dict{Symbol, String}()
     for var in output_vars
         output_files[var] = get_forecast_filename(directory, filestring_base,
-                                                  input_type, cond_type, symbol("mb$var");
+                                                  input_type, cond_type, Symbol("mb$var");
                                                   forecast_string = forecast_string,
                                                   fileformat = fileformat)
     end
@@ -356,40 +356,40 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
     my_output_vars = add_requisite_output_vars_meansbands(output_vars)
 
     for class in [:pseudo, :obs]
-        if !isempty(intersect(my_output_vars, [symbol("hist$class"), symbol("histforecast$class")]))
-            mbs[symbol("hist$class")] =
+        if !isempty(intersect(my_output_vars, [Symbol("hist$class"), Symbol("histforecast$class")]))
+            mbs[Symbol("hist$class")] =
                 read_mb(workpath(m, "forecast", "mbhist$class.jld", filestring_addl))
         end
-        if !isempty(intersect(my_output_vars, [symbol("forecast$class"), symbol("histforecast$class")]))
-            mbs[symbol("forecast$class")] =
+        if !isempty(intersect(my_output_vars, [Symbol("forecast$class"), Symbol("histforecast$class")]))
+            mbs[Symbol("forecast$class")] =
                 read_mb(workpath(m, "forecast", "mbforecast$class.jld", filestring_addl))
         end
-        if !isempty(intersect(my_output_vars, [symbol("bddforecast$class"), symbol("bddhistforecast$class")]))
-            mbs[symbol("bddforecast$class")] =
+        if !isempty(intersect(my_output_vars, [Symbol("bddforecast$class"), Symbol("bddhistforecast$class")]))
+            mbs[Symbol("bddforecast$class")] =
                 read_mb(workpath(m, "forecast", "mbbddforecast$class.jld", filestring_addl))
         end
-        if !isempty(intersect(my_output_vars, [symbol("forecast4q$class"), symbol("histforecast4q$class")]))
-            mbs[symbol("forecast4q$class")] =
+        if !isempty(intersect(my_output_vars, [Symbol("forecast4q$class"), Symbol("histforecast4q$class")]))
+            mbs[Symbol("forecast4q$class")] =
                 read_mb(workpath(m, "forecast", "mbforecast4q$class.jld", filestring_addl))
         end
-        if !isempty(intersect(my_output_vars, [symbol("bddforecast4q$class"), symbol("bddhistforecast4q$class")]))
-            mbs[symbol("bddforecast4q$class")] =
+        if !isempty(intersect(my_output_vars, [Symbol("bddforecast4q$class"), Symbol("bddhistforecast4q$class")]))
+            mbs[Symbol("bddforecast4q$class")] =
                 read_mb(workpath(m, "forecast", "mbbddforecast4q$class.jld", filestring_addl))
         end
-        if symbol("shockdec$class") in my_output_vars
-            mbs[symbol("shockdec$class")] =
+        if Symbol("shockdec$class") in my_output_vars
+            mbs[Symbol("shockdec$class")] =
                 read_mb(workpath(m, "forecast", "mbshockdec$class.jld", filestring_addl))
         end
-        if symbol("dettrend$class") in my_output_vars
-            mbs[symbol("dettrend$class")] =
+        if Symbol("dettrend$class") in my_output_vars
+            mbs[Symbol("dettrend$class")] =
                 read_mb(workpath(m, "forecast", "mbdettrend$class.jld", filestring_addl))
         end
-        if symbol("trend$class") in my_output_vars
-            mbs[symbol("trend$class")] =
+        if Symbol("trend$class") in my_output_vars
+            mbs[Symbol("trend$class")] =
                 read_mb(workpath(m, "forecast", "mbtrend$class.jld", filestring_addl))
         end
-        if symbol("irf$class") in my_output_vars
-            mbs[symbol("irf$class")] =
+        if Symbol("irf$class") in my_output_vars
+            mbs[Symbol("irf$class")] =
                 read_mb(workpath(m, "forecast", "mbirf$class.jld", filestring_addl))
         end
 
@@ -407,16 +407,16 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
 
         elseif output in [:histforecastpseudo, :histforecastobs]
 
-            mb_histforecast = cat(mb[symbol("hist$(class)")], mb[symbol("forecast$class")])
+            mb_histforecast = cat(mb[Symbol("hist$(class)")], mb[Symbol("forecast$class")])
             write_meansbands_tables(m, mb_histforecast, tablevars = vars)
 
         elseif output in [:shockdecpseudo, :shockdecobs]
 
-            mb_shockdec = mbs[symbol("shockdec$(class)")]
-            mb_trend    = mbs[symbol("trend$(class)")]
-            mb_dettrend = mbs[symbol("dettrend$(class)")]
-            mb_forecast = mbs[symbol("forecast$(class)")]
-            mb_hist     = mbs[symbol("hist$(class)")]
+            mb_shockdec = mbs[Symbol("shockdec$(class)")]
+            mb_trend    = mbs[Symbol("trend$(class)")]
+            mb_dettrend = mbs[Symbol("dettrend$(class)")]
+            mb_forecast = mbs[Symbol("forecast$(class)")]
+            mb_hist     = mbs[Symbol("hist$(class)")]
 
             write_meansbands_tables(m, mb_shockdec, mb_trend = mb_trend, mb_dettrend = mb_dettrend,
                                     mb_hist = mb_hist, mb_forecast = mb_forecast,

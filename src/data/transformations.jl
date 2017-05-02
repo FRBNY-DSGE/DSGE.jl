@@ -32,7 +32,7 @@ end
 Converts nominal to real values using the specified deflator.
 
 ## Arguments
-- `col`: symbol indicating which column of `df` to transform
+- `col`: Symbol indicating which column of `df` to transform
 - `df`: DataFrame containining series for proper population measure and `col`
 
 ## Keyword arguments
@@ -54,7 +54,7 @@ percapita(col, df, population_mnemonic)
 Converts data column `col` of DataFrame `df` to a per-capita value.
 
 ## Arguments
-- `col`: symbol indicating which column of data to transform
+- `col`: Symbol indicating which column of data to transform
 - `df`: DataFrame containining series for proper population measure and `col`
 - `population_mnemonic`: a mnemonic found in df for some population measure.
 """

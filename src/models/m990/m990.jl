@@ -112,13 +112,13 @@ function init_model_indices!(m::Model990)
         :Eπ_t, :EL_t, :Erk_t, :Ew_t, :ERtil_k_t, :y_f_t, :c_f_t, :i_f_t, :qk_f_t, :k_f_t,
         :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :r_f_t, :Ec_f_t, :Eqk_f_t, :Ei_f_t,
         :EL_f_t, :Erk_f_t, :ztil_t, :π_t1, :π_t2, :π_a_t, :R_t1, :zp_t, :Ez_t];
-        [symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]]
+        [Symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]]
 
     # Exogenous shocks
     exogenous_shocks = [[
         :g_sh, :b_sh, :μ_sh, :z_sh, :λ_f_sh, :λ_w_sh, :rm_sh, :σ_ω_sh, :μ_e_sh,
         :γ_sh, :π_star_sh, :lr_sh, :zp_sh, :tfp_sh, :gdpdef_sh, :corepce_sh];
-        [symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
+        [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
 
     # Expectations shocks
     expected_shocks = [
@@ -134,7 +134,7 @@ function init_model_indices!(m::Model990)
         :eq_capval_f, :eq_output_f, :eq_caputl_f, :eq_capsrv_f, :eq_capev_f, :eq_mkupp_f,
         :eq_caprnt_f, :eq_msub_f, :eq_res_f, :eq_Ec_f, :eq_Eqk_f, :eq_Ei_f, :eq_EL_f, :eq_Erk_f,
         :eq_ztil, :eq_π_star, :eq_π1, :eq_π2, :eq_π_a, :eq_Rt1, :eq_zp, :eq_Ez];
-        [symbol("eq_rml$i") for i=1:n_anticipated_shocks(m)]]
+        [Symbol("eq_rml$i") for i=1:n_anticipated_shocks(m)]]
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
@@ -424,12 +424,12 @@ function init_parameters!(m::Model990)
     # standard deviations of the anticipated policy shocks
     for i = 1:n_anticipated_shocks_padding(m)
         if i < 13
-            m <= parameter(symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(),
+            m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(),
                            RootInverseGamma(4., .2), fixed=false,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
         else
-            m <= parameter(symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.),
+            m <= parameter(Symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.),
                            DSGE.Exponential(), RootInverseGamma(4., .2), fixed=true,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))

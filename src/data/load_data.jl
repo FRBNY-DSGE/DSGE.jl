@@ -124,7 +124,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
     # Set ois series to load
     if n_anticipated_shocks(m) > 0
-        data_series[:OIS] = [symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
+        data_series[:OIS] = [Symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
     end
 
     # For each additional source, search for the file with the proper name. Open
@@ -444,7 +444,7 @@ function parse_data_series(m::AbstractModel)
     # Parse vector of observable mappings into data_series dictionary
     for obs in values(m.observable_mappings)
         for series in obs.input_series
-            mnemonic, source = map(symbol, split(string(series), DSGE_DATASERIES_DELIM))
+            mnemonic, source = map(Symbol, split(string(series), DSGE_DATASERIES_DELIM))
 
             if !in(source, keys(data_series))
                 data_series[source] = Vector{Symbol}()
