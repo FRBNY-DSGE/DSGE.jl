@@ -7,7 +7,7 @@ means_bands_all(input_type, cond_type, output_vars, input_dir, output_dir,
     filestring_base; forecast_string = "", density_bands = [0.5, 0.6, 0.7, 0.8, 0.9],
     minimize = false, population_mnemonic = Nullable{Symbol}(),
     population_data_file = "", population_forecast_file = "",
-    y0_indexes = Dict{Symbol, Int}(), data = Matrix{T}(),
+    y0_indexes = Dict{Symbol, Int}(), data = Matrix{Float64}(),
     verbose = :low)
 ```
 
@@ -16,8 +16,6 @@ the results to a file. Two methods are provided. The method that accepts a model
 object as an argument uses the model's settings to infer the arguments to the
 second method. Users can optionally skip construction of a model object and
 manually enter the directory and file names.
-
-Below, `T<:AbstractFloat`:
 
 ### Input Arguments
 
@@ -41,7 +39,7 @@ Below, `T<:AbstractFloat`:
   \"fcid=value\" in the forecast output filename). Required when
   `input_type == :subset`
 
-- `density_bands::Vector{T}`: a vector of percent values (between 0 and 1) for
+- `density_bands::Vector{Float64}`: a vector of percent values (between 0 and 1) for
   which to compute density bands
 
 - `minimize::Bool`: if `true`, choose shortest interval, otherwise just chop off
@@ -69,16 +67,16 @@ Below, `T<:AbstractFloat`:
   transformation. This is used to compute growth rates and four-quarter
   cumulations (among others). See `get_y0_index`.
 
-- `data::Matrix{T}`: pre-loaded `nobs x nperiods` matrix containing the
+- `data::Matrix{Float64}`: pre-loaded `nobs x nperiods` matrix containing the
   (untransformed) data matrix.
 """
-function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
-                                           cond_type::Symbol, output_vars::Vector{Symbol};
-                                           df::DataFrame = DataFrame(),
-                                           forecast_string::String = "",
-                                           density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
-                                           minimize::Bool = false,
-                                           verbose::Symbol = :low)
+function means_bands_all(m::AbstractModel, input_type::Symbol,
+                         cond_type::Symbol, output_vars::Vector{Symbol};
+                         df::DataFrame = DataFrame(),
+                         forecast_string::String = "",
+                         density_bands::Array{Float64} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                         minimize::Bool = false,
+                         verbose::Symbol = :low)
 
     ## Step 0: Determine full set of output_vars necessary for plotting desired results
     #          Specifically, if output_vars contains shockdecs but not trend or deterministic trends,
@@ -142,19 +140,19 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                     compute_shockdec_bands = compute_shockdec_bands)
 end
 
-function means_bands_all{T<:AbstractFloat}(input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol},
-                                           input_dir::String, output_dir::String,
-                                           filestring_base::Vector{String};
-                                           forecast_string::String = "",
-                                           density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
-                                           minimize::Bool = false,
-                                           population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
-                                           population_data_file::String = "",
-                                           population_forecast_file::String = "",
-                                           y0_indexes::Dict{Symbol,Int} = Dict{Symbol,Int}(),
-                                           data = Matrix{T}(),
-                                           verbose::Symbol = :low,
-                                           compute_shockdec_bands::Bool = false)
+function means_bands_all(input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol},
+                         input_dir::String, output_dir::String,
+                         filestring_base::Vector{String};
+                         forecast_string::String = "",
+                         density_bands::Vector{Float64} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                         minimize::Bool = false,
+                         population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
+                         population_data_file::String = "",
+                         population_forecast_file::String = "",
+                         y0_indexes::Dict{Symbol,Int} = Dict{Symbol,Int}(),
+                         data = Matrix{Float64}(),
+                         verbose::Symbol = :low,
+                         compute_shockdec_bands::Bool = false)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
@@ -241,26 +239,26 @@ means_bands(input_type, cond_type, output_var,
     meansbands_input_files::Dict{Symbol, String}; forecast_string = "",
     density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], minimize = false,
     population_mnemonic = Nullable{Symbol}(), population_data = DataFrame(),
-    population_forecast = DataFrame(), y0_index = -1, data = Matrix{T}(),
+    population_forecast = DataFrame(), y0_index = -1, data = Matrix{Float64}(),
     verbose = :low)
 ```
 
 Computes means and bands for a single `output_var`.
 """
-function means_bands{T<:AbstractFloat}(input_type::Symbol,
-                                       cond_type::Symbol,
-                                       output_var::Symbol,
-                                       meansbands_input_files::Dict{Symbol, String};
-                                       forecast_string::String = "",
-                                       density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
-                                       minimize::Bool = false,
-                                       population_data::DataFrame = DataFrame(),
-                                       population_forecast::DataFrame = DataFrame(),
-                                       population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
-                                       y0_index::Int = -1,
-                                       data::Matrix{T} = Matrix{T}(),
-                                       verbose::Symbol = :none,
-                                       compute_shockdec_bands::Bool = false)
+function means_bands(input_type::Symbol,
+                     cond_type::Symbol,
+                     output_var::Symbol,
+                     meansbands_input_files::Dict{Symbol, String};
+                     forecast_string::String = "",
+                     density_bands::Vector{Float64} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                     minimize::Bool = false,
+                     population_data::DataFrame = DataFrame(),
+                     population_forecast::DataFrame = DataFrame(),
+                     population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
+                     y0_index::Int = -1,
+                     data::Matrix{Float64} = Matrix{Float64}(),
+                     verbose::Symbol = :none,
+                     compute_shockdec_bands::Bool = false)
 
     # Return only one set of bands if we read in only one draw
     if input_type in [:init, :mode, :mean]
@@ -285,7 +283,7 @@ function means_bands{T<:AbstractFloat}(input_type::Symbol,
     date_list         = product == :irf ? Vector{Date}() : collect(keys(mb_metadata[:date_inds]))
     variable_names    = collect(keys(mb_metadata[:indices]))
     population_series = if isnull(population_mnemonic)
-        Vector{T}()
+        Vector{Float64}()
     else
         get_mb_population_series(product, get(population_mnemonic), population_data,
                                  population_forecast, date_list)
@@ -356,17 +354,17 @@ function means_bands{T<:AbstractFloat}(input_type::Symbol,
     return MeansBands(mb_metadata, means, bands)
 end
 
-function compute_means_bands{T<:AbstractFloat}(class::Symbol,
-                                               product::Symbol,
-                                               var_name::Symbol,
-                                               filename::String;
-                                               data::Matrix{T} = Matrix{T}(),
-                                               population_series::Vector{T} = Vector{T}(),
-                                               y0_index::Int = -1,
-                                               shock_name::Nullable{Symbol} = Nullable{Symbol}(),
-                                               density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9],
-                                               minimize::Bool = false,
-                                               compute_shockdec_bands::Bool = false)
+function compute_means_bands(class::Symbol,
+                             product::Symbol,
+                             var_name::Symbol,
+                             filename::String;
+                             data::Matrix{Float64} = Matrix{Float64}(),
+                             population_series::Vector{Float64} = Vector{Float64}(),
+                             y0_index::Int = -1,
+                             shock_name::Nullable{Symbol} = Nullable{Symbol}(),
+                             density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9],
+                             minimize::Bool = false,
+                             compute_shockdec_bands::Bool = false)
 
     fcast_series, transform, var_ind, date_list = jldopen(filename, "r") do file
         # Read forecast output
@@ -416,7 +414,7 @@ function compute_means_bands{T<:AbstractFloat}(class::Symbol,
             # Divide log levels y_t by y_{t-4}
             use_data ? squeeze(data[var_ind, y0_index:end], 1) : fill(NaN, 4)
         else
-            Vector{T}()
+            Vector{Float64}()
         end
 
         transformed_series = reverse_transform(fcast_series, transform4q;
