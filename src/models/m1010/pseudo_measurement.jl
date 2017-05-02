@@ -467,14 +467,14 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
 
  	 ## 5-Year Forward Real Rate
 	 TTT5_fwd = TTT^20
-	 ZZ_pseudo[pseudo_inds[:Forward5YearRealRate], :] = ZZ_pseudo[pseudo_inds[:ExAnteRealRate], :] * TTT5_fwd
+	 ZZ_pseudo[pseudo_inds[:Forward5YearRealRate], :] = ZZ_pseudo[pseudo_inds[:ExAnteRealRate], :]' * TTT5_fwd
 	 DD_pseudo[pseudo_inds[:Forward5YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
 	 pseudo[:Forward5YearRealRate].name     = "Forward 5-Year Real Rate"
 	 pseudo[:Forward5YearRealRate].longname = "Forward 5-Year Real Rate of Interest (not the average, computed by projecting TTT foreward 80 periods)"
 	 pseudo[:Forward5YearRealRate].rev_transform = quartertoannual
 
 	 ## 5-Year Real Natural Forward Rate
-	 ZZ_pseudo[pseudo_inds[:Forward5YearRealNaturalRate], :] = ZZ_pseudo[pseudo_inds[:RealNaturalRate], :] * TTT5_fwd
+	 ZZ_pseudo[pseudo_inds[:Forward5YearRealNaturalRate], :] = ZZ_pseudo[pseudo_inds[:RealNaturalRate], :]' * TTT5_fwd
 	 DD_pseudo[pseudo_inds[:Forward5YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
 	 pseudo[:Forward5YearRealNaturalRate].name     = "Forward 5-Year Real Natural Rate"
 	 pseudo[:Forward5YearRealNaturalRate].longname = "Forward 5-Year Real Natural Rate of Interest (not the average, computed by projecting TTT foreward 80 periods)"
@@ -482,14 +482,14 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
 
  	 ## 10-Year Forward Real Rate
 	 TTT10_fwd = TTT^40
-	 ZZ_pseudo[pseudo_inds[:Forward10YearRealRate], :] = ZZ_pseudo[pseudo_inds[:ExAnteRealRate], :] * TTT10_fwd
+	 ZZ_pseudo[pseudo_inds[:Forward10YearRealRate], :] = ZZ_pseudo[pseudo_inds[:ExAnteRealRate], :]' * TTT10_fwd
 	 DD_pseudo[pseudo_inds[:Forward10YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
 	 pseudo[:Forward10YearRealRate].name     = "Forward 10-Year Real Rate"
 	 pseudo[:Forward10YearRealRate].longname = "Forward 10-Year Real Rate of Interest (not the average, computed by projecting TTT foreward 80 periods)"
 	 pseudo[:Forward10YearRealRate].rev_transform = quartertoannual
 
 	 ## 10-Year Real Natural Forward Rate
-	 ZZ_pseudo[pseudo_inds[:Forward10YearRealNaturalRate], :] = ZZ_pseudo[pseudo_inds[:RealNaturalRate], :] * TTT10_fwd
+	 ZZ_pseudo[pseudo_inds[:Forward10YearRealNaturalRate], :] = ZZ_pseudo[pseudo_inds[:RealNaturalRate], :]' * TTT10_fwd
 	 DD_pseudo[pseudo_inds[:Forward10YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
 	 pseudo[:Forward10YearRealNaturalRate].name     = "Forward 10-Year Real Natural Rate"
 	 pseudo[:Forward10YearRealNaturalRate].longname = "Forward 10-Year Real Natural Rate of Interest (not the average, computed by projecting TTT foreward 80 periods)"
@@ -497,14 +497,14 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
 
  	 ## 20-Year Forward Real Rate
 	 TTT20_fwd = TTT^80
-	 ZZ_pseudo[pseudo_inds[:Forward20YearRealRate], :] = ZZ_pseudo[pseudo_inds[:ExAnteRealRate], :] * TTT20_fwd
+	 ZZ_pseudo[pseudo_inds[:Forward20YearRealRate], :] = ZZ_pseudo[pseudo_inds[:ExAnteRealRate], :]' * TTT20_fwd
 	 DD_pseudo[pseudo_inds[:Forward20YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
 	 pseudo[:Forward20YearRealRate].name     = "Forward 20-Year Real Rate"
 	 pseudo[:Forward20YearRealRate].longname = "Forward 20-Year Real Rate of Interest (not the average, computed by projecting TTT foreward 80 periods)"
 	 pseudo[:Forward20YearRealRate].rev_transform = quartertoannual
 
 	 ## 20-Year Real Natural Forward Rate
-	 ZZ_pseudo[pseudo_inds[:Forward20YearRealNaturalRate], :] = ZZ_pseudo[pseudo_inds[:RealNaturalRate], :] * TTT20_fwd
+	 ZZ_pseudo[pseudo_inds[:Forward20YearRealNaturalRate], :] = ZZ_pseudo[pseudo_inds[:RealNaturalRate], :]' * TTT20_fwd
 	 DD_pseudo[pseudo_inds[:Forward20YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
 	 pseudo[:Forward20YearRealNaturalRate].name     = "Forward 20-Year Real Natural Rate"
 	 pseudo[:Forward20YearRealNaturalRate].longname = "Forward 20-Year Real Natural Rate of Interest (not the average, computed by projecting TTT foreward 80 periods)"
@@ -512,14 +512,14 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
 
 	 ## 30-Year Forward Real Rate
 	 TTT30_fwd = TTT^120
-	 ZZ_pseudo[pseudo_inds[:Forward30YearRealRate], :] = ZZ_pseudo[pseudo_inds[:ExAnteRealRate], :] * TTT30_fwd
+	 ZZ_pseudo[pseudo_inds[:Forward30YearRealRate], :] = ZZ_pseudo[pseudo_inds[:ExAnteRealRate], :]' * TTT30_fwd
 	 DD_pseudo[pseudo_inds[:Forward30YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
 	 pseudo[:Forward30YearRealRate].name     = "Forward 30-Year Real Rate"
 	 pseudo[:Forward30YearRealRate].longname = "Forward 30-Year Real Rate of Interest (not the average, computed by projecting TTT foreward 80 periods)"
 	 pseudo[:Forward30YearRealRate].rev_transform = quartertoannual
 
 	 ## 30-Year Real Natural Forward Rate
-	 ZZ_pseudo[pseudo_inds[:Forward30YearRealNaturalRate], :] = ZZ_pseudo[pseudo_inds[:RealNaturalRate], :] * TTT30_fwd
+	 ZZ_pseudo[pseudo_inds[:Forward30YearRealNaturalRate], :] = ZZ_pseudo[pseudo_inds[:RealNaturalRate], :]' * TTT30_fwd
 	 DD_pseudo[pseudo_inds[:Forward30YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
 	 pseudo[:Forward30YearRealNaturalRate].name     = "Forward 30-Year Real Natural Rate"
 	 pseudo[:Forward30YearRealNaturalRate].longname = "Forward 30-Year Real Natural Rate of Interest (not the average, computed by projecting TTT foreward 80 periods)"
@@ -546,20 +546,20 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
              pseudo[:SDF].longname = "Stochastic discount factor"
              pseudo[:SDF].rev_transform = quartertoannual
 
-             ZZ_pseudo[pseudo_inds[:Forward20YearLiquidityConvenienceYield], :] = ZZ_pseudo[pseudo_inds[:LiquidityConvenienceYield], :] * TTT20_fwd
+             ZZ_pseudo[pseudo_inds[:Forward20YearLiquidityConvenienceYield], :] = ZZ_pseudo[pseudo_inds[:LiquidityConvenienceYield], :]' * TTT20_fwd
              DD_pseudo[pseudo_inds[:Forward20YearLiquidityConvenienceYield]] = 100*log(m[:lnb_liq])
              pseudo[:Forward20YearLiquidityConvenienceYield].name = "20-year forward liquidity convenience yield"
              pseudo[:Forward20YearLiquidityConvenienceYield].longname = "20-year forward liquidity convenience yield"
              pseudo[:Forward20YearLiquidityConvenienceYield].rev_transform = quartertoannual
 
-             ZZ_pseudo[pseudo_inds[:Forward20YearSafetyConvenienceYield], :] = ZZ_pseudo[pseudo_inds[:SafetyConvenienceYield], :] * TTT20_fwd
+             ZZ_pseudo[pseudo_inds[:Forward20YearSafetyConvenienceYield], :] = ZZ_pseudo[pseudo_inds[:SafetyConvenienceYield], :]' * TTT20_fwd
              DD_pseudo[pseudo_inds[:Forward20YearSafetyConvenienceYield]] = 100*log(m[:lnb_safe])
              pseudo[:Forward20YearSafetyConvenienceYield].name = "20-year forward safety convenience yield"
              pseudo[:Forward20YearSafetyConvenienceYield].longname = "20-year forward safety convenience yield"
              pseudo[:Forward20YearSafetyConvenienceYield].rev_transform = quartertoannual
 
 
-             ZZ_pseudo[pseudo_inds[:Forward20YearSDF], :] = ZZ_pseudo[pseudo_inds[:SDF], :] * TTT20_fwd
+             ZZ_pseudo[pseudo_inds[:Forward20YearSDF], :] = ZZ_pseudo[pseudo_inds[:SDF], :]' * TTT20_fwd
              DD_pseudo[pseudo_inds[:Forward20YearSDF]]    = m[:Rstarn] - 100*(m[:π_star]-1) + 100*log(m[:lnb_liq]) + 100*log(m[:lnb_safe])
              pseudo[:Forward20YearSDF].name = "20-year forward stochastic discount factor"
              pseudo[:Forward20YearSDF].longname = "20-year forward stochastic discount factor"

@@ -123,7 +123,7 @@ function forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
                 # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
                 ϵ_t[ind_r_sh] = 0.
                 z_t = C + T*z_t1 + R*ϵ_t
-                ϵ_t[ind_r_sh] = getindex((zlb_value - D[ind_r] - Z[ind_r, :]*z_t) / (Z[ind_r, :]*R[:, ind_r_sh]), 1)
+                ϵ_t[ind_r_sh] = getindex((zlb_value - D[ind_r] - Z[ind_r, :]'*z_t) / (Z[ind_r, :]' * R[:, ind_r_sh]), 1)
 
                 # Forecast again with new shocks
                 z_t = C + T*z_t1 + R*ϵ_t
