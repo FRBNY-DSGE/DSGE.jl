@@ -16,15 +16,15 @@ bands in various LaTeX tables stored `tablespath(m)`.
 - `percent::AbstractFloat`: the percentage of the mass of draws from
   Metropolis-Hastings included between the bands displayed in output tables.
 - `subset_inds::Range{Int64}`: indices specifying the draws we want to use
-- `subset_string::AbstractString`: short string identifying the subset to be
+- `subset_string::String`: short string identifying the subset to be
   appended to the output filenames. If `subset_inds` is nonempty but
   `subset_string` is empty, an error is thrown
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
 """
-function moment_tables{S<:AbstractString}(m::AbstractModel; percent::AbstractFloat = 0.90,
-                       subset_inds::Range{Int64} = 1:0, subset_string::AbstractString = "",
-                       groupings::Associative{S, Vector{Parameter}} = Dict{ASCIIString, Vector{Parameter}}(),
+function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
+                       subset_inds::Range{Int64} = 1:0, subset_string::String = "",
+                       groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
                        verbose::Symbol = :low)
 
     ### 1. Load parameter draws from Metropolis-Hastings
@@ -95,8 +95,8 @@ end
 prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}())
 ```
 """
-function prior_table{S<:AbstractString}(m::AbstractModel; subset_string::S = "",
-             groupings::Associative{S, Vector{Parameter}} = Dict{ASCIIString, Vector{Parameter}}())
+function prior_table(m::AbstractModel; subset_string::String = "",
+             groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -212,11 +212,11 @@ Produces a table of prior means, prior standard deviations, posterior means, and
 tablespath(m, \"estimate\", \"moments[_sub=\$subset_string].tex\")
 ```
 """
-function prior_posterior_moments_table{S<:AbstractString}(m::AbstractModel,
+function prior_posterior_moments_table(m::AbstractModel,
                  post_means::Vector, post_bands::Matrix;
                  percent::AbstractFloat = 0.9,
-                 subset_string::AbstractString = "",
-                 groupings::Associative{S, Vector{Parameter}} = Dict{ASCIIString, Vector{Parameter}}())
+                 subset_string::String = "",
+                 groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -311,10 +311,9 @@ Produces a table of prior means and posterior means. Saves to:
 tablespath(m, \"estimate\", \"prior_posterior_means[_sub=\$subset_string].tex\")
 ```
 """
-function prior_posterior_means_table{S<:AbstractString}(m::AbstractModel,
-                 post_means::Vector;
-                 subset_string::AbstractString = "",
-                 groupings::Associative{S, Vector{Parameter}} = Dict{ASCIIString, Vector{Parameter}}())
+function prior_posterior_means_table(m::AbstractModel, post_means::Vector;
+                 subset_string::String = "",
+                 groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))

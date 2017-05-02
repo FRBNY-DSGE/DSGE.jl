@@ -28,16 +28,16 @@ Below, `T<:AbstractFloat`:
 
 **Method 2 only:**
 
-- `input_dir::AbstractString`: directory from which the forecast outputs are to
+- `input_dir::String`: directory from which the forecast outputs are to
   be read in
-- `output_dir::AbstractString`: directory to which the means and bands are to be
+- `output_dir::String`: directory to which the means and bands are to be
   saved
-- `filestring_base::Vector{ASCIIString}`: should be equivalent to the result of
+- `filestring_base::Vector{String}`: should be equivalent to the result of
   `filestring_base(m)`
 
 ### Keyword Arguments
 
-- `forecast_string::AbstractString`: forecast identifier string (the value
+- `forecast_string::String`: forecast identifier string (the value
   \"fcid=value\" in the forecast output filename). Required when
   `input_type == :subset`
 
@@ -55,7 +55,7 @@ Below, `T<:AbstractFloat`:
 - `population_mnemonic::Nullable{Symbol}`: the result of
    `get_setting(m, :population_mnemonic`. Typically `Nullable(:CNP16OV__FRED)`.
 
-- `population_data_file::AbstractString`: path to population data (in levels)
+- `population_data_file::String`: path to population data (in levels)
   file. In the first method, the following file is used, if it exists:
   `inpath(m, \"data\", \"population_data_levels_(data_vintage(m)).csv\")`
 
@@ -75,7 +75,7 @@ Below, `T<:AbstractFloat`:
 function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
                                            cond_type::Symbol, output_vars::Vector{Symbol};
                                            df::DataFrame = DataFrame(),
-                                           forecast_string::AbstractString = "",
+                                           forecast_string::String = "",
                                            density_bands::Array{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                            minimize::Bool = false,
                                            verbose::Symbol = :low)
@@ -143,14 +143,14 @@ function means_bands_all{T<:AbstractFloat}(m::AbstractModel, input_type::Symbol,
 end
 
 function means_bands_all{T<:AbstractFloat}(input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol},
-                                           input_dir::AbstractString, output_dir::AbstractString,
-                                           filestring_base::Vector{ASCIIString};
-                                           forecast_string::AbstractString = "",
+                                           input_dir::String, output_dir::String,
+                                           filestring_base::Vector{String};
+                                           forecast_string::String = "",
                                            density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                            minimize::Bool = false,
                                            population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
-                                           population_data_file::AbstractString = "",
-                                           population_forecast_file::AbstractString = "",
+                                           population_data_file::String = "",
+                                           population_forecast_file::String = "",
                                            y0_indexes::Dict{Symbol,Int} = Dict{Symbol,Int}(),
                                            data = Matrix{T}(),
                                            verbose::Symbol = :low,
@@ -238,7 +238,7 @@ end
 """
 ```
 means_bands(input_type, cond_type, output_var,
-    meansbands_input_files::Dict{Symbol, AbstractString}; forecast_string = "",
+    meansbands_input_files::Dict{Symbol, String}; forecast_string = "",
     density_bands = [0.5, 0.6, 0.7, 0.8, 0.9], minimize = false,
     population_mnemonic = Nullable{Symbol}(), population_data = DataFrame(),
     population_forecast = DataFrame(), y0_index = -1, data = Matrix{T}(),
@@ -250,8 +250,8 @@ Computes means and bands for a single `output_var`.
 function means_bands{T<:AbstractFloat}(input_type::Symbol,
                                        cond_type::Symbol,
                                        output_var::Symbol,
-                                       meansbands_input_files::Dict{Symbol, ASCIIString};
-                                       forecast_string::AbstractString = "",
+                                       meansbands_input_files::Dict{Symbol, String};
+                                       forecast_string::String = "",
                                        density_bands::Vector{T} = [0.5, 0.6, 0.7, 0.8, 0.9],
                                        minimize::Bool = false,
                                        population_data::DataFrame = DataFrame(),
@@ -359,7 +359,7 @@ end
 function compute_means_bands{T<:AbstractFloat}(class::Symbol,
                                                product::Symbol,
                                                var_name::Symbol,
-                                               filename::AbstractString;
+                                               filename::String;
                                                data::Matrix{T} = Matrix{T}(),
                                                population_series::Vector{T} = Vector{T}(),
                                                y0_index::Int = -1,

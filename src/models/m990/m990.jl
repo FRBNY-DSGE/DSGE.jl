@@ -43,10 +43,10 @@ conditions.
 
 #### Model Specifications and Settings
 
-* `spec::AbstractString`: The model specification identifier, \"m990\", cached here for
+* `spec::String`: The model specification identifier, \"m990\", cached here for
   filepath computation.
 
-* `subspec::AbstractString`: The model subspecification number, indicating that some
+* `subspec::String`: The model subspecification number, indicating that some
   parameters from the original model spec (\"ss0\") are initialized differently. Cached here for
   filepath computation.
 
@@ -82,8 +82,8 @@ type Model990{T} <: AbstractModel{T}
     endogenous_states_augmented::Dict{Symbol,Int}   #
     observables::Dict{Symbol,Int}                   #
 
-    spec::ASCIIString                               # Model specification number (eg "m990")
-    subspec::ASCIIString                            # Model subspecification (eg "ss0")
+    spec::String                                    # Model specification number (eg "m990")
+    subspec::String                                 # Model subspecification (eg "ss0")
     settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
@@ -155,7 +155,7 @@ function init_model_indices!(m::Model990)
 end
 
 
-function Model990(subspec::AbstractString="ss2";
+function Model990(subspec::String="ss2";
                   custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                   testing = false)
 

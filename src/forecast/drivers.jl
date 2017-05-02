@@ -208,7 +208,7 @@ conditional data case given by `cond_type`.
   more sophisticated selection criterion is desired, the user is responsible for
   determining the indices corresponding to that criterion. If `input_type` is
   not `subset`, `subset_inds` will be ignored
-- `forecast_string::AbstractString`: short string identifying the subset to be
+- `forecast_string::String`: short string identifying the subset to be
   appended to the output filenames. If `input_type = :subset` and
   `forecast_string` is empty, an error is thrown.
 - `verbose::Symbol`: desired frequency of function progress messages printed to
@@ -222,7 +222,7 @@ None. Output is saved to files returned by
 function forecast_one(m::AbstractModel{Float64},
     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
     df::DataFrame = DataFrame(), subset_inds::Range{Int64} = 1:0,
-    forecast_string::AbstractString = "", verbose::Symbol = :low)
+    forecast_string::String = "", verbose::Symbol = :low)
 
     ### Common Setup
 

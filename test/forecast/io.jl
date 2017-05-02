@@ -28,7 +28,7 @@ overrides[:subset] = mktemp()[1]
 @test DSGE.get_forecast_filestring_addl(:mode, :none; forecast_string = "test") == ["para=mode", "cond=none", "fcid=test"]
 
 # get_forecast_output_files
-dict = Dict{Symbol, ASCIIString}()
+dict = Dict{Symbol, String}()
 output_vars = [:histstates, :histobs, :histpseudo, :histshocks,
                :forecastobs, :shockdecobs, :dettrendobs, :trendobs, :irfobs]
 for var in output_vars

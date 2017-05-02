@@ -14,8 +14,8 @@ type Observable
   per-capita growth rates from levels).
 - `rev_transform::Function`: Transforms a series from model units into
   observable units. May take kwargs.
-- `name::UTF8String`: e.g. \"Real GDP growth\"
-- `longname::UTF8String`: e.g. \"Real GDP growth per capita\"
+- `name::String`: e.g. \"Real GDP growth\"
+- `longname::String`: e.g. \"Real GDP growth per capita\"
 """
 type Observable
     key
@@ -30,8 +30,8 @@ type Observable
     rev_transform::Function      # corresponds to getyp, or getyp4q. May take kwargs (untransformed,
                                  # 1q transforms, 4q transforms, levels/growth rates, etc)
 
-    name::UTF8String
-    longname::UTF8String
+    name::String
+    longname::String
 end
 
 
@@ -43,15 +43,15 @@ type PseudoObservable
 ### Fields
 
 - `key::Symbol`
-- `name::UTF8String`: e.g. \"Flexible Output Growth\"
-- `longname::UTF8String`: e.g. \"Output that would prevail in a flexible-price economy\"
+- `name::String`: e.g. \"Flexible Output Growth\"
+- `longname::String`: e.g. \"Output that would prevail in a flexible-price economy\"
 - `rev_transform::Function`: Transforms a series from model units into
   observable units. May take kwargs.
 """
 type PseudoObservable
     key::Symbol
-    name::UTF8String
-    longname::UTF8String
+    name::String
+    longname::String
     rev_transform::Function
 end
 

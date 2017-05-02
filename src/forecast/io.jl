@@ -7,7 +7,7 @@ Compute the appropriate forecast input filenames for model `m` and
 forecast input type `input_type`.
 
 The default input files for each `input_type` can be overriden by adding entries
-to the `Dict{Symbol, ASCIIString}` returned from
+to the `Dict{Symbol, String}` returned from
 `forecast_input_file_overrides(m)`. For example:
 
 ```
@@ -65,7 +65,7 @@ an error.
 function get_forecast_filename(m::AbstractModel, input_type::Symbol,
                                cond_type::Symbol, output_var::Symbol;
                                pathfcn::Function = rawpath,
-                               forecast_string::AbstractString = "", fileformat = :jld)
+                               forecast_string::String = "", fileformat = :jld)
 
     # First, we need to make sure we get all of the settings that have been printed to this filestring
     directory = pathfcn(m, "forecast")
@@ -76,16 +76,12 @@ function get_forecast_filename(m::AbstractModel, input_type::Symbol,
                           forecast_string = forecast_string, fileformat = fileformat)
 end
 
-function get_forecast_filename(directory::AbstractString, filestring_base::Vector{ASCIIString},
+function get_forecast_filename(directory::String, filestring_base::Vector{String},
                                input_type::Symbol, cond_type::Symbol, output_var::Symbol;
-                               forecast_string::AbstractString = "", fileformat = :jld)
-
-    # Cast the strings so they're all the same type
-    directory       = ASCIIString(directory)
-    forecast_string = ASCIIString(forecast_string)
+                               forecast_string::String = "", fileformat = :jld)
 
     # Base file name
-    file_name = ASCIIString("$output_var.$fileformat")
+    file_name = String("$output_var.$fileformat")
 
     # Gather all of the file strings into an array
     filestring_addl = get_forecast_filestring_addl(input_type, cond_type,
@@ -94,17 +90,17 @@ function get_forecast_filename(directory::AbstractString, filestring_base::Vecto
     return savepath(directory, file_name, filestring_base, filestring_addl)
 end
 
-function get_forecast_filestring_addl(input_type, cond_type; forecast_string::AbstractString = "")
+function get_forecast_filestring_addl(input_type, cond_type; forecast_string::String = "")
 
-    filestring_addl = Vector{ASCIIString}()
-    push!(filestring_addl, ASCIIString("para=" * abbrev_symbol(input_type)))
-    push!(filestring_addl, ASCIIString("cond=" * abbrev_symbol(cond_type)))
+    filestring_addl = Vector{String}()
+    push!(filestring_addl, String("para=" * abbrev_symbol(input_type)))
+    push!(filestring_addl, String("cond=" * abbrev_symbol(cond_type)))
     if isempty(forecast_string)
         if input_type == :subset
             error("Must supply a nonempty forecast_string if input_type = subset")
         end
     else
-        push!(filestring_addl, ASCIIString("fcid=" * forecast_string))
+        push!(filestring_addl, String("fcid=" * forecast_string))
     end
 
     filestring_addl
@@ -129,7 +125,7 @@ type `input_type`, and conditional type `cond_type`, for each output variable in
 
 ### Keyword Arguments
 
-- `forecast_string::AbstractString`: subset identifier for when `input_type = :subset`
+- `forecast_string::String`: subset identifier for when `input_type = :subset`
 - `fileformat::Symbol`: file extension, without a period. Defaults to
   `:jld`, though `:h5` is another common option.
 
@@ -139,7 +135,7 @@ See `get_forecast_filename` for more information.
 """
 function get_forecast_output_files(m::AbstractModel, input_type::Symbol,
                                    cond_type::Symbol, output_vars::Vector{Symbol};
-                                   forecast_string::AbstractString = "", fileformat = :jld)
+                                   forecast_string::String = "", fileformat = :jld)
 
     directory = rawpath(m, "forecast")
     base      = filestring_base(m)
@@ -149,11 +145,11 @@ function get_forecast_output_files(m::AbstractModel, input_type::Symbol,
                               fileformat = fileformat)
 end
 
-function get_forecast_output_files(directory::AbstractString, filestring_base::Vector{ASCIIString},
+function get_forecast_output_files(directory::String, filestring_base::Vector{String},
                                    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                                   forecast_string::AbstractString = "", fileformat = :jld)
+                                   forecast_string::String = "", fileformat = :jld)
 
-    output_files = Dict{Symbol, ASCIIString}()
+    output_files = Dict{Symbol, String}()
     for var in output_vars
         output_files[var] = get_forecast_filename(directory, filestring_base,
                                                   input_type, cond_type, var,
@@ -176,9 +172,9 @@ Writes the elements of `forecast_output` indexed by `output_vars` to file, given
 
 If `output_vars` contains `:histobs`, data must be passed in as `df`.
 """
-function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, input_type::Symbol,
+function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                                 output_vars::Vector{Symbol},
-                                forecast_output_files::Dict{Symbol, S},
+                                forecast_output_files::Dict{Symbol, String},
                                 forecast_output::Dict{Symbol, Array{Float64}};
                                 df::DataFrame = DataFrame(),
                                 block_number::Nullable{Int64} = Nullable{Int64}(),

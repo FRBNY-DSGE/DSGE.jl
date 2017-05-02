@@ -117,7 +117,7 @@ load_population_growth(data_file, forecast_file, mnemonic; verbose = :low)
 
 Returns `DataFrame`s of growth rates for HP-filtered population data and forecast.
 """
-function load_population_growth{S<:AbstractString}(data_file::S, forecast_file::S,
+function load_population_growth{S<:String}(data_file::S, forecast_file::S,
                                                    mnemonic::Symbol;
                                                    verbose::Symbol = :low)
     data_verbose = verbose == :none ? :none : :low
@@ -233,9 +233,9 @@ get_mb_metadata(input_type, cond_type, output_var, forecast_output_file; forecas
 Returns the `metadata` dictionary from `read_forecast_metadata`, as well as
 `mb_metadata`, the dictionary that we will save to the means and bands file.
 """
-function get_mb_metadata{S<:AbstractString}(input_type::Symbol, cond_type::Symbol,
-                                            output_var::Symbol, forecast_output_file::S;
-                                            forecast_string = "")
+function get_mb_metadata{S<:String}(input_type::Symbol, cond_type::Symbol,
+                                    output_var::Symbol, forecast_output_file::S;
+                                    forecast_string = "")
     class   = get_class(output_var)
     product = get_product(output_var)
 

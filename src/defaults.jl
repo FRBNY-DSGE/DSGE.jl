@@ -91,7 +91,7 @@ function default_settings!(m::AbstractModel)
     settings[:forecast_start_block] = Setting(:forecast_start_block, Nullable{Int64}(),
         "Block at which to resume forecasting (possibly null)")
     settings[:forecast_input_file_overrides] = Setting(:forecast_input_file_overrides,
-        Dict{Symbol, ASCIIString}())
+        Dict{Symbol, String}())
     settings[:forecast_jstep] = Setting(:forecast_jstep, 5,
         "Forecast thinning step (in addition to MH thinning step")
     settings[:forecast_pseudoobservables] = Setting(:forecast_pseudoobservables, false,
@@ -128,9 +128,9 @@ The following Settings are constructed, initialized and added to
 `m.settings`, but these values are used to test DSGE.jl.
 
 ### I/O Locations and identifiers
-- `saveroot::Setting{ASCIIString}`: A temporary directory in /tmp/
-- `dataroot::Setting{ASCIIString}`: dsgeroot/test/reference/
-- `data_vintage::Setting{ASCIIString}`: \"_REF\"
+- `saveroot::Setting{String}`: A temporary directory in /tmp/
+- `dataroot::Setting{String}`: dsgeroot/test/reference/
+- `data_vintage::Setting{String}`: \"_REF\"
 
 ### Metropolis-Hastings
 - `n_mh_simulations::Setting{Int}`: 100

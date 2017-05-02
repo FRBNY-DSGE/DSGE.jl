@@ -13,14 +13,14 @@ Reformat `MeansBands` object into matrices, and save to individual files.
 
 ### Keyword Arguments
 
-- `forecast_string::AbstractString`: identifies the forecast (if
+- `forecast_string::String`: identifies the forecast (if
   desired). Required if `input_type == :subset`
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
 """
 function meansbands_matrix_all(m::AbstractModel, input_type::Symbol,
                                cond_type::Symbol, output_vars::Vector{Symbol};
-                               forecast_string::AbstractString = "", verbose::Symbol = :low)
+                               forecast_string::String = "", verbose::Symbol = :low)
 
     ## Step 0: Determine full set of output_vars necessary for plotting desired results
     #          Specifically, if output_vars contains shockdecs but not

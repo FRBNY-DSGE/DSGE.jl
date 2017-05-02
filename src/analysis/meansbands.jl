@@ -137,14 +137,14 @@ in `mb2` beginning 1 period after the final period in `mb1`.
 - `out_product::Symbol`: desired product of the resulting concatenated
 `MeansBands` object. This argument is required if `mb1` and `mb2` do not
 represent a history and a forecast respectively
-- `forecast_string::AbstractString`: desired `forecast_string` of the resulting
+- `forecast_string::String`: desired `forecast_string` of the resulting
   concatenated `MeansBands`. This argument is recommended (but not required) if
   the `forecast_string`s of `mb1` and `mb2` do not match. If this is the case
   but `forecast_string` is not provided, `mb1`'s `forecast_string` will be used.
 """
 function Base.cat(mb1::MeansBands, mb2::MeansBands;
                   out_product::Symbol = Symbol(),
-                  forecast_string::AbstractString = "")
+                  forecast_string::String = "")
 
     # Assert class, cond type and para are the same
     @assert get_class(mb1) == get_class(mb2)

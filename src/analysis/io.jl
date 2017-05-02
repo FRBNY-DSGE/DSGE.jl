@@ -24,8 +24,8 @@ and bands.
 
 **Method 2:**
 
-- `directory::AbstractString`: directory location of input files to read
-- `filestring_base::Vector{AbstractString}`: a vector of strings to be added as
+- `directory::String`: directory location of input files to read
+- `filestring_base::Vector{String}`: a vector of strings to be added as
   a suffix. These usually come from model settings for which `print = true`. It
   should *not* include entries for `cond_type` and `input_type` (these will be
   added automatically).
@@ -35,12 +35,12 @@ and bands.
 - `input_type::Symbol`: See `?forecast_one`
 - `cond_type::Symbol`: See `?forecast_one`
 - `output_vars::Symbol`: See `?forecast_one`
-- `forecast_string::AbstractString`: See `?forecast_one`
+- `forecast_string::String`: See `?forecast_one`
 - `fileformat`: file extension of saved files
 """
 function get_meansbands_input_files(m::AbstractModel, input_type::Symbol,
                                     cond_type::Symbol, output_vars::Vector{Symbol};
-                                    forecast_string::AbstractString = "", fileformat = :jld)
+                                    forecast_string::String = "", fileformat = :jld)
 
     directory = rawpath(m, "forecast")
     base = filestring_base(m)
@@ -49,11 +49,11 @@ function get_meansbands_input_files(m::AbstractModel, input_type::Symbol,
                                fileformat = fileformat)
 end
 
-function get_meansbands_input_files(directory::AbstractString, filestring_base::Vector{ASCIIString},
+function get_meansbands_input_files(directory::String, filestring_base::Vector{String},
                                     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                                    forecast_string::AbstractString = "", fileformat::Symbol = :jld)
+                                    forecast_string::String = "", fileformat::Symbol = :jld)
 
-    input_files = Dict{Symbol, ASCIIString}()
+    input_files = Dict{Symbol, String}()
     for var in output_vars
         input_files[var] = get_forecast_filename(directory, filestring_base,
                                                  input_type, cond_type, var,
@@ -94,8 +94,8 @@ computed means and bands.
 
 **Method 2:**
 
-- `directory::AbstractString`: directory location of input files to read
-- `filestring_base::Vector{AbstractString}`: a vector of strings to be
+- `directory::String`: directory location of input files to read
+- `filestring_base::Vector{String}`: a vector of strings to be
   added as a suffix. These usually come from model settings for which
   print=true. It should *not* include entries for `cond_type` and
   `input_type` (these will be added automatically).
@@ -105,12 +105,12 @@ computed means and bands.
 - `input_type::Symbol`: See `?forecast_one`
 - `cond_type::Symbol`: See `?forecast_one`
 - `output_vars::Symbol`: See `?forecast_one`
-- `forecast_string::AbstractString`: See `?forecast_one`
+- `forecast_string::String`: See `?forecast_one`
 - `fileformat`: file extension of saved files
 """
 function get_meansbands_output_files(m::AbstractModel, input_type::Symbol,
                                      cond_type::Symbol, output_vars::Vector{Symbol};
-                                     forecast_string::AbstractString = "",
+                                     forecast_string::String = "",
                                      fileformat::Symbol = :jld)
 
     directory = workpath(m, "forecast")
@@ -119,13 +119,13 @@ function get_meansbands_output_files(m::AbstractModel, input_type::Symbol,
                                 forecast_string = forecast_string, fileformat = fileformat)
 end
 
-function get_meansbands_output_files(directory::AbstractString,
-                                     filestring_base::Vector{ASCIIString},
+function get_meansbands_output_files(directory::String,
+                                     filestring_base::Vector{String},
                                      input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                                     forecast_string::AbstractString = "", fileformat = :jld)
+                                     forecast_string::String = "", fileformat = :jld)
 
     mb_output_vars = [symbol("mb$x") for x in output_vars]
-    output_files = Dict{Symbol, ASCIIString}()
+    output_files = Dict{Symbol, String}()
     for var in output_vars
         output_files[var] = get_forecast_filename(directory, filestring_base,
                                                   input_type, cond_type, symbol("mb$var");
@@ -137,11 +137,11 @@ end
 
 """
 ```
-function read_mb{S<:AbstractString}(fn::S)
+function read_mb(fn::String)
 ```
 Read in a `MeansBands` object saved in `fn`.
 """
-function read_mb{S<:AbstractString}(fn::S)
+function read_mb(fn::String)
     @assert isfile(fn) "File $fn could not be found"
     mb = jldopen(fn, "r") do f
         read(f, "mb")
@@ -190,7 +190,7 @@ elements of `columnvars`.
   economic variable names (either pseudoobservables or
   observables). For irfs, this should be names of shocks. If left out or
   empty, means and bands for all variables in `mb` will be printed.
-- `forecast_string::AbstractString`: See `?forecast_one`
+- `forecast_string::String`: See `?forecast_one`
 - `mb_trend::MeansBands`: a `MeansBands` object for a trend
   product. This is required when `mb` contains means and bands for
   a shock decomposition.
@@ -202,7 +202,7 @@ elements of `columnvars`.
   shocks will be printed. For irfs, this is an optional list of variables to print to separate tables.
 """
 function write_meansbands_tables(m::AbstractModel, mb::MeansBands, tablevar::Symbol;
-                                 forecast_string::AbstractString = "",
+                                 forecast_string::String = "",
                                  mb_trend::MeansBands = MeansBands(),
                                  mb_dettrend::MeansBands = MeansBands(),
                                  mb_forecast::MeansBands = MeansBands(),
@@ -241,15 +241,15 @@ function write_meansbands_tables(m::AbstractModel, mb::MeansBands;
     end
 end
 
-function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands;
-                                                    tablevars::Vector{Symbol} = Vector{Symbol}(),
-                                                    filestring_base::Vector{S} = Vector{S}(),
-                                                    forecast_string::AbstractString = "",
-                                                    mb_trend::MeansBands = MeansBands(),
-                                                    mb_dettrend::MeansBands = MeansBands(),
-                                                    mb_forecast::MeansBands = MeansBands(),
-                                                    mb_hist::MeansBands = MeansBands(),
-                                                    columnvars::Vector{Symbol} = Vector{Symbol}())
+function write_meansbands_tables(dirname::String, mb::MeansBands;
+                                 tablevars::Vector{Symbol} = Vector{Symbol}(),
+                                 filestring_base::Vector{String} = Vector{String}(),
+                                 forecast_string::String = "",
+                                 mb_trend::MeansBands = MeansBands(),
+                                 mb_dettrend::MeansBands = MeansBands(),
+                                 mb_forecast::MeansBands = MeansBands(),
+                                 mb_hist::MeansBands = MeansBands(),
+                                 columnvars::Vector{Symbol} = Vector{Symbol}())
     # Use all vars by default
     if isempty(tablevars)
         tablevars = setdiff(names(mb.means), [:date])
@@ -264,14 +264,15 @@ function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands;
     end
 end
 
-function write_meansbands_tables{S<:AbstractString}(dirname::S, mb::MeansBands, tablevar::Symbol;
-                                                    filestring_base::Vector{S} = Vector{S}(),
-                                                    forecast_string::AbstractString = "",
-                                                    mb_trend::MeansBands = MeansBands(),
-                                                    mb_dettrend::MeansBands = MeansBands(),
-                                                    mb_forecast::MeansBands = MeansBands(),
-                                                    mb_hist::MeansBands = MeansBands(),
-                                                    columnvars::Vector{Symbol} = Vector{Symbol}())
+function write_meansbands_tables(dirname::String, mb::MeansBands, tablevar::Symbol;
+                                 filestring_base::Vector{String} = Vector{String}(),
+                                 forecast_string::String = "",
+                                 mb_trend::MeansBands = MeansBands(),
+                                 mb_dettrend::MeansBands = MeansBands(),
+                                 mb_forecast::MeansBands = MeansBands(),
+                                 mb_hist::MeansBands = MeansBands(),
+                                 columnvars::Vector{Symbol} = Vector{Symbol}())
+
     # What product are we making here?
     prod = get_product(mb)
 
@@ -330,7 +331,7 @@ Writes all `output_vars` corresponding to model `m` to tables in `tablespath(m, 
 
 ### Keyword Arguments
 
-- `forecast_string::AbstractString`: See `?forecast_one`
+- `forecast_string::String`: See `?forecast_one`
 - `vars`::Vector{Symbol}: Vector of economic variables for which to
   print `output_vars` to tables. If omitted, all shocks will be
   printed.

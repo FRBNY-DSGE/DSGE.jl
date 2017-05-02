@@ -218,7 +218,7 @@ function reverse_transform(m::AbstractModel, input_type::Symbol, cond_type::Symb
     return results
 end
 
-function reverse_transform(path::AbstractString, class::Symbol, product::Symbol,
+function reverse_transform(path::String, class::Symbol, product::Symbol,
                            var::Symbol, rev_transform::Function;
                            pop_growth::Vector{Float64} = Vector{Float64}(),
                            fourquarter::Bool = false)

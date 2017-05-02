@@ -44,10 +44,10 @@ conditions.
 
 #### Model Specifications and Settings
 
-* `spec::AbstractString`: The model specification identifier, "m1010", cached here for
+* `spec::String`: The model specification identifier, "m1010", cached here for
   filepath computation.
 
-* `subspec::AbstractString`: The model subspecification number, indicating that some
+* `subspec::String`: The model subspecification number, indicating that some
   parameters from the original model spec ("ss0") are initialized differently. Cached here for
   filepath computation.
 
@@ -83,8 +83,8 @@ type Model1010{T} <: AbstractModel{T}
     endogenous_states_augmented::Dict{Symbol,Int}   #
     observables::Dict{Symbol,Int}                   #
 
-    spec::ASCIIString                               # Model specification number (eg "m1010")
-    subspec::ASCIIString                            # Model subspecification (eg "ss0")
+    spec::String                                    # Model specification number (eg "m1010")
+    subspec::String                                 # Model subspecification (eg "ss0")
     settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
@@ -161,7 +161,7 @@ function init_model_indices!(m::Model1010)
 end
 
 
-function Model1010(subspec::AbstractString="ss18";
+function Model1010(subspec::String="ss18";
                    custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                    testing = false)
 
@@ -771,7 +771,7 @@ end
 parameter_groupings(m::Model1010)
 ```
 
-Returns an `OrderedDict{ASCIIString, Vector{Parameter}}` mapping descriptions of
+Returns an `OrderedDict{String, Vector{Parameter}}` mapping descriptions of
 parameter groupings (e.g. \"Policy Parameters\") to vectors of
 `Parameter`s. This dictionary is passed in as a keyword argument to
 `prior_table`.
@@ -803,7 +803,7 @@ function parameter_groupings(m::Model1010)
                     "Measurement"]
 
 
-    groupings = OrderedDict{ASCIIString, Vector{Parameter}}(zip(descriptions, all_params))
+    groupings = OrderedDict{String, Vector{Parameter}}(zip(descriptions, all_params))
 
     # Ensure no parameters missing
     incl_params = vcat(collect(values(groupings))...)

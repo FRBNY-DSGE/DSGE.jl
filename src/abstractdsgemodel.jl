@@ -336,11 +336,11 @@ end
 
 """
 ```
-load_parameters_from_file(m::AbstractModel,path::AbstractString)
+load_parameters_from_file(m::AbstractModel,path::String)
 ```
 Returns a vector of parameters, read from a file, suitable for updating `m`.
 """
-function load_parameters_from_file(m::AbstractModel, path::AbstractString)
+function load_parameters_from_file(m::AbstractModel, path::String)
 
     if isfile(path) && splitext(path)[2] == ".h5"
         x  = h5open(path, "r") do file
@@ -361,7 +361,7 @@ end
 
 """
 ```
-specify_mode!(m::AbstractModel, mode_file::AbstractString=""; verbose=:low)
+specify_mode!(m::AbstractModel, mode_file::String=""; verbose=:low)
 ```
 
 Updates the values of `m.parameters` with the values from
@@ -373,7 +373,7 @@ Usage: should be run before calling `estimate(m)`, e.g.:
     specify_mode!(m, modefile)
     estimate(m)
 """
-function specify_mode!(m::AbstractModel, mode_file::AbstractString = ""; verbose=:low)
+function specify_mode!(m::AbstractModel, mode_file::String = ""; verbose=:low)
 
     m <= Setting(:reoptimize, false)
 
@@ -392,13 +392,13 @@ end
 
 """
 ```
-specify_hessian(m::AbstractModel, path::AbstractString=""; verbose=:low)
+specify_hessian(m::AbstractModel, path::String=""; verbose=:low)
 ```
 
 Specify a Hessian matrix calculated at the posterior mode to use in the model estimation. If
 no path is provided, will attempt to detect location.
 """
-function specify_hessian(m::AbstractModel, path::AbstractString=""; verbose=:low)
+function specify_hessian(m::AbstractModel, path::String=""; verbose=:low)
     if isempty(path)
         path = inpath(m, "user", "hessian.h5")
     end
@@ -454,7 +454,7 @@ fns = [symbol(x, "path") for x in strs]
 for (str, fn) in zip(strs, fns)
     @eval begin
         # First eval function
-        function $fn{T<:AbstractString}(m::AbstractModel,
+        function $fn{T<:String}(m::AbstractModel,
                                         out_type::T,
                                         file_name::T = "",
                                         filestring_addl::Vector{T}=Vector{T}())
@@ -465,7 +465,7 @@ for (str, fn) in zip(strs, fns)
         @doc $(
         """
         ```
-        $fn{T<:AbstractString}(m::AbstractModel, out_type::T, file_name::T="")
+        $fn{T<:String}(m::AbstractModel, out_type::T, file_name::T="")
         ```
 
         Returns path to specific $str output file, creating containing directory as needed. If
@@ -480,13 +480,13 @@ for (str, fn) in zip(strs, fns)
 end
 
 # Not exposed to user. Actually create path and insert model string to file name.
-function savepath{T<:AbstractString}(m::AbstractModel,
+function savepath{T<:String}(m::AbstractModel,
                                      out_type::T,
                                      sub_type::T,
                                      file_name::T = "",
                                      filestring_addl::Vector{T} = Vector{T}())
     # Containing directory
-    dir = ASCIIString(joinpath(saveroot(m), "output_data", spec(m), subspec(m), out_type, sub_type))
+    dir = String(joinpath(saveroot(m), "output_data", spec(m), subspec(m), out_type, sub_type))
 
     if !isempty(file_name)
         base = filestring_base(m)
@@ -496,7 +496,7 @@ function savepath{T<:AbstractString}(m::AbstractModel,
     end
 end
 
-function savepath{T<:AbstractString}(dir::T,
+function savepath{T<:String}(dir::T,
                                      file_name::T = "",
                                      filestring_base::Vector{T} = Vector{T}(),
                                      filestring_addl::Vector{T} = Vector{T}())
@@ -519,7 +519,7 @@ end
 # Input data handled slightly differently, because it is not model-specific.
 """
 ```
-inpath{T<:AbstractString}(m::AbstractModel, in_type::T, file_name::T="")
+inpath{T<:String}(m::AbstractModel, in_type::T, file_name::T="")
 ```
 
 Returns path to specific input data file, creating containing directory as needed. If
@@ -535,7 +535,7 @@ Path built as
 <data root>/<in_type>/<file_name>
 ```
 """
-function inpath{T<:AbstractString}(m::AbstractModel, in_type::T, file_name::T="")
+function inpath{T<:String}(m::AbstractModel, in_type::T, file_name::T="")
     path = dataroot(m)
     # Normal cases.
     if in_type == "data" || in_type == "cond"
@@ -562,7 +562,7 @@ end
 
 function filestring_base(m::AbstractModel)
     if !m.testing
-        base = Vector{ASCIIString}()
+        base = Vector{String}()
         for (skey, sval) in m.settings
             if sval.print
                 push!(base, to_filestring(sval))
@@ -574,20 +574,20 @@ function filestring_base(m::AbstractModel)
     end
 end
 
-filestring(m::AbstractModel) = filestring(m, Vector{ASCIIString}())
-filestring(m::AbstractModel, d::AbstractString) = filestring(m, [ASCIIString(d)])
-function filestring{T<:AbstractString}(m::AbstractModel, d::Vector{T})
+filestring(m::AbstractModel) = filestring(m, Vector{String}())
+filestring(m::AbstractModel, d::String) = filestring(m, [String(d)])
+function filestring{T<:String}(m::AbstractModel, d::Vector{T})
     base = filestring_base(m)
     return filestring(base, d)
 end
 
-function filestring{T<:AbstractString}(base::Vector{T}, d::Vector{T})
+function filestring{T<:String}(base::Vector{T}, d::Vector{T})
     filestrings = vcat(base, d)
     sort!(filestrings)
     return "_" * join(filestrings, "_")
 end
 
-function filestring{T<:AbstractString}(d::Vector{T})
+function filestring{T<:String}(d::Vector{T})
     sort!(d)
     return "_" * join(d, "_")
 end

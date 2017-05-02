@@ -44,10 +44,10 @@ conditions.
 
 #### Model Specifications and Settings
 
-* `spec::AbstractString`: The model specification identifier, \"AnSchorfheide\", cached here for
+* `spec::String`: The model specification identifier, \"AnSchorfheide\", cached here for
   filepath computation.
 
-* `subspec::AbstractString`: The model subspecification number, indicating that some
+* `subspec::String`: The model subspecification number, indicating that some
   parameters from the original model spec (\"ss0\") are initialized differently. Cached here for
   filepath computation.
 
@@ -83,8 +83,8 @@ type AnSchorfheide{T} <: AbstractModel{T}
     endogenous_states_augmented::Dict{Symbol,Int}   #
     observables::Dict{Symbol,Int}                   #
 
-    spec::ASCIIString                               # Model specification number (eg "AnSchorfheide")
-    subspec::ASCIIString                            # Model subspecification (eg "ss0")
+    spec::String                                    # Model specification number (eg "AnSchorfheide")
+    subspec::String                                 # Model subspecification (eg "ss0")
     settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
@@ -137,7 +137,7 @@ function init_model_indices!(m::AnSchorfheide)
 end
 
 
-function AnSchorfheide(subspec::AbstractString="ss0";
+function AnSchorfheide(subspec::String="ss0";
                        custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                        testing = false)
 

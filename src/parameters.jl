@@ -83,9 +83,9 @@ conditions.
   model space and real line.
 - `prior::NullablePrior`: Prior distribution for parameter value.
 - `fixed::Bool`: Indicates whether the parameter's value is fixed rather than estimated.
-- `description::AbstractString`:  A short description of the parameter's economic
+- `description::String`:  A short description of the parameter's economic
   significance.
-- `tex_label::AbstractString`: String for printing the parameter name to LaTeX.
+- `tex_label::String`: String for printing the parameter name to LaTeX.
 """
 type UnscaledParameter{T,U} <: Parameter{T,U}
     key::Symbol
@@ -95,8 +95,8 @@ type UnscaledParameter{T,U} <: Parameter{T,U}
     transform::U                            # transformation between model space and real line for optimization
     prior::NullablePrior                    # prior distribution
     fixed::Bool                             # is this parameter fixed at some value?
-    description::AbstractString
-    tex_label::AbstractString               # LaTeX label for printing
+    description::String
+    tex_label::String               # LaTeX label for printing
 end
 
 
@@ -126,9 +126,9 @@ conditions.
 - `fixed::Bool`: Indicates whether the parameter's value is fixed rather than estimated.
 - `scaling::Function`: Function used to scale parameter value for use in equilibrium
   conditions.
-- `description::AbstractString`: A short description of the parameter's economic
+- `description::String`: A short description of the parameter's economic
   significance.
-- `tex_label::AbstractString`: String for printing parameter name to LaTeX.
+- `tex_label::String`: String for printing parameter name to LaTeX.
 """
 type ScaledParameter{T,U} <: Parameter{T,U}
     key::Symbol
@@ -140,8 +140,8 @@ type ScaledParameter{T,U} <: Parameter{T,U}
     prior::NullablePrior
     fixed::Bool
     scaling::Function
-    description::AbstractString
-    tex_label::AbstractString
+    description::String
+    tex_label::String
 end
 
 """
@@ -162,14 +162,14 @@ equilibrium conditions.
 - `key::Symbol`: Parameter name. Should conform to the guidelines
   established in the DSGE Style Guide.
 - `value::T`: The parameter's steady-state value.
-- `description::AbstractString`: Short description of the parameter's economic significance.
-- `tex_label::AbstractString`: String for printing parameter name to LaTeX.
+- `description::String`: Short description of the parameter's economic significance.
+- `tex_label::String`: String for printing parameter name to LaTeX.
 """
 type SteadyStateParameter{T} <: AbstractParameter{T}
     key::Symbol
     value::T
-    description::AbstractString
-    tex_label::AbstractString
+    description::String
+    tex_label::String
 end
 
 hasprior(p::Parameter) = !isnull(p.prior)
@@ -189,7 +189,7 @@ A `ParamBoundsError` is thrown upon an attempt to assign a parameter value that 
 between `valuebounds`.
 """
 type ParamBoundsError <: Exception
-    msg::AbstractString
+    msg::String
 end
 ParamBoundsError() = ParamBoundsError("Value not between valuebounds")
 Base.showerror(io::IO, ex::ParamBoundsError) = print(io, ex.msg)
@@ -200,7 +200,7 @@ parameter{T,U<:Transform}(key::Symbol, value::T, valuebounds = (value,value),
                           transform_parameterization = (value,value),
                           transform = Untransformed(), prior = NullablePrior(),
                           fixed = true, scaling::Function = identity, description = "",
-                          tex_label::AbstractString = "")
+                          tex_label::String = "")
 ```
 
 By default, returns a fixed `UnscaledParameter` object with key `key`
@@ -216,8 +216,8 @@ function parameter{T,U<:Transform}(key::Symbol,
                                    prior::NullableOrPrior   = NullablePrior();
                                    fixed::Bool              = true,
                                    scaling::Function        = identity,
-                                   description::AbstractString = "No description available.",
-                                   tex_label::AbstractString = "")
+                                   description::String = "No description available.",
+                                   tex_label::String = "")
 
     # If fixed=true, force bounds to match and leave prior as null.  We need to define new
     # variable names here because of lexical scoping.
@@ -257,16 +257,16 @@ end
 """
 ```
 SteadyStateParameter{T<:Number}(key::Symbol, value::T;
-                                description::AbstractString = "",
-                                tex_label::AbstractString = "")
+                                description::String = "",
+                                tex_label::String = "")
 ```
 
 SteadyStateParameter constructor with optional `description` and `tex_label` arguments.
 """
 function SteadyStateParameter{T<:Number}(key::Symbol,
                                        value::T;
-                                       description::AbstractString = "No description available",
-                                       tex_label::AbstractString = "")
+                                       description::String = "No description available",
+                                       tex_label::String = "")
 
     return SteadyStateParameter(key, value, description, tex_label)
 end

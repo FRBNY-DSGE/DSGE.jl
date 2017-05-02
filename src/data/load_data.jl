@@ -474,7 +474,7 @@ function read_population_data(m::AbstractModel; verbose::Symbol = :low)
     read_population_data(filename; verbose = verbose)
 end
 
-function read_population_data(filename::AbstractString; verbose::Symbol = :low)
+function read_population_data(filename::String; verbose::Symbol = :low)
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Reading population data from $filename...")
     end
@@ -511,7 +511,7 @@ function read_population_forecast(m::AbstractModel; verbose::Symbol = :low)
     end
 end
 
-function read_population_forecast(filename::AbstractString, population_mnemonic::Symbol;
+function read_population_forecast(filename::String, population_mnemonic::Symbol;
                                   verbose::Symbol = :low)
 
     if isfile(filename)
