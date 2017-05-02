@@ -2,7 +2,6 @@ using HDF5
 using Base.Test
 using DSGE
 
-include("../util.jl")
 path = dirname(@__FILE__)
 
 file = "$path/../reference/solve.h5"

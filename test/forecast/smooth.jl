@@ -1,5 +1,4 @@
 using DSGE, DataFrames, JLD
-include("../util.jl")
 
 path = dirname(@__FILE__())
 

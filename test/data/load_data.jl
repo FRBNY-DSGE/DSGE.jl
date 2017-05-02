@@ -1,6 +1,5 @@
 using DSGE
 using Base.Test, DataFrames, HDF5
-include("../util.jl")
 
 path = dirname(@__FILE__)
 

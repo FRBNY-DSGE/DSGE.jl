@@ -1,5 +1,4 @@
 using DSGE, JLD, Base.Test
-include("../util.jl")
 
 path = dirname(@__FILE__)
 

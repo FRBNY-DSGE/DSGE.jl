@@ -1,8 +1,6 @@
 using Base.Test
 using DSGE
 
-include(joinpath(dirname(@__FILE__()),"util.jl"))
-
 my_tests = [
             "core",
             "parameters",

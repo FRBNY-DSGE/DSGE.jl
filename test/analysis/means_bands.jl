@@ -1,5 +1,4 @@
 using DSGE, HDF5, JLD
-include("../util.jl")
 
 path = dirname(@__FILE__)
 
