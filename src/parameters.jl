@@ -407,11 +407,11 @@ Base.convert{T<:Number}(::Type{T}, p::SteadyStateParameter)  = convert(T,p.value
 
 Base.promote_rule{T<:Number,U<:Number}(::Type{AbstractParameter{T}}, ::Type{U}) = promote_rule(T,U)
 
-for op in (:(Base.(:+)),
-           :(Base.(:-)),
-           :(Base.(:*)),
-           :(Base.(:/)),
-           :(Base.(:^)))
+for op in (:(Base.:+),
+           :(Base.:-),
+           :(Base.:*),
+           :(Base.:/),
+           :(Base.:^))
 
     @eval ($op)(p::UnscaledOrSteadyState, q::UnscaledOrSteadyState) = ($op)(p.value, q.value)
     @eval ($op)(p::UnscaledOrSteadyState, x::Integer)            = ($op)(p.value, x)
@@ -429,11 +429,11 @@ end
 
 for f in (:(Base.exp),
           :(Base.log),
-          :(Base.(:-)),
-          :(Base.(:<)),
-          :(Base.(:>)),
-          :(Base.(:<=)),
-          :(Base.(:>=)))
+          :(Base.:-),
+          :(Base.:<),
+          :(Base.:>),
+          :(Base.:<=),
+          :(Base.:>=))
 
     @eval ($f)(p::UnscaledOrSteadyState) = ($f)(p.value)
     @eval ($f)(p::ScaledParameter) = ($f)(p.scaledvalue)
