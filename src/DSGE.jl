@@ -101,7 +101,7 @@ module DSGE
         prepare_meansbands_tables_shockdec, write_meansbands_tables_all,
 
         # util
-        @test_matrix_approx_eq
+        @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"
