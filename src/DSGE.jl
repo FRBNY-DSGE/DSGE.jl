@@ -154,6 +154,8 @@ module DSGE
     include("analysis/io.jl")
     include("analysis/util.jl")
 
+    include("models/financial_frictions.jl")
+
     include("models/m990/m990.jl")
     include("models/m990/subspecs.jl")
     include("models/m990/eqcond.jl")
