@@ -34,7 +34,7 @@ exp_modal_means, exp_modal_bands, exp_full_means, exp_full_bands =
 @time means_bands_all(m, :mode, :none, output_vars; verbose = :none)
 @time meansbands_matrix_all(m, :mode, :none, output_vars; verbose = :none)
 
-mb_matrix_vars = map(x -> symbol("_matrix_$x"), output_vars)
+mb_matrix_vars = map(x -> Symbol("_matrix_$x"), output_vars)
 files = get_meansbands_output_files(m, :mode, :none, mb_matrix_vars; fileformat = :h5)
 for (var, mb_var) in zip(output_vars, mb_matrix_vars)
     filename = files[mb_var]
