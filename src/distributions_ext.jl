@@ -217,7 +217,7 @@ Generate `n` draws from `d`. This returns a matrix of size `(length(d), n)`,
 where each column is a sample.
 """
 function Distributions.rand(d::DegenerateDiagMvTDist, n::Int)
-    return d.μ .+ d.σ*rand(TDist(d.ν), (length(d), n))
+    return d.μ .+ d.σ*rand(TDist(d.ν), length(d), n)
 end
 
 # Compute the mean μ and standard deviation σ of a DSGE.RootInverseGamma object.
