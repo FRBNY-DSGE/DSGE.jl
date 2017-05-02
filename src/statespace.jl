@@ -16,8 +16,8 @@ function Transition{T<:AbstractFloat}(TTT::Matrix{T}, RRR::Matrix{T})
     CCC = zeros(eltype(TTT), size(TTT, 1))
     Transition{T}(TTT, RRR, CCC)
 end
-function Transition{T<:AbstractFloat}(TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T})
-    Transition{T}(TTT, RRR, CCC)
+function Transition{T<:AbstractFloat}(TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
+    Transition{T}(TTT, RRR, collect(CCC))
 end
 function Base.getindex(eq::Transition, d::Symbol)
     if d in (:TTT, :RRR, :CCC)
