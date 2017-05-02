@@ -47,23 +47,23 @@ jldopen(dict[:histstates], "r") do file
     @test dates[date_mainsample_start(m)] == 1
     @test dates[date_mainsample_end(m)] == length(dates)
     @test read(file, "state_indices") == merge(m.endogenous_states, m.endogenous_states_augmented)
-    @test all(x -> x == symbol("DSGE.identity"), values(read(file, "state_revtransforms")))
+    @test all(x -> x == Symbol("DSGE.identity"), values(read(file, "state_revtransforms")))
 end
 jldopen(dict[:histobs], "r") do file
     @test read(file, "observable_indices") == m.observables
-    @test !all(x -> x == symbol("DSGE.identity"), values(read(file, "observable_revtransforms")))
+    @test !all(x -> x == Symbol("DSGE.identity"), values(read(file, "observable_revtransforms")))
 end
 jldopen(dict[:histpseudo], "r") do file
     @test read(file, "pseudoobservable_indices") == pseudo_measurement(m)[2].inds
-    @test !all(x -> x == symbol("DSGE.identity"), values(read(file, "pseudoobservable_revtransforms")))
+    @test !all(x -> x == Symbol("DSGE.identity"), values(read(file, "pseudoobservable_revtransforms")))
 end
 jldopen(dict[:histshocks], "r") do file
     @test read(file, "shock_indices") == m.exogenous_shocks
-    @test all(x -> x == symbol("DSGE.identity"), values(read(file, "shock_revtransforms")))
+    @test all(x -> x == Symbol("DSGE.identity"), values(read(file, "shock_revtransforms")))
 end
 jldopen(dict[:histshocks], "r") do file
     @test read(file, "shock_indices") == m.exogenous_shocks
-    @test all(x -> x == symbol("DSGE.identity"), values(read(file, "shock_revtransforms")))
+    @test all(x -> x == Symbol("DSGE.identity"), values(read(file, "shock_revtransforms")))
 end
 jldopen(dict[:forecastobs], "r") do file
     dates = read(file, "date_indices")
@@ -71,7 +71,7 @@ jldopen(dict[:forecastobs], "r") do file
     @test dates[date_forecast_end(m)] == length(dates)
 end
 for class in [:shockdec, :dettrend, :trend]
-    jldopen(dict[symbol(class, "obs")], "r") do file
+    jldopen(dict[Symbol(class, "obs")], "r") do file
         dates = read(file, "date_indices")
         @test dates[date_mainsample_start(m)] == 1
         @test dates[date_forecast_end(m)] == length(dates)
@@ -79,5 +79,5 @@ for class in [:shockdec, :dettrend, :trend]
 end
 jldopen(dict[:irfobs], "r") do file
     @test !HDF5.exists(file, "date_indices")
-    @test all(x -> x == symbol("DSGE.identity"), values(read(file, "observable_revtransforms")))
+    @test all(x -> x == Symbol("DSGE.identity"), values(read(file, "observable_revtransforms")))
 end
