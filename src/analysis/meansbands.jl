@@ -193,10 +193,10 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     end
 
     # date indices
-    date_indices = [d::Date => i::Int for (i, d) in enumerate(means[:date])]
+    date_indices = Dict(d::Date => i::Int for (i, d) in enumerate(means[:date]))
 
     # variable indices
-    indices = [var::Symbol => i::Int for (i, var) in enumerate(names(means))]
+    indices = Dict(var::Symbol => i::Int for (i, var) in enumerate(names(means)))
 
     # forecast string
     if isempty(forecast_string) && (mb1.metadata[:forecast_string] != mb2.metadata[:forecast_string])
