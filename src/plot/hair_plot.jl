@@ -22,31 +22,29 @@ function hair_plot(var::Symbol, df::DataFrame,
                    forecast_palette::Symbol = Symbol(),
                    forecast_color::Colorant = RGBA(1., 0., 0., 1.))
     # Dates
-    dates      = map(quarter_date_to_number, df[:date])
-    start_date = ceil(dates[1] / 5) * 5
-    end_date   = dates[end]
-    date_ticks = start_date:5:end_date
+    datenums   = map(quarter_date_to_number, df[:date])
+    date_ticks = get_date_ticks(df[:date])
 
     # Initialize GR backend
     gr()
     p = Plots.plot(xtick = date_ticks)
 
     # Plot realized (transformed) series
-    plot!(p, dates, df[var], label = hist_label, linewidth = 2, linecolor = :black)
+    plot!(p, datenums, df[var], label = hist_label, linewidth = 2, linecolor = :black)
 
     # Plot each forecast
     for (initial_value, forecast) in zip(initial_values, forecasts)
         date_0 = DSGE.iterate_quarters(forecast.means[1, :date], -1)
         dates = vcat([date_0], forecast.means[:date])
-        dates = map(quarter_date_to_number, dates)
+        datenums = map(quarter_date_to_number, dates)
 
         series = vcat([initial_value], forecast.means[var])
 
         label = forecast == forecasts[1] ? forecast_label : ""
         if forecast_palette == Symbol()
-            plot!(p, dates, series, label = label, linewidth = 1, linecolor = forecast_color)
+            plot!(p, datenums, series, label = label, linewidth = 1, linecolor = forecast_color)
         else
-            plot!(p, dates, series, label = label, linewidth = 1, palette = forecast_palette)
+            plot!(p, datenums, series, label = label, linewidth = 1, palette = forecast_palette)
         end
     end
 
