@@ -12,16 +12,14 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     combined = cat(history, forecast)
 
     # Dates
-    datenums = map(quarter_date_to_number, combined.means[:date])
-    start_ind = if !isnull(start_date)
+    datenums   = map(quarter_date_to_number, df[:date])
+    start_ind  = if !isnull(start_date)
         @assert history.means[1, :date] <= get(start_date) <= history.means[end, :date]
-        findfirst(datenums, quarter_date_to_number(get(start_date)))
+        findfirst(combined.means[:date], get(start_date))
     else
         1
     end
-    t0 = ceil(datenums[start_ind] / 5) * 5
-    t1 = datenums[end]
-    date_ticks = t0:5:t1
+    date_ticks = get_date_ticks(combined.means[start_ind:end, :date])
 
     hist_inds  = start_ind:size(history.means, 1)
     fcast_inds = size(history.means, 1):size(combined.means, 1)
