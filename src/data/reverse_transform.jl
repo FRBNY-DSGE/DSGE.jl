@@ -11,7 +11,7 @@ reverse_transform(path, class, product, var, rev_transform;
 Methods that take a single draw of a forecast output that is already in memory:
 ```
 reverse_transform(m::AbstractModel, untransformed::Matrix, start_date,
-                           vars, class; fourquarter = false,
+                           row_labels, class; fourquarter = false,
                            verbose = :low)
 
 reverse_transform(m, untransformed::DataFrame, class; fourquarter = false, verbose = :low)
@@ -28,7 +28,7 @@ forecast outputs from model units into final output units. We
 provide methods at various levels of abstraction.
 
 At the highest level, the first two methods listed above read in raw
-forecast output from a file and transform all draws corresponding to
+forecast output from a file and transform **all draws** corresponding to
 the given `vars` or `var`. The model-agnostic function takes the name of the
 file containing the forecast output and a reverse transform
 function. The model-dependent function determines the filepath and
@@ -36,16 +36,14 @@ appropriate reverse transform from the information contained in the
 model.
 
 The second two methods take in raw forecast output that is already in
-memory corresponding to a single draw. The model-agnostic method takes
-a single series and reverse transformation, applies it, and returns a
-vector. It relies on the user to provide population data if
-necessary. The model-dependent method loads population data, and
-transforms all series corresponding to the given `vars` (or all
-series if none are provided), returning a `DataFrame` of all
-transformed series.
+memory corresponding to a **single draw**. In the first method, the
+user must specify `row_labels`, which label the rows of the `untransformed`
+matrix. Each element of `row_labels` must be a valid observable or
+pseudoobservable key that corresponds to the row it labels. These
+methods return a `DataFrame` of all transformed series.
 
 The lowest-level method requires the caller to provide additional
-information. It is applied to one or many draws of a single
+information. It is applied to **one or many draws** of a single
 series. This method is called by the higher-level functions as well as
 `compute_means_bands`.
 
