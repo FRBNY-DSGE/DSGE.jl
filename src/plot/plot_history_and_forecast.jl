@@ -9,7 +9,8 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
                                    hist_color::Colorant = RGBA(0., 0., 0., 1.),
                                    forecast_mean_color::Colorant = RGBA(1., 0., 0., 1.),
                                    forecast_band_color::Colorant = RGBA(0., 0., 1., 0.1),
-                                   tick_size::Int = 5)
+                                   tick_size::Int = 5,
+                                   legend = :best)
     # Concatenate MeansBands
     combined = cat(history, forecast)
 
@@ -29,7 +30,7 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
 
     # Initialize GR backend
     gr()
-    p = Plots.plot()
+    p = Plots.plot(legend = legend)
 
     # Plot bands
     band_percents = DSGE.which_density_bands(combined; uniquify = true)
