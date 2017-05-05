@@ -24,10 +24,6 @@ Base.show(io::IO, t::Untransformed) = @printf io "x -> x\n"
 Base.show(io::IO, t::SquareRoot)    = @printf io "x -> (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)\n"
 Base.show(io::IO, t::Exponential)   = @printf io "x -> b + (1/c) * log(x-a)\n"
 
-Base.call(t::Untransformed) = Untransformed()
-Base.call(t::SquareRoot) = SquareRoot()
-Base.call(t::Exponential) = Exponential()
-
 """
 ```
 AbstractParameter{T<:Number}
