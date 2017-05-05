@@ -409,10 +409,10 @@ function compute_means_bands(class::Symbol,
 
         y0s = if transform4q in [loggrowthtopct_4q_percapita, loggrowthtopct_4q]
             # Sum growth rates y_{t-3}, y_{t-2}, y_{t-1}, and y_t
-            use_data ? squeeze(data[var_ind, y0_index+1:end], 1) : fill(NaN, 3)
+            use_data ? data[var_ind, y0_index+1:end] : fill(NaN, 3)
         elseif transform4q in [logleveltopct_4q_percapita, logleveltopct_4q]
             # Divide log levels y_t by y_{t-4}
-            use_data ? squeeze(data[var_ind, y0_index:end], 1) : fill(NaN, 4)
+            use_data ? data[var_ind, y0_index:end] : fill(NaN, 4)
         else
             Vector{Float64}()
         end
