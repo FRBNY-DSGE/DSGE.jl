@@ -7,7 +7,7 @@ path = dirname(@__FILE__)
 # Global minimum at (a, a^2)
 a = 1
 b = 100
-function rosenbrock(x::Vector)
+function rosenbrock_csminwel(x::Vector)
     return (a-x[1])^2.0 + b*(x[2]-x[1]^2.0)^2.0
 end
 
@@ -24,9 +24,9 @@ end
 x_init = [10.0, -9.0]
 x_expected = [a, a^2.0]
 
-res_real_grad, _ = csminwel(rosenbrock, rosenbrock_grad, x_init)
+res_real_grad, _ = csminwel(rosenbrock_csminwel, rosenbrock_grad, x_init)
 @test_approx_eq x_expected res_real_grad.minimizer
-res_numeric_grad, _ = csminwel(rosenbrock, x_init)
+res_numeric_grad, _ = csminwel(rosenbrock_csminwel, x_init)
 @test_approx_eq_eps x_expected res_numeric_grad.minimizer 1e-8
 
 nothing
