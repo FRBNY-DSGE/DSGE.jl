@@ -6,12 +6,13 @@ function hair_plot(var::Symbol, df::DataFrame,
                    hist_label::AbstractString = "Realized",
                    forecast_label::AbstractString = "Forecasts",
                    forecast_palette::Symbol = Symbol(),
-                   forecast_color::Colorant = RGBA(1., 0., 0., 1.))
+                   forecast_color::Colorant = RGBA(1., 0., 0., 1.),
+                   legend = :best)
 
     initial_values = map(history -> history.means[end, var], histories)
     hair_plot(var, df, initial_values, forecasts,
               output_file = output_file, hist_label = hist_label, forecast_label = forecast_label,
-              forecast_palette = forecast_palette, forecast_color =forecast_color)
+              forecast_palette = forecast_palette, forecast_color = forecast_color, legend = legend)
 end
 
 function hair_plot(var::Symbol, df::DataFrame,
@@ -20,14 +21,15 @@ function hair_plot(var::Symbol, df::DataFrame,
                    hist_label::AbstractString = "Realized",
                    forecast_label::AbstractString = "Forecasts",
                    forecast_palette::Symbol = Symbol(),
-                   forecast_color::Colorant = RGBA(1., 0., 0., 1.))
+                   forecast_color::Colorant = RGBA(1., 0., 0., 1.),
+                   legend = :best)
     # Dates
     datenums   = map(quarter_date_to_number, df[:date])
     date_ticks = get_date_ticks(df[:date])
 
     # Initialize GR backend
     gr()
-    p = Plots.plot(xtick = date_ticks)
+    p = Plots.plot(xtick = date_ticks, legend = legend)
 
     # Plot realized (transformed) series
     plot!(p, datenums, df[var], label = hist_label, linewidth = 2, linecolor = :black)
