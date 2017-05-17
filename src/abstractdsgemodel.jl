@@ -1,6 +1,6 @@
 abstract AbstractModel{T}
 
-function Base.show{T<:AbstractModel}(io::IO, m::T)
+function Base.show(io::IO, m::AbstractModel)
     @printf io "Dynamic Stochastic General Equilibrium Model\n"
     @printf io "%s\n" T
     @printf io "no. states:             %i\n" n_states(m)
@@ -27,7 +27,7 @@ end
     end
 end
 
-@inline function Base.setindex!{T<:Number}(m::AbstractModel, value::T, i::Integer)
+@inline function Base.setindex!(m::AbstractModel, value::Number, i::Integer)
     if i <= (j = length(m.parameters))
         param = m.parameters[i]
         param.value = value
@@ -44,13 +44,13 @@ end
 
 """
 ```
-setindex!{T<:AbstractParameter}(m::AbstractModel, param::T, i::Integer)
+setindex!(m::AbstractModel, param::AbstractParameter, i::Integer)
 ```
 
 If `i`<length(m.parameters), overwrites m.parameters[i] with
 param. Otherwise, overwrites m.steady_state[i-length(m.parameters).
 """
-@inline function Base.setindex!{T<:AbstractParameter}(m::AbstractModel, param::T, i::Integer)
+@inline function Base.setindex!(m::AbstractModel, param::AbstractParameter, i::Integer)
     if i <= (j = length(m.parameters))
         m.parameters[i] = param
     else
@@ -454,10 +454,10 @@ fns = [Symbol(x, "path") for x in strs]
 for (str, fn) in zip(strs, fns)
     @eval begin
         # First eval function
-        function $fn{T<:String}(m::AbstractModel,
-                                        out_type::T,
-                                        file_name::T = "",
-                                        filestring_addl::Vector{T}=Vector{T}())
+        function $fn(m::AbstractModel,
+                     out_type::String,
+                     file_name::String = "",
+                     filestring_addl::Vector{String}=Vector{String}())
             return savepath(m, out_type, $(string(str)), file_name, filestring_addl)
         end
 
@@ -465,7 +465,7 @@ for (str, fn) in zip(strs, fns)
         @doc $(
         """
         ```
-        $fn{T<:String}(m::AbstractModel, out_type::T, file_name::T="")
+        $fn(m::AbstractModel, out_type::String, file_name::String="", filestring_addl::Vector{String}=Vector{String}())
         ```
 
         Returns path to specific $str output file, creating containing directory as needed. If
@@ -480,11 +480,11 @@ for (str, fn) in zip(strs, fns)
 end
 
 # Not exposed to user. Actually create path and insert model string to file name.
-function savepath{T<:String}(m::AbstractModel,
-                                     out_type::T,
-                                     sub_type::T,
-                                     file_name::T = "",
-                                     filestring_addl::Vector{T} = Vector{T}())
+function savepath(m::AbstractModel,
+                  out_type::String,
+                  sub_type::String,
+                  file_name::String = "",
+                  filestring_addl::Vector{String} = Vector{String}())
     # Containing directory
     dir = String(joinpath(saveroot(m), "output_data", spec(m), subspec(m), out_type, sub_type))
 
@@ -496,10 +496,10 @@ function savepath{T<:String}(m::AbstractModel,
     end
 end
 
-function savepath{T<:String}(dir::T,
-                                     file_name::T = "",
-                                     filestring_base::Vector{T} = Vector{T}(),
-                                     filestring_addl::Vector{T} = Vector{T}())
+function savepath(dir::String,
+                  file_name::String = "",
+                  filestring_base::Vector{String} = Vector{String}(),
+                  filestring_addl::Vector{String} = Vector{String}())
     if !isdir(dir)
         mkpath(dir)
     end
@@ -535,7 +535,7 @@ Path built as
 <data root>/<in_type>/<file_name>
 ```
 """
-function inpath{T<:String}(m::AbstractModel, in_type::T, file_name::T="")
+function inpath(m::AbstractModel, in_type::String, file_name::String="")
     path = dataroot(m)
     # Normal cases.
     if in_type == "data" || in_type == "cond"
@@ -576,18 +576,18 @@ end
 
 filestring(m::AbstractModel) = filestring(m, Vector{String}())
 filestring(m::AbstractModel, d::String) = filestring(m, [String(d)])
-function filestring{T<:String}(m::AbstractModel, d::Vector{T})
+function filestring(m::AbstractModel, d::Vector{String})
     base = filestring_base(m)
     return filestring(base, d)
 end
 
-function filestring{T<:String}(base::Vector{T}, d::Vector{T})
+function filestring(base::Vector{String}, d::Vector{String})
     filestrings = vcat(base, d)
     sort!(filestrings)
     return "_" * join(filestrings, "_")
 end
 
-function filestring{T<:String}(d::Vector{T})
+function filestring(d::Vector{String})
     sort!(d)
     return "_" * join(d, "_")
 end
@@ -629,12 +629,12 @@ end
 
 """
 ```
-rand{T<:AbstractFloat, U<:AbstractModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
+rand(d::DegenerateMvNormal, m::AbstractModel; cc::AbstractFloat = 1.0)
 ```
 
-Generate a draw from d with variance optionally scaled by cc^2.
+Generate a draw from `d` with variance optionally scaled by `cc^2`.
 """
-function rand{T<:AbstractFloat, U<:AbstractModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
+function rand(d::DegenerateMvNormal, m::AbstractModel; cc::AbstractFloat = 1.0)
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
 
@@ -651,7 +651,7 @@ function rand_prior(m::AbstractModel; ndraws::Int = 100_000)
     for i in 1:ndraws
         priodraw = Array{T}(npara)
 
-        #Parameter draws per particle
+        # Parameter draws per particle
         for j in 1:length(m.parameters)
 
             priodraw[j] = if !m.parameters[j].fixed
