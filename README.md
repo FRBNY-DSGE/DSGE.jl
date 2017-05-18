@@ -1,23 +1,29 @@
-# FRBNY DSGE Model (Version 1002)
+# New York Fed DSGE Model (Version 1002)
+
 [![Build Status](https://travis-ci.org/FRBNY-DSGE/DSGE.jl.svg)](https://travis-ci.org/FRBNY-DSGE/DSGE.jl)
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://FRBNY-DSGE.github.io/DSGE.jl/stable)
 [![](https://img.shields.io/badge/docs-latest-blue.svg)](https://FRBNY-DSGE.github.io/DSGE.jl/latest)
 
-The *DSGE.jl* package implements the FRBNY DSGE model and provides general code
-to estimate many user-specified DSGE models. The package is introduced in the
-Liberty Street Economics blog post
+The *DSGE.jl* package implements the New York Fed DSGE model and provides
+general code to estimate many user-specified DSGE models. The package is
+introduced in the Liberty Street Economics blog post
 [The FRBNY DSGE Model Meets Julia](http://libertystreeteconomics.newyorkfed.org/2015/12/the-frbny-dsge-model-meets-julia.html).
+(We previously referred to our model as the "FRBNY DSGE Model".)
 
-This Julia-language implementation mirrors the MATLAB code
-included in the Liberty Street Economics blog post
+This Julia-language implementation mirrors the MATLAB code included in the
+Liberty Street Economics blog post
 [The FRBNY DSGE Model Forecast](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html).
 
-For the latest documentation on the *code*, click on the docs|latest button above. For the latest stable version of the code, click on the docs|stable button. Documentation for the most recent *model version* is available [here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf).
+For the latest documentation on the *code*, click on the docs|latest button
+above. For the latest stable version of the code, click on the docs|stable
+button. Documentation for the most recent *model version* is available
+[here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf).
 
-FRBNY is currently working on extending the code to include forecasts and other
-features. Ongoing work on implementing Sequential Monte Carlo (SMC) sampling can be found
-on the `smc` branch. Further extensions of the DSGE model code may be released in the
-future at the discretion of FRBNY.
+The New York Fed DSGE team is currently working on extending the code to include
+forecasts and other features. Ongoing work on implementing Sequential Monte
+Carlo (SMC) sampling can be found on the `smc` branch. Further extensions of the
+DSGE model code may be released in the future at the discretion of the New York
+Fed.
 
 ## Installation
 
