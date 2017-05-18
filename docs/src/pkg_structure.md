@@ -14,7 +14,7 @@
 ### `estimate/`: Optimization, posterior sampling, and other functionality.
 ### [`xxx/`]: Other model functionality, such as forecasts, impulse response functions, and shock decompositions.
 ### `models/`
-#### `m990/`: Contains code to define and initialize version 990 of the FRBNY DSGE model.
+#### `m990/`: Contains code to define and initialize version 990 of the New York Fed DSGE model.
 ##### `m990.jl`: Constructs a `Model990` object.
 ##### `eqcond.jl`: Constructs `Model990` equilibrium condition matrices
 ##### `measurement.jl`: Constructs `Model990` measurement equation matrices.

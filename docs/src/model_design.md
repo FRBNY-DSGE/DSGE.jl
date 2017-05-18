@@ -1,7 +1,7 @@
 # Model Design
 
-*DSGE.jl* is an object-oriented approach to solving the FRBNY DSGE model that
-takes advantage of Julia's type system, multiple dispatch, package-handling
+*DSGE.jl* is an object-oriented approach to solving the New York Fed DSGE model
+that takes advantage of Julia's type system, multiple dispatch, package-handling
 mechanism, and other features. A single model object centralizes all information
 about the model's parameters, states, equilibrium conditions, and settings in a
 single data structure. The model object also keeps track of file locations for

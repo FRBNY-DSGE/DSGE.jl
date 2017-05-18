@@ -21,11 +21,11 @@ concrete subtype of `AbstractModel` can be passed to any function defined for
 `AbstractModel`, provided that the concrete type has the fields that the
 function expects to be available.
 
-`Model990` is one example of a concrete subtype of `AbstractModel`
-that implements a single specification of the FRBNY DSGE model. All
-model objects must have these fields so that the interface for
-`AbstractModel` objects works correctly.  See [Editing or Extending a
-Model](@ref editing-extending-model) for more detail.
+`Model990` is one example of a concrete subtype of `AbstractModel` that
+implements a single specification of the New York Fed DSGE model. All model
+objects must have these fields so that the interface for `AbstractModel` objects
+works correctly.  See [Editing or Extending a Model](@ref
+editing-extending-model) for more detail.
 
 ```@docs
 Model990
@@ -169,12 +169,12 @@ etc.), so that when we access a particular setting during the estimation and
 forecast steps, we don't have to think about the setting's type.
 
 `Setting`s play an important role in addition to providing useful abstraction.
-Estimating and forecasting the FRBNY DSGE model takes many hours of computation
-time and creates a lot of output files. It is useful to be able to compare model
-output from two different models whose settings differ slightly (for example,
-consider two identical models that use different vintages of data as input). A
-central feature of the `Setting` type is a mechanism that generates unique,
-meaningful filenames when code is executed with different settings.
+Estimating and forecasting the New York Fed DSGE model takes many hours of
+computation time and creates a lot of output files. It is useful to be able to
+compare model output from two different models whose settings differ slightly
+(for example, consider two identical models that use different vintages of data
+as input). A central feature of the `Setting` type is a mechanism that generates
+unique, meaningful filenames when code is executed with different settings.
 Specifically, when a setting takes on a non-default value, a user-defined
 setting code (along with the setting's value) are appended to all output files
 generated during execution.
