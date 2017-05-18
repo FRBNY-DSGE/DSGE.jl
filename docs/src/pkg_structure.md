@@ -12,7 +12,8 @@
 ### `data/`: Manipulating and updating input dataset.
 ### `solve/`: Solving the model; includes `gensys.jl` code.
 ### `estimate/`: Optimization, posterior sampling, and other functionality.
-### [`xxx/`]: Other model functionality, such as forecasts, impulse response functions, and shock decompositions.
+### `forecast/`: Forecasts, smoothing, shock decompositions, and impulse response functions.
+### `analysis/`: Moment tables of estimated parameters, computation of forecast means and bands.
 ### `models/`
 #### `m990/`: Contains code to define and initialize version 990 of the New York Fed DSGE model.
 ##### `m990.jl`: Constructs a `Model990` object.
