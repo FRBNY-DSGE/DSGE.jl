@@ -235,7 +235,7 @@ approach did not end up improving on the parallel mapping approach, our final
 Julia code is faster and better designed than the original MATLAB
 implementation.
 
-Like many academic institutions, the FRBNY Research Group maintains a
+Like many academic institutions, the New York Fed's Research Group maintains a
 Linux-based cluster for use by the economists and RAs. This setup allows us to
 distribute computing jobs across multiple processes on multiple compute nodes,
 so that non-serially dependent jobs can be executed at the same time. However,

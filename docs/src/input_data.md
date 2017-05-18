@@ -8,10 +8,9 @@ Given all of the hard work put into specifying the model, one should be able to 
 the input data painlessly. To that extent, *DSGE.jl* provides facilities to download
 appropriate vintages of data series from FRED (Federal Reserve Economic Data).
 
-Note that a sample input dataset for use with model `m990` is
-provided; see [FRBNY Model 990 Data](@ref frbny-data) for more details. To update
-this sample dataset for use with model `m990`, see [Update sample
-input data](@ref).
+Note that a sample input dataset for use with model `m990` is provided; see
+[New York Fed Model 990 Data](@ref frbny-data) for more details. To update this
+sample dataset for use with model `m990`, see [Update sample input data](@ref).
 
 ## Setup
 
@@ -223,13 +222,13 @@ julia>  m <= Setting(:data_vintage, "yymmdd")
 
 **Step 3**. Create data files for the non-FRED data sources (specified in
    `m.data_series`). For model `m990`, the required data files include
-   `spf_<yymmdd>.csv` (with column `ASACX10`), `longrate_<yymmdd>.csv`
-   (with column `FYCCZA`), and `fernald_<yymmdd>.csv` (with columns
-   `TFPJQ` and `TFPKQ`). To include data on expected interest rates,
-   the file `ois_<yymmdd>.csv` is also required. To include data on
-   population forecasts, the file `population_forecst_<yymmdd>.csv` is
-   also required (see [Incorporate population forecasts](@ref). See
-   [FRBNY Model Input Data](@ref frbny-data) for details on the series
+   `spf_<yymmdd>.csv` (with column `ASACX10`), `longrate_<yymmdd>.csv` (with
+   column `FYCCZA`), and `fernald_<yymmdd>.csv` (with columns `TFPJQ` and
+   `TFPKQ`). To include data on expected interest rates, the file
+   `ois_<yymmdd>.csv` is also required. To include data on population forecasts,
+   the file `population_forecst_<yymmdd>.csv` is also required (see
+   [Incorporate population forecasts](@ref). See
+   [New York Fed Model Input Data](@ref frbny-data) for details on the series
    used and links to data sources.
 
 **Step 4**. Run `load_data(m)`; series from FRED will be downloaded and merged with the series from
