@@ -4,9 +4,9 @@ The DSGE.jl package provides several example models:
 
 - A simple three-equation DSGE model from [An and Schorfheide (2006)](https://sites.sas.upenn.edu/schorf/files/er-final.pdf)
 - The well-known [Smets and Wouters (2007)](https://www.aeaweb.org/articles?id=10.1257/aer.97.3.586) model
-- The FRBNY DSGE model (version 990.2), which was introduced in [this blog post](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html)
-- The FRBNY DSGE model (version 1002.9), which is documented [here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf)
-- The FRBNY DSGE model (version 1010.18)
+- The New York Fed DSGE model (version 990.2), which was introduced in [this blog post](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html)
+- The New York Fed DSGE model (version 1002.9), which is documented [here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf)
+- The New York Fed DSGE model (version 1010.18)
 
 You can run these models using the description provided here. If you
 were to implement another model using DSGE.jl, these procedures can also be used to
