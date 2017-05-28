@@ -2,7 +2,6 @@ abstract AbstractModel{T}
 
 function Base.show{T<:AbstractModel}(io::IO, m::T)
     @printf io "Dynamic Stochastic General Equilibrium Model\n"
-    @printf io "%s\n" T
     @printf io "no. states:             %i\n" n_states(m)
     @printf io "no. anticipated shocks: %i\n" n_anticipated_shocks(m)
     @printf io "data vintage:           %s\n" data_vintage(m)
