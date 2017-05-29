@@ -133,10 +133,13 @@ function load_population_growth(data_file::String, forecast_file::String,
         DataFrame(date = @data(convert(Array{Date}, data[:date])),
                   population_growth = @data(convert(Array{Float64},
                                                     data[:dlfiltered_population_recorded])))
-    dlfiltered_forecast =
+    dlfiltered_forecast = if isempty(forecast)
+        DataFrame()
+    else
         DataFrame(date = @data(convert(Array{Date}, forecast[:date])),
                   population_growth = @data(convert(Array{Float64},
                                                     forecast[:dlfiltered_population_forecast])))
+    end
 
     return dlfiltered_data, dlfiltered_forecast
 end
@@ -157,7 +160,15 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
                                end_date::Date)
 
     last_historical_date = population_data[end, :date]
-    last_forecast_date   = population_forecast[end, :date]
+
+    # If no population forecast, use last period of population data instead
+    if isempty(population_forecast)
+        population_forecast = population_data[end, :]
+        last_forecast_date = DSGE.iterate_quarters(last_historical_date, 1)
+        population_forecast[1, :date] = last_forecast_date
+    else
+        last_forecast_date = population_forecast[end, :date]
+    end
 
     # Calculate number of periods that are in the future and extend
     # population forecast by the right number of periods
