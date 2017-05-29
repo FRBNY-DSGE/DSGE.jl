@@ -507,7 +507,11 @@ function read_population_forecast(m::AbstractModel; verbose::Symbol = :low)
     if isnull(population_mnemonic)
         error("No population mnemonic provided")
     else
-        read_population_forecast(population_forecast_file, get(population_mnemonic); verbose = verbose)
+        if use_population_forecast(m)
+            read_population_forecast(population_forecast_file, get(population_mnemonic); verbose = verbose)
+        else
+            DataFrame()
+        end
     end
 end
 
