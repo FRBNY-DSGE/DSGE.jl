@@ -657,6 +657,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
 
     # fetch the columns corresponding to varshocks
     df_shockdec = mb_shockdec.means[union([:date], varshocks)]
+
     df_trend    = mb_trend.means[[:date, var]]
     df_dettrend = mb_dettrend.means[[:date, var]]
 
