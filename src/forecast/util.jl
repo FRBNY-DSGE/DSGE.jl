@@ -176,7 +176,11 @@ conditional data, we smooth beyond the last historical period.
 function transplant_history{T<:AbstractFloat}(history::Matrix{T},
     last_hist_period::Int)
 
-    return history[:, 1:last_hist_period]
+    if isempty(history)
+        return history
+    else
+        return history[:, 1:last_hist_period]
+    end
 end
 
 """
