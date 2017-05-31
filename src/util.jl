@@ -92,3 +92,7 @@ end
 function detexify(s::ASCIIString)
     s
 end
+
+function detexify(s::Symbol)
+    symbol(detexify(string(s)))
+end
