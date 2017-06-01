@@ -57,7 +57,7 @@ module DSGE
         update, update!, transform_to_model_space, transform_to_real_line, Interval, ParamBoundsError,
 
         # observables.jl
-        Observable, PseudoObservable, PseudoObservableMapping,
+        Observable, PseudoObservable, PseudoObservableMapping, check_mnemonics,
 
         # statespace.jl
         Measurement, Transition, System, compute_system,
