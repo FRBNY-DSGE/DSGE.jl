@@ -1,11 +1,3 @@
-function check_mnemonics(levels, mneomincs)
-
-    for mnemonic in mnemonics
-        @assert in(mnemonic, names(levels)) "Dataframe is missing $(mnemonic)"
-    end
-end
-
-
 function init_observable_mappings!(m::Model1010)
 
     observables = OrderedDict{Symbol,Observable}()
