@@ -657,6 +657,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
 
     # fetch the columns corresponding to varshocks
     df_shockdec = mb_shockdec.means[union([:date], varshocks)]
+
     df_trend    = mb_trend.means[[:date, var]]
     df_dettrend = mb_dettrend.means[[:date, var]]
 
@@ -677,6 +678,14 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
 
     # rename columns to just the shock names
     map(x -> rename!(df, x, parse_mb_colname(x)[2]), setdiff(names(df), [:date, :trend, :dettrend]))
+
+    # remove Unicode characters from shock names
+    for x in setdiff(names(df), [:date, :trend, :dettrend])
+        x_detexed = detexify(x)
+        if x != x_detexed
+            rename!(df, x, x_detexed)
+        end
+    end
 
     # last, if mb_forecast and mb_hist are passed in, add the
     # detrended time series mean of var to the table

@@ -176,7 +176,6 @@ to that shock (note, however, that because we print bands for irfs,
 each file will represent a particular shock-variable pair). This
 function groups first by the elements of `tablevar`, and then by the
 elements of `columnvars`.
->>>>>>> add irfs to write_meansbands_all functions
 
 ### Inputs
 
@@ -230,7 +229,7 @@ function write_meansbands_tables(m::AbstractModel, mb::MeansBands;
 
     # Use all vars by default
     if isempty(tablevars)
-        tablevars = setdiff(names(mb.means), [:date])
+        tablevars = get_variables(mb)
     end
 
     # Write table for each var
@@ -252,7 +251,7 @@ function write_meansbands_tables(dirname::String, mb::MeansBands;
                                  columnvars::Vector{Symbol} = Vector{Symbol}())
     # Use all vars by default
     if isempty(tablevars)
-        tablevars = setdiff(names(mb.means), [:date])
+        tablevars = get_variables(mb)
     end
 
     # Write table for each var

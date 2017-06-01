@@ -37,8 +37,64 @@ function quarter_range(t0::Date, t1::Date)
     return Dates.recur(d -> Dates.lastdayofquarter(d) == d, dr)
 end
 
-function detexify(s::String)
-    replace(s, "π", "pi")
+function detexify(s::UTF8String)
+    s = replace(s, "α", "alpha")
+    s = replace(s, "β", "beta")
+    s = replace(s, "γ", "gamma")
+    s = replace(s, "δ", "delta")
+    s = replace(s, "ϵ", "epsilon")
+    s = replace(s, "ε", "epsilon")
+    s = replace(s, "η", "eta")
+    s = replace(s, "θ", "theta")
+    s = replace(s, "ι", "iota")
+    s = replace(s, "κ", "kappa")
+    s = replace(s, "λ", "lambda")
+    s = replace(s, "μ", "mu")
+    s = replace(s, "ν", "nu")
+    s = replace(s, "ξ", "xi")
+    s = replace(s, "π", "pi")
+    s = replace(s, "ρ", "rho")
+    s = replace(s, "σ", "sigma")
+    s = replace(s, "τ", "tau")
+    s = replace(s, "υ", "upsilon")
+    s = replace(s, "ϕ", "phi")
+    s = replace(s, "φ", "phi")
+    s = replace(s, "χ", "chi")
+    s = replace(s, "ψ", "psi")
+    s = replace(s, "ω", "omega")
+
+    s = replace(s, "Α", "Alpha")
+    s = replace(s, "Β", "Beta")
+    s = replace(s, "Γ", "Gamma")
+    s = replace(s, "Δ", "Delta")
+    s = replace(s, "Ε", "Epsilon")
+    s = replace(s, "Η", "Eta")
+    s = replace(s, "Θ", "Theta")
+    s = replace(s, "Ι", "Iota")
+    s = replace(s, "Κ", "Kappa")
+    s = replace(s, "Λ", "Lambda")
+    s = replace(s, "Μ", "Mu")
+    s = replace(s, "Ν", "Nu")
+    s = replace(s, "Ξ", "Xi")
+    s = replace(s, "Π", "Pi")
+    s = replace(s, "Ρ", "Rho")
+    s = replace(s, "Σ", "Sigma")
+    s = replace(s, "Τ", "Tau")
+    s = replace(s, "Υ", "Upsilon")
+    s = replace(s, "Φ", "Phi")
+    s = replace(s, "Χ", "Chi")
+    s = replace(s, "Ψ", "Psi")
+    s = replace(s, "Ω", "Omega")
+
+    return s
+end
+
+function detexify(s::ASCIIString)
+    s
+end
+
+function detexify(s::Symbol)
+    symbol(detexify(string(s)))
 end
 
 
@@ -101,4 +157,3 @@ margin of absolute tolerance given by `ϵ_abs` and a margin of relative toleranc
 macro test_matrix_approx_eq_eps(a,b,c,d)
     :(test_matrix_eq2($(esc(a)),$(esc(b)),$(string(a)),$(string(b)),$(esc(c)),$(esc(d))))
 end
-
