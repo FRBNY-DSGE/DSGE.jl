@@ -12,8 +12,8 @@ also each be saved as \"base__var.ext\". By default, only 90% bands are plotted.
 Returns an `OrderedDict{Symbol, Plot}` indexed by variable name.
 """
 function plot_irfs(shock::Symbol, vars::Vector{Symbol}, mb::MeansBands;
-                   bands::Vector{ASCIIString} = ["90.0%"],
-                   output_file::AbstractString = "")
+                   bands::Vector{String} = ["90.0%"],
+                   output_file::String = "")
     # Split `output_file` into base and extension
     if !isempty(output_file)
         strs = split(output_file, ".")
