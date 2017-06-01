@@ -2,9 +2,9 @@ using DSGE, Iterators, Plots
 
 function hair_plot(var::Symbol, df::DataFrame,
                    histories::Vector{MeansBands}, forecasts::Vector{MeansBands};
-                   output_file::AbstractString = "",
-                   hist_label::AbstractString = "Realized",
-                   forecast_label::AbstractString = "Forecasts",
+                   output_file::String = "",
+                   hist_label::String = "Realized",
+                   forecast_label::String = "Forecasts",
                    forecast_palette::Symbol = Symbol(),
                    forecast_color::Colorant = RGBA(1., 0., 0., 1.),
                    legend = :best)
@@ -17,9 +17,9 @@ end
 
 function hair_plot(var::Symbol, df::DataFrame,
                    initial_values::Vector{Float64}, forecasts::Vector{MeansBands};
-                   output_file::AbstractString = "",
-                   hist_label::AbstractString = "Realized",
-                   forecast_label::AbstractString = "Forecasts",
+                   output_file::String = "",
+                   hist_label::String = "Realized",
+                   forecast_label::String = "Forecasts",
                    forecast_palette::Symbol = Symbol(),
                    forecast_color::Colorant = RGBA(1., 0., 0., 1.),
                    legend = :best)

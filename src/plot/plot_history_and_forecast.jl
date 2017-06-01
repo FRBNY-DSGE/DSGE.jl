@@ -3,9 +3,9 @@ using DSGE, Plots
 function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::MeansBands;
                                    start_date::Nullable{Date} = Nullable{Date}(),
                                    end_date::Nullable{Date} = Nullable{Date}(),
-                                   output_file::AbstractString = "",
-                                   hist_label::AbstractString = "History",
-                                   forecast_label::AbstractString = "Forecast",
+                                   output_file::String = "",
+                                   hist_label::String = "History",
+                                   forecast_label::String = "Forecast",
                                    hist_color::Colorant = RGBA(0., 0., 0., 1.),
                                    forecast_mean_color::Colorant = RGBA(1., 0., 0., 1.),
                                    forecast_band_color::Colorant = RGBA(0., 0., 1., 0.1),
