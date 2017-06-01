@@ -1,5 +1,7 @@
 """
-    abbrev_symbol(s::Symbol, n::Int=4)
+```
+abbrev_symbol(s::Symbol, n::Int=4)
+```
 
 Abbreviate the symbol `s` to an `n`-character string.
 """
@@ -37,7 +39,17 @@ function quarter_range(t0::Date, t1::Date)
     return Dates.recur(d -> Dates.lastdayofquarter(d) == d, dr)
 end
 
-function detexify(s::UTF8String)
+"""
+```
+detexify(s::String)
+
+detexify(s::Symbol)
+```
+
+Remove Unicode characters from the string `s`, replacing them with ASCII
+equivalents. For example, `detexify(\"π\")` returns `\"pi\"`.
+"""
+function detexify(s::String)
     s = replace(s, "α", "alpha")
     s = replace(s, "β", "beta")
     s = replace(s, "γ", "gamma")
@@ -87,10 +99,6 @@ function detexify(s::UTF8String)
     s = replace(s, "Ω", "Omega")
 
     return s
-end
-
-function detexify(s::ASCIIString)
-    s
 end
 
 function detexify(s::Symbol)
