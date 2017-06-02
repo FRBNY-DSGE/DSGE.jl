@@ -1,4 +1,4 @@
-julia 0.5.1
+julia 0.5.0+
 Calculus
 DataFrames
 DataStructures
