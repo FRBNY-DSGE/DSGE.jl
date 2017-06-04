@@ -38,7 +38,7 @@ These tests were conducted on a single core on an Intel® Xeon® E5-2697 v2
 2.70GHz CPU running GNU/Linux. The exception is computing all the
 full-distribution results, which was done using 50 parallel workers.
 
-**Benchmark Times Relative to MATLAB 2009a (Smaller is Better)**
+**Benchmark Times Relative to MATLAB 2014a (Smaller is Better)**
 
 | Test                                                           | MATLAB (2014a) | Julia (0.4.5) |
 | -------------------------------------------------------------- | -------------- | ------------- |
