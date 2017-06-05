@@ -20,7 +20,6 @@ output_vars = add_requisite_output_vars([:histpseudo,
                                          :forecastpseudo, :forecastobs,
                                          :shockdecpseudo, :shockdecobs,
                                          :irfpseudo, :irfobs])
-@everywhere using DSGE
 
 # Read expected output
 exp_modal_means, exp_modal_bands, exp_full_means, exp_full_bands =
