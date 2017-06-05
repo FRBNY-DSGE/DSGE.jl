@@ -1,5 +1,5 @@
 using Base.Test
-using DSGE
+@everywhere using DSGE
 
 my_tests = [
             "core",
