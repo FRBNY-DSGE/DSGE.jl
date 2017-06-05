@@ -29,10 +29,15 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
 
     n_obs, _ = size(levels)
 
-    # Step 1: HP filter population forecasts, if they're being used
+    # Step 1: HP filter (including population forecasts, if they're being used)
     population_mnemonic = parse_population_mnemonic(m)[1]
     if !isnull(population_mnemonic)
-        population_forecast_levels = read_population_forecast(m; verbose = verbose)
+        population_forecast_levels = if use_population_forecast(m)
+            read_population_forecast(m; verbose = verbose)
+        else
+            DataFrame()
+        end
+
         population_data, _ = transform_population_data(levels, population_forecast_levels,
                                                        get(population_mnemonic);
                                                        verbose = verbose,

@@ -112,14 +112,15 @@ parse_transform(t::Symbol) = eval(Symbol(split(string(t),".")[end]))
 
 """
 ```
-load_population_growth(data_file, forecast_file, mnemonic; use_hpfilter = true,
-    verbose = :low)
+load_population_growth(data_file, forecast_file, mnemonic;
+    use_population_forecast = true, use_hpfilter = true, verbose = :low)
 ```
 
 Returns `DataFrame`s of growth rates for HP-filtered population data and forecast.
 """
 function load_population_growth(data_file::String, forecast_file::String,
                                 mnemonic::Symbol;
+                                use_population_forecast::Bool = true,
                                 use_hpfilter::Bool = true,
                                 verbose::Symbol = :low)
 
@@ -127,31 +128,36 @@ function load_population_growth(data_file::String, forecast_file::String,
 
     # Read in unfiltered series
     unfiltered_data     = read_population_data(data_file; verbose = data_verbose)
-    unfiltered_forecast = read_population_forecast(forecast_file, mnemonic; verbose = data_verbose)
+    unfiltered_forecast = if use_population_forecast
+        read_population_forecast(forecast_file, mnemonic; verbose = data_verbose)
+    else
+        DataFrame()
+    end
 
     # HP filter if necessary
     data, forecast = transform_population_data(unfiltered_data, unfiltered_forecast,
                                                mnemonic; use_hpfilter = use_hpfilter,
                                                verbose = :none)
     if use_hpfilter
-        data_mnemonic  = :dlfiltered_population_recorded
-        fcast_mnemonic = :dlfiltered_population_forecast
+        data_mnemonic = :dlfiltered_population_recorded
+        forecast_mnemonic = :dlfiltered_population_forecast
     else
-        data_mnemonic  = :dlpopulation_recorded
-        fcast_mnemonic = :dlpopulation_forecast
+        data_mnemonic = :dlpopulation_recorded
+        forecast_mnemonic = :dlpopulation_forecast
     end
 
-    growth_data =
-        DataFrame(date = @data(convert(Array{Date}, data[:date])),
-                  population_growth = @data(convert(Array{Float64}, data[data_mnemonic])))
-    growth_forecast = if isempty(forecast)
-        DataFrame()
+    # Prepare output variables
+    data  = data[[:date, data_mnemonic]]
+    rename!(data, data_mnemonic, :population_growth)
+
+    if use_population_forecast
+        forecast = forecast[[:date, forecast_mnemonic]]
+        rename!(forecast, forecast_mnemonic, :population_growth)
     else
-        DataFrame(date = @data(convert(Array{Date}, forecast[:date])),
-                  population_growth = @data(convert(Array{Float64}, forecast[fcast_mnemonic])))
+        forecast = DataFrame()
     end
 
-    return growth_data, growth_forecast
+    return data, forecast
 end
 
 """

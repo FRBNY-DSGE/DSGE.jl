@@ -7,8 +7,8 @@ means_bands_all(input_type, cond_type, output_vars, input_dir, output_dir,
     filestring_base; forecast_string = "", density_bands = [0.5, 0.6, 0.7, 0.8, 0.9],
     minimize = false, population_mnemonic = Nullable{Symbol}(),
     population_data_file = "", population_forecast_file = "",
-    use_hpfilter = true, y0_indexes = Dict{Symbol, Int}(),
-    data = Matrix{Float64}(), verbose = :low)
+    use_population_forecast = true, use_hpfilter = true,
+    y0_indexes = Dict{Symbol, Int}(), data = Matrix{Float64}(), verbose = :low)
 ```
 
 Computes means and bands for pseudo-observables, observables, and shocks, and writes
@@ -62,7 +62,12 @@ manually enter the directory and file names.
   is used, if it exists:
   `inpath(m, \"data\", \"population_forecast_(data_vintage(m)).csv\")`
 
-- `use_hpfilter::Bool`: whether to HP filter population data and forecast
+- `use_population_forecast::Bool`: whether to use population forecast. If
+  `false`, use last period of recorded population growth to population adjust
+  for forecast periods. Defaults to `true`.
+
+- `use_hpfilter::Bool`: whether to HP filter population data and
+  forecast. Defaults to `true`.
 
 - `y0_indexes::Dict{Symbol, Int}`: A `Dict` storing the mapping of products to
   the index of the first period of data needed to compute the product's
@@ -134,6 +139,7 @@ function means_bands_all(m::AbstractModel, input_type::Symbol,
                     population_mnemonic = population_mnemonic,
                     population_data_file = population_data_file,
                     population_forecast_file = population_forecast_file,
+                    use_population_forecast = use_population_forecast(m),
                     use_hpfilter = hpfilter_population(m),
                     y0_indexes = y0_indexes, data = data,
                     compute_shockdec_bands = get_setting(m, :compute_shockdec_bands),
@@ -149,6 +155,7 @@ function means_bands_all(input_type::Symbol, cond_type::Symbol, output_vars::Vec
                          population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                          population_data_file::String = "",
                          population_forecast_file::String = "",
+                         use_population_forecast::Bool = true,
                          use_hpfilter::Bool = true,
                          y0_indexes::Dict{Symbol,Int} = Dict{Symbol,Int}(),
                          data = Matrix{Float64}(),
@@ -171,6 +178,7 @@ function means_bands_all(input_type::Symbol, cond_type::Symbol, output_vars::Vec
         else
             load_population_growth(population_data_file, population_forecast_file,
                                    get(population_mnemonic);
+                                   use_population_forecast = use_population_forecast,
                                    use_hpfilter = use_hpfilter,
                                    verbose = verbose)
         end
