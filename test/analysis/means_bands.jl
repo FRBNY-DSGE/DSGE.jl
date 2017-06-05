@@ -42,6 +42,7 @@ for (var, mb_var) in zip(output_vars, mb_matrix_vars)
 end
 
 # Full-distribution
+@everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
 @time forecast_one(m, :full, :none, output_vars, verbose = :none)
 @time means_bands_all(m, :full, :none, output_vars; verbose = :none)
