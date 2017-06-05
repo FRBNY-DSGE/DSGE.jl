@@ -303,12 +303,6 @@ function means_bands(input_type::Symbol,
                           compute_shockdec_bands = compute_shockdec_bands),
                       variable_names)
 
-        # If some element of mb_vec is a RemoteException, rethrow the exception
-        ind_ex = findfirst(x -> isa(x, RemoteException), mb_vec)
-        if ind_ex > 0
-            throw(mb_vec[ind_ex].captured)
-        end
-
         # Re-assemble pmap outputs
         means = DataFrame(date = date_list)
         bands = Dict{Symbol,DataFrame}()
@@ -336,12 +330,6 @@ function means_bands(input_type::Symbol,
                               shock_name = Nullable(shock_name), density_bands = density_bands,
                               minimize = minimize, compute_shockdec_bands = compute_shockdec_bands),
                           variable_names)
-
-            # If some element of mb_vec is a RemoteException, rethrow the exception
-            ind_ex = findfirst(x -> isa(x, RemoteException), mb_vec)
-            if ind_ex > 0
-                throw(mb_vec[ind_ex].captured)
-            end
 
             # Re-assemble pmap outputs
             for (var_name, (var_means, var_bands)) in zip(variable_names, mb_vec)
