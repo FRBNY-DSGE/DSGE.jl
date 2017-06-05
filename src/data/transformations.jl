@@ -59,12 +59,8 @@ Converts data column `col` of DataFrame `df` to a per-capita value.
 - `population_mnemonic`: a mnemonic found in df for some population measure.
 """
 function percapita(m::AbstractModel, col::Symbol, df::DataFrame)
-    population_mnemonic = parse_population_mnemonic(m)[1]
-    if isnull(population_mnemonic)
-        error("No population mnemonic provided")
-    else
-        percapita(col, df, get(population_mnemonic))
-    end
+    population_mnemonic = :filtered_population
+    percapita(col, df, get(population_mnemonic))
 end
 function percapita(col::Symbol, df::DataFrame, population_mnemonic::Symbol)
     df[col] ./ df[population_mnemonic]
@@ -181,24 +177,6 @@ Calculates the quarter-to-quarter percentage change of a series.
 function oneqtrpctchange(y)
     100 * difflog(y)
 end
-
-
-"""
-```
-hpadjust(y, df)
-```
-
-Adjust series to compensate for differences between filtered and unfiltered population.
-## Arguments
-- `y`: A vector of data
-- `df`: DataFrame containing both a filtered and unfiltered population growth series
-"""
-function hpadjust(y, df; filtered_mnemonic=:filtered_population_growth,
-                         unfiltered_mnemonic=:unfiltered_population_growth)
-    y + 100 * (df[unfiltered_mnemonic] - df[filtered_mnemonic])
-end
-
-
 
 
 ## REVERSE TRANSFORMS

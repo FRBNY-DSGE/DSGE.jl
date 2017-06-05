@@ -12,7 +12,7 @@ function init_observable_mappings!(m::SmetsWouters)
 
         levels[:temp] = percapita(m, :GDP, levels)
         gdp = 1000 * nominal_to_real(:temp, levels)
-        hpadjust(oneqtrpctchange(gdp), levels)
+        oneqtrpctchange(gdp)
     end
 
     gdp_rev_transform = loggrowthtopct_annualized_percapita
@@ -108,7 +108,7 @@ function init_observable_mappings!(m::SmetsWouters)
 
         levels[:temp] = percapita(m, :PCE, levels)
         cons = 1000 * nominal_to_real(:temp, levels)
-        hpadjust(oneqtrpctchange(cons), levels)
+        oneqtrpctchange(cons)
     end
 
     consumption_rev_transform = loggrowthtopct_annualized_percapita
@@ -129,7 +129,7 @@ function init_observable_mappings!(m::SmetsWouters)
 
         levels[:temp] = percapita(m, :FPI, levels)
         inv = 10000 * nominal_to_real(:temp, levels)
-        hpadjust(oneqtrpctchange(inv), levels)
+        oneqtrpctchange(inv)
     end
 
     investment_rev_transform  = loggrowthtopct_annualized_percapita
