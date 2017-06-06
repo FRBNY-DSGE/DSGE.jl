@@ -63,6 +63,17 @@ function default_settings!(m::AbstractModel)
         "Calculate the hessian at the mode")
     settings[:n_hessian_test_params] = Setting(:n_hessian_test_params, typemax(Int),
         "Max number of free params for which to calculate Hessian")
+    settings[:optimization_method] = Setting(:optimization_method,:csminwel, "Method for finding the posterior mode")
+    settings[:optimization_iterations] = Setting(:optimization_iterations,100, "Number of iterations the optimizer should run for")
+    settings[:optimization_step_size] = Setting(:optimization_step_size,.01, "step size scaling factor for optimization")
+	settings[:simulated_annealing_temperature] = Setting(:simulated_annealing_temperature,Optim.log_temperature, "The temperature function for simulated annealing")
+   settings[:simulated_annealing_block_proportion] = Setting(:simulated_annealing_block_proportion, .3, "The fraction of parameters to vary for each proposed move in simulated annealing")
+   settings[:optimization_ftol] = Setting(:optimization_ftol, 1e-10, "The relative function difference threshold for optimization")
+    settings[:optimization_xtol] = Setting(:optimization_xtol, 1e-10, "The relative input vector difference threshold for optimization")
+    settings[:optimization_gtol] = Setting(:optimization_gtol, 1e-10, "The relative gradient difference threshold for optimization")
+    settings[:combined_optimizer_max_cycles] = Setting(:combined_optimizer_max_cycles,4, "The total number of cycles to use in the combined optimization routine")
+    settings[:optimization_attempts] = Setting(:optimization_attempts, 4, "The number of times to attempt optimization in estimate()")
+
 
     # Metropolis-Hastings
     settings[:n_mh_simulations] = Setting(:n_mh_simulations, 5000,
@@ -75,24 +86,22 @@ function default_settings!(m::AbstractModel)
         "Metropolis-Hastings thinning step")
 
     # Forecast
-    settings[:forecast_block_size] = Setting(:n_forecast_blocks, 5000,
+    settings[:forecast_block_size] = Setting(:forecast_block_size, 5000,
         "Number of draws in each forecast block (before thinning by forecast_jstep)")
     settings[:forecast_start_block] = Setting(:forecast_start_block, Nullable{Int64}(),
         "Block at which to resume forecasting (possibly null)")
     settings[:forecast_input_file_overrides] = Setting(:forecast_input_file_overrides,
-        Dict{Symbol, ASCIIString}())
+        Dict{Symbol, String}())
     settings[:forecast_jstep] = Setting(:forecast_jstep, 5,
         "Forecast thinning step (in addition to MH thinning step")
     settings[:forecast_pseudoobservables] = Setting(:forecast_pseudoobservables, false,
         "Whether to forecast pseudo-observables")
+    settings[:forecast_uncertainty_override] = Setting(:forecast_uncertainty_override, Nullable{Bool}(),
+        "If non-null, overrides default drawing states/shocks behavior in smoother and forecast")
     settings[:forecast_smoother] = Setting(:forecast_smoother, :durbin_koopman,
-        "Choice of smoother to use during forecasting. Can be :kalman, :durbin_koopman, or eventually :carter_kohn")
+        "Choice of smoother to use during forecasting. Can be :hamilton, :koopman, :carter_kohn, or :durbin_koopman")
     settings[:forecast_horizons] = Setting(:forecast_horizons, 60,
         "Number of periods to forecast ahead")
-    settings[:forecast_draw_z0] = Setting(:forecast_draw_z0, false,
-        "Whether to draw an initial state from N(s_{T|T}, P_{T|T}) to start the forecast")
-    settings[:forecast_kill_shocks] = Setting(:forecast_kill_shocks, false,
-        "Kill (set to 0) all shocks in forecast")
     settings[:forecast_tdist_shocks] = Setting(:forecast_tdist_shocks, false,
         "Draw Students-t distributed shocks in forecast")
     settings[:forecast_tdist_df_val] = Setting(:forecast_tdist_df_val, 15,
@@ -105,10 +114,14 @@ function default_settings!(m::AbstractModel)
         "Date of end of shock decomposition output period. If null, then shockdec ends at date_forecast_end")
     settings[:impulse_response_horizons] = Setting(:impulse_response_horizons, 40,
         "Number of periods for which to calculate an impulse response")
+<<<<<<< HEAD
 
     # Alternative policy
     settings[:alternative_policy] = Setting(:alternative_policy, identity)
 
+=======
+    settings[:compute_shockdec_bands] = Setting(:compute_shockdec_bands, false, "Whether or not to compute bands for shock decomposition. Setting to false saves signficant storage space.")
+>>>>>>> master
     return settings
 end
 
@@ -122,9 +135,9 @@ The following Settings are constructed, initialized and added to
 `m.settings`, but these values are used to test DSGE.jl.
 
 ### I/O Locations and identifiers
-- `saveroot::Setting{ASCIIString}`: A temporary directory in /tmp/
-- `dataroot::Setting{ASCIIString}`: dsgeroot/test/reference/
-- `data_vintage::Setting{ASCIIString}`: \"_REF\"
+- `saveroot::Setting{String}`: A temporary directory in /tmp/
+- `dataroot::Setting{String}`: dsgeroot/test/reference/
+- `data_vintage::Setting{String}`: \"_REF\"
 
 ### Metropolis-Hastings
 - `n_mh_simulations::Setting{Int}`: 100

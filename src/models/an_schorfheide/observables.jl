@@ -15,7 +15,7 @@ function init_observable_mappings!(m::AnSchorfheide)
         hpadjust(oneqtrpctchange(gdp), levels)
     end
 
-    gdp_rev_transform = logtopct_annualized_percapita
+    gdp_rev_transform = loggrowthtopct_annualized_percapita
 
     observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPCTPI__FRED],
                                        gdp_fwd_transform, gdp_rev_transform,
@@ -32,7 +32,7 @@ function init_observable_mappings!(m::AnSchorfheide)
         quartertoannual(oneqtrpctchange(levels[:CPIAUCSL]))
     end
 
-    cpi_rev_transform = logtopct_annualized
+    cpi_rev_transform = loggrowthtopct_annualized
 
     observables[:obs_cpi] = Observable(:obs_cpi, [:CPIAUCSL__FRED],
                                         cpi_fwd_transform, cpi_rev_transform,

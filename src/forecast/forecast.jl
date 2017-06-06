@@ -1,7 +1,5 @@
 """
 ```
-forecast(m, system, kal; enforce_zlb = false, shocks = Matrix{S}())
-
 forecast(m, system, z0; enforce_zlb = false, shocks = Matrix{S}())
 
 forecast(system, z0, shocks; enforce_zlb = false)
@@ -26,14 +24,18 @@ where `S<:AbstractFloat`.
 - `enforce_zlb::Bool`: whether to enforce the zero lower bound. Defaults to
   `false`.
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
-  under which to forecast. If not provided, shocks are drawn according to:
+  under which to forecast.
+- `draw_shocks::Bool`: if `isempty(shocks)`, indicates whether to draw shocks
+  according to:
 
-  1. If `forecast_killshocks(m)`, `shocks` is set to a `nshocks` x `horizon`
-     matrix of zeros
-  2. Otherwise, if `forecast_tdist_shocks(m)`, draw `horizons` many shocks from a
+  1. If `forecast_tdist_shocks(m)`, draw `horizons` many shocks from a
      `Distributions.TDist(forecast_tdist_df_val(m))`
-  3. Otherwise, draw `horizons` many shocks from a
+  2. Otherwise, draw `horizons` many shocks from a
      `DegenerateMvNormal(zeros(nshocks), sqrt(system[:QQ]))`
+
+  or to set `shocks` to a `nshocks` x `horizon` matrix of zeros. Defaults to
+  `false`. If `shocks` is provided as a keyword argument, this flag has no
+  effect.
 
 ### Outputs
 
@@ -45,23 +47,8 @@ where `S<:AbstractFloat`.
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
 function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
-    kal::Kalman{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
-    shocks::Matrix{S} = Matrix{S}())
-
-    draw_z0(kal::Kalman) = rand(DegenerateMvNormal(kal[:zend], kal[:Pend]))
-    z0 = if forecast_draw_z0(m)
-        draw_z0(kal)
-    else
-        kal[:zend]
-    end
-
-    forecast(m, system, z0; cond_type = cond_type, enforce_zlb = enforce_zlb,
-                     shocks = shocks)
-end
-
-function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
-    shocks::Matrix{S} = Matrix{S}())
+    shocks::Matrix{S} = Matrix{S}(), draw_shocks::Bool = false)
 
     # Numbers of things
     nshocks = n_shocks_exogenous(m)
@@ -69,9 +56,7 @@ function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
 
     # Populate shocks matrix
     if isempty(shocks)
-        if forecast_kill_shocks(m)
-            shocks = zeros(S, nshocks, horizon)
-        else
+        if draw_shocks
             μ = zeros(S, nshocks)
             σ = sqrt(system[:QQ])
             dist = if forecast_tdist_shocks(m)
@@ -88,10 +73,12 @@ function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
             # Forecast without anticipated shocks
             if n_anticipated_shocks(m) > 0
                 ind_ant1 = m.exogenous_shocks[:rm_shl1]
-                ind_antn = m.exogenous_shocks[symbol("rm_shl$(n_anticipated_shocks(m))")]
+                ind_antn = m.exogenous_shocks[Symbol("rm_shl$(n_anticipated_shocks(m))")]
                 ant_shock_inds = ind_ant1:ind_antn
                 shocks[ant_shock_inds, :] = 0
             end
+        else
+            shocks = zeros(S, nshocks, horizon)
         end
     end
 
@@ -136,7 +123,7 @@ function forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
                 # Solve for interest rate shock causing interest rate forecast to be exactly ZLB
                 ϵ_t[ind_r_sh] = 0.
                 z_t = C + T*z_t1 + R*ϵ_t
-                ϵ_t[ind_r_sh] = getindex((zlb_value - D[ind_r] - Z[ind_r, :]*z_t) / (Z[ind_r, :]*R[:, ind_r_sh]), 1)
+                ϵ_t[ind_r_sh] = getindex((zlb_value - D[ind_r] - Z[ind_r, :]'*z_t) / (Z[ind_r, :]' * R[:, ind_r_sh]), 1)
 
                 # Forecast again with new shocks
                 z_t = C + T*z_t1 + R*ϵ_t

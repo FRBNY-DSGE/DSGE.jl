@@ -1,6 +1,5 @@
 using DSGE
 using HDF5, Base.Test, Distributions, JLD
-include("../../util.jl")
 
 path = dirname(@__FILE__)
 
@@ -55,7 +54,7 @@ obs = model.observables
 # Matrices are of expected dimensions
 @test size(Γ0) == (60, 60)
 @test size(Γ1) == (60, 60)
-@test size(C) == (60, 1)
+@test size(C) == (60,)
 @test size(Ψ) == (60, 16)
 @test size(Π) == (60, 13)
 
@@ -151,7 +150,7 @@ obs = model.observables
 # Matrices are of expected dimensions
 @test size(Γ0) == (66, 66)
 @test size(Γ1) == (66, 66)
-@test size(C) == (66, 1)
+@test size(C) == (66,)
 @test size(Ψ) == (66, 22)
 @test size(Π) == (66, 13)
 

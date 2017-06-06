@@ -48,19 +48,19 @@ These are adapted from JuliaLang.
 
 ## DSGE Julia Style Guide
 
-### Intro 
+### Intro
 
-This document lists Julia coding recommendations consistent with best
-practices in the software development community. The recommendations are
-based on guidelines for other languages collected from a number of
-sources and on personal experience. These guidelines are written with
-the FRBNY DSGE code in mind. All pull requests submitted should follow these
-general style guidelines.
+This document lists Julia coding recommendations consistent with best practices
+in the software development community. The recommendations are based on
+guidelines for other languages collected from a number of sources and on
+personal experience. These guidelines are written with the New York Fed DSGE
+code in mind. All pull requests submitted should follow these general style
+guidelines.
 
 ### Naming conventions
 
 Emphasize readability! Our goal is for the code to mimic the mathematical
-notation used in FRBNY DSGE papers as closely as possible.
+notation used in New York Fed DSGE papers as closely as possible.
 
 - The names of variables should document their meaning or
 use. Variables with a large scope should have especially meaningful
@@ -93,8 +93,8 @@ apparent what `!isNotFound` means.  Use `isFound`. Avoid `isNotFound`.
 
 - Naming mathematical objects
 
-Variables with mathematical significance should use 
-unicode characters and imitate LaTeX syntax.  For example, ρ should be used to  
+Variables with mathematical significance should use
+unicode characters and imitate LaTeX syntax.  For example, ρ should be used to
 name the autocorrelation coefficient in an AR(1) process, and σ should be used
 to name standard deviation. Parameters in the text should keep the same
 symbol in the code (e.g. α in the code is the same α as in [this

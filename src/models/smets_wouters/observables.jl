@@ -15,7 +15,7 @@ function init_observable_mappings!(m::SmetsWouters)
         hpadjust(oneqtrpctchange(gdp), levels)
     end
 
-    gdp_rev_transform = DSGE.logtopct_annualized_percapita
+    gdp_rev_transform = loggrowthtopct_annualized_percapita
 
     observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPCTPI__FRED],
                                        gdp_fwd_transform, gdp_rev_transform,
@@ -34,7 +34,7 @@ function init_observable_mappings!(m::SmetsWouters)
         100*(log(3 * aggregateweeklyhours / 100) - log(levels[:filtered_population]))
     end
 
-    hrs_rev_transform = loglevelto4qpct_annualized_percapita
+    hrs_rev_transform = logleveltopct_annualized_percapita
 
     observables[:obs_hours] = Observable(:obs_hours, [:AWHNONAG__FRED, :CE16OV__FRED],
                                          hrs_fwd_transform, hrs_rev_transform,
@@ -51,7 +51,7 @@ function init_observable_mappings!(m::SmetsWouters)
         oneqtrpctchange(nominal_to_real(:COMPNFB, levels))
     end
 
-    wages_rev_transform = logtopct_annualized
+    wages_rev_transform = loggrowthtopct_annualized
 
     observables[:obs_wages] = Observable(:obs_wages, [:COMPNFB__FRED, :GDPCTPI__FRED],
                                          wages_fwd_transform, wages_rev_transform,
@@ -71,7 +71,7 @@ function init_observable_mappings!(m::SmetsWouters)
     end
 
 
-    gdpdeflator_rev_transform = logtopct_annualized
+    gdpdeflator_rev_transform = loggrowthtopct_annualized
 
     observables[:obs_gdpdeflator] = Observable(:obs_gdpdeflator, [:GDPCTPI__FRED],
                                                gdpdeflator_fwd_transform, gdpdeflator_rev_transform,
@@ -111,7 +111,7 @@ function init_observable_mappings!(m::SmetsWouters)
         hpadjust(oneqtrpctchange(cons), levels)
     end
 
-    consumption_rev_transform = logtopct_annualized_percapita
+    consumption_rev_transform = loggrowthtopct_annualized_percapita
 
     observables[:obs_consumption] = Observable(:obs_consumption, [:PCE__FRED, population_mnemonic],
                                                consumption_fwd_transform, consumption_rev_transform,
@@ -132,7 +132,7 @@ function init_observable_mappings!(m::SmetsWouters)
         hpadjust(oneqtrpctchange(inv), levels)
     end
 
-    investment_rev_transform  = logtopct_annualized_percapita
+    investment_rev_transform  = loggrowthtopct_annualized_percapita
 
     observables[:obs_investment] = Observable(:obs_investment, [:FPI__FRED, population_mnemonic],
                                               investment_fwd_transform, investment_rev_transform,
@@ -148,12 +148,12 @@ function init_observable_mappings!(m::SmetsWouters)
         # TO:   Same
 
         ant_fwd_transform = function (levels)
-            levels[:, symbol("ant$i")]
+            levels[:, Symbol("ant$i")]
         end
 
         ant_rev_transform = quartertoannual
 
-        observables[symbol("obs_nominalrate$i")] = Observable(symbol("obs_ant$i"), [symbol("ant$(i)__OIS")],
+        observables[Symbol("obs_nominalrate$i")] = Observable(Symbol("obs_ant$i"), [Symbol("ant$(i)__OIS")],
                                                       ant_fwd_transform, ant_rev_transform,
                                                       "Anticipated Shock $i",
                                                       "$i-period ahead anticipated monetary policy shock")

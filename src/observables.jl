@@ -4,13 +4,18 @@ type Observable
 ```
 
 ### Fields
+
 - `key::Symbol`
-- `input_series::Vector{Symbol}`: (vector of Mnemonics, e.g. GDPC1@FRED). This vector is parsed to determine source (eg consumption per capita gets population and consumption).
-- `fwd_transform::Function`: Extracts appropriate `input_series` from a DataFrame of levels, and transforms data to model inputs (for example, computes per capita growth rates from levels).
-- `rev_transform::Function`: Transforms a series from model units into observable units. May take kwargs.
-- `name::UTF8String`: eg. "Real GDP growth"
-- `longname::UTF8String`: eg. "Real GDP growth per capita"
-- `units::Symbol`: For untransformed variables, units would be "thousands" or "percent" or "levels". Transformed, could be "1q" or "4q" or something. This needs some thought.
+- `input_series::Vector{Symbol}`: vector of mnemonics, each in the form
+  `:MNEMONIC__SOURCE` (e.g. `:GDP__FRED`). This vector is parsed to determine
+  source (e.g. per-capita consumption gets population and consumption).
+- `fwd_transform::Function`: Extracts appropriate `input_series` from a
+  DataFrame of levels, and transforms data to model units (for example, computes
+  per-capita growth rates from levels).
+- `rev_transform::Function`: Transforms a series from model units into
+  observable units. May take kwargs.
+- `name::String`: e.g. \"Real GDP growth\"
+- `longname::String`: e.g. \"Real GDP growth per capita\"
 """
 type Observable
     key
@@ -25,9 +30,8 @@ type Observable
     rev_transform::Function      # corresponds to getyp, or getyp4q. May take kwargs (untransformed,
                                  # 1q transforms, 4q transforms, levels/growth rates, etc)
 
-    name::UTF8String
-    longname::UTF8String
-    # units::Symbol
+    name::String
+    longname::String
 end
 
 
@@ -37,15 +41,17 @@ type PseudoObservable
 ```
 
 ### Fields
-`key::Symbol`
-`name::UTF8String`
-`longname::UTF8String`
-`rev_transform::Function`
+
+- `key::Symbol`
+- `name::String`: e.g. \"Flexible Output Growth\"
+- `longname::String`: e.g. \"Output that would prevail in a flexible-price economy\"
+- `rev_transform::Function`: Transforms a series from model units into
+  observable units. May take kwargs.
 """
 type PseudoObservable
     key::Symbol
-    name::UTF8String
-    longname::UTF8String
+    name::String
+    longname::String
     rev_transform::Function
 end
 

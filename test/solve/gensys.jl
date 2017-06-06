@@ -2,7 +2,6 @@ using Base: Test
 using HDF5
 using DSGE
 
-include("../util.jl")
 path = dirname(@__FILE__)
 
 m = AnSchorfheide()

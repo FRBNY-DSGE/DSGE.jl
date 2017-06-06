@@ -8,7 +8,7 @@
 # Ψ  (n_states x n_shocks_exogenous) holds coefficients of iid shocks.
 # Π  (n_states x n_states_expectational) holds coefficients of expectational states.
 
-function eqcond(m::SmetsWouters) 
+function eqcond(m::SmetsWouters)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
     ex   = m.expected_shocks
@@ -16,7 +16,7 @@ function eqcond(m::SmetsWouters)
 
     Γ0 = zeros(n_states(m), n_states(m))
     Γ1 = zeros(n_states(m), n_states(m))
-    C  = zeros(n_states(m), 1)
+    C  = zeros(n_states(m))
     Ψ  = zeros(n_states(m), n_shocks_exogenous(m))
     Π  = zeros(n_states(m), n_shocks_expectational(m))
 
@@ -83,7 +83,7 @@ function eqcond(m::SmetsWouters)
     Γ0[eq[:eq_capval],endo[:b_t]]  = -(m[:σ_c]*(1+m[:h]*exp(-m[:zstar])))/(1-m[:h]*exp(-m[:zstar]))
     Γ0[eq[:eq_capval],endo[:Eπ_t]] = -1.
 
-    # Flexible prices and wages 
+    # Flexible prices and wages
     Γ0[eq[:eq_capval_f], endo[:Erk_f_t]] = -m[:rkstar]/(1 + m[:rkstar] - m[:δ])
     Γ0[eq[:eq_capval_f], endo[:Eqk_f_t]] = -(1 - m[:δ])/(1 + m[:rkstar] - m[:δ])
     Γ0[eq[:eq_capval_f], endo[:qk_f_t]] = 1.
@@ -91,7 +91,7 @@ function eqcond(m::SmetsWouters)
     Γ0[eq[:eq_capval_f], endo[:b_t]]    = -(m[:σ_c]*(1 + m[:h]*exp(-m[:zstar])))/(1 - m[:h]*exp(-m[:zstar]))
 
 
-       
+
     ### 4. Aggregate Production Function
 
     # Sticky prices and wages
@@ -99,7 +99,7 @@ function eqcond(m::SmetsWouters)
     Γ0[eq[:eq_output], endo[:k_t]] = -m[:Φ]*m[:α]
     Γ0[eq[:eq_output], endo[:L_t]] = -m[:Φ]*(1 - m[:α])
     Γ0[eq[:eq_output], endo[:ztil_t]] = -( m[:Φ]-1 ) / (1-m[:α]);
-    
+
     # Flexible prices and wages
     Γ0[eq[:eq_output_f], endo[:y_f_t]] =  1.
     Γ0[eq[:eq_output_f], endo[:k_f_t]] = -m[:Φ]*m[:α]
@@ -228,9 +228,9 @@ function eqcond(m::SmetsWouters)
     Γ0[eq[:eq_wage], endo[:ztil_t]] = -( 1/(1-m[:α]) )*(m[:ρ_z]-1)*m[:β]*exp((1-m[:σ_c])*m[:zstar])*1/(1+m[:β]*exp((1-m[:σ_c])*m[:zstar]))
     Γ0[eq[:eq_wage], endo[:Eπ_t]]  = -m[:β]*exp((1 - m[:σ_c])*m[:zstar])/(1 + m[:β]*exp((1 - m[:σ_c])*m[:zstar]))
     Γ0[eq[:eq_wage], endo[:λ_w_t]] = -1.
-       
+
     # Flexible prices and wages not necessary
-       
+
 
 
     ### 13. Monetary Policy Rule
@@ -324,7 +324,7 @@ function eqcond(m::SmetsWouters)
 
 
     # Anticipated policy shocks
-    if n_anticipated_shocks(m) > 0 
+    if n_anticipated_shocks(m) > 0
 
         # This section adds the anticipated shocks. There is one state for all the
         # anticipated shocks that will hit in a given period (i.e. rm_tl2 holds those that
@@ -338,9 +338,9 @@ function eqcond(m::SmetsWouters)
 
         if n_anticipated_shocks(m) > 1
             for i = 2:n_anticipated_shocks(m)
-                Γ1[eq[symbol("eq_rml$(i-1)")], endo[symbol("rm_tl$i")]] = 1.
-                Γ0[eq[symbol("eq_rml$i")], endo[symbol("rm_tl$i")]] = 1.
-                Ψ[eq[symbol("eq_rml$i")], exo[symbol("rm_shl$i")]] = 1.
+                Γ1[eq[Symbol("eq_rml$(i-1)")], endo[Symbol("rm_tl$i")]] = 1.
+                Γ0[eq[Symbol("eq_rml$i")], endo[Symbol("rm_tl$i")]] = 1.
+                Ψ[eq[Symbol("eq_rml$i")], exo[Symbol("rm_shl$i")]] = 1.
             end
         end
     end

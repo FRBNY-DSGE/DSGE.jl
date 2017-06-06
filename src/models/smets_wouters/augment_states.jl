@@ -8,7 +8,7 @@ function augment_states{T<:AbstractFloat}(m::SmetsWouters{T}, TTT::Matrix{T}, RR
     @assert (n_endo, n_endo) == size(TTT)
     @assert (n_endo, n_exo) == size(RRR)
     @assert n_endo == length(CCC)
-    
+
     # Initialize augmented matrices
     n_addl_states = length(m.endogenous_states_augmented)
     n_addl_eqs = n_addl_states
@@ -39,8 +39,8 @@ function augment_states{T<:AbstractFloat}(m::SmetsWouters{T}, TTT::Matrix{T}, RR
     TR = TTT*RRR
     CTC = CCC+TTT*CCC
 
-    
-    TTT_aug[endo_addl[:Et_π_t],:] = [T2[endo[:π_t],:] zeros(n_addl_states)'];
+
+    TTT_aug[endo_addl[:Et_π_t],:] = [T2[endo[:π_t],:]; zeros(n_addl_states)]
 
     RRR_aug[endo_addl[:Et_π_t],:] = TR[endo[:π_t],:]
     CCC_aug[endo_addl[:Et_π_t],:] = CTC[endo[:π_t],:]

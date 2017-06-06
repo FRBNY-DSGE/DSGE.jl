@@ -124,8 +124,8 @@ end
 add_requisite_output_vars(output_vars::Vector{Symbol})
 ```
 
-Based on the given output_vars, this function determines which
-additional output_vars must be computed and stored for future
+Based on the given `output_vars`, this function determines which
+additional `output_vars` must be computed and stored for future
 plotting.
 
 Specifically, when plotting a shock decomposition, the trend and
@@ -145,10 +145,10 @@ added to `output_vars` when calling
 """
 function add_requisite_output_vars(output_vars::Vector{Symbol})
 
-    # Add :forecast<class>bdd if :forecast<class> is in output_vars
-    forecast_outputs = Base.filter(output -> get_product(output) == :forecast, output_vars)
+    # Add :bddforecast<class> if :forecast<class> is in output_vars
+    forecast_outputs = Base.filter(output -> get_product(output) in [:forecast, :forecast4q], output_vars)
     if !isempty(forecast_outputs)
-        bdd_vars = [symbol("bdd$(var)") for var in forecast_outputs]
+        bdd_vars = [Symbol("bdd$(var)") for var in forecast_outputs]
         output_vars = unique(vcat(output_vars, bdd_vars))
     end
 
@@ -156,8 +156,8 @@ function add_requisite_output_vars(output_vars::Vector{Symbol})
     shockdec_outputs = Base.filter(output -> get_product(output) == :shockdec, output_vars)
     if !isempty(shockdec_outputs)
         classes = [get_class(output) for output in shockdec_outputs]
-        dettrend_vars = [symbol("dettrend$c") for c in classes]
-        trend_vars = [symbol("trend$c") for c in classes]
+        dettrend_vars = [Symbol("dettrend$c") for c in classes]
+        trend_vars = [Symbol("trend$c") for c in classes]
         output_vars = unique(vcat(output_vars, dettrend_vars, trend_vars))
     end
 
@@ -176,7 +176,11 @@ conditional data, we smooth beyond the last historical period.
 function transplant_history{T<:AbstractFloat}(history::Matrix{T},
     last_hist_period::Int)
 
-    return history[:, 1:last_hist_period]
+    if isempty(history)
+        return history
+    else
+        return history[:, 1:last_hist_period]
+    end
 end
 
 """
@@ -226,6 +230,23 @@ end
 
 """
 ```
+standardize_shocks(shocks, QQ)
+```
+
+Normalize shocks by their standard deviations. Shocks with zero standard
+deviation will be set to zero.
+"""
+function standardize_shocks{T<:AbstractFloat}(shocks::Matrix{T}, QQ::Matrix{T})
+    stdshocks = shocks ./ sqrt(diag(QQ))
+
+    zeroed_shocks = find(diag(QQ) .== 0)
+    stdshocks[zeroed_shocks, :] = 0
+
+    return stdshocks
+end
+
+"""
+```
 assemble_block_outputs(dicts)
 ```
 
@@ -252,14 +273,15 @@ get_forecast_output_dims(m, input_type, output_var)
 Returns the dimension of the forecast output specified by `input_type` and
 `output_var`.
 """
-function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_var::Symbol)
+function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_var::Symbol;
+                                  subset_inds::Range{Int64} = 1:0)
     prod  = get_product(output_var)
     class = get_class(output_var)
 
     ndraws = if input_type in [:mode, :mean, :init]
         1
     elseif input_type in [:full, :subset]
-        _, block_inds_thin = forecast_block_inds(m, input_type)
+        _, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
         sum(map(length, block_inds_thin))
     end
 
@@ -269,7 +291,7 @@ function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_v
         n_observables(m)
     elseif class == :pseudo
         n_pseudoobservables(m)
-    elseif class == :shock
+    elseif class in [:shock, :stdshock]
         n_shocks_exogenous(m)
     end
 

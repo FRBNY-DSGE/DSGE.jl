@@ -1,10 +1,12 @@
-julia 0.4
+julia 0.5.1
 Calculus
+DataFrames
 DataStructures
 Distributions
 FredData
 HDF5
 JLD
-Optim 0.5
+Optim 0.7
 QuantEcon
 Roots
+StateSpaceRoutines

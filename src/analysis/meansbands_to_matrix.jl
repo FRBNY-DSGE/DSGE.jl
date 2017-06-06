@@ -13,14 +13,14 @@ Reformat `MeansBands` object into matrices, and save to individual files.
 
 ### Keyword Arguments
 
-- `forecast_string::AbstractString`: identifies the forecast (if
+- `forecast_string::String`: identifies the forecast (if
   desired). Required if `input_type == :subset`
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
 """
 function meansbands_matrix_all(m::AbstractModel, input_type::Symbol,
                                cond_type::Symbol, output_vars::Vector{Symbol};
-                               forecast_string::AbstractString = "", verbose::Symbol = :low)
+                               forecast_string::String = "", verbose::Symbol = :low)
 
     ## Step 0: Determine full set of output_vars necessary for plotting desired results
     #          Specifically, if output_vars contains shockdecs but not
@@ -57,12 +57,12 @@ function meansbands_matrix_all(m::AbstractModel, mbs::Dict{Symbol,MeansBands};
     for output_var in keys(mbs)
 
         mb       = mbs[output_var]
-        prod     = product(mb)                    # history? forecast? shockdec?
-        cl       = class(mb)                      # pseudo? obs? state?
-        condtype = cond_type(mb)
+        prod     = get_product(mb)                    # history? forecast? shockdec?
+        cl       = get_class(mb)                      # pseudo? obs? state?
+        condtype = get_cond_type(mb)
 
         ## Get name of file to write
-        outfile = get_forecast_filename(m, para(mb), cond_type(mb), output_var;
+        outfile = get_forecast_filename(m, get_para(mb), get_cond_type(mb), output_var;
                                         pathfcn = workpath,
                                         forecast_string = mb.metadata[:forecast_string],
                                         fileformat = :h5)
@@ -101,9 +101,9 @@ function meansbands_matrix(mb::MeansBands)
     T          = eltype(mb.means[tmp])          # type of elements of mb structure
 
     nperiods   = n_periods_means(mb)            # get number of periods
-    prod       = product(mb)                    # history? forecast? shockdec?
+    prod       = get_product(mb)                    # history? forecast? shockdec?
     inds       = mb.metadata[:indices]          # mapping from names of vars to indices
-    bands_list = get_density_bands(mb)          # which bands are stored
+    bands_list = which_density_bands(mb)        # which bands are stored
     nbands     = length(bands_list)             # how many bands are stored
 
     # extract  matrices from MeansBands structure
@@ -119,7 +119,7 @@ function meansbands_matrix(mb::MeansBands)
             means[ind,:] = convert(Array{T},mb.means[series])
 
             for (i,band) in enumerate(bands_list)  # these are ordered properly already
-                bands[i,ind,:] = convert(Array{T},mb.bands[series][symbol(band)])
+                bands[i,ind,:] = convert(Array{T},mb.bands[series][Symbol(band)])
             end
         end
 
@@ -142,7 +142,7 @@ function meansbands_matrix(mb::MeansBands)
 
             for (band_ind, band) in enumerate(bands_list)
                 bands[band_ind, ind, :, shock_ind] =
-                    convert(Array{T}, mb.bands[series][symbol(band)])
+                    convert(Array{T}, mb.bands[series][Symbol(band)])
             end
         end
     end
