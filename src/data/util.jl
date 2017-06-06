@@ -41,12 +41,12 @@ function stringstodates(stringarray)
 end
 
 """
-`quartertodate(string::AbstractString)`
+`quartertodate(string::String)`
 
 Convert `string` in the form "YYqX", "YYYYqX", or "YYYY-qX" to a Date of the end of
 the indicated quarter. "X" is in `{1,2,3,4}` and the case of "q" is ignored.
 """
-function quartertodate(string::AbstractString)
+function quartertodate(string::String)
     if ismatch(r"^[0-9]{2}[qQ][1-4]$", string)
         year = "20"*string[1:2]
         quarter = string[end]

@@ -117,7 +117,7 @@ function load_fred_data(m::AbstractModel;
         for i = 1:length(fredseries)
             if isdefined(fredseries, i)
                 series = fredseries[i]
-                series_id = symbol(series.id)
+                series_id = Symbol(series.id)
                 rename!(series.df, :value, series_id)
                 map!(x->lastdayofquarter(x), series.df[:date], series.df[:date])
                 data = join(data, series.df[:,[:date, series_id]], on=:date, kind=:outer)

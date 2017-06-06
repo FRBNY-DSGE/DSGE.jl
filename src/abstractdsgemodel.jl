@@ -1,8 +1,7 @@
 abstract AbstractModel{T}
 
-function Base.show{T<:AbstractModel}(io::IO, m::T)
+function Base.show(io::IO, m::AbstractModel)
     @printf io "Dynamic Stochastic General Equilibrium Model\n"
-    @printf io "%s\n" T
     @printf io "no. states:             %i\n" n_states(m)
     @printf io "no. anticipated shocks: %i\n" n_anticipated_shocks(m)
     @printf io "data vintage:           %s\n" data_vintage(m)
@@ -27,7 +26,7 @@ end
     end
 end
 
-@inline function Base.setindex!{T<:Number}(m::AbstractModel, value::T, i::Integer)
+@inline function Base.setindex!(m::AbstractModel, value::Number, i::Integer)
     if i <= (j = length(m.parameters))
         param = m.parameters[i]
         param.value = value
@@ -44,13 +43,13 @@ end
 
 """
 ```
-setindex!{T<:AbstractParameter}(m::AbstractModel, param::T, i::Integer)
+setindex!(m::AbstractModel, param::AbstractParameter, i::Integer)
 ```
 
 If `i`<length(m.parameters), overwrites m.parameters[i] with
 param. Otherwise, overwrites m.steady_state[i-length(m.parameters).
 """
-@inline function Base.setindex!{T<:AbstractParameter}(m::AbstractModel, param::T, i::Integer)
+@inline function Base.setindex!(m::AbstractModel, param::AbstractParameter, i::Integer)
     if i <= (j = length(m.parameters))
         m.parameters[i] = param
     else
@@ -201,7 +200,7 @@ function get_key(m::AbstractModel, class::Symbol, index::Int)
     elseif class == :pseudo
         _, pseudo_mapping = pseudo_measurement(m)
         pseudo_mapping.inds
-    elseif class == :shock
+    elseif class in [:shock, :stdshock]
         m.exogenous_shocks
     else
         throw(ArgumentError("Invalid class :$class. Must be :state, :obs, :pseudo, or :shock"))
@@ -223,7 +222,7 @@ function parse_population_mnemonic(m::AbstractModel)
     if isnull(mnemonic)
         return [Nullable{Symbol}(), Nullable{Symbol}()]
     else
-        return map(s -> Nullable(symbol(s)), split(string(get(mnemonic)), DSGE_DATASERIES_DELIM))
+        return map(s -> Nullable(Symbol(s)), split(string(get(mnemonic)), DSGE_DATASERIES_DELIM))
     end
 end
 
@@ -232,7 +231,7 @@ end
 function inds_states_no_ant(m::AbstractModel)
     if n_anticipated_shocks(m) > 0
         ind_ant1 = m.endogenous_states[:rm_tl1]
-        ind_antn = m.endogenous_states[symbol("rm_tl$(n_anticipated_shocks(m))")]
+        ind_antn = m.endogenous_states[Symbol("rm_tl$(n_anticipated_shocks(m))")]
         return [1:(ind_ant1-1); (ind_antn+1):n_states_augmented(m)]
     else
         return collect(1:n_states_augmented(m))
@@ -242,7 +241,7 @@ end
 function inds_shocks_no_ant(m::AbstractModel)
     if n_anticipated_shocks(m) > 0
         ind_ant1 = m.exogenous_shocks[:rm_shl1]
-        ind_antn = m.exogenous_shocks[symbol("rm_shl$(n_anticipated_shocks(m))")]
+        ind_antn = m.exogenous_shocks[Symbol("rm_shl$(n_anticipated_shocks(m))")]
         return [1:(ind_ant1-1); (ind_antn+1):n_shocks_exogenous(m)]
     else
         return collect(1:n_shocks_exogenous(m))
@@ -252,7 +251,7 @@ end
 function inds_obs_no_ant(m::AbstractModel)
     if n_anticipated_shocks(m) > 0
         ind_ant1 = m.observables[:obs_nominalrate1]
-        ind_antn = m.observables[symbol("obs_nominalrate$(n_anticipated_shocks(m))")]
+        ind_antn = m.observables[Symbol("obs_nominalrate$(n_anticipated_shocks(m))")]
         return [1:(ind_ant1-1); (ind_antn+1):n_observables(m)]
     else
         return collect(1:n_observables(m))
@@ -294,9 +293,8 @@ forecast_block_size(m::AbstractModel)   = get_setting(m, :forecast_block_size)
 forecast_start_block(m::AbstractModel)  = get_setting(m, :forecast_start_block)
 forecast_input_file_overrides(m::AbstractModel) = get_setting(m, :forecast_input_file_overrides)
 forecast_pseudoobservables(m::AbstractModel) = get_setting(m, :forecast_pseudoobservables)
+forecast_uncertainty_override(m::AbstractModel) = get_setting(m, :forecast_uncertainty_override)
 forecast_smoother(m::AbstractModel)     = get_setting(m, :forecast_smoother)
-forecast_draw_z0(m::AbstractModel)      = get_setting(m, :forecast_draw_z0)
-forecast_kill_shocks(m::AbstractModel)  = get_setting(m, :forecast_kill_shocks)
 forecast_tdist_df_val(m::AbstractModel) = get_setting(m, :forecast_tdist_df_val)
 forecast_tdist_shocks(m::AbstractModel) = get_setting(m, :forecast_tdist_shocks)
 forecast_zlb_value(m::AbstractModel)    = get_setting(m, :forecast_zlb_value)
@@ -340,11 +338,11 @@ end
 
 """
 ```
-load_parameters_from_file(m::AbstractModel,path::AbstractString)
+load_parameters_from_file(m::AbstractModel,path::String)
 ```
 Returns a vector of parameters, read from a file, suitable for updating `m`.
 """
-function load_parameters_from_file(m::AbstractModel, path::AbstractString)
+function load_parameters_from_file(m::AbstractModel, path::String)
 
     if isfile(path) && splitext(path)[2] == ".h5"
         x  = h5open(path, "r") do file
@@ -365,7 +363,7 @@ end
 
 """
 ```
-specify_mode!(m::AbstractModel, mode_file::AbstractString=""; verbose=:low)
+specify_mode!(m::AbstractModel, mode_file::String=""; verbose=:low)
 ```
 
 Updates the values of `m.parameters` with the values from
@@ -377,7 +375,7 @@ Usage: should be run before calling `estimate(m)`, e.g.:
     specify_mode!(m, modefile)
     estimate(m)
 """
-function specify_mode!(m::AbstractModel, mode_file::AbstractString = ""; verbose=:low)
+function specify_mode!(m::AbstractModel, mode_file::String = ""; verbose=:low)
 
     m <= Setting(:reoptimize, false)
 
@@ -396,13 +394,13 @@ end
 
 """
 ```
-specify_hessian(m::AbstractModel, path::AbstractString=""; verbose=:low)
+specify_hessian(m::AbstractModel, path::String=""; verbose=:low)
 ```
 
 Specify a Hessian matrix calculated at the posterior mode to use in the model estimation. If
 no path is provided, will attempt to detect location.
 """
-function specify_hessian(m::AbstractModel, path::AbstractString=""; verbose=:low)
+function specify_hessian(m::AbstractModel, path::String=""; verbose=:low)
     if isempty(path)
         path = inpath(m, "user", "hessian.h5")
     end
@@ -440,28 +438,28 @@ Creates the proper directory structure for input and output files, treating the 
 
 Note: we refer to the savepathroot/output_data/<spec>/<subspec>/ directory as saveroot.
 =#
-"""
-```
-logpath(model)
-```
-Returns path to log file. Path built as
-```
-<output root>/output_data/<spec>/<subspec>/log/log_<filestring>.log
-```
-"""
-function logpath(m::AbstractModel)
-    return savepath(m, "log", "log.log")
-end
+# """
+# ```
+# logpath(model)
+# ```
+# Returns path to log file. Path built as
+# ```
+# <output root>/output_data/<spec>/<subspec>/log/log_<filestring>.log
+# ```
+# """
+# function logpath(m::AbstractModel)
+#     return savepath(m, "log", "log.log")
+# end
 
-strs = [:work, :raw, :tables, :figures]
-fns = [symbol(x, "path") for x in strs]
+strs = [:work, :raw, :tables, :figures, :log]
+fns = [Symbol(x, "path") for x in strs]
 for (str, fn) in zip(strs, fns)
     @eval begin
         # First eval function
-        function $fn{T<:AbstractString}(m::AbstractModel,
-                                        out_type::T,
-                                        file_name::T = "",
-                                        filestring_addl::Vector{T}=Vector{T}())
+        function $fn(m::AbstractModel,
+                     out_type::String,
+                     file_name::String = "",
+                     filestring_addl::Vector{String}=Vector{String}())
             return savepath(m, out_type, $(string(str)), file_name, filestring_addl)
         end
 
@@ -469,7 +467,7 @@ for (str, fn) in zip(strs, fns)
         @doc $(
         """
         ```
-        $fn{T<:AbstractString}(m::AbstractModel, out_type::T, file_name::T="")
+        $fn(m::AbstractModel, out_type::String, file_name::String="", filestring_addl::Vector{String}=Vector{String}())
         ```
 
         Returns path to specific $str output file, creating containing directory as needed. If
@@ -484,13 +482,13 @@ for (str, fn) in zip(strs, fns)
 end
 
 # Not exposed to user. Actually create path and insert model string to file name.
-function savepath{T<:AbstractString}(m::AbstractModel,
-                                     out_type::T,
-                                     sub_type::T,
-                                     file_name::T = "",
-                                     filestring_addl::Vector{T} = Vector{T}())
+function savepath(m::AbstractModel,
+                  out_type::String,
+                  sub_type::String,
+                  file_name::String = "",
+                  filestring_addl::Vector{String} = Vector{String}())
     # Containing directory
-    dir = ASCIIString(joinpath(saveroot(m), "output_data", spec(m), subspec(m), out_type, sub_type))
+    dir = String(joinpath(saveroot(m), "output_data", spec(m), subspec(m), out_type, sub_type))
 
     if !isempty(file_name)
         base = filestring_base(m)
@@ -500,10 +498,10 @@ function savepath{T<:AbstractString}(m::AbstractModel,
     end
 end
 
-function savepath{T<:AbstractString}(dir::T,
-                                     file_name::T = "",
-                                     filestring_base::Vector{T} = Vector{T}(),
-                                     filestring_addl::Vector{T} = Vector{T}())
+function savepath(dir::String,
+                  file_name::String = "",
+                  filestring_base::Vector{String} = Vector{String}(),
+                  filestring_addl::Vector{String} = Vector{String}())
     if !isdir(dir)
         mkpath(dir)
     end
@@ -523,7 +521,7 @@ end
 # Input data handled slightly differently, because it is not model-specific.
 """
 ```
-inpath{T<:AbstractString}(m::AbstractModel, in_type::T, file_name::T="")
+inpath{T<:String}(m::AbstractModel, in_type::T, file_name::T="")
 ```
 
 Returns path to specific input data file, creating containing directory as needed. If
@@ -539,7 +537,7 @@ Path built as
 <data root>/<in_type>/<file_name>
 ```
 """
-function inpath{T<:AbstractString}(m::AbstractModel, in_type::T, file_name::T="")
+function inpath(m::AbstractModel, in_type::String, file_name::String="")
     path = dataroot(m)
     # Normal cases.
     if in_type == "data" || in_type == "cond"
@@ -566,7 +564,7 @@ end
 
 function filestring_base(m::AbstractModel)
     if !m.testing
-        base = Vector{ASCIIString}()
+        base = Vector{String}()
         for (skey, sval) in m.settings
             if sval.print
                 push!(base, to_filestring(sval))
@@ -578,20 +576,20 @@ function filestring_base(m::AbstractModel)
     end
 end
 
-filestring(m::AbstractModel) = filestring(m, Vector{ASCIIString}())
-filestring(m::AbstractModel, d::AbstractString) = filestring(m, [ASCIIString(d)])
-function filestring{T<:AbstractString}(m::AbstractModel, d::Vector{T})
+filestring(m::AbstractModel) = filestring(m, Vector{String}())
+filestring(m::AbstractModel, d::String) = filestring(m, [String(d)])
+function filestring(m::AbstractModel, d::Vector{String})
     base = filestring_base(m)
     return filestring(base, d)
 end
 
-function filestring{T<:AbstractString}(base::Vector{T}, d::Vector{T})
+function filestring(base::Vector{String}, d::Vector{String})
     filestrings = vcat(base, d)
     sort!(filestrings)
     return "_" * join(filestrings, "_")
 end
 
-function filestring{T<:AbstractString}(d::Vector{T})
+function filestring(d::Vector{String})
     sort!(d)
     return "_" * join(d, "_")
 end
@@ -633,12 +631,46 @@ end
 
 """
 ```
-rand{T<:AbstractFloat, U<:AbstractModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
+rand(d::DegenerateMvNormal, m::AbstractModel; cc::AbstractFloat = 1.0)
 ```
 
-Generate a draw from d with variance optionally scaled by cc^2.
+Generate a draw from `d` with variance optionally scaled by `cc^2`.
 """
-function rand{T<:AbstractFloat, U<:AbstractModel}(d::DegenerateMvNormal, m::U; cc::T = 1.0)
+function rand(d::DegenerateMvNormal, m::AbstractModel; cc::AbstractFloat = 1.0)
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
 
+"""
+`rand_prior(m::AbstractModel; ndraws::Int = 100_000)`
+
+Draw a random sample from the model's prior distribution.
+"""
+function rand_prior(m::AbstractModel; ndraws::Int = 100_000)
+    T = typeof(m.parameters[1].value)
+    npara = length(m.parameters)
+    priorsim = Array{T}(ndraws, npara)
+
+    for i in 1:ndraws
+        priodraw = Array{T}(npara)
+
+        # Parameter draws per particle
+        for j in 1:length(m.parameters)
+
+            priodraw[j] = if !m.parameters[j].fixed
+                prio = rand(m.parameters[j].prior.value)
+
+                # Resample until all prior draws are within the value bounds
+                while !(m.parameters[j].valuebounds[1] < prio < m.parameters[j].valuebounds[2])
+                    prio = rand(m.parameters[j].prior.value)
+                end
+
+                prio
+            else
+                m.parameters[j].value
+            end
+        end
+        priorsim[i,:] = priodraw'
+    end
+
+    priorsim
+end

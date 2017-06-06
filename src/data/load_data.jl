@@ -121,9 +121,10 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     # Load FRED data
     df = load_fred_data(m; start_date=firstdayofquarter(start_date), end_date=end_date, verbose=verbose)
 
+
     # Set ois series to load
     if n_anticipated_shocks(m) > 0
-        data_series[:OIS] = [symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
+        data_series[:OIS] = [Symbol("ant$i") for i in 1:n_anticipated_shocks(m)]
     end
 
     # For each additional source, search for the file with the proper name. Open
@@ -366,18 +367,23 @@ end
 
 """
 ```
-df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
+df_to_matrix(m, df; cond_type = :none, include_presample = true)
 ```
 
 Return `df`, converted to matrix of floats, and discard date column. Also ensure data are
 sorted by date and that rows outside of sample are discarded. The output of this function is
 suitable for direct use in `estimate`, `posterior`, etc.
 """
-function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
+function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none,
+                      include_presample::Bool = true)
     # Sort rows by date and discard rows outside of sample
     df1 = sort(df; cols=[:date])
 
-    start_date = date_presample_start(m)
+    start_date = if include_presample
+        date_presample_start(m)
+    else
+        date_mainsample_start(m)
+    end
     end_date   = if cond_type in [:semi, :full]
         date_conditional_end(m)
     else
@@ -393,6 +399,34 @@ function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
     return convert(Matrix{Float64}, df1)'
 end
 
+"""
+```
+data_to_df(m, data, start_date)
+```
+
+Create a `DataFrame` out of the matrix `data`, including a `:date` column
+beginning in `start_date`.  Variable names and indices are obtained from
+`m.observables`.
+"""
+function data_to_df{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T}, start_date::Date)
+    # Check number of rows = number of observables
+    nobs = n_observables(m)
+    @assert size(data, 1) == nobs "Number of rows of data matrix ($(size(data, 1))) must equal number of observables ($nobs)"
+
+    # Initialize DataFrame and add dates
+    nperiods = size(data, 2)
+    end_date = iterate_quarters(start_date, nperiods - 1)
+    dates = quarter_range(start_date, end_date)
+    df = DataFrame(date = dates)
+
+    # Add observables
+    for var in keys(m.observables)
+        ind = m.observables[var]
+        df[var] = vec(data[ind, :])
+    end
+
+    return df
+end
 
 """
 ```
@@ -410,7 +444,7 @@ function parse_data_series(m::AbstractModel)
     # Parse vector of observable mappings into data_series dictionary
     for obs in values(m.observable_mappings)
         for series in obs.input_series
-            mnemonic, source = map(symbol, split(string(series), DSGE_DATASERIES_DELIM))
+            mnemonic, source = map(Symbol, split(string(series), DSGE_DATASERIES_DELIM))
 
             if !in(source, keys(data_series))
                 data_series[source] = Vector{Symbol}()
@@ -440,7 +474,7 @@ function read_population_data(m::AbstractModel; verbose::Symbol = :low)
     read_population_data(filename; verbose = verbose)
 end
 
-function read_population_data(filename::AbstractString; verbose::Symbol = :low)
+function read_population_data(filename::String; verbose::Symbol = :low)
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Reading population data from $filename...")
     end
@@ -473,11 +507,15 @@ function read_population_forecast(m::AbstractModel; verbose::Symbol = :low)
     if isnull(population_mnemonic)
         error("No population mnemonic provided")
     else
-        read_population_forecast(population_forecast_file, get(population_mnemonic); verbose = verbose)
+        if use_population_forecast(m)
+            read_population_forecast(population_forecast_file, get(population_mnemonic); verbose = verbose)
+        else
+            DataFrame()
+        end
     end
 end
 
-function read_population_forecast(filename::AbstractString, population_mnemonic::Symbol;
+function read_population_forecast(filename::String, population_mnemonic::Symbol;
                                   verbose::Symbol = :low)
 
     if isfile(filename)

@@ -1,6 +1,6 @@
 """
 ```
-smooth(m, data, system, kal; cond_type = :none)
+smooth(m, df, system, kal; cond_type = :none, draw_states = true)
 ```
 
 Computes and returns the smoothed values of states and shocks for the system
@@ -9,17 +9,22 @@ Computes and returns the smoothed values of states and shocks for the system
 ### Inputs
 
 - `m::AbstractModel`: model object
-- `data`: `DataFrame` or `nobs` x `hist_periods` `Matrix{S}` of data for
-  observables. This should include the conditional period if `cond_type in
-  [:semi, :full]`
+- `df`: `DataFrame` of data for observables. This should include the conditional
+  period if `cond_type in [:semi, :full]`
 - `system::System`: `System` object representing the state-space system
 - `kal::Kalman`: `Kalman` object containing the results of the Kalman filter for
   this system
 
 ### Keyword Arguments
 
-- `cond_type`: conditional case. See `forecast_all` for documentation of all
-  `cond_type` options.
+- `cond_type`: conditional case. See `forecast_one` for documentation of all
+  `cond_type` options
+- `draw_states`: if using a simulation smoother (i.e.
+  `forecast_smoother(m) in [:carter_kohn, :durbin_koopman]`), indicates whether
+   to draw smoothed states from the distribution `N(z_{t|T}, P_{t|T})` or to use
+   the mean `z_{t|T}`. Defaults to `false`. If not using a simulation smoother,
+   this flag has no effect (though the user will be warned if
+   `draw_states = true`)
 
 ### Outputs
 
@@ -41,30 +46,43 @@ Computes and returns the smoothed values of states and shocks for the system
 overridden by calling
 
 ```
-m <= Setting(:forecast_smoother, :kalman_smoother))
+m <= Setting(:forecast_smoother, :koopman_smoother))
 ```
 
 before calling `smooth`.
 """
 function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    system::System{S}, kal::Kalman{S}; cond_type::Symbol = :none)
+    system::System{S}, kal::Kalman{S}; cond_type::Symbol = :none,
+    draw_states::Bool = false)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    smooth(m, data, system, kal)
- end
 
-function smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    system::System{S}, kal::Kalman{S})
+    # Partition sample into pre- and post-ZLB regimes
+    # Note that the post-ZLB regime may be empty if we do not impose the ZLB
+    regime_inds = zlb_regime_indices(m, data)
 
-    states, shocks = if forecast_smoother(m) == :kalman
-        kalman_smoother(m, data, system, kal[:z0], kal[:vz0], kal[:pred], kal[:vpred];
-            include_presample = true)
-    elseif forecast_smoother(m) == :durbin_koopman
-        durbin_koopman_smoother(m, data, system, kal[:z0], kal[:vz0];
-            include_presample = true)
+    # Get system matrices for each regime
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_regime_matrices(m, system)
+
+    # Call smoother
+    smoother = eval(Symbol(forecast_smoother(m), "_smoother"))
+
+    states, shocks = if smoother == hamilton_smoother
+        draw_states ? warn("$smoother called with draw_states = true") : nothing
+        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+            kal[:z0], kal[:vz0])
+    elseif smoother == koopman_smoother
+        draw_states ? warn("$smoother called with draw_states = true") : nothing
+        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+            kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+    elseif smoother in [carter_kohn_smoother, durbin_koopman_smoother]
+        smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
+            kal[:z0], kal[:vz0]; draw_states = draw_states)
+    else
+        error("Invalid smoother: $(forecast_smoother(m))")
     end
 
-    # Index out last presample states, used to compute the deterministic trend
+    # Index out last presample period, used to compute the deterministic trend
     t0 = n_presample_periods(m)
     t1 = index_mainsample_start(m)
     initial_states = states[:, t0]
@@ -73,7 +91,7 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 
     # Map smoothed states to pseudo-observables
     pseudo = if forecast_pseudoobservables(m)
-        system[:DD_pseudo] .+ system[:ZZ_pseudo] * states
+        system[:ZZ_pseudo] * states .+ system[:DD_pseudo]
     else
         Matrix{S}()
     end

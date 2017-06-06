@@ -14,27 +14,27 @@ computational settings.
 - `print::Bool`: Indicates whether to append this setting's code and value to output file
   names. If true, output file names will include a suffix of the form `_code1=val1_code2=val2`
   etc. where codes are listed in alphabetical order.
-- `code::AbstractString`: string of <=4 characters to print to output file suffixes when
+- `code::String`: string of <=4 characters to print to output file suffixes when
   `print=true`.
-- `description::AbstractString`: Short description of what the setting is used for.
+- `description::String`: Short description of what the setting is used for.
 """
 type Setting{T}
     key::Symbol                  # name of setting
     value::T                     # whatever the setting is
     print::Bool                  # whether or not to add this setting to the print
-    code::AbstractString         # what gets printed to the print
-    description::AbstractString  # description of what the setting is for
+    code::String         # what gets printed to the print
+    description::String  # description of what the setting is for
 end
 
 # for printing codes to filename string
 Base.convert{T<:Number, U<:Number}(::Type{T}, s::Setting{U}) = convert(T, s.value)
-Base.convert{T<:AbstractString, U<:AbstractString}(::Type{T}, s::Setting{U}) = convert(T, s.value)
+Base.convert(::Type{String}, s::Setting{String}) = convert(String, s.value)
 
 Base.promote_rule{T<:Number,U<:Number}(::Type{Setting{T}}, ::Type{U}) = promote_rule(T,U)
-Base.promote_rule{T<:AbstractString,U<:AbstractString}(::Type{Setting{T}}, ::Type{U}) = promote_rule(T,U)
+Base.promote_rule(::Type{Setting{String}}, ::Type{String}) = promote_rule(String, String)
 Base.promote_rule(::Type{Setting{Bool}}, ::Type{Bool}) = promote_rule(Bool, Bool)
 
-Base.string(s::Setting{AbstractString}) = string(s.value)
+Base.string(s::Setting{String}) = string(s.value)
 
 to_filestring(s::Setting) = "$(s.code)=$(s.value)"
 
@@ -73,7 +73,7 @@ update!(a::Setting, b::Setting)
 
 Update `a` with the fields of `b` if:
 
-- The `key` field is updated if `a.key == b.key` 
+- The `key` field is updated if `a.key == b.key`
 - The `print` boolean and `code` string are overwritten if `a.print` is false and
   `b.print` is true, or `a.print` is true, `b.print` is false, and
   b.code is non-empty.
@@ -95,9 +95,9 @@ function update!(a::Setting, b::Setting)
     # do not overwrite if we can't determine whether or not those fields are just the
     # defaults.
     if (a.print == false && b.print == true) ||
-       (a.print == true && b.print == false && !isempty(b.code))
-       a.print = b.print
-   end
+        (a.print == true && b.print == false && !isempty(b.code))
+        a.print = b.print
+    end
     if !isempty(b.code) && b.code ≠ a.code
         a.code = b.code
     end

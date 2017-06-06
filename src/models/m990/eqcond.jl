@@ -23,7 +23,7 @@ function eqcond(m::Model990)
 
     Γ0 = zeros(n_states(m), n_states(m))
     Γ1 = zeros(n_states(m), n_states(m))
-    C  = zeros(n_states(m), 1)
+    C  = zeros(n_states(m))
     Ψ  = zeros(n_states(m), n_shocks_exogenous(m))
     Π  = zeros(n_states(m), n_shocks_expectational(m))
 
@@ -397,9 +397,9 @@ function eqcond(m::Model990)
 
         if n_anticipated_shocks(m) > 1
             for i = 2:n_anticipated_shocks(m)
-                Γ1[eq[symbol("eq_rml$(i-1)")], endo[symbol("rm_tl$i")]] = 1.
-                Γ0[eq[symbol("eq_rml$i")], endo[symbol("rm_tl$i")]]     = 1.
-                Ψ[eq[symbol("eq_rml$i")], exo[symbol("rm_shl$i")]]      = 1.
+                Γ1[eq[Symbol("eq_rml$(i-1)")], endo[Symbol("rm_tl$i")]] = 1.
+                Γ0[eq[Symbol("eq_rml$i")], endo[Symbol("rm_tl$i")]]     = 1.
+                Ψ[eq[Symbol("eq_rml$i")], exo[Symbol("rm_shl$i")]]      = 1.
             end
         end
     end

@@ -13,6 +13,8 @@ Compute impulse responses for a single draw.
 - `system::System{S}`: state-space system matrices
 - `horizon::Int`: number of periods ahead to forecast
 
+where `S<:AbstractFloat`
+
 ### Outputs
 
 - `states::Array{S, 3}`: matrix of size `nstates` x `horizon` x `nshocks` of

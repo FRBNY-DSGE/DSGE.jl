@@ -1,9 +1,12 @@
 # Running an Existing Model
 
-The DSGE.jl package provides 2 example models:
+The DSGE.jl package provides several example models:
 
-- The well-known [Smets and Wouters (2007)](https://www.aeaweb.org/articles?id=10.1257/aer.97.3.586) Model
-- The FRBNY DSGE Model (version 990.2), which was introduced in [this blog post](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html)
+- A simple three-equation DSGE model from [An and Schorfheide (2006)](https://sites.sas.upenn.edu/schorf/files/er-final.pdf)
+- The well-known [Smets and Wouters (2007)](https://www.aeaweb.org/articles?id=10.1257/aer.97.3.586) model
+- The New York Fed DSGE model (version 990.2), which was introduced in [this blog post](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html)
+- The New York Fed DSGE model (version 1002.9), which is documented [here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf)
+- The New York Fed DSGE model (version 1010.18)
 
 You can run these models using the description provided here. If you
 were to implement another model using DSGE.jl, these procedures can also be used to
@@ -32,13 +35,12 @@ estimate(m)
 # produce LaTeX tables of parameter moments
 compute_moments(m)
 
-# forecast using 10 processes
+# forecast and compute means and bands using 10 processes
 my_procs = addprocs(10)
 @everywhere using DSGE
 
-m <= Setting(:use_parallel_workers, true)
-output_vars = get_output_vars(m, :simple)
-forecast_all(m, [:none, :semi, :full], [:mode, :full], output_vars; procs = my_procs)
+forecast_one(m, :full, :none, [:forecaststates, forecastobs])
+means_bands_all(m, :full, :none, [:forecaststates, :forecastobs])
 rmprocs(my_procs)
 ```
 

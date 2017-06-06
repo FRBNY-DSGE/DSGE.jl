@@ -1,4 +1,4 @@
-# [FRBNY Model 990 Data](@id frbny-data)
+# [New York Fed DSGE Model 990 Data](@id frbny-data)
 
 ```@meta
 CurrentModule = DSGE
@@ -6,9 +6,9 @@ CurrentModule = DSGE
 
 ## Data Series
 
-The FRBNY DSGE Model takes an CSV file containing a matrix of data as
-input. The columns of this file contain transformations of the
-following series (the number corresponds to the column of data matrix):
+The New York Fed DSGE Model takes an CSV file containing a matrix of data as
+input. The columns of this file contain transformations of the following series
+(the number corresponds to the column of data matrix):
 
 1.  Output Growth (Bureau of Economic Analysis)
 2.  Hours Worked (Bureau of Labor Statistics)

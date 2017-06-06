@@ -44,10 +44,10 @@ the model's measurement equation matrices.
 
 #### Model Specifications and Settings
 
-* `spec::AbstractString`: The model specification identifier, \"smets_wouters\",
+* `spec::String`: The model specification identifier, \"smets_wouters\",
 cached here for filepath computation.
 
-* `subspec::AbstractString`: The model subspecification number,
+* `subspec::String`: The model subspecification number,
 indicating that some parameters from the original model spec (\"ss0\")
 are initialized differently. Cached here for filepath computation.
 
@@ -83,8 +83,8 @@ type SmetsWouters{T} <: AbstractModel{T}
     endogenous_states_augmented::Dict{Symbol,Int}   #
     observables::Dict{Symbol,Int}                   #
 
-    spec::ASCIIString                               # Model specification number
-    subspec::ASCIIString                            # Model subspecification
+    spec::String                                    # Model specification number
+    subspec::String                                 # Model subspecification
     settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
@@ -113,12 +113,12 @@ function init_model_indices!(m::SmetsWouters)
         :Eπ_t, :EL_t, :Erk_t, :Ew_t, :y_f_t, :c_f_t,
         :i_f_t, :qk_f_t, :k_f_t, :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t,
         :L_f_t, :r_f_t, :Ec_f_t, :Eqk_f_t, :Ei_f_t, :EL_f_t, :Erk_f_t, :ztil_t];
-        [symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]]
+        [Symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]]
 
     # Exogenous shocks
     exogenous_shocks = [[
         :g_sh, :b_sh, :μ_sh, :z_sh, :λ_f_sh, :λ_w_sh, :rm_sh];
-        [symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
+        [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
 
     # Expectations shocks
     expected_shocks = [
@@ -133,7 +133,7 @@ function init_model_indices!(m::SmetsWouters)
         :eq_Eqk, :eq_Ei, :eq_Eπ, :eq_EL, :eq_Erk, :eq_Ew, :eq_euler_f, :eq_inv_f,
         :eq_capval_f, :eq_output_f, :eq_caputl_f, :eq_capsrv_f, :eq_capev_f, :eq_mkupp_f, :eq_caprnt_f, :eq_msub_f,
         :eq_res_f, :eq_Ec_f, :eq_Eqk_f, :eq_Ei_f, :eq_EL_f, :eq_Erk_f, :eq_ztil];
-        [symbol("eq_rml$i") for i=1:n_anticipated_shocks(m)]]
+        [Symbol("eq_rml$i") for i=1:n_anticipated_shocks(m)]]
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
@@ -154,16 +154,16 @@ function init_model_indices!(m::SmetsWouters)
 end
 
 
-function SmetsWouters(subspec::AbstractString="ss0";
+function SmetsWouters(subspec::String="ss0";
                       custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
-                      testing = true)
+                      testing = false)
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]
     subspec            = subspec
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
-    rng                = MersenneTwister()        # Random Number Generator
+    rng                = MersenneTwister(0)        # Random Number Generator
 
     # initialize empty model
     m = SmetsWouters{Float64}(
@@ -440,4 +440,8 @@ function settings_smets_wouters!(m::SmetsWouters)
 
     # Data vintage
     m <= Setting(:data_vintage, "150827")
+
+    # Conditional data variables
+    m <= Setting(:cond_semi_names, [:obs_nominalrate])
+    m <= Setting(:cond_full_names, [:obs_gdp, :obs_nominalrate])
 end

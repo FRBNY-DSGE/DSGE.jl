@@ -44,10 +44,10 @@ conditions.
 
 #### Model Specifications and Settings
 
-* `spec::AbstractString`: The model specification identifier, \"m1002\", cached here for
+* `spec::String`: The model specification identifier, \"m1002\", cached here for
   filepath computation.
 
-* `subspec::AbstractString`: The model subspecification number, indicating that some
+* `subspec::String`: The model subspecification number, indicating that some
   parameters from the original model spec (\"ss0\") are initialized differently. Cached here for
   filepath computation.
 
@@ -83,8 +83,8 @@ type Model1002{T} <: AbstractModel{T}
     endogenous_states_augmented::Dict{Symbol,Int}   #
     observables::Dict{Symbol,Int}                   #
 
-    spec::ASCIIString                               # Model specification number (eg "m1002")
-    subspec::ASCIIString                            # Model subspecification (eg "ss0")
+    spec::String                                    # Model specification number (eg "m1002")
+    subspec::String                                 # Model subspecification (eg "ss0")
     settings::Dict{Symbol,Setting}                  # Settings/flags for computation
     test_settings::Dict{Symbol,Setting}             # Settings/flags for testing mode
     rng::MersenneTwister                            # Random number generator
@@ -114,13 +114,13 @@ function init_model_indices!(m::Model1002)
         :Eπ_t, :EL_t, :Erk_t, :Ew_t, :ERtil_k_t, :ERktil_f_t, :y_f_t, :c_f_t, :i_f_t, :qk_f_t, :k_f_t,
         :kbar_f_t, :u_f_t, :rk_f_t, :w_f_t, :L_f_t, :r_f_t, :Ec_f_t, :Eqk_f_t, :Ei_f_t,
         :EL_f_t,  :ztil_t, :π_t1, :π_t2, :π_a_t, :R_t1, :zp_t, :Ez_t, :rktil_f_t, :n_f_t];
-        [symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]]
+        [Symbol("rm_tl$i") for i = 1:n_anticipated_shocks(m)]]
 
     # Exogenous shocks
     exogenous_shocks = [[
         :g_sh, :b_sh, :μ_sh, :z_sh, :λ_f_sh, :λ_w_sh, :rm_sh, :σ_ω_sh, :μ_e_sh,
         :γ_sh, :π_star_sh, :lr_sh, :zp_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh];
-        [symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
+        [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]]
 
     # Expectations shocks
     expected_shocks = [
@@ -136,7 +136,7 @@ function init_model_indices!(m::Model1002)
         :eq_capval_f, :eq_output_f, :eq_caputl_f, :eq_capsrv_f, :eq_capev_f, :eq_mkupp_f,
         :eq_caprnt_f, :eq_msub_f, :eq_res_f, :eq_Ec_f, :eq_Eqk_f, :eq_Ei_f, :eq_EL_f,
         :eq_ztil, :eq_π_star, :eq_π1, :eq_π2, :eq_π_a, :eq_Rt1, :eq_zp, :eq_Ez, :eq_spread_f,:eq_nevol_f,  :eq_Erktil_f];
-        [symbol("eq_rml$i") for i=1:n_anticipated_shocks(m)]]
+        [Symbol("eq_rml$i") for i=1:n_anticipated_shocks(m)]]
 
     # Additional states added after solving model
     # Lagged states and observables measurement error
@@ -157,7 +157,7 @@ function init_model_indices!(m::Model1002)
 end
 
 
-function Model1002(subspec::AbstractString="ss2";
+function Model1002(subspec::String="ss2";
                   custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                   testing = false)
 
@@ -166,7 +166,7 @@ function Model1002(subspec::AbstractString="ss2";
     subspec            = subspec
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
-    rng                = MersenneTwister()
+    rng                = MersenneTwister(0)
 
     # Initialize empty model
     m = Model1002{Float64}(
@@ -485,10 +485,10 @@ function init_parameters!(m::Model1002)
     # standard deviations of the anticipated policy shocks
     for i = 1:DSGE.n_anticipated_shocks_padding(m)
         if i < 13
-            m <= parameter(symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(), DSGE.RootInverseGamma(4., .2), fixed=false,
+            m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(), DSGE.RootInverseGamma(4., .2), fixed=false,
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
         else
-            m <= parameter(symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(), DSGE.RootInverseGamma(4., .2), fixed=true,
+            m <= parameter(Symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(), DSGE.RootInverseGamma(4., .2), fixed=true,
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
         end
     end
@@ -543,49 +543,6 @@ function init_parameters!(m::Model1002)
     m <= SteadyStateParameter(:ζ_nμ_e,   NaN, tex_label="\\zeta_{n_{\\mu_e}}")
     m <= SteadyStateParameter(:ζ_nσ_ω,   NaN, tex_label="\\zeta_{n_{\\sigma_\\omega}}")
     end
-
-# functions that are used to compute financial frictions
-# steady-state values from parameter values
-@inline function ζ_spb_fn(z, σ, spr)
-    zetaratio = ζ_bω_fn(z, σ, spr)/ζ_zω_fn(z, σ, spr)
-    nk = nk_fn(z, σ, spr)
-    return -zetaratio/(1-zetaratio)*nk/(1-nk)
-end
-
-@inline function ζ_bω_fn(z, σ, spr)
-    nk          = nk_fn(z, σ, spr)
-    μstar       = μ_fn(z, σ, spr)
-    ω_star      = ω_fn(z, σ)
-    Γstar       = Γ_fn(z, σ)
-    Gstar       = G_fn(z, σ)
-    dΓ_dω_star  = dΓ_dω_fn(z)
-    dG_dω_star  = dG_dω_fn(z, σ)
-    d2Γ_dω2star = d2Γ_dω2_fn(z, σ)
-    d2G_dω2star = d2G_dω2_fn(z, σ)
-    return ω_star*μstar*nk*(d2Γ_dω2star*dG_dω_star - d2G_dω2star*dΓ_dω_star)/
-        (dΓ_dω_star - μstar*dG_dω_star)^2/spr/(1 - Γstar + dΓ_dω_star*(Γstar - μstar*Gstar)/
-            (dΓ_dω_star - μstar*dG_dω_star))
-end
-
-@inline function ζ_zω_fn(z, σ, spr)
-    μstar = μ_fn(z, σ, spr)
-    return ω_fn(z, σ)*(dΓ_dω_fn(z) - μstar*dG_dω_fn(z, σ))/
-        (Γ_fn(z, σ) - μstar*G_fn(z, σ))
-end
-
-nk_fn(z, σ, spr)  = 1 - (Γ_fn(z, σ) - μ_fn(z, σ, spr)*G_fn(z, σ))*spr
-μ_fn(z, σ, spr)   = (1 - 1/spr)/(dG_dω_fn(z, σ)/dΓ_dω_fn(z)*(1 - Γ_fn(z, σ)) + G_fn(z, σ))
-ω_fn(z, σ)        = exp(σ*z - σ^2/2)
-G_fn(z, σ)        = cdf(Normal(), z-σ)
-Γ_fn(z, σ)        = ω_fn(z, σ)*(1 - cdf(Normal(), z)) + cdf(Normal(), z-σ)
-dG_dω_fn(z, σ)    = pdf(Normal(), z)/σ
-d2G_dω2_fn(z, σ)  = -z*pdf(Normal(), z)/ω_fn(z, σ)/σ^2
-dΓ_dω_fn(z)       = 1 - cdf(Normal(), z)
-d2Γ_dω2_fn(z, σ)  = -pdf(Normal(), z)/ω_fn(z, σ)/σ
-dG_dσ_fn(z, σ)    = -z*pdf(Normal(), z-σ)/σ
-d2G_dωdσ_fn(z, σ) = -pdf(Normal(), z)*(1 - z*(z-σ))/σ^2
-dΓ_dσ_fn(z, σ)    = -pdf(Normal(), z-σ)
-d2Γ_dωdσ_fn(z, σ) = (z/σ-1)*pdf(Normal(), z)
 
 """
 ```
@@ -734,7 +691,7 @@ end
 parameter_groupings(m::Model1002)
 ```
 
-Returns an `OrderedDict{ASCIIString, Vector{Parameter}}` mapping descriptions of
+Returns an `OrderedDict{String, Vector{Parameter}}` mapping descriptions of
 parameter groupings (e.g. \"Policy Parameters\") to vectors of
 `Parameter`s. This dictionary is passed in as a keyword argument to
 `prior_table`.
@@ -757,12 +714,12 @@ function parameter_groupings(m::Model1002)
                     "Financial Frictions Parameters", "Exogenous Process Parameters",
                     "Measurement Error Parameters"]
 
-    groupings = OrderedDict{ASCIIString, Vector{Parameter}}(zip(descriptions, all_params))
+    groupings = OrderedDict{String, Vector{Parameter}}(zip(descriptions, all_params))
 
     # Ensure no parameters missing
     incl_params = vcat(collect(values(groupings))...)
     excl_params = [m[θ] for θ in vcat([:Upsilon, :ρ_μ_e, :ρ_γ, :σ_μ_e, :σ_γ, :Iendoα, :γ_gdi, :δ_gdi],
-                                      [symbol("σ_r_m$i") for i=2:20])]
+                                      [Symbol("σ_r_m$i") for i=2:20])]
     @assert isempty(setdiff(m.parameters, vcat(incl_params, excl_params)))
 
     return groupings

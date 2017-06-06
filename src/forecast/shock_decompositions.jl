@@ -1,5 +1,7 @@
 """
 ```
+shock_decompositions(m, system, histshocks)
+
 shock_decompositions(system, forecast_horizons, histshocks, start_index,
     end_index)
 

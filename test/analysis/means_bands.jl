@@ -1,5 +1,4 @@
 using DSGE, HDF5, JLD
-include("../util.jl")
 
 path = dirname(@__FILE__)
 
@@ -8,7 +7,7 @@ m = AnSchorfheide(testing = true)
 m <= Setting(:saveroot, tempdir())
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:date_conditional_end, quartertodate("2015-Q4"))
-m <= Setting(:forecast_kill_shocks, true)
+m <= Setting(:forecast_uncertainty_override, Nullable(false))
 m <= Setting(:use_population_forecast, true)
 m <= Setting(:forecast_pseudoobservables, true)
 
@@ -35,7 +34,7 @@ exp_modal_means, exp_modal_bands, exp_full_means, exp_full_bands =
 @time means_bands_all(m, :mode, :none, output_vars; verbose = :none)
 @time meansbands_matrix_all(m, :mode, :none, output_vars; verbose = :none)
 
-mb_matrix_vars = map(x -> symbol("_matrix_$x"), output_vars)
+mb_matrix_vars = map(x -> Symbol("_matrix_$x"), output_vars)
 files = get_meansbands_output_files(m, :mode, :none, mb_matrix_vars; fileformat = :h5)
 for (var, mb_var) in zip(output_vars, mb_matrix_vars)
     filename = files[mb_var]
@@ -55,5 +54,6 @@ for (var, mb_var) in zip(output_vars, mb_matrix_vars)
     @test_matrix_approx_eq exp_full_means[var] h5read(filename, "means")
     @test_matrix_approx_eq exp_full_bands[var] h5read(filename, "bands")
 end
+
 
 nothing

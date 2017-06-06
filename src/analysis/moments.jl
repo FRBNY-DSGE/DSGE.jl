@@ -16,14 +16,15 @@ bands in various LaTeX tables stored `tablespath(m)`.
 - `percent::AbstractFloat`: the percentage of the mass of draws from
   Metropolis-Hastings included between the bands displayed in output tables.
 - `subset_inds::Range{Int64}`: indices specifying the draws we want to use
-- `subset_string::AbstractString`: short string identifying the subset to be
+- `subset_string::String`: short string identifying the subset to be
   appended to the output filenames. If `subset_inds` is nonempty but
   `subset_string` is empty, an error is thrown
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
 """
 function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
-                       subset_inds::Range{Int64} = 1:0, subset_string::AbstractString = "",
+                       subset_inds::Range{Int64} = 1:0, subset_string::String = "",
+                       groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
                        verbose::Symbol = :low)
 
     ### 1. Load parameter draws from Metropolis-Hastings
@@ -60,8 +61,8 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
     ### 3. Produce TeX tables
 
     prior_posterior_moments_table(m, post_means, post_bands;
-                                  percent = percent, subset_string = subset_string)
-    prior_posterior_means_table(m, post_means; subset_string = subset_string)
+                                  percent = percent, subset_string = subset_string, groupings = groupings)
+    prior_posterior_means_table(m, post_means; subset_string = subset_string, groupings = groupings)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         @printf "Tables are saved as %s.\n" tablespath(m, "estimate", "*.tex")
@@ -94,8 +95,8 @@ end
 prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}())
 ```
 """
-function prior_table{S<:AbstractString}(m::AbstractModel; subset_string::S = "",
-             groupings::Associative{S, Vector{Parameter}} = Dict{ASCIIString, Vector{Parameter}}())
+function prior_table(m::AbstractModel; subset_string::String = "",
+             groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -148,7 +149,7 @@ function prior_table{S<:AbstractString}(m::AbstractModel; subset_string::S = "",
         function anticipated_shock_footnote(θ::Parameter)
             if n_anticipated_shocks(m) > 0 && θ.key == :σ_r_m1
                 nantpad          = n_anticipated_shocks_padding(m)
-                all_sigmas       = [m[symbol("σ_r_m$i")]::Parameter for i = 1:nantpad]
+                all_sigmas       = [m[Symbol("σ_r_m$i")]::Parameter for i = 1:nantpad]
                 nonzero_sigmas   = Base.filter(θ -> !(θ.fixed && θ.value == 0), all_sigmas)
                 n_nonzero_sigmas = length(nonzero_sigmas)
 
@@ -212,9 +213,16 @@ tablespath(m, \"estimate\", \"moments[_sub=\$subset_string].tex\")
 ```
 """
 function prior_posterior_moments_table(m::AbstractModel,
-                                       post_means::Vector, post_bands::Matrix;
-                                       percent::AbstractFloat = 0.9,
-                                       subset_string::AbstractString = "")
+                 post_means::Vector, post_bands::Matrix;
+                 percent::AbstractFloat = 0.9,
+                 subset_string::String = "",
+                 groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
+
+    if isempty(groupings)
+        sorted_parameters = sort(m.parameters, by = (x -> x.key))
+        groupings[""] = sorted_parameters
+    end
+
     # Open the TeX file
     basename = "moments"
     if !isempty(subset_string)
@@ -263,17 +271,26 @@ function prior_posterior_moments_table(m::AbstractModel,
     distid(::DSGE.RootInverseGamma) = "IG"
 
     # Write parameter moments
-    sorted_parameters = sort(m.parameters, by = (x -> x.key))
-    for param in sorted_parameters
-        index = m.keys[param.key]
-        (prior_mean, prior_std) = moments(param)
+    # sorted_parameters = sort(m.parameters, by = (x -> x.key))
+    for group_desc in keys(groupings)
+        params = groupings[group_desc]
 
-        @printf moments_fid "\$\%4.99s\$ & " param.tex_label
-        @printf moments_fid "%s & " (param.fixed ? "-" : distid(get(param.prior)))
-        @printf moments_fid "%8.3f & " prior_mean
-        @printf moments_fid "%8.3f & " prior_std
-        @printf moments_fid "%8.3f & " post_means[index]
-        @printf moments_fid "%8.3f & %8.3f \\\\\n" post_bands[index, :]...
+        # Write grouping description if not empty
+        if !isempty(group_desc)
+            @printf moments_fid "\\multicolumn{7}{c}{\\textit{%s}} \\\\[3pt]\n" group_desc
+        end
+
+        for param in params
+            index = m.keys[param.key]
+            (prior_mean, prior_std) = moments(param)
+
+            @printf moments_fid "\$\%4.99s\$ & " param.tex_label
+            @printf moments_fid "%s & " (param.fixed ? "-" : distid(get(param.prior)))
+            @printf moments_fid "%8.3f & " prior_mean
+            @printf moments_fid "%8.3f & " prior_std
+            @printf moments_fid "%8.3f & " post_means[index]
+            @printf moments_fid "%8.3f & %8.3f \\\\\n" post_bands[index, :]...
+        end
     end
 
     # Write footer
@@ -294,9 +311,15 @@ Produces a table of prior means and posterior means. Saves to:
 tablespath(m, \"estimate\", \"prior_posterior_means[_sub=\$subset_string].tex\")
 ```
 """
-function prior_posterior_means_table(m::AbstractModel,
-                                     post_means::Vector;
-                                     subset_string::AbstractString = "")
+function prior_posterior_means_table(m::AbstractModel, post_means::Vector;
+                 subset_string::String = "",
+                 groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
+
+    if isempty(groupings)
+        sorted_parameters = sort(m.parameters, by = (x -> x.key))
+        groupings[""] = sorted_parameters
+    end
+
     # Open the TeX file
     basename = "prior_posterior_means"
     if !isempty(subset_string)
@@ -318,20 +341,30 @@ function prior_posterior_means_table(m::AbstractModel,
     @printf means_fid "\\endfoot\n"
 
     # Write results
-    sorted_parameters = sort(m.parameters, by = (x -> x.key))
-    for param in sorted_parameters
-        index = m.keys[param.key]
+    # sorted_parameters = sort(m.parameters, by = (x -> x.key))
 
-        post_mean = if param.fixed
-            param.value
-        else
-            prior = get(param.prior)
-            isa(prior, RootInverseGamma) ? prior.τ : mean(prior)
+    for group_desc in keys(groupings)
+        params = groupings[group_desc]
+
+        # Write grouping description if not empty
+        if !isempty(group_desc)
+            @printf means_fid "\\multicolumn{7}{c}{\\textit{%s}} \\\\[3pt]\n" group_desc
         end
 
-        @printf means_fid "\$\%4.99s\$ & " param.tex_label
-        @printf means_fid "%8.3f & " post_mean
-        @printf means_fid "\%8.3f \\\\\n" post_means[index]
+        for param in params
+            index = m.keys[param.key]
+
+            post_mean = if param.fixed
+                param.value
+            else
+                prior = get(param.prior)
+                isa(prior, RootInverseGamma) ? prior.τ : mean(prior)
+            end
+
+            @printf means_fid "\$\%4.99s\$ & " param.tex_label
+            @printf means_fid "%8.3f & " post_mean
+            @printf means_fid "\%8.3f \\\\\n" post_means[index]
+        end
     end
 
     # Write footer
@@ -445,8 +478,8 @@ function find_density_bands{T<:AbstractFloat}(draws::Matrix, percents::Vector{T}
     for p in percents
         out = find_density_bands(draws, p, minimize = minimize)
 
-        bands[symbol("$(100*p)\% UB")] = vec(out[2,:])
-        bands[symbol("$(100*p)\% LB")] = vec(out[1,:])
+        bands[Symbol("$(100*p)\% UB")] = vec(out[2,:])
+        bands[Symbol("$(100*p)\% LB")] = vec(out[1,:])
     end
 
     bands

@@ -53,6 +53,8 @@ type RootInverseGamma <: Distribution{Univariate, Continuous}
 If x ~ RootInverseGamma(ν, τ²), then
   x² ~ ScaledInverseChiSquared(ν, τ²)
   x² ~ InverseGamma(ν/2, ντ²/2)
+
+ν represents the degrees of freedom.
 """
 type RootInverseGamma <: Distribution{Univariate, Continuous}
     ν::Float64
@@ -85,7 +87,16 @@ function Distributions.logpdf(d::RootInverseGamma, x::AbstractFloat)
     return log(2) - log(gamma(ν/2)) + (ν/2)*log(ν*τ^2/2) - ((ν+1)/2)*log(x^2) - ν*τ^2/(2x^2)
 end
 
+"""
+```
+Distributions.rand{T<:AbstractFloat}(d::RootInverseGamma; cc::T = 1.0)
+```
 
+Generate a draw from d with variance optionally scaled by cc^2 (for a RootInverseGamma)
+"""
+function Distributions.rand{T<:AbstractFloat}(d::RootInverseGamma; cc::T = 1.0)
+    return sqrt(d.ν*(d.τ^2)^2/sum(randn(round(Int,d.ν)).^2))
+end
 
 """
 ```
@@ -206,7 +217,7 @@ Generate `n` draws from `d`. This returns a matrix of size `(length(d), n)`,
 where each column is a sample.
 """
 function Distributions.rand(d::DegenerateDiagMvTDist, n::Int)
-    return d.μ .+ d.σ*rand(TDist(d.ν), (length(d), n))
+    return d.μ .+ d.σ*rand(TDist(d.ν), length(d), n)
 end
 
 # Compute the mean μ and standard deviation σ of a DSGE.RootInverseGamma object.

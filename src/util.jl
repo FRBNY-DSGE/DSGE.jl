@@ -1,5 +1,7 @@
 """
-    abbrev_symbol(s::Symbol, n::Int=4)
+```
+abbrev_symbol(s::Symbol, n::Int=4)
+```
 
 Abbreviate the symbol `s` to an `n`-character string.
 """
@@ -35,4 +37,131 @@ Returns a vector of `Dates`, consisting of the last days of each quarter between
 function quarter_range(t0::Date, t1::Date)
     dr = t0:t1
     return Dates.recur(d -> Dates.lastdayofquarter(d) == d, dr)
+end
+
+"""
+```
+detexify(s::String)
+
+detexify(s::Symbol)
+```
+
+Remove Unicode characters from the string `s`, replacing them with ASCII
+equivalents. For example, `detexify(\"π\")` returns `\"pi\"`.
+"""
+function detexify(s::String)
+    s = replace(s, "α", "alpha")
+    s = replace(s, "β", "beta")
+    s = replace(s, "γ", "gamma")
+    s = replace(s, "δ", "delta")
+    s = replace(s, "ϵ", "epsilon")
+    s = replace(s, "ε", "epsilon")
+    s = replace(s, "η", "eta")
+    s = replace(s, "θ", "theta")
+    s = replace(s, "ι", "iota")
+    s = replace(s, "κ", "kappa")
+    s = replace(s, "λ", "lambda")
+    s = replace(s, "μ", "mu")
+    s = replace(s, "ν", "nu")
+    s = replace(s, "ξ", "xi")
+    s = replace(s, "π", "pi")
+    s = replace(s, "ρ", "rho")
+    s = replace(s, "σ", "sigma")
+    s = replace(s, "τ", "tau")
+    s = replace(s, "υ", "upsilon")
+    s = replace(s, "ϕ", "phi")
+    s = replace(s, "φ", "phi")
+    s = replace(s, "χ", "chi")
+    s = replace(s, "ψ", "psi")
+    s = replace(s, "ω", "omega")
+
+    s = replace(s, "Α", "Alpha")
+    s = replace(s, "Β", "Beta")
+    s = replace(s, "Γ", "Gamma")
+    s = replace(s, "Δ", "Delta")
+    s = replace(s, "Ε", "Epsilon")
+    s = replace(s, "Η", "Eta")
+    s = replace(s, "Θ", "Theta")
+    s = replace(s, "Ι", "Iota")
+    s = replace(s, "Κ", "Kappa")
+    s = replace(s, "Λ", "Lambda")
+    s = replace(s, "Μ", "Mu")
+    s = replace(s, "Ν", "Nu")
+    s = replace(s, "Ξ", "Xi")
+    s = replace(s, "Π", "Pi")
+    s = replace(s, "Ρ", "Rho")
+    s = replace(s, "Σ", "Sigma")
+    s = replace(s, "Τ", "Tau")
+    s = replace(s, "Υ", "Upsilon")
+    s = replace(s, "Φ", "Phi")
+    s = replace(s, "Χ", "Chi")
+    s = replace(s, "Ψ", "Psi")
+    s = replace(s, "Ω", "Omega")
+
+    return s
+end
+
+function detexify(s::Symbol)
+    symbol(detexify(string(s)))
+end
+
+
+## Testing functions
+
+function test_matrix_eq2{T<:AbstractFloat}(expect::Array{T},
+                                           actual::Array{T},
+                                           expstr::String,
+                                           actstr::String,
+                                           ϵ_abs::Float64 = 1e-6,
+                                           ϵ_rel::Float64 = 1e-2)
+    if length(expect) ≠ length(actual)
+        error("lengths of ", expstr, " and ", actstr, " do not match: ",
+              "\n  ", expstr, " (length $(length(expect))) = ", expect,
+              "\n  ", actstr, " (length $(length(actual))) = ", actual)
+    end
+
+    # Absolute difference filter
+    abs_diff   = actual .- expect .> ϵ_abs
+    n_abs_diff = sum(abs_diff)
+
+    # Relative difference filter
+    rel_diff   = 100(actual .- expect) ./ expect .> ϵ_rel
+    n_rel_diff = sum(rel_diff)
+
+    # Element is only problematic if it fails *both* tests.
+    mixed_diff   = abs_diff & rel_diff
+    n_mixed_diff = sum(mixed_diff)
+
+    if n_mixed_diff ≠ 0
+        sdiff = string("|a - b| <= ", ϵ_abs,
+                   " or |a - b|/|b| <= ", ϵ_rel, "%,",
+                   " ∀ a ∈ ", actstr, ",",
+                   " ∀ b ∈ ",expstr)
+        error("assertion failed:\n",
+              "    ", sdiff,
+              "\n$(n_abs_diff) entries fail absolute equality filter",
+              "\n$(n_rel_diff) entries fail relative equality filter",
+              "\n$(n_mixed_diff) entries fail both equality filters")
+    end
+
+end
+
+"""
+    @test_matrix_approx_eq(a, b)
+
+Test two matrices of floating point numbers `a` and `b` for approximate equality.
+"""
+macro test_matrix_approx_eq(a,b)
+    :(test_matrix_eq2($(esc(a)),$(esc(b)),$(string(a)),$(string(b))))
+end
+
+"""
+    @test_matrix_approx_eq_eps(a, b, ϵ_abs, ϵ_rel)
+
+Test two matrices of floating point numbers `a` and `b` for equality taking in account a
+margin of absolute tolerance given by `ϵ_abs` and a margin of relative tolerance given by
+`ϵ_rel` (in comparison to `b`).
+"""
+macro test_matrix_approx_eq_eps(a,b,c,d)
+    :(test_matrix_eq2($(esc(a)),$(esc(b)),$(string(a)),$(string(b)),$(esc(c)),$(esc(d))))
 end

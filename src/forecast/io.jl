@@ -7,7 +7,7 @@ Compute the appropriate forecast input filenames for model `m` and
 forecast input type `input_type`.
 
 The default input files for each `input_type` can be overriden by adding entries
-to the `Dict{Symbol, ASCIIString}` returned from
+to the `Dict{Symbol, String}` returned from
 `forecast_input_file_overrides(m)`. For example:
 
 ```
@@ -22,10 +22,10 @@ function get_forecast_input_file(m, input_type)
         if ispath(override_file)
             return override_file
         else
-            error("Invalid input file override for input_type = $input_type: $override_file")
+            error("Input file $override_file does not exist")
         end
-    # If input_type = :subset or :block, also check for existence of overrides[:full]
-    elseif input_type in [:subset, :block]
+    elseif input_type == :subset
+        # If input_type == :subset, also check for existence of overrides[:full]
         return get_forecast_input_file(m, :full)
     end
 
@@ -35,7 +35,7 @@ function get_forecast_input_file(m, input_type)
         return workpath(m,"estimate","paramsmean.h5")
     elseif input_type == :init
         return ""
-    elseif input_type in [:full, :subset, :block]
+    elseif input_type in [:full, :subset]
         return rawpath(m,"estimate","mhsave.h5")
     else
         throw(ArgumentError("Invalid input_type: $(input_type)"))
@@ -46,7 +46,6 @@ end
 ```
 get_forecast_filename(m, input_type, cond_type, output_var;
     pathfcn = rawpath, forecast_string = "", fileformat = :jld)
-
 
 get_forecast_filename(directory, filestring_base, input_type, cond_type,
     output_var; forecast_string = "", fileformat = :jld)
@@ -66,7 +65,7 @@ an error.
 function get_forecast_filename(m::AbstractModel, input_type::Symbol,
                                cond_type::Symbol, output_var::Symbol;
                                pathfcn::Function = rawpath,
-                               forecast_string::AbstractString = "", fileformat = :jld)
+                               forecast_string::String = "", fileformat = :jld)
 
     # First, we need to make sure we get all of the settings that have been printed to this filestring
     directory = pathfcn(m, "forecast")
@@ -77,30 +76,34 @@ function get_forecast_filename(m::AbstractModel, input_type::Symbol,
                           forecast_string = forecast_string, fileformat = fileformat)
 end
 
-function get_forecast_filename(directory::AbstractString, filestring_base::Vector{ASCIIString},
+function get_forecast_filename(directory::String, filestring_base::Vector{String},
                                input_type::Symbol, cond_type::Symbol, output_var::Symbol;
-                               forecast_string::AbstractString = "", fileformat = :jld)
-
-    # Cast the strings so they're all the same type
-    directory       = ASCIIString(directory)
-    forecast_string = ASCIIString(forecast_string)
+                               forecast_string::String = "", fileformat = :jld)
 
     # Base file name
-    file_name = ASCIIString("$output_var.$fileformat")
+    file_name = String("$output_var.$fileformat")
 
     # Gather all of the file strings into an array
-    filestring_addl = Vector{ASCIIString}()
-    push!(filestring_addl, ASCIIString("para=" * abbrev_symbol(input_type)))
-    push!(filestring_addl, ASCIIString("cond=" * abbrev_symbol(cond_type)))
+    filestring_addl = get_forecast_filestring_addl(input_type, cond_type,
+                                                   forecast_string = forecast_string)
+
+    return savepath(directory, file_name, filestring_base, filestring_addl)
+end
+
+function get_forecast_filestring_addl(input_type, cond_type; forecast_string::String = "")
+
+    filestring_addl = Vector{String}()
+    push!(filestring_addl, String("para=" * abbrev_symbol(input_type)))
+    push!(filestring_addl, String("cond=" * abbrev_symbol(cond_type)))
     if isempty(forecast_string)
         if input_type == :subset
             error("Must supply a nonempty forecast_string if input_type = subset")
         end
     else
-        push!(filestring_addl, ASCIIString("fcid=" * forecast_string))
+        push!(filestring_addl, String("fcid=" * forecast_string))
     end
 
-    return savepath(directory, file_name, filestring_base, filestring_addl)
+    filestring_addl
 end
 
 """
@@ -122,7 +125,7 @@ type `input_type`, and conditional type `cond_type`, for each output variable in
 
 ### Keyword Arguments
 
-- `forecast_string::AbstractString`: subset identifier for when `input_type = :subset`
+- `forecast_string::String`: subset identifier for when `input_type = :subset`
 - `fileformat::Symbol`: file extension, without a period. Defaults to
   `:jld`, though `:h5` is another common option.
 
@@ -132,7 +135,7 @@ See `get_forecast_filename` for more information.
 """
 function get_forecast_output_files(m::AbstractModel, input_type::Symbol,
                                    cond_type::Symbol, output_vars::Vector{Symbol};
-                                   forecast_string::AbstractString = "", fileformat = :jld)
+                                   forecast_string::String = "", fileformat = :jld)
 
     directory = rawpath(m, "forecast")
     base      = filestring_base(m)
@@ -142,11 +145,11 @@ function get_forecast_output_files(m::AbstractModel, input_type::Symbol,
                               fileformat = fileformat)
 end
 
-function get_forecast_output_files(directory::AbstractString, filestring_base::Vector{ASCIIString},
+function get_forecast_output_files(directory::String, filestring_base::Vector{String},
                                    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                                   forecast_string::AbstractString = "", fileformat = :jld)
+                                   forecast_string::String = "", fileformat = :jld)
 
-    output_files = Dict{Symbol, ASCIIString}()
+    output_files = Dict{Symbol, String}()
     for var in output_vars
         output_files[var] = get_forecast_filename(directory, filestring_base,
                                                   input_type, cond_type, var,
@@ -159,45 +162,70 @@ end
 
 """
 ```
-write_forecast_outputs(m, output_vars, forecast_output_files, forecast_output; verbose = :low)
+write_forecast_outputs(m, output_vars, forecast_output_files, forecast_output;
+    df = DataFrame(), block_number = Nullable{Int64}(), block_inds = 1:0,
+    verbose = :low)
 ```
 
 Writes the elements of `forecast_output` indexed by `output_vars` to file, given
 `forecast_output_files`, which maps `output_vars` to file names.
+
+If `output_vars` contains `:histobs`, data must be passed in as `df`.
 """
-function write_forecast_outputs{S<:AbstractString}(m::AbstractModel, input_type::Symbol,
+function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                                 output_vars::Vector{Symbol},
-                                forecast_output_files::Dict{Symbol, S},
+                                forecast_output_files::Dict{Symbol, String},
                                 forecast_output::Dict{Symbol, Array{Float64}};
+                                df::DataFrame = DataFrame(),
                                 block_number::Nullable{Int64} = Nullable{Int64}(),
                                 block_inds::Range{Int64} = 1:0,
+                                subset_inds::Range{Int64} = 1:0,
                                 verbose::Symbol = :low)
 
     for var in output_vars
+        prod = get_product(var)
+        if prod in [:forecast4q, :bddforecast4q]
+            # These are computed and saved in means and bands, not
+            # during the forecast itself
+            continue
+        end
         filepath = forecast_output_files[var]
         if isnull(block_number) || get(block_number) == 1
             jldopen(filepath, "w") do file
                 write_forecast_metadata(m, file, var)
 
-                if !isnull(block_number) && get(block_number) == 1
-                    # Determine forecast output size
-                    dims  = get_forecast_output_dims(m, input_type, var)
-                    block_size = forecast_block_size(m)
-                    chunk_dims = collect(dims)
-                    chunk_dims[1] = block_size
+                if var == :histobs
+                    # :histobs just refers to data, so we only write one draw
+                    # (as all draws would be the same)
+                    @assert !isempty(df) "df cannot be empty if trying to write :histobs"
+                    data = df_to_matrix(m, df; include_presample = false)
+                    write(file, "arr", data)
 
-                    # Initialize dataset
-                    pfile = file.plain
-                    dataset = HDF5.d_create(pfile, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
+                else
+                    # Otherwise, pre-allocate HDF5 dataset which will contain
+                    # all draws
+                    if !isnull(block_number) && get(block_number) == 1
+                        # Determine forecast output size
+                        dims  = get_forecast_output_dims(m, input_type, var; subset_inds = subset_inds)
+                        block_size = forecast_block_size(m)
+                        chunk_dims = collect(dims)
+                        chunk_dims[1] = block_size
+
+                        # Initialize dataset
+                        pfile = file.plain
+                        HDF5.d_create(pfile, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
+                    end
                 end
             end
         end
 
-        jldopen(filepath, "r+") do file
-            if isnull(block_number)
-                write(file, "arr", forecast_output[var])
-            else
-                write_forecast_block(file, forecast_output[var], block_inds)
+        if var != :histobs
+            jldopen(filepath, "r+") do file
+                if isnull(block_number)
+                    write(file, "arr", forecast_output[var])
+                else
+                    write_forecast_block(file, forecast_output[var], block_inds)
+                end
             end
         end
 
@@ -218,7 +246,7 @@ Specifically, we save dictionaries mapping dates, as well as state, observable,
 pseudo-observable, and shock names, to their respective indices in the saved
 forecast output array. The saved dictionaries include:
 
-- `date_indices::Dict{Date, Int}`: saved for all forecast outputs
+- `date_indices::Dict{Date, Int}`: saved for all forecast outputs except IRFs
 - `state_names::Dict{Symbol, Int}`: saved for `var in [:histstates, :forecaststates, :shockdecstates]`
 - `observable_names::Dict{Symbol, Int}`: saved for `var in [:forecastobs, :shockdecobs]`
 - `observable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for observables
@@ -243,7 +271,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
             quarter_range(date_shockdec_start(m), date_shockdec_end(m))
         end
 
-        date_indices = [d::Date => i::Int for (i, d) in enumerate(dates)]
+        date_indices = Dict(d::Date => i::Int for (i, d) in enumerate(dates))
         write(file, "date_indices", date_indices)
     end
 
@@ -252,15 +280,17 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
         state_indices = merge(m.endogenous_states, m.endogenous_states_augmented)
         @assert length(state_indices) == n_states_augmented(m) # assert no duplicate keys
         write(file, "state_indices", state_indices)
+        rev_transforms = Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(state_indices))
+        write(file, "state_revtransforms", rev_transforms)
     end
 
     # Write observable names and transforms
     if class == :obs
         write(file, "observable_indices", m.observables)
         rev_transforms = if prod != :irf
-            Dict{Symbol,Symbol}([x => symbol(m.observable_mappings[x].rev_transform) for x in keys(m.observables)])
+            Dict{Symbol,Symbol}(x => Symbol(m.observable_mappings[x].rev_transform) for x in keys(m.observables))
         else
-            Dict{Symbol,Symbol}([x => symbol("DSGE.identity") for x in keys(m.observables)])
+            Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(m.observables))
         end
         write(file, "observable_revtransforms", rev_transforms)
     end
@@ -270,20 +300,20 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
         pseudo, pseudo_mapping = pseudo_measurement(m)
         write(file, "pseudoobservable_indices", pseudo_mapping.inds)
         rev_transforms = if prod != :irf
-            Dict{Symbol,Symbol}([x => symbol(pseudo[x].rev_transform) for x in keys(pseudo)])
+            Dict{Symbol,Symbol}(x => Symbol(pseudo[x].rev_transform) for x in keys(pseudo))
         else
-            Dict{Symbol,Symbol}([x => symbol("DSGE.identity") for x in keys(pseudo)])
+            Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(pseudo))
         end
         write(file, "pseudoobservable_revtransforms", rev_transforms)
     end
 
     # Write shock names and transforms
-    if class == :shock || prod in [:shockdec, :irf]
+    if class in [:shock, :stdshock] || prod in [:shockdec, :irf]
         write(file, "shock_indices", m.exogenous_shocks)
-        if class == :shock
-            rev_transforms = Dict{Symbol,Symbol}([x => symbol("DSGE.identity") for x in keys(m.exogenous_shocks)])
+        if class in [:shock, :stdshock]
+            rev_transforms = Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(m.exogenous_shocks))
+            write(file, "shock_revtransforms", rev_transforms)
         end
-        write(file, "shock_revtransforms", rev_transforms)
     end
 end
 
@@ -308,29 +338,34 @@ end
 read_forecast_metadata(file::JLD.JldFile)
 ```
 
-Read metadata from forecast output files. This includes dictionaries mapping dates, as well as state, observable,
-pseudo-observable, and shock names, to their respective indices in the saved
-forecast output array. The saved dictionaries include:
+Read metadata from forecast output files. This includes dictionaries mapping
+dates, as well as state, observable, pseudo-observable, and shock names, to
+their respective indices in the saved forecast output array. Depending on the
+`output_var`, the saved dictionaries might include:
 
-- `date_indices::Dict{Date, Int}`: saved for all forecast outputs
-- `state_names::Dict{Symbol, Int}`: saved for `var in [:histstates, :forecaststates, :shockdecstates]`
-- `observable_names::Dict{Symbol, Int}`: saved for `var in [:forecastobs, :shockdecobs]`
-- `observable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for observables
-- `pseudoobservable_names::Dict{Symbol, Int}`: saved for `var in [:histpseudo, :forecastpseudo, :shockdecpseudo]`
-- `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for pseudoobservables
-- `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
+- `date_indices::Dict{Date, Int}`: not saved for IRFs
+- `state_indices::Dict{Symbol, Int}`
+- `observable_indices::Dict{Symbol, Int}`
+- `pseudoobservable_indices::Dict{Symbol, Int}`
+- `shock_indices::Dict{Symbol, Int}`
+- `state_revtransforms::Dict{Symbol, Symbol}`: states are not transformed, so
+  all values are `:identity`
+- `observable_revtransforms::Dict{Symbol, Symbol}`
+- `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`
+- `shock_revtransforms::Dict{Symbol, Symbol}`: shocks are not transformed, so
+  all values are `:identity`
 """
 function read_forecast_metadata(file::JLD.JldFile)
     metadata = Dict{Symbol, Any}()
     for field in setdiff(names(file), "arr")
-        metadata[symbol(field)] = read(file, field)
+        metadata[Symbol(field)] = read(file, field)
     end
     return metadata
 end
 
 """
 ```
-read_forecast_output(file, class, var_name[, shock_name])
+read_forecast_output(file, class, product, var_name[, shock_name])
 ```
 
 Read only the forecast output for a particular variable (e.g. for a particular
@@ -371,7 +406,6 @@ function read_forecast_output(file::JLD.JldFile, class::Symbol, product::Symbol,
 
     return arr
 end
-
 function read_forecast_output(file::JLD.JldFile, class::Symbol, product::Symbol, var_name::Symbol,
                               shock_name::Symbol)
     # Get indices corresponding to var_name and shock_name

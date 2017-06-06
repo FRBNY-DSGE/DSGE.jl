@@ -2,7 +2,6 @@ using DSGE
 using HDF5, Base.Test
 using DataFrames
 
-include("../util.jl")
 path = dirname(@__FILE__)
 
 # Set up model for testing

@@ -1,14 +1,11 @@
 using DSGE, Base.Test, HDF5, JLD
-include("../util.jl")
 
 path = dirname(@__FILE__)
 
 # Initialize model object
 m = AnSchorfheide(testing = true)
-m <= Setting(:saveroot, tempdir())
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:date_conditional_end, quartertodate("2015-Q4"))
-m <= Setting(:forecast_kill_shocks, true)
 m <= Setting(:use_population_forecast, true)
 m <= Setting(:forecast_pseudoobservables, true)
 
@@ -17,7 +14,7 @@ overrides = forecast_input_file_overrides(m)
 overrides[:mode] = joinpath(estroot, "optimize.h5")
 overrides[:full] = joinpath(estroot, "metropolis_hastings.h5")
 
-output_vars = add_requisite_output_vars([:histpseudo,
+output_vars = add_requisite_output_vars([:histpseudo, :histobs,
                                          :forecastpseudo, :forecastobs,
                                          :shockdecpseudo, :shockdecobs,
                                          :irfpseudo, :irfobs])
@@ -76,6 +73,21 @@ end
 @everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
 @time forecast_one(m, :full, :none, output_vars, verbose = :none)
+
+
+# Test read_forecast_output
+for input_type in [:mode, :full]
+    output_files = get_forecast_output_files(m, input_type, :none, output_vars)
+    jldopen(output_files[:trendobs], "r") do file
+        @test ndims(read_forecast_output(file, :obs, :trend, :obs_gdp)) == 2
+    end
+    jldopen(output_files[:forecastobs], "r") do file
+        @test ndims(read_forecast_output(file, :obs, :forecast, :obs_gdp)) == 2
+    end
+    jldopen(output_files[:irfobs], "r") do file
+        @test ndims(read_forecast_output(file, :obs, :irf, :obs_gdp, :rm_sh)) == 2
+    end
+end
 
 
 nothing

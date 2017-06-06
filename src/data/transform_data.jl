@@ -66,7 +66,7 @@ function collect_data_transforms(m; direction=:fwd)
 
     # Parse vector of observable mappings into data_transforms dictionary
     for obs in keys(m.observable_mappings)
-        data_transforms[obs] = getfield(m.observable_mappings[obs], symbol(string(direction) * "_transform"))
+        data_transforms[obs] = getfield(m.observable_mappings[obs], Symbol(string(direction) * "_transform"))
     end
 
     data_transforms
@@ -115,12 +115,14 @@ function transform_population_data(population_data::DataFrame, population_foreca
     population_recorded = population_data[:,[:date, population_mnemonic]]
 
     # Make sure first period of unfiltered population forecast is the first forecast quarter
-    last_recorded_date = population_recorded[end, :date]
-    if population_forecast[1, :date] <= last_recorded_date
-        last_recorded_ind   = find(population_forecast[:date] .== last_recorded_date)[1]
-        population_forecast = population_forecast[(last_recorded_ind+1):end, :]
+    if !isempty(population_forecast)
+        last_recorded_date = population_recorded[end, :date]
+        if population_forecast[1, :date] <= last_recorded_date
+            last_recorded_ind   = find(population_forecast[:date] .== last_recorded_date)[1]
+            population_forecast = population_forecast[(last_recorded_ind+1):end, :]
+        end
+        @assert subtract_quarters(population_forecast[1, :date], last_recorded_date) == 1
     end
-    @assert subtract_quarters(population_forecast[1, :date], last_recorded_date) == 1
 
     # population_all: full unfiltered series (including forecast)
     population_all = if isempty(population_forecast)

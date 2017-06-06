@@ -1,6 +1,6 @@
-#########################################
-## Extract class and product from a symbol
-#########################################
+##########################################
+## Extract class and product from a Symbol
+##########################################
 
 function get_class(s::Symbol)
     class = if contains(string(s), "pseudo")
@@ -9,6 +9,8 @@ function get_class(s::Symbol)
         :obs
     elseif contains(string(s), "state")
         :state
+    elseif contains(string(s), "stdshock")
+        :stdshock
     elseif contains(string(s), "shock")
         :shock
     end
@@ -43,326 +45,15 @@ function get_class_longname(class::Symbol)
         :observable
     elseif class == :state
         :state
-    elseif class == :shock
+    elseif class in [:shock, :stdshock]
         :shock
     end
 end
 
 
-#########################################
-## Useful methods for MeansBands objects
-#########################################
-
-class(mb::MeansBands) = mb.metadata[:class]
-product(mb::MeansBands) = mb.metadata[:product]
-cond_type(mb::MeansBands) = mb.metadata[:cond_type]
-para(mb::MeansBands) = mb.metadata[:para]
-
-function Base.show(io::IO, mb::MeansBands)
-    @printf io "MeansBands\n"
-    @printf io "  class: %s\n" class(mb)
-    @printf io "  product: %s\n" product(mb)
-    @printf io "  cond: %s\n" cond_type(mb)
-    @printf io "  para: %s\n" para(mb)
-    if mb.metadata[:product] != :trend && mb.metadata[:product] != :irf
-        @printf io "  dates: %s - %s\n" startdate_means(mb) enddate_means(mb)
-    end
-    @printf io "  # of variables: %s\n" n_vars_means(mb)
-    @printf io "  bands: %s\n" get_density_bands(mb, uniqueify=true)
-end
-
-"""
-```
-function read_mb{S<:AbstractString}(fn::S)
-```
-Read in a `MeansBands` object saved in `fn`.
-"""
-function read_mb{S<:AbstractString}(fn::S)
-    @assert isfile(fn) "File $fn could not be found"
-    mb = jldopen(fn, "r") do f
-        read(f, "mb")
-    end
-    mb
-end
-
-###################################
-## MEANS
-###################################
-
-"""
-```
-n_vars_means(mb::MeansBands)
-````
-
-Get number of variables (`:y_t`, `:OutputGap`, etc) in `mb.means`
-"""
-function n_vars_means(mb::MeansBands)
-    length(get_vars_means(mb))
-end
-
-"""
-```
-get_vars_means(mb::MeansBands)
-````
-
-Get variables (`:y_t`, `:OutputGap`, etc) in `mb.means`. Note that
-`mb.metadata[:indices]` is an `OrderedDict`, so the keys will be in the correct
-order.
-"""
-function get_vars_means(mb::MeansBands)
-    collect(keys(mb.metadata[:indices]))
-end
-
-
-"""
-```
-n_periods_means(mb::MeansBands)
-```
-
-Get number of periods in `mb.means`
-"""
-n_periods_means(mb::MeansBands) = size(mb.means,1)
-
-"""
-```
-startdate_means(mb::MeansBands)
-```
-
-Get first period in`mb.means`. Assumes `mb.means[product]` is already sorted by date.
-"""
-startdate_means(mb::MeansBands) = mb.means[:date][1]
-
-"""
-```
-enddate_means(mb::MeansBands)
-```
-
-Get last period for which `mb` stores means. Assumes `mb.means[product]` is already sorted by date.
-"""
-enddate_means(mb::MeansBands) = mb.means[:date][end]
-
-
-"""
-```
-get_shockdec_means(mb::MeansBands, var::Symbol; shocks::Vector{Symbol}=Vector{Symbol}())
-```
-
-Return the mean value of each shock requested in the shock decomposition of a particular variable.
-If `shocks` is empty, returns all shocks.
-"""
-
-function get_shockdec_means(mb::MeansBands, var::Symbol; shocks::Vector{Symbol}=Vector{Symbol}())
-
-    # Extract the subset of columns relating to the variable `var` and the shocks listed in `shocks.`
-    # If `shocks` not provided, give all the shocks
-    var_cols = collect(names(mb.means))[find([contains(string(col), string(var)) for col in names(mb.means)])]
-    if !isempty(shocks)
-        var_cols = [col -> contains(string(col), string(shock)) ? col : nothing for shock in shocks]
-    end
-
-    # Make a new DataFrame with column the column names
-    out = DataFrame()
-    for col in var_cols
-        shockname = split(string(col), DSGE_SHOCKDEC_DELIM)[2]
-        out[symbol(shockname)] = mb.means[col]
-    end
-
-    out
-end
-
-
-
-###################################
-## BANDS
-###################################
-
-"""
-```
-n_vars_bands(mb::MeansBands)
-```
-
-Get number of variables (`:y_t`, `:OutputGap`, etc) for which `mb`
-stores bands for the specified `product` (`hist`, `forecast`, `shockdec`, etc).
-"""
-n_vars_bands(mb::MeansBands) = length(mb.bands)
-
-
-"""
-```
-n_periods_bands(mb::MeansBands)
-```
-
-Get number of periods for which `mb` stores bands for the specified
-`product` (`hist`, `forecast`, `shockdec`, etc).
-"""
-function n_periods_bands(mb::MeansBands)
-    size(mb.bands[collect(keys(mb.bands))[1]],1)
-end
-
-"""
-```
-startdate_bands(mb::MeansBands)
-```
-
-Get first period for which `mb` stores bands. Assumes `mb.bands` is already sorted by date.
-"""
-startdate_bands(mb::MeansBands) = mb.bands[collect(keys(mb.bands))][:date][1]
-
-"""
-```
-enddate_bands(mb::MeansBands)
-```
-
-Get last period in `mb.bands`. Assumes `mb.bands` is already sorted by date.
-"""
-enddate_bands(mb::MeansBands) = mb.bands[:date]
-
-"""
-```
-get_density_bands(mb, uniqueify=false)
-```
-
-Return a list of the bands stored in mb.bands. If `uniqueify=true`,
-strips "upper" and "lower" band tags and returns unique list of percentage values.
-"""
-function get_density_bands(mb::MeansBands; uniqueify=false, ordered=true)
-
-    # extract one of the keys in mb.bands
-    var  = collect(keys(mb.bands))[1]
-
-    # get all the columns in the corresponding dataframe that aren't dates
-    strs = map(string,names(mb.bands[var]))
-    strs = setdiff(strs, ["date"])
-
-    lowers = strs[map(ismatch, repmat([r"LB"], length(strs)), strs)]
-    uppers = strs[map(ismatch, repmat([r"UB"], length(strs)), strs)]
-
-    # sort
-    if ordered
-        sort!(lowers, rev=true)
-        sort!(uppers)
-    end
-
-    # return both upper and lower bands, or just percents, as desired
-    strs = if uniqueify
-        sort(unique([split(x, " ")[1] for x in [lowers; uppers]]))
-    else
-        [lowers; uppers]
-    end
-
-    return strs
-end
-
-
-"""
-```
-get_shockdec_bands(mb::MeansBands, var::Symbol;
-       shocks::Vector{Symbol}=Vector{Symbol}(), bands::Vector{Symbol}()=Vector{Symbol}())
-```
-
-Return bands stored in this MeansBands object for all variables.
-
-### Inputs
-- `mb`: MeansBands object
-- `var`: the variable of interest (eg the state `:y_t`, or observable `:obs_hours`)
-
-### Optional arguments
-- `shocks`: subset of shock names for which to return bands. If empty, `get_shockdec_bands` returns all bands.
-- `bands`: subset of bands stored in the DataFrames of `mb.bands` to return.
-
-### Outputs
-
-A `Dict{Symbol, DataFrame}` mapping names of shocks to the bands of `var` corresponding to each shock.
-"""
-function get_shockdec_bands(mb::MeansBands, var::Symbol;
-                            shocks::Vector{Symbol}=Vector{Symbol}(), bands::Vector{Symbol}=Vector{Symbol}())
-
-    # Extract the subset of columns relating to the variable `var` and the shocks listed in `shocks.`
-    # If `shocks` not provided, give all the shocks
-    var_cols = collect(keys(mb.bands))[find([contains(string(col), string(var)) for col in keys(mb.bands)])]
-    if !isempty(shocks)
-        var_cols = [col -> contains(string(col), string(shock)) ? col : nothing for shock in shocks]
-    end
-
-    # Extract the subset of bands we want to return. Return all bands if `bands` not provided.
-    bands_keys = if isempty(bands)
-        names(mb.bands[var_cols[1]])
-    else
-        [[symbol("$(100x)% LB") for x in bands]; [symbol("$(100x)% UB") for x in bands]]
-    end
-
-    # Make a new dictionary mapping shock names to bands
-    out = Dict{Symbol, DataFrame}()
-    for col in var_cols
-        shockname = split(string(col), DSGE_SHOCKDEC_DELIM)[2]
-        out[shockname] = mb.bands[col][bands_keys]
-    end
-
-    out
-end
-
-
 #####################################
-## INPUT/OUTPUT
+## Preparing data for transformations
 #####################################
-
-function get_meansbands_input_files(m::AbstractModel, input_type::Symbol,
-                                    cond_type::Symbol, output_vars::Vector{Symbol};
-                                    forecast_string::AbstractString = "", fileformat = :jld)
-
-    directory = rawpath(m, "forecast")
-    base = filestring_base(m)
-    get_meansbands_input_files(directory, base, input_type, cond_type, output_vars;
-                               forecast_string = forecast_string,
-                               fileformat = fileformat)
-end
-
-function get_meansbands_input_files(directory::AbstractString, filestring_base::Vector{ASCIIString},
-                                    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                                    forecast_string::AbstractString = "", fileformat::Symbol = :jld)
-
-    input_files = Dict{Symbol, ASCIIString}()
-    for var in output_vars
-        input_files[var] = get_forecast_filename(directory, filestring_base,
-                                                 input_type, cond_type, var,
-                                                 forecast_string = forecast_string,
-                                                 fileformat = fileformat)
-        if contains(string(var), "4q")
-            input_files[var] = replace(input_files[var], "forecast4q", "forecast")
-        end
-    end
-
-    return input_files
-end
-
-function get_meansbands_output_files(m::AbstractModel, input_type::Symbol,
-                                     cond_type::Symbol, output_vars::Vector{Symbol};
-                                     forecast_string::AbstractString = "",
-                                     fileformat::Symbol = :jld)
-
-    directory = workpath(m, "forecast")
-    base = filestring_base(m)
-    get_meansbands_output_files(directory, base, input_type, cond_type, output_vars;
-                                forecast_string = forecast_string, fileformat = fileformat)
-end
-
-function get_meansbands_output_files(directory::AbstractString,
-                                     filestring_base::Vector{ASCIIString},
-                                     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                                     forecast_string::AbstractString = "", fileformat = :jld)
-
-    mb_output_vars = [symbol("mb$x") for x in output_vars]
-    output_files = Dict{Symbol, ASCIIString}()
-    for var in output_vars
-        output_files[var] = get_forecast_filename(directory, filestring_base,
-                                                  input_type, cond_type, symbol("mb$var");
-                                                  forecast_string = forecast_string,
-                                                  fileformat = fileformat)
-    end
-    return output_files
-end
-
-
 
 """
 ```
@@ -417,7 +108,205 @@ parse_transform(t::Symbol)
 Parse the module name out of a Symbol to recover the transform associated with
 an observable or pseudoobservable. Returns a function.
 """
-parse_transform(t::Symbol) = eval(symbol(split(string(t),".")[end]))
+parse_transform(t::Symbol) = eval(Symbol(split(string(t),".")[end]))
+
+"""
+```
+load_population_growth(data_file, forecast_file, mnemonic; verbose = :low)
+```
+
+Returns `DataFrame`s of growth rates for HP-filtered population data and forecast.
+"""
+function load_population_growth(data_file::String, forecast_file::String,
+                                mnemonic::Symbol;
+                                verbose::Symbol = :low)
+    data_verbose = verbose == :none ? :none : :low
+
+    # Read in unfiltered series
+    unfiltered_data     = read_population_data(data_file; verbose = data_verbose)
+    unfiltered_forecast = read_population_forecast(forecast_file, mnemonic; verbose = data_verbose)
+
+    # HP filter
+    data, forecast = transform_population_data(unfiltered_data, unfiltered_forecast,
+                                               mnemonic; verbose = :none)
+    dlfiltered_data =
+        DataFrame(date = @data(convert(Array{Date}, data[:date])),
+                  population_growth = @data(convert(Array{Float64},
+                                                    data[:dlfiltered_population_recorded])))
+    dlfiltered_forecast = if isempty(forecast)
+        DataFrame()
+    else
+        DataFrame(date = @data(convert(Array{Date}, forecast[:date])),
+                  population_growth = @data(convert(Array{Float64},
+                                                    forecast[:dlfiltered_population_forecast])))
+    end
+
+    return dlfiltered_data, dlfiltered_forecast
+end
+
+"""
+```
+get_population_series(mnemonic, population_data, population_forecast,
+    start_date, end_date)
+```
+
+Returns the population series between `start_date` and `end_date`. If `end_date`
+is after the last period in `population_forecast`, the last forecasted
+population is repeated until `end_date` using
+`resize_population_forecast`. Returns a `Vector{Float64}`.
+"""
+function get_population_series(mnemonic::Symbol, population_data::DataFrame,
+                               population_forecast::DataFrame, start_date::Date,
+                               end_date::Date)
+
+    last_historical_date = population_data[end, :date]
+
+    # If no population forecast, use last period of population data instead
+    if isempty(population_forecast)
+        population_forecast = population_data[end, :]
+        last_forecast_date = DSGE.iterate_quarters(last_historical_date, 1)
+        population_forecast[1, :date] = last_forecast_date
+    else
+        last_forecast_date = population_forecast[end, :date]
+    end
+
+    # Calculate number of periods that are in the future and extend
+    # population forecast by the right number of periods
+    if end_date > last_forecast_date
+        n_fcast_periods = subtract_quarters(end_date, last_historical_date)
+        population_forecast = resize_population_forecast(population_forecast, n_fcast_periods,
+                                                         mnemonic)
+    end
+
+    population_insample = if population_data[1, :date] <= start_date <= population_data[end, :date]
+        if population_data[1, :date] < end_date < population_data[end, :date]
+            # Dates entirely in past
+            population_data[start_date .<= population_data[:, :date] .<= end_date, :]
+
+        else
+            # Dates span past and forecast
+            data  = population_data[start_date .<= population_data[:, :date], :]
+            fcast = population_forecast[population_forecast[:, :date] .<= end_date, :]
+            vcat(data, fcast)
+        end
+
+    elseif population_forecast[1, :date] <= start_date <= population_forecast[end, :date]
+        # Dates entirely in forecast
+        population_forecast[start_date .<= population_forecast[:, :date] .<= end_date, :]
+
+    else
+        # Start date is before population data
+        error("Start date $start_date is before population data begin")
+    end
+
+    return convert(Vector{Float64}, population_insample[mnemonic])
+end
+
+"""
+```
+get_mb_population_series(product, mnemonic, population_data, population_forecast, date_list)
+```
+
+Returns the appropriate population series for the `product`.
+"""
+function get_mb_population_series(product::Symbol, mnemonic::Symbol,
+                                  population_data::DataFrame, population_forecast::DataFrame,
+                                  date_list::Vector{Date})
+
+    if product == :irf
+        # Return empty vector for IRFs, which don't correspond to real dates
+        return Vector{Float64}()
+    else
+        start_date = if product in [:forecast4q, :bddforecast4q]
+            iterate_quarters(date_list[1], -3)
+        elseif product in [:hist, :forecast, :bddforecast, :shockdec, :dettrend, :trend]
+            date_list[1]
+        else
+            error("Invalid product: $product")
+        end
+        end_date = date_list[end]
+
+        return get_population_series(mnemonic, population_data, population_forecast,
+                                     start_date, end_date)
+    end
+end
+
+
+##############
+## Other utils
+##############
+
+"""
+```
+get_mb_metadata(input_type, cond_type, output_var, forecast_output_file; forecast_string = "")
+```
+
+Returns the `metadata` dictionary from `read_forecast_metadata`, as well as
+`mb_metadata`, the dictionary that we will save to the means and bands file.
+"""
+function get_mb_metadata(input_type::Symbol, cond_type::Symbol,
+                         output_var::Symbol, forecast_output_file::String;
+                         forecast_string::String = "")
+    class   = get_class(output_var)
+    product = get_product(output_var)
+
+    metadata = jldopen(forecast_output_file, "r") do jld
+        read_forecast_metadata(jld)
+    end
+
+    class_long = get_class_longname(class)
+    variable_indices = metadata[Symbol("$(class_long)_indices")]
+    date_indices     = product == :irf ? Dict{Date,Int}() : metadata[:date_indices]
+
+    # Make sure date lists are valid. This is vacuously true for and IRFs, which
+    # are not time-dependent and hence have empty `date_indices`.
+    date_list          = collect(keys(date_indices))   # unsorted array of actual dates
+    date_indices_order = collect(values(date_indices)) # unsorted array of date indices
+    check_consistent_order(date_list, date_indices_order)
+
+    mb_metadata = Dict{Symbol,Any}(
+                   :para            => input_type,
+                   :cond_type       => cond_type,
+                   :product         => product,
+                   :class           => class,
+                   :indices         => sort(variable_indices, by = x -> variable_indices[x]),
+                   :date_inds       => sort(date_indices, by = x -> date_indices[x]),
+                   :forecast_string => forecast_string)
+
+    return metadata, mb_metadata
+end
+
+"""
+```
+get_y0_index(m::AbstractModel, product::Symbol)
+```
+
+Returns the index of the period *before* the start of saved results
+for a particular forecast-step product. For regular forecasts, this is
+the last period for which we have full-quarter data. For running 4q
+forecasts, this corresponds to 4 periods before the first forecast
+period. For shockdecs, this is one period before
+`index_shockdec_start(m)`, and for histories, it is the last period of
+the presample.
+"""
+function get_y0_index(m::AbstractModel, product::Symbol)
+    if product in [:forecast, :bddforecast]
+        return index_forecast_start(m) - 1
+    elseif product in [:forecast4q, :bddforecast4q]
+        # We subtract 4 because there is 1 transform that actually
+        # needs us to go 4 periods. Later, we can use y0_index + 1
+        # to index out the data we need for all the other forecasts.
+        return index_forecast_start(m) - 4
+    elseif product in [:shockdec, :dettrend, :trend]
+        return n_presample_periods(m) + index_shockdec_start(m) - 1
+    elseif product == :hist
+        return index_mainsample_start(m) - 1
+    elseif product == :irf
+        return -1
+    else
+        error("get_y0_index not implemented for product = $product")
+    end
+end
 
 """
 ```
@@ -445,184 +334,4 @@ function check_consistent_order(l1, l2)
     end
 
     return true
-end
-
-"""
-```
-parse_mb_colname(s::Symbol)
-```
-
-`MeansBands` column names are saved in the format
-`\$var\$DSGE_SHOCKDEC_DELIM\$shock`. `parse_mb_colname` returns (`var`,
-`shock`).
-
-"""
-function parse_mb_colname(s::Symbol)
-    map(symbol, split(string(s), DSGE_SHOCKDEC_DELIM))
-end
-
-"""
-```
-load_population_growth(data_file, forecast_file, mnemonic; verbose = :low)
-```
-
-Returns `DataFrame`s of growth rates for HP-filtered population data and forecast.
-"""
-function load_population_growth{S<:AbstractString}(data_file::S, forecast_file::S,
-                                                   mnemonic::Symbol;
-                                                   verbose::Symbol = :low)
-    data_verbose = verbose == :none ? :none : :low
-
-    # Read in unfiltered series
-    unfiltered_data     = read_population_data(data_file; verbose = data_verbose)
-    unfiltered_forecast = read_population_forecast(forecast_file, mnemonic; verbose = data_verbose)
-
-    # HP filter
-    data, forecast = transform_population_data(unfiltered_data, unfiltered_forecast,
-                                               mnemonic; verbose = :none)
-    dlfiltered_data =
-        DataFrame(date = @data(convert(Array{Date}, data[:date])),
-                  population_growth = @data(convert(Array{Float64},
-                                                    data[:dlfiltered_population_recorded])))
-    dlfiltered_forecast =
-        DataFrame(date = @data(convert(Array{Date}, forecast[:date])),
-                  population_growth = @data(convert(Array{Float64},
-                                                    forecast[:dlfiltered_population_forecast])))
-
-    return dlfiltered_data, dlfiltered_forecast
-end
-
-"""
-```
-get_mb_population_series(product, mnemonic, population_data, population_forecast, date_list)
-```
-
-Returns the appropriate population series for the `product`.
-"""
-function get_mb_population_series(product::Symbol, mnemonic::Symbol,
-                                  population_data::DataFrame, population_forecast::DataFrame,
-                                  date_list::Vector{Date})
-
-    if product in [:forecast, :bddforecast]
-
-        # For forecasts, we repeat the last forecast period's population
-        # forecast until we have n_fcast_periods of population forecasts
-        n_fcast_periods = length(date_list)
-        population_series = resize_population_forecast(population_forecast, n_fcast_periods,
-                                                       mnemonic)
-        population_series = convert(Vector{Float64}, population_series[mnemonic])
-
-    elseif product in [:shockdec, :dettrend, :trend, :forecast4q, :bddforecast4q]
-
-        if product in [:forecast4q, :bddforecast4q]
-            # For forecast4q, we want the last 3 historical periods + the forecast
-            # date_list is the date_list for forecast, so date_list[1] corresponds to date_forecast_start.
-            start_date = iterate_quarters(date_list[1], -3)
-            end_date   = date_list[end]
-            start_ind  = find(population_data[:date] .== start_date)[1]
-        else
-            # For shockdecs, deterministic trend, and trend, we want to
-            # make sure population series corresponds with the saved dates.
-            start_date = date_list[1]
-            end_date   = date_list[end]
-            start_ind  = find(population_data[:date] .== start_date)[1]
-        end
-        population_data = population_data[start_ind:end, mnemonic]
-
-        # Calculate number of periods that are in the future
-        n_fcast_periods = if product in [:forecast4q, :bddforecast4q]
-            length(date_list)
-        else
-            length(date_list) - length(population_data)
-        end
-
-        # Extend population forecast by the right number of periods
-        population_forecast = resize_population_forecast(population_forecast, n_fcast_periods,
-                                                         mnemonic)
-        end_ind = find(population_forecast[:date] .== end_date)[1]
-
-        # Concatenate population histories and forecasts together
-        population_series = if isempty(end_ind)
-            convert(Vector{Float64}, population_data)
-        else
-            tmp = [population_data; population_forecast[1:end_ind, mnemonic]]
-            convert(Vector{Float64}, tmp)
-        end
-
-    elseif product == :hist
-
-        # For history, the population series is just the data
-        population_series = convert(Vector{Float64}, population_data[mnemonic])
-
-    elseif product == :irf
-
-        # Return empty vector for IRFs, which don't correspond to real dates
-        population_series = Vector{Float64}()
-
-    else
-
-        error("Invalid product: $product")
-
-    end
-
-    return population_series
-end
-
-"""
-```
-get_mb_metadata(input_type, cond_type, output_var, forecast_output_file; forecast_string = "")
-```
-
-Returns the `metadata` dictionary from `read_forecast_metadata`, as well as
-`mb_metadata`, the dictionary that we will save to the means and bands file.
-"""
-function get_mb_metadata{S<:AbstractString}(input_type::Symbol, cond_type::Symbol,
-                                            output_var::Symbol, forecast_output_file::S;
-                                            forecast_string = "")
-    class   = get_class(output_var)
-    product = get_product(output_var)
-
-    metadata = jldopen(forecast_output_file, "r") do jld
-        read_forecast_metadata(jld)
-    end
-
-    class_long = get_class_longname(class)
-    variable_indices = metadata[symbol("$(class_long)_indices")]
-    date_indices     = product == :irf ? Dict{Date,Int}() : metadata[:date_indices]
-
-    # Make sure date lists are valid. This is vacuously true for and IRFs, which
-    # are not time-dependent and hence have empty `date_indices`.
-    date_list          = collect(keys(date_indices))   # unsorted array of actual dates
-    date_indices_order = collect(values(date_indices)) # unsorted array of date indices
-    check_consistent_order(date_list, date_indices_order)
-
-    mb_metadata = Dict{Symbol,Any}(
-                   :para            => input_type,
-                   :cond_type       => cond_type,
-                   :product         => product,
-                   :class           => class,
-                   :indices         => sort(variable_indices, by = x -> variable_indices[x]),
-                   :date_inds       => sort(date_indices, by = x -> date_indices[x]),
-                   :forecast_string => forecast_string)
-
-    return metadata, mb_metadata
-end
-
-function get_y0_index(m::AbstractModel, product::Symbol)
-    if product in [:forecast, :bddforecast]
-        return index_forecast_start(m) - 1
-    elseif product in [:forecast4q, :bddforecast4q]
-        # We subtract 4 because there is 1 transform that actually
-        # needs us to go 4 periods. Later, we can use y0_index + 1
-        # to index out the data we need for all the other forecasts.
-        return index_forecast_start(m) - 4
-    elseif product in [:shockdec, :dettrend, :trend]
-        return n_presample_periods(m) + index_shockdec_start(m) - 1
-    elseif product == :hist
-        return index_mainsample_start(m) - 1
-    elseif product == :irf
-        return -1
-    else
-        error("get_y0_index not implemented for product = $product")
-    end
 end
