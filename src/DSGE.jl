@@ -67,7 +67,7 @@ module DSGE
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance,
-        prior,
+        prior, get_estimation_output_files,
 
         # forecast/
         load_draws, forecast_one,
