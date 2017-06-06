@@ -27,11 +27,12 @@ function init_observable_mappings!(m::Model1002)
 
     hrs_fwd_transform =  function (levels)
         # FROM: Average weekly hours (AWHNONAG) & civilian employment (CE16OV)
-        # TO:   log (3 * aggregregate weekly hours / 100), per-capita
+        # TO:   log (3 * per-capita weekly hours / 100)
         # Note: Not sure why the 3 is there.
 
-        aggregateweeklyhours = levels[:AWHNONAG] .* levels[:CE16OV]
-        100*(log(3 * aggregateweeklyhours / 100) - log(levels[:filtered_population]))
+        levels[:temp] = levels[:AWHNONAG] .* levels[:CE16OV]
+        weeklyhours = percapita(m, :temp, levels)
+        100*log(3 * weeklyhours / 100)
     end
 
     hrs_rev_transform = logleveltopct_annualized_percapita
