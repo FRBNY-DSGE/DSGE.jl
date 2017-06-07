@@ -41,12 +41,12 @@ function stringstodates(stringarray)
 end
 
 """
-`quartertodate(string::AbstractString)`
+`quartertodate(string::String)`
 
 Convert `string` in the form "YYqX", "YYYYqX", or "YYYY-qX" to a Date of the end of
 the indicated quarter. "X" is in `{1,2,3,4}` and the case of "q" is ignored.
 """
-function quartertodate(string::AbstractString)
+function quartertodate(string::String)
     if ismatch(r"^[0-9]{2}[qQ][1-4]$", string)
         year = "20"*string[1:2]
         quarter = string[end]
@@ -115,4 +115,79 @@ function na2nan!(v::DataArray)
     for i = 1:length(v)
         v[i] = isna(v[i]) ?  NaN : v[i]
     end
+end
+
+"""
+```
+nan_cond_vars!(m, df; cond_type = :none)
+```
+
+NaN out conditional period variables not in `cond_semi_names(m)` or
+`cond_full_names(m)` if necessary.
+"""
+function nan_cond_vars!(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
+    if cond_type in [:semi, :full]
+        cond_names = if cond_type == :semi
+            cond_semi_names(m)
+        elseif cond_type == :full
+            cond_full_names(m)
+        end
+
+        cond_names_nan = setdiff(names(df), [cond_names; :date])
+        T = eltype(df[:, cond_names_nan])
+        df[df[:, :date] .>= date_forecast_start(m), cond_names_nan] = convert(T, NaN)
+    end
+end
+
+"""
+```
+get_data_filename(m, cond_type)
+```
+
+Returns the data file for `m`, which depends on `data_vintage(m)`, and if
+`cond_type in [:semi, :full]`, also on `cond_vintage(m)` and `cond_id(m)`.
+"""
+function get_data_filename(m::AbstractModel, cond_type::Symbol)
+    vint = data_vintage(m)
+    filestring = "data"
+
+    # If writing conditional data, append conditional vintage and ID to filename
+    if cond_type in [:semi, :full]
+        cond_vint  = cond_vintage(m)
+        cond_idno  = cond_id(m)
+        filestring = filestring * "_cdvt=$(cond_vint)_cdid=$(cond_idno)"
+    end
+
+    return inpath(m, "data", "$(filestring)_$vint.csv")
+end
+
+"""
+```
+iterate_quarters(start::Date, quarters::Int)
+```
+
+Returns the date corresponding to `start` + `quarters` quarters.
+
+### Inputs
+- `start`: starting date
+- `quarters`: number of quarters to iterate forward or backward
+"""
+function iterate_quarters(start::Date, quarters::Int)
+
+    next = start
+    if quarters < 0
+        for n = 1:-quarters
+            next = Dates.toprev(next) do x
+                Dates.lastdayofquarter(x) == x
+            end
+        end
+    elseif quarters > 0
+        for n = 1:quarters
+            next = Dates.tonext(next) do x
+                Dates.lastdayofquarter(x) == x
+            end
+        end
+    end
+
+    next
 end

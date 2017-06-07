@@ -1,6 +1,6 @@
 """
 ```
-augment_states{T<:AbstractFloat}(m::AbstractModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
+augment_states{T<:AbstractFloat}(m::AbstractModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T})
 ```
 
 ### Arguments
@@ -41,7 +41,7 @@ The diagram below shows how `TTT` is extended to `TTT_aug`.
     |_________________________________|
 
 """
-function augment_states{T<:AbstractFloat}(m::Model990, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
+function augment_states{T<:AbstractFloat}(m::Model990, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T})
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
     exo      = m.exogenous_shocks
@@ -50,25 +50,25 @@ function augment_states{T<:AbstractFloat}(m::Model990, TTT::Matrix{T}, RRR::Matr
     n_exo  = n_shocks_exogenous(m)
     @assert (n_endo, n_endo) == size(TTT)
     @assert (n_endo, n_exo)  == size(RRR)
-    @assert (n_endo, 1)      == size(CCC)
+    @assert n_endo           == length(CCC)
 
     # Initialize augmented matrices
     n_states_add = 12
     TTT_aug = zeros(n_endo + n_states_add, n_endo + n_states_add)
     TTT_aug[1:n_endo, 1:n_endo] = TTT
     RRR_aug = [RRR; zeros(n_states_add, n_exo)]
-    CCC_aug = [CCC; zeros(n_states_add, 1)]
+    CCC_aug = [CCC; zeros(n_states_add)]
 
     ### TTT modifications
 
     # Track Lags
-    TTT_aug[endo_new[:y_t1], endo[:y_t]] = 1.0
-    TTT_aug[endo_new[:c_t1], endo[:c_t]] = 1.0
-    TTT_aug[endo_new[:i_t1], endo[:i_t]] = 1.0
-    TTT_aug[endo_new[:w_t1], endo[:w_t]] = 1.0
-    TTT_aug[endo_new[:π_t1], endo[:π_t]] = 1.0
-    TTT_aug[endo_new[:L_t1], endo[:L_t]] = 1.0
-    TTT_aug[endo_new[:u_t1], endo[:u_t]] = 1.0
+    TTT_aug[endo_new[:y_t1],     endo[:y_t]] = 1.0
+    TTT_aug[endo_new[:c_t1],     endo[:c_t]] = 1.0
+    TTT_aug[endo_new[:i_t1],     endo[:i_t]] = 1.0
+    TTT_aug[endo_new[:w_t1],     endo[:w_t]] = 1.0
+    TTT_aug[endo_new[:π_t1_dup], endo[:π_t]] = 1.0
+    TTT_aug[endo_new[:L_t1],     endo[:L_t]] = 1.0
+    TTT_aug[endo_new[:u_t1],     endo[:u_t]] = 1.0
 
     # Expected inflation
     TTT_aug[endo_new[:Et_π_t], 1:n_endo] = (TTT^2)[endo[:π_t], :]
@@ -102,7 +102,7 @@ function augment_states{T<:AbstractFloat}(m::Model990, TTT::Matrix{T}, RRR::Matr
     ### CCC Modifications
 
     # Expected inflation
-    CCC_aug[endo_new[:Et_π_t], :] = (CCC + TTT*CCC)[endo[:π_t], :]
+    CCC_aug[endo_new[:Et_π_t]] = (CCC + TTT*CCC)[endo[:π_t]]
 
     return TTT_aug, RRR_aug, CCC_aug
 end

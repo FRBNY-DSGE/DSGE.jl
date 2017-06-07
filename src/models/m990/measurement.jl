@@ -1,25 +1,28 @@
 """
 ```
 measurement{T<:AbstractFloat}(m::Model990{T}, TTT::Matrix{T}, RRR::Matrix{T},
-                              CCC::Matrix{T}; shocks::Bool = true)
+                              CCC::Vector{T}; shocks::Bool = true)
 ```
 
 Assign measurement equation
 ```
-X_t = ZZ*S_t + DD + u_t
+y_t = ZZ*s_t + DD + u_t
 ```
 where
 ```
-u_t = eta_t + MM*eps_t
-var(eta_t) = EE
+u_t = η_t + MM*ϵ_t
+```
+is error composed of measurement error and a contribution from underlying shocks, and
+```
+var(η_t) = EE
 var(u_t) = HH = EE + MM*QQ*MM'
-cov(eps_t,u_t) = VV = QQ*MM'
+cov(ϵ_t,u_t) = VV = QQ*MM'
 ```
 """
 function measurement{T<:AbstractFloat}(m::Model990{T},
                                        TTT::Matrix{T},
                                        RRR::Matrix{T},
-                                       CCC::Matrix{T};
+                                       CCC::Vector{T};
                                        shocks::Bool = true)
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
@@ -36,12 +39,12 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
         _n_observables = n_observables(m) - n_anticipated_shocks(m)
         _n_states = n_states_augmented(m) - n_anticipated_shocks(m)
         _n_shocks_exogenous = n_shocks_exogenous(m) - n_anticipated_shocks(m)
-        endo_new = Dict(
+        endo_new = OrderedDict(
             [(key,m.endogenous_states_augmented[key] - n_anticipated_shocks(m)) for key in keys(m.endogenous_states_augmented)])
     end
 
     ZZ = zeros(_n_observables, _n_states)
-    DD = zeros(_n_observables, 1)
+    DD = zeros(_n_observables)
     MM = zeros(_n_observables, _n_shocks_exogenous)
     EE = zeros(_n_observables, _n_observables)
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
@@ -99,7 +102,7 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
     DD[obs[:obs_longinflation]]    = 100*(m[:π_star]-1)
 
     ## Long Rate
-    ZZ[obs[:obs_longrate], :]               = ZZ[6, :]*TTT10
+    ZZ[obs[:obs_longrate], :]               = ZZ[6, :]' * TTT10
     ZZ[obs[:obs_longrate], endo_new[:lr_t]] = 1.0
     DD[obs[:obs_longrate]]                  = m[:Rstarn]
 
@@ -131,9 +134,9 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
     # as we had in 904
     if shocks
         for i = 1:n_anticipated_shocks(m)
-            ZZ[obs[symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]*(TTT^i)
-            DD[obs[symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
-            QQ[exo[symbol("rm_shl$i")], exo[symbol("rm_shl$i")]] = m[symbol("σ_r_m$i")]^2
+            ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
+            DD[obs[Symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
         end
     end
 
@@ -148,20 +151,4 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
              [VV'*RRR'    HH]]
 
     return Measurement(ZZ, DD, QQ, EE, MM, VVall)
-end
-
-type Measurement{T<:AbstractFloat}
-    ZZ::Matrix{T}
-    DD::Matrix{T}
-    QQ::Matrix{T}
-    EE::Matrix{T}
-    MM::Matrix{T}
-    VVall::Matrix{T}
-end
-function Base.getindex(M::Measurement, d::Symbol)
-    if d in (:ZZ, :DD, :QQ, :EE, :MM, :VVall)
-        return getfield(M, d)
-    else
-        throw(KeyError(d))
-    end
 end

@@ -2,15 +2,18 @@
 # *.*~
 # \#*\#
 # .juliahistory
-# 
+#
 # # Files in src directory
 # src/*/.*~
 # src/*/\#*\#
 # src/*/.juliahistory
-# 
-# # Data
-# *.h5
+
+
+# Data
 *.mat
+*core.[0-9]*
+save/input_data/
+save/output_data/
 
 # With git v1.8+
 **/**/*.*~
@@ -20,3 +23,5 @@
 # Documenter.jl related
 docs/build
 docs/site
+docs/.documenter
+docs/.documenter.pub

@@ -8,10 +8,9 @@ Given all of the hard work put into specifying the model, one should be able to 
 the input data painlessly. To that extent, *DSGE.jl* provides facilities to download
 appropriate vintages of data series from FRED (Federal Reserve Economic Data).
 
-Note that a sample input dataset for use with model `m990` is
-provided; see [FRBNY Model 990 Data](@ref frbny-data) for more details. To update
-this sample dataset for use with model `m990`, see [Update sample
-input data](@ref).
+Note that a sample input dataset for use with model `m990` is provided; see
+[New York Fed Model 990 Data](@ref frbny-data) for more details. To update this
+sample dataset for use with model `m990`, see [Update sample input data](@ref).
 
 ## Setup
 
@@ -66,7 +65,7 @@ values are specified by `NaN`.
 
 Let's consider an example dataset comprised of 10 macro series sourced from FRED and one
 survey-based series sourced from, say, the Philadelphia Fed's [Survey of Professional
-Forecasters](https://www.philadelphiafed.org/research-and-data/real-time-center/survey-of-professional-forecasters/historical-data/inflation-forecasts)
+Forecasters](http://www.philadelphiafed.org/research-and-data/real-time-center/survey-of-professional-forecasters/historical-data/inflation-forecasts)
 via Haver Analytics:
 
 ```
@@ -146,7 +145,7 @@ for their model.
 
 - the user specifies `m.observables`; the keys of this dictionary name
     the series to be used in estimating the model.
-    
+
 - the user specifies `m.data_series`; the keys of this dictionary name data sources, and the
     values of this dictionary are lists of mnemonics to be accessed from that data source.
     Note that these mnemonics do not correspond to observables one-to-one, but rather are
@@ -164,7 +163,7 @@ for their model.
     of use when defining series-specific transformations.
 
 - the user adjusts data-related settings, such as `data_vintage`, `dataroot`,
-    `date_presample_start`, `date_mainsample_end`, and `date_zlbregime_start`, and
+    `date_presample_start`, `date_zlb_start`, `date_forecast_start`, and
     `use_population_forecast`.
 
 Second, *DSGE.jl* attempts to construct the dataset given this setup through a call to
@@ -182,7 +181,7 @@ Given the complexity of the data download, you may find that the dataset generat
 
 - Ensure that the `data_vintage` model setting is as you expect. (Try checking
     `data_vintage(m)`.)
-- Ensure that the `date_mainsample_end` model setting is as you expect, and that is not
+- Ensure that the `date_forecast_start` model setting is as you expect, and that is not
     logically incompatible with `data_vintage`.
 - Ensure that the `data_series` field of the model object is set as expected.
 - Double check the transformations specified in the `data_transforms` field of the model
@@ -223,13 +222,13 @@ julia>  m <= Setting(:data_vintage, "yymmdd")
 
 **Step 3**. Create data files for the non-FRED data sources (specified in
    `m.data_series`). For model `m990`, the required data files include
-   `spf_<yymmdd>.csv` (with column `ASACX10`), `longrate_<yymmdd>.csv`
-   (with column `FYCCZA`), and `fernald_<yymmdd>.csv` (with columns
-   `TFPJQ` and `TFPKQ`). To include data on expected interest rates,
-   the file `ois_<yymmdd>.csv` is also required. To include data on
-   population forecasts, the file `population_forecst_<yymmdd>.csv` is
-   also required (see [Incorporate population forecasts](@ref). See
-   [FRBNY Model Input Data](@ref frbny-data) for details on the series
+   `spf_<yymmdd>.csv` (with column `ASACX10`), `longrate_<yymmdd>.csv` (with
+   column `FYCCZA`), and `fernald_<yymmdd>.csv` (with columns `TFPJQ` and
+   `TFPKQ`). To include data on expected interest rates, the file
+   `ois_<yymmdd>.csv` is also required. To include data on population forecasts,
+   the file `population_forecst_<yymmdd>.csv` is also required (see
+   [Incorporate population forecasts](@ref). See
+   [New York Fed Model Input Data](@ref frbny-data) for details on the series
    used and links to data sources.
 
 **Step 4**. Run `load_data(m)`; series from FRED will be downloaded and merged with the series from

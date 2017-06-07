@@ -17,7 +17,7 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 - `data`: well-formed data as DataFrame
 - `m`: model of type AbstractModel being estimated.
 
-### Keyword Arguments: 
+### Keyword Arguments:
 - `rvec`: A matrix of horizontally concatenated random vectors ε as in Θ* = θ + ε for the proposed move in RWMH, for the purposes of testing that mutation_RWMH.
 - `rval`: A vector of random values generated in MATLAB for the purposes of testing whether the proposed move exceeds the threshhold and is accepted (or rejected).
 
@@ -48,16 +48,11 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, p0::Array{Float6
 
     rvec = isempty(rvec) ? randn(n_para-length(fixed_para_inds),1): rvec
     rval = isempty(rval) ? rand() : rval
-    
-    cov_mat = zeros(size(R,1),size(R,2))
-    if n_para < 20
-        cov_mat = chol(R)'
-    else
-        # SVD is a potential alternative to Cholesky factorization.
-        U, E, V = svd(R)
-        cov_mat = U * diagm(sqrt(E))
-    end
-    
+
+    # SVD is a robust alternative to Cholesky factorization.
+    U, E, V = svd(R)
+    cov_mat = U * diagm(sqrt(E))
+
     px_draw = p0 + squeeze(c*cov_mat*rvec,2) # reshape to be of the dimension of the original # of paras
     px_draw = reverse(px_draw)
     px = []
@@ -69,24 +64,23 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, p0::Array{Float6
         end
     end
     px = convert(Array{Float64},px)
-    
+
 
     lx = -Inf
     postx = -Inf
     try
-        out = posterior!(m,px,data;φ_smc=tempering_schedule[i])
-        lx = out[:like]
-        postx = out[:post] 
+        postx = posterior!(m,px,data;φ_smc=tempering_schedule[i])
+        lx = postx - prior(m)
     catch
         # in the event that the proposed move is outside of the bounds or
         # otherwise inappropriate
         lx = -Inf
         postx = -Inf
     end
-    
+
     # Previous posterior needs to be updated (due to tempering)
     post0 = post0+(tempering_schedule[i]-tempering_schedule[i-1])*l0
-    
+
 
     # Previous prior needs to have the fixed values reattached
     p0_pre = reverse(p0)
@@ -98,12 +92,12 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, p0::Array{Float6
             append!(p0,[pop!(p0_pre)])
         end
     end
-    
+
     # Accept/Reject
     α = exp(postx - post0) # this is RW, so q is canceled out
 
     if rval .< α # accept
-        ind_para   = px 
+        ind_para   = px
         ind_loglh  = lx
         ind_post   = postx
         ind_accept = 1

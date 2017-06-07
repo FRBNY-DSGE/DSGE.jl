@@ -26,17 +26,28 @@ either an issue or a pull request to this branch.
 
 ## Background
 
-The *DSGE.jl* package implements the FRBNY DSGE model and provides
-general code to estimate many user-specified DSGE models. The package
-is introduced in the Liberty Street Economics blog post [The FRBNY
-DSGE Model Meets
-Julia](http://libertystreeteconomics.newyorkfed.org/2015/12/the-frbny-dsge-model-meets-julia.html).
+The *DSGE.jl* package implements the New York Fed DSGE model and provides
+general code to estimate many user-specified DSGE models. The package is
+introduced in the Liberty Street Economics blog post
+[The FRBNY DSGE Model Meets Julia](http://libertystreeteconomics.newyorkfed.org/2015/12/the-frbny-dsge-model-meets-julia.html).
+(We previously referred to our model as the "FRBNY DSGE Model".)
+
+This Julia-language implementation mirrors the MATLAB code included in the
+Liberty Street Economics blog post
+[The FRBNY DSGE Model Forecast](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html).
+
+For the latest documentation on the *code*, click on the docs|latest button
+above. For the latest stable version of the code, click on the docs|stable
+button. Documentation for the most recent *model version* is available
+[here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf).
+
 
 This Julia-language implementation mirrors the MATLAB code included in
 the Liberty Street Economics blog post [The FRBNY DSGE Model
 Forecast](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html).
 
 ## Usage
+
 
 Once you've followed the installation instructions for the main
 `DSGE.jl` package, you should you also have Git installed on your
