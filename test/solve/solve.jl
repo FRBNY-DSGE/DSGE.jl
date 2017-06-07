@@ -2,17 +2,14 @@ using HDF5
 using Base.Test
 using DSGE
 
-include("../util.jl")
 path = dirname(@__FILE__)
 
-h5 = h5open("$path/../reference/solve.h5")
-TTT_expected = read(h5, "TTT")
-CCC_expected = reshape(read(h5, "CCC"), 72, 1)
-RRR_expected = read(h5, "RRR")
-close(h5)
+file = "$path/../reference/solve.h5"
+TTT_expected = h5read(file, "TTT")
+CCC_expected = h5read(file, "CCC")
+RRR_expected = h5read(file, "RRR")
 
-
-m = Model990()
+m = AnSchorfheide()
 TTT, RRR, CCC = solve(m)
 @test_matrix_approx_eq TTT_expected TTT
 @test_matrix_approx_eq RRR_expected RRR

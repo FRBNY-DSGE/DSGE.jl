@@ -1,6 +1,5 @@
 using DSGE
 using HDF5, Base.Test, Distributions
-include("../../util.jl")
 
 path = dirname(@__FILE__)
 
@@ -9,64 +8,13 @@ sw = SmetsWouters()
 
 ### Parameters
 
-# Parameters match parameters, bounds, etc. vectors from reference (ϵ = 1e-4)
-para = zeros(42)
-bounds = zeros(42, 2)
-pshape = zeros(42)
-pmean = zeros(42)
-pstdd = zeros(42)
-trspec = zeros(42, 4)
-
-# keys to skip (used to be fixed_parameters)
-fixed_parameters = [:δ, :λ_w, :ϵ_p, :ϵ_w, :g_star]
-    
-# not all parameters appear in sw.parameters
-i = 1
 for θ in sw.parameters
     !isa(θ,AbstractParameter) && error()
-    in(θ.key, fixed_parameters) && continue
-    
-    para[i] = θ.value
+    θ.fixed && continue
 
     (left, right) = θ.valuebounds
-    bounds[i, 1] = left
-    bounds[i, 2] = right
+    @test left < θ.value < right
 
-    prior = θ.prior.value
-    
-    if isa(prior, DSGE.RootInverseGamma)
-        pshape[i] = 4
-        (ν, τ) = params(prior)
-        pmean[i] = τ
-        pstdd[i] = ν
-    else
-        if isa(prior, Distributions.Beta)
-            pshape[i] = 1
-        elseif isa(prior, Distributions.Gamma)
-            pshape[i] = 2
-        elseif isa(prior, Distributions.Normal)
-            pshape[i] = 3
-        end
-        pmean[i] = mean(prior)
-        pstdd[i] = std(prior)
-        
-    end
-
-    if θ.transform == DSGE.Untransformed()
-        trspec[i, 1] = 0
-    elseif θ.transform == DSGE.SquareRoot()
-        trspec[i, 1] = 1
-    elseif  θ.transform == DSGE.Exponential()
-        trspec[i, 1] = 2        
-    else
-       throw(error("This kind of transform not allowed")) 
-    end
-        
-    (left, right) = θ.transform_parameterization
-    trspec[i, 2] = left
-    trspec[i, 3] = right
-
-    i += 1
 end
 
 ### Model indices
@@ -107,7 +55,7 @@ obs = sw.observables
 # Matrices are of expected dimensions
 @test size(Γ0) == (47, 47)
 @test size(Γ1) == (47, 47)
-@test size(C) == (47, 1)
+@test size(C) == (47,)
 @test size(Ψ) == (47, 7)
 @test size(Π) == (47, 12)
 
@@ -126,7 +74,7 @@ close(h5)
 @test_matrix_approx_eq Ψ_ref Ψ
 @test_matrix_approx_eq Π_ref Π
 
-# ### Measurement equation
+### Measurement equation
 expect = Dict{Symbol, Matrix}()
 h5 = h5open("$path/measurement.h5")
 expect[:ZZ] = read(h5, "ZZ")
@@ -142,5 +90,11 @@ actual = measurement(sw, TTT, RRR, CCC)
 for d in (:ZZ, :DD, :QQ, :EE, :MM)
     @test_matrix_approx_eq expect[d] actual[d]
 end
+
+### Custom settings
+custom_settings = Dict{Symbol, Setting}(
+    :reoptimize => Setting(:reoptimize, false))
+model = SmetsWouters(custom_settings = custom_settings)
+@test get_setting(model, :reoptimize) == false
 
 nothing

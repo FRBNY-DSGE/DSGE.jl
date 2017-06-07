@@ -4,19 +4,11 @@ using HDF5, Base.Test
 using DataFrames
 
 path = dirname(@__FILE__)
-include("../util.jl")
 
 # Set up models for testing
-s = AnSchorfheide()
-s.testing=true
-
-s <= Setting(:saveroot, "$path/../../save")
-s <= Setting(:dataroot, "$path/../../save/input_data")
-s <= Setting(:data_vintage, "160706")
-s <= Setting(:date_presample_start, quartertodate("1983-Q1"))
-s <= Setting(:date_mainsample_start, quartertodate("1983-Q1"))
-s <= Setting(:date_mainsample_end, quartertodate("2002-Q4"))
-s <= Setting(:date_zlbregime_start, quartertodate("2002-Q4"))
+custom_settings = Dict{Symbol, Setting}(
+    :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")))
+s = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 s <= Setting(:n_particles, 5)
 s <= Setting(:n_Φ, 10)
@@ -24,18 +16,17 @@ s <= Setting(:λ, 2.0)
 s <= Setting(:n_smc_blocks, 1)
 
 # Reading in reference values
-acc_loglh = h5read("$path/../reference/mutation_RWMH.h5","Acc_loglh")
-acc_post = h5read("$path/../reference/mutation_RWMH.h5","Acc_post")
+acc_loglh = h5read("$path/../reference/mutation_RWMH.h5","acc_loglh")
+acc_post = h5read("$path/../reference/mutation_RWMH.h5","acc_post")
 
-rej_loglh = h5read("$path/../reference/mutation_RWMH.h5","Rej_loglh")
-rej_post = h5read("$path/../reference/mutation_RWMH.h5","Rej_post")
+rej_loglh = h5read("$path/../reference/mutation_RWMH.h5","rej_loglh")
+rej_post = h5read("$path/../reference/mutation_RWMH.h5","rej_post")
 
-prior_draw = h5read("$path/../reference/mutation_RWMH.h5","initial_para")
-data = h5read("$path/../reference/smc.h5","data")
+prior_draw = h5read("$path/../reference/mutation_RWMH.h5","prior_draw")
+data = h5read("$path/../reference/mutation_RWMH.h5","data")
 
-out = posterior!(s, prior_draw, data, φ_smc = 1.)
-loglh = out[:like]
-post = out[:post]
+post = posterior!(s, prior_draw, data, φ_smc = 1.)
+loglh = post - prior(s)
 tempering_schedule = vec([.5 .6])
 R = eye(n_parameters(s),n_parameters(s))
 

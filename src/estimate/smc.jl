@@ -18,27 +18,27 @@ smc(m::AbstractModel)
 
 ### Outputs
 
-- `mu`: The mean of a particular parameter as calculated by taking the weighted sum of that parameter from the particle draws made in that particular stage Nφ. 
-- `sig`: The standard deviation of a particular parameter. 
+- `mu`: The mean of a particular parameter as calculated by taking the weighted sum of that parameter from the particle draws made in that particular stage Nφ.
+- `sig`: The standard deviation of a particular parameter.
 
 ### Overview
 
-Sequential Monte Carlo can be used in lieu of Random Walk Metropolis Hastings to generate parameter samples from high-dimensional parameter spaces using sequentially constructed proposal densities.  
+Sequential Monte Carlo can be used in lieu of Random Walk Metropolis Hastings to generate parameter samples from high-dimensional parameter spaces using sequentially constructed proposal densities.
 
 The implementation here is based upon Edward Herbst and Frank Schorfheide's 2014 paper 'Sequential Monte Carlo Sampling for DSGE Models' and the code accompanying their book 'Bayesian Estimation of DSGE Models'.
 
 SMC is broken up into three main steps:
 
-- `Correction`: Reweight the particles from stage n-1 by defining "incremental weights", incweight, which gradually incorporate the likelihood function p(Y|θ(i,n-1)) into the particle weights. 
-- `Selection`: Resample the particles if the distribution of particles begins to degenerate, according to a tolerance level ESS < N/2. The current resampling technique employed is systematic resampling. 
+- `Correction`: Reweight the particles from stage n-1 by defining "incremental weights", incweight, which gradually incorporate the likelihood function p(Y|θ(i,n-1)) into the particle weights.
+- `Selection`: Resample the particles if the distribution of particles begins to degenerate, according to a tolerance level ESS < N/2. The current resampling technique employed is systematic resampling.
 
-- `Mutation`: Propagate particles {θ(i),W(n)} via N(MH) steps of a Metropolis Hastings algorithm.  
+- `Mutation`: Propagate particles {θ(i),W(n)} via N(MH) steps of a Metropolis Hastings algorithm.
 """
 function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     #--------------------------------------------------------------
     #Set Parameters of Algorithm
     #--------------------------------------------------------------
-    
+
     n_Φ = get_setting(m, :n_Φ)
     n_part = get_setting(m, :n_particles)
     n_params = n_parameters(m)
@@ -90,11 +90,11 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     end
 
     if parallel
-        draws = @sync @parallel (hcat) for j = 1:n_part 
+        draws = @sync @parallel (hcat) for j = 1:n_part
             draw_from_prior(m, data, tempering_schedule)
         end
     else
-        draws = [draw_from_prior(m, data, tempering_schedule)  for j = 1:n_part]
+        draws = [DSGE.draw_from_prior(m, data, tempering_schedule)  for j = 1:n_part]
     end
 
     for i = 1:n_part
@@ -103,25 +103,26 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         loglh[i]       = draws[i][3]
     end
 
-    para_sim[1,:,:] = prior_sim # Draws from prior 
-    weight_sim[:,1] = 1/n_part 
-    zhat[1] = sum(weight_sim[:,1]) 
+    para_sim[1,:,:] = prior_sim # Draws from prior
+    weight_sim[:,1] = 1/n_part
+    zhat[1] = sum(weight_sim[:,1])
 
     i = 1
-    para = squeeze(para_sim[i, :, :],1);
-    weight = repmat(weight_sim[:, i], 1, n_params);
-    
+    para = para_sim[i, :, :]
+    weight = repmat(weight_sim[:, i], 1, n_params)
+
     if m.testing
+        println("saving draws at $(pwd())")
         open("draws.csv","a") do x
             writecsv(x,reshape(para_sim[i,:,:],(n_part,n_parameters(m))))
-        end 
+        end
     end
-     
-    μ  = sum(para.*weight,1);
-    σ = sum((para - repmat(μ, n_part, 1)).^2 .*weight,1);
-    σ = (sqrt(σ));
-    
-        
+
+    μ = sum(para.*weight,1);
+    σ = sqrt(sum((para - repmat(μ, n_part, 1)).^2 .*weight,1))
+
+    println("size of para_sim: $(size(para_sim))")
+
     if VERBOSITY[verbose] >= VERBOSITY[:low]
 	println("--------------------------")
         println("Iteration = $(i) / $(n_Φ)")
@@ -153,17 +154,17 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	#------------------------------------
 	# Incremental weights
 	incweight = exp((tempering_schedule[i] - tempering_schedule[i-1]) * loglh)
-
-	# Update weights
-	weight_sim[:,i] = weight_sim[:,i-1].*incweight 
-        zhat[i] = sum(weight_sim[:,i]) 
+        println("variance of incremental weights: $(var(incweight))")
+       	# Update weights
+	weight_sim[:,i] = weight_sim[:,i-1].*incweight
+        zhat[i] = sum(weight_sim[:,i])
 
 	# Normalize weights
 	weight_sim[:, i] = weight_sim[:, i]/zhat[i]
 	#------------------------------------
-	# (b) Selection 
+	# (b) Selection
 	#------------------------------------
-
+        println("variance of weights: $(var(weight_sim[:,i]))")
 	ESS = 1/sum(weight_sim[:,i].^2)
         @assert !isnan(ESS) "no particles have non-zero weight"
 
@@ -183,18 +184,18 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 
         c = c*(0.95 + 0.10*exp(16*(accept - target))/(1 + exp(16*(accept - target))))
         m <= Setting(:c, c)
-        
-        para = squeeze(para_sim[i-1, :, :][:,:,free_para_inds],1)
+
+        para = para_sim[i-1, :, free_para_inds] # para_sim[i-1, :, :][:,:,free_para_inds]
         weight = repmat(weight_sim[:,i], 1, n_params)[:,free_para_inds]
         μ = sum(para.*weight,1)
 	z =  (para - repmat(μ, n_part, 1))
         R_temp = (z.*weight)'*z
-        R = (R_temp + R_temp')/2 # one can also use nearestSPD(R_temp) 
+        R = (R_temp + R_temp')/2 # one can also use nearestSPD(R_temp)
 
 	temp_accept = zeros(n_part, 1) # Initialize acceptance indicator
-        
+
         if parallel
-            out = @sync @parallel (hcat) for j = 1:n_part 
+            out = @sync @parallel (hcat) for j = 1:n_part
                 mutation_RWMH(m, data, vec(para[j,:]'), loglh[j], logpost[j], i, R, tempering_schedule)
             end
         else
@@ -210,18 +211,18 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         loglh = Float64[out[i][2] for i=1:length(out)]
         logpost = Float64[out[i][3] for i=1:length(out)]
         temp_accept = Int[out[i][4] for i=1:length(out)]
-        
+
         accept = mean(temp_accept) # update average acceptance rate
         c_sim[i,:]    = c; # scale parameter
         ESS_sim[i,:]  = ESS; # ESS
         accept_sim[i,:] = accept; # average acceptance rate
-        
-        para = squeeze(para_sim[i, :, :],1);
-        weight = repmat(weight_sim[:, i], 1, n_params);
-        
-        μ  = sum(para.*weight,1);
-        σ = sum((para - repmat(μ, n_part, 1)).^2 .*weight,1);
-        σ = (sqrt(σ));
+
+        para = para_sim[i, :, :]
+        weight = repmat(weight_sim[:, i], 1, n_params)
+
+        μ  = sum(para.*weight,1)
+        σ = sum((para - repmat(μ, n_part, 1)).^2 .*weight,1)
+        σ = (sqrt(σ))
 
         # timekeeping
         block_time = toq()
@@ -229,7 +230,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         total_sampling_time_minutes = total_sampling_time/60
         expected_time_remaining_sec = (total_sampling_time/i)*(n_Φ - i)
         expected_time_remaining_minutes = expected_time_remaining_sec/60
-        
+
         if VERBOSITY[verbose] >= VERBOSITY[:low]
 	    println("--------------------------")
             println("Iteration = $(i) / $(n_Φ)")
@@ -248,8 +249,8 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	        end
             end
         end
-        
-        
+
+
     end
     if m.testing
         open("wtsim.csv","a") do x
@@ -260,7 +261,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     # Saving parameter draws
     #------------------------------------
     if !m.testing
-        
+
         save_file = h5open(rawpath(m,"estimate","mhsave.h5"),"w")
         n_saved_obs = n_part
         n_chunks = max(floor(n_saved_obs/5000),1)
@@ -281,15 +282,15 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
                              "chunk", (n_chunks,n_states_augmented(m)))
 
         print("\n calculating transition matrices \n ")
-        
+
         if parallel
-            out = @sync @parallel (hcat) for j = 1:n_part 
+            out = @sync @parallel (hcat) for j = 1:n_part
                 posterior!(m, vec(para[j,:]'), data, sampler=true)
             end
         else
             out = [posterior!(m, vec(para[j,:]'), data, sampler=true)  for j = 1:n_part]
         end
-        
+
         print("\n saving output \n ")
 
         for i = 1:n_part
@@ -301,7 +302,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         end
         close(save_file)
     end
-        
+
 end
 
 function smc(m::AbstractModel, data::DataFrame; verbose::Symbol=:low)
@@ -322,7 +323,7 @@ draw_from_prior(m::AbstractModel, data::Matrix, tempering_schedule::Array)
 ```
 
 Draw from prior distribution and resample if certain conditions are not met.
-Returns a tuple (prior_draw, logpost, loglh). 
+Returns a tuple (prior_draw, logpost, loglh).
 
 """
 function draw_from_prior(m::AbstractModel, data::Matrix, tempering_schedule::Array)
@@ -334,28 +335,27 @@ function draw_from_prior(m::AbstractModel, data::Matrix, tempering_schedule::Arr
     loglh = 0
 
     while !success
-        try            
-            for j in 1:n_params    
-                prior_draw[j] = if !m.parameters[j].fixed            
+        for j in 1:n_params
+            prior_draw[j] = if !m.parameters[j].fixed
+                prior = rand(m.parameters[j].prior.value)
+
+                # Resample until all prior draws are within the value bounds
+                while !(m.parameters[j].valuebounds[1] < prior < m.parameters[j].valuebounds[2])
                     prior = rand(m.parameters[j].prior.value)
-                    
-                    # Resample until all prior draws are within the value bounds
-                    while !(m.parameters[j].valuebounds[1] < prior < m.parameters[j].valuebounds[2])
-                        prior = rand(m.parameters[j].prior.value)
-                    end     
-                    prior
-                else
-                    m.parameters[j].value
                 end
+                prior
+            else
+                m.parameters[j].value
             end
-            out = posterior!(m, convert(Array{Float64,1},prior_draw), data; φ_smc = tempering_schedule[1])
-            logpost = out[:post]
-            loglh   = out[:like]
+        end
+        try
+            logpost = posterior!(m, convert(Array{Float64,1},prior_draw), data;
+                                 φ_smc = 1.)#convert(Float64,tempering_schedule[1]))
+            loglh = logpost - prior(m)
             success = true
         end
     end
 
     return (prior_draw, logpost, loglh)
 end
-                                    
- 
+

@@ -1,23 +1,19 @@
-using Base: Test, LinAlg
+using Base: Test
 using HDF5
-
 using DSGE
-include("../util.jl")
+
 path = dirname(@__FILE__)
 
-
-
-m = Model990()
+m = AnSchorfheide()
 Γ0, Γ1, C, Ψ, Π = eqcond(m)
 stake = 1 + 1e-6
 G1, C, impact, fmat, fwt, ywt, gev, eu, loose = gensys(Γ0, Γ1, C, Ψ, Π, stake)
 
-h5 = h5open("$path/../reference/gensys.h5")
-G1_exp = read(h5, "G1_gensys")
-C_exp = reshape(read(h5, "C_gensys"), 60, 1)
-impact_exp = read(h5, "impact")
-eu_exp = read(h5, "eu")
-close(h5)
+file = "$path/../reference/gensys.h5"
+G1_exp = h5read(file, "G1_gensys")
+C_exp = h5read(file,"C_gensys")
+impact_exp = h5read(file, "impact")
+eu_exp = h5read(file, "eu")
 
 @test_matrix_approx_eq G1_exp G1
 
