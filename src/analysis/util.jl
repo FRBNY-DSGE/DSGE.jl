@@ -17,7 +17,9 @@ function get_class(s::Symbol)
 end
 
 function get_product(s::Symbol)
-    product = if contains(string(s), "hist")
+    product = if contains(string(s), "hist4q")
+        :hist4q
+    elseif contains(string(s), "hist")
         :hist
     elseif contains(string(s), "bddforecast4q")
         :bddforecast4q
@@ -178,11 +180,21 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
                                                          mnemonic)
     end
 
-    population_insample = if population_data[1, :date] <= start_date <= population_data[end, :date]
-        if population_data[1, :date] < end_date < population_data[end, :date]
+    population_insample = if start_date <= population_data[end, :date]
+
+        padding = if start_date < population_data[1, :date]
+            # Start date is before population data; compute number of NaNs to prepend
+            warn("Start date $start_date is before population data begins: prepending NaNs")
+            n_nans = subtract_quarters(population_data[1, :date], start_date)
+
+            DataFrame(date = quarter_range(start_date, iterate_quarters(population_data[1,:date], -1)))
+        else
+            DataFrame()
+        end
+
+        unpadded_data = if population_data[1, :date] < end_date < population_data[end, :date]
             # Dates entirely in past
             population_data[start_date .<= population_data[:, :date] .<= end_date, :]
-
         else
             # Dates span past and forecast
             data  = population_data[start_date .<= population_data[:, :date], :]
@@ -190,13 +202,16 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
             vcat(data, fcast)
         end
 
+        padded_data =  vcat(padding, unpadded_data)
+        na2nan!(padded_data)
+        padded_data
+
     elseif population_forecast[1, :date] <= start_date <= population_forecast[end, :date]
         # Dates entirely in forecast
         population_forecast[start_date .<= population_forecast[:, :date] .<= end_date, :]
-
     else
-        # Start date is before population data
-        error("Start date $start_date is before population data begin")
+        # start_date comes after population_forecast[end, :date]
+        error("Start date $start_date comes after population forecast ends")
     end
 
     return convert(Vector{Float64}, population_insample[mnemonic])
@@ -217,7 +232,7 @@ function get_mb_population_series(product::Symbol, mnemonic::Symbol,
         # Return empty vector for IRFs, which don't correspond to real dates
         return Vector{Float64}()
     else
-        start_date = if product in [:forecast4q, :bddforecast4q]
+        start_date = if product in [:hist4q, :forecast4q, :bddforecast4q]
             iterate_quarters(date_list[1], -3)
         elseif product in [:hist, :forecast, :bddforecast, :shockdec, :dettrend, :trend]
             date_list[1]
@@ -299,7 +314,7 @@ function get_y0_index(m::AbstractModel, product::Symbol)
         return index_forecast_start(m) - 4
     elseif product in [:shockdec, :dettrend, :trend]
         return n_presample_periods(m) + index_shockdec_start(m) - 1
-    elseif product == :hist
+    elseif product in [:hist, :hist4q]
         return index_mainsample_start(m) - 1
     elseif product == :irf
         return -1

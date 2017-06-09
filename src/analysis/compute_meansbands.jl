@@ -291,7 +291,7 @@ function means_bands(input_type::Symbol,
 
     ## Step 3: Compute means and bands
 
-    if product in [:hist, :forecast, :dettrend, :trend, :forecast4q, :bddforecast, :bddforecast4q]
+    if product in [:hist, :forecast, :dettrend, :trend, :hist4q, :forecast4q, :bddforecast, :bddforecast4q]
 
         # Get to work!
         mb_vec = pmap(var_name -> compute_means_bands(class, product, var_name, forecast_output_file;
@@ -402,9 +402,9 @@ function compute_means_bands(class::Symbol,
     end
 
     # Do we want to use the data for y0 and y0s?
-    use_data = class == :obs && product != :irf
+    use_data = class == :obs && !(product in [:irf, :hist4q])
 
-    if product in [:forecast4q, :bddforecast4q]
+    if product in [:hist4q, :forecast4q, :bddforecast4q]
         transform4q = get_transform4q(transform)
 
         y0s = if transform4q in [loggrowthtopct_4q_percapita, loggrowthtopct_4q]
