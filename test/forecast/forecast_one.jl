@@ -14,10 +14,13 @@ overrides = forecast_input_file_overrides(m)
 overrides[:mode] = joinpath(estroot, "optimize.h5")
 overrides[:full] = joinpath(estroot, "metropolis_hastings.h5")
 
+# Make sure output_vars ignores the 4q things because they are computed in compute_meansbands
 output_vars = add_requisite_output_vars([:histpseudo, :histobs,
                                          :forecastpseudo, :forecastobs,
                                          :shockdecpseudo, :shockdecobs,
-                                         :irfpseudo, :irfobs])
+                                         :irfpseudo, :irfobs,
+                                         :forecast4qobs, :bddforecast4qobs, :hist4qobs,
+                                         :forecast4qpseudo, :bddforecast4qpseudo, :hist4qpseudo])
 
 # Check error handling for input_type = :subset
 @test_throws ErrorException forecast_one(m, :subset, :none, output_vars,
