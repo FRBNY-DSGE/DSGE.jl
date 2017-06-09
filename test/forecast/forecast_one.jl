@@ -77,7 +77,6 @@ end
 m <= Setting(:forecast_block_size, 5)
 @time forecast_one(m, :full, :none, output_vars, verbose = :none)
 
-
 # Test read_forecast_output
 for input_type in [:mode, :full]
     output_files = get_forecast_output_files(m, input_type, :none, output_vars)

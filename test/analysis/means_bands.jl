@@ -23,7 +23,6 @@ output_vars = add_requisite_output_vars([:histpseudo, :histobs,
                                          :forecast4qobs, :bddforecast4qobs, :hist4qobs,
                                          :forecast4qpseudo, :bddforecast4qpseudo, :hist4qpseudo])
 
-@everywhere using DSGE
 
 # Read expected output
 exp_modal_means, exp_modal_bands, exp_full_means, exp_full_bands =
@@ -46,6 +45,7 @@ for (var, mb_var) in zip(output_vars, mb_matrix_vars)
 end
 
 # Full-distribution
+@everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
 @time forecast_one(m, :full, :none, output_vars, verbose = :none)
 @time means_bands_all(m, :full, :none, output_vars; verbose = :none)
