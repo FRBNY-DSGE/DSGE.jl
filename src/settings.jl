@@ -59,7 +59,8 @@ function (<=)(m::AbstractModel, s::Setting)
         setting_field_name = :test_settings
     end
 
-    if !haskey(getfield(m, setting_field_name), s.key)
+    if !haskey(getfield(m, setting_field_name), s.key) ||
+        isa(s.value, Function)
         getfield(m, setting_field_name)[s.key] = s
     else
         update!(getfield(m, setting_field_name)[s.key], s)
