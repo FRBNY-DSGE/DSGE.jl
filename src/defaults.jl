@@ -121,7 +121,9 @@ function default_settings!(m::AbstractModel)
     settings[:n_Φ] = Setting(:n_Φ, 200, "Number of stages in the tempering schedule")
   	settings[:λ] = Setting(:λ, 3.0, "The 'bending coefficient' λ in Φ(n) = (n/N(Φ))^λ")
     settings[:n_smc_blocks] = Setting(:n_smc_blocks, 1, "The number of parameter blocks in SMC")
-    settings[:c] = Setting(:c, .5, "The scaling factor for the covariance, constructed from acpt and tgt during mutation")
+    settings[:step_size_smc] = Setting(:step_size_smc, .5, "The scaling factor for the covariance of the particles. Controls size of steps in mutation step")
+    settings[:n_MH_steps_smc] = Setting(:n_MH_steps_smc, 5, "Number of Metropolis Hastings steps to attempt during the mutation step.")
+
     settings[:init_accept] = Setting(:init_accept, .25, "The initial average acceptance rate for new particles during mutation")
     settings[:target_accept] = Setting(:target_accept, .25, "The initial target acceptance rate for new particles during mutation")
 

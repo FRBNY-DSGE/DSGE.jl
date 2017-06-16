@@ -67,7 +67,7 @@ module DSGE
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, compute_moments,
-        find_density_bands, prior, mutation_RWMH, systematic_resampling, smc, nearestSPD,
+        find_density_bands, prior, mutation_RWMH, systematic_resampling, smc, nearest_spd,
 
 
         # forecast/
@@ -142,7 +142,7 @@ module DSGE
     include("estimate/mutation_RWMH.jl")
     include("estimate/systematic_resampling.jl")
     include("estimate/smc.jl")
-    include("estimate/nearestSPD.jl")
+    include("estimate/nearest_spd.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")
