@@ -46,7 +46,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 
     fixed_para_inds = find([ θ.fixed for θ in m.parameters])
     free_para_inds  = find([!θ.fixed for θ in m.parameters])
-    c = get_setting(m, :c)
+    c = get_setting(m, :step_size_smc)
     accept = get_setting(m, :init_accept)
     target = get_setting(m, :target_accept)
 
@@ -61,7 +61,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     para_sim = zeros(n_Φ, n_part, n_params) # parameter draws
     weight_sim = zeros(n_part, n_Φ) # weights
     zhat = zeros(n_Φ, 1) # normalization constant
-    nresamp = 0 # record # of iteration resampled
+    n_resamp = 0 # record # of iteration resampled
 
     c_sim = zeros(n_Φ,1) # scale parameter
     ESS_sim = zeros(n_Φ,1) # ESS
@@ -80,8 +80,8 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     prior_sim = zeros(n_part,n_params)
 
     # Posterior values at prior draws
-    loglh = zeros(n_part, 1)
-    logpost = zeros(n_part, 1)
+    loglh = zeros(n_part)
+    logpost = zeros(n_part)
 
     # fix seed if testing
     if m.testing
@@ -91,10 +91,10 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 
     if parallel
         draws = @sync @parallel (hcat) for j = 1:n_part
-            draw_from_prior(m, data, tempering_schedule)
+            draw_from_prior(m, data)
         end
     else
-        draws = [DSGE.draw_from_prior(m, data, tempering_schedule)  for j = 1:n_part]
+        draws = [DSGE.draw_from_prior(m, data)  for j = 1:n_part]
     end
 
     for i = 1:n_part
@@ -112,16 +112,14 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     weight = repmat(weight_sim[:, i], 1, n_params)
 
     if m.testing
-        println("saving draws at $(pwd())")
         open("draws.csv","a") do x
             writecsv(x,reshape(para_sim[i,:,:],(n_part,n_parameters(m))))
         end
     end
 
-    μ = sum(para.*weight,1);
+    μ = sum(para.*weight,1)
     σ = sqrt(sum((para - repmat(μ, n_part, 1)).^2 .*weight,1))
 
-    println("size of para_sim: $(size(para_sim))")
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
 	println("--------------------------")
@@ -154,7 +152,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	#------------------------------------
 	# Incremental weights
 	incweight = exp((tempering_schedule[i] - tempering_schedule[i-1]) * loglh)
-        println("variance of incremental weights: $(var(incweight))")
+
        	# Update weights
 	weight_sim[:,i] = weight_sim[:,i-1].*incweight
         zhat[i] = sum(weight_sim[:,i])
@@ -164,7 +162,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	#------------------------------------
 	# (b) Selection
 	#------------------------------------
-        println("variance of weights: $(var(weight_sim[:,i]))")
+
 	ESS = 1/sum(weight_sim[:,i].^2)
         @assert !isnan(ESS) "no particles have non-zero weight"
 
@@ -174,7 +172,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	    loglh = loglh[id]
 	    logpost = logpost[id]
 	    weight_sim[:,i] = 1/n_part
-	    nresamp += 1
+	    n_resamp += 1
 	    rsmp_sim[i] = 1
 	end
 
@@ -183,14 +181,14 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	#------------------------------------
 
         c = c*(0.95 + 0.10*exp(16*(accept - target))/(1 + exp(16*(accept - target))))
-        m <= Setting(:c, c)
+        m <= Setting(:step_size_smc, c)
 
-        para = para_sim[i-1, :, free_para_inds] # para_sim[i-1, :, :][:,:,free_para_inds]
+        para = para_sim[i-1, :, free_para_inds]
         weight = repmat(weight_sim[:,i], 1, n_params)[:,free_para_inds]
         μ = sum(para.*weight,1)
 	z =  (para - repmat(μ, n_part, 1))
         R_temp = (z.*weight)'*z
-        R = (R_temp + R_temp')/2 # one can also use nearestSPD(R_temp)
+        R = (R_temp + R_temp')/2 # one can also use nearest_spd(R_temp)
 
 	temp_accept = zeros(n_part, 1) # Initialize acceptance indicator
 
@@ -213,16 +211,15 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         temp_accept = Int[out[i][4] for i=1:length(out)]
 
         accept = mean(temp_accept) # update average acceptance rate
-        c_sim[i,:]    = c; # scale parameter
-        ESS_sim[i,:]  = ESS; # ESS
-        accept_sim[i,:] = accept; # average acceptance rate
+        c_sim[i,:]    = c # scale parameter
+        ESS_sim[i,:]  = ESS # ESS
+        accept_sim[i,:] = accept # average acceptance rate
 
         para = para_sim[i, :, :]
         weight = repmat(weight_sim[:, i], 1, n_params)
 
         μ  = sum(para.*weight,1)
-        σ = sum((para - repmat(μ, n_part, 1)).^2 .*weight,1)
-        σ = (sqrt(σ))
+        σ = sqrt(sum((para - repmat(μ, n_part, 1)).^2 .*weight,1))
 
         # timekeeping
         block_time = toq()
@@ -241,7 +238,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	    println("--------------------------")
             println("c = $(c)")
             println("accept = $(accept)")
-            println("ESS = $(ESS)   ($(nresamp) total resamples.)")
+            println("ESS = $(ESS)   ($(n_resamp) total resamples.)")
 	    println("--------------------------")
             if VERBOSITY[verbose] >= VERBOSITY[:high]
                 for n=1:n_params
@@ -262,44 +259,17 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     #------------------------------------
     if !m.testing
 
-        save_file = h5open(rawpath(m,"estimate","mhsave.h5"),"w")
+        save_file = h5open(rawpath(m,"estimate","smcsave.h5"),"w")
         n_saved_obs = n_part
         n_chunks = max(floor(n_saved_obs/5000),1)
-        para_save = d_create(save_file, "mhparams", datatype(Float32),
+        para_save = d_create(save_file, "smcparams", datatype(Float32),
                              dataspace(n_saved_obs,n_params),
                              "chunk", (n_chunks,n_params))
-        post_save = d_create(save_file, "mhposterior", datatype(Float32),
-                             dataspace(n_saved_obs,1),
-                             "chunk", (n_chunks,1))
-        TTT_save  = d_create(save_file, "mhTTT", datatype(Float32),
-                             dataspace(n_saved_obs,n_states_augmented(m),n_states_augmented(m)),
-                             "chunk", (n_chunks,n_states_augmented(m),n_states_augmented(m)))
-        RRR_save  = d_create(save_file, "mhRRR", datatype(Float32),
-                             dataspace(n_saved_obs,n_states_augmented(m),n_shocks_exogenous(m)),
-                             "chunk", (n_chunks,n_states_augmented(m),n_shocks_exogenous(m)))
-        zend_save = d_create(save_file, "mhzend", datatype(Float32),
-                             dataspace(n_saved_obs,n_states_augmented(m)),
-                             "chunk", (n_chunks,n_states_augmented(m)))
-
-        print("\n calculating transition matrices \n ")
-
-        if parallel
-            out = @sync @parallel (hcat) for j = 1:n_part
-                posterior!(m, vec(para[j,:]'), data, sampler=true)
-            end
-        else
-            out = [posterior!(m, vec(para[j,:]'), data, sampler=true)  for j = 1:n_part]
-        end
 
         print("\n saving output \n ")
 
-        for i = 1:n_part
-            para_save[i,:]  = map(Float32,para[i,:])
-            post_save[i,:]  = map(Float32,out[i][:post])
-            TTT_save[i,:,:] = map(Float32,out[i][:mats][:TTT])
-            RRR_save[i,:,:] = map(Float32,out[i][:mats][:RRR])
-            zend_save[i,:]  = map(Float32,out[i][:mats][:zend]')
-        end
+        para_save[:,:] = map(Float32, para)
+
         close(save_file)
     end
 
@@ -319,14 +289,14 @@ end
 
 """
 ```
-draw_from_prior(m::AbstractModel, data::Matrix, tempering_schedule::Array)
+draw_from_prior(m::AbstractModel, data::Matrix)
 ```
 
 Draw from prior distribution and resample if certain conditions are not met.
 Returns a tuple (prior_draw, logpost, loglh).
 
 """
-function draw_from_prior(m::AbstractModel, data::Matrix, tempering_schedule::Array)
+function draw_from_prior(m::AbstractModel, data::Matrix)
     success = false
     n_params = n_parameters(m)
     T = typeof(m.parameters[1].value)
@@ -349,8 +319,7 @@ function draw_from_prior(m::AbstractModel, data::Matrix, tempering_schedule::Arr
             end
         end
         try
-            logpost = posterior!(m, convert(Array{Float64,1},prior_draw), data;
-                                 φ_smc = 1.)#convert(Float64,tempering_schedule[1]))
+            logpost = posterior!(m, convert(Array{Float64,1},prior_draw), data)
             loglh = logpost - prior(m)
             success = true
         end

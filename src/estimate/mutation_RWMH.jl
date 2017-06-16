@@ -6,11 +6,11 @@ mutation_RWMH(m, data, p0, l0, post0, i, R, tempering_schedule; rvec=[], rval=[]
 Execute one proposed move of the Metropolis-Hastings algorithm for a given parameter
 
 ### Arguments:
-- `p0`: para(j,:)
+- `p_init`: para(j,:)
         initial prior draw.
-- `l0`: loglh(j)
+- `l_init`: loglh(j)
         initial log-likelihood at the prior draw.
-- `post0`: logpost(j)
+- `post_init`: logpost(j)
            initial log-posterior at the prior draw.
 - `tune`: the tune object, which is a struct/type object that contains information about tuning the SMC and the MH algorithms
 - `i`: the index of the iteration of the SMC algorithm
@@ -23,90 +23,83 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 
 ### Outputs:
 
-- `ind_para`: para_sim[i,j,:]
+- `para`: para_sim[i,j,:]
               Updated parameter vector
-- `ind_loglh`: loglh[j]
+- `loglh`: loglh[j]
                Updated log-likelihood
-- `ind_post`: temp_accept[j,1]
+- `post`: temp_accept[j,1]
               Updated posterior
-- `ind_accept`: Indicator for acceptance or rejection (0 reject, 1 accept)
+- `accept`: Indicator for acceptance or rejection (0 reject, 1 accept)
 
 """
-function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, p0::Array{Float64,1}, l0::Float64, post0::Float64, i::Int64, R::Array{Float64,2}, tempering_schedule::Array{Float64,1}; rvec = [], rval = [])
+function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array{Float64,1}, like_init::Float64, post_init::Float64, i::Int64, R::Array{Float64,2}, tempering_schedule::Array{Float64,1}; rvec = [], rval = [])
 
 
     n_Φ = get_setting(m, :n_Φ)
     n_part = get_setting(m, :n_particles)
     n_para = n_parameters(m)
     n_blocks = get_setting(m, :n_smc_blocks)
+    n_steps = m.testing ? 1 : get_setting(m, :n_MH_steps_smc)
 
     fixed_para_inds = find([ θ.fixed for θ in m.parameters])
     free_para_inds  = find([!θ.fixed for θ in m.parameters])
-    c = get_setting(m, :c)
+    c = get_setting(m, :step_size_smc)
     accept = get_setting(m, :init_accept)
     target = get_setting(m, :target_accept)
 
-    rvec = isempty(rvec) ? randn(n_para-length(fixed_para_inds),1): rvec
-    rval = isempty(rval) ? rand() : rval
+    # draw initial step and step probability
+    step = isempty(rvec) ? randn(n_para-length(fixed_para_inds),1): rvec
+    step_prob = isempty(rval) ? rand() : rval
 
     # SVD is a robust alternative to Cholesky factorization.
     U, E, V = svd(R)
     cov_mat = U * diagm(sqrt(E))
 
-    px_draw = p0 + squeeze(c*cov_mat*rvec,2) # reshape to be of the dimension of the original # of paras
-    px_draw = reverse(px_draw)
-    px = []
-    for p in 1:n_para
-        if m.parameters[p].fixed == true
-            append!(px,[m.parameters[p].value])
-        else
-            append!(px,[pop!(px_draw)])
-        end
-    end
-    px = convert(Array{Float64},px)
-
-
-    lx = -Inf
-    postx = -Inf
-    try
-        postx = posterior!(m,px,data;φ_smc=tempering_schedule[i])
-        lx = postx - prior(m)
-    catch
-        # in the event that the proposed move is outside of the bounds or
-        # otherwise inappropriate
-        lx = -Inf
-        postx = -Inf
-    end
-
+    para = para_init
+    like = like_init
     # Previous posterior needs to be updated (due to tempering)
-    post0 = post0+(tempering_schedule[i]-tempering_schedule[i-1])*l0
+    post = post_init + (tempering_schedule[i] - tempering_schedule[i-1]) * like
+    accept = 0
+
+    for j in 1:n_steps
+        para_new = para + squeeze(c * cov_mat * step, 2)
+        like_new = -Inf
+        post_new = -Inf
+        # catch error in the event that the proposed move is outside of the bounds or
+        # otherwise inappropriate
+        try
+            post_new = posterior!(m, augment_draw(para_new, m), data; φ_smc = tempering_schedule[i])
+            like_new = post_new - prior(m)
+        end
+
+        # Accept/Reject
+        α = exp(post_new - post_init) # this is RW, so q is canceled out
+
+        if step_prob .< α # accept
+            para   = para_new
+            like   = like_new
+            post   = post_new
+            accept = 1
+        end
+
+        # draw again for the next step
+        step = randn(n_para-length(fixed_para_inds),1)
+        step_prob = rand()
+
+    end
+
+    return augment_draw(para, m), like, post, accept
+end
 
 
-    # Previous prior needs to have the fixed values reattached
-    p0_pre = reverse(p0)
-    p0 = []
-    for p in 1:length(m.parameters)
-        if m.parameters[p].fixed == true
-            append!(p0,[m.parameters[p].value])
-        else
-            append!(p0,[pop!(p0_pre)])
+function augment_draw(draw, m)
+    new_draw = map(x -> x.value, m.parameters)
+    j = 1
+    for (i,θ) in enumerate(m.parameters)
+        if !θ.fixed
+            new_draw[i] = draw[j]
+            j += 1
         end
     end
-
-    # Accept/Reject
-    α = exp(postx - post0) # this is RW, so q is canceled out
-
-    if rval .< α # accept
-        ind_para   = px
-        ind_loglh  = lx
-        ind_post   = postx
-        ind_accept = 1
-    else
-        ind_para   = p0
-        ind_loglh  = l0
-        ind_post   = post0
-        ind_accept = 0
-    end
-
-    return ind_para, ind_loglh, ind_post, ind_accept
+    return new_draw
 end
