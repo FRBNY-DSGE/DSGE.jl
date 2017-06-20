@@ -102,7 +102,7 @@ function detexify(s::String)
 end
 
 function detexify(s::Symbol)
-    symbol(detexify(string(s)))
+    Symbol(detexify(string(s)))
 end
 
 
