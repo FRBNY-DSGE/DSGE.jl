@@ -143,6 +143,7 @@ module DSGE
     include("estimate/systematic_resampling.jl")
     include("estimate/smc.jl")
     include("estimate/nearestSPD.jl")
+    include("estimate/multinomial_sampling2.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")
