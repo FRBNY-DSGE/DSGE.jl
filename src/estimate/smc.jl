@@ -188,7 +188,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         μ = sum(para.*weight,1)
 	z =  (para - repmat(μ, n_part, 1))
         R_temp = (z.*weight)'*z
-        R = (R_temp + R_temp')/2 # one can also use nearest_spd(R_temp)
+        R = nearest_spd(R_temp)
 
 	temp_accept = zeros(n_part, 1) # Initialize acceptance indicator
 
