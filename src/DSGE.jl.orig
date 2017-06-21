@@ -66,9 +66,14 @@ module DSGE
         simulated_annealing, combined_optimizer, LBFGS_wrapper,
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
-
+<<<<<<< HEAD
         metropolis_hastings, compute_parameter_covariance, compute_moments,
-        find_density_bands, prior, mutation_RWMH, multinomial_resampling1, multinomial_resampling2, systematic_resampling, mutation_RWMH1, smc, nearestSPD,
+        find_density_bands, prior, mutation_RWMH, multinomial_resampling1, systematic_resampling, smc, nearestSPD,
+
+=======
+        metropolis_hastings, compute_parameter_covariance,
+        prior, get_estimation_output_files,
+>>>>>>> 9360a14c1d91aab0aeebf5d5823cf66ea1b083cf
 
         # forecast/
         load_draws, forecast_one,
@@ -143,9 +148,11 @@ module DSGE
     include("estimate/systematic_resampling.jl")
     include("estimate/smc.jl")
     include("estimate/nearestSPD.jl")
+<<<<<<< HEAD
     include("estimate/multinomial_resampling1.jl")
+=======
     include("estimate/multinomial_sampling2.jl")
-    include("estimate/mutation_RWMH1.jl")
+>>>>>>> cc23acadee3a9455820e64d5c9d4f6e4b4bac48a
 
     include("forecast/util.jl")
     include("forecast/io.jl")
