@@ -12,7 +12,7 @@ function init_observable_mappings!(m::AnSchorfheide)
 
         levels[:temp] = percapita(m, :GDP, levels)
         gdp = 1000 * nominal_to_real(:temp, levels)
-        hpadjust(oneqtrpctchange(gdp), levels)
+        oneqtrpctchange(gdp)
     end
 
     gdp_rev_transform = loggrowthtopct_annualized_percapita
