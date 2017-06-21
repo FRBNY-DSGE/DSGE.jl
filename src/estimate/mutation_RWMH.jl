@@ -52,8 +52,9 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array
     step_prob = isempty(rval) ? rand() : rval
 
     # SVD is a robust alternative to Cholesky factorization.
-    U, E, V = svd(R)
-    cov_mat = U * diagm(sqrt(E))
+    # U, E, V = svd(R)
+    # cov_mat = U * diagm(sqrt(E))
+    cov_mat = chol(R)'
 
     para = para_init
     like = like_init
@@ -63,14 +64,9 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array
 
     for j in 1:n_steps
         para_new = para + squeeze(c * cov_mat * step, 2)
-        like_new = -Inf
-        post_new = -Inf
-        # catch error in the event that the proposed move is outside of the bounds or
-        # otherwise inappropriate
-        try
-            post_new = posterior!(m, augment_draw(para_new, m), data; φ_smc = tempering_schedule[i])
-            like_new = post_new - prior(m)
-        end
+        post_new = posterior!(m, augment_draw(para_new, m), data; φ_smc = tempering_schedule[i],
+                              sampler = true)
+        like_new = post_new - prior(m)
 
         # Accept/Reject
         α = exp(post_new - post_init) # this is RW, so q is canceled out
