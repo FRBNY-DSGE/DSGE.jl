@@ -66,9 +66,9 @@ module DSGE
         simulated_annealing, combined_optimizer, LBFGS_wrapper,
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
-        metropolis_hastings, compute_parameter_covariance, compute_moments,
-        find_density_bands, prior, mutation_RWMH, multinomial_resampling1, systematic_resampling, smc, nearestSPD,
 
+        metropolis_hastings, compute_parameter_covariance, compute_moments,
+        find_density_bands, prior, mutation_RWMH, multinomial_resampling1, multinomial_resampling2, systematic_resampling, smc, nearestSPD,
 
         # forecast/
         load_draws, forecast_one,
@@ -88,7 +88,7 @@ module DSGE
         load_data, load_data_levels, load_cond_data_levels, load_fred_data,
         transform_data, save_data, get_data_filename,
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
-        hpadjust, oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
+        oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
         loggrowthtopct_annualized_percapita, loggrowthtopct_annualized, logleveltopct_annualized_percapita,
         logleveltopct_annualized,
         parse_data_series, collect_data_transforms, reverse_transform,
@@ -144,6 +144,7 @@ module DSGE
     include("estimate/smc.jl")
     include("estimate/nearestSPD.jl")
     include("estimate/multinomial_resampling1.jl")
+    include("estimate/multinomial_sampling2.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")

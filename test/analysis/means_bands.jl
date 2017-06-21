@@ -16,11 +16,13 @@ overrides = forecast_input_file_overrides(m)
 overrides[:mode] = joinpath(estroot, "optimize.h5")
 overrides[:full] = joinpath(estroot, "metropolis_hastings.h5")
 
-output_vars = add_requisite_output_vars([:histpseudo,
+output_vars = add_requisite_output_vars([:histpseudo, :histobs,
                                          :forecastpseudo, :forecastobs,
                                          :shockdecpseudo, :shockdecobs,
-                                         :irfpseudo, :irfobs])
-@everywhere using DSGE
+                                         :irfpseudo, :irfobs,
+                                         :forecast4qobs, :bddforecast4qobs, :hist4qobs,
+                                         :forecast4qpseudo, :bddforecast4qpseudo, :hist4qpseudo])
+
 
 # Read expected output
 exp_modal_means, exp_modal_bands, exp_full_means, exp_full_bands =
@@ -37,12 +39,13 @@ exp_modal_means, exp_modal_bands, exp_full_means, exp_full_bands =
 mb_matrix_vars = map(x -> Symbol("_matrix_$x"), output_vars)
 files = get_meansbands_output_files(m, :mode, :none, mb_matrix_vars; fileformat = :h5)
 for (var, mb_var) in zip(output_vars, mb_matrix_vars)
-    filename = files[mb_var]
-    @test_matrix_approx_eq exp_modal_means[var] h5read(filename, "means")
-    @test_matrix_approx_eq exp_modal_bands[var] h5read(filename, "bands")
+     filename = files[mb_var]
+     @test_matrix_approx_eq exp_modal_means[var] h5read(filename, "means")
+     @test_matrix_approx_eq exp_modal_bands[var] h5read(filename, "bands")
 end
 
 # Full-distribution
+@everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
 @time forecast_one(m, :full, :none, output_vars, verbose = :none)
 @time means_bands_all(m, :full, :none, output_vars; verbose = :none)
@@ -54,6 +57,5 @@ for (var, mb_var) in zip(output_vars, mb_matrix_vars)
     @test_matrix_approx_eq exp_full_means[var] h5read(filename, "means")
     @test_matrix_approx_eq exp_full_bands[var] h5read(filename, "bands")
 end
-
 
 nothing
