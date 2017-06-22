@@ -2,7 +2,7 @@ using Base.Test
 @everywhere using DSGE
 
 my_tests = [
-            "core",
+            #="core",
             "parameters",
             "models/an_schorfheide/an_schorfheide",
             "models/smets_wouters/smets_wouters",
@@ -23,7 +23,8 @@ my_tests = [
             "estimate/eig",
             "estimate/metropolis_hastings",
             "estimate/smc",
-            "estimate/mutation_RWMH",
+            "estimate/mutation_RWMH",=#
+            "estimate/mutation_RWMH1",
             "data/misc",
             "data/load_data",
             "forecast/smooth",
