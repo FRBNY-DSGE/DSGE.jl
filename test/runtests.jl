@@ -24,7 +24,7 @@ my_tests = [
             "estimate/metropolis_hastings",
             "estimate/smc",
             "estimate/mutation_RWMH",=#
-            "estimate/mutation_RWMH1",
+            "estimate/mutation",
             "data/misc",
             "data/load_data",
             "forecast/smooth",
