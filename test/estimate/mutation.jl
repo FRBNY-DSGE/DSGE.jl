@@ -17,9 +17,8 @@ h5open("$path/../reference/matricesForMutation.h5","w") do file
 end
     
 
-#test it. it works!
+#Test that it compiles
 s_part1, eps_part1, acpt = mutation(m,[50.2,8.3,7.6],[.8,.9,.6,.9,.11,5,7,10],[.2,.5,.7])
-
 
 h5open("$path/../reference/mutation_RWMH1.h5","w") do file
     write(file, "s_part1", s_part1)
@@ -30,25 +29,19 @@ data=h5open("$path/../reference/mutation_RWMH.h5","r") do file
     read(file,"data")
 end
 
-
-
 #test it with one column of data. it works!
-#s,eps,acpt=mutation(m,data[:,1],[.8,.9,.6,.9,.11,5,7,10],[.2,.5,.7])
- s, eps, acpt = mutation(m, data[:,1],ones(8), zeros(3))  
-print(s)
+s, eps, acpt = mutation(m, data[:,1],ones(8), zeros(3))  
 c = h5open("$path/../reference/mutation_RWMH1.h5","r") do file
     read(file,"s_part1")
     read(file,"eps_part1")
 end
 
-#path=dirname(@__FILE__)
-#acc_log1h= h5read("$path/../reference/mutation_RWMH.h5","acc_log1h")
+#Test Kalman-certified reasonable case (should accept)
+ind_s, ind_eps, ind_acpt = mutation(m, data[:,1], [-0.6119,-1.5262,-2.6471,0.9952,-0.8350,-0.4785,-0.3428,-1.6893], zeros(3))
+@test ind_acpt == 1
 
-#=
-df,system,s0,eps0 = jldopen($"path/../reference/forecast_args.jld","r") do file
-    read(file,"df"),read(file,"system"),read(file,"s0",read(file,"eps0"
-end
+#Test unreasonable case (should reject)
+ind_s, ind_eps, ind_acpt = mutation(m, data[:,1], 3*[-0.6119,-1.5262,-2.6471,0.9952,-0.8350,-0.4785,-0.3428,-1.6893], zeros(3))
+@test ind_acpt == 0
 
-#read expected output
-exp 
-=#
+nothing 
