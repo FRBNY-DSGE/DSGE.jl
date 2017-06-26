@@ -82,12 +82,13 @@ function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
         end
     end
 
-    # Populate shocks matrix under alternative policy
-    altpolicy_shocks = get_altpolicy_forecast_shocks(m)
+    # Populate shocks matrix under alternative policy, if
+    # user has specified a function to do so
+    altpolicy_shocks = alternative_policy_shocks(m)
     if alternative_policy(m) != identity &&
         altpolicy_shocks != identity
 
-        altpolicy_shocks!(m, shocks)
+        shocks = altpolicy_shocks(m, shocks, z0)
     end
 
     # Get variables necessary to enforce the zero lower bound in the forecast
