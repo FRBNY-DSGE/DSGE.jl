@@ -1,4 +1,4 @@
-function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1}, ε_init::Array{Float64,1})
+function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1}, ε_init::Array{Float64,1}, A::Array, B::Array, R::Array, Φ::Array, H::Array, sqrtS2::Array, cov_mat::Array)
     #=This function runs random walk metropolis hastings for ONE particle. The caller should loop through all particles and call the method on each one.
     m: the model 
     yt: 1xnumMeasurements vector at time t for all observed y (GDP, inflation, interest rate, etc.)
@@ -10,23 +10,13 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
     N_MH=1
    #Set path
     path = dirname(@__FILE__)
-    #solve for the matrices in the state equation (using TPF paper notation, not standard)
-    sys=compute_system(m)
-    R=sys.transition.RRR
-    φ=sys.transition.TTT
-    C=sys.transition.CCC
-    H=sys.measurement.EE
     ind_s=0
     ind_ε=0
-    #varStateEq is the covariance matrix of the state equation(should change name. TPF paper calls it S2 but probably want to call it something different.
-    varStateEq=sys.measurement.MM*sys.measurement.QQ*sys.measurement.MM'
+
+
     #Get the meta-paramater c from model settings (I think we want a separate c for this part rather than what is used for regular MH but can change later)
     c=get_setting(m,:c)
-    #Convert the varStateEq matrix into a covariance matrix of the state error
-    U, E, V = svd(varStateEq)
-    cov_mat = U * diagm(sqrt(E))
-    
-    sqrtS2 = R*cov_mat'
+
     #initialize acceptance counter to zero
     acpt=0
     
@@ -44,8 +34,8 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
         s_init_fore = φ*s_init+sqrtS2*ε_init
 
         #Calculate difference between data and expected y from measurement equation and calculated states from above for both the new draw of ε_new and the old ε_init (we do this to calculate probabilities below. Since the error is still drawn from a Normal and everything is still linear, we know that y will also be normal. See equation of multivariate normal for how error_new and error_init enter into the pdf).
-        error_new = yt-sys.measurement.ZZ*s_new_fore-sys.measurement.DD
-        error_init = yt-sys.measurement.ZZ*s_init_fore - sys.measurement.DD
+        error_new = yt-B*s_new_fore-A
+        error_init = yt-B*s_init_fore-A
         #Calculate the top and bottom probabilities for the α ratio.
         post_new = log(pdf(MvNormal(zeros(length(yt)),H),error_new)[1]*pdf(MvNormal(zeros(length(ε_new)),eye(length(ε_new),length(ε_new))),ε_new)[1])
         post_init = log(pdf(MvNormal(zeros(length(yt)),H),error_init)[1]*pdf(MvNormal(zeros(length(ε_init)),eye(length(ε_init),length(ε_init))),ε_init)[1])

@@ -68,7 +68,7 @@ module DSGE
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
 
         metropolis_hastings, compute_parameter_covariance, compute_moments,
-        find_density_bands, prior, mutation_RWMH, multinomial_resampling, systematic_resampling, mutation, smc, nearestSPD,
+        find_density_bands, prior, mutation, multinomial_resampling, systematic_resampling, mutation, smc, nearestSPD, density, correction, ineff_func,
 
         # forecast/
         load_draws, forecast_one,
@@ -145,6 +145,9 @@ module DSGE
     include("estimate/nearestSPD.jl")
     include("estimate/multinomial_resampling.jl")
     include("estimate/mutation.jl")
+    include("estimate/correction.jl")
+    include("estimate/ineff_func.jl")
+    include("estimate/density.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")
