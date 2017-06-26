@@ -118,6 +118,7 @@ function default_settings!(m::AbstractModel)
 
     # Alternative policy
     settings[:alternative_policy] = Setting(:alternative_policy, identity)
+    settings[:alternative_policy_shocks] = Setting(:alternative_policy_shocks, identity)
 
     return settings
 end

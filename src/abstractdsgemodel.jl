@@ -303,6 +303,7 @@ n_shockdec_periods(m::AbstractModel)    = index_shockdec_end(m) - index_shockdec
 
 # Interface for alternative policy settings
 alternative_policy(m::AbstractModel) = get_setting(m, :alternative_policy)
+alternative_policy_shocks(m::AbstractModel) = get_setting(m, :alternative_policy_shocks)
 
 function date_forecast_end(m::AbstractModel)
     date = date_forecast_start(m) + Dates.Month(3 * (forecast_horizons(m)-1))
