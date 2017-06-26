@@ -156,15 +156,15 @@ function correction(m::AbstractModel, s0::Array{Float64}, ε0::Array{Float64}, y
         acptVec=zeros(numParticles)
         # Final round of mutation
         for i=1:numParticles
-             new_s, new_ε, acpt = mutation(m, yt, s_particle, ε_particle, A, B, R, Φ, H, sqrtS2, cov_mat)
-              s_fore[i] = new_s
-              ε_fore[i] = new_ε
-              acptVec[i] = acpt 
+            new_s, new_ε, acpt = mutation(m, yt, s_particle, ε_particle, A, B, R, Φ, H, sqrtS2, cov_mat)
+            s_fore[i] = new_s
+            ε_fore[i] = new_ε
+            acptVec[i] = acpt 
         end
-    # Store for next time iteration
-    acptAvg = mean(acptVec)
-    Neff[t] = (numParticles^2)/sum(weights.^2)
-    s_up = s_fore
+        # Store for next time iteration
+        acptAvg = mean(acptVec)
+        Neff[t] = (numParticles^2)/sum(weights.^2)
+        s_up = s_fore
     end
-    return Neff, lik, acptAvg
+    return Neff, lik
 end
