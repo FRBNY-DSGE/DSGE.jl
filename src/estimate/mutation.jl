@@ -1,4 +1,4 @@
-function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1}, ε_init::Array{Float64,1}, A::Array, B::Array, R::Array, Φ::Array, H::Array, sqrtS2::Array, cov_mat::Array)
+function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1}, ε_init::Array{Float64,1}, A::Array, B::Array, R::Array, Φ::Array, H::Array, sqrtS2::Array, cov_mat::Array,N_MH::Int64)
     #= 
     This function runs random walk Metropolis Hastings for ONE particle. The caller should loop through all particles and call the method on each one.
     m: the model 
@@ -7,8 +7,6 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
     eps_init: the starting epsilon (state error)
     =#
 
-    # Number of Metropolis-Hastings steps. This will eventually be a setting, but hard-coded for now. Should be low.
-    N_MH=1
     # Set path
     path = dirname(@__FILE__)
     ind_s=0
