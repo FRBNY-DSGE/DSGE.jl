@@ -14,11 +14,11 @@ Driver to compute the model solution and augment transition matrices.
     S_t = TTT*S_{t-1} + RRR*ϵ_t + CCC
     ```
 """
-function solve(m::AbstractModel)
+function solve(m::AbstractModel; apply_altpolicy = false)
 
     altpolicy = alternative_policy(m).rule
 
-    if altpolicy == identity
+    if altpolicy == identity || !apply_altpolicy
 
         # Get equilibrium condition matrices
         Γ0, Γ1, C, Ψ, Π  = eqcond(m)
