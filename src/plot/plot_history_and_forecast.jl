@@ -85,20 +85,11 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     plot!(p, datenums[fcast_inds], combined.means[fcast_inds, var], label = forecast_label,
           linewidth = 2, linecolor = forecast_mean_color)
 
-    # Set x-axis limits and ticks
-    # xlims attribute only sets finite values, e.g. (-Inf, 2) sets only the right limit
-    t0 = isnull(start_date) ? -Inf : quarter_date_to_number(get(start_date))
-    t1 = isnull(end_date)   ?  Inf : quarter_date_to_number(get(end_date))
-    date_ticks = get_date_ticks(get(start_date), get(end_date), tick_size = tick_size)
-    xaxis!(p, xlims = (t0, t1), xtick = date_ticks)
+    # Set date ticks
+    date_ticks!(p, start_date, end_date, tick_size)
 
     # Save if output_file provided
-    if !isempty(output_file)
-        output_dir = dirname(output_file)
-        !isdir(output_dir) && mkdir(output_dir)
-        Plots.savefig(output_file)
-        println("Saved $output_file")
-    end
+    save_plot(p, output_file)
 
     return p
 end
