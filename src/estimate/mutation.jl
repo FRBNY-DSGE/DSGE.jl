@@ -23,7 +23,7 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
             write(file, "randMat", randMat)
         end
         # Generate new draw of ε from a N(ε_init, c²cov_mat) distribution
-        println(nearestSPD(R))
+        #println(nearestSPD(R))
         
         ε_new=ε_init + c*Matrix(chol(nearestSPD(R)))'*randMat
         # Use the state equation to calculate the corresponding state from that ε 
@@ -54,6 +54,7 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
             #acpt = 0
         end
     end
+    acpt /= N_MH
     return ind_s, ind_ε, acpt 
 end
 
