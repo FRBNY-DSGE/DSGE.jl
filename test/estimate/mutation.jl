@@ -55,7 +55,7 @@ end
 
 # Test Kalman-certified reasonable case (should accept)
 ind_s, ind_eps, ind_acpt = mutation(m, data[:,1], [-0.6119,-1.5262,-2.6471,0.9952,-0.8350,-0.4785,-0.3428,-1.6893], zeros(3),A,B,R,Φ,H,sqrtS2,cov_mat,N_MH)
-@test ind_acpt == 1
+@test ind_acpt == N_MH #very likely so should be equal to number of MH steps
 
 #Test unreasonable case (should reject)
 ind_s, ind_eps, ind_acpt = mutation(m, data[:,1], 3*[-0.6119,-1.5262,-2.6471,0.9952,-0.8350,-0.4785,-0.3428,-1.6893], zeros(3),A,B,R,Φ,H,sqrtS2,cov_mat,N_MH)

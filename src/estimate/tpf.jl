@@ -14,9 +14,9 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array)
     H=sys.measurement.EE
     A=sys.measurement.DD
     B=sys.measurement.ZZ
-    varStateEq=sys.measurement.MM*sys.measurement.QQ*sys.measurement.MM'
+    varStateEq=sys.measurement.QQ
     cov_mat = getChol(varStateEq)
-    sqrtS2=R*eye(size(cov_mat',1)) # TEMPORARY CHANGE - for TESTING (old code: sqrtS2=R*cov_mat'
+    sqrtS2=R*cov_mat' # TEMPORARY CHANGE - for TESTING (old code: sqrtS2=R*cov_mat'
     
     # Get tuning parameters from the model
     rstar = get_setting(m,:tpf_rstar)
@@ -26,7 +26,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array)
     N_MH = get_setting(m,:tpf_N_MH)
     numParticles = get_setting(m,:tpf_numParticles)
 
-    # Initialize time
+    # End time (last period)
     T = size(yy,2)
     # Size of covariance matrix
     numErrors = size(sqrtS2,2)
@@ -44,7 +44,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array)
     # In Matlab code, they use P0 instead of ε0. What is this?
     s_up = repmat(s0,1,numParticles) + getChol(P0)'*randn(numStates,numParticles)
 
-    for t=1:T
+    for t=1:1
         yt = yy[:,t]
 
         ############ First tempering step / Initialization ################
@@ -53,8 +53,10 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array)
 
         # Error for each particle
         perror = repmat(yt-A,1,numParticles)-B*s_fore
-        # Solve for initial tempering parameter ϕ_1
+        ### Solve for initial tempering parameter ϕ_1
+        #function to solve for zeros
         init_Ineff_func(φ) = ineff_func(φ, 0.0, yt, perror, H, initialize=1)-rstar
+        #solve for zeros
         φ_1 = fzero(init_Ineff_func,0.000001, 1.0)
         
         # Update weights array and resample particles.
@@ -188,8 +190,9 @@ end
 
 # Function for calculating cholesky decomposition of matrix
 function getChol(mat::Array)
-    U,E,V=svd(mat)
-    return U*diagm(sqrt(E))
+    #get spd here, then just do chol(R)'
+    #U,E,V=svd(mat)
+    return Matrix(chol(nearestSPD(mat)))
 end
 
 # Calculation for updating c
@@ -199,24 +202,32 @@ end
 
 ################
 function correctAndResample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array,density_arr::Array,weights::Array, s_up::Array, ε::Array,ε_up::Array, H::Array, numParticles::Int64; initialize=0)
+    #=intln("initialize=$initialize")
+    println("φ_new=$φ_new")
+    println("φ_old=$φ_old")
+    println("yt=$yt")
+    println("perror=$perror")
+    println("H=$H")=#
     # Calculate initial weights
     for n=1:numParticles
         density_arr[n]=density(φ_new, φ_old, yt, perror[:,n], H, initialize=initialize)
     end
     println("New density array")
     println(density_arr)
-    println("old weights")
-    println(weights)
+   
     # Normalize weights
     weights = (density_arr.*weights)./sum(density_arr.*weights)
     # Resampling
     id = multinomial_resampling(weights)
+    #rintln("IDs: $id")
     s_up = s_up[:,id]
+    println("Before ε_up=$ε_up")
     if initialize == 1
         ε_up = ε[:,id]
     else
         ε_up = ε_up[:,id]
     end
+    println("After ε_up=$ε_up")
     # Reset weights to ones
     weights = ones(numParticles)
     # Calculate likelihood
