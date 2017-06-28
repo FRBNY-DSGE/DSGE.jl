@@ -26,6 +26,5 @@ immutable AltPolicy
     forecast_init::Function
 end
 
-function AltPolicy(rule)
-    AltPolicy(rule, identity)
-end
+AltPolicy(rule) = AltPolicy(rule, identity)
+Base.show(a::AltPolicy) = show(a.rule)
