@@ -1,8 +1,9 @@
 """
 ```
-plot_history_and_forecast(var, history, forecast; start_date = Nullable{Date}(),
-    end_date = Nullable{Date}(), output_file = "", hist_label = \"History\",
-    forecast_label = \"Forecast\", hist_color = :black, forecast_mean_color = :red,
+plot_history_and_forecast(var, history, forecast; output_file = "",
+    start_date = Nullable{Date}(), end_date = Nullable{Date}(),
+    hist_label = \"History\", forecast_label = \"Forecast\",
+    hist_color = :black, forecast_mean_color = :red,
     forecast_band_color = RGBA(0, 0, 1, 0.1), tick_size = 5, legend = :best,
     plot_handle = plot())
 ```
@@ -18,9 +19,9 @@ full-distribution forecast, the forecast will be a fan chart.
 
 ### Keyword Arguments
 
+- `output_file::String`: if specified, plot will be saved there as a PDF
 - `start_date::Nullable{Date}`
 - `end_date::Nullable{Date}`
-- `output_file::String`: if specified, plot will be saved there as a PDF
 - `hist_label::String`
 - `forecast_label::String`
 - `hist_color::Colorant`
@@ -33,12 +34,11 @@ full-distribution forecast, the forecast will be a fan chart.
 ### Output
 
 - `p::Plot`
-
 """
 function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::MeansBands;
+                                   output_file::String = "",
                                    start_date::Nullable{Date} = Nullable{Date}(),
                                    end_date::Nullable{Date} = Nullable{Date}(),
-                                   output_file::String = "",
                                    hist_label::String = "History",
                                    forecast_label::String = "Forecast",
                                    hist_color::Colorant = RGBA(0., 0., 0., 1.),
