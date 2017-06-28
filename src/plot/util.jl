@@ -27,6 +27,19 @@ function get_date_ticks(dates::AbstractArray{Date, 1};
     return ticks
 end
 
+function date_ticks!(p::Plots.Plot,
+                     start_date::Nullable{Date}, end_date::Nullable{Date},
+                     tick_size::Int)
+    # xlims attribute only sets finite values, e.g. (-Inf, 2) sets only the right limit
+    t0 = isnull(start_date) ? -Inf : quarter_date_to_number(get(start_date))
+    t1 = isnull(end_date)   ?  Inf : quarter_date_to_number(get(end_date))
+
+    date_ticks = get_date_ticks(get(start_date), get(end_date), tick_size = tick_size)
+    xaxis!(p, xlims = (t0, t1), xtick = date_ticks)
+
+    return nothing
+end
+
 function get_date_limits(start_date::Nullable{Date}, end_date::Nullable{Date},
                          dates::AbstractArray{Date, 1})
     if isnull(start_date)
@@ -64,4 +77,13 @@ function get_date_limit_indices(start_date::Nullable{Date}, end_date::Nullable{D
         end
     end
     return start_ind, end_ind
+end
+
+function save_plot(p::Plots.Plot, output_file::String = "")
+    if !isempty(output_file)
+        output_dir = dirname(output_file)
+        !isdir(output_dir) && mkdir(output_dir)
+        Plots.savefig(output_file)
+        println("Saved $output_file")
+    end
 end
