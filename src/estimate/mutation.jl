@@ -9,8 +9,8 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
 
     # Set path
     path = dirname(@__FILE__)
-    #ind_s=0
-    #ind_ε=0
+    ind_s=s_init
+    ind_ε=ε_init
     #Get the meta-paramater c from model settings (I think we want a separate c for this part rather than what is used for regular MH but can change later)
     c=get_setting(m,:c)
     # Initialize acceptance counter to zero
@@ -23,6 +23,8 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
             write(file, "randMat", randMat)
         end
         # Generate new draw of ε from a N(ε_init, c²cov_mat) distribution
+        println(nearestSPD(R))
+        
         ε_new=ε_init + c*Matrix(chol(nearestSPD(R)))'*randMat
         # Use the state equation to calculate the corresponding state from that ε 
         s_new_fore = Φ*s_init+sqrtS2*ε_new

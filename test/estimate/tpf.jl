@@ -30,6 +30,9 @@ Q=sys.measurement.QQ
 s0 = zeros(8)
 P0=nearestSPD(solve_discrete_lyapunov(Φ, R*Q*R'))
 
-data = readtable("~/us.txt",separator='     ')
+println(path)
+df = readtable("$path/../../../../../us.txt",separator=' ')
+data = convert(Matrix{Float64},df)
+data=data'
 println(data)
 neff, lik = tpf(m, data, s0, P0)
