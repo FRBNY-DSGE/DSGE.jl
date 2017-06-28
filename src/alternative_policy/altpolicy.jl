@@ -27,4 +27,4 @@ immutable AltPolicy
 end
 
 AltPolicy(rule) = AltPolicy(rule, identity)
-Base.show(a::AltPolicy) = show(a.rule)
+Base.show(io::IO, a::AltPolicy) = show(io, a.rule)
