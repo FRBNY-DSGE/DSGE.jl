@@ -14,9 +14,8 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array)
     H=sys.measurement.EE
     A=sys.measurement.DD
     B=sys.measurement.ZZ
-    varStateEq=sys.measurement.QQ
-    cov_mat = getChol(varStateEq)
-    sqrtS2=R*cov_mat' # TEMPORARY CHANGE - for TESTING (old code: sqrtS2=R*cov_mat'
+    S2=sys.measurement.QQ
+    sqrtS2=R*getChol(S2)'
     
     # Get tuning parameters from the model
     rstar = get_setting(m,:tpf_rstar)
@@ -29,7 +28,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array)
     # End time (last period)
     T = size(yy,2)
     # Size of covariance matrix
-    numErrors = size(sqrtS2,2)
+    numErrors = size(S2,1)
     #number of states
     numStates = size(B, 2)
     
@@ -44,7 +43,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array)
     # In Matlab code, they use P0 instead of ε0. What is this?
     s_up = repmat(s0,1,numParticles) + getChol(P0)'*randn(numStates,numParticles)
 
-    for t=1:1
+    for t=1:T
         yt = yy[:,t]
 
         ############ First tempering step / Initialization ################
@@ -53,14 +52,16 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array)
 
         # Error for each particle
         perror = repmat(yt-A,1,numParticles)-B*s_fore
+       
         ### Solve for initial tempering parameter ϕ_1
+        
         #function to solve for zeros
-        init_Ineff_func(φ) = ineff_func(φ, 0.0, yt, perror, H, initialize=1)-rstar
+        init_Ineff_func(φ) = ineff_func(φ, 2.0*pi, yt, perror, H, initialize=1)-rstar
         #solve for zeros
         φ_1 = fzero(init_Ineff_func,0.000001, 1.0)
         
         # Update weights array and resample particles.
-        loglik, weights, s_up, ε_up = correctAndResample(φ_1, 0.0,yt,perror,density_arr,weights,s_up,ε,ε_up,H,numParticles,initialize=1)
+        loglik, weights, s_up, ε_up = correctAndResample(φ_1,0.0,yt,perror,density_arr,weights,s_up,ε,H,numParticles,initialize=1)
         # Update likelihood
         lik[t]=lik[t]+loglik
 
@@ -87,8 +88,10 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array)
                 # Set ϕ_new to the solution of the inefficiency function over interval
                 φ_new = fzero(InEff_func,φ_interval)
                 check_InEff = ineff_func(1.0,φ_new,yt,perror,H,initialize=0)
+
                 # Update weights array and resample particles.
-                loglik, weights, s_up, ε_up = correctAndResample(φ_new,φ_old,yt,perror,density_arr,weights,s_up,ε_up,ε_up,H,numParticles,initialize=0)
+                loglik, weights, s_up, ε_up = correctAndResample(φ_new,φ_old,yt,perror,density_arr,weights,s_up,ε_up,H,numParticles,initialize=0)
+
                 # Update likelihood
                 lik[t]=lik[t]+loglik
 
@@ -97,16 +100,15 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array)
                 
                 μ = mean(ε_up,2)
                 cov_s = (1/numParticles)*(ε_up-repmat(μ,1,numParticles))*(ε_up - repmat(μ,1,numParticles))'
-                checkp = diagm(diag(getChol(cov_s)))
 
                 # Mutation Step
                 acptVec=zeros(numParticles)
                 
-                for i = 1:numParticles  
-                    new_s, new_ε, acpt = mutation(m,yt,s_up[:,i],ε_up[:,i],A,B,cov_s,Φ,H,sqrtS2,cov_mat,N_MH)
-                    s_fore[:,i] = new_s
-                    ε_up[:,i] = new_ε
-                    acptVec[i] = acpt
+                for i = 1:numParticles
+                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_up[:,i],ε_up[:,i],A,B,cov_s,Φ,H,sqrtS2,S2,N_MH)
+                    s_fore[:,i] = ind_s
+                    ε_up[:,i] = ind_ε
+                    acptVec[i] = ind_acpt
                 end
                 # Calculate average accept rate
                 acpt_rate = mean(acptVec)
@@ -122,11 +124,14 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array)
         # End of tempering steps. Begin final round with φ=1
         φ_new = 1.0
         # Update weights array and resample particles.
-        loglik, weights, s_up, ε_up = correctAndResample(φ_new,φ_old,yt,perror,density_arr,weights,s_up,ε_up,ε_up,H,numParticles,initialize=0)
+        loglik, weights, s_up, ε_up = correctAndResample(φ_new,φ_old,yt,perror,density_arr,weights,s_up,ε_up,H,numParticles,initialize=0)
         # Update likelihood
         lik[t]=lik[t]+loglik
-
-
+        
+        c = updateC(c,acpt_rate,trgt)
+        μ = mean(ε_up,2)
+        cov_s = (1/numParticles)*(ε_up-repmat(μ,1,numParticles))*(ε_up - repmat(μ,1,numParticles))'
+#=
         # Calculate densities
         for i=1:numParticles
             density_arr[i]= density(φ_new, φ_old, yt, perror[:,i],H,initialize=0)
@@ -169,13 +174,14 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array)
         μ=mean(ε_up,2)
         cov_s = (1/numParticles)*(ε_up - repmat(μ,1,numParticles))*(ε_up-repmat(μ,1,numParticles))'
         checkp = diagm(diag(getChol(cov_s)))
+=#
         acptVec=zeros(numParticles)
         # Final round of mutation
         for i=1:numParticles
-            new_s, new_ε, acpt = mutation(m, yt, s_up[:,i], ε_up[:,i], A, B, R, Φ, H, sqrtS2, cov_mat,N_MH)
-            s_fore[:,i] = new_s
-            ε_up[:,i] = new_ε
-            acptVec[i] = acpt 
+            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_up[:,i], ε_up[:,i], A, B, cov_s, Φ, H, sqrtS2,S2,N_MH)
+            s_fore[:,i] = ind_s
+            ε_up[:,i] = ind_ε
+            acptVec[i] = ind_acpt 
         end
         # Store for next time iteration
         acpt_rate = mean(acptVec)
@@ -201,19 +207,12 @@ function updateC(c::Float64, acpt::Float64, trgt::Float64)
 end
 
 ################
-function correctAndResample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array,density_arr::Array,weights::Array, s_up::Array, ε::Array,ε_up::Array, H::Array, numParticles::Int64; initialize=0)
-    #=intln("initialize=$initialize")
-    println("φ_new=$φ_new")
-    println("φ_old=$φ_old")
-    println("yt=$yt")
-    println("perror=$perror")
-    println("H=$H")=#
+function correctAndResample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array,density_arr::Array,weights::Array, s_up::Array, ε_up::Array, H::Array, numParticles::Int64; initialize=0)
+
     # Calculate initial weights
     for n=1:numParticles
         density_arr[n]=density(φ_new, φ_old, yt, perror[:,n], H, initialize=initialize)
     end
-    println("New density array")
-    println(density_arr)
    
     # Normalize weights
     weights = (density_arr.*weights)./sum(density_arr.*weights)
@@ -221,13 +220,8 @@ function correctAndResample(φ_new::Float64, φ_old::Float64, yt::Array, perror:
     id = multinomial_resampling(weights)
     #rintln("IDs: $id")
     s_up = s_up[:,id]
-    println("Before ε_up=$ε_up")
-    if initialize == 1
-        ε_up = ε[:,id]
-    else
-        ε_up = ε_up[:,id]
-    end
-    println("After ε_up=$ε_up")
+    ε_up = ε_up[:,id]
+    
     # Reset weights to ones
     weights = ones(numParticles)
     # Calculate likelihood

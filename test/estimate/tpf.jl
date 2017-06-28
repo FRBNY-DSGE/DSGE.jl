@@ -15,17 +15,21 @@ srand(1234)
 path=dirname(@__FILE__)
 
 #Test if the code runs without error
-s0 = zeros(8)
+#=s0 = zeros(8)
 ε0 = zeros(3)
 data = h5open("$path/../reference/mutation_RWMH.h5","r") do file
     read(file, "data")
 end
+=#
 
 sys=compute_system(m)
 Φ=sys.transition.TTT
 R=sys.transition.RRR
 Q=sys.measurement.QQ
-P0=solve_discrete_lyapunov(Φ, R*Q*R')
 
+s0 = zeros(8)
+P0=nearestSPD(solve_discrete_lyapunov(Φ, R*Q*R'))
 
+data = readtable("~/us.txt",separator='     ')
+println(data)
 neff, lik = tpf(m, data, s0, P0)
