@@ -3,7 +3,8 @@
 plot_history_and_forecast(var, history, forecast; start_date = Nullable{Date}(),
     end_date = Nullable{Date}(), output_file = "", hist_label = \"History\",
     forecast_label = \"Forecast\", hist_color = :black, forecast_mean_color = :red,
-    forecast_band_color = RGBA(0, 0, 1, 0.1), tick_size = 5, legend = :best)
+    forecast_band_color = RGBA(0, 0, 1, 0.1), tick_size = 5, legend = :best,
+    plot_handle = plot())
 ```
 
 Plot `var` from `history` and `forecast`. If these correspond to a
@@ -27,6 +28,7 @@ full-distribution forecast, the forecast will be a fan chart.
 - `forecast_band_color::Colorant`
 - `tick_size::Int`: x-axis (time) tick size in units of years
 - `legend`
+- `plot_handle::Plots.Plot`: a plot handle to add `history` and `forecast` to
 
 ### Output
 
@@ -43,7 +45,8 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
                                    forecast_mean_color::Colorant = RGBA(1., 0., 0., 1.),
                                    forecast_band_color::Colorant = RGBA(0., 0., 1., 0.1),
                                    tick_size::Int = 5,
-                                   legend = :best)
+                                   legend = :best,
+                                   plot_handle::Plots.Plot = plot())
     # Concatenate MeansBands
     combined = cat(history, forecast)
 
@@ -62,7 +65,11 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     all_inds   = start_ind:end_ind
 
     # Initialize plot
-    p = Plots.plot(legend = legend)
+    p = if isempty(plot_handle.series_list)
+        Plots.plot(legend = legend)
+    else
+        plot_handle
+    end
 
     # Plot bands
     band_percents = DSGE.which_density_bands(combined; uniquify = true)
