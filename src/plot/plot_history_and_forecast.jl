@@ -13,8 +13,8 @@ full-distribution forecast, the forecast will be a fan chart.
 ### Inputs
 
 - `var::Symbol`: e.g. `:obs_gdp`
-- `history::MeansBands`
-- `forecast::MeansBands`
+- `history::MeansBands` or `Vector{MeansBands}`
+- `forecast::MeansBands` or `Vector{MeansBands}`
 
 ### Keyword Arguments
 
@@ -101,4 +101,33 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     end
 
     return p
+end
+
+
+function plot_history_and_forecast(var::Symbol, histories::Vector{MeansBands}, forecasts::Vector{MeansBands};
+                                   start_date::Nullable{Date} = Nullable{Date}(),
+                                   end_date::Nullable{Date} = Nullable{Date}(),
+                                   output_file::String = "",
+                                   hist_label::String = "History",
+                                   forecast_label::String = "Forecast",
+                                   hist_color::Colorant = RGBA(0., 0., 0., 1.),
+                                   forecast_mean_color::Colorant = RGBA(1., 0., 0., 1.),
+                                   forecast_band_color::Colorant = RGBA(0., 0., 1., 0.1),
+                                   tick_size::Int = 5,
+                                   legend = :best,
+                                   plot_handle::Plots.Plot = plot())
+
+    @assert length(histories) == length(forecasts) "histories and forecasts must be same length"
+
+    for (history, forecast) in zip(histories, forecasts)
+       plot_handle =  plot_history_and_forecast(var, history, forecast;
+                            start_date = start_date, end_date = end_date,
+                            output_file = output_file,
+                            hist_label = hist_label, forecast_label = forecast_label,
+                            hist_color = hist_color, forecast_mean_color = forecast_mean_color,
+                            forecast_band_color = forecast_band_color,
+                            tick_size = tick_size, legend = legend, plot_handle = plot_handle)
+    end
+
+    return plot_handle
 end
