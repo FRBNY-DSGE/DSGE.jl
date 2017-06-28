@@ -60,8 +60,7 @@ function hair_plot(var::Symbol, df::DataFrame,
     datenums   = map(quarter_date_to_number, df[:date])
     date_ticks = get_date_ticks(df[:date])
 
-    # Initialize GR backend
-    gr()
+    # Initialize plot
     p = Plots.plot(xtick = date_ticks, legend = legend)
 
     # Plot realized (transformed) series
