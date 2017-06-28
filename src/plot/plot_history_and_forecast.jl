@@ -1,4 +1,3 @@
-using DSGE, Plots
 """
 ```
 plot_history_and_forecast(var, history, forecast; start_date = Nullable{Date}(),

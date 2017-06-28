@@ -1,4 +1,3 @@
-using DSGE, Iterators, Plots
 """
 ```
 hair_plot(var, df, histories, forecasts; output_file = "", hist_label = \"Realized\",
