@@ -16,7 +16,7 @@ Driver to compute the model solution and augment transition matrices.
 """
 function solve(m::AbstractModel)
 
-    altpolicy = alternative_policy(m)
+    altpolicy = alternative_policy(m).rule
 
     if altpolicy == identity
 
