@@ -5,11 +5,24 @@ using DSGE, Plots, DataStructures
 plot_irfs(shock, vars, mb; bands = [\"90.0%\"], output_file = "")
 ```
 
-Plots the responses of `vars` to `shock`, given a `MeansBands` object `mb`. If
-`output_file` is provided in the form \"base.ext\", the individual plots will
-also each be saved as \"base__var.ext\". By default, only 90% bands are plotted.
+Plots the responses of `vars` to `shock`, given a `MeansBands` object `mb`. By
+default, only 90% bands are plotted.
 
-Returns an `OrderedDict{Symbol, Plot}` indexed by variable name.
+### Inputs
+
+- `shock::Symbol`: e.g. `:g_sh`
+- `vars::Vector{Symbol}`: response variables, e.g. `[:obs_gdp, :obs_corepce]`
+- `mb::MeansBands`
+
+### Keyword Arguments
+
+- `bands::Vector{String}`
+- `output_file::String`: if `output_file` is provided in the form \"base.ext\",
+  the individual plots will also each be saved as \"base__var.ext\"
+
+### Output
+
+- `allplots::OrderedDict{Symbol, Plot}`: indexed by variable name
 """
 function plot_irfs(shock::Symbol, vars::Vector{Symbol}, mb::MeansBands;
                    bands::Vector{String} = ["90.0%"],

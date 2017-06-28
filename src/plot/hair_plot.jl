@@ -1,5 +1,39 @@
 using DSGE, Iterators, Plots
+"""
+```
+hair_plot(var, df, histories, forecasts; output_file = "", hist_label = \"Realized\",
+    forecast_label = \"Forecasts\", forecast_palette = Symbol(), forecast_color = :black,
+    legend = :best)
 
+hair_plot(var, df, initial_values, forecasts; output_file = "", hist_label = \"Realized\",
+    forecast_label = \"Forecasts\", forecast_palette = Symbol(), forecast_color = :black,
+    legend = :best)
+```
+
+### Inputs
+
+- `var::Symbol`: e.g. `:obs_gdp`
+- `df::DataFrame`: must contain realized values of `var`
+- `histories::Vector{MeansBands}` (method 1) or
+  `initial_values::Vector{Float64}` (method 2): vector of either historical
+  `MeansBands` or initial forecast values (i.e. s_{T|T} or y_T). Needed to
+  connect the forecast hairs to the realized data line
+- `forecasts::Vector{MeansBands}`
+
+### Keyword Arguments
+
+- `output_file::String`: if specified, plot will be saved there as a PDF
+- `hist_label::String`
+- `forecast_label::String`
+- `forecast_palette::Symbol`: if specified, the hair colors will be chosen
+  according to this palette. Otherwise they will all be `forecast_color`
+- `forecast_color::Symbol`
+- `legend`
+
+### Output
+
+- `p::Plot`
+"""
 function hair_plot(var::Symbol, df::DataFrame,
                    histories::Vector{MeansBands}, forecasts::Vector{MeansBands};
                    output_file::String = "",

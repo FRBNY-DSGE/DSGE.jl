@@ -1,5 +1,39 @@
 using DSGE, Plots
+"""
+```
+plot_history_and_forecast(var, history, forecast; start_date = Nullable{Date}(),
+    end_date = Nullable{Date}(), output_file = "", hist_label = \"History\",
+    forecast_label = \"Forecast\", hist_color = :black, forecast_mean_color = :red,
+    forecast_band_color = RGBA(0, 0, 1, 0.1), tick_size = 5, legend = :best)
+```
 
+Plot `var` from `history` and `forecast`. If these correspond to a
+full-distribution forecast, the forecast will be a fan chart.
+
+### Inputs
+
+- `var::Symbol`: e.g. `:obs_gdp`
+- `history::MeansBands`
+- `forecast::MeansBands`
+
+### Keyword Arguments
+
+- `start_date::Nullable{Date}`
+- `end_date::Nullable{Date}`
+- `output_file::String`: if specified, plot will be saved there as a PDF
+- `hist_label::String`
+- `forecast_label::String`
+- `hist_color::Colorant`
+- `forecast_mean_color::Colorant`
+- `forecast_band_color::Colorant`
+- `tick_size::Int`: x-axis (time) tick size in units of years
+- `legend`
+
+### Output
+
+- `p::Plot`
+
+"""
 function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::MeansBands;
                                    start_date::Nullable{Date} = Nullable{Date}(),
                                    end_date::Nullable{Date} = Nullable{Date}(),
