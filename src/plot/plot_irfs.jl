@@ -1,5 +1,3 @@
-using DSGE, Plots, DataStructures
-
 """
 ```
 plot_irfs(shock, vars, mb; bands = [\"90.0%\"], output_file = "")
