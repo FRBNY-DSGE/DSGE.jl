@@ -61,8 +61,7 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     fcast_inds = max(start_ind, n_hist_periods):end_ind
     all_inds   = start_ind:end_ind
 
-    # Initialize GR backend
-    gr()
+    # Initialize plot
     p = Plots.plot(legend = legend)
 
     # Plot bands
