@@ -49,6 +49,7 @@ module DSGE
         load_parameters_from_file, specify_mode!, specify_hessian,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
+        alternative_policy,
 
         # parameters.jl
         parameter, Transform, NullablePrior, AbstractParameter,
@@ -99,6 +100,9 @@ module DSGE
         get_meansbands_input_files, get_meansbands_output_files, get_product, get_class,
         which_density_bands, write_meansbands_tables, prepare_meansbands_tables_timeseries,
         prepare_meansbands_tables_shockdec, write_meansbands_tables_all,
+
+        # alternative_policy/
+        AltPolicy,
 
         # util
         @test_matrix_approx_eq, @test_matrix_approx_eq_eps

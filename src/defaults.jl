@@ -117,8 +117,8 @@ function default_settings!(m::AbstractModel)
     settings[:compute_shockdec_bands] = Setting(:compute_shockdec_bands, false, "Whether or not to compute bands for shock decomposition. Setting to false saves signficant storage space.")
 
     # Alternative policy
-    settings[:alternative_policy] = Setting(:alternative_policy, identity)
-    settings[:alternative_policy_shocks] = Setting(:alternative_policy_shocks, identity)
+    baseline_policy = AltPolicy(identity, identity)
+    settings[:alternative_policy] = Setting(:alternative_policy, baseline_policy)
 
     return settings
 end
