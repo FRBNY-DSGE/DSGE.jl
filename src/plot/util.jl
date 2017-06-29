@@ -12,6 +12,16 @@ function quarter_date_to_number(date::Date)
     end
 end
 
+function quarter_number_to_date(datenum::Float64)
+    if datenum % 0.25 != 0
+        throw(DomainError())
+    end
+
+    y = convert(Int, floor(datenum))
+    q = convert(Int, (datenum % 1) / 0.25) + 1
+    return DSGE.quartertodate("$y-Q$q")
+end
+
 function get_date_ticks(start_date::Date, end_date::Date;
                         tick_size::Int = 5)
     dates = DSGE.quarter_range(start_date, end_date)
