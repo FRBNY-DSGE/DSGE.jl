@@ -56,7 +56,15 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
     ε_up = zeros(num_errors)
 
     # Initialize first state
-    s_up = repmat(s0,1,num_particles) + get_chol(P0)'*randn(num_states,num_particles)
+    # STORING FOR TESTING - RANDOM
+    s_up_rand_mat = randn(num_states,num_particles)
+    ε_rand_mat = randn(num_errors, num_particles)
+    h5open("$path/../reference/matricesForTPF.h5","w") do file
+        write(file,"s_up_rand_mat",s_up_rand_mat)
+        write(file,"ε_rand_mat",ε_rand_mat)
+    end
+    ###
+    s_up = repmat(s0,1,num_particles) + get_chol(P0)'*s_up_rand_mat
     
     for t=1:T
 
@@ -65,9 +73,9 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
         #--------------------------------------------------------------
 
         yt = yy[:,t]
-
-        ε = randn(num_errors, num_particles)
-        s_fore = Φ*s_up + sqrtS2*ε
+        # RANDOM
+        #ε = randn(num_errors, num_particles)
+        s_fore = Φ*s_up + sqrtS2*ε_rand_mat
 
         # Error for each particle
         perror = repmat(yt-A,1,num_particles)-B*s_fore

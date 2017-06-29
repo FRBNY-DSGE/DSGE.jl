@@ -24,7 +24,7 @@ N_MH = get_setting(m,:tpf_N_MH)
 h5open("$path/../reference/matricesForMutation.h5","w") do file
     write(file, "phi", sys.transition.TTT)
     write(file, "D", sys.measurement.DD)
-    write(file, "R", cov_mat)
+    write(file, "R", sys.transition.RRR)
     write(file, "H", sys.measurement.EE)
     write(file, "C", sys.transition.CCC)
     write(file, "M", sys.measurement.MM)
@@ -36,7 +36,7 @@ end
     
 
 #Test that it compiles
-s_part1, eps_part1, acpt = mutation(m,[50.2,8.3,7.6],[.8,.9,.6,.9,.11,5,7,10],[.2,.5,.7],A,B,cov_mat,Φ,H,sqrtS2,cov_mat,N_MH)
+s_part1, eps_part1, acpt = mutation(m,[50.2,8.3,7.6],[.8,.9,.6,.9,.11,5,7,10],[.2,.5,.7],A,B,R,Φ,H,sqrtS2,cov_mat,N_MH)
 
 h5open("$path/../reference/mutation_RWMH1.h5","w") do file
     write(file, "s_part1", s_part1)
@@ -57,12 +57,13 @@ end
 goodOut = h5open("$path/../reference/mutationMatlabOutput.h5","r") do file
     read(file,"ind_s")
 end
-goodOut = goodOut[:,1]
-
-println(goodOut)
+#goodOut = goodOut[:,1]
+# Hardcoded from Kalman output
+goodOut = [-0.2317   -0.6848    0.7385   -0.4007    0.2663    0.3005    0.0768   -0.1969]'[:,1]
+#println(goodOut)
 # Test Kalman-certified reasonable case (should accept)
 ind_s, ind_eps, ind_acpt = mutation(m, data[:,1],goodOut,zeros(3),A,B,cov_mat,Φ,H,sqrtS2,cov_mat,N_MH)
-@test ind_acpt >= 1 #very likely so should be equal to number of MH steps
+@test ind_acpt >= 0.3
 
 #Test unreasonable case (should reject)
 ind_s, ind_eps, ind_acpt = mutation(m, data[:,1],3*goodOut,zeros(3),A,B,cov_mat,Φ,H,sqrtS2,cov_mat,N_MH)

@@ -23,7 +23,7 @@ s_init: The starting state before mutation.
             write(file, "rand_mat", rand_mat)
         end
         # Generate new draw of ε from a N(ε_init, c²R) distribution where R is cov_s (defined in tpf.jl) and c is the tuning parameter
-        ε_new=ε_init + c*Matrix(chol(nearestSPD(R)))'*rand_mat
+        ε_new=ε_init + c*Matrix(chol(nearestSPD(cov_mat)))'*rand_mat
         # Use the state equation to calculate the corresponding state from that ε 
         s_new_fore = Φ*s_init+sqrtS2*ε_new
         # Use the state equation to calculate the state corresponding to ε_init
@@ -38,6 +38,12 @@ s_init: The starting state before mutation.
 
         # α represents the probability of accepting the new particle (post_new and post_init are in logs so subtract and take the exponential)
         α = exp(post_new - post_init)
+        @show ε_new
+        @show ε_init
+        @show pdf(MvNormal(zeros(length(yt)),H),error_init)[1]
+        @show pdf(MvNormal(zeros(length(yt)),H),error_new)[1]
+        @show error_init
+        @show error_new
         
         # Accept the particle with probability α (rand() generates Unif(0,1) r.v. If accept set s_init to the particle and ε_init to the error for starting the loop over again
         if rand()<α 
