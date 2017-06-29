@@ -6,13 +6,13 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
     s_init: the starting state
     eps_init: the starting epsilon (state error)
     =#
-
+    alph = 0
     # Set path
     path = dirname(@__FILE__)
     ind_s=s_init
     ind_ε=ε_init
     #Get the meta-paramater c from model settings (I think we want a separate c for this part rather than what is used for regular MH but can change later)
-    c=get_setting(m,:c)
+    c=get_setting(m,:tpf_c)
     # Initialize acceptance counter to zero
     acpt=0
     
@@ -37,7 +37,7 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
         # Calculate the top and bottom probabilities for the α ratio.
         post_new = log(pdf(MvNormal(zeros(length(yt)),H),error_new)[1]*pdf(MvNormal(zeros(length(ε_new)),eye(length(ε_new),length(ε_new))),ε_new)[1])
         post_init = log(pdf(MvNormal(zeros(length(yt)),H),error_init)[1]*pdf(MvNormal(zeros(length(ε_init)),eye(length(ε_init),length(ε_init))),ε_init)[1])
-       
+
         # α represents the probability of accepting the new particle (post_new and post_init are in logs so subtract and take the exponential
         α = exp(post_new - post_init)
         
@@ -51,10 +51,13 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
             # Reject and keep the old particle unchanged
             ind_s = s_init_fore
             ind_ε = ε_init
-            #acpt = 0
+#THIS IS DIFFERENT THAN MATLAB BUT WE THINK MATLAB WRONG
+#            acpt = 0
         end
+    alph = α
     end
+
     acpt /= N_MH
-    return ind_s, ind_ε, acpt 
+    return ind_s, ind_ε, acpt, alph 
 end
 
