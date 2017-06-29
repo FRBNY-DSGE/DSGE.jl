@@ -20,7 +20,7 @@ s_init: The starting state before mutation.
         # Isolate random matrix for testing purposes
         rand_mat = randn(size(R,1),1)
         h5open("$path/../../test/reference/mutationRandomMatrix.h5","w") do file
-            write(file, "randMat", randMat)
+            write(file, "rand_mat", rand_mat)
         end
         # Generate new draw of ε from a N(ε_init, c²R) distribution where R is cov_s (defined in tpf.jl) and c is the tuning parameter
         ε_new=ε_init + c*Matrix(chol(nearestSPD(R)))'*rand_mat

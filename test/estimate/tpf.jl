@@ -8,7 +8,7 @@ m<=Setting(:tpf_c,0.1)
 m<=Setting(:tpf_acpt_rate,0.5)
 m<=Setting(:tpf_trgt,0.25)
 m<=Setting(:tpf_N_MH,3)
-m<=Setting(:tpf_numParticles,100)
+m<=Setting(:tpf_num_particles,100)
 
 srand(1234)
 
@@ -35,7 +35,7 @@ A = [0.51; 3.16; 5.45]
 B = [1 0 0 -1 0 1 0 0;
      0 4 0 0 0 0 0 0;
      0 0 4 0 0 0 0 0]
- H = [0.0135 0 0;
+H = [0.0135 0 0;
       0 0.0865 0;
       0 0 0.2003]
 R = [0.7696    1.0000   -0.6674;
@@ -62,17 +62,8 @@ S2 = [0.0576         0         0;
 s0 = zeros(8)
 P0=nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 
-#=println(size(A))
-println(size(B))
-println(size(H))
-println(size(R))
-println(size(S2))
-println(size(Φ))
-=#
-#println(path)
-df = readtable("$path/../../../../../us.txt",separator=' ')
+df = readtable("$path/../../../../../us.txt",header=false, separator=' ')
 data = convert(Matrix{Float64},df)
 data=data'
-#println(data)
 neff, lik = tpf(m, data, s0, P0, A, B, H, R, S2, Φ)
 @show neff, lik
