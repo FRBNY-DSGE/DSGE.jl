@@ -4,6 +4,7 @@ using DSGE,DataFrames,HDF5
 m=AnSchorfheide(testing=true)
 m<=Setting(:date_forecast_start,quartertodate("2015-Q4"))
 m<=Setting(:tpf_N_MH,3)
+m<=Setting(:tpf_c, 0.1)
 # Set seeding 
 srand(1234)
 # Set path
@@ -58,6 +59,7 @@ goodOut = h5open("$path/../reference/mutationMatlabOutput.h5","r") do file
 end
 goodOut = goodOut[:,1]
 
+println(goodOut)
 # Test Kalman-certified reasonable case (should accept)
 ind_s, ind_eps, ind_acpt = mutation(m, data[:,1],goodOut,zeros(3),A,B,cov_mat,Φ,H,sqrtS2,cov_mat,N_MH)
 @test ind_acpt >= 1 #very likely so should be equal to number of MH steps
