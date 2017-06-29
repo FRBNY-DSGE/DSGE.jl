@@ -74,18 +74,6 @@ function plot_forecast_comparison(var::Symbol,
     plot!(p, histnew.means[hist_inds, :datenum], histnew.means[hist_inds, var],
           linewidth = 2, linecolor = hist_color, label = hist_label)
 
-    # Plot old forecast
-    n_hist_periods  = size(histold.means, 1)
-    n_all_periods   = size(allold.means, 1)
-    fcast_inds      = max(start_ind, n_hist_periods):end_ind
-
-    plot!(p, allold.means[fcast_inds, :datenum], allold.means[fcast_inds, var],
-          linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = old_fcast_label)
-    plot!(p, allold.bands[var][fcast_inds, :datenum], allold.bands[var][fcast_inds, Symbol(bandpct, " UB")],
-          linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = "")
-    plot!(p, allold.bands[var][fcast_inds, :datenum], allold.bands[var][fcast_inds, Symbol(bandpct, " LB")],
-          linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = "")
-
     # Plot new forecast
     n_hist_periods  = size(histnew.means, 1)
     n_all_periods   = size(allnew.means, 1)
@@ -97,6 +85,21 @@ function plot_forecast_comparison(var::Symbol,
           linewidth = 2, linecolor = new_fcast_color, label = "")
     plot!(p, allnew.bands[var][fcast_inds, :datenum], allnew.bands[var][fcast_inds, Symbol(bandpct, " LB")],
           linewidth = 2, linecolor = new_fcast_color, label = "")
+
+    # Plot old forecast
+    start_date, end_date = get_date_limits(start_date, end_date, allold.means[:date])
+    start_ind,  end_ind  = get_date_limit_indices(start_date, end_date, allold.means[:date])
+
+    n_hist_periods  = size(histold.means, 1)
+    n_all_periods   = size(allold.means, 1)
+    fcast_inds      = max(start_ind, n_hist_periods):end_ind
+
+    plot!(p, allold.means[fcast_inds, :datenum], allold.means[fcast_inds, var],
+          linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = old_fcast_label)
+    plot!(p, allold.bands[var][fcast_inds, :datenum], allold.bands[var][fcast_inds, Symbol(bandpct, " UB")],
+          linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = "")
+    plot!(p, allold.bands[var][fcast_inds, :datenum], allold.bands[var][fcast_inds, Symbol(bandpct, " LB")],
+          linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = "")
 
     # Set date ticks
     date_ticks!(p, start_date, end_date, tick_size)
