@@ -75,3 +75,4 @@ data = convert(Matrix{Float64},df)
 data=data'
 #println(data)
 neff, lik = tpf(m, data, s0, P0, A, B, H, R, S2, Φ)
+@show neff, lik
