@@ -65,8 +65,8 @@ function plot_forecast_comparison(var::Symbol,
     p = Plots.plot(legend = legend)
 
     # Plot new data
-    start_date, end_date = get_date_limits(start_date, end_date, allnew.means[:date])
-    start_ind,  end_ind  = get_date_limit_indices(start_date, end_date, allnew.means[:date])
+    start_date_new, end_date_new = get_date_limits(start_date, end_date, allnew.means[:date])
+    start_ind,      end_ind      = get_date_limit_indices(start_date_new, end_date_new, allnew.means[:date])
 
     n_hist_periods = size(histnew.means, 1)
     hist_inds = start_ind:min(end_ind, n_hist_periods)
@@ -81,14 +81,17 @@ function plot_forecast_comparison(var::Symbol,
 
     plot!(p, allnew.means[fcast_inds, :datenum], allnew.means[fcast_inds, var],
           linewidth = 2, linecolor = new_fcast_color, label = new_fcast_label)
-    plot!(p, allnew.bands[var][fcast_inds, :datenum], allnew.bands[var][fcast_inds, Symbol(bandpct, " UB")],
-          linewidth = 2, linecolor = new_fcast_color, label = "")
-    plot!(p, allnew.bands[var][fcast_inds, :datenum], allnew.bands[var][fcast_inds, Symbol(bandpct, " LB")],
-          linewidth = 2, linecolor = new_fcast_color, label = "")
+
+    if fcastnew.metadata[:para] in [:full, :subset]
+        plot!(p, allnew.bands[var][fcast_inds, :datenum], allnew.bands[var][fcast_inds, Symbol(bandpct, " UB")],
+              linewidth = 2, linecolor = new_fcast_color, label = "")
+        plot!(p, allnew.bands[var][fcast_inds, :datenum], allnew.bands[var][fcast_inds, Symbol(bandpct, " LB")],
+              linewidth = 2, linecolor = new_fcast_color, label = "")
+    end
 
     # Plot old forecast
-    start_date, end_date = get_date_limits(start_date, end_date, allold.means[:date])
-    start_ind,  end_ind  = get_date_limit_indices(start_date, end_date, allold.means[:date])
+    start_date_old, end_date_old = get_date_limits(start_date, end_date, allold.means[:date])
+    start_ind,      end_ind      = get_date_limit_indices(start_date_old, end_date_old, allold.means[:date])
 
     n_hist_periods  = size(histold.means, 1)
     n_all_periods   = size(allold.means, 1)
@@ -96,16 +99,25 @@ function plot_forecast_comparison(var::Symbol,
 
     plot!(p, allold.means[fcast_inds, :datenum], allold.means[fcast_inds, var],
           linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = old_fcast_label)
-    plot!(p, allold.bands[var][fcast_inds, :datenum], allold.bands[var][fcast_inds, Symbol(bandpct, " UB")],
-          linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = "")
-    plot!(p, allold.bands[var][fcast_inds, :datenum], allold.bands[var][fcast_inds, Symbol(bandpct, " LB")],
-          linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = "")
+
+    if fcastold.metadata[:para] in [:full, :subset]
+        plot!(p, allold.bands[var][fcast_inds, :datenum], allold.bands[var][fcast_inds, Symbol(bandpct, " UB")],
+              linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = "")
+        plot!(p, allold.bands[var][fcast_inds, :datenum], allold.bands[var][fcast_inds, Symbol(bandpct, " LB")],
+              linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = "")
+    end
 
     # Set date ticks
-    date_ticks!(p, start_date, end_date, tick_size)
+    date_ticks!(p, min(start_date_old, start_date_new), max(end_date_old, end_date_new), tick_size)
 
     # Save if output_file provided
     save_plot(p, output_file)
+
+    # Delete datenum fields from input arguments (causes problems in cat)
+    for mb in [histold, fcastold, histnew, fcastnew]
+        delete!(mb.means,      :datenum)
+        delete!(mb.bands[var], :datenum)
+    end
 
     return p
 end
