@@ -121,11 +121,10 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
                 acptVec=zeros(numParticles)
                 
                 for i = 1:numParticles
-                    ind_s, ind_ε, ind_acpt,α = mutation(m,yt,s_up[:,i],ε_up[:,i],A,B,cov_s,Φ,H,sqrtS2,S2,N_MH)
+                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_up[:,i],ε_up[:,i],A,B,cov_s,Φ,H,sqrtS2,S2,N_MH)
                     s_fore[:,i] = ind_s
                     ε_up[:,i] = ind_ε
                     acptVec[i] = ind_acpt
-                    alph[i]=α
                 end
 
                 # Calculate average accept rate
@@ -199,11 +198,10 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
         acptVec=zeros(numParticles)
         # Final round of mutation
         for i=1:numParticles
-            ind_s, ind_ε, ind_acpt,α = mutation(m, yt, s_up[:,i], ε_up[:,i], A, B, cov_s, Φ, H, sqrtS2,S2,N_MH)
+            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_up[:,i], ε_up[:,i], A, B, cov_s, Φ, H, sqrtS2,S2,N_MH)
             s_fore[:,i] = ind_s
             ε_up[:,i] = ind_ε
             acptVec[i] = ind_acpt 
-            alph[i] = α
         end
         # Store for next time iteration
         acpt_rate = mean(acptVec)
