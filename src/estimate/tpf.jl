@@ -42,7 +42,11 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
     c = 0.1
     N_MH= 2
     num_particles=100
-
+    
+    rand_mat = randn(3,1)
+    h5open("$path/../../test/reference/mutationRandomMatrix.h5","w") do file
+        write(file,"rand_mat",rand_mat)
+    end
     # End time (last period)
     T = size(yy,2)
     # Size of covariance matrix
@@ -64,10 +68,15 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
     ε_rand_mat = randn(num_errors, num_particles)
     h5open("$path/../../test/reference/matricesForTPF.h5","w") do file
         write(file,"s_up_rand_mat",s_up_rand_mat)
-        write(file,"ε_rand_mat",ε_rand_mat)
+        write(file,"eps_rand_mat",ε_rand_mat)
     end
     ###
+
+    sVec=zeros(8,T)
+
     s_up = repmat(s0,1,num_particles) + get_chol(P0)'*s_up_rand_mat
+    
+
     
     for t=1:T
 
@@ -79,7 +88,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
         # RANDOM
         #ε = randn(num_errors, num_particles)
         s_fore = Φ*s_up + sqrtS2*ε_rand_mat
-
+        
         # Error for each particle
         perror = repmat(yt-A,1,num_particles)-B*s_fore
 
@@ -87,11 +96,14 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
         init_Ineff_func(φ) = ineff_func(φ, 2.0*pi, yt, perror, H, initialize=1)-rstar
         φ_1 = fzero(init_Ineff_func,0.000001, 1.0)
 
+
         # Update weights array and resample particles
-        loglik, weights, s_up, ε_up = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_up,ε,H,num_particles,initialize=1)
+        #E: added ε_rand_mat instead of ε
+        loglik, weights, s_up, ε_up = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_up,ε_rand_mat,H,num_particles,initialize=1)
         # Update likelihood
         lik[t]=lik[t]+loglik
 
+        
         # Tempering Initialization
         count = 2 # Accounts for initialization and final mutation
         φ_old = φ_1
@@ -112,17 +124,17 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
             init_ineff_func(φ) = ineff_func(φ, φ_old, yt, perror,H)-rstar
             φ_interval = [φ_old, 1.0]
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
-            
+          
             # Check solution exists within interval
             if prod(sign(fphi_interval))==-1
                
                 # Set φ_new to the solution of the inefficiency function over interval
                 φ_new = fzero(init_ineff_func, φ_interval)
                 check_ineff = ineff_func(1.0, φ_new, yt, perror, H, initialize=0)
-               
+                              
                 # Update weights array and resample particles
                 loglik, weights, s_up, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_up,ε_up,H,num_particles,initialize=0)
-
+           
                 # Update likelihood
                 lik[t]=lik[t]+loglik
 
@@ -132,11 +144,15 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
                 # Update covariance matrix
                 μ = mean(ε_up,2)
                 cov_s = (1/num_particles)*(ε_up-repmat(μ,1,num_particles))*(ε_up - repmat(μ,1,num_particles))'
- 
+### EXCELLENCE
+                if !isposdef(cov_s)
+                    cov_s = diagm(diag(cov_s))
+                end
+                
                 # Mutation Step
                 acpt_vec=zeros(num_particles)
                 for i = 1:num_particles
-                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_up[:,i],ε_up[:,i],A,B,cov_s,Φ,H,sqrtS2,S2,N_MH)
+                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_up[:,i],ε_up[:,i],A,B,cov_s,Φ,H,sqrtS2,S2,N_MH,rand_mat)
                     s_fore[:,i] = ind_s
                     ε_up[:,i] = ind_ε
                     acpt_vec[i] = ind_acpt
@@ -149,6 +165,13 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
                 perror = repmat(yt-A, 1,num_particles)-B*s_fore
                 φ_old = φ_new
                 len_phis[t]+=1
+#@show s_fore
+#@show ε_up
+#@show acpt_vec
+#@show acpt_rate
+#@show perror
+#@show φ_old
+#fjriopamgf
 
             # If no solution exists within interval, set inefficiency to rstar
             else 
@@ -170,11 +193,15 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
 
         μ = mean(ε_up,2)
         cov_s = (1/num_particles)*(ε_up-repmat(μ,1,num_particles))*(ε_up - repmat(μ,1,num_particles))'
-       
+        
+        if !isposdef(cov_s)
+            cov_s = diagm(diag(cov_s))
+        end
+                
         # Final round of mutation
         acpt_vec=zeros(num_particles)
         for i=1:num_particles
-            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_up[:,i], ε_up[:,i], A, B, cov_s, Φ, H, sqrtS2,S2,N_MH)
+            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_up[:,i], ε_up[:,i], A, B, cov_s, Φ, H, sqrtS2,S2,N_MH,rand_mat)
             s_fore[:,i] = ind_s
             ε_up[:,i] = ind_ε
             acpt_vec[i] = ind_acpt 
@@ -184,9 +211,12 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
         acpt_rate = mean(acpt_vec)
         Neff[t] = (num_particles^2)/sum(weights.^2)
         s_up = s_fore
+
+
+    sVec[:,t]=mean(s_up,2)
     end
     # Return vector of likelihood indexed by time step and Neff
-    return Neff, lik
+    return Neff, lik, sVec
 end
 
 
@@ -234,7 +264,8 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perro
     weights = (density_arr.*weights)./mean(density_arr.*weights)
 
     # Resampling
-    id = multinomial_resampling(weights)
+    #MUST PUT BACK IN: id = multinomial_resampling(weights)
+    id = seeded_multinomial_resampling(weights)
     s_up = s_up[:,id]
     ε_up = ε_up[:,id]
     
@@ -243,6 +274,7 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perro
 
     # Calculate likelihood
     loglik = log(mean(density_arr.*weights))
+    
 
     return loglik, weights, s_up, ε_up
 end
