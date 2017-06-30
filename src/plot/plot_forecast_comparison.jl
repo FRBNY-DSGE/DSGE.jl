@@ -2,7 +2,7 @@
 ```
 plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
     output_file = "", start_date = Nullable{Date}(),
-    end_date = Nullable{Date}(), bandpct::String = \"90.0%\",
+    end_date = Nullable{Date}(), bandpcts::Vector{String} = [\"90.0%\"],
     hist_label = \"History\", old_fcast_label = \"Old Forecast\",
     new_fcast_label = \"New Forecast\", hist_color = :black,
     old_fcast_color = :blue, new_fcast_color = :red, tick_size = 2,
@@ -22,7 +22,7 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
 - `output_file::String`: if specified, plot will be saved there as a PDF
 - `start_date::Nullable{Date}`
 - `end_date::Nullable{Date}`
-- `bandpct::String`: which bands to plot
+- `bandpcts::Vector{String}`: which bands to plot
 - `hist_label::String`
 - `old_fcast_label::String`
 - `new_fcast_label::String`
@@ -42,7 +42,7 @@ function plot_forecast_comparison(var::Symbol,
                                   output_file::String = "",
                                   start_date::Nullable{Date} = Nullable{Date}(),
                                   end_date::Nullable{Date} = Nullable{Date}(),
-                                  bandpct::String = "90.0%",
+                                  bandpcts::Vector{String} = ["90.0%"],
                                   hist_label::String = "History",
                                   old_fcast_label::String = "Old Forecast",
                                   new_fcast_label::String = "New Forecast",
@@ -83,10 +83,12 @@ function plot_forecast_comparison(var::Symbol,
           linewidth = 2, linecolor = new_fcast_color, label = new_fcast_label)
 
     if fcastnew.metadata[:para] in [:full, :subset]
-        plot!(p, allnew.bands[var][fcast_inds, :datenum], allnew.bands[var][fcast_inds, Symbol(bandpct, " UB")],
-              linewidth = 2, linecolor = new_fcast_color, label = "")
-        plot!(p, allnew.bands[var][fcast_inds, :datenum], allnew.bands[var][fcast_inds, Symbol(bandpct, " LB")],
-              linewidth = 2, linecolor = new_fcast_color, label = "")
+        for pct in bandpcts
+            plot!(p, allnew.bands[var][fcast_inds, :datenum], allnew.bands[var][fcast_inds, Symbol(pct, " UB")],
+                  linewidth = 2, linecolor = new_fcast_color, label = "")
+            plot!(p, allnew.bands[var][fcast_inds, :datenum], allnew.bands[var][fcast_inds, Symbol(pct, " LB")],
+                  linewidth = 2, linecolor = new_fcast_color, label = "")
+        end
     end
 
     # Plot old forecast
@@ -101,10 +103,12 @@ function plot_forecast_comparison(var::Symbol,
           linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = old_fcast_label)
 
     if fcastold.metadata[:para] in [:full, :subset]
-        plot!(p, allold.bands[var][fcast_inds, :datenum], allold.bands[var][fcast_inds, Symbol(bandpct, " UB")],
-              linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = "")
-        plot!(p, allold.bands[var][fcast_inds, :datenum], allold.bands[var][fcast_inds, Symbol(bandpct, " LB")],
-              linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = "")
+        for pct in bandpcts
+            plot!(p, allold.bands[var][fcast_inds, :datenum], allold.bands[var][fcast_inds, Symbol(pct, " UB")],
+                  linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = "")
+            plot!(p, allold.bands[var][fcast_inds, :datenum], allold.bands[var][fcast_inds, Symbol(pct, " LB")],
+                  linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = "")
+        end
     end
 
     # Set date ticks
