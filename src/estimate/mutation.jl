@@ -1,11 +1,18 @@
+"""
+```
 function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1}, ε_init::Array{Float64,1}, A::Array, B::Array, R::Array, Φ::Array, H::Array, sqrtS2::Array, cov_mat::Array,N_MH::Int64)
-#=This function runs random walk Metropolis Hastings for ONE particle. The caller should loop through all particles and call the method on each one.
+```
+Runs random-walk Metropolis Hastings for ONE particle. The caller should loop through all particles, calling this method on each. 
 m: The model. Used to get the setting tpf_c (which is VERY important it turns out...) 
 yt: A 1 x num_measurement vector at time t for all observed y (GDP, PCE, FFR, etc.)
 s_init: The starting state before mutation.
 ε_init: The starting epsilon (state error) before mutation.
-=#
+"""
 
+function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1}, ε_init::Array{Float64,1}, A::Array, B::Array, R::Array, Φ::Array, H::Array, sqrtS2::Array, cov_mat::Array,N_MH::Int64)
+    #------------------------------------------------------------------------
+    #Setup
+    #------------------------------------------------------------------------
     # Set path--used only for testing
     path = dirname(@__FILE__)
     #Initialize ind_s and ind_ε
@@ -16,6 +23,9 @@ s_init: The starting state before mutation.
     # Initialize acceptance counter to zero
     acpt=0
     
+    #------------------------------------------------------------------------
+    #Metropolis-Hastings Steps
+    #------------------------------------------------------------------------
     for i=1:N_MH
         # Isolate random matrix for testing purposes
         rand_mat = randn(size(R,1),1)
@@ -38,13 +48,7 @@ s_init: The starting state before mutation.
 
         # α represents the probability of accepting the new particle (post_new and post_init are in logs so subtract and take the exponential)
         α = exp(post_new - post_init)
-        @show ε_new
-        @show ε_init
-        @show pdf(MvNormal(zeros(length(yt)),H),error_init)[1]
-        @show pdf(MvNormal(zeros(length(yt)),H),error_new)[1]
-        @show error_init
-        @show error_new
-        
+                
         # Accept the particle with probability α (rand() generates Unif(0,1) r.v. If accept set s_init to the particle and ε_init to the error for starting the loop over again
         if rand()<α 
             # Accept
