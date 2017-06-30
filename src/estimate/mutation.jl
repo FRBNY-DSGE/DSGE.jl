@@ -9,7 +9,7 @@ s_init: The starting state before mutation.
 ε_init: The starting epsilon (state error) before mutation.
 """
 
-function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1}, ε_init::Array{Float64,1}, A::Array, B::Array, R::Array, Φ::Array, H::Array, sqrtS2::Array, cov_mat::Array,N_MH::Int64)
+function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1}, ε_init::Array{Float64,1}, A::Array, B::Array, R::Array, Φ::Array, H::Array, sqrtS2::Array, cov_mat::Array,N_MH::Int64,rand_mat::Array)
     #------------------------------------------------------------------------
     #Setup
     #------------------------------------------------------------------------
@@ -26,12 +26,14 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
     #------------------------------------------------------------------------
     #Metropolis-Hastings Steps
     #------------------------------------------------------------------------
+    # Isolate random matrix for testing purposes
+       # rand_mat = randn(size(cov_mat,1),1)
+       # h5open("$path/../../test/reference/mutationRandomMatrix.h5","w") do file
+       #     write(file, "rand_mat", rand_mat)
+       # end
+        
+    
     for i=1:N_MH
-        # Isolate random matrix for testing purposes
-        rand_mat = randn(size(R,1),1)
-        h5open("$path/../../test/reference/mutationRandomMatrix.h5","w") do file
-            write(file, "rand_mat", rand_mat)
-        end
         # Generate new draw of ε from a N(ε_init, c²R) distribution where R is cov_s (defined in tpf.jl) and c is the tuning parameter
         ε_new=ε_init + c*Matrix(chol(nearestSPD(cov_mat)))'*rand_mat
         # Use the state equation to calculate the corresponding state from that ε 
@@ -50,7 +52,7 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
         α = exp(post_new - post_init)
                 
         # Accept the particle with probability α (rand() generates Unif(0,1) r.v. If accept set s_init to the particle and ε_init to the error for starting the loop over again
-        if rand()<α 
+        if .5<α 
             # Accept
             ind_s = s_new_fore
             ind_ε = ε_new
@@ -60,7 +62,7 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
             ind_s = s_init_fore
             ind_ε = ε_init
 #THIS IS DIFFERENT THAN MATLAB BUT WE THINK MATLAB WRONG
-#            acpt = 0
+            acpt = 0
         end
     end
     acpt /= N_MH
