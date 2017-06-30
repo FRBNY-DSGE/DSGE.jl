@@ -22,6 +22,9 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
     =#   
     sqrtS2=R*get_chol(S2)'
 
+    path = dirname(@__FILE__)
+
+
     # Get tuning parameters from the model
   
 ##### WILL ALSO NEED TO BRING THIS BACK LATER
@@ -59,7 +62,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
     # STORING FOR TESTING - RANDOM
     s_up_rand_mat = randn(num_states,num_particles)
     ε_rand_mat = randn(num_errors, num_particles)
-    h5open("$path/../reference/matricesForTPF.h5","w") do file
+    h5open("$path/../../test/reference/matricesForTPF.h5","w") do file
         write(file,"s_up_rand_mat",s_up_rand_mat)
         write(file,"ε_rand_mat",ε_rand_mat)
     end
