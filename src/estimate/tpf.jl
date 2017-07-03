@@ -41,7 +41,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
     trgt= 0.25
     c = 0.1
     N_MH= 2
-    num_particles=100
+    num_particles=500
     
     rand_mat = randn(3,1)
     h5open("$path/../../test/reference/mutationRandomMatrix.h5","w") do file
@@ -131,10 +131,16 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
                 # Set φ_new to the solution of the inefficiency function over interval
                 φ_new = fzero(init_ineff_func, φ_interval)
                 check_ineff = ineff_func(1.0, φ_new, yt, perror, H, initialize=0)
+#@show φ_new
+#@show check_ineff
                               
                 # Update weights array and resample particles
                 loglik, weights, s_up, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_up,ε_up,H,num_particles,initialize=0)
-           
+# @show ε_up        
+#@show loglik
+#q@show s_up
+
+
                 # Update likelihood
                 lik[t]=lik[t]+loglik
 
@@ -144,22 +150,29 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
                 # Update covariance matrix
                 μ = mean(ε_up,2)
                 cov_s = (1/num_particles)*(ε_up-repmat(μ,1,num_particles))*(ε_up - repmat(μ,1,num_particles))'
-### EXCELLENCE
+
                 if !isposdef(cov_s)
                     cov_s = diagm(diag(cov_s))
+                    #cov_s = nearestSPD(cov_s)
                 end
+
                 
                 # Mutation Step
                 acpt_vec=zeros(num_particles)
                 for i = 1:num_particles
-                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_up[:,i],ε_up[:,i],A,B,cov_s,Φ,H,sqrtS2,S2,N_MH,rand_mat)
+                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_up[:,i],ε_up[:,i],A,B,cov_s,Φ,H,sqrtS2,cov_s,N_MH,rand_mat)
                     s_fore[:,i] = ind_s
                     ε_up[:,i] = ind_ε
                     acpt_vec[i] = ind_acpt
                 end
+#@show ε_up
+#@show s_fore
+
 
                 # Calculate average acceptance rate
                 acpt_rate = mean(acpt_vec)
+
+@show acpt_rate
 
                 # Get error for all particles
                 perror = repmat(yt-A, 1,num_particles)-B*s_fore
@@ -167,17 +180,19 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
                 len_phis[t]+=1
 #@show s_fore
 #@show ε_up
-#@show acpt_vec
-#@show acpt_rate
+
 #@show perror
-#@show φ_old
-#fjriopamgf
+@show φ_old
+#aaa
 
             # If no solution exists within interval, set inefficiency to rstar
             else 
                 check_ineff = rstar
             end
         end
+        @show count
+####THE NUMERICAL SOLVER ISN'T PRECISE EVERY TIME BETWEEN MATLAB AND JULIA HENCE WE ARE GETTING DIFFERENT PHIs EACH TIME WHICH THROW OFF OUR ANSWERS
+aaa
 
         #--------------------------------------------------------------
         # Last Stage of Algorithm: φ_new=1
@@ -186,29 +201,51 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H
 
         # Update weights array and resample particles.
         loglik, weights, s_up, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_up,ε_up,H,num_particles,initialize=0)
-        # Update likelihood
-        lik[t]=lik[t]+loglik
-        
-        c = update_c(m,c,acpt_rate,trgt)
+#@show s_up
+#@show ε_up'
+#@show loglik
+aaa
 
+       # Update likelihood
+        lik[t]=lik[t]+loglik
+
+        c = update_c(m,c,acpt_rate,trgt)
         μ = mean(ε_up,2)
+
         cov_s = (1/num_particles)*(ε_up-repmat(μ,1,num_particles))*(ε_up - repmat(μ,1,num_particles))'
-        
-        if !isposdef(cov_s)
+
+#@show cov_s
+#@show eig(cov_s)
+       #eigs = eig(cov_s)[1]
+       # if (round(eigs[1],16) <= 0) | (round(eigs[2],16) <= 0) | (round(eigs[3],16) <= 0)
+        #    cov_s = diagm(diag(cov_s))
+        #end
+       if isposdef(cov_s)== false
             cov_s = diagm(diag(cov_s))
-        end
+       end
+@show cov_s
+
+### EXCELLENCE 
                 
         # Final round of mutation
         acpt_vec=zeros(num_particles)
-        for i=1:num_particles
-            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_up[:,i], ε_up[:,i], A, B, cov_s, Φ, H, sqrtS2,S2,N_MH,rand_mat)
+@show s_up
+@show ε_up
+  
+      for i=1:num_particles
+            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_up[:,i], ε_up[:,i], A, B, cov_s, Φ, H, sqrtS2,cov_s,N_MH,rand_mat)
             s_fore[:,i] = ind_s
             ε_up[:,i] = ind_ε
             acpt_vec[i] = ind_acpt 
+ #           @show ind_acpt
         end
 
         # Store for next time iteration
         acpt_rate = mean(acpt_vec)
+#@show acpt_rate
+#@show s_fore
+#@show ε_up
+
         Neff[t] = (num_particles^2)/sum(weights.^2)
         s_up = s_fore
 
@@ -254,12 +291,14 @@ Returns log likelihood, weight, state, and ε vectors.
 
 """
 function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array, density_arr::Array, weights::Array, s_up::Array, ε_up::Array, H::Array, num_particles::Int64; initialize::Int64=0)
-
+#    @show φ_new
+#    @show yt
+#    @show H
     # Calculate initial weights
     for n=1:num_particles
         density_arr[n]=density(φ_new, φ_old, yt, perror[:,n], H, initialize=initialize)
     end   
-
+    #@show density_arr'
     # Normalize weights
     weights = (density_arr.*weights)./mean(density_arr.*weights)
 
@@ -268,14 +307,13 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perro
     id = seeded_multinomial_resampling(weights)
     s_up = s_up[:,id]
     ε_up = ε_up[:,id]
-    
+
     # Reset weights to ones
     weights = ones(num_particles)
 
     # Calculate likelihood
     loglik = log(mean(density_arr.*weights))
     
-
     return loglik, weights, s_up, ε_up
 end
 
