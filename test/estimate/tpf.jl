@@ -56,13 +56,19 @@ good_likelihoods = h5open("$path/../reference/tpf_test_likelihoods.h5","r") do f
     read(file, "test_likelihoods")
 end
 
+m<=Setting(:DD,A)
+m<=Setting(:ZZ,B)
+m<=Setting(:RRR,R)
+m<=Setting(:TTT,Φ)
+m<=Setting(:EE,H)
+m<=Setting(:tpf_S2,S2)
 
 s0 = zeros(8)
 P0=nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 df = readtable("$path/../../../../../us.txt",header=false, separator=' ')
 data = convert(Matrix{Float64},df)
 data=data'
-neff, lik = tpf_fixed_phi(m, data, s0, P0, A, B, H, R, S2, Φ)
+neff, lik = tpf_fixed_phi(m, data, s0, P0)
 
 @test good_likelihoods == lik
 

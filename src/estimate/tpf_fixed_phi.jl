@@ -1,6 +1,6 @@
 using DSGE
 using Roots
-function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H, R, S2, Φ)
+function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array)
     # s0 is 8xnum_particles
     # P0
     # yy is data matrix
@@ -19,9 +19,24 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
     A=sys.measurement.DD
     B=sys.measurement.ZZ
     S2=sys.measurement.QQ
-    =#   
+    
+    m<=Setting(:DD,A)
+    m<=Setting(:ZZ,B)
+    m<=Setting(:RRR,R)
+    m<=Setting(:TTT,Φ)
+    m<=Setting(:EE,H)
+    m<=Setting(:tpf_S2,S2)
+    =#
+    ### To be replaced by code above when non-deterministic
+    A = get_setting(m,:DD)
+    B = get_setting(m,:ZZ)
+    R = get_setting(m,:RRR)
+    Φ = get_setting(m,:TTT)
+    H = get_setting(m,:EE)
+    S2 = get_setting(m,:tpf_S2)
+    ###
     sqrtS2=R*get_chol(S2)'
-
+    m<=Setting(:tpf_sqrtS2,sqrtS2)
     path = dirname(@__FILE__)
     
     # Get tuning parameters from the model
@@ -62,7 +77,7 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
     ε_up = zeros(num_errors)
 
     # Initialize first state
-    # STORING FOR TESTING - RANDOM
+    ### STORING FOR TESTING - RANDOM
     s_up_rand_mat = randn(num_states,num_particles)
     ε_rand_mat = randn(num_errors, num_particles)
     h5open("$path/../../test/reference/matricesForTPF.h5","w") do file
@@ -73,10 +88,7 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
 
     s_up = repmat(s0,1,num_particles) + get_chol(P0)'*s_up_rand_mat
     
-
-    
     for t=1:T
-
         #--------------------------------------------------------------
         # Initialize Algorithm: First Tempering Step
         #--------------------------------------------------------------
@@ -93,7 +105,7 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
         #φ_1 = fzero(init_Ineff_func,0.000001, 1.0)
         φ_1=.25
 
-
+        @show t
 
         # Update weights array and resample particles
         loglik, weights, s_up, ε_up = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_up,ε_rand_mat,H,num_particles,initialize=1)
@@ -114,7 +126,7 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
         # Main Algorithm
         #--------------------------------------------------------------
         #while (check_ineff>rstar) 
-        for φ_new=[.5]
+            φ_new=0.5
             count += 1
 
             # Define inefficiency function
@@ -151,16 +163,14 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
                 # Mutation Step
                 acpt_vec=zeros(num_particles)
                 for i = 1:num_particles
-                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_up[:,i],ε_up[:,i],A,B,cov_s,Φ,H,sqrtS2,cov_s,N_MH,rand_mat)
+                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_up[:,i],ε_up[:,i],cov_s,rand_mat)
                     s_fore[:,i] = ind_s
                     ε_up[:,i] = ind_ε
                     acpt_vec[i] = ind_acpt
                 end
 
-
                 # Calculate average acceptance rate
                 acpt_rate = mean(acpt_vec)
-
 
                 # Get error for all particles
                 perror = repmat(yt-A, 1,num_particles)-B*s_fore
@@ -171,8 +181,7 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
            # else 
             #    check_ineff = rstar
             #end
-        end
-####THE NUMERICAL SOLVER ISN'T PRECISE EVERY TIME BETWEEN MATLAB AND JULIA HENCE WE ARE GETTING DIFFERENT PHIs EACH TIME WHICH THROW OFF OUR ANSWERS
+        #end
 
         #--------------------------------------------------------------
         # Last Stage of Algorithm: φ_new=1
@@ -199,7 +208,7 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
         acpt_vec=zeros(num_particles)
   
       for i=1:num_particles
-            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_up[:,i], ε_up[:,i], A, B, cov_s, Φ, H, sqrtS2,cov_s,N_MH,rand_mat)
+            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_up[:,i], ε_up[:,i],cov_s,rand_mat)
             s_fore[:,i] = ind_s
             ε_up[:,i] = ind_ε
             acpt_vec[i] = ind_acpt 
