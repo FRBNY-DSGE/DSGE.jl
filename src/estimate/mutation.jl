@@ -9,12 +9,21 @@ s_init: The starting state before mutation.
 ε_init: The starting epsilon (state error) before mutation.
 """
 
-function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1}, ε_init::Array{Float64,1}, A::Array, B::Array, R::Array, Φ::Array, H::Array, sqrtS2::Array, cov_mat::Array,N_MH::Int64,rand_mat::Array)
+function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1},ε_init::Array{Float64,1},cov_s::Array,rand_mat::Array)
     #------------------------------------------------------------------------
-    #Setup
+    # Setup
     #------------------------------------------------------------------------
     # Set path--used only for testing
     path = dirname(@__FILE__)
+
+    A = get_setting(m, :DD)
+    B = get_setting(m, :ZZ)
+    R = get_setting(m, :RRR)
+    Φ = get_setting(m, :TTT)
+    H = get_setting(m, :EE)
+    sqrtS2 = get_setting(m, :tpf_sqrtS2)
+    N_MH = get_setting(m, :tpf_N_MH)
+
     #Initialize ind_s and ind_ε
     ind_s=s_init
     ind_ε=ε_init
@@ -28,7 +37,7 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
     #------------------------------------------------------------------------
     for i=1:N_MH
         # Generate new draw of ε from a N(ε_init, c²R) distribution where R is cov_s (defined in tpf.jl) and c is the tuning parameter
-        ε_new=ε_init + c*Matrix(chol(nearestSPD(cov_mat)))'*rand_mat
+        ε_new=ε_init + c*Matrix(chol(nearestSPD(cov_s)))'*rand_mat
 
         # Use the state equation to calculate the corresponding state from that ε 
         s_new_fore = Φ*s_init+sqrtS2*ε_new
