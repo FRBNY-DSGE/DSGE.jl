@@ -9,7 +9,7 @@
 """
 using Distributions
 
-function mutate(m::AbstractModel, data::Matrix, ϵ_0::Vector{AbstractFloat}, s0::Vector{AbstractFloat},t::Int64, verbose::Symbol=:low)
+function mutate(m::AbstractModel, data::Matrix, ϵ_0::Vector{AbstractFloat}, s0::Vector{AbstractFloat}, t::Int64, verbose::Symbol=:low)
     
     ind_acpt{Int64} = 0
     N_mh = get_setting(m, :n_mh_pf)
@@ -44,7 +44,7 @@ function mutate(m::AbstractModel, data::Matrix, ϵ_0::Vector{AbstractFloat}, s0:
         else
             ind_s = s0_fore
             ind_ϵ = ϵ_x
-            ind_acpt = 0
+            #ind_acpt = 0
         end
 
         ϵ_0 = ind_ϵ
