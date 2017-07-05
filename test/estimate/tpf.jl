@@ -62,9 +62,13 @@ P0=nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 df = readtable("$path/../../../../../us.txt",header=false, separator=' ')
 data = convert(Matrix{Float64},df)
 data=data'
-neff, lik, sVec= tpf(m, data, s0, P0, A, B, H, R, S2, Φ)
+neff, lik, sVec= tpf_fixed_phi(m, data, s0, P0, A, B, H, R, S2, Φ)
 
 h5open("$path/../reference/output_likelihoods.h5","w") do file
     write(file,"julia_likelihoods",lik)
 end
-@show sVec
+
+# Seeded, deterministic resampling; fixed tempering schedule of 0.25->0.5->1
+h5open("$path/../reference/tpf_test_likelihoods.h5","w") do file
+    write(file,"test_likelihoods",lik)
+end
