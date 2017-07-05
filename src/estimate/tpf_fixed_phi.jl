@@ -23,8 +23,6 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
     sqrtS2=R*get_chol(S2)'
 
     path = dirname(@__FILE__)
-    #rm("$path/../../test/reference/random_ids.csv")
-   # close(fid1)
     
     # Get tuning parameters from the model
   
@@ -73,7 +71,6 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
     end
     ###
 
-    sVec=zeros(8,T)
     s_up = repmat(s0,1,num_particles) + get_chol(P0)'*s_up_rand_mat
     
 
@@ -83,7 +80,6 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
         #--------------------------------------------------------------
         # Initialize Algorithm: First Tempering Step
         #--------------------------------------------------------------
-       # @show(t)
         yt = yy[:,t]
         # RANDOM
         #ε = randn(num_errors, num_particles)
@@ -91,7 +87,6 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
         
         # Error for each particle
         perror = repmat(yt-A,1,num_particles)-B*s_fore
-        #@show perror
         
         # Solve for initial tempering parameter ϕ_1
         init_Ineff_func(φ) = ineff_func(φ, 2.0*pi, yt, perror, H, initialize=1)-rstar
@@ -101,16 +96,10 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
 
 
         # Update weights array and resample particles
-        #E: added ε_rand_mat instead of ε
         loglik, weights, s_up, ε_up = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_up,ε_rand_mat,H,num_particles,initialize=1)
         # Update likelihood
         lik[t]=lik[t]+loglik
 
-#@show s_up
-       # @show mean(ε_up,2)
-#@show loglik 
-
-        
         # Tempering Initialization
         count = 2 # Accounts for initialization and final mutation
         φ_old = φ_1
@@ -118,9 +107,8 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
         # First propagation
         s_fore = Φ*s_up + sqrtS2*ε_up
         perror = repmat(yt-A, 1, num_particles) - B*s_fore        
-#@show perror
  
-       check_ineff=ineff_func(1.0, φ_1, yt, perror, H)         
+        check_ineff=ineff_func(1.0, φ_1, yt, perror, H)         
 
         #--------------------------------------------------------------
         # Main Algorithm
@@ -138,19 +126,12 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
            # if prod(sign(fphi_interval))==-1
                
                 # Set φ_new to the solution of the inefficiency function over interval
-                #φ_new = .5 #fzero(init_ineff_func, φ_interval)
+                #fzero(init_ineff_func, φ_interval)
                # check_ineff = ineff_func(1.0, φ_new, yt, perror, H, initialize=0)
-#@show φ_new
-#@show check_ineff
-#@show mean(ε_up,2)
                               
                 # Update weights array and resample particles
                 loglik, weights, s_up, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_up,ε_up,H,num_particles,initialize=0)
 
-
-#@show s_up
-#@show ε_up
-#@show loglik
 
                 # Update likelihood
                 lik[t]=lik[t]+loglik
@@ -166,9 +147,6 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
                     cov_s = diagm(diag(cov_s))
                     #cov_s = nearestSPD(cov_s)
                 end
-#@show μ
-#@show c
-#@show μ 
                 
                 # Mutation Step
                 acpt_vec=zeros(num_particles)
@@ -178,34 +156,23 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
                     ε_up[:,i] = ind_ε
                     acpt_vec[i] = ind_acpt
                 end
-#@show ε_up
-#@show s_fore
 
 
                 # Calculate average acceptance rate
                 acpt_rate = mean(acpt_vec)
 
-#@show acpt_rate
 
                 # Get error for all particles
                 perror = repmat(yt-A, 1,num_particles)-B*s_fore
                 φ_old = φ_new
                 len_phis[t]+=1
-#@show s_fore
-#@show ε_up
-
-#@show perror
-#@show φ_old
-#aaa
 
             # If no solution exists within interval, set inefficiency to rstar
            # else 
             #    check_ineff = rstar
             #end
         end
-     #   @show count
 ####THE NUMERICAL SOLVER ISN'T PRECISE EVERY TIME BETWEEN MATLAB AND JULIA HENCE WE ARE GETTING DIFFERENT PHIs EACH TIME WHICH THROW OFF OUR ANSWERS
-#aaa
 
         #--------------------------------------------------------------
         # Last Stage of Algorithm: φ_new=1
@@ -214,47 +181,28 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
 
         # Update weights array and resample particles.
         loglik, weights, s_up, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_up,ε_up,H,num_particles,initialize=0)
-#@show s_up
-#@show ε_up'
-#@show loglik
-#aaa
 
        # Update likelihood
         lik[t]=lik[t]+loglik
 
         c = update_c(m,c,acpt_rate,trgt)
         μ = mean(ε_up,2)
-#@show c
-#@show μ 
 
         cov_s = (1/num_particles)*(ε_up-repmat(μ,1,num_particles))*(ε_up - repmat(μ,1,num_particles))'
-#@show cov_s
 
-
-#@show cov_s
-#@show eig(cov_s)
-       #eigs = eig(cov_s)[1]
-       # if (round(eigs[1],16) <= 0) | (round(eigs[2],16) <= 0) | (round(eigs[3],16) <= 0)
-        #    cov_s = diagm(diag(cov_s))
-        #end
        if isposdef(cov_s)== false
             cov_s = diagm(diag(cov_s))
        end
-#@show cov_s
 
-### EXCELLENCE 
                 
         # Final round of mutation
         acpt_vec=zeros(num_particles)
-#@show s_up
-#@show ε_up
   
       for i=1:num_particles
             ind_s, ind_ε, ind_acpt = mutation(m, yt, s_up[:,i], ε_up[:,i], A, B, cov_s, Φ, H, sqrtS2,cov_s,N_MH,rand_mat)
             s_fore[:,i] = ind_s
             ε_up[:,i] = ind_ε
             acpt_vec[i] = ind_acpt 
- #           @show ind_acpt
         end
 
         # Store for next time iteration
@@ -263,12 +211,9 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
 
         Neff[t] = (num_particles^2)/sum(weights.^2)
         s_up = s_fore
-
-
-    sVec[:,t]=mean(s_up,2)
-    end
+        end
     # Return vector of likelihood indexed by time step and Neff
-    return Neff, lik, sVec
+    return Neff, lik
 end
 
 
