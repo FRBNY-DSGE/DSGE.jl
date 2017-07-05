@@ -5,8 +5,9 @@ function seeded_multinomial_resampling(weight::Array{Float64,1})
     weight = round(weight)    
     sorted_idx = sortperm(weight,rev=true)
     out_weight::Array{Int64, 1}=zeros(num_particles)
-    i=k=is_first=1
-    still_on_first=1
+
+    i=k=is_first=still_on_first=1
+
     while i<=num_particles
         if (weight[sorted_idx[k]]>0.0) | (is_first==1)
             weight[sorted_idx[k]]-=1

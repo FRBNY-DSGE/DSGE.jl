@@ -16,75 +16,40 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
     # Set path--used only for testing
     path = dirname(@__FILE__)
     #Initialize ind_s and ind_ε
-   ind_s=s_init
-   ind_ε=ε_init
+    ind_s=s_init
+    ind_ε=ε_init
     #Get the meta-paramater tpf_c from model setting. This updates dynamically to tune TPF over time (which is very important as we all know).
     c=get_setting(m,:tpf_c)
     # Initialize acceptance counter to zero
     acpt=0
     
     #------------------------------------------------------------------------
-    #Metropolis-Hastings Steps
+    # Metropolis-Hastings Steps
     #------------------------------------------------------------------------
-    # Isolate random matrix for testing purposes
-       # rand_mat = randn(size(cov_mat,1),1)
-       # h5open("$path/../../test/reference/mutationRandomMatrix.h5","w") do file
-       #     write(file, "rand_mat", rand_mat)
-       # end
-        
-    
     for i=1:N_MH
         # Generate new draw of ε from a N(ε_init, c²R) distribution where R is cov_s (defined in tpf.jl) and c is the tuning parameter
-        #@show cov_mat
-        #@show nearestSPD(cov_mat)
-        #@show chol(nearestSPD(cov_mat))
-        #@show Matrix(chol(nearestSPD(cov_mat)))
         ε_new=ε_init + c*Matrix(chol(nearestSPD(cov_mat)))'*rand_mat
-#@show ε_init
-#   @show c
-#@show ε_new
-#@show chol(nearestSPD(cov_mat))
-#@show rand_mat
-#@show cov_mat
 
         # Use the state equation to calculate the corresponding state from that ε 
         s_new_fore = Φ*s_init+sqrtS2*ε_new
-#@show Φ
-#@show s_init
-#@show sqrtS2
-#@show ε_new
-#@show s_new_fore
-#@show i
- 
-#aaa
 
         # Use the state equation to calculate the state corresponding to ε_init
         s_init_fore = Φ*s_init+sqrtS2*ε_init
 
        # Calculate difference between data and expected y from measurement equation and calculated states from above for both the new draw of ε_new and the old ε_init (we do this to calculate probabilities below. Since the error is still drawn from a Normal and everything is still linear, we know that y will also be normal. See equation of multivariate normal for how error_new and error_init enter into the pdf).
         error_new = yt-B*s_new_fore-A #wrong
-#@show yt 
-#@show B
-#@show s_new_fore
-#@show A
-#aaa
-#s_new_fore is wrong i think because eps_new is wrong
+        #s_new_fore is wrong i think because eps_new is wrong
+        
         error_init = yt-B*s_init_fore-A
         # Calculate the top and bottom probabilities for the α ratio.
-#@show error_new
-#@show error_init
-#@show ε_new
-
         post_new = log(pdf(MvNormal(zeros(length(yt)),H),error_new)[1]*pdf(MvNormal(zeros(length(ε_new)),eye(length(ε_new),length(ε_new))),ε_new)[1])
-
         post_init = log(pdf(MvNormal(zeros(length(yt)),H),error_init)[1]*pdf(MvNormal(zeros(length(ε_init)),eye(length(ε_init),length(ε_init))),ε_init)[1])
-
-
 
         # α represents the probability of accepting the new particle (post_new and post_init are in logs so subtract and take the exponential)
         α = exp(post_new - post_init)
 
-        # Accept the particle with probability α (rand() generates Unif(0,1) r.v. If accept set s_init to the particle and ε_init to the error for starting the loop over again
+        # Accept the particle with probability α
+        # DETERMINISTIC: in actuality, 0.5 should be rand
         if .5<α 
             # Accept
             ind_s = s_new_fore
@@ -94,8 +59,8 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
             # Reject and keep the old particle unchanged
             ind_s = s_init_fore
             ind_ε = ε_init
-#THIS IS DIFFERENT THAN MATLAB BUT WE THINK MATLAB WRONG
-#            acpt = 0
+            #THIS IS DIFFERENT THAN ORIGINAL MATLAB BUT WE THINK MATLAB WRONG
+            #acpt = 0
         end
         ε_init = ind_ε
     end

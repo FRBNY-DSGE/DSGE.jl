@@ -1,5 +1,4 @@
 using StatsBase
-
 """
 ```
 function multinomial_resampling(weight::Array{Float64,1}

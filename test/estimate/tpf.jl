@@ -52,11 +52,6 @@ end
     read(file,"Phi")
 end
 
-
-###For comparing piece-by-piece with MatLab, get the matrices from the Matlab code
-#(copied and pasted)
-
-
 s0 = zeros(8)
 P0=nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 df = readtable("$path/../../../../../us.txt",header=false, separator=' ')
@@ -69,6 +64,6 @@ h5open("$path/../reference/output_likelihoods.h5","w") do file
 end
 
 # Seeded, deterministic resampling; fixed tempering schedule of 0.25->0.5->1
-h5open("$path/../reference/tpf_test_likelihoods.h5","w") do file
-    write(file,"test_likelihoods",lik)
-end
+# h5open("$path/../reference/tpf_test_likelihoods.h5","w") do file
+#     write(file,"test_likelihoods",lik)
+# end
