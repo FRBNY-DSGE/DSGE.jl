@@ -68,7 +68,7 @@ module DSGE
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
 
         metropolis_hastings, compute_parameter_covariance, compute_moments,
-        find_density_bands, prior, mutation, multinomial_resampling, systematic_resampling, mutation, smc, nearestSPD, density, tpf, ineff_func,seeded_multinomial_resampling,
+        find_density_bands, prior, mutation, multinomial_resampling, systematic_resampling, mutation, smc, nearestSPD, density, tpf, tpf_fixed_phi, ineff_func,seeded_multinomial_resampling,
 
         # forecast/
         load_draws, forecast_one,
@@ -146,6 +146,7 @@ module DSGE
     include("estimate/multinomial_resampling.jl")
     include("estimate/mutation.jl")
     include("estimate/tpf.jl")
+    include("estimate/tpf_fixed_phi.jl")
     include("estimate/seeded_multinomial_resampling.jl")
     include("estimate/ineff_func.jl")
     include("estimate/density.jl")
