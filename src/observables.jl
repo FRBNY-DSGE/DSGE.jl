@@ -60,7 +60,7 @@ function PseudoObservable(k::Symbol)
 end
 
 type PseudoObservableMapping{T}
-    inds::Dict{Symbol,Int}
+    inds::OrderedDict{Symbol,Int}
     ZZ_pseudo::Matrix{T}
     DD_pseudo::Array{T}
 end

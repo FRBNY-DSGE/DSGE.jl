@@ -149,8 +149,8 @@ function get_forecast_output_files(directory::String, filestring_base::Vector{St
                                    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
                                    forecast_string::String = "", fileformat = :jld)
 
-    output_files = Dict{Symbol, String}()
-    for var in output_vars
+    output_files    = Dict{Symbol, String}()
+    for var in remove_meansbands_only_output_vars(output_vars)
         output_files[var] = get_forecast_filename(directory, filestring_base,
                                                   input_type, cond_type, var,
                                                   forecast_string = forecast_string,
@@ -184,7 +184,7 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
 
     for var in output_vars
         prod = get_product(var)
-        if prod in [:forecast4q, :bddforecast4q]
+        if prod in [:hist4q, :forecast4q, :bddforecast4q]
             # These are computed and saved in means and bands, not
             # during the forecast itself
             continue
@@ -393,7 +393,7 @@ function read_forecast_output(file::JLD.JldFile, class::Symbol, product::Symbol,
         end
 
     # Other products are ndraws x nvars x nperiods
-    elseif product in [:hist, :forecast, :forecast4q, :bddforecast, :bddforecast4q, :dettrend]
+    elseif product in [:hist, :forecast, :hist4q, :forecast4q, :bddforecast, :bddforecast4q, :dettrend]
         inds_to_read = if ndims == 2 # one draw
             arr = h5read(filename, "arr", (var_ind, Colon()))
         elseif ndims == 3 # many draws

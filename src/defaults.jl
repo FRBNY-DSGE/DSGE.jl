@@ -33,6 +33,8 @@ function default_settings!(m::AbstractModel)
         "Whether to use population forecasts as data")
     settings[:population_mnemonic] = Setting(:population_mnemonic, Nullable(:CNP16OV__FRED),
         "Mnemonic of FRED data series for computing per-capita values (a Nullable{Symbol})")
+    settings[:hpfilter_population] = Setting(:hpfilter_population, true,
+        "Whether to HP filter combined population and forecast")
 
     # Dates
     settings[:date_presample_start] = Setting(:date_presample_start, quartertodate("1959-Q3"),

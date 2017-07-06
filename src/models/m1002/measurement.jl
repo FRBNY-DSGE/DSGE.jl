@@ -36,7 +36,7 @@ function measurement{T<:AbstractFloat}(m::Model1002{T},
         _n_observables = n_observables(m) - n_anticipated_shocks(m)
         _n_states = n_states_augmented(m) - n_anticipated_shocks(m)
         _n_shocks_exogenous = n_shocks_exogenous(m) - n_anticipated_shocks(m)
-        endo_new = Dict(
+        endo_new = OrderedDict(
             [(key,m.endogenous_states_augmented[key] - n_anticipated_shocks(m)) for key in keys(m.endogenous_states_augmented)])
     end
 

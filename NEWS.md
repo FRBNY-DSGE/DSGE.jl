@@ -1,3 +1,16 @@
+# DSGE.jl v0.2.1 Release Notes
+
+## New features
+
+- `detexify` function turns unicode characters into ASCII strings
+  before writing them to CSV.
+
+## Breaking changes
+
+- Changed `Dict`s of indices in model object to `OrderedDict`s
+- Upgrade all code for use with Julia v0.5.1 or higher
+
+
 # DSGE.jl v0.2.0 Release Notes
 
 ## New features

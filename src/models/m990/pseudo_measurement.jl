@@ -17,13 +17,13 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
                     :NominalFFR, :RealFFR, :ExpectedNominalNaturalRate]
 
     # Map pseudoobservables to indices
-    pseudo_inds = Dict{Symbol,Int}()
+    pseudo_inds = OrderedDict{Symbol,Int}()
     for (i,k) in enumerate(pseudo_names)
         pseudo_inds[k] = i
     end
 
     # Create PseudoObservable objects
-    pseudo = Dict{Symbol,PseudoObservable}()
+    pseudo = OrderedDict{Symbol,PseudoObservable}()
     for k in pseudo_names
         pseudo[k] = PseudoObservable(k)
     end

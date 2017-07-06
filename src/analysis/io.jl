@@ -59,8 +59,10 @@ function get_meansbands_input_files(directory::String, filestring_base::Vector{S
                                                  input_type, cond_type, var,
                                                  forecast_string = forecast_string,
                                                  fileformat = fileformat)
-        if contains(string(var), "4q")
+        if contains(string(var), "forecast4q")
             input_files[var] = replace(input_files[var], "forecast4q", "forecast")
+        elseif contains(string(var), "hist4q")
+            input_files[var] = replace(input_files[var], "hist4q", "hist")
         end
     end
 
@@ -281,7 +283,7 @@ function write_meansbands_tables(dirname::String, mb::MeansBands, tablevar::Symb
     fullfilename = DSGE.savepath(dirname, filename, filestring_base, filestring_addl)
 
     # Extract dataframe
-    if prod in [:hist, :forecast, :forecast4q, :bddforecast, :bddforecast4q, :trend, :dettrend]
+    if prod in [:hist, :forecast, :hist4q, :forecast4q, :bddforecast, :bddforecast4q, :trend, :dettrend]
         df = prepare_meansbands_table_timeseries(mb, tablevar)
 
         # Write to file
@@ -367,6 +369,10 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
             mbs[Symbol("bddforecast$class")] =
                 read_mb(workpath(m, "forecast", "mbbddforecast$class.jld", filestring_addl))
         end
+        if !isempty(intersect(my_output_vars, [Symbol("hist4q$class"), Symbol("histforecast4q$class")]))
+            mbs[Symbol("hist4q$class")] =
+                read_mb(workpath(m, "forecast", "mbhist4q$class.jld", filestring_addl))
+        end
         if !isempty(intersect(my_output_vars, [Symbol("forecast4q$class"), Symbol("histforecast4q$class")]))
             mbs[Symbol("forecast4q$class")] =
                 read_mb(workpath(m, "forecast", "mbforecast4q$class.jld", filestring_addl))
@@ -407,6 +413,11 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
         elseif output in [:histforecastpseudo, :histforecastobs]
 
             mb_histforecast = cat(mb[Symbol("hist$(class)")], mb[Symbol("forecast$class")])
+            write_meansbands_tables(m, mb_histforecast, tablevars = vars)
+
+        elseif output in [:histforecast4qpseudo, :histforecast4qobs]
+
+            mb_histforecast = cat(mb[Symbol("hist4q$(class)")], mb[Symbol("forecast4q$class")])
             write_meansbands_tables(m, mb_histforecast, tablevars = vars)
 
         elseif output in [:shockdecpseudo, :shockdecobs]

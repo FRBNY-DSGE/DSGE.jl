@@ -183,7 +183,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     # product
     mb1_product = get_product(mb1)
     mb2_product = get_product(mb2)
-    product = if mb1_product == :hist && contains(string(mb2_product), "forecast")
+    product = if mb1_product in [:hist, :hist4q] && contains(string(mb2_product), "forecast")
         Symbol(string(mb1_product)*string(mb2_product))
     elseif mb1_product == mb2_product
         mb1_product
@@ -543,7 +543,7 @@ ordered as follows: [68\% lower, 50\% lower, 50\% upper, 68\% upper, mean].
 """
 function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol)
 
-    @assert get_product(mb) in [:hist, :forecast, :forecast4q, :bddforecast,
+    @assert get_product(mb) in [:hist, :forecast, :hist4q, :forecast4q, :bddforecast,
          :bddforecast4q, :trend, :dettrend] "prepare_meansbands_table_timeseries can only be used for time-series products"
 
     @assert var in get_vars_means(mb) "$var is not stored in this MeansBands object"
