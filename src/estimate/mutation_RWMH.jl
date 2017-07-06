@@ -39,7 +39,7 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array
     n_part = get_setting(m, :n_particles)
     n_para = n_parameters(m)
     n_blocks = get_setting(m, :n_smc_blocks)
-    n_steps = m.testing ? 1 : get_setting(m, :n_MH_steps_smc)
+    n_steps = get_setting(m, :n_MH_steps_smc)
 
     fixed_para_inds = find([ θ.fixed for θ in m.parameters])
     free_para_inds  = find([!θ.fixed for θ in m.parameters])
@@ -51,9 +51,6 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array
     step = isempty(rvec) ? randn(n_para-length(fixed_para_inds),1): rvec
     step_prob = isempty(rval) ? rand() : rval
 
-    # SVD is a robust alternative to Cholesky factorization.
-    # U, E, V = svd(R)
-    # cov_mat = U * diagm(sqrt(E))
     cov_mat = chol(R)'
 
     para = para_init
@@ -62,16 +59,22 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array
     post = post_init + (tempering_schedule[i] - tempering_schedule[i-1]) * like
     accept = 0
 
-    for j in 1:n_steps
-        para_new = para + squeeze(c * cov_mat * step, 2)
+    j = 0
+    while j < n_steps
+        para_new = para + c * cov_mat * step
         post_new = posterior!(m, augment_draw(para_new, m), data; φ_smc = tempering_schedule[i],
                               sampler = true)
         like_new = post_new - prior(m)
 
-        # Accept/Reject
-        α = exp(post_new - post_init) # this is RW, so q is canceled out
+        # if step is invalid, retry
+        if !isfinite(post_new)
+             j -= 1
+        end
 
-        if step_prob .< α # accept
+        # Accept/Reject
+        α = exp(post_new - post) # this is RW, so q is canceled out
+
+        if step_prob < α # accept
             para   = para_new
             like   = like_new
             post   = post_new
@@ -81,6 +84,7 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array
         # draw again for the next step
         step = randn(n_para-length(fixed_para_inds),1)
         step_prob = rand()
+        j += 1
 
     end
 
