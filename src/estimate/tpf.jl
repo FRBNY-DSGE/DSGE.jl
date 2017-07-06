@@ -20,13 +20,13 @@ if testing==0
     A=sys.measurement.DD
     B=sys.measurement.ZZ
     S2=sys.measurement.QQ
-    
-    m<=Setting(:DD,A)
-    m<=Setting(:ZZ,B)
-    m<=Setting(:RRR,R)
-    m<=Setting(:TTT,Φ)
-    m<=Setting(:EE,H)
-    m<=Setting(:tpf_S2,S2)
+    # @show A
+    # m<=Setting(:DD,Matrix{A})
+    # m<=Setting(:ZZ,B)
+    # m<=Setting(:RRR,R)
+    # m<=Setting(:TTT,Φ)
+    # m<=Setting(:EE,H)
+    # m<=Setting(:tpf_S2,S2)
 else   
     ###Testing Mode. Read in matrices from Schorfheide Matlab code.
     A = get_setting(m,:DD)
@@ -110,7 +110,7 @@ end
         else 
             φ_1=.25
         end
-
+        @show φ_1 
         
         # Update weights array and resample particles
         #While it might seem weird that we're updating s_lag_tempered and not s_t_nontempered, we are actually just resampling and we only need the lagged states for future calculations.
@@ -143,18 +143,20 @@ end
             φ_interval = [φ_old, 1.0]
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
           
-            if testing==0
-                # Set φ_new to the solution of the inefficiency function over interval
-                fzero(init_ineff_func, φ_interval)
-                check_ineff = ineff_func(1.0, φ_new, yt, perror, H, initialize=0)
-            else
-                φ_new=0.5
-            end
             count += 1
 
             # Check solution exists within interval
             if prod(sign(fphi_interval))==-1 || testing==1
-               
+                
+                if testing==0
+                    # Set φ_new to the solution of the inefficiency function over interval
+                    φ_new=fzero(init_ineff_func, φ_interval)
+                    check_ineff = ineff_func(1.0, φ_new, yt, perror, H, initialize=0)
+                else
+                    φ_new=0.5
+                end
+                @show φ_new
+
                 # Update weights array and resample particles
                 loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,H,n_particles, testing, initialize=0)
 
@@ -177,7 +179,7 @@ end
                 # Mutation Step
                 acpt_vec=zeros(n_particles)
                 for i = 1:n_particles
-                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_lag_tempered[:,i],ε[:,i],cov_s,rand_mat)
+                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_lag_tempered[:,i],ε[:,i],cov_s,rand_mat, testing)
                     s_t_nontempered[:,i] = ind_s
                     ε[:,i] = ind_ε
                     acpt_vec[i] = ind_acpt
@@ -226,7 +228,7 @@ end
         acpt_vec=zeros(n_particles)
   
         for i=1:n_particles
-            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_lag_tempered[:,i], ε[:,i],cov_s,rand_mat)
+            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_lag_tempered[:,i], ε[:,i],cov_s,rand_mat, testing)
             s_t_nontempered[:,i] = ind_s
             ε[:,i] = ind_ε
             acpt_vec[i] = ind_acpt 

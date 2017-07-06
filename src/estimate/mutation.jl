@@ -9,7 +9,7 @@ s_init: The starting state before mutation.
 ε_init: The starting epsilon (state error) before mutation.
 """
 
-function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1},ε_init::Array{Float64,1},cov_s::Array,rand_mat::Array)
+function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1},ε_init::Array{Float64,1},cov_s::Array,rand_mat::Array, testing::Int64)
     #------------------------------------------------------------------------
     # Setup
     #------------------------------------------------------------------------
@@ -37,6 +37,7 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
     #------------------------------------------------------------------------
     for i=1:N_MH
         # Generate new draw of ε from a N(ε_init, c²R) distribution where R is cov_s (defined in tpf.jl) and c is the tuning parameter
+        if testing==0 rand_mat=randn(3,1) end
         ε_new=ε_init + c*Matrix(chol(nearestSPD(cov_s)))'*rand_mat
 
         # Use the state equation to calculate the corresponding state from that ε 
@@ -58,8 +59,9 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
         α = exp(post_new - post_init)
 
         # Accept the particle with probability α
-        # DETERMINISTIC: in actuality, 0.5 should be rand
-        if .5<α 
+        if (testing==0) num = rand()
+        else num=0.5 end
+        if num<α 
             # Accept
             ind_s = s_new_fore
             ind_ε = ε_new
