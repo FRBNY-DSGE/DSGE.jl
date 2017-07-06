@@ -131,7 +131,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	println("--------------------------")
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             for n=1:n_params
-                println("$(m.parameters[n].key) = $(μ[n]), $(σ[n])")
+                println("$(m.parameters[n].key) = $(round(μ[n],5)), $(round(σ[n],5))")
 	    end
         end
     end
@@ -242,7 +242,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	    println("--------------------------")
             if VERBOSITY[verbose] >= VERBOSITY[:high]
                 for n=1:n_params
-                    println("$(m.parameters[n].key) = $(μ[n]), $(σ[n])")
+                    println("$(m.parameters[n].key) = $(round(μ[n],5)), $(round(σ[n],5))")
 	        end
             end
         end
