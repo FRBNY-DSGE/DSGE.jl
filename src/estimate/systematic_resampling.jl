@@ -16,24 +16,32 @@ Reindexing and reweighting samples from a degenerate distribution
 
 """
 function systematic_resampling(m, weight)
+    
+    n_part = length(weight)
+    weight = weight./sum(weight)
 
-    npart = length(weight)
+    # Stores cumulative weights until given index
+    cumulative_weight = cumsum(weight)
     weight = weight'
-    cweight = cumsum(weight')
-    uu = zeros(npart,1)
-    csi=rand()
+    uu = zeros(n_part,1)
 
-    for j=1:npart
-        uu[j] = (j-1)+csi
+    # Random part of algorithm - choose offset of first index by some u~U[0,1)
+    rand_offset=rand()
+
+    # Set "spokes" at the position of the random offset
+    for j=1:n_part
+        uu[j] = (j-1)+rand_offset
     end
-
-    indx = zeros(npart, 1)
-
+    
+    # Initialize output vector
+    indx = zeros(n_part, 1)
+    
+    # Function solves where an individual "spoke" lands
     function subsys(i)
-        u = uu[i]/npart
+        u = uu[i]/n_part
         j=1
-        while j <= npart
-            if (u < cweight[j])
+        while j <= n_part
+            if (u < cumulative_weight[j])
                 break
             end
             j = j+1
@@ -41,18 +49,19 @@ function systematic_resampling(m, weight)
         indx[i] = j
     end
 
+    # Map function if parallel
     parallel = get_setting(m,:use_parallel_workers)
     if parallel
-        parindx = @sync @parallel (hcat) for j = 1:npart
-            subsys(j)
-        end
+        parindx = pmap(j -> subsys(j), 1:n_part)
     else
-        parindx = [subsys(j) for j = 1:npart]'
+        parindx = [subsys(j) for j = 1:n_part]'
     end
+
+    # Transpose and round output indices
     indx = parindx'
-
     indx = round(Int, indx)
-
+    
+    # Write output to file if in testing mode
     if m.testing
         open("resamples.csv","a") do x
             writecsv(x,indx')
