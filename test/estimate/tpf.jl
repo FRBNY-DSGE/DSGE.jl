@@ -8,7 +8,7 @@ m<=Setting(:tpf_c,0.1)
 m<=Setting(:tpf_acpt_rate,0.5)
 m<=Setting(:tpf_trgt,0.25)
 m<=Setting(:tpf_N_MH,2)
-m<=Setting(:tpf_num_particles,100)
+m<=Setting(:tpf_num_particles,4000)
 
 srand(1234)
 
