@@ -166,6 +166,21 @@ end
 
 """
 ```
+remove_meansbands_only_output_vars(output_vars)
+```
+"""
+function remove_meansbands_only_output_vars(output_vars)
+
+    # all the <product>4q<class> variables are computed during compute_meansbands
+    meansbands_only_output_vars = [:hist4qpseudo, :hist4qobs,
+                                   :forecast4qobs, :forecast4qpseudo,
+                                   :bddforecast4qobs, :bddforecast4qpseudo]
+
+    setdiff(output_vars, meansbands_only_output_vars)
+end
+
+"""
+```
 transplant_history(history, last_hist_period)
 ```
 
