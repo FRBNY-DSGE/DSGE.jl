@@ -113,7 +113,7 @@ end
 
         # Update weights array and resample particles
         #While it might seem weird that we're updating s_lag_tempered and not s_t_nontempered, we are actually just resampling and we only need the lagged states for future calculations.
-        loglik, weights, s_lag_tempered, ε_up = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_lag_tempered,ε_rand_mat,H,num_particles,initialize=1)
+        loglik, weights, s_lag_tempered, ε_up = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_lag_tempered,ε_rand_mat,H,num_particles,testing,initialize=1)
         # Update likelihood
         lik[t]=lik[t]+loglik
 
@@ -143,23 +143,19 @@ end
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
           
             if testing==0
-                
+                # Set φ_new to the solution of the inefficiency function over interval
+                fzero(init_ineff_func, φ_interval)
+                check_ineff = ineff_func(1.0, φ_new, yt, perror, H, initialize=0)
             else
                 φ_new=0.5
             end
-            @show φ_new
             count += 1
 
-            
             # Check solution exists within interval
-           # if prod(sign(fphi_interval))==-1
+            if prod(sign(fphi_interval))==-1 || testing==1
                
-                # Set φ_new to the solution of the inefficiency function over interval
-                #fzero(init_ineff_func, φ_interval)
-               # check_ineff = ineff_func(1.0, φ_new, yt, perror, H, initialize=0)
-                              
                 # Update weights array and resample particles
-                loglik, weights, s_lag_tempered, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε_up,H,num_particles,initialize=0)
+                loglik, weights, s_lag_tempered, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε_up,H,num_particles, testing, initialize=0)
 
 
                 # Update likelihood
@@ -195,9 +191,10 @@ end
                 len_phis[t]+=1
 
             # If no solution exists within interval, set inefficiency to rstar
-           # else 
-            #    check_ineff = rstar
-            #end
+            else 
+                check_ineff = rstar
+            end
+            #For testing with the phi schedule, we want to get out of while loop after one iteration so just set check_ineff=0
             if testing==1
                check_ineff=0
             end
@@ -209,7 +206,7 @@ end
         φ_new = 1.0
 
         # Update weights array and resample particles.
-        loglik, weights, s_lag_tempered, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε_up,H,num_particles,initialize=0)
+        loglik, weights, s_lag_tempered, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε_up,H,num_particles,testing,initialize=0)
 
        # Update likelihood
         lik[t]=lik[t]+loglik
@@ -279,22 +276,22 @@ Calculate densities, normalize and reset weights, call multinomial resampling, u
 Returns log likelihood, weight, state, and ε vectors.
 
 """
-function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array, density_arr::Array, weights::Array, s_lag_tempered::Array, ε_up::Array, H::Array, num_particles::Int64; initialize::Int64=0)
-#    @show φ_new
-#    @show yt
-#    @show H
+function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array, density_arr::Array, weights::Array, s_lag_tempered::Array, ε_up::Array, H::Array, num_particles::Int64, testing::Int64; initialize::Int64=0)
+
     # Calculate initial weights
     path = dirname(@__FILE__)
     for n=1:num_particles
         density_arr[n]=density(φ_new, φ_old, yt, perror[:,n], H, initialize=initialize)
     end   
-    #@show density_arr'
     # Normalize weights
     weights = (density_arr.*weights)./mean(density_arr.*weights)
 
     # Resampling
-    #MUST PUT BACK IN: id = multinomial_resampling(weights)
-    id = seeded_multinomial_resampling(weights)
+    if testing==0
+        id = multinomial_resampling(weights)
+    else
+        id = seeded_multinomial_resampling(weights)
+    end
     # @show id
     # fid1 = open("$path/../../test/reference/random_ids.csv","a")
     # for i in id
