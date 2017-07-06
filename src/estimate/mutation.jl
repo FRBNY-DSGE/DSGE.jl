@@ -71,7 +71,8 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
             ind_s = s_init_fore
             ind_ε = ε_init
             #THIS IS DIFFERENT THAN ORIGINAL MATLAB BUT WE THINK MATLAB WRONG
-            #acpt = 0
+            #I HAVE RE-UNCOMMENTED THIS SO THAT C DOESNT GET HUGE AND EVERYTHING DOESN'T BREAK WITH THE INDEX OUT OF BOUNDS ERROR
+            if testing==0 acpt = 0 end
         end
         ε_init = ind_ε
     end

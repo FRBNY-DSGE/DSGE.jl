@@ -1,6 +1,6 @@
 using DSGE
 using Roots
-function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing=0)
+function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing=0, parallel=0)
     # s0 is 8xn_particles
     # P0
     # yy is data matrix
@@ -166,7 +166,7 @@ end
 
                 # Update value for c
                 c = update_c(m,c,acpt_rate,trgt)
-                
+                @show c 
                 # Update covariance matrix
                 μ = mean(ε,2)
                 cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
@@ -178,13 +178,20 @@ end
                 
                 # Mutation Step
                 acpt_vec=zeros(n_particles)
+               
+
+                if parallel==1
+                    out = pmap(i -> mutation(m, yt, s_lag_tempered[:,i], ε[:,i],cov_s,rand_mat, testing), 1:n_particles)
+                else 
+                    out = [mutation(m, yt, s_lag_tempered[:,i], ε[:,i],cov_s,rand_mat, testing) for i=1:n_particles]
+                end
                 for i = 1:n_particles
-                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_lag_tempered[:,i],ε[:,i],cov_s,rand_mat, testing)
-                    s_t_nontempered[:,i] = ind_s
-                    ε[:,i] = ind_ε
-                    acpt_vec[i] = ind_acpt
+                    s_t_nontempered[:,i] = out[i][1]
+                    ε[:,i] = out[i][2]
+                    acpt_vec[i] = out[i][3]
                 end
 
+               
                 # Calculate average acceptance rate
                 acpt_rate = mean(acpt_vec)
 
@@ -227,12 +234,23 @@ end
         # Final round of mutation
         acpt_vec=zeros(n_particles)
   
-        for i=1:n_particles
-            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_lag_tempered[:,i], ε[:,i],cov_s,rand_mat, testing)
-            s_t_nontempered[:,i] = ind_s
-            ε[:,i] = ind_ε
-            acpt_vec[i] = ind_acpt 
+        if parallel==1
+            out = pmap(i -> mutation(m, yt, s_lag_tempered[:,i], ε[:,i],cov_s,rand_mat, testing), 1:n_particles)
+        else 
+            out = [mutation(m, yt, s_lag_tempered[:,i], ε[:,i],cov_s,rand_mat, testing) for i=1:n_particles]
         end
+        for i = 1:n_particles
+            s_t_nontempered[:,i] = out[i][1]
+            ε[:,i] = out[i][2]
+            acpt_vec[i] = out[i][3]
+        end
+
+        # for i=1:n_particles
+        #     s_t_nontempered[:,i], ε[:,i], acpt_vec[i] = mutation(m, yt, s_lag_tempered[:,i], ε[:,i],cov_s,rand_mat, testing)
+        #    # s_t_nontempered[:,i] = ind_s
+        #    # ε[:,i] = ind_ε
+        #    # acpt_vec[i] = ind_acpt 
+        # end
 
         # Store for next time iteration
         acpt_rate = mean(acpt_vec)

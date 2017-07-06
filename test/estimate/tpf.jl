@@ -69,10 +69,11 @@ df = readtable("$path/../../../../../us.txt",header=false, separator=' ')
 data = convert(Matrix{Float64},df)
 data=data'
 
-neff, like = tpf(m, data, s0,P0, testing=0)
+neff, lik = tpf(m, data, s0,P0, testing=1, parallel=1)
 
+#neff, lik = tpf(m, data, s0,P0, testing=0, parallel=0)
 
-neff, lik = tpf(m, data, s0, P0, testing=1)
+#neff, lik = tpf(m, data, s0, P0, testing=1, parallel=0)
 
 @test good_likelihoods == lik
 
