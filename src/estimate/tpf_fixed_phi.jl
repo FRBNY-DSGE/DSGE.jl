@@ -40,23 +40,14 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
     path = dirname(@__FILE__)
     
     # Get tuning parameters from the model
-  
-##### WILL ALSO NEED TO BRING THIS BACK LATER
-    #= rstar = get_setting(m,:tpf_rstar)
+    rstar = get_setting(m,:tpf_rstar)
     c = get_setting(m,:tpf_c)
     acpt_rate = get_setting(m,:tpf_acpt_rate)
     trgt = get_setting(m,:tpf_trgt)
     N_MH = get_setting(m,:tpf_N_MH)
     num_particles = get_setting(m,:tpf_num_particles)
-    =#
-#### BELOW IS HARD CODED, TO BE REPLACED BY ABOVE
-    rstar= 2.0
-    acpt_rate= 0.5
-    trgt= 0.25
-    c = 0.1
-    N_MH= 2
-    num_particles=4000
-    
+  
+
     rand_mat = randn(3,1)
     h5open("$path/../../test/reference/mutationRandomMatrix.h5","w") do file
         write(file,"rand_mat",rand_mat)
@@ -78,16 +69,18 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
 
     # Initialize first state
     ### STORING FOR TESTING - RANDOM
-    s_up_rand_mat = randn(num_states,num_particles)
+    s_lag_tempered_rand_mat = randn(num_states,num_particles)
     ε_rand_mat = randn(num_errors, num_particles)
     h5open("$path/../../test/reference/matricesForTPF.h5","w") do file
-        write(file,"s_up_rand_mat",s_up_rand_mat)
+        write(file,"s_lag_tempered_rand_mat",s_lag_tempered_rand_mat)
         write(file,"eps_rand_mat",ε_rand_mat)
     end
     ###
 
-    s_up = repmat(s0,1,num_particles) + get_chol(P0)'*s_up_rand_mat
-    
+    #Draw initial particles from the distribution of s₀ which for now is N(s₀, P₀) 
+    s_lag_tempered = repmat(s0,1,num_particles) + get_chol(P0)'*s_lag_tempered_rand_mat
+#s_lag_tempered is s_up
+#s_t_nontempered is s_fore    
     for t=1:T
         #--------------------------------------------------------------
         # Initialize Algorithm: First Tempering Step
@@ -95,10 +88,10 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
         yt = yy[:,t]
         # RANDOM
         #ε = randn(num_errors, num_particles)
-        s_fore = Φ*s_up + sqrtS2*ε_rand_mat
+        s_t_nontempered = Φ*s_lag_tempered + sqrtS2*ε_rand_mat
         
         # Error for each particle
-        perror = repmat(yt-A,1,num_particles)-B*s_fore
+        perror = repmat(yt-A,1,num_particles)-B*s_t_nontempered
         
         # Solve for initial tempering parameter ϕ_1
         init_Ineff_func(φ) = ineff_func(φ, 2.0*pi, yt, perror, H, initialize=1)-rstar
@@ -108,7 +101,8 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
         @show t
 
         # Update weights array and resample particles
-        loglik, weights, s_up, ε_up = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_up,ε_rand_mat,H,num_particles,initialize=1)
+        #While it might seem weird that we're updating s_lag_tempered and not s_t_nontempered, we are actually just resampling and we only need the lagged states for future calculations.
+        loglik, weights, s_lag_tempered, ε_up = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_lag_tempered,ε_rand_mat,H,num_particles,initialize=1)
         # Update likelihood
         lik[t]=lik[t]+loglik
 
@@ -117,9 +111,10 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
         φ_old = φ_1
 
         # First propagation
-        s_fore = Φ*s_up + sqrtS2*ε_up
-        perror = repmat(yt-A, 1, num_particles) - B*s_fore        
- 
+
+#i believe the only point of the next three lines is to calculate the ineff ratio. s_t_nontempered is never used after this
+        s_t_nontempered = Φ*s_lag_tempered + sqrtS2*ε_up
+        perror = repmat(yt-A, 1, num_particles) - B*s_t_nontempered         
         check_ineff=ineff_func(1.0, φ_1, yt, perror, H)         
 
         #--------------------------------------------------------------
@@ -142,7 +137,7 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
                # check_ineff = ineff_func(1.0, φ_new, yt, perror, H, initialize=0)
                               
                 # Update weights array and resample particles
-                loglik, weights, s_up, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_up,ε_up,H,num_particles,initialize=0)
+                loglik, weights, s_lag_tempered, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε_up,H,num_particles,initialize=0)
 
 
                 # Update likelihood
@@ -163,8 +158,8 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
                 # Mutation Step
                 acpt_vec=zeros(num_particles)
                 for i = 1:num_particles
-                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_up[:,i],ε_up[:,i],cov_s,rand_mat)
-                    s_fore[:,i] = ind_s
+                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_lag_tempered[:,i],ε_up[:,i],cov_s,rand_mat)
+                    s_t_nontempered[:,i] = ind_s
                     ε_up[:,i] = ind_ε
                     acpt_vec[i] = ind_acpt
                 end
@@ -173,7 +168,7 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
                 acpt_rate = mean(acpt_vec)
 
                 # Get error for all particles
-                perror = repmat(yt-A, 1,num_particles)-B*s_fore
+                perror = repmat(yt-A, 1,num_particles)-B*s_t_nontempered
                 φ_old = φ_new
                 len_phis[t]+=1
 
@@ -189,7 +184,7 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
         φ_new = 1.0
 
         # Update weights array and resample particles.
-        loglik, weights, s_up, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_up,ε_up,H,num_particles,initialize=0)
+        loglik, weights, s_lag_tempered, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε_up,H,num_particles,initialize=0)
 
        # Update likelihood
         lik[t]=lik[t]+loglik
@@ -208,8 +203,8 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
         acpt_vec=zeros(num_particles)
   
       for i=1:num_particles
-            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_up[:,i], ε_up[:,i],cov_s,rand_mat)
-            s_fore[:,i] = ind_s
+            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_lag_tempered[:,i], ε_up[:,i],cov_s,rand_mat)
+            s_t_nontempered[:,i] = ind_s
             ε_up[:,i] = ind_ε
             acpt_vec[i] = ind_acpt 
         end
@@ -219,7 +214,7 @@ function tpf_fixed_phi(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Arra
 
 
         Neff[t] = (num_particles^2)/sum(weights.^2)
-        s_up = s_fore
+        s_lag_tempered = s_t_nontempered
         end
     # Return vector of likelihood indexed by time step and Neff
     return Neff, lik
@@ -253,13 +248,13 @@ end
 
 """
 ```
-correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array,density_arr::Array,weights::Array, s_up::Array, ε_up::Array, H::Array, num_particles::Int64; initialize::Int64=0)
+correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array,density_arr::Array,weights::Array, s_lag_tempered::Array, ε_up::Array, H::Array, num_particles::Int64; initialize::Int64=0)
 ```
 Calculate densities, normalize and reset weights, call multinomial resampling, update state and error vectors,reset error vectors to 1,and calculate new log likelihood.
 Returns log likelihood, weight, state, and ε vectors.
 
 """
-function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array, density_arr::Array, weights::Array, s_up::Array, ε_up::Array, H::Array, num_particles::Int64; initialize::Int64=0)
+function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array, density_arr::Array, weights::Array, s_lag_tempered::Array, ε_up::Array, H::Array, num_particles::Int64; initialize::Int64=0)
 #    @show φ_new
 #    @show yt
 #    @show H
@@ -283,7 +278,7 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perro
     # print(fid1,"\n")
     # close(fid1)
 
-    s_up = s_up[:,id]
+    s_lag_tempered = s_lag_tempered[:,id]
     ε_up = ε_up[:,id]
 
     # Reset weights to ones
@@ -292,7 +287,7 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perro
     # Calculate likelihood
     loglik = log(mean(density_arr.*weights))
     
-    return loglik, weights, s_up, ε_up
+    return loglik, weights, s_lag_tempered, ε_up
 end
 
 nothing
