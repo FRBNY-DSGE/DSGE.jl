@@ -68,7 +68,7 @@ P0=nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 df = readtable("$path/../../../../../us.txt",header=false, separator=' ')
 data = convert(Matrix{Float64},df)
 data=data'
-neff, lik = tpf_fixed_phi(m, data, s0, P0)
+neff, lik = tpf(m, data, s0, P0, testing=1)
 
 @test good_likelihoods == lik
 

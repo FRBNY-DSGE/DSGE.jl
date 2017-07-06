@@ -1,6 +1,6 @@
 using DSGE
 using Roots
-function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing=0)
+function tpf_old(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array, A, B, H, R, S2, Φ)
     # s0 is 8xnum_particles
     # P0
     # yy is data matrix
@@ -9,10 +9,9 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
 # Set Parameters of Algorithm
 #--------------------------------------------------------------
 
-#Compute system and store model parameters
-if testing==0
-    ###Non-testing mode. Use actual matrices computed from model system.
-    sys=compute_system(m)
+####THIS NEEDS TO COME BACK. TAKEN OUT SO THAT WE CAN PASS IN MATRICES FROM SHORFHEIDGE MATLAB CODE, BUT WILL NEED TO CHANGE
+    #Compute system and store model parameters
+  #=  sys=compute_system(m)
     R=sys.transition.RRR
     Φ=sys.transition.TTT
     C=sys.transition.CCC
@@ -20,38 +19,31 @@ if testing==0
     A=sys.measurement.DD
     B=sys.measurement.ZZ
     S2=sys.measurement.QQ
-    
-    m<=Setting(:DD,A)
-    m<=Setting(:ZZ,B)
-    m<=Setting(:RRR,R)
-    m<=Setting(:TTT,Φ)
-    m<=Setting(:EE,H)
-    m<=Setting(:tpf_S2,S2)
-else   
-    ###Testing Mode. Read in matrices from Schorfheide Matlab code.
-    A = get_setting(m,:DD)
-    B = get_setting(m,:ZZ)
-    R = get_setting(m,:RRR)
-    Φ = get_setting(m,:TTT)
-    H = get_setting(m,:EE)
-    S2 = get_setting(m,:tpf_S2)
-end   
-
+    =#   
     sqrtS2=R*get_chol(S2)'
-    m<=Setting(:tpf_sqrtS2,sqrtS2)
 
-    
+    path = dirname(@__FILE__)
+
+
     # Get tuning parameters from the model
-    rstar = get_setting(m,:tpf_rstar)
+  
+##### WILL ALSO NEED TO BRING THIS BACK LATER
+    #= rstar = get_setting(m,:tpf_rstar)
     c = get_setting(m,:tpf_c)
     acpt_rate = get_setting(m,:tpf_acpt_rate)
     trgt = get_setting(m,:tpf_trgt)
     N_MH = get_setting(m,:tpf_N_MH)
     num_particles = get_setting(m,:tpf_num_particles)
-  
-    # Testing mode: Generate pre-defined 3x1 vector of random movements for mutation step. 
+    =#
+#### BELOW IS HARD CODED, TO BE REPLACED BY ABOVE
+    rstar= 2.0
+    acpt_rate= 0.5
+    trgt= 0.25
+    c = 0.1
+    N_MH= 2
+    num_particles=500
+    
     rand_mat = randn(3,1)
-    path = dirname(@__FILE__)
     h5open("$path/../../test/reference/mutationRandomMatrix.h5","w") do file
         write(file,"rand_mat",rand_mat)
     end
@@ -62,7 +54,7 @@ end
     #number of states
     num_states = size(B, 2)
     
-    #Setup some things we'll want later
+    # Likelihood matrix
     lik = zeros(T)
     Neff=zeros(T)
     len_phis = ones(T)
@@ -71,95 +63,82 @@ end
     ε_up = zeros(num_errors)
 
     # Initialize first state
-    ### Testing: Generated pre-defined random shocks for s and ε
-    s_lag_tempered_rand_mat = randn(num_states,num_particles)
+    # STORING FOR TESTING - RANDOM
+    s_up_rand_mat = randn(num_states,num_particles)
     ε_rand_mat = randn(num_errors, num_particles)
     h5open("$path/../../test/reference/matricesForTPF.h5","w") do file
-        write(file,"s_lag_tempered_rand_mat",s_lag_tempered_rand_mat)
+        write(file,"s_up_rand_mat",s_up_rand_mat)
         write(file,"eps_rand_mat",ε_rand_mat)
     end
     ###
 
-    #Draw initial particles from the distribution of s₀: N(s₀, P₀) 
-    if testing==0 #if not testing, draw a new random term. 
-        s_lag_tempered_rand_mat = randn(num_states,num_particles)
-    end
-    s_lag_tempered = repmat(s0,1,num_particles) + get_chol(P0)'*s_lag_tempered_rand_mat
+    sVec=zeros(8,T)
 
+    s_up = repmat(s0,1,num_particles) + get_chol(P0)'*s_up_rand_mat
+    
+
+    
     for t=1:T
+
         #--------------------------------------------------------------
         # Initialize Algorithm: First Tempering Step
         #--------------------------------------------------------------
+
         yt = yy[:,t]
-        
-        if testing==0 #when not testing, want a new random ε each time 
-            ε_rand_mat = randn(num_errors, num_particles)
-        end
-        #Forecast forward one time step
-        s_t_nontempered = Φ*s_lag_tempered + sqrtS2*ε_rand_mat
+        # RANDOM
+        #ε = randn(num_errors, num_particles)
+        s_fore = Φ*s_up + sqrtS2*ε_rand_mat
         
         # Error for each particle
-        perror = repmat(yt-A,1,num_particles)-B*s_t_nontempered
-        
-        # Solve for initial tempering parameter ϕ_1
-        if testing==0
-            init_Ineff_func(φ) = ineff_func(φ, 2.0*pi, yt, perror, H, initialize=1)-rstar
-            φ_1 = fzero(init_Ineff_func,0.000001, 1.0)
-        else 
-            φ_1=.25
-        end
+        perror = repmat(yt-A,1,num_particles)-B*s_fore
 
-        @show t
+        # Solve for initial tempering parameter ϕ_1
+        init_Ineff_func(φ) = ineff_func(φ, 2.0*pi, yt, perror, H, initialize=1)-rstar
+        φ_1 = fzero(init_Ineff_func,0.000001, 1.0)
+
 
         # Update weights array and resample particles
-        #While it might seem weird that we're updating s_lag_tempered and not s_t_nontempered, we are actually just resampling and we only need the lagged states for future calculations.
-        loglik, weights, s_lag_tempered, ε_up = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_lag_tempered,ε_rand_mat,H,num_particles,initialize=1)
+        #E: added ε_rand_mat instead of ε
+        loglik, weights, s_up, ε_up = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_up,ε_rand_mat,H,num_particles,initialize=1)
         # Update likelihood
         lik[t]=lik[t]+loglik
 
+        
         # Tempering Initialization
         count = 2 # Accounts for initialization and final mutation
         φ_old = φ_1
 
         # First propagation
-        
-        #turns out these lines are actually important! figure out later why
-        s_t_nontempered = Φ*s_lag_tempered + sqrtS2*ε_up
-        perror = repmat(yt-A, 1, num_particles) - B*s_t_nontempered         
-           
-        if testing==0
-             check_ineff=ineff_func(1.0, φ_1, yt, perror, H)         
-        else
-            check_ineff=rstar+1
-        end
-        
+        s_fore = Φ*s_up + sqrtS2*ε_up
+        perror = repmat(yt-A, 1, num_particles) - B*s_fore        
+        check_ineff=ineff_func(1.0, φ_1, yt, perror, H)         
+
         #--------------------------------------------------------------
         # Main Algorithm
         #--------------------------------------------------------------
         while (check_ineff>rstar)
+
+            count += 1
+
             # Define inefficiency function
             init_ineff_func(φ) = ineff_func(φ, φ_old, yt, perror,H)-rstar
             φ_interval = [φ_old, 1.0]
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
           
-            if testing==0
-                
-            else
-                φ_new=0.5
-            end
-            @show φ_new
-            count += 1
-
-            
             # Check solution exists within interval
-           # if prod(sign(fphi_interval))==-1
+            if prod(sign(fphi_interval))==-1
                
                 # Set φ_new to the solution of the inefficiency function over interval
-                #fzero(init_ineff_func, φ_interval)
-               # check_ineff = ineff_func(1.0, φ_new, yt, perror, H, initialize=0)
+                φ_new = fzero(init_ineff_func, φ_interval)
+                check_ineff = ineff_func(1.0, φ_new, yt, perror, H, initialize=0)
+#@show φ_new
+#@show check_ineff
                               
                 # Update weights array and resample particles
-                loglik, weights, s_lag_tempered, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε_up,H,num_particles,initialize=0)
+                loglik, weights, s_up, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_up,ε_up,H,num_particles,initialize=0)
+# @show ε_up        
+#@show loglik
+#q@show s_up
 
 
                 # Update likelihood
@@ -176,32 +155,44 @@ end
                     cov_s = diagm(diag(cov_s))
                     #cov_s = nearestSPD(cov_s)
                 end
+
                 
                 # Mutation Step
                 acpt_vec=zeros(num_particles)
                 for i = 1:num_particles
-                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_lag_tempered[:,i],ε_up[:,i],cov_s,rand_mat)
-                    s_t_nontempered[:,i] = ind_s
+                    ind_s, ind_ε, ind_acpt = mutation(m,yt,s_up[:,i],ε_up[:,i],A,B,cov_s,Φ,H,sqrtS2,cov_s,N_MH,rand_mat)
+                    s_fore[:,i] = ind_s
                     ε_up[:,i] = ind_ε
                     acpt_vec[i] = ind_acpt
                 end
+#@show ε_up
+#@show s_fore
+
 
                 # Calculate average acceptance rate
                 acpt_rate = mean(acpt_vec)
 
+@show acpt_rate
+
                 # Get error for all particles
-                perror = repmat(yt-A, 1,num_particles)-B*s_t_nontempered
+                perror = repmat(yt-A, 1,num_particles)-B*s_fore
                 φ_old = φ_new
                 len_phis[t]+=1
+#@show s_fore
+#@show ε_up
+
+#@show perror
+@show φ_old
+#aaa
 
             # If no solution exists within interval, set inefficiency to rstar
-           # else 
-            #    check_ineff = rstar
-            #end
-            if testing==1
-               check_ineff=0
+            else 
+                check_ineff = rstar
             end
         end
+        @show count
+####THE NUMERICAL SOLVER ISN'T PRECISE EVERY TIME BETWEEN MATLAB AND JULIA HENCE WE ARE GETTING DIFFERENT PHIs EACH TIME WHICH THROW OFF OUR ANSWERS
+aaa
 
         #--------------------------------------------------------------
         # Last Stage of Algorithm: φ_new=1
@@ -209,7 +200,11 @@ end
         φ_new = 1.0
 
         # Update weights array and resample particles.
-        loglik, weights, s_lag_tempered, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε_up,H,num_particles,initialize=0)
+        loglik, weights, s_up, ε_up = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_up,ε_up,H,num_particles,initialize=0)
+#@show s_up
+#@show ε_up'
+#@show loglik
+aaa
 
        # Update likelihood
         lik[t]=lik[t]+loglik
@@ -219,30 +214,46 @@ end
 
         cov_s = (1/num_particles)*(ε_up-repmat(μ,1,num_particles))*(ε_up - repmat(μ,1,num_particles))'
 
+#@show cov_s
+#@show eig(cov_s)
+       #eigs = eig(cov_s)[1]
+       # if (round(eigs[1],16) <= 0) | (round(eigs[2],16) <= 0) | (round(eigs[3],16) <= 0)
+        #    cov_s = diagm(diag(cov_s))
+        #end
        if isposdef(cov_s)== false
             cov_s = diagm(diag(cov_s))
        end
+@show cov_s
 
+### EXCELLENCE 
                 
         # Final round of mutation
         acpt_vec=zeros(num_particles)
+@show s_up
+@show ε_up
   
       for i=1:num_particles
-            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_lag_tempered[:,i], ε_up[:,i],cov_s,rand_mat)
-            s_t_nontempered[:,i] = ind_s
+            ind_s, ind_ε, ind_acpt = mutation(m, yt, s_up[:,i], ε_up[:,i], A, B, cov_s, Φ, H, sqrtS2,cov_s,N_MH,rand_mat)
+            s_fore[:,i] = ind_s
             ε_up[:,i] = ind_ε
             acpt_vec[i] = ind_acpt 
+ #           @show ind_acpt
         end
 
         # Store for next time iteration
         acpt_rate = mean(acpt_vec)
-
+#@show acpt_rate
+#@show s_fore
+#@show ε_up
 
         Neff[t] = (num_particles^2)/sum(weights.^2)
-        s_lag_tempered = s_t_nontempered
+        s_up = s_fore
+
+
+    sVec[:,t]=mean(s_up,2)
     end
     # Return vector of likelihood indexed by time step and Neff
-    return Neff, lik
+    return Neff, lik, sVec
 end
 
 
@@ -273,18 +284,17 @@ end
 
 """
 ```
-correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array,density_arr::Array,weights::Array, s_lag_tempered::Array, ε_up::Array, H::Array, num_particles::Int64; initialize::Int64=0)
+correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array,density_arr::Array,weights::Array, s_up::Array, ε_up::Array, H::Array, num_particles::Int64; initialize::Int64=0)
 ```
 Calculate densities, normalize and reset weights, call multinomial resampling, update state and error vectors,reset error vectors to 1,and calculate new log likelihood.
 Returns log likelihood, weight, state, and ε vectors.
 
 """
-function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array, density_arr::Array, weights::Array, s_lag_tempered::Array, ε_up::Array, H::Array, num_particles::Int64; initialize::Int64=0)
+function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array, density_arr::Array, weights::Array, s_up::Array, ε_up::Array, H::Array, num_particles::Int64; initialize::Int64=0)
 #    @show φ_new
 #    @show yt
 #    @show H
     # Calculate initial weights
-    path = dirname(@__FILE__)
     for n=1:num_particles
         density_arr[n]=density(φ_new, φ_old, yt, perror[:,n], H, initialize=initialize)
     end   
@@ -295,15 +305,7 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perro
     # Resampling
     #MUST PUT BACK IN: id = multinomial_resampling(weights)
     id = seeded_multinomial_resampling(weights)
-    # @show id
-    # fid1 = open("$path/../../test/reference/random_ids.csv","a")
-    # for i in id
-    #     print(fid1,i,",")
-    # end    
-    # print(fid1,"\n")
-    # close(fid1)
-
-    s_lag_tempered = s_lag_tempered[:,id]
+    s_up = s_up[:,id]
     ε_up = ε_up[:,id]
 
     # Reset weights to ones
@@ -312,7 +314,7 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perro
     # Calculate likelihood
     loglik = log(mean(density_arr.*weights))
     
-    return loglik, weights, s_lag_tempered, ε_up
+    return loglik, weights, s_up, ε_up
 end
 
 nothing
