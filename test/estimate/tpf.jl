@@ -8,7 +8,7 @@ m<=Setting(:tpf_c,0.1)
 m<=Setting(:tpf_acpt_rate,0.5)
 m<=Setting(:tpf_trgt,0.25)
 m<=Setting(:tpf_N_MH,2)
-m<=Setting(:tpf_num_particles,4000)
+m<=Setting(:tpf_n_particles,4000)
 
 srand(1234)
 
@@ -68,6 +68,10 @@ P0=nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 df = readtable("$path/../../../../../us.txt",header=false, separator=' ')
 data = convert(Matrix{Float64},df)
 data=data'
+
+neff, like = tpf(m, data, s0,P0, testing=0)
+
+
 neff, lik = tpf(m, data, s0, P0, testing=1)
 
 @test good_likelihoods == lik

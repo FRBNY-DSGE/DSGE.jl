@@ -5,6 +5,7 @@ m=AnSchorfheide(testing=true)
 m<=Setting(:date_forecast_start,quartertodate("2015-Q4"))
 m<=Setting(:tpf_N_MH,3)
 m<=Setting(:tpf_c, 0.1)
+m<=Setting(:tpf_n_particles,100)
 # Set seeding 
 srand(1234)
 # Set path
@@ -17,9 +18,27 @@ B = sys.measurement.ZZ
 R = sys.transition.RRR
 H = sys.measurement.EE
 Q = sys.measurement.QQ
-cov_mat = Matrix(chol(nearestSPD(Q)))
-sqrtS2=R*cov_mat'
+
+n_particles = get_setting(m,:tpf_n_particles)
+
+sqrtS2=R*Matrix(chol(nearestSPD(Q)))'
 N_MH = get_setting(m,:tpf_N_MH)
+
+ε = randn(3,n_particles)
+μ = mean(ε,2)
+cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε-repmat(μ,1,n_particles))'
+
+m<=Setting(:date_forecast_start,quartertodate("2015-Q4"))
+m<=Setting(:tpf_N_MH,3)
+m<=Setting(:TTT, Φ)
+m<=Setting(:DD, A)
+m<=Setting(:ZZ, B)
+m<=Setting(:RRR, R)
+m<=Setting(:EE, H)
+m<=Setting(:S2, Q)
+m<=Setting(:tpf_sqrtS2, sqrtS2)
+
+rand_mat = randn(3,1)
 
 h5open("$path/../reference/matricesForMutation.h5","w") do file
     write(file, "phi", sys.transition.TTT)
@@ -32,11 +51,13 @@ h5open("$path/../reference/matricesForMutation.h5","w") do file
     write(file, "Z", sys.measurement.ZZ)
     write(file, "sqrtS2", sqrtS2)
     write(file, "N_MH", N_MH)
+    write(file, "rand_mat", rand_mat)
+    write(file, "cov_s", cov_s)
 end
     
 
 #Test that it compiles
-s_part1, eps_part1, acpt = mutation(m,[50.2,8.3,7.6],[.8,.9,.6,.9,.11,5,7,10],[.2,.5,.7],A,B,R,Φ,H,sqrtS2,cov_mat,N_MH)
+s_part1, eps_part1, acpt = mutation(m,[50.2,8.3,7.6],[.8,.9,.6,.9,.11,5,7,10],[.2,.5,.7],cov_s,rand_mat,1)
 
 h5open("$path/../reference/mutation_RWMH1.h5","w") do file
     write(file, "s_part1", s_part1)
@@ -48,25 +69,33 @@ data=h5open("$path/../reference/mutation_RWMH.h5","r") do file
 end
 
 # Test function with one column of data.
-s, eps, acpt = mutation(m, data[:,1], ones(8), zeros(3),A,B,cov_mat,Φ,H,sqrtS2,cov_mat,N_MH)  
+s, eps, acpt = mutation(m, data[:,1], ones(8), zeros(3),cov_s,rand_mat,1)  
 c = h5open("$path/../reference/mutation_RWMH1.h5","r") do file
     read(file,"s_part1")
     read(file,"eps_part1")
 end
 
-goodOut = h5open("$path/../reference/mutationMatlabOutput.h5","r") do file
-    read(file,"ind_s")
+matlab_acpt_rate = h5open("$path/../reference/mutation_acceptance_rate.h5","r") do file
+    read(file,"ind_acpt")
 end
-#goodOut = goodOut[:,1]
-# Hardcoded from Kalman output
-goodOut = [-0.2317   -0.6848    0.7385   -0.4007    0.2663    0.3005    0.0768   -0.1969]'[:,1]
-#println(goodOut)
-# Test Kalman-certified reasonable case (should accept)
-ind_s, ind_eps, ind_acpt = mutation(m, data[:,1],goodOut,zeros(3),A,B,cov_mat,Φ,H,sqrtS2,cov_mat,N_MH)
-@test ind_acpt >= 0.3
 
-#Test unreasonable case (should reject)
-ind_s, ind_eps, ind_acpt = mutation(m, data[:,1],3*goodOut,zeros(3),A,B,cov_mat,Φ,H,sqrtS2,cov_mat,N_MH)
-@test ind_acpt == 0
+@test [acpt] == matlab_acpt_rate
+
+
+# goodOut = h5open("$path/../reference/mutationMatlabOutput.h5","r") do file
+#     read(file,"ind_s")
+# end
+
+# #goodOut = goodOut[:,1]
+# # Hardcoded from Kalman output
+# goodOut = [-0.2317   -0.6848    0.7385   -0.4007    0.2663    0.3005    0.0768   -0.1969]'[:,1]
+# #println(goodOut)
+# # Test Kalman-certified reasonable case (should accept)
+# ind_s, ind_eps, ind_acpt = mutation(m, data[:,1],goodOut,zeros(3),A,B,cov_mat,Φ,H,sqrtS2,cov_mat,N_MH)
+# @test ind_acpt >= 0.3
+
+# #Test unreasonable case (should reject)
+# ind_s, ind_eps, ind_acpt = mutation(m, data[:,1],3*goodOut,zeros(3),A,B,cov_mat,Φ,H,sqrtS2,cov_mat,N_MH)
+# @test ind_acpt == 0
 
 nothing 
