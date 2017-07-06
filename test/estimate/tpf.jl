@@ -1,4 +1,4 @@
-using DSGE, HDF5, DataFrames
+using DSGE, HDF5, DataFrames, ClusterManagers
 using QuantEcon: solve_discrete_lyapunov
 
 m = AnSchorfheide(testing=true)
@@ -69,7 +69,9 @@ df = readtable("$path/../../../../../us.txt",header=false, separator=' ')
 data = convert(Matrix{Float64},df)
 data=data'
 
+tic()
 neff, lik = tpf(m, data, s0,P0, testing=1, parallel=1)
+toc()
 
 #neff, lik = tpf(m, data, s0,P0, testing=0, parallel=0)
 
