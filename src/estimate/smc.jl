@@ -50,6 +50,14 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     accept = get_setting(m, :init_accept)
     target = get_setting(m, :target_accept)
 
+    resampler(x) = if get_setting(m, :resampler_smc) == :systematic
+        systematic_resampling(m, x)
+    elseif get_setting(m, :resampler_smc) == :multinomial
+        sample(1:n_part, weights(x), n_part, replace = true)
+    else
+        throw("Invalid resampler in SMC. Set :resampler_smc setting to either :systematic or :multinomial")
+    end
+
     parallel = get_setting(m, :use_parallel_workers)
 
     # Creating the tempering schedule
@@ -90,9 +98,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     end
 
     if parallel
-        draws = @sync @parallel (hcat) for j = 1:n_part
-            draw_from_prior(m, data)
-        end
+        draws = pmap(x -> draw_from_prior(m, data), 1:n_part)
     else
         draws = [DSGE.draw_from_prior(m, data)  for j = 1:n_part]
     end
@@ -167,7 +173,9 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         @assert !isnan(ESS) "no particles have non-zero weight"
 
 	if (ESS < n_part/2)
-	    id = systematic_resampling(m, weight_sim[:,i])
+	    id = resampler(weight_sim[:,i])
+            # sample(1:n_part, weights(weight_sim[:,i]), n_part, replace = true)
+            # systematic_resampling(m, weight_sim[:,i])
             para_sim[i-1, :, :] = para_sim[i-1, id, :]
 	    loglh = loglh[id]
 	    logpost = logpost[id]
@@ -193,9 +201,10 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
 	temp_accept = zeros(n_part, 1) # Initialize acceptance indicator
 
         if parallel
-            out = @sync @parallel (hcat) for j = 1:n_part
-                mutation_RWMH(m, data, vec(para[j,:]'), loglh[j], logpost[j], i, R, tempering_schedule)
-            end
+            out = pmap(j -> mutation_RWMH(m, data, vec(para[j,:]'), loglh[j], logpost[j], i, R, tempering_schedule), 1:n_part)
+            # out = @sync @parallel (hcat) for j = 1:n_part
+            #     mutation_RWMH(m, data, vec(para[j,:]'), loglh[j], logpost[j], i, R, tempering_schedule)
+            # end
         else
             out = [mutation_RWMH(m, data, vec(para[j,:]'), loglh[j], logpost[j], i, R, tempering_schedule)  for j = 1:n_part]
         end
