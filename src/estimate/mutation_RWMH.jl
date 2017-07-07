@@ -34,7 +34,6 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 """
 function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array{Float64,1}, like_init::Float64, post_init::Float64, i::Int64, R::Array{Float64,2}, tempering_schedule::Array{Float64,1}; rvec = [], rval = [])
 
-
     n_Φ = get_setting(m, :n_Φ)
     n_part = get_setting(m, :n_particles)
     n_para = n_parameters(m)
@@ -61,6 +60,7 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array
 
     j = 0
     while j < n_steps
+
         para_new = para + c * cov_mat * step
         post_new = posterior!(m, augment_draw(para_new, m), data; φ_smc = tempering_schedule[i],
                               sampler = true)
@@ -69,6 +69,7 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array
         # if step is invalid, retry
         if !isfinite(post_new)
              j -= 1
+    
         end
 
         # Accept/Reject
@@ -82,12 +83,13 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array
         end
 
         # draw again for the next step
-        step = randn(n_para-length(fixed_para_inds),1)
+        #step = randn(n_para-length(fixed_para_inds),1)
+        step = randn(n_para,1)
         step_prob = rand()
         j += 1
 
     end
-
+    
     return augment_draw(para, m), like, post, accept
 end
 
