@@ -14,9 +14,16 @@ rm("systematic_resampling_test.csv")
 
 # Append weights vectors for testing
 weights_vec=Any[]
+# Increasing weight
 append!(weights_vec, [collect(0.1:0.1:0.9)])
+# Even distribution between indices
 append!(weights_vec,[[0.4, 0.1, 0.1, 0.2, 0.3]])
+# Index in the middle should appear far more frequently than others
 append!(weights_vec,[[0.1, 0.8, 0.1]])
+# Weights whose sum far exceeds 0
+append!(weights_vec,[[9.0, 20.0, 2.0, 7.0, 14.0, 23.0, 4.0]])
+# Index with 0 probability
+append!(weights_vec,[[0, 0.5, 0.5]]
 
 for weights in weights_vec
     
@@ -37,11 +44,17 @@ for weights in weights_vec
     act_weights = round(weights./sum(weights),3)
 
     open("systematic_resampling_test.csv","a") do file
+        write(file,"\n---------------------\n")
         write(file,"Actual Probabilities \n")
         writecsv(file,act_weights')
         write(file,"\nTested Probabilities \n")
         writecsv(file,count')
-        write(file,"\n---------------------\n")
     end
+
 end
+
+open("systematic_resampling_test.csv","a") do file
+    write(file,"\n---------------------\n")
+end
+
 nothing
