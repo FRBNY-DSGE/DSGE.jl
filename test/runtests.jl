@@ -22,8 +22,8 @@ my_tests = [#=
             "estimate/optimize",
             "estimate/eig",
             "estimate/metropolis_hastings",
-            "estimate/smc",
-            "estimate/mutation_RWMH",=#
+            "estimate/smc",=#
+            "estimate/mutation_RWMH",
             "estimate/systematic_resampling",
             "data/misc",
             "data/load_data",
