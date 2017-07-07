@@ -1,7 +1,7 @@
 using Base.Test
 using DSGE
 
-my_tests = [
+my_tests = [#=
             "core",
             "parameters",
             "models/an_schorfheide/an_schorfheide",
@@ -23,7 +23,8 @@ my_tests = [
             "estimate/eig",
             "estimate/metropolis_hastings",
             "estimate/smc",
-            "estimate/mutation_RWMH",
+            "estimate/mutation_RWMH",=#
+            "estimate/systematic_resampling",
             "data/misc",
             "data/load_data",
             "forecast/smooth",
