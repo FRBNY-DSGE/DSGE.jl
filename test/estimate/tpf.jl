@@ -56,7 +56,7 @@ good_likelihoods = h5open("$path/../reference/tpf_test_likelihoods.h5","r") do f
     read(file, "test_likelihoods")
 end
 
-m<=Setting(:DD,A)
+m<=Setting(:DD,A[:,1])
 m<=Setting(:ZZ,B)
 m<=Setting(:RRR,R)
 m<=Setting(:TTT,Φ)
@@ -70,7 +70,7 @@ data = convert(Matrix{Float64},df)
 data=data'
 
 tic()
-neff, lik = tpf(m, data, s0,P0, testing=1, parallel=1)
+neff, lik = tpf(m, data, s0,P0, testing=0, parallel=0)
 toc()
 
 #neff, lik = tpf(m, data, s0,P0, testing=0, parallel=0)
