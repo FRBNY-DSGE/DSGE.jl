@@ -10,34 +10,32 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
 #--------------------------------------------------------------
 
 #Compute system and store model parameters
-if testing==0
-    ###Non-testing mode. Use actual matrices computed from model system.
-    sys=compute_system(m)
-    R=sys.transition.RRR
-    Φ=sys.transition.TTT
-    C=sys.transition.CCC
-    H=sys.measurement.EE
-    A=sys.measurement.DD
-    B=sys.measurement.ZZ
-    S2=sys.measurement.QQ
+    if testing==0
+        ###Non-testing mode. Use actual matrices computed from model system.
+        sys=compute_system(m)
+        R=sys.transition.RRR
+        Φ=sys.transition.TTT
+        H=sys.measurement.EE
+        A=sys.measurement.DD
+        B=sys.measurement.ZZ
+        S2=sys.measurement.QQ
+ 
+        m<=Setting(:DD,A)
+        m<=Setting(:ZZ,B)
+        m<=Setting(:RRR,R)
+        m<=Setting(:TTT,Φ)
+        m<=Setting(:EE,H)
+        m<=Setting(:tpf_S2,S2)
+    else   
+        ###Testing Mode. Read in matrices from Schorfheide Matlab code.
+        A = get_setting(m,:DD)
+        B = get_setting(m,:ZZ)
+        R = get_setting(m,:RRR)
+        Φ = get_setting(m,:TTT)
+        H = get_setting(m,:EE)
+        S2 = get_setting(m,:tpf_S2)
+    end   
     
-        
-     m<=Setting(:DD,A)
-     m<=Setting(:ZZ,B)
-     m<=Setting(:RRR,R)
-     m<=Setting(:TTT,Φ)
-     m<=Setting(:EE,H)
-     m<=Setting(:tpf_S2,S2)
-else   
-    ###Testing Mode. Read in matrices from Schorfheide Matlab code.
-    A = get_setting(m,:DD)
-    B = get_setting(m,:ZZ)
-    R = get_setting(m,:RRR)
-    Φ = get_setting(m,:TTT)
-    H = get_setting(m,:EE)
-    S2 = get_setting(m,:tpf_S2)
-end   
-
     sqrtS2=R*get_chol(S2)'
     m<=Setting(:tpf_sqrtS2,sqrtS2)
 
@@ -129,13 +127,18 @@ end
         #turns out these lines are actually important! figure out later why
         s_t_nontempered = Φ*s_lag_tempered + sqrtS2*ε
         perror = repmat(yt-A, 1, n_particles) - B*s_t_nontempered         
-           
+        
+        #if φ_1<.0007
+         #   aaa
+        #end
         if testing==0
              check_ineff=ineff_func(1.0, φ_1, yt, perror, H)         
         else
             check_ineff=rstar+1
         end
         
+        @show check_ineff
+       
         #--------------------------------------------------------------
         # Main Algorithm
         #--------------------------------------------------------------
@@ -205,14 +208,17 @@ end
 
             # If no solution exists within interval, set inefficiency to rstar
             else 
+                println("no sol in interval")
                 check_ineff = rstar
             end
             #For testing with the phi schedule, we want to get out of while loop after one iteration so just set check_ineff=0
             if testing==1
                check_ineff=0
             end
+        println(check_ineff)
+       
         end
-
+ println("out of while")
         #--------------------------------------------------------------
         # Last Stage of Algorithm: φ_new=1
         #--------------------------------------------------------------
@@ -304,9 +310,15 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perro
 
     # Calculate initial weights
     path = dirname(@__FILE__)
+    @show φ_new
+    @show φ_old
+    @show mean(perror,2)
+    @show inv(H)
     for n=1:n_particles
         density_arr[n]=density(φ_new, φ_old, yt, perror[:,n], H, initialize=initialize)
     end   
+    #@show density_arr
+        
     # Normalize weights
     weights = (density_arr.*weights)./mean(density_arr.*weights)
 
