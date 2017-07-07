@@ -15,7 +15,7 @@ Reindexing and reweighting samples from a degenerate distribution
         the newly assigned indices of parameter draws.
 
 """
-function systematic_resampling(m, weight)
+function systematic_resampling(m::AbstractModel, weight::AbstractArray)
     
     n_part = length(weight)
     weight = weight./sum(weight)
@@ -67,6 +67,5 @@ function systematic_resampling(m, weight)
             writecsv(x,indx')
         end
     end
-
     return vec(indx)
 end
