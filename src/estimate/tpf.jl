@@ -128,9 +128,6 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
         s_t_nontempered = Φ*s_lag_tempered + sqrtS2*ε
         perror = repmat(yt-A, 1, n_particles) - B*s_t_nontempered         
         
-        #if φ_1<.0007
-         #   aaa
-        #end
         if testing==0
              check_ineff=ineff_func(1.0, φ_1, yt, perror, H)         
         else
@@ -254,13 +251,6 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
             acpt_vec[i] = out[i][3]
         end
 
-        # for i=1:n_particles
-        #     s_t_nontempered[:,i], ε[:,i], acpt_vec[i] = mutation(m, yt, s_lag_tempered[:,i], ε[:,i],cov_s,rand_mat, testing)
-        #    # s_t_nontempered[:,i] = ind_s
-        #    # ε[:,i] = ind_ε
-        #    # acpt_vec[i] = ind_acpt 
-        # end
-
         # Store for next time iteration
         acpt_rate = mean(acpt_vec)
 
@@ -310,14 +300,9 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perro
 
     # Calculate initial weights
     path = dirname(@__FILE__)
-    @show φ_new
-    @show φ_old
-    @show mean(perror,2)
-    @show inv(H)
     for n=1:n_particles
         density_arr[n]=density(φ_new, φ_old, yt, perror[:,n], H, initialize=initialize)
     end   
-    #@show density_arr
         
     # Normalize weights
     weights = (density_arr.*weights)./mean(density_arr.*weights)
