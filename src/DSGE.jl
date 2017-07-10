@@ -1,7 +1,7 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-    using Base.Dates, DataFrames, Distributions, FredData, HDF5, JLD, Optim, StateSpaceRoutines
+    using Base.Dates, DataFrames, Distributions, FredData, HDF5, JLD, Optim, Plots, StateSpaceRoutines
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
@@ -100,6 +100,9 @@ module DSGE
         which_density_bands, write_meansbands_tables, prepare_meansbands_tables_timeseries,
         prepare_meansbands_tables_shockdec, write_meansbands_tables_all,
 
+        # plot/
+        plot_irfs, plot_history_and_forecast, hair_plot, plot_forecast_comparison,
+
         # util
         @test_matrix_approx_eq, @test_matrix_approx_eq_eps
 
@@ -153,6 +156,12 @@ module DSGE
     include("analysis/meansbands_to_matrix.jl")
     include("analysis/io.jl")
     include("analysis/util.jl")
+
+    include("plot/util.jl")
+    include("plot/plot_irfs.jl")
+    include("plot/plot_history_and_forecast.jl")
+    include("plot/hair_plot.jl")
+    include("plot/plot_forecast_comparison.jl")
 
     include("models/financial_frictions.jl")
 
