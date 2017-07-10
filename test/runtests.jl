@@ -28,7 +28,8 @@ my_tests = [
             "forecast/impulse_responses",
             "forecast/io",
             "forecast/forecast_one",
-            "analysis/means_bands"
+            "analysis/means_bands",
+            "plot/plot"
             ]
 
 for test in my_tests
