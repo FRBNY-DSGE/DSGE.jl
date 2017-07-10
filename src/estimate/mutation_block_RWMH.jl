@@ -72,48 +72,43 @@ function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init:
     
 ### BLOCKING ###
 
-    j = 0
     b = 1
-    while j < n_steps
-                
-        while b <= n_blocks # corresponds to jth block
-            if b > 1
-                cov_mat_temp = isolate_block(cov_mat, b, n_blocks, para_idx)
-                @show cov_mat_temp
-                para_new = para + c * cov_mat_temp * step
-            else
-                para_new = para + c * cov_mat * step
-            end
-            @show para_new
-            @show n_blocks
-            post_new = posterior!(m, augment_draw(para_new, m), data; 
-                                  φ_smc = tempering_schedule[i],
-                                  sampler = true)
-            like_new = post_new - prior(m)
-
-            # if step is invalid, retry
-            if !isfinite(post_new)
-                #j -= 1
-                b -= 1    
-            end
-
-            # Accept/Reject
-            α = exp(post_new - post) # this is RW, so q is canceled out
-
-            if step_prob < α # accept
-                para   = para_new
-                like   = like_new
-                post   = post_new
-                accept = 1
-            end
-
-            # draw again for the next step
-            step = randn(n_para-length(fixed_para_inds),1)
-            step_prob = rand()
-            # j += 1
-            b += 1
-
+                  
+    while b <= n_blocks # corresponds to jth block
+        if b > 1
+            cov_mat_temp = isolate_block(cov_mat, b, n_blocks, para_idx)
+            @show cov_mat_temp
+            para_new = para + c * cov_mat_temp * step
+        else
+            para_new = para + c * cov_mat * step
         end
+        @show para_new
+        @show n_blocks
+        post_new = posterior!(m, augment_draw(para_new, m), data; 
+                              φ_smc = tempering_schedule[i],
+                              sampler = true)
+        like_new = post_new - prior(m)
+
+        # if step is invalid, retry
+        if !isfinite(post_new)
+            #j -= 1
+            b -= 1    
+        end
+
+        # Accept/Reject
+        α = exp(post_new - post) # this is RW, so q is canceled out
+
+        if step_prob < α # accept
+            para   = para_new
+            like   = like_new
+            post   = post_new
+            accept = 1
+        end
+
+        # draw again for the next step
+        step = randn(n_para-length(fixed_para_inds),1)
+        step_prob = rand()
+        b += 1  
     end
     return augment_draw(para, m), like, post, accept
 end
