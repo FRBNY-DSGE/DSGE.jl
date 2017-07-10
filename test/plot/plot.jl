@@ -9,6 +9,7 @@ m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:date_conditional_end, quartertodate("2015-Q4"))
 m <= Setting(:use_population_forecast, true)
 m <= Setting(:forecast_horizons, 8)
+m <= Setting(:impulse_response_horizons, 8)
 
 # Run full-distribution forecast
 estroot = normpath(joinpath(dirname(@__FILE__), "..", "reference"))
@@ -49,4 +50,6 @@ hair_plot(:obs_nominalrate, df, [hist_mb], [fcast_mb];
 irf_mb = read_mb(files[:irfobs])
 output_file = joinpath(saveroot(m), "irf__rm_sh.pdf")
 plot_irfs(:rm_sh, collect(keys(m.observables)), irf_mb;
-          output_file = output_file)
+          output_file = output_file,
+          layout = Plots.GridLayout(1, 3),
+          titles = ["Real GDP Growth", "CPI Inflation", "Nominal FFR"])
