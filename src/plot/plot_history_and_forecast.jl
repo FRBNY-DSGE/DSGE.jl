@@ -72,7 +72,11 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     end
 
     # Plot bands
-    band_percents = DSGE.which_density_bands(combined; uniquify = true)
+    band_percents = if combined.metadata[:para] in [:full, :subset]
+        DSGE.which_density_bands(combined; uniquify = true)
+    else
+        []
+    end
     for pct in band_percents
         plot!(p, datenums[all_inds], combined.bands[var][all_inds, Symbol("$pct UB")],
               fillto = combined.bands[var][all_inds, Symbol("$pct LB")],
