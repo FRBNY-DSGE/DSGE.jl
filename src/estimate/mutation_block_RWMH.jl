@@ -79,6 +79,7 @@ function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init:
         # If b <= 1, then blocking procedure does not occur. 
         if b > 1
             cov_mat_temp = isolate_block(cov_mat, b, n_blocks, para_inds)
+            
             para_new = para + c * cov_mat_temp * step
         else
             para_new = para + c * cov_mat * step
@@ -86,7 +87,8 @@ function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init:
         
         @show size(para_new)
         @show size(cov_mat)
-        post_new = posterior!(m, [para_new], data; 
+        @show size(augment_draw(para_new,m))
+        post_new = posterior!(m, augment_draw(para_new,m), data; 
                               φ_smc = tempering_schedule[i],
                               sampler = true)
         like_new = post_new - prior(m)
