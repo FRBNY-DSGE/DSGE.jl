@@ -33,11 +33,11 @@ function plot_irfs(shock::Symbol, vars::Vector{Symbol}, mb::MeansBands;
         save_plots = true
     end
 
-    allplots = OrderedDict{Symbol, Plot}()
+    allplots = OrderedDict{Symbol, Plots.Plot}()
 
     # Iterate through variables
     for var in vars
-        p = Plots.plot(title = string(var), margin = 10px)
+        p = plot(title = string(var), margin = 10px)
         varshock = Symbol("$(var)__$(shock)")
 
         # Plot 90% bands
@@ -53,8 +53,7 @@ function plot_irfs(shock::Symbol, vars::Vector{Symbol}, mb::MeansBands;
         # Save if `output_file` provided
         if save_plots
             this_file = base * "__$var" * ext
-            Plots.savefig(this_file)
-            println("Saved $this_file")
+            save_plot(p, this_file)
         end
 
         allplots[var] = p
