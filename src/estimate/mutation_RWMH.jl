@@ -47,11 +47,11 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array
     target = get_setting(m, :target_accept)
 
     # draw initial step and step probability
-    step = isempty(rvec) ? randn(n_para-length(fixed_para_inds),1): rvec
+    step = isempty(rvec) ? randn(n_para,1): rvec
     step_prob = isempty(rval) ? rand() : rval
 
     cov_mat = chol(R)'
-
+    cov_mat = augment_cov_mat(cov_mat, fixed_para_inds)
     para = para_init
     like = like_init
     # Previous posterior needs to be updated (due to tempering)
@@ -104,4 +104,11 @@ function augment_draw(draw, m)
         end
     end
     return new_draw
+end
+
+function augment_cov_mat(cov_mat, fixed_inds)
+    for ind in fixed_inds
+        cov_mat[:,ind] = zeros(size(cov_mat)[1])
+        cov_mat[ind,:] = zeros(size(cov_mat)[1])
+    end
 end
