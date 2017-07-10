@@ -37,6 +37,8 @@ para_1, loglh_1, post_1, acpt_1 = mutation_RWMH(s,data,prior_draw,loglh,post,2,R
 
 para_2, loglh_2, post_2, acpt_2 = mutation_RWMH(s,data,prior_draw,loglh,post,2,R,tempering_schedule,rvec=rvec2,rval=1.0)
 
+para_3, loglh_3, post_3, acpt_3 = mutation_block_RWMH(s,data,prior_draw,loglh,post,2,R,tempering_schedule,rvec=rvec2,rval=1.0)
+
 
 @test_approx_eq loglh_1 rej_loglh
 @test_approx_eq post_1 rej_post

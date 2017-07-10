@@ -34,7 +34,6 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 """
 function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array{Float64,1}, like_init::Float64, post_init::Float64, i::Int64, R::Array{Float64,2}, tempering_schedule::Array{Float64,1}; rvec = [], rval = [])
 
-
     n_Φ = get_setting(m, :n_Φ)
     n_part = get_setting(m, :n_particles)
     n_para = n_parameters(m)
@@ -48,13 +47,16 @@ function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init:
     target = get_setting(m, :target_accept)
 
     # draw initial step and step probability
-    step = isempty(rvec) ? randn(n_para-length(fixed_para_inds),1): rvec
+    step = isempty(rvec) ? randn(n_para,1): rvec
     step_prob = isempty(rval) ? rand() : rval
 
+    # Solve for covariance and zero-out variables that are fixed
     cov_mat = chol(R)'
+    cov_mat = augment_cov_mat(cov_mat, fixed_para_inds)
 
     para = para_init
     like = like_init
+
     # Previous posterior needs to be updated (due to tempering)
     post = post_init + (tempering_schedule[i] - tempering_schedule[i-1]) * like
     accept = 0
@@ -62,29 +64,29 @@ function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init:
 ### BLOCKING ###
 
     # Generate random index for each parameter, as means of sorting
-    para_idx = zeros(n_para)
+    para_inds = zeros(n_para)
     for i=1:n_para
-        para_idx[i] = rand()
+        para_inds[i] = rand()
     end
     # Returns indices sorted by their random value
-    para_idx = sortperm(para_idx)
-    @show para_idx
+    para_inds = sortperm(para_inds)
     
 ### BLOCKING ###
 
     b = 1
-                  
     while b <= n_blocks # corresponds to jth block
+        
+        # If b <= 1, then blocking procedure does not occur. 
         if b > 1
-            cov_mat_temp = isolate_block(cov_mat, b, n_blocks, para_idx)
-            @show cov_mat_temp
+            cov_mat_temp = isolate_block(cov_mat, b, n_blocks, para_inds)
             para_new = para + c * cov_mat_temp * step
         else
             para_new = para + c * cov_mat * step
         end
-        @show para_new
-        @show n_blocks
-        post_new = posterior!(m, augment_draw(para_new, m), data; 
+        
+        @show size(para_new)
+        @show size(cov_mat)
+        post_new = posterior!(m, [para_new], data; 
                               φ_smc = tempering_schedule[i],
                               sampler = true)
         like_new = post_new - prior(m)
@@ -92,7 +94,7 @@ function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init:
         # if step is invalid, retry
         if !isfinite(post_new)
             #j -= 1
-            b -= 1    
+            b -= 1
         end
 
         # Accept/Reject
@@ -106,7 +108,7 @@ function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init:
         end
 
         # draw again for the next step
-        step = randn(n_para-length(fixed_para_inds),1)
+        step = randn(n_para,1)
         step_prob = rand()
         b += 1  
     end
@@ -114,25 +116,35 @@ function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init:
 end
 
 # Zeros-out the lines of the matrices not in block
-function isolate_block(cov_mat::AbstractArray, b, n_blocks, para_idx::AbstractArray)
+function isolate_block(cov_mat::AbstractArray, b, n_blocks, para_inds::AbstractArray)
     cov_mat_block = cov_mat
-    n_para = length(para_idx)
+    n_para = length(para_inds)
     sup = min(b*n_blocks,n_para)
     inf = max(1,(b-1)*n_blocks)
     for i = 1:inf
-        idx = para_idx[i]
-        cov_mat_block[:,idx] = zeros(n_para)
-        cov_mat_block[idx,:] = zeros(n_para)
+        inds = para_inds[i]
+        cov_mat_block[:,inds] = zeros(n_para)
+        cov_mat_block[inds,:] = zeros(n_para)
     end
     for i = sup:n_para
-        idx = para_idx[i]
-        cov_mat_block[:,idx] = zeros(n_para)
-        cov_mat_block[idx,:] = zeros(n_para)
+        inds = para_inds[i]
+        cov_mat_block[:,inds] = zeros(n_para)
+        cov_mat_block[inds,:] = zeros(n_para)
     end
     return cov_mat_block
 end
 
+# Function used at the start of program to zero-out fixed rows and columns
+function augment_cov_mat(cov_mat,list_inds)
+    for id in list_inds
+        cov_mat[:,id] = zeros(size(cov_mat)[1])
+        cov_mat[id,:] = zeros(size(cov_mat)[1])
+    end
+    return cov_mat
+end
 
+
+# Not currently being called
 function augment_draw(draw, m)
     new_draw = map(x -> x.value, m.parameters)
     j = 1
