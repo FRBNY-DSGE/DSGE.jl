@@ -91,7 +91,7 @@ P0=nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 #data=data'
 
 tic()
-neff, lik = tpf(m, data, s0,P0, testing=0, parallel=1)
+neff, lik = tpf(m, data, s0, P0, testing=1, parallel=1)
 toc()
 
 #neff, lik = tpf(m, data, s0,P0, testing=0, parallel=0)
