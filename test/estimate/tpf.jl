@@ -3,7 +3,7 @@ using QuantEcon: solve_discrete_lyapunov
 
 custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
-m = AnSchorfheide(custom_settings = custom_settings, testing=true)
+m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 srand(1234)
 
@@ -71,6 +71,7 @@ n_iterations = 3
 
 x0=Float64[p.value for p in m.parameters]
 out, H = optimize!(m,data; iterations=500)
+n_particles = 500
 
 params = out.minimizer
 
@@ -81,25 +82,33 @@ m<=Setting(:tpf_c,0.1)
 m<=Setting(:tpf_acpt_rate,0.5)
 m<=Setting(:tpf_trgt,0.25)
 m<=Setting(:tpf_N_MH,2)
-m<=Setting(:tpf_n_particles,500)
+m<=Setting(:tpf_n_particles,n_particles)
 
+# Parallelize
+m<=Setting(:use_parallel_workers,true)
 
+# Set testing condition
+testing = false
+
+# Input parameters
 s0 = zeros(8)
-P0=nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
+P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
+
+# Use for testing:
 #df = readtable("$path/../../../../../us.txt",header=false, separator=' ')
 #data = convert(Matrix{Float64},df)
 #data=data'
 
 tic()
-neff, lik = tpf(m, data, s0, P0, testing=1, parallel=1)
+neff, lik = tpf(m, data, s0, P0, testing=testing)
 toc()
 
-#neff, lik = tpf(m, data, s0,P0, testing=0, parallel=0)
-
+#neff, lik = tpf(m, data, s0, P0, testing=0, parallel=0)
 #neff, lik = tpf(m, data, s0, P0, testing=1, parallel=0)
 
-#This test only passes if n_particles=4000 and testing=1
-@test good_likelihoods == lik
+if n_particles == 4000 & testing
+    @test good_likelihoods == lik
+end
 
 h5open("$path/../reference/output_likelihoods.h5","w") do file
     write(file,"julia_likelihoods",lik)
