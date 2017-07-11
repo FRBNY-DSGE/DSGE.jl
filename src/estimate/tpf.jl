@@ -1,17 +1,17 @@
 using DSGE
 using Roots
-function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing=0, parallel=0)
+function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing::Bool=false,verbose::Symbol=:low)
     # s0 is 8xn_particles
     # P0
     # yy is data matrix
 
-#--------------------------------------------------------------
-# Set Parameters of Algorithm
-#--------------------------------------------------------------
+    #--------------------------------------------------------------
+    # Set Parameters of Algorithm
+    #--------------------------------------------------------------
 
-#Compute system and store model parameters
-    if testing==0
-        ###Non-testing mode. Use actual matrices computed from model system.
+    # Compute system and store model parameters
+    if !testing
+        # Non-testing mode. Use actual matrices computed from model system.
         sys=compute_system(m)
         R=sys.transition.RRR
         Φ=sys.transition.TTT
@@ -27,7 +27,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
         m<=Setting(:EE,H)
         m<=Setting(:tpf_S2,S2)
     else   
-        ###Testing Mode. Read in matrices from Schorfheide Matlab code.
+        # Testing Mode. Read in matrices from Schorfheide Matlab code.
         A = get_setting(m,:DD)
         B = get_setting(m,:ZZ)
         R = get_setting(m,:RRR)
@@ -47,21 +47,26 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
     trgt = get_setting(m,:tpf_trgt)
     N_MH = get_setting(m,:tpf_N_MH)
     n_particles = get_setting(m,:tpf_n_particles)
-  
+    parallel = get_setting(m,:use_parallel_workers)
+    path = dirname(@__FILE__)  
+    
     # Testing mode: Generate pre-defined 3x1 vector of random movements for mutation step. 
     rand_mat = randn(3,1)
-    path = dirname(@__FILE__)
-    h5open("$path/../../test/reference/mutationRandomMatrix.h5","w") do file
-        write(file,"rand_mat",rand_mat)
+    
+    if testing
+        h5open("$path/../../test/reference/mutationRandomMatrix.h5","w") do file
+            write(file,"rand_mat",rand_mat)
+        end
     end
+
     # End time (last period)
     T = size(yy,2)
     # Size of covariance matrix
     n_errors = size(S2,1)
-    #number of states
-    n_states = size(B, 2)
+    # Number of states
+    n_states = size(B,2)
     
-    #Setup some things we'll want later
+    # Initialization
     lik = zeros(T)
     Neff=zeros(T)
     len_phis = ones(T)
@@ -70,47 +75,60 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
     ε = zeros(n_errors)
 
     # Initialize first state
+
     ### Testing: Generated pre-defined random shocks for s and ε
-    s_lag_tempered_rand_mat = randn(n_states,n_particles)
-    ε_rand_mat = randn(n_errors, n_particles)
-    h5open("$path/../../test/reference/matricesForTPF.h5","w") do file
-        write(file,"s_lag_tempered_rand_mat",s_lag_tempered_rand_mat)
-        write(file,"eps_rand_mat",ε_rand_mat)
+    if testing
+        s_lag_tempered_rand_mat = randn(n_states,n_particles)
+        ε_rand_mat = randn(n_errors, n_particles)
+    
+        h5open("$path/../../test/reference/matricesForTPF.h5","w") do file
+            write(file,"s_lag_tempered_rand_mat",s_lag_tempered_rand_mat)
+            write(file,"eps_rand_mat",ε_rand_mat)
+        end
     end
     ###
 
     #Draw initial particles from the distribution of s₀: N(s₀, P₀) 
-    if testing==0 #if not testing, draw a new random term. 
+    if !testing #if not testing, draw a new random term. 
         s_lag_tempered_rand_mat = randn(n_states,n_particles)
     end
+
     s_lag_tempered = repmat(s0,1,n_particles) + get_chol(P0)'*s_lag_tempered_rand_mat
 
     for t=1:T
-        @show t
-
+        
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            @show t
+        end
+        
         #--------------------------------------------------------------
         # Initialize Algorithm: First Tempering Step
         #--------------------------------------------------------------
         yt = yy[:,t]
         
-        if testing==0 #when not testing, want a new random ε each time 
+        if !testing # When not testing, want a new random ε each time 
             ε_rand_mat = randn(n_errors, n_particles)
         end
-        #Forecast forward one time step
+
+        # Forecast forward one time step
         s_t_nontempered = Φ*s_lag_tempered + sqrtS2*ε_rand_mat
         
         # Error for each particle
         perror = repmat(yt-A,1,n_particles)-B*s_t_nontempered
         
+        @show "Time to solve for φ:"
+        tic()
         # Solve for initial tempering parameter ϕ_1
-        if testing==0
+        if !testing
             init_Ineff_func(φ) = ineff_func(φ, 2.0*pi, yt, perror, H, initialize=1)-rstar
             φ_1 = fzero(init_Ineff_func,0.000001, 1.0)
         else 
-            φ_1=.25
+            φ_1 = 0.25
         end
-        @show φ_1 
-        
+        toc()
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            @show φ_1 
+        end
               
         # Update weights array and resample particles
         #While it might seem weird that we're updating s_lag_tempered and not s_t_nontempered, we are actually just resampling and we only need the lagged states for future calculations.
@@ -128,14 +146,15 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
         s_t_nontempered = Φ*s_lag_tempered + sqrtS2*ε
         perror = repmat(yt-A, 1, n_particles) - B*s_t_nontempered         
         
-        if testing==0
-             check_ineff=ineff_func(1.0, φ_1, yt, perror, H)         
+        if !testing
+            check_ineff=ineff_func(1.0, φ_1, yt, perror, H)         
         else
             check_ineff=rstar+1
         end
-        
-        @show check_ineff
-       
+
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            @show check_ineff
+        end
         #--------------------------------------------------------------
         # Main Algorithm
         #--------------------------------------------------------------
@@ -148,53 +167,64 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
             count += 1
 
             # Check solution exists within interval
-            if prod(sign(fphi_interval))==-1 || testing==1
+            if prod(sign(fphi_interval))== -1 || testing
                 
-                if testing==0
+                if !testing
                     # Set φ_new to the solution of the inefficiency function over interval
-                    φ_new=fzero(init_ineff_func, φ_interval)
+                    φ_new = fzero(init_ineff_func, φ_interval)
                     check_ineff = ineff_func(1.0, φ_new, yt, perror, H, initialize=0)
                 else
-                    φ_new=0.5
+                    φ_new = 0.5
                 end
-            @show φ_new
                
+                if VERBOSITY[verbose] >= VERBOSITY[:low]
+                    @show φ_new
+                end
+
                 # Update weights array and resample particles
                 loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,H,n_particles, testing, initialize=0)
 
-
                 # Update likelihood
-                lik[t]=lik[t]+loglik
+                lik[t] = lik[t] + loglik
 
                 # Update value for c
                 c = update_c(m,c,acpt_rate,trgt)
-                #c = update_c(m,c,acpt_rate,trgt)
-                @show c 
+
+                if VERBOSITY[verbose] >= VERBOSITY[:low]
+                    @show c
+                end
+
                 # Update covariance matrix
                 μ = mean(ε,2)
                 cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
 
                 if !isposdef(cov_s)
                     cov_s = diagm(diag(cov_s))
-                    #cov_s = nearestSPD(cov_s)
                 end
                 
                 # Mutation Step
                 acpt_vec=zeros(n_particles)
                
-
-                if parallel==1
-                    out = pmap(i -> mutation(m, yt, s_lag_tempered[:,i], ε[:,i],cov_s,rand_mat, testing), 1:n_particles)
+                if parallel
+                    out = pmap(i->mutation(m,yt,s_lag_tempered[:,i],ε[:,i],cov_s,rand_mat,testing), 1:n_particles)
                 else 
-                    out = [mutation(m, yt, s_lag_tempered[:,i], ε[:,i],cov_s,rand_mat, testing) for i=1:n_particles]
+                    out = [mutation(m,yt,s_lag_tempered[:,i],ε[:,i],cov_s,rand_mat,testing) for i=1:n_particles]
                 end
-                for i = 1:n_particles
-                    s_t_nontempered[:,i] = out[i][1]
-                    ε[:,i] = out[i][2]
-                    acpt_vec[i] = out[i][3]
-                end
+                
+                # if parallel
+                #     @parallel for i=1:n_particles
+                #     s_t_nontempered[:,i] = out[i][1]    
+                #     ε[:,i] = out[i][2]
+                #     acpt_vec[i] = out[i][3]
+                #     end
+                # else
+                    for i = 1:n_particles
+                        s_t_nontempered[:,i] = out[i][1]
+                        ε[:,i] = out[i][2]
+                        acpt_vec[i] = out[i][3]
+                    end
+                # end
 
-               
                 # Calculate average acceptance rate
                 acpt_rate = mean(acpt_vec)
 
@@ -205,17 +235,25 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
 
             # If no solution exists within interval, set inefficiency to rstar
             else 
-                println("no sol in interval")
+                if VERBOSITY[verbose] >= VERBOSITY[:high]
+                    println("No solution in interval.")
+                end
                 check_ineff = rstar
             end
-            #For testing with the phi schedule, we want to get out of while loop after one iteration so just set check_ineff=0
-            if testing==1
+            #For testing with phi schedule, leave while loop after one iteration, thus set check_ineff=0
+            if testing
                check_ineff=0
             end
-        println(check_ineff)
-       
+
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                @show check_ineff
+            end
         end
- println("out of while")
+
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("Out of main while-loop.")
+        end
+        
         #--------------------------------------------------------------
         # Last Stage of Algorithm: φ_new=1
         #--------------------------------------------------------------
@@ -232,28 +270,29 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
 
         cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
 
-       if isposdef(cov_s)== false
+        if isposdef(cov_s)== false 
             cov_s = diagm(diag(cov_s))
-       end
-
-                
+        end
+        
         # Final round of mutation
         acpt_vec=zeros(n_particles)
   
-        if parallel==1
-            out = pmap(i -> mutation(m, yt, s_lag_tempered[:,i], ε[:,i],cov_s,rand_mat, testing), 1:n_particles)
+        if parallel
+            out = pmap(i -> mutation(m,yt,s_lag_tempered[:,i],ε[:,i],cov_s,rand_mat,testing), 1:n_particles)
         else 
-            out = [mutation(m, yt, s_lag_tempered[:,i], ε[:,i],cov_s,rand_mat, testing) for i=1:n_particles]
+            out = [mutation(m, yt, s_lag_tempered[:,i], ε[:,i], cov_s, rand_mat, testing) for i=1:n_particles]
         end
+        
+        @show "Time for one iteration of copying:"
+        tic()
         for i = 1:n_particles
             s_t_nontempered[:,i] = out[i][1]
             ε[:,i] = out[i][2]
             acpt_vec[i] = out[i][3]
         end
-
+        toc()
         # Store for next time iteration
         acpt_rate = mean(acpt_vec)
-
 
         Neff[t] = (n_particles^2)/sum(weights.^2)
         s_lag_tempered = s_t_nontempered
@@ -296,7 +335,7 @@ Calculate densities, normalize and reset weights, call multinomial resampling, u
 Returns log likelihood, weight, state, and ε vectors.
 
 """
-function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array, density_arr::Array, weights::Array, s_lag_tempered::Array, ε::Array, H::Array, n_particles::Int64, testing::Int64; initialize::Int64=0)
+function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array, density_arr::Array, weights::Array, s_lag_tempered::Array, ε::Array, H::Array, n_particles::Int64, testing::Bool; initialize::Int64=0)
 
     # Calculate initial weights
     path = dirname(@__FILE__)
@@ -308,7 +347,7 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perro
     weights = (density_arr.*weights)./mean(density_arr.*weights)
 
     # Resampling
-    if testing==0
+    if !testing
         id = multinomial_resampling(weights)
     else
         id = seeded_multinomial_resampling(weights)
