@@ -24,7 +24,14 @@ Type defining an alternative policy rule.
 immutable AltPolicy
     rule::Function
     forecast_init::Function
+    color::Colorant
+    linestyle::Symbol
 end
 
-AltPolicy(rule) = AltPolicy(rule, identity)
+function AltPolicy(rule; forecast_init::Function = identity,
+                   color::Colorant = RGB(0., 0., 1.), linestyle::Symbol = :solid)
+
+    AltPolicy(rule, forecast_init, color, linestyle)
+end
+
 Base.show(io::IO, a::AltPolicy) = show(io, a.rule)
