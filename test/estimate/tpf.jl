@@ -23,10 +23,10 @@ numParticles=500
 m<=Setting(:tpf_n_particles, numParticles)
 
 # Parallelize
-m<=Setting(:use_parallel_workers,false)
+m<=Setting(:use_parallel_workers,true)
 
 # Set testing condition
-testing = false
+testing = true
 
 #If testing, get us.txt data from Shorfheide package, read in Matlab matrices, seed random number generator.
 if testing
@@ -58,6 +58,9 @@ if testing
     m<=Setting(:TTT,Φ)
     m<=Setting(:EE,H)
     m<=Setting(:tpf_S2,S2)
+    C = zeros(8,1)
+    m<=Setting(:CCC, C)
+    quarters = Date(1982,12,30):Dates.Month(3):Date(2002,9,30)
 else
     #If not testing, compute system in Julia, get better starting parameters to that the whole code runs
     sys=compute_system(m)
@@ -85,9 +88,14 @@ tic()
 neff, lik = tpf(m, data, s0, P0, testing=testing)
 toc()
 
+#kalman filter
+kalman_out = DSGE.filter(m,data, s0, P0, allout=true)
+@show kalman_out[:L] 
+##need to get the likelihoods out by time
+
 ##Plotting: this will need to move, but in test file for now
 plotly()
-plot(lik)
+plot(quarters,lik, label="Particle Filter (Testing. 500 particles)")
 gui()
 
 #neff, lik = tpf(m, data, s0, P0, testing=0, parallel=0)
