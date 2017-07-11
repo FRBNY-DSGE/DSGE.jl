@@ -49,7 +49,8 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     c = get_setting(m, :step_size_smc)
     accept = get_setting(m, :init_accept)
     target = get_setting(m, :target_accept)
-
+    
+    draw_type = get_setting(m,:draw_type)
     resampler(x) = if get_setting(m, :resampler_smc) == :systematic
         systematic_resampling(m, x)
     elseif get_setting(m, :resampler_smc) == :multinomial
@@ -97,17 +98,50 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         srand(42)
     end
 
-    if parallel
-        draws = pmap(x -> draw_from_prior(m, data), 1:n_part)
-    else
-        draws = [DSGE.draw_from_prior(m, data)  for j = 1:n_part]
+    ##Get parameters at mode and hessian
+    params = h5open(rawpath(m,"estimate", "paramsmode.h5"),"r") do file
+        read(file, "params")
     end
+
+    # fn = hessian_path(m)
+    fn = rawpath(m,"estimate","hessian.h5")
+    hessian = h5open(fn,"r") do file
+        read(file, "hessian")
+    end
+
+    S_diag, U = eig(hessian)
+    big_eig_vals = find(x -> x>1e-6, S_diag)
+    rank = length(big_eig_vals)
+    n = length(params)
+    S_inv = zeros(n,n)
+    for i = (n-rank+1):n
+        S_inv[i,i] = 1/S_diag[i]
+    end
+    hessian_inv = U*sqrt(S_inv) #inverse of Hessian
+    dist = DSGE.DegenerateMvNormal(params, hessian_inv)
+ 
+    if :draw_type==mode 
+        if parallel
+            draws = pmap(x -> draw_from_approximated_post(m,data,dist), 1:n_part)
+        else
+            draws = [draw_from_approximated_post(m,data,dist) for j = 1:n_part]
+        end
+    else
+        if parallel
+            draws = pmap(x -> DSGE.draw_from_prior(m,data), 1:n_part)
+        else
+            draws = [DSGE.draw_from_prior(m,data)  for j = 1:n_part]
+        end
+end
+
+
 
     for i = 1:n_part
         prior_sim[i,:] = draws[i][1]
         logpost[i]     = draws[i][2]
         loglh[i]       = draws[i][3]
     end
+
 
     para_sim[1,:,:] = prior_sim # Draws from prior
     weight_sim[:,1] = 1/n_part
