@@ -22,8 +22,7 @@ s <= Setting(:step_size_smc,0.5)
 s <= Setting(:n_MH_steps_smc, 5)
 s <= Setting(:resampler_smc, :multinomial)
 s <= Setting(:target_accept, 0.25)
-
-
+s <= Setting(:draw_type, "mode")
 try
     rm("resamples.csv")
     rm("wtsim.csv")
@@ -36,6 +35,10 @@ resamples = h5read("$path/../reference/smc.h5","resamples")
 wtsim = h5read("$path/../reference/smc.h5","wtsim")
 draws = h5read("$path/../reference/smc.h5","draws")
 
+##to precompute the hessian and mode parameters
+#estimate(s, data, method=:MH)
+#estimate(s, data[:,100:200], method =:MH, proposal_covariance=ones(3,3))
+##
 smc(s,data[:,100:120],verbose=:low)
 
 #=
