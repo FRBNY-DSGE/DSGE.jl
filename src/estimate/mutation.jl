@@ -9,13 +9,12 @@ s_init: The starting state before mutation.
 ε_init: The starting epsilon (state error) before mutation.
 """
 
-function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1},ε_init::Array{Float64,1},cov_s::Array,rand_mat::Array,testing::Bool)
+function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1},ε_init::Array{Float64,1},cov_s::Array{Float64,2},rand_mat::Array{Float64,2},testing::Bool)
     #------------------------------------------------------------------------
     # Setup
     #------------------------------------------------------------------------
     # Set path--used only for testing
     path = dirname(@__FILE__)
-
     A = get_setting(m, :DD)
     B = get_setting(m, :ZZ)
     R = get_setting(m, :RRR)
@@ -31,7 +30,7 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
     c=get_setting(m,:tpf_c)
     # Initialize acceptance counter to zero
     acpt=0
-    
+
     #------------------------------------------------------------------------
     # Metropolis-Hastings Steps
     #------------------------------------------------------------------------
@@ -51,7 +50,6 @@ function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1
        # Calculate difference between data and expected y from measurement equation and calculated states from above for both the new draw of ε_new and the old ε_init (we do this to calculate probabilities below. Since the error is still drawn from a Normal and everything is still linear, we know that y will also be normal. See equation of multivariate normal for how error_new and error_init enter into the pdf).
         error_new = yt-B*s_new_fore-A
         error_init = yt-B*s_init_fore-A
-
         # Calculate the top and bottom probabilities for the α ratio.
         post_new = log(pdf(MvNormal(zeros(length(yt)),H),error_new)[1]*pdf(MvNormal(zeros(length(ε_new)),eye(length(ε_new),length(ε_new))),ε_new)[1])
         post_init = log(pdf(MvNormal(zeros(length(yt)),H),error_init)[1]*pdf(MvNormal(zeros(length(ε_init)),eye(length(ε_init),length(ε_init))),ε_init)[1])

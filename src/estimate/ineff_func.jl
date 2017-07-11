@@ -5,7 +5,7 @@ ineff_func(φ_new::Float64, φ_old::Float64, yt::Array{Float64, 1}, perror::Arra
 Returns the value of the ineffeciency function (average of the normalized weights squared).
 """
 
-function ineff_func(φ_new::Float64, φ_old::Float64, yt::Array{Float64, 1}, perror::Array, H::Array{Float64}; initialize::Int64=0)
+function ineff_func(φ_new::Float64, φ_old::Float64, yt::Array{Float64, 1}, perror::Array{Float64,2}, H::Array{Float64,2}; initialize::Int64=0)
     N = size(perror, 2)
     w=zeros(N)
     # Inefficiency function during tempering steps
