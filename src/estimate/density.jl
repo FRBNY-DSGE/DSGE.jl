@@ -5,7 +5,7 @@ density(φ_new::Float64, φ_old::Float64, yt::Array{Float64,1}, perror::Array{Fl
 Returns the appropriate probability (right now from a Normal distribution) evaluated at perror.
 """
 
-function density(φ_new::Float64, φ_old::Float64, yt::Array{Float64,1}, perror::Array{Float64,1}, H::Array;initialize::Int64=0)
+function density(φ_new::Float64, φ_old::Float64, yt::Array{Float64,1}, perror::Array{Float64,1}, H::Array{Float64,2};initialize::Int64=0)
     #Non-initialization step (tempering and final iteration)
     if initialize==0
         return (φ_new/φ_old)^(length(yt)/2)*exp(-1/2*perror'*(φ_new-φ_old)*inv(H)*perror)[1]

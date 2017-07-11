@@ -96,7 +96,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
     s_lag_tempered = repmat(s0,1,n_particles) + get_chol(P0)'*s_lag_tempered_rand_mat
 
     for t=1:T
-        
+        tic()
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             @show t
         end
@@ -116,23 +116,22 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
         # Error for each particle
         perror = repmat(yt-A,1,n_particles)-B*s_t_nontempered
         
-        @show "Time to solve for φ:"
-        tic()
         # Solve for initial tempering parameter ϕ_1
         if !testing
             init_Ineff_func(φ) = ineff_func(φ, 2.0*pi, yt, perror, H, initialize=1)-rstar
-            φ_1 = fzero(init_Ineff_func,0.000001, 1.0)
+            φ_1 = fzero(init_Ineff_func,0.000001, 1.0, xtol=1e-3)
         else 
             φ_1 = 0.25
         end
-        toc()
+        
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             @show φ_1 
         end
               
         # Update weights array and resample particles
-        #While it might seem weird that we're updating s_lag_tempered and not s_t_nontempered, we are actually just resampling and we only need the lagged states for future calculations.
+        # While it might seem weird that we're updating s_lag_tempered and not s_t_nontempered, we are actually just resampling and we only need the lagged states for future calculations.
         loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_lag_tempered,ε_rand_mat,H,n_particles,testing,initialize=1)
+        
         # Update likelihood
         lik[t]=lik[t]+loglik
 
@@ -163,7 +162,6 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
             init_ineff_func(φ) = ineff_func(φ, φ_old, yt, perror,H)-rstar
             φ_interval = [φ_old, 1.0]
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
-          
             count += 1
 
             # Check solution exists within interval
@@ -171,7 +169,10 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
                 
                 if !testing
                     # Set φ_new to the solution of the inefficiency function over interval
-                    φ_new = fzero(init_ineff_func, φ_interval)
+                    println("Time of fphi inside while loop")
+                    tic()
+                    φ_new = fzero(init_ineff_func, φ_interval, xtol=1e-3)
+                    toc()
                     check_ineff = ineff_func(1.0, φ_new, yt, perror, H, initialize=0)
                 else
                     φ_new = 0.5
@@ -186,44 +187,36 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
 
                 # Update likelihood
                 lik[t] = lik[t] + loglik
-
+                                
                 # Update value for c
                 c = update_c(m,c,acpt_rate,trgt)
-
+                
                 if VERBOSITY[verbose] >= VERBOSITY[:low]
                     @show c
                 end
-
+                                
                 # Update covariance matrix
                 μ = mean(ε,2)
                 cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
-
+                
                 if !isposdef(cov_s)
                     cov_s = diagm(diag(cov_s))
                 end
                 
                 # Mutation Step
                 acpt_vec=zeros(n_particles)
-               
+                                
                 if parallel
                     out = pmap(i->mutation(m,yt,s_lag_tempered[:,i],ε[:,i],cov_s,rand_mat,testing), 1:n_particles)
                 else 
                     out = [mutation(m,yt,s_lag_tempered[:,i],ε[:,i],cov_s,rand_mat,testing) for i=1:n_particles]
                 end
-                
-                # if parallel
-                #     @parallel for i=1:n_particles
-                #     s_t_nontempered[:,i] = out[i][1]    
-                #     ε[:,i] = out[i][2]
-                #     acpt_vec[i] = out[i][3]
-                #     end
-                # else
-                    for i = 1:n_particles
-                        s_t_nontempered[:,i] = out[i][1]
-                        ε[:,i] = out[i][2]
-                        acpt_vec[i] = out[i][3]
-                    end
-                # end
+                                
+                for i = 1:n_particles
+                    s_t_nontempered[:,i] = out[i][1]
+                    ε[:,i] = out[i][2]
+                    acpt_vec[i] = out[i][3]
+                end
 
                 # Calculate average acceptance rate
                 acpt_rate = mean(acpt_vec)
@@ -269,7 +262,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
         μ = mean(ε,2)
 
         cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
-
+                
         if isposdef(cov_s)== false 
             cov_s = diagm(diag(cov_s))
         end
@@ -282,20 +275,20 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
         else 
             out = [mutation(m, yt, s_lag_tempered[:,i], ε[:,i], cov_s, rand_mat, testing) for i=1:n_particles]
         end
-        
-        @show "Time for one iteration of copying:"
-        tic()
+                
         for i = 1:n_particles
             s_t_nontempered[:,i] = out[i][1]
             ε[:,i] = out[i][2]
             acpt_vec[i] = out[i][3]
         end
-        toc()
+        
         # Store for next time iteration
         acpt_rate = mean(acpt_vec)
 
         Neff[t] = (n_particles^2)/sum(weights.^2)
         s_lag_tempered = s_t_nontempered
+        println("Time of entire time loop")
+        toc()
     end
     # Return vector of likelihood indexed by time step and Neff
     return Neff, lik
@@ -309,7 +302,7 @@ get_chol(mat::Aray)
 Calculate and return the Cholesky of a matrix.
 
 """
-function get_chol(mat::Array)
+function get_chol(mat::Array{Float64,2})
     return Matrix(chol(nearestSPD(mat)))
 end
 
@@ -335,7 +328,7 @@ Calculate densities, normalize and reset weights, call multinomial resampling, u
 Returns log likelihood, weight, state, and ε vectors.
 
 """
-function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array, perror::Array, density_arr::Array, weights::Array, s_lag_tempered::Array, ε::Array, H::Array, n_particles::Int64, testing::Bool; initialize::Int64=0)
+function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array{Float64,1}, perror::Array{Float64,2}, density_arr::Array{Float64,1}, weights::Array{Float64,1}, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, H::Array{Float64,2}, n_particles::Int64, testing::Bool; initialize::Int64=0)
 
     # Calculate initial weights
     path = dirname(@__FILE__)

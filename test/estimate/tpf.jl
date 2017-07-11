@@ -13,7 +13,36 @@ good_likelihoods = h5open("$path/../reference/tpf_test_likelihoods.h5","r") do f
     read(file, "test_likelihoods")
 end
 
+
 #Set settings
+
+#m<=Setting(:DD,A[:,1])
+#m<=Setting(:ZZ,B)
+#m<=Setting(:RRR,R)
+#m<=Setting(:TTT,Φ)
+#m<=Setting(:EE,H)
+#m<=Setting(:tpf_S2,S2)
+
+#get better starting parameters to that the whole code runs
+#file = "$path/../reference/optimize.h5"
+#x0 = h5read(file,"params")
+#data = h5read(file, "data")'
+#minimizer = h5read(file,"minimizer")
+#minimum = h5read(file,"minimum")
+#H_expected = h5read(file,"H")
+
+#update!(m,x0)
+#n_iterations = 3
+
+#x0=Float64[p.value for p in m.parameters]
+#out, H = optimize!(m,data; iterations=500)
+#n_particles = 4000
+
+#params = out.minimizer
+
+#update!(m,params)
+
+
 m<=Setting(:tpf_rstar,2.0)
 m<=Setting(:tpf_c,0.1)
 m<=Setting(:tpf_acpt_rate,0.5)
