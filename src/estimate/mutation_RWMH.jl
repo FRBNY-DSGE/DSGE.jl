@@ -68,8 +68,7 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array
 
         # if step is invalid, retry
         if !isfinite(post_new)
-             j -= 1
-    
+             j -= 1    
         end
 
         # Accept/Reject
@@ -87,22 +86,20 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array
         step = randn(n_para,1)
         step_prob = rand()
         j += 1
-
     end
-    
     return augment_draw(para, m), like, post, accept
 end
 
 
 function augment_draw(draw, m)
     new_draw = map(x -> x.value, m.parameters)
-    j = 1
-    for (i,θ) in enumerate(m.parameters)
-        if !θ.fixed
-            new_draw[i] = draw[j]
-            j += 1
-        end
-    end
+   # j = 1
+   # for (i,θ) in enumerate(m.parameters)
+       # if !θ.fixed
+        #    new_draw[i] = draw[j]
+         #   j += 1
+       # end
+   # end
     return new_draw
 end
 

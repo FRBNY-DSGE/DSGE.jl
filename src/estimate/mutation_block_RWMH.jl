@@ -72,23 +72,24 @@ function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init:
     para_inds = sortperm(para_inds)
     
 ### BLOCKING ###
-
+    n_blocks = 4
     b = 1
     while b <= n_blocks # corresponds to jth block
         
         # If b <= 1, then blocking procedure does not occur. 
-        if b > 1
-            cov_mat_temp = isolate_block(cov_mat, b, n_blocks, para_inds)
-            
+        if b >= 1
+            cov_mat_temp = isolate_block(cov_mat, b, n_blocks, para_inds)            
             para_new = para + c * cov_mat_temp * step
+            para_new2 = para + c*cov_mat*step
         else
             para_new = para + c * cov_mat * step
         end
         
-        @show size(para_new)
+        @show (para_new)
         @show size(cov_mat)
+        @show para_new2
         @show size(augment_draw(para_new,m))
-        post_new = posterior!(m, augment_draw(para_new,m), data; 
+        post_new = posterior!(m, para_new, data; 
                               φ_smc = tempering_schedule[i],
                               sampler = true)
         like_new = post_new - prior(m)
@@ -149,12 +150,12 @@ end
 # Not currently being called
 function augment_draw(draw, m)
     new_draw = map(x -> x.value, m.parameters)
-    j = 1
-    for (i,θ) in enumerate(m.parameters)
-        if !θ.fixed
-            new_draw[i] = draw[j]
-            j += 1
-        end
-    end
+    #j = 1
+    #for (i,θ) in enumerate(m.parameters)
+    #    if !θ.fixed
+    #        new_draw[i] = draw[j]
+    #        j += 1
+    #    end
+    #end
     return new_draw
 end
