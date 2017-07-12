@@ -6,12 +6,13 @@ m<=Setting(:date_forecast_start,quartertodate("2015-Q4"))
 m<=Setting(:tpf_N_MH,3)
 m<=Setting(:tpf_c, 0.1)
 m<=Setting(:tpf_n_particles,100)
+
 # Set seeding 
 srand(1234)
 # Set path
 path=dirname(@__FILE__)
 # Compute system and store parameters
-sys=compute_system(m)
+sys = compute_system(m)
 Φ = sys.transition.TTT
 A = sys.measurement.DD
 B = sys.measurement.ZZ
@@ -19,26 +20,19 @@ R = sys.transition.RRR
 H = sys.measurement.EE
 Q = sys.measurement.QQ
 
-n_particles = get_setting(m,:tpf_n_particles)
+sqrtS2 = R*Matrix(chol(nearestSPD(Q)))'
+rand_mat = randn(3,1)
 
-sqrtS2=R*Matrix(chol(nearestSPD(Q)))'
+transition_equation = Transition(Φ, R)
+measurement_equation = Measurement(B, A, Q, H, rand_mat, R)
+system = System(transition_equation, measurement_equation)
+
+n_particles = get_setting(m,:tpf_n_particles)
 N_MH = get_setting(m,:tpf_N_MH)
 
 ε = randn(3,n_particles)
 μ = mean(ε,2)
 cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε-repmat(μ,1,n_particles))'
-
-m<=Setting(:date_forecast_start,quartertodate("2015-Q4"))
-m<=Setting(:tpf_N_MH,3)
-m<=Setting(:TTT, Φ)
-m<=Setting(:DD, A)
-m<=Setting(:ZZ, B)
-m<=Setting(:RRR, R)
-m<=Setting(:EE, H)
-m<=Setting(:S2, Q)
-m<=Setting(:tpf_sqrtS2, sqrtS2)
-
-rand_mat = randn(3,1)
 
 h5open("$path/../reference/matricesForMutation.h5","w") do file
     write(file, "phi", sys.transition.TTT)
@@ -55,9 +49,8 @@ h5open("$path/../reference/matricesForMutation.h5","w") do file
     write(file, "cov_s", cov_s)
 end
     
-
 #Test that it compiles
-s_part1, eps_part1, acpt = mutation(m,[50.2,8.3,7.6],[.8,.9,.6,.9,.11,5,7,10],[.2,.5,.7],cov_s,rand_mat,1)
+s_part1, eps_part1, acpt = mutation(m,system,[50.2,8.3,7.6],[.8,.9,.6,.9,.11,5,7,10],[.2,.5,.7],cov_s)
 
 h5open("$path/../reference/mutation_RWMH1.h5","w") do file
     write(file, "s_part1", s_part1)
@@ -69,7 +62,7 @@ data=h5open("$path/../reference/mutation_RWMH.h5","r") do file
 end
 
 # Test function with one column of data.
-s, eps, acpt = mutation(m, data[:,1], ones(8), zeros(3),cov_s,rand_mat,1)  
+s, eps, acpt = mutation(m, system, data[:,1], ones(8), zeros(3),cov_s)  
 c = h5open("$path/../reference/mutation_RWMH1.h5","r") do file
     read(file,"s_part1")
     read(file,"eps_part1")
