@@ -4,9 +4,11 @@ using QuantEcon: solve_discrete_lyapunov
 function setup(testing::Bool)
     if testing
         srand(1234)
+        
         df = readtable("$path/../reference/us.txt",header=false, separator=' ')
         data = convert(Matrix{Float64},df)
         data=data'
+        
         file = "$path/../reference/matlab_variable_for_testing.h5"
         A = h5read(file, "A")
         B = h5read(file, "B")
@@ -14,13 +16,13 @@ function setup(testing::Bool)
         R = h5read(file, "R")
         S2 = h5read(file,"S2")
         Φ = h5read(file, "Phi")
-		rand_mat = randn(3,1)
+	rand_mat = randn(3,1)
     	
-		h5open("$path/../reference/mutationRandomMatrix.h5","w") do file
+	h5open("$path/../reference/mutationRandomMatrix.h5","w") do file
             write(file,"rand_mat",rand_mat)
     	end
         
-		# Set variables within system
+        # Set variables within system
     	transition_equation = Transition(Φ, R)
     	measurement_equation = Measurement(B,squeeze(A,2),S2,H,rand_mat,R)
     	system = System(transition_equation, measurement_equation)
@@ -45,10 +47,9 @@ function setup(testing::Bool)
         x0=Float64[p.value for p in m.parameters]
         out, H = optimize!(m, data; iterations=500)
         params = out.minimizer
-        @show params
         update!(m,params)
     end
-	return system, data, Φ, R, S2
+    return system, data, Φ, R, S2
 end
 
 
@@ -79,7 +80,6 @@ m<=Setting(:use_parallel_workers,true)
 # Set tolerance in fzero
 # m<=Setting(:x_tolerance,1e-3)
 m<=Setting(:x_tolerance, zero(float(0)))
-# Input parameters
 
 # sys, data, Φ, R, S2  = setup(false)
 # s0 = zeros(8)
@@ -113,7 +113,6 @@ end
 h5open("$path/../reference/output_likelihoods.h5","w") do file
     write(file,"julia_likelihoods",lik)
 end
-
 
 #####The following code regenerates the test comparison that we use to compare. DO NOT RUN (unless you are sure that the new tpf.jl is correct).
 # Seeded, deterministic resampling; fixed tempering schedule of 0.25->0.5->1
