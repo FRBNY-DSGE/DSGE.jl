@@ -37,7 +37,7 @@ m<=Setting(:tpf_c,0.1)
 m<=Setting(:tpf_acpt_rate,0.5)
 m<=Setting(:tpf_trgt,0.25)
 m<=Setting(:tpf_N_MH,2)
-n_particles = 4000
+n_particles=500
 m<=Setting(:tpf_n_particles, n_particles)
 
 # Parallelize
@@ -54,7 +54,7 @@ if testing
     srand(1234)
     df = readtable("$path/../../../../../us.txt",header=false, separator=' ')
     data = convert(Matrix{Float64},df)
-    data=data'
+    data=data' 
     A = h5open("$path/../reference/matlab_variable_for_testing.h5","r") do file
         read(file,"A")
     end
@@ -96,13 +96,12 @@ else
     data = h5read(file, "data")'
 
     minimizer = h5read(file,"minimizer")
-    minimum = h5read(file,"minimum")
-    H_expected = h5read(file,"H")
     update!(m,x0)
 
     x0=Float64[p.value for p in m.parameters]
     out, H = optimize!(m, data; iterations=500)
     params = out.minimizer
+    @show params
     update!(m,params)
 end
 
@@ -110,19 +109,36 @@ end
 s0 = zeros(8)
 P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 
+
 tic()
 neff, lik = tpf(m, data, s0, P0, testing=testing)
 toc()
 
+h5open("$path/../reference/output_likelihoods.h5","w") do file
+    write(file,"julia_likelihoods_500_testing",lik)
+end
+
+n_particles=4000
+m<=Setting(:tpf_n_particles, n_particles)
+
+tic()
+neff, lik = tpf(m,data,s0,P0,testing=testing)
+toc()
+h5open("$path/../reference/output_likelihoods.h5","w") do file
+    write(file,"julia_likelihoods_4000_testing",lik)
+end
+
+
+
 #kalman filter
-kalman_out = DSGE.filter(m,data, s0, P0, allout=true)
-@show kalman_out[:L] 
+#kalman_out = DSGE.filter(m,data, s0, P0, allout=true)
+#@show kalman_out[:L_vec] 
 ##need to get the likelihoods out by time
 
 ##Plotting: this will need to move, but in test file for now
-plotly()
-plot(quarters,lik, label="Particle Filter (Testing. 500 particles)")
-gui()
+#plotly()
+#plot(quarters,lik, label="Particle Filter (Testing. 500 particles)")
+#gui()
 
 #neff, lik = tpf(m, data, s0, P0, testing=0, parallel=0)
 #neff, lik = tpf(m, data, s0, P0, testing=1, parallel=0)
@@ -131,9 +147,6 @@ if n_particles == 4000 & testing
     @test good_likelihoods == lik
 end
 
-h5open("$path/../reference/output_likelihoods.h5","w") do file
-    write(file,"julia_likelihoods",lik)
-end
 
 
 #####The following code regenerates the test comparison that we use to compare. DO NOT RUN (unless you are sure that the new tpf.jl is correct).

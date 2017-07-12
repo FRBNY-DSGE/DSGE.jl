@@ -37,6 +37,7 @@ immutable Kalman{S<:AbstractFloat}
     vfilt::Array{S, 3}     # mean squared errors of filtered state vectors
     z0::Vector{S}          # starting-period state vector
     vz0::Matrix{S}         # starting-period variance-covariance matrix for the states
+    L_vec::Vector{S} #vector of likelihoods for each time
 end
 
 function Kalman{S<:AbstractFloat}(L::S,
@@ -51,14 +52,15 @@ function Kalman{S<:AbstractFloat}(L::S,
                                   rmse::Matrix{S}          = Matrix{S}(),
                                   rmsd::Matrix{S}          = Matrix{S}(),
                                   z0::Vector{S}            = Vector{S}(),
-                                  P0::Matrix{S}            = Matrix{S}())
+                                  P0::Matrix{S}            = Matrix{S}(),
+                                  L_vec::Vector{S}         = Vector{S}())
 
-    return Kalman{S}(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, P0)
+    return Kalman{S}(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, P0, L_vec)
 end
 
 function Base.getindex(K::Kalman, d::Symbol)
     if d in (:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse, :rmsd,
-             :filt, :vfilt, :z0, :vz0)
+             :filt, :vfilt, :z0, :vz0, :L_vec)
         return getfield(K, d)
     else
         throw(KeyError(d))
@@ -69,6 +71,7 @@ function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
     k2::Kalman{S}; allout::Bool = true)
 
     L = k1[:L] + k2[:L]
+    push!(L_vec,k1[:L], k2[:L])
     zend = k2[:zend]
     Pend = k2[:Pend]
 
@@ -85,7 +88,7 @@ function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
         P0    = k1[:vz0]
 
         return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror,
-            rmse, rmsd, filt, vfilt, z0, P0)
+            rmse, rmsd, filt, vfilt, z0, P0, L_vec)
     else
         return Kalman(L, zend, Pend)
     end
