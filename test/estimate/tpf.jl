@@ -1,14 +1,14 @@
 using DSGE, HDF5, DataFrames, ClusterManagers, Plots
 using QuantEcon: solve_discrete_lyapunov
 
-#Set up model
+# Set up model
 custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
 m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 path=dirname(@__FILE__)
 
-#For comparison test
+# For comparison test
 good_likelihoods = h5open("$path/../reference/tpf_test_likelihoods.h5","r") do file
     read(file, "test_likelihoods")
 end
@@ -31,33 +31,25 @@ end
 #minimum = h5read(file,"minimum")
 #H_expected = h5read(file,"H")
 
-#update!(m,x0)
-#n_iterations = 3
-
-#x0=Float64[p.value for p in m.parameters]
-#out, H = optimize!(m,data; iterations=500)
-#n_particles = 4000
-
-#params = out.minimizer
-
-#update!(m,params)
-
 
 m<=Setting(:tpf_rstar,2.0)
 m<=Setting(:tpf_c,0.1)
 m<=Setting(:tpf_acpt_rate,0.5)
 m<=Setting(:tpf_trgt,0.25)
 m<=Setting(:tpf_N_MH,2)
-numParticles=500
-m<=Setting(:tpf_n_particles, numParticles)
+n_particles = 4000
+m<=Setting(:tpf_n_particles, n_particles)
 
 # Parallelize
 m<=Setting(:use_parallel_workers,true)
 
-# Set testing condition
-testing = true
+# Set tolerance in fzero
+m<=Setting(:x_tolerance,1e-3)
 
-#If testing, get us.txt data from Shorfheide package, read in Matlab matrices, seed random number generator.
+# Set testing condition
+testing = false
+
+# If testing, get us.txt data from Shorfheide package, read in Matlab matrices, seed random number generator.
 if testing
     srand(1234)
     df = readtable("$path/../../../../../us.txt",header=false, separator=' ')
@@ -90,21 +82,26 @@ if testing
     C = zeros(8,1)
     m<=Setting(:CCC, C)
     quarters = Date(1982,12,30):Dates.Month(3):Date(2002,9,30)
+
 else
-    #If not testing, compute system in Julia, get better starting parameters to that the whole code runs
+    #If not testing, compute system in Julia, get better starting parameters s.t. code runs
     sys=compute_system(m)
     R = sys.transition.RRR
-    S2=sys.measurement.QQ
+    S2 = sys.measurement.QQ
     Φ = sys.transition.TTT
+
     file = "$path/../reference/optimize.h5"
+
     x0 = h5read(file,"params")
     data = h5read(file, "data")'
+
     minimizer = h5read(file,"minimizer")
     minimum = h5read(file,"minimum")
     H_expected = h5read(file,"H")
     update!(m,x0)
+
     x0=Float64[p.value for p in m.parameters]
-    out, H = optimize!(m,data; iterations=500)
+    out, H = optimize!(m, data; iterations=500)
     params = out.minimizer
     update!(m,params)
 end
