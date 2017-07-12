@@ -52,7 +52,11 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         # Testing: Generate pre-defined random shocks for s and ε
         s_lag_tempered_rand_mat = randn(n_states,n_particles)
         ε_rand_mat = randn(n_errors, n_particles)
+<<<<<<< HEAD
         h5open("$path/../../test/reference/matricesForTPF$n_particles.h5","w") do file
+=======
+        h5open("$path/../../test/reference/matricesForTPF.h5","w") do file
+>>>>>>> Significantly refactored mutation, tpf, and test files. Eliminated unnecessary writing to files. Cleaned.
             write(file,"s_lag_tempered_rand_mat",s_lag_tempered_rand_mat)
             write(file,"eps_rand_mat",ε_rand_mat)
         end
