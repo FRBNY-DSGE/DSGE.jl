@@ -38,7 +38,6 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
     
     sqrtS2=R*get_chol(S2)'
     m<=Setting(:tpf_sqrtS2,sqrtS2)
-
     
     # Get tuning parameters from the model
     rstar = get_setting(m,:tpf_rstar)
@@ -47,6 +46,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
     trgt = get_setting(m,:tpf_trgt)
     N_MH = get_setting(m,:tpf_N_MH)
     n_particles = get_setting(m,:tpf_n_particles)
+    xtol = get_setting(m, :x_tolerance)
     parallel = get_setting(m,:use_parallel_workers)
     path = dirname(@__FILE__)  
     
@@ -119,7 +119,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
         # Solve for initial tempering parameter ϕ_1
         if !testing
             init_Ineff_func(φ) = ineff_func(φ, 2.0*pi, yt, perror, H, initialize=1)-rstar
-            φ_1 = fzero(init_Ineff_func,0.000001, 1.0, xtol=1e-3)
+            φ_1 = fzero(init_Ineff_func,0.000001, 1.0, xtol=xtol)
         else 
             φ_1 = 0.25
         end
@@ -146,6 +146,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
         perror = repmat(yt-A, 1, n_particles) - B*s_t_nontempered         
         
         if !testing
+            @show "You're not testing!"
             check_ineff=ineff_func(1.0, φ_1, yt, perror, H)         
         else
             check_ineff=rstar+1
@@ -171,7 +172,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
                     # Set φ_new to the solution of the inefficiency function over interval
                     println("Time of fphi inside while loop")
                     tic()
-                    φ_new = fzero(init_ineff_func, φ_interval, xtol=1e-3)
+                    φ_new = fzero(init_ineff_func, φ_interval, xtol=xtol)
                     toc()
                     check_ineff = ineff_func(1.0, φ_new, yt, perror, H, initialize=0)
                 else
@@ -205,13 +206,17 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
                 
                 # Mutation Step
                 acpt_vec=zeros(n_particles)
-                                
+                @show "Mutation time..."
+                tic()
                 if parallel
+                    @show "In parallel:"
                     out = pmap(i->mutation(m,yt,s_lag_tempered[:,i],ε[:,i],cov_s,rand_mat,testing), 1:n_particles)
                 else 
+                    @show "Not in parallel:"
                     out = [mutation(m,yt,s_lag_tempered[:,i],ε[:,i],cov_s,rand_mat,testing) for i=1:n_particles]
                 end
-                                
+                toc()                
+                
                 for i = 1:n_particles
                     s_t_nontempered[:,i] = out[i][1]
                     ε[:,i] = out[i][2]
