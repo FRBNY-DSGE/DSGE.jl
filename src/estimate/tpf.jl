@@ -80,8 +80,7 @@ function tpf(m::AbstractModel, yy::Array, s0::Array{Float64}, P0::Array; testing
     if testing
         s_lag_tempered_rand_mat = randn(n_states,n_particles)
         ε_rand_mat = randn(n_errors, n_particles)
-    
-        h5open("$path/../../test/reference/matricesForTPF.h5","w") do file
+        h5open("$path/../../test/reference/matricesForTPF$n_particles.h5","w") do file
             write(file,"s_lag_tempered_rand_mat",s_lag_tempered_rand_mat)
             write(file,"eps_rand_mat",ε_rand_mat)
         end
