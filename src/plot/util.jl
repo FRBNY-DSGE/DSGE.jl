@@ -80,6 +80,18 @@ function get_date_limit_indices(start_date::Date, end_date::Date,
     return start_ind, end_ind
 end
 
+function first_bands_period(var::Symbol, mb::MeansBands)
+    df = mb.bands[var]
+    cols = setdiff(names(df), [:date])
+    for t = 1:size(df, 1)
+        bandvals = convert(Matrix, df[t, cols])
+        if !all(x -> x ≈ mb.means[t, var], bandvals)
+            return t
+        end
+    end
+    return -1
+end
+
 function save_plot(p::Plots.Plot, output_file::String = "")
     if !isempty(output_file)
         output_dir = dirname(output_file)
