@@ -17,20 +17,18 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     ZZ  = system.measurement.ZZ
     QQ  = system.measurement.QQ    
     sqrtS2 = RRR*get_chol(QQ)'
-    
+
     # Get tuning parameters from the model
     rstar         = get_setting(m,:tpf_rstar)
     c             = get_setting(m,:tpf_c)
     acpt_rate     = get_setting(m,:tpf_acpt_rate)
     trgt          = get_setting(m,:tpf_trgt)
-    N_MH          = get_setting(m,:tpf_N_MH)
+    N_MH          = get_setting(m,:tpf_n_mh_simulations)
     n_particles   = get_setting(m,:tpf_n_particles)
-    deterministic = get_setting(m, :tpf_deterministic)
-
-    @show n_particles
+    deterministic = get_setting(m,:tpf_deterministic)
 
     # Tolerance of fzero
-    xtol = get_setting(m, :x_tolerance)
+    xtol = get_setting(m, :tpf_x_tolerance)
 
     # Get setting of parallelization
     parallel = get_setting(m,:use_parallel_workers)
@@ -248,7 +246,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         end
         
         # Final round of mutation
-        acpt_vec=zeros(n_particles)
+        acpt_vec = zeros(n_particles)
   
         if parallel
             out = pmap(i -> mutation(m,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s), 1:n_particles)
@@ -300,8 +298,8 @@ Returns the new c, in addition to storing it in the model settings.
 
 """
 function update_c(m::AbstractModel,c_in::Float64, acpt_in::Float64, trgt_in::Float64)
-    c_out=c_in*(0.95+0.1*exp(16*(acpt_in-trgt_in))/(1+exp(16*(acpt_in-trgt_in))))
-    m<=Setting(:tpf_c,c_out)
+    c_out = c_in*(0.95+0.1*exp(16*(acpt_in-trgt_in))/(1+exp(16*(acpt_in-trgt_in))))
+    m <= Setting(:tpf_c, c_out)
     return c_out
 end
 
@@ -316,7 +314,6 @@ Returns log likelihood, weight, state, and ε vectors.
 function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array{Float64,1}, perror::Array{Float64,2}, density_arr::Array{Float64,1}, weights::Array{Float64,1}, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, EE::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Int64=0)
 
     # Calculate initial weights
-    path = dirname(@__FILE__)
     for n=1:n_particles
         density_arr[n]=density(φ_new, φ_old, yt, perror[:,n], EE, initialize=initialize)
     end   
