@@ -27,6 +27,8 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     n_particles = get_setting(m,:tpf_n_particles)
     deterministic = get_setting(m, :tpf_deterministic)
 
+    @show n_particles
+
     # Tolerance of fzero
     xtol = get_setting(m, :x_tolerance)
 
