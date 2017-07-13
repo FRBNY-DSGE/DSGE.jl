@@ -33,7 +33,7 @@ function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1
     # Get paramaters from model settings; c updates dynamically to tune TPF over time.
     c = get_setting(m,:tpf_c)
     N_MH = get_setting(m, :tpf_N_MH)
-
+    deterministic = get_setting(m, :tpf_deterministic)
     # Initialize acceptance counter to zero
     acpt = 0
 
@@ -42,7 +42,7 @@ function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1
     #------------------------------------------------------------------------
     for i=1:N_MH
         
-        if (!m.testing) rand_mat = randn(3,1) end
+        if (!deterministic) rand_mat = randn(3,1) end
             
         # Generate new draw of ε from a N(ε_init, c²cov_s) distribution (defined in tpf.jl), c tuning parameter
         ε_new=ε_init + c*Matrix(chol(nearestSPD(cov_s)))'*rand_mat
@@ -65,7 +65,7 @@ function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1
         α = exp(post_new - post_init)
 
         # Accept the particle with probability α
-        if (m.testing) num = 0.5
+        if (deterministic) num = 0.5
         else num = rand() end
         
         if num<α 

@@ -1,6 +1,6 @@
 using DSGE
 using Roots
-function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array; testing::Bool=false, verbose::Symbol=:low)
+function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array; verbose::Symbol=:low)
     # s0 is 8xn_particles
     # P0
     # yy is data matrix
@@ -25,6 +25,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     trgt        = get_setting(m,:tpf_trgt)
     N_MH        = get_setting(m,:tpf_N_MH)
     n_particles = get_setting(m,:tpf_n_particles)
+    deterministic = get_setting(m, :tpf_deterministic)
 
     # Tolerance of fzero
     xtol = get_setting(m, :x_tolerance)
@@ -48,15 +49,16 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     density_arr = zeros(n_particles)
     ε = zeros(n_errors)
 
+<<<<<<< HEAD
+    @show n_particles
     if testing
+=======
+    if deterministic
+>>>>>>> Split deterministic and testing as terms
         # Testing: Generate pre-defined random shocks for s and ε
         s_lag_tempered_rand_mat = randn(n_states,n_particles)
         ε_rand_mat = randn(n_errors, n_particles)
-<<<<<<< HEAD
         h5open("$path/../../test/reference/matricesForTPF$n_particles.h5","w") do file
-=======
-        h5open("$path/../../test/reference/matricesForTPF.h5","w") do file
->>>>>>> Significantly refactored mutation, tpf, and test files. Eliminated unnecessary writing to files. Cleaned.
             write(file,"s_lag_tempered_rand_mat",s_lag_tempered_rand_mat)
             write(file,"eps_rand_mat",ε_rand_mat)
         end
@@ -79,7 +81,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         #--------------------------------------------------------------
         yt = yy[:,t]
         
-        if !testing # When not testing, want a new random ε each time 
+        if !deterministic # When not testing, want a new random ε each time 
             ε_rand_mat = randn(n_errors, n_particles)
         end
 
@@ -90,21 +92,21 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         perror = repmat(yt-A,1,n_particles)-B*s_t_nontempered
         
         # Solve for initial tempering parameter ϕ_1
-        if !testing
+        if !deterministic
             init_Ineff_func(φ) = ineff_func(φ, 2.0*pi, yt, perror, H, initialize=1)-rstar
             φ_1 = fzero(init_Ineff_func,0.000001, 1.0, xtol=xtol)
         else 
             φ_1 = 0.25
         end
         
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
+         if VERBOSITY[verbose] >= VERBOSITY[:low]
             @show φ_1 
             println("------------------------------")
         end
               
         # Update weights array and resample particles
         # While it might seem weird that we're updating s_lag_tempered and not s_t_nontempered, we are actually just resampling and we only need the lagged states for future calculations.
-        loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_lag_tempered,ε_rand_mat,H,n_particles,testing,initialize=1)
+        loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_lag_tempered,ε_rand_mat,H,n_particles,deterministic,initialize=1)
         
         # Update likelihood
         lik[t]=lik[t]+loglik
@@ -117,8 +119,8 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         s_t_nontempered = Φ*s_lag_tempered + sqrtS2*ε
         perror = repmat(yt-A, 1, n_particles) - B*s_t_nontempered         
         
-        if !testing
-            println("You're not testing!")
+        if !deterministic
+            println("You're not deterministic!")
             check_ineff=ineff_func(1.0, φ_1, yt, perror, H)         
         else
             check_ineff=rstar+1
@@ -141,9 +143,9 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
             count += 1
 
             # Check solution exists within interval
-            if prod(sign(fphi_interval))== -1 || testing
+            if prod(sign(fphi_interval))== -1 || deterministic
                 
-                if !testing
+                if !deterministic
                     # Set φ_new to the solution of the inefficiency function over interval
                     println("Time of fphi inside while loop")
                     tic()
@@ -159,7 +161,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
                 end
 
                 # Update weights array and resample particles
-                loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,H,n_particles, testing, initialize=0)
+                loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,H,n_particles, deterministic, initialize=0)
 
                 # Update likelihood
                 lik[t] = lik[t] + loglik
@@ -215,7 +217,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
                 check_ineff = rstar
             end
             # With phi schedule, leave while loop after one iteration, thus set check_ineff=0
-            if testing
+            if deterministic
                check_ineff = 0
             end
 
@@ -234,7 +236,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         φ_new = 1.0
 
         # Update weights array and resample particles.
-        loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,H,n_particles,testing,initialize=0)
+        loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,H,n_particles,deterministic,initialize=0)
 
        # Update likelihood
         lik[t]=lik[t]+loglik
@@ -314,7 +316,7 @@ Calculate densities, normalize and reset weights, call multinomial resampling, u
 Returns log likelihood, weight, state, and ε vectors.
 
 """
-function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array{Float64,1}, perror::Array{Float64,2}, density_arr::Array{Float64,1}, weights::Array{Float64,1}, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, H::Array{Float64,2}, n_particles::Int64, testing::Bool; initialize::Int64=0)
+function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array{Float64,1}, perror::Array{Float64,2}, density_arr::Array{Float64,1}, weights::Array{Float64,1}, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, H::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Int64=0)
 
     # Calculate initial weights
     path = dirname(@__FILE__)
@@ -326,7 +328,7 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array{Float6
     weights = (density_arr.*weights)./mean(density_arr.*weights)
 
     # Resampling
-    if !testing
+    if !deterministic
         id = multinomial_resampling(weights)
     else
         id = seeded_multinomial_resampling(weights)
