@@ -73,8 +73,6 @@ m<=Setting(:tpf_c,0.1)
 m<=Setting(:tpf_acpt_rate,0.5)
 m<=Setting(:tpf_trgt,0.25)
 m<=Setting(:tpf_N_MH,2)
-n_particles = 500
-m<=Setting(:tpf_n_particles, n_particles)
 
 # Parallelize
 m<=Setting(:use_parallel_workers,true)
@@ -84,8 +82,8 @@ m<=Setting(:use_parallel_workers,true)
 m<=Setting(:x_tolerance, zero(float(0)))
 
 # Set number of particles
-#n_particles = 500
-#m<=Setting(:tpf_n_particles, n_particles)
+n_particles = 500
+m<=Setting(:tpf_n_particles, n_particles)
 
 #sys, data, Φ, R, S2  = setup(false)
 #m.testing = false
@@ -97,7 +95,7 @@ m<=Setting(:x_tolerance, zero(float(0)))
 
 # Test 4000 particles, testing = true
 n_particles = 4000
-m<=Setting(:n_particles, n_particles)
+m<=Setting(:tpf_n_particles, n_particles)
 
 sys, data, Φ, R, S2 = setup(true)
 s0 = zeros(8)
