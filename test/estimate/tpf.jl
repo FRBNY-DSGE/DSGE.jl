@@ -73,6 +73,8 @@ m<=Setting(:tpf_c,0.1)
 m<=Setting(:tpf_acpt_rate,0.5)
 m<=Setting(:tpf_trgt,0.25)
 m<=Setting(:tpf_N_MH,2)
+deterministic = true
+m<=Setting(:tpf_deterministic,deterministic)
 
 # Parallelize
 m<=Setting(:use_parallel_workers,true)
@@ -107,7 +109,7 @@ tic()
 neff, lik = tpf(m, data, sys, s0, P0)
 toc()
 
-if (n_particles == 4000) & m.testing
+if (n_particles == 4000) & deterministic
     @test good_likelihoods == lik
     println("Test passed for 4000 particles in testing mode.")
 end

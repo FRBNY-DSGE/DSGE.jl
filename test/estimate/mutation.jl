@@ -6,7 +6,7 @@ m<=Setting(:date_forecast_start,quartertodate("2015-Q4"))
 m<=Setting(:tpf_N_MH,3)
 m<=Setting(:tpf_c, 0.1)
 m<=Setting(:tpf_n_particles,100)
-
+m<=Setting(:tpf_deterministic,true)
 # Set seeding 
 srand(1234)
 # Set path
