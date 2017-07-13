@@ -33,14 +33,19 @@ function setup(testing::Bool)
         # If not testing, compute system in Julia, get better starting parameters s.t. code runs
         file = "$path/../reference/optimize.h5"
 
-        x0 = h5read(file,"params")
-        data = h5read(file, "data")'
-
-        minimizer = h5read(file,"minimizer")
-        update!(m,x0)
-
-        x0=Float64[p.value for p in m.parameters]
-        out, H = optimize!(m, data; iterations=500)
+ #       x0 = h5read(file,"params")
+       # data = h5read(file, "data")'
+        
+        filesw = "/data/dsge_data_dir/dsgejl/realtime/input_data/data"
+        data = readcsv("$filesw/realtime_spec=smets_wouters_hp=true_vint=110110.csv",header=true)
+        data = convert(Array{Float64,2}, data[1][:,2:end])
+        data=data'
+       
+#        minimizer = h5read(file,"minimizer")
+#        update!(m,x0)
+#        x0=Float64[p.value for p in m.parameters]
+        goodparams = h5read("$filesw/../output_data/smets_wouters/ss0/estimate/raw/paramsmode_est=1_vint=110110.h5",params)
+        out, H = optimize!(m, data; iterations=200)
         params = out.minimizer
         update!(m,params)
 
@@ -57,8 +62,8 @@ end
 # Set up model
 custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
-m = AnSchorfheide(custom_settings = custom_settings, testing = true)
-#m = Model990(custom_settings = custom_settings, testing = true)
+#m = AnSchorfheide(custom_settings = custom_settings, testing = true)
+m = SmetsWouters(custom_settings = custom_settings, testing = true)
 
 
 path=dirname(@__FILE__)
