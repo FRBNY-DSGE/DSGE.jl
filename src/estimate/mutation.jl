@@ -1,6 +1,6 @@
 """
 ```
-function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1}, ε_init::Array{Float64,1}, A::Array, B::Array, R::Array, Φ::Array, H::Array, sqrtS2::Array, cov_mat::Array,N_MH::Int64)
+function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array)
 ```
 Runs random-walk Metropolis Hastings for ONE particle. The caller should loop through all particles, calling this method on each. 
 m: The model. Used to get the setting tpf_c (which is VERY important it turns out...) 
@@ -16,13 +16,13 @@ function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1
     # Set path--used for testing
     path = dirname(@__FILE__)
 
-    A = system.measurement.DD
-    B = system.measurement.ZZ
-    H = system.measurement.EE
-    R = system.transition.RRR
-    Φ = system.transition.TTT
-    S2 = system.measurement.QQ
-    sqrtS2 = R*Matrix(chol(nearestSPD(S2)))'
+    DD = system.measurement.DD
+    ZZ = system.measurement.ZZ
+    EE = system.measurement.EE
+    RRR = system.transition.RRR
+    TTT = system.transition.TTT
+    QQ = system.measurement.QQ
+    sqrtS2 = RRR*Matrix(chol(nearestSPD(QQ)))'
 
     rand_mat = system.measurement.MM # I just used this for storage; not actually MM    
 
@@ -48,17 +48,17 @@ function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1
         ε_new=ε_init + c*Matrix(chol(nearestSPD(cov_s)))'*rand_mat
 
         # Use the state equation to calculate the corresponding state from that ε 
-        s_new_fore = Φ*s_init+sqrtS2*ε_new
+        s_new_fore = TTT*s_init+sqrtS2*ε_new
 
         # Use the state equation to calculate the state corresponding to ε_init
-        s_init_fore = Φ*s_init+sqrtS2*ε_init
+        s_init_fore = TTT*s_init+sqrtS2*ε_init
 
         # Calculate difference between data and expected y from measurement equation and calculated states from above for both the new draw of ε_new and the old ε_init (we do this to calculate probabilities below. Since the error is still drawn from a Normal and everything is still linear, we know that y will also be normal. See equation of multivariate normal for how error_new and error_init enter into the pdf).
-        error_new  = yt - B*s_new_fore - A
-        error_init = yt - B*s_init_fore - A
+        error_new  = yt - ZZ*s_new_fore - DD
+        error_init = yt - ZZ*s_init_fore - DD
         # Calculate the top and bottom probabilities for the α ratio.
-        post_new = log(pdf(MvNormal(zeros(length(yt)),H),error_new)[1]*pdf(MvNormal(zeros(length(ε_new)),eye(length(ε_new),length(ε_new))),ε_new)[1])
-        post_init = log(pdf(MvNormal(zeros(length(yt)),H),error_init)[1]*pdf(MvNormal(zeros(length(ε_init)),eye(length(ε_init),length(ε_init))),ε_init)[1])
+        post_new = log(pdf(MvNormal(zeros(length(yt)),EE),error_new)[1]*pdf(MvNormal(zeros(length(ε_new)),eye(length(ε_new),length(ε_new))),ε_new)[1])
+        post_init = log(pdf(MvNormal(zeros(length(yt)),EE),error_init)[1]*pdf(MvNormal(zeros(length(ε_init)),eye(length(ε_init),length(ε_init))),ε_init)[1])
 
         # α is the probability of accepting the new particle 
         # (post_new and post_init are in logs so subtract and take the exponential)
