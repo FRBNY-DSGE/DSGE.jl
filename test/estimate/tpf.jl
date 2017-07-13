@@ -45,7 +45,7 @@ function setup(testing::Bool)
         update!(m,x0)
 
         x0=Float64[p.value for p in m.parameters]
-        out, H = optimize!(m, data; iterations=500)
+        out, H = optimize!(m, data; iterations=200)
         params = out.minimizer
         update!(m,params)
     end
@@ -85,13 +85,15 @@ m<=Setting(:x_tolerance, zero(float(0)))
 n_particles = 500
 m<=Setting(:tpf_n_particles, n_particles)
 
-#sys, data, Φ, R, S2  = setup(false)
-#m.testing = false
-#s0 = zeros(8)
-#P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
-#tic()
-#neff, lik = tpf(m, data, s0, P0, testing = false)
-#toc()
+sys, data, Φ, R, S2  = setup(false)
+
+s0 = zeros(8)
+P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
+m<=Setting(:tpf_deterministic, false)
+tic()
+neff, lik = tpf(m, data,sys, s0, P0)
+toc()
+@show lik
 
 # Test 4000 particles, testing = true
 n_particles = 4000
@@ -100,9 +102,9 @@ m<=Setting(:tpf_n_particles, n_particles)
 sys, data, Φ, R, S2 = setup(true)
 s0 = zeros(8)
 P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
-m.testing = true
+m<=Setting(:tpf_deterministic, true)
 tic()
-neff, lik = tpf(m, data, sys, s0, P0, testing = m.testing)
+neff, lik = tpf(m, data, sys, s0, P0)
 toc()
 
 if (n_particles == 4000) & m.testing
