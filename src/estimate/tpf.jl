@@ -48,6 +48,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     density_arr = zeros(n_particles)
     ε = zeros(n_errors)
 
+    @show n_particles
     if testing
         # Testing: Generate pre-defined random shocks for s and ε
         s_lag_tempered_rand_mat = randn(n_states,n_particles)
