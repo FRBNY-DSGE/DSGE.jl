@@ -33,8 +33,8 @@ function setup(testing::Bool)
         # If not testing, compute system in Julia, get better starting parameters s.t. code runs
         file = "$path/../reference/optimize.h5"
 
- #       x0 = h5read(file,"params")
-       # data = h5read(file, "data")'
+        # x0 = h5read(file,"params")
+        # data = h5read(file, "data")'
         
         filesw = "/data/dsge_data_dir/dsgejl/realtime/input_data/data"
         data = readcsv("$filesw/realtime_spec=smets_wouters_hp=true_vint=110110.csv",header=true)
@@ -44,9 +44,9 @@ function setup(testing::Bool)
 #        minimizer = h5read(file,"minimizer")
 #        update!(m,x0)
 #        x0=Float64[p.value for p in m.parameters]
-        goodparams = h5read("$filesw/../output_data/smets_wouters/ss0/estimate/raw/paramsmode_est=1_vint=110110.h5",params)
-        out, H = optimize!(m, data; iterations=200)
-        params = out.minimizer
+        params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
+        #out, H = optimize!(m, data; iterations=200)
+        #params = out.minimizer
         update!(m,params)
 
         system = compute_system(m)
@@ -60,9 +60,14 @@ end
 
 
 # Set up model
-custom_settings = Dict{Symbol, Setting}(
-    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
+
+#custom_settings = Dict{Symbol, Setting}(
+#    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
 #m = AnSchorfheide(custom_settings = custom_settings, testing = true)
+
+# Smets Wouters model
+custom_settings = Dict{Symbol, Setting}(
+    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2011-Q1")))
 m = SmetsWouters(custom_settings = custom_settings, testing = true)
 
 
@@ -108,12 +113,9 @@ deterministic = false
 m<=Setting(:tpf_n_particles, n_particles)
 
 sys, data, Φ, R, S2 = setup(deterministic)
-s0 = zeros(8)
+s0 = zeros(size(sys[:TTT])[1])
 P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 m<=Setting(:tpf_deterministic, deterministic)
-
-#@show m.settings
-#@show m.test_settings
 
 tic()
 neff, lik = tpf(m, data, sys, s0, P0)
