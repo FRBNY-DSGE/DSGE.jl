@@ -32,7 +32,7 @@ function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1
     
     # Get paramaters from model settings; c updates dynamically to tune TPF over time.
     c = get_setting(m,:tpf_c)
-    N_MH = get_setting(m, :tpf_N_MH)
+    N_MH = get_setting(m, :tpf_n_mh_simulations)
     deterministic = get_setting(m, :tpf_deterministic)
     # Initialize acceptance counter to zero
     acpt = 0

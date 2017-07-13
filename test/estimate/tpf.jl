@@ -31,11 +31,6 @@ function setup(testing::Bool)
         # update!(m,params)
     else
         # If not testing, compute system in Julia, get better starting parameters s.t. code runs
-        system = compute_system(m)
-        R = system.transition.RRR
-        S2 = system.measurement.QQ
-        Φ = system.transition.TTT
-
         file = "$path/../reference/optimize.h5"
 
         x0 = h5read(file,"params")
@@ -45,9 +40,15 @@ function setup(testing::Bool)
         update!(m,x0)
 
         x0=Float64[p.value for p in m.parameters]
-        out, H = optimize!(m, data; iterations=200)
+        out, H = optimize!(m, data; iterations=500)
         params = out.minimizer
         update!(m,params)
+
+        system = compute_system(m)
+        R = system.transition.RRR
+        S2 = system.measurement.QQ
+        Φ = system.transition.TTT
+
     end
     return system, data, Φ, R, S2
 end
@@ -72,49 +73,53 @@ m<=Setting(:tpf_rstar,2.0)
 m<=Setting(:tpf_c,0.1)
 m<=Setting(:tpf_acpt_rate,0.5)
 m<=Setting(:tpf_trgt,0.25)
-m<=Setting(:tpf_N_MH,2)
-deterministic = true
+m<=Setting(:tpf_n_mh_simulations,2)
+deterministic = false
 m<=Setting(:tpf_deterministic,deterministic)
 
 # Parallelize
 m<=Setting(:use_parallel_workers,true)
 
 # Set tolerance in fzero
-# m<=Setting(:x_tolerance,1e-3)
-m<=Setting(:x_tolerance, zero(float(0)))
+m<=Setting(:tpf_x_tolerance,1e-3)
+#m<=Setting(:tpf_x_tolerance, zero(float(0)))
 
 # Set number of particles
-n_particles = 500
-m<=Setting(:tpf_n_particles, n_particles)
+#n_particles = 500
+#m<=Setting(:tpf_n_particles, n_particles)
 
-sys, data, Φ, R, S2  = setup(false)
+#sys, data, Φ, R, S2  = setup(false)
 
-s0 = zeros(8)
-P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
-m<=Setting(:tpf_deterministic, false)
-tic()
-neff, lik = tpf(m, data,sys, s0, P0)
-toc()
-@show lik
+#s0 = zeros(8)
+#P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
+#m<=Setting(:tpf_deterministic, true)
+#tic()
+#neff, lik = tpf(m, data,sys, s0, P0)
+#toc()
 
 # Test 4000 particles, testing = true
-n_particles = 4000
+n_particles = 500
+deterministic = false
 m<=Setting(:tpf_n_particles, n_particles)
 
-sys, data, Φ, R, S2 = setup(true)
+sys, data, Φ, R, S2 = setup(deterministic)
 s0 = zeros(8)
 P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
-m<=Setting(:tpf_deterministic, true)
+m<=Setting(:tpf_deterministic, deterministic)
+
+#@show m.settings
+#@show m.test_settings
+
 tic()
 neff, lik = tpf(m, data, sys, s0, P0)
 toc()
 
 if (n_particles == 4000) & deterministic
     @test good_likelihoods == lik
+    @show good_likelihoods
+    @show lik
     println("Test passed for 4000 particles in testing mode.")
 end
-
-
 
 
 

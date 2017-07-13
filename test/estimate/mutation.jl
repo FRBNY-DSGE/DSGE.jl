@@ -3,7 +3,7 @@ using DSGE,DataFrames,HDF5
 # Set model
 m=AnSchorfheide(testing=true)
 m<=Setting(:date_forecast_start,quartertodate("2015-Q4"))
-m<=Setting(:tpf_N_MH,3)
+m<=Setting(:tpf_n_mh_simulations,3)
 m<=Setting(:tpf_c, 0.1)
 m<=Setting(:tpf_n_particles,100)
 m<=Setting(:tpf_deterministic,true)
@@ -28,7 +28,7 @@ measurement_equation = Measurement(B, A, Q, H, rand_mat, R)
 system = System(transition_equation, measurement_equation)
 
 n_particles = get_setting(m,:tpf_n_particles)
-N_MH = get_setting(m,:tpf_N_MH)
+N_MH = get_setting(m,:tpf_n_mh_simulations)
 
 ε = randn(3,n_particles)
 μ = mean(ε,2)
