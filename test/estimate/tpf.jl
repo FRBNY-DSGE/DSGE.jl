@@ -83,22 +83,30 @@ m<=Setting(:use_parallel_workers,true)
 # m<=Setting(:x_tolerance,1e-3)
 m<=Setting(:x_tolerance, zero(float(0)))
 
-sys, data, Φ, R, S2  = setup(false)
-s0 = zeros(8)
-P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
-tic()
-neff, lik = tpf(m, data,sys, s0, P0, testing = false)
-toc()
-@show lik
+# Set number of particles
+#n_particles = 500
+#m<=Setting(:tpf_n_particles, n_particles)
+
+#sys, data, Φ, R, S2  = setup(false)
+#m.testing = false
+#s0 = zeros(8)
+#P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
+#tic()
+#neff, lik = tpf(m, data, s0, P0, testing = false)
+#toc()
+
+# Test 4000 particles, testing = true
+n_particles = 4000
+m<=Setting(:n_particles, n_particles)
 
 sys, data, Φ, R, S2 = setup(true)
 s0 = zeros(8)
 P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
-n_particles = 4000
-m<=Setting(:n_particles, n_particles)
+m.testing = true
 tic()
-neff, lik = tpf(m, sys, data, s0, P0, testing = true)
+neff, lik = tpf(m, data, sys, s0, P0, testing = m.testing)
 toc()
+
 if (n_particles == 4000) & m.testing
     @test good_likelihoods == lik
     println("Test passed for 4000 particles in testing mode.")
