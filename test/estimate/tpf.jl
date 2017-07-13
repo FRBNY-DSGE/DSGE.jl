@@ -57,6 +57,8 @@ end
 custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
 m = AnSchorfheide(custom_settings = custom_settings, testing = true)
+#m = Model990(custom_settings = custom_settings, testing = true)
+
 
 path=dirname(@__FILE__)
 
@@ -85,8 +87,9 @@ sys, data, Φ, R, S2  = setup(false)
 s0 = zeros(8)
 P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 tic()
-neff, lik = tpf(m, data, s0, P0, testing = false)
+neff, lik = tpf(m, data,sys, s0, P0, testing = false)
 toc()
+@show lik
 
 sys, data, Φ, R, S2 = setup(true)
 s0 = zeros(8)
