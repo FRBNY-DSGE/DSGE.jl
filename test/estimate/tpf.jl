@@ -81,38 +81,29 @@ m<=Setting(:use_parallel_workers,true)
 # m<=Setting(:x_tolerance,1e-3)
 m<=Setting(:x_tolerance, zero(float(0)))
 
-# sys, data, Φ, R, S2  = setup(false)
-# s0 = zeros(8)
-# P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
-# neff, lik = tpf(m, data, s0, P0, testing = false)
+sys, data, Φ, R, S2  = setup(false)
+s0 = zeros(8)
+P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
+tic()
+neff, lik = tpf(m, data, s0, P0, testing = false)
+toc()
 
 sys, data, Φ, R, S2 = setup(true)
 s0 = zeros(8)
 P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
-neff, lik = tpf(m, sys, data, s0, P0, testing = true)
 n_particles = 4000
-
-m<=Setting(:tpf_n_particles, n_particles)
-m<=Setting(:x_tolerance, 1e-3)
-
-
-# Input parameters
-s0 = zeros(8)
-P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
-
-# Run tempered particle filter
+m<=Setting(:n_particles, n_particles)
 tic()
-neff, lik = tpf(m, data, system, s0, P0, testing = m.testing)
+neff, lik = tpf(m, sys, data, s0, P0, testing = true)
 toc()
-
 if (n_particles == 4000) & m.testing
     @test good_likelihoods == lik
     println("Test passed for 4000 particles in testing mode.")
 end
 
-h5open("$path/../reference/output_likelihoods.h5","w") do file
-    write(file,"julia_likelihoods",lik)
-end
+
+
+
 
 #####The following code regenerates the test comparison that we use to compare. DO NOT RUN (unless you are sure that the new tpf.jl is correct).
 # Seeded, deterministic resampling; fixed tempering schedule of 0.25->0.5->1
