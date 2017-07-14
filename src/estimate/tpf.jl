@@ -26,16 +26,11 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     N_MH          = get_setting(m,:tpf_n_mh_simulations)
     n_particles   = get_setting(m,:tpf_n_particles)
     deterministic = get_setting(m,:tpf_deterministic)
+    xtol          = get_setting(m,:tpf_x_tolerance) # Tolerance of fzero
+    parallel      = get_setting(m,:use_parallel_workers) # Get setting of parallelization
     
     # Determine presampling periods
     n_presample_periods = (include_presample) ? 0 : get_setting(m, :n_presample_periods)
-
-    # Tolerance of fzero
-    xtol = get_setting(m, :tpf_x_tolerance)
-
-    # Get setting of parallelization
-    parallel = get_setting(m,:use_parallel_workers)
-    path = dirname(@__FILE__)  
     
     # End time (last period)
     T = size(yy,2)
@@ -45,17 +40,18 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     n_states = size(ZZ,2)
     
     # Initialization
-    lik = zeros(T)
-    Neff = zeros(T)
-    len_phis = ones(T)
-    weights = ones(n_particles)
+    lik         = zeros(T)
+    Neff        = zeros(T)
+    len_phis    = ones(T)
+    weights     = ones(n_particles)
     density_arr = zeros(n_particles)
-    ε = zeros(n_errors)
+    ε           = zeros(n_errors)
 
     if deterministic
         # Testing: Generate pre-defined random shocks for s and ε
         s_lag_tempered_rand_mat = randn(n_states,n_particles)
         ε_rand_mat = randn(n_errors, n_particles)
+        path = dirname(@__FILE__)  
         h5open("$path/../../test/reference/matricesForTPF$n_particles.h5","w") do file
             write(file,"s_lag_tempered_rand_mat",s_lag_tempered_rand_mat)
             write(file,"eps_rand_mat",ε_rand_mat)
