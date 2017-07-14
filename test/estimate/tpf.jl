@@ -1,14 +1,15 @@
 using DSGE, HDF5, DataFrames, ClusterManagers, Plots
 using QuantEcon: solve_discrete_lyapunov
 
-function setup(testing::Bool)
-    if testing
+function setup(deterministic::Bool, m)#,n_particles::Int64, model)
+    if deterministic
+        ##Seed random number generator
         srand(1234)
-        
+        #Load in us.txt data from schorfheide
         df = readtable("$path/../reference/us.txt",header=false, separator=' ')
         data = convert(Matrix{Float64},df)
         data=data'
-        
+        #Read in matrices from schorfheide Matlab code
         file = "$path/../reference/matlab_variable_for_testing.h5"
         A = h5read(file, "A")
         B = h5read(file, "B")
@@ -17,7 +18,7 @@ function setup(testing::Bool)
         S2 = h5read(file,"S2")
         Φ = h5read(file, "Phi")
 	rand_mat = randn(3,1)
-    	
+    	#Write rand_mat to h5 for Matlab to read for comparison
 	h5open("$path/../reference/mutationRandomMatrix.h5","w") do file
             write(file,"rand_mat",rand_mat)
     	end
@@ -44,16 +45,31 @@ function setup(testing::Bool)
         minimizer = h5read(file,"minimizer")
         update!(m,x0)
         x0=Float64[p.value for p in m.parameters]
-#        params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
+        params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
         out, H = optimize!(m, data; iterations=200)
         params = out.minimizer
-        update!(m,params)
 
+       minimizer = h5read(file,"minimizer")
+        update!(m,x0)
+        x0=Float64[p.value for p in m.parameters]
+        params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
+
+        push!(params, m[:e_y].value, m[:e_L].value, m[:e_w].value, m[:e_π].value, m[:e_R].value, m[:e_c].value, m[:e_i].value)
+
+        #out, H = optimize!(m, data; iterations=200)
+        #params = out.minimizer
+
+        update!(m,params)
+       
         system = compute_system(m)
         R = system.transition.RRR
         S2 = system.measurement.QQ
         Φ = system.transition.TTT
-
+        
+        transition_equation = Transition(Φ, R)
+    	measurement_equation = Measurement(B,squeeze(A,2),S2,H,rand_mat,R)
+    	system = System(transition_equation, measurement_equation)
+        
     end
     return system, data, Φ, R, S2
 end
@@ -62,14 +78,15 @@ end
 # Set up model
 
 # An Schorfheide model
-custom_settings = Dict{Symbol, Setting}(
-    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
-m = AnSchorfheide(custom_settings = custom_settings, testing = true)
+#custom_settings = Dict{Symbol, Setting}(
+#    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
+#m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 # Smets Wouters model
-#custom_settings = Dict{Symbol, Setting}(
-#    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2011-Q1")))
-#m = SmetsWouters(custom_settings = custom_settings, testing = true)
+custom_settings = Dict{Symbol, Setting}(
+    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2011-Q1")))
+m = SmetsWouters("ss1",custom_settings = custom_settings, testing = true)
+
 
 
 path=dirname(@__FILE__)
@@ -114,7 +131,7 @@ n_particles = 500
 deterministic = false
 m<=Setting(:tpf_n_particles, n_particles)
 
-sys, data, Φ, R, S2 = setup(deterministic)
+sys, data, Φ, R, S2 = setup(deterministic, m)
 s0 = zeros(size(sys[:TTT])[1])
 P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 m<=Setting(:tpf_deterministic, deterministic)

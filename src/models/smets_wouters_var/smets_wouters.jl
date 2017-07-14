@@ -1,7 +1,7 @@
 """
-SmetsWouters{T} <: AbstractModel{T}
+SmetsWouters_var{T} <: AbstractModel{T}
 
-The `SmetsWouters` type defines the structure of the New York Fed DSGE
+The `SmetsWouters_var` type defines the structure of the New York Fed DSGE
 model.
 
 ### Fields
@@ -72,7 +72,7 @@ the model.
   FRED database; all other data must be downloaded by the user. See `load_data`
   and `Observable` for further details.
 """
-type SmetsWouters{T} <: AbstractModel{T}
+type SmetsWouters_var{T} <: AbstractModel{T}
     parameters::ParameterVector{T}                         # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                       # model steady-state values
     keys::OrderedDict{Symbol,Int}                          # human-readable names for all the model
@@ -95,18 +95,18 @@ type SmetsWouters{T} <: AbstractModel{T}
     observable_mappings::OrderedDict{Symbol, Observable}
 end
 
-description(m::SmetsWouters) = "Smets-Wouters Model"
+description(m::SmetsWouters_var) = "Smets-Wouters Model"
 
 """
-`init_model_indices!(m::SmetsWouters)`
+`init_model_indices!(m::SmetsWouters_var)`
 
 Arguments:
-`m:: SmetsWouters`: a model object
+`m:: SmetsWouters_var`: a model object
 
 Description:
 Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 """
-function init_model_indices!(m::SmetsWouters)
+function init_model_indices!(m::SmetsWouters_var)
     # Endogenous states
     endogenous_states = [[
         :y_t, :c_t, :i_t, :qk_t, :k_t, :kbar_t, :u_t, :rk_t, :mc_t,
@@ -152,11 +152,10 @@ function init_model_indices!(m::SmetsWouters)
     for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
     for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(endogenous_states) end
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
-
 end
 
 
-function SmetsWouters(subspec::String="ss0";
+function SmetsWouters_var(subspec::String="ss0";
                       custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                       testing = false)
 
@@ -168,7 +167,7 @@ function SmetsWouters(subspec::String="ss0";
     rng                = MersenneTwister(0)
 
     # initialize empty model
-    m = SmetsWouters{Float64}(
+    m = SmetsWouters_var{Float64}(
             # model parameters and steady state values
             Vector{AbstractParameter{Float64}}(), Vector{Float64}(), OrderedDict{Symbol,Int}(),
 
@@ -205,14 +204,14 @@ end
 
 """
 ```
-init_parameters!(m::SmetsWouters)
+init_parameters!(m::SmetsWouters_var)
 ```
 
 Initializes the model's parameters, as well as empty values for the steady-state
 parameters (in preparation for `steadystate!(m)` being called to initialize
 those).
 """
-function init_parameters!(m::SmetsWouters)
+function init_parameters!(m::SmetsWouters_var)
     m <= parameter(:α, 0.24, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05), fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's Cobb-Douglas production function.",
                    tex_label="\\alpha")
@@ -383,15 +382,6 @@ function init_parameters!(m::SmetsWouters)
                    description="η_λ_w: Moving average component in the wage markup shock.",
                    tex_label="\\eta_{\\lambda_w}")
 
-    m <= parameter(:e_y, 0.0, fixed=true, description = "e_y: Measurement error on GDP", tex_label="e_y")
-    m <= parameter(:e_L, 0.0, fixed = true, description = "e_L: Measurement error on hours worked", tex_label="e_L")
-    m <= parameter(:e_w, 0.0, fixed=true, description = "e_w: Measurement error on wages", tex_label = "e_w")
-    m <= parameter(:e_π, 0.0, fixed=true, description = "e_π: Measurement error on GDP deflator", tex_label= "e_π")
-    m <= parameter(:e_R, 0.0, fixed=true, description = "e_R: Measurement error on nonominal rate of interest", tex_label="e_R")
-    m <= parameter(:e_c, 0.0, fixed=true, description = "e_c: Measurement error on consumption", tex_label="e_c")
-    m <= parameter(:e_i, 0.0, fixed=true, description = "e_i: Measurement error on investment", tex_label="e_i")
-
-
     # steady states
     m <= SteadyStateParameter(:zstar, NaN, description="Steady-state growth rate of productivity", tex_label="\\z_*")
     m <= SteadyStateParameter(:rstar, NaN, tex_label="\\r_*")
@@ -409,12 +399,12 @@ end
 
 """
 ```
-steadystate!(m::SmetsWouters)
+steadystate!(m::SmetsWouters_var)
 ```
 
 Calculates the model's steady-state values. `steadystate!(m)` must be called whenever the parameters of `m` are updated.
 """
-function steadystate!(m::SmetsWouters)
+function steadystate!(m::SmetsWouters_var)
     m[:zstar]    = log(1+m[:γ]) + m[:α]/(1-m[:α])*log(m[:Upsilon])
     m[:rstar]    = exp(m[:σ_c]*m[:zstar]) / m[:β]
     m[:Rstarn]   = 100*(m[:rstar]*m[:π_star] - 1)
@@ -431,7 +421,7 @@ function steadystate!(m::SmetsWouters)
     return m
 end
 
-function settings_smets_wouters!(m::SmetsWouters)
+function settings_smets_wouters!(m::SmetsWouters_var)
 
     default_settings!(m)
 
