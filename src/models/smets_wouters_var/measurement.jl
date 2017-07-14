@@ -81,17 +81,18 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
     ZZ[obs[:obs_investment], endo_addl[:i_t1]] = -1.0
     ZZ[obs[:obs_investment], endo[:z_t]]       = 1.0
     DD[obs[:obs_investment]]                   = 100*(exp(m[:zstar])-1)
+    
+    ## Measurement error
+    EE[obs[:obs_gdp],endo[:y_t]] = m[:e_y]^2
+    EE[obs[:obs_hours], endo[:L_t]] = m[:e_L]^2
+    EE[obs[:obs_wages], endo[:w_t]] = m[:e_w]^2
+    EE[obs[:obs_gdpdeflator], endo[:π_t]] = m[:e_π]^2
+    EE[obs[:obs_naturalrate], endo[:R_t]] = m[:e_R]^2
+    EE[obs[:obs_consumption], endo[:c_t]] = m[:c_t]^2
+    EE[obs[:obs_investment], endo[:i_t]] = m[:i_t]^2
+    
 
-    #Measurement error
-    EE[obs[:obs_gdp],1] = m[:e_y]^2
-    EE[obs[:obs_hours],2] = m[:e_L]^2
-    EE[obs[:obs_wages],3] = m[:e_w]^2
-    EE[obs[:obs_gdpdeflator],4] = m[:e_π]^2
-    EE[obs[:obs_nominalrate],5] = m[:e_R]^2
-    EE[obs[:obs_consumption],6] = m[:c_t]^2
-    EE[obs[:obs_investment],7] = m[:i_t]^2
-
-    #Variance of innovations
+    ## variance of innovations
     QQ[exo[:g_sh], exo[:g_sh]]           = m[:σ_g]^2
     QQ[exo[:b_sh], exo[:b_sh]]           = m[:σ_b]^2
     QQ[exo[:μ_sh], exo[:μ_sh]]           = m[:σ_μ]^2

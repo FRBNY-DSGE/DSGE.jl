@@ -9,6 +9,9 @@ function ineff_func(φ_new::Float64, φ_old::Float64, yt::Array{Float64, 1}, per
     
     n_particles = size(perror, 2)
     w = zeros(n_particles)
+    @show size(EE)
+    @show EE
+    @show det(EE)
     inv_EE = inv(EE)
     det_EE = det(EE)
 
