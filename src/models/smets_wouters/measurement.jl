@@ -88,8 +88,8 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
     EE[obs[:obs_wages],3] = m[:e_w]^2
     EE[obs[:obs_gdpdeflator],4] = m[:e_π]^2
     EE[obs[:obs_nominalrate],5] = m[:e_R]^2
-    EE[obs[:obs_consumption],6] = m[:c_t]^2
-    EE[obs[:obs_investment],7] = m[:i_t]^2
+    EE[obs[:obs_consumption],6] = m[:e_c]^2
+    EE[obs[:obs_investment],7] = m[:e_i]^2
 
     #Variance of innovations
     QQ[exo[:g_sh], exo[:g_sh]]           = m[:σ_g]^2
