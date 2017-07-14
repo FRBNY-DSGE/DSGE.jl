@@ -45,6 +45,9 @@ function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1
         if (!deterministic) rand_mat = randn(size(QQ,1),1) end
         @show size(QQ,1)    
         # Generate new draw of ε from a N(ε_init, c²cov_s) distribution (defined in tpf.jl), c tuning parameter
+        @show size(ε_init)
+        @show size(Matrix(chol(nearestSPD(cov_s))))
+        @show size(rand_mat)
         ε_new=ε_init + c*Matrix(chol(nearestSPD(cov_s)))'*rand_mat
 
         # Use the state equation to calculate the corresponding state from that ε 
