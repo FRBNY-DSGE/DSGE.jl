@@ -88,6 +88,7 @@ module DSGE
         transform_data, save_data, get_data_filename,
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
         oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
+        loggrowthtopct_percapita, loggrowthtopct,
         loggrowthtopct_annualized_percapita, loggrowthtopct_annualized, logleveltopct_annualized_percapita,
         logleveltopct_annualized,
         parse_data_series, collect_data_transforms, reverse_transform,
