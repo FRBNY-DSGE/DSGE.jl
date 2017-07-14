@@ -17,7 +17,7 @@ function setup(deterministic::Bool, m)#,n_particles::Int64, model)
         R = h5read(file, "R")
         S2 = h5read(file,"S2")
         Φ = h5read(file, "Phi")
-	rand_mat = randn(3,1)
+	rand_mat = randn(size(S2,1),1)
     	#Write rand_mat to h5 for Matlab to read for comparison
 	h5open("$path/../reference/mutationRandomMatrix.h5","w") do file
             write(file,"rand_mat",rand_mat)
