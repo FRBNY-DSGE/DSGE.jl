@@ -24,8 +24,6 @@ function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1
     QQ = system.measurement.QQ
     sqrtS2 = RRR*Matrix(chol(nearestSPD(QQ)))'
 
-    rand_mat = system.measurement.MM # I just used this for storage; not actually MM    
-
     # Initialize ind_s and ind_ε
     ind_s = s_init
     ind_ε = ε_init
@@ -34,6 +32,8 @@ function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1
     c = get_setting(m,:tpf_c)
     N_MH = get_setting(m, :tpf_n_mh_simulations)
     deterministic = get_setting(m, :tpf_deterministic)
+    rand_mat = get_setting(m,:tpf_rand_mat)
+
     # Initialize acceptance counter to zero
     acpt = 0
 

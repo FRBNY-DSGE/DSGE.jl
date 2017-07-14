@@ -28,30 +28,27 @@ function setup(deterministic::Bool, m)#,n_particles::Int64, model)
     	measurement_equation = Measurement(B,squeeze(A,2),S2,H,rand_mat,R)
     	system = System(transition_equation, measurement_equation)
         
-        # params = [2.09, 0.98, 2.25, 0.65, 0.34, 3.16, 0.51, 0.81, 0.98, 0.93, 0.19, 0.65, 0.24,0.12,0.29,0.45]
+        # params = [2.09, 0.98, 2.25, 0.65, 0.34, 3.16, 0.51, 0.81, 0.98, 
+        #           0.93, 0.19, 0.65, 0.24,0.12,0.29,0.45]
         # update!(m,params)
     else
         # If not testing, compute system in Julia, get better starting parameters s.t. code runs
-      #  file = "$path/../reference/optimize.h5"
-
-       # x0 = h5read(file,"params")
-       # data = h5read(file, "data")'
+        rand_mat = randn(size(S2,1),1)
+        # An Schorfheide
+        # file = "$path/../reference/optimize.h5"
+        # x0 = h5read(file,"params")
+        # data = h5read(file, "data")'
         
+        # Smets Wouters
         filesw = "/data/dsge_data_dir/dsgejl/realtime/input_data/data"
         data = readcsv("$filesw/realtime_spec=smets_wouters_hp=true_vint=110110.csv",header=true)
         data = convert(Array{Float64,2}, data[1][:,2:end])
         data=data'
        
-#        minimizer = h5read(file,"minimizer")
- #       update!(m,x0)
-  #      x0=Float64[p.value for p in m.parameters]
-       # params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
-       # out, H = optimize!(m, data; iterations=200)
-       # params = out.minimizer
+        # minimizer = h5read(file,"minimizer")
+        # update!(m,x0)
+        # x0=Float64[p.value for p in m.parameters]
 
-       #minimizer = h5read(file,"minimizer")
-       # update!(m,x0)
-       # x0=Float64[p.value for p in m.parameters]
         params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
 
         push!(params, m[:e_y].value, m[:e_L].value, m[:e_w].value, m[:e_π].value, m[:e_R].value, m[:e_c].value, m[:e_i].value)
@@ -65,11 +62,7 @@ function setup(deterministic::Bool, m)#,n_particles::Int64, model)
         R = system.transition.RRR
         S2 = system.measurement.QQ
         Φ = system.transition.TTT
-        
-    #    transition_equation = Transition(Φ, R)
-    #	measurement_equation = Measurement(B,squeeze(A,2),S2,H,rand_mat,R)
-    #	system = System(transition_equation, measurement_equation)
-        
+
     end
     return system, data, Φ, R, S2
 end
@@ -100,13 +93,14 @@ m<=Setting(:tpf_c,0.1)
 m<=Setting(:tpf_acpt_rate,0.5)
 m<=Setting(:tpf_trgt,0.25)
 m<=Setting(:tpf_n_mh_simulations,2)
+m<=Setting(:n_presample_periods,2)
 deterministic = false
 m<=Setting(:tpf_deterministic,deterministic)
-m<=Setting(:n_presample_periods,2)
 
+# Random matrix written to file for comparison with MATLAB
+m<=Setting(:tpf_rand_mat,rand_mat)
 # Parallelize
 m<=Setting(:use_parallel_workers,true)
-
 # Set tolerance in fzero
 m<=Setting(:tpf_x_tolerance,1e-3)
 #m<=Setting(:tpf_x_tolerance, zero(float(0)))
