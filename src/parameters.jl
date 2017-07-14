@@ -376,14 +376,6 @@ transform_to_real_line{T}(p::Parameter{T,Untransformed}, x::T = p.value) = x
 function transform_to_real_line{T}(p::Parameter{T,SquareRoot}, x::T = p.value)
     (a,b), c = p.transform_parameterization, one(T)
     cx = 2. * (x - (a+b)/2.)/(b-a)
-    if cx^2 >1
-        println("Parameter is: $(p.key)")
-        println("a is $a")
-        println("b is $b")
-        println("x is $x")
-        println("cx is $cx")
-        error("invalid paramter value")
-    end
     (1/c)*cx/sqrt(1 - cx^2)
 end
 function transform_to_real_line{T}(p::Parameter{T,Exponential}, x::T = p.value)
