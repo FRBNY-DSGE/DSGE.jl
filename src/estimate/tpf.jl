@@ -61,9 +61,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         # Draw initial particles from the distribution of s₀: N(s₀, P₀) 
         s_lag_tempered_rand_mat = randn(n_states,n_particles)
     end
-    @show size(repmat(s0,1,n_particles))
-    @show size(get_chol(P0)')
-    @show size(s_lag_tempered_rand_mat)
+
     s_lag_tempered = repmat(s0,1,n_particles) + get_chol(P0)'*s_lag_tempered_rand_mat
 
     for t=1:T
