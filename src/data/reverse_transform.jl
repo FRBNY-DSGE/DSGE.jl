@@ -163,11 +163,13 @@ function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Functio
             error("Invalid 4-quarter reverse transform: $rev_transform")
         end
     else
-        if rev_transform in [loggrowthtopct_annualized_percapita]
-            rev_transform(y, pop_growth)
-        elseif rev_transform in [logleveltopct_annualized_percapita]
+        if rev_transform in [logleveltopct_annualized_percapita]
             rev_transform(y, y0, pop_growth)
-        elseif rev_transform in [loggrowthtopct_annualized, logleveltopct_annualized, quartertoannual, identity]
+        elseif rev_transform in [loggrowthtopct_annualized_percapita, loggrowthtopct_percapita]
+            rev_transform(y, pop_growth)
+        elseif rev_transform in [logleveltopct_annualized]
+            rev_transform(y, y0)
+        elseif rev_transform in [loggrowthtopct_annualized, loggrowthtopct, quartertoannual, identity]
             rev_transform(y)
         else
             error("Invalid reverse transform: $rev_transform")
