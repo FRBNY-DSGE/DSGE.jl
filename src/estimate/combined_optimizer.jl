@@ -1,26 +1,26 @@
 """
 ```
 combined_optimizer(fcn::Function,
-                       x0::Vector,
-                       args...;
-                       xtol::Real            = 1e-32, # default from Optim.jl
-                       ftol::Float64         = 1e-14, # Default from csminwel
-                       grtol::Real           = 1e-8,  # default from Optim.jl
-                       iterations::Int       = 1000,
-                       store_trace::Bool     = false,
-                       show_trace::Bool      = false,
-                       extended_trace::Bool  = false,
-                       verbose::Symbol       = :none,
-                       rng::AbstractRNG      = MersenneTwister(),
-                       autodiff::Bool        = false,
-                       neighbor!::Function   = Optim.default_neighbor!,
-                       temperature::Function = Optim.log_temperature,
-                       max_cycles::Int       = 4,
-                       kwargs...)
+                   x0::Vector,
+                   args...;
+                   xtol::Real            = 1e-32, # default from Optim.jl
+                   ftol::Float64         = 1e-14, # Default from csminwel
+                   grtol::Real           = 1e-8,  # default from Optim.jl
+                   iterations::Int       = 1000,
+                   store_trace::Bool     = false,
+                   show_trace::Bool      = false,
+                   extended_trace::Bool  = false,
+                   verbose::Symbol       = :none,
+                   rng::AbstractRNG      = MersenneTwister(),
+                   autodiff::Bool        = false,
+                   neighbor!::Function   = Optim.default_neighbor!,
+                   temperature::Function = Optim.log_temperature,
+                   max_cycles::Int       = 4,
+                   kwargs...)
 
 ```
 This routine alternates between LBFGS and simulated annealing. LBFGS is good for quickly moving in the correct
-direction, while simulated annealing is used to escape local minimima.
+direction, while simulated annealing is used to escape local minima.
 """
 function combined_optimizer(fcn::Function,
                        x0::Vector,
