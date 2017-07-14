@@ -33,20 +33,20 @@ function setup(testing::Bool)
         # If not testing, compute system in Julia, get better starting parameters s.t. code runs
         file = "$path/../reference/optimize.h5"
 
-        # x0 = h5read(file,"params")
-        # data = h5read(file, "data")'
+        x0 = h5read(file,"params")
+        data = h5read(file, "data")'
         
-        filesw = "/data/dsge_data_dir/dsgejl/realtime/input_data/data"
-        data = readcsv("$filesw/realtime_spec=smets_wouters_hp=true_vint=110110.csv",header=true)
-        data = convert(Array{Float64,2}, data[1][:,2:end])
-        data=data'
+        #filesw = "/data/dsge_data_dir/dsgejl/realtime/input_data/data"
+        #data = readcsv("$filesw/realtime_spec=smets_wouters_hp=true_vint=110110.csv",header=true)
+        #data = convert(Array{Float64,2}, data[1][:,2:end])
+        #data=data'
        
-#        minimizer = h5read(file,"minimizer")
-#        update!(m,x0)
-#        x0=Float64[p.value for p in m.parameters]
-        params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
-        #out, H = optimize!(m, data; iterations=200)
-        #params = out.minimizer
+        minimizer = h5read(file,"minimizer")
+        update!(m,x0)
+        x0=Float64[p.value for p in m.parameters]
+#        params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
+        out, H = optimize!(m, data; iterations=200)
+        params = out.minimizer
         update!(m,params)
 
         system = compute_system(m)
@@ -61,14 +61,15 @@ end
 
 # Set up model
 
-#custom_settings = Dict{Symbol, Setting}(
-#    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
-#m = AnSchorfheide(custom_settings = custom_settings, testing = true)
+# An Schorfheide model
+custom_settings = Dict{Symbol, Setting}(
+    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
+m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 # Smets Wouters model
-custom_settings = Dict{Symbol, Setting}(
-    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2011-Q1")))
-m = SmetsWouters(custom_settings = custom_settings, testing = true)
+#custom_settings = Dict{Symbol, Setting}(
+#    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2011-Q1")))
+#m = SmetsWouters(custom_settings = custom_settings, testing = true)
 
 
 path=dirname(@__FILE__)
@@ -86,6 +87,7 @@ m<=Setting(:tpf_trgt,0.25)
 m<=Setting(:tpf_n_mh_simulations,2)
 deterministic = false
 m<=Setting(:tpf_deterministic,deterministic)
+m<=Setting(:n_presample_periods,2)
 
 # Parallelize
 m<=Setting(:use_parallel_workers,true)

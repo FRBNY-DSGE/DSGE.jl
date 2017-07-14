@@ -1,6 +1,6 @@
 using DSGE
 using Roots
-function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array; verbose::Symbol=:low)
+function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array; verbose::Symbol=:low, include_presample::Bool=true)
     # s0 is 8xn_particles
     # P0
     # yy is data matrix
@@ -26,6 +26,9 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     N_MH          = get_setting(m,:tpf_n_mh_simulations)
     n_particles   = get_setting(m,:tpf_n_particles)
     deterministic = get_setting(m,:tpf_deterministic)
+    
+    # Determine presampling periods
+    n_presample_periods = (include_presample) ? 0 : get_setting(m, :n_presample_periods)
 
     # Tolerance of fzero
     xtol = get_setting(m, :tpf_x_tolerance)
@@ -160,7 +163,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
 
                 # Update likelihood
                 lik[t] = lik[t] + loglik
-                                
+                
                 # Update value for c
                 c = update_c(m,c,acpt_rate,trgt)
                 
@@ -233,7 +236,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         # Update weights array and resample particles.
         loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,EE,n_particles,deterministic,initialize=0)
 
-       # Update likelihood
+        # Update likelihood
         lik[t]=lik[t]+loglik
 
         c = update_c(m,c,acpt_rate,trgt)
@@ -274,7 +277,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     end
 
     # Return vector of likelihood indexed by time step and Neff
-    return Neff, lik
+    return Neff[n_presample_periods+1:end], lik[n_presample_periods+1:end]
 end
 
 
