@@ -339,4 +339,43 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array{Float6
     return loglik, weights, s_lag_tempered, ε
 end
 
+function zlb_regime_indices{S<:AbstractFloat}(m::AbstractModel{S},data::Matrix{S})
+    #make sure the data matrix has all time periods when passing in or this won't work
+    T = size(data,2)
+    if n_anticipated_shocks(m) >0
+        regime_inds = Vec{Range{Int64}}(2)
+        regime_inds[1] = 1:index_zlb_start(m)-1
+        regime_inds[2] = index_zlb_start(m):T 
+    else 
+        regime_inds = Range{Int64}[1:T]
+    end
+end
+
+function zlb_regime_matrices{S<:AbstractFloat}(m::AbstractModel{S},system::System{S})
+    if !all(x -> x==0, system[:MM])
+        error("previously this error said Kalman filter and smoothers not implemented for nonzero MM however i'm not sure if this still applies to the TPF")
+    end
+    
+    if n_anticipated_shocks(m) > 0
+        n_regimes = 2
+        
+        shock_inds = inds_shocks_no_ant(m)
+        QQ_ZLB = zeros(size(QQ_ZLB))
+        QQ_preZLB[shock_inds, shock_inds] = QQ_ZLB[shock_inds,shock_inds]
+        QQs = Matrix{S}[QQ_preZLB,QQ_ZLB]
+    else 
+        n_regimes = 1
+        QQs = Matrix{S}[system[:QQ]]
+    end
+    TTTs = fill(system[:TTT], n_regimes)
+    RRRs = fill(system[:RRR], n_regimes)
+    CCCs = fill(system[:CCC], n_regimes)
+    ZZs = fill(system[:ZZ], n_regimes)
+    DDs = fill(system[:DD], n_regimes)
+    EEs = fill(system[:EE], n_regimes)
+
+    return TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs
+end
+
+
 nothing

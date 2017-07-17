@@ -83,14 +83,14 @@ end
 # Set up model
 
 # An Schorfheide model
-#custom_settings = Dict{Symbol, Setting}(
-#    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
-#m = AnSchorfheide(custom_settings = custom_settings, testing = true)
+custom_settings = Dict{Symbol, Setting}(
+    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
+m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 # Smets Wouters model
-custom_settings = Dict{Symbol, Setting}(
-    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2011-Q1")))
-m = SmetsWouters("ss1",custom_settings = custom_settings, testing = true)
+#custom_settings = Dict{Symbol, Setting}(
+ #   :date_forecast_start => Setting(:date_forecast_start, quartertodate("2011-Q1")))
+#m = SmetsWouters("ss1",custom_settings = custom_settings, testing = true)
 
 
 # Tuning Parameters
