@@ -3,13 +3,13 @@ using QuantEcon: solve_discrete_lyapunov
 
 function setup(deterministic::Bool, m::AbstractModel)#,n_particles::Int64, model)
     if deterministic
-        ##Seed random number generator
+        # Seed random number generator
         srand(1234)
-        #Load in us.txt data from schorfheide
+        # Load in us.txt data from schorfheide
         df = readtable("$path/../reference/us.txt",header=false, separator=' ')
         data = convert(Matrix{Float64},df)
         data=data'
-        #Read in matrices from schorfheide Matlab code
+        # Read in matrices from Schorfheide Matlab code
         file = "$path/../reference/matlab_variable_for_testing.h5"
         A = h5read(file, "A")
         B = h5read(file, "B")
@@ -39,10 +39,8 @@ function setup(deterministic::Bool, m::AbstractModel)#,n_particles::Int64, model
             file = "$path/../reference/optimize.h5"
             #x0 = h5read(file,"params")
             data = h5read(file, "data")'
-
             out, H = optimize!(m, data; iterations=200)
             params = out.minimizer
-
         else
             # Smets Wouters
             filesw = "/data/dsge_data_dir/dsgejl/realtime/input_data/data"
@@ -51,8 +49,8 @@ function setup(deterministic::Bool, m::AbstractModel)#,n_particles::Int64, model
             data=data'
     
             params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
-
-            push!(params, m[:e_y].value, m[:e_L].value, m[:e_w].value, m[:e_π].value, m[:e_R].value, m[:e_c].value, m[:e_i].value)
+            push!(params, m[:e_y].value, m[:e_L].value, m[:e_w].value, m[:e_π].value, 
+                          m[:e_R].value, m[:e_c].value, m[:e_i].value)
         end 
         
         update!(m,params)
@@ -60,9 +58,9 @@ function setup(deterministic::Bool, m::AbstractModel)#,n_particles::Int64, model
         R = system.transition.RRR
         S2 = system.measurement.QQ
         Φ = system.transition.TTT
-        
-        rand_mat = randn(size(S2,1),1)
+
         # Random matrix written to file for comparison with MATLAB
+        rand_mat = randn(size(S2,1),1)
         m<=Setting(:tpf_rand_mat,rand_mat)
     end
     return system, data, Φ, R, S2
@@ -79,9 +77,9 @@ end
 # Set up model
 
 # An Schorfheide model
-custom_settings = Dict{Symbol, Setting}(
-    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
-m = AnSchorfheide(custom_settings = custom_settings, testing = true)
+#custom_settings = Dict{Symbol, Setting}(
+#    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2015-Q4")))
+#m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 # Smets Wouters model
 custom_settings = Dict{Symbol, Setting}(
