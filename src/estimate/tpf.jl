@@ -156,7 +156,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
 
                 # Update weights array and resample particles
                 loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,EE,n_particles, deterministic, initialize=0)
-
+                
                 # Update likelihood
                 lik[t] = lik[t] + loglik
                 
@@ -316,10 +316,10 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array{Float6
     for n=1:n_particles
         density_arr[n]=density(φ_new, φ_old, yt, perror[:,n], EE, initialize=initialize)
     end   
-        
+    @show density_arr
     # Normalize weights
     weights = (density_arr.*weights)./mean(density_arr.*weights)
-
+    
     # Resampling
     if !deterministic
         id = multinomial_resampling(weights)

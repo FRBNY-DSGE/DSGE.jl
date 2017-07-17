@@ -1,7 +1,7 @@
 using DSGE, HDF5, DataFrames, ClusterManagers, Plots
 using QuantEcon: solve_discrete_lyapunov
 
-function setup(deterministic::Bool, m)#,n_particles::Int64, model)
+function setup(deterministic::Bool, m::AbstractModel)#,n_particles::Int64, model)
     if deterministic
         ##Seed random number generator
         srand(1234)
@@ -22,6 +22,7 @@ function setup(deterministic::Bool, m)#,n_particles::Int64, model)
 	h5open("$path/../reference/mutationRandomMatrix.h5","w") do file
             write(file,"rand_mat",rand_mat)
     	end
+        m<=Setting(:tpf_rand_mat,rand_mat)
         
         # Set variables within system
     	transition_equation = Transition(Φ, R)
@@ -33,38 +34,49 @@ function setup(deterministic::Bool, m)#,n_particles::Int64, model)
         # update!(m,params)
     else
         # If not testing, compute system in Julia, get better starting parameters s.t. code runs
-        rand_mat = randn(size(S2,1),1)
-        # An Schorfheide
-        # file = "$path/../reference/optimize.h5"
-        # x0 = h5read(file,"params")
-        # data = h5read(file, "data")'
+        if typeof(m)==AnSchorfheide{Float64} 
+            # An Schorfheide
+            file = "$path/../reference/optimize.h5"
+            #x0 = h5read(file,"params")
+            data = h5read(file, "data")'
+
+            out, H = optimize!(m, data; iterations=200)
+            params = out.minimizer
+
+        else
+            # Smets Wouters
+            filesw = "/data/dsge_data_dir/dsgejl/realtime/input_data/data"
+            data = readcsv("$filesw/realtime_spec=smets_wouters_hp=true_vint=110110.csv",header=true)
+            data = convert(Array{Float64,2}, data[1][:,2:end])
+            data=data'
+    
+            params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
+
+            push!(params, m[:e_y].value, m[:e_L].value, m[:e_w].value, m[:e_π].value, m[:e_R].value, m[:e_c].value, m[:e_i].value)
+            out, H = optimize!(m, data; iterations=200)
+            params = out.minimizer
+            update!(m,params)
+        end 
         
-        # Smets Wouters
-        filesw = "/data/dsge_data_dir/dsgejl/realtime/input_data/data"
-        data = readcsv("$filesw/realtime_spec=smets_wouters_hp=true_vint=110110.csv",header=true)
-        data = convert(Array{Float64,2}, data[1][:,2:end])
-        data=data'
-       
-        # minimizer = h5read(file,"minimizer")
-        # update!(m,x0)
-        # x0=Float64[p.value for p in m.parameters]
-
-        params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
-
-        push!(params, m[:e_y].value, m[:e_L].value, m[:e_w].value, m[:e_π].value, m[:e_R].value, m[:e_c].value, m[:e_i].value)
-
-        #out, H = optimize!(m, data; iterations=200)
-        #params = out.minimizer
-
         update!(m,params)
-       
         system = compute_system(m)
         R = system.transition.RRR
         S2 = system.measurement.QQ
         Φ = system.transition.TTT
-
+        
+        rand_mat = randn(size(S2,1),1)
+        # Random matrix written to file for comparison with MATLAB
+        m<=Setting(:tpf_rand_mat,rand_mat)
+        
     end
     return system, data, Φ, R, S2
+end
+
+path=dirname(@__FILE__)
+
+# For comparison test
+good_likelihoods = h5open("$path/../reference/tpf_test_likelihoods.h5","r") do file
+    read(file, "test_likelihoods")
 end
 
 
@@ -80,12 +92,6 @@ custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start => Setting(:date_forecast_start, quartertodate("2011-Q1")))
 m = SmetsWouters("ss1",custom_settings = custom_settings, testing = true)
 
-path=dirname(@__FILE__)
-
-# For comparison test
-good_likelihoods = h5open("$path/../reference/tpf_test_likelihoods.h5","r") do file
-    read(file, "test_likelihoods")
-end
 
 # Tuning Parameters
 m<=Setting(:tpf_rstar,2.0)
@@ -97,13 +103,12 @@ m<=Setting(:n_presample_periods,2)
 deterministic = false
 m<=Setting(:tpf_deterministic,deterministic)
 
-# Random matrix written to file for comparison with MATLAB
-m<=Setting(:tpf_rand_mat,rand_mat)
+
 # Parallelize
 m<=Setting(:use_parallel_workers,true)
 # Set tolerance in fzero
-m<=Setting(:tpf_x_tolerance,1e-3)
-#m<=Setting(:tpf_x_tolerance, zero(float(0)))
+#m<=Setting(:tpf_x_tolerance,1e-3)
+m<=Setting(:tpf_x_tolerance, zero(float(0)))
 
 # Set number of particles
 n_particles = 4000
@@ -120,7 +125,7 @@ m<=Setting(:tpf_n_particles, n_particles)
 # Test 4000 particles, testing = true
 
 deterministic = false
-m<=Setting(:tpf_deterministic, true)
+m<=Setting(:tpf_deterministic, deterministic)
 
 sys, data, Φ, R, S2 = setup(deterministic, m)
 s0 = zeros(size(sys[:TTT])[1])
@@ -131,9 +136,7 @@ neff, lik = tpf(m, data, sys, s0, P0)
 toc()
 
 if (n_particles == 4000) & deterministic
-    @test good_likelihoods == lik
-    @show good_likelihoods
-    @show lik
+    @ test lik==good_likelihoods
     println("Test passed for 4000 particles in testing mode.")
 end
 
