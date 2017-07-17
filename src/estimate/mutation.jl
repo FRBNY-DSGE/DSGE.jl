@@ -9,19 +9,19 @@ s_init: The starting state before mutation.
 ε_init: The starting epsilon (state error) before mutation.
 """
 
-function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array{Float64,2})
+function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array{Float64,2}, nonmissing::Array{Bool,1})
     #------------------------------------------------------------------------
     # Setup
     #------------------------------------------------------------------------
     # Set path--used for testing
     path = dirname(@__FILE__)
 
-    DD = system.measurement.DD
-    ZZ = system.measurement.ZZ
-    EE = system.measurement.EE
-    RRR = system.transition.RRR
+    DD = system.measurement.DD[nonmissing]
+    ZZ = system.measurement.ZZ[nonmissing,:]
+    EE = system.measurement.EE[nonmissing,nonmissing]
+    RRR = system.transition.RRR[:,nonmissing]
     TTT = system.transition.TTT
-    QQ = system.measurement.QQ
+    QQ = system.measurement.QQ[nonmissing,nonmissing]
     sqrtS2 = RRR*Matrix(chol(nearestSPD(QQ)))'
 
     # Initialize ind_s and ind_ε

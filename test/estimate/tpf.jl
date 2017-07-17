@@ -53,9 +53,6 @@ function setup(deterministic::Bool, m::AbstractModel)#,n_particles::Int64, model
             params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
 
             push!(params, m[:e_y].value, m[:e_L].value, m[:e_w].value, m[:e_π].value, m[:e_R].value, m[:e_c].value, m[:e_i].value)
-            out, H = optimize!(m, data; iterations=200)
-            params = out.minimizer
-            update!(m,params)
         end 
         
         update!(m,params)
@@ -67,7 +64,6 @@ function setup(deterministic::Bool, m::AbstractModel)#,n_particles::Int64, model
         rand_mat = randn(size(S2,1),1)
         # Random matrix written to file for comparison with MATLAB
         m<=Setting(:tpf_rand_mat,rand_mat)
-        
     end
     return system, data, Φ, R, S2
 end
@@ -88,10 +84,11 @@ custom_settings = Dict{Symbol, Setting}(
 m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 # Smets Wouters model
-#custom_settings = Dict{Symbol, Setting}(
- #   :date_forecast_start => Setting(:date_forecast_start, quartertodate("2011-Q1")))
-#m = SmetsWouters("ss1",custom_settings = custom_settings, testing = true)
-
+custom_settings = Dict{Symbol, Setting}(
+    :date_forecast_start => Setting(:date_forecast_start, quartertodate("2011-Q2")))
+m = SmetsWouters("ss1",custom_settings = custom_settings, testing = true)
+m<= Setting(:date_conditional_end, quartertodate("2011-Q1"))
+m<= Setting(:date_forecast_start, quartertodate("2011-Q2"))
 
 # Tuning Parameters
 m<=Setting(:tpf_rstar,2.0)
@@ -100,12 +97,14 @@ m<=Setting(:tpf_acpt_rate,0.5)
 m<=Setting(:tpf_trgt,0.25)
 m<=Setting(:tpf_n_mh_simulations,2)
 m<=Setting(:n_presample_periods,2)
+
 deterministic = false
 m<=Setting(:tpf_deterministic,deterministic)
 
 
 # Parallelize
 m<=Setting(:use_parallel_workers,true)
+
 # Set tolerance in fzero
 #m<=Setting(:tpf_x_tolerance,1e-3)
 m<=Setting(:tpf_x_tolerance, zero(float(0)))
@@ -124,10 +123,11 @@ m<=Setting(:tpf_n_particles, n_particles)
 
 # Test 4000 particles, testing = true
 
+sys, data, Φ, R, S2 = setup(deterministic, m)
+
 deterministic = false
 m<=Setting(:tpf_deterministic, deterministic)
 
-sys, data, Φ, R, S2 = setup(deterministic, m)
 s0 = zeros(size(sys[:TTT])[1])
 P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 
@@ -136,8 +136,8 @@ neff, lik = tpf(m, data, sys, s0, P0)
 toc()
 
 if (n_particles == 4000) & deterministic
-    @ test lik==good_likelihoods
-    println("Test passed for 4000 particles in testing mode.")
+    @test lik==good_likelihoods
+    println("Test passed for AnSchorfheide with 4000 particles in deterministic mode.")
 end
 
 
