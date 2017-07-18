@@ -3,7 +3,7 @@
 
 function kalman_filter_likvec{S<:AbstractFloat}(regime_indices::Vector{Range{Int64}},
     data::Matrix{S}, TTTs::Vector{Matrix{S}}, RRRs::Vector{Matrix{S}}, CCCs::Vector{Vector{S}},
-    QQs::Vector{Matrix{S}}, ZZs::Vector{Matrix{S}}, DDs::Vector{Vector{S}}, EEs::Vector{Matrix{S}},
+    QQs::Vector{Matrix{S}}, ZZs::Vector{Matrix{S}}, DDs::Vector{Vector{S}}, EEs::Vector{Matrix{S}},log_lik_vec::Vector{Float64},
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
     allout::Bool = true, n_presample_periods::Int = 0)
 
@@ -16,7 +16,7 @@ function kalman_filter_likvec{S<:AbstractFloat}(regime_indices::Vector{Range{Int
     z = z0
     P = P0
     log_likelihood = zero(S)
-    log_lik_vec = zeros(T)
+
     if allout
         pred  = zeros(S, Nz, T)
         vpred = zeros(S, Nz, Nz, T)
@@ -34,9 +34,10 @@ function kalman_filter_likvec{S<:AbstractFloat}(regime_indices::Vector{Range{Int
         T0 = i == 1 ? n_presample_periods : 0
 
         if allout
+      
             L, z, P, pred[:,ts], vpred[:,:,ts], filt[:,ts], vfilt[:,:,ts],
             yprederror[:,ts], ystdprederror[:,ts], _, _, z0_, P0_        =
-                kalman_filter(regime_data, TTTs[i], RRRs[i], CCCs[i], QQs[i], ZZs[i], DDs[i], EEs[i], z, P;
+                kalman_filter_likvec(regime_data, TTTs[i], RRRs[i], CCCs[i], QQs[i], ZZs[i], DDs[i], EEs[i],log_lik_vec, z, P;
                               allout = true, n_presample_periods = T0)
 
             # If `n_presample_periods > 0`, then `z0_` and `P0_` are returned as
@@ -49,12 +50,12 @@ function kalman_filter_likvec{S<:AbstractFloat}(regime_indices::Vector{Range{Int
                 z0, P0 = z0_, P0_
             end
         else
-            L, z, P = kalman_filter(regime_data, TTTs[i], RRRs[i], CCCs[i], QQs[i], ZZs[i], DDs[i], EEs[i], z, P,
+              
+            L, z, P = kalman_filter_likvec(regime_data, TTTs[i], RRRs[i], CCCs[i], QQs[i], ZZs[i], DDs[i], EEs[i], log_lik_vec, z, P,
                                     allout = false, n_presample_periods = T0)
         end
         log_likelihood += L
-        push!(log_lik_vec, L)
-    end
+      end
 
     if allout
         rmse = sqrt(mean((yprederror.^2)', 1))
@@ -67,10 +68,10 @@ function kalman_filter_likvec{S<:AbstractFloat}(regime_indices::Vector{Range{Int
 end
 function kalman_filter_likvec{S<:AbstractFloat}(data::Matrix{S},
     TTT::Matrix{S}, RRR::Matrix{S}, CCC::Vector{S},
-    QQ::Matrix{S}, ZZ::Matrix{S}, DD::Vector{S}, EE::Matrix{S},
+    QQ::Matrix{S}, ZZ::Matrix{S}, DD::Vector{S}, EE::Matrix{S}, log_lik_vec::Vector{Float64},
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
     allout::Bool = true, n_presample_periods::Int = 0)
-
+  
     # Dimensions
     T  = size(data, 2) # number of periods of data
     Nz = size(TTT,  1) # number of states
@@ -94,7 +95,7 @@ function kalman_filter_likvec{S<:AbstractFloat}(data::Matrix{S},
 
     # Initialize outputs
     log_likelihood = zero(S)
-    log_lik_vec = zeros(T)
+   
     if allout
         pred          = zeros(S, Nz, T)
         vpred         = zeros(S, Nz, Nz, T)

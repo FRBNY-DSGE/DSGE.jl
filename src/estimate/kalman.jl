@@ -2,16 +2,12 @@
 ```
 Kalman{S<:AbstractFloat}
 ```
-
 ### Fields:
-
 - `L`: value of the average log likelihood function of the SSM under assumption that
   observation noise ϵ(t) is normally distributed
 - `zend`: state vector in the last period for which data is provided
 - `Pend`: variance-covariance matrix for `zend`
-
 #### Fields filled in when `allout` in a call to `kalman_filter`:
-
 - `pred`: a `Nz` x `T` matrix containing one-step predicted state vectors
 - `vpred`: a `Nz` x `Nz` x `T` matrix containing mean square errors of predicted
   state vectors
@@ -37,7 +33,7 @@ immutable Kalman{S<:AbstractFloat}
     vfilt::Array{S, 3}     # mean squared errors of filtered state vectors
     z0::Vector{S}          # starting-period state vector
     vz0::Matrix{S}         # starting-period variance-covariance matrix for the states
-    L_vec::Vector{S} #vector of likelihoods for each time
+    L_vec::Vector{S}
 end
 
 function Kalman{S<:AbstractFloat}(L::S,
@@ -53,8 +49,8 @@ function Kalman{S<:AbstractFloat}(L::S,
                                   rmsd::Matrix{S}          = Matrix{S}(),
                                   z0::Vector{S}            = Vector{S}(),
                                   P0::Matrix{S}            = Matrix{S}(),
-                                  L_vec::Vector{S}         = Vector{S}())
-
+                                  L_vec::Vector{S}       = Vector{S}())
+                                   
     return Kalman{S}(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, P0, L_vec)
 end
 
@@ -71,7 +67,6 @@ function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
     k2::Kalman{S}; allout::Bool = true)
 
     L = k1[:L] + k2[:L]
-    push!(L_vec,k1[:L], k2[:L])
     zend = k2[:zend]
     Pend = k2[:Pend]
 
@@ -88,7 +83,7 @@ function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
         P0    = k1[:vz0]
 
         return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror,
-            rmse, rmsd, filt, vfilt, z0, P0, L_vec)
+            rmse, rmsd, filt, vfilt, z0, P0, lik_vec)
     else
         return Kalman(L, zend, Pend)
     end
@@ -98,7 +93,6 @@ end
 ```
 zlb_regime_indices(m, data)
 ```
-
 Returns a Vector{Range{Int64}} of index ranges for the pre- and post-ZLB regimes.
 """
 function zlb_regime_indices{S<:AbstractFloat}(m::AbstractModel{S}, data::Matrix{S})
@@ -119,7 +113,6 @@ end
 ```
 zlb_regime_matrices(m, system)
 ```
-
 Returns `TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs`, an 8-tuple of
 `Vector{Matrix{S}}`s and `Vector{Vector{S}}`s of system matrices for the pre-
 and post-ZLB regimes. Of these, only `QQ` changes from pre- to post-ZLB: the
