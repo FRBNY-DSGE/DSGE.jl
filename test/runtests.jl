@@ -18,7 +18,7 @@ my_tests = [
             "estimate/posterior",
             "estimate/hessizero",
             "estimate/hessian",
-            "estimate/csminwel"
+            "estimate/csminwel",
             "estimate/optimize", 
             "estimate/eig",
             "estimate/metropolis_hastings",

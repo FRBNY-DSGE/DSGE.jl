@@ -1,19 +1,62 @@
 function plot_tpf()
- #   using DSGE, HDF5, DataFrames, Plots
- #   using QuantEcon: solve_discrete_lyapunov
+    #using DSGE, HDF5, DataFrames, Plots
+    #using QuantEcon: solve_discrete_lyapunov
+    custom_settings= Dict{Symbol,Setting}(
+        :date_forecast_start => Setting(:date_forecast_start, quartertodate("2011-Q2")))
+    m = SmetsWouters("ss1",custom_settings = custom_settings, testing=true)
+    m <= Setting(:date_conditional_end,quartertodate("2011-Q1"))
+    m <= Setting(:date_forecast_start, quartertodate("2011-Q2"))
 
-    m = AnSchorfheide(testing=true)
     path = dirname(@__FILE__)
+
+    filesw = "/data/dsge_data_dir/dsgejl/realtime/input_data/data"
+    data = readcsv("$filesw/realtime_spec=smets_wouters_hp=true_vint=110110.csv",header=true)
+    data=convert(Array{Float64,2},data[1][:,2:end])
+    data = data'
+
+    params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
+    push!(params, m[:e_y].value, m[:e_L].value, m[:e_w].value, m[:e_π].value, m[:e_R].value, m[:e_c].value, m[:e_i].value)
+    update!(m,params)
+    system = compute_system(m)
+    R = system.transition.RRR
+    S2 = system.measurement.QQ
+    Φ = system.transition.TTT
+
+    rand_mat = randn(size(S2,1),1)
+    m<=Setting(:tpf_rand_mat,rand_mat)
 
     m<=Setting(:tpf_rstar,2.0)
     m<=Setting(:tpf_N_MH, 2)
     m<=Setting(:tpf_c,0.1)
     m<=Setting(:tpf_acpt_rate,0.5)
     m<=Setting(:tpf_trgt,0.25)
-    n_particles=500
+    n_particles=4000
     m<=Setting(:tpf_n_particles,n_particles)
     m<=Setting(:use_parallel_workers, true)
-    m<=Setting(:x_tolerance, 1e-3)
+    m<=Setting(:x_tolerance, zero(float(0)))
+    m<=Setting(:tpf_deterministic, false)
+    m<=Setting(:use_parallel_workers,true)
+    
+    s0 = zeros(size(system[:TTT])[1])
+    P0= nearestSPD(solve_discrete_lyapunov(Φ,R*S2*R'))
+       
+    #kalman filter
+    kalman_out = filter(m,data,s0,P0,allout=true)
+    @show kalman_out[:L_vec]
+    neff, lik = tpf(m,data,system,s0,P0)
+     h5open("$path/../../test/reference/lik_for_plot.h5","w") do file
+        write(file, "kalman_lik",kalman_out[:L_vec])
+        write(file, "tpf_lik", lik)
+    end
+
+    #plotly()
+    #plot(kalman_out, color=:blue, linewidth=3, label="Kalman")
+    #plot!(lik, color=:green, linewidth=2, label="TPF")
+    #plot!(legend=:bottomright, xlabel="Time", ylabel="Log likelihood")
+    #gui()
+
+aaa
+###########
     
     srand(1234)
     df = readtable("$path/../../test/reference/us.txt",header=false,separator=' ')
@@ -38,17 +81,16 @@ function plot_tpf()
     update!(m,params)
     s0=zeros(8)
     P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
-     
-
-    neff, lik = tpf(m,data,s0,P0,testing=true)
-    h5open("$path/../../test/reference/output_likelihoods_500_testing.h5","w") do file
+  
+  h5open("$path/../../test/reference/output_likelihoods_500_testing.h5","w") do file
         write(file, "julia_likelihoods",lik)
     end
-    
+   
+ 
     #4000 particles. testing
     n_particles = 4000
     m<=Setting(:tpf_n_particles,n_particles)
-    neff,lik = tpf(m,data,s0,P0,testing=true)
+    neff,lik = tpf(m,data,s0,P0)
     h5open("$path/../../test/reference/output_likelihoods_4000_testing.h5","w") do file
         write(file,"julia_likelihoods",lik)
     end
