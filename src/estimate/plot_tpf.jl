@@ -26,7 +26,7 @@ function plot_tpf()
     m<=Setting(:tpf_rand_mat,rand_mat)
 
     m<=Setting(:tpf_rstar,2.0)
-    m<=Setting(:tpf_N_MH, 2)
+    m<=Setting(:tpf_N_MH, 10)
     m<=Setting(:tpf_c,0.1)
     m<=Setting(:tpf_acpt_rate,0.5)
     m<=Setting(:tpf_trgt,0.25)
@@ -44,7 +44,7 @@ function plot_tpf()
     kalman_out = filter(m,data,s0,P0,allout=true)
     @show kalman_out[:L_vec]
     neff, lik = tpf(m,data,system,s0,P0)
-     h5open("$path/../../test/reference/lik_for_plot.h5","w") do file
+     h5open("$path/../../test/reference/lik_for_plot_4000_5mh.h5","w") do file
         write(file, "kalman_lik",kalman_out[:L_vec])
         write(file, "tpf_lik", lik)
     end
