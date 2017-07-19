@@ -4,8 +4,9 @@ plot_history_and_forecast(var, history, forecast; output_file = "",
     start_date = Nullable{Date}(), end_date = Nullable{Date}(),
     hist_label = \"History\", forecast_label = \"Forecast\",
     hist_color = :black, forecast_mean_color = :red,
-    forecast_band_color = RGBA(0, 0, 1, 0.1), tick_size = 5, legend = :best,
-    plot_handle = plot())
+    forecast_band_color = RGBA(0, 0, 1, 0.1),
+    forecast_mean_style = :solid, tick_size = 5, legend = :best,
+    plot_handle = plot(), title = "")
 ```
 
 Plot `var` from `history` and `forecast`. If these correspond to a
@@ -27,9 +28,11 @@ full-distribution forecast, the forecast will be a fan chart.
 - `hist_color::Colorant`
 - `forecast_mean_color::Colorant`
 - `forecast_band_color::Colorant`
+- `forecast_mean_style::Symbol`: line style for forecast mean line
 - `tick_size::Int`: x-axis (time) tick size in units of years
 - `legend`
 - `plot_handle::Plots.Plot`: a plot handle to add `history` and `forecast` to
+- `title::String`: a plot title
 
 ### Output
 
@@ -44,9 +47,11 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
                                    hist_color::Colorant = RGBA(0., 0., 0., 1.),
                                    forecast_mean_color::Colorant = RGBA(1., 0., 0., 1.),
                                    forecast_band_color::Colorant = RGBA(0., 0., 1., 0.1),
+                                   forecast_mean_style::Symbol = :solid,
                                    tick_size::Int = 5,
                                    legend = :best,
-                                   plot_handle::Plots.Plot = plot())
+                                   plot_handle::Plots.Plot = plot(),
+                                   title::String = "")
     # Concatenate MeansBands
     combined = cat(history, forecast)
 
@@ -87,10 +92,13 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     plot!(p, datenums[hist_inds],  combined.means[hist_inds,  var], label = hist_label,
           linewidth = 2, linecolor = hist_color)
     plot!(p, datenums[fcast_inds], combined.means[fcast_inds, var], label = forecast_label,
-          linewidth = 2, linecolor = forecast_mean_color)
+          linewidth = 2, linecolor = forecast_mean_color, linestyle = forecast_mean_style)
 
     # Set date ticks
     date_ticks!(p, start_date, end_date, tick_size)
+
+    # Add title
+    title!(p, title)
 
     # Save if output_file provided
     save_plot(p, output_file)
@@ -103,25 +111,49 @@ function plot_history_and_forecast(var::Symbol, histories::Vector{MeansBands}, f
                                    start_date::Nullable{Date} = Nullable{Date}(),
                                    end_date::Nullable{Date} = Nullable{Date}(),
                                    output_file::String = "",
-                                   hist_label::String = "History",
-                                   forecast_label::String = "Forecast",
-                                   hist_color::Colorant = RGBA(0., 0., 0., 1.),
-                                   forecast_mean_color::Colorant = RGBA(1., 0., 0., 1.),
-                                   forecast_band_color::Colorant = RGBA(0., 0., 1., 0.1),
+                                   hist_label::Vector{String} = Vector{String}(),
+                                   forecast_label::Vector{String} = Vector{String}(),
+                                   hist_color::Vector{Colorant} = Vector{Colorant}(),
+                                   forecast_mean_color::Vector{Colorant} = Vector{Colorant}(),
+                                   forecast_band_color::Vector{Colorant} = Vector{Colorant}(),
+                                   forecast_mean_style::Vector{Symbol} = Vector{Symbol}(),
                                    tick_size::Int = 5,
                                    legend = :best,
-                                   plot_handle::Plots.Plot = plot())
+                                   plot_handle::Plots.Plot = plot(),
+                                   title::String = "")
 
     @assert length(histories) == length(forecasts) "histories and forecasts must be same length"
 
-    for (history, forecast) in zip(histories, forecasts)
-       plot_handle =  plot_history_and_forecast(var, history, forecast;
+    if isempty(hist_label)
+        hist_label = fill("History", length(histories))
+    end
+    if isempty(forecast_label)
+        forecast_label = fill("Forecast", length(forecasts))
+    end
+    if isempty(hist_color)
+        hist_color = fill(RGBA(0., 0., 0., 1.), length(histories))
+    end
+    if isempty(forecast_mean_color)
+        forecast_mean_color = fill(RGBA(1., 0., 0., 1.), length(forecasts))
+    end
+    if isempty(forecast_band_color)
+        forecast_band_color = fill(RGBA(0., 0., 1., 0.1), length(forecasts))
+    end
+    if isempty(forecast_mean_style)
+        forecast_mean_style = fill(:solid, length(forecasts))
+    end
+
+
+    for (i,(history, forecast)) in enumerate(zip(histories, forecasts))
+        plot_handle = plot_history_and_forecast(var, history, forecast;
                             start_date = start_date, end_date = end_date,
                             output_file = output_file,
-                            hist_label = hist_label, forecast_label = forecast_label,
-                            hist_color = hist_color, forecast_mean_color = forecast_mean_color,
-                            forecast_band_color = forecast_band_color,
-                            tick_size = tick_size, legend = legend, plot_handle = plot_handle)
+                            hist_label = hist_label[i], forecast_label = forecast_label[i],
+                            hist_color = hist_color[i], forecast_mean_color = forecast_mean_color[i],
+                            forecast_band_color = forecast_band_color[i],
+                            forecast_mean_style = forecast_mean_style[i],
+                            tick_size = tick_size, legend = legend, plot_handle = plot_handle,
+                            title = title)
     end
 
     return plot_handle
