@@ -62,7 +62,8 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array
     while j < n_steps
 
         para_new = para + c * cov_mat * step
-        post_new = posterior!(m, augment_draw(para_new, m), data; φ_smc = tempering_schedule[i],
+        post_new = posterior!(m, vec(para_new), data; 
+                              φ_smc = tempering_schedule[i],
                               sampler = true)
         like_new = post_new - prior(m)
 
@@ -87,7 +88,7 @@ function mutation_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init::Array
         step_prob = rand()
         j += 1
     end
-    return augment_draw(para, m), like, post, accept
+    return para, like, post, accept
 end
 
 
