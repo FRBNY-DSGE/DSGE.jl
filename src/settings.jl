@@ -36,7 +36,7 @@ Base.promote_rule(::Type{Setting{Bool}}, ::Type{Bool}) = promote_rule(Bool, Bool
 
 Base.string(s::Setting{String}) = string(s.value)
 
-to_filestring(s::Setting) = "$(s.code)=$(s.value)"
+to_filestring(s::Setting) = string(s.code) * "=" * string(s.value)
 
 # key, value constructor
 Setting(key, value) = Setting(key, value, false, "", "")

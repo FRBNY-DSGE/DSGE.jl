@@ -1,6 +1,6 @@
 """
 ```
-AltPolicy(rule, [forecast_init = identity])
+AltPolicy(rule, [forecast_init = identity], [color = :black], [linestyle = :solid])
 ```
 
 Type defining an alternative policy rule.
@@ -20,18 +20,34 @@ Type defining an alternative policy rule.
   must return a new matrix of shocks and a new initial state
   vector. If no adjustments to shocks or initial state vectors are
   necessary under the policy rule, this field may be omitted.
+
+- `color::Colorant`: The color to plot this alternative policy in
+
+- `linestyle::Symbol`: Line style for forecast plots under this
+  alternative policy. See options from `Plots.jl`
+
 """
 immutable AltPolicy
-    rule::Function
+    key::Symbol
+    eqcond::Function
+    solve::Function
+    setup::Function
     forecast_init::Function
     color::Colorant
     linestyle::Symbol
 end
 
-function AltPolicy(rule; forecast_init::Function = identity,
-                   color::Colorant = RGB(0., 0., 1.), linestyle::Symbol = :solid)
+function AltPolicy(key, eqcond_fcn, solve_fcn; forecast_init::Function = identity,
+                   setup::Function = identity, color::Colorant = RGB(0., 0., 1.),
+                   linestyle::Symbol = :solid)
 
-    AltPolicy(rule, forecast_init, color, linestyle)
+    AltPolicy(key, eqcond_fcn, solve_fcn, setup, forecast_init, color, linestyle)
 end
 
-Base.show(io::IO, a::AltPolicy) = show(io, a.rule)
+Base.string(a::AltPolicy) = string(a.key)
+
+function eqcond_altpolicy(m::AbstractModel)
+    altpol = alternative_policy(m)
+    altpol.eqcond(m)
+end
+

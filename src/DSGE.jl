@@ -102,7 +102,7 @@ module DSGE
         prepare_meansbands_tables_shockdec, write_meansbands_tables_all,
 
         # alternative_policy/
-        AltPolicy,
+        AltPolicy, eqcond_altpolicy,
 
         # plot/
         plot_irfs, plot_history_and_forecast, hair_plot, plot_forecast_comparison,
