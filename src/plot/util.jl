@@ -80,16 +80,33 @@ function get_date_limit_indices(start_date::Date, end_date::Date,
     return start_ind, end_ind
 end
 
-function first_bands_period(var::Symbol, mb::MeansBands)
+function has_nonidentical_bands(var::Symbol, mb::MeansBands)
     df = mb.bands[var]
     cols = setdiff(names(df), [:date])
     for t = 1:size(df, 1)
         bandvals = convert(Matrix, df[t, cols])
         if !all(x -> x ≈ mb.means[t, var], bandvals)
-            return t
+            return true
         end
     end
-    return -1
+    return false
+end
+
+function get_bands_indices(var::Symbol, history::MeansBands, forecast::MeansBands,
+                           hist_inds::UnitRange{Int}, fcast_inds::UnitRange{Int})
+
+    hist_bands  = has_nonidentical_bands(var, history)
+    fcast_bands = has_nonidentical_bands(var, forecast)
+
+    if hist_bands && fcast_bands
+        return hist_inds.start:fcast_inds.stop
+    elseif hist_bands
+        return hist_inds
+    elseif fcast_bands
+        return fcast_inds
+    else
+        return 1:0
+    end
 end
 
 function save_plot(p::Plots.Plot, output_file::String = "")
