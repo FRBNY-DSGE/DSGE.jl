@@ -32,7 +32,6 @@ function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1
     c = get_setting(m,:tpf_c)
     N_MH = get_setting(m, :tpf_n_mh_simulations)
     deterministic = get_setting(m, :tpf_deterministic)
-    rand_mat = get_setting(m,:tpf_rand_mat)
 
     # Initialize acceptance counter to zero
     acpt = 0
@@ -42,7 +41,8 @@ function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1
     #------------------------------------------------------------------------
     for i=1:N_MH
         
-        if (!deterministic) rand_mat = randn(size(QQ,1),1) end
+        if (!deterministic) rand_mat = randn(size(QQ,1),1) 
+        else rand_mat = get_setting(m,:tpf_rand_mat) end
                 # Generate new draw of ε from a N(ε_init, c²cov_s) distribution (defined in tpf.jl), c tuning parameter
         ε_new=ε_init + c*Matrix(chol(nearestSPD(cov_s)))'*rand_mat
 

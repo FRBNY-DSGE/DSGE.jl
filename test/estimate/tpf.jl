@@ -6,7 +6,7 @@ path=dirname(@__FILE__)
 
 # Set up model
 function setup_model(model_type::String,n_particles::Int64,deterministic::Bool,parallel::Bool)
-    
+
     if (model_type=="AnSchorfheide")
         # An Schorfheide model
         custom_settings = Dict{Symbol, Setting}(:date_forecast_start => 
@@ -112,24 +112,25 @@ end
 
 deterministic=false
 parallel=true
+n_particles=4000
+
+if parallel
+    my_procs = addprocs_sge(40,queue="background.q")
+    @everywhere using DSGE
+end
 
 ### Tests:
-output = []
-for i=3500
-    m = setup_model("SmetsWouters",i,deterministic,parallel)
-    m, sys, data, Φ, R, S2 = optimize_setup(m,deterministic)
-    s0 = zeros(size(sys[:TTT])[1])
-    P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
+m = setup_model("SmetsWouters", n_particles, deterministic, parallel)
+m, sys, data, Φ, R, S2 = optimize_setup(m,deterministic)
+s0 = zeros(size(sys[:TTT])[1])
+P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 
-    tic()
-    neff, lik = tpf(m, data, sys, s0, P0)
-    total_time = toc()
+tic()
+neff, lik = tpf(m, data, sys, s0, P0)
+total_time = toc()
 
-    type_m = typeof(m)
-    println("$i Particles, $type_m, elapsed time: $total_time seconds\n")
-    push!(output,"$i Particles, $type_m, elapsed time: $total_time seconds\n")    
-end
-println(output)
+type_m = typeof(m)
+println("$n_particles Particles, $type_m, elapsed time: $total_time seconds\n")
 
 # For comparison test
 good_likelihoods = h5open("$path/../reference/tpf_test_likelihoods.h5","r") do file
@@ -147,7 +148,9 @@ end
 #     write(file,"test_likelihoods",lik)
 # end
 
+rmprocs(my_procs)
 
+nothing
 
 
 

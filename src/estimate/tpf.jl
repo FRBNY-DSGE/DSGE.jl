@@ -191,9 +191,13 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
                 acpt_vec=zeros(n_particles)
                 print("Mutation ")
                 tic()
+
                 if parallel
                     print("(in parallel) ")
-                    out = pmap(i->mutation(m,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
+                    #out = pmap(i->mutation(m,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
+                    out = @sync @parallel (hcat) for i=1:n_particles
+                        mutation(m,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
+                    end
                 else 
                     print("(not parallel) ")
                     out = [mutation(m,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
@@ -259,7 +263,10 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         acpt_vec = zeros(n_particles)
   
         if parallel
-            out = pmap(i -> mutation(m,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
+            #out = pmap(i -> mutation(m,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
+            out = @sync @parallel (hcat) for i=1:n_particles
+                        mutation(m,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
+                end
         else 
             out = [mutation(m,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
         end
