@@ -115,7 +115,7 @@ parallel=true
 
 ### Tests:
 output = []
-for i=1500:500:3500
+for i=3500
     m = setup_model("SmetsWouters",i,deterministic,parallel)
     m, sys, data, Φ, R, S2 = optimize_setup(m,deterministic)
     s0 = zeros(size(sys[:TTT])[1])
