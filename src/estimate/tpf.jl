@@ -1,4 +1,4 @@
-using DSGE
+using DSGE, ClusterManagers
 using Roots
 function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array; verbose::Symbol=:low, include_presample::Bool=true)
     # s0 is 8xn_particles
