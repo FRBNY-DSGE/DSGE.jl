@@ -139,16 +139,28 @@ end
 
 """
 ```
-function read_mb(fn::String)
+read_mb(fn::String)
+
+read_mb(m, input_type, cond_type, output_var; forecast
 ```
-Read in a `MeansBands` object saved in `fn`.
+
+Read in a `MeansBands` object saved in `fn`, or use the model object `m` to
+determine the file location.
 """
 function read_mb(fn::String)
     @assert isfile(fn) "File $fn could not be found"
-    mb = jldopen(fn, "r") do f
+    jldopen(fn, "r") do f
         read(f, "mb")
     end
-    mb
+end
+
+function read_mb(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+                 output_var::Symbol; forecast_string::String = "")
+
+    files = get_meansbands_output_files(m, input_type, cond_type, [output_var];
+                                        forecast_string = forecast_string,
+                                        fileformat = :jld)
+    read_mb(files[output_var])
 end
 
 
