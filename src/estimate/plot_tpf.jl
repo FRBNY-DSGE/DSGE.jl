@@ -26,27 +26,49 @@ function plot_tpf()
     m<=Setting(:tpf_rand_mat,rand_mat)
 
     m<=Setting(:tpf_rstar,2.0)
-    m<=Setting(:tpf_N_MH, 10)
+    m<=Setting(:tpf_N_MH, 2)
     m<=Setting(:tpf_c,0.1)
     m<=Setting(:tpf_acpt_rate,0.5)
     m<=Setting(:tpf_trgt,0.25)
     n_particles=4000
     m<=Setting(:tpf_n_particles,n_particles)
-    m<=Setting(:use_parallel_workers, true)
+    m<=Setting(:use_parallel_workers, false)
     m<=Setting(:x_tolerance, zero(float(0)))
     m<=Setting(:tpf_deterministic, false)
-    m<=Setting(:use_parallel_workers,true)
+   
     
     s0 = zeros(size(system[:TTT])[1])
     P0= nearestSPD(solve_discrete_lyapunov(Φ,R*S2*R'))
-       
+    
+
+#=
     #kalman filter
     kalman_out = filter(m,data,s0,P0,allout=true)
-    @show kalman_out[:L_vec]
+    kalman_out[:L_vec]
+
     neff, lik = tpf(m,data,system,s0,P0)
-     h5open("$path/../../test/reference/lik_for_plot_4000_5mh.h5","w") do file
+     h5open("$path/../../test/reference/lik_for_plot_4000_10mh.h5","w") do file
         write(file, "kalman_lik",kalman_out[:L_vec])
         write(file, "tpf_lik", lik)
+    end
+    @show mean(abs(lik-kalman_lik))
+=#
+
+    #for getting distribution of errors
+    kalman_out = filter(m,data,s0,P0,allout=true)
+    error = zeros(100)
+  
+ #   out = pmap(i-> tpf(m,data,system,s0,P0), 1:100)
+ #   for i = 1:10
+ #       error[i]=kalman_out[:L]-sum(out[2])
+ #   end
+    for i=1:2
+        Neff, lik = tpf(m,data,system,s0,P0)
+        error[i] = kalman_out[:L]-sum(lik)
+    end
+
+    h5open("$path/../../test/reference/distError_4000_10mh.h5","w") do file
+        write(file, "error", error)
     end
 
     #plotly()
