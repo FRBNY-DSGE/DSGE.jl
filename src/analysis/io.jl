@@ -231,7 +231,11 @@ function write_meansbands_tables(m::AbstractModel, mb::MeansBands;
 
     # Use all vars by default
     if isempty(tablevars)
-        tablevars = get_variables(mb)
+        tablevars = if get_product(mb) in [:irf, :shockdec]
+            get_variables(mb)
+        else
+            get_vars_means(mb)
+        end
     end
 
     # Write table for each var
