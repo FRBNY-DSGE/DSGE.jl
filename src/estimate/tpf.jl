@@ -283,6 +283,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         Neff[t] = (n_particles^2)/sum(weights.^2)
         s_lag_tempered = s_t_nontempered
         print("Completion of one period ")
+        gc()
         toc()
     end
     
