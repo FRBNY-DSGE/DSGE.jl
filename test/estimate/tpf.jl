@@ -111,7 +111,7 @@ end
 
 
 deterministic=false
-parallel=false
+parallel=true
 n_particles=4000
 
 if parallel
@@ -123,7 +123,9 @@ end
 m = setup_model("SmetsWouters", n_particles, deterministic, parallel)
 m, sys, data, Φ, R, S2 = optimize_setup(m,deterministic)
 s0 = zeros(size(sys[:TTT])[1])
-P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
+
+### WE ARE MULTIPLYING INITIAL VARIANCE BY 0.1 FOR REASONS UNKNOWN :O ###
+P0 = 0.1*nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 
 tic()
 neff, lik = tpf(m, data, sys, s0, P0)
