@@ -115,7 +115,7 @@ parallel=true
 n_particles=4000
 
 if parallel
-    my_procs = addprocs_sge(40,queue="background.q")
+    my_procs = addprocs_sge(10,queue="background.q")
     @everywhere using DSGE
 end
 
