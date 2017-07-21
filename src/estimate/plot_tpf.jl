@@ -26,7 +26,7 @@ function plot_tpf()
     m<=Setting(:tpf_rand_mat,rand_mat)
 
     m<=Setting(:tpf_rstar,2.0)
-    m<=Setting(:tpf_N_MH, 2)
+    m<=Setting(:tpf_N_MH, 10)
     m<=Setting(:tpf_c,0.1)
     m<=Setting(:tpf_acpt_rate,0.5)
     m<=Setting(:tpf_trgt,0.25)
@@ -56,15 +56,18 @@ function plot_tpf()
 
     #for getting distribution of errors
     kalman_out = filter(m,data,s0,P0,allout=true)
-    error = zeros(100)
+    error = zeros(50)
   
  #   out = pmap(i-> tpf(m,data,system,s0,P0), 1:100)
  #   for i = 1:10
  #       error[i]=kalman_out[:L]-sum(out[2])
  #   end
-    for i=1:2
+    for i=1:50
         Neff, lik = tpf(m,data,system,s0,P0)
         error[i] = kalman_out[:L]-sum(lik)
+        h5open("$path/../../test/reference/error$i.h5","w") do file
+            write(file, "error", error[i])
+        end
     end
 
     h5open("$path/../../test/reference/distError_4000_10mh.h5","w") do file

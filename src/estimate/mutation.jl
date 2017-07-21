@@ -9,12 +9,14 @@ s_init: The starting state before mutation.
 ε_init: The starting epsilon (state error) before mutation.
 """
 
-function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array{Float64,2}, nonmissing::Array{Bool,1})
+#function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array{Float64,2}, nonmissing::Array{Bool,1})
+function mutation(c::Float64, N_MH::Int64, deterministic::Bool, system::System{Float64}, yt::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array{Float64,2}, nonmissing::Array{Bool,1})
     #------------------------------------------------------------------------
     # Setup
     #------------------------------------------------------------------------
     # Set path--used for testing
     path = dirname(@__FILE__)
+
 
     DD = system.measurement.DD[nonmissing]
     ZZ = system.measurement.ZZ[nonmissing,:]
@@ -29,9 +31,9 @@ function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1
     ind_ε = ε_init
     
     # Get paramaters from model settings; c updates dynamically to tune TPF over time.
-    c = get_setting(m,:tpf_c)
-    N_MH = get_setting(m, :tpf_n_mh_simulations)
-    deterministic = get_setting(m, :tpf_deterministic)
+   # c = get_setting(m,:tpf_c)
+   # N_MH = get_setting(m, :tpf_n_mh_simulations)
+   # deterministic = get_setting(m, :tpf_deterministic)
 
     # Initialize acceptance counter to zero
     acpt = 0
