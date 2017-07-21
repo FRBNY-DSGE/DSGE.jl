@@ -111,7 +111,7 @@ end
 
 
 deterministic=false
-parallel=true
+parallel=false
 n_particles=4000
 
 if parallel
