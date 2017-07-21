@@ -130,8 +130,9 @@ function time4(parallel::Bool, pmap_flag::Bool)
     # Q = diagm(rand(7))
     # sqrtS2 = R*Matrix(chol(nearestSPD(Q)))'
     system = compute_system(m)
-    nonmissing = ones(7,7)
-
+    nonmissing = [true, true, true, true, true, true, true] 
+   
+    @show nonmissing
     s_init = randn(54)
     ε_init = randn(7)
     cov_s = diagm(rand(7))
