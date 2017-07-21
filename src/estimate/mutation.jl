@@ -84,5 +84,6 @@ function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1
     end
     acpt /= N_MH
     return ind_s, ind_ε, acpt 
+    gc()
 end
 
