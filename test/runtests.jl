@@ -23,8 +23,8 @@ my_tests = [
             "estimate/eig",
             "estimate/metropolis_hastings",
             "estimate/smc",
-            "estimate/mutation_RWMH",=# 
-            "estimate/parallel_breaking",
+            "estimate/mutation_RWMH", 
+            "estimate/parallel_breaking",=#
             "estimate/tpf", 
             "estimate/mutation",
             "data/misc",
