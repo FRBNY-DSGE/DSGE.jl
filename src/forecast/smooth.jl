@@ -59,10 +59,11 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
 
     # Partition sample into pre- and post-ZLB regimes
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
-    regime_inds = zlb_regime_indices(m, data)
+    start_date = max(date_presample_start(m), df[1, :date])
+    regime_inds = zlb_regime_indices(m, data, start_date)
 
     # Get system matrices for each regime
-    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_regime_matrices(m, system)
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_regime_matrices(m, system, start_date)
 
     # Call smoother
     smoother = eval(Symbol(forecast_smoother(m), "_smoother"))
