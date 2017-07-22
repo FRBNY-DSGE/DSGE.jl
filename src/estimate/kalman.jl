@@ -123,10 +123,6 @@ and post-ZLB regimes. Of these, only `QQ` changes from pre- to post-ZLB: the
 entries corresponding to anticipated shock variances are zeroed out pre-ZLB.
 """
 function zlb_regime_matrices{S<:AbstractFloat}(m::AbstractModel{S}, system::System{S})
-    if !all(x -> x == 0, system[:MM])
-        error("Kalman filter and smoothers not implemented for nonzero MM")
-    end
-
     if n_anticipated_shocks(m) > 0
         n_regimes = 2
 
