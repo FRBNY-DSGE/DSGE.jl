@@ -80,13 +80,12 @@ expect[:ZZ] = read(h5, "ZZ")
 expect[:DD] = reshape(read(h5, "DD"), 12, 1)
 expect[:QQ] = read(h5, "QQ")
 expect[:EE] = read(h5, "EE")
-expect[:MM]  = read(h5, "MM")
 close(h5)
 
 model = Model990()
 TTT, RRR, CCC = solve(model)
 actual = measurement(model, TTT, RRR, CCC)
-for d in (:ZZ, :DD, :QQ, :EE, :MM)
+for d in (:ZZ, :DD, :QQ, :EE)
     @test_matrix_approx_eq expect[d] actual[d]
 end
 

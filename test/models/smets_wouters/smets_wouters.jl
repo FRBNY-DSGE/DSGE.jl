@@ -81,13 +81,12 @@ expect[:ZZ] = read(h5, "ZZ")
 expect[:DD] = reshape(read(h5, "DD"), 7, 1)
 expect[:QQ] = read(h5, "QQ")
 expect[:EE] = read(h5, "EE")
-expect[:MM]  = read(h5, "MM")
 close(h5)
 
 sw = SmetsWouters()
 TTT, RRR, CCC = solve(sw)
 actual = measurement(sw, TTT, RRR, CCC)
-for d in (:ZZ, :DD, :QQ, :EE, :MM)
+for d in (:ZZ, :DD, :QQ, :EE)
     @test_matrix_approx_eq expect[d] actual[d]
 end
 
