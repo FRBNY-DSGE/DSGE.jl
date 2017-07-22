@@ -102,6 +102,19 @@ function Base.getindex(system::System, d::Symbol)
     end
 end
 
+function Base.copy(system::System)
+    trans = Transition(system[:TTT], system[:RRR], system[:CCC])
+    meas  = Measurement(system[:ZZ], system[:DD], system[:QQ], system[:EE])
+    pseudo_measurement = if isnull(system.pseudo_measurement)
+        Nullable{PseudoObservableMapping}()
+    else
+        pseudo_inds = get(system.pseudo_measurement).inds
+        pseudo_measurement = Nullable(PseudoObservableMapping(pseudo_inds,
+                                 system[:ZZ_pseudo], system[:DD_pseudo]))
+    end
+    return System(trans, meas, pseudo_measurement)
+end
+
 type PseudoMeasurementUndefError <: Exception
 end
 
