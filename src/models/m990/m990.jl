@@ -399,19 +399,6 @@ function init_parameters!(m::Model990)
     m <= parameter(:ρ_corepce, 0.2320, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    tex_label="\\rho_{pce}")
 
-    m <= parameter(:ρ_gdp, 0., (-0.999, 0.999), (-0.999, 0.999), DSGE.SquareRoot(), Normal(0.0, 0.2), fixed=false,
-                   tex_label="\\rho_{gdp}")
-
-    m <= parameter(:ρ_gdi, 0., (-0.999, 0.999), (-0.999, 0.999), DSGE.SquareRoot(), Normal(0.0, 0.2), fixed=false,
-                   tex_label="\\rho_{gdi}")
-
-    m <= parameter(:ρ_gdpvar, 0., (-0.999, 0.999), (-0.999, 0.999), DSGE.SquareRoot(), Normal(0.0, 0.4), fixed=false,
-                   tex_label="\\varrho_{gdp}")
-
-    m <= parameter(:me_level, 1., (-0.999, 0.999), (-0.999, 0.999), DSGE.Untransformed(), Normal(0.0, 0.4), fixed=true,
-                   description="me_level: Indicator of cointegration of GDP and GDI.",
-                   tex_label="\\mathcal{C}_{me}")
-
     # exogenous processes - standard deviation
     m <= parameter(:σ_g, 2.5230, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_g: The standard deviation of the government spending process.",
