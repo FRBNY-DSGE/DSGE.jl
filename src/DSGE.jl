@@ -138,6 +138,7 @@ module DSGE
     include("estimate/simulated_annealing.jl")
     include("estimate/combined_optimizer.jl")
     include("estimate/LBFGS.jl")
+    include("estimate/Nelder_Mead.jl")
     include("estimate/estimate.jl")
     include("estimate/mutation_RWMH.jl")
     include("estimate/mutation_block_RWMH.jl")
