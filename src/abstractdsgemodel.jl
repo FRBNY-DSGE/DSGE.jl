@@ -529,6 +529,7 @@ Returns path to specific input data file, creating containing directory as neede
 * `\"data\"`: recorded data
 * `\"cond\"`: conditional data - nowcasts for the current forecast quarter, or related
 * `\"user\"`: user-supplied data for starting parameter vector, hessian, or related
+* `\"scenarios\"`: alternative scenarios
 
 Path built as
 ```
@@ -538,7 +539,7 @@ Path built as
 function inpath(m::AbstractModel, in_type::String, file_name::String="")
     path = dataroot(m)
     # Normal cases.
-    if in_type == "data" || in_type == "cond"
+    if in_type in ["data", "cond", "scenarios"]
         path = joinpath(path, in_type)
     # User-provided inputs. May treat this differently in the future.
     elseif in_type == "user"
