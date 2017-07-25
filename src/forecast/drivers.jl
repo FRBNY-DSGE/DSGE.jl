@@ -290,9 +290,10 @@ function forecast_one(m::AbstractModel{Float64},
             # Get to work!
             params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
 
-            forecast_outputs = pmap(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
-                                                               param, df, verbose = verbose),
-                                    params)
+            mapfcn = use_parallel_workers(m) ? pmap : map
+            forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
+                                                                 param, df, verbose = verbose),
+                                      params)
 
             # Assemble outputs from this block and write to file
             forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
