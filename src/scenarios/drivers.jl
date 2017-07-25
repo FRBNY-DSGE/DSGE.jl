@@ -41,10 +41,9 @@ function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
     return forecastshocks
 end
 
-function forecast_scenario_draw(m::AbstractModel, scenario_key::Symbol,
-                                draw_index::Int, s_T::Vector{Float64})
+function forecast_scenario_draw(m::AbstractModel, draw_index::Int, s_T::Vector{Float64})
     # Initialize scenario
-    constructor = eval(scenario_key)
+    constructor = eval(get_setting(m, :scenario_key))
     scen = constructor()
     path = scenario_targets_file(m)
     load_scenario_targets!(scen, path, draw_index)
@@ -64,6 +63,36 @@ function forecast_scenario_draw(m::AbstractModel, scenario_key::Symbol,
     forecast_output[:forecastobs]    = forecastobs
     forecast_output[:forecastpseudo] = forecastpseudo
     forecast_output[:forecastshocks] = forecastshocks
+
+    return forecast_output
+end
+
+function write_scenario_forecasts(m::AbstractModel, scenario_output_file::String,
+                                  forecast_output::Dict{Symbol, Array{Float64}};
+                                  verbose::Symbol = :low)
+end
+
+function forecast_scenario(m::AbstractModel, df::DataFrame; verbose::Symbol = :low)
+    # Load modal parameters
+    params = load_draws(m, :mode; verbose = verbose)
+    DSGE.update!(m, params)
+    system = compute_system(m)
+
+    # Filter to get s_T
+    kal = DSGE.filter(m, df, system)
+    s_T = kal[:zend]
+
+    # Get to work!
+    ndraws = n_scenario_draws(m)
+    mapfcn = use_parallel_workers(m) ? pmap : map
+    forecast_outputs = mapfcn(draw_ind -> forecast_scenario_draw(m, draw_ind, s_T), 1:n_scenario_draws(m))
+
+    # Assemble outputs and write to file
+    forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
+    forecast_output = DSGE.assemble_block_outputs(forecast_outputs)
+    output_file = get_scenario_output_files(m, input_type, cond_type, output_vars;
+                                            forecast_string = forecast_string)
+    write_scenario_forecasts(m, output_file, forecast_output, verbose = verbose)
 
     return forecast_output
 end
