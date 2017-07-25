@@ -72,4 +72,8 @@ function pmap_test4(yt::Array{Float64,1}, system, s_init::Array{Float64,1}, ε_i
     return ind_s, ind_ε, acpt
 end
 
+function pmap_test5(m,A,B,x)
+    return x*x, (A*B)'
+end
+
 using DSGE, Optim, Distributions

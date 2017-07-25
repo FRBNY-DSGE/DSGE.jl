@@ -70,7 +70,7 @@ module DSGE
         metropolis_hastings, compute_parameter_covariance, compute_moments,
         find_density_bands, prior, mutation, multinomial_resampling, systematic_resampling, 
         mutation, smc, nearestSPD, density, tpf, tpf_fixed_phi, ineff_func,
-        seeded_multinomial_resampling, plot_tpf, kalman_filter_likvec, parallel_breaking,
+        seeded_multinomial_resampling, kalman_filter_likvec, parallel_breaking, plot_tpf,
 
         # forecast/
         load_draws, forecast_one,
