@@ -10,6 +10,12 @@ n_targets(scen::Scenario) = length(scen.target_names)
 n_instruments(scen::Scenario) = length(scen.instrument_names)
 n_target_horizons(scen::Scenario) = size(scen.targets, 1)
 
+function scenario_targets_file(m::AbstractModel)
+    key = get_setting(m, :scenario_key)
+    vint = get_setting(m, :scenario_vintage)
+    basename = string(key) * "_" * string(vint) * ".jld"
+    return inpath(m, "scenarios", basename)
+end
 
 function load_scenario_targets!(scen::Scenario, path::String, draw_index::Int)
     raw_targets = h5read(path, "arr", (:, :, draw_index))
