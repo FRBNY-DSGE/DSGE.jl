@@ -43,22 +43,3 @@ function targets_to_data(m::AbstractModel, scen::Scenario)
     end
     return df
 end
-
-type MyScenario <: Scenario
-    key::Symbol
-    description::String
-    target_names::Vector{Symbol}
-    instrument_names::Vector{Symbol}
-    targets::DataFrame
-    instruments::DataFrame
-end
-
-function MyScenario()
-    key = :myscenario
-    description = "My Scenario"
-    target_names = [:obs_gdp, :obs_corepce]
-    instrument_names = [:g_sh, :b_sh, :μ_sh, :z_sh]
-    targets = DataFrame()
-    instruments = DataFrame()
-    return MyScenario(key, description, target_names, instrument_names, targets, instruments)
-end
