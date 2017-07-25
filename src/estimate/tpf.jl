@@ -1,6 +1,6 @@
 #using DSGE, ClusterManagers
 using Roots
-function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array; verbose::Symbol=:low, include_presample::Bool=true)
+function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array, varInflate; verbose::Symbol=:low, include_presample::Bool=true)
     # s0 is 8xn_particles
     # P0
     # yy is data matrix
@@ -62,11 +62,31 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
 
     s_lag_tempered = repmat(s0,1,n_particles) + get_chol(P0)'*s_lag_tempered_rand_mat
 
+    fullData = size(yy,1)
+    incIter=zeros(0)
+    i = 0
+     for t=1:T
+         if any(isnan(yy[:,t]))
+             if (t-1) in incIter
+                 incIter[i]=t
+             else 
+               push!(incIter, t)
+               i+=1
+             end
+         end
+     end
+    incIter2=zeros(0)
+    for i=incIter
+        push!(incIter2,i,i+1,i+2)
+    end
+incIter2 = union(round(Int64,incIter2))
+incIter2 = incIter2[find(x -> x>0,incIter2)]
+@show incIter2
+times = zeros(T)
     for t=1:T
         tic()
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("============================================================")
-            @show t
         end
         
         #--------------------------------------------------------------
@@ -85,22 +105,56 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         sqrtS2_t = RRR_t*get_chol(QQ_t)'
         n_errors_t = length(yt)
         ε = zeros(n_errors_t)
+        
+        scale = ones(size(EE_t,1))
+        if length(scale)==7
+            scale[2]=1+10000000000*exp(-19)
+        end
+        @show EE_t
+        if varInflate
+            EE_t = diagm(EE_t*scale)
+        end
+        @show EE_t
 
-                
+        if t in incIter2
+            rstar=1.25
+            N_MH=20
+            m<=Setting(:tpf_n_mh_simulations,10)
+        else
+            rstar=2.0
+            N_MH=2
+            m<=Setting(:tpf_n_mh_simulations,2)
+        end
+        # @show length(yt)
+        # @show fullData
+        # if length(yt)<fullData
+        #     rstar=1.5
+        #     N_MH=10
+        #     m<=Setting(:tpf_n_mh_simulations,10)
+        # else
+        #     rstar=2.0
+        #     N_MH=2
+        #     m<=Setting(:tpf_n_mh_simulation,2)
+        # end
+        
+
+         @show t
+         @show n_particles
+         @show parallel
+         @show N_MH
+         @show rstar
+            
         if !deterministic # When not testing, want a new random ε each time 
             ε_rand_mat = randn(n_errors_t, n_particles)
         end
 
-        @show size(TTT)
-        @show size(s_lag_tempered)
-        @show size(sqrtS2_t)
-        @show size(ε_rand_mat)
+        
         # Forecast forward one time step
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε_rand_mat
         
         # Error for each particle
         perror = repmat(yt-DD_t,1,n_particles)-ZZ_t*s_t_nontempered
-        @show mean(perror)
+        
         # Solve for initial tempering parameter ϕ_1
         if !deterministic
             init_Ineff_func(φ) = ineff_func(φ, 2.0*pi, yt, perror, EE_t, initialize=1)-rstar
@@ -140,6 +194,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
             @show check_ineff
         end
 
+        
         #--------------------------------------------------------------
         # Main Algorithm
         #--------------------------------------------------------------
@@ -211,7 +266,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
                     print("(not parallel) ")
                     out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
                 end
-                toc()                
+               times[t] = toc()                
                 
                 for i = 1:n_particles
                     s_t_nontempered[:,i] = out[i][1]
@@ -304,7 +359,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     end
 
     # Return vector of likelihood indexed by time step and Neff
-    return Neff[n_presample_periods+1:end], lik[n_presample_periods+1:end]
+    return Neff[n_presample_periods+1:end], lik[n_presample_periods+1:end], times
 end
 
 

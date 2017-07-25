@@ -170,10 +170,22 @@ function time4(parallel::Bool, pmap_flag::Bool)
     end
 end
 
+function time5()
+    m = SmetsWouters("ss1",testing=true)
+    A = randn(100,100)
+    B = randn(100,100) 
+    x = randn(4000)
+    tic()
+    arr = @sync @parallel (hcat) for i=1:4000
+        pmap_test5(m,A,B,x[i])
+    end
+    return toc()
+end
 
-using ClusterManagers
 
-addprocs_sge(10,queue="background.q")
+using ClusterManagers, Plots, HDF5
+
+addprocs_sge(30,queue="background.q")
 @everywhere include("pmap_test.jl")
  
 # println("@parallel on")
@@ -183,16 +195,27 @@ addprocs_sge(10,queue="background.q")
 # rmprocs()
 # println("no parallel")
 # time2(false,false)
- 
 
-for t = 1:100
-@show t
+@show time5()
+ 
+times = zeros(3000)
+for i = 1:3000
+    @show i
     println("@parallel on")
-    time4(true,false)
-    println("pmap on")
-    time4(false,true)
+    times[i] = time5()
+   # println("pmap on")
+    #time4(false,true)
+end
+path = dirname(@__FILE__)
+h5open("$path/../../test/reference/timeOverTime.h5","w") do file
+    write(file,"times", times)
 end
 
+plotly()
+plot(times)
+gui()
+
 rmprocs()
+aaa
 println("Non-parallel")
 time4(false, false)
