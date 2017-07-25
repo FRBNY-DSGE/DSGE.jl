@@ -42,12 +42,11 @@ function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
 end
 
 function forecast_scenario_draw(m::AbstractModel, scenario_key::Symbol,
-                                scenario_vintage::String, draw_index::Int,
-                                s_T::Vector{Float64})
+                                draw_index::Int, s_T::Vector{Float64})
     # Initialize scenario
     constructor = eval(scenario_key)
     scen = constructor()
-    path = "" # TODO: decide how to format path
+    path = scenario_targets_file(m)
     load_scenario_targets!(scen, path, draw_index)
 
     # Filter shocks
@@ -58,4 +57,13 @@ function forecast_scenario_draw(m::AbstractModel, scenario_key::Symbol,
     # Forecast
     forecaststates, forecastobs, forecastpseudo, _ =
         forecast(m, system, s_T, shocks = forecastshocks)
+
+    # Return output dictionary
+    forecast_output = Dict{Symbol, Array{Float64}}()
+    forecast_output[:forecaststates] = forecaststates
+    forecast_output[:forecastobs]    = forecastobs
+    forecast_output[:forecastpseudo] = forecastpseudo
+    forecast_output[:forecastshocks] = forecastshocks
+
+    return forecast_output
 end
