@@ -1,6 +1,6 @@
 function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
     # Check applicability of this methodology
-    @assert n_instruments(scen) > n_targets(scen) "Number of instruments must be strictly greater than number of targets"
+    @assert n_instruments(scen) >= n_targets(scen) "Number of instruments must be at least number of targets"
 
     # Construct data
     df = targets_to_data(m, scen)
