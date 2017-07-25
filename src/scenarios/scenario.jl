@@ -10,19 +10,16 @@ n_targets(scen::Scenario) = length(scen.target_names)
 n_instruments(scen::Scenario) = length(scen.instrument_names)
 n_target_horizons(scen::Scenario) = size(scen.targets, 1)
 
+
 function load_scenario_targets!(scen::Scenario, path::String, draw_index::Int)
-    # TODO: uncomment after generating test scenario file
-    # raw_targets = h5read(path, "arr", (:, :, draw_index))
-    # target_inds = load(path, "target_indices")
+    raw_targets = h5read(path, "arr", (:, :, draw_index))
+    target_inds = load(path, "target_indices")
 
-    # @assert keys(target_inds) == scen.target_names "Target indices in $path do not match target names in $(scen.key)"
+    @assert collect(keys(target_inds)) == scen.target_names "Target indices in $path do not match target names in $(scen.key)"
 
-    # for (target_name, target_index) in target_inds
-    #     scen.targets[target_name] = raw_targets[target_index, :]
-    # end
-
-    scen.targets[:obs_gdp] = [0.25, 0.5, 0.75]
-    scen.targets[:obs_corepce] = [0.25, 0.5, 0.75]
+    for (target_name, target_index) in target_inds
+        scen.targets[target_name] = raw_targets[target_index, :]
+    end
 
     return scen.targets
 end
