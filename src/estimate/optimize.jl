@@ -56,6 +56,8 @@ function optimize!(m::AbstractModel,
         csminwel
     elseif method == :simulated_annealing
         simulated_annealing
+    elseif method == :Nelder_Mead
+        Nelder_Mead
     elseif method == :combined_optimizer
         combined_optimizer
     elseif method == :LBFGS
@@ -166,6 +168,14 @@ function optimize!(m::AbstractModel,
                         iterations = iterations, step_size = step_size,
                         store_trace = store_trace, show_trace = show_trace, extended_trace = extended_trace,
                         neighbor! = neighbor_dsge!, verbose = verbose, rng = rng, temperature = temperature)
+       converged = opt_result.iteration_converged
+       out = optimization_result(opt_result.minimizer, opt_result.minimum, converged, opt_result.iterations)
+
+    elseif method == :Nelder_Mead
+        opt_result = optimizer(f_opt, x_opt;
+                               iterations = iterations,
+                               store_trace = store_trace, show_trace = show_trace,
+                               extended_trace = extended_trace, verbose = verbose, rng = rng)
        converged = opt_result.iteration_converged
        out = optimization_result(opt_result.minimizer, opt_result.minimum, converged, opt_result.iterations)
 
