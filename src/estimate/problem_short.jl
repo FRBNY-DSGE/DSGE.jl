@@ -1,0 +1,113 @@
+#= The following script creates 30 workers. The function problem_short sets up inputs then for T time steps (default 50) runs the mutation function 10 times per time step. It keeps track of runtimes and prints a plot of the increase in runtime for each time step.
+=#
+
+using ClusterManagers, HDF5, Plots, JLD
+using QuantEcon: solve_discrete_lyapunov
+
+addprocs_sge(30, queue="background.q")
+
+@everywhere using DSGE
+
+function problem_short(parallel=true::Bool,T=50::Int64)
+    ## Setup
+    m,system,TTT,sqrtS2,s0,P0,s_lag_tempered,ε,yt,nonmissing, N_MH,c, n_particles,deterministic, μ, cov_s,s_t_nontempered = setup()
+   
+    ## Initialize vector for keeping track of runtimes for each time step
+    times = zeros(T)
+    
+    # Loop over number of desired time steps
+    for t = 1:T
+        @show t
+        #Begin timer for time step
+        tic()        
+        #Run mutation 10 times per time step
+        for i=1:10                            
+            acpt_vec=zeros(n_particles)
+            print("Mutation ")
+            #Begin timer for each mutation step
+            tic()
+            if parallel
+                print("(in parallel) ")
+                #out = pmap(i->mutation(c, N_MH,deterministic,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
+                out = @sync @parallel (hcat) for i=1:n_particles
+                    mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
+                end
+            else
+                print("(not parallel)")
+                out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
+            end               
+            toc()
+            # Disentangle three outputs of mutation and enter them into appropriate arrays
+            for i = 1:n_particles
+                s_t_nontempered[:,i] = out[i][1]
+                ε[:,i] = out[i][2]
+                acpt_vec[i]=out[i][3]
+            end
+        end
+        print("Completion of one period ")
+        gc()
+        times[t] = toc()
+    end
+    h5open("../../test/reference/the_problem_times.h5", "w") do file
+        write(file, "times", times)
+    end    
+    plotly()
+    plot(times)
+    gui()
+end
+
+
+"""
+```
+get_chol(mat::Aray)
+```
+Calculate and return the Cholesky of a matrix.
+"""
+function get_chol(mat::Array{Float64,2})
+    return Matrix(chol(nearestSPD(mat)))
+end
+
+function setup()
+    m = SmetsWouters("ss1", testing=true)
+
+    path = dirname(@__FILE__)
+    filesw= "/data/dsge_data_dir/dsgejl/realtime/input_data/data"
+    data = readcsv("$filesw/realtime_spec=smets_wouters_hp=true_vint=110110.csv",header=true)
+    data = convert(Array{Float64,2},data[1][:,2:end])
+    data=data'
+ 
+    N_MH= 10
+    c = 0.1
+    n_particles = 4000
+
+    system = load( "$path/../../test/reference/system.jld", "system")
+    RRR = system.transition.RRR
+    TTT = system.transition.TTT
+    S2 = system.measurement.QQ
+    sqrtS2 = RRR*get_chol(S2)'
+   
+    s0 = zeros(size(TTT)[1])
+    P0 = nearestSPD(solve_discrete_lyapunov(TTT,RRR*S2*RRR'))
+
+    n_errors = size(S2,1)
+    n_states = size(system.measurement.ZZ,2)
+
+    s_lag_tempered_rand_mat = randn(n_states,n_particles)
+    ε = randn(n_errors, n_particles)
+   
+    s_lag_tempered = repmat(s0,1,n_particles) + get_chol(P0)'*s_lag_tempered_rand_mat
+    
+    yt = data[:,25]
+    nonmissing =!isnan(yt)
+    deterministic=false
+
+    μ = mean(ε,2)
+    cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
+    if !isposdef(cov_s)
+        cov_s = diagm(diag(cov_s))
+    end
+    
+    s_t_nontempered = TTT*s_lag_tempered + sqrtS2*ε
+      
+    return m,system,TTT,sqrtS2,s0,P0,s_lag_tempered,ε,yt,nonmissing, N_MH,c, n_particles, deterministic, μ, cov_s, s_t_nontempered
+end
