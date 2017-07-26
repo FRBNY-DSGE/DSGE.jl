@@ -1,4 +1,4 @@
-using ClusterManagers, HDF5
+using ClusterManagers, HDF5, Plots
 using Roots: fzero
 using QuantEcon: solve_discrete_lyapunov
 
@@ -8,59 +8,58 @@ addprocs_sge(30, queue="background.q")
 
 function the_problem()
 
-m = SmetsWouters("ss1", testing=true)
-
-path = dirname(@__FILE__)
-filesw= "/data/dsge_data_dir/dsgejl/realtime/input_data/data"
-data = readcsv("$filesw/realtime_spec=smets_wouters_hp=true_vint=110110.csv",header=true)
-data = convert(Array{Float64,2},data[1][:,2:end])
-data=data'
-params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
- push!(params, m[:e_y].value, m[:e_L].value, m[:e_w].value, m[:e_π].value, m[:e_R].value, m[:e_c].value, m[:e_i].value)
-update!(m,params)
-system = compute_system(m)
-
-mats = "$path/../../test/reference/sysMats.h5"
-h5open(mats, "w") do file
-    write(file, "R", system.transition.RRR)
-    write(file, "T", system.transition.TTT)
-    write(file, "E", system.measurement.EE)
-    write(file, "D", system.measurement.DD)
-    write(file, "Z", system.measurement.ZZ)
-    write(file, "Q", system.measurement.QQ)
-    write(file, "sqrtS2",system.transition.RRR*get_chol(system.measurement.QQ)')
-end
-
-RRR = h5read(mats, "R")
-TTT = h5read(mats, "T")
-EE = h5read(mats, "E")
-DD = h5read(mats, "D")
-ZZ = h5read(mats, "Z")
-S2 = h5read(mats, "Q")
-QQ = h5read(mats, "Q")
-sqrtS2 = h5read(mats, "sqrtS2")
-
-
-rand_mat = randn(size(S2,1),1)
-m<=Setting(:tpf_rand_mat,rand_mat)
-
-m<=Setting(:tpf_rstar,2.0)
-m<=Setting(:tpf_N_MH, 10)
-m<=Setting(:tpf_c,0.1)
-m<=Setting(:tpf_acpt_rate,0.5)
-m<=Setting(:tpf_trgt,0.25)
-n_particles=4000
-m<=Setting(:tpf_n_particles,n_particles)
-m<=Setting(:use_parallel_workers, true)
-m<=Setting(:x_tolerance, zero(float(0)))
-m<=Setting(:tpf_deterministic, false)
-
-s0 = zeros(size(TTT)[1])
-P0= nearestSPD(solve_discrete_lyapunov(TTT,RRR*S2*RRR'))
-
-#tpf(m,data,system,s0,P0)
-
-# Store model parameters
+    m = SmetsWouters("ss1", testing=true)
+    
+    path = dirname(@__FILE__)
+    filesw= "/data/dsge_data_dir/dsgejl/realtime/input_data/data"
+    data = readcsv("$filesw/realtime_spec=smets_wouters_hp=true_vint=110110.csv",header=true)
+    data = convert(Array{Float64,2},data[1][:,2:end])
+    data=data'
+    params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
+    push!(params, m[:e_y].value, m[:e_L].value, m[:e_w].value, m[:e_π].value, m[:e_R].value, m[:e_c].value, m[:e_i].value)
+    update!(m,params)
+    system = compute_system(m)
+    
+    mats = "$path/../../test/reference/sysMats.h5"
+    # h5open(mats, "w") do file
+    #     write(file, "R", system.transition.RRR)
+    #     write(file, "T", system.transition.TTT)
+    #     write(file, "E", system.measurement.EE)
+    #     write(file, "D", system.measurement.DD)
+    #     write(file, "Z", system.measurement.ZZ)
+    #     write(file, "Q", system.measurement.QQ)
+    #     write(file, "sqrtS2",system.transition.RRR*get_chol(system.measurement.QQ)')
+    # end
+    
+    RRR = h5read(mats, "R")
+    TTT = h5read(mats, "T")
+    EE = h5read(mats, "E")
+    DD = h5read(mats, "D")
+    ZZ = h5read(mats, "Z")
+    S2 = h5read(mats, "Q")
+    QQ = h5read(mats, "Q")
+    sqrtS2 = h5read(mats, "sqrtS2")
+    
+    rand_mat = randn(size(S2,1),1)
+    m<=Setting(:tpf_rand_mat,rand_mat)
+    
+    m<=Setting(:tpf_rstar,2.0)
+    m<=Setting(:tpf_N_MH, 10)
+    m<=Setting(:tpf_c,0.1)
+    m<=Setting(:tpf_acpt_rate,0.5)
+    m<=Setting(:tpf_trgt,0.25)
+    n_particles=4000
+    m<=Setting(:tpf_n_particles,n_particles)
+    m<=Setting(:use_parallel_workers, true)
+    m<=Setting(:x_tolerance, zero(float(0)))
+    m<=Setting(:tpf_deterministic, false)
+    
+    s0 = zeros(size(TTT)[1])
+    P0= nearestSPD(solve_discrete_lyapunov(TTT,RRR*S2*RRR'))
+    
+    #tpf(m,data,system,s0,P0)
+    
+    # Store model parameters
     
     # Get tuning parameters from the model
     rstar         = get_setting(m,:tpf_rstar)
@@ -72,8 +71,8 @@ P0= nearestSPD(solve_discrete_lyapunov(TTT,RRR*S2*RRR'))
     deterministic = get_setting(m,:tpf_deterministic)
     xtol          = get_setting(m,:tpf_x_tolerance) # Tolerance of fzero
     parallel      = get_setting(m,:use_parallel_workers) # Get setting of parallelization
-
-# End time (last period)
+    
+    # End time (last period)
     T = size(data,2)
     # Size of covariance matrix
     n_errors = size(QQ,1)
@@ -87,162 +86,170 @@ P0= nearestSPD(solve_discrete_lyapunov(TTT,RRR*S2*RRR'))
     weights     = ones(n_particles)
     density_arr = zeros(n_particles)
 
-s_lag_tempered_rand_mat = randn(n_states,n_particles)
-        ε_rand_mat = randn(n_errors, n_particles)
+    s_lag_tempered_rand_mat = randn(n_states,n_particles)
+    ε_rand_mat = randn(n_errors, n_particles)
 
-s_lag_tempered = repmat(s0,1,n_particles) + get_chol(P0)'*s_lag_tempered_rand_mat
+    s_lag_tempered = repmat(s0,1,n_particles) + get_chol(P0)'*s_lag_tempered_rand_mat
 
-for t=1:T
-    @show t
-    tic()
-    yt = data[:,25]
-    nonmissing =!isnan(yt)
+    times = zeros(T)
 
-    s_t_nontempered = TTT*s_lag_tempered + sqrtS2*ε_rand_mat
+    for t=1:50
+        @show t
+        tic()
+        yt = data[:,25]
+        nonmissing =!isnan(yt)
         
-    # Error for each particle
-    perror = repmat(yt-DD,1,n_particles)-ZZ*s_t_nontempered
-
-    init_Ineff_func(φ) = ineff_func(φ, 2.0*pi, yt, perror, EE, initialize=1)-rstar
-    φ_1 = fzero(init_Ineff_func,0.00000001, 1.0, xtol=xtol)
-
-    loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_lag_tempered,ε_rand_mat,EE,n_particles,deterministic,initialize=1)
+        s_t_nontempered = TTT*s_lag_tempered + sqrtS2*ε_rand_mat
         
-    # Update likelihood
-    lik[t]=lik[t]+loglik
-
+        # Error for each particle
+        perror = repmat(yt-DD,1,n_particles)-ZZ*s_t_nontempered
+        
+        init_Ineff_func(φ) = ineff_func(φ, 2.0*pi, yt, perror, EE, initialize=1)-rstar
+        φ_1 = fzero(init_Ineff_func,0.00000001, 1.0, xtol=xtol)
+        
+        loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_lag_tempered,ε_rand_mat,EE,n_particles,deterministic,initialize=1)
+        
+        # Update likelihood
+        lik[t]=lik[t]+loglik
+        
         # Tempering Initialization
         count = 2 # Accounts for initialization and final mutation
         φ_old = φ_1
-
+        
         # First propagation
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2*ε
         perror = repmat(yt-DD, 1, n_particles) - ZZ*s_t_nontempered         
-    check_ineff=ineff_func(1.0, φ_1, yt, perror, EE)         
-
-    while (check_ineff>rstar)
-
-        # Define inefficiency function
-        init_ineff_func(φ) = ineff_func(φ, φ_old, yt, perror, EE)-rstar
-        φ_interval = [φ_old, 1.0]
-        fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
-
-        count += 1
-
-        # Check solution exists within interval
-        if prod(sign(fphi_interval))== -1 || deterministic
-                
-           
-            # Set φ_new to the solution of the inefficiency function over interval
-            φ_new = fzero(init_ineff_func, φ_interval, xtol=xtol)
-            check_ineff = ineff_func(1.0, φ_new, yt, perror, EE, initialize=0)
+        check_ineff=ineff_func(1.0, φ_1, yt, perror, EE)         
+        
+        while (check_ineff>rstar)
             
-            # Update weights array and resample particles
-            loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,EE,n_particles, deterministic, initialize=0)
-                
-            # Update likelihood
-            lik[t] = lik[t] + loglik
-                
-            # Update value for c
-            c = update_c(m,c,acpt_rate,trgt)
-                                            
-            # Update covariance matrix
-            μ = mean(ε,2)
-            cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
-              
-            if !isposdef(cov_s)
-                cov_s = diagm(diag(cov_s))
-            end
+            # Define inefficiency function
+            init_ineff_func(φ) = ineff_func(φ, φ_old, yt, perror, EE)-rstar
+            φ_interval = [φ_old, 1.0]
+            fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
             
-            # Mutation Step
-            acpt_vec=zeros(n_particles)
-            print("Mutation ")
+            count += 1
+            
+            # Check solution exists within interval
+            if prod(sign(fphi_interval))== -1 || deterministic
                 
-            tic()
-
-            if parallel
-                print("(in parallel) ")
-                c = get_setting(m,:tpf_c)
-                N_MH=get_setting(m,:tpf_n_mh_simulations)
-                deterministic=get_setting(m,:tpf_deterministic)
-                #out = pmap(i->mutation(c, N_MH,deterministic,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
-                out = @sync @parallel (hcat) for i=1:n_particles
-                    mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
+                
+                # Set φ_new to the solution of the inefficiency function over interval
+                φ_new = fzero(init_ineff_func, φ_interval, xtol=xtol)
+                check_ineff = ineff_func(1.0, φ_new, yt, perror, EE, initialize=0)
+                
+                # Update weights array and resample particles
+                loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,EE,n_particles, deterministic, initialize=0)
+                
+                # Update likelihood
+                lik[t] = lik[t] + loglik
+                
+                # Update value for c
+                c = update_c(m,c,acpt_rate,trgt)
+                
+                # Update covariance matrix
+                μ = mean(ε,2)
+                cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
+                
+                if !isposdef(cov_s)
+                    cov_s = diagm(diag(cov_s))
                 end
-            else
-                print("(not parallel)")
-                out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
-            end               
-            toc()
-            for i = 1:n_particles
-                s_t_nontempered[:,i] = out[i][1]
-                ε[:,i] = out[i][2]
-                acpt_vec[i]=out[i][3]
-            end
-            acpt_rate = mean(acpt_vec)
-
-            # Get error for all particles
-            perror = repmat(yt-DD, 1, n_particles)-ZZ*s_t_nontempered
-            φ_old = φ_new
-            len_phis[t]+=1
-
-            # If no solution exists within interval, set inefficiency to rstar
-        else 
-            check_ineff = rstar
-        end
-    end
-
-            
-    #————————————————————–
-    # Last Stage of Algorithm: φ_new=1
-    #————————————————————–
-    φ_new = 1.0
-
-    # Update weights array and resample particles.
-    loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,EE,n_particles,deterministic,initialize=0)
-
-    # Update likelihood
-    lik[t]=lik[t]+loglik
-
-    c = update_c(m,c,acpt_rate,trgt)
-    μ = mean(ε,2)
-    
-    cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
                 
-    if isposdef(cov_s)== false 
-        cov_s = diagm(diag(cov_s))
-    end
-        
-    # Final round of mutation
-    acpt_vec = zeros(n_particles)
-    
-    if parallel
-        c = get_setting(m,:tpf_c)
-        N_MH=get_setting(m,:tpf_n_mh_simulations)
-        deterministic=get_setting(m,:tpf_deterministic)
-        #out = pmap(i -> mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
-        out = @sync @parallel (hcat) for i=1:n_particles
-            mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
+                # Mutation Step
+                acpt_vec=zeros(n_particles)
+                print("Mutation ")
+                
+                tic()
+                
+                if parallel
+                    print("(in parallel) ")
+                    c = get_setting(m,:tpf_c)
+                    N_MH=get_setting(m,:tpf_n_mh_simulations)
+                    deterministic=get_setting(m,:tpf_deterministic)
+                    #out = pmap(i->mutation(c, N_MH,deterministic,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
+                    out = @sync @parallel (hcat) for i=1:n_particles
+                        mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
+                    end
+                else
+                    print("(not parallel)")
+                    out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
+                end               
+                toc()
+                for i = 1:n_particles
+                    s_t_nontempered[:,i] = out[i][1]
+                    ε[:,i] = out[i][2]
+                    acpt_vec[i]=out[i][3]
+                end
+                acpt_rate = mean(acpt_vec)
+                
+                # Get error for all particles
+                perror = repmat(yt-DD, 1, n_particles)-ZZ*s_t_nontempered
+                φ_old = φ_new
+                len_phis[t]+=1
+                
+                # If no solution exists within interval, set inefficiency to rstar
+            else 
+                check_ineff = rstar
+            end
         end
-    else 
-        out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
-    end
-
-    for i = 1:n_particles
-        s_t_nontempered[:,i] = out[i][1]
-        ε[:,i] = out[i][2]
-        acpt_vec[i] = out[i][3]
-    end
         
-    # Store for next time iteration
-    acpt_rate = mean(acpt_vec)
+            
+        #————————————————————–
+        # Last Stage of Algorithm: φ_new=1
+        #————————————————————–
+        φ_new = 1.0
+        
+        # Update weights array and resample particles.
+        loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,EE,n_particles,deterministic,initialize=0)
+        
+        # Update likelihood
+        lik[t]=lik[t]+loglik
+        
+        c = update_c(m,c,acpt_rate,trgt)
+        μ = mean(ε,2)
+        
+        cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
+        
+        if isposdef(cov_s)== false 
+            cov_s = diagm(diag(cov_s))
+        end
+        
+        # Final round of mutation
+        acpt_vec = zeros(n_particles)
+        
+        if parallel
+            c = get_setting(m,:tpf_c)
+            N_MH=get_setting(m,:tpf_n_mh_simulations)
+            deterministic=get_setting(m,:tpf_deterministic)
+            #out = pmap(i -> mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
+            out = @sync @parallel (hcat) for i=1:n_particles
+                mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
+            end
+        else 
+            out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
+        end
 
-    Neff[t] = (n_particles^2)/sum(weights.^2 )
-    s_lag_tempered = s_t_nontempered
-    print("Completion of one period ")
-    gc()
-    toc()
-end
+        for i = 1:n_particles
+            s_t_nontempered[:,i] = out[i][1]
+            ε[:,i] = out[i][2]
+            acpt_vec[i] = out[i][3]
+        end
+
+        # Store for next time iteration
+        acpt_rate = mean(acpt_vec)
+
+        Neff[t] = (n_particles^2)/sum(weights.^2 )
+        s_lag_tempered = s_t_nontempered 
+        print("Completion of one period ")
+        gc()
+        times[t] = toc()
+    end
+    h5open("../../test/reference/the_problem_times.h5", "w") do file
+        write(file, "times", times)
+    end
+    plotly()
+    plot(times)
+    gui()
 end
 
 
@@ -280,7 +287,7 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array{Float6
 
     # Calculate initial weights
     for n=1:n_particles
-        density_arr[n]=density(φ_new, φ_old, yt, perror[:,n], EE, initialize=initialize)
+        density_arr[n]=DSGE.density(φ_new, φ_old, yt, perror[:,n], EE, initialize=initialize)
     end   
 
     # Normalize weights
