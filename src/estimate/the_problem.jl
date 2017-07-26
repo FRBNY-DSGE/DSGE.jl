@@ -226,3 +226,4 @@ function zlb_regime_matrices{S<:AbstractFloat}(m::AbstractModel{S},system::Syste
     EEs = fill(system[:EE], n_regimes)
 
     return TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs
+end
