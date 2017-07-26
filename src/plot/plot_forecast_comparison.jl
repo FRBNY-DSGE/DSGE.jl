@@ -44,9 +44,11 @@ function plot_forecast_comparison(var::Symbol,
                                   end_date::Nullable{Date} = Nullable{Date}(),
                                   bandpcts::Vector{String} = ["90.0%"],
                                   hist_label::String = "History",
+                                  old_hist_label::String="",
                                   old_fcast_label::String = "Old Forecast",
                                   new_fcast_label::String = "New Forecast",
                                   hist_color::Colorant = parse(Colorant, :black),
+                                  old_hist_color::Colorant = parse(Colorant, :grey),
                                   old_fcast_color::Colorant = parse(Colorant, :blue),
                                   new_fcast_color::Colorant = parse(Colorant, :red),
                                   tick_size::Int = 2,
@@ -91,10 +93,20 @@ function plot_forecast_comparison(var::Symbol,
         end
     end
 
-    # Plot old forecast
+    # Plot old data
+    # Conditional on whether the historic path differs (i.e. for pseudo-observables)
     start_date_old, end_date_old = get_date_limits(start_date, end_date, allold.means[:date])
     start_ind,      end_ind      = get_date_limit_indices(start_date_old, end_date_old, allold.means[:date])
 
+    if !isempty(old_hist_label)
+        n_hist_periods = size(histold.means, 1)
+        hist_inds = start_ind:min(end_ind, n_hist_periods)
+
+        plot!(p, histold.means[hist_inds, :datenum], histold.means[hist_inds, var],
+              linewidth = 2, linecolor = old_hist_color, label = old_hist_label)
+    end
+
+    # Plot old forecast
     n_hist_periods  = size(histold.means, 1)
     n_all_periods   = size(allold.means, 1)
     fcast_inds      = max(start_ind, n_hist_periods):end_ind
