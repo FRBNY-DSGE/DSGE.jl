@@ -8,7 +8,7 @@ function plot_tpf()
     m = SmetsWouters("ss1", testing=true)
 #    m <= Setting(:date_conditional_end,quartertodate("2011-Q1"))
  #   m <= Setting(:date_forecast_start, quartertodate("2011-Q2"))
-    
+    srand(47)
     path = dirname(@__FILE__)
     
     filesw = "/data/dsge_data_dir/dsgejl/realtime/input_data/data"
