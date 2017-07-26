@@ -23,13 +23,13 @@ function setup_model(model_type::String,n_particles::Int64,deterministic::Bool,p
 
     # Tuning Parameters
     m<=Setting(:tpf_rstar,2.0)
-    m<=Setting(:tpf_c,0.1)
+    m<=Setting(:tpf_c, 0.1)
     m<=Setting(:tpf_acpt_rate,0.5)
-    m<=Setting(:tpf_trgt,0.25)
-    m<=Setting(:tpf_n_mh_simulations,2)
-    m<=Setting(:n_presample_periods,2)
-    m<=Setting(:tpf_deterministic,deterministic)
-    m<=Setting(:use_parallel_workers,parallel)
+    m<=Setting(:tpf_trgt, 0.25)
+    m<=Setting(:tpf_n_mh_simulations, 20)
+    m<=Setting(:n_presample_periods, 2)
+    m<=Setting(:tpf_deterministic, deterministic)
+    m<=Setting(:use_parallel_workers, parallel)
     m<=Setting(:tpf_x_tolerance, zero(float(0)))
     m<=Setting(:tpf_n_particles, n_particles)
     
@@ -116,7 +116,7 @@ n_particles=4000
 
 
 if parallel
-    my_procs = addprocs_sge(10,queue="background.q")
+    my_procs = addprocs_sge(4,queue="background.q")
     @everywhere using DSGE
 end
 
@@ -131,9 +131,21 @@ P0 = 0.1*nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 tic()
 neff, lik = tpf(m, data, sys, s0, P0)
 total_time = toc()
+#Profile.print()
+h5open("$path/reference/output_likelihoods_particles_4000_n_MH_20.h5","w") do f
+    write(f,"julia_likelihoods",lik)
+end
+#data = copy(Profile.fetch())
+#Profile.clear()
+#open("profile_backtrace2.txt","w") do s
+#    Profile.print(s, data) # Prints the previous results
+#end
+#Profile.clear()
 
 type_m = typeof(m)
-println("$n_particles Particles, $type_m, elapsed time: $total_time seconds\n")
+println("$n_particles Particles, $type_m, N_MH = $tpf_n_mh_simulations, elapsed time: $total_time seconds\n")
+
+
 
 # For comparison test
 good_likelihoods = h5open("$path/../reference/tpf_test_likelihoods.h5","r") do file
@@ -154,8 +166,3 @@ end
 rmprocs(my_procs)
 
 nothing
-
-
-
-
-

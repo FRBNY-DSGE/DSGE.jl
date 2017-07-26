@@ -87,6 +87,7 @@ times = zeros(T)
         tic()
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("============================================================")
+            @show t
         end
         
         #--------------------------------------------------------------
@@ -148,13 +149,12 @@ times = zeros(T)
             ε_rand_mat = randn(n_errors_t, n_particles)
         end
 
-        
         # Forecast forward one time step
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε_rand_mat
         
         # Error for each particle
         perror = repmat(yt-DD_t,1,n_particles)-ZZ_t*s_t_nontempered
-        
+
         # Solve for initial tempering parameter ϕ_1
         if !deterministic
             init_Ineff_func(φ) = ineff_func(φ, 2.0*pi, yt, perror, EE_t, initialize=1)-rstar
@@ -194,7 +194,6 @@ times = zeros(T)
             @show check_ineff
         end
 
-        
         #--------------------------------------------------------------
         # Main Algorithm
         #--------------------------------------------------------------
@@ -267,7 +266,6 @@ times = zeros(T)
                     out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
                 end
                times[t] = toc()                
-                
                 for i = 1:n_particles
                     s_t_nontempered[:,i] = out[i][1]
                     ε[:,i] = out[i][2]
@@ -289,6 +287,7 @@ times = zeros(T)
                 end
                 check_ineff = rstar
             end
+            gc()
             # With phi schedule, leave while loop after one iteration, thus set check_ineff=0
             if deterministic
                check_ineff = 0
@@ -319,7 +318,7 @@ times = zeros(T)
 
         cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
                 
-        if isposdef(cov_s)== false 
+        if isposdef(cov_s) == false 
             cov_s = diagm(diag(cov_s))
         end
         
@@ -353,7 +352,7 @@ times = zeros(T)
         gc()
         toc()
     end
-    
+
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("=============================================")
     end
