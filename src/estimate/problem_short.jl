@@ -4,7 +4,7 @@
 using ClusterManagers, HDF5, Plots, JLD
 using QuantEcon: solve_discrete_lyapunov
 
-addprocs_sge(30, queue="background.q")
+addprocs_sge(10, queue="background.q")
 
 @everywhere using DSGE
 
@@ -30,11 +30,11 @@ function problem_short(parallel=true::Bool,T=50::Int64)
                 print("(in parallel) ")
                 #out = pmap(i->mutation(c, N_MH,deterministic,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
                 out = @sync @parallel (hcat) for i=1:n_particles
-                    mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
+                    mutation_problem(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
                 end
             else
                 print("(not parallel)")
-                out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
+                out = [mutation_problem(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
             end               
             toc()
             # Disentangle three outputs of mutation and enter them into appropriate arrays
