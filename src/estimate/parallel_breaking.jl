@@ -2,11 +2,13 @@
 # Test to show buildup of parallel calls
 function parallel_breaking()
     N = 4000
-
+    K = 7
+    T = 100
     m=Array{Array{Float64}}(4)
-    A = randn(N,54)
-    B = randn(54,N)
-    C = randn(54,N)
+    time_blocks = zeros(T)
+    A = randn(N,K)
+    B = randn(K,N)
+    C = randn(K,N)
     D = randn(N,N)
     j = 1
 
@@ -15,15 +17,22 @@ function parallel_breaking()
     m[3]=C
     m[4]=D
 
-    while j<5
+    for t=1:1
         tic()
-        out = @sync @parallel (hcat) for i=1:N
-            move_stuff(m, A, B, C[:,i], D[:,i])
+        while j<5
+            tic()
+            out = @allocated @sync @parallel (hcat) for i=1:N
+                move_stuff(m, A, B, C[:,i], D[:,i])
+            end
+            print("\nOne function call ")
+            toc()
+            j+= 1
         end
-        print("\nOne function call ")
-        toc()
-        j+= 1
+        print("Time $t ")
+        time_blocks[t] = toc()
+        print("==========================")
     end
+    return time_blocks
 end
 
 function move_stuff(m::Array, A::Array{Float64}, B::Array{Float64}, C::Array{Float64}, D::Array{Float64})
@@ -39,11 +48,6 @@ function move_stuff(m::Array, A::Array{Float64}, B::Array{Float64}, C::Array{Flo
         M1 = A*C + D
         M2 = A*C + D
     end
-    finalize(A)
-    finalize(B)
-    finalize(C)
-    finalize(D)
-    finalize(m)
     gc()
     return a, b, c
     
