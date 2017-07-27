@@ -1,6 +1,18 @@
 #= The following script creates 30 workers. The function problem_short sets up inputs then for T time steps (default 50) runs the mutation function 10 times per time step. It keeps track of runtimes and prints a plot of the increase in runtime for each time step. It calls mutation_problem.jl instead of mutation.jl which are identical however mutation_problem.jl has a flag for whether to create two MvNormal objects
 =#
 
+#= Two things that we've done that seem to mitigate the problem:
+1. Not passing in the model object (relatively large) into mutation--> this would 
+seem to suggest the problem is with allocating work
+2. Not creating MvNormal Distribution objects in mutation--> this occurs within
+ each mutation which would seem to suggest the problem is with gunk accumulating on each worker.
+
+Also, the problem is worse with 30 workers than 10 workers so to see an effect, should run with
+30 workers
+
+Also, look at distVsNodist.pdf in the src/estimate folder
+=#
+
 using ClusterManagers, HDF5, Plots, JLD
 using QuantEcon: solve_discrete_lyapunov
 
