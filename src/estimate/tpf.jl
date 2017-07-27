@@ -172,9 +172,10 @@ times = zeros(T)
         # While it might seem weird that we're updating s_lag_tempered and not s_t_nontempered, we are actually just resampling and we only need the lagged states for future calculations.
         loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_lag_tempered,ε_rand_mat,EE_t,n_particles,deterministic,initialize=1)
         
+
         # Update likelihood
         lik[t]=lik[t]+loglik
-
+        
         # Tempering Initialization
         count = 2 # Accounts for initialization and final mutation
         φ_old = φ_1
@@ -351,6 +352,8 @@ times = zeros(T)
         print("Completion of one period ")
         gc()
         toc()
+        @show loglik
+        #@assert loglik<0.0
     end
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -403,6 +406,7 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array{Float6
     end   
 
     # Normalize weights
+    ##SHOULD THIS BE SUM INSTEAD OF MEAN?
     weights = (density_arr.*weights)./mean(density_arr.*weights)
     
     # Resampling

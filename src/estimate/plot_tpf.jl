@@ -1,7 +1,10 @@
-function plot_tpf()
-#using ClusterManagers, HDF5, DataFrames, Plots, StateSpaceRoutines
-#using QuantEcon: solve_discrete_lyapunov
+using ClusterManagers, HDF5, DataFrames, Plots
+using QuantEcon: solve_discrete_lyapunov
 
+addprocs_sge(10,queue="background.q")
+@everywhere using DSGE
+
+function plot_tpf()
 
   #  custom_settings= Dict{Symbol,Setting}(
 #        :date_forecast_start => Setting(:date_forecast_start, quartertodate("2011-Q2")))
@@ -28,7 +31,7 @@ function plot_tpf()
     m<=Setting(:tpf_rand_mat,rand_mat)
     
     m<=Setting(:tpf_rstar,2.0)
-    m<=Setting(:tpf_N_MH, 10)
+    m<=Setting(:tpf_N_MH, 2)
     m<=Setting(:tpf_c,0.1)
     m<=Setting(:tpf_acpt_rate,0.5)
     m<=Setting(:tpf_trgt,0.25)
@@ -44,14 +47,20 @@ function plot_tpf()
 
 #For comparing change variance to not changing variance    
     Neff, lik, times = tpf(m,data,system,s0,P0,false)
-    kalman_out = filter(m,data,s0,P0,allout=true)
-    NeffVar, likVar, timesVar = tpf(m,data,system,s0,P0,true)
+    kalman_out = DSGE.filter(m,data,s0,P0,allout=true)
+    #NeffVar, likVar, timesVar = tpf(m,data,system,s0,P0,true)
 
     h5open("$path/../../test/reference/varLik.h5","w") do file
         write(file, "lik", lik)
-        write(file, "likVar",likVar)
+       # write(file, "likVar",likVar)
         write(file, "kalman_lik",kalman_out[:L_vec])
     end
+
+    plotly()
+    plot(kalman_out[:L_vec], color=:blue, linewidth=3, label="Kalman")
+    plot!(lik, color=:green, linewidth=2, label="TPF")
+    plot!(legend=:bottomright, xlabel="Time", ylabel="Log likelihood")
+    gui()
 
     
 ##For getting distribution of errors (relative to Kalman filter)
