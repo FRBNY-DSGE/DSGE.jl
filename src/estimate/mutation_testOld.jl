@@ -10,13 +10,12 @@ s_init: The starting state before mutation.
 """
 
 #function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array{Float64,2}, nonmissing::Array{Bool,1})
-function mutation_problem(c::Float64, N_MH::Int64, deterministic::Bool, system::System{Float64}, yt::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array{Float64,2}, nonmissing::Array{Bool,1}, distCall::Bool)
+function mutation_problem(c::Float64, N_MH::Int64, deterministic::Bool, system::System{Float64}, yt::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array{Float64,2}, nonmissing::Array{Bool,1})
     #------------------------------------------------------------------------
     # Setup
     #------------------------------------------------------------------------
     # Set path--used for testing
     path = dirname(@__FILE__)
-
 
     DD = system.measurement.DD[nonmissing]
     ZZ = system.measurement.ZZ[nonmissing,:]
@@ -30,11 +29,6 @@ function mutation_problem(c::Float64, N_MH::Int64, deterministic::Bool, system::
     ind_s = s_init
     ind_ε = ε_init
     
-    # Get paramaters from model settings; c updates dynamically to tune TPF over time.
-   # c = get_setting(m,:tpf_c)
-   # N_MH = get_setting(m, :tpf_n_mh_simulations)
-   # deterministic = get_setting(m, :tpf_deterministic)
-
     # Initialize acceptance counter to zero
     acpt = 0
 
@@ -45,6 +39,7 @@ function mutation_problem(c::Float64, N_MH::Int64, deterministic::Bool, system::
         
         if (!deterministic) rand_mat = randn(size(QQ,1),1) 
         else rand_mat = get_setting(m,:tpf_rand_mat) end
+#rand_mat = randn(size(QQ,1),1)
                 # Generate new draw of ε from a N(ε_init, c²cov_s) distribution (defined in tpf.jl), c tuning parameter
         ε_new=ε_init + c*Matrix(chol(nearestSPD(cov_s)))'*rand_mat
 
@@ -58,16 +53,13 @@ function mutation_problem(c::Float64, N_MH::Int64, deterministic::Bool, system::
         error_new  = yt - ZZ*s_new_fore - DD
         error_init = yt - ZZ*s_init_fore - DD
         # Calculate the top and bottom probabilities for the α ratio.
-       if distCall
-           post_new = log(pdf(MvNormal(zeros(length(yt)),EE),error_new)[1]*pdf(MvNormal(zeros(length(ε_new)),eye(length(ε_new),length(ε_new))),ε_new)[1])
-           post_init = log(pdf(MvNormal(zeros(length(yt)),EE),error_init)[1]*pdf(MvNormal(zeros(length(ε_init)),eye(length(ε_init),length(ε_init))),ε_init)[1])
+   #     post_new = log(pdf(MvNormal(zeros(length(yt)),EE),error_new)[1]*pdf(MvNormal(zeros(length(ε_new)),eye(length(ε_new),length(ε_new))),ε_new)[1])
+   #     post_init = log(pdf(MvNormal(zeros(length(yt)),EE),error_init)[1]*pdf(MvNormal(zeros(length(ε_init)),eye(length(ε_init),length(ε_init))),ε_init)[1])
 
         # α is the probability of accepting the new particle 
         # (post_new and post_init are in logs so subtract and take the exponential)
-        α = exp(post_new - post_init)
-       else
-           α = .5
-       end
+#        α = exp(post_new - post_init)
+        α=.5
         # Accept the particle with probability α
         if (deterministic) num = 0.5
         else num = rand() end
@@ -80,13 +72,10 @@ function mutation_problem(c::Float64, N_MH::Int64, deterministic::Bool, system::
         else 
             # Reject and keep the old particle unchanged
             ind_s = s_init_fore
-            ind_ε = ε_init
-            
-            #THIS IS DIFFERENT THAN ORIGINAL MATLAB BUT WE THINK MATLAB WRONG 
-            # acpt = 0
+            ind_ε = ε_init            
         end
         ε_init = ind_ε
-    end
+    end  
     acpt /= N_MH
     return ind_s, ind_ε, acpt 
     gc()

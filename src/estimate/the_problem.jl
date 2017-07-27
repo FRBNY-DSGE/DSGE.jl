@@ -1,4 +1,4 @@
-#= The following script creates 30 workers. The function problem_short sets up inputs then for T time steps (default 50) runs the mutation function 10 times per time step. It keeps track of runtimes and prints a plot of the increase in runtime for each time step.
+#= The following script creates 30 workers. The function problem_short sets up inputs then for T time steps (default 50) runs the mutation function 10 times per time step. It keeps track of runtimes and prints a plot of the increase in runtime for each time step. It calls mutation_problem.jl instead of mutation.jl which are identical however mutation_problem.jl has a flag for whether to create two MvNormal objects
 =#
 
 using ClusterManagers, HDF5, Plots, JLD
@@ -8,7 +8,7 @@ addprocs_sge(30, queue="background.q")
 
 @everywhere using DSGE
 
-function problem_short(parallel=true::Bool,T=50::Int64)
+function the_problem(parallel=true::Bool,T=50::Int64, distCall=true)
     ## Setup
     m,system,TTT,sqrtS2,s0,P0,s_lag_tempered,ε,yt,nonmissing, N_MH,c, n_particles,deterministic, μ, cov_s,s_t_nontempered = setup()
    
@@ -21,20 +21,20 @@ function problem_short(parallel=true::Bool,T=50::Int64)
         #Begin timer for time step
         tic()        
         #Run mutation 10 times per time step
-        for i=1:10                            
+        for i=1:10
             acpt_vec=zeros(n_particles)
             print("Mutation ")
             #Begin timer for each mutation step
             tic()
             if parallel
                 print("(in parallel) ")
-                #out = pmap(i->mutation(c, N_MH,deterministic,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
+                #out = pmap(i->mutation_problem(c, N_MH,deterministic,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing,distCall), 1:n_particles)
                 out = @sync @parallel (hcat) for i=1:n_particles
-                    mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
+                    mutation_problem(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing,distCall)
                 end
             else
                 print("(not parallel)")
-                out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
+                out = [mutation_problem(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing,distCall) for i=1:n_particles]
             end               
             toc()
             # Disentangle three outputs of mutation and enter them into appropriate arrays
@@ -48,7 +48,7 @@ function problem_short(parallel=true::Bool,T=50::Int64)
         gc()
         times[t] = toc()
     end
-    h5open("../../test/reference/the_problem_times.h5", "w") do file
+    h5open("../../test/reference/the_problem_times_distCall=$distCall.h5", "w") do file
         write(file, "times", times)
     end    
     plotly()
