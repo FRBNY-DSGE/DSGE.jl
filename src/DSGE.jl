@@ -102,7 +102,7 @@ module DSGE
         prepare_meansbands_tables_shockdec, write_meansbands_tables_all,
 
         # plot/
-        plot_irfs, plot_history_and_forecast, hair_plot, plot_forecast_comparison,
+        ShockGroup, plot_irfs, plot_history_and_forecast, hair_plot, plot_forecast_comparison,
 
         # util
         @test_matrix_approx_eq, @test_matrix_approx_eq_eps
@@ -160,6 +160,7 @@ module DSGE
     include("analysis/util.jl")
 
     include("plot/util.jl")
+    include("plot/shock_group.jl")
     include("plot/plot_irfs.jl")
     include("plot/plot_history_and_forecast.jl")
     include("plot/hair_plot.jl")
