@@ -26,13 +26,12 @@ function setup_model(model_type::String,n_particles::Int64,deterministic::Bool,p
     m<=Setting(:tpf_c, 0.1)
     m<=Setting(:tpf_acpt_rate,0.5)
     m<=Setting(:tpf_trgt, 0.25)
-    m<=Setting(:tpf_n_mh_simulations, 20)
+    m<=Setting(:tpf_n_mh_simulations, 2)
     m<=Setting(:n_presample_periods, 2)
     m<=Setting(:tpf_deterministic, deterministic)
     m<=Setting(:use_parallel_workers, parallel)
     m<=Setting(:tpf_x_tolerance, zero(float(0)))
     m<=Setting(:tpf_n_particles, n_particles)
-    
     return m
 end
 
@@ -77,7 +76,6 @@ function optimize_setup(m::AbstractModel,deterministic::Bool)
             println("AnSchorfheide model, nondeterministic model.")
             # An Schorfheide, nondeterministic
             file = "$path/../reference/optimize.h5"
-            #x0 = h5read(file,"params")
             data = h5read(file, "data")'
             out, H = optimize!(m, data; iterations=200)
             params = out.minimizer
@@ -109,14 +107,13 @@ function optimize_setup(m::AbstractModel,deterministic::Bool)
     return m, system, data, Φ, R, S2
 end
 
-
+# Set parameters for testing
 deterministic=false
 parallel=true
 n_particles=4000
 
-
 if parallel
-    my_procs = addprocs_sge(4,queue="background.q")
+    my_procs = addprocs_sge(10,queue="background.q")
     @everywhere using DSGE
 end
 
@@ -124,28 +121,18 @@ end
 m = setup_model("SmetsWouters", n_particles, deterministic, parallel)
 m, sys, data, Φ, R, S2 = optimize_setup(m,deterministic)
 s0 = zeros(size(sys[:TTT])[1])
-
-### WE ARE MULTIPLYING INITIAL VARIANCE BY 0.1 FOR REASONS UNKNOWN :O ###
-P0 = 0.1*nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
+P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 
 tic()
 neff, lik = tpf(m, data, sys, s0, P0)
 total_time = toc()
-#Profile.print()
+
 h5open("$path/reference/output_likelihoods_particles_4000_n_MH_20.h5","w") do f
     write(f,"julia_likelihoods",lik)
 end
-#data = copy(Profile.fetch())
-#Profile.clear()
-#open("profile_backtrace2.txt","w") do s
-#    Profile.print(s, data) # Prints the previous results
-#end
-#Profile.clear()
 
 type_m = typeof(m)
 println("$n_particles Particles, $type_m, N_MH = $tpf_n_mh_simulations, elapsed time: $total_time seconds\n")
-
-
 
 # For comparison test
 good_likelihoods = h5open("$path/../reference/tpf_test_likelihoods.h5","r") do file
@@ -153,7 +140,7 @@ good_likelihoods = h5open("$path/../reference/tpf_test_likelihoods.h5","r") do f
 end
 
 if ((n_particles == 4000) & deterministic) & (typeof(m)==AnSchorfheide{Float64})
-    @test lik==good_likelihoods
+    @test lik == good_likelihoods
     println("Test passed for AnSchorfheide with 4000 particles in deterministic mode.")
 end
 
@@ -162,7 +149,6 @@ end
 # h5open("$path/../reference/tpf_test_likelihoods.h5","w") do file
 #     write(file,"test_likelihoods",lik)
 # end
-
 rmprocs(my_procs)
 
 nothing

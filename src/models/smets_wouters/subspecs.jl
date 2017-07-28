@@ -10,9 +10,9 @@ function init_subspec!(m::SmetsWouters)
     if subspec(m) == "ss0"
         return
     elseif subspec(m) == "ss1"
-        return ss1!(m,10)
-    elseif subspec(m) == "ss2"
         return ss1!(m,5)
+    elseif subspec(m) == "ss2"
+        return ss1!(m,10)
     elseif subspec(m) == "ss3"
         return ss1!(m,2)
     else
