@@ -1,6 +1,10 @@
 #using DSGE, ClusterManagers
 using Roots
+<<<<<<< HEAD
 function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array, varInflate::Int; verbose::Symbol=:low, include_presample::Bool=true)
+=======
+function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array, varInflate, identity; verbose::Symbol=:low, include_presample::Bool=true)
+>>>>>>> Significantly refactored plotting files for creating distribution of errors and comparing different specifications of TPF in plot_tpf_dist.jl and plot_tpf_comp.jl
     # s0 is 8xn_particles
     # P0
     # yy is data matrix
@@ -286,13 +290,19 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
             c = get_setting(m,:tpf_c)
             N_MH=get_setting(m,:tpf_n_mh_simulations)
             deterministic=get_setting(m,:tpf_deterministic)
-
+<<<<<<< HEAD
             # out = pmap(i -> mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
             out = @sync @parallel (hcat) for i=1:n_particles
                 mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
             end
+=======
+            #out = pmap(i -> mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing,identity), 1:n_particles)
+            out = @sync @parallel (hcat) for i=1:n_particles
+                        mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing,identity)
+                end
+>>>>>>> Significantly refactored plotting files for creating distribution of errors and comparing different specifications of TPF in plot_tpf_dist.jl and plot_tpf_comp.jl
         else 
-            out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
+            out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing,identity) for i=1:n_particles]
         end
                 
         for i = 1:n_particles

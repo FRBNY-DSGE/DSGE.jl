@@ -1,11 +1,7 @@
-function plot_tpf(filter;identity=False::Bool)
-
-  #  custom_settings= Dict{Symbol,Setting}(
-#        :date_forecast_start => Setting(:date_forecast_start, quartertodate("2011-Q2")))
+function tpf_error()
+tic()
     m = SmetsWouters("ss1", testing=true)
-#    m <= Setting(:date_conditional_end,quartertodate("2011-Q1"))
- #   m <= Setting(:date_forecast_start, quartertodate("2011-Q2"))
-#    srand(47)
+
     path = dirname(@__FILE__)
     
     filesw = "/data/dsge_data_dir/dsgejl/realtime/input_data/data"
@@ -31,29 +27,21 @@ function plot_tpf(filter;identity=False::Bool)
     m<=Setting(:tpf_trgt,0.25)
     n_particles=4000
     m<=Setting(:tpf_n_particles,n_particles)
-    m<=Setting(:use_parallel_workers, true)
+    m<=Setting(:use_parallel_workers, false)
     m<=Setting(:x_tolerance, zero(float(0)))
-    m<=Setting(:tpf_deterministic, false)    
+    m<=Setting(:tpf_deterministic, false)
     
     s0 = zeros(size(system[:TTT])[1])
     P0= nearestSPD(solve_discrete_lyapunov(Φ,R*S2*R'))
-
-    if cmp(filter,"kalman")==0
-        println("A")
-        kalman_out = DSGE.filter(m,data,s0,P0,allout=true)
-        lik = kalman_out[:L_vec]
-    else
-        Neff, lik, times = tpf(m,data,system,s0,P0,true,identity)
-    end
     
-    h5open("$path/../../test/reference/lik_$(filter)_identity=$(identity).h5","w") do file
-        write(file, "lik", lik)        
-    end
-    return lik
-end
-
-
-
+    #For getting distribution of errors (relative to Kalman filter)
+    kalman_out = DSGE.filter(m,data,s0,P0,allout=true)
+ 
+    Neff, lik, times = tpf(m,data,system,s0,P0,true,false)
+    println("One error generated ")
+    toc()
+   return kalman_out[:L]-sum(lik)
+ end
 
     #kalman filter
     #=kalman_out = filter(m,data,s0,P0,allout=true)

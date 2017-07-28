@@ -109,7 +109,7 @@ end
 
 # Set parameters for testing
 deterministic=false
-parallel=true
+parallel=false
 n_particles=4000
 
 if parallel
@@ -124,7 +124,7 @@ s0 = zeros(size(sys[:TTT])[1])
 P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 
 tic()
-neff, lik = tpf(m, data, sys, s0, P0)
+neff, lik = tpf(m, data, sys, s0, P0,false)
 total_time = toc()
 
 h5open("$path/reference/output_likelihoods_particles_4000_n_MH_20.h5","w") do f
