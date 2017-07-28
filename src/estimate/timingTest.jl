@@ -62,7 +62,6 @@ gui()
 
 Neff, lik_40000, times = tpf(m,data,system,s0,P0,0)
 
-
 ### BUILD NEW MODEL ###
 m = SmetsWouters("ss1", testing=true)
 path = dirname(@__FILE__)
