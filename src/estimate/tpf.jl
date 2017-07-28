@@ -1,6 +1,6 @@
 #using DSGE, ClusterManagers
 using Roots
-function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array, varInflate; verbose::Symbol=:low, include_presample::Bool=true)
+function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array, varInflate::Int; verbose::Symbol=:low, include_presample::Bool=true)
     # s0 is 8xn_particles
     # P0
     # yy is data matrix
@@ -10,12 +10,12 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     #--------------------------------------------------------------
 
     # Store model parameters
-    RRR = system.transition.RRR
-    TTT = system.transition.TTT
-    EE  = system.measurement.EE
-    DD  = system.measurement.DD
-    ZZ  = system.measurement.ZZ
-    QQ  = system.measurement.QQ    
+    RRR    = system.transition.RRR
+    TTT    = system.transition.TTT
+    EE     = system.measurement.EE
+    DD     = system.measurement.DD
+    ZZ     = system.measurement.ZZ
+    QQ     = system.measurement.QQ    
     sqrtS2 = RRR*get_chol(QQ)'
 
     # Get tuning parameters from the model
@@ -62,28 +62,10 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
 
     s_lag_tempered = repmat(s0,1,n_particles) + get_chol(P0)'*s_lag_tempered_rand_mat
 
-    fullData = size(yy,1)
-    incIter=zeros(0)
-    i = 0
-     for t=1:T
-         if any(isnan(yy[:,t]))
-             if (t-1) in incIter
-                 incIter[i]=t
-             else 
-               push!(incIter, t)
-               i+=1
-             end
-         end
-     end
-    incIter2=zeros(0)
-    for i=incIter
-        push!(incIter2,i,i+1,i+2)
-    end
-incIter2 = union(round(Int64,incIter2))
-incIter2 = incIter2[find(x -> x>0,incIter2)]
-@show incIter2
-times = zeros(T)
+    times = zeros(T)
+
     for t=1:T
+
         tic()
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("============================================================")
@@ -95,9 +77,9 @@ times = zeros(T)
         #--------------------------------------------------------------
         yt = yy[:,t]
         
+        # Remove rows/columns of series with NaN values
         nonmissing = !isnan(yt)
-        yt = yt[nonmissing]
-        
+        yt = yt[nonmissing]        
         ZZ_t = ZZ[nonmissing,:]
         DD_t = DD[nonmissing]
         EE_t = EE[nonmissing,nonmissing]
@@ -107,43 +89,19 @@ times = zeros(T)
         n_errors_t = length(yt)
         ε = zeros(n_errors_t)
         
+        # Scale certain series (for testing purposes)
         scale = ones(size(EE_t,1))
         if length(scale)==7
-            scale[2]=1+10000000000*exp(-19)
+            if varInflate == 1
+                scale[2]=1+10000000000*exp(-t)
+            end
+            if varInflate == 2
+                scale[2]=1+10000000000*exp(-19)
+            end
         end
-        @show EE_t
-        if varInflate
+        if varInflate>0
             EE_t = diagm(EE_t*scale)
         end
-        @show EE_t
-
-        if t in incIter2
-            rstar=1.25
-            N_MH=20
-            m<=Setting(:tpf_n_mh_simulations,10)
-        else
-            rstar=2.0
-            N_MH=2
-            m<=Setting(:tpf_n_mh_simulations,2)
-        end
-        # @show length(yt)
-        # @show fullData
-        # if length(yt)<fullData
-        #     rstar=1.5
-        #     N_MH=10
-        #     m<=Setting(:tpf_n_mh_simulations,10)
-        # else
-        #     rstar=2.0
-        #     N_MH=2
-        #     m<=Setting(:tpf_n_mh_simulation,2)
-        # end
-        
-
-         @show t
-         @show n_particles
-         @show parallel
-         @show N_MH
-         @show rstar
             
         if !deterministic # When not testing, want a new random ε each time 
             ε_rand_mat = randn(n_errors_t, n_particles)
@@ -212,10 +170,7 @@ times = zeros(T)
                 
                 if !deterministic
                     # Set φ_new to the solution of the inefficiency function over interval
-                    println("Time of fphi inside while loop")
-                    tic()
                     φ_new = fzero(init_ineff_func, φ_interval, xtol=xtol)
-                    toc()
                     check_ineff = ineff_func(1.0, φ_new, yt, perror, EE_t, initialize=0)
                 else
                     φ_new = 0.5
@@ -249,8 +204,7 @@ times = zeros(T)
                 
                 # Mutation Step
                 acpt_vec=zeros(n_particles)
-                print("Mutation ")
-                
+                print("Mutation ")        
                 tic()
 
                 if parallel
@@ -266,7 +220,8 @@ times = zeros(T)
                     print("(not parallel) ")
                     out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
                 end
-               times[t] = toc()                
+                times[t] = toc()                
+
                 for i = 1:n_particles
                     s_t_nontempered[:,i] = out[i][1]
                     ε[:,i] = out[i][2]
@@ -289,9 +244,10 @@ times = zeros(T)
                 check_ineff = rstar
             end
             gc()
+
             # With phi schedule, leave while loop after one iteration, thus set check_ineff=0
             if deterministic
-               check_ineff = 0
+                check_ineff = 0
             end
 
             if VERBOSITY[verbose] >= VERBOSITY[:high]
@@ -325,15 +281,15 @@ times = zeros(T)
         
         # Final round of mutation
         acpt_vec = zeros(n_particles)
-  
+
         if parallel
             c = get_setting(m,:tpf_c)
             N_MH=get_setting(m,:tpf_n_mh_simulations)
             deterministic=get_setting(m,:tpf_deterministic)
-            #out = pmap(i -> mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
+            # out = pmap(i -> mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
             out = @sync @parallel (hcat) for i=1:n_particles
-                        mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
-                end
+                mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
+            end
         else 
             out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
         end
@@ -429,7 +385,7 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array{Float6
 end
 
 function zlb_regime_indices{S<:AbstractFloat}(m::AbstractModel{S},data::Matrix{S})
-    #make sure the data matrix has all time periods when passing in or this won't work
+    # Make sure the data matrix has all time periods when passing in or this won't work
     T = size(data,2)
     if n_anticipated_shocks(m) >0
         regime_inds = Vec{Range{Int64}}(2)
@@ -442,7 +398,7 @@ end
 
 function zlb_regime_matrices{S<:AbstractFloat}(m::AbstractModel{S},system::System{S})
     if !all(x -> x==0, system[:MM])
-        error("previously this error said Kalman filter and smoothers not implemented for nonzero MM however i'm not sure if this still applies to the TPF")
+        error("Previously this error said Kalman filter and smoothers not implemented for nonzero MM however i'm not sure if this still applies to the TPF")
     end
     
     if n_anticipated_shocks(m) > 0
@@ -459,9 +415,9 @@ function zlb_regime_matrices{S<:AbstractFloat}(m::AbstractModel{S},system::Syste
     TTTs = fill(system[:TTT], n_regimes)
     RRRs = fill(system[:RRR], n_regimes)
     CCCs = fill(system[:CCC], n_regimes)
-    ZZs = fill(system[:ZZ], n_regimes)
-    DDs = fill(system[:DD], n_regimes)
-    EEs = fill(system[:EE], n_regimes)
+    ZZs  = fill(system[:ZZ],  n_regimes)
+    DDs  = fill(system[:DD],  n_regimes)
+    EEs  = fill(system[:EE],  n_regimes)
 
     return TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs
 end
