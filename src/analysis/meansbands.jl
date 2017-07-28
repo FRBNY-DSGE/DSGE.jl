@@ -614,8 +614,9 @@ end
 """
 ```
 prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBands,
-           mb_dettrend::MeansBands, var::Symbol; [shocks = Vector{Symbol}()],
-           [mb_forecast = MeansBands()], [mb_hist = MeansBands()])
+    mb_dettrend::MeansBands, var::Symbol;
+    shocks = Vector{Symbol}(), mb_forecast = MeansBands(), mb_hist = MeansBands(),
+    detexify::Bool = true)
 ```
 
 Returns a `DataFrame` representing a detrended shock decompostion for
@@ -624,6 +625,7 @@ contributions of each shock in `shocks` (or all shocks, if the keyword
 argument is omitted) and the deterministic trend.
 
 ### Inputs
+
 - `mb_shockdec::MeansBands`: a `MeansBands` object for a shock decomposition
 - `mb_trend::MeansBands`: a `MeansBands` object for a trend  product.
 - `mb_dettrend::MeansBands`: a `MeansBands` object for a deterministic trend
@@ -631,17 +633,20 @@ argument is omitted) and the deterministic trend.
 - `var::Symbol`: name of economic variable for which to return the means and bands table
 
 ### Keyword Arguments
+
 - `shocks::Vector{Symbol}`: If `mb` is a shock decomposition, this is
   an optional list of shocks to print to the table. If omitted, all
   shocks will be printed.
 - `mb_forecast::MeansBands`: a `MeansBands` object for a forecast.
 - `mb_hist::MeansBands`: a `MeansBands` object for smoothed states.
+- `detexify::Bool`: whether to remove Unicode characters from shock names
 """
 function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBands,
                                       mb_dettrend::MeansBands, var::Symbol;
                                       shocks::Vector{Symbol} = Vector{Symbol}(),
                                       mb_forecast::MeansBands = MeansBands(),
-                                      mb_hist::MeansBands = MeansBands())
+                                      mb_hist::MeansBands = MeansBands(),
+                                      detexify_shocks::Bool = true)
 
     @assert get_product(mb_shockdec) == :shockdec "The first argument must be a MeansBands object for a shockdec"
     @assert get_product(mb_trend)    == :trend    "The second argument must be a MeansBands object for a trend"
@@ -680,10 +685,12 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     map(x -> rename!(df, x, parse_mb_colname(x)[2]), setdiff(names(df), [:date, :trend, :dettrend]))
 
     # remove Unicode characters from shock names
-    for x in setdiff(names(df), [:date, :trend, :dettrend])
-        x_detexed = detexify(x)
-        if x != x_detexed
-            rename!(df, x, x_detexed)
+    if detexify_shocks
+        for x in setdiff(names(df), [:date, :trend, :dettrend])
+            x_detexed = detexify(x)
+            if x != x_detexed
+                rename!(df, x, x_detexed)
+            end
         end
     end
 
