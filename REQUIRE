@@ -8,6 +8,7 @@ HDF5
 JLD
 Optim 0.7
 QuantEcon
+Plots
 Roots
 StateSpaceRoutines
 StatPlots
