@@ -732,3 +732,24 @@ function parameter_groupings(m::Model1002)
 
     return groupings
 end
+
+"""
+```
+shock_groupings(m::Model1002)
+```
+
+Returns a `Vector{ShockGroup}`, which must be passed in to
+`plot_shock_decomposition`. See `?ShockGroup` for details.
+"""
+function shock_groupings(m::Model1002)
+    gov = ShockGroup("Gov't", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
+    fin = ShockGroup("Financial", [:b_sh, :γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo
+    tfp = ShockGroup("TFP", [:z_sh, :zp_sh], RGB(1.0, 0.55, 0.0)) # darkorange
+    mkp = ShockGroup("Mark-Up", [:λ_f_sh, :λ_w_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
+    pol = ShockGroup("Policy",    vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]),
+                     RGB(1.0, 0.84, 0.0)) # gold
+    mei = ShockGroup("MEI", [:μ_sh], :cyan)
+    det = ShockGroup("Det Trend", [:dettrend], :gray40)
+
+    return [gov, fin, tfp, mkp, pol, mei, det]
+end
