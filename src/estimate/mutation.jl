@@ -1,6 +1,6 @@
 """
 ```
-function mutation(m::AbstractModel, yt::Array{Float64,1},s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array)
+function mutation(c::Float64, N_MH::Int64, deterministic::Bool, system::System{Float64}, yt::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array, nonmissing::Array{Bool,1})
 ```
 Runs random-walk Metropolis Hastings for ONE particle. The caller should loop through all particles, calling this method on each. 
 m: The model. Used to get the setting tpf_c (which is VERY important it turns out...) 
@@ -17,7 +17,6 @@ function mutation(c::Float64, N_MH::Int64, deterministic::Bool, system::System{F
     # Set path--used for testing
     path = dirname(@__FILE__)
 
-
     DD = system.measurement.DD[nonmissing]
     ZZ = system.measurement.ZZ[nonmissing,:]
     EE = system.measurement.EE[nonmissing,nonmissing]
@@ -30,11 +29,6 @@ function mutation(c::Float64, N_MH::Int64, deterministic::Bool, system::System{F
     ind_s = s_init
     ind_ε = ε_init
     
-    # Get paramaters from model settings; c updates dynamically to tune TPF over time.
-   # c = get_setting(m,:tpf_c)
-   # N_MH = get_setting(m, :tpf_n_mh_simulations)
-   # deterministic = get_setting(m, :tpf_deterministic)
-
     # Initialize acceptance counter to zero
     acpt = 0
 
@@ -62,14 +56,13 @@ function mutation(c::Float64, N_MH::Int64, deterministic::Bool, system::System{F
         post_init = log(pdf(MvNormal(zeros(length(yt)),EE),error_init)[1]*pdf(MvNormal(zeros(length(ε_init)),eye(length(ε_init),length(ε_init))),ε_init)[1])
 
         # α is the probability of accepting the new particle 
-        # (post_new and post_init are in logs so subtract and take the exponential)
         α = exp(post_new - post_init)
 
         # Accept the particle with probability α
         if (deterministic) num = 0.5
         else num = rand() end
         
-        if num<α 
+        if num < α 
             # Accept
             ind_s = s_new_fore
             ind_ε = ε_new
@@ -85,6 +78,7 @@ function mutation(c::Float64, N_MH::Int64, deterministic::Bool, system::System{F
         ε_init = ind_ε
     end
     acpt /= N_MH
+
     return ind_s, ind_ε, acpt 
     gc()
 end
