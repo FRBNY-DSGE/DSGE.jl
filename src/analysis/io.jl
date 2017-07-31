@@ -141,11 +141,16 @@ end
 ```
 read_mb(fn::String)
 
-read_mb(m, input_type, cond_type, output_var; forecast
+read_mb(m, input_type, cond_type, output_var; forecast_string = "",
+    bdd_and_unbdd::Bool = false)
 ```
 
 Read in a `MeansBands` object saved in `fn`, or use the model object `m` to
 determine the file location.
+
+If `bdd_and_unbdd`, then `output_var` must be either `:forecast` or
+`:forecast4q`. Then this function calls `read_bdd_and_unbdd` to return a
+`MeansBands` with unbounded means and bounded bands.
 """
 function read_mb(fn::String)
     @assert isfile(fn) "File $fn could not be found"
@@ -155,12 +160,49 @@ function read_mb(fn::String)
 end
 
 function read_mb(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
-                 output_var::Symbol; forecast_string::String = "")
+                 output_var::Symbol; forecast_string::String = "",
+                 bdd_and_unbdd::Bool = false)
 
-    files = get_meansbands_output_files(m, input_type, cond_type, [output_var];
-                                        forecast_string = forecast_string,
-                                        fileformat = :jld)
-    read_mb(files[output_var])
+    if bdd_and_unbdd
+        @assert get_product(output_var) in [:forecast, :forecast4q]
+        bdd_output_var = Symbol(:bdd, output_var)
+        files = get_meansbands_output_files(m, input_type, cond_type,
+                                            [output_var, bdd_output_var];
+                                            forecast_string = forecast_string)
+        read_bdd_and_unbdd_mb(files[bdd_output_var], files[output_var])
+    else
+        files = get_meansbands_output_files(m, input_type, cond_type, [output_var];
+                                            forecast_string = forecast_string)
+        read_mb(files[output_var])
+    end
+end
+
+"""
+```
+read_bdd_and_unbdd_mb(bdd_fn::String, unbdd_fn::String)
+```
+
+Read in the bounded and unbounded forecast `MeansBands` from `bdd_fn` and
+`unbdd_fn`. Create and return a `MeansBands` with the unbounded means and
+bounded bands.
+"""
+function read_bdd_and_unbdd_mb(bdd_fn::String, unbdd_fn::String)
+    # Check files exist
+    @assert isfile(bdd_fn)   "File $bdd_fn could not be found"
+    @assert isfile(unbdd_fn) "File $unbdd_fn could not be found"
+
+    # Read MeansBands
+    bdd_mb   = read_mb(bdd_fn)
+    unbdd_mb = read_mb(unbdd_fn)
+
+    # Check well-formed
+    for fld in [:para, :forecast_string, :cond_type, :date_inds, :class, :indices]
+        @assert bdd_mb.metadata[fld] == unbdd_mb.metadata[fld] "$fld field does not match: $((bdd_mb.metadata[fld], unbdd_mb.metadata[fld]))"
+    end
+    @assert (bdd_mb.metadata[:product], unbdd_mb.metadata[:product]) in [(:bddforecast, :forecast), (:bddforecast4q, :forecast4q)] "Invalid product fields: $((bdd_mb.metadata[:product], unbdd_mb.metadata[:product]))"
+
+    # Stick together unbounded means, bounded bands
+    return MeansBands(unbdd_mb.metadata, unbdd_mb.means, bdd_mb.bands)
 end
 
 
