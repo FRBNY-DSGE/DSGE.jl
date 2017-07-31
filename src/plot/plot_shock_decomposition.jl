@@ -92,6 +92,7 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
                                            mb_hist = hist, mb_forecast = forecast,
                                            detexify_shocks = false)
     df[:datenum] = map(quarter_date_to_number, df[:date])
+    df[:x] = map(date -> shockdec_date_to_x(date, df[1, :date]), df[:date])
     nperiods = size(df, 1)
 
     # Sum shock values for each group
@@ -102,15 +103,12 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
         df[Symbol(group.name)] = shock_sum
     end
 
-    # Dates
-    t0 = df[1, :datenum]
-    t1 = df[end, :datenum]
-
-    # x-axis units
-    x0 = 0.5
-    x1 = x0 + (nperiods - 1)
-    xs = collect(x0:1.0:x1)
+    # x-axis ticks
+    date_ticks = get_date_ticks(df[:date], tick_size = tick_size)
+    x0 = shockdec_date_to_x(quarter_number_to_date(date_ticks.start), df[1, :date])
+    x1 = shockdec_date_to_x(quarter_number_to_date(date_ticks.stop),  df[1, :date])
     xstep = tick_size * 4
+    x_ticks = x0:xstep:x1
 
     # Plot bars
     colors = reshape(map(x -> x.color, groups), 1, length(groups))
@@ -118,7 +116,7 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
     cat_names = map(Symbol, labels)
 
     p = groupedbar(convert(Array, df[cat_names]),
-                   xtick = (x0:xstep:x1, t0:tick_size:t1),
+                   xtick = (x_ticks, date_ticks),
                    labels = labels,
                    color = colors,
                    linealpha = 0.0,
@@ -129,9 +127,9 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
     hist_end_date = enddate_means(hist)
     hist_end_ind  = findfirst(df[:date], hist_end_date)
 
-    plot!(p, xs[1:hist_end_ind], df[1:hist_end_ind, :detrendedMean],
+    plot!(p, df[1:hist_end_ind, :x], df[1:hist_end_ind, :detrendedMean],
           color = hist_color, linewidth = 2, label = hist_label, ylim = :auto)
-    plot!(p, xs[hist_end_ind:end], df[hist_end_ind:end, :detrendedMean],
+    plot!(p, df[hist_end_ind:end, :x], df[hist_end_ind:end, :detrendedMean],
           color = forecast_color, linewidth = 2, label = forecast_label, ylim = :auto)
 
     # Save if output_file provided
