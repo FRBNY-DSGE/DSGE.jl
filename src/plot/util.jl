@@ -116,6 +116,17 @@ function get_bands_indices(var::Symbol, history::MeansBands, forecast::MeansBand
     end
 end
 
+function plot_extension()
+    be = typeof(Plots.backend())
+    if be == Plots.GRBackend
+        :pdf
+    elseif be in [Plots.PlotlyBackend, Plots.PlotlyJSBackend]
+        :html
+    else
+        :pdf
+    end
+end
+
 function save_plot(p::Plots.Plot, output_file::String = "")
     if !isempty(output_file)
         output_dir = dirname(output_file)
