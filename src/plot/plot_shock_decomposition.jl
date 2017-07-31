@@ -33,7 +33,6 @@ Plot shock decomposition for `var`.
 
 ### Keyword Arguments
 
-- `output_file::String`: if specified, plot will be saved there as a PDF
 - `hist_label::String`
 - `forecast_label::String`
 - `hist_color::Colorant`
@@ -45,6 +44,10 @@ Plot shock decomposition for `var`.
 
 - `forecast_string::String`
 
+**Method 2 only:**
+
+- `output_file::String`: if specified, plot will be saved there
+
 ### Output
 
 - `p::Plot`
@@ -52,7 +55,6 @@ Plot shock decomposition for `var`.
 function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
-                                  output_file::String = "",
                                   hist_label::String = "Detrended History",
                                   forecast_label::String = "Detrended Forecast",
                                   hist_color::Colorant = RGBA(0., 0., 0., 1.),
@@ -67,6 +69,8 @@ function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
 
     # Get shock groupings
     groups = shock_groupings(m)
+    output_file = get_forecast_filename(m, input_type, cond_type, Symbol("shockdec_", var),
+                                        pathfcn = figurespath, fileformat = plot_extension())
 
     # Appeal to second method
     plot_shock_decomposition(var, mbs..., groups, output_file = output_file,
