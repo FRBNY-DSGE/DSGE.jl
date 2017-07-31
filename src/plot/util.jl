@@ -12,7 +12,7 @@ function quarter_date_to_number(date::Date)
     end
 end
 
-function quarter_number_to_date(datenum::Float64)
+function quarter_number_to_date(datenum::Real)
     if datenum % 0.25 != 0
         throw(DomainError())
     end
@@ -24,17 +24,24 @@ end
 
 function get_date_ticks(start_date::Date, end_date::Date;
                         tick_size::Int = 5)
-    dates = DSGE.quarter_range(start_date, end_date)
+    dates = quarter_range(start_date, end_date)
     get_date_ticks(dates, tick_size = tick_size)
 end
 
 function get_date_ticks(dates::AbstractArray{Date, 1};
                         tick_size::Int = 5)
     datenums = map(quarter_date_to_number, dates)
-    t0 = ceil(datenums[1] / tick_size) * tick_size
-    t1 = datenums[end]
+    t0 = convert(Int, ceil(datenums[1] / tick_size) * tick_size)
+    t1 = convert(Int, floor(datenums[end]))
     ticks = t0:tick_size:t1
     return ticks
+end
+
+function shockdec_date_to_x(date::Date, start_date::Date)
+    start_x = 0.5
+    quarters_diff = DSGE.subtract_quarters(date, start_date)
+    x = start_x + quarters_diff
+    return x
 end
 
 function date_ticks!(p::Plots.Plot,
