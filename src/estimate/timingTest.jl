@@ -62,6 +62,10 @@ gui()
 
 Neff, lik_40000, times = tpf(m,data,system,s0,P0,0)
 
+h5open("$path/../../test/reference/compare_n_particles.h5","w") do file
+    write(file,"lik_40000",lik_40000)
+end
+
 ### BUILD NEW MODEL ###
 m = SmetsWouters("ss1", testing=true)
 path = dirname(@__FILE__)
