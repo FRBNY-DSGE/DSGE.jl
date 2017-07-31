@@ -52,9 +52,7 @@ function plot_irfs(shock::Symbol, var::Symbol, mb::MeansBands;
     plot!(p, mb.means[varshock], label = "", linewidth = 2, linecolor = :black)
 
     # Save if `output_file` provided
-    if !isempty(output_file)
-        save_plot(p, output_file)
-    end
+    save_plot(p, output_file)
 
     return p
 end
@@ -85,9 +83,7 @@ function plot_irfs(shock::Symbol, vars::Vector{Symbol}, mb::MeansBands;
     end
 
     # Save if `output_file` provided
-    if !isempty(output_file)
-        save_plot(p, output_file)
-    end
+    save_plot(p, output_file)
 
     return p
 end
