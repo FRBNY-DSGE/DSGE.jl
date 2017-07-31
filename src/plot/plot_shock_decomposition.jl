@@ -33,6 +33,8 @@ Plot shock decomposition for `var`.
 
 ### Keyword Arguments
 
+- `output_file::String`: if specified, plot will be saved there. In method 1, if
+  `output_file` is not specified, one will be computed using `get_forecast_filename`
 - `hist_label::String`
 - `forecast_label::String`
 - `hist_color::Colorant`
@@ -44,10 +46,6 @@ Plot shock decomposition for `var`.
 
 - `forecast_string::String`
 
-**Method 2 only:**
-
-- `output_file::String`: if specified, plot will be saved there
-
 ### Output
 
 - `p::Plot`
@@ -55,6 +53,7 @@ Plot shock decomposition for `var`.
 function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
+                                  output_file::String = "",
                                   hist_label::String = "Detrended History",
                                   forecast_label::String = "Detrended Forecast",
                                   hist_color::Colorant = RGBA(0., 0., 0., 1.),
@@ -63,14 +62,17 @@ function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                   legend = :best)
     # Read in MeansBands
     output_vars = [Symbol(prod, class) for prod in [:shockdec, :trend, :dettrend, :hist, :forecast]]
-    files = get_meansbands_output_files(m, input_type, cond_type, output_vars,
-                                        forecast_string = forecast_string)
-    mbs = [read_mb(files[output_var]) for output_var in output_vars]
+    mbs = map(output_var -> read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string),
+              output_vars)
 
     # Get shock groupings
     groups = shock_groupings(m)
-    output_file = get_forecast_filename(m, input_type, cond_type, Symbol("shockdec_", var),
-                                        pathfcn = figurespath, fileformat = plot_extension())
+
+    # Get output file name if not provided
+    if isempty(output_file)
+        output_file = get_forecast_filename(m, input_type, cond_type, Symbol("shockdec_", var),
+                                            pathfcn = figurespath, fileformat = plot_extension())
+    end
 
     # Appeal to second method
     plot_shock_decomposition(var, mbs..., groups, output_file = output_file,
