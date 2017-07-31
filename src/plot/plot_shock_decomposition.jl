@@ -117,14 +117,15 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
     x_ticks = x0:xstep:x1
 
     # Plot bars
-    colors = reshape(map(x -> x.color, groups), 1, length(groups))
+    ngroups = length(groups)
+    colors = map(x -> x.color, groups)
     labels = map(x -> x.name,  groups)
     cat_names = map(Symbol, labels)
 
     p = groupedbar(convert(Array, df[cat_names]),
                    xtick = (x_ticks, date_ticks),
-                   labels = labels,
-                   color = colors,
+                   labels = reshape(labels, 1, ngroups),
+                   color = reshape(colors, 1, ngroups),
                    linealpha = 0.0,
                    bar_width = 1.0,
                    legend = legend)
