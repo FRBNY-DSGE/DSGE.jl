@@ -134,14 +134,11 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
         end
 end
 
-
-
     for i = 1:n_part
         prior_sim[i,:] = draws[i][1]
         logpost[i]     = draws[i][2]
         loglh[i]       = draws[i][3]
     end
-
 
     para_sim[1,:,:] = prior_sim # Draws from prior
     weight_sim[:,1] = 1/n_part
@@ -152,7 +149,7 @@ end
     weight = repmat(weight_sim[:, i], 1, n_params)
 
     if m.testing
-        open("draws.csv","a") do x
+        open(rawpath(m,"estimate","draws.csv"),"a") do x
             writecsv(x,reshape(para_sim[i,:,:],(n_part,n_parameters(m))))
         end
     end
@@ -236,10 +233,6 @@ end
 
         if parallel
             out = pmap(j -> mutation_RWMH(m, data, vec(para[j,:]'), loglh[j], logpost[j], i, R, tempering_schedule), 1:n_part)
-            # out = @sync @parallel (hcat) for j = 1:n_part
-            #     mutation_RWMH(m, data, vec(para[j,:]'), loglh[j], logpost[j], i, R, tempering_schedule)
-            # end
-        else
             out = [mutation_RWMH(m, data, vec(para[j,:]'), loglh[j], logpost[j], i, R, tempering_schedule)  for j = 1:n_part]
         end
 
@@ -290,10 +283,9 @@ end
             end
         end
 
-
     end
     if m.testing
-        open("wtsim.csv","a") do x
+        open(rawpath(m,"estimate,"wtsim.csv"),"a") do x
             writecsv(x,weight_sim)
         end
     end
