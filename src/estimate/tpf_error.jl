@@ -35,9 +35,9 @@ tic()
     P0= nearestSPD(solve_discrete_lyapunov(Φ,R*S2*R'))
     
     #For getting distribution of errors (relative to Kalman filter)
-    kalman_out = DSGE.filter(m,data,s0,P0,allout=true)
+    kalman_out = DSGE.filter(m,data,s0,P0)#,allout=true)
  
-    Neff, lik, times = tpf(m,data,system,s0,P0,true,false)
+    Neff, lik, times = tpf(m,data,system,s0,P0,0)
     println("One error generated ")
     toc()
    return kalman_out[:L]-sum(lik)
