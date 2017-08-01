@@ -8,7 +8,7 @@ path = dirname(@__FILE__)
 @everywhere include("tpf_error.jl")
 error = zeros(5)
 
-error = pmap(i -> tpf_error(), 1:1)
+error = pmap(i -> tpf_error(), 1:2)
 
 plotly()
 histogram(error)
