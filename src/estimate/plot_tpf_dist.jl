@@ -2,13 +2,13 @@ using ClusterManagers,Plots
 
 path = dirname(@__FILE__)
 
-#addprocs_sge(10, queue="background.q")
+addprocs_sge(10, queue="background.q")
 @everywhere using DSGE, HDF5, DataFrames
 @everywhere using QuantEcon: solve_discrete_lyapunov
 @everywhere include("tpf_error.jl")
 error = zeros(5)
 
-error = pmap(i -> tpf_error(), 1:1)
+error = pmap(i -> tpf_error(), 1:5)
 
 plotly()
 histogram(error)

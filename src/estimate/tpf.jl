@@ -212,13 +212,13 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
                     c = get_setting(m,:tpf_c)
                     N_MH=get_setting(m,:tpf_n_mh_simulations)
                     deterministic=get_setting(m,:tpf_deterministic)
-                    #out = pmap(i->mutation(c, N_MH,deterministic,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing, identity), 1:n_particles)
+                    #out = pmap(i->mutation(c, N_MH,deterministic,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
                     out = @sync @parallel (hcat) for i=1:n_particles
-                        mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing,identity)
+                        mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
                     end
                 else 
                     print("(not parallel) ")
-                    out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing,identity) for i=1:n_particles]
+                    out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
                 end
                 times[t] = toc()                
 
