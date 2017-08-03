@@ -78,8 +78,10 @@ function optimize_setup(m::AbstractModel,deterministic::Bool)
             # An Schorfheide, nondeterministic
             file = "$path/../reference/optimize.h5"
             data = h5read(file, "data")'
-            out, H = optimize!(m, data; iterations=200)
-            params = out.minimizer
+             # Parameters given in Schorfheide's MATLAB code
+            params = [2.09, 0.98, 2.25, 0.65, 0.34, 3.16, 0.51, 0.81, 0.98, 
+                       0.93, 0.19, 0.65, 0.24,0.12,0.29,0.45]
+            update!(m,params)
         end
     else
         # Smets Wouters
@@ -109,8 +111,8 @@ function optimize_setup(m::AbstractModel,deterministic::Bool)
 end
 
 # Set parameters for testing
-deterministic = true
-parallel=false
+deterministic = false
+parallel=true
 n_particles=4000
 
 if parallel
