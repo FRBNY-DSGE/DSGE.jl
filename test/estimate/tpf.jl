@@ -147,7 +147,7 @@ println("$n_particles Particles, $type_m, N_MH = $N_MH, elapsed time: $total_tim
 good_likelihoods_deterministic = h5read("$path/../reference/tpf_test_likelihoods.h5","test_likelihoods")
 good_likelihoods_random = h5read("$path/../reference/tpf_test_likelihoods_random.h5", "test_likelihoods")
 
-if n_particles==4000 & !deterministic & typeof(m)==AnSchorfheide{Float64})
+if (n_particles==4000) & (!deterministic) & (typeof(m)==AnSchorfheide{Float64})
     @test_matrix_approx_eq lik good_likelihoods_random
     println("Test passed for AnSchorfheide with 4000 particles in random mode")
 end
