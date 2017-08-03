@@ -33,11 +33,11 @@ m<=Setting(:tpf_rstar, 2.0)
 m<=Setting(:tpf_N_MH, N_MH)
 m<=Setting(:tpf_c, 0.1)
 m<=Setting(:tpf_acpt_rate, 0.5)
-m<=Setting(:tpf_target, 0.25)
+m<=Setting(:tpf_target, 0.4)
 m<=Setting(:tpf_n_particles, n_particles)
 m<=Setting(:use_parallel_workers, parallel)
 m<=Setting(:x_tolerance, zero(float(0)))
-m<=Setting(:tpf_deterministic, true)
+m<=Setting(:tpf_deterministic, false)
 
 s0 = zeros(size(system[:TTT])[1])
 
@@ -46,9 +46,6 @@ neff, lik_fixed = tpf(m, data, system, s0, P0)
 
 kalman_out = DSGE.filter(m,data,system,s0,P0)
 lik_kalman_no_NaN = kalman_out[:L_vec]
-
-m<=Setting(:tpf_deterministic, false)
-neff, lik_adaptive = tpf(m, data, system, s0, P0)
 
 #=
 Neff, lik_reg, times = tpf(m,data,system,s0,P0,0)
@@ -117,8 +114,6 @@ P0= nearestSPD(solve_discrete_lyapunov(Φ,R*S2*R'))
 Neff, lik_4000, times = tpf(m,data,system,s0,P0)
 =#
 
-
-
 rmprocs()
 #=
 h5open("$path/../../test/reference/compare_tapering_of_error.h5","w") do file
@@ -145,10 +140,9 @@ h5open("$path/../../test/reference/kalman_different_errors.h5","w") do file
     write(file, "lik_kalman_half",lik_kalman_half)
 end
 =#
-h5open("$path/../../test/reference/compare_fixed_phi.h5","w") do file
-    write(file, "lik_kalman_no_NaN", lik_kalman_no_NaN)
-    write(file, "lik_fixed", lik_fixed)
-    write(file, "lik_adaptive", lik_adaptive)
+h5open("/data/dsge_data_dir/dsgejl/interns2017/standard_vals.h5","w") do file
+    write(file, "lik_kalman", lik_kalman_no_NaN)
+    write(file, "lik_tpf", lik_adaptive)
 end 
 
 #lik_4000 = h5read("$path/../../test/reference/compare_n_particles.h5","lik_4000")
@@ -168,11 +162,7 @@ gui()
 #lik_tenth = h5read("$path/../../test/reference/compare_scaling_no_MH_change.h5","lik_tenth")
 #lik_kalman_error = h5read("$path/../../test/reference/varLik_error.h5","lik_kalman_error")
 plotly()
-#plot(lik_fifth[:,20:end],label="Adaptive, included NaN quarters")
-
-plot(lik_adaptive,label="Adaptive, excluded NaN quarters")
-plot!(lik_fixed,label="fixed")
-
+plot(lik_adaptive,label="TPF")
 plot!(lik_kalman_no_NaN,label="Kalman")
 gui()
 
