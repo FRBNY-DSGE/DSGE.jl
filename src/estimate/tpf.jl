@@ -93,9 +93,9 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         sqrtS2_t   = RRR_t*get_chol(QQ_t)'
         n_errors_t = length(y_t)
         ε          = zeros(n_errors_t)
-        @show size(mutation_rand_mat)
-        mutation_rand_mat = mutation_rand_mat[nonmissing] 
-        @show size(mutation_rand_mat)
+        cov_s_t = cov_s[nonmissing, nonmissing]
+        mutation_rand_mat_t = mutation_rand_mat[nonmissing,:] 
+
         if !deterministic # When not testing, want a new random ε each time 
             ε_rand_mat = randn(n_errors_t, n_particles)
         end
@@ -194,7 +194,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
                                 
                 # Update covariance matrix
                 μ = mean(ε,2)
-                if !deterministic
+                if !deterministic & false
                     cov_s = (1/n_particles)*(ε - repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
                     if !isposdef(cov_s) cov_s = diagm(diag(cov_s)) end
                 end
@@ -211,11 +211,11 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
                     deterministic = get_setting(m,:tpf_deterministic)
                     #out = pmap(i->mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c, N_MH,deterministic,cov_s,nonmissing,mutation_rand_mat), 1:n_particles)
                     out = @sync @parallel (hcat) for i=1:n_particles
-                        mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,cov_s,nonmissing,mutation_rand_mat)
+                        mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,cov_s_t,nonmissing,mutation_rand_mat_t)
                     end
                 else 
                     print("(not parallel) ")
-                    out = [mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,cov_s,nonmissing,mutation_rand_mat) for i=1:n_particles]
+                    out = [mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,cov_s_t,nonmissing,mutation_rand_mat_t) for i=1:n_particles]
                 end
                 times[t] = toc()                
 
@@ -272,7 +272,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         c = update_c!(m, c, acpt_rate, target)
         μ = mean(ε,2)
 
-        if !deterministic
+        if !deterministic & false
             cov_s = (1/n_particles)*(ε - repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
             if !isposdef(cov_s) cov_s = diagm(diag(cov_s)) end
         end
@@ -287,10 +287,10 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
 
             # out = pmap(i -> mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,cov_s,nonmissing,mutation_rand_mat), 1:n_particles)
             out = @sync @parallel (hcat) for i=1:n_particles
-                mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,cov_s,nonmissing,mutation_rand_mat)
+                mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,cov_s_t,nonmissing,mutation_rand_mat_t)
             end
         else 
-            out = [mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,cov_s,nonmissing,mutation_rand_mat) for i=1:n_particles]
+            out = [mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,cov_s_t,nonmissing,mutation_rand_mat_t) for i=1:n_particles]
         end
                 
         for i = 1:n_particles
