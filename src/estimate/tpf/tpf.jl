@@ -15,6 +15,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     DD     = system.measurement.DD
     ZZ     = system.measurement.ZZ
     QQ     = system.measurement.QQ    
+    
     sqrtS2 = RRR*get_chol(QQ)'
 
     # Get tuning parameters from the model
