@@ -55,8 +55,8 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     parallel = get_setting(m, :use_parallel_workers)
 
     #Distribution that initial draws are generated from
-    dist_type = :prior
-    
+    dist_type = get_setting(:initial_draw_source)
+
     #Creating the tempering schedule
     λ = get_setting(m, :λ)
     tempering_schedule = ((collect(1:1:n_Φ)-1)/(n_Φ-1)).^λ
@@ -299,7 +299,7 @@ function initial_draw(m::AbstractModel, data::Array{Float64}, n_part::Int64;dist
         params = h5open(rawpath(m,"estimate","paramsmode.h5"),"r") do file
             read(file,"params")
         end
-                    
+
         fn = rawpath(m,"estimate","hessian.h5")
         hessian = h5open(fn,"r") do file
             read(file,"hessian")
@@ -315,13 +315,13 @@ function initial_draw(m::AbstractModel, data::Array{Float64}, n_part::Int64;dist
         end
         hessian_inv = U*sqrt(S_inv)
         dist = DSGE.DegenerateMvNormal(params, hessian_inv)
-        
-        draws = rand(dist,n_part)' 
+
+        draws = rand(dist,n_part)'
         logpost = zeros(n_part)
         loglh = zeros(n_part)
         for i in 1:size(draws)[1]
             success = false
-            while !success 
+            while !success
                 try
                     logpost[i] = posterior!(m,draws[i,:],data)
                     loglh[i] = logpost[i] - prior(m)
@@ -330,8 +330,8 @@ function initial_draw(m::AbstractModel, data::Array{Float64}, n_part::Int64;dist
                     continue
                 end
                 success = true
-            end    
-        end    
+            end
+        end
         return (draws,logpost,loglh)
     else
         draws = rand_prior(m;ndraws=n_part)
@@ -339,7 +339,7 @@ function initial_draw(m::AbstractModel, data::Array{Float64}, n_part::Int64;dist
         loglh = zeros(n_part)
         for i in 1:size(draws)[1]
             success = false
-            while !success 
+            while !success
                 try
                     logpost[i] = posterior!(m,draws[i,:],data)
                     loglh[i] = logpost[i] - prior(m)
@@ -348,8 +348,8 @@ function initial_draw(m::AbstractModel, data::Array{Float64}, n_part::Int64;dist
                     continue
                 end
                 success = true
-            end    
-        end    
+            end
+        end
         return (draws,logpost,loglh)
     end
 end

@@ -127,6 +127,7 @@ function default_settings!(m::AbstractModel)
     settings[:init_accept] = Setting(:init_accept, .25, "The initial average acceptance rate for new particles during mutation")
     settings[:target_accept] = Setting(:target_accept, .25, "The initial target acceptance rate for new particles during mutation")
     settings[:resampler_smc] = Setting(:resampler_smc, :systematic, "Which resampling method to use in SMC")
+    settings[:initial_draw_source] = Setting(:initial_draw_source, :prior, "How to draw the initial population of particles in SMC")
 
 	return settings
 end
