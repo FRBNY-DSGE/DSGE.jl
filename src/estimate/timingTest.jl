@@ -1,10 +1,10 @@
 using ClusterManagers, Plots, HDF5
 using QuantEcon: solve_discrete_lyapunov
 using DSGE
-#=
+
 addprocs_sge(10,queue="background.q")
 @everywhere using DSGE
-=#
+
 srand(47)
 
 m = SmetsWouters("ss1", testing=true)
@@ -33,7 +33,7 @@ m<=Setting(:tpf_rstar, 2.0)
 m<=Setting(:tpf_N_MH, N_MH)
 m<=Setting(:tpf_c, 0.1)
 m<=Setting(:tpf_acpt_rate, 0.5)
-m<=Setting(:tpf_trgt, 0.25)
+m<=Setting(:tpf_target, 0.25)
 m<=Setting(:tpf_n_particles, n_particles)
 m<=Setting(:use_parallel_workers, parallel)
 m<=Setting(:x_tolerance, zero(float(0)))
@@ -104,7 +104,7 @@ m<=Setting(:tpf_rstar,2.0)
 m<=Setting(:tpf_N_MH, N_MH)
 m<=Setting(:tpf_c,0.1)
 m<=Setting(:tpf_acpt_rate,0.5)
-m<=Setting(:tpf_trgt,0.25)
+m<=Setting(:tpf_target,0.25)
 m<=Setting(:tpf_n_particles,n_particles)
 m<=Setting(:use_parallel_workers, parallel)
 m<=Setting(:x_tolerance, zero(float(0)))
@@ -119,7 +119,7 @@ Neff, lik_4000, times = tpf(m,data,system,s0,P0)
 
 
 
-# rmprocs()
+rmprocs()
 #=
 h5open("$path/../../test/reference/compare_tapering_of_error.h5","w") do file
     write(file,"lik_tapered",lik_tapered)

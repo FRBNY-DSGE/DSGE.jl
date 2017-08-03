@@ -2,7 +2,7 @@ using DSGE, HDF5, DataFrames, ClusterManagers, Plots
 using QuantEcon: solve_discrete_lyapunov
 
 # Establish path
-path=dirname(@__FILE__)
+path = dirname(@__FILE__)
 
 # Set up model
 function setup_model(model_type::String,n_particles::Int64,deterministic::Bool,parallel::Bool)
@@ -25,7 +25,7 @@ function setup_model(model_type::String,n_particles::Int64,deterministic::Bool,p
     m<=Setting(:tpf_rstar,2.0)
     m<=Setting(:tpf_c, 0.1)
     m<=Setting(:tpf_acpt_rate,0.5)
-    m<=Setting(:tpf_trgt, 0.25)
+    m<=Setting(:tpf_target, 0.25)
     m<=Setting(:tpf_n_mh_simulation, 2)
     m<=Setting(:n_presample_periods, 2)
     m<=Setting(:tpf_deterministic, deterministic)
