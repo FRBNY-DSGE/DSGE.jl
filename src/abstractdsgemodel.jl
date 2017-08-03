@@ -266,6 +266,7 @@ dataroot(m::AbstractModel)     = get_setting(m, :dataroot)
 
 # Interface for data
 data_vintage(m::AbstractModel)    = get_setting(m, :data_vintage)
+data_id(m::AbstractModel)         = get_setting(m, :data_id)
 cond_vintage(m::AbstractModel)    = get_setting(m, :cond_vintage)
 cond_id(m::AbstractModel)         = get_setting(m, :cond_id)
 cond_full_names(m::AbstractModel) = get_setting(m, :cond_full_names)
@@ -526,7 +527,8 @@ Returns path to specific input data file, creating containing directory as neede
 `file_name` not specified, creates and returns path to containing directory only. Valid
 `in_type` includes:
 
-* `\"data\"`: recorded data
+* `\"raw\"`: raw input series
+* `\"data\"`: transformed data in model units
 * `\"cond\"`: conditional data - nowcasts for the current forecast quarter, or related
 * `\"user\"`: user-supplied data for starting parameter vector, hessian, or related
 
@@ -538,7 +540,7 @@ Path built as
 function inpath(m::AbstractModel, in_type::String, file_name::String="")
     path = dataroot(m)
     # Normal cases.
-    if in_type == "data" || in_type == "cond"
+    if in_type in ["raw", "data", "cond"]
         path = joinpath(path, in_type)
     # User-provided inputs. May treat this differently in the future.
     elseif in_type == "user"

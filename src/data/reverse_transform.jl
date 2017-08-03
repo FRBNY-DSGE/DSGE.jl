@@ -109,8 +109,8 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     # Prepare population series
     population_mnemonic = parse_population_mnemonic(m)[1]
     vint = data_vintage(m)
-    population_data_file     = inpath(m, "data", "population_data_levels_$vint.csv")
-    population_forecast_file = inpath(m, "data", "population_forecast_$vint.csv")
+    population_data_file     = inpath(m, "raw", "population_data_levels_$vint.csv")
+    population_forecast_file = inpath(m, "raw", "population_forecast_$vint.csv")
     population_data, population_forecast =
         load_population_growth(population_data_file, population_forecast_file,
                                get(population_mnemonic);
@@ -193,8 +193,8 @@ function reverse_transform(m::AbstractModel, input_type::Symbol, cond_type::Symb
     # Load population series
     population_mnemonic = parse_population_mnemonic(m)[1]
     vint = data_vintage(m)
-    population_data_file     = inpath(m, "data", "population_data_levels_$vint.csv")
-    population_forecast_file = inpath(m, "data", "population_forecast_$vint.csv")
+    population_data_file     = inpath(m, "raw", "population_data_levels_$vint.csv")
+    population_forecast_file = inpath(m, "raw", "population_forecast_$vint.csv")
     population_data, population_forecast =
         load_population_growth(population_data_file, population_forecast_file,
                                get(population_mnemonic);
