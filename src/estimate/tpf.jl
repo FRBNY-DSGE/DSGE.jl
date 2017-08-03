@@ -18,15 +18,15 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     sqrtS2 = RRR*get_chol(QQ)'
 
     # Get tuning parameters from the model
-    rstar              = get_setting(m,:tpf_rstar)
-    c                  = get_setting(m,:tpf_c)
-    acpt_rate          = get_setting(m,:tpf_acpt_rate)
-    target             = get_setting(m,:tpf_target)
-    N_MH               = get_setting(m,:tpf_n_mh_simulations)
-    n_particles        = get_setting(m,:tpf_n_particles)
-    deterministic      = get_setting(m,:tpf_deterministic)
-    xtol               = get_setting(m,:tpf_x_tolerance) # Tolerance of fzero
-    parallel           = get_setting(m,:use_parallel_workers) # Get setting of parallelization
+    rstar              = get_setting(m, :tpf_rstar)
+    c                  = get_setting(m, :tpf_c)
+    acpt_rate          = get_setting(m, :tpf_acpt_rate)
+    target             = get_setting(m, :tpf_target)
+    N_MH               = get_setting(m, :tpf_n_mh_simulations)
+    n_particles        = get_setting(m, :tpf_n_particles)
+    deterministic      = get_setting(m, :tpf_deterministic)
+    xtol               = get_setting(m, :tpf_x_tolerance) # Tolerance of fzero
+    parallel           = get_setting(m, :use_parallel_workers) # Get setting of parallelization
     mutation_rand_mat  = get_setting(m, :tpf_rand_mat)
     
     # Determine presampling periods
@@ -98,11 +98,14 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
             ε_rand_mat = randn(n_errors_t, n_particles)
         end
 
+        # TEMPORARY
+        ε_rand_mat = randn(n_errors_t, n_particles)
+
         # Forecast forward one time step
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε_rand_mat
         
         # Error for each particle
-        p_error = repmat(y_t-DD_t,1,n_particles)-ZZ_t*s_t_nontempered
+        p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered
 
         # Solve for initial tempering parameter ϕ_1
         if !deterministic
@@ -118,7 +121,6 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         end
               
         # Update weights array and resample particles
-        # While it might seem weird that we're updating s_lag_tempered and not s_t_nontempered, we are actually just resampling and we only need the lagged states for future calculations.
         loglik, weights, s_lag_tempered, ε, id = correct_and_resample(φ_1,0.0,y_t,p_error,density_arr,weights,s_lag_tempered,ε_rand_mat,EE_t,n_particles,deterministic,initialize=1)
         #resampling_ids[ids_i,:] = id
         #ids_i += 1
@@ -132,7 +134,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
 
         # First propagation
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε
-        p_error = repmat(y_t-DD_t, 1, n_particles) - ZZ_t*s_t_nontempered         
+        p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered         
         
         if !deterministic
             println("You're not deterministic!")
