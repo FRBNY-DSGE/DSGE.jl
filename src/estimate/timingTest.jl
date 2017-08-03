@@ -37,18 +37,19 @@ m<=Setting(:tpf_target, 0.25)
 m<=Setting(:tpf_n_particles, n_particles)
 m<=Setting(:use_parallel_workers, parallel)
 m<=Setting(:x_tolerance, zero(float(0)))
-m<=Setting(:tpf_deterministic, false)
+m<=Setting(:tpf_mutation_rand_mat, randn(size(S2,1),1))
+m<=Setting(:tpf_deterministic, true)
 
 s0 = zeros(size(system[:TTT])[1])
-P0 = nearestSPD(solve_discrete_lyapunov(Φ,R*S2*R'))
 
-neff, lik_adaptive = tpf(m, data, system, s0, P0)
+P0 = nearestSPD(solve_discrete_lyapunov(Φ,R*S2*R'))
+neff, lik_fixed = tpf(m, data, system, s0, P0)
 
 kalman_out = DSGE.filter(m,data,system,s0,P0)
 lik_kalman_no_NaN = kalman_out[:L_vec]
 
-m<=Setting(:tpf_deterministic, true)
-neff, lik_fixed = tpf(m, data, system, s0, P0)
+m<=Setting(:tpf_deterministic, false)
+neff, lik_adaptive = tpf(m, data, system, s0, P0)
 
 #=
 Neff, lik_reg, times = tpf(m,data,system,s0,P0,0)
