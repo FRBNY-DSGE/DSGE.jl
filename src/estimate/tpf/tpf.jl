@@ -47,6 +47,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     weights     = ones(n_particles)
     density_arr = zeros(n_particles)
     cov_s       = eye(n_errors)
+    times       = zeros(T)
     
     #resampling_ids = zeros(3*T,n_particles)
     #ids_i = 1
@@ -65,9 +66,8 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         s_lag_tempered_rand_mat = randn(n_states,n_particles)
     end
 
-    ###change back to get_chol later!!
-	s_lag_tempered = repmat(s0,1,n_particles) + Matrix(chol(P0))'*s_lag_tempered_rand_mat
-    times = zeros(T)
+    ### Change back to get_chol later!!
+    s_lag_tempered = repmat(s0,1,n_particles) + Matrix(chol(P0))'*s_lag_tempered_rand_mat
 
     for t=1:T
 
@@ -192,13 +192,6 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
                     println("------------------------------")
                 end
                                 
-                # Update covariance matrix
-                μ = mean(ε,2)
-                if !deterministic & false
-                    cov_s = (1/n_particles)*(ε - repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
-                    if !isposdef(cov_s) cov_s = diagm(diag(cov_s)) end
-                end
-                
                 # Mutation Step
                 acpt_vec = zeros(n_particles)
                 print("Mutation ")        
@@ -269,13 +262,8 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         # Update likelihood
         lik[t] += loglik
 
+        # Update c
         c = update_c!(m, c, acpt_rate, target)
-        μ = mean(ε,2)
-
-        if !deterministic & false
-            cov_s = (1/n_particles)*(ε - repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
-            if !isposdef(cov_s) cov_s = diagm(diag(cov_s)) end
-        end
         
         # Final round of mutation
         acpt_vec = zeros(n_particles)
@@ -344,7 +332,7 @@ Returns the new c, in addition to storing it in the model settings.
 
 """
 function update_c!(m::AbstractModel,c_in::Float64, acpt_in::Float64, target_in::Float64)
-    c_out = c_in*(0.95 + 0.1*exp(16*(acpt_in - target_in))/(1 + exp(16*(acpt_in - target_in))))
+    c_out = c_in*(0.95 + 0.1*exp(20*(acpt_in - target_in))/(1 + exp(20*(acpt_in - target_in))))
     m <= Setting(:tpf_c, c_out)
     return c_out
 end
