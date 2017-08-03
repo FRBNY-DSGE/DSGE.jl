@@ -47,13 +47,10 @@ function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init:
 
     # draw initial step and step probability
     # conditions for testing purposes
-    step = isempty(rstep) ? (isempty(rvec) ? randn(n_para,1): rvec) : rstep
+    # step = isempty(rstep) ? (isempty(rvec) ? randn(n_para,1): rvec) : rstep
     step_prob = isempty(rval) ? rand() : rval
 
-    # Solve for covariance and zero-out variables that are fixed
-    cov_mat = chol(R)'
-    cov_mat = augment_cov_mat(cov_mat, fixed_para_inds)
-
+    cov_mat = R
     para = para_init
     like = like_init
 
@@ -84,7 +81,6 @@ function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init:
         bhi[b] = convert(Int64,min(n_para+1,ceil(b*n_para/n_blocks)+1))
     end
 
-    #assuming blocks > 1
     for (j,k) in zip(blo,bhi)
         #Zeroing out relevant rows in cov matrix
         cov_mat_block = copy(cov_mat)
@@ -97,7 +93,8 @@ function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init:
 
         l = 0
         while l < n_steps
-            para_new = para+c*cov_mat_block*step
+            #para_new = para+c*cov_mat_block*step
+            para_new = rand(DegenerateMvNormal(para,cov_mat_block);cc=c)
             post_new = posterior!(m, vec(para_new), data; 
                                   φ_smc = tempering_schedule[i],
                                   sampler = true)
@@ -105,7 +102,7 @@ function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init:
 
             # if step is invalid, retry
             if !isfinite(post_new) && isempty(rstep)
-                step = randn(n_para,1)
+                para_new = rand(DegenerateMvNormal(para,cov_mat_block);cc=c)
                 step_prob = rand()
                 continue
             end
@@ -121,7 +118,7 @@ function mutation_block_RWMH(m::AbstractModel, data::Matrix{Float64}, para_init:
             end
 
             # draw again for the next step
-            step = isempty(rstep) ? randn(n_para,1): step.+1
+            #step = isempty(rstep) ? randn(n_para,1): step.+1
             step_prob = rand()
             l += 1
         end
