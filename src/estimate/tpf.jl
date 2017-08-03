@@ -66,7 +66,9 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         s_lag_tempered_rand_mat = randn(n_states,n_particles)
     end
 
-    s_lag_tempered = repmat(s0,1,n_particles) + Matrix(chol(P0))'*s_lag_tempered_rand_mat
+    ###change back to get_chol later!!
+	s_lag_tempered = repmat(s0,1,n_particles) + Matrix(chol(P0))'*s_lag_tempered_rand_mat
+    times = zeros(T)
 
     for t=1:T
 
