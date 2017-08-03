@@ -26,7 +26,7 @@ function setup_model(model_type::String,n_particles::Int64,deterministic::Bool,p
     m<=Setting(:tpf_c, 0.1)
     m<=Setting(:tpf_acpt_rate,0.5)
     m<=Setting(:tpf_trgt, 0.25)
-    m<=Setting(:tpf_n_mh_simulations, 2)
+    m<=Setting(:tpf_n_mh_simulation, 2)
     m<=Setting(:n_presample_periods, 2)
     m<=Setting(:tpf_deterministic, deterministic)
     m<=Setting(:use_parallel_workers, parallel)
@@ -69,9 +69,10 @@ function optimize_setup(m::AbstractModel,deterministic::Bool)
     	    measurement_equation = Measurement(B,squeeze(A,2),S2,H,rand_mat,R)
     	    system = System(transition_equation, measurement_equation)
             
-            # params = [2.09, 0.98, 2.25, 0.65, 0.34, 3.16, 0.51, 0.81, 0.98, 
-            #           0.93, 0.19, 0.65, 0.24,0.12,0.29,0.45]
-            # update!(m,params)
+            # Parameters given in Schorfheide's MATLAB code
+            params = [2.09, 0.98, 2.25, 0.65, 0.34, 3.16, 0.51, 0.81, 0.98, 
+                       0.93, 0.19, 0.65, 0.24,0.12,0.29,0.45]
+            update!(m,params)
         else
             println("AnSchorfheide model, nondeterministic model.")
             # An Schorfheide, nondeterministic
@@ -91,9 +92,9 @@ function optimize_setup(m::AbstractModel,deterministic::Bool)
         params = h5read("$filesw/../../output_data/smets_wouters/ss0/estimate/raw/paramsmode_vint=110110.h5","params")
         push!(params, m[:e_y].value, m[:e_L].value, m[:e_w].value, m[:e_π].value, 
                           m[:e_R].value, m[:e_c].value, m[:e_i].value)     
+        update!(m,params)
     end 
         
-    update!(m,params)
     system = compute_system(m)
     R = system.transition.RRR
     S2 = system.measurement.QQ
@@ -108,7 +109,7 @@ function optimize_setup(m::AbstractModel,deterministic::Bool)
 end
 
 # Set parameters for testing
-deterministic=false
+deterministic = true
 parallel=false
 n_particles=4000
 
@@ -118,21 +119,22 @@ if parallel
 end
 
 ### Tests:
-m = setup_model("SmetsWouters", n_particles, deterministic, parallel)
+m = setup_model("AnSchorfheide", n_particles, deterministic, parallel)
 m, sys, data, Φ, R, S2 = optimize_setup(m,deterministic)
 s0 = zeros(size(sys[:TTT])[1])
 P0 = nearestSPD(solve_discrete_lyapunov(Φ, R*S2*R'))
 
 tic()
-neff, lik = tpf(m, data, sys, s0, P0,false)
+neff, lik = tpf(m, data, sys, s0, P0)
 total_time = toc()
 
-h5open("$path/reference/output_likelihoods_particles_4000_n_MH_20.h5","w") do f
+h5open("$path/../reference/output_likelihoods_ansch.h5","w") do f
     write(f,"julia_likelihoods",lik)
 end
 
 type_m = typeof(m)
-println("$n_particles Particles, $type_m, N_MH = $tpf_n_mh_simulations, elapsed time: $total_time seconds\n")
+N_MH = get_setting(m, :tpf_n_mh_simulations)
+println("$n_particles Particles, $type_m, N_MH = $N_MH, elapsed time: $total_time seconds\n")
 
 # For comparison test
 good_likelihoods = h5open("$path/../reference/tpf_test_likelihoods.h5","r") do file
