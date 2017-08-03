@@ -36,9 +36,9 @@ SMC is broken up into three main steps:
 
 - `Mutation`: Propagate particles {θ(i),W(n)} via N(MH) steps of a Metropolis Hastings algorithm.
 """
-function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
+function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low)
     #--------------------------------------------------------------
-    #Set Parameters of Algorithm
+    # Set Parameters of Algorithm
     #--------------------------------------------------------------
 
     n_Φ = get_setting(m, :n_Φ)
@@ -51,17 +51,14 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     c = get_setting(m, :step_size_smc)
     accept = get_setting(m, :init_accept)
     target = get_setting(m, :target_accept)
-
     parallel = get_setting(m, :use_parallel_workers)
 
-    #Distribution that initial draws are generated from
-    dist_type = get_setting(:initial_draw_source)
+    dist_type = get_setting(m, :initial_draw_source)
 
-    #Creating the tempering schedule
     λ = get_setting(m, :λ)
     tempering_schedule = ((collect(1:1:n_Φ)-1)/(n_Φ-1)).^λ
 
-    #Matrices for storing
+    # Matrices for storing
     para_sim = zeros(n_Φ, n_part, n_params) # parameter draws
     weight_sim = zeros(n_part, n_Φ) # weights
     zhat = zeros(n_Φ, 1) # normalization constant
@@ -73,7 +70,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     rsmp_sim = zeros(n_Φ,1) # 1 if resampled
 
     #--------------------------------------------------------------
-    #Initialize Algorithm: Draws from prior
+    # Initialize Algorithm: Draws from prior
     #--------------------------------------------------------------
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -106,7 +103,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol=:low)
     zhat[1] = sum(weight_sim[:,1])
 
     i = 1
-    para = para_sim[i, :, :]
+    para = para_sim[i,:,:]
     weight = repmat(weight_sim[:, i], 1, n_params)
 
     if m.testing
