@@ -659,7 +659,7 @@ function steadystate!(m::Model1010)
     Rhostar     = 1/nkstar - 1
 
     # define betabar
-    betabar     = exp( (σ_ω_star -1) * m[:z_star]) / m[:β]
+    betabar     = exp( (m[:σ_c] -1) * m[:z_star]) / m[:β]
 
     # evaluate wekstar and vkstar
     wekstar     = (1-(m[:γ_star]*betabar))*nkstar - m[:γ_star]*betabar*(m[:spr]*(1-μ_estar*Gstar) - 1)
