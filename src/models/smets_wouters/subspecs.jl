@@ -22,7 +22,6 @@ end
 
 function ss1!(m::SmetsWouters,divisor::Int)
     scale = (1/divisor)
-    #The following values come from 0.1*stdev(_obs)
     m <= parameter(:e_y, scale*0.868241996, fixed=true, 
                    description = "e_y: Measurement error on GDP", tex_label="e_y")
     m <= parameter(:e_L, scale*0.283703727, fixed=true, 

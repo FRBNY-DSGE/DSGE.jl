@@ -1,14 +1,14 @@
 #using DSGE, ClusterManagers
 using Roots
-function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array, varInflate::Int; verbose::Symbol=:low, include_presample::Bool=true)
+function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array; verbose::Symbol=:low, include_presample::Bool=true)
     # s0 is 8xn_particles
-    # P0
+    # P0 is solution to discrete lyapunov equation for Φ and R*S2*R'
     # yy is data matrix
 
     #--------------------------------------------------------------
     # Set Parameters of Algorithm
     #--------------------------------------------------------------
-    @show system
+
     # Store model parameters
     RRR    = system.transition.RRR
     TTT    = system.transition.TTT
@@ -28,6 +28,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     deterministic = get_setting(m,:tpf_deterministic)
     xtol          = get_setting(m,:tpf_x_tolerance) # Tolerance of fzero
     parallel      = get_setting(m,:use_parallel_workers) # Get setting of parallelization
+    mutation_rand_mat  = get_setting(m, :tpf_rand_mat)
     
     # Determine presampling periods
     n_presample_periods = (include_presample) ? 0 : get_setting(m, :n_presample_periods)
@@ -43,15 +44,20 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     lik         = zeros(T)
     Neff        = zeros(T)
     len_phis    = ones(T)
+    times       = zeros(T)
     weights     = ones(n_particles)
     density_arr = zeros(n_particles)
+    cov_s       = eye(n_errors)
+    
+    #resampling_ids = zeros(3*T,n_particles)
+    #ids_i = 1
 
     if deterministic
         # Testing: Generate pre-defined random shocks for s and ε
         s_lag_tempered_rand_mat = randn(n_states,n_particles)
         ε_rand_mat = randn(n_errors, n_particles)
         path = dirname(@__FILE__)  
-        h5open("$path/../../test/reference/matricesForTPF$n_particles.h5","w") do file
+        h5open("$path/../../test/reference/matricesForTPF.h5","w") do file
             write(file,"s_lag_tempered_rand_mat",s_lag_tempered_rand_mat)
             write(file,"eps_rand_mat",ε_rand_mat)
         end
@@ -60,9 +66,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         s_lag_tempered_rand_mat = randn(n_states,n_particles)
     end
 
-    s_lag_tempered = repmat(s0,1,n_particles) + get_chol(P0)'*s_lag_tempered_rand_mat
-
-    times = zeros(T)
+    s_lag_tempered = repmat(s0,1,n_particles) + Matrix(chol(P0))'*s_lag_tempered_rand_mat
 
     for t=1:T
 
@@ -79,29 +83,15 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         
         # Remove rows/columns of series with NaN values
         nonmissing = !isnan(yt)
-        yt = yt[nonmissing]        
-        ZZ_t = ZZ[nonmissing,:]
-        DD_t = DD[nonmissing]
-        EE_t = EE[nonmissing,nonmissing]
-        QQ_t = QQ[nonmissing,nonmissing]
-        RRR_t = RRR[:,nonmissing]
-        sqrtS2_t = RRR_t*get_chol(QQ_t)'
+        yt         = yt[nonmissing]        
+        ZZ_t       = ZZ[nonmissing,:]
+        DD_t       = DD[nonmissing]
+        EE_t       = EE[nonmissing,nonmissing]
+        QQ_t       = QQ[nonmissing,nonmissing]
+        RRR_t      = RRR[:,nonmissing]
+        sqrtS2_t   = RRR_t*get_chol(QQ_t)'
         n_errors_t = length(yt)
-        ε = zeros(n_errors_t)
-        
-        # Scale certain series (for testing purposes)
-        scale = ones(size(EE_t,1))
-        if length(scale)==7
-            if varInflate == 1
-                scale[2]=1+10000000000*exp(-t)
-            end
-            if varInflate == 2
-                scale[2]=1+10000000000*exp(-19)
-            end
-        end
-        if varInflate>0
-            EE_t = diagm(EE_t*scale)
-        end
+        ε          = zeros(n_errors_t)
             
         if !deterministic # When not testing, want a new random ε each time 
             ε_rand_mat = randn(n_errors_t, n_particles)
@@ -128,8 +118,9 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
               
         # Update weights array and resample particles
         # While it might seem weird that we're updating s_lag_tempered and not s_t_nontempered, we are actually just resampling and we only need the lagged states for future calculations.
-        loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_lag_tempered,ε_rand_mat,EE_t,n_particles,deterministic,initialize=1)
-        
+        loglik, weights, s_lag_tempered, ε, id = correct_and_resample(φ_1,0.0,yt,perror,density_arr,weights,s_lag_tempered,ε_rand_mat,EE_t,n_particles,deterministic,initialize=1)
+        resampling_ids[ids_i,:] = id
+        ids_i += 1
 
         # Update likelihood
         lik[t]=lik[t]+loglik
@@ -181,8 +172,10 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
                 end
 
                 # Update weights array and resample particles
-                loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,EE_t,n_particles, deterministic, initialize=0)
-                
+                loglik, weights, s_lag_tempered, ε, id = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,EE_t,n_particles, deterministic, initialize=0)
+                #resampling_ids[ids_i,:] = id
+                #ids_i += 1
+
                 # Update likelihood
                 lik[t] = lik[t] + loglik
                 
@@ -196,10 +189,9 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
                                 
                 # Update covariance matrix
                 μ = mean(ε,2)
-                cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
-              
-                if !isposdef(cov_s)
-                    cov_s = diagm(diag(cov_s))
+                if !deterministic
+                    cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
+                    if !isposdef(cov_s) cov_s = diagm(diag(cov_s)) end
                 end
                 
                 # Mutation Step
@@ -210,15 +202,15 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
                 if parallel
                     print("(in parallel) ")
                     c = get_setting(m,:tpf_c)
-                    N_MH=get_setting(m,:tpf_n_mh_simulations)
-                    deterministic=get_setting(m,:tpf_deterministic)
-                    #out = pmap(i->mutation(c, N_MH,deterministic,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
+                    N_MH = get_setting(m,:tpf_n_mh_simulations)
+                    deterministic = get_setting(m,:tpf_deterministic)
+                    #out = pmap(i->mutation(system,yt,s_lag_tempered[:,i],ε[:,i],c, N_MH,deterministic,cov_s,nonmissing,mutation_rand_mat), 1:n_particles)
                     out = @sync @parallel (hcat) for i=1:n_particles
-                        mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
+                        mutation(system,yt,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,cov_s,nonmissing,mutation_rand_mat)
                     end
                 else 
                     print("(not parallel) ")
-                    out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
+                    out = [mutation(system,yt,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,cov_s,nonmissing,mutation_rand_mat) for i=1:n_particles]
                 end
                 times[t] = toc()                
 
@@ -265,7 +257,9 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         φ_new = 1.0
 
         # Update weights array and resample particles.
-        loglik, weights, s_lag_tempered, ε = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,EE_t,n_particles,deterministic,initialize=0)
+        loglik, weights, s_lag_tempered, ε, id = correct_and_resample(φ_new,φ_old,yt,perror,density_arr,weights,s_lag_tempered,ε,EE_t,n_particles,deterministic,initialize=0)
+        #resampling_ids[ids_i,:] = id
+        #ids_i += 1
 
         # Update likelihood
         lik[t]=lik[t]+loglik
@@ -273,10 +267,9 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         c = update_c(m,c,acpt_rate,trgt)
         μ = mean(ε,2)
 
-        cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
-                
-        if isposdef(cov_s) == false 
-            cov_s = diagm(diag(cov_s))
+        if !deterministic
+            cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε - repmat(μ,1,n_particles))'
+            if !isposdef(cov_s) cov_s = diagm(diag(cov_s)) end
         end
         
         # Final round of mutation
@@ -287,12 +280,12 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
             N_MH=get_setting(m,:tpf_n_mh_simulations)
             deterministic=get_setting(m,:tpf_deterministic)
 
-            # out = pmap(i -> mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing), 1:n_particles)
+            # out = pmap(i -> mutation(system,yt,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,cov_s,nonmissing,mutation_rand_mat), 1:n_particles)
             out = @sync @parallel (hcat) for i=1:n_particles
-                mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing)
+                mutation(system,yt,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,cov_s,nonmissing,mutation_rand_mat)
             end
         else 
-            out = [mutation(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing) for i=1:n_particles]
+            out = [mutation(system,yt,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,cov_s,nonmissing,mutation_rand_mat) for i=1:n_particles]
         end
                 
         for i = 1:n_particles
@@ -309,14 +302,18 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         print("Completion of one period ")
         gc()
         toc()
-        @show loglik
-        #@assert loglik<0.0
     end
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("=============================================")
     end
-
+#= 
+    if deterministic
+        h5open("$path/../../test/reference/resampled_ids.h5","w") do f
+            write(f, "resampling_ids",resampling_ids)
+        end
+    end
+=#
     # Return vector of likelihood indexed by time step and Neff
     return Neff[n_presample_periods+1:end], lik[n_presample_periods+1:end], times
 end
@@ -371,7 +368,7 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array{Float6
     else
         id = seeded_multinomial_resampling(weights)
     end
-   
+    
     s_lag_tempered = s_lag_tempered[:,id]
     ε = ε[:,id]
 
@@ -381,7 +378,7 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, yt::Array{Float6
     # Calculate likelihood
     loglik = log(mean(density_arr.*weights))
     
-    return loglik, weights, s_lag_tempered, ε
+    return loglik, weights, s_lag_tempered, ε, id
 end
 
 function zlb_regime_indices{S<:AbstractFloat}(m::AbstractModel{S},data::Matrix{S})
