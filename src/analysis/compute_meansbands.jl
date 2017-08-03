@@ -55,12 +55,12 @@ manually enter the directory and file names.
 
 - `population_data_file::String`: path to population data (in levels)
   file. In the first method, the following file is used, if it exists:
-  `inpath(m, \"data\", \"population_data_levels_(data_vintage(m)).csv\")`
+  `inpath(m, \"raw\", \"population_data_levels_(data_vintage(m)).csv\")`
 
 - `population_forecast_file::S`: path to population forecast (in levels)
   file. In the first method, if `use_population_forecast(m)`, the following file
   is used, if it exists:
-  `inpath(m, \"data\", \"population_forecast_(data_vintage(m)).csv\")`
+  `inpath(m, \"raw\", \"population_forecast_(data_vintage(m)).csv\")`
 
 - `use_population_forecast::Bool`: whether to use population forecast. If
   `false`, use last period of recorded population growth to population adjust
@@ -100,8 +100,8 @@ function means_bands_all(m::AbstractModel, input_type::Symbol,
     # Get filenames for population data and forecast
     if !isnull(population_mnemonic)
         vint = data_vintage(m)
-        population_data_file     = inpath(m, "data", "population_data_levels_$vint.csv")
-        population_forecast_file = inpath(m, "data", "population_forecast_$vint.csv")
+        population_data_file     = inpath(m, "raw", "population_data_levels_$vint.csv")
+        population_forecast_file = inpath(m, "raw", "population_forecast_$vint.csv")
     else
         population_data_file = ""
         population_forecast_file = ""

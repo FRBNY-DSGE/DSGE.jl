@@ -35,7 +35,7 @@ module DSGE
         n_parameters_free, n_pseudoobservables, get_key,
         inds_states_no_ant, inds_shocks_no_ant, inds_obs_no_ant,
         spec, subspec, saveroot, dataroot,
-        data_vintage, cond_vintage, cond_id, cond_full_names, cond_semi_names, use_population_forecast,
+        data_vintage, data_id, cond_vintage, cond_id, cond_full_names, cond_semi_names, use_population_forecast,
         use_parallel_workers,
         reoptimize, calculate_hessian, hessian_path, n_hessian_test_params,
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin,
