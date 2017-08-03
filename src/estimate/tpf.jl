@@ -93,8 +93,9 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         sqrtS2_t   = RRR_t*get_chol(QQ_t)'
         n_errors_t = length(y_t)
         ε          = zeros(n_errors_t)
+        @show size(mutation_rand_mat)
         mutation_rand_mat = mutation_rand_mat[nonmissing] 
-   
+        @show size(mutation_rand_mat)
         if !deterministic # When not testing, want a new random ε each time 
             ε_rand_mat = randn(n_errors_t, n_particles)
         end

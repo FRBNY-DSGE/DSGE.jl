@@ -37,7 +37,6 @@ m<=Setting(:tpf_target, 0.25)
 m<=Setting(:tpf_n_particles, n_particles)
 m<=Setting(:use_parallel_workers, parallel)
 m<=Setting(:x_tolerance, zero(float(0)))
-m<=Setting(:tpf_mutation_rand_mat, randn(size(S2,1),1))
 m<=Setting(:tpf_deterministic, true)
 
 s0 = zeros(size(system[:TTT])[1])
