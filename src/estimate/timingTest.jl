@@ -24,7 +24,7 @@ S2 = system.measurement.QQ
 Φ = system.transition.TTT
 
 N_MH = 2
-n_particles = 4000
+n_particles = 10000
 parallel = true
 
 rand_mat = randn(size(S2,1) ,1)
@@ -44,8 +44,8 @@ s0 = zeros(size(system[:TTT])[1])
 P0 = nearestSPD(solve_discrete_lyapunov(Φ,R*S2*R'))
 neff, lik_fixed = tpf(m, data, system, s0, P0)
 
-kalman_out = DSGE.filter(m,data,system,s0,P0)
-lik_kalman_no_NaN = kalman_out[:L_vec]
+#kalman_out = DSGE.filter(m,data,system,s0,P0)
+#lik_kalman_no_NaN = kalman_out[:L_vec]
 
 #=
 Neff, lik_reg, times = tpf(m,data,system,s0,P0,0)
@@ -140,9 +140,12 @@ h5open("$path/../../test/reference/kalman_different_errors.h5","w") do file
     write(file, "lik_kalman_half",lik_kalman_half)
 end
 =#
-h5open("/data/dsge_data_dir/dsgejl/interns2017/standard_vals.h5","w") do file
+lik_kalman_no_NaN = h5read("/data/dsge_data_dir/dsgejl/interns2017/standard_vals.h5","lik_kalman")
+#lik_fixed = h5read("/data/dsge_data_dir/dsgejl/interns2017/standard_vals.h5","lik_tpf")
+
+h5open("/data/dsge_data_dir/dsgejl/interns2017/standard_vals2.h5","w") do file
     write(file, "lik_kalman", lik_kalman_no_NaN)
-    write(file, "lik_tpf", lik_adaptive)
+    write(file, "lik_tpf", lik_fixed)
 end 
 
 #lik_4000 = h5read("$path/../../test/reference/compare_n_particles.h5","lik_4000")
@@ -162,7 +165,7 @@ gui()
 #lik_tenth = h5read("$path/../../test/reference/compare_scaling_no_MH_change.h5","lik_tenth")
 #lik_kalman_error = h5read("$path/../../test/reference/varLik_error.h5","lik_kalman_error")
 plotly()
-plot(lik_adaptive,label="TPF")
+plot(lik_fixed,label="TPF")
 plot!(lik_kalman_no_NaN,label="Kalman")
 gui()
 

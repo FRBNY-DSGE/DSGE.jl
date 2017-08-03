@@ -1,6 +1,6 @@
 """
 ```
-function mutation(c::Float64, N_MH::Int64, deterministic::Bool, system::System{Float64}, y_t::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array, nonmissing::Array{Bool,1})
+function mutation(c::Float64, N_MH::Int64, deterministic::Bool, system::System{Float64}, y_t::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, nonmissing::Array{Bool,1})
 ```
 Runs random-walk Metropolis Hastings for ONE particle. The caller should loop through all particles, calling this method on each. 
 m: The model. Used to get the setting tpf_c (which is VERY important it turns out...) 
@@ -8,7 +8,7 @@ y_t: A 1 x num_measurement vector at time t for all observed y (GDP, PCE, FFR, e
 s_init: The starting state before mutation.
 ε_init: The starting epsilon (state error) before mutation.
 """
-function mutation(system::System{Float64}, y_t::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, c::Float64, N_MH::Int64, deterministic::Bool, cov_s::Array{Float64,2}, nonmissing::Array{Bool,1}, rand_mat::Array{Float64})
+function mutation(system::System{Float64}, y_t::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, c::Float64, N_MH::Int64, deterministic::Bool, nonmissing::Array{Bool,1}, rand_mat::Array{Float64})
     #------------------------------------------------------------------------
     # Setup
     #------------------------------------------------------------------------
@@ -38,8 +38,8 @@ function mutation(system::System{Float64}, y_t::Array{Float64,1}, s_init::Array{
         if !deterministic rand_mat = randn(size(QQ,1),1) end
         #else rand_mat = get_setting(m,:tpf_rand_mat) end
         
-        # Generate new draw of ε from a N(ε_init, c²cov_s) distribution, c tuning parameter
-        ε_new = ε_init + c*Matrix(chol(nearestSPD(cov_s)))'*rand_mat
+        # Generate new draw of ε from a N(ε_init, c²I) distribution, c tuning parameter, I identity
+        ε_new = ε_init + c*rand_mat
         
         # Use the state equation to calculate the corresponding state from that ε 
         s_new_fore = TTT*s_init + sqrtS2*ε_new
