@@ -31,8 +31,6 @@ n_particles = get_setting(m,:tpf_n_particles)
 N_MH = get_setting(m,:tpf_n_mh_simulations)
 
 ε = randn(3,n_particles)
-μ = mean(ε,2)
-cov_s = (1/n_particles)*(ε-repmat(μ,1,n_particles))*(ε-repmat(μ,1,n_particles))'
 
 h5open("$path/../reference/matricesForMutation.h5","w") do file
     write(file, "phi", sys.transition.TTT)
@@ -50,7 +48,7 @@ h5open("$path/../reference/matricesForMutation.h5","w") do file
 end
     
 #Test that it compiles
-s_part1, eps_part1, acpt = mutation(m,system,[50.2,8.3,7.6],[.8,.9,.6,.9,.11,5,7,10],[.2,.5,.7],cov_s)
+s_part1, eps_part1, acpt = mutation(m,system,[50.2,8.3,7.6],[.8,.9,.6,.9,.11,5,7,10],[.2,.5,.7])
 
 h5open("$path/../reference/mutation_RWMH1.h5","w") do file
     write(file, "s_part1", s_part1)
