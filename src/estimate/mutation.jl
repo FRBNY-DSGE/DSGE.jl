@@ -76,7 +76,6 @@ function mutation(system::System{Float64}, y_t::Array{Float64,1}, s_init::Array{
         ε_init = ind_ε
     end
     accept_rate = accept/N_MH
-
     return ind_s, ind_ε, accept_rate 
 end
 
