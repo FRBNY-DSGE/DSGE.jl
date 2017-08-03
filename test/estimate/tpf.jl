@@ -76,9 +76,14 @@ function optimize_setup(m::AbstractModel,deterministic::Bool)
         else
             println("AnSchorfheide model, nondeterministic model.")
             # An Schorfheide, nondeterministic
-            file = "$path/../reference/optimize.h5"
-            data = h5read(file, "data")'
-             # Parameters given in Schorfheide's MATLAB code
+            #file = "$path/../reference/optimize.h5"
+            #data = h5read(file, "data")'
+            # Load in us.txt data from schorfheide
+            df = readtable("$path/../reference/us.txt",header=false,separator=' ')
+            data = convert(Matrix{Float64},df)
+            data=data'
+ 
+            # Parameters given in Schorfheide's MATLAB code
             params = [2.09, 0.98, 2.25, 0.65, 0.34, 3.16, 0.51, 0.81, 0.98, 
                        0.93, 0.19, 0.65, 0.24,0.12,0.29,0.45]
             update!(m,params)
@@ -130,17 +135,21 @@ tic()
 neff, lik = tpf(m, data, sys, s0, P0)
 total_time = toc()
 
-h5open("$path/../reference/output_likelihoods_ansch.h5","w") do f
-    write(f,"julia_likelihoods",lik)
-end
+# h5open("$path/../reference/output_likelihoods_ansch.h5","w") do f
+#     write(f,"julia_likelihoods",lik)
+# end
 
 type_m = typeof(m)
 N_MH = get_setting(m, :tpf_n_mh_simulations)
 println("$n_particles Particles, $type_m, N_MH = $N_MH, elapsed time: $total_time seconds\n")
 
 # For comparison test
-good_likelihoods = h5open("$path/../reference/tpf_test_likelihoods.h5","r") do file
-    read(file, "test_likelihoods")
+good_likelihoods_deterministic = h5read("$path/../reference/tpf_test_likelihoods.h5","test_likelihoods")
+good_likelihoods_random = h5read("$path/../reference/tpf_test_likelihoods_random.h5", "test_likelihoods")
+
+if n_particles==4000 & !deterministic & typeof(m)==AnSchorfheide{Float64})
+    @test_matrix_approx_eq lik good_likelihoods_random
+    println("Test passed for AnSchorfheide with 4000 particles in random mode")
 end
 
 if ((n_particles == 4000) & deterministic) & (typeof(m)==AnSchorfheide{Float64})
@@ -149,10 +158,11 @@ if ((n_particles == 4000) & deterministic) & (typeof(m)==AnSchorfheide{Float64})
 end
 
 #####The following code regenerates the test comparison that we use to compare. DO NOT RUN (unless you are sure that the new tpf.jl is correct).
-# Seeded, deterministic resampling; fixed tempering schedule of 0.25->0.5->1
-# h5open("$path/../reference/tpf_test_likelihoods.h5","w") do file
+#Seeded, deterministic resampling; fixed tempering schedule of 0.25->0.5->1
+# h5open("$path/../reference/tpf_test_likelihoods_random.h5","w") do file
 #     write(file,"test_likelihoods",lik)
 # end
+
+
 rmprocs(my_procs)
 
-nothing
