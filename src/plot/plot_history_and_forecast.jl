@@ -89,8 +89,11 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
                                    hist_label::String = "History",
                                    forecast_label::String = "Forecast",
                                    hist_color::Colorant = RGBA(0., 0., 0., 1.),
-                                   forecast_mean_color::Colorant = RGBA(1., 0., 0., 1.),
-                                   forecast_band_color::Colorant = RGBA(0., 0., 1., 0.1),
+                                   forecast_color::Colorant = RGBA(1., 0., 0., 1.),
+                                   linestyle::Symbol = :solid,
+                                   bands_color::Colorant = RGBA(0., 0., 1., 0.1),
+                                   bands_pcts::Vector{String} = String[],
+                                   bands_style::Symbol = :fan,
                                    tick_size::Int = 5,
                                    legend = :best,
                                    plot_handle::Plots.Plot = plot())
@@ -121,20 +124,16 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
 
     # Plot bands
     if combined.metadata[:para] in [:full, :subset]
-        band_inds = get_bands_indices(var, history, forecast, hist_inds, fcast_inds)
-        band_pcts = DSGE.which_density_bands(combined; uniquify = true)
-        for pct in band_pcts
-            plot!(p, datenums[band_inds], combined.bands[var][band_inds, Symbol("$pct UB")],
-                  fillto = combined.bands[var][band_inds, Symbol("$pct LB")],
-                  label = "", color = forecast_band_color, α = 0.10)
-        end
+        bands_inds = get_bands_indices(var, history, forecast, hist_inds, fcast_inds)
+        plot_bands!(p, combined, bands_style, bands_color,
+                    linestyle = linestyle, pcts = bands_pcts, indices = bands_inds)
     end
 
     # Plot mean
     plot!(p, datenums[hist_inds],  combined.means[hist_inds,  var], label = hist_label,
-          linewidth = 2, linecolor = hist_color)
+          linewidth = 2, linestyle = linestyle, linecolor = hist_color)
     plot!(p, datenums[fcast_inds], combined.means[fcast_inds, var], label = forecast_label,
-          linewidth = 2, linecolor = forecast_mean_color)
+          linewidth = 2, linestyle = linestyle, linecolor = forecast_color)
 
     # Set date ticks
     date_ticks!(p, start_date, end_date, tick_size)
@@ -144,7 +143,6 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
 
     return p
 end
-
 
 function plot_history_and_forecast(var::Symbol, histories::Vector{MeansBands}, forecasts::Vector{MeansBands};
                                    start_date::Nullable{Date} = Nullable{Date}(),
@@ -172,4 +170,42 @@ function plot_history_and_forecast(var::Symbol, histories::Vector{MeansBands}, f
     end
 
     return plot_handle
+end
+
+"""
+```
+function plot_bands!(p, mb, style, color; linestyle = :solid,
+    pcts = DSGE.which_density_bands(mb, uniquify = true), indices = Colon())
+```
+
+Plot bands from `mb` on plot `p`. The `style` can be one of `:fan` or `:line`,
+and the user can which bands to plot (`pcts`) and over which time periods
+(`indices`).
+"""
+function plot_bands!(p::Plots.Plot, mb::MeansBands,
+                     style::Symbol, color::Colorant;
+                     linestyle::Symbol = :solid,
+                     pcts::Vector{String} = DSGE.which_density_bands(mb, uniquify = true),
+                     indices = Colon())
+
+    datenums = map(quarter_date_to_number, mb.means[:date])
+
+    if style == :fan
+        for pct in pcts
+            plot!(p, datenums[indices], mb.bands[var][indices, Symbol(pct, " UB")],
+                  fillto = mb.bands[var][indices, Symbol(pct, " LB")],
+                  label = "", color = color, α = 0.10)
+        end
+
+    elseif style == :line
+        for pct in pcts
+            plot!(p, datenums[indices], mb.bands[var][indices, Symbol(pct, " UB")],
+                  label = "", color = color, linewidth = 2, linestyle = linestyle)
+            plot!(p, datenums[indices], mb.bands[var][indices, Symbol(pct, " LB")],
+                  label = "", color = color, linewidth = 2, linestyle = linestyle)
+        end
+
+    else
+        error("Invalid style: " * string(style))
+    end
 end
