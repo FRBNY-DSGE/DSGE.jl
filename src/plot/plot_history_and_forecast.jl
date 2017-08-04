@@ -1,15 +1,16 @@
 """
 ```
-plot_history_and_forecast(var, history, forecast; output_file = "",
-    start_date = Nullable{Date}(), end_date = Nullable{Date}(),
-    hist_label = \"History\", forecast_label = \"Forecast\",
-    hist_color = :black, forecast_mean_color = :red,
-    forecast_band_color = RGBA(0, 0, 1, 0.1), tick_size = 5, legend = :best,
-    plot_handle = plot())
-
 plot_history_and_forecast(m, var, class, input_type, cond_type;
     forecast_string = "", bdd_and_unbdd = false, output_file = "",
     title = "", kwargs...)
+
+plot_history_and_forecast(var, history, forecast; output_file = "",
+    title = "", start_date = Nullable{Date}(), end_date = Nullable{Date}(),
+    hist_label = \"History\", forecast_label = \"Forecast\",
+    hist_color = :black, forecast_color = :red, linestyle = :solid,
+    bands_color = RGBA(0, 0, 1, 0.1), bands_pcts = [],
+    bands_style = :fan, tick_size = 5, legend = :best,
+    plot_handle = plot())
 ```
 
 Plot `var` from `history` and `forecast`. If these correspond to a
@@ -19,32 +20,36 @@ full-distribution forecast, the forecast will be a fan chart.
 
 - `var::Symbol`: variable to be plotted, e.g. `:obs_gdp`
 
-**Methods 1 and 3 only:**
-
-- `history::MeansBands` or `Vector{MeansBands}`
-- `forecast::MeansBands` or `Vector{MeansBands}`
-
-**Method 2 only:**
+**Method 1 only:**
 
 - `m::AbstractModel`
 - `class::Symbol`
+
+**Method 2 only:**
+
+- `history::MeansBands` or `Vector{MeansBands}`
+- `forecast::MeansBands` or `Vector{MeansBands}`
 
 ### Keyword Arguments
 
 - `output_file::String`: if specified, plot will be saved there. In method 1, if
   `output_file` is not specified, one will be computed using `get_forecast_filename`
+- `title::String`
 - `start_date::Nullable{Date}`
 - `end_date::Nullable{Date}`
 - `hist_label::String`
 - `forecast_label::String`
 - `hist_color::Colorant`
-- `forecast_mean_color::Colorant`
-- `forecast_band_color::Colorant`
+- `forecast_color::Colorant`
+- `linestyle::Symbol`
+- `bands_color::Colorant`
+- `bands_pcts::Vector{String}`
+- `bands_style::Symbol`: either `:fan` or `:line`
 - `tick_size::Int`: x-axis (time) tick size in units of years
 - `legend`
 - `plot_handle::Plots.Plot`: a plot handle to add `history` and `forecast` to
 
-**Method 2 only:**
+**Method 1 only:**
 
 - `forecast_string::String`
 - `bdd_and_unbdd::Bool`: if true, then unbounded means and bounded bands are plotted
@@ -83,9 +88,9 @@ end
 
 function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::MeansBands;
                                    output_file::String = "",
+                                   title::String = "",
                                    start_date::Nullable{Date} = Nullable{Date}(),
                                    end_date::Nullable{Date} = Nullable{Date}(),
-                                   title::String = "",
                                    hist_label::String = "History",
                                    forecast_label::String = "Forecast",
                                    hist_color::Colorant = RGBA(0., 0., 0., 1.),

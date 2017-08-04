@@ -1,15 +1,16 @@
 """
 ```
-plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
-    output_file = "", start_date = Nullable{Date}(),
-    end_date = Nullable{Date}(), bandpcts::Vector{String} = [\"90.0%\"],
-    hist_label = \"History\", old_fcast_label = \"Old Forecast\",
-    new_fcast_label = \"New Forecast\", hist_color = :black,
-    old_fcast_color = :blue, new_fcast_color = :red, tick_size = 2,
-    legend = :best)
-
 plot_forecast_comparison(m_old, m_new, var, class, input_type, cond_type;
     forecast_string = "", bdd_and_unbdd = false, kwargs...)
+
+plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
+    output_file = "", title = "", start_date = Nullable{Date}(),
+    end_date = Nullable{Date}(), bandpcts::Vector{String} = [\"90.0%\"],
+    old_hist_label = "", new_hist_label = "",
+    old_fcast_label = \"Old Forecast\", new_fcast_label = \"New Forecast\",
+    old_hist_color = :grey, new_hist_color = :black,
+    old_fcast_color = :blue, new_fcast_color = :red,
+    tick_size = 2, legend = :best)
 ```
 
 ### Inputs
@@ -18,35 +19,38 @@ plot_forecast_comparison(m_old, m_new, var, class, input_type, cond_type;
 
 **Method 1 only:**
 
-- `histold::MeansBands`
-- `fcastold::MeansBands`
-- `histnew::MeansBands`
-- `fcastnew::MeansBands`
-
-**Method 2 only:**
-
 - `m_old::AbstractModel`
 - `m_new::AbstractModel`
 - `class::Symbol`
 - `input_type::Symbol`
 - `output_type::Symbol`
 
+**Method 2 only:**
+
+- `histold::MeansBands`
+- `fcastold::MeansBands`
+- `histnew::MeansBands`
+- `fcastnew::MeansBands`
+
 ### Keyword Arguments
 
 - `output_file::String`: if specified, plot will be saved there as a PDF
+- `title::String`
 - `start_date::Nullable{Date}`
 - `end_date::Nullable{Date}`
 - `bandpcts::Vector{String}`: which bands to plot
-- `hist_label::String`
+- `old_hist_label::String`
+- `new_hist_label::String`
 - `old_fcast_label::String`
 - `new_fcast_label::String`
-- `hist_color::Colorant`
+- `old_hist_color::Colorant`
+- `new_hist_color::Colorant`
 - `old_fcast_color::Colorant`
 - `new_fcast_color::Colorant`
 - `tick_size::Int`: x-axis (time) tick size in units of years
 - `legend`
 
-**Method 2 only:**
+**Method 1 only:**
 
 - `forecast_string::String`
 - `bdd_and_unbdd::Bool`: if true, then unbounded means and bounded bands are plotted
@@ -85,17 +89,17 @@ function plot_forecast_comparison(var::Symbol,
                                   histold::MeansBands, fcastold::MeansBands,
                                   histnew::MeansBands, fcastnew::MeansBands;
                                   output_file::String = "",
+                                  title::String = "",
                                   start_date::Nullable{Date} = Nullable{Date}(),
                                   end_date::Nullable{Date} = Nullable{Date}(),
                                   bandpcts::Vector{String} = ["90.0%"],
-                                  title::String = "",
                                   old_hist_label::String = "",
-                                  old_fcast_label::String = "Old Forecast",
                                   new_hist_label::String = "",
+                                  old_fcast_label::String = "Old Forecast",
                                   new_fcast_label::String = "New Forecast",
                                   old_hist_color::Colorant = parse(Colorant, :grey),
-                                  old_fcast_color::Colorant = parse(Colorant, :blue),
                                   new_hist_color::Colorant = parse(Colorant, :black),
+                                  old_fcast_color::Colorant = parse(Colorant, :blue),
                                   new_fcast_color::Colorant = parse(Colorant, :red),
                                   tick_size::Int = 2,
                                   legend = :best)
