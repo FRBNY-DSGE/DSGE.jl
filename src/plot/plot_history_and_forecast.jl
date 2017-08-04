@@ -125,7 +125,7 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     # Plot bands
     if combined.metadata[:para] in [:full, :subset]
         bands_inds = get_bands_indices(var, history, forecast, hist_inds, fcast_inds)
-        plot_bands!(p, combined, bands_style, bands_color,
+        plot_bands!(p, var, combined, bands_style, bands_color,
                     linestyle = linestyle, pcts = bands_pcts, indices = bands_inds)
     end
 
@@ -174,15 +174,15 @@ end
 
 """
 ```
-function plot_bands!(p, mb, style, color; linestyle = :solid,
+function plot_bands!(p, var, mb, style, color; linestyle = :solid,
     pcts = DSGE.which_density_bands(mb, uniquify = true), indices = Colon())
 ```
 
-Plot bands from `mb` on plot `p`. The `style` can be one of `:fan` or `:line`,
-and the user can which bands to plot (`pcts`) and over which time periods
-(`indices`).
+Plot `var` bands from `mb` on plot `p`. The `style` can be one of `:fan` or
+`:line`, and the user can which bands to plot (`pcts`) and over which time
+periods (`indices`).
 """
-function plot_bands!(p::Plots.Plot, mb::MeansBands,
+function plot_bands!(p::Plots.Plot, var::Symbol, mb::MeansBands,
                      style::Symbol, color::Colorant;
                      linestyle::Symbol = :solid,
                      pcts::Vector{String} = DSGE.which_density_bands(mb, uniquify = true),
