@@ -5,7 +5,7 @@ using DSGE
 addprocs_sge(10,queue="background.q")
 @everywhere using DSGE
 
-srand(47)
+#srand(47)
 
 m = SmetsWouters("ss1", testing=true)
 path = dirname(@__FILE__)
@@ -143,7 +143,7 @@ end
 lik_kalman_no_NaN = h5read("/data/dsge_data_dir/dsgejl/interns2017/standard_vals.h5","lik_kalman")
 #lik_fixed = h5read("/data/dsge_data_dir/dsgejl/interns2017/standard_vals.h5","lik_tpf")
 
-h5open("/data/dsge_data_dir/dsgejl/interns2017/standard_vals2.h5","w") do file
+h5open("/data/dsge_data_dir/dsgejl/interns2017/standard_vals3.h5","w") do file
     write(file, "lik_kalman", lik_kalman_no_NaN)
     write(file, "lik_tpf", lik_fixed)
 end 
