@@ -1,8 +1,10 @@
 """
 ```
-function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::Array{S,1}, ε_init::Array{S,1}, c::S, N_MH::Int, deterministic::Bool, nonmissing::Array{Bool,1})
+function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::Array{S,1}, 
+        ε_init::Array{S,1}, c::S, N_MH::Int, deterministic::Bool, nonmissing::Array{Bool,1})
 ```
-Runs random-walk Metropolis Hastings for single particle. The caller should loop through all particles, calling this method on each. 
+Runs random-walk Metropolis Hastings for single particle. The caller should loop through 
+all particles, calling this method on each. 
 
 ### Inputs
 
@@ -18,7 +20,9 @@ Runs random-walk Metropolis Hastings for single particle. The caller should loop
 - `accept_rate`: 
 
 """
-function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::Array{S,1}, ε_init::Array{S,1}, c::S, N_MH::Int, deterministic::Bool, nonmissing::Array{Bool,1}, rand_mat::Array{S})
+function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::Array{S,1}, 
+    ε_init::Array{S,1}, c::S, N_MH::Int, deterministic::Bool, nonmissing::Array{Bool,1}, 
+    rand_mat::Array{S})
     #------------------------------------------------------------------------
     # Setup
     #------------------------------------------------------------------------

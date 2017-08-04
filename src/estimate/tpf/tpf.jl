@@ -1,4 +1,4 @@
-using Roots
+using DSGE
 function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
     s0::Array{S}, P0::Array; verbose::Symbol=:low, include_presample::Bool=true)
     # s0 is 8xn_particles
@@ -107,10 +107,10 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         # Error for each particle
         p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered
 
-        # Solve for initial tempering parameter ϕ_1
+        # Solve for initial tempering parameter φ_1
         if !deterministic
-            init_ineff_func(φ) = inefficiency(φ, 2.0*pi, y_t, p_error, EE_t, initialize=true)-rstar
-            φ_1 = fzero(init_ineff_func,0.00000001, 1.0, xtol=xtol)
+            init_Ineff_func(φ) = solve_inefficiency(φ, 2.0*pi, y_t, p_error, EE_t, initialize=true)-rstar
+            φ_1 = fzero(init_Ineff_func, 0.00000001, 1.0, xtol=xtol)
         else 
             φ_1 = 0.25
         end
@@ -138,7 +138,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         
         if !deterministic
             println("You're not deterministic!")
-            ineff_check = inefficiency(1.0, φ_1, y_t, p_error, EE_t)         
+            ineff_check = solve_inefficiency(1.0, φ_1, y_t, p_error, EE_t)         
         else
             ineff_check = rstar + 1
         end
@@ -153,7 +153,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         while ineff_check > rstar
 
             # Define inefficiency function
-            init_ineff_func(φ) = inefficiency(φ, φ_old, y_t, p_error, EE_t) - rstar
+            init_ineff_func(φ) = solve_inefficiency(φ, φ_old, y_t, p_error, EE_t) - rstar
             φ_interval = [φ_old, 1.0]
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
 
@@ -167,7 +167,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
                 else
                     # Set φ_new to the solution of the inefficiency function over interval
                     φ_new = fzero(init_ineff_func, φ_interval, xtol=xtol)
-                    ineff_check = inefficiency(1.0, φ_new, y_t, p_error, EE_t)
+                    ineff_check = solve_inefficiency(1.0, φ_new, y_t, p_error, EE_t)
                 end
                
                 if VERBOSITY[verbose] >= VERBOSITY[:low]

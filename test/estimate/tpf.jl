@@ -117,7 +117,7 @@ end
 
 # Set parameters for testing
 deterministic = false
-parallel=true
+parallel=false
 n_particles=4000
 
 if parallel
