@@ -23,7 +23,7 @@ function setup_model(model_type::String,n_particles::Int64,deterministic::Bool,p
 
     # Tuning Parameters
     m<=Setting(:tpf_rstar,2.0)
-    m<=Setting(:tpf_c, 0.1)
+    m<=Setting(:tpf_cstar, 0.1)
     m<=Setting(:tpf_acpt_rate,0.5)
     m<=Setting(:tpf_target, 0.25)
     m<=Setting(:tpf_n_mh_simulation, 2)
@@ -148,6 +148,8 @@ good_likelihoods_deterministic = h5read("$path/../reference/tpf_test_likelihoods
 good_likelihoods_random = h5read("$path/../reference/tpf_test_likelihoods_random.h5", "test_likelihoods")
 
 if (n_particles==4000) & (!deterministic) & (typeof(m)==AnSchorfheide{Float64})
+    @show lik 
+    @show good_likelihoods_random
     @test_matrix_approx_eq lik good_likelihoods_random
     println("Test passed for AnSchorfheide with 4000 particles in random mode")
 end
