@@ -49,8 +49,7 @@ plot_forecast_comparison(m_old, m_new, var, class, input_type, cond_type;
 **Method 2 only:**
 
 - `forecast_string::String`
-- `bdd_and_unbdd::Bool`: whether to read in `MeansBands` forecasts that enforce
-  the ZLB for bands **but not for means**. Defaults to `false`
+- `bdd_and_unbdd::Bool`: if true, then unbounded means and bounded bands are plotted
 
 ### Output
 
@@ -61,8 +60,9 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
                                   bdd_and_unbdd::Bool = false,
+                                  title = "",
                                   kwargs...)
-
+    # Read in MeansBands
     histold  = read_mb(m_old, input_type, cond_type, Symbol(:hist, class),
                        forecast_string = forecast_string)
     fcastold = read_mb(m_old, input_type, cond_type, Symbol(:forecast, class),
@@ -72,7 +72,13 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
     fcastnew = read_mb(m_new, input_type, cond_type, Symbol(:forecast, class),
                        forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd)
 
-    plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew; kwargs...)
+    # Get title if not provided
+    if isempty(title)
+        title = describe_series(m_new, var, class)
+    end
+
+    plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
+                             title = title, kwargs...)
 end
 
 function plot_forecast_comparison(var::Symbol,
@@ -82,97 +88,45 @@ function plot_forecast_comparison(var::Symbol,
                                   start_date::Nullable{Date} = Nullable{Date}(),
                                   end_date::Nullable{Date} = Nullable{Date}(),
                                   bandpcts::Vector{String} = ["90.0%"],
-                                  hist_label::String = "History",
-                                  old_hist_label::String="",
+                                  title::String = "",
+                                  old_hist_label::String = "",
                                   old_fcast_label::String = "Old Forecast",
+                                  new_hist_label::String = "",
                                   new_fcast_label::String = "New Forecast",
-                                  hist_color::Colorant = parse(Colorant, :black),
                                   old_hist_color::Colorant = parse(Colorant, :grey),
                                   old_fcast_color::Colorant = parse(Colorant, :blue),
+                                  new_hist_color::Colorant = parse(Colorant, :black),
                                   new_fcast_color::Colorant = parse(Colorant, :red),
                                   tick_size::Int = 2,
                                   legend = :best)
 
-    allold = cat(histold, fcastold)
-    allnew = cat(histnew, fcastnew)
-
-    # Convert Dates to datenums (see util.jl)
-    for mb in [histold, fcastold, allold, histnew, fcastnew, allnew]
-        mb.means[:datenum]      = map(quarter_date_to_number, mb.means[:date])
-        mb.bands[var][:datenum] = map(quarter_date_to_number, mb.bands[var][:date])
-    end
-
     # Initialize plot
-    p = Plots.plot(legend = legend)
+    p = Plots.plot(legend = legend, title = title)
 
-    # Plot new data
-    start_date_new, end_date_new = get_date_limits(start_date, end_date, allnew.means[:date])
-    start_ind,      end_ind      = get_date_limit_indices(start_date_new, end_date_new, allnew.means[:date])
+    # Set up common keyword arguments
+    common_kwargs = Dict{Symbol, Any}()
+    common_kwargs[:start_date]  = start_date
+    common_kwargs[:end_date]    = end_date
+    common_kwargs[:bands_pcts]  = bandpcts
+    common_kwargs[:bands_style] = :line
+    common_kwargs[:tick_size]   = tick_size
+    common_kwargs[:legend]      = legend
+    common_kwargs[:title]       = title
 
-    n_hist_periods = size(histnew.means, 1)
-    hist_inds = start_ind:min(end_ind, n_hist_periods)
-
-    plot!(p, histnew.means[hist_inds, :datenum], histnew.means[hist_inds, var],
-          linewidth = 2, linecolor = hist_color, label = hist_label)
-
-    # Plot new forecast
-    n_hist_periods  = size(histnew.means, 1)
-    n_all_periods   = size(allnew.means, 1)
-    fcast_inds      = max(start_ind, n_hist_periods):end_ind
-
-    plot!(p, allnew.means[fcast_inds, :datenum], allnew.means[fcast_inds, var],
-          linewidth = 2, linecolor = new_fcast_color, label = new_fcast_label)
-
-    if fcastnew.metadata[:para] in [:full, :subset]
-        for pct in bandpcts
-            plot!(p, allnew.bands[var][fcast_inds, :datenum], allnew.bands[var][fcast_inds, Symbol(pct, " UB")],
-                  linewidth = 2, linecolor = new_fcast_color, label = "")
-            plot!(p, allnew.bands[var][fcast_inds, :datenum], allnew.bands[var][fcast_inds, Symbol(pct, " LB")],
-                  linewidth = 2, linecolor = new_fcast_color, label = "")
-        end
-    end
-
-    # Plot old data
-    # Conditional on whether the historic path differs (i.e. for pseudo-observables)
-    start_date_old, end_date_old = get_date_limits(start_date, end_date, allold.means[:date])
-    start_ind,      end_ind      = get_date_limit_indices(start_date_old, end_date_old, allold.means[:date])
-
-    if !isempty(old_hist_label)
-        n_hist_periods = size(histold.means, 1)
-        hist_inds = start_ind:min(end_ind, n_hist_periods)
-
-        plot!(p, histold.means[hist_inds, :datenum], histold.means[hist_inds, var],
-              linewidth = 2, linecolor = old_hist_color, label = old_hist_label)
-    end
-
-    # Plot old forecast
-    n_hist_periods  = size(histold.means, 1)
-    n_all_periods   = size(allold.means, 1)
-    fcast_inds      = max(start_ind, n_hist_periods):end_ind
-
-    plot!(p, allold.means[fcast_inds, :datenum], allold.means[fcast_inds, var],
-          linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = old_fcast_label)
-
-    if fcastold.metadata[:para] in [:full, :subset]
-        for pct in bandpcts
-            plot!(p, allold.bands[var][fcast_inds, :datenum], allold.bands[var][fcast_inds, Symbol(pct, " UB")],
-                  linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = "")
-            plot!(p, allold.bands[var][fcast_inds, :datenum], allold.bands[var][fcast_inds, Symbol(pct, " LB")],
-                  linewidth = 2, linecolor = old_fcast_color, linestyle = :dash, label = "")
-        end
-    end
-
-    # Set date ticks
-    date_ticks!(p, min(start_date_old, start_date_new), max(end_date_old, end_date_new), tick_size)
+    # Plot old and new histories/forecasts separately
+    p = plot_history_and_forecast(var, histold, fcastold; plot_handle = p,
+                                  hist_label = old_hist_label, forecast_label = old_fcast_label,
+                                  hist_color = old_hist_color, forecast_color = old_fcast_color,
+                                  bands_color = old_fcast_color, linestyle = :solid,
+                                  common_kwargs...)
+    p = plot_history_and_forecast(var, histnew, fcastnew; plot_handle = p,
+                                  hist_label = new_hist_label, forecast_label = new_fcast_label,
+                                  hist_color = new_hist_color, forecast_color = new_fcast_color,
+                                  bands_color = new_fcast_color, linestyle = :dash,
+                                  common_kwargs...)
 
     # Save if output_file provided
     save_plot(p, output_file)
-
-    # Delete datenum fields from input arguments (causes problems in cat)
-    for mb in [histold, fcastold, histnew, fcastnew]
-        delete!(mb.means,      :datenum)
-        delete!(mb.bands[var], :datenum)
-    end
 
     return p
 end
