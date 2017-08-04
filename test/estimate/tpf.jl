@@ -24,7 +24,7 @@ function setup_model(model_type::String,n_particles::Int64,deterministic::Bool,p
     # Tuning Parameters
     m<=Setting(:tpf_rstar,2.0)
     m<=Setting(:tpf_cstar, 0.1)
-    m<=Setting(:tpf_acpt_rate,0.5)
+    m<=Setting(:tpf_accept_rate,0.5)
     m<=Setting(:tpf_target, 0.25)
     m<=Setting(:tpf_n_mh_simulation, 2)
     m<=Setting(:n_presample_periods, 2)
@@ -103,9 +103,9 @@ function optimize_setup(m::AbstractModel,deterministic::Bool)
     end 
         
     system = compute_system(m)
-    R = system.transition.RRR
-    S2 = system.measurement.QQ
-    Φ = system.transition.TTT
+    R = system[:RRR]
+    S2 = system[:QQ]
+    Φ = system[:TTT]
 
     if !(deterministic & (typeof(m)==AnSchorfheide{Float64}))
         # Random matrix written to file for comparison with MATLAB
