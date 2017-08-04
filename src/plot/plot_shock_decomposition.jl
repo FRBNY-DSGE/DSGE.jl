@@ -1,11 +1,11 @@
 """
 ```
 plot_shock_decomposition(m, var, class, input_type, cond_type; forecast_string = "",
-    output_file = "", hist_label = \"Detrended History\", forecast_label = \"Detrended Forecast\",
-    hist_color = :black, forecast_color = :red, tick_size = 5, legend = :best)
+    output_file = "", title = "", kwargs...)
 
 plot_shock_decomposition(var, shockdec, trend, dettrend, hist, forecast, groups;
-    output_file = "", hist_label = \"Detrended History\", forecast_label = \"Detrended Forecast\",
+    output_file = "", title = "",
+    hist_label = \"Detrended History\", forecast_label = \"Detrended Forecast\",
     hist_color = :black, forecast_color = :red, tick_size = 5, legend = :best)
 ```
 
@@ -35,6 +35,7 @@ Plot shock decomposition for `var`.
 
 - `output_file::String`: if specified, plot will be saved there. In method 1, if
   `output_file` is not specified, one will be computed using `get_forecast_filename`
+- `title::String`
 - `hist_label::String`
 - `forecast_label::String`
 - `hist_color::Colorant`
@@ -54,12 +55,8 @@ function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
                                   output_file::String = "",
-                                  hist_label::String = "Detrended History",
-                                  forecast_label::String = "Detrended Forecast",
-                                  hist_color::Colorant = RGBA(0., 0., 0., 1.),
-                                  forecast_color::Colorant = RGBA(1., 0., 0., 1.),
-                                  tick_size::Int = 5,
-                                  legend = :best)
+                                  title = "",
+                                  kwargs...)
     # Read in MeansBands
     output_vars = [Symbol(prod, class) for prod in [:shockdec, :trend, :dettrend, :hist, :forecast]]
     mbs = map(output_var -> read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string),
@@ -74,11 +71,14 @@ function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                             pathfcn = figurespath, fileformat = plot_extension())
     end
 
+    # Get title if not provided
+    if isempty(title)
+        title = describe_series(m, var, class)
+    end
+
     # Appeal to second method
-    plot_shock_decomposition(var, mbs..., groups, output_file = output_file,
-                             hist_label = hist_label, forecast_label = forecast_label,
-                             hist_color = hist_color, forecast_color = forecast_color,
-                             tick_size = tick_size, legend = legend)
+    plot_shock_decomposition(var, mbs..., groups; title = title,
+                             output_file = output_file, kwargs...)
 end
 
 function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
@@ -86,6 +86,7 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
                                   hist::MeansBands, forecast::MeansBands,
                                   groups::Vector{ShockGroup};
                                   output_file::String = "",
+                                  title = "",
                                   hist_label::String = "Detrended History",
                                   forecast_label::String = "Detrended Forecast",
                                   hist_color::Colorant = RGBA(0., 0., 0., 1.),
@@ -128,7 +129,8 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
                    color = reshape(colors, 1, ngroups),
                    linealpha = 0.0,
                    bar_width = 1.0,
-                   legend = legend)
+                   legend = legend,
+                   title = title)
 
     # Plot detrended mean
     hist_end_date = enddate_means(hist)
