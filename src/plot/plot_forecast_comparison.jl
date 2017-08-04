@@ -7,15 +7,29 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
     new_fcast_label = \"New Forecast\", hist_color = :black,
     old_fcast_color = :blue, new_fcast_color = :red, tick_size = 2,
     legend = :best)
+
+plot_forecast_comparison(m_old, m_new, var, class, input_type, cond_type;
+    forecast_string = "", bdd_and_unbdd = false, kwargs...)
 ```
 
 ### Inputs
 
 - `var::Symbol`: e.g. `:obs_gdp`
+
+**Method 1 only:**
+
 - `histold::MeansBands`
 - `fcastold::MeansBands`
 - `histnew::MeansBands`
 - `fcastnew::MeansBands`
+
+**Method 2 only:**
+
+- `m_old::AbstractModel`
+- `m_new::AbstractModel`
+- `class::Symbol`
+- `input_type::Symbol`
+- `output_type::Symbol`
 
 ### Keyword Arguments
 
@@ -32,10 +46,35 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
 - `tick_size::Int`: x-axis (time) tick size in units of years
 - `legend`
 
+**Method 2 only:**
+
+- `forecast_string::String`
+- `bdd_and_unbdd::Bool`: whether to read in `MeansBands` forecasts that enforce
+  the ZLB for bands **but not for means**. Defaults to `false`
+
 ### Output
 
 - `p::Plot`
 """
+function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
+                                  var::Symbol, class::Symbol,
+                                  input_type::Symbol, cond_type::Symbol;
+                                  forecast_string::String = "",
+                                  bdd_and_unbdd::Bool = false,
+                                  kwargs...)
+
+    histold  = read_mb(m_old, input_type, cond_type, Symbol(:hist, class),
+                       forecast_string = forecast_string)
+    fcastold = read_mb(m_old, input_type, cond_type, Symbol(:forecast, class),
+                       forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd)
+    histnew  = read_mb(m_new, input_type, cond_type, Symbol(:hist, class),
+                       forecast_string = forecast_string)
+    fcastnew = read_mb(m_new, input_type, cond_type, Symbol(:forecast, class),
+                       forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd)
+
+    plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew; kwargs...)
+end
+
 function plot_forecast_comparison(var::Symbol,
                                   histold::MeansBands, fcastold::MeansBands,
                                   histnew::MeansBands, fcastnew::MeansBands;
