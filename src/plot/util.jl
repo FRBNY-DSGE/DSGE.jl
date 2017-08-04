@@ -127,6 +127,22 @@ function plot_extension()
     end
 end
 
+function describe_series(m::AbstractModel, var::Symbol, class::Symbol)
+    if class in [:obs, :pseudo]
+        dict = if class == :obs
+            m.observable_mappings
+        elseif class == :pseudo
+            pseudo_measurement(m)[1]
+        end
+        return dict[var].name
+    elseif class in [:state, :shock, :stdshock]
+        return string(var)
+    else
+        error("Invalid class: " * string(class))
+    end
+end
+
+
 function save_plot(p::Plots.Plot, output_file::String = "")
     if !isempty(output_file)
         output_dir = dirname(output_file)
