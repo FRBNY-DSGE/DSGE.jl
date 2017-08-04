@@ -68,11 +68,16 @@ module DSGE
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
 
         metropolis_hastings, compute_parameter_covariance, compute_moments,
-
-        find_density_bands, prior, mutation, mutation_testing, multinomial_resampling, systematic_resampling, 
-        mutation, smc, nearestSPD, density, tpf, tpf_testing, tpf_testing2, mutation_problem, tpf_fixed_phi, 
+<<<<<<< HEAD
+        find_density_bands, prior, mutation, multinomial_resampling, systematic_resampling, 
+        mutation, smc, nearestSPD, density, tpf, mutation_problem, tpf_fixed_phi, 
         solve_inefficiency, seeded_multinomial_resampling, kalman_filter_likvec, 
         parallel_breaking, 
+=======
+        find_density_bands, prior, mutation,mutation_testing, multinomial_resampling, systematic_resampling, 
+        mutation, smc, nearestSPD, density, tpf, tpf_testing, tpf_testing2, mutation_problem, tpf_fixed_phi, ineff_func,
+        seeded_multinomial_resampling, kalman_filter_likvec, parallel_breaking,
+>>>>>>> added tpf_testing and tpf_testing2  and mutation_testing which are trying to find the bug in the code
 
         # forecast/
         load_draws, forecast_one,

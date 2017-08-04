@@ -1,6 +1,5 @@
 using Roots
-
-function tpf_testing(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array; verbose::Symbol=:low, include_presample::Bool=true)
+function tpf_testing2(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Float64}, P0::Array; verbose::Symbol=:low, include_presample::Bool=true)
     # s0 is 8xn_particles
     # P0 is solution to discrete lyapunov equation for Φ and R*S2*R'
     # yy is data matrix
@@ -8,7 +7,7 @@ function tpf_testing(m::AbstractModel, yy::Array, system::System{Float64}, s0::A
     #--------------------------------------------------------------
     # Set Parameters of Algorithm
     #--------------------------------------------------------------
-    println("AAAAAAAAAAAAAAAAAAAAAAA")
+
     # Store model parameters
     RRR    = system[:RRR]
     TTT    = system[:TTT]
@@ -121,7 +120,7 @@ function tpf_testing(m::AbstractModel, yy::Array, system::System{Float64}, s0::A
         end
               
         # Update weights array and resample particles
-        loglik, weights, s_t_nontempered, ε, id = correct_and_resample(φ_1,0.0,y_t,p_error,density_arr,weights,s_t_nontempered,ε_rand_mat,EE_t,n_particles,deterministic,initialize=1)
+        loglik, weights, s_t_nontempered, s_lag_tempered, ε, id = correct_and_resample(φ_1,0.0,y_t,p_error,density_arr,weights,s_t_nontempered,s_lag_tempered,ε_rand_mat,EE_t,n_particles,deterministic,initialize=1)
         #resampling_ids[ids_i,:] = id
         #ids_i += 1
 
@@ -132,8 +131,8 @@ function tpf_testing(m::AbstractModel, yy::Array, system::System{Float64}, s0::A
         count = 2 # Accounts for initialization and final mutation
         φ_old = φ_1
 
-        # Only for computing p_error to recalculate inefficiency
-        # s_apple = TTT*s_lag_tempered + sqrtS2_t*ε
+        # First propagation
+        #s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε
         p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered         
         
         if !deterministic
@@ -175,7 +174,7 @@ function tpf_testing(m::AbstractModel, yy::Array, system::System{Float64}, s0::A
                 end
 
                 # Update weights array and resample particles
-                loglik, weights, s_t_nontempered, ε, id = correct_and_resample(φ_new, φ_old, y_t, p_error, density_arr, weights, s_t_nontempered, ε, EE_t, n_particles, deterministic, initialize=0)
+                loglik, weights, s_t_nontempered, s_lag_tempered, ε, id = correct_and_resample(φ_new, φ_old, y_t, p_error, density_arr, weights, s_t_nontempered, s_lag_tempered, ε, EE_t, n_particles, deterministic, initialize=0)
                 #resampling_ids[ids_i,:] = id
                 #ids_i += 1
 
@@ -199,11 +198,11 @@ function tpf_testing(m::AbstractModel, yy::Array, system::System{Float64}, s0::A
                     print("(in parallel) ")                    
                     #out = pmap(i->mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c, N_MH,deterministic,nonmissing,mutation_rand_mat), 1:n_particles)
                     out = @sync @parallel (hcat) for i=1:n_particles
-                        mutation(system,y_t,s_t_nontempered[:,i],ε[:,i],c,N_MH,deterministic,nonmissing,mutation_rand_mat_t)
+                        mutation_testing(system,y_t,s_t_nontempered[:,i],ε[:,i],c,N_MH,deterministic,nonmissing,mutation_rand_mat_t)
                     end
                 else 
                     print("(not parallel) ")
-                    out = [mutation(system,y_t,s_t_nontempered[:,i],ε[:,i],c,N_MH,deterministic,nonmissing,mutation_rand_mat_t) for i=1:n_particles]
+                    out = [mutation_testing(system,y_t,s_t_nontempered[:,i],ε[:,i],c,N_MH,deterministic,nonmissing,mutation_rand_mat_t) for i=1:n_particles]
                 end
                 times[t] = toc()                
 
@@ -250,7 +249,7 @@ function tpf_testing(m::AbstractModel, yy::Array, system::System{Float64}, s0::A
         φ_new = 1.0
 
         # Update weights array and resample particles.
-        loglik, weights, s_t_nontempered, ε, id = correct_and_resample(φ_new,φ_old,y_t,p_error,density_arr,weights,s_t_nontempered,ε,EE_t,n_particles,deterministic,initialize=0)
+        loglik, weights, s_t_nontempered, s_lag_tempered, ε, id = correct_and_resample(φ_new,φ_old,y_t,p_error,density_arr,weights,s_t_nontempered, s_lag_tempered, ε,EE_t,n_particles,deterministic,initialize=0)
         #resampling_ids[ids_i,:] = id
         #ids_i += 1
 
@@ -266,10 +265,10 @@ function tpf_testing(m::AbstractModel, yy::Array, system::System{Float64}, s0::A
         if parallel
             # out = pmap(i -> mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,nonmissing,mutation_rand_mat), 1:n_particles)
             out = @sync @parallel (hcat) for i=1:n_particles
-                mutation(system,y_t,s_t_nontempered[:,i],ε[:,i],c,N_MH,deterministic,nonmissing,mutation_rand_mat_t)
+                mutation_testing(system,y_t,s_t_nontempered[:,i],ε[:,i],c,N_MH,deterministic,nonmissing,mutation_rand_mat_t)
             end
         else 
-            out = [mutation(system,y_t,s_t_nontempered[:,i],ε[:,i],c,N_MH,deterministic,nonmissing,mutation_rand_mat_t) for i=1:n_particles]
+            out = [mutation_testing(system,y_t,s_t_nontempered[:,i],ε[:,i],c,N_MH,deterministic,nonmissing,mutation_rand_mat_t) for i=1:n_particles]
         end
                 
         for i = 1:n_particles
@@ -335,7 +334,7 @@ Calculate densities, normalize and reset weights, call multinomial resampling, u
 Returns log likelihood, weight, state, and ε vectors.
 
 """
-function correct_and_resample(φ_new::Float64, φ_old::Float64, y_t::Array{Float64,1}, p_error::Array{Float64,2}, density_arr::Array{Float64,1}, weights::Array{Float64,1}, s_t_nontempered::Array{Float64,2}, ε::Array{Float64,2}, EE::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Int64=0)
+function correct_and_resample(φ_new::Float64, φ_old::Float64, y_t::Array{Float64,1}, p_error::Array{Float64,2}, density_arr::Array{Float64,1}, weights::Array{Float64,1}, s_t_nontempered, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, EE::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Int64=0)
     # Calculate initial weights
     for n=1:n_particles
         density_arr[n]=density(φ_new, φ_old, y_t, p_error[:,n], EE, initialize=initialize)
@@ -352,6 +351,7 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, y_t::Array{Float
         id = seeded_multinomial_resampling(weights)
     end
     
+    s_lag_tempered = s_lag_tempered[:,id]
     s_t_nontempered = s_t_nontempered[:,id]
     ε = ε[:,id]
 
@@ -361,7 +361,7 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, y_t::Array{Float
     # Calculate likelihood
     loglik = log(mean(density_arr.*weights))
     
-    return loglik, weights, s_t_nontempered, ε, id
+    return loglik, weights, s_t_nontempered, s_lag_tempered, ε, id
 end
 
 function zlb_regime_indices{S<:AbstractFloat}(m::AbstractModel{S},data::Matrix{S})
