@@ -9,18 +9,16 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
     #--------------------------------------------------------------
 
     # Store model parameters
-    RRR    = system.transition.RRR
-    TTT    = system.transition.TTT
-    EE     = system.measurement.EE
-    DD     = system.measurement.DD
-    ZZ     = system.measurement.ZZ
-    QQ     = system.measurement.QQ    
+    RRR    = system[:RRR]
+    TTT    = system[:TTT]
+    EE     = system[:EE]
+    DD     = system[:DD]
+    ZZ     = system[:ZZ]
+    QQ     = system[:QQ]    
     
-    sqrtS2 = RRR*get_chol(QQ)'
-
     # Get tuning parameters from the model
     rstar              = get_setting(m, :tpf_rstar)
-    c                  = get_setting(m, :tpf_c)
+    c                  = get_setting(m, :tpf_cstar)
     acpt_rate          = get_setting(m, :tpf_acpt_rate)
     target             = get_setting(m, :tpf_target)
     N_MH               = get_setting(m, :tpf_n_mh_simulations)
@@ -54,7 +52,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
 
     if deterministic
         # Testing: Generate pre-defined random shocks for s and ε
-        s_lag_tempered_rand_mat = randn(n_states,n_particles)
+        s_lag_tempered_rand_mat = randn(n_states, n_particles)
         ε_rand_mat = randn(n_errors, n_particles)
         path = dirname(@__FILE__)  
         h5open("$path/../../test/reference/matricesForTPF.h5","w") do file
@@ -63,11 +61,11 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         end
     else
         # Draw initial particles from the distribution of s₀: N(s₀, P₀) 
-        s_lag_tempered_rand_mat = randn(n_states,n_particles)
+        s_lag_tempered_rand_mat = randn(n_states, n_particles)
     end
 
     ### Change back to get_chol later!!
-    s_lag_tempered = repmat(s0,1,n_particles) + Matrix(chol(P0))'*s_lag_tempered_rand_mat
+    s_lag_tempered = repmat(s0, 1, n_particles) + Matrix(chol(P0))'*s_lag_tempered_rand_mat
 
     for t=1:T
 
@@ -94,7 +92,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         n_errors_t = length(y_t)
         ε          = zeros(n_errors_t)
         mutation_rand_mat_t = mutation_rand_mat[nonmissing,:] 
-
+        
         if !deterministic # When not testing, want a new random ε each time 
             ε_rand_mat = randn(n_errors_t, n_particles)
         end
@@ -197,10 +195,7 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
                 tic()
 
                 if parallel
-                    print("(in parallel) ")
-                    c = get_setting(m,:tpf_c)
-                    N_MH = get_setting(m,:tpf_n_mh_simulations)
-                    deterministic = get_setting(m,:tpf_deterministic)
+                    print("(in parallel) ")                    
                     #out = pmap(i->mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c, N_MH,deterministic,nonmissing,mutation_rand_mat), 1:n_particles)
                     out = @sync @parallel (hcat) for i=1:n_particles
                         mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,nonmissing,mutation_rand_mat_t)
@@ -268,10 +263,6 @@ function tpf(m::AbstractModel, yy::Array, system::System{Float64}, s0::Array{Flo
         acpt_vec = zeros(n_particles)
 
         if parallel
-            c = get_setting(m,:tpf_c)
-            N_MH = get_setting(m,:tpf_n_mh_simulations)
-            deterministic = get_setting(m,:tpf_deterministic)
-
             # out = pmap(i -> mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,nonmissing,mutation_rand_mat), 1:n_particles)
             out = @sync @parallel (hcat) for i=1:n_particles
                 mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c,N_MH,deterministic,nonmissing,mutation_rand_mat_t)
@@ -332,7 +323,6 @@ Returns the new c, in addition to storing it in the model settings.
 """
 function update_c!(m::AbstractModel,c_in::Float64, acpt_in::Float64, target_in::Float64)
     c_out = c_in*(0.95 + 0.1*exp(20*(acpt_in - target_in))/(1 + exp(20*(acpt_in - target_in))))
-    m <= Setting(:tpf_c, c_out)
     return c_out
 end
 
