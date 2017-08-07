@@ -120,7 +120,7 @@ function tpf_testing2(m::AbstractModel, yy::Array, system::System{Float64}, s0::
         end
               
         # Update weights array and resample particles
-        loglik, weights, s_t_nontempered, s_lag_tempered, ε, id = correct_and_resample(φ_1,0.0,y_t,p_error,density_arr,weights,s_t_nontempered,s_lag_tempered,ε_rand_mat,EE_t,n_particles,deterministic,initialize=1)
+        loglik, weights, s_t_nontempered, s_lag_tempered, ε, id = correct_and_resample_testing2(φ_1,0.0,y_t,p_error,density_arr,weights,s_t_nontempered,s_lag_tempered,ε_rand_mat,EE_t,n_particles,deterministic,initialize=1)
         #resampling_ids[ids_i,:] = id
         #ids_i += 1
 
@@ -174,7 +174,7 @@ function tpf_testing2(m::AbstractModel, yy::Array, system::System{Float64}, s0::
                 end
 
                 # Update weights array and resample particles
-                loglik, weights, s_t_nontempered, s_lag_tempered, ε, id = correct_and_resample(φ_new, φ_old, y_t, p_error, density_arr, weights, s_t_nontempered, s_lag_tempered, ε, EE_t, n_particles, deterministic, initialize=0)
+                loglik, weights, s_t_nontempered, s_lag_tempered, ε, id = correct_and_resample_testing2(φ_new, φ_old, y_t, p_error, density_arr, weights, s_t_nontempered, s_lag_tempered, ε, EE_t, n_particles, deterministic, initialize=0)
                 #resampling_ids[ids_i,:] = id
                 #ids_i += 1
 
@@ -249,7 +249,7 @@ function tpf_testing2(m::AbstractModel, yy::Array, system::System{Float64}, s0::
         φ_new = 1.0
 
         # Update weights array and resample particles.
-        loglik, weights, s_t_nontempered, s_lag_tempered, ε, id = correct_and_resample(φ_new,φ_old,y_t,p_error,density_arr,weights,s_t_nontempered, s_lag_tempered, ε,EE_t,n_particles,deterministic,initialize=0)
+        loglik, weights, s_t_nontempered, s_lag_tempered, ε, id = correct_and_resample_testing2(φ_new,φ_old,y_t,p_error,density_arr,weights,s_t_nontempered, s_lag_tempered, ε,EE_t,n_particles,deterministic,initialize=0)
         #resampling_ids[ids_i,:] = id
         #ids_i += 1
 
@@ -334,7 +334,7 @@ Calculate densities, normalize and reset weights, call multinomial resampling, u
 Returns log likelihood, weight, state, and ε vectors.
 
 """
-function correct_and_resample(φ_new::Float64, φ_old::Float64, y_t::Array{Float64,1}, p_error::Array{Float64,2}, density_arr::Array{Float64,1}, weights::Array{Float64,1}, s_t_nontempered, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, EE::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Int64=0)
+function correct_and_resample_testing2(φ_new::Float64, φ_old::Float64, y_t::Array{Float64,1}, p_error::Array{Float64,2}, density_arr::Array{Float64,1}, weights::Array{Float64,1}, s_t_nontempered, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, EE::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Int64=0)
     # Calculate initial weights
     for n=1:n_particles
         density_arr[n]=density(φ_new, φ_old, y_t, p_error[:,n], EE, initialize=initialize)
