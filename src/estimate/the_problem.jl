@@ -16,9 +16,9 @@ Also, look at distVsNodist.pdf in the src/estimate folder
 using ClusterManagers, HDF5, Plots, JLD
 using QuantEcon: solve_discrete_lyapunov
 
-#addprocs_sge(30, queue="background.q")
+addprocs_sge(30, queue="background.q")
 
-#@everywhere using DSGE
+@everywhere using DSGE
 using DSGE
 
 function the_problem(parallel=true::Bool,T=50::Int64, distCall=true)

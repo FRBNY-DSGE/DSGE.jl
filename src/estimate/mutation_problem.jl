@@ -43,7 +43,7 @@ function mutation_problem(c::Float64, N_MH::Int64, deterministic::Bool, system::
     #------------------------------------------------------------------------
     for i=1:N_MH
         
-        if (!deterministic) rand_mat = randn(size(QQ,1),1) 
+        if (!deterministic) rand_mat = randn(size(QQ,1)) 
         else rand_mat = get_setting(m,:tpf_rand_mat) end
                 # Generate new draw of ε from a N(ε_init, c²cov_s) distribution (defined in tpf.jl), c tuning parameter
         ε_new=ε_init + c*Matrix(chol(nearestSPD(cov_s)))'*rand_mat
