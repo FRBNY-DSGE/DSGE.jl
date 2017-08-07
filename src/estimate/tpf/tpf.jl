@@ -121,6 +121,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         end
               
         # Update weights array and resample particles
+#(φ_new::Float64, φ_old::Float64, y_t::Array{Float64,1}, p_error::Array{Float64,2}, density_arr::Array{Float64,1}, weights::Array{Float64,1}, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, EE::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Bool=false)
         loglik, weights, s_lag_tempered, ε, id = correct_and_resample(φ_1,0.0,y_t,p_error,density_arr,weights,s_lag_tempered,ε_rand_mat,EE_t,n_particles,deterministic,initialize=true)
         #resampling_ids[ids_i,:] = id
         #ids_i += 1
