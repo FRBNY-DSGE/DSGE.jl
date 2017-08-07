@@ -40,13 +40,13 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
     n_states = size(ZZ,2)
     
     # Initialization
-    lik         = zeros(T)
-    Neff        = zeros(T)
-    len_phis    = ones(T)
-    times       = zeros(T)
-    weights     = ones(n_particles)
-    density_arr = zeros(n_particles)
-    times       = zeros(T)
+    lik                 = zeros(T)
+    Neff                = zeros(T)
+    len_phis            = ones(T)
+    times               = zeros(T)
+    weights             = ones(n_particles)
+    incremental_weights = zeros(n_particles)
+    times               = zeros(T)
     
     # resampling_ids = zeros(3*T,n_particles)
     # ids_i = 1
@@ -121,8 +121,8 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         end
               
         # Update weights array and resample particles
-#(φ_new::Float64, φ_old::Float64, y_t::Array{Float64,1}, p_error::Array{Float64,2}, density_arr::Array{Float64,1}, weights::Array{Float64,1}, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, EE::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Bool=false)
-        loglik, weights, s_lag_tempered, ε, id = correct_and_resample(φ_1,0.0,y_t,p_error,density_arr,weights,s_lag_tempered,ε_rand_mat,EE_t,n_particles,deterministic,initialize=true)
+#(φ_new::Float64, φ_old::Float64, y_t::Array{Float64,1}, p_error::Array{Float64,2}, incremental_weights::Array{Float64,1}, weights::Array{Float64,1}, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, EE::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Bool=false)
+        loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_1,0.0,y_t,p_error,incremental_weights,weights,s_lag_tempered,ε_rand_mat,EE_t,n_particles,deterministic,initialize=true)
         #resampling_ids[ids_i,:] = id
         #ids_i += 1
 
@@ -176,7 +176,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
                 end
 
                 # Update weights array and resample particles
-                loglik, weights, s_lag_tempered, ε, id = correct_and_resample(φ_new, φ_old, y_t, p_error, density_arr, weights, s_lag_tempered, ε, EE_t, n_particles, deterministic)
+                loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_new, φ_old, y_t, p_error, incremental_weights, weights, s_lag_tempered, ε, EE_t, n_particles, deterministic)
                 #resampling_ids[ids_i,:] = id
                 #ids_i += 1
 
@@ -251,7 +251,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         φ_new = 1.0
 
         # Update weights array and resample particles.
-        loglik, weights, s_lag_tempered, ε, id = correct_and_resample(φ_new,φ_old,y_t,p_error,density_arr,weights,s_lag_tempered,ε,EE_t,n_particles,deterministic)
+        loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_new,φ_old,y_t,p_error,incremental_weights,weights,s_lag_tempered,ε,EE_t,n_particles,deterministic)
         #resampling_ids[ids_i,:] = id
         #ids_i += 1
 
@@ -330,20 +330,20 @@ end
 
 """
 ```
-correct_and_resample(φ_new::Float64, φ_old::Float64, y_t::Array, p_error::Array,density_arr::Array,weights::Array, s_lag_tempered::Array, ε::Array, EE::Array, n_particles::Int64; initialize::Bool=false)
+correct_and_resample!(φ_new::Float64, φ_old::Float64, y_t::Array, p_error::Array,incremental_weights::Array,weights::Array, s_lag_tempered::Array, ε::Array, EE::Array, n_particles::Int64; initialize::Bool=false)
 ```
 Calculate densities, normalize and reset weights, call multinomial resampling, update state and error vectors,reset error vectors to 1,and calculate new log likelihood.
 Returns log likelihood, weight, state, and ε vectors.
 
 """
-function correct_and_resample(φ_new::Float64, φ_old::Float64, y_t::Array{Float64,1}, p_error::Array{Float64,2}, density_arr::Array{Float64,1}, weights::Array{Float64,1}, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, EE::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Bool=false)
+function correct_and_resample!(φ_new::Float64, φ_old::Float64, y_t::Array{Float64,1}, p_error::Array{Float64,2}, incremental_weights::Array{Float64,1}, weights::Array{Float64,1}, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, EE::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Bool=false)
     # Calculate initial weights
     for n=1:n_particles
-        density_arr[n]=density(φ_new, φ_old, y_t, p_error[:,n], EE, initialize=initialize)
+        incremental_weights[n]=incremental_weight(φ_new, φ_old, y_t, p_error[:,n], EE, initialize=initialize)
     end   
 
     # Normalize weights
-    weights = (density_arr.*weights)./mean(density_arr.*weights)
+    weights = (incremental_weights.*weights)./mean(incremental_weights.*weights)
     
     # Resampling
     if deterministic
@@ -360,10 +360,36 @@ function correct_and_resample(φ_new::Float64, φ_old::Float64, y_t::Array{Float
     weights = ones(n_particles)
 
     # Calculate likelihood
-    loglik = log(mean(density_arr.*weights))
+    loglik = log(mean(incremental_weights.*weights))
     
     return loglik, weights, s_lag_tempered, ε, id
 end
+
+"""
+```
+incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,1}, 
+    EE::Array{S,2}; initialize::Bool=false)
+```
+### Input
+
+
+
+### Output
+
+Returns the probability evaluated at p_error.
+"""
+function incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,1}, 
+                                   EE::Array{S,2}; initialize::Bool=false)
+
+    # Initialization step (using 2π instead of φ_old)
+    if initialize
+        return (φ_new/(2*pi))^(length(y_t)/2) * (det(EE)^(-1/2)) * exp((-1/2)*p_error'*φ_new*inv(EE)*p_error)[1]
+    # Non-initialization step (tempering and final iteration)
+    else
+        return (φ_new/φ_old)^(length(y_t)/2) * exp(-1/2*p_error'*(φ_new - φ_old)*inv(EE)*p_error)[1]
+    end
+end
+
 
 function zlb_regime_indices{S<:AbstractFloat}(m::AbstractModel{S},data::Matrix{S})
     # Make sure the data matrix has all time periods when passing in or this won't work
