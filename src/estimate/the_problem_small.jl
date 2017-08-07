@@ -21,7 +21,7 @@ addprocs_sge(30, queue="background.q")
 @everywhere using DSGE
 using DSGE
 
-function the_problem2(parallel=true::Bool,T=50::Int64, distCall=true)
+function the_problem_small(parallel=true::Bool,T=50::Int64, distCall=true)
     ## Setup
     m,system,TTT,sqrtS2,s0,P0,s_lag_tempered,ε,yt,nonmissing, N_MH,c, n_particles,deterministic, μ, cov_s,s_t_nontempered = setup()
    
@@ -45,6 +45,13 @@ function the_problem2(parallel=true::Bool,T=50::Int64, distCall=true)
                 #s_in = s_lag_tempered[:,i]
                 #ε_in = ε[:,i]
                 #mutation_problem2(c,N_MH,deterministic,system,yt,s_in,ε_in,cov_s,nonmissing,distCall)
+                #D = system[:DD]
+                #Z = system[:ZZ]
+                #E = system[:EE]
+                #T = system[:TTT]
+                #R = system[:RRR]
+                #Q = system[:QQ]
+                #sqrtS2= R*Matrix(chol(nearestSPD(Q)))
                 out = @sync @parallel (hcat) for i=1:n_particles
                     #s_in = view(s_lag_tempered,:,i)
                     #ε_in = view(ε,:,i)
@@ -52,7 +59,7 @@ function the_problem2(parallel=true::Bool,T=50::Int64, distCall=true)
                     #ε_in = ε[:,i]
                     #s_in = randn(54)
                     #ε_in = randn(7)
-                    mutation_problem2(c,N_MH,deterministic,system,yt,s_lag_tempered,ε,i,cov_s,nonmissing,distCall)
+                    mutation_small(c,N_MH,deterministic,system,yt,s_lag_tempered,ε,i,cov_s,nonmissing,distCall)
                 end
             else
                 #s_in = s_lag_tempered[:,i]
@@ -65,7 +72,6 @@ function the_problem2(parallel=true::Bool,T=50::Int64, distCall=true)
             for i = 1:n_particles
                 s_t_nontempered[:,i] = out[i][1]
                 ε[:,i] = out[i][2]
-                acpt_vec[i]=out[i][3]
             end
         end
         print("Completion of one period ")

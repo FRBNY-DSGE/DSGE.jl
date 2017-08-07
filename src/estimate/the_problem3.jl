@@ -16,12 +16,12 @@ Also, look at distVsNodist.pdf in the src/estimate folder
 using ClusterManagers, HDF5, Plots, JLD
 using QuantEcon: solve_discrete_lyapunov
 
-addprocs_sge(30, queue="background.q")
+addprocs_sge(10, queue="background.q")
 
 @everywhere using DSGE
 using DSGE
 
-function the_problem2(parallel=true::Bool,T=50::Int64, distCall=true)
+function the_problem3(parallel=true::Bool,T=50::Int64, distCall=true)
     ## Setup
     m,system,TTT,sqrtS2,s0,P0,s_lag_tempered,ε,yt,nonmissing, N_MH,c, n_particles,deterministic, μ, cov_s,s_t_nontempered = setup()
    
@@ -34,7 +34,7 @@ function the_problem2(parallel=true::Bool,T=50::Int64, distCall=true)
         #Begin timer for time step
         tic()        
         #Run mutation 10 times per time step
-        for j=1:10
+        for i=1:10
             acpt_vec=zeros(n_particles)
             print("Mutation ")
             #Begin timer for each mutation step
@@ -42,23 +42,12 @@ function the_problem2(parallel=true::Bool,T=50::Int64, distCall=true)
             if parallel
                 print("(in parallel) ")
                 #out = pmap(i->mutation_problem(c, N_MH,deterministic,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing,distCall), 1:n_particles)
-                #s_in = s_lag_tempered[:,i]
-                #ε_in = ε[:,i]
-                #mutation_problem2(c,N_MH,deterministic,system,yt,s_in,ε_in,cov_s,nonmissing,distCall)
                 out = @sync @parallel (hcat) for i=1:n_particles
-                    #s_in = view(s_lag_tempered,:,i)
-                    #ε_in = view(ε,:,i)
-                    #s_in = s_lag_tempered[:,i]
-                    #ε_in = ε[:,i]
-                    #s_in = randn(54)
-                    #ε_in = randn(7)
-                    mutation_problem2(c,N_MH,deterministic,system,yt,s_lag_tempered,ε,i,cov_s,nonmissing,distCall)
+                    mutation_problem3(c,N_MH,deterministic,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing,distCall)
                 end
             else
-                #s_in = s_lag_tempered[:,i]
-                #ε_in = ε[:,i]
                 print("(not parallel)")
-                out = [mutation_problem2(c,N_MH,deterministic,system,yt,s_lag_tempered[:,i],ε[:,i],cov_s,nonmissing,distCall) for i=1:n_particles]
+                out = [mutation_problem3(c,N_MH,deterministic,yt,s_lag_tempered[:,i],ε[:,i]cov_s,nonmissing,distCall) for i=1:n_particles]
             end               
             toc()
             # Disentangle three outputs of mutation and enter them into appropriate arrays

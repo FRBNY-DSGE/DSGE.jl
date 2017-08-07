@@ -11,36 +11,20 @@ s_init: The starting state before mutation.
 
 #function mutation(m::AbstractModel, system::System{Float64}, yt::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array{Float64,2}, nonmissing::Array{Bool,1})
 #function mutation_problem(c::Float64, N_MH::Int64, deterministic::Bool, system::System{Float64}, yt::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array{Float64,2}, nonmissing::Array{Bool,1}, distCall::Bool)
-#function mutation_problem2(c::Float64, N_MH::Int64, deterministic::Bool, system::System{Float64}, yt::Array{Float64,1}, s_init::AbstractArray{Float64,1}, ε_init::AbstractArray{Float64,1}, cov_s::Array{Float64,2}, nonmissing::Array{Bool,1}, distCall::Bool) 
-function mutation_problem2(c::Float64, N_MH::Int64, deterministic::Bool, system::System{Float64}, yt::Array{Float64,1}, s::AbstractArray{Float64,2}, ε::AbstractArray{Float64,2},index::Int64, cov_s::Array{Float64,2}, nonmissing::Array{Bool,1}, distCall::Bool) 
+function mutation_problem3(c::Float64, N_MH::Int64, deterministic::Bool, yt::Array{Float64,1}, s_init::Array{Float64,1}, ε_init::Array{Float64,1}, cov_s::Array{Float64,2}, nonmissing::Array{Bool,1}, distCall::Bool) 
    #------------------------------------------------------------------------
     # Setup
     #------------------------------------------------------------------------
     # Set path--used for testing
     path = dirname(@__FILE__)
-    #s_init = s_i
-    #ε_init = ε_i
-    
-    ##s_init = s[:,index]
-    #@show s_init 
-    ε_init = ε[:,index]
-    # size(s)
-    # size(ε)
-    ##s_init = randn(54)
-    #ε_init = randn(7)
-    
-    s_init = ones(size(s,1))
-    for k=1:size(s,1)
-        s_init[k]=s[k,index]
-    end
 
-    DD = system.measurement.DD[nonmissing]
-    ZZ = system.measurement.ZZ[nonmissing,:]
-    EE = system.measurement.EE[nonmissing,nonmissing]
-    RRR = system.transition.RRR[:,nonmissing]
-    TTT = system.transition.TTT
-    QQ = system.measurement.QQ[nonmissing,nonmissing]
-    sqrtS2 = RRR*Matrix(chol(nearestSPD(QQ)))'
+    DD = ones(size(nonmissing,1))
+    ZZ = ones(size(nonmissing,1),54)
+    EE = eye(size(nonmissing,1),size(nonmissing,1))
+    RRR = ones(54,size(nonmissing,1))
+    TTT = ones(54,54)
+    QQ = eye(size(nonmissing,1),size(nonmissing,1))
+    sqrtS2 = RRR*Matrix(chol(QQ))'
 
     # Initialize ind_s and ind_ε
     ind_s = s_init
