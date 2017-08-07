@@ -1,11 +1,17 @@
 """
 ```
-density{S<:AbstractFloat}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,1}, 
+density{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,1}, 
     EE::Array{S,2}; initialize::Bool=false)
 ```
+### Input
+
+
+
+### Output
+
 Returns the appropriate probability (right now from a Normal distribution) evaluated at p_error.
 """
-function density{S<:AbstractFloat}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,1}, 
+function density{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,1}, 
                                    EE::Array{S,2}; initialize::Bool=false)
 
     # Initialization step (using 2π instead of φ_old)
