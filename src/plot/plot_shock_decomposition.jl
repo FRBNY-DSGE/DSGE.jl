@@ -1,7 +1,12 @@
 """
 ```
-plot_shock_decomposition(m, var, class, input_type, cond_type; forecast_string = "",
-    output_file = "", title = "", kwargs...)
+plot_shock_decomposition(m, var, class, input_type, cond_type;
+    forecast_string = "", output_file = "", title = "",
+    kwargs...)
+
+plot_shock_decomposition(m, vars, class, input_type, cond_type;
+    forecast_string = "", output_files = [], titles = [],
+    kwargs...)
 
 plot_shock_decomposition(var, shockdec, trend, dettrend, hist, forecast, groups;
     output_file = "", title = "",
@@ -9,20 +14,21 @@ plot_shock_decomposition(var, shockdec, trend, dettrend, hist, forecast, groups;
     hist_color = :black, forecast_color = :red, tick_size = 5, legend = :best)
 ```
 
-Plot shock decomposition for `var`.
+Plot shock decomposition(s) for `var` or `vars`.
 
 ### Inputs
 
-- `var::Symbol`: variable whose shock decomposition is to be plotted, e.g. `:obs_gdp`
+- `var::Symbol` or `vars::Vector{Symbol}`: variable(s) whose shock decomposition
+  is to be plotted, e.g. `:obs_gdp` or `[:obs_gdp, :obs_nominalrate]`
 
-**Method 1 only:**
+**Methods 1 and 2 only:**
 
 - `m::AbstractModel`
 - `class::Symbol`
 - `input_type::Symbol`
 - `cond_type::Symbol`
 
-**Method 2 only:**
+**Method 3 only:**
 
 - `shockdec::MeansBands`
 - `trend::MeansBands`
@@ -33,9 +39,10 @@ Plot shock decomposition for `var`.
 
 ### Keyword Arguments
 
-- `output_file::String`: if specified, plot will be saved there. In method 1, if
-  `output_file` is not specified, one will be computed using `get_forecast_filename`
-- `title::String`
+- `output_file::String` or `output_files::Vector{String}`: if specified, plot
+  will be saved there. In methods 1 and 2, if not specified, output file(s) will
+  be computed using `get_forecast_filename`
+- `title::String` or `titles::Vector{String}`
 - `hist_label::String`
 - `forecast_label::String`
 - `hist_color::Colorant`
@@ -43,7 +50,7 @@ Plot shock decomposition for `var`.
 - `tick_size::Int`: x-axis (time) tick size in units of years
 - `legend`
 
-**Method 1 only:**
+**Methods 1 and 2 only:**
 
 - `forecast_string::String`
 
@@ -57,6 +64,20 @@ function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                   output_file::String = "",
                                   title = "",
                                   kwargs...)
+
+    plot_shock_decomposition(m, [var], class, input_type, cond_type;
+                             forecast_string = forecast_string,
+                             output_files = isempty(output_file) ? String[] : [output_file],
+                             titles = isempty(title) ? String[] : [title],
+                             kwargs...)
+end
+
+function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
+                                  input_type::Symbol, cond_type::Symbol;
+                                  forecast_string::String = "",
+                                  output_files::Vector{String} = String[],
+                                  titles::Vector{String} = String[],
+                                  kwargs...)
     # Read in MeansBands
     output_vars = [Symbol(prod, class) for prod in [:shockdec, :trend, :dettrend, :hist, :forecast]]
     mbs = map(output_var -> read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string),
@@ -65,20 +86,22 @@ function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
     # Get shock groupings
     groups = shock_groupings(m)
 
-    # Get output file name if not provided
-    if isempty(output_file)
-        output_file = get_forecast_filename(m, input_type, cond_type, Symbol("shockdec_", var),
-                                            pathfcn = figurespath, fileformat = plot_extension())
+    # Get output file names and titles if not provided
+    if isempty(output_files)
+        output_files = map(var -> get_forecast_filename(m, input_type, cond_type, Symbol("shockdec_", var),
+                                                        pathfcn = figurespath, fileformat = plot_extension()),
+                           vars)
+    end
+    if isempty(titles)
+        titles = map(var -> describe_series(m, var, class), vars)
     end
 
-    # Get title if not provided
-    if isempty(title)
-        title = describe_series(m, var, class)
+    # Loop through variables
+    for (var, output_file, title) in zip(vars, output_files, titles)
+        plot_shock_decomposition(var, mbs..., groups;
+                                 output_file = output_file, title = title,
+                                 kwargs...)
     end
-
-    # Appeal to second method
-    plot_shock_decomposition(var, mbs..., groups; title = title,
-                             output_file = output_file, kwargs...)
 end
 
 function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
