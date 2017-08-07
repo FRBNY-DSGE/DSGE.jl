@@ -1,7 +1,12 @@
 """
 ```
 plot_forecast_comparison(m_old, m_new, var, class, input_type, cond_type;
-    forecast_string = "", bdd_and_unbdd = false, kwargs...)
+    forecast_string = "", bdd_and_unbdd = false, output_file = "", title = "",
+    kwargs...)
+
+plot_forecast_comparison(m_old, m_new, vars, class, input_type, cond_type;
+    forecast_string = "", bdd_and_unbdd = false, output_files = [], titles = [],
+    kwargs...)
 
 plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
     output_file = "", title = "", start_date = Nullable{Date}(),
@@ -15,9 +20,10 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
 
 ### Inputs
 
-- `var::Symbol`: e.g. `:obs_gdp`
+- `var::Symbol` or `vars::Vector{Symbol}`: e.g. `:obs_gdp` or `[:obs_gdp,
+  :obs_nominalrate]`
 
-**Method 1 only:**
+**Methods 1 and 2 only:**
 
 - `m_old::AbstractModel`
 - `m_new::AbstractModel`
@@ -25,7 +31,7 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
 - `input_type::Symbol`
 - `output_type::Symbol`
 
-**Method 2 only:**
+**Method 3 only:**
 
 - `histold::MeansBands`
 - `fcastold::MeansBands`
@@ -34,8 +40,9 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
 
 ### Keyword Arguments
 
-- `output_file::String`: if specified, plot will be saved there as a PDF
-- `title::String`
+- `output_file::String` or `output_files::Vector{String}`: if specified, plot
+  will be saved there as a PDF
+- `title::String` or `titles::Vector{String}`
 - `start_date::Nullable{Date}`
 - `end_date::Nullable{Date}`
 - `bandpcts::Vector{String}`: which bands to plot
@@ -50,7 +57,7 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
 - `tick_size::Int`: x-axis (time) tick size in units of years
 - `legend`
 
-**Method 1 only:**
+**Methods 1 and 2 only:**
 
 - `forecast_string::String`
 - `bdd_and_unbdd::Bool`: if true, then unbounded means and bounded bands are plotted
@@ -64,7 +71,25 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
                                   bdd_and_unbdd::Bool = false,
-                                  title = "",
+                                  output_file::String = "",
+                                  title::String = "",
+                                  kwargs...)
+
+    plot_forecast_comparison(m_old, m_new, [var], class, input_type, cond_type;
+                             forecast_string = forecast_string,
+                             bdd_and_unbdd = bdd_and_unbdd,
+                             output_files = isempty(output_file) ? String[] : [output_file],
+                             titles = isempty(title) ? String[] : [title],
+                             kwargs...)
+end
+
+function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
+                                  vars::Vector{Symbol}, class::Symbol,
+                                  input_type::Symbol, cond_type::Symbol;
+                                  forecast_string::String = "",
+                                  bdd_and_unbdd::Bool = false,
+                                  output_files::Vector{String} = String[],
+                                  titles::Vector{String} = String[],
                                   kwargs...)
     # Read in MeansBands
     histold  = read_mb(m_old, input_type, cond_type, Symbol(:hist, class),
@@ -76,13 +101,21 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
     fcastnew = read_mb(m_new, input_type, cond_type, Symbol(:forecast, class),
                        forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd)
 
-    # Get title if not provided
-    if isempty(title)
-        title = describe_series(m_new, var, class)
+    # Get output file names and titles if not provided
+    if isempty(output_files)
+        output_files = map(var -> "", vars)
+    end
+    if isempty(titles)
+        titles = map(var -> describe_series(m_new, var, class), vars)
     end
 
-    plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
-                             title = title, kwargs...)
+    # Loop through variables
+    for (var, output_file, title) in zip(vars, output_files, titles)
+
+        plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
+                                 output_file = output_file, title = title,
+                                 kwargs...)
+    end
 end
 
 function plot_forecast_comparison(var::Symbol,

@@ -4,6 +4,10 @@ plot_history_and_forecast(m, var, class, input_type, cond_type;
     forecast_string = "", bdd_and_unbdd = false, output_file = "",
     title = "", kwargs...)
 
+plot_history_and_forecast(m, vars, class, input_type, cond_type;
+    forecast_string = "", bdd_and_unbdd = false, output_files = [],
+    titles = [], kwargs...)
+
 plot_history_and_forecast(var, history, forecast; output_file = "",
     title = "", start_date = Nullable{Date}(), end_date = Nullable{Date}(),
     hist_label = \"History\", forecast_label = \"Forecast\",
@@ -13,28 +17,31 @@ plot_history_and_forecast(var, history, forecast; output_file = "",
     plot_handle = plot())
 ```
 
-Plot `var` from `history` and `forecast`. If these correspond to a
-full-distribution forecast, the forecast will be a fan chart.
+Plot `var` from `history` and `forecast`, possibly read in using `read_mb`
+(depending on the method). If these correspond to a full-distribution forecast,
+you can specify the `bands_style` and `bands_pcts`.
 
 ### Inputs
 
-- `var::Symbol`: variable to be plotted, e.g. `:obs_gdp`
+- `var::Symbol` or `vars::Vector{Symbol}`: variable(s) to be plotted,
+  e.g. `:obs_gdp` or `[:obs_gdp, :obs_nominalrate]`
 
-**Method 1 only:**
+**Methods 1 and 2 only:**
 
 - `m::AbstractModel`
 - `class::Symbol`
 
-**Method 2 only:**
+**Method 3 only:**
 
 - `history::MeansBands` or `Vector{MeansBands}`
 - `forecast::MeansBands` or `Vector{MeansBands}`
 
 ### Keyword Arguments
 
-- `output_file::String`: if specified, plot will be saved there. In method 1, if
-  `output_file` is not specified, one will be computed using `get_forecast_filename`
-- `title::String`
+- `output_file::String` or `output_files::Vector{String}: if specified, plot will
+  be saved there. In methods 1 and 2, if not specified, output files will be
+  computed using `get_forecast_filename`
+- `title::String` or `titles::Vector{String}`
 - `start_date::Nullable{Date}`
 - `end_date::Nullable{Date}`
 - `hist_label::String`
@@ -65,25 +72,43 @@ function plot_history_and_forecast(m::AbstractModel, var::Symbol, class::Symbol,
                                    output_file::String = "",
                                    title::String = "",
                                    kwargs...)
+
+    plot_history_and_forecast(m, [var], class, input_type, cond_type,
+                              forecast_string = forecast_string,
+                              bdd_and_unbdd = bdd_and_unbdd,
+                              output_files = isempty(output_file) ? String[] : [output_file],
+                              titles = isempty(title) ? String[] : [title],
+                              kwargs...)
+end
+
+function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
+                                   input_type::Symbol, cond_type::Symbol;
+                                   forecast_string::String = "",
+                                   bdd_and_unbdd::Bool = false,
+                                   output_files::Vector{String} = String[],
+                                   titles::Vector{String} = String[],
+                                   kwargs...)
     # Read in MeansBands
     hist  = read_mb(m, input_type, cond_type, Symbol(:hist, class),
                     forecast_string = forecast_string)
     fcast = read_mb(m, input_type, cond_type, Symbol(:forecast, class),
                     forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd)
 
-    # Get output file name if not provided
-    if isempty(output_file)
-        output_file = get_forecast_filename(m, input_type, cond_type, Symbol("forecast_", var),
-                                            pathfcn = figurespath, fileformat = plot_extension())
+
+    # Get output file names and titles if not provided
+    if isempty(output_files)
+        output_files = map(var -> get_forecast_filename(m, input_type, cond_type, Symbol("forecast_", var),
+                                                        pathfcn = figurespath, fileformat = plot_extension()),
+                           vars)
+    end
+    if isempty(titles)
+        titles = map(var -> DSGE.describe_series(m, var, class), vars)
     end
 
-    # Get title if not provided
-    if isempty(title)
-        title = describe_series(:obs, :pseudo)
+    # Loop through variables
+    for (var, output_file, title) in zip(vars, output_files, titles)
+        plot_history_and_forecast(var, hist, fcast; output_file = output_file, title = title, kwargs...)
     end
-
-    # Appeal to second method
-    plot_history_and_forecast(var, hist, fcast, output_file = output_file, title = title, kwargs...)
 end
 
 function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::MeansBands;
@@ -192,6 +217,10 @@ function plot_bands!(p::Plots.Plot, var::Symbol, mb::MeansBands,
                      linestyle::Symbol = :solid,
                      pcts::Vector{String} = DSGE.which_density_bands(mb, uniquify = true),
                      indices = Colon())
+
+    if isempty(pcts)
+        pcts = which_density_bands(mb, uniquify = true)
+    end
 
     datenums = map(quarter_date_to_number, mb.means[:date])
 
