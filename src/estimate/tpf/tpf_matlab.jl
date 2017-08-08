@@ -1,5 +1,5 @@
 using DSGE
-function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
+function tpf_matlab{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
     s0::Array{S}, P0::Array; verbose::Symbol=:low, include_presample::Bool=true)
     # s0 is 8xn_particles
     # P0 is solution to discrete lyapunov equation for Φ and R*S2*R'
@@ -19,7 +19,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
     
     # Get tuning parameters from the model
     rstar              = get_setting(m, :tpf_rstar)
-    c                  = get_setting(m, :tpf_cstar)
+    c                  = get_setting(m, :tpf_c)
     accept_rate        = get_setting(m, :tpf_accept_rate)
     target             = get_setting(m, :tpf_target)
     N_MH               = get_setting(m, :tpf_n_mh_simulations)
@@ -27,8 +27,8 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
     deterministic      = get_setting(m, :tpf_deterministic)
     xtol               = get_setting(m, :tpf_x_tolerance)
     parallel           = get_setting(m, :use_parallel_workers)
-    mutation_rand_mat  = get_setting(m, :tpf_rand_mat)
-    
+    mutation_rand_mat  = get_setting(m, :tpf_rand_mat)    
+
     # Determine presampling periods
     n_presample_periods = (include_presample) ? 0 : get_setting(m, :n_presample_periods)
     
@@ -47,16 +47,36 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
     weights             = ones(n_particles)
     incremental_weights = zeros(n_particles)
     times               = zeros(T)
-        
+    
+    # resampling_ids = zeros(3*T,n_particles)
+    # ids_i = 1
+    id_cur = 1
+    id_m = 1
+    s_id = 1 
+
+    # TEMPORARY: 
+    matlab_resampled_ids = h5read("/data/dsge_data_dir/dsgejl/interns2017/matlab_resampled_ids.h5",
+                                  "resampled_ids")
+    matlab_resampled_ids = round(Int64, matlab_resampled_ids)
+    mutation_rand_mats1 = h5read("/data/dsge_data_dir/dsgejl/interns2017/mutation_rand_mats.h5",
+                                 "mutation_rand_mats1")
+    mutation_rand_mats2 = h5read("/data/dsge_data_dir/dsgejl/interns2017/mutation_rand_mats.h5",
+                                 "mutation_rand_mats2")
+    s_lag_tempered_rand_mat = h5read("/data/dsge_data_dir/dsgejl/interns2017/s_lag_tempered.h5",
+                                "s_lag_tempered_rand_mat")
+    ε_rand_mats = h5read("/data/dsge_data_dir/dsgejl/interns2017/eps_rand_mats.h5",
+                                "eps_rand_mats")
+    
     if deterministic
         # Testing: Generate pre-defined random shocks for s and ε
-        s_lag_tempered_rand_mat = randn(n_states, n_particles)
-        ε_rand_mat = randn(n_observables, n_particles)
-        path = dirname(@__FILE__)  
-        h5open("$path/../../test/reference/matricesForTPF.h5", "w") do file
-            write(file, "s_lag_tempered_rand_mat", s_lag_tempered_rand_mat)
-            write(file, "eps_rand_mat", ε_rand_mat)
-        end
+        # s_lag_tempered_rand_mat = randn(n_states, n_particles)
+        #ε_rand_mat = ε_rand_mats[:,:,eps_id] #randn(n_observables, n_particles)
+        #path = dirname(@__FILE__)  
+        
+        #h5open("$path/../../../test/reference/matricesForTPF.h5", "w") do file
+        #    write(file, "s_lag_tempered_rand_mat", s_lag_tempered_rand_mat)
+        #    write(file, "eps_rand_mat", ε_rand_mat)
+        #end
     else
         # Draw initial particles from the distribution of s₀: N(s₀, P₀) 
         s_lag_tempered_rand_mat = randn(n_states, n_particles)
@@ -64,6 +84,10 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
 
     ### Change back to get_chol later!!
     s_lag_tempered = repmat(s0, 1, n_particles) + Matrix(chol(P0))'*s_lag_tempered_rand_mat
+    @show chol(P0)
+    @show s0
+    @show sum(s_lag_tempered,2)
+
 
     for t=1:T
 
@@ -90,19 +114,24 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         n_observables_t     = length(y_t)
         ε                   = zeros(n_observables_t)
         mutation_rand_mat_t = mutation_rand_mat[nonmissing,:] 
-        
-        if !deterministic # When not testing, want a new random ε each time 
+
+        if deterministic # When not testing, want a new random ε each time 
+            ε_rand_mat = ε_rand_mats[:,:,T]
+        else    
             ε_rand_mat = randn(n_observables_t, n_particles)
         end
 
         # TEMPORARY
-        ε_rand_mat = randn(n_observables_t, n_particles)
+        #ε_rand_mat = randn(n_observables_t, n_particles)
 
         # Forecast forward one time step
+        @show sum(sum(s_lag_tempered))
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε_rand_mat
-        
+        @show sum(sum(s_t_nontempered))
+
         # Error for each particle
         p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered
+        @show sum(sum(p_error))
 
         # Solve for initial tempering parameter φ_1
         if deterministic 
@@ -119,13 +148,23 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         end
               
         # Update weights array and resample particles
-        loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_1, 0.0, y_t, p_error,
+        loglik, weights, s_lag_tempered, ε, id = correct_and_resample2!(φ_1, 0.0, y_t, p_error,
                                                      incremental_weights, weights, s_lag_tempered,
                                                      ε_rand_mat, EE_t, n_particles, deterministic,
-                                                     initialize=true)
+                                                     initialize=true,id_cur=id_cur,matlab_resampled_ids=matlab_resampled_ids)
+
+#        @show loglik
+#        @show weights
+#        @show s_lag_tempered
+#        @show ε
+#        @show id
+
+        #resampling_ids[ids_i,:] = id
+        #ids_i += 1
+        id_cur += 1 
         # Update likelihood
         lik[t] += loglik
-        
+        @show lik[t]
         # Tempering Initialization
         count = 2 # Accounts for initialization and final mutation
         φ_old = φ_1
@@ -173,13 +212,16 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
                 end
 
                 # Update weights array and resample particles
-                loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_new, φ_old, y_t,
+                loglik, weights, s_lag_tempered, ε, id = correct_and_resample2!(φ_new, φ_old, y_t,
                                                              p_error, incremental_weights, weights,
                                                              s_lag_tempered, ε, EE_t, n_particles,
-                                                             deterministic)
+                                                             deterministic, id_cur=id_cur,matlab_resampled_ids=matlab_resampled_ids)
+                #resampling_ids[ids_i,:] = id
+                #ids_i += 1
+                id_cur += 1
                 # Update likelihood
                 lik[t] += loglik
-                
+                @show lik[t]
                 # Update value for c
                 c = update_c!(m, c, accept_rate, target)
                 
@@ -200,16 +242,16 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
                     #out = pmap(i -> mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, 
                     #           N_MH, deterministic, nonmissing, mutation_rand_mat), 1:n_particles)
                     out = @sync @parallel (hcat) for i=1:n_particles
-                    mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, deterministic,
-                             nonmissing, mutation_rand_mat_t)
+                    mutation_matlab(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, deterministic, nonmissing, mutation_rand_mat_t, mutation_rand_mats1[:,id_m,i], mutation_rand_mats2[:,id_m,i])
                     end
                 else 
                     print("(not parallel) ")
                     out = [mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, 
-                                    deterministic, nonmissing, mutation_rand_mat_t) 
+                                    deterministic, nonmissing, mutation_rand_mat_t, mutation_rand_mats1[:,id_m,i], mutation_rand_mats2[:,id_m,i]) 
                            for i=1:n_particles]
                 end
                 times[t] = toc()                
+                id_m += 1
 
                 for i = 1:n_particles
                     s_t_nontempered[:,i] = out[i][1]
@@ -254,12 +296,16 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         φ_new = 1.0
 
         # Update weights array and resample particles.
-        loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_new, φ_old, y_t, p_error,
+        loglik, weights, s_lag_tempered, ε, id = correct_and_resample2!(φ_new, φ_old, y_t, p_error,
                                                      incremental_weights, weights, s_lag_tempered,
-                                                     ε, EE_t, n_particles, deterministic)
+                                                     ε, EE_t, n_particles, deterministic, id_cur=id_cur,matlab_resampled_ids=matlab_resampled_ids)
+        id_cur += 1
+        #resampling_ids[ids_i,:] = id
+        #ids_i += 1
+
         # Update likelihood
         lik[t] += loglik
-
+        @show lik[t]
         # Update c
         c = update_c!(m, c, accept_rate, target)
         
@@ -270,14 +316,15 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
             # out = pmap(i -> mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, 
             #            deterministic,nonmissing,mutation_rand_mat), 1:n_particles)
             out = @sync @parallel (hcat) for i=1:n_particles
-                mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c,N_MH, deterministic,
-                         nonmissing, mutation_rand_mat_t)
+                mutation_matlab(system, y_t, s_lag_tempered[:,i], ε[:,i], c,N_MH, deterministic,
+                         nonmissing, mutation_rand_mat_t, mutation_rand_mats1[:,id_m,i], mutation_rand_mats2[:,id_m,i])
             end
         else 
             out = [mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, deterministic,
-                            nonmissing, mutation_rand_mat_t) for i=1:n_particles]
+                            nonmissing, mutation_rand_mat_t, mutation_rand_mats1[:,id_m,i], mutation_rand_mats2[:,id_m,i]) for i=1:n_particles]
         end
         
+        id_m += 1
         # Unwrap output
         for i = 1:n_particles
             s_t_nontempered[:,i] = out[i][1]
@@ -342,7 +389,7 @@ Calculate densities, normalize and reset weights, call multinomial resampling, u
 Returns log likelihood, weight, state, and ε vectors.
 
 """
-function correct_and_resample!(φ_new::Float64, φ_old::Float64, y_t::Array{Float64,1}, p_error::Array{Float64,2}, incremental_weights::Array{Float64,1}, weights::Array{Float64,1}, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, EE::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Bool=false)
+function correct_and_resample2!(φ_new::Float64, φ_old::Float64, y_t::Array{Float64,1}, p_error::Array{Float64,2}, incremental_weights::Array{Float64,1}, weights::Array{Float64,1}, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, EE::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Bool=false,id_cur::Int=1,matlab_resampled_ids=zeros(1,1))
     # Calculate initial weights
     for n=1:n_particles
         incremental_weights[n] = incremental_weight(φ_new, φ_old, y_t, p_error[:,n], EE, 
@@ -354,11 +401,12 @@ function correct_and_resample!(φ_new::Float64, φ_old::Float64, y_t::Array{Floa
     
     # Resampling
     if deterministic
-        id = seeded_multinomial_resampling(weights)
+        # id = seeded_multinomial_resampling(weights)
+        id = matlab_resampled_ids[:,id_cur]
     else
         id = multinomial_resampling(weights)
     end
-    
+
     # Update arrays for resampled indices
     s_lag_tempered = s_lag_tempered[:,id]
     ε = ε[:,id]
