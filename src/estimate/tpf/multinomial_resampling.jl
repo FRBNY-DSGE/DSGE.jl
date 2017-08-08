@@ -5,10 +5,9 @@ function multinomial_resampling(weight::Array{Float64,1}
 ```
 Returns the indices of the resampled particles (computed using weights vector).
 """
-
-function multinomial_resampling(weight::Array{Float64,1})
-    num_particles=size(weight,1)
-    ids=sample(collect(1:num_particles), weights(weight), num_particles, replace=true)
+function multinomial_resampling{S<:Float64}(weight::Array{S,1})
+    num_particles = size(weight,1)
+    ids = sample(collect(1:num_particles), weights(weight), num_particles, replace=true)
     return ids
 end
 
