@@ -86,7 +86,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         if adaptive
             init_Ineff_func(φ) = solve_inefficiency(φ, 2.0*pi, y_t, p_error, EE_t, 
                                                     initialize=true) - r_star
-            φ_1 = fzero(init_Ineff_func, 1e-7, 1.0, xtol=xtol)
+            φ_1 = fzero(init_Ineff_func, 1e-30, 1.0, xtol=xtol)
         else
             φ_1 = 0.25
         end
@@ -109,7 +109,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
 
         # Simulate propagation forward
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε
-
+        
         # Calculate error for each particle
         p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered         
         
@@ -139,7 +139,10 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
                 if adaptive
                     # Set φ_new to the solution of the inefficiency function over interval
                     φ_new = fzero(init_ineff_func, φ_interval, xtol=xtol)
-                    ineff_check = solve_inefficiency(1.0, φ_new, y_t, p_error, EE_t)
+                    ineff_check = solve_inefficiency(1.0, φ_old, y_t, p_error, EE_t)
+                    if ineff_check <= r_star
+                        φ_new = 1.0
+                    end
                 else
                     φ_new = 0.5
                 end
@@ -202,7 +205,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
 
             # If no solution exists within interval, set inefficiency to r_star
             else 
-                if VERBOSITY[verbose] >= VERBOSITY[:high]
+                if VERBOSITY[verbose] >= VERBOSITY[:low]
                     println("No solution in interval.")
                 end
                 ineff_check = r_star
@@ -225,7 +228,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         #--------------------------------------------------------------
         # Last Stage of Algorithm: φ_new := 1.0
         #--------------------------------------------------------------
-        φ_new = 1.0
+#=        φ_new = 1.0
 
         # Update weights array and resample particles.
         loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_new, φ_old, y_t, p_error,
@@ -260,7 +263,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         
         # Store for next time iteration
         accept_rate = mean(accept_vec)
-
+=#
         Neff[t] = (n_particles^2)/sum(weights.^2)
         s_lag_tempered = s_t_nontempered
         print("Completion of one period ")
