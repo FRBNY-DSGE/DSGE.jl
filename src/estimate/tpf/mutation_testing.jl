@@ -35,7 +35,7 @@ function mutation_testing(system::System{Float64}, y_t::Array{Float64,1}, s_init
     #------------------------------------------------------------------------
     for i=1:N_MH
         
-        if !deterministic rand_mat = randn(size(QQ,1),1) end
+        if !deterministic rand_mat = randn(size(QQ,1)) end
         #else rand_mat = get_setting(m,:tpf_rand_mat) end
         
         # Generate new draw of ε from a N(ε_init, c²I) distribution, c tuning parameter, I identity
