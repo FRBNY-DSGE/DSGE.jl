@@ -18,52 +18,35 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
     QQ  = system[:QQ]    
     
     # Get tuning parameters from the model
-    rstar              = get_setting(m, :tpf_rstar)
-    c                  = get_setting(m, :tpf_cstar)
-    accept_rate        = get_setting(m, :tpf_accept_rate)
-    target             = get_setting(m, :tpf_target)
-    N_MH               = get_setting(m, :tpf_n_mh_simulations)
-    n_particles        = get_setting(m, :tpf_n_particles)
-    deterministic      = get_setting(m, :tpf_deterministic)
-    xtol               = get_setting(m, :tpf_x_tolerance)
-    parallel           = get_setting(m, :use_parallel_workers)
-    mutation_rand_mat  = get_setting(m, :tpf_rand_mat)
-    
+    r_star       = get_setting(m, :tpf_r_star)
+    c            = get_setting(m, :tpf_c_star)
+    accept_rate  = get_setting(m, :tpf_accept_rate)
+    target       = get_setting(m, :tpf_target)
+    N_MH         = get_setting(m, :tpf_n_mh_simulations)
+    n_particles  = get_setting(m, :tpf_n_particles)
+    adaptive     = get_setting(m, :tpf_adaptive)
+    xtol         = get_setting(m, :tpf_x_tolerance)
+    parallel     = get_setting(m, :use_parallel_workers)
+
     # Determine presampling periods
     n_presample_periods = (include_presample) ? 0 : get_setting(m, :n_presample_periods)
     
     # End time (last period)
     T = size(yy,2) 
-    # Size of covariance matrix
-    n_observables = size(QQ,1)
-    # Number of states
-    n_states = size(ZZ,2)
     
     # Initialization
+    n_observables       = size(QQ,1)
+    n_states            = size(ZZ,2)
     lik                 = zeros(T)
     Neff                = zeros(T)
-    len_phis            = ones(T)
+    n_φ_steps           = ones(T)
     times               = zeros(T)
     weights             = ones(n_particles)
     incremental_weights = zeros(n_particles)
     times               = zeros(T)
         
-    if deterministic
-        # Testing: Generate pre-defined random shocks for s and ε
-        s_lag_tempered_rand_mat = randn(n_states, n_particles)
-        ε_rand_mat = randn(n_observables, n_particles)
-        path = dirname(@__FILE__)  
-        h5open("$path/../../test/reference/matricesForTPF.h5", "w") do file
-            write(file, "s_lag_tempered_rand_mat", s_lag_tempered_rand_mat)
-            write(file, "eps_rand_mat", ε_rand_mat)
-        end
-    else
-        # Draw initial particles from the distribution of s₀: N(s₀, P₀) 
-        s_lag_tempered_rand_mat = randn(n_states, n_particles)
-    end
-
-    ### Change back to get_chol later!!
-    s_lag_tempered = repmat(s0, 1, n_particles) + Matrix(chol(P0))'*s_lag_tempered_rand_mat
+    # Draw initial particles from the distribution of s₀: N(s₀, P₀) 
+    s_lag_tempered = repmat(s0, 1, n_particles) + Matrix(chol(P0))'*randn(n_states, n_particles)
 
     for t=1:T
 
@@ -79,41 +62,36 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         y_t = yy[:,t]
         
         # Remove rows/columns of series with NaN values
-        nonmissing          = !isnan(y_t)
-        y_t                 = y_t[nonmissing]        
-        ZZ_t                = ZZ[nonmissing,:]
-        DD_t                = DD[nonmissing]
-        EE_t                = EE[nonmissing,nonmissing]
-        QQ_t                = QQ[nonmissing,nonmissing]
-        RRR_t               = RRR[:,nonmissing]
-        sqrtS2_t            = RRR_t*get_chol(QQ_t)'
-        n_observables_t     = length(y_t)
-        ε                   = zeros(n_observables_t)
-        mutation_rand_mat_t = mutation_rand_mat[nonmissing,:] 
+        nonmissing      = !isnan(y_t)
+        y_t             = y_t[nonmissing]        
+        ZZ_t            = ZZ[nonmissing,:]
+        DD_t            = DD[nonmissing]
+        EE_t            = EE[nonmissing,nonmissing]
+        QQ_t            = QQ[nonmissing,nonmissing]
+        RRR_t           = RRR[:,nonmissing]
+        sqrtS2_t        = RRR_t*get_chol(QQ_t)'
+        n_observables_t = length(y_t)
+        ε               = zeros(n_observables_t)
         
-        if !deterministic # When not testing, want a new random ε each time 
-            ε_rand_mat = randn(n_observables_t, n_particles)
-        end
-
-        # TEMPORARY
-        ε_rand_mat = randn(n_observables_t, n_particles)
+        # Draw random shock ε
+        ε_initial = randn(n_observables_t, n_particles)
 
         # Forecast forward one time step
-        s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε_rand_mat
+        s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε_initial
         
         # Error for each particle
         p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered
 
         # Solve for initial tempering parameter φ_1
-        if deterministic 
-            φ_1 = 0.25
-        else
+        if adaptive
             init_Ineff_func(φ) = solve_inefficiency(φ, 2.0*pi, y_t, p_error, EE_t, 
-                                                    initialize=true)-rstar
+                                                    initialize=true) - r_star
             φ_1 = fzero(init_Ineff_func, 1e-7, 1.0, xtol=xtol)
+        else
+            φ_1 = 0.25
         end
         
-         if VERBOSITY[verbose] >= VERBOSITY[:low]
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
             @show φ_1 
             println("------------------------------")
         end
@@ -121,8 +99,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         # Update weights array and resample particles
         loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_1, 0.0, y_t, p_error,
                                                      incremental_weights, weights, s_lag_tempered,
-                                                     ε_rand_mat, EE_t, n_particles, deterministic,
-                                                     initialize=true)
+                                                     ε_initial, EE_t, n_particles, initialize=true)
         # Update likelihood
         lik[t] += loglik
         
@@ -130,42 +107,41 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         count = 2 # Accounts for initialization and final mutation
         φ_old = φ_1
 
-        # First propagation
+        # Simulate propagation forward
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε
+
+        # Calculate error for each particle
         p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered         
         
-        if deterministic
-            ineff_check = rstar + 1
-        else
-            ineff_check = solve_inefficiency(1.0, φ_1, y_t, p_error, EE_t)         
-        end
+        # If fixed φ schedule, set inefficiency to a value trivially greater than r_star
+        ineff_check = adaptive ? solve_inefficiency(1.0, φ_1, y_t, p_error, EE_t) : r_star + 1
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
-            deterministic ? println("Deterministic:") : println("Non-deterministic:")
+            adaptive ? println("Adaptive φ Schedule:") : println("Fixed φ Schedule:")
             @show ineff_check
         end
 
         #--------------------------------------------------------------
         # Main Algorithm
         #--------------------------------------------------------------
-        while ineff_check > rstar
+        while ineff_check > r_star
 
             # Define inefficiency function
-            init_ineff_func(φ) = solve_inefficiency(φ, φ_old, y_t, p_error, EE_t) - rstar
+            init_ineff_func(φ) = solve_inefficiency(φ, φ_old, y_t, p_error, EE_t) - r_star
             φ_interval = [φ_old, 1.0]
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
 
             count += 1
 
             # Check solution exists within interval
-            if prod(sign(fphi_interval)) == -1 || deterministic
+            if prod(sign(fphi_interval)) == -1 || !adaptive
                 
-                if deterministic
-                    φ_new = 0.5
-                else
+                if adaptive
                     # Set φ_new to the solution of the inefficiency function over interval
                     φ_new = fzero(init_ineff_func, φ_interval, xtol=xtol)
                     ineff_check = solve_inefficiency(1.0, φ_new, y_t, p_error, EE_t)
+                else
+                    φ_new = 0.5
                 end
                
                 if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -175,13 +151,12 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
                 # Update weights array and resample particles
                 loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_new, φ_old, y_t,
                                                              p_error, incremental_weights, weights,
-                                                             s_lag_tempered, ε, EE_t, n_particles,
-                                                             deterministic)
+                                                             s_lag_tempered, ε, EE_t, n_particles)
                 # Update likelihood
                 lik[t] += loglik
                 
                 # Update value for c
-                c = update_c!(m, c, accept_rate, target)
+                c = update_c!(c, accept_rate, target)
                 
                 if VERBOSITY[verbose] >= VERBOSITY[:low]
                     if VERBOSITY[verbose] >= VERBOSITY[:high]
@@ -198,15 +173,13 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
                 if parallel
                     print("(in parallel) ")                    
                     #out = pmap(i -> mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, 
-                    #           N_MH, deterministic, nonmissing, mutation_rand_mat), 1:n_particles)
+                    #           N_MH, nonmissing), 1:n_particles)
                     out = @sync @parallel (hcat) for i=1:n_particles
-                    mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, deterministic,
-                             nonmissing, mutation_rand_mat_t)
+                        mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, nonmissing)
                     end
                 else 
                     print("(not parallel) ")
-                    out = [mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, 
-                                    deterministic, nonmissing, mutation_rand_mat_t) 
+                    out = [mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, nonmissing) 
                            for i=1:n_particles]
                 end
                 times[t] = toc()                
@@ -221,21 +194,22 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
                 accept_rate = mean(accept_vec)
 
                 # Get error for all particles
-                p_error = repmat(y_t-DD_t, 1, n_particles)-ZZ_t*s_t_nontempered
+                p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered
+                
+                # Update φ
                 φ_old = φ_new
-                len_phis[t] += 1
+                n_φ_steps[t] += 1
 
-            # If no solution exists within interval, set inefficiency to rstar
+            # If no solution exists within interval, set inefficiency to r_star
             else 
                 if VERBOSITY[verbose] >= VERBOSITY[:high]
                     println("No solution in interval.")
                 end
-                ineff_check = rstar
+                ineff_check = r_star
             end
-            gc()
 
-            # With phi schedule, exit after one iteration, thus set ineff_check=0
-            if deterministic
+            # With fixed φ schedule, exit after one iteration, thus set ineff_check = 0
+            if !adaptive
                 ineff_check = 0.0
             end
 
@@ -256,26 +230,25 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         # Update weights array and resample particles.
         loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_new, φ_old, y_t, p_error,
                                                      incremental_weights, weights, s_lag_tempered,
-                                                     ε, EE_t, n_particles, deterministic)
+                                                     ε, EE_t, n_particles)
         # Update likelihood
         lik[t] += loglik
 
         # Update c
-        c = update_c!(m, c, accept_rate, target)
+        c = update_c!(c, accept_rate, target)
         
         # Final round of mutation
         accept_vec = zeros(n_particles)
 
         if parallel
             # out = pmap(i -> mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, 
-            #            deterministic,nonmissing,mutation_rand_mat), 1:n_particles)
+            #            nonmissing), 1:n_particles)
             out = @sync @parallel (hcat) for i=1:n_particles
-                mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c,N_MH, deterministic,
-                         nonmissing, mutation_rand_mat_t)
+                mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c,N_MH, nonmissing)
             end
         else 
-            out = [mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, deterministic,
-                            nonmissing, mutation_rand_mat_t) for i=1:n_particles]
+            out = [mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, nonmissing) 
+                   for i=1:n_particles]
         end
         
         # Unwrap output
@@ -291,20 +264,13 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         Neff[t] = (n_particles^2)/sum(weights.^2)
         s_lag_tempered = s_t_nontempered
         print("Completion of one period ")
-        gc()
         toc()
     end
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("=============================================")
     end
-#= 
-    if deterministic
-        h5open("$path/../../test/reference/resampled_ids.h5","w") do f
-            write(f, "resampling_ids",resampling_ids)
-        end
-    end
-=#
+
     # Return vector of likelihood indexed by time step and Neff
     return Neff[n_presample_periods + 1:end], lik[n_presample_periods + 1:end], times
 end
@@ -317,7 +283,7 @@ get_chol(mat::Aray)
 Calculate and return the Cholesky of a matrix.
 
 """
-function get_chol(mat::Array{Float64,2})
+@inline function get_chol(mat::Array{Float64,2})
     return Matrix(chol(nearestSPD(mat)))
 end
 
@@ -329,7 +295,7 @@ Update value of c by expression that is function of the target and mean acceptan
 Returns the new c, in addition to storing it in the model settings.
 
 """
-function update_c!(m::AbstractModel,c_in::Float64, accept_in::Float64, target_in::Float64)
+@inline function update_c!{S<:Float64}(c_in::S, accept_in::S, target_in::S)
     c_out = c_in*(0.95 + 0.1*exp(20*(accept_in - target_in))/(1 + exp(20*(accept_in - target_in))))
     return c_out
 end
@@ -342,7 +308,8 @@ Calculate densities, normalize and reset weights, call multinomial resampling, u
 Returns log likelihood, weight, state, and ε vectors.
 
 """
-function correct_and_resample!(φ_new::Float64, φ_old::Float64, y_t::Array{Float64,1}, p_error::Array{Float64,2}, incremental_weights::Array{Float64,1}, weights::Array{Float64,1}, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, EE::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Bool=false)
+function correct_and_resample!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,2}, incremental_weights::Array{S,1}, weights::Array{S,1}, s_lag_tempered::Array{S,2}, ε::Array{S,2}, EE::Array{S,2}, n_particles::Int; initialize::Bool=false)
+    
     # Calculate initial weights
     for n=1:n_particles
         incremental_weights[n] = incremental_weight(φ_new, φ_old, y_t, p_error[:,n], EE, 
@@ -353,11 +320,7 @@ function correct_and_resample!(φ_new::Float64, φ_old::Float64, y_t::Array{Floa
     weights = (incremental_weights.*weights) ./ mean(incremental_weights.*weights)
     
     # Resampling
-    if deterministic
-        id = seeded_multinomial_resampling(weights)
-    else
-        id = multinomial_resampling(weights)
-    end
+    id = multinomial_resampling(weights)
     
     # Update arrays for resampled indices
     s_lag_tempered = s_lag_tempered[:,id]

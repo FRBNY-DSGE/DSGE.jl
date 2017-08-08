@@ -128,12 +128,12 @@ function default_settings!(m::AbstractModel)
     settings[:target_accept] = Setting(:target_accept, .25, "The initial target acceptance rate for new particles during mutation")
 
         # Tempered Particle Filter
-    settings[:tpf_rstar] = Setting(:tpf_rstar,2.0,"Initial target ratio for φs")
+    settings[:tpf_r_star] = Setting(:tpf_r_star,2.0,"Initial target ratio for φs")
     settings[:tpf_c] = Setting(:tpf_c,0.1,"The scaling factor for the covariance, constructed from accept and tgt during mutation")
     settings[:tpf_accept_rate] = Setting(:tpf_accept_rate, 0.5,"Initial average acceptance rate for new particles during mutation")
     settings[:tpf_target] = Setting(:tpf_target, 0.4, "Initial target acceptance rate for new particles during mutation")
     settings[:tpf_n_mh_simulations] = Setting(:tpf_n_mh_simulations, 2, "Number of Metropolis Hastings steps during mutation")
-    settings[:tpf_deterministic] = Setting(:tpf_deterministic, false, "Setting that determines whether to used seeded multinomial resampling and a fixed φ schedule for testing")
+    settings[:tpf_adaptive] = Setting(:tpf_adaptive, true, "Adaptive or fixed φ schedule")
     settings[:tpf_x_tolerance] = Setting(:tpf_x_tolerance, zero(float(0)),"Tolerance for fzero")
     settings[:tpf_n_particles] = Setting(:tpf_n_particles,500,"Number of particles for use in TPF")
 
