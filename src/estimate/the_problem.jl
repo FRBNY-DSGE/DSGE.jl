@@ -61,7 +61,7 @@ function the_problem(parallel=true::Bool,T=50::Int64, distCall=true)
         gc()
         times[t] = toc()
     end
-    h5open("../../test/reference/the_problem_times_distCall=$distCall.h5", "w") do file
+    h5open("../../test/reference/the_problem_times_good.h5", "w") do file
         write(file, "times", times)
     end    
     plotly()

@@ -70,8 +70,13 @@ module DSGE
         metropolis_hastings, compute_parameter_covariance, compute_moments,
 
         find_density_bands, prior, mutation, mutation_testing, multinomial_resampling, systematic_resampling, 
-        mutation, smc, nearestSPD, tpf, tpf_testing, tpf_testing2, tpf_testing3, mutation_problem, mutation_problem2,
-		mutation_problem3, mutation_small, tpf_fixed_phi, mutation_matlab, tpf_matlab, solve_inefficiency, seeded_multinomial_resampling, kalman_filter_likvec, 
+<<<<<<< HEAD
+        mutation, smc, nearestSPD, tpf, tpf_testing, tpf_testing2, mutation_problem, mutation_problem2,
+		mutation_problem3, mutation_small, tpf_fixed_phi, mutation_matlab, tpf_matlab, 
+=======
+        mutation, smc, nearestSPD, tpf, tpf_testing, tpf_testing2, tpf_testing3, mutation_problem, mutation_problem2,mutation_problem3, mutation_small, tpf_fixed_phi, 
+>>>>>>> added tpf_testing3.jl
+        solve_inefficiency, seeded_multinomial_resampling, kalman_filter_likvec, 
         parallel_breaking, 
 
         # forecast/
