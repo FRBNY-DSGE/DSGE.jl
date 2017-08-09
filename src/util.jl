@@ -102,6 +102,8 @@ function detexify(s::String)
     s = replace(s, "Ψ", "Psi")
     s = replace(s, "Ω", "Omega")
 
+    s = replace(s, "′", "'")
+
     return s
 end
 
