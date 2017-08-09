@@ -24,16 +24,11 @@ S2 = system.measurement.QQ
 Φ = system.transition.TTT
 
 N_MH = 2
-n_particles = 10000
+n_particles = 4000
 parallel = true
 
-rand_mat = randn(size(S2,1) ,1)
-m<=Setting(:tpf_rand_mat, rand_mat)
-m<=Setting(:tpf_rstar, 2.0)
 m<=Setting(:tpf_N_MH, N_MH)
-m<=Setting(:tpf_c, 0.1)
-m<=Setting(:tpf_accept_rate, 0.5)
-m<=Setting(:tpf_target, 0.4)
+m<=Setting(:tpf_c_star, 0.1)
 m<=Setting(:tpf_n_particles, n_particles)
 m<=Setting(:use_parallel_workers, parallel)
 m<=Setting(:x_tolerance, zero(float(0)))
@@ -42,7 +37,16 @@ m<=Setting(:tpf_deterministic, false)
 s0 = zeros(size(system[:TTT])[1])
 
 P0 = nearestSPD(solve_discrete_lyapunov(Φ,R*S2*R'))
-neff, lik_fixed = tpf(m, data, system, s0, P0)
+neff, lik_tpf = tpf(m, data, system, s0, P0)
+
+rmprocs()
+lik_kalman = h5read("/data/dsge_data_dir/dsgejl/interns2017/standard_vals3.h5","lik_kalman")
+@show sum(lik_tpf) - sum(lik_kalman)
+
+plotly()
+plot(lik_tpf,label="TPF")
+plot!(lik_kalman,label="Kalman")
+gui()
 
 #kalman_out = DSGE.filter(m,data,system,s0,P0)
 #lik_kalman_no_NaN = kalman_out[:L_vec]
@@ -114,7 +118,6 @@ P0= nearestSPD(solve_discrete_lyapunov(Φ,R*S2*R'))
 Neff, lik_4000, times = tpf(m,data,system,s0,P0)
 =#
 
-rmprocs()
 #=
 h5open("$path/../../test/reference/compare_tapering_of_error.h5","w") do file
     write(file,"lik_tapered",lik_tapered)
@@ -140,13 +143,15 @@ h5open("$path/../../test/reference/kalman_different_errors.h5","w") do file
     write(file, "lik_kalman_half",lik_kalman_half)
 end
 =#
-lik_kalman_no_NaN = h5read("/data/dsge_data_dir/dsgejl/interns2017/standard_vals.h5","lik_kalman")
+
 #lik_fixed = h5read("/data/dsge_data_dir/dsgejl/interns2017/standard_vals.h5","lik_tpf")
 
+#=
 h5open("/data/dsge_data_dir/dsgejl/interns2017/standard_vals3.h5","w") do file
     write(file, "lik_kalman", lik_kalman_no_NaN)
     write(file, "lik_tpf", lik_fixed)
 end 
+=#
 
 #lik_4000 = h5read("$path/../../test/reference/compare_n_particles.h5","lik_4000")
 #lik_40000 = h5read("$path/../../test/reference/compare_n_particles.h5","lik_40000")
@@ -164,10 +169,7 @@ gui()
 #lik_fifth = h5read("$path/../../test/reference/compare_scaling_no_MH_change.h5","lik_fifth")
 #lik_tenth = h5read("$path/../../test/reference/compare_scaling_no_MH_change.h5","lik_tenth")
 #lik_kalman_error = h5read("$path/../../test/reference/varLik_error.h5","lik_kalman_error")
-plotly()
-plot(lik_fixed,label="TPF")
-plot!(lik_kalman_no_NaN,label="Kalman")
-gui()
+
 
 #=
 plotly()
