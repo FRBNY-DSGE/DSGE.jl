@@ -69,35 +69,40 @@ function plot_history_and_forecast(m::AbstractModel, var::Symbol, class::Symbol,
                                    input_type::Symbol, cond_type::Symbol;
                                    forecast_string::String = "",
                                    bdd_and_unbdd::Bool = false,
+                                   fourquarter::Bool = false,
                                    output_file::String = "",
                                    title::String = "",
                                    kwargs...)
 
-    plot_history_and_forecast(m, [var], class, input_type, cond_type,
-                              forecast_string = forecast_string,
-                              bdd_and_unbdd = bdd_and_unbdd,
-                              output_files = isempty(output_file) ? String[] : [output_file],
-                              titles = isempty(title) ? String[] : [title],
-                              kwargs...)
+    plots = plot_history_and_forecast(m, [var], class, input_type, cond_type;
+                                      forecast_string = forecast_string,
+                                      bdd_and_unbdd = bdd_and_unbdd,
+                                      fourquarter = fourquarter,
+                                      output_files = isempty(output_file) ? String[] : [output_file],
+                                      titles = isempty(title) ? String[] : [title],
+                                      kwargs...)
+    return plots[var]
 end
 
 function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
                                    input_type::Symbol, cond_type::Symbol;
                                    forecast_string::String = "",
                                    bdd_and_unbdd::Bool = false,
+                                   fourquarter::Bool = false,
                                    output_files::Vector{String} = String[],
                                    titles::Vector{String} = String[],
                                    kwargs...)
     # Read in MeansBands
-    hist  = read_mb(m, input_type, cond_type, Symbol(:hist, class),
+    hist  = read_mb(m, input_type, cond_type, Symbol(fourquarter ? :hist4q : :hist, class),
                     forecast_string = forecast_string)
-    fcast = read_mb(m, input_type, cond_type, Symbol(:forecast, class),
+    fcast = read_mb(m, input_type, cond_type, Symbol(fourquarter ? :forecast4q : :forecast, class),
                     forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd)
 
 
     # Get output file names and titles if not provided
     if isempty(output_files)
-        output_files = map(var -> get_forecast_filename(m, input_type, cond_type, Symbol("forecast_", var),
+        output_files = map(var -> get_forecast_filename(m, input_type, cond_type,
+                                                        Symbol(fourquarter ? "forecast4q_" : "forecast_", var),
                                                         pathfcn = figurespath, fileformat = plot_extension()),
                            vars)
     end
@@ -106,9 +111,14 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
     end
 
     # Loop through variables
+    plots = Dict{Symbol, Plots.Plot}()
     for (var, output_file, title) in zip(vars, output_files, titles)
-        plot_history_and_forecast(var, hist, fcast; output_file = output_file, title = title, kwargs...)
+        plots[var] = plot_history_and_forecast(var, hist, fcast;
+                                               output_file = output_file, title = title,
+                                               kwargs...)
     end
+
+    return plots
 end
 
 function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::MeansBands;
