@@ -14,7 +14,7 @@ function tpf_testing3{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::Sys
     TTT = system[:TTT]
     ####CHANGED THIS because I think measurement error is the whole measurement error (not just var of shock)
     EE = system[:EE] + system[:MM]*system[:QQ]*system[:MM]'
-    #EE  = system[:EE]
+#    EE  = system[:EE]
     DD  = system[:DD]
     ZZ  = system[:ZZ]
     QQ  = system[:QQ]    
@@ -129,7 +129,7 @@ function tpf_testing3{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::Sys
         # Update weights array and resample particles
 #(φ_new::Float64, φ_old::Float64, y_t::Array{Float64,1}, p_error::Array{Float64,2}, incremental_weights::Array{Float64,1}, weights::Array{Float64,1}, s_lag_tempered::Array{Float64,2}, ε::Array{Float64,2}, EE::Array{Float64,2}, n_particles::Int64, deterministic::Bool; initialize::Bool=false)
         ##DIFFERENCE WITH OLD VERSION/MATLAB: want to resample s_t_nontempered not s_lag_tempered 
-        loglik, weights, s_t_nontempered, ε, id = correct_and_resample!(φ_1,0.0,y_t,p_error,incremental_weights,weights,s_t_nontempered,ε_rand_mat,EE_t,n_particles,deterministic,initialize=true)
+        loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_1,0.0,y_t,p_error,incremental_weights,weights,s_lag_tempered,ε_rand_mat,EE_t,n_particles,deterministic,initialize=true)
         #resampling_ids[ids_i,:] = id
         #ids_i += 1
 
@@ -141,7 +141,7 @@ function tpf_testing3{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::Sys
         φ_old = φ_1
 
         # First propagation
-        #s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε
+        s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε
         p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered         
         
         if !deterministic
@@ -183,7 +183,7 @@ function tpf_testing3{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::Sys
                 end
 
                 # Update weights array and resample particles
-                loglik, weights, s_t_nontempered, ε, id = correct_and_resample!(φ_new, φ_old, y_t, p_error, incremental_weights, weights, s_t_nontempered, ε, EE_t, n_particles, deterministic)
+                loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_new, φ_old, y_t, p_error, incremental_weights, weights, s_lag_tempered, ε, EE_t, n_particles, deterministic)
                 #resampling_ids[ids_i,:] = id
                 #ids_i += 1
 
@@ -220,6 +220,9 @@ function tpf_testing3{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::Sys
                     ε[:,i] = out[i][2]
                     accept_vec[i] = out[i][3]
                 end
+                
+                ##BIG THING? maybe not
+                s_lag_tempered = s_t_nontempered
 
                 # Calculate average acceptance rate
                 accept_rate = mean(accept_vec)
