@@ -44,6 +44,8 @@ function init_subspec!(m::Model1010)
         return ss18!(m)
     elseif subspec(m) == "ss19"
         return ss19!(m)
+    elseif subspec(m) == "ss20"
+        return ss20!(m)
     else
         error("This subspec is not defined.")
     end
@@ -529,4 +531,9 @@ function ss19!(m::Model1010)
                    fixed=false,
                    description="σ_z_p: No description available.",
                    tex_label="\\sigma_{z^p}")
+end
+
+function ss20!(m::Model1010)
+    # ss18 with betabar defined (correctly) with σ_c instead of σ_ω_star
+    ss18!(m)
 end
