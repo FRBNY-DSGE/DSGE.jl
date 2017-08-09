@@ -1,6 +1,6 @@
 """
 ```
-function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::Array{S,1}, 
+mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::Array{S,1}, 
         ε_init::Array{S,1}, c::S, N_MH::Int, nonmissing::Array{Bool,1})
 ```
 Runs random-walk Metropolis Hastings for single particle. The caller should loop through 
@@ -13,11 +13,11 @@ all particles, calling this method on each.
 - `s_init`: vector of starting state before mutation (ŝ in paper) 
 - `ε_init`: vector of starting state error before mutation
 - `c`: scaling factor used to achieve a desired acceptance rate, adjusted via:
- 
-        cₙ = cₙ₋₁*f(1-R̂ₙ₋₁(cₙ₋₁))
+    
+    cₙ = cₙ₋₁f(1-R̂ₙ₋₁(cₙ₋₁))
 
-        Where c₁ = c_star and R̂ₙ₋₁(cₙ₋₁) is the emprical rejection rate based on mutation
-        phase in iteration n-1. Average is computed across previous N_MH RWMH steps.
+    Where c₁ = c_star and R̂ₙ₋₁(cₙ₋₁) is the emprical rejection rate based on mutation
+    phase in iteration n-1. Average is computed across previous N_MH RWMH steps.
 
 - `N_MH`: number of Metropolis Hastings steps
 - `nonmissing`: vector of booleans used to remove NaN values from matrices in system object
@@ -26,7 +26,7 @@ all particles, calling this method on each.
 
 - `s_out`: mutated state vector
 - `ε_out`: output ε shock corresponding to state vector 
-- `accept_rate`: acceptance rate across N_MH steps, used for updating c later
+- `accept_rate`: acceptance rate across N_MH steps
 
 """
 function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::Array{S,1}, 
@@ -48,7 +48,7 @@ function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::
     ε_out = ε_init
 
     # Store length of y_t, ε
-    n_obs = length(y_t)
+    n_obs    = length(y_t)
     n_states = length(ε_init)
 
     # Initialize acceptance counter to zero
@@ -83,7 +83,7 @@ function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::
 
         # Accept the particle with probability α
         if rand() < α 
-            # Accept
+            # Accept and update particle
             s_out = s_new_e
             ε_out = ε_new
             accept += 1

@@ -1,9 +1,36 @@
 """
 ```
-function solve_inefficiency{S<:AbstractFloat}(φ_new::S, φ_old::S, y_t::Array{S, 1}, 
-                            p_error::Array{S,2}, EE::Array{S,2}; initialize::Bool=false)
+solve_inefficiency{S<:AbstractFloat}(φ_new::S, φ_old::S, y_t::Array{S, 1}, p_error::Array{S,2}, 
+                                     EE::Array{S,2}; initialize::Bool=false)
 ```
-Returns the value of the ineffeciency function (average of the normalized weights squared).
+Returns the value of the ineffeciency function InEff(φₙ), where:
+
+        InEff(φₙ) = (1/M) ∑ᴹ (W̃ₜʲ(φₙ))² 
+                    
+Where ∑ is over j=1...M particles, and for a particle j: 
+
+        W̃ₜʲ(φₙ) = w̃ₜʲ(φₙ) / (1/M) ∑ᴹ w̃ₜʲ(φₙ)
+
+Where ∑ is over j=1...M particles, and incremental weight is:
+            
+        w̃ₜʲ(φₙ) = pₙ(yₜ|sₜʲ'ⁿ⁻¹) / pₙ₋₁(yₜ|sₜ^{j,n-1})
+                = (φₙ/φₙ₋₁)^(d/2) exp{-1/2 [yₜ-Ψ(sₜʲ'ⁿ⁻¹)]' (φₙ-φₙ₋₁) ∑ᵤ⁻¹ [yₜ-Ψ(sₜʲ'ⁿ⁻¹)]}
+
+### Inputs
+
+- `φ_new`: φₙ
+- `φ_old`: φₙ₋₁
+- `y_t`: vector of observables for time t
+- `p_error`: (`n_states` x `n_particles`) matrix of particles' errors yₜ - Ψ(sₜʲ'ⁿ⁻¹) in columns
+- `EE`: measurement error covariance matrix, ∑ᵤ
+
+### Keyword Arguments
+
+- `initialize::Bool`: flag to indicate whether this is being used in initialization stage, 
+    in which case one instead solves the formula for w̃ₜʲ(φₙ) as:
+
+    w̃ₜʲ(φ₁) = (φ₁/2π)^(d/2)|∑ᵤ|^(1/2) exp{-1/2 [yₜ-Ψ(sₜʲ'ⁿ⁻¹)]' φ₁ ∑ᵤ⁻¹ [yₜ-Ψ(sₜʲ'ⁿ⁻¹)]}
+
 """
 function solve_inefficiency{S<:AbstractFloat}(φ_new::S, φ_old::S, y_t::Array{S,1}, 
                             p_error::Array{S,2}, EE::Array{S,2}; initialize::Bool=false)

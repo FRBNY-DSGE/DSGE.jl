@@ -1,9 +1,30 @@
-using DSGE
-function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
-    s0::Array{S}, P0::Array; verbose::Symbol=:low, include_presample::Bool=true)
-    # s0 is 8xn_particles
-    # P0 is solution to discrete lyapunov equation for Φ and R*S2*R'
-    # yy is data matrix
+"""
+```
+tpf{S<:AbstractFloat}(m::AbstractModel, data::Array, system::System{S},
+    s0::Array{S}, P0::Array{S}; verbose::Symbol=:low, include_presample::Bool=true)
+```
+Executes tempered particle filter.
+
+### Inputs
+- `m::AbstractModel`: model object
+- `data::Array{S}`: (`n_observables` x `hist_periods`) size `Matrix{S}` of data for observables.
+- `system::System{S}`: `System` object specifying state-space system matrices for model
+- `s0::Array{S}`: (`n_observables` x `n_particles`) initial state vector
+- `P0::Array`: (`n_observables` x `n_observavles`) initial state covariance matrix
+
+### Keyword Arguments
+- `verbose::Symbol`: indicates desired nuance of outputs. Default to `:low`. 
+- `include_presample::Bool`: indicates whether to include presample in periods in the returned
+   outputs. Defaults to `true`.
+
+### Outputs
+- `Neff::Vector{S}`: (`hist_perdiods` x 1) vector returning inefficiency calculated per period t
+- `lik::Vector{S}`: (`hist_periods` x 1) vector returning log-likelihood per period t
+- `times::Vector{S}`: (`hist_periods` x 1) vector returning elapsed runtime per period t
+
+"""
+function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{S},
+    s0::Array{S}, P0::Array{S}; verbose::Symbol=:low, include_presample::Bool=true)
 
     #--------------------------------------------------------------
     # Set Parameters of Algorithm
@@ -28,15 +49,13 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
     xtol         = get_setting(m, :tpf_x_tolerance)
     parallel     = get_setting(m, :use_parallel_workers)
 
-    # Determine presampling periods
+    # Set number of presampling periods
     n_presample_periods = (include_presample) ? 0 : get_setting(m, :n_presample_periods)
-    
-    # End time (last period)
-    T = size(yy,2) 
     
     # Initialization
     n_observables       = size(QQ,1)
     n_states            = size(ZZ,2)
+    T                   = size(data,2)
     lik                 = zeros(T)
     Neff                = zeros(T)
     n_φ_steps           = ones(T)
@@ -59,7 +78,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         #--------------------------------------------------------------
         # Initialize Algorithm: First Tempering Step
         #--------------------------------------------------------------
-        y_t = yy[:,t]
+        y_t = data[:,t]
         
         # Remove rows/columns of series with NaN values
         nonmissing      = !isnan(y_t)
@@ -97,7 +116,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
         end
               
         # Update weights array and resample particles
-        loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_1, 0.0, y_t, p_error,
+        loglik, weights, s_lag_tempered, ε, id = correction_selection!(φ_1, 0.0, y_t, p_error,
                                                      incremental_weights, weights, s_lag_tempered,
                                                      ε_initial, EE_t, n_particles, initialize=true)
         # Update likelihood
@@ -152,7 +171,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
                 end
 
                 # Update weights array and resample particles
-                loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_new, φ_old, y_t,
+                loglik, weights, s_lag_tempered, ε, id = correction_selection!(φ_new, φ_old, y_t,
                                                              p_error, incremental_weights, weights,
                                                              s_lag_tempered, ε, EE_t, n_particles)
                 # Update likelihood
@@ -231,7 +250,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{S},
 #=        φ_new = 1.0
 
         # Update weights array and resample particles.
-        loglik, weights, s_lag_tempered, ε, id = correct_and_resample!(φ_new, φ_old, y_t, p_error,
+        loglik, weights, s_lag_tempered, ε, id = correction_selection!(φ_new, φ_old, y_t, p_error,
                                                      incremental_weights, weights, s_lag_tempered,
                                                      ε, EE_t, n_particles)
         # Update likelihood
@@ -305,13 +324,13 @@ end
 
 """
 ```
-correct_and_resample!(φ_new::Float64, φ_old::Float64, y_t::Array, p_error::Array,incremental_weights::Array,weights::Array, s_lag_tempered::Array, ε::Array, EE::Array, n_particles::Int64; initialize::Bool=false)
+correction_selection!(φ_new::Float64, φ_old::Float64, y_t::Array, p_error::Array,incremental_weights::Array,weights::Array, s_lag_tempered::Array, ε::Array, EE::Array, n_particles::Int64; initialize::Bool=false)
 ```
 Calculate densities, normalize and reset weights, call multinomial resampling, update state and error vectors,reset error vectors to 1,and calculate new log likelihood.
 Returns log likelihood, weight, state, and ε vectors.
 
 """
-function correct_and_resample!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,2}, incremental_weights::Array{S,1}, weights::Array{S,1}, s_lag_tempered::Array{S,2}, ε::Array{S,2}, EE::Array{S,2}, n_particles::Int; initialize::Bool=false)
+function correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,2}, incremental_weights::Array{S,1}, weights::Array{S,1}, s_lag_tempered::Array{S,2}, ε::Array{S,2}, EE::Array{S,2}, n_particles::Int; initialize::Bool=false)
     
     # Calculate initial weights
     for n=1:n_particles
