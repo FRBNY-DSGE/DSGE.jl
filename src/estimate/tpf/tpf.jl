@@ -61,9 +61,6 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
     Neff                = zeros(T)
     n_φ_steps           = ones(T)
     times               = zeros(T)
-    weights             = ones(n_particles)
-    incremental_weights = zeros(n_particles)
-    times               = zeros(T)
         
     # Draw initial particles from the distribution of s₀: N(s₀, P₀) 
     s_lag_tempered = repmat(s0, 1, n_particles) + Matrix(chol(P0))'*randn(n_states, n_particles)
@@ -116,11 +113,11 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
             @show φ_1 
             println("------------------------------")
         end
-        
-        # Update weights array and resample particles
-        loglik, weights, s_lag_tempered, ε, id = correction_selection!(φ_1, 0.0, y_t, p_error,
-                                                     incremental_weights, weights, s_lag_tempered,
-                                                     ε_initial, EE_t, n_particles, initialize=true)
+
+        # Correct and resample particles
+        loglik, s_lag_tempered, ε, id = correction_selection!(φ_1, 0.0, y_t, p_error,
+                                                 s_lag_tempered, ε_initial, EE_t, n_particles, 
+                                                 initialize=true)
         # Update likelihood
         lik[t] += loglik
         
@@ -161,6 +158,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
                     # Set φ_new to the solution of the inefficiency function over interval
                     φ_new = fzero(init_ineff_func, φ_interval, xtol=xtol)
                     ineff_check = solve_inefficiency(1.0, φ_old, y_t, p_error, EE_t)
+
                     if ineff_check <= r_star
                         φ_new = 1.0
                     end
@@ -172,10 +170,10 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
                     @show φ_new
                 end
 
-                # Update weights array and resample particles
-                loglik, weights, s_lag_tempered, ε, id = correction_selection!(φ_new, φ_old, y_t,
-                                                             p_error, incremental_weights, weights,
-                                                             s_lag_tempered, ε, EE_t, n_particles)
+                # Correct and resample particles
+                loglik, s_lag_tempered, ε, id = correction_selection!(φ_new, φ_old, y_t, p_error,
+                                                        s_lag_tempered, ε, EE_t, n_particles)
+
                 # Update likelihood
                 lik[t] += loglik
                 
@@ -251,10 +249,9 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         #--------------------------------------------------------------
 #=        φ_new = 1.0
 
-        # Update weights array and resample particles.
-        loglik, weights, s_lag_tempered, ε, id = correction_selection!(φ_new, φ_old, y_t, p_error,
-                                                     incremental_weights, weights, s_lag_tempered,
-                                                     ε, EE_t, n_particles)
+        # Correct and resample particles.
+        loglik, s_lag_tempered, ε, id = correction_selection!(φ_new, φ_old, y_t, p_error,
+                                                     s_lag_tempered, ε, EE_t, n_particles)
         # Update likelihood
         lik[t] += loglik
 
@@ -285,7 +282,6 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         # Store for next time iteration
         accept_rate = mean(accept_vec)
 =#
-        Neff[t] = (n_particles^2)/sum(weights.^2)
         s_lag_tempered = s_t_nontempered
         print("Completion of one period ")
         toc()
@@ -313,7 +309,7 @@ end
 
 """
 ```
-update_c!(m::AbstractModel, c_in::Float64, accept_in::Float64, target_in::Float64)
+update_c!(c_in::Float64, accept_in::Float64, target_in::Float64)
 ```
 Updates value of c by expression that is function of the target and mean acceptance rates.
 Returns the new c, in addition to storing it in the model settings.
@@ -326,17 +322,18 @@ end
 
 """
 ```
-correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,2}, incremental_weights::Array{S,1}, weights::Array{S,1}, s_lag_tempered::Array{S,2}, ε::Array{S,2}, EE::Array{S,2}, n_particles::Int; initialize::Bool=false)
+correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,2}, 
+    s_lag_tempered::Array{S,2}, ε::Array{S,2}, EE::Array{S,2}, n_particles::Int; 
+    initialize::Bool=false)
 ```
-Calculate densities, normalize and reset weights, call multinomial resampling, update state and error vectors, reset error vectors to 1,and calculate new log likelihood.
+Calculate densities, normalize and reset weights, call multinomial resampling, update state and 
+error vectors, reset error vectors to 1,and calculate new log likelihood.
 
 ### Inputs
 - `φ_new::S`: current φ
 - `φ_old::S`: φ from last tempering iteration
 - `y_t::Array{S,1}`: (`n_observables` x 1) vector of observables at time t
 - `p_error::Array{S,1}`: A single particle's error: y_t - Ψ(s_t)
-- `incremental_weights::Array{S,1}`: Weights for all particles
-- `weights::Array{S,1}`: Normalized weights from tempering iteration before
 - `s_lag_tempered::Array{S,2}`: particles' 'final' tempered states from previous period
 - `ε::Array{S,2}`: particles' shocks, corresponding to s_lag_tempered
 - `EE::Array{S,2}`: measurement error covariance matrix, ∑ᵤ
@@ -348,12 +345,16 @@ Calculate densities, normalize and reset weights, call multinomial resampling, u
 
 ### Outputs
 - `loglik::S`: incremental log likelihood
-- `weights::Vector{S}`: vector of weights, reset to 1
 - `s_lag_tempered::Array{S,2}`: resampled tempered states from previous period
 - `ε::Array{S,2}`: resampled shocks from previous period
 - `id::Vector{Int}`: vector of indices corresponding to resampled particles
 """
-function correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,2}, incremental_weights::Array{S,1}, weights::Array{S,1}, s_lag_tempered::Array{S,2}, ε::Array{S,2}, EE::Array{S,2}, n_particles::Int; initialize::Bool=false)
+function correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, 
+                                   p_error::Array{S,2}, s_lag_tempered::Array{S,2}, ε::Array{S,2},
+                                   EE::Array{S,2}, n_particles::Int; initialize::Bool=false)
+    # Initialize vector
+    incremental_weights = zeros(n_particles)
+    
     # Calculate initial weights
     for n=1:n_particles
         incremental_weights[n] = incremental_weight(φ_new, φ_old, y_t, p_error[:,n], EE, 
@@ -361,22 +362,19 @@ function correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}
     end   
 
     # Normalize weights
-    weights = (incremental_weights.*weights) ./ mean(incremental_weights.*weights)
+    normalized_weights = incremental_weights ./ mean(incremental_weights)
     
     # Resampling
-    id = multinomial_resampling(weights)
+    id = multinomial_resampling(normalized_weights)
     
     # Update arrays for resampled indices
     s_lag_tempered = s_lag_tempered[:,id]
     ε = ε[:,id]
 
-    # Reset weights to ones
-    weights = ones(n_particles)
-
     # Calculate likelihood
-    loglik = log(mean(incremental_weights.*weights))
+    loglik = log(mean(incremental_weights))
     
-    return loglik, weights, s_lag_tempered, ε, id
+    return loglik, s_lag_tempered, ε, id
 end
 
 """
