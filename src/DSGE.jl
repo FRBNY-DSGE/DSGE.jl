@@ -67,11 +67,11 @@ module DSGE
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
 
-        metropolis_hastings, compute_parameter_covariance, compute_moments,
-
-        find_density_bands, prior, mutation, mutation_testing, multinomial_resampling, systematic_resampling, 
-        mutation, smc, nearestSPD, tpf, tpf_testing, tpf_testing2, tpf_testing3, mutation_problem, mutation_problem2,
-		mutation_problem3, mutation_small, tpf_fixed_phi, mutation_matlab, tpf_matlab, solve_inefficiency, seeded_multinomial_resampling, kalman_filter_likvec, 
+        metropolis_hastings, compute_parameter_covariance, compute_moments, find_density_bands,
+        prior, mutation, mutation_testing, multinomial_resampling, systematic_resampling, 
+        mutation, smc, nearestSPD, tpf, tpf_testing, tpf_testing2, tpf_testing3, mutation_problem,
+        mutation_problem2, mutation_problem3, mutation_small, tpf_fixed_phi, 
+        mutation_matlab, tpf_matlab, solve_inefficiency, kalman_filter_likvec, 
         parallel_breaking, 
 
         # forecast/
@@ -161,7 +161,6 @@ module DSGE
     include("estimate/mutation_problem3.jl")
     include("estimate/mutation_small.jl")
     include("estimate/tpf/tpf_fixed_phi.jl")
-    include("estimate/tpf/seeded_multinomial_resampling.jl")
     include("estimate/tpf/solve_inefficiency.jl")
     include("estimate/kalman_filter_likvec.jl")
     include("estimate/parallel_breaking.jl")
