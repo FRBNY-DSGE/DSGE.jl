@@ -722,13 +722,16 @@ function settings_m1010!(m::Model1010)
     m <= Setting(:n_anticipated_shocks_padding, 20,
                  "Padding for anticipated policy shocks")
 
-    # Forecast
-    m <= Setting(:use_population_forecast, true,
-                 "Whether to use population forecasts as data")
+    # Data
+    m <= Setting(:data_id, 4, "Dataset identifier")
     m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
                  "Observables used in conditional forecasts")
     m <= Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
                  "Observables used in semiconditional forecasts")
+
+    # Forecast
+    m <= Setting(:use_population_forecast, true,
+                 "Whether to use population forecasts as data")
     m <= Setting(:forecast_pseudoobservables, true,
                  "Whether to forecast pseudo-observables")
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")),
