@@ -118,7 +118,11 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         end
         
         # Update weights array and resample particles
+<<<<<<< HEAD
         loglik, weights, s_lag_tempered, ε, id = correction_selection!(φ_1, 0.0, y_t, p_error,
+=======
+        loglik, weights, s_lag_tempered, ε, id = correction_and_selection!(φ_1, 0.0, y_t, p_error,
+>>>>>>> In tpf.jl change from EE to EE+MM*QQ*MM'. Also add tpf_loop that tries to mimic fortran (but is currently incorrect as all likelihoods become zero)
                                                      incremental_weights, weights, s_lag_tempered,
                                                      ε_initial, EE_t, n_particles, initialize=true)
         # Update likelihood
@@ -133,6 +137,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         
         # Calculate error for each particle
         p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered 
+        @show mean(p_error,2)
         
         # If fixed φ schedule, set inefficiency to a value trivially greater than r_star
         ineff_check = adaptive ? solve_inefficiency(1.0, φ_1, y_t, p_error, EE_t) : r_star + 1
@@ -173,7 +178,11 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
                 end
 
                 # Update weights array and resample particles
+<<<<<<< HEAD
                 loglik, weights, s_lag_tempered, ε, id = correction_selection!(φ_new, φ_old, y_t,
+=======
+                loglik, weights, s_lag_tempered, ε, id = correction_and_selection!(φ_new, φ_old, y_t,
+>>>>>>> In tpf.jl change from EE to EE+MM*QQ*MM'. Also add tpf_loop that tries to mimic fortran (but is currently incorrect as all likelihoods become zero)
                                                              p_error, incremental_weights, weights,
                                                              s_lag_tempered, ε, EE_t, n_particles)
                 # Update likelihood
@@ -353,13 +362,25 @@ Calculate densities, normalize and reset weights, call multinomial resampling, u
 - `ε::Array{S,2}`: resampled shocks from previous period
 - `id::Vector{Int}`: vector of indices corresponding to resampled particles
 """
+<<<<<<< HEAD
 function correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,2}, incremental_weights::Array{S,1}, weights::Array{S,1}, s_lag_tempered::Array{S,2}, ε::Array{S,2}, EE::Array{S,2}, n_particles::Int; initialize::Bool=false)
+    
+=======
+function correction_and_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,2}, incremental_weights::Array{S,1}, weights::Array{S,1}, s_lag_tempered::Array{S,2}, ε::Array{S,2}, EE::Array{S,2}, n_particles::Int; initialize::Bool=false)
+    println("ASDFASDFSDFASDFASDFADFADFAF")
+>>>>>>> In tpf.jl change from EE to EE+MM*QQ*MM'. Also add tpf_loop that tries to mimic fortran (but is currently incorrect as all likelihoods become zero)
     # Calculate initial weights
     for n=1:n_particles
         incremental_weights[n] = incremental_weight(φ_new, φ_old, y_t, p_error[:,n], EE, 
                                                     initialize=initialize)
     end   
+<<<<<<< HEAD
+    @show sum(weights)
+=======
 
+    @show mean(incremental_weights)
+
+>>>>>>> In tpf.jl change from EE to EE+MM*QQ*MM'. Also add tpf_loop that tries to mimic fortran (but is currently incorrect as all likelihoods become zero)
     # Normalize weights
     weights = (incremental_weights.*weights) ./ mean(incremental_weights.*weights)
     

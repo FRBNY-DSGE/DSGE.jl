@@ -67,13 +67,20 @@ module DSGE
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
 
-
+<<<<<<< HEAD
         metropolis_hastings, compute_parameter_covariance, compute_moments, find_density_bands,
         prior, mutation, mutation_testing, multinomial_resampling, systematic_resampling, 
-        mutation, smc, nearestSPD, tpf, tpf_testing, tpf_testing2, tpf_testing3, tpf_loop, mutation_problem,
+        mutation, smc, nearestSPD, tpf, tpf_testing, tpf_testing2, tpf_testing3, mutation_problem,
         mutation_problem2, mutation_problem3, mutation_small, tpf_fixed_phi, 
         mutation_matlab, tpf_matlab, solve_inefficiency, kalman_filter_likvec, 
+=======
+        metropolis_hastings, compute_parameter_covariance, compute_moments,
 
+        find_density_bands, prior, mutation, mutation_testing, multinomial_resampling, systematic_resampling, 
+        mutation, smc, nearestSPD, tpf, tpf_testing, tpf_testing2, tpf_testing3, tpf_loop, mutation_problem, mutation_problem2,
+		mutation_problem3, mutation_small, tpf_fixed_phi, mutation_matlab, tpf_matlab, solve_inefficiency, seeded_multinomial_resampling, kalman_filter_likvec, 
+>>>>>>> In tpf.jl change from EE to EE+MM*QQ*MM'. Also add tpf_loop that tries to mimic fortran (but is currently incorrect as all likelihoods become zero)
+        parallel_breaking, 
 
         # forecast/
         load_draws, forecast_one,
