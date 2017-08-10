@@ -1,12 +1,12 @@
 using DSGE,DataFrames,HDF5
 
 # Set model
-m=AnSchorfheide(testing=true)
-m<=Setting(:date_forecast_start,quartertodate("2015-Q4"))
-m<=Setting(:tpf_n_mh_simulations,3)
+m = AnSchorfheide(testing=true)
+m<=Setting(:date_forecast_start, quartertodate("2015-Q4"))
+m<=Setting(:tpf_n_mh_simulations, 3)
 m<=Setting(:tpf_c, 0.1)
-m<=Setting(:tpf_n_particles,100)
-m<=Setting(:tpf_deterministic,true)
+m<=Setting(:tpf_n_particles, 100)
+m<=Setting(:tpf_deterministic, true)
 # Set seeding 
 srand(1234)
 # Set path

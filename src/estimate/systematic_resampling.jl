@@ -17,7 +17,6 @@ Reindexing and reweighting samples from a degenerate distribution
 """
 function systematic_resampling(m, weight)
 
-
     npart = length(weight)
     weight = weight'
     cweight = cumsum(weight')

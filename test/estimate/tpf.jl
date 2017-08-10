@@ -135,8 +135,6 @@ good_likelihoods_adaptive = h5read("$path/../reference/tpf_test_likelihoods.h5",
 good_likelihoods_random = h5read("$path/../reference/tpf_test_likelihoods_random.h5", "test_likelihoods")
 
 if (n_particles==4000) & (adaptive) & (typeof(m) == AnSchorfheide{Float64})
-    @show lik 
-    @show good_likelihoods_random
     @test_matrix_approx_eq lik good_likelihoods_random
     println("Test passed for AnSchorfheide with 4000 particles and adaptive φ schedule.")
 end
@@ -146,7 +144,9 @@ if ((n_particles == 4000) & !adaptive) & (typeof(m) == AnSchorfheide{Float64})
     println("Test passed for AnSchorfheide with 4000 particles and fixed φ schedule.")
 end
 
-#####The following code regenerates the test comparison that we use to compare. DO NOT RUN (unless you are sure that the new tpf.jl is correct).
+##### The following code regenerates the test comparison that we use to compare. 
+##### DO NOT RUN (unless you are sure that the new tpf.jl is correct).
+
 #Seeded, adaptive resampling; fixed tempering schedule of 0.25->0.5->1
 # h5open("$path/../reference/tpf_test_likelihoods_random.h5","w") do file
 #     write(file,"test_likelihoods",lik)
