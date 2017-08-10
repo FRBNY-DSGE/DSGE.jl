@@ -56,17 +56,10 @@ function optimize_setup(m::AbstractModel, adaptive::Bool)
             R  = h5read(file, "R")
             S2 = h5read(file, "S2")
             Φ  = h5read(file, "Phi")
-
-	    # Write rand_mat to h5 for Matlab to read for comparison
-            rand_mat = randn(size(S2,1),1)    	
-	    h5open("$path/../reference/mutationRandomMatrix.h5","w") do file
-                write(file, "rand_mat", rand_mat)
-    	    end
-            m<=Setting(:tpf_rand_mat,rand_mat)
             
             # Set variables within system
     	    transition_equation = Transition(Φ, R)
-    	    measurement_equation = Measurement(B,squeeze(A,2),S2,H,rand_mat,R)
+    	    measurement_equation = Measurement(B,squeeze(A,2),S2,H,R,R)
     	    system = System(transition_equation, measurement_equation)
             
             # Parameters given in Schorfheide's MATLAB code
