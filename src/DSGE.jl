@@ -72,7 +72,7 @@ module DSGE
         prior, mutation, multinomial_resampling, systematic_resampling, 
         mutation, smc, nearestSPD, tpf, tpf_loop,tpf_refactor, mutation_problem,
         mutation_problem2, mutation_problem3, mutation_small, tpf_fixed_phi, 
-        mutation_matlab, tpf_matlab, solve_inefficiency, kalman_filter_likvec, 
+        mutation_matlab, tpf_matlab, solve_inefficiency, solve_inefficiency_refactor, kalman_filter_likvec, 
 
 
         # forecast/
@@ -161,6 +161,7 @@ module DSGE
     include("estimate/mutation_small.jl")
     include("estimate/tpf/tpf_fixed_phi.jl")
     include("estimate/tpf/solve_inefficiency.jl")
+    include("estimate/tpf/solve_inefficiency_refactor.jl")
     include("estimate/kalman_filter_likvec.jl")
     include("estimate/parallel_breaking.jl")
 

@@ -152,11 +152,11 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
                 
                 if adaptive
                     # Set φ_new to the solution of the inefficiency function over interval
-                    φ_new = fzero(init_ineff_func, φ_old, 1.0, xtol=xtol)
                     ineff_check = solve_inefficiency(1.0, φ_old, y_t, p_error, HH_t)
-
                     if ineff_check <= r_star
                         φ_new = 1.0
+                    else
+                        φ_new = fzero(init_ineff_func, φ_old, 1.0, xtol=xtol)
                     end
                 else
                     φ_new = 0.5
