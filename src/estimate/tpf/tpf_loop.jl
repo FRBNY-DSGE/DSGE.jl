@@ -72,7 +72,7 @@ function tpf_loop{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε
 
         converged = false
-        φ_old = 0
+        φ_old = 0.001
         φ_min = 0.001
         
         oldweight = ones(n_particles)
@@ -80,13 +80,16 @@ function tpf_loop{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{
             tic()
             # Error for each particle
             p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered
-            @show mean(p_error,2)
-            incwt=ones(n_particles)
+            #@show mean(p_error,2)
+   #=         incwt=ones(n_particles)
             
             for i=1:n_particles
                 incwt[i] = -.5*(p_error[:,i]'*inv(EE)*p_error[:,i])[1]
+                #check what's going on here
                 oldweight[i] = weights[i]
             end
+            println("old weights")
+            @show mean(oldweight)
             wt_kernel = incwt
             ess0 = ineff_func_h(φ_min, φ_old, wt_kernel, n_particles,r_star)
             ess1 = ineff_func_h(1.0, φ_old, wt_kernel, n_particles,r_star)
@@ -108,74 +111,114 @@ function tpf_loop{S<:AbstractFloat}(m::AbstractModel, yy::Array, system::System{
                     weights[i] = (2*pi)^(length(y_t)/2)*(det(EE))^(-1/2)*φ_new^(length(y_t)/2)*exp(φ_new*wt_kernel[i])*oldweight[i]
                 end
             end
-            @show mean(weights)
-            φ_old = φ_new
-            φ_min = φ_old
-            weights = weights ./ mean(weights)
-            id = multinomial_resampling(weights)
-            s_lag_tempered = s_lag_tempered[:,id]
-            ε=ε[:,id]
-            loglik = log(mean(weights))
-            weights = ones(n_particles)
-            lik[t] += loglik
-            #mutate
-            s_init = s_lag_tempered
-            @show φ_new
-            for k = 1: N_MH
-                ε_new = ε + c*randn(length(y_t),n_particles)
-                acpt = 0
-                for j = 1:n_particles
-                    s_new_e = TTT*s_init[:,j]+sqrtS2_t*ε_new[:,j]
-                    s_init_e = TTT*s_init[:,j] + sqrtS2_t*ε[:,j]
-                    error_new = y_t - ZZ_t*s_new_e - DD_t
-                    error_init = y_t - ZZ_t*s_init_e - DD_t
-
-                    post_new = log(pdf(MvNormal(zeros(length(y_t)),EE_t),error_new)*pdf(MvNormal(zeros(length(ε_new[:,j])),eye(length(ε_new[:,j]))),ε_new[:,j]))
-                    post_init = log(pdf(MvNormal(zeros(length(y_t)),EE_t),error_init)[1]*pdf(MvNormal(zeros(length(ε[:,j])),eye(length(ε[:,j]))),ε[:,j])[1])
-                    α = exp(φ_new*(post_new-post_init))
-                    if rand() <α
-                        ε = ε_new
-                        s_t_nontempered[:,j] = s_new_e
-                        acpt += 1
-                    end
-                end
-                acpt_rate = sum(acpt)/n_particles
-                c = c*(0.95+0.1*exp(20*(acpt_rate-0.4))/(1+exp(20*(acpt_rate-0.4))))
+=#
+            initialize = (φ_old==0.001)
+     #=       @show initialize
+            for j=1:n_particles
+                weights[j] = incremental_weight(φ_new, φ_old,y_t,p_error[:,j],EE_t,initialize=initialize)
             end
+            =#          
+            init_Ineff_func(φ) = solve_inefficiency(φ,φ_old,y_t,p_error,EE_t,initialize=initialize)-r_star
+            if prod(sign([init_Ineff_func(φ_old),init_Ineff_func(1.0)])) ==-1
+                φ_new = fzero(init_Ineff_func,φ_old,1.0,xtol=xtol)
+                ineff_check = solve_inefficiency(1.0,φ_old,y_t,p_error,EE_t)
+                if ineff_check <=r_star
+                    φ_new = 1.0
+                    converged=true
+                end
+                for j=1:n_particles
+                    weights[j]=incremental_weight(φ_new,φ_old,y_t,p_error[:,j],EE,initialize=initialize)
+                end
+
+                println("before normalize")
+                @show mean(weights)
+                weights = weights./mean(weights)        
+                id = multinomial_resampling(weights)
+                s_lag_tempered = s_lag_tempered[:,id]
+                ε= ε[:,id]
+               @show mean(weights)
+                loglik= log(mean(weights))
+                weights=ones(n_particles)
+         
+                φ_old = φ_new
+                φ_min = φ_old
+        
+                lik[t] += loglik
+               
+                c= update_c!(c,accept_rate,target)
+                accept_vec = zeros(n_particles)
+                out = @sync @parallel (hcat) for i=1:n_particles
+                    mutation(system,y_t,s_lag_tempered[:,i],ε[:,i],c,N_MH,nonmissing) 
+                end
+                for i=1:n_particles
+                    s_t_nontempered[:,i] = out[i][1]
+                    ε[:,i]=out[i][2]
+                    accept_vec[i]=out[i][3]
+                end
+                accept_rate = mean(accept_vec)
+                φ_old = φ_new
+                
+                #mutate
+        #=        s_init = s_lag_tempered
+                @show φ_new
+                for k = 1: N_MH
+                    ε_new = ε + c*randn(length(y_t),n_particles)
+                    acpt = 0
+                    for j = 1:n_particles
+                        s_new_e = TTT*s_init[:,j]+sqrtS2_t*ε_new[:,j]
+                        s_init_e = TTT*s_init[:,j] + sqrtS2_t*ε[:,j]
+                        error_new = y_t - ZZ_t*s_new_e - DD_t
+                        error_init = y_t - ZZ_t*s_init_e - DD_t
+                        
+                        post_new = log(pdf(MvNormal(zeros(length(y_t)),EE_t),error_new)*pdf(MvNormal(zeros(length(ε_new[:,j])),eye(length(ε_new[:,j]))),ε_new[:,j]))
+                        post_init = log(pdf(MvNormal(zeros(length(y_t)),EE_t),error_init)[1]*pdf(MvNormal(zeros(length(ε[:,j])),eye(length(ε[:,j]))),ε[:,j])[1])
+                        α = exp(φ_new*(post_new-post_init))
+                        if rand() <α
+                            ε = ε_new
+                            s_t_nontempered[:,j] = s_new_e
+                            acpt += 1
+                        end
+                    end
+                    acpt_rate = sum(acpt)/n_particles
+                    c = c*(0.95+0.1*exp(20*(acpt_rate-0.4))/(1+exp(20*(acpt_rate-0.4))))
+                end
+=#               
+            else 
+                converged=true
+            end
+        end
             # Update value for c
             # c = update_c!(c, accept_rate, target)
             
             # Mutation Step
             #accept_vec = zeros(n_particles)
             #print("Mutation ")        
-           # tic()
+            # tic()
             
-           # print("(in parallel) ")                    
-           # out = @sync @parallel (hcat) for i=1:n_particles
-          #      mutation_loop(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, nonmissing)
-           ## end
+            # print("(in parallel) ")                    
+            # out = @sync @parallel (hcat) for i=1:n_particles
+            #      mutation_loop(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, nonmissing)
+            ## end
             #toc()                
             #for i = 1:n_particles
-             #   s_t_nontempered[:,i] = out[i][1]
-              #  ε[:,i] = out[i][2]
-              #  accept_vec[i] = out[i][3]
-           # end            
-                        
-            n_φ_steps[t] += 1
-                 
-            Neff[t] = (n_particles^2)/sum(weights.^2)
+            #   s_t_nontempered[:,i] = out[i][1]
+            #  ε[:,i] = out[i][2]
+            #  accept_vec[i] = out[i][3]
+            # end            
+    
+        n_φ_steps[t] += 1
             
-            s_lag_tempered = s_t_nontempered
-            print("Completion of one period ")
-            toc()
-        end
-        @show lik[t]
-    end
+    Neff[t] = (n_particles^2)/sum(weights.^2)
+
+    s_lag_tempered = s_t_nontempered
+    print("Completion of one period ") 
+    toc()
+    @show lik[t]
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("=============================================")
     end
-
+end
     # Return vector of likelihood indexed by time step and Neff
     return Neff[n_presample_periods + 1:end], lik[n_presample_periods + 1:end]
 end
