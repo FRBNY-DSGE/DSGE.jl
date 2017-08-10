@@ -90,7 +90,6 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         RRR_t           = RRR[:,nonmissing]
         sqrtS2_t        = RRR_t*get_chol(QQ_t)'
         n_observables_t = length(y_t)
-        ε               = zeros(n_observables_t)
         
         # Draw random shock ε
         ε_initial = randn(n_observables_t, n_particles)
@@ -99,7 +98,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε_initial
         
         # Error for each particle
-        p_error = broadcast(+, y_t - DD_t, -ZZ_t*s_t_nontempered)
+        p_error = broadcast(-,y_t - DD_t,ZZ_t*s_t_nontempered)
 
         # Solve for initial tempering parameter φ_1
         if adaptive
@@ -129,7 +128,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε
         
         # Calculate error for each particle
-        p_error = broadcast(+, y_t - DD_t, -ZZ_t*s_t_nontempered) 
+        p_error = broadcast(-, y_t - DD_t, ZZ_t*s_t_nontempered) 
         
         # If fixed φ schedule, set inefficiency to a value trivially greater than r_star
         ineff_check = adaptive ? solve_inefficiency(1.0, φ_1, y_t, p_error, HH_t) : r_star + 1
@@ -146,7 +145,6 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
 
             # Define inefficiency function
             init_ineff_func(φ) = solve_inefficiency(φ, φ_old, y_t, p_error, HH_t) - r_star
-            φ_interval = [φ_old, 1.0]
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
 
             # The below boolean checks that solution exists within interval
@@ -154,7 +152,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
                 
                 if adaptive
                     # Set φ_new to the solution of the inefficiency function over interval
-                    φ_new = fzero(init_ineff_func, φ_interval, xtol=xtol)
+                    φ_new = fzero(init_ineff_func, φ_old, 1.0, xtol=xtol)
                     ineff_check = solve_inefficiency(1.0, φ_old, y_t, p_error, HH_t)
 
                     if ineff_check <= r_star
