@@ -1,4 +1,4 @@
-using DSGE, HDF5, DataFrames, ClusterManagers, Plots
+using HDF5, DataFrames, ClusterManagers, Plots
 using QuantEcon: solve_discrete_lyapunov
 
 # Establish path
@@ -108,6 +108,8 @@ n_particles = 4000
 if parallel
     my_procs = addprocs_sge(10,queue="background.q")
     @everywhere using DSGE
+else
+    using DSGE
 end
 
 ### Tests:
