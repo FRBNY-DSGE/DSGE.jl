@@ -1,7 +1,7 @@
 """
 ```
 solve_inefficiency{S<:AbstractFloat}(φ_new::S, φ_old::S, y_t::Array{S, 1}, p_error::Array{S,2}, 
-                                     EE::Array{S,2}; initialize::Bool=false)
+                                     HH::Array{S,2}; initialize::Bool=false)
 ```
 Returns the value of the ineffeciency function InEff(φₙ), where:
 
@@ -22,7 +22,7 @@ Where ∑ is over j=1...M particles, and incremental weight is:
 - `φ_old`: φₙ₋₁
 - `y_t`: vector of observables for time t
 - `p_error`: (`n_states` x `n_particles`) matrix of particles' errors yₜ - Ψ(sₜʲ'ⁿ⁻¹) in columns
-- `EE`: measurement error covariance matrix, ∑ᵤ
+- `HH`: measurement error covariance matrix, ∑ᵤ
 
 ### Keyword Arguments
 
@@ -33,26 +33,26 @@ Where ∑ is over j=1...M particles, and incremental weight is:
 
 """
 function solve_inefficiency{S<:AbstractFloat}(φ_new::S, φ_old::S, y_t::Array{S,1}, 
-                            p_error::Array{S,2}, EE::Array{S,2}; initialize::Bool=false)
+                            p_error::Array{S,2}, HH::Array{S,2}; initialize::Bool=false)
 
     n_particles = size(p_error, 2)
     n_obs       = length(y_t)
     w           = zeros(n_particles)
-    inv_EE      = inv(EE)
-    det_EE      = det(EE)
+    inv_HH      = inv(HH)
+    det_HH      = det(HH)
 
     # Inefficiency function during initialization
     if initialize
         for i=1:n_particles
-            w[i] = ((φ_new/(2*pi))^(n_obs/2) * (det_EE^(-1/2)) * exp(-1/2 * p_error[:,i]' * 
-                                                φ_new * inv_EE * p_error[:,i]))[1]
+            w[i] = ((φ_new/(2*pi))^(n_obs/2) * (det_HH^(-1/2)) * exp(-1/2 * p_error[:,i]' * 
+                                                φ_new * inv_HH * p_error[:,i]))[1]
         end
     
     # Inefficiency function during tempering steps
     else
         for i=1:n_particles
             w[i] = (φ_new/φ_old)^(n_obs/2) * exp(-1/2 * p_error[:,i]' * 
-                                                 (φ_new-φ_old) * inv_EE * p_error[:,i])[1]
+                                                 (φ_new-φ_old) * inv_HH * p_error[:,i])[1]
         end
     end
     W = w/mean(w)
