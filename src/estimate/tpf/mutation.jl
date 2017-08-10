@@ -37,7 +37,8 @@ function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::
     #------------------------------------------------------------------------
     DD     = system[:DD][nonmissing]
     ZZ     = system[:ZZ][nonmissing,:]
-    EE     = system[:EE][nonmissing,nonmissing]
+    HH     = system[:EE] + system[:MM]*system[:QQ]*system[:MM]'
+    HH     = HH[nonmissing,nonmissing]
     RRR    = system[:RRR][:,nonmissing]
     TTT    = system[:TTT]
     QQ     = system[:QQ][nonmissing,nonmissing]
@@ -73,9 +74,9 @@ function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::
         error_init = y_t - ZZ*s_init_e - DD
 
         # Calculate posteriors
-        post_new = log(pdf(MvNormal(zeros(n_obs), EE), error_new)[1] * 
+        post_new = log(pdf(MvNormal(zeros(n_obs), HH), error_new)[1] * 
                        pdf(MvNormal(zeros(n_states), eye(n_states, n_states)), ε_new)[1])
-        post_init = log(pdf(MvNormal(zeros(n_obs), EE), error_init)[1] * 
+        post_init = log(pdf(MvNormal(zeros(n_obs), HH), error_init)[1] * 
                         pdf(MvNormal(zeros(n_states), eye(n_states, n_states)), ε_init)[1])
 
         # Calculate α, probability of accepting the new particle 

@@ -33,8 +33,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
     # Unpack system
     RRR = system[:RRR]
     TTT = system[:TTT]
-    #EE  = system[:EE]
-    EE = system[:EE] + system[:MM]*system[:QQ]*system[:MM]'
+    HH  = system[:EE] + system[:MM]*system[:QQ]*system[:MM]'
     DD  = system[:DD]
     ZZ  = system[:ZZ]
     QQ  = system[:QQ]    
@@ -59,12 +58,11 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
     T                   = size(data,2)
     lik                 = zeros(T)
     Neff                = zeros(T)
-    n_φ_steps           = ones(T)
     times               = zeros(T)
         
     # Draw initial particles from the distribution of s₀: N(s₀, P₀) 
-    s_lag_tempered = repmat(s0, 1, n_particles) + Matrix(chol(P0))'*randn(n_states, n_particles)
-
+#    s_lag_tempered = repmat(s0, 1, n_particles) + Matrix(chol(P0))'*randn(n_states, n_particles)
+    s_lag_tempered = broadcast(+, s0, Matrix(chol(P0))'*randn(n_states, n_particles))
     for t=1:T
 
         tic()
@@ -83,7 +81,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         y_t             = y_t[nonmissing]        
         ZZ_t            = ZZ[nonmissing,:]
         DD_t            = DD[nonmissing]
-        EE_t            = EE[nonmissing,nonmissing]
+        HH_t            = HH[nonmissing,nonmissing]
         QQ_t            = QQ[nonmissing,nonmissing]
         RRR_t           = RRR[:,nonmissing]
         sqrtS2_t        = RRR_t*get_chol(QQ_t)'
@@ -102,7 +100,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         mean(p_error,2)
         # Solve for initial tempering parameter φ_1
         if adaptive
-            init_Ineff_func(φ) = solve_inefficiency(φ, 2.0*pi, y_t, p_error, EE_t, 
+            init_Ineff_func(φ) = solve_inefficiency(φ, 2.0*pi, y_t, p_error, HH_t, 
                                                     initialize=true) - r_star
             φ_1 = fzero(init_Ineff_func, 1e-30, 1.0, xtol=xtol)
         else
@@ -116,7 +114,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
 
         # Correct and resample particles
         loglik, s_lag_tempered, ε, id = correction_selection!(φ_1, 0.0, y_t, p_error,
-                                                 s_lag_tempered, ε_initial, EE_t, n_particles, 
+                                                 s_lag_tempered, ε_initial, HH_t, n_particles, 
                                                  initialize=true)
         # Update likelihood
         lik[t] += loglik
@@ -132,7 +130,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered 
         
         # If fixed φ schedule, set inefficiency to a value trivially greater than r_star
-        ineff_check = adaptive ? solve_inefficiency(1.0, φ_1, y_t, p_error, EE_t) : r_star + 1
+        ineff_check = adaptive ? solve_inefficiency(1.0, φ_1, y_t, p_error, HH_t) : r_star + 1
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             adaptive ? println("Adaptive φ Schedule:") : println("Fixed φ Schedule:")
@@ -145,7 +143,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         while ineff_check > r_star
 
             # Define inefficiency function
-            init_ineff_func(φ) = solve_inefficiency(φ, φ_old, y_t, p_error, EE_t) - r_star
+            init_ineff_func(φ) = solve_inefficiency(φ, φ_old, y_t, p_error, HH_t) - r_star
             φ_interval = [φ_old, 1.0]
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
 
@@ -157,7 +155,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
                 if adaptive
                     # Set φ_new to the solution of the inefficiency function over interval
                     φ_new = fzero(init_ineff_func, φ_interval, xtol=xtol)
-                    ineff_check = solve_inefficiency(1.0, φ_old, y_t, p_error, EE_t)
+                    ineff_check = solve_inefficiency(1.0, φ_old, y_t, p_error, HH_t)
 
                     if ineff_check <= r_star
                         φ_new = 1.0
@@ -172,7 +170,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
 
                 # Correct and resample particles
                 loglik, s_lag_tempered, ε, id = correction_selection!(φ_new, φ_old, y_t, p_error,
-                                                        s_lag_tempered, ε, EE_t, n_particles)
+                                                        s_lag_tempered, ε, HH_t, n_particles)
 
                 # Update likelihood
                 lik[t] += loglik
@@ -220,7 +218,6 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
                 
                 # Update φ
                 φ_old = φ_new
-                n_φ_steps[t] += 1
 
             # If no solution exists within interval, set inefficiency to r_star
             else 
@@ -251,7 +248,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
 
         # Correct and resample particles.
         loglik, s_lag_tempered, ε, id = correction_selection!(φ_new, φ_old, y_t, p_error,
-                                                     s_lag_tempered, ε, EE_t, n_particles)
+                                                     s_lag_tempered, ε, HH_t, n_particles)
         # Update likelihood
         lik[t] += loglik
 
@@ -323,7 +320,7 @@ end
 """
 ```
 correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,2}, 
-    s_lag_tempered::Array{S,2}, ε::Array{S,2}, EE::Array{S,2}, n_particles::Int; 
+    s_lag_tempered::Array{S,2}, ε::Array{S,2}, HH::Array{S,2}, n_particles::Int; 
     initialize::Bool=false)
 ```
 Calculate densities, normalize and reset weights, call multinomial resampling, update state and 
@@ -336,7 +333,7 @@ error vectors, reset error vectors to 1,and calculate new log likelihood.
 - `p_error::Array{S,1}`: A single particle's error: y_t - Ψ(s_t)
 - `s_lag_tempered::Array{S,2}`: particles' 'final' tempered states from previous period
 - `ε::Array{S,2}`: particles' shocks, corresponding to s_lag_tempered
-- `EE::Array{S,2}`: measurement error covariance matrix, ∑ᵤ
+- `HH::Array{S,2}`: measurement error covariance matrix, ∑ᵤ
 - `n_particles::Int`: number of particles
 
 ### Keyword Arguments
@@ -351,13 +348,13 @@ error vectors, reset error vectors to 1,and calculate new log likelihood.
 """
 function correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, 
                                    p_error::Array{S,2}, s_lag_tempered::Array{S,2}, ε::Array{S,2},
-                                   EE::Array{S,2}, n_particles::Int; initialize::Bool=false)
+                                   HH::Array{S,2}, n_particles::Int; initialize::Bool=false)
     # Initialize vector
     incremental_weights = zeros(n_particles)
     
     # Calculate initial weights
     for n=1:n_particles
-        incremental_weights[n] = incremental_weight(φ_new, φ_old, y_t, p_error[:,n], EE, 
+        incremental_weights[n] = incremental_weight(φ_new, φ_old, y_t, p_error[:,n], HH, 
                                                     initialize=initialize)
     end   
 
@@ -380,14 +377,14 @@ end
 """
 ```
 incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,1}, 
-    EE::Array{S,2}; initialize::Bool=false)
+    HH::Array{S,2}; initialize::Bool=false)
 ```
 ### Inputs
 - `φ_new::S`: current φ 
 - `φ_old::S`: φ value before last
 - `y_t::Array{S,1}`: Vector of observables for time t
 - `p_error::Array{S,1}`: A single particle's error: y_t - Ψ(s_t)
-- `EE::Array{S,2}`: Measurement error covariance matrix
+- `HH::Array{S,2}`: Measurement error covariance matrix
 
 ### Keyword Arguments
 - `initialize::Bool`: Flag indicating whether one is solving for incremental weights during 
@@ -397,16 +394,16 @@ incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::A
 - Returns the incremental weight of single particle
 """
 function incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,1}, 
-                                   EE::Array{S,2}; initialize::Bool=false)
+                                   HH::Array{S,2}; initialize::Bool=false)
 
     # Initialization step (using 2π instead of φ_old)
     if initialize
-        return (φ_new/(2*pi))^(length(y_t)/2) * (det(EE)^(-1/2)) * 
-            exp(-1/2 * p_error' * φ_new * inv(EE) * p_error)[1]
+        return (φ_new/(2*pi))^(length(y_t)/2) * (det(HH)^(-1/2)) * 
+            exp(-1/2 * p_error' * φ_new * inv(HH) * p_error)[1]
     
     # Non-initialization step (tempering and final iteration)
     else
         return (φ_new/φ_old)^(length(y_t)/2) * 
-            exp(-1/2 * p_error' * (φ_new - φ_old) * inv(EE) * p_error)[1]
+            exp(-1/2 * p_error' * (φ_new - φ_old) * inv(HH) * p_error)[1]
     end
 end
