@@ -86,7 +86,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         EE_t            = EE[nonmissing,nonmissing]
         QQ_t            = QQ[nonmissing,nonmissing]
         RRR_t           = RRR[:,nonmissing]
-        sqrtS2_t        = RRR_t*get_chol(QQ_t)'
+        sqrtS2_t        = RRR_t*get_chol_refactor(QQ_t)'
         n_observables_t = length(y_t)
         ε               = zeros(n_observables_t)
         
@@ -115,7 +115,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         end
 
         # Correct and resample particles
-        loglik, s_lag_tempered, ε, id = correction_selection!(φ_1, 0.0, y_t, p_error,
+        loglik, s_lag_tempered, ε, id = correction_selection_refactor!(φ_1, 0.0, y_t, p_error,
                                                  s_lag_tempered, ε_initial, EE_t, n_particles, 
                                                  initialize=true)
         # Update likelihood
@@ -171,14 +171,14 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
                 end
 
                 # Correct and resample particles
-                loglik, s_lag_tempered, ε, id = correction_selection!(φ_new, φ_old, y_t, p_error,
+                loglik, s_lag_tempered, ε, id = correction_selection_refactor!(φ_new, φ_old, y_t, p_error,
                                                         s_lag_tempered, ε, EE_t, n_particles)
 
                 # Update likelihood
                 lik[t] += loglik
                 
                 # Update value for c
-                c = update_c!(c, accept_rate, target)
+                c = update_c_refactor!(c, accept_rate, target)
                 
                 if VERBOSITY[verbose] >= VERBOSITY[:low]
                     if VERBOSITY[verbose] >= VERBOSITY[:high]
@@ -303,7 +303,7 @@ get_chol{S<:Float64}(mat::Array{S,2})
 Calculate and return the Cholesky of a matrix.
 
 """
-@inline function get_chol{S<:Float64}(mat::Array{S,2})
+@inline function get_chol_refactor{S<:Float64}(mat::Array{S,2})
     return Matrix(chol(nearestSPD(mat)))
 end
 
@@ -315,7 +315,7 @@ Updates value of c by expression that is function of the target and mean accepta
 Returns the new c, in addition to storing it in the model settings.
 
 """
-@inline function update_c!{S<:Float64}(c_in::S, accept_in::S, target_in::S)
+@inline function update_c_refactor!{S<:Float64}(c_in::S, accept_in::S, target_in::S)
     c_out = c_in*(0.95 + 0.1*exp(20*(accept_in - target_in))/(1 + exp(20*(accept_in - target_in))))
     return c_out
 end
@@ -349,7 +349,7 @@ error vectors, reset error vectors to 1,and calculate new log likelihood.
 - `ε::Array{S,2}`: resampled shocks from previous period
 - `id::Vector{Int}`: vector of indices corresponding to resampled particles
 """
-function correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, 
+function correction_selection_refactor!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, 
                                    p_error::Array{S,2}, s_lag_tempered::Array{S,2}, ε::Array{S,2},
                                    EE::Array{S,2}, n_particles::Int; initialize::Bool=false)
     # Initialize vector
@@ -357,7 +357,7 @@ function correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}
     
     # Calculate initial weights
     for n=1:n_particles
-        incremental_weights[n] = incremental_weight(φ_new, φ_old, y_t, p_error[:,n], EE, 
+        incremental_weights[n] = incremental_weight_refactor(φ_new, φ_old, y_t, p_error[:,n], EE, 
                                                     initialize=initialize)
     end   
 
@@ -396,7 +396,7 @@ incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::A
 ### Output
 - Returns the incremental weight of single particle
 """
-function incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,1}, 
+function incremental_weight_refactor{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,1}, 
                                    EE::Array{S,2}; initialize::Bool=false)
 
     # Initialization step (using 2π instead of φ_old)
