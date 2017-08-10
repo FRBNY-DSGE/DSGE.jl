@@ -52,17 +52,21 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
     # Set number of presampling periods
     n_presample_periods = (include_presample) ? 0 : get_setting(m, :n_presample_periods)
     
-    # Initialization
-    n_observables       = size(QQ,1)
-    n_states            = size(ZZ,2)
-    T                   = size(data,2)
-    lik                 = zeros(T)
-    Neff                = zeros(T)
-    times               = zeros(T)
+    # Initialization of constants and output vectors
+    n_observables = size(QQ,1)
+    n_states      = size(ZZ,2)
+    T             = size(data,2)
+    lik           = zeros(T)
+    Neff          = zeros(T)
+    times         = zeros(T)
+
+    #--------------------------------------------------------------
+    # Main Algorithm: Tempered Particle Filter
+    #--------------------------------------------------------------
         
     # Draw initial particles from the distribution of s₀: N(s₀, P₀) 
-#    s_lag_tempered = repmat(s0, 1, n_particles) + Matrix(chol(P0))'*randn(n_states, n_particles)
     s_lag_tempered = broadcast(+, s0, Matrix(chol(P0))'*randn(n_states, n_particles))
+
     for t=1:T
 
         tic()
@@ -95,9 +99,8 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε_initial
         
         # Error for each particle
-        p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered
+        p_error = broadcast(+, y_t - DD_t, -ZZ_t*s_t_nontempered)
 
-        mean(p_error,2)
         # Solve for initial tempering parameter φ_1
         if adaptive
             init_Ineff_func(φ) = solve_inefficiency(φ, 2.0*pi, y_t, p_error, HH_t, 
@@ -119,15 +122,14 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         # Update likelihood
         lik[t] += loglik
         
-        # Tempering Initialization
-        count = 2 # Accounts for initialization and final mutation
+        # Tempering initialization
         φ_old = φ_1
 
         # Simulate propagation forward
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε
         
         # Calculate error for each particle
-        p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered 
+        p_error = broadcast(+, y_t - DD_t, -ZZ_t*s_t_nontempered) 
         
         # If fixed φ schedule, set inefficiency to a value trivially greater than r_star
         ineff_check = adaptive ? solve_inefficiency(1.0, φ_1, y_t, p_error, HH_t) : r_star + 1
@@ -147,9 +149,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
             φ_interval = [φ_old, 1.0]
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
 
-            count += 1
-
-            # Check solution exists within interval
+            # The below boolean checks that solution exists within interval
             if prod(sign(fphi_interval)) == -1 || !adaptive
                 
                 if adaptive
@@ -214,7 +214,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
                 accept_rate = mean(accept_vec)
 
                 # Get error for all particles
-                p_error = repmat(y_t - DD_t, 1, n_particles) - ZZ_t*s_t_nontempered
+                p_error = broadcast(+, y_t - DD_t, -ZZ_t*s_t_nontempered)
                 
                 # Update φ
                 φ_old = φ_new
@@ -393,8 +393,8 @@ incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::A
 ### Output
 - Returns the incremental weight of single particle
 """
-function incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,1}, 
-                                   HH::Array{S,2}; initialize::Bool=false)
+@inline function incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, 
+                                       p_error::Array{S,1},HH::Array{S,2}; initialize::Bool=false)
 
     # Initialization step (using 2π instead of φ_old)
     if initialize

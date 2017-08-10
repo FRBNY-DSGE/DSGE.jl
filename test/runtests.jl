@@ -26,7 +26,7 @@ my_tests = [
             "estimate/mutation_RWMH", 
             "estimate/parallel_breaking",=#
             "estimate/tpf", 
-            "estimate/mutation",
+#=            "estimate/mutation",
             "data/misc",
             "data/load_data",
             "forecast/smooth",
@@ -35,7 +35,7 @@ my_tests = [
             "forecast/impulse_responses",
             "forecast/io",
             "forecast/forecast_one",
-            "analysis/means_bands"
+            "analysis/means_bands"=#
             ]
 
 for test in my_tests
