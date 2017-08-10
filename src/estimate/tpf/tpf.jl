@@ -98,7 +98,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε_initial
         
         # Error for each particle
-        p_error = broadcast(-,y_t - DD_t,ZZ_t*s_t_nontempered)
+        p_error = broadcast(+, y_t - DD_t, -ZZ_t*s_t_nontempered)
 
         # Solve for initial tempering parameter φ_1
         if adaptive
@@ -128,7 +128,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε
         
         # Calculate error for each particle
-        p_error = broadcast(-, y_t - DD_t, ZZ_t*s_t_nontempered) 
+        p_error = broadcast(+, y_t - DD_t, -ZZ_t*s_t_nontempered) 
         
         # If fixed φ schedule, set inefficiency to a value trivially greater than r_star
         ineff_check = adaptive ? solve_inefficiency(1.0, φ_1, y_t, p_error, HH_t) : r_star + 1
