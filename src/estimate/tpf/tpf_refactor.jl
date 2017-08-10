@@ -98,12 +98,11 @@ function tpf_refactor{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system
         # Error for each particle
         p_error = broadcast(-,y_t - DD_t,ZZ_t*s_t_nontempered)
 
-        mean(p_error,2)
         # Solve for initial tempering parameter φ_1
         if adaptive
-            init_Ineff_func(φ) = solve_inefficiency(φ, 2.0*pi, y_t, p_error, EE_t, 
+            init_Ineff_func(φ) = solve_inefficiency_refactor(φ, 2.0*pi, y_t, p_error, EE_t, 
                                                     initialize=true) - r_star
-            φ_1 = fzero(init_Ineff_func, 1e-30, 1.0, xtol=xtol)
+            φ_1 = fzero(init_Ineff_func, .001, 1.0, xtol=xtol)
         else
             φ_1 = 0.25
         end
@@ -131,7 +130,7 @@ function tpf_refactor{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system
         p_error = broadcast(-,y_t - DD_t,ZZ_t*s_t_nontempered)
         
         # If fixed φ schedule, set inefficiency to a value trivially greater than r_star
-        ineff_check = adaptive ? solve_inefficiency(1.0, φ_1, y_t, p_error, EE_t) : r_star + 1
+        ineff_check = adaptive ? solve_inefficiency_refactor(1.0, φ_1, y_t, p_error, EE_t) : r_star + 1
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             adaptive ? println("Adaptive φ Schedule:") : println("Fixed φ Schedule:")
@@ -144,7 +143,8 @@ function tpf_refactor{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system
         while ineff_check > r_star
 
             # Define inefficiency function
-            init_ineff_func(φ) = solve_inefficiency(φ, φ_old, y_t, p_error, EE_t) - r_star
+            init_ineff_func(φ) = solve_inefficiency_refactor(φ, φ_old, y_t, p_error, EE_t) - r_star
+            @show init_ineff_func
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
 
             count += 1
@@ -153,12 +153,13 @@ function tpf_refactor{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system
             if prod(sign(fphi_interval)) == -1 || !adaptive
                 
                 if adaptive
-                    # Set φ_new to the solution of the inefficiency function over interval
-                    φ_new = fzero(init_ineff_func, φ_old, 1.0, xtol=xtol)
-                    ineff_check = solve_inefficiency(1.0, φ_old, y_t, p_error, EE_t)
+                    ineff_check = solve_inefficiency_refactor(1.0, φ_old, y_t, p_error, EE_t)
 
                     if ineff_check <= r_star
                         φ_new = 1.0
+                    else
+                        # Set φ_new to the solution of the inefficiency function over interval
+                        φ_new = fzero(init_ineff_func, φ_old, 1.0, xtol=xtol)
                     end
                 else
                     φ_new = 0.5
@@ -206,6 +207,7 @@ function tpf_refactor{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system
                     s_t_nontempered[:,i] = out[i][1]
                     ε[:,i] = out[i][2]
                     accept_vec[i] = out[i][3]
+                   # c = out[i][3]
                 end
 
                 # Calculate average acceptance rate

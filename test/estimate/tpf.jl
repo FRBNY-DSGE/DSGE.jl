@@ -25,7 +25,7 @@ function setup_model(model_type::String, n_particles::Int64, adaptive::Bool, par
     m<=Setting(:tpf_r_star, 2.0)
     m<=Setting(:tpf_c_star, 0.1)
     m<=Setting(:tpf_accept_rate,0.5)
-    m<=Setting(:tpf_target, 0.25)
+    m<=Setting(:tpf_target, 0.4)
     m<=Setting(:tpf_n_mh_simulation, 2)
     m<=Setting(:n_presample_periods, 2)
     m<=Setting(:tpf_adaptive, adaptive)
