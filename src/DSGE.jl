@@ -69,8 +69,8 @@ module DSGE
 
 
         metropolis_hastings, compute_parameter_covariance, compute_moments, find_density_bands,
-        prior, mutation, mutation_testing, multinomial_resampling, systematic_resampling, 
-        mutation, smc, nearestSPD, tpf, tpf_testing, tpf_testing2, tpf_testing3, tpf_loop, mutation_problem,
+        prior, mutation, multinomial_resampling, systematic_resampling, 
+        mutation, smc, nearestSPD, tpf, tpf_loop, mutation_problem,
         mutation_problem2, mutation_problem3, mutation_small, tpf_fixed_phi, 
         mutation_matlab, tpf_matlab, solve_inefficiency, kalman_filter_likvec, 
 
@@ -152,11 +152,7 @@ module DSGE
     include("estimate/tpf/mutation.jl")
     include("estimate/tpf/mutation_matlab.jl")
     include("estimate/tpf/tpf_matlab.jl")
-    include("estimate/tpf/mutation_testing.jl")
     include("estimate/tpf/tpf.jl")
-    include("estimate/tpf/tpf_testing.jl")
-    include("estimate/tpf/tpf_testing2.jl")
-    include("estimate/tpf/tpf_testing3.jl")
     include("estimate/tpf/tpf_loop.jl")
     include("estimate/mutation_problem.jl")
     include("estimate/mutation_problem2.jl")
