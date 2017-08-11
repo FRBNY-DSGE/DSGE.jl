@@ -37,11 +37,12 @@ function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::
     #------------------------------------------------------------------------
     DD     = system[:DD][nonmissing]
     ZZ     = system[:ZZ][nonmissing,:]
-    HH     = system[:EE] + system[:MM]*system[:QQ]*system[:MM]'
-    HH     = HH[nonmissing,nonmissing]
-    RRR    = system[:RRR][:,nonmissing]
+    EE     = system[:EE][nonmissing,nonmissing]
+    MM     = system[:MM][nonmissing,:]
+    RRR    = system[:RRR]
     TTT    = system[:TTT]
-    QQ     = system[:QQ][nonmissing,nonmissing]
+    QQ     = system[:QQ]
+    HH     = EE + MM*QQ*MM'
     sqrtS2 = RRR*Matrix(chol(nearestSPD(QQ)))'
 
     # Initialize s_out and ε_out
