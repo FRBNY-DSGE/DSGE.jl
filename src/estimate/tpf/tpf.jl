@@ -265,46 +265,8 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
     @show log_lik
     @show lik[t]
 
-#=        φ_new = 1.0
+###
 
-        # Correct and resample particles.
-        loglik, id = correction_selection!(φ_new, φ_old, y_t, p_error, HH_t, n_particles)
-
-        # Update likelihood
-        lik[t] += loglik
-
-        # Update arrays for resampled indices
-        s_lag_tempered  = s_lag_tempered[:,id]
-        s_t_nontempered = s_t_nontempered[:,id]
-        ε               = ε[:,id]
-
-        # Update c
-        c = update_c!(c, accept_rate, target)
-        
-        # Final round of mutation
-        accept_vec = zeros(n_particles)
-
-        if parallel
-            # out = pmap(i -> mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, 
-            #            nonmissing), 1:n_particles)
-            out = @sync @parallel (hcat) for i=1:n_particles
-                mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c,N_MH, nonmissing)
-            end
-        else 
-            out = [mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, nonmissing) 
-                   for i=1:n_particles]
-        end
-        
-        # Unwrap output
-        for i = 1:n_particles
-            s_t_nontempered[:,i] = out[i][1]
-            ε[:,i] = out[i][2]
-            accept_vec[i] = out[i][3]
-        end
-        
-        # Store for next time iteration
-        accept_rate = mean(accept_vec)
-=#
         s_lag_tempered = s_t_nontempered
         print("Completion of one period ")
         toc()
