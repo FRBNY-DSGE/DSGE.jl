@@ -122,6 +122,9 @@ tic()
 neff, lik = tpf(m, data, sys, s0, P0)
 total_time = toc()
 
+kalman_out = DSGE.filter(m, data, s0, P0)
+kalman = kalman_out[:L_vec]
+@show sum(lik) - sum(kalman)
 # h5open("$path/../reference/output_likelihoods_ansch.h5","w") do f
 #     write(f,"julia_likelihoods",lik)
 # end
@@ -131,7 +134,7 @@ N_MH = get_setting(m, :tpf_n_mh_simulations)
 println("$n_particles Particles, $type_m, N_MH = $N_MH, elapsed time: $total_time seconds\n")
 
 # For comparison test
-good_likelihoods_adaptive = h5read("$path/../reference/tpf_test_likelihoods.h5","test_likelihoods")
+good_likelihoods_adaptive = h5read("$path/../reference/tpf_test_likelihoods.h5", "test_likelihoods")
 good_likelihoods_random = h5read("$path/../reference/tpf_test_likelihoods_random.h5", "test_likelihoods")
 
 if (n_particles==4000) & (adaptive) & (typeof(m) == AnSchorfheide{Float64})

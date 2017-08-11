@@ -31,13 +31,16 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
     #--------------------------------------------------------------
 
     # Unpack system
-    RRR = system[:RRR]
-    TTT = system[:TTT]
-    HH  = system[:EE] + system[:MM]*system[:QQ]*system[:MM]'
-    DD  = system[:DD]
-    ZZ  = system[:ZZ]
-    QQ  = system[:QQ]    
-    
+    RRR    = system[:RRR]
+    TTT    = system[:TTT]
+    HH     = system[:EE] + system[:MM]*system[:QQ]*system[:MM]'
+    DD     = system[:DD]
+    ZZ     = system[:ZZ]
+    QQ     = system[:QQ]    
+    EE     = system[:EE]
+    MM     = system[:MM]
+    sqrtS2 = RRR*get_chol(QQ)'
+
     # Get tuning parameters from the model
     r_star       = get_setting(m, :tpf_r_star)
     c            = get_setting(m, :tpf_c_star)
@@ -85,17 +88,16 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         y_t             = y_t[nonmissing]        
         ZZ_t            = ZZ[nonmissing,:]
         DD_t            = DD[nonmissing]
-        HH_t            = HH[nonmissing,nonmissing]
-        QQ_t            = QQ[nonmissing,nonmissing]
-        RRR_t           = RRR[:,nonmissing]
-        sqrtS2_t        = RRR_t*get_chol(QQ_t)'
+        EE_t            = EE[nonmissing, nonmissing]
+        MM_t            = MM[nonmissing,:]
+        HH_t            = EE_t + MM_t*QQ*MM_t'
         n_observables_t = length(y_t)
-        
+
         # Draw random shock ε
-        ε_initial = randn(n_observables_t, n_particles)
+        ε = randn(size(sqrtS2,2), n_particles)
 
         # Forecast forward one time step
-        s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε_initial
+        s_t_nontempered = TTT*s_lag_tempered + sqrtS2*ε
         
         # Error for each particle
         p_error = broadcast(+, y_t - DD_t, -ZZ_t*s_t_nontempered)
@@ -115,21 +117,21 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         end
 
         # Correct and resample particles
-        loglik, s_lag_tempered, ε, id = correction_selection!(φ_1, 0.0, y_t, p_error,
-                                                 s_lag_tempered, ε_initial, HH_t, n_particles, 
-                                                 initialize=true)
+        loglik, id = correction_selection!(φ_1, 0.0, y_t, p_error, HH_t, n_particles, 
+                                           initialize=true)
+        
+        # Update arrays for resampled indices
+        s_lag_tempered  = s_lag_tempered[:,id]
+        s_t_nontempered = s_t_nontempered[:,id]
+        ε               = ε[:,id]
+        p_error         = p_error[:,id]
+
         # Update likelihood
         lik[t] += loglik
         
         # Tempering initialization
         φ_old = φ_1
 
-        # Simulate propagation forward
-        s_t_nontempered = TTT*s_lag_tempered + sqrtS2_t*ε
-        
-        # Calculate error for each particle
-        p_error = broadcast(+, y_t - DD_t, -ZZ_t*s_t_nontempered) 
-        
         # If fixed φ schedule, set inefficiency to a value trivially greater than r_star
         ineff_check = adaptive ? solve_inefficiency(1.0, φ_1, y_t, p_error, HH_t) : r_star + 1
 
@@ -147,7 +149,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
             init_ineff_func(φ) = solve_inefficiency(φ, φ_old, y_t, p_error, HH_t) - r_star
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
 
-            # The below boolean checks that solution exists within interval
+            # The below boolean checks that a solution exists within interval
             if prod(sign(fphi_interval)) == -1 || !adaptive
                 
                 if adaptive
@@ -167,8 +169,12 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
                 end
 
                 # Correct and resample particles
-                loglik, s_lag_tempered, ε, id = correction_selection!(φ_new, φ_old, y_t, p_error,
-                                                        s_lag_tempered, ε, HH_t, n_particles)
+                loglik, id = correction_selection!(φ_new, φ_old, y_t, p_error, HH_t, n_particles)
+
+                # Update arrays for resampled indices
+                s_lag_tempered  = s_lag_tempered[:,id]
+                s_t_nontempered = s_t_nontempered[:,id]
+                ε               = ε[:,id]
 
                 # Update likelihood
                 lik[t] += loglik
@@ -242,13 +248,35 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         #--------------------------------------------------------------
         # Last Stage of Algorithm: φ_new := 1.0
         #--------------------------------------------------------------
+
+### PER REQUEST
+
+    # Initialize vector
+    incremental_weights = zeros(n_particles)
+    
+    # Calculate initial weights
+    for n=1:n_particles
+        incremental_weights[n] = incremental_weight(1.0, φ_old, y_t, p_error[:,n], HH_t, 
+                                                    initialize=true)
+    end   
+
+    log_lik = log(mean(incremental_weights))
+        
+    @show log_lik
+    @show lik[t]
+
 #=        φ_new = 1.0
 
         # Correct and resample particles.
-        loglik, s_lag_tempered, ε, id = correction_selection!(φ_new, φ_old, y_t, p_error,
-                                                     s_lag_tempered, ε, HH_t, n_particles)
+        loglik, id = correction_selection!(φ_new, φ_old, y_t, p_error, HH_t, n_particles)
+
         # Update likelihood
         lik[t] += loglik
+
+        # Update arrays for resampled indices
+        s_lag_tempered  = s_lag_tempered[:,id]
+        s_t_nontempered = s_t_nontempered[:,id]
+        ε               = ε[:,id]
 
         # Update c
         c = update_c!(c, accept_rate, target)
@@ -329,8 +357,6 @@ error vectors, reset error vectors to 1,and calculate new log likelihood.
 - `φ_old::S`: φ from last tempering iteration
 - `y_t::Array{S,1}`: (`n_observables` x 1) vector of observables at time t
 - `p_error::Array{S,1}`: A single particle's error: y_t - Ψ(s_t)
-- `s_lag_tempered::Array{S,2}`: particles' 'final' tempered states from previous period
-- `ε::Array{S,2}`: particles' shocks, corresponding to s_lag_tempered
 - `HH::Array{S,2}`: measurement error covariance matrix, ∑ᵤ
 - `n_particles::Int`: number of particles
 
@@ -340,13 +366,11 @@ error vectors, reset error vectors to 1,and calculate new log likelihood.
 
 ### Outputs
 - `loglik::S`: incremental log likelihood
-- `s_lag_tempered::Array{S,2}`: resampled tempered states from previous period
-- `ε::Array{S,2}`: resampled shocks from previous period
 - `id::Vector{Int}`: vector of indices corresponding to resampled particles
 """
 function correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, 
-                                   p_error::Array{S,2}, s_lag_tempered::Array{S,2}, ε::Array{S,2},
-                                   HH::Array{S,2}, n_particles::Int; initialize::Bool=false)
+                                   p_error::Array{S,2}, HH::Array{S,2}, n_particles::Int; 
+                                   initialize::Bool=false)
     # Initialize vector
     incremental_weights = zeros(n_particles)
     
@@ -362,14 +386,10 @@ function correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}
     # Resampling
     id = multinomial_resampling(normalized_weights)
     
-    # Update arrays for resampled indices
-    s_lag_tempered = s_lag_tempered[:,id]
-    ε = ε[:,id]
-
     # Calculate likelihood
     loglik = log(mean(incremental_weights))
     
-    return loglik, s_lag_tempered, ε, id
+    return loglik, id
 end
 
 """
@@ -392,7 +412,7 @@ incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::A
 - Returns the incremental weight of single particle
 """
 @inline function incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, 
-                                       p_error::Array{S,1},HH::Array{S,2}; initialize::Bool=false)
+                                       p_error::Array{S,1}, HH::Array{S,2}; initialize::Bool=false)
 
     # Initialization step (using 2π instead of φ_old)
     if initialize
