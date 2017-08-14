@@ -39,6 +39,7 @@ function estimate(m::AbstractModel, df::DataFrame;
     estimate(m, data; verbose=verbose, proposal_covariance=proposal_covariance,
              mle = mle, method = method, sample = sample)
 end
+
 function estimate(m::AbstractModel;
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix(),
@@ -50,6 +51,7 @@ function estimate(m::AbstractModel;
     estimate(m, df; verbose=verbose, proposal_covariance=proposal_covariance,
              mle = mle, method = method, sample = sample)
 end
+
 function estimate(m::AbstractModel, data::Matrix{Float64};
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix(),
@@ -132,7 +134,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
         return nothing
     end
 
-    if method == :MH
+    if get_setting(m,:sampling_method) == :MH
         ########################################################################################
         ### Step 3: Compute proposal distribution for Markov Chain Monte Carlo (MCMC)
         ###
@@ -206,7 +208,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
 
         metropolis_hastings(propdist, m, data, cc0, cc; verbose=verbose);
 
-    elseif method == :SMC
+    elseif get_setting(s, :sampling_method) == :SMC
         ########################################################################################
         ### Step 3: Run Sequential Monte Carlo (SMC)
         ###
