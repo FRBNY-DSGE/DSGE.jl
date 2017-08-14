@@ -93,10 +93,11 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::Sys
     # the final results
     T0 = include_presample ? 0 : n_presample_periods(m)
 
+    lik_vec=zeros(0)
     # Run Kalman filter, construct Kalman object, and return
-    out = kalman_filter(regime_inds, data, TTTs, RRRs, CCCs,
-              QQs, ZZs, DDs, EEs, z0, P0;
+         
+    out = kalman_filter_likvec(regime_inds, data, TTTs, RRRs, CCCs,
+              QQs, ZZs, DDs, EEs, lik_vec, z0, P0;
               allout = allout, n_presample_periods = T0)
-
     return Kalman(out...)
 end

@@ -507,17 +507,12 @@ function read_population_forecast(m::AbstractModel; verbose::Symbol = :low)
     if isnull(population_mnemonic)
         error("No population mnemonic provided")
     else
-        if use_population_forecast(m)
-            read_population_forecast(population_forecast_file, get(population_mnemonic); verbose = verbose)
-        else
-            DataFrame()
-        end
+        read_population_forecast(population_forecast_file, get(population_mnemonic); verbose = verbose)
     end
 end
 
 function read_population_forecast(filename::String, population_mnemonic::Symbol;
                                   verbose::Symbol = :low)
-
     if isfile(filename)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("Loading population forecast from $filename...")

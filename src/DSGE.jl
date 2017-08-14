@@ -66,9 +66,10 @@ module DSGE
         simulated_annealing, combined_optimizer, LBFGS_wrapper,
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
-        metropolis_hastings, compute_parameter_covariance, compute_moments,
-        find_density_bands, prior, mutation_RWMH, mutation_block_RWMH, resample, 
-        smc, nearest_spd, initial_draw,
+        metropolis_hastings, compute_parameter_covariance, compute_moments, find_density_bands,
+        prior, mutation,  resample, smc, nearest_spd, initial_draw,
+        tpf, tpf_refactor, multinomial_resampling, systematic_resampling, mutation_matlab,
+        tpf_matlab, solve_inefficiency, solve_inefficiency_refactor, kalman_filter_likvec,
 
         # forecast/
         load_draws, forecast_one,
@@ -88,7 +89,7 @@ module DSGE
         load_data, load_data_levels, load_cond_data_levels, load_fred_data,
         transform_data, save_data, get_data_filename,
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
-        hpadjust, oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
+        oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
         loggrowthtopct_annualized_percapita, loggrowthtopct_annualized, logleveltopct_annualized_percapita,
         logleveltopct_annualized,
         parse_data_series, collect_data_transforms, reverse_transform,
@@ -136,15 +137,24 @@ module DSGE
     include("estimate/hessian.jl")
     include("estimate/hessizero.jl")
     include("estimate/simulated_annealing.jl")
-    include("estimate/combined_optimizer.jl")
-    include("estimate/LBFGS.jl")
-    include("estimate/Nelder_Mead.jl")
+    include("estimate/smc/combined_optimizer.jl")
+    include("estimate/smc/LBFGS.jl")
     include("estimate/estimate.jl")
-    include("estimate/mutation_RWMH.jl")
-    include("estimate/mutation_block_RWMH.jl")
+    include("estimate/smc/mutation_RWMH.jl")
+    include("estimate/smc/mutation_block_RWMH.jl")
+    include("estimate/systematic_resampling.jl")
     include("estimate/resample.jl")
-    include("estimate/smc.jl")
+    include("estimate/smc/smc.jl")
     include("estimate/nearest_spd.jl")
+    include("estimate/tpf/multinomial_resampling.jl")
+    include("estimate/tpf/mutation.jl")
+    include("estimate/tpf/mutation_matlab.jl")
+    include("estimate/tpf/tpf_matlab.jl")
+    include("estimate/tpf/tpf.jl")
+    include("estimate/tpf/tpf_refactor.jl")
+    include("estimate/tpf/solve_inefficiency.jl")
+    include("estimate/tpf/solve_inefficiency_refactor.jl")
+    include("estimate/kalman_filter_likvec.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")
@@ -201,4 +211,6 @@ module DSGE
     include("models/an_schorfheide/measurement.jl")
     include("models/an_schorfheide/pseudo_measurement.jl")
     include("models/an_schorfheide/augment_states.jl")
+
+
 end

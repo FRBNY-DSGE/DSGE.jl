@@ -53,19 +53,28 @@ percapita(col, df, population_mnemonic)
 
 Converts data column `col` of DataFrame `df` to a per-capita value.
 
+The first method checks `hpfilter_population(m)`. If true, then it divides by
+the filtered population series. Otherwise it divides by the result of
+`parse_population_mnemonic(m)[1]`.
+
 ## Arguments
-- `col`: Symbol indicating which column of data to transform
-- `df`: DataFrame containining series for proper population measure and `col`
-- `population_mnemonic`: a mnemonic found in df for some population measure.
+
+- `col`: `Symbol` indicating which column of data to transform
+- `df`: `DataFrame` containining series for proper population measure and `col`
+- `population_mnemonic`: a mnemonic found in `df` for some population measure
 """
 function percapita(m::AbstractModel, col::Symbol, df::DataFrame)
-    population_mnemonic = parse_population_mnemonic(m)[1]
-    if isnull(population_mnemonic)
-        error("No population mnemonic provided")
+    if hpfilter_population(m)
+        population_mnemonic = Nullable(:filtered_population)
     else
-        percapita(col, df, get(population_mnemonic))
+        population_mnemonic = parse_population_mnemonic(m)[1]
+        if isnull(population_mnemonic)
+            error("No population mnemonic provided")
+        end
     end
+    percapita(col, df, get(population_mnemonic))
 end
+
 function percapita(col::Symbol, df::DataFrame, population_mnemonic::Symbol)
     df[col] ./ df[population_mnemonic]
 end
@@ -181,24 +190,6 @@ Calculates the quarter-to-quarter percentage change of a series.
 function oneqtrpctchange(y)
     100 * difflog(y)
 end
-
-
-"""
-```
-hpadjust(y, df)
-```
-
-Adjust series to compensate for differences between filtered and unfiltered population.
-## Arguments
-- `y`: A vector of data
-- `df`: DataFrame containing both a filtered and unfiltered population growth series
-"""
-function hpadjust(y, df; filtered_mnemonic=:filtered_population_growth,
-                         unfiltered_mnemonic=:unfiltered_population_growth)
-    y + 100 * (df[unfiltered_mnemonic] - df[filtered_mnemonic])
-end
-
-
 
 
 ## REVERSE TRANSFORMS

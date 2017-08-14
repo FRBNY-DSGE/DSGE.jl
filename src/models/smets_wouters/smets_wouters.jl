@@ -152,6 +152,7 @@ function init_model_indices!(m::SmetsWouters)
     for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
     for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(endogenous_states) end
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
+
 end
 
 
@@ -381,6 +382,15 @@ function init_parameters!(m::SmetsWouters)
     m <= parameter(:η_λ_w, 0.8936, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.50, 0.20), fixed=false,
                    description="η_λ_w: Moving average component in the wage markup shock.",
                    tex_label="\\eta_{\\lambda_w}")
+
+    m <= parameter(:e_y, 0.0, fixed=true, description = "e_y: Measurement error on GDP", tex_label="e_y")
+    m <= parameter(:e_L, 0.0, fixed = true, description = "e_L: Measurement error on hours worked", tex_label="e_L")
+    m <= parameter(:e_w, 0.0, fixed=true, description = "e_w: Measurement error on wages", tex_label = "e_w")
+    m <= parameter(:e_π, 0.0, fixed=true, description = "e_π: Measurement error on GDP deflator", tex_label= "e_π")
+    m <= parameter(:e_R, 0.0, fixed=true, description = "e_R: Measurement error on nonominal rate of interest", tex_label="e_R")
+    m <= parameter(:e_c, 0.0, fixed=true, description = "e_c: Measurement error on consumption", tex_label="e_c")
+    m <= parameter(:e_i, 0.0, fixed=true, description = "e_i: Measurement error on investment", tex_label="e_i")
+
 
     # steady states
     m <= SteadyStateParameter(:zstar, NaN, description="Steady-state growth rate of productivity", tex_label="\\z_*")

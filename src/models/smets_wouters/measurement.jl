@@ -82,6 +82,16 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
     ZZ[obs[:obs_investment], endo[:z_t]]       = 1.0
     DD[obs[:obs_investment]]                   = 100*(exp(m[:zstar])-1)
 
+    #Measurement error
+    EE[obs[:obs_gdp],1] = m[:e_y]^2
+    EE[obs[:obs_hours],2] = m[:e_L]^2
+    EE[obs[:obs_wages],3] = m[:e_w]^2
+    EE[obs[:obs_gdpdeflator],4] = m[:e_π]^2
+    EE[obs[:obs_nominalrate],5] = m[:e_R]^2
+    EE[obs[:obs_consumption],6] = m[:e_c]^2
+    EE[obs[:obs_investment],7] = m[:e_i]^2
+
+    #Variance of innovations
     QQ[exo[:g_sh], exo[:g_sh]]           = m[:σ_g]^2
     QQ[exo[:b_sh], exo[:b_sh]]           = m[:σ_b]^2
     QQ[exo[:μ_sh], exo[:μ_sh]]           = m[:σ_μ]^2
@@ -95,7 +105,7 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
     # unanticipated policy shock
     if shocks
         for i = 1:n_anticipated_shocks(m)
-            ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]*(TTT^i)
+            ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
             DD[obs[Symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
             QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_rm")]^2 / 16
         end
