@@ -329,6 +329,38 @@ function Distributions.rand(d::DegenerateDiagMvTDist, n::Int)
     return d.μ .+ d.σ*rand(TDist(d.ν), length(d), n)
 end
 
+"""
+```
+Distributions.rand(p::AbstractParameter{Float64,1},n::Int)
+```
+
+Generate `n` draws from the priors of each parameter in `p`.This returns a matrix of size
+`(length(p),n)`, where each column is a sample.
+"""
+function Distributions.rand(p::Array{AbstractParameter{Float64},1},ndraws::Int)
+    T = typeof(p[1].value)
+    nparams = length(p)
+    priorsim = Array{T}(nparams, ndraws)
+    for i in 1:ndraws
+        draw = Array{T}(nparams)
+        for j in 1:nparams
+            draw[j] =
+            if !p[j].fixed
+                prio = rand(p[j].prior.value)
+                # Resample until all prior draws are within the value bounds
+                while !(p[j].valuebounds[1] < prio < p[j].valuebounds[2])
+                    prio = rand(p[j].prior.value)
+                end
+                prio
+            else
+                p[j].value
+            end
+        end
+        priorsim[:,i] = draw
+    end
+    priorsim
+end
+
 # Compute the mean μ and standard deviation σ of a DSGE.RootInverseGamma object.
 
 # A Root Inverse Gamma / Nagasaki Scaled Chi2 Distribution's mean and standard deviation
