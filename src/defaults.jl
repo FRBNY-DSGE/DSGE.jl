@@ -56,13 +56,9 @@ function default_settings!(m::AbstractModel)
     settings[:use_parallel_workers] = Setting(:use_parallel_workers, true,
         "Use available parallel workers in computations")
 
-    # Estimation
+    # Optimization
     settings[:reoptimize] = Setting(:reoptimize, true,
         "Optimize the posterior mode. If false, reads in mode from a file.")
-    settings[:calculate_hessian] = Setting(:calculate_hessian, true,
-        "Calculate the hessian at the mode")
-    settings[:n_hessian_test_params] = Setting(:n_hessian_test_params, typemax(Int),
-        "Max number of free params for which to calculate Hessian")
     settings[:optimization_method] = Setting(:optimization_method,:csminwel, "Method for finding the posterior mode")
     settings[:optimization_iterations] = Setting(:optimization_iterations,100, "Number of iterations the optimizer should run for")
     settings[:optimization_step_size] = Setting(:optimization_step_size,.01, "step size scaling factor for optimization")
@@ -74,6 +70,12 @@ function default_settings!(m::AbstractModel)
     settings[:combined_optimizer_max_cycles] = Setting(:combined_optimizer_max_cycles,4, "The total number of cycles to use in the combined optimization routine")
     settings[:optimization_attempts] = Setting(:optimization_attempts, 4, "The number of times to attempt optimization in estimate()")
 
+    # Estimation
+    settings[:sampling_method] = Setting(:sampling_method, :MH, "The method used to generate samples from the posterior distribution of the parameters.")
+    settings[:calculate_hessian] = Setting(:calculate_hessian, true,
+        "Calculate the hessian at the mode")
+    settings[:n_hessian_test_params] = Setting(:n_hessian_test_params, typemax(Int),
+        "Max number of free params for which to calculate Hessian")
 
     # Metropolis-Hastings
     settings[:n_mh_simulations] = Setting(:n_mh_simulations, 5000,
