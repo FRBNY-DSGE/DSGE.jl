@@ -2,7 +2,7 @@ function Nelder_Mead(fcn::Function,
                      x0::Array,
                      args...;
                      parameters            = Optim.AdaptiveParameters(),
-                     initial_simplex       = Optim.AffineSimplexer(),
+                     initial_simplex       = MatlabSimplexer(),
                      iterations::Int       = 1000,
                      store_trace::Bool     = false,
                      show_trace::Bool      = false,

@@ -56,6 +56,7 @@ function detexify(s::String)
     s = replace(s, "δ", "delta")
     s = replace(s, "ϵ", "epsilon")
     s = replace(s, "ε", "epsilon")
+    s = replace(s, "ζ", "zeta")
     s = replace(s, "η", "eta")
     s = replace(s, "θ", "theta")
     s = replace(s, "ι", "iota")
@@ -66,7 +67,9 @@ function detexify(s::String)
     s = replace(s, "ξ", "xi")
     s = replace(s, "π", "pi")
     s = replace(s, "ρ", "rho")
+    s = replace(s, "ϱ", "rho")
     s = replace(s, "σ", "sigma")
+    s = replace(s, "ς", "sigma")
     s = replace(s, "τ", "tau")
     s = replace(s, "υ", "upsilon")
     s = replace(s, "ϕ", "phi")
@@ -80,6 +83,7 @@ function detexify(s::String)
     s = replace(s, "Γ", "Gamma")
     s = replace(s, "Δ", "Delta")
     s = replace(s, "Ε", "Epsilon")
+    s = replace(s, "Ζ", "Zeta")
     s = replace(s, "Η", "Eta")
     s = replace(s, "Θ", "Theta")
     s = replace(s, "Ι", "Iota")
@@ -98,11 +102,13 @@ function detexify(s::String)
     s = replace(s, "Ψ", "Psi")
     s = replace(s, "Ω", "Omega")
 
+    s = replace(s, "′", "'")
+
     return s
 end
 
 function detexify(s::Symbol)
-    symbol(detexify(string(s)))
+    Symbol(detexify(string(s)))
 end
 
 

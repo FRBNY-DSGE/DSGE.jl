@@ -55,7 +55,6 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         Nullable{System}(compute_system(m))
     catch err
         if catch_errors && isa(err, GensysError)
-            warn(err.msg)
             Nullable{System}()
         else
             rethrow(err)
@@ -65,8 +64,17 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     if isnull(system)
         return Kalman(-Inf)
     else
-        filter(m, data, get(system), z0, P0; allout = allout,
-            include_presample = include_presample)
+        try
+            filter(m, data, get(system), z0, P0; allout = allout,
+                   include_presample = include_presample)
+        catch err
+            if catch_errors && isa(err, DomainError)
+                warn("Log of incremental likelihood is negative; returning -Inf")
+                return Kalman(-Inf)
+            else
+                rethrow(err)
+            end
+        end
     end
 end
 

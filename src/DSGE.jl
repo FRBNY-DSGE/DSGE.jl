@@ -1,11 +1,11 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-    using Base.Dates, DataFrames, Distributions, FredData, HDF5, JLD, Optim, StateSpaceRoutines
+    using Base.Dates, Base.Test
+    using DataFrames, Distributions, FredData, HDF5, JLD, Optim, Plots, StateSpaceRoutines, StatPlots
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
-    using Base.Test
     import Calculus
     import Optim: optimize, Optimizer
 
@@ -35,7 +35,7 @@ module DSGE
         n_parameters_free, n_pseudoobservables, get_key,
         inds_states_no_ant, inds_shocks_no_ant, inds_obs_no_ant,
         spec, subspec, saveroot, dataroot,
-        data_vintage, cond_vintage, cond_id, cond_full_names, cond_semi_names, use_population_forecast,
+        data_vintage, data_id, cond_vintage, cond_id, cond_full_names, cond_semi_names, use_population_forecast,
         use_parallel_workers,
         reoptimize, calculate_hessian, hessian_path, n_hessian_test_params,
         n_mh_blocks, n_mh_simulations, n_mh_burn, mh_thin,
@@ -66,9 +66,8 @@ module DSGE
         simulated_annealing, combined_optimizer, LBFGS_wrapper,
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
-        metropolis_hastings, compute_parameter_covariance, compute_moments,
-        find_density_bands, prior, mutation, resample,
-        smc, nearest_spd, initial_draw, ParticleCloud, Particle,
+        metropolis_hastings, compute_parameter_covariance, prior, get_estimation_output_files,
+        mutation, resample, smc, nearest_spd, initial_draw, ParticleCloud, Particle,
 
         # forecast/
         load_draws, forecast_one,
@@ -88,7 +87,8 @@ module DSGE
         load_data, load_data_levels, load_cond_data_levels, load_fred_data,
         transform_data, save_data, get_data_filename,
         df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
-        hpadjust, oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
+        oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
+        loggrowthtopct_percapita, loggrowthtopct,
         loggrowthtopct_annualized_percapita, loggrowthtopct_annualized, logleveltopct_annualized_percapita,
         logleveltopct_annualized,
         parse_data_series, collect_data_transforms, reverse_transform,
@@ -100,6 +100,10 @@ module DSGE
         get_meansbands_input_files, get_meansbands_output_files, get_product, get_class,
         which_density_bands, write_meansbands_tables, prepare_meansbands_tables_timeseries,
         prepare_meansbands_tables_shockdec, write_meansbands_tables_all,
+
+        # plot/
+        ShockGroup, plot_prior_posterior, plot_irfs, plot_history_and_forecast, hair_plot,
+        plot_forecast_comparison, plot_shock_decomposition,
 
         # util
         @test_matrix_approx_eq, @test_matrix_approx_eq_eps
@@ -138,7 +142,7 @@ module DSGE
     include("estimate/simulated_annealing.jl")
     include("estimate/combined_optimizer.jl")
     include("estimate/LBFGS.jl")
-    include("estimate/Nelder_Mead.jl")
+    include("estimate/nelder_mead.jl")
     include("estimate/estimate.jl")
     include("estimate/particle.jl")
     include("estimate/mutation.jl")
@@ -160,6 +164,15 @@ module DSGE
     include("analysis/meansbands_to_matrix.jl")
     include("analysis/io.jl")
     include("analysis/util.jl")
+
+    include("plot/util.jl")
+    include("plot/shock_group.jl")
+    include("plot/plot_parameters.jl")
+    include("plot/plot_irfs.jl")
+    include("plot/plot_history_and_forecast.jl")
+    include("plot/hair_plot.jl")
+    include("plot/plot_forecast_comparison.jl")
+    include("plot/plot_shock_decomposition.jl")
 
     include("models/financial_frictions.jl")
 

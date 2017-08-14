@@ -609,7 +609,11 @@ function steadystate!(m::Model1002)
     if subspec(m) in ["ss2", "ss8"]
         wekstar = (1-m[:γ_star]/m[:β])*nkstar - m[:γ_star]/m[:β]*(m[:spr]*(1-μ_estar*Gstar) - 1)
     else
-        betabar = exp( (m[:σ_c] -1) * m[:z_star]) / m[:β]
+        if subspec(m) == "ss9"
+            betabar = exp( (σ_ω_star -1) * m[:z_star]) / m[:β]
+        else
+            betabar = exp( (m[:σ_c] -1) * m[:z_star]) / m[:β]
+        end
         wekstar = (1-(m[:γ_star]*betabar))*nkstar - m[:γ_star]*betabar*(m[:spr]*(1-μ_estar*Gstar) - 1)
     end
     vkstar      = (nkstar-wekstar)/m[:γ_star]
@@ -679,13 +683,16 @@ function settings_m1002!(m::Model1002)
     m <= Setting(:n_anticipated_shocks_padding, 20,
                  "Padding for anticipated policy shocks")
 
-    # Forecast
-    m <= Setting(:use_population_forecast, true,
-                 "Whether to use population forecasts as data")
+    # Data
+    m <= Setting(:data_id, 3, "Dataset identifier")
     m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
                  "Observables used in conditional forecasts")
     m <= Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
                  "Observables used in semiconditional forecasts")
+
+    # Forecast
+    m <= Setting(:use_population_forecast, true,
+                 "Whether to use population forecasts as data")
     m <= Setting(:forecast_pseudoobservables, true,
                  "Whether to forecast pseudo-observables")
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")),
@@ -731,4 +738,25 @@ function parameter_groupings(m::Model1002)
     @assert isempty(setdiff(m.parameters, vcat(incl_params, excl_params)))
 
     return groupings
+end
+
+"""
+```
+shock_groupings(m::Model1002)
+```
+
+Returns a `Vector{ShockGroup}`, which must be passed in to
+`plot_shock_decomposition`. See `?ShockGroup` for details.
+"""
+function shock_groupings(m::Model1002)
+    gov = ShockGroup("Gov't", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
+    fin = ShockGroup("Financial", [:b_sh, :γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo
+    tfp = ShockGroup("TFP", [:z_sh, :zp_sh], RGB(1.0, 0.55, 0.0)) # darkorange
+    mkp = ShockGroup("Mark-Up", [:λ_f_sh, :λ_w_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
+    pol = ShockGroup("Policy",    vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]),
+                     RGB(1.0, 0.84, 0.0)) # gold
+    mei = ShockGroup("MEI", [:μ_sh], :cyan)
+    det = ShockGroup("Det Trend", [:dettrend], :gray40)
+
+    return [gov, fin, tfp, mkp, pol, mei, det]
 end

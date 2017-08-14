@@ -152,8 +152,11 @@ function optimize!(m::AbstractModel,
                 solve(m)
                 x_proposal_all = transform_to_real_line(m.parameters, x_proposal_all)
                 success = true
+            catch ex
+                if !(typeof(ex) in [DomainError, ParamBoundsError, GensysError])
+                    rethrow(ex)
+                end
             end
-
         end
 
         x_proposal[1:end] = x_proposal_all[para_free_inds]
