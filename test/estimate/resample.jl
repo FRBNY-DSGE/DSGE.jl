@@ -5,13 +5,14 @@ path = dirname(@__FILE__)
 custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")))
 m = AnSchorfheide(custom_settings = custom_settings, testing = true)
-m<=Setting(:use_parallel_workers,true)
+m <= Setting(:use_parallel_workers, true)
+parallel = get_setting(m, :use_parallel_workers)
 
 # Set number of draws
 draws = 10000
 
 # Remove previous testing file
-#rm("systematic_resampling_test.csv")
+rm("$path/../reference/systematic_resampling_test.csv")
 
 # Append weights vectors for testing
 weights_vec=Any[]
@@ -29,16 +30,16 @@ append!(weights_vec,[[0.0, 0.5, 0.5]])
 open("$path/../reference/systematic_resampling_test.csv","w") do file
    write(file,"---------------------")
 end
- 
+
 for weights in weights_vec
-    
+
     n_parts = length(weights)
 
     count = zeros(n_parts)
     out = zeros(n_parts)
 
     for i=1:draws
-        out = systematic_resampling(m, weights)
+        out = resample(weights; method = :systematic, parallel = parallel)
         for idx in out
             count[idx] += 1
         end
@@ -57,5 +58,5 @@ for weights in weights_vec
     end
 
 end
-    
+
 nothing
