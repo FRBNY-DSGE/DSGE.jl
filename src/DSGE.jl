@@ -67,8 +67,8 @@ module DSGE
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, compute_moments,
-        find_density_bands, prior, mutation_RWMH, mutation_block_RWMH, resample, 
-        smc, nearest_spd, initial_draw,
+        find_density_bands, prior, mutation, resample,
+        smc, nearest_spd, initial_draw, ParticleCloud, Particle,
 
         # forecast/
         load_draws, forecast_one,
@@ -140,8 +140,8 @@ module DSGE
     include("estimate/LBFGS.jl")
     include("estimate/Nelder_Mead.jl")
     include("estimate/estimate.jl")
-    include("estimate/mutation_RWMH.jl")
-    include("estimate/mutation_block_RWMH.jl")
+    include("estimate/particle.jl")
+    include("estimate/mutation.jl")
     include("estimate/resample.jl")
     include("estimate/smc.jl")
     include("estimate/nearest_spd.jl")
