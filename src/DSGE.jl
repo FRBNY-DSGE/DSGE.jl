@@ -98,8 +98,10 @@ module DSGE
         find_density_bands, moment_tables, means_bands, means_bands_all, compute_means_bands, MeansBands,
         meansbands_matrix_all, meansbands_matrix, read_mb,
         get_meansbands_input_files, get_meansbands_output_files, get_product, get_class,
-        which_density_bands, write_meansbands_tables, prepare_meansbands_tables_timeseries,
-        prepare_meansbands_tables_shockdec, write_meansbands_tables_all,
+        which_density_bands,
+        prepare_meansbands_tables_timeseries, prepare_means_tables_shockdec, prepare_meansbands_table_irf,
+        write_meansbands_tables_timeseries, write_means_tables_shockdec, prepare_meansbands_table_irf,
+        write_meansbands_tables_all,
 
         # plot/
         ShockGroup, plot_prior_posterior, plot_irfs, plot_history_and_forecast, hair_plot,
