@@ -203,9 +203,9 @@ function means_bands_all(input_type::Symbol, cond_type::Symbol, output_vars::Vec
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             if prod in [:shockdec, :irf]
-                println("Computing $output_var for shocks:")
+                println("Computing " * string(output_var) * " for shocks:")
             else
-                print("Computing $output_var... ")
+                print("Computing " * string(output_var) * "... ")
             end
         end
 
@@ -230,7 +230,7 @@ function means_bands_all(input_type::Symbol, cond_type::Symbol, output_vars::Vec
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             sep = prod in [:shockdec, :irf] ? "  " : ""
-            println("$(sep)wrote $(basename(filepath))")
+            println(sep * "wrote " * basename(filepath))
         end
     end
 
@@ -238,8 +238,8 @@ function means_bands_all(input_type::Symbol, cond_type::Symbol, output_vars::Vec
         total_mb_time     = toq()
         total_mb_time_min = total_mb_time/60
 
-        println("\nTotal time to compute means and bands: $total_mb_time_min minutes")
-        println("Computation of means and bands complete: $(now())")
+        println("\nTotal time to compute means and bands: " * string(total_mb_time_min) * " minutes")
+        println("Computation of means and bands complete: " * string(now()))
 
     end
 end
@@ -330,7 +330,7 @@ function means_bands(input_type::Symbol,
         # Get to work!
         for shock_name in keys(mb_metadata[:shock_indices])
             if VERBOSITY[verbose] >= VERBOSITY[:high]
-                println("  * $(shock_name)")
+                println("  * " * string(shock_name))
             end
 
             mb_vec = pmap(var_name -> compute_means_bands(class, product, var_name, forecast_output_file;
@@ -341,10 +341,10 @@ function means_bands(input_type::Symbol,
 
             # Re-assemble pmap outputs
             for (var_name, (var_means, var_bands)) in zip(variable_names, mb_vec)
-                means[Symbol("$var_name$DSGE_SHOCKDEC_DELIM$shock_name")] = var_means
-                bands[Symbol("$var_name$DSGE_SHOCKDEC_DELIM$shock_name")] = var_bands
+                means[Symbol(var_name, DSGE_SHOCKDEC_DELIM, shock_name)] = var_means
+                bands[Symbol(var_name, DSGE_SHOCKDEC_DELIM, shock_name)] = var_bands
                 if product != :irf
-                    bands[Symbol("$var_name$DSGE_SHOCKDEC_DELIM$shock_name")][:date] = date_list
+                    bands[Symbol(var_name,DSGE_SHOCKDEC_DELIM, shock_name)][:date] = date_list
                 end
             end
         end
@@ -375,11 +375,11 @@ function compute_means_bands(class::Symbol,
 
         # Parse transform
         class_long = get_class_longname(class)
-        transforms = read(file, "$(class_long)_revtransforms")
+        transforms = read(file, string(class_long) * "_revtransforms")
         transform = parse_transform(transforms[var_name])
 
         # Get variable index
-        indices = read(file, "$(class_long)_indices")
+        indices = read(file, string(class_long) * "_indices")
         var_ind = indices[var_name]
 
         # Read date list

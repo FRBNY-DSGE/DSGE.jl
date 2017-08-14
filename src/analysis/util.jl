@@ -292,7 +292,7 @@ function get_mb_metadata(input_type::Symbol, cond_type::Symbol,
     end
 
     class_long = get_class_longname(class)
-    variable_indices = metadata[Symbol("$(class_long)_indices")]
+    variable_indices = metadata[Symbol(class_long, "_indices")]
     date_indices     = product == :irf ? Dict{Date,Int}() : metadata[:date_indices]
 
     # Make sure date lists are valid. This is vacuously true for and IRFs, which
