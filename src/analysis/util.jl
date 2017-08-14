@@ -2,44 +2,52 @@
 ## Extract class and product from a Symbol
 ##########################################
 
-function get_class(s::Symbol)
-    class = if contains(string(s), "pseudo")
+function get_class(output_var::Symbol)
+    s = string(output_var)
+    if contains(s, "pseudo")
         :pseudo
-    elseif contains(string(s), "obs")
+    elseif contains(s, "obs")
         :obs
-    elseif contains(string(s), "state")
+    elseif contains(s, "state")
         :state
-    elseif contains(string(s), "stdshock")
+    elseif contains(s, "stdshock")
         :stdshock
-    elseif contains(string(s), "shock")
+    elseif contains(s, "shock")
         :shock
+    else
+        error("Invalid output_var: " * s)
     end
 end
 
-function get_product(s::Symbol)
-    product = if contains(string(s), "hist")
+function get_product(output_var::Symbol)
+    s = string(output_var)
+    if contains(s, "hist4q")
+        :hist4q
+    elseif contains(s, "hist")
         :hist
-    elseif contains(string(s), "bddforecast4q")
+    elseif contains(s, "bddforecast4q")
         :bddforecast4q
-    elseif contains(string(s), "forecast4q")
+    elseif contains(s, "forecast4q")
         :forecast4q
-    elseif contains(string(s), "bddforecast")
+    elseif contains(s, "bddforecast")
         :bddforecast
-    elseif contains(string(s), "forecast")
+    elseif contains(s, "forecast")
         :forecast
-    elseif contains(string(s), "shockdec")
+    elseif contains(s, "shockdec")
         :shockdec
-    elseif contains(string(s), "dettrend")
+    elseif contains(s, "dettrend")
         :dettrend
-    elseif contains(string(s), "trend")
+    elseif contains(s, "trend")
         :trend
-    elseif contains(string(s), "irf")
+    elseif contains(s, "irf")
         :irf
+    else
+        error("Invalid output_var: " * s)
     end
 end
 
 function get_class_longname(class::Symbol)
-    longname = if class == :pseudo
+    if class == :pseudo
         :pseudoobservable
     elseif class == :obs
         :observable
@@ -112,36 +120,52 @@ parse_transform(t::Symbol) = eval(Symbol(split(string(t),".")[end]))
 
 """
 ```
-load_population_growth(data_file, forecast_file, mnemonic; verbose = :low)
+load_population_growth(data_file, forecast_file, mnemonic;
+    use_population_forecast = true, use_hpfilter = true, verbose = :low)
 ```
 
 Returns `DataFrame`s of growth rates for HP-filtered population data and forecast.
 """
 function load_population_growth(data_file::String, forecast_file::String,
                                 mnemonic::Symbol;
+                                use_population_forecast::Bool = true,
+                                use_hpfilter::Bool = true,
                                 verbose::Symbol = :low)
+
     data_verbose = verbose == :none ? :none : :low
 
     # Read in unfiltered series
     unfiltered_data     = read_population_data(data_file; verbose = data_verbose)
-    unfiltered_forecast = read_population_forecast(forecast_file, mnemonic; verbose = data_verbose)
-
-    # HP filter
-    data, forecast = transform_population_data(unfiltered_data, unfiltered_forecast,
-                                               mnemonic; verbose = :none)
-    dlfiltered_data =
-        DataFrame(date = @data(convert(Array{Date}, data[:date])),
-                  population_growth = @data(convert(Array{Float64},
-                                                    data[:dlfiltered_population_recorded])))
-    dlfiltered_forecast = if isempty(forecast)
-        DataFrame()
+    unfiltered_forecast = if use_population_forecast
+        read_population_forecast(forecast_file, mnemonic; verbose = data_verbose)
     else
-        DataFrame(date = @data(convert(Array{Date}, forecast[:date])),
-                  population_growth = @data(convert(Array{Float64},
-                                                    forecast[:dlfiltered_population_forecast])))
+        DataFrame()
     end
 
-    return dlfiltered_data, dlfiltered_forecast
+    # HP filter if necessary
+    data, forecast = transform_population_data(unfiltered_data, unfiltered_forecast,
+                                               mnemonic; use_hpfilter = use_hpfilter,
+                                               verbose = :none)
+    if use_hpfilter
+        data_mnemonic = :dlfiltered_population_recorded
+        forecast_mnemonic = :dlfiltered_population_forecast
+    else
+        data_mnemonic = :dlpopulation_recorded
+        forecast_mnemonic = :dlpopulation_forecast
+    end
+
+    # Prepare output variables
+    data  = data[[:date, data_mnemonic]]
+    rename!(data, data_mnemonic, :population_growth)
+
+    if use_population_forecast
+        forecast = forecast[[:date, forecast_mnemonic]]
+        rename!(forecast, forecast_mnemonic, :population_growth)
+    else
+        forecast = DataFrame()
+    end
+
+    return data, forecast
 end
 
 """
@@ -178,11 +202,21 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
                                                          mnemonic)
     end
 
-    population_insample = if population_data[1, :date] <= start_date <= population_data[end, :date]
-        if population_data[1, :date] < end_date < population_data[end, :date]
+    population_insample = if start_date <= population_data[end, :date]
+
+        padding = if start_date < population_data[1, :date]
+            # Start date is before population data; compute number of NaNs to prepend
+            warn("Start date $start_date is before population data begins: prepending NaNs")
+            n_nans = subtract_quarters(population_data[1, :date], start_date)
+
+            DataFrame(date = quarter_range(start_date, iterate_quarters(population_data[1,:date], -1)))
+        else
+            DataFrame()
+        end
+
+        unpadded_data = if population_data[1, :date] < end_date < population_data[end, :date]
             # Dates entirely in past
             population_data[start_date .<= population_data[:, :date] .<= end_date, :]
-
         else
             # Dates span past and forecast
             data  = population_data[start_date .<= population_data[:, :date], :]
@@ -190,13 +224,16 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
             vcat(data, fcast)
         end
 
+        padded_data =  vcat(padding, unpadded_data)
+        na2nan!(padded_data)
+        padded_data
+
     elseif population_forecast[1, :date] <= start_date <= population_forecast[end, :date]
         # Dates entirely in forecast
         population_forecast[start_date .<= population_forecast[:, :date] .<= end_date, :]
-
     else
-        # Start date is before population data
-        error("Start date $start_date is before population data begin")
+        # start_date comes after population_forecast[end, :date]
+        error("Start date $start_date comes after population forecast ends")
     end
 
     return convert(Vector{Float64}, population_insample[mnemonic])
@@ -217,7 +254,7 @@ function get_mb_population_series(product::Symbol, mnemonic::Symbol,
         # Return empty vector for IRFs, which don't correspond to real dates
         return Vector{Float64}()
     else
-        start_date = if product in [:forecast4q, :bddforecast4q]
+        start_date = if product in [:hist4q, :forecast4q, :bddforecast4q]
             iterate_quarters(date_list[1], -3)
         elseif product in [:hist, :forecast, :bddforecast, :shockdec, :dettrend, :trend]
             date_list[1]
@@ -299,7 +336,7 @@ function get_y0_index(m::AbstractModel, product::Symbol)
         return index_forecast_start(m) - 4
     elseif product in [:shockdec, :dettrend, :trend]
         return n_presample_periods(m) + index_shockdec_start(m) - 1
-    elseif product == :hist
+    elseif product in [:hist, :hist4q]
         return index_mainsample_start(m) - 1
     elseif product == :irf
         return -1

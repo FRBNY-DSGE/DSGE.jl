@@ -59,8 +59,10 @@ function get_meansbands_input_files(directory::String, filestring_base::Vector{S
                                                  input_type, cond_type, var,
                                                  forecast_string = forecast_string,
                                                  fileformat = fileformat)
-        if contains(string(var), "4q")
+        if contains(string(var), "forecast4q")
             input_files[var] = replace(input_files[var], "forecast4q", "forecast")
+        elseif contains(string(var), "hist4q")
+            input_files[var] = replace(input_files[var], "hist4q", "hist")
         end
     end
 
@@ -137,16 +139,70 @@ end
 
 """
 ```
-function read_mb(fn::String)
+read_mb(fn::String)
+
+read_mb(m, input_type, cond_type, output_var; forecast_string = "",
+    bdd_and_unbdd::Bool = false)
 ```
-Read in a `MeansBands` object saved in `fn`.
+
+Read in a `MeansBands` object saved in `fn`, or use the model object `m` to
+determine the file location.
+
+If `bdd_and_unbdd`, then `output_var` must be either `:forecast` or
+`:forecast4q`. Then this function calls `read_bdd_and_unbdd` to return a
+`MeansBands` with unbounded means and bounded bands.
 """
 function read_mb(fn::String)
     @assert isfile(fn) "File $fn could not be found"
-    mb = jldopen(fn, "r") do f
+    jldopen(fn, "r") do f
         read(f, "mb")
     end
-    mb
+end
+
+function read_mb(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+                 output_var::Symbol; forecast_string::String = "",
+                 bdd_and_unbdd::Bool = false)
+
+    if bdd_and_unbdd
+        @assert get_product(output_var) in [:forecast, :forecast4q]
+        bdd_output_var = Symbol(:bdd, output_var)
+        files = get_meansbands_output_files(m, input_type, cond_type,
+                                            [output_var, bdd_output_var];
+                                            forecast_string = forecast_string)
+        read_bdd_and_unbdd_mb(files[bdd_output_var], files[output_var])
+    else
+        files = get_meansbands_output_files(m, input_type, cond_type, [output_var];
+                                            forecast_string = forecast_string)
+        read_mb(files[output_var])
+    end
+end
+
+"""
+```
+read_bdd_and_unbdd_mb(bdd_fn::String, unbdd_fn::String)
+```
+
+Read in the bounded and unbounded forecast `MeansBands` from `bdd_fn` and
+`unbdd_fn`. Create and return a `MeansBands` with the unbounded means and
+bounded bands.
+"""
+function read_bdd_and_unbdd_mb(bdd_fn::String, unbdd_fn::String)
+    # Check files exist
+    @assert isfile(bdd_fn)   "File $bdd_fn could not be found"
+    @assert isfile(unbdd_fn) "File $unbdd_fn could not be found"
+
+    # Read MeansBands
+    bdd_mb   = read_mb(bdd_fn)
+    unbdd_mb = read_mb(unbdd_fn)
+
+    # Check well-formed
+    for fld in [:para, :forecast_string, :cond_type, :date_inds, :class, :indices]
+        @assert bdd_mb.metadata[fld] == unbdd_mb.metadata[fld] "$fld field does not match: $((bdd_mb.metadata[fld], unbdd_mb.metadata[fld]))"
+    end
+    @assert (bdd_mb.metadata[:product], unbdd_mb.metadata[:product]) in [(:bddforecast, :forecast), (:bddforecast4q, :forecast4q)] "Invalid product fields: $((bdd_mb.metadata[:product], unbdd_mb.metadata[:product]))"
+
+    # Stick together unbounded means, bounded bands
+    return MeansBands(unbdd_mb.metadata, unbdd_mb.means, bdd_mb.bands)
 end
 
 
@@ -229,7 +285,11 @@ function write_meansbands_tables(m::AbstractModel, mb::MeansBands;
 
     # Use all vars by default
     if isempty(tablevars)
-        tablevars = get_variables(mb)
+        tablevars = if get_product(mb) in [:irf, :shockdec]
+            get_variables(mb)
+        else
+            get_vars_means(mb)
+        end
     end
 
     # Write table for each var
@@ -281,7 +341,7 @@ function write_meansbands_tables(dirname::String, mb::MeansBands, tablevar::Symb
     fullfilename = DSGE.savepath(dirname, filename, filestring_base, filestring_addl)
 
     # Extract dataframe
-    if prod in [:hist, :forecast, :forecast4q, :bddforecast, :bddforecast4q, :trend, :dettrend]
+    if prod in [:hist, :forecast, :hist4q, :forecast4q, :bddforecast, :bddforecast4q, :trend, :dettrend]
         df = prepare_meansbands_table_timeseries(mb, tablevar)
 
         # Write to file
@@ -367,6 +427,10 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
             mbs[Symbol("bddforecast$class")] =
                 read_mb(workpath(m, "forecast", "mbbddforecast$class.jld", filestring_addl))
         end
+        if !isempty(intersect(my_output_vars, [Symbol("hist4q$class"), Symbol("histforecast4q$class")]))
+            mbs[Symbol("hist4q$class")] =
+                read_mb(workpath(m, "forecast", "mbhist4q$class.jld", filestring_addl))
+        end
         if !isempty(intersect(my_output_vars, [Symbol("forecast4q$class"), Symbol("histforecast4q$class")]))
             mbs[Symbol("forecast4q$class")] =
                 read_mb(workpath(m, "forecast", "mbforecast4q$class.jld", filestring_addl))
@@ -407,6 +471,11 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
         elseif output in [:histforecastpseudo, :histforecastobs]
 
             mb_histforecast = cat(mb[Symbol("hist$(class)")], mb[Symbol("forecast$class")])
+            write_meansbands_tables(m, mb_histforecast, tablevars = vars)
+
+        elseif output in [:histforecast4qpseudo, :histforecast4qobs]
+
+            mb_histforecast = cat(mb[Symbol("hist4q$(class)")], mb[Symbol("forecast4q$class")])
             write_meansbands_tables(m, mb_histforecast, tablevars = vars)
 
         elseif output in [:shockdecpseudo, :shockdecobs]

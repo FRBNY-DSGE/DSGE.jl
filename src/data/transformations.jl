@@ -53,19 +53,28 @@ percapita(col, df, population_mnemonic)
 
 Converts data column `col` of DataFrame `df` to a per-capita value.
 
+The first method checks `hpfilter_population(m)`. If true, then it divides by
+the filtered population series. Otherwise it divides by the result of
+`parse_population_mnemonic(m)[1]`.
+
 ## Arguments
-- `col`: Symbol indicating which column of data to transform
-- `df`: DataFrame containining series for proper population measure and `col`
-- `population_mnemonic`: a mnemonic found in df for some population measure.
+
+- `col`: `Symbol` indicating which column of data to transform
+- `df`: `DataFrame` containining series for proper population measure and `col`
+- `population_mnemonic`: a mnemonic found in `df` for some population measure
 """
 function percapita(m::AbstractModel, col::Symbol, df::DataFrame)
-    population_mnemonic = parse_population_mnemonic(m)[1]
-    if isnull(population_mnemonic)
-        error("No population mnemonic provided")
+    if hpfilter_population(m)
+        population_mnemonic = Nullable(:filtered_population)
     else
-        percapita(col, df, get(population_mnemonic))
+        population_mnemonic = parse_population_mnemonic(m)[1]
+        if isnull(population_mnemonic)
+            error("No population mnemonic provided")
+        end
     end
+    percapita(col, df, get(population_mnemonic))
 end
+
 function percapita(col::Symbol, df::DataFrame, population_mnemonic::Symbol)
     df[col] ./ df[population_mnemonic]
 end
@@ -183,25 +192,64 @@ function oneqtrpctchange(y)
 end
 
 
+## REVERSE TRANSFORMS
+
 """
 ```
-hpadjust(y, df)
+loggrowthtopct(y)
 ```
 
-Adjust series to compensate for differences between filtered and unfiltered population.
-## Arguments
-- `y`: A vector of data
-- `df`: DataFrame containing both a filtered and unfiltered population growth series
+Transform from annualized quarter-over-quarter log growth rates to annualized
+quarter-over-quarter percent change.
+
+### Note
+
+This should only be used in Model 510, which has the core PCE inflation
+observable in annualized log growth rates.
 """
-function hpadjust(y, df; filtered_mnemonic=:filtered_population_growth,
-                         unfiltered_mnemonic=:unfiltered_population_growth)
-    y + 100 * (df[unfiltered_mnemonic] - df[filtered_mnemonic])
+function loggrowthtopct(y)
+    100. * (exp(y/100.) - 1.)
 end
 
+"""
+```
+loggrowthtopct_percapita(y, pop_growth)
+```
 
+Transform from annualized quarter-over-quarter log per-capita growth rates to
+annualized quarter-over-quarter aggregate percent change.
 
+### Note
 
-## REVERSE TRANSFORMS
+This should only be used in Model 510, which has the output growth observable in
+annualized log per-capita growth rates.
+
+### Inputs
+
+- `y`: the data we wish to transform to annualized percent change from
+  annualized log growth rates. `y` is either a vector of length `nperiods` or an
+  `ndraws x `nperiods` matrix.
+
+- `pop_growth::Vector`: the length `nperiods` vector of log population growth
+  rates.
+"""
+function loggrowthtopct_percapita(y::Array, pop_growth::Vector)
+    # `y` is either a vector of length `nperiods` or an
+    # `ndraws` x `nperiods` matrix
+    if ndims(y) == 1
+        nperiods = length(y)
+    else
+        nperiods = size(y, 2)
+
+        # Transpose `pop_growth` to a 1 x `nperiods` row vector so it can be
+        # broadcasted to match the dimensions of `y`
+        pop_growth = pop_growth'
+    end
+
+    @assert length(pop_growth) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
+
+    100. * ((exp(y/100.) .* exp(pop_growth).^4) - 1.)
+end
 
 """
 ```

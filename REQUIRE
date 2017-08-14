@@ -1,4 +1,4 @@
-julia 0.5.0+
+julia 0.5
 Calculus
 DataFrames
 DataStructures
@@ -8,5 +8,7 @@ HDF5
 JLD
 Optim 0.7
 QuantEcon
+Plots
 Roots
 StateSpaceRoutines
+StatPlots

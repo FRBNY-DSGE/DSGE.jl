@@ -148,7 +148,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
         end
 
         # Read and merge data from this source
-        file = inpath(m, "data", "$(lowercase(string(source)))_$vint.csv")
+        file = inpath(m, "raw", "$(lowercase(string(source)))_$vint.csv")
 
         if isfile(file)
             if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -199,7 +199,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
     # print population level data to a file
     if !m.testing
-        filename = inpath(m, "data", "population_data_levels_$vint.csv")
+        filename = inpath(m, "raw", "population_data_levels_$vint.csv")
         mnemonic = parse_population_mnemonic(m)[1]
         if !isnull(mnemonic)
             writetable(filename, df[:,[:date, get(mnemonic)]])
@@ -217,7 +217,7 @@ load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
 Check on disk in `inpath(m, \"cond\")` for a conditional dataset (in levels) of the correct
 vintage and load it.
 
-The following series are also loaded from `inpath(m, \"data\")` and either
+The following series are also loaded from `inpath(m, \"raw\")` and either
 appended or merged into the conditional data:
 
 - The last period of (unconditional) data in levels
@@ -229,8 +229,8 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
     # Prepare file name
     cond_vint = cond_vintage(m)
-    cond_idno = cond_id(m)
-    file = inpath(m, "cond", "cond_vint=$(cond_vint)_cdid=$(cond_idno).csv")
+    cond_idno = lpad(cond_id(m), 2, 0) # print as 2 digits
+    file = inpath(m, "cond", "cond_cdid=" * cond_idno * "_cdvt=" * cond_vint * ".csv")
 
     if isfile(file)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -244,7 +244,7 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
         date_cond_end = cond_df[end, :date]
 
         # Use population forecast as population data
-        population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
+        population_forecast_file = inpath(m, "raw", "population_forecast_" * data_vintage(m) * ".csv")
         if isfile(population_forecast_file) && !isnull(get_setting(m, :population_mnemonic))
             pop_forecast = readtable(population_forecast_file)
 
@@ -466,11 +466,11 @@ read_population_data(filename; verbose = :low)
 ```
 
 Read in population data stored in levels, either from
-`inpath(m, \"data\", \"population_data_levels_[vint].csv\"`) or `filename`.
+`inpath(m, \"raw\", \"population_data_levels_[vint].csv\"`) or `filename`.
 """
 function read_population_data(m::AbstractModel; verbose::Symbol = :low)
     vint = data_vintage(m)
-    filename = inpath(m, "data", "population_data_levels_$vint.csv")
+    filename = inpath(m, "raw", "population_data_levels_" * vint * ".csv")
     read_population_data(filename; verbose = verbose)
 end
 
@@ -496,28 +496,23 @@ read_population_forecast(filename, population_mnemonic, last_recorded_date; verb
 ```
 
 Read in population forecast in levels, either from
-`inpath(m, \"data\", \"population_forecast_[vint].csv\")` or `filename`.
+`inpath(m, \"raw\", \"population_forecast_[vint].csv\")` or `filename`.
 If that file does not exist, return an empty `DataFrame`.
 
 """
 function read_population_forecast(m::AbstractModel; verbose::Symbol = :low)
-    population_forecast_file = inpath(m, "data", "population_forecast_$(data_vintage(m)).csv")
+    population_forecast_file = inpath(m, "raw", "population_forecast_" * data_vintage(m) * ".csv")
     population_mnemonic = parse_population_mnemonic(m)[1]
 
     if isnull(population_mnemonic)
         error("No population mnemonic provided")
     else
-        if use_population_forecast(m)
-            read_population_forecast(population_forecast_file, get(population_mnemonic); verbose = verbose)
-        else
-            DataFrame()
-        end
+        read_population_forecast(population_forecast_file, get(population_mnemonic); verbose = verbose)
     end
 end
 
 function read_population_forecast(filename::String, population_mnemonic::Symbol;
                                   verbose::Symbol = :low)
-
     if isfile(filename)
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("Loading population forecast from $filename...")

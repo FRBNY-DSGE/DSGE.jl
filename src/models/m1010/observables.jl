@@ -12,7 +12,7 @@ function init_observable_mappings!(m::Model1010)
 
         levels[:temp] = percapita(m, :GDP, levels)
         gdp = 1000 * nominal_to_real(:temp, levels)
-        hpadjust(oneqtrpctchange(gdp), levels)
+        oneqtrpctchange(gdp)
     end
 
     gdp_rev_transform = loggrowthtopct_annualized_percapita
@@ -27,11 +27,12 @@ function init_observable_mappings!(m::Model1010)
 
     hrs_fwd_transform =  function (levels)
         # FROM: Average weekly hours (AWHNONAG) & civilian employment (CE16OV)
-        # TO:   log (3 * aggregregate weekly hours / 100), per-capita
+        # TO:   log (3 * per-capita weekly hours / 100)
         # Note: Not sure why the 3 is there.
 
-        aggregateweeklyhours = levels[:AWHNONAG] .* levels[:CE16OV]
-        100*(log(3 * aggregateweeklyhours / 100) - log(levels[:filtered_population]))
+        levels[:temp] = levels[:AWHNONAG] .* levels[:CE16OV]
+        weeklyhours = percapita(m, :temp, levels)
+        100*log(3 * weeklyhours / 100)
     end
 
     hrs_rev_transform = logleveltopct_annualized_percapita
@@ -129,7 +130,7 @@ function init_observable_mappings!(m::Model1010)
 
         levels[:temp] = percapita(m, :PCE, levels)
         cons = 1000 * nominal_to_real(:temp, levels)
-        hpadjust(oneqtrpctchange(cons), levels)
+        oneqtrpctchange(cons)
     end
 
     consumption_rev_transform = loggrowthtopct_annualized_percapita
@@ -151,7 +152,7 @@ function init_observable_mappings!(m::Model1010)
 
         levels[:temp] = percapita(m, :FPI, levels)
         inv = 10000 * nominal_to_real(:temp, levels)
-        hpadjust(oneqtrpctchange(inv), levels)
+        oneqtrpctchange(inv)
     end
 
     investment_rev_transform  = loggrowthtopct_annualized_percapita
@@ -275,7 +276,7 @@ function init_observable_mappings!(m::Model1010)
 
         levels[:temp] = percapita(m, :GDI, levels)
         gdi = 1000 * nominal_to_real(:temp, levels)
-        hpadjust(oneqtrpctchange(gdi), levels)
+        oneqtrpctchange(gdi)
     end
 
     gdi_rev_transform = loggrowthtopct_annualized_percapita
