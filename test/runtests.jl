@@ -1,7 +1,7 @@
 using Base.Test
-using DSGE
+@everywhere using DSGE
 
-my_tests = [#=
+my_tests = [
             "core",
             "parameters",
             "models/an_schorfheide/an_schorfheide",
@@ -21,10 +21,13 @@ my_tests = [#=
             "estimate/csminwel",
             "estimate/optimize",
             "estimate/eig",
-            "estimate/metropolis_hastings", =#
+            "estimate/metropolis_hastings",
             "estimate/smc",
             "estimate/mutation_RWMH",
             "estimate/systematic_resampling",
+            "estimate/mutation_RWMH",
+            "estimate/tpf",
+            "estimate/mutation",
             "data/misc",
             "data/load_data",
             "forecast/smooth",

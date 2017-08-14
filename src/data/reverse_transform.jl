@@ -113,7 +113,10 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     population_forecast_file = inpath(m, "data", "population_forecast_$vint.csv")
     population_data, population_forecast =
         load_population_growth(population_data_file, population_forecast_file,
-                               get(population_mnemonic); verbose = verbose)
+                               get(population_mnemonic);
+                               use_population_forecast = use_population_forecast(m),
+                               use_hpfilter = hpfilter_population(m),
+                               verbose = verbose)
     population_series = get_population_series(:population_growth, population_data,
                                               population_forecast, start_date, end_date)
 
@@ -192,7 +195,10 @@ function reverse_transform(m::AbstractModel, input_type::Symbol, cond_type::Symb
     population_forecast_file = inpath(m, "data", "population_forecast_$vint.csv")
     population_data, population_forecast =
         load_population_growth(population_data_file, population_forecast_file,
-                               get(population_mnemonic); verbose = verbose)
+                               get(population_mnemonic);
+                               use_population_forecast = use_population_forecast(m),
+                               use_hpfilter = hpfilter_population(m),
+                               verbose = verbose)
     population_series = get_population_series(:population_growth, population_data,
                                               population_forecast, start_date, end_date)
 

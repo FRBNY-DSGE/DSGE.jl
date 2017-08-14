@@ -33,6 +33,8 @@ function default_settings!(m::AbstractModel)
         "Whether to use population forecasts as data")
     settings[:population_mnemonic] = Setting(:population_mnemonic, Nullable(:CNP16OV__FRED),
         "Mnemonic of FRED data series for computing per-capita values (a Nullable{Symbol})")
+    settings[:hpfilter_population] = Setting(:hpfilter_population, true,
+        "Whether to HP filter combined population and forecast")
 
     # Dates
     settings[:date_presample_start] = Setting(:date_presample_start, quartertodate("1959-Q3"),
@@ -123,11 +125,20 @@ function default_settings!(m::AbstractModel)
     settings[:n_smc_blocks] = Setting(:n_smc_blocks, 1, "The number of parameter blocks in SMC")
     settings[:step_size_smc] = Setting(:step_size_smc, .5, "The scaling factor for the covariance of the particles. Controls size of steps in mutation step")
     settings[:n_MH_steps_smc] = Setting(:n_MH_steps_smc, 5, "Number of Metropolis Hastings steps to attempt during the mutation step.")
-
     settings[:init_accept] = Setting(:init_accept, .25, "The initial average acceptance rate for new particles during mutation")
     settings[:target_accept] = Setting(:target_accept, .25, "The initial target acceptance rate for new particles during mutation")
     settings[:resampler_smc] = Setting(:resampler_smc, :systematic, "Which resampling method to use in SMC")
     settings[:initial_draw_source] = Setting(:initial_draw_source, :prior, "How to draw the initial population of particles in SMC")
+
+        # Tempered Particle Filter
+    settings[:tpf_r_star] = Setting(:tpf_r_star,2.0,"Initial target ratio for φs")
+    settings[:tpf_c] = Setting(:tpf_c,0.1,"The scaling factor for the covariance, constructed from accept and tgt during mutation")
+    settings[:tpf_accept_rate] = Setting(:tpf_accept_rate, 0.5,"Initial average acceptance rate for new particles during mutation")
+    settings[:tpf_target] = Setting(:tpf_target, 0.4, "Initial target acceptance rate for new particles during mutation")
+    settings[:tpf_n_mh_simulations] = Setting(:tpf_n_mh_simulations, 2, "Number of Metropolis Hastings steps during mutation")
+    settings[:tpf_adaptive] = Setting(:tpf_adaptive, true, "Adaptive or fixed φ schedule")
+    settings[:tpf_x_tolerance] = Setting(:tpf_x_tolerance, zero(float(0)),"Tolerance for fzero")
+    settings[:tpf_n_particles] = Setting(:tpf_n_particles,500,"Number of particles for use in TPF")
 
 	return settings
 end

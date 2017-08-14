@@ -294,16 +294,8 @@ function forecast_one(m::AbstractModel{Float64},
                                                                param, df, verbose = verbose),
                                     params)
 
-            # If some element of forecast_outputs is a RemoteException, rethrow the exception
-            ind_ex = findfirst(x -> isa(x, RemoteException), forecast_outputs)
-            if ind_ex > 0
-                ex = forecast_outputs[ind_ex].captured
-                throw(ex)
-            else
-                forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
-            end
-
             # Assemble outputs from this block and write to file
+            forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
             forecast_output = assemble_block_outputs(forecast_outputs)
             write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
                                    forecast_output; df = df, block_number = Nullable(block),

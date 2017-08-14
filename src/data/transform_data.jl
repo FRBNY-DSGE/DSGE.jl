@@ -29,12 +29,19 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
 
     n_obs, _ = size(levels)
 
-    # Step 1: HP filter population forecasts, if they're being used
+    # Step 1: HP filter (including population forecasts, if they're being used)
     population_mnemonic = parse_population_mnemonic(m)[1]
     if !isnull(population_mnemonic)
-        population_forecast_levels = read_population_forecast(m; verbose = verbose)
+        population_forecast_levels = if use_population_forecast(m)
+            read_population_forecast(m; verbose = verbose)
+        else
+            DataFrame()
+        end
+
         population_data, _ = transform_population_data(levels, population_forecast_levels,
-                                                       get(population_mnemonic); verbose = verbose)
+                                                       get(population_mnemonic);
+                                                       verbose = verbose,
+                                                       use_hpfilter = hpfilter_population(m))
 
         levels = join(levels, population_data, on = :date, kind = :left)
         rename!(levels, [:filtered_population_recorded, :dlfiltered_population_recorded, :dlpopulation_recorded],
@@ -94,22 +101,29 @@ levels. Optionally do the same for forecasts.
 ### Keyword Arguments
 
 - `verbose`: one of `:none`, `:low`, or `:high`
+- `use_hpfilter`: whether to HP filter population data and forecast. See `Output` below.
 
 ### Output
 
-A dictionary containing the following keys:
+Two dictionaries containing the following keys:
 
-- `:filtered_population_recorded`: HP-filtered historical population series (levels)
-- `:dlfiltered_population_recorded`: HP-filtered historical population series (growth rates)
-- `:dlpopulation_recorded`: Non-filtered historical population series (growth rates)
-- `:filtered_population_forecast`: HP-filtered population forecast series (levels)
-- `:dlfiltered_population_forecast`: HP-filtered population forecast series (growth rates)
-- `:dlpopulation_forecast`: Non-filtered historical population series (growth rates)
+- `population_data_out`:
+  + `:filtered_population_recorded`: HP-filtered historical population series (levels)
+  + `:dlfiltered_population_recorded`: HP-filtered historical population series (growth rates)
+  + `:dlpopulation_recorded`: Non-filtered historical population series (growth rates)
 
-Note: the r\"*forecast\" fields will be empty if population_forecast_file is not provided.
+- `population_forecast_out`:
+  + `:filtered_population_forecast`: HP-filtered population forecast series (levels)
+  + `:dlfiltered_population_forecast`: HP-filtered population forecast series (growth rates)
+  + `:dlpopulation_forecast`: Non-filtered historical population series (growth rates)
+
+If `population_forecast_file` is not provided, the r\"*forecast\" fields will be
+empty. If `use_hpfilter = false`, then the r\"*filtered*\" fields will be
+empty.
 """
 function transform_population_data(population_data::DataFrame, population_forecast::DataFrame,
-                                   population_mnemonic::Symbol; verbose = :low)
+                                   population_mnemonic::Symbol; verbose = :low,
+                                   use_hpfilter::Bool = true)
 
     # Unfiltered population data
     population_recorded = population_data[:,[:date, population_mnemonic]]
@@ -132,38 +146,36 @@ function transform_population_data(population_data::DataFrame, population_foreca
         pop_all[population_mnemonic]
     end
 
-    # hp filter
-    population_all = convert(Array{Float64}, population_all)
-    filtered_population, _ = hpfilter(population_all, 1600)
+    # HP filter
+    if use_hpfilter
+        population_all = convert(Array{Float64}, population_all)
+        filtered_population, _ = hpfilter(population_all, 1600)
+    end
 
-    ## Setup output dictionary
+    # Output dictionary for population data
     population_data_out = DataFrame()
+    population_data_out[:date] = convert(Array{Date}, population_recorded[:date])
+    population_data_out[:dlpopulation_recorded] = difflog(population_recorded[population_mnemonic])
 
-    ## recorded series
     n_population_forecast_obs = size(population_forecast,1)
 
-    # dates
-    population_data_out[:date] = convert(Array{Date}, population_recorded[:date])
+    if use_hpfilter
+        filt_pop_recorded = filtered_population[1:end-n_population_forecast_obs]
+        population_data_out[:filtered_population_recorded] = filt_pop_recorded
+        population_data_out[:dlfiltered_population_recorded] = difflog(filt_pop_recorded)
+    end
 
-    # filtered series (levels)
-    filt_pop_recorded = filtered_population[1:end-n_population_forecast_obs]
-    population_data_out[:filtered_population_recorded] = filt_pop_recorded
-
-    # filtered growth rates
-    population_data_out[:dlpopulation_recorded]          = difflog(population_recorded[population_mnemonic])
-    population_data_out[:dlfiltered_population_recorded] = difflog(filt_pop_recorded)
-
-    ## forecasts
+    # Output dictionary for population forecast
     population_forecast_out = DataFrame()
     if n_population_forecast_obs > 0
-        # dates
         population_forecast_out[:date] = convert(Array{Date}, population_forecast[:date])
+        population_forecast_out[:dlpopulation_forecast] = difflog(population_forecast[population_mnemonic])
 
-        # return filtered series (levels), filtered forecast growth rates, filtered data growth rates
-        filt_pop_fcast = filtered_population[end-n_population_forecast_obs:end]
-        population_forecast_out[:filtered_population_forecast]   = filt_pop_fcast[2:end]
-        population_forecast_out[:dlpopulation_forecast]          = difflog(population_forecast[population_mnemonic])
-        population_forecast_out[:dlfiltered_population_forecast] = difflog(filt_pop_fcast)[2:end]
+        if use_hpfilter
+            filt_pop_fcast = filtered_population[end-n_population_forecast_obs:end]
+            population_forecast_out[:filtered_population_forecast]   = filt_pop_fcast[2:end]
+            population_forecast_out[:dlfiltered_population_forecast] = difflog(filt_pop_fcast)[2:end]
+        end
     end
 
     return population_data_out, population_forecast_out

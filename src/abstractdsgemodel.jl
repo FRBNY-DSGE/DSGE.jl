@@ -271,6 +271,7 @@ cond_id(m::AbstractModel)         = get_setting(m, :cond_id)
 cond_full_names(m::AbstractModel) = get_setting(m, :cond_full_names)
 cond_semi_names(m::AbstractModel) = get_setting(m, :cond_semi_names)
 use_population_forecast(m::AbstractModel) = get_setting(m, :use_population_forecast)
+hpfilter_population(m::AbstractModel)     = get_setting(m, :hpfilter_population)
 
 # Interface for general computation settings
 use_parallel_workers(m::AbstractModel)    = get_setting(m, :use_parallel_workers)

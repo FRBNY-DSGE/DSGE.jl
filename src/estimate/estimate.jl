@@ -446,3 +446,28 @@ function compute_parameter_covariance(m::AbstractModel)
 
     return param_covariance
 end
+
+"""
+```
+get_estimation_output_files(m)
+```
+
+Returns a `Dict{Symbol, String}` with all files created by `estimate(m)`.
+"""
+function get_estimation_output_files(m::AbstractModel)
+    output_files = Dict{Symbol, String}()
+
+    for file in [:paramsmode, :hessian, :mhsave]
+        output_files[file] = rawpath(m, "estimate", "$file.h5")
+    end
+
+    for file in [:paramsmean, :parameter_covariance]
+        output_files[file] = workpath(m, "estimate", "$file.h5")
+    end
+
+    for file in [:priors, :prior_posterior_means, :moments]
+        output_files[file] = tablespath(m, "estimate", "$file.tex")
+    end
+
+    return output_files
+end
