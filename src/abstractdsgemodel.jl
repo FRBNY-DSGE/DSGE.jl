@@ -636,38 +636,3 @@ Generate a draw from `d` with variance optionally scaled by `cc^2`.
 function rand(d::DegenerateMvNormal, m::AbstractModel; cc::AbstractFloat = 1.0)
     return d.μ + cc*d.σ*randn(m.rng, length(d))
 end
-
-"""
-`rand_prior(m::AbstractModel; ndraws::Int = 100_000)`
-
-Draw a random sample from the model's prior distribution.
-"""
-function rand_prior(m::AbstractModel; ndraws::Int = 100_000)
-    T = typeof(m.parameters[1].value)
-    npara = length(m.parameters)
-    priorsim = Array{T}(ndraws, npara)
-
-    for i in 1:ndraws
-        priodraw = Array{T}(npara)
-
-        # Parameter draws per particle
-        for j in 1:length(m.parameters)
-
-            priodraw[j] = if !m.parameters[j].fixed
-                prio = rand(m.parameters[j].prior.value)
-
-                # Resample until all prior draws are within the value bounds
-                while !(m.parameters[j].valuebounds[1] < prio < m.parameters[j].valuebounds[2])
-                    prio = rand(m.parameters[j].prior.value)
-                end
-
-                prio
-            else
-                m.parameters[j].value
-            end
-        end
-        priorsim[i,:] = priodraw'
-    end
-
-    priorsim
-end
