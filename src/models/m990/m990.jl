@@ -532,7 +532,7 @@ function steadystate!(m::Model990)
     SIGWSTAR_ZERO = 0.5
 
     m[:z_star]   = log(1+m[:γ]) + m[:α]/(1-m[:α])*log(m[:Upsilon])
-    m[:rstar]    = exp(m[:σ_c]*m[:z_star]) / (m[:β] * bstar)
+    m[:rstar]    = exp(m[:σ_c]*m[:z_star]) / m[:β]
     m[:Rstarn]   = 100*(m[:rstar]*m[:π_star] - 1)
     m[:r_k_star] = m[:spr]*m[:rstar]*m[:Upsilon] - (1-m[:δ])
     m[:wstar]    = (m[:α]^m[:α] * (1-m[:α])^(1-m[:α]) * m[:r_k_star]^(-m[:α]) / m[:Φ])^(1/(1-m[:α]))
