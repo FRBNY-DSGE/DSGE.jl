@@ -213,7 +213,8 @@ end
 """
 ```
 write_meansbands_tables_timeseries(m, input_type, cond_type, output_var;
-    forecast_string = "", bdd_and_unbdd = false, kwargs...)
+    forecast_string = "", bdd_and_unbdd = false,
+    dirname = tablespath(m, \"forecast\"), kwargs...)
 
 write_meansbands_tables_timeseries(dirname, filestring_base, mb;
     tablevars = get_variables(mb))
@@ -230,8 +231,7 @@ write_meansbands_tables_timeseries(dirname, filestring_base, mb;
 
 **Method 2 only:**
 
-- `dirname::String`: directory to which tables are saved. Defaults to
-  `tablespath(m, \"forecast\")`
+- `dirname::String`: directory to which tables are saved
 - `filestring_base::Vector{String}`: the result of `filestring_base(m)`,
   typically `[\"vint=yymmdd\"]``
 
@@ -245,11 +245,13 @@ write_meansbands_tables_timeseries(dirname, filestring_base, mb;
 - `forecast_string::String`
 - `bdd_and_unbdd::Bool`: whether to use unbounded means and bounded
   bands. Applies only for `class(output_var) in [:forecast, :forecast4q]`
+- `dirname::String`: directory to which tables are saved
 """
 function write_meansbands_tables_timeseries(m::AbstractModel, input_type::Symbol,
                                             cond_type::Symbol, output_var::Symbol;
                                             forecast_string::String = "",
                                             bdd_and_unbdd::Bool = false,
+                                            dirname::String = tablespath(m, "forecast"),
                                             kwargs...)
     # Check that output_var is a time series
     prod = get_product(output_var)
@@ -272,7 +274,7 @@ function write_meansbands_tables_timeseries(m::AbstractModel, input_type::Symbol
     end
 
     # Call second method
-    write_meansbands_tables_timeseries(tablespath(m, "forecast"), filestring_base(m), mb;
+    write_meansbands_tables_timeseries(dirname, filestring_base(m), mb;
                                        kwargs...)
 end
 
@@ -288,7 +290,8 @@ end
 """
 ```
 write_means_tables_shockdec(m, input_type, cond_type, class;
-    forecast_string = "", kwargs...)
+    forecast_string = "", dirname = tablespath(m, \"forecast\"),
+    kwargs...)
 
 write_means_tables_shockdec(dirname, filestring_base, mb_shockdec,
     mb_trend, mb_dettrend, mb_hist, mb_forecast; tablevars = get_variables(mb),
@@ -306,8 +309,7 @@ write_means_tables_shockdec(dirname, filestring_base, mb_shockdec,
 
 **Method 2 only:**
 
-- `dirname::String`: directory to which tables are saved. Defaults to
-  `tablespath(m, \"forecast\")`
+- `dirname::String`: directory to which tables are saved
 - `filestring_base::Vector{String}`: the result of `filestring_base(m)`,
   typically `[\"vint=yymmdd\"]``
 - `mb_shockdec::MeansBands`
@@ -326,10 +328,13 @@ write_means_tables_shockdec(dirname, filestring_base, mb_shockdec,
 - `forecast_string::String`
 - `bdd_and_unbdd::Bool`: whether to use unbounded means and bounded
   bands. Applies only for `class(output_var) in [:forecast, :forecast4q]`
+- `dirname::String`: directory to which tables are saved
 """
 function write_means_tables_shockdec(m::AbstractModel, input_type::Symbol,
                                      cond_type::Symbol, class::Symbol;
-                                     forecast_string::String = "", kwargs...)
+                                     forecast_string::String = "",
+                                     dirname::String = tablespath(m, "forecast"),
+                                     kwargs...)
     # Read in necessary MeansBands
     products = [:shockdec, :trend, :dettrend, :hist, :forecast]
     output_vars = [Symbol(product, class) for product in products]
@@ -348,7 +353,7 @@ function write_means_tables_shockdec(m::AbstractModel, input_type::Symbol,
     end
 
     # Call second method
-    write_means_tables_shockdec(tablespath(m, "forecast"), filestring_base(m), values(mbs)...;
+    write_means_tables_shockdec(dirname, filestring_base(m), values(mbs)...;
                                 kwargs...)
 end
 
@@ -370,7 +375,8 @@ end
 """
 ```
 write_meansbands_tables_irf(m, input_type, cond_type, class;
-    forecast_string = "", kwargs...)
+    forecast_string = "", dirname = tablespath(m, \"forecast\"),
+    kwargs...)
 
 write_meansbands_tables_irf(dirname, filestring_base, mb;
     tablevars = get_shocks(mb), columnvars = get_variables(mb))
@@ -387,8 +393,7 @@ write_meansbands_tables_irf(dirname, filestring_base, mb;
 
 **Method 2 only:**
 
-- `dirname::String`: directory to which tables are saved. Defaults to
-  `tablespath(m, \"forecast\")`
+- `dirname::String`: directory to which tables are saved
 - `filestring_base::Vector{String}`: the result of `filestring_base(m)`,
   typically `[\"vint=yymmdd\"]``
 - `mb::MeansBands`
@@ -404,17 +409,20 @@ write_meansbands_tables_irf(dirname, filestring_base, mb;
 - `forecast_string::String`
 - `bdd_and_unbdd::Bool`: whether to use unbounded means and bounded
   bands. Applies only for `class(output_var) in [:forecast, :forecast4q]`
+- `dirname::String`: directory to which tables are saved
 """
 function write_meansbands_tables_irf(m::AbstractModel, input_type::Symbol,
                                      cond_type::Symbol, class::Symbol;
-                                     forecast_string::String = "", kwargs...)
+                                     forecast_string::String = "",
+                                     dirname::String = tablespath(m, "forecast"),
+                                     kwargs...)
     output_var = Symbol(:irf, class)
 
     # Read in MeansBands
     mb = read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string)
 
     # Call second method
-    write_meansbands_tables_irf(tablespath(m, "forecast"), filestring_base(m), mbs...;
+    write_meansbands_tables_irf(dirname, filestring_base(m), mbs...;
                                 kwargs...)
 end
 
@@ -466,11 +474,11 @@ end
 """
 ```
 write_meansbands_tables_all(m, input_type, cond_type, output_vars;
-    forecast_string = "", vars = [], shocks = shocks)
+    forecast_string = "", dirname = tablespath(m, \"forecast\"),
+    vars = [], shocks = shocks)
 ```
 
-Write all `output_vars` corresponding to model `m` to tables in
-`tablespath(m, \"forecast\")`.
+Write all `output_vars` corresponding to model `m` to tables in `dirname`.
 
 ### Inputs
 
@@ -493,6 +501,7 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
                                      output_vars::Vector{Symbol};
                                      forecast_string = "",
                                      bdd_and_unbdd::Bool = false,
+                                     dirname::String = tablespath(m, "forecast"),
                                      vars::Vector{Symbol} = Vector{Symbol}(),
                                      shocks::Vector{Symbol} = Vector{Symbol}())
     for output_var in output_vars
@@ -505,18 +514,21 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
             write_meansbands_table_timeseries(m, input_type, cond_type, output_var,
                                               tablevars = vars, columnvars = shocks,
                                               forecast_string = forecast_string,
-                                              bdd_and_unbdd = bdd_and_unbdd)
+                                              bdd_and_unbdd = bdd_and_unbdd,
+                                              dirname = dirname)
 
         elseif prod == :shockdec
             write_means_tables_shockdec(m, input_type, cond_type, class,
                                         tablevars = vars, columnvars = shocks,
                                         bdd_and_unbdd = bdd_and_unbdd,
-                                        forecast_string = forecast_string)
+                                        forecast_string = forecast_string,
+                                        dirname = dirname)
 
         elseif prod == :irf
             write_means_tables(m, input_type, cond_type, class,
                                tablevars = shocks, columnvars = vars,
-                               forecast_string = forecast_string)
+                               forecast_string = forecast_string,
+                               dirname = dirname)
         end
     end
 end
