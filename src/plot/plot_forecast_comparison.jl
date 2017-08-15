@@ -15,7 +15,7 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
     old_fcast_label = \"Old Forecast\", new_fcast_label = \"New Forecast\",
     old_hist_color = :grey, new_hist_color = :black,
     old_fcast_color = :blue, new_fcast_color = :red,
-    tick_size = 2, legend = :best)
+    tick_size = 2, ylabel = "", legend = :best)
 ```
 
 ### Inputs
@@ -55,6 +55,7 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
 - `old_fcast_color::Colorant`
 - `new_fcast_color::Colorant`
 - `tick_size::Int`: x-axis (time) tick size in units of years
+- `ylabel::String`
 - `legend`
 
 **Methods 1 and 2 only:**
@@ -114,6 +115,7 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
 
         plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
                                  output_file = output_file, title = title,
+                                 ylabel = DSGE.series_ylabel(m, var, class),
                                  kwargs...)
     end
 end
@@ -135,6 +137,7 @@ function plot_forecast_comparison(var::Symbol,
                                   old_fcast_color::Colorant = parse(Colorant, :blue),
                                   new_fcast_color::Colorant = parse(Colorant, :red),
                                   tick_size::Int = 2,
+                                  ylabel::String = "",
                                   legend = :best)
 
     # Initialize plot
@@ -149,6 +152,7 @@ function plot_forecast_comparison(var::Symbol,
     common_kwargs[:tick_size]   = tick_size
     common_kwargs[:legend]      = legend
     common_kwargs[:title]       = title
+    common_kwargs[:ylabel]      = ylabel
 
     # Plot old and new histories/forecasts separately
     p = plot_history_and_forecast(var, histold, fcastold; plot_handle = p,

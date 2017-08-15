@@ -13,7 +13,7 @@ plot_history_and_forecast(var, history, forecast; output_file = "",
     hist_label = \"History\", forecast_label = \"Forecast\",
     hist_color = :black, forecast_color = :red, linestyle = :solid,
     bands_color = RGBA(0, 0, 1, 0.1), bands_pcts = [],
-    bands_style = :fan, tick_size = 5, legend = :best,
+    bands_style = :fan, tick_size = 5, ylabel = "", legend = :best,
     plot_handle = plot())
 ```
 
@@ -53,6 +53,7 @@ you can specify the `bands_style` and `bands_pcts`.
 - `bands_pcts::Vector{String}`
 - `bands_style::Symbol`: either `:fan` or `:line`
 - `tick_size::Int`: x-axis (time) tick size in units of years
+- `ylabel::String`
 - `legend`
 - `plot_handle::Plots.Plot`: a plot handle to add `history` and `forecast` to
 
@@ -115,6 +116,7 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
     for (var, output_file, title) in zip(vars, output_files, titles)
         plots[var] = plot_history_and_forecast(var, hist, fcast;
                                                output_file = output_file, title = title,
+                                               ylabel = DSGE.series_ylabel(m, var, class),
                                                kwargs...)
     end
 
@@ -135,6 +137,7 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
                                    bands_pcts::Vector{String} = String[],
                                    bands_style::Symbol = :fan,
                                    tick_size::Int = 5,
+                                   ylabel::String = "",
                                    legend = :best,
                                    plot_handle::Plots.Plot = plot())
     # Concatenate MeansBands
@@ -161,6 +164,7 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
         plot_handle
     end
     title!(p, title)
+    yaxis!(p, ylabel = ylabel)
 
     # Plot bands
     if combined.metadata[:para] in [:full, :subset]
