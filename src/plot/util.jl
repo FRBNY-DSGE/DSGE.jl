@@ -142,6 +142,30 @@ function describe_series(m::AbstractModel, var::Symbol, class::Symbol)
     end
 end
 
+function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
+                       fourquarter::Bool = false)
+    if class in [:obs, :pseudo]
+        dict = if class == :obs
+            m.observable_mappings
+        elseif class == :pseudo
+            pseudo_measurement(m)[1]
+        end
+        transform = dict[var].rev_transform
+
+        if transform in [loggrowthtopct_annualized_percapita, logleveltopct_annualized_percapita,
+                         loggrowthtopct_annualized, logleveltopct_annualized]
+            return fourquarter ? "Percent 4Q Growth" : "Percent Q/Q Annualized"
+        elseif transform == quartertoannual
+            return "Percent Annualized"
+        elseif transform == identity
+            ""
+        end
+    elseif class in [:state, :shock, :stdshock]
+        return ""
+    else
+        error("Invalid class: " * string(class))
+    end
+end
 
 function save_plot(p::Plots.Plot, output_file::String = "")
     if !isempty(output_file)
