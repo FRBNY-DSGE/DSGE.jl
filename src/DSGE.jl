@@ -70,6 +70,7 @@ module DSGE
         prior, mutation,  resample, smc, nearest_spd, initial_draw,
         tpf, tpf_refactor, multinomial_resampling, systematic_resampling, mutation_matlab,
         tpf_matlab, solve_inefficiency, solve_inefficiency_refactor, kalman_filter_likvec,
+        initialize_function_system, initialize_state_draws,
 
         # forecast/
         load_draws, forecast_one,
@@ -137,15 +138,15 @@ module DSGE
     include("estimate/hessian.jl")
     include("estimate/hessizero.jl")
     include("estimate/simulated_annealing.jl")
-    include("estimate/smc/combined_optimizer.jl")
-    include("estimate/smc/LBFGS.jl")
+    include("estimate/combined_optimizer.jl")
+    include("estimate/LBFGS.jl")
     include("estimate/estimate.jl")
     include("estimate/smc/mutation_RWMH.jl")
     include("estimate/smc/mutation_block_RWMH.jl")
-    include("estimate/systematic_resampling.jl")
-    include("estimate/resample.jl")
+    include("estimate/smc/resample.jl")
     include("estimate/smc/smc.jl")
     include("estimate/nearest_spd.jl")
+    include("estimate/tpf/systematic_resampling.jl")
     include("estimate/tpf/multinomial_resampling.jl")
     include("estimate/tpf/mutation.jl")
     include("estimate/tpf/mutation_matlab.jl")
