@@ -40,9 +40,9 @@ end
 ss9!(m::Model1002)
 ```
 
-Initializes subspec 9 of `Model1002`. This subspecification is the same as ss8,
-and in addition the bounds for beta-distributed parameters have been changed
-from (1e-5, 0.99) to (0.0, 1.0).
+Initializes subspec 9 of `Model1002`. This subspecification is ss8 + Iskander's
+changes + the bounds for beta-distributed parameters have been changed from
+(1e-5, 0.99) to (0.0, 1.0).
 """
 function ss9!(m::Model1002)
 

@@ -4,7 +4,7 @@ using HDF5, Base.Test, Distributions, JLD
 path = dirname(@__FILE__)
 
 ### Model
-model = Model990()
+model = Model990("ss2")
 
 ### Parameters
 
@@ -83,7 +83,6 @@ expect[:EE] = read(h5, "EE")
 expect[:MM]  = read(h5, "MM")
 close(h5)
 
-model = Model990()
 TTT, RRR, CCC = solve(model)
 actual = measurement(model, TTT, RRR, CCC)
 for d in (:ZZ, :DD, :QQ, :EE, :MM)
@@ -99,7 +98,6 @@ expect[:DD_pseudo] = reshape(read(jld, "DD_pseudo"), 18, 1)
 expect[:inds] = read(jld, "inds")
 close(jld)
 
-model = Model990()
 actual = pseudo_measurement(model)[2]
 for d in (:ZZ_pseudo, :DD_pseudo)
     @test_matrix_approx_eq expect[d] getfield(actual,d)
@@ -109,7 +107,7 @@ end
 ### Custom settings
 custom_settings = Dict{Symbol, Setting}(
     :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6))
-model = Model990(custom_settings = custom_settings)
+model = Model990("ss2", custom_settings = custom_settings)
 @test get_setting(model, :n_anticipated_shocks) == 6
 
 # Indices initialized correctly under custom settings

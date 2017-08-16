@@ -8,11 +8,26 @@ called from within the model constructor.
 function init_subspec!(m::Model990)
     if subspec(m) == "ss2"
         return
+    elseif subspec(m) == "ss3"
+        ss3!(m)
     elseif subspec(m) == "ss5"
-        return ss5!(m)
+        ss5!(m)
     else
         error("This subspec is not defined.")
     end
+end
+
+"""
+```
+ss3!(m::Model990)
+```
+
+Initialize subspec 3 of `Model990`. This is the same as subspec 2, but with
+Iskander's changes (including `betabar` defined correctly with `σ_c`, not
+`σ_ω_star`).
+"""
+function ss3!(m::Model990)
+    return
 end
 
 """
