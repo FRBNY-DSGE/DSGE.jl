@@ -79,11 +79,11 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, new_data::M
 
     # Particle draws from the parameter's marginal priors
     # Modifies the cloud object in place to update draws, loglh, & logpost
-    if isempty(new_data)
+    # if isempty(new_data)
         initial_draw(m, data, cloud)
-    else
-        cloud = 
-    end
+    # else
+        # cloud =
+    # end
 
     if m.testing
         writecsv("draws.csv", get_vals(cloud))
@@ -118,11 +118,11 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, new_data::M
     ########################################################################################
 
 	# Incremental weights
-    if isempty(new_data)
+    # if isempty(new_data)
         inc_weight = exp((cloud.tempering_schedule[i] - cloud.tempering_schedule[i-1]) * get_loglh(cloud))
-    else
-        inc_weight = 
-    end
+    # else
+        # inc_weight =
+    # end
 
     # Update weights
     update_weights!(cloud, inc_weight)
@@ -239,103 +239,103 @@ Draw from a general starting distribution (set by default to be from the prior) 
 Returns a tuple (logpost, loglh) and modifies the particle objects in the particle cloud in place.
 
 """
-function initial_draw(m::AbstractModel, data::Array{Float64}, c::ParticleCloud)
-    dist_type = get_setting(m, :initial_draw_source)
-    if dist_type == :normal
-        params = zeros(n_parameters(m))
-        hessian = zeros(n_parameters(m),n_parameters(m))
-        try
-            file = h5open(rawpath(m, "estimate", "paramsmode.h5"), "r")
-            params = read(file,"params")
-            close(file)
-        catch
-            throw("There does not exist a valid mode file at "*rawpath(m,"estimate","paramsmode.h5"))
-        end
+# function initial_draw(m::AbstractModel, data::Array{Float64}, c::ParticleCloud)
+    # dist_type = get_setting(m, :initial_draw_source)
+    # if dist_type == :normal
+        # params = zeros(n_parameters(m))
+        # hessian = zeros(n_parameters(m),n_parameters(m))
+        # try
+            # file = h5open(rawpath(m, "estimate", "paramsmode.h5"), "r")
+            # params = read(file,"params")
+            # close(file)
+        # catch
+            # throw("There does not exist a valid mode file at "*rawpath(m,"estimate","paramsmode.h5"))
+        # end
 
-        try
-            file = h5open(rawpath(m, "estimate", "hessian.h5"), "r")
-            hessian = read(file, "hessian")
-            close(file)
-        catch
-            throw("There does not exist a valid hessian file at "*rawpath(m,"estimate","hessian.h5"))
-        end
+        # try
+            # file = h5open(rawpath(m, "estimate", "hessian.h5"), "r")
+            # hessian = read(file, "hessian")
+            # close(file)
+        # catch
+            # throw("There does not exist a valid hessian file at "*rawpath(m,"estimate","hessian.h5"))
+        # end
 
-        S_diag, U = eig(hessian)
-        big_eig_vals = find(x -> x>1e-6, S_diag)
-        rank = length(big_eig_vals)
-        n = length(params)
-        S_inv = zeros(n, n)
-        for i = (n-rank+1):n
-            S_inv[i, i] = 1/S_diag[i]
-        end
-        hessian_inv = U*sqrt(S_inv)
-        dist = DSGE.DegenerateMvNormal(params, hessian_inv)
-    end
+        # S_diag, U = eig(hessian)
+        # big_eig_vals = find(x -> x>1e-6, S_diag)
+        # rank = length(big_eig_vals)
+        # n = length(params)
+        # S_inv = zeros(n, n)
+        # for i = (n-rank+1):n
+            # S_inv[i, i] = 1/S_diag[i]
+        # end
+        # hessian_inv = U*sqrt(S_inv)
+        # dist = DSGE.DegenerateMvNormal(params, hessian_inv)
+    # end
 
-    n_part = length(c)
-    draws =
-    dist_type == :prior ? rand(m.parameters, n_part) : rand(dist, n_part)
+    # n_part = length(c)
+    # draws =
+    # dist_type == :prior ? rand(m.parameters, n_part) : rand(dist, n_part)
 
-    loglh = zeros(n_part)
-    logpost = zeros(n_part)
-    for i in 1:size(draws)[2]
-        success = false
-        while !success
-            try
-                update!(m, draws[:, i])
-                loglh[i] = likelihood(m, data)
-                logpost[i] = prior(m)
-            catch
-                draws[:, i] =
-                dist_type == :prior ? rand(m.parameters, 1) : rand(dist, 1)
-                continue
-            end
-            success = true
-        end
-    end
-    update_draws!(c, draws)
-    update_loglh!(c, loglh)
-    update_logpost!(c, logpost)
-end
+    # loglh = zeros(n_part)
+    # logpost = zeros(n_part)
+    # for i in 1:size(draws)[2]
+        # success = false
+        # while !success
+            # try
+                # update!(m, draws[:, i])
+                # loglh[i] = likelihood(m, data)
+                # logpost[i] = prior(m)
+            # catch
+                # draws[:, i] =
+                # dist_type == :prior ? rand(m.parameters, 1) : rand(dist, 1)
+                # continue
+            # end
+            # success = true
+        # end
+    # end
+    # update_draws!(c, draws)
+    # update_loglh!(c, loglh)
+    # update_logpost!(c, logpost)
+# end
 
-function init_stage_print(cloud::ParticleCloud; verbose::Symbol=:low)
-    μ = weighted_mean(cloud)
-    σ = weighted_std(cloud)
-	println("--------------------------")
-        println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
-	println("--------------------------")
-        println("phi = $(cloud.tempering_schedule[cloud.stage_index])")
-	println("--------------------------")
-        println("c = $(cloud.c)")
-	println("--------------------------")
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        for n=1:length(cloud.particles[1])
-            println("$(cloud.particles[1].keys[n]) = $(round(μ[n], 5)), $(round(σ[n], 5))")
-	    end
-    end
-end
+# function init_stage_print(cloud::ParticleCloud; verbose::Symbol=:low)
+    # μ = weighted_mean(cloud)
+    # σ = weighted_std(cloud)
+	# println("--------------------------")
+        # println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
+	# println("--------------------------")
+        # println("phi = $(cloud.tempering_schedule[cloud.stage_index])")
+	# println("--------------------------")
+        # println("c = $(cloud.c)")
+	# println("--------------------------")
+    # if VERBOSITY[verbose] >= VERBOSITY[:high]
+        # for n=1:length(cloud.particles[1])
+            # println("$(cloud.particles[1].keys[n]) = $(round(μ[n], 5)), $(round(σ[n], 5))")
+		# end
+    # end
+# end
 
-function end_stage_print(cloud::ParticleCloud, total_sampling_time::Float64; verbose::Symbol=:low)
-    total_sampling_time_minutes = total_sampling_time/60
-    expected_time_remaining_sec = (total_sampling_time/cloud.stage_index)*(cloud.n_Φ - cloud.stage_index)
-    expected_time_remaining_minutes = expected_time_remaining_sec/60
+# function end_stage_print(cloud::ParticleCloud, total_sampling_time::Float64; verbose::Symbol=:low)
+    # total_sampling_time_minutes = total_sampling_time/60
+    # expected_time_remaining_sec = (total_sampling_time/cloud.stage_index)*(cloud.n_Φ - cloud.stage_index)
+    # expected_time_remaining_minutes = expected_time_remaining_sec/60
 
-    μ = weighted_mean(cloud)
-    σ = weighted_std(cloud)
-    println("--------------------------")
-        println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
-        println("time elapsed: $(round(total_sampling_time_minutes, 4)) minutes")
-        println("estimated time remaining: $(round(expected_time_remaining_minutes, 4)) minutes")
-    println("--------------------------")
-        println("phi = $(cloud.tempering_schedule[cloud.stage_index])")
-    println("--------------------------")
-        println("c = $(cloud.c)")
-        println("accept = $(cloud.accept)")
-        println("ESS = $(cloud.ESS)   ($(cloud.resamples) total resamples.)")
-    println("--------------------------")
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        for n=1:length(cloud.particles[1])
-            println("$(cloud.particles[1].keys[n]) = $(round(μ[n], 5)), $(round(σ[n], 5))")
-        end
-    end
-end
+    # μ = weighted_mean(cloud)
+    # σ = weighted_std(cloud)
+    # println("--------------------------")
+        # println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
+        # println("time elapsed: $(round(total_sampling_time_minutes, 4)) minutes")
+        # println("estimated time remaining: $(round(expected_time_remaining_minutes, 4)) minutes")
+    # println("--------------------------")
+        # println("phi = $(cloud.tempering_schedule[cloud.stage_index])")
+    # println("--------------------------")
+        # println("c = $(cloud.c)")
+        # println("accept = $(cloud.accept)")
+        # println("ESS = $(cloud.ESS)   ($(cloud.resamples) total resamples.)")
+    # println("--------------------------")
+    # if VERBOSITY[verbose] >= VERBOSITY[:high]
+        # for n=1:length(cloud.particles[1])
+            # println("$(cloud.particles[1].keys[n]) = $(round(μ[n], 5)), $(round(σ[n], 5))")
+        # end
+    # end
+# end
