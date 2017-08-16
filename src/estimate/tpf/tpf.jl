@@ -23,26 +23,12 @@ Executes tempered particle filter.
 - `times::Vector{S}`: (`hist_periods` x 1) vector returning elapsed runtime per period t
 
 """
-# function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{S},
-    # s0::Array{S}, P0::Array{S}; verbose::Symbol=:low, include_presample::Bool=true)
-
 function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
                                Ψ::Function, F_ε::Distribution, F_u::Distribution, s_init::Matrix{S};
                                verbose::Symbol=:low, include_presample::Bool=true)
     #--------------------------------------------------------------
     # Set Parameters of Algorithm
     #--------------------------------------------------------------
-
-    # Unpack system
-    # RRR    = system[:RRR]
-    # TTT    = system[:TTT]
-    # HH     = system[:EE] + system[:MM]*system[:QQ]*system[:MM]'
-    # DD     = system[:DD]
-    # ZZ     = system[:ZZ]
-    # QQ     = system[:QQ]
-    # EE     = system[:EE]
-    # MM     = system[:MM]
-    # sqrtS2 = RRR*get_chol(QQ)'
 
     # Get tuning parameters from the model
     r_star       = get_setting(m, :tpf_r_star)
@@ -71,9 +57,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
     #--------------------------------------------------------------
 
     # Draw initial particles from the distribution of s₀: N(s₀, P₀)
-    # s_lag_tempered = broadcast(+, s0, Matrix(chol(nearest_spd(P0)))'*randn(n_states, n_particles))
     s_lag_tempered = s_init
-    # make separate function for generating initial particles
 
     for t = 1:T
 
@@ -89,14 +73,6 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
         y_t = data[:,t]
 
         # Remove rows/columns of series with NaN values
-        # nonmissing      = !isnan(y_t)
-        # y_t             = y_t[nonmissing]
-        # ZZ_t            = ZZ[nonmissing,:]
-        # DD_t            = DD[nonmissing]
-        # EE_t            = EE[nonmissing, nonmissing]
-        # MM_t            = MM[nonmissing,:]
-        # HH_t            = EE_t + MM_t*QQ*MM_t'
-
         nonmissing          = !isnan(y_t)
         y_t                 = y_t[nonmissing]
         n_observables_t     = length(y_t)
@@ -105,15 +81,12 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
         HH_t                = F_u.Σ.mat[nonmissing, nonmissing]
 
         # Draw random shock ε
-        # ε = randn(size(sqrtS2,2), n_particles)
         ε = rand(F_ε, n_particles)
 
         # Forecast forward one time step
-        # s_t_nontempered = TTT*s_lag_tempered + sqrtS2*ε
         s_t_nontempered = Φ(s_lag_tempered, ε)
 
         # Error for each particle
-        # p_error = broadcast(+, y_t - DD_t, -ZZ_t*s_t_nontempered)
         p_error = y_t .- Ψ_t(s_t_nontempered, zeros(n_observables_t, n_particles))
 
         # Solve for initial tempering parameter φ_1
@@ -232,7 +205,6 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
                 accept_rate = mean(accept_vec)
 
                 # Get error for all particles
-                # p_error = broadcast(+, y_t - DD_t, -ZZ_t*s_t_nontempered)
                 p_error = y_t .- Ψ_t(s_t_nontempered, zeros(n_observables_t, n_particles))
 
                 # Update φ
