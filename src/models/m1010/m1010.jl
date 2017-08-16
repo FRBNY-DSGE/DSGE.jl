@@ -164,7 +164,7 @@ function init_model_indices!(m::Model1010)
     for (i,k) in enumerate(observables);                 m.observables[k]                  = i end
 end
 
-function Model1010(subspec::String="ss18";
+function Model1010(subspec::String="ss20";
                    custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                    testing = false)
 
