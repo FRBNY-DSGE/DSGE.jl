@@ -1,3 +1,20 @@
+# DSGE.jl v0.3.1 Release Notes
+
+## Bug fixes
+
+- Added the following subspecs:
+  + Model 990, subspec 3: fixes bugs 1-4 in
+    [FRBNY-DSGE/DSGE-2015-Apr#1](https://github.com/FRBNY-DSGE/DSGE-2015-Apr/issues/1)
+  + Model 1002, subspec 10: corrects the definition of `betabar` to use
+    `m[:σ_c]` instead of `σ_ω_star`
+  + Model 1010, subspec 20: similarly corrects the definition of `betabar`
+
+## Deprecation Fixes
+
+- Implemented `transpose` for `Parameter`s so that matrix division (i.e. the
+  `(\)` operator) no longer throws a warning
+
+
 # DSGE.jl v0.3.0 Release Notes
 
 ## New features
