@@ -36,7 +36,7 @@ SMC is broken up into three main steps:
 
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis Hastings algorithm.
 """
-function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low)
+function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_update::Bool = false)
     ########################################################################################
     ### Setting Parameters
     ########################################################################################
@@ -52,13 +52,6 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low)
     accept = get_setting(m, :init_accept)
     target = get_setting(m, :target_accept)
     λ = get_setting(m, :λ)
-
-    # Instantiating ParticleCloud object
-    cloud = ParticleCloud(m, n_parts)
-    cloud.n_Φ = n_Φ
-    cloud.c = c
-    cloud.tempering_schedule = ((collect(1:n_Φ)-1)/(n_Φ-1)).^λ
-    cloud.accept = accept
 
     ########################################################################################
     ### Initialize Algorithm: Draws from prior
@@ -77,9 +70,28 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low)
         srand(42)
     end
 
-    # Particle draws from the parameter's marginal priors
-    # Modifies the cloud object in place to update draws, loglh, & logpost
-    initial_draw(m, data, cloud)
+    if !tempered_update
+        # Instantiating ParticleCloud object
+        cloud = ParticleCloud(m, n_parts)
+
+        # Particle draws from the parameter's marginal priors
+        # Modifies the cloud object in place to update draws, loglh, & logpost
+        initial_draw(m, data, cloud)
+    else
+        updated_vintage = get_setting(m, :updated_data_vintage)
+        cloud = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "old_cloud")
+
+        unchanged_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "unchanged_loglh")
+        revised_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "revised_loglh")
+        new_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "new_loglh")
+
+        update_loglh!(cloud, unchanged_loglh)
+    end
+
+    cloud.n_Φ = n_Φ
+    cloud.c = c
+    cloud.tempering_schedule = ((collect(1:n_Φ)-1)/(n_Φ-1)).^λ
+    cloud.accept = accept
 
     if m.testing
         writecsv("draws.csv", get_vals(cloud))
@@ -114,7 +126,13 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low)
     ########################################################################################
 
 	# Incremental weights
-    inc_weight = exp((cloud.tempering_schedule[i] - cloud.tempering_schedule[i-1]) * get_loglh(cloud))
+    ϕ_n = cloud.tempering_schedule[i]
+    ϕ_n1 = cloud.tempering_schedule[i-1]
+    if !tempered_update
+        inc_weight = exp((ϕ_n - ϕ_n1)*get_loglh(cloud))
+    else
+        inc_weight = exp((ϕ_n1 - ϕ_n)*revised_loglh + (ϕ_n - ϕ_n1*new_loglh))
+    end
 
     # Update weights
     update_weights!(cloud, inc_weight)
@@ -195,7 +213,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low)
 
     end
 
-    if !m.testing
+    if !m.testing && !tempered_update
         simfile = h5open(rawpath(m,"estimate","smcsave.h5"),"w")
         particle_store = d_create(simfile, "smcparams", datatype(Float32),
                                   dataspace(n_parts, n_params))
@@ -204,7 +222,13 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low)
         end
         close(simfile)
         save(rawpath(m,"estimate","smc_cloud.jld"),"cloud",cloud)
+    elseif tempered_update
+        new_vintage = get_setting(m, :updated_data_vintage)
+        jldopen(rawpath(m, "estimate", "smc_cloud_updvint=$new_vintage.jld"), "r+") do file
+            write(file, "up_cloud", cloud)
+        end
     end
+
     # Draws saved for debugging purposes
     # close(simfile)
     # Access saved clouds by jldopen then read(file,"cloud_store")
@@ -221,6 +245,39 @@ function smc(m::AbstractModel; verbose::Symbol=:low)
     return smc(m, data_mat, verbose=verbose)
 end
 
+# For doing a combination of data tempering and likelihood tempering to incorporate
+# new data into particle cloud sample
+function smc{S<:AbstractFloat}(m::AbstractModel, cloud::ParticleCloud, old_data::Matrix{S},
+                               new_data::Matrix{S}; verbose::Symbol=:low)
+    new_vintage = get_setting(m, :updated_data_vintage)
+    original_data_range  = quarter_range(date_mainsample_start(m), date_mainsample_end(m))
+    updated_data_range   = quarter_range(get_setting(m, :date_updatedsample_start), get_setting(m, :date_updatedsample_end))
+    revised_quarters = intersect(original_data_range, updated_data_range)
+    new_quarters = setdiff(updated_data_range, original_data_range)
+
+    n_particles = length(cloud)
+    unchanged_loglh = zeros(n_particles)
+    revised_loglh   = zeros(n_particles)
+    new_loglh       = zeros(n_particles)
+
+    for (i,p) in enumerate(cloud.particles)
+        update!(m, p.value)
+        unchanged_loglh[i] = likelihood(m, old_data[:, 1:end-length(revised_quarters)])
+        revised_loglh[i]   = likelihood(m, old_data[:, end-length(revised_quarters)+1:end])
+        new_loglh[i]       = likelihood(m, new_data)
+    end
+
+    data = hcat(old_data, new_data)
+
+    jldopen(rawpath(m, "estimate", "smc_cloud_updvint=$new_vintage.jld"), "w") do file
+        write(file, "old_cloud", cloud)
+        write(file, "unchanged_loglh", unchanged_loglh)
+        write(file, "revised_loglh", revised_loglh)
+        write(file, "new_loglh", new_loglh)
+    end
+
+    smc(m, data; verbose=verbose, tempered_update=true)
+end
 
 """
 ```

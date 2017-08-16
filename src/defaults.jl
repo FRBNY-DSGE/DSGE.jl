@@ -139,12 +139,16 @@ function default_settings!(m::AbstractModel)
     settings[:n_smc_blocks] = Setting(:n_smc_blocks, 1, "The number of parameter blocks in SMC")
     settings[:step_size_smc] = Setting(:step_size_smc, .5, "The scaling factor for the covariance of the particles. Controls size of steps in mutation step")
     settings[:n_MH_steps_smc] = Setting(:n_MH_steps_smc, 5, "Number of Metropolis Hastings steps to attempt during the mutation step.")
-
     settings[:init_accept] = Setting(:init_accept, .25, "The initial average acceptance rate for new particles during mutation")
     settings[:target_accept] = Setting(:target_accept, .25, "The initial target acceptance rate for new particles during mutation")
     settings[:resampler_smc] = Setting(:resampler_smc, :systematic, "Which resampling method to use in SMC")
     settings[:initial_draw_source] = Setting(:initial_draw_source, :prior, "How to draw the initial population of particles in SMC")
-
+    settings[:updated_data_vintage] = Setting(:updated_data_vintage, vint, "Updated data vintage for the combination tempered data/likelihood
+                                              tempering for the purposes of updating an old cloud vintage with new data.")
+    settings[:date_updatedsample_start] = Setting(:date_updatedsample_start, quartertodate("1960-Q1"),
+                                                 "Start date of revision or update of sample")
+    settings[:date_updatedsample_end] = Setting(:date_updatedsample_end, quartertodate("1960-Q2"),
+                                                 "End date of revision or update of sample")
 	return settings
 end
 
