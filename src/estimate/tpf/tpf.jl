@@ -52,6 +52,10 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
     Neff          = zeros(T)
     times         = zeros(T)
 
+    # Ensuring Φ, Ψ broadcast to matrices
+    Φ_bcast(s_t1::Matrix{S}, ε_t1::Matrix{S}) = hcat([Φ(s_t1[:,i], ε_t1[:,i]) for i in 1:size(s_t1)[2]]...)
+    Ψ_bcast(s_t1::Matrix{S}, u_t1::Matrix{S}) = hcat([Ψ(s_t1[:,i], u_t1[:,i]) for i in 1:size(s_t1)[2]]...)
+
     #--------------------------------------------------------------
     # Main Algorithm: Tempered Particle Filter
     #--------------------------------------------------------------
@@ -76,18 +80,17 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
         nonmissing          = !isnan(y_t)
         y_t                 = y_t[nonmissing]
         n_observables_t     = length(y_t)
-        Ψ_t                 = (x, ε) -> Ψ(x, ε)[nonmissing, :]
-        # Distributions.rand  = (dist, n_particles) -> rand(dist, n_particles)[nonmissing, nonmissing]
+        Ψ_bcast_t           = (x, ε) -> Ψ_bcast(x, ε)[nonmissing, :]
         HH_t                = F_u.Σ.mat[nonmissing, nonmissing]
 
         # Draw random shock ε
         ε = rand(F_ε, n_particles)
 
         # Forecast forward one time step
-        s_t_nontempered = Φ(s_lag_tempered, ε)
+        s_t_nontempered = Φ_bcast(s_lag_tempered, ε)
 
         # Error for each particle
-        p_error = y_t .- Ψ_t(s_t_nontempered, zeros(n_observables_t, n_particles))
+        p_error = y_t .- Ψ_bcast_t(s_t_nontempered, zeros(n_observables_t, n_particles))
 
         # Solve for initial tempering parameter φ_1
         if adaptive
@@ -205,7 +208,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
                 accept_rate = mean(accept_vec)
 
                 # Get error for all particles
-                p_error = y_t .- Ψ_t(s_t_nontempered, zeros(n_observables_t, n_particles))
+                p_error = y_t .- Ψ_bcast_t(s_t_nontempered, zeros(n_observables_t, n_particles))
 
                 # Update φ
                 φ_old = φ_new
@@ -388,10 +391,7 @@ function initialize_function_system{S<:AbstractFloat}(system::System{S})
     sqrtS2 = RRR*get_chol(QQ)'
 
     @inline Φ(s_t1::Vector{S}, ε_t1::Vector{S}) = TTT*s_t1 + RRR*ε_t1
-    @inline Φ(s_t1::Matrix{S}, ε_t1::Matrix{S}) = hcat([Φ(s_t1[:,i], ε_t1[:,i]) for i in 1:size(s_t1)[2]]...)
-
     @inline Ψ(s_t1::Vector{S}, u_t1::Vector{S}) = ZZ*s_t1 + DD + u_t1
-    @inline Ψ(s_t1::Matrix{S}, u_t1::Matrix{S}) = hcat([Ψ(s_t1[:,i], u_t1[:,i]) for i in 1:size(s_t1)[2]]...)
 
     F_ε = Distributions.MvNormal(zeros(size(QQ)[1]), QQ)
     F_u = Distributions.MvNormal(zeros(size(EE)[1]), HH)
