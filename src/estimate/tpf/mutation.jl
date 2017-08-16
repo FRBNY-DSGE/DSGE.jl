@@ -37,16 +37,6 @@ function mutation{S<:AbstractFloat}(Φ::Function, Ψ::Function, F_ε::Distributi
     #------------------------------------------------------------------------
     # Setup
     #------------------------------------------------------------------------
-    # DD     = system[:DD][nonmissing]
-    # ZZ     = system[:ZZ][nonmissing,:]
-    # EE     = system[:EE][nonmissing,nonmissing]
-    # MM     = system[:MM][nonmissing,:]
-    # RRR    = system[:RRR]
-    # TTT    = system[:TTT]
-    # QQ     = system[:QQ]
-    # HH     = EE + MM*QQ*MM'
-    # sqrtS2 = RRR*Matrix(chol(nearest_spd(QQ)))'
-
     # Initialize s_out and ε_out
     s_out = s_init
     ε_out = ε_init
@@ -66,21 +56,16 @@ function mutation{S<:AbstractFloat}(Φ::Function, Ψ::Function, F_ε::Distributi
     for i=1:N_MH
 
         # Generate new draw of ε from a N(ε_init, c²I) distribution, c tuning parameter, I identity
-        # ε_new = ε_init + c*randn(size(QQ, 1))
         F_ε_new = MvNormal(ε_init, c^2*eye(length(ε_init)))
         ε_new = rand(F_ε_new)
 
         # Use the state equation to calculate the corresponding state from that ε
-        # s_new_e = TTT*s_init + sqrtS2*ε_new
         s_new_e = Φ(s_init, ε_new)
 
         # Use the state equation to calculate the state corresponding to ε_init
-        # s_init_e = TTT*s_init + sqrtS2*ε_init
         s_init_e = Φ(s_init, ε_init)
 
         # Calculate difference between data and expected y from measurement equation
-        # error_new  = y_t - ZZ*s_new_e - DD
-        # error_init = y_t - ZZ*s_init_e - DD
         error_new = y_t - Ψ(s_new_e, similar(y_t))
         error_init = y_t - Ψ(s_init_e, similar(y_t))
 
