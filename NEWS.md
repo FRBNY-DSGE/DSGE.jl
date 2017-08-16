@@ -1,4 +1,4 @@
-# DSGE.jl v0.2.1 Release Notes
+# DSGE.jl v0.3.0 Release Notes
 
 ## New features
 
