@@ -645,8 +645,13 @@ function steadystate!(m::Model1002)
     m[:ζ_spσ_ω] = (ζ_bw_zw*ζ_zσ_ω - ζ_bσ_ω) / (1-ζ_bw_zw)
 
     # elasticities wrt μ_e
-    ζ_bμ_e      = -μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
-        ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    if subspec(m) in ["ss2", "ss8"]
+        ζ_bμ_e  = μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
+            ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    else
+        ζ_bμ_e  = -μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
+            ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    end
     ζ_zμ_e      = -μ_estar*Gstar/ΓμG
     m[:ζ_spμ_e] = (ζ_bw_zw*ζ_zμ_e - ζ_bμ_e) / (1-ζ_bw_zw)
 
