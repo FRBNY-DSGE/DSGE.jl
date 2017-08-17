@@ -1,19 +1,19 @@
 """
 ```
-mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::Array{S,1}, 
+mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::Array{S,1},
         ε_init::Array{S,1}, c::S, N_MH::Int, nonmissing::Array{Bool,1})
 ```
-Runs random-walk Metropolis Hastings for single particle. The caller should loop through 
-all particles, calling this method on each. 
+Runs random-walk Metropolis Hastings for single particle. The caller should loop through
+all particles, calling this method on each.
 
 ### Inputs
 
 - `system`: state-space system matrices
 - `y_t`: vector of observables at time t
-- `s_init`: vector of starting state before mutation (ŝ in paper) 
+- `s_init`: vector of starting state before mutation (ŝ in paper)
 - `ε_init`: vector of starting state error before mutation
 - `c`: scaling factor used to achieve a desired acceptance rate, adjusted via:
-    
+
     cₙ = cₙ₋₁f(1-R̂ₙ₋₁(cₙ₋₁))
 
     Where c₁ = c_star and R̂ₙ₋₁(cₙ₋₁) is the emprical rejection rate based on mutation
@@ -25,13 +25,13 @@ all particles, calling this method on each.
 ### Outputs
 
 - `s_out`: mutated state vector
-- `ε_out`: output ε shock corresponding to state vector 
+- `ε_out`: output ε shock corresponding to state vector
 - `accept_rate`: acceptance rate across N_MH steps
 
 """
-function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::Array{S,1}, 
+function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, φ_new::S, s_init::Array{S,1},
     ε_init::Array{S,1}, c::S, N_MH::Int, nonmissing::Array{Bool,1})
-    
+
     #------------------------------------------------------------------------
     # Setup
     #------------------------------------------------------------------------
@@ -42,8 +42,8 @@ function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::
     RRR    = system[:RRR]
     TTT    = system[:TTT]
     QQ     = system[:QQ]
-    HH     = EE + MM*QQ*MM'
-    sqrtS2 = RRR*Matrix(chol(nearestSPD(QQ)))'
+    HH     = (EE + MM*QQ*MM')/φ_new
+    sqrtS2 = RRR*Matrix(chol(nearest_spd(QQ)))'
 
     # Initialize s_out and ε_out
     s_out = s_init
@@ -60,11 +60,11 @@ function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::
     # Metropolis-Hastings Steps
     #------------------------------------------------------------------------
     for i=1:N_MH
-        
+
         # Generate new draw of ε from a N(ε_init, c²I) distribution, c tuning parameter, I identity
         ε_new = ε_init + c*randn(size(QQ, 1))
-        
-        # Use the state equation to calculate the corresponding state from that ε 
+
+        # Use the state equation to calculate the corresponding state from that ε
         s_new_e = TTT*s_init + sqrtS2*ε_new
 
         # Use the state equation to calculate the state corresponding to ε_init
@@ -75,21 +75,21 @@ function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::
         error_init = y_t - ZZ*s_init_e - DD
 
         # Calculate posteriors
-        post_new = log(pdf(MvNormal(zeros(n_obs), HH), error_new)[1] * 
+        post_new = log(pdf(MvNormal(zeros(n_obs), HH/φ_new), error_new)[1] *
                        pdf(MvNormal(zeros(n_states), eye(n_states, n_states)), ε_new)[1])
-        post_init = log(pdf(MvNormal(zeros(n_obs), HH), error_init)[1] * 
+        post_init = log(pdf(MvNormal(zeros(n_obs), HH/φ_new), error_init)[1] *
                         pdf(MvNormal(zeros(n_states), eye(n_states, n_states)), ε_init)[1])
 
-        # Calculate α, probability of accepting the new particle 
+        # Calculate α, probability of accepting the new particle
         α = exp(post_new - post_init)
 
         # Accept the particle with probability α
-        if rand() < α 
+        if rand() < α
             # Accept and update particle
             s_out = s_new_e
             ε_out = ε_new
             accept += 1
-        else 
+        else
             # Reject and keep particle unchanged
             s_out = s_init_e
             ε_out = ε_init
@@ -100,5 +100,5 @@ function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::
     # Calculate acceptance rate
     accept_rate = accept/N_MH
 
-    return s_out, ε_out, accept_rate 
+    return s_out, ε_out, accept_rate
 end

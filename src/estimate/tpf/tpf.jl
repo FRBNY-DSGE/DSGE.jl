@@ -13,7 +13,7 @@ Executes tempered particle filter.
 - `P0::Array`: (`n_observables` x `n_observavles`) initial state covariance matrix
 
 ### Keyword Arguments
-- `verbose::Symbol`: indicates desired nuance of outputs. Default to `:low`. 
+- `verbose::Symbol`: indicates desired nuance of outputs. Default to `:low`.
 - `include_presample::Bool`: indicates whether to include presample in periods in the returned
    outputs. Defaults to `true`.
 
@@ -36,7 +36,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
     HH     = system[:EE] + system[:MM]*system[:QQ]*system[:MM]'
     DD     = system[:DD]
     ZZ     = system[:ZZ]
-    QQ     = system[:QQ]    
+    QQ     = system[:QQ]
     EE     = system[:EE]
     MM     = system[:MM]
     sqrtS2 = RRR*get_chol(QQ)'
@@ -54,7 +54,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
 
     # Set number of presampling periods
     n_presample_periods = (include_presample) ? 0 : get_setting(m, :n_presample_periods)
-    
+
     # Initialization of constants and output vectors
     n_observables = size(QQ,1)
     n_states      = size(ZZ,2)
@@ -66,9 +66,9 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
     #--------------------------------------------------------------
     # Main Algorithm: Tempered Particle Filter
     #--------------------------------------------------------------
-        
-    # Draw initial particles from the distribution of s₀: N(s₀, P₀) 
-    s_lag_tempered = broadcast(+, s0, Matrix(chol(P0))'*randn(n_states, n_particles))
+
+    # Draw initial particles from the distribution of s₀: N(s₀, P₀)
+    s_lag_tempered = (s0 .+ Matrix(chol(nearest_spd(P0))))' * randn(n_states, n_particles)
 
     for t=1:T
 
@@ -77,15 +77,15 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
             println("============================================================")
             @show t
         end
-        
+
         #--------------------------------------------------------------
         # Initialize Algorithm: First Tempering Step
         #--------------------------------------------------------------
         y_t = data[:,t]
-        
+
         # Remove rows/columns of series with NaN values
         nonmissing      = !isnan(y_t)
-        y_t             = y_t[nonmissing]        
+        y_t             = y_t[nonmissing]
         ZZ_t            = ZZ[nonmissing,:]
         DD_t            = DD[nonmissing]
         EE_t            = EE[nonmissing, nonmissing]
@@ -98,28 +98,28 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
 
         # Forecast forward one time step
         s_t_nontempered = TTT*s_lag_tempered + sqrtS2*ε
-        
+
         # Error for each particle
-        p_error = broadcast(+, y_t - DD_t, -ZZ_t*s_t_nontempered)
+        p_error = y_t-DD_t .- ZZ_t*s_t_nontempered
 
         # Solve for initial tempering parameter φ_1
         if adaptive
-            init_Ineff_func(φ) = solve_inefficiency(φ, 2.0*pi, y_t, p_error, HH_t, 
+            init_Ineff_func(φ) = solve_inefficiency(φ, 2.0*pi, y_t, p_error, HH_t,
                                                     initialize=true) - r_star
             φ_1 = fzero(init_Ineff_func, 1e-30, 1.0, xtol=xtol)
         else
             φ_1 = 0.25
         end
-        
+
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            @show φ_1 
+            @show φ_1
             println("------------------------------")
         end
 
         # Correct and resample particles
-        loglik, id = correction_selection!(φ_1, 0.0, y_t, p_error, HH_t, n_particles, 
+        loglik, id = correction_selection!(φ_1, 0.0, y_t, p_error, HH_t, n_particles,
                                            initialize=true)
-        
+
         # Update arrays for resampled indices
         s_lag_tempered  = s_lag_tempered[:,id]
         s_t_nontempered = s_t_nontempered[:,id]
@@ -128,140 +128,110 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
 
         # Update likelihood
         lik[t] += loglik
-        
+
         # Tempering initialization
         φ_old = φ_1
-
-        # If fixed φ schedule, set inefficiency to a value trivially greater than r_star
-        ineff_check = adaptive ? solve_inefficiency(1.0, φ_1, y_t, p_error, HH_t) : r_star + 1
-
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            adaptive ? println("Adaptive φ Schedule:") : println("Fixed φ Schedule:")
-            @show ineff_check
-        end
+        count = 1
 
         #--------------------------------------------------------------
         # Main Algorithm
         #--------------------------------------------------------------
-        while ineff_check > r_star
+        while φ_old < 1
+
+            count += 1
 
             # Define inefficiency function
             init_ineff_func(φ) = solve_inefficiency(φ, φ_old, y_t, p_error, HH_t) - r_star
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
 
-            # The below boolean checks that a solution exists within interval
-            if prod(sign(fphi_interval)) == -1 || !adaptive
-                
-                if adaptive
-                    # Set φ_new to the solution of the inefficiency function over interval
-                    ineff_check = solve_inefficiency(1.0, φ_old, y_t, p_error, HH_t)
-                    if ineff_check <= r_star
-                        φ_new = 1.0
-                    else
-                        φ_new = fzero(init_ineff_func, φ_old, 1.0, xtol=xtol)
-                    end
-                else
-                    φ_new = 0.5
-                end
-               
-                if VERBOSITY[verbose] >= VERBOSITY[:low]
-                    @show φ_new
-                end
-
-                # Correct and resample particles
-                loglik, id = correction_selection!(φ_new, φ_old, y_t, p_error, HH_t, n_particles)
-
-                # Update arrays for resampled indices
-                s_lag_tempered  = s_lag_tempered[:,id]
-                s_t_nontempered = s_t_nontempered[:,id]
-                ε               = ε[:,id]
-
-                # Update likelihood
-                lik[t] += loglik
-                
-                # Update value for c
-                c = update_c!(c, accept_rate, target)
-                
-                if VERBOSITY[verbose] >= VERBOSITY[:low]
-                    if VERBOSITY[verbose] >= VERBOSITY[:high]
-                        @show c
-                    end
-                    println("------------------------------")
-                end
-                                
-                # Mutation Step
-                accept_vec = zeros(n_particles)
-                print("Mutation ")        
-                tic()
-
-                if parallel
-                    print("(in parallel) ")                    
-                    #out = pmap(i -> mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, 
-                    #           N_MH, nonmissing), 1:n_particles)
-                    out = @sync @parallel (hcat) for i=1:n_particles
-                        mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, nonmissing)
-                    end
-                else 
-                    print("(not parallel) ")
-                    out = [mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH, nonmissing) 
-                           for i=1:n_particles]
-                end
-                times[t] = toc()                
-
-                for i = 1:n_particles
-                    s_t_nontempered[:,i] = out[i][1]
-                    ε[:,i] = out[i][2]
-                    accept_vec[i] = out[i][3]
-                end
-
-                # Calculate average acceptance rate
-                accept_rate = mean(accept_vec)
-
-                # Get error for all particles
-                p_error = broadcast(+, y_t - DD_t, -ZZ_t*s_t_nontempered)
-                
-                # Update φ
-                φ_old = φ_new
-
-            # If no solution exists within interval, set inefficiency to r_star
-            else 
-                if VERBOSITY[verbose] >= VERBOSITY[:low]
-                    println("No solution in interval.")
-                end
-                ineff_check = r_star
+            if prod(sign(fphi_interval)) == -1 && adaptive
+                φ_new = fzero(init_ineff_func, φ_old, 1., xtol=xtol)
+            elseif prod(sign(fphi_interval)) != -1 && adaptive
+                φ_new = 1.
+            else # fixed φ
+                φ_new = 0.5
             end
 
-            # With fixed φ schedule, exit after one iteration, thus set ineff_check = 0
-            if !adaptive
-                ineff_check = 0.0
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                @show φ_new
             end
 
-            if VERBOSITY[verbose] >= VERBOSITY[:high]
-                @show ineff_check
+            # Correct and resample particles
+            loglik, id = correction_selection!(φ_new, φ_old, y_t, p_error, HH_t, n_particles)
+
+            # Update arrays for resampled indices
+            s_lag_tempered  = s_lag_tempered[:,id]
+            s_t_nontempered = s_t_nontempered[:,id]
+            ε               = ε[:,id]
+
+            # Update likelihood
+            lik[t] += loglik
+
+            # Update value for c
+            c = update_c!(c, accept_rate, target)
+
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                if VERBOSITY[verbose] >= VERBOSITY[:high]
+                    @show c
+                end
+                println("------------------------------")
             end
+
+            # Mutation Step
+            accept_vec = zeros(n_particles)
+            print("Mutation ")
+            tic()
+
+            if parallel
+                print("(in parallel) ")
+                out = @sync @parallel (hcat) for i=1:n_particles
+                    mutation(system, y_t, φ_new, s_lag_tempered[:,i], ε[:,i], c, N_MH, nonmissing)
+                end
+            else
+                print("(not parallel) ")
+                out = [mutation(system, y_t, φ_new, s_lag_tempered[:,i], ε[:,i], c, N_MH, nonmissing)
+                       for i=1:n_particles]
+            end
+            times[t] = toc()
+
+            for i = 1:n_particles
+                s_t_nontempered[:,i] = out[i][1]
+                ε[:,i] = out[i][2]
+                accept_vec[i] = out[i][3]
+            end
+
+            # Calculate average acceptance rate
+            accept_rate = mean(accept_vec)
+
+            # Get error for all particles
+            p_error = y_t - DD_t .- ZZ_t*s_t_nontempered
+
+            # Update φ
+            φ_old = φ_new
+
         end
 
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            println("Out of main while-loop.")
-        end
-        
-        #--------------------------------------------------------------
-        # Last Stage of Algorithm: φ_new := 1.0
-        #--------------------------------------------------------------
+    if VERBOSITY[verbose] >= VERBOSITY[:high]
+        println("Out of main while-loop.")
+    end
+
+    #--------------------------------------------------------------
+    # Last Stage of Algorithm: φ_new := 1.0
+    #--------------------------------------------------------------
 
 ### PER REQUEST
 
     # Initialize vector
     incremental_weights = zeros(n_particles)
-    
+
     # Calculate initial weights
     for n=1:n_particles
-        incremental_weights[n] = incremental_weight(1.0, φ_old, y_t, p_error[:,n], HH_t, 
+        incremental_weights[n] = incremental_weight(1.0, φ_old, y_t, p_error[:,n], HH_t,
                                                     initialize=true)
-    end   
+    end
 
     log_lik = log(mean(incremental_weights))
-        
+
     @show log_lik
     @show lik[t]
 
@@ -289,7 +259,7 @@ Calculate and return the Cholesky of a matrix.
 
 """
 @inline function get_chol{S<:Float64}(mat::Array{S,2})
-    return Matrix(chol(nearestSPD(mat)))
+    return Matrix(chol(nearest_spd(mat)))
 end
 
 """
@@ -307,11 +277,11 @@ end
 
 """
 ```
-correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,2}, 
-    s_lag_tempered::Array{S,2}, ε::Array{S,2}, HH::Array{S,2}, n_particles::Int; 
+correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,2},
+    s_lag_tempered::Array{S,2}, ε::Array{S,2}, HH::Array{S,2}, n_particles::Int;
     initialize::Bool=false)
 ```
-Calculate densities, normalize and reset weights, call multinomial resampling, update state and 
+Calculate densities, normalize and reset weights, call multinomial resampling, update state and
 error vectors, reset error vectors to 1,and calculate new log likelihood.
 
 ### Inputs
@@ -323,67 +293,67 @@ error vectors, reset error vectors to 1,and calculate new log likelihood.
 - `n_particles::Int`: number of particles
 
 ### Keyword Arguments
-- `initialize::Bool`: Flag indicating whether one is solving for incremental weights during 
+- `initialize::Bool`: Flag indicating whether one is solving for incremental weights during
     the initialization of weights; default is `false`.
 
 ### Outputs
 - `loglik::S`: incremental log likelihood
 - `id::Vector{Int}`: vector of indices corresponding to resampled particles
 """
-function correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, 
-                                   p_error::Array{S,2}, HH::Array{S,2}, n_particles::Int; 
+function correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1},
+                                   p_error::Array{S,2}, HH::Array{S,2}, n_particles::Int;
                                    initialize::Bool=false)
     # Initialize vector
     incremental_weights = zeros(n_particles)
-    
+
     # Calculate initial weights
     for n=1:n_particles
-        incremental_weights[n] = incremental_weight(φ_new, φ_old, y_t, p_error[:,n], HH, 
+        incremental_weights[n] = incremental_weight(φ_new, φ_old, y_t, p_error[:,n], HH,
                                                     initialize=initialize)
-    end   
+    end
 
     # Normalize weights
     normalized_weights = incremental_weights ./ mean(incremental_weights)
-    
+
     # Resampling
     id = multinomial_resampling(normalized_weights)
-    
+
     # Calculate likelihood
     loglik = log(mean(incremental_weights))
-    
+
     return loglik, id
 end
 
 """
 ```
-incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,1}, 
+incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::Array{S,1},
     HH::Array{S,2}; initialize::Bool=false)
 ```
 ### Inputs
-- `φ_new::S`: current φ 
+- `φ_new::S`: current φ
 - `φ_old::S`: φ value before last
 - `y_t::Array{S,1}`: Vector of observables for time t
 - `p_error::Array{S,1}`: A single particle's error: y_t - Ψ(s_t)
 - `HH::Array{S,2}`: Measurement error covariance matrix
 
 ### Keyword Arguments
-- `initialize::Bool`: Flag indicating whether one is solving for incremental weights during 
+- `initialize::Bool`: Flag indicating whether one is solving for incremental weights during
     the initialization of weights; default is `false`.
 
 ### Output
 - Returns the incremental weight of single particle
 """
-@inline function incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, 
+@inline function incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1},
                                        p_error::Array{S,1}, HH::Array{S,2}; initialize::Bool=false)
 
     # Initialization step (using 2π instead of φ_old)
     if initialize
-        return (φ_new/(2*pi))^(length(y_t)/2) * (det(HH)^(-1/2)) * 
+        return (φ_new/(2*pi))^(length(y_t)/2) * (det(HH)^(-1/2)) *
             exp(-1/2 * p_error' * φ_new * inv(HH) * p_error)[1]
-    
+
     # Non-initialization step (tempering and final iteration)
     else
-        return (φ_new/φ_old)^(length(y_t)/2) * 
+        return (φ_new/φ_old)^(length(y_t)/2) *
             exp(-1/2 * p_error' * (φ_new - φ_old) * inv(HH) * p_error)[1]
     end
 end
