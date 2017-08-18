@@ -121,123 +121,92 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
 
         # Tempering initialization
         φ_old = φ_1
-
-        # If fixed φ schedule, set inefficiency to a value trivially greater than r_star
-        ineff_check = adaptive ? solve_inefficiency(1.0, φ_1, y_t, p_error, HH_t) : r_star + 1
-
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            adaptive ? println("Adaptive φ Schedule:") : println("Fixed φ Schedule:")
-            @show ineff_check
-        end
+        count = 1
 
         #--------------------------------------------------------------
         # Main Algorithm
         #--------------------------------------------------------------
-        while ineff_check > r_star
+        while φ_old < 1
+
+            count += 1
 
             # Define inefficiency function
             init_ineff_func(φ) = solve_inefficiency(φ, φ_old, y_t, p_error, HH_t) - r_star
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
 
             # The below boolean checks that a solution exists within interval
-            if prod(sign(fphi_interval)) == -1 || !adaptive
+            if prod(sign(fphi_interval)) == -1 && adaptive
+                φ_new = fzero(init_ineff_func, φ_old, 1., xtol=xtol)
+            elseif prod(sign(fphi_interval)) != -1 && adaptive
+                φ_new = 1.
+            else # fixed φ
+                φ_new = 0.5
+            end
 
-                if adaptive
-                    # Set φ_new to the solution of the inefficiency function over interval
-                    ineff_check = solve_inefficiency(1.0, φ_old, y_t, p_error, HH_t)
-                    if ineff_check <= r_star
-                        φ_new = 1.0
-                    else
-                        φ_new = fzero(init_ineff_func, φ_old, 1.0, xtol=xtol)
-                    end
-                else
-                    φ_new = 0.5
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                @show φ_new
+            end
+
+            # Correct and resample particles
+            loglik, id = correction_selection!(φ_new, φ_old, y_t, p_error, HH_t, n_particles)
+
+            # Update arrays for resampled indices
+            s_lag_tempered  = s_lag_tempered[:,id]
+            s_t_nontempered = s_t_nontempered[:,id]
+            ε               = ε[:,id]
+
+            # Update likelihood
+            lik[t] += loglik
+
+            # Update value for c
+            c = update_c!(c, accept_rate, target)
+
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
+                if VERBOSITY[verbose] >= VERBOSITY[:high]
+                    @show c
                 end
+                println("------------------------------")
+            end
 
-                if VERBOSITY[verbose] >= VERBOSITY[:low]
-                    @show φ_new
+            # Mutation Step
+            accept_vec = zeros(n_particles)
+            print("Mutation ")
+            tic()
+
+            if parallel
+                print("(in parallel) ")
+                out = @sync @parallel (hcat) for i=1:n_particles
+                    mutation(Φ, Ψ, F_ε, F_u, φ_new, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH)
                 end
-
-                # Correct and resample particles
-                loglik, id = correction_selection!(φ_new, φ_old, y_t, p_error, HH_t, n_particles)
-
-                # Update arrays for resampled indices
-                s_lag_tempered  = s_lag_tempered[:,id]
-                s_t_nontempered = s_t_nontempered[:,id]
-                ε               = ε[:,id]
-
-                # Update likelihood
-                lik[t] += loglik
-
-                # Update value for c
-                c = update_c!(c, accept_rate, target)
-
-                if VERBOSITY[verbose] >= VERBOSITY[:low]
-                    if VERBOSITY[verbose] >= VERBOSITY[:high]
-                        @show c
-                    end
-                    println("------------------------------")
-                end
-
-                # Mutation Step
-                accept_vec = zeros(n_particles)
-                print("Mutation ")
-                tic()
-
-                if parallel
-                    print("(in parallel) ")
-                    #out = pmap(i -> mutation(system, y_t, s_lag_tempered[:,i], ε[:,i], c,
-                    #           N_MH, nonmissing), 1:n_particles)
-                    out = @sync @parallel (hcat) for i=1:n_particles
-                        mutation(Φ, Ψ, F_ε, F_u,  y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH)
-                    end
-                else
-                    print("(not parallel) ")
-                    out = [mutation(Φ, Ψ, F_ε, F_u, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH)
-                           for i = 1:n_particles]
-                end
-                times[t] = toc()
-
-                for i = 1:n_particles
-                    s_t_nontempered[:,i] = out[i][1]
-                    ε[:,i] = out[i][2]
-                    accept_vec[i] = out[i][3]
-                end
-
-                # Calculate average acceptance rate
-                accept_rate = mean(accept_vec)
-
-                # Get error for all particles
-                p_error = y_t .- Ψ_bcast_t(s_t_nontempered, zeros(n_observables_t, n_particles))
-
-                # Update φ
-                φ_old = φ_new
-
-            # If no solution exists within interval, set inefficiency to r_star
             else
-                if VERBOSITY[verbose] >= VERBOSITY[:low]
-                    println("No solution in interval.")
-                end
-                ineff_check = r_star
+                print("(not parallel) ")
+                out = [mutation(Φ, Ψ, F_ε, F_u, φ_new, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH)
+                       for i = 1:n_particles]
             end
+            times[t] = toc()
 
-            # With fixed φ schedule, exit after one iteration, thus set ineff_check = 0
-            if !adaptive
-                ineff_check = 0.0
-            end
+            # Update arrays for resampled indices
+            s_lag_tempered  = s_lag_tempered[:,id]
+            s_t_nontempered = s_t_nontempered[:,id]
+            ε               = ε[:,id]
 
-            if VERBOSITY[verbose] >= VERBOSITY[:high]
-                @show ineff_check
-            end
+            # Calculate average acceptance rate
+            accept_rate = mean(accept_vec)
+
+            # Get error for all particles
+            p_error = y_t .- Ψ_bcast_t(s_t_nontempered, zeros(n_observables_t, n_particles))
+
+            # Update φ
+            φ_old = φ_new
         end
 
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            println("Out of main while-loop.")
-        end
+    if VERBOSITY[verbose] >= VERBOSITY[:high]
+        println("Out of main while-loop.")
+    end
 
-        #--------------------------------------------------------------
-        # Last Stage of Algorithm: φ_new := 1.0
-        #--------------------------------------------------------------
+    #--------------------------------------------------------------
+    # Last Stage of Algorithm: φ_new := 1.0
+    #--------------------------------------------------------------
 
 ### PER REQUEST
 

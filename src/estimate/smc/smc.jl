@@ -230,15 +230,15 @@ function smc(m::AbstractModel; verbose::Symbol=:low)
 end
 
 
-"""
-```
-initial_draw(m::AbstractModel, data::Array{Float64}, c::ParticleCloud)
-```
+# """
+# ```
+# initial_draw(m::AbstractModel, data::Array{Float64}, c::ParticleCloud)
+# ```
 
-Draw from a general starting distribution (set by default to be from the prior) to initialize the SMC algorithm.
-Returns a tuple (logpost, loglh) and modifies the particle objects in the particle cloud in place.
+# Draw from a general starting distribution (set by default to be from the prior) to initialize the SMC algorithm.
+# Returns a tuple (logpost, loglh) and modifies the particle objects in the particle cloud in place.
 
-"""
+# """
 # function initial_draw(m::AbstractModel, data::Array{Float64}, c::ParticleCloud)
     # dist_type = get_setting(m, :initial_draw_source)
     # if dist_type == :normal
