@@ -42,7 +42,7 @@ function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, φ_new::
     RRR    = system[:RRR]
     TTT    = system[:TTT]
     QQ     = system[:QQ]
-    HH     = (EE + MM*QQ*MM')/φ_new
+    HH     = (EE + MM*QQ*MM')
     sqrtS2 = RRR*Matrix(chol(nearest_spd(QQ)))'
 
     # Initialize s_out and ε_out
