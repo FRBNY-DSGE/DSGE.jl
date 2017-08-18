@@ -29,10 +29,8 @@ all particles, calling this method on each.
 - `accept_rate`: acceptance rate across N_MH steps
 
 """
-# function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, s_init::Array{S,1},
-    # ε_init::Array{S,1}, c::S, N_MH::Int, nonmissing::Array{Bool,1})
 function mutation{S<:AbstractFloat}(Φ::Function, Ψ::Function, F_ε::Distribution,
-                                    F_u::Distribution, y_t::Vector{S}, s_init::Vector{S},
+                                    F_u::Distribution, φ_new::S, y_t::Vector{S}, s_init::Vector{S},
                                     ε_init::Vector{S}, c::S, N_MH::Int)
     #------------------------------------------------------------------------
     # Setup
@@ -58,6 +56,8 @@ function mutation{S<:AbstractFloat}(Φ::Function, Ψ::Function, F_ε::Distributi
         # Generate new draw of ε from a N(ε_init, c²I) distribution, c tuning parameter, I identity
         F_ε_new = MvNormal(ε_init, c^2*eye(length(ε_init)))
         ε_new = rand(F_ε_new)
+        # NOTE: This may perform differently than
+        # ε_new = ε_init + c*randn(size(QQ, 1)), which is the original implementation. Check.
 
         # Use the state equation to calculate the corresponding state from that ε
         s_new_e = Φ(s_init, ε_new)
@@ -70,9 +70,9 @@ function mutation{S<:AbstractFloat}(Φ::Function, Ψ::Function, F_ε::Distributi
         error_init = y_t - Ψ(s_init_e, similar(y_t))
 
         # Calculate posteriors
-        post_new = log(pdf(MvNormal(zeros(n_obs), HH), error_new)[1] *
+        post_new = log(pdf(MvNormal(zeros(n_obs), HH/φ_new), error_new)[1] *
                        pdf(MvNormal(zeros(n_states), eye(n_states, n_states)), ε_new)[1])
-        post_init = log(pdf(MvNormal(zeros(n_obs), HH), error_init)[1] *
+        post_init = log(pdf(MvNormal(zeros(n_obs), HH/φ_new), error_init)[1] *
                         pdf(MvNormal(zeros(n_states), eye(n_states, n_states)), ε_init)[1])
 
         # Calculate α, probability of accepting the new particle
