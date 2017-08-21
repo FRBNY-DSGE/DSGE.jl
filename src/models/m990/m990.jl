@@ -653,6 +653,10 @@ function settings_m990!(m::Model990)
 
     # Data
     m <= Setting(:data_id, 2, "Dataset identifier")
+    m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
+        "Observables used in conditional forecasts")
+    m <= Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
+        "Observables used in semiconditional forecasts")
 
     # Forecast
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")))

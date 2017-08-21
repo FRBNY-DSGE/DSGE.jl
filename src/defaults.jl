@@ -27,9 +27,9 @@ function default_settings!(m::AbstractModel)
         "Conditional data vintage")
     settings[:cond_id] = Setting(:cond_id, 2,
         "Conditional dataset identifier")
-    settings[:cond_full_names] = Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate],
+    settings[:cond_full_names] = Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
         "Observables used in conditional forecasts")
-    settings[:cond_semi_names] = Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate],
+    settings[:cond_semi_names] = Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
         "Observables used in semiconditional forecasts")
     settings[:use_population_forecast] = Setting(:use_population_forecast, false,
         "Whether to use population forecasts as data")
