@@ -435,7 +435,7 @@ function settings_smets_wouters!(m::SmetsWouters)
 
     # Data
     m <= Setting(:data_vintage, "150827")
-    m <= Setting(:data_id, 3, "Dataset identifier")
-    m <= Setting(:cond_semi_names, [:obs_nominalrate])
+    m <= Setting(:data_id, 1, "Dataset identifier")
     m <= Setting(:cond_full_names, [:obs_gdp, :obs_nominalrate])
+    m <= Setting(:cond_semi_names, [:obs_nominalrate])
 end
