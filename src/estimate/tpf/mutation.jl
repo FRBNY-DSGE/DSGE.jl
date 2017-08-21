@@ -57,7 +57,7 @@ function mutation{S<:AbstractFloat}(Φ::Function, Ψ::Function, F_ε::Distributi
         F_ε_new = MvNormal(ε_init, c^2*eye(length(ε_init)))
         ε_new = rand(F_ε_new)
         # NOTE: This may perform differently than
-        # ε_new = ε_init + c*randn(size(QQ, 1)), which is the original implementation. Check.
+        # ε_new = ε_init + c*randn(length(ε_init))# which is the original implementation. Check.
 
         # Use the state equation to calculate the corresponding state from that ε
         s_new_e = Φ(s_init, ε_new)
@@ -66,8 +66,8 @@ function mutation{S<:AbstractFloat}(Φ::Function, Ψ::Function, F_ε::Distributi
         s_init_e = Φ(s_init, ε_init)
 
         # Calculate difference between data and expected y from measurement equation
-        error_new = y_t - Ψ(s_new_e, similar(y_t))
-        error_init = y_t - Ψ(s_init_e, similar(y_t))
+        error_new = y_t - Ψ(s_new_e, zeros(length(y_t)))
+        error_init = y_t - Ψ(s_init_e, zeros(length(y_t)))
 
         # Calculate posteriors
         post_new = log(pdf(MvNormal(zeros(n_obs), HH/φ_new), error_new)[1] *
