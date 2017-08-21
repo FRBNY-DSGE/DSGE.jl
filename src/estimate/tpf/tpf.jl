@@ -85,6 +85,8 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
 
         # Draw random shock ε
         ε = rand(F_ε, n_particles)
+        # QQ = F_ε.Σ.mat
+        # ε = randn(size(QQ)[1], n_particles)
 
         # Forecast forward one time step
         s_t_nontempered = Φ_bcast(s_lag_tempered, ε)
@@ -185,10 +187,11 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
             end
             times[t] = toc()
 
-            # Update arrays for resampled indices
-            s_lag_tempered  = s_lag_tempered[:,id]
-            s_t_nontempered = s_t_nontempered[:,id]
-            ε               = ε[:,id]
+            for i = 1:n_particles
+                s_t_nontempered[:,i] = out[i][1]
+                ε[:,i] = out[i][2]
+                accept_vec[i] = out[i][3]
+            end
 
             # Calculate average acceptance rate
             accept_rate = mean(accept_vec)
@@ -359,11 +362,11 @@ function initialize_function_system{S<:AbstractFloat}(system::System{S})
     MM     = system[:MM]
     sqrtS2 = RRR*get_chol(QQ)'
 
-    @inline Φ(s_t1::Vector{S}, ε_t1::Vector{S}) = TTT*s_t1 + RRR*ε_t1
+    @inline Φ(s_t1::Vector{S}, ε_t1::Vector{S}) = TTT*s_t1 + sqrtS2*ε_t1
     @inline Ψ(s_t1::Vector{S}, u_t1::Vector{S}) = ZZ*s_t1 + DD + u_t1
 
-    F_ε = Distributions.MvNormal(zeros(size(QQ)[1]), QQ)
-    F_u = Distributions.MvNormal(zeros(size(EE)[1]), HH)
+    F_ε = Distributions.MvNormal(zeros(size(QQ)[1]), eye(size(QQ)[1]))
+    F_u = Distributions.MvNormal(zeros(size(HH)[1]), HH)
 
     return Φ, Ψ, F_ε, F_u
 end
