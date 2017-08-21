@@ -25,7 +25,7 @@ function default_settings!(m::AbstractModel)
         "Dataset identifier")
     settings[:cond_vintage] = Setting(:cond_vintage, vint,
         "Conditional data vintage")
-    settings[:cond_id] = Setting(:cond_id, 1,
+    settings[:cond_id] = Setting(:cond_id, 2,
         "Conditional dataset identifier")
     settings[:cond_full_names] = Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate],
         "Observables used in conditional forecasts")
