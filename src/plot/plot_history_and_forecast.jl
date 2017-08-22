@@ -126,8 +126,8 @@ end
 function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::MeansBands;
                                    output_file::String = "",
                                    title::String = "",
-                                   start_date::Nullable{Date} = Nullable{Date}(),
-                                   end_date::Nullable{Date} = Nullable{Date}(),
+                                   start_date::Date = history.means[1, :date],
+                                   end_date::Date = forecast.means[end, :date],
                                    hist_label::String = "History",
                                    forecast_label::String = "Forecast",
                                    hist_color::Colorant = RGBA(0., 0., 0., 1.),
@@ -144,9 +144,8 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     combined = cat(history, forecast)
 
     # Dates
-    start_date, end_date = get_date_limits(start_date, end_date, combined.means[:date])
-    start_ind,  end_ind  = get_date_limit_indices(start_date, end_date, combined.means[:date])
-    datenums             = map(quarter_date_to_number, combined.means[:date])
+    start_ind, end_ind = get_date_limit_indices(start_date, end_date, combined.means[:date])
+    datenums           = map(quarter_date_to_number, combined.means[:date])
 
     # Indices
     n_hist_periods  = size(history.means,  1)
