@@ -115,6 +115,8 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
                                   groups::Vector{ShockGroup};
                                   output_file::String = "",
                                   title = "",
+                                  start_date::Date = shockdec.means[1, :date],
+                                  end_date::Date = shockdec.means[end, :date],
                                   hist_label::String = "Detrended History",
                                   forecast_label::String = "Detrended Forecast",
                                   hist_color::Colorant = RGBA(0., 0., 0., 1.),
@@ -126,6 +128,9 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
     df = prepare_means_table_shockdec(shockdec, trend, dettrend, var,
                                            mb_hist = hist, mb_forecast = forecast,
                                            detexify_shocks = false)
+
+    # Dates
+    start_ind, end_ind = get_date_limit_indices(start_date, end_date, df[:date])
     df[:datenum] = map(quarter_date_to_number, df[:date])
     df[:x] = map(date -> shockdec_date_to_x(date, df[1, :date]), df[:date])
     nperiods = size(df, 1)
@@ -139,9 +144,10 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
     end
 
     # x-axis ticks
-    date_ticks = get_date_ticks(df[:date], tick_size = tick_size)
-    x0 = shockdec_date_to_x(quarter_number_to_date(date_ticks.start), df[1, :date])
-    x1 = shockdec_date_to_x(quarter_number_to_date(date_ticks.stop),  df[1, :date])
+    all_inds = start_ind:end_ind
+    date_ticks = get_date_ticks(df[all_inds, :date], tick_size = tick_size)
+    x0 = shockdec_date_to_x(quarter_number_to_date(date_ticks.start), df[start_ind, :date])
+    x1 = shockdec_date_to_x(quarter_number_to_date(date_ticks.stop),  df[start_ind, :date])
     xstep = tick_size * 4
     x_ticks = x0:xstep:x1
 
@@ -151,7 +157,7 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
     labels = map(x -> x.name,  groups)
     cat_names = map(Symbol, labels)
 
-    p = groupedbar(convert(Array, df[cat_names]),
+    p = groupedbar(convert(Array, df[all_inds, cat_names]),
                    xtick = (x_ticks, date_ticks),
                    labels = reshape(labels, 1, ngroups),
                    color = reshape(colors, 1, ngroups),
@@ -164,9 +170,9 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
     hist_end_date = enddate_means(hist)
     hist_end_ind  = findfirst(df[:date], hist_end_date)
 
-    plot!(p, df[1:hist_end_ind, :x], df[1:hist_end_ind, :detrendedMean],
+    plot!(p, df[start_ind:hist_end_ind, :x], df[start_ind:hist_end_ind, :detrendedMean],
           color = hist_color, linewidth = 2, label = hist_label, ylim = :auto)
-    plot!(p, df[hist_end_ind:end, :x], df[hist_end_ind:end, :detrendedMean],
+    plot!(p, df[hist_end_ind:end_ind, :x], df[hist_end_ind:end_ind, :detrendedMean],
           color = forecast_color, linewidth = 2, label = forecast_label, ylim = :auto)
 
     # Save if output_file provided
