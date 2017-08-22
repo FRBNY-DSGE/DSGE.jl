@@ -754,14 +754,19 @@ Returns a `Vector{ShockGroup}`, which must be passed in to
 `plot_shock_decomposition`. See `?ShockGroup` for details.
 """
 function shock_groupings(m::Model1002)
-    gov = ShockGroup("Gov't", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
-    fin = ShockGroup("Financial", [:b_sh, :γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo
-    tfp = ShockGroup("TFP", [:z_sh, :zp_sh], RGB(1.0, 0.55, 0.0)) # darkorange
-    mkp = ShockGroup("Mark-Up", [:λ_f_sh, :λ_w_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
-    pol = ShockGroup("Policy",    vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]),
+    gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
+    bet = ShockGroup("b", [:b_sh], RGB(0.3, 0.3, 1.0))
+    fin = ShockGroup("FF", [:γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo
+    tfp = ShockGroup("z", [:z_sh], RGB(1.0, 0.55, 0.0)) # darkorange
+    pmu = ShockGroup("p-mkp", [:λ_f_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
+    wmu = ShockGroup("w-mkp", [:λ_w_sh], RGB(0.0, 0.5, 0.5)) # teal
+    pol = ShockGroup("pol", vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]),
                      RGB(1.0, 0.84, 0.0)) # gold
-    mei = ShockGroup("MEI", [:μ_sh], :cyan)
-    det = ShockGroup("Det Trend", [:dettrend], :gray40)
+    pis = ShockGroup("pi-LR", [:π_star_sh], RGB(1.0, 0.75, 0.793)) # pink
+    mei = ShockGroup("mu", [:μ_sh], :cyan)
+    mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh], RGB(0.0, 0.8, 0.0))
+    zpe = ShockGroup("zp", [:zp_sh], RGB(0.0, 0.3, 0.0))
+    det = ShockGroup("dt", [:dettrend], :gray40)
 
-    return [gov, fin, tfp, mkp, pol, mei, det]
+    return [gov, bet, fin, tfp, pmu, wmu, pol, pis, mei, mea, zpe, det]
 end
