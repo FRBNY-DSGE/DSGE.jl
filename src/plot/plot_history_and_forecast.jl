@@ -119,7 +119,6 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
                                                ylabel = DSGE.series_ylabel(m, var, class),
                                                kwargs...)
     end
-
     return plots
 end
 
@@ -139,7 +138,7 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
                                    tick_size::Int = 5,
                                    ylabel::String = "",
                                    legend = :best,
-                                   plot_handle::Plots.Plot = plot())
+                                   plot_handle::Plots.Plot = plot(legend = legend))
     # Concatenate MeansBands
     combined = cat(history, forecast)
 
@@ -157,11 +156,7 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     all_inds   = start_ind:end_ind
 
     # Initialize plot
-    p = if isempty(plot_handle.series_list)
-        Plots.plot(legend = legend)
-    else
-        plot_handle
-    end
+    p = plot_handle
     title!(p, title)
     yaxis!(p, ylabel = ylabel)
 
