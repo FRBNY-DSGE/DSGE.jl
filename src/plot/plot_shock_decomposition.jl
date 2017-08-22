@@ -1,12 +1,12 @@
 """
 ```
 plot_shock_decomposition(m, var, class, input_type, cond_type;
-    forecast_string = "", output_file = "", title = "",
-    kwargs...)
+    forecast_string = "", groups = shock_groupings(m), output_file = "",
+    title = "", kwargs...)
 
 plot_shock_decomposition(m, vars, class, input_type, cond_type;
-    forecast_string = "", output_files = [], titles = [],
-    kwargs...)
+    forecast_string = "", groups = shock_groupings(m), output_files = [],
+    titles = [], kwargs...)
 
 plot_shock_decomposition(var, shockdec, trend, dettrend, hist, forecast, groups;
     output_file = "", title = "",
@@ -53,6 +53,7 @@ Plot shock decomposition(s) for `var` or `vars`.
 **Methods 1 and 2 only:**
 
 - `forecast_string::String`
+- `groups::Vector{ShockGroup}`
 
 ### Output
 
@@ -61,12 +62,14 @@ Plot shock decomposition(s) for `var` or `vars`.
 function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
+                                  groups::Vector{ShockGroup} = shock_groupings(m),
                                   output_file::String = "",
                                   title = "",
                                   kwargs...)
 
     plot_shock_decomposition(m, [var], class, input_type, cond_type;
                              forecast_string = forecast_string,
+                             groups = groups,
                              output_files = isempty(output_file) ? String[] : [output_file],
                              titles = isempty(title) ? String[] : [title],
                              kwargs...)
@@ -75,6 +78,7 @@ end
 function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
+                                  groups::Vector{ShockGroup} = shock_groupings(m),
                                   output_files::Vector{String} = String[],
                                   titles::Vector{String} = String[],
                                   kwargs...)
@@ -82,9 +86,6 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
     output_vars = [Symbol(prod, class) for prod in [:shockdec, :trend, :dettrend, :hist, :forecast]]
     mbs = map(output_var -> read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string),
               output_vars)
-
-    # Get shock groupings
-    groups = shock_groupings(m)
 
     # Get output file names and titles if not provided
     if isempty(output_files)
