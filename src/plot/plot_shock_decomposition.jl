@@ -165,6 +165,7 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
                    linealpha = 0.0,
                    bar_width = 1.0,
                    legend = legend,
+                   legendfont = Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, parse(Colorant, :black)),
                    title = title,
                    ylabel = ylabel)
 
