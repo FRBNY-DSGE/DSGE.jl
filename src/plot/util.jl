@@ -57,15 +57,6 @@ function date_ticks!(p::Plots.Plot,
     return nothing
 end
 
-function get_date_limits(nullable_start::Nullable{Date}, nullable_end::Nullable{Date},
-                         dates::AbstractArray{Date, 1})
-
-    start_date = isnull(nullable_start) ? dates[1] : get(nullable_start)
-    end_date = isnull(nullable_end) ? dates[end] : get(nullable_end)
-
-    return start_date, end_date
-end
-
 function get_date_limit_indices(start_date::Date, end_date::Date,
                                 dates::AbstractArray{Date, 1})
     start_ind = if dates[1] <= start_date <= dates[end]
