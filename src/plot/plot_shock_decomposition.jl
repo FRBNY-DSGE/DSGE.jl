@@ -122,6 +122,7 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
                                   hist_color::Colorant = RGBA(0., 0., 0., 1.),
                                   forecast_color::Colorant = RGBA(1., 0., 0., 1.),
                                   tick_size::Int = 5,
+                                  ylabel::String = "",
                                   legend = :best)
 
     # Construct DataFrame with detrended mean, deterministic trend, and all shocks
@@ -164,7 +165,8 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
                    linealpha = 0.0,
                    bar_width = 1.0,
                    legend = legend,
-                   title = title)
+                   title = title,
+                   ylabel = ylabel)
 
     # Plot detrended mean
     hist_end_date = enddate_means(hist)
