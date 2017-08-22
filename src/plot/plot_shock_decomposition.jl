@@ -67,12 +67,13 @@ function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                   title = "",
                                   kwargs...)
 
-    plot_shock_decomposition(m, [var], class, input_type, cond_type;
-                             forecast_string = forecast_string,
-                             groups = groups,
-                             output_files = isempty(output_file) ? String[] : [output_file],
-                             titles = isempty(title) ? String[] : [title],
-                             kwargs...)
+    plots = plot_shock_decomposition(m, [var], class, input_type, cond_type;
+                                     forecast_string = forecast_string,
+                                     groups = groups,
+                                     output_files = isempty(output_file) ? String[] : [output_file],
+                                     titles = isempty(title) ? String[] : [title],
+                                     kwargs...)
+    return plots[var]
 end
 
 function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
@@ -98,11 +99,14 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
     end
 
     # Loop through variables
+    plots = Dict{Symbol, Plots.Plot}()
     for (var, output_file, title) in zip(vars, output_files, titles)
-        plot_shock_decomposition(var, mbs..., groups;
-                                 output_file = output_file, title = title,
-                                 kwargs...)
+        plots[var] = plot_shock_decomposition(var, mbs..., groups;
+                                              output_file = output_file, title = title,
+                                              ylabel = DSGE.series_ylabel(m, var, class),
+                                              kwargs...)
     end
+    return plots
 end
 
 function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
