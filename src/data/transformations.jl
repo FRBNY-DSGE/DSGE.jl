@@ -81,6 +81,16 @@ end
 
 """
 ```
+series_lag_n = lag(series, n::Int)
+```
+Returns a particular data series lagged by n periods
+"""
+function lag{T<:AbstractArray}(series::T, n::Int)
+    return vcat(NaN*ones(n), series[1:end-n])
+end
+
+"""
+```
 yt, yf = hpfilter(y, λ::Real)
 ```
 
