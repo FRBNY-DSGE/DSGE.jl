@@ -85,8 +85,6 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
 
         # Draw random shock ε
         ε = rand(F_ε, n_particles)
-        # QQ = F_ε.Σ.mat
-        # ε = randn(size(QQ)[1], n_particles)
 
         # Forecast forward one time step
         s_t_nontempered = Φ_bcast(s_lag_tempered, ε)
@@ -112,14 +110,13 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
         loglik, id = correction_selection!(φ_1, 0.0, y_t, p_error, HH_t, n_particles,
                                            initialize=true)
 
+        # Update likelihood
+        lik[t] += loglik
+
         # Update arrays for resampled indices
         s_lag_tempered  = s_lag_tempered[:,id]
         s_t_nontempered = s_t_nontempered[:,id]
         ε               = ε[:,id]
-        p_error         = p_error[:,id]
-
-        # Update likelihood
-        lik[t] += loglik
 
         # Tempering initialization
         φ_old = φ_1
@@ -131,6 +128,9 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
         while φ_old < 1
 
             count += 1
+
+            # Get error for all particles
+            p_error = y_t .- Ψ_bcast_t(s_t_nontempered, zeros(n_observables_t, n_particles))
 
             # Define inefficiency function
             init_ineff_func(φ) = solve_inefficiency(φ, φ_old, y_t, p_error, HH_t) - r_star
@@ -152,13 +152,14 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
             # Correct and resample particles
             loglik, id = correction_selection!(φ_new, φ_old, y_t, p_error, HH_t, n_particles)
 
+            # Update likelihood
+            lik[t] += loglik
+
             # Update arrays for resampled indices
             s_lag_tempered  = s_lag_tempered[:,id]
             s_t_nontempered = s_t_nontempered[:,id]
             ε               = ε[:,id]
-
-            # Update likelihood
-            lik[t] += loglik
+            p_error         = p_error[:,id]
 
             # Update value for c
             c = update_c!(c, accept_rate, target)
@@ -178,11 +179,13 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
             if parallel
                 print("(in parallel) ")
                 out = @sync @parallel (hcat) for i=1:n_particles
-                    mutation(Φ, Ψ, F_ε, F_u, φ_new, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH)
+                    mutation(Φ, Ψ, F_ε, F_u, φ_new, y_t, s_t_nontempered[:,i],
+                             s_lag_tempered[:,i], ε[:,i], c, N_MH)
                 end
             else
                 print("(not parallel) ")
-                out = [mutation(Φ, Ψ, F_ε, F_u, φ_new, y_t, s_lag_tempered[:,i], ε[:,i], c, N_MH)
+                out = [mutation(Φ, Ψ, F_ε, F_u, φ_new, y_t, s_t_nontempered[:,i],
+                                s_lag_tempered[:,i], ε[:,i], c, N_MH)
                        for i = 1:n_particles]
             end
             times[t] = toc()
@@ -196,9 +199,6 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
             # Calculate average acceptance rate
             accept_rate = mean(accept_vec)
 
-            # Get error for all particles
-            p_error = y_t .- Ψ_bcast_t(s_t_nontempered, zeros(n_observables_t, n_particles))
-
             # Update φ
             φ_old = φ_new
         end
@@ -207,28 +207,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
         println("Out of main while-loop.")
     end
 
-    #--------------------------------------------------------------
-    # Last Stage of Algorithm: φ_new := 1.0
-    #--------------------------------------------------------------
-
-### PER REQUEST
-
-    # Initialize vector
-    incremental_weights = zeros(n_particles)
-
-    # Calculate initial weights
-    for n=1:n_particles
-        incremental_weights[n] = incremental_weight(1.0, φ_old, y_t, p_error[:,n], HH_t,
-                                                    initialize=true)
-    end
-
-    log_lik = log(mean(incremental_weights))
-
-    @show log_lik
     @show lik[t]
-
-###
-
     s_lag_tempered = s_t_nontempered
     print("Completion of one period ")
     toc()
