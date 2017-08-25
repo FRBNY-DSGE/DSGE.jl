@@ -16,9 +16,11 @@ Executes tempered particle filter.
 - `s_init::Array{S}`: (`n_observables` x `n_particles`) initial state vector
 
 ### Keyword Arguments
-- `verbose::Symbol`: indicates desired nuance of outputs. Default to `:low`.
-- `include_presample::Bool`: indicates whether to include presample in periods in the returned
+- `verbose::Symbol`: Indicates desired nuance of outputs. Default to `:low`.
+- `include_presample::Bool`: Indicates whether to include presample in periods in the returned
    outputs. Defaults to `true`.
+- `fixed_sched::Vector`: An array of elements in (0,1] that are monotonically increasing, which
+specify the tempering schedule.
 
 ### Outputs
 - `Neff::Vector{S}`: (`hist_perdiods` x 1) vector returning inefficiency calculated per period t
@@ -26,9 +28,10 @@ Executes tempered particle filter.
 - `times::Vector{S}`: (`hist_periods` x 1) vector returning elapsed runtime per period t
 
 """
-function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
+function tpf{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, Φ::Function,
                                Ψ::Function, F_ε::Distribution, F_u::Distribution, s_init::Matrix{S};
-                               verbose::Symbol=:low, include_presample::Bool=true)
+                               verbose::Symbol = :low, include_presample::Bool=true,
+                               fixed_sched::Vector{S} = zeros(0))
     #--------------------------------------------------------------
     # Set Parameters of Algorithm
     #--------------------------------------------------------------
@@ -43,6 +46,16 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
     adaptive     = get_setting(m, :tpf_adaptive)
     xtol         = get_setting(m, :tpf_x_tolerance)
     parallel     = get_setting(m, :use_parallel_workers)
+
+    # Ensuring the fixed φ schedule is bounded properly
+    if !adaptive
+        try
+            @assert fixed_sched[1] > 0. && fixed_sched[1] < 1.
+            @assert fixed_sched[end] == 1.
+        catch
+            throw("Invalid fixed φ schedule. It must be a range from [a,1] s.t. a > 0.")
+        end
+    end
 
     # Set number of presampling periods
     n_presample_periods = (include_presample) ? 0 : get_setting(m, :n_presample_periods)
@@ -101,7 +114,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
                                                     initialize = true) - r_star
             φ_1 = fzero(init_Ineff_func, 1e-30, 1.0, xtol = xtol)
         else
-            φ_1 = 0.25
+            φ_1 = fixed_sched[1]
         end
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -111,7 +124,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
 
         # Correct and resample particles
         loglik, id = correction_selection!(φ_1, 0.0, y_t, p_error, HH_t, n_particles,
-                                           initialize=true)
+                                           initialize = true, parallel = parallel)
 
         # Update likelihood
         lik[t] += loglik
@@ -145,7 +158,7 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
             elseif prod(sign(fphi_interval)) != -1 && adaptive
                 φ_new = 1.
             else # fixed φ
-                φ_new = 0.5
+                φ_new = fixed_sched[count]
             end
 
             if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -153,7 +166,8 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
             end
 
             # Correct and resample particles
-            loglik, id = correction_selection!(φ_new, φ_old, y_t, p_error, HH_t, n_particles)
+            loglik, id = correction_selection!(φ_new, φ_old, y_t, p_error, HH_t, n_particles;
+                                              parallel = parallel)
 
             # Update likelihood
             lik[t] += loglik
@@ -276,21 +290,27 @@ error vectors, reset error vectors to 1,and calculate new log likelihood.
 """
 function correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1},
                                    p_error::Array{S,2}, HH::Array{S,2}, n_particles::Int;
-                                   initialize::Bool=false)
+                                   initialize::Bool=false, parallel::Bool=false)
     # Initialize vector
     incremental_weights = zeros(n_particles)
 
     # Calculate initial weights
-    for n=1:n_particles
-        incremental_weights[n] = incremental_weight(φ_new, φ_old, y_t, p_error[:,n], HH,
-                                                    initialize=initialize)
+    if parallel
+        incremental_weights = @sync @parallel (hcat) for n=1:n_particles
+            incremental_weight(φ_new, φ_old, y_t, p_error[:,n], HH, initialize=initialize)
+        end
+    else
+        for n=1:n_particles
+            incremental_weights[n] = incremental_weight(φ_new, φ_old, y_t, p_error[:,n], HH,
+                                                        initialize=initialize)
+        end
     end
 
     # Normalize weights
     normalized_weights = incremental_weights ./ mean(incremental_weights)
 
     # Resampling
-    id = multinomial_resampling(normalized_weights)
+    id = multinomial_resampling(vec(normalized_weights))
 
     # Calculate likelihood
     loglik = log(mean(incremental_weights))
