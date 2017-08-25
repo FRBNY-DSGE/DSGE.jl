@@ -1,16 +1,19 @@
 """
 ```
-tpf{S<:AbstractFloat}(m::AbstractModel, data::Array, system::System{S},
-    s0::Array{S}, P0::Array{S}; verbose::Symbol=:low, include_presample::Bool=true)
+tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
+                      Ψ::Function, F_ε::Distribution, F_u::Distribution, s_init::Matrix{S};
+                      verbose::Symbol=:low, include_presample::Bool=true)
 ```
 Executes tempered particle filter.
 
 ### Inputs
 - `m::AbstractModel`: model object
 - `data::Array{S}`: (`n_observables` x `hist_periods`) size `Matrix{S}` of data for observables.
-- `system::System{S}`: `System` object specifying state-space system matrices for model
-- `s0::Array{S}`: (`n_observables` x `n_particles`) initial state vector
-- `P0::Array`: (`n_observables` x `n_observavles`) initial state covariance matrix
+- `Φ::Function`: The state transition function: s_t = Φ(s_t-1,ε_t)
+- `Ψ::Function`: The measurement equation: y_t = Ψ(s_t, u_t)
+- `F_ε::Distribution`: The shock distribution: ε ~ F_ε
+- `F_u::Distribution`: The measurement error distribution: u ~ F_u
+- `s_init::Array{S}`: (`n_observables` x `n_particles`) initial state vector
 
 ### Keyword Arguments
 - `verbose::Symbol`: indicates desired nuance of outputs. Default to `:low`.
@@ -328,7 +331,16 @@ incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::A
             exp(-1/2 * p_error' * (φ_new - φ_old) * inv(HH) * p_error)[1]
     end
 end
-
+"""
+```
+initialize_function_system{S<:AbstractFloat}(system::System{S})
+```
+### Inputs
+- `system::System`: The output of compute_system(m), i.e. the matrix outputs from solving a given model, m.
+### Output
+- Returns the transition and measurement equations as functions,and the distributions of the shocks
+and measurement error.
+"""
 function initialize_function_system{S<:AbstractFloat}(system::System{S})
     # Unpack system
     RRR    = system[:RRR]
@@ -349,7 +361,28 @@ function initialize_function_system{S<:AbstractFloat}(system::System{S})
 
     return Φ, Ψ, F_ε, F_u
 end
+"""
+```
+initialize_state_draws(s0::Vector{Float64}, F_ε::Distribution, Φ::Function, n_parts::Int;
+                       burn::Int = 10000, thin::Int = 5)
+```
+### Inputs
+- `s0::Vector`: An initial guess/starting point to begin iterating the states forward.
+- `F_ε::Distribution`: The shock distribution: ε ~ F_ε
+- `Φ::Function`: The state transition function: s_t = Φ(s_t-1,ε_t)
+- `n_parts::Int`: The number of particles (draws) to generate
 
+### Keyword Arguments
+- `initialize::Bool`: Flag indicating whether one is solving for incremental weights during
+    the initialization of weights; default is `false`.
+- `burn::Int`: The number of draws to burn in before the draws are actually collected.
+This is under the assumption that the s_t reaches its stationary distribution post burn-in.
+- `thin::Int`: The number of draws to thin by to minimize serial correlation
+
+### Output
+- A matrix (# of states x # of particles) containing the initial draws of states to start
+the tpf algorithm from.
+"""
 function initialize_state_draws(s0::Vector{Float64}, F_ε::Distribution, Φ::Function,
                                 n_parts::Int; burn::Int = 10000, thin::Int = 5)
     s_init = zeros(length(s0), n_parts)
