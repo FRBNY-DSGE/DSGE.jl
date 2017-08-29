@@ -1,4 +1,5 @@
 using DSGE, DataFrames, JLD
+using Base.Test
 
 path = dirname(@__FILE__)
 
@@ -6,6 +7,7 @@ path = dirname(@__FILE__)
 m = AnSchorfheide(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 
+println("The following warning is expected test behavior:")
 df, system, z0, P0 = jldopen("$path/../reference/forecast_args.jld", "r") do file
     read(file, "df"), read(file, "system"), read(file, "z0"), read(file, "vz0")
 end
