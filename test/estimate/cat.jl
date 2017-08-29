@@ -3,9 +3,7 @@ using DSGE, JLD, Base.Test
 path = dirname(@__FILE__)
 
 # Set up
-custom_settings = Dict{Symbol, Setting}(
-    :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6))
-m = Model990(custom_settings = custom_settings, testing = true)
+m = AnSchorfheide(testing = true)
 
 kal1, kal2 = jldopen("$path/../reference/kalman_cat_args.jld", "r") do file
     read(file, "kal1"), read(file, "kal2")
