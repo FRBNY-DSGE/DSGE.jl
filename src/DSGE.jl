@@ -68,7 +68,7 @@ module DSGE
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, compute_moments, find_density_bands,
         prior, mutation,  resample, smc, nearest_spd, initial_draw,
-        tpf, multinomial_resampling, systematic_resampling, solve_inefficiency, kalman_filter_likvec,
+        tpf, multinomial_resampling, systematic_resampling, solve_inefficiency,
         initialize_function_system, initialize_state_draws,
 
         # forecast/
@@ -150,7 +150,6 @@ module DSGE
     include("estimate/tpf/mutation.jl")
     include("estimate/tpf/tpf.jl")
     include("estimate/tpf/solve_inefficiency.jl")
-    include("estimate/kalman_filter_likvec.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")
