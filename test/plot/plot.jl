@@ -30,7 +30,7 @@ fcast_mb = read_mb(files[:bddforecastobs])
 output_file = joinpath(saveroot(m), "forecast__obs_nominalrate.pdf")
 plot_history_and_forecast(:obs_nominalrate, hist_mb, fcast_mb;
                           output_file = output_file,
-                          start_date = Nullable(DSGE.quartertodate("2007-Q1")))
+                          start_date = DSGE.quartertodate("2007-Q1"))
 
 # Plot forecast comparison
 output_file = joinpath(saveroot(m), "forecastcomp__obs_nominalrate.pdf")
@@ -38,7 +38,7 @@ hist_mb2  = read_mb(files[:histobs])
 fcast_mb2 = read_mb(files[:bddforecastobs])
 plot_forecast_comparison(:obs_nominalrate, hist_mb, fcast_mb, hist_mb2, fcast_mb2;
                          output_file = output_file,
-                         start_date = Nullable(DSGE.quartertodate("2007-Q1")))
+                         start_date = DSGE.quartertodate("2007-Q1"))
 
 # Hair plot
 df = load_data(m)
