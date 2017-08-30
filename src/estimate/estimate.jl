@@ -208,7 +208,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
 
         metropolis_hastings(propdist, m, data, cc0, cc; verbose=verbose);
 
-    elseif get_setting(s, :sampling_method) == :SMC
+    elseif get_setting(m, :sampling_method) == :SMC
         ########################################################################################
         ### Step 3: Run Sequential Monte Carlo (SMC)
         ###
