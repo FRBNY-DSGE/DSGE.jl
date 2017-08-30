@@ -131,7 +131,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
     if !tempered_update
         inc_weight = exp((ϕ_n - ϕ_n1)*get_loglh(cloud))
     else
-        inc_weight = exp((ϕ_n1 - ϕ_n)*revised_loglh + (ϕ_n - ϕ_n1*new_loglh))
+        inc_weight = exp((ϕ_n1 - ϕ_n)*revised_loglh + (ϕ_n - ϕ_n1)*new_loglh)
     end
 
     # Update weights
