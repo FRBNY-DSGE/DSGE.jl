@@ -161,7 +161,7 @@ end
 function save_plot(p::Plots.Plot, output_file::String = "")
     if !isempty(output_file)
         output_dir = dirname(output_file)
-        !isdir(output_dir) && mkdir(output_dir)
+        !isdir(output_dir) && mkpath(output_dir)
         Plots.savefig(output_file)
         println("Saved $output_file")
     end

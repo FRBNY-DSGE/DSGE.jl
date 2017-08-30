@@ -222,7 +222,7 @@ function means_bands_all(input_type::Symbol, cond_type::Symbol, output_vars::Vec
         # write to file
         filepath = mb_output_files[output_var]
         dirpath  = dirname(filepath)
-        !isdir(dirpath) ? mkdir(dirpath) : nothing
+        !isdir(dirpath) ? mkpath(dirpath) : nothing
         jldopen(filepath, "w") do file
             write(file, "mb", mb)
         end
