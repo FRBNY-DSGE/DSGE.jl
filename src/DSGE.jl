@@ -6,7 +6,7 @@ module DSGE
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
-    import Calculus
+    import Calculus: gradient
     import Optim: optimize, Optimizer
 
     export
