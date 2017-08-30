@@ -3,6 +3,7 @@
 smc(m::AbstractModel, data::Matrix)
 smc(m::AbstractModel, data::DataFrame)
 smc(m::AbstractModel)
+smc(m::AbstractModel, cloud::ParticleCloud, old_data::Matrix, new_data::Matrix)
 ```
 
 ### Arguments:
@@ -15,8 +16,6 @@ smc(m::AbstractModel)
 	- `:none`: No status updates will be reported.
 	- `:low`: Status updates for SMC initialization and recursion will be included.
 	    - `:high`: Status updates for every iteration of SMC is output, which includes the mu and sigma of each individual parameter draw after each iteration, as well as the calculated acceptance rate, the ESS, and the number of times resampled.
-- `start_approx_post`: Have the initial parameters drawn from the approximated posterior (a degenerate multivariate normal
-centered at the mode).
 
 ### Outputs
 
@@ -109,12 +108,6 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
         println("\n\n SMC Recursion starts \n\n")
     end
 
-    # Draws saved for debugging purposes
-    # Saving all clouds for debugging purposes
-    # simfile = jldopen(rawpath(m, "estimate", "smc_cloud.jld"), "w")
-    # cloud_store = g_create(simfile, "cloud_store")
-    # cloud_store["cloud_1"] = cloud
-
     total_sampling_time = 0.
 
     for i = 2:n_Φ
@@ -201,11 +194,6 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
     ### Saving data
     ########################################################################################
 
-    # Draws saved for debugging purposes
-    # Save both the standard format .h5 file of parameters by particles for reading
-    # into the forecast step, but also save the last cloud object as a .jld
-    # cloud_store["cloud_$i"] = cloud
-
     if m.testing
         writecsv("mutated_values.csv",get_vals(cloud))
         break
@@ -228,10 +216,6 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
             write(file, "up_cloud", cloud)
         end
     end
-
-    # Draws saved for debugging purposes
-    # close(simfile)
-    # Access saved clouds by jldopen then read(file,"cloud_store")
 end
 
 function smc(m::AbstractModel, data::DataFrame; verbose::Symbol=:low)
@@ -247,6 +231,10 @@ end
 
 # For doing a combination of data tempering and likelihood tempering to incorporate
 # new data into particle cloud sample
+# Cloud is a obtained from loading from a .jld an old particle cloud pertaining to the old data matrix
+# from a previous run of SMC, located in the relevant path.
+# new_data is a new data matrix corresponding to both revised and newly updated periods of data to be
+# incorporated into creating a new cloud/sample.
 function smc{S<:AbstractFloat}(m::AbstractModel, cloud::ParticleCloud, old_data::Matrix{S},
                                new_data::Matrix{S}; verbose::Symbol=:low)
     new_vintage = get_setting(m, :updated_data_vintage)
