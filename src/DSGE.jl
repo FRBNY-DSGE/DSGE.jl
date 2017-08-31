@@ -104,7 +104,7 @@ module DSGE
         write_meansbands_tables_all,
 
         # plot/
-        ShockGroup, plot_prior_posterior, plot_irfs, plot_history_and_forecast, hair_plot,
+        ShockGroup, plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition,
 
         # util
@@ -165,7 +165,7 @@ module DSGE
     include("plot/util.jl")
     include("plot/shock_group.jl")
     include("plot/plot_parameters.jl")
-    include("plot/plot_irfs.jl")
+    include("plot/plot_impulse_response.jl")
     include("plot/plot_history_and_forecast.jl")
     include("plot/hair_plot.jl")
     include("plot/plot_forecast_comparison.jl")
