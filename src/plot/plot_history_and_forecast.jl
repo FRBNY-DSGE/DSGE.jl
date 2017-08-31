@@ -32,6 +32,8 @@ you can specify the `bands_style` and `bands_pcts`.
 
 - `m::AbstractModel`
 - `class::Symbol`
+- `input_type::Symbol`
+- `cond_type::Symbol`
 
 **Method 3 only:**
 
