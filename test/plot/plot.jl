@@ -15,7 +15,7 @@ m <= Setting(:impulse_response_horizons, 8)
 estroot = normpath(joinpath(dirname(@__FILE__), "..", "reference"))
 overrides = forecast_input_file_overrides(m)
 overrides[:full] = joinpath(estroot, "metropolis_hastings.h5")
-output_vars = add_requisite_output_vars([:histobs, :forecastobs, :irfobs])
+output_vars = add_requisite_output_vars([:histobs, :forecastobs, :shockdecobs, :irfobs])
 
 @everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
@@ -23,18 +23,20 @@ m <= Setting(:forecast_block_size, 5)
 @time means_bands_all(m, :full, :none, output_vars; verbose = :none)
 
 # Plot history and forecast
-output_file = joinpath(saveroot(m), "forecast__obs_nominalrate.pdf")
 plot_history_and_forecast(m, :obs_nominalrate, :obs, :full, :none,
                           bdd_and_unbdd = true,
-                          output_file = output_file,
                           start_date = DSGE.quartertodate("2007-Q1"))
 
 # Plot forecast comparison
-output_file = joinpath(saveroot(m), "forecastcomp__obs_nominalrate.pdf")
 plot_forecast_comparison(m, m, :obs_nominalrate, :obs, :full, :none,
                          bdd_and_unbdd = true,
-                         output_file = output_file,
                          start_date = DSGE.quartertodate("2007-Q1"))
+
+# Plot shock decomposition
+plot_shock_decomposition(m, :obs_nominalrate, :obs, :full, :none)
+
+# Plot IRF
+plot_impulse_response(m, :rm_sh, collect(keys(m.observables)), :obs, :full, :none)
 
 # Hair plot
 df = load_data(m)
@@ -43,11 +45,3 @@ hist_mb = read_mb(m, :full, :none, :histobs)
 fcast_mb = read_mb(m, :full, :none, :bddforecastobs)
 hair_plot(:obs_nominalrate, df, [hist_mb], [fcast_mb];
           output_file = output_file)
-
-# Plot IRF
-irf_mb = read_mb(m, :full, :none, :irfobs)
-output_file = joinpath(saveroot(m), "irf__rm_sh.pdf")
-plot_irfs(:rm_sh, collect(keys(m.observables)), irf_mb;
-          output_file = output_file,
-          layout = Plots.GridLayout(1, 3),
-          titles = ["Real GDP Growth", "CPI Inflation", "Nominal FFR"])
