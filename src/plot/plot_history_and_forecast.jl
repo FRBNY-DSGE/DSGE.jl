@@ -1,12 +1,14 @@
 """
 ```
 plot_history_and_forecast(m, var, class, input_type, cond_type;
-    forecast_string = "", bdd_and_unbdd = false, output_file = "",
-    title = "", kwargs...)
+    forecast_string = "", bdd_and_unbdd = false,
+    plotroot = figurespath(m, \"forecast\"), title = "",
+    kwargs...)
 
 plot_history_and_forecast(m, vars, class, input_type, cond_type;
-    forecast_string = "", bdd_and_unbdd = false, output_files = [],
-    titles = [], kwargs...)
+    forecast_string = "", bdd_and_unbdd = false,
+    output_files = figurespath(m, \"forecast\"), titles = [],
+    kwargs...)
 
 plot_history_and_forecast(var, history, forecast; output_file = "",
     title = "", start_date = Nullable{Date}(), end_date = Nullable{Date}(),
@@ -38,9 +40,6 @@ you can specify the `bands_style` and `bands_pcts`.
 
 ### Keyword Arguments
 
-- `output_file::String` or `output_files::Vector{String}: if specified, plot will
-  be saved there. In methods 1 and 2, if not specified, output files will be
-  computed using `get_forecast_filename`
 - `title::String` or `titles::Vector{String}`
 - `start_date::Nullable{Date}`
 - `end_date::Nullable{Date}`
@@ -57,21 +56,26 @@ you can specify the `bands_style` and `bands_pcts`.
 - `legend`
 - `plot_handle::Plots.Plot`: a plot handle to add `history` and `forecast` to
 
-**Method 1 only:**
+**Methods 1 and 2 only:**
 
 - `forecast_string::String`
 - `bdd_and_unbdd::Bool`: if true, then unbounded means and bounded bands are plotted
+- `plotroot::String`: if nonempty, plots will be saved in that directory
+
+**Method 3 only:**
+
+- `output_file::String`: if nonempty, plot will be saved in that path
 
 ### Output
 
-- `p::Plot`
+- `p::Plot` or `plots::Dict{Symbol, Plot}`
 """
 function plot_history_and_forecast(m::AbstractModel, var::Symbol, class::Symbol,
                                    input_type::Symbol, cond_type::Symbol;
                                    forecast_string::String = "",
                                    bdd_and_unbdd::Bool = false,
                                    fourquarter::Bool = false,
-                                   output_file::String = "",
+                                   plotroot::String = figurespath(m, "forecast"),
                                    title::String = "",
                                    kwargs...)
 
@@ -79,7 +83,7 @@ function plot_history_and_forecast(m::AbstractModel, var::Symbol, class::Symbol,
                                       forecast_string = forecast_string,
                                       bdd_and_unbdd = bdd_and_unbdd,
                                       fourquarter = fourquarter,
-                                      output_files = isempty(output_file) ? String[] : [output_file],
+                                      plotroot = plotroot,
                                       titles = isempty(title) ? String[] : [title],
                                       kwargs...)
     return plots[var]
@@ -90,7 +94,7 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
                                    forecast_string::String = "",
                                    bdd_and_unbdd::Bool = false,
                                    fourquarter::Bool = false,
-                                   output_files::Vector{String} = String[],
+                                   plotroot::String = figurespath(m, "forecast"),
                                    titles::Vector{String} = String[],
                                    kwargs...)
     # Read in MeansBands
@@ -100,20 +104,23 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
                     forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd)
 
 
-    # Get output file names and titles if not provided
-    if isempty(output_files)
-        output_files = map(var -> get_forecast_filename(m, input_type, cond_type,
-                                                        Symbol(fourquarter ? "forecast4q_" : "forecast_", var),
-                                                        pathfcn = figurespath, fileformat = plot_extension()),
-                           vars)
-    end
+    # Get titles if not provided
     if isempty(titles)
         titles = map(var -> DSGE.describe_series(m, var, class), vars)
     end
 
     # Loop through variables
     plots = Dict{Symbol, Plots.Plot}()
-    for (var, output_file, title) in zip(vars, output_files, titles)
+    for (var, title) in zip(vars, titles)
+        output_file = if isempty(plotroot)
+            ""
+        else
+            get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
+                                  Symbol(fourquarter ? "forecast4q_" : "forecast_", var),
+                                  forecast_string = forecast_string,
+                                  fileformat = plot_extension())
+        end
+
         plots[var] = plot_history_and_forecast(var, hist, fcast;
                                                output_file = output_file, title = title,
                                                ylabel = DSGE.series_ylabel(m, var, class),

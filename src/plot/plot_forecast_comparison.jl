@@ -1,11 +1,11 @@
 """
 ```
 plot_forecast_comparison(m_old, m_new, var, class, input_type, cond_type;
-    forecast_string = "", bdd_and_unbdd = false, output_file = "", title = "",
+    forecast_string = "", bdd_and_unbdd = false, plotroot = "", title = "",
     kwargs...)
 
 plot_forecast_comparison(m_old, m_new, vars, class, input_type, cond_type;
-    forecast_string = "", bdd_and_unbdd = false, output_files = [], titles = [],
+    forecast_string = "", bdd_and_unbdd = false, plotroot = "", titles = [],
     kwargs...)
 
 plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
@@ -40,8 +40,6 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
 
 ### Keyword Arguments
 
-- `output_file::String` or `output_files::Vector{String}`: if specified, plot
-  will be saved there as a PDF
 - `title::String` or `titles::Vector{String}`
 - `start_date::Date`
 - `end_date::Date`
@@ -62,17 +60,23 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
 
 - `forecast_string::String`
 - `bdd_and_unbdd::Bool`: if true, then unbounded means and bounded bands are plotted
+- `plotroot::String`: if nonempty, plots will be saved in that directory
+
+**Method 3 only:**
+
+- `output_file::String`: if nonempty, plot will be saved in that path
+
 
 ### Output
 
-- `p::Plot`
+- `p::Plot` or `plots::Dict{Symbol, Plot}`
 """
 function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
                                   var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
                                   bdd_and_unbdd::Bool = false,
-                                  output_file::String = "",
+                                  plotroot::String = "",
                                   title::String = "",
                                   kwargs...)
 
@@ -90,7 +94,7 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
                                   bdd_and_unbdd::Bool = false,
-                                  output_files::Vector{String} = String[],
+                                  plotroot::String = "",
                                   titles::Vector{String} = String[],
                                   kwargs...)
     # Read in MeansBands
@@ -103,17 +107,20 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
     fcastnew = read_mb(m_new, input_type, cond_type, Symbol(:forecast, class),
                        forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd)
 
-    # Get output file names and titles if not provided
-    if isempty(output_files)
-        output_files = map(var -> "", vars)
-    end
+    # Get titles if not provided
     if isempty(titles)
         titles = map(var -> describe_series(m_new, var, class), vars)
     end
 
     # Loop through variables
     plots = Dict{Symbol, Plots.Plot}()
-    for (var, output_file, title) in zip(vars, output_files, titles)
+    for (var, title) in zip(vars, titles)
+        output_file = if isempty(plotroot)
+            ""
+        else
+            joinpath(plotroot, "forecastcomp_" * string(var) * "." * plot_extension())
+        end
+
         plots[var] = plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
                                               output_file = output_file, title = title,
                                               ylabel = DSGE.series_ylabel(m_new, var, class),

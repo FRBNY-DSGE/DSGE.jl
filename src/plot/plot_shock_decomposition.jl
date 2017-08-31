@@ -1,12 +1,14 @@
 """
 ```
 plot_shock_decomposition(m, var, class, input_type, cond_type;
-    forecast_string = "", groups = shock_groupings(m), output_file = "",
-    title = "", kwargs...)
+    forecast_string = "", groups = shock_groupings(m),
+    plotroot::String = figurespath(m, \"forecast\"), title = "",
+    kwargs...)
 
 plot_shock_decomposition(m, vars, class, input_type, cond_type;
-    forecast_string = "", groups = shock_groupings(m), output_files = [],
-    titles = [], kwargs...)
+    forecast_string = "", groups = shock_groupings(m),
+    plotroot::String = figurespath(m, \"forecast\"), titles = [],
+    kwargs...)
 
 plot_shock_decomposition(var, shockdec, trend, dettrend, hist, forecast, groups;
     output_file = "", title = "",
@@ -39,9 +41,6 @@ Plot shock decomposition(s) for `var` or `vars`.
 
 ### Keyword Arguments
 
-- `output_file::String` or `output_files::Vector{String}`: if specified, plot
-  will be saved there. In methods 1 and 2, if not specified, output file(s) will
-  be computed using `get_forecast_filename`
 - `title::String` or `titles::Vector{String}`
 - `hist_label::String`
 - `forecast_label::String`
@@ -54,23 +53,28 @@ Plot shock decomposition(s) for `var` or `vars`.
 
 - `forecast_string::String`
 - `groups::Vector{ShockGroup}`
+- `plotroot::String`: if nonempty, plots will be saved in that directory
+
+**Method 3 only:**
+
+- `output_file::String`: if nonempty, plot will be saved in that path
 
 ### Output
 
-- `p::Plot`
+- `p::Plot` or `plots::Dict{Symbol, Plot}`
 """
 function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
                                   groups::Vector{ShockGroup} = shock_groupings(m),
-                                  output_file::String = "",
+                                  plotroot::String = figurespath(m, "forecast"),
                                   title = "",
                                   kwargs...)
 
     plots = plot_shock_decomposition(m, [var], class, input_type, cond_type;
                                      forecast_string = forecast_string,
                                      groups = groups,
-                                     output_files = isempty(output_file) ? String[] : [output_file],
+                                     plotroot = plotroot,
                                      titles = isempty(title) ? String[] : [title],
                                      kwargs...)
     return plots[var]
@@ -80,7 +84,7 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
                                   groups::Vector{ShockGroup} = shock_groupings(m),
-                                  output_files::Vector{String} = String[],
+                                  plotroot::String = figurespath(m, "forecast"),
                                   titles::Vector{String} = String[],
                                   kwargs...)
     # Read in MeansBands
@@ -88,19 +92,23 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
     mbs = map(output_var -> read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string),
               output_vars)
 
-    # Get output file names and titles if not provided
-    if isempty(output_files)
-        output_files = map(var -> get_forecast_filename(m, input_type, cond_type, Symbol("shockdec_", var),
-                                                        pathfcn = figurespath, fileformat = plot_extension()),
-                           vars)
-    end
+    # Get titles if not provided
     if isempty(titles)
         titles = map(var -> describe_series(m, var, class), vars)
     end
 
     # Loop through variables
     plots = Dict{Symbol, Plots.Plot}()
-    for (var, output_file, title) in zip(vars, output_files, titles)
+    for (var, title) in zip(vars, titles)
+        output_file = if isempty(plotroot)
+            ""
+        else
+            get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
+                                  Symbol("shockdec_", var),
+                                  forecast_string = forecast_string,
+                                  fileformat = plot_extension())
+        end
+
         plots[var] = plot_shock_decomposition(var, mbs..., groups;
                                               output_file = output_file, title = title,
                                               ylabel = DSGE.series_ylabel(m, var, class),
