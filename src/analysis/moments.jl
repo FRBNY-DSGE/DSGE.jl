@@ -133,6 +133,7 @@ function prior_table(m::AbstractModel; subset_string::String = "",
     distid(::Distributions.Gamma)   = "Gamma"
     distid(::Distributions.Normal)  = "Normal"
     distid(::DSGE.RootInverseGamma) = "InvG"
+    distid(::Distributions.Uniform) = "Uniform"
 
     # Write priors
     for group_desc in keys(groupings)
@@ -269,6 +270,7 @@ function prior_posterior_moments_table(m::AbstractModel,
     distid(::Distributions.Gamma)   = "G"
     distid(::Distributions.Normal)  = "N"
     distid(::DSGE.RootInverseGamma) = "IG"
+    distid(::Distributions.Uniform) = "U"
 
     # Write parameter moments
     # sorted_parameters = sort(m.parameters, by = (x -> x.key))
