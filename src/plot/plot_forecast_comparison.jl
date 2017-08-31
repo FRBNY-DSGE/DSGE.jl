@@ -76,12 +76,13 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
                                   title::String = "",
                                   kwargs...)
 
-    plot_forecast_comparison(m_old, m_new, [var], class, input_type, cond_type;
-                             forecast_string = forecast_string,
-                             bdd_and_unbdd = bdd_and_unbdd,
-                             output_files = isempty(output_file) ? String[] : [output_file],
-                             titles = isempty(title) ? String[] : [title],
-                             kwargs...)
+    plots = plot_forecast_comparison(m_old, m_new, [var], class, input_type, cond_type;
+                                     forecast_string = forecast_string,
+                                     bdd_and_unbdd = bdd_and_unbdd,
+                                     plotroot = plotroot,
+                                     titles = isempty(title) ? String[] : [title],
+                                     kwargs...)
+    return plots[var]
 end
 
 function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
@@ -111,13 +112,14 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
     end
 
     # Loop through variables
+    plots = Dict{Symbol, Plots.Plot}()
     for (var, output_file, title) in zip(vars, output_files, titles)
-
-        plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
-                                 output_file = output_file, title = title,
-                                 ylabel = DSGE.series_ylabel(m_new, var, class),
-                                 kwargs...)
+        plots[var] = plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
+                                              output_file = output_file, title = title,
+                                              ylabel = DSGE.series_ylabel(m_new, var, class),
+                                              kwargs...)
     end
+    return plots
 end
 
 function plot_forecast_comparison(var::Symbol,
