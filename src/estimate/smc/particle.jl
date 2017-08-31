@@ -59,39 +59,21 @@ function get_weights(c::ParticleCloud)
 end
 
 function get_vals(c::ParticleCloud)
-    temp = map(p -> p.value, c.particles)
-    mat = temp[1]
-    for i in 2:length(temp)
-        mat = hcat(mat,temp[i])
-    end
-    return mat
+    return hcat(map(p -> p.value, c.particles)...)
 end
 
 function get_loglh(c::ParticleCloud)
-    temp = map(p -> p.loglh, c.particles)
-    arr = temp[1]
-    for i in 2:length(temp)
-        arr = vcat(arr,temp[i])
-    end
-    return arr
+    return map(p -> p.loglh, c.particles)
 end
 
 function get_logpost(c::ParticleCloud)
-    temp = map(p -> p.logpost, c.particles)
-    arr = temp[1]
-    for i in 2:length(temp)
-        arr = vcat(arr,temp[i])
-    end
-    return arr
+    return map(p -> p.logpost, c.particles)
 end
 
 function update_draws!(c::ParticleCloud, draws::Array{Float64,2})
-    # transform matrix draws into array of rows vectors
-    # for the purposes of aligning zip on the right dimension
     @assert size(draws) == (length(c.particles[1]),length(c))
-    draws = [draws[:,i] for i in 1:size(draws)[2]]
-    for (p,draw) in zip(c.particles,draws)
-        update_val!(p,draw)
+    for (i,p) in enumerate(c.particles)
+        update_val!(p, draws[:,i])
     end
 end
 
@@ -148,12 +130,7 @@ function update_weight!(p::Particle, weight::Float64)
 end
 
 function update_acceptance_rate!(c::ParticleCloud)
-    temp = map(p -> p.accept, c.particles)
-    arr = temp[1]
-    for i in 2:length(temp)
-        arr = vcat(arr,temp[i])
-    end
-    c.accept = mean(temp)
+    c.accept = mean(map(p -> p.accept, c.particles))
 end
 
 @inline function Base.length(c::ParticleCloud)
@@ -175,11 +152,7 @@ end
 
 # Calculate the covariance of the particles
 function Base.cov(c::ParticleCloud)
-    temp = zeros(length(c.particles[1]),length(c))
-    for (i,p) in enumerate(c.particles)
-        temp[:,i] = p.value
-    end
-    return cov(temp,2)
+    return cov(get_vals(c), 2)
 end
 
 for op in (:(Base.:+),

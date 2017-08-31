@@ -336,8 +336,6 @@ function initial_draw(m::AbstractModel, data::Array{Float64}, c::ParticleCloud)
 end
 
 function init_stage_print(cloud::ParticleCloud; verbose::Symbol=:low)
-    μ = weighted_mean(cloud)
-    σ = weighted_std(cloud)
 	println("--------------------------")
         println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
 	println("--------------------------")
@@ -346,6 +344,8 @@ function init_stage_print(cloud::ParticleCloud; verbose::Symbol=:low)
         println("c = $(cloud.c)")
 	println("--------------------------")
     if VERBOSITY[verbose] >= VERBOSITY[:high]
+        μ = weighted_mean(cloud)
+        σ = weighted_std(cloud)
         for n=1:length(cloud.particles[1])
             println("$(cloud.particles[1].keys[n]) = $(round(μ[n], 5)), $(round(σ[n], 5))")
 	    end
@@ -357,8 +357,6 @@ function end_stage_print(cloud::ParticleCloud, total_sampling_time::Float64; ver
     expected_time_remaining_sec = (total_sampling_time/cloud.stage_index)*(cloud.n_Φ - cloud.stage_index)
     expected_time_remaining_minutes = expected_time_remaining_sec/60
 
-    μ = weighted_mean(cloud)
-    σ = weighted_std(cloud)
     println("--------------------------")
         println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
         println("time elapsed: $(round(total_sampling_time_minutes, 4)) minutes")
@@ -371,6 +369,8 @@ function end_stage_print(cloud::ParticleCloud, total_sampling_time::Float64; ver
         println("ESS = $(cloud.ESS)   ($(cloud.resamples) total resamples.)")
     println("--------------------------")
     if VERBOSITY[verbose] >= VERBOSITY[:high]
+        μ = weighted_mean(cloud)
+        σ = weighted_std(cloud)
         for n=1:length(cloud.particles[1])
             println("$(cloud.particles[1].keys[n]) = $(round(μ[n], 5)), $(round(σ[n], 5))")
         end
