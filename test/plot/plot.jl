@@ -22,32 +22,30 @@ m <= Setting(:forecast_block_size, 5)
 @time forecast_one(m, :full, :none, output_vars, verbose = :none)
 @time means_bands_all(m, :full, :none, output_vars; verbose = :none)
 
-files = get_meansbands_output_files(m, :full, :none, output_vars)
-
 # Plot history and forecast
-hist_mb  = read_mb(files[:histobs])
-fcast_mb = read_mb(files[:bddforecastobs])
 output_file = joinpath(saveroot(m), "forecast__obs_nominalrate.pdf")
-plot_history_and_forecast(:obs_nominalrate, hist_mb, fcast_mb;
+plot_history_and_forecast(m, :obs_nominalrate, :obs, :full, :none,
+                          bdd_and_unbdd = true,
                           output_file = output_file,
                           start_date = DSGE.quartertodate("2007-Q1"))
 
 # Plot forecast comparison
 output_file = joinpath(saveroot(m), "forecastcomp__obs_nominalrate.pdf")
-hist_mb2  = read_mb(files[:histobs])
-fcast_mb2 = read_mb(files[:bddforecastobs])
-plot_forecast_comparison(:obs_nominalrate, hist_mb, fcast_mb, hist_mb2, fcast_mb2;
+plot_forecast_comparison(m, m, :obs_nominalrate, :obs, :full, :none,
+                         bdd_and_unbdd = true,
                          output_file = output_file,
                          start_date = DSGE.quartertodate("2007-Q1"))
 
 # Hair plot
 df = load_data(m)
 output_file = joinpath(saveroot(m), "hairplot__obs_nominalrate.pdf")
+hist_mb = read_mb(m, :full, :none, :histobs)
+fcast_mb = read_mb(m, :full, :none, :bddforecastobs)
 hair_plot(:obs_nominalrate, df, [hist_mb], [fcast_mb];
           output_file = output_file)
 
 # Plot IRF
-irf_mb = read_mb(files[:irfobs])
+irf_mb = read_mb(m, :full, :none, :irfobs)
 output_file = joinpath(saveroot(m), "irf__rm_sh.pdf")
 plot_irfs(:rm_sh, collect(keys(m.observables)), irf_mb;
           output_file = output_file,
