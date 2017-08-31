@@ -9,8 +9,8 @@ plot_forecast_comparison(m_old, m_new, vars, class, input_type, cond_type;
     kwargs...)
 
 plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
-    output_file = "", title = "", start_date = Nullable{Date}(),
-    end_date = Nullable{Date}(), bandpcts::Vector{String} = [\"90.0%\"],
+    output_file = "", title = "", start_date = histold.means[1, :date],
+    end_date = fcastnew.means[end, :date], bandpcts::Vector{String} = [\"90.0%\"],
     old_hist_label = "", new_hist_label = "",
     old_fcast_label = \"Old Forecast\", new_fcast_label = \"New Forecast\",
     old_hist_color = :grey, new_hist_color = :black,
@@ -43,8 +43,8 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
 - `output_file::String` or `output_files::Vector{String}`: if specified, plot
   will be saved there as a PDF
 - `title::String` or `titles::Vector{String}`
-- `start_date::Nullable{Date}`
-- `end_date::Nullable{Date}`
+- `start_date::Date`
+- `end_date::Date`
 - `bandpcts::Vector{String}`: which bands to plot
 - `old_hist_label::String`
 - `new_hist_label::String`
@@ -115,7 +115,7 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
 
         plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
                                  output_file = output_file, title = title,
-                                 ylabel = DSGE.series_ylabel(m, var, class),
+                                 ylabel = DSGE.series_ylabel(m_new, var, class),
                                  kwargs...)
     end
 end
@@ -125,8 +125,8 @@ function plot_forecast_comparison(var::Symbol,
                                   histnew::MeansBands, fcastnew::MeansBands;
                                   output_file::String = "",
                                   title::String = "",
-                                  start_date::Nullable{Date} = Nullable{Date}(),
-                                  end_date::Nullable{Date} = Nullable{Date}(),
+                                  start_date::Date = histold.means[1, :date],
+                                  end_date::Date = fcastnew.means[end, :date],
                                   bandpcts::Vector{String} = ["90.0%"],
                                   old_hist_label::String = "",
                                   new_hist_label::String = "",
