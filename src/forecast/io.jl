@@ -36,7 +36,13 @@ function get_forecast_input_file(m, input_type)
     elseif input_type == :init
         return ""
     elseif input_type in [:full, :subset]
-        return rawpath(m,"estimate","mhsave.h5")
+        if get_setting(m, :sampling_method) == :MH
+            return rawpath(m, "estimate", "mhsave.h5")
+        elseif get_setting(m, :sampling_method) == :SMC
+            return rawpath(m, "estimate", "smcsave.h5")
+        else
+            throw("Invalid sampling method specification. Change in setting :sampling_method")
+        end
     else
         throw(ArgumentError("Invalid input_type: $(input_type)"))
     end

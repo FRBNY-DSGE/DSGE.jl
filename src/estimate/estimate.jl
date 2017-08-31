@@ -429,21 +429,42 @@ parameter_covariance.h5 file in the `workpath(m, "estimate")` directory.
 function compute_parameter_covariance(m::AbstractModel)
 
     # Read in saved parameter draws
-    param_draws_path = rawpath(m,"estimate","mhsave.h5")
-    if !isfile(param_draws_path)
-        @printf STDERR "Saved parameter draws not found.\n"
-        return
-    end
-    param_draws = h5open(param_draws_path, "r") do f
-        read(f, "mhparams")
-    end
+    if get_setting(m, :sampling_method) == :MH
+        param_draws_path = rawpath(m, "estimate", "mhsave.h5")
+        if !isfile(param_draws_path)
+            @printf STDERR "Saved parameter draws not found.\n"
+            return
+        end
+        param_draws = h5open(param_draws_path, "r") do f
+            read(f, "mhparams")
+        end
 
-    # Calculate covariance matrix
-    param_covariance = cov(param_draws)
+        # Calculate covariance matrix
+        param_covariance = cov(param_draws)
 
-    # Write to file
-    h5open(workpath(m, "estimate","parameter_covariance.h5"),"w") do f
-        f["mhcov"] = param_covariance
+        # Write to file
+        h5open(workpath(m, "estimate","parameter_covariance.h5"),"w") do f
+            f["mhcov"] = param_covariance
+        end
+    elseif get_setting(m, :sampling_method) == :SMC
+        param_draws_path = rawpath(m, "estimate", "smcsave.h5")
+        if !isfile(param_draws_path)
+            @printf STDERR "Saved parameter draws not found.\n"
+            return
+        end
+        param_draws = h5open(param_draws_path, "r") do f
+            read(f, "smcparams")
+        end
+
+        # Calculate covariance matrix
+        param_covariance = cov(param_draws)
+
+        # Write to file
+        h5open(workpath(m, "estimate","parameter_covariance.h5"),"w") do f
+            f["smccov"] = param_covariance
+        end
+    else
+        throw("Invalid sampling method specified in setting :sampling_method")
     end
 
     return param_covariance
