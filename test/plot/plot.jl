@@ -37,6 +37,7 @@ plot_shock_decomposition(m, :obs_nominalrate, :obs, :full, :none)
 
 # Plot IRF
 plot_impulse_response(m, :rm_sh, collect(keys(m.observables)), :obs, :full, :none)
+plot_impulse_response(m, :rm_sh, collect(keys(m.observables)), :obs, :full, :none, flip = true)
 
 # Hair plot
 df = load_data(m)
