@@ -113,9 +113,10 @@ computed means and bands.
 function get_meansbands_output_files(m::AbstractModel, input_type::Symbol,
                                      cond_type::Symbol, output_vars::Vector{Symbol};
                                      forecast_string::String = "",
-                                     fileformat::Symbol = :jld)
+                                     fileformat::Symbol = :jld,
+                                     directory::String = workpath(m, "forecast"))
 
-    directory = workpath(m, "forecast")
+    directory = directory
     base = filestring_base(m)
     get_meansbands_output_files(directory, base, input_type, cond_type, output_vars;
                                 forecast_string = forecast_string, fileformat = fileformat)
@@ -161,18 +162,20 @@ end
 
 function read_mb(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                  output_var::Symbol; forecast_string::String = "",
-                 bdd_and_unbdd::Bool = false)
+                 bdd_and_unbdd::Bool = false, directory = workpath(m, "forecast"))
 
     if bdd_and_unbdd
         @assert get_product(output_var) in [:forecast, :forecast4q]
         bdd_output_var = Symbol(:bdd, output_var)
         files = get_meansbands_output_files(m, input_type, cond_type,
                                             [output_var, bdd_output_var];
-                                            forecast_string = forecast_string)
+                                            forecast_string = forecast_string,
+                                            directory = directory)
         read_bdd_and_unbdd_mb(files[bdd_output_var], files[output_var])
     else
         files = get_meansbands_output_files(m, input_type, cond_type, [output_var];
-                                            forecast_string = forecast_string)
+                                            forecast_string = forecast_string,
+                                            directory = directory)
         read_mb(files[output_var])
     end
 end
@@ -228,10 +231,11 @@ write_meansbands_tables_timeseries(dirname, filestring_base, mb;
 - `input_type::Symbol`
 - `cond_type::Symbol`
 - `output_var::Symbol`: `class(output_var)` must be one of `[:hist, :forecast, :hist4q, :forecast4q, :bddforecast, :bddforecast4q, :trend, :dettrend, :histforecast, :histforecast4q]`
+- `read_dirname::String`: directory to which meansbands objects are read from
 
 **Method 2 only:**
 
-- `dirname::String`: directory to which tables are saved
+- `write_dirname::String`: directory to which tables are saved
 - `filestring_base::Vector{String}`: the result of `filestring_base(m)`,
   typically `[\"vint=yymmdd\"]``
 
@@ -251,7 +255,8 @@ function write_meansbands_tables_timeseries(m::AbstractModel, input_type::Symbol
                                             cond_type::Symbol, output_var::Symbol;
                                             forecast_string::String = "",
                                             bdd_and_unbdd::Bool = false,
-                                            dirname::String = tablespath(m, "forecast"),
+                                            read_dirname::String = workpath(m, "forecast"),
+                                            write_dirname::String = tablespath(m, "forecast"),
                                             kwargs...)
     # Check that output_var is a time series
     prod = get_product(output_var)
@@ -264,26 +269,27 @@ function write_meansbands_tables_timeseries(m::AbstractModel, input_type::Symbol
     if prod in [:histforecast, :histforecast4q]
         fourq = contains(string(prod), "4q")
         mb_hist     = read_mb(m, input_type, cond_type, Symbol(fourq ? :hist4q : :hist, class),
-                              forecast_string = forecast_string)
+                              forecast_string = forecast_string, directory = read_dirname)
         mb_forecast = read_mb(m, input_type, cond_type, Symbol(fourq ? :forecast4q : :forecast, class),
-                              forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd)
+                              forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd,
+                              directory = read_dirname)
         mb = cat(mb_hist, mb_forecast)
     else
         mb = read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string,
-                     bdd_and_unbdd = bdd_and_unbdd)
+                     bdd_and_unbdd = bdd_and_unbdd, directory = read_dirname)
     end
 
     # Call second method
-    write_meansbands_tables_timeseries(dirname, filestring_base(m), mb;
+    write_meansbands_tables_timeseries(write_dirname, filestring_base(m), mb;
                                        kwargs...)
 end
 
-function write_meansbands_tables_timeseries(dirname::String, filestring_base::Vector{String},
+function write_meansbands_tables_timeseries(write_dirname::String, filestring_base::Vector{String},
                                             mb::MeansBands;
                                             tablevars::Vector{Symbol} = get_variables(mb))
     for tablevar in tablevars
         df = prepare_meansbands_table_timeseries(mb, tablevar)
-        write_meansbands_table(dirname, filestring_base, mb, df, tablevar)
+        write_meansbands_table(write_dirname, filestring_base, mb, df, tablevar)
     end
 end
 
