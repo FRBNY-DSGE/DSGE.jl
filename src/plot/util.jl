@@ -156,7 +156,9 @@ function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
         elseif transform == identity
             ""
         end
-    elseif class in [:states, :shocks, :stdshocks]
+    elseif class == :stdshocks
+        return "Standard Deviations"
+    elseif class in [:states, :shocks]
         return ""
     else
         error("Invalid class: " * string(class))
