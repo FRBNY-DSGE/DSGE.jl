@@ -9,7 +9,7 @@ plot_impulse_response(m, shock, vars, class, input_type, cond_type;
     titles = [], kwargs...)
 
 plot_impulse_response(shock, var, mb; bands_pcts = [\"90.0%\"],
-    output_file = "", title = "")
+    output_file = "", title = "", flip = false)
 ```
 
 Plot the responses of `var` to `shock` from `mb`, possibly read in using
@@ -36,6 +36,7 @@ Plot the responses of `var` to `shock` from `mb`, possibly read in using
 - `bands_pct::Vector{String}`
 - `output_file::String`: if specified, plot will be saved there as a PDF
 - `title::String` or `titles::Vector{String}`
+- `flip::Bool`: whether to flip the sign of the impulse response while plotting
 
 **Methods 1 and 2 only:**
 
@@ -102,7 +103,8 @@ end
 function plot_impulse_response(shock::Symbol, var::Symbol, mb::MeansBands;
                                bands_pcts::Vector{String} = ["90.0%"],
                                output_file::String = "",
-                               title::String = "")
+                               title::String = "",
+                               flip::Bool = false)
 
     # Plot title
     if isempty(title)
@@ -111,16 +113,17 @@ function plot_impulse_response(shock::Symbol, var::Symbol, mb::MeansBands;
     p = plot(title = title, margin = 10px)
 
     varshock = Symbol("$(var)__$(shock)")
+    sign = flip ? -1 : 1
 
     # Plot bands
     for pct in bands_pcts
-        plot!(p, mb.bands[varshock][Symbol("$pct UB")],
-              fillto = mb.bands[varshock][Symbol("$pct LB")],
+        plot!(p, sign * mb.bands[varshock][Symbol("$pct UB")],
+              fillto = sign * mb.bands[varshock][Symbol("$pct LB")],
               label = "", color = :blue, α = 0.10)
     end
 
     # Plot mean
-    plot!(p, mb.means[varshock], label = "", linewidth = 2, linecolor = :black)
+    plot!(p, sign * mb.means[varshock], label = "", linewidth = 2, linecolor = :black)
 
     # Save if `output_file` provided
     save_plot(p, output_file)
