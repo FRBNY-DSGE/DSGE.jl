@@ -9,11 +9,11 @@ function get_class(output_var::Symbol)
     elseif contains(s, "obs")
         :obs
     elseif contains(s, "state")
-        :state
+        :states
     elseif contains(s, "stdshock")
-        :stdshock
+        :stdshocks
     elseif contains(s, "shock")
-        :shock
+        :shocks
     else
         error("Invalid output_var: " * s)
     end
@@ -51,9 +51,9 @@ function get_class_longname(class::Symbol)
         :pseudoobservable
     elseif class == :obs
         :observable
-    elseif class == :state
+    elseif class == :states
         :state
-    elseif class in [:shock, :stdshock]
+    elseif class in [:shocks, :stdshocks]
         :shock
     end
 end

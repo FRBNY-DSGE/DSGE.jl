@@ -276,7 +276,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     end
 
     # Write state names
-    if class == :state
+    if class == :states
         state_indices = merge(m.endogenous_states, m.endogenous_states_augmented)
         @assert length(state_indices) == n_states_augmented(m) # assert no duplicate keys
         write(file, "state_indices", state_indices)
@@ -308,9 +308,9 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     end
 
     # Write shock names and transforms
-    if class in [:shock, :stdshock] || prod in [:shockdec, :irf]
+    if class in [:shocks, :stdshocks] || prod in [:shockdec, :irf]
         write(file, "shock_indices", m.exogenous_shocks)
-        if class in [:shock, :stdshock]
+        if class in [:shocks, :stdshocks]
             rev_transforms = Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(m.exogenous_shocks))
             write(file, "shock_revtransforms", rev_transforms)
         end
