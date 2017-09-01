@@ -173,8 +173,10 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     # Plot bands
     if combined.metadata[:para] in [:full, :subset]
         bands_inds = get_bands_indices(var, history, forecast, hist_inds, fcast_inds)
-        plot_bands!(p, var, combined, bands_style, bands_color,
-                    linestyle = linestyle, pcts = bands_pcts, indices = bands_inds)
+        if !isempty(bands_inds)
+            plot_bands!(p, var, combined, bands_style, bands_color,
+                        linestyle = linestyle, pcts = bands_pcts, indices = bands_inds)
+        end
     end
 
     # Plot mean
@@ -220,10 +222,6 @@ function plot_bands!(p::Plots.Plot, var::Symbol, mb::MeansBands,
                      linestyle::Symbol = :solid,
                      pcts::Vector{String} = DSGE.which_density_bands(mb, uniquify = true),
                      indices = Colon())
-
-    if isempty(pcts)
-        pcts = which_density_bands(mb, uniquify = true)
-    end
 
     datenums = map(quarter_date_to_number, mb.means[:date])
 
