@@ -109,7 +109,8 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
 
     # Get titles if not provided
     if isempty(titles)
-        titles = map(var -> describe_series(m_new, var, class), vars)
+        detexify_title = typeof(Plots.backend()) == Plots.GRBackend
+        titles = map(var -> DSGE.describe_series(m_new, var, class, detexify = detexify_title), vars)
     end
 
     # Loop through variables
