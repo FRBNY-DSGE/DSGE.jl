@@ -188,29 +188,29 @@ end
 get_key(m, class, index)
 ```
 
-Returns the name of the state (`class = :state`), observable (`obs`),
-pseudo-observable (`pseudo`), or shock (`shock`) corresponding to the given
-`index`.
+Returns the name of the state (`class = :states`), observable (`:obs`),
+pseudo-observable (`:pseudo`), or shock (`:shocks` or `:stdshocks`)
+corresponding to the given `index`.
 """
 function get_key(m::AbstractModel, class::Symbol, index::Int)
-    dict = if class == :state
+    dict = if class == :states
         m.endogenous_states
     elseif class == :obs
         m.observables
     elseif class == :pseudo
         _, pseudo_mapping = pseudo_measurement(m)
         pseudo_mapping.inds
-    elseif class in [:shock, :stdshock]
+    elseif class in [:shocks, :stdshocks]
         m.exogenous_shocks
     else
-        throw(ArgumentError("Invalid class :$class. Must be :state, :obs, :pseudo, or :shock"))
+        throw(ArgumentError("Invalid class: $class. Must be :states, :obs, :pseudo, :shocks, or :stdshocks"))
     end
 
     out = Base.filter(key -> dict[key] == index, collect(keys(dict)))
     if length(out) == 0
-        error("Key corresponding to index $index not found for class :$class")
+        error("Key corresponding to index $index not found for class: $class")
     elseif length(out) > 1
-        error("Multiple keys corresponding to index $index found for class :$class")
+        error("Multiple keys corresponding to index $index found for class: $class")
     else
         return out[1]
     end

@@ -126,7 +126,7 @@ function describe_series(m::AbstractModel, var::Symbol, class::Symbol)
             pseudo_measurement(m)[1]
         end
         return dict[var].name
-    elseif class in [:state, :shock, :stdshock]
+    elseif class in [:states, :shocks, :stdshocks]
         return string(var)
     else
         error("Invalid class: " * string(class))
@@ -151,7 +151,7 @@ function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
         elseif transform == identity
             ""
         end
-    elseif class in [:state, :shock, :stdshock]
+    elseif class in [:states, :shocks, :stdshocks]
         return ""
     else
         error("Invalid class: " * string(class))
