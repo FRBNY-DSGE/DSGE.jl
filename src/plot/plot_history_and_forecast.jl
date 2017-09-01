@@ -70,7 +70,7 @@ you can specify the `bands_style` and `bands_pcts`.
 
 ### Output
 
-- `p::Plot` or `plots::Dict{Symbol, Plot}`
+- `p::Plot` or `plots::OrderedDict{Symbol, Plot}`
 """
 function plot_history_and_forecast(m::AbstractModel, var::Symbol, class::Symbol,
                                    input_type::Symbol, cond_type::Symbol;
@@ -113,7 +113,7 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
     end
 
     # Loop through variables
-    plots = Dict{Symbol, Plots.Plot}()
+    plots = OrderedDict{Symbol, Plots.Plot}()
     for (var, title) in zip(vars, titles)
         output_file = if isempty(plotroot)
             ""
