@@ -69,7 +69,7 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
 
 ### Output
 
-- `p::Plot` or `plots::Dict{Symbol, Plot}`
+- `p::Plot` or `plots::OrderedDict{Symbol, Plot}`
 """
 function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
                                   var::Symbol, class::Symbol,
@@ -114,7 +114,7 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
     end
 
     # Loop through variables
-    plots = Dict{Symbol, Plots.Plot}()
+    plots = OrderedDict{Symbol, Plots.Plot}()
     for (var, title) in zip(vars, titles)
         output_file = if isempty(plotroot)
             ""

@@ -61,7 +61,7 @@ Plot shock decomposition(s) for `var` or `vars`.
 
 ### Output
 
-- `p::Plot` or `plots::Dict{Symbol, Plot}`
+- `p::Plot` or `plots::OrderedDict{Symbol, Plot}`
 """
 function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
@@ -99,7 +99,7 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
     end
 
     # Loop through variables
-    plots = Dict{Symbol, Plots.Plot}()
+    plots = OrderedDict{Symbol, Plots.Plot}()
     for (var, title) in zip(vars, titles)
         output_file = if isempty(plotroot)
             ""
