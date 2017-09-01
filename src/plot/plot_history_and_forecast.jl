@@ -14,7 +14,8 @@ plot_history_and_forecast(var, history, forecast; output_file = "",
     title = "", start_date = Nullable{Date}(), end_date = Nullable{Date}(),
     hist_label = \"History\", forecast_label = \"Forecast\",
     hist_color = :black, forecast_color = :red, linestyle = :solid,
-    bands_color = RGBA(0, 0, 1, 0.1), bands_pcts = [],
+    bands_color = RGBA(0, 0, 1, 0.1),
+    bands_pcts = DSGE.which_density_bands(history, uniquify = true),
     bands_style = :fan, tick_size = 5, ylabel = "", legend = :best,
     plot_handle = plot())
 ```
@@ -143,7 +144,7 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
                                    forecast_color::Colorant = RGBA(1., 0., 0., 1.),
                                    linestyle::Symbol = :solid,
                                    bands_color::Colorant = RGBA(0., 0., 1., 0.1),
-                                   bands_pcts::Vector{String} = String[],
+                                   bands_pcts::Vector{String} = DSGE.which_density_bands(history, uniquify = true),
                                    bands_style::Symbol = :fan,
                                    tick_size::Int = 5,
                                    ylabel::String = "",

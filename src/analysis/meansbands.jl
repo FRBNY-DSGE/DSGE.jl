@@ -457,7 +457,7 @@ function which_density_bands(mb::MeansBands; uniquify=false, ordered=true)
 
     # return both upper and lower bands, or just percents, as desired
     strs = if uniquify
-        sort(unique([split(x, " ")[1] for x in [lowers; uppers]]))
+        sort([convert(String, split(x, " ")[1]) for x in lowers])
     else
         [lowers; uppers]
     end
