@@ -118,19 +118,24 @@ function plot_extension()
     end
 end
 
-function describe_series(m::AbstractModel, var::Symbol, class::Symbol)
-    if class in [:obs, :pseudo]
+function describe_series(m::AbstractModel, var::Symbol, class::Symbol;
+                         detexify::Bool = false)
+    res = if class in [:obs, :pseudo]
         dict = if class == :obs
             m.observable_mappings
         elseif class == :pseudo
             pseudo_measurement(m)[1]
         end
-        return dict[var].name
-    elseif class in [:states, :shocks, :stdshocks]
-        return string(var)
+        dict[var].name
+    elseif class == :states
+        string(var)
+    elseif class in [:shocks, :stdshocks]
+        replace(string(var), r"_sh$", "")
     else
         error("Invalid class: " * string(class))
     end
+
+    detexify ? DSGE.detexify(res) : res
 end
 
 function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;

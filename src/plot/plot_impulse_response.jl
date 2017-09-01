@@ -76,7 +76,8 @@ function plot_impulse_response(m::AbstractModel, shock::Symbol, vars::Vector{Sym
 
     # Get titles if not provided
     if isempty(titles)
-        titles = map(var -> DSGE.describe_series(m, var, class), vars)
+        detexify_title = typeof(Plots.backend()) == Plots.GRBackend
+        titles = map(var -> DSGE.describe_series(m, var, class, detexify = detexify_title), vars)
     end
 
     # Loop through variables
