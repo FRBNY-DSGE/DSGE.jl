@@ -301,7 +301,7 @@ write_means_tables_shockdec(m, input_type, cond_type, class;
 
 write_means_tables_shockdec(dirname, filestring_base, mb_shockdec,
     mb_trend, mb_dettrend, mb_hist, mb_forecast; tablevars = get_variables(mb),
-    columnvars = get_shocks(mb))
+    columnvars = get_shocks(mb), groups = [])
 ```
 
 ### Inputs
@@ -328,6 +328,7 @@ write_means_tables_shockdec(dirname, filestring_base, mb_shockdec,
 
 - `tablevars::Vector{Symbol}`: which series to write tables for
 - `columnvars::Vector{Symbol}`: which shocks to include as columns in the tables
+- `groups::Vector{ShockGroup}`: if provided, shocks will be grouped accordingly
 
 **Method 1 only:**
 
@@ -369,11 +370,13 @@ function write_means_tables_shockdec(dirname::String, filestring_base::Vector{St
                                      mb_hist::MeansBands = MeansBands(),
                                      mb_forecast::MeansBands = MeansBands();
                                      tablevars::Vector{Symbol} = get_variables(mb_shockdec),
-                                     columnvars::Vector{Symbol} = get_shocks(mb_shockdec))
+                                     columnvars::Vector{Symbol} = get_shocks(mb_shockdec),
+                                     groups::Vector{ShockGroup} = ShockGroup[])
     for tablevar in tablevars
         df = prepare_means_table_shockdec(mb_shockdec, mb_trend, mb_dettrend, tablevar,
                                           mb_forecast = mb_forecast, mb_hist = mb_hist,
-                                          shocks = columnvars)
+                                          shocks = columnvars,
+                                          groups = groups)
         write_meansbands_table(dirname, filestring_base, mb_shockdec, df, tablevar)
     end
 end
@@ -481,7 +484,7 @@ end
 ```
 write_meansbands_tables_all(m, input_type, cond_type, output_vars;
     forecast_string = "", dirname = tablespath(m, \"forecast\"),
-    vars = [], shocks = shocks)
+    vars = [], shocks = [], shock_groups = [])
 ```
 
 Write all `output_vars` corresponding to model `m` to tables in `dirname`.
@@ -502,14 +505,17 @@ Write all `output_vars` corresponding to model `m` to tables in `dirname`.
 - `shocks::Vector{Symbol}`: Vector of shocks to print if `output_vars`
   contains a shock decomposition. If omitted, all shocks will be
   printed.
+- `shock_groups::Vector{ShockGroup}`: if provided, shocks will be grouped
+  accordingly in shockdec tables
 """
 function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                                      output_vars::Vector{Symbol};
                                      forecast_string = "",
                                      bdd_and_unbdd::Bool = false,
                                      dirname::String = tablespath(m, "forecast"),
-                                     vars::Vector{Symbol} = Vector{Symbol}(),
-                                     shocks::Vector{Symbol} = Vector{Symbol}())
+                                     vars::Vector{Symbol} = Symbol[],
+                                     shocks::Vector{Symbol} = Symbol[],
+                                     shock_groups::Vector{ShockGroup} = ShockGroup[])
     for output_var in output_vars
 
         class = get_class(output)
@@ -528,7 +534,8 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
                                         tablevars = vars, columnvars = shocks,
                                         bdd_and_unbdd = bdd_and_unbdd,
                                         forecast_string = forecast_string,
-                                        dirname = dirname)
+                                        dirname = dirname,
+                                        groups = shock_groups)
 
         elseif prod == :irf
             write_means_tables(m, input_type, cond_type, class,

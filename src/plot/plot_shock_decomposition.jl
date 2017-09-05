@@ -136,22 +136,14 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
 
     # Construct DataFrame with detrended mean, deterministic trend, and all shocks
     df = prepare_means_table_shockdec(shockdec, trend, dettrend, var,
-                                           mb_hist = hist, mb_forecast = forecast,
-                                           detexify_shocks = false)
+                                      mb_hist = hist, mb_forecast = forecast,
+                                      detexify_shocks = false,
+                                      groups = groups)
 
     # Dates
     start_ind, end_ind = get_date_limit_indices(start_date, end_date, df[:date])
     df[:datenum] = map(quarter_date_to_number, df[:date])
     df[:x] = map(date -> shockdec_date_to_x(date, df[1, :date]), df[:date])
-    nperiods = size(df, 1)
-
-    # Sum shock values for each group
-    v0 = zeros(nperiods)
-    for group in groups
-        shock_vectors = [df[shock] for shock in group.shocks]
-        shock_sum = reduce(+, v0, shock_vectors)
-        df[Symbol(group.name)] = shock_sum
-    end
 
     # x-axis ticks
     all_inds = start_ind:end_ind
