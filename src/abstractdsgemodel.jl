@@ -674,3 +674,30 @@ function rand_prior(m::AbstractModel; ndraws::Int = 100_000)
 
     priorsim
 end
+
+"""
+```
+type ShockGroup
+```
+
+The `ShockGroup` type is used in `prepare_means_table_shockdec` and
+`plot_shock_decompositions`. When plotting shock decompositions, we usually want
+to group the shocks into categories (financial, monetary policy, etc.) so that
+the resulting grouped bar plot is legible.
+
+### Fields
+
+- `name::String`
+- `shocks::Vector{Symbol}`
+- `color::Colorant`
+"""
+type ShockGroup
+    name::String
+    shocks::Vector{Symbol}
+    color::Colorant
+end
+
+function ShockGroup(name::String, shocks::Vector{Symbol}, color_name::Symbol)
+    color = parse(Colorant, color_name)
+    return ShockGroup(name, shocks, color)
+end

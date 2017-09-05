@@ -49,6 +49,7 @@ module DSGE
         load_parameters_from_file, specify_mode!, specify_hessian,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
+        ShockGroup,
 
         # parameters.jl
         parameter, Transform, NullablePrior, AbstractParameter,
@@ -79,6 +80,7 @@ module DSGE
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, eqcond, measurement, pseudo_measurement,
+        shock_groupings,
 
         # solve/
         gensys, solve,
@@ -104,7 +106,7 @@ module DSGE
         write_meansbands_tables_all,
 
         # plot/
-        ShockGroup, plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
+        plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition,
 
         # util
@@ -163,7 +165,6 @@ module DSGE
     include("analysis/util.jl")
 
     include("plot/util.jl")
-    include("plot/shock_group.jl")
     include("plot/plot_parameters.jl")
     include("plot/plot_impulse_response.jl")
     include("plot/plot_history_and_forecast.jl")
