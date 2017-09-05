@@ -119,7 +119,7 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
         output_file = if isempty(plotroot)
             ""
         else
-            joinpath(plotroot, "forecastcomp_" * string(var) * "." * plot_extension())
+            joinpath(plotroot, "forecastcomp_" * string(var) * "." * string(plot_extension()))
         end
 
         plots[var] = plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
