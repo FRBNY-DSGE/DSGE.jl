@@ -105,7 +105,7 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
             ""
         else
             get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
-                                  Symbol("shockdec_", var),
+                                  Symbol("shockdec_", detexify(var)),
                                   forecast_string = forecast_string,
                                   fileformat = plot_extension())
         end

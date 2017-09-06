@@ -88,7 +88,7 @@ function plot_impulse_response(m::AbstractModel, shock::Symbol, vars::Vector{Sym
             ""
         else
             get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
-                                  Symbol("irf_", shock, "_", var),
+                                  Symbol("irf_", shock, "_", detexify(var)),
                                   forecast_string = forecast_string,
                                   fileformat = plot_extension())
         end
