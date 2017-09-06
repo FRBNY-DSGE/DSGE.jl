@@ -120,7 +120,7 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
             ""
         else
             get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
-                                  Symbol(fourquarter ? "forecast4q_" : "forecast_", var),
+                                  Symbol(fourquarter ? "forecast4q_" : "forecast_", detexify(var)),
                                   forecast_string = forecast_string,
                                   fileformat = plot_extension())
         end
