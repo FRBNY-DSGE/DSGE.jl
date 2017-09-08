@@ -81,7 +81,7 @@ function means_bands_all(m::AbstractModel, input_type::Symbol,
                          cond_type::Symbol, output_vars::Vector{Symbol};
                          df::DataFrame = DataFrame(),
                          forecast_string::String = "",
-                         density_bands::Array{Float64} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                         density_bands::Vector{Float64} = [0.5, 0.6, 0.7, 0.8, 0.9],
                          minimize::Bool = false,
                          verbose::Symbol = :low)
 
@@ -361,7 +361,7 @@ function compute_means_bands(class::Symbol,
                              population_series::Vector{Float64} = Vector{Float64}(),
                              y0_index::Int = -1,
                              shock_name::Nullable{Symbol} = Nullable{Symbol}(),
-                             density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9],
+                             density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9],
                              minimize::Bool = false,
                              compute_shockdec_bands::Bool = false)
 
