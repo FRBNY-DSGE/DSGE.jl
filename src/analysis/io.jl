@@ -286,9 +286,10 @@ end
 
 function write_meansbands_tables_timeseries(write_dirname::String, filestring_base::Vector{String},
                                             mb::MeansBands;
-                                            tablevars::Vector{Symbol} = get_variables(mb))
+                                            tablevars::Vector{Symbol} = get_variables(mb),
+                                            bands_pcts::Vector{String} = which_density_bands(mb, uniquify = true))
     for tablevar in tablevars
-        df = prepare_meansbands_table_timeseries(mb, tablevar)
+        df = prepare_meansbands_table_timeseries(mb, tablevar, bands_pcts = bands_pcts)
         write_meansbands_table(write_dirname, filestring_base, mb, df, tablevar)
     end
 end
