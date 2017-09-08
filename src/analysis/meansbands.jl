@@ -540,17 +540,27 @@ ordered as follows: [68\% lower, 50\% lower, 50\% upper, 68\% upper, mean].
   observables, `var` would be an element of `names(m.observables)`. If
   it stores pseudo-observables, `var` would be the name of a
   pseudo-observable defined in the pseudo-measurement equation.
+
+### Keyword Arguments
+
+- `bands_pcts::Vector{String}`: vector of (uniquified) band percentiles to
+  include in the table
 """
-function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol)
+function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol;
+                                             bands_pcts::Vector{String} = which_density_bands(mb, uniquify = true))
 
     @assert get_product(mb) in [:hist, :forecast, :hist4q, :forecast4q, :bddforecast,
          :bddforecast4q, :trend, :dettrend] "prepare_meansbands_table_timeseries can only be used for time-series products"
-
     @assert var in get_vars_means(mb) "$var is not stored in this MeansBands object"
+
+    # Get bands
+    uppers = sort!([pct * " UB" for pct in bands_pcts], rev = true)
+    lowers = sort!([pct * " LB" for pct in bands_pcts])
+    my_bands = map(Symbol, vcat(lowers, uppers))
 
     # Extract this variable from Means and bands
     means = mb.means[[:date, var]]
-    bands = mb.bands[var][[:date; map(Symbol, which_density_bands(mb))]]
+    bands = mb.bands[var][[:date; my_bands]]
 
     # Join so mean is on far right and date is on far left
     df = join(bands, means, on = :date)
