@@ -2,52 +2,58 @@
 ## Extract class and product from a Symbol
 ##########################################
 
-function get_class(s::Symbol)
-    class = if contains(string(s), "pseudo")
+function get_class(output_var::Symbol)
+    s = string(output_var)
+    if contains(s, "pseudo")
         :pseudo
-    elseif contains(string(s), "obs")
+    elseif contains(s, "obs")
         :obs
-    elseif contains(string(s), "state")
-        :state
-    elseif contains(string(s), "stdshock")
-        :stdshock
-    elseif contains(string(s), "shock")
-        :shock
+    elseif contains(s, "state")
+        :states
+    elseif contains(s, "stdshock")
+        :stdshocks
+    elseif contains(s, "shock")
+        :shocks
+    else
+        error("Invalid output_var: " * s)
     end
 end
 
-function get_product(s::Symbol)
-    product = if contains(string(s), "hist4q")
+function get_product(output_var::Symbol)
+    s = string(output_var)
+    if contains(s, "hist4q")
         :hist4q
-    elseif contains(string(s), "hist")
+    elseif contains(s, "hist")
         :hist
-    elseif contains(string(s), "bddforecast4q")
+    elseif contains(s, "bddforecast4q")
         :bddforecast4q
-    elseif contains(string(s), "forecast4q")
+    elseif contains(s, "forecast4q")
         :forecast4q
-    elseif contains(string(s), "bddforecast")
+    elseif contains(s, "bddforecast")
         :bddforecast
-    elseif contains(string(s), "forecast")
+    elseif contains(s, "forecast")
         :forecast
-    elseif contains(string(s), "shockdec")
+    elseif contains(s, "shockdec")
         :shockdec
-    elseif contains(string(s), "dettrend")
+    elseif contains(s, "dettrend")
         :dettrend
-    elseif contains(string(s), "trend")
+    elseif contains(s, "trend")
         :trend
-    elseif contains(string(s), "irf")
+    elseif contains(s, "irf")
         :irf
+    else
+        error("Invalid output_var: " * s)
     end
 end
 
 function get_class_longname(class::Symbol)
-    longname = if class == :pseudo
+    if class == :pseudo
         :pseudoobservable
     elseif class == :obs
         :observable
-    elseif class == :state
+    elseif class == :states
         :state
-    elseif class in [:shock, :stdshock]
+    elseif class in [:shocks, :stdshocks]
         :shock
     end
 end
@@ -286,7 +292,7 @@ function get_mb_metadata(input_type::Symbol, cond_type::Symbol,
     end
 
     class_long = get_class_longname(class)
-    variable_indices = metadata[Symbol("$(class_long)_indices")]
+    variable_indices = metadata[Symbol(class_long, "_indices")]
     date_indices     = product == :irf ? Dict{Date,Int}() : metadata[:date_indices]
 
     # Make sure date lists are valid. This is vacuously true for and IRFs, which

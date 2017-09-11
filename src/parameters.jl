@@ -417,6 +417,7 @@ end
 
 for f in (:(Base.exp),
           :(Base.log),
+          :(Base.transpose),
           :(Base.:-),
           :(Base.:<),
           :(Base.:>),
@@ -488,3 +489,29 @@ end
 
 Distributions.pdf{T}(pvec::ParameterVector{T}) = exp(logpdf(pvec))
 Distributions.pdf{T}(pvec::ParameterVector{T}, values::Vector{T}) = exp(logpdf(pvec, values))
+
+function describe_prior(param::Parameter)
+    if param.fixed
+        return "fixed at " * string(param.value)
+
+    elseif !param.fixed && !isnull(param.prior)
+        (prior_mean, prior_std) = DSGE.moments(param)
+
+        prior_dist = string(typeof(get(param.prior)))
+        prior_dist = replace(prior_dist, "Distributions.", "")
+        prior_dist = replace(prior_dist, "DSGE.", "")
+        prior_dist = replace(prior_dist, "{Float64}", "")
+
+        mom1, mom2 = if isa(prior, DSGE.RootInverseGamma)
+            "tau", "nu"
+        else
+            "mu", "sigma"
+        end
+
+        return prior_dist * "(" * mom1 * "=" * string(round(prior_mean, 4)) * ", " *
+                                  mom2 * "=" * string(round(prior_std, 4)) * ")"
+
+    else
+        error("Parameter must either be fixed or have non-null prior: " * string(param.key))
+    end
+end

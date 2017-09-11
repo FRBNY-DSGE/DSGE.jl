@@ -19,15 +19,17 @@ function default_settings!(m::AbstractModel)
     # Data settings for released and conditional data. Default behavior is to set vintage
     # of data to today's date.
     vint = Dates.format(now(), DSGE_DATE_FORMAT)
-    settings[:data_vintage] = Setting(:data_vintage, vint, true,
-        "vint", "Vintage of data")
+    settings[:data_vintage] = Setting(:data_vintage, vint, true, "vint",
+        "Data vintage")
+    settings[:data_id] = Setting(:data_id, 3,
+        "Dataset identifier")
     settings[:cond_vintage] = Setting(:cond_vintage, vint,
-        "Vintage of conditional data")
-    settings[:cond_id] = Setting(:cond_id, "0000",
-        "Identifier of conditional dataset")
-    settings[:cond_full_names] = Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate],
+        "Conditional data vintage")
+    settings[:cond_id] = Setting(:cond_id, 2,
+        "Conditional dataset identifier")
+    settings[:cond_full_names] = Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
         "Observables used in conditional forecasts")
-    settings[:cond_semi_names] = Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate],
+    settings[:cond_semi_names] = Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
         "Observables used in semiconditional forecasts")
     settings[:use_population_forecast] = Setting(:use_population_forecast, false,
         "Whether to use population forecasts as data")

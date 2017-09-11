@@ -10,7 +10,7 @@ function simulated_annealing(fcn::Function,
                              kwargs...)
 
     Optim.optimize(fcn, x0,
-                   method = SimulatedAnnealing(neighbor! = neighbor!,temperature = temperature),
+                   method = SimulatedAnnealing(neighbor = neighbor!,temperature = temperature),
                    iterations = iterations, store_trace = store_trace, show_trace = show_trace,
                    extended_trace = extended_trace)
 
