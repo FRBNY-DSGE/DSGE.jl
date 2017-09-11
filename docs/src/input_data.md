@@ -48,7 +48,7 @@ Some data series may not be available from FRED or one may simply wish to use a 
 data source, for whatever reason. The data sources and series are specified in the
 `data_series` field of the model object. For each data source that is *not* `:fred`, a
 well-formed CSV of the form `<source>_<yymmdd>.csv` is expected in the directory indicated
-by `inpath(m, "data")`.  For example, the following might be the contents of a data source
+by `inpath(m, "raw")`.  For example, the following might be the contents of a data source
 for two series `:series1` and `:series2`:
 
 ```
@@ -76,7 +76,7 @@ Dict{Symbol,Array{Symbol,1}} with 2 entries:
 ```
 
 If the data vintage specified for the model is `151127` (Nov. 27, 2015), then the following
-files are expected in `inpath(m, "data")`:
+files are expected in `inpath(m, "raw")`:
 
 ```
 spf_151127.csv
@@ -120,7 +120,7 @@ observation.
 To incorporate population forecasts,
 
 1. Set the model setting `use_population_forecast` to `true`.
-2. Provide a file `population_forecast_<yymmdd>.csv` to `inpath(m, "data")`. Population
+2. Provide a file `population_forecast_<yymmdd>.csv` to `inpath(m, "raw")`. Population
    forecasts should be in levels, and represent the same series as given by the
    `population_mnemonic` setting (defaults to `:CNP16OV`, or "Civilian Noninstitutional
    Population, Thousands"). If your population forecast is in growth rates, convert it to
@@ -162,9 +162,9 @@ for their model.
     percent changes or adjusting into per-capita terms. See [Data Transforms and Utilities](@ref) for functions that may be
     of use when defining series-specific transformations.
 
-- the user adjusts data-related settings, such as `data_vintage`, `dataroot`,
-    `date_presample_start`, `date_zlb_start`, `date_forecast_start`, and
-    `use_population_forecast`.
+- the user adjusts data-related settings, such as `data_vintage`, `data_id`,
+    `dataroot`, `date_presample_start`, `date_zlb_start`, `date_forecast_start`,
+    and `use_population_forecast`.
 
 Second, *DSGE.jl* attempts to construct the dataset given this setup through a call to
 `load_data`. See [`load_data`](@ref) for more details.
@@ -181,6 +181,7 @@ Given the complexity of the data download, you may find that the dataset generat
 
 - Ensure that the `data_vintage` model setting is as you expect. (Try checking
     `data_vintage(m)`.)
+- Ensure that the `data_id` model setting is correct for the given model.
 - Ensure that the `date_forecast_start` model setting is as you expect, and that is not
     logically incompatible with `data_vintage`.
 - Ensure that the `data_series` field of the model object is set as expected.
@@ -189,13 +190,13 @@ Given the complexity of the data download, you may find that the dataset generat
 - Ensure that the keys of the `observables` and `data_transforms` fields of the model object
     match.
 - Check the input files for [Non-FRED data sources](@ref). They should be
-    in the directory indicated by `inpath(m, "data")`, be named appropriately given the
+    in the directory indicated by `inpath(m, "raw")`, be named appropriately given the
     vintage of data expected, and be formatted appropriately. One may have to copy and
     rename files of non-FRED data sources to match the specified vintage, even if the
     contents of the files would be identical.
-- Look for any immediate issues in the final dataset saved (`data_<yymmdd>.csv`). If a data
-    series in this file is all `NaN` values, then likely a non-FRED data source was not
-    provided correctly.
+- Look for any immediate issues in the final dataset saved
+    (`data_dsid=<xx>_vint=<yymmdd>.csv`). If a data series in this file is all
+    `NaN` values, then likely a non-FRED data source was not provided correctly.
 - Ensure that the column names of the data CSV match the keys of the `observables` field of
     the model object.
 - You may receive a warning that an input data file "does not contain the entire date range

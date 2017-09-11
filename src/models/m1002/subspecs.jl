@@ -12,6 +12,8 @@ function init_subspec!(m::Model1002)
         return ss8!(m)
     elseif subspec(m) == "ss9"
         return ss9!(m)
+    elseif subspec(m) == "ss10"
+        return ss10!(m)
     else
         error("This subspec is not defined.")
     end
@@ -38,9 +40,9 @@ end
 ss9!(m::Model1002)
 ```
 
-Initializes subspec 9 of `Model1002`. This subspecification is the same as ss8,
-and in addition the bounds for beta-distributed parameters have been changed
-from (1e-5, 0.99) to (0.0, 1.0).
+Initializes subspec 9 of `Model1002`. This subspecification is ss8 + Iskander's
+changes + the bounds for beta-distributed parameters have been changed from
+(1e-5, 0.99) to (0.0, 1.0).
 """
 function ss9!(m::Model1002)
 
@@ -163,4 +165,16 @@ function ss9!(m::Model1002)
     m <= parameter(:Iendoα, 0.0000, (0.0, 1.0), (0.0, 0.0), DSGE.Untransformed(), BetaAlt(0.50, 0.20), fixed = true,
                    description = "Iendoα: Indicates whether to use the model's endogenous α in the capacity utilization adjustment of total factor productivity.",
                    tex_label = "I\\{\\alpha^{model}\\}")
+end
+
+"""
+```
+ss10!(m::Model1002)
+```
+
+Initializes subspec 10 of `Model1002`. This subspecification is the same as ss9,
+except `betabar` is defined with `m[:σ_c]` instead of `σ_ω_star`.
+"""
+function ss10!(m::Model1002)
+    ss9!(m)
 end

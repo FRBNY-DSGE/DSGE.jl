@@ -50,7 +50,7 @@ equilibrium conditions.
   filepath computation.
 
 * `subspec::String`: The model subspecification number, indicating that
-  some parameters from the original model spec (\"ss2\") are initialized
+  some parameters from the original model spec (\"ss10\") are initialized
   differently. Cached here for filepath computation.
 
 * `settings::Dict{Symbol,Setting}`: Settings/flags that affect computation
@@ -158,9 +158,9 @@ function init_model_indices!(m::Model1002)
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
 end
 
-function Model1002(subspec::String="ss2";
-                  custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
-                  testing = false)
+function Model1002(subspec::String="ss10";
+                   custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
+                   testing = false)
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]
@@ -609,7 +609,11 @@ function steadystate!(m::Model1002)
     if subspec(m) in ["ss2", "ss8"]
         wekstar = (1-m[:γ_star]/m[:β])*nkstar - m[:γ_star]/m[:β]*(m[:spr]*(1-μ_estar*Gstar) - 1)
     else
-        betabar = exp( (m[:σ_c] -1) * m[:z_star]) / m[:β]
+        if subspec(m) == "ss9"
+            betabar = exp( (σ_ω_star -1) * m[:z_star]) / m[:β]
+        else
+            betabar = exp( (m[:σ_c] -1) * m[:z_star]) / m[:β]
+        end
         wekstar = (1-(m[:γ_star]*betabar))*nkstar - m[:γ_star]*betabar*(m[:spr]*(1-μ_estar*Gstar) - 1)
     end
     vkstar      = (nkstar-wekstar)/m[:γ_star]
@@ -641,8 +645,13 @@ function steadystate!(m::Model1002)
     m[:ζ_spσ_ω] = (ζ_bw_zw*ζ_zσ_ω - ζ_bσ_ω) / (1-ζ_bw_zw)
 
     # elasticities wrt μ_e
-    ζ_bμ_e      = -μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
-        ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    if subspec(m) in ["ss2", "ss8"]
+        ζ_bμ_e  = μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
+            ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    else
+        ζ_bμ_e  = -μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
+            ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    end
     ζ_zμ_e      = -μ_estar*Gstar/ΓμG
     m[:ζ_spμ_e] = (ζ_bw_zw*ζ_zμ_e - ζ_bμ_e) / (1-ζ_bw_zw)
 
@@ -679,13 +688,16 @@ function settings_m1002!(m::Model1002)
     m <= Setting(:n_anticipated_shocks_padding, 20,
                  "Padding for anticipated policy shocks")
 
-    # Forecast
-    m <= Setting(:use_population_forecast, true,
-                 "Whether to use population forecasts as data")
+    # Data
+    m <= Setting(:data_id, 3, "Dataset identifier")
     m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
                  "Observables used in conditional forecasts")
     m <= Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
                  "Observables used in semiconditional forecasts")
+
+    # Forecast
+    m <= Setting(:use_population_forecast, true,
+                 "Whether to use population forecasts as data")
     m <= Setting(:forecast_pseudoobservables, true,
                  "Whether to forecast pseudo-observables")
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")),
@@ -731,4 +743,30 @@ function parameter_groupings(m::Model1002)
     @assert isempty(setdiff(m.parameters, vcat(incl_params, excl_params)))
 
     return groupings
+end
+
+"""
+```
+shock_groupings(m::Model1002)
+```
+
+Returns a `Vector{ShockGroup}`, which must be passed in to
+`plot_shock_decomposition`. See `?ShockGroup` for details.
+"""
+function shock_groupings(m::Model1002)
+    gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
+    bet = ShockGroup("b", [:b_sh], RGB(0.3, 0.3, 1.0))
+    fin = ShockGroup("FF", [:γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo
+    tfp = ShockGroup("z", [:z_sh], RGB(1.0, 0.55, 0.0)) # darkorange
+    pmu = ShockGroup("p-mkp", [:λ_f_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
+    wmu = ShockGroup("w-mkp", [:λ_w_sh], RGB(0.0, 0.5, 0.5)) # teal
+    pol = ShockGroup("pol", vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]),
+                     RGB(1.0, 0.84, 0.0)) # gold
+    pis = ShockGroup("pi-LR", [:π_star_sh], RGB(1.0, 0.75, 0.793)) # pink
+    mei = ShockGroup("mu", [:μ_sh], :cyan)
+    mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh], RGB(0.0, 0.8, 0.0))
+    zpe = ShockGroup("zp", [:zp_sh], RGB(0.0, 0.3, 0.0))
+    det = ShockGroup("dt", [:dettrend], :gray40)
+
+    return [gov, bet, fin, tfp, pmu, wmu, pol, pis, mei, mea, zpe, det]
 end

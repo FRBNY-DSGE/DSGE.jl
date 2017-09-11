@@ -188,29 +188,29 @@ end
 get_key(m, class, index)
 ```
 
-Returns the name of the state (`class = :state`), observable (`obs`),
-pseudo-observable (`pseudo`), or shock (`shock`) corresponding to the given
-`index`.
+Returns the name of the state (`class = :states`), observable (`:obs`),
+pseudo-observable (`:pseudo`), or shock (`:shocks` or `:stdshocks`)
+corresponding to the given `index`.
 """
 function get_key(m::AbstractModel, class::Symbol, index::Int)
-    dict = if class == :state
+    dict = if class == :states
         m.endogenous_states
     elseif class == :obs
         m.observables
     elseif class == :pseudo
         _, pseudo_mapping = pseudo_measurement(m)
         pseudo_mapping.inds
-    elseif class in [:shock, :stdshock]
+    elseif class in [:shocks, :stdshocks]
         m.exogenous_shocks
     else
-        throw(ArgumentError("Invalid class :$class. Must be :state, :obs, :pseudo, or :shock"))
+        throw(ArgumentError("Invalid class: $class. Must be :states, :obs, :pseudo, :shocks, or :stdshocks"))
     end
 
     out = Base.filter(key -> dict[key] == index, collect(keys(dict)))
     if length(out) == 0
-        error("Key corresponding to index $index not found for class :$class")
+        error("Key corresponding to index $index not found for class: $class")
     elseif length(out) > 1
-        error("Multiple keys corresponding to index $index found for class :$class")
+        error("Multiple keys corresponding to index $index found for class: $class")
     else
         return out[1]
     end
@@ -266,6 +266,7 @@ dataroot(m::AbstractModel)     = get_setting(m, :dataroot)
 
 # Interface for data
 data_vintage(m::AbstractModel)    = get_setting(m, :data_vintage)
+data_id(m::AbstractModel)         = get_setting(m, :data_id)
 cond_vintage(m::AbstractModel)    = get_setting(m, :cond_vintage)
 cond_id(m::AbstractModel)         = get_setting(m, :cond_id)
 cond_full_names(m::AbstractModel) = get_setting(m, :cond_full_names)
@@ -526,7 +527,8 @@ Returns path to specific input data file, creating containing directory as neede
 `file_name` not specified, creates and returns path to containing directory only. Valid
 `in_type` includes:
 
-* `\"data\"`: recorded data
+* `\"raw\"`: raw input series
+* `\"data\"`: transformed data in model units
 * `\"cond\"`: conditional data - nowcasts for the current forecast quarter, or related
 * `\"user\"`: user-supplied data for starting parameter vector, hessian, or related
 * `\"scenarios\"`: alternative scenarios
@@ -539,7 +541,7 @@ Path built as
 function inpath(m::AbstractModel, in_type::String, file_name::String="")
     path = dataroot(m)
     # Normal cases.
-    if in_type in ["data", "cond", "scenarios"]
+    if in_type in ["raw", "data", "cond", "scenarios"]
         path = joinpath(path, in_type)
     # User-provided inputs. May treat this differently in the future.
     elseif in_type == "user"
@@ -672,4 +674,31 @@ function rand_prior(m::AbstractModel; ndraws::Int = 100_000)
     end
 
     priorsim
+end
+
+"""
+```
+type ShockGroup
+```
+
+The `ShockGroup` type is used in `prepare_means_table_shockdec` and
+`plot_shock_decompositions`. When plotting shock decompositions, we usually want
+to group the shocks into categories (financial, monetary policy, etc.) so that
+the resulting grouped bar plot is legible.
+
+### Fields
+
+- `name::String`
+- `shocks::Vector{Symbol}`
+- `color::Colorant`
+"""
+type ShockGroup
+    name::String
+    shocks::Vector{Symbol}
+    color::Colorant
+end
+
+function ShockGroup(name::String, shocks::Vector{Symbol}, color_name::Symbol)
+    color = parse(Colorant, color_name)
+    return ShockGroup(name, shocks, color)
 end

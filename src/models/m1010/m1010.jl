@@ -164,7 +164,7 @@ function init_model_indices!(m::Model1010)
     for (i,k) in enumerate(observables);                 m.observables[k]                  = i end
 end
 
-function Model1010(subspec::String="ss18";
+function Model1010(subspec::String="ss20";
                    custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                    testing = false)
 
@@ -659,7 +659,11 @@ function steadystate!(m::Model1010)
     Rhostar     = 1/nkstar - 1
 
     # define betabar
-    betabar     = exp( (m[:σ_c] -1) * m[:z_star]) / m[:β]
+    if subspec(m) == "ss20"
+        betabar = exp( (m[:σ_c] -1) * m[:z_star]) / m[:β]
+    else
+        betabar = exp( (σ_ω_star -1) * m[:z_star]) / m[:β]
+    end
 
     # evaluate wekstar and vkstar
     wekstar     = (1-(m[:γ_star]*betabar))*nkstar - m[:γ_star]*betabar*(m[:spr]*(1-μ_estar*Gstar) - 1)
@@ -718,13 +722,16 @@ function settings_m1010!(m::Model1010)
     m <= Setting(:n_anticipated_shocks_padding, 20,
                  "Padding for anticipated policy shocks")
 
-    # Forecast
-    m <= Setting(:use_population_forecast, true,
-                 "Whether to use population forecasts as data")
+    # Data
+    m <= Setting(:data_id, 4, "Dataset identifier")
     m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
                  "Observables used in conditional forecasts")
     m <= Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
                  "Observables used in semiconditional forecasts")
+
+    # Forecast
+    m <= Setting(:use_population_forecast, true,
+                 "Whether to use population forecasts as data")
     m <= Setting(:forecast_pseudoobservables, true,
                  "Whether to forecast pseudo-observables")
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")),

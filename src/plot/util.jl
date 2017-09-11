@@ -12,7 +12,7 @@ function quarter_date_to_number(date::Date)
     end
 end
 
-function quarter_number_to_date(datenum::Float64)
+function quarter_number_to_date(datenum::Real)
     if datenum % 0.25 != 0
         throw(DomainError())
     end
@@ -24,17 +24,24 @@ end
 
 function get_date_ticks(start_date::Date, end_date::Date;
                         tick_size::Int = 5)
-    dates = DSGE.quarter_range(start_date, end_date)
+    dates = quarter_range(start_date, end_date)
     get_date_ticks(dates, tick_size = tick_size)
 end
 
 function get_date_ticks(dates::AbstractArray{Date, 1};
                         tick_size::Int = 5)
     datenums = map(quarter_date_to_number, dates)
-    t0 = ceil(datenums[1] / tick_size) * tick_size
-    t1 = datenums[end]
+    t0 = convert(Int, ceil(datenums[1] / tick_size) * tick_size)
+    t1 = convert(Int, floor(datenums[end]))
     ticks = t0:tick_size:t1
     return ticks
+end
+
+function shockdec_date_to_x(date::Date, start_date::Date)
+    start_x = 0.5
+    quarters_diff = DSGE.subtract_quarters(date, start_date)
+    x = start_x + quarters_diff
+    return x
 end
 
 function date_ticks!(p::Plots.Plot,
@@ -48,15 +55,6 @@ function date_ticks!(p::Plots.Plot,
     xaxis!(p, xlims = (t0, t1), xtick = date_ticks)
 
     return nothing
-end
-
-function get_date_limits(nullable_start::Nullable{Date}, nullable_end::Nullable{Date},
-                         dates::AbstractArray{Date, 1})
-
-    start_date = isnull(nullable_start) ? dates[1] : get(nullable_start)
-    end_date = isnull(nullable_end) ? dates[end] : get(nullable_end)
-
-    return start_date, end_date
 end
 
 function get_date_limit_indices(start_date::Date, end_date::Date,
@@ -109,10 +107,68 @@ function get_bands_indices(var::Symbol, history::MeansBands, forecast::MeansBand
     end
 end
 
+function plot_extension()
+    be = typeof(Plots.backend())
+    if be == Plots.GRBackend
+        :pdf
+    elseif be in [Plots.PlotlyBackend, Plots.PlotlyJSBackend]
+        :html
+    else
+        :pdf
+    end
+end
+
+function describe_series(m::AbstractModel, var::Symbol, class::Symbol;
+                         detexify::Bool = false)
+    res = if class in [:obs, :pseudo]
+        dict = if class == :obs
+            m.observable_mappings
+        elseif class == :pseudo
+            pseudo_measurement(m)[1]
+        end
+        dict[var].name
+    elseif class == :states
+        string(var)
+    elseif class in [:shocks, :stdshocks]
+        replace(string(var), r"_sh$", "")
+    else
+        error("Invalid class: " * string(class))
+    end
+
+    detexify ? DSGE.detexify(res) : res
+end
+
+function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
+                       fourquarter::Bool = false)
+    if class in [:obs, :pseudo]
+        dict = if class == :obs
+            m.observable_mappings
+        elseif class == :pseudo
+            pseudo_measurement(m)[1]
+        end
+        transform = dict[var].rev_transform
+
+        if transform in [loggrowthtopct_annualized_percapita, logleveltopct_annualized_percapita,
+                         loggrowthtopct_annualized, logleveltopct_annualized]
+            return fourquarter ? "Percent 4Q Growth" : "Percent Q/Q Annualized"
+        elseif transform == quartertoannual
+            return "Percent Annualized"
+        elseif transform == identity
+            ""
+        end
+    elseif class == :stdshocks
+        return "Standard Deviations"
+    elseif class in [:states, :shocks]
+        return ""
+    else
+        error("Invalid class: " * string(class))
+    end
+end
+
 function save_plot(p::Plots.Plot, output_file::String = "")
     if !isempty(output_file)
         output_dir = dirname(output_file)
-        !isdir(output_dir) && mkdir(output_dir)
+        !isdir(output_dir) && mkpath(output_dir)
         Plots.savefig(output_file)
         println("Saved $output_file")
     end
