@@ -27,6 +27,14 @@ n_targets(scen::Scenario) = length(scen.target_names)
 n_instruments(scen::Scenario) = length(scen.instrument_names)
 n_target_horizons(scen::Scenario) = size(scen.targets, 1)
 
+function empty_scenario(constructor::DataType, key::Symbol, description::String,
+                        target_names::Vector{Symbol}, instrument_names::Vector{Symbol})
+    targets = DataFrame()
+    instruments = DataFrame()
+    return constructor(key, description, target_names, instrument_names,
+                       targets, instruments)
+end
+
 function get_scenario_input_file(m::AbstractModel, key::Symbol, vint::String)
     basename = lowercase(string(key)) * "_" * vint * ".jld"
     return inpath(m, "scenarios", basename)
