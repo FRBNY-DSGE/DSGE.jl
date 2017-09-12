@@ -29,25 +29,18 @@ all particles, calling this method on each.
 - `accept_rate`: acceptance rate across N_MH steps
 
 """
-function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, φ_new::S, s_init::Array{S,1},
-    ε_init::Array{S,1}, c::S, N_MH::Int, nonmissing::Array{Bool,1})
-
+function mutation{S<:AbstractFloat}(Φ::Function, Ψ::Function, F_ε::Distribution,
+                                    F_u::Distribution, φ_new::S, y_t::Vector{S}, s_non::Vector{S},
+                                    s_init::Vector{S}, ε_init::Vector{S}, c::S, N_MH::Int)
     #------------------------------------------------------------------------
     # Setup
     #------------------------------------------------------------------------
-    DD     = system[:DD][nonmissing]
-    ZZ     = system[:ZZ][nonmissing,:]
-    EE     = system[:EE][nonmissing,nonmissing]
-    MM     = system[:MM][nonmissing,:]
-    RRR    = system[:RRR]
-    TTT    = system[:TTT]
-    QQ     = system[:QQ]
-    HH     = (EE + MM*QQ*MM')
-    sqrtS2 = RRR*Matrix(chol(nearest_spd(QQ)))'
 
     # Initialize s_out and ε_out
     s_out = s_init
     ε_out = ε_init
+
+    HH = F_u.Σ.mat
 
     # Store length of y_t, ε
     n_obs    = length(y_t)
@@ -62,17 +55,20 @@ function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, φ_new::
     for i=1:N_MH
 
         # Generate new draw of ε from a N(ε_init, c²I) distribution, c tuning parameter, I identity
-        ε_new = ε_init + c*randn(size(QQ, 1))
+        F_ε_new = MvNormal(ε_init, c^2*eye(length(ε_init)))
+        ε_new = rand(F_ε_new)
+        # NOTE: This may perform differently than
+        # ε_new = ε_init + c*randn(length(ε_init))# which is the original implementation. Check.
 
         # Use the state equation to calculate the corresponding state from that ε
-        s_new_e = TTT*s_init + sqrtS2*ε_new
+        s_new = Φ(s_init, ε_new)
 
         # Use the state equation to calculate the state corresponding to ε_init
-        s_init_e = TTT*s_init + sqrtS2*ε_init
+        # s_init_e = Φ(s_init, ε_init)
 
         # Calculate difference between data and expected y from measurement equation
-        error_new  = y_t - ZZ*s_new_e - DD
-        error_init = y_t - ZZ*s_init_e - DD
+        error_new = y_t - Ψ(s_new, zeros(length(y_t)))
+        error_init = y_t - Ψ(s_non, zeros(length(y_t)))
 
         # Calculate posteriors
         post_new = log(pdf(MvNormal(zeros(n_obs), HH/φ_new), error_new)[1] *
@@ -86,15 +82,16 @@ function mutation{S<:AbstractFloat}(system::System{S}, y_t::Array{S,1}, φ_new::
         # Accept the particle with probability α
         if rand() < α
             # Accept and update particle
-            s_out = s_new_e
+            s_out = s_new
             ε_out = ε_new
             accept += 1
         else
             # Reject and keep particle unchanged
-            s_out = s_init_e
+            s_out = s_non
             ε_out = ε_init
         end
         ε_init = ε_out
+        s_non = s_out
     end
 
     # Calculate acceptance rate

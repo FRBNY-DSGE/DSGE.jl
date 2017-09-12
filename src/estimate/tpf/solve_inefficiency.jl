@@ -1,18 +1,18 @@
 """
 ```
-solve_inefficiency{S<:AbstractFloat}(φ_new::S, φ_old::S, y_t::Array{S, 1}, p_error::Array{S,2}, 
+solve_inefficiency{S<:AbstractFloat}(φ_new::S, φ_old::S, y_t::Array{S, 1}, p_error::Array{S,2},
                                      HH::Array{S,2}; initialize::Bool=false)
 ```
 Returns the value of the ineffeciency function InEff(φₙ), where:
 
-        InEff(φₙ) = (1/M) ∑ᴹ (W̃ₜʲ(φₙ))² 
-                    
-Where ∑ is over j=1...M particles, and for a particle j: 
+        InEff(φₙ) = (1/M) ∑ᴹ (W̃ₜʲ(φₙ))²
+
+Where ∑ is over j=1...M particles, and for a particle j:
 
         W̃ₜʲ(φₙ) = w̃ₜʲ(φₙ) / (1/M) ∑ᴹ w̃ₜʲ(φₙ)
 
 Where ∑ is over j=1...M particles, and incremental weight is:
-            
+
         w̃ₜʲ(φₙ) = pₙ(yₜ|sₜʲ'ⁿ⁻¹) / pₙ₋₁(yₜ|sₜ^{j,n-1})
                 = (φₙ/φₙ₋₁)^(d/2) exp{-1/2 [yₜ-Ψ(sₜʲ'ⁿ⁻¹)]' (φₙ-φₙ₋₁) ∑ᵤ⁻¹ [yₜ-Ψ(sₜʲ'ⁿ⁻¹)]}
 
@@ -26,13 +26,13 @@ Where ∑ is over j=1...M particles, and incremental weight is:
 
 ### Keyword Arguments
 
-- `initialize::Bool`: flag to indicate whether this is being used in initialization stage, 
+- `initialize::Bool`: flag to indicate whether this is being used in initialization stage,
     in which case one instead solves the formula for w̃ₜʲ(φₙ) as:
 
     w̃ₜʲ(φ₁) = (φ₁/2π)^(d/2)|∑ᵤ|^(1/2) exp{-1/2 [yₜ-Ψ(sₜʲ'ⁿ⁻¹)]' φ₁ ∑ᵤ⁻¹ [yₜ-Ψ(sₜʲ'ⁿ⁻¹)]}
 
 """
-function solve_inefficiency{S<:AbstractFloat}(φ_new::S, φ_old::S, y_t::Array{S,1}, 
+function solve_inefficiency{S<:AbstractFloat}(φ_new::S, φ_old::S, y_t::Array{S,1},
                             p_error::Array{S,2}, HH::Array{S,2}; initialize::Bool=false)
 
     n_particles = size(p_error, 2)
@@ -44,14 +44,14 @@ function solve_inefficiency{S<:AbstractFloat}(φ_new::S, φ_old::S, y_t::Array{S
     # Inefficiency function during initialization
     if initialize
         for i=1:n_particles
-            w[i] = ((φ_new/(2*pi))^(n_obs/2) * (det_HH^(-1/2)) * exp(-1/2 * p_error[:,i]' * 
+            w[i] = ((φ_new/(2*pi))^(n_obs/2) * (det_HH^(-1/2)) * exp(-1/2 * p_error[:,i]' *
                                                 φ_new * inv_HH * p_error[:,i]))[1]
         end
-    
+
     # Inefficiency function during tempering steps
     else
         for i=1:n_particles
-            w[i] = (φ_new/φ_old)^(n_obs/2) * exp(-1/2 * p_error[:,i]' * 
+            w[i] = (φ_new/φ_old)^(n_obs/2) * exp(-1/2 * p_error[:,i]' *
                                                  (φ_new-φ_old) * inv_HH * p_error[:,i])[1]
         end
     end

@@ -82,7 +82,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, new_data::M
     # if isempty(new_data)
         initial_draw(m, data, cloud)
     # else
-        # cloud = 
+        # cloud =
     # end
 
     if m.testing
@@ -121,7 +121,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, new_data::M
     # if isempty(new_data)
         inc_weight = exp((cloud.tempering_schedule[i] - cloud.tempering_schedule[i-1]) * get_loglh(cloud))
     # else
-        # inc_weight = 
+        # inc_weight =
     # end
 
     # Update weights

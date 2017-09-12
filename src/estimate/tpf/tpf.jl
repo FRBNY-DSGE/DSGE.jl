@@ -1,21 +1,26 @@
 """
 ```
-tpf{S<:AbstractFloat}(m::AbstractModel, data::Array, system::System{S},
-    s0::Array{S}, P0::Array{S}; verbose::Symbol=:low, include_presample::Bool=true)
+tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, Φ::Function,
+                      Ψ::Function, F_ε::Distribution, F_u::Distribution, s_init::Matrix{S};
+                      verbose::Symbol=:low, include_presample::Bool=true)
 ```
 Executes tempered particle filter.
 
 ### Inputs
 - `m::AbstractModel`: model object
 - `data::Array{S}`: (`n_observables` x `hist_periods`) size `Matrix{S}` of data for observables.
-- `system::System{S}`: `System` object specifying state-space system matrices for model
-- `s0::Array{S}`: (`n_observables` x `n_particles`) initial state vector
-- `P0::Array`: (`n_observables` x `n_observavles`) initial state covariance matrix
+- `Φ::Function`: The state transition function: s_t = Φ(s_t-1,ε_t)
+- `Ψ::Function`: The measurement equation: y_t = Ψ(s_t, u_t)
+- `F_ε::Distribution`: The shock distribution: ε ~ F_ε
+- `F_u::Distribution`: The measurement error distribution: u ~ F_u
+- `s_init::Array{S}`: (`n_observables` x `n_particles`) initial state vector
 
 ### Keyword Arguments
-- `verbose::Symbol`: indicates desired nuance of outputs. Default to `:low`.
-- `include_presample::Bool`: indicates whether to include presample in periods in the returned
+- `verbose::Symbol`: Indicates desired nuance of outputs. Default to `:low`.
+- `include_presample::Bool`: Indicates whether to include presample in periods in the returned
    outputs. Defaults to `true`.
+- `fixed_sched::Vector`: An array of elements in (0,1] that are monotonically increasing, which
+specify the tempering schedule.
 
 ### Outputs
 - `Neff::Vector{S}`: (`hist_perdiods` x 1) vector returning inefficiency calculated per period t
@@ -23,23 +28,13 @@ Executes tempered particle filter.
 - `times::Vector{S}`: (`hist_periods` x 1) vector returning elapsed runtime per period t
 
 """
-function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{S},
-    s0::Array{S}, P0::Array{S}; verbose::Symbol=:low, include_presample::Bool=true)
-
+function tpf{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, Φ::Function,
+                               Ψ::Function, F_ε::Distribution, F_u::Distribution, s_init::Matrix{S};
+                               verbose::Symbol = :low, include_presample::Bool=true,
+                               fixed_sched::Vector{S} = zeros(0))
     #--------------------------------------------------------------
     # Set Parameters of Algorithm
     #--------------------------------------------------------------
-
-    # Unpack system
-    RRR    = system[:RRR]
-    TTT    = system[:TTT]
-    HH     = system[:EE] + system[:MM]*system[:QQ]*system[:MM]'
-    DD     = system[:DD]
-    ZZ     = system[:ZZ]
-    QQ     = system[:QQ]
-    EE     = system[:EE]
-    MM     = system[:MM]
-    sqrtS2 = RRR*get_chol(QQ)'
 
     # Get tuning parameters from the model
     r_star       = get_setting(m, :tpf_r_star)
@@ -52,25 +47,39 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
     xtol         = get_setting(m, :tpf_x_tolerance)
     parallel     = get_setting(m, :use_parallel_workers)
 
+    # Ensuring the fixed φ schedule is bounded properly
+    if !adaptive
+        try
+            @assert fixed_sched[1] > 0. && fixed_sched[1] < 1.
+            @assert fixed_sched[end] == 1.
+        catch
+            throw("Invalid fixed φ schedule. It must be a range from [a,1] s.t. a > 0.")
+        end
+    end
+
     # Set number of presampling periods
     n_presample_periods = (include_presample) ? 0 : get_setting(m, :n_presample_periods)
 
     # Initialization of constants and output vectors
-    n_observables = size(QQ,1)
-    n_states      = size(ZZ,2)
+    n_observables = size(data,1)
+    n_states      = size(s_init)[1]
     T             = size(data,2)
     lik           = zeros(T)
     Neff          = zeros(T)
     times         = zeros(T)
+
+    # Ensuring Φ, Ψ broadcast to matrices
+    Φ_bcast(s_t1::Matrix{S}, ε_t1::Matrix{S}) = hcat([Φ(s_t1[:,i], ε_t1[:,i]) for i in 1:size(s_t1)[2]]...)
+    Ψ_bcast(s_t1::Matrix{S}, u_t1::Matrix{S}) = hcat([Ψ(s_t1[:,i], u_t1[:,i]) for i in 1:size(s_t1)[2]]...)
 
     #--------------------------------------------------------------
     # Main Algorithm: Tempered Particle Filter
     #--------------------------------------------------------------
 
     # Draw initial particles from the distribution of s₀: N(s₀, P₀)
-    s_lag_tempered = (s0 .+ Matrix(chol(nearest_spd(P0))))' * randn(n_states, n_particles)
+    s_lag_tempered = s_init
 
-    for t=1:T
+    for t = 1:T
 
         tic()
         if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -84,31 +93,28 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
         y_t = data[:,t]
 
         # Remove rows/columns of series with NaN values
-        nonmissing      = !isnan(y_t)
-        y_t             = y_t[nonmissing]
-        ZZ_t            = ZZ[nonmissing,:]
-        DD_t            = DD[nonmissing]
-        EE_t            = EE[nonmissing, nonmissing]
-        MM_t            = MM[nonmissing,:]
-        HH_t            = EE_t + MM_t*QQ*MM_t'
-        n_observables_t = length(y_t)
+        nonmissing          = !isnan(y_t)
+        y_t                 = y_t[nonmissing]
+        n_observables_t     = length(y_t)
+        Ψ_bcast_t           = (x, ε) -> Ψ_bcast(x, ε)[nonmissing, :]
+        HH_t                = F_u.Σ.mat[nonmissing, nonmissing]
 
         # Draw random shock ε
-        ε = randn(size(sqrtS2,2), n_particles)
+        ε = rand(F_ε, n_particles)
 
         # Forecast forward one time step
-        s_t_nontempered = TTT*s_lag_tempered + sqrtS2*ε
+        s_t_nontempered = Φ_bcast(s_lag_tempered, ε)
 
         # Error for each particle
-        p_error = y_t-DD_t .- ZZ_t*s_t_nontempered
+        p_error = y_t .- Ψ_bcast_t(s_t_nontempered, zeros(n_observables_t, n_particles))
 
         # Solve for initial tempering parameter φ_1
         if adaptive
-            init_Ineff_func(φ) = solve_inefficiency(φ, 2.0*pi, y_t, p_error, HH_t,
-                                                    initialize=true) - r_star
-            φ_1 = fzero(init_Ineff_func, 1e-30, 1.0, xtol=xtol)
+            init_Ineff_func(φ) = solve_inefficiency(φ, 2.0*pi, y_t, p_error, HH_t;
+                                                    initialize = true) - r_star
+            φ_1 = fzero(init_Ineff_func, 1e-30, 1.0, xtol = xtol)
         else
-            φ_1 = 0.25
+            φ_1 = fixed_sched[1]
         end
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -118,16 +124,15 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
 
         # Correct and resample particles
         loglik, id = correction_selection!(φ_1, 0.0, y_t, p_error, HH_t, n_particles,
-                                           initialize=true)
+                                           initialize = true, parallel = parallel)
+
+        # Update likelihood
+        lik[t] += loglik
 
         # Update arrays for resampled indices
         s_lag_tempered  = s_lag_tempered[:,id]
         s_t_nontempered = s_t_nontempered[:,id]
         ε               = ε[:,id]
-        p_error         = p_error[:,id]
-
-        # Update likelihood
-        lik[t] += loglik
 
         # Tempering initialization
         φ_old = φ_1
@@ -140,16 +145,20 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
 
             count += 1
 
+            # Get error for all particles
+            p_error = y_t .- Ψ_bcast_t(s_t_nontempered, zeros(n_observables_t, n_particles))
+
             # Define inefficiency function
             init_ineff_func(φ) = solve_inefficiency(φ, φ_old, y_t, p_error, HH_t) - r_star
             fphi_interval = [init_ineff_func(φ_old) init_ineff_func(1.0)]
 
+            # The below boolean checks that a solution exists within interval
             if prod(sign(fphi_interval)) == -1 && adaptive
                 φ_new = fzero(init_ineff_func, φ_old, 1., xtol=xtol)
             elseif prod(sign(fphi_interval)) != -1 && adaptive
                 φ_new = 1.
             else # fixed φ
-                φ_new = 0.5
+                φ_new = fixed_sched[count]
             end
 
             if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -157,15 +166,17 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
             end
 
             # Correct and resample particles
-            loglik, id = correction_selection!(φ_new, φ_old, y_t, p_error, HH_t, n_particles)
+            loglik, id = correction_selection!(φ_new, φ_old, y_t, p_error, HH_t, n_particles;
+                                              parallel = parallel)
+
+            # Update likelihood
+            lik[t] += loglik
 
             # Update arrays for resampled indices
             s_lag_tempered  = s_lag_tempered[:,id]
             s_t_nontempered = s_t_nontempered[:,id]
             ε               = ε[:,id]
-
-            # Update likelihood
-            lik[t] += loglik
+            p_error         = p_error[:,id]
 
             # Update value for c
             c = update_c!(c, accept_rate, target)
@@ -185,12 +196,14 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
             if parallel
                 print("(in parallel) ")
                 out = @sync @parallel (hcat) for i=1:n_particles
-                    mutation(system, y_t, φ_new, s_lag_tempered[:,i], ε[:,i], c, N_MH, nonmissing)
+                    mutation(Φ, Ψ, F_ε, F_u, φ_new, y_t, s_t_nontempered[:,i],
+                             s_lag_tempered[:,i], ε[:,i], c, N_MH)
                 end
             else
                 print("(not parallel) ")
-                out = [mutation(system, y_t, φ_new, s_lag_tempered[:,i], ε[:,i], c, N_MH, nonmissing)
-                       for i=1:n_particles]
+                out = [mutation(Φ, Ψ, F_ε, F_u, φ_new, y_t, s_t_nontempered[:,i],
+                                s_lag_tempered[:,i], ε[:,i], c, N_MH)
+                       for i = 1:n_particles]
             end
             times[t] = toc()
 
@@ -203,43 +216,18 @@ function tpf{S<:AbstractFloat}(m::AbstractModel, data::Array{S}, system::System{
             # Calculate average acceptance rate
             accept_rate = mean(accept_vec)
 
-            # Get error for all particles
-            p_error = y_t - DD_t .- ZZ_t*s_t_nontempered
-
             # Update φ
             φ_old = φ_new
-
         end
 
     if VERBOSITY[verbose] >= VERBOSITY[:high]
         println("Out of main while-loop.")
     end
 
-    #--------------------------------------------------------------
-    # Last Stage of Algorithm: φ_new := 1.0
-    #--------------------------------------------------------------
-
-### PER REQUEST
-
-    # Initialize vector
-    incremental_weights = zeros(n_particles)
-
-    # Calculate initial weights
-    for n=1:n_particles
-        incremental_weights[n] = incremental_weight(1.0, φ_old, y_t, p_error[:,n], HH_t,
-                                                    initialize=true)
-    end
-
-    log_lik = log(mean(incremental_weights))
-
-    @show log_lik
     @show lik[t]
-
-###
-
-        s_lag_tempered = s_t_nontempered
-        print("Completion of one period ")
-        toc()
+    s_lag_tempered = s_t_nontempered
+    print("Completion of one period ")
+    toc()
     end
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -302,21 +290,27 @@ error vectors, reset error vectors to 1,and calculate new log likelihood.
 """
 function correction_selection!{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1},
                                    p_error::Array{S,2}, HH::Array{S,2}, n_particles::Int;
-                                   initialize::Bool=false)
+                                   initialize::Bool=false, parallel::Bool=false)
     # Initialize vector
     incremental_weights = zeros(n_particles)
 
     # Calculate initial weights
-    for n=1:n_particles
-        incremental_weights[n] = incremental_weight(φ_new, φ_old, y_t, p_error[:,n], HH,
-                                                    initialize=initialize)
+    if parallel
+        incremental_weights = @sync @parallel (hcat) for n=1:n_particles
+            incremental_weight(φ_new, φ_old, y_t, p_error[:,n], HH, initialize=initialize)
+        end
+    else
+        for n=1:n_particles
+            incremental_weights[n] = incremental_weight(φ_new, φ_old, y_t, p_error[:,n], HH,
+                                                        initialize=initialize)
+        end
     end
 
     # Normalize weights
     normalized_weights = incremental_weights ./ mean(incremental_weights)
 
     # Resampling
-    id = multinomial_resampling(normalized_weights)
+    id = multinomial_resampling(vec(normalized_weights))
 
     # Calculate likelihood
     loglik = log(mean(incremental_weights))
@@ -356,4 +350,73 @@ incremental_weight{S<:Float64}(φ_new::S, φ_old::S, y_t::Array{S,1}, p_error::A
         return (φ_new/φ_old)^(length(y_t)/2) *
             exp(-1/2 * p_error' * (φ_new - φ_old) * inv(HH) * p_error)[1]
     end
+end
+"""
+```
+initialize_function_system{S<:AbstractFloat}(system::System{S})
+```
+### Inputs
+- `system::System`: The output of compute_system(m), i.e. the matrix outputs from solving a given model, m.
+### Output
+- Returns the transition and measurement equations as functions,and the distributions of the shocks
+and measurement error.
+"""
+function initialize_function_system{S<:AbstractFloat}(system::System{S})
+    # Unpack system
+    RRR    = system[:RRR]
+    TTT    = system[:TTT]
+    HH     = system[:EE] + system[:MM]*system[:QQ]*system[:MM]'
+    DD     = system[:DD]
+    ZZ     = system[:ZZ]
+    QQ     = system[:QQ]
+    EE     = system[:EE]
+    MM     = system[:MM]
+    sqrtS2 = RRR*get_chol(QQ)'
+
+    @inline Φ(s_t1::Vector{S}, ε_t1::Vector{S}) = TTT*s_t1 + sqrtS2*ε_t1
+    @inline Ψ(s_t1::Vector{S}, u_t1::Vector{S}) = ZZ*s_t1 + DD + u_t1
+
+    F_ε = Distributions.MvNormal(zeros(size(QQ)[1]), eye(size(QQ)[1]))
+    F_u = Distributions.MvNormal(zeros(size(HH)[1]), HH)
+
+    return Φ, Ψ, F_ε, F_u
+end
+"""
+```
+initialize_state_draws(s0::Vector{Float64}, F_ε::Distribution, Φ::Function, n_parts::Int;
+                       burn::Int = 10000, thin::Int = 5)
+```
+### Inputs
+- `s0::Vector`: An initial guess/starting point to begin iterating the states forward.
+- `F_ε::Distribution`: The shock distribution: ε ~ F_ε
+- `Φ::Function`: The state transition function: s_t = Φ(s_t-1,ε_t)
+- `n_parts::Int`: The number of particles (draws) to generate
+
+### Keyword Arguments
+- `initialize::Bool`: Flag indicating whether one is solving for incremental weights during
+    the initialization of weights; default is `false`.
+- `burn::Int`: The number of draws to burn in before the draws are actually collected.
+This is under the assumption that the s_t reaches its stationary distribution post burn-in.
+- `thin::Int`: The number of draws to thin by to minimize serial correlation
+
+### Output
+- A matrix (# of states x # of particles) containing the initial draws of states to start
+the tpf algorithm from.
+"""
+function initialize_state_draws(s0::Vector{Float64}, F_ε::Distribution, Φ::Function,
+                                n_parts::Int; burn::Int = 10000, thin::Int = 5)
+    s_init = zeros(length(s0), n_parts)
+    s_old = s0
+    for i in 1:(burn + thin*n_parts)
+        ε = rand(F_ε)
+        s_new = Φ(s_old, ε)
+
+        if i > burn && i % thin == 0
+            draw_index = convert(Int, (i-burn)/thin)
+            s_init[:,draw_index] = s_new
+        end
+
+        s_old = s_new
+    end
+    return s_init
 end
