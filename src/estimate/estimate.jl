@@ -70,7 +70,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
   #  end
 
     ########################################################################################
-    ### Step 1: Find posterior/likelihood mode (if reoptimizing, run optimization routine)
+    ### Step 2: Find posterior/likelihood mode (if reoptimizing, run optimization routine)
     ########################################################################################
 
     # Specify starting mode
