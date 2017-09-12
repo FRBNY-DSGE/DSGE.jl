@@ -1,3 +1,19 @@
+"""
+```
+abstract Scenario
+```
+
+Abstract supertype for all alternative scenarios.
+
+### Required Fields
+
+- `key::Symbol`
+- `description::String`
+- `target_names::Vector{Symbol}`
+- `instrument_names::Vector{Symbol}`
+- `targets::DataFrame`
+- `instruments::DataFrame`
+"""
 abstract Scenario
 
 function Base.show(io::IO, scen::Scenario)
