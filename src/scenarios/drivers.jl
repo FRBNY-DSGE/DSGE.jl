@@ -95,9 +95,8 @@ function forecast_scenario(m::AbstractModel, scenario_key::Symbol,
     # Assemble outputs and write to file
     forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
     forecast_output = DSGE.assemble_block_outputs(forecast_outputs)
-    output_file = get_scenario_output_files(m, input_type, cond_type, output_vars;
-                                            forecast_string = forecast_string)
-    write_scenario_forecasts(m, output_file, forecast_output, verbose = verbose)
+    output_files = get_scenario_output_files(m, scenario_key, scenario_vint, [:forecastobs, :forecastpseudo])
+    write_scenario_forecasts(m, output_files, forecast_output, verbose = verbose)
 
     return forecast_output
 end
