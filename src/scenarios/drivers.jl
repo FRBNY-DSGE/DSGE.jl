@@ -41,11 +41,12 @@ function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
     return forecastshocks
 end
 
-function forecast_scenario_draw(m::AbstractModel, draw_index::Int, s_T::Vector{Float64})
+function forecast_scenario_draw(m::AbstractModel, scenario_key::Symbol, scenario_vint::String,
+                                draw_index::Int, s_T::Vector{Float64})
     # Initialize scenario
-    constructor = eval(get_setting(m, :scenario_key))
+    constructor = eval(scenario_key)
     scen = constructor()
-    path = scenario_targets_file(m)
+    path = get_scenario_input_file(m, scenario_key, scenario_vint)
     load_scenario_targets!(scen, path, draw_index)
 
     # Filter shocks
@@ -72,7 +73,10 @@ function write_scenario_forecasts(m::AbstractModel, scenario_output_file::String
                                   verbose::Symbol = :low)
 end
 
-function forecast_scenario(m::AbstractModel, df::DataFrame; verbose::Symbol = :low)
+function forecast_scenario(m::AbstractModel, scenario_key::Symbol,
+                           scenario_vint::String, df::DataFrame;
+                           verbose::Symbol = :low)
+
     # Load modal parameters
     params = load_draws(m, :mode; verbose = verbose)
     DSGE.update!(m, params)
@@ -83,9 +87,10 @@ function forecast_scenario(m::AbstractModel, df::DataFrame; verbose::Symbol = :l
     s_T = kal[:zend]
 
     # Get to work!
-    ndraws = n_scenario_draws(m)
+    ndraws = n_scenario_draws(m, scenario_key, scenario_vint)
     mapfcn = use_parallel_workers(m) ? pmap : map
-    forecast_outputs = mapfcn(draw_ind -> forecast_scenario_draw(m, draw_ind, s_T), 1:n_scenario_draws(m))
+    forecast_outputs = mapfcn(draw_ind -> forecast_scenario_draw(m, scenario_key, scenario_vint, draw_ind, s_T),
+                              1:ndraws)
 
     # Assemble outputs and write to file
     forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)

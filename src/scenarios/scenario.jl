@@ -10,10 +10,8 @@ n_targets(scen::Scenario) = length(scen.target_names)
 n_instruments(scen::Scenario) = length(scen.instrument_names)
 n_target_horizons(scen::Scenario) = size(scen.targets, 1)
 
-function get_scenario_input_file(m::AbstractModel)
-    key = get_setting(m, :scenario_key)
-    vint = get_setting(m, :scenario_vintage)
-    basename = string(key) * "_" * string(vint) * ".jld"
+function get_scenario_input_file(m::AbstractModel, key::Symbol, vint::String)
+    basename = lowercase(string(key)) * "_" * vint * ".jld"
     return inpath(m, "scenarios", basename)
 end
 
@@ -30,8 +28,8 @@ function get_scenario_output_file(m::AbstractModel)
     return workpath(m, "scenarios", "")
 end
 
-function n_scenario_draws(m::AbstractModel)
-    input_file = get_scenario_input_file(m)
+function n_scenario_draws(m::AbstractModel, key::Symbol, vint::String)
+    input_file = get_scenario_input_file(m, key, vint)
     draws = h5open(input_file, "r") do file
         dataset = HDF5.o_open(file, "arr")
         size(dataset)[3]
