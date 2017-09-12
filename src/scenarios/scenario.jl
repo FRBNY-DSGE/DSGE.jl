@@ -33,13 +33,13 @@ function n_scenario_draws(m::AbstractModel, key::Symbol, vint::String)
     input_file = get_scenario_input_file(m, key, vint)
     draws = h5open(input_file, "r") do file
         dataset = HDF5.o_open(file, "arr")
-        size(dataset)[3]
+        size(dataset)[1]
     end
     return draws
 end
 
 function load_scenario_targets!(scen::Scenario, path::String, draw_index::Int)
-    raw_targets = h5read(path, "arr", (:, :, draw_index))
+    raw_targets = squeeze(h5read(path, "arr", (draw_index, :, :)), 1)
     target_inds = load(path, "target_indices")
 
     @assert collect(keys(target_inds)) == scen.target_names "Target indices in $path do not match target names in $(scen.key)"
