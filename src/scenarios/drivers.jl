@@ -88,6 +88,12 @@ end
 function forecast_scenario(m::AbstractModel, scenario_key::Symbol,
                            scenario_vint::String, df::DataFrame;
                            verbose::Symbol = :low)
+    # Print
+    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+        info("Forecasting scenario = $scenario_key, vintage = $scenario_vint...")
+        println("Start time: " * string(now()))
+        println("Forecast outputs will be saved in " * rawpath(m, "scenarios"))
+    end
 
     # Load modal parameters
     params = load_draws(m, :mode; verbose = verbose)
