@@ -17,9 +17,10 @@ Abstract supertype for all alternative scenarios.
 abstract Scenario
 
 function Base.show(io::IO, scen::Scenario)
-    @printf io "Scenario: %s\n" scen.description
-    @printf io "Targets: %s\n" scen.target_names
-    @printf io "Instruments: %s\n" scen.instrument_names
+    @printf io "%-12s %s\n" "Key:" scen.key
+    @printf io "%-12s %s\n" "Description:" scen.description
+    @printf io "%-12s %s\n" "Targets:" scen.target_names
+    @printf io "%-12s %s" "Instruments:" scen.instrument_names
 end
 
 n_targets(scen::Scenario) = length(scen.target_names)
