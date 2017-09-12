@@ -15,17 +15,18 @@ function get_scenario_input_file(m::AbstractModel, key::Symbol, vint::String)
     return inpath(m, "scenarios", basename)
 end
 
-function get_scenario_output_file(m::AbstractModel)
-    key = get_setting(m, :scenario_key)
-    vint = get_setting(m, :scenario_vintage)
-
-    base = filestring_base(m)
-
+function get_scenario_output_files(m::AbstractModel, key::Symbol, vint::String,
+                                   output_vars::Vector{Symbol})
     filestring_addl = Vector{String}()
-    push!(filestring_addl, String("scen=" * key))
-    push!(filestring_addl, String("svin=" * key))
+    push!(filestring_addl, "scen=" * string(key))
+    push!(filestring_addl, "svin=" * vint)
 
-    return workpath(m, "scenarios", "")
+    output_files = Dict{Symbol, String}()
+    for var in output_vars
+        basename = string(var) * ".jld"
+        output_files[var] = workpath(m, "scenarios", basename, filestring_addl)
+    end
+    return output_files
 end
 
 function n_scenario_draws(m::AbstractModel, key::Symbol, vint::String)
