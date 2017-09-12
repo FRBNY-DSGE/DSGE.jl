@@ -68,9 +68,21 @@ function forecast_scenario_draw(m::AbstractModel, scenario_key::Symbol, scenario
     return forecast_output
 end
 
-function write_scenario_forecasts(m::AbstractModel, scenario_output_file::String,
+function write_scenario_forecasts(m::AbstractModel,
+                                  scenario_output_files::Dict{Symbol, String},
                                   forecast_output::Dict{Symbol, Array{Float64}};
                                   verbose::Symbol = :low)
+    for var in [:forecastobs, :forecastpseudo]
+        filepath = scenario_output_files[var]
+        jldopen(filepath, "w") do file
+            DSGE.write_forecast_metadata(m, file, var)
+            write(file, "arr", forecast_output[var])
+        end
+
+        if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:high]
+            println(" * Wrote $(basename(filepath))")
+        end
+    end
 end
 
 function forecast_scenario(m::AbstractModel, scenario_key::Symbol,
