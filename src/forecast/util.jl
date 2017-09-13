@@ -144,9 +144,9 @@ added to `output_vars` when calling
 `add_requisite_output_vars([shockdecstates])`.
 """
 function add_requisite_output_vars(output_vars::Vector{Symbol})
-
     # Add :bddforecast<class> if :forecast<class> is in output_vars
-    forecast_outputs = Base.filter(output -> get_product(output) in [:forecast, :forecast4q], output_vars)
+    forecast_outputs = Base.filter(output -> get_product(output) in [:forecast, :forecastut, :forecast4q],
+                                   output_vars)
     if !isempty(forecast_outputs)
         bdd_vars = [Symbol("bdd$(var)") for var in forecast_outputs]
         output_vars = unique(vcat(output_vars, bdd_vars))
@@ -169,14 +169,12 @@ end
 remove_meansbands_only_output_vars(output_vars)
 ```
 """
-function remove_meansbands_only_output_vars(output_vars)
+function remove_meansbands_only_output_vars(output_vars::Vector{Symbol})
+    # All the <product>ut<class> and <product>4q<class> variables are computed
+    # during compute_meansbands
+    meansbands_only_products = [:hist4q, :forecast4q, :bddforecast4q, :forecastut, :bddforecastut]
 
-    # all the <product>4q<class> variables are computed during compute_meansbands
-    meansbands_only_output_vars = [:hist4qpseudo, :hist4qobs,
-                                   :forecast4qobs, :forecast4qpseudo,
-                                   :bddforecast4qobs, :bddforecast4qpseudo]
-
-    setdiff(output_vars, meansbands_only_output_vars)
+    Base.filter(var -> !(product(var) in meansbands_only_products), output_vars)
 end
 
 """

@@ -50,6 +50,7 @@ end
 function get_scenario_mb_input_file(m::AbstractModel, key::Symbol, vint::String,
                                     output_var::Symbol)
     input_file = get_scenario_filename(m, key, vint, output_var)
+    input_file = replace(input_file, "forecastut", "forecast")
     input_file = replace(input_file, "forecast4q", "forecast")
     return input_file
 end
