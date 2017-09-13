@@ -217,7 +217,7 @@ function init_parameters!(m::AnSchorfheide)
 
     m <= parameter(:rA, 0.0313, (1e-20, 1e5), (1e-20, 1e5), DSGE.Exponential(), GammaAlt(0.5, 0.5), fixed=false,
                    description="rA: β (discount factor) = 1/(1+ rA/400).",
-                   tex_label="\\rA")
+                   tex_label="rA")
 
     m <= parameter(:π_star, 8.1508, (1e-20, 1e5), (1e-20, 1e5), DSGE.Exponential(), GammaAlt(7., 2.), fixed=false,
                    description="π_star: Target inflation rate.",
