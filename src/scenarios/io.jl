@@ -57,7 +57,8 @@ end
 
 function get_scenario_mb_output_file(m::AbstractModel, key::Symbol, vint::String,
                                     output_var::Symbol)
-    "mb" * get_scenario_filename(m, key, vint, output_var, pathfcn = workpath)
+    fullfile = get_scenario_filename(m, key, vint, output_var, pathfcn = workpath)
+    joinpath(dirname(fullfile), "mb" * basename(fullfile))
 end
 
 """
