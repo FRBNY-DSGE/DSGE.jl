@@ -4,7 +4,7 @@ using Base.Test
 path = dirname(@__FILE__)
 
 ### Model
-model = Model1002()
+model = Model1002("ss2")
 
 ### Parameters
 

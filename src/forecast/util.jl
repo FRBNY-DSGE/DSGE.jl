@@ -305,13 +305,13 @@ function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_v
         sum(map(length, block_inds_thin))
     end
 
-    nvars = if class == :state
+    nvars = if class == :states
         n_states_augmented(m)
     elseif class == :obs
         n_observables(m)
     elseif class == :pseudo
         n_pseudoobservables(m)
-    elseif class in [:shock, :stdshock]
+    elseif class in [:shocks, :stdshocks]
         n_shocks_exogenous(m)
     end
 

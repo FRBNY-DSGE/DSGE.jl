@@ -83,12 +83,7 @@ function hair_plot(var::Symbol, df::DataFrame,
     end
 
     # Save if `output_file` provided
-    if !isempty(output_file)
-        output_dir = dirname(output_file)
-        !isdir(output_dir) && mkdir(output_dir)
-        Plots.savefig(output_file)
-        println("Saved $output_file")
-    end
+    save_plot(p, output_file)
 
     return p
 end

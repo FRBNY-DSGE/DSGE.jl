@@ -49,6 +49,7 @@ module DSGE
         load_parameters_from_file, specify_mode!, specify_hessian,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
+        ShockGroup,
 
         # parameters.jl
         parameter, Transform, NullablePrior, AbstractParameter,
@@ -79,6 +80,7 @@ module DSGE
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, eqcond, measurement, pseudo_measurement,
+        shock_groupings,
 
         # solve/
         gensys, solve,
@@ -96,13 +98,15 @@ module DSGE
 
         # analysis/
         find_density_bands, moment_tables, means_bands, means_bands_all, compute_means_bands, MeansBands,
-        meansbands_matrix_all, meansbands_matrix, read_mb,
+        meansbands_matrix_all, meansbands_matrix, read_mb, read_bdd_and_unbdd_mb,
         get_meansbands_input_files, get_meansbands_output_files, get_product, get_class,
-        which_density_bands, write_meansbands_tables, prepare_meansbands_tables_timeseries,
-        prepare_meansbands_tables_shockdec, write_meansbands_tables_all,
+        which_density_bands,
+        prepare_meansbands_tables_timeseries, prepare_means_tables_shockdec, prepare_meansbands_table_irf,
+        write_meansbands_tables_timeseries, write_means_tables_shockdec, prepare_meansbands_table_irf,
+        write_meansbands_tables_all,
 
         # plot/
-        ShockGroup, plot_prior_posterior, plot_irfs, plot_history_and_forecast, hair_plot,
+        plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition,
 
         # util
@@ -166,9 +170,8 @@ module DSGE
     include("analysis/util.jl")
 
     include("plot/util.jl")
-    include("plot/shock_group.jl")
     include("plot/plot_parameters.jl")
-    include("plot/plot_irfs.jl")
+    include("plot/plot_impulse_response.jl")
     include("plot/plot_history_and_forecast.jl")
     include("plot/hair_plot.jl")
     include("plot/plot_forecast_comparison.jl")
