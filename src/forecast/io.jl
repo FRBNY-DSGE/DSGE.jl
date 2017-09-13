@@ -393,7 +393,8 @@ function read_forecast_output(file::JLD.JldFile, class::Symbol, product::Symbol,
         end
 
     # Other products are ndraws x nvars x nperiods
-    elseif product in [:hist, :forecast, :hist4q, :forecast4q, :bddforecast, :bddforecast4q, :dettrend]
+    elseif product in [:hist, :hist4q, :forecast, :bddforecast, :forecastut, :bddforecastut,
+                       :forecast4q, :bddforecast4q, :dettrend]
         inds_to_read = if ndims == 2 # one draw
             arr = h5read(filename, "arr", (var_ind, Colon()))
         elseif ndims == 3 # many draws

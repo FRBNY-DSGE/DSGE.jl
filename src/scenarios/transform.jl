@@ -1,6 +1,7 @@
 function scenario_means_bands(m::AbstractModel, scenario_key::Symbol, scenario_vint::String,
-                              output_vars::Vector{Symbol} = [:forecastobs, :forecast4qobs,
-                                                             :forecastpseudo, :forecast4qpseudo];
+                              output_vars::Vector{Symbol} = [:forecastutobs, :forecastutpseudo,
+                                                             :forecastobs, :forecastpseudo,
+                                                             :forecast4qobs, :forecast4qpseudo];
                               verbose::Symbol = :low,
                               kwargs...)
     # Print
@@ -77,7 +78,7 @@ function compute_scenario_means_bands(class::Symbol, product::Symbol, var_name::
                                       minimize::Bool = false,
                                       density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9])
 
-    @assert product in [:forecast, :bddforecast, :forecast4q, :bddforecast4q] "Product can only be (bdd)forecast(4q)"
+    @assert product in [:forecast, :forecast4q, :forecastut] "Product can only be forecast(ut|4q)"
 
     # Read in everything from raw forecast file
     fcast_series, transform, var_ind, date_list = jldopen(filename, "r") do file
@@ -115,9 +116,12 @@ function compute_scenario_means_bands(class::Symbol, product::Symbol, var_name::
 
         transformed_series = reverse_transform(fcast_series, transform4q_scen;
                                                fourquarter = true, y0s = y0s)
-    else
+    elseif product == :forecast
         transform_scen = DSGE.get_scenario_transform(transform)
         transformed_series = reverse_transform(fcast_series, transform_scen; y0 = 0.0)
+
+    else
+        transformed_series = fcast_series
     end
 
     # Compute means and bands of transformed series

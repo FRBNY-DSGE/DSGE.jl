@@ -29,6 +29,10 @@ function get_product(output_var::Symbol)
         :bddforecast4q
     elseif contains(s, "forecast4q")
         :forecast4q
+    elseif contains(s, "bddforecastut")
+        :bddforecastut
+    elseif contains(s, "forecastut")
+        :forecastut
     elseif contains(s, "bddforecast")
         :bddforecast
     elseif contains(s, "forecast")
