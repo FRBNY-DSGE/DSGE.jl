@@ -63,6 +63,13 @@ function forecast_scenario_draw(m::AbstractModel, scenario_key::Symbol, scenario
     forecaststates, forecastobs, forecastpseudo, _ =
         forecast(m, system, s_T, shocks = forecastshocks)
 
+    # Check forecasted output matches targets
+    for var in scen.target_names
+        var_index = m.observables[var]
+        horizon = n_target_horizons(scen)
+        @assert forecastobs[var_index, 1:horizon] ≈ scen.targets[var]
+    end
+
     # Return output dictionary
     forecast_output = Dict{Symbol, Array{Float64}}()
     forecast_output[:forecaststates] = forecaststates
