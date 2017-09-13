@@ -226,6 +226,11 @@ function prior_posterior_moments_table(m::AbstractModel,
 
     # Open the TeX file
     basename = "moments"
+    if get_setting(m, :sampling_method) == :MH
+        basename *= "_mh"
+    else
+        basename *= "_smc"
+    end
     if !isempty(subset_string)
         basename *= "_sub=$(subset_string)"
     end
