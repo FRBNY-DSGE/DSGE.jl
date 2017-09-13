@@ -34,7 +34,8 @@ function n_scenario_draws(m::AbstractModel, key::Symbol, vint::String)
     return draws
 end
 
-function load_scenario_targets!(scen::Scenario, path::String, draw_index::Int)
+function load_scenario_targets!(m::AbstractModel, scen::Scenario, vint::String, draw_index::Int)
+    path = get_scenario_input_file(m, scen.key, vint)
     raw_targets = squeeze(h5read(path, "arr", (draw_index, :, :)), 1)
     target_inds = load(path, "target_indices")
 
