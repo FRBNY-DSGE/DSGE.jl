@@ -127,15 +127,24 @@ NaN out conditional period variables not in `cond_semi_names(m)` or
 """
 function nan_cond_vars!(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
     if cond_type in [:semi, :full]
+        # Get appropriate
         cond_names = if cond_type == :semi
             cond_semi_names(m)
         elseif cond_type == :full
             cond_full_names(m)
         end
 
+        # NaN out non-conditional variables
         cond_names_nan = setdiff(names(df), [cond_names; :date])
         T = eltype(df[:, cond_names_nan])
         df[df[:, :date] .>= date_forecast_start(m), cond_names_nan] = convert(T, NaN)
+
+        # Warn if any conditional variables are missing
+        for var in cond_names
+            if any(isnan(df[df[:, :date] .>= date_forecast_start(m), var]))
+                warn("Missing some conditional observations for " * string(var))
+            end
+        end
     end
 end
 

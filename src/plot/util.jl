@@ -57,15 +57,6 @@ function date_ticks!(p::Plots.Plot,
     return nothing
 end
 
-function get_date_limits(nullable_start::Nullable{Date}, nullable_end::Nullable{Date},
-                         dates::AbstractArray{Date, 1})
-
-    start_date = isnull(nullable_start) ? dates[1] : get(nullable_start)
-    end_date = isnull(nullable_end) ? dates[end] : get(nullable_end)
-
-    return start_date, end_date
-end
-
 function get_date_limit_indices(start_date::Date, end_date::Date,
                                 dates::AbstractArray{Date, 1})
     start_ind = if dates[1] <= start_date <= dates[end]
@@ -127,26 +118,57 @@ function plot_extension()
     end
 end
 
-function describe_series(m::AbstractModel, var::Symbol, class::Symbol)
+function describe_series(m::AbstractModel, var::Symbol, class::Symbol;
+                         detexify::Bool = false)
+    res = if class in [:obs, :pseudo]
+        dict = if class == :obs
+            m.observable_mappings
+        elseif class == :pseudo
+            pseudo_measurement(m)[1]
+        end
+        dict[var].name
+    elseif class == :states
+        string(var)
+    elseif class in [:shocks, :stdshocks]
+        replace(string(var), r"_sh$", "")
+    else
+        error("Invalid class: " * string(class))
+    end
+
+    detexify ? DSGE.detexify(res) : res
+end
+
+function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
+                       fourquarter::Bool = false)
     if class in [:obs, :pseudo]
         dict = if class == :obs
             m.observable_mappings
         elseif class == :pseudo
             pseudo_measurement(m)[1]
         end
-        return dict[var].name
-    elseif class in [:state, :shock, :stdshock]
-        return string(var)
+        transform = dict[var].rev_transform
+
+        if transform in [loggrowthtopct_annualized_percapita, logleveltopct_annualized_percapita,
+                         loggrowthtopct_annualized, logleveltopct_annualized]
+            return fourquarter ? "Percent 4Q Growth" : "Percent Q/Q Annualized"
+        elseif transform == quartertoannual
+            return "Percent Annualized"
+        elseif transform == identity
+            ""
+        end
+    elseif class == :stdshocks
+        return "Standard Deviations"
+    elseif class in [:states, :shocks]
+        return ""
     else
         error("Invalid class: " * string(class))
     end
 end
 
-
 function save_plot(p::Plots.Plot, output_file::String = "")
     if !isempty(output_file)
         output_dir = dirname(output_file)
-        !isdir(output_dir) && mkdir(output_dir)
+        !isdir(output_dir) && mkpath(output_dir)
         Plots.savefig(output_file)
         println("Saved $output_file")
     end

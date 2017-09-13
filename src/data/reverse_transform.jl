@@ -183,7 +183,7 @@ function reverse_transform(m::AbstractModel, input_type::Symbol, cond_type::Symb
     start_date, end_date  = if product in [:hist]
         date_mainsample_start(m), date_mainsample_end(m)
     elseif product in [:forecast, :bddforecast, :forecast4q, :bddforecast4q]
-        date_forecast_start(m), date_forecast_start(m)
+        date_forecast_start(m), date_forecast_end(m)
     elseif product in [:shockdec, :trend, :dettrend]
         date_shockdec_start(m), date_shockdec_end(m)
     else
@@ -204,8 +204,13 @@ function reverse_transform(m::AbstractModel, input_type::Symbol, cond_type::Symb
     population_series = get_population_series(:population_growth, population_data,
                                               population_forecast, start_date, end_date)
 
-    # Compute pseudomeasurement equation
-    pseudos, _ = pseudo_measurement(m)
+    if class == :obs
+        dict = m.observable_mappings
+    elseif class == :pseudo
+        dict, _ = pseudo_measurement(m)
+    else
+        error("Class $class does not have reverse transformations")
+    end
 
     # Determine which file to read in
     path       = get_forecast_filename(m, input_type, cond_type, Symbol(product, class);
@@ -214,9 +219,9 @@ function reverse_transform(m::AbstractModel, input_type::Symbol, cond_type::Symb
     # Apply reverse transform to each desired variable
     results    = Dict{Symbol, Array{Float64,2}}()
     for var in vars
-        pseudo = pseudos[var]
+        series = dict[var]
         transformed = reverse_transform(path, class, product,
-                                        var, pseudo.rev_transform, pop_growth = population_series,
+                                        var, series.rev_transform, pop_growth = population_series,
                                         fourquarter = fourquarter)
         results[var] = transformed
     end

@@ -50,7 +50,7 @@ equilibrium conditions.
   filepath computation.
 
 * `subspec::String`: The model subspecification number, indicating that
-  some parameters from the original model spec (\"ss2\") are initialized
+  some parameters from the original model spec (\"ss10\") are initialized
   differently. Cached here for filepath computation.
 
 * `settings::Dict{Symbol,Setting}`: Settings/flags that affect computation
@@ -158,9 +158,9 @@ function init_model_indices!(m::Model1002)
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
 end
 
-function Model1002(subspec::String="ss2";
-                  custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
-                  testing = false)
+function Model1002(subspec::String="ss10";
+                   custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
+                   testing = false)
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]
@@ -645,8 +645,13 @@ function steadystate!(m::Model1002)
     m[:ζ_spσ_ω] = (ζ_bw_zw*ζ_zσ_ω - ζ_bσ_ω) / (1-ζ_bw_zw)
 
     # elasticities wrt μ_e
-    ζ_bμ_e      = -μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
-        ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    if subspec(m) in ["ss2", "ss8"]
+        ζ_bμ_e  = μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
+            ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    else
+        ζ_bμ_e  = -μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
+            ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    end
     ζ_zμ_e      = -μ_estar*Gstar/ΓμG
     m[:ζ_spμ_e] = (ζ_bw_zw*ζ_zμ_e - ζ_bμ_e) / (1-ζ_bw_zw)
 
@@ -749,14 +754,19 @@ Returns a `Vector{ShockGroup}`, which must be passed in to
 `plot_shock_decomposition`. See `?ShockGroup` for details.
 """
 function shock_groupings(m::Model1002)
-    gov = ShockGroup("Gov't", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
-    fin = ShockGroup("Financial", [:b_sh, :γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo
-    tfp = ShockGroup("TFP", [:z_sh, :zp_sh], RGB(1.0, 0.55, 0.0)) # darkorange
-    mkp = ShockGroup("Mark-Up", [:λ_f_sh, :λ_w_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
-    pol = ShockGroup("Policy",    vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]),
+    gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
+    bet = ShockGroup("b", [:b_sh], RGB(0.3, 0.3, 1.0))
+    fin = ShockGroup("FF", [:γ_sh, :μ_e_sh, :σ_ω_sh], RGB(0.29, 0.0, 0.51)) # indigo
+    tfp = ShockGroup("z", [:z_sh], RGB(1.0, 0.55, 0.0)) # darkorange
+    pmu = ShockGroup("p-mkp", [:λ_f_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
+    wmu = ShockGroup("w-mkp", [:λ_w_sh], RGB(0.0, 0.5, 0.5)) # teal
+    pol = ShockGroup("pol", vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]),
                      RGB(1.0, 0.84, 0.0)) # gold
-    mei = ShockGroup("MEI", [:μ_sh], :cyan)
-    det = ShockGroup("Det Trend", [:dettrend], :gray40)
+    pis = ShockGroup("pi-LR", [:π_star_sh], RGB(1.0, 0.75, 0.793)) # pink
+    mei = ShockGroup("mu", [:μ_sh], :cyan)
+    mea = ShockGroup("me", [:lr_sh, :tfp_sh, :gdpdef_sh, :corepce_sh, :gdp_sh, :gdi_sh], RGB(0.0, 0.8, 0.0))
+    zpe = ShockGroup("zp", [:zp_sh], RGB(0.0, 0.3, 0.0))
+    det = ShockGroup("dt", [:dettrend], :gray40)
 
-    return [gov, fin, tfp, mkp, pol, mei, det]
+    return [gov, bet, fin, tfp, pmu, wmu, pol, pis, mei, mea, zpe, det]
 end
