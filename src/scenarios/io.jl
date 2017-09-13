@@ -46,3 +46,45 @@ function load_scenario_targets!(m::AbstractModel, scen::Scenario, vint::String, 
 
     return scen.targets
 end
+
+function get_scenario_mb_input_file(m::AbstractModel, key::Symbol, vint::String,
+                                    output_var::Symbol)
+    input_file = get_scenario_filename(m, key, vint, output_var)
+    input_file = replace(input_file, "forecast4q", "forecast")
+    return input_file
+end
+
+function get_scenario_mb_output_file(m::AbstractModel, key::Symbol, vint::String,
+                                    output_var::Symbol)
+    "mb" * get_scenario_filename(m, key, vint, output_var, pathfcn = workpath)
+end
+
+"""
+```
+get_scenario_mb_metadata(key, vint, output_var, forecast_output_file)
+```
+
+Returns the `metadata` dictionary from `read_forecast_metadata`, as well as
+`mb_metadata`, the dictionary that we will save to the means and bands file.
+"""
+function get_scenario_mb_metadata(key::Symbol, vint::String, output_var::Symbol,
+                                  forecast_output_file::String)
+
+    metadata, mb_metadata = DSGE.get_mb_metadata(:mode, :none, output_var, forecast_output_file)
+    mb_metadata[:scenario_key] = key
+    mb_metadata[:scenario_vint] = vint
+
+    return metadata, mb_metadata
+end
+
+"""
+```
+read_scenario_mb(m, key, vint, output_var)
+```
+
+Read in an alternative scenario `MeansBands` object.
+"""
+function read_scenario_mb(m::AbstractModel, key::Symbol, vint::String, output_var::Symbol)
+    filepath = get_scenario_mb_output_file(m, key, vint, output_var)
+    read_mb(filepath)
+end
