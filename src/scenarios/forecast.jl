@@ -90,7 +90,7 @@ function forecast_scenario(m::AbstractModel, scenario_key::Symbol,
                            verbose::Symbol = :low)
     # Print
     if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
-        info("Forecasting scenario = $scenario_key, vintage = $scenario_vint...")
+        info("Forecasting scenario = $scenario_key...")
         println("Start time: " * string(now()))
         println("Forecast outputs will be saved in " * rawpath(m, "scenarios"))
     end
