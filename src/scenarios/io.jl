@@ -6,8 +6,7 @@ end
 function get_scenario_filename(m::AbstractModel, key::Symbol,
                                vint::String, output_var::Symbol;
                                pathfcn::Function = rawpath,
-                               fileformat = :jld)
-
+                               fileformat::Symbol = :jld)
     filestring_addl = Vector{String}()
     push!(filestring_addl, "scen=" * lowercase(string(key)))
     push!(filestring_addl, "svin=" * vint)
