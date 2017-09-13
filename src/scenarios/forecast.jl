@@ -1,3 +1,22 @@
+function compute_scenario_system(m::AbstractModel, scen::Scenario)
+    system = compute_system(m)
+
+    # Set D = 0
+    system.measurement.DD = zeros(size(system[:DD]))
+
+    # Zero out non-instrument shocks
+    system.measurement.QQ = copy(system[:QQ])
+    for shock in keys(m.exogenous_shocks)
+        if !(shock in scen.instrument_names)
+            shock_index = m.exogenous_shocks[shock]
+            system[:QQ][shock_index, :] = 0
+            system[:QQ][:, shock_index] = 0
+        end
+    end
+
+    return system
+end
+
 function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
     # Check applicability of this methodology
     @assert n_instruments(scen) >= n_targets(scen) "Number of instruments must be at least number of targets"
@@ -5,27 +24,13 @@ function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
     # Construct data
     df = targets_to_data(m, scen)
 
-    # Set D = 0 and zero out non-instrument shocks
-    scen_system = copy(system)
-
-    scen_system.measurement.DD = zeros(size(system[:DD]))
-
-    scen_system.measurement.QQ = copy(system[:QQ])
-    for shock in keys(m.exogenous_shocks)
-        if !(shock in scen.instrument_names)
-            shock_index = m.exogenous_shocks[shock]
-            scen_system[:QQ][shock_index, :] = 0
-            scen_system[:QQ][:, shock_index] = 0
-        end
-    end
-
     # Set initial state and state covariance to 0
-    z0 = zeros(n_states_augmented(m))
-    P0 = zeros(n_states_augmented(m), n_states_augmented(m))
+    s_0 = zeros(n_states_augmented(m))
+    P_0 = zeros(n_states_augmented(m), n_states_augmented(m))
 
     # Filter and smooth *deviations from baseline*
-    kal = DSGE.filter(m, df, scen_system, z0, P0)
-    _, forecastshocks, _ = smooth(m, df, scen_system, kal, draw_states = false,
+    kal = DSGE.filter(m, df, system, s_0, P_0)
+    _, forecastshocks, _ = smooth(m, df, system, kal, draw_states = false,
                                   include_presample = true)
 
     # Assign shocks to instruments DataFrame
@@ -42,7 +47,7 @@ function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
 end
 
 function forecast_scenario_draw(m::AbstractModel, scenario_key::Symbol, scenario_vint::String,
-                                draw_index::Int, s_T::Vector{Float64})
+                                draw_index::Int)
     # Initialize scenario
     constructor = eval(scenario_key)
     scen = constructor()
@@ -50,10 +55,11 @@ function forecast_scenario_draw(m::AbstractModel, scenario_key::Symbol, scenario
 
     # Filter shocks
     # TODO: add solving for shocks
-    system = compute_system(m)
+    system = compute_scenario_system(m, scen)
     forecastshocks = filter_shocks!(m, scen, system)
 
     # Forecast
+    s_T = zeros(n_states_augmented(m))
     forecaststates, forecastobs, forecastpseudo, _ =
         forecast(m, system, s_T, shocks = forecastshocks)
 
@@ -85,8 +91,7 @@ function write_scenario_forecasts(m::AbstractModel,
 end
 
 function forecast_scenario(m::AbstractModel, scenario_key::Symbol,
-                           scenario_vint::String, df::DataFrame;
-                           verbose::Symbol = :low)
+                           scenario_vint::String; verbose::Symbol = :low)
     # Print
     if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
         info("Forecasting scenario = $scenario_key...")
@@ -97,16 +102,11 @@ function forecast_scenario(m::AbstractModel, scenario_key::Symbol,
     # Load modal parameters
     params = load_draws(m, :mode; verbose = verbose)
     DSGE.update!(m, params)
-    system = compute_system(m)
-
-    # Filter to get s_T
-    kal = DSGE.filter(m, df, system)
-    s_T = kal[:zend]
 
     # Get to work!
     ndraws = n_scenario_draws(m, scenario_key, scenario_vint)
     mapfcn = use_parallel_workers(m) ? pmap : map
-    forecast_outputs = mapfcn(draw_ind -> forecast_scenario_draw(m, scenario_key, scenario_vint, draw_ind, s_T),
+    forecast_outputs = mapfcn(draw_ind -> forecast_scenario_draw(m, scenario_key, scenario_vint, draw_ind),
                               1:ndraws)
 
     # Assemble outputs and write to file
