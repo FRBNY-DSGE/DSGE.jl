@@ -94,6 +94,9 @@ function Base.show(io::IO, mb::MeansBands)
     end
     @printf io "  # of variables: %s\n" n_vars_means(mb)
     @printf io "  bands: %s\n" which_density_bands(mb, uniquify=true)
+    if haskey(mb.metadata, :scenario_key)
+        @printf io "  scenario: %s\n" get_scenario_key(mb)
+    end
 end
 
 """
@@ -294,6 +297,19 @@ function get_variables(mb::MeansBands)
     varshocks = setdiff(names(mb.means), [:date])
     unique(map(x -> Symbol(split(string(x), DSGE_SHOCKDEC_DELIM)[1]), varshocks))
 end
+
+"""
+```
+get_scenario_key(mb::MeansBands)
+```
+
+If `mb` is an alternative scenario `MeansBands`, return the scenario key.
+"""
+function get_scenario_key(mb::MeansBands)
+    @assert haskey(mb.metadata, :scenario_key) "Function only for scenario MeansBands objects"
+    mb.metadata[:scenario_key]
+end
+
 
 ###################################
 ## MEANS
