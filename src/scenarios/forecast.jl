@@ -108,6 +108,7 @@ function forecast_scenario(m::AbstractModel, scenario_key::Symbol,
         info("Forecasting scenario = $scenario_key...")
         println("Start time: " * string(now()))
         println("Forecast outputs will be saved in " * rawpath(m, "scenarios"))
+        tic()
     end
 
     # Load modal parameters
@@ -125,6 +126,14 @@ function forecast_scenario(m::AbstractModel, scenario_key::Symbol,
     forecast_output = DSGE.assemble_block_outputs(forecast_outputs)
     output_files = get_scenario_output_files(m, scenario_key, scenario_vint, [:forecastobs, :forecastpseudo])
     write_scenario_forecasts(m, output_files, forecast_output, verbose = verbose)
+
+    # Print
+    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+        forecast_time = toq()
+        forecast_time_min = forecast_time/60
+        println("\nTime elapsed: $forecast_time_min minutes")
+        println("Forecast complete: $(now())")
+    end
 
     return forecast_output
 end
