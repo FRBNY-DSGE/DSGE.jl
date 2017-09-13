@@ -165,7 +165,11 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::Range{Int6
             ndraws = length(block_inds)
             params = Vector{Vector{Float64}}(ndraws)
             for (i, j) in zip(1:ndraws, block_inds)
-                params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
+                if get_setting(m, :sampling_method) == :MH
+                    params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
+                else
+                    params[i] = vec(map(Float64, h5read(input_file_name, "smcparams", (j, :))))
+                end
             end
             return params
         end
