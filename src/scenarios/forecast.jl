@@ -46,8 +46,7 @@ function forecast_scenario_draw(m::AbstractModel, scenario_key::Symbol, scenario
     # Initialize scenario
     constructor = eval(scenario_key)
     scen = constructor()
-    path = get_scenario_input_file(m, scenario_key, scenario_vint)
-    load_scenario_targets!(scen, path, draw_index)
+    load_scenario_targets!(m, scen, scenario_vint, draw_index)
 
     # Filter shocks
     # TODO: add solving for shocks
