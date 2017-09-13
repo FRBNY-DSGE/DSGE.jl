@@ -141,7 +141,7 @@ end
 read_mb(fn::String)
 
 read_mb(m, input_type, cond_type, output_var; forecast_string = "",
-    bdd_and_unbdd::Bool = false)
+    bdd_and_unbdd::Bool = false, directory = workpath(m, \"forecast\"))
 ```
 
 Read in a `MeansBands` object saved in `fn`, or use the model object `m` to
@@ -160,7 +160,8 @@ end
 
 function read_mb(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                  output_var::Symbol; forecast_string::String = "",
-                 bdd_and_unbdd::Bool = false, directory = workpath(m, "forecast"))
+                 bdd_and_unbdd::Bool = false,
+                 directory::String = workpath(m, "forecast"))
 
     if bdd_and_unbdd
         @assert get_product(output_var) in [:forecast, :forecast4q]

@@ -65,7 +65,8 @@ an error.
 function get_forecast_filename(m::AbstractModel, input_type::Symbol,
                                cond_type::Symbol, output_var::Symbol;
                                pathfcn::Function = rawpath,
-                               forecast_string::String = "", fileformat = :jld)
+                               forecast_string::String = "",
+                               fileformat::Symbol = :jld)
 
     # First, we need to make sure we get all of the settings that have been printed to this filestring
     directory = pathfcn(m, "forecast")
@@ -135,7 +136,8 @@ See `get_forecast_filename` for more information.
 """
 function get_forecast_output_files(m::AbstractModel, input_type::Symbol,
                                    cond_type::Symbol, output_vars::Vector{Symbol};
-                                   forecast_string::String = "", fileformat = :jld)
+                                   forecast_string::String = "",
+                                   fileformat::Symbol = :jld)
 
     directory = rawpath(m, "forecast")
     base      = filestring_base(m)
@@ -147,7 +149,7 @@ end
 
 function get_forecast_output_files(directory::String, filestring_base::Vector{String},
                                    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                                   forecast_string::String = "", fileformat = :jld)
+                                   forecast_string::String = "", fileformat::Symbol = :jld)
 
     output_files    = Dict{Symbol, String}()
     for var in remove_meansbands_only_output_vars(output_vars)
