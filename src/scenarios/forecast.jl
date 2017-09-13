@@ -53,8 +53,12 @@ function forecast_scenario_draw(m::AbstractModel, scenario_key::Symbol, scenario
     scen = constructor()
     load_scenario_targets!(m, scen, scenario_vint, draw_index)
 
+    # If no instrument names provided, use all shocks
+    if isempty(scen.instrument_names)
+        scen.instrument_names = collect(keys(m.exogenous_shocks))
+    end
+
     # Filter shocks
-    # TODO: add solving for shocks
     system = compute_scenario_system(m, scen)
     forecastshocks = filter_shocks!(m, scen, system)
 
