@@ -146,6 +146,13 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
                   out_product::Symbol = Symbol(),
                   forecast_string::String = "")
 
+    # If either mb1 or mb2 is empty, return just the other one
+    if isempty(mb1)
+        return mb2
+    elseif isempty(mb2)
+        return mb1
+    end
+
     # Assert class, cond type and para are the same
     @assert get_class(mb1) == get_class(mb2)
     @assert get_cond_type(mb1) == get_cond_type(mb2)
