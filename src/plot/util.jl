@@ -95,8 +95,8 @@ end
 function get_bands_indices(var::Symbol, history::MeansBands, forecast::MeansBands,
                            hist_inds::UnitRange{Int}, fcast_inds::UnitRange{Int})
 
-    hist_bands  = has_nonidentical_bands(var, history)
-    fcast_bands = has_nonidentical_bands(var, forecast)
+    hist_bands  = !isempty(history)  && has_nonidentical_bands(var, history)
+    fcast_bands = !isempty(forecast) && has_nonidentical_bands(var, forecast)
 
     if hist_bands && fcast_bands
         return hist_inds.start:fcast_inds.stop
