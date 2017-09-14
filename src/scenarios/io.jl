@@ -6,13 +6,18 @@ end
 function get_scenario_filename(m::AbstractModel, key::Symbol,
                                vint::String, output_var::Symbol;
                                pathfcn::Function = rawpath,
-                               fileformat::Symbol = :jld)
+                               fileformat::Symbol = :jld,
+                               directory::String = "")
     filestring_addl = Vector{String}()
     push!(filestring_addl, "scen=" * lowercase(string(key)))
     push!(filestring_addl, "svin=" * vint)
 
-    basename = string(output_var) * "." * string(fileformat)
-    return pathfcn(m, "scenarios", basename, filestring_addl)
+    base = string(output_var) * "." * string(fileformat)
+    path = pathfcn(m, "scenarios", base, filestring_addl)
+    if !isempty(directory)
+        path = joinpath(directory, basename(path))
+    end
+    return path
 end
 
 function get_scenario_output_files(m::AbstractModel, key::Symbol, vint::String,
@@ -56,8 +61,9 @@ function get_scenario_mb_input_file(m::AbstractModel, key::Symbol, vint::String,
 end
 
 function get_scenario_mb_output_file(m::AbstractModel, key::Symbol, vint::String,
-                                    output_var::Symbol)
-    fullfile = get_scenario_filename(m, key, vint, output_var, pathfcn = workpath)
+                                     output_var::Symbol;
+                                     directory::String = "")
+    fullfile = get_scenario_filename(m, key, vint, output_var, pathfcn = workpath, directory = directory)
     joinpath(dirname(fullfile), "mb" * basename(fullfile))
 end
 
@@ -81,12 +87,13 @@ end
 
 """
 ```
-read_scenario_mb(m, key, vint, output_var)
+read_scenario_mb(m, key, vint, output_var; directory = "")
 ```
 
 Read in an alternative scenario `MeansBands` object.
 """
-function read_scenario_mb(m::AbstractModel, key::Symbol, vint::String, output_var::Symbol)
-    filepath = get_scenario_mb_output_file(m, key, vint, output_var)
+function read_scenario_mb(m::AbstractModel, key::Symbol, vint::String, output_var::Symbol;
+                          directory::String = "")
+    filepath = get_scenario_mb_output_file(m, key, vint, output_var, directory = directory)
     read_mb(filepath)
 end
