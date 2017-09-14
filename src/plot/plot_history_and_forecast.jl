@@ -1,9 +1,7 @@
 """
 ```
 plot_history_and_forecast(m, var, class, input_type, cond_type;
-    forecast_string = "", bdd_and_unbdd = false,
-    plotroot = figurespath(m, \"forecast\"), title = "",
-    kwargs...)
+    title = "", kwargs...)
 
 plot_history_and_forecast(m, vars, class, input_type, cond_type;
     forecast_string = "", bdd_and_unbdd = false,
@@ -21,9 +19,9 @@ plot_history_and_forecast(var, history, forecast; output_file = "",
     plot_handle = plot())
 ```
 
-Plot `var` from `history` and `forecast`, possibly read in using `read_mb`
-(depending on the method). If these correspond to a full-distribution forecast,
-you can specify the `bands_style` and `bands_pcts`.
+Plot `var` or `vars` from `history` and `forecast`, possibly read in using
+`read_mb` (depending on the method). If these correspond to a full-distribution
+forecast, you can specify the `bands_style` and `bands_pcts`.
 
 ### Inputs
 
@@ -76,18 +74,10 @@ you can specify the `bands_style` and `bands_pcts`.
 """
 function plot_history_and_forecast(m::AbstractModel, var::Symbol, class::Symbol,
                                    input_type::Symbol, cond_type::Symbol;
-                                   forecast_string::String = "",
-                                   bdd_and_unbdd::Bool = false,
-                                   fourquarter::Bool = false,
-                                   plotroot::String = figurespath(m, "forecast"),
                                    title::String = "",
                                    kwargs...)
 
     plots = plot_history_and_forecast(m, [var], class, input_type, cond_type;
-                                      forecast_string = forecast_string,
-                                      bdd_and_unbdd = bdd_and_unbdd,
-                                      fourquarter = fourquarter,
-                                      plotroot = plotroot,
                                       titles = isempty(title) ? String[] : [title],
                                       kwargs...)
     return plots[var]
@@ -111,7 +101,7 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
     # Get titles if not provided
     if isempty(titles)
         detexify_title = typeof(Plots.backend()) == Plots.GRBackend
-        titles = map(var -> DSGE.describe_series(m, var, class, detexify = detexify_title), vars)
+        titles = map(var -> describe_series(m, var, class, detexify = detexify_title), vars)
     end
 
     # Loop through variables
@@ -214,7 +204,7 @@ end
 """
 ```
 function plot_bands!(p, var, mb, style, color; linestyle = :solid,
-    pcts = DSGE.which_density_bands(mb, uniquify = true), indices = Colon())
+    pcts = which_density_bands(mb, uniquify = true), indices = Colon())
 ```
 
 Plot `var` bands from `mb` on plot `p`. The `style` can be one of `:fan` or
@@ -224,7 +214,7 @@ periods (`indices`).
 function plot_bands!(p::Plots.Plot, var::Symbol, mb::MeansBands,
                      style::Symbol, color::Colorant;
                      linestyle::Symbol = :solid,
-                     pcts::Vector{String} = DSGE.which_density_bands(mb, uniquify = true),
+                     pcts::Vector{String} = which_density_bands(mb, uniquify = true),
                      indices = Colon())
 
     datenums = map(quarter_date_to_number, mb.means[:date])

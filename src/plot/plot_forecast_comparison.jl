@@ -1,8 +1,7 @@
 """
 ```
 plot_forecast_comparison(m_old, m_new, var, class, input_type, cond_type;
-    forecast_string = "", bdd_and_unbdd = false, plotroot = "", title = "",
-    kwargs...)
+    title = "", kwargs...)
 
 plot_forecast_comparison(m_old, m_new, vars, class, input_type, cond_type;
     forecast_string = "", bdd_and_unbdd = false, plotroot = "", titles = [],
@@ -74,16 +73,10 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
 function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
                                   var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
-                                  forecast_string::String = "",
-                                  bdd_and_unbdd::Bool = false,
-                                  plotroot::String = "",
                                   title::String = "",
                                   kwargs...)
 
     plots = plot_forecast_comparison(m_old, m_new, [var], class, input_type, cond_type;
-                                     forecast_string = forecast_string,
-                                     bdd_and_unbdd = bdd_and_unbdd,
-                                     plotroot = plotroot,
                                      titles = isempty(title) ? String[] : [title],
                                      kwargs...)
     return plots[var]
@@ -110,7 +103,7 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
     # Get titles if not provided
     if isempty(titles)
         detexify_title = typeof(Plots.backend()) == Plots.GRBackend
-        titles = map(var -> DSGE.describe_series(m_new, var, class, detexify = detexify_title), vars)
+        titles = map(var -> describe_series(m_new, var, class, detexify = detexify_title), vars)
     end
 
     # Loop through variables
@@ -124,7 +117,7 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
 
         plots[var] = plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
                                               output_file = output_file, title = title,
-                                              ylabel = DSGE.series_ylabel(m_new, var, class),
+                                              ylabel = series_ylabel(m_new, var, class),
                                               kwargs...)
     end
     return plots
