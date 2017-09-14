@@ -5,6 +5,7 @@ plot_history_and_forecast(m, var, class, input_type, cond_type;
 
 plot_history_and_forecast(m, vars, class, input_type, cond_type;
     forecast_string = "", bdd_and_unbdd = false,
+    untrans = false, fourquarter = false,
     output_files = figurespath(m, \"forecast\"), titles = [],
     kwargs...)
 
@@ -62,6 +63,8 @@ forecast, you can specify the `bands_style` and `bands_pcts`.
 - `forecast_string::String`
 - `bdd_and_unbdd::Bool`: if true, then unbounded means and bounded bands are plotted
 - `plotroot::String`: if nonempty, plots will be saved in that directory
+- `untrans::Bool`: whether to plot untransformed (model units) history and forecast
+- `fourquarter::Bool`: whether to plot four-quarter history and forecast
 
 **Method 3 only:**
 
@@ -86,15 +89,29 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
                                    input_type::Symbol, cond_type::Symbol;
                                    forecast_string::String = "",
                                    bdd_and_unbdd::Bool = false,
+                                   untrans::Bool = false,
                                    fourquarter::Bool = false,
                                    plotroot::String = figurespath(m, "forecast"),
                                    titles::Vector{String} = String[],
                                    kwargs...)
+    # Determine output_vars
+    if untrans && fourquarter
+        error("Only one of untrans or fourquarter can be true")
+    elseif untrans
+        hist_prod  = :histut
+        fcast_prod = :forecastut
+    elseif fourquarter
+        hist_prod  = :hist4q
+        fcast_prod = :forecast4q
+    else
+        hist_prod  = :hist
+        fcast_prod = :forecast
+    end
+
     # Read in MeansBands
-    hist  = read_mb(m, input_type, cond_type, Symbol(fourquarter ? :hist4q : :hist, class),
-                    forecast_string = forecast_string)
-    fcast = read_mb(m, input_type, cond_type, Symbol(fourquarter ? :forecast4q : :forecast, class),
-                    forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd)
+    hist  = read_mb(m, input_type, cond_type, Symbol(hist_prod, class), forecast_string = forecast_string)
+    fcast = read_mb(m, input_type, cond_type, Symbol(fcast_prod, class), forecast_string = forecast_string,
+                    bdd_and_unbdd = bdd_and_unbdd)
 
 
     # Get titles if not provided
@@ -110,14 +127,15 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
             ""
         else
             get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
-                                  Symbol(fourquarter ? "forecast4q_" : "forecast_", detexify(var)),
+                                  Symbol(forecast_prod, "_", detexify(var)),
                                   forecast_string = forecast_string,
                                   fileformat = plot_extension())
         end
+        ylabel = series_ylabel(m, var, class, untrans = untrans, fourquarter = fourquarter)
 
         plots[var] = plot_history_and_forecast(var, hist, fcast;
                                                output_file = output_file, title = title,
-                                               ylabel = DSGE.series_ylabel(m, var, class),
+                                               ylabel = ylabel,
                                                kwargs...)
     end
     return plots

@@ -139,7 +139,12 @@ function describe_series(m::AbstractModel, var::Symbol, class::Symbol;
 end
 
 function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
+                       untrans::Bool = false,
                        fourquarter::Bool = false)
+    if untrans && fourquarter
+        error("Only one of untrans or fourquarter can be true")
+    end
+
     if class in [:obs, :pseudo]
         dict = if class == :obs
             m.observable_mappings
@@ -148,11 +153,28 @@ function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
         end
         transform = dict[var].rev_transform
 
-        if transform in [loggrowthtopct_annualized_percapita, logleveltopct_annualized_percapita,
-                         loggrowthtopct_annualized, logleveltopct_annualized]
-            return fourquarter ? "Percent 4Q Growth" : "Percent Q/Q Annualized"
+        if transform in [loggrowthtopct_annualized_percapita, loggrowthtopct_annualized]
+            if untrans
+                return "Q/Q Log Growth Rate"
+            elseif fourquarter
+                return "Percent 4Q Growth"
+            else
+                return "Percent Q/Q Annualized"
+            end
+        elseif transform in [logleveltopct_annualized_percapita, logleveltopct_annualized]
+            if untrans
+                return "Log Level"
+            elseif fourquarter
+                return "Percent 4Q Growth"
+            else
+                return "Percent Q/Q Annualized"
+            end
         elseif transform == quartertoannual
-            return "Percent Annualized"
+            if untrans
+                return "Percent Q/Q"
+            else
+                return "Percent Annualized"
+            end
         elseif transform == identity
             ""
         end
