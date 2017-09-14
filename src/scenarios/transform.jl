@@ -20,7 +20,8 @@ function scenario_means_bands(m::AbstractModel, scenario_key::Symbol, scenario_v
 
         # Compute means and bands
         input_file = get_scenario_mb_input_file(m, scenario_key, scenario_vint, output_var)
-        mb = means_bands(scenario_key, scenario_vint, output_var, input_file)
+        mb = means_bands(scenario_key, scenario_vint, output_var, input_file;
+                         dist = use_parallel_workers(m))
 
         # Write to file
         output_file = get_scenario_mb_output_file(m, scenario_key, scenario_vint, output_var)
@@ -45,7 +46,7 @@ function scenario_means_bands(m::AbstractModel, scenario_key::Symbol, scenario_v
 end
 
 function DSGE.means_bands(scenario_key::Symbol, scenario_vint::String, output_var::Symbol,
-                          input_file::String; kwargs...)
+                          input_file::String; dist::Bool = false, kwargs...)
     # Determine class and product
     class   = get_class(output_var)
     product = get_product(output_var)
@@ -57,7 +58,7 @@ function DSGE.means_bands(scenario_key::Symbol, scenario_vint::String, output_va
     date_list = collect(keys(mb_metadata[:date_inds]))
 
     # Get to work!
-    mapfcn = use_parallel_workers(m) ? pmap : map
+    mapfcn = dist ? pmap : map
     mb_vec = pmap(var_name -> compute_scenario_means_bands(class, product, var_name, input_file),
                   variable_names)
 
