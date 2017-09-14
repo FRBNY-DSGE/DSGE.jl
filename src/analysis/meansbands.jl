@@ -156,10 +156,16 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
         return mb1
     end
 
-    # Assert class, cond type and para are the same
+    # Assert class, cond type, para, and scenario info are the same
     @assert get_class(mb1) == get_class(mb2)
     @assert get_cond_type(mb1) == get_cond_type(mb2)
     @assert get_para(mb1) == get_para(mb2)
+    @assert haskey(mb1.metadata, :scenario_key) == haskey(mb2.metadata, :scenario_key) ==
+        haskey(mb1.metadata, :scenario_vint) == haskey(mb2.metadata, :scenario_vint)
+    if haskey(mb1.metadata, :scenario_key)
+        @assert mb1.metadata[:scenario_key] == mb2.metadata[:scenario_key]
+        @assert mb1.metadata[:scenario_vint] == mb2.metadata[:scenario_vint]
+    end
 
     # Assert dates are contiguous
     last_mb1_date  = enddate_means(mb1)
@@ -222,6 +228,10 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
                    :indices         => indices,
                    :forecast_string => forecast_string,
                    :date_inds       => sort(date_indices, by = x -> date_indices[x]))
+    if haskey(mb1.metadata, :scenario_key)
+        metadata[:scenario_key] = mb1.metadata[:scenario_key]
+        metadata[:scenario_vint] = mb1.metadata[:scenario_vint]
+    end
 
     # construct the new MeansBands object and return
     MeansBands(mb1.metadata, means, bands)
