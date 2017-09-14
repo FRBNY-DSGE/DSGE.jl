@@ -173,7 +173,7 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     yaxis!(p, ylabel = ylabel)
 
     # Plot bands
-    if combined.metadata[:para] in [:full, :subset]
+    if combined.metadata[:para] in [:full, :subset] || haskey(combined.metadata, :scenario_key)
         bands_inds = get_bands_indices(var, history, forecast, hist_inds, fcast_inds)
         if !isempty(bands_inds)
             plot_bands!(p, var, combined, bands_style, bands_color,
