@@ -46,11 +46,8 @@ function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
     return forecastshocks
 end
 
-function forecast_scenario_draw(m::AbstractModel, scenario_key::Symbol, scenario_vint::String,
-                                draw_index::Int)
-    # Initialize scenario
-    constructor = eval(scenario_key)
-    scen = constructor()
+function forecast_scenario_draw(m::AbstractModel, scen::Scenario, draw_index::Int)
+    # Load targets
     load_scenario_targets!(m, scen, scenario_vint, draw_index)
 
     # If no instrument names provided, use all shocks
@@ -101,11 +98,11 @@ function write_scenario_forecasts(m::AbstractModel,
     end
 end
 
-function forecast_scenario(m::AbstractModel, scenario_key::Symbol,
-                           scenario_vint::String; verbose::Symbol = :low)
+function forecast_scenario(m::AbstractModel, scen::Scenario;
+                           verbose::Symbol = :low)
     # Print
     if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
-        info("Forecasting scenario = $scenario_key...")
+        info("Forecasting scenario = " * string(scen.key) * "...")
         println("Start time: " * string(now()))
         println("Forecast outputs will be saved in " * rawpath(m, "scenarios"))
         tic()
@@ -116,15 +113,15 @@ function forecast_scenario(m::AbstractModel, scenario_key::Symbol,
     DSGE.update!(m, params)
 
     # Get to work!
-    ndraws = n_scenario_draws(m, scenario_key, scenario_vint)
+    ndraws = n_scenario_draws(m, scen)
     mapfcn = use_parallel_workers(m) ? pmap : map
-    forecast_outputs = mapfcn(draw_ind -> forecast_scenario_draw(m, scenario_key, scenario_vint, draw_ind),
+    forecast_outputs = mapfcn(draw_ind -> forecast_scenario_draw(m, scen, draw_ind),
                               1:ndraws)
 
     # Assemble outputs and write to file
     forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
     forecast_output = DSGE.assemble_block_outputs(forecast_outputs)
-    output_files = get_scenario_output_files(m, scenario_key, scenario_vint, [:forecastobs, :forecastpseudo])
+    output_files = get_scenario_output_files(m, scen, [:forecastobs, :forecastpseudo])
     write_scenario_forecasts(m, output_files, forecast_output, verbose = verbose)
 
     # Print
