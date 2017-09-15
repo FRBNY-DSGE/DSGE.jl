@@ -67,42 +67,37 @@ function targets_to_data(m::AbstractModel, scen::Scenario)
     return df
 end
 
-abstract SwitchingScenario <: AbstractScenario
+type SwitchingScenario <: AbstractScenario
+    key::Symbol
+    description::String
+    default_scenario_key::Symbol
+    prob_enter::Vector{Float64}
+    prob_exit::Vector{Float64}
+    vintage::String
+end
 
 function Base.show(io::IO, scen::SwitchingScenario)
     @printf io "%-12s %s\n" "Original:" scen.key
     @printf io "%-12s %s\n" "Description:" scen.description
-    @printf io "%-12s %s\n" "Description:" scen.default_scenario
+    @printf io "%-12s %s\n" "Default:" scen.default_scenario_key
+    @printf io "%-12s %s"   "Vintage:" scen.vintage
 end
 
-
-function define_switching_scenario(original::Scenario)
-    new_name = Symbol(string(original.key) * "Switching")
-
-    return @eval begin
-        type $(new_name) <: SwitchingScenario
-            key::Symbol
-            description::String
-            default_scenario::Symbol
-            probs_enter::Vector{Float64}
-            probs_leave::Vector{Float64}
-        end
-    end
- end
-
+"""
+'''
+construct_switching_scenario(original, default, prob_enter, prob_exit)
+'''
+Constructs an instance of `SwitchingScenario` from two scenarios and
+two vectors of entry/exit probabilities.
+"""
 function construct_switching_scenario(original::Scenario, default::Scenario,
                                       prob_enter::Vector{Float64},
-                                      prob_leave::Vector{Float64})
+                                      prob_exit::Vector{Float64})
 
-    new_name = Symbol(string(original.key) * "Switching")
-    if !isdefined(new_name)
-        define_switching_scenario(original)
-    end
+    @assert n_target_horizons(original) == length(prob_enter) == length(prob_exit)
 
-    @assert length(prob_enter) == length(prob_leave) == n_target_horizons(original)
+    new_scenario = SwitchingScenario(original.key, original.description, default.key,
+                                     prob_enter, prob_exit, original.vintage)
 
-    @eval constructor = $(new_name)
-    new_scenario = constructor(original.key, original.description,
-                               default.key, prob_enter, prob_leave)
     return new_scenario
 end
