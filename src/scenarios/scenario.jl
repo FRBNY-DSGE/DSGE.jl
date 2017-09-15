@@ -112,7 +112,7 @@ type ScenarioAggregate
 
 Composite type for aggregated alternative scenarios.
 """
-type ScenarioAggregate
+type ScenarioAggregate <: AbstractScenario
     key::Symbol
     description::String
     scenario_groups::Vector{Vector{SingleScenario}}
