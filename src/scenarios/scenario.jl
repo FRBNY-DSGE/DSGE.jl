@@ -14,25 +14,38 @@ Abstract supertype for all alternative scenarios.
 - `targets::DataFrame`
 - `instruments::DataFrame`
 """
-abstract Scenario
+abstract AbstractScenario
+
+type Scenario <: AbstractScenario
+    key::Symbol
+    description::String
+    target_names::Vector{Symbol}
+    instrument_names::Vector{Symbol}
+    targets::DataFrame
+    instruments::DataFrame
+    vintage::String
+end
 
 function Base.show(io::IO, scen::Scenario)
     @printf io "%-12s %s\n" "Key:" scen.key
     @printf io "%-12s %s\n" "Description:" scen.description
     @printf io "%-12s %s\n" "Targets:" scen.target_names
-    @printf io "%-12s %s" "Instruments:" scen.instrument_names
+    @printf io "%-12s %s\n" "Instruments:" scen.instrument_names
+    @printf io "%-12s %s"   "Vintage:" scen.vintage
 end
 
 n_targets(scen::Scenario) = length(scen.target_names)
 n_instruments(scen::Scenario) = length(scen.instrument_names)
 n_target_horizons(scen::Scenario) = size(scen.targets, 1)
 
-function empty_scenario(constructor::DataType, key::Symbol, description::String,
-                        target_names::Vector{Symbol}, instrument_names::Vector{Symbol})
+function empty_scenario(key::Symbol, description::String,
+                        target_names::Vector{Symbol},
+                        instrument_names::Vector{Symbol},
+                        vintage::String)
     targets = DataFrame()
     instruments = DataFrame()
-    return constructor(key, description, target_names, instrument_names,
-                       targets, instruments)
+    return Scenario(key, description, target_names, instrument_names,
+                       targets, instruments, vintage)
 end
 
 function targets_to_data(m::AbstractModel, scen::Scenario)
@@ -54,7 +67,7 @@ function targets_to_data(m::AbstractModel, scen::Scenario)
     return df
 end
 
-abstract SwitchingScenario <: Scenario
+abstract SwitchingScenario <: AbstractScenario
 
 function Base.show(io::IO, scen::SwitchingScenario)
     @printf io "%-12s %s\n" "Original:" scen.key
