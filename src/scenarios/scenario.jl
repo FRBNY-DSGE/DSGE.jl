@@ -1,3 +1,8 @@
+
+abstract AbstractScenario
+abstract SingleScenario <: AbstractScenario
+
+
 """
 ```
 abstract Scenario
@@ -9,14 +14,9 @@ Abstract supertype for all alternative scenarios.
 
 - `key::Symbol`
 - `description::String`
-- `target_names::Vector{Symbol}`
-- `instrument_names::Vector{Symbol}`
-- `targets::DataFrame`
-- `instruments::DataFrame`
+- `vintage::String`
 """
-abstract AbstractScenario
-
-type Scenario <: AbstractScenario
+type Scenario <: SingleScenario
     key::Symbol
     description::String
     target_names::Vector{Symbol}
@@ -67,7 +67,7 @@ function targets_to_data(m::AbstractModel, scen::Scenario)
     return df
 end
 
-type SwitchingScenario <: AbstractScenario
+type SwitchingScenario <: SingleScenario
     key::Symbol
     description::String
     default_scenario_key::Symbol
