@@ -110,7 +110,84 @@ end
 
 """
 ```
-read_scenario_mb(m, key, vint, output_var; directory = "")
+read_scenario_output(m, scen, class, product, var_name)
+
+read_scenario_output(m, agg, class, product, var_name)
+```
+
+Given either `scen::SingleScenario` or `agg::ScenarioAggregate`, read in and
+return all draws of and the appropriate reverse transform for `var_name`.
+"""
+function read_scenario_output(m::AbstractModel, scen::SingleScenario, class::Symbol, product::Symbol,
+                              var_name::Symbol)
+    # Get filename
+    filename = get_scenario_mb_input_file(m, scen, output_var)
+
+    fcast_series, transform = jldopen(filename, "r") do file
+        # Read forecast outputs
+        fcast_series = read_forecast_output(file, class, product, var_name)
+
+        # Parse transform
+        class_long = DSGE.get_class_longname(class)
+        transforms = read(file, string(class_long) * "_revtransforms")
+        transform = DSGE.parse_transform(transforms[var_name])
+
+        fcast_series, transform
+    end
+end
+
+function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::Symbol,
+                              product::Symbol, var_name::Symbol)
+    # Aggregate scenarios
+    ngroups = length(agg.scenario_groups)
+    agg_draws = Vector{Array{Float64, 3}}(ngroups)
+
+    for (i, (group, pct)) in enumerate(zip(agg.scenario_groups, agg.proportions))
+        # Read in draws for each scenario in group
+        nscenarios = length(group)
+        group_draws = Vector{Array{Float64, 3}}(nscenarios)
+        for (j, scenario) in enumerate(group)
+            filename = get_scenario_mb_input_file(m, scen, output_var)
+            group_draws[j] = jldopen(filename, "r") do file
+                read_forecast_output(file, class, product, var_name)
+            end
+        end
+
+        # Stack all scenario draws in this group together
+        all_group_draws = cat(1, group_draws...)
+
+        # Sample
+        actual_ndraws = size(all_group_draws, 1)
+        desired_ndraws = convert(Int, round(pct * scen.total_draws))
+
+        sampled_inds = if agg.replace
+            rand(1:actual_ndraws, desired_ndraws, replace = true)
+        else
+            quotient  = convert(Int, floor(actual_ndraws / desired_ndraws))
+            remainder = actual_ndraws % desired_ndraws
+            vcat(repmat(1:actual_ndraws, quotient),
+                 sample(1:actual_ndraws, remainder, replace = false))
+        end
+        sort!(sampled_inds)
+        agg_draws[i] = all_group_draws[sampled_inds, :, :]
+    end
+
+    fcast_series = cat(1, agg_draws...)
+
+    # Parse transform
+    filename = get_scenario_mb_input_file(m, agg.scenario_groups[1], output_var)
+    transform = jldopen(filename, "r") do file
+        class_long = DSGE.get_class_longname(class)
+        transforms = read(file, string(class_long) * "_revtransforms")
+        DSGE.parse_transform(transforms[var_name])
+    end
+
+    return fcast_series, transform
+end
+
+"""
+```
+read_scenario_mb(m, scen, output_var; directory = "")
 ```
 
 Read in an alternative scenario `MeansBands` object.

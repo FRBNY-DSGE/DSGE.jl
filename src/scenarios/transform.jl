@@ -1,4 +1,4 @@
-function scenario_means_bands(m::AbstractModel, scenario_key::Symbol, scenario_vint::String,
+function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
                               output_vars::Vector{Symbol} = [:forecastutobs, :forecastutpseudo,
                                                              :forecastobs, :forecastpseudo,
                                                              :forecast4qobs, :forecast4qpseudo];
@@ -7,7 +7,7 @@ function scenario_means_bands(m::AbstractModel, scenario_key::Symbol, scenario_v
     # Print
     if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
         println()
-        info("Computing means and bands for scenario = $scenario_key...")
+        info("Computing means and bands for scenario = " * string(scen.key) * "...")
         println("Start time: " * string(now()))
         println("Means and bands will be saved in " * workpath(m, "scenarios"))
         tic()
@@ -19,12 +19,10 @@ function scenario_means_bands(m::AbstractModel, scenario_key::Symbol, scenario_v
         end
 
         # Compute means and bands
-        input_file = get_scenario_mb_input_file(m, scenario_key, scenario_vint, output_var)
-        mb = means_bands(scenario_key, scenario_vint, output_var, input_file;
-                         dist = use_parallel_workers(m))
+        mb = scenario_means_bands(m, scen, output_var; kwargs...)
 
         # Write to file
-        output_file = get_scenario_mb_output_file(m, scenario_key, scenario_vint, output_var)
+        output_file = get_scenario_mb_output_file(m, scen, output_var)
         output_dir = dirname(output_file)
         isdir(output_dir) || mkpath(output_dir)
         jldopen(output_file, "w") do file
@@ -36,6 +34,7 @@ function scenario_means_bands(m::AbstractModel, scenario_key::Symbol, scenario_v
         end
     end
 
+    # Print
     if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
         total_mb_time     = toq()
         total_mb_time_min = total_mb_time/60
@@ -45,21 +44,15 @@ function scenario_means_bands(m::AbstractModel, scenario_key::Symbol, scenario_v
     end
 end
 
-function DSGE.means_bands(scenario_key::Symbol, scenario_vint::String, output_var::Symbol,
-                          input_file::String; dist::Bool = false, kwargs...)
-    # Determine class and product
-    class   = get_class(output_var)
-    product = get_product(output_var)
-
+function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_var::Symbol; kwargs...)
     # Read metadata
-    metadata, mb_metadata =
-        get_scenario_mb_metadata(scenario_key, scenario_vint, output_var, input_file)
-    variable_names = collect(keys(mb_metadata[:indices]))
-    date_list = collect(keys(mb_metadata[:date_inds]))
+    metadata = get_scenario_mb_metadata(m, scen, output_var)
+    date_list = collect(keys(metadata[:date_inds]))
+    variable_names = collect(keys(metadata[:indices]))
 
     # Get to work!
-    mapfcn = dist ? pmap : map
-    mb_vec = pmap(var_name -> compute_scenario_means_bands(class, product, var_name, input_file),
+    mapfcn = use_parallel_workers(m) ? pmap : map
+    mb_vec = pmap(var_name -> compute_scenario_means_bands(m, scen, output_var, var_name),
                   variable_names)
 
     # Re-assemble pmap outputs
@@ -71,35 +64,27 @@ function DSGE.means_bands(scenario_key::Symbol, scenario_vint::String, output_va
         bands[var_name][:date] = date_list
     end
 
-    return MeansBands(mb_metadata, means, bands; kwargs...)
+    return MeansBands(metadata, means, bands; kwargs...)
 end
 
-function compute_scenario_means_bands(class::Symbol, product::Symbol, var_name::Symbol,
-                                      filename::String;
-                                      minimize::Bool = false,
+function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_var::Symbol,
+                              var_name::Symbol; kwargs...)
+    # Determine class and product
+    class = get_class(output_var)
+    product = get_product(output_var)
+
+    # Read in scenario draws
+    fcast_series, transform = read_scenario_output(m, scen, class, product, var_name)
+
+    # Compute means and bands
+    compute_scenario_means_bands(fcast_series, transform, product; kwargs...)
+end
+
+function compute_scenario_means_bands(fcast_series::Matrix{Float64}, transform::Function,
+                                      product::Symbol; minimize::Bool = false,
                                       density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9])
 
-    @assert product in [:forecast, :forecast4q, :forecastut] "Product can only be forecast(ut|4q)"
-
-    # Read in everything from raw forecast file
-    fcast_series, transform, var_ind, date_list = jldopen(filename, "r") do file
-        # Read forecast output
-        fcast_series = read_forecast_output(file, class, product, var_name)
-
-        # Parse transform
-        class_long = DSGE.get_class_longname(class)
-        transforms = read(file, string(class_long) * "_revtransforms")
-        transform = DSGE.parse_transform(transforms[var_name])
-
-        # Get variable index
-        indices = read(file, string(class_long) * "_indices")
-        var_ind = indices[var_name]
-
-        # Read date list
-        date_list = collect(keys(read(file, "date_indices")))
-
-        fcast_series, transform, var_ind, date_list
-    end
+    @assert product in [:forecast, :forecastut, :forecast4q] "Product can only be forecast(ut|4q)"
 
     # Reverse transform
     if product == :forecast4q
