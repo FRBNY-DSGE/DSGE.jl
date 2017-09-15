@@ -70,33 +70,36 @@ end
 type SwitchingScenario <: SingleScenario
     key::Symbol
     description::String
-    default_scenario_key::Symbol
+    original_key::Symbol
+    default_key::Symbol
     prob_enter::Vector{Float64}
     prob_exit::Vector{Float64}
     vintage::String
 end
 
 function Base.show(io::IO, scen::SwitchingScenario)
-    @printf io "%-12s %s\n" "Original:" scen.key
+    @printf io "%-12s %s\n" "Key:" scen.key
     @printf io "%-12s %s\n" "Description:" scen.description
-    @printf io "%-12s %s\n" "Default:" scen.default_scenario_key
+    @printf io "%-12s %s\n" "Default:" scen.original_key
+    @printf io "%-12s %s\n" "Default:" scen.default_key
     @printf io "%-12s %s"   "Vintage:" scen.vintage
 end
 
 """
 '''
-SwitchingScenario(original, default, prob_enter, prob_exit)
+SwitchingScenario(key, original, default, prob_enter, prob_exit)
 '''
 Constructs an instance of `SwitchingScenario` from two scenarios and
 two vectors of entry/exit probabilities.
 """
-function SwitchingScenario(original::Scenario, default::Scenario,
+function SwitchingScenario(key::Symbol, original::Scenario, default::Scenario,
                            prob_enter::Vector{Float64},
                            prob_exit::Vector{Float64})
 
     @assert n_target_horizons(original) == length(prob_enter) == length(prob_exit)
 
-    new_scenario = SwitchingScenario(original.key, original.description, default.key,
+    new_scenario = SwitchingScenario(key, original.description,
+                                     original.key, default.key,
                                      prob_enter, prob_exit, original.vintage)
 
     return new_scenario
