@@ -52,7 +52,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_v
 
     # Get to work!
     mapfcn = use_parallel_workers(m) ? pmap : map
-    mb_vec = pmap(var_name -> compute_scenario_means_bands(m, scen, output_var, var_name),
+    mb_vec = pmap(var_name -> scenario_means_bands(m, scen, output_var, var_name),
                   variable_names)
 
     # Re-assemble pmap outputs

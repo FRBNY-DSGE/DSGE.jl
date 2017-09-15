@@ -48,7 +48,7 @@ end
 
 function forecast_scenario_draw(m::AbstractModel, scen::Scenario, draw_index::Int)
     # Load targets
-    load_scenario_targets!(m, scen, scenario_vint, draw_index)
+    load_scenario_targets!(m, scen, draw_index)
 
     # If no instrument names provided, use all shocks
     if isempty(scen.instrument_names)
