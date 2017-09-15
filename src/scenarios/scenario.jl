@@ -38,10 +38,10 @@ n_targets(scen::Scenario) = length(scen.target_names)
 n_instruments(scen::Scenario) = length(scen.instrument_names)
 n_target_horizons(scen::Scenario) = size(scen.targets, 1)
 
-function empty_scenario(key::Symbol, description::String,
-                        target_names::Vector{Symbol},
-                        instrument_names::Vector{Symbol},
-                        vintage::String)
+function Scenario(key::Symbol, description::String,
+                  target_names::Vector{Symbol},
+                  instrument_names::Vector{Symbol},
+                  vintage::String)
     targets = DataFrame()
     instruments = DataFrame()
     return Scenario(key, description, target_names, instrument_names,
@@ -85,14 +85,14 @@ end
 
 """
 '''
-construct_switching_scenario(original, default, prob_enter, prob_exit)
+SwitchingScenario(original, default, prob_enter, prob_exit)
 '''
 Constructs an instance of `SwitchingScenario` from two scenarios and
 two vectors of entry/exit probabilities.
 """
-function construct_switching_scenario(original::Scenario, default::Scenario,
-                                      prob_enter::Vector{Float64},
-                                      prob_exit::Vector{Float64})
+function SwitchingScenario(original::Scenario, default::Scenario,
+                           prob_enter::Vector{Float64},
+                           prob_exit::Vector{Float64})
 
     @assert n_target_horizons(original) == length(prob_enter) == length(prob_exit)
 
