@@ -56,7 +56,7 @@ function load_scenario_targets!(m::AbstractModel, scen::Scenario, draw_index::In
 end
 
 function get_scenario_mb_input_file(m::AbstractModel, scen::AbstractScenario, output_var::Symbol)
-    input_file = get_scenario_filename(m, key, vint, output_var)
+    input_file = get_scenario_filename(m, scen, output_var)
     input_file = replace(input_file, "forecastut", "forecast")
     input_file = replace(input_file, "forecast4q", "forecast")
     return input_file
@@ -121,7 +121,7 @@ return all draws of and the appropriate reverse transform for `var_name`.
 function read_scenario_output(m::AbstractModel, scen::SingleScenario, class::Symbol, product::Symbol,
                               var_name::Symbol)
     # Get filename
-    filename = get_scenario_mb_input_file(m, scen, output_var)
+    filename = get_scenario_mb_input_file(m, scen, Symbol(product, class))
 
     fcast_series, transform = jldopen(filename, "r") do file
         # Read forecast outputs
