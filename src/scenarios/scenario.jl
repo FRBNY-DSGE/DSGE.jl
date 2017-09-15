@@ -1,7 +1,6 @@
-
 abstract AbstractScenario
-abstract SingleScenario <: AbstractScenario
 
+abstract SingleScenario <: AbstractScenario
 
 """
 ```
@@ -80,15 +79,16 @@ end
 function Base.show(io::IO, scen::SwitchingScenario)
     @printf io "%-12s %s\n" "Key:" scen.key
     @printf io "%-12s %s\n" "Description:" scen.description
-    @printf io "%-12s %s\n" "Default:" scen.original_key
+    @printf io "%-12s %s\n" "Original:" scen.original_key
     @printf io "%-12s %s\n" "Default:" scen.default_key
     @printf io "%-12s %s"   "Vintage:" scen.vintage
 end
 
 """
-'''
+```
 SwitchingScenario(key, original, default, prob_enter, prob_exit)
-'''
+```
+
 Constructs an instance of `SwitchingScenario` from two scenarios and
 two vectors of entry/exit probabilities.
 """
@@ -103,4 +103,21 @@ function SwitchingScenario(key::Symbol, original::Scenario, default::Scenario,
                                      prob_enter, prob_exit, original.vintage)
 
     return new_scenario
+end
+
+"""
+```
+type ScenarioAggregate
+```
+
+Composite type for aggregated alternative scenarios.
+"""
+type ScenarioAggregate
+    key::Symbol
+    description::String
+    scenario_groups::Vector{Vector{SingleScenario}}
+    proportions::Vector{Float64}
+    total_draws::Int
+    replace::Bool # whether to sample with replacement
+    vintage::String
 end
