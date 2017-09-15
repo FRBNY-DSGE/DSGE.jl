@@ -1,10 +1,6 @@
-abstract AbstractScenario
-
-abstract SingleScenario <: AbstractScenario
-
 """
 ```
-abstract Scenario
+abstract AbstractScenario
 ```
 
 Abstract supertype for all alternative scenarios.
@@ -15,6 +11,10 @@ Abstract supertype for all alternative scenarios.
 - `description::String`
 - `vintage::String`
 """
+abstract AbstractScenario
+
+abstract SingleScenario <: AbstractScenario
+
 type Scenario <: SingleScenario
     key::Symbol
     description::String
@@ -33,10 +33,6 @@ function Base.show(io::IO, scen::Scenario)
     @printf io "%-12s %s"   "Vintage:" scen.vintage
 end
 
-n_targets(scen::Scenario) = length(scen.target_names)
-n_instruments(scen::Scenario) = length(scen.instrument_names)
-n_target_horizons(scen::Scenario) = size(scen.targets, 1)
-
 function Scenario(key::Symbol, description::String,
                   target_names::Vector{Symbol},
                   instrument_names::Vector{Symbol},
@@ -46,6 +42,10 @@ function Scenario(key::Symbol, description::String,
     return Scenario(key, description, target_names, instrument_names,
                        targets, instruments, vintage)
 end
+
+n_targets(scen::Scenario) = length(scen.target_names)
+n_instruments(scen::Scenario) = length(scen.instrument_names)
+n_target_horizons(scen::Scenario) = size(scen.targets, 1)
 
 function targets_to_data(m::AbstractModel, scen::Scenario)
     df = DataFrame()
