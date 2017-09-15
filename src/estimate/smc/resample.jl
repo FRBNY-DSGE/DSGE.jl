@@ -56,7 +56,7 @@ function resample(weights::AbstractArray; method::Symbol=:systematic,
         # Map function if parallel
         if parallel
             parindx =
-            @parallel (vcat) for j in 1:n_part
+            @sync @parallel (vcat) for j in 1:n_part
                 subsys(j)
             end
         else
