@@ -85,8 +85,12 @@ function get_scenario_mb_metadata(m::AbstractModel, scen::SingleScenario, output
 end
 
 function get_scenario_mb_metadata(m::AbstractModel, agg::ScenarioAggregate, output_var::Symbol)
-    _, metadata = get_scenario_mb_input_file(m, agg.scenario_groups[1][1], output_var)
+    forecast_output_file = get_scenario_mb_input_file(m, agg.scenario_groups[1][1], output_var)
+    _, metadata = DSGE.get_mb_metadata(:mode, :none, output_var, forecast_output_file)
+
+    # Initialize start and end date
     start_date = date_forecast_start(m)
+    end_date   = maximum(keys(metadata[:date_inds]))
 
     for scen in vcat(agg.scenario_groups...)
         forecast_output_file = get_scenario_mb_input_file(m, scen, output_var)
@@ -99,9 +103,12 @@ function get_scenario_mb_metadata(m::AbstractModel, agg::ScenarioAggregate, outp
             error("All scenarios in agg must start from the same date")
         end
 
-        merge!(metadata[:date_inds], scen_dates)
+        # Update end date if necessary
+        end_date = max(end_date, maximum(keys(metadata[:date_inds])))
     end
 
+    dates = DSGE.quarter_range(start_date, end_date)
+    metadata[:date_inds] = OrderedDict{Date, Int}(d => i for (i, d) in enumerate(dates))
     metadata[:scenario_key] = agg.key
     metadata[:scenario_vint] = agg.vintage
 
@@ -140,14 +147,14 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
                               product::Symbol, var_name::Symbol)
     # Aggregate scenarios
     ngroups = length(agg.scenario_groups)
-    agg_draws = Vector{Array{Float64, 3}}(ngroups)
+    agg_draws = Vector{Matrix{Float64}}(ngroups)
 
     for (i, (group, pct)) in enumerate(zip(agg.scenario_groups, agg.proportions))
         # Read in draws for each scenario in group
         nscenarios = length(group)
-        group_draws = Vector{Array{Float64, 3}}(nscenarios)
-        for (j, scenario) in enumerate(group)
-            filename = get_scenario_mb_input_file(m, scen, output_var)
+        group_draws = Vector{Matrix{Float64}}(nscenarios)
+        for (j, scen) in enumerate(group)
+            filename = get_scenario_mb_input_file(m, scen, Symbol(product, class))
             group_draws[j] = jldopen(filename, "r") do file
                 read_forecast_output(file, class, product, var_name)
             end
@@ -169,13 +176,13 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
                  sample(1:actual_ndraws, remainder, replace = false))
         end
         sort!(sampled_inds)
-        agg_draws[i] = all_group_draws[sampled_inds, :, :]
+        agg_draws[i] = all_group_draws[sampled_inds, :]
     end
 
     fcast_series = cat(1, agg_draws...)
 
     # Parse transform
-    filename = get_scenario_mb_input_file(m, agg.scenario_groups[1], output_var)
+    filename = get_scenario_mb_input_file(m, agg.scenario_groups[1][1], Symbol(product, class))
     transform = jldopen(filename, "r") do file
         class_long = DSGE.get_class_longname(class)
         transforms = read(file, string(class_long) * "_revtransforms")
