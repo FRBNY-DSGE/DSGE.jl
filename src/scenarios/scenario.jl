@@ -96,7 +96,8 @@ function SwitchingScenario(key::Symbol, original::Scenario, default::Scenario,
                            prob_enter::Vector{Float64},
                            prob_exit::Vector{Float64})
 
-    @assert n_target_horizons(original) == length(prob_enter) == length(prob_exit)
+    @assert n_target_horizons(original) <= length(prob_enter)
+    @assert n_target_horizons(original) <= length(prob_exit)
 
     new_scenario = SwitchingScenario(key, original.description,
                                      original.key, default.key,
