@@ -1,5 +1,5 @@
 function get_scenario_input_file(m::AbstractModel, scen::Scenario)
-    basename = lowercase(string(scen.key)) * "_" * scen.vintage * ".jld"
+    basename = string(scen.key) * "_" * scen.vintage * ".jld"
     return inpath(m, "scenarios", basename)
 end
 
@@ -9,9 +9,9 @@ function get_scenario_filename(m::AbstractModel, scen::AbstractScenario, output_
                                directory::String = "")
     filestring_addl = Vector{String}()
     if isa(scen, SingleScenario)
-        push!(filestring_addl, "scen=" * lowercase(string(scen.key)))
+        push!(filestring_addl, "scen=" * string(scen.key))
     elseif isa(scen, ScenarioAggregate)
-        push!(filestring_addl, "sagg=" * lowercase(string(scen.key)))
+        push!(filestring_addl, "sagg=" * string(scen.key))
     end
     push!(filestring_addl, "svin=" * scen.vintage)
 
