@@ -1,7 +1,8 @@
 """
 ```
-simulate_switching(m, scen; verbose = :low)
+simulate_switching(m, scen::SwitchingScenario; verbose = :low)
 ```
+
 Simulate switching in and out of a default scenario for the
 SwitchingScenario scen. See `SwitchingScenario` for more
 info.
@@ -64,8 +65,9 @@ end
 ```
 switch(original, default, probs_enter, probs_exit)
 ```
+
 Simulate entry and exit from the original vector into the default one
-according to the specified probabilities
+according to the specified probabilities.
 """
 function switch(original::Matrix{Float64}, default::Matrix{Float64},
                 probs_enter::Vector{Float64}, probs_exit::Vector{Float64})
