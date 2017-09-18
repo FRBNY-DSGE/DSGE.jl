@@ -79,8 +79,8 @@ end
 function Base.show(io::IO, scen::SwitchingScenario)
     @printf io "%-12s %s\n" "Key:" scen.key
     @printf io "%-12s %s\n" "Description:" scen.description
-    @printf io "%-12s %s\n" "Original:" scen.original_key
-    @printf io "%-12s %s\n" "Default:" scen.default_key
+    @printf io "%-12s %s\n" "Original:" scen.original.key
+    @printf io "%-12s %s\n" "Default:" scen.default.key
     @printf io "%-12s %s"   "Vintage:" scen.vintage
 end
 
