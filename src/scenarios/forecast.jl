@@ -1,8 +1,12 @@
 function compute_scenario_system(m::AbstractModel, scen::Scenario)
     system = compute_system(m)
 
-    # Set D = 0
-    system.measurement.DD = zeros(size(system[:DD]))
+    # Set C = D = D_pseudo = 0
+    system[:CCC] = zeros(size(system[:CCC]))
+    system[:DD] = zeros(size(system[:DD]))
+    if !isnull(sys.pseudo_measurement)
+        system[:DD_pseudo] = zeros(size(system[:DD_pseudo]))
+    end
 
     # Zero out non-instrument shocks
     system.measurement.QQ = copy(system[:QQ])
