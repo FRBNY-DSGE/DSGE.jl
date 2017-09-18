@@ -28,9 +28,13 @@ function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
     s_0 = zeros(n_states_augmented(m))
     P_0 = zeros(n_states_augmented(m), n_states_augmented(m))
 
+    # Decide whether to draw states/shocks in smoother
+    uncertainty_override = forecast_uncertainty_override(m)
+    uncertainty = isnull(uncertainty_override) ? false : get(uncertainty_override)
+
     # Filter and smooth *deviations from baseline*
     kal = DSGE.filter(m, df, system, s_0, P_0)
-    _, forecastshocks, _ = smooth(m, df, system, kal, draw_states = false,
+    _, forecastshocks, _ = smooth(m, df, system, kal, draw_states = uncertainty,
                                   include_presample = true)
 
     # Assign shocks to instruments DataFrame
@@ -64,11 +68,14 @@ function forecast_scenario_draw(m::AbstractModel, scen::Scenario, draw_index::In
     forecaststates, forecastobs, forecastpseudo, _ =
         forecast(m, system, s_T, shocks = forecastshocks)
 
-    # Check forecasted output matches targets
-    for var in scen.target_names
-        var_index = m.observables[var]
-        horizon = n_target_horizons(scen)
-        @assert forecastobs[var_index, 1:horizon] ≈ scen.targets[var]
+    # Check forecasted output matches targets *if not using simulation smoother*
+    uncertainty_override = forecast_uncertainty_override(m)
+    if isnull(uncertainty_override) || !get(uncertainty_override)
+        for var in scen.target_names
+            var_index = m.observables[var]
+            horizon = n_target_horizons(scen)
+            @assert forecastobs[var_index, 1:horizon] ≈ scen.targets[var]
+        end
     end
 
     # Return output dictionary
