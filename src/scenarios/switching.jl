@@ -1,13 +1,17 @@
 """
 ```
-simulate_switching(m, scenario; verbose = :low)
+simulate_switching(m, scen; verbose = :low)
 ```
+Simulate switching in and out of a default scenario for the
+SwitchingScenario scen. See `SwitchingScenario` for more
+info.
 """
 function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
-                           verbose::Symbol = :low)
+                            verbose::Symbol = :low)
+
 
     if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
-        info("Simulating switching for $(scen.key)...")
+        info("Simulating switching for " * string(scen.key) * "...")
         println("Start time: " * string(now()))
         println("Outputs will be saved in " * rawpath(m, "scenarios"))
         tic()
@@ -26,20 +30,21 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
         default_draws  = load(default_output_files[output_var])["arr"]
 
         n_draws, n_vars, n_periods = size(original_draws)
+        n_default_draws = size(default_draws, 1)
+
         @assert n_vars == size(default_draws, 2)
         @assert n_periods <= size(default_draws, 3)
 
         results[output_var] = zeros(n_draws, n_vars, n_periods)
 
-        for i = 1:n_draws
-            j = rand(1:size(default_draws,1))
+        @parallel for i = 1:n_draws
+            j = rand(1:n_default_draws)
             results[output_var][i, :, :] = switch(original_draws[i,:,:], default_draws[j,:,:],
                                                   scen.probs_enter, scen.probs_exit)
         end
 
     end
 
-    #results = DSGE.assemble_block_outputs(results)
     output_files = get_scenario_output_files(m, scen, [:forecastobs, :forecastpseudo])
     write_scenario_forecasts(m, output_files, results, verbose = verbose)
 
@@ -47,16 +52,22 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
     if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
         switching_time = toq()
         switching_time_min = switching_time/60
-        println("\nTime elapsed: $switching_time_min minutes")
-        println("Switching complete: $(now())")
+        println("\nTime elapsed: " * string(switching_time_min) * " minutes")
+        println("Switching complete: " * string(now()))
     end
 
     return results
 
 end
 
-
-function switch(original::Array{Float64,2}, default::Array{Float64,2},
+"""
+```
+switch(original, default, probs_enter, probs_exit)
+```
+Simulate entry and exit from the original vector into the default one
+according to the specified probabilities
+"""
+function switch(original::Matrix{Float64}, default::Matrix{Float64},
                 probs_enter::Vector{Float64}, probs_exit::Vector{Float64})
 
     n_vars, n_periods = size(original)
@@ -76,7 +87,7 @@ function switch(original::Array{Float64,2}, default::Array{Float64,2},
     return output
 end
 
-function choose_last_period(probs::Array{Float64,1}, first_period::Int, n_periods::Int)
+function choose_last_period(probs::Vector{Float64}, first_period::Int, n_periods::Int)
     last_period = n_periods
 
     for t = first_period:n_periods
