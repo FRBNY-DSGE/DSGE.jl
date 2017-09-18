@@ -37,7 +37,7 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
 
         results[output_var] = zeros(n_draws, n_vars, n_periods)
 
-        @parallel for i = 1:n_draws
+        for i = 1:n_draws
             j = rand(1:n_default_draws)
             results[output_var][i, :, :] = switch(original_draws[i,:,:], default_draws[j,:,:],
                                                   scen.probs_enter, scen.probs_exit)
