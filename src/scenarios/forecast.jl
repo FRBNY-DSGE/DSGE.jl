@@ -29,6 +29,11 @@ function compute_scenario_system(m::AbstractModel, scen::Scenario)
         end
     end
 
+    # Error out if there is nonzero measurement error
+    if any(x -> x != 0, system[:EE])
+        error("Can't simulate scenarios under nonzero measurement error")
+    end
+
     return system
 end
 
@@ -80,12 +85,13 @@ end
 
 """
 ```
-forecast_scenario_draw(m, scen::Scenario, draw_index)
+forecast_scenario_draw(m, scen::Scenario, system, draw_index)
 ```
 
 Filter shocks and use them to forecast the `draw_index`th draw of `scen`.
 """
-function forecast_scenario_draw(m::AbstractModel, scen::Scenario, draw_index::Int)
+function forecast_scenario_draw(m::AbstractModel, scen::Scenario, system::System,
+                                draw_index::Int)
     # Load targets
     load_scenario_targets!(m, scen, draw_index)
 
@@ -95,7 +101,6 @@ function forecast_scenario_draw(m::AbstractModel, scen::Scenario, draw_index::In
     end
 
     # Filter shocks
-    system = compute_scenario_system(m, scen)
     forecastshocks = filter_shocks!(m, scen, system)
 
     # Forecast
@@ -166,14 +171,15 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
         tic()
     end
 
-    # Load modal parameters
+    # Load modal parameters and compute system
     params = load_draws(m, :mode; verbose = verbose)
     DSGE.update!(m, params)
+    system = compute_scenario_system(m, scen)
 
     # Get to work!
     ndraws = n_scenario_draws(m, scen)
     mapfcn = use_parallel_workers(m) ? pmap : map
-    forecast_outputs = mapfcn(draw_ind -> forecast_scenario_draw(m, scen, draw_ind),
+    forecast_outputs = mapfcn(draw_ind -> forecast_scenario_draw(m, scen, system, draw_ind),
                               1:ndraws)
 
     # Assemble outputs and write to file
