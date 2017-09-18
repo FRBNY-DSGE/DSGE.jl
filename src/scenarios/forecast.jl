@@ -1,3 +1,14 @@
+"""
+```
+compute_scenario_system(m, scen::Scenario)
+```
+
+Given the current model parameters, compute the state-space system corresponding
+to model `m` and alternative scenario `scen`. This function differs from
+`compute_system` in that the `CCC`, `DD`, and `DD_pseudo` vectors are set to
+zero (since we forecast in deviations from baseline) and shocks that are not in
+`scen.instrument_names` are zeroed out in the `QQ` matrix.
+"""
 function compute_scenario_system(m::AbstractModel, scen::Scenario)
     system = compute_system(m)
 
@@ -21,6 +32,19 @@ function compute_scenario_system(m::AbstractModel, scen::Scenario)
     return system
 end
 
+"""
+```
+filter_shocks!(m, scen, system::Scenario)
+```
+
+Given a scenario draw `scen`, back out the shocks necessary to hit
+`scen.targets` and put them into `scen.instruments`. This function returns
+`forecastshocks`, an `nshocks` x `horizon` matrix of filtered and smoothed
+shocks.
+
+This function checks `forecast_uncertainty_override(m)` for whether to smooth
+shocks using the simulation smoother.
+"""
 function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
     # Check applicability of this methodology
     @assert n_instruments(scen) >= n_targets(scen) "Number of instruments must be at least number of targets"
@@ -54,6 +78,13 @@ function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
     return forecastshocks
 end
 
+"""
+```
+forecast_scenario_draw(m, scen::Scenario, draw_index)
+```
+
+Filter shocks and use them to forecast the `draw_index`th draw of `scen`.
+"""
 function forecast_scenario_draw(m::AbstractModel, scen::Scenario, draw_index::Int)
     # Load targets
     load_scenario_targets!(m, scen, draw_index)
@@ -92,6 +123,14 @@ function forecast_scenario_draw(m::AbstractModel, scen::Scenario, draw_index::In
     return forecast_output
 end
 
+"""
+```
+write_scenario_forecasts(m, scenario_output_files, forecast_output;
+    verbose = :low)
+```
+
+Write scenario outputs in `forecast_output` to `values(scenario_output_files)`.
+"""
 function write_scenario_forecasts(m::AbstractModel,
                                   scenario_output_files::Dict{Symbol, String},
                                   forecast_output::Dict{Symbol, Array{Float64}};
@@ -104,11 +143,19 @@ function write_scenario_forecasts(m::AbstractModel,
         end
 
         if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:high]
-            println(" * Wrote $(basename(filepath))")
+            println(" * Wrote " * basename(filepath))
         end
     end
 end
 
+"""
+```
+forecast_scenario(m, scen::Scenario; verbose = :low)
+```
+
+Simulate all draws of `scen` using the modal parameters of the model `m`. This
+function returns a `Dict{Symbol, Array{Float64}`.
+"""
 function forecast_scenario(m::AbstractModel, scen::Scenario;
                            verbose::Symbol = :low)
     # Print
@@ -139,8 +186,8 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
     if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
         forecast_time = toq()
         forecast_time_min = forecast_time/60
-        println("\nTime elapsed: $forecast_time_min minutes")
-        println("Forecast complete: $(now())")
+        println("\nTime elapsed: " * string(forecast_time_min) * " minutes")
+        println("Forecast complete: " * string(now()))
     end
 
     return forecast_output
