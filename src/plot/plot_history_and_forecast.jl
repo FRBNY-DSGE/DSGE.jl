@@ -127,7 +127,8 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
 
         plots[var] = plot_history_and_forecast(var, hist, fcast;
                                                output_file = output_file, title = title,
-                                               ylabel = DSGE.series_ylabel(m, var, class),
+                                               ylabel = DSGE.series_ylabel(m, var, class;
+                                                                          fourquarter = fourquarter),
                                                kwargs...)
     end
     return plots
