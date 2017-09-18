@@ -1,3 +1,18 @@
+"""
+```
+scenario_means_bands(m, scen::AbstractScenario,
+    output_vars = [:forecastutobs, :forecastobs, :forecast4qobs,
+                   :forecastutpseudo, :forecastpseudo, :forecast4qpseudo];
+    verbose = :low, kwargs...)
+
+scenario_means_bands(m, scen::AbstractScenario, output_var; kwargs...)
+
+scenario_means_bands(m, scen::AbstractScenario, output_var, var_name; kwargs...)
+```
+
+Compute means and bands for model `m` and scenario `scen`. Keyword arguments are
+the same as for `compute_scenario_means_bands`.
+"""
 function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
                               output_vars::Vector{Symbol} = [:forecastutobs, :forecastutpseudo,
                                                              :forecastobs, :forecastpseudo,
@@ -80,6 +95,26 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_v
     compute_scenario_means_bands(fcast_series, transform, product; kwargs...)
 end
 
+"""
+```
+compute_scenario_means_bands(fcast_series, transform, product;
+    minimize = false, density_bands = [0.5, 0.6, 0.7, 0.8, 0.9])
+```
+
+### Inputs
+
+- `fcast_series::Matrix{Float64}`: `ndraws` x `horizon` matrix of untransformed
+  scenario forecasts
+- `transform::Function`: reverse transform (possibly no transform at all or 4Q)
+- `product::Symbol`: must be one of `:forecast`, `:forecastut`, or `:forecast4q`
+
+### Keyword Arguments
+
+- `minimize::Bool`: if `true`, choose shortest interval, otherwise just chop off
+  lowest and highest (percent/2)
+- `density_bands::Vector{Float64}`: a vector of percent values (between 0 and 1) for
+  which to compute density bands
+"""
 function compute_scenario_means_bands(fcast_series::Matrix{Float64}, transform::Function,
                                       product::Symbol; minimize::Bool = false,
                                       density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9])

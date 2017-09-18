@@ -1,8 +1,65 @@
+"""
+```
+get_scenario_input_file(m, scen::Scenario)
+```
+
+Get file name of raw scenario targets from `inpath(m, \"scenarios\")`.
+"""
 function get_scenario_input_file(m::AbstractModel, scen::Scenario)
     basename = string(scen.key) * "_" * scen.vintage * ".jld"
     return inpath(m, "scenarios", basename)
 end
 
+"""
+```
+n_scenario_draws(m, scen::Scenario)
+```
+
+Return the number of draws for `scen`, determined using
+`get_scenario_input_file(m, scen)`.
+"""
+function n_scenario_draws(m::AbstractModel, scen::Scenario)
+    input_file = get_scenario_input_file(m, scen)
+    draws = h5open(input_file, "r") do file
+        dataset = HDF5.o_open(file, "arr")
+        size(dataset)[1]
+    end
+    return draws
+end
+
+"""
+```
+load_scenario_targets!(m, scen::Scenario, draw_index)
+```
+
+Add the targets from the `draw_index`th draw of the raw scenario targets to
+`scen.targets`.
+"""
+function load_scenario_targets!(m::AbstractModel, scen::Scenario, draw_index::Int)
+    path = get_scenario_input_file(m, scen)
+    raw_targets = squeeze(h5read(path, "arr", (draw_index, :, :)), 1)
+    target_inds = load(path, "target_indices")
+
+    @assert collect(keys(target_inds)) == scen.target_names "Target indices in $path do not match target names in $(scen.key)"
+
+    for (target_name, target_index) in target_inds
+        scen.targets[target_name] = raw_targets[target_index, :]
+    end
+
+    return scen.targets
+end
+
+"""
+```
+get_scenario_filename(m, scen::AbstractScenario, output_var;
+    pathfcn = rawpath, fileformat = :jld, directory = "")
+```
+
+Get scenario file name of the form
+`pathfcn(m, \"scenarios\", output_var * filestring * string(fileformat))`. If
+`directory` is provided (nonempty), then the same file name in that directory
+will be returned instead.
+"""
 function get_scenario_filename(m::AbstractModel, scen::AbstractScenario, output_var::Symbol;
                                pathfcn::Function = rawpath,
                                fileformat::Symbol = :jld,
@@ -23,6 +80,14 @@ function get_scenario_filename(m::AbstractModel, scen::AbstractScenario, output_
     return path
 end
 
+"""
+```
+get_scenario_output_files(m, scen::SingleScenario, output_vars)
+```
+
+Return a `Dict{Symbol, String}` mapping `output_vars` to the raw simulated
+scenario outputs for `scen`.
+"""
 function get_scenario_output_files(m::AbstractModel, scen::SingleScenario,
                                    output_vars::Vector{Symbol})
     output_files = Dict{Symbol, String}()
@@ -32,29 +97,14 @@ function get_scenario_output_files(m::AbstractModel, scen::SingleScenario,
     return output_files
 end
 
-function n_scenario_draws(m::AbstractModel, scen::SingleScenario)
-    input_file = get_scenario_input_file(m, scen)
-    draws = h5open(input_file, "r") do file
-        dataset = HDF5.o_open(file, "arr")
-        size(dataset)[1]
-    end
-    return draws
-end
+"""
+```
+get_scenario_mb_input_file(m, scen::AbstractScenario, output_var)
+```
 
-function load_scenario_targets!(m::AbstractModel, scen::Scenario, draw_index::Int)
-    path = get_scenario_input_file(m, scen)
-    raw_targets = squeeze(h5read(path, "arr", (draw_index, :, :)), 1)
-    target_inds = load(path, "target_indices")
-
-    @assert collect(keys(target_inds)) == scen.target_names "Target indices in $path do not match target names in $(scen.key)"
-
-    for (target_name, target_index) in target_inds
-        scen.targets[target_name] = raw_targets[target_index, :]
-    end
-
-    return scen.targets
-end
-
+Call `get_scenario_filename` while replacing `forecastut` and `forecast4q` in
+`output_var` with `forecast`.
+"""
 function get_scenario_mb_input_file(m::AbstractModel, scen::AbstractScenario, output_var::Symbol)
     input_file = get_scenario_filename(m, scen, output_var)
     input_file = replace(input_file, "forecastut", "forecast")
@@ -62,6 +112,15 @@ function get_scenario_mb_input_file(m::AbstractModel, scen::AbstractScenario, ou
     return input_file
 end
 
+"""
+```
+get_scenario_mb_output_file(m, scen::AbstractScenario, output_var;
+    directory = "")
+```
+
+Call `get_scenario_filename` while tacking on `\"mb\"` to the front of the base
+file name.
+"""
 function get_scenario_mb_output_file(m::AbstractModel, scen::AbstractScenario, output_var::Symbol;
                                      directory::String = "")
     fullfile = get_scenario_filename(m, scen, output_var, pathfcn = workpath, directory = directory)
@@ -70,10 +129,12 @@ end
 
 """
 ```
-get_scenario_mb_metadata(m, scen, output_var)
+get_scenario_mb_metadata(m, scen::SingleScenario, output_var)
+
+get_scenario_mb_metadata(m, agg::ScenarioAggregate, output_var)
 ```
 
-Returns the `MeansBands` metadata dictionary for the `SingleScenario` `scen`.
+Return the `MeansBands` metadata dictionary for `scen`.
 """
 function get_scenario_mb_metadata(m::AbstractModel, scen::SingleScenario, output_var::Symbol)
     forecast_output_file = get_scenario_mb_input_file(m, scen, output_var)
@@ -117,13 +178,13 @@ end
 
 """
 ```
-read_scenario_output(m, scen, class, product, var_name)
+read_scenario_output(m, scen::SingleScenario, class, product, var_name)
 
-read_scenario_output(m, agg, class, product, var_name)
+read_scenario_output(m, agg::ScenarioAggregate, class, product, var_name)
 ```
 
-Given either `scen::SingleScenario` or `agg::ScenarioAggregate`, read in and
-return all draws of and the appropriate reverse transform for `var_name`.
+Given either `scen` or `agg`, read in and return all draws of and the
+appropriate reverse transform for `var_name`.
 """
 function read_scenario_output(m::AbstractModel, scen::SingleScenario, class::Symbol, product::Symbol,
                               var_name::Symbol)
@@ -194,7 +255,7 @@ end
 
 """
 ```
-read_scenario_mb(m, scen, output_var; directory = "")
+read_scenario_mb(m, scen::AbstractScenario, output_var; directory = "")
 ```
 
 Read in an alternative scenario `MeansBands` object.
