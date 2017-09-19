@@ -118,11 +118,11 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
                                   forecast_string = forecast_string,
                                   fileformat = plot_extension())
         end
+        ylabel = series_ylabel(m, var, class, fourquarter = fourquarter)
 
         plots[var] = plot_history_and_forecast(var, hist, fcast;
                                                output_file = output_file, title = title,
-                                               ylabel = DSGE.series_ylabel(m, var, class;
-                                                                          fourquarter = fourquarter),
+                                               ylabel = ylabel,
                                                kwargs...)
     end
     return plots
@@ -135,8 +135,8 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
                                    end_date::Date = forecast.means[end, :date],
                                    hist_label::String = "History",
                                    forecast_label::String = "Forecast",
-                                   hist_color::Colorant = RGBA(0., 0., 0., 1.),
-                                   forecast_color::Colorant = RGBA(1., 0., 0., 1.),
+                                   hist_color::Colorant = colorant"black",
+                                   forecast_color::Colorant = colorant"red",
                                    linestyle::Symbol = :solid,
                                    bands_color::Colorant = colorant"blue",
                                    bands_pcts::Vector{String} = union(which_density_bands(history, uniquify = true),
