@@ -79,11 +79,13 @@ function get_date_limit_indices(start_date::Date, end_date::Date,
 end
 
 function has_nonidentical_bands(var::Symbol, mb::MeansBands)
+    nanapprox(x, y) = x ≈ y || (isnan(x) && isnan(y))
+
     df = mb.bands[var]
     cols = setdiff(names(df), [:date])
     for t = 1:size(df, 1)
         bandvals = convert(Matrix, df[t, cols])
-        if !all(x -> x ≈ mb.means[t, var], bandvals)
+        if !all(x -> nanapprox(x, mb.means[t, var]), bandvals)
             return true
         end
     end
