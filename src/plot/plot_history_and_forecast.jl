@@ -12,10 +12,11 @@ plot_history_and_forecast(var, history, forecast; output_file = "",
     title = "", start_date = Nullable{Date}(), end_date = Nullable{Date}(),
     hist_label = \"History\", forecast_label = \"Forecast\",
     hist_color = :black, forecast_color = :red, linestyle = :solid,
-    bands_color = RGBA(0, 0, 1, 0.1),
+    bands_color = :blue,
     bands_pcts = union(which_density_bands(history, uniquify = true),
                        which_density_bands(forecast, uniquify = true)),
-    bands_style = :fan, tick_size = 5, ylabel = "", legend = :best,
+    bands_style = :fan, label_bands = false, transparent_bands = true,
+    tick_size = 5, ylabel = "", legend = :best,
     plot_handle = plot())
 ```
 
@@ -53,6 +54,8 @@ forecast, you can specify the `bands_style` and `bands_pcts`.
 - `bands_color::Colorant`
 - `bands_pcts::Vector{String}`
 - `bands_style::Symbol`: either `:fan` or `:line`
+- `label_bands::Bool`
+- `transparent_bands::Bool`
 - `tick_size::Int`: x-axis (time) tick size in units of years
 - `ylabel::String`
 - `legend`
@@ -135,10 +138,12 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
                                    hist_color::Colorant = RGBA(0., 0., 0., 1.),
                                    forecast_color::Colorant = RGBA(1., 0., 0., 1.),
                                    linestyle::Symbol = :solid,
-                                   bands_color::Colorant = RGBA(0., 0., 1., 0.1),
+                                   bands_color::Colorant = colorant"blue",
                                    bands_pcts::Vector{String} = union(which_density_bands(history, uniquify = true),
                                                                       which_density_bands(forecast, uniquify = true)),
                                    bands_style::Symbol = :fan,
+                                   label_bands::Bool = false,
+                                   transparent_bands::Bool = true,
                                    tick_size::Int = 5,
                                    ylabel::String = "",
                                    legend = :best,
@@ -169,7 +174,8 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
         bands_inds = get_bands_indices(var, history, forecast, hist_inds, fcast_inds)
         if !isempty(bands_inds)
             plot_bands!(p, var, combined, bands_style, bands_color,
-                        linestyle = linestyle, pcts = bands_pcts, indices = bands_inds)
+                        linestyle = linestyle, pcts = bands_pcts, indices = bands_inds,
+                        label_bands = label_bands, transparent_bands = transparent_bands)
         end
     end
 
@@ -215,23 +221,46 @@ function plot_bands!(p::Plots.Plot, var::Symbol, mb::MeansBands,
                      style::Symbol, color::Colorant;
                      linestyle::Symbol = :solid,
                      pcts::Vector{String} = which_density_bands(mb, uniquify = true),
+                     label_bands::Bool = false,
+                     transparent_bands::Bool = true,
                      indices = Colon())
 
     datenums = map(quarter_date_to_number, mb.means[:date])
 
+    # Sort percentages from largest to smallest
+    sort!(pcts, rev = true)
+
     if style == :fan
-        for pct in pcts
+        for (i, pct) in enumerate(pcts)
+            # Determine label
+            label = label_bands ? pct * " Bands" : ""
+
+            # Determine color
+            if transparent_bands
+                pct_color = RGBA(color, 0.1*i)
+                α = 0.1
+            else
+                pct_color = weighted_color_mean(0.1*i, color, colorant"white")
+                α = 1.0
+            end
+
+            # Plot
             plot!(p, datenums[indices], mb.bands[var][indices, Symbol(pct, " UB")],
                   fillto = mb.bands[var][indices, Symbol(pct, " LB")],
-                  label = "", color = color, α = 0.10)
+                  label = label, color = pct_color, α = α)
         end
 
     elseif style == :line
         for pct in pcts
+            # Determine labels
+            upper_label = label_bands ? pct * " UB" : ""
+            lower_label = label_bands ? pct * " LB" : ""
+
+            # Plot
             plot!(p, datenums[indices], mb.bands[var][indices, Symbol(pct, " UB")],
-                  label = "", color = color, linewidth = 2, linestyle = linestyle)
+                  label = upper_label, color = color, linewidth = 2, linestyle = linestyle)
             plot!(p, datenums[indices], mb.bands[var][indices, Symbol(pct, " LB")],
-                  label = "", color = color, linewidth = 2, linestyle = linestyle)
+                  label = lower_label, color = color, linewidth = 2, linestyle = linestyle)
         end
 
     else
