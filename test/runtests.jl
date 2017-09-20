@@ -30,6 +30,7 @@ my_tests = [
             "forecast/forecast_one",
             "analysis/means_bands",
             "plot/plot",
+            "scenarios/scenario",
             "scenarios/forecast",
             "scenarios/switching",
             "scenarios/drivers"
