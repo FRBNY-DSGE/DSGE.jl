@@ -21,7 +21,7 @@ overrides[:subset] = mktemp()[1]
 @test get_forecast_filename(m, :mode, :none, :histstates) == joinpath(dir, "forecast", "raw", "histstates_cond=none_para=mode_test.jld")
 @test get_forecast_filename(m, :mode, :none, :histstates; pathfcn = workpath) == joinpath(dir, "forecast", "work", "histstates_cond=none_para=mode_test.jld")
 @test get_forecast_filename(m, :mode, :none, :histstates; forecast_string = "test") == joinpath(dir, "forecast", "raw", "histstates_cond=none_fcid=test_para=mode_test.jld")
-@test get_forecast_filename(m, :mode, :none, :histstates; fileformat = "h5") == joinpath(dir, "forecast", "raw", "histstates_cond=none_para=mode_test.h5")
+@test get_forecast_filename(m, :mode, :none, :histstates; fileformat = :h5) == joinpath(dir, "forecast", "raw", "histstates_cond=none_para=mode_test.h5")
 
 # get_forecast_filestring_addl
 @test DSGE.get_forecast_filestring_addl(:mode, :none) == ["para=mode", "cond=none"]
