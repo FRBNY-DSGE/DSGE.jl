@@ -126,3 +126,13 @@ type ScenarioAggregate <: AbstractScenario
     replace::Bool # whether to sample with replacement
     vintage::String
 end
+
+function Base.show(io::IO, agg::ScenarioAggregate)
+    @printf io "%-24s %s\n" "Key:" agg.key
+    @printf io "%-24s %s\n" "Description:" agg.description
+    @printf io "%-24s %s\n" "Scenario Groups:" map(g -> map(x -> x.key, g), agg.scenario_groups)
+    @printf io "%-24s %s\n" "Proportions:" agg.proportions
+    @printf io "%-24s %s\n" "Total Draws:" agg.total_draws
+    @printf io "%-24s %s\n" "Sample with Replacement:" agg.replace
+    @printf io "%-24s %s"   "Vintage:" agg.vintage
+end
