@@ -25,19 +25,23 @@ m <= Setting(:forecast_block_size, 5)
 # Plot history and forecast
 plot_history_and_forecast(m, :obs_nominalrate, :obs, :full, :none,
                           bdd_and_unbdd = true,
-                          start_date = DSGE.quartertodate("2007-Q1"))
+                          start_date = DSGE.quartertodate("2007-Q1"),
+                          verbose = :none)
 
 # Plot forecast comparison
 plot_forecast_comparison(m, m, :obs_nominalrate, :obs, :full, :none,
                          bdd_and_unbdd = true,
-                         start_date = DSGE.quartertodate("2007-Q1"))
+                         start_date = DSGE.quartertodate("2007-Q1"),
+                         verbose = :none)
 
 # Plot shock decomposition
-plot_shock_decomposition(m, :obs_nominalrate, :obs, :full, :none)
+plot_shock_decomposition(m, :obs_nominalrate, :obs, :full, :none, verbose = :none)
 
 # Plot IRF
-plot_impulse_response(m, :rm_sh, collect(keys(m.observables)), :obs, :full, :none)
-plot_impulse_response(m, :rm_sh, collect(keys(m.observables)), :obs, :full, :none, flip = true)
+plot_impulse_response(m, :rm_sh, collect(keys(m.observables)), :obs, :full, :none,
+                      verbose = :none)
+plot_impulse_response(m, :rm_sh, collect(keys(m.observables)), :obs, :full, :none,
+                      flip = true, verbose = :none)
 
 # Hair plot
 df = load_data(m)
@@ -45,4 +49,4 @@ output_file = joinpath(saveroot(m), "hairplot__obs_nominalrate.pdf")
 hist_mb = read_mb(m, :full, :none, :histobs)
 fcast_mb = read_mb(m, :full, :none, :bddforecastobs)
 hair_plot(:obs_nominalrate, df, [hist_mb], [fcast_mb];
-          output_file = output_file)
+          output_file = output_file, verbose = :none)
