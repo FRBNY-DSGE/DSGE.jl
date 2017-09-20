@@ -14,7 +14,7 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
     old_fcast_label = \"Old Forecast\", new_fcast_label = \"New Forecast\",
     old_hist_color = :grey, new_hist_color = :black,
     old_fcast_color = :blue, new_fcast_color = :red,
-    tick_size = 2, ylabel = "", legend = :best)
+    tick_size = 2, ylabel = "", legend = :best, verbose = :low)
 ```
 
 ### Inputs
@@ -54,6 +54,7 @@ plot_forecast_comparison(var, histold, fcastold, histnew, fcastnew;
 - `tick_size::Int`: x-axis (time) tick size in units of years
 - `ylabel::String`
 - `legend`
+- `verbose::Symbol`
 
 **Methods 1 and 2 only:**
 
@@ -141,7 +142,8 @@ function plot_forecast_comparison(var::Symbol,
                                   new_fcast_color::Colorant = colorant"red",
                                   tick_size::Int = 2,
                                   ylabel::String = "",
-                                  legend = :best)
+                                  legend = :best,
+                                  verbose::Symbol = :low)
 
     # Initialize plot
     p = Plots.plot(legend = legend, title = title)
@@ -170,7 +172,7 @@ function plot_forecast_comparison(var::Symbol,
                                   common_kwargs...)
 
     # Save if output_file provided
-    save_plot(p, output_file)
+    save_plot(p, output_file, verbose = verbose)
 
     return p
 end
