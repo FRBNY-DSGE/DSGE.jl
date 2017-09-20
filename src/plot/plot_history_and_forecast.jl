@@ -17,8 +17,8 @@ plot_history_and_forecast(var, history, forecast; output_file = "",
     bands_pcts = union(which_density_bands(history, uniquify = true),
                        which_density_bands(forecast, uniquify = true)),
     bands_style = :fan, label_bands = false, transparent_bands = true,
-    tick_size = 5, ylabel = "", legend = :best,
-    plot_handle = plot())
+    tick_size = 5, ylabel = "", legend = :best, plot_handle = plot(),
+    verbose = :low)
 ```
 
 Plot `var` or `vars` from `history` and `forecast`, possibly read in using
@@ -61,6 +61,7 @@ forecast, you can specify the `bands_style` and `bands_pcts`.
 - `ylabel::String`
 - `legend`
 - `plot_handle::Plots.Plot`: a plot handle to add `history` and `forecast` to
+- `verbose::Symbol`
 
 **Methods 1 and 2 only:**
 
@@ -164,7 +165,8 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
                                    tick_size::Int = 5,
                                    ylabel::String = "",
                                    legend = :best,
-                                   plot_handle::Plots.Plot = plot(legend = legend))
+                                   plot_handle::Plots.Plot = plot(legend = legend),
+                                   verbose::Symbol = :low)
     # Concatenate MeansBands
     combined = cat(history, forecast)
 
@@ -206,7 +208,7 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     date_ticks!(p, start_date, end_date, tick_size)
 
     # Save if output_file provided
-    save_plot(p, output_file)
+    save_plot(p, output_file, verbose = verbose)
 
     return p
 end

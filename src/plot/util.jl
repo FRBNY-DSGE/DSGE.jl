@@ -189,11 +189,14 @@ function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
     end
 end
 
-function save_plot(p::Plots.Plot, output_file::String = "")
+function save_plot(p::Plots.Plot, output_file::String = ""; verbose::Symbol = :low)
     if !isempty(output_file)
         output_dir = dirname(output_file)
         !isdir(output_dir) && mkpath(output_dir)
         Plots.savefig(output_file)
-        println("Saved $output_file")
+
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("Saved $output_file")
+        end
     end
 end
