@@ -110,7 +110,7 @@ module DSGE
 
         # plot/
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
-        plot_forecast_comparison, plot_shock_decomposition,
+        plot_forecast_comparison, plot_shock_decomposition, plot_scenario,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
