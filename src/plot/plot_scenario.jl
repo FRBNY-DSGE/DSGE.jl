@@ -65,7 +65,7 @@ function plot_scenario(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
     # Get titles if not provided
     if isempty(titles)
         detexify_title = typeof(Plots.backend()) == Plots.GRBackend
-        titles = map(var -> DSGE.describe_series(m, var, class, detexify = detexify_title), vars)
+        titles = map(var -> describe_series(m, var, class, detexify = detexify_title), vars)
     end
 
     # Loop through variables
@@ -74,11 +74,11 @@ function plot_scenario(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
         output_file = if isempty(plotroot)
             ""
         else
-            get_scenario_filename(m, scen, Symbol(fcast_prod, "_", DSGE.detexify(var)),
+            get_scenario_filename(m, scen, Symbol(fcast_prod, "_", detexify(var)),
                                   pathfcn = figurespath,
-                                  fileformat = DSGE.plot_extension())
+                                  fileformat = plot_extension())
         end
-        ylabel = DSGE.series_ylabel(m, var, class, untrans = untrans, fourquarter = fourquarter)
+        ylabel = series_ylabel(m, var, class, untrans = untrans, fourquarter = fourquarter)
         ylabel = ylabel * " (deviations from baseline)"
 
         plots[var] = plot_history_and_forecast(var, hist, fcast;

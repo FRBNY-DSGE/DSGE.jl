@@ -20,7 +20,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
                               verbose::Symbol = :low,
                               kwargs...)
     # Print
-    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
         info("Computing means and bands for scenario = " * string(scen.key) * "...")
         println("Start time: " * string(now()))
@@ -29,7 +29,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
     end
 
     for output_var in output_vars
-        if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:high]
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
             print("Computing " * string(output_var) * "...")
         end
 
@@ -44,13 +44,13 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
             write(file, "mb", mb)
         end
 
-        if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:high]
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
             println("wrote " * basename(output_file))
         end
     end
 
     # Print
-    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         total_mb_time     = toq()
         total_mb_time_min = total_mb_time/60
 
@@ -123,12 +123,12 @@ function compute_scenario_means_bands(fcast_series::Matrix{Float64}, transform::
 
     # Reverse transform
     if product == :forecast4q
-        transform4q_scen = DSGE.get_scenario_transform4q(transform)
+        transform4q_scen = get_scenario_transform4q(transform)
 
-        y0s = if transform4q_scen == DSGE.loggrowthtopct_4q_approx
+        y0s = if transform4q_scen == loggrowthtopct_4q_approx
             # Sum growth rates y_{t-3}, y_{t-2}, y_{t-1}, and y_t
             zeros(3)
-        elseif transform4q_scen == DSGE.logleveltopct_4q_approx
+        elseif transform4q_scen == logleveltopct_4q_approx
             # Divide log levels y_t by y_{t-4}
             zeros(4)
         else
@@ -138,7 +138,7 @@ function compute_scenario_means_bands(fcast_series::Matrix{Float64}, transform::
         transformed_series = reverse_transform(fcast_series, transform4q_scen;
                                                fourquarter = true, y0s = y0s)
     elseif product == :forecast
-        transform_scen = DSGE.get_scenario_transform(transform)
+        transform_scen = get_scenario_transform(transform)
         transformed_series = reverse_transform(fcast_series, transform_scen; y0 = 0.0)
 
     else

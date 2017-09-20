@@ -95,7 +95,7 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
     # Get titles if not provided
     if isempty(titles)
         detexify_title = typeof(Plots.backend()) == Plots.GRBackend
-        titles = map(var -> DSGE.describe_series(m, var, class, detexify = detexify_title), vars)
+        titles = map(var -> describe_series(m, var, class, detexify = detexify_title), vars)
     end
 
     # Loop through variables
@@ -112,7 +112,7 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
 
         plots[var] = plot_shock_decomposition(var, mbs..., groups;
                                               output_file = output_file, title = title,
-                                              ylabel = DSGE.series_ylabel(m, var, class),
+                                              ylabel = series_ylabel(m, var, class),
                                               kwargs...)
     end
     return plots
