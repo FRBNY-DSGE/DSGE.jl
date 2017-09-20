@@ -194,7 +194,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
         else
             vcat(fill(NaN, nperiods_mb1), mb2vars[var])
         end
-        na2nan!(bands)
+        na2nan!(bands[var])
     end
 
     # compute metadata

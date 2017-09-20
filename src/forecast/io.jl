@@ -200,7 +200,8 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                     # :histobs just refers to data, so we only write one draw
                     # (as all draws would be the same)
                     @assert !isempty(df) "df cannot be empty if trying to write :histobs"
-                    data = df_to_matrix(m, df; include_presample = false)
+                    df1 = df[date_mainsample_start(m) .<= df[:date] .<= date_mainsample_end(m), :]
+                    data = df_to_matrix(m, df1)
                     write(file, "arr", data)
 
                 else

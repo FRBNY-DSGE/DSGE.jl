@@ -131,7 +131,7 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
             ""
         else
             get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
-                                  Symbol(forecast_prod, "_", detexify(var)),
+                                  Symbol(fcast_prod, "_", detexify(var)),
                                   forecast_string = forecast_string,
                                   fileformat = plot_extension())
         end
