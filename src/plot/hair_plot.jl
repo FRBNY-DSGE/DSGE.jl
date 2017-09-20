@@ -4,7 +4,7 @@ hair_plot(var, df, histories, forecasts; kwargs...)
 
 hair_plot(var, df, initial_values, forecasts; output_file = "", hist_label = \"Realized\",
     forecast_label = \"Forecasts\", forecast_palette = Symbol(), forecast_color = :red,
-    legend = :best)
+    legend = :best, verbose = :low)
 ```
 
 ### Inputs
@@ -26,6 +26,7 @@ hair_plot(var, df, initial_values, forecasts; output_file = "", hist_label = \"R
   according to this palette. Otherwise they will all be `forecast_color`
 - `forecast_color::Colorant`
 - `legend`
+- `verbose::Symbol`
 
 ### Output
 
@@ -46,7 +47,8 @@ function hair_plot(var::Symbol, df::DataFrame,
                    forecast_label::String = "Forecasts",
                    forecast_palette::Symbol = Symbol(),
                    forecast_color::Colorant = colorant"red",
-                   legend = :best)
+                   legend = :best,
+                   verbose::Symbol = :low)
     # Dates
     datenums   = map(quarter_date_to_number, df[:date])
     date_ticks = get_date_ticks(df[:date])
@@ -74,7 +76,7 @@ function hair_plot(var::Symbol, df::DataFrame,
     end
 
     # Save if `output_file` provided
-    save_plot(p, output_file)
+    save_plot(p, output_file, verbose = verbose)
 
     return p
 end
