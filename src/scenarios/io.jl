@@ -138,7 +138,7 @@ Return the `MeansBands` metadata dictionary for `scen`.
 """
 function get_scenario_mb_metadata(m::AbstractModel, scen::SingleScenario, output_var::Symbol)
     forecast_output_file = get_scenario_mb_input_file(m, scen, output_var)
-    _, mb_metadata = DSGE.get_mb_metadata(:mode, :none, output_var, forecast_output_file)
+    _, mb_metadata = get_mb_metadata(:mode, :none, output_var, forecast_output_file)
     mb_metadata[:scenario_key] = scen.key
     mb_metadata[:scenario_vint] = scen.vintage
 
@@ -147,7 +147,7 @@ end
 
 function get_scenario_mb_metadata(m::AbstractModel, agg::ScenarioAggregate, output_var::Symbol)
     forecast_output_file = get_scenario_mb_input_file(m, agg.scenario_groups[1][1], output_var)
-    _, metadata = DSGE.get_mb_metadata(:mode, :none, output_var, forecast_output_file)
+    _, metadata = get_mb_metadata(:mode, :none, output_var, forecast_output_file)
 
     # Initialize start and end date
     start_date = date_forecast_start(m)
@@ -168,7 +168,7 @@ function get_scenario_mb_metadata(m::AbstractModel, agg::ScenarioAggregate, outp
         end_date = max(end_date, maximum(keys(metadata[:date_inds])))
     end
 
-    dates = DSGE.quarter_range(start_date, end_date)
+    dates = quarter_range(start_date, end_date)
     metadata[:date_inds] = OrderedDict{Date, Int}(d => i for (i, d) in enumerate(dates))
     metadata[:scenario_key] = agg.key
     metadata[:scenario_vint] = agg.vintage
@@ -196,9 +196,9 @@ function read_scenario_output(m::AbstractModel, scen::SingleScenario, class::Sym
         fcast_series = read_forecast_output(file, class, product, var_name)
 
         # Parse transform
-        class_long = DSGE.get_class_longname(class)
+        class_long = get_class_longname(class)
         transforms = read(file, string(class_long) * "_revtransforms")
-        transform = DSGE.parse_transform(transforms[var_name])
+        transform = parse_transform(transforms[var_name])
 
         fcast_series, transform
     end
@@ -249,9 +249,9 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
     # Parse transform
     filename = get_scenario_mb_input_file(m, agg.scenario_groups[1][1], Symbol(product, class))
     transform = jldopen(filename, "r") do file
-        class_long = DSGE.get_class_longname(class)
+        class_long = get_class_longname(class)
         transforms = read(file, string(class_long) * "_revtransforms")
-        DSGE.parse_transform(transforms[var_name])
+        parse_transform(transforms[var_name])
     end
 
     return fcast_series, transform

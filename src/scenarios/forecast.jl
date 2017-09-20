@@ -66,7 +66,7 @@ function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
     uncertainty = isnull(uncertainty_override) ? false : get(uncertainty_override)
 
     # Filter and smooth *deviations from baseline*
-    kal = DSGE.filter(m, df, system, s_0, P_0)
+    kal = filter(m, df, system, s_0, P_0)
     _, forecastshocks, _ = smooth(m, df, system, kal, draw_states = uncertainty,
                                   include_presample = true)
 
@@ -138,11 +138,11 @@ function write_scenario_forecasts(m::AbstractModel,
     for var in [:forecastobs, :forecastpseudo]
         filepath = scenario_output_files[var]
         jldopen(filepath, "w") do file
-            DSGE.write_forecast_metadata(m, file, var)
+            write_forecast_metadata(m, file, var)
             write(file, "arr", forecast_output[var])
         end
 
-        if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:high]
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
             println(" * Wrote " * basename(filepath))
         end
     end
@@ -159,7 +159,7 @@ function returns a `Dict{Symbol, Array{Float64}`.
 function forecast_scenario(m::AbstractModel, scen::Scenario;
                            verbose::Symbol = :low)
     # Print
-    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         info("Forecasting scenario = " * string(scen.key) * "...")
         println("Start time: " * string(now()))
         println("Forecast outputs will be saved in " * rawpath(m, "scenarios"))
@@ -173,7 +173,7 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
 
     # Load modal parameters and compute system
     params = load_draws(m, :mode; verbose = verbose)
-    DSGE.update!(m, params)
+    update!(m, params)
     system = compute_scenario_system(m, scen)
 
     # Get to work!
@@ -184,12 +184,12 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
 
     # Assemble outputs and write to file
     forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
-    forecast_output = DSGE.assemble_block_outputs(forecast_outputs)
+    forecast_output = assemble_block_outputs(forecast_outputs)
     output_files = get_scenario_output_files(m, scen, [:forecastobs, :forecastpseudo])
     write_scenario_forecasts(m, output_files, forecast_output, verbose = verbose)
 
     # Print
-    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         forecast_time = toq()
         forecast_time_min = forecast_time/60
         println("\nTime elapsed: " * string(forecast_time_min) * " minutes")

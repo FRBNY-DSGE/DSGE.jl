@@ -19,7 +19,7 @@ function quarter_number_to_date(datenum::Real)
 
     y = convert(Int, floor(datenum))
     q = convert(Int, (datenum % 1) / 0.25) + 1
-    return DSGE.quartertodate("$y-Q$q")
+    return quartertodate("$y-Q$q")
 end
 
 function get_date_ticks(start_date::Date, end_date::Date;
@@ -39,7 +39,7 @@ end
 
 function shockdec_date_to_x(date::Date, start_date::Date)
     start_x = 0.5
-    quarters_diff = DSGE.subtract_quarters(date, start_date)
+    quarters_diff = subtract_quarters(date, start_date)
     x = start_x + quarters_diff
     return x
 end
