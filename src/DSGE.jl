@@ -6,6 +6,7 @@ module DSGE
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
+    using StatsBase: sample
     import Calculus
     import Optim: optimize, Optimizer
 
@@ -100,6 +101,13 @@ module DSGE
         write_meansbands_tables_timeseries, write_means_tables_shockdec, prepare_meansbands_table_irf,
         write_meansbands_tables_all,
 
+        # scenarios/
+        AbstractScenario, SingleScenario, Scenario, SwitchingScenario, ScenarioAggregate,
+        n_targets, n_instruments, n_target_horizons, targets_to_data,
+        compute_scenario_system, filter_shocks!, forecast_scenario, simulate_switching, scenario_means_bands,
+        get_scenario_input_file, n_scenario_draws, get_scenario_filename, get_scenario_output_files,
+        read_scenario_output, get_scenario_mb_input_file, get_scenario_mb_output_file, read_scenario_mb,
+
         # plot/
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition,
@@ -164,6 +172,12 @@ module DSGE
     include("analysis/io.jl")
     include("analysis/util.jl")
 
+    include("scenarios/scenario.jl")
+    include("scenarios/io.jl")
+    include("scenarios/forecast.jl")
+    include("scenarios/switching.jl")
+    include("scenarios/transform.jl")
+
     include("plot/util.jl")
     include("plot/plot_parameters.jl")
     include("plot/plot_impulse_response.jl")
@@ -171,6 +185,7 @@ module DSGE
     include("plot/hair_plot.jl")
     include("plot/plot_forecast_comparison.jl")
     include("plot/plot_shock_decomposition.jl")
+    include("plot/plot_scenario.jl")
 
     include("models/financial_frictions.jl")
 
