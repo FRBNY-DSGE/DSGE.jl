@@ -39,10 +39,6 @@ if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
     semicond_df = load_data(m; cond_type=:semi, try_disk=false, verbose=:none)
     semicond_data = df_to_matrix(m, semicond_df; cond_type=:semi)
     @test_matrix_approx_eq exp_semicond_data semicond_data
-
-    # include_presample flag
-    data = df_to_matrix(m, df; include_presample = false)
-    @test_matrix_approx_eq exp_data[:, 3:end] data
 else
     warn("Skipping load_data test because FRED_API_KEY not present")
 end
