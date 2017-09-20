@@ -45,10 +45,8 @@ function Scenario(key::Symbol, description::String,
                   target_names::Vector{Symbol},
                   instrument_names::Vector{Symbol},
                   vintage::String)
-    targets = DataFrame()
-    instruments = DataFrame()
-    return Scenario(key, description, target_names, instrument_names,
-                       targets, instruments, vintage)
+    Scenario(key, description, target_names, instrument_names,
+             DataFrame(), DataFrame(), vintage)
 end
 
 n_targets(scen::Scenario) = length(scen.target_names)
@@ -60,9 +58,7 @@ function targets_to_data(m::AbstractModel, scen::Scenario)
 
     # Assign dates
     horizons = n_target_horizons(scen)
-    start_date = date_forecast_start(m)
-    end_date = DSGE.iterate_quarters(date_forecast_start(m), horizons - 1)
-    df[:date] = DSGE.quarter_range(start_date, end_date)
+    df[:date] = quarter_range(date_forecast_start(m), date_forecast_end(m))
 
     for var in keys(m.observables)
         df[var] = if var in scen.target_names
@@ -85,11 +81,20 @@ type SwitchingScenario <: SingleScenario
 
     function SwitchingScenario(key, description, vintage, original, default,
                                probs_enter, probs_exit)
+        if length(probs_enter) != length(probs_exit)
+            error("Lengths of probs_enter and probs_exit must be the same")
+        end
         if !all(p -> 0.0 <= p <= 1.0, probs_enter)
             error("Elements of probs_enter must be between 0 and 1")
         end
         if !all(p -> 0.0 <= p <= 1.0, probs_exit)
             error("Elements of probs_exit must be between 0 and 1")
+        end
+        if n_target_horizons(original) < length(probs_enter)
+            error("Original scenario must have at least as many horizons as probs_enter")
+        end
+        if n_target_horizons(default) < length(probs_enter)
+            error("Default scenario must have at least as many horizons as probs_enter")
         end
         return new(key, description, vintage, original, default, probs_enter, probs_exit)
     end
@@ -119,14 +124,8 @@ function SwitchingScenario(key::Symbol, original::Scenario, default::Scenario,
                            description::String = original.description,
                            vintage::String = original.vintage)
 
-    @assert n_target_horizons(original) <= length(probs_enter)
-    @assert n_target_horizons(original) <= length(probs_exit)
-
-    new_scenario = SwitchingScenario(key, description, vintage,
-                                     original, default,
-                                     probs_enter, probs_exit)
-
-    return new_scenario
+    SwitchingScenario(key, description, vintage, original, default,
+                      probs_enter, probs_exit)
 end
 
 """
