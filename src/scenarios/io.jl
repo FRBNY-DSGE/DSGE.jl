@@ -226,15 +226,19 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
 
         # Sample
         actual_ndraws = size(all_group_draws, 1)
-        desired_ndraws = convert(Int, round(pct * scen.total_draws))
+        desired_ndraws = convert(Int, round(pct * agg.total_draws))
 
         sampled_inds = if agg.replace
-            rand(1:actual_ndraws, desired_ndraws, replace = true)
+            sample(1:actual_ndraws, desired_ndraws, replace = true)
         else
-            quotient  = convert(Int, floor(actual_ndraws / desired_ndraws))
-            remainder = actual_ndraws % desired_ndraws
-            vcat(repmat(1:actual_ndraws, quotient),
-                 sample(1:actual_ndraws, remainder, replace = false))
+            if desired_ndraws == 0
+                Int[]
+            else
+                quotient  = convert(Int, floor(actual_ndraws / desired_ndraws))
+                remainder = actual_ndraws % desired_ndraws
+                vcat(repmat(1:actual_ndraws, quotient),
+                     sample(1:actual_ndraws, remainder, replace = false))
+            end
         end
         sort!(sampled_inds)
         agg_draws[i] = all_group_draws[sampled_inds, :]
