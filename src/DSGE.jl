@@ -63,6 +63,20 @@ module DSGE
         # statespace.jl
         Measurement, Transition, System, compute_system,
 
+        # data/
+        load_data, load_data_levels, load_cond_data_levels, load_fred_data,
+        transform_data, save_data, get_data_filename,
+        df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
+        oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
+        loggrowthtopct_percapita, loggrowthtopct, logleveltopct_annualized,
+        loggrowthtopct_annualized_percapita, loggrowthtopct_annualized, logleveltopct_annualized_percapita,
+        logleveltopct_annualized_approx, loggrowthtopct_4q_approx, logleveltopct_4q_approx,
+        parse_data_series, collect_data_transforms, reverse_transform,
+        subtract_quarters, iterate_quarters,
+
+        # solve/
+        gensys, solve,
+
         # estimate/
         simulated_annealing, combined_optimizer, LBFGS_wrapper,
         filter, likelihood, posterior, posterior!,
@@ -77,25 +91,6 @@ module DSGE
         get_forecast_input_file, get_forecast_output_files, get_forecast_filename,
         read_forecast_output,
 
-        # models/
-        init_parameters!, steadystate!, init_observable_mappings!,
-        Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, eqcond, measurement, pseudo_measurement,
-        shock_groupings,
-
-        # solve/
-        gensys, solve,
-
-        # data/
-        load_data, load_data_levels, load_cond_data_levels, load_fred_data,
-        transform_data, save_data, get_data_filename,
-        df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
-        oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
-        loggrowthtopct_percapita, loggrowthtopct,
-        loggrowthtopct_annualized_percapita, loggrowthtopct_annualized, logleveltopct_annualized_percapita,
-        logleveltopct_annualized,
-        parse_data_series, collect_data_transforms, reverse_transform,
-        subtract_quarters, iterate_quarters,
-
         # analysis/
         find_density_bands, moment_tables, means_bands, means_bands_all, compute_means_bands, MeansBands,
         meansbands_matrix_all, meansbands_matrix, read_mb, read_bdd_and_unbdd_mb,
@@ -108,6 +103,11 @@ module DSGE
         # plot/
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition,
+
+        # models/
+        init_parameters!, steadystate!, init_observable_mappings!,
+        Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, eqcond, measurement, pseudo_measurement,
+        shock_groupings,
 
         # util
         @test_matrix_approx_eq, @test_matrix_approx_eq_eps
