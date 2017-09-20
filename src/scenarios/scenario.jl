@@ -33,6 +33,14 @@ function Base.show(io::IO, scen::Scenario)
     @printf io "%-12s %s"   "Vintage:" scen.vintage
 end
 
+"""
+```
+Scenario(key, description, target_names, instrument_names, vintage)
+```
+
+Scenario constructor. If `instrument_names` is empty, then all model shocks will
+be used.
+"""
 function Scenario(key::Symbol, description::String,
                   target_names::Vector{Symbol},
                   instrument_names::Vector{Symbol},
@@ -74,6 +82,17 @@ type SwitchingScenario <: SingleScenario
     default::SingleScenario
     probs_enter::Vector{Float64}
     probs_exit::Vector{Float64}
+
+    function SwitchingScenario(key, description, vintage, original, default,
+                               probs_enter, probs_exit)
+        if !all(p -> 0.0 <= p <= 1.0, probs_enter)
+            error("Elements of probs_enter must be between 0 and 1")
+        end
+        if !all(p -> 0.0 <= p <= 1.0, probs_exit)
+            error("Elements of probs_exit must be between 0 and 1")
+        end
+        return new(key, description, vintage, original, default, probs_enter, probs_exit)
+    end
 end
 
 function Base.show(io::IO, scen::SwitchingScenario)
@@ -112,10 +131,15 @@ end
 
 """
 ```
-type ScenarioAggregate
+ScenarioAggregate(key, description, scenario_groups, proportions, total_draws,
+    replace, vintage)
 ```
 
-Composite type for aggregated alternative scenarios.
+Composite type for aggregated `SingleScenario`s. Scenarios in each group in
+`scenario_groups::Vector{Vector{SingleScenario}}` are sampled into the aggregate
+with the probability of the corresponding entry in `proportions` (whose values
+must sum to 1). The field `replace` indicates whether to sample with
+replacement.
 """
 type ScenarioAggregate <: AbstractScenario
     key::Symbol
@@ -125,6 +149,21 @@ type ScenarioAggregate <: AbstractScenario
     total_draws::Int
     replace::Bool # whether to sample with replacement
     vintage::String
+
+    function ScenarioAggregate(key, description, scenario_groups, proportions,
+                               total_draws, replace, vintage)
+        if length(scenario_groups) != length(proportions)
+            error("Lengths of scenario_groups and proportions must be the same")
+        end
+        if !all(p -> 0.0 <= p <= 1.0, proportions)
+            error("Elements of proportions must be between 0 and 1")
+        end
+        if sum(proportions) != 1.0
+            error("Elements of proportions must sum to 1")
+        end
+        return new(key, description, scenario_groups, proportions, total_draws,
+                   replace, vintage)
+    end
 end
 
 function Base.show(io::IO, agg::ScenarioAggregate)
