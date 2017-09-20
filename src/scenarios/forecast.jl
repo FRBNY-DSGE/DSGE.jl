@@ -95,11 +95,6 @@ function forecast_scenario_draw(m::AbstractModel, scen::Scenario, system::System
     # Load targets
     load_scenario_targets!(m, scen, draw_index)
 
-    # If no instrument names provided, use all shocks
-    if isempty(scen.instrument_names)
-        scen.instrument_names = collect(keys(m.exogenous_shocks))
-    end
-
     # Filter shocks
     forecastshocks = filter_shocks!(m, scen, system)
 
@@ -169,6 +164,11 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
         println("Start time: " * string(now()))
         println("Forecast outputs will be saved in " * rawpath(m, "scenarios"))
         tic()
+    end
+
+    # If no instrument names provided, use all shocks
+    if isempty(scen.instrument_names)
+        scen.instrument_names = collect(keys(m.exogenous_shocks))
     end
 
     # Load modal parameters and compute system
