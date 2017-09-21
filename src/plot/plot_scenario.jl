@@ -34,7 +34,7 @@ specified by `key` and `vint`.
 function plot_scenario(m::AbstractModel, var::Symbol, class::Symbol, scen::AbstractScenario;
                        title::String = "", kwargs...)
 
-    plots = plot_scenario(m, [var], class, scen,
+    plots = plot_scenario(m, [var], class, scen;
                           titles = isempty(title) ? String[] : [title],
                           kwargs...)
     return plots[var]
