@@ -98,6 +98,9 @@ function forecast_scenario_draw(m::AbstractModel, scen::Scenario, system::System
     # Filter shocks
     forecastshocks = filter_shocks!(m, scen, system)
 
+    # Scale shocks if desired
+    forecastshocks = scen.shock_scaling * forecastshocks
+
     # Forecast
     s_T = zeros(n_states_augmented(m))
     forecaststates, forecastobs, forecastpseudo, _ =
@@ -109,7 +112,7 @@ function forecast_scenario_draw(m::AbstractModel, scen::Scenario, system::System
         for var in scen.target_names
             var_index = m.observables[var]
             horizon = n_target_horizons(scen)
-            @assert forecastobs[var_index, 1:horizon] ≈ scen.targets[var]
+            @assert forecastobs[var_index, 1:horizon] ≈ scen.shock_scaling * scen.targets[var]
         end
     end
 

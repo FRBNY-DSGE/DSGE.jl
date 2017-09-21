@@ -129,4 +129,19 @@ aggrep1 = ScenarioAggregate(:aggrep1, "Test Scenario Aggregate", [SingleScenario
 aggrep2 = ScenarioAggregate(:aggrep2, "Test Scenario Aggregate", [SingleScenario[def], SingleScenario[alt]],
                             [0.0, 1.0], 20, true, "REF")
 
+# Simulate dummy scenario with shock scaling
+scale = Scenario(:altscen, "Test Shock Scaling Scenario", [:obs_gdp, :obs_cpi], [:g_sh, :rm_sh], "REF",
+                 shock_scaling = 2.0)
+forecast_scenario(m, scale, verbose = :none)
+
+expect = jldopen(get_scenario_input_file(m, scale), "r") do file
+    2.0 * read(file, "arr")
+end
+actual = jldopen(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "r") do file
+    dict = read(file, "observable_indices")
+    inds = map(var -> dict[var], def.target_names)
+    read(file, "arr")[:, inds, :]
+end
+@test expect ≈ actual
+
 nothing

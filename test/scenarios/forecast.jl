@@ -45,3 +45,18 @@ for var in scen.target_names
     i = m.observables[var]
     @test scen.targets[var] ≈ forecastobs[i, :]
 end
+
+# Test scenario with shock scaling
+scale = Scenario(:scaledscen, "Test Shock Scaling Scenario", [:obs_gdp, :obs_cpi], [:g_sh, :rm_sh], "REF",
+                 shock_scaling = 2.0)
+scale.targets = scen.targets
+
+forecastshocks = filter_shocks!(m, scale, sys)
+for var in scale.target_names
+    i = m.observables[var]
+    @test scale.targets[var] == scen.targets[var]
+end
+for var in scale.instrument_names
+    i = m.exogenous_shocks[var]
+    @test scale.instruments[var] == forecastshocks[i, :]
+end
