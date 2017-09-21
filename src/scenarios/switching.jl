@@ -34,7 +34,7 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
         n_default_draws = size(default_draws, 1)
 
         @assert n_vars == size(default_draws, 2)
-        @assert n_periods <= size(default_draws, 3)
+        @assert length(scen.probs_enter) == n_periods <= size(default_draws, 3)
 
         results[output_var] = zeros(n_draws, n_vars, n_periods)
 

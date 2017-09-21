@@ -29,10 +29,9 @@ scale = Scenario(:scaledscen, "Test Shock Scaling Scenario", [:obs_gdp, :obs_cpi
 @test scale.shock_scaling == 2.0
 
 # SwitchingScenario
+@test_throws ErrorException SwitchingScenario(:switch, scen, scen, [1.0], [1.0, 1.0])
 @test_throws ErrorException SwitchingScenario(:switch, scen, scen, [-1.0, 1.0], [1.0, 1.0])
 @test_throws ErrorException SwitchingScenario(:switch, scen, scen, [1.0, 1.0], [-1.0, 1.0])
-@test_throws ErrorException SwitchingScenario(:switch, scen, scen, [1.0], [1.0, 1.0])
-@test_throws ErrorException SwitchingScenario(:switch, scen, scen, ones(3), zeros(3))
 
 # ScenarioAggregate
 @test_throws ErrorException ScenarioAggregate(:agg, "Test Scenario Aggregate", [SingleScenario[scen]],

@@ -98,12 +98,6 @@ type SwitchingScenario <: SingleScenario
         if !all(p -> 0.0 <= p <= 1.0, probs_exit)
             error("Elements of probs_exit must be between 0 and 1")
         end
-        if n_target_horizons(original) < length(probs_enter)
-            error("Original scenario must have at least as many horizons as probs_enter")
-        end
-        if n_target_horizons(default) < length(probs_enter)
-            error("Default scenario must have at least as many horizons as probs_enter")
-        end
         return new(key, description, vintage, original, default, probs_enter, probs_exit)
     end
 end
