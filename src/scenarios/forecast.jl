@@ -111,8 +111,8 @@ function forecast_scenario_draw(m::AbstractModel, scen::Scenario, system::System
     if isnull(uncertainty_override) || !get(uncertainty_override)
         for var in scen.target_names
             var_index = m.observables[var]
-            horizon = n_target_horizons(scen)
-            @assert forecastobs[var_index, 1:horizon] ≈ scen.shock_scaling * scen.targets[var]
+            horizon = min(forecast_horizons(m), n_target_horizons(scen))
+            @assert forecastobs[var_index, 1:horizon] ≈ scen.shock_scaling * scen.targets[1:horizon, var]
         end
     end
 
