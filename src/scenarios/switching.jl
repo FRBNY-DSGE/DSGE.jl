@@ -20,15 +20,14 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
 
     original_output_files = get_scenario_output_files(m, scen.original,
                                                       [:forecastobs, :forecastpseudo])
-
     default_output_files = get_scenario_output_files(m, scen.default,
                                                      [:forecastobs, :forecastpseudo])
 
     results = Dict{Symbol, Array{Float64}}()
     for output_var in [:forecastobs, :forecastpseudo]
-        # these forecasts are n_draws x n_vars x n_periods
-        original_draws = load(original_output_files[output_var])["arr"]
-        default_draws  = load(default_output_files[output_var])["arr"]
+        # Read in original and default draws
+        original_draws = load(original_output_files[output_var], "arr")
+        default_draws  = load(default_output_files[output_var], "arr")
 
         n_draws, n_vars, n_periods = size(original_draws)
         n_default_draws = size(default_draws, 1)
@@ -36,16 +35,17 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
         @assert n_vars == size(default_draws, 2)
         @assert length(scen.probs_enter) == n_periods <= size(default_draws, 3)
 
+        # Simulate switching
         results[output_var] = zeros(n_draws, n_vars, n_periods)
-
         for i = 1:n_draws
             j = rand(1:n_default_draws)
-            results[output_var][i, :, :] = switch(original_draws[i,:,:], default_draws[j,:,:],
+            results[output_var][i, :, :] = switch(original_draws[i, :, :], default_draws[j, :, :],
                                                   scen.probs_enter, scen.probs_exit)
         end
 
     end
 
+    # Write outputs
     output_files = get_scenario_output_files(m, scen, [:forecastobs, :forecastpseudo])
     write_scenario_forecasts(m, output_files, results, verbose = verbose)
 
@@ -58,7 +58,6 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
     end
 
     return results
-
 end
 
 """
@@ -75,29 +74,28 @@ function switch(original::Matrix{Float64}, default::Matrix{Float64},
     n_vars, n_periods = size(original)
     output = zeros(n_vars, n_periods)
 
-    # find period we switch into the original from the default
-    period_in  = choose_last_period(probs_enter, 1, n_periods)
-    # spend 1 period in the original scenario at least
-    period_out = choose_last_period(probs_exit, period_in + 2, n_periods)
+    # Find period of switch from default to original
+    period_in = choose_switch_period(probs_enter, 1)
 
-    output[:,1:period_in]            = default[:,1:period_in]
-    output[:,period_in+1:period_out] = original[:,1:(period_out-period_in)]
-    if period_out < n_periods
-        output[:, period_out+1:n_periods] = default[:,period_out+1:n_periods]
-    end
+    # Find period of switch from original to default
+    # Start in period_in + 1 s.t. at least 1 period is spent in the original scenario
+    period_out = choose_switch_period(probs_exit, period_in + 1)
+
+    output[:, 1:(period_in-1)]          = default[:, 1:(period_in-1)]
+    output[:, period_in:(period_out-1)] = original[:, 1:(period_out-period_in)]
+    output[:, period_out:n_periods]     = default[:, period_out:n_periods]
 
     return output
 end
 
-function choose_last_period(probs::Vector{Float64}, first_period::Int, n_periods::Int)
-    last_period = n_periods
+function choose_switch_period(probs::Vector{Float64}, first_period::Int)
+    n_periods = length(probs)
 
     for t = first_period:n_periods
         if rand() < probs[t]
-            last_period = t-1
-            return last_period
+            return t
         end
     end
 
-    return last_period
+    return n_periods + 1
 end
