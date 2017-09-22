@@ -146,6 +146,13 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
                   out_product::Symbol = Symbol(),
                   forecast_string::String = "")
 
+    # If either mb1 or mb2 is empty, return just the other one
+    if isempty(mb1)
+        return mb2
+    elseif isempty(mb2)
+        return mb1
+    end
+
     # Assert class, cond type and para are the same
     @assert get_class(mb1) == get_class(mb2)
     @assert get_cond_type(mb1) == get_cond_type(mb2)
@@ -159,6 +166,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
 
     # compute means field
     means = vcat(mb1.means, mb2.means)
+    na2nan!(means)
 
     # compute bands field
     bands = Dict{Symbol, DataFrame}()
@@ -177,6 +185,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
         else
             vcat(fill(NaN, nperiods_mb1), mb2vars[var])
         end
+        na2nan!(bands)
     end
 
     # compute metadata
@@ -457,7 +466,7 @@ function which_density_bands(mb::MeansBands; uniquify=false, ordered=true)
 
     # return both upper and lower bands, or just percents, as desired
     strs = if uniquify
-        sort(unique([split(x, " ")[1] for x in [lowers; uppers]]))
+        sort([convert(String, split(x, " ")[1]) for x in lowers])
     else
         [lowers; uppers]
     end
@@ -540,17 +549,27 @@ ordered as follows: [68\% lower, 50\% lower, 50\% upper, 68\% upper, mean].
   observables, `var` would be an element of `names(m.observables)`. If
   it stores pseudo-observables, `var` would be the name of a
   pseudo-observable defined in the pseudo-measurement equation.
+
+### Keyword Arguments
+
+- `bands_pcts::Vector{String}`: vector of (uniquified) band percentiles to
+  include in the table
 """
-function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol)
+function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol;
+                                             bands_pcts::Vector{String} = which_density_bands(mb, uniquify = true))
 
     @assert get_product(mb) in [:hist, :forecast, :hist4q, :forecast4q, :bddforecast,
          :bddforecast4q, :trend, :dettrend] "prepare_meansbands_table_timeseries can only be used for time-series products"
-
     @assert var in get_vars_means(mb) "$var is not stored in this MeansBands object"
+
+    # Get bands
+    uppers = sort!([pct * " UB" for pct in bands_pcts], rev = true)
+    lowers = sort!([pct * " LB" for pct in bands_pcts])
+    my_bands = map(Symbol, vcat(lowers, uppers))
 
     # Extract this variable from Means and bands
     means = mb.means[[:date, var]]
-    bands = mb.bands[var][[:date; map(Symbol, which_density_bands(mb))]]
+    bands = mb.bands[var][[:date; my_bands]]
 
     # Join so mean is on far right and date is on far left
     df = join(bands, means, on = :date)
@@ -613,9 +632,9 @@ end
 
 """
 ```
-prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBands,
-           mb_dettrend::MeansBands, var::Symbol; [shocks = Vector{Symbol}()],
-           [mb_forecast = MeansBands()], [mb_hist = MeansBands()])
+prepare_means_table_shockdec(mb_shockdec, mb_trend, mb_dettrend, var;
+    shocks = get_shocks(mb_shockdec), mb_forecast = MeansBands(),
+    mb_hist = MeansBands(), detexify = true, groups = [])
 ```
 
 Returns a `DataFrame` representing a detrended shock decompostion for
@@ -624,6 +643,7 @@ contributions of each shock in `shocks` (or all shocks, if the keyword
 argument is omitted) and the deterministic trend.
 
 ### Inputs
+
 - `mb_shockdec::MeansBands`: a `MeansBands` object for a shock decomposition
 - `mb_trend::MeansBands`: a `MeansBands` object for a trend  product.
 - `mb_dettrend::MeansBands`: a `MeansBands` object for a deterministic trend
@@ -631,75 +651,90 @@ argument is omitted) and the deterministic trend.
 - `var::Symbol`: name of economic variable for which to return the means and bands table
 
 ### Keyword Arguments
+
 - `shocks::Vector{Symbol}`: If `mb` is a shock decomposition, this is
   an optional list of shocks to print to the table. If omitted, all
   shocks will be printed.
 - `mb_forecast::MeansBands`: a `MeansBands` object for a forecast.
 - `mb_hist::MeansBands`: a `MeansBands` object for smoothed states.
+- `detexify::Bool`: whether to remove Unicode characters from shock names
+- `groups::Vector{ShockGroup}`: if provided, shocks will be grouped accordingly
 """
 function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBands,
                                       mb_dettrend::MeansBands, var::Symbol;
-                                      shocks::Vector{Symbol} = Vector{Symbol}(),
+                                      shocks::Vector{Symbol} = get_shocks(mb_shockdec),
                                       mb_forecast::MeansBands = MeansBands(),
-                                      mb_hist::MeansBands = MeansBands())
+                                      mb_hist::MeansBands = MeansBands(),
+                                      detexify_shocks::Bool = true,
+                                      groups::Vector{ShockGroup} = ShockGroup[])
 
     @assert get_product(mb_shockdec) == :shockdec "The first argument must be a MeansBands object for a shockdec"
     @assert get_product(mb_trend)    == :trend    "The second argument must be a MeansBands object for a trend"
     @assert get_product(mb_dettrend) == :dettrend "The third argument must be a MeansBands object for a deterministic trend"
 
-    # Print all shocks by default
-    if isempty(shocks)
-        shocks = DSGE.get_shocks(mb_shockdec)
-    end
-
-    # get the variable-shock combinations we want to print
+    # Get the variable-shock combinations we want to print
     varshocks = Symbol["$var" * DSGE_SHOCKDEC_DELIM * "$shock" for shock in shocks]
 
-    # fetch the columns corresponding to varshocks
+    # Fetch the columns corresponding to varshocks
     df_shockdec = mb_shockdec.means[union([:date], varshocks)]
 
     df_trend    = mb_trend.means[[:date, var]]
     df_dettrend = mb_dettrend.means[[:date, var]]
 
-    # line up dates between trend, dettrend and shockdec
+    # Line up dates between trend, dettrend and shockdec
     df_shockdec = join(df_shockdec, df_trend, on = :date, kind = :inner)
     rename!(df_shockdec, var, :trend)
     df_shockdec = join(df_shockdec, df_dettrend, on = :date, kind = :inner)
     rename!(df_shockdec, var, :dettrend)
 
-    # de-trend each shock's contribution and add to the output dataframe
+    # De-trend each shock's contribution and add to the output dataframe
     df = DataFrame(date = df_shockdec[:date])
     for col in setdiff(names(df_shockdec), [:date, :trend])
         df[col] = df_shockdec[col] - df_shockdec[:trend]
     end
 
-    # add the de-trended deterministic trend
+    # Add the de-trended deterministic trend
     df_shockdec[:dettrend] = df_shockdec[:dettrend] - df_shockdec[:trend]
 
-    # rename columns to just the shock names
+    # Rename columns to just the shock names
     map(x -> rename!(df, x, parse_mb_colname(x)[2]), setdiff(names(df), [:date, :trend, :dettrend]))
 
-    # remove Unicode characters from shock names
-    for x in setdiff(names(df), [:date, :trend, :dettrend])
-        x_detexed = detexify(x)
-        if x != x_detexed
-            rename!(df, x, x_detexed)
-        end
-    end
-
-    # last, if mb_forecast and mb_hist are passed in, add the
-    # detrended time series mean of var to the table
+    # If mb_forecast and mb_hist are passed in, add the detrended time series
+    # mean of var to the table
     if !isempty(mb_forecast) && !isempty(mb_hist)
 
         mb_timeseries = cat(mb_hist, mb_forecast)
 
-        # truncate to just the dates we want
-        startdate = df[:date][1]
-        enddate   = df[:date][end]
+        # Truncate to just the dates we want
+        startdate = df[1, :date]
+        enddate   = df[end, :date]
         df_mean   = mb_timeseries.means[startdate .<= mb_timeseries.means[:date] .<= enddate, [:date, var]]
 
         df_shockdec = join(df_shockdec, df_mean, on = :date, kind = :inner)
         df[:detrendedMean] = df_shockdec[var] - df_shockdec[:trend]
+    end
+
+    # Group shocks if desired
+    nperiods = size(df, 1)
+    v0 = zeros(nperiods)
+    for group in groups
+        # Sum shock values for each group
+        shock_vectors = [df[shock] for shock in group.shocks]
+        shock_sum = reduce(+, v0, shock_vectors)
+        df[Symbol(group.name)] = shock_sum
+
+        # Delete original (ungrouped) shocks from df
+        delete!(df, group.shocks)
+    end
+
+    # Remove Unicode characters from shock names
+    if detexify_shocks
+        for x in setdiff(names(df), [:date, :trend, :dettrend])
+            x_detexed = detexify(x)
+            if x != x_detexed
+                rename!(df, x, x_detexed)
+            end
+        end
     end
 
     return df

@@ -1,11 +1,9 @@
 """
 ```
-hair_plot(var, df, histories, forecasts; output_file = "", hist_label = \"Realized\",
-    forecast_label = \"Forecasts\", forecast_palette = Symbol(), forecast_color = :black,
-    legend = :best)
+hair_plot(var, df, histories, forecasts; kwargs...)
 
 hair_plot(var, df, initial_values, forecasts; output_file = "", hist_label = \"Realized\",
-    forecast_label = \"Forecasts\", forecast_palette = Symbol(), forecast_color = :black,
+    forecast_label = \"Forecasts\", forecast_palette = Symbol(), forecast_color = :red,
     legend = :best)
 ```
 
@@ -26,7 +24,7 @@ hair_plot(var, df, initial_values, forecasts; output_file = "", hist_label = \"R
 - `forecast_label::String`
 - `forecast_palette::Symbol`: if specified, the hair colors will be chosen
   according to this palette. Otherwise they will all be `forecast_color`
-- `forecast_color::Symbol`
+- `forecast_color::Colorant`
 - `legend`
 
 ### Output
@@ -35,17 +33,10 @@ hair_plot(var, df, initial_values, forecasts; output_file = "", hist_label = \"R
 """
 function hair_plot(var::Symbol, df::DataFrame,
                    histories::Vector{MeansBands}, forecasts::Vector{MeansBands};
-                   output_file::String = "",
-                   hist_label::String = "Realized",
-                   forecast_label::String = "Forecasts",
-                   forecast_palette::Symbol = Symbol(),
-                   forecast_color::Colorant = RGBA(1., 0., 0., 1.),
-                   legend = :best)
+                   kwargs...)
 
     initial_values = map(history -> history.means[end, var], histories)
-    hair_plot(var, df, initial_values, forecasts,
-              output_file = output_file, hist_label = hist_label, forecast_label = forecast_label,
-              forecast_palette = forecast_palette, forecast_color = forecast_color, legend = legend)
+    hair_plot(var, df, initial_values, forecasts; kwargs...)
 end
 
 function hair_plot(var::Symbol, df::DataFrame,
@@ -54,7 +45,7 @@ function hair_plot(var::Symbol, df::DataFrame,
                    hist_label::String = "Realized",
                    forecast_label::String = "Forecasts",
                    forecast_palette::Symbol = Symbol(),
-                   forecast_color::Colorant = RGBA(1., 0., 0., 1.),
+                   forecast_color::Colorant = colorant"red",
                    legend = :best)
     # Dates
     datenums   = map(quarter_date_to_number, df[:date])
@@ -83,12 +74,7 @@ function hair_plot(var::Symbol, df::DataFrame,
     end
 
     # Save if `output_file` provided
-    if !isempty(output_file)
-        output_dir = dirname(output_file)
-        !isdir(output_dir) && mkdir(output_dir)
-        Plots.savefig(output_file)
-        println("Saved $output_file")
-    end
+    save_plot(p, output_file)
 
     return p
 end

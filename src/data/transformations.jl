@@ -196,6 +196,63 @@ end
 
 """
 ```
+loggrowthtopct(y)
+```
+
+Transform from annualized quarter-over-quarter log growth rates to annualized
+quarter-over-quarter percent change.
+
+### Note
+
+This should only be used in Model 510, which has the core PCE inflation
+observable in annualized log growth rates.
+"""
+function loggrowthtopct(y)
+    100. * (exp(y/100.) - 1.)
+end
+
+"""
+```
+loggrowthtopct_percapita(y, pop_growth)
+```
+
+Transform from annualized quarter-over-quarter log per-capita growth rates to
+annualized quarter-over-quarter aggregate percent change.
+
+### Note
+
+This should only be used in Model 510, which has the output growth observable in
+annualized log per-capita growth rates.
+
+### Inputs
+
+- `y`: the data we wish to transform to annualized percent change from
+  annualized log growth rates. `y` is either a vector of length `nperiods` or an
+  `ndraws x `nperiods` matrix.
+
+- `pop_growth::Vector`: the length `nperiods` vector of log population growth
+  rates.
+"""
+function loggrowthtopct_percapita(y::Array, pop_growth::Vector)
+    # `y` is either a vector of length `nperiods` or an
+    # `ndraws` x `nperiods` matrix
+    if ndims(y) == 1
+        nperiods = length(y)
+    else
+        nperiods = size(y, 2)
+
+        # Transpose `pop_growth` to a 1 x `nperiods` row vector so it can be
+        # broadcasted to match the dimensions of `y`
+        pop_growth = pop_growth'
+    end
+
+    @assert length(pop_growth) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
+
+    100. * ((exp(y/100.) .* exp(pop_growth).^4) - 1.)
+end
+
+"""
+```
 loggrowthtopct_annualized(y)
 ```
 
