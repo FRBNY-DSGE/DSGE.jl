@@ -79,8 +79,8 @@ m <= Setting(:forecast_start_block, Nullable{Int64}(2),
 
 A forecast output (i.e. an `output_var`) is a combination of what we call a
 "product" and a "class". The possible classes are states (`:states`), observables
-(`:obs`), pseudo-observables (`:pseudo`), and shocks (`:shock`). The possible
-forecast products are:
+(`:obs`), pseudo-observables (`:pseudo`), and standardized (`:stdshocks`) and
+unstandardized shocks (`:shocks`). The possible forecast products are:
 
 - Smoothed histories (`:hist`): use the smoother specified by
   `forecast_smoother(m)` to get smoothed histories of each class.

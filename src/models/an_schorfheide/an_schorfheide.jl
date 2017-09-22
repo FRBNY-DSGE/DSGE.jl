@@ -280,14 +280,28 @@ end
 function settings_an_schorfheide!(m::AnSchorfheide)
     default_settings!(m)
 
-    m <= Setting(:use_population_forecast, true,
-                 "Whether to use population forecasts as data")
+    # Data
+    m <= Setting(:data_id, 0, "Dataset identifier")
     m <= Setting(:cond_full_names, [:obs_gdp, :obs_nominalrate],
         "Observables used in conditional forecasts")
     m <= Setting(:cond_semi_names, [:obs_nominalrate],
         "Observables used in semiconditional forecasts")
+
+    # Forecast
+    m <= Setting(:use_population_forecast, true,
+                 "Whether to use population forecasts as data")
     m <= Setting(:forecast_pseudoobservables, true,
                  "Whether to forecast pseudo-observables")
     m <= Setting(:forecast_zlb_value, 0.13,
         "Value of the zero lower bound in forecast periods, if we choose to enforce it")
+end
+
+function shock_groupings(m::AnSchorfheide)
+    gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
+    tfp = ShockGroup("z", [:z_sh], RGB(1.0, 0.55, 0.0)) # darkorange
+    pol = ShockGroup("pol", vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]),
+                     RGB(1.0, 0.84, 0.0)) # gold
+    det = ShockGroup("dt", [:dettrend], :gray40)
+
+    return [gov, tfp, pol, det]
 end

@@ -19,15 +19,17 @@ function default_settings!(m::AbstractModel)
     # Data settings for released and conditional data. Default behavior is to set vintage
     # of data to today's date.
     vint = Dates.format(now(), DSGE_DATE_FORMAT)
-    settings[:data_vintage] = Setting(:data_vintage, vint, true,
-        "vint", "Vintage of data")
+    settings[:data_vintage] = Setting(:data_vintage, vint, true, "vint",
+        "Data vintage")
+    settings[:data_id] = Setting(:data_id, 3,
+        "Dataset identifier")
     settings[:cond_vintage] = Setting(:cond_vintage, vint,
-        "Vintage of conditional data")
-    settings[:cond_id] = Setting(:cond_id, "0000",
-        "Identifier of conditional dataset")
-    settings[:cond_full_names] = Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate],
+        "Conditional data vintage")
+    settings[:cond_id] = Setting(:cond_id, 2,
+        "Conditional dataset identifier")
+    settings[:cond_full_names] = Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
         "Observables used in conditional forecasts")
-    settings[:cond_semi_names] = Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate],
+    settings[:cond_semi_names] = Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
         "Observables used in semiconditional forecasts")
     settings[:use_population_forecast] = Setting(:use_population_forecast, false,
         "Whether to use population forecasts as data")
@@ -65,17 +67,26 @@ function default_settings!(m::AbstractModel)
         "Calculate the hessian at the mode")
     settings[:n_hessian_test_params] = Setting(:n_hessian_test_params, typemax(Int),
         "Max number of free params for which to calculate Hessian")
-    settings[:optimization_method] = Setting(:optimization_method,:csminwel, "Method for finding the posterior mode")
-    settings[:optimization_iterations] = Setting(:optimization_iterations,100, "Number of iterations the optimizer should run for")
-    settings[:optimization_step_size] = Setting(:optimization_step_size,.01, "step size scaling factor for optimization")
-	settings[:simulated_annealing_temperature] = Setting(:simulated_annealing_temperature,Optim.log_temperature, "The temperature function for simulated annealing")
-   settings[:simulated_annealing_block_proportion] = Setting(:simulated_annealing_block_proportion, .3, "The fraction of parameters to vary for each proposed move in simulated annealing")
-   settings[:optimization_ftol] = Setting(:optimization_ftol, 1e-10, "The relative function difference threshold for optimization")
-    settings[:optimization_xtol] = Setting(:optimization_xtol, 1e-10, "The relative input vector difference threshold for optimization")
-    settings[:optimization_gtol] = Setting(:optimization_gtol, 1e-10, "The relative gradient difference threshold for optimization")
-    settings[:combined_optimizer_max_cycles] = Setting(:combined_optimizer_max_cycles,4, "The total number of cycles to use in the combined optimization routine")
-    settings[:optimization_attempts] = Setting(:optimization_attempts, 4, "The number of times to attempt optimization in estimate()")
-
+    settings[:optimization_method] = Setting(:optimization_method, :csminwel,
+        "Method for finding the posterior mode")
+    settings[:optimization_iterations] = Setting(:optimization_iterations, 100,
+        "Number of iterations the optimizer should run for")
+    settings[:optimization_step_size] = Setting(:optimization_step_size, 0.01,
+        "Step size scaling factor for optimization")
+	settings[:simulated_annealing_temperature] = Setting(:simulated_annealing_temperature, Optim.log_temperature,
+        "Temperature function for simulated annealing")
+   settings[:simulated_annealing_block_proportion] = Setting(:simulated_annealing_block_proportion, 0.3,
+        "Fraction of parameters to vary for each proposed move in simulated annealing")
+   settings[:optimization_ftol] = Setting(:optimization_ftol, 1e-10,
+        "Relative function difference threshold for optimization")
+    settings[:optimization_xtol] = Setting(:optimization_xtol, 1e-10,
+        "Relative input vector difference threshold for optimization")
+    settings[:optimization_gtol] = Setting(:optimization_gtol, 1e-10,
+        "Relative gradient difference threshold for optimization")
+    settings[:combined_optimizer_max_cycles] = Setting(:combined_optimizer_max_cycles, 4,
+        "Total number of cycles to use in the combined optimization routine")
+    settings[:optimization_attempts] = Setting(:optimization_attempts, 4,
+        "Number of times to attempt optimization in estimate()")
 
     # Metropolis-Hastings
     settings[:n_mh_simulations] = Setting(:n_mh_simulations, 5000,
@@ -153,7 +164,7 @@ function default_test_settings!(m::AbstractModel)
     dataroot = normpath(joinpath(dirname(@__FILE__), "..", "test", "reference", "input_data"))
     saveroot = mktempdir()
 
-    #General
+    # General
     test[:saveroot] = Setting(:saveroot, saveroot,
         "Where to write files when in test mode")
     test[:dataroot] = Setting(:dataroot, dataroot,

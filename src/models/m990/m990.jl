@@ -49,7 +49,7 @@ equilibrium conditions.
   here for filepath computation.
 
 * `subspec::String`: The model subspecification number, indicating that
-  some parameters from the original model spec (\"ss2\") are initialized
+  some parameters from the original model spec (\"ss3\") are initialized
   differently. Cached here for filepath computation.
 
 * `settings::Dict{Symbol,Setting}`: Settings/flags that affect computation
@@ -157,7 +157,7 @@ function init_model_indices!(m::Model990)
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
 end
 
-function Model990(subspec::String="ss2";
+function Model990(subspec::String="ss3";
                   custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
                   testing = false)
 
@@ -399,19 +399,6 @@ function init_parameters!(m::Model990)
     m <= parameter(:ρ_corepce, 0.2320, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    tex_label="\\rho_{pce}")
 
-    m <= parameter(:ρ_gdp, 0., (-0.999, 0.999), (-0.999, 0.999), DSGE.SquareRoot(), Normal(0.0, 0.2), fixed=false,
-                   tex_label="\\rho_{gdp}")
-
-    m <= parameter(:ρ_gdi, 0., (-0.999, 0.999), (-0.999, 0.999), DSGE.SquareRoot(), Normal(0.0, 0.2), fixed=false,
-                   tex_label="\\rho_{gdi}")
-
-    m <= parameter(:ρ_gdpvar, 0., (-0.999, 0.999), (-0.999, 0.999), DSGE.SquareRoot(), Normal(0.0, 0.4), fixed=false,
-                   tex_label="\\varrho_{gdp}")
-
-    m <= parameter(:me_level, 1., (-0.999, 0.999), (-0.999, 0.999), DSGE.Untransformed(), Normal(0.0, 0.4), fixed=true,
-                   description="me_level: Indicator of cointegration of GDP and GDI.",
-                   tex_label="\\mathcal{C}_{me}")
-
     # exogenous processes - standard deviation
     m <= parameter(:σ_g, 2.5230, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_g: The standard deviation of the government spending process.",
@@ -593,12 +580,23 @@ function steadystate!(m::Model990)
     Rhostar     = 1/nkstar - 1
 
     # evaluate wekstar and vkstar
-    wekstar     = (1-m[:γ_star]/m[:β])*nkstar - m[:γ_star]/m[:β]*(m[:spr]*(1-μ_estar*Gstar) - 1)
-    vkstar      = (nkstar-wekstar)/m[:γ_star]
+    if subspec(m) in ["ss2", "ss5"]
+        wekstar     = (1-m[:γ_star]/m[:β])*nkstar - m[:γ_star]/m[:β]*(m[:spr]*(1-μ_estar*Gstar) - 1)
+        vkstar      = (nkstar-wekstar)/m[:γ_star]
+    else
+        betabar     = exp( (m[:σ_c] -1) * m[:z_star]) \ m[:β]
+        wekstar     = (1-(m[:γ_star]*betabar))*nkstar - m[:γ_star]*betabar*(m[:spr]*(1-μ_estar*Gstar) - 1)
+        vkstar      = (nkstar-wekstar)/m[:γ_star]
+    end
 
     # evaluate nstar and vstar
-    m[:nstar]   = nkstar*m[:kstar]
-    m[:vstar]   = vkstar*m[:kstar]
+    if subspec(m) in ["ss2", "ss5"]
+        m[:nstar]   = nkstar*m[:kstar]
+        m[:vstar]   = vkstar*m[:kstar]
+    else
+        m[:nstar]   = nkstar*m[:kbarstar]
+        m[:vstar]   = vkstar*m[:kbarstar]
+    end
 
     # a couple of combinations
     ΓμG         = Γstar - μ_estar*Gstar
@@ -618,21 +616,32 @@ function steadystate!(m::Model990)
     m[:ζ_spσ_ω] = (ζ_bw_zw*ζ_zσ_ω - ζ_bσ_ω) / (1-ζ_bw_zw)
 
     # elasticities wrt μ_e
-    ζ_bμ_e      = μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
-        ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    if subspec(m) in ["ss2", "ss5"]
+        ζ_bμ_e  = μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
+            ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    else
+        ζ_bμ_e  = -μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
+            ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    end
     ζ_zμ_e      = -μ_estar*Gstar/ΓμG
     m[:ζ_spμ_e] = (ζ_bw_zw*ζ_zμ_e - ζ_bμ_e) / (1-ζ_bw_zw)
 
     # some ratios/elasticities
-    Rkstar      = m[:spr]*m[:π_star]*m[:rstar] # (r_k_star+1-δ)/Upsilon*π_star
+    Rkstar     = m[:spr]*m[:π_star]*m[:rstar] # (r_k_star+1-δ)/Upsilon*π_star
     ζ_gw        = dGdω_star/Gstar*ωbarstar
-    ζ_Gσ_ω      = dGdσstar/Gstar*σ_ω_star
+    ζ_Gσ_ω     = dGdσstar/Gstar*σ_ω_star
 
     # elasticities for the net worth evolution
     m[:ζ_nRk]   = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1 - ζ_gw/ζ_zw))
-    m[:ζ_nR]    = m[:γ_star]/m[:β]*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
-    m[:ζ_nqk]   = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]/m[:β]*(1+Rhostar)
-    m[:ζ_nn]    = m[:γ_star]/m[:β] + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
+    if subspec(m) in ["ss2", "ss5"]
+        m[:ζ_nR]    = m[:γ_star]/m[:β]*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
+        m[:ζ_nqk]   = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]/m[:β]*(1+Rhostar)
+        m[:ζ_nn]    = m[:γ_star]/m[:β] + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
+    else
+        m[:ζ_nR]    = m[:γ_star]*betabar*(1+Rhostar)*(1 - nkstar + μ_estar*Gstar*m[:spr]*ζ_gw/ζ_zw)
+        m[:ζ_nqk]   = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*(1 - μ_estar*Gstar*(1+ζ_gw/ζ_zw/Rhostar)) - m[:γ_star]*betabar*(1+Rhostar)
+        m[:ζ_nn]    = m[:γ_star]*betabar + m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*ζ_gw/ζ_zw/Rhostar
+    end
     m[:ζ_nμ_e]  = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*(1 - ζ_gw*ζ_zμ_e/ζ_zw)
     m[:ζ_nσ_ω]  = m[:γ_star]*Rkstar/m[:π_star]/exp(m[:z_star])*(1+Rhostar)*μ_estar*Gstar*(ζ_Gσ_ω-ζ_gw/ζ_zw*ζ_zσ_ω)
 
@@ -642,6 +651,14 @@ end
 function settings_m990!(m::Model990)
     default_settings!(m)
 
+    # Data
+    m <= Setting(:data_id, 2, "Dataset identifier")
+    m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
+        "Observables used in conditional forecasts")
+    m <= Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
+        "Observables used in semiconditional forecasts")
+
+    # Forecast
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")))
     m <= Setting(:forecast_pseudoobservables, true)
 end
