@@ -1,6 +1,7 @@
  """
 ```
-pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
+pseudo_measurement{T<:AbstractFloat}(m::Model1010{T};
+    apply_altpolicy::Bool = false)
 ```
 
 Assign pseudo-measurement equation (a linear combination of states):
