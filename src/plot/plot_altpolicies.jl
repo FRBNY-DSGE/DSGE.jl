@@ -30,7 +30,7 @@ function plot_altpolicies{T<:AbstractModel}(models::Vector{T}, vars::Vector{Symb
                     models)
 
     # Determine plotting styles
-    altpolicies     = map(m -> get_setting(m, :alternative_policy), models)
+    altpolicies     = map(alternative_policy, models)
     hist_labels     = fill("", n_altpolicies)
     forecast_labels = map(string, altpolicies)
     forecast_colors = Colorant[altpol.color for altpol in altpolicies]
