@@ -1,14 +1,15 @@
 """
 ```
-compute_system(m)
+compute_system(m; apply_altpolicy = false)
 ```
 
 Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` object.
 """
-function compute_system{T<:AbstractFloat}(m::AbstractModel{T})
+function compute_system{T<:AbstractFloat}(m::AbstractModel{T}; apply_altpolicy = false)
+
     # Solve model
-    TTT, RRR, CCC = solve(m)
+    TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy)
     transition_equation = Transition(TTT, RRR, CCC)
 
     # Solve measurement equation
@@ -17,7 +18,7 @@ function compute_system{T<:AbstractFloat}(m::AbstractModel{T})
 
     # Solve pseudo-measurement equation
     pseudo_measurement_equation = if method_exists(pseudo_measurement, (typeof(m),)) && forecast_pseudoobservables(m)
-        _, pseudo_mapping = pseudo_measurement(m)
+        _, pseudo_mapping = pseudo_measurement(m; apply_altpolicy = apply_altpolicy)
         Nullable(pseudo_mapping)
     else
         Nullable{PseudoObservableMapping{T}}()

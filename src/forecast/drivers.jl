@@ -452,7 +452,6 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
         end
     end
 
-
     ### 2. Forecasts
 
     unbddforecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks, :forecaststdshocks]
@@ -480,9 +479,12 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
             kal[:zend]
         end
 
+        # Re-solve model with alternative policy rule, if applicable
+        if alternative_policy(m).solve != identity
+            system = compute_system(m; apply_altpolicy = true)
+        end
 
         # 2A. Unbounded forecasts
-
         if !isempty(intersect(output_vars, unbddforecast_vars))
             forecaststates, forecastobs, forecastpseudo, forecastshocks =
                 forecast(m, system, initial_forecast_state;
