@@ -269,6 +269,7 @@ function prior_posterior_moments_table(m::AbstractModel,
     distid(::Distributions.Gamma)   = "G"
     distid(::Distributions.Normal)  = "N"
     distid(::DSGE.RootInverseGamma) = "IG"
+    distid(::Distributions.Uniform) = "U"
 
     # Write parameter moments
     # sorted_parameters = sort(m.parameters, by = (x -> x.key))
