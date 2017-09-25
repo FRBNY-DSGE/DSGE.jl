@@ -110,7 +110,7 @@ module DSGE
 
         # plot/
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
-        plot_forecast_comparison, plot_shock_decomposition,
+        plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies,
 
         # util
         @test_matrix_approx_eq, @test_matrix_approx_eq_eps
@@ -174,6 +174,7 @@ module DSGE
     include("plot/hair_plot.jl")
     include("plot/plot_forecast_comparison.jl")
     include("plot/plot_shock_decomposition.jl")
+    include("plot/plot_altpolicies.jl")
 
     include("models/financial_frictions.jl")
 
