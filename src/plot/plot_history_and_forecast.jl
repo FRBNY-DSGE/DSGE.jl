@@ -10,7 +10,8 @@ plot_history_and_forecast(m, vars, class, input_type, cond_type;
     kwargs...)
 
 plot_history_and_forecast(var, history, forecast; output_file = "",
-    title = "", start_date = Nullable{Date}(), end_date = Nullable{Date}(),
+    title = "", start_date = history.means[1, :date],
+    end_date = forecast.means[end, :date],
     hist_label = \"History\", forecast_label = \"Forecast\",
     hist_color = :black, forecast_color = :red, linestyle = :solid,
     bands_color = :blue,
@@ -45,8 +46,8 @@ forecast, you can specify the `bands_style` and `bands_pcts`.
 ### Keyword Arguments
 
 - `title::String` or `titles::Vector{String}`
-- `start_date::Nullable{Date}`
-- `end_date::Nullable{Date}`
+- `start_date::Date`
+- `end_date::Date`
 - `hist_label::String`
 - `forecast_label::String`
 - `hist_color::Colorant`
@@ -165,7 +166,7 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
                                    tick_size::Int = 5,
                                    ylabel::String = "",
                                    legend = :best,
-                                   plot_handle::Plots.Plot = plot(legend = legend),
+                                   plot_handle::Plots.Plot = plot(),
                                    verbose::Symbol = :low)
     # Concatenate MeansBands
     combined = cat(history, forecast)
@@ -185,6 +186,7 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
 
     # Initialize plot
     p = plot_handle
+    plot!(p, legend = legend)
     title!(p, title)
     yaxis!(p, ylabel = ylabel)
 
@@ -207,6 +209,9 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     # Set date ticks
     date_ticks!(p, start_date, end_date, tick_size)
 
+    # Add title
+    title!(p, title)
+
     # Save if output_file provided
     save_plot(p, output_file, verbose = verbose)
 
@@ -214,13 +219,30 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
 end
 
 function plot_history_and_forecast(var::Symbol, histories::Vector{MeansBands}, forecasts::Vector{MeansBands};
-                                   plot_handle::Plots.Plot = plot(), kwargs...)
+                                   start_date::Date = histories[1].means[1, :date],
+                                   end_date::Date = forecasts[1].means[end, :date],
+                                   output_file::String = "",
+                                   hist_label::Vector{String} = fill("History", length(histories)),
+                                   forecast_label::Vector{String} = fill("Forecast", length(forecasts)),
+                                   hist_color::Vector{Colorant} = Colorant[colorant"black" for i = 1:length(histories)],
+                                   forecast_color::Vector{Colorant} = Colorant[colorant"red" for i = 1:length(forecasts)],
+                                   bands_color::Vector{Colorant} = Colorant[colorant"blue" for i = 1:length(forecasts)],
+                                   linestyle::Vector{Symbol} = fill(:solid, length(forecasts)),
+                                   plot_handle::Plots.Plot = plot(),
+                                   kwargs...)
 
     @assert length(histories) == length(forecasts) "histories and forecasts must be same length"
 
-    for (history, forecast) in zip(histories, forecasts)
-       plot_handle = plot_history_and_forecast(var, history, forecast;
-                                               plot_handle = plot_handle, kwargs...,)
+    for (i, (history, forecast)) in enumerate(zip(histories, forecasts))
+        plot_handle = plot_history_and_forecast(var, history, forecast;
+                            start_date = start_date, end_date = end_date,
+                            output_file = output_file,
+                            hist_label = hist_label[i], forecast_label = forecast_label[i],
+                            hist_color = hist_color[i], forecast_color = forecast_color[i],
+                            bands_color = bands_color[i],
+                            linestyle = linestyle[i],
+                            plot_handle = plot_handle,
+                            kwargs...)
     end
 
     return plot_handle

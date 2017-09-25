@@ -50,7 +50,7 @@ module DSGE
         load_parameters_from_file, specify_mode!, specify_hessian,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
-        ShockGroup,
+        ShockGroup, alternative_policy,
 
         # parameters.jl
         parameter, Transform, NullablePrior, AbstractParameter,
@@ -101,6 +101,9 @@ module DSGE
         write_meansbands_tables_timeseries, write_means_tables_shockdec, prepare_meansbands_table_irf,
         write_meansbands_tables_all,
 
+        # alternative_policy/
+        AltPolicy, eqcond_altpolicy,
+
         # scenarios/
         AbstractScenario, SingleScenario, Scenario, SwitchingScenario, ScenarioAggregate,
         n_targets, n_instruments, n_target_horizons, targets_to_data,
@@ -110,7 +113,7 @@ module DSGE
 
         # plot/
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
-        plot_forecast_comparison, plot_shock_decomposition, plot_scenario,
+        plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies, plot_scenario,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
@@ -172,6 +175,8 @@ module DSGE
     include("analysis/io.jl")
     include("analysis/util.jl")
 
+    include("alternative_policy/altpolicy.jl")
+
     include("scenarios/scenario.jl")
     include("scenarios/io.jl")
     include("scenarios/forecast.jl")
@@ -185,6 +190,7 @@ module DSGE
     include("plot/hair_plot.jl")
     include("plot/plot_forecast_comparison.jl")
     include("plot/plot_shock_decomposition.jl")
+    include("plot/plot_altpolicies.jl")
     include("plot/plot_scenario.jl")
 
     include("models/financial_frictions.jl")

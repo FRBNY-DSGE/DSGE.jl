@@ -94,6 +94,15 @@ function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
         end
     end
 
+    # Populate shocks matrix under alternative policy, if
+    # user has specified a function to do so
+    alt_policy = alternative_policy(m)
+    if alt_policy.solve != identity &&
+        alt_policy.forecast_init != identity
+
+        shocks, z0 = alt_policy.forecast_init(m, shocks, z0, cond_type = cond_type)
+    end
+
     # Get variables necessary to enforce the zero lower bound in the forecast
     ind_r = m.observables[:obs_nominalrate]
     ind_r_sh = m.exogenous_shocks[:rm_sh]
