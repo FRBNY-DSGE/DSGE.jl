@@ -27,7 +27,7 @@ Type defining an alternative policy rule.
   alternative policy. See options from `Plots.jl`
 
 """
-immutable AltPolicy
+type AltPolicy
     key::Symbol
     eqcond::Function
     solve::Function
