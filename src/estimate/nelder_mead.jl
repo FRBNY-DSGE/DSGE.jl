@@ -1,4 +1,4 @@
-function Nelder_Mead(fcn::Function,
+function nelder_mead(fcn::Function,
                      x0::Array,
                      args...;
                      parameters            = Optim.AdaptiveParameters(),
@@ -9,12 +9,10 @@ function Nelder_Mead(fcn::Function,
                      extended_trace::Bool  = false,
                      kwargs...)
 
-
     Optim.optimize(fcn, x0,
                    method = Optim.NelderMead(parameters = parameters, initial_simplex = initial_simplex),
                    iterations = iterations, store_trace = store_trace, show_trace = show_trace,
                    extended_trace = extended_trace)
-
 end
 
 type MatlabSimplexer <: Optim.Simplexer
