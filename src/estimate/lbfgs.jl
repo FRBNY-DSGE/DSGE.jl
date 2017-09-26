@@ -1,4 +1,4 @@
-function LBFGS_wrapper(fcn::Function,
+function lbfgs_wrapper(fcn::Function,
                        x0::Vector,
                        args...;
                        xtol::Real           = 1e-32, # default from Optim.jl
@@ -14,9 +14,8 @@ function LBFGS_wrapper(fcn::Function,
                        kwargs...)
 
     Optim.optimize(fcn, x0,
-                   LBFGS(),
+                   lbfgs(),
                    Optim.Options(autodiff=autodiff, g_tol = grtol, f_tol = ftol, x_tol = xtol,
                    iterations = iterations, store_trace = store_trace, show_trace = show_trace,
                    extended_trace = extended_trace))
-
 end

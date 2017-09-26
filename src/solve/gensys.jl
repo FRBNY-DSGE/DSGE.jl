@@ -33,10 +33,12 @@ If `div` is omitted from argument list, a `div`>1 is calculated.
 
 ### Return codes
 
-* `eu[1]==1` for existence
-* `eu[2]==1` for uniqueness
-* `eu[1]==-1` for existence only with not-s.c. z;
-* `eu==[-2,-2]` for coincident zeros.
+* `eu[1] = 1` for existence
+* `eu[2] = 1` for uniqueness
+* `eu[1] = -1` for existence only with not-s.c. z
+* `eu = [-2, -2]` for coincident zeros
+* `eu = [-3, -3]` if a LAPACKException is thrown while computing the Schur
+  decomposition
 
 ### Notes
 
@@ -45,7 +47,27 @@ types of `Γ0` and `Γ1`, to match the behavior of Matlab.  Matlab always uses t
 of the Schur decomposition, even if the inputs are real numbers.
 """
 function gensys(Γ0, Γ1, c, Ψ, Π, args...)
-    F = schurfact!(complex(Γ0), complex(Γ1))
+    F = try
+        schurfact!(complex(Γ0), complex(Γ1))
+    catch ex
+        if isa(ex, Base.LinAlg.LAPACKException)
+            info("LAPACK exception thrown while computing Schur decomposition of Γ0 and Γ1.")
+            eu = [-3, -3]
+
+            G1 = Array{Float64, 2}()
+            C = Array{Float64, 1}()
+            impact = Array{Float64, 2}()
+            fmat = Array{Complex{Float64}, 2}()
+            fwt = Array{Complex{Float64}, 2}()
+            ywt = Vector{Complex{Float64}}()
+            gev = Vector{Complex{Float64}}()
+            loose = Array{Float64, 2}()
+
+            return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
+        else
+            rethrow(ex)
+        end
+    end
     gensys(F, c, Ψ, Π, args...)
 end
 
@@ -70,9 +92,18 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
     end
 
     if zxz == 1
-        info("Coincident zeros.  Indeterminacy and/or nonexistence.")
+        warn("Coincident zeros. Indeterminacy and/or nonexistence.")
         eu=[-2, -2]
-        G1 = Array{Float64, 2}() ;  C = Array{Float64, 1}() ; impact = Array{Float64, 2}() ; fmat = Array{Complex{Float64}, 2}() ; fwt = Array{Complex{Float64}, 2}() ; ywt = Vector{Complex{Float64}}() ; gev = Vector{Complex{Float64}}() ; loose = Array{Float64, 2}()
+
+        G1 = Array{Float64, 2}()
+        C = Array{Float64, 1}()
+        impact = Array{Float64, 2}()
+        fmat = Array{Complex{Float64}, 2}()
+        fwt = Array{Complex{Float64}, 2}()
+        ywt = Vector{Complex{Float64}}()
+        gev = Vector{Complex{Float64}}()
+        loose = Array{Float64, 2}()
+
         return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
     end
 
@@ -101,7 +132,12 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
         deta = diagm(etawtsvd[:S][bigev])
     end
 
-    eu[1] = length(bigev) >= nunstab
+    existence = length(bigev) >= nunstab
+    if existence
+        eu[1] = 1
+    else
+        warn("Nonexistence: number of unstable roots exceeds number of jump variables")
+    end
 
     # Note that existence and uniqueness are not just matters of comparing
     # numbers of roots and numbers of endogenous errors.  These counts are
@@ -136,7 +172,7 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
     if unique
         eu[2] = 1
     else
-        info("Indeterminacy. $(nloose) loose endogeneous errors")
+        warn("Indeterminacy: $(nloose) loose endogeneous error(s)")
     end
 
 
@@ -187,6 +223,3 @@ function new_div(F::Base.LinAlg.GeneralizedSchur)
 
     return div
 end
-
-
-

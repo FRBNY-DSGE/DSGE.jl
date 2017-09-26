@@ -162,7 +162,7 @@ function csminwel(fcn::Function,
                 Hcliff = H + diagm(diag(H).*rand(rng, nx))
 
                 if VERBOSITY[verbose] >= VERBOSITY[:low]
-                    @printf "Cliff.  Perturbing search direction.\n"
+                    println("Cliff. Perturbing search direction.")
                 end
 
                 f2, x2, fc, retcode2 = csminit(fcn, x, f_x, gr, badg, Hcliff,
@@ -181,7 +181,7 @@ function csminwel(fcn::Function,
 
                     if wall2
                         if VERBOSITY[verbose] >= VERBOSITY[:low]
-                            @printf "Cliff again.  Try traversing\n"
+                            println("Cliff again. Try traversing")
                         end
 
                         if norm(x2-x1) < 1e-13
@@ -292,7 +292,7 @@ function csminwel(fcn::Function,
 
         if stuck
             if VERBOSITY[verbose] >= VERBOSITY[:low]
-                @printf "improvement < ftol -- terminating\n"
+                println("improvement < ftol -- terminating")
             end
         end
 
@@ -394,7 +394,7 @@ function csminit(fcn, x0, f0, g0, badg, H0, args...; verbose::Symbol=:none, kwar
         if dxnorm > 1e12
 
             if VERBOSITY[verbose] >= VERBOSITY[:low]
-                @printf "Near singular H problem.\n"
+                println("Near singular H problem.")
             end
 
             dx = dx * fchange / dxnorm
