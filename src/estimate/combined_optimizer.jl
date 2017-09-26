@@ -1,26 +1,26 @@
 """
 ```
 combined_optimizer(fcn::Function,
-                       x0::Vector,
-                       args...;
-                       xtol::Real            = 1e-32, # default from Optim.jl
-                       ftol::Float64         = 1e-14, # Default from csminwel
-                       grtol::Real           = 1e-8,  # default from Optim.jl
-                       iterations::Int       = 1000,
-                       store_trace::Bool     = false,
-                       show_trace::Bool      = false,
-                       extended_trace::Bool  = false,
-                       verbose::Symbol       = :none,
-                       rng::AbstractRNG      = MersenneTwister(),
-                       autodiff::Bool        = false,
-                       neighbor!::Function   = Optim.default_neighbor!,
-                       temperature::Function = Optim.log_temperature,
-                       max_cycles::Int       = 4,
-                       kwargs...)
+                   x0::Vector,
+                   args...;
+                   xtol::Real            = 1e-32, # default from Optim.jl
+                   ftol::Float64         = 1e-14, # Default from csminwel
+                   grtol::Real           = 1e-8,  # default from Optim.jl
+                   iterations::Int       = 1000,
+                   store_trace::Bool     = false,
+                   show_trace::Bool      = false,
+                   extended_trace::Bool  = false,
+                   verbose::Symbol       = :none,
+                   rng::AbstractRNG      = MersenneTwister(),
+                   autodiff::Bool        = false,
+                   neighbor!::Function   = Optim.default_neighbor!,
+                   temperature::Function = Optim.log_temperature,
+                   max_cycles::Int       = 4,
+                   kwargs...)
 
 ```
 This routine alternates between LBFGS and simulated annealing. LBFGS is good for quickly moving in the correct
-direction, while simulated annealing is used to escape local minimima.
+direction, while simulated annealing is used to escape local minima.
 """
 function combined_optimizer(fcn::Function,
                        x0::Vector,
@@ -44,10 +44,10 @@ function combined_optimizer(fcn::Function,
     cycle = 0
     converged = false
     x_opt = x0
-    use_SA_out = false
+    use_sa_out = false
     f_opt = fcn(x_opt)
-    out_SA = nothing
-    out_LBFGS = nothing
+    out_sa = nothing
+    out_lbfgs = nothing
 
     while cycle < max_cycles && converged == false
 
@@ -55,14 +55,14 @@ function combined_optimizer(fcn::Function,
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             println("Running L-BFGS...")
         end
-        out_LBFGS = Optim.optimize(fcn, x_opt, LBFGS(),
+        out_lbfgs = Optim.optimize(fcn, x_opt, lbfgs(),
                    Optim.Options(autodiff=autodiff, g_tol = grtol, f_tol = ftol, x_tol = xtol,
                    iterations = iterations, store_trace = store_trace, show_trace = show_trace,
                    extended_trace = extended_trace))
 
         # store relevant information from the optimizer
-        minimum_LBFGS = out_LBFGS.minimum
-        minimizer_LBFGS = out_LBFGS.minimizer
+        minimum_lbfgs = out_lbfgs.minimum
+        minimizer_lbfgs = out_lbfgs.minimizer
 
         # second, run simulated annealing with the trace disabled
         if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -70,19 +70,19 @@ function combined_optimizer(fcn::Function,
         end
 
         # simulated annealing gets more iterations, no trace printout
-        SA_iterations = min(iterations * 10, 250)
-        out_SA = Optim.optimize(fcn, x_opt,
+        sa_iterations = min(iterations * 10, 250)
+        out_sa = Optim.optimize(fcn, x_opt,
                              method = SimulatedAnnealing(neighbor! = neighbor!,temperature = temperature),
-                             iterations = SA_iterations, store_trace = store_trace, show_trace = false,
+                             iterations = sa_iterations, store_trace = store_trace, show_trace = false,
                              extended_trace = extended_trace)
 
-        minimum_SA = out_SA.minimum
-        minimizer_SA = out_SA.minimizer
+        minimum_sa = out_sa.minimum
+        minimizer_sa = out_sa.minimizer
 
         # reject a move to a worse spot
-        use_SA_out = minimum_SA < minimum_LBFGS
-        x_opt =  use_SA_out ? minimizer_SA : minimizer_LBFGS
-        cycle_best = use_SA_out ? minimum_SA : minimum_LBFGS
+        use_sa_out = minimum_sa < minimum_lbfgs
+        x_opt =  use_sa_out ? minimizer_sa : minimizer_lbfgs
+        cycle_best = use_sa_out ? minimum_sa : minimum_lbfgs
 
         # check convergence
         rel_diff = abs(f_opt - cycle_best)/abs(f_opt)
@@ -99,7 +99,6 @@ function combined_optimizer(fcn::Function,
     end
 
     println("optimization complete. cycles: $cycle")
-    out = use_SA_out ? out_SA : out_LBFGS
+    out = use_sa_out ? out_sa : out_lbfgs
     return out
-
 end

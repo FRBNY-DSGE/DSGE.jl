@@ -433,10 +433,9 @@ function settings_smets_wouters!(m::SmetsWouters)
     m <= Setting(:reoptimize, true)
     m <= Setting(:recalculate_hessian, true)
 
-    # Data vintage
+    # Data
     m <= Setting(:data_vintage, "150827")
-
-    # Conditional data variables
-    m <= Setting(:cond_semi_names, [:obs_nominalrate])
+    m <= Setting(:data_id, 1, "Dataset identifier")
     m <= Setting(:cond_full_names, [:obs_gdp, :obs_nominalrate])
+    m <= Setting(:cond_semi_names, [:obs_nominalrate])
 end
