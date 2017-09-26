@@ -13,7 +13,8 @@ plot_shock_decomposition(m, vars, class, input_type, cond_type;
 plot_shock_decomposition(var, shockdec, trend, dettrend, hist, forecast, groups;
     output_file = "", title = "",
     hist_label = \"Detrended History\", forecast_label = \"Detrended Forecast\",
-    hist_color = :black, forecast_color = :red, tick_size = 5, legend = :best)
+    hist_color = :black, forecast_color = :red, tick_size = 5, legend = :best,
+    verbose = :low)
 ```
 
 Plot shock decomposition(s) for `var` or `vars`.
@@ -48,6 +49,7 @@ Plot shock decomposition(s) for `var` or `vars`.
 - `forecast_color::Colorant`
 - `tick_size::Int`: x-axis (time) tick size in units of years
 - `legend`
+- `verbose::Symbol`
 
 **Methods 1 and 2 only:**
 
@@ -128,11 +130,12 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
                                   end_date::Date = shockdec.means[end, :date],
                                   hist_label::String = "Detrended History",
                                   forecast_label::String = "Detrended Forecast",
-                                  hist_color::Colorant = RGBA(0., 0., 0., 1.),
-                                  forecast_color::Colorant = RGBA(1., 0., 0., 1.),
+                                  hist_color::Colorant = colorant"black",
+                                  forecast_color::Colorant = colorant"red",
                                   tick_size::Int = 5,
                                   ylabel::String = "",
-                                  legend = :best)
+                                  legend = :best,
+                                  verbose::Symbol = :low)
 
     # Construct DataFrame with detrended mean, deterministic trend, and all shocks
     df = prepare_means_table_shockdec(shockdec, trend, dettrend, var,
@@ -166,7 +169,7 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
                    linealpha = 0.0,
                    bar_width = 1.0,
                    legend = legend,
-                   legendfont = Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, parse(Colorant, :black)),
+                   legendfont = Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black"),
                    title = title,
                    ylabel = ylabel)
 
@@ -180,7 +183,7 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
           color = forecast_color, linewidth = 2, label = forecast_label, ylim = :auto)
 
     # Save if output_file provided
-    save_plot(p, output_file)
+    save_plot(p, output_file, verbose = verbose)
 
     return p
 end
