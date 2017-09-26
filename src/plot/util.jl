@@ -79,11 +79,13 @@ function get_date_limit_indices(start_date::Date, end_date::Date,
 end
 
 function has_nonidentical_bands(var::Symbol, mb::MeansBands)
+    nanapprox(x, y) = x ≈ y || (isnan(x) && isnan(y))
+
     df = mb.bands[var]
     cols = setdiff(names(df), [:date])
     for t = 1:size(df, 1)
         bandvals = convert(Matrix, df[t, cols])
-        if !all(x -> x ≈ mb.means[t, var], bandvals)
+        if !all(x -> nanapprox(x, mb.means[t, var]), bandvals)
             return true
         end
     end
@@ -93,8 +95,8 @@ end
 function get_bands_indices(var::Symbol, history::MeansBands, forecast::MeansBands,
                            hist_inds::UnitRange{Int}, fcast_inds::UnitRange{Int})
 
-    hist_bands  = has_nonidentical_bands(var, history)
-    fcast_bands = has_nonidentical_bands(var, forecast)
+    hist_bands  = !isempty(history)  && has_nonidentical_bands(var, history)
+    fcast_bands = !isempty(forecast) && has_nonidentical_bands(var, forecast)
 
     if hist_bands && fcast_bands
         return hist_inds.start:fcast_inds.stop
@@ -165,11 +167,14 @@ function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
     end
 end
 
-function save_plot(p::Plots.Plot, output_file::String = "")
+function save_plot(p::Plots.Plot, output_file::String = ""; verbose::Symbol = :low)
     if !isempty(output_file)
         output_dir = dirname(output_file)
         !isdir(output_dir) && mkpath(output_dir)
         Plots.savefig(output_file)
-        println("Saved $output_file")
+
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("Saved $output_file")
+        end
     end
 end

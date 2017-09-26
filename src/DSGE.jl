@@ -64,7 +64,7 @@ module DSGE
         Measurement, Transition, System, compute_system,
 
         # estimate/
-        simulated_annealing, combined_optimizer, LBFGS_wrapper,
+        simulated_annealing, combined_optimizer, lbfgs_wrapper,
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, prior, get_estimation_output_files,
@@ -145,7 +145,7 @@ module DSGE
     include("estimate/hessizero.jl")
     include("estimate/simulated_annealing.jl")
     include("estimate/combined_optimizer.jl")
-    include("estimate/LBFGS.jl")
+    include("estimate/lbfgs.jl")
     include("estimate/nelder_mead.jl")
     include("estimate/estimate.jl")
     include("estimate/nearest_spd.jl")
