@@ -7,7 +7,7 @@ module DSGE
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
     import Calculus
-    import Optim: optimize, Optimizer
+    import Optim: optimize, Optimizer, MultivariateOptimizationResults
 
     export
 

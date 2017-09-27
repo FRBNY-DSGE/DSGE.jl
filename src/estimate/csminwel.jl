@@ -15,7 +15,7 @@ const rc_messages = Dict(0 => "Standard Iteration",
                          7 => "warning: possible inaccuracy in H matrix")
 
 macro csminwelltrace()
-    quote
+    esc(quote
         if tracing
             dt = Dict()
             if extended_trace
@@ -34,7 +34,7 @@ macro csminwelltrace()
                           store_trace,
                           show_trace)
         end
-    end
+    end)
 end
 
 """
