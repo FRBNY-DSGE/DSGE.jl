@@ -42,7 +42,7 @@ immutable Kalman{S<:AbstractFloat}
 end
 
 function Kalman{S<:AbstractFloat}(L::S,
-                                  zend::Vector{S}          = Vector{S}(),
+                                  zend::Vector{S}          = Vector{S}(0),
                                   Pend::Matrix{S}          = Matrix{S}(0, 0),
                                   pred::Matrix{S}          = Matrix{S}(0, 0),
                                   vpred::Array{S, 3}       = Array{S}(0, 0, 0),
@@ -52,9 +52,9 @@ function Kalman{S<:AbstractFloat}(L::S,
                                   ystdprederror::Matrix{S} = Matrix{S}(0, 0),
                                   rmse::Matrix{S}          = Matrix{S}(0, 0),
                                   rmsd::Matrix{S}          = Matrix{S}(0, 0),
-                                  z0::Vector{S}            = Vector{S}(),
+                                  z0::Vector{S}            = Vector{S}(0),
                                   P0::Matrix{S}            = Matrix{S}(0, 0),
-                                  marginal_L::Vector{S}    = Vector{S}())
+                                  marginal_L::Vector{S}    = Vector{S}(0))
 
     return Kalman{S}(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, P0,
                      marginal_L)
