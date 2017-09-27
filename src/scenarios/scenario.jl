@@ -23,6 +23,7 @@ type Scenario <: SingleScenario
     targets::DataFrame
     instruments::DataFrame
     shock_scaling::Float64
+    draw_states::Bool
     vintage::String
 end
 
@@ -34,13 +35,16 @@ function Base.show(io::IO, scen::Scenario)
     if scen.shock_scaling != 1.0
         @printf io "%-14s %s\n" "Shock Scaling:" scen.shock_scaling
     end
+    if scen.draw_states
+        @printf io "%-14s %s\n" "Draw States:" scen.draw_states
+    end
     @printf io "%-14s %s"   "Vintage:" scen.vintage
 end
 
 """
 ```
 Scenario(key, description, target_names, instrument_names, vintage;
-    shock_scaling = 1.0)
+    shock_scaling = 1.0, draw_states = false)
 ```
 
 Scenario constructor. If `instrument_names` is empty, then all model shocks will
@@ -50,9 +54,10 @@ function Scenario(key::Symbol, description::String,
                   target_names::Vector{Symbol},
                   instrument_names::Vector{Symbol},
                   vintage::String;
-                  shock_scaling::Float64 = 1.0)
+                  shock_scaling::Float64 = 1.0,
+                  draw_states::Bool = false)
     Scenario(key, description, target_names, instrument_names,
-             DataFrame(), DataFrame(), shock_scaling, vintage)
+             DataFrame(), DataFrame(), shock_scaling, draw_states, vintage)
 end
 
 n_targets(scen::Scenario) = length(scen.target_names)
