@@ -13,8 +13,7 @@ function compute_system{T<:AbstractFloat}(m::AbstractModel{T}; apply_altpolicy =
     transition_equation = Transition(TTT, RRR, CCC)
 
     # Solve measurement equation
-    shocks = n_anticipated_shocks(m) > 0
-    measurement_equation = measurement(m, TTT, RRR, CCC; shocks = shocks)
+    measurement_equation = measurement(m, TTT, RRR, CCC)
 
     # Solve pseudo-measurement equation
     pseudo_measurement_equation = if method_exists(pseudo_measurement, (typeof(m),)) && forecast_pseudoobservables(m)
