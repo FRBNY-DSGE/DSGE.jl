@@ -46,10 +46,9 @@ function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::Syste
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}(0, 0);
-    catch_errors::Bool = false,
-    start_date::Date = date_presample_start(m),
-    allout::Bool = true, include_presample::Bool = true)
+    z0::Vector{S} = Vector{S}(0), P0::Matrix{S} = Matrix{S}(0, 0);
+    catch_errors::Bool = false, allout::Bool = true,
+    include_presample::Bool = true)
 
     # If we are in Metropolis-Hastings, then any errors coming out of `gensys`
     # should be caught and a -Inf posterior should be returned.
@@ -81,8 +80,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::System,
-    z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
-    start_date::Date = date_presample_start(m),
+    z0::Vector{S} = Vector{S}(0), P0::Matrix{S} = Matrix{S}(0, 0);
     allout::Bool = true, include_presample::Bool = true)
 
     # Partition sample into pre- and post-ZLB regimes
