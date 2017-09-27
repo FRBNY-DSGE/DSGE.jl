@@ -1,6 +1,6 @@
 """
 ```
-compute_scenario_system(m, scen::Scenario)
+compute_scenario_system(m, scen::Scenario; apply_altpolicy = false)
 ```
 
 Given the current model parameters, compute the state-space system corresponding
@@ -9,8 +9,10 @@ to model `m` and alternative scenario `scen`. This function differs from
 zero (since we forecast in deviations from baseline) and shocks that are not in
 `scen.instrument_names` are zeroed out in the `QQ` matrix.
 """
-function compute_scenario_system(m::AbstractModel, scen::Scenario)
-    system = compute_system(m)
+function compute_scenario_system(m::AbstractModel, scen::Scenario;
+                                 apply_altpolicy::Bool = false)
+
+    system = compute_system(m, apply_altpolicy = apply_altpolicy)
 
     # Set C = D = D_pseudo = 0
     system.transition.CCC = zeros(size(system[:CCC]))
@@ -96,6 +98,11 @@ function forecast_scenario_draw(m::AbstractModel, scen::Scenario, system::System
 
     # Scale shocks if desired
     forecastshocks = scen.shock_scaling * forecastshocks
+
+    # Re-solve model with alternative policy rule, if applicable
+    if alternative_policy(m).solve != identity
+        system = compute_system(m, apply_altpolicy = true)
+    end
 
     # Forecast
     s_T = zeros(n_states_augmented(m))
