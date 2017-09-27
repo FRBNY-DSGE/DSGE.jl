@@ -1,7 +1,7 @@
 """
 ```
 measurement{T<:AbstractFloat}(m::Model1002{T}, TTT::Matrix{T}, RRR::Matrix{T},
-                              CCC::Matrix{T}; shocks::Bool = true)
+                              CCC::Vector{T})
 ```
 
 Assign measurement equation
@@ -19,26 +19,14 @@ cov(eps_t,u_t) = VV = QQ*MM'
 function measurement{T<:AbstractFloat}(m::Model1002{T},
                                        TTT::Matrix{T},
                                        RRR::Matrix{T},
-                                       CCC::Vector{T};
-                                       shocks::Bool = true)
+                                       CCC::Vector{T})
     endo = m.endogenous_states
     exo  = m.exogenous_shocks
     obs  = m.observables
-
-    # If shocks = true, then return measurement equation matrices with rows and columns for
-    # anticipated policy shocks
-    if shocks
-        _n_observables = n_observables(m)
-        _n_states = n_states_augmented(m)
-        _n_shocks_exogenous = n_shocks_exogenous(m)
-        endo_new = m.endogenous_states_augmented
-    else
-        _n_observables = n_observables(m) - n_anticipated_shocks(m)
-        _n_states = n_states_augmented(m) - n_anticipated_shocks(m)
-        _n_shocks_exogenous = n_shocks_exogenous(m) - n_anticipated_shocks(m)
-        endo_new = OrderedDict(
-            [(key,m.endogenous_states_augmented[key] - n_anticipated_shocks(m)) for key in keys(m.endogenous_states_augmented)])
-    end
+    _n_observables = n_observables(m)
+    _n_states = n_states_augmented(m)
+    _n_shocks_exogenous = n_shocks_exogenous(m)
+    endo_new = m.endogenous_states_augmented
 
     ZZ = zeros(_n_observables, _n_states)
     DD = zeros(_n_observables)
@@ -141,12 +129,10 @@ function measurement{T<:AbstractFloat}(m::Model1002{T},
     # These lines set the standard deviations for the anticipated shocks. They
     # are here no longer calibrated to the std dev of contemporaneous shocks,
     # as we had in 904
-    if shocks
-        for i = 1:n_anticipated_shocks(m)
-            ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
-            DD[obs[Symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
-            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
-        end
+    for i = 1:n_anticipated_shocks(m)
+        ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
+        DD[obs[Symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
+        QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
     end
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
