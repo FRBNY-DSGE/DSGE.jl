@@ -145,6 +145,7 @@ module DSGE
     include("estimate/smc/resample.jl")
     include("estimate/smc/smc.jl")
     include("estimate/nearest_spd.jl")
+    include("estimate/tpf/initialize_function_system.jl")
     include("estimate/tpf/systematic_resampling.jl")
     include("estimate/tpf/multinomial_resampling.jl")
     include("estimate/tpf/mutation.jl")
