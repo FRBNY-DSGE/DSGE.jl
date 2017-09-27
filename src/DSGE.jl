@@ -7,7 +7,7 @@ module DSGE
     using Roots: fzero, ConvergenceFailed
     using Base.Test
     import Calculus
-    import Optim: optimize, Optimizer
+    import Optim: optimize, Optimizer, MultivariateOptimizationResults
 
     export
 
