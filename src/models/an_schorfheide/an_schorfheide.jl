@@ -151,7 +151,7 @@ function AnSchorfheide(subspec::String="ss0";
     subspec            = subspec
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
-    rng                = MersenneTwister()
+    rng                = MersenneTwister(0)
 
     # initialize empty model
     m = AnSchorfheide{Float64}(
