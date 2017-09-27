@@ -40,18 +40,19 @@ immutable Kalman{S<:AbstractFloat}
 end
 
 function Kalman{S<:AbstractFloat}(L::S,
-                                  zend::Vector{S}          = Vector{S}(),
-                                  Pend::Matrix{S}          = Matrix{S}(),
-                                  pred::Matrix{S}          = Matrix{S}(),
+                                  zend::Vector{S}          = Vector{S}(0),
+                                  Pend::Matrix{S}          = Matrix{S}(0, 0),
+                                  pred::Matrix{S}          = Matrix{S}(0, 0),
                                   vpred::Array{S, 3}       = Array{S}(0, 0, 0),
-                                  filt::Matrix{S}          = Matrix{S}(),
+                                  filt::Matrix{S}          = Matrix{S}(0, 0),
                                   vfilt::Array{S, 3}       = Array{S}(0, 0, 0),
-                                  yprederror::Matrix{S}    = Matrix{S}(),
-                                  ystdprederror::Matrix{S} = Matrix{S}(),
-                                  rmse::Matrix{S}          = Matrix{S}(),
-                                  rmsd::Matrix{S}          = Matrix{S}(),
-                                  z0::Vector{S}            = Vector{S}(),
-                                  P0::Matrix{S}            = Matrix{S}())
+                                  yprederror::Matrix{S}    = Matrix{S}(0, 0),
+                                  ystdprederror::Matrix{S} = Matrix{S}(0, 0),
+                                  rmse::Matrix{S}          = Matrix{S}(0, 0),
+                                  rmsd::Matrix{S}          = Matrix{S}(0, 0),
+                                  z0::Vector{S}            = Vector{S}(0),
+                                  P0::Matrix{S}            = Matrix{S}(0, 0),
+                                  marginal_L::Vector{S}    = Vector{S}(0))
 
     return Kalman{S}(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, P0)
 end

@@ -31,7 +31,7 @@ Estimate the DSGE parameter posterior distribution.
 """
 function estimate(m::AbstractModel, df::DataFrame;
                   verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix(),
+                  proposal_covariance::Matrix=Matrix(0,0),
                   mle::Bool = false,
 				  method::Symbol = :MH,
                   sample::Bool = true)
@@ -42,7 +42,7 @@ end
 
 function estimate(m::AbstractModel;
                   verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix(),
+                  proposal_covariance::Matrix=Matrix(0,0),
                   mle::Bool = false,
 				  method::Symbol = :MH,
                   sample::Bool = true)
@@ -54,10 +54,9 @@ end
 
 function estimate(m::AbstractModel, data::Matrix{Float64};
                   verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix(),
-				  mle::Bool = false,
-                  method::Symbol = :MH,
-				  sample::Bool = true)
+                  proposal_covariance::Matrix=Matrix(0,0),
+                  mle::Bool = false,
+                  run_MH::Bool = true)
 
     if !(method in [:SMC,:MH])
         error("method must be :SMC or :MH")
