@@ -32,7 +32,7 @@ function init_observable_mappings!(m::AnSchorfheide)
         quartertoannual(oneqtrpctchange(levels[:CPIAUCSL]))
     end
 
-    cpi_rev_transform = loggrowthtopct_annualized
+    cpi_rev_transform = loggrowthtopct
 
     observables[:obs_cpi] = Observable(:obs_cpi, [:CPIAUCSL__FRED],
                                         cpi_fwd_transform, cpi_rev_transform,
