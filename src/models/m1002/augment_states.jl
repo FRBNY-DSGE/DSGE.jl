@@ -42,12 +42,13 @@ The diagram below shows how `TTT` is extended to `TTT_aug`.
 
 """
 function augment_states{T<:AbstractFloat}(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T})
-    endo     = m.endogenous_states
-    endo_new = m.endogenous_states_augmented
-    exo      = m.exogenous_shocks
-
     n_endo = n_states(m)
     n_exo  = n_shocks_exogenous(m)
+
+    endo     = m.endogenous_states
+    endo_new = OrderedDict((var, i + n_endo) for (var, i) in m.endogenous_states_augmented)
+    exo      = m.exogenous_shocks
+
     @assert (n_endo, n_endo) == size(TTT)
     @assert (n_endo, n_exo)  == size(RRR)
     @assert (n_endo,)        == size(CCC)
