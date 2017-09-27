@@ -277,7 +277,9 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
 
     # Write state names
     if class == :states
-        state_indices = merge(m.endogenous_states, m.endogenous_states_augmented)
+        nstates = n_states(m)
+        endo_addl = OrderedDict((var, i + nstates) for (var, i) in m.endogenous_states_augmented)
+        state_indices = merge(m.endogenous_states, endo_addl)
         @assert length(state_indices) == n_states_augmented(m) # assert no duplicate keys
         write(file, "state_indices", state_indices)
         rev_transforms = Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(state_indices))
