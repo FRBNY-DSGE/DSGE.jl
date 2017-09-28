@@ -90,6 +90,10 @@ Filter shocks and use them to forecast the `draw_index`th draw of `scen`.
 """
 function forecast_scenario_draw(m::AbstractModel, scen::Scenario, system::System,
                                 draw_index::Int)
+    # Re-initialize model indices in case extra states or equations were added
+    # for an alternative policy
+    init_model_indices!(m)
+
     # Load targets
     load_scenario_targets!(m, scen, draw_index)
 
