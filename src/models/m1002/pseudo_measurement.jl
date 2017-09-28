@@ -12,9 +12,8 @@ X_t = ZZ_pseudo*S_t + DD_pseudo
 """
 function pseudo_measurement{T<:AbstractFloat}(m::Model1002{T}; apply_altpolicy::Bool = false)
 
-    nstates   = n_states(m; apply_altpolicy = apply_altpolicy)
     endo      = m.endogenous_states
-    endo_addl = OrderedDict((var, i + nstates) for (var, i) in m.endogenous_states_augmented)
+    endo_addl = m.endogenous_states_augmented
     pseudo_names = [:y_t, :y_f_t, :NaturalRate, :π_t, :OutputGap, :ExAnteRealRate, :LongRunInflation,
                     :MarginalCost, :Wages, :FlexibleWages, :Hours, :FlexibleHours, :z_t,
                     :Expected10YearRateGap, :NominalFFR, :Expected10YearRate, :Expected10YearNaturalRate,
