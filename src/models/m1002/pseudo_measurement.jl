@@ -12,7 +12,7 @@ X_t = ZZ_pseudo*S_t + DD_pseudo
 """
 function pseudo_measurement{T<:AbstractFloat}(m::Model1002{T}; apply_altpolicy::Bool = false)
 
-    nstates   = n_states(m)
+    nstates   = n_states(m; apply_altpolicy = apply_altpolicy)
     endo      = m.endogenous_states
     endo_addl = OrderedDict((var, i + nstates) for (var, i) in m.endogenous_states_augmented)
     pseudo_names = [:y_t, :y_f_t, :NaturalRate, :π_t, :OutputGap, :ExAnteRealRate, :LongRunInflation,
