@@ -33,25 +33,15 @@ type AltPolicy
     solve::Function
     setup::Function
     forecast_init::Function
-    states::OrderedDict{Symbol, Int}
-    equations::OrderedDict{Symbol, Int}
     color::Colorant
     linestyle::Symbol
 end
 
-function AltPolicy(key::Symbol, eqcond_fcn::Function, solve_fcn::Function;
-                   forecast_init::Function = identity,
-                   setup::Function = identity,
-                   state_names::Vector{Symbol} = Symbol[],
-                   equation_names::Vector{Symbol} = Symbol[],
-                   color::Colorant = colorant"blue",
+function AltPolicy(key, eqcond_fcn, solve_fcn; forecast_init::Function = identity,
+                   setup::Function = identity, color::Colorant = RGB(0., 0., 1.),
                    linestyle::Symbol = :solid)
 
-    states    = OrderedDict{Symbol, Int}((var, i) for (i, var) in enumerate(state_names))
-    equations = OrderedDict{Symbol, Int}((var, i) for (i, var) in enumerate(equation_names))
-
-    AltPolicy(key, eqcond_fcn, solve_fcn, setup, forecast_init,
-              states, equations, color, linestyle)
+    AltPolicy(key, eqcond_fcn, solve_fcn, setup, forecast_init, color, linestyle)
 end
 
 Base.string(a::AltPolicy) = string(a.key)

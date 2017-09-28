@@ -42,7 +42,7 @@ eq = model.equilibrium_conditions
 # Additional states
 endo_new = model.endogenous_states_augmented
 @test length(endo_new) == 16
-@test endo_new[:y_t1] == 1
+@test endo_new[:y_t1] == 69
 
 # Observables
 obs = model.observables

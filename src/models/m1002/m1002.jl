@@ -154,7 +154,7 @@ function init_model_indices!(m::Model1002)
     for (i,k) in enumerate(expected_shocks);             m.expected_shocks[k]             = i end
     for (i,k) in enumerate(equilibrium_conditions);      m.equilibrium_conditions[k]      = i end
     for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
-    for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i end
+    for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(endogenous_states) end
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
 end
 
