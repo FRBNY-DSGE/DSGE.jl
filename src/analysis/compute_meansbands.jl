@@ -420,6 +420,11 @@ function compute_means_bands(class::Symbol,
                                                fourquarter = true,
                                                y0s = y0s, pop_growth = population_series)
     else
+        # Use IRF transform if necessary
+        if product == :irf
+            transform = get_irf_transform(transform)
+        end
+
         y0 = use_data ? data[var_ind, y0_index] : NaN
         transformed_series = reverse_transform(fcast_series, transform;
                                                y0 = y0, pop_growth = population_series)
