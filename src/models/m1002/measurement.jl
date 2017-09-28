@@ -19,10 +19,11 @@ cov(eps_t,u_t) = VV = QQ*MM'
 function measurement{T<:AbstractFloat}(m::Model1002{T},
                                        TTT::Matrix{T},
                                        RRR::Matrix{T},
-                                       CCC::Vector{T})
+                                       CCC::Vector{T};
+                                       apply_altpolicy::Bool = false)
     _n_observables = n_observables(m)
-    _n_states = n_states(m)
-    _n_states_aug = n_states_augmented(m)
+    _n_states = n_states(m; apply_altpolicy = apply_altpolicy)
+    _n_states_aug = n_states_augmented(m; apply_altpolicy = apply_altpolicy)
     _n_shocks_exogenous = n_shocks_exogenous(m)
 
     endo     = m.endogenous_states

@@ -41,8 +41,9 @@ The diagram below shows how `TTT` is extended to `TTT_aug`.
     |_________________________________|
 
 """
-function augment_states{T<:AbstractFloat}(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T})
-    n_endo = n_states(m)
+function augment_states{T<:AbstractFloat}(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T};
+                                          apply_altpolicy::Bool = false)
+    n_endo = n_states(m; apply_altpolicy = apply_altpolicy)
     n_exo  = n_shocks_exogenous(m)
 
     endo     = m.endogenous_states
