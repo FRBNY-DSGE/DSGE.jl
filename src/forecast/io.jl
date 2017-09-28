@@ -192,7 +192,11 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
         filepath = forecast_output_files[var]
         if isnull(block_number) || get(block_number) == 1
             jldopen(filepath, "w") do file
-                write_forecast_metadata(m, file, var)
+                # All forecast outputs except the smoothed histories are
+                # produced under the alternative rule
+                apply_altpolicy = prod != :hist
+
+                write_forecast_metadata(m, file, var, apply_altpolicy = apply_altpolicy)
 
                 if var == :histobs
                     # :histobs just refers to data, so we only write one draw
@@ -256,7 +260,8 @@ forecast output array. The saved dictionaries include:
 
 Note that we don't save dates or transformations for impulse response functions.
 """
-function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbol)
+function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbol;
+                                 apply_altpolicy::Bool = false)
 
     prod  = get_product(var)
     class = get_class(var)
@@ -277,9 +282,11 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
 
     # Write state names
     if class == :states
-        nstates = n_states(m)
-        endo_addl = OrderedDict((var, i + nstates) for (var, i) in m.endogenous_states_augmented)
-        state_indices = merge(m.endogenous_states, endo_addl)
+        endo_altpolicy = OrderedDict((var, i + n_states(m))
+                                         for (var, i) in alternative_policy(m).states)
+        endo_addl      = OrderedDict((var, i + n_states(m; apply_altpolicy = apply_altpolicy))
+                                         for (var, i) in m.endogenous_states_augmented)
+        state_indices = merge(m.endogenous_states, endo_altpolicy, endo_addl)
         @assert length(state_indices) == n_states_augmented(m) # assert no duplicate keys
         write(file, "state_indices", state_indices)
         rev_transforms = Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(state_indices))
