@@ -2,7 +2,7 @@ function nelder_mead(fcn::Function,
                      x0::Array,
                      args...;
                      parameters            = Optim.AdaptiveParameters(),
-                     initial_simplex       = MatlabSimplexer(),
+                     initial_simplex       = Optim.AffineSimplexer(),
                      iterations::Int       = 1000,
                      store_trace::Bool     = false,
                      show_trace::Bool      = false,
@@ -25,7 +25,7 @@ function Optim.simplexer{T, N}(A::MatlabSimplexer, initial_x::Array{T, N})
     n = length(initial_x)
     initial_simplex = Array{T, N}[initial_x for i = 1:n+1]
     for j = 1:n
-        initial_simplex[j+1][j] += initial_simplex[j+1][j] == zero(T) ? S.b * initial_simplex[j+1][j] : S.a
+        initial_simplex[j+1][j] += initial_simplex[j+1][j] == zero(T) ? A.b * initial_simplex[j+1][j] : A.a
     end
     initial_simplex
 end

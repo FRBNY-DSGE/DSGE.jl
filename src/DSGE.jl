@@ -64,7 +64,7 @@ module DSGE
         Measurement, Transition, System, compute_system,
 
         # estimate/
-        simulated_annealing, combined_optimizer, lbfgs_wrapper,
+        simulated_annealing, combined_optimizer, lbfgs,
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance,

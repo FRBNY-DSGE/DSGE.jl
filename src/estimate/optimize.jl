@@ -61,7 +61,7 @@ function optimize!(m::AbstractModel,
     elseif method == :combined_optimizer
         combined_optimizer
     elseif method == :lbfgs
-        lbfgs_wrapper
+        lbfgs
     else
         error("Method ", method, " is not supported.")
     end
