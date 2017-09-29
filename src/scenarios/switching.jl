@@ -18,6 +18,11 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
         tic()
     end
 
+    # Revert model alt policy to historical rule
+    m <= Setting(:alternative_policy, AltPolicy(:historical, solve, eqcond), false, "apol",
+                 "Alternative policy")
+
+    # Get output file names
     original_output_files = get_scenario_output_files(m, scen.original,
                                                       [:forecastobs, :forecastpseudo])
     default_output_files = get_scenario_output_files(m, scen.default,

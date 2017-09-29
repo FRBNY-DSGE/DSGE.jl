@@ -28,6 +28,10 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
         tic()
     end
 
+    # Revert model alt policy to historical rule
+    m <= Setting(:alternative_policy, AltPolicy(:historical, solve, eqcond), false, "apol",
+                 "Alternative policy")
+
     for output_var in output_vars
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             print("Computing " * string(output_var) * "...")

@@ -104,8 +104,8 @@ function forecast_scenario_draw(m::AbstractModel, scen::Scenario, system::System
     forecastshocks = scen.shock_scaling * forecastshocks
 
     # Re-solve model with alternative policy rule, if applicable
-    if alternative_policy(m).solve != identity
-        system = compute_system(m, apply_altpolicy = true)
+    if alternative_policy(m).key != :historical
+        system = compute_scenario_system(m, scen, apply_altpolicy = true)
     end
 
     # Forecast
@@ -113,8 +113,9 @@ function forecast_scenario_draw(m::AbstractModel, scen::Scenario, system::System
     forecaststates, forecastobs, forecastpseudo, _ =
         forecast(m, system, s_T, shocks = forecastshocks)
 
-    # Check forecasted output matches targets *if not using simulation smoother*
-    if !scen.draw_states
+    # Check forecasted output matches targets *if not forecasting udnder
+    # alternative policy or using simulation smoother*
+    if alternative_policy(m).key == :historical && !scen.draw_states
         for var in scen.target_names
             var_index = m.observables[var]
             horizon = min(forecast_horizons(m), n_target_horizons(scen))
@@ -174,6 +175,10 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
         println("Forecast outputs will be saved in " * rawpath(m, "scenarios"))
         tic()
     end
+
+    # Update model alt policy setting
+    m <= Setting(:alternative_policy, scen.altpolicy, false, "apol",
+                 "Alternative policy")
 
     # If no instrument names provided, use all shocks
     if isempty(scen.instrument_names)
