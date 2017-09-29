@@ -153,7 +153,7 @@ function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
         if transform in [loggrowthtopct_annualized_percapita, logleveltopct_annualized_percapita,
                          loggrowthtopct_annualized, logleveltopct_annualized]
             return fourquarter ? "Percent 4Q Growth" : "Percent Q/Q Annualized"
-        elseif transform == quartertoannual
+        elseif transform == quartertoannual || m.spec == "an_schorfheide" # cpi is already annualized for AnSchorfheide
             return "Percent Annualized"
         elseif transform == identity
             ""
