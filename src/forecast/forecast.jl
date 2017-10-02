@@ -23,8 +23,10 @@ where `S<:AbstractFloat`.
   data. Defaults to `:none`.
 - `enforce_zlb::Bool`: whether to enforce the zero lower bound. Defaults to
   `false`.
-- `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
-  under which to forecast.
+- `shocks::Matrix{S}`: matrix of size `nshocks` x `shock_horizon` of shock
+  innovations under which to forecast. If `shock_horizon > horizon`, the extra
+  periods of shocks will be ignored; if `shock_horizon < horizon`, zeros will be
+  filled in for the shocks hitting the remaining forecasted periods.
 - `draw_shocks::Bool`: if `isempty(shocks)`, indicates whether to draw shocks
   according to:
 
@@ -54,8 +56,8 @@ function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     nshocks = n_shocks_exogenous(m)
     horizon = forecast_horizons(m; cond_type = cond_type)
 
-    # Populate shocks matrix
     if isempty(shocks)
+        # Populate shocks matrix
         if draw_shocks
             μ = zeros(S, nshocks)
             σ = sqrt(system[:QQ])
@@ -80,6 +82,25 @@ function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
         else
             shocks = zeros(S, nshocks, horizon)
         end
+    else
+        # Adjust size of shocks matrix, padding with zeros or cutting off
+        # periods of shocks if necessary
+        shock_horizon = size(shocks, 2)
+        if shock_horizon <= horizon
+            shocks0 = zeros(nshocks, horizon - shock_horizon)
+            shocks = hcat(shocks, shocks0)
+        else
+            shocks = shocks[:, 1:horizon]
+        end
+    end
+
+    # Populate shocks matrix under alternative policy, if
+    # user has specified a function to do so
+    alt_policy = alternative_policy(m)
+    if alt_policy.solve != identity &&
+        alt_policy.forecast_init != identity
+
+        shocks, z0 = alt_policy.forecast_init(m, shocks, z0, cond_type = cond_type)
     end
 
     # Get variables necessary to enforce the zero lower bound in the forecast

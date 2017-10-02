@@ -135,7 +135,7 @@ function test_matrix_eq2{T<:AbstractFloat}(expect::Array{T},
     n_rel_diff = sum(rel_diff)
 
     # Element is only problematic if it fails *both* tests.
-    mixed_diff   = abs_diff & rel_diff
+    mixed_diff   = abs_diff .& rel_diff
     n_mixed_diff = sum(mixed_diff)
 
     if n_mixed_diff ≠ 0

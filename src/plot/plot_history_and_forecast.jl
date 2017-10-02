@@ -1,25 +1,30 @@
 """
 ```
 plot_history_and_forecast(m, var, class, input_type, cond_type;
-    forecast_string = "", bdd_and_unbdd = false, output_file = "",
     title = "", kwargs...)
 
 plot_history_and_forecast(m, vars, class, input_type, cond_type;
-    forecast_string = "", bdd_and_unbdd = false, output_files = [],
-    titles = [], kwargs...)
+    forecast_string = "", bdd_and_unbdd = false,
+    untrans = false, fourquarter = false,
+    output_files = figurespath(m, \"forecast\"), titles = [],
+    kwargs...)
 
 plot_history_and_forecast(var, history, forecast; output_file = "",
-    title = "", start_date = Nullable{Date}(), end_date = Nullable{Date}(),
+    title = "", start_date = history.means[1, :date],
+    end_date = forecast.means[end, :date],
     hist_label = \"History\", forecast_label = \"Forecast\",
     hist_color = :black, forecast_color = :red, linestyle = :solid,
-    bands_color = RGBA(0, 0, 1, 0.1), bands_pcts = [],
-    bands_style = :fan, tick_size = 5, legend = :best,
-    plot_handle = plot())
+    bands_color = :blue,
+    bands_pcts = union(which_density_bands(history, uniquify = true),
+                       which_density_bands(forecast, uniquify = true)),
+    bands_style = :fan, label_bands = false, transparent_bands = true,
+    tick_size = 5, ylabel = "", legend = :best, plot_handle = plot(),
+    verbose = :low)
 ```
 
-Plot `var` from `history` and `forecast`, possibly read in using `read_mb`
-(depending on the method). If these correspond to a full-distribution forecast,
-you can specify the `bands_style` and `bands_pcts`.
+Plot `var` or `vars` from `history` and `forecast`, possibly read in using
+`read_mb` (depending on the method). If these correspond to a full-distribution
+forecast, you can specify the `bands_style` and `bands_pcts`.
 
 ### Inputs
 
@@ -30,6 +35,8 @@ you can specify the `bands_style` and `bands_pcts`.
 
 - `m::AbstractModel`
 - `class::Symbol`
+- `input_type::Symbol`
+- `cond_type::Symbol`
 
 **Method 3 only:**
 
@@ -38,12 +45,9 @@ you can specify the `bands_style` and `bands_pcts`.
 
 ### Keyword Arguments
 
-- `output_file::String` or `output_files::Vector{String}: if specified, plot will
-  be saved there. In methods 1 and 2, if not specified, output files will be
-  computed using `get_forecast_filename`
 - `title::String` or `titles::Vector{String}`
-- `start_date::Nullable{Date}`
-- `end_date::Nullable{Date}`
+- `start_date::Date`
+- `end_date::Date`
 - `hist_label::String`
 - `forecast_label::String`
 - `hist_color::Colorant`
@@ -52,33 +56,36 @@ you can specify the `bands_style` and `bands_pcts`.
 - `bands_color::Colorant`
 - `bands_pcts::Vector{String}`
 - `bands_style::Symbol`: either `:fan` or `:line`
+- `label_bands::Bool`
+- `transparent_bands::Bool`
 - `tick_size::Int`: x-axis (time) tick size in units of years
+- `ylabel::String`
 - `legend`
 - `plot_handle::Plots.Plot`: a plot handle to add `history` and `forecast` to
+- `verbose::Symbol`
 
-**Method 1 only:**
+**Methods 1 and 2 only:**
 
 - `forecast_string::String`
 - `bdd_and_unbdd::Bool`: if true, then unbounded means and bounded bands are plotted
+- `plotroot::String`: if nonempty, plots will be saved in that directory
+- `untrans::Bool`: whether to plot untransformed (model units) history and forecast
+- `fourquarter::Bool`: whether to plot four-quarter history and forecast
+
+**Method 3 only:**
+
+- `output_file::String`: if nonempty, plot will be saved in that path
 
 ### Output
 
-- `p::Plot`
+- `p::Plot` or `plots::OrderedDict{Symbol, Plot}`
 """
 function plot_history_and_forecast(m::AbstractModel, var::Symbol, class::Symbol,
                                    input_type::Symbol, cond_type::Symbol;
-                                   forecast_string::String = "",
-                                   bdd_and_unbdd::Bool = false,
-                                   fourquarter::Bool = false,
-                                   output_file::String = "",
                                    title::String = "",
                                    kwargs...)
 
     plots = plot_history_and_forecast(m, [var], class, input_type, cond_type;
-                                      forecast_string = forecast_string,
-                                      bdd_and_unbdd = bdd_and_unbdd,
-                                      fourquarter = fourquarter,
-                                      output_files = isempty(output_file) ? String[] : [output_file],
                                       titles = isempty(title) ? String[] : [title],
                                       kwargs...)
     return plots[var]
@@ -88,62 +95,85 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
                                    input_type::Symbol, cond_type::Symbol;
                                    forecast_string::String = "",
                                    bdd_and_unbdd::Bool = false,
+                                   untrans::Bool = false,
                                    fourquarter::Bool = false,
-                                   output_files::Vector{String} = String[],
+                                   plotroot::String = figurespath(m, "forecast"),
                                    titles::Vector{String} = String[],
                                    kwargs...)
-    # Read in MeansBands
-    hist  = read_mb(m, input_type, cond_type, Symbol(fourquarter ? :hist4q : :hist, class),
-                    forecast_string = forecast_string)
-    fcast = read_mb(m, input_type, cond_type, Symbol(fourquarter ? :forecast4q : :forecast, class),
-                    forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd)
-
-
-    # Get output file names and titles if not provided
-    if isempty(output_files)
-        output_files = map(var -> get_forecast_filename(m, input_type, cond_type,
-                                                        Symbol(fourquarter ? "forecast4q_" : "forecast_", var),
-                                                        pathfcn = figurespath, fileformat = plot_extension()),
-                           vars)
+    # Determine output_vars
+    if untrans && fourquarter
+        error("Only one of untrans or fourquarter can be true")
+    elseif untrans
+        hist_prod  = :histut
+        fcast_prod = :forecastut
+    elseif fourquarter
+        hist_prod  = :hist4q
+        fcast_prod = :forecast4q
+    else
+        hist_prod  = :hist
+        fcast_prod = :forecast
     end
+
+    # Read in MeansBands
+    hist  = read_mb(m, input_type, cond_type, Symbol(hist_prod, class), forecast_string = forecast_string)
+    fcast = read_mb(m, input_type, cond_type, Symbol(fcast_prod, class), forecast_string = forecast_string,
+                    bdd_and_unbdd = bdd_and_unbdd)
+
+
+    # Get titles if not provided
     if isempty(titles)
-        titles = map(var -> DSGE.describe_series(m, var, class), vars)
+        detexify_title = typeof(Plots.backend()) == Plots.GRBackend
+        titles = map(var -> describe_series(m, var, class, detexify = detexify_title), vars)
     end
 
     # Loop through variables
-    plots = Dict{Symbol, Plots.Plot}()
-    for (var, output_file, title) in zip(vars, output_files, titles)
+    plots = OrderedDict{Symbol, Plots.Plot}()
+    for (var, title) in zip(vars, titles)
+        output_file = if isempty(plotroot)
+            ""
+        else
+            get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
+                                  Symbol(fcast_prod, "_", detexify(var)),
+                                  forecast_string = forecast_string,
+                                  fileformat = plot_extension())
+        end
+        ylabel = series_ylabel(m, var, class, untrans = untrans, fourquarter = fourquarter)
+
         plots[var] = plot_history_and_forecast(var, hist, fcast;
                                                output_file = output_file, title = title,
+                                               ylabel = ylabel,
                                                kwargs...)
     end
-
     return plots
 end
 
 function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::MeansBands;
                                    output_file::String = "",
                                    title::String = "",
-                                   start_date::Nullable{Date} = Nullable{Date}(),
-                                   end_date::Nullable{Date} = Nullable{Date}(),
+                                   start_date::Date = history.means[1, :date],
+                                   end_date::Date = forecast.means[end, :date],
                                    hist_label::String = "History",
                                    forecast_label::String = "Forecast",
-                                   hist_color::Colorant = RGBA(0., 0., 0., 1.),
-                                   forecast_color::Colorant = RGBA(1., 0., 0., 1.),
+                                   hist_color::Colorant = colorant"black",
+                                   forecast_color::Colorant = colorant"red",
                                    linestyle::Symbol = :solid,
-                                   bands_color::Colorant = RGBA(0., 0., 1., 0.1),
-                                   bands_pcts::Vector{String} = String[],
+                                   bands_color::Colorant = colorant"blue",
+                                   bands_pcts::Vector{String} = union(which_density_bands(history, uniquify = true),
+                                                                      which_density_bands(forecast, uniquify = true)),
                                    bands_style::Symbol = :fan,
+                                   label_bands::Bool = false,
+                                   transparent_bands::Bool = true,
                                    tick_size::Int = 5,
+                                   ylabel::String = "",
                                    legend = :best,
-                                   plot_handle::Plots.Plot = plot())
+                                   plot_handle::Plots.Plot = plot(),
+                                   verbose::Symbol = :low)
     # Concatenate MeansBands
     combined = cat(history, forecast)
 
     # Dates
-    start_date, end_date = get_date_limits(start_date, end_date, combined.means[:date])
-    start_ind,  end_ind  = get_date_limit_indices(start_date, end_date, combined.means[:date])
-    datenums             = map(quarter_date_to_number, combined.means[:date])
+    start_ind, end_ind = get_date_limit_indices(start_date, end_date, combined.means[:date])
+    datenums           = map(quarter_date_to_number, combined.means[:date])
 
     # Indices
     n_hist_periods  = size(history.means,  1)
@@ -155,18 +185,19 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     all_inds   = start_ind:end_ind
 
     # Initialize plot
-    p = if isempty(plot_handle.series_list)
-        Plots.plot(legend = legend)
-    else
-        plot_handle
-    end
+    p = plot_handle
+    plot!(p, legend = legend)
     title!(p, title)
+    yaxis!(p, ylabel = ylabel)
 
     # Plot bands
-    if combined.metadata[:para] in [:full, :subset]
+    if combined.metadata[:para] in [:full, :subset] || haskey(combined.metadata, :scenario_key)
         bands_inds = get_bands_indices(var, history, forecast, hist_inds, fcast_inds)
-        plot_bands!(p, var, combined, bands_style, bands_color,
-                    linestyle = linestyle, pcts = bands_pcts, indices = bands_inds)
+        if !isempty(bands_inds)
+            plot_bands!(p, var, combined, bands_style, bands_color,
+                        linestyle = linestyle, pcts = bands_pcts, indices = bands_inds,
+                        label_bands = label_bands, transparent_bands = transparent_bands)
+        end
     end
 
     # Plot mean
@@ -178,35 +209,40 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     # Set date ticks
     date_ticks!(p, start_date, end_date, tick_size)
 
+    # Add title
+    title!(p, title)
+
     # Save if output_file provided
-    save_plot(p, output_file)
+    save_plot(p, output_file, verbose = verbose)
 
     return p
 end
 
 function plot_history_and_forecast(var::Symbol, histories::Vector{MeansBands}, forecasts::Vector{MeansBands};
-                                   start_date::Nullable{Date} = Nullable{Date}(),
-                                   end_date::Nullable{Date} = Nullable{Date}(),
+                                   start_date::Date = histories[1].means[1, :date],
+                                   end_date::Date = forecasts[1].means[end, :date],
                                    output_file::String = "",
-                                   hist_label::String = "History",
-                                   forecast_label::String = "Forecast",
-                                   hist_color::Colorant = RGBA(0., 0., 0., 1.),
-                                   forecast_mean_color::Colorant = RGBA(1., 0., 0., 1.),
-                                   forecast_band_color::Colorant = RGBA(0., 0., 1., 0.1),
-                                   tick_size::Int = 5,
-                                   legend = :best,
-                                   plot_handle::Plots.Plot = plot())
+                                   hist_label::Vector{String} = fill("History", length(histories)),
+                                   forecast_label::Vector{String} = fill("Forecast", length(forecasts)),
+                                   hist_color::Vector{Colorant} = Colorant[colorant"black" for i = 1:length(histories)],
+                                   forecast_color::Vector{Colorant} = Colorant[colorant"red" for i = 1:length(forecasts)],
+                                   bands_color::Vector{Colorant} = Colorant[colorant"blue" for i = 1:length(forecasts)],
+                                   linestyle::Vector{Symbol} = fill(:solid, length(forecasts)),
+                                   plot_handle::Plots.Plot = plot(),
+                                   kwargs...)
 
     @assert length(histories) == length(forecasts) "histories and forecasts must be same length"
 
-    for (history, forecast) in zip(histories, forecasts)
-       plot_handle =  plot_history_and_forecast(var, history, forecast;
+    for (i, (history, forecast)) in enumerate(zip(histories, forecasts))
+        plot_handle = plot_history_and_forecast(var, history, forecast;
                             start_date = start_date, end_date = end_date,
                             output_file = output_file,
-                            hist_label = hist_label, forecast_label = forecast_label,
-                            hist_color = hist_color, forecast_mean_color = forecast_mean_color,
-                            forecast_band_color = forecast_band_color,
-                            tick_size = tick_size, legend = legend, plot_handle = plot_handle)
+                            hist_label = hist_label[i], forecast_label = forecast_label[i],
+                            hist_color = hist_color[i], forecast_color = forecast_color[i],
+                            bands_color = bands_color[i],
+                            linestyle = linestyle[i],
+                            plot_handle = plot_handle,
+                            kwargs...)
     end
 
     return plot_handle
@@ -215,7 +251,7 @@ end
 """
 ```
 function plot_bands!(p, var, mb, style, color; linestyle = :solid,
-    pcts = DSGE.which_density_bands(mb, uniquify = true), indices = Colon())
+    pcts = which_density_bands(mb, uniquify = true), indices = Colon())
 ```
 
 Plot `var` bands from `mb` on plot `p`. The `style` can be one of `:fan` or
@@ -225,28 +261,47 @@ periods (`indices`).
 function plot_bands!(p::Plots.Plot, var::Symbol, mb::MeansBands,
                      style::Symbol, color::Colorant;
                      linestyle::Symbol = :solid,
-                     pcts::Vector{String} = DSGE.which_density_bands(mb, uniquify = true),
+                     pcts::Vector{String} = which_density_bands(mb, uniquify = true),
+                     label_bands::Bool = false,
+                     transparent_bands::Bool = true,
                      indices = Colon())
-
-    if isempty(pcts)
-        pcts = which_density_bands(mb, uniquify = true)
-    end
 
     datenums = map(quarter_date_to_number, mb.means[:date])
 
+    # Sort percentages from largest to smallest
+    sort!(pcts, rev = true)
+
     if style == :fan
-        for pct in pcts
+        for (i, pct) in enumerate(pcts)
+            # Determine label
+            label = label_bands ? pct * " Bands" : ""
+
+            # Determine color
+            if transparent_bands
+                pct_color = RGBA(color, 0.1*i)
+                α = 0.1
+            else
+                pct_color = weighted_color_mean(0.1*i, color, colorant"white")
+                α = 1.0
+            end
+
+            # Plot
             plot!(p, datenums[indices], mb.bands[var][indices, Symbol(pct, " UB")],
                   fillto = mb.bands[var][indices, Symbol(pct, " LB")],
-                  label = "", color = color, α = 0.10)
+                  label = label, color = pct_color, α = α)
         end
 
     elseif style == :line
         for pct in pcts
+            # Determine labels
+            upper_label = label_bands ? pct * " UB" : ""
+            lower_label = label_bands ? pct * " LB" : ""
+
+            # Plot
             plot!(p, datenums[indices], mb.bands[var][indices, Symbol(pct, " UB")],
-                  label = "", color = color, linewidth = 2, linestyle = linestyle)
+                  label = upper_label, color = color, linewidth = 2, linestyle = linestyle)
             plot!(p, datenums[indices], mb.bands[var][indices, Symbol(pct, " LB")],
-                  label = "", color = color, linewidth = 2, linestyle = linestyle)
+                  label = lower_label, color = color, linewidth = 2, linestyle = linestyle)
         end
 
     else

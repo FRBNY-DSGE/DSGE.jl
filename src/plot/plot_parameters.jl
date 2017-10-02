@@ -1,12 +1,12 @@
 """
 ```
-plot_prior_posterior(m::AbstractModel; include_fixed = false)
+plot_prior_posterior(m::AbstractModel; include_fixed = false, verbose = :low)
 
 plot_prior_posterior(m::AbstractModel, param_key::Symbol, posterior_draws::Matrix{T};
-    output_file = "")
+    output_file = "", verbose = :low)
 
 plot_prior_posterior(param::Parameter, posterior_draws::Vector{T};
-    output_file = "")
+    output_file = "", verbose = :low)
 ```
 
 Plot prior distribution and histogram of posterior draws for either all
@@ -15,7 +15,8 @@ parameters (method 1) or the specified `param_key` or `param` (methods 2 and
 plotted.
 """
 function plot_prior_posterior(m::AbstractModel;
-                              include_fixed::Bool = false)
+                              include_fixed::Bool = false,
+                              verbose::Symbol = :low)
     # Load parameter draws from Metropolis-Hastings
     posterior_draws = load_draws(m, :full)
 
@@ -28,26 +29,28 @@ function plot_prior_posterior(m::AbstractModel;
 
         posterior = posterior_draws[:, i]
         output_file = figurespath(m, "estimate", "prior_posterior_" * detexify(string(param.key)) * ".pdf")
-        plot_prior_posterior(param, posterior, output_file = output_file)
+        plot_prior_posterior(param, posterior, output_file = output_file, verbose = verbose)
     end
 end
 
 function plot_prior_posterior{T<:AbstractFloat}(m::AbstractModel, param_key::Symbol,
                                                 posterior_draws::Matrix{T};
-                                                output_file::String = "")
+                                                output_file::String = "",
+                                                verbose::Symbol = :low)
     i = findfirst(x -> x.key == param_key, m.parameters)
     if i > 0
         param = m.parameters[i]
         posterior = posterior_draws[:, i]
         output_file = figurespath(m, "estimate", "prior_posterior_" * detexify(string(param.key)) * ".pdf")
-        plot_prior_posterior(param, posterior, output_file = output_file)
+        plot_prior_posterior(param, posterior, output_file = output_file, verbose = verbose)
     else
         error("Parameter not found: " * string(param_key))
     end
 end
 
 function plot_prior_posterior{T<:AbstractFloat}(param::Parameter, posterior_draws::Vector{T};
-                                                output_file::String = "")
+                                                output_file::String = "",
+                                                verbose::Symbol = :low)
     # Plot posterior
     label = if param.fixed
         "Posterior: " * describe_prior(param)
@@ -69,7 +72,7 @@ function plot_prior_posterior{T<:AbstractFloat}(param::Parameter, posterior_draw
     title!(p, param.tex_label)
 
     # Save if output_file provided
-    save_plot(p, output_file)
+    save_plot(p, output_file, verbose = verbose)
 
     return p
 end

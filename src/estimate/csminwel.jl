@@ -137,6 +137,9 @@ function csminwel(fcn::Function,
     # Assess multiple types of convergence
     x_converged, f_converged, gr_converged = false, false, false
 
+    # Declare residual variables
+    x_resid, f_resid, gr_resid = 0.0, 0.0, 0.0
+
     # Iterate until convergence or exhaustion
     converged = false
     while !converged && iteration < iterations
@@ -318,13 +321,16 @@ function csminwel(fcn::Function,
                                        ftol,
                                        grtol)
 
-        @csminwelltrace
+        x_resid  = Optim.x_residual(x, x_previous)
+        f_resid  = Optim.f_residual(f_x, f_x_previous, ftol)
+        gr_resid = Optim.g_residual(gr)
 
+        @csminwelltrace
     end
 
-    return MultivariateOptimizationResults("csminwel", x0, x, convert(Float64, f_x),
-        iteration, iteration==iterations, x_converged, xtol, f_converged, ftol, gr_converged,
-        grtol, false, tr, f_calls, g_calls, 0), H  # also return H
+    return MultivariateOptimizationResults(Csminwel(), x0, x, convert(Float64, f_x),
+        iteration, iteration==iterations, x_converged, xtol, x_resid, f_converged, ftol, f_resid,
+        gr_converged, grtol, gr_resid, false, tr, f_calls, g_calls, 0), H  # also return H
 end
 
 

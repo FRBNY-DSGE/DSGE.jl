@@ -21,7 +21,7 @@ for arg in fieldnames(kal1)
     if arg == :L
         @test exp_kal12[arg] ≈ kal12[arg]
     else
-        @test_approx_eq exp_kal12[arg] kal12[arg]
+        @test exp_kal12[arg] ≈ kal12[arg]
     end
 end
 

@@ -71,7 +71,8 @@ an error.
 function get_forecast_filename(m::AbstractModel, input_type::Symbol,
                                cond_type::Symbol, output_var::Symbol;
                                pathfcn::Function = rawpath,
-                               forecast_string::String = "", fileformat = :jld)
+                               forecast_string::String = "",
+                               fileformat::Symbol = :jld)
 
     # First, we need to make sure we get all of the settings that have been printed to this filestring
     directory = pathfcn(m, "forecast")
@@ -141,7 +142,8 @@ See `get_forecast_filename` for more information.
 """
 function get_forecast_output_files(m::AbstractModel, input_type::Symbol,
                                    cond_type::Symbol, output_vars::Vector{Symbol};
-                                   forecast_string::String = "", fileformat = :jld)
+                                   forecast_string::String = "",
+                                   fileformat::Symbol = :jld)
 
     directory = rawpath(m, "forecast")
     base      = filestring_base(m)
@@ -153,7 +155,7 @@ end
 
 function get_forecast_output_files(directory::String, filestring_base::Vector{String},
                                    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                                   forecast_string::String = "", fileformat = :jld)
+                                   forecast_string::String = "", fileformat::Symbol = :jld)
 
     output_files    = Dict{Symbol, String}()
     for var in remove_meansbands_only_output_vars(output_vars)
@@ -204,7 +206,8 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                     # :histobs just refers to data, so we only write one draw
                     # (as all draws would be the same)
                     @assert !isempty(df) "df cannot be empty if trying to write :histobs"
-                    data = df_to_matrix(m, df; include_presample = false)
+                    df1 = df[date_mainsample_start(m) .<= df[:date] .<= date_mainsample_end(m), :]
+                    data = df_to_matrix(m, df1)
                     write(file, "arr", data)
 
                 else
@@ -282,7 +285,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     end
 
     # Write state names
-    if class == :state
+    if class == :states
         state_indices = merge(m.endogenous_states, m.endogenous_states_augmented)
         @assert length(state_indices) == n_states_augmented(m) # assert no duplicate keys
         write(file, "state_indices", state_indices)
@@ -314,9 +317,9 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     end
 
     # Write shock names and transforms
-    if class in [:shock, :stdshock] || prod in [:shockdec, :irf]
+    if class in [:shocks, :stdshocks] || prod in [:shockdec, :irf]
         write(file, "shock_indices", m.exogenous_shocks)
-        if class in [:shock, :stdshock]
+        if class in [:shocks, :stdshocks]
             rev_transforms = Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(m.exogenous_shocks))
             write(file, "shock_revtransforms", rev_transforms)
         end
@@ -399,7 +402,8 @@ function read_forecast_output(file::JLD.JldFile, class::Symbol, product::Symbol,
         end
 
     # Other products are ndraws x nvars x nperiods
-    elseif product in [:hist, :forecast, :hist4q, :forecast4q, :bddforecast, :bddforecast4q, :dettrend]
+    elseif product in [:hist, :hist4q, :forecast, :bddforecast, :forecastut, :bddforecastut,
+                       :forecast4q, :bddforecast4q, :dettrend]
         inds_to_read = if ndims == 2 # one draw
             arr = h5read(filename, "arr", (var_ind, Colon()))
         elseif ndims == 3 # many draws

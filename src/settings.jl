@@ -36,7 +36,7 @@ Base.promote_rule(::Type{Setting{Bool}}, ::Type{Bool}) = promote_rule(Bool, Bool
 
 Base.string(s::Setting{String}) = string(s.value)
 
-to_filestring(s::Setting) = "$(s.code)=$(s.value)"
+to_filestring(s::Setting) = string(s.code) * "=" * string(s.value)
 
 # key, value constructor
 Setting(key, value) = Setting(key, value, false, "", "")
@@ -59,7 +59,8 @@ function (<=)(m::AbstractModel, s::Setting)
         setting_field_name = :test_settings
     end
 
-    if !haskey(getfield(m, setting_field_name), s.key)
+    if !haskey(getfield(m, setting_field_name), s.key) ||
+        isa(s.value, Function)
         getfield(m, setting_field_name)[s.key] = s
     else
         update!(getfield(m, setting_field_name)[s.key], s)

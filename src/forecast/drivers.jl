@@ -301,9 +301,10 @@ function forecast_one(m::AbstractModel{Float64},
             # Get to work!
             params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
 
-            forecast_outputs = pmap(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
-                                                               param, df, verbose = verbose),
-                                    params)
+            mapfcn = use_parallel_workers(m) ? pmap : map
+            forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
+                                                                 param, df, verbose = verbose),
+                                      params)
 
             # Assemble outputs from this block and write to file
             forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
@@ -462,7 +463,6 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
         end
     end
 
-
     ### 2. Forecasts
 
     unbddforecast_vars = [:forecaststates, :forecastobs, :forecastpseudo, :forecastshocks, :forecaststdshocks]
@@ -490,9 +490,12 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
             kal[:zend]
         end
 
+        # Re-solve model with alternative policy rule, if applicable
+        if alternative_policy(m).solve != identity
+            system = compute_system(m; apply_altpolicy = true)
+        end
 
         # 2A. Unbounded forecasts
-
         if !isempty(intersect(output_vars, unbddforecast_vars))
             forecaststates, forecastobs, forecastpseudo, forecastshocks =
                 forecast(m, system, initial_forecast_state;

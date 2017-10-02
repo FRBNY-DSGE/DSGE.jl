@@ -81,8 +81,8 @@ function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
         vpred = cat(3, k1[:vpred], k2[:vpred])
         yprederror    = hcat(k1[:yprederror], k2[:yprederror])
         ystdprederror = hcat(k1[:ystdprederror], k2[:yprederror])
-        rmse  = sqrt(mean((yprederror.^2)', 1))
-        rmsd  = sqrt(mean((ystdprederror.^2)', 1))
+        rmse  = sqrt.(mean((yprederror.^2)', 1))
+        rmsd  = sqrt.(mean((ystdprederror.^2)', 1))
         filt  = hcat(k1[:filt], k2[:filt])
         vfilt = cat(3, k1[:vfilt], k2[:vfilt])
         z0    = k1[:z0]
@@ -98,18 +98,30 @@ end
 
 """
 ```
-zlb_regime_indices(m, data)
+zlb_regime_indices(m, data, start_date = date_presample_start(m))
 ```
 
-Returns a Vector{Range{Int64}} of index ranges for the pre- and post-ZLB regimes.
+Returns a Vector{Range{Int64}} of index ranges for the pre- and post-ZLB
+regimes. The optional argument `start_date` indicates the first quarter of
+`data`.
 """
-function zlb_regime_indices{S<:AbstractFloat}(m::AbstractModel{S}, data::Matrix{S})
+function zlb_regime_indices{S<:AbstractFloat}(m::AbstractModel{S}, data::Matrix{S},
+                                              start_date::Date = date_presample_start(m))
     T = size(data, 2)
 
     if n_anticipated_shocks(m) > 0
-        regime_inds = Vector{Range{Int64}}(2)
-        regime_inds[1] = 1:index_zlb_start(m)-1
-        regime_inds[2] = index_zlb_start(m):T # allows for conditional data
+        if start_date < date_presample_start(m)
+            error("Start date $start_date must be >= date_presample_start(m)")
+
+        elseif date_presample_start(m) <= start_date <= date_zlb_start(m)
+            offset = DSGE.subtract_quarters(start_date, date_presample_start(m))
+            regime_inds = Vector{Range{Int64}}(2)
+            regime_inds[1] = 1:(index_zlb_start(m) - offset - 1)
+            regime_inds[2] = (index_zlb_start(m) - offset):T
+
+        elseif date_zlb_start(m) < start_date
+            regime_inds = Range{Int64}[1:T]
+        end
     else
         regime_inds = Range{Int64}[1:T]
     end
@@ -119,7 +131,7 @@ end
 
 """
 ```
-zlb_regime_matrices(m, system)
+zlb_regime_matrices(m, system, start_date = date_presample_start(m))
 ```
 
 Returns `TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs`, an 8-tuple of
@@ -127,22 +139,27 @@ Returns `TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs`, an 8-tuple of
 and post-ZLB regimes. Of these, only `QQ` changes from pre- to post-ZLB: the
 entries corresponding to anticipated shock variances are zeroed out pre-ZLB.
 """
-function zlb_regime_matrices{S<:AbstractFloat}(m::AbstractModel{S}, system::System{S})
-    if !all(x -> x == 0, system[:MM])
-        error("Kalman filter and smoothers not implemented for nonzero MM")
-    end
-
+function zlb_regime_matrices{S<:AbstractFloat}(m::AbstractModel{S}, system::System{S},
+                                               start_date::Date = date_presample_start(m))
     if n_anticipated_shocks(m) > 0
-        n_regimes = 2
+        if start_date < date_presample_start(m)
+            error("Start date $start_date must be >= date_presample_start(m)")
 
-        shock_inds = inds_shocks_no_ant(m)
-        QQ_ZLB = system[:QQ]
-        QQ_preZLB = zeros(size(QQ_ZLB))
-        QQ_preZLB[shock_inds, shock_inds] = QQ_ZLB[shock_inds, shock_inds]
-        QQs = Matrix{S}[QQ_preZLB, QQ_ZLB]
+        elseif date_presample_start(m) <= start_date <= date_zlb_start(m)
+            n_regimes = 2
+
+            shock_inds = inds_shocks_no_ant(m)
+            QQ_ZLB = system[:QQ]
+            QQ_preZLB = zeros(size(QQ_ZLB))
+            QQ_preZLB[shock_inds, shock_inds] = QQ_ZLB[shock_inds, shock_inds]
+            QQs = Matrix{S}[QQ_preZLB, QQ_ZLB]
+
+        elseif date_zlb_start(m) < start_date
+            n_regimes = 1
+            QQs = Matrix{S}[system[:QQ]]
+        end
     else
         n_regimes = 1
-
         QQs = Matrix{S}[system[:QQ]]
     end
 

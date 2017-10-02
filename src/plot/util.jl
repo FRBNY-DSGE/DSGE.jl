@@ -19,7 +19,7 @@ function quarter_number_to_date(datenum::Real)
 
     y = convert(Int, floor(datenum))
     q = convert(Int, (datenum % 1) / 0.25) + 1
-    return DSGE.quartertodate("$y-Q$q")
+    return quartertodate("$y-Q$q")
 end
 
 function get_date_ticks(start_date::Date, end_date::Date;
@@ -39,7 +39,7 @@ end
 
 function shockdec_date_to_x(date::Date, start_date::Date)
     start_x = 0.5
-    quarters_diff = DSGE.subtract_quarters(date, start_date)
+    quarters_diff = subtract_quarters(date, start_date)
     x = start_x + quarters_diff
     return x
 end
@@ -55,15 +55,6 @@ function date_ticks!(p::Plots.Plot,
     xaxis!(p, xlims = (t0, t1), xtick = date_ticks)
 
     return nothing
-end
-
-function get_date_limits(nullable_start::Nullable{Date}, nullable_end::Nullable{Date},
-                         dates::AbstractArray{Date, 1})
-
-    start_date = isnull(nullable_start) ? dates[1] : get(nullable_start)
-    end_date = isnull(nullable_end) ? dates[end] : get(nullable_end)
-
-    return start_date, end_date
 end
 
 function get_date_limit_indices(start_date::Date, end_date::Date,
@@ -88,11 +79,13 @@ function get_date_limit_indices(start_date::Date, end_date::Date,
 end
 
 function has_nonidentical_bands(var::Symbol, mb::MeansBands)
+    nanapprox(x, y) = x ≈ y || (isnan(x) && isnan(y))
+
     df = mb.bands[var]
     cols = setdiff(names(df), [:date])
     for t = 1:size(df, 1)
         bandvals = convert(Matrix, df[t, cols])
-        if !all(x -> x ≈ mb.means[t, var], bandvals)
+        if !all(x -> nanapprox(x, mb.means[t, var]), bandvals)
             return true
         end
     end
@@ -102,8 +95,8 @@ end
 function get_bands_indices(var::Symbol, history::MeansBands, forecast::MeansBands,
                            hist_inds::UnitRange{Int}, fcast_inds::UnitRange{Int})
 
-    hist_bands  = has_nonidentical_bands(var, history)
-    fcast_bands = has_nonidentical_bands(var, forecast)
+    hist_bands  = !isempty(history)  && has_nonidentical_bands(var, history)
+    fcast_bands = !isempty(forecast) && has_nonidentical_bands(var, forecast)
 
     if hist_bands && fcast_bands
         return hist_inds.start:fcast_inds.stop
@@ -127,27 +120,83 @@ function plot_extension()
     end
 end
 
-function describe_series(m::AbstractModel, var::Symbol, class::Symbol)
+function describe_series(m::AbstractModel, var::Symbol, class::Symbol;
+                         detexify::Bool = false)
+    res = if class in [:obs, :pseudo]
+        dict = if class == :obs
+            m.observable_mappings
+        elseif class == :pseudo
+            pseudo_measurement(m)[1]
+        end
+        dict[var].name
+    elseif class == :states
+        string(var)
+    elseif class in [:shocks, :stdshocks]
+        replace(string(var), r"_sh$", "")
+    else
+        error("Invalid class: " * string(class))
+    end
+
+    detexify ? DSGE.detexify(res) : res
+end
+
+function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
+                       untrans::Bool = false,
+                       fourquarter::Bool = false)
+    if untrans && fourquarter
+        error("Only one of untrans or fourquarter can be true")
+    end
+
     if class in [:obs, :pseudo]
         dict = if class == :obs
             m.observable_mappings
         elseif class == :pseudo
             pseudo_measurement(m)[1]
         end
-        return dict[var].name
-    elseif class in [:state, :shock, :stdshock]
-        return string(var)
+        transform = dict[var].rev_transform
+
+        if transform in [loggrowthtopct_annualized_percapita, loggrowthtopct_annualized]
+            if untrans
+                return "Q/Q Log Growth Rate"
+            elseif fourquarter
+                return "Percent 4Q Growth"
+            else
+                return "Percent Q/Q Annualized"
+            end
+        elseif transform in [logleveltopct_annualized_percapita, logleveltopct_annualized]
+            if untrans
+                return "Log Level"
+            elseif fourquarter
+                return "Percent 4Q Growth"
+            else
+                return "Percent Q/Q Annualized"
+            end
+        elseif transform == quartertoannual
+            if untrans
+                return "Percent Q/Q"
+            else
+                return "Percent Annualized"
+            end
+        elseif transform == identity
+            ""
+        end
+    elseif class == :stdshocks
+        return "Standard Deviations"
+    elseif class in [:states, :shocks]
+        return ""
     else
         error("Invalid class: " * string(class))
     end
 end
 
-
-function save_plot(p::Plots.Plot, output_file::String = "")
+function save_plot(p::Plots.Plot, output_file::String = ""; verbose::Symbol = :low)
     if !isempty(output_file)
         output_dir = dirname(output_file)
-        !isdir(output_dir) && mkdir(output_dir)
+        !isdir(output_dir) && mkpath(output_dir)
         Plots.savefig(output_file)
-        println("Saved $output_file")
+
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("Saved $output_file")
+        end
     end
 end
