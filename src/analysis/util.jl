@@ -88,7 +88,7 @@ function resize_population_forecast(population_forecast::DataFrame, nperiods::In
     dr = last_provided:(last_provided+Dates.Day(93 * n_filler_periods))
 
     islastdayofquarter = x->Dates.lastdayofquarter(x) == x
-    dates = recur(dr) do x
+    dates = Base.filter(dr) do x
         islastdayofquarter(x)
     end
 
