@@ -50,7 +50,7 @@ equilibrium conditions.
   filepath computation.
 
 * `subspec::String`: The model subspecification number, indicating that
-  some parameters from the original model spec (\"ss2\") are initialized
+  some parameters from the original model spec (\"ss10\") are initialized
   differently. Cached here for filepath computation.
 
 * `settings::Dict{Symbol,Setting}`: Settings/flags that affect computation
@@ -158,9 +158,9 @@ function init_model_indices!(m::Model1002)
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
 end
 
-function Model1002(subspec::String="ss2";
-                  custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
-                  testing = false)
+function Model1002(subspec::String="ss10";
+                   custom_settings::Dict{Symbol, Setting} = Dict{Symbol, Setting}(),
+                   testing = false)
 
     # Model-specific specifications
     spec               = split(basename(@__FILE__),'.')[1]
@@ -645,8 +645,13 @@ function steadystate!(m::Model1002)
     m[:ζ_spσ_ω] = (ζ_bw_zw*ζ_zσ_ω - ζ_bσ_ω) / (1-ζ_bw_zw)
 
     # elasticities wrt μ_e
-    ζ_bμ_e      = -μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
-        ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    if subspec(m) in ["ss2", "ss8"]
+        ζ_bμ_e  = μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
+            ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    else
+        ζ_bμ_e  = -μ_estar * (nkstar*dΓdω_star*dGdω_star/ΓμGprime+dΓdω_star*Gstar*m[:spr]) /
+            ((1-Γstar)*ΓμGprime*m[:spr] + dΓdω_star*(1-nkstar))
+    end
     ζ_zμ_e      = -μ_estar*Gstar/ΓμG
     m[:ζ_spμ_e] = (ζ_bw_zw*ζ_zμ_e - ζ_bμ_e) / (1-ζ_bw_zw)
 

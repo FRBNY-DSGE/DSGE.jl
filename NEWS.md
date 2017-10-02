@@ -4,6 +4,7 @@
 - The AnSchorfheide model, a small scale NK DSGE model, is now included.
 - Sequential Monte Carlo is implemented and works with the AnSchorfheide model.
 
+
 # DSGE.jl v0.2.1 Release Notes
 
 ## New features
@@ -11,10 +12,12 @@
 - `detexify` function turns unicode characters into ASCII strings
   before writing them to CSV.
 
+
 ## Breaking changes
 
 - Changed `Dict`s of indices in model object to `OrderedDict`s
 - Upgrade all code for use with Julia v0.5.1 or higher
+
 
 
 # DSGE.jl v0.2.0 Release Notes
@@ -36,6 +39,7 @@
   [means and bands](http://frbny-dsge.github.io/DSGE.jl/latest/means_bands.html)
   for more details.
 
+
 ## Breaking changes
 
 - Added the `Observable` type; replaced the `data_series` and `data_transforms`
@@ -46,6 +50,7 @@
   [StateSpaceRoutines.jl](https://github.com/FRBNY-DSGE/StateSpaceRoutines.jl).
 - `estimate` now saves only parameter draws, not the associated state-space
   matrices or the last filtered states for each draw.
+
 
 
 # DSGE.jl v0.1.5 Release Notes
@@ -59,10 +64,12 @@
   the data used, a table of priors for the model's parameters,
   and more.
 
+
 ## Deprecation Fixes
 
 - Optim.jl's `MultivariateOptimizationResults` type requires `f_increased` field
 - `MersenneTwister` must be constructed with a seed
+
 
 
 # DSGE.jl v0.1.4 Release Notes
@@ -72,9 +79,11 @@
 - Gensys no longer throws an error when system is indeterminate;
   instead, a warning is printed to the screen.
 
+
 ## Bug Fixes
 
 - Fix `OptimizationTrace` constructor according to Optim v0.6. See #6.
+
 
 
 # DSGE.jl v0.1.3 Release Notes
@@ -88,7 +97,9 @@
 - Bug fix in treatment of zero lower bound in posterior computation
 - Improved test coverage and documentation
 
+
 ## Breaking changes
 
 - Input data matrices are CSV instead of HDF5
 - Estimation output matrices are *not* flattened when saved
+
