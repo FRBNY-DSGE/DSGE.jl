@@ -147,7 +147,7 @@ end
 
 function weighted_std(c::ParticleCloud)
     temp = map(p -> (p - weighted_mean(c)).^2, c.particles)
-    return sqrt(sum(map(*, temp, get_weights(c))))
+    return sqrt.(sum(map(*, temp, get_weights(c))))
 end
 
 # Calculate the covariance of the particles

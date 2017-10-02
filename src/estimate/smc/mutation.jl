@@ -52,7 +52,7 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, R::Array
     step_prob = isempty(rval) ? rand() : rval
 
     U, E, V = svd(R)
-    cov_mat = U * diagm(sqrt(E))
+    cov_mat = U * diagm(sqrt.(E))
 
     para = p.value
     like = p.loglh
