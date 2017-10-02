@@ -36,7 +36,7 @@ Returns a vector of `Dates`, consisting of the last days of each quarter between
 """
 function quarter_range(t0::Date, t1::Date)
     dr = t0:t1
-    return Dates.recur(d -> Dates.lastdayofquarter(d) == d, dr)
+    return Base.filter(d -> Dates.lastdayofquarter(d) == d, dr)
 end
 
 """

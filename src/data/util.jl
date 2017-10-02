@@ -100,7 +100,7 @@ Convert all NAs in a DataFrame to NaNs.
 """
 function na2nan!(df::DataFrame)
     for col in names(df)
-        df[isna(df[col]), col] = NaN
+        df[isna.(df[col]), col] = NaN
     end
 end
 
