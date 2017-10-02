@@ -425,6 +425,7 @@ end
 
 for f in (:(Base.exp),
           :(Base.log),
+          :(Base.transpose),
           :(Base.:-),
           :(Base.:<),
           :(Base.:>),

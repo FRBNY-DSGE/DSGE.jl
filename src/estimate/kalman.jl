@@ -22,6 +22,7 @@ Kalman{S<:AbstractFloat}
   data, then `z0` is the state vector at the end of the presample/beginning of
   the main sample
 - `P0`: variance-covariance matrix for `z0`
+- `marginal_L`: a vector of marginal likelihoods from t = 1 to T
 """
 immutable Kalman{S<:AbstractFloat}
     L::S                  # likelihood
@@ -37,6 +38,7 @@ immutable Kalman{S<:AbstractFloat}
     vfilt::Array{S, 3}     # mean squared errors of filtered state vectors
     z0::Vector{S}          # starting-period state vector
     vz0::Matrix{S}         # starting-period variance-covariance matrix for the states
+    marginal_L::Vector{S}
 end
 
 function Kalman{S<:AbstractFloat}(L::S,
@@ -54,12 +56,13 @@ function Kalman{S<:AbstractFloat}(L::S,
                                   P0::Matrix{S}            = Matrix{S}(0, 0),
                                   marginal_L::Vector{S}    = Vector{S}(0))
 
-    return Kalman{S}(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, P0)
+    return Kalman{S}(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, P0,
+                     marginal_L)
 end
 
 function Base.getindex(K::Kalman, d::Symbol)
     if d in (:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse, :rmsd,
-             :filt, :vfilt, :z0, :vz0)
+             :filt, :vfilt, :z0, :vz0, :marginal_L)
         return getfield(K, d)
     else
         throw(KeyError(d))
@@ -84,9 +87,10 @@ function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
         vfilt = cat(3, k1[:vfilt], k2[:vfilt])
         z0    = k1[:z0]
         P0    = k1[:vz0]
+        marginal_L = vcat(k1[:marginal_L], k2[:marginal_L])
 
         return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror,
-            rmse, rmsd, filt, vfilt, z0, P0)
+            rmse, rmsd, filt, vfilt, z0, P0, marginal_L)
     else
         return Kalman(L, zend, Pend)
     end
