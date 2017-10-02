@@ -27,48 +27,48 @@ Estimate the DSGE parameter posterior distribution.
     for Sequential Monte Carlo.
 - `mle`: Set to true if parameters should be estimated by maximum likelihood directly.
     If this is set to true, this function will return after estimating parameters.
-- `sample`: Set to false to disable sampling from the posterior.
+- `sampling`: Set to false to disable sampling from the posterior.
 """
 function estimate(m::AbstractModel, df::DataFrame;
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix(0,0),
                   mle::Bool = false,
-				  method::Symbol = :MH,
-                  sample::Bool = true)
+                  sampling::Bool = true)
     data = df_to_matrix(m, df)
-    estimate(m, data; verbose=verbose, proposal_covariance=proposal_covariance,
-             mle = mle, method = method, sample = sample)
+    estimate(m, data; verbose = verbose, proposal_covariance = proposal_covariance,
+             mle = mle, sampling = sampling)
 end
 
 function estimate(m::AbstractModel;
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix(0,0),
                   mle::Bool = false,
-				  method::Symbol = :MH,
-                  sample::Bool = true)
+                  sampling::Bool = true)
     # Load data
     df = load_data(m; verbose=verbose)
-    estimate(m, df; verbose=verbose, proposal_covariance=proposal_covariance,
-             mle = mle, method = method, sample = sample)
+    estimate(m, df; verbose = verbose, proposal_covariance = proposal_covariance,
+             mle = mle, sampling = sampling)
 end
 
 function estimate(m::AbstractModel, data::Matrix{Float64};
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix(0,0),
                   mle::Bool = false,
-                  run_MH::Bool = true)
+                  sampling::Bool = true)
 
-    if !(method in [:SMC,:MH])
+    if !(get_setting(m, :sampling_method) in [:SMC,:MH])
         error("method must be :SMC or :MH")
+    else
+        method = get_setting(m, :sampling_method)
     end
 
     ########################################################################################
     ### Step 1: Initialize
     ########################################################################################
 
-#    if reoptimize(m)
- #       post = posterior(m, data)[:post]
-  #  end
+    if reoptimize(m)
+        post = posterior(m, data)[:post]
+    end
 
     ########################################################################################
     ### Step 1: Find posterior/likelihood mode (if reoptimizing, run optimization routine)
@@ -129,7 +129,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     params = map(θ->θ.value, m.parameters)
 
     # Sampling does not make sense if mle=true
-    if mle || !sample
+    if mle || !sampling
         return nothing
     end
 
