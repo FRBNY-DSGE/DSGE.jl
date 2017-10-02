@@ -209,14 +209,13 @@ trend is used for plotting shock decompositions.
 """
 function trends{S<:AbstractFloat}(system::System{S})
 
-    # Unpack system
-    C, D = system[:CCC], system[:DD]
-
-    D_pseudo = if !isnull(system.pseudo_measurement)
-        system[:DD_pseudo]
+    state_trend  = system[:CCC]
+    obs_trend    = system[:ZZ]*system[:CCC] + system[:DD]
+    pseudo_trend = if !isnull(system.pseudo_measurement)
+        system[:ZZ_pseudo]*system[:CCC] + system[:DD_pseudo]
     else
         Vector{S}()
     end
 
-    C, D, D_pseudo
+    return state_trend, obs_trend, pseudo_trend
 end
