@@ -53,7 +53,7 @@ using Base.Test
 
 # transform_to_real_line and transform_to_model_space
 cx = 2 * (α - 1/2)
-@test_approx_eq_eps(transform_to_real_line(α), cx / sqrt(1 - cx^2), 0.001)
+@test abs(transform_to_real_line(α) - cx / sqrt(1 - cx^2)) < .001
 @test transform_to_real_line(δ) == 0.025
 
 m = AnSchorfheide()

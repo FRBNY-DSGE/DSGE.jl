@@ -11,9 +11,9 @@ Abstract supertype for all alternative scenarios.
 - `description::String`
 - `vintage::String`
 """
-abstract AbstractScenario
+abstract type AbstractScenario end
 
-abstract SingleScenario <: AbstractScenario
+abstract type SingleScenario <: AbstractScenario end
 
 type Scenario <: SingleScenario
     key::Symbol

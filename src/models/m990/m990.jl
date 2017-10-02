@@ -584,7 +584,7 @@ function steadystate!(m::Model990)
         wekstar     = (1-m[:γ_star]/m[:β])*nkstar - m[:γ_star]/m[:β]*(m[:spr]*(1-μ_estar*Gstar) - 1)
         vkstar      = (nkstar-wekstar)/m[:γ_star]
     else
-        betabar     = exp( (m[:σ_c] -1) * m[:z_star]) \ m[:β]
+        betabar     = exp( (m[:σ_c] -1) * m[:z_star]) / m[:β]
         wekstar     = (1-(m[:γ_star]*betabar))*nkstar - m[:γ_star]*betabar*(m[:spr]*(1-μ_estar*Gstar) - 1)
         vkstar      = (nkstar-wekstar)/m[:γ_star]
     end

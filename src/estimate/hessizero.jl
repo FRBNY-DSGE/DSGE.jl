@@ -98,7 +98,7 @@ function hess_diag_element{T<:AbstractFloat}(fcn::Function,
     # Setup
     n_para = length(x)
     dxscale  = ones(n_para, 1)
-    dx       = exp(-(6:2:(6+(ndx-1)*2))')
+    dx       = exp.(-(6:2:(6+(ndx-1)*2))')
     hessdiag = zeros(ndx, 1)
 
     # Computation
@@ -148,7 +148,7 @@ function hess_offdiag_element{T<:AbstractFloat}(fcn::Function,
     # Setup
     n_para = length(x)
     dxscale  = ones(n_para, 1)
-    dx       = exp(-(6:2:(6+(ndx-1)*2))')
+    dx       = exp.(-(6:2:(6+(ndx-1)*2))')
     hessdiag = zeros(ndx, 1)
 
     # Computation

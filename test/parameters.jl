@@ -20,8 +20,8 @@ pvec =  ParameterVector{Float64}(N)
 for i in 1:length(pvec)
 	pvec[i] = (i%2 == 0) ? u : v
 end
-@test_approx_eq logpdf(pvec) 50*logpdf(v)
-@test_approx_eq pdf(pvec) exp(50*logpdf(v))
+@test logpdf(pvec) ≈ 50*logpdf(v)
+@test pdf(pvec) ≈ exp(50*logpdf(v))
 
 updated = update(pvec, ones(length(pvec)))
 update!(pvec, ones(length(pvec)))
