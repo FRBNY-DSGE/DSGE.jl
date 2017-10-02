@@ -20,7 +20,7 @@ exp = copy(scen.targets)
 exp[:date] = DSGE.quarter_range(date_forecast_start(m), date_forecast_end(m))
 exp[:obs_nominalrate] = fill(NaN, 2)
 for col in names(exp)
-    @test act[col] == exp[col] || (all(isnan(act[col])) && all(isnan(exp[col])))
+    @test act[col] == exp[col] || (all(isnan.(act[col])) && all(isnan.(exp[col])))
 end
 
 # Scenario with shock scaling

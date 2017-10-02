@@ -50,7 +50,7 @@ where `S<:AbstractFloat`.
 """
 function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
-    shocks::Matrix{S} = Matrix{S}(0,0), draw_shocks::Bool = false)
+    shocks::Matrix{S} = Matrix{S}(0, 0), draw_shocks::Bool = false)
 
     # Numbers of things
     nshocks = n_shocks_exogenous(m)
@@ -60,7 +60,7 @@ function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
         # Populate shocks matrix
         if draw_shocks
             μ = zeros(S, nshocks)
-            σ = sqrt(system[:QQ])
+            σ = sqrt.(system[:QQ])
             dist = if forecast_tdist_shocks(m)
                 # Use t-distributed shocks
                 ν = forecast_tdist_df_val(m)

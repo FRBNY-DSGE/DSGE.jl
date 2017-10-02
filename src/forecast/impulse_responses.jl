@@ -61,7 +61,7 @@ function impulse_responses{S<:AbstractFloat}(system::System{S}, horizon::Int)
     # Define iterate function, matrix of shocks
     iterate(z_t1, ϵ_t) = T*z_t1 + R*ϵ_t
     z0 = zeros(S, nstates)
-    impact = -diagm(sqrt(diag(Q))) # a negative 1 s.d. shock
+    impact = -diagm(sqrt.(diag(Q))) # a negative 1 s.d. shock
 
     for i = 1:nshocks
         # Iterate state space forward

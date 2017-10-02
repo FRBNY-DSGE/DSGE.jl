@@ -251,7 +251,7 @@ function init_observable_mappings!(m::Model1002)
         tfp_unadj_inrange = levels[date_range, :TFPKQ]
 
         tfp_unadj      = levels[:TFPKQ]
-        tfp_unadj_mean = mean(tfp_unadj_inrange[!isnan(tfp_unadj_inrange)])
+        tfp_unadj_mean = mean(tfp_unadj_inrange[!isnan.(tfp_unadj_inrange)])
         (tfp_unadj - tfp_unadj_mean) ./ (4*(1 - levels[:TFPJQ]))
     end
 

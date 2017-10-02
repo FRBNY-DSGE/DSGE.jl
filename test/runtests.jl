@@ -1,5 +1,5 @@
 using Base.Test
-@everywhere using DSGE
+@everywhere using DSGE, JLD
 
 my_tests = [
             "core",
