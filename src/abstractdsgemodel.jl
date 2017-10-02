@@ -164,16 +164,24 @@ inds_zlb_periods(m::AbstractModel) = collect(index_zlb_start(m):(index_forecast_
 inds_mainsample_periods(m::AbstractModel) = collect(index_mainsample_start(m):(index_forecast_start(m)-1))
 
 # Number of a few things that are useful
-n_states(m::AbstractModel)                 = length(m.endogenous_states)
-n_states_augmented(m::AbstractModel)       = n_states(m) + length(m.endogenous_states_augmented)
-n_shocks_exogenous(m::AbstractModel)       = length(m.exogenous_shocks)
-n_shocks_expectational(m::AbstractModel)   = length(m.expected_shocks)
-n_equilibrium_conditions(m::AbstractModel) = length(m.equilibrium_conditions)
-n_observables(m::AbstractModel)            = length(m.observables)
-n_parameters(m::AbstractModel)             = length(m.parameters)
-n_parameters_steady_state(m::AbstractModel)= length(m.steady_state)
-n_parameters_free(m::AbstractModel)        = sum([!α.fixed for α in m.parameters])
+n_altpolicy_states(m::AbstractModel)        = length(alternative_policy(m).states)
+n_altpolicy_equations(m::AbstractModel)     = length(alternative_policy(m).equations)
+n_shocks_exogenous(m::AbstractModel)        = length(m.exogenous_shocks)
+n_shocks_expectational(m::AbstractModel)    = length(m.expected_shocks)
+n_observables(m::AbstractModel)             = length(m.observables)
+n_parameters(m::AbstractModel)              = length(m.parameters)
+n_parameters_steady_state(m::AbstractModel) = length(m.steady_state)
+n_parameters_free(m::AbstractModel)         = sum([!α.fixed for α in m.parameters])
 
+function n_states(m::AbstractModel; apply_altpolicy::Bool = false)
+    length(m.endogenous_states) + (apply_altpolicy ? n_altpolicy_states(m) : 0)
+end
+function n_states_augmented(m::AbstractModel; apply_altpolicy::Bool = false)
+    n_states(m) + (apply_altpolicy ? n_altpolicy_states(m) : 0) + length(m.endogenous_states_augmented)
+end
+function n_equilibrium_conditions(m::AbstractModel; apply_altpolicy::Bool = false)
+    length(m.equilibrium_conditions) + (apply_altpolicy ? n_altpolicy_equations(m) : 0)
+end
 function n_pseudoobservables(m::AbstractModel)
     if forecast_pseudoobservables(m)
         pseudo, _ = pseudo_measurement(m)
@@ -302,6 +310,9 @@ forecast_tdist_shocks(m::AbstractModel) = get_setting(m, :forecast_tdist_shocks)
 forecast_zlb_value(m::AbstractModel)    = get_setting(m, :forecast_zlb_value)
 impulse_response_horizons(m::AbstractModel) = get_setting(m, :impulse_response_horizons)
 n_shockdec_periods(m::AbstractModel)    = index_shockdec_end(m) - index_shockdec_start(m) + 1
+
+# Interface for alternative policy settings
+alternative_policy(m::AbstractModel) = get_setting(m, :alternative_policy)
 
 function date_forecast_end(m::AbstractModel)
     date = date_forecast_start(m) + Dates.Month(3 * (forecast_horizons(m)-1))
@@ -531,6 +542,7 @@ Returns path to specific input data file, creating containing directory as neede
 * `\"data\"`: transformed data in model units
 * `\"cond\"`: conditional data - nowcasts for the current forecast quarter, or related
 * `\"user\"`: user-supplied data for starting parameter vector, hessian, or related
+* `\"scenarios\"`: alternative scenarios
 
 Path built as
 ```
@@ -540,7 +552,7 @@ Path built as
 function inpath(m::AbstractModel, in_type::String, file_name::String="")
     path = dataroot(m)
     # Normal cases.
-    if in_type in ["raw", "data", "cond"]
+    if in_type in ["raw", "data", "cond", "scenarios"]
         path = joinpath(path, in_type)
     # User-provided inputs. May treat this differently in the future.
     elseif in_type == "user"

@@ -3,7 +3,7 @@
 
 The transition equation of the state-space model takes the form
 
-   `s_{t} = TTT*s_{t-1} + RRR*ε_{t} + CCC`
+   `s_{t} = TTT*s_{t-1} + RRR*ϵ_t + CCC`
 
 The `Transition` type stores the coefficient `Matrix{T}`s (`TTT`, `RRR`) and constant `Vector{T} CCC`.
 """
@@ -32,10 +32,10 @@ end
 
 The measurement equation of the state-space model takes the form
 
-   `y_t = ZZ*s_t +  DD + u_t`
+   `y_t = ZZ*s_t + DD + u_t`
 
-where the error `u_t = η_t + MM*ϵ_t` is the measurement error (`η_t`)
-plus the error induced by the shocks in the transition equation (`MM*ϵ_t`).
+where the error `η_t` is the measurement error, which is uncorrelated with the
+shocks in the transition equation `ϵ_t`.
 
 ### Fields
 
@@ -44,26 +44,18 @@ observables `y_t`, and `Ne` is the number of shocks `ϵ_t`:
 
 - `ZZ`: the `Ny` x `Nz`  measurement matrix
 - `DD`: the `Ny` x 1 constant vector
-- `QQ`: the `Ne` x `Ne` covariance matrix for the shocks ϵ_t
-- `EE`: the `Ny` x `Ny` variance of measurement error `η_t`
-- `MM`: an `Ny` x `Ne` matrix mapping shocks ϵ_t to error in measurement equation
-- `VVall`: an `Nz+Ny` x `Nz+Ny` matrix for a time-invariant variance
-  matrix for the error in the transition equation and the error in the
-  measurement equation (`[RRR*ϵ_t, u_t]'`). Thus:
-  - `VVall[1:Nz,1:Nz]` is the covariance of RRR*ϵ_t (`RRR * QQ * RRR'`)
-  - `VVall[Nz+1:Nz+Ny, Nz+1:Nz+Ny] = EE + MM*QQ*MM'`
+- `QQ`: the `Ne` x `Ne` covariance matrix for the shocks `ϵ_t`
+- `EE`: the `Ny` x `Ny` covariance matrix for the measurement error `η_t`
 """
 type Measurement{T<:AbstractFloat}
     ZZ::Matrix{T}
     DD::Vector{T}
     QQ::Matrix{T}
     EE::Matrix{T}
-    MM::Matrix{T}
-    VVall::Matrix{T}
 end
 
 function Base.getindex(M::Measurement, d::Symbol)
-    if d in (:ZZ, :DD, :QQ, :EE, :MM, :VVall)
+    if d in (:ZZ, :DD, :QQ, :EE)
         return getfield(M, d)
     else
         throw(KeyError(d))
@@ -108,6 +100,19 @@ function Base.getindex(system::System, d::Symbol)
     else
         throw(KeyError(d))
     end
+end
+
+function Base.copy(system::System)
+    trans = Transition(system[:TTT], system[:RRR], system[:CCC])
+    meas  = Measurement(system[:ZZ], system[:DD], system[:QQ], system[:EE])
+    pseudo_measurement = if isnull(system.pseudo_measurement)
+        Nullable{PseudoObservableMapping}()
+    else
+        pseudo_inds = get(system.pseudo_measurement).inds
+        pseudo_measurement = Nullable(PseudoObservableMapping(pseudo_inds,
+                                 system[:ZZ_pseudo], system[:DD_pseudo]))
+    end
+    return System(trans, meas, pseudo_measurement)
 end
 
 type PseudoMeasurementUndefError <: Exception

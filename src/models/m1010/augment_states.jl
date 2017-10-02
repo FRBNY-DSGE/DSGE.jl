@@ -53,7 +53,7 @@ function augment_states{T<:AbstractFloat}(m::Model1010, TTT::Matrix{T}, RRR::Mat
     @assert (n_endo,)        == size(CCC)
 
     # Initialize augmented matrices
-    n_states_add = 18
+    n_states_add = length(endo_new)
     TTT_aug = zeros(n_endo + n_states_add, n_endo + n_states_add)
     TTT_aug[1:n_endo, 1:n_endo] = TTT
     RRR_aug = [RRR; zeros(n_states_add, n_exo)]

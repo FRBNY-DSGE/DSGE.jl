@@ -61,7 +61,7 @@ function hair_plot(var::Symbol, df::DataFrame,
 
     # Plot each forecast
     for (initial_value, forecast) in zip(initial_values, forecasts)
-        date_0 = DSGE.iterate_quarters(forecast.means[1, :date], -1)
+        date_0 = iterate_quarters(forecast.means[1, :date], -1)
         dates = vcat([date_0], forecast.means[:date])
         datenums = map(quarter_date_to_number, dates)
 

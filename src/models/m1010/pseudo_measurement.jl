@@ -1,6 +1,7 @@
  """
 ```
-pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
+pseudo_measurement{T<:AbstractFloat}(m::Model1010{T};
+    apply_altpolicy::Bool = false)
 ```
 
 Assign pseudo-measurement equation (a linear combination of states):
@@ -9,13 +10,13 @@ Assign pseudo-measurement equation (a linear combination of states):
 X_t = ZZ_pseudo*S_t + DD_pseudo
 ```
 """
-function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T})
+function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T}, apply_altpolicy::Bool = false)
 
     endo      = m.endogenous_states
     endo_addl = m.endogenous_states_augmented
 
     # Compute TTT^10, used for ExpectedAvg10YearRateGap, ExpectedAvg10YearRate, and ExpectedAvg10YearNaturalRate
-    TTT, _, _ = solve(m)
+    TTT, _, _ = solve(m; apply_altpolicy = apply_altpolicy)
     TTT20 = (1/80)*((UniformScaling(1.) - TTT)\(UniformScaling(1.) - TTT^80))
     TTT10 = (1/40)*((UniformScaling(1.) - TTT)\(UniformScaling(1.) - TTT^40))
     TTT5 = (1/20)*((UniformScaling(1.) - TTT)\(UniformScaling(1.) - TTT^20))
