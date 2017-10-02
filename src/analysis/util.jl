@@ -9,11 +9,11 @@ function get_class(output_var::Symbol)
     elseif contains(s, "obs")
         :obs
     elseif contains(s, "state")
-        :state
+        :states
     elseif contains(s, "stdshock")
-        :stdshock
+        :stdshocks
     elseif contains(s, "shock")
-        :shock
+        :shocks
     else
         error("Invalid output_var: " * s)
     end
@@ -29,6 +29,10 @@ function get_product(output_var::Symbol)
         :bddforecast4q
     elseif contains(s, "forecast4q")
         :forecast4q
+    elseif contains(s, "bddforecastut")
+        :bddforecastut
+    elseif contains(s, "forecastut")
+        :forecastut
     elseif contains(s, "bddforecast")
         :bddforecast
     elseif contains(s, "forecast")
@@ -51,9 +55,9 @@ function get_class_longname(class::Symbol)
         :pseudoobservable
     elseif class == :obs
         :observable
-    elseif class == :state
+    elseif class == :states
         :state
-    elseif class in [:shock, :stdshock]
+    elseif class in [:shocks, :stdshocks]
         :shock
     end
 end
@@ -292,7 +296,7 @@ function get_mb_metadata(input_type::Symbol, cond_type::Symbol,
     end
 
     class_long = get_class_longname(class)
-    variable_indices = metadata[Symbol("$(class_long)_indices")]
+    variable_indices = metadata[Symbol(class_long, "_indices")]
     date_indices     = product == :irf ? Dict{Date,Int}() : metadata[:date_indices]
 
     # Make sure date lists are valid. This is vacuously true for and IRFs, which

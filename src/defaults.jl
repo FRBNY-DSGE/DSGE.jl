@@ -25,11 +25,11 @@ function default_settings!(m::AbstractModel)
         "Dataset identifier")
     settings[:cond_vintage] = Setting(:cond_vintage, vint,
         "Conditional data vintage")
-    settings[:cond_id] = Setting(:cond_id, 1,
+    settings[:cond_id] = Setting(:cond_id, 2,
         "Conditional dataset identifier")
-    settings[:cond_full_names] = Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate],
+    settings[:cond_full_names] = Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
         "Observables used in conditional forecasts")
-    settings[:cond_semi_names] = Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate],
+    settings[:cond_semi_names] = Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
         "Observables used in semiconditional forecasts")
     settings[:use_population_forecast] = Setting(:use_population_forecast, false,
         "Whether to use population forecasts as data")
@@ -149,7 +149,12 @@ function default_settings!(m::AbstractModel)
                                                  "Start date of revision or update of sample")
     settings[:date_updatedsample_end] = Setting(:date_updatedsample_end, quartertodate("1960-Q2"),
                                                  "End date of revision or update of sample")
-	return settings
+
+    # Alternative policy
+    baseline_policy = AltPolicy(:historical, eqcond, solve, forecast_init = identity)
+    settings[:alternative_policy] = Setting(:alternative_policy, baseline_policy)
+
+    return settings
 end
 
 """

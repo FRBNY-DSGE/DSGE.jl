@@ -5,18 +5,17 @@ measurement{T<:AbstractFloat}(m::Model990{T}, TTT::Matrix{T}, RRR::Matrix{T},
 ```
 
 Assign measurement equation
+
 ```
-y_t = ZZ*s_t + DD + u_t
+y_t = ZZ*s_t + DD + η_t
 ```
+
 where
+
 ```
-u_t = η_t + MM*ϵ_t
-```
-is error composed of measurement error and a contribution from underlying shocks, and
-```
-var(η_t) = EE
-var(u_t) = HH = EE + MM*QQ*MM'
-cov(ϵ_t,u_t) = VV = QQ*MM'
+Var(ϵ_t) = QQ
+Var(η_t) = EE
+Cov(ϵ_t, η_t) = 0
 ```
 """
 function measurement{T<:AbstractFloat}(m::Model990{T},
@@ -45,7 +44,6 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
 
     ZZ = zeros(_n_observables, _n_states)
     DD = zeros(_n_observables)
-    MM = zeros(_n_observables, _n_shocks_exogenous)
     EE = zeros(_n_observables, _n_observables)
     QQ = zeros(_n_shocks_exogenous, _n_shocks_exogenous)
 
@@ -145,10 +143,5 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
         DD += ZZ*((UniformScaling(1) - TTT)\CCC)
     end
 
-    HH    = EE + MM*QQ*MM'
-    VV    = QQ*MM'
-    VVall = [[RRR*QQ*RRR' RRR*VV];
-             [VV'*RRR'    HH]]
-
-    return Measurement(ZZ, DD, QQ, EE, MM, VVall)
+    return Measurement(ZZ, DD, QQ, EE)
 end

@@ -81,7 +81,7 @@ function means_bands_all(m::AbstractModel, input_type::Symbol,
                          cond_type::Symbol, output_vars::Vector{Symbol};
                          df::DataFrame = DataFrame(),
                          forecast_string::String = "",
-                         density_bands::Array{Float64} = [0.5, 0.6, 0.7, 0.8, 0.9],
+                         density_bands::Vector{Float64} = [0.5, 0.6, 0.7, 0.8, 0.9],
                          minimize::Bool = false,
                          verbose::Symbol = :low)
 
@@ -203,9 +203,9 @@ function means_bands_all(input_type::Symbol, cond_type::Symbol, output_vars::Vec
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             if prod in [:shockdec, :irf]
-                println("Computing $output_var for shocks:")
+                println("Computing " * string(output_var) * " for shocks:")
             else
-                print("Computing $output_var... ")
+                print("Computing " * string(output_var) * "... ")
             end
         end
 
@@ -222,7 +222,7 @@ function means_bands_all(input_type::Symbol, cond_type::Symbol, output_vars::Vec
         # write to file
         filepath = mb_output_files[output_var]
         dirpath  = dirname(filepath)
-        !isdir(dirpath) ? mkdir(dirpath) : nothing
+        isdir(dirpath) || mkpath(dirpath)
         jldopen(filepath, "w") do file
             write(file, "mb", mb)
         end
@@ -230,7 +230,7 @@ function means_bands_all(input_type::Symbol, cond_type::Symbol, output_vars::Vec
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             sep = prod in [:shockdec, :irf] ? "  " : ""
-            println("$(sep)wrote $(basename(filepath))")
+            println(sep * "wrote " * basename(filepath))
         end
     end
 
@@ -238,9 +238,8 @@ function means_bands_all(input_type::Symbol, cond_type::Symbol, output_vars::Vec
         total_mb_time     = toq()
         total_mb_time_min = total_mb_time/60
 
-        println("\nTotal time to compute means and bands: $total_mb_time_min minutes")
-        println("Computation of means and bands complete: $(now())")
-
+        println("\nTotal time to compute means and bands: " * string(total_mb_time_min) * " minutes")
+        println("Computation of means and bands complete: " * string(now()))
     end
 end
 
@@ -330,7 +329,7 @@ function means_bands(input_type::Symbol,
         # Get to work!
         for shock_name in keys(mb_metadata[:shock_indices])
             if VERBOSITY[verbose] >= VERBOSITY[:high]
-                println("  * $(shock_name)")
+                println("  * " * string(shock_name))
             end
 
             mb_vec = pmap(var_name -> compute_means_bands(class, product, var_name, forecast_output_file;
@@ -341,10 +340,10 @@ function means_bands(input_type::Symbol,
 
             # Re-assemble pmap outputs
             for (var_name, (var_means, var_bands)) in zip(variable_names, mb_vec)
-                means[Symbol("$var_name$DSGE_SHOCKDEC_DELIM$shock_name")] = var_means
-                bands[Symbol("$var_name$DSGE_SHOCKDEC_DELIM$shock_name")] = var_bands
+                means[Symbol(var_name, DSGE_SHOCKDEC_DELIM, shock_name)] = var_means
+                bands[Symbol(var_name, DSGE_SHOCKDEC_DELIM, shock_name)] = var_bands
                 if product != :irf
-                    bands[Symbol("$var_name$DSGE_SHOCKDEC_DELIM$shock_name")][:date] = date_list
+                    bands[Symbol(var_name,DSGE_SHOCKDEC_DELIM, shock_name)][:date] = date_list
                 end
             end
         end
@@ -361,7 +360,7 @@ function compute_means_bands(class::Symbol,
                              population_series::Vector{Float64} = Vector{Float64}(),
                              y0_index::Int = -1,
                              shock_name::Nullable{Symbol} = Nullable{Symbol}(),
-                             density_bands::Array{Float64} = [0.5,0.6,0.7,0.8,0.9],
+                             density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9],
                              minimize::Bool = false,
                              compute_shockdec_bands::Bool = false)
 
@@ -375,18 +374,18 @@ function compute_means_bands(class::Symbol,
 
         # Parse transform
         class_long = get_class_longname(class)
-        transforms = read(file, "$(class_long)_revtransforms")
+        transforms = read(file, string(class_long) * "_revtransforms")
         transform = parse_transform(transforms[var_name])
 
         # Get variable index
-        indices = read(file, "$(class_long)_indices")
+        indices = read(file, string(class_long) * "_indices")
         var_ind = indices[var_name]
 
         # Read date list
         date_list = if product != :irf
             collect(keys(read(file, "date_indices")))
         else
-            Vector{Date}()
+            Date[]
         end
 
         fcast_series, transform, var_ind, date_list
@@ -403,6 +402,7 @@ function compute_means_bands(class::Symbol,
     # Do we want to use the data for y0 and y0s?
     use_data = class == :obs && !(product in [:irf, :hist4q])
 
+    # Reverse transform
     if product in [:hist4q, :forecast4q, :bddforecast4q]
         transform4q = get_transform4q(transform)
 
@@ -413,18 +413,24 @@ function compute_means_bands(class::Symbol,
             # Divide log levels y_t by y_{t-4}
             use_data ? data[var_ind, y0_index:end] : fill(NaN, 4)
         else
-            Vector{Float64}()
+            Float64[]
         end
 
         transformed_series = reverse_transform(fcast_series, transform4q;
                                                fourquarter = true,
                                                y0s = y0s, pop_growth = population_series)
     else
+        # Use IRF transform if necessary
+        if product == :irf
+            transform = get_irf_transform(transform)
+        end
+
         y0 = use_data ? data[var_ind, y0_index] : NaN
         transformed_series = reverse_transform(fcast_series, transform;
                                                y0 = y0, pop_growth = population_series)
     end
 
+    # Compute means and bands of transformed series
     means = vec(mean(transformed_series, 1))
     bands = if product in [:shockdec, :dettrend, :trend] && compute_shockdec_bands
         Dict{Symbol,DataFrame}()

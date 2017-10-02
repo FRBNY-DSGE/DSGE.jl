@@ -1,29 +1,59 @@
 """
 ```
-compute_system(m)
+compute_system(m; apply_altpolicy = false)
 ```
 
 Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` object.
 """
-function compute_system{T<:AbstractFloat}(m::AbstractModel{T})
+function compute_system{T<:AbstractFloat}(m::AbstractModel{T}; apply_altpolicy = false)
+
     # Solve model
-    TTT, RRR, CCC = solve(m)
+    TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy)
     transition_equation = Transition(TTT, RRR, CCC)
 
     # Solve measurement equation
-    shocks = n_anticipated_shocks(m) > 0
-    measurement_equation = measurement(m, TTT, RRR, CCC; shocks = shocks)
+    measurement_equation = measurement(m, TTT, RRR, CCC)
 
     # Solve pseudo-measurement equation
     pseudo_measurement_equation = if method_exists(pseudo_measurement, (typeof(m),)) && forecast_pseudoobservables(m)
-        _, pseudo_mapping = pseudo_measurement(m)
+        _, pseudo_mapping = pseudo_measurement(m; apply_altpolicy = apply_altpolicy)
         Nullable(pseudo_mapping)
     else
         Nullable{PseudoObservableMapping{T}}()
     end
 
     return System(transition_equation, measurement_equation, pseudo_measurement_equation)
+end
+"""
+```
+compute_system_function{S<:AbstractFloat}(system::System{S})
+```
+### Inputs
+- `system::System`: The output of compute_system(m), i.e. the matrix outputs from solving a given model, m.
+### Output
+- Returns the transition and measurement equations as functions,and the distributions of the shocks
+and measurement error.
+"""
+function compute_system_function{S<:AbstractFloat}(system::System{S})
+    # Unpack system
+    RRR    = system[:RRR]
+    TTT    = system[:TTT]
+    HH     = system[:EE] + system[:MM]*system[:QQ]*system[:MM]'
+    DD     = system[:DD]
+    ZZ     = system[:ZZ]
+    QQ     = system[:QQ]
+    EE     = system[:EE]
+    MM     = system[:MM]
+    sqrtS2 = RRR*chol(QQ)'
+
+    @inline Φ(s_t1::Vector{S}, ε_t1::Vector{S}) = TTT*s_t1 + sqrtS2*ε_t1
+    @inline Ψ(s_t1::Vector{S}, u_t1::Vector{S}) = ZZ*s_t1 + DD + u_t1
+
+    F_ε = Distributions.MvNormal(zeros(size(QQ)[1]), eye(size(QQ)[1]))
+    F_u = Distributions.MvNormal(zeros(size(HH)[1]), HH)
+
+    return Φ, Ψ, F_ε, F_u
 end
 
 """
@@ -144,9 +174,9 @@ added to `output_vars` when calling
 `add_requisite_output_vars([shockdecstates])`.
 """
 function add_requisite_output_vars(output_vars::Vector{Symbol})
-
     # Add :bddforecast<class> if :forecast<class> is in output_vars
-    forecast_outputs = Base.filter(output -> get_product(output) in [:forecast, :forecast4q], output_vars)
+    forecast_outputs = Base.filter(output -> get_product(output) in [:forecast, :forecastut, :forecast4q],
+                                   output_vars)
     if !isempty(forecast_outputs)
         bdd_vars = [Symbol("bdd$(var)") for var in forecast_outputs]
         output_vars = unique(vcat(output_vars, bdd_vars))
@@ -169,14 +199,12 @@ end
 remove_meansbands_only_output_vars(output_vars)
 ```
 """
-function remove_meansbands_only_output_vars(output_vars)
+function remove_meansbands_only_output_vars(output_vars::Vector{Symbol})
+    # All the <product>ut<class> and <product>4q<class> variables are computed
+    # during compute_meansbands
+    meansbands_only_products = [:hist4q, :forecast4q, :bddforecast4q, :forecastut, :bddforecastut]
 
-    # all the <product>4q<class> variables are computed during compute_meansbands
-    meansbands_only_output_vars = [:hist4qpseudo, :hist4qobs,
-                                   :forecast4qobs, :forecast4qpseudo,
-                                   :bddforecast4qobs, :bddforecast4qpseudo]
-
-    setdiff(output_vars, meansbands_only_output_vars)
+    Base.filter(var -> !(get_product(var) in meansbands_only_products), output_vars)
 end
 
 """
@@ -300,13 +328,13 @@ function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_v
         sum(map(length, block_inds_thin))
     end
 
-    nvars = if class == :state
+    nvars = if class == :states
         n_states_augmented(m)
     elseif class == :obs
         n_observables(m)
     elseif class == :pseudo
         n_pseudoobservables(m)
-    elseif class in [:shock, :stdshock]
+    elseif class in [:shocks, :stdshocks]
         n_shocks_exogenous(m)
     end
 

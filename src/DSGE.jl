@@ -6,6 +6,7 @@ module DSGE
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
+    using StatsBase: sample
     import Calculus
     import Optim: optimize, Optimizer, MultivariateOptimizationResults
 
@@ -49,6 +50,7 @@ module DSGE
         load_parameters_from_file, specify_mode!, specify_hessian,
         logpath, workpath, rawpath, tablespath, figurespath, inpath,
         transform_to_model_space!, transform_to_real_line!,
+        ShockGroup, alternative_policy,
 
         # parameters.jl
         parameter, Transform, NullablePrior, AbstractParameter,
@@ -62,8 +64,22 @@ module DSGE
         # statespace.jl
         Measurement, Transition, System, compute_system,
 
+        # data/
+        load_data, load_data_levels, load_cond_data_levels, load_fred_data,
+        transform_data, save_data, get_data_filename,
+        df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
+        oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
+        loggrowthtopct_percapita, loggrowthtopct, logleveltopct_annualized,
+        loggrowthtopct_annualized_percapita, loggrowthtopct_annualized, logleveltopct_annualized_percapita,
+        logleveltopct_annualized_approx, loggrowthtopct_4q_approx, logleveltopct_4q_approx,
+        parse_data_series, collect_data_transforms, reverse_transform,
+        subtract_quarters, iterate_quarters,
+
+        # solve/
+        gensys, solve,
+
         # estimate/
-        simulated_annealing, combined_optimizer, LBFGS_wrapper,
+        simulated_annealing, combined_optimizer, lbfgs,
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, prior, get_estimation_output_files,
@@ -72,38 +88,37 @@ module DSGE
         # forecast/
         load_draws, forecast_one,
         smooth, forecast, shock_decompositions, deterministic_trends, trends, impulse_responses,
-        compute_system, add_requisite_output_vars, n_forecast_draws,
+        compute_system, compute_system_function, add_requisite_output_vars, n_forecast_draws,
         get_forecast_input_file, get_forecast_output_files, get_forecast_filename,
         read_forecast_output,
+
+        # analysis/
+        find_density_bands, moment_tables, means_bands, means_bands_all, compute_means_bands, MeansBands,
+        meansbands_matrix_all, meansbands_matrix, read_mb, read_bdd_and_unbdd_mb,
+        get_meansbands_input_files, get_meansbands_output_files, get_product, get_class,
+        which_density_bands,
+        prepare_meansbands_tables_timeseries, prepare_means_tables_shockdec, prepare_meansbands_table_irf,
+        write_meansbands_tables_timeseries, write_means_tables_shockdec, prepare_meansbands_table_irf,
+        write_meansbands_tables_all,
+
+        # alternative_policy/
+        AltPolicy, eqcond_altpolicy,
+
+        # scenarios/
+        AbstractScenario, SingleScenario, Scenario, SwitchingScenario, ScenarioAggregate,
+        n_targets, n_instruments, n_target_horizons, targets_to_data,
+        compute_scenario_system, filter_shocks!, forecast_scenario, simulate_switching, scenario_means_bands,
+        get_scenario_input_file, n_scenario_draws, get_scenario_filename, get_scenario_output_files,
+        read_scenario_output, get_scenario_mb_input_file, get_scenario_mb_output_file, read_scenario_mb,
+
+        # plot/
+        plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
+        plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies, plot_scenario,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, eqcond, measurement, pseudo_measurement,
-
-        # solve/
-        gensys, solve,
-
-        # data/
-        load_data, load_data_levels, load_cond_data_levels, load_fred_data,
-        transform_data, save_data, get_data_filename,
-        df_to_matrix, hpfilter, difflog, quartertodate, percapita, nominal_to_real,
-        oneqtrpctchange, annualtoquarter, quartertoannual, quartertoannualpercent,
-        loggrowthtopct_percapita, loggrowthtopct,
-        loggrowthtopct_annualized_percapita, loggrowthtopct_annualized, logleveltopct_annualized_percapita,
-        logleveltopct_annualized,
-        parse_data_series, collect_data_transforms, reverse_transform,
-        subtract_quarters, iterate_quarters,
-
-        # analysis/
-        find_density_bands, moment_tables, means_bands, means_bands_all, compute_means_bands, MeansBands,
-        meansbands_matrix_all, meansbands_matrix, read_mb,
-        get_meansbands_input_files, get_meansbands_output_files, get_product, get_class,
-        which_density_bands, write_meansbands_tables, prepare_meansbands_tables_timeseries,
-        prepare_meansbands_tables_shockdec, write_meansbands_tables_all,
-
-        # plot/
-        ShockGroup, plot_prior_posterior, plot_irfs, plot_history_and_forecast, hair_plot,
-        plot_forecast_comparison, plot_shock_decomposition,
+        shock_groupings,
 
         # util
         @test_matrix_approx_eq, @test_matrix_approx_eq_eps
@@ -141,7 +156,7 @@ module DSGE
     include("estimate/hessizero.jl")
     include("estimate/simulated_annealing.jl")
     include("estimate/combined_optimizer.jl")
-    include("estimate/LBFGS.jl")
+    include("estimate/lbfgs.jl")
     include("estimate/nelder_mead.jl")
     include("estimate/estimate.jl")
     include("estimate/nearest_spd.jl")
@@ -165,14 +180,23 @@ module DSGE
     include("analysis/io.jl")
     include("analysis/util.jl")
 
+    include("alternative_policy/altpolicy.jl")
+
+    include("scenarios/scenario.jl")
+    include("scenarios/io.jl")
+    include("scenarios/forecast.jl")
+    include("scenarios/switching.jl")
+    include("scenarios/transform.jl")
+
     include("plot/util.jl")
-    include("plot/shock_group.jl")
     include("plot/plot_parameters.jl")
-    include("plot/plot_irfs.jl")
+    include("plot/plot_impulse_response.jl")
     include("plot/plot_history_and_forecast.jl")
     include("plot/hair_plot.jl")
     include("plot/plot_forecast_comparison.jl")
     include("plot/plot_shock_decomposition.jl")
+    include("plot/plot_altpolicies.jl")
+    include("plot/plot_scenario.jl")
 
     include("models/financial_frictions.jl")
 

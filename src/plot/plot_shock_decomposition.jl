@@ -1,17 +1,20 @@
 """
 ```
 plot_shock_decomposition(m, var, class, input_type, cond_type;
-    forecast_string = "", output_file = "", title = "",
+    forecast_string = "", groups = shock_groupings(m),
+    plotroot::String = figurespath(m, \"forecast\"), title = "",
     kwargs...)
 
 plot_shock_decomposition(m, vars, class, input_type, cond_type;
-    forecast_string = "", output_files = [], titles = [],
+    forecast_string = "", groups = shock_groupings(m),
+    plotroot::String = figurespath(m, \"forecast\"), titles = [],
     kwargs...)
 
 plot_shock_decomposition(var, shockdec, trend, dettrend, hist, forecast, groups;
     output_file = "", title = "",
     hist_label = \"Detrended History\", forecast_label = \"Detrended Forecast\",
-    hist_color = :black, forecast_color = :red, tick_size = 5, legend = :best)
+    hist_color = :black, forecast_color = :red, tick_size = 5, legend = :best,
+    verbose = :low)
 ```
 
 Plot shock decomposition(s) for `var` or `vars`.
@@ -39,9 +42,6 @@ Plot shock decomposition(s) for `var` or `vars`.
 
 ### Keyword Arguments
 
-- `output_file::String` or `output_files::Vector{String}`: if specified, plot
-  will be saved there. In methods 1 and 2, if not specified, output file(s) will
-  be computed using `get_forecast_filename`
 - `title::String` or `titles::Vector{String}`
 - `hist_label::String`
 - `forecast_label::String`
@@ -49,33 +49,44 @@ Plot shock decomposition(s) for `var` or `vars`.
 - `forecast_color::Colorant`
 - `tick_size::Int`: x-axis (time) tick size in units of years
 - `legend`
+- `verbose::Symbol`
 
 **Methods 1 and 2 only:**
 
 - `forecast_string::String`
+- `groups::Vector{ShockGroup}`
+- `plotroot::String`: if nonempty, plots will be saved in that directory
+
+**Method 3 only:**
+
+- `output_file::String`: if nonempty, plot will be saved in that path
 
 ### Output
 
-- `p::Plot`
+- `p::Plot` or `plots::OrderedDict{Symbol, Plot}`
 """
 function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
-                                  output_file::String = "",
+                                  groups::Vector{ShockGroup} = shock_groupings(m),
+                                  plotroot::String = figurespath(m, "forecast"),
                                   title = "",
                                   kwargs...)
 
-    plot_shock_decomposition(m, [var], class, input_type, cond_type;
-                             forecast_string = forecast_string,
-                             output_files = isempty(output_file) ? String[] : [output_file],
-                             titles = isempty(title) ? String[] : [title],
-                             kwargs...)
+    plots = plot_shock_decomposition(m, [var], class, input_type, cond_type;
+                                     forecast_string = forecast_string,
+                                     groups = groups,
+                                     plotroot = plotroot,
+                                     titles = isempty(title) ? String[] : [title],
+                                     kwargs...)
+    return plots[var]
 end
 
 function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
-                                  output_files::Vector{String} = String[],
+                                  groups::Vector{ShockGroup} = shock_groupings(m),
+                                  plotroot::String = figurespath(m, "forecast"),
                                   titles::Vector{String} = String[],
                                   kwargs...)
     # Read in MeansBands
@@ -83,25 +94,30 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
     mbs = map(output_var -> read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string),
               output_vars)
 
-    # Get shock groupings
-    groups = shock_groupings(m)
-
-    # Get output file names and titles if not provided
-    if isempty(output_files)
-        output_files = map(var -> get_forecast_filename(m, input_type, cond_type, Symbol("shockdec_", var),
-                                                        pathfcn = figurespath, fileformat = plot_extension()),
-                           vars)
-    end
+    # Get titles if not provided
     if isempty(titles)
-        titles = map(var -> describe_series(m, var, class), vars)
+        detexify_title = typeof(Plots.backend()) == Plots.GRBackend
+        titles = map(var -> describe_series(m, var, class, detexify = detexify_title), vars)
     end
 
     # Loop through variables
-    for (var, output_file, title) in zip(vars, output_files, titles)
-        plot_shock_decomposition(var, mbs..., groups;
-                                 output_file = output_file, title = title,
-                                 kwargs...)
+    plots = OrderedDict{Symbol, Plots.Plot}()
+    for (var, title) in zip(vars, titles)
+        output_file = if isempty(plotroot)
+            ""
+        else
+            get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
+                                  Symbol("shockdec_", detexify(var)),
+                                  forecast_string = forecast_string,
+                                  fileformat = plot_extension())
+        end
+
+        plots[var] = plot_shock_decomposition(var, mbs..., groups;
+                                              output_file = output_file, title = title,
+                                              ylabel = series_ylabel(m, var, class),
+                                              kwargs...)
     end
+    return plots
 end
 
 function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
@@ -110,33 +126,33 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
                                   groups::Vector{ShockGroup};
                                   output_file::String = "",
                                   title = "",
+                                  start_date::Date = shockdec.means[1, :date],
+                                  end_date::Date = shockdec.means[end, :date],
                                   hist_label::String = "Detrended History",
                                   forecast_label::String = "Detrended Forecast",
-                                  hist_color::Colorant = RGBA(0., 0., 0., 1.),
-                                  forecast_color::Colorant = RGBA(1., 0., 0., 1.),
+                                  hist_color::Colorant = colorant"black",
+                                  forecast_color::Colorant = colorant"red",
                                   tick_size::Int = 5,
-                                  legend = :best)
+                                  ylabel::String = "",
+                                  legend = :best,
+                                  verbose::Symbol = :low)
 
     # Construct DataFrame with detrended mean, deterministic trend, and all shocks
     df = prepare_means_table_shockdec(shockdec, trend, dettrend, var,
-                                           mb_hist = hist, mb_forecast = forecast,
-                                           detexify_shocks = false)
+                                      mb_hist = hist, mb_forecast = forecast,
+                                      detexify_shocks = false,
+                                      groups = groups)
+
+    # Dates
+    start_ind, end_ind = get_date_limit_indices(start_date, end_date, df[:date])
     df[:datenum] = map(quarter_date_to_number, df[:date])
     df[:x] = map(date -> shockdec_date_to_x(date, df[1, :date]), df[:date])
-    nperiods = size(df, 1)
-
-    # Sum shock values for each group
-    v0 = zeros(nperiods)
-    for group in groups
-        shock_vectors = [df[shock] for shock in group.shocks]
-        shock_sum = reduce(+, v0, shock_vectors)
-        df[Symbol(group.name)] = shock_sum
-    end
 
     # x-axis ticks
-    date_ticks = get_date_ticks(df[:date], tick_size = tick_size)
-    x0 = shockdec_date_to_x(quarter_number_to_date(date_ticks.start), df[1, :date])
-    x1 = shockdec_date_to_x(quarter_number_to_date(date_ticks.stop),  df[1, :date])
+    all_inds = start_ind:end_ind
+    date_ticks = get_date_ticks(df[all_inds, :date], tick_size = tick_size)
+    x0 = shockdec_date_to_x(quarter_number_to_date(date_ticks.start), df[start_ind, :date])
+    x1 = shockdec_date_to_x(quarter_number_to_date(date_ticks.stop),  df[start_ind, :date])
     xstep = tick_size * 4
     x_ticks = x0:xstep:x1
 
@@ -146,26 +162,28 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
     labels = map(x -> x.name,  groups)
     cat_names = map(Symbol, labels)
 
-    p = groupedbar(convert(Array, df[cat_names]),
+    p = groupedbar(convert(Array, df[all_inds, cat_names]),
                    xtick = (x_ticks, date_ticks),
                    labels = reshape(labels, 1, ngroups),
                    color = reshape(colors, 1, ngroups),
                    linealpha = 0.0,
                    bar_width = 1.0,
                    legend = legend,
-                   title = title)
+                   legendfont = Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black"),
+                   title = title,
+                   ylabel = ylabel)
 
     # Plot detrended mean
     hist_end_date = enddate_means(hist)
     hist_end_ind  = findfirst(df[:date], hist_end_date)
 
-    plot!(p, df[1:hist_end_ind, :x], df[1:hist_end_ind, :detrendedMean],
+    plot!(p, df[start_ind:hist_end_ind, :x], df[start_ind:hist_end_ind, :detrendedMean],
           color = hist_color, linewidth = 2, label = hist_label, ylim = :auto)
-    plot!(p, df[hist_end_ind:end, :x], df[hist_end_ind:end, :detrendedMean],
+    plot!(p, df[hist_end_ind:end_ind, :x], df[hist_end_ind:end_ind, :detrendedMean],
           color = forecast_color, linewidth = 2, label = forecast_label, ylim = :auto)
 
     # Save if output_file provided
-    save_plot(p, output_file)
+    save_plot(p, output_file, verbose = verbose)
 
     return p
 end
