@@ -51,14 +51,14 @@ end
 alt = Scenario(:altscen, "Test Alternative Scenario", [:obs_gdp, :obs_cpi], [:g_sh, :rm_sh], "REF")
 forecast_scenario(m, alt, verbose = :none)
 scenario_means_bands(m, alt, verbose = :none)
-plot_scenario(m, :obs_nominalrate, :obs, alt, untrans = true)
-plot_scenario(m, :obs_nominalrate, :obs, alt)
-plot_scenario(m, :obs_nominalrate, :obs, alt, fourquarter = true)
+plot_scenario(m, :obs_nominalrate, :obs, alt, untrans = true, verbose = :none)
+plot_scenario(m, :obs_nominalrate, :obs, alt, verbose = :none)
+plot_scenario(m, :obs_nominalrate, :obs, alt, fourquarter = true, verbose = :none)
 @test_throws ErrorException plot_scenario(m, :obs_nominalrate, :obs, alt,
                                           untrans = true, fourquarter = true)
 
 # Hair plot
-df = load_data(m)
+df = load_data(m, verbose = :none)
 output_file = joinpath(saveroot(m), "hairplot__obs_nominalrate.pdf")
 hist_mb = read_mb(m, :full, :none, :histobs)
 fcast_mb = read_mb(m, :full, :none, :bddforecastobs)
