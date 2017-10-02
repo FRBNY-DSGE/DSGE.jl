@@ -56,14 +56,14 @@ function optimize!(m::AbstractModel,
         csminwel
     elseif method == :simulated_annealing
         simulated_annealing
-    elseif method == :Nelder_Mead
-        Nelder_Mead
+    elseif method == :nelder_mead
+        nelder_mead
     elseif method == :combined_optimizer
         combined_optimizer
-    elseif method == :LBFGS
-        LBFGS_wrapper
+    elseif method == :lbfgs
+        lbfgs
     else
-        error("Method ",method," is not supported.")
+        error("Method ", method, " is not supported.")
     end
 
     # Inputs to optimization
@@ -174,7 +174,7 @@ function optimize!(m::AbstractModel,
        converged = opt_result.iteration_converged
        out = optimization_result(opt_result.minimizer, opt_result.minimum, converged, opt_result.iterations)
 
-    elseif method == :Nelder_Mead
+    elseif method == :nelder_mead
         opt_result = optimizer(f_opt, x_opt;
                                iterations = iterations,
                                store_trace = store_trace, show_trace = show_trace,
@@ -190,7 +190,7 @@ function optimize!(m::AbstractModel,
         converged = opt_result.g_converged || opt_result.f_converged #|| opt_result.x_converged
         out = optimization_result(opt_result.minimizer, opt_result.minimum, converged, opt_result.iterations)
 
-    elseif method == :LBFGS
+    elseif method == :lbfgs
         opt_result = optimizer(f_opt, x_opt;
                         xtol = xtol, ftol = ftol, grtol = grtol, iterations = iterations,
                         store_trace = store_trace, show_trace = show_trace, extended_trace = extended_trace,

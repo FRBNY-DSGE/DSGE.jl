@@ -40,14 +40,16 @@ function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::Syste
     include_presample::Bool = true)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
-    filter(m, data, system, z0, P0; allout = allout,
-        include_presample = include_presample)
+    start_date = max(date_presample_start(m), df[1, :date])
+    filter(m, data, system, z0, P0; start_date = start_date,
+        allout = allout, include_presample = include_presample)
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
-    catch_errors::Bool = false, allout::Bool = true,
-    include_presample::Bool = true)
+    catch_errors::Bool = false,
+    start_date::Date = date_presample_start(m),
+    allout::Bool = true, include_presample::Bool = true)
 
     # If we are in Metropolis-Hastings, then any errors coming out of `gensys`
     # should be caught and a -Inf posterior should be returned.
@@ -65,8 +67,8 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         return Kalman(-Inf)
     else
         try
-            filter(m, data, get(system), z0, P0; allout = allout,
-                   include_presample = include_presample)
+            filter(m, data, get(system), z0, P0; start_date = start_date,
+                   allout = allout, include_presample = include_presample)
         catch err
             if catch_errors && isa(err, DomainError)
                 warn("Log of incremental likelihood is negative; returning -Inf")
@@ -80,14 +82,15 @@ end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::System,
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
+    start_date::Date = date_presample_start(m),
     allout::Bool = true, include_presample::Bool = true)
 
     # Partition sample into pre- and post-ZLB regimes
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
-    regime_inds = zlb_regime_indices(m, data)
+    regime_inds = zlb_regime_indices(m, data, start_date)
 
     # Get system matrices for each regime
-    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_regime_matrices(m, system)
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_regime_matrices(m, system, start_date)
 
     # If z0 and P0 provided, check that rows and columns corresponding to
     # anticipated shocks are zero in P0

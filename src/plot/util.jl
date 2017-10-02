@@ -19,7 +19,7 @@ function quarter_number_to_date(datenum::Real)
 
     y = convert(Int, floor(datenum))
     q = convert(Int, (datenum % 1) / 0.25) + 1
-    return DSGE.quartertodate("$y-Q$q")
+    return quartertodate("$y-Q$q")
 end
 
 function get_date_ticks(start_date::Date, end_date::Date;
@@ -39,7 +39,7 @@ end
 
 function shockdec_date_to_x(date::Date, start_date::Date)
     start_x = 0.5
-    quarters_diff = DSGE.subtract_quarters(date, start_date)
+    quarters_diff = subtract_quarters(date, start_date)
     x = start_x + quarters_diff
     return x
 end
@@ -141,7 +141,12 @@ function describe_series(m::AbstractModel, var::Symbol, class::Symbol;
 end
 
 function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
+                       untrans::Bool = false,
                        fourquarter::Bool = false)
+    if untrans && fourquarter
+        error("Only one of untrans or fourquarter can be true")
+    end
+
     if class in [:obs, :pseudo]
         dict = if class == :obs
             m.observable_mappings
@@ -150,11 +155,28 @@ function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
         end
         transform = dict[var].rev_transform
 
-        if transform in [loggrowthtopct_annualized_percapita, logleveltopct_annualized_percapita,
-                         loggrowthtopct_annualized, logleveltopct_annualized]
-            return fourquarter ? "Percent 4Q Growth" : "Percent Q/Q Annualized"
+        if transform in [loggrowthtopct_annualized_percapita, loggrowthtopct_annualized]
+            if untrans
+                return "Q/Q Log Growth Rate"
+            elseif fourquarter
+                return "Percent 4Q Growth"
+            else
+                return "Percent Q/Q Annualized"
+            end
+        elseif transform in [logleveltopct_annualized_percapita, logleveltopct_annualized]
+            if untrans
+                return "Log Level"
+            elseif fourquarter
+                return "Percent 4Q Growth"
+            else
+                return "Percent Q/Q Annualized"
+            end
         elseif transform == quartertoannual
-            return "Percent Annualized"
+            if untrans
+                return "Percent Q/Q"
+            else
+                return "Percent Annualized"
+            end
         elseif transform == identity
             ""
         end
@@ -167,11 +189,14 @@ function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
     end
 end
 
-function save_plot(p::Plots.Plot, output_file::String = "")
+function save_plot(p::Plots.Plot, output_file::String = ""; verbose::Symbol = :low)
     if !isempty(output_file)
         output_dir = dirname(output_file)
         !isdir(output_dir) && mkpath(output_dir)
         Plots.savefig(output_file)
-        println("Saved $output_file")
+
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("Saved $output_file")
+        end
     end
 end

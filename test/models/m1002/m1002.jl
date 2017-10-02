@@ -70,7 +70,6 @@ pseudo, mapping = pseudo_measurement(model)
 @test size(meas[:DD]) == (19,)
 @test size(meas[:QQ]) == (24,24)
 @test size(meas[:EE]) == (19,19)
-@test size(meas[:MM]) == (19,24)
 
 @test size(TTT) == (84,84)
 @test size(RRR) == (84,24)

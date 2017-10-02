@@ -222,7 +222,7 @@ function means_bands_all(input_type::Symbol, cond_type::Symbol, output_vars::Vec
         # write to file
         filepath = mb_output_files[output_var]
         dirpath  = dirname(filepath)
-        !isdir(dirpath) ? mkpath(dirpath) : nothing
+        isdir(dirpath) || mkpath(dirpath)
         jldopen(filepath, "w") do file
             write(file, "mb", mb)
         end
@@ -240,7 +240,6 @@ function means_bands_all(input_type::Symbol, cond_type::Symbol, output_vars::Vec
 
         println("\nTotal time to compute means and bands: " * string(total_mb_time_min) * " minutes")
         println("Computation of means and bands complete: " * string(now()))
-
     end
 end
 
@@ -386,7 +385,7 @@ function compute_means_bands(class::Symbol,
         date_list = if product != :irf
             collect(keys(read(file, "date_indices")))
         else
-            Vector{Date}()
+            Date[]
         end
 
         fcast_series, transform, var_ind, date_list
@@ -403,6 +402,7 @@ function compute_means_bands(class::Symbol,
     # Do we want to use the data for y0 and y0s?
     use_data = class == :obs && !(product in [:irf, :hist4q])
 
+    # Reverse transform
     if product in [:hist4q, :forecast4q, :bddforecast4q]
         transform4q = get_transform4q(transform)
 
@@ -413,18 +413,24 @@ function compute_means_bands(class::Symbol,
             # Divide log levels y_t by y_{t-4}
             use_data ? data[var_ind, y0_index:end] : fill(NaN, 4)
         else
-            Vector{Float64}()
+            Float64[]
         end
 
         transformed_series = reverse_transform(fcast_series, transform4q;
                                                fourquarter = true,
                                                y0s = y0s, pop_growth = population_series)
     else
+        # Use IRF transform if necessary
+        if product == :irf
+            transform = get_irf_transform(transform)
+        end
+
         y0 = use_data ? data[var_ind, y0_index] : NaN
         transformed_series = reverse_transform(fcast_series, transform;
                                                y0 = y0, pop_growth = population_series)
     end
 
+    # Compute means and bands of transformed series
     means = vec(mean(transformed_series, 1))
     bands = if product in [:shockdec, :dettrend, :trend] && compute_shockdec_bands
         Dict{Symbol,DataFrame}()

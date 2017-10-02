@@ -1,6 +1,7 @@
 """
 ```
-pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
+pseudo_measurement{T<:AbstractFloat}(m::Model990{T};
+    apply_altpolicy::Bool = false)
 ```
 
 Assign pseudo-measurement equation (a linear combination of states):
@@ -9,7 +10,7 @@ Assign pseudo-measurement equation (a linear combination of states):
 X_t = ZZ_pseudo*S_t + DD_pseudo
 ```
 """
-function pseudo_measurement{T<:AbstractFloat}(m::Model990{T})
+function pseudo_measurement{T<:AbstractFloat}(m::Model990{T}; apply_altpolicy::Bool = false)
 
     endo = m.endogenous_states
     pseudo_names = [:y_t, :y_f_t, :NaturalRate, :π_t, :OutputGap, :ExAnteRealRate, :LongRunInflation,
