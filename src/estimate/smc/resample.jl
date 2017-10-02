@@ -22,52 +22,36 @@ Reindexing and reweighting samples from a degenerate distribution
 function resample(weights::AbstractArray; method::Symbol=:systematic,
                   parallel::Bool=false, testing::Bool=false)
     if method == :systematic
-        n_part = length(weights)
-        weights = weights./sum(weights)
+        n_parts = length(weights)
         # Stores cumulative weights until given index
-        cumulative_weights = cumsum(weights)
-        weights = weights'
-        uu = zeros(n_part,1)
+        cumulative_weights = cumsum(weights./sum(weights))
+        uu = Vector{Float64}(n_parts)
 
         # Random part of algorithm - choose offset of first index by some u~U[0,1)
-        rand_offset=rand()
+        rand_offset = rand()
 
         # Set "spokes" at the position of the random offset
-        for j=1:n_part
-            uu[j] = (j-1)+rand_offset
+        for j = 1:n_parts
+            uu[j] = (j - 1) + rand_offset
         end
 
-        # Initialize output vector
-        indx = zeros(n_part, 1)
-
         # Function solves where an individual "spoke" lands
-        function subsys(i)
-            u = uu[i]/n_part
-            j=1
-            while j <= n_part
-                if (u < cumulative_weights[j])
-                    break
-                end
-                j = j+1
-            end
-            indx[i] = j
+        function subsys(i::Int)
+            findfirst(j -> cumulative_weights[j] > uu[i]/n_parts, 1:length(cumulative_weights))
         end
 
         # Map function if parallel
         if parallel
-            parindx =
-            @parallel (vcat) for j in 1:n_part
+            indx =
+            @sync @parallel (vcat) for j in 1:n_parts
                 subsys(j)
             end
         else
-            parindx = [subsys(j) for j = 1:n_part]'
+            indx = [subsys(j) for j = 1:n_parts]
         end
 
-        # Transpose and round output indices
-        indx = parindx'
-        indx = round(Int, indx)
+        return indx
 
-        return vec(indx)
     elseif method == :multinomial
         n_part = length(weights)
         weights = Weights(weights./sum(weights))
