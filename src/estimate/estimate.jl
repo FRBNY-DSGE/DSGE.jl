@@ -30,8 +30,8 @@ Estimate the DSGE parameter posterior distribution.
 - `sampling`: Set to false to disable sampling from the posterior.
 """
 function estimate(m::AbstractModel, df::DataFrame;
-                  verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix(0,0),
+                  verbose::Symbol = :low,
+                  proposal_covariance::Matrix = Matrix(0,0),
                   mle::Bool = false,
                   sampling::Bool = true)
     data = df_to_matrix(m, df)
@@ -40,19 +40,19 @@ function estimate(m::AbstractModel, df::DataFrame;
 end
 
 function estimate(m::AbstractModel;
-                  verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix(0,0),
+                  verbose::Symbol = :low,
+                  proposal_covariance::Matrix = Matrix(0,0),
                   mle::Bool = false,
                   sampling::Bool = true)
     # Load data
-    df = load_data(m; verbose=verbose)
+    df = load_data(m; verbose = verbose)
     estimate(m, df; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, sampling = sampling)
 end
 
 function estimate(m::AbstractModel, data::Matrix{Float64};
-                  verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix(0,0),
+                  verbose::Symbol = :low,
+                  proposal_covariance::Matrix = Matrix(0,0),
                   mle::Bool = false,
                   sampling::Bool = true)
 
@@ -67,7 +67,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     ########################################################################################
 
     if reoptimize(m)
-        post = posterior(m, data)[:post]
+        post = posterior(m, data)
     end
 
     ########################################################################################
@@ -99,9 +99,9 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
             tic()
             out, H = optimize!(m, data;
                                method = get_setting(m, :optimization_method),
-                               ftol=ftol, grtol = gtol, xtol = xtol,
-                               iterations=n_iterations, show_trace=true, step_size=step_size,
-                               verbose=verbose,
+                               ftol = ftol, grtol = gtol, xtol = xtol,
+                               iterations = n_iterations, show_trace = true, step_size = step_size,
+                               verbose = verbose,
                                mle = mle)
 
             attempts += 1
