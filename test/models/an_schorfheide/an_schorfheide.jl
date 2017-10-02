@@ -66,7 +66,6 @@ meas = measurement(model, TTT, RRR, CCC)
 @test size(meas[:DD]) == (3,)
 @test size(meas[:QQ]) == (3, 3)
 @test size(meas[:EE]) == (3, 3)
-@test size(meas[:MM]) == (3, 3)
 
 @test size(TTT) == (8,8)
 @test size(RRR) == (8,3)

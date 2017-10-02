@@ -1,23 +1,23 @@
 """
 ```
-compute_system(m)
+compute_system(m; apply_altpolicy = false)
 ```
 
 Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` object.
 """
-function compute_system{T<:AbstractFloat}(m::AbstractModel{T})
+function compute_system{T<:AbstractFloat}(m::AbstractModel{T}; apply_altpolicy = false)
+
     # Solve model
-    TTT, RRR, CCC = solve(m)
+    TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy)
     transition_equation = Transition(TTT, RRR, CCC)
 
     # Solve measurement equation
-    shocks = n_anticipated_shocks(m) > 0
-    measurement_equation = measurement(m, TTT, RRR, CCC; shocks = shocks)
+    measurement_equation = measurement(m, TTT, RRR, CCC)
 
     # Solve pseudo-measurement equation
     pseudo_measurement_equation = if method_exists(pseudo_measurement, (typeof(m),)) && forecast_pseudoobservables(m)
-        _, pseudo_mapping = pseudo_measurement(m)
+        _, pseudo_mapping = pseudo_measurement(m; apply_altpolicy = apply_altpolicy)
         Nullable(pseudo_mapping)
     else
         Nullable{PseudoObservableMapping{T}}()
@@ -144,9 +144,9 @@ added to `output_vars` when calling
 `add_requisite_output_vars([shockdecstates])`.
 """
 function add_requisite_output_vars(output_vars::Vector{Symbol})
-
     # Add :bddforecast<class> if :forecast<class> is in output_vars
-    forecast_outputs = Base.filter(output -> get_product(output) in [:forecast, :forecast4q], output_vars)
+    forecast_outputs = Base.filter(output -> get_product(output) in [:forecast, :forecastut, :forecast4q],
+                                   output_vars)
     if !isempty(forecast_outputs)
         bdd_vars = [Symbol("bdd$(var)") for var in forecast_outputs]
         output_vars = unique(vcat(output_vars, bdd_vars))
@@ -169,14 +169,12 @@ end
 remove_meansbands_only_output_vars(output_vars)
 ```
 """
-function remove_meansbands_only_output_vars(output_vars)
+function remove_meansbands_only_output_vars(output_vars::Vector{Symbol})
+    # All the <product>ut<class> and <product>4q<class> variables are computed
+    # during compute_meansbands
+    meansbands_only_products = [:hist4q, :forecast4q, :bddforecast4q, :forecastut, :bddforecastut]
 
-    # all the <product>4q<class> variables are computed during compute_meansbands
-    meansbands_only_output_vars = [:hist4qpseudo, :hist4qobs,
-                                   :forecast4qobs, :forecast4qpseudo,
-                                   :bddforecast4qobs, :bddforecast4qpseudo]
-
-    setdiff(output_vars, meansbands_only_output_vars)
+    Base.filter(var -> !(get_product(var) in meansbands_only_products), output_vars)
 end
 
 """
