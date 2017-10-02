@@ -29,7 +29,11 @@ my_tests = [
             "forecast/io",
             "forecast/forecast_one",
             "analysis/means_bands",
-            "plot/plot"
+            "plot/plot",
+            "scenarios/scenario",
+            "scenarios/forecast",
+            "scenarios/switching",
+            "scenarios/drivers"
             ]
 
 for test in my_tests

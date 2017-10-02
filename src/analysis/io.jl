@@ -59,11 +59,9 @@ function get_meansbands_input_files(directory::String, filestring_base::Vector{S
                                                  input_type, cond_type, var,
                                                  forecast_string = forecast_string,
                                                  fileformat = fileformat)
-        if contains(string(var), "forecast4q")
-            input_files[var] = replace(input_files[var], "forecast4q", "forecast")
-        elseif contains(string(var), "hist4q")
-            input_files[var] = replace(input_files[var], "hist4q", "hist")
-        end
+        input_files[var] = replace(input_files[var], "hist4q", "hist")
+        input_files[var] = replace(input_files[var], "forecast4q", "forecast")
+        input_files[var] = replace(input_files[var], "forecastut", "forecast")
     end
 
     return input_files
@@ -143,7 +141,7 @@ end
 read_mb(fn::String)
 
 read_mb(m, input_type, cond_type, output_var; forecast_string = "",
-    bdd_and_unbdd::Bool = false)
+    bdd_and_unbdd::Bool = false, directory = workpath(m, \"forecast\"))
 ```
 
 Read in a `MeansBands` object saved in `fn`, or use the model object `m` to
@@ -162,7 +160,8 @@ end
 
 function read_mb(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                  output_var::Symbol; forecast_string::String = "",
-                 bdd_and_unbdd::Bool = false, directory = workpath(m, "forecast"))
+                 bdd_and_unbdd::Bool = false,
+                 directory::String = workpath(m, "forecast"))
 
     if bdd_and_unbdd
         @assert get_product(output_var) in [:forecast, :forecast4q]

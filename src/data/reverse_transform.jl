@@ -141,7 +141,8 @@ function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Functio
                                              y0::T = NaN, y0s::Vector{T} = Vector{T}(),
                                              pop_growth::Vector{T} = Vector{T}())
     if fourquarter
-        if rev_transform in [loggrowthtopct_4q_percapita, loggrowthtopct_4q]
+        if rev_transform in [loggrowthtopct_4q_percapita, loggrowthtopct_4q,
+                             loggrowthtopct_4q_approx]
             # Sum growth rates y_{t-3}, y_{t-2}, y_{t-1}, and y_t
             y0s = isempty(y0s) ? fill(NaN, 3) : y0s
             if rev_transform == loggrowthtopct_4q_percapita
@@ -149,7 +150,8 @@ function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Functio
             else
                 rev_transform(y, y0s)
             end
-        elseif rev_transform in [logleveltopct_4q_percapita, logleveltopct_4q]
+        elseif rev_transform in [logleveltopct_4q_percapita, logleveltopct_4q,
+                                 logleveltopct_4q_approx]
             # Divide log levels y_t by y_{t-4}
             y0s = isempty(y0s) ? fill(NaN, 4) : y0s
             if rev_transform == logleveltopct_4q_percapita
@@ -167,7 +169,7 @@ function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Functio
             rev_transform(y, y0, pop_growth)
         elseif rev_transform in [loggrowthtopct_annualized_percapita, loggrowthtopct_percapita]
             rev_transform(y, pop_growth)
-        elseif rev_transform in [logleveltopct_annualized]
+        elseif rev_transform in [logleveltopct_annualized, logleveltopct_annualized_approx]
             rev_transform(y, y0)
         elseif rev_transform in [loggrowthtopct_annualized, loggrowthtopct, quartertoannual, identity]
             rev_transform(y)

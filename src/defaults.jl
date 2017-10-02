@@ -128,6 +128,11 @@ function default_settings!(m::AbstractModel)
     settings[:impulse_response_horizons] = Setting(:impulse_response_horizons, 40,
         "Number of periods for which to calculate an impulse response")
     settings[:compute_shockdec_bands] = Setting(:compute_shockdec_bands, false, "Whether or not to compute bands for shock decomposition. Setting to false saves signficant storage space.")
+
+    # Alternative policy
+    baseline_policy = AltPolicy(:historical, eqcond, solve, forecast_init = identity)
+    settings[:alternative_policy] = Setting(:alternative_policy, baseline_policy)
+
     return settings
 end
 

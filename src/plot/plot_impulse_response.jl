@@ -9,7 +9,7 @@ plot_impulse_response(m, shock, vars, class, input_type, cond_type;
     titles = [], kwargs...)
 
 plot_impulse_response(shock, var, mb; bands_pcts = [\"90.0%\"],
-    output_file = "", title = "", flip = false)
+    output_file = "", title = "", flip = false, verbose = :low)
 ```
 
 Plot the responses of `var` to `shock` from `mb`, possibly read in using
@@ -37,6 +37,7 @@ Plot the responses of `var` to `shock` from `mb`, possibly read in using
 - `output_file::String`: if specified, plot will be saved there as a PDF
 - `title::String` or `titles::Vector{String}`
 - `flip::Bool`: whether to flip the sign of the impulse response while plotting
+- `verbose::Symbol`
 
 **Methods 1 and 2 only:**
 
@@ -78,7 +79,7 @@ function plot_impulse_response(m::AbstractModel, shock::Symbol, vars::Vector{Sym
     # Get titles if not provided
     if isempty(titles)
         detexify_title = typeof(Plots.backend()) == Plots.GRBackend
-        titles = map(var -> DSGE.describe_series(m, var, class, detexify = detexify_title), vars)
+        titles = map(var -> describe_series(m, var, class, detexify = detexify_title), vars)
     end
 
     # Loop through variables
@@ -104,7 +105,8 @@ function plot_impulse_response(shock::Symbol, var::Symbol, mb::MeansBands;
                                bands_pcts::Vector{String} = ["90.0%"],
                                output_file::String = "",
                                title::String = "",
-                               flip::Bool = false)
+                               flip::Bool = false,
+                               verbose::Symbol = :low)
 
     # Plot title
     if isempty(title)
@@ -126,7 +128,7 @@ function plot_impulse_response(shock::Symbol, var::Symbol, mb::MeansBands;
     plot!(p, sign * mb.means[varshock], label = "", linewidth = 2, linecolor = :black)
 
     # Save if `output_file` provided
-    save_plot(p, output_file)
+    save_plot(p, output_file, verbose = verbose)
 
     return p
 end

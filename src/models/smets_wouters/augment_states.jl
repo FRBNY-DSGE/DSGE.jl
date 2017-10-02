@@ -10,7 +10,7 @@ function augment_states{T<:AbstractFloat}(m::SmetsWouters{T}, TTT::Matrix{T}, RR
     @assert n_endo == length(CCC)
 
     # Initialize augmented matrices
-    n_addl_states = length(m.endogenous_states_augmented)
+    n_addl_states = length(endo_addl)
     n_addl_eqs = n_addl_states
     TTT_aug = zeros(n_endo + n_addl_eqs, n_endo + n_addl_states)
     TTT_aug[1:n_endo, 1:n_endo] = TTT

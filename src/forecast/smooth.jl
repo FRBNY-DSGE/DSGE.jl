@@ -1,6 +1,7 @@
 """
 ```
-smooth(m, df, system, kal; cond_type = :none, draw_states = true)
+smooth(m, df, system, kal; cond_type = :none, draw_states = true,
+    include_presample = false)
 ```
 
 Computes and returns the smoothed values of states and shocks for the system
@@ -25,6 +26,8 @@ Computes and returns the smoothed values of states and shocks for the system
    the mean `z_{t|T}`. Defaults to `false`. If not using a simulation smoother,
    this flag has no effect (though the user will be warned if
    `draw_states = true`)
+- `include_presample::Bool`: indicates whether to include presample periods in
+  the returned matrices. Defaults to `false`.
 
 ### Outputs
 
@@ -53,16 +56,17 @@ before calling `smooth`.
 """
 function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     system::System{S}, kal::Kalman{S}; cond_type::Symbol = :none,
-    draw_states::Bool = false)
+    draw_states::Bool = false, include_presample::Bool = false)
 
     data = df_to_matrix(m, df; cond_type = cond_type)
 
     # Partition sample into pre- and post-ZLB regimes
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
-    regime_inds = zlb_regime_indices(m, data)
+    start_date = max(date_presample_start(m), df[1, :date])
+    regime_inds = zlb_regime_indices(m, data, start_date)
 
     # Get system matrices for each regime
-    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_regime_matrices(m, system)
+    TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_regime_matrices(m, system, start_date)
 
     # Call smoother
     smoother = eval(Symbol(forecast_smoother(m), "_smoother"))
@@ -85,9 +89,13 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     # Index out last presample period, used to compute the deterministic trend
     t0 = n_presample_periods(m)
     t1 = index_mainsample_start(m)
-    initial_states = states[:, t0]
-    states = states[:, t1:end]
-    shocks = shocks[:, t1:end]
+    if include_presample
+        initial_states = kal[:z0]
+    else
+        initial_states = states[:, t0]
+        states = states[:, t1:end]
+        shocks = shocks[:, t1:end]
+    end
 
     # Map smoothed states to pseudo-observables
     pseudo = if forecast_pseudoobservables(m)
