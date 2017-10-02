@@ -12,8 +12,8 @@ The `Particle` type contains the values and weight of a given vector of paramete
 """
 type Particle
     weight::Float64
-    keys::Array{Symbol,1}
-    value::Array{Float64,1}
+    keys::Vector{Symbol}
+    value::Vector{Float64}
     loglh::Float64
     logpost::Float64
     accept::Bool
@@ -36,8 +36,8 @@ the final output will be the final cloud of particles, of which only the particl
 - `accept::Float64`: The average acceptance rate of mutation steps
 """
 type ParticleCloud
-    particles::Array{Particle,1}
-    tempering_schedule::Array{Float64,1}
+    particles::Vector{Particle}
+    tempering_schedule::Vector{Float64}
     stage_index::Int
     n_Φ::Int
     resamples::Int
@@ -68,6 +68,10 @@ end
 
 function get_logpost(c::ParticleCloud)
     return map(p -> p.logpost, c.particles)
+end
+
+function get_likeliest_particle_value(c::ParticleCloud)
+    return c.particles[indmax(get_loglh(c))].value
 end
 
 function update_draws!(c::ParticleCloud, draws::Array{Float64,2})
