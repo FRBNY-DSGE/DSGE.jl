@@ -174,7 +174,7 @@ difflog(x::Vector{AbstractFloat})
 ```
 """
 function difflog{T<:AbstractFloat}(x::Vector{T})
-    [NaN; log(x[2:end]) - log(x[1:end-1])]
+    [NaN; log.(x[2:end]) - log.(x[1:end-1])]
 end
 
 
