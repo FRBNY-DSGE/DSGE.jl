@@ -1,6 +1,10 @@
-using DSGE, HDF5, JLD
+println("The following warning is expected test behavior:")
+using DSGE, HDF5, JLD, Plots
 
 path = dirname(@__FILE__)
+
+# Initialize the plotting backend
+Plots.backend()
 
 # Initialize model object
 m = AnSchorfheide(testing = true)

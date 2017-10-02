@@ -22,7 +22,11 @@ for out in fieldnames(kal)
     expect = exp_kal[out]
     actual = kal[out]
 
-    ndims(expect) == 0 ? @test_approx_eq(expect, actual) : @test_matrix_approx_eq(expect, actual)
+    if ndims(expect) == 0
+        @test expect ≈ actual
+    else
+        @test_matrix_approx_eq(expect, actual)
+    end
 end
 
 # Providing z0 and P0
@@ -31,7 +35,11 @@ for out in fieldnames(kal)
     expect = exp_kal[out]
     actual = kal[out]
 
-    ndims(expect) == 0 ? @test_approx_eq(expect, actual) : @test_matrix_approx_eq(expect, actual)
+    if ndims(expect) == 0
+        @test expect ≈ actual
+    else
+        @test_matrix_approx_eq(expect, actual)
+    end
 end
 
 
