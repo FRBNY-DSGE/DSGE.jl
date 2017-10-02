@@ -86,8 +86,13 @@ function n_forecast_draws(m::AbstractModel, input_type::Symbol)
     elseif input_type in [:full, :subset]
         input_file = get_forecast_input_file(m, input_type)
         draws = h5open(input_file, "r") do file
-            dataset = HDF5.o_open(file, "mhparams")
-            size(dataset)[1]
+            if get_setting(m, :sampling_method) == :MH
+                dataset = HDF5.o_open(file, "mhparams")
+                size(dataset)[1]
+            else
+                dataset = HDF5.o_open(file, "smcparams")
+                size(dataset)[1]
+            end
         end
         return draws
     else

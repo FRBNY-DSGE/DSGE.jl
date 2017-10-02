@@ -1,6 +1,6 @@
 """
 ```
-plot_prior_posterior(m::AbstractModel; include_fixed = false, verbose = :low)
+plot_prior_posterior(m::AbstractModel; include_fixed = false, sub_dir = "", verbose = :low)
 
 plot_prior_posterior(m::AbstractModel, param_key::Symbol, posterior_draws::Matrix{T};
     output_file = "", verbose = :low)
@@ -16,6 +16,7 @@ plotted.
 """
 function plot_prior_posterior(m::AbstractModel;
                               include_fixed::Bool = false,
+                              sub_dir::String = "",
                               verbose::Symbol = :low)
     # Load parameter draws from Metropolis-Hastings
     posterior_draws = load_draws(m, :full)
@@ -28,8 +29,8 @@ function plot_prior_posterior(m::AbstractModel;
         end
 
         posterior = posterior_draws[:, i]
-        output_file = figurespath(m, "estimate", "prior_posterior_" * detexify(string(param.key)) * ".pdf")
-        plot_prior_posterior(param, posterior, output_file = output_file, verbose = verbose)
+        output_file = isempty(sub_dir) ? figurespath(m, "estimate", "prior_posterior_" * detexify(string(param.key)) * ".pdf") : figurespath(m, "estimate", sub_dir*"/prior_posterior_" * detexify(string(param.key)) * ".pdf")
+        plot_prior_posterior(param, posterior, output_file = output_file)
     end
 end
 

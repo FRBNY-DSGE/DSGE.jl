@@ -171,7 +171,7 @@ function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
             else
                 return "Percent Q/Q Annualized"
             end
-        elseif transform == quartertoannual
+        elseif transform in [quartertoannual, loggrowthtopct]
             if untrans
                 return "Percent Q/Q"
             else
