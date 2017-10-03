@@ -67,9 +67,7 @@ module DSGE
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, compute_moments, find_density_bands,
-        prior, mutation,  resample, smc, nearest_spd, initial_draw,
-        tpf, multinomial_resampling, systematic_resampling, solve_inefficiency,
-        initialize_function_system, initialize_state_draws,
+        prior,
 
         # forecast/
         load_draws, forecast_one,
@@ -140,17 +138,9 @@ module DSGE
     include("estimate/combined_optimizer.jl")
     include("estimate/LBFGS.jl")
     include("estimate/estimate.jl")
-    include("estimate/smc/mutation_RWMH.jl")
-    include("estimate/smc/mutation_block_RWMH.jl")
     include("estimate/smc/resample.jl")
     include("estimate/smc/smc.jl")
     include("estimate/nearest_spd.jl")
-    include("estimate/tpf/initialize_function_system.jl")
-    include("estimate/tpf/systematic_resampling.jl")
-    include("estimate/tpf/multinomial_resampling.jl")
-    include("estimate/tpf/mutation.jl")
-    include("estimate/tpf/tpf.jl")
-    include("estimate/tpf/solve_inefficiency.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")
