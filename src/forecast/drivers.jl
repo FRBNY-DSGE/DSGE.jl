@@ -389,6 +389,12 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     ### Setup
 
+    # Re-initialize model indices if forecasting under an alternative policy
+    # rule (in case new states or equations were added)
+    if alternative_policy(m).key != :historical
+        init_model_indices!(m)
+    end
+
     # Are we only running IRFs?
     output_prods = map(get_product, output_vars)
     irfs_only = all(x -> x == :irf, output_prods)
