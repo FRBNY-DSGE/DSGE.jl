@@ -36,185 +36,190 @@ SMC is broken up into three main steps:
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis Hastings algorithm.
 """
 function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_update::Bool = false)
-    ########################################################################################
-    ### Setting Parameters
-    ########################################################################################
+    try
+        ########################################################################################
+        ### Setting Parameters
+        ########################################################################################
 
-    parallel = get_setting(m, :use_parallel_workers)
+        parallel = get_setting(m, :use_parallel_workers)
 
-    n_parts = get_setting(m, :n_particles)
-    n_params = n_parameters(m)
-    n_blocks = get_setting(m, :n_smc_blocks)
-    n_Φ = get_setting(m, :n_Φ)
+        n_parts = get_setting(m, :n_particles)
+        n_params = n_parameters(m)
+        n_blocks = get_setting(m, :n_smc_blocks)
+        n_Φ = get_setting(m, :n_Φ)
 
-    c = get_setting(m, :step_size_smc)
-    accept = get_setting(m, :init_accept)
-    target = get_setting(m, :target_accept)
-    λ = get_setting(m, :λ)
+        c = get_setting(m, :step_size_smc)
+        accept = get_setting(m, :init_accept)
+        target = get_setting(m, :target_accept)
+        λ = get_setting(m, :λ)
 
-    ########################################################################################
-    ### Initialize Algorithm: Draws from prior
-    ########################################################################################
+        ########################################################################################
+        ### Initialize Algorithm: Draws from prior
+        ########################################################################################
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            if m.testing
+                println("\n\n SMC testing starts ....  \n\n  ")
+            else
+                println("\n\n SMC starts ....  \n\n  ")
+            end
+        end
+
+        # fix seed if testing
         if m.testing
-            println("\n\n SMC testing starts ....  \n\n  ")
+            srand(42)
+        end
+
+        if !tempered_update
+            # Instantiating ParticleCloud object
+            cloud = ParticleCloud(m, n_parts)
+
+            # Particle draws from the parameter's marginal priors
+            # Modifies the cloud object in place to update draws, loglh, & logpost
+            initial_draw(m, data, cloud)
         else
-            println("\n\n SMC starts ....  \n\n  ")
+            updated_vintage = get_setting(m, :updated_data_vintage)
+            cloud = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "old_cloud")
+
+            unchanged_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "unchanged_loglh")
+            revised_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "revised_loglh")
+            new_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "new_loglh")
+
+            update_loglh!(cloud, unchanged_loglh)
         end
-    end
 
-    # fix seed if testing
-    if m.testing
-        srand(42)
-    end
+        cloud.n_Φ = n_Φ
+        cloud.c = c
+        cloud.tempering_schedule = ((collect(1:n_Φ)-1)/(n_Φ-1)).^λ
+        cloud.accept = accept
 
-    if !tempered_update
-        # Instantiating ParticleCloud object
-        cloud = ParticleCloud(m, n_parts)
-
-        # Particle draws from the parameter's marginal priors
-        # Modifies the cloud object in place to update draws, loglh, & logpost
-        initial_draw(m, data, cloud)
-    else
-        updated_vintage = get_setting(m, :updated_data_vintage)
-        cloud = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "old_cloud")
-
-        unchanged_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "unchanged_loglh")
-        revised_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "revised_loglh")
-        new_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "new_loglh")
-
-        update_loglh!(cloud, unchanged_loglh)
-    end
-
-    cloud.n_Φ = n_Φ
-    cloud.c = c
-    cloud.tempering_schedule = ((collect(1:n_Φ)-1)/(n_Φ-1)).^λ
-    cloud.accept = accept
-
-    if m.testing
-        writecsv("draws.csv", get_vals(cloud))
-    end
-
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        init_stage_print(cloud;verbose=verbose)
-    end
-
-    ########################################################################################
-    ### Recursion
-    ########################################################################################
-
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("\n\n SMC Recursion starts \n\n")
-    end
-
-    total_sampling_time = 0.
-
-    for i = 2:n_Φ
-        tic()
-        cloud.stage_index = i
-
-    ########################################################################################
-    ### Step 1: Correction
-    ########################################################################################
-
-	# Incremental weights
-    ϕ_n = cloud.tempering_schedule[i]
-    ϕ_n1 = cloud.tempering_schedule[i-1]
-    if !tempered_update
-        inc_weight = exp.((ϕ_n - ϕ_n1)*get_loglh(cloud))
-    else
-        inc_weight = exp.((ϕ_n1 - ϕ_n)*revised_loglh + (ϕ_n - ϕ_n1)*new_loglh)
-    end
-
-    # Update weights
-    update_weights!(cloud, inc_weight)
-
-	# Normalize weights
-    normalize_weights!(cloud)
-
-    if m.testing
-        writecsv("weights.csv", get_weights(cloud))
-    end
-
-    ########################################################################################
-    ### Step 2: Selection
-    ########################################################################################
-
-    cloud.ESS = 1/sum(get_weights(cloud).^2)
-    @assert !isnan(cloud.ESS) "no particles have non-zero weight"
-    if (cloud.ESS < n_parts/2)
-        new_inds = resample(get_weights(cloud); method = get_setting(m, :resampler_smc),
-                            parallel = parallel, testing = m.testing)
-        # update parameters/logpost/loglh with resampled values
-        # reset the weights to 1/n_parts
-        cloud.particles = [deepcopy(cloud.particles[i]) for i in new_inds]
-        reset_weights!(cloud)
-        cloud.resamples += 1
-    end
-
-    ########################################################################################
-    ### Step 3: Mutation
-    ########################################################################################
-
-    c = c*(0.95 + 0.10*exp(16*(cloud.accept - target))/(1 + exp(16*(cloud.accept - target))))
-    # Updating c step size in model object and cloud object
-    m <= Setting(:step_size_smc, c)
-    cloud.c = c
-
-    if parallel
-        R = cov(cloud)
-        current_φ = cloud.tempering_schedule[i]
-        previous_φ = cloud.tempering_schedule[i-1]
-        #out = pmap(j -> mutation_block_RWMH(m, data, cloud.particles[j], R, current_φ, previous_φ, 1:n_parts))
-        new_particles = @parallel (vcat) for j in 1:n_parts
-            mutation(m, data, cloud.particles[j], R, current_φ, previous_φ)
+        if m.testing
+            writecsv("draws.csv", get_vals(cloud))
         end
-    else
-        R = cov(cloud)
-        current_φ = cloud.tempering_schedule[i]
-        previous_φ = cloud.tempering_schedule[i-1]
-        new_particles = [mutation(m, data, cloud.particles[j], R, current_φ, previous_φ)  for j = 1:n_parts]
-    end
 
-    cloud.particles = new_particles
-    update_acceptance_rate!(cloud) # update average acceptance rate
-
-    ########################################################################################
-    ### Timekeeping and Output Generation
-    ########################################################################################
-
-    total_sampling_time += toq()
-
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        end_stage_print(cloud, total_sampling_time; verbose=verbose)
-    end
-
-    ########################################################################################
-    ### Saving data
-    ########################################################################################
-
-    if m.testing
-        writecsv("mutated_values.csv",get_vals(cloud))
-        break
-    end
-
-    end
-
-    if !m.testing && !tempered_update
-        simfile = h5open(rawpath(m,"estimate","smcsave.h5"),"w")
-        particle_store = d_create(simfile, "smcparams", datatype(Float32),
-                                  dataspace(n_parts, n_params))
-        for i in 1:length(cloud)
-            particle_store[i,:] = cloud.particles[i].value
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            init_stage_print(cloud;verbose=verbose)
         end
-        close(simfile)
-        save(rawpath(m,"estimate","smc_cloud.jld"),"cloud",cloud)
-    elseif tempered_update
-        new_vintage = get_setting(m, :updated_data_vintage)
-        jldopen(rawpath(m, "estimate", "smc_cloud_updvint=$new_vintage.jld"), "r+") do file
-            write(file, "up_cloud", cloud)
+
+        ########################################################################################
+        ### Recursion
+        ########################################################################################
+
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            println("\n\n SMC Recursion starts \n\n")
         end
+
+        total_sampling_time = 0.
+
+        for i = 2:n_Φ
+            tic()
+            cloud.stage_index = i
+
+        ########################################################################################
+        ### Step 1: Correction
+        ########################################################################################
+
+        # Incremental weights
+        ϕ_n = cloud.tempering_schedule[i]
+        ϕ_n1 = cloud.tempering_schedule[i-1]
+        if !tempered_update
+            inc_weight = exp.((ϕ_n - ϕ_n1)*get_loglh(cloud))
+        else
+            inc_weight = exp.((ϕ_n1 - ϕ_n)*revised_loglh + (ϕ_n - ϕ_n1)*new_loglh)
+        end
+
+        # Update weights
+        update_weights!(cloud, inc_weight)
+
+        # Normalize weights
+        normalize_weights!(cloud)
+
+        if m.testing
+            writecsv("weights.csv", get_weights(cloud))
+        end
+
+        ########################################################################################
+        ### Step 2: Selection
+        ########################################################################################
+
+        cloud.ESS = 1/sum(get_weights(cloud).^2)
+        @assert !isnan(cloud.ESS) "no particles have non-zero weight"
+        if (cloud.ESS < n_parts/2)
+            new_inds = resample(get_weights(cloud); method = get_setting(m, :resampler_smc),
+                                parallel = parallel, testing = m.testing)
+            # update parameters/logpost/loglh with resampled values
+            # reset the weights to 1/n_parts
+            cloud.particles = [deepcopy(cloud.particles[i]) for i in new_inds]
+            reset_weights!(cloud)
+            cloud.resamples += 1
+        end
+
+        ########################################################################################
+        ### Step 3: Mutation
+        ########################################################################################
+
+        c = c*(0.95 + 0.10*exp(16*(cloud.accept - target))/(1 + exp(16*(cloud.accept - target))))
+        # Updating c step size in model object and cloud object
+        m <= Setting(:step_size_smc, c)
+        cloud.c = c
+
+        if parallel
+            R = cov(cloud)
+            current_φ = cloud.tempering_schedule[i]
+            previous_φ = cloud.tempering_schedule[i-1]
+            #out = pmap(j -> mutation_block_RWMH(m, data, cloud.particles[j], R, current_φ, previous_φ, 1:n_parts))
+            new_particles = @parallel (vcat) for j in 1:n_parts
+                mutation(m, data, cloud.particles[j], R, current_φ, previous_φ)
+            end
+        else
+            R = cov(cloud)
+            current_φ = cloud.tempering_schedule[i]
+            previous_φ = cloud.tempering_schedule[i-1]
+            new_particles = [mutation(m, data, cloud.particles[j], R, current_φ, previous_φ)  for j = 1:n_parts]
+        end
+
+        cloud.particles = new_particles
+        update_acceptance_rate!(cloud) # update average acceptance rate
+
+        ########################################################################################
+        ### Timekeeping and Output Generation
+        ########################################################################################
+
+        total_sampling_time += toq()
+
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            end_stage_print(cloud, total_sampling_time; verbose=verbose)
+        end
+
+        ########################################################################################
+        ### Saving data
+        ########################################################################################
+
+        if m.testing
+            writecsv("mutated_values.csv",get_vals(cloud))
+            break
+        end
+
+        end
+
+        if !m.testing && !tempered_update
+            simfile = h5open(rawpath(m,"estimate","smcsave.h5"),"w")
+            particle_store = d_create(simfile, "smcparams", datatype(Float32),
+                                      dataspace(n_parts, n_params))
+            for i in 1:length(cloud)
+                particle_store[i,:] = cloud.particles[i].value
+            end
+            close(simfile)
+            save(rawpath(m,"estimate","smc_cloud.jld"),"cloud",cloud)
+        elseif tempered_update
+            new_vintage = get_setting(m, :updated_data_vintage)
+            jldopen(rawpath(m, "estimate", "smc_cloud_updvint=$new_vintage.jld"), "r+") do file
+                write(file, "up_cloud", cloud)
+            end
+        end
+    catch
+        save(rawpath(m, "estimate", "smc_cloud_incomplete.jld"), "cloud", cloud)
+        throw("SMC broke")
     end
 end
 
