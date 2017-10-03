@@ -97,5 +97,6 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::Sys
     out = kalman_filter(regime_inds, data, TTTs, RRRs, CCCs,
               QQs, ZZs, DDs, EEs, z0, P0;
               allout = allout, n_presample_periods = T0)
+
     return Kalman(out...)
 end

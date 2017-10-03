@@ -62,15 +62,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     end
 
     ########################################################################################
-    ### Step 1: Initialize
-    ########################################################################################
-
-#    if reoptimize(m)
- #       post = posterior(m, data)[:post]
-  #  end
-
-    ########################################################################################
-    ### Step 2: Find posterior/likelihood mode (if reoptimizing, run optimization routine)
+    ### Step 1: Find posterior/likelihood mode (if reoptimizing, run optimization routine)
     ########################################################################################
 
     # Specify starting mode
@@ -134,7 +126,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
 
     if method == :MH
         ########################################################################################
-        ### Step 3: Compute proposal distribution for Markov Chain Monte Carlo (MCMC)
+        ### Step 2: Compute proposal distribution for Markov Chain Monte Carlo (MCMC)
         ###
         ### In Metropolis-Hastings, we draw sample parameter vectors from
         ### the proposal distribution, which is a degenerate multivariate
@@ -197,7 +189,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
     end
 
         ########################################################################################
-        ### Step 3.5: Sample from posterior using Metropolis-Hastings algorithm
+        ### Step 3: Sample from posterior using Metropolis-Hastings algorithm
         ########################################################################################
 
         # Set the jump size for sampling

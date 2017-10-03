@@ -59,11 +59,9 @@ function get_meansbands_input_files(directory::String, filestring_base::Vector{S
                                                  input_type, cond_type, var,
                                                  forecast_string = forecast_string,
                                                  fileformat = fileformat)
-        if contains(string(var), "forecast4q")
-            input_files[var] = replace(input_files[var], "forecast4q", "forecast")
-        elseif contains(string(var), "hist4q")
-            input_files[var] = replace(input_files[var], "hist4q", "hist")
-        end
+        input_files[var] = replace(input_files[var], "hist4q", "hist")
+        input_files[var] = replace(input_files[var], "forecast4q", "forecast")
+        input_files[var] = replace(input_files[var], "forecastut", "forecast")
     end
 
     return input_files
