@@ -432,7 +432,7 @@ function compute_means_bands(class::Symbol,
 
     # Compute means and bands of transformed series
     means = vec(mean(transformed_series, 1))
-    bands = if product in [:shockdec, :dettrend, :trend] && compute_shockdec_bands
+    bands = if product in [:shockdec, :dettrend, :trend] && !compute_shockdec_bands
         Dict{Symbol,DataFrame}()
     else
         find_density_bands(transformed_series, density_bands, minimize = minimize)
