@@ -112,7 +112,7 @@ function plot_impulse_response(shock::Symbol, var::Symbol, mb::MeansBands;
     if isempty(title)
         title = string(var)
     end
-    p = plot(title = title, margin = 10px)
+    p = plot(title = title)
 
     varshock = Symbol("$(var)__$(shock)")
     sign = flip ? -1 : 1

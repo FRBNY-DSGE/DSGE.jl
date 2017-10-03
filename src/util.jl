@@ -127,11 +127,11 @@ function test_matrix_eq2{T<:AbstractFloat}(expect::Array{T},
     end
 
     # Absolute difference filter
-    abs_diff   = actual .- expect .> ϵ_abs
+    abs_diff   = abs.(actual .- expect) .> ϵ_abs
     n_abs_diff = sum(abs_diff)
 
     # Relative difference filter
-    rel_diff   = 100(actual .- expect) ./ expect .> ϵ_rel
+    rel_diff   = 100*abs.((actual .- expect) ./ expect) .> ϵ_rel
     n_rel_diff = sum(rel_diff)
 
     # Element is only problematic if it fails *both* tests.

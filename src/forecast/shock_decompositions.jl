@@ -4,17 +4,11 @@ shock_decompositions(m, system, histshocks)
 
 shock_decompositions(system, forecast_horizons, histshocks, start_index,
     end_index)
-
-shock_decompositions(T, R, Z, D, Z_pseudo, D_pseudo, z0, shocks,
-    forecast_horizons, histshocks, start_index, end_index)
 ```
 
 ### Inputs
 
-- `system::System{S}`: state-space system matrices. Alternatively, provide
-  transition equation matrices `T`, `R`; measurement equation matrices `Z`, `D`;
-  and (possibly empty) pseudo-measurement equation matrices `Z_pseudo` and
-  `D_pseudo`.
+- `system::System{S}`: state-space system matrices
 - `forecast_horizons::Int`: number of periods ahead to forecast
 - `histshocks::Matrix{S}`: matrix of size `nshocks` x `hist_periods` of
   historical smoothed shocks
@@ -50,49 +44,37 @@ function shock_decompositions{S<:AbstractFloat}(system::System{S},
     forecast_horizons::Int, histshocks::Matrix{S},
     start_index::Int, end_index::Int)
 
-    # Unpack system
-    T, R = system[:TTT], system[:RRR]
-    Z, D = system[:ZZ], system[:DD]
-
-    Z_pseudo, D_pseudo = if !isnull(system.pseudo_measurement)
-        system[:ZZ_pseudo], system[:DD_pseudo]
-    else
-        Matrix{S}(), Vector{S}()
-    end
-
-    shock_decompositions(T, R, Z, D, Z_pseudo, D_pseudo,
-        forecast_horizons, histshocks, start_index, end_index)
-end
-
-function shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
-    R::Matrix{S}, Z::Matrix{S}, D::Vector{S}, Z_pseudo::Matrix{S},
-    D_pseudo::Vector{S}, forecast_horizons::Int, histshocks::Matrix{S},
-    start_index::Int, end_index::Int)
-
     # Setup
-    nshocks      = size(R, 2)
-    nstates      = size(T, 2)
-    nobs         = size(Z, 1)
-    npseudo      = size(Z_pseudo, 1)
+    nshocks      = size(system[:RRR], 2)
+    nstates      = size(system[:TTT], 2)
+    nobs         = size(system[:ZZ], 1)
     histperiods  = size(histshocks, 2)
     allperiods   = histperiods + forecast_horizons
 
-    forecast_pseudo = !isempty(Z_pseudo) && !isempty(D_pseudo)
+    states = zeros(S, nstates, allperiods, nshocks)
+    obs    = zeros(S, nobs, allperiods, nshocks)
 
+    forecast_pseudo = !isnull(system.pseudo_measurement)
+    if forecast_pseudo
+        npseudo = size(system[:ZZ_pseudo], 1)
+        pseudo = zeros(S, npseudo, allperiods, nshocks)
+    else
+        pseudo = zeros(S, 0, 0, 0)
+    end
+
+    # Check dates
     if forecast_horizons <= 0 || start_index < 1 || end_index > allperiods
         throw(DomainError())
     end
 
-    states = zeros(S, nstates,      allperiods, nshocks)
-    obs    = zeros(S, nobs, allperiods, nshocks)
-    pseudo = if forecast_pseudo
-        zeros(S, npseudo, allperiods, nshocks)
-    else
-        zeros(S, 0, 0, 0)
+    # Set constant system matrices to 0
+    system = copy(system)
+    system.transition.CCC = zeros(size(system[:CCC]))
+    system.measurement.DD = zeros(size(system[:DD]))
+    if forecast_pseudo
+        get(system.pseudo_measurement).DD_pseudo = zeros(size(system[:DD_pseudo]))
     end
 
-    # Define our iteration function
-    iterate(z_t1, ϵ_t) = T*z_t1 + R*ϵ_t
     z0 = zeros(S, nstates)
 
     for i = 1:nshocks
@@ -101,17 +83,10 @@ function shock_decompositions{S<:AbstractFloat}(T::Matrix{S},
         shocks[i, 1:histperiods] = histshocks[i, :]
 
         # Iterate state space forward
-        states[:, 1, i] = iterate(z0, shocks[:, 1])
-        for t in 2:allperiods
-            states[:, t, i] = iterate(states[:, t-1, i], shocks[:, t])
-        end
-
-        # Apply measurement and pseudo-measurement equations
-        obs[:, :, i] = D .+ Z * states[:, :, i]
+        states[:, :, i], obs[:, :, i], pseudo_i, _ = forecast(system, z0, shocks)
         if forecast_pseudo
-            pseudo[:, :, i] = D_pseudo .+ Z_pseudo * states[:, :, i]
+            pseudo[:, :, i] = pseudo_i
         end
-
     end
 
     # Return shock decompositions in appropriate range
@@ -178,15 +153,25 @@ end
 function deterministic_trends{S<:AbstractFloat}(system::System{S}, z0::Vector{S}, nperiods::Int,
     start_index::Int, end_index::Int)
 
-    # construct matrix of 0 shocks for entire history and forecast horizon
+    # Determine whether to forecast pseudo-observables
+    forecast_pseudo = !isnull(system.pseudo_measurement)
+
+    # Set constant system matrices to 0
+    system = copy(system)
+    system.transition.CCC = zeros(size(system[:CCC]))
+    system.measurement.DD = zeros(size(system[:DD]))
+    if forecast_pseudo
+        get(system.pseudo_measurement).DD_pseudo = zeros(size(system[:DD_pseudo]))
+    end
+
+    # Construct matrix of 0 shocks for entire history and forecast horizon
     nshocks  = size(system[:RRR], 2)
     shocks   = zeros(S, nshocks, nperiods)
 
-    # use forecast to iterate state-space system forward without shocks or the ZLB procedure
+    # Use forecast to iterate state-space system forward without shocks or the ZLB procedure
     states, obs, pseudo, _ = forecast(system, z0, shocks)
 
     # Return deterministic trends in appropriate range
-    forecast_pseudo = !isnull(system.pseudo_measurement)
     if start_index == 1 && end_index == nperiods
         return states, obs, pseudo
     else
@@ -209,14 +194,13 @@ trend is used for plotting shock decompositions.
 """
 function trends{S<:AbstractFloat}(system::System{S})
 
-    # Unpack system
-    C, D = system[:CCC], system[:DD]
-
-    D_pseudo = if !isnull(system.pseudo_measurement)
-        system[:DD_pseudo]
+    state_trend  = system[:CCC]
+    obs_trend    = system[:ZZ]*system[:CCC] + system[:DD]
+    pseudo_trend = if !isnull(system.pseudo_measurement)
+        system[:ZZ_pseudo]*system[:CCC] + system[:DD_pseudo]
     else
         Vector{S}()
     end
 
-    C, D, D_pseudo
+    return state_trend, obs_trend, pseudo_trend
 end

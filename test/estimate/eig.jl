@@ -1,4 +1,5 @@
-using HDF5, Base.Test, ClusterManagers
+using HDF5, Base.Test
+using ClusterManagers
 
 # Read in an input matrix and reference eigenvalues/eigenvectors
 h5 = h5open(joinpath(dirname(@__FILE__), "..", "reference", "eig.h5"),"r")

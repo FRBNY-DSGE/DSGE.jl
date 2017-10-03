@@ -141,7 +141,7 @@ function nan_cond_vars!(m::AbstractModel, df::DataFrame; cond_type::Symbol = :no
 
         # Warn if any conditional variables are missing
         for var in cond_names
-            if any(isnan(df[df[:, :date] .>= date_forecast_start(m), var]))
+            if any(isnan.(df[df[:, :date] .>= date_forecast_start(m), var]))
                 warn("Missing some conditional observations for " * string(var))
             end
         end

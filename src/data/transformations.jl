@@ -396,13 +396,13 @@ end
 
 """
 ```
-get_irf_transform(transform::Function)
+get_nopop_transform(transform::Function)
 ```
-Returns the IRF-specific transformation, which doesn't add back population
-growth (since IRFs are given in deviations).
+Returns the corresponding transformation which doesn't add back population
+growth. Used for shock decompositions, deterministic trends, and IRFs, which are
+given in deviations.
 """
-function get_irf_transform(transform::Function)
-
+function get_nopop_transform(transform::Function)
     transform4q = if transform == loggrowthtopct_annualized_percapita
         loggrowthtopct_annualized
     elseif transform == logleveltopct_annualized_percapita
