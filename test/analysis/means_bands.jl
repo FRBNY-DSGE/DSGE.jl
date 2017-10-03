@@ -24,7 +24,6 @@ output_vars = add_requisite_output_vars([:histpseudo, :histobs,
                                          :forecast4qobs, :bddforecast4qobs, :hist4qobs,
                                          :forecast4qpseudo, :bddforecast4qpseudo, :hist4qpseudo])
 
-
 # Read expected output
 exp_modal_means, exp_modal_bands, exp_full_means, exp_full_bands =
     jldopen("$path/../reference/means_bands_out.jld", "r") do file
@@ -37,12 +36,11 @@ exp_modal_means, exp_modal_bands, exp_full_means, exp_full_bands =
 @time means_bands_all(m, :mode, :none, output_vars; verbose = :none)
 @time meansbands_matrix_all(m, :mode, :none, output_vars; verbose = :none)
 
-mb_matrix_vars = map(x -> Symbol("_matrix_$x"), output_vars)
-files = get_meansbands_output_files(m, :mode, :none, mb_matrix_vars; fileformat = :h5)
-for (var, mb_var) in zip(output_vars, mb_matrix_vars)
-     filename = files[mb_var]
-     @test_matrix_approx_eq exp_modal_means[var] h5read(filename, "means")
-     @test_matrix_approx_eq exp_modal_bands[var] h5read(filename, "bands")
+for var in output_vars
+    filename = get_forecast_filename(m, :mode, :none, Symbol("mb_matrix_", var),
+                                     pathfcn = workpath, fileformat = :h5)
+    @test_matrix_approx_eq exp_modal_means[var] h5read(filename, "means")
+    @test_matrix_approx_eq exp_modal_bands[var] h5read(filename, "bands")
 end
 
 # Full-distribution
@@ -52,9 +50,9 @@ m <= Setting(:forecast_block_size, 5)
 @time means_bands_all(m, :full, :none, output_vars; verbose = :none)
 @time meansbands_matrix_all(m, :full, :none, output_vars; verbose = :none)
 
-files = get_meansbands_output_files(m, :full, :none, mb_matrix_vars; fileformat = :h5)
-for (var, mb_var) in zip(output_vars, mb_matrix_vars)
-    filename = files[mb_var]
+for var in output_vars
+    filename = get_forecast_filename(m, :full, :none, Symbol("mb_matrix_", var),
+                                     pathfcn = workpath, fileformat = :h5)
     @test_matrix_approx_eq exp_full_means[var] h5read(filename, "means")
     @test_matrix_approx_eq exp_full_bands[var] h5read(filename, "bands")
 end
