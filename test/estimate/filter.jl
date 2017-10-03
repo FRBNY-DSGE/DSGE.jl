@@ -7,7 +7,7 @@ path = dirname(@__FILE__)
 m = AnSchorfheide(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 
-println("The following warning is expected test behavior:")
+println("The following warning is expected test behavior:\n")
 df, system, z0, P0 = jldopen("$path/../reference/forecast_args.jld", "r") do file
     read(file, "df"), read(file, "system"), read(file, "z0"), read(file, "P0")
 end

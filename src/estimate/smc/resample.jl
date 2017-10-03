@@ -1,13 +1,13 @@
 """
 ```
-resample(weights::AbstractArray; method::Symbol=:systematic,
-         parallel::Bool=false, testing::Bool=false)
+resample(weights::AbstractArray; method::Symbol = :systematic;
+         parallel::Bool = false, testing::Bool = false)
 ```
 
 Reindexing and reweighting samples from a degenerate distribution
 
 ### Arguments:
-- `weights`: get_weights(cloud)
+- `weight`: wtsim[:,i]
         the weights of a degenerate distribution.
 - `method`: :systematic or :multinomial
         the method for resampling
@@ -16,11 +16,11 @@ Reindexing and reweighting samples from a degenerate distribution
 
 ### Output:
 
-- `vec(indx)`: id
+- `indx`
         the newly assigned indices of parameter draws.
 """
-function resample(weights::AbstractArray; method::Symbol=:systematic,
-                  parallel::Bool=false, testing::Bool=false)
+function resample(weights::AbstractArray; method::Symbol = :systematic,
+                  parallel::Bool = false, testing::Bool = false)
     if method == :systematic
         n_parts = length(weights)
         # Stores cumulative weights until given index
@@ -28,10 +28,10 @@ function resample(weights::AbstractArray; method::Symbol=:systematic,
         uu = Vector{Float64}(n_parts)
 
         # Random part of algorithm - choose offset of first index by some u~U[0,1)
-        rand_offset = rand()
+        rand_offset=rand()
 
         # Set "spokes" at the position of the random offset
-        for j = 1:n_parts
+        for j = 1:n_part
             uu[j] = (j - 1) + rand_offset
         end
 
@@ -42,6 +42,7 @@ function resample(weights::AbstractArray; method::Symbol=:systematic,
 
         # Map function if parallel
         if parallel
+            parindx = pmap(j -> subsys(j), 1:n_part)
             indx =
             @sync @parallel (vcat) for j in 1:n_parts
                 subsys(j)
@@ -50,13 +51,18 @@ function resample(weights::AbstractArray; method::Symbol=:systematic,
             indx = [subsys(j) for j = 1:n_parts]
         end
 
-        return indx
+        # # Write output to file if in testing mode
+        # if testing
+            # open("resamples.csv","a") do x
+                # writecsv(x,indx)
+            # end
+        # end
 
+        return vec(indx)
     elseif method == :multinomial
-        n_part = length(weights)
+        n_parts = length(weights)
         weights = Weights(weights./sum(weights))
-        # to use the proper method of sample, weight needs to be an AbstractWeight object
-        return sample(1:n_part,weights,n_part,replace=true)
+        return sample(1:n_parts, weights, n_parts, replace = true)
     else
         throw("Invalid resampler in SMC. Set model setting :resampler_smc to either :systematic or :multinomial")
     end
