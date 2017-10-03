@@ -33,7 +33,7 @@ deploydocs(
      repo = "github.com/FRBNY-DSGE/DSGE.jl.git",
      target = "build",
      deps = nothing,
-     julia = "0.4",
+     julia = "0.6",
      osname = "osx",
      make = nothing
 )
