@@ -13,6 +13,8 @@ function init_subspec!(m::SmetsWouters)
         return ss2!(m)
     elseif subspec(m) == "ss3"
         return ss3!(m)
+    elseif subspec(m) == "ss4"
+        return ss4!(m,5)
     else
         error("This subspec is not defined.")
     end
@@ -109,4 +111,31 @@ function ss3!(m::SmetsWouters)
     m <= parameter(:ρ_g, 0.9930, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = true,
                    description = "ρ_g: AR(1) coefficient in the government spending process.",
                    tex_label = "\\rho_g")
+end
+
+"""
+```
+ss4!(m::SmetsWouters, divisor::Int)`
+```
+
+Initializes a SmetsWouters model with measurement error equal to standard deviation of the
+states scaled by a factor 1/divisor.
+"""
+function ss4!(m::SmetsWouters, divisor::Int)
+    scale = (1/divisor)
+    m <= parameter(:e_y, scale*0.868241996, fixed = true,
+                   description = "e_y: Measurement error on GDP", tex_label = "e_y")
+    m <= parameter(:e_L, scale*0.283703727, fixed = true,
+                   description = "e_L: Measurement error on hours worked", tex_label = "e_L")
+    m <= parameter(:e_w, scale*0.600015046, fixed = true,
+                   description = "e_w: Measurement error on wages", tex_label = "e_w")
+    m <= parameter(:e_π, scale*0.600386299, fixed = true,
+                   description = "e_π: Measurement error on GDP deflator", tex_label = "e_π")
+    m <= parameter(:e_R, scale*0.846722459, fixed = true,
+                   description = "e_R: Measurement error on nonominal rate of interest", tex_label = "e_R")
+    m <= parameter(:e_c, scale*0.710297826, fixed = true,
+                   description = "e_c: Measurement error on consumption", tex_label = "e_c")
+    m <= parameter(:e_i, scale*2.405946712, fixed = true,
+                   description = "e_i: Measurement error on investment", tex_label = "e_i")
+
 end

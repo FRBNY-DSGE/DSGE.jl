@@ -545,3 +545,17 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
         end
     end
 end
+
+function add_requisite_output_vars_meansbands(output_vars)
+
+    all_output_vars = add_requisite_output_vars(output_vars)
+
+    if :shockdecpseudo in all_output_vars
+        push!(all_output_vars, :histforecastpseudo)
+    end
+    if :shockdecobs in all_output_vars
+        push!(all_output_vars, :histforecastobs)
+    end
+
+    return all_output_vars
+end

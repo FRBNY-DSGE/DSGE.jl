@@ -25,12 +25,12 @@ rvec2     = read(file, "rvec2")
 data      = read(file, "data")
 close(file)
 
-#Test 1
+# Test 1
 current_φ = tempering_schedule[2]
 previous_φ = tempering_schedule[1]
 R = eye(n_parameters(s))
 
-#bad
+# bad particle
 test_prev_part = deepcopy(prev_part)
 update!(s, test_prev_part.value)
 prev_part.logpost = previous_φ*prev_part.loglh + prior(s)
@@ -42,7 +42,7 @@ new_part_0 = mutation(s,data,test_prev_part,R,current_φ,previous_φ,rvec=rvec2,
 @test_approx_eq new_part_0.logpost (prev_part.logpost + (current_φ - previous_φ)*prev_part.loglh)
 @test_approx_eq new_part_0.accept false
 
-#good
+# good particle
 test_prev_part = deepcopy(prev_part)
 update!(s, good_part.value)
 prev_part.logpost = previous_φ*prev_part.loglh + prior(s)

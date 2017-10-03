@@ -2,16 +2,12 @@
 ```
 Kalman{S<:AbstractFloat}
 ```
-
 ### Fields:
-
 - `L`: value of the average log likelihood function of the SSM under assumption that
   observation noise ϵ(t) is normally distributed
 - `zend`: state vector in the last period for which data is provided
 - `Pend`: variance-covariance matrix for `zend`
-
 #### Fields filled in when `allout` in a call to `kalman_filter`:
-
 - `pred`: a `Nz` x `T` matrix containing one-step predicted state vectors
 - `vpred`: a `Nz` x `Nz` x `T` matrix containing mean square errors of predicted
   state vectors
@@ -133,7 +129,6 @@ end
 ```
 zlb_regime_matrices(m, system, start_date = date_presample_start(m))
 ```
-
 Returns `TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs`, an 8-tuple of
 `Vector{Matrix{S}}`s and `Vector{Vector{S}}`s of system matrices for the pre-
 and post-ZLB regimes. Of these, only `QQ` changes from pre- to post-ZLB: the

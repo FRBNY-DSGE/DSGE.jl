@@ -83,7 +83,8 @@ module DSGE
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, prior, get_estimation_output_files,
-        mutation, resample, smc, nearest_spd, initial_draw, ParticleCloud, Particle,
+        compute_moments, find_density_bands, mutation, resample, smc, nearest_spd,
+        initial_draw, ParticleCloud, Particle,
 
         # forecast/
         load_draws, forecast_one,
@@ -238,4 +239,6 @@ module DSGE
     include("models/an_schorfheide/measurement.jl")
     include("models/an_schorfheide/pseudo_measurement.jl")
     include("models/an_schorfheide/augment_states.jl")
+
+
 end
