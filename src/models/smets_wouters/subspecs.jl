@@ -11,6 +11,8 @@ function init_subspec!(m::SmetsWouters)
         return
     elseif subspec(m) == "ss2"
         return ss2!(m)
+    elseif subspec(m) == "ss3"
+        return ss3!(m)
     else
         error("This subspec is not defined.")
     end
@@ -53,8 +55,6 @@ function ss2!(m::SmetsWouters)
                    description = "ρ: The degree of inertia in the monetary policy rule.",
                    tex_label = "\\rho_R")
 
-    # Financial frictions parameters
-
     m <= parameter(:ρ_g, 0.9930, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = false,
                    description = "ρ_g: AR(1) coefficient in the government spending process.",
                    tex_label = "\\rho_g")
@@ -93,4 +93,20 @@ function ss2!(m::SmetsWouters)
     m <= parameter(:η_λ_w, 0.8936, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.50, 0.20), fixed = false,
                    description = "η_λ_w: AR(2) coefficient on wage markup shock process.",
                    tex_label = "\\eta_{\\lambda_w}")
+end
+
+"""
+```
+ss3!(m::SmetsWouters)
+```
+
+Initializes subspec 3 of `SmetsWouters`. Fix ρ_g.
+"""
+function ss3!(m::SmetsWouters)
+
+    ss2!(m)
+
+    m <= parameter(:ρ_g, 0.9930, (0.0, 1.0), (0.0, 1.0), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed = true,
+                   description = "ρ_g: AR(1) coefficient in the government spending process.",
+                   tex_label = "\\rho_g")
 end
