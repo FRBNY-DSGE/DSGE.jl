@@ -36,11 +36,12 @@ Pages = [
 ]
 ```
 
-## Acknowledgements
+## Acknowledgments
 
 Developers of this package at the
 [New York Fed](https://www.newyorkfed.org/research) include
 
+* [Michael Cai](https://github.com/caimichael)
 * [Abhi Gupta](https://github.com/abhig94)
 * [Pearl Li](https://github.com/pearlzli)
 * [Erica Moszkowski](https://github.com/emoszkowski)
