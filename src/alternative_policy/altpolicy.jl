@@ -1,30 +1,36 @@
 """
 ```
-AltPolicy(rule, [forecast_init = identity], [color = :black], [linestyle = :solid])
+type AltPolicy
 ```
 
 Type defining an alternative policy rule.
 
 ### Fields
 
-- `rule::Function`: A function that solves the model and replaces the
-  baseline policy rule with the desired alternative rule. It is also
-  responsible for augmenting the state-space system with the states in
-  `m.endogenous_states_augmented`. This function must accept 1
-  argument: an instance of a subtype of `AbstractModel`. It must return
+- `key::Symbol`: alternative policy identifier
 
-- `forecast_init::Function`: A function that initializes forecasts
-  under the alternative policy rule. Specifically, it accepts a model,
-  an `nshocks` x `n_forecast_periods` matrix of shocks to be applied
-  in the forecast, and a vector of initial states for the forecast. It
-  must return a new matrix of shocks and a new initial state
-  vector. If no adjustments to shocks or initial state vectors are
-  necessary under the policy rule, this field may be omitted.
+- `eqcond::Function`: a version of `DSGE.eqcond` which computes the equilibrium
+  condition matrices under the alternative policy. Like `eqcond`, it should take
+  in one argument of type `AbstractModel` and return the `Γ0`, `Γ1`, `C`, `Ψ`,
+  and `Π` matrices.
 
-- `color::Colorant`: The color to plot this alternative policy in
+- `solve::Function`: a version of `DSGE.solve` which solves the model under the
+  alternative policy. Like `DSGE.solve`, it should take in one argument of type
+  `AbstractModel` and return the `TTT`, `RRR`, and `CCC` matrices.
 
-- `linestyle::Symbol`: Line style for forecast plots under this
-  alternative policy. See options from `Plots.jl`
+- `setup::Function`
+
+- `forecast_init::Function`: a function that initializes forecasts under the
+  alternative policy rule. Specifically, it accepts a model, an `nshocks` x
+  `n_forecast_periods` matrix of shocks to be applied in the forecast, and a
+  vector of initial states for the forecast. It must return a new matrix of
+  shocks and a new initial state vector. If no adjustments to shocks or initial
+  state vectors are necessary under the policy rule, this field may be omitted.
+
+- `color::Colorant`: color to plot this alternative policy in. Defaults to blue.
+
+- `linestyle::Symbol`: line style for forecast plots under this alternative
+  policy. See options from `Plots.jl`. Defaults to `:solid`.
 
 """
 type AltPolicy
@@ -37,17 +43,13 @@ type AltPolicy
     linestyle::Symbol
 end
 
-function AltPolicy(key, eqcond_fcn, solve_fcn; forecast_init::Function = identity,
-                   setup::Function = identity, color::Colorant = RGB(0., 0., 1.),
+function AltPolicy(key::Symbol, eqcond_fcn::Function, solve_fcn::Function;
+                   forecast_init::Function = identity,
+                   setup::Function = identity,
+                   color::Colorant = RGB(0., 0., 1.),
                    linestyle::Symbol = :solid)
 
     AltPolicy(key, eqcond_fcn, solve_fcn, setup, forecast_init, color, linestyle)
 end
 
 Base.string(a::AltPolicy) = string(a.key)
-
-function eqcond_altpolicy(m::AbstractModel)
-    altpol = alternative_policy(m)
-    altpol.eqcond(m)
-end
-
