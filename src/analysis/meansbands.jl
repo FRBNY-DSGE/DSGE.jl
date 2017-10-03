@@ -713,14 +713,12 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     df_shockdec = join(df_shockdec, df_dettrend, on = :date, kind = :inner)
     rename!(df_shockdec, var, :dettrend)
 
-    # De-trend each shock's contribution and add to the output dataframe
+    # Add each shock's contribution and deterministic trend to output DataFrame
     df = DataFrame(date = df_shockdec[:date])
     for col in setdiff(names(df_shockdec), [:date, :trend])
-        df[col] = df_shockdec[col] - df_shockdec[:trend]
+        df[col] = df_shockdec[col]
     end
-
-    # Add the de-trended deterministic trend
-    df_shockdec[:dettrend] = df_shockdec[:dettrend] - df_shockdec[:trend]
+    df_shockdec[:dettrend] = df_shockdec[:dettrend]
 
     # Rename columns to just the shock names
     map(x -> rename!(df, x, parse_mb_colname(x)[2]), setdiff(names(df), [:date, :trend, :dettrend]))
