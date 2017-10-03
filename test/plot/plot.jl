@@ -1,7 +1,6 @@
 using DSGE, HDF5, JLD
 
 path = dirname(@__FILE__)
-Plots.backend()
 
 # Initialize model object
 m = AnSchorfheide(testing = true)
@@ -39,8 +38,7 @@ plot_forecast_comparison(m, m, :obs_nominalrate, :obs, :full, :none,
 # Plot shock decomposition
 plot_shock_decomposition(m, :obs_nominalrate, :obs, :full, :none, verbose = :none)
 
-
-
+# Plot IRF
 plot_impulse_response(m, :rm_sh, collect(keys(m.observables)), :obs, :full, :none,
                       verbose = :none)
 plot_impulse_response(m, :rm_sh, collect(keys(m.observables)), :obs, :full, :none,
