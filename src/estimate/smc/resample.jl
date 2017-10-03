@@ -31,7 +31,7 @@ function resample(weights::AbstractArray; method::Symbol = :systematic,
         rand_offset=rand()
 
         # Set "spokes" at the position of the random offset
-        for j = 1:n_part
+        for j = 1:n_parts
             uu[j] = (j - 1) + rand_offset
         end
 
@@ -42,7 +42,7 @@ function resample(weights::AbstractArray; method::Symbol = :systematic,
 
         # Map function if parallel
         if parallel
-            parindx = pmap(j -> subsys(j), 1:n_part)
+            parindx = pmap(j -> subsys(j), 1:n_parts)
             indx =
             @sync @parallel (vcat) for j in 1:n_parts
                 subsys(j)
