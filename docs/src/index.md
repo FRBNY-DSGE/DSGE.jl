@@ -31,7 +31,10 @@ Pages = [
   "estimation.md",
   "forecast.md",
   "means_bands.md",
+  "algorithms.md",
   "contributing.md",
+  "MatlabToJuliaTransition.md",
+  "julia_forecasting.md",
   "license.md"
 ]
 ```
