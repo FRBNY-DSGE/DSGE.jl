@@ -51,6 +51,14 @@ function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
         error("Must supply nonempty subset_inds if input_type = :subset")
     end
 
+    # Throw error if trying to compute shock decompositions under an alternative
+    # policy rule
+    if alternative_policy(m).key != :historical &&
+        any(prod -> prod in [:shockdec, :dettrend, :trend], output_prods)
+
+        error("Only histories, forecasts, and IRFs can be computed under an alternative policy")
+    end
+
     # Determine if we are only running IRFs. If so, we won't need to load data
     # below
     irfs_only = all(prod -> prod == :irf, output_prods)
