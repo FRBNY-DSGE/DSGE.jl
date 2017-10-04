@@ -18,8 +18,6 @@ Type defining an alternative policy rule.
   alternative policy. Like `DSGE.solve`, it should take in one argument of type
   `AbstractModel` and return the `TTT`, `RRR`, and `CCC` matrices.
 
-- `setup::Function`
-
 - `forecast_init::Function`: a function that initializes forecasts under the
   alternative policy rule. Specifically, it accepts a model, an `nshocks` x
   `n_forecast_periods` matrix of shocks to be applied in the forecast, and a
@@ -37,7 +35,6 @@ type AltPolicy
     key::Symbol
     eqcond::Function
     solve::Function
-    setup::Function
     forecast_init::Function
     color::Colorant
     linestyle::Symbol
@@ -45,11 +42,10 @@ end
 
 function AltPolicy(key::Symbol, eqcond_fcn::Function, solve_fcn::Function;
                    forecast_init::Function = identity,
-                   setup::Function = identity,
                    color::Colorant = RGB(0., 0., 1.),
                    linestyle::Symbol = :solid)
 
-    AltPolicy(key, eqcond_fcn, solve_fcn, setup, forecast_init, color, linestyle)
+    AltPolicy(key, eqcond_fcn, solve_fcn, forecast_init, color, linestyle)
 end
 
 Base.string(a::AltPolicy) = string(a.key)
