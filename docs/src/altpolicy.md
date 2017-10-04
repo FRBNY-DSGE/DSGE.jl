@@ -21,7 +21,7 @@ deterministic trends) cannot currently be computed under an alternative policy.
 The user defines some instance of the `AltPolicy` type (described below) and
 sets it as the value for the `:alternative_policy` `Setting`. Then the function
 calls made to forecast and compute means and bands remain the same as usual (see
-[Forecasting](@ref) and [Computing Means and Bands](@ref)).
+[Forecasting](@ref) and [Computing Means and Bands](@ref means-bands)).
 
 For example, suppose you have defined the functions `taylor93_eqcond` and
 `taylor93_solve` corresponding to
