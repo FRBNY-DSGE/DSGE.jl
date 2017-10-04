@@ -84,16 +84,19 @@ with some exceptions:
 
 - All draws of a particular scenario are forecasted under the modal parameters.
 - Smoothed histories, shock decompositions, and IRFs are not supported.
-- We zero out the entries in the `Q` matrix (the variance-covariance of the
-  shocks `ϵ_t`) corresponding to shocks which are not scenario instruments.
-- Forecasting is done in deviations from baseline. That is, let `sa_t` and
-  `sb_t` be the state vectors under the alternative and baseline scenarios
-  respectively, and define `ya_t` and `yb_t` analogously for observable
+- We zero out the entries in the ``Q`` matrix (the variance-covariance of the
+  shocks ``\epsilon_t``) corresponding to shocks which are not scenario
+  instruments.
+- Forecasting is done in deviations from baseline. That is, let ``s^a_t`` and
+  ``s^b_t`` be the state vectors under the alternative and baseline scenarios
+  respectively, and define ``y^a_t`` and ``yb_t`` analogously for observable
   vectors. Then the state space in deviations is
 
-  ```
-  sa_t - sb_t = T*(sa_{t-1} - sb_{t-1}) + R*ϵ_t    (transition)
-  ya_t - yb_t = Z*(ya_t - yb_t)                   (measurement)
+  ```math
+  \begin{align*}
+  s^a_t - s^b_t &= T(s^a_{t-1} - s^b_{t-1}) + R \epsilon_t & \mathrm{(transition)} \\
+  y^a_t - y^b_t &= Z(y^a_t - y^b_t) & \mathrm{(measurement)}
+  \end{align*}
   ```
 
 The main function to run is `forecast_scenario`, which is similar in spirit to
