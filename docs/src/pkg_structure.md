@@ -14,11 +14,15 @@
 ### `estimate/`: Optimization, posterior sampling, and other functionality.
 ### `forecast/`: Forecasts, smoothing, shock decompositions, and impulse response functions.
 ### `analysis/`: Moment tables of estimated parameters, computation of forecast means and bands.
+### `altpolicy/`: Infrastructure for forecasting under alternative monetary policy rules.
+### `scenarios/`: Forecasting alternative scenarios.
+### `plot/`: Plot estimation results, forecasts, etc.
 ### `models/`
 #### `m990/`: Contains code to define and initialize version 990 of the New York Fed DSGE model.
 ##### `m990.jl`: Constructs a `Model990` object.
 ##### `eqcond.jl`: Constructs `Model990` equilibrium condition matrices
 ##### `measurement.jl`: Constructs `Model990` measurement equation matrices.
+##### `pseudo_measurement.jl`: Constructs `Model990` pseudo-measurement equation matrices.
 ##### `subspecs.jl`: Code for model sub-specifications is defined here. See [Editing or Extending a Model](@ref editing-extending-model) for details on constructing model sub-specifications.
 ##### `augment_states.jl`: Code for augmenting the state space system after model solution.
 #### [`[m991/]`]: Code for new models should be kept in directories at this level in the directory tree
