@@ -31,16 +31,23 @@ Pages = [
   "estimation.md",
   "forecast.md",
   "means_bands.md",
+  "altpolicy.md",
+  "scenarios.md",
+  "plotting.md",
+  "algorithms.md",
   "contributing.md",
+  "MatlabToJuliaTransition.md",
+  "julia_forecasting.md",
   "license.md"
 ]
 ```
 
-## Acknowledgements
+## Acknowledgments
 
 Developers of this package at the
 [New York Fed](https://www.newyorkfed.org/research) include
 
+* [Michael Cai](https://github.com/caimichael)
 * [Abhi Gupta](https://github.com/abhig94)
 * [Pearl Li](https://github.com/pearlzli)
 * [Erica Moszkowski](https://github.com/emoszkowski)

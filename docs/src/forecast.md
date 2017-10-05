@@ -1,4 +1,4 @@
-# Forecasting
+# [Forecasting](@id forecast-step)
 
 ```@meta
 CurrentModule = DSGE
@@ -19,7 +19,7 @@ and conditional type, call `forecast_one`.
 
 - *Compute forecast outputs:* Carry out desired combination of smoothing,
   forecasting, computing shock decompositions, and computing IRFs. See
-  [Forecast Outputs](@ref forecast-outputs) for a list of possible forecast
+  [Forecast Outputs](@ref) for a list of possible forecast
   outputs.
 
 - *Save forecast outputs:* Save each forecast output as an array to its own
@@ -135,9 +135,9 @@ This is done the usual way, using `load_data` with the appropriate `cond_type`.
 **Loading Draws:**
 
 By default, the draws are loaded from the file whose path is given by
-[`get_forecast_input_file`](@ref). However, you can override the default input
-file for a given input type by adding entries to the `Dict{Symbol, ASCIIString}`
-returned from `forecast_input_file_overrides(m)`. For example:
+`get_forecast_input_file`. However, you can override the default input file for
+a given input type by adding entries to the `Dict{Symbol, ASCIIString}` returned
+from `forecast_input_file_overrides(m)`. For example:
 
 ```julia
 overrides = forecast_input_file_overrides(m)
