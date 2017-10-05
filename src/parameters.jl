@@ -1,6 +1,6 @@
 import Base: <=
 
-typealias Interval{T} Tuple{T,T}
+Interval{T} = Tuple{T,T}
 
 """
 ```
@@ -14,7 +14,7 @@ necessary for mode-finding using csminwel). The transformation is
 performed by the `transform_to_real_line` function, and is reversed by the
 `transform_to_model_space` function.
 """
-abstract Transform
+abstract type Transform end
 
 immutable Untransformed <: Transform end
 immutable SquareRoot    <: Transform end
@@ -39,7 +39,7 @@ as follows:
         -`ScaledParameter{T<:Number, U:<Transform}`: Concrete type for parameters that are scaled for equilibrium conditions.
     -`SteadyStateParameter{T<:Number}`: Concrete type for steady-state parameters.
 """
-abstract AbstractParameter{T<:Number}
+abstract type AbstractParameter{T<:Number} end
 
 """
 ```
@@ -52,10 +52,10 @@ parameters. It has 2 subtypes, `UnscaledParameter` and `ScaledParameter`.
 equilibrium conditions. The scaled value is stored for convenience, and udpated when the
 parameter's value is updated.
 """
-abstract Parameter{T,U<:Transform} <: AbstractParameter{T}
+abstract type Parameter{T,U<:Transform} <: AbstractParameter{T} end
 
-typealias ParameterVector{T} Vector{AbstractParameter{T}}
-typealias NullablePrior      Nullable{ContinuousUnivariateDistribution}
+ParameterVector{T} =  Vector{AbstractParameter{T}}
+NullablePrior      =  Nullable{ContinuousUnivariateDistribution}
 
 """
 ```
@@ -170,11 +170,11 @@ end
 
 hasprior(p::Parameter) = !isnull(p.prior)
 
-typealias NullableOrPrior Union{NullablePrior, ContinuousUnivariateDistribution}
+NullableOrPrior = Union{NullablePrior, ContinuousUnivariateDistribution}
 
 # We want to use value field from UnscaledParameters and
 # SteadyStateParameters in computation, so we alias their union here.
-typealias UnscaledOrSteadyState Union{UnscaledParameter, SteadyStateParameter}
+UnscaledOrSteadyState = Union{UnscaledParameter, SteadyStateParameter}
 
 """
 ```
@@ -376,6 +376,14 @@ transform_to_real_line{T}(p::Parameter{T,Untransformed}, x::T = p.value) = x
 function transform_to_real_line{T}(p::Parameter{T,SquareRoot}, x::T = p.value)
     (a,b), c = p.transform_parameterization, one(T)
     cx = 2. * (x - (a+b)/2.)/(b-a)
+    if cx^2 >1
+        println("Parameter is: $(p.key)")
+        println("a is $a")
+        println("b is $b")
+        println("x is $x")
+        println("cx is $cx")
+        error("invalid paramter value")
+    end
     (1/c)*cx/sqrt(1 - cx^2)
 end
 function transform_to_real_line{T}(p::Parameter{T,Exponential}, x::T = p.value)
@@ -417,7 +425,6 @@ end
 
 for f in (:(Base.exp),
           :(Base.log),
-          :(Base.transpose),
           :(Base.:-),
           :(Base.:<),
           :(Base.:>),

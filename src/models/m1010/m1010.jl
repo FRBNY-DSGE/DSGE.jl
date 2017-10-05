@@ -173,7 +173,7 @@ function Model1010(subspec::String="ss20";
     subspec            = subspec
     settings           = Dict{Symbol,Setting}()
     test_settings      = Dict{Symbol,Setting}()
-    rng                = MersenneTwister()
+    rng                = MersenneTwister(0)
 
     # Initialize empty model
     m = Model1010{Float64}(

@@ -8,7 +8,7 @@ module DSGE
     using Roots: fzero, ConvergenceFailed
     using StatsBase: sample
     import Calculus
-    import Optim: optimize, Optimizer
+    import Optim: optimize, Optimizer, MultivariateOptimizationResults
 
     export
 
@@ -88,7 +88,7 @@ module DSGE
         # forecast/
         load_draws, forecast_one,
         smooth, forecast, shock_decompositions, deterministic_trends, trends, impulse_responses,
-        compute_system, add_requisite_output_vars, n_forecast_draws,
+        compute_system, compute_system_function, add_requisite_output_vars, n_forecast_draws,
         get_forecast_input_file, get_forecast_output_files, get_forecast_filename,
         read_forecast_output,
 

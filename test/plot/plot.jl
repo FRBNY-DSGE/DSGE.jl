@@ -1,6 +1,9 @@
-using DSGE, HDF5, JLD
+using DSGE, HDF5, JLD, Plots
 
 path = dirname(@__FILE__)
+
+# Initialize the plotting backend
+Plots.backend()
 
 # Initialize model object
 m = AnSchorfheide(testing = true)
@@ -22,6 +25,8 @@ output_vars = add_requisite_output_vars([:histobs, :forecastobs, :shockdecobs, :
 m <= Setting(:forecast_block_size, 5)
 @time forecast_one(m, :full, :none, output_vars, verbose = :none)
 @time means_bands_all(m, :full, :none, output_vars; verbose = :none)
+
+println("The following warning is expected test behavior:")
 
 # Plot history and forecast
 plot_history_and_forecast(m, :obs_nominalrate, :obs, :full, :none,

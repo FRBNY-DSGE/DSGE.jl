@@ -13,14 +13,14 @@ lh_expected = h5read(file, "likelihood")
 post_expected = h5read(file, "posterior")
 
 lh = likelihood(m, data)
-@test_approx_eq lh_expected lh
+@test lh_expected ≈ lh
 
 post = posterior(m, data)
-@test_approx_eq post_expected post
+@test post_expected ≈ post
 
 x = map(α->α.value, m.parameters)
 post_at_start = posterior!(m, x, data)
-@test_approx_eq post_expected post_at_start
+@test post_expected ≈ post_at_start
 
 # Ensure if we are not evaluating at start vector, then we do not get the reference
 # posterior
