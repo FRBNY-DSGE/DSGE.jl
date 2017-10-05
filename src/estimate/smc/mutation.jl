@@ -53,6 +53,8 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, R::Array
 
     U, E, V = svd(R)
     cov_mat = U * diagm(sqrt.(E))
+    # Ensuring numerical error does not propagate and move fixed parameters
+    cov_mat[:, fixed_para_inds] = cov_mat[fixed_para_inds, :] = 0.
 
     para = p.value
     like = p.loglh
