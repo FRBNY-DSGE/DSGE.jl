@@ -1,4 +1,4 @@
-abstract AbstractModel{T}
+abstract type AbstractModel{T} end
 
 function Base.show(io::IO, m::AbstractModel)
     @printf io "Dynamic Stochastic General Equilibrium Model\n"

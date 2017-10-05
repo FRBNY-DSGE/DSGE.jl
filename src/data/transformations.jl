@@ -174,7 +174,7 @@ difflog(x::Vector{AbstractFloat})
 ```
 """
 function difflog{T<:AbstractFloat}(x::Vector{T})
-    [NaN; log(x[2:end]) - log(x[1:end-1])]
+    [NaN; log.(x[2:end]) - log.(x[1:end-1])]
 end
 
 
@@ -218,7 +218,7 @@ This should only be used in Model 510, which has the core PCE inflation
 observable in annualized log growth rates.
 """
 function loggrowthtopct(y)
-    100. * (exp(y/100.) - 1.)
+    100. * (exp.(y/100.) - 1.)
 end
 
 """
@@ -258,7 +258,7 @@ function loggrowthtopct_percapita(y::Array, pop_growth::Vector)
 
     @assert length(pop_growth) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
 
-    100. * ((exp(y/100.) .* exp(pop_growth).^4) - 1.)
+    100. * ((exp.(y/100.) .* exp.(pop_growth).^4) - 1.)
 end
 
 """
@@ -269,7 +269,7 @@ loggrowthtopct_annualized(y)
 Transform from log growth rates to annualized quarter-over-quarter percent change.
 """
 function loggrowthtopct_annualized(y)
-    100. * (exp(y/100.).^4 - 1.)
+    100. * (exp.(y/100.).^4 - 1.)
 end
 
 """
@@ -309,7 +309,7 @@ function loggrowthtopct_annualized_percapita(y::Array, pop_growth::Vector)
 
     @assert length(pop_growth) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
 
-    100. * (exp(y/100. .+ pop_growth).^4 - 1.)
+    100. * (exp.(y/100. .+ pop_growth).^4 - 1.)
 end
 
 """
@@ -342,7 +342,7 @@ function logleveltopct_annualized{T<:AbstractFloat}(y::Array, y0::T)
 
     # Subtract log levels to get log growth rates, then take the exponential to
     # get growth rates
-    100. * (exp(y./100. - y_t1./100.).^4 .- 1.)
+    100. * (exp.(y./100. - y_t1./100.).^4 .- 1.)
 end
 
 """
@@ -391,7 +391,7 @@ function logleveltopct_annualized_percapita{T<:AbstractFloat}(y::Array, y0::T, p
 
     # Subtract log levels to get log growth rates, then take the exponential to
     # get growth rates
-    100. * (exp(y./100. - y_t1./100. .+ pop_growth).^4 .- 1.)
+    100. * (exp.(y./100. - y_t1./100. .+ pop_growth).^4 .- 1.)
 end
 
 """
@@ -467,7 +467,7 @@ function loggrowthtopct_4q(y::Array, data::Vector)
         y_4q = y[:,  1:end-3] + y[:, 2:end-2] + y[:, 3:end-1] + y[:, 4:end]
     end
 
-    100. * (exp(y_4q/100.) - 1.)
+    100. * (exp.(y_4q/100.) - 1.)
 end
 
 """
@@ -520,7 +520,7 @@ function loggrowthtopct_4q_percapita(y::Array, data::Vector, pop_growth::Vector)
 
     @assert length(pop_growth_4q) == nperiods
 
-    100. * (exp(y_4q/100. .+ pop_growth_4q) - 1.)
+    100. * (exp.(y_4q/100. .+ pop_growth_4q) - 1.)
 end
 
 """
@@ -556,7 +556,7 @@ function logleveltopct_4q(y::Array, data::Vector)
 
     # Subtract log levels to get log growth rates, then exponentiate to get
     # growth rates
-    100. * (exp(y_4q./100.) .- 1.)
+    100. * (exp.(y_4q./100.) .- 1.)
 end
 
 """
@@ -606,7 +606,7 @@ function logleveltopct_4q_percapita(y::Array, data::Vector, pop_growth::Vector)
     y_4q = y - y_t4
 
     # Subtract log levels to get log growth rates, then exponentiate to get growth rates
-    100. * (exp(y_4q./100. .+ pop_growth_4q) .- 1.)
+    100. * (exp.(y_4q./100. .+ pop_growth_4q) .- 1.)
 end
 
 """

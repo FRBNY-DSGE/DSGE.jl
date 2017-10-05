@@ -36,7 +36,7 @@ Returns a vector of `Dates`, consisting of the last days of each quarter between
 """
 function quarter_range(t0::Date, t1::Date)
     dr = t0:t1
-    return Dates.recur(d -> Dates.lastdayofquarter(d) == d, dr)
+    return Base.filter(d -> Dates.lastdayofquarter(d) == d, dr)
 end
 
 """
@@ -127,15 +127,15 @@ function test_matrix_eq2{T<:AbstractFloat}(expect::Array{T},
     end
 
     # Absolute difference filter
-    abs_diff   = abs(actual .- expect) .> ϵ_abs
+    abs_diff   = abs.(actual .- expect) .> ϵ_abs
     n_abs_diff = sum(abs_diff)
 
     # Relative difference filter
-    rel_diff   = 100*abs((actual .- expect) ./ expect) .> ϵ_rel
+    rel_diff   = 100*abs.((actual .- expect) ./ expect) .> ϵ_rel
     n_rel_diff = sum(rel_diff)
 
     # Element is only problematic if it fails *both* tests.
-    mixed_diff   = abs_diff & rel_diff
+    mixed_diff   = abs_diff .& rel_diff
     n_mixed_diff = sum(mixed_diff)
 
     if n_mixed_diff ≠ 0

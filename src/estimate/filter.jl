@@ -35,7 +35,7 @@ where `S<:AbstractFloat`.
 - `kal::Kalman`: see `Kalman` documentation for more details.
 """
 function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::System{S},
-    z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
+    z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}(0, 0);
     cond_type::Symbol = :none, allout::Bool = true,
     include_presample::Bool = true)
 
@@ -46,9 +46,8 @@ function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::Syste
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
-    catch_errors::Bool = false,
-    start_date::Date = date_presample_start(m),
+    z0::Vector{S} = Vector{S}(0), P0::Matrix{S} = Matrix{S}(0, 0);
+    catch_errors::Bool = false, start_date::Date = date_presample_start(m),
     allout::Bool = true, include_presample::Bool = true)
 
     # If we are in Metropolis-Hastings, then any errors coming out of `gensys`
@@ -81,7 +80,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::System,
-    z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}();
+    z0::Vector{S} = Vector{S}(0), P0::Matrix{S} = Matrix{S}(0, 0);
     start_date::Date = date_presample_start(m),
     allout::Bool = true, include_presample::Bool = true)
 

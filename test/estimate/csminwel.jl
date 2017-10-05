@@ -25,8 +25,8 @@ x_init = [10.0, -9.0]
 x_expected = [a, a^2.0]
 
 res_real_grad, _ = csminwel(rosenbrock_csminwel, rosenbrock_grad, x_init)
-@test_approx_eq x_expected res_real_grad.minimizer
+@test x_expected ≈ res_real_grad.minimizer
 res_numeric_grad, _ = csminwel(rosenbrock_csminwel, x_init)
-@test_approx_eq_eps x_expected res_numeric_grad.minimizer 1e-8
+@test x_expected ≈ res_numeric_grad.minimizer atol=1.0e-8
 
 nothing

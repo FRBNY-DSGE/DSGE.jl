@@ -115,7 +115,7 @@ function load_fred_data(m::AbstractModel;
 
         # Extract dataframe from each series and merge on date
         for i = 1:length(fredseries)
-            if isdefined(fredseries, i)
+            if isassigned(fredseries, i)
                 series = fredseries[i]
                 series_id = Symbol(series.id)
                 rename!(series.df, :value, series_id)

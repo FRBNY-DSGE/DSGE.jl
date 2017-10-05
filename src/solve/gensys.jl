@@ -107,7 +107,7 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
         return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
     end
 
-    select = abs(F[:alpha]) .> div * abs(F[:beta])
+    select = abs.(F[:alpha]) .> div * abs.(F[:beta])
     FS = ordschur!(F, select)
     a, b, qt, z = FS[:S], FS[:T], FS[:Q], FS[:Z]
     gev = hcat(diag(a), diag(b))
@@ -165,7 +165,7 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
     else
         loose = veta1 - A_mul_Bc(veta, veta) * veta1
         loosesvd = svdfact!(loose)
-        nloose = sum(abs(loosesvd[:S]) .> ϵ * n)
+        nloose = sum(abs.(loosesvd[:S]) .> ϵ * n)
         unique = (nloose == 0)
     end
 
