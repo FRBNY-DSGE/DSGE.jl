@@ -97,6 +97,10 @@ function default_settings!(m::AbstractModel)
         "Number of blocks to use as burn-in in Metropolis-Hastings")
     settings[:mh_thin] = Setting(:mh_thin, 5,
         "Metropolis-Hastings thinning step")
+    settings[:mh_cc] = Setting(:mh_cc, 0.09,
+        "Jump size for Metropolis-Hastings (after initialization)")
+    settings[:mh_cc0] = Setting(:mh_cc0, 0.01,
+        "Jump size for initialization of Metropolis-Hastings")
 
     # Forecast
     settings[:forecast_block_size] = Setting(:forecast_block_size, 5000,
