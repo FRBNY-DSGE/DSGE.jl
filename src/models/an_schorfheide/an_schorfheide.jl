@@ -287,6 +287,10 @@ function settings_an_schorfheide!(m::AnSchorfheide)
     m <= Setting(:cond_semi_names, [:obs_nominalrate],
         "Observables used in semiconditional forecasts")
 
+    # Metropolis-Hastings
+    m <= Setting(:mh_cc, 0.27,
+                 "Jump size for Metropolis-Hastings (after initialization)")
+
     # Forecast
     m <= Setting(:use_population_forecast, true,
                  "Whether to use population forecasts as data")
