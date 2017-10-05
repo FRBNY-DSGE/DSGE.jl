@@ -25,35 +25,44 @@ function compute_system{T<:AbstractFloat}(m::AbstractModel{T}; apply_altpolicy =
 
     return System(transition_equation, measurement_equation, pseudo_measurement_equation)
 end
+
 """
 ```
 compute_system_function{S<:AbstractFloat}(system::System{S})
 ```
+
 ### Inputs
+
 - `system::System`: The output of compute_system(m), i.e. the matrix outputs from solving a given model, m.
-### Output
-- Returns the transition and measurement equations as functions,and the distributions of the shocks
-and measurement error.
+
+### Outputs
+
+- `Φ::Function`: transition equation
+- `Ψ::Function`: measurement equation
+- `F_ϵ::Distributions.MvNormal`: shock distribution
+- `F_u::Distributions.MvNormal`: measurement error distribution
 """
 function compute_system_function{S<:AbstractFloat}(system::System{S})
     # Unpack system
-    RRR    = system[:RRR]
     TTT    = system[:TTT]
-    HH     = system[:EE] + system[:MM]*system[:QQ]*system[:MM]'
-    DD     = system[:DD]
-    ZZ     = system[:ZZ]
+    RRR    = system[:RRR]
+    CCC    = system[:CCC]
     QQ     = system[:QQ]
+    ZZ     = system[:ZZ]
+    DD     = system[:DD]
     EE     = system[:EE]
-    MM     = system[:MM]
-    sqrtS2 = RRR*chol(QQ)'
 
-    @inline Φ(s_t1::Vector{S}, ε_t1::Vector{S}) = TTT*s_t1 + sqrtS2*ε_t1
-    @inline Ψ(s_t1::Vector{S}, u_t1::Vector{S}) = ZZ*s_t1 + DD + u_t1
+    # Define transition and measurement functions
+    @inline Φ(s_t1::Vector{S}, ϵ_t::Vector{S}) = TTT*s_t1 + RRR*ϵ_t + CCC
+    @inline Ψ(s_t::Vector{S},  u_t::Vector{S}) = ZZ*s_t + DD + u_t
 
-    F_ε = Distributions.MvNormal(zeros(size(QQ)[1]), eye(size(QQ)[1]))
-    F_u = Distributions.MvNormal(zeros(size(HH)[1]), HH)
+    # Define shock and measurement error distributions
+    nshocks = size(QQ, 1)
+    nobs    = size(EE, 1)
+    F_ϵ = Distributions.MvNormal(zeros(nshocks), QQ)
+    F_u = Distributions.MvNormal(zeros(nobs),    EE)
 
-    return Φ, Ψ, F_ε, F_u
+    return Φ, Ψ, F_ϵ, F_u
 end
 
 """
