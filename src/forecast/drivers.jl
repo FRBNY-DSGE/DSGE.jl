@@ -51,6 +51,14 @@ function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
         error("Must supply nonempty subset_inds if input_type = :subset")
     end
 
+    # Throw error if trying to compute shock decompositions under an alternative
+    # policy rule
+    if alternative_policy(m).key != :historical &&
+        any(prod -> prod in [:shockdec, :dettrend, :trend], output_prods)
+
+        error("Only histories, forecasts, and IRFs can be computed under an alternative policy")
+    end
+
     # Determine if we are only running IRFs. If so, we won't need to load data
     # below
     irfs_only = all(prod -> prod == :irf, output_prods)
@@ -388,6 +396,12 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     output_vars::Vector{Symbol}, params::Vector{Float64}, df::DataFrame; verbose::Symbol = :low)
 
     ### Setup
+
+    # Re-initialize model indices if forecasting under an alternative policy
+    # rule (in case new states or equations were added)
+    if alternative_policy(m).key != :historical
+        init_model_indices!(m)
+    end
 
     # Are we only running IRFs?
     output_prods = map(get_product, output_vars)

@@ -1,4 +1,4 @@
-# Computing Means and Bands
+# [Computing Means and Bands](@id means-bands)
 
 ```@meta
 CurrentModule = DSGE
@@ -27,7 +27,7 @@ plot our estimation of the full distribution of the forecast outputs.
   output.
 
 - *Write to file:* For each `output_var`, Write a `MeansBands` object (see
-  [The MeansBands Type](@ref the-meansbands-type) below) to the file specified by
+  [The MeansBands Type](@ref) below) to the file specified by
   `get_meansbands_output_files(m)`.
 
 Computing means and bands is done by calling `means_bands_all`. If desired, you
