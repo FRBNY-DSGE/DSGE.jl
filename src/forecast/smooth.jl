@@ -101,7 +101,7 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     pseudo = if forecast_pseudoobservables(m)
         system[:ZZ_pseudo] * states .+ system[:DD_pseudo]
     else
-        Matrix{S}()
+        Matrix{S}(0, 0)
     end
 
     return states, shocks, pseudo, initial_states
