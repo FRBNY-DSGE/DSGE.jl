@@ -41,11 +41,6 @@ function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
     output_prods   = unique(map(get_product, output_vars))
     output_classes = unique(map(get_class,   output_vars))
 
-    # Set forecast_pseudoobservables properly
-    if any(class -> class == :pseudo, output_classes)
-        m <= Setting(:forecast_pseudoobservables, true)
-    end
-
     # Throw error if input_type = :subset but no subset_inds provided
     if input_type == :subset && isempty(subset_inds)
         error("Must supply nonempty subset_inds if input_type = :subset")
@@ -365,8 +360,7 @@ Compute `output_vars` for a single parameter draw, `params`. Called by
   - `:histstates`: `Matrix{Float64}` of smoothed historical states
   - `:histobs`: `Matrix{Float64}` of smoothed historical data
   - `:histpseudo`: `Matrix{Float64}` of smoothed historical
-    pseudo-observables (if a pseudo-measurement equation has been provided for
-    this model type)
+    pseudo-observables
   - `:histshocks`: `Matrix{Float64}` of smoothed historical shocks
   - `:forecaststates`: `Matrix{Float64}` of forecasted states
   - `:forecastobs`: `Matrix{Float64}` of forecasted observables

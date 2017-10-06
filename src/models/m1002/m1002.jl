@@ -44,6 +44,9 @@ equilibrium conditions.
 * `observables::OrderedDict{Symbol,Int}`: Maps each observable to a row in the
   model's measurement equation matrices.
 
+* `pseudo_observables::OrderedDict{Symbol,Int}`: Maps each pseudo-observable to
+  a row in the model's pseudo-measurement equation matrices.
+
 #### Model Specifications and Settings
 
 * `spec::String`: The model specification identifier, \"m1002\", cached here for
@@ -72,6 +75,10 @@ equilibrium conditions.
   units.  DSGE.jl will fetch data from the Federal Reserve Bank of St. Louis's
   FRED database; all other data must be downloaded by the user. See `load_data`
   and `Observable` for further details.
+
+* `pseudo_observable_mappings::OrderedDict{Symbol,PseudoObservable}`: A
+  dictionary that stores names and transformations to/from model units. See
+  `PseudoObservable` for further details.
 """
 type Model1002{T} <: AbstractModel{T}
     parameters::ParameterVector{T}                         # vector of all time-invariant model parameters
@@ -85,6 +92,7 @@ type Model1002{T} <: AbstractModel{T}
     equilibrium_conditions::OrderedDict{Symbol,Int}        #
     endogenous_states_augmented::OrderedDict{Symbol,Int}   #
     observables::OrderedDict{Symbol,Int}                   #
+    pseudo_observables::OrderedDict{Symbol,Int}            #
 
     spec::String                                           # Model specification number (eg "m990")
     subspec::String                                        # Model subspecification (eg "ss0")
@@ -94,6 +102,7 @@ type Model1002{T} <: AbstractModel{T}
     testing::Bool                                          # Whether we are in testing mode or not
 
     observable_mappings::OrderedDict{Symbol, Observable}
+    pseudo_observable_mappings::OrderedDict{Symbol, PseudoObservable}
 end
 
 description(m::Model1002) = "New York Fed DSGE Model m1002, $(m.subspec)."
@@ -146,8 +155,11 @@ function init_model_indices!(m::Model1002)
         :y_t1, :c_t1, :i_t1, :w_t1, :π_t1_dup, :L_t1, :u_t1, :Et_π_t, :lr_t, :tfp_t, :e_gdpdef_t,
         :e_corepce_t, :e_gdp_t, :e_gdi_t, :e_gdp_t1, :e_gdi_t1]
 
-    # Measurement equation observables
+    # Observables
     observables = keys(m.observable_mappings)
+
+    # Pseudo-observables
+    pseudo_observables = keys(m.pseudo_observable_mappings)
 
     for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
     for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
@@ -156,6 +168,7 @@ function init_model_indices!(m::Model1002)
     for (i,k) in enumerate(endogenous_states);           m.endogenous_states[k]           = i end
     for (i,k) in enumerate(endogenous_states_augmented); m.endogenous_states_augmented[k] = i+length(endogenous_states) end
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
+    for (i,k) in enumerate(pseudo_observables);          m.pseudo_observables[k]          = i end
 end
 
 function Model1002(subspec::String="ss10";
@@ -175,7 +188,7 @@ function Model1002(subspec::String="ss10";
             Vector{AbstractParameter{Float64}}(), Vector{Float64}(), OrderedDict{Symbol,Int}(),
 
             # model indices
-            OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
+            OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(), OrderedDict{Symbol,Int}(),
 
             spec,
             subspec,
@@ -183,7 +196,8 @@ function Model1002(subspec::String="ss10";
             test_settings,
             rng,
             testing,
-            OrderedDict{Symbol,Observable}())
+            OrderedDict{Symbol,Observable}(),
+            OrderedDict{Symbol,PseudoObservable}())
 
     # Set settings
     settings_m1002!(m)
@@ -192,8 +206,9 @@ function Model1002(subspec::String="ss10";
         m <= custom_setting
     end
 
-    # Set observable transformations
+    # Set observable and pseudo-observable transformations
     init_observable_mappings!(m)
+    init_pseudo_observable_mappings!(m)
 
     # Initialize parameters
     init_parameters!(m)
@@ -698,8 +713,6 @@ function settings_m1002!(m::Model1002)
     # Forecast
     m <= Setting(:use_population_forecast, true,
                  "Whether to use population forecasts as data")
-    m <= Setting(:forecast_pseudoobservables, true,
-                 "Whether to forecast pseudo-observables")
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")),
                  "Date of start of shock decomposition output period. If null, then shockdec starts at date_mainsample_start")
 

@@ -8,7 +8,6 @@ m <= Setting(:cond_id, 0)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:date_conditional_end, quartertodate("2015-Q4"))
 m <= Setting(:use_population_forecast, true)
-m <= Setting(:forecast_pseudoobservables, true)
 
 estroot = normpath(joinpath(dirname(@__FILE__), "..", "reference"))
 overrides = forecast_input_file_overrides(m)

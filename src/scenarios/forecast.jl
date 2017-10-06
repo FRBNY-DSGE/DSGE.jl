@@ -14,12 +14,8 @@ function compute_scenario_system(m::AbstractModel, scen::Scenario;
 
     system = compute_system(m, apply_altpolicy = apply_altpolicy)
 
-    # Set C = D = D_pseudo = 0
-    system.transition.CCC = zeros(size(system[:CCC]))
-    system.measurement.DD = zeros(size(system[:DD]))
-    if !isnull(system.pseudo_measurement)
-        get(system.pseudo_measurement).DD_pseudo = zeros(size(system[:DD_pseudo]))
-    end
+    # Set constant system matrices to 0
+    system = zero_system_constants(system)
 
     # Zero out non-instrument shocks
     system.measurement.QQ = copy(system[:QQ])

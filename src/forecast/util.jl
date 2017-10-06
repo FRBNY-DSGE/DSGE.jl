@@ -1,72 +1,5 @@
 """
 ```
-compute_system(m; apply_altpolicy = false)
-```
-
-Given the current model parameters, compute the state-space system
-corresponding to model `m`. Returns a `System` object.
-"""
-function compute_system{T<:AbstractFloat}(m::AbstractModel{T}; apply_altpolicy = false)
-
-    # Solve model
-    TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy)
-    transition_equation = Transition(TTT, RRR, CCC)
-
-    # Solve measurement equation
-    measurement_equation = measurement(m, TTT, RRR, CCC)
-
-    # Solve pseudo-measurement equation
-    pseudo_measurement_equation = if method_exists(pseudo_measurement, (typeof(m),)) && forecast_pseudoobservables(m)
-        _, pseudo_mapping = pseudo_measurement(m; apply_altpolicy = apply_altpolicy)
-        Nullable(pseudo_mapping)
-    else
-        Nullable{PseudoObservableMapping{T}}()
-    end
-
-    return System(transition_equation, measurement_equation, pseudo_measurement_equation)
-end
-
-"""
-```
-compute_system_function{S<:AbstractFloat}(system::System{S})
-```
-
-### Inputs
-
-- `system::System`: The output of compute_system(m), i.e. the matrix outputs from solving a given model, m.
-
-### Outputs
-
-- `Φ::Function`: transition equation
-- `Ψ::Function`: measurement equation
-- `F_ϵ::Distributions.MvNormal`: shock distribution
-- `F_u::Distributions.MvNormal`: measurement error distribution
-"""
-function compute_system_function{S<:AbstractFloat}(system::System{S})
-    # Unpack system
-    TTT    = system[:TTT]
-    RRR    = system[:RRR]
-    CCC    = system[:CCC]
-    QQ     = system[:QQ]
-    ZZ     = system[:ZZ]
-    DD     = system[:DD]
-    EE     = system[:EE]
-
-    # Define transition and measurement functions
-    @inline Φ(s_t1::Vector{S}, ϵ_t::Vector{S}) = TTT*s_t1 + RRR*ϵ_t + CCC
-    @inline Ψ(s_t::Vector{S},  u_t::Vector{S}) = ZZ*s_t + DD + u_t
-
-    # Define shock and measurement error distributions
-    nshocks = size(QQ, 1)
-    nobs    = size(EE, 1)
-    F_ϵ = Distributions.MvNormal(zeros(nshocks), QQ)
-    F_u = Distributions.MvNormal(zeros(nobs),    EE)
-
-    return Φ, Ψ, F_ϵ, F_u
-end
-
-"""
-```
 get_jstep(m, n_sim)
 ```
 
@@ -342,7 +275,7 @@ function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_v
     elseif class == :obs
         n_observables(m)
     elseif class == :pseudo
-        n_pseudoobservables(m)
+        n_pseudo_observables(m)
     elseif class in [:shocks, :stdshocks]
         n_shocks_exogenous(m)
     end

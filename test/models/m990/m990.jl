@@ -88,20 +88,17 @@ for d in (:ZZ, :DD, :QQ, :EE)
     @test_matrix_approx_eq expect[d] actual[d]
 end
 
-
 ### Pseudo-measurement equation
 expect = Dict{Symbol, Any}()
 jld = jldopen("$path/pseudo_measurement.jld")
 expect[:ZZ_pseudo] = read(jld, "ZZ_pseudo")
-expect[:DD_pseudo] = reshape(read(jld, "DD_pseudo"), 18, 1)
-expect[:inds] = read(jld, "inds")
+expect[:DD_pseudo] = read(jld, "DD_pseudo")
 close(jld)
 
-actual = pseudo_measurement(model)[2]
+actual = pseudo_measurement(model, TTT, RRR, CCC)
 for d in (:ZZ_pseudo, :DD_pseudo)
     @test_matrix_approx_eq expect[d] getfield(actual,d)
 end
-@assert isequal(expect[:inds], getfield(actual, :inds))
 
 ### Custom settings
 custom_settings = Dict{Symbol, Setting}(
