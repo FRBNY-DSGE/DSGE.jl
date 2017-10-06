@@ -44,8 +44,7 @@ where `S<:AbstractFloat`.
 - `states::Matrix{S}`: matrix of size `nstates` x `horizon` of forecasted states
 - `obs::Matrix{S}`: matrix of size `nobs` x `horizon` of forecasted observables
 - `pseudo::Matrix{S}`: matrix of size `npseudo` x `horizon` of forecasted
-  pseudo-observables. If `!forecast_pseudoobservables(m)` or the provided
-  `Z_pseudo` and `D_pseudo` matrices are empty, then `pseudo` will be empty.
+  pseudo-observables
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
 function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},

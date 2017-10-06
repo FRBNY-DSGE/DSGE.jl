@@ -290,8 +290,6 @@ function settings_an_schorfheide!(m::AnSchorfheide)
     # Forecast
     m <= Setting(:use_population_forecast, true,
                  "Whether to use population forecasts as data")
-    m <= Setting(:forecast_pseudoobservables, true,
-                 "Whether to forecast pseudo-observables")
     m <= Setting(:forecast_zlb_value, 0.13,
         "Value of the zero lower bound in forecast periods, if we choose to enforce it")
 end

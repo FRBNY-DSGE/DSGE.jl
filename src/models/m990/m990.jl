@@ -660,5 +660,4 @@ function settings_m990!(m::Model990)
 
     # Forecast
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")))
-    m <= Setting(:forecast_pseudoobservables, true)
 end
