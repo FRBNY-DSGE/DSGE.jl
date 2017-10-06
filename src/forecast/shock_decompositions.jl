@@ -61,12 +61,7 @@ function shock_decompositions{S<:AbstractFloat}(system::System{S},
     end
 
     # Set constant system matrices to 0
-    system = copy(system)
-    system.transition.CCC = zeros(size(system[:CCC]))
-    system.measurement.DD = zeros(size(system[:DD]))
-    if forecast_pseudo
-        get(system.pseudo_measurement).DD_pseudo = zeros(size(system[:DD_pseudo]))
-    end
+    system = zero_system_constants(system)
 
     z0 = zeros(S, nstates)
 
@@ -139,12 +134,7 @@ function deterministic_trends{S<:AbstractFloat}(system::System{S}, z0::Vector{S}
     start_index::Int, end_index::Int)
 
     # Set constant system matrices to 0
-    system = copy(system)
-    system.transition.CCC = zeros(size(system[:CCC]))
-    system.measurement.DD = zeros(size(system[:DD]))
-    if forecast_pseudo
-        get(system.pseudo_measurement).DD_pseudo = zeros(size(system[:DD_pseudo]))
-    end
+    system = zero_system_constants(system)
 
     # Construct matrix of 0 shocks for entire history and forecast horizon
     nshocks  = size(system[:RRR], 2)
