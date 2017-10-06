@@ -30,39 +30,28 @@ function impulse_responses{S<:AbstractFloat}(m::AbstractModel, system::System{S}
 end
 
 function impulse_responses{S<:AbstractFloat}(system::System{S}, horizon::Int)
-
-    # Unpack system
-    T, R = system[:TTT], system[:RRR]
-    Q, Z = system[:QQ], system[:ZZ]
-
-    Z_pseudo = system[:ZZ_pseudo]
-
     # Setup
-    nshocks      = size(R, 2)
-    nstates      = size(T, 1)
-    nobs         = size(Z, 1)
-    npseudo      = size(Z_pseudo, 1)
-
+    nshocks      = size(system[:RRR], 2)
+    nstates      = size(system[:TTT], 1)
+    nobs         = size(system[:ZZ], 1)
+    npseudo      = size(system[:ZZ_pseudo], 1)
 
     states = zeros(S, nstates, horizon, nshocks)
     obs    = zeros(S, nobs,    horizon, nshocks)
     pseudo = zeros(S, npseudo, horizon, nshocks)
 
-    # Define iterate function, matrix of shocks
-    iterate(z_t1, ϵ_t) = T*z_t1 + R*ϵ_t
+    # Set constant system matrices to 0
+    system = zero_system_constants(system)
+
     z0 = zeros(S, nstates)
-    impact = -diagm(sqrt.(diag(Q))) # a negative 1 s.d. shock
 
     for i = 1:nshocks
-        # Iterate state space forward
-        states[:, 1, i] = iterate(z0, impact[:, i])
-        for t in 2:horizon
-            states[:, t, i] = iterate(states[:, t-1, i], zeros(nshocks))
-        end
+        # Isolate single shock
+        shocks = zeros(S, nshocks, horizon)
+        shocks[i, 1] = -sqrt(system[:QQ][i, i]) # a negative 1 s.d. shock
 
-        # Apply measurement and pseudo-measurement equations
-        obs[:, :, i] = Z * states[:, :, i]
-        pseudo[:, :, i] = Z_pseudo * states[:, :, i]
+        # Iterate state space forward
+        states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(system, z0, shocks)
     end
 
     return states, obs, pseudo
