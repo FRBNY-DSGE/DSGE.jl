@@ -160,10 +160,14 @@ function compute_system{T<:AbstractFloat}(m::AbstractModel{T}; apply_altpolicy =
     # Solve measurement equation
     measurement_equation = measurement(m, TTT, RRR, CCC)
 
-    # Solve pseudo-measurement equation
-    pseudo_measurement_equation = pseudo_measurement(m, TTT, RRR, CCC)
-
-    return System(transition_equation, measurement_equation, pseudo_measurement_equation)
+    type_tuple = (typeof(m), Matrix{T}, Matrix{T}, Vector{T})
+    if method_exists(pseudo_measurement, type_tuple)
+        # Solve pseudo-measurement equation
+        pseudo_measurement_equation = pseudo_measurement(m, TTT, RRR, CCC)
+        return System(transition_equation, measurement_equation, pseudo_measurement_equation)
+    else
+        return System(transition_equation, measurement_equation)
+    end
 end
 
 """
