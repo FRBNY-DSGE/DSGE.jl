@@ -275,7 +275,7 @@ function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_v
     elseif class == :obs
         n_observables(m)
     elseif class == :pseudo
-        n_pseudoobservables(m)
+        n_pseudo_observables(m)
     elseif class in [:shocks, :stdshocks]
         n_shocks_exogenous(m)
     end
