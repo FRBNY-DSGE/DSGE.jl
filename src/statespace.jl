@@ -204,3 +204,13 @@ function compute_system_function{S<:AbstractFloat}(system::System{S})
 
     return Φ, Ψ, F_ϵ, F_u
 end
+
+function zero_system_constants{S<:AbstractFloat}(system::System{S})
+    system = copy(system)
+
+    system.transition.CCC = zeros(size(system[:CCC]))
+    system.measurement.DD = zeros(size(system[:DD]))
+    system.pseudo_measurement.DD_pseudo = zeros(size(system[:DD_pseudo]))
+
+    return system
+end
