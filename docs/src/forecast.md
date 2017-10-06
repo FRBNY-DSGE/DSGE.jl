@@ -71,7 +71,7 @@ you want to start the forecast from a later block, you can also do so. For
 example:
 
 ``` julia
-m <= Setting(:forecast_start_block, Nullable{Int64}(2),
+m <= Setting(:forecast_start_block, 2,
     "Block at which to resume forecasting (possibly null)")
 ```
 
