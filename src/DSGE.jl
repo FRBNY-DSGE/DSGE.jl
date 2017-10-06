@@ -101,7 +101,7 @@ module DSGE
         write_meansbands_tables_timeseries, write_means_tables_shockdec, prepare_meansbands_table_irf,
         write_meansbands_tables_all,
 
-        # alternative_policy/
+        # altpolicy/
         AltPolicy, eqcond_altpolicy,
 
         # scenarios/
@@ -175,7 +175,7 @@ module DSGE
     include("analysis/io.jl")
     include("analysis/util.jl")
 
-    include("alternative_policy/altpolicy.jl")
+    include("altpolicy/altpolicy.jl")
 
     include("scenarios/scenario.jl")
     include("scenarios/io.jl")
