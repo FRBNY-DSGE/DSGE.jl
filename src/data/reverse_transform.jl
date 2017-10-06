@@ -101,7 +101,7 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     if class == :obs
         dict = m.observable_mappings
     elseif class == :pseudo
-        dict, _ = pseudo_measurement(m)
+        dict = m.pseudo_observable_mappings
     else
         error("Class $class does not have reverse transformations")
     end
@@ -209,7 +209,7 @@ function reverse_transform(m::AbstractModel, input_type::Symbol, cond_type::Symb
     if class == :obs
         dict = m.observable_mappings
     elseif class == :pseudo
-        dict, _ = pseudo_measurement(m)
+        dict = m.pseudo_observable_mappings
     else
         error("Class $class does not have reverse transformations")
     end

@@ -22,8 +22,7 @@ where `S<:AbstractFloat`
 - `obs::Array{S, 3}`: matrix of size `nobs` x `horizon` x `nshocks` of
   observable impulse response functions
 - `pseudo::Array{S, 3}`: matrix of size `npseudo` x `horizon` x `nshocks` of
-  pseudo-observable impulse response functions. If the pseudo-measurement equation
-  matrices in `system` are empty, then `pseudo` will be empty.
+  pseudo-observable impulse response functions
 """
 function impulse_responses{S<:AbstractFloat}(m::AbstractModel, system::System{S})
     horizon = impulse_response_horizons(m)
@@ -36,11 +35,7 @@ function impulse_responses{S<:AbstractFloat}(system::System{S}, horizon::Int)
     T, R = system[:TTT], system[:RRR]
     Q, Z = system[:QQ], system[:ZZ]
 
-    Z_pseudo = if !isnull(system.pseudo_measurement)
-        system[:ZZ_pseudo]
-    else
-        Matrix{S}()
-    end
+    Z_pseudo = system[:ZZ_pseudo]
 
     # Setup
     nshocks      = size(R, 2)
@@ -48,15 +43,10 @@ function impulse_responses{S<:AbstractFloat}(system::System{S}, horizon::Int)
     nobs         = size(Z, 1)
     npseudo      = size(Z_pseudo, 1)
 
-    forecast_pseudo = !isempty(Z_pseudo)
 
     states = zeros(S, nstates, horizon, nshocks)
     obs    = zeros(S, nobs,    horizon, nshocks)
-    pseudo = if forecast_pseudo
-        zeros(S, npseudo, horizon, nshocks)
-    else
-        zeros(S, 0, 0, 0)
-    end
+    pseudo = zeros(S, npseudo, horizon, nshocks)
 
     # Define iterate function, matrix of shocks
     iterate(z_t1, ϵ_t) = T*z_t1 + R*ϵ_t
@@ -72,9 +62,7 @@ function impulse_responses{S<:AbstractFloat}(system::System{S}, horizon::Int)
 
         # Apply measurement and pseudo-measurement equations
         obs[:, :, i] = Z * states[:, :, i]
-        if forecast_pseudo
-            pseudo[:, :, i] = Z_pseudo * states[:, :, i]
-        end
+        pseudo[:, :, i] = Z_pseudo * states[:, :, i]
     end
 
     return states, obs, pseudo

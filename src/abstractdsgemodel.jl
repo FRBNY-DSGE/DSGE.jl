@@ -169,19 +169,11 @@ n_states_augmented(m::AbstractModel)        = n_states(m) + length(m.endogenous_
 n_shocks_exogenous(m::AbstractModel)        = length(m.exogenous_shocks)
 n_shocks_expectational(m::AbstractModel)    = length(m.expected_shocks)
 n_observables(m::AbstractModel)             = length(m.observables)
+n_pseudo_observables(m::AbstractModel)      = length(m.pseudo_observables)
 n_equilibrium_conditions(m::AbstractModel)  = length(m.equilibrium_conditions)
 n_parameters(m::AbstractModel)              = length(m.parameters)
 n_parameters_steady_state(m::AbstractModel) = length(m.steady_state)
 n_parameters_free(m::AbstractModel)         = sum([!α.fixed for α in m.parameters])
-
-function n_pseudo_observables(m::AbstractModel)
-    if forecast_pseudoobservables(m)
-        pseudo, _ = pseudo_measurement(m)
-        return length(pseudo)
-    else
-        return 0
-    end
-end
 
 """
 ```
@@ -198,8 +190,7 @@ function get_key(m::AbstractModel, class::Symbol, index::Int)
     elseif class == :obs
         m.observables
     elseif class == :pseudo
-        _, pseudo_mapping = pseudo_measurement(m)
-        pseudo_mapping.inds
+        m.pseudo_observables
     elseif class in [:shocks, :stdshocks]
         m.exogenous_shocks
     else
