@@ -172,20 +172,20 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T},
 
     ## 20-Year Forward Real Rate
     TTT20_fwd = TTT^80
-    ZZ_pseudo[pseudo[:Forward20YearRealRate], :] = ZZ_pseudo[pseudo[:ExAnteRealRate], :] * TTT20_fwd
+    ZZ_pseudo[pseudo[:Forward20YearRealRate], :] = ZZ_pseudo[pseudo[:ExAnteRealRate], :]' * TTT20_fwd
     DD_pseudo[pseudo[:Forward20YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
     ## 20-Year Real Natural Forward Rate
-    ZZ_pseudo[pseudo[:Forward20YearRealNaturalRate], :] = ZZ_pseudo[pseudo[:RealNaturalRate], :] * TTT20_fwd
+    ZZ_pseudo[pseudo[:Forward20YearRealNaturalRate], :] = ZZ_pseudo[pseudo[:RealNaturalRate], :]' * TTT20_fwd
     DD_pseudo[pseudo[:Forward20YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
     ## 30-Year Real Forward Rate
     TTT30_fwd = TTT^120
-    ZZ_pseudo[pseudo[:Forward30YearRealRate], :] = ZZ_pseudo[pseudo[:ExAnteRealRate], :] * TTT30_fwd
+    ZZ_pseudo[pseudo[:Forward30YearRealRate], :] = ZZ_pseudo[pseudo[:ExAnteRealRate], :]' * TTT30_fwd
     DD_pseudo[pseudo[:Forward30YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
     ## 30-Year Real Natural Forward Rate
-    ZZ_pseudo[pseudo[:Forward30YearRealNaturalRate], :] = ZZ_pseudo[pseudo[:RealNaturalRate], :] * TTT30_fwd
+    ZZ_pseudo[pseudo[:Forward30YearRealNaturalRate], :] = ZZ_pseudo[pseudo[:RealNaturalRate], :]' * TTT30_fwd
     DD_pseudo[pseudo[:Forward30YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
     if !(subspec(m) in ["ss2", "ss4"])
