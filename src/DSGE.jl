@@ -200,6 +200,7 @@ module DSGE
     include("models/m990/eqcond.jl")
     include("models/m990/observables.jl")
     include("models/m990/measurement.jl")
+    include("models/m990/pseudo_observables.jl")
     include("models/m990/pseudo_measurement.jl")
     include("models/m990/augment_states.jl")
 
