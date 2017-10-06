@@ -116,7 +116,64 @@ function Base.copy(system::System)
 end
 
 type PseudoMeasurementUndefError <: Exception
+"""
+```
+compute_system(m; apply_altpolicy = false)
+```
+
+Given the current model parameters, compute the state-space system
+corresponding to model `m`. Returns a `System` object.
+"""
+function compute_system{T<:AbstractFloat}(m::AbstractModel{T}; apply_altpolicy = false)
+    # Solve model
+    TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy)
+    transition_equation = Transition(TTT, RRR, CCC)
+
+    # Solve measurement equation
+    measurement_equation = measurement(m, TTT, RRR, CCC)
+
+    # Solve pseudo-measurement equation
+    pseudo_measurement_equation = pseudo_measurement(m, TTT, RRR, CCC)
+
+    return System(transition_equation, measurement_equation, pseudo_measurement_equation)
 end
 
 Base.showerror(io::IO, e::PseudoMeasurementUndefError) = print(io, "A pseudo-measurement
-    equation was not defined for the model from which this state-space system was computed.")
+    equation was not defined for the model from which this state-space system was computed.")"""
+```
+compute_system_function{S<:AbstractFloat}(system::System{S})
+```
+
+### Inputs
+
+- `system::System`: The output of compute_system(m), i.e. the matrix outputs from solving a given model, m.
+
+### Outputs
+
+- `Φ::Function`: transition equation
+- `Ψ::Function`: measurement equation
+- `F_ϵ::Distributions.MvNormal`: shock distribution
+- `F_u::Distributions.MvNormal`: measurement error distribution
+"""
+function compute_system_function{S<:AbstractFloat}(system::System{S})
+    # Unpack system
+    TTT    = system[:TTT]
+    RRR    = system[:RRR]
+    CCC    = system[:CCC]
+    QQ     = system[:QQ]
+    ZZ     = system[:ZZ]
+    DD     = system[:DD]
+    EE     = system[:EE]
+
+    # Define transition and measurement functions
+    @inline Φ(s_t1::Vector{S}, ϵ_t::Vector{S}) = TTT*s_t1 + RRR*ϵ_t + CCC
+    @inline Ψ(s_t::Vector{S},  u_t::Vector{S}) = ZZ*s_t + DD + u_t
+
+    # Define shock and measurement error distributions
+    nshocks = size(QQ, 1)
+    nobs    = size(EE, 1)
+    F_ϵ = Distributions.MvNormal(zeros(nshocks), QQ)
+    F_u = Distributions.MvNormal(zeros(nobs),    EE)
+
+    return Φ, Ψ, F_ϵ, F_u
+end
