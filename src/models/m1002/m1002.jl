@@ -698,8 +698,6 @@ function settings_m1002!(m::Model1002)
     # Forecast
     m <= Setting(:use_population_forecast, true,
                  "Whether to use population forecasts as data")
-    m <= Setting(:forecast_pseudoobservables, true,
-                 "Whether to forecast pseudo-observables")
     m <= Setting(:shockdec_startdate, Nullable(quartertodate("2007-Q1")),
                  "Date of start of shock decomposition output period. If null, then shockdec starts at date_mainsample_start")
 

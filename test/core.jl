@@ -138,12 +138,10 @@ system = compute_system(m)
 system[:ZZ_pseudo]
 system[:DD_pseudo]
 
-m <= Setting(:forecast_pseudoobservables, false)
 system = compute_system(m)
 @test isnull(system.pseudo_measurement)
 @test_throws DSGE.PseudoMeasurementUndefError system[:ZZ_pseudo]
 @test_throws DSGE.PseudoMeasurementUndefError system[:DD_pseudo]
-m <= Setting(:forecast_pseudoobservables, true)
 
 
 nothing

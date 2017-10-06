@@ -107,8 +107,6 @@ function default_settings!(m::AbstractModel)
         Dict{Symbol, String}())
     settings[:forecast_jstep] = Setting(:forecast_jstep, 5,
         "Forecast thinning step (in addition to MH thinning step")
-    settings[:forecast_pseudoobservables] = Setting(:forecast_pseudoobservables, false,
-        "Whether to forecast pseudo-observables")
     settings[:forecast_uncertainty_override] = Setting(:forecast_uncertainty_override, Nullable{Bool}(),
         "If non-null, overrides default drawing states/shocks behavior in smoother and forecast")
     settings[:forecast_smoother] = Setting(:forecast_smoother, :durbin_koopman,
