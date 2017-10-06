@@ -54,7 +54,7 @@ jldopen(dict[:histobs], "r") do file
     @test !all(x -> x == Symbol("DSGE.identity"), values(read(file, "observable_revtransforms")))
 end
 jldopen(dict[:histpseudo], "r") do file
-    @test read(file, "pseudoobservable_indices") == pseudo_measurement(m)[2].inds
+    @test read(file, "pseudoobservable_indices") == m.pseudo_observables
     @test !all(x -> x == Symbol("DSGE.identity"), values(read(file, "pseudoobservable_revtransforms")))
 end
 jldopen(dict[:histshocks], "r") do file

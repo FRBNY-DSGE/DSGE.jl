@@ -134,14 +134,8 @@ end
 
 # Pseudo-measurement equation matrices in Systems
 system = compute_system(m)
-@test !isnull(system.pseudo_measurement)
 system[:ZZ_pseudo]
 system[:DD_pseudo]
-
-system = compute_system(m)
-@test isnull(system.pseudo_measurement)
-@test_throws DSGE.PseudoMeasurementUndefError system[:ZZ_pseudo]
-@test_throws DSGE.PseudoMeasurementUndefError system[:DD_pseudo]
 
 
 nothing

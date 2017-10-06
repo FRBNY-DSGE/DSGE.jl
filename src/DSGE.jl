@@ -59,10 +59,10 @@ module DSGE
         update, update!, transform_to_model_space, transform_to_real_line, Interval, ParamBoundsError,
 
         # observables.jl
-        Observable, PseudoObservable, PseudoObservableMapping, check_mnemonics,
+        Observable, PseudoObservable, check_mnemonics,
 
         # statespace.jl
-        Measurement, Transition, System, compute_system,
+        Transition, Measurement, PseudoMeasurement, System, compute_system,
 
         # data/
         load_data, load_data_levels, load_cond_data_levels, load_fred_data,
@@ -116,7 +116,7 @@ module DSGE
         plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies, plot_scenario,
 
         # models/
-        init_parameters!, steadystate!, init_observable_mappings!,
+        init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, eqcond, measurement, pseudo_measurement,
         shock_groupings,
 

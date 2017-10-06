@@ -97,11 +97,7 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     end
 
     # Map smoothed states to pseudo-observables
-    pseudo = if isnull(system.pseudo_measurement)
-        system[:ZZ_pseudo] * states .+ system[:DD_pseudo]
-    else
-        Matrix{S}()
-    end
+    pseudo = system[:ZZ_pseudo] * states .+ system[:DD_pseudo]
 
     return states, shocks, pseudo, initial_states
 end

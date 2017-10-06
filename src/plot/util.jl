@@ -126,7 +126,7 @@ function describe_series(m::AbstractModel, var::Symbol, class::Symbol;
         dict = if class == :obs
             m.observable_mappings
         elseif class == :pseudo
-            pseudo_measurement(m)[1]
+            m.pseudo_observable_mappings
         end
         dict[var].name
     elseif class == :states
@@ -151,7 +151,7 @@ function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
         dict = if class == :obs
             m.observable_mappings
         elseif class == :pseudo
-            pseudo_measurement(m)[1]
+            m.pseudo_observable_mappings
         end
         transform = dict[var].rev_transform
 
