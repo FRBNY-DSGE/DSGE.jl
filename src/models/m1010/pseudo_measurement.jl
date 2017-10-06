@@ -41,13 +41,13 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T},
 	ZZ_pseudo[pseudo[:y_f_t],endo[:y_f_t]] = 1.
 
 	## Output Gap
-	ZZ_pseudo[pseudo[:OutputGap],endo[:y_t]] = 1;
-	ZZ_pseudo[pseudo[:OutputGap],endo[:y_f_t]] = -1;
+	ZZ_pseudo[pseudo[:OutputGap],endo[:y_t]] = 1
+	ZZ_pseudo[pseudo[:OutputGap],endo[:y_f_t]] = -1
 
     if subspec(m) in ["ss2", "ss4"]
 	    ## π_t
 	    ZZ_pseudo[pseudo[:π_t],endo[:π_t]] = 1.
-	    DD_pseudo[pseudo[:π_t]]            = 100*(m[:π_star]-1);
+	    DD_pseudo[pseudo[:π_t]]            = 100*(m[:π_star]-1)
 
 	    ## Long Run Inflation
 	    ZZ_pseudo[pseudo[:LongRunInflation],endo[:π_star_t]] = 1.
@@ -76,9 +76,9 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T},
 	DD_pseudo[pseudo[:RealNaturalRate]]              = 100.*(m[:rstar]-1.)
 
 	## Ex Ante Real Rate
-	ZZ_pseudo[pseudo[:ExAnteRealRate],endo[:R_t]]  = 1;
-	ZZ_pseudo[pseudo[:ExAnteRealRate],endo[:Eπ_t]] = -1;
-	DD_pseudo[pseudo[:ExAnteRealRate]]             = m[:Rstarn] - 100*(m[:π_star]-1);
+	ZZ_pseudo[pseudo[:ExAnteRealRate],endo[:R_t]]  = 1
+	ZZ_pseudo[pseudo[:ExAnteRealRate],endo[:Eπ_t]] = -1
+	DD_pseudo[pseudo[:ExAnteRealRate]]             = m[:Rstarn] - 100*(m[:π_star]-1)
 
 	## Nominal FFR
 	ZZ_pseudo[pseudo[:NominalFFR], endo[:R_t]] = 1.
@@ -98,11 +98,11 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T},
 
     ## Expected Average 10-Year Real Interest Rate
     ZZ_pseudo[pseudo[:ExpectedAvg10YearRealRate], :] = TTT10[endo[:R_t], :] - TTT10[endo[:Eπ_t], :]
-    DD_pseudo[pseudo[:ExpectedAvg10YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+    DD_pseudo[pseudo[:ExpectedAvg10YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
     ## Expected Average 10-Year Real Natural Rate
     ZZ_pseudo[pseudo[:ExpectedAvg10YearRealNaturalRate], :] = TTT10[endo[:r_f_t], :]
-    DD_pseudo[pseudo[:ExpectedAvg10YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+    DD_pseudo[pseudo[:ExpectedAvg10YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
     if subspec(m) in ["ss2", "ss4"]
         ## Expected Average 10-Year Nominal Interest Rate
@@ -119,11 +119,11 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T},
 
     ## Expected Average 5-Year Real Interest Rate
     ZZ_pseudo[pseudo[:ExpectedAvg5YearRealRate], :] = TTT5[endo[:R_t], :] - TTT5[endo[:Eπ_t], :]
-    DD_pseudo[pseudo[:ExpectedAvg5YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+    DD_pseudo[pseudo[:ExpectedAvg5YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
     ## Expected Average 5-Year Real Natural Rate
     ZZ_pseudo[pseudo[:ExpectedAvg5YearRealNaturalRate], :] = TTT5[endo[:r_f_t], :]
-    DD_pseudo[pseudo[:ExpectedAvg5YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+    DD_pseudo[pseudo[:ExpectedAvg5YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
     if subspec(m) in ["ss2", "ss4"]
         ## Expected Average 5-Year Nominal Interest Rate
@@ -141,11 +141,11 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T},
 
     ## Expected Average 20-Year Real Interest Rate
     ZZ_pseudo[pseudo[:ExpectedAvg20YearRealRate], :] = TTT20[endo[:R_t], :] - TTT20[endo[:Eπ_t], :]
-    DD_pseudo[pseudo[:ExpectedAvg20YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+    DD_pseudo[pseudo[:ExpectedAvg20YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
     ## Expected Average 20-Year Real Natural Rate
     ZZ_pseudo[pseudo[:ExpectedAvg20YearRealNaturalRate], :] = TTT20[endo[:r_f_t], :]
-    DD_pseudo[pseudo[:ExpectedAvg20YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+    DD_pseudo[pseudo[:ExpectedAvg20YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
     if subspec(m) in ["ss2", "ss4"]
         ## Expected Average 20-Year Nominal Interest Rate
@@ -173,20 +173,20 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T},
     ## 20-Year Forward Real Rate
     TTT20_fwd = TTT^80
     ZZ_pseudo[pseudo[:Forward20YearRealRate], :] = ZZ_pseudo[pseudo[:ExAnteRealRate], :] * TTT20_fwd
-    DD_pseudo[pseudo[:Forward20YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+    DD_pseudo[pseudo[:Forward20YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
     ## 20-Year Real Natural Forward Rate
     ZZ_pseudo[pseudo[:Forward20YearRealNaturalRate], :] = ZZ_pseudo[pseudo[:RealNaturalRate], :] * TTT20_fwd
-    DD_pseudo[pseudo[:Forward20YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+    DD_pseudo[pseudo[:Forward20YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
     ## 30-Year Real Forward Rate
     TTT30_fwd = TTT^120
     ZZ_pseudo[pseudo[:Forward30YearRealRate], :] = ZZ_pseudo[pseudo[:ExAnteRealRate], :] * TTT30_fwd
-    DD_pseudo[pseudo[:Forward30YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+    DD_pseudo[pseudo[:Forward30YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
     ## 30-Year Real Natural Forward Rate
     ZZ_pseudo[pseudo[:Forward30YearRealNaturalRate], :] = ZZ_pseudo[pseudo[:RealNaturalRate], :] * TTT30_fwd
-    DD_pseudo[pseudo[:Forward30YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+    DD_pseudo[pseudo[:Forward30YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
     if !(subspec(m) in ["ss2", "ss4"])
         ## Nominal Natural Rate
@@ -197,20 +197,20 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1010{T},
         ## 5-Year Forward Real Rate
         TTT5_fwd = TTT^20
         ZZ_pseudo[pseudo[:Forward5YearRealRate], :] = ZZ_pseudo[pseudo[:ExAnteRealRate], :]' * TTT5_fwd
-        DD_pseudo[pseudo[:Forward5YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+        DD_pseudo[pseudo[:Forward5YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
         ## 5-Year Real Natural Forward Rate
         ZZ_pseudo[pseudo[:Forward5YearRealNaturalRate], :] = ZZ_pseudo[pseudo[:RealNaturalRate], :]' * TTT5_fwd
-        DD_pseudo[pseudo[:Forward5YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+        DD_pseudo[pseudo[:Forward5YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
         ## 10-Year Forward Real Rate
         TTT10_fwd = TTT^40
         ZZ_pseudo[pseudo[:Forward10YearRealRate], :] = ZZ_pseudo[pseudo[:ExAnteRealRate], :]' * TTT10_fwd
-        DD_pseudo[pseudo[:Forward10YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+        DD_pseudo[pseudo[:Forward10YearRealRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
 
         ## 10-Year Real Natural Forward Rate
         ZZ_pseudo[pseudo[:Forward10YearRealNaturalRate], :] = ZZ_pseudo[pseudo[:RealNaturalRate], :]' * TTT10_fwd
-        DD_pseudo[pseudo[:Forward10YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1);
+        DD_pseudo[pseudo[:Forward10YearRealNaturalRate]]    = m[:Rstarn] - 100*(m[:π_star]-1)
     end
 
     if subspec(m) in ["ss13", "ss18"]
