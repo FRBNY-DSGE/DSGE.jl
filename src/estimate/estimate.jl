@@ -169,7 +169,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
             S_inv[i, i] = 1/S_diag[i]
         end
 
-        hessian_inv = U*sqrt(S_inv) #this is the inverse of the hessian
+        hessian_inv = U*sqrt.(S_inv) #this is the inverse of the hessian
         DSGE.DegenerateMvNormal(params, hessian_inv)
     else
         DSGE.DegenerateMvNormal(params, proposal_covariance)
