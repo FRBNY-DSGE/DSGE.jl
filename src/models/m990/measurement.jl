@@ -1,46 +1,35 @@
 """
 ```
 measurement{T<:AbstractFloat}(m::Model990{T}, TTT::Matrix{T}, RRR::Matrix{T},
-                              CCC::Vector{T}; shocks::Bool = true)
+                              CCC::Vector{T})
 ```
 
 Assign measurement equation
 
 ```
-y_t = ZZ*s_t + DD + η_t
+y_t = ZZ*s_t + DD + u_t
 ```
 
 where
 
 ```
 Var(ϵ_t) = QQ
-Var(η_t) = EE
-Cov(ϵ_t, η_t) = 0
+Var(u_t) = EE
+Cov(ϵ_t, u_t) = 0
 ```
 """
 function measurement{T<:AbstractFloat}(m::Model990{T},
                                        TTT::Matrix{T},
                                        RRR::Matrix{T},
-                                       CCC::Vector{T};
-                                       shocks::Bool = true)
-    endo = m.endogenous_states
-    exo  = m.exogenous_shocks
-    obs  = m.observables
+                                       CCC::Vector{T})
+    endo     = m.endogenous_states
+    endo_new = m.endogenous_states_augmented
+    exo      = m.exogenous_shocks
+    obs      = m.observables
 
-    # If shocks = true, then return measurement equation matrices with rows and columns for
-    # anticipated policy shocks
-    if shocks
-        _n_observables = n_observables(m)
-        _n_states = n_states_augmented(m)
-        _n_shocks_exogenous = n_shocks_exogenous(m)
-        endo_new = m.endogenous_states_augmented
-    else
-        _n_observables = n_observables(m) - n_anticipated_shocks(m)
-        _n_states = n_states_augmented(m) - n_anticipated_shocks(m)
-        _n_shocks_exogenous = n_shocks_exogenous(m) - n_anticipated_shocks(m)
-        endo_new = OrderedDict(
-            [(key,m.endogenous_states_augmented[key] - n_anticipated_shocks(m)) for key in keys(m.endogenous_states_augmented)])
-    end
+    _n_observables = n_observables(m)
+    _n_states = n_states_augmented(m)
+    _n_shocks_exogenous = n_shocks_exogenous(m)
 
     ZZ = zeros(_n_observables, _n_states)
     DD = zeros(_n_observables)
@@ -110,32 +99,30 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
     ZZ[obs[:obs_tfp], endo[:u_t]]       = m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα] )
     ZZ[obs[:obs_tfp], endo_new[:u_t1]]  = -(m[:α]/( (1-m[:α])*(1-m[:Iendoα]) + 1*m[:Iendoα]) )
 
-    QQ[exo[:g_sh], exo[:g_sh]]           = m[:σ_g]^2
-    QQ[exo[:b_sh], exo[:b_sh]]           = m[:σ_b]^2
-    QQ[exo[:μ_sh], exo[:μ_sh]]           = m[:σ_μ]^2
-    QQ[exo[:z_sh], exo[:z_sh]]           = m[:σ_z]^2
-    QQ[exo[:λ_f_sh], exo[:λ_f_sh]]       = m[:σ_λ_f]^2
-    QQ[exo[:λ_w_sh], exo[:λ_w_sh]]       = m[:σ_λ_w]^2
-    QQ[exo[:rm_sh], exo[:rm_sh]]         = m[:σ_r_m]^2
-    QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]       = m[:σ_σ_ω]^2
-    QQ[exo[:μ_e_sh], exo[:μ_e_sh]]       = m[:σ_μ_e]^2
-    QQ[exo[:γ_sh], exo[:γ_sh]]           = m[:σ_γ]^2
-    QQ[exo[:π_star_sh], exo[:π_star_sh]] = m[:σ_π_star]^2
-    QQ[exo[:lr_sh], exo[:lr_sh]]         = m[:σ_lr]^2
-    QQ[exo[:zp_sh], exo[:zp_sh]]         = m[:σ_z_p]^2
-    QQ[exo[:tfp_sh], exo[:tfp_sh]]       = m[:σ_tfp]^2
-    QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]] = m[:σ_gdpdef]^2
-    QQ[exo[:corepce_sh], exo[:corepce_sh]]       = m[:σ_corepce]^2
+    QQ[exo[:g_sh], exo[:g_sh]]             = m[:σ_g]^2
+    QQ[exo[:b_sh], exo[:b_sh]]             = m[:σ_b]^2
+    QQ[exo[:μ_sh], exo[:μ_sh]]             = m[:σ_μ]^2
+    QQ[exo[:z_sh], exo[:z_sh]]             = m[:σ_z]^2
+    QQ[exo[:λ_f_sh], exo[:λ_f_sh]]         = m[:σ_λ_f]^2
+    QQ[exo[:λ_w_sh], exo[:λ_w_sh]]         = m[:σ_λ_w]^2
+    QQ[exo[:rm_sh], exo[:rm_sh]]           = m[:σ_r_m]^2
+    QQ[exo[:σ_ω_sh], exo[:σ_ω_sh]]         = m[:σ_σ_ω]^2
+    QQ[exo[:μ_e_sh], exo[:μ_e_sh]]         = m[:σ_μ_e]^2
+    QQ[exo[:γ_sh], exo[:γ_sh]]             = m[:σ_γ]^2
+    QQ[exo[:π_star_sh], exo[:π_star_sh]]   = m[:σ_π_star]^2
+    QQ[exo[:lr_sh], exo[:lr_sh]]           = m[:σ_lr]^2
+    QQ[exo[:zp_sh], exo[:zp_sh]]           = m[:σ_z_p]^2
+    QQ[exo[:tfp_sh], exo[:tfp_sh]]         = m[:σ_tfp]^2
+    QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]]   = m[:σ_gdpdef]^2
+    QQ[exo[:corepce_sh], exo[:corepce_sh]] = m[:σ_corepce]^2
 
     # These lines set the standard deviations for the anticipated shocks. They
     # are here no longer calibrated to the std dev of contemporaneous shocks,
     # as we had in 904
-    if shocks
-        for i = 1:n_anticipated_shocks(m)
-            ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
-            DD[obs[Symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
-            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
-        end
+    for i = 1:n_anticipated_shocks(m)
+        ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
+        DD[obs[Symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
+        QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
     end
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
