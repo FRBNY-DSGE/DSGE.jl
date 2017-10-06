@@ -277,7 +277,7 @@ function forecast_one(m::AbstractModel{Float64},
         # Block info
         block_inds, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
         nblocks = length(block_inds)
-        start_block = isnull(forecast_start_block(m)) ? 1 : get(forecast_start_block(m))
+        start_block = forecast_start_block(m)
 
         # Info needed for printing progress
         total_forecast_time = 0.0

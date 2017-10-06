@@ -101,8 +101,8 @@ function default_settings!(m::AbstractModel)
     # Forecast
     settings[:forecast_block_size] = Setting(:forecast_block_size, 5000,
         "Number of draws in each forecast block (before thinning by forecast_jstep)")
-    settings[:forecast_start_block] = Setting(:forecast_start_block, Nullable{Int64}(),
-        "Block at which to resume forecasting (possibly null)")
+    settings[:forecast_start_block] = Setting(:forecast_start_block, 1,
+        "Block at which to resume forecasting")
     settings[:forecast_input_file_overrides] = Setting(:forecast_input_file_overrides,
         Dict{Symbol, String}())
     settings[:forecast_jstep] = Setting(:forecast_jstep, 5,
