@@ -9,7 +9,6 @@ m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:date_conditional_end, quartertodate("2015-Q4"))
 m <= Setting(:forecast_uncertainty_override, Nullable(false))
 m <= Setting(:use_population_forecast, true)
-m <= Setting(:forecast_pseudoobservables, true)
 m <= Setting(:compute_shockdec_bands, true)
 
 estroot = normpath(joinpath(dirname(@__FILE__), "..", "reference"))

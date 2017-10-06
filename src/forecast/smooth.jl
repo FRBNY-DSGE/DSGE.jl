@@ -36,8 +36,7 @@ Computes and returns the smoothed values of states and shocks for the system
 - `shocks::Matrix{S}`: array of size `nshocks` x `hist_nperiods` of smoothed
   shocks
 - `pseudo::Matrix{S}`: matrix of size `npseudo` x `hist_periods` of
-  pseudo-observables computed from the smoothed states. If
-  `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
+  pseudo-observables computed from the smoothed states
 - `initial_states::Vector{S}`: vector of length `nstates` of the smoothed states
   in the last presample period. This is used as the initial state for computing
   the deterministic trend
@@ -98,11 +97,7 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     end
 
     # Map smoothed states to pseudo-observables
-    pseudo = if forecast_pseudoobservables(m)
-        system[:ZZ_pseudo] * states .+ system[:DD_pseudo]
-    else
-        Matrix{S}()
-    end
+    pseudo = system[:ZZ_pseudo] * states .+ system[:DD_pseudo]
 
     return states, shocks, pseudo, initial_states
 end

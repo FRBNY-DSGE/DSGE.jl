@@ -33,7 +33,7 @@ module DSGE
         inds_presample_periods, inds_prezlb_periods, inds_zlb_periods, inds_mainsample_periods,
         n_states, n_states_augmented, n_shocks_exogenous, n_shocks_expectational,
         n_equilibrium_conditions, n_observables, n_parameters, n_parameters_steady_state,
-        n_parameters_free, n_pseudoobservables, get_key,
+        n_parameters_free, n_pseudo_observables, get_key,
         inds_states_no_ant, inds_shocks_no_ant, inds_obs_no_ant,
         spec, subspec, saveroot, dataroot,
         data_vintage, data_id, cond_vintage, cond_id, cond_full_names, cond_semi_names, use_population_forecast,
@@ -59,10 +59,10 @@ module DSGE
         update, update!, transform_to_model_space, transform_to_real_line, Interval, ParamBoundsError,
 
         # observables.jl
-        Observable, PseudoObservable, PseudoObservableMapping, check_mnemonics,
+        Observable, PseudoObservable, check_mnemonics,
 
         # statespace.jl
-        Measurement, Transition, System, compute_system,
+        Transition, Measurement, PseudoMeasurement, System, compute_system,
 
         # data/
         load_data, load_data_levels, load_cond_data_levels, load_fred_data,
@@ -101,7 +101,7 @@ module DSGE
         write_meansbands_tables_timeseries, write_means_tables_shockdec, prepare_meansbands_table_irf,
         write_meansbands_tables_all,
 
-        # alternative_policy/
+        # altpolicy/
         AltPolicy, eqcond_altpolicy,
 
         # scenarios/
@@ -116,7 +116,7 @@ module DSGE
         plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies, plot_scenario,
 
         # models/
-        init_parameters!, steadystate!, init_observable_mappings!,
+        init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, eqcond, measurement, pseudo_measurement,
         shock_groupings,
 
@@ -175,7 +175,7 @@ module DSGE
     include("analysis/io.jl")
     include("analysis/util.jl")
 
-    include("alternative_policy/altpolicy.jl")
+    include("altpolicy/altpolicy.jl")
 
     include("scenarios/scenario.jl")
     include("scenarios/io.jl")
@@ -200,6 +200,7 @@ module DSGE
     include("models/m990/eqcond.jl")
     include("models/m990/observables.jl")
     include("models/m990/measurement.jl")
+    include("models/m990/pseudo_observables.jl")
     include("models/m990/pseudo_measurement.jl")
     include("models/m990/augment_states.jl")
 
@@ -208,6 +209,7 @@ module DSGE
     include("models/m1002/eqcond.jl")
     include("models/m1002/observables.jl")
     include("models/m1002/measurement.jl")
+    include("models/m1002/pseudo_observables.jl")
     include("models/m1002/pseudo_measurement.jl")
     include("models/m1002/augment_states.jl")
 
@@ -216,6 +218,7 @@ module DSGE
     include("models/m1010/eqcond.jl")
     include("models/m1010/observables.jl")
     include("models/m1010/measurement.jl")
+    include("models/m1010/pseudo_observables.jl")
     include("models/m1010/pseudo_measurement.jl")
     include("models/m1010/augment_states.jl")
 
@@ -231,6 +234,7 @@ module DSGE
     include("models/an_schorfheide/eqcond.jl")
     include("models/an_schorfheide/observables.jl")
     include("models/an_schorfheide/measurement.jl")
+    include("models/an_schorfheide/pseudo_observables.jl")
     include("models/an_schorfheide/pseudo_measurement.jl")
     include("models/an_schorfheide/augment_states.jl")
 end

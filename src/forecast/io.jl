@@ -300,12 +300,12 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
 
     # Write pseudo-observable names and transforms
     if class == :pseudo
-        pseudo, pseudo_mapping = pseudo_measurement(m)
-        write(file, "pseudoobservable_indices", pseudo_mapping.inds)
+        write(file, "pseudoobservable_indices", m.pseudo_observables)
         rev_transforms = if prod != :irf
-            Dict{Symbol,Symbol}(x => Symbol(pseudo[x].rev_transform) for x in keys(pseudo))
+            Dict{Symbol,Symbol}(x => Symbol(m.pseudo_observable_mappings[x].rev_transform)
+                                for x in keys(m.pseudo_observables))
         else
-            Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(pseudo))
+            Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(m.pseudo_observables))
         end
         write(file, "pseudoobservable_revtransforms", rev_transforms)
     end
