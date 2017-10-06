@@ -33,7 +33,7 @@ module DSGE
         inds_presample_periods, inds_prezlb_periods, inds_zlb_periods, inds_mainsample_periods,
         n_states, n_states_augmented, n_shocks_exogenous, n_shocks_expectational,
         n_equilibrium_conditions, n_observables, n_parameters, n_parameters_steady_state,
-        n_parameters_free, n_pseudoobservables, get_key,
+        n_parameters_free, n_pseudo_observables, get_key,
         inds_states_no_ant, inds_shocks_no_ant, inds_obs_no_ant,
         spec, subspec, saveroot, dataroot,
         data_vintage, data_id, cond_vintage, cond_id, cond_full_names, cond_semi_names, use_population_forecast,

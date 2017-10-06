@@ -174,7 +174,7 @@ n_parameters(m::AbstractModel)              = length(m.parameters)
 n_parameters_steady_state(m::AbstractModel) = length(m.steady_state)
 n_parameters_free(m::AbstractModel)         = sum([!α.fixed for α in m.parameters])
 
-function n_pseudoobservables(m::AbstractModel)
+function n_pseudo_observables(m::AbstractModel)
     if forecast_pseudoobservables(m)
         pseudo, _ = pseudo_measurement(m)
         return length(pseudo)
