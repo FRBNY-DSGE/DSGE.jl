@@ -7,15 +7,10 @@ measurement{T<:AbstractFloat}(m::Model1002{T}, TTT::Matrix{T}, RRR::Matrix{T},
 Assign measurement equation
 
 ```
-y_t = ZZ*s_t + DD + η_t
-```
-
-where
-
-```
+y_t = ZZ*s_t + DD + u_t
 Var(ϵ_t) = QQ
-Var(η_t) = EE
-Cov(ϵ_t, η_t) = 0
+Var(u_t) = EE
+Cov(ϵ_t, u_t) = 0
 ```
 """
 function measurement{T<:AbstractFloat}(m::Model1002{T},
