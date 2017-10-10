@@ -102,7 +102,7 @@ module DSGE
         write_meansbands_tables_all,
 
         # altpolicy/
-        AltPolicy, eqcond_altpolicy,
+        AltPolicy, taylor93, taylor99,
 
         # scenarios/
         AbstractScenario, SingleScenario, Scenario, SwitchingScenario, ScenarioAggregate,
@@ -176,6 +176,8 @@ module DSGE
     include("analysis/util.jl")
 
     include("altpolicy/altpolicy.jl")
+    include("altpolicy/taylor93.jl")
+    include("altpolicy/taylor99.jl")
 
     include("scenarios/scenario.jl")
     include("scenarios/io.jl")
