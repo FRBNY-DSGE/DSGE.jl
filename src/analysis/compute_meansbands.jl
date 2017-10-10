@@ -158,7 +158,7 @@ function means_bands_all(input_type::Symbol, cond_type::Symbol, output_vars::Vec
                          use_population_forecast::Bool = true,
                          use_hpfilter::Bool = true,
                          y0_indexes::Dict{Symbol,Int} = Dict{Symbol,Int}(),
-                         data = Matrix{Float64}(),
+                         data = Matrix{Float64}(0,0),
                          compute_shockdec_bands::Bool = false,
                          verbose::Symbol = :low)
 
@@ -266,7 +266,7 @@ function means_bands(input_type::Symbol,
                      population_forecast::DataFrame = DataFrame(),
                      population_mnemonic::Nullable{Symbol} = Nullable{Symbol}(),
                      y0_index::Int = -1,
-                     data::Matrix{Float64} = Matrix{Float64}(),
+                     data::Matrix{Float64} = Matrix{Float64}(0,0),
                      verbose::Symbol = :none,
                      compute_shockdec_bands::Bool = false)
 
@@ -313,6 +313,7 @@ function means_bands(input_type::Symbol,
         # Re-assemble pmap outputs
         means = DataFrame(date = date_list)
         bands = Dict{Symbol,DataFrame}()
+
         for (var_name, (var_means, var_bands)) in zip(variable_names, mb_vec)
             means[var_name] = var_means
             bands[var_name] = var_bands
@@ -356,7 +357,7 @@ function compute_means_bands(class::Symbol,
                              product::Symbol,
                              var_name::Symbol,
                              filename::String;
-                             data::Matrix{Float64} = Matrix{Float64}(),
+                             data::Matrix{Float64} = Matrix{Float64}(0,0),
                              population_series::Vector{Float64} = Vector{Float64}(),
                              y0_index::Int = -1,
                              shock_name::Nullable{Symbol} = Nullable{Symbol}(),
