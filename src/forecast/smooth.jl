@@ -28,6 +28,7 @@ Computes and returns the smoothed values of states and shocks for the system
    `draw_states = true`)
 - `include_presample::Bool`: indicates whether to include presample periods in
   the returned matrices. Defaults to `false`.
+- `in_sample::Bool`: indicates whether or not to discard out of sample rows in `df_to_matrix` call.
 
 ### Outputs
 
@@ -55,9 +56,10 @@ before calling `smooth`.
 """
 function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     system::System{S}, kal::Kalman{S}; cond_type::Symbol = :none,
-    draw_states::Bool = false, include_presample::Bool = false)
+    draw_states::Bool = false, include_presample::Bool = false,
+    in_sample::Bool = true)
 
-    data = df_to_matrix(m, df; cond_type = cond_type)
+    data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
 
     # Partition sample into pre- and post-ZLB regimes
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB

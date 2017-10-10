@@ -48,7 +48,7 @@ shocks.
 This function checks `forecast_uncertainty_override(m)` for whether to smooth
 shocks using the simulation smoother.
 """
-function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
+function filter_shocks!(m::AbstractModel, scen::Scenario, system::System, in_sample::Bool = false)
     # Check applicability of this methodology
     @assert n_instruments(scen) >= n_targets(scen) "Number of instruments must be at least number of targets"
 
@@ -60,9 +60,9 @@ function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
     P_0 = zeros(n_states_augmented(m), n_states_augmented(m))
 
     # Filter and smooth *deviations from baseline*
-    kal = filter(m, df, system, s_0, P_0)
+    kal = filter(m, df, system, s_0, P_0, in_sample = in_sample)
     _, forecastshocks, _ = smooth(m, df, system, kal, draw_states = scen.draw_states,
-                                  include_presample = true)
+                                  include_presample = true, in_sample = in_sample)
 
     # Assign shocks to instruments DataFrame
     for shock in keys(m.exogenous_shocks)
