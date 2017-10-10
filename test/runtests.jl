@@ -29,6 +29,7 @@ my_tests = [
             "forecast/io",
             "forecast/forecast_one",
             "analysis/means_bands",
+            "altpolicy/altpolicy",
             "scenarios/scenario",
             "scenarios/forecast",
             "scenarios/switching",
