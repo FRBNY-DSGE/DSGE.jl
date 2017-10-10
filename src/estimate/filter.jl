@@ -29,6 +29,7 @@ where `S<:AbstractFloat`.
   well. Defaults to `true`.
 - `include_presample::Bool`: indicates whether to include presample periods in
   the returned vector of `Kalman` objects. Defaults to `true`.
+- `in_sample::Bool`: indicates whether or not to discard out of sample rows in `df_to_matrix` call.
 
 ### Outputs
 
@@ -37,12 +38,13 @@ where `S<:AbstractFloat`.
 function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::System{S},
     z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}(0, 0);
     cond_type::Symbol = :none, allout::Bool = true,
-    include_presample::Bool = true)
+    include_presample::Bool = true, in_sample::Bool = true)
 
-    data = df_to_matrix(m, df; cond_type = cond_type)
+    data = df_to_matrix(m, df; cond_type = cond_type, include_presample = include_presample,
+                        in_sample = in_sample)
     start_date = max(date_presample_start(m), df[1, :date])
     filter(m, data, system, z0, P0; start_date = start_date,
-        allout = allout, include_presample = include_presample)
+           allout = allout, include_presample = include_presample)
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
