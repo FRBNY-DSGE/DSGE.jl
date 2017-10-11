@@ -1,4 +1,40 @@
-# DSGE.jl v0.2.1 Release Notes
+# DSGE.jl v0.3.2 Release Notes
+
+## New features
+
+- Added plotting functions: `plot_parameters`, `plot_history_and_forecast`,
+  `plot_forecast_comparison`, `hair_plot`, `plot_shock_decomposition`, and
+  `plot_impulse_response`
+- Added `nelder_mead` optimizer
+
+## Breaking changes
+
+- Changed input data file names: see `get_data_filename`
+  + Added dataset identifier `Setting` with key `data_id`
+  + Changed `cond_id` from `Setting{String}` to `Setting{Int}`
+  + Moved raw input data files from `inpath(m, "data")` to `inpath(m, "raw")`
+- Added `:marginal_L` (marginal likelihood) field to `Kalman` type
+- Pluralized forecast output classes `:states`, `:shocks`, and `:stdshocks`
+
+
+# DSGE.jl v0.3.1 Release Notes
+
+## Bug fixes
+
+- Added the following subspecs:
+  + Model 990, subspec 3: fixes bugs 1-4 in
+    [FRBNY-DSGE/DSGE-2015-Apr#1](https://github.com/FRBNY-DSGE/DSGE-2015-Apr/issues/1)
+  + Model 1002, subspec 10: corrects the definition of `betabar` to use
+    `m[:σ_c]` instead of `σ_ω_star`
+  + Model 1010, subspec 20: similarly corrects the definition of `betabar`
+
+## Deprecation fixes
+
+- Implemented `transpose` for `Parameter`s so that matrix division (i.e. the
+  `(\)` operator) no longer throws a warning
+
+
+# DSGE.jl v0.3.0 Release Notes
 
 ## New features
 
