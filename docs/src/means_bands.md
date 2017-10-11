@@ -28,9 +28,9 @@ plot our estimation of the full distribution of the forecast outputs.
 
 - *Write to file:* For each `output_var`, Write a `MeansBands` object (see
   [The MeansBands Type](@ref) below) to the file specified by
-  `get_meansbands_output_files(m)`.
+  `get_meansbands_output_file`.
 
-Computing means and bands is done by calling `means_bands_all`. If desired, you
+Computing means and bands is done by calling `compute_meansbands`. If desired, you
 can also write your computed means and bands as matrices by calling
 `meansbands_matrix_all`.
 
@@ -39,11 +39,11 @@ forecast of states and observables:
 
 ``` julia
 m = AnSchorfheide()
-means_bands_all(m, :mode, :none, [:forecaststates, forecastobs])
+compute_meansbands(m, :mode, :none, [:forecaststates, forecastobs])
 ```
 
 ```@docs
-means_bands_all
+compute_meansbands
 ```
 
 

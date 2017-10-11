@@ -24,7 +24,7 @@ output_vars = add_requisite_output_vars([:histobs, :forecastobs, :shockdecobs, :
 @everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
 @time forecast_one(m, :full, :none, output_vars, verbose = :none)
-@time means_bands_all(m, :full, :none, output_vars; verbose = :none)
+@time compute_meansbands(m, :full, :none, output_vars; verbose = :none)
 
 println("The following warning is expected test behavior:")
 

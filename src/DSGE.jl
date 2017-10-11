@@ -93,9 +93,9 @@ module DSGE
         read_forecast_output,
 
         # analysis/
-        find_density_bands, moment_tables, means_bands, means_bands_all, compute_means_bands, MeansBands,
-        meansbands_matrix_all, meansbands_matrix, read_mb, read_bdd_and_unbdd_mb,
-        get_meansbands_input_files, get_meansbands_output_files, get_product, get_class,
+        find_density_bands, moment_tables, compute_meansbands, MeansBands,
+        meansbands_to_matrix, read_mb, read_bdd_and_unbdd_mb,
+        get_meansbands_input_file, get_meansbands_output_file, get_product, get_class,
         which_density_bands,
         prepare_meansbands_tables_timeseries, prepare_means_tables_shockdec, prepare_meansbands_table_irf,
         write_meansbands_tables_timeseries, write_means_tables_shockdec, prepare_meansbands_table_irf,

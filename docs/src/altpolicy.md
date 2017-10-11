@@ -32,7 +32,7 @@ proposed monetary policy rule. Then you can run:
 m = AnSchorfheide()
 m <= Setting(:alternative_policy, AltPolicy(:taylor93, taylor93_eqcond, taylor93_solve))
 forecast_one(m, :mode, :none, [:forecastobs, :forecastpseudo])
-means_bands_all(m, :mode, :none, [:forecastobs, :forecastpseudo])
+compute_meansbands(m, :mode, :none, [:forecastobs, :forecastpseudo])
 ```
 
 ## The `AltPolicy` Type

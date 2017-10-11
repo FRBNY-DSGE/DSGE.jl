@@ -40,7 +40,7 @@ my_procs = addprocs(10)
 @everywhere using DSGE
 
 forecast_one(m, :full, :none, [:forecaststates, forecastobs])
-means_bands_all(m, :full, :none, [:forecaststates, :forecastobs])
+compute_meansbands(m, :full, :none, [:forecaststates, :forecastobs])
 rmprocs(my_procs)
 ```
 

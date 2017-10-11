@@ -4,12 +4,12 @@
 
 """
 ```
-get_meansbands_input_files(m, input_type, cond_type, output_vars;
+get_meansbands_input_file(m, input_type, cond_type, output_var;
     forecast_string = "", fileformat = :jld)
 ```
 
 ```
-get_meansbands_input_files(directory, filestring_base, input_type, cond_type, output_vars;
+get_meansbands_input_file(directory, filestring_base, input_type, cond_type, output_var;
     forecast_string = "", fileformat = :jld)
 ```
 
@@ -34,37 +34,33 @@ and bands.
 
 - `input_type::Symbol`: See `?forecast_one`
 - `cond_type::Symbol`: See `?forecast_one`
-- `output_vars::Symbol`: See `?forecast_one`
+- `output_var::Symbol`: See `?forecast_one`
 - `forecast_string::String`: See `?forecast_one`
 - `fileformat`: file extension of saved files
 """
-function get_meansbands_input_files(m::AbstractModel, input_type::Symbol,
-                                    cond_type::Symbol, output_vars::Vector{Symbol};
-                                    forecast_string::String = "", fileformat = :jld)
+function get_meansbands_input_file(m::AbstractModel, input_type::Symbol,
+                                   cond_type::Symbol, output_var::Symbol;
+                                   forecast_string::String = "", fileformat = :jld)
 
     directory = rawpath(m, "forecast")
     base = filestring_base(m)
-    get_meansbands_input_files(directory, base, input_type, cond_type, output_vars;
-                               forecast_string = forecast_string,
-                               fileformat = fileformat)
+    get_meansbands_input_file(directory, base, input_type, cond_type, output_var;
+                              forecast_string = forecast_string,
+                              fileformat = fileformat)
 end
 
-function get_meansbands_input_files(directory::String, filestring_base::Vector{String},
-                                    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                                    forecast_string::String = "", fileformat::Symbol = :jld)
+function get_meansbands_input_file(directory::String, filestring_base::Vector{String},
+                                   input_type::Symbol, cond_type::Symbol, output_var::Symbol;
+                                   forecast_string::String = "", fileformat::Symbol = :jld)
 
-    input_files = Dict{Symbol, String}()
-    for var in output_vars
-        input_files[var] = get_forecast_filename(directory, filestring_base,
-                                                 input_type, cond_type, var,
-                                                 forecast_string = forecast_string,
-                                                 fileformat = fileformat)
-        input_files[var] = replace(input_files[var], "hist4q", "hist")
-        input_files[var] = replace(input_files[var], "forecast4q", "forecast")
-        input_files[var] = replace(input_files[var], "forecastut", "forecast")
-    end
-
-    return input_files
+    filename = get_forecast_filename(directory, filestring_base,
+                                     input_type, cond_type, output_var,
+                                     forecast_string = forecast_string,
+                                     fileformat = fileformat)
+    filename = replace(filename, "hist4q", "hist")
+    filename = replace(filename, "forecast4q", "forecast")
+    filename = replace(filename, "forecastut", "forecast")
+    return filename
 end
 
 
@@ -74,12 +70,12 @@ end
 
 """
 ```
-get_meansbands_output_files(m, input_type, cond_type, output_vars;
+get_meansbands_output_file(m, input_type, cond_type, output_var;
     forecast_string = "", fileformat = :jld)
 ```
 
 ```
-get_meansbands_output_files(directory, filestring_base, input_type, cond_type, output_vars;
+get_meansbands_output_file(directory, filestring_base, input_type, cond_type, output_var;
     forecast_string = "", fileformat = :jld)
 ```
 
@@ -108,32 +104,27 @@ computed means and bands.
 - `forecast_string::String`: See `?forecast_one`
 - `fileformat`: file extension of saved files
 """
-function get_meansbands_output_files(m::AbstractModel, input_type::Symbol,
-                                     cond_type::Symbol, output_vars::Vector{Symbol};
-                                     forecast_string::String = "",
-                                     fileformat::Symbol = :jld,
-                                     directory::String = workpath(m, "forecast"))
+function get_meansbands_output_file(m::AbstractModel, input_type::Symbol,
+                                    cond_type::Symbol, output_var::Symbol;
+                                    forecast_string::String = "",
+                                    fileformat::Symbol = :jld,
+                                    directory::String = workpath(m, "forecast"))
 
     directory = directory
     base = filestring_base(m)
-    get_meansbands_output_files(directory, base, input_type, cond_type, output_vars;
-                                forecast_string = forecast_string, fileformat = fileformat)
+    get_meansbands_output_file(directory, base, input_type, cond_type, output_var;
+                               forecast_string = forecast_string, fileformat = fileformat)
 end
 
-function get_meansbands_output_files(directory::String,
-                                     filestring_base::Vector{String},
-                                     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                                     forecast_string::String = "", fileformat = :jld)
+function get_meansbands_output_file(directory::String,
+                                    filestring_base::Vector{String},
+                                    input_type::Symbol, cond_type::Symbol, output_var::Symbol;
+                                    forecast_string::String = "", fileformat = :jld)
 
-    mb_output_vars = [Symbol("mb$x") for x in output_vars]
-    output_files = Dict{Symbol, String}()
-    for var in output_vars
-        output_files[var] = get_forecast_filename(directory, filestring_base,
-                                                  input_type, cond_type, Symbol("mb$var");
-                                                  forecast_string = forecast_string,
-                                                  fileformat = fileformat)
-    end
-    return output_files
+    get_forecast_filename(directory, filestring_base,
+                          input_type, cond_type, Symbol("mb", output_var);
+                          forecast_string = forecast_string,
+                          fileformat = fileformat)
 end
 
 """
@@ -163,19 +154,19 @@ function read_mb(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                  bdd_and_unbdd::Bool = false,
                  directory::String = workpath(m, "forecast"))
 
+    unbdd_file = get_meansbands_output_file(m, input_type, cond_type, output_var;
+                                            forecast_string = forecast_string,
+                                            directory = directory)
+
     if bdd_and_unbdd
-        @assert get_product(output_var) in [:forecast, :forecast4q]
+        @assert get_product(output_var) == :forecast
         bdd_output_var = Symbol(:bdd, output_var)
-        files = get_meansbands_output_files(m, input_type, cond_type,
-                                            [output_var, bdd_output_var];
-                                            forecast_string = forecast_string,
-                                            directory = directory)
-        read_bdd_and_unbdd_mb(files[bdd_output_var], files[output_var])
+        bdd_file = get_meansbands_output_file(m, input_type, cond_type, bdd_output_var;
+                                              forecast_string = forecast_string,
+                                              directory = directory)
+        read_bdd_and_unbdd_mb(bdd_file, unbdd_file)
     else
-        files = get_meansbands_output_files(m, input_type, cond_type, [output_var];
-                                            forecast_string = forecast_string,
-                                            directory = directory)
-        read_mb(files[output_var])
+        read_mb(unbdd_file)
     end
 end
 
@@ -216,7 +207,8 @@ end
 ```
 write_meansbands_tables_timeseries(m, input_type, cond_type, output_var;
     forecast_string = "", bdd_and_unbdd = false,
-    dirname = tablespath(m, \"forecast\"), kwargs...)
+    read_dirname = workpath(m, \"forecast\"),
+    write_dirname = tablespath(m, \"forecast\"), kwargs...)
 
 write_meansbands_tables_timeseries(dirname, filestring_base, mb;
     tablevars = get_variables(mb))
@@ -234,10 +226,10 @@ write_meansbands_tables_timeseries(dirname, filestring_base, mb;
 
 **Method 2 only:**
 
+- `read_dirname::String`: directory from which `MeansBands` are read in
 - `write_dirname::String`: directory to which tables are saved
 - `filestring_base::Vector{String}`: the result of `filestring_base(m)`,
   typically `[\"vint=yymmdd\"]``
-
 
 ### Keyword Arguments
 
