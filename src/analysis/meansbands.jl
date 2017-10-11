@@ -201,8 +201,18 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     # product
     mb1_product = get_product(mb1)
     mb2_product = get_product(mb2)
-    product = if mb1_product in [:hist, :hist4q] && contains(string(mb2_product), "forecast")
-        Symbol(string(mb1_product)*string(mb2_product))
+    product = if mb1_product == :hist
+        if mb2_product == :forecast
+            :histforecast
+        elseif mb2_product == :bddforecast
+            :bddforecast
+        end
+    elseif mb1_product == :hist4q
+        if mb2_product == :forecast4q
+            :histforecast4q
+        elseif mb2_product == :bddforecast4q
+            :bddhistforecast4q
+        end
     elseif mb1_product == mb2_product
         mb1_product
     else
@@ -236,7 +246,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     end
 
     # construct the new MeansBands object and return
-    MeansBands(mb1.metadata, means, bands)
+    MeansBands(metadata, means, bands)
 end
 
 
@@ -584,8 +594,10 @@ ordered as follows: [68\% lower, 50\% lower, 50\% upper, 68\% upper, mean].
 function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol;
                                              bands_pcts::Vector{String} = which_density_bands(mb, uniquify = true))
 
-    @assert get_product(mb) in [:hist, :forecast, :hist4q, :forecast4q, :bddforecast,
-         :bddforecast4q, :trend, :dettrend] "prepare_meansbands_table_timeseries can only be used for time-series products"
+    @assert get_product(mb) in [:hist, :hist4q, :forecast, :forecast4q,
+                                :bddforecast, :bddforecast4q, :histforecast, :histforecast4q,
+                                :bddhistforecast, :bddhistforecast4q,
+                                :trend, :dettrend] "prepare_meansbands_table_timeseries can only be used for time-series products"
     @assert var in get_vars_means(mb) "$var is not stored in this MeansBands object"
 
     # Get bands

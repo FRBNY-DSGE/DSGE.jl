@@ -118,7 +118,7 @@ and pseudo-observables are written to the files given by
 ### Computing Means and Bands
 
 Computing means and bands is carried out by `scenario_means_bands`, which is
-likewise similar to `means_bands_all` for regular forecasts. The default
+likewise similar to `compute_meansbands` for regular forecasts. The default
 `output_vars` passed into `scenario_means_bands` are
 
 ```
