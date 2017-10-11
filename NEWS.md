@@ -1,20 +1,40 @@
-# DSGE.jl v0.3.2 Release Notes
+# DSGE.jl v0.4.0 Release Notes
 
 ## New features
 
-- Added plotting functions: `plot_parameters`, `plot_history_and_forecast`,
-  `plot_forecast_comparison`, `hair_plot`, `plot_shock_decomposition`, and
-  `plot_impulse_response`
 - Added `nelder_mead` optimizer
+- Added forecasting under alternative policies (`AltPolicy`) and alternative
+  scenarios (`AbstractScenario`)
+- Added plotting functions: `plot_parameters`, `plot_history_and_forecast`,
+  `plot_forecast_comparison`, `hair_plot`, `plot_shock_decomposition`,
+  `plot_impulse_response`, `plot_altpolicies`, and `plot_scenario`
 
 ## Breaking changes
 
+- Upgraded all code for use with Julia v0.6.0 or higher
 - Changed input data file names: see `get_data_filename`
   + Added dataset identifier `Setting` with key `data_id`
   + Changed `cond_id` from `Setting{String}` to `Setting{Int}`
   + Moved raw input data files from `inpath(m, "data")` to `inpath(m, "raw")`
 - Added `:marginal_L` (marginal likelihood) field to `Kalman` type
+- Removed `MM` and `VVall` fields from `Measurement` type
 - Pluralized forecast output classes `:states`, `:shocks`, and `:stdshocks`
+- Stopped adding back population growth when reverse transforming shock
+  decompositions and deterministic trends
+- Stopped adding trends to and detrending shock decompositions and deterministic
+  trends
+- Changed pseudo-observable implementation to correspond one-to-one with
+  observables
+  + Changed `PseudoObservableMapping` type (and field in `System` type) to
+    `PseudoMeasurement`
+  + Added `m.pseudo_observables` and `m.pseudo_observable_mappings` fields to
+    `AbstractModel` subtypes
+  + Pseudo-observable-related things are no longer `Nullable`. Instead, if no
+    pseudo-measurement equation is implemented, the fields in the model object
+    are empty dictionaries
+- Refactored means and bands computation
+  + Renamed `means_bands_all` to `compute_meansbands`
+  + Renamed `meansbands_matrix_all` to `meansbands_to_matrix`
 
 
 # DSGE.jl v0.3.1 Release Notes
