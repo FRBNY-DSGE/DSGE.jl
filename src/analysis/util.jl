@@ -88,9 +88,6 @@ simply repeated as many times as necessary.
 function resize_population_forecast(population_forecast::DataFrame, nperiods::Int,
                                     mnemonic::Symbol)
 
-    # Remove first row of population_forecast (contains last historical period)
-    population_forecast = population_forecast[2:end, :]
-
     nperiods_act = size(population_forecast, 1)
     if nperiods_act >= nperiods
         # Keep first nperiods of population forecast
@@ -101,8 +98,9 @@ function resize_population_forecast(population_forecast::DataFrame, nperiods::In
         n_filler_periods = nperiods - nperiods_act
 
         last_provided = population_forecast[end, :date]
-        dates = quarter_range(last_provided, last_provided + Dates.Month(3 * n_filler_periods))
-        filler = DataFrame(date = dates)
+        next_period = iterate_quarters(last_provided, 1)
+        filler_dates = quarter_range(next_period, next_period + Dates.Month(3 * (n_filler_periods - 1)))
+        filler = DataFrame(date = filler_dates)
 
         filler[mnemonic] = fill(population_forecast[end, mnemonic], n_filler_periods)
         return vcat(population_forecast, filler)
