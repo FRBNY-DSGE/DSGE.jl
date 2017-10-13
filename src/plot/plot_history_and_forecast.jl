@@ -149,68 +149,12 @@ end
 
 function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::MeansBands;
                                    output_file::String = "",
-                                   title::String = "",
-                                   start_date::Date = history.means[1, :date],
-                                   end_date::Date = forecast.means[end, :date],
-                                   hist_label::String = "History",
-                                   forecast_label::String = "Forecast",
-                                   hist_color::Colorant = colorant"black",
-                                   forecast_color::Colorant = colorant"red",
-                                   linestyle::Symbol = :solid,
-                                   bands_color::Colorant = colorant"blue",
-                                   bands_pcts::Vector{String} = union(which_density_bands(history, uniquify = true),
-                                                                      which_density_bands(forecast, uniquify = true)),
-                                   bands_style::Symbol = :fan,
-                                   label_bands::Bool = false,
-                                   transparent_bands::Bool = true,
-                                   tick_size::Int = 5,
-                                   ylabel::String = "",
-                                   legend = :best,
                                    plot_handle::Plots.Plot = plot(),
-                                   verbose::Symbol = :low)
-    # Concatenate MeansBands
-    combined = cat(history, forecast)
-
-    # Dates
-    start_ind, end_ind = get_date_limit_indices(start_date, end_date, combined.means[:date])
-    datenums           = map(quarter_date_to_number, combined.means[:date])
-
-    # Indices
-    n_hist_periods  = size(history.means,  1)
-    n_fcast_periods = size(forecast.means, 1)
-    n_all_periods   = n_hist_periods + n_fcast_periods
-
-    hist_inds  = start_ind:min(end_ind, n_hist_periods)
-    fcast_inds = max(start_ind, n_hist_periods):end_ind
-    all_inds   = start_ind:end_ind
-
-    # Initialize plot
-    p = plot_handle
-    plot!(p, legend = legend)
-    title!(p, title)
-    yaxis!(p, ylabel = ylabel)
-
-    # Plot bands
-    if combined.metadata[:para] in [:full, :subset] || haskey(combined.metadata, :scenario_key)
-        bands_inds = get_bands_indices(var, history, forecast, hist_inds, fcast_inds)
-        if !isempty(bands_inds)
-            plot_bands!(p, var, combined, bands_style, bands_color,
-                        linestyle = linestyle, pcts = bands_pcts, indices = bands_inds,
-                        label_bands = label_bands, transparent_bands = transparent_bands)
-        end
-    end
-
-    # Plot mean
-    plot!(p, datenums[hist_inds],  combined.means[hist_inds,  var], label = hist_label,
-          linewidth = 2, linestyle = linestyle, linecolor = hist_color)
-    plot!(p, datenums[fcast_inds], combined.means[fcast_inds, var], label = forecast_label,
-          linewidth = 2, linestyle = linestyle, linecolor = forecast_color)
-
-    # Set date ticks
-    date_ticks!(p, start_date, end_date, tick_size)
-
-    # Add title
-    title!(p, title)
+                                   verbose::Symbol = :low,
+                                   kwargs...)
+    # Call recipe
+    p = plot(plot_handle)
+    histforecast!(var, history, forecast; kwargs...)
 
     # Save if output_file provided
     save_plot(p, output_file, verbose = verbose)
@@ -246,65 +190,4 @@ function plot_history_and_forecast(var::Symbol, histories::Vector{MeansBands}, f
     end
 
     return plot_handle
-end
-
-"""
-```
-function plot_bands!(p, var, mb, style, color; linestyle = :solid,
-    pcts = which_density_bands(mb, uniquify = true), indices = Colon())
-```
-
-Plot `var` bands from `mb` on plot `p`. The `style` can be one of `:fan` or
-`:line`, and the user can which bands to plot (`pcts`) and over which time
-periods (`indices`).
-"""
-function plot_bands!(p::Plots.Plot, var::Symbol, mb::MeansBands,
-                     style::Symbol, color::Colorant;
-                     linestyle::Symbol = :solid,
-                     pcts::Vector{String} = which_density_bands(mb, uniquify = true),
-                     label_bands::Bool = false,
-                     transparent_bands::Bool = true,
-                     indices = Colon())
-
-    datenums = map(quarter_date_to_number, mb.means[:date])
-
-    # Sort percentages from largest to smallest
-    sort!(pcts, rev = true)
-
-    if style == :fan
-        for (i, pct) in enumerate(pcts)
-            # Determine label
-            label = label_bands ? pct * " Bands" : ""
-
-            # Determine color
-            if transparent_bands
-                pct_color = RGBA(color, 0.1*i)
-                α = 0.1
-            else
-                pct_color = weighted_color_mean(0.1*i, color, colorant"white")
-                α = 1.0
-            end
-
-            # Plot
-            plot!(p, datenums[indices], mb.bands[var][indices, Symbol(pct, " UB")],
-                  fillto = mb.bands[var][indices, Symbol(pct, " LB")],
-                  label = label, color = pct_color, α = α)
-        end
-
-    elseif style == :line
-        for pct in pcts
-            # Determine labels
-            upper_label = label_bands ? pct * " UB" : ""
-            lower_label = label_bands ? pct * " LB" : ""
-
-            # Plot
-            plot!(p, datenums[indices], mb.bands[var][indices, Symbol(pct, " UB")],
-                  label = upper_label, color = color, linewidth = 2, linestyle = linestyle)
-            plot!(p, datenums[indices], mb.bands[var][indices, Symbol(pct, " LB")],
-                  label = lower_label, color = color, linewidth = 2, linestyle = linestyle)
-        end
-
-    else
-        error("Invalid style: " * string(style))
-    end
 end
