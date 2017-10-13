@@ -33,10 +33,11 @@ the results to a file. Other methods are for one `output_var` and one `var_name`
 function compute_meansbands(m::AbstractModel, input_type::Symbol,
                             cond_type::Symbol, output_vars::Vector{Symbol};
                             forecast_string::String = "",
-                            verbose::Symbol = :low,
+                            verbose::Symbol = :low, df::DataFrame = DataFrame(),
                             kwargs...)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
+        output_dir = workpath(m, "forecast")
         println()
         info("Computing means and bands for input_type = $input_type, cond_type = $cond_type...")
         println("Start time: $(now())")
@@ -51,7 +52,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
     population_data, population_forecast = load_population_growth(m, verbose = verbose)
 
     # Load main dataset (required for some transformations)
-    df = load_data(m, verbose = :none)
+    isempty(df) && (df = load_data(m, verbose = :none))
 
     for output_var in output_vars
         prod = get_product(output_var)
