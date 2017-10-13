@@ -128,10 +128,6 @@ function plot_forecast_comparison(var::Symbol,
                                   histold::MeansBands, fcastold::MeansBands,
                                   histnew::MeansBands, fcastnew::MeansBands;
                                   output_file::String = "",
-                                  title::String = "",
-                                  start_date::Date = histold.means[1, :date],
-                                  end_date::Date = fcastnew.means[end, :date],
-                                  bandpcts::Vector{String} = ["90.0%"],
                                   old_hist_label::String = "",
                                   new_hist_label::String = "",
                                   old_fcast_label::String = "Old Forecast",
@@ -140,10 +136,8 @@ function plot_forecast_comparison(var::Symbol,
                                   new_hist_color::Colorant = colorant"black",
                                   old_fcast_color::Colorant = colorant"blue",
                                   new_fcast_color::Colorant = colorant"red",
-                                  tick_size::Int = 2,
-                                  ylabel::String = "",
-                                  legend = :best,
-                                  verbose::Symbol = :low)
+                                  verbose::Symbol = :low,
+                                  kwargs...)
 
     # Initialize plot
     p = Plots.plot(legend = legend, title = title)
@@ -154,22 +148,19 @@ function plot_forecast_comparison(var::Symbol,
     common_kwargs[:end_date]    = end_date
     common_kwargs[:bands_pcts]  = bandpcts
     common_kwargs[:bands_style] = :line
-    common_kwargs[:tick_size]   = tick_size
-    common_kwargs[:legend]      = legend
-    common_kwargs[:title]       = title
-    common_kwargs[:ylabel]      = ylabel
 
     # Plot old and new histories/forecasts separately
-    p = plot_history_and_forecast(var, histold, fcastold; plot_handle = p,
-                                  hist_label = old_hist_label, forecast_label = old_fcast_label,
-                                  hist_color = old_hist_color, forecast_color = old_fcast_color,
-                                  bands_color = old_fcast_color, linestyle = :solid,
-                                  common_kwargs...)
-    p = plot_history_and_forecast(var, histnew, fcastnew; plot_handle = p,
-                                  hist_label = new_hist_label, forecast_label = new_fcast_label,
-                                  hist_color = new_hist_color, forecast_color = new_fcast_color,
-                                  bands_color = new_fcast_color, linestyle = :dash,
-                                  common_kwargs...)
+    p = histforecast(var, histold, fcastold;
+                     hist_label = old_hist_label, forecast_label = old_fcast_label,
+                     hist_color = old_hist_color, forecast_color = old_fcast_color,
+                     bands_color = old_fcast_color, linestyle = :solid,
+                     common_kwargs, kwargs...)
+
+    histforecast!(var, histnew, fcastnew;
+                  hist_label = new_hist_label, forecast_label = new_fcast_label,
+                  hist_color = new_hist_color, forecast_color = new_fcast_color,
+                  bands_color = new_fcast_color, linestyle = :dash,
+                  common_kwargs, kwargs...)
 
     # Save if output_file provided
     save_plot(p, output_file, verbose = verbose)
