@@ -358,7 +358,7 @@ function isvalid_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
     # Ensure that no series is all NaN
     for col in setdiff(names(df), [:date])
         if all(isnan.(df[col]))
-            error("df[$col] is all NaN.")
+            warn("df[$col] is all NaN.")
         end
     end
 
