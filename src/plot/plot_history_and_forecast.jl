@@ -10,16 +10,7 @@ plot_history_and_forecast(m, vars, class, input_type, cond_type;
     kwargs...)
 
 plot_history_and_forecast(var, history, forecast; output_file = "",
-    title = "", start_date = history.means[1, :date],
-    end_date = forecast.means[end, :date],
-    hist_label = \"History\", forecast_label = \"Forecast\",
-    hist_color = :black, forecast_color = :red, linestyle = :solid,
-    bands_color = :blue,
-    bands_pcts = union(which_density_bands(history, uniquify = true),
-                       which_density_bands(forecast, uniquify = true)),
-    bands_style = :fan, label_bands = false, transparent_bands = true,
-    tick_size = 5, ylabel = "", legend = :best, plot_handle = plot(),
-    verbose = :low)
+    plot_handle = plot(), verbose = :low, kwargs...)
 ```
 
 Plot `var` or `vars` from `history` and `forecast`, possibly read in using
@@ -45,24 +36,12 @@ forecast, you can specify the `bands_style` and `bands_pcts`.
 
 ### Keyword Arguments
 
-- `title::String` or `titles::Vector{String}`
-- `start_date::Date`
-- `end_date::Date`
-- `hist_label::String`
-- `forecast_label::String`
-- `hist_color::Colorant`
-- `forecast_color::Colorant`
-- `linestyle::Symbol`
-- `bands_color::Colorant`
-- `bands_pcts::Vector{String}`
-- `bands_style::Symbol`: either `:fan` or `:line`
-- `label_bands::Bool`
-- `transparent_bands::Bool`
-- `tick_size::Int`: x-axis (time) tick size in units of years
-- `ylabel::String`
-- `legend`
 - `plot_handle::Plots.Plot`: a plot handle to add `history` and `forecast` to
+- `title::String` or `titles::Vector{String}`
 - `verbose::Symbol`
+
+See `?histforecast` for additional keyword arguments, all of which can be passed
+into `plot_history_and_forecast`.
 
 **Methods 1 and 2 only:**
 
