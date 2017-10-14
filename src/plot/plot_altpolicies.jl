@@ -1,15 +1,59 @@
+"""
+```
+plot_altpolicies(models, var, class, cond_type; kwargs...)
+
+plot_altpolicies(models, vars, class, cond_type;
+    forecast_string = "", altpol_string = "", fourquarter = false,
+    plotroot = figurespath(m, \"forecast\"), titles = [],
+    start_date = iterate_quarters(date_mainsample_end(models[1], -4)),
+    end_date = iterate_quarters(date_forecast_start(models[1], 20)),
+    kwargs...)
+```
+
+Plot `var` or `vars` forecasts under the alternative policies in `models`.
+
+### Inputs
+
+- `models::Vector{AbstractModel}`: vector of models, where each model has a
+  different alternative policy
+- `var::Symbol` or `vars::Vector{Symbol}`: variable(s) to be plotted,
+  e.g. `:obs_gdp` or `[:obs_gdp, :obs_nominalrate]`
+- `class::Symbol`
+- `cond_type::Symbol`
+
+### Keyword Arguments
+
+- `forecast_string::String`
+- `altpol_string::String`: identifies the group of alternative policies being
+  plotted together. Required if `length(models) > 1`
+- `start_date::Date`
+- `end_date::Date`
+- `fourquarter::Bool`: whether to plot four-quarter forecast
+- `plotroot::String`: if nonempty, plots will be saved in that directory
+- `title::String` or `titles::Vector{String}`
+
+See `?histforecast` for additional keyword arguments, all of which can be passed
+into `plot_altpolicies`.
+"""
+function plot_altpolicies{T<:AbstractModel}(models::Vector{T}, var::Symbol, class::Symbol,
+                                            cond_type::Symbol; title::String = "",
+                                            kwargs...)
+    plots = plot_altpolicies(models, [var], class, cond_type;
+                             title = isempty(title) ? String[] : [title],
+                             kwargs...)
+    return plots[var]
+end
+
 function plot_altpolicies{T<:AbstractModel}(models::Vector{T}, vars::Vector{Symbol}, class::Symbol,
                                             cond_type::Symbol;
                                             forecast_string::String = "",
                                             altpol_string::String = "",
+                                            start_date::Date = iterate_quarters(date_mainsample_end(models[1]), -4),
+                                            end_date::Date = iterate_quarters(date_forecast_start(models[1]), 20),
                                             fourquarter::Bool = false,
                                             plotroot::String = figurespath(m, "forecast"),
                                             titles::Vector{String} = String[],
-                                            start_date = iterate_quarters(date_mainsample_end(m), -4),
-                                            end_date = iterate_quarters(date_forecast_start(m), 20),
                                             kwargs...)
-    n_altpolicies = length(models)
-
     # Determine output_vars
     if fourquarter
         hist_prod  = :hist4q
@@ -19,30 +63,14 @@ function plot_altpolicies{T<:AbstractModel}(models::Vector{T}, vars::Vector{Symb
         fcast_prod = :forecast
     end
 
-    # Read in MeansBands
-    read_mb(models[1], :mode, cond_type, Symbol(hist_prod, class),
-            forecast_string = forecast_string)
-    mb_hists  = map(m -> read_mb(m, :mode, cond_type, Symbol(hist_prod, class),
-                                 forecast_string = forecast_string),
-                    models)
-    mb_fcasts = map(m -> read_mb(m, :mode, cond_type, Symbol(fcast_prod, class),
-                                 forecast_string = forecast_string),
-                    models)
-
-    # Determine plotting styles
-    altpolicies     = map(alternative_policy, models)
-    hist_labels     = fill("", n_altpolicies)
-    forecast_labels = map(string, altpolicies)
-    forecast_colors = Colorant[altpol.color for altpol in altpolicies]
-    linestyles      = map(altpol -> altpol.linestyle, altpolicies)
-
     # Get titles if not provided
     if isempty(titles)
         detexify_title = typeof(Plots.backend()) == Plots.GRBackend
-        titles = map(var -> describe_series(models[1], var, class, detexify = detexify_title), vars)
+        titles = map(var -> describe_series(models[1], var, class, detexify = detexify_title))
     end
 
     # Temporarily set models[1] altpolicy key to altpol_string for get_forecast_filename
+    n_altpolicies = length(models)
     if n_altpolicies != 1
         if isempty(altpol_string)
             error("Must provide nonempty altpol_key if plotting multiple alternative policies")
@@ -56,6 +84,26 @@ function plot_altpolicies{T<:AbstractModel}(models::Vector{T}, vars::Vector{Symb
     # Loop through variables
     plots = OrderedDict{Symbol, Plots.Plot}()
     for (var, title) in zip(vars, titles)
+        # Loop through alternative policies
+        plots[var] = plot()
+        for (i, m) in enumerate(models)
+            # Get AltPolicy
+            altpolicy = alternative_policy(m)
+
+            # Read in MeansBands
+            hist     = read_mb(m, :mode, cond_type, Symbol(hist_prod, class), forecast_string = forecast_string)
+            forecast = read_mb(m, :mode, cond_type, Symbol(fcast_prod, class), forecast_string = forecast_string)
+
+            # Call recipe
+            plots[var] = histforecast!(var, hist, forecast;
+                                       start_date = start_date, end_date = end_date,
+                                       hist_label = "", forecast_label = string(altpolicy),
+                                       forecast_color = altpolicy.color, linestyle = altpolicy.linestyle,
+                                       ylabel = series_ylabel(m, var, class, fourquarter = fourquarter),
+                                       title = title, kwargs...)
+        end
+
+        # Save if output_file provided
         output_file = if isempty(plotroot)
             ""
         else
@@ -64,18 +112,7 @@ function plot_altpolicies{T<:AbstractModel}(models::Vector{T}, vars::Vector{Symb
                                   forecast_string = forecast_string,
                                   fileformat = plot_extension())
         end
-
-        p = plot_history_and_forecast(var, mb_hists, mb_fcasts;
-                                      start_date = start_date,
-                                      end_date = end_date,
-                                      output_file = output_file,
-                                      title = title,
-                                      hist_label = hist_labels,
-                                      forecast_label = forecast_labels,
-                                      forecast_color = forecast_colors,
-                                      linestyle = linestyles,
-                                      tick_size = 2,
-                                      kwargs...)
+        save_plot(plots[var], output_file, verbose = verbose)
     end
 
     # Reset models[1] altpolicy key to original value
