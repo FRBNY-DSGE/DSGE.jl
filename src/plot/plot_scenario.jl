@@ -4,7 +4,7 @@ plot_scenario(m, var, class, scen; title = "", kwargs...)
 
 plot_scenario(m, vars, class, scen; untrans = false, fourquarter = false,
     plotroot = figurespath(m, \"scenarios\"), titles = [], tick_size = 1,
-    legend = :none, kwargs...)
+    kwargs...)
 ```
 
 Plot `var` or `vars` *in deviations from baseline* for the alternative scenario
@@ -25,7 +25,9 @@ specified by `key` and `vint`.
 - `title::String` or `titles::Vector{String}`
 - `tick_size::Int`: x-axis (time) tick size in units of years
 - `legend`
-- Other keyword arguments passed in to `plot_history_and_forecast`
+
+See `?histforecast` for additional keyword arguments, all of which can be passed
+into `plot_scenario`.
 
 ### Output
 
@@ -44,8 +46,7 @@ function plot_scenario(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
                        scen::AbstractScenario; untrans::Bool = false, fourquarter::Bool = false,
                        plotroot::String = figurespath(m, "scenarios"),
                        titles::Vector{String} = String[],
-                       tick_size::Int = 1,
-                       legend = :none,
+                       tick_size::Int = 1, legend = :none,
                        kwargs...)
     # Determine output_var
     fcast_prod = if untrans && fourquarter
@@ -71,6 +72,14 @@ function plot_scenario(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
     # Loop through variables
     plots = OrderedDict{Symbol, Plots.Plot}()
     for (var, title) in zip(vars, titles)
+        ylabel = series_ylabel(m, var, class, untrans = untrans, fourquarter = fourquarter)
+        ylabel = ylabel * " (deviations from baseline)"
+
+        plots[var] = histforecast(var, hist, fcast;
+                                  start_date = date_forecast_start(m),
+                                  title = title, legend = legend, kwargs...)
+
+        # Save if output_file provided
         output_file = if isempty(plotroot)
             ""
         else
@@ -78,15 +87,7 @@ function plot_scenario(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
                                   pathfcn = figurespath,
                                   fileformat = plot_extension())
         end
-        ylabel = series_ylabel(m, var, class, untrans = untrans, fourquarter = fourquarter)
-        ylabel = ylabel * " (deviations from baseline)"
-
-        plots[var] = plot_history_and_forecast(var, hist, fcast;
-                                               output_file = output_file, title = title,
-                                               tick_size = tick_size, legend = legend,
-                                               ylabel = ylabel,
-                                               start_date = date_forecast_start(m),
-                                               kwargs...)
+        save_plot(plots[var], output_file, verbose = verbose)
     end
     return plots
 end
