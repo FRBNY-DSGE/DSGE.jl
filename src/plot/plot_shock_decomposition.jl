@@ -11,10 +11,7 @@ plot_shock_decomposition(m, vars, class, input_type, cond_type;
     kwargs...)
 
 plot_shock_decomposition(var, shockdec, trend, dettrend, hist, forecast, groups;
-    output_file = "", title = "",
-    hist_label = \"Detrended History\", forecast_label = \"Detrended Forecast\",
-    hist_color = :black, forecast_color = :red, tick_size = 5, legend = :best,
-    verbose = :low)
+    output_file = "", verbose = :low, kwargs...)
 ```
 
 Plot shock decomposition(s) for `var` or `vars`.
@@ -43,13 +40,10 @@ Plot shock decomposition(s) for `var` or `vars`.
 ### Keyword Arguments
 
 - `title::String` or `titles::Vector{String}`
-- `hist_label::String`
-- `forecast_label::String`
-- `hist_color::Colorant`
-- `forecast_color::Colorant`
-- `tick_size::Int`: x-axis (time) tick size in units of years
-- `legend`
 - `verbose::Symbol`
+
+See `?shockdec` for additional keyword arguments, all of which can be passed
+into `plot_history_and_forecast`.
 
 **Methods 1 and 2 only:**
 
@@ -125,62 +119,11 @@ function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
                                   hist::MeansBands, forecast::MeansBands,
                                   groups::Vector{ShockGroup};
                                   output_file::String = "",
-                                  title = "",
-                                  start_date::Date = shockdec.means[1, :date],
-                                  end_date::Date = shockdec.means[end, :date],
-                                  hist_label::String = "Detrended History",
-                                  forecast_label::String = "Detrended Forecast",
-                                  hist_color::Colorant = colorant"black",
-                                  forecast_color::Colorant = colorant"red",
-                                  tick_size::Int = 5,
-                                  ylabel::String = "",
-                                  legend = :best,
-                                  verbose::Symbol = :low)
+                                  verbose::Symbol = :low,
+                                  kwargs...)
 
-    # Construct DataFrame with detrended mean, deterministic trend, and all shocks
-    df = prepare_means_table_shockdec(shockdec, trend, dettrend, var,
-                                      mb_hist = hist, mb_forecast = forecast,
-                                      detexify_shocks = false,
-                                      groups = groups)
-
-    # Dates
-    start_ind, end_ind = get_date_limit_indices(start_date, end_date, df[:date])
-    df[:datenum] = map(quarter_date_to_number, df[:date])
-    df[:x] = map(date -> shockdec_date_to_x(date, df[1, :date]), df[:date])
-
-    # x-axis ticks
-    all_inds = start_ind:end_ind
-    date_ticks = get_date_ticks(df[all_inds, :date], tick_size = tick_size)
-    x0 = shockdec_date_to_x(quarter_number_to_date(date_ticks.start), df[start_ind, :date])
-    x1 = shockdec_date_to_x(quarter_number_to_date(date_ticks.stop),  df[start_ind, :date])
-    xstep = tick_size * 4
-    x_ticks = x0:xstep:x1
-
-    # Plot bars
-    ngroups = length(groups)
-    colors = map(x -> x.color, groups)
-    labels = map(x -> x.name,  groups)
-    cat_names = map(Symbol, labels)
-
-    p = groupedbar(convert(Array, df[all_inds, cat_names]),
-                   xtick = (x_ticks, date_ticks),
-                   labels = reshape(labels, 1, ngroups),
-                   color = reshape(colors, 1, ngroups),
-                   linealpha = 0.0,
-                   bar_width = 1.0,
-                   legend = legend,
-                   legendfont = Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black"),
-                   title = title,
-                   ylabel = ylabel)
-
-    # Plot detrended mean
-    hist_end_date = enddate_means(hist)
-    hist_end_ind  = findfirst(df[:date], hist_end_date)
-
-    plot!(p, df[start_ind:hist_end_ind, :x], df[start_ind:hist_end_ind, :detrendedMean],
-          color = hist_color, linewidth = 2, label = hist_label, ylim = :auto)
-    plot!(p, df[hist_end_ind:end_ind, :x], df[hist_end_ind:end_ind, :detrendedMean],
-          color = forecast_color, linewidth = 2, label = forecast_label, ylim = :auto)
+    # Call recipe
+    shockdec(var, shockdec, trend, dettrend, hist, forecast, groups; kwargs...)
 
     # Save if output_file provided
     save_plot(p, output_file, verbose = verbose)
