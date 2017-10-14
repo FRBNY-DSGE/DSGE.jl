@@ -1,3 +1,68 @@
+@userplot PriorPost
+
+"""
+```
+priorpost(param, posterior_draws)
+```
+
+User recipe called by `plot_prior_posterior`.
+
+### Inputs
+
+- `param::Parameter`
+- `posterior_draws::AbstractVector`
+
+### Keyword Arguments
+
+- `prior_color`
+- `posterior_color`
+
+Additionally, all Plots attributes (see docs.juliaplots.org/latest/attributes)
+are supported as keyword arguments.
+"""
+priorpost
+
+@recipe function f(pp::PriorPost;
+                   prior_color = :red,
+                   posterior_color = :blue)
+    # Error checking
+    if length(pp.args) != 2 || !(typeof(pp.args[1]) <: Parameter) || !(typeof(pp.args[2]) <: AbstractVector)
+        error("priorpost must be given a Parameter and an AbstractVector. Got $(typeof(pp.args))")
+    end
+
+    param, posterior_draws = pp.args
+
+    title  --> param.tex_label
+    legend --> :bottomright
+
+    # Posterior
+    @series begin
+        seriestype := :histogram
+        normalize  := true
+        label      := param.fixed ? "Posterior: " * DSGE.describe_prior(param) : "Posterior"
+        color      := posterior_color
+
+        posterior_draws
+    end
+
+    # Prior
+    @series begin
+        label      := "Prior: " * DSGE.describe_prior(param)
+        color      := prior_color
+        linewidth --> 4
+
+        if param.fixed
+            @show keys(plotattributes)
+            [minimum(posterior_draws), maximum(posterior_draws)], [1, 1]
+        elseif !param.fixed && !isnull(param.prior)
+            prior = get(param.prior)
+            typeof(prior), prior
+        else
+            error("Parameter must either be fixed or have a non-null prior")
+        end
+    end
+end
+
 @userplot HistForecast
 
 """
