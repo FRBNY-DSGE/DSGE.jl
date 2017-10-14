@@ -2,9 +2,8 @@
 ```
 hair_plot(var, realized, histories, forecasts; kwargs...)
 
-hair_plot(var, realized, initial_values, forecasts; output_file = "", hist_label = \"Realized\",
-    forecast_label = \"Forecasts\", forecast_palette = Symbol(), forecast_color = :red,
-    legend = :best, verbose = :low)
+hair_plot(var, realized, initial_values, forecasts; output_file = "",
+    verbose = :low, kwargs...)
 ```
 
 ### Inputs
@@ -20,13 +19,11 @@ hair_plot(var, realized, initial_values, forecasts; output_file = "", hist_label
 ### Keyword Arguments
 
 - `output_file::String`: if specified, plot will be saved there as a PDF
-- `hist_label::String`
-- `forecast_label::String`
-- `forecast_palette::Symbol`: if specified, the hair colors will be chosen
-  according to this palette. Otherwise they will all be `forecast_color`
-- `forecast_color::Colorant`
 - `legend`
 - `verbose::Symbol`
+
+See `?hair` for additional keyword arguments, all of which can be passed into
+`hair_plot`.
 
 ### Output
 

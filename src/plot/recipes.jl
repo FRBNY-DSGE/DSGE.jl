@@ -1,5 +1,45 @@
 @userplot HistForecast
 
+"""
+```
+histforecast(var, hist, forecast;
+    start_date = hist.means[1, :date], end_date = forecast.means[end, :date],
+    hist_label = \"History\", forecast_label = \"Forecast\",
+    hist_color = :black, forecast_color = :red, bands_color = :blue,
+    bands_pcts = union(which_density_bands(hist, uniquify = true),
+                       which_density_bands(forecast, uniquify = true)),
+    bands_style = :fan, label_bands = false, transparent_bands = true,
+    tick_size = 2)
+```
+
+User recipe called by `plot_history_and_forecast`.
+
+### Inputs
+
+- `var::Symbol`: e.g. `obs_gdp`
+- `hist::MeansBands`
+- `forecast::MeansBands`
+
+### Keyword Arguments
+
+- `start_date::Date`
+- `end_date::Date`
+- `hist_label::String`
+- `forecast_label::String`
+- `hist_color`
+- `forecast_color`
+- `bands_color`
+- `bands_pcts::Vector{String}`: which bands percentiles to plot
+- `bands_style::Symbol`: either `:fan` or `:line`
+- `label_bands::Bool`
+- `transparent_bands::Bool`
+- `tick_size::Int`: x-axis (time) tick size in units of years
+
+Additionally, all Plots attributes (see docs.juliaplots.org/latest/attributes)
+are supported as keyword arguments.
+"""
+histforecast
+
 @recipe function f(hf::HistForecast;
                    start_date = hf.args[2].means[1, :date],
                    end_date = hf.args[3].means[end, :date],
@@ -105,6 +145,39 @@
 end
 
 @userplot Hair
+
+"""
+```
+hair(var, realized, initial_values, forecasts;
+    hist_label = \"Realized\", forecast_label = \"Forecasts\",
+    hist_color = :black, forecast_color = :red, forecast_palette = :none,
+    tick_size = 2)
+```
+
+User recipe called by `hair_plot`.
+
+### Inputs
+
+- `var::Symbol`: e.g. `:obs_gdp`
+- `initial_values::Vector{Float64}`: vector of initial forecast values (i.e. s_{T|T} or y_T). Needed to
+  connect the forecast hairs to the realized data line
+- `forecasts::Vector{MeansBands}`
+
+### Keyword Arguments
+
+- `hist_label::String`
+- `forecast_label::String`
+- `forecast_color`
+- `forecast_palette`: if not `:none`, the hair colors will be chosen according
+  to this palette; otherwise they will all be `forecast_color`. Values
+  correspond to values of the Plots attribute `color_palette` (see
+  docs.juliaplots.org/latest/attributes)
+- `tick_size::Int`: x-axis (time) tick size in units of years
+
+Additionally, all Plots attributes (see docs.juliaplots.org/latest/attributes)
+are supported as keyword arguments.
+"""
+hair
 
 @recipe function f(hp::Hair;
                    hist_label = "Realized",
