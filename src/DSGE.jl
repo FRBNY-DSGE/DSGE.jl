@@ -187,7 +187,7 @@ module DSGE
 
     include("plot/util.jl")
     include("plot/recipes.jl")
-    include("plot/plot_parameters.jl")
+    include("plot/plot_prior_posterior.jl")
     include("plot/plot_impulse_response.jl")
     include("plot/plot_history_and_forecast.jl")
     include("plot/hair_plot.jl")
