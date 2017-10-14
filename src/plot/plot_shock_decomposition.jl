@@ -1,59 +1,35 @@
 """
 ```
 plot_shock_decomposition(m, var, class, input_type, cond_type;
-    forecast_string = "", groups = shock_groupings(m),
-    plotroot::String = figurespath(m, \"forecast\"), title = "",
-    kwargs...)
+    title = "", kwargs...)
 
 plot_shock_decomposition(m, vars, class, input_type, cond_type;
     forecast_string = "", groups = shock_groupings(m),
     plotroot::String = figurespath(m, \"forecast\"), titles = [],
     kwargs...)
-
-plot_shock_decomposition(var, shockdec, trend, dettrend, hist, forecast, groups;
-    output_file = "", verbose = :low, kwargs...)
 ```
 
 Plot shock decomposition(s) for `var` or `vars`.
 
 ### Inputs
 
+- `m::AbstractModel`
 - `var::Symbol` or `vars::Vector{Symbol}`: variable(s) whose shock decomposition
   is to be plotted, e.g. `:obs_gdp` or `[:obs_gdp, :obs_nominalrate]`
-
-**Methods 1 and 2 only:**
-
-- `m::AbstractModel`
 - `class::Symbol`
 - `input_type::Symbol`
 - `cond_type::Symbol`
 
-**Method 3 only:**
-
-- `shockdec::MeansBands`
-- `trend::MeansBands`
-- `dettrend::MeansBands`
-- `hist::MeansBands`
-- `forecast::MeansBands`
-- `groups::Vector{ShockGroup}`
-
 ### Keyword Arguments
 
+- `forecast_string::String`
+- `groups::Vector{ShockGroup}`
+- `plotroot::String`: if nonempty, plots will be saved in that directory
 - `title::String` or `titles::Vector{String}`
 - `verbose::Symbol`
 
 See `?shockdec` for additional keyword arguments, all of which can be passed
 into `plot_history_and_forecast`.
-
-**Methods 1 and 2 only:**
-
-- `forecast_string::String`
-- `groups::Vector{ShockGroup}`
-- `plotroot::String`: if nonempty, plots will be saved in that directory
-
-**Method 3 only:**
-
-- `output_file::String`: if nonempty, plot will be saved in that path
 
 ### Output
 
@@ -61,9 +37,6 @@ into `plot_history_and_forecast`.
 """
 function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
-                                  forecast_string::String = "",
-                                  groups::Vector{ShockGroup} = shock_groupings(m),
-                                  plotroot::String = figurespath(m, "forecast"),
                                   title = "",
                                   kwargs...)
 
@@ -97,36 +70,19 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
     # Loop through variables
     plots = OrderedDict{Symbol, Plots.Plot}()
     for (var, title) in zip(vars, titles)
-        output_file = if isempty(plotroot)
-            ""
-        else
-            get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
-                                  Symbol("shockdec_", detexify(var)),
-                                  forecast_string = forecast_string,
-                                  fileformat = plot_extension())
-        end
+        # Call recipe
+        plots[var] = shockdec(var, mbs..., groups;
+                              ylabel = series_ylabel(m, var, class),
+                              title = title, kwargs...)
 
-        plots[var] = plot_shock_decomposition(var, mbs..., groups;
-                                              output_file = output_file, title = title,
-                                              ylabel = series_ylabel(m, var, class),
-                                              kwargs...)
+        # Save plot
+        if !isempty(plotroot)
+            output_file = get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
+                                                Symbol("shockdec_", detexify(var)),
+                                                forecast_string = forecast_string,
+                                                fileformat = plot_extension())
+            save_plot(p, output_file, verbose = verbose)
+        end
     end
     return plots
-end
-
-function plot_shock_decomposition(var::Symbol, shockdec::MeansBands,
-                                  trend::MeansBands, dettrend::MeansBands,
-                                  hist::MeansBands, forecast::MeansBands,
-                                  groups::Vector{ShockGroup};
-                                  output_file::String = "",
-                                  verbose::Symbol = :low,
-                                  kwargs...)
-
-    # Call recipe
-    shockdec(var, shockdec, trend, dettrend, hist, forecast, groups; kwargs...)
-
-    # Save if output_file provided
-    save_plot(p, output_file, verbose = verbose)
-
-    return p
 end

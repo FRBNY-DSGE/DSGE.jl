@@ -2,7 +2,7 @@
 ```
 hair_plot(var, realized, histories, forecasts; kwargs...)
 
-hair_plot(var, realized, initial_values, forecasts; output_file = "",
+hair_plot(var, realized, initial_values, forecasts; plotroot = "",
     verbose = :low, kwargs...)
 ```
 
@@ -18,8 +18,7 @@ hair_plot(var, realized, initial_values, forecasts; output_file = "",
 
 ### Keyword Arguments
 
-- `output_file::String`: if specified, plot will be saved there as a PDF
-- `legend`
+- `plotroot::String`: if nonempty, plots will be saved in that directory
 - `verbose::Symbol`
 
 See `?hair` for additional keyword arguments, all of which can be passed into
@@ -45,8 +44,12 @@ function hair_plot(var::Symbol, realized::DataFrame,
     # Call recipe
     p = hair(var, realized, initial_values, forecasts; kwargs...)
 
-    # Save if `output_file` provided
-    save_plot(p, output_file, verbose = verbose)
+    # Save plot
+    if !isempty(plotroot)
+        output_file = joinpath(plotroot, "hairplot_" * detexify(string(var)) * "." *
+                               string(plot_extension()))
+        save_plot(p, output_file, verbose = verbose)
+    end
 
     return p
 end
