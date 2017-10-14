@@ -103,16 +103,14 @@ function plot_altpolicies{T<:AbstractModel}(models::Vector{T}, vars::Vector{Symb
                                        title = title, kwargs...)
         end
 
-        # Save if output_file provided
-        output_file = if isempty(plotroot)
-            ""
-        else
-            get_forecast_filename(plotroot, filestring_base(models[1]), :mode, cond_type,
-                                                            Symbol("altpol", fcast_prod, "_", detexify(var)),
-                                  forecast_string = forecast_string,
-                                  fileformat = plot_extension())
+        # Save plot
+        if !isempty(plotroot)
+            output_file = get_forecast_filename(plotroot, filestring_base(models[1]), :mode, cond_type,
+                                                Symbol("altpol", fcast_prod, "_", detexify(var)),
+                                                forecast_string = forecast_string,
+                                                fileformat = plot_extension())
+            save_plot(plots[var], output_file, verbose = verbose)
         end
-        save_plot(plots[var], output_file, verbose = verbose)
     end
 
     # Reset models[1] altpolicy key to original value
