@@ -31,8 +31,8 @@ forecast, you can specify the `bands_style` and `bands_pcts`.
 
 **Method 3 only:**
 
-- `history::MeansBands` or `Vector{MeansBands}`
-- `forecast::MeansBands` or `Vector{MeansBands}`
+- `history::MeansBands`
+- `forecast::MeansBands`
 
 ### Keyword Arguments
 
@@ -50,6 +50,7 @@ into `plot_history_and_forecast`.
 - `plotroot::String`: if nonempty, plots will be saved in that directory
 - `untrans::Bool`: whether to plot untransformed (model units) history and forecast
 - `fourquarter::Bool`: whether to plot four-quarter history and forecast
+- `title::String` or `titles::Vector{String}`
 
 **Method 3 only:**
 
@@ -139,34 +140,4 @@ function plot_history_and_forecast(var::Symbol, history::MeansBands, forecast::M
     save_plot(p, output_file, verbose = verbose)
 
     return p
-end
-
-function plot_history_and_forecast(var::Symbol, histories::Vector{MeansBands}, forecasts::Vector{MeansBands};
-                                   start_date::Date = histories[1].means[1, :date],
-                                   end_date::Date = forecasts[1].means[end, :date],
-                                   output_file::String = "",
-                                   hist_label::Vector{String} = fill("History", length(histories)),
-                                   forecast_label::Vector{String} = fill("Forecast", length(forecasts)),
-                                   hist_color::Vector{Colorant} = Colorant[colorant"black" for i = 1:length(histories)],
-                                   forecast_color::Vector{Colorant} = Colorant[colorant"red" for i = 1:length(forecasts)],
-                                   bands_color::Vector{Colorant} = Colorant[colorant"blue" for i = 1:length(forecasts)],
-                                   linestyle::Vector{Symbol} = fill(:solid, length(forecasts)),
-                                   plot_handle::Plots.Plot = plot(),
-                                   kwargs...)
-
-    @assert length(histories) == length(forecasts) "histories and forecasts must be same length"
-
-    for (i, (history, forecast)) in enumerate(zip(histories, forecasts))
-        plot_handle = plot_history_and_forecast(var, history, forecast;
-                            start_date = start_date, end_date = end_date,
-                            output_file = output_file,
-                            hist_label = hist_label[i], forecast_label = forecast_label[i],
-                            hist_color = hist_color[i], forecast_color = forecast_color[i],
-                            bands_color = bands_color[i],
-                            linestyle = linestyle[i],
-                            plot_handle = plot_handle,
-                            kwargs...)
-    end
-
-    return plot_handle
 end
