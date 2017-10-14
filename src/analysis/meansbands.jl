@@ -484,30 +484,34 @@ strips \"upper\" and \"lower\" band tags and returns unique list of percentage v
 """
 function which_density_bands(mb::MeansBands; uniquify=false, ordered=true)
 
-    # extract one of the keys in mb.bands
-    var  = collect(keys(mb.bands))[1]
-
-    # get all the columns in the corresponding dataframe that aren't dates
-    strs = map(string,names(mb.bands[var]))
-    strs = setdiff(strs, ["date"])
-
-    lowers = strs[map(ismatch, repmat([r"LB"], length(strs)), strs)]
-    uppers = strs[map(ismatch, repmat([r"UB"], length(strs)), strs)]
-
-    # sort
-    if ordered
-        sort!(lowers, rev=true)
-        sort!(uppers)
-    end
-
-    # return both upper and lower bands, or just percents, as desired
-    strs = if uniquify
-        sort([convert(String, split(x, " ")[1]) for x in lowers])
+    if isempty(mb.bands)
+        return String[]
     else
-        [lowers; uppers]
-    end
+        # extract one of the keys in mb.bands
+        var  = collect(keys(mb.bands))[1]
 
-    return strs
+        # get all the columns in the corresponding dataframe that aren't dates
+        strs = map(string,names(mb.bands[var]))
+        strs = setdiff(strs, ["date"])
+
+        lowers = strs[map(ismatch, repmat([r"LB"], length(strs)), strs)]
+        uppers = strs[map(ismatch, repmat([r"UB"], length(strs)), strs)]
+
+        # sort
+        if ordered
+            sort!(lowers, rev=true)
+            sort!(uppers)
+        end
+
+        # return both upper and lower bands, or just percents, as desired
+        strs = if uniquify
+            sort([convert(String, split(x, " ")[1]) for x in lowers])
+        else
+            [lowers; uppers]
+        end
+
+        return strs
+    end
 end
 
 
