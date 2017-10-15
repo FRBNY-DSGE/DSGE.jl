@@ -41,9 +41,6 @@ function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                   kwargs...)
 
     plots = plot_shock_decomposition(m, [var], class, input_type, cond_type;
-                                     forecast_string = forecast_string,
-                                     groups = groups,
-                                     plotroot = plotroot,
                                      titles = isempty(title) ? String[] : [title],
                                      kwargs...)
     return plots[var]
@@ -55,6 +52,7 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
                                   groups::Vector{ShockGroup} = shock_groupings(m),
                                   plotroot::String = figurespath(m, "forecast"),
                                   titles::Vector{String} = String[],
+                                  verbose::Symbol = :low,
                                   kwargs...)
     # Read in MeansBands
     output_vars = [Symbol(prod, class) for prod in [:shockdec, :trend, :dettrend, :hist, :forecast]]
@@ -81,7 +79,7 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
                                                 Symbol("shockdec_", detexify(var)),
                                                 forecast_string = forecast_string,
                                                 fileformat = plot_extension())
-            save_plot(p, output_file, verbose = verbose)
+            save_plot(plots[var], output_file, verbose = verbose)
         end
     end
     return plots

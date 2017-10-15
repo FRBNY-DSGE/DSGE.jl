@@ -38,7 +38,7 @@ end
 
 function hair_plot(var::Symbol, realized::DataFrame,
                    initial_values::Vector{Float64}, forecasts::Vector{MeansBands};
-                   output_file::String = "",
+                   plotroot::String = "",
                    verbose::Symbol = :low,
                    kwargs...)
     # Call recipe
@@ -104,11 +104,10 @@ hair
         error("hair must be given Tuple{Symbol, DataFrame, AbstractVector, AbstractVector{MeansBands}}. Got $(typeof(hf.args))")
     end
 
+    var, realized, initial_values, forecasts = hp.args
     if length(initial_values) != length(forecasts)
         error("Lengths of initial_values ($length(initial_values)) and forecasts ($length(forecasts)) do not match")
     end
-
-    var, realized, initial_values, forecasts = hp.args
 
     # Assign date ticks
     date_ticks = Base.filter(x -> Dates.month(x) == 3,            realized[:date])
