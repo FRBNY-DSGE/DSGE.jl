@@ -86,3 +86,119 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
     end
     return plots
 end
+
+@userplot Shockdec
+
+"""
+```
+shockdec(var, shockdec, trend, dettrend, hist, forecast, groups;
+    start_date = shockdec.means[1, :date],
+    end_date = shockdec.means[end, :date],
+    hist_label = \"Detrended History\",
+    forecast_label = \"Detrended Forecast\",
+    hist_color = :black, forecast_color = :red, tick_size = 5)
+```
+
+User recipe called by `plot_shock_decomposition`.
+
+### Inputs
+
+- `var::Symbol`: e.g. `:obs_gdp`
+- `shockdec::MeansBands`
+- `trend::MeansBands`
+- `dettrend::MeansBands`
+- `hist::MeansBands`
+- `forecast::MeansBands`
+- `groups::Vector{ShockGroup}`
+
+### Keyword Arguments
+
+- `start_date::Date`
+- `end_date::Date`
+- `hist_label::String`
+- `forecast_label::String`
+- `hist_color`
+- `forecast_color`
+- `tick_size::Int`: x-axis (time) tick size in units of years
+
+Additionally, all Plots attributes (see docs.juliaplots.org/latest/attributes)
+are supported as keyword arguments.
+"""
+shockdec
+
+@recipe function f(sd::Shockdec;
+                   start_date = sd.args[2].means[1, :date],
+                   end_date = sd.args[2].means[end, :date],
+                   hist_label = "Detrended History",
+                   forecast_label = "Detrended Forecast",
+                   hist_color = :black,
+                   forecast_color = :red,
+                   tick_size = 5)
+    # Error checking
+    if length(sd.args) != 7 || typeof(sd.args[1]) != Symbol ||
+        typeof(sd.args[2]) != MeansBands || typeof(sd.args[3]) != MeansBands ||
+        typeof(sd.args[4]) != MeansBands || typeof(sd.args[5]) != MeansBands ||
+        typeof(sd.args[6]) != MeansBands || typeof(sd.args[7]) != Vector{ShockGroup}
+
+        error("shockdec must be given a Symbol, five MeansBands, and a Vector{ShockGroup}. Got $(typeof(sd.args))")
+    end
+
+    var, shockdec, trend, dettrend, hist, forecast, groups = sd.args
+
+    # Construct DataFrame with detrended mean, deterministic trend, and all shocks
+    df = DSGE.prepare_means_table_shockdec(shockdec, trend, dettrend, var,
+                                      mb_hist = hist, mb_forecast = forecast,
+                                      detexify_shocks = false,
+                                      groups = groups)
+    dates = df[:date]
+    xnums = (1:length(dates)) - 0.5
+
+    # Assign date ticks
+    inds = intersect(find(x -> start_date .<= x .<= end_date,  dates),
+                     find(x -> Dates.month(x) == 3,            dates),
+                     find(x -> Dates.year(x) % tick_size == 0, dates))
+    xticks --> (xnums[inds], map(Dates.year, dates[inds]))
+
+    # Shock contributions
+    @series begin
+        labels    = map(x -> x.name,  groups)
+        cat_names = map(Symbol, labels)
+        colors    = map(x -> x.color, groups)
+        ngroups   = length(groups)
+
+        labels     --> reshape(labels, 1, ngroups)
+        color      --> reshape(colors, 1, ngroups)
+        linealpha  --> 0
+        bar_width  --> 1
+        legendfont --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
+
+        inds = find(start_date .<= dates .<= end_date)
+        x = df[inds, :date]
+        y = convert(Array, df[inds, cat_names])
+        StatPlots.GroupedBar((x, y))
+    end
+
+    seriestype := :line
+    linewidth  := 2
+    ylim       := :auto
+
+    # Detrended mean history
+    @series begin
+        linecolor := hist_color
+        label     := hist_label
+
+        inds = intersect(find(start_date .<= dates .<= end_date),
+                         find(hist.means[1, :date] .<= dates .<= hist.means[end, :date]))
+        xnums[inds], df[inds, :detrendedMean]
+    end
+
+    # Detrended mean forecast
+    @series begin
+        linecolor := forecast_color
+        label     := forecast_label
+
+        inds = intersect(find(start_date .<= dates .<= end_date),
+                         find(hist.means[end, :date] .<= dates .<= forecast.means[end, :date]))
+        xnums[inds], df[inds, :detrendedMean]
+    end
+end
