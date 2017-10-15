@@ -49,6 +49,7 @@ function plot_impulse_response(m::AbstractModel, shock::Symbol, vars::Vector{Sym
                                forecast_string::String = "",
                                plotroot::String = figurespath(m, "forecast"),
                                titles::Vector{String} = String[],
+                               verbose::Symbol = :low,
                                kwargs...)
     # Read in MeansBands
     mb = read_mb(m, input_type, cond_type, Symbol(:irf, class), forecast_string = forecast_string)
