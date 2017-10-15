@@ -53,6 +53,7 @@ function plot_altpolicies{T<:AbstractModel}(models::Vector{T}, vars::Vector{Symb
                                             fourquarter::Bool = false,
                                             plotroot::String = figurespath(m, "forecast"),
                                             titles::Vector{String} = String[],
+                                            verbose::Symbol = :low,
                                             kwargs...)
     # Determine output_vars
     if fourquarter

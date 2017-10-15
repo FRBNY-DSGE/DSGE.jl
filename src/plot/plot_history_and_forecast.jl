@@ -57,6 +57,7 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
                                    fourquarter::Bool = false,
                                    plotroot::String = figurespath(m, "forecast"),
                                    titles::Vector{String} = String[],
+                                   verbose::Symbol = :low,
                                    kwargs...)
     # Determine output_vars
     if untrans && fourquarter
@@ -88,7 +89,7 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
     plots = OrderedDict{Symbol, Plots.Plot}()
     for (var, title) in zip(vars, titles)
         # Call recipe
-        plots[var] = histforecast(var, history, forecast;
+        plots[var] = histforecast(var, hist, fcast;
                                   ylabel = series_ylabel(m, var, class, untrans = untrans,
                                                          fourquarter = fourquarter),
                                   title = title, kwargs...)
@@ -99,7 +100,7 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
                                                 Symbol(fcast_prod, "_", detexify(var)),
                                                 forecast_string = forecast_string,
                                                 fileformat = plot_extension())
-            save_plot(p, output_file, verbose = verbose)
+            save_plot(plots[var], output_file, verbose = verbose)
         end
     end
     return plots
