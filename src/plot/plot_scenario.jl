@@ -47,6 +47,7 @@ function plot_scenario(m::AbstractModel, vars::Vector{Symbol}, class::Symbol,
                        plotroot::String = figurespath(m, "scenarios"),
                        titles::Vector{String} = String[],
                        tick_size::Int = 1, legend = :none,
+                       verbose::Symbol = :low,
                        kwargs...)
     # Determine output_var
     fcast_prod = if untrans && fourquarter
