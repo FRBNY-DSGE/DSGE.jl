@@ -1,13 +1,14 @@
 """
 ```
 plot_history_and_forecast(m, var, class, input_type, cond_type;
-    title = "", kwargs...)
+    title = "", plot_handle = plot(), kwargs...)
 
 plot_history_and_forecast(m, vars, class, input_type, cond_type;
     forecast_string = "", bdd_and_unbdd = false,
     untrans = false, fourquarter = false,
     plotroot = figurespath(m, \"forecast\"), titles = [],
-    verbose = :low, kwargs...)
+    plot_handles = fill(plot(), length(vars)), verbose = :low,
+    kwargs...)
 ```
 
 Plot history and forecast for `var` or `vars`. If these correspond to a
@@ -30,6 +31,8 @@ full-distribution forecast, you can specify the `bands_style` and `bands_pcts`.
 - `fourquarter::Bool`: whether to plot four-quarter history and forecast
 - `plotroot::String`: if nonempty, plots will be saved in that directory
 - `title::String` or `titles::Vector{String}`
+- `plot_handle::Plot` or `plot_handles::Vector{Plot}`: existing plot(s) on which
+  to overlay new forecast plot(s)
 - `verbose::Symbol`
 
 See `?histforecast` for additional keyword arguments, all of which can be passed
@@ -41,10 +44,12 @@ into `plot_history_and_forecast`.
 """
 function plot_history_and_forecast(m::AbstractModel, var::Symbol, class::Symbol,
                                    input_type::Symbol, cond_type::Symbol;
-                                   title::String = "", kwargs...)
+                                   title::String = "", plot_handle::Plots.Plot = plot(),
+                                   kwargs...)
 
     plots = plot_history_and_forecast(m, [var], class, input_type, cond_type;
                                       titles = isempty(title) ? String[] : [title],
+                                      plot_handles = Plots.Plot[plot_handle],
                                       kwargs...)
     return plots[var]
 end
@@ -57,6 +62,7 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
                                    fourquarter::Bool = false,
                                    plotroot::String = figurespath(m, "forecast"),
                                    titles::Vector{String} = String[],
+                                   plot_handles::Vector{Plots.Plot} = Plots.Plot[plot() for i = 1:length(vars)],
                                    verbose::Symbol = :low,
                                    kwargs...)
     # Determine output_vars
@@ -87,12 +93,13 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
 
     # Loop through variables
     plots = OrderedDict{Symbol, Plots.Plot}()
-    for (var, title) in zip(vars, titles)
+    for (var, title, plot_handle) in zip(vars, titles, plot_handles)
         # Call recipe
-        plots[var] = histforecast(var, hist, fcast;
-                                  ylabel = series_ylabel(m, var, class, untrans = untrans,
-                                                         fourquarter = fourquarter),
-                                  title = title, kwargs...)
+        plots[var] = plot(plot_handle)
+        histforecast!(var, hist, fcast;
+                      ylabel = series_ylabel(m, var, class, untrans = untrans,
+                                             fourquarter = fourquarter),
+                      title = title, kwargs...)
 
         # Save plot
         if !isempty(plotroot)
