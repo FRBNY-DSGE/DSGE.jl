@@ -62,6 +62,7 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
                                   input_type::Symbol, cond_type::Symbol;
                                   forecast_string::String = "",
                                   bdd_and_unbdd::Bool = false,
+                                  bands_pcts::Vector{String} = ["90.0%"],
                                   old_hist_label::String = "",
                                   new_hist_label::String = "",
                                   old_forecast_label::String = "Old Forecast",
@@ -99,13 +100,13 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
                                   hist_label = old_hist_label, forecast_label = old_forecast_label,
                                   hist_color = old_hist_color, forecast_color = old_forecast_color,
                                   bands_color = old_forecast_color, linestyle = :solid,
-                                  bands_style = :line, kwargs...)
+                                  bands_pcts = bands_pcts, bands_style = :line, kwargs...)
 
         histforecast!(var, histnew, forecastnew;
                       hist_label = new_hist_label, forecast_label = new_forecast_label,
                       hist_color = new_hist_color, forecast_color = new_forecast_color,
                       bands_color = new_forecast_color, linestyle = :dash,
-                      bands_style = :line, kwargs...)
+                      bands_pcts = bands_pcts, bands_style = :line, kwargs...)
 
         # Save plot
         if !isempty(plotroot)
