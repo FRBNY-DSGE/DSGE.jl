@@ -142,6 +142,6 @@ irf
         label     := label_mean_bands ? "Mean" : ""
         linewidth := 2
         linecolor := mean_color
-        mb.means[varshock]
+        sign * mb.means[varshock]
     end
 end
