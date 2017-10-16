@@ -1,16 +1,15 @@
 """
 ```
-hair_plot(var, df, histories, forecasts; kwargs...)
+hair_plot(var, realized, histories, forecasts; kwargs...)
 
-hair_plot(var, df, initial_values, forecasts; output_file = "", hist_label = \"Realized\",
-    forecast_label = \"Forecasts\", forecast_palette = Symbol(), forecast_color = :red,
-    legend = :best, verbose = :low)
+hair_plot(var, realized, initial_values, forecasts; plotroot = "",
+    verbose = :low, kwargs...)
 ```
 
 ### Inputs
 
 - `var::Symbol`: e.g. `:obs_gdp`
-- `df::DataFrame`: must contain realized values of `var`
+- `realized::DataFrame`: must contain realized values of `var`
 - `histories::Vector{MeansBands}` (method 1) or
   `initial_values::Vector{Float64}` (method 2): vector of either historical
   `MeansBands` or initial forecast values (i.e. s_{T|T} or y_T). Needed to
@@ -19,64 +18,128 @@ hair_plot(var, df, initial_values, forecasts; output_file = "", hist_label = \"R
 
 ### Keyword Arguments
 
-- `output_file::String`: if specified, plot will be saved there as a PDF
-- `hist_label::String`
-- `forecast_label::String`
-- `forecast_palette::Symbol`: if specified, the hair colors will be chosen
-  according to this palette. Otherwise they will all be `forecast_color`
-- `forecast_color::Colorant`
-- `legend`
+- `plotroot::String`: if nonempty, plots will be saved in that directory
 - `verbose::Symbol`
+
+See `?hair` for additional keyword arguments, all of which can be passed into
+`hair_plot`.
 
 ### Output
 
 - `p::Plot`
 """
-function hair_plot(var::Symbol, df::DataFrame,
+function hair_plot(var::Symbol, realized::DataFrame,
                    histories::Vector{MeansBands}, forecasts::Vector{MeansBands};
                    kwargs...)
 
     initial_values = map(history -> history.means[end, var], histories)
-    hair_plot(var, df, initial_values, forecasts; kwargs...)
+    hair_plot(var, realized, initial_values, forecasts; kwargs...)
 end
 
-function hair_plot(var::Symbol, df::DataFrame,
+function hair_plot(var::Symbol, realized::DataFrame,
                    initial_values::Vector{Float64}, forecasts::Vector{MeansBands};
-                   output_file::String = "",
-                   hist_label::String = "Realized",
-                   forecast_label::String = "Forecasts",
-                   forecast_palette::Symbol = Symbol(),
-                   forecast_color::Colorant = colorant"red",
-                   legend = :best,
-                   verbose::Symbol = :low)
-    # Dates
-    datenums   = map(quarter_date_to_number, df[:date])
-    date_ticks = get_date_ticks(df[:date])
+                   plotroot::String = "",
+                   verbose::Symbol = :low,
+                   kwargs...)
+    # Call recipe
+    p = hair(var, realized, initial_values, forecasts; kwargs...)
 
-    # Initialize plot
-    p = Plots.plot(xtick = date_ticks, legend = legend)
-
-    # Plot realized (transformed) series
-    plot!(p, datenums, df[var], label = hist_label, linewidth = 2, linecolor = :black)
-
-    # Plot each forecast
-    for (initial_value, forecast) in zip(initial_values, forecasts)
-        date_0 = iterate_quarters(forecast.means[1, :date], -1)
-        dates = vcat([date_0], forecast.means[:date])
-        datenums = map(quarter_date_to_number, dates)
-
-        series = vcat([initial_value], forecast.means[var])
-
-        label = forecast == forecasts[1] ? forecast_label : ""
-        if forecast_palette == Symbol()
-            plot!(p, datenums, series, label = label, linewidth = 1, linecolor = forecast_color)
-        else
-            plot!(p, datenums, series, label = label, linewidth = 1, palette = forecast_palette)
-        end
+    # Save plot
+    if !isempty(plotroot)
+        output_file = joinpath(plotroot, "hairplot_" * detexify(string(var)) * "." *
+                               string(plot_extension()))
+        save_plot(p, output_file, verbose = verbose)
     end
 
-    # Save if `output_file` provided
-    save_plot(p, output_file, verbose = verbose)
-
     return p
+end
+
+@userplot Hair
+
+"""
+```
+hair(var, realized, initial_values, forecasts;
+    hist_label = \"Realized\", forecast_label = \"Forecasts\",
+    hist_color = :black, forecast_color = :red, forecast_palette = :none,
+    tick_size = 2)
+```
+
+User recipe called by `hair_plot`.
+
+### Inputs
+
+- `var::Symbol`: e.g. `:obs_gdp`
+- `initial_values::Vector{Float64}`: vector of initial forecast values (i.e. s_{T|T} or y_T). Needed to
+  connect the forecast hairs to the realized data line
+- `forecasts::Vector{MeansBands}`
+
+### Keyword Arguments
+
+- `hist_label::String`
+- `forecast_label::String`
+- `forecast_color`
+- `forecast_palette`: if not `:none`, the hair colors will be chosen according
+  to this palette; otherwise they will all be `forecast_color`. Values
+  correspond to values of the Plots attribute `color_palette` (see
+  docs.juliaplots.org/latest/attributes)
+- `tick_size::Int`: x-axis (time) tick size in units of years
+
+Additionally, all Plots attributes (see docs.juliaplots.org/latest/attributes)
+are supported as keyword arguments.
+"""
+hair
+
+@recipe function f(hp::Hair;
+                   hist_label = "Realized",
+                   forecast_label = "Forecasts",
+                   hist_color = :black,
+                   forecast_color = :red,
+                   forecast_palette = :none,
+                   tick_size = 2)
+    # Error checking
+    if length(hp.args) != 4 || typeof(hp.args[1]) != Symbol || typeof(hp.args[2]) != DataFrame ||
+        !(typeof(hp.args[3]) <: AbstractVector) ||
+        !(typeof(hp.args[4]) <: AbstractVector{MeansBands})
+
+        error("hair must be given Tuple{Symbol, DataFrame, AbstractVector, AbstractVector{MeansBands}}. Got $(typeof(hf.args))")
+    end
+
+    var, realized, initial_values, forecasts = hp.args
+    if length(initial_values) != length(forecasts)
+        error("Lengths of initial_values ($length(initial_values)) and forecasts ($length(forecasts)) do not match")
+    end
+
+    # Assign date ticks
+    date_ticks = Base.filter(x -> Dates.month(x) == 3,            realized[:date])
+    date_ticks = Base.filter(x -> Dates.year(x) % tick_size == 0, date_ticks)
+    xticks --> (date_ticks, map(Dates.year, date_ticks))
+
+    # Realized series
+    @series begin
+        seriestype := :line
+        linewidth := 2
+        linecolor := hist_color
+        label     := hist_label
+
+        realized[:date], realized[var]
+    end
+
+    # Forecasts
+    for (initial_value, forecast) in zip(initial_values, forecasts)
+        @series begin
+            seriestype := :line
+            linewidth  := 1
+            label      := forecast == forecasts[1] ? forecast_label : ""
+            if forecast_palette == :none
+                linecolor := forecast_color
+            else
+                palette   := forecast_palette
+            end
+
+            initial_date = iterate_quarters(forecast.means[1, :date], -1)
+            x = vcat(initial_date,  forecast.means[:date])
+            y = vcat(initial_value, forecast.means[var])
+            x, y
+        end
+    end
 end

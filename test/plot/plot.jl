@@ -63,9 +63,8 @@ plot_scenario(m, :obs_nominalrate, :obs, alt, fourquarter = true, verbose = :non
                                           untrans = true, fourquarter = true)
 
 # Hair plot
-df = load_data(m, verbose = :none)
-output_file = joinpath(saveroot(m), "hairplot__obs_nominalrate.pdf")
+realized = load_data(m, verbose = :none)
 hist_mb = read_mb(m, :full, :none, :histobs)
 fcast_mb = read_mb(m, :full, :none, :bddforecastobs)
-hair_plot(:obs_nominalrate, df, [hist_mb], [fcast_mb];
-          output_file = output_file, verbose = :none)
+hair_plot(:obs_nominalrate, realized, [hist_mb], [fcast_mb];
+          plotroot = saveroot(m), verbose = :none)
