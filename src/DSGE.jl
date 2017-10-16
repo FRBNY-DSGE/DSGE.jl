@@ -2,7 +2,7 @@ isdefined(Base, :__precompile__) && __precompile__(false)
 
 module DSGE
     using Base.Dates, Base.Test
-    using DataFrames, Distributions, FredData, HDF5, JLD, Optim, Plots, StateSpaceRoutines, StatPlots
+    using DataFrames, Distributions, FredData, HDF5, JLD, Optim, Plots, RecipesBase, StateSpaceRoutines, StatPlots
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
@@ -186,7 +186,7 @@ module DSGE
     include("scenarios/transform.jl")
 
     include("plot/util.jl")
-    include("plot/plot_parameters.jl")
+    include("plot/plot_prior_posterior.jl")
     include("plot/plot_impulse_response.jl")
     include("plot/plot_history_and_forecast.jl")
     include("plot/hair_plot.jl")
