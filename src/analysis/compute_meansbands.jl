@@ -134,7 +134,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
 
             mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                           pop_growth = pop_growth, shock_name = Nullable(shock_name),
-                                          kwargs...),
+                                          forecast_string = forecast_string, kwargs...),
                           variable_names)
 
             # Re-assemble pmap outputs
