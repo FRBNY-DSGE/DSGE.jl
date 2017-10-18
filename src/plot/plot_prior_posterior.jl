@@ -107,7 +107,7 @@ priorpost
     @series begin
         seriestype := :histogram
         normalize  := true
-        label      := param.fixed ? "Posterior: " * DSGE.describe_prior(param) : "Posterior"
+        label      := param.fixed ? "Posterior: " * describe_prior(param) : "Posterior"
         color      := posterior_color
 
         posterior_draws
@@ -115,12 +115,11 @@ priorpost
 
     # Prior
     @series begin
-        label      := "Prior: " * DSGE.describe_prior(param)
+        label      := "Prior: " * describe_prior(param)
         color      := prior_color
         linewidth --> 4
 
         if param.fixed
-            @show keys(plotattributes)
             [minimum(posterior_draws), maximum(posterior_draws)], [1, 1]
         elseif !param.fixed && !isnull(param.prior)
             prior = get(param.prior)
