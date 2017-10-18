@@ -112,6 +112,14 @@ custom_settings = Dict{Symbol, Setting}(
 m = Model990(custom_settings = custom_settings)
 ```
 
+Or like this:
+```julia
+m = Model990()
+m <= Setting(:use_parallel_workers, true)
+```
+Note that using this second method will not work for all settings, e.g. `n_anticipated_shocks`
+is a setting that must be passed into the model during construction, as in the first example.
+
 By default, passing in `custom_settings` overwrites the entries in the model
 object's `settings` field. However, with the additional keyword argument
 `testing = true`, it will overwrite the entries in `test_settings`:
