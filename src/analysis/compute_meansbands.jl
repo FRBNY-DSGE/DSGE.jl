@@ -192,8 +192,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
 
     # Reverse transform
     y0_index = get_y0_index(m, product)
-    use_data = class == :obs && !(product in [:irf, :hist4q])
-    data = use_data ? convert(Vector{Float64}, df[var_name]) : fill(NaN, size(df, 1))
+    data = class == :obs ? convert(Vector{Float64}, df[var_name]) : fill(NaN, size(df, 1))
     transformed_series = mb_reverse_transform(fcast_series, transform, product, class,
                                               y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)
@@ -218,10 +217,9 @@ function mb_reverse_transform(fcast_series::Array{Float64}, transform::Function,
         return fcast_series
     end
 
-    use_data = class == :obs && !(product in [:irf, :hist4q])
-
     if product in [:hist4q, :forecast4q, :bddforecast4q]
         transform4q = get_transform4q(transform)
+        use_data = class == :obs && product != :hist4q
 
         y0s = if transform4q in [loggrowthtopct_4q_percapita, loggrowthtopct_4q]
             # Sum growth rates y_{t-3}, y_{t-2}, y_{t-1}, and y_t
@@ -241,9 +239,11 @@ function mb_reverse_transform(fcast_series::Array{Float64}, transform::Function,
         # products which are given in deviations
         if product in [:shockdec, :dettrend, :irf]
             transform = get_nopop_transform(transform)
+            y0 = 0.0
+        else
+            y0 = class == :obs ? data[y0_index] : NaN
         end
 
-        y0 = use_data ? data[y0_index] : NaN
         reverse_transform(fcast_series, transform;
                           y0 = y0, pop_growth = pop_growth)
     end
