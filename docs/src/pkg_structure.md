@@ -4,8 +4,7 @@
 ## `src/`
 ### `DSGE.jl`: The main module file.
 ### `abstractdsgemodel.jl`: Defines the `AbstractModel` type.
-### `parameters.jl`: Implements the `AbstractParameter` type and its
-       subtypes.
+### `parameters.jl`: Implements the `AbstractParameter` type and its subtypes.
 ### `settings.jl`: Implements the `Setting` type.
 ### `defaults.jl`: Specifies default `Setting`s.
 ### `distributions_ext.jl`: DSGE-specific extensions of `Distributions` functionality.
