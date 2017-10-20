@@ -84,9 +84,13 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
     # shocks to be equal to the standard deviation for the
     # unanticipated policy shock
     for i = 1:n_anticipated_shocks(m)
-        ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
-        DD[obs[Symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
-        QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_rm")]^2 / 16
+        ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
+        DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
+        if subspec(m) == "ss1"
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_rm")]^2 / n_anticipated_shocks(m)
+        else
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_rm")]^2 / 16
+        end
     end
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
