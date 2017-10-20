@@ -116,13 +116,15 @@ function measurement{T<:AbstractFloat}(m::Model990{T},
     QQ[exo[:gdpdef_sh], exo[:gdpdef_sh]]   = m[:σ_gdpdef]^2
     QQ[exo[:corepce_sh], exo[:corepce_sh]] = m[:σ_corepce]^2
 
-    # These lines set the standard deviations for the anticipated shocks. They
-    # are here no longer calibrated to the std dev of contemporaneous shocks,
-    # as we had in 904
+    # These lines set the standard deviations for the anticipated shocks
     for i = 1:n_anticipated_shocks(m)
-        ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
-        DD[obs[Symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
-        QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
+        ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
+        DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
+        if subspec(m) == "ss6"
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_anticipated_shocks(m)
+        else
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
+        end
     end
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
