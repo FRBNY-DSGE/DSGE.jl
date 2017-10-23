@@ -49,6 +49,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
         scenario_means_bands(m, scen, output_var; kwargs...)
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
+            output_file = get_scenario_mb_output_file(m, scen, output_var)
             println("wrote " * basename(output_file))
         end
     end
