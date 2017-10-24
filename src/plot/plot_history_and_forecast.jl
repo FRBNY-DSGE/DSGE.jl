@@ -168,6 +168,7 @@ histforecast
                    bands_style = :fan,
                    label_bands = false,
                    transparent_bands = true,
+                   bands_alpha = 0.1,
                    tick_size = 2)
     # Error checking
     if length(hf.args) != 3 || typeof(hf.args[1]) != Symbol ||
@@ -202,12 +203,12 @@ histforecast
             @series begin
                 if transparent_bands
                     fillcolor := bands_color
-                    fillalpha := 0.1
+                    fillalpha := bands_alpha
                 else
                     if typeof(bands_color) in [Symbol, String]
                         bands_color = parse(Colorant, bands_color)
                     end
-                    fillcolor := weighted_color_mean(0.1*i, bands_color, colorant"white")
+                    fillcolor := weighted_color_mean(bands_alpha*i, bands_color, colorant"white")
                     fillalpha := 1
                 end
                 linealpha  := 0
