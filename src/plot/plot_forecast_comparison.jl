@@ -4,14 +4,18 @@ plot_forecast_comparison(m_old, m_new, var, class, input_type, cond_type;
     title = "", kwargs...)
 
 plot_forecast_comparison(m_old, m_new, vars, class, input_type, cond_type;
-    input_type_old = input_type, cond_type_old = cond_type, 
-    forecast_string = "", forecast_string_old = forecast_string, 
+    input_type_old = input_type, cond_type_old = cond_type,
+    forecast_string = "", forecast_string_old = forecast_string,
     bdd_and_unbdd = false, bands_pcts = [\"90.0%\"],
-    old_hist_label = "", new_hist_label = "",
-    old_forecast_label = \"Old Forecast\", new_forecast_label = \"New Forecast\",
-    old_hist_color = :grey, new_hist_color = :black,
-    old_forecast_color = :blue, new_forecast_color = :red,
-    verbose = :low)
+    old_names = Dict(:hist => "", :forecast => \"Old Forecast\"),
+    new_names = Dict(:hist => "", :forecast => \"New Forecast\"),
+    old_colors = Dict(:hist => :grey, :forecast => :blue, :bands => :blue),
+    new_colors = Dict(:hist => :black, :forecast => :red, :bands => :red),
+    old_alphas = Dict{Symbol, Float64}(),
+    new_alphas = Dict{Symbol, Float64}(),
+    old_styles = Dict(:hist => :dash, :forecast => :dash, :bands => :dash),
+    new_styles = Dict(:hist => :solid, :forecast => :solid, :bands => :solid),
+    plotroot = "", titles = [], verbose = :low)
 ```
 
 Plot forecasts from `m_old` and `m_new` of `var` or `vars`.
@@ -34,14 +38,18 @@ Plot forecasts from `m_old` and `m_new` of `var` or `vars`.
 - `forecast_string_old::String`
 - `bdd_and_unbdd::Bool`: if true, then unbounded means and bounded bands are plotted
 - `bands_pcts::Vector{String}`: which bands to plot
-- `old_hist_label::String`
-- `new_hist_label::String`
-- `old_forecast_label::String`
-- `new_forecast_label::String`
-- `old_hist_color::Colorant`
-- `new_hist_color::Colorant`
-- `old_forecast_color::Colorant`
-- `new_forecast_color::Colorant`
+- `old_names::Dict{Symbol, String}`: maps keys `[:hist, :forecast, :bands]` to
+  labels for old forecast
+- `new_names::Dict{Symbol, String}`
+- `old_colors::Dict{Symbol, Any}`: maps keys `[:hist, :forecast, :bands]` to
+  colors for old forecast
+- `new_colors::Dict{Symbol, Any}`
+- `old_alphas::Dict{Symbol, Float64}`: maps keys `[:hist, :forecast, :bands]` to
+  transparency values for old forecast
+- `new_alphas::Dict{Symbol, Float64}`
+- `old_styles::Dict{Symbol, Symbol}`: maps keys `[:hist, :forecast, :bands]` to
+  linestyles for old forecast
+- `new_styles::Dict{Symbol, Symbol}`
 - `plotroot::String`: if nonempty, plots will be saved in that directory
 - `title::String` or `titles::Vector{String}`
 - `verbose::Symbol`
@@ -71,14 +79,14 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
                                   forecast_string_old::String = forecast_string,
                                   bdd_and_unbdd::Bool = false,
                                   bands_pcts::Vector{String} = ["90.0%"],
-                                  old_hist_label::String = "",
-                                  new_hist_label::String = "",
-                                  old_forecast_label::String = "Old Forecast",
-                                  new_forecast_label::String = "New Forecast",
-                                  old_hist_color::Colorant = colorant"gray",
-                                  new_hist_color::Colorant = colorant"black",
-                                  old_forecast_color::Colorant = colorant"blue",
-                                  new_forecast_color::Colorant = colorant"red",
+                                  old_names = Dict(:hist => "", :forecast => "Old Forecast"),
+                                  new_names = Dict(:hist => "", :forecast => "New Forecast"),
+                                  old_colors = Dict(:hist => :grey, :forecast => :blue, :bands => :blue),
+                                  new_colors = Dict(:hist => :black, :forecast => :red, :bands => :red),
+                                  old_alphas = Dict{Symbol, Float64}(),
+                                  new_alphas = Dict{Symbol, Float64}(),
+                                  old_styles = Dict(:hist => :dash, :forecast => :dash, :bands => :dash),
+                                  new_styles = Dict(:hist => :solid, :forecast => :solid, :bands => :solid),
                                   plotroot::String = "",
                                   titles::Vector{String} = String[],
                                   verbose::Symbol = :low,
@@ -102,18 +110,17 @@ function plot_forecast_comparison(m_old::AbstractModel, m_new::AbstractModel,
     # Loop through variables
     plots = OrderedDict{Symbol, Plots.Plot}()
     for (var, title) in zip(vars, titles)
-
         # Call recipe
         plots[var] = histforecast(var, histold, forecastold;
-                                  hist_label = old_hist_label, forecast_label = old_forecast_label,
-                                  hist_color = old_hist_color, forecast_color = old_forecast_color,
-                                  bands_color = old_forecast_color, linestyle = :solid,
-                                  bands_pcts = bands_pcts, bands_style = :line, kwargs...)
+                                  names = old_names, colors = old_colors,
+                                  alphas = old_alphas, styles = old_styles,
+                                  bands_pcts = bands_pcts, bands_style = :line,
+                                  title = title, ylabel = series_ylabel(m_new, var, class),
+                                  kwargs...)
 
         histforecast!(var, histnew, forecastnew;
-                      hist_label = new_hist_label, forecast_label = new_forecast_label,
-                      hist_color = new_hist_color, forecast_color = new_forecast_color,
-                      bands_color = new_forecast_color, linestyle = :dash,
+                      names = new_names, colors = new_colors,
+                      alphas = new_alphas, styles = new_styles,
                       bands_pcts = bands_pcts, bands_style = :line, kwargs...)
 
         # Save plot
