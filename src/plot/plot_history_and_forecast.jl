@@ -119,8 +119,8 @@ end
 ```
 histforecast(var, hist, forecast;
     start_date = hist.means[1, :date], end_date = forecast.means[end, :date],
-    hist_label = \"History\", forecast_label = \"Forecast\",
-    hist_color = :black, forecast_color = :red, bands_color = :blue,
+    names = Dict{Symbol, String}(), colors = Dict{Symbol, Any}(),
+    alphas = Dict{Symbol, Float64}(), styles = Dict{Symbol, Symbol}(),
     bands_pcts = union(which_density_bands(hist, uniquify = true),
                        which_density_bands(forecast, uniquify = true)),
     bands_style = :fan, label_bands = false, transparent_bands = true,
@@ -139,11 +139,14 @@ User recipe called by `plot_history_and_forecast`.
 
 - `start_date::Date`
 - `end_date::Date`
-- `hist_label::String`
-- `forecast_label::String`
-- `hist_color`
-- `forecast_color`
-- `bands_color`
+- `names::Dict{Symbol, String}`: maps keys `[:hist, :forecast, :bands]` to
+  labels. If a key is missing from `names`, a default value will be used
+- `colors::Dict{Symbol, Any}`: maps keys `[:hist, :forecast, :bands]` to
+  colors
+- `alphas::Dict{Symbol, Float64}`: maps keys `[:hist, :forecast, :bands]` to
+  transparency values (between 0.0 and 1.0)
+- `styles::Dict{Symbol, Symbol}`: maps keys `[:hist, :forecast, :bands]` to
+  linestyles
 - `bands_pcts::Vector{String}`: which bands percentiles to plot
 - `bands_style::Symbol`: either `:fan` or `:line`
 - `label_bands::Bool`
@@ -158,23 +161,28 @@ histforecast
 @recipe function f(hf::HistForecast;
                    start_date = hf.args[2].means[1, :date],
                    end_date = hf.args[3].means[end, :date],
-                   hist_label = "History",
-                   forecast_label = "Forecast",
-                   hist_color = :black,
-                   forecast_color = :red,
-                   bands_color = :blue,
+                   names = Dict{Symbol, String}(),
+                   colors = Dict{Symbol, Any}(),
+                   alphas = Dict{Symbol, Float64}(),
+                   styles = Dict{Symbol, Symbol}(),
                    bands_pcts = union(which_density_bands(hf.args[2], uniquify = true),
                                       which_density_bands(hf.args[3], uniquify = true)),
                    bands_style = :fan,
                    label_bands = false,
                    transparent_bands = true,
-                   bands_alpha = 0.1,
                    tick_size = 2)
     # Error checking
     if length(hf.args) != 3 || typeof(hf.args[1]) != Symbol ||
         typeof(hf.args[2]) != MeansBands || typeof(hf.args[3]) != MeansBands
 
         error("histforecast must be given a Symbol and two MeansBands. Got $(typeof(hf.args))")
+    end
+
+    for dict in [names, colors, styles, alphas]
+        bad_keys = setdiff(keys(dict), [:hist, :forecast, :bands])
+        if !isempty(bad_keys)
+            error("Invalid key(s) in $dict: $bad_keys")
+        end
     end
 
     # Concatenate MeansBands
@@ -199,6 +207,10 @@ histforecast
         lb = combined.bands[var][inds, Symbol(pct, " LB")]
         ub = combined.bands[var][inds, Symbol(pct, " UB")]
 
+        bands_color = haskey(colors, :bands) ? colors[:bands] : :blue
+        bands_alpha = haskey(alphas, :bands) ? alphas[:bands] : 0.1
+        bands_linestyle = haskey(styles, :bands) ? styles[:bands] : :solid
+
         if bands_style == :fan
             @series begin
                 if transparent_bands
@@ -219,15 +231,19 @@ histforecast
         elseif bands_style == :line
             # Lower bound
             @series begin
-                linecolor := bands_color
-                label     := label_bands ? "$pct LB" : ""
+                linewidth --> 2
+                linecolor :=  bands_color
+                linestyle :=  bands_linestyle
+                label     :=  label_bands ? "$pct LB" : ""
                 x, lb
             end
 
             # Upper bound
             @series begin
-                linecolor := bands_color
-                label     := label_bands ? "$pct UB" : ""
+                linewidth --> 2
+                linecolor :=  bands_color
+                linestyle :=  bands_linestyle
+                label     :=  label_bands ? "$pct UB" : ""
                 x, ub
             end
         else
@@ -239,8 +255,10 @@ histforecast
     @series begin
         seriestype :=  :line
         linewidth  --> 2
-        linecolor  :=  hist_color
-        label      :=  hist_label
+        linecolor  :=  haskey(colors, :hist) ? colors[:hist] : :black
+        alpha      :=  haskey(alphas, :hist) ? alphas[:hist] : 1.0
+        linestyle  :=  haskey(styles, :hist) ? styles[:hist] : :solid
+        label      :=  haskey(names, :hist) ? names[:hist] : "History"
 
         inds = intersect(find(start_date .<= dates .<= end_date),
                          find(hist.means[1, :date] .<= dates .<= hist.means[end, :date]))
@@ -251,8 +269,10 @@ histforecast
     @series begin
         seriestype :=  :line
         linewidth  --> 2
-        linecolor  :=  forecast_color
-        label      :=  forecast_label
+        linecolor  :=  haskey(colors, :forecast) ? colors[:forecast] : :red
+        alpha      :=  haskey(alphas, :forecast) ? alphas[:forecast] : 1.0
+        linestyle  :=  haskey(styles, :forecast) ? styles[:forecast] : :solid
+        label      :=  haskey(names, :forecast) ? names[:forecast] : "Forecast"
 
         inds = intersect(find(start_date .<= dates .<= end_date),
                          find(hist.means[end, :date] .<= dates .<= forecast.means[end, :date]))
