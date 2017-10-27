@@ -107,16 +107,7 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     end
 
     # Prepare population series
-    population_mnemonic = parse_population_mnemonic(m)[1]
-    vint = data_vintage(m)
-    population_data_file     = inpath(m, "raw", "population_data_levels_$vint.csv")
-    population_forecast_file = inpath(m, "raw", "population_forecast_$vint.csv")
-    population_data, population_forecast =
-        load_population_growth(population_data_file, population_forecast_file,
-                               get(population_mnemonic);
-                               use_population_forecast = use_population_forecast(m),
-                               use_hpfilter = hpfilter_population(m),
-                               verbose = verbose)
+    population_data, population_forecast = load_population_growth(m, verbose = verbose)
     population_series = get_population_series(:population_growth, population_data,
                                               population_forecast, start_date, end_date)
 
