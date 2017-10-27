@@ -60,7 +60,7 @@ function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
         end
         transform = dict[var].rev_transform
 
-        if transform in [loggrowthtopct_annualized_percapita, loggrowthtopct_annualized]
+        if transform in [loggrowthtopct_annualized_percapita, loggrowthtopct_annualized, loggrowthtopct, loggrowthtopct_percapita]
             if untrans
                 return "Q/Q Log Growth Rate"
             elseif fourquarter
@@ -84,6 +84,8 @@ function series_ylabel(m::AbstractModel, var::Symbol, class::Symbol;
             end
         elseif transform == identity
             ""
+        else
+            error("series_ylabel not implemented for transform: $transform")
         end
     elseif class == :stdshocks
         return "Standard Deviations"
