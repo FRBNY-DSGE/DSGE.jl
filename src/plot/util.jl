@@ -1,6 +1,6 @@
 function quarter_date_to_number(date::Date)
     y = Dates.year(date)
-    m = Dates.quarterofyear(date)
+    q = Dates.quarterofyear(date)
     return y + (q-1)*0.25
 end
 
