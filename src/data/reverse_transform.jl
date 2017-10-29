@@ -83,7 +83,7 @@ function reverse_transform(m::AbstractModel, untransformed::Matrix, start_date::
     df[:date] = quarter_range(start_date, end_date)
 
     for (ind, var) in enumerate(vars)
-        series = squeeze(untransformed[ind, :], 1)
+        series = untransformed[ind, :]
         df[var] = series
     end
 
@@ -110,6 +110,7 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     population_data, population_forecast = load_population_growth(m, verbose = verbose)
     population_series = get_population_series(:population_growth, population_data,
                                               population_forecast, start_date, end_date)
+    population_series = convert(Vector{Float64}, population_series)
 
     # Apply reverse transform
     transformed = DataFrame()
