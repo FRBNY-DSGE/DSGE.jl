@@ -275,13 +275,13 @@ function write_meansbands_tables_timeseries(m::AbstractModel, input_type::Symbol
                                        kwargs...)
 end
 
-function write_meansbands_tables_timeseries(write_dirname::String, filestring_base::Vector{String},
+function write_meansbands_tables_timeseries(dirname::String, filestring_base::Vector{String},
                                             mb::MeansBands;
                                             tablevars::Vector{Symbol} = get_variables(mb),
                                             bands_pcts::Vector{String} = which_density_bands(mb, uniquify = true))
     for tablevar in tablevars
         df = prepare_meansbands_table_timeseries(mb, tablevar, bands_pcts = bands_pcts)
-        write_meansbands_table(write_dirname, filestring_base, mb, df, tablevar)
+        write_meansbands_table(dirname, filestring_base, mb, df, tablevar)
     end
 end
 
@@ -327,12 +327,14 @@ write_means_tables_shockdec(dirname, filestring_base, mb_shockdec,
 - `forecast_string::String`
 - `bdd_and_unbdd::Bool`: whether to use unbounded means and bounded
   bands. Applies only for `class(output_var) in [:forecast, :forecast4q]`
-- `dirname::String`: directory to which tables are saved
+- `read_dirname::String`: directory from which `MeansBands` are read in
+- `write_dirname::String`: directory to which tables are saved
 """
 function write_means_tables_shockdec(m::AbstractModel, input_type::Symbol,
                                      cond_type::Symbol, class::Symbol;
                                      forecast_string::String = "",
-                                     dirname::String = tablespath(m, "forecast"),
+                                     read_dirname::String = workpath(m, "forecast"),
+                                     write_dirname::String = tablespath(m, "forecast"),
                                      kwargs...)
     # Read in necessary MeansBands
     products = [:shockdec, :trend, :dettrend, :hist, :forecast]
@@ -340,7 +342,8 @@ function write_means_tables_shockdec(m::AbstractModel, input_type::Symbol,
     mbs = OrderedDict{Symbol, MeansBands}()
     for output_var in output_vars
         try
-            mbs[output_var] = read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string)
+            mbs[output_var] = read_mb(m, input_type, cond_type, output_var,
+                                      forecast_string = forecast_string, directory = read_dirname)
         catch ex
             if output_var in [Symbol(:hist, class), Symbol(:forecast, class)]
                 warn("MeansBands for " * string(output_var) * " not found")
@@ -352,7 +355,7 @@ function write_means_tables_shockdec(m::AbstractModel, input_type::Symbol,
     end
 
     # Call second method
-    write_means_tables_shockdec(dirname, filestring_base(m), values(mbs)...;
+    write_means_tables_shockdec(write_dirname, filestring_base(m), values(mbs)...;
                                 kwargs...)
 end
 
