@@ -740,9 +740,9 @@ function settings_m1010!(m::Model1010)
 
     # Data
     m <= Setting(:data_id, 4, "Dataset identifier")
-    m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
+    m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_BBBspread, :obs_AAAspread, :obs_nominalrate, :obs_longrate],
                  "Observables used in conditional forecasts")
-    m <= Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
+    m <= Setting(:cond_semi_names, [:obs_BBBspread, :obs_AAAspread, :obs_nominalrate, :obs_longrate],
                  "Observables used in semiconditional forecasts")
 
     # Forecast
