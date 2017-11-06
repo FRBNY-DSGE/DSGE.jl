@@ -1,5 +1,4 @@
-"""
-```
+"""```
 measurement{T<:AbstractFloat}(m::Model1010{T}, TTT::Matrix{T}, RRR::Matrix{T},
                               CCC::Vector{T})
 ```
@@ -169,7 +168,13 @@ function measurement{T<:AbstractFloat}(m::Model1010{T},
     for i = 1:n_anticipated_shocks(m)
         ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
         DD[obs[Symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
-        QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
+
+        if subspec(m) == "ss21"
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m")]^2 /
+            n_anticipated_shocks(m)
+        else
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
+        end
     end
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector
