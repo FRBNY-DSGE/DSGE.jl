@@ -163,8 +163,8 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
             hessian
         end
 
-        ## Compute inverse hessian and create proposal distribution, or
-        ## just create it with the given cov matrix if we have it
+        # Compute inverse hessian and create proposal distribution, or
+        # just create it with the given cov matrix if we have it
         propdist = if isempty(proposal_covariance)
             # Make sure the mode and hessian have the same number of parameters
             n = length(params)
@@ -179,6 +179,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
             for i = (n-rank+1):n
                 S_inv[i, i] = 1/S_diag[i]
             end
+
         hessian_inv = U*sqrt.(S_inv) #this is the inverse of the hessian
         DSGE.DegenerateMvNormal(params, hessian_inv)
     else

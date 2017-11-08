@@ -147,7 +147,7 @@ SteadyStateParameter{T} <: AbstractParameter{T}
 
 Steady-state model parameter whose value depends upon the value of other (non-steady-state)
 `Parameter`s. `SteadyStateParameter`s must be constructed and added to an instance of a
-model object `m` _after_ all other model `Parameter`s have been defined. Once added to `m`,
+model object `m` after all other model `Parameter`s have been defined. Once added to `m`,
 `SteadyStateParameter`s are stored in `m.steady_state`. Their values are calculated and set
 by `steadystate!(m)`, rather than being estimated directly. `SteadyStateParameter`s do not
 require transformations from the model space to the real line or scalings for use in

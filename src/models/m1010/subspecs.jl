@@ -46,6 +46,8 @@ function init_subspec!(m::Model1010)
         return ss19!(m)
     elseif subspec(m) == "ss20"
         return ss20!(m)
+    elseif subspec(m) == "ss21"
+        return ss21!(m)
     else
         error("This subspec is not defined.")
     end
@@ -536,4 +538,16 @@ end
 function ss20!(m::Model1010)
     # ss18 with betabar defined (correctly) with σ_c instead of σ_ω_star
     ss18!(m)
+end
+
+function ss21!(m::Model1010)
+    ss13!(m)
+
+    # standard deviations of the anticipated policy shocks
+    for i = 1:n_anticipated_shocks_padding(m)
+        m <= parameter(Symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., .2), fixed=true,
+                       description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
+                       tex_label=@sprintf("\\sigma_{%d,r}",i))
+    end
+
 end

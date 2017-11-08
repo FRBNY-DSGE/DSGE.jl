@@ -146,21 +146,25 @@ for their model.
 - the user specifies `m.observables`; the keys of this dictionary name
     the series to be used in estimating the model.
 
-- the user specifies `m.data_series`; the keys of this dictionary name data sources, and the
-    values of this dictionary are lists of mnemonics to be accessed from that data source.
-    Note that these mnemonics do not correspond to observables one-to-one, but rather are
-    usually series in *levels* that will be further transformed.
+- the user specifies `m.observable_mappings`; the keys of this dictionary name observed variables, and the values correspond to the observable object, which contains information about the forward and reverse transforms as well as the input data series from which the observable is constructed.
 
-- the user specifies `m.data_transforms`; the keys of this dictionary
-    name the series to be constructed and match the keys of
-    `m.observables` exactly; the values of this dictionary are
-    functions that operate on a single argument (`levels`) which is a
-    DataFrame of the series specified in `m.data_series`. These
-    functions return a DataArray for a single series. These functions
-    could do nothing (e.g. return `levels[:, :SERIES1]`) or perform a
-    more complex transformation, such as converting to one quarter
-    percent changes or adjusting into per-capita terms. See [Data Transforms and Utilities](@ref) for functions that may be
-    of use when defining series-specific transformations.
+- For a given observable, an input series, e.g.
+    `m.observable_mappings[:obs_gdp].input_series`, is an array of mnemonics to be
+    accessed from the data source listed after the mnemonic (separated by the double
+    underscore).Note that these mnemonics do not correspond to observables one-to-one,
+    but rather are usually series in *levels* that will be further transformed.
+
+- There are also both forward and reverse transforms for a given observable,
+    e.g. `m.observable_mappings[:obs_gdp].fwd_transform` and
+    `m.observable_mappings[:obs_gdp].rev_transform`. The forward transform operates on a
+    single argument, `levels`, which is a DataFrame of the data in levels returned by the
+    function `load_data_levels`. The reverse transform operates on a forward transformed
+    series (which is in model units) transforming it into human-readable units, such
+    as one quarter percent changes or per-capita adjustments. Both transforms return a
+    DataArray for a single series. These functions could do nothing, or they could
+    perform a more complex transformation. See
+    [Data Transforms and Utilities](@ref) for more information about series-specific
+    transformations.
 
 - the user adjusts data-related settings, such as `data_vintage`, `data_id`,
     `dataroot`, `date_presample_start`, `date_zlb_start`, `date_forecast_start`,

@@ -138,16 +138,16 @@ Return the `MeansBands` metadata dictionary for `scen`.
 """
 function get_scenario_mb_metadata(m::AbstractModel, scen::SingleScenario, output_var::Symbol)
     forecast_output_file = get_scenario_mb_input_file(m, scen, output_var)
-    _, mb_metadata = get_mb_metadata(:mode, :none, output_var, forecast_output_file)
-    mb_metadata[:scenario_key] = scen.key
-    mb_metadata[:scenario_vint] = scen.vintage
+    metadata = get_mb_metadata(m, :mode, :none, output_var, forecast_output_file)
+    metadata[:scenario_key] = scen.key
+    metadata[:scenario_vint] = scen.vintage
 
-    return mb_metadata
+    return metadata
 end
 
 function get_scenario_mb_metadata(m::AbstractModel, agg::ScenarioAggregate, output_var::Symbol)
     forecast_output_file = get_scenario_mb_input_file(m, agg.scenario_groups[1][1], output_var)
-    _, metadata = get_mb_metadata(:mode, :none, output_var, forecast_output_file)
+    metadata = get_mb_metadata(m, :mode, :none, output_var, forecast_output_file)
 
     # Initialize start and end date
     start_date = date_forecast_start(m)
@@ -191,9 +191,9 @@ function read_scenario_output(m::AbstractModel, scen::SingleScenario, class::Sym
     # Get filename
     filename = get_scenario_mb_input_file(m, scen, Symbol(product, class))
 
-    fcast_series, transform = jldopen(filename, "r") do file
+    jldopen(filename, "r") do file
         # Read forecast outputs
-        fcast_series = read_forecast_output(file, class, product, var_name)
+        fcast_series = read_forecast_series(file, class, product, var_name)
 
         # Parse transform
         class_long = get_class_longname(class)
@@ -217,7 +217,7 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
         for (j, scen) in enumerate(group)
             filename = get_scenario_mb_input_file(m, scen, Symbol(product, class))
             group_draws[j] = jldopen(filename, "r") do file
-                read_forecast_output(file, class, product, var_name)
+                read_forecast_series(file, class, product, var_name)
             end
         end
 

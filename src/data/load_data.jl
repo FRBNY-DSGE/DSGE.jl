@@ -358,7 +358,7 @@ function isvalid_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
     # Ensure that no series is all NaN
     for col in setdiff(names(df), [:date])
         if all(isnan.(df[col]))
-            error("df[$col] is all NaN.")
+            warn("df[$col] is all NaN.")
         end
     end
 
@@ -367,19 +367,40 @@ end
 
 """
 ```
-df_to_matrix(m, df; cond_type = :none)
+df_to_matrix(m, df; cond_type = :none, in_sample = true)
 ```
 
 Return `df`, converted to matrix of floats, and discard date column. Also ensure
-that rows are sorted by date and columns by `m.observables`. The output of this
+that rows are sorted by date and columns by `m.observables`, with the option to specify
+whether or not the out of sample rows are discarded. The output of this
 function is suitable for direct use in `estimate`, `posterior`, etc.
+
+### Keyword Arguments:
+- `include_presample::Bool`: indicates whether or not there are presample periods.
+- `in_sample::Bool`: indicates whether or not to discard rows that are out of sample. Set this flag to false in
+the case that you are calling filter_shocks! in the scenarios codebase.
 """
-function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
+function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none, include_presample::Bool = true, in_sample::Bool = true)
     # Sort rows by date
     df1 = sort(df; cols=[:date])
 
+    if in_sample
+        start_date = if include_presample
+            date_presample_start(m)
+        else
+            date_mainsample_start(m)
+        end
+        end_date = if cond_type in [:semi, :full]
+            date_conditional_end(m)
+        else
+            date_mainsample_end(m)
+        end
+        df1 = df1[start_date .<= df[:, :date] .<= end_date, :]
+    end
+
     # Discard columns not used
     cols = collect(keys(m.observables))
+    sort!(cols, by = x -> m.observables[x])
     df1 = df1[cols]
 
     return convert(Matrix{Float64}, df1)'

@@ -24,6 +24,6 @@ output_vars = [:histstates, :forecaststates, :forecastobs]
 forecast_one(m, :full, :none, output_vars)
 
 # compute means and bands
-means_bands_all(m, :full, :none, output_vars)
+compute_meansbands(m, :full, :none, output_vars)
 
 rmprocs(my_procs)

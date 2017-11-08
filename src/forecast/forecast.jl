@@ -44,8 +44,7 @@ where `S<:AbstractFloat`.
 - `states::Matrix{S}`: matrix of size `nstates` x `horizon` of forecasted states
 - `obs::Matrix{S}`: matrix of size `nobs` x `horizon` of forecasted observables
 - `pseudo::Matrix{S}`: matrix of size `npseudo` x `horizon` of forecasted
-  pseudo-observables. If `!forecast_pseudoobservables(m)` or the provided
-  `Z_pseudo` and `D_pseudo` matrices are empty, then `pseudo` will be empty.
+  pseudo-observables
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
 function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
@@ -119,12 +118,7 @@ function forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
     # Unpack system
     T, R, C = system[:TTT], system[:RRR], system[:CCC]
     Q, Z, D = system[:QQ], system[:ZZ], system[:DD]
-
-    Z_pseudo, D_pseudo = if !isnull(system.pseudo_measurement)
-        system[:ZZ_pseudo], system[:DD_pseudo]
-    else
-        Matrix{S}(0,0), Vector{S}(0)
-    end
+    Z_pseudo, D_pseudo = system[:ZZ_pseudo], system[:DD_pseudo]
 
     # Setup
     nshocks = size(R, 2)
@@ -166,11 +160,7 @@ function forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
 
     # Apply measurement and pseudo-measurement equations
     obs    = D .+ Z*states
-    pseudo = if !isempty(Z_pseudo) && !isempty(D_pseudo)
-        D_pseudo .+ Z_pseudo * states
-    else
-        Matrix{S}(0,0)
-    end
+    pseudo = D_pseudo .+ Z_pseudo * states
 
     # Return forecasts
     return states, obs, pseudo, shocks

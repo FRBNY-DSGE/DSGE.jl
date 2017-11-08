@@ -9,7 +9,6 @@ m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:date_conditional_end, quartertodate("2015-Q4"))
 m <= Setting(:forecast_uncertainty_override, Nullable(false))
 m <= Setting(:use_population_forecast, true)
-m <= Setting(:forecast_pseudoobservables, true)
 m <= Setting(:compute_shockdec_bands, true)
 
 estroot = normpath(joinpath(dirname(@__FILE__), "..", "reference"))
@@ -33,8 +32,8 @@ exp_modal_means, exp_modal_bands, exp_full_means, exp_full_bands =
 
 # Modal
 @time forecast_one(m, :mode, :none, output_vars, verbose = :none)
-@time means_bands_all(m, :mode, :none, output_vars; verbose = :none)
-@time meansbands_matrix_all(m, :mode, :none, output_vars; verbose = :none)
+@time compute_meansbands(m, :mode, :none, output_vars; compute_shockdec_bands = true, verbose = :none)
+@time meansbands_to_matrix(m, :mode, :none, output_vars; verbose = :none)
 
 for var in output_vars
     filename = get_forecast_filename(m, :mode, :none, Symbol("mb_matrix_", var),
@@ -47,8 +46,8 @@ end
 @everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
 @time forecast_one(m, :full, :none, output_vars, verbose = :none)
-@time means_bands_all(m, :full, :none, output_vars; verbose = :none)
-@time meansbands_matrix_all(m, :full, :none, output_vars; verbose = :none)
+@time compute_meansbands(m, :full, :none, output_vars; compute_shockdec_bands = true, verbose = :none)
+@time meansbands_to_matrix(m, :full, :none, output_vars; verbose = :none)
 
 for var in output_vars
     filename = get_forecast_filename(m, :full, :none, Symbol("mb_matrix_", var),

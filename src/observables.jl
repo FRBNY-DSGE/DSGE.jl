@@ -44,7 +44,8 @@ type PseudoObservable
 
 - `key::Symbol`
 - `name::String`: e.g. \"Flexible Output Growth\"
-- `longname::String`: e.g. \"Output that would prevail in a flexible-price economy\"
+- `longname::String`: e.g. \"Output that would prevail in a flexible-price
+  economy\"
 - `rev_transform::Function`: Transforms a series from model units into
   observable units. May take kwargs.
 """
@@ -56,21 +57,7 @@ type PseudoObservable
 end
 
 function PseudoObservable(k::Symbol)
-    PseudoObservable(k,"","", identity)
-end
-
-type PseudoObservableMapping{T}
-    inds::OrderedDict{Symbol,Int}
-    ZZ_pseudo::Matrix{T}
-    DD_pseudo::Array{T}
-end
-
-function Base.getindex(eq::PseudoObservableMapping, d::Symbol)
-    if d in (:ZZ_pseudo, :DD_pseudo)
-        return getfield(eq, d)
-    else
-        throw(KeyError(d))
-    end
+    PseudoObservable(k, "", "", identity)
 end
 
 function check_mnemonics(levels::DataFrame, mnemonics::Symbol)

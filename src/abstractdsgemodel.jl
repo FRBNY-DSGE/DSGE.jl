@@ -158,38 +158,22 @@ n_zlb_periods(m::AbstractModel)         = subtract_quarters(date_forecast_start(
 n_mainsample_periods(m::AbstractModel)  = subtract_quarters(date_forecast_start(m), date_mainsample_start(m))
 n_conditional_periods(m::AbstractModel) = subtract_quarters(date_conditional_end(m), date_mainsample_end(m))
 
-inds_presample_periods(m::AbstractModel) = collect(index_presample_start(m):(index_mainsample_start(m)-1))
-inds_prezlb_periods(m::AbstractModel) = collect(index_mainsample_start(m):(index_zlb_start(m)-1))
-inds_zlb_periods(m::AbstractModel) = collect(index_zlb_start(m):(index_forecast_start(m)-1))
+inds_presample_periods(m::AbstractModel)  = collect(index_presample_start(m):(index_mainsample_start(m)-1))
+inds_prezlb_periods(m::AbstractModel)     = collect(index_mainsample_start(m):(index_zlb_start(m)-1))
+inds_zlb_periods(m::AbstractModel)        = collect(index_zlb_start(m):(index_forecast_start(m)-1))
 inds_mainsample_periods(m::AbstractModel) = collect(index_mainsample_start(m):(index_forecast_start(m)-1))
 
 # Number of a few things that are useful
-n_altpolicy_states(m::AbstractModel)        = length(alternative_policy(m).states)
-n_altpolicy_equations(m::AbstractModel)     = length(alternative_policy(m).equations)
+n_states(m::AbstractModel)                  = length(m.endogenous_states)
+n_states_augmented(m::AbstractModel)        = n_states(m) + length(m.endogenous_states_augmented)
 n_shocks_exogenous(m::AbstractModel)        = length(m.exogenous_shocks)
 n_shocks_expectational(m::AbstractModel)    = length(m.expected_shocks)
 n_observables(m::AbstractModel)             = length(m.observables)
+n_pseudo_observables(m::AbstractModel)      = length(m.pseudo_observables)
+n_equilibrium_conditions(m::AbstractModel)  = length(m.equilibrium_conditions)
 n_parameters(m::AbstractModel)              = length(m.parameters)
 n_parameters_steady_state(m::AbstractModel) = length(m.steady_state)
 n_parameters_free(m::AbstractModel)         = sum([!α.fixed for α in m.parameters])
-
-function n_states(m::AbstractModel; apply_altpolicy::Bool = false)
-    length(m.endogenous_states) + (apply_altpolicy ? n_altpolicy_states(m) : 0)
-end
-function n_states_augmented(m::AbstractModel; apply_altpolicy::Bool = false)
-    n_states(m) + (apply_altpolicy ? n_altpolicy_states(m) : 0) + length(m.endogenous_states_augmented)
-end
-function n_equilibrium_conditions(m::AbstractModel; apply_altpolicy::Bool = false)
-    length(m.equilibrium_conditions) + (apply_altpolicy ? n_altpolicy_equations(m) : 0)
-end
-function n_pseudoobservables(m::AbstractModel)
-    if forecast_pseudoobservables(m)
-        pseudo, _ = pseudo_measurement(m)
-        return length(pseudo)
-    else
-        return 0
-    end
-end
 
 """
 ```
@@ -206,8 +190,7 @@ function get_key(m::AbstractModel, class::Symbol, index::Int)
     elseif class == :obs
         m.observables
     elseif class == :pseudo
-        _, pseudo_mapping = pseudo_measurement(m)
-        pseudo_mapping.inds
+        m.pseudo_observables
     elseif class in [:shocks, :stdshocks]
         m.exogenous_shocks
     else
@@ -302,7 +285,6 @@ date_forecast_start(m::AbstractModel)   = get_setting(m, :date_forecast_start)
 forecast_block_size(m::AbstractModel)   = get_setting(m, :forecast_block_size)
 forecast_start_block(m::AbstractModel)  = get_setting(m, :forecast_start_block)
 forecast_input_file_overrides(m::AbstractModel) = get_setting(m, :forecast_input_file_overrides)
-forecast_pseudoobservables(m::AbstractModel) = get_setting(m, :forecast_pseudoobservables)
 forecast_uncertainty_override(m::AbstractModel) = get_setting(m, :forecast_uncertainty_override)
 forecast_smoother(m::AbstractModel)     = get_setting(m, :forecast_smoother)
 forecast_tdist_df_val(m::AbstractModel) = get_setting(m, :forecast_tdist_df_val)

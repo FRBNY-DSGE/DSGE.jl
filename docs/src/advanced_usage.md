@@ -26,66 +26,74 @@ See [defaults.jl](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/src/defaults
 
 #### General
 
-- `dataroot`: The root directory for
-  model input data.
-- `saveroot`: The root directory for model output.
-- `use_parallel_workers`: Use available parallel workers in computaitons.
-- `data_vintage`: Data vintage identifier, formatted
-  `yymmdd`. By default, `data_vintage` is set to today's date. It is (currently) the only
-  setting printed to output filenames by default.
+- `saveroot::String`: The root directory for model output.
+- `use_parallel_workers::Bool`: Use available parallel workers in computations.
+- `n_anticipated_shocks`: Number of anticipated policy shocks.
+
+#### Data and I/O
+
+- `dataroot::String`: The root directory for model input data.
+- `data_vintage::String`: Data vintage, formatted `yymmdd`. By default,
+  `data_vintage` is set to today's date. It is (currently) the only setting
+  printed to output filenames by default.
+- `dataset_id::Int`: Dataset identifier. There should be a unique dataset ID for
+  each set of observables.
+- `cond_vintage::String`: Conditional data vintage, formatted `yymmdd`.
+- `cond_id::Int`: Conditional dataset identifier. There should be a unique
+  conditional dataset ID for each set of input, raw data mnemonics (not
+  observables!).
+- `cond_semi_names::Vector{Symbol}` and `cond_full_names::Vector{Symbol}`: names
+  of observables for which we want to use semi- and full conditional data. All
+  other observables are `NaN`ed out in the conditional data periods.
+- `population_mnemonic::Nullable{Symbol}`: population series mnemonic in form
+  `Nullable(:<mnemonic>__<source>)` (for example, `Nullable(:CNP16OV__FRED)`),
+  or `Nullable{Symbol}()` if the model doesn't use population data
 
 #### Dates
-- `date_presample_start`: Start date of pre-sample.
-- `date_mainsample_start`: Start date of main sample.
-- `date_zlb_start`: Start date of zero lower bound regime.
-- `date_forecast_start`: Start date of forecast period (or the period after the last period for which we have GDP data).
-- `date_forecast_end`: End date of forecast period.
 
-#### Anticipated Shocks
-- `n_anticipated_shocks`: Number of anticipated policy shocks.
-- `n_anticipated_shocks_padding`: Padding for anticipated shocks.
+- `date_presample_start::Date`: Start date of pre-sample.
+- `date_mainsample_start::Date`: Start date of main sample.
+- `date_zlb_start::Date`: Start date of zero lower bound regime.
+- `date_forecast_start::Date`: Start date of forecast period (or the period
+  after the last period for which we have GDP data).
+- `date_conditional_end::Date`: Last date for which we have conditional
+  data. This is typically the same as `date_forecast_start` when we condition on
+  nowcasts and current quarter financial data.
 
 #### Estimation
-- `reoptimize`: Whether to reoptimize the posterior mode. If `true`
-    (the default), `estimate()` begins reoptimizing from the model
-    object's parameter vector.
-    See [Optimizing or Reoptimizing](@ref estimation-reoptimizing)
-    for more details.
-- `calculate_hessian`: Whether to compute the Hessian. If `true` (the
-    default), `estimate()` calculates the Hessian at the posterior mode.
 
-#### Metropolis-Hastings
-- `n_mh_simulations`: Number of draws from the posterior distribution per block.
-- `n_mh_blocks`: Number of blocks to run Metropolis-Hastings.
-- `n_mh_burn`: Number of blocks to discard as burn-in for Metropolis-Hastings.
-- `mh_thin`: Metropolis-Hastings thinning step.
+- `reoptimize::Bool`: Whether to reoptimize the posterior mode. If `true` (the
+    default), `estimate` begins reoptimizing from the model object's parameter
+    vector.  See [Optimizing or Reoptimizing](@ref estimation-reoptimizing) for
+    more details.
+- `calculate_hessian::Bool`: Whether to compute the Hessian. If `true` (the
+    default), `estimate` calculates the Hessian at the posterior mode.
+- `n_mh_simulations::Int`: Number of draws from the posterior distribution per
+  block.
+- `n_mh_blocks::Int`: Number of blocks to run Metropolis-Hastings.
+- `n_mh_burn::Int`: Number of blocks to discard as burn-in for Metropolis-Hastings.
+- `mh_thin::Int`: Metropolis-Hastings thinning step.
+
+#### Forecasting
+
+- `forecast_jstep::Int`: Forecast thinning step.
+- `forecast_block_size::Int`: Number of draws in each forecast block *before*
+  thinning by `forecast_jstep`.
+- `forecast_input_file_overrides::Dict{Symbol, String}`: Maps `input_type`(s) to
+  the file name containing input draws for that type of forecast. See
+  [Forecasting](@ref).
+- `forecast_horizons::Int`: Number of periods to forecast.
+- `impulse_response_horizons::Int`: Number of periods for which to calculate IRFs.
+
+#### Alternative Policy
+
+- `alternative_policy::AltPolicy`: See [Alternative Policies](@ref).
 
 ### Accessing Settings
+
 The function `get_setting(m::AbstractModel, s::Symbol)` returns the value of the setting `s`
 in `m.settings`. Some settings also have explicit getter methods that take only the model
 object `m` as an argument. Note that not all are exported.
-
-*I/O*:
-
-  * `saveroot(m)`,
-  * `dataroot(m)`,
-  * `data_vintage(m)`,
-
-*Parallelization*:
-
-  * `use_parallel_workers(m)`
-
-*Estimation*:
-
-  * `reoptimize(m)`,
-  * `calculate_hessian(m)`,
-
-*Metropolis-Hastings*:
-
-  * `n_mh_blocks(m)`,
-  * `n_mh_simulations(m)`,
-  * `n_mh_burn(m)`,
-  * `mh_thin(m)`
 
 ### Overwriting Default Settings
 
@@ -103,6 +111,14 @@ custom_settings = Dict{Symbol, Setting}(
     :use_parallel_workers => Setting(:use_parallel_workers, true))
 m = Model990(custom_settings = custom_settings)
 ```
+
+Or like this:
+```julia
+m = Model990()
+m <= Setting(:use_parallel_workers, true)
+```
+Note that using this second method will not work for all settings, e.g. `n_anticipated_shocks`
+is a setting that must be passed into the model during construction, as in the first example.
 
 By default, passing in `custom_settings` overwrites the entries in the model
 object's `settings` field. However, with the additional keyword argument

@@ -41,14 +41,17 @@ function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
     output_prods   = unique(map(get_product, output_vars))
     output_classes = unique(map(get_class,   output_vars))
 
-    # Set forecast_pseudoobservables properly
-    if any(class -> class == :pseudo, output_classes)
-        m <= Setting(:forecast_pseudoobservables, true)
-    end
-
     # Throw error if input_type = :subset but no subset_inds provided
     if input_type == :subset && isempty(subset_inds)
         error("Must supply nonempty subset_inds if input_type = :subset")
+    end
+
+    # Throw error if trying to compute shock decompositions under an alternative
+    # policy rule
+    if alternative_policy(m).key != :historical &&
+        any(prod -> prod in [:shockdec, :dettrend, :trend], output_prods)
+
+        error("Only histories, forecasts, and IRFs can be computed under an alternative policy")
     end
 
     # Determine if we are only running IRFs. If so, we won't need to load data
@@ -289,7 +292,7 @@ function forecast_one(m::AbstractModel{Float64},
         # Block info
         block_inds, block_inds_thin = forecast_block_inds(m, input_type; subset_inds = subset_inds)
         nblocks = length(block_inds)
-        start_block = isnull(forecast_start_block(m)) ? 1 : get(forecast_start_block(m))
+        start_block = forecast_start_block(m)
 
         # Info needed for printing progress
         total_forecast_time = 0.0
@@ -372,8 +375,7 @@ Compute `output_vars` for a single parameter draw, `params`. Called by
   - `:histstates`: `Matrix{Float64}` of smoothed historical states
   - `:histobs`: `Matrix{Float64}` of smoothed historical data
   - `:histpseudo`: `Matrix{Float64}` of smoothed historical
-    pseudo-observables (if a pseudo-measurement equation has been provided for
-    this model type)
+    pseudo-observables
   - `:histshocks`: `Matrix{Float64}` of smoothed historical shocks
   - `:forecaststates`: `Matrix{Float64}` of forecasted states
   - `:forecastobs`: `Matrix{Float64}` of forecasted observables
@@ -403,6 +405,12 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     output_vars::Vector{Symbol}, params::Vector{Float64}, df::DataFrame; verbose::Symbol = :low)
 
     ### Setup
+
+    # Re-initialize model indices if forecasting under an alternative policy
+    # rule (in case new states or equations were added)
+    if alternative_policy(m).key != :historical
+        init_model_indices!(m)
+    end
 
     # Are we only running IRFs?
     output_prods = map(get_product, output_vars)

@@ -7,28 +7,29 @@ measurement{T<:AbstractFloat}(m::Model1002{T}, TTT::Matrix{T}, RRR::Matrix{T},
 Assign measurement equation
 
 ```
-y_t = ZZ*s_t + DD + η_t
+y_t = ZZ*s_t + DD + u_t
 ```
 
 where
 
 ```
 Var(ϵ_t) = QQ
-Var(η_t) = EE
-Cov(ϵ_t, η_t) = 0
+Var(u_t) = EE
+Cov(ϵ_t, u_t) = 0
 ```
 """
 function measurement{T<:AbstractFloat}(m::Model1002{T},
                                        TTT::Matrix{T},
                                        RRR::Matrix{T},
                                        CCC::Vector{T})
-    endo = m.endogenous_states
-    exo  = m.exogenous_shocks
-    obs  = m.observables
+    endo     = m.endogenous_states
+    endo_new = m.endogenous_states_augmented
+    exo      = m.exogenous_shocks
+    obs      = m.observables
+
     _n_observables = n_observables(m)
     _n_states = n_states_augmented(m)
     _n_shocks_exogenous = n_shocks_exogenous(m)
-    endo_new = m.endogenous_states_augmented
 
     ZZ = zeros(_n_observables, _n_states)
     DD = zeros(_n_observables)
@@ -127,13 +128,15 @@ function measurement{T<:AbstractFloat}(m::Model1002{T},
     QQ[exo[:gdp_sh], exo[:gdp_sh]]        = m[:σ_gdp]^2
     QQ[exo[:gdi_sh], exo[:gdi_sh]]        = m[:σ_gdi]^2
 
-    # These lines set the standard deviations for the anticipated shocks. They
-    # are here no longer calibrated to the std dev of contemporaneous shocks,
-    # as we had in 904
+    # These lines set the standard deviations for the anticipated shocks
     for i = 1:n_anticipated_shocks(m)
-        ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
-        DD[obs[Symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
-        QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
+        ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
+        DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
+        if subspec(m) == "ss11"
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[:σ_r_m]^2 / n_anticipated_shocks(m)
+        else
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_r_m$i")]^2
+        end
     end
 
     # Adjustment to DD because measurement equation assumes CCC is the zero vector

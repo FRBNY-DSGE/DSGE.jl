@@ -1,63 +1,5 @@
 """
 ```
-compute_system(m; apply_altpolicy = false)
-```
-
-Given the current model parameters, compute the state-space system
-corresponding to model `m`. Returns a `System` object.
-"""
-function compute_system{T<:AbstractFloat}(m::AbstractModel{T}; apply_altpolicy = false)
-
-    # Solve model
-    TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy)
-    transition_equation = Transition(TTT, RRR, CCC)
-
-    # Solve measurement equation
-    measurement_equation = measurement(m, TTT, RRR, CCC)
-
-    # Solve pseudo-measurement equation
-    pseudo_measurement_equation = if method_exists(pseudo_measurement, (typeof(m),)) && forecast_pseudoobservables(m)
-        _, pseudo_mapping = pseudo_measurement(m; apply_altpolicy = apply_altpolicy)
-        Nullable(pseudo_mapping)
-    else
-        Nullable{PseudoObservableMapping{T}}()
-    end
-
-    return System(transition_equation, measurement_equation, pseudo_measurement_equation)
-end
-"""
-```
-compute_system_function{S<:AbstractFloat}(system::System{S})
-```
-### Inputs
-- `system::System`: The output of compute_system(m), i.e. the matrix outputs from solving a given model, m.
-### Output
-- Returns the transition and measurement equations as functions,and the distributions of the shocks
-and measurement error.
-"""
-function compute_system_function{S<:AbstractFloat}(system::System{S})
-    # Unpack system
-    RRR    = system[:RRR]
-    TTT    = system[:TTT]
-    HH     = system[:EE] + system[:MM]*system[:QQ]*system[:MM]'
-    DD     = system[:DD]
-    ZZ     = system[:ZZ]
-    QQ     = system[:QQ]
-    EE     = system[:EE]
-    MM     = system[:MM]
-    sqrtS2 = RRR*chol(QQ)'
-
-    @inline Φ(s_t1::Vector{S}, ε_t1::Vector{S}) = TTT*s_t1 + sqrtS2*ε_t1
-    @inline Ψ(s_t1::Vector{S}, u_t1::Vector{S}) = ZZ*s_t1 + DD + u_t1
-
-    F_ε = Distributions.MvNormal(zeros(size(QQ)[1]), eye(size(QQ)[1]))
-    F_u = Distributions.MvNormal(zeros(size(HH)[1]), HH)
-
-    return Φ, Ψ, F_ε, F_u
-end
-
-"""
-```
 get_jstep(m, n_sim)
 ```
 
@@ -285,7 +227,7 @@ Normalize shocks by their standard deviations. Shocks with zero standard
 deviation will be set to zero.
 """
 function standardize_shocks{T<:AbstractFloat}(shocks::Matrix{T}, QQ::Matrix{T})
-    stdshocks = shocks ./ sqrt(diag(QQ))
+    stdshocks = shocks ./ sqrt.(diag(QQ))
 
     zeroed_shocks = find(diag(QQ) .== 0)
     stdshocks[zeroed_shocks, :] = 0
@@ -338,7 +280,7 @@ function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_v
     elseif class == :obs
         n_observables(m)
     elseif class == :pseudo
-        n_pseudoobservables(m)
+        n_pseudo_observables(m)
     elseif class in [:shocks, :stdshocks]
         n_shocks_exogenous(m)
     end

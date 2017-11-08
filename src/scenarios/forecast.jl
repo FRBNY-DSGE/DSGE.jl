@@ -14,12 +14,8 @@ function compute_scenario_system(m::AbstractModel, scen::Scenario;
 
     system = compute_system(m, apply_altpolicy = apply_altpolicy)
 
-    # Set C = D = D_pseudo = 0
-    system.transition.CCC = zeros(size(system[:CCC]))
-    system.measurement.DD = zeros(size(system[:DD]))
-    if !isnull(system.pseudo_measurement)
-        get(system.pseudo_measurement).DD_pseudo = zeros(size(system[:DD_pseudo]))
-    end
+    # Set constant system matrices to 0
+    system = zero_system_constants(system)
 
     # Zero out non-instrument shocks
     system.measurement.QQ = copy(system[:QQ])
@@ -52,7 +48,7 @@ shocks.
 This function checks `forecast_uncertainty_override(m)` for whether to smooth
 shocks using the simulation smoother.
 """
-function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
+function filter_shocks!(m::AbstractModel, scen::Scenario, system::System, in_sample::Bool = false)
     # Check applicability of this methodology
     @assert n_instruments(scen) >= n_targets(scen) "Number of instruments must be at least number of targets"
 
@@ -64,9 +60,9 @@ function filter_shocks!(m::AbstractModel, scen::Scenario, system::System)
     P_0 = zeros(n_states_augmented(m), n_states_augmented(m))
 
     # Filter and smooth *deviations from baseline*
-    kal = filter(m, df, system, s_0, P_0)
+    kal = filter(m, df, system, s_0, P_0, in_sample = in_sample)
     _, forecastshocks, _ = smooth(m, df, system, kal, draw_states = scen.draw_states,
-                                  include_presample = true)
+                                  include_presample = true, in_sample = in_sample)
 
     # Assign shocks to instruments DataFrame
     for shock in keys(m.exogenous_shocks)
@@ -145,11 +141,14 @@ function write_scenario_forecasts(m::AbstractModel,
                                   scenario_output_files::Dict{Symbol, String},
                                   forecast_output::Dict{Symbol, Array{Float64}};
                                   verbose::Symbol = :low)
-    for var in [:forecastobs, :forecastpseudo]
+    for (i, var) in enumerate([:forecastobs, :forecastpseudo])
         filepath = scenario_output_files[var]
         jldopen(filepath, "w") do file
             write_forecast_metadata(m, file, var)
             write(file, "arr", forecast_output[var])
+            if :proportion_switched in keys(scenario_output_files)
+                write(file, "proportion_switched", forecast_output[:proportion_switched][i])
+            end
         end
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
