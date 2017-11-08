@@ -7,11 +7,19 @@ scenario_means_bands(m, scen::AbstractScenario,
 
 scenario_means_bands(m, scen::AbstractScenario, output_var; kwargs...)
 
-scenario_means_bands(m, scen::AbstractScenario, output_var, var_name; kwargs...)
+scenario_means_bands(m, scen::AbstractScenario, output_var, var_name,
+    kwargs...)
 ```
 
-Compute means and bands for model `m` and scenario `scen`. Keyword arguments are
-the same as for `compute_scenario_means_bands`.
+Compute means and bands for model `m` and scenario `scen`. Other methods are for
+one `output_var` and one `var_name` respectively.
+
+### Keyword Arguments
+
+- `minimize::Bool`: if `true`, choose shortest interval, otherwise just chop off
+  lowest and highest (percent/2)
+- `density_bands::Vector{Float64}`: a vector of percent values (between 0 and 1) for
+  which to compute density bands
 """
 function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
                               output_vars::Vector{Symbol} = [:forecastutobs, :forecastutpseudo,
@@ -38,17 +46,10 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
         end
 
         # Compute means and bands
-        mb = scenario_means_bands(m, scen, output_var; kwargs...)
-
-        # Write to file
-        output_file = get_scenario_mb_output_file(m, scen, output_var)
-        output_dir = dirname(output_file)
-        isdir(output_dir) || mkpath(output_dir)
-        jldopen(output_file, "w") do file
-            write(file, "mb", mb)
-        end
+        scenario_means_bands(m, scen, output_var; kwargs...)
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
+            output_file = get_scenario_mb_output_file(m, scen, output_var)
             println("wrote " * basename(output_file))
         end
     end
@@ -82,27 +83,42 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_v
         bands[var_name] = var_bands
         bands[var_name][:date] = date_list
     end
+    mb = MeansBands(metadata, means, bands; kwargs...)
 
-    return MeansBands(metadata, means, bands; kwargs...)
+    # Write to file
+    output_file = get_scenario_mb_output_file(m, scen, output_var)
+    output_dir = dirname(output_file)
+    isdir(output_dir) || mkpath(output_dir)
+    jldopen(output_file, "w") do file
+        write(file, "mb", mb)
+    end
+
+    return mb
 end
 
 function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_var::Symbol,
-                              var_name::Symbol; kwargs...)
+                              var_name::Symbol; minimize::Bool = false,
+                              density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9])
     # Determine class and product
     class = get_class(output_var)
     product = get_product(output_var)
+    @assert product in [:forecast, :forecastut, :forecast4q] "Product can only be forecast(ut|4q)"
 
     # Read in scenario draws
     fcast_series, transform = read_scenario_output(m, scen, class, product, var_name)
 
+    # Reverse transform
+    transformed_series = scenario_mb_reverse_transform(fcast_series, transform, product)
+
     # Compute means and bands
-    compute_scenario_means_bands(fcast_series, transform, product; kwargs...)
+    means = vec(mean(transformed_series, 1))
+    bands = find_density_bands(transformed_series, density_bands, minimize = minimize)
+    return means, bands
 end
 
 """
 ```
-compute_scenario_means_bands(fcast_series, transform, product;
-    minimize = false, density_bands = [0.5, 0.6, 0.7, 0.8, 0.9])
+scenario_mb_reverse_transform(fcast_series, transform, product)
 ```
 
 ### Inputs
@@ -111,21 +127,9 @@ compute_scenario_means_bands(fcast_series, transform, product;
   scenario forecasts
 - `transform::Function`: reverse transform (possibly no transform at all or 4Q)
 - `product::Symbol`: must be one of `:forecast`, `:forecastut`, or `:forecast4q`
-
-### Keyword Arguments
-
-- `minimize::Bool`: if `true`, choose shortest interval, otherwise just chop off
-  lowest and highest (percent/2)
-- `density_bands::Vector{Float64}`: a vector of percent values (between 0 and 1) for
-  which to compute density bands
 """
-function compute_scenario_means_bands(fcast_series::Matrix{Float64}, transform::Function,
-                                      product::Symbol; minimize::Bool = false,
-                                      density_bands::Vector{Float64} = [0.5,0.6,0.7,0.8,0.9])
-
-    @assert product in [:forecast, :forecastut, :forecast4q] "Product can only be forecast(ut|4q)"
-
-    # Reverse transform
+function scenario_mb_reverse_transform(fcast_series::Matrix{Float64}, transform::Function,
+                                       product::Symbol)
     if product == :forecast4q
         transform4q_scen = get_scenario_transform4q(transform)
 
@@ -139,18 +143,13 @@ function compute_scenario_means_bands(fcast_series::Matrix{Float64}, transform::
             Float64[]
         end
 
-        transformed_series = reverse_transform(fcast_series, transform4q_scen;
-                                               fourquarter = true, y0s = y0s)
+        reverse_transform(fcast_series, transform4q_scen;
+                          fourquarter = true, y0s = y0s)
     elseif product == :forecast
         transform_scen = get_scenario_transform(transform)
-        transformed_series = reverse_transform(fcast_series, transform_scen; y0 = 0.0)
+        reverse_transform(fcast_series, transform_scen; y0 = 0.0)
 
     else
-        transformed_series = fcast_series
+        return fcast_series
     end
-
-    # Compute means and bands of transformed series
-    means = vec(mean(transformed_series, 1))
-    bands = find_density_bands(transformed_series, density_bands, minimize = minimize)
-    return means, bands
 end

@@ -1,11 +1,60 @@
-# DSGE.jl SMC-replication Release Notes
+# DSGE.jl v0.4.0 Release Notes
 
-## New Features
-- The AnSchorfheide model, a small scale NK DSGE model, is now included.
-- Sequential Monte Carlo is implemented and works with the AnSchorfheide model.
+## New features
+
+- Added `nelder_mead` optimizer
+- Added forecasting under alternative policies (`AltPolicy`) and alternative
+  scenarios (`AbstractScenario`)
+- Added plotting functions: `plot_parameters`, `plot_history_and_forecast`,
+  `plot_forecast_comparison`, `hair_plot`, `plot_shock_decomposition`,
+  `plot_impulse_response`, `plot_altpolicies`, and `plot_scenario`
+
+## Breaking changes
+
+- Upgraded all code for use with Julia v0.6.0 or higher
+- Changed input data file names: see `get_data_filename`
+  + Added dataset identifier `Setting` with key `data_id`
+  + Changed `cond_id` from `Setting{String}` to `Setting{Int}`
+  + Moved raw input data files from `inpath(m, "data")` to `inpath(m, "raw")`
+- Added `:marginal_L` (marginal likelihood) field to `Kalman` type
+- Removed `MM` and `VVall` fields from `Measurement` type
+- Pluralized forecast output classes `:states`, `:shocks`, and `:stdshocks`
+- Stopped adding back population growth when reverse transforming shock
+  decompositions and deterministic trends
+- Stopped adding trends to and detrending shock decompositions and deterministic
+  trends
+- Changed pseudo-observable implementation to correspond one-to-one with
+  observables
+  + Changed `PseudoObservableMapping` type (and field in `System` type) to
+    `PseudoMeasurement`
+  + Added `m.pseudo_observables` and `m.pseudo_observable_mappings` fields to
+    `AbstractModel` subtypes
+  + Pseudo-observable-related things are no longer `Nullable`. Instead, if no
+    pseudo-measurement equation is implemented, the fields in the model object
+    are empty dictionaries
+- Refactored means and bands computation
+  + Renamed `means_bands_all` to `compute_meansbands`
+  + Renamed `meansbands_matrix_all` to `meansbands_to_matrix`
 
 
-# DSGE.jl v0.2.1 Release Notes
+# DSGE.jl v0.3.1 Release Notes
+
+## Bug fixes
+
+- Added the following subspecs:
+  + Model 990, subspec 3: fixes bugs 1-4 in
+    [FRBNY-DSGE/DSGE-2015-Apr#1](https://github.com/FRBNY-DSGE/DSGE-2015-Apr/issues/1)
+  + Model 1002, subspec 10: corrects the definition of `betabar` to use
+    `m[:σ_c]` instead of `σ_ω_star`
+  + Model 1010, subspec 20: similarly corrects the definition of `betabar`
+
+## Deprecation fixes
+
+- Implemented `transpose` for `Parameter`s so that matrix division (i.e. the
+  `(\)` operator) no longer throws a warning
+
+
+# DSGE.jl v0.3.0 Release Notes
 
 ## New features
 

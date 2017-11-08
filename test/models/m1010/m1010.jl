@@ -57,7 +57,7 @@ TTT, RRR, CCC = solve(model)
 meas = measurement(model, TTT, RRR, CCC)
 
 ### Pseudo-measurement equation
-pseudo, mapping = pseudo_measurement(model)
+pseudo_meas = pseudo_measurement(model, TTT, RRR, CCC)
 
 # Matrices are of expected dimensions
 @test size(Γ0) == (73, 73)

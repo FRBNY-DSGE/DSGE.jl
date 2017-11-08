@@ -8,7 +8,6 @@ m <= Setting(:cond_id, 0)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:date_conditional_end, quartertodate("2015-Q4"))
 m <= Setting(:use_population_forecast, true)
-m <= Setting(:forecast_pseudoobservables, true)
 
 estroot = normpath(joinpath(dirname(@__FILE__), "..", "reference"))
 overrides = forecast_input_file_overrides(m)
@@ -82,13 +81,13 @@ m <= Setting(:forecast_block_size, 5)
 for input_type in [:mode, :full]
     output_files = get_forecast_output_files(m, input_type, :none, output_vars)
     jldopen(output_files[:trendobs], "r") do file
-        @test ndims(read_forecast_output(file, :obs, :trend, :obs_gdp)) == 2
+        @test ndims(DSGE.read_forecast_series(file, :obs, :trend, :obs_gdp)) == 2
     end
     jldopen(output_files[:forecastobs], "r") do file
-        @test ndims(read_forecast_output(file, :obs, :forecast, :obs_gdp)) == 2
+        @test ndims(DSGE.read_forecast_series(file, :obs, :forecast, :obs_gdp)) == 2
     end
     jldopen(output_files[:irfobs], "r") do file
-        @test ndims(read_forecast_output(file, :obs, :irf, :obs_gdp, :rm_sh)) == 2
+        @test ndims(DSGE.read_forecast_series(file, :obs, :irf, :obs_gdp, :rm_sh)) == 2
     end
 end
 

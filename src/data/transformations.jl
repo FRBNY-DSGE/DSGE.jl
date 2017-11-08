@@ -414,6 +414,24 @@ end
 
 """
 ```
+get_irf_transform(transform::Function)
+```
+Returns the IRF-specific transformation, which doesn't add back population
+growth (since IRFs are given in deviations).
+"""
+function get_irf_transform(transform::Function)
+
+    transform4q = if transform == loggrowthtopct_annualized_percapita
+        loggrowthtopct_annualized
+    elseif transform == logleveltopct_annualized_percapita
+        logleveltopct_annualized
+    else
+        transform
+    end
+end
+
+"""
+```
 get_transform4q(transform::Function)
 ```
 Returns the 4-quarter transformation associated with the annualizing transformation.

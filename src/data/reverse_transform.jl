@@ -83,7 +83,7 @@ function reverse_transform(m::AbstractModel, untransformed::Matrix, start_date::
     df[:date] = quarter_range(start_date, end_date)
 
     for (ind, var) in enumerate(vars)
-        series = squeeze(untransformed[ind, :], 1)
+        series = untransformed[ind, :]
         df[var] = series
     end
 
@@ -101,24 +101,16 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     if class == :obs
         dict = m.observable_mappings
     elseif class == :pseudo
-        dict, _ = pseudo_measurement(m)
+        dict = m.pseudo_observable_mappings
     else
         error("Class $class does not have reverse transformations")
     end
 
     # Prepare population series
-    population_mnemonic = parse_population_mnemonic(m)[1]
-    vint = data_vintage(m)
-    population_data_file     = inpath(m, "raw", "population_data_levels_$vint.csv")
-    population_forecast_file = inpath(m, "raw", "population_forecast_$vint.csv")
-    population_data, population_forecast =
-        load_population_growth(population_data_file, population_forecast_file,
-                               get(population_mnemonic);
-                               use_population_forecast = use_population_forecast(m),
-                               use_hpfilter = hpfilter_population(m),
-                               verbose = verbose)
+    population_data, population_forecast = load_population_growth(m, verbose = verbose)
     population_series = get_population_series(:population_growth, population_data,
                                               population_forecast, start_date, end_date)
+    population_series = convert(Vector{Float64}, population_series)
 
     # Apply reverse transform
     transformed = DataFrame()
@@ -209,7 +201,7 @@ function reverse_transform(m::AbstractModel, input_type::Symbol, cond_type::Symb
     if class == :obs
         dict = m.observable_mappings
     elseif class == :pseudo
-        dict, _ = pseudo_measurement(m)
+        dict = m.pseudo_observable_mappings
     else
         error("Class $class does not have reverse transformations")
     end

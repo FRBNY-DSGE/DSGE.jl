@@ -306,12 +306,12 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
 
     # Write pseudo-observable names and transforms
     if class == :pseudo
-        pseudo, pseudo_mapping = pseudo_measurement(m)
-        write(file, "pseudoobservable_indices", pseudo_mapping.inds)
+        write(file, "pseudoobservable_indices", m.pseudo_observables)
         rev_transforms = if prod != :irf
-            Dict{Symbol,Symbol}(x => Symbol(pseudo[x].rev_transform) for x in keys(pseudo))
+            Dict{Symbol,Symbol}(x => Symbol(m.pseudo_observable_mappings[x].rev_transform)
+                                for x in keys(m.pseudo_observables))
         else
-            Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(pseudo))
+            Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(m.pseudo_observables))
         end
         write(file, "pseudoobservable_revtransforms", rev_transforms)
     end
@@ -372,16 +372,54 @@ function read_forecast_metadata(file::JLD.JldFile)
     return metadata
 end
 
+function read_forecast_output(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
+                              output_var::Symbol, var_name::Symbol,
+                              shock_name::Nullable{Symbol} = Nullable{Symbol}();
+                              forecast_string::String = "")
+    # Get filename
+    filename = get_meansbands_input_file(m, input_type, cond_type, output_var,
+                                         forecast_string = forecast_string)
+
+    # Determine class and product
+    product = get_product(output_var)
+    class   = get_class(output_var)
+
+    jldopen(filename, "r") do file
+        # Read forecast output
+        fcast_series = if isnull(shock_name)
+            read_forecast_series(file, class, product, var_name)
+        else
+            read_forecast_series(file, class, product, var_name, get(shock_name))
+        end
+
+        # The `fcast_output` for trends only is of size `ndraws` x `nvars`. We
+        # need to use `repeat` below because population adjustments will be
+        # different in each period. Now we have something of size `ndraws` x
+        # `nvars` x `nperiods`
+        if product == :trend
+            nperiods = length(read(file, "date_indices"))
+            fcast_series = repeat(fcast_series, outer = [1, nperiods])
+        end
+
+        # Parse transform
+        class_long = get_class_longname(class)
+        transforms = read(file, string(class_long) * "_revtransforms")
+        transform = parse_transform(transforms[var_name])
+
+        fcast_series, transform
+    end
+end
+
 """
 ```
-read_forecast_output(file, class, product, var_name[, shock_name])
+read_forecast_series(file, class, product, var_name[, shock_name])
 ```
 
 Read only the forecast output for a particular variable (e.g. for a particular
 observable) and possibly a particular shock. Result should be a matrix of size
 `ndraws` x `nperiods`.
 """
-function read_forecast_output(file::JLD.JldFile, class::Symbol, product::Symbol, var_name::Symbol)
+function read_forecast_series(file::JLD.JldFile, class::Symbol, product::Symbol, var_name::Symbol)
     # Get index corresponding to var_name
     class_long = get_class_longname(class)
     indices = read(file, "$(class_long)_indices")
@@ -416,7 +454,8 @@ function read_forecast_output(file::JLD.JldFile, class::Symbol, product::Symbol,
 
     return arr
 end
-function read_forecast_output(file::JLD.JldFile, class::Symbol, product::Symbol, var_name::Symbol,
+
+function read_forecast_series(file::JLD.JldFile, class::Symbol, product::Symbol, var_name::Symbol,
                               shock_name::Symbol)
     # Get indices corresponding to var_name and shock_name
     class_long = get_class_longname(class)

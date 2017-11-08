@@ -3,7 +3,7 @@ using DSGE, HDF5, JLD, Plots
 path = dirname(@__FILE__)
 
 # Initialize the plotting backend
-Plots.backend()
+gr()
 
 # Initialize model object
 m = AnSchorfheide(testing = true)
@@ -24,7 +24,7 @@ output_vars = add_requisite_output_vars([:histobs, :forecastobs, :shockdecobs, :
 @everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
 @time forecast_one(m, :full, :none, output_vars, verbose = :none)
-@time means_bands_all(m, :full, :none, output_vars; verbose = :none)
+@time compute_meansbands(m, :full, :none, output_vars; verbose = :none)
 
 println("The following warning is expected test behavior:")
 
@@ -63,9 +63,8 @@ plot_scenario(m, :obs_nominalrate, :obs, alt, fourquarter = true, verbose = :non
                                           untrans = true, fourquarter = true)
 
 # Hair plot
-df = load_data(m, verbose = :none)
-output_file = joinpath(saveroot(m), "hairplot__obs_nominalrate.pdf")
+realized = load_data(m, verbose = :none)
 hist_mb = read_mb(m, :full, :none, :histobs)
 fcast_mb = read_mb(m, :full, :none, :bddforecastobs)
-hair_plot(:obs_nominalrate, df, [hist_mb], [fcast_mb];
-          output_file = output_file, verbose = :none)
+hair_plot(:obs_nominalrate, realized, [hist_mb], [fcast_mb];
+          plotroot = saveroot(m), verbose = :none)

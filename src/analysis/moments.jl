@@ -21,11 +21,12 @@ bands in various LaTeX tables stored `tablespath(m)`.
   `subset_string` is empty, an error is thrown
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
+- `use_mode::Bool`: Return a table with the modal parameters as opposed to the mean
 """
 function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
                        subset_inds::Range{Int64} = 1:0, subset_string::String = "",
                        groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
-                       verbose::Symbol = :low)
+                       verbose::Symbol = :low, use_mode::Bool = false)
 
     ### 1. Load parameter draws from Metropolis-Hastings
 
@@ -44,8 +45,10 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
 
     ### 2. Compute posterior moments
 
+    if use_mode
+        post_mode = h5read(get_forecast_input_file(m, :mode), "params")
+    end
     post_means = vec(mean(params, 1))
-    post_bands = find_density_bands(params, percent; minimize = true)'
 
     # Save posterior means
     basename = "paramsmean"
@@ -56,13 +59,17 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
     h5open(filename, "w") do file
         write(file, "post_means", post_means)
     end
-
+    post_bands = find_density_bands(params, percent; minimize = true)'
 
     ### 3. Produce TeX tables
 
+    if use_mode
+        prior_posterior_table(m, post_mode; subset_string = subset_string, groupings = groupings, use_mode = use_mode)
+    else
+        prior_posterior_table(m, post_means; subset_string = subset_string, groupings = groupings, use_mode = use_mode)
+    end
     prior_posterior_moments_table(m, post_means, post_bands;
                                   percent = percent, subset_string = subset_string, groupings = groupings)
-    prior_posterior_means_table(m, post_means; subset_string = subset_string, groupings = groupings)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         @printf "Tables are saved as %s.\n" tablespath(m, "estimate", "*.tex")
@@ -309,18 +316,23 @@ end
 
 """
 ```
-prior_posterior_means_table(m, post_means; subset_string = "")
+prior_posterior_table(m, post_values; subset_string = "")
 ```
 
-Produces a table of prior means and posterior means. Saves to:
+Produces a table of prior means and posterior means or mode. Saves to:
 
 ```
 tablespath(m, \"estimate\", \"prior_posterior_means[_sub=\$subset_string].tex\")
 ```
+or
+```
+tablespath(m, \"estimate\", \"prior_posterior_mode[_sub=\$subset_string].tex\")
+```
 """
-function prior_posterior_means_table(m::AbstractModel, post_means::Vector;
+function prior_posterior_table(m::AbstractModel, post_values::Vector;
                  subset_string::String = "",
-                 groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
+                 groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                 use_mode::Bool = false)
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -328,24 +340,28 @@ function prior_posterior_means_table(m::AbstractModel, post_means::Vector;
     end
 
     # Open the TeX file
-    basename = "prior_posterior_means"
+    basename = use_mode ? "prior_posterior_mode" : "prior_posterior_means"
     if !isempty(subset_string)
         basename *= "_sub=$(subset_string)"
     end
-    means_out = tablespath(m, "estimate", "$basename.tex")
-    means_fid = open(means_out, "w")
+    table_out = tablespath(m, "estimate", "$basename.tex")
+    fid = open(table_out, "w")
 
     # Write header
-    write_table_preamble(means_fid)
-    @printf means_fid "\\vspace*{.5cm}\n"
-    @printf means_fid "\\begin{longtable}{ccc}\n"
-    @printf means_fid "\\caption{Parameter Estimates: Prior and Posterior Means}\n"
-    @printf means_fid "\\\\ \\hline\n"
-    @printf means_fid "Parameter & Prior & Posterior\n"
-    @printf means_fid "\\\\ \\hline\n"
-    @printf means_fid "\\endhead\n"
-    @printf means_fid "\\hline\n"
-    @printf means_fid "\\endfoot\n"
+    write_table_preamble(fid)
+    @printf fid "\\vspace*{.5cm}\n"
+    @printf fid "\\begin{longtable}{ccc}\n"
+    if use_mode
+        @printf fid "\\caption{Parameter Estimates: Prior Mean and Posterior Mode}\n"
+    else
+        @printf fid "\\caption{Parameter Estimates: Prior and Posterior Means}\n"
+    end
+    @printf fid "\\\\ \\hline\n"
+    @printf fid "Parameter & Prior & Posterior\n"
+    @printf fid "\\\\ \\hline\n"
+    @printf fid "\\endhead\n"
+    @printf fid "\\hline\n"
+    @printf fid "\\endfoot\n"
 
     # Write results
     # sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -361,24 +377,24 @@ function prior_posterior_means_table(m::AbstractModel, post_means::Vector;
         for param in params
             index = m.keys[param.key]
 
-            post_mean = if param.fixed
+            post_value = if param.fixed
                 param.value
             else
                 prior = get(param.prior)
                 isa(prior, RootInverseGamma) ? prior.τ : mean(prior)
             end
 
-            @printf means_fid "\$\%4.99s\$ & " param.tex_label
-            @printf means_fid "%8.3f & " post_mean
-            @printf means_fid "\%8.3f \\\\\n" post_means[index]
+            @printf fid "\$\%4.99s\$ & " param.tex_label
+            @printf fid "%8.3f & " post_value
+            @printf fid "\%8.3f \\\\\n" post_values[index]
         end
     end
 
     # Write footer
-    write_table_postamble(means_fid)
+    write_table_postamble(fid)
 
     # Close file
-    close(means_fid)
+    close(fid)
 end
 
 """

@@ -5,7 +5,8 @@ simulate_switching(m, scen::SwitchingScenario; verbose = :low)
 
 Simulate switching in and out of a default scenario for the
 SwitchingScenario scen. See `SwitchingScenario` for more
-info.
+info. Returns a dictionary of results and the proportion
+of times a switch actually occured.
 """
 function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
                             verbose::Symbol = :low)
@@ -29,7 +30,9 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
                                                      [:forecastobs, :forecastpseudo])
 
     results = Dict{Symbol, Array{Float64}}()
-    for output_var in [:forecastobs, :forecastpseudo]
+    switching_results = [0.0, 0.0]
+
+    for (i, output_var) in enumerate([:forecastobs, :forecastpseudo])
         # Read in original and default draws
         original_draws = load(original_output_files[output_var], "arr")
         default_draws  = load(default_output_files[output_var], "arr")
@@ -42,13 +45,18 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
 
         # Simulate switching
         results[output_var] = zeros(n_draws, n_vars, n_periods)
-        for i = 1:n_draws
-            j = rand(1:n_default_draws)
-            results[output_var][i, :, :] = switch(original_draws[i, :, :], default_draws[j, :, :],
-                                                  scen.probs_enter, scen.probs_exit)
+        proportion_switched = 0.0
+        for j = 1:n_draws
+            k = rand(1:n_default_draws)
+            results[output_var][j, :, :], switched = switch(original_draws[j, :, :], default_draws[k, :, :],
+                                                            scen.probs_enter, scen.probs_exit)
+            proportion_switched += Float64(switched)
         end
-
+        println(proportion_switched / n_draws)
+        switching_results[i] = proportion_switched / n_draws
     end
+
+    results[:proportion_switched] = mean(switching_results)
 
     # Write outputs
     output_files = get_scenario_output_files(m, scen, [:forecastobs, :forecastpseudo])
@@ -62,7 +70,7 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
         println("Switching complete: " * string(now()))
     end
 
-    return results
+    return results, switching_results
 end
 
 """
@@ -82,6 +90,9 @@ function switch(original::Matrix{Float64}, default::Matrix{Float64},
     # Find period of switch from default to original
     period_in = choose_switch_period(probs_enter, 1)
 
+    # Record whether original is actually switched into
+    switched = period_in < n_periods
+
     # Find period of switch from original to default
     # Start in period_in + 1 s.t. at least 1 period is spent in the original scenario
     period_out = choose_switch_period(probs_exit, period_in + 1)
@@ -90,7 +101,7 @@ function switch(original::Matrix{Float64}, default::Matrix{Float64},
     output[:, period_in:(period_out-1)] = original[:, 1:(period_out-period_in)]
     output[:, period_out:n_periods]     = default[:, period_out:n_periods]
 
-    return output
+    return output, switched
 end
 
 function choose_switch_period(probs::Vector{Float64}, first_period::Int)

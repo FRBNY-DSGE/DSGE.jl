@@ -1,46 +1,35 @@
 """
 ```
 measurement{T<:AbstractFloat}(m::SmetsWouters{T}, TTT::Matrix{T}, RRR::Matrix{T},
-                              CCC::Vector{T}; shocks::Bool = true)
+                              CCC::Vector{T})
 ```
 
 Assign measurement equation
 
 ```
-y_t = ZZ*s_t + DD + η_t
+y_t = ZZ*s_t + DD + u_t
 ```
 
 where
 
 ```
 Var(ϵ_t) = QQ
-Var(η_t) = EE
-Cov(ϵ_t, η_t) = 0
+Var(u_t) = EE
+Cov(ϵ_t, u_t) = 0
 ```
 """
 function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
                                        TTT::Matrix{T},
                                        RRR::Matrix{T},
-                                       CCC::Vector{T};
-                                       shocks::Bool = true)
-    endo = m.endogenous_states
-    exo  = m.exogenous_shocks
-    obs  = m.observables
+                                       CCC::Vector{T})
+    endo      = m.endogenous_states
+    endo_addl = m.endogenous_states_augmented
+    exo       = m.exogenous_shocks
+    obs       = m.observables
 
-    # If shocks = true, then return measurement equation matrices with rows and columns for
-    # anticipated policy shocks
-    if shocks
-        _n_observables = n_observables(m)
-        _n_states = n_states_augmented(m)
-        _n_shocks_exogenous = n_shocks_exogenous(m)
-        endo_addl = m.endogenous_states_augmented
-    else
-        _n_observables = n_observables(m) - n_anticipated_shocks(m)
-        _n_states = n_states_augmented(m) - n_anticipated_shocks(m)
-        _n_shocks_exogenous = n_shocks_exogenous(m) - n_anticipated_shocks(m)
-        endo_addl = OrderedDict(
-            [(key,m.endogenous_states_augmented[key] - n_anticipated_shocks(m)) for key in keys(m.endogenous_states_augmented)])
-    end
+    _n_observables = n_observables(m)
+    _n_states = n_states_augmented(m)
+    _n_shocks_exogenous = n_shocks_exogenous(m)
 
     ZZ = zeros(_n_observables, _n_states)
     DD = zeros(_n_observables)
@@ -104,10 +93,12 @@ function measurement{T<:AbstractFloat}(m::SmetsWouters{T},
     # These lines set the standard deviations for the anticipated
     # shocks to be equal to the standard deviation for the
     # unanticipated policy shock
-    if shocks
-        for i = 1:n_anticipated_shocks(m)
-            ZZ[obs[Symbol("obs_nominalrate$i")], :]              = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
-            DD[obs[Symbol("obs_nominalrate$i")]]                 = m[:Rstarn]
+    for i = 1:n_anticipated_shocks(m)
+        ZZ[obs[Symbol("obs_nominalrate$i")], :] = ZZ[obs[:obs_nominalrate], :]' * (TTT^i)
+        DD[obs[Symbol("obs_nominalrate$i")]]    = m[:Rstarn]
+        if subspec(m) == "ss1"
+            QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_rm")]^2 / n_anticipated_shocks(m)
+        else
             QQ[exo[Symbol("rm_shl$i")], exo[Symbol("rm_shl$i")]] = m[Symbol("σ_rm")]^2 / 16
         end
     end

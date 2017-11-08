@@ -28,6 +28,7 @@ Computes and returns the smoothed values of states and shocks for the system
    `draw_states = true`)
 - `include_presample::Bool`: indicates whether to include presample periods in
   the returned matrices. Defaults to `false`.
+- `in_sample::Bool`: indicates whether or not to discard out of sample rows in `df_to_matrix` call.
 
 ### Outputs
 
@@ -36,8 +37,7 @@ Computes and returns the smoothed values of states and shocks for the system
 - `shocks::Matrix{S}`: array of size `nshocks` x `hist_nperiods` of smoothed
   shocks
 - `pseudo::Matrix{S}`: matrix of size `npseudo` x `hist_periods` of
-  pseudo-observables computed from the smoothed states. If
-  `!forecast_pseudoobservables(m)`, `pseudo` will be empty.
+  pseudo-observables computed from the smoothed states
 - `initial_states::Vector{S}`: vector of length `nstates` of the smoothed states
   in the last presample period. This is used as the initial state for computing
   the deterministic trend
@@ -56,9 +56,10 @@ before calling `smooth`.
 """
 function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     system::System{S}, kal::Kalman{S}; cond_type::Symbol = :none,
-    draw_states::Bool = false, include_presample::Bool = false)
+    draw_states::Bool = false, include_presample::Bool = false,
+    in_sample::Bool = true)
 
-    data = df_to_matrix(m, df; cond_type = cond_type)
+    data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
 
     # Partition sample into pre- and post-ZLB regimes
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
@@ -98,11 +99,7 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     end
 
     # Map smoothed states to pseudo-observables
-    pseudo = if forecast_pseudoobservables(m)
-        system[:ZZ_pseudo] * states .+ system[:DD_pseudo]
-    else
-        Matrix{S}(0, 0)
-    end
+    pseudo = system[:ZZ_pseudo] * states .+ system[:DD_pseudo]
 
     return states, shocks, pseudo, initial_states
 end

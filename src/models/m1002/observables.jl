@@ -302,5 +302,5 @@ function init_observable_mappings!(m::Model1002)
                                                       "$i-period ahead anticipated monetary policy shock")
     end
 
-   m.observable_mappings = observables
+    m.observable_mappings = observables
 end

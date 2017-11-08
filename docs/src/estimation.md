@@ -1,19 +1,19 @@
-# Estimation
+# [Estimation](@id estimation-step)
 
 ```@meta
 CurrentModule = DSGE
 ```
 
-## Procedure 
+## Procedure
 
 The goal of the estimation step is to sample from the posterior
 distribution of the model parameters. DSGE.jl uses a Metropolis-Hastings
 sampler to do this, which requires as a proposal covariance matrix the
-Hessian matrix corresponding to the posterior mode. The function `estimate` implements the entire procedure. 
+Hessian matrix corresponding to the posterior mode. The function `estimate` implements the entire procedure.
 
 **Main Steps**:
 
-- *Initialization*: Read in and transform raw data from `save/input_data/`. See [Input Data](@ref) for more details.  
+- *Initialization*: Read in and transform raw data from `save/input_data/`. See [Input Data](@ref) for more details.
 
 - *Reoptimize parameter vector*: The main program will call the `csminwel`
   optimization routine (located in `csminwel.jl`) to find modal parameter
@@ -43,16 +43,15 @@ DSGE.estimate
 
 ## Computing the Posterior
 
-In DSGE.jl, the function `posterior` computes the value of the
-posterior distribution at a given parameter vector. It calls the
-`likelihood` function, which in turn calls the `kalman_filter`
-routine. See [Estimation routines](@ref) for more details on these
-functions.
+In DSGE.jl, the function `posterior` computes the value of the posterior
+distribution at a given parameter vector. It calls the `likelihood` function,
+which in turn calls the `filter` routine. See [Estimation routines](@ref) for
+more details on these functions.
 
-We implement the Kalman Filter via the `kalman_filter` function to
-compute the log-likelihood, and add this to the log prior to obtain
-the log posterior. See [State Space Routines](@ref) for a
-model-independent implementations of the Kalman filter.	
+We implement the Kalman Filter via the `filter` function to compute the
+log-likelihood, and add this to the log prior to obtain the log posterior. See
+[StateSpaceRoutines.jl](https://github.com/FRBNY-DSGE/StateSpaceRoutines.jl) for
+a model-independent implementation of the Kalman filter.
 
 
 ## [Optimizing or Reoptimizing](@id estimation-reoptimizing)
@@ -118,7 +117,7 @@ than calculating it directly.  Ensure that you supply an HDF5 file with a variab
 `hessian` that is the correct dimension and data type. Specifying the Hessian matrix but
 *not* the parameter mode results in undefined behavior.
 
-See [Hessian Approximation] for more details on the Hessian computation. 
+See [Hessian Approximation] for more details on the Hessian computation.
 
 ## Estimation routines
 

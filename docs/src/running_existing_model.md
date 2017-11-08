@@ -40,7 +40,7 @@ my_procs = addprocs(10)
 @everywhere using DSGE
 
 forecast_one(m, :full, :none, [:forecaststates, forecastobs])
-means_bands_all(m, :full, :none, [:forecaststates, :forecastobs])
+compute_meansbands(m, :full, :none, [:forecaststates, :forecastobs])
 rmprocs(my_procs)
 ```
 
@@ -50,7 +50,7 @@ conditions, etc., see [Advanced Usage](@ref).
 By default, the `estimate` routine loads the dataset, reoptimizes the initial parameter
 vector, computes the Hessian at the mode, and conducts full posterior parameter sampling.
 (The initial parameter vector used is specified in the model's constructor.)
-Further options for estimation are described in [Estimating the Model](@ref):
+Further options for estimation are described in [Estimation](@ref estimation-step):
 
 - To use updated data or alternative user-specified datasets, see [Input Data](@ref).
 - The user may want to avoid reoptimizing the parameter vector and calculating
@@ -58,7 +58,7 @@ Further options for estimation are described in [Estimating the Model](@ref):
   estimation-reoptimizing).
 
 For more information on the many types of forecasts that can be run on an
-existing or user-defined model, see [Forecasting](@ref).
+existing or user-defined model, see [Forecasting](@ref forecast-step).
 
 
 
