@@ -56,7 +56,7 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
         switching_results[i] = proportion_switched / n_draws
     end
 
-    results[:proportion_switched] = mean(switching_results)
+    results[:proportion_switched] = [mean(switching_results)]
 
     # Write outputs
     output_files = get_scenario_output_files(m, scen, [:forecastobs, :forecastpseudo])
