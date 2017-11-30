@@ -115,16 +115,12 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, R::Array
             catch err
                 if isa(err, GensysError) || isa(err, ParamBoundsError)
                     post_new = like_new = -Inf
+                elseif isa(err, Base.LinAlg.LAPACKException)
+                    # throw(err)
+                    post_new = like_new = -Inf
                 else
                     throw(err)
                 end
-            end
-
-            # if step is invalid, retry
-            if !isfinite(post_new) && isempty(rstep)
-                para_new = rand(DegenerateMvNormal(para,cov_mat_block);cc=c)
-                step_prob = rand()
-                continue
             end
 
             # Accept/Reject
