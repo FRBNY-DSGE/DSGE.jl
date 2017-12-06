@@ -85,22 +85,27 @@ the standard distribution and `(1 - α)` of the diagonalized covariance distribu
 
 ### Arguments
 `p`: The mean of the desired distribution
-`Σ`: The standard deviation of the desired distribution
+`σ`: The standard deviation of the desired distribution
+
+### Outputs
+`draw`: The draw from the mixture distribution to be used as the MH proposed step
+`mixture_density`: The mixture density evaluated at `draw` to use in calculating the MH
+α move probability
 
 """
-function mvnormal_mixture_draw{T<:AbstractFloat}(p::Vector{T}, Σ::Matrix{T};
+function mvnormal_mixture_draw{T<:AbstractFloat}(p::Vector{T}, σ::Matrix{T};
                                                  cc::T = 1.0, α::T = 1.,
                                                  p_prop::Vector{T} = zeros(length(p)))
     @assert 0 <= α <= 1
-    d = DegenerateMvNormal(p, Σ)
-    d_diag = DegenerateMvNormal(p, diagm(diag(Σ)))
-    d_prop = p_prop == zeros(length(p)) ? d_diag : DegenerateMvNormal(p_prop, Σ)
+    d = DegenerateMvNormal(p, cc*σ)
+    d_diag = DegenerateMvNormal(p, diagm(diag(cc*σ)))
+    d_prop = p_prop == zeros(length(p)) ? d_diag : DegenerateMvNormal(p_prop, cc*σ)
 
-    normal_component = α*(d.μ + cc*d.σ*randn(length(d)))
-    diag_component   = (1 - α)/2*(d_diag.μ + cc*d_diag.σ*randn(length(d_diag)))
-    proposal_component   = (1 - α)/2*(d_prop.μ + cc*d_prop.σ*randn(length(d_prop)))
+    d_mix = MixtureModel(DegenerateMvNormal[d, d_diag, d_prop], [α, (1 - α)/2, (1 - α)/2])
+    draw = rand(d_mix)
+    mixture_density = pdf(d_mix, draw)
 
-    return normal_component + diag_component + proposal_component
+    return draw, mixture_density
 end
 
 
