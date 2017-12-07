@@ -34,16 +34,18 @@ the final output will be the final cloud of particles, of which only the particl
 - `rsmp::Int`: A binary indicator of whether or not the particles were resampled in a given stage
 - `ESS::Float64`: The effective sample size (resample if ESS falls under n_parts/2)
 - `accept::Float64`: The average acceptance rate of mutation steps
+- `estimation_vintage::String`: The date that this ParticleCloud was last estimated
 """
 type ParticleCloud
     particles::Vector{Particle}
     tempering_schedule::Vector{Float64}
+    ESS::Vector{Float64}
     stage_index::Int
     n_Φ::Int
     resamples::Int
     c::Float64
-    ESS::Float64
     accept::Float64
+    total_sampling_time::Float64
 end
 
 # Easier constructor for ParticleCloud, which initializes the weights to be equal, and everything else
@@ -51,7 +53,7 @@ end
 function ParticleCloud(m::AbstractModel, n_parts::Int)
     return ParticleCloud([Particle(1/n_parts,[m.parameters[i].key for i in 1:length(m.parameters)],
                          zeros(length(m.parameters)),0.,0.,false) for n in 1:n_parts],
-                         zeros(get_setting(m,:n_Φ)),1,0,0,0.,0.,0.)
+                         zeros(1),zeros(1),1,0,0,0.,0., 0.)
 end
 
 function get_weights(c::ParticleCloud)
