@@ -207,6 +207,12 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
         elseif mb2_product == :bddforecast
             :bddforecast
         end
+    elseif mb1_product == :histut
+        if mb2_product == :forecastut
+            :histforecastut
+        elseif mb2_product == :bddforecast
+            :bddforecastut
+        end
     elseif mb1_product == :hist4q
         if mb2_product == :forecast4q
             :histforecast4q
@@ -598,9 +604,10 @@ ordered as follows: [68\% lower, 50\% lower, 50\% upper, 68\% upper, mean].
 function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol;
                                              bands_pcts::Vector{String} = which_density_bands(mb, uniquify = true))
 
-    @assert get_product(mb) in [:hist, :hist4q, :forecast, :forecast4q,
-                                :bddforecast, :bddforecast4q, :histforecast, :histforecast4q,
-                                :bddhistforecast, :bddhistforecast4q,
+    @assert get_product(mb) in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
+                                :bddforecast, :bddforecastut, :bddforecast4q,
+                                :histforecast, :histforecastut, :histforecast4q,
+                                :bddhistforecast, :bddhistforecastut, :bddhistforecast4q,
                                 :trend, :dettrend] "prepare_meansbands_table_timeseries can only be used for time-series products"
     @assert var in get_vars_means(mb) "$var is not stored in this MeansBands object"
 

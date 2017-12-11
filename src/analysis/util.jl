@@ -31,6 +31,8 @@ function get_product(output_var::Symbol)
         :histforecast
     elseif contains(s, "hist4q")
         :hist4q
+    elseif contains(s, "histut")
+        :histut
     elseif contains(s, "hist")
         :hist
     elseif contains(s, "bddforecast4q")
@@ -267,7 +269,8 @@ function get_mb_population_series(product::Symbol, population_data::DataFrame,
     else
         start_date = if product in [:hist4q, :forecast4q, :bddforecast4q]
             iterate_quarters(date_list[1], -3)
-        elseif product in [:hist, :forecast, :bddforecast, :shockdec, :dettrend, :trend]
+        elseif product in [:histut, :hist, :forecastut, :forecast, :bddforecastut, :bddforecast,
+                           :shockdec, :dettrend, :trend]
             date_list[1]
         else
             error("Invalid product: $product")
@@ -350,7 +353,7 @@ period. For shockdecs, this is one period before
 the presample.
 """
 function get_y0_index(m::AbstractModel, product::Symbol)
-    if product in [:forecast, :bddforecast]
+    if product in [:forecastut, :forecast, :bddforecastut, :bddforecast]
         return index_forecast_start(m) - 1
     elseif product in [:forecast4q, :bddforecast4q]
         # We subtract 4 because there is 1 transform that actually
@@ -359,7 +362,7 @@ function get_y0_index(m::AbstractModel, product::Symbol)
         return index_forecast_start(m) - 4
     elseif product in [:shockdec, :dettrend, :trend]
         return n_presample_periods(m) + index_shockdec_start(m) - 1
-    elseif product in [:hist, :hist4q]
+    elseif product in [:hist, :histut, :hist4q]
         return index_mainsample_start(m) - 1
     elseif product == :irf
         return -1
