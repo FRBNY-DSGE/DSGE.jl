@@ -83,7 +83,8 @@ module DSGE
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
         metropolis_hastings, compute_parameter_covariance, prior, get_estimation_output_files,
-        compute_moments, find_density_bands, mutation, resample, smc, nearest_spd,
+        compute_moments, find_density_bands, mutation, resample, smc,
+        mvnormal_mixture_draw, nearest_spd,
         initial_draw, ParticleCloud, Particle,
 
         # forecast/
@@ -162,6 +163,7 @@ module DSGE
     include("estimate/estimate.jl")
     include("estimate/nearest_spd.jl")
     include("estimate/smc/particle.jl")
+    include("estimate/smc/util.jl")
     include("estimate/smc/mutation.jl")
     include("estimate/smc/resample.jl")
     include("estimate/smc/smc.jl")

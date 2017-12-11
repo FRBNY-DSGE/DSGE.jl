@@ -29,12 +29,16 @@ in the SMC algorithm. Information for a single iteration is stored at any given 
 the final output will be the final cloud of particles, of which only the particle values will be saved).
 
 ### Fields
-- `particles::Array{Particle,1}`: The array of particles (which contain weight, keys, and value information)
-- `n_Φ::Int`: The stage of the tempering schedule
-- `rsmp::Int`: A binary indicator of whether or not the particles were resampled in a given stage
-- `ESS::Float64`: The effective sample size (resample if ESS falls under n_parts/2)
+- `particles::Vector{Particle}`: The vector of particles (which contain weight, keys, and value information)
+- `tempering_schedule::Vector{Float64}`: The vector of ϕ_ns (tempering factors)
+- `ESS::Vector{Float64}`: The vector of effective sample sizes (resample if ESS falls under the threshold)
+- `stage_index::Int`: The current iteration index of the algorithm
+- `n_Φ::Int`: The total number of stages of in the fixed tempering schedule
+    (if the algorithm is run with an adaptive ϕ schedule then this is used to calibrate the ϕ_prop)
+- `resamples::Int`: The number of times the particle population was resampled
+- `c::Float64`: The mutation step size
 - `accept::Float64`: The average acceptance rate of mutation steps
-- `estimation_vintage::String`: The date that this ParticleCloud was last estimated
+- `total_sampling_time::Float64`: The total amount of time that the smc algorith took to execute
 """
 type ParticleCloud
     particles::Vector{Particle}

@@ -103,15 +103,30 @@ function mvnormal_mixture_draw{T<:AbstractFloat}(p::Vector{T}, σ::Matrix{T};
 
     d_mix = MixtureModel(DegenerateMvNormal[d, d_diag, d_prop], [α, (1 - α)/2, (1 - α)/2])
     draw = rand(d_mix)
-    mixture_density = pdf(d_mix, draw)
+    # mixture_density = pdf(d_mix, draw)
 
-    return draw, mixture_density
+    # return draw, mixture_density
+    return draw
 end
 
+function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector{T},
+                                       ϕ_n::T, ϕ_n1::T)
+    inc_weight = exp.((ϕ_n - ϕ_n1)*loglh)
+    new_weights = current_weights.*inc_weight
+    normalized_weights = new_weights/sum(new_weights)
+    ESS = 1/sum(normalized_weights.^2)
+    return ESS
+end
 
-function init_stage_print(cloud::ParticleCloud; verbose::Symbol=:low)
-	println("--------------------------")
-        println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
+function init_stage_print(cloud::ParticleCloud;
+                          verbose::Symbol=:low, use_fixed_schedule::Bool = true)
+    if use_fixed_schedule
+        println("--------------------------")
+            println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
+    else
+        println("--------------------------")
+            println("Iteration = $(cloud.stage_index)")
+    end
 	println("--------------------------")
         println("phi = $(cloud.tempering_schedule[cloud.stage_index])")
 	println("--------------------------")
@@ -126,21 +141,29 @@ function init_stage_print(cloud::ParticleCloud; verbose::Symbol=:low)
     end
 end
 
-function end_stage_print(cloud::ParticleCloud, total_sampling_time::Float64; verbose::Symbol=:low)
-    total_sampling_time_minutes = total_sampling_time/60
-    expected_time_remaining_sec = (total_sampling_time/cloud.stage_index)*(cloud.n_Φ - cloud.stage_index)
-    expected_time_remaining_minutes = expected_time_remaining_sec/60
+function end_stage_print(cloud::ParticleCloud;
+                         verbose::Symbol=:low, use_fixed_schedule::Bool = true)
+    total_sampling_time_minutes = cloud.total_sampling_time/60
+    if use_fixed_schedule
+        expected_time_remaining_sec = (cloud.total_sampling_time/cloud.stage_index)*(cloud.n_Φ - cloud.stage_index)
+        expected_time_remaining_minutes = expected_time_remaining_sec/60
+    end
 
     println("--------------------------")
+    if use_fixed_schedule
         println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
         println("time elapsed: $(round(total_sampling_time_minutes, 4)) minutes")
         println("estimated time remaining: $(round(expected_time_remaining_minutes, 4)) minutes")
+    else
+        println("Iteration = $(cloud.stage_index)")
+        println("time elapsed: $(round(total_sampling_time_minutes, 4)) minutes")
+    end
     println("--------------------------")
         println("phi = $(cloud.tempering_schedule[cloud.stage_index])")
     println("--------------------------")
         println("c = $(cloud.c)")
         println("accept = $(cloud.accept)")
-        println("ESS = $(cloud.ESS)   ($(cloud.resamples) total resamples.)")
+        println("ESS = $(cloud.ESS[cloud.stage_index])   ($(cloud.resamples) total resamples.)")
     println("--------------------------")
     if VERBOSITY[verbose] >= VERBOSITY[:high]
         μ = weighted_mean(cloud)
