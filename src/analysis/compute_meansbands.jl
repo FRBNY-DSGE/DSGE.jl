@@ -103,9 +103,8 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     pop_growth     = get_mb_population_series(product, population_data, population_forecast, date_list)
 
     # Compute means and bands
-    if product in [:hist, :hist4q, :forecast, :forecast4q, :bddforecast, :bddforecast4q,
-                   :dettrend, :trend]
-
+    if product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
+                   :bddforecast, :bddforecastut, :bddforecast4q, :dettrend, :trend]
         # Get to work!
         mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                       pop_growth = pop_growth, forecast_string = forecast_string, kwargs...),
@@ -122,7 +121,6 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
         end
 
     elseif product in [:shockdec, :irf]
-
         means = product == :irf ? DataFrame() : DataFrame(date = date_list)
         bands = Dict{Symbol, DataFrame}()
 
@@ -146,6 +144,9 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
                 end
             end
         end
+
+    else
+        error("Invalid product: $product")
     end # of if product
 
     mb = MeansBands(metadata, means, bands)
@@ -213,7 +214,7 @@ function mb_reverse_transform(fcast_series::Array{Float64}, transform::Function,
                               data::AbstractVector{Float64} = Float64[],
                               pop_growth::AbstractVector{Float64} = Float64[])
     # No transformation
-    if product == :forecastut
+    if product in [:histut, :forecastut, :bddforecastut]
         return fcast_series
     end
 
