@@ -164,7 +164,7 @@ end
 difflog(x::AbstractVector)
 ```
 """
-function difflog(x::AbstractVector)
+function difflog(x::Vector)
     [NaN; log.(x[2:end]) - log.(x[1:end-1])]
 end
 
@@ -176,7 +176,7 @@ difflog(x::DataArray{AbstractFloat})
 """
 function difflog(x::DataArray)
     DSGE.na2nan!(x)
-    return difflog(x)
+    return difflog(convert(Vector, x))
 end
 
 
