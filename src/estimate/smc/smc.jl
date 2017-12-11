@@ -41,16 +41,20 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
     ########################################################################################
 
     parallel = get_setting(m, :use_parallel_workers)
+    use_fixed_schedule = get_setting(m, :fixed_ϕ_schedule)
 
     n_parts = get_setting(m, :n_particles)
     n_params = n_parameters(m)
     n_blocks = get_setting(m, :n_smc_blocks)
-    n_Φ = get_setting(m, :n_Φ)
 
     c = get_setting(m, :step_size_smc)
     accept = get_setting(m, :init_accept)
     target = get_setting(m, :target_accept)
     λ = get_setting(m, :λ)
+    n_Φ = get_setting(m, :n_Φ)
+    bar_coeff = get_setting(m, :bar_coeff)
+    threshold_ratio = get_setting(m, :resampling_threshold)
+    threshold = threshold_ratio * n_parts
 
     ########################################################################################
     ### Initialize Algorithm: Draws from prior
@@ -69,35 +73,47 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
         srand(42)
     end
 
-    if !tempered_update
+    # if !tempered_update
         # Instantiating ParticleCloud object
         cloud = ParticleCloud(m, n_parts)
 
         # Particle draws from the parameter's marginal priors
         # Modifies the cloud object in place to update draws, loglh, & logpost
         initial_draw(m, data, cloud)
+    # else
+        # updated_vintage = get_setting(m, :updated_data_vintage)
+        # cloud = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "old_cloud")
+
+        # unchanged_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "unchanged_loglh")
+        # revised_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "revised_loglh")
+        # new_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "new_loglh")
+
+        # update_loglh!(cloud, unchanged_loglh)
+    # end
+
+    # Fixed schedule for construction of ϕ_prop
+    if use_fixed_schedule
+        cloud.tempering_schedule = ((collect(1:n_Φ)-1)/(n_Φ-1)).^λ
     else
-        updated_vintage = get_setting(m, :updated_data_vintage)
-        cloud = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "old_cloud")
-
-        unchanged_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "unchanged_loglh")
-        revised_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "revised_loglh")
-        new_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "new_loglh")
-
-        update_loglh!(cloud, unchanged_loglh)
+        proposed_fixed_schedule = ((collect(1:n_Φ)-1)/(n_Φ-1)).^λ
     end
 
+    # Saving initial parameter values in the ParticleCloud instance
     cloud.n_Φ = n_Φ
     cloud.c = c
-    cloud.tempering_schedule = ((collect(1:n_Φ)-1)/(n_Φ-1)).^λ
     cloud.accept = accept
+    cloud.stage_index = i = 1
+    cloud.ESS[1] = n_parts          # To make adaptive ϕ schedule calculate ESS_bar properly
 
-    if m.testing
-        writecsv("draws.csv", get_vals(cloud))
-    end
+    j = 1                           # The index tracking to the fixed_schedule entry that ϕ_prop is set as
+    resampled_last_period = false   # To ensure proper resetting of ESS_bar right after resample
+    ϕ_n = 0.                        # Instantiating ϕ_n and ϕ_prop variables to be referenced in their
+    ϕ_prop = 0.                     # respective while loop conditions
+    w_matrix = zeros(n_parts, 1)    # Incremental and normalized weight matrices (n_parts x n_Φ) to store
+    W_matrix = ones(n_parts, 1)     # for the calculation of the MDD
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        init_stage_print(cloud;verbose=verbose)
+        init_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)
     end
 
     ########################################################################################
@@ -105,76 +121,131 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
     ########################################################################################
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("\n\n SMC Recursion starts \n\n")
+        println("\n\n SMC recursion starts \n\n")
     end
 
     total_sampling_time = 0.
 
-    for i = 2:n_Φ
-        tic()
-        cloud.stage_index = i
+    while ϕ_n < 1.
+
+    tic()
+    cloud.stage_index = i += 1
+
+    ########################################################################################
+    ### Step 0: Setting ϕ_n (either adaptively or by the fixed schedule)
+    ########################################################################################
+    ϕ_n1 = cloud.tempering_schedule[i-1]
+
+    if use_fixed_schedule
+        ϕ_n = cloud.tempering_schedule[i]
+    else
+        if resampled_last_period
+            # The ESS_bar should be reset to target an evenly weighted particle population
+            ESS_bar = bar_coeff*n_parts
+            resampled_last_period = false
+        else
+            ESS_bar = bar_coeff*cloud.ESS[i-1]
+        end
+
+        # Setting up the optimal ϕ solving function for endogenizing the tempering schedule
+        optimal_ϕ_function(ϕ)  = compute_ESS(get_loglh(cloud), get_weights(cloud), ϕ, ϕ_n1) - ESS_bar
+
+        # Find a ϕ_prop such that the optimal ϕ_n will lie somewhere between ϕ_n1 and ϕ_prop
+        # Do so by iterating through a proposed_fixed_schedule and finding the first
+        # ϕ_prop such that the ESS would fall by more than the targeted amount ESS_bar
+        while optimal_ϕ_function(ϕ_prop) >= 0 && j <= n_Φ
+            ϕ_prop = proposed_fixed_schedule[j]
+            j += 1
+        end
+
+        # if ϕ_prop == 1.
+            # jldopen("debug_file.jld", "w") do file
+                # write(file, "cloud", cloud)
+                # write(file, "ϕ_prop", ϕ_prop)
+                # write(file, "ϕ_n1", ϕ_n1)
+                # write(file, "ESS_bar", ESS_bar)
+                # write(file, "proposed_fixed_schedule", proposed_fixed_schedule)
+            # end
+        # end
+
+        # Note: optimal_ϕ_function(ϕ_n1) > 0 because ESS_{t-1} is always positive
+        # When ϕ_prop != 1. then there are still ϕ increments strictly below 1 that
+        # give the optimal ϕ step, ϕ_n.
+        # When ϕ_prop == 1. but optimal_ϕ_function(ϕ_prop) < 0 then there still exists
+        # an optimal ϕ step, ϕ_n, that does not equal 1.
+        # Thus the interval [optimal_ϕ_function(ϕ_n1), optimal_ϕ_function(ϕ_prop)] always
+        # contains a 0 by construction.
+        if ϕ_prop != 1. || optimal_ϕ_function(ϕ_prop) < 0
+            ϕ_n = fzero(optimal_ϕ_function, [ϕ_n1, ϕ_prop], xtol = 0.)
+            push!(cloud.tempering_schedule, ϕ_n)
+        else
+            ϕ_n = 1.
+            push!(cloud.tempering_schedule, ϕ_n)
+        end
+    end
 
     ########################################################################################
     ### Step 1: Correction
     ########################################################################################
 
-    # Incremental weights
-    ϕ_n = cloud.tempering_schedule[i]
-    ϕ_n1 = cloud.tempering_schedule[i-1]
-    if !tempered_update
-        inc_weight = exp.((ϕ_n - ϕ_n1)*get_loglh(cloud))
-    else
-        inc_weight = exp.((ϕ_n1 - ϕ_n)*revised_loglh + (ϕ_n - ϕ_n1)*new_loglh)
-    end
+    # Calculate incremental weights
+    # if !tempered_update
+        incremental_weights = exp.((ϕ_n - ϕ_n1)*get_loglh(cloud))
+    # else
+        # incremental_weights = exp.((ϕ_n1 - ϕ_n)*revised_loglh + (ϕ_n - ϕ_n1)*new_loglh)
+    # end
 
     # Update weights
-    update_weights!(cloud, inc_weight)
+    update_weights!(cloud, incremental_weights)
 
     # Normalize weights
     normalize_weights!(cloud)
 
-    if m.testing
-        writecsv("weights.csv", get_weights(cloud))
-    end
+    normalized_weights = get_weights(cloud)
+
+    w_matrix = hcat(w_matrix, incremental_weights)
+    W_matrix = hcat(W_matrix, normalized_weights)
 
     ########################################################################################
     ### Step 2: Selection
     ########################################################################################
 
-    cloud.ESS = 1/sum(get_weights(cloud).^2)
-    @assert !isnan(cloud.ESS) "no particles have non-zero weight"
-    if (cloud.ESS < n_parts/2)
-        new_inds = resample(get_weights(cloud); method = get_setting(m, :resampler_smc),
+    # Calculate the degeneracy/effective sample size metric
+    push!(cloud.ESS, 1/sum(normalized_weights.^2))
+
+    # If this assertion does not hold then there are likely too few particles
+    @assert !isnan(cloud.ESS[i]) "no particles have non-zero weight"
+
+    # Resample if the degeneracy/effective sample size metric falls below the accepted threshold
+    if (cloud.ESS[i] < threshold)
+        new_inds = resample(normalized_weights; method = get_setting(m, :resampler_smc),
                             parallel = parallel, testing = m.testing)
+
         # update parameters/logpost/loglh with resampled values
         # reset the weights to 1/n_parts
         cloud.particles = [deepcopy(cloud.particles[i]) for i in new_inds]
         reset_weights!(cloud)
         cloud.resamples += 1
+        resampled_last_period = true
     end
 
     ########################################################################################
     ### Step 3: Mutation
     ########################################################################################
 
+    # Calculate the adaptive c-step to be used as a scaling coefficient in the mutation MH step
     c = c*(0.95 + 0.10*exp(16*(cloud.accept - target))/(1 + exp(16*(cloud.accept - target))))
-    # Updating c step size in model object and cloud object
     m <= Setting(:step_size_smc, c)
     cloud.c = c
 
     if parallel
         R = cov(cloud)
-        current_φ = cloud.tempering_schedule[i]
-        previous_φ = cloud.tempering_schedule[i-1]
-        #out = pmap(j -> mutation_block_RWMH(m, data, cloud.particles[j], R, current_φ, previous_φ, 1:n_parts))
         new_particles = @parallel (vcat) for j in 1:n_parts
-            mutation(m, data, cloud.particles[j], R, current_φ, previous_φ)
+            mutation(m, data, cloud.particles[j], R, ϕ_n, ϕ_n1; c = c)
         end
     else
         R = cov(cloud)
-        current_φ = cloud.tempering_schedule[i]
-        previous_φ = cloud.tempering_schedule[i-1]
-        new_particles = [mutation(m, data, cloud.particles[j], R, current_φ, previous_φ)  for j = 1:n_parts]
+        new_particles = [mutation(m, data, cloud.particles[j], R, ϕ_n, ϕ_n1; c = c) for j = 1:n_parts]
     end
 
     cloud.particles = new_particles
@@ -184,32 +255,31 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
     ### Timekeeping and Output Generation
     ########################################################################################
 
-    total_sampling_time += toq()
+    cloud.total_sampling_time += toq()
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        end_stage_print(cloud, total_sampling_time; verbose=verbose)
+        end_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)
+    end
+
     end
 
     ########################################################################################
     ### Saving data
     ########################################################################################
 
-    if m.testing
-        writecsv("mutated_values.csv",get_vals(cloud))
-        break
-    end
-
-    end
-
     if !m.testing && !tempered_update
-        simfile = h5open(rawpath(m,"estimate","smcsave.h5"),"w")
+        simfile = h5open(rawpath(m, "estimate", "smcsave.h5"),"w")
         particle_store = d_create(simfile, "smcparams", datatype(Float32),
                                   dataspace(n_parts, n_params))
         for i in 1:length(cloud)
             particle_store[i,:] = cloud.particles[i].value
         end
         close(simfile)
-        save(rawpath(m,"estimate","smc_cloud.jld"),"cloud",cloud)
+        jldopen(rawpath(m, "estimate", "smc_cloud.jld"), "w") do file
+            write(file, "cloud", cloud)
+            write(file, "w", w_matrix)
+            write(file, "W", W_matrix)
+        end
     elseif tempered_update
         new_vintage = get_setting(m, :updated_data_vintage)
         jldopen(rawpath(m, "estimate", "smc_cloud_updvint=$new_vintage.jld"), "r+") do file
@@ -265,114 +335,4 @@ function smc{S<:AbstractFloat}(m::AbstractModel, cloud::ParticleCloud, old_data:
     end
 
     smc(m, data; verbose=verbose, tempered_update=true)
-end
-
-"""
-```
-initial_draw(m::AbstractModel, data::Array{Float64}, c::ParticleCloud)
-```
-
-Draw from a general starting distribution (set by default to be from the prior) to initialize the SMC algorithm.
-Returns a tuple (logpost, loglh) and modifies the particle objects in the particle cloud in place.
-
-"""
-function initial_draw(m::AbstractModel, data::Array{Float64}, c::ParticleCloud)
-    dist_type = get_setting(m, :initial_draw_source)
-    if dist_type == :normal
-        params = zeros(n_parameters(m))
-        hessian = zeros(n_parameters(m),n_parameters(m))
-        try
-            file = h5open(rawpath(m, "estimate", "paramsmode.h5"), "r")
-            params = read(file,"params")
-            close(file)
-        catch
-            throw("There does not exist a valid mode file at "*rawpath(m,"estimate","paramsmode.h5"))
-        end
-
-        try
-            file = h5open(rawpath(m, "estimate", "hessian.h5"), "r")
-            hessian = read(file, "hessian")
-            close(file)
-        catch
-            throw("There does not exist a valid hessian file at "*rawpath(m,"estimate","hessian.h5"))
-        end
-
-        S_diag, U = eig(hessian)
-        big_eig_vals = find(x -> x>1e-6, S_diag)
-        rank = length(big_eig_vals)
-        n = length(params)
-        S_inv = zeros(n, n)
-        for i = (n-rank+1):n
-            S_inv[i, i] = 1/S_diag[i]
-        end
-        hessian_inv = U*sqrt(S_inv)
-        dist = DSGE.DegenerateMvNormal(params, hessian_inv)
-    end
-
-    n_part = length(c)
-    draws =
-    dist_type == :prior ? rand(m.parameters, n_part) : rand(dist, n_part)
-
-    loglh = zeros(n_part)
-    logpost = zeros(n_part)
-    for i in 1:size(draws)[2]
-        success = false
-        while !success
-            try
-                update!(m, draws[:, i])
-                loglh[i] = likelihood(m, data)
-                logpost[i] = prior(m)
-            catch
-                draws[:, i] =
-                dist_type == :prior ? rand(m.parameters, 1) : rand(dist, 1)
-                continue
-            end
-            success = true
-        end
-    end
-    update_draws!(c, draws)
-    update_loglh!(c, loglh)
-    update_logpost!(c, logpost)
-end
-
-function init_stage_print(cloud::ParticleCloud; verbose::Symbol=:low)
-	println("--------------------------")
-        println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
-	println("--------------------------")
-        println("phi = $(cloud.tempering_schedule[cloud.stage_index])")
-	println("--------------------------")
-        println("c = $(cloud.c)")
-	println("--------------------------")
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        μ = weighted_mean(cloud)
-        σ = weighted_std(cloud)
-        for n=1:length(cloud.particles[1])
-            println("$(cloud.particles[1].keys[n]) = $(round(μ[n], 5)), $(round(σ[n], 5))")
-	    end
-    end
-end
-
-function end_stage_print(cloud::ParticleCloud, total_sampling_time::Float64; verbose::Symbol=:low)
-    total_sampling_time_minutes = total_sampling_time/60
-    expected_time_remaining_sec = (total_sampling_time/cloud.stage_index)*(cloud.n_Φ - cloud.stage_index)
-    expected_time_remaining_minutes = expected_time_remaining_sec/60
-
-    println("--------------------------")
-        println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
-        println("time elapsed: $(round(total_sampling_time_minutes, 4)) minutes")
-        println("estimated time remaining: $(round(expected_time_remaining_minutes, 4)) minutes")
-    println("--------------------------")
-        println("phi = $(cloud.tempering_schedule[cloud.stage_index])")
-    println("--------------------------")
-        println("c = $(cloud.c)")
-        println("accept = $(cloud.accept)")
-        println("ESS = $(cloud.ESS)   ($(cloud.resamples) total resamples.)")
-    println("--------------------------")
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        μ = weighted_mean(cloud)
-        σ = weighted_std(cloud)
-        for n=1:length(cloud.particles[1])
-            println("$(cloud.particles[1].keys[n]) = $(round(μ[n], 5)), $(round(σ[n], 5))")
-        end
-    end
 end
