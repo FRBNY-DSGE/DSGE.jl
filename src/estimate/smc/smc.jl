@@ -157,16 +157,6 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
             j += 1
         end
 
-        # if ϕ_prop == 1.
-            # jldopen("debug_file.jld", "w") do file
-                # write(file, "cloud", cloud)
-                # write(file, "ϕ_prop", ϕ_prop)
-                # write(file, "ϕ_n1", ϕ_n1)
-                # write(file, "ESS_bar", ESS_bar)
-                # write(file, "proposed_fixed_schedule", proposed_fixed_schedule)
-            # end
-        # end
-
         # Note: optimal_ϕ_function(ϕ_n1) > 0 because ESS_{t-1} is always positive
         # When ϕ_prop != 1. then there are still ϕ increments strictly below 1 that
         # give the optimal ϕ step, ϕ_n.
@@ -234,7 +224,6 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
 
     # Calculate the adaptive c-step to be used as a scaling coefficient in the mutation MH step
     c = c*(0.95 + 0.10*exp(16*(cloud.accept - target))/(1 + exp(16*(cloud.accept - target))))
-    m <= Setting(:step_size_smc, c)
     cloud.c = c
 
     if parallel
