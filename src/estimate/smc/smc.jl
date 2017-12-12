@@ -19,8 +19,7 @@ smc(m::AbstractModel, cloud::ParticleCloud, old_data::Matrix, new_data::Matrix)
 
 ### Outputs
 
-- `mu`: The mean of a particular parameter as calculated by taking the weighted sum of that parameter from the particle draws made in that particular stage Nφ.
-- `sig`: The standard deviation of a particular parameter.
+- `cloud`: The ParticleCloud object that contains all of the information about the parameter values from the sample, their respective log-likelihoods, the ESS schedule, tempering schedule etc. is saved in the saveroot.
 
 ### Overview
 
@@ -41,7 +40,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
     ########################################################################################
 
     parallel = get_setting(m, :use_parallel_workers)
-    use_fixed_schedule = get_setting(m, :fixed_ϕ_schedule)
+    use_fixed_schedule = get_setting(m, :use_fixed_schedule)
 
     n_parts = get_setting(m, :n_particles)
     n_params = n_parameters(m)
@@ -52,7 +51,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
     target = get_setting(m, :target_accept)
     λ = get_setting(m, :λ)
     n_Φ = get_setting(m, :n_Φ)
-    bar_coeff = get_setting(m, :bar_coeff)
+    tempering_target = get_setting(m, :tempering_target)
     threshold_ratio = get_setting(m, :resampling_threshold)
     threshold = threshold_ratio * n_parts
 
@@ -141,10 +140,10 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
     else
         if resampled_last_period
             # The ESS_bar should be reset to target an evenly weighted particle population
-            ESS_bar = bar_coeff*n_parts
+            ESS_bar = tempering_target*n_parts
             resampled_last_period = false
         else
-            ESS_bar = bar_coeff*cloud.ESS[i-1]
+            ESS_bar = tempering_target*cloud.ESS[i-1]
         end
 
         # Setting up the optimal ϕ solving function for endogenizing the tempering schedule

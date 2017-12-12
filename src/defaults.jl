@@ -131,16 +131,25 @@ function default_settings!(m::AbstractModel)
     settings[:compute_shockdec_bands] = Setting(:compute_shockdec_bands, false, "Whether or not to compute bands for shock decomposition. Setting to false saves signficant storage space.")
 
 	# Sequential Monte Carlo
-    settings[:n_particles] = Setting(:n_particles, 10000, "Number of particles for use in SMC")
-    settings[:n_Φ] = Setting(:n_Φ, 200, "Number of stages in the tempering schedule")
-  	settings[:λ] = Setting(:λ, 3.0, "The 'bending coefficient' λ in Φ(n) = (n/N(Φ))^λ")
+    settings[:n_particles] = Setting(:n_particles, 2000, "Number of particles for use in SMC")
+    settings[:n_Φ] = Setting(:n_Φ, 300, "Number of stages in the tempering schedule")
+  	settings[:λ] = Setting(:λ, 2.1, "The 'bending coefficient' λ in Φ(n) = (n/N(Φ))^λ")
     settings[:n_smc_blocks] = Setting(:n_smc_blocks, 1, "The number of parameter blocks in SMC")
     settings[:step_size_smc] = Setting(:step_size_smc, .5, "The scaling factor for the covariance of the particles. Controls size of steps in mutation step")
     settings[:n_MH_steps_smc] = Setting(:n_MH_steps_smc, 5, "Number of Metropolis Hastings steps to attempt during the mutation step.")
     settings[:init_accept] = Setting(:init_accept, .25, "The initial average acceptance rate for new particles during mutation")
     settings[:target_accept] = Setting(:target_accept, .25, "The initial target acceptance rate for new particles during mutation")
-    settings[:resampler_smc] = Setting(:resampler_smc, :systematic, "Which resampling method to use in SMC")
+    settings[:resampler_smc] = Setting(:resampler_smc, :multinomial, "Which resampling method to use in SMC")
     settings[:initial_draw_source] = Setting(:initial_draw_source, :prior, "How to draw the initial population of particles in SMC")
+
+    # Endogenous ϕ Schedule
+    settings[:use_fixed_schedule] = Setting(:use_fixed_schedule, true, true, "fix", "Boolean indicating whether or not to use a fixed tempering (ϕ) schedule")
+    settings[:tempering_target] = Setting(:tempering_target, 0.95, "The coefficient of the sample size metric to be targeted when solving for an endogenous ϕ")
+    settings[:resampling_threshold] = Setting(:resampling_threshold, 0.5, "The threshold such that the particles will be resampled when the population drops below threshold * N")
+    # temporary setting to save different output files
+    settings[:smc_iteration] = Setting(:smc_iteration, 1, true, "iter", "The iteration index for the number of times smc has been run on the same data vintage. Primarily for numerical accuracy/testing purposes.")
+
+    # Time tempering (to be changed)
     settings[:updated_data_vintage] = Setting(:updated_data_vintage, vint, "Updated data vintage for the combination tempered data/likelihood
                                               tempering for the purposes of updating an old cloud vintage with new data.")
     settings[:date_updatedsample_start] = Setting(:date_updatedsample_start, quartertodate("1960-Q1"),
