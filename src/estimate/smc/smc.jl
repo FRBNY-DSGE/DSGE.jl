@@ -46,6 +46,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
     n_params = n_parameters(m)
     n_blocks = get_setting(m, :n_smc_blocks)
 
+    resampling_method = get_setting(m, :resampler_smc)
     c = get_setting(m, :step_size_smc)
     accept = get_setting(m, :init_accept)
     target = get_setting(m, :target_accept)
@@ -54,6 +55,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
     tempering_target = get_setting(m, :tempering_target)
     threshold_ratio = get_setting(m, :resampling_threshold)
     threshold = threshold_ratio * n_parts
+    use_CESS = get_setting(m, :use_CESS)
 
     ########################################################################################
     ### Initialize Algorithm: Draws from prior
@@ -147,7 +149,8 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
         end
 
         # Setting up the optimal ϕ solving function for endogenizing the tempering schedule
-        optimal_ϕ_function(ϕ)  = compute_ESS(get_loglh(cloud), get_weights(cloud), ϕ, ϕ_n1) - ESS_bar
+        optimal_ϕ_function(ϕ)  = compute_ESS(get_loglh(cloud), get_weights(cloud), ϕ, ϕ_n1,
+                                             use_CESS = use_CESS) - ESS_bar
 
         # Find a ϕ_prop such that the optimal ϕ_n will lie somewhere between ϕ_n1 and ϕ_prop
         # Do so by iterating through a proposed_fixed_schedule and finding the first
@@ -184,6 +187,11 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
         # incremental_weights = exp.((ϕ_n1 - ϕ_n)*revised_loglh + (ϕ_n - ϕ_n1)*new_loglh)
     # end
 
+    # Need previous weights for CESS calculation
+    if use_CESS
+        previous_weights = get_weights(cloud)
+    end
+
     # Update weights
     update_weights!(cloud, incremental_weights)
 
@@ -200,14 +208,19 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
     ########################################################################################
 
     # Calculate the degeneracy/effective sample size metric
-    push!(cloud.ESS, 1/sum(normalized_weights.^2))
+    if use_CESS
+        push!(cloud.ESS, n_parts*sum(previous_weights .* incremental_weights)^2/sum(previous_weights .*
+                                                                                    incremental_weights.^2))
+    else
+        push!(cloud.ESS, 1/sum(normalized_weights.^2))
+    end
 
     # If this assertion does not hold then there are likely too few particles
     @assert !isnan(cloud.ESS[i]) "no particles have non-zero weight"
 
     # Resample if the degeneracy/effective sample size metric falls below the accepted threshold
     if (cloud.ESS[i] < threshold)
-        new_inds = resample(normalized_weights; method = get_setting(m, :resampler_smc),
+        new_inds = resample(normalized_weights; method = resampling_method,
                             parallel = parallel, testing = m.testing)
 
         # update parameters/logpost/loglh with resampled values
