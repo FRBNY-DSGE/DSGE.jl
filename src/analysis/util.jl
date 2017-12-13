@@ -98,11 +98,13 @@ function resize_population_forecast(population_forecast::DataFrame, nperiods::In
         n_filler_periods = nperiods - nperiods_act
 
         last_provided = population_forecast[end, :date]
-        next_period = iterate_quarters(last_provided, 1)
-        filler_dates = quarter_range(next_period, next_period + Dates.Month(3 * (n_filler_periods - 1)))
+
+        first_filler = iterate_quarters(last_provided, 1)
+        last_filler  = iterate_quarters(last_provided, n_filler_periods)
+        filler_dates = quarter_range(first_filler, last_filler)
         filler = DataFrame(date = filler_dates)
 
-        filler[mnemonic] = fill(population_forecast[end, mnemonic], n_filler_periods)
+        filler[mnemonic] = population_forecast[end, mnemonic]
         return vcat(population_forecast, filler)
     end
 end
