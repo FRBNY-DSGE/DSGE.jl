@@ -110,11 +110,17 @@ function mvnormal_mixture_draw{T<:AbstractFloat}(p::Vector{T}, σ::Matrix{T};
 end
 
 function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector{T},
-                                       ϕ_n::T, ϕ_n1::T)
-    inc_weight = exp.((ϕ_n - ϕ_n1)*loglh)
-    new_weights = current_weights.*inc_weight
-    normalized_weights = new_weights/sum(new_weights)
-    ESS = 1/sum(normalized_weights.^2)
+                                       ϕ_n::T, ϕ_n1::T; use_CESS::Bool = false)
+    incremental_weights = exp.((ϕ_n - ϕ_n1)*loglh)
+    new_weights = current_weights.*incremental_weights
+    if use_CESS
+        N   = length(incremental_weights)
+        ESS = N*sum(current_weights .* incremental_weights)^2/sum(current_weights .*
+                                                                  incremental_weights.^2)
+    else
+        normalized_weights = new_weights/sum(new_weights)
+        ESS = 1/sum(normalized_weights.^2)
+    end
     return ESS
 end
 
