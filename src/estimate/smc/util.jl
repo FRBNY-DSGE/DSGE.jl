@@ -68,45 +68,60 @@ end
 
 """
 ```
-mvnormal_mixture_draw{T<:AbstractFloat}(p, Σ; cc, α, d_prop)
+mvnormal_mixture_draw{T<:AbstractFloat}(θ_old, σ; cc, α, θ_prop)
 ```
 
 Create a `DegenerateMvNormal` distribution object, `d`, from a parameter vector, `p`, and a
-covariance matrix, `Σ`.
+standard deviation matrix (obtained from SVD), `σ`.
 
-Generate a draw from the mixture distribution of the `DegenerateMvNormal` scaled by `cc^2`
-and with mixture proportion `α`, a `DegenerateMvNormal` centered at the same mean, but with a
-covariance matrix of the diagonal entries of `Σ` scaled by `cc^2` with mixture
-proportion `(1 - α)/2`, and an additional proposed distribution with the same covariance
-matrix as `d` but centered at the new proposed mean, `p_prop`, scaled by `cc^2`, and with mixture proportion `(1 - α)/2`.
+Generate a draw from the mixture distribution of:
+1. A `DegenerateMvNormal` centered at θ_old with the standard deviation matrix `σ`, scaled by `cc^2` and with mixture proportion `α`.
+2. A `DegenerateMvNormal` centered at the same mean, but with a standard deviation matrix of the diagonal entries of `σ` scaled by `cc^2` with mixture proportion `(1 - α)/2`.
+3. A `DegenerateMvNormal`  with the same standard deviation matrix `σ` but centered at the new proposed mean, `θ_prop`, scaled by `cc^2`, and with mixture proportion `(1 - α)/2`.
 
-If no `p_prop` is given, but an `α` is specified, then the mixture will consist of `α` of
-the standard distribution and `(1 - α)` of the diagonalized covariance distribution.
+If no `θ_prop` is given, but an `α` is specified, then the mixture will consist of `α` of
+the standard distribution and `(1 - α)` of the diagonalized distribution.
 
 ### Arguments
-`p`: The mean of the desired distribution
-`σ`: The standard deviation of the desired distribution
+- `θ_old::Vector{T}`: The mean of the desired distribution
+- `σ::Matrix{T}`: The standard deviation matrix of the desired distribution
+
+### Keyword Arguments
+- `cc::T`: The standard deviation matrix scaling factor
+- `α::T`: The mixing proportion
+- `θ_prop::Vector{T}`: The proposed parameter vector to be used as part of the mixture distribution, set by default to be the weighted mean of the particles, prior to mutation.
 
 ### Outputs
-`draw`: The draw from the mixture distribution to be used as the MH proposed step
-`mixture_density`: The mixture density evaluated at `draw` to use in calculating the MH
-α move probability
+- `θ_new::Vector{T}`: The draw from the mixture distribution to be used as the MH proposed step
+- `new mixture_density::T`: The mixture density conditional on θ_old evaluated at `θ_new` to be used in calculating the MH move probability
+- `old mixture_density::T`: The mixture density conditional on θ_new evaluated at `θ_old` to be used in calculating the MH move probability
 
 """
-function mvnormal_mixture_draw{T<:AbstractFloat}(p::Vector{T}, σ::Matrix{T};
+function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, σ::Matrix{T};
                                                  cc::T = 1.0, α::T = 1.,
-                                                 p_prop::Vector{T} = zeros(length(p)))
+                                                 θ_prop::Vector{T} = θ_old)
     @assert 0 <= α <= 1
-    d = DegenerateMvNormal(p, cc*σ)
-    d_diag = DegenerateMvNormal(p, diagm(diag(cc*σ)))
-    d_prop = p_prop == zeros(length(p)) ? d_diag : DegenerateMvNormal(p_prop, cc*σ)
 
-    d_mix = MixtureModel(DegenerateMvNormal[d, d_diag, d_prop], [α, (1 - α)/2, (1 - α)/2])
-    draw = rand(d_mix)
-    # mixture_density = pdf(d_mix, draw)
+    # Create mixture distribution conditional on the previous parameter value, θ_old
+    d_old = DegenerateMvNormal(θ_old, cc*σ)
+    d_diag_old = DegenerateMvNormal(θ_old, diagm(diag(cc*σ)))
+    d_prop = θ_prop == θ_old ? d_diag : DegenerateMvNormal(θ_prop, cc*σ)
+    d_mix_old = MixtureModel(DegenerateMvNormal[d_old, d_diag_old, d_prop], [α, (1 - α)/2, (1 - α)/2])
 
-    # return draw, mixture_density
-    return draw
+    θ_new = rand(d_mix_old)
+
+    # Create mixture distribution conditional on the new parameter value, θ_new
+    d_new = DegenerateMvNormal(θ_new, cc*σ)
+    d_diag_new = DegenerateMvNormal(θ_new, diagm(diag(cc*σ)))
+    d_mix_new = MixtureModel(DegenerateMvNormal[d_new, d_diag_new, d_prop], [α, (1 - α)/2, (1 - α)/2])
+
+    # To clarify, this is not just the density of θ_new/θ_old using a given mixture
+    # density function, but rather, the density of θ_new | θ_old and the density of
+    # θ_old | θ_new taken with respect to their respective mixture density functions
+    new_mixture_density = logpdf(d_mix_old, θ_new)
+    old_mixture_density = logpdf(d_mix_new, θ_old)
+
+    return θ_new, new_mixture_density, old_mixture_density
 end
 
 function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector{T},
