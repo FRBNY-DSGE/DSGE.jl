@@ -145,17 +145,17 @@ end
 
 """
 ```
-Distributions.pdf{T<:AbstractFloat}(d::DegenerateMvNormal, v::Vector)
+Distributions.logpdf{T<:AbstractFloat}(d::DegenerateMvNormal, v::Vector)
 ```
 
-Evaluate the pdf of `d` at `v` subsetting out the positive-definite sub-matrix of the
+Evaluate the logpdf of `d` at `v` subsetting out the positive-definite sub-matrix of the
 covariance matrix of `d` and the corresponding indices in `v`.
 """
-function Distributions.pdf{T<:AbstractFloat}(d::DegenerateMvNormal, v::Vector{T})
+function Distributions.logpdf{T<:AbstractFloat}(d::DegenerateMvNormal, v::Vector{T})
     inds = find(!iszero, [d.σ[:, i] for i in 1:length(v)])
     d_alt = MvNormal(d.μ[inds], d.σ[inds, inds]*d.σ[inds, inds]')
     v_alt = v[inds]
-    return pdf(d_alt, v_alt)
+    return logpdf(d_alt, v_alt)
 end
 
 """
