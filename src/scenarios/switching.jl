@@ -52,7 +52,6 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
                                                             scen.probs_enter, scen.probs_exit)
             proportion_switched += Float64(switched)
         end
-        println(proportion_switched / n_draws)
         switching_results[i] = proportion_switched / n_draws
     end
 
