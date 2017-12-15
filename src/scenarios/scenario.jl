@@ -157,31 +157,55 @@ type ScenarioAggregate <: AbstractScenario
     key::Symbol
     description::String
     scenarios::Vector{AbstractScenario}
+    sample::Bool # if false, scenario draws are kept in original proportions and `proportions` and `total_draws` are filled in after reading in draws
     proportions::Vector{Float64}
     total_draws::Int
     replace::Bool # whether to sample with replacement
     vintage::String
 
-    function ScenarioAggregate(key, description, scenarios, proportions,
-                               total_draws, replace, vintage)
-        if length(scenarios) != length(proportions)
-            error("Lengths of scenarios and proportions must be the same")
+    function ScenarioAggregate(key, description, scenarios, sample,
+                               proportions, total_draws, replace, vintage)
+        if sample
+            if length(scenarios) != length(proportions)
+                error("Lengths of scenarios and proportions must be the same")
+            end
+            if !all(p -> 0.0 <= p <= 1.0, proportions)
+                error("Elements of proportions must be between 0 and 1")
+            end
+            if sum(proportions) != 1.0
+                error("Elements of proportions must sum to 1")
+            end
         end
-        if !all(p -> 0.0 <= p <= 1.0, proportions)
-            error("Elements of proportions must be between 0 and 1")
-        end
-        if sum(proportions) != 1.0
-            error("Elements of proportions must sum to 1")
-        end
-        return new(key, description, scenarios, proportions, total_draws,
-                   replace, vintage)
+        return new(key, description, scenarios, sample,
+                   proportions, total_draws, replace, vintage)
     end
+end
+
+# `sample = true` constructor
+function ScenarioAggregate(key::Symbol, description::String, scenarios::Vector{AbstractScenario},
+                           proportions::Vector{Float64}, total_draws::Int, replace::Bool,
+                           vintage::String)
+    sample = true
+    return ScenarioAggregate(key, description, scenarios, sample, proportions, total_draws,
+                             replace, vintage)
+end
+
+# `sample = false` constructor
+function ScenarioAggregate(key::Symbol, description::String, scenarios::Vector{AbstractScenario},
+                           vintage::String)
+    sample = false
+    proportions = Float64[]
+    total_draws = -1
+    replace = false
+    return ScenarioAggregate(key, description, scenarios, sample, proportions, total_draws,
+                             replace, vintage)
 end
 
 function Base.show(io::IO, agg::ScenarioAggregate)
     @printf io "%-24s %s\n" "Key:" agg.key
     @printf io "%-24s %s\n" "Description:" agg.description
     @printf io "%-24s %s\n" "Scenarios:" map(scen -> scen.key, agg.scenarios)
+    @printf io "%-24s %s\n" "Sample:" agg.sample
     @printf io "%-24s %s\n" "Proportions:" agg.proportions
     @printf io "%-24s %s\n" "Total Draws:" agg.total_draws
     @printf io "%-24s %s\n" "Sample with Replacement:" agg.replace

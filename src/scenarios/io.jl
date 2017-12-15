@@ -210,28 +210,41 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
     nscens = length(agg.scenarios)
     agg_draws = Vector{Matrix{Float64}}(nscens)
 
+    # If not sampling, initialize vector to record number of draws in each
+    # scenario in order to update `agg.proportions` and `agg.total_draws` at the
+    # end
+    if !agg.sample
+        n_scen_draws = zeros(Int, nscens)
+    end
+
     for (i, (scen, pct)) in enumerate(zip(agg.scenarios, agg.proportions))
         # Recursively read in scenario draws
         scen_draws, _ = read_scenario_output(m, scen, class, product, var_name)
 
-        # Sample
-        actual_ndraws = size(scen_draws, 1)
-        desired_ndraws = convert(Int, round(pct * agg.total_draws))
+        # Sample if desired
+        agg_draws[i] = if agg.sample
+            actual_ndraws = size(scen_draws, 1)
+            desired_ndraws = convert(Int, round(pct * agg.total_draws))
 
-        sampled_inds = if agg.replace
-            sample(1:actual_ndraws, desired_ndraws, replace = true)
-        else
-            if desired_ndraws == 0
-                Int[]
+            sampled_inds = if agg.replace
+                sample(1:actual_ndraws, desired_ndraws, replace = true)
             else
-                quotient  = convert(Int, floor(actual_ndraws / desired_ndraws))
-                remainder = actual_ndraws % desired_ndraws
-                vcat(repmat(1:actual_ndraws, quotient),
-                     sample(1:actual_ndraws, remainder, replace = false))
+                if desired_ndraws == 0
+                    Int[]
+                else
+                    quotient  = convert(Int, floor(actual_ndraws / desired_ndraws))
+                    remainder = actual_ndraws % desired_ndraws
+                    vcat(repmat(1:actual_ndraws, quotient),
+                         sample(1:actual_ndraws, remainder, replace = false))
+                end
             end
+            sort!(sampled_inds)
+            scen_draws[sampled_inds, :]
+        else
+            # Record number of draws in this scenario
+            n_scen_draws[i] = size(scen_draws, 1)
+            scen_draws
         end
-        sort!(sampled_inds)
-        agg_draws[i] = scen_draws[sampled_inds, :]
     end
 
     fcast_series = cat(1, agg_draws...)
@@ -242,6 +255,12 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
         class_long = get_class_longname(class)
         transforms = read(file, string(class_long) * "_revtransforms")
         parse_transform(transforms[var_name])
+    end
+
+    # If not sampling, update `agg.proportions` and `agg.total_draws`
+    if !agg.sample
+        agg.total_draws = sum(n_scen_draws)
+        agg.proportions = n_scen_draws ./ agg.total_draws
     end
 
     return fcast_series, transform
