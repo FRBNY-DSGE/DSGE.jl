@@ -143,12 +143,12 @@ end
 
 """
 ```
-ScenarioAggregate(key, description, scenario_groups, proportions, total_draws,
+ScenarioAggregate(key, description, scenarios, proportions, total_draws,
     replace, vintage)
 ```
 
-Composite type for aggregated `SingleScenario`s. Scenarios in each group in
-`scenario_groups::Vector{Vector{SingleScenario}}` are sampled into the aggregate
+Composite type for aggregated `AbstractScenario`s. Scenarios in
+`scenarios::Vector{AbstractScenario}` are sampled into the aggregate
 with the probability of the corresponding entry in `proportions` (whose values
 must sum to 1). The field `replace` indicates whether to sample with
 replacement.
@@ -156,16 +156,16 @@ replacement.
 type ScenarioAggregate <: AbstractScenario
     key::Symbol
     description::String
-    scenario_groups::Vector{Vector{SingleScenario}}
+    scenarios::Vector{AbstractScenario}
     proportions::Vector{Float64}
     total_draws::Int
     replace::Bool # whether to sample with replacement
     vintage::String
 
-    function ScenarioAggregate(key, description, scenario_groups, proportions,
+    function ScenarioAggregate(key, description, scenarios, proportions,
                                total_draws, replace, vintage)
-        if length(scenario_groups) != length(proportions)
-            error("Lengths of scenario_groups and proportions must be the same")
+        if length(scenarios) != length(proportions)
+            error("Lengths of scenarios and proportions must be the same")
         end
         if !all(p -> 0.0 <= p <= 1.0, proportions)
             error("Elements of proportions must be between 0 and 1")
@@ -173,7 +173,7 @@ type ScenarioAggregate <: AbstractScenario
         if sum(proportions) != 1.0
             error("Elements of proportions must sum to 1")
         end
-        return new(key, description, scenario_groups, proportions, total_draws,
+        return new(key, description, scenarios, proportions, total_draws,
                    replace, vintage)
     end
 end
@@ -181,7 +181,7 @@ end
 function Base.show(io::IO, agg::ScenarioAggregate)
     @printf io "%-24s %s\n" "Key:" agg.key
     @printf io "%-24s %s\n" "Description:" agg.description
-    @printf io "%-24s %s\n" "Scenario Groups:" map(g -> map(x -> x.key, g), agg.scenario_groups)
+    @printf io "%-24s %s\n" "Scenarios:" map(scen -> scen.key, agg.scenarios)
     @printf io "%-24s %s\n" "Proportions:" agg.proportions
     @printf io "%-24s %s\n" "Total Draws:" agg.total_draws
     @printf io "%-24s %s\n" "Sample with Replacement:" agg.replace

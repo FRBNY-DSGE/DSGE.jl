@@ -102,8 +102,8 @@ for mb in [mb1, mb2]
 end
 
 # Aggregate scenarios equally
-aggall = ScenarioAggregate(:aggall, "Test Scenario Aggregate", [SingleScenario[def, alt]],
-                           [1.0], 20, false, "REF")
+aggall = ScenarioAggregate(:aggall, "Test Scenario Aggregate", AbstractScenario[def, alt],
+                           [0.5, 0.5], 20, false, "REF")
 scenario_means_bands(m, aggall, verbose = :none)
 actual = squeeze(mean(cat(1, default_draws, original_draws), 1), 1)
 
@@ -113,7 +113,7 @@ for (var, ind) in mb.metadata[:indices]
 end
 
 # Aggregate scenarios to only have alternative scenaro
-aggalt = ScenarioAggregate(:aggalt, "Test Scenario Aggregate", [SingleScenario[def], SingleScenario[alt]],
+aggalt = ScenarioAggregate(:aggalt, "Test Scenario Aggregate", AbstractScenario[def, alt],
                            [0.0, 1.0], 20, false, "REF")
 scenario_means_bands(m, aggalt, verbose = :none)
 actual = squeeze(mean(repeat(original_draws, outer = [2, 1, 1]), 1), 1)
@@ -124,9 +124,9 @@ for (var, ind) in mb.metadata[:indices]
 end
 
 # Aggregate scenarios, drawing with replacement
-aggrep1 = ScenarioAggregate(:aggrep1, "Test Scenario Aggregate", [SingleScenario[def, alt]],
-                            [1.0], 20, true, "REF")
-aggrep2 = ScenarioAggregate(:aggrep2, "Test Scenario Aggregate", [SingleScenario[def], SingleScenario[alt]],
+aggrep1 = ScenarioAggregate(:aggrep1, "Test Scenario Aggregate", AbstractScenario[def, alt],
+                            [0.5, 0.5], 20, true, "REF")
+aggrep2 = ScenarioAggregate(:aggrep2, "Test Scenario Aggregate", AbstractScenario[def, alt],
                             [0.0, 1.0], 20, true, "REF")
 
 # Simulate dummy scenario with shock scaling
