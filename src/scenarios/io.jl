@@ -217,12 +217,13 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
         n_scen_draws = zeros(Int, nscens)
     end
 
-    for (i, (scen, pct)) in enumerate(zip(agg.scenarios, agg.proportions))
+    for (i, scen) in enumerate(agg.scenarios)
         # Recursively read in scenario draws
         scen_draws, _ = read_scenario_output(m, scen, class, product, var_name)
 
         # Sample if desired
         agg_draws[i] = if agg.sample
+            pct = agg.proportions[i]
             actual_ndraws = size(scen_draws, 1)
             desired_ndraws = convert(Int, round(pct * agg.total_draws))
 
