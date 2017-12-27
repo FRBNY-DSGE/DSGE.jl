@@ -143,6 +143,11 @@ end
 
 """
 ```
+ScenarioAggregate(key, description, scenarios, sample, proportions, total_draws,
+    replace, vintage)
+
+ScenarioAggregate(key, description, scenarios, vintage)
+
 ScenarioAggregate(key, description, scenarios, proportions, total_draws,
     replace, vintage)
 ```
