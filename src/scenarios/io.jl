@@ -217,9 +217,15 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
         n_scen_draws = zeros(Int, nscens)
     end
 
+    # Initialize transform so it can be assigned from within the following for
+    # loop. Each transform read in from read_scenario_output will be the
+    # same. We just want to delegate the transform parsing to the recursive
+    # read_scenario_output call.
+    transform = identity
+
     for (i, scen) in enumerate(agg.scenarios)
         # Recursively read in scenario draws
-        scen_draws, _ = read_scenario_output(m, scen, class, product, var_name)
+        scen_draws, transform = read_scenario_output(m, scen, class, product, var_name)
 
         # Sample if desired
         agg_draws[i] = if agg.sample
@@ -248,15 +254,8 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
         end
     end
 
+    # Stack draws from all component scenarios
     fcast_series = cat(1, agg_draws...)
-
-    # Parse transform
-    filename = get_scenario_mb_input_file(m, agg.scenarios[1], Symbol(product, class))
-    transform = jldopen(filename, "r") do file
-        class_long = get_class_longname(class)
-        transforms = read(file, string(class_long) * "_revtransforms")
-        parse_transform(transforms[var_name])
-    end
 
     # If not sampling, update `agg.proportions` and `agg.total_draws`
     if !agg.sample
