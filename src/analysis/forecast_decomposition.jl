@@ -6,7 +6,7 @@ decompose_forecast_one_draw(model, df_new, df_old, params)
 Returns reestimation, state_updates, realized_shocks, data_revisions, overall_change
 """
 function decompose_forecast_one_draw(model::AbstractModel, df_new::DataFrame, df_old::DataFrame,
-                                     params_new::Vector{Float64}, params_old::Vector{Float64};
+                                     params_new::Vector{Float64}, params_old::Vector{Float64}, k::Int64;
                                      cond_type::Symbol = :none)
 
     # Update model
@@ -18,9 +18,12 @@ function decompose_forecast_one_draw(model::AbstractModel, df_new::DataFrame, df
     # Filter and smooth
     kal_new = DSGE.filter(model, df_new, sys_new; cond_type = cond_type) # |T, new para
     kal_mix = DSGE.filter(model, df_new, sys_old; cond_type = cond_type) # |T, old para
-    kal_old = DSGE.filter(model, df_old, sys_old; cond_type = cond_type) # |T-1, old para
+    kal_two = DSGE.filter(model, df_old, sys_new; cond_type = cond_type) # |T-K, new para
+    kal_old = DSGE.filter(model, df_old, sys_old; cond_type = cond_type) # |T-k, old para
 
     histstates_mix, histshocks_mix, _, _ = DSGE.smooth(model, df_new, sys_old, kal_mix; draw_states = false)
+    histstates_two, histshocks_two, _, _ = DSGE.smooth(model, df_old, sys_new, kal_two; draw_states = false)
+    histstates_new, histshocks_new, _, _ = DSGE.smooth(model, df_new, sys_new, kal_two; draw_states = false)
 
     # Compute decomposition
     reestimation    = zeros(n_observables(model), forecast_horizons(model))
@@ -29,14 +32,23 @@ function decompose_forecast_one_draw(model::AbstractModel, df_new::DataFrame, df
     realized_shocks = zeros(n_observables(model), forecast_horizons(model))
     overall_change  = zeros(n_observables(model), forecast_horizons(model))
 
-    Z, T, R = sys_old[:ZZ], sys_old[:TTT], sys_old[:RRR]
-    Z_new, T_new = sys_new[:ZZ], sys_new[:TTT]
+    Z, T, R, D, C = sys_old[:ZZ], sys_old[:TTT], sys_old[:RRR], sys_old[:DD], sys_old[:CCC]
+    Z_new, T_new, R_new, D_new, C_new = sys_new[:ZZ], sys_new[:TTT], sys_new[:RRR], sys_new[:DD], sys_new[:CCC]
 
-    para_component(j)     = Z_new * T_new^j * kal_new[:zend] - Z * T^j * kal_mix[:zend]
-    state_component(j)    = Z * T^(j+1) * (histstates_mix[:,end-1] - kal_mix[:filt][:,end-1])
-    shock_component(j)    = Z * T^j * R * histshocks_mix[:,end]
-    revision_component(j) = Z * T^(j+1) * (kal_mix[:filt][:,end-1] - kal_old[:zend])
-    all_components(j)     = Z_new * T_new^j * kal_new[:zend] - Z * T^(j+1) * kal_old[:zend]
+    partial_sum(M::Matrix, k::Int) = k <= 0 ? eye(size(M)...) : M^k + partial_sum(M, k-1)
+
+    # new decomposition
+    state_component(j)    = Z_new * T_new^(j+k) * (histstates_new[:,end-k] - kal_new[:filt][:,end-k])
+    revision_component(j) = Z_new * T_new^(j+k) * (kal_new[:filt][:,end-k] - kal_two[:zend])
+    para_component(j)     = Z_new * (T_new^(j+k) * kal_two[:zend] + partial_sum(T_new,j+k-1) * C_new) - Z * (T^(j+k) * kal_old[:zend] + partial_sum(T,j+k-1) * C) + (D_new - D)
+    all_components(j)     = Z_new * (T_new^j * kal_new[:zend] + C_new) - Z * (T^(j+k) * kal_old[:zend] + C) + (D_new - D)
+    function shock_component(j::Int)
+        total = zeros(n_states_augmented(model), 1)
+        for i in 0:k-1
+            total += T_new^(j+i) * R_new * histshocks_new[:,end-i]
+        end
+        return Z_new * total
+    end
 
     for t in 1:forecast_horizons(model)
         reestimation[:,t]    = para_component(t)
@@ -77,7 +89,7 @@ function decompose_forecast_changes(m_new::AbstractModel, m_old::AbstractModel,
     df_old = load_data(m_old; cond_type = cond_type)
 
     decompose_forecast_changes(m_new, m_old, df_new, df_old, input_type, cond_type;
-                               verbose = verbose, transform = transformd,
+                               verbose = verbose, transform = transform,
                                format_as_DataFrame = format_as_DataFrame)
 end
 
@@ -87,6 +99,13 @@ function decompose_forecast_changes(m_new::AbstractModel, m_old::AbstractModel,
                                     verbose::Symbol = :low, transform::Bool = false,
                                     format_as_DataFrame = true)
 
+    # calculate offset
+    new_start = date_forecast_start(m_new)
+    old_start = date_forecast_start(m_old)
+    quarter_diff = quarter_date_to_number(new_start) - quarter_date_to_number(old_start)
+    offset = Int(4 * quarter_diff)
+    @assert offset >= 0 "The vintage of m_new must not be older than the vintage of m_old"
+
     # Initialize results matrices
     reestimation    = zeros(n_observables(m_new), forecast_horizons(m_new))
     state_updates   = zeros(n_observables(m_new), forecast_horizons(m_new))
@@ -94,7 +113,7 @@ function decompose_forecast_changes(m_new::AbstractModel, m_old::AbstractModel,
     data_revisions  = zeros(n_observables(m_new), forecast_horizons(m_new))
     overall_change  = zeros(n_observables(m_new), forecast_horizons(m_new))
 
-    decompose(params) = decompose_forecast_one_draw(m_new, df_new, df_old, params[1], params[2];
+    decompose(params) = decompose_forecast_one_draw(m_new, df_new, df_old, params[1], params[2], offset;
                                                     cond_type = cond_type)
 
     # Choose parameters depending on input_type and run decomposition
