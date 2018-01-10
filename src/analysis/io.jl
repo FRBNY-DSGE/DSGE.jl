@@ -277,7 +277,7 @@ end
 
 function write_meansbands_tables_timeseries(write_dirname::String, filestring_base::Vector{String},
                                             mb::MeansBands;
-                                            tablevars::Vector{Symbol} = get_variables(mb),
+                                            tablevars::Vector{Symbol} = Symbol[],
                                             bands_pcts::Vector{String} = which_density_bands(mb, uniquify = true))
     for tablevar in tablevars
         df = prepare_meansbands_table_timeseries(mb, tablevar, bands_pcts = bands_pcts)
@@ -510,23 +510,22 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
                                      shock_groups::Vector{ShockGroup} = ShockGroup[])
     for output_var in output_vars
 
-        class = get_class(output)
-        prod  = get_product(output)
+        class = get_class(output_var)
+        prod  = get_product(output_var)
 
         if prod in [:hist, :forecast, :hist4q, :forecast4q, :bddforecast, :bddforecast4q,
                     :trend, :dettrend, :histforecast, :histforecast4q]
-            write_meansbands_table_timeseries(m, input_type, cond_type, output_var,
-                                              tablevars = vars, columnvars = shocks,
-                                              forecast_string = forecast_string,
-                                              bdd_and_unbdd = bdd_and_unbdd,
-                                              dirname = dirname)
+            write_meansbands_tables_timeseries(m, input_type, cond_type, output_var,
+                                               forecast_string = forecast_string,
+                                               bdd_and_unbdd = bdd_and_unbdd,
+                                               tablevars = vars)
 
         elseif prod == :shockdec
             write_means_tables_shockdec(m, input_type, cond_type, class,
-                                        tablevars = vars, columnvars = shocks,
-                                        bdd_and_unbdd = bdd_and_unbdd,
+                                        columnvars = shocks,
                                         forecast_string = forecast_string,
                                         dirname = dirname,
+                                        tablevars = vars,
                                         groups = shock_groups)
 
         elseif prod == :irf
