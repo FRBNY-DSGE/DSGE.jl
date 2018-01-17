@@ -105,17 +105,20 @@ function zlb_regime_indices{S<:AbstractFloat}(m::AbstractModel{S}, data::Matrix{
                                               start_date::Date = date_presample_start(m))
     T = size(data, 2)
 
-    if n_anticipated_shocks(m) > 0
+    if n_anticipated_shocks(m) > 0 && !isempty(data)
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")
 
-        elseif date_presample_start(m) <= start_date <= date_zlb_start(m)
+        # T > index_zlb_start(m) check is non-redundant for SMC time-tempering since
+        # The likelihood may be evaluated twice for two datasets, one that has the ZLB
+        # and one that does not.
+        elseif date_presample_start(m) <= start_date <= date_zlb_start(m) && T > index_zlb_start(m)
             offset = DSGE.subtract_quarters(start_date, date_presample_start(m))
             regime_inds = Vector{Range{Int64}}(2)
             regime_inds[1] = 1:(index_zlb_start(m) - offset - 1)
             regime_inds[2] = (index_zlb_start(m) - offset):T
 
-        elseif date_zlb_start(m) < start_date
+        elseif date_zlb_start(m) < start_date || T < index_zlb_start(m)
             regime_inds = Range{Int64}[1:T]
         end
     else
