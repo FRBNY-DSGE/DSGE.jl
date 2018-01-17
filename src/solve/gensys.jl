@@ -95,14 +95,14 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
         warn("Coincident zeros. Indeterminacy and/or nonexistence.")
         eu=[-2, -2]
 
-        G1 = Array{Float64, 2}(0, 0)
-        C = Array{Float64, 1}(0)
-        impact = Array{Float64, 2}(0)
-        fmat = Array{Complex{Float64}, 2}(0,0)
-        fwt = Array{Complex{Float64}, 2}(0,0)
+        G1 = Matrix{Float64}(0, 0)
+        C = Vector{Float64}(0)
+        impact = Matrix{Float64}(0, 0)
+        fmat = Matrix{Complex{Float64}}(0, 0)
+        fwt = Matrix{Complex{Float64}}(0, 0)
         ywt = Vector{Complex{Float64}}(0)
         gev = Vector{Complex{Float64}}(0)
-        loose = Array{Float64, 2}(0,0)
+        loose = Matrix{Float64}(0, 0)
 
         return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
     end
