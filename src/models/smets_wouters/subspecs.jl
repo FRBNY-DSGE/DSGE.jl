@@ -22,6 +22,8 @@ function init_subspec!(m::SmetsWouters)
         return ss3!(m)
     elseif subspec(m) == "ss4"
         return ss4!(m,5)
+    elseif subspec(m) == "ss5"
+        return ss5!(m)
     else
         error("This subspec is not defined.")
     end
@@ -145,4 +147,17 @@ function ss4!(m::SmetsWouters, divisor::Int)
     m <= parameter(:e_i, scale*2.405946712, fixed = true,
                    description = "e_i: Measurement error on investment", tex_label = "e_i")
 
+end
+
+"""
+```
+ss5!(m::SmetsWouters)
+
+Initializes subspec 5 of `SmetsWouters`. Change Lmean to be Normal(0, 2), since it seems
+Herbst & Schorfheide de-mean their hours series a priori.
+"""
+function ss5!(m::SmetsWouters)
+
+    m <= parameter(:Lmean, 0., (-1000., 1000.), (-1e3, 1e3), Untransformed(), Normal(0, 2), fixed=false,
+                   description="Lmean: Mean level of hours.", tex_label="\\bar{L}")
 end
