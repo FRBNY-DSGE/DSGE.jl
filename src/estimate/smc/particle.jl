@@ -6,9 +6,13 @@ Particle
 The `Particle` type contains the values and weight of a given vector of parameters.
 
 ### Fields
-- `weights::Array{Float64,1}`: The weights of a given particle (from the perspective of importance sampling). The incremental weight that updates the weights at each step φ_n is given by p(Y|θ^i_{n-1})^(φ_n-φ_{n-1}).
-- `keys::Array{Symbol,1}`: The key of the parameter corresponding to a given value.
-- `value::Array{Float64,1}`: The matrix of particles (n_params by n_parts)
+- `weights::Vector{Float64}`: The weights of a given particle (from the perspective of importance sampling). The incremental weight that updates the weights at each step φ_n is given by p(Y|θ^i_{n-1})^(φ_n-φ_{n-1}).
+- `keys::Vector{Symbol}`: The key of the parameter corresponding to a given value.
+- `value::Vector{Float64}`: The matrix of particles (n_params by n_parts)
+- `loglh::Float64`: The log-likelihood of the Particle
+- `logpost::Float64`: The log-posterior of the Particle
+- `old_loglh::Float64`: The log-likelihood of the Particle evaluated at the old data (only non-zero during time tempering)
+- `old_logpost::Float64`: The log-posterior of the Particle evaluated at the old data (only non-zero during time tempering)
 """
 type Particle
     weight::Float64
@@ -16,6 +20,7 @@ type Particle
     value::Vector{Float64}
     loglh::Float64
     logpost::Float64
+    old_loglh::Float64
     accept::Bool
 end
 
@@ -56,7 +61,7 @@ end
 # in the Particle object etc. to be empty
 function ParticleCloud(m::AbstractModel, n_parts::Int)
     return ParticleCloud([Particle(1/n_parts,[m.parameters[i].key for i in 1:length(m.parameters)],
-                         zeros(length(m.parameters)),0.,0.,false) for n in 1:n_parts],
+                         zeros(length(m.parameters)),0.,0.,0.,false) for n in 1:n_parts],
                          zeros(1),zeros(1),1,0,0,0.,0., 0.)
 end
 
@@ -70,6 +75,10 @@ end
 
 function get_loglh(c::ParticleCloud)
     return map(p -> p.loglh, c.particles)
+end
+
+function get_old_loglh(c::ParticleCloud)
+    return map(p -> p.old_loglh, c.particles)
 end
 
 function get_logpost(c::ParticleCloud)
@@ -124,10 +133,11 @@ function reset_weights!(c::ParticleCloud)
 end
 
 function update_mutation!(p::Particle, para::Array{Float64,1},
-                          like::Float64, post::Float64, accept::Bool)
+                          like::Float64, post::Float64, old_like::Float64, accept::Bool)
     p.value = para
     p.loglh = like
     p.logpost = post
+    p.old_loglh = old_like
     p.accept = accept
 end
 
@@ -137,6 +147,19 @@ end
 
 function update_weight!(p::Particle, weight::Float64)
     p.weight = weight
+end
+
+# For resetting a previously used cloud's settings for the purpose of time tempering
+function reset_cloud_settings!(c::ParticleCloud)
+    c.tempering_schedule = zeros(1)
+    c.ESS = zeros(1)
+    c.stage_index = 1
+    c.n_Φ = 0
+    c.resamples = 0
+    c.c = 0
+    c.accept = 0.
+    c.total_sampling_time = 0.
+    reset_weights!(c)
 end
 
 function update_acceptance_rate!(c::ParticleCloud)

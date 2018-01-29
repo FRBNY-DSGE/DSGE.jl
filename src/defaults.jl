@@ -140,7 +140,7 @@ function default_settings!(m::AbstractModel)
     settings[:init_accept] = Setting(:init_accept, .25, "The initial average acceptance rate for new particles during mutation")
     settings[:target_accept] = Setting(:target_accept, .25, "The initial target acceptance rate for new particles during mutation")
     settings[:resampler_smc] = Setting(:resampler_smc, :multinomial, "Which resampling method to use in SMC")
-    settings[:initial_draw_source] = Setting(:initial_draw_source, :prior, "How to draw the initial population of particles in SMC")
+    settings[:mixture_proportion] = Setting(:mixture_proportion, 1., "The mixture proportion for the mutation step's proposal distribution")
 
     # Endogenous ϕ Schedule
     settings[:use_fixed_schedule] = Setting(:use_fixed_schedule, true, true, "fix", "Boolean indicating whether or not to use a fixed tempering (ϕ) schedule")
@@ -151,12 +151,9 @@ function default_settings!(m::AbstractModel)
     settings[:smc_iteration] = Setting(:smc_iteration, 1, true, "iter", "The iteration index for the number of times smc has been run on the same data vintage. Primarily for numerical accuracy/testing purposes.")
 
     # Time tempering (to be changed)
-    settings[:updated_data_vintage] = Setting(:updated_data_vintage, vint, "Updated data vintage for the combination tempered data/likelihood
-                                              tempering for the purposes of updating an old cloud vintage with new data.")
-    settings[:date_updatedsample_start] = Setting(:date_updatedsample_start, quartertodate("1960-Q1"),
-                                                 "Start date of revision or update of sample")
-    settings[:date_updatedsample_end] = Setting(:date_updatedsample_end, quartertodate("1960-Q2"),
-                                                 "End date of revision or update of sample")
+    settings[:previous_data_vintage] = Setting(:previous_data_vintage, vint, "The old data vintage to start SMC from.")
+    # Temporary setting to test logMDD accuracy of time tempering
+    settings[:time_temper] = Setting(:time_temper, false, true, "temp", "Indicate whether or not time tempering was used")
 
     # Alternative policy
     baseline_policy = AltPolicy(:historical, eqcond, solve, forecast_init = identity)

@@ -1,21 +1,21 @@
 """
 ```
-smc(m::AbstractModel, data::Matrix)
+smc(m::AbstractModel, data::Matrix; verbose::Symbol, old_data::Matrix)
 smc(m::AbstractModel, data::DataFrame)
 smc(m::AbstractModel)
-smc(m::AbstractModel, cloud::ParticleCloud, old_data::Matrix, new_data::Matrix)
 ```
 
 ### Arguments:
 
 - `m`: A model object, from which its parameters values, prior dists, and bounds will be referenced
-- `data`: A matrix or data frame containing time series of the observables to be used in the calculation of the posterior/likelihood
+- `data`: A matrix or data frame containing the time series of the observables to be used in the calculation of the posterior/likelihood
+- `old_data`: A matrix containing the time series of observables of previous data (with `data` being the new data) for the purposes of time tempered estimation
 
 ### Keyword Arguments:
 - `verbose`: The desired frequency of function progress messages printed to standard out.
 	- `:none`: No status updates will be reported.
 	- `:low`: Status updates for SMC initialization and recursion will be included.
-	    - `:high`: Status updates for every iteration of SMC is output, which includes the mu and sigma of each individual parameter draw after each iteration, as well as the calculated acceptance rate, the ESS, and the number of times resampled.
+	- `:high`: Status updates for every iteration of SMC is output, which includes the mu and sigma of each individual parameter draw after each iteration, as well as the calculated acceptance rate, the ESS, and the number of times resampled.
 
 ### Outputs
 
@@ -34,28 +34,43 @@ SMC is broken up into three main steps:
 
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis Hastings algorithm.
 """
-function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_update::Bool = false)
+function smc(m::AbstractModel, data::Matrix{Float64};
+             verbose::Symbol = :low, old_data::Matrix{Float64} = Matrix{Float64}(size(data, 1), 0))
     ########################################################################################
     ### Setting Parameters
     ########################################################################################
 
+    # General
     parallel = get_setting(m, :use_parallel_workers)
-    use_fixed_schedule = get_setting(m, :use_fixed_schedule)
-
     n_parts = get_setting(m, :n_particles)
     n_params = n_parameters(m)
     n_blocks = get_setting(m, :n_smc_blocks)
 
-    resampling_method = get_setting(m, :resampler_smc)
-    c = get_setting(m, :step_size_smc)
-    accept = get_setting(m, :init_accept)
-    target = get_setting(m, :target_accept)
+    # Time Tempering
+    tempered_update = !isempty(old_data)
+    # Quick check that if there is a tempered update that the old vintage and current vintage are different
+    if tempered_update
+        old_vintage = get_setting(m, :previous_data_vintage)
+        @assert old_vintage != data_vintage(m)
+    end
+
+    # Step 0 (ϕ schedule) settings
+    use_fixed_schedule = get_setting(m, :use_fixed_schedule)
     λ = get_setting(m, :λ)
     n_Φ = get_setting(m, :n_Φ)
     tempering_target = get_setting(m, :tempering_target)
+
+    # Step 2 (Correction) settings
+    resampling_method = get_setting(m, :resampler_smc)
     threshold_ratio = get_setting(m, :resampling_threshold)
     threshold = threshold_ratio * n_parts
     use_CESS = get_setting(m, :use_CESS)
+
+    # Step 3 (Mutation) settings
+    c = get_setting(m, :step_size_smc)
+    accept = get_setting(m, :init_accept)
+    target = get_setting(m, :target_accept)
+    α = get_setting(m, :mixture_proportion)
 
     ########################################################################################
     ### Initialize Algorithm: Draws from prior
@@ -74,23 +89,21 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
         srand(42)
     end
 
-    # if !tempered_update
+    if tempered_update
+        # Load the previous ParticleCloud as the starting point for time tempering
+        loadpath = rawpath(m, "estimate", "smc_cloud.jld")
+        loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
+
+        cloud = load(loadpath, "cloud")
+        reset_cloud_settings!(cloud)
+        initialize_likelihoods(m, data, cloud, parallel = parallel)
+    else
         # Instantiating ParticleCloud object
         cloud = ParticleCloud(m, n_parts)
 
-        # Particle draws from the parameter's marginal priors
         # Modifies the cloud object in place to update draws, loglh, & logpost
-        initial_draw(m, data, cloud)
-    # else
-        # updated_vintage = get_setting(m, :updated_data_vintage)
-        # cloud = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "old_cloud")
-
-        # unchanged_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "unchanged_loglh")
-        # revised_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "revised_loglh")
-        # new_loglh = load(rawpath(m, "estimate", "smc_cloud_updvint=$updated_vintage.jld"), "new_loglh")
-
-        # update_loglh!(cloud, unchanged_loglh)
-    # end
+        initial_draw(m, data, cloud, parallel = parallel)
+    end
 
     # Fixed schedule for construction of ϕ_prop
     if use_fixed_schedule
@@ -125,8 +138,6 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
         println("\n\n SMC recursion starts \n\n")
     end
 
-    total_sampling_time = 0.
-
     while ϕ_n < 1.
 
     tic()
@@ -150,7 +161,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
 
         # Setting up the optimal ϕ solving function for endogenizing the tempering schedule
         optimal_ϕ_function(ϕ)  = compute_ESS(get_loglh(cloud), get_weights(cloud), ϕ, ϕ_n1,
-                                             use_CESS = use_CESS) - ESS_bar
+                                             use_CESS = use_CESS, old_loglh = get_old_loglh(cloud)) - ESS_bar
 
         # Find a ϕ_prop such that the optimal ϕ_n will lie somewhere between ϕ_n1 and ϕ_prop
         # Do so by iterating through a proposed_fixed_schedule and finding the first
@@ -181,11 +192,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
     ########################################################################################
 
     # Calculate incremental weights
-    # if !tempered_update
-        incremental_weights = exp.((ϕ_n - ϕ_n1)*get_loglh(cloud))
-    # else
-        # incremental_weights = exp.((ϕ_n1 - ϕ_n)*revised_loglh + (ϕ_n - ϕ_n1)*new_loglh)
-    # end
+    incremental_weights = exp.((ϕ_n1 - ϕ_n)*get_old_loglh(cloud) + (ϕ_n - ϕ_n1)*get_loglh(cloud))
 
     # Need previous weights for CESS calculation
     if use_CESS
@@ -235,18 +242,26 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
     ### Step 3: Mutation
     ########################################################################################
 
-    # Calculate the adaptive c-step to be used as a scaling coefficient in the mutation MH step
+    # Calculate the adaptive c-step to be used as a scaling coefficient in the mutation MH stea
     c = c*(0.95 + 0.10*exp(16*(cloud.accept - target))/(1 + exp(16*(cloud.accept - target))))
     cloud.c = c
 
+    R = cov(cloud)
+    p_prop = weighted_mean(cloud)
+
+    # This calculates the matrix 'square root' of R for the purposes
+    # of drawing by μ + std_dev_mat*randn(length(μ))
+    U, E, V = svd(R)
+    std_dev_mat = U * diagm(sqrt.(E))
+
     if parallel
-        R = cov(cloud)
         new_particles = @parallel (vcat) for j in 1:n_parts
-            mutation(m, data, cloud.particles[j], R, ϕ_n, ϕ_n1; c = c)
+            mutation(m, data, cloud.particles[j], std_dev_mat, ϕ_n, ϕ_n1; c = c, p_prop = p_prop, α = α,
+                     old_data = old_data)
         end
     else
-        R = cov(cloud)
-        new_particles = [mutation(m, data, cloud.particles[j], R, ϕ_n, ϕ_n1; c = c) for j = 1:n_parts]
+        new_particles = [mutation(m, data, cloud.particles[j], std_dev_mat, ϕ_n, ϕ_n1; c = c, p_prop = p_prop,
+                                  α = α, old_data = old_data) for j = 1:n_parts]
     end
 
     cloud.particles = new_particles
@@ -268,7 +283,7 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
     ### Saving data
     ########################################################################################
 
-    if !m.testing && !tempered_update
+    if !m.testing
         simfile = h5open(rawpath(m, "estimate", "smcsave.h5"),"w")
         particle_store = d_create(simfile, "smcparams", datatype(Float32),
                                   dataspace(n_parts, n_params))
@@ -280,11 +295,6 @@ function smc(m::AbstractModel, data::Matrix; verbose::Symbol = :low, tempered_up
             write(file, "cloud", cloud)
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)
-        end
-    elseif tempered_update
-        new_vintage = get_setting(m, :updated_data_vintage)
-        jldopen(rawpath(m, "estimate", "smc_cloud_updvint=$new_vintage.jld"), "r+") do file
-            write(file, "up_cloud", cloud)
         end
     end
 end
@@ -298,42 +308,4 @@ function smc(m::AbstractModel; verbose::Symbol=:low)
     data = load_data(m)
     data_mat = df_to_matrix(m, data)
     return smc(m, data_mat, verbose=verbose)
-end
-
-# For doing a combination of data tempering and likelihood tempering to incorporate
-# new data into particle cloud sample
-# Cloud is a obtained from loading from a .jld an old particle cloud pertaining to the old data matrix
-# from a previous run of SMC, located in the relevant path.
-# new_data is a new data matrix corresponding to both revised and newly updated periods of data to be
-# incorporated into creating a new cloud/sample.
-function smc{S<:AbstractFloat}(m::AbstractModel, cloud::ParticleCloud, old_data::Matrix{S},
-                               new_data::Matrix{S}; verbose::Symbol=:low)
-    new_vintage = get_setting(m, :updated_data_vintage)
-    original_data_range  = quarter_range(date_mainsample_start(m), date_mainsample_end(m))
-    updated_data_range   = quarter_range(get_setting(m, :date_updatedsample_start), get_setting(m, :date_updatedsample_end))
-    revised_quarters = intersect(original_data_range, updated_data_range)
-    new_quarters = setdiff(updated_data_range, original_data_range)
-
-    n_particles = length(cloud)
-    unchanged_loglh = zeros(n_particles)
-    revised_loglh   = zeros(n_particles)
-    new_loglh       = zeros(n_particles)
-
-    for (i,p) in enumerate(cloud.particles)
-        update!(m, p.value)
-        unchanged_loglh[i] = likelihood(m, old_data[:, 1:end-length(revised_quarters)])
-        revised_loglh[i]   = likelihood(m, old_data[:, end-length(revised_quarters)+1:end])
-        new_loglh[i]       = likelihood(m, new_data)
-    end
-
-    data = hcat(old_data, new_data)
-
-    jldopen(rawpath(m, "estimate", "smc_cloud_updvint=$new_vintage.jld"), "w") do file
-        write(file, "old_cloud", cloud)
-        write(file, "unchanged_loglh", unchanged_loglh)
-        write(file, "revised_loglh", revised_loglh)
-        write(file, "new_loglh", new_loglh)
-    end
-
-    smc(m, data; verbose=verbose, tempered_update=true)
 end
