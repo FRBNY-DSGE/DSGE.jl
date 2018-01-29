@@ -153,7 +153,8 @@ covariance matrix of `d` and the corresponding indices in `v`.
 """
 function Distributions.logpdf{T<:AbstractFloat}(d::DegenerateMvNormal, v::Vector{T})
     inds = find(!iszero, [d.σ[:, i] for i in 1:length(v)])
-    d_alt = MvNormal(d.μ[inds], d.σ[inds, inds]*d.σ[inds, inds]')
+    cov_mat = d.σ[inds, inds]*d.σ[inds, inds]'
+    d_alt = MvNormal(d.μ[inds], nearest_spd(cov_mat))
     v_alt = v[inds]
     return logpdf(d_alt, v_alt)
 end
