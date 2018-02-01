@@ -45,6 +45,7 @@ function decompose_forecast_one_draw(model::AbstractModel, df_new::DataFrame, df
     all_components(h)     = Z_new * (T_new^h * kal_new[:zend] + C_new) - Z * (T^(h+k) * kal_old[:zend] + C) + (D_new - D)
     function shock_component(h::Int)
         total = zeros(n_obs, 1, n_shocks)
+        (k == 0) && (return total)
         for s in 1:n_shocks
             shock_total = zeros(n_states, 1)
             shock = zeros(n_shocks, 1)
@@ -82,10 +83,10 @@ decompose_forecast_changes(m_new, m_old, df_new, df_old, input_type, cond_type;
 
 ```
 
-Decompose the difference between forecasts in `yr`:`quarter` and the subsequent quarter,
-(e.g. forecasts in 2010Q1 and 2010Q2) into components attributable to updating the states,
-new shocks, and data revisions. Returns changes due to state updates, realized shocks,
-and data revisions
+Decompose the difference between two sets of forecasts, (e.g. forecasts in
+2010Q1 and 2010Q2) into components attributable to parameter changes, updates to
+the states, new shocks, and data revisions. Returns the individual components
+(parameters, states, shocks, data) and the overall change.
 """
 function decompose_forecast_changes(m_new::AbstractModel, m_old::AbstractModel,
                                     input_type::Symbol, cond_type::Symbol;
@@ -139,7 +140,7 @@ function decompose_forecast_changes(m_new::AbstractModel, m_old::AbstractModel,
         # Block info
         block_inds, block_inds_thin = DSGE.forecast_block_inds(m_new, input_type)
         nblocks = length(block_inds)
-        start_block = isnull(forecast_start_block(m_new)) ? 1 : get(forecast_start_block(m_new))
+        start_block = isnull(forecast_start_block(m_new)) ? 1 : forecast_start_block(m_new)
 
         # Info needed for printing progress
         total_forecast_time = 0.0
@@ -254,7 +255,7 @@ function collapse_shocks(shocks::Vector{DataFrames.DataFrame}, m::AbstractModel;
 
     df = DataFrame()
     n_periods = size(shocks[1],1)
-    start_date = date_forecast_start(m_new)
+    start_date = date_forecast_start(m)
     end_date = iterate_quarters(start_date, n_periods - 1)
     df[:date] = DSGE.quarter_range(start_date, end_date)
 
