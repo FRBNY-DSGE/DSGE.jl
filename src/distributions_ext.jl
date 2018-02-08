@@ -93,8 +93,8 @@ Distributions.rand(d::RootInverseGamma; cc::T = 1.0) where T <: AbstractFloat
 
 Generate a draw from the RootInverseGamma distribution `d`.
 """
-function Distributions.rand(d::RootInverseGamma; cc::T = 1.0) where T <: AbstractFloat
-    return sqrt(d.ν*(d.τ^2)^2/sum(randn(round(Int,d.ν)).^2))
+function Distributions.rand{T<:AbstractFloat}(d::RootInverseGamma; cc::T = 1.0)
+    return sqrt(d.ν * d.τ^2 / sum(randn(round(Int,d.ν)).^2))
 end
 
 """
