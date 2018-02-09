@@ -188,6 +188,36 @@ function Base.cov(c::ParticleCloud)
     return cov(get_vals(c), 2)
 end
 
+"""
+```
+marginal_data_density(c, w, W; method = :incremental_weights)
+```
+
+### Inputs
+
+- `c::ParticleCloud`
+- `w::Matrix{Float64}`: size `nparticles` x `nstages` matrix of incremental weights
+- `W::Matrix{Float64}`: size `nparticles` x `nstages` matrix of normalized weights
+
+### Keyword Arguments
+
+- `method::Symbol`: either `:incremental_weights` or `:harmonic_mean`
+"""
+function marginal_data_density(c::ParticleCloud, w::Matrix{Float64}, W::Matrix{Float64};
+                               method::Symbol = :incremental_weights)
+    logmdd = if method == :incremental_weights
+        w_W = w[:, 2:end] .* W[:, 1:end-1]
+        sum(log.(sum(w_W, 1))) # sum across particles, take log, sum across parameters
+    elseif method == :harmonic_mean
+        logpost = DSGE.get_logpost(cloud)
+        c = -mean(logpost)
+        -c - log(sum(W[:, end] .* exp.(-(c .+ logpost))))
+    else
+        error("Invalid method: $method")
+    end
+    return logmdd
+end
+
 for op in (:(Base.:+),
            :(Base.:-),
            :(Base.:*),
