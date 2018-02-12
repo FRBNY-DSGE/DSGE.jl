@@ -102,7 +102,7 @@ m.testing = true
 m.testing = false
 m <= Setting(:n_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Hastings")
 @test m.settings[:n_mh_blocks].value == 5
-@test ismatch(r"^\s*_mhbk=5_vint=(\d{6})", DSGE.filestring(m))
+@test ismatch(r"^.*_mhbk=5.*_vint=(\d{6})", DSGE.filestring(m))
 DSGE.filestring(m, "key=val")
 DSGE.filestring(m, ["key=val", "foo=bar"])
 m.testing = true
