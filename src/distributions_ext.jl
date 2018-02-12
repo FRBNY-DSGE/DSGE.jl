@@ -49,11 +49,11 @@ end
 type RootInverseGamma <: Distribution{Univariate, Continuous}
 ```
 
-If x ~ RootInverseGamma(ν, τ²), then
-  x² ~ ScaledInverseChiSquared(ν, τ²)
-  x² ~ InverseGamma(ν/2, ντ²/2)
+If x  ~ RootInverseGamma(ν, τ), then
+   x² ~ ScaledInverseChiSquared(ν, τ²)
+   x² ~ InverseGamma(ν/2, ντ²/2)
 
-ν represents the degrees of freedom.
+x has mode τ and ν degrees of freedom.
 """
 type RootInverseGamma <: Distribution{Univariate, Continuous}
     ν::Float64
@@ -88,13 +88,43 @@ end
 
 """
 ```
-Distributions.rand{T<:AbstractFloat}(d::RootInverseGamma; cc::T = 1.0)
+Distributions.rand(d::RootInverseGamma)
 ```
 
-Generate a draw from d with variance optionally scaled by cc^2 (for a RootInverseGamma)
+Generate a draw from the RootInverseGamma distribution `d`.
 """
-function Distributions.rand{T<:AbstractFloat}(d::RootInverseGamma; cc::T = 1.0)
+function Distributions.rand(d::RootInverseGamma)
     return sqrt(d.ν * d.τ^2 / sum(randn(round(Int,d.ν)).^2))
+end
+
+"""
+```
+mean(d::RootInverseGamma)
+```
+
+Compute the mean of the RootInverseGamma distribution `d`.
+"""
+function mean(d::RootInverseGamma)
+    α = d.ν/2
+    β = d.τ^2 * d.ν/2
+
+    μ = sqrt(β) * gamma(α - 0.5) / gamma(α)
+    return μ
+end
+
+"""
+```
+std(d::RootInverseGamma)
+```
+
+Compute the standard deviation of the RootInverseGamma distribution `d`.
+"""
+function std(d::RootInverseGamma)
+    α = d.ν/2
+    β = d.τ^2 * d.ν/2
+
+    σ = sqrt((β / (α - 1) - μ^2))
+    return σ
 end
 
 """
@@ -139,8 +169,20 @@ Distributions.rand{T<:AbstractFloat}(d::DegenerateMvNormal; cc::T = 1.0)
 
 Generate a draw from `d` with variance optionally scaled by `cc^2`.
 """
-function Distributions.rand{T<:AbstractFloat}(d::DegenerateMvNormal; cc::T = 1.0)
+function Distributions.rand(d::DegenerateMvNormal; cc::AbstractFloat = 1.0)
     return d.μ + cc*d.σ*randn(length(d))
+end
+
+"""
+```
+Distributions.rand(d::DegenerateMvNormal, n::Int)
+```
+
+Generate `n` draws from `d`. This returns a matrix of size `(length(d), n)`,
+where each column is a sample.
+"""
+function Distributions.rand(d::DegenerateMvNormal, n::Int)
+    return d.μ .+ d.σ*randn(length(d), n)
 end
 
 """
@@ -157,18 +199,6 @@ function Distributions.logpdf{T<:AbstractFloat}(d::DegenerateMvNormal, v::Vector
     d_alt = MvNormal(d.μ[inds], nearest_spd(cov_mat))
     v_alt = v[inds]
     return logpdf(d_alt, v_alt)
-end
-
-"""
-```
-Distributions.rand(d::DegenerateMvNormal, n::Int)
-```
-
-Generate `n` draws from `d`. This returns a matrix of size `(length(d), n)`,
-where each column is a sample.
-"""
-function Distributions.rand(d::DegenerateMvNormal, n::Int)
-    return d.μ .+ d.σ*randn(length(d), n)
 end
 
 """
@@ -233,29 +263,4 @@ where each column is a sample.
 """
 function Distributions.rand(d::DegenerateDiagMvTDist, n::Int)
     return d.μ .+ d.σ*rand(TDist(d.ν), length(d), n)
-end
-
-# Compute the mean μ and standard deviation σ of a DSGE.RootInverseGamma object.
-
-# A Root Inverse Gamma / Nagasaki Scaled Chi2 Distribution's mean and standard deviation
-# can be computed as follows:
-
-#     μ = √(β) * Γ(α - 0.5) / Γ(α)
-#     σ = √(β / (α - 1) - μ²)
-
-# where α = ν/2 and β = τ²*ν/2.
-function mean(dist::RootInverseGamma)
-    α = dist.ν/2
-    β = dist.τ^2 * dist.ν/2
-
-    μ = β^(.5) * gamma(α - 0.5) / gamma(α)
-    return μ
-end
-
-function std(dist::RootInverseGamma)
-    α = dist.ν/2
-    β = dist.τ^2 * dist.ν/2
-
-    σ = (β / (α - 1) - μ^2)^(0.5)
-    return σ
 end
