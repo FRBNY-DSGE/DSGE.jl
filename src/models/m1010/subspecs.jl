@@ -85,7 +85,7 @@ function ss3!(m::Model1010)
                    description="ln(b_safe_*): Safety premium (percent annualized).",
                    tex_label="ln(b_{safe})")
 
-    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
@@ -127,7 +127,7 @@ function ss5!(m::Model1010)
                    description="ρ_BBB: AR(1) coefficient in the BBB spread process.",
                    tex_label="\\rho_{BBB}")
 
-    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
@@ -148,7 +148,7 @@ function ss6!(m::Model1010)
 
     # ss1, with iid measurement error on BBB spread
 
-    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
@@ -168,18 +168,18 @@ function ss7!(m::Model1010)
                    description="ln(b_safe_*): Safety premium (percent annualized).",
                    tex_label="ln(b_{safe})")
 
-    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
 
 
-    m <= parameter(:σ_b_liqp, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)),
+    m <= parameter(:σ_b_liqp, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100, sqrt(1/400)),
                    fixed=false,
                    description="σ_b_liqp: Standard deviation of stationary component of liquid asset preference shifter process.",
                    tex_label="\\sigma_{b^p, liq}")
 
-    m <= parameter(:σ_b_safep, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)),
+    m <= parameter(:σ_b_safep, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100, sqrt(1/400)),
                    fixed=false,
                    description="σ_b_safep: Standard deviation of stationary component of safe asset preference shifter process.",
                    tex_label="\\sigma_{b^p, safe}")
@@ -198,7 +198,7 @@ function ss8!(m::Model1010)
                    description="ρ_BBB: AR(1) coefficient in the BBB spread process.",
                    tex_label="\\rho_{BBB}")
 
-    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
@@ -214,7 +214,7 @@ function ss9!(m::Model1010)
                    description="ρ_AAA: AR(1) coefficient in the AAA spread process.",
                    tex_label="\\rho_{AAA}")
 
-    m <= parameter(:σ_AAA, 0.25, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.25),
+    m <= parameter(:σ_AAA, 0.25, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.25),
                    fixed=false,
                    description="σ_AAA: Standard deviation on the AR(1) process for measurement error on the AAA spread.",
                    tex_label="\\sigma_{AAA}")
@@ -224,7 +224,7 @@ function ss9!(m::Model1010)
                    description="ρ_BBB: AR(1) coefficient in the BBB spread process.",
                    tex_label="\\rho_{BBB}")
 
-    m <= parameter(:σ_BBB, 0.25, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.25),
+    m <= parameter(:σ_BBB, 0.25, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.25),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
@@ -241,7 +241,7 @@ function ss10!(m::Model1010)
                    description="ρ_AAA: AR(1) coefficient in the AAA spread process.",
                    tex_label="\\rho_{AAA}")
 
-    m <= parameter(:σ_AAA, 0.25, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.25),
+    m <= parameter(:σ_AAA, 0.25, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.25),
                    fixed=false,
                    description="σ_AAA: Standard deviation on the AR(1) process for measurement error on the AAA spread.",
                    tex_label="\\sigma_{AAA}")
@@ -251,17 +251,17 @@ function ss10!(m::Model1010)
                    description="ρ_BBB: AR(1) coefficient in the BBB spread process.",
                    tex_label="\\rho_{BBB}")
 
-    m <= parameter(:σ_BBB, 0.25, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.25),
+    m <= parameter(:σ_BBB, 0.25, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.25),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
 
-    m <= parameter(:σ_b_liqp, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., sqrt(1/400)),
+    m <= parameter(:σ_b_liqp, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2, sqrt(1/400)),
                    fixed=false,
                    description="σ_b_liqp: Standard deviation of stationary component of liquid asset preference shifter process.",
                    tex_label="\\sigma_{b^p, liq}")
 
-    m <= parameter(:σ_b_safep, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., sqrt(1/400)),
+    m <= parameter(:σ_b_safep, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2, sqrt(1/400)),
                    fixed=false,
                    description="σ_b_safep: Standard deviation of stationary component of safe asset preference shifter process.",
                    tex_label="\\sigma_{b^p, safe}")
@@ -278,7 +278,7 @@ function ss11!(m::Model1010)
                    description="ρ_AAA: AR(1) coefficient in the AAA spread process.",
                    tex_label="\\rho_{AAA}")
 
-    m <= parameter(:σ_AAA, 0.15, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.25),
+    m <= parameter(:σ_AAA, 0.15, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.25),
                    fixed=false,
                    description="σ_AAA: Standard deviation on the AR(1) process for measurement error on the AAA spread.",
                    tex_label="\\sigma_{AAA}")
@@ -288,17 +288,17 @@ function ss11!(m::Model1010)
                    description="ρ_BBB: AR(1) coefficient in the BBB spread process.",
                    tex_label="\\rho_{BBB}")
 
-    m <= parameter(:σ_BBB, 0.15, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.25),
+    m <= parameter(:σ_BBB, 0.15, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.25),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
 
-    m <= parameter(:σ_b_liqp, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., sqrt(1/400)/4),
+    m <= parameter(:σ_b_liqp, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2, sqrt(1/400)/4),
                    fixed=false,
                    description="σ_b_liqp: Standard deviation of stationary component of liquid asset preference shifter process.",
                    tex_label="\\sigma_{b^p, liq}")
 
-    m <= parameter(:σ_b_safep, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., sqrt(1/400)/4),
+    m <= parameter(:σ_b_safep, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2, sqrt(1/400)/4),
                    fixed=false,
                    description="σ_b_safep: Standard deviation of stationary component of safe asset preference shifter process.",
                    tex_label="\\sigma_{b^p, safe}")
@@ -307,18 +307,18 @@ end
 function ss12!(m::Model1010)
     # ss7 with lnb_safe and lnb_liq fixed and std dev of permanent processes centered at number adjusted for quarterly
 
-    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
 
 
-    m <= parameter(:σ_b_liqp, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+    m <= parameter(:σ_b_liqp, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=false,
                    description="σ_b_liqp: Standard deviation of stationary component of liquid asset preference shifter process.",
                    tex_label="\\sigma_{b^p, liq}")
 
-    m <= parameter(:σ_b_safep, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+    m <= parameter(:σ_b_safep, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=false,
                    description="σ_b_safep: Standard deviation of stationary component of safe asset preference shifter process.",
                    tex_label="\\sigma_{b^p, safe}")
@@ -337,17 +337,17 @@ function ss13!(m::Model1010)
                    description="ρ_BBB: AR(1) coefficient in the BBB spread process.",
                    tex_label="\\rho_{BBB}")
 
-    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
 
-    m <= parameter(:σ_b_liqp, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+    m <= parameter(:σ_b_liqp, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=false,
                    description="σ_b_liqp: Standard deviation of stationary component of liquid asset preference shifter process.",
                    tex_label="\\sigma_{b^p, liq}")
 
-    m <= parameter(:σ_b_safep, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+    m <= parameter(:σ_b_safep, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=false,
                    description="σ_b_safep: Standard deviation of stationary component of safe asset preference shifter process.",
                    tex_label="\\sigma_{b^p, safe}")
@@ -366,17 +366,17 @@ function ss14!(m::Model1010)
                    description="ρ_BBB: AR(1) coefficient in the BBB spread process.",
                    tex_label="\\rho_{BBB}")
 
-    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
 
-    m <= parameter(:σ_b_liqp, 0., (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+    m <= parameter(:σ_b_liqp, 0., (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=true,
                    description="σ_b_liqp: Standard deviation of stationary component of liquid asset preference shifter process.",
                    tex_label="\\sigma_{b^p, liq}")
 
-    m <= parameter(:σ_b_safep, 0., (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+    m <= parameter(:σ_b_safep, 0., (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=true,
                    description="σ_b_safep: Standard deviation of stationary component of safe asset preference shifter process.",
                    tex_label="\\sigma_{b^p, safe}")
@@ -396,7 +396,7 @@ function ss15!(m::Model1010)
                    description="ρ_BBB: AR(1) coefficient in the BBB spread process.",
                    tex_label="\\rho_{BBB}")
 
-    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
@@ -415,17 +415,17 @@ function ss16!(m::Model1010)
                    description="ρ_BBB: AR(1) coefficient in the BBB spread process.",
                    tex_label="\\rho_{BBB}")
 
-    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
 
-    m <= parameter(:σ_b_liqp, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+    m <= parameter(:σ_b_liqp, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=false,
                    description="σ_b_liqp: Standard deviation of stationary component of liquid asset preference shifter process.",
                    tex_label="\\sigma_{b^p, liq}")
 
-    m <= parameter(:σ_b_safep, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+    m <= parameter(:σ_b_safep, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=false,
                    description="σ_b_safep: Standard deviation of stationary component of safe asset preference shifter process.",
                    tex_label="\\sigma_{b^p, safe}")
@@ -444,17 +444,17 @@ function ss17!(m::Model1010)
                    description="ρ_BBB: AR(1) coefficient in the BBB spread process.",
                    tex_label="\\rho_{BBB}")
 
-    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
 
-    m <= parameter(:σ_b_liqp, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+    m <= parameter(:σ_b_liqp, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=false,
                    description="σ_b_liqp: Standard deviation of stationary component of liquid asset preference shifter process.",
                    tex_label="\\sigma_{b^p, liq}")
 
-    m <= parameter(:σ_b_safep, 0.0, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+    m <= parameter(:σ_b_safep, 0.0, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=true,
                    description="σ_b_safep: Standard deviation of stationary component of safe asset preference shifter process.",
                    tex_label="\\sigma_{b^p, safe}")
@@ -473,17 +473,17 @@ function ss18!(m::Model1010)
                    description="ρ_BBB: AR(1) coefficient in the BBB spread process.",
                    tex_label="\\rho_{BBB}")
 
-    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
 
-    m <= parameter(:σ_b_liqp, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+    m <= parameter(:σ_b_liqp, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=false,
                    description="σ_b_liqp: Standard deviation of stationary component of liquid asset preference shifter process.",
                    tex_label="\\sigma_{b^p, liq}")
 
-    m <= parameter(:σ_b_safep, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+    m <= parameter(:σ_b_safep, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=false,
                    description="σ_b_safep: Standard deviation of stationary component of safe asset preference shifter process.",
                    tex_label="\\sigma_{b^p, safe}")
@@ -506,19 +506,19 @@ function ss19!(m::Model1010)
                    description="ρ_BBB: AR(1) coefficient in the BBB spread process.",
                    tex_label="\\rho_{BBB}")
 
-    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_BBB, 0.1, (1e-8, 5.),(1e-8, 5.),DSGE.Exponential(),DSGE.RootInverseGamma(2, 0.10),
                    fixed=false,
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
 
     m <= parameter(:σ_b_liqp, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(),
-                   DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+                   DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=false,
                    description="σ_b_liqp: Standard deviation of stationary component of liquid asset preference shifter process.",
                    tex_label="\\sigma_{b^p, liq}")
 
     m <= parameter(:σ_b_safep, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(),
-                   DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+                   DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=false,
                    description="σ_b_safep: Standard deviation of stationary component of safe asset preference shifter process.",
                    tex_label="\\sigma_{b^p, safe}")
@@ -529,7 +529,7 @@ function ss19!(m::Model1010)
                    tex_label="\\rho_{z^p}")
 
     m <= parameter(:σ_z_p, sqrt(1/400)/4, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(),
-                   DSGE.RootInverseGamma(100., sqrt(1/400)/4),
+                   DSGE.RootInverseGamma(100, sqrt(1/400)/4),
                    fixed=false,
                    description="σ_z_p: No description available.",
                    tex_label="\\sigma_{z^p}")

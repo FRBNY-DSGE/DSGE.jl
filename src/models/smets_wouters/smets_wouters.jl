@@ -356,30 +356,30 @@ function init_parameters!(m::SmetsWouters)
                    tex_label="\\rho_{r^m}")
 
     # exogenous processes - standard deviation
-    m <= parameter(:σ_g, 0.6090, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_g, 0.6090, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_g: The standard deviation of the government spending process.",
                    tex_label="\\sigma_{g}")
 
-    m <= parameter(:σ_b, 0.1818, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_b, 0.1818, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_b: The standard deviation of the intertemporal preference shifter process.",
                    tex_label="\\sigma_{b}")
 
-    m <= parameter(:σ_μ, 0.4601, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_μ, 0.4601, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
                    tex_label="\\sigma_{\\mu}")
 
-    m <= parameter(:σ_z, 0.4618, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_z, 0.4618, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label="\\sigma_{z}")
 
-    m <= parameter(:σ_λ_f, 0.1455, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_λ_f, 0.1455, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
                    tex_label="\\sigma_{\\lambda_f}")
 
-    m <= parameter(:σ_λ_w, 0.2089, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_λ_w, 0.2089, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    tex_label="\\sigma_{\\lambda_w}")
 
-    m <= parameter(:σ_rm, 0.2397, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_rm, 0.2397, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_r_m: The standard deviation of the monetary policy shock.",
                    tex_label="\\sigma_{r^m}")
 

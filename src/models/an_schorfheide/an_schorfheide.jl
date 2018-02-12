@@ -255,15 +255,15 @@ function init_parameters!(m::AnSchorfheide)
                    description="ρ_z: AR(1) coefficient on shocks to the technology growth rate.",
                    tex_label="\\rho_z")
 
-    m <= parameter(:σ_R, 0.4900, (1e-20, 1e5), (1e-20, 1e5), DSGE.Exponential(), DSGE.RootInverseGamma(4, .4), fixed=false,
+    m <= parameter(:σ_R, 0.4900, (1e-20, 1e5), (1e-20, 1e5), DSGE.Exponential(), RootInverseGamma(4, .4), fixed=false,
                    description="σ_R: Standard deviation of shocks to the nominal interest rate.",
                    tex_label="\\sigma_R")
 
-    m <= parameter(:σ_g, 1.4594, (1e-20, 1e5), (1e-20, 1e5), DSGE.Exponential(), DSGE.RootInverseGamma(4, 1.), fixed=false,
+    m <= parameter(:σ_g, 1.4594, (1e-20, 1e5), (1e-20, 1e5), DSGE.Exponential(), RootInverseGamma(4, 1.), fixed=false,
                    description="σ_g: Standard deviation of shocks to the government spending process.",
                    tex_label="\\sigma_g")
 
-    m <= parameter(:σ_z, 0.9247, (1e-20, 1e5), (1e-20, 1e5), DSGE.Exponential(), DSGE.RootInverseGamma(4, 0.5), fixed=false,
+    m <= parameter(:σ_z, 0.9247, (1e-20, 1e5), (1e-20, 1e5), DSGE.Exponential(), RootInverseGamma(4, 0.5), fixed=false,
                    description="σ_z: Standard deviation of shocks to the technology growth rate process.",
                    tex_label="\\sigma_z")
 
