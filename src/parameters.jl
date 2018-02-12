@@ -498,6 +498,46 @@ end
 Distributions.pdf{T}(pvec::ParameterVector{T}) = exp(logpdf(pvec))
 Distributions.pdf{T}(pvec::ParameterVector{T}, values::Vector{T}) = exp(logpdf(pvec, values))
 
+"""
+```
+Distributions.rand(p::Vector{AbstractParameter{Float64}})
+```
+
+Generate a draw from the prior of each parameter in `p`.
+"""
+function Distributions.rand(p::Vector{AbstractParameter{Float64}})
+    draw = zeros(length(p))
+    for (i, para) in enumerate(p)
+        draw[i] = if para.fixed
+            para.value
+        else
+            # Resample until all prior draws are within the value bounds
+            prio = rand(para.prior.value)
+            while !(para.valuebounds[1] < prio < para.valuebounds[2])
+                prio = rand(para.prior.value)
+            end
+            prio
+        end
+    end
+    return draw
+end
+
+"""
+```
+Distributions.rand(p::Vector{AbstractParameter{Float64}}, n::Int)
+```
+
+Generate `n` draws from the priors of each parameter in `p`.This returns a matrix of size
+`(length(p),n)`, where each column is a sample.
+"""
+function Distributions.rand(p::Vector{AbstractParameter{Float64}}, n::Int)
+    priorsim = zeros(length(p), n)
+    for i in 1:n
+        priorsim[:, i] = rand(p)
+    end
+    return priorsim
+end
+
 function describe_prior(param::Parameter)
     if param.fixed
         return "fixed at " * string(param.value)
