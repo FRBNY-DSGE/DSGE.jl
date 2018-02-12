@@ -56,7 +56,7 @@ If x  ~ RootInverseGamma(ν, τ), then
 x has mode τ and ν degrees of freedom.
 """
 type RootInverseGamma <: Distribution{Univariate, Continuous}
-    ν::Float64
+    ν::Int
     τ::Float64
 end
 
@@ -94,7 +94,7 @@ Distributions.rand(d::RootInverseGamma)
 Generate a draw from the RootInverseGamma distribution `d`.
 """
 function Distributions.rand(d::RootInverseGamma)
-    return sqrt(d.ν * d.τ^2 / sum(randn(round(Int,d.ν)).^2))
+    return sqrt(d.ν * d.τ^2 / sum(randn(d.ν).^2))
 end
 
 """
