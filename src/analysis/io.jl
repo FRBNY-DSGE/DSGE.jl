@@ -248,7 +248,7 @@ function write_meansbands_tables_timeseries(m::AbstractModel, input_type::Symbol
                                             forecast_string::String = "",
                                             bdd_and_unbdd::Bool = false,
                                             read_dirname::String = workpath(m, "forecast"),
-                                            write_dirname::String = tablespath(m, "forecast"),
+                                            dirname::String = tablespath(m, "forecast"),
                                             kwargs...)
     # Check that output_var is a time series
     prod = get_product(output_var)
@@ -284,7 +284,7 @@ function write_meansbands_tables_timeseries(m::AbstractModel, input_type::Symbol
     end
 
     # Call second method
-    write_meansbands_tables_timeseries(write_dirname, filestring_base(m), mb;
+    write_meansbands_tables_timeseries(dirname, filestring_base(m), mb;
                                        kwargs...)
 end
 
@@ -294,6 +294,7 @@ function write_meansbands_tables_timeseries(dirname::String, filestring_base::Ve
                                             bands_pcts::Vector{String} = which_density_bands(mb, uniquify = true))
     for tablevar in tablevars
         df = prepare_meansbands_table_timeseries(mb, tablevar, bands_pcts = bands_pcts)
+                                                 # shocks = columnvars)
         write_meansbands_table(dirname, filestring_base, mb, df, tablevar)
     end
 end
@@ -347,7 +348,7 @@ function write_means_tables_shockdec(m::AbstractModel, input_type::Symbol,
                                      cond_type::Symbol, class::Symbol;
                                      forecast_string::String = "",
                                      read_dirname::String = workpath(m, "forecast"),
-                                     write_dirname::String = tablespath(m, "forecast"),
+                                     dirname::String = tablespath(m, "forecast"),
                                      kwargs...)
     # Read in necessary MeansBands
     products = [:shockdec, :trend, :dettrend, :hist, :forecast]
@@ -368,7 +369,7 @@ function write_means_tables_shockdec(m::AbstractModel, input_type::Symbol,
     end
 
     # Call second method
-    write_means_tables_shockdec(write_dirname, filestring_base(m), values(mbs)...;
+    write_means_tables_shockdec(dirname, filestring_base(m), values(mbs)...;
                                 kwargs...)
 end
 
@@ -519,30 +520,27 @@ Write all `output_vars` corresponding to model `m` to tables in `dirname`.
 function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                                      output_vars::Vector{Symbol};
                                      forecast_string = "",
-                                     bdd_and_unbdd::Bool = false,
                                      dirname::String = tablespath(m, "forecast"),
                                      vars::Vector{Symbol} = Symbol[],
                                      shocks::Vector{Symbol} = Symbol[],
                                      shock_groups::Vector{ShockGroup} = ShockGroup[])
     for output_var in output_vars
 
-        class = get_class(output)
-        prod  = get_product(output)
+        class = get_class(output_var)
+        prod  = get_product(output_var)
 
         if prod in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
                     :histforecast, :histforecastut, :histforecast4q,
                     :bddforecast, :bddforecastut, :bddforecast4q,
                     :trend, :dettrend]
-            write_meansbands_table_timeseries(m, input_type, cond_type, output_var,
-                                              tablevars = vars, columnvars = shocks,
+            write_meansbands_tables_timeseries(m, input_type, cond_type, output_var,
+                                              tablevars = vars,
                                               forecast_string = forecast_string,
-                                              bdd_and_unbdd = bdd_and_unbdd,
                                               dirname = dirname)
 
         elseif prod == :shockdec
             write_means_tables_shockdec(m, input_type, cond_type, class,
                                         tablevars = vars, columnvars = shocks,
-                                        bdd_and_unbdd = bdd_and_unbdd,
                                         forecast_string = forecast_string,
                                         dirname = dirname,
                                         groups = shock_groups)
