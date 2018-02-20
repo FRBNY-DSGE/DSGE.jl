@@ -101,6 +101,8 @@ module DSGE
         write_meansbands_tables_timeseries, write_means_tables_shockdec, prepare_meansbands_table_irf,
         write_meansbands_tables_all,
         decompose_forecast_changes, collapse_shocks,
+        construct_fcast_and_hist_dfs,
+        df_to_table,
 
         # altpolicy/
         AltPolicy, taylor93, taylor99,
@@ -176,6 +178,7 @@ module DSGE
     include("analysis/io.jl")
     include("analysis/util.jl")
     include("analysis/forecast_decomposition.jl")
+    include("analysis/df_to_table.jl")
 
     include("altpolicy/altpolicy.jl")
     include("altpolicy/taylor93.jl")
