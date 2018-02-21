@@ -119,8 +119,8 @@ function decompose_history_one_draw(model::AbstractModel, df_new::DataFrame, df_
     c = cond_type in [:semi, :full] ? 1 : 0
     partial_sum(M::Matrix, k::Int) = k <= 0 ? eye(size(M)...) : M^k + partial_sum(M, k-1)
 
-    state_component(h)    = Z_new * (histstates[:,end-k+h] - kal_new[:filt][:,end-k+h])
-    revision_component(h) = Z_new * (kal_new[:filt][:,end-k+h] - T_new^(h) * kal_mix[:filt][:,end])
+    state_component(h)    = Z_new * T_new^(h) * (histstates[:,end-k] - kal_new[:filt][:,end-k])
+    revision_component(h) = Z_new * T_new^(h) * (kal_new[:filt][:,end-k] - kal_mix[:filt][:,end])
     para_component(h)     = Z_new * (T_new^(h) * kal_mix[:filt][:,end] + partial_sum(T_new,h+k) * C_new) - Z * (T^(h) * kal_old[:filt][:,end] + partial_sum(T,h) * C) + (D_new - D)
     all_components(h)     = Z_new * (histstates[:,end-k+h] + C_new) - Z * (T^(h) * kal_old[:zend] + C) + (D_new - D)
     function shock_component(h::Int)
@@ -128,11 +128,11 @@ function decompose_history_one_draw(model::AbstractModel, df_new::DataFrame, df_
         (k == 0) && (return total)
         for s in 1:n_shocks
             shock_total = zeros(n_states, 1)
-            # shock = zeros(n_shocks, 1)
-            # for i in 0:k-1
-            #     shock[s,1] = histshocks[s,end-i]
-            #     shock_total += T_new^(h+i) * R_new * shock
-            # end
+            shock = zeros(n_shocks, 1)
+            for i in 1:h
+                shock[s,1] = histshocks[s,end-k+i]
+                shock_total += T_new^(h-i) * R_new * shock
+            end
             total[:,1,s] = Z_new * shock_total
         end
         return total
