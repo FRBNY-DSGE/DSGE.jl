@@ -705,8 +705,13 @@ function settings_m1002!(m::Model1002)
 
     # Data
     m <= Setting(:data_id, 3, "Dataset identifier")
-    m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
-                 "Observables used in conditional forecasts")
+    if get_setting(m, :cond_id) in [1,2]
+        m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
+                     "Observables used in conditional forecasts")
+    elseif get_setting(m, :cond_id) == 6
+        m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate,
+                                        :obs_gdpdeflator], "Observables used in conditional forecasts")
+    end
     m <= Setting(:cond_semi_names, [:obs_spread, :obs_nominalrate, :obs_longrate],
                  "Observables used in semiconditional forecasts")
 
