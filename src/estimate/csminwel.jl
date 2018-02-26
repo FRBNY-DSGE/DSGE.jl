@@ -3,7 +3,7 @@ This code is based on a routine originally copyright Chris Sims.
 See http://sims.princeton.edu/yftp/optimize/
 =#
 
-immutable Csminwel <: Optim.Optimizer end
+immutable Csminwel <: Optim.SecondOrderOptimizer end
 
 const rc_messages = Dict(0 => "Standard Iteration",
                          1 => "zero gradient",
