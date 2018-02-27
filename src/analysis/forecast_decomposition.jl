@@ -153,14 +153,14 @@ end
 
 """
 ```
-decompose_forecast_changes(m_new, m_old, input_type, cond_type,
+decompose_changes(m_new, m_old, input_type, cond_type,
                            decomposition_type = :forecast;
                            verbose = :low, transform = false,
                            format_as_DataFrame = true,
                            pseudo = false)
 
 
-decompose_forecast_changes(m_new, m_old, df_new, df_old, input_type, cond_type,
+decompose_changes(m_new, m_old, df_new, df_old, input_type, cond_type,
                            decomposition_type = :forecast;
                            verbose = :low, transform = false,
                            format_as_DataFrame=  true,
@@ -354,7 +354,17 @@ function decompose_changes(m_new::AbstractModel, m_old::AbstractModel,
     return reestimation, state_updates, realized_shocks, data_revisions, overall_change
 end
 
+"""
+```
+collapse_shocks(shocks, m; cond_type = :none, pseudo = false)
 
+collapse_shocks(shocks)
+
+```
+
+Aggregate either a vector of shock DataFrames or a 3D array of shocks
+into n_periods x n_variables DataFrame or array
+"""
 function collapse_shocks(shocks::Vector{DataFrames.DataFrame}, m::AbstractModel;
                          cond_type::Symbol = :none, pseudo::Bool = false)
     n_shocks = n_shocks_exogenous(m)
@@ -379,3 +389,4 @@ end
 function collapse_shocks(shocks::Array{Float64,3})
     return squeeze(sum(shocks,3),3)
 end
+
