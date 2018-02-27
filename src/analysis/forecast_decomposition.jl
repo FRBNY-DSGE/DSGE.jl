@@ -1,37 +1,37 @@
 """
 ```
-decompose_forecast_one_draw(model, df_new, df_old, params_new, params_old, k, cond_type)
+decompose_forecast_one_draw(m_new, m_old, df_new, df_old, params_new, params_old, k, cond_type)
 ```
 
 Returns reestimation, state_updates, realized_shocks, data_revisions, overall_change
 """
-function decompose_forecast_one_draw(model::AbstractModel, df_new::DataFrame, df_old::DataFrame,
+function decompose_forecast_one_draw(m_new::AbstractModel, m_old::AbstractModel, df_new::DataFrame, df_old::DataFrame,
                                      params_new::Vector{Float64}, params_old::Vector{Float64}, k::Int64;
                                      cond_type::Symbol = :none, pseudo::Bool = false)
 
     # Update model
-    DSGE.update!(model, params_new)
-    sys_new = compute_system(model)
-    DSGE.update!(model, params_old)
-    sys_old = compute_system(model)
+    DSGE.update!(m_new, params_new)
+    sys_new = compute_system(m_new)
+    DSGE.update!(m_old, params_old)
+    sys_old = compute_system(m_old)
 
     # Filter and smooth
-    kal_new = DSGE.filter(model, df_new, sys_new; cond_type = cond_type) # |T, new para
-    kal_mix = DSGE.filter(model, df_old, sys_new; cond_type = cond_type) # |T-K, new para
-    kal_old = DSGE.filter(model, df_old, sys_old; cond_type = cond_type) # |T-k, old para
+    kal_new = DSGE.filter(m_new, df_new, sys_new; cond_type = cond_type) # |T, new para
+    kal_mix = DSGE.filter(m_new, df_old, sys_new; cond_type = cond_type) # |T-K, new para
+    kal_old = DSGE.filter(m_new, df_old, sys_old; cond_type = cond_type) # |T-k, old para
 
-    histstates, histshocks, _, _ = DSGE.smooth(model, df_new, sys_new, kal_new; draw_states = false, cond_type = cond_type)
+    histstates, histshocks, _, _ = DSGE.smooth(m_new, df_new, sys_new, kal_new; draw_states = false, cond_type = cond_type)
 
     # Compute decomposition
-    n_obs    = pseudo ? n_pseudo_observables(model) : n_observables(model)
-    n_shocks = n_shocks_exogenous(model)
-    n_states = n_states_augmented(model)
+    n_obs    = pseudo ? n_pseudo_observables(m_new) : n_observables(m_new)
+    n_shocks = n_shocks_exogenous(m_new)
+    n_states = n_states_augmented(m_new)
 
-    reestimation    = zeros(n_obs, forecast_horizons(model))
-    data_revisions  = zeros(n_obs, forecast_horizons(model))
-    state_updates   = zeros(n_obs, forecast_horizons(model))
-    realized_shocks = zeros(n_obs, forecast_horizons(model), n_shocks)
-    overall_change  = zeros(n_obs, forecast_horizons(model))
+    reestimation    = zeros(n_obs, forecast_horizons(m_new))
+    data_revisions  = zeros(n_obs, forecast_horizons(m_new))
+    state_updates   = zeros(n_obs, forecast_horizons(m_new))
+    realized_shocks = zeros(n_obs, forecast_horizons(m_new), n_shocks)
+    overall_change  = zeros(n_obs, forecast_horizons(m_new))
 
     Z, T, R, D, C = sys_old[:ZZ], sys_old[:TTT], sys_old[:RRR], sys_old[:DD], sys_old[:CCC]
     Z_new, T_new, R_new, D_new, C_new = sys_new[:ZZ], sys_new[:TTT], sys_new[:RRR], sys_new[:DD], sys_new[:CCC]
@@ -62,7 +62,7 @@ function decompose_forecast_one_draw(model::AbstractModel, df_new::DataFrame, df
         return total
     end
 
-    for t in 1:forecast_horizons(model)
+    for t in 1:forecast_horizons(m_new)
         reestimation[:,t]      = para_component(t-c)
         state_updates[:,t]     = state_component(t-c)
         realized_shocks[:,t,:] = shock_component(t-c)
@@ -76,32 +76,32 @@ end
 
 """
 ```
-decompose_history_one_draw(model, df_new, df_old, params_new, params_old, k, cond_type)
+decompose_history_one_draw(m_new, m_old,  df_new, df_old, params_new, params_old, k, cond_type)
 ```
 
 Returns reestimation, state_updates, realized_shocks, data_revisions, overall_change
 """
-function decompose_history_one_draw(model::AbstractModel, df_new::DataFrame, df_old::DataFrame,
+function decompose_history_one_draw(m_new::AbstractModel, m_old::AbstractModel, df_new::DataFrame, df_old::DataFrame,
                                     params_new::Vector{Float64}, params_old::Vector{Float64}, k::Int64;
                                     cond_type::Symbol = :none, pseudo::Bool = false)
 
     # Update model
-    DSGE.update!(model, params_new)
-    sys_new = compute_system(model)
-    DSGE.update!(model, params_old)
-    sys_old = compute_system(model)
+    DSGE.update!(m_new, params_new)
+    sys_new = compute_system(m_new)
+    DSGE.update!(m_old, params_old)
+    sys_old = compute_system(m_old)
 
     # Filter and smooth
-    kal_new = DSGE.filter(model, df_new, sys_new; cond_type = cond_type) # |T, new para
-    kal_mix = DSGE.filter(model, df_old, sys_new; cond_type = cond_type) # |T-K, new para
-    kal_old = DSGE.filter(model, df_old, sys_old; cond_type = cond_type) # |T-k, old para
+    kal_new = DSGE.filter(m_new, df_new, sys_new; cond_type = cond_type) # |T, new para
+    kal_mix = DSGE.filter(m_new, df_old, sys_new; cond_type = cond_type) # |T-K, new para
+    kal_old = DSGE.filter(m_new, df_old, sys_old; cond_type = cond_type) # |T-k, old para
 
-    histstates, histshocks, _, _ = DSGE.smooth(model, df_new, sys_new, kal_new; draw_states = false, cond_type = cond_type)
+    histstates, histshocks, _, _ = DSGE.smooth(m_new, df_new, sys_new, kal_new; draw_states = false, cond_type = cond_type)
 
     # Compute decomposition
-    n_obs    = pseudo ? n_pseudo_observables(model) : n_observables(model)
-    n_shocks = n_shocks_exogenous(model)
-    n_states = n_states_augmented(model)
+    n_obs    = pseudo ? n_pseudo_observables(m_new) : n_observables(m_new)
+    n_shocks = n_shocks_exogenous(m_new)
+    n_states = n_states_augmented(m_new)
 
     reestimation    = zeros(n_obs, k)
     data_revisions  = zeros(n_obs, k)
@@ -218,10 +218,10 @@ function decompose_changes(m_new::AbstractModel, m_old::AbstractModel,
     overall_change  = zeros(n_observables(m_new), forecast_horizons(m_new))
 
     decompose(params) = if decomposition_type == :forecast
-        decompose_forecast_one_draw(m_new, df_new, df_old, params[1], params[2], offset;
+        decompose_forecast_one_draw(m_new, m_old, df_new, df_old, params[1], params[2], offset;
                                     cond_type = cond_type, pseudo = pseudo)
     else
-        decompose_history_one_draw(m_new, df_new, df_old, params[1], params[2], offset;
+        decompose_history_one_draw(m_new, m_old, df_new, df_old, params[1], params[2], offset;
                                    cond_type = cond_type, pseudo = pseudo)
     end
 
