@@ -176,7 +176,7 @@ the states, new shocks, and data revisions. Returns the individual components
 function decompose_changes(m_new::AbstractModel, m_old::AbstractModel,
                            input_type::Symbol, cond_type::Symbol,
                            decomposition_type::Symbol = :forecast;
-                           verbose::Symbol = :low, transform::Bool = false,
+                           verbose::Symbol = :low, transform::Bool = true,
                            format_as_DataFrame = true, pseudo::Bool = false,)
 
     # Load data
@@ -194,7 +194,7 @@ function decompose_changes(m_new::AbstractModel, m_old::AbstractModel,
                            df_new::DataFrame, df_old::DataFrame,
                            input_type::Symbol, cond_type::Symbol,
                            decomposition_type::Symbol = :forecast;
-                           verbose::Symbol = :low, transform::Bool = false,
+                           verbose::Symbol = :low, transform::Bool = true,
                            format_as_DataFrame = true, pseudo::Bool = false)
 
     # calculate offset
@@ -302,17 +302,23 @@ function decompose_changes(m_new::AbstractModel, m_old::AbstractModel,
     end
 
     if transform
-        # quartertoannual works as a first approximation (ignoring per-capita
-        # concerns) to most reverse transformations
-        reestimation    = DSGE.quartertoannual(reestimation)
-        state_updates   = DSGE.quartertoannual(state_updates)
-        realized_shocks = DSGE.quartertoannual(realized_shocks)
-        data_revisions  = DSGE.quartertoannual(data_revisions)
-        overall_change  = DSGE.quartertoannual(overall_change)
+        vars = pseudo ? m_new.pseudo_observable_mappings : m_new.observable_mappings
+
+        for (i,var) in enumerate(collect(keys(vars)))
+            transform = vars[var].rev_transform
+            # quartertoannual works as a first approximation (ignoring per-capita
+            # concerns) to most reverse transformations
+            if transform != identity
+                reestimation[i,:]      = DSGE.quartertoannual(reestimation[i,:])
+                state_updates[i,:]     = DSGE.quartertoannual(state_updates[i,:])
+                realized_shocks[i,:,:] = DSGE.quartertoannual(realized_shocks[i,:,:])
+                data_revisions[i,:]    = DSGE.quartertoannual(data_revisions[i,:])
+                overall_change[i,:]    = DSGE.quartertoannual(overall_change[i,:])
+            end
+        end
     end
 
     if format_as_DataFrame
-        # n_periods  = forecast_horizons(m_new)
         start_date = if decomposition_type == :forecast
             date_forecast_start(m_new)
         elseif decomposition_type == :hist
