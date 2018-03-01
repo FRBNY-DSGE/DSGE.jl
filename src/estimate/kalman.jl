@@ -114,12 +114,12 @@ function zlb_regime_indices{S<:AbstractFloat}(m::AbstractModel{S}, data::Matrix{
             error("Start date $start_date must be >= date_presample_start(m)")
 
         elseif date_presample_start(m) <= start_date <= date_zlb_start(m)
-            offset = DSGE.subtract_quarters(start_date, date_presample_start(m))
+            n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
             regime_inds = Vector{Range{Int64}}(2)
-            regime_inds[1] = 1:(index_zlb_start(m) - offset - 1)
-            regime_inds[2] = (index_zlb_start(m) - offset):T
+            regime_inds[1] = 1:n_nozlb_periods
+            regime_inds[2] = (n_nozlb_periods+1):T
 
-        elseif date_zlb_start(m) < start_date
+        else # date_zlb_start(m) < start_date
             regime_inds = Range{Int64}[1:T]
         end
     else
