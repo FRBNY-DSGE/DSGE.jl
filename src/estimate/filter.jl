@@ -40,8 +40,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::Syste
     cond_type::Symbol = :none, allout::Bool = true,
     include_presample::Bool = true, in_sample::Bool = true)
 
-    data = df_to_matrix(m, df; cond_type = cond_type, include_presample = include_presample,
-                        in_sample = in_sample)
+    data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
     start_date = max(date_presample_start(m), df[1, :date])
     filter(m, data, system, z0, P0; start_date = start_date,
            allout = allout, include_presample = include_presample)
