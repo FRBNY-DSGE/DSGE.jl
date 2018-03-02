@@ -7,11 +7,10 @@
 function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
                             df_new::DataFrame, df_old::DataFrame,
                             params_new::Vector{Float64}, params_old::Vector{Float64},
-                            k::Int, h::Int;
-                            check::Bool = false)
+                            h::Int; check::Bool = false)
     # Update parameters
-    sys_new, sys_old, kal_new_new, kal_new_old, kal_old_old, s_tgT, ϵ_tgT, T0, T =
-        prepare_decomposition!(m_new, m_old, df_new, df_old, params_new, params_old, k)
+    sys_new, sys_old, kal_new_new, kal_new_old, kal_old_old, s_tgT, ϵ_tgT, T0, T, k =
+        prepare_decomposition!(m_new, m_old, df_new, df_old, params_new, params_old)
 
     # Decompose into components
     state_comp, shock_comp = decompose_states_shocks(sys_new, kal_new_new, s_tgT, ϵ_tgT, T0, T, k, h,
@@ -61,16 +60,15 @@ end
 
 function prepare_decomposition!(m_new::AbstractModel, m_old::AbstractModel,
                                 df_new::DataFrame, df_old::DataFrame,
-                                params_new::Vector{Float64}, params_old::Vector{Float64},
-                                k::Int)
+                                params_new::Vector{Float64}, params_old::Vector{Float64})
     # Check models well-formed
     @assert typeof(m_new) == typeof(m_old)
-    @assert DSGE.subtract_quarters(date_forecast_start(m_new), date_forecast_start(m_old)) == k
+    k = DSGE.subtract_quarters(date_forecast_start(m_new), date_forecast_start(m_old))
 
     T0 = n_presample_periods(m_new)
     @assert n_presample_periods(m_old) == T0
 
-    T  = n_mainsample_periods(m_new)
+    T = n_mainsample_periods(m_new)
     @assert size(df_new, 1) == T0 + T
     @assert size(df_old, 1) == T0 + T - k
 
@@ -86,7 +84,7 @@ function prepare_decomposition!(m_new::AbstractModel, m_old::AbstractModel,
     kal_old_old = DSGE.filter(m_old, df_old, sys_old)
     s_tgT, ϵ_tgT = smooth(m_new, df_new, sys_new, kal_new_new, draw_states = false)
 
-    return sys_new, sys_old, kal_new_new, kal_new_old, kal_old_old, s_tgT, ϵ_tgT, T0, T
+    return sys_new, sys_old, kal_new_new, kal_new_old, kal_old_old, s_tgT, ϵ_tgT, T0, T, k
 end
 
 function decompose_states_shocks(sys_new::System, kal_new::DSGE.Kalman,
