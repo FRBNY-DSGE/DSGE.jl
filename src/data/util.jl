@@ -69,6 +69,29 @@ function quartertodate(string::String)
 end
 
 """
+`datetoquarter(date::Date)`
+
+Convert `string` in the form "YYqX", "YYYYqX", or "YYYY-qX" to a Date of the end of
+the indicated quarter. "X" is in `{1,2,3,4}` and the case of "q" is ignored.
+
+Return an integer from the set `{1,2,3,4}`, corresponding to one of the quarters in a year given a Date object.
+"""
+function datetoquarter(date::Date)
+    month = Dates.month(date)
+    if month in 1:3
+        return 1
+    elseif month in 4:6
+        return 2
+    elseif month in 7:9
+        return 3
+    elseif month in 10:12
+        return 4
+    else
+        throw("Must provide a date object with a valid month (in 1:12)")
+    end
+end
+
+"""
 `subtract_quarters(t1::Date, t0::Date)`
 
 Compute the number of quarters between t1 and t0, including t0 and excluding t1.
