@@ -1,6 +1,4 @@
 # TODO:
-# - DOESN'T WORK IF ONE IS CONDITIONAL AND OTHER ISN'T
-# - Handle conditioning
 # - Compute multiple h at once
 # - Handle pseudo-observables
 # - Maybe: break out checking into own functions
@@ -8,8 +6,9 @@
 function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
                             df_new::DataFrame, df_old::DataFrame,
                             params_new::Vector{Float64}, params_old::Vector{Float64},
-                            h::Int; check::Bool = false,
-                            cond_new::Symbol = :none, cond_old::Symbol = cond_new)
+                            h::Int;
+                            cond_new::Symbol = :none, cond_old::Symbol = cond_new,
+                            check::Bool = false, atol::Float64 = 1e-8)
     # Update parameters
     sys_new, sys_old, kal_new_new, kal_new_old, kal_old_old, s_tgT, ϵ_tgT, T0, T1_new, T1_old, k =
         prepare_decomposition!(m_new, m_old, df_new, df_old, params_new, params_old,
@@ -41,13 +40,12 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
 
         # Total difference = y^{new,new}_{T+h-k|T} - y^{old,old}_{T-k+h|T-k}
         exp_total = y_new_Tmkph_T - y_old_Tmkph_Tmk
-        return DataFrame(y_new = y_new_Tmkph_T, y_old = y_old_Tmkph_Tmk, diff = exp_total) # PZL (sorry!)
         try
-            @assert myapprox(exp_total, total)
+            @assert isapprox(exp_total, total, atol = atol)
         catch ex
             @show total
             @show exp_total
-            # throw(ex)
+            throw(ex)
         end
     end
 
@@ -96,7 +94,7 @@ end
 function decompose_states_shocks(sys_new::System, kal_new::DSGE.Kalman,
                                  s_tgT::Matrix{Float64}, ϵ_tgT::Matrix{Float64},
                                  T0::Int, k::Int, h::Int;
-                                 check::Bool = false)
+                                 check::Bool = false, atol::Float64 = 1e-8)
     # New parameters, new data
     # State and shock components = y_{T-k+h|T} - y_{T-k+h|T-k}
     #     = Z [ T^h (s_{T-k|T} - s_{T-k|T-k}) + sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ_{T-k+j|T} ) ]
@@ -119,7 +117,7 @@ function decompose_states_shocks(sys_new::System, kal_new::DSGE.Kalman,
     # Return
     if check
         @assert size(s_tgt, 2) == size(s_tgT, 2) == size(ϵ_tgT, 2)
-        @assert myapprox(s_tgt[:, end], s_tgT[:, end])
+        @assert isapprox(s_tgt[:, end], s_tgT[:, end], atol = atol)
 
         y_Tmkph_T = if h <= k
             ZZ * (s_tgT[:, end-k+h] + CCC) + DD # smoothed history
@@ -130,7 +128,7 @@ function decompose_states_shocks(sys_new::System, kal_new::DSGE.Kalman,
         state_shock_comp = y_Tmkph_T - y_Tmkph_Tmk
 
         try
-            @assert myapprox(state_shock_comp, state_comp + shock_comp)
+            @assert isapprox(state_shock_comp, state_comp + shock_comp, atol = atol)
         catch ex
             @show state_comp + shock_comp
             @show state_shock_comp
@@ -142,7 +140,7 @@ end
 
 function decompose_data_revisions(sys_new::System, kal_new::DSGE.Kalman, kal_old::DSGE.Kalman,
                                   T0::Int, k::Int, h::Int;
-                                  check::Bool = false)
+                                  check::Bool = false, atol::Float64 = 1e-8)
     # New parameters, new and old data
     # Data revision component = y^{new}_{T-k+h|T-k} - y^{old}_{T-k+h|T-k}
     #     = Z T^h ( s^{new}_{T-k|T-k} - s^{old}_{T-k|T-k} )
@@ -156,6 +154,7 @@ function decompose_data_revisions(sys_new::System, kal_new::DSGE.Kalman, kal_old
         @show size(s_new_tgt, 2)
         @show size(s_old_tgt, 2)
         @show k
+        throw(ex)
     end
 
     # Return
@@ -166,7 +165,7 @@ end
 function decompose_param_reest(sys_new::System, sys_old::System,
                                kal_new::DSGE.Kalman, kal_old::DSGE.Kalman,
                                T0::Int, k::Int, h::Int;
-                               check::Bool = false)
+                               check::Bool = false, atol::Float64 = 1e-8)
     # New and old parameters, old data
     # Parameter re-estimation component = y^{new}_{T-k+h|T-k} - y^{old}_{T-k+h|T-k}
     ZZ_new, DD_new, TTT_new, CCC_new = sys_new[:ZZ], sys_new[:DD], sys_new[:TTT], sys_new[:CCC]
@@ -232,15 +231,6 @@ end
 
 
 ### OTHER HELPER FUNCTIONS
-
-function myapprox(exp, act, tol = 1e-8)
-    for (e, a) in zip(exp, act)
-        if !(e ≈ a || (abs(e) < tol && abs(a) < tol))
-            return false
-        end
-    end
-    return true
-end
 
 function compute_history_and_forecast(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
     sys = compute_system(m)
