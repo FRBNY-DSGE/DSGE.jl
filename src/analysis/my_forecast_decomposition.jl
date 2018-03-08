@@ -1,13 +1,14 @@
 # TODO:
-# - Handle pseudo-observables
+# - Handle full distribution
+# - Maybe: handle h < 0 (new history vs. old history)
 # - Maybe: break out checking into own functions
 # - Save decomposition output
 # - Plotting
 
 function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
                             df_new::DataFrame, df_old::DataFrame,
-                            params_new::Vector{Float64}, params_old::Vector{Float64};
-                            hs = 1:forecast_horizons(m_old),
+                            params_new::Vector{Float64}, params_old::Vector{Float64},
+                            class::Symbol; hs = 1:forecast_horizons(m_old),
                             cond_new::Symbol = :none, cond_old::Symbol = cond_new,
                             check::Bool = false, atol::Float64 = 1e-8)
 
@@ -27,19 +28,20 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
                                cond_new = cond_new, cond_old = cond_old)
 
     # Initialize DataFrames
-    dfs = DataStructures.OrderedDict{Symbol, DataFrame}()
-    for var in keys(m_new.observables)
-        dfs[var] = DataFrame(h = Int[], date = Date[], total = Float64[],
-                             state = Float64[], shock = Float64[], data = Float64[], param = Float64[])
+    decomps = DataStructures.OrderedDict{Symbol, DataFrame}()
+    for var in keys(DSGE.get_dict(m_new, class))
+        decomps[var] = DataFrame(h = Int[], date = Date[], total = Float64[],
+                                 state = Float64[], shock = Float64[],
+                                 data = Float64[], param = Float64[])
     end
 
     # Compute whole sequence of historical and forecasted observables if desired
     if check
         # y^{new,new}_{t|T-k}, t = 1:T:H
-        y_new = compute_history_and_forecast(m_new, df_new, cond_type = cond_new)
+        y_new = compute_history_and_forecast(m_new, df_new, class, cond_type = cond_new)
 
         # y^{old,old}_{t|T-k}, t = 1:T-k+H
-        y_old = compute_history_and_forecast(m_old, df_old, cond_type = cond_old)
+        y_old = compute_history_and_forecast(m_old, df_old, class, cond_type = cond_old)
     end
 
     for h in hs
@@ -49,19 +51,20 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
 
         # Decompose into components
         state_comp, shock_comp = decompose_states_shocks(sys_new, kal_new_new, s_tgT, ϵ_tgT,
-                                                         T0, k_cond, h_cond, check = check)
+                                                         class, T0, k_cond, h_cond, check = check)
         data_comp = decompose_data_revisions(sys_new, kal_new_new, kal_new_old,
-                                             T0, k_cond, h_cond, check = check)
+                                             class, T0, k_cond, h_cond, check = check)
         param_comp = decompose_param_reest(sys_new, sys_old, kal_new_old, kal_old_old,
-                                           T0, k_cond, h_cond, check = check)
+                                           class, T0, k_cond, h_cond, check = check)
 
         # Compute total difference
         total = state_comp + shock_comp + data_comp + param_comp
 
         # Add to DataFrames
         date = DSGE.iterate_quarters(date_mainsample_end(m_old), h)
-        for (var, i) in m_new.observables
-            push!(dfs[var], [h, date, total[i], state_comp[i], shock_comp[i], data_comp[i], param_comp[i]])
+        for (var, i) in DSGE.get_dict(m_new, class)
+            push!(decomps[var], [h, date, total[i], state_comp[i], shock_comp[i],
+                                 data_comp[i], param_comp[i]])
         end
 
         if check
@@ -79,7 +82,7 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
         end
     end
 
-    return dfs
+    return decomps
 end
 
 function decomposition_periods(m_new::AbstractModel, m_old::AbstractModel;
@@ -129,13 +132,13 @@ end
 
 function decompose_states_shocks(sys_new::System, kal_new::DSGE.Kalman,
                                  s_tgT::Matrix{Float64}, ϵ_tgT::Matrix{Float64},
-                                 T0::Int, k::Int, h::Int;
+                                 class::Symbol, T0::Int, k::Int, h::Int;
                                  check::Bool = false, atol::Float64 = 1e-8)
     # New parameters, new data
     # State and shock components = y_{T-k+h|T} - y_{T-k+h|T-k}
     #     = Z [ T^h (s_{T-k|T} - s_{T-k|T-k}) + sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ_{T-k+j|T} ) ]
     #     = state component + shock component
-    ZZ, DD, TTT, RRR, CCC = sys_new[:ZZ], sys_new[:DD], sys_new[:TTT], sys_new[:RRR], sys_new[:CCC]
+    ZZ, DD, TTT, RRR, CCC = class_system_matrices(sys_new, class)
     s_tgt = kal_new[:filt][:, (T0+1):end] # s_{t|t}
 
     # State component = Z T^h (s_{T-k|T} - s_{T-k|T-k})
@@ -175,12 +178,12 @@ function decompose_states_shocks(sys_new::System, kal_new::DSGE.Kalman,
 end
 
 function decompose_data_revisions(sys_new::System, kal_new::DSGE.Kalman, kal_old::DSGE.Kalman,
-                                  T0::Int, k::Int, h::Int;
+                                  class::Symbol, T0::Int, k::Int, h::Int;
                                   check::Bool = false, atol::Float64 = 1e-8)
     # New parameters, new and old data
     # Data revision component = y^{new}_{T-k+h|T-k} - y^{old}_{T-k+h|T-k}
     #     = Z T^h ( s^{new}_{T-k|T-k} - s^{old}_{T-k|T-k} )
-    ZZ, TTT = sys_new[:ZZ], sys_new[:TTT]
+    ZZ, _, TTT, _, _ = class_system_matrices(sys_new, class)
 
     s_new_tgt = kal_new[:filt][:, (T0+1):end] # s^{new}_{t|t}
     s_old_tgt = kal_old[:filt][:, (T0+1):end] # s^{old}_{t|t}
@@ -200,12 +203,12 @@ end
 
 function decompose_param_reest(sys_new::System, sys_old::System,
                                kal_new::DSGE.Kalman, kal_old::DSGE.Kalman,
-                               T0::Int, k::Int, h::Int;
+                               class::Symbol, T0::Int, k::Int, h::Int;
                                check::Bool = false, atol::Float64 = 1e-8)
     # New and old parameters, old data
     # Parameter re-estimation component = y^{new}_{T-k+h|T-k} - y^{old}_{T-k+h|T-k}
-    ZZ_new, DD_new, TTT_new, CCC_new = sys_new[:ZZ], sys_new[:DD], sys_new[:TTT], sys_new[:CCC]
-    ZZ_old, DD_old, TTT_old, CCC_old = sys_old[:ZZ], sys_old[:DD], sys_old[:TTT], sys_old[:CCC]
+    ZZ_new, DD_new, TTT_new, _, CCC_new = class_system_matrices(sys_new, class)
+    ZZ_old, DD_old, TTT_old, _, CCC_old = class_system_matrices(sys_old, class)
 
     s_new_tgt = kal_new[:filt][:, (T0+1):end] # s^{new}_{t|t}
     s_old_tgt = kal_old[:filt][:, (T0+1):end] # s^{old}_{t|t}
@@ -228,11 +231,31 @@ end
 
 ### HELPER FUNCTIONS
 
-function compute_history_and_forecast(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
+function class_system_matrices(sys::System, class::Symbol)
+    TTT, RRR, CCC = sys[:TTT], sys[:RRR], sys[:CCC]
+    ZZ, DD = if class == :obs
+        sys[:ZZ], sys[:DD]
+    elseif class == :pseudo
+        sys[:ZZ_pseudo], sys[:DD_pseudo]
+    elseif class == :states
+        I, zeros(size(TTT, 1))
+    else
+        error("Invalid class: $class. Must be :obs, :pseudo, or :state")
+    end
+    return ZZ, DD, TTT, RRR, CCC
+end
+
+function compute_history_and_forecast(m::AbstractModel, df::DataFrame, class::Symbol;
+                                      cond_type::Symbol = :none)
     sys = compute_system(m)
+    ZZ, DD, _, _, _ = class_system_matrices(sys, class)
+
     kal = DSGE.filter(m, df, sys, cond_type = cond_type)
     histstates, _ = smooth(m, df, sys, kal, cond_type = cond_type, draw_states = false)
-    hist = sys[:ZZ] * histstates .+ sys[:DD]
-    _, fcast, _ = forecast(m, sys, kal[:zend])
-    return hcat(hist, fcast)
+    hist = ZZ * histstates .+ DD
+
+    fcast = Dict{Symbol, Matrix{Float64}}()
+    fcast[:states], fcast[:obs], fcast[:pseudo] = forecast(m, sys, kal[:zend])
+
+    return hcat(hist, fcast[class])
 end
