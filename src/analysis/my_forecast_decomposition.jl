@@ -1,9 +1,89 @@
 # TODO:
-# - Handle full distribution
 # - Maybe: handle h < 0 (new history vs. old history)
 # - Maybe: break out checking into own functions
 # - Save decomposition output
 # - Plotting
+
+function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
+                            df_new::DataFrame, df_old::DataFrame,
+                            input_type::Symbol, cond_new::Symbol, cond_old::Symbol,
+                            class::Symbol;
+                            hs = 1:forecast_horizons(m_old),
+                            verbose::Symbol = :low, kwargs...)
+    # Get output file names
+    decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, class)
+
+    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+        info("Decomposing forecast...")
+        println("Start time: $(now())")
+    end
+
+    # Single-draw forecasts
+    if input_type in [:mode, :mean, :init]
+
+        params_new = load_draws(m_new, input_type, verbose = verbose)
+        params_old = load_draws(m_old, input_type, verbose = verbose)
+
+        decomps = decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old, class;
+                                     hs = hs, cond_new = cond_new, cond_old = cond_old, kwargs...)
+        write_forecast_decomposition(m_new, m_old, input_type, class, hs, decomp_output_files, decomps,
+                                     verbose = verbose)
+
+    # Multiple-draw forecasts
+    elseif input_type == :full
+
+        block_inds, block_inds_thin = DSGE.forecast_block_inds(m_new, input_type)
+        nblocks = length(block_inds)
+        total_forecast_time = 0.0
+
+        for block = 1:nblocks
+            if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+                println()
+                info("Decomposing block $block of $nblocks...")
+            end
+            tic()
+
+            # Get to work!
+            params_new = load_draws(m_new, input_type, block_inds[block], verbose = verbose)
+            params_old = load_draws(m_old, input_type, block_inds[block], verbose = verbose)
+
+            mapfcn = use_parallel_workers(m_new) ? pmap : map
+            decomps = mapfcn((param_new, param_old) ->
+                             decompose_forecast(m_new, m_old, df_new, df_old, param_new, param_old, class;
+                                                hs = hs, cond_new = cond_new, cond_old = cond_old, kwargs...),
+                             params_new, params_old)
+
+            # Assemble outputs from this block and write to file
+            decomps = convert(Vector{Dict{Symbol, Array{Float64}}}, decomps)
+            decomps = DSGE.assemble_block_outputs(decomps)
+            write_forecast_decomposition(m_new, m_old, input_type, class, hs, decomp_output_files, decomps,
+                                         block_number = Nullable(block), block_inds = block_inds_thin[block],
+                                         verbose = verbose)
+            gc()
+
+            # Calculate time to complete this block, average block time, and
+            # expected time to completion
+            if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+                block_time = toq()
+                total_forecast_time += block_time
+                total_forecast_time_min     = total_forecast_time/60
+                expected_time_remaining     = (total_forecast_time/block)*(nblocks - block)
+                expected_time_remaining_min = expected_time_remaining/60
+
+                println("\nCompleted $block of $nblocks blocks.")
+                println("Total time elapsed: $total_forecast_time_min minutes")
+                println("Expected time remaining: $expected_time_remaining_min minutes")
+            end
+        end # of loop through blocks
+
+    else
+        error("Invalid input_type: $input_type. Must be in [:mode, :mean, :init, :full]")
+    end
+
+    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+        println("\nForecast decomposition complete: $(now())")
+    end
+end
 
 function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
                             df_new::DataFrame, df_old::DataFrame,
@@ -27,12 +107,13 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
         prepare_decomposition!(m_new, m_old, df_new, df_old, params_new, params_old,
                                cond_new = cond_new, cond_old = cond_old)
 
-    # Initialize DataFrames
-    decomps = DataStructures.OrderedDict{Symbol, DataFrame}()
-    for var in keys(DSGE.get_dict(m_new, class))
-        decomps[var] = DataFrame(h = Int[], date = Date[], total = Float64[],
-                                 state = Float64[], shock = Float64[],
-                                 data = Float64[], param = Float64[])
+    # Initialize output dictionary
+    decomp = Dict{Symbol, Array{Float64}}()
+    ZZ, _, _, _, _ = class_system_matrices(sys_new, class)
+    nobs = size(ZZ, 1)
+    for comp in [:state, :shock, :data, :param]
+        output_var = Symbol(:decomp, comp, class)
+        decomp[output_var] = zeros(size(ZZ, 1), length(hs))
     end
 
     # Compute whole sequence of historical and forecasted observables if desired
@@ -44,28 +125,21 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
         y_old = compute_history_and_forecast(m_old, df_old, class, cond_type = cond_old)
     end
 
-    for h in hs
+    for (i, h) in enumerate(hs)
         # Adjust h for (differences in) conditioning
         h_cond = h - T1_old
         @assert h_cond >= 0
 
         # Decompose into components
-        state_comp, shock_comp = decompose_states_shocks(sys_new, kal_new_new, s_tgT, ϵ_tgT,
-                                                         class, T0, k_cond, h_cond, check = check)
-        data_comp = decompose_data_revisions(sys_new, kal_new_new, kal_new_old,
-                                             class, T0, k_cond, h_cond, check = check)
-        param_comp = decompose_param_reest(sys_new, sys_old, kal_new_old, kal_old_old,
-                                           class, T0, k_cond, h_cond, check = check)
-
-        # Compute total difference
-        total = state_comp + shock_comp + data_comp + param_comp
-
-        # Add to DataFrames
-        date = DSGE.iterate_quarters(date_mainsample_end(m_old), h)
-        for (var, i) in DSGE.get_dict(m_new, class)
-            push!(decomps[var], [h, date, total[i], state_comp[i], shock_comp[i],
-                                 data_comp[i], param_comp[i]])
-        end
+        decomp[Symbol(:decompstate, class)][:, i], decomp[Symbol(:decompshock, class)][:, i] =
+            decompose_states_shocks(sys_new, kal_new_new, s_tgT, ϵ_tgT,
+                                    class, T0, k_cond, h_cond, check = check)
+        decomp[Symbol(:decompdata, class)][:, i] =
+            decompose_data_revisions(sys_new, kal_new_new, kal_new_old,
+                                     class, T0, k_cond, h_cond, check = check)
+        decomp[Symbol(:decompparam, class)][:, i] =
+            decompose_param_reest(sys_new, sys_old, kal_new_old, kal_old_old,
+                                  class, T0, k_cond, h_cond, check = check)
 
         if check
             # Total difference = y^{new,new}_{T+h-k|T} - y^{old,old}_{T-k+h|T-k}
@@ -73,16 +147,21 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
             y_old_Tmkph_Tmk = y_old[:, T-k+h]
             exp_total = y_new_Tmkph_T - y_old_Tmkph_Tmk
             try
-                @assert isapprox(exp_total, total, atol = atol)
+                @assert isapprox(exp_total, decomp[Symbol(:decomptotal, class)], atol = atol)
             catch ex
-                @show total
+                @show decomp[Symbol(:decomptotal, class)]
                 @show exp_total
                 throw(ex)
             end
         end
     end
 
-    return decomps
+    # Compute total difference
+    decomp[Symbol(:decomptotal, class)] =
+        decomp[Symbol(:decompstate, class)] + decomp[Symbol(:decompshock, class)] +
+        decomp[Symbol(:decompdata, class)]  + decomp[Symbol(:decompparam, class)]
+
+    return decomp
 end
 
 function decomposition_periods(m_new::AbstractModel, m_old::AbstractModel;
@@ -258,4 +337,73 @@ function compute_history_and_forecast(m::AbstractModel, df::DataFrame, class::Sy
     fcast[:states], fcast[:obs], fcast[:pseudo] = forecast(m, sys, kal[:zend])
 
     return hcat(hist, fcast[class])
+end
+
+function get_decomp_output_files(m_new::AbstractModel, m_old::AbstractModel,
+                                 input_type::Symbol, cond_new::Symbol, cond_old::Symbol,
+                                 class::Symbol)
+    output_files = Dict{Symbol, String}()
+    for comp in [:state, :shock, :data, :param, :total]
+        output_var = Symbol(:decomp, comp, class)
+
+        fn_new = get_forecast_filename(m_new, input_type, cond_new, output_var)
+        fn_old = get_forecast_filename(m_old, input_type, cond_old, output_var)
+
+        dir = dirname(fn_new)
+        base_new, ext = splitext(basename(fn_new))
+        base_old, _ = splitext(basename(fn_old))
+        base_old = replace(base_old, string(output_var), "")
+        base_old = spec(m_old) * "_" * subspec(m_old) * base_old
+
+        output_files[output_var] = joinpath(dir, base_new * "__" * base_old * ext)
+    end
+    return output_files
+end
+
+function write_forecast_decomposition(m_new::AbstractModel, m_old::AbstractModel,
+                                      input_type::Symbol, class::Symbol, hs::Union{Int, UnitRange{Int}},
+                                      decomp_output_files::Dict{Symbol, String},
+                                      decomps::Dict{Symbol, Array{Float64}};
+                                      block_number::Nullable{Int} = Nullable{Int}(),
+                                      block_inds::Range{Int} = 1:0,
+                                      verbose::Symbol = :low)
+    for comp in [:state, :shock, :data, :param, :total]
+        prod = Symbol(:decomp, comp)
+        var = Symbol(prod, class)
+        filepath = decomp_output_files[var]
+
+        if isnull(block_number) || get(block_number) == 1
+            jldopen(filepath, "w") do file
+                # Write metadata
+                # Pass in m_old because its date_mainsample_end is used to calculate dates
+                DSGE.write_forecast_metadata(m_old, file, prod, class, hs = hs)
+
+                # Pre-allocate HDF5 dataset which will contain all draws
+                if !isnull(block_number) && get(block_number) == 1
+                    # Determine forecast output size
+                    dims = DSGE.get_forecast_output_dims(m_new, input_type, Symbol(:forecast, class))
+                    dims = (dims[1], dims[2], length(hs)) # dims is ndraws x nvars x nperiods
+                    block_size = forecast_block_size(m_new)
+                    chunk_dims = collect(dims)
+                    chunk_dims[1] = block_size
+
+                    # Initialize dataset
+                    pfile = file.plain
+                    HDF5.d_create(pfile, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
+                end
+            end
+        end
+
+        jldopen(filepath, "r+") do file
+            if isnull(block_number)
+                write(file, "arr", decomps[var])
+            else
+                DSGE.write_forecast_block(file, decomps[var], block_inds)
+            end
+        end
+
+        if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:high]
+            println(" * Wrote $(basename(filepath))")
+        end
+    end
 end

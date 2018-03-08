@@ -144,7 +144,7 @@ function write_scenario_forecasts(m::AbstractModel,
     for (i, var) in enumerate([:forecastobs, :forecastpseudo])
         filepath = scenario_output_files[var]
         jldopen(filepath, "w") do file
-            write_forecast_metadata(m, file, var)
+            write_forecast_metadata(m, file, get_product(var), get_class(var))
             write(file, "arr", forecast_output[var])
             if :proportion_switched in keys(scenario_output_files)
                 write(file, "proportion_switched", forecast_output[:proportion_switched][i])
