@@ -69,6 +69,26 @@ function Base.getindex(K::Kalman, d::Symbol)
     end
 end
 
+function Base.getindex(kal::DSGE.Kalman, inds::Union{Int, UnitRange{Int}})
+    t0 = first(inds)
+    t1 = last(inds)
+
+    return DSGE.Kalman(sum(kal[:marginal_L][inds]),  # L
+                       kal[:filt][:, t1],            # zend
+                       kal[:vfilt][:, :, t1],        # Pend
+                       kal[:pred][:, inds],          # pred
+                       kal[:vpred][:, :, inds],      # vpred
+                       kal[:yprederror][:, inds],    # yprederror
+                       kal[:ystdprederror][:, inds], # ystdprederror
+                       sqrt.(mean((kal[:yprederror][:, inds].^2)', 1)), # rmse
+                       sqrt.(mean((kal[:ystdprederror][:, inds].^2)', 1)), # rmsd
+                       kal[:filt][:, inds],          # filt
+                       kal[:vfilt][:, :, inds],      # vfilt
+                       kal[:filt][:, t0],            # z0
+                       kal[:vfilt][:, :, t0],        # P0
+                       kal[:marginal_L][inds])       # marginal_L
+end
+
 function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
     k2::Kalman{S}; allout::Bool = true)
 
