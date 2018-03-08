@@ -228,26 +228,6 @@ end
 
 ### HELPER FUNCTIONS
 
-function Base.getindex(kal::DSGE.Kalman, inds::Union{Int, UnitRange{Int}})
-    t0 = first(inds)
-    t1 = last(inds)
-
-    return DSGE.Kalman(sum(kal[:marginal_L][inds]),  # L
-                       kal[:filt][:, t1],            # zend
-                       kal[:vfilt][:, :, t1],        # Pend
-                       kal[:pred][:, inds],          # pred
-                       kal[:vpred][:, :, inds],      # vpred
-                       kal[:yprederror][:, inds],    # yprederror
-                       kal[:ystdprederror][:, inds], # ystdprederror
-                       sqrt.(mean((kal[:yprederror][:, inds].^2)', 1)), # rmse
-                       sqrt.(mean((kal[:ystdprederror][:, inds].^2)', 1)), # rmsd
-                       kal[:filt][:, inds],          # filt
-                       kal[:vfilt][:, :, inds],      # vfilt
-                       kal[:filt][:, t0],            # z0
-                       kal[:vfilt][:, :, t0],        # P0
-                       kal[:marginal_L][inds])       # marginal_L
-end
-
 function compute_history_and_forecast(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
     sys = compute_system(m)
     kal = DSGE.filter(m, df, sys, cond_type = cond_type)
