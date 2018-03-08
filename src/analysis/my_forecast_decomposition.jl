@@ -1,18 +1,20 @@
 # TODO:
-# - Compute multiple h at once
 # - Handle pseudo-observables
 # - Maybe: break out checking into own functions
+# - Save decomposition output
+# - Plotting
 
-function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel, h::Int,
+function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
                             df_new::DataFrame, df_old::DataFrame,
                             params_new::Vector{Float64}, params_old::Vector{Float64};
+                            hs = 1:forecast_horizons(m_old),
                             cond_new::Symbol = :none, cond_old::Symbol = cond_new,
                             check::Bool = false, atol::Float64 = 1e-8)
 
     # Compute numbers of periods
     # h_cond and k_cond are h and k adjusted for (differences in) conditioning
-    T0, T, k, T1_new, T1_old, h_cond, k_cond =
-        decomposition_periods(m_new, m_old, h, cond_new = cond_new, cond_old = cond_old)
+    T0, T, k, T1_new, T1_old, k_cond =
+        decomposition_periods(m_new, m_old, cond_new = cond_new, cond_old = cond_old)
 
     if check
         @assert size(df_new, 1) == T0 + T + T1_new
@@ -24,45 +26,63 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel, h::Int,
         prepare_decomposition!(m_new, m_old, df_new, df_old, params_new, params_old,
                                cond_new = cond_new, cond_old = cond_old)
 
-    # Decompose into components
-    state_comp, shock_comp = decompose_states_shocks(sys_new, kal_new_new, s_tgT, ϵ_tgT,
-                                                     T0, k_cond, h_cond, check = check)
-    data_comp = decompose_data_revisions(sys_new, kal_new_new, kal_new_old,
-                                         T0, k_cond, h_cond, check = check)
-    param_comp = decompose_param_reest(sys_new, sys_old, kal_new_old, kal_old_old,
-                                       T0, k_cond, h_cond, check = check)
+    # Initialize DataFrames
+    dfs = DataStructures.OrderedDict{Symbol, DataFrame}()
+    for var in keys(m_new.observables)
+        dfs[var] = DataFrame(h = Int[], date = Date[], total = Float64[],
+                             state = Float64[], shock = Float64[], data = Float64[], param = Float64[])
+    end
 
-    # Compute total difference
-    total = state_comp + shock_comp + data_comp + param_comp
-
+    # Compute whole sequence of historical and forecasted observables if desired
     if check
-        # y^{new,new}_{T-k+h|T}
-        y_new = compute_history_and_forecast(m_new, df_new, cond_type = cond_new) # y^{new,new}_{t|T-k}, t = 1:T:H
-        y_new_Tmkph_T = y_new[:, T-k+h]
+        # y^{new,new}_{t|T-k}, t = 1:T:H
+        y_new = compute_history_and_forecast(m_new, df_new, cond_type = cond_new)
 
-        # y^{old,old}_{T-k+h|T-k}
-        y_old = compute_history_and_forecast(m_old, df_old, cond_type = cond_old) # y^{old,old}_{t|T-k}, t = 1:T-k+H
-        y_old_Tmkph_Tmk = y_old[:, T-k+h]
+        # y^{old,old}_{t|T-k}, t = 1:T-k+H
+        y_old = compute_history_and_forecast(m_old, df_old, cond_type = cond_old)
+    end
 
-        # Total difference = y^{new,new}_{T+h-k|T} - y^{old,old}_{T-k+h|T-k}
-        exp_total = y_new_Tmkph_T - y_old_Tmkph_Tmk
-        try
-            @assert isapprox(exp_total, total, atol = atol)
-        catch ex
-            @show total
-            @show exp_total
-            throw(ex)
+    for h in hs
+        # Adjust h for (differences in) conditioning
+        h_cond = h - T1_old
+        @assert h_cond >= 0
+
+        # Decompose into components
+        state_comp, shock_comp = decompose_states_shocks(sys_new, kal_new_new, s_tgT, ϵ_tgT,
+                                                         T0, k_cond, h_cond, check = check)
+        data_comp = decompose_data_revisions(sys_new, kal_new_new, kal_new_old,
+                                             T0, k_cond, h_cond, check = check)
+        param_comp = decompose_param_reest(sys_new, sys_old, kal_new_old, kal_old_old,
+                                           T0, k_cond, h_cond, check = check)
+
+        # Compute total difference
+        total = state_comp + shock_comp + data_comp + param_comp
+
+        # Add to DataFrames
+        date = DSGE.iterate_quarters(date_mainsample_end(m_old), h)
+        for (var, i) in m_new.observables
+            push!(dfs[var], [h, date, total[i], state_comp[i], shock_comp[i], data_comp[i], param_comp[i]])
+        end
+
+        if check
+            # Total difference = y^{new,new}_{T+h-k|T} - y^{old,old}_{T-k+h|T-k}
+            y_new_Tmkph_T   = y_new[:, T-k+h]
+            y_old_Tmkph_Tmk = y_old[:, T-k+h]
+            exp_total = y_new_Tmkph_T - y_old_Tmkph_Tmk
+            try
+                @assert isapprox(exp_total, total, atol = atol)
+            catch ex
+                @show total
+                @show exp_total
+                throw(ex)
+            end
         end
     end
 
-    # Put into DataFrame and return
-    out = DataFrame(var = collect(keys(m_new.observables)),
-                    state = state_comp, shock = shock_comp, data = data_comp, param = param_comp,
-                    total = total)
-    return out
+    return dfs
 end
 
-function decomposition_periods(m_new::AbstractModel, m_old::AbstractModel, h::Int;
+function decomposition_periods(m_new::AbstractModel, m_old::AbstractModel;
                                cond_new::Symbol = :none, cond_old::Symbol = cond_old)
     # Number of presample periods T0 must be the same
     T0 = n_presample_periods(m_new)
@@ -72,16 +92,16 @@ function decomposition_periods(m_new::AbstractModel, m_old::AbstractModel, h::In
     # Old model has T-k main-sample periods
     T = n_mainsample_periods(m_new)
     k = DSGE.subtract_quarters(date_forecast_start(m_new), date_forecast_start(m_old))
+    @assert k >= 0
 
     # Number of conditional periods T1 may differ
     T1_new = cond_new == :none ? 0 : n_conditional_periods(m_new)
     T1_old = cond_old == :none ? 0 : n_conditional_periods(m_old)
 
-    # Adjust k and h for (differences in) conditioning
-    h_cond = h - T1_old
+    # Adjust k for (differences in) conditioning
     k_cond = k + T1_new - T1_old
 
-    return T0, T, k, T1_new, T1_old, h_cond, k_cond
+    return T0, T, k, T1_new, T1_old, k_cond
 end
 
 function prepare_decomposition!(m_new::AbstractModel, m_old::AbstractModel,
@@ -125,7 +145,7 @@ function decompose_states_shocks(sys_new::System, kal_new::DSGE.Kalman,
 
     # Shock component = Z sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ_{T-k+j|T} )
     shock_sum = zeros(size(s_Tmk_T))
-    for j = 1:min(k ,h)
+    for j = 1:min(k, h)
         shock_sum += TTT^(h-j) * RRR * ϵ_tgT[:, end-k+j]
     end
     shock_comp = ZZ * shock_sum
@@ -136,7 +156,7 @@ function decompose_states_shocks(sys_new::System, kal_new::DSGE.Kalman,
         @assert isapprox(s_tgt[:, end], s_tgT[:, end], atol = atol)
 
         y_Tmkph_T = if h <= k
-            ZZ * (s_tgT[:, end-k+h] + CCC) + DD # smoothed history
+            ZZ * (s_tgT[:, end-k+h] + CCC) + DD # history
         else
             ZZ * (TTT^(h-k) * s_tgt[:, end] + CCC) + DD # forecast
         end
@@ -206,57 +226,27 @@ end
 
 
 
-### CONVENIENCE METHODS
+### HELPER FUNCTIONS
 
-function decompose_states_shocks(m_new::AbstractModel, m_old::AbstractModel, h::Int,
-                                 df_new::DataFrame, params_new::Vector{Float64};
-                                 cond_new::Symbol = :none, cond_old::Symbol = cond_new,
-                                 check::Bool = false, atol::Float64 = 1e-8)
-    T0, _, _, _, _, h_cond, k_cond =
-        decomposition_periods(m_new, m_old, h, cond_new = cond_new, cond_old = cond_old)
-    DSGE.update!(m_new, params_new)
-    sys_new = compute_system(m_new)
-    kal_new = DSGE.filter(m_new, df_new, sys_new, cond_type = cond_new)
-    s_tgT, ϵ_tgT = smooth(m_new, df_new, sys_new, kal_new,
-                          draw_states = false, cond_type = cond_new)
-    decompose_states_shocks(sys_new, kal_new, s_tgT, ϵ_tgT, T0, k_cond, h_cond,
-                            check = check, atol = atol)
+function Base.getindex(kal::DSGE.Kalman, inds::Union{Int, UnitRange{Int}})
+    t0 = first(inds)
+    t1 = last(inds)
+
+    return DSGE.Kalman(sum(kal[:marginal_L][inds]),  # L
+                       kal[:filt][:, t1],            # zend
+                       kal[:vfilt][:, :, t1],        # Pend
+                       kal[:pred][:, inds],          # pred
+                       kal[:vpred][:, :, inds],      # vpred
+                       kal[:yprederror][:, inds],    # yprederror
+                       kal[:ystdprederror][:, inds], # ystdprederror
+                       sqrt.(mean((kal[:yprederror][:, inds].^2)', 1)), # rmse
+                       sqrt.(mean((kal[:ystdprederror][:, inds].^2)', 1)), # rmsd
+                       kal[:filt][:, inds],          # filt
+                       kal[:vfilt][:, :, inds],      # vfilt
+                       kal[:filt][:, t0],            # z0
+                       kal[:vfilt][:, :, t0],        # P0
+                       kal[:marginal_L][inds])       # marginal_L
 end
-
-function decompose_data_revisions(m_new::AbstractModel, m_old::AbstractModel, h::Int,
-                                  df_new::DataFrame, df_old::DataFrame,
-                                  params_new::Vector{Float64};
-                                  cond_new::Symbol = :none, cond_old::Symbol = cond_new,
-                                  check::Bool = false, atol::Float64 = 1e-8)
-    T0, _, _, _, _, h_cond, k_cond =
-        decomposition_periods(m_new, m_old, h, cond_new = cond_new, cond_old = cond_old)
-    DSGE.update!(m_new, params_new)
-    sys_new = compute_system(m_new)
-    kal_new = DSGE.filter(m_new, df_new, sys_new, cond_type = cond_new)
-    kal_old = DSGE.filter(m_new, df_old, sys_new, cond_type = cond_old)
-    decompose_data_revisions(sys_new, kal_new, kal_old, T0, k_cond, h_cond,
-                             check = check, atol = atol)
-end
-
-function decompose_param_reest(m_new::AbstractModel, m_old::AbstractModel, h::Int,
-                               df_old::DataFrame, params_new::Vector{Float64}, params_old::Vector{Float64};
-                               cond_new::Symbol = :none, cond_old::Symbol = cond_new,
-                               check::Bool = false, atol::Float64 = 1e-8)
-    T0, _, _, _, _, h_cond, k_cond =
-        decomposition_periods(m_new, m_old, h, cond_new = cond_new, cond_old = cond_old)
-    DSGE.update!(m_new, params_new)
-    DSGE.update!(m_old, params_old)
-    sys_new = compute_system(m_new)
-    sys_old = compute_system(m_old)
-    kal_new = DSGE.filter(m_new, df_old, sys_new, cond_type = cond_old)
-    kal_old = DSGE.filter(m_old, df_old, sys_old, cond_type = cond_old)
-    decompose_param_reest(sys_new, sys_old, kal_new, kal_old, T0, k_cond, h_cond,
-                          check = check, atol = atol)
-end
-
-
-
-### OTHER HELPER FUNCTIONS
 
 function compute_history_and_forecast(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
     sys = compute_system(m)
