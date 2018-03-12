@@ -246,7 +246,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     c = c*(0.95 + 0.10*exp(16*(cloud.accept - target))/(1 + exp(16*(cloud.accept - target))))
     cloud.c = c
 
-    R = cov(cloud)
+    R = weighted_cov(cloud)
     p_prop = weighted_mean(cloud)
 
     # This calculates the matrix 'square root' of R for the purposes

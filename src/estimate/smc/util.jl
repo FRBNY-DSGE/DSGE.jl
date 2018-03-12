@@ -139,7 +139,7 @@ function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, σ::Matrix{T
     # Create mixture distribution conditional on the previous parameter value, θ_old
     d_old = DegenerateMvNormal(θ_old, cc*σ)
     d_diag_old = DegenerateMvNormal(θ_old, diagm(diag(cc*σ)))
-    d_prop = θ_prop == θ_old ? d_diag : DegenerateMvNormal(θ_prop, cc*σ)
+    d_prop = θ_prop == θ_old ? d_diag_old : DegenerateMvNormal(θ_prop, cc*σ)
     d_mix_old = MixtureModel(DegenerateMvNormal[d_old, d_diag_old, d_prop], [α, (1 - α)/2, (1 - α)/2])
 
     θ_new = rand(d_mix_old)

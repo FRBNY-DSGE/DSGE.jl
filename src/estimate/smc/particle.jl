@@ -183,9 +183,9 @@ function weighted_std(c::ParticleCloud)
     return sqrt.(sum(map(*, temp, get_weights(c))))
 end
 
-# Calculate the covariance of the particles
-function Base.cov(c::ParticleCloud)
-    return cov(get_vals(c), 2)
+function weighted_cov(c::ParticleCloud)
+    demeaned_vals = (get_vals(c) .- weighted_mean(c))'
+    return (demeaned_vals .* get_weights(c))'*demeaned_vals
 end
 
 """
