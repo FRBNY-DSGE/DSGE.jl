@@ -111,7 +111,7 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
     for class in classes
         ZZ, _, _, _, _ = class_system_matrices(sys_new, class)
         nobs = size(ZZ, 1)
-        for comp in [:state, :shock, :data, :param]
+        for comp in [:state, :shock, :data, :param, :total]
             output_var = Symbol(:decomp, comp, class)
             decomp[output_var] = zeros(size(ZZ, 1), length(hs))
         end
@@ -147,27 +147,25 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
                 decompose_param_reest(sys_new, sys_old, kal_new_old, kal_old_old,
                                       class, T0, k_cond, h_cond, check = check)
 
+            # Compute total difference
+            decomp[Symbol(:decomptotal, class)][:, i] =
+                decomp[Symbol(:decompstate, class)][:, i] + decomp[Symbol(:decompshock, class)][:, i] +
+                decomp[Symbol(:decompdata, class)][:, i]  + decomp[Symbol(:decompparam, class)][:, i]
+
             if check
                 # Total difference = y^{new,new}_{T+h-k|T} - y^{old,old}_{T-k+h|T-k}
                 y_new_Tmkph_T   = y_new[class][:, T-k+h]
                 y_old_Tmkph_Tmk = y_old[class][:, T-k+h]
                 exp_total = y_new_Tmkph_T - y_old_Tmkph_Tmk
                 try
-                    @assert isapprox(exp_total, decomp[Symbol(:decomptotal, class)], atol = atol)
+                    @assert isapprox(exp_total, decomp[Symbol(:decomptotal, class)][:, i], atol = atol)
                 catch ex
-                    @show decomp[Symbol(:decomptotal, class)]
+                    @show decomp[Symbol(:decomptotal, class)][:, i]
                     @show exp_total
                     throw(ex)
                 end
             end
         end
-    end
-
-    # Compute total difference
-    for class in classes
-        decomp[Symbol(:decomptotal, class)] =
-            decomp[Symbol(:decompstate, class)] + decomp[Symbol(:decompshock, class)] +
-            decomp[Symbol(:decompdata, class)]  + decomp[Symbol(:decompparam, class)]
     end
 
     return decomp
