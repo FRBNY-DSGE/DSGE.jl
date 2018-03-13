@@ -23,8 +23,8 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
         params_new = load_draws(m_new, input_type, verbose = verbose)
         params_old = load_draws(m_old, input_type, verbose = verbose)
 
-        decomps = decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old, classes;
-                                     hs = hs, cond_new = cond_new, cond_old = cond_old, kwargs...)
+        decomps = decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
+                                     cond_new, cond_old, classes; hs = hs, kwargs...)
         write_forecast_decomposition(m_new, m_old, input_type, classes, hs, decomp_output_files, decomps,
                                      verbose = verbose)
 
@@ -48,8 +48,8 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
 
             mapfcn = use_parallel_workers(m_new) ? pmap : map
             decomps = mapfcn((param_new, param_old) ->
-                             decompose_forecast(m_new, m_old, df_new, df_old, param_new, param_old, classes;
-                                                hs = hs, cond_new = cond_new, cond_old = cond_old, kwargs...),
+                             decompose_forecast(m_new, m_old, df_new, df_old, param_new, param_old,
+                                                cond_new, cond_old, classes; hs = hs, kwargs...),
                              params_new, params_old)
 
             # Assemble outputs from this block and write to file
@@ -87,14 +87,14 @@ end
 function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
                             df_new::DataFrame, df_old::DataFrame,
                             params_new::Vector{Float64}, params_old::Vector{Float64},
-                            classes::Vector{Symbol}; hs = 1:forecast_horizons(m_old),
-                            cond_new::Symbol = :none, cond_old::Symbol = cond_new,
+                            cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
+                            hs = 1:forecast_horizons(m_old),
                             check::Bool = false, atol::Float64 = 1e-8)
 
     # Compute numbers of periods
     # h_cond and k_cond are h and k adjusted for (differences in) conditioning
     T0, T, k, T1_new, T1_old, k_cond =
-        decomposition_periods(m_new, m_old, cond_new = cond_new, cond_old = cond_old)
+        decomposition_periods(m_new, m_old, cond_new, cond_old)
 
     if check
         @assert size(df_new, 1) == T0 + T + T1_new
@@ -104,7 +104,7 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
     # Update parameters, filter, and smooth
     sys_new, sys_old, kal_new_new, kal_new_old, kal_old_old, s_tgT, ϵ_tgT =
         prepare_decomposition!(m_new, m_old, df_new, df_old, params_new, params_old,
-                               cond_new = cond_new, cond_old = cond_old)
+                               cond_new, cond_old)
 
     # Initialize output dictionary
     decomp = Dict{Symbol, Array{Float64}}()
@@ -171,8 +171,8 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
     return decomp
 end
 
-function decomposition_periods(m_new::AbstractModel, m_old::AbstractModel;
-                               cond_new::Symbol = :none, cond_old::Symbol = cond_old)
+function decomposition_periods(m_new::AbstractModel, m_old::AbstractModel,
+                               cond_new::Symbol, cond_old::Symbol)
     # Number of presample periods T0 must be the same
     T0 = n_presample_periods(m_new)
     @assert n_presample_periods(m_old) == T0
@@ -195,8 +195,8 @@ end
 
 function prepare_decomposition!(m_new::AbstractModel, m_old::AbstractModel,
                                 df_new::DataFrame, df_old::DataFrame,
-                                params_new::Vector{Float64}, params_old::Vector{Float64};
-                                cond_new::Symbol = :none, cond_old::Symbol = cond_old)
+                                params_new::Vector{Float64}, params_old::Vector{Float64},
+                                cond_new::Symbol, cond_old::Symbol)
     # Check models well-formed
     @assert typeof(m_new) == typeof(m_old)
 
