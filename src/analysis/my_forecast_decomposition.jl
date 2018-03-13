@@ -271,8 +271,8 @@ function decompose_data_revisions(sys_new::System, kal_new::DSGE.Kalman, kal_old
     #     = Z T^h ( s^{new}_{T-k|T-k} - s^{old}_{T-k|T-k} )
     ZZ, _, TTT, _, _ = class_system_matrices(sys_new, class)
 
-    s_new_tgt = kal_new[:filt][:, (T0+1):end] # s^{new}_{t|t}
-    s_old_tgt = kal_old[:filt][:, (T0+1):end] # s^{old}_{t|t}
+    s_new_tgt = kal_new[:filt][:, (T0+1):end] # s^{new}_{t|t}, t = 1:T
+    s_old_tgt = kal_old[:filt][:, (T0+1):end] # s^{old}_{t|t}, t = 1:T-k
     try
         check && @assert size(s_new_tgt, 2) == size(s_old_tgt, 2) + k
     catch ex
@@ -283,7 +283,7 @@ function decompose_data_revisions(sys_new::System, kal_new::DSGE.Kalman, kal_old
     end
 
     # Return
-    data_comp = ZZ * TTT^h * (s_new_tgt[:, end-k] - s_old_tgt[:, end-k])
+    data_comp = ZZ * TTT^h * (s_new_tgt[:, end-k] - s_old_tgt[:, end])
     return data_comp
 end
 
@@ -296,12 +296,15 @@ function decompose_param_reest(sys_new::System, sys_old::System,
     ZZ_new, DD_new, TTT_new, _, CCC_new = class_system_matrices(sys_new, class)
     ZZ_old, DD_old, TTT_old, _, CCC_old = class_system_matrices(sys_old, class)
 
-    s_new_tgt = kal_new[:filt][:, (T0+1):end] # s^{new}_{t|t}
-    s_old_tgt = kal_old[:filt][:, (T0+1):end] # s^{old}_{t|t}
-    check && @assert size(s_new_tgt, 2) == size(s_old_tgt, 2)
+    s_new_tgt = kal_new[:filt][:, (T0+1):end] # s^{new}_{t|t}, t = 1:T-k
+    s_old_tgt = kal_old[:filt][:, (T0+1):end] # s^{old}_{t|t}, t = 1:T-k
+    if check
+        @assert size(s_new_tgt, 2) == size(s_old_tgt, 2)
+        @assert isapprox(s_new_tgt, s_old_tgt, atol = atol)
+    end
 
     # y^{new}_{T-k+h|T-k} = Z^{new} (T^{new}^h s^{new}_{T-k|T-k} + C^{new}) + D^{new}
-    s_new_Tmk_Tmk = s_new_tgt[:, end-k]
+    s_new_Tmk_Tmk = s_new_tgt[:, end]
     y_new_Tmkph_Tmk = ZZ_new * (TTT_new^h * s_new_Tmk_Tmk + CCC_new) + DD_new
 
     # y^{old}_{T-k+h|T-k} = Z^{old} (T^{old}^h s^{old}_{T-k|T-k} + C^{old}) + D^{old}
