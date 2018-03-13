@@ -144,7 +144,7 @@ shockdec
     var, shockdec, trend, dettrend, hist, forecast, groups = sd.args
 
     # Construct DataFrame with detrended mean, deterministic trend, and all shocks
-    df = DSGE.prepare_means_table_shockdec(shockdec, trend, dettrend, var,
+    df = prepare_means_table_shockdec(shockdec, trend, dettrend, var,
                                       mb_hist = hist, mb_forecast = forecast,
                                       detexify_shocks = false,
                                       groups = groups)
