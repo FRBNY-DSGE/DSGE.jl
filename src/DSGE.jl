@@ -13,7 +13,7 @@ module DSGE
     export
 
         # distributions_ext.jl
-        BetaAlt, GammaAlt, DegenerateMvNormal, DegenerateDiagMvTDist,
+        BetaAlt, GammaAlt, DegenerateMvNormal, DegenerateDiagMvTDist, MatrixNormal,
 
         # settings.jl
         Setting, get_setting,
