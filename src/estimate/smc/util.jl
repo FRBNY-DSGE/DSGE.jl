@@ -131,27 +131,25 @@ the standard distribution and `(1 - α)` of the diagonalized distribution.
 - `old mixture_density::T`: The mixture density conditional on θ_new evaluated at `θ_old` to be used in calculating the MH move probability
 
 """
-function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, σ::Matrix{T};
-                                                 cc::T = 1.0, α::T = 1.,
-                                                 θ_prop::Vector{T} = θ_old)
+function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Distribution;
+                                                 cc::T = 1.0, α::T = 1.)
     @assert 0 <= α <= 1
 
     # Create mixture distribution conditional on the previous parameter value, θ_old
-    d_old = DegenerateMvNormal(θ_old, cc*σ)
-    d_diag_old = DegenerateMvNormal(θ_old, diagm(diag(cc*σ)))
-    d_prop = θ_prop == θ_old ? d_diag_old : DegenerateMvNormal(θ_prop, cc*σ)
-    d_mix_old = MixtureModel(DegenerateMvNormal[d_old, d_diag_old, d_prop], [α, (1 - α)/2, (1 - α)/2])
+    d_old = MvNormal(θ_old, cc*d_prop.Σ)
+    d_diag_old = MvNormal(θ_old, diagm(diag(cc*d_prop.Σ)))
+    d_mix_old = MixtureModel(MvNormal[d_old, d_diag_old, d_prop], [α, (1 - α)/2, (1 - α)/2])
 
     θ_new = rand(d_mix_old)
 
     # Create mixture distribution conditional on the new parameter value, θ_new
-    d_new = DegenerateMvNormal(θ_new, cc*σ)
-    d_diag_new = DegenerateMvNormal(θ_new, diagm(diag(cc*σ)))
-    d_mix_new = MixtureModel(DegenerateMvNormal[d_new, d_diag_new, d_prop], [α, (1 - α)/2, (1 - α)/2])
+    d_new = MvNormal(θ_new, cc*d_prop.Σ)
+    d_diag_new = MvNormal(θ_new, diagm(diag(cc*d_prop.Σ)))
+    d_mix_new = MixtureModel(MvNormal[d_new, d_diag_new, d_prop], [α, (1 - α)/2, (1 - α)/2])
 
     # To clarify, this is not just the density of θ_new/θ_old using a given mixture
     # density function, but rather, the density of θ_new | θ_old and the density of
-    # θ_old | θ_new taken with respect to their respective mixture density functions
+    # θ_old | θ_new taken with respect to their respective mixture densities
     new_mixture_density = logpdf(d_mix_old, θ_new)
     old_mixture_density = logpdf(d_mix_new, θ_old)
 
@@ -172,6 +170,62 @@ function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector
         ESS = 1/sum(normalized_weights.^2)
     end
     return ESS
+end
+
+# For mutation
+# Generate a Vector of Vector{Int64} of length n_blocks, where each
+# element contains a subset of the randomly permuted set of indices 1:n_para
+# For the purpose of indexing into R_fr
+function generate_free_blocks(n_para::Int64, n_blocks::Int64)
+    rand_inds = shuffle(1:n_para)
+
+    subset_length = cld(n_para, n_blocks) # ceiling division
+    last_block_length = n_para - subset_length*(n_blocks - 1)
+
+    blocks_free = Vector{Vector{Int64}}(n_blocks)
+    for i in 1:n_blocks
+        if i < n_blocks
+            blocks_free[i] = rand_inds[((i-1)*subset_length + 1):(i*subset_length)]
+        else
+            # To account for the fact that the last block may be smaller than the others
+            blocks_free[i] = rand_inds[end-last_block_length+1:end]
+        end
+    end
+    return blocks_free
+end
+
+# For mutation
+# Generate a Vector of Vector{Int64} of length n_blocks, where each
+# element contains a subset corresponding to the subset of blocks_free of the same
+# index but with indices that map to free_para_inds as opposed to 1:n_para
+# For the purpose of "re-creating" the proposed parameter vector that contains both free
+# and fixed parameters from the mh step generated from only the free parameters
+function generate_all_blocks(blocks_free::Vector{Vector{Int64}}, free_para_inds::Vector{Int64})
+    n_free_para = length(free_para_inds)
+    # Need to know the mapping from an ordered list of 1:n_free_para
+    # to the index in the actual parameter vector
+    ind_mappings = Dict{Int64, Int64}()
+    for (k, v) in zip(1:n_free_para, free_para_inds)
+        ind_mappings[k] = v
+    end
+
+    # Want: Input: blocks, a vector of vectors of indices of randomized blocks of an ordered list of 1:n_free_para
+    # Output: rev_blocks, a vector of vector of indices of the rand blocks indices that correspond to the actual
+    # indices in a parameter vector
+    function block_map(blocks::Vector{Vector{Int64}}, ind_mappings::Dict{Int64, Int64})
+        blocks_all = similar(blocks)
+        for (i, block) in enumerate(blocks)
+            blocks_all[i] = similar(block)
+            for (j, b) in enumerate(block)
+                blocks_all[i][j] = ind_mappings[b]
+            end
+        end
+        return blocks_all
+    end
+
+    blocks_all = block_map(blocks_free, ind_mappings)
+
+    return blocks_all
 end
 
 function init_stage_print(cloud::ParticleCloud;

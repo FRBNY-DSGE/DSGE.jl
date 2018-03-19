@@ -1,6 +1,6 @@
 """
 ```
-mutation(m, data, p, std_dev_mat, ϕ_n, ϕ_n1; c = 1., p_prop)
+mutation(m, data, p, d, blocks_free, blocks_all, ϕ_n, ϕ_n1; c = 1., α = 1., old_data)
 ```
 
 Execute one proposed move of the Metropolis-Hastings algorithm for a given parameter
@@ -9,13 +9,14 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 - `m::AbstractModel`: Model of type AbstractModel being estimated.
 - `data::Matrix{Float64}`: Matrix of data
 - `p::Particle`: Initial particle value
-- `std_dev_mat::Matrix{Float64}`: The std_dev matrix of all initial particle values (taken w/ SVD)
+- `d::Distribution`: A distribution with μ = the weighted mean, and Σ = the weighted variance/covariance matrix
+- `blocks_free::Vector{Vector{Int64}}`: A vector of index blocks, where the indices in each block corresponds to the ordering of free parameters only (e.g. all the indices will be ∈ 1:n_free_parameters)
+- `blocks_all::Vector{Vector{Int64}}`: A vector of index blocks, where the indices in each block corresponds to the ordering of all parameters (e.g. all the indices will be in ∈ set of all model parameter indices)
 - `ϕ_n::Float64`: The current tempering factor
 - `ϕ_n1::Float64`: The previous tempering factor
 
 ### Keyword Arguments:
 - `c::Float64`: The scaling parameter for the proposed covariance matrix
-- `p_prop::Vector{Float64}`: The proposed particle value to be mixed in the mvnormal_mixture_draw
 - `α::Float64`: The mixing proportion
 - `old_data::Matrix{Float64}`: The matrix of old data to be used in calculating the old_loglh, old_logpost in time tempering
 
@@ -24,23 +25,16 @@ Execute one proposed move of the Metropolis-Hastings algorithm for a given param
 - `p::Particle`: An updated particle containing updated parameter values, log-likelihood, posterior, and acceptance indicator.
 
 """
-function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, std_dev_mat::Matrix{Float64},
-                  ϕ_n::Float64, ϕ_n1::Float64; c::Float64 = 1., p_prop::Vector{Float64} = p.value,
-                  α::Float64 = 1., old_data::Matrix{Float64} = Matrix{Float64}(size(data, 1), 0))
+function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distribution,
+                  blocks_free::Vector{Vector{Int64}}, blocks_all::Vector{Vector{Int64}},
+                  ϕ_n::Float64, ϕ_n1::Float64; c::Float64 = 1., α::Float64 = 1.,
+                  old_data::Matrix{Float64} = Matrix{Float64}(size(data, 1), 0))
 
-    n_para = n_parameters(m)
-    n_blocks = get_setting(m, :n_smc_blocks)
     n_steps = get_setting(m, :n_MH_steps_smc)
-
-    fixed_para_inds = find([θ.fixed for θ in m.parameters])
-    nonfixed_para_inds = find([!θ.fixed for θ in m.parameters])
 
     # draw initial step probability
     # conditions for testing purposes
     step_prob = rand()
-
-    # Ensuring numerical error does not propagate and move fixed parameters
-    std_dev_mat[:, fixed_para_inds] = std_dev_mat[fixed_para_inds, :] = 0.
 
     para = p.value
     like = p.loglh
@@ -51,38 +45,21 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, std_dev_
     post = post_init + (ϕ_n - ϕ_n1) * like
     accept = false
 
-    ### BLOCKING ###
+    for step in 1:n_steps
+        for (block_f, block_a) in zip(blocks_free, blocks_all)
 
-    # Generate random ordering
-    # Returns indices sorted by their random value
-    para_inds = [rand() for j in 1:n_para]
-    para_inds = sortperm(para_inds)
+            # Index out the parameters corresponding to a given random block
+            # And also create a distribution centered at the weighted mean
+            # and with Σ corresponding to the same random block
+            para_subset = para[block_a]
+            d_subset = MvNormal(d.μ[block_f], d.Σ.mat[block_f, block_f])
 
-    # Find the indices for the lower and upper bounds on each block
-    b = 1
-    blo = Array{Int}(n_blocks)
-    bhi = Array{Int}(n_blocks)
-    for b in 1:n_blocks
-        blo[b] = convert(Int, max(0, ceil((b-1)*n_para/n_blocks)))
-        bhi[b] = convert(Int, min(n_para+1, ceil(b*n_para/n_blocks)+1))
-    end
+            para_draw, para_new_density, para_old_density = mvnormal_mixture_draw(para_subset, d_subset;
+                                                                                  cc = c, α = α)
 
-    l = 0
-    while l < n_steps
-        for (j, k) in zip(blo, bhi)
-            #Zeroing out relevant rows in cov matrix
-            std_dev_mat_block = copy(std_dev_mat)
-            blo_inds = para_inds[1:j]
-            bhi_inds = para_inds[k:end]
+            para_new = copy(para)
+            para_new[block_a] = para_draw
 
-            std_dev_mat_block[:,blo_inds] = 0.
-            std_dev_mat_block[blo_inds,:] = 0.
-            std_dev_mat_block[:,bhi_inds] = 0.
-            std_dev_mat_block[bhi_inds,:] = 0.
-
-            para_new, para_new_density, para_old_density = mvnormal_mixture_draw(para, std_dev_mat_block;
-                                                                                 cc = c, α = α,
-                                                                                 θ_prop = p_prop)
             like_new = -Inf
             post_new = -Inf
             like_old_data = -Inf
@@ -110,7 +87,6 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, std_dev_
             # draw again for the next step
             step_prob = rand()
         end
-        l += 1
     end
     update_mutation!(p, para, like, post, like_prev, accept)
     return p
