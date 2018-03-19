@@ -71,6 +71,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     accept = get_setting(m, :init_accept)
     target = get_setting(m, :target_accept)
     α = get_setting(m, :mixture_proportion)
+    fixed_para_inds = find([θ.fixed for θ in m.parameters])
+    free_para_inds = find([!θ.fixed for θ in m.parameters])
 
     ########################################################################################
     ### Initialize Algorithm: Draws from prior
@@ -246,22 +248,30 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     c = c*(0.95 + 0.10*exp(16*(cloud.accept - target))/(1 + exp(16*(cloud.accept - target))))
     cloud.c = c
 
+    ̄θ = weighted_mean(cloud)
     R = weighted_cov(cloud)
-    p_prop = weighted_mean(cloud)
+    R_fr = (R[free_para_inds, free_para_inds] + R[free_para_inds, free_para_inds]')/2
 
-    # This calculates the matrix 'square root' of R for the purposes
-    # of drawing by μ + std_dev_mat*randn(length(μ))
-    U, E, V = svd(R)
-    std_dev_mat = U * diagm(sqrt.(E))
+    # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
+    d = MvNormal(̄θ[free_para_inds], R_fr)
+
+    ### BLOCKING ###
+    n_para = n_parameters(m)
+    n_free_para = length(free_para_inds)
+    n_blocks = get_setting(m, :n_smc_blocks)
+
+    # New way of generating blocks
+    blocks_free = generate_free_blocks(n_free_para, n_blocks)
+    blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
     if parallel
         new_particles = @parallel (vcat) for j in 1:n_parts
-            mutation(m, data, cloud.particles[j], std_dev_mat, ϕ_n, ϕ_n1; c = c, p_prop = p_prop, α = α,
-                     old_data = old_data)
+            mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
+                     c = c, α = α, old_data = old_data)
         end
     else
-        new_particles = [mutation(m, data, cloud.particles[j], std_dev_mat, ϕ_n, ϕ_n1; c = c, p_prop = p_prop,
-                                  α = α, old_data = old_data) for j = 1:n_parts]
+        new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
+                                  c = c, α = α, old_data = old_data) for j = 1:n_parts]
     end
 
     cloud.particles = new_particles
