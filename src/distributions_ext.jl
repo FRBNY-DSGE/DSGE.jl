@@ -187,22 +187,6 @@ end
 
 """
 ```
-Distributions.logpdf{T<:AbstractFloat}(d::DegenerateMvNormal, v::Vector)
-```
-
-Evaluate the logpdf of `d` at `v` subsetting out the positive-definite sub-matrix of the
-covariance matrix of `d` and the corresponding indices in `v`.
-"""
-function Distributions.logpdf{T<:AbstractFloat}(d::DegenerateMvNormal, v::Vector{T})
-    inds = find(!iszero, [d.σ[:, i] for i in 1:length(v)])
-    cov_mat = d.σ[inds, inds]*d.σ[inds, inds]'
-    d_alt = MvNormal(d.μ[inds], nearest_spd(cov_mat))
-    v_alt = v[inds]
-    return logpdf(d_alt, v_alt)
-end
-
-"""
-```
 DegenerateDiagMvTDist <: Distribution{Multivariate, Continuous}
 ```
 
