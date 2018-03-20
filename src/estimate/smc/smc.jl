@@ -248,12 +248,12 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     c = c*(0.95 + 0.10*exp(16*(cloud.accept - target))/(1 + exp(16*(cloud.accept - target))))
     cloud.c = c
 
-    ̄θ = weighted_mean(cloud)
+    θ_bar = weighted_mean(cloud)
     R = weighted_cov(cloud)
     R_fr = (R[free_para_inds, free_para_inds] + R[free_para_inds, free_para_inds]')/2
 
     # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
-    d = MvNormal(̄θ[free_para_inds], R_fr)
+    d = MvNormal(θ_bar[free_para_inds], R_fr)
 
     ### BLOCKING ###
     n_para = n_parameters(m)
