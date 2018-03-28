@@ -248,19 +248,16 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
     n_burn   = 0
     n_params = n_parameters(m)
 
-    # Initialize algorithm by drawing para_old from a normal distribution centered on the
-    # posterior mode until the parameters are within bounds or the posterior value is
-    # sufficiently large.
-    para_old = rand(propdist, m; cc=cc0)
-    post_old = -Inf
-
     n_blocks = n_mh_blocks(m)
     n_sim    = n_mh_simulations(m)
     n_burn   = n_mh_burn(m)
     mhthin   = mh_thin(m)
-
+   
+    # Initialize algorithm by drawing para_old from a normal distribution centered on the
+    # posterior mode until the posterior value is sufficiently large.
     initialized = false
     while !initialized
+        para_old = rand(propdist, m; cc=cc0)
         post_old = posterior!(m, para_old, data; mh = true)
         if post_old > -Inf
             propdist.μ = para_old
