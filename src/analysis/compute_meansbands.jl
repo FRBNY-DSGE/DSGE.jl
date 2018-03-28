@@ -48,11 +48,13 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
     # Determine full set of output_vars necessary for plotting desired result
     output_vars = add_requisite_output_vars(output_vars)
 
-    # Load population data
-    population_data, population_forecast = load_population_growth(m, verbose = verbose)
-
-    # Load main dataset (required for some transformations)
-    isempty(df) && (df = load_data(m, verbose = :none))
+    # Load population data and main dataset (required for some transformations)
+    if all(var -> get_product(var) == :irf, output_vars)
+        population_data, population_forecast = DataFrame(), DataFrame()
+    else
+        population_data, population_forecast = load_population_growth(m, verbose = verbose)
+        isempty(df) && (df = load_data(m, verbose = :none))
+    end
 
     for output_var in output_vars
         prod = get_product(output_var)
