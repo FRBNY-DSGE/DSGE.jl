@@ -95,6 +95,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # Load the previous ParticleCloud as the starting point for time tempering
         loadpath = rawpath(m, "estimate", "smc_cloud.jld")
         loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
+        loadpath = replace(loadpath, "temp=true", "temp=false")
 
         cloud = load(loadpath, "cloud")
         reset_cloud_settings!(cloud)
