@@ -176,11 +176,7 @@ module DSGE
     include("analysis/meansbands_to_matrix.jl")
     include("analysis/io.jl")
     include("analysis/util.jl")
-<<<<<<< HEAD
-=======
-    include("analysis/forecast_decomposition.jl")
     include("analysis/df_to_table.jl")
->>>>>>> 28fef3f... Create functions in analysis/df_to_table for producing LaTeX tables from dfs
 
     include("altpolicy/altpolicy.jl")
     include("altpolicy/taylor93.jl")
