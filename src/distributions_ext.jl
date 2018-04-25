@@ -328,7 +328,7 @@ function Distributions.pdf(d::MatrixNormal, x::Matrix)
     n, p = size(μ)
     U_inv = d.U_inv
     V_inv = d.V_inv
-    return exp(-.5*trace(V_inv * (x-μ)' * U_inv * (x-μ))) / ((2π)^(n*p/2) * det(U)^(n/2) * det(V)^(p/2))
+    return exp(-.5*trace(V_inv * (x-μ)' * U_inv * (x-μ))) / ((2π)^(n*p/2) * det(U)^(p/2) * det(V)^(n/2))
 end
 
 """
@@ -343,5 +343,5 @@ function Distributions.logpdf(d::MatrixNormal, x::Matrix)
     n, p = size(μ)
     U_inv = d.U_inv
     V_inv = d.V_inv
-    return -.5*trace(V_inv * (x-μ)' * U_inv * (x-μ)) - log((2π)^(n*p/2) * det(U)^(n/2) * det(V)^(p/2))
+    return -.5*trace(V_inv * (x-μ)' * U_inv * (x-μ)) - log((2π)^(n*p/2) * det(U)^(p/2) * det(V)^(n/2))
 end
