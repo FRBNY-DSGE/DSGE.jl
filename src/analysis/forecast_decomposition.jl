@@ -350,7 +350,7 @@ function decompose_changes(m_new::AbstractModel, m_old::AbstractModel,
 
         realized_shocks_new = Vector{DataFrames.DataFrame}(n_shocks_exogenous(m_new))
         for s in 1:n_shocks_exogenous(m_new)
-            new_var_names = map(x -> Symbol(x, :_, m_new.exogenous_shocks.keys[s]), var_names)
+            new_var_names = map(x -> Symbol(x, :__, m_new.exogenous_shocks.keys[s]), var_names)
             realized_shocks_new[s] = forecast_mat_to_df(realized_shocks[:,:,s], new_var_names)
         end
 
@@ -395,4 +395,3 @@ end
 function collapse_shocks(shocks::Array{Float64,3})
     return squeeze(sum(shocks,3),3)
 end
-
