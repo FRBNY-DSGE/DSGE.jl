@@ -157,6 +157,11 @@ shockdec
                      find(x -> Dates.year(x) % tick_size == 0, dates))
     xticks --> (xnums[inds], map(Dates.year, dates[inds]))
 
+    # Set date axis limits
+    x0 = xnums[findfirst(dates .== start_date)]
+    x1 = xnums[findfirst(dates .== end_date)]
+    xlims := (x0, x1)
+
     # Shock contributions
     @series begin
         labels    = map(x -> x.name,  groups)
@@ -170,23 +175,20 @@ shockdec
         bar_width  --> 1
         legendfont --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
 
-        inds = find(start_date .<= dates .<= end_date)
-        x = df[inds, :date]
-        y = convert(Array, df[inds, cat_names])
+        x = df[:date]
+        y = convert(Array, df[cat_names])
         StatPlots.GroupedBar((x, y))
     end
 
     seriestype := :line
     linewidth  := 2
-    ylim       := :auto
 
     # Detrended mean history
     @series begin
         linecolor := hist_color
         label     := hist_label
 
-        inds = intersect(find(start_date .<= dates .<= end_date),
-                         find(hist.means[1, :date] .<= dates .<= hist.means[end, :date]))
+        inds = find(hist.means[1, :date] .<= dates .<= hist.means[end, :date])
         xnums[inds], df[inds, :detrendedMean]
     end
 
@@ -195,8 +197,7 @@ shockdec
         linecolor := forecast_color
         label     := forecast_label
 
-        inds = intersect(find(start_date .<= dates .<= end_date),
-                         find(hist.means[end, :date] .<= dates .<= forecast.means[end, :date]))
+        inds = find(hist.means[end, :date] .<= dates .<= forecast.means[end, :date])
         xnums[inds], df[inds, :detrendedMean]
     end
 end
