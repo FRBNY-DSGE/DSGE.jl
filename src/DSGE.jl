@@ -2,7 +2,7 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
     using Base.Dates, Base.Test
-    using DataFrames, Distributions, FredData, HDF5, JLD, Optim, Plots, RecipesBase, StateSpaceRoutines, StatPlots
+    using CSV, DataFrames, DataArrays, Distributions, FredData, HDF5, JLD, Optim, Plots, RecipesBase, StateSpaceRoutines, StatPlots
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
