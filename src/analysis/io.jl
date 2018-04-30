@@ -485,7 +485,7 @@ function write_meansbands_table(dirname::String, filestring_base::Vector{String}
     fullfilename = savepath(dirname, filename, filestring_base, filestring_addl)
 
     # Write to file
-    writetable(fullfilename, df)
+    CSV.write(fullfilename, df)
     println(" * Wrote means and bands for $tablevar to $fullfilename")
 end
 

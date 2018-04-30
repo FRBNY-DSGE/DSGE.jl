@@ -165,11 +165,11 @@ function load_population_growth(m::AbstractModel; verbose::Symbol = :low)
 
         # Prepare output variables
         data = data[[:date, data_mnemonic]]
-        rename!(data, data_mnemonic, :population_growth)
+        rename!(data, data_mnemonic => :population_growth)
 
         if use_population_forecast(m)
             forecast = forecast[[:date, forecast_mnemonic]]
-            rename!(forecast, forecast_mnemonic, :population_growth)
+            rename!(forecast, forecast_mnemonic => :population_growth)
         else
             forecast = DataFrame()
         end
@@ -234,6 +234,7 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
             vcat(data, fcast)
         end
 
+        padding, unpadded_data = reconcile_column_names(padding, unpadded_data)
         padded_data = vcat(padding, unpadded_data)
         na2nan!(padded_data)
         padded_data
