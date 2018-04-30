@@ -40,6 +40,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ### Setting Parameters
     ########################################################################################
 
+    # Temporary
+    endo_type = get_setting(m, :endogenous_type)
+
     # General
     parallel = get_setting(m, :use_parallel_workers)
     n_parts = get_setting(m, :n_particles)
@@ -166,13 +169,25 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         optimal_ϕ_function(ϕ)  = compute_ESS(get_loglh(cloud), get_weights(cloud), ϕ, ϕ_n1,
                                              use_CESS = use_CESS, old_loglh = get_old_loglh(cloud)) - ESS_bar
 
-        # # Find a ϕ_prop such that the optimal ϕ_n will lie somewhere between ϕ_n1 and ϕ_prop
-        # # Do so by iterating through a proposed_fixed_schedule and finding the first
-        # # ϕ_prop such that the ESS would fall by more than the targeted amount ESS_bar
-        # while optimal_ϕ_function(ϕ_prop) >= 0 && j <= n_Φ
-            # ϕ_prop = proposed_fixed_schedule[j]
-            # j += 1
-        # end
+        # Find a ϕ_prop such that the optimal ϕ_n will lie somewhere between ϕ_n1 and ϕ_prop
+        # Do so by iterating through a proposed_fixed_schedule and finding the first
+        # ϕ_prop such that the ESS would fall by more than the targeted amount ESS_bar
+        if endo_type == :adaptive
+            while optimal_ϕ_function(ϕ_prop) >= 0 && j <= n_Φ
+                ϕ_prop = proposed_fixed_schedule[j]
+                j += 1
+            end
+        elseif endo_type == :adaptive_min
+            ϕ_prop = proposed_fixed_schedule[j]
+        elseif endo_type == :adaptive_min_j_eq_n
+            if j <= n_Φ
+                ϕ_prop = proposed_fixed_schedule[j]
+            else
+                ϕ_prop = 1.
+            end
+        else
+            throw("not an endo type")
+        end
 
         # Note: optimal_ϕ_function(ϕ_n1) > 0 because ESS_{t-1} is always positive
         # When ϕ_prop != 1. then there are still ϕ increments strictly below 1 that
@@ -187,13 +202,26 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # Thus the ϕ_schedule should be strictly bounded above by the fixed schedule
         # i.e. the adaptive ϕ schedule should not outpace the fixed schedule at the end
         # (when the fixed schedule tends to drop by less than 5% per iteration)
-        ϕ_prop = proposed_fixed_schedule[j]
+
         if ϕ_prop != 1. || optimal_ϕ_function(ϕ_prop) < 0
-            if optimal_ϕ_function(ϕ_prop) < 0
+            if endo_type == :adaptive
                 ϕ_n = fzero(optimal_ϕ_function, [ϕ_n1, ϕ_prop], xtol = 0.)
-            else
-                ϕ_n = ϕ_prop
+            elseif endo_type == :adaptive_min
+                if optimal_ϕ_function(ϕ_prop) < 0
+                    ϕ_n = fzero(optimal_ϕ_function, [ϕ_n1, ϕ_prop], xtol = 0.)
+                else
+                    ϕ_n = ϕ_prop
+                    j += 1
+                end
+            elseif endo_type == :adaptive_min_j_eq_n
+                if optimal_ϕ_function(ϕ_prop) < 0
+                    ϕ_n = fzero(optimal_ϕ_function, [ϕ_n1, ϕ_prop], xtol = 0.)
+                else
+                    ϕ_n = ϕ_prop
+                end
                 j += 1
+            else
+                throw("not an endo type")
             end
             push!(cloud.tempering_schedule, ϕ_n)
         else
