@@ -6,7 +6,7 @@ parameters). Note these functions are NOT new methods for the Distributions.Beta
 functions, but rather new functions with the same names.
 =#
 
-import Distributions: params, mean, std, pdf, logpdf, rand
+import Distributions: params, mean, std, pdf, logpdf, rand, Distribution, Matrixvariate
 import Base: length, rank
 
 """
@@ -243,4 +243,105 @@ function std(dist::RootInverseGamma)
 
     σ = (β / (α - 1) - μ^2)^(0.5)
     return σ
+end
+
+"""
+```
+MatrixNormal <: Distribution{Matrixvariate, Continuous}
+```
+
+The `MatrixNormal` type implements a matrixvariate normal
+distribution. Note that the matrix must be square.
+
+See [Matrix normal distribution - Degenerate case](en.wikipedia.org/wiki/Matrix_normal_distribution).
+"""
+type MatrixNormal <: Distribution{Matrixvariate, Continuous}
+    μ::Matrix # mean
+    U::Matrix # row variance
+    V::Matrix # col variance
+    U_sqrt::Matrix # cholesky of U
+    V_sqrt::Matrix # choleksy of V
+    U_inv::Matrix # inverse of U
+    V_inv::Matrix # inverse of V
+
+    function MatrixNormal(μ::Matrix, U::Matrix, V::Matrix)
+        size(μ,1) == size(U,1) || error("μ and U must have the same number of rows")
+        size(μ,2) == size(V,1) || error("μ and V must have the same number of columns")
+        isposdef(U) || error("U is not a positive definite matrix")
+        isposdef(V) || error("V is not a positive definite matrix")
+
+        U_sqrt = Matrix(chol(U))
+        V_sqrt = Matrix(chol(V))
+        U_inv = inv(U)
+        V_inv = inv(V)
+
+        return new(μ, U, V, U_sqrt, V_sqrt, U_inv, V_inv)
+    end
+
+    function MatrixNormal(μ::Matrix, Σ::Matrix)
+        size(μ) == size(Σ) || error("μ and Σ must be the same size")
+        isposdef(Σ) || error("Σ is not a positive definite matrix")
+        Σ_sqrt = Matrix(chol(U))
+        Σ_inv = inv(U)
+
+        return new(μ, Σ, Σ, Σ_sqrt, Σ_sqrt, Σ_inv, Σ_inv)
+    end
+
+end
+
+"""
+```
+size(d::MatrixNormal)
+```
+
+Returns the dimension of `d`.
+"""
+Base.size(d::MatrixNormal) = size(d.μ)
+
+"""
+```
+Distributions.rand{T<:AbstractFloat}(d::MatrixNormal)
+```
+
+Generate a draw from `d`.
+"""
+function Distributions.rand(d::MatrixNormal)
+    return d.μ + d.U_sqrt*randn(size(d.μ))*d.V_sqrt'
+end
+
+
+function mean(d::MatrixNormal)
+    return d.μ
+end
+
+Distributions.params(d::MatrixNormal) = d.μ, d.U, d.V
+
+"""
+```
+Distributions.pdf(d::MatrixNormal, x::Matrix)
+```
+
+Compute the pdf of a MatrixNormal distribution at x.
+"""
+function Distributions.pdf(d::MatrixNormal, x::Matrix)
+    μ, U, V = params(d)
+    n, p = size(μ)
+    U_inv = d.U_inv
+    V_inv = d.V_inv
+    return exp(-.5*trace(V_inv * (x-μ)' * U_inv * (x-μ))) / ((2π)^(n*p/2) * det(U)^(p/2) * det(V)^(n/2))
+end
+
+"""
+```
+Distributions.logpdf(d::MatrixNormal, x::Matrix)
+```
+
+Compute the logpdf of a MatrixNormal distribution at x.
+"""
+function Distributions.logpdf(d::MatrixNormal, x::Matrix)
+    μ, U, V = params(d)
+    n, p = size(μ)
+    U_inv = d.U_inv
+    V_inv = d.V_inv
+    return -.5*trace(V_inv * (x-μ)' * U_inv * (x-μ)) - log((2π)^(n*p/2) * det(U)^(p/2) * det(V)^(n/2))
 end

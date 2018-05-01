@@ -98,7 +98,8 @@ function meansbands_to_matrix(mb::MeansBands)
     nbands     = length(bands_list)             # how many bands are stored
 
     # extract  matrices from MeansBands structure
-    if prod in [:hist, :hist4q, :forecast, :forecast4q, :bddforecast, :bddforecast4q,
+    if prod in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
+                :bddforecast, :bddforecastut, :bddforecast4q,
                 :dettrend, :trend]
 
         # construct means and bands arrays

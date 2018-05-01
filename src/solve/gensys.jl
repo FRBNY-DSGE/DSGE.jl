@@ -54,14 +54,14 @@ function gensys(Γ0, Γ1, c, Ψ, Π, args...)
             info("LAPACK exception thrown while computing Schur decomposition of Γ0 and Γ1.")
             eu = [-3, -3]
 
-            G1 = Array{Float64, 2}()
-            C = Array{Float64, 1}()
-            impact = Array{Float64, 2}()
-            fmat = Array{Complex{Float64}, 2}()
-            fwt = Array{Complex{Float64}, 2}()
-            ywt = Vector{Complex{Float64}}()
-            gev = Vector{Complex{Float64}}()
-            loose = Array{Float64, 2}()
+            G1 = Array{Float64, 2}(0,0)
+            C = Array{Float64, 1}(0)
+            impact = Array{Float64, 2}(0,0)
+            fmat = Array{Complex{Float64}, 2}(0,0)
+            fwt = Array{Complex{Float64}, 2}(0,0)
+            ywt = Vector{Complex{Float64}}(0)
+            gev = Vector{Complex{Float64}}(0)
+            loose = Array{Float64, 2}(0,0)
 
             return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
         else
@@ -84,30 +84,35 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
     a, b, = F[:S], F[:T]
     n = size(a, 1)
 
+    select = BitArray(n)
     for i in 1:n
-        nunstab += (abs(b[i, i]) > div * abs(a[i,i]))
+        # nunstab is the variable name used by Chris Sims, but it seems
+        # that nunstab should actually correspond to the number of stable λs
+        # i.e. nunstab += 1/div > abs(a[i,i])/abs(b[i,i]), which is basically
+        # 1 - a small number > abs(a[i,i])/abs(b[i,i])
+        select[i] = !(abs(b[i, i]) > div * abs(a[i, i]))
         if (abs(a[i, i]) < ϵ) && (abs(b[i, i]) < ϵ)
             zxz = 1
         end
     end
+    nunstab = n - sum(select)
 
     if zxz == 1
         warn("Coincident zeros. Indeterminacy and/or nonexistence.")
         eu=[-2, -2]
 
-        G1 = Array{Float64, 2}()
-        C = Array{Float64, 1}()
-        impact = Array{Float64, 2}()
-        fmat = Array{Complex{Float64}, 2}()
-        fwt = Array{Complex{Float64}, 2}()
-        ywt = Vector{Complex{Float64}}()
-        gev = Vector{Complex{Float64}}()
-        loose = Array{Float64, 2}()
+        G1 = Array{Float64, 2}(0, 0)
+        C = Array{Float64, 1}(0)
+        impact = Array{Float64, 2}(0)
+        fmat = Array{Complex{Float64}, 2}(0,0)
+        fwt = Array{Complex{Float64}, 2}(0,0)
+        ywt = Vector{Complex{Float64}}(0)
+        gev = Vector{Complex{Float64}}(0)
+        loose = Array{Float64, 2}(0,0)
 
         return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
     end
 
-    select = abs.(F[:alpha]) .> div * abs.(F[:beta])
     FS = ordschur!(F, select)
     a, b, qt, z = FS[:S], FS[:T], FS[:Q], FS[:Z]
     gev = hcat(diag(a), diag(b))

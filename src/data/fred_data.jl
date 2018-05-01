@@ -36,7 +36,7 @@ function load_fred_data(m::AbstractModel;
     if isfile(datafile)
 
         # Read in dataset and check that the file contains data for the proper dates
-        data = readtable(datafile)
+        data = CSV.read(datafile)
 
         # Convert dates from strings to dates for date arithmetic
         format_dates!(:date, data)
@@ -118,7 +118,7 @@ function load_fred_data(m::AbstractModel;
             if isassigned(fredseries, i)
                 series = fredseries[i]
                 series_id = Symbol(series.id)
-                rename!(series.df, :value, series_id)
+                rename!(series.df, :value => series_id)
                 map!(x->lastdayofquarter(x), series.df[:date], series.df[:date])
                 data = join(data, series.df[:,[:date, series_id]], on=:date, kind=:outer)
             end
@@ -132,7 +132,7 @@ function load_fred_data(m::AbstractModel;
         end
 
         if !m.testing
-            writetable(datafile, data)
+            CSV.write(datafile, data, missingstring = "NaN")
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println("Updated data from FRED written to $datafile.")
             end

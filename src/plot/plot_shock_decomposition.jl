@@ -70,7 +70,7 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
     for (var, title) in zip(vars, titles)
         # Call recipe
         plots[var] = shockdec(var, mbs..., groups;
-                              ylabel = series_ylabel(m, var, class),
+                              ylabel = series_ylabel(m, var, class) * "\n(deviations from mean)",
                               title = title, kwargs...)
 
         # Save plot

@@ -17,11 +17,11 @@ overrides[:mode] = joinpath(estroot, "optimize.h5")
 overrides[:full] = joinpath(estroot, "metropolis_hastings.h5")
 
 output_vars = add_requisite_output_vars([:histpseudo, :histobs,
+                                         :hist4qpseudo, :hist4qobs,
                                          :forecastpseudo, :forecastobs,
+                                         :forecast4qpseudo, :forecast4qobs,
                                          :shockdecpseudo, :shockdecobs,
-                                         :irfpseudo, :irfobs,
-                                         :forecast4qobs, :bddforecast4qobs, :hist4qobs,
-                                         :forecast4qpseudo, :bddforecast4qpseudo, :hist4qpseudo])
+                                         :irfpseudo, :irfobs])
 
 # Read expected output
 exp_modal_means, exp_modal_bands, exp_full_means, exp_full_bands =

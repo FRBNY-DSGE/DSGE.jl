@@ -4,7 +4,8 @@ using HDF5, Base.Test, Distributions, JLD
 path = dirname(@__FILE__)
 
 ### Model
-model = Model990("ss2")
+sub = "ss2"
+model = Model990(sub)
 
 ### Parameters
 
@@ -103,7 +104,7 @@ end
 ### Custom settings
 custom_settings = Dict{Symbol, Setting}(
     :n_anticipated_shocks => Setting(:n_anticipated_shocks, 6))
-model = Model990("ss2", custom_settings = custom_settings)
+model = Model990(sub, custom_settings = custom_settings)
 @test get_setting(model, :n_anticipated_shocks) == 6
 
 # Indices initialized correctly under custom settings

@@ -1,3 +1,19 @@
+# DSGE.jl v0.4.1 Release Notes
+
+## Bug fixes and cleanup
+- Addressed deprecations and warnings for:
+  + Non-vectorized functions (e.g. `log`, `!`)
+  + `vcat` on DataFrames with different column names
+  + Optimization-related functions for new releases of Optim.jl
+  + Array declaration
+
+- Tidied:
+  + Plotting code
+  + Meansbands computation
+  + Various models
+  + Scenarios code
+  + Tests
+
 # DSGE.jl v0.4.0 Release Notes
 
 ## New features

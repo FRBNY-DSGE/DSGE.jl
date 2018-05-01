@@ -145,7 +145,7 @@ function forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
 
                 # Confirm procedure worked
                 interest_rate_forecast = getindex(D + Z*z_t, ind_r)
-                @assert interest_rate_forecast >= zlb_value - 0.01
+                @assert interest_rate_forecast >= zlb_value - 0.01 "interest_rate_forecast = $interest_rate_forecast must be >= zlb_value - 0.01 = $(zlb_value - 0.01)"
             end
         end
         return z_t, ϵ_t

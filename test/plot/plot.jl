@@ -3,7 +3,7 @@ using DSGE, HDF5, JLD, Plots
 path = dirname(@__FILE__)
 
 # Initialize the plotting backend
-Plots.backend()
+gr()
 
 # Initialize model object
 m = AnSchorfheide(testing = true)

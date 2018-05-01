@@ -207,6 +207,12 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
         elseif mb2_product == :bddforecast
             :bddforecast
         end
+    elseif mb1_product == :histut
+        if mb2_product == :forecastut
+            :histforecastut
+        elseif mb2_product == :bddforecast
+            :bddforecastut
+        end
     elseif mb1_product == :hist4q
         if mb2_product == :forecast4q
             :histforecast4q
@@ -598,9 +604,10 @@ ordered as follows: [68\% lower, 50\% lower, 50\% upper, 68\% upper, mean].
 function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol;
                                              bands_pcts::Vector{String} = which_density_bands(mb, uniquify = true))
 
-    @assert get_product(mb) in [:hist, :hist4q, :forecast, :forecast4q,
-                                :bddforecast, :bddforecast4q, :histforecast, :histforecast4q,
-                                :bddhistforecast, :bddhistforecast4q,
+    @assert get_product(mb) in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
+                                :bddforecast, :bddforecastut, :bddforecast4q,
+                                :histforecast, :histforecastut, :histforecast4q,
+                                :bddhistforecast, :bddhistforecastut, :bddhistforecast4q,
                                 :trend, :dettrend] "prepare_meansbands_table_timeseries can only be used for time-series products"
     @assert var in get_vars_means(mb) "$var is not stored in this MeansBands object"
 
@@ -615,7 +622,7 @@ function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol;
 
     # Join so mean is on far right and date is on far left
     df = join(bands, means, on = :date)
-    rename!(df, var, Symbol("mean"))
+    rename!(df, var => Symbol("mean"))
 
     return df
 end
@@ -725,9 +732,9 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
 
     # Line up dates between trend, dettrend and shockdec
     df_shockdec = join(df_shockdec, df_trend, on = :date, kind = :inner)
-    rename!(df_shockdec, var, :trend)
+    rename!(df_shockdec, var => :trend)
     df_shockdec = join(df_shockdec, df_dettrend, on = :date, kind = :inner)
-    rename!(df_shockdec, var, :dettrend)
+    rename!(df_shockdec, var => :dettrend)
 
     # Add each shock's contribution and deterministic trend to output DataFrame
     df = DataFrame(date = df_shockdec[:date])
@@ -737,7 +744,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     df_shockdec[:dettrend] = df_shockdec[:dettrend]
 
     # Rename columns to just the shock names
-    map(x -> rename!(df, x, parse_mb_colname(x)[2]), setdiff(names(df), [:date, :trend, :dettrend]))
+    map(x -> rename!(df, x => parse_mb_colname(x)[2]), setdiff(names(df), [:date, :trend, :dettrend]))
 
     # If mb_forecast and mb_hist are passed in, add the detrended time series
     # mean of var to the table
@@ -772,7 +779,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
         for x in setdiff(names(df), [:date, :trend, :dettrend])
             x_detexed = detexify(x)
             if x != x_detexed
-                rename!(df, x, x_detexed)
+                rename!(df, x => x_detexed)
             end
         end
     end
