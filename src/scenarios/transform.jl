@@ -49,6 +49,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
         scenario_means_bands(m, scen, output_var; kwargs...)
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
+            output_file = get_scenario_mb_output_file(m, scen, output_var)
             println("wrote " * basename(output_file))
         end
     end
@@ -71,7 +72,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_v
 
     # Get to work!
     mapfcn = use_parallel_workers(m) ? pmap : map
-    mb_vec = pmap(var_name -> scenario_means_bands(m, scen, output_var, var_name),
+    mb_vec = pmap(var_name -> scenario_means_bands(m, scen, output_var, var_name; kwargs...),
                   variable_names)
 
     # Re-assemble pmap outputs
@@ -82,7 +83,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_v
         bands[var_name] = var_bands
         bands[var_name][:date] = date_list
     end
-    mb = MeansBands(metadata, means, bands; kwargs...)
+    mb = MeansBands(metadata, means, bands)
 
     # Write to file
     output_file = get_scenario_mb_output_file(m, scen, output_var)

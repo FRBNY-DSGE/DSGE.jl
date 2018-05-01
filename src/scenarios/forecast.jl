@@ -141,11 +141,14 @@ function write_scenario_forecasts(m::AbstractModel,
                                   scenario_output_files::Dict{Symbol, String},
                                   forecast_output::Dict{Symbol, Array{Float64}};
                                   verbose::Symbol = :low)
-    for var in [:forecastobs, :forecastpseudo]
+    for (i, var) in enumerate([:forecastobs, :forecastpseudo])
         filepath = scenario_output_files[var]
         jldopen(filepath, "w") do file
             write_forecast_metadata(m, file, var)
             write(file, "arr", forecast_output[var])
+            if :proportion_switched in keys(scenario_output_files)
+                write(file, "proportion_switched", forecast_output[:proportion_switched][i])
+            end
         end
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]

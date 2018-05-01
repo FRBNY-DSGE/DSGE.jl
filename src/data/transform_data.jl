@@ -44,8 +44,9 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
                                                        use_hpfilter = hpfilter_population(m))
 
         levels = join(levels, population_data, on = :date, kind = :left)
-        rename!(levels, [:filtered_population_recorded, :dlfiltered_population_recorded, :dlpopulation_recorded],
-                [:filtered_population, :filtered_population_growth, :unfiltered_population_growth])
+        name_maps = [s => t for (s,t) = zip([:filtered_population_recorded, :dlfiltered_population_recorded, :dlpopulation_recorded],
+                [:filtered_population, :filtered_population_growth, :unfiltered_population_growth])]
+        rename!(levels, name_maps)
     end
 
     # Step 2: apply transformations to each series
@@ -62,7 +63,7 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
         transformed[series] = f(levels)
     end
 
-    sort!(transformed, cols = :date)
+    sort!(transformed, [:date])
 
     return transformed
 end

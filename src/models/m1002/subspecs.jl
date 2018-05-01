@@ -14,6 +14,11 @@ function init_subspec!(m::Model1002)
         return ss9!(m)
     elseif subspec(m) == "ss10"
         return ss10!(m)
+    elseif subspec(m) == "ss11"
+        # Normalize s.t. sum of variances of anticipated shocks equals the
+        # variance of the contemporaneous shock
+        # See measurement equation
+        return ss10!(m)
     else
         error("This subspec is not defined.")
     end

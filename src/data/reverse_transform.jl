@@ -83,12 +83,13 @@ function reverse_transform(m::AbstractModel, untransformed::Matrix, start_date::
     df[:date] = quarter_range(start_date, end_date)
 
     for (ind, var) in enumerate(vars)
-        series = squeeze(untransformed[ind, :], 1)
+        series = untransformed[ind, :]
         df[var] = series
     end
 
     reverse_transform(m, df, class; fourquarter = fourquarter, verbose = verbose)
 end
+
 function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Symbol;
                            fourquarter::Bool = false, verbose::Symbol = :low)
     # Dates
@@ -107,18 +108,10 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     end
 
     # Prepare population series
-    population_mnemonic = parse_population_mnemonic(m)[1]
-    vint = data_vintage(m)
-    population_data_file     = inpath(m, "raw", "population_data_levels_$vint.csv")
-    population_forecast_file = inpath(m, "raw", "population_forecast_$vint.csv")
-    population_data, population_forecast =
-        load_population_growth(population_data_file, population_forecast_file,
-                               get(population_mnemonic);
-                               use_population_forecast = use_population_forecast(m),
-                               use_hpfilter = hpfilter_population(m),
-                               verbose = verbose)
+    population_data, population_forecast = load_population_growth(m, verbose = verbose)
     population_series = get_population_series(:population_growth, population_data,
                                               population_forecast, start_date, end_date)
+    population_series = convert(Vector{Float64}, population_series)
 
     # Apply reverse transform
     transformed = DataFrame()
@@ -136,17 +129,18 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     end
     return transformed
 end
+
 function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Function;
                                              fourquarter::Bool = false,
-                                             y0::T = NaN, y0s::Vector{T} = Vector{T}(),
-                                             pop_growth::Vector{T} = Vector{T}())
+                                             y0::T = NaN, y0s::Vector{T} = T[],
+                                             pop_growth::Vector{T} = T[])
     if fourquarter
         if rev_transform in [loggrowthtopct_4q_percapita, loggrowthtopct_4q,
                              loggrowthtopct_4q_approx]
             # Sum growth rates y_{t-3}, y_{t-2}, y_{t-1}, and y_t
             y0s = isempty(y0s) ? fill(NaN, 3) : y0s
             if rev_transform == loggrowthtopct_4q_percapita
-                rev_transform(y, y0s, pop_growth)
+                rev_transform(y, pop_growth, y0s)
             else
                 rev_transform(y, y0s)
             end
@@ -155,7 +149,7 @@ function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Functio
             # Divide log levels y_t by y_{t-4}
             y0s = isempty(y0s) ? fill(NaN, 4) : y0s
             if rev_transform == logleveltopct_4q_percapita
-                rev_transform(y, y0s, pop_growth)
+                rev_transform(y, pop_growth, y0s)
             else
                 rev_transform(y, y0s)
             end
@@ -166,7 +160,7 @@ function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Functio
         end
     else
         if rev_transform in [logleveltopct_annualized_percapita]
-            rev_transform(y, y0, pop_growth)
+            rev_transform(y, pop_growth, y0)
         elseif rev_transform in [loggrowthtopct_annualized_percapita, loggrowthtopct_percapita]
             rev_transform(y, pop_growth)
         elseif rev_transform in [logleveltopct_annualized, logleveltopct_annualized_approx]
@@ -178,6 +172,7 @@ function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Functio
         end
     end
 end
+
 function reverse_transform(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                            class::Symbol, product::Symbol, vars::Vector{Symbol};
                            forecast_string = "", fourquarter::Bool = false, verbose::Symbol = :low)
@@ -247,4 +242,3 @@ function reverse_transform(path::String, class::Symbol, product::Symbol,
 
     return transformed
 end
-

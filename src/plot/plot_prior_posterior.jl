@@ -42,17 +42,18 @@ function plot_prior_posterior(m::AbstractModel,
     # Loop through parameters
     plots = OrderedDict{Symbol, Plots.Plot}()
     for key in param_keys
-        if !include_fixed && param.fixed
-            continue
-        end
-
         i = findfirst(x -> x.key == key, m.parameters)
         if i > 0
             param = m.parameters[i]
             posterior = posterior_draws[:, i]
 
+            # Skip fixed parameter if desired
+            if !include_fixed && param.fixed
+                continue
+            end
+
             # Call recipe
-            plots[key] = priorpost(param, posterior; verbose = verbose, kwargs...)
+            plots[key] = priorpost(param, posterior; kwargs...)
 
             # Save plot
             output_file = figurespath(m, "estimate", "prior_posterior_" * detexify(string(param.key)) * ".pdf")
@@ -106,7 +107,7 @@ priorpost
     @series begin
         seriestype := :histogram
         normalize  := true
-        label      := param.fixed ? "Posterior: " * DSGE.describe_prior(param) : "Posterior"
+        label      := param.fixed ? "Posterior: " * describe_prior(param) : "Posterior"
         color      := posterior_color
 
         posterior_draws
@@ -114,12 +115,11 @@ priorpost
 
     # Prior
     @series begin
-        label      := "Prior: " * DSGE.describe_prior(param)
+        label      := "Prior: " * describe_prior(param)
         color      := prior_color
         linewidth --> 4
 
         if param.fixed
-            @show keys(plotattributes)
             [minimum(posterior_draws), maximum(posterior_draws)], [1, 1]
         elseif !param.fixed && !isnull(param.prior)
             prior = get(param.prior)

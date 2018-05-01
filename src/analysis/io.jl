@@ -58,6 +58,7 @@ function get_meansbands_input_file(directory::String, filestring_base::Vector{St
                                      forecast_string = forecast_string,
                                      fileformat = fileformat)
     filename = replace(filename, "hist4q", "hist")
+    filename = replace(filename, "histut", "hist")
     filename = replace(filename, "forecast4q", "forecast")
     filename = replace(filename, "forecastut", "forecast")
     return filename
@@ -159,7 +160,7 @@ function read_mb(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                                             directory = directory)
 
     if bdd_and_unbdd
-        @assert get_product(output_var) == :forecast
+        @assert get_product(output_var) in [:forecast, :forecast4q]
         bdd_output_var = Symbol(:bdd, output_var)
         bdd_file = get_meansbands_output_file(m, input_type, cond_type, bdd_output_var;
                                               forecast_string = forecast_string,
@@ -221,7 +222,7 @@ write_meansbands_tables_timeseries(dirname, filestring_base, mb;
 - `m::AbstractModel`
 - `input_type::Symbol`
 - `cond_type::Symbol`
-- `output_var::Symbol`: `class(output_var)` must be one of `[:hist, :forecast, :hist4q, :forecast4q, :bddforecast, :bddforecast4q, :trend, :dettrend, :histforecast, :histforecast4q]`
+- `output_var::Symbol`: `class(output_var)` must be one of `[:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q, :bddforecast, :bddforecastut, :bddforecast4q, :trend, :dettrend, :histforecast, :histforecastut, :histforecast4q]`
 - `read_dirname::String`: directory to which meansbands objects are read from
 
 **Method 2 only:**
@@ -251,20 +252,32 @@ function write_meansbands_tables_timeseries(m::AbstractModel, input_type::Symbol
                                             kwargs...)
     # Check that output_var is a time series
     prod = get_product(output_var)
-    @assert prod in [:hist, :forecast, :hist4q, :forecast4q, :bddforecast, :bddforecast4q,
-                     :trend, :dettrend, :histforecast, :histforecast4q]
+    @assert prod in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
+                     :bddforecast, :bddforecastut, :bddforecast4q,
+                     :histforecast, :histforecastut, :histforecast4q,
+                     :trend, :dettrend]
 
     # Read in MeansBands
     class = get_class(output_var)
 
-    if prod in [:histforecast, :histforecast4q]
-        fourq = contains(string(prod), "4q")
-        mb_hist     = read_mb(m, input_type, cond_type, Symbol(fourq ? :hist4q : :hist, class),
-                              forecast_string = forecast_string, directory = read_dirname)
-        mb_forecast = read_mb(m, input_type, cond_type, Symbol(fourq ? :forecast4q : :forecast, class),
-                              forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd,
-                              directory = read_dirname)
-        mb = cat(mb_hist, mb_forecast)
+    if prod in [:histforecast, :histforecastut, :histforecast4q]
+        if prod == :histforecastut
+            hist_prod  = :histut
+            fcast_prod = :forecastut
+        elseif prod == :histforecast4q
+            hist_prod  = :hist4q
+            fcast_prod = :forecast4q
+        else
+            hist_prod  = :hist
+            fcast_prod = :forecast
+        end
+
+        mb_hist  = read_mb(m, input_type, cond_type, Symbol(hist_prod, class),
+                           forecast_string = forecast_string, directory = read_dirname)
+        mb_fcast = read_mb(m, input_type, cond_type, Symbol(fcast_prod, class),
+                           forecast_string = forecast_string, bdd_and_unbdd = bdd_and_unbdd,
+                           directory = read_dirname)
+        mb = cat(mb_hist, mb_fcast)
     else
         mb = read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string,
                      bdd_and_unbdd = bdd_and_unbdd, directory = read_dirname)
@@ -275,13 +288,14 @@ function write_meansbands_tables_timeseries(m::AbstractModel, input_type::Symbol
                                        kwargs...)
 end
 
-function write_meansbands_tables_timeseries(write_dirname::String, filestring_base::Vector{String},
+function write_meansbands_tables_timeseries(dirname::String, filestring_base::Vector{String},
                                             mb::MeansBands;
                                             tablevars::Vector{Symbol} = Symbol[],
                                             bands_pcts::Vector{String} = which_density_bands(mb, uniquify = true))
     for tablevar in tablevars
         df = prepare_meansbands_table_timeseries(mb, tablevar, bands_pcts = bands_pcts)
-        write_meansbands_table(write_dirname, filestring_base, mb, df, tablevar)
+                                                 # shocks = columnvars)
+        write_meansbands_table(dirname, filestring_base, mb, df, tablevar)
     end
 end
 
@@ -327,12 +341,14 @@ write_means_tables_shockdec(dirname, filestring_base, mb_shockdec,
 - `forecast_string::String`
 - `bdd_and_unbdd::Bool`: whether to use unbounded means and bounded
   bands. Applies only for `class(output_var) in [:forecast, :forecast4q]`
-- `dirname::String`: directory to which tables are saved
+- `read_dirname::String`: directory from which `MeansBands` are read in
+- `write_dirname::String`: directory to which tables are saved
 """
 function write_means_tables_shockdec(m::AbstractModel, input_type::Symbol,
                                      cond_type::Symbol, class::Symbol;
                                      forecast_string::String = "",
-                                     dirname::String = tablespath(m, "forecast"),
+                                     read_dirname::String = workpath(m, "forecast"),
+                                     write_dirname::String = tablespath(m, "forecast"),
                                      kwargs...)
     # Read in necessary MeansBands
     products = [:shockdec, :trend, :dettrend, :hist, :forecast]
@@ -340,7 +356,8 @@ function write_means_tables_shockdec(m::AbstractModel, input_type::Symbol,
     mbs = OrderedDict{Symbol, MeansBands}()
     for output_var in output_vars
         try
-            mbs[output_var] = read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string)
+            mbs[output_var] = read_mb(m, input_type, cond_type, output_var,
+                                      forecast_string = forecast_string, directory = read_dirname)
         catch ex
             if output_var in [Symbol(:hist, class), Symbol(:forecast, class)]
                 warn("MeansBands for " * string(output_var) * " not found")
@@ -352,11 +369,11 @@ function write_means_tables_shockdec(m::AbstractModel, input_type::Symbol,
     end
 
     # Call second method
-    write_means_tables_shockdec(dirname, filestring_base(m), values(mbs)...;
+    write_means_tables_shockdec(write_dirname, filestring_base(m), values(mbs)...;
                                 kwargs...)
 end
 
-function write_means_tables_shockdec(dirname::String, filestring_base::Vector{String},
+function write_means_tables_shockdec(write_dirname::String, filestring_base::Vector{String},
                                      mb_shockdec::MeansBands, mb_trend::MeansBands,
                                      mb_dettrend::MeansBands,
                                      mb_hist::MeansBands = MeansBands(),
@@ -369,7 +386,7 @@ function write_means_tables_shockdec(dirname::String, filestring_base::Vector{St
                                           mb_forecast = mb_forecast, mb_hist = mb_hist,
                                           shocks = columnvars,
                                           groups = groups)
-        write_meansbands_table(dirname, filestring_base, mb_shockdec, df, tablevar)
+        write_meansbands_table(write_dirname, filestring_base, mb_shockdec, df, tablevar)
     end
 end
 
@@ -415,7 +432,7 @@ write_meansbands_tables_irf(dirname, filestring_base, mb;
 function write_meansbands_tables_irf(m::AbstractModel, input_type::Symbol,
                                      cond_type::Symbol, class::Symbol;
                                      forecast_string::String = "",
-                                     dirname::String = tablespath(m, "forecast"),
+                                     write_dirname::String = tablespath(m, "forecast"),
                                      kwargs...)
     output_var = Symbol(:irf, class)
 
@@ -423,7 +440,7 @@ function write_meansbands_tables_irf(m::AbstractModel, input_type::Symbol,
     mb = read_mb(m, input_type, cond_type, output_var, forecast_string = forecast_string)
 
     # Call second method
-    write_meansbands_tables_irf(dirname, filestring_base(m), mbs...;
+    write_meansbands_tables_irf(write_dirname, filestring_base(m), mbs...;
                                 kwargs...)
 end
 
@@ -468,7 +485,7 @@ function write_meansbands_table(dirname::String, filestring_base::Vector{String}
     fullfilename = savepath(dirname, filename, filestring_base, filestring_addl)
 
     # Write to file
-    writetable(fullfilename, df)
+    CSV.write(fullfilename, df)
     println(" * Wrote means and bands for $tablevar to $fullfilename")
 end
 
@@ -503,8 +520,7 @@ Write all `output_vars` corresponding to model `m` to tables in `dirname`.
 function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
                                      output_vars::Vector{Symbol};
                                      forecast_string = "",
-                                     bdd_and_unbdd::Bool = false,
-                                     dirname::String = tablespath(m, "forecast"),
+                                     write_dirname::String = tablespath(m, "forecast"),
                                      vars::Vector{Symbol} = Symbol[],
                                      shocks::Vector{Symbol} = Symbol[],
                                      shock_groups::Vector{ShockGroup} = ShockGroup[])
@@ -513,26 +529,27 @@ function write_meansbands_tables_all(m::AbstractModel, input_type::Symbol, cond_
         class = get_class(output_var)
         prod  = get_product(output_var)
 
-        if prod in [:hist, :forecast, :hist4q, :forecast4q, :bddforecast, :bddforecast4q,
-                    :trend, :dettrend, :histforecast, :histforecast4q]
+        if prod in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
+                    :histforecast, :histforecastut, :histforecast4q,
+                    :bddforecast, :bddforecastut, :bddforecast4q,
+                    :trend, :dettrend]
             write_meansbands_tables_timeseries(m, input_type, cond_type, output_var,
-                                               forecast_string = forecast_string,
-                                               bdd_and_unbdd = bdd_and_unbdd,
-                                               tablevars = vars)
+                                              tablevars = vars,
+                                              forecast_string = forecast_string,
+                                              write_dirname = write_dirname)
 
         elseif prod == :shockdec
             write_means_tables_shockdec(m, input_type, cond_type, class,
-                                        columnvars = shocks,
+                                        tablevars = vars, columnvars = shocks,
                                         forecast_string = forecast_string,
-                                        dirname = dirname,
-                                        tablevars = vars,
+                                        write_dirname = write_dirname,
                                         groups = shock_groups)
 
         elseif prod == :irf
             write_means_tables(m, input_type, cond_type, class,
                                tablevars = shocks, columnvars = vars,
                                forecast_string = forecast_string,
-                               dirname = dirname)
+                               write_dirname = write_dirname)
         end
     end
 end
