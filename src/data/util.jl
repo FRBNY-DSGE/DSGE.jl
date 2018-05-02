@@ -26,21 +26,6 @@ function get_quarter_ends(start_date::Date,end_date::Date)
 end
 
 """
-`stringstodates(stringarray)`
-
-Converts a collection of strings in "y-m-d" format to Dates.
-"""
-function stringstodates(stringarray)
-    n = length(stringarray)
-    dates = Vector{Date}(n)
-    for i = 1:n
-        dates[i] = Date(stringarray[i], "y-m-d")
-    end
-
-    dates
-end
-
-"""
 `quartertodate(string::String)`
 
 Convert `string` in the form "YYqX", "YYYYqX", or "YYYY-qX" to a Date of the end of
@@ -69,6 +54,29 @@ function quartertodate(string::String)
 end
 
 """
+`datetoquarter(date::Date)`
+
+Convert `string` in the form "YYqX", "YYYYqX", or "YYYY-qX" to a Date of the end of
+the indicated quarter. "X" is in `{1,2,3,4}` and the case of "q" is ignored.
+
+Return an integer from the set `{1,2,3,4}`, corresponding to one of the quarters in a year given a Date object.
+"""
+function datetoquarter(date::Date)
+    month = Dates.month(date)
+    if month in 1:3
+        return 1
+    elseif month in 4:6
+        return 2
+    elseif month in 7:9
+        return 3
+    elseif month in 10:12
+        return 4
+    else
+        throw("Must provide a date object with a valid month (in 1:12)")
+    end
+end
+
+"""
 `subtract_quarters(t1::Date, t0::Date)`
 
 Compute the number of quarters between t1 and t0, including t0 and excluding t1.
@@ -87,8 +95,23 @@ Change column `col` of dates in `df` from String to Date, and map any dates give
 interior of a quarter to the last day of the quarter.
 """
 function format_dates!(col::Symbol, df::DataFrame)
-    df[col] = stringstodates(df[col])
+    df[col] = Date.(df[col])
     map!(lastdayofquarter, df[col], df[col])
+end
+
+"""
+```
+missing2nan!(df::DataArray)
+```
+
+Convert all elements of Union{X, Missing.Missing} and the like to type X.
+"""
+function missing2nan!(v::DataArray)
+    valid_types = [Date, Float64]
+    new_v = tryparse.(new_type, v)
+    if all(isnull.(new_v))
+        new_v = tryparse.(Date, new_v)
+    end
 end
 
 """
@@ -100,20 +123,20 @@ Convert all NAs in a DataFrame to NaNs.
 """
 function na2nan!(df::DataFrame)
     for col in names(df)
-        df[isna.(df[col]), col] = NaN
+        df[ismissing.(df[col]), col] = NaN
     end
 end
 
 """
 ```
-na2nan!(df::DataFrame)
+na2nan!(df::DataArray)
 ```
 
-Convert all NAs in a DataFrame to NaNs.
+Convert all NAs in a DataArray to NaNs.
 """
 function na2nan!(v::DataArray)
     for i = 1:length(v)
-        v[i] = isna(v[i]) ?  NaN : v[i]
+        v[i] = ismissing(v[i]) ?  NaN : v[i]
     end
 end
 
@@ -201,4 +224,24 @@ function iterate_quarters(start::Date, quarters::Int)
     end
 
     next
+end
+
+"""
+```
+reconcile_column_names(a::DataFrame, b::DataFrame)
+```
+
+adds columns of NaNs to a and b so that both have
+the same set of column names.
+"""
+function reconcile_column_names(a::DataFrame, b::DataFrame)
+    new_a_cols = setdiff(names(b), names(a))
+    new_b_cols = setdiff(names(a), names(b))
+    for col in new_a_cols
+        a[col] = fill(NaN, size(a, 1))
+    end
+    for col in new_b_cols
+        b[col] = fill(NaN, size(b, 1))
+    end
+    return a, b
 end

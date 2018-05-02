@@ -288,6 +288,8 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
         if post_old > -Inf
             propdist.μ = para_old
             initialized = true
+        else
+            para_old = rand(propdist, m; cc=cc0)
         end
     end
 

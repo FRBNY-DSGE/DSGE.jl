@@ -146,14 +146,14 @@ function get_scenario_mb_metadata(m::AbstractModel, scen::SingleScenario, output
 end
 
 function get_scenario_mb_metadata(m::AbstractModel, agg::ScenarioAggregate, output_var::Symbol)
-    forecast_output_file = get_scenario_mb_input_file(m, agg.scenario_groups[1][1], output_var)
+    forecast_output_file = get_scenario_mb_input_file(m, agg.scenarios[1], output_var)
     metadata = get_mb_metadata(m, :mode, :none, output_var, forecast_output_file)
 
     # Initialize start and end date
     start_date = date_forecast_start(m)
     end_date   = maximum(keys(metadata[:date_inds]))
 
-    for scen in vcat(agg.scenario_groups...)
+    for scen in agg.scenarios
         forecast_output_file = get_scenario_mb_input_file(m, scen, output_var)
         scen_dates = jldopen(forecast_output_file, "r") do file
             read(file, "date_indices")
@@ -207,51 +207,60 @@ end
 function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::Symbol,
                               product::Symbol, var_name::Symbol)
     # Aggregate scenarios
-    ngroups = length(agg.scenario_groups)
-    agg_draws = Vector{Matrix{Float64}}(ngroups)
+    nscens = length(agg.scenarios)
+    agg_draws = Vector{Matrix{Float64}}(nscens)
 
-    for (i, (group, pct)) in enumerate(zip(agg.scenario_groups, agg.proportions))
-        # Read in draws for each scenario in group
-        nscenarios = length(group)
-        group_draws = Vector{Matrix{Float64}}(nscenarios)
-        for (j, scen) in enumerate(group)
-            filename = get_scenario_mb_input_file(m, scen, Symbol(product, class))
-            group_draws[j] = jldopen(filename, "r") do file
-                read_forecast_series(file, class, product, var_name)
-            end
-        end
-
-        # Stack all scenario draws in this group together
-        all_group_draws = cat(1, group_draws...)
-
-        # Sample
-        actual_ndraws = size(all_group_draws, 1)
-        desired_ndraws = convert(Int, round(pct * agg.total_draws))
-
-        sampled_inds = if agg.replace
-            sample(1:actual_ndraws, desired_ndraws, replace = true)
-        else
-            if desired_ndraws == 0
-                Int[]
-            else
-                quotient  = convert(Int, floor(actual_ndraws / desired_ndraws))
-                remainder = actual_ndraws % desired_ndraws
-                vcat(repmat(1:actual_ndraws, quotient),
-                     sample(1:actual_ndraws, remainder, replace = false))
-            end
-        end
-        sort!(sampled_inds)
-        agg_draws[i] = all_group_draws[sampled_inds, :]
+    # If not sampling, initialize vector to record number of draws in each
+    # scenario in order to update `agg.proportions` and `agg.total_draws` at the
+    # end
+    if !agg.sample
+        n_scen_draws = zeros(Int, nscens)
     end
 
+    # Initialize transform so it can be assigned from within the following for
+    # loop. Each transform read in from read_scenario_output will be the
+    # same. We just want to delegate the transform parsing to the recursive
+    # read_scenario_output call.
+    transform = identity
+
+    for (i, scen) in enumerate(agg.scenarios)
+        # Recursively read in scenario draws
+        scen_draws, transform = read_scenario_output(m, scen, class, product, var_name)
+
+        # Sample if desired
+        agg_draws[i] = if agg.sample
+            pct = agg.proportions[i]
+            actual_ndraws = size(scen_draws, 1)
+            desired_ndraws = convert(Int, round(pct * agg.total_draws))
+
+            sampled_inds = if agg.replace
+                sample(1:actual_ndraws, desired_ndraws, replace = true)
+            else
+                if desired_ndraws == 0
+                    Int[]
+                else
+                    quotient  = convert(Int, floor(actual_ndraws / desired_ndraws))
+                    remainder = actual_ndraws % desired_ndraws
+                    vcat(repmat(1:actual_ndraws, quotient),
+                         sample(1:actual_ndraws, remainder, replace = false))
+                end
+            end
+            sort!(sampled_inds)
+            scen_draws[sampled_inds, :]
+        else
+            # Record number of draws in this scenario
+            n_scen_draws[i] = size(scen_draws, 1)
+            scen_draws
+        end
+    end
+
+    # Stack draws from all component scenarios
     fcast_series = cat(1, agg_draws...)
 
-    # Parse transform
-    filename = get_scenario_mb_input_file(m, agg.scenario_groups[1][1], Symbol(product, class))
-    transform = jldopen(filename, "r") do file
-        class_long = get_class_longname(class)
-        transforms = read(file, string(class_long) * "_revtransforms")
-        parse_transform(transforms[var_name])
+    # If not sampling, update `agg.proportions` and `agg.total_draws`
+    if !agg.sample
+        agg.total_draws = sum(n_scen_draws)
+        agg.proportions = n_scen_draws ./ agg.total_draws
     end
 
     return fcast_series, transform

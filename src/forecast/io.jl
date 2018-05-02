@@ -192,7 +192,7 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
 
     for var in output_vars
         prod = get_product(var)
-        if prod in [:hist4q, :forecast4q, :bddforecast4q]
+        if prod in [:histut, :hist4q, :forecastut, :bddforecastut, :forecast4q, :bddforecast4q]
             # These are computed and saved in means and bands, not
             # during the forecast itself
             continue
@@ -440,8 +440,8 @@ function read_forecast_series(file::JLD.JldFile, class::Symbol, product::Symbol,
         end
 
     # Other products are ndraws x nvars x nperiods
-    elseif product in [:hist, :hist4q, :forecast, :bddforecast, :forecastut, :bddforecastut,
-                       :forecast4q, :bddforecast4q, :dettrend]
+    elseif product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
+                       :bddforecast, :bddforecastut, :bddforecast4q, :dettrend]
         inds_to_read = if ndims == 2 # one draw
             arr = h5read(filename, "arr", (var_ind, Colon()))
         elseif ndims == 3 # many draws

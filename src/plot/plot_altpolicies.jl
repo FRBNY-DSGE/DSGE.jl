@@ -3,8 +3,8 @@
 plot_altpolicies(models, var, class, cond_type; kwargs...)
 
 plot_altpolicies(models, vars, class, cond_type;
-    forecast_string = "", altpol_string = "", fourquarter = false,
-    plotroot = figurespath(m, \"forecast\"), titles = [],
+    forecast_string = "", altpol_string = "", untrans = false,
+    fourquarter = false, plotroot = figurespath(m, \"forecast\"), titles = [],
     start_date = iterate_quarters(date_mainsample_end(models[1], -4)),
     end_date = iterate_quarters(date_forecast_start(models[1], 20)),
     kwargs...)
@@ -28,6 +28,7 @@ Plot `var` or `vars` forecasts under the alternative policies in `models`.
   plotted together. Required if `length(models) > 1`
 - `start_date::Date`
 - `end_date::Date`
+- `untrans::Bool`: whether to plot untransformed forecast
 - `fourquarter::Bool`: whether to plot four-quarter forecast
 - `plotroot::String`: if nonempty, plots will be saved in that directory
 - `title::String` or `titles::Vector{String}`
@@ -50,13 +51,19 @@ function plot_altpolicies{T<:AbstractModel}(models::Vector{T}, vars::Vector{Symb
                                             altpol_string::String = "",
                                             start_date::Date = iterate_quarters(date_mainsample_end(models[1]), -4),
                                             end_date::Date = iterate_quarters(date_forecast_start(models[1]), 20),
+                                            untrans::Bool = false,
                                             fourquarter::Bool = false,
                                             plotroot::String = figurespath(m, "forecast"),
                                             titles::Vector{String} = String[],
                                             verbose::Symbol = :low,
                                             kwargs...)
     # Determine output_vars
-    if fourquarter
+    if untrans && fourquarter
+        error("Only one of untrans or fourquarter can be true")
+    elseif untrans
+        hist_prod  = :histut
+        fcast_prod = :forecastut
+    elseif fourquarter
         hist_prod  = :hist4q
         fcast_prod = :forecast4q
     else
@@ -100,7 +107,8 @@ function plot_altpolicies{T<:AbstractModel}(models::Vector{T}, vars::Vector{Symb
                                        start_date = start_date, end_date = end_date,
                                        hist_label = "", forecast_label = string(altpolicy),
                                        forecast_color = altpolicy.color, linestyle = altpolicy.linestyle,
-                                       ylabel = series_ylabel(m, var, class, fourquarter = fourquarter),
+                                       ylabel = series_ylabel(m, var, class, untrans = untrans,
+                                                              fourquarter = fourquarter),
                                        title = title, kwargs...)
         end
 

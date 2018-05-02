@@ -2,7 +2,7 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
     using Base.Dates, Base.Test
-    using DataFrames, Distributions, FredData, HDF5, JLD, Optim, Plots, RecipesBase, StateSpaceRoutines, StatPlots
+    using CSV, DataFrames, DataArrays, Distributions, FredData, HDF5, JLD, Optim, Plots, RecipesBase, StateSpaceRoutines, StatPlots
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
@@ -13,7 +13,7 @@ module DSGE
     export
 
         # distributions_ext.jl
-        BetaAlt, GammaAlt, DegenerateMvNormal, DegenerateDiagMvTDist,
+        BetaAlt, GammaAlt, DegenerateMvNormal, DegenerateDiagMvTDist, MatrixNormal,
 
         # settings.jl
         Setting, get_setting,
@@ -102,6 +102,8 @@ module DSGE
         prepare_meansbands_tables_timeseries, prepare_means_tables_shockdec, prepare_meansbands_table_irf,
         write_meansbands_tables_timeseries, write_means_tables_shockdec, prepare_meansbands_table_irf,
         write_meansbands_tables_all,
+        construct_fcast_and_hist_dfs,
+        df_to_table,
 
         # altpolicy/
         AltPolicy, taylor93, taylor99,
@@ -182,6 +184,7 @@ module DSGE
     include("analysis/meansbands_to_matrix.jl")
     include("analysis/io.jl")
     include("analysis/util.jl")
+    include("analysis/df_to_table.jl")
 
     include("altpolicy/altpolicy.jl")
     include("altpolicy/taylor93.jl")
