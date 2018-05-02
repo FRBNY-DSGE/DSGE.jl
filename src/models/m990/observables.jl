@@ -32,7 +32,7 @@ function init_observable_mappings!(m::Model990)
 
         levels[:temp] = levels[:AWHNONAG] .* levels[:CE16OV]
         weeklyhours = percapita(m, :temp, levels)
-        100*log(3 * weeklyhours / 100)
+        100*log.(3 * weeklyhours / 100)
     end
 
     hrs_rev_transform = logleveltopct_annualized_percapita
@@ -243,7 +243,7 @@ function init_observable_mappings!(m::Model990)
         tfp_unadj_inrange = levels[date_range, :TFPKQ]
 
         tfp_unadj      = levels[:TFPKQ]
-        tfp_unadj_mean = mean(tfp_unadj_inrange[!isnan.(tfp_unadj_inrange)])
+        tfp_unadj_mean = mean(tfp_unadj_inrange[.!isnan.(tfp_unadj_inrange)])
         (tfp_unadj - tfp_unadj_mean) ./ (4*(1 - levels[:TFPJQ]))
     end
 

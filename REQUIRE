@@ -1,12 +1,14 @@
 julia 0.6
 Calculus
+CSV
+DataArrays
 DataFrames
 DataStructures
 Distributions
 FredData
 HDF5
 JLD
-Optim 0.7
+Optim 0.14
 QuantEcon
 Plots
 Roots

@@ -48,11 +48,13 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
     # Determine full set of output_vars necessary for plotting desired result
     output_vars = add_requisite_output_vars(output_vars)
 
-    # Load population data
-    population_data, population_forecast = load_population_growth(m, verbose = verbose)
-
-    # Load main dataset (required for some transformations)
-    isempty(df) && (df = load_data(m, verbose = :none))
+    # Load population data and main dataset (required for some transformations)
+    if all(var -> get_product(var) == :irf, output_vars)
+        population_data, population_forecast = DataFrame(), DataFrame()
+    else
+        population_data, population_forecast = load_population_growth(m, verbose = verbose)
+        isempty(df) && (df = load_data(m, verbose = :none))
+    end
 
     for output_var in output_vars
         prod = get_product(output_var)
@@ -103,9 +105,8 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     pop_growth     = get_mb_population_series(product, population_data, population_forecast, date_list)
 
     # Compute means and bands
-    if product in [:hist, :hist4q, :forecast, :forecast4q, :bddforecast, :bddforecast4q,
-                   :dettrend, :trend]
-
+    if product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
+                   :bddforecast, :bddforecastut, :bddforecast4q, :dettrend, :trend]
         # Get to work!
         mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                       pop_growth = pop_growth, forecast_string = forecast_string, kwargs...),
@@ -122,7 +123,6 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
         end
 
     elseif product in [:shockdec, :irf]
-
         means = product == :irf ? DataFrame() : DataFrame(date = date_list)
         bands = Dict{Symbol, DataFrame}()
 
@@ -146,6 +146,9 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
                 end
             end
         end
+
+    else
+        error("Invalid product: $product")
     end # of if product
 
     mb = MeansBands(metadata, means, bands)
@@ -213,7 +216,7 @@ function mb_reverse_transform(fcast_series::Array{Float64}, transform::Function,
                               data::AbstractVector{Float64} = Float64[],
                               pop_growth::AbstractVector{Float64} = Float64[])
     # No transformation
-    if product == :forecastut
+    if product in [:histut, :forecastut, :bddforecastut]
         return fcast_series
     end
 
@@ -221,12 +224,12 @@ function mb_reverse_transform(fcast_series::Array{Float64}, transform::Function,
         transform4q = get_transform4q(transform)
         use_data = class == :obs && product != :hist4q
 
-        y0s = if transform4q in [loggrowthtopct_4q_percapita, loggrowthtopct_4q]
+        y0s = if use_data && transform4q in [loggrowthtopct_4q_percapita, loggrowthtopct_4q]
             # Sum growth rates y_{t-3}, y_{t-2}, y_{t-1}, and y_t
-            use_data ? data[y0_index+1:end] : fill(NaN, 3)
-        elseif transform4q in [logleveltopct_4q_percapita, logleveltopct_4q]
+            data[y0_index+1:end]
+        elseif use_data && transform4q in [logleveltopct_4q_percapita, logleveltopct_4q]
             # Divide log levels y_t by y_{t-4}
-            use_data ? data[y0_index:end] : fill(NaN, 4)
+            data[y0_index:end]
         else
             Float64[]
         end

@@ -30,7 +30,6 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
 
     ### 1. Load parameter draws from Metropolis-Hastings
 
-    filename = get_forecast_input_file(m, :full)
     params = if !isempty(subset_inds)
         # Use subset of draws
         if isempty(subset_string)
@@ -41,7 +40,6 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
         # Use all draws
         load_draws(m, :full; verbose = verbose)
     end
-
 
     ### 2. Compute posterior moments
 
@@ -417,7 +415,7 @@ is above `bands[1,i]` and below `bands[2,i]`.
 """
 function find_density_bands{T<:AbstractFloat}(draws::Matrix, percent::T; minimize::Bool = true)
 
-    if !(0 < percent <= 1)
+    if !(0 <= percent <= 1)
         error("percent must be between 0 and 1")
     end
 

@@ -149,7 +149,8 @@ remove_meansbands_only_output_vars(output_vars)
 function remove_meansbands_only_output_vars(output_vars::Vector{Symbol})
     # All the <product>ut<class> and <product>4q<class> variables are computed
     # during compute_meansbands
-    meansbands_only_products = [:hist4q, :forecast4q, :bddforecast4q, :forecastut, :bddforecastut]
+    meansbands_only_products = [:histut, :hist4q, :forecastut, :forecast4q,
+                                :bddforecastut, :bddforecast4q]
 
     Base.filter(var -> !(get_product(var) in meansbands_only_products), output_vars)
 end

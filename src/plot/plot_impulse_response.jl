@@ -69,7 +69,7 @@ function plot_impulse_response(m::AbstractModel, shock::Symbol, vars::Vector{Sym
         # Save plot
         if !isempty(plotroot)
             output_file = get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
-                                                Symbol("irf_", shock, "_", detexify(var)),
+                                                Symbol("irf_", detexify(shock), "_", detexify(var)),
                                                 forecast_string = forecast_string,
                                                 fileformat = plot_extension())
             save_plot(plots[var], output_file, verbose = verbose)
@@ -82,7 +82,7 @@ end
 
 """
 ```
-irf(shock, var, mb; flip = false, label_mean_bands = false,
+irf(shock, var, mb; flip_sign = false, label_mean_bands = false,
     mean_color = :black, bands_color = :blue, bands_pcts = [\"90.0%\"])
 ```
 
@@ -96,7 +96,8 @@ User recipe called by `plot_impulse_response`.
 
 ### Keyword Arguments
 
-- `flip::Bool`: whether to flip the sign of the impulse response while plotting
+- `flip_sign::Bool`: whether to flip the sign of the impulse response while
+  plotting
 - `label_mean_bands::Bool`
 - `mean_color`
 - `bands_color`
@@ -108,7 +109,7 @@ are supported as keyword arguments.
 irf
 
 @recipe function f(irf::Irf;
-                   flip = false,
+                   flip_sign = false,
                    label_mean_bands = false,
                    mean_color = :black,
                    bands_color = :blue,
@@ -122,7 +123,7 @@ irf
 
     shock, var, mb = irf.args
     varshock = Symbol(var, "__", shock)
-    sign = flip ? -1 : 1
+    sign = flip_sign ? -1 : 1
 
     # Bands
     for pct in bands_pcts

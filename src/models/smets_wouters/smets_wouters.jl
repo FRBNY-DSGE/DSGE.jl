@@ -462,3 +462,25 @@ function settings_smets_wouters!(m::SmetsWouters)
     m <= Setting(:cond_full_names, [:obs_gdp, :obs_nominalrate])
     m <= Setting(:cond_semi_names, [:obs_nominalrate])
 end
+
+"""
+```
+shock_groupings(m::SmetsWouters)
+```
+
+Returns a `Vector{ShockGroup}`, which must be passed in to
+`plot_shock_decomposition`. See `?ShockGroup` for details.
+"""
+function shock_groupings(m::SmetsWouters)
+    gov = ShockGroup("g", [:g_sh], RGB(0.70, 0.13, 0.13)) # firebrick
+    bet = ShockGroup("b", [:b_sh], RGB(0.3, 0.3, 1.0))
+    tfp = ShockGroup("z", [:z_sh], RGB(1.0, 0.55, 0.0)) # darkorange
+    pmu = ShockGroup("p-mkp", [:λ_f_sh], RGB(0.60, 0.80, 0.20)) # yellowgreen
+    wmu = ShockGroup("w-mkp", [:λ_w_sh], RGB(0.0, 0.5, 0.5)) # teal
+    pol = ShockGroup("pol", vcat([:rm_sh], [Symbol("rm_shl$i") for i = 1:n_anticipated_shocks(m)]),
+                     RGB(1.0, 0.84, 0.0)) # gold
+    mei = ShockGroup("mu", [:μ_sh], :cyan)
+    det = ShockGroup("dt", [:dettrend], :gray40)
+
+    return [gov, bet, tfp, pmu, wmu, pol, mei, det]
+end

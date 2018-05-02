@@ -121,7 +121,7 @@ function csminwel(fcn::Function,
     iteration = 0
 
     # Maintain a trace
-    tr = OptimizationTrace{Csminwel}()
+    tr = OptimizationTrace{Float64, Csminwel}()
     tracing = show_trace || store_trace || extended_trace
     @csminwelltrace
 
@@ -321,8 +321,8 @@ function csminwel(fcn::Function,
                                        ftol,
                                        grtol)
 
-        x_resid  = Optim.x_residual(x, x_previous)
-        f_resid  = Optim.f_residual(f_x, f_x_previous, ftol)
+        x_resid  = Optim.x_abschange(x, x_previous)
+        f_resid  = Optim.f_abschange(f_x, f_x_previous)/abs(f_x + ftol)
         gr_resid = Optim.g_residual(gr)
 
         @csminwelltrace

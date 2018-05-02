@@ -1,6 +1,7 @@
 using DSGE
 using Base.Test
-using DataFrames: DataFrame, @data
+using DataFrames: DataFrame
+using DataArrays: @data
 
 # Previous and next quarter arithmetic
 q = Date(1913,12,13)
@@ -14,7 +15,11 @@ end_date   = Date(2010,01,01)
 DSGE.get_quarter_ends(start_date,end_date)
 DSGE.subtract_quarters(end_date, start_date)
 
-DSGE.stringstodates(["1913-12-23", "1992-11-14", "2002-01-01", "2014-12-19"])
+df1 = DataFrame(a = [1])
+df2 = DataFrame()
+df1, df2 = DSGE.reconcile_column_names(df1, df2)
+@test names(df1) == names(df2)
+@test size(df2, 1) == 0
 
 quartertodate("11q3")
 quartertodate("1997q4")
