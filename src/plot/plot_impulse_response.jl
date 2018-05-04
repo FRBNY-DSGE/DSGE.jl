@@ -113,7 +113,7 @@ irf
                    label_mean_bands = false,
                    mean_color = :black,
                    bands_color = :blue,
-                   bands_pcts = ["90.0%"])
+                   bands_pcts = which_density_bands(irf.args[3]))
     # Error checking
     if length(irf.args) != 3 || typeof(irf.args[1]) != Symbol || typeof(irf.args[2]) != Symbol ||
         typeof(irf.args[3]) != MeansBands
