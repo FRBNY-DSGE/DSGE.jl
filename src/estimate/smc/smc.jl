@@ -157,77 +157,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     if use_fixed_schedule
         ϕ_n = cloud.tempering_schedule[i]
     else
-        if resampled_last_period
-            # The ESS_bar should be reset to target an evenly weighted particle population
-            ESS_bar = tempering_target*n_parts
-            resampled_last_period = false
-        else
-            ESS_bar = tempering_target*cloud.ESS[i-1]
-        end
-
-        # Setting up the optimal ϕ solving function for endogenizing the tempering schedule
-        optimal_ϕ_function(ϕ)  = compute_ESS(get_loglh(cloud), get_weights(cloud), ϕ, ϕ_n1,
-                                             use_CESS = use_CESS, old_loglh = get_old_loglh(cloud)) - ESS_bar
-
-        # Find a ϕ_prop such that the optimal ϕ_n will lie somewhere between ϕ_n1 and ϕ_prop
-        # Do so by iterating through a proposed_fixed_schedule and finding the first
-        # ϕ_prop such that the ESS would fall by more than the targeted amount ESS_bar
-        if endo_type == :adaptive
-            while optimal_ϕ_function(ϕ_prop) >= 0 && j <= n_Φ
-                ϕ_prop = proposed_fixed_schedule[j]
-                j += 1
-            end
-        elseif endo_type == :adaptive_min
-            ϕ_prop = proposed_fixed_schedule[j]
-        elseif endo_type == :adaptive_min_j_eq_n
-            if j <= n_Φ
-                ϕ_prop = proposed_fixed_schedule[j]
-            else
-                ϕ_prop = 1.
-            end
-        else
-            throw("not an endo type")
-        end
-
-        # Note: optimal_ϕ_function(ϕ_n1) > 0 because ESS_{t-1} is always positive
-        # When ϕ_prop != 1. then there are still ϕ increments strictly below 1 that
-        # give the optimal ϕ step, ϕ_n.
-        # When ϕ_prop == 1. but optimal_ϕ_function(ϕ_prop) < 0 then there still exists
-        # an optimal ϕ step, ϕ_n, that does not equal 1.
-        # Thus the interval [optimal_ϕ_function(ϕ_n1), optimal_ϕ_function(ϕ_prop)] always
-        # contains a 0 by construction.
-
-        # Modification makes it such that ϕ_n is the minimum of ϕ_prop (the fixed schedule)
-        # at a given stage or the root-solved ϕ such that the ESS drops by the target amount.
-        # Thus the ϕ_schedule should be strictly bounded above by the fixed schedule
-        # i.e. the adaptive ϕ schedule should not outpace the fixed schedule at the end
-        # (when the fixed schedule tends to drop by less than 5% per iteration)
-
-        if ϕ_prop != 1. || optimal_ϕ_function(ϕ_prop) < 0
-            if endo_type == :adaptive
-                ϕ_n = fzero(optimal_ϕ_function, [ϕ_n1, ϕ_prop], xtol = 0.)
-            elseif endo_type == :adaptive_min
-                if optimal_ϕ_function(ϕ_prop) < 0
-                    ϕ_n = fzero(optimal_ϕ_function, [ϕ_n1, ϕ_prop], xtol = 0.)
-                else
-                    ϕ_n = ϕ_prop
-                    j += 1
-                end
-            elseif endo_type == :adaptive_min_j_eq_n
-                if optimal_ϕ_function(ϕ_prop) < 0
-                    ϕ_n = fzero(optimal_ϕ_function, [ϕ_n1, ϕ_prop], xtol = 0.)
-                else
-                    ϕ_n = ϕ_prop
-                end
-                j += 1
-            else
-                throw("not an endo type")
-            end
-            push!(cloud.tempering_schedule, ϕ_n)
-        else
-            ϕ_n = 1.
-            push!(cloud.tempering_schedule, ϕ_n)
-        end
+        ϕ_n, resampled_last_period, j = solve_adaptive_ϕ(cloud, proposed_fixed_schedule, i, j, ϕ_n1, tempering_target, n_Φ, endo_type, resampled_last_period, use_CESS = use_CESS)
     end
 
     ########################################################################################
