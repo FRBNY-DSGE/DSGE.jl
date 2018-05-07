@@ -125,7 +125,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     cloud.stage_index = i = 1
     cloud.ESS[1] = n_parts          # To make adaptive ϕ schedule calculate ESS_bar properly
 
-    j = 1                           # The index tracking to the fixed_schedule entry that ϕ_prop is set as
+    j = 2                           # The index tracking to the fixed_schedule entry that ϕ_prop is set as
     resampled_last_period = false   # To ensure proper resetting of ESS_bar right after resample
     ϕ_n = 0.                        # Instantiating ϕ_n and ϕ_prop variables to be referenced in their
     ϕ_prop = 0.                     # respective while loop conditions
