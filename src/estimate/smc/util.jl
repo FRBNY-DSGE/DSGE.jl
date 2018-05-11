@@ -101,7 +101,8 @@ function initialize_likelihoods(m::AbstractModel, data::Matrix{Float64}, c::Part
 end
 
 function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector{Float64},
-                          i::Int64, j::Int64, ϕ_n1::Float64, tempering_target::Float64, n_Φ::Int64, endo_type::Symbol,
+                          i::Int64, j::Int64, ϕ_prop::Float64, ϕ_n1::Float64,
+                          tempering_target::Float64, n_Φ::Int64, endo_type::Symbol,
                           resampled_last_period::Bool; use_CESS = use_CESS)
     if resampled_last_period
         # The ESS_bar should be reset to target an evenly weighted particle population
@@ -175,7 +176,7 @@ function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector
         push!(cloud.tempering_schedule, ϕ_n)
     end
 
-    return ϕ_n, resampled_last_period, j
+    return ϕ_n, resampled_last_period, j, ϕ_prop
 end
 
 """
@@ -319,6 +320,7 @@ function init_stage_print(cloud::ParticleCloud;
         println("phi = $(cloud.tempering_schedule[cloud.stage_index])")
 	println("--------------------------")
         println("c = $(cloud.c)")
+        println("ESS = $(cloud.ESS[cloud.stage_index])   ($(cloud.resamples) total resamples.)")
 	println("--------------------------")
     if VERBOSITY[verbose] >= VERBOSITY[:high]
         μ = weighted_mean(cloud)
