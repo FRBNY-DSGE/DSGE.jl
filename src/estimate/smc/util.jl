@@ -103,7 +103,7 @@ end
 function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector{Float64},
                           i::Int64, j::Int64, ϕ_prop::Float64, ϕ_n1::Float64,
                           tempering_target::Float64, n_Φ::Int64, endo_type::Symbol,
-                          resampled_last_period::Bool; use_CESS = use_CESS)
+                          resampled_last_period::Bool)
     if resampled_last_period
         # The ESS_bar should be reset to target an evenly weighted particle population
         ESS_bar = tempering_target*length(cloud)
@@ -114,7 +114,7 @@ function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector
 
     # Setting up the optimal ϕ solving function for endogenizing the tempering schedule
     optimal_ϕ_function(ϕ)  = compute_ESS(get_loglh(cloud), get_weights(cloud), ϕ, ϕ_n1,
-                                         use_CESS = use_CESS, old_loglh = get_old_loglh(cloud)) - ESS_bar
+                                         old_loglh = get_old_loglh(cloud)) - ESS_bar
 
     # Find a ϕ_prop such that the optimal ϕ_n will lie somewhere between ϕ_n1 and ϕ_prop
     # Do so by iterating through a proposed_fixed_schedule and finding the first
@@ -236,18 +236,12 @@ function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Dist
 end
 
 function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector{T},
-                                       ϕ_n::T, ϕ_n1::T; use_CESS::Bool = false,
+                                       ϕ_n::T, ϕ_n1::T;
                                        old_loglh::Vector{T} = zeros(length(loglh)))
     incremental_weights = exp.((ϕ_n1 - ϕ_n)*old_loglh + (ϕ_n - ϕ_n1)*loglh)
     new_weights = current_weights.*incremental_weights
-    if use_CESS
-        N   = length(incremental_weights)
-        ESS = N*sum(current_weights .* incremental_weights)^2/sum(current_weights .*
-                                                                  incremental_weights.^2)
-    else
-        normalized_weights = new_weights/sum(new_weights)
-        ESS = 1/sum(normalized_weights.^2)
-    end
+    normalized_weights = new_weights/sum(new_weights)
+    ESS = 1/sum(normalized_weights.^2)
     return ESS
 end
 
