@@ -146,7 +146,6 @@ function default_settings!(m::AbstractModel)
     settings[:use_fixed_schedule] = Setting(:use_fixed_schedule, true, true, "fix", "Boolean indicating whether or not to use a fixed tempering (ϕ) schedule")
     settings[:tempering_target] = Setting(:tempering_target, 0.95, "The coefficient of the sample size metric to be targeted when solving for an endogenous ϕ")
     settings[:resampling_threshold] = Setting(:resampling_threshold, 0.5, "The threshold such that the particles will be resampled when the population drops below threshold * N")
-    settings[:use_CESS] = Setting(:use_CESS, false, "Whether or not to use CESS (the conditional ESS metric developed in Zhou, Johansen, and Aston 2015) as the degeneracy metric")
     # temporary setting to save different output files
     settings[:smc_iteration] = Setting(:smc_iteration, 1, true, "iter", "The iteration index for the number of times smc has been run on the same data vintage. Primarily for numerical accuracy/testing purposes.")
 

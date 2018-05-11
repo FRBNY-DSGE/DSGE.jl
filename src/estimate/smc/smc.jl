@@ -67,7 +67,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     resampling_method = get_setting(m, :resampler_smc)
     threshold_ratio = get_setting(m, :resampling_threshold)
     threshold = threshold_ratio * n_parts
-    use_CESS = get_setting(m, :use_CESS)
 
     # Step 3 (Mutation) settings
     c = get_setting(m, :step_size_smc)
@@ -166,7 +165,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     if use_fixed_schedule
         ϕ_n = cloud.tempering_schedule[i]
     else
-        ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud, proposed_fixed_schedule, i, j, ϕ_prop, ϕ_n1, tempering_target, n_Φ, endo_type, resampled_last_period, use_CESS = use_CESS)
+        ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud, proposed_fixed_schedule, i, j, ϕ_prop, ϕ_n1, tempering_target, n_Φ, endo_type, resampled_last_period)
     end
 
     ########################################################################################
@@ -175,11 +174,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     # Calculate incremental weights
     incremental_weights = exp.((ϕ_n1 - ϕ_n)*get_old_loglh(cloud) + (ϕ_n - ϕ_n1)*get_loglh(cloud))
-
-    # Need previous weights for CESS calculation
-    if use_CESS
-        previous_weights = get_weights(cloud)
-    end
 
     # Update weights
     update_weights!(cloud, incremental_weights)
@@ -197,12 +191,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ########################################################################################
 
     # Calculate the degeneracy/effective sample size metric
-    if use_CESS
-        push!(cloud.ESS, n_parts*sum(previous_weights .* incremental_weights)^2/sum(previous_weights .*
-                                                                                    incremental_weights.^2))
-    else
-        push!(cloud.ESS, 1/sum(normalized_weights.^2))
-    end
+    push!(cloud.ESS, 1/sum(normalized_weights.^2))
 
     # If this assertion does not hold then there are likely too few particles
     @assert !isnan(cloud.ESS[i]) "no particles have non-zero weight"
