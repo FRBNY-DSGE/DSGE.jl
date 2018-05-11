@@ -152,14 +152,13 @@ end
 # For resetting a previously used cloud's settings for the purpose of time tempering
 function reset_cloud_settings!(c::ParticleCloud)
     c.tempering_schedule = zeros(1)
-    c.ESS = zeros(1)
+    c.ESS = [c.ESS[end]]
     c.stage_index = 1
     c.n_Φ = 0
     c.resamples = 0
     c.c = 0
     c.accept = 0.
     c.total_sampling_time = 0.
-    reset_weights!(c)
 end
 
 function update_acceptance_rate!(c::ParticleCloud)

@@ -123,14 +123,23 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     cloud.c = c
     cloud.accept = accept
     cloud.stage_index = i = 1
-    cloud.ESS[1] = n_parts          # To make adaptive ϕ schedule calculate ESS_bar properly
+    if !tempered_update
+        cloud.ESS[1] = n_parts      # To make adaptive ϕ schedule calculate ESS_bar properly
+    end
 
     j = 2                           # The index tracking to the fixed_schedule entry that ϕ_prop is set as
     resampled_last_period = false   # To ensure proper resetting of ESS_bar right after resample
     ϕ_n = 0.                        # Instantiating ϕ_n and ϕ_prop variables to be referenced in their
     ϕ_prop = 0.                     # respective while loop conditions
     w_matrix = zeros(n_parts, 1)    # Incremental and normalized weight matrices (n_parts x n_Φ) to store
-    W_matrix = ones(n_parts, 1)     # for the calculation of the MDD
+    if tempered_update
+        W_matrix = similar(w_matrix)
+        for k in 1:n_parts
+            W_matrix[k] = cloud.particles[k].weight
+        end
+    else
+        W_matrix = ones(n_parts, 1)
+    end
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         init_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)
@@ -157,7 +166,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     if use_fixed_schedule
         ϕ_n = cloud.tempering_schedule[i]
     else
-        ϕ_n, resampled_last_period, j = solve_adaptive_ϕ(cloud, proposed_fixed_schedule, i, j, ϕ_n1, tempering_target, n_Φ, endo_type, resampled_last_period, use_CESS = use_CESS)
+        ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud, proposed_fixed_schedule, i, j, ϕ_prop, ϕ_n1, tempering_target, n_Φ, endo_type, resampled_last_period, use_CESS = use_CESS)
     end
 
     ########################################################################################
