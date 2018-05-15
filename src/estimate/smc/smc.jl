@@ -7,15 +7,15 @@ smc(m::AbstractModel)
 
 ### Arguments:
 
-- `m`: A model object, from which its parameters values, prior dists, and bounds will be referenced
-- `data`: A matrix or data frame containing the time series of the observables to be used in the calculation of the posterior/likelihood
-- `old_data`: A matrix containing the time series of observables of previous data (with `data` being the new data) for the purposes of time tempered estimation
+- `m`: A model object, from which its parameters values, prior dists, bounds, and various other settings will be referenced
+- `data`: A matrix or dataframe containing the time series of the observables to be used in the calculation of the posterior/likelihood
+- `old_data`: A matrix containing the time series of observables of previous data (with `data` being the new data) for the purposes of a time tempered estimation (that is, using the posterior draws from a previous estimation as the initial set of draws for an estimation with new data)
 
 ### Keyword Arguments:
 - `verbose`: The desired frequency of function progress messages printed to standard out.
 	- `:none`: No status updates will be reported.
 	- `:low`: Status updates for SMC initialization and recursion will be included.
-	- `:high`: Status updates for every iteration of SMC is output, which includes the mu and sigma of each individual parameter draw after each iteration, as well as the calculated acceptance rate, the ESS, and the number of times resampled.
+	- `:high`: Status updates for every iteration of SMC is output, which includes the mean and standard deviation of each individual parameter draw after each iteration, as well as the calculated acceptance rate, the ESS, and the number of times resampled.
 
 ### Outputs
 
@@ -29,9 +29,8 @@ The implementation here is based upon Edward Herbst and Frank Schorfheide's 2014
 
 SMC is broken up into three main steps:
 
-- `Correction`: Reweight the particles from stage n-1 by defining "incremental weights", incweight, which gradually incorporate the likelihood function p(Y|θ(i, n-1)) into the particle weights.
-- `Selection`: Resample the particles if the distribution of particles begins to degenerate, according to a tolerance level ESS < N/2. The current resampling technique employed is systematic resampling.
-
+- `Correction`: Reweight the particles from stage n-1 by defining "incremental weights", `incremental_weight`, which gradually incorporate/"temper in" the likelihood function p(Y|θ(i, n-1)) into the particle weights.
+- `Selection`: Resample the particles if the distribution of particles begins to degenerate, according to a tolerance level ESS < N/2.
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis Hastings algorithm.
 """
 function smc(m::AbstractModel, data::Matrix{Float64};
@@ -101,13 +100,13 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         cloud = load(loadpath, "cloud")
         reset_cloud_settings!(cloud)
-        initialize_likelihoods(m, data, cloud, parallel = parallel)
+        initialize_likelihoods!(m, data, cloud, parallel = parallel)
     else
         # Instantiating ParticleCloud object
         cloud = ParticleCloud(m, n_parts)
 
         # Modifies the cloud object in place to update draws, loglh, & logpost
-        initial_draw(m, data, cloud, parallel = parallel)
+        initial_draw!(m, data, cloud, parallel = parallel)
     end
 
     # Fixed schedule for construction of ϕ_prop
