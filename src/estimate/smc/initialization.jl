@@ -7,13 +7,13 @@ Draw from a general starting distribution (set by default to be from the prior) 
 Returns a tuple (logpost, loglh) and modifies the particle objects in the particle cloud in place.
 
 """
-function initial_draw(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
-                      parallel::Bool = false)
+function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
+                       parallel::Bool = false)
     n_parts = length(c)
     loglh = zeros(n_parts)
     logpost = zeros(n_parts)
     if parallel
-        out = @parallel (hcat) for i in 1:n_parts
+        draws, loglh, logpost = @parallel (vector_reduce) for i in 1:n_parts
             draw = vec(rand(m.parameters, 1))
             draw_loglh = 0.
             draw_logpost = 0.
@@ -29,14 +29,10 @@ function initial_draw(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
                 end
                 success = true
             end
-            (draw, draw_loglh, draw_logpost)
+            vector_reshape(draw, draw_loglh, draw_logpost)
         end
-        draws = zeros(n_parameters(m), n_parts)
-        for i in 1:n_parts
-            draws[:, i] = out[i][1]
-            loglh[i]    = out[i][2]
-            logpost[i]  = out[i][3]
-        end
+        loglh = squeeze(loglh, 1)
+        logpost = squeeze(logpost, 1)
     else
         draws = rand(m.parameters, n_parts)
         for i in 1:n_parts
@@ -64,8 +60,8 @@ end
 # ParticleCloud from a previous estimation to each particle's respective old_loglh
 # field, and for evaluating/saving the likelihood and posterior at the new data, which
 # here is just the argument, data.
-function initialize_likelihoods(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
-                                parallel::Bool = false)
+function initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
+                                 parallel::Bool = false)
     # Retire log-likelihood values from the old estimation to the field old_loglh
     map(p -> p.old_loglh = p.loglh, c.particles)
 
@@ -75,15 +71,11 @@ function initialize_likelihoods(m::AbstractModel, data::Matrix{Float64}, c::Part
     logpost = zeros(n_parts)
 
     if parallel
-        out = @sync @parallel (hcat) for i in 1:n_parts
+        loglh, logpost = @sync @parallel (scalar_reduce) for i in 1:n_parts
             update!(m, draws[:, i])
             draw_loglh = likelihood(m, data)
             draw_logpost = prior(m)
-            (draw_loglh, draw_logpost)
-        end
-        for i in 1:n_parts
-            loglh[i]    = out[i][1]
-            logpost[i]  = out[i][2]
+            scalar_reshape(draw_loglh, draw_logpost)
         end
     else
         for i in 1:n_parts
