@@ -12,18 +12,20 @@ end
 
 """
 ```
-n_scenario_draws(m, scen::Scenario)
+count_scenario_draws!(m, scen::Scenario)
 ```
 
 Return the number of draws for `scen`, determined using
-`get_scenario_input_file(m, scen)`.
+`get_scenario_input_file(m, scen)`, and update the
+`n_draws` field of `scen` with this count.
 """
-function n_scenario_draws(m::AbstractModel, scen::Scenario)
+function count_scenario_draws!(m::AbstractModel, scen::Scenario)
     input_file = get_scenario_input_file(m, scen)
     draws = jldopen(input_file, "r") do file
         dataset = file["arr"]
         size(dataset)[1]
     end
+    scen.n_draws = draws
     return draws
 end
 
@@ -36,11 +38,19 @@ Add the targets from the `draw_index`th draw of the raw scenario targets to
 `scen.targets`.
 """
 function load_scenario_targets!(m::AbstractModel, scen::Scenario, draw_index::Int)
-    path = get_scenario_input_file(m, scen)
-    file = load(path)
-    raw_targets = file["arr"][draw_index, :, :]
-    #raw_targets = squeeze(h5read(path, "arr", (draw_index, :, :)), 1)
-    target_inds = load(path, "target_indices")
+    if isempty(scen.target_names)
+        n_periods = forecast_horizons(m)
+        for target in keys(m.observables)
+            scen.targets[target] = fill(NaN, n_periods)
+        end
+    else
+        path = get_scenario_input_file(m, sce)
+        raw_targets, target_inds = jldopen(path, "r") do file
+            arr = read(file, "arr")
+            inds = read(file, "target_indices")
+            arr[draw_index, :, :], inds
+        end
+    end
 
     @assert collect(keys(target_inds)) == scen.target_names "Target indices in $path do not match target names in $(scen.key)"
 
