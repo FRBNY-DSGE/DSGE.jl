@@ -1,6 +1,8 @@
 function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector{Float64},
                           i::Int64, j::Int64, ϕ_prop::Float64, ϕ_n1::Float64,
-                          tempering_target::Float64, n_Φ::Int64, resampled_last_period::Bool)
+                          tempering_target::Float64, resampled_last_period::Bool)
+    n_Φ = length(proposed_fixed_schedule)
+
     if resampled_last_period
         # The ESS_bar should be reset to target an evenly weighted particle population
         ESS_bar = tempering_target*length(cloud)
