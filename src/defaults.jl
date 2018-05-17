@@ -148,12 +148,7 @@ function default_settings!(m::AbstractModel)
     settings[:resampling_threshold] = Setting(:resampling_threshold, 0.5, "The threshold such that the particles will be resampled when the population drops below threshold * N")
     # temporary setting to save different output files
     settings[:smc_iteration] = Setting(:smc_iteration, 1, true, "iter", "The iteration index for the number of times smc has been run on the same data vintage. Primarily for numerical accuracy/testing purposes.")
-
-    # Time tempering (to be changed)
-    settings[:previous_data_vintage] = Setting(:previous_data_vintage, vint, "The old data vintage to start SMC from.")
-    # Temporary setting to test logMDD accuracy of time tempering
-    settings[:time_temper] = Setting(:time_temper, false, true, "temp", "Indicate whether or not time tempering was used")
-
+    settings[:previous_data_vintage] = Setting(:previous_data_vintage, vint, "The old data vintage to start SMC from when time tempering.")
     # Alternative policy
     baseline_policy = AltPolicy(:historical, eqcond, solve, forecast_init = identity)
     settings[:alternative_policy] = Setting(:alternative_policy, baseline_policy)
