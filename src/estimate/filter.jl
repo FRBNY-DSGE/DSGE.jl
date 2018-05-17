@@ -43,41 +43,7 @@ function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::Syste
     data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
     start_date = max(date_presample_start(m), df[1, :date])
     filter(m, data, system, s_0, P_0; start_date = start_date,
-           outputs = outputs, include_presample = include_presample)
-end
-
-function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0);
-    catch_errors::Bool = false, start_date::Date = date_presample_start(m),
-    include_presample::Bool = true, outputs = [:loglh, :pred, :filt])
-
-    # If we are in Metropolis-Hastings, then any errors coming out of `gensys`
-    # should be caught and a -Inf posterior should be returned.
-    system = try
-        Nullable{System}(compute_system(m))
-    catch err
-        if catch_errors && isa(err, GensysError)
-            Nullable{System}()
-        else
-            rethrow(err)
-        end
-    end
-
-    if isnull(system)
-        return Kalman(-Inf)
-    else
-        try
-            filter(m, data, get(system), s_0, P_0; start_date = start_date,
-                   nclude_presample = include_presample, outputs = outputs)
-        catch err
-            if catch_errors && isa(err, DomainError)
-                warn("Log of incremental likelihood is negative; returning -Inf")
-                return Kalman(-Inf)
-            else
-                rethrow(err)
-            end
-        end
-    end
+           include_presample = include_presample, outputs = outputs)
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::System,
