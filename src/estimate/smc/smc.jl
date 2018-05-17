@@ -39,9 +39,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ### Setting Parameters
     ########################################################################################
 
-    # Temporary
-    endo_type = get_setting(m, :endogenous_type)
-
     # General
     parallel = get_setting(m, :use_parallel_workers)
     n_parts = get_setting(m, :n_particles)
@@ -165,7 +162,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     if use_fixed_schedule
         ϕ_n = cloud.tempering_schedule[i]
     else
-        ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud, proposed_fixed_schedule, i, j, ϕ_prop, ϕ_n1, tempering_target, n_Φ, endo_type, resampled_last_period)
+        ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud, proposed_fixed_schedule, i, j, ϕ_prop, ϕ_n1, tempering_target, n_Φ, resampled_last_period)
     end
 
     ########################################################################################
