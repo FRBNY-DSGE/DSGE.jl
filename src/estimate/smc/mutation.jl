@@ -67,7 +67,7 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                 update!(m, para_new)
                 like_new = likelihood(m, data; sampler = true)
                 post_new = ϕ_n*like_new + prior(m) - para_new_density
-                like_old_data = likelihood(m, old_data; sampler = true)
+                like_old_data = isempty(old_data) ? 0. : likelihood(m, old_data; sampler = true)
             catch
                 post_new = like_new = like_old_data = -Inf
             end
