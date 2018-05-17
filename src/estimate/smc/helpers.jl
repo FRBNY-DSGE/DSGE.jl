@@ -1,7 +1,6 @@
 function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector{Float64},
                           i::Int64, j::Int64, ϕ_prop::Float64, ϕ_n1::Float64,
-                          tempering_target::Float64, n_Φ::Int64, endo_type::Symbol,
-                          resampled_last_period::Bool)
+                          tempering_target::Float64, n_Φ::Int64, resampled_last_period::Bool)
     if resampled_last_period
         # The ESS_bar should be reset to target an evenly weighted particle population
         ESS_bar = tempering_target*length(cloud)
@@ -17,21 +16,9 @@ function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector
     # Find a ϕ_prop such that the optimal ϕ_n will lie somewhere between ϕ_n1 and ϕ_prop
     # Do so by iterating through a proposed_fixed_schedule and finding the first
     # ϕ_prop such that the ESS would fall by more than the targeted amount ESS_bar
-    if endo_type == :adaptive
-        while optimal_ϕ_function(ϕ_prop) >= 0 && j <= n_Φ
-            ϕ_prop = proposed_fixed_schedule[j]
-            j += 1
-        end
-    elseif endo_type == :adaptive_min
+    while optimal_ϕ_function(ϕ_prop) >= 0 && j <= n_Φ
         ϕ_prop = proposed_fixed_schedule[j]
-    elseif endo_type == :adaptive_min_j_eq_n
-        if j <= n_Φ
-            ϕ_prop = proposed_fixed_schedule[j]
-        else
-            ϕ_prop = 1.
-        end
-    else
-        throw("not an endo type")
+        j += 1
     end
 
     # Note: optimal_ϕ_function(ϕ_n1) > 0 because ESS_{t-1} is always positive
@@ -49,25 +36,7 @@ function solve_adaptive_ϕ(cloud::ParticleCloud, proposed_fixed_schedule::Vector
     # (when the fixed schedule tends to drop by less than 5% per iteration)
 
     if ϕ_prop != 1. || optimal_ϕ_function(ϕ_prop) < 0
-        if endo_type == :adaptive
-            ϕ_n = fzero(optimal_ϕ_function, [ϕ_n1, ϕ_prop], xtol = 0.)
-        elseif endo_type == :adaptive_min
-            if optimal_ϕ_function(ϕ_prop) < 0
-                ϕ_n = fzero(optimal_ϕ_function, [ϕ_n1, ϕ_prop], xtol = 0.)
-            else
-                ϕ_n = ϕ_prop
-                j += 1
-            end
-        elseif endo_type == :adaptive_min_j_eq_n
-            if optimal_ϕ_function(ϕ_prop) < 0
-                ϕ_n = fzero(optimal_ϕ_function, [ϕ_n1, ϕ_prop], xtol = 0.)
-            else
-                ϕ_n = ϕ_prop
-            end
-            j += 1
-        else
-            throw("not an endo type")
-        end
+        ϕ_n = fzero(optimal_ϕ_function, [ϕ_n1, ϕ_prop], xtol = 0.)
         push!(cloud.tempering_schedule, ϕ_n)
     else
         ϕ_n = 1.

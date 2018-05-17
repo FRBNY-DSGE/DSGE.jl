@@ -149,9 +149,6 @@ function default_settings!(m::AbstractModel)
     # temporary setting to save different output files
     settings[:smc_iteration] = Setting(:smc_iteration, 1, true, "iter", "The iteration index for the number of times smc has been run on the same data vintage. Primarily for numerical accuracy/testing purposes.")
 
-    # Temporary!
-    settings[:endogenous_type] = Setting(:endogenous_type, :adaptive_min, "Adaptive or adaptive min")
-
     # Time tempering (to be changed)
     settings[:previous_data_vintage] = Setting(:previous_data_vintage, vint, "The old data vintage to start SMC from.")
     # Temporary setting to test logMDD accuracy of time tempering
