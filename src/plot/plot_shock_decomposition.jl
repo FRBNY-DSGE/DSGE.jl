@@ -176,7 +176,7 @@ shockdec
         legendfont --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
 
         x = df[:date]
-        y = convert(Array, df[cat_names])
+        y = convert(Matrix{Float64}, df[cat_names])
         StatPlots.GroupedBar((x, y))
     end
 
@@ -189,7 +189,9 @@ shockdec
         label     := hist_label
 
         inds = find(hist.means[1, :date] .<= dates .<= hist.means[end, :date])
-        xnums[inds], df[inds, :detrendedMean]
+        x = xnums[inds]
+        y = convert(Vector{Float64}, df[inds, :detrendedMean])
+        x, y
     end
 
     # Detrended mean forecast
@@ -198,6 +200,8 @@ shockdec
         label     := forecast_label
 
         inds = find(hist.means[end, :date] .<= dates .<= forecast.means[end, :date])
-        xnums[inds], df[inds, :detrendedMean]
+        x = xnums[inds]
+        y = convert(Vector{Float64}, df[inds, :detrendedMean])
+        x, y
     end
 end
