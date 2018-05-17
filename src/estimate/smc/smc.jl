@@ -7,8 +7,8 @@ smc(m::AbstractModel)
 
 ### Arguments:
 
-- `m`: A model object, from which its parameters values, prior dists, bounds, and various other settings will be referenced
-- `data`: A matrix or dataframe containing the time series of the observables to be used in the calculation of the posterior/likelihood
+- `m`: A model object, which stores parameter values, prior dists, bounds, and various other settings that will be referenced
+- `data`: A matrix or dataframe containing the time series of the observables used in the calculation of the posterior/likelihood
 - `old_data`: A matrix containing the time series of observables of previous data (with `data` being the new data) for the purposes of a time tempered estimation (that is, using the posterior draws from a previous estimation as the initial set of draws for an estimation with new data)
 
 ### Keyword Arguments:
@@ -19,18 +19,18 @@ smc(m::AbstractModel)
 
 ### Outputs
 
-- `cloud`: The ParticleCloud object that contains all of the information about the parameter values from the sample, their respective log-likelihoods, the ESS schedule, tempering schedule etc. is saved in the saveroot.
+- `cloud`: The ParticleCloud object containing all of the information about the parameter values from the sample, their respective log-likelihoods, the ESS schedule, tempering schedule etc., which is saved in the saveroot.
 
 ### Overview
 
-Sequential Monte Carlo can be used in lieu of Random Walk Metropolis Hastings to generate parameter samples from high-dimensional parameter spaces using sequentially constructed proposal densities.
+Sequential Monte Carlo can be used in lieu of Random Walk Metropolis Hastings to generate parameter samples from high-dimensional parameter spaces using sequentially constructed proposal densities to be used in iterative importance sampling.
 
-The implementation here is based upon Edward Herbst and Frank Schorfheide's 2014 paper 'Sequential Monte Carlo Sampling for DSGE Models' and the code accompanying their book 'Bayesian Estimation of DSGE Models'.
+The implementation here is based on Edward Herbst and Frank Schorfheide's 2014 paper 'Sequential Monte Carlo Sampling for DSGE Models' and the code accompanying their book 'Bayesian Estimation of DSGE Models'.
 
 SMC is broken up into three main steps:
 
-- `Correction`: Reweight the particles from stage n-1 by defining "incremental weights", `incremental_weight`, which gradually incorporate/"temper in" the likelihood function p(Y|θ(i, n-1)) into the particle weights.
-- `Selection`: Resample the particles if the distribution of particles begins to degenerate, according to a tolerance level ESS < N/2.
+- `Correction`: Reweight the particles from stage n-1 by defining incremental weights, which gradually "temper in" the likelihood function p(Y|θ)^(ϕ_n - ϕ_n-1) into the normalized particle weights.
+- `Selection`: Resample the particles if the distribution of particles begins to degenerate, according to a tolerance level for the ESS.
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis Hastings algorithm.
 """
 function smc(m::AbstractModel, data::Matrix{Float64};
@@ -74,6 +74,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     α = get_setting(m, :mixture_proportion)
     fixed_para_inds = find([θ.fixed for θ in m.parameters])
     free_para_inds = find([!θ.fixed for θ in m.parameters])
+    n_free_para = length(free_para_inds)
 
     ########################################################################################
     ### Initialize Algorithm: Draws from prior
@@ -222,11 +223,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
     d = MvNormal(θ_bar[free_para_inds], R_fr)
-
-    ### BLOCKING ###
-    n_para = n_parameters(m)
-    n_free_para = length(free_para_inds)
-    n_blocks = get_setting(m, :n_smc_blocks)
 
     # New way of generating blocks
     blocks_free = generate_free_blocks(n_free_para, n_blocks)

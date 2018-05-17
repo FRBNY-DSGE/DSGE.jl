@@ -6,7 +6,7 @@
 # individual iterations to return n singleton vectors (one element vectors) of those n
 # scalars so as to preserve the homogeneity of the input/output type coming into/out of
 # the scalar reduce function.
-# This would obviously not work if the input argument types were just Ints or Float64s
+# This would not work if the input argument types were just Ints or Float64s
 # since a return type of Int/Float64 for scalar reduce function does not permit that
 # function to return collections of items (because an Int/Float64 can only contain a
 # single value).
@@ -66,15 +66,18 @@ function vector_reshape(args...)
     return return_arg
 end
 
-# For mutation
-# Generate a Vector of Vector{Int64} of length n_blocks, where each
-# element contains a subset of the randomly permuted set of indices 1:n_para
-# For the purpose of indexing into R_fr
-function generate_free_blocks(n_para::Int64, n_blocks::Int64)
-    rand_inds = shuffle(1:n_para)
+"""
+```
+function generate_free_blocks(n_free_para, n_blocks)
+```
 
-    subset_length = cld(n_para, n_blocks) # ceiling division
-    last_block_length = n_para - subset_length*(n_blocks - 1)
+Return a Vector{Vector{Int64}} where each internal Vector{Int64} contains a subset of the range 1:n_free_para of randomly permuted indices. This is used to index out random blocks of free parameters from the covariance matrix for the mutation step.
+"""
+function generate_free_blocks(n_free_para::Int64, n_blocks::Int64)
+    rand_inds = shuffle(1:n_free_para)
+
+    subset_length = cld(n_free_para, n_blocks) # ceiling division
+    last_block_length = n_free_para - subset_length*(n_blocks - 1)
 
     blocks_free = Vector{Vector{Int64}}(n_blocks)
     for i in 1:n_blocks
@@ -88,24 +91,20 @@ function generate_free_blocks(n_para::Int64, n_blocks::Int64)
     return blocks_free
 end
 
-# For mutation
-# Generate a Vector of Vector{Int64} of length n_blocks, where each
-# element contains a subset corresponding to the subset of blocks_free of the same
-# index but with indices that map to free_para_inds as opposed to 1:n_para
-# For the purpose of "re-creating" the proposed parameter vector that contains both free
-# and fixed parameters from the mh step generated from only the free parameters
+"""
+```
+function generate_all_blocks(blocks_free, free_para_inds)
+```
+
+Return a Vector{Vector{Int64}} where each internal Vector{Int64} contains indices corresponding to those in `blocks_free` but mapping to `1:n_para` (as opposed to `1:n_free_para`). These blocks are used to reconstruct the particle vector by inserting the mutated free parameters into the size `n_para,` particle vector, which also contains fixed parameters.
+"""
 function generate_all_blocks(blocks_free::Vector{Vector{Int64}}, free_para_inds::Vector{Int64})
     n_free_para = length(free_para_inds)
-    # Need to know the mapping from an ordered list of 1:n_free_para
-    # to the index in the actual parameter vector
     ind_mappings = Dict{Int64, Int64}()
     for (k, v) in zip(1:n_free_para, free_para_inds)
         ind_mappings[k] = v
     end
 
-    # Want: Input: blocks, a vector of vectors of indices of randomized blocks of an ordered list of 1:n_free_para
-    # Output: rev_blocks, a vector of vector of indices of the rand blocks indices that correspond to the actual
-    # indices in a parameter vector
     function block_map(blocks::Vector{Vector{Int64}}, ind_mappings::Dict{Int64, Int64})
         blocks_all = similar(blocks)
         for (i, block) in enumerate(blocks)
