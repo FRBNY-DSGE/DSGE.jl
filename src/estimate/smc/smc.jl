@@ -54,6 +54,11 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     end
 
     # Step 0 (ϕ schedule) settings
+    i = 1                           # The index tracking the stage of the algorithm
+    j = 2                           # The index tracking to the fixed_schedule entry that ϕ_prop is set as
+    resampled_last_period = false   # To ensure proper resetting of ESS_bar right after resample
+    ϕ_n = 0.                        # Instantiating ϕ_n and ϕ_prop variables to be referenced in their
+    ϕ_prop = 0.                     # respective while loop conditions
     use_fixed_schedule = get_setting(m, :use_fixed_schedule)
     λ = get_setting(m, :λ)
     n_Φ = get_setting(m, :n_Φ)
@@ -66,8 +71,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     # Step 3 (Mutation) settings
     c = get_setting(m, :step_size_smc)
-    accept = get_setting(m, :init_accept)
-    target = get_setting(m, :target_accept)
+    target = accept = get_setting(m, :target_accept)
     α = get_setting(m, :mixture_proportion)
     fixed_para_inds = find([θ.fixed for θ in m.parameters])
     free_para_inds = find([!θ.fixed for θ in m.parameters])
@@ -97,7 +101,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         loadpath = replace(loadpath, "temp=true", "temp=false")
 
         cloud = load(loadpath, "cloud")
-        reset_cloud_settings!(cloud)
+        initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
         initialize_likelihoods!(m, data, cloud, parallel = parallel)
     else
         # Instantiating ParticleCloud object
@@ -105,6 +109,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         # Modifies the cloud object in place to update draws, loglh, & logpost
         initial_draw!(m, data, cloud, parallel = parallel)
+
+        initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
     end
 
     # Fixed schedule for construction of ϕ_prop
@@ -114,20 +120,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         proposed_fixed_schedule = ((collect(1:n_Φ)-1)/(n_Φ-1)).^λ
     end
 
-    # Saving initial parameter values in the ParticleCloud instance
-    cloud.n_Φ = n_Φ
-    cloud.c = c
-    cloud.accept = accept
-    cloud.stage_index = i = 1
-    if !tempered_update
-        cloud.ESS[1] = n_parts      # To make adaptive ϕ schedule calculate ESS_bar properly
-    end
-
-    j = 2                           # The index tracking to the fixed_schedule entry that ϕ_prop is set as
-    resampled_last_period = false   # To ensure proper resetting of ESS_bar right after resample
-    ϕ_n = 0.                        # Instantiating ϕ_n and ϕ_prop variables to be referenced in their
-    ϕ_prop = 0.                     # respective while loop conditions
-    w_matrix = zeros(n_parts, 1)    # Incremental and normalized weight matrices (n_parts x n_Φ) to store
+    # Instantiate incremental and normalized weight matrices to be used for logMDD calculation
+    w_matrix = zeros(n_parts, 1)
     if tempered_update
         W_matrix = similar(w_matrix)
         for k in 1:n_parts
@@ -162,7 +156,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     if use_fixed_schedule
         ϕ_n = cloud.tempering_schedule[i]
     else
-        ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud, proposed_fixed_schedule, i, j, ϕ_prop, ϕ_n1, tempering_target, n_Φ, resampled_last_period)
+        ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud, proposed_fixed_schedule, i, j, ϕ_prop,
+                                                                 ϕ_n1, tempering_target, resampled_last_period)
     end
 
     ########################################################################################
@@ -195,8 +190,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     # Resample if the degeneracy/effective sample size metric falls below the accepted threshold
     if (cloud.ESS[i] < threshold)
-        new_inds = resample(normalized_weights; method = resampling_method,
-                            parallel = parallel, testing = m.testing)
+        new_inds = resample(normalized_weights; method = resampling_method)
 
         # update parameters/logpost/loglh with resampled values
         # reset the weights to 1/n_parts
