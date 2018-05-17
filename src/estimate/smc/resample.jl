@@ -1,7 +1,6 @@
 """
 ```
-resample(weights::AbstractArray; method::Symbol = :systematic;
-         parallel::Bool = false, testing::Bool = false)
+resample(weights::AbstractArray; method::Symbol = :systematic)
 ```
 
 Reindexing and reweighting samples from a degenerate distribution
@@ -11,54 +10,42 @@ Reindexing and reweighting samples from a degenerate distribution
         the weights of a degenerate distribution.
 - `method`: :systematic or :multinomial
         the method for resampling
-- `parallel`: to indicate whether to resample using multiple workers (if available)
-- `testing`: to indicate whether to give test output
 
 ### Output:
 
-- `indx`
-        the newly assigned indices of parameter draws.
+- `indx`: the newly assigned indices of parameter draws.
 """
-function resample(weights::AbstractArray; method::Symbol = :systematic,
-                  parallel::Bool = false, testing::Bool = false)
+function resample(weights::Vector{Float64}; method::Symbol = :systematic)
     if method == :systematic
         n_parts = length(weights)
+
         # Stores cumulative weights until given index
-        cumulative_weights = cumsum(weights./sum(weights))
-        uu = Vector{Float64}(n_parts)
-
-        # Random part of algorithm - choose offset of first index by some u~U[0,1)
-        rand_offset=rand()
-
-        # Set "spokes" at the position of the random offset
-        for j = 1:n_parts
-            uu[j] = (j - 1) + rand_offset
-        end
+        cumulative_weights = cumsum(weights/sum(weights))
+        offset = rand()
 
         # Function solves where an individual "spoke" lands
-        function subsys(i::Int)
-            findfirst(j -> cumulative_weights[j] > uu[i]/n_parts, 1:length(cumulative_weights))
-        end
-
-        # Map function if parallel
-        if parallel
-            parindx = pmap(j -> subsys(j), 1:n_parts)
-            indx =
-            @sync @parallel (vcat) for j in 1:n_parts
-                subsys(j)
+        function subsys(i::Int, offset::Float64, n_parts::Int64, start_ind::Int64,
+                        cumulative_weights::Vector{Float64})
+            threshold = (i - 1 + offset)/n_parts
+            range = start_ind:n_parts
+            for j in range
+                if cumulative_weights[j] > threshold
+                    return j
+                end
             end
-        else
-            indx = [subsys(j) for j = 1:n_parts]
+            return 0
         end
 
-        # # Write output to file if in testing mode
-        # if testing
-            # open("resamples.csv","a") do x
-                # writecsv(x,indx)
-            # end
-        # end
+        indx = Vector{Int64}(n_parts)
+        for i in 1:n_parts
+            if i == 1
+                indx[i] = subsys(i, offset, n_parts, 1, cumulative_weights)
+            else
+                indx[i] = subsys(i, offset, n_parts, indx[i-1], cumulative_weights)
+            end
+        end
 
-        return vec(indx)
+        return indx
     elseif method == :multinomial
         n_parts = length(weights)
         weights = Weights(weights./sum(weights))
