@@ -401,12 +401,9 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     output_prods = map(get_product, output_vars)
     irfs_only = all(x -> x == :irf, output_prods)
 
-    # Compute state space and run Kalman filter
+    # Compute state space
     update!(m, params)
     system = compute_system(m)
-    if !irfs_only
-        kal = filter(m, df, system; cond_type = cond_type)
-    end
 
     # Initialize output dictionary
     forecast_output = Dict{Symbol, Array{Float64}}()
@@ -439,7 +436,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     if run_smoother
         # Call smoother
         histstates, histshocks, histpseudo, initial_states =
-            smooth(m, df, system, kal; cond_type = cond_type, draw_states = uncertainty)
+            smooth(m, df, system; cond_type = cond_type, draw_states = uncertainty)
 
         # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
         if cond_type in [:full, :semi]
@@ -469,22 +466,22 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     if !isempty(forecasts_to_compute)
         # Get initial forecast state vector s_T
-        initial_forecast_state = if uncertainty
-            if run_smoother
-                # If we want to draw s_T and have already run the smoother, use the
-                # last smoothed state, which was already drawn from N(s_{T|T},
-                # P_{T|T}) in the simulation smoother
-                histstates[:, end]
-            else
+        s_T = if run_smoother
+            # The last smoothed state is either s_{T|T} (if !uncertainty) or
+            # drawn from N(s_{T|T}, P_{T|T}) (if uncertainty)
+            histstates[:, end]
+        else
+            kal = filter(m, df, system; cond_type = cond_type)
+            if uncertainty
                 # If we want to draw s_T but haven't run the smoother, draw from
                 # N(s_{T|T}, P_{T|T}) directly
-                U, singular_values, _ = svd(kal[:Pend])
-                dist = DegenerateMvNormal(kal[:zend], U*diagm(sqrt(singular_values)))
+                U, singular_values, _ = svd(kal[:P_T])
+                dist = DegenerateMvNormal(kal[:s_T], U*diagm(sqrt(singular_values)))
                 rand(dist)
+            else
+                # If we don't want to draw s_T, simply use the mean s_{T|T}
+                kal[:s_T]
             end
-        else
-            # If we don't want to draw s_T, simply use the mean s_{T|T}
-            kal[:zend]
         end
 
         # Re-solve model with alternative policy rule, if applicable
@@ -495,7 +492,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
         # 2A. Unbounded forecasts
         if !isempty(intersect(output_vars, unbddforecast_vars))
             forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                forecast(m, system, initial_forecast_state;
+                forecast(m, system, s_T;
                          cond_type = cond_type, enforce_zlb = false, draw_shocks = uncertainty)
 
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast
@@ -522,7 +519,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
         if !isempty(intersect(output_vars, bddforecast_vars))
             forecaststates, forecastobs, forecastpseudo, forecastshocks =
-                forecast(m, system, initial_forecast_state;
+                forecast(m, system, s_T;
                          cond_type = cond_type, enforce_zlb = true, draw_shocks = uncertainty)
 
             # For conditional data, transplant the obs/state/pseudo vectors from hist to forecast

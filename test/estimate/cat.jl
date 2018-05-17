@@ -18,11 +18,7 @@ exp_kal12 = jldopen("$path/../reference/kalman_cat_out.jld", "r") do file
 end
 
 for arg in fieldnames(kal1)
-    if arg == :L
-        @test exp_kal12[arg] ≈ kal12[arg]
-    else
-        @test exp_kal12[arg] ≈ kal12[arg]
-    end
+    @test exp_kal12[arg] ≈ kal12[arg]
 end
 
 nothing

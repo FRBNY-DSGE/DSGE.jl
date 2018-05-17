@@ -1,7 +1,8 @@
 """
 ```
-filter(m, data, system, z0, P0; cond_type = :none, allout = true,
-      include_presample = true)
+filter(m, data, system, s_0 = [], P_0 = []; cond_type = :none,
+    include_presample = true, in_sample = true,
+    outputs = [:loglh, :pred, :filt])
 ```
 
 Computes and returns the filtered values of states for the state-space
@@ -15,41 +16,40 @@ system corresponding to the current parameter values of model `m`.
   [:semi, :full]`
 - `system::System`: `System` object specifying state-space system matrices for
   the model
-- `z0::Vector{S}`: optional `Nz` x 1 initial state vector
-- `P0::Matrix{S}`: optional `Nz` x `Nz` initial state covariance matrix
+- `s_0::Vector{S}`: optional `Nz` x 1 initial state vector
+- `P_0::Matrix{S}`: optional `Nz` x `Nz` initial state covariance matrix
 
 where `S<:AbstractFloat`.
 
 ### Keyword Arguments
 
 - `cond_type::Symbol`: conditional case. See `forecast_all` for documentation of
-  all `cond_type` options.
-- `allout::Bool`: optional keyword argument indicating whether we want optional
-  output variables (besides `log_likelihood`, `zend`, and `Pend`) returned as
-  well. Defaults to `true`.
+  all `cond_type` options
 - `include_presample::Bool`: indicates whether to include presample periods in
-  the returned vector of `Kalman` objects. Defaults to `true`.
-- `in_sample::Bool`: indicates whether or not to discard out of sample rows in `df_to_matrix` call.
+  the returned vector of `Kalman` objects
+- `in_sample::Bool`: indicates whether or not to discard out of sample rows in `df_to_matrix` call
+- `outputs::Vector{Symbol}`: which Kalman filter outputs to compute and return.
+  See `?kalman_filter`
 
 ### Outputs
 
-- `kal::Kalman`: see `Kalman` documentation for more details.
+- `kal::Kalman`: see `?Kalman`
 """
 function filter{S<:AbstractFloat}(m::AbstractModel, df::DataFrame, system::System{S},
-    z0::Vector{S} = Vector{S}(), P0::Matrix{S} = Matrix{S}(0, 0);
-    cond_type::Symbol = :none, allout::Bool = true,
-    include_presample::Bool = true, in_sample::Bool = true)
+    s_0::Vector{S} = Vector{S}(), P_0::Matrix{S} = Matrix{S}(0, 0);
+    cond_type::Symbol = :none, include_presample::Bool = true, in_sample::Bool = true,
+    outputs::Vector{Symbol} = [:loglh, :pred, :filt])
 
     data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
     start_date = max(date_presample_start(m), df[1, :date])
-    filter(m, data, system, z0, P0; start_date = start_date,
-           allout = allout, include_presample = include_presample)
+    filter(m, data, system, s_0, P_0; start_date = start_date,
+           outputs = outputs, include_presample = include_presample)
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
-    z0::Vector{S} = Vector{S}(0), P0::Matrix{S} = Matrix{S}(0, 0);
+    s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0);
     catch_errors::Bool = false, start_date::Date = date_presample_start(m),
-    allout::Bool = true, include_presample::Bool = true)
+    include_presample::Bool = true, outputs = [:loglh, :pred, :filt])
 
     # If we are in Metropolis-Hastings, then any errors coming out of `gensys`
     # should be caught and a -Inf posterior should be returned.
@@ -67,8 +67,8 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
         return Kalman(-Inf)
     else
         try
-            filter(m, data, get(system), z0, P0; start_date = start_date,
-                   allout = allout, include_presample = include_presample)
+            filter(m, data, get(system), s_0, P_0; start_date = start_date,
+                   nclude_presample = include_presample, outputs = outputs)
         catch err
             if catch_errors && isa(err, DomainError)
                 warn("Log of incremental likelihood is negative; returning -Inf")
@@ -81,9 +81,9 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S},
 end
 
 function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::System,
-    z0::Vector{S} = Vector{S}(0), P0::Matrix{S} = Matrix{S}(0, 0);
-    start_date::Date = date_presample_start(m),
-    allout::Bool = true, include_presample::Bool = true)
+    s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0);
+    start_date::Date = date_presample_start(m), include_presample::Bool = true,
+    outputs::Vector{Symbol} = [:loglh, :pred, :filt])
 
     # Partition sample into pre- and post-ZLB regimes
     # Note that the post-ZLB regime may be empty if we do not impose the ZLB
@@ -92,22 +92,21 @@ function filter{S<:AbstractFloat}(m::AbstractModel, data::Matrix{S}, system::Sys
     # Get system matrices for each regime
     TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_regime_matrices(m, system, start_date)
 
-    # If z0 and P0 provided, check that rows and columns corresponding to
-    # anticipated shocks are zero in P0
-    if !isempty(z0) && !isempty(P0)
+    # If s_0 and P_0 provided, check that rows and columns corresponding to
+    # anticipated shocks are zero in P_0
+    if !isempty(s_0) && !isempty(P_0)
         ant_state_inds = setdiff(1:n_states_augmented(m), inds_states_no_ant(m))
-        @assert all(x -> x == 0, P0[:, ant_state_inds])
-        @assert all(x -> x == 0, P0[ant_state_inds, :])
+        @assert all(x -> x == 0, P_0[:, ant_state_inds])
+        @assert all(x -> x == 0, P_0[ant_state_inds, :])
     end
 
     # Specify number of presample periods if we don't want to include them in
     # the final results
-    T0 = include_presample ? 0 : n_presample_periods(m)
+    Nt0 = include_presample ? 0 : n_presample_periods(m)
 
     # Run Kalman filter, construct Kalman object, and return
-    out = kalman_filter(regime_inds, data, TTTs, RRRs, CCCs,
-              QQs, ZZs, DDs, EEs, z0, P0;
-              allout = allout, n_presample_periods = T0)
+    out = kalman_filter(regime_inds, data, TTTs, RRRs, CCCs, QQs,
+                        ZZs, DDs, EEs, s_0, P_0; outputs = outputs, Nt0 = Nt0)
 
     return Kalman(out...)
 end
