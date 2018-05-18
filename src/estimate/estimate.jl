@@ -170,12 +170,12 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
         end
 
         hessian_inv = U*sqrt.(S_inv) #this is the inverse of the hessian
-        DSGE.DegenerateMvNormal(params, hessian_inv)
+        DegenerateMvNormal(params, hessian_inv)
     else
-        DSGE.DegenerateMvNormal(params, proposal_covariance)
+        DegenerateMvNormal(params, proposal_covariance)
     end
 
-    if DSGE.rank(propdist) != n_parameters_free(m)
+    if rank(propdist) != n_parameters_free(m)
         println("problem –    shutting down dimensions")
     end
 

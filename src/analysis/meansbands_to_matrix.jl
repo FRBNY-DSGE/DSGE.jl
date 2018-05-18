@@ -127,7 +127,7 @@ function meansbands_to_matrix(mb::MeansBands)
 
         for series in setdiff(names(mb.means), [:date])
 
-            var, shock = DSGE.parse_mb_colname(series)
+            var, shock = parse_mb_colname(series)
             ind = inds[var]
 
             shock_ind = shock_inds[shock]
