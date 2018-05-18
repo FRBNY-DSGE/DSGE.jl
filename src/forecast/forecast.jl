@@ -1,8 +1,8 @@
 """
 ```
-forecast(m, system, z0; enforce_zlb = false, shocks = Matrix{S}(0,0))
+forecast(m, system, s_0; enforce_zlb = false, shocks = Matrix{S}(0,0))
 
-forecast(system, z0, shocks; enforce_zlb = false)
+forecast(system, s_0, shocks; enforce_zlb = false)
 ```
 
 ### Inputs
@@ -10,7 +10,7 @@ forecast(system, z0, shocks; enforce_zlb = false)
 - `m::AbstractModel`: model object. Only needed for the method in which `shocks`
   are not provided.
 - `system::System{S}`: state-space system matrices
-- `kal::Kalman{S}` or `z0::Vector{S}`: result of running the Kalman filter or
+- `kal::Kalman{S}` or `s_0::Vector{S}`: result of running the Kalman filter or
   state vector in the final historical period (aka initial forecast period)
 
 where `S<:AbstractFloat`.
@@ -48,7 +48,7 @@ where `S<:AbstractFloat`.
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
 function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
-    z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
+    s_0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
     shocks::Matrix{S} = Matrix{S}(0, 0), draw_shocks::Bool = false)
 
     # Numbers of things
@@ -99,7 +99,7 @@ function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     if alt_policy.solve != identity &&
         alt_policy.forecast_init != identity
 
-        shocks, z0 = alt_policy.forecast_init(m, shocks, z0, cond_type = cond_type)
+        shocks, s_0 = alt_policy.forecast_init(m, shocks, s_0, cond_type = cond_type)
     end
 
     # Get variables necessary to enforce the zero lower bound in the forecast
@@ -107,11 +107,11 @@ function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     ind_r_sh = m.exogenous_shocks[:rm_sh]
     zlb_value = forecast_zlb_value(m)
 
-    forecast(system, z0, shocks; enforce_zlb = enforce_zlb,
+    forecast(system, s_0, shocks; enforce_zlb = enforce_zlb,
         ind_r = ind_r, ind_r_sh = ind_r_sh, zlb_value = zlb_value)
 end
 
-function forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
+function forecast{S<:AbstractFloat}(system::System{S}, s_0::Vector{S},
     shocks::Matrix{S}; enforce_zlb::Bool = false, ind_r::Int = -1,
     ind_r_sh::Int = -1, zlb_value::S = 0.13/4)
 
@@ -153,7 +153,7 @@ function forecast{S<:AbstractFloat}(system::System{S}, z0::Vector{S},
 
     # Iterate state space forward
     states = zeros(S, nstates, horizon)
-    states[:, 1], shocks[:, 1] = iterate(z0, shocks[:, 1])
+    states[:, 1], shocks[:, 1] = iterate(s_0, shocks[:, 1])
     for t in 2:horizon
         states[:, t], shocks[:, t] = iterate(states[:, t-1], shocks[:, t])
     end
