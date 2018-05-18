@@ -60,8 +60,7 @@ function filter_shocks!(m::AbstractModel, scen::Scenario, system::System, in_sam
     P_0 = zeros(n_states_augmented(m), n_states_augmented(m))
 
     # Filter and smooth *deviations from baseline*
-    kal = filter(m, df, system, s_0, P_0, in_sample = in_sample)
-    _, forecastshocks, _ = smooth(m, df, system, kal, draw_states = scen.draw_states,
+    _, forecastshocks, _ = smooth(m, df, system, s_0, P_0, draw_states = scen.draw_states,
                                   include_presample = true, in_sample = in_sample)
 
     # Assign shocks to instruments DataFrame

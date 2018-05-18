@@ -63,7 +63,7 @@ function shock_decompositions{S<:AbstractFloat}(system::System{S},
     # Set constant system matrices to 0
     system = zero_system_constants(system)
 
-    z0 = zeros(S, nstates)
+    s_0 = zeros(S, nstates)
 
     for i = 1:nshocks
         # Isolate single shock
@@ -71,7 +71,7 @@ function shock_decompositions{S<:AbstractFloat}(system::System{S},
         shocks[i, 1:histperiods] = histshocks[i, :]
 
         # Iterate state space forward
-        states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(system, z0, shocks)
+        states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(system, s_0, shocks)
     end
 
     # Return shock decompositions in appropriate range
@@ -85,22 +85,22 @@ end
 
 """
 ```
-deterministic_trends(m, system, z0)
+deterministic_trends(m, system, s_0)
 
-deterministic_trends(system, z0, nperiods, start_index, end_index)
+deterministic_trends(system, s_0, nperiods, start_index, end_index)
 ```
 
 Compute deterministic trend values of states, observables, and
 pseudo-observables, given a model object and system matrices. The deterministic
 trend for a single draw is simply the series that would be obtained by iterating
-the state-space system forward, beginning from a state vector `z0` in the last
+the state-space system forward, beginning from a state vector `s_0` in the last
 presample period.
 
 ### Inputs
 
 - `m::AbstractModel`: model object
 - `system::System{S}`: state-space system matrices
-- `z0`::Vector{S}: initial state vector
+- `s_0`::Vector{S}: initial state vector
 
 where `S<:AbstractFloat`.
 
@@ -117,7 +117,7 @@ where `nperiods` is the number of quarters between
 `date_shockdec_start(m)` and `date_shockdec_end(m)`, inclusive.
 """
 function deterministic_trends{S<:AbstractFloat}(m::AbstractModel{S},
-    system::System{S}, z0::Vector{S})
+    system::System{S}, s_0::Vector{S})
 
     # Dates: We compute the deterministic trend starting from the
     # first historical period.  However, since it is only used to
@@ -127,10 +127,10 @@ function deterministic_trends{S<:AbstractFloat}(m::AbstractModel{S},
     start_index = index_shockdec_start(m)
     end_index   = index_shockdec_end(m)
 
-    deterministic_trends(system, z0, nperiods, start_index, end_index)
+    deterministic_trends(system, s_0, nperiods, start_index, end_index)
 end
 
-function deterministic_trends{S<:AbstractFloat}(system::System{S}, z0::Vector{S}, nperiods::Int,
+function deterministic_trends{S<:AbstractFloat}(system::System{S}, s_0::Vector{S}, nperiods::Int,
     start_index::Int, end_index::Int)
 
     # Set constant system matrices to 0
@@ -141,7 +141,7 @@ function deterministic_trends{S<:AbstractFloat}(system::System{S}, z0::Vector{S}
     shocks   = zeros(S, nshocks, nperiods)
 
     # Use forecast to iterate state-space system forward without shocks or the ZLB procedure
-    states, obs, pseudo, _ = forecast(system, z0, shocks)
+    states, obs, pseudo, _ = forecast(system, s_0, shocks)
 
     # Return deterministic trends in appropriate range
     if start_index == 1 && end_index == nperiods

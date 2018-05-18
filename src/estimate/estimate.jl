@@ -195,8 +195,8 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
         ########################################################################################
 
         # Set the jump size for sampling
-        cc0 = 0.01
-        cc = 0.09
+        cc0 = get_setting(m, :mh_cc0)
+        cc = get_setting(m, :mh_cc)
 
         metropolis_hastings(propdist, m, data, cc0, cc; verbose=verbose);
 

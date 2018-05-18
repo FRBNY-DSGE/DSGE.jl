@@ -133,8 +133,27 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
         end
     end
 
-    # Return total log-likelihood, excluding the presample
-    kal = filter(m, data; catch_errors = catch_errors, allout = false, include_presample = false)
+    # Compute state-space system
+    system = try
+        compute_system(m)
+    catch err
+        if catch_errors && isa(err, GensysError)
+            return -Inf
+        else
+            rethrow(err)
+        end
+    end
 
-    return kal[:L]
+    # Return total log-likelihood, excluding the presample
+    try
+        kal = filter(m, data, system; outputs = [:loglh], include_presample = false)
+        return kal[:total_loglh]
+    catch err
+        if catch_errors && isa(err, DomainError)
+            warn("Log of incremental likelihood is negative; returning -Inf")
+            return -Inf
+        else
+            rethrow(err)
+        end
+    end
 end

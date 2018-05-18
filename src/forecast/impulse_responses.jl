@@ -43,7 +43,7 @@ function impulse_responses{S<:AbstractFloat}(system::System{S}, horizon::Int)
     # Set constant system matrices to 0
     system = zero_system_constants(system)
 
-    z0 = zeros(S, nstates)
+    s_0 = zeros(S, nstates)
 
     for i = 1:nshocks
         # Isolate single shock
@@ -51,7 +51,7 @@ function impulse_responses{S<:AbstractFloat}(system::System{S}, horizon::Int)
         shocks[i, 1] = -sqrt(system[:QQ][i, i]) # a negative 1 s.d. shock
 
         # Iterate state space forward
-        states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(system, z0, shocks)
+        states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(system, s_0, shocks)
     end
 
     return states, obs, pseudo
