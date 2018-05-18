@@ -81,7 +81,7 @@ function targets_to_data(m::AbstractModel, scen::Scenario)
     # Assign dates
     horizons   = n_target_horizons(scen)
     start_date = date_forecast_start(m)
-    end_date   = DSGE.iterate_quarters(start_date, horizons - 1)
+    end_date   = iterate_quarters(start_date, horizons - 1)
     df[:date]  = quarter_range(start_date, end_date)
 
     for var in keys(m.observables)

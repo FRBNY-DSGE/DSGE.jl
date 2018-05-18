@@ -72,7 +72,7 @@ equilibrium conditions.
 
 * `observable_mappings::OrderedDict{Symbol,Observable}`: A dictionary that
   stores data sources, series mnemonics, and transformations to/from model
-  units.  DSGE.jl will fetch data from the Federal Reserve Bank of St. Louis's
+  units. DSGE.jl will fetch data from the Federal Reserve Bank of St. Louis's
   FRED database; all other data must be downloaded by the user. See `load_data`
   and `Observable` for further details.
 

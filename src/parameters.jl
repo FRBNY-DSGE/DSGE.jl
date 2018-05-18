@@ -208,7 +208,7 @@ function parameter{T,U<:Transform}(key::Symbol,
                                    value::T,
                                    valuebounds::Interval{T} = (value,value),
                                    transform_parameterization::Interval{T} = (value,value),
-                                   transform::U             = DSGE.Untransformed(),
+                                   transform::U             = Untransformed(),
                                    prior::NullableOrPrior   = NullablePrior();
                                    fixed::Bool              = true,
                                    scaling::Function        = identity,
@@ -226,7 +226,7 @@ function parameter{T,U<:Transform}(key::Symbol,
 
     if fixed
         transform_parameterization_new = (value,value)  # value is transformed already
-        transform_new = DSGE.Untransformed()            # fixed priors should stay untransformed
+        transform_new = Untransformed()                 # fixed priors should stay untransformed
         U_new = Untransformed
 
         if isa(transform, Untransformed)
@@ -314,7 +314,7 @@ function Base.show{T,U}(io::IO, p::Parameter{T,U})
     #@printf io "real value:        %+6f\n" transform_to_real_line(p)
     @printf io "unscaled, untransformed value:        %+6f\n" p.value
     isa(p,ScaledParameter) && @printf "scaled, untransformed value:        %+6f\n" p.scaledvalue
-    #!isa(U(),DSGE.Untransformed) && @printf io "transformed value: %+6f\n" p.value
+    #!isa(U(),Untransformed) && @printf io "transformed value: %+6f\n" p.value
 
     if hasprior(p)
         @printf io "prior distribution:\n\t%s\n" get(p.prior)
@@ -502,14 +502,13 @@ function describe_prior(param::Parameter)
         return "fixed at " * string(param.value)
 
     elseif !param.fixed && !isnull(param.prior)
-        (prior_mean, prior_std) = DSGE.moments(param)
+        (prior_mean, prior_std) = moments(param)
 
         prior_dist = string(typeof(get(param.prior)))
         prior_dist = replace(prior_dist, "Distributions.", "")
-        prior_dist = replace(prior_dist, "DSGE.", "")
         prior_dist = replace(prior_dist, "{Float64}", "")
 
-        mom1, mom2 = if isa(prior, DSGE.RootInverseGamma)
+        mom1, mom2 = if isa(prior, RootInverseGamma)
             "tau", "nu"
         else
             "mu", "sigma"

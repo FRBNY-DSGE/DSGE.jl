@@ -665,7 +665,7 @@ function prepare_meansbands_table_irf(mb::MeansBands, shock::Symbol, vars::Vecto
 
     # Print all vars by default
     if isempty(vars)
-        vars = DSGE.get_variables(mb)
+        vars = get_variables(mb)
     end
 
     # Make dictionary to return

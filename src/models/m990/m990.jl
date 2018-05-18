@@ -71,7 +71,7 @@ equilibrium conditions.
 
 * `observable_mappings::OrderedDict{Symbol,Observable}`: A dictionary that
   stores data sources, series mnemonics, and transformations to/from model
-  units.  DSGE.jl will fetch data from the Federal Reserve Bank of St. Louis's
+  units. DSGE.jl will fetch data from the Federal Reserve Bank of St. Louis's
   FRED database; all other data must be downloaded by the user. See `load_data`
   and `Observable` for further details.
 
@@ -229,15 +229,15 @@ parameters (in preparation for `steadystate!(m)` being called to initialize
 those).
 """
 function init_parameters!(m::Model990)
-    m <= parameter(:α, 0.1596, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), Normal(0.30, 0.05), fixed=false,
+    m <= parameter(:α, 0.1596, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), Normal(0.30, 0.05), fixed=false,
                    description="α: Capital elasticity in the intermediate goods sector's production function (also known as the capital share).",
                    tex_label="\\alpha")
 
-    m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+    m <= parameter(:ζ_p, 0.8940, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
                    description="ζ_p: The Calvo parameter. In every period, intermediate goods producers optimize prices with probability (1-ζ_p). With probability ζ_p, prices are adjusted according to a weighted average of the previous period's inflation (π_t1) and steady-state inflation (π_star).",
                    tex_label="\\zeta_p")
 
-    m <= parameter(:ι_p, 0.1865, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
+    m <= parameter(:ι_p, 0.1865, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
                    description="ι_p: The weight attributed to last period's inflation in price indexation. (1-ι_p) is the weight attributed to steady-state inflation.",
                    tex_label="\\iota_p")
 
@@ -245,35 +245,35 @@ function init_parameters!(m::Model990)
                    description="δ: The capital depreciation rate.",
                    tex_label="\\delta" )
 
-    m <= parameter(:Upsilon, 1.000, (0., 10.), (1e-5, 0.), DSGE.Exponential(), GammaAlt(1., 0.5), fixed=true,
+    m <= parameter(:Upsilon, 1.000, (0., 10.), (1e-5, 0.), Exponential(), GammaAlt(1., 0.5), fixed=true,
                    description="Υ: The trend evolution of the price of investment goods relative to consumption goods. Set equal to 1.",
                    tex_label="\\Upsilon")
 
-    m <= parameter(:Φ, 1.1066, (1., 10.), (1.00, 10.00), DSGE.Exponential(), Normal(1.25, 0.12), fixed=false,
+    m <= parameter(:Φ, 1.1066, (1., 10.), (1.00, 10.00), Exponential(), Normal(1.25, 0.12), fixed=false,
                    description="Φ: Fixed costs.",
                    tex_label="\\Phi_p")
 
-    m <= parameter(:S′′, 2.7314, (-15., 15.), (-15., 15.), DSGE.Untransformed(), Normal(4., 1.5), fixed=false,
+    m <= parameter(:S′′, 2.7314, (-15., 15.), (-15., 15.), Untransformed(), Normal(4., 1.5), fixed=false,
                    description="S'': The second derivative of households' cost of adjusting investment.",
                    tex_label="S''")
 
-    m <= parameter(:h, 0.5347, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.7, 0.1), fixed=false,
+    m <= parameter(:h, 0.5347, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.7, 0.1), fixed=false,
                    description="h: Consumption habit persistence.",
                    tex_label="h")
 
-    m <= parameter(:ppsi, 0.6862, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
+    m <= parameter(:ppsi, 0.6862, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
                    description="ppsi: Utilization costs.",
                    tex_label="\\psi")
 
-    m <= parameter(:ν_l, 2.5975, (1e-5, 10.), (1e-5, 10.), DSGE.Exponential(), Normal(2, 0.75), fixed=false,
+    m <= parameter(:ν_l, 2.5975, (1e-5, 10.), (1e-5, 10.), Exponential(), Normal(2, 0.75), fixed=false,
                    description="ν_l: The coefficient of relative risk aversion on the labor term of households' utility function.",
                    tex_label="\\nu_l")
 
-    m <= parameter(:ζ_w, 0.9291, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
+    m <= parameter(:ζ_w, 0.9291, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
                    description="ζ_w: (1-ζ_w) is the probability with which households can freely choose wages in each period. With probability ζ_w, wages increase at a geometrically weighted average of the steady state rate of wage increases and last period's productivity times last period's inflation.",
                    tex_label="\\zeta_w")
 
-    m <= parameter(:ι_w, 0.2992, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
+    m <= parameter(:ι_w, 0.2992, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.15), fixed=false,
                    description="ι_w: The weight attributed to last period's wage in wage indexation. (1-ι_w) is the weight attributed to steady-state wages.",
                    tex_label="\\iota_w")
 
@@ -281,33 +281,33 @@ function init_parameters!(m::Model990)
                    description="λ_w: The wage markup, which affects the elasticity of substitution between differentiated labor services.",
                    tex_label="\\lambda_w")
 
-    m <= parameter(:β, 0.1402, (1e-5, 10.), (1e-5, 10.), DSGE.Exponential(), GammaAlt(0.25, 0.1), fixed=false,
+    m <= parameter(:β, 0.1402, (1e-5, 10.), (1e-5, 10.), Exponential(), GammaAlt(0.25, 0.1), fixed=false,
                    scaling = x -> 1/(1 + x/100),
                    description="β: Discount rate.",
                    tex_label="100(\\beta^{-1} - 1)")
 
-    m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), DSGE.Exponential(), Normal(1.5, 0.25), fixed=false,
+    m <= parameter(:ψ1, 1.3679, (1e-5, 10.), (1e-5, 10.00), Exponential(), Normal(1.5, 0.25), fixed=false,
                    description="ψ₁: Weight on inflation gap in monetary policy rule.",
                    tex_label="\\psi_1")
 
-    m <= parameter(:ψ2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), DSGE.Untransformed(), Normal(0.12, 0.05), fixed=false,
+    m <= parameter(:ψ2, 0.0388, (-0.5, 0.5), (-0.5, 0.5), Untransformed(), Normal(0.12, 0.05), fixed=false,
                    description="ψ₂: Weight on output gap in monetary policy rule.",
                    tex_label="\\psi_2")
 
-    m <= parameter(:ψ3, 0.2464, (-0.5, 0.5), (-0.5, 0.5), DSGE.Untransformed(), Normal(0.12, 0.05), fixed=false,
+    m <= parameter(:ψ3, 0.2464, (-0.5, 0.5), (-0.5, 0.5), Untransformed(), Normal(0.12, 0.05), fixed=false,
                    description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
                    tex_label="\\psi_3")
 
-    m <= parameter(:π_star, 0.5000, (1e-5, 10.), (1e-5, 10.), DSGE.Exponential(), GammaAlt(0.75, 0.4), fixed=true,
+    m <= parameter(:π_star, 0.5000, (1e-5, 10.), (1e-5, 10.), Exponential(), GammaAlt(0.75, 0.4), fixed=true,
                    scaling = x -> 1 + x/100,
                    description="π_star: The steady-state rate of inflation.",
                    tex_label="\\pi_*")
 
-    m <= parameter(:σ_c, 0.8719, (1e-5, 10.), (1e-5, 10.), DSGE.Exponential(), Normal(1.5, 0.37), fixed=false,
+    m <= parameter(:σ_c, 0.8719, (1e-5, 10.), (1e-5, 10.), Exponential(), Normal(1.5, 0.37), fixed=false,
                    description="σ_c: Coefficient of relative risk aversion.",
                    tex_label="\\sigma_{c}")
 
-    m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
+    m <= parameter(:ρ, 0.7126, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
                    description="ρ: The degree of inertia in the monetary policy rule.",
                    tex_label="\\rho_R")
 
@@ -321,31 +321,31 @@ function init_parameters!(m::Model990)
 
 
     # financial frictions parameters
-    m <= parameter(:Fω, 0.0300, (1e-5, 0.99999), (1e-5, 0.99), DSGE.SquareRoot(), BetaAlt(0.03, 0.01), fixed=true,
+    m <= parameter(:Fω, 0.0300, (1e-5, 0.99999), (1e-5, 0.99), SquareRoot(), BetaAlt(0.03, 0.01), fixed=true,
                    scaling = x -> 1 - (1-x)^0.25,
                    description="F(ω): The cumulative distribution function of ω (idiosyncratic iid shock that increases or decreases entrepreneurs' capital).",
                    tex_label="F(\\bar{\\omega})")
 
-    m <= parameter(:spr, 1.7444, (0., 100.), (1e-5, 0.), DSGE.Exponential(), GammaAlt(2., 0.1), fixed=false,
+    m <= parameter(:spr, 1.7444, (0., 100.), (1e-5, 0.), Exponential(), GammaAlt(2., 0.1), fixed=false,
                    scaling = x -> (1 + x/100)^0.25,
                    description="spr_*: Steady-state level of spread.",
                    tex_label="SP_*")
 
-    m <= parameter(:ζ_spb, 0.0559, (1e-5, 0.99999), (1e-5, 0.99), DSGE.SquareRoot(), BetaAlt(0.05, 0.005), fixed=false,
+    m <= parameter(:ζ_spb, 0.0559, (1e-5, 0.99999), (1e-5, 0.99), SquareRoot(), BetaAlt(0.05, 0.005), fixed=false,
                    description="ζ_spb: The elasticity of the expected exess return on capital (or 'spread') with respect to leverage.",
                    tex_label="\\zeta_{sp,b}")
 
-    m <= parameter(:γ_star, 0.9900, (1e-5, 0.99999), (1e-5, 0.99), DSGE.SquareRoot(), BetaAlt(0.99, 0.002), fixed=true,
+    m <= parameter(:γ_star, 0.9900, (1e-5, 0.99999), (1e-5, 0.99), SquareRoot(), BetaAlt(0.99, 0.002), fixed=true,
                    description="γ_star: Fraction of entrepreneurs who survive and continue operating for another period.",
                    tex_label="\\gamma_*")
 
     # exogenous processes - level
-    m <= parameter(:γ, 0.3673, (-5.0, 5.0), (-5., 5.), DSGE.Untransformed(), Normal(0.4, 0.1), fixed=false,
+    m <= parameter(:γ, 0.3673, (-5.0, 5.0), (-5., 5.), Untransformed(), Normal(0.4, 0.1), fixed=false,
                    scaling = x -> x/100,
                    description="γ: The log of the steady-state growth rate of technology.",
                    tex_label="100\\gamma")
 
-    m <= parameter(:Lmean, -45.9364, (-1000., 1000.), (-1e3, 1e3), DSGE.Untransformed(), Normal(-45., 5.), fixed=false,
+    m <= parameter(:Lmean, -45.9364, (-1000., 1000.), (-1e3, 1e3), Untransformed(), Normal(-45., 5.), fixed=false,
                    description="Lmean: Mean level of hours.",
                    tex_label="\\bar{L}")
 
@@ -354,160 +354,160 @@ function init_parameters!(m::Model990)
                    tex_label="g_*")
 
     # exogenous processes - autocorrelation
-    m <= parameter(:ρ_g, 0.9863, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_g, 0.9863, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_g: AR(1) coefficient in the government spending process.",
                    tex_label="\\rho_g")
 
-    m <= parameter(:ρ_b, 0.9410, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_b, 0.9410, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_b: AR(1) coefficient in the intertemporal preference shifter process.",
                    tex_label="\\rho_b")
 
-    m <= parameter(:ρ_μ, 0.8735, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_μ, 0.8735, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_μ: AR(1) coefficient in capital adjustment cost process.",
                    tex_label="\\rho_{\\mu}")
 
-    m <= parameter(:ρ_z, 0.9446, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_z, 0.9446, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_z: AR(1) coefficient in the technology process.",
                    tex_label="\\rho_z")
 
-    m <= parameter(:ρ_λ_f, 0.8827, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_λ_f, 0.8827, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_λ_f: AR(1) coefficient in the price mark-up shock process.",
                    tex_label="\\rho_{\\lambda_f}")
 
-    m <= parameter(:ρ_λ_w, 0.3884, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_λ_w, 0.3884, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_λ_w: AR(1) coefficient in the wage mark-up shock process.",
                    tex_label="\\rho_{\\lambda_w}")
 
     # monetary policy shock - see eqcond
-    m <= parameter(:ρ_rm, 0.2135, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_rm, 0.2135, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_rm: AR(1) coefficient in the monetary policy shock process.",
                    tex_label="\\rho_{r^m}")
 
-    m <= parameter(:ρ_σ_w, 0.9898, (1e-5, 0.99999), (1e-5, 0.99999), DSGE.SquareRoot(), BetaAlt(0.75, 0.15), fixed=false,
+    m <= parameter(:ρ_σ_w, 0.9898, (1e-5, 0.99999), (1e-5, 0.99999), SquareRoot(), BetaAlt(0.75, 0.15), fixed=false,
                    description="ρ_σ_w: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with mean ρ_σ_w. Innovations to the process are called _spread shocks_.",
                    tex_label="\\rho_{\\sigma_\\omega}")
 
-    m <= parameter(:ρ_μ_e, 0.7500, (1e-5, 0.99999), (1e-5, 0.99999),  DSGE.SquareRoot(), BetaAlt(0.75, 0.15), fixed=true,
+    m <= parameter(:ρ_μ_e, 0.7500, (1e-5, 0.99999), (1e-5, 0.99999),  SquareRoot(), BetaAlt(0.75, 0.15), fixed=true,
                    description="ρ_μ_e: AR(1) coefficient in the exogenous bankruptcy cost process.",
                    tex_label="\\rho_{\\mu_e}")
 
-    m <= parameter(:ρ_γ, 0.7500, (1e-5, 0.99999), (1e-5, 0.99), DSGE.SquareRoot(), BetaAlt(0.75, 0.15), fixed=true,
+    m <= parameter(:ρ_γ, 0.7500, (1e-5, 0.99999), (1e-5, 0.99), SquareRoot(), BetaAlt(0.75, 0.15), fixed=true,
                    description="ρ_γ: AR(1) coefficient in the process describing the fraction of entrepreneurs surviving period t.",
                    tex_label="\\rho_{\\gamma}")
 
-    m <= parameter(:ρ_π_star, 0.9900, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=true,
+    m <= parameter(:ρ_π_star, 0.9900, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=true,
                    description="ρ_π_star: AR(1) coefficient in the time-varying inflation target process.",
                    tex_label="\\rho_{\\pi_*}")
 
-    m <= parameter(:ρ_lr, 0.6936, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_lr, 0.6936, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    tex_label="\\rho_{10y}")
 
-    m <= parameter(:ρ_z_p, 0.8910, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_z_p, 0.8910, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_z_p: AR(1) coefficient in the process describing the permanent component of productivity.",
                    tex_label="\\rho_{z^p}")
-    m <= parameter(:ρ_tfp, 0.1953, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_tfp, 0.1953, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    tex_label="\\rho_{tfp}")
 
-    m <= parameter(:ρ_gdpdef, 0.5379, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_gdpdef, 0.5379, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    tex_label="\\rho_{gdpdef}")
 
-    m <= parameter(:ρ_corepce, 0.2320, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_corepce, 0.2320, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    tex_label="\\rho_{pce}")
 
     # exogenous processes - standard deviation
-    m <= parameter(:σ_g, 2.5230, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_g, 2.5230, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_g: The standard deviation of the government spending process.",
                    tex_label="\\sigma_{g}")
 
-    m <= parameter(:σ_b, 0.0292, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_b, 0.0292, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_b: The standard deviation of the intertemporal preference shifter process.",
                    tex_label="\\sigma_{b}")
 
-    m <= parameter(:σ_μ, 0.4559, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_μ, 0.4559, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
                    tex_label="\\sigma_{\\mu}")
 
-    m <= parameter(:σ_z, 0.6742, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_z, 0.6742, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label="\\sigma_{z}")
 
-    m <= parameter(:σ_λ_f, 0.1314, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_λ_f, 0.1314, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
                    tex_label="\\sigma_{\\lambda_f}")
 
-    m <= parameter(:σ_λ_w, 0.3864, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_λ_w, 0.3864, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    tex_label="\\sigma_{\\lambda_w}")
 
-    m <= parameter(:σ_r_m, 0.2380, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_r_m, 0.2380, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_r_m: The standard deviation of the monetary policy shock.",
                    tex_label="\\sigma_{r^m}")
 
-    m <= parameter(:σ_σ_ω, 0.0428, (1e-7,100.), (1e-5, 0.), DSGE.Exponential(), DSGE.RootInverseGamma(4., 0.05), fixed=false,
+    m <= parameter(:σ_σ_ω, 0.0428, (1e-7,100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., 0.05), fixed=false,
                    description="σ_σ_ω: The standard deviation of entrepreneurs' capital productivity follows an exogenous process with standard deviation σ_σ_ω.",
                    tex_label="\\sigma_{\\sigma_\\omega}")
 
-    m <= parameter(:σ_μ_e, 0.0000, (1e-7,100.), (1e-5, 0.), DSGE.Exponential(), DSGE.RootInverseGamma(4., 0.05), fixed=true,
+    m <= parameter(:σ_μ_e, 0.0000, (1e-7,100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., 0.05), fixed=true,
                    description="σ_μ_e: Exogenous bankrupcy costs follow an exogenous process with standard deviation σ_μ_e.",
                    tex_label="\\sigma_{\\mu_e}")
 
-    m <= parameter(:σ_γ, 0.0000, (1e-7,100.), (1e-5, 0.), DSGE.Exponential(), DSGE.RootInverseGamma(4., 0.01), fixed=true,
+    m <= parameter(:σ_γ, 0.0000, (1e-7,100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., 0.01), fixed=true,
                    description="σ_γ: The fraction of entrepreneurs surviving period t follows an exogenous process with standard deviation σ_γ.",
                    tex_label="\\sigma_{\\gamma}")
 
-    m <= parameter(:σ_π_star, 0.0269, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(6., 0.03), fixed=false,
+    m <= parameter(:σ_π_star, 0.0269, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(6., 0.03), fixed=false,
                    description="σ_π_star: The standard deviation of the inflation target.",
                    tex_label="\\sigma_{\\pi_*}")
 
-    m <= parameter(:σ_lr, 0.1766, (1e-8,10.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.75), fixed=false,
+    m <= parameter(:σ_lr, 0.1766, (1e-8,10.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.75), fixed=false,
                    tex_label="\\sigma_{10y}")
 
-    m <= parameter(:σ_z_p, 0.1662, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_z_p, 0.1662, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_z_p: The standard deviation of the shock to the permanent component of productivity.",
                    tex_label="\\sigma_{z^p}")
 
-    m <= parameter(:σ_tfp, 0.9391, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_tfp, 0.9391, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    tex_label="\\sigma_{tfp}")
 
-    m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), DSGE.RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_gdpdef, 0.1575, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    tex_label="\\sigma_{gdpdef}")
 
-    m <= parameter(:σ_corepce, 0.0999, (1e-8, 5.),(1e-8, 5.), DSGE.Exponential(),DSGE.RootInverseGamma(2., 0.10),
+    m <= parameter(:σ_corepce, 0.0999, (1e-8, 5.),(1e-8, 5.), Exponential(),RootInverseGamma(2., 0.10),
                    fixed=false,
                    tex_label="\\sigma_{pce}")
 
     # standard deviations of the anticipated policy shocks
     for i = 1:n_anticipated_shocks_padding(m)
         if i < 13
-            m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(), DSGE.RootInverseGamma(4., .2), fixed=false,
+            m <= parameter(Symbol("σ_r_m$i"), .2, (1e-7, 100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., .2), fixed=false,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
         else
-            m <= parameter(Symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.), DSGE.Exponential(), DSGE.RootInverseGamma(4., .2), fixed=true,
+            m <= parameter(Symbol("σ_r_m$i"), .0, (1e-7, 100.), (1e-5, 0.), Exponential(), RootInverseGamma(4., .2), fixed=true,
                            description="σ_r_m$i: Standard deviation of the $i-period-ahead anticipated policy shock.",
                            tex_label=@sprintf("\\sigma_{ant%d}",i))
         end
     end
 
-    m <= parameter(:η_gz, 0.8400, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.50, 0.20), fixed=false,
+    m <= parameter(:η_gz, 0.8400, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.50, 0.20), fixed=false,
                    description="η_gz: Correlate g and z shocks.",
                    tex_label="\\eta_{gz}")
 
-    m <= parameter(:η_λ_f, 0.7892, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.50, 0.20), fixed=false,
+    m <= parameter(:η_λ_f, 0.7892, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.50, 0.20), fixed=false,
                    description="η_λ_f: Moving average component in the price markup shock.",
                    tex_label="\\eta_{\\lambda_f}")
 
-    m <= parameter(:η_λ_w, 0.4226, (1e-5, 0.999), (1e-5, 0.999), DSGE.SquareRoot(), BetaAlt(0.50, 0.20), fixed=false,
+    m <= parameter(:η_λ_w, 0.4226, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.50, 0.20), fixed=false,
                    description="η_λ_w: Moving average component in the wage markup shock.",
                    tex_label="\\eta_{\\lambda_w}")
 
-    m <= parameter(:Iendoα, 0.0000, (0.000, 1.000), (0., 0.), DSGE.Untransformed(), BetaAlt(0.50, 0.20), fixed=true,
+    m <= parameter(:Iendoα, 0.0000, (0.000, 1.000), (0., 0.), Untransformed(), BetaAlt(0.50, 0.20), fixed=true,
                    description="Iendoα: Indicates whether to use the model's endogenous α in the capacity utilization adjustment of total factor productivity.",
                    tex_label="I\\{\\alpha^{model}\\}")
 
-    m <= parameter(:Γ_gdpdef, 1.0354, (-10., 10.), (-10., -10.), DSGE.Untransformed(), Normal(1.00, 2.), fixed=false,
+    m <= parameter(:Γ_gdpdef, 1.0354, (-10., 10.), (-10., -10.), Untransformed(), Normal(1.00, 2.), fixed=false,
                    tex_label="\\gamma_{gdpdef}")
 
-    m <= parameter(:δ_gdpdef, 0.0181, (-9.1, 9.1), (-10., -10.), DSGE.Untransformed(), Normal(0.00, 2.), fixed=false,
+    m <= parameter(:δ_gdpdef, 0.0181, (-9.1, 9.1), (-10., -10.), Untransformed(), Normal(0.00, 2.), fixed=false,
                    tex_label="\\delta_{gdpdef}")
 
     # steady states
