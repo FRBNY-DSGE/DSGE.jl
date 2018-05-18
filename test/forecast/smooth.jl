@@ -6,8 +6,8 @@ path = dirname(@__FILE__())
 m = AnSchorfheide(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 
-df, system, kal = jldopen("$path/../reference/forecast_args.jld","r") do file
-    read(file, "df"), read(file, "system"), read(file, "kalman")
+df, system = jldopen("$path/../reference/forecast_args.jld","r") do file
+    read(file, "df"), read(file, "system")
 end
 
 # Read expected output
@@ -26,7 +26,7 @@ for smoother in [:hamilton, :koopman, :carter_kohn, :durbin_koopman]
     m <= Setting(:forecast_smoother, smoother)
 
     states[smoother], shocks[smoother], pseudo[smoother] =
-        smooth(m, df, system, kal; draw_states = false)
+        smooth(m, df, system; draw_states = false)
 
     @test_matrix_approx_eq exp_states states[smoother]
     @test_matrix_approx_eq exp_shocks shocks[smoother]
@@ -36,7 +36,7 @@ end
 # Smooth, drawing states
 for smoother in [:carter_kohn, :durbin_koopman]
     m <= Setting(:forecast_smoother, smoother)
-    smooth(m, df, system, kal; draw_states = true)
+    smooth(m, df, system; draw_states = true)
 end
 
 
