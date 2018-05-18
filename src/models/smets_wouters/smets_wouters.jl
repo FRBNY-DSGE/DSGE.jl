@@ -197,7 +197,7 @@ function SmetsWouters(subspec::String="ss0";
             OrderedDict{Symbol,PseudoObservable}())
 
     # Set settings
-    settings_smets_wouters!(m)
+    model_settings!(m)
     default_test_settings!(m)
     for custom_setting in values(custom_settings)
         m <= custom_setting
@@ -435,7 +435,7 @@ function steadystate!(m::SmetsWouters)
     return m
 end
 
-function settings_smets_wouters!(m::SmetsWouters)
+function model_settings!(m::SmetsWouters)
 
     default_settings!(m)
 
