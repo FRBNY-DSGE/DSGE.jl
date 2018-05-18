@@ -184,7 +184,7 @@ function AnSchorfheide(subspec::String="ss0";
             OrderedDict{Symbol,PseudoObservable}())
 
     # Set settings
-    settings_an_schorfheide!(m)
+    model_settings!(m)
     default_test_settings!(m)
     for custom_setting in values(custom_settings)
         m <= custom_setting
@@ -292,7 +292,7 @@ function steadystate!(m::AnSchorfheide)
     return m
 end
 
-function settings_an_schorfheide!(m::AnSchorfheide)
+function model_settings!(m::AnSchorfheide)
     default_settings!(m)
 
     # Data

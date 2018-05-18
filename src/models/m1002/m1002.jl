@@ -200,7 +200,7 @@ function Model1002(subspec::String="ss10";
             OrderedDict{Symbol,PseudoObservable}())
 
     # Set settings
-    settings_m1002!(m)
+    model_settings!(m)
     default_test_settings!(m)
     for custom_setting in values(custom_settings)
         m <= custom_setting
@@ -693,7 +693,7 @@ function steadystate!(m::Model1002)
     return m
 end
 
-function settings_m1002!(m::Model1002)
+function model_settings!(m::Model1002)
 
     default_settings!(m)
 
