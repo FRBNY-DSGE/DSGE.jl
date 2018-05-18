@@ -1,6 +1,6 @@
 """
 ```
-smooth(m, df, system, kal; cond_type = :none, draw_states = true,
+smooth(m, df, system, s_0, P_0; cond_type = :none, draw_states = true,
     include_presample = false)
 ```
 
@@ -10,11 +10,11 @@ Computes and returns the smoothed values of states and shocks for the system
 ### Inputs
 
 - `m::AbstractModel`: model object
-- `df`: `DataFrame` of data for observables. This should include the conditional
+- `df::DataFrame`: data for observables. This should include the conditional
   period if `cond_type in [:semi, :full]`
 - `system::System`: `System` object representing the state-space system
-- `kal::Kalman`: `Kalman` object containing the results of the Kalman filter for
-  this system
+- `s_0::Vector{S}`: optional initial state vector
+- `P_0::Matrix{S}`: optional initial state covariance matrix
 
 ### Keyword Arguments
 
@@ -54,10 +54,10 @@ m <= Setting(:forecast_smoother, :koopman_smoother))
 
 before calling `smooth`.
 """
-function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
-    system::System{S}, kal::Kalman{S}; cond_type::Symbol = :none,
-    draw_states::Bool = false, include_presample::Bool = false,
-    in_sample::Bool = true)
+function smooth(m::AbstractModel, df::DataFrame, system::System{S},
+    s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0);
+    cond_type::Symbol = :none, draw_states::Bool = false,
+    include_presample::Bool = false, in_sample::Bool = true) where {S<:AbstractFloat}
 
     data = df_to_matrix(m, df; cond_type = cond_type, in_sample = in_sample)
 
@@ -69,20 +69,28 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     # Get system matrices for each regime
     TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = zlb_regime_matrices(m, system, start_date)
 
+    # Initialize s_0 and P_0
+    if isempty(s_0) || isempty(P_0)
+        s_0, P_0 = init_stationary_states(TTTs[1], RRRs[1], CCCs[1], QQs[1])
+    end
+
     # Call smoother
     smoother = eval(Symbol(forecast_smoother(m), "_smoother"))
 
+    if draw_states && smoother in [hamilton_smoother, koopman_smoother]
+        warn("$smoother called with draw_states = true")
+    end
+
     states, shocks = if smoother == hamilton_smoother
-        draw_states ? warn("$smoother called with draw_states = true") : nothing
         smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-            kal[:z0], kal[:vz0])
+            s_0, P_0)
     elseif smoother == koopman_smoother
-        draw_states ? warn("$smoother called with draw_states = true") : nothing
+        kal = filter(m, data, system)
         smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-            kal[:z0], kal[:vz0], kal[:pred], kal[:vpred])
+            s_0, P_0, kal[:s_pred], kal[:P_pred])
     elseif smoother in [carter_kohn_smoother, durbin_koopman_smoother]
         smoother(regime_inds, data, TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs,
-            kal[:z0], kal[:vz0]; draw_states = draw_states)
+            s_0, P_0; draw_states = draw_states)
     else
         error("Invalid smoother: $(forecast_smoother(m))")
     end
@@ -91,7 +99,7 @@ function smooth{S<:AbstractFloat}(m::AbstractModel, df::DataFrame,
     t0 = n_presample_periods(m)
     t1 = index_mainsample_start(m)
     if include_presample
-        initial_states = kal[:z0]
+        initial_states = s_0
     else
         initial_states = states[:, t0]
         states = states[:, t1:end]
