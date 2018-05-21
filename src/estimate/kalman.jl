@@ -5,115 +5,80 @@ Kalman{S<:AbstractFloat}
 
 ### Fields:
 
-- `L`: value of the average log likelihood function of the SSM under assumption that
-  observation noise ϵ(t) is normally distributed
-- `zend`: state vector in the last period for which data is provided
-- `Pend`: variance-covariance matrix for `zend`
-
-#### Fields filled in when `allout` in a call to `kalman_filter`:
-
-- `pred`: a `Nz` x `T` matrix containing one-step predicted state vectors
-- `vpred`: a `Nz` x `Nz` x `T` matrix containing mean square errors of predicted
-  state vectors
-- `filt`: an `Nz` x `T` matrix containing filtered state vectors
-- `vfilt`: an `Nz` x `Nz` x `T` matrix containing mean square errors of filtered
-  state vectors
-- `z0`: starting-period state vector. If there are presample periods in the
-  data, then `z0` is the state vector at the end of the presample/beginning of
+- `loglh`: vector of conditional log-likelihoods log p(y_t | y_{1:t-1}), t = 1:T
+- `s_T`: state vector in the last period for which data is provided
+- `P_T`: variance-covariance matrix for `s_T`
+- `s_pred`: `Ns` x `Nt` matrix of s_{t|t-1}, t = 1:T
+- `P_pred`: `Ns` x `Ns` x `Nt` array of P_{t|t-1}, t = 1:T
+- `s_filt`: `Ns` x `Nt` matrix of s_{t|t}, t = 1:T
+- `P_filt`: `Ns` x `Ns` x `Nt` array of P_{t|t}, t = 1:T
+- `s_0`: starting-period state vector. If there are presample periods in the
+  data, then `s_0` is the state vector at the end of the presample/beginning of
   the main sample
-- `P0`: variance-covariance matrix for `z0`
-- `marginal_L`: a vector of marginal likelihoods from t = 1 to T
+- `P_0`: variance-covariance matrix for `s_0`
+- `total_loglh`: log p(y_{1:t})
 """
 immutable Kalman{S<:AbstractFloat}
-    L::S                  # likelihood
-    zend::Vector{S}       # last-period state vector
-    Pend::Matrix{S}       # last-period variance-covariance matrix for the states
-    pred::Matrix{S}       # predicted value of states in period T+1
-    vpred::Array{S, 3}    # predicted variance-covariance matrix for states in period T+1
-    yprederror::Matrix{S}
-    ystdprederror::Matrix{S}
-    rmse::Matrix{S}
-    rmsd::Matrix{S}
-    filt::Matrix{S}        # filtered states
-    vfilt::Array{S, 3}     # mean squared errors of filtered state vectors
-    z0::Vector{S}          # starting-period state vector
-    vz0::Matrix{S}         # starting-period variance-covariance matrix for the states
-    marginal_L::Vector{S}
+    loglh::Vector{S}     # log p(y_t | y_{1:t-1}), t = 1:T
+    s_pred::Matrix{S}    # s_{t|t-1}, t = 1:T
+    P_pred::Array{S, 3}  # P_{t|t-1}, t = 1:T
+    s_filt::Matrix{S}    # s_{t|t}, t = 1:T
+    P_filt::Array{S, 3}  # P_{t|t}, t = 1:T
+    s_0::Vector{S}       # s_0
+    P_0::Matrix{S}       # P_0
+    s_T::Vector{S}       # s_{T|T}
+    P_T::Matrix{S}       # P_{T|T}
+    total_loglh::S       # log p(y_{1:t})
 end
 
-function Kalman{S<:AbstractFloat}(L::S,
-                                  zend::Vector{S}          = Vector{S}(0),
-                                  Pend::Matrix{S}          = Matrix{S}(0, 0),
-                                  pred::Matrix{S}          = Matrix{S}(0, 0),
-                                  vpred::Array{S, 3}       = Array{S}(0, 0, 0),
-                                  filt::Matrix{S}          = Matrix{S}(0, 0),
-                                  vfilt::Array{S, 3}       = Array{S}(0, 0, 0),
-                                  yprederror::Matrix{S}    = Matrix{S}(0, 0),
-                                  ystdprederror::Matrix{S} = Matrix{S}(0, 0),
-                                  rmse::Matrix{S}          = Matrix{S}(0, 0),
-                                  rmsd::Matrix{S}          = Matrix{S}(0, 0),
-                                  z0::Vector{S}            = Vector{S}(0),
-                                  P0::Matrix{S}            = Matrix{S}(0, 0),
-                                  marginal_L::Vector{S}    = Vector{S}(0))
+function Kalman(loglh::Vector{S},
+                s_pred::Matrix{S}, P_pred::Array{S, 3},
+                s_filt::Matrix{S}, P_filt::Array{S, 3},
+                s_0::Vector{S}, P_0::Matrix{S},
+                s_T::Vector{S}, P_T::Matrix{S}) where {S<:AbstractFloat}
 
-    return Kalman{S}(L, zend, Pend, pred, vpred, yprederror, ystdprederror, rmse, rmsd, filt, vfilt, z0, P0,
-                     marginal_L)
+    return Kalman{S}(loglh, s_pred, P_pred, s_filt, P_filt, s_0, P_0, s_T, P_T, sum(loglh))
 end
 
 function Base.getindex(K::Kalman, d::Symbol)
-    if d in (:L, :zend, :Pend, :pred, :vpred, :yprederror, :ystdprederror, :rmse, :rmsd,
-             :filt, :vfilt, :z0, :vz0, :marginal_L)
+    if d in (:loglh, :s_pred, :P_pred, :s_filt, :P_filt, :s_0, :P_0, :s_T, :P_T, :total_loglh)
         return getfield(K, d)
     else
         throw(KeyError(d))
     end
 end
 
-function Base.getindex(kal::DSGE.Kalman, inds::Union{Int, UnitRange{Int}})
+function Base.getindex(kal::Kalman, inds::Union{Int, UnitRange{Int}})
     t0 = first(inds)
     t1 = last(inds)
 
-    return DSGE.Kalman(sum(kal[:marginal_L][inds]),  # L
-                       kal[:filt][:, t1],            # zend
-                       kal[:vfilt][:, :, t1],        # Pend
-                       kal[:pred][:, inds],          # pred
-                       kal[:vpred][:, :, inds],      # vpred
-                       kal[:yprederror][:, inds],    # yprederror
-                       kal[:ystdprederror][:, inds], # ystdprederror
-                       sqrt.(mean((kal[:yprederror][:, inds].^2)', 1)), # rmse
-                       sqrt.(mean((kal[:ystdprederror][:, inds].^2)', 1)), # rmsd
-                       kal[:filt][:, inds],          # filt
-                       kal[:vfilt][:, :, inds],      # vfilt
-                       kal[:filt][:, t0],            # z0
-                       kal[:vfilt][:, :, t0],        # P0
-                       kal[:marginal_L][inds])       # marginal_L
+    return Kalman(kal[:loglh][inds],        # loglh
+                  kal[:s_pred][:,    inds], # s_pred
+                  kal[:P_pred][:, :, inds], # P_pred
+                  kal[:s_filt][:,    inds], # filt
+                  kal[:P_filt][:, :, inds], # P_filt
+                  kal[:s_filt][:,    t0],   # s_0
+                  kal[:P_filt][:, :, t0],   # P_0
+                  kal[:s_filt][:,    t1],   # s_T
+                  kal[:P_filt][:, :, t1],   # P_T
+                  sum(kal[:loglh][inds]))   # total_loglh
 end
 
 function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
     k2::Kalman{S}; allout::Bool = true)
 
-    L = k1[:L] + k2[:L]
-    zend = k2[:zend]
-    Pend = k2[:Pend]
+    loglh  = cat(1, k1[:loglh], k2[:loglh])
+    s_pred = cat(2, k1[:s_pred], k2[:s_pred])
+    P_pred = cat(3, k1[:P_pred], k2[:P_pred])
+    s_filt = cat(2, k1[:s_filt], k2[:s_filt])
+    P_filt = cat(3, k1[:P_filt], k2[:P_filt])
+    s_0    = k1[:s_0]
+    P_0    = k1[:P_0]
+    s_T    = k2[:s_T]
+    P_T    = k2[:P_T]
+    total_loglh = k1[:total_loglh] + k2[:total_loglh]
 
-    if allout
-        pred  = hcat(k1[:pred], k2[:pred])
-        vpred = cat(3, k1[:vpred], k2[:vpred])
-        yprederror    = hcat(k1[:yprederror], k2[:yprederror])
-        ystdprederror = hcat(k1[:ystdprederror], k2[:yprederror])
-        rmse  = sqrt.(mean((yprederror.^2)', 1))
-        rmsd  = sqrt.(mean((ystdprederror.^2)', 1))
-        filt  = hcat(k1[:filt], k2[:filt])
-        vfilt = cat(3, k1[:vfilt], k2[:vfilt])
-        z0    = k1[:z0]
-        P0    = k1[:vz0]
-        marginal_L = vcat(k1[:marginal_L], k2[:marginal_L])
-
-        return Kalman(L, zend, Pend, pred, vpred, yprederror, ystdprederror,
-            rmse, rmsd, filt, vfilt, z0, P0, marginal_L)
-    else
-        return Kalman(L, zend, Pend)
-    end
+    return Kalman(loglh, s_pred, P_pred, s_filt, P_filt, s_0, P_0, s_T, P_T, total_loglh)
 end
 
 """

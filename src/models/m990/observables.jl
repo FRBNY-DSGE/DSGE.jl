@@ -32,7 +32,7 @@ function init_observable_mappings!(m::Model990)
 
         levels[:temp] = levels[:AWHNONAG] .* levels[:CE16OV]
         weeklyhours = percapita(m, :temp, levels)
-        100*log(3 * weeklyhours / 100)
+        100*log.(3 * weeklyhours / 100)
     end
 
     hrs_rev_transform = logleveltopct_annualized_percapita
@@ -201,7 +201,7 @@ function init_observable_mappings!(m::Model990)
 
     longinflation_rev_transform = loggrowthtopct_annualized
 
-    observables[:obs_longinflation] = Observable(:obs_longinflation, [:ASACX10__SPF],
+    observables[:obs_longinflation] = Observable(:obs_longinflation, [:ASACX10__DLX],
                                                  longinflation_fwd_transform, longinflation_rev_transform,
                                                  "Long term inflation expectations",
                                                  "10-year average yr/yr CPI inflation expectations")
@@ -219,7 +219,7 @@ function init_observable_mappings!(m::Model990)
 
     longrate_rev_transform = quartertoannual
 
-    observables[:obs_longrate] = Observable(:obs_longrate, [:FYCCZA__LONGRATE, :THREEFYTP10__FRED],
+    observables[:obs_longrate] = Observable(:obs_longrate, [:FYCCZA__DLX, :THREEFYTP10__FRED],
                                             longrate_fwd_transform, longrate_rev_transform,
                                             "Long term interest rate expectations",
                                             "10T yield - 10T term premium")
@@ -243,13 +243,13 @@ function init_observable_mappings!(m::Model990)
         tfp_unadj_inrange = levels[date_range, :TFPKQ]
 
         tfp_unadj      = levels[:TFPKQ]
-        tfp_unadj_mean = mean(tfp_unadj_inrange[!isnan.(tfp_unadj_inrange)])
+        tfp_unadj_mean = mean(tfp_unadj_inrange[.!isnan.(tfp_unadj_inrange)])
         (tfp_unadj - tfp_unadj_mean) ./ (4*(1 - levels[:TFPJQ]))
     end
 
     tfp_rev_transform = quartertoannual
 
-    observables[:obs_tfp] = Observable(:obs_tfp, [:TFPKQ__FERNALD, :TFPJQ__FERNALD],
+    observables[:obs_tfp] = Observable(:obs_tfp, [:TFPKQ__DLX, :TFPJQ__DLX],
                                        tfp_fwd_transform, tfp_rev_transform,
                                        "Total Factor Productivity",
                                        "Fernald's TFP, adjusted by Fernald's estimated alpha")

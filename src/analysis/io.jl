@@ -290,7 +290,7 @@ end
 
 function write_meansbands_tables_timeseries(dirname::String, filestring_base::Vector{String},
                                             mb::MeansBands;
-                                            tablevars::Vector{Symbol} = get_variables(mb),
+                                            tablevars::Vector{Symbol} = Symbol[],
                                             bands_pcts::Vector{String} = which_density_bands(mb, uniquify = true))
     for tablevar in tablevars
         df = prepare_meansbands_table_timeseries(mb, tablevar, bands_pcts = bands_pcts)
@@ -485,7 +485,7 @@ function write_meansbands_table(dirname::String, filestring_base::Vector{String}
     fullfilename = savepath(dirname, filename, filestring_base, filestring_addl)
 
     # Write to file
-    writetable(fullfilename, df)
+    CSV.write(fullfilename, df)
     println(" * Wrote means and bands for $tablevar to $fullfilename")
 end
 
