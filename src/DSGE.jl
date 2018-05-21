@@ -102,6 +102,8 @@ module DSGE
         write_meansbands_tables_all,
         construct_fcast_and_hist_dfs,
         df_to_table,
+
+        # decomp/
         decompose_changes, collapse_shocks,
 
         # altpolicy/
@@ -178,8 +180,9 @@ module DSGE
     include("analysis/meansbands_to_matrix.jl")
     include("analysis/io.jl")
     include("analysis/util.jl")
-    include("analysis/forecast_decomposition.jl")
     include("analysis/df_to_table.jl")
+
+    include("decomp/forecast_decomposition.jl")
 
     include("altpolicy/altpolicy.jl")
     include("altpolicy/taylor93.jl")
