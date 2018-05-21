@@ -26,6 +26,7 @@ type Scenario <: SingleScenario
     draw_states::Bool
     altpolicy::AltPolicy
     vintage::String
+    n_draws::Int64
 end
 
 function Base.show(io::IO, scen::Scenario)
@@ -42,6 +43,7 @@ function Base.show(io::IO, scen::Scenario)
     if scen.altpolicy.key != :historical
         @printf io "%-14s %s\n" "Alt Policy:" scen.altpolicy
     end
+    @printf io "%-14s %s\n" "Number of draws:" scen.n_draws
     @printf io "%-14s %s"   "Vintage:" scen.vintage
 end
 
@@ -61,14 +63,17 @@ function Scenario(key::Symbol, description::String,
                   vintage::String;
                   shock_scaling::Float64 = 1.0,
                   draw_states::Bool = false,
-                  altpolicy::AltPolicy = AltPolicy(:historical, eqcond, solve))
+                  altpolicy::AltPolicy = AltPolicy(:historical, eqcond, solve),
+                  n_draws::Int64 = 0)
     Scenario(key, description, target_names, instrument_names,
-             DataFrame(), DataFrame(), shock_scaling, draw_states, altpolicy, vintage)
+             DataFrame(), DataFrame(), shock_scaling, draw_states,
+             altpolicy, vintage, n_draws)
 end
 
 n_targets(scen::Scenario) = length(scen.target_names)
 n_instruments(scen::Scenario) = length(scen.instrument_names)
 n_target_horizons(scen::Scenario) = size(scen.targets, 1)
+n_scenario_draws(scen::Scenario) = scen.n_draws
 
 function targets_to_data(m::AbstractModel, scen::Scenario)
     df = DataFrame()
@@ -76,7 +81,7 @@ function targets_to_data(m::AbstractModel, scen::Scenario)
     # Assign dates
     horizons   = n_target_horizons(scen)
     start_date = date_forecast_start(m)
-    end_date   = DSGE.iterate_quarters(start_date, horizons - 1)
+    end_date   = iterate_quarters(start_date, horizons - 1)
     df[:date]  = quarter_range(start_date, end_date)
 
     for var in keys(m.observables)

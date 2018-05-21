@@ -71,7 +71,7 @@ the model.
 
 * `observable_mappings::OrderedDict{Symbol,Observable}`: A dictionary that
   stores data sources, series mnemonics, and transformations to/from model
-  units.  DSGE.jl will fetch data from the Federal Reserve Bank of St. Louis's
+  units. DSGE.jl will fetch data from the Federal Reserve Bank of St. Louis's
   FRED database; all other data must be downloaded by the user. See `load_data`
   and `Observable` for further details.
 
@@ -197,7 +197,7 @@ function SmetsWouters(subspec::String="ss0";
             OrderedDict{Symbol,PseudoObservable}())
 
     # Set settings
-    settings_smets_wouters!(m)
+    model_settings!(m)
     default_test_settings!(m)
     for custom_setting in values(custom_settings)
         m <= custom_setting
@@ -242,11 +242,11 @@ function init_parameters!(m::SmetsWouters)
                    description="δ: The capital depreciation rate.",
                    tex_label="\\delta" )
 
-    m <= parameter(:Upsilon, 1.000, (0., 10.), (1e-5, 0.), DSGE.Exponential(), GammaAlt(1., 0.5), fixed=true,
+    m <= parameter(:Upsilon, 1.000, (0., 10.), (1e-5, 0.), Exponential(), GammaAlt(1., 0.5), fixed=true,
                    description="Υ: The trend evolution of the price of investment goods relative to consumption goods. Set equal to 1.",
                    tex_label="\\Upsilon")
 
-    m <= parameter(:Φ, 1.4672, (1., 10.), (1.00, 10.00), DSGE.Exponential(), Normal(1.25, 0.12), fixed=false,
+    m <= parameter(:Φ, 1.4672, (1., 10.), (1.00, 10.00), Exponential(), Normal(1.25, 0.12), fixed=false,
                    description="Φ: Fixed costs.",
                    tex_label="\\Phi")
 
@@ -262,7 +262,7 @@ function init_parameters!(m::SmetsWouters)
                    description="ppsi: Utilization costs.",
                    tex_label="\\psi")
 
-    m <= parameter(:ν_l, 2.8401, (1e-5, 10.), (1e-5, 10.), DSGE.Exponential(), Normal(2, 0.75), fixed=false,
+    m <= parameter(:ν_l, 2.8401, (1e-5, 10.), (1e-5, 10.), Exponential(), Normal(2, 0.75), fixed=false,
                    description="ν_l: The coefficient of relative risk aversion on the labor term of households' utility function.", tex_label="\\nu_l")
 
     m <= parameter(:ζ_w, 0.7937, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.1), fixed=false,
@@ -277,11 +277,11 @@ function init_parameters!(m::SmetsWouters)
                    description="λ_w: The wage markup, which affects the elasticity of substitution between differentiated labor services.",
                    tex_label="\\lambda_w")
 
-    m <= parameter(:β, 0.7420, (1e-5, 10.), (1e-5, 10.), DSGE.Exponential(), GammaAlt(0.25, 0.1), fixed=false, scaling = x -> 1/(1 + x/100),
+    m <= parameter(:β, 0.7420, (1e-5, 10.), (1e-5, 10.), Exponential(), GammaAlt(0.25, 0.1), fixed=false, scaling = x -> 1/(1 + x/100),
                    description="β: Discount rate.",
                    tex_label="\\beta ")
 
-    m <= parameter(:ψ1, 1.7985, (1e-5, 10.), (1e-5, 10.00), DSGE.Exponential(), Normal(1.5, 0.25), fixed=false,
+    m <= parameter(:ψ1, 1.7985, (1e-5, 10.), (1e-5, 10.00), Exponential(), Normal(1.5, 0.25), fixed=false,
                    description="ψ₁: Weight on inflation gap in monetary policy rule.",
                    tex_label="\\psi_1")
 
@@ -293,11 +293,11 @@ function init_parameters!(m::SmetsWouters)
                    description="ψ₃: Weight on rate of change of output gap in the monetary policy rule.",
                    tex_label="\\psi_3")
 
-    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), DSGE.Exponential(), GammaAlt(0.62, 0.1), fixed=false, scaling = x -> 1 + x/100,
+    m <= parameter(:π_star, 0.7000, (1e-5, 10.), (1e-5, 10.), Exponential(), GammaAlt(0.62, 0.1), fixed=false, scaling = x -> 1 + x/100,
                    description="π_star: The steady-state rate of inflation.",
                    tex_label="\\pi_*")
 
-    m <= parameter(:σ_c, 1.2312, (1e-5, 10.), (1e-5, 10.), DSGE.Exponential(), Normal(1.5, 0.37), fixed=false,
+    m <= parameter(:σ_c, 1.2312, (1e-5, 10.), (1e-5, 10.), Exponential(), Normal(1.5, 0.37), fixed=false,
                    tex_label="\\sigma_{c}")
 
     m <= parameter(:ρ, .8258, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.75, 0.10), fixed=false,
@@ -356,30 +356,30 @@ function init_parameters!(m::SmetsWouters)
                    tex_label="\\rho_{r^m}")
 
     # exogenous processes - standard deviation
-    m <= parameter(:σ_g, 0.6090, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_g, 0.6090, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_g: The standard deviation of the government spending process.",
                    tex_label="\\sigma_{g}")
 
-    m <= parameter(:σ_b, 0.1818, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_b, 0.1818, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_b: The standard deviation of the intertemporal preference shifter process.",
                    tex_label="\\sigma_{b}")
 
-    m <= parameter(:σ_μ, 0.4601, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_μ, 0.4601, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_μ: The standard deviation of the exogenous marginal efficiency of investment shock process.",
                    tex_label="\\sigma_{\\mu}")
 
-    m <= parameter(:σ_z, 0.4618, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_z, 0.4618, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label="\\sigma_{z}")
 
-    m <= parameter(:σ_λ_f, 0.1455, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_λ_f, 0.1455, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_λ_f: The mean of the process that generates the price elasticity of the composite good. Specifically, the elasticity is (1+λ_{f,t})/(λ_{f_t}).",
                    tex_label="\\sigma_{\\lambda_f}")
 
-    m <= parameter(:σ_λ_w, 0.2089, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_λ_w, 0.2089, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    tex_label="\\sigma_{\\lambda_w}")
 
-    m <= parameter(:σ_rm, 0.2397, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), RootInverseGamma(2., 0.10), fixed=false,
+    m <= parameter(:σ_rm, 0.2397, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2., 0.10), fixed=false,
                    description="σ_r_m: The standard deviation of the monetary policy shock.",
                    tex_label="\\sigma_{r^m}")
 
@@ -435,7 +435,7 @@ function steadystate!(m::SmetsWouters)
     return m
 end
 
-function settings_smets_wouters!(m::SmetsWouters)
+function model_settings!(m::SmetsWouters)
 
     default_settings!(m)
 

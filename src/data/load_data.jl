@@ -55,6 +55,7 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
         levels = load_data_levels(m; verbose=verbose)
         if cond_type in [:semi, :full]
             cond_levels = load_cond_data_levels(m; verbose=verbose)
+            levels, cond_levels = reconcile_column_names(levels, cond_levels)
             levels = vcat(levels, cond_levels)
             na2nan!(levels)
         end
@@ -156,7 +157,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             end
 
             # Read in dataset and check that the file contains data for the proper dates
-            addl_data = readtable(file)
+            addl_data = CSV.read(file)
 
             # Convert dates from strings to quarter-end dates for date arithmetic
             format_dates!(:date, addl_data)
@@ -195,14 +196,14 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     # turn NAs into NaNs
     na2nan!(df)
 
-    sort!(df, cols = :date)
+    sort!(df, :date)
 
     # print population level data to a file
     if !m.testing
         filename = inpath(m, "raw", "population_data_levels_$vint.csv")
         mnemonic = parse_population_mnemonic(m)[1]
         if !isnull(mnemonic)
-            writetable(filename, df[:,[:date, get(mnemonic)]])
+            CSV.write(filename, df[:,[:date, get(mnemonic)]])
         end
     end
 
@@ -238,7 +239,7 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
         end
 
         # Read data
-        cond_df = readtable(file)
+        cond_df = CSV.read(file)
         format_dates!(:date, cond_df)
 
         date_cond_end = cond_df[end, :date]
@@ -246,18 +247,18 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
         # Use population forecast as population data
         population_forecast_file = inpath(m, "raw", "population_forecast_" * data_vintage(m) * ".csv")
         if isfile(population_forecast_file) && !isnull(get_setting(m, :population_mnemonic))
-            pop_forecast = readtable(population_forecast_file)
+            pop_forecast = CSV.read(population_forecast_file)
 
             population_mnemonic = get(parse_population_mnemonic(m)[1])
-            rename!(pop_forecast, :POPULATION,  population_mnemonic)
-            DSGE.na2nan!(pop_forecast)
-            DSGE.format_dates!(:date, pop_forecast)
+            rename!(pop_forecast, :POPULATION =>  population_mnemonic)
+            na2nan!(pop_forecast)
+            format_dates!(:date, pop_forecast)
 
             cond_df = join(cond_df, pop_forecast, on=:date, kind=:left)
 
             # Turn NAs into NaNs
             na2nan!(cond_df)
-            sort!(cond_df, cols = :date)
+            sort!(cond_df, :date)
 
             return cond_df
         else
@@ -278,7 +279,7 @@ Save `df` to disk as CSV. File is located in `inpath(m, \"data\")`.
 """
 function save_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
     filename = get_data_filename(m, cond_type)
-    writetable(filename, df)
+    CSV.write(filename, df)
 end
 
 """
@@ -303,7 +304,7 @@ Read CSV from disk as DataFrame. File is located in `inpath(m, \"data\")`.
 """
 function read_data(m::AbstractModel; cond_type::Symbol = :none)
     filename = get_data_filename(m, cond_type)
-    df       = readtable(filename)
+    df       = CSV.read(filename)
 
     # Convert date column from string to Date
     df[:date] = map(Date, df[:date])
@@ -382,7 +383,7 @@ the case that you are calling filter_shocks! in the scenarios codebase.
 """
 function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none, include_presample::Bool = true, in_sample::Bool = true)
     # Sort rows by date
-    df1 = sort(df; cols=[:date])
+    df1 = sort(df, :date)
 
     if in_sample
         start_date = if include_presample
@@ -486,11 +487,11 @@ function read_population_data(filename::String; verbose::Symbol = :low)
         println("Reading population data from $filename...")
     end
 
-    df = readtable(filename)
+    df = CSV.read(filename)
 
-    DSGE.na2nan!(df)
-    DSGE.format_dates!(:date, df)
-    sort!(df, cols = :date)
+    na2nan!(df)
+    format_dates!(:date, df)
+    sort!(df, :date)
 
     return df
 end
@@ -525,12 +526,12 @@ function read_population_forecast(filename::String, population_mnemonic::Symbol;
             println("Loading population forecast from $filename...")
         end
 
-        df = readtable(filename)
+        df = CSV.read(filename)
 
-        rename!(df, :POPULATION, population_mnemonic)
-        DSGE.na2nan!(df)
-        DSGE.format_dates!(:date, df)
-        sort!(df, cols = :date)
+        rename!(df, :POPULATION => population_mnemonic)
+        na2nan!(df)
+        format_dates!(:date, df)
+        sort!(df, :date)
 
         return df[:, [:date, population_mnemonic]]
     else

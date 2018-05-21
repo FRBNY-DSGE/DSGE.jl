@@ -23,7 +23,7 @@ output_vars = add_requisite_output_vars([:histpseudo, :histobs,
                                          :forecastutpseudo, :forecastutobs,
                                          :forecast4qpseudo, :forecast4qobs,
                                          :shockdecpseudo, :shockdecobs,
-                                         :irfpseudo, :irfobs]
+                                         :irfpseudo, :irfobs])
 
 # Check error handling for input_type = :subset
 @test_throws ErrorException forecast_one(m, :subset, :none, output_vars,

@@ -625,7 +625,7 @@ function prepare_meansbands_table_timeseries(mb::MeansBands, var::Symbol;
 
     # Join so mean is on far right and date is on far left
     df = join(bands, means, on = :date)
-    rename!(df, var, Symbol("mean"))
+    rename!(df, var => Symbol("mean"))
 
     return df
 end
@@ -668,7 +668,7 @@ function prepare_meansbands_table_irf(mb::MeansBands, shock::Symbol, vars::Vecto
 
     # Print all vars by default
     if isempty(vars)
-        vars = DSGE.get_variables(mb)
+        vars = get_variables(mb)
     end
 
     # Make dictionary to return
@@ -734,9 +734,9 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
 
     # Line up dates between trend, dettrend and shockdec
     df_shockdec = join(df_shockdec, df_trend, on = :date, kind = :inner)
-    rename!(df_shockdec, var, :trend)
+    rename!(df_shockdec, var => :trend)
     df_shockdec = join(df_shockdec, df_dettrend, on = :date, kind = :inner)
-    rename!(df_shockdec, var, :dettrend)
+    rename!(df_shockdec, var => :dettrend)
 
     # Add each shock's contribution and deterministic trend to output DataFrame
     df = DataFrame(date = df_shockdec[:date])
@@ -746,7 +746,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     df_shockdec[:dettrend] = df_shockdec[:dettrend]
 
     # Rename columns to just the shock names
-    map(x -> rename!(df, x, parse_mb_colname(x)[2]), setdiff(names(df), [:date, :trend, :dettrend]))
+    map(x -> rename!(df, x => parse_mb_colname(x)[2]), setdiff(names(df), [:date, :trend, :dettrend]))
 
     # If mb_forecast and mb_hist are passed in, add the detrended time series
     # mean of var to the table
@@ -780,7 +780,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
         for x in setdiff(names(df), [:date, :trend, :dettrend])
             x_detexed = detexify(x)
             if x != x_detexed
-                rename!(df, x, x_detexed)
+                rename!(df, x => x_detexed)
             end
         end
     end
