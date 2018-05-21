@@ -88,18 +88,12 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
                             df_new::DataFrame, df_old::DataFrame,
                             params_new::Vector{Float64}, params_old::Vector{Float64},
                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
-                            hs = 1:forecast_horizons(m_old),
-                            check::Bool = false, atol::Float64 = 1e-8)
+                            hs = 1:forecast_horizons(m_old))
 
     # Compute numbers of periods
     # h_cond and k_cond are h and k adjusted for (differences in) conditioning
     T0, T, k, T1_new, T1_old, k_cond =
         decomposition_periods(m_new, m_old, cond_new, cond_old)
-
-    if check
-        @assert size(df_new, 1) == T0 + T + T1_new
-        @assert size(df_old, 1) == T0 + T + T1_old - k
-    end
 
     # Update parameters, filter, and smooth
     sys_new, sys_old, kal_new_new, kal_new_old, kal_old_old, s_tgT, ϵ_tgT =
@@ -118,18 +112,6 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
     end
 
     # Compute whole sequence of historical and forecasted observables if desired
-    if check
-        y_new = Dict{Symbol, Matrix{Float64}}()
-        y_old = Dict{Symbol, Matrix{Float64}}()
-        for class in classes
-            # y^{new,new}_{t|T-k}, t = 1:T:H
-            y_new[class] = compute_history_and_forecast(m_new, df_new, class, cond_type = cond_new)
-
-            # y^{old,old}_{t|T-k}, t = 1:T-k+H
-            y_old[class] = compute_history_and_forecast(m_old, df_old, class, cond_type = cond_old)
-        end
-    end
-
     for (i, h) in enumerate(hs)
         # Adjust h for (differences in) conditioning
         h_cond = h - T1_old
@@ -139,32 +121,18 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
             # Decompose into components
             decomp[Symbol(:decompstate, class)][:, i], decomp[Symbol(:decompshock, class)][:, i] =
                 decompose_states_shocks(sys_new, kal_new_new, s_tgT, ϵ_tgT,
-                                        class, T0, k_cond, h_cond, check = check)
+                                        class, T0, k_cond, h_cond)
             decomp[Symbol(:decompdata, class)][:, i] =
                 decompose_data_revisions(sys_new, kal_new_new, kal_new_old,
-                                         class, T0, k_cond, h_cond, check = check)
+                                         class, T0, k_cond, h_cond)
             decomp[Symbol(:decompparam, class)][:, i] =
                 decompose_param_reest(sys_new, sys_old, kal_new_old, kal_old_old,
-                                      class, T0, k_cond, h_cond, check = check)
+                                      class, T0, k_cond, h_cond)
 
             # Compute total difference
             decomp[Symbol(:decomptotal, class)][:, i] =
                 decomp[Symbol(:decompstate, class)][:, i] + decomp[Symbol(:decompshock, class)][:, i] +
                 decomp[Symbol(:decompdata, class)][:, i]  + decomp[Symbol(:decompparam, class)][:, i]
-
-            if check
-                # Total difference = y^{new,new}_{T+h-k|T} - y^{old,old}_{T-k+h|T-k}
-                y_new_Tmkph_T   = y_new[class][:, T-k+h]
-                y_old_Tmkph_Tmk = y_old[class][:, T-k+h]
-                exp_total = y_new_Tmkph_T - y_old_Tmkph_Tmk
-                try
-                    @assert isapprox(exp_total, decomp[Symbol(:decomptotal, class)][:, i], atol = atol)
-                catch ex
-                    @show decomp[Symbol(:decomptotal, class)][:, i]
-                    @show exp_total
-                    throw(ex)
-                end
-            end
         end
     end
 
@@ -218,8 +186,7 @@ end
 
 function decompose_states_shocks(sys_new::System, kal_new::DSGE.Kalman,
                                  s_tgT::Matrix{Float64}, ϵ_tgT::Matrix{Float64},
-                                 class::Symbol, T0::Int, k::Int, h::Int;
-                                 check::Bool = false, atol::Float64 = 1e-8)
+                                 class::Symbol, T0::Int, k::Int, h::Int)
     # New parameters, new data
     # State and shock components = y_{T-k+h|T} - y_{T-k+h|T-k}
     #     = Z [ T^h (s_{T-k|T} - s_{T-k|T-k}) + sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ_{T-k+j|T} ) ]
@@ -240,32 +207,11 @@ function decompose_states_shocks(sys_new::System, kal_new::DSGE.Kalman,
     shock_comp = ZZ * shock_sum
 
     # Return
-    if check
-        @assert size(s_tgt, 2) == size(s_tgT, 2) == size(ϵ_tgT, 2)
-        @assert isapprox(s_tgt[:, end], s_tgT[:, end], atol = atol)
-
-        y_Tmkph_T = if h <= k
-            ZZ * (s_tgT[:, end-k+h] + CCC) + DD # history
-        else
-            ZZ * (TTT^(h-k) * s_tgt[:, end] + CCC) + DD # forecast
-        end
-        y_Tmkph_Tmk = ZZ * (TTT^h * s_tgt[:, end-k] + CCC) + DD
-        state_shock_comp = y_Tmkph_T - y_Tmkph_Tmk
-
-        try
-            @assert isapprox(state_shock_comp, state_comp + shock_comp, atol = atol)
-        catch ex
-            @show state_comp + shock_comp
-            @show state_shock_comp
-            throw(ex)
-        end
-    end
     return state_comp, shock_comp
 end
 
 function decompose_data_revisions(sys_new::System, kal_new::DSGE.Kalman, kal_old::DSGE.Kalman,
-                                  class::Symbol, T0::Int, k::Int, h::Int;
-                                  check::Bool = false, atol::Float64 = 1e-8)
+                                  class::Symbol, T0::Int, k::Int, h::Int)
     # New parameters, new and old data
     # Data revision component = y^{new}_{T-k+h|T-k} - y^{old}_{T-k+h|T-k}
     #     = Z T^h ( s^{new}_{T-k|T-k} - s^{old}_{T-k|T-k} )
@@ -273,14 +219,6 @@ function decompose_data_revisions(sys_new::System, kal_new::DSGE.Kalman, kal_old
 
     s_new_tgt = kal_new[:filt][:, (T0+1):end] # s^{new}_{t|t}, t = 1:T
     s_old_tgt = kal_old[:filt][:, (T0+1):end] # s^{old}_{t|t}, t = 1:T-k
-    try
-        check && @assert size(s_new_tgt, 2) == size(s_old_tgt, 2) + k
-    catch ex
-        @show size(s_new_tgt, 2)
-        @show size(s_old_tgt, 2)
-        @show k
-        throw(ex)
-    end
 
     # Return
     data_comp = ZZ * TTT^h * (s_new_tgt[:, end-k] - s_old_tgt[:, end])
@@ -289,8 +227,7 @@ end
 
 function decompose_param_reest(sys_new::System, sys_old::System,
                                kal_new::DSGE.Kalman, kal_old::DSGE.Kalman,
-                               class::Symbol, T0::Int, k::Int, h::Int;
-                               check::Bool = false, atol::Float64 = 1e-8)
+                               class::Symbol, T0::Int, k::Int, h::Int)
     # New and old parameters, old data
     # Parameter re-estimation component = y^{new}_{T-k+h|T-k} - y^{old}_{T-k+h|T-k}
     ZZ_new, DD_new, TTT_new, _, CCC_new = class_system_matrices(sys_new, class)
@@ -298,10 +235,6 @@ function decompose_param_reest(sys_new::System, sys_old::System,
 
     s_new_tgt = kal_new[:filt][:, (T0+1):end] # s^{new}_{t|t}, t = 1:T-k
     s_old_tgt = kal_old[:filt][:, (T0+1):end] # s^{old}_{t|t}, t = 1:T-k
-    if check
-        @assert size(s_new_tgt, 2) == size(s_old_tgt, 2)
-        @assert isapprox(s_new_tgt, s_old_tgt, atol = atol)
-    end
 
     # y^{new}_{T-k+h|T-k} = Z^{new} (T^{new}^h s^{new}_{T-k|T-k} + C^{new}) + D^{new}
     s_new_Tmk_Tmk = s_new_tgt[:, end]
