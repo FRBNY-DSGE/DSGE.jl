@@ -178,8 +178,7 @@ function prepare_decomposition!(m_new::AbstractModel, m_old::AbstractModel,
     kal_new_new = DSGE.filter(m_new, df_new, sys_new, cond_type = cond_new)
     kal_new_old = DSGE.filter(m_new, df_old, sys_new, cond_type = cond_old)
     kal_old_old = DSGE.filter(m_old, df_old, sys_old, cond_type = cond_old)
-    s_tgT, ϵ_tgT = smooth(m_new, df_new, sys_new, kal_new_new,
-                          cond_type = cond_new, draw_states = false)
+    s_tgT, ϵ_tgT = smooth(m_new, df_new, sys_new, cond_type = cond_new, draw_states = false)
 
     return sys_new, sys_old, kal_new_new, kal_new_old, kal_old_old, s_tgT, ϵ_tgT
 end
@@ -192,7 +191,7 @@ function decompose_states_shocks(sys_new::System, kal_new::DSGE.Kalman,
     #     = Z [ T^h (s_{T-k|T} - s_{T-k|T-k}) + sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ_{T-k+j|T} ) ]
     #     = state component + shock component
     ZZ, DD, TTT, RRR, CCC = class_system_matrices(sys_new, class)
-    s_tgt = kal_new[:filt][:, (T0+1):end] # s_{t|t}
+    s_tgt = kal_new[:s_filt][:, (T0+1):end] # s_{t|t}
 
     # State component = Z T^h (s_{T-k|T} - s_{T-k|T-k})
     s_Tmk_T   = s_tgT[:, end-k] # s_{T-k|T}
@@ -217,8 +216,8 @@ function decompose_data_revisions(sys_new::System, kal_new::DSGE.Kalman, kal_old
     #     = Z T^h ( s^{new}_{T-k|T-k} - s^{old}_{T-k|T-k} )
     ZZ, _, TTT, _, _ = class_system_matrices(sys_new, class)
 
-    s_new_tgt = kal_new[:filt][:, (T0+1):end] # s^{new}_{t|t}, t = 1:T
-    s_old_tgt = kal_old[:filt][:, (T0+1):end] # s^{old}_{t|t}, t = 1:T-k
+    s_new_tgt = kal_new[:s_filt][:, (T0+1):end] # s^{new}_{t|t}, t = 1:T
+    s_old_tgt = kal_old[:s_filt][:, (T0+1):end] # s^{old}_{t|t}, t = 1:T-k
 
     # Return
     data_comp = ZZ * TTT^h * (s_new_tgt[:, end-k] - s_old_tgt[:, end])
@@ -233,8 +232,8 @@ function decompose_param_reest(sys_new::System, sys_old::System,
     ZZ_new, DD_new, TTT_new, _, CCC_new = class_system_matrices(sys_new, class)
     ZZ_old, DD_old, TTT_old, _, CCC_old = class_system_matrices(sys_old, class)
 
-    s_new_tgt = kal_new[:filt][:, (T0+1):end] # s^{new}_{t|t}, t = 1:T-k
-    s_old_tgt = kal_old[:filt][:, (T0+1):end] # s^{old}_{t|t}, t = 1:T-k
+    s_new_tgt = kal_new[:s_filt][:, (T0+1):end] # s^{new}_{t|t}, t = 1:T-k
+    s_old_tgt = kal_old[:s_filt][:, (T0+1):end] # s^{old}_{t|t}, t = 1:T-k
 
     # y^{new}_{T-k+h|T-k} = Z^{new} (T^{new}^h s^{new}_{T-k|T-k} + C^{new}) + D^{new}
     s_new_Tmk_Tmk = s_new_tgt[:, end]
