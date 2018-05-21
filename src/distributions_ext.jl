@@ -144,12 +144,12 @@ end
 
 """
 ```
-rank(d::DegenerateMvNormal)
+Base.rank(d::DegenerateMvNormal)
 ```
 
 Returns the rank of `d.σ`.
 """
-function rank(d::DegenerateMvNormal)
+function Base.rank(d::DegenerateMvNormal)
     return rank(d.σ)
 end
 
@@ -249,7 +249,7 @@ function Distributions.rand(d::DegenerateDiagMvTDist, n::Int)
     return d.μ .+ d.σ*rand(TDist(d.ν), length(d), n)
 end
 
-# Compute the mean μ and standard deviation σ of a DSGE.RootInverseGamma object.
+# Compute the mean μ and standard deviation σ of a RootInverseGamma object.
 
 # A Root Inverse Gamma / Nagasaki Scaled Chi2 Distribution's mean and standard deviation
 # can be computed as follows:

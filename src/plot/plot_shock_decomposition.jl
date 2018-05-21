@@ -144,7 +144,7 @@ shockdec
     var, shockdec, trend, dettrend, hist, forecast, groups = sd.args
 
     # Construct DataFrame with detrended mean, deterministic trend, and all shocks
-    df = DSGE.prepare_means_table_shockdec(shockdec, trend, dettrend, var,
+    df = prepare_means_table_shockdec(shockdec, trend, dettrend, var,
                                       mb_hist = hist, mb_forecast = forecast,
                                       detexify_shocks = false,
                                       groups = groups)
@@ -156,6 +156,11 @@ shockdec
                      find(x -> Dates.month(x) == 3,            dates),
                      find(x -> Dates.year(x) % tick_size == 0, dates))
     xticks --> (xnums[inds], map(Dates.year, dates[inds]))
+
+    # Set date axis limits
+    x0 = xnums[findfirst(dates .== start_date)]
+    x1 = xnums[findfirst(dates .== end_date)]
+    xlims := (x0, x1)
 
     # Shock contributions
     @series begin
@@ -170,24 +175,23 @@ shockdec
         bar_width  --> 1
         legendfont --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
 
-        inds = find(start_date .<= dates .<= end_date)
-        x = df[inds, :date]
-        y = convert(Array, df[inds, cat_names])
+        x = df[:date]
+        y = convert(Matrix{Float64}, df[cat_names])
         StatPlots.GroupedBar((x, y))
     end
 
     seriestype := :line
     linewidth  := 2
-    ylim       := :auto
 
     # Detrended mean history
     @series begin
         linecolor := hist_color
         label     := hist_label
 
-        inds = intersect(find(start_date .<= dates .<= end_date),
-                         find(hist.means[1, :date] .<= dates .<= hist.means[end, :date]))
-        xnums[inds], df[inds, :detrendedMean]
+        inds = find(hist.means[1, :date] .<= dates .<= hist.means[end, :date])
+        x = xnums[inds]
+        y = convert(Vector{Float64}, df[inds, :detrendedMean])
+        x, y
     end
 
     # Detrended mean forecast
@@ -195,8 +199,9 @@ shockdec
         linecolor := forecast_color
         label     := forecast_label
 
-        inds = intersect(find(start_date .<= dates .<= end_date),
-                         find(hist.means[end, :date] .<= dates .<= forecast.means[end, :date]))
-        xnums[inds], df[inds, :detrendedMean]
+        inds = find(hist.means[end, :date] .<= dates .<= forecast.means[end, :date])
+        x = xnums[inds]
+        y = convert(Vector{Float64}, df[inds, :detrendedMean])
+        x, y
     end
 end

@@ -72,7 +72,7 @@ equilibrium conditions.
 
 * `observable_mappings::OrderedDict{Symbol,Observable}`: A dictionary that
   stores data sources, series mnemonics, and transformations to/from model
-  units.  DSGE.jl will fetch data from the Federal Reserve Bank of St. Louis's
+  units. DSGE.jl will fetch data from the Federal Reserve Bank of St. Louis's
   FRED database; all other data must be downloaded by the user. See `load_data`
   and `Observable` for further details.
 
@@ -200,7 +200,7 @@ function Model1002(subspec::String="ss10";
             OrderedDict{Symbol,PseudoObservable}())
 
     # Set settings
-    settings_m1002!(m)
+    model_settings!(m)
     default_test_settings!(m)
     for custom_setting in values(custom_settings)
         m <= custom_setting
@@ -693,7 +693,7 @@ function steadystate!(m::Model1002)
     return m
 end
 
-function settings_m1002!(m::Model1002)
+function model_settings!(m::Model1002)
 
     default_settings!(m)
 

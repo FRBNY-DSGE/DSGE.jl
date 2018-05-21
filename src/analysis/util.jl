@@ -198,7 +198,7 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
     # If no population forecast, use last period of population data instead
     if isempty(population_forecast)
         population_forecast = population_data[end, :]
-        last_forecast_date = DSGE.iterate_quarters(last_historical_date, 1)
+        last_forecast_date = iterate_quarters(last_historical_date, 1)
         population_forecast[1, :date] = last_forecast_date
     else
         last_forecast_date = population_forecast[end, :date]

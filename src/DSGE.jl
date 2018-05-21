@@ -13,7 +13,7 @@ module DSGE
     export
 
         # distributions_ext.jl
-        BetaAlt, GammaAlt, DegenerateMvNormal, DegenerateDiagMvTDist, MatrixNormal,
+        BetaAlt, GammaAlt, RootInverseGamma, DegenerateMvNormal, DegenerateDiagMvTDist, MatrixNormal,
 
         # settings.jl
         Setting, get_setting,
@@ -114,6 +114,7 @@ module DSGE
         compute_scenario_system, filter_shocks!, forecast_scenario, simulate_switching, scenario_means_bands,
         get_scenario_input_file, n_scenario_draws, get_scenario_filename, get_scenario_output_files,
         read_scenario_output, get_scenario_mb_input_file, get_scenario_mb_output_file, read_scenario_mb,
+        count_scenario_draws,
 
         # plot/
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
