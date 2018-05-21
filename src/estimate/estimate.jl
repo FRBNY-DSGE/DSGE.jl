@@ -186,7 +186,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
         DegenerateMvNormal(params, proposal_covariance)
     end
 
-    if rank(propdist) != n_parameters_free(m)
+    if Base.rank(propdist) != n_parameters_free(m)
         println("problem –    shutting down dimensions")
     end
 
