@@ -47,20 +47,20 @@ function Base.getindex(K::Kalman, d::Symbol)
     end
 end
 
-function Base.getindex(kal::DSGE.Kalman, inds::Union{Int, UnitRange{Int}})
+function Base.getindex(kal::Kalman, inds::Union{Int, UnitRange{Int}})
     t0 = first(inds)
     t1 = last(inds)
 
-    return DSGE.Kalman(kal[:loglh][inds],        # loglh
-                       kal[:s_pred][:,    inds], # s_pred
-                       kal[:P_pred][:, :, inds], # P_pred
-                       kal[:s_filt][:,    inds], # filt
-                       kal[:P_filt][:, :, inds], # P_filt
-                       kal[:s_filt][:,    t0],   # s_0
-                       kal[:P_filt][:, :, t0],   # P_0
-                       kal[:s_filt][:,    t1],   # s_T
-                       kal[:P_filt][:, :, t1],   # P_T
-                       sum(kal[:loglh][inds]))   # total_loglh
+    return Kalman(kal[:loglh][inds],        # loglh
+                  kal[:s_pred][:,    inds], # s_pred
+                  kal[:P_pred][:, :, inds], # P_pred
+                  kal[:s_filt][:,    inds], # filt
+                  kal[:P_filt][:, :, inds], # P_filt
+                  kal[:s_filt][:,    t0],   # s_0
+                  kal[:P_filt][:, :, t0],   # P_0
+                  kal[:s_filt][:,    t1],   # s_T
+                  kal[:P_filt][:, :, t1],   # P_T
+                  sum(kal[:loglh][inds]))   # total_loglh
 end
 
 function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},

@@ -289,7 +289,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
         state_indices = merge(m.endogenous_states, m.endogenous_states_augmented)
         @assert length(state_indices) == n_states_augmented(m) # assert no duplicate keys
         write(file, "state_indices", state_indices)
-        rev_transforms = Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(state_indices))
+        rev_transforms = Dict{Symbol,Symbol}(x => Symbol("identity") for x in keys(state_indices))
         write(file, "state_revtransforms", rev_transforms)
     end
 
@@ -299,7 +299,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
         rev_transforms = if prod != :irf
             Dict{Symbol,Symbol}(x => Symbol(m.observable_mappings[x].rev_transform) for x in keys(m.observables))
         else
-            Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(m.observables))
+            Dict{Symbol,Symbol}(x => Symbol("identity") for x in keys(m.observables))
         end
         write(file, "observable_revtransforms", rev_transforms)
     end
@@ -311,7 +311,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
             Dict{Symbol,Symbol}(x => Symbol(m.pseudo_observable_mappings[x].rev_transform)
                                 for x in keys(m.pseudo_observables))
         else
-            Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(m.pseudo_observables))
+            Dict{Symbol,Symbol}(x => Symbol("identity") for x in keys(m.pseudo_observables))
         end
         write(file, "pseudoobservable_revtransforms", rev_transforms)
     end
@@ -320,7 +320,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     if class in [:shocks, :stdshocks] || prod in [:shockdec, :irf]
         write(file, "shock_indices", m.exogenous_shocks)
         if class in [:shocks, :stdshocks]
-            rev_transforms = Dict{Symbol,Symbol}(x => Symbol("DSGE.identity") for x in keys(m.exogenous_shocks))
+            rev_transforms = Dict{Symbol,Symbol}(x => Symbol("identity") for x in keys(m.exogenous_shocks))
             write(file, "shock_revtransforms", rev_transforms)
         end
     end

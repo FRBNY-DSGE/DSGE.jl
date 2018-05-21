@@ -209,7 +209,7 @@ function init_observable_mappings!(m::Model1002)
 
     longinflation_rev_transform = loggrowthtopct_annualized
 
-    observables[:obs_longinflation] = Observable(:obs_longinflation, [:ASACX10__SPF],
+    observables[:obs_longinflation] = Observable(:obs_longinflation, [:ASACX10__DLX],
                                                  longinflation_fwd_transform, longinflation_rev_transform,
                                                  "Long term inflation expectations",
                                                  "10-year average yr/yr CPI inflation expectations")
@@ -227,7 +227,7 @@ function init_observable_mappings!(m::Model1002)
 
     longrate_rev_transform = quartertoannual
 
-    observables[:obs_longrate] = Observable(:obs_longrate, [:FYCCZA__LONGRATE],
+    observables[:obs_longrate] = Observable(:obs_longrate, [:FYCCZA__DLX],
                                             longrate_fwd_transform, longrate_rev_transform,
                                             "Long term interest rate expectations",
                                             "10T yield")
@@ -257,7 +257,7 @@ function init_observable_mappings!(m::Model1002)
 
     tfp_rev_transform = quartertoannual
 
-    observables[:obs_tfp] = Observable(:obs_tfp, [:TFPKQ__FERNALD, :TFPJQ__FERNALD],
+    observables[:obs_tfp] = Observable(:obs_tfp, [:TFPKQ__DLX, :TFPJQ__DLX],
                                        tfp_fwd_transform, tfp_rev_transform,
                                        "Total Factor Productivity",
                                        "Fernald's TFP, adjusted by Fernald's estimated alpha")

@@ -79,7 +79,7 @@ end
 moments(θ::Parameter)
 ```
 
-If θ's prior is a `DSGE.RootInverseGamma`, τ and ν. Otherwise, returns the mean
+If θ's prior is a `RootInverseGamma`, τ and ν. Otherwise, returns the mean
 and standard deviation of the prior. If θ is fixed, returns `(θ.value, 0.0)`.
 """
 function moments(θ::Parameter)
@@ -134,11 +134,11 @@ function prior_table(m::AbstractModel; subset_string::String = "",
     @printf priors_fid "\\endfoot\n"
 
     # Map prior distributions to identifying strings
+    distid(::Distributions.Uniform) = "Uniform"
     distid(::Distributions.Beta)    = "Beta"
     distid(::Distributions.Gamma)   = "Gamma"
     distid(::Distributions.Normal)  = "Normal"
-    distid(::DSGE.RootInverseGamma) = "InvG"
-    distid(::Distributions.Uniform) = "Uniform"
+    distid(::RootInverseGamma) = "InvG"
 
     # Write priors
     for group_desc in keys(groupings)
@@ -276,11 +276,11 @@ function prior_posterior_moments_table(m::AbstractModel,
     @printf moments_fid "\\endfoot\n"
 
     # Map prior distributions to identifying strings
+    distid(::Distributions.Uniform) = "U"
     distid(::Distributions.Beta)    = "B"
     distid(::Distributions.Gamma)   = "G"
     distid(::Distributions.Normal)  = "N"
-    distid(::DSGE.RootInverseGamma) = "IG"
-    distid(::Distributions.Uniform) = "U"
+    distid(::RootInverseGamma) = "IG"
 
     # Write parameter moments
     # sorted_parameters = sort(m.parameters, by = (x -> x.key))
