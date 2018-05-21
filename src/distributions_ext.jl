@@ -99,36 +99,6 @@ end
 
 """
 ```
-mean(d::RootInverseGamma)
-```
-
-Compute the mean of the RootInverseGamma distribution `d`.
-"""
-function mean(d::RootInverseGamma)
-    α = d.ν/2
-    β = d.τ^2 * d.ν/2
-
-    μ = sqrt(β) * gamma(α - 0.5) / gamma(α)
-    return μ
-end
-
-"""
-```
-std(d::RootInverseGamma)
-```
-
-Compute the standard deviation of the RootInverseGamma distribution `d`.
-"""
-function std(d::RootInverseGamma)
-    α = d.ν/2
-    β = d.τ^2 * d.ν/2
-
-    σ = sqrt((β / (α - 1) - μ^2))
-    return σ
-end
-
-"""
-```
 DegenerateMvNormal <: Distribution{Multivariate, Continuous}
 ```
 
