@@ -27,12 +27,11 @@ function compute_history_and_forecast(m::AbstractModel, df::DataFrame, class::Sy
     return hcat(hist, fcast[class])
 end
 
-function check_total_decomp(m_new::AbstractModel, m_old::AbstractModel,
-                            df_new::DataFrame, df_old::DataFrame,
+function check_total_decomp(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol},
                             decomp::Dict{Symbol, Array{Float64}};
                             hs = 1:forecast_horizons(m_old),
-                            atol::Float64 = 1e-8)
+                            atol::Float64 = 1e-8) where M<:AbstractModel
     correct = true
     for class in classes
         # y^{new,new}_{t|T}, t = 1:T+H

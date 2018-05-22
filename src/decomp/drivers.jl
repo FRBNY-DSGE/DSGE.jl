@@ -1,15 +1,13 @@
 # TODO:
-# - Have M<:AbstractModel instead of assert
 # - Have each function handle multiple hs at a time
 # - Maybe: handle h < 0 (new history vs. old history)
 # - Plotting
 
-function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
-                            df_new::DataFrame, df_old::DataFrame,
+function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                             input_type::Symbol, cond_new::Symbol, cond_old::Symbol,
                             classes::Vector{Symbol};
                             hs = 1:forecast_horizons(m_old),
-                            verbose::Symbol = :low, kwargs...)
+                            verbose::Symbol = :low, kwargs...) where M<:AbstractModel
     # Get output file names
     decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes)
 
@@ -85,12 +83,11 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
     end
 end
 
-function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
-                            df_new::DataFrame, df_old::DataFrame,
+function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                             params_new::Vector{Float64}, params_old::Vector{Float64},
                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
                             hs = 1:forecast_horizons(m_old),
-                            check::Bool = false, atol::Float64 = 1e-8)
+                            check::Bool = false, atol::Float64 = 1e-8) where M<:AbstractModel
 
     # Compute numbers of periods
     # h_cond and k_cond are h and k adjusted for (differences in) conditioning
@@ -146,8 +143,8 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
     return decomp
 end
 
-function decomposition_periods(m_new::AbstractModel, m_old::AbstractModel,
-                               cond_new::Symbol, cond_old::Symbol)
+function decomposition_periods(m_new::M, m_old::M,
+                               cond_new::Symbol, cond_old::Symbol) where M<:AbstractModel
     # Number of presample periods T0 must be the same
     T0 = n_presample_periods(m_new)
     @assert n_presample_periods(m_old) == T0
@@ -168,13 +165,9 @@ function decomposition_periods(m_new::AbstractModel, m_old::AbstractModel,
     return T0, T, k, T1_new, T1_old, k_cond
 end
 
-function prepare_decomposition!(m_new::AbstractModel, m_old::AbstractModel,
-                                df_new::DataFrame, df_old::DataFrame,
+function prepare_decomposition!(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                                 params_new::Vector{Float64}, params_old::Vector{Float64},
-                                cond_new::Symbol, cond_old::Symbol)
-    # Check models well-formed
-    @assert typeof(m_new) == typeof(m_old)
-
+                                cond_new::Symbol, cond_old::Symbol) where M<:AbstractModel
     # Update parameters
     DSGE.update!(m_new, params_new)
     DSGE.update!(m_old, params_old)
