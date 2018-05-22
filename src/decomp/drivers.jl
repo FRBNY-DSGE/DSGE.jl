@@ -299,7 +299,6 @@ function decompose_param_reest(sys_new::System, sys_old::System,
     s_old_tgt = kal_old[:s_filt][:, (T0+1):end] # s^{old}_{t|t}, t = 1:T-k
     if check
         @assert size(s_new_tgt, 2) == size(s_old_tgt, 2)
-        @assert isapprox(s_new_tgt, s_old_tgt, atol = atol)
     end
 
     # y^{new}_{T-k+h|T-k} = Z^{new} (T^{new}^h s^{new}_{T-k|T-k} + C^{new}) + D^{new}
