@@ -12,10 +12,9 @@ function class_measurement_matrices(sys::System, class::Symbol)
     return ZZ, DD
 end
 
-function compute_history_and_forecast(m::AbstractModel, df::DataFrame, class::Symbol;
-                                      cond_type::Symbol = :none)
-    sys = compute_system(m)
-    ZZ, DD, _, _, _ = class_system_matrices(sys, class)
+function compute_history_and_forecast(m::AbstractModel, df::DataFrame, sys::System,
+                                      class::Symbol; cond_type::Symbol = :none)
+    ZZ, DD = class_measurement_matrices(sys, class)
 
     histstates, _ = smooth(m, df, sys, cond_type = cond_type, draw_states = false)
     hist = ZZ * histstates .+ DD
@@ -28,16 +27,22 @@ function compute_history_and_forecast(m::AbstractModel, df::DataFrame, class::Sy
 end
 
 function check_total_decomp(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
+                            sys_new::System, sys_old::System,
                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol},
                             decomp::Dict{Symbol, Array{Float64}};
                             hs = 1:forecast_horizons(m_old),
                             atol::Float64 = 1e-8) where M<:AbstractModel
-    for class in classes
-        # y^{new,new}_{t|T}, t = 1:T+H
-        y_new = compute_history_and_forecast(m_new, df_new, class, cond_type = cond_new)
+    # s_{t|T}, t = 1:T+H
+    s_new = compute_history_and_forecast(m_new, df_new, sys_new, :states, cond_type = cond_new)
+    s_old = compute_history_and_forecast(m_old, df_old, sys_old, :states, cond_type = cond_old)
 
-        # y^{old,old}_{t|T-k}, t = 1:T-k+H
-        y_old = compute_history_and_forecast(m_old, df_old, class, cond_type = cond_old)
+    for class in classes
+        # y_{t|T}, t = 1:T+H
+        ZZ_new, DD_new = class_measurement_matrices(sys_new, class)
+        y_new = ZZ_new*s_new .+ DD_new
+
+        ZZ_old, DD_old = class_measurement_matrices(sys_old, class)
+        y_old = ZZ_old*s_old .+ DD_old
 
         # Total difference = y^{new,new}_{T-k+h|T} - y^{old,old}_{T-k+h|T-k}
         y_new_Tmkph_T   = y_new[:, T-k+hs]
