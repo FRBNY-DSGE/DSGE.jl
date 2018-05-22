@@ -102,7 +102,7 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
     end
 
     # Update parameters, filter, and smooth
-    sys_new, sys_old, kal_new_new, kal_new_old, kal_old_old, s_tgT, ϵ_tgT =
+    sys_new, sys_old, s_new_new_tgt, s_new_old_tgt, s_old_old_tgt, s_new_new_tgT, ϵ_new_new_tgT =
         prepare_decomposition!(m_new, m_old, df_new, df_old, params_new, params_old,
                                cond_new, cond_old)
 
@@ -138,13 +138,13 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
         for class in classes
             # Decompose into components
             decomp[Symbol(:decompstate, class)][:, i], decomp[Symbol(:decompshock, class)][:, i] =
-                decompose_states_shocks(sys_new, kal_new_new, s_tgT, ϵ_tgT,
+                decompose_states_shocks(sys_new, s_new_new_tgt, s_new_new_tgT, ϵ_new_new_tgT,
                                         class, T0, k_cond, h_cond, check = check)
             decomp[Symbol(:decompdata, class)][:, i] =
-                decompose_data_revisions(sys_new, kal_new_new, kal_new_old,
+                decompose_data_revisions(sys_new, s_new_new_tgt, s_new_old_tgt,
                                          class, T0, k_cond, h_cond, check = check)
             decomp[Symbol(:decompparam, class)][:, i] =
-                decompose_param_reest(sys_new, sys_old, kal_new_old, kal_old_old,
+                decompose_param_reest(sys_new, sys_old, s_new_old_tgt, s_old_old_tgt,
                                       class, T0, k_cond, h_cond, check = check)
 
             # Compute total difference
@@ -207,15 +207,18 @@ function prepare_decomposition!(m_new::AbstractModel, m_old::AbstractModel,
     sys_old = compute_system(m_old)
 
     # Filter and smooth
-    kal_new_new = DSGE.filter(m_new, df_new, sys_new, cond_type = cond_new)
-    kal_new_old = DSGE.filter(m_new, df_old, sys_new, cond_type = cond_old)
-    kal_old_old = DSGE.filter(m_old, df_old, sys_old, cond_type = cond_old)
-    s_tgT, ϵ_tgT = smooth(m_new, df_new, sys_new, cond_type = cond_new, draw_states = false)
+    s_new_new_tgt = DSGE.filter(m_new, df_new, sys_new, cond_type = cond_new, outputs = [:filt],
+                                include_presample = false)[:s_filt]
+    s_new_old_tgt = DSGE.filter(m_new, df_old, sys_new, cond_type = cond_old, outputs = [:filt],
+                                include_presample = false)[:s_filt]
+    s_old_old_tgt = DSGE.filter(m_old, df_old, sys_old, cond_type = cond_old, outputs = [:filt],
+                                include_presample = false)[:s_filt]
+    s_new_new_tgT, ϵ_new_new_tgT = smooth(m_new, df_new, sys_new, cond_type = cond_new, draw_states = false)
 
-    return sys_new, sys_old, kal_new_new, kal_new_old, kal_old_old, s_tgT, ϵ_tgT
+    return sys_new, sys_old, s_new_new_tgt, s_new_old_tgt, s_old_old_tgt, s_new_new_tgT, ϵ_new_new_tgT
 end
 
-function decompose_states_shocks(sys_new::System, kal_new::DSGE.Kalman,
+function decompose_states_shocks(sys_new::System, s_tgt::Matrix{Float64},
                                  s_tgT::Matrix{Float64}, ϵ_tgT::Matrix{Float64},
                                  class::Symbol, T0::Int, k::Int, h::Int;
                                  check::Bool = false, atol::Float64 = 1e-8)
@@ -224,7 +227,6 @@ function decompose_states_shocks(sys_new::System, kal_new::DSGE.Kalman,
     #     = Z [ T^h (s_{T-k|T} - s_{T-k|T-k}) + sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ_{T-k+j|T} ) ]
     #     = state component + shock component
     ZZ, DD, TTT, RRR, CCC = class_system_matrices(sys_new, class)
-    s_tgt = kal_new[:s_filt][:, (T0+1):end] # s_{t|t}
 
     # State component = Z T^h (s_{T-k|T} - s_{T-k|T-k})
     s_Tmk_T   = s_tgT[:, end-k] # s_{T-k|T}
@@ -262,7 +264,7 @@ function decompose_states_shocks(sys_new::System, kal_new::DSGE.Kalman,
     return state_comp, shock_comp
 end
 
-function decompose_data_revisions(sys_new::System, kal_new::DSGE.Kalman, kal_old::DSGE.Kalman,
+function decompose_data_revisions(sys_new::System, s_new_tgt::Matrix{Float64}, s_old_tgt::Matrix{Float64},
                                   class::Symbol, T0::Int, k::Int, h::Int;
                                   check::Bool = false, atol::Float64 = 1e-8)
     # New parameters, new and old data
@@ -270,8 +272,6 @@ function decompose_data_revisions(sys_new::System, kal_new::DSGE.Kalman, kal_old
     #     = Z T^h ( s^{new}_{T-k|T-k} - s^{old}_{T-k|T-k} )
     ZZ, _, TTT, _, _ = class_system_matrices(sys_new, class)
 
-    s_new_tgt = kal_new[:s_filt][:, (T0+1):end] # s^{new}_{t|t}, t = 1:T
-    s_old_tgt = kal_old[:s_filt][:, (T0+1):end] # s^{old}_{t|t}, t = 1:T-k
     try
         check && @assert size(s_new_tgt, 2) == size(s_old_tgt, 2) + k
     catch ex
@@ -287,7 +287,7 @@ function decompose_data_revisions(sys_new::System, kal_new::DSGE.Kalman, kal_old
 end
 
 function decompose_param_reest(sys_new::System, sys_old::System,
-                               kal_new::DSGE.Kalman, kal_old::DSGE.Kalman,
+                               s_new_tgt::Matrix{Float64}, s_old_tgt::Matrix{Float64},
                                class::Symbol, T0::Int, k::Int, h::Int;
                                check::Bool = false, atol::Float64 = 1e-8)
     # New and old parameters, old data
@@ -295,8 +295,6 @@ function decompose_param_reest(sys_new::System, sys_old::System,
     ZZ_new, DD_new, TTT_new, _, CCC_new = class_system_matrices(sys_new, class)
     ZZ_old, DD_old, TTT_old, _, CCC_old = class_system_matrices(sys_old, class)
 
-    s_new_tgt = kal_new[:s_filt][:, (T0+1):end] # s^{new}_{t|t}, t = 1:T-k
-    s_old_tgt = kal_old[:s_filt][:, (T0+1):end] # s^{old}_{t|t}, t = 1:T-k
     if check
         @assert size(s_new_tgt, 2) == size(s_old_tgt, 2)
     end
