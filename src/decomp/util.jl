@@ -21,7 +21,8 @@ function compute_history_and_forecast(m::AbstractModel, df::DataFrame, class::Sy
     hist = ZZ * histstates .+ DD
 
     fcast = Dict{Symbol, Matrix{Float64}}()
-    fcast[:states], fcast[:obs], fcast[:pseudo] = forecast(m, sys, kal[:zend])
+    fcast[:states], fcast[:obs], fcast[:pseudo], _ =
+        forecast(m, sys, histstates[:, end], cond_type = cond_type)
 
     return hcat(hist, fcast[class])
 end
