@@ -1,15 +1,15 @@
-function class_system_matrices(sys::System, class::Symbol)
-    TTT, RRR, CCC = sys[:TTT], sys[:RRR], sys[:CCC]
+function class_measurement_matrices(sys::System, class::Symbol)
     ZZ, DD = if class == :obs
         sys[:ZZ], sys[:DD]
     elseif class == :pseudo
         sys[:ZZ_pseudo], sys[:DD_pseudo]
     elseif class == :states
-        I, zeros(size(TTT, 1))
+        Ns = size(sys[:TTT], 1)
+        eye(Ns), zeros(Ns)
     else
         error("Invalid class: $class. Must be :obs, :pseudo, or :state")
     end
-    return ZZ, DD, TTT, RRR, CCC
+    return ZZ, DD
 end
 
 function compute_history_and_forecast(m::AbstractModel, df::DataFrame, class::Symbol;
@@ -32,7 +32,6 @@ function check_total_decomp(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
                             decomp::Dict{Symbol, Array{Float64}};
                             hs = 1:forecast_horizons(m_old),
                             atol::Float64 = 1e-8) where M<:AbstractModel
-    correct = true
     for class in classes
         # y^{new,new}_{t|T}, t = 1:T+H
         y_new = compute_history_and_forecast(m_new, df_new, class, cond_type = cond_new)
@@ -49,36 +48,42 @@ function check_total_decomp(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         if !isapprox(exp_total, decomp[Symbol(:decomptotal, class)], atol = atol)
             @show decomp[Symbol(:decomptotal, class)]
             @show exp_total
-            correct = false
+            return false
         end
     end
-    return correct
+    return true
 end
 
 function check_states_shocks_decomp(sys_new::System, s_tgt::Matrix{Float64}, s_tgT::Matrix{Float64},
-                                    class::Symbol, k::Int, h::Int,
-                                    state_comp::Vector{Float64}, shock_comp::Vector{Float64};
+                                    classes::Vector{Symbol}, k::Int, h::Int,
+                                    state_comps::Dict{Symbol, Vector{Float64}},
+                                    shock_comps::Dict{Symbol, Vector{Float64}};
                                     atol::Float64 = 1e-8)
-    ZZ, DD, TTT, RRR, CCC = class_system_matrices(sys_new, class)
+    TTT, CCC = sys_new[:TTT], sys_new[:CCC]
 
-    # y_{T-k+h|T}
-    y_Tmkph_T = if h <= k
-        ZZ * (s_tgT[:, end-k+h] + CCC) + DD # history
+    # s_{T-k+h|T}
+    s_Tmkph_T = if h <= k
+        s_tgT[:, end-k+h] + CCC # history
     else
-        ZZ * (TTT^(h-k) * s_tgt[:, end] + CCC) + DD # forecast
+        TTT^(h-k) * s_tgt[:, end] + CCC # forecast
     end
 
-    # y_{T-k+h|T-k}
-    y_Tmkph_Tmk = ZZ * (TTT^h * s_tgt[:, end-k] + CCC) + DD
+    # s_{T-k+h|T-k}
+    s_Tmkph_Tmk = TTT^h * s_tgt[:, end-k] + CCC
 
-    # State and shock components = y_{T-k+h|T} - y_{T-k+h|T-k}
-    state_shock_comp = y_Tmkph_T - y_Tmkph_Tmk
+    for class in classes
+        ZZ, DD = class_measurement_matrices(sys_new, class)
+        y_Tmkph_T   = ZZ*s_Tmkph_T   + DD
+        y_Tmkph_Tmk = ZZ*s_Tmkph_Tmk + DD
 
-    if isapprox(state_shock_comp, state_comp + shock_comp, atol = atol)
-        return true
-    else
-        @show state_comp + shock_comp
-        @show state_shock_comp
-        return false
+        # State and shock components = y_{T-k+h|T} - y_{T-k+h|T-k}
+        state_shock_comp = y_Tmkph_T - y_Tmkph_Tmk
+
+        if !isapprox(state_shock_comp, state_comps[class] + shock_comps[class], atol = atol)
+            @show state_comps[class] + shock_comps[class]
+            @show state_shock_comp
+            return false
+        end
     end
+    return true
 end

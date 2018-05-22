@@ -1,5 +1,5 @@
 # TODO:
-# - Have each function handle multiple hs at a time
+# - Fix T^h C for nonzero C in decompose_param_reest
 # - Maybe: handle h < 0 (new history vs. old history)
 # - Plotting
 
@@ -90,7 +90,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
                             check::Bool = false, atol::Float64 = 1e-8) where M<:AbstractModel
 
     # Compute numbers of periods
-    # h_cond and k_cond are h and k adjusted for (differences in) conditioning
+    # k_cond is h adjusted for (differences in) conditioning
     T0, T, k, T1_new, T1_old, k_cond =
         decomposition_periods(m_new, m_old, cond_new, cond_old)
 
@@ -105,11 +105,11 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     # Initialize output dictionary
     decomp = Dict{Symbol, Array{Float64}}()
     for class in classes
-        ZZ, _, _, _, _ = class_system_matrices(sys_new, class)
-        nobs = size(ZZ, 1)
+        ZZ, _ = class_measurement_matrices(sys_new, class)
+        Ny    = size(ZZ, 1)
         for comp in [:state, :shock, :data, :param, :total]
             output_var = Symbol(:decomp, comp, class)
-            decomp[output_var] = zeros(size(ZZ, 1), length(hs))
+            decomp[output_var] = zeros(Ny, length(hs))
         end
     end
 
@@ -118,22 +118,23 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         h_cond = h - T1_old
         @assert h_cond >= 0
 
+        # Decompose into components
+        state_comps, shock_comps = decompose_states_shocks(sys_new, s_new_new_tgt, s_new_new_tgT, ϵ_new_new_tgT,
+                                                           classes, T0, k_cond, h_cond, check = check)
+        data_comps = decompose_data_revisions(sys_new, s_new_new_tgt, s_new_old_tgt,
+                                              classes, T0, k_cond, h_cond)
+        param_comps = decompose_param_reest(sys_new, sys_old, s_new_old_tgt, s_old_old_tgt,
+                                            classes, T0, k_cond, h_cond)
+
         for class in classes
-            # Decompose into components
-            decomp[Symbol(:decompstate, class)][:, i], decomp[Symbol(:decompshock, class)][:, i] =
-                decompose_states_shocks(sys_new, s_new_new_tgt, s_new_new_tgT, ϵ_new_new_tgT,
-                                        class, T0, k_cond, h_cond, check = check)
-            decomp[Symbol(:decompdata, class)][:, i] =
-                decompose_data_revisions(sys_new, s_new_new_tgt, s_new_old_tgt,
-                                         class, T0, k_cond, h_cond)
-            decomp[Symbol(:decompparam, class)][:, i] =
-                decompose_param_reest(sys_new, sys_old, s_new_old_tgt, s_old_old_tgt,
-                                      class, T0, k_cond, h_cond)
+            decomp[Symbol(:decompstate, class)][:, i] = state_comps[class]
+            decomp[Symbol(:decompshock, class)][:, i] = shock_comps[class]
+            decomp[Symbol(:decompdata, class)][:,  i] = data_comps[class]
+            decomp[Symbol(:decompparam, class)][:, i] = param_comps[class]
 
             # Compute total difference
             decomp[Symbol(:decomptotal, class)][:, i] =
-                decomp[Symbol(:decompstate, class)][:, i] + decomp[Symbol(:decompshock, class)][:, i] +
-                decomp[Symbol(:decompdata, class)][:, i]  + decomp[Symbol(:decompparam, class)][:, i]
+                state_comps[class] + shock_comps[class] + data_comps[class] + param_comps[class]
         end
     end
 
@@ -188,7 +189,7 @@ end
 
 function decompose_states_shocks(sys_new::System, s_tgt::Matrix{Float64},
                                  s_tgT::Matrix{Float64}, ϵ_tgT::Matrix{Float64},
-                                 class::Symbol, T0::Int, k::Int, h::Int;
+                                 classes::Vector{Symbol}, T0::Int, k::Int, h::Int;
                                  check::Bool = false, atol::Float64 = 1e-8)
 
     @assert size(s_tgt, 2) == size(s_tgT, 2) == size(ϵ_tgT, 2)
@@ -198,61 +199,82 @@ function decompose_states_shocks(sys_new::System, s_tgt::Matrix{Float64},
     # State and shock components = y_{T-k+h|T} - y_{T-k+h|T-k}
     #     = Z [ T^h (s_{T-k|T} - s_{T-k|T-k}) + sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ_{T-k+j|T} ) ]
     #     = state component + shock component
-    ZZ, DD, TTT, RRR, CCC = class_system_matrices(sys_new, class)
+    TTT, RRR, CCC = sys_new[:TTT], sys_new[:RRR], sys_new[:CCC]
 
     # State component = Z T^h (s_{T-k|T} - s_{T-k|T-k})
     s_Tmk_T   = s_tgT[:, end-k] # s_{T-k|T}
     s_Tmk_Tmk = s_tgt[:, end-k] # s_{T-k|T-k}
-    state_comp = ZZ * TTT^h * (s_Tmk_T - s_Tmk_Tmk)
+    _state_comp = TTT^h * (s_Tmk_T - s_Tmk_Tmk)
 
     # Shock component = Z sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ_{T-k+j|T} )
-    shock_sum = zeros(size(s_Tmk_T))
+    _shock_comp = zeros(size(s_Tmk_T))
     for j = 1:min(k, h)
-        shock_sum += TTT^(h-j) * RRR * ϵ_tgT[:, end-k+j]
+        _shock_comp += TTT^(h-j) * RRR * ϵ_tgT[:, end-k+j]
     end
-    shock_comp = ZZ * shock_sum
 
-    # Return
-    check && @assert check_states_shocks_decomp(sys_new, s_tgt, s_tgT, class, k, h, state_comp, shock_comp,
-                                                atol = atol)
-    return state_comp, shock_comp
+    # Map states to desired classes
+    state_comps = Dict{Symbol, Vector{Float64}}()
+    shock_comps = Dict{Symbol, Vector{Float64}}()
+    for class in classes
+        ZZ, DD = class_measurement_matrices(sys_new, class)
+        state_comps[class] = ZZ * _state_comp
+        shock_comps[class] = ZZ * _shock_comp
+    end
+
+    check && @assert check_states_shocks_decomp(sys_new, s_tgt, s_tgT, classes, k, h,
+                                                state_comps, shock_comps, atol = atol)
+    return state_comps, shock_comps
 end
 
 function decompose_data_revisions(sys_new::System, s_new_tgt::Matrix{Float64}, s_old_tgt::Matrix{Float64},
-                                  class::Symbol, T0::Int, k::Int, h::Int)
+                                  classes::Vector{Symbol}, T0::Int, k::Int, h::Int)
 
     @assert size(s_new_tgt, 2) == size(s_old_tgt, 2) + k
 
     # New parameters, new and old data
     # Data revision component = y^{new}_{T-k+h|T-k} - y^{old}_{T-k+h|T-k}
     #     = Z T^h ( s^{new}_{T-k|T-k} - s^{old}_{T-k|T-k} )
-    ZZ, _, TTT, _, _ = class_system_matrices(sys_new, class)
+    TTT = sys_new[:TTT]
+    _data_comp = TTT^h * (s_new_tgt[:, end-k] - s_old_tgt[:, end])
 
-    # Return
-    data_comp = ZZ * TTT^h * (s_new_tgt[:, end-k] - s_old_tgt[:, end])
-    return data_comp
+    # Map states to desired classes
+    data_comps = Dict{Symbol, Vector{Float64}}()
+    for class in classes
+        ZZ, _ = class_measurement_matrices(sys_new, class)
+        data_comps[class] = ZZ * _data_comp
+    end
+    return data_comps
 end
 
 function decompose_param_reest(sys_new::System, sys_old::System,
                                s_new_tgt::Matrix{Float64}, s_old_tgt::Matrix{Float64},
-                               class::Symbol, T0::Int, k::Int, h::Int)
+                               classes::Vector{Symbol}, T0::Int, k::Int, h::Int)
 
     @assert size(s_new_tgt, 2) == size(s_old_tgt, 2)
 
     # New and old parameters, old data
     # Parameter re-estimation component = y^{new}_{T-k+h|T-k} - y^{old}_{T-k+h|T-k}
-    ZZ_new, DD_new, TTT_new, _, CCC_new = class_system_matrices(sys_new, class)
-    ZZ_old, DD_old, TTT_old, _, CCC_old = class_system_matrices(sys_old, class)
+    TTT_new, CCC_new = sys_new[:TTT], sys_new[:CCC]
+    TTT_old, CCC_old = sys_old[:TTT], sys_old[:CCC]
 
     # y^{new}_{T-k+h|T-k} = Z^{new} (T^{new}^h s^{new}_{T-k|T-k} + C^{new}) + D^{new}
     s_new_Tmk_Tmk = s_new_tgt[:, end]
-    y_new_Tmkph_Tmk = ZZ_new * (TTT_new^h * s_new_Tmk_Tmk + CCC_new) + DD_new
+    s_new_Tmkph_Tmk = TTT_new^h * s_new_Tmk_Tmk + CCC_new
 
     # y^{old}_{T-k+h|T-k} = Z^{old} (T^{old}^h s^{old}_{T-k|T-k} + C^{old}) + D^{old}
     s_old_Tmk_Tmk = s_old_tgt[:, end]
-    y_old_Tmkph_Tmk = ZZ_old * (TTT_old^h * s_old_Tmk_Tmk + CCC_old) + DD_old
+    s_old_Tmkph_Tmk = TTT_old^h * s_old_Tmk_Tmk + CCC_old
 
-    # Return
-    param_comp = y_new_Tmkph_Tmk - y_old_Tmkph_Tmk
-    return param_comp
+    # Map to desired classes
+    param_comps = Dict{Symbol, Vector{Float64}}()
+    for class in classes
+        ZZ_new, DD_new = class_measurement_matrices(sys_new, class)
+        ZZ_old, DD_old = class_measurement_matrices(sys_old, class)
+
+        y_new_Tmkph_Tmk = ZZ_new*s_new_Tmkph_Tmk + DD_new
+        y_old_Tmkph_Tmk = ZZ_old*s_old_Tmkph_Tmk + DD_old
+
+        param_comps[class] = y_new_Tmkph_Tmk - y_old_Tmkph_Tmk
+    end
+    return param_comps
 end
