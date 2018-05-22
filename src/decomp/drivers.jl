@@ -122,7 +122,7 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
         y_new = Dict{Symbol, Matrix{Float64}}()
         y_old = Dict{Symbol, Matrix{Float64}}()
         for class in classes
-            # y^{new,new}_{t|T-k}, t = 1:T:H
+            # y^{new,new}_{t|T}, t = 1:T+H
             y_new[class] = compute_history_and_forecast(m_new, df_new, class, cond_type = cond_new)
 
             # y^{old,old}_{t|T-k}, t = 1:T-k+H
@@ -153,7 +153,7 @@ function decompose_forecast(m_new::AbstractModel, m_old::AbstractModel,
                 decomp[Symbol(:decompdata, class)][:, i]  + decomp[Symbol(:decompparam, class)][:, i]
 
             if check
-                # Total difference = y^{new,new}_{T+h-k|T} - y^{old,old}_{T-k+h|T-k}
+                # Total difference = y^{new,new}_{T-k+h|T} - y^{old,old}_{T-k+h|T-k}
                 y_new_Tmkph_T   = y_new[class][:, T-k+h]
                 y_old_Tmkph_Tmk = y_old[class][:, T-k+h]
                 exp_total = y_new_Tmkph_T - y_old_Tmkph_Tmk
