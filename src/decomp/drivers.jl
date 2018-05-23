@@ -1,5 +1,4 @@
 # TODO:
-# - Fix T^h C for nonzero C in decompose_param_reest
 # - Maybe: handle h < 0 (new history vs. old history)
 # - Plotting
 
@@ -98,9 +97,14 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     @assert size(df_old, 1) == T0 + T + T1_old - k
 
     # Update parameters, filter, and smooth
-    sys_new, sys_old, s_new_new_tgt, s_new_old_tgt, s_old_old_tgt, s_new_new_tgT, ϵ_new_new_tgT =
+    sys_new, sys_old, s_new_new_tgt, s_old_new_tgt, s_old_old_tgt, s_new_new_tgT, ϵ_new_new_tgT =
         prepare_decomposition!(m_new, m_old, df_new, df_old, params_new, params_old,
-                               cond_new, cond_old)
+                               cond_new, cond_old, k_cond; atol = atol)
+
+    s_new_new_Tmk_Tmk = s_new_new_tgt[:, end-k_cond]
+    s_old_new_Tmk_Tmk = s_old_new_tgt[:, end]
+    s_old_old_Tmk_Tmk = s_old_old_tgt[:, end]
+    s_new_new_Tmk_T   = s_new_new_tgT[:, end-k_cond]
 
     # Initialize output dictionary
     decomp = Dict{Symbol, Array{Float64}}()
@@ -119,11 +123,14 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         @assert h_cond >= 0
 
         # Decompose into components
-        state_comps, shock_comps = decompose_states_shocks(sys_new, s_new_new_tgt, s_new_new_tgT, ϵ_new_new_tgT,
-                                                           classes, T0, k_cond, h_cond, check = check)
-        data_comps = decompose_data_revisions(sys_new, s_new_new_tgt, s_new_old_tgt,
+        state_comps, shock_comps = decompose_states_shocks(sys_new, s_new_new_Tmk_Tmk, s_new_new_Tmk_T,
+                                                           ϵ_new_new_tgT, classes, T0, k_cond, h_cond)
+        check && @assert check_states_shocks_decomp(sys_new, s_new_new_tgt, s_new_new_tgT, classes,
+                                                    k_cond, h_cond, state_comps, shock_comps, atol = atol)
+
+        data_comps = decompose_data_revisions(sys_new, s_new_new_Tmk_Tmk, s_old_new_Tmk_Tmk,
                                               classes, T0, k_cond, h_cond)
-        param_comps = decompose_param_reest(sys_new, sys_old, s_new_old_tgt, s_old_old_tgt,
+        param_comps = decompose_param_reest(sys_new, sys_old, s_old_new_Tmk_Tmk, s_old_old_Tmk_Tmk,
                                             classes, T0, k_cond, h_cond)
 
         for class in classes
@@ -138,7 +145,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         end
     end
 
-    check && @assert check_total_decomp(m_new, m_old, df_new, df_old, cond_new, cond_old, classes, decomp;
+    check && @assert check_total_decomp(m_new, m_old, df_new, df_old, sys_new, sys_old, cond_new, cond_old, classes, decomp;
                                         hs = hs, atol = atol)
 
     return decomp
@@ -168,7 +175,8 @@ end
 
 function prepare_decomposition!(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                                 params_new::Vector{Float64}, params_old::Vector{Float64},
-                                cond_new::Symbol, cond_old::Symbol) where M<:AbstractModel
+                                cond_new::Symbol, cond_old::Symbol,
+                                k::Int; atol::Float64 = 1e-8) where M<:AbstractModel
     # Update parameters
     DSGE.update!(m_new, params_new)
     DSGE.update!(m_old, params_old)
@@ -178,23 +186,24 @@ function prepare_decomposition!(m_new::M, m_old::M, df_new::DataFrame, df_old::D
     # Filter and smooth
     s_new_new_tgt = DSGE.filter(m_new, df_new, sys_new, cond_type = cond_new, outputs = [:filt],
                                 include_presample = false)[:s_filt]
-    s_new_old_tgt = DSGE.filter(m_new, df_old, sys_new, cond_type = cond_old, outputs = [:filt],
+    s_old_new_tgt = DSGE.filter(m_new, df_old, sys_new, cond_type = cond_old, outputs = [:filt],
                                 include_presample = false)[:s_filt]
     s_old_old_tgt = DSGE.filter(m_old, df_old, sys_old, cond_type = cond_old, outputs = [:filt],
                                 include_presample = false)[:s_filt]
     s_new_new_tgT, ϵ_new_new_tgT = smooth(m_new, df_new, sys_new, cond_type = cond_new, draw_states = false)
 
-    return sys_new, sys_old, s_new_new_tgt, s_new_old_tgt, s_old_old_tgt, s_new_new_tgT, ϵ_new_new_tgT
+    # Check sizes
+    T = size(s_new_new_tgt, 2)
+    @assert size(s_old_new_tgt, 2) == size(s_old_old_tgt, 2) == T-k
+    @assert size(s_new_new_tgT, 2) == size(ϵ_new_new_tgT, 2) == T
+    @assert isapprox(s_new_new_tgt[:, end], s_new_new_tgT[:, end], atol = atol)
+
+    return sys_new, sys_old, s_new_new_tgt, s_old_new_tgt, s_old_old_tgt, s_new_new_tgT, ϵ_new_new_tgT
 end
 
-function decompose_states_shocks(sys_new::System, s_tgt::Matrix{Float64},
-                                 s_tgT::Matrix{Float64}, ϵ_tgT::Matrix{Float64},
-                                 classes::Vector{Symbol}, T0::Int, k::Int, h::Int;
-                                 check::Bool = false, atol::Float64 = 1e-8)
-
-    @assert size(s_tgt, 2) == size(s_tgT, 2) == size(ϵ_tgT, 2)
-    @assert isapprox(s_tgt[:, end], s_tgT[:, end], atol = atol)
-
+function decompose_states_shocks(sys_new::System, s_Tmk_Tmk::Vector{Float64},
+                                 s_Tmk_T::Vector{Float64}, ϵ_tgT::Matrix{Float64},
+                                 classes::Vector{Symbol}, T0::Int, k::Int, h::Int)
     # New parameters, new data
     # State and shock components = y_{T-k+h|T} - y_{T-k+h|T-k}
     #     = Z [ T^h (s_{T-k|T} - s_{T-k|T-k}) + sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ_{T-k+j|T} ) ]
@@ -202,8 +211,6 @@ function decompose_states_shocks(sys_new::System, s_tgt::Matrix{Float64},
     TTT, RRR, CCC = sys_new[:TTT], sys_new[:RRR], sys_new[:CCC]
 
     # State component = Z T^h (s_{T-k|T} - s_{T-k|T-k})
-    s_Tmk_T   = s_tgT[:, end-k] # s_{T-k|T}
-    s_Tmk_Tmk = s_tgt[:, end-k] # s_{T-k|T-k}
     _state_comp = TTT^h * (s_Tmk_T - s_Tmk_Tmk)
 
     # Shock component = Z sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ_{T-k+j|T} )
@@ -221,21 +228,17 @@ function decompose_states_shocks(sys_new::System, s_tgt::Matrix{Float64},
         shock_comps[class] = ZZ * _shock_comp
     end
 
-    check && @assert check_states_shocks_decomp(sys_new, s_tgt, s_tgT, classes, k, h,
-                                                state_comps, shock_comps, atol = atol)
     return state_comps, shock_comps
 end
 
-function decompose_data_revisions(sys_new::System, s_new_tgt::Matrix{Float64}, s_old_tgt::Matrix{Float64},
-                                  classes::Vector{Symbol}, T0::Int, k::Int, h::Int)
-
-    @assert size(s_new_tgt, 2) == size(s_old_tgt, 2) + k
-
+function decompose_data_revisions(sys_new::System, s_new_Tmk_Tmk::Vector{Float64},
+                                  s_old_Tmk_Tmk::Vector{Float64}, classes::Vector{Symbol},
+                                  T0::Int, k::Int, h::Int)
     # New parameters, new and old data
-    # Data revision component = y^{new}_{T-k+h|T-k} - y^{old}_{T-k+h|T-k}
-    #     = Z T^h ( s^{new}_{T-k|T-k} - s^{old}_{T-k|T-k} )
+    # Data revision component = y^new_{T-k+h|T-k} - y^old_{T-k+h|T-k}
+    #     = Z T^h ( s^new_{T-k|T-k} - s^old_{T-k|T-k} )
     TTT = sys_new[:TTT]
-    _data_comp = TTT^h * (s_new_tgt[:, end-k] - s_old_tgt[:, end])
+    _data_comp = TTT^h * (s_new_Tmk_Tmk - s_old_Tmk_Tmk)
 
     # Map states to desired classes
     data_comps = Dict{Symbol, Vector{Float64}}()
@@ -247,23 +250,18 @@ function decompose_data_revisions(sys_new::System, s_new_tgt::Matrix{Float64}, s
 end
 
 function decompose_param_reest(sys_new::System, sys_old::System,
-                               s_new_tgt::Matrix{Float64}, s_old_tgt::Matrix{Float64},
+                               s_new_Tmk_Tmk::Vector{Float64}, s_old_Tmk_Tmk::Vector{Float64},
                                classes::Vector{Symbol}, T0::Int, k::Int, h::Int)
-
-    @assert size(s_new_tgt, 2) == size(s_old_tgt, 2)
-
     # New and old parameters, old data
-    # Parameter re-estimation component = y^{new}_{T-k+h|T-k} - y^{old}_{T-k+h|T-k}
+    # Parameter re-estimation component = y^new_{T-k+h|T-k} - y^old_{T-k+h|T-k}
     TTT_new, CCC_new = sys_new[:TTT], sys_new[:CCC]
     TTT_old, CCC_old = sys_old[:TTT], sys_old[:CCC]
 
-    # y^{new}_{T-k+h|T-k} = Z^{new} (T^{new}^h s^{new}_{T-k|T-k} + C^{new}) + D^{new}
-    s_new_Tmk_Tmk = s_new_tgt[:, end]
-    s_new_Tmkph_Tmk = TTT_new^h * s_new_Tmk_Tmk + CCC_new
+    # y^new_{T-k+h|T-k} = Z^new (T^new^h s^new_{T-k|T-k}) + D^new
+    s_new_Tmkph_Tmk = TTT_new^h * s_new_Tmk_Tmk
 
-    # y^{old}_{T-k+h|T-k} = Z^{old} (T^{old}^h s^{old}_{T-k|T-k} + C^{old}) + D^{old}
-    s_old_Tmk_Tmk = s_old_tgt[:, end]
-    s_old_Tmkph_Tmk = TTT_old^h * s_old_Tmk_Tmk + CCC_old
+    # y^old_{T-k+h|T-k} = Z^old (T^old^h s^old_{T-k|T-k}) + D^old
+    s_old_Tmkph_Tmk = TTT_old^h * s_old_Tmk_Tmk
 
     # Map to desired classes
     param_comps = Dict{Symbol, Vector{Float64}}()
