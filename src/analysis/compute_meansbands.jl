@@ -195,7 +195,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
 
     # Reverse transform
     y0_index = get_y0_index(m, product)
-    data = class == :obs ? convert(Vector{Float64}, df[var_name]) : fill(NaN, size(df, 1))
+    data = class == :obs && product != :irf ? convert(Vector{Float64}, df[var_name]) : fill(NaN, size(df, 1))
     transformed_series = mb_reverse_transform(fcast_series, transform, product, class,
                                               y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)
