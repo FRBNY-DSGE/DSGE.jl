@@ -216,7 +216,7 @@ function decompose_states_shocks(sys_new::System, s_Tmk_Tmk::Vector{Float64},
     # Shock component = Z sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ_{T-k+j|T} )
     _shock_comp = zeros(size(s_Tmk_T))
     for j = 1:min(k, h)
-        _shock_comp += TTT^(h-j) * RRR * ϵ_tgT[:, end-k+j]
+        _shock_comp .+= TTT^(h-j) * RRR * ϵ_tgT[:, end-k+j]
     end
 
     # Map states to desired classes
@@ -257,11 +257,17 @@ function decompose_param_reest(sys_new::System, sys_old::System,
     TTT_new, CCC_new = sys_new[:TTT], sys_new[:CCC]
     TTT_old, CCC_old = sys_old[:TTT], sys_old[:CCC]
 
-    # y^new_{T-k+h|T-k} = Z^new (T^new^h s^new_{T-k|T-k}) + D^new
+    # y^new_{T-k+h|T-k} = Z^new (T^new^h s^new_{T-k|T-k} + \sum_{j=1}^h (T^new)^(j-1) C^new) + D^new
     s_new_Tmkph_Tmk = TTT_new^h * s_new_Tmk_Tmk
+    for j = 1:h
+        s_new_Tmkph_Tmk .+= TTT_new^(j-1) * CCC_new
+    end
 
-    # y^old_{T-k+h|T-k} = Z^old (T^old^h s^old_{T-k|T-k}) + D^old
+    # y^old_{T-k+h|T-k} = Z^old (T^old^h s^old_{T-k|T-k} + \sum_{j=1}^h (T^old)^(j-1) C^old) + D^old
     s_old_Tmkph_Tmk = TTT_old^h * s_old_Tmk_Tmk
+    for j = 1:h
+        s_old_Tmkph_Tmk .+= TTT_old^(j-1) * CCC_old
+    end
 
     # Map to desired classes
     param_comps = Dict{Symbol, Vector{Float64}}()

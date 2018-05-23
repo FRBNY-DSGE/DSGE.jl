@@ -67,14 +67,20 @@ function check_states_shocks_decomp(sys_new::System, s_tgt::Matrix{Float64}, s_t
     TTT, CCC = sys_new[:TTT], sys_new[:CCC]
 
     # s_{T-k+h|T}
-    s_Tmkph_T = if h <= k
-        s_tgT[:, end-k+h] + CCC # history
+    if h <= k
+        s_Tmkph_T = s_tgT[:, end-k+h] # history
     else
-        TTT^(h-k) * s_tgt[:, end] + CCC # forecast
+        s_Tmkph_T = TTT^(h-k) * s_tgt[:, end] # forecast
+        for j = 1:h
+            s_Tmkph_T .+= TTT^(j-1) * CCC
+        end
     end
 
     # s_{T-k+h|T-k}
-    s_Tmkph_Tmk = TTT^h * s_tgt[:, end-k] + CCC
+    s_Tmkph_Tmk = TTT^h * s_tgt[:, end-k]
+    for j = 1:h
+        s_Tmkph_Tmk .+= TTT^(j-1) * CCC
+    end
 
     for class in classes
         ZZ, DD = class_measurement_matrices(sys_new, class)
