@@ -105,7 +105,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     s_new_new_Tmk_T   = s_new_new_tgT[:, end-k_cond]
 
     # Initialize output dictionary
-    decomp = Dict{Symbol, Array{Float64}}()
+    decomp = Dict{Symbol, Matrix{Float64}}()
     for class in classes
         ZZ, _ = class_measurement_matrices(sys_new, class)
         Ny    = size(ZZ, 1)
