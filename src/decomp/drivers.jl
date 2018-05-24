@@ -1,7 +1,52 @@
-# TODO:
-# - Maybe: handle h < 0 (new history vs. old history)
-# - Plotting
+"""
+```
+decompose_forecast(m_new, m_old, df_new, df_old, input_type, cond_new, cond_old,
+    classes; hs = 1:forecast_horizons(m_old), verbose = :low, kwargs...)
 
+decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
+    cond_new, cond_old, classes; hs = 1:forecast_horizons(m_old), check = false,
+    atol = 1e-8)
+```
+
+### Inputs
+
+- `m_new::M` and `m_old::M` where `M<:AbstractModel`
+- `df_new::DataFrame` and `df_old::DataFrame`
+- `cond_new::Symbol` and `cond_old::Symbol`
+- `classes::Vector{Symbol}`: some subset of `[:states, :obs, :pseudo]`
+
+**Method 1 only:**
+
+- `input_type::Symbol`: estimation type to use. Parameters will be loaded using
+  `load_draws(m_new, input_type)` and `load_draws(m_old, input_type)` in this
+  method
+
+**Method 2 only:**
+
+- `params_new::Vector{Float64}` and `params_old::Vector{Float64}`: single
+  parameter draws to use
+
+### Keyword Arguments
+
+- `hs`: horizons at which to calculate the forecast decomposition *in terms of
+  the old forecast*. That is, if the old forecast uses data up to time T-k and
+  the new forecast up to time T, this function computes the decomposition for
+  periods T-k+hs. All elements of `hs` must be positive
+- `check::Bool`: whether to check that the individual components add up to the
+  correct total difference in forecasts. This roughly doubles the runtime
+- `atol::Float64`: absolute tolerance used if `check = true`
+
+**Method 1 only:**
+
+- `verbose::Symbol`
+
+### Outputs
+
+The first method returns nothing. The second method returns
+`decomp::Dict{Symbol, Matrix{Float64}}`, which has keys of the form
+`:decomp<component><class>` and values of size `Ny` x `length(hs)` (where `Ny`
+is the number of variables in the given class).
+"""
 function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                             input_type::Symbol, cond_new::Symbol, cond_old::Symbol,
                             classes::Vector{Symbol};
@@ -142,12 +187,29 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         end
     end
 
-    check && @assert check_total_decomp(m_new, m_old, df_new, df_old, sys_new, sys_old, cond_new, cond_old, classes, decomp;
+    check && @assert check_total_decomp(m_new, m_old, df_new, df_old, sys_new, sys_old,
+                                        cond_new, cond_old, classes, decomp;
                                         hs = hs, atol = atol)
 
     return decomp
 end
 
+"""
+```
+decomposition_periods(m_new, m_old, cond_new, cond_old)
+```
+
+Compute and return numbers of periods.
+
+### Outputs
+
+- `T0::Int`: number of presample periods. Must be the same for `m_new` and `m_old`
+- `T::Int`: number of main-sample periods for `m_new`
+- `k::Int`: difference in number of main-sample periods between `m_old` and
+  `m_new`. `m_old` has `T-k`
+- `T1_new::Int` and `T1_old::Int`: number of conditional periods for each model
+- `k_cond::Int`: difference in number of main-sample + conditional periods
+"""
 function decomposition_periods(m_new::M, m_old::M,
                                cond_new::Symbol, cond_old::Symbol) where M<:AbstractModel
     # Number of presample periods T0 must be the same
@@ -170,6 +232,24 @@ function decomposition_periods(m_new::M, m_old::M,
     return T0, T, k, T1_new, T1_old, k_cond
 end
 
+"""
+```
+prepare_decomposition!(m_new, m_old, df_new, df_old, params_new, params_old,
+    cond_new, cond_old, k; atol = 1e-8)
+```
+
+Update `m_new` and `m_old` with `params_new` and `params_old`,
+respectively. Compute state-space matrices, filter, and smooth.
+
+### Outputs
+
+- `sys_new::System` and `sys_old::System`
+- `s_new_new_tgt::Matrix{Float64}`: filtered states using `df_new` and `params_new`
+- `s_new_new_tgT::Matrix{Float64}`: smoothed states using `df_new` and `params_new`
+- `ϵ_new_new_tgT::Matrix{Float64}`: smoothed shocks using `df_new` and `params_new`
+- `s_old_new_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_old` and `params_new`
+- `s_old_old_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_old` and `params_old`
+"""
 function prepare_decomposition!(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                                 params_new::Vector{Float64}, params_old::Vector{Float64},
                                 cond_new::Symbol, cond_old::Symbol,
@@ -255,6 +335,27 @@ function decompose_states_shocks(sys_new::System, s_Tmk_Tmk::Vector{Float64},
     return state_comps, shock_comps
 end
 
+"""
+```
+decompose_data_revision(sys_new, s_new_Tmk_Tmk, s_old_Tmk_Tmk, classes, k, h)
+```
+
+Compute y^{d_new,θ_new}_{T-k+h|T-k} - y^{d_old,θ_new}_{T-k+h|T-k}, the
+difference in forecasts attributable to data revisions.
+
+### Inputs
+
+- `sys_new::System`: state-space matrices under new parameters
+- `s_new_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_new` and `params_new`
+- `s_old_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_old` and `params_new`
+- `classes::Vector{Symbol}
+- `k::Int`
+- `h::Int`
+
+### Outputs
+
+- `data_comps::Dict{Symbol, Vector{Float64}}`: has keys `classes`
+"""
 function decompose_data_revisions(sys_new::System, s_new_Tmk_Tmk::Vector{Float64},
                                   s_old_Tmk_Tmk::Vector{Float64}, classes::Vector{Symbol},
                                   k::Int, h::Int)
