@@ -97,13 +97,11 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     @assert size(df_old, 1) == T0 + T + T1_old - k
 
     # Update parameters, filter, and smooth
-    sys_new, sys_old, s_new_new_tgt, s_old_new_tgt, s_old_old_tgt, s_new_new_tgT, ϵ_new_new_tgT =
+    sys_new, sys_old, s_new_new_tgt, s_new_new_tgT, ϵ_new_new_tgT, s_old_new_Tmk_Tmk, s_old_old_Tmk_Tmk =
         prepare_decomposition!(m_new, m_old, df_new, df_old, params_new, params_old,
                                cond_new, cond_old, k_cond; atol = atol)
 
     s_new_new_Tmk_Tmk = s_new_new_tgt[:, end-k_cond]
-    s_old_new_Tmk_Tmk = s_old_new_tgt[:, end]
-    s_old_old_Tmk_Tmk = s_old_old_tgt[:, end]
     s_new_new_Tmk_T   = s_new_new_tgT[:, end-k_cond]
 
     # Initialize output dictionary
@@ -186,19 +184,19 @@ function prepare_decomposition!(m_new::M, m_old::M, df_new::DataFrame, df_old::D
     # Filter and smooth
     s_new_new_tgt = DSGE.filter(m_new, df_new, sys_new, cond_type = cond_new, outputs = [:filt],
                                 include_presample = false)[:s_filt]
-    s_old_new_tgt = DSGE.filter(m_new, df_old, sys_new, cond_type = cond_old, outputs = [:filt],
-                                include_presample = false)[:s_filt]
-    s_old_old_tgt = DSGE.filter(m_old, df_old, sys_old, cond_type = cond_old, outputs = [:filt],
-                                include_presample = false)[:s_filt]
     s_new_new_tgT, ϵ_new_new_tgT = smooth(m_new, df_new, sys_new, cond_type = cond_new, draw_states = false)
+
+    s_old_new_Tmk_Tmk = DSGE.filter(m_new, df_old, sys_new, cond_type = cond_old, outputs = Symbol[],
+                                    include_presample = false)[:s_T]
+    s_old_old_Tmk_Tmk = DSGE.filter(m_old, df_old, sys_old, cond_type = cond_old, outputs = Symbol[],
+                                    include_presample = false)[:s_T]
 
     # Check sizes
     T = size(s_new_new_tgt, 2)
-    @assert size(s_old_new_tgt, 2) == size(s_old_old_tgt, 2) == T-k
     @assert size(s_new_new_tgT, 2) == size(ϵ_new_new_tgT, 2) == T
     @assert isapprox(s_new_new_tgt[:, end], s_new_new_tgT[:, end], atol = atol)
 
-    return sys_new, sys_old, s_new_new_tgt, s_old_new_tgt, s_old_old_tgt, s_new_new_tgT, ϵ_new_new_tgT
+    return sys_new, sys_old, s_new_new_tgt, s_new_new_tgT, ϵ_new_new_tgT, s_old_new_Tmk_Tmk, s_old_old_Tmk_Tmk
 end
 
 function decompose_states_shocks(sys_new::System, s_Tmk_Tmk::Vector{Float64},
