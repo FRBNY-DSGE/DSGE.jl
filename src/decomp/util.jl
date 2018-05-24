@@ -60,11 +60,12 @@ function check_total_decomp(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
 end
 
 function check_states_shocks_decomp(sys_new::System, s_tgt::Matrix{Float64}, s_tgT::Matrix{Float64},
-                                    classes::Vector{Symbol}, k::Int, h::Int,
-                                    state_comps::Dict{Symbol, Vector{Float64}},
-                                    shock_comps::Dict{Symbol, Vector{Float64}};
+                                    class::Symbol, k::Int, h::Int,
+                                    state_comp::Vector{Float64},
+                                    shock_comp::Vector{Float64};
                                     atol::Float64 = 1e-8)
     TTT, CCC = sys_new[:TTT], sys_new[:CCC]
+    ZZ, DD = class_measurement_matrices(sys_new, class)
 
     # s_{T-k+h|T}
     if h <= k
@@ -75,26 +76,22 @@ function check_states_shocks_decomp(sys_new::System, s_tgt::Matrix{Float64}, s_t
             s_Tmkph_T .+= TTT^(j-1) * CCC
         end
     end
+    y_Tmkph_T = ZZ*s_Tmkph_T   + DD
 
     # s_{T-k+h|T-k}
     s_Tmkph_Tmk = TTT^h * s_tgt[:, end-k]
     for j = 1:h
         s_Tmkph_Tmk .+= TTT^(j-1) * CCC
     end
+    y_Tmkph_Tmk = ZZ*s_Tmkph_Tmk + DD
 
-    for class in classes
-        ZZ, DD = class_measurement_matrices(sys_new, class)
-        y_Tmkph_T   = ZZ*s_Tmkph_T   + DD
-        y_Tmkph_Tmk = ZZ*s_Tmkph_Tmk + DD
+    # State and shock components = y_{T-k+h|T} - y_{T-k+h|T-k}
+    state_shock_comp = y_Tmkph_T - y_Tmkph_Tmk
 
-        # State and shock components = y_{T-k+h|T} - y_{T-k+h|T-k}
-        state_shock_comp = y_Tmkph_T - y_Tmkph_Tmk
-
-        if !isapprox(state_shock_comp, state_comps[class] + shock_comps[class], atol = atol)
-            @show state_comps[class] + shock_comps[class]
-            @show state_shock_comp
-            return false
-        end
+    if !isapprox(state_shock_comp, state_comp + shock_comp, atol = atol)
+        @show state_comp + shock_comp
+        @show state_shock_comp
+        return false
     end
     return true
 end
