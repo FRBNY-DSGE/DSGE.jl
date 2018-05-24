@@ -381,6 +381,15 @@ function write_means_tables_shockdec(write_dirname::String, filestring_base::Vec
                                      tablevars::Vector{Symbol} = get_variables(mb_shockdec),
                                      columnvars::Vector{Symbol} = get_shocks(mb_shockdec),
                                      groups::Vector{ShockGroup} = ShockGroup[])
+
+    # If shockdec tables are written as part of write_meansbands_tables_all then
+    # the default kwargs passed into write_means_tables_shockdec for vars and shocks are empty Symbol vectors
+    # Hence, to ensure both user flexibility at the top-level with being able to specify vars/shocks from
+    # write_meansbands_tables_all and also to ensure that non-trivial shockdecs are returned (that is shockdecs with
+    # actual shocks in them as opposed to just the dettrend), this is the additional check in place.
+    tablevars = isempty(tablevars) ? get_variables(mb_shockdec) : tablevars
+    columnvars = isempty(columnvars) ? get_shocks(mb_shockdec) : columnvars
+
     for tablevar in tablevars
         df = prepare_means_table_shockdec(mb_shockdec, mb_trend, mb_dettrend, tablevar,
                                           mb_forecast = mb_forecast, mb_hist = mb_hist,
