@@ -122,15 +122,14 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
 
         # Decompose into components
         state_comps, shock_comps = decompose_states_shocks(sys_new, s_new_new_Tmk_Tmk, s_new_new_Tmk_T,
-                                                           ϵ_new_new_tgT, classes, T0, k_cond, h_cond)
+                                                           ϵ_new_new_tgT, classes, k_cond, h_cond)
         check && @assert check_states_shocks_decomp(sys_new, s_new_new_tgt, s_new_new_tgT, classes,
                                                     k_cond, h_cond, state_comps, shock_comps, atol = atol)
 
         data_comps = decompose_data_revisions(sys_new, s_new_new_Tmk_Tmk, s_old_new_Tmk_Tmk,
-                                              classes, T0, k_cond, h_cond)
+                                              classes, k_cond, h_cond)
         param_comps = decompose_param_reest(sys_new, sys_old, s_old_new_Tmk_Tmk, s_old_old_Tmk_Tmk,
-                                            classes, T0, k_cond, h_cond)
-
+                                            classes, k_cond, h_cond)
         for class in classes
             decomp[Symbol(:decompstate, class)][:, i] = state_comps[class]
             decomp[Symbol(:decompshock, class)][:, i] = shock_comps[class]
@@ -199,9 +198,36 @@ function prepare_decomposition!(m_new::M, m_old::M, df_new::DataFrame, df_old::D
     return sys_new, sys_old, s_new_new_tgt, s_new_new_tgT, ϵ_new_new_tgT, s_old_new_Tmk_Tmk, s_old_old_Tmk_Tmk
 end
 
+"""
+```
+decompose_states_shocks(sys_new, s_Tmk_Tmk, s_Tmk_T, ϵ_tgT, classes, k, h)
+```
+
+Compute y^{d_new,θ_new}_{T-k+h|T} - y^{d_new,θ_new}_{T-k+h|T-k}, the difference
+in forecasts attributable to changes in estimates of the state s_{T-k} and the
+shock sequence ϵ_{T-k+1:min(T-k+h,T)}.
+
+(If h <= k, then T-k+h <= T and we observe shocks up to T-k+h. If h > k, then
+T-k+h > T and we observe shocks up to T.)
+
+### Inputs
+
+- `sys_new::System`: state-space matrices under new parameters
+- `s_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_new` and `params_new`
+- `s_Tmk_T::Vector{Float64}`: s_{T-k|T} from smoothing using `df_new` and `params_new`
+- `ϵ_tgT::Matrix{Float64}`: ϵ_{t|T}, t = 1:T from smoothing using `df_new` and `params_new`
+- `classes::Vector{Symbol}
+- `k::Int`
+- `h::Int`
+
+### Outputs
+
+- `state_comps::Dict{Symbol, Vector{Float64}}`: has keys `classes`
+- `shock_comps::Dict{Symbol, Vector{Float64}}`: has keys `classes`
+"""
 function decompose_states_shocks(sys_new::System, s_Tmk_Tmk::Vector{Float64},
                                  s_Tmk_T::Vector{Float64}, ϵ_tgT::Matrix{Float64},
-                                 classes::Vector{Symbol}, T0::Int, k::Int, h::Int)
+                                 classes::Vector{Symbol}, k::Int, h::Int)
     # New parameters, new data
     # State and shock components = y_{T-k+h|T} - y_{T-k+h|T-k}
     #     = Z [ T^h (s_{T-k|T} - s_{T-k|T-k}) + sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ_{T-k+j|T} ) ]
@@ -231,7 +257,7 @@ end
 
 function decompose_data_revisions(sys_new::System, s_new_Tmk_Tmk::Vector{Float64},
                                   s_old_Tmk_Tmk::Vector{Float64}, classes::Vector{Symbol},
-                                  T0::Int, k::Int, h::Int)
+                                  k::Int, h::Int)
     # New parameters, new and old data
     # Data revision component = y^new_{T-k+h|T-k} - y^old_{T-k+h|T-k}
     #     = Z T^h ( s^new_{T-k|T-k} - s^old_{T-k|T-k} )
@@ -247,9 +273,31 @@ function decompose_data_revisions(sys_new::System, s_new_Tmk_Tmk::Vector{Float64
     return data_comps
 end
 
+"""
+```
+decompose_param_reest(sys_new, sys_old, s_new_Tmk_Tmk, s_old_Tmk_Tmk, classes, k, h)
+```
+
+Compute y^{d_old,θ_new}_{T-k+h|T-k} - y^{d_old,θ_old}_{T-k+h|T-k}, the
+difference in forecasts attributable to parameter re-estimation.
+
+### Inputs
+
+- `sys_new::System`: state-space matrices under new parameters
+- `sys_old::System`: state-space matrices under old parameters
+- `s_new_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_old` and `params_new`
+- `s_old_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_old` and `params_old`
+- `classes::Vector{Symbol}
+- `k::Int`
+- `h::Int`
+
+### Outputs
+
+- `param_comps::Dict{Symbol, Vector{Float64}}`: has keys `classes`
+"""
 function decompose_param_reest(sys_new::System, sys_old::System,
                                s_new_Tmk_Tmk::Vector{Float64}, s_old_Tmk_Tmk::Vector{Float64},
-                               classes::Vector{Symbol}, T0::Int, k::Int, h::Int)
+                               classes::Vector{Symbol}, k::Int, h::Int)
     # New and old parameters, old data
     # Parameter re-estimation component = y^new_{T-k+h|T-k} - y^old_{T-k+h|T-k}
     TTT_new, CCC_new = sys_new[:TTT], sys_new[:CCC]
