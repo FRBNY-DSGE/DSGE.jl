@@ -90,7 +90,7 @@ function Base.show(io::IO, mb::MeansBands)
     @printf io "  cond: %s\n"    get_cond_type(mb)
     @printf io "  para: %s\n"    get_para(mb)
     if mb.metadata[:product] != :trend && mb.metadata[:product] != :irf
-        if isempty(mb.metadata[:dates])
+        if isempty(mb.metadata[:date_inds])
             @printf io "  dates: []\n"
         else
             @printf io "  dates: %s - %s\n" startdate_means(mb) enddate_means(mb)
