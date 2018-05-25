@@ -3,15 +3,29 @@
 forecast(m, system, s_0; enforce_zlb = false, shocks = Matrix{S}(0,0))
 
 forecast(system, s_0, shocks; enforce_zlb = false)
+
+forecast(system, s_0, H)
 ```
 
 ### Inputs
 
-- `m::AbstractModel`: model object. Only needed for the method in which `shocks`
-  are not provided.
 - `system::System{S}`: state-space system matrices
-- `kal::Kalman{S}` or `s_0::Vector{S}`: result of running the Kalman filter or
-  state vector in the final historical period (aka initial forecast period)
+- `s_0::Vector{S}`: state vector in the final historical period
+
+**Method 1 only:**
+
+- `m::AbstractModel`
+
+**Methods 1 and 2 only:**
+
+- `shocks::Matrix{S}`: `nshocks` x `nperiods` matrix of shocks to use when
+  forecasting. Note that in the first method, `nperiods` doesn't necessarily
+  have to equal `forecast_horizons(m)`; it will be truncated or padded with
+  zeros appropriately
+
+**Method 3 only:**
+
+- `H::Int` number of periods ahead to forecast
 
 where `S<:AbstractFloat`.
 
@@ -41,11 +55,17 @@ where `S<:AbstractFloat`.
 
 ### Outputs
 
+**Methods 1 and 2:**
+
 - `states::Matrix{S}`: matrix of size `nstates` x `horizon` of forecasted states
 - `obs::Matrix{S}`: matrix of size `nobs` x `horizon` of forecasted observables
 - `pseudo::Matrix{S}`: matrix of size `npseudo` x `horizon` of forecasted
   pseudo-observables
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
+
+**Method 3:**
+
+- `s_H::Vector{S}`: state vector at time `T+H` (after forecasting `H` periods ahead)
 """
 function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
     s_0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
@@ -164,4 +184,13 @@ function forecast{S<:AbstractFloat}(system::System{S}, s_0::Vector{S},
 
     # Return forecasts
     return states, obs, pseudo, shocks
+end
+
+function forecast(system::System{S}, s_0::Vector{S}, H::Int) where S<:AbstractFloat
+    TTT, CCC = system[:TTT], system[:CCC]
+    s_H = TTT^H * s_0
+    for h = 1:H
+        s_H .+= TTT^(h-1) * CCC
+    end
+    return s_H
 end
