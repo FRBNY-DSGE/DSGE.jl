@@ -389,10 +389,17 @@ function decompose_param_reest(sys_new::System, sys_old::System,
                                class::Symbol, k::Int, h::Int)
     # New and old parameters, old data
     # Parameter re-estimation component = y^new_{T-k+h|T-k} - y^old_{T-k+h|T-k}
-    TTT_new, CCC_new = sys_new[:TTT], sys_new[:CCC]
-    TTT_old, CCC_old = sys_old[:TTT], sys_old[:CCC]
     ZZ_new, DD_new = class_measurement_matrices(sys_new, class)
     ZZ_old, DD_old = class_measurement_matrices(sys_old, class)
+
+    function forecast(system::System, s_0::Vector{Float64}, h::Int)
+        TTT, CCC = system[:TTT], system[:CCC]
+        s_h = TTT^h * s_0
+        for j = 1:h
+            s_h .+= TTT^(j-1) * CCC
+        end
+        return s_h
+    end
 
     # y^new_{T-k+h|T-k} = Z^new (T^new^h s^new_{T-k|T-k} + \sum_{j=1}^h (T^new)^(j-1) C^new) + D^new
     s_new_Tmkph_Tmk = forecast(sys_new, s_new_Tmk_Tmk, h)
