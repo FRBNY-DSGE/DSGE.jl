@@ -90,10 +90,10 @@ function plot_forecast_decomposition(m_new::AbstractModel, m_old::AbstractModel,
     mbs = make_forecast_decomposition_mb(m_new, m_old, input_type, cond_new, cond_old, class)
 
     # Create shock grouping
-    groups = [ShockGroup("state", [:state], :cyan),
-              ShockGroup("shock", [:shock], :orange),
-              ShockGroup("data",  [:data],  :green),
-              ShockGroup("param", [:param], :purple)]
+    groups = [ShockGroup("state", [:state], colorant"#E5FCC2"), # yellow-green
+              ShockGroup("shock", [:shock], colorant"#9DE0AD"), # sea foam green
+              ShockGroup("data",  [:data],  colorant"#45ADA8"), # turquoise
+              ShockGroup("param", [:param], colorant"#547980")] # blue gray
 
     # Get titles if not provided
     if isempty(titles)
