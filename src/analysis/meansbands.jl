@@ -189,7 +189,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     nperiods_mb2 = length(mb2.metadata[:date_inds])
 
     bothvars = intersect(mb1vars, mb2vars)
-    for var in union(keys(mb1.bands), keys(mb2.bands))
+    for var in setdiff(union(keys(mb1.bands), keys(mb2.bands)), [:date])
         bands[var] = if var in bothvars
             vcat(mb1.bands[var], mb2.bands[var])
         elseif var in setdiff(mb1vars, mb2vars)
