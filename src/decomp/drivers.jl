@@ -169,7 +169,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
             # Decompose into components
             state_comp = decompose_states_reest(sys_new, s_new_new_Tmk_Tmk, s_new_new_Tmk_T,
                                                 class, k_cond, h_cond)
-            shock_comp = decompose_shocks_obs(sys_new, ϵ_new_new_tgT, class, k_cond, h_cond)
+            shock_comp = decompose_shocks_observed(sys_new, ϵ_new_new_tgT, class, k_cond, h_cond)
             if check
                 @assert check_states_shocks_decomp(sys_new, s_new_new_tgt, s_new_new_tgT, class,
                                                    k_cond, h_cond, state_comp, shock_comp, atol = atol)
@@ -315,7 +315,7 @@ end
 
 """
 ```
-decompose_shocks_obs(sys_new, ϵ_tgT, class, k, h)
+decompose_shocks_observed(sys_new, ϵ_tgT, class, k, h)
 ```
 
 Compute the difference in forecasts attributable to observing the shock sequence
@@ -334,8 +334,8 @@ T-k+h. If h > k, then T-k+h > T and we observe shocks up to T.)
 
 - `shock_comp::Vector{Float64}`
 """
-function decompose_shocks_obs(sys_new::System, ϵ_tgT::Matrix{Float64}, class::Symbol,
-                              k::Int, h::Int)
+function decompose_shocks_observed(sys_new::System, ϵ_tgT::Matrix{Float64},
+                                   class::Symbol, k::Int, h::Int)
     # New parameters, new data
     TTT, RRR, CCC = sys_new[:TTT], sys_new[:RRR], sys_new[:CCC]
     ZZ, _ = class_measurement_matrices(sys_new, class)
