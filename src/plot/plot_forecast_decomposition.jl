@@ -58,7 +58,7 @@ function make_forecast_decomposition_mb(m_new::AbstractModel, m_old::AbstractMod
         hist_mb.metadata[:date_inds] = DataStructures.OrderedDict(date => i for (i, date) in enumerate(hist_dates))
         for var in vars
             hist_mb.means[var] = decomps[var][hist_inds, :total]
-            hist_mb.bands[var] = DataFrame(date = dates)
+            hist_mb.bands[var] = DataFrame(date = hist_dates)
         end
     end
 
@@ -73,7 +73,7 @@ function make_forecast_decomposition_mb(m_new::AbstractModel, m_old::AbstractMod
         fcast_mb.metadata[:date_inds] = DataStructures.OrderedDict(date => i for (i, date) in enumerate(fcast_dates))
         for var in vars
             fcast_mb.means[var] = decomps[var][fcast_inds, :total]
-            fcast_mb.bands[var] = DataFrame(date = dates)
+            fcast_mb.bands[var] = DataFrame(date = fcast_dates)
         end
     end
 
