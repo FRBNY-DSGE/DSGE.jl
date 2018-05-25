@@ -4,8 +4,8 @@ decompose_forecast(m_new, m_old, df_new, df_old, input_type, cond_new, cond_old,
     classes; hs = 1:forecast_horizons(m_old), verbose = :low, kwargs...)
 
 decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
-    cond_new, cond_old, classes; hs = 1:forecast_horizons(m_old), check = false,
-    atol = 1e-8)
+    cond_new, cond_old, classes; hs = 1:forecast_horizons(m_old),
+    individual_shocks = false, check = false, atol = 1e-8)
 ```
 
 ### Inputs
@@ -39,6 +39,11 @@ decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
 **Method 1 only:**
 
 - `verbose::Symbol`
+
+**Method 2 only:**
+
+- `individual_shocks::Bool`: whether to decompose the shock component into
+  individual shocks
 
 ### Outputs
 
@@ -131,6 +136,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
                             params_new::Vector{Float64}, params_old::Vector{Float64},
                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
                             hs = 1:forecast_horizons(m_old),
+                            individual_shocks::Bool = false,
                             check::Bool = false, atol::Float64 = 1e-8) where M<:AbstractModel
 
     # Compute numbers of periods
@@ -150,15 +156,20 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     s_new_new_Tmk_T   = s_new_new_tgT[:, end-k_cond]
 
     # Initialize output dictionary
-    decomp = Dict{Symbol, Matrix{Float64}}()
+    decomp = Dict{Symbol, Array{Float64}}()
 
     for class in classes
         # Initialize output matrix
         ZZ, _ = class_measurement_matrices(sys_new, class)
         Ny    = size(ZZ, 1)
+        Ne    = size(sys_new[:RRR], 2)
+        Nh    = length(hs)
         for comp in [:state, :shock, :data, :param, :total]
             output_var = Symbol(:decomp, comp, class)
-            decomp[output_var] = zeros(Ny, length(hs))
+            decomp[output_var] = zeros(Ny, Nh)
+        end
+        if individual_shocks
+            decomp[Symbol(:decompindshock, class)] = zeros(Ny, Nh, Ne)
         end
 
         for (i, h) in enumerate(hs)
@@ -169,7 +180,9 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
             # Decompose into components
             state_comp = decompose_states_reest(sys_new, s_new_new_Tmk_Tmk, s_new_new_Tmk_T,
                                                 class, k_cond, h_cond)
-            shock_comp = decompose_shocks_observed(sys_new, ϵ_new_new_tgT, class, k_cond, h_cond)
+            shock_comp, indshock_comps = decompose_shocks_observed(sys_new, ϵ_new_new_tgT,
+                                                                   class, k_cond, h_cond,
+                                                                   individual_shocks = individual_shocks)
             if check
                 @assert check_states_shocks_decomp(sys_new, s_new_new_tgt, s_new_new_tgT, class,
                                                    k_cond, h_cond, state_comp, shock_comp, atol = atol)
@@ -184,6 +197,9 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
             decomp[Symbol(:decompshock, class)][:, i] = shock_comp
             decomp[Symbol(:decompdata,  class)][:, i] = data_comp
             decomp[Symbol(:decompparam, class)][:, i] = param_comp
+            if individual_shocks
+                decomp[Symbol(:decompindshock, class)][:, i, :] = indshock_comps
+            end
 
             # Compute total difference
             decomp[Symbol(:decomptotal, class)][:, i] = state_comp + shock_comp + data_comp + param_comp
@@ -315,11 +331,11 @@ end
 
 """
 ```
-decompose_shocks_observed(sys_new, ϵ_tgT, class, k, h)
+decompose_shocks_observed(sys_new, ϵ_tgT, class, k, h; individual_shocks = false)
 ```
 
 Compute the difference in forecasts attributable to observing the shock sequence
-ϵ_{T-k+1:min(T-k+h,T)}.  (If h <= k, then T-k+h <= T and we observe shocks up to
+ϵ_{T-k+1:min(T-k+h,T)}. (If h <= k, then T-k+h <= T and we observe shocks up to
 T-k+h. If h > k, then T-k+h > T and we observe shocks up to T.)
 
 ### Inputs
@@ -330,23 +346,49 @@ T-k+h. If h > k, then T-k+h > T and we observe shocks up to T.)
 - `k::Int`
 - `h::Int`
 
+### Keyword Arguments
+
+- `individual_shocks::Bool` whether to decompose into the contributions of
+  observing each individual shock (like in a shock decomposition)
+
 ### Outputs
 
-- `shock_comp::Vector{Float64}`
+- `shock_comp::Vector{Float64}`: size `nobs` x 1
+- `indshock_comps::Matrix{Float64}`: either size `nobs` x `nshocks` (if
+  `individual_shocks = true`) or an empty matrix
 """
 function decompose_shocks_observed(sys_new::System, ϵ_tgT::Matrix{Float64},
-                                   class::Symbol, k::Int, h::Int)
+                                   class::Symbol, k::Int, h::Int;
+                                   individual_shocks::Bool = false)
     # New parameters, new data
     TTT, RRR, CCC = sys_new[:TTT], sys_new[:RRR], sys_new[:CCC]
     ZZ, _ = class_measurement_matrices(sys_new, class)
+    Ns = size(TTT, 1)
+    Ne = size(RRR, 2)
+    Nt = size(ϵ_tgT, 2)
 
     # Shock component = Z sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ_{T-k+j|T} )
-    shock_sum = zeros(size(TTT, 1))
+    shock_sum = zeros(Ns)
     for j = 1:min(k, h)
         shock_sum .+= TTT^(h-j) * RRR * ϵ_tgT[:, end-k+j]
     end
     shock_comp = ZZ * shock_sum
-    return shock_comp
+
+    # Component for shock i = Z sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ^i_{T-k+j|T} )
+    indshock_comps = if individual_shocks
+        shock_sum = zeros(Ns, Ne)
+        for i = 1:Ne
+            ϵ_i_tgT = zeros(Ne, Nt)
+            ϵ_i_tgT[i, :] = ϵ_tgT[i, :]
+            for j = 1:min(k, h)
+                shock_sum[:, i] .+= TTT^(h-j) * RRR * ϵ_i_tgT[:, end-k+j]
+            end
+        end
+        ZZ * shock_sum
+    else
+        Matrix{Float64}(0, 0)
+    end
+    return shock_comp, indshock_comps
 end
 
 """

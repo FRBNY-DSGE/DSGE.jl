@@ -313,7 +313,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, prod::Symb
     end
 
     # Write shock names and transforms
-    if class in [:shocks, :stdshocks] || prod in [:shockdec, :irf]
+    if class in [:shocks, :stdshocks] || prod in [:shockdec, :irf, :decompindshock]
         write(file, "shock_indices", m.exogenous_shocks)
         if class in [:shocks, :stdshocks]
             rev_transforms = Dict{Symbol,Symbol}(x => Symbol("identity") for x in keys(m.exogenous_shocks))

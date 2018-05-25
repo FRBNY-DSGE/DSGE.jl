@@ -29,7 +29,7 @@ end
 function check_total_decomp(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                             sys_new::System, sys_old::System,
                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol},
-                            decomp::Dict{Symbol, Matrix{Float64}};
+                            decomp::Dict{Symbol, Array{Float64}};
                             hs = 1:forecast_horizons(m_old),
                             atol::Float64 = 1e-8) where M<:AbstractModel
     # s_{t|T}, t = 1:T+H

@@ -22,7 +22,7 @@ function get_decomp_output_files(m_new::AbstractModel, m_old::AbstractModel,
                                  input_type::Symbol, cond_new::Symbol, cond_old::Symbol,
                                  classes::Vector{Symbol})
     output_files = Dict{Symbol, String}()
-    for comp in [:state, :shock, :data, :param, :total]
+    for comp in [:state, :shock, :indshock, :data, :param, :total]
         for class in classes
             product = Symbol(:decomp, comp)
             output_var = Symbol(product, class)
@@ -45,14 +45,16 @@ function write_forecast_decomposition(m_new::AbstractModel, m_old::AbstractModel
                                       input_type::Symbol, classes::Vector{Symbol},
                                       hs::Union{Int, UnitRange{Int}},
                                       decomp_output_files::Dict{Symbol, String},
-                                      decomps::Dict{Symbol, Matrix{Float64}};
+                                      decomps::Dict{Symbol, Array{Float64}};
                                       block_number::Nullable{Int} = Nullable{Int}(),
                                       block_inds::Range{Int} = 1:0,
                                       verbose::Symbol = :low)
-    for comp in [:state, :shock, :data, :param, :total]
+    for comp in [:state, :shock, :indshock, :data, :param, :total]
         for class in classes
             prod = Symbol(:decomp, comp)
             var = Symbol(prod, class)
+            isempty(decomps[var]) && continue
+
             filepath = decomp_output_files[var]
 
             if isnull(block_number) || get(block_number) == 1
@@ -64,8 +66,7 @@ function write_forecast_decomposition(m_new::AbstractModel, m_old::AbstractModel
                     # Pre-allocate HDF5 dataset which will contain all draws
                     if !isnull(block_number) && get(block_number) == 1
                         # Determine forecast output size
-                        dims = DSGE.get_forecast_output_dims(m_new, input_type, Symbol(:forecast, class))
-                        dims = (dims[1], dims[2], length(hs)) # dims is ndraws x nvars x nperiods
+                        dims = size(decomps[var])
                         block_size = forecast_block_size(m_new)
                         chunk_dims = collect(dims)
                         chunk_dims[1] = block_size
