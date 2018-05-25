@@ -395,17 +395,11 @@ function decompose_param_reest(sys_new::System, sys_old::System,
     ZZ_old, DD_old = class_measurement_matrices(sys_old, class)
 
     # y^new_{T-k+h|T-k} = Z^new (T^new^h s^new_{T-k|T-k} + \sum_{j=1}^h (T^new)^(j-1) C^new) + D^new
-    s_new_Tmkph_Tmk = TTT_new^h * s_new_Tmk_Tmk
-    for j = 1:h
-        s_new_Tmkph_Tmk .+= TTT_new^(j-1) * CCC_new
-    end
+    s_new_Tmkph_Tmk = forecast(sys_new, s_new_Tmk_Tmk, h)
     y_new_Tmkph_Tmk = ZZ_new * s_new_Tmkph_Tmk + DD_new
 
     # y^old_{T-k+h|T-k} = Z^old (T^old^h s^old_{T-k|T-k} + \sum_{j=1}^h (T^old)^(j-1) C^old) + D^old
-    s_old_Tmkph_Tmk = TTT_old^h * s_old_Tmk_Tmk
-    for j = 1:h
-        s_old_Tmkph_Tmk .+= TTT_old^(j-1) * CCC_old
-    end
+    s_old_Tmkph_Tmk = forecast(sys_old, s_old_Tmk_Tmk, h)
     y_old_Tmkph_Tmk = ZZ_old * s_old_Tmkph_Tmk + DD_old
 
     # Return
