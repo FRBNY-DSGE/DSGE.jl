@@ -97,7 +97,7 @@ function initialize_cloud_settings!(m::AbstractModel, cloud::ParticleCloud; temp
 
     cloud.tempering_schedule = zeros(1)
     if tempered_update
-        cloud.ESS = [cloud.ESS[1]]
+        cloud.ESS = [cloud.ESS[end]]
     else
         cloud.ESS[1] = n_parts
     end
