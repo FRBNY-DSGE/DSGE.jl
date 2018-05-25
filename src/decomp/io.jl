@@ -45,7 +45,7 @@ function write_forecast_decomposition(m_new::AbstractModel, m_old::AbstractModel
                                       input_type::Symbol, classes::Vector{Symbol},
                                       hs::Union{Int, UnitRange{Int}},
                                       decomp_output_files::Dict{Symbol, String},
-                                      decomps::Dict{Symbol, Array{Float64}};
+                                      decomps::Dict{Symbol, Matrix{Float64}};
                                       block_number::Nullable{Int} = Nullable{Int}(),
                                       block_inds::Range{Int} = 1:0,
                                       verbose::Symbol = :low)
