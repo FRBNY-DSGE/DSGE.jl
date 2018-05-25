@@ -142,23 +142,28 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     @assert size(df_old, 1) == T0 + T + T1_old - k
 
     # Update parameters, filter, and smooth
+    @timeit to "filter/smooth" begin
     sys_new, sys_old, s_new_new_tgt, s_new_new_tgT, ϵ_new_new_tgT, s_old_new_Tmk_Tmk, s_old_old_Tmk_Tmk =
         prepare_decomposition!(m_new, m_old, df_new, df_old, params_new, params_old,
                                cond_new, cond_old, k_cond; atol = atol)
 
     s_new_new_Tmk_Tmk = s_new_new_tgt[:, end-k_cond]
     s_new_new_Tmk_T   = s_new_new_tgT[:, end-k_cond]
+    end
 
     # Initialize output dictionary
+    # Even though we know the values of decomp are all Matrix{Float64}s, we need to initialize the dictionary to accommodate Array{Float64}s, which is what write_forecast_decomposition expects
     decomp = Dict{Symbol, Matrix{Float64}}()
 
     for class in classes
         # Initialize output matrix
+        @timeit to "init dict" begin
         ZZ, _ = class_measurement_matrices(sys_new, class)
         Ny    = size(ZZ, 1)
         for comp in [:state, :shock, :data, :param, :total]
             output_var = Symbol(:decomp, comp, class)
             decomp[output_var] = zeros(Ny, length(hs))
+        end
         end
 
         for (i, h) in enumerate(hs)
@@ -167,18 +172,33 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
             @assert h_cond >= 0
 
             # Decompose into components
+<<<<<<< Updated upstream
             state_comp = decompose_states_reest(sys_new, s_new_new_Tmk_Tmk, s_new_new_Tmk_T,
                                                 class, k_cond, h_cond)
-            shock_comp = decompose_shocks_obs(sys_new, ϵ_new_new_tgT, class, k_cond, h_cond)
+            shock_comp = decompose_states_obs(sys_new, ϵ_new_new_tgT, class, k_cond, h_cond)
             if check
                 @assert check_states_shocks_decomp(sys_new, s_new_new_tgt, s_new_new_tgT, class,
                                                    k_cond, h_cond, state_comp, shock_comp, atol = atol)
             end
 
+=======
+            @timeit to "states/shocks" begin
+            state_comp, shock_comp = decompose_states_shocks(sys_new, s_new_new_Tmk_Tmk, s_new_new_Tmk_T,
+                                                             ϵ_new_new_tgT, class, k_cond, h_cond)
+            check && @assert check_states_shocks_decomp(sys_new, s_new_new_tgt, s_new_new_tgT, class,
+                                                        k_cond, h_cond, state_comp, shock_comp, atol = atol)
+            end
+
+            @timeit to "data" begin
+>>>>>>> Stashed changes
             data_comp = decompose_data_revisions(sys_new, s_new_new_Tmk_Tmk, s_old_new_Tmk_Tmk,
                                                  class, k_cond, h_cond)
+            end
+
+            @timeit to "param" begin
             param_comp = decompose_param_reest(sys_new, sys_old, s_old_new_Tmk_Tmk, s_old_old_Tmk_Tmk,
                                                class, k_cond, h_cond)
+            end
 
             decomp[Symbol(:decompstate, class)][:, i] = state_comp
             decomp[Symbol(:decompshock, class)][:, i] = shock_comp
@@ -190,9 +210,11 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         end
     end
 
+    @timeit to "check total" begin
     check && @assert check_total_decomp(m_new, m_old, df_new, df_old, sys_new, sys_old,
                                         cond_new, cond_old, classes, decomp;
                                         hs = hs, atol = atol)
+    end
 
     return decomp
 end
