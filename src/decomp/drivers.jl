@@ -283,30 +283,24 @@ end
 
 """
 ```
-decompose_states_shocks(sys_new, s_Tmk_Tmk, s_Tmk_T, ϵ_tgT, classes, k, h)
+decompose_states_reest(sys_new, s_Tmk_Tmk, s_Tmk_T, class, k, h)
 ```
 
-Compute y^{d_new,θ_new}_{T-k+h|T} - y^{d_new,θ_new}_{T-k+h|T-k}, the difference
-in forecasts attributable to changes in estimates of the state s_{T-k} and the
-shock sequence ϵ_{T-k+1:min(T-k+h,T)}.
-
-(If h <= k, then T-k+h <= T and we observe shocks up to T-k+h. If h > k, then
-T-k+h > T and we observe shocks up to T.)
+Compute the difference in forecasts attributable to changes in estimates of the
+state s_{T-k}.
 
 ### Inputs
 
 - `sys_new::System`: state-space matrices under new parameters
 - `s_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_new` and `params_new`
 - `s_Tmk_T::Vector{Float64}`: s_{T-k|T} from smoothing using `df_new` and `params_new`
-- `ϵ_tgT::Matrix{Float64}`: ϵ_{t|T}, t = 1:T from smoothing using `df_new` and `params_new`
-- `classes::Vector{Symbol}
+- `class::Symbol
 - `k::Int`
 - `h::Int`
 
 ### Outputs
 
-- `state_comps::Dict{Symbol, Vector{Float64}}`: has keys `classes`
-- `shock_comps::Dict{Symbol, Vector{Float64}}`: has keys `classes`
+- `state_comp::Vector{Float64}`
 """
 function decompose_states_reest(sys_new::System, s_Tmk_Tmk::Vector{Float64},
                                 s_Tmk_T::Vector{Float64}, class::Symbol, k::Int, h::Int)
@@ -319,6 +313,27 @@ function decompose_states_reest(sys_new::System, s_Tmk_Tmk::Vector{Float64},
     return state_comp
 end
 
+"""
+```
+decompose_shocks_obs(sys_new, ϵ_tgT, class, k, h)
+```
+
+Compute the difference in forecasts attributable to observing the shock sequence
+ϵ_{T-k+1:min(T-k+h,T)}.  (If h <= k, then T-k+h <= T and we observe shocks up to
+T-k+h. If h > k, then T-k+h > T and we observe shocks up to T.)
+
+### Inputs
+
+- `sys_new::System`: state-space matrices under new parameters
+- `ϵ_tgT::Matrix{Float64}`: ϵ_{t|T}, t = 1:T from smoothing using `df_new` and `params_new`
+- `classes::Vector{Symbol}
+- `k::Int`
+- `h::Int`
+
+### Outputs
+
+- `shock_comp::Vector{Float64}`
+"""
 function decompose_shocks_obs(sys_new::System, ϵ_tgT::Matrix{Float64}, class::Symbol,
                               k::Int, h::Int)
     # New parameters, new data
@@ -336,7 +351,7 @@ end
 
 """
 ```
-decompose_data_revision(sys_new, s_new_Tmk_Tmk, s_old_Tmk_Tmk, classes, k, h)
+decompose_data_revision(sys_new, s_new_Tmk_Tmk, s_old_Tmk_Tmk, class, k, h)
 ```
 
 Compute y^{d_new,θ_new}_{T-k+h|T-k} - y^{d_old,θ_new}_{T-k+h|T-k}, the
@@ -347,13 +362,13 @@ difference in forecasts attributable to data revisions.
 - `sys_new::System`: state-space matrices under new parameters
 - `s_new_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_new` and `params_new`
 - `s_old_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_old` and `params_new`
-- `classes::Vector{Symbol}
+- `class::Symbol`
 - `k::Int`
 - `h::Int`
 
 ### Outputs
 
-- `data_comps::Dict{Symbol, Vector{Float64}}`: has keys `classes`
+- `data_comp::Vector{Float64}`
 """
 function decompose_data_revisions(sys_new::System, s_new_Tmk_Tmk::Vector{Float64},
                                   s_old_Tmk_Tmk::Vector{Float64}, class::Symbol,
@@ -370,7 +385,7 @@ end
 
 """
 ```
-decompose_param_reest(sys_new, sys_old, s_new_Tmk_Tmk, s_old_Tmk_Tmk, classes, k, h)
+decompose_param_reest(sys_new, sys_old, s_new_Tmk_Tmk, s_old_Tmk_Tmk, class, k, h)
 ```
 
 Compute y^{d_old,θ_new}_{T-k+h|T-k} - y^{d_old,θ_old}_{T-k+h|T-k}, the
@@ -382,13 +397,13 @@ difference in forecasts attributable to parameter re-estimation.
 - `sys_old::System`: state-space matrices under old parameters
 - `s_new_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_old` and `params_new`
 - `s_old_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_old` and `params_old`
-- `classes::Vector{Symbol}
+- `class::Symbol`
 - `k::Int`
 - `h::Int`
 
 ### Outputs
 
-- `param_comps::Dict{Symbol, Vector{Float64}}`: has keys `classes`
+- `param_comp::Vector{Float64}`
 """
 function decompose_param_reest(sys_new::System, sys_old::System,
                                s_new_Tmk_Tmk::Vector{Float64}, s_old_Tmk_Tmk::Vector{Float64},
