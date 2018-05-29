@@ -3,7 +3,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
                              hs::Union{Int, UnitRange{Int}};
                              verbose::Symbol = :low) where M<:AbstractModel
     # Print
-    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
         info("Computing means of forecast decomposition...")
         println("Start time: " * string(now()))
@@ -13,13 +13,13 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
     input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes, hs)
 
     for class in classes
-        if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:high]
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
             print("Computing " * string(class) * "...")
         end
 
         # Read metadata
         variable_names = jldopen(input_files[Symbol(:decomptotal, class)]) do file
-            class_long = DSGE.get_class_longname(class)
+            class_long = get_class_longname(class)
             collect(keys(read(file, string(class_long) * "_indices")))
         end
 
@@ -41,14 +41,14 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
             write(file, "decomps", decomps)
         end
 
-        if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:high]
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
             output_file = get_scenario_mb_output_file(m, scen, output_var)
             println("wrote " * basename(output_file))
         end
     end
 
     # Print
-    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         total_mb_time     = toq()
         total_mb_time_min = total_mb_time/60
 
@@ -78,18 +78,18 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         input_file = input_files[Symbol(product, class)]
         decomp_series, transform = jldopen(input_file, "r") do file
             # Read in variable: ndraws x nperiods
-            decomp_series = DSGE.read_forecast_series(file, class, product, var)
+            decomp_series = read_forecast_series(file, class, product, var)
 
             # Parse transform
-            class_long = DSGE.get_class_longname(class)
+            class_long = get_class_longname(class)
             transforms = read(file, string(class_long) * "_revtransforms")
-            transform = DSGE.parse_transform(transforms[var])
+            transform = parse_transform(transforms[var])
 
             decomp_series, transform
         end
 
         # Reverse transform
-        transformed_decomp = DSGE.scenario_mb_reverse_transform(decomp_series, transform, :forecast)
+        transformed_decomp = scenario_mb_reverse_transform(decomp_series, transform, :forecast)
 
         # Compute mean and add to DataFrame
         decomp[comp] = vec(mean(transformed_decomp, 1))
@@ -102,15 +102,15 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
             shock_indices = read(file, "shock_indices")
             for (shock, i) in shock_indices
                 # Read in variable and shock: ndraws x nperiods
-                decomp_series = DSGE.read_forecast_series(file, class, :decompindshock, var, shock)
+                decomp_series = read_forecast_series(file, class, :decompindshock, var, shock)
 
                 # Parse transform
-                class_long = DSGE.get_class_longname(class)
+                class_long = get_class_longname(class)
                 transforms = read(file, string(class_long) * "_revtransforms")
-                transform = DSGE.parse_transform(transforms[var])
+                transform = parse_transform(transforms[var])
 
                 # Reverse transform
-                transformed_decomp = DSGE.scenario_mb_reverse_transform(decomp_series, transform, :forecast)
+                transformed_decomp = scenario_mb_reverse_transform(decomp_series, transform, :forecast)
 
                 # Compute mean and add to DataFrame
                 decomp[shock] = vec(mean(transformed_decomp, 1))

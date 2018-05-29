@@ -61,7 +61,7 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
                 jldopen(filepath, "w") do file
                     # Write metadata
                     # Pass in m_old because its date_mainsample_end is used to calculate dates
-                    DSGE.write_forecast_metadata(m_old, file, prod, class, hs = hs)
+                    write_forecast_metadata(m_old, file, prod, class, hs = hs)
 
                     # Pre-allocate HDF5 dataset which will contain all draws
                     if !isnull(block_number) && get(block_number) == 1
@@ -82,11 +82,11 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
                 if isnull(block_number)
                     write(file, "arr", decomps[var])
                 else
-                    DSGE.write_forecast_block(file, decomps[var], block_inds)
+                    write_forecast_block(file, decomps[var], block_inds)
                 end
             end
 
-            if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:high]
+            if VERBOSITY[verbose] >= VERBOSITY[:high]
                 println(" * Wrote $(basename(filepath))")
             end
         end # of loop over classes
