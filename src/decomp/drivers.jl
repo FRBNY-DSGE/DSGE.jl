@@ -60,7 +60,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     # Get output file names
     decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes, hs)
 
-    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         info("Decomposing forecast...")
         println("Start time: $(now())")
     end
@@ -79,12 +79,12 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     # Multiple-draw forecasts
     elseif input_type == :full
 
-        block_inds, block_inds_thin = DSGE.forecast_block_inds(m_new, input_type)
+        block_inds, block_inds_thin = forecast_block_inds(m_new, input_type)
         nblocks = length(block_inds)
         total_forecast_time = 0.0
 
         for block = 1:nblocks
-            if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println()
                 info("Decomposing block $block of $nblocks...")
             end
@@ -102,7 +102,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
 
             # Assemble outputs from this block and write to file
             decomps = convert(Vector{Dict{Symbol, Array{Float64}}}, decomps)
-            decomps = DSGE.assemble_block_outputs(decomps)
+            decomps = assemble_block_outputs(decomps)
             write_forecast_decomposition(m_new, m_old, input_type, classes, hs, decomp_output_files, decomps,
                                          block_number = Nullable(block), block_inds = block_inds_thin[block],
                                          verbose = verbose)
@@ -110,7 +110,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
 
             # Calculate time to complete this block, average block time, and
             # expected time to completion
-            if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
                 block_time = toq()
                 total_forecast_time += block_time
                 total_forecast_time_min     = total_forecast_time/60
@@ -127,7 +127,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         error("Invalid input_type: $input_type. Must be in [:mode, :mean, :init, :full]")
     end
 
-    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("\nForecast decomposition complete: $(now())")
     end
 end
@@ -238,7 +238,7 @@ function decomposition_periods(m_new::M, m_old::M,
     # New model has T main-sample periods
     # Old model has T-k main-sample periods
     T = n_mainsample_periods(m_new)
-    k = DSGE.subtract_quarters(date_forecast_start(m_new), date_forecast_start(m_old))
+    k = subtract_quarters(date_forecast_start(m_new), date_forecast_start(m_old))
     @assert k >= 0
 
     # Number of conditional periods T1 may differ
@@ -274,19 +274,19 @@ function prepare_decomposition!(m_new::M, m_old::M, df_new::DataFrame, df_old::D
                                 cond_new::Symbol, cond_old::Symbol,
                                 k::Int; atol::Float64 = 1e-8) where M<:AbstractModel
     # Update parameters
-    DSGE.update!(m_new, params_new)
-    DSGE.update!(m_old, params_old)
+    update!(m_new, params_new)
+    update!(m_old, params_old)
     sys_new = compute_system(m_new)
     sys_old = compute_system(m_old)
 
     # Filter and smooth
-    s_new_new_tgt = DSGE.filter(m_new, df_new, sys_new, cond_type = cond_new, outputs = [:filt],
+    s_new_new_tgt = filter(m_new, df_new, sys_new, cond_type = cond_new, outputs = [:filt],
                                 include_presample = false)[:s_filt]
     s_new_new_tgT, ϵ_new_new_tgT = smooth(m_new, df_new, sys_new, cond_type = cond_new, draw_states = false)
 
-    s_old_new_Tmk_Tmk = DSGE.filter(m_new, df_old, sys_new, cond_type = cond_old, outputs = Symbol[],
+    s_old_new_Tmk_Tmk = filter(m_new, df_old, sys_new, cond_type = cond_old, outputs = Symbol[],
                                     include_presample = false)[:s_T]
-    s_old_old_Tmk_Tmk = DSGE.filter(m_old, df_old, sys_old, cond_type = cond_old, outputs = Symbol[],
+    s_old_old_Tmk_Tmk = filter(m_old, df_old, sys_old, cond_type = cond_old, outputs = Symbol[],
                                     include_presample = false)[:s_T]
 
     # Check sizes

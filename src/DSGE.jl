@@ -182,7 +182,10 @@ module DSGE
     include("analysis/util.jl")
     include("analysis/df_to_table.jl")
 
-    include("decomp/forecast_decomposition.jl")
+    include("decomp/drivers.jl")
+    include("decomp/util.jl")
+    include("decomp/io.jl")
+    include("decomp/meansbands.jl")
 
     include("altpolicy/altpolicy.jl")
     include("altpolicy/taylor93.jl")
@@ -203,6 +206,7 @@ module DSGE
     include("plot/plot_shock_decomposition.jl")
     include("plot/plot_altpolicies.jl")
     include("plot/plot_scenario.jl")
+    include("plot/plot_forecast_decomposition.jl")
 
     include("models/financial_frictions.jl")
 
