@@ -1,6 +1,6 @@
 """
 ```
-make_decomp_mbs(m_new, m_old, input_type, cond_new, cond_old, class;
+make_decomp_mbs(m_new, m_old, input_type, cond_new, cond_old, class, hs;
     individual_shocks = false)
 ```
 
@@ -9,10 +9,11 @@ forecast) necessary to call the plotting function `shockdec` in
 `plot_forecast_decomposition`.
 """
 function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
-                         cond_new::Symbol, cond_old::Symbol, class::Symbol;
+                         cond_new::Symbol, cond_old::Symbol,
+                         class::Symbol, hs::Union{Int, UnitRange{Int}};
                          individual_shocks::Bool = false) where M<:AbstractModel
     # Read in means
-    input_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class)
+    input_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class, hs)
     decomps = jldopen(input_file, "r") do file
         read(file, "decomps")
     end
@@ -108,7 +109,7 @@ end
 """
 ```
 plot_forecast_decomposition(m_new, m_old, vars, class, input_type,
-    cond_new, cond_old; titles = [], individual_shocks = false,
+    cond_new, cond_old, hs; titles = [], individual_shocks = false,
     groups = shock_groupings(m_new), verbose = :low, kwargs...)
 ```
 
@@ -121,14 +122,15 @@ and the bars give the individual shock contributions.
 The `groups` keyword argument is only used if `individual_shocks = true`.
 """
 function plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, class::Symbol,
-                                     input_type::Symbol, cond_new::Symbol, cond_old::Symbol;
+                                     input_type::Symbol, cond_new::Symbol,
+                                     cond_old::Symbol, hs::Union{Int, UnitRange{Int}};
                                      titles::Vector{String} = String[],
                                      individual_shocks::Bool = false,
                                      groups::Vector{ShockGroup} = shock_groupings(m_new),
                                      verbose::Symbol = :low,
                                      kwargs...) where M<:AbstractModel
     # Create MeansBands
-    mbs = make_decomp_mbs(m_new, m_old, input_type, cond_new, cond_old, class,
+    mbs = make_decomp_mbs(m_new, m_old, input_type, cond_new, cond_old, class, hs,
                           individual_shocks = individual_shocks)
 
     # Create shock grouping
@@ -160,7 +162,7 @@ function plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, c
         # Save plot
         basename = Symbol(:decomp, individual_shocks ? :shocks : :total, "_", var)
         output_file = get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old,
-                                          basename, Symbol(),
+                                          basename, Symbol(), hs,
                                           pathfcn = figurespath, fileformat = DSGE.plot_extension())
 
         DSGE.save_plot(plots[var], output_file, verbose = verbose)

@@ -1,6 +1,7 @@
-function decomposition_means(m_new::AbstractModel, m_old::AbstractModel,
-                             input_type::Symbol, cond_new::Symbol, cond_old::Symbol,
-                             classes::Vector{Symbol}; verbose::Symbol = :low)
+function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
+                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol},
+                             hs::Union{Int, UnitRange{Int}};
+                             verbose::Symbol = :low) where M<:AbstractModel
     # Print
     if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
         println()
@@ -9,7 +10,7 @@ function decomposition_means(m_new::AbstractModel, m_old::AbstractModel,
         tic()
     end
 
-    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes)
+    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes, hs)
 
     for class in classes
         if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:high]
@@ -25,7 +26,7 @@ function decomposition_means(m_new::AbstractModel, m_old::AbstractModel,
         # Get to work!
         mapfcn = use_parallel_workers(m_new) ? pmap : map
         decomp_vec = mapfcn(var -> decomposition_means(m_new, m_old, input_type,
-                                                       cond_new, cond_old, class, var),
+                                                       cond_new, cond_old, class, var, hs),
                             variable_names)
         decomps = DataStructures.OrderedDict{Symbol, DataFrame}()
         for (var, decomp) in zip(variable_names, decomp_vec)
@@ -33,7 +34,7 @@ function decomposition_means(m_new::AbstractModel, m_old::AbstractModel,
         end
 
         # Write to file
-        output_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class)
+        output_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class, hs)
         output_dir = dirname(output_file)
         isdir(output_dir) || mkpath(output_dir)
         jldopen(output_file, "w") do file
@@ -56,11 +57,12 @@ function decomposition_means(m_new::AbstractModel, m_old::AbstractModel,
     end
 end
 
-function decomposition_means(m_new::AbstractModel, m_old::AbstractModel,
-                             input_type::Symbol, cond_new::Symbol, cond_old::Symbol,
-                             class::Symbol, var::Symbol)
+function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
+                             cond_new::Symbol, cond_old::Symbol,
+                             class::Symbol, var::Symbol,
+                             hs::Union{Int, UnitRange{Int}}) where M<:AbstractModel
     # Read in dates
-    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, [class])
+    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, [class], hs)
     input_file = input_files[Symbol(:decomptotal, class)]
     dates = jldopen(input_file, "r") do file
         sort(collect(keys(read(file, "date_indices"))))
