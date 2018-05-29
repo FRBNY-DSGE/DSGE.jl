@@ -58,7 +58,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
                             hs = 1:forecast_horizons(m_old),
                             verbose::Symbol = :low, kwargs...) where M<:AbstractModel
     # Get output file names
-    decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes)
+    decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes, hs)
 
     if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
         info("Decomposing forecast...")
