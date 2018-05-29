@@ -101,7 +101,7 @@ function initialize_cloud_settings!(m::AbstractModel, cloud::ParticleCloud; temp
     else
         cloud.ESS[1] = n_parts
     end
-    cloud.stage_index = i = 1
+    cloud.stage_index = 1
     cloud.n_Φ = get_setting(m, :n_Φ)
     cloud.resamples = 0
     cloud.c = get_setting(m, :step_size_smc)
