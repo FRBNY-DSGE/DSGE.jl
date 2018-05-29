@@ -1,5 +1,6 @@
-function make_forecast_decomposition_mb(m_new::AbstractModel, m_old::AbstractModel,
-                                        input_type::Symbol, cond_new::Symbol, cond_old::Symbol, class::Symbol)
+function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
+                         cond_new::Symbol, cond_old::Symbol, class::Symbol;
+                         individual_shocks::Bool = false) where M<:AbstractModel
     # Read in means
     input_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class)
     decomps = jldopen(input_file, "r") do file
@@ -22,12 +23,26 @@ function make_forecast_decomposition_mb(m_new::AbstractModel, m_old::AbstractMod
     # Shock decomposition
     shockdec_mb = MeansBands(Dict(metadata), DataFrame(date = dates), Dict{Symbol, DataFrame}())
     shockdec_mb.metadata[:product] = :shockdec
-    shockdec_mb.metadata[:shock_indices] = DataStructures.OrderedDict(comp => i for (i, comp) in enumerate(comps))
-    for comp in comps
+    if individual_shocks
         for var in vars
-            varcomp = Symbol(var, "__", comp)
-            shockdec_mb.means[varcomp] = decomps[var][comp]
-            shockdec_mb.bands[varcomp] = DataFrame(date = dates)
+            shocks = setdiff(names(decomps[var]), vcat([:date, :total], comps))
+            if var == vars[1]
+                shockdec_mb.metadata[:shock_indices] = DataStructures.OrderedDict(shock => i for (i, shock) in enumerate(shocks))
+            end
+            for shock in shocks
+                varshock = Symbol(var, "__", shock)
+                shockdec_mb.means[varshock] = decomps[var][shock]
+                shockdec_mb.bands[varshock] = DataFrame(date = dates)
+            end
+        end
+    else
+        shockdec_mb.metadata[:shock_indices] = DataStructures.OrderedDict(comp => i for (i, comp) in enumerate(comps))
+        for var in vars
+            for comp in comps
+                varcomp = Symbol(var, "__", comp)
+                shockdec_mb.means[varcomp] = decomps[var][comp]
+                shockdec_mb.bands[varcomp] = DataFrame(date = dates)
+            end
         end
     end
 
@@ -57,7 +72,7 @@ function make_forecast_decomposition_mb(m_new::AbstractModel, m_old::AbstractMod
         hist_mb.metadata[:product]   = :hist
         hist_mb.metadata[:date_inds] = DataStructures.OrderedDict(date => i for (i, date) in enumerate(hist_dates))
         for var in vars
-            hist_mb.means[var] = decomps[var][hist_inds, :total]
+            hist_mb.means[var] = decomps[var][hist_inds, individual_shocks ? :shock : :total]
             hist_mb.bands[var] = DataFrame(date = hist_dates)
         end
     end
@@ -72,7 +87,7 @@ function make_forecast_decomposition_mb(m_new::AbstractModel, m_old::AbstractMod
         fcast_mb.metadata[:product]   = :forecast
         fcast_mb.metadata[:date_inds] = DataStructures.OrderedDict(date => i for (i, date) in enumerate(fcast_dates))
         for var in vars
-            fcast_mb.means[var] = decomps[var][fcast_inds, :total]
+            fcast_mb.means[var] = decomps[var][fcast_inds, individual_shocks ? :shock : :total]
             fcast_mb.bands[var] = DataFrame(date = fcast_dates)
         end
     end
@@ -80,20 +95,28 @@ function make_forecast_decomposition_mb(m_new::AbstractModel, m_old::AbstractMod
     return shockdec_mb, trend_mb, dettrend_mb, hist_mb, fcast_mb
 end
 
-function plot_forecast_decomposition(m_new::AbstractModel, m_old::AbstractModel,
-                                     vars::Vector{Symbol}, class::Symbol,
+function plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, class::Symbol,
                                      input_type::Symbol, cond_new::Symbol, cond_old::Symbol;
                                      titles::Vector{String} = String[],
+                                     individual_shocks::Bool = false,
+                                     groups::Vector{ShockGroup} = shock_groupings(m_new),
                                      verbose::Symbol = :low,
-                                     kwargs...)
+                                     kwargs...) where M<:AbstractModel
     # Create MeansBands
-    mbs = make_forecast_decomposition_mb(m_new, m_old, input_type, cond_new, cond_old, class)
+    mbs = make_decomp_mbs(m_new, m_old, input_type, cond_new, cond_old, class,
+                          individual_shocks = individual_shocks)
 
     # Create shock grouping
-    groups = [ShockGroup("state", [:state], colorant"#E5FCC2"), # yellow-green
-              ShockGroup("shock", [:shock], colorant"#9DE0AD"), # sea foam green
-              ShockGroup("data",  [:data],  colorant"#45ADA8"), # turquoise
-              ShockGroup("param", [:param], colorant"#547980")] # blue gray
+    if individual_shocks
+        # Remove deterministic trend (zero by construction)
+        ind_dt = findfirst(group -> group.name == "dt", groups)
+        splice!(groups, ind_dt)
+    else
+        groups = [ShockGroup("state", [:state], colorant"#E5FCC2"), # yellow-green
+                  ShockGroup("shock", [:shock], colorant"#9DE0AD"), # sea foam green
+                  ShockGroup("data",  [:data],  colorant"#45ADA8"), # turquoise
+                  ShockGroup("param", [:param], colorant"#547980")] # blue gray
+    end
 
     # Get titles if not provided
     if isempty(titles)
@@ -110,7 +133,9 @@ function plot_forecast_decomposition(m_new::AbstractModel, m_old::AbstractModel,
                               title = title, kwargs...)
 
         # Save plot
-        output_file = get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old, :decomp, class,
+        basename = Symbol(:decomp, individual_shocks ? :shocks : :total, "_", var)
+        output_file = get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old,
+                                          basename, Symbol(),
                                           pathfcn = figurespath, fileformat = DSGE.plot_extension())
 
         DSGE.save_plot(plots[var], output_file, verbose = verbose)
