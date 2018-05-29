@@ -1,3 +1,13 @@
+"""
+```
+make_decomp_mbs(m_new, m_old, input_type, cond_new, cond_old, class;
+    individual_shocks = false)
+```
+
+Construct and return the `MeansBands` (for shockdec, trend, dettrend, hist, and
+forecast) necessary to call the plotting function `shockdec` in
+`plot_forecast_decomposition`.
+"""
 function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
                          cond_new::Symbol, cond_old::Symbol, class::Symbol;
                          individual_shocks::Bool = false) where M<:AbstractModel
@@ -95,6 +105,21 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
     return shockdec_mb, trend_mb, dettrend_mb, hist_mb, fcast_mb
 end
 
+"""
+```
+plot_forecast_decomposition(m_new, m_old, vars, class, input_type,
+    cond_new, cond_old; titles = [], individual_shocks = false,
+    groups = shock_groupings(m_new), verbose = :low, kwargs...)
+```
+
+Plot forecast decomposition (looks like a shock decomposition). If
+`individual_shocks = false`, then the black and red lines give the total
+difference and the bars give the state, shock, data, and parameter
+components. Otherwise, the black and red lines give the total shock component
+and the bars give the individual shock contributions.
+
+The `groups` keyword argument is only used if `individual_shocks = true`.
+"""
 function plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, class::Symbol,
                                      input_type::Symbol, cond_new::Symbol, cond_old::Symbol;
                                      titles::Vector{String} = String[],
