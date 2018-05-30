@@ -66,9 +66,13 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
                     # Pre-allocate HDF5 dataset which will contain all draws
                     if !isnull(block_number) && get(block_number) == 1
                         # Determine forecast output size
-                        dims = size(decomps[var])
-                        block_size = forecast_block_size(m_new)
-                        chunk_dims = collect(dims)
+                        jstep = get_jstep(m_new, n_forecast_draws(m_new, input_type))
+                        dims = collect(size(decomps[var]))
+                        dims[1] = convert(Int, n_forecast_draws(m_new, input_type) / jstep)
+
+                        # Determine chunk (block) size
+                        block_size = convert(Int, forecast_block_size(m_new) / jstep)
+                        chunk_dims = copy(dims)
                         chunk_dims[1] = block_size
 
                         # Initialize dataset
