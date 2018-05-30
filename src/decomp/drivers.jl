@@ -207,8 +207,8 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     end
 
     check && @assert check_total_decomp(m_new, m_old, df_new, df_old, sys_new, sys_old,
-                                        cond_new, cond_old, classes, decomp;
-                                        hs = hs, atol = atol)
+                                        cond_new, cond_old, classes, decomp,
+                                        T, k, hs; atol = atol)
 
     return decomp
 end
