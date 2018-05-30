@@ -47,11 +47,12 @@ each of length equal to the number of forecast blocks. `block_inds[i]` is the
 range of indices for block `i` before thinning by `jstep` and
 `block_inds_thin[i]` is the range after thinning.
 """
-function forecast_block_inds(m::AbstractModel, input_type::Symbol; subset_inds::Range{Int64} = 1:0)
+function forecast_block_inds(m::AbstractModel, input_type::Symbol;
+                             subset_inds::Range{Int64} = 1:0)
 
     if input_type == :full
-        ndraws = n_forecast_draws(m, :full)
-        jstep = get_jstep(m, ndraws)
+        ndraws    = n_forecast_draws(m, :full)
+        jstep     = get_jstep(m, ndraws)
         start_ind = 1
         end_ind   = ndraws
     elseif input_type == :subset
