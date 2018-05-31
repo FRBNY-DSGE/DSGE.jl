@@ -1,7 +1,7 @@
 """
 ```
 moment_tables(m; percent = 0.90, subset_inds = 1:0, subset_string = "",
-    verbose = :none)
+    verbose = :none, use_mode = false, tables = [:prior_posterior_means, :moments, :prior, :posterior])
 ```
 
 Computes prior and posterior parameter moments. Tabulates prior mean, posterior mean, and
@@ -21,12 +21,14 @@ bands in various LaTeX tables stored `tablespath(m)`.
   `subset_string` is empty, an error is thrown
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
-- `use_mode::Bool`: Return a table with the modal parameters as opposed to the mean
+- `use_mode::Bool`: return a table with the modal parameters as opposed to the mean
+- `tables::Vector{Symbol}`: which tables to produce
 """
 function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
                        subset_inds::Range{Int64} = 1:0, subset_string::String = "",
                        groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
-                       verbose::Symbol = :low, use_mode::Bool = false)
+                       verbose::Symbol = :low, use_mode::Bool = false,
+                       tables::Vector{Symbol} = [:prior_posterior_means, :moments, :prior, :posterior])
 
     ### 1. Load parameter draws from Metropolis-Hastings
 
@@ -61,14 +63,25 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
 
     ### 3. Produce TeX tables
 
-    prior_posterior_table(m, use_mode ? post_mode : post_means;
-                          subset_string = subset_string,
-                          groupings = groupings, use_mode = use_mode)
-    prior_posterior_moments_table(m, post_means, post_bands; percent = percent,
-                                  subset_string = subset_string, groupings = groupings)
-    prior_table(m, groupings = groupings)
-    posterior_table(m, post_means, post_bands, percent = percent,
-                    subset_string = subset_string, groupings = groupings)
+    if :prior_posterior_means in tables
+        prior_posterior_table(m, use_mode ? post_mode : post_means;
+                              subset_string = subset_string,
+                              groupings = groupings, use_mode = use_mode)
+    end
+
+    if :moments in tables
+        prior_posterior_moments_table(m, post_means, post_bands; percent = percent,
+                                      subset_string = subset_string, groupings = groupings)
+    end
+
+    if :prior in tables
+        prior_table(m, groupings = groupings)
+    end
+
+    if :posterior in tables
+        posterior_table(m, post_means, post_bands, percent = percent,
+                        subset_string = subset_string, groupings = groupings)
+    end
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         @printf "Tables are saved as %s.\n" tablespath(m, "estimate", "*.tex")
