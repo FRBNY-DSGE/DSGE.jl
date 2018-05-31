@@ -28,7 +28,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         decomp_vec = mapfcn(var -> decomposition_means(m_new, m_old, input_type,
                                                        cond_new, cond_old, class, var, hs),
                             variable_names)
-        decomps = DataStructures.OrderedDict{Symbol, DataFrame}()
+        decomps = OrderedDict{Symbol, DataFrame}()
         for (var, decomp) in zip(variable_names, decomp_vec)
             decomps[var] = decomp
         end

@@ -27,7 +27,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
     metadata[:para]            = input_type
     metadata[:indices]         = DSGE.get_dict(m_new, class)
     metadata[:class]           = class
-    metadata[:date_inds]       = DataStructures.OrderedDict(date => i for (i, date) in enumerate(dates))
+    metadata[:date_inds]       = OrderedDict(date => i for (i, date) in enumerate(dates))
     metadata[:forecast_string] = ""
     metadata[:cond_type]       = cond_new
 
@@ -38,7 +38,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
         for var in vars
             shocks = setdiff(names(decomps[var]), vcat([:date, :total], comps))
             if var == vars[1]
-                shockdec_mb.metadata[:shock_indices] = DataStructures.OrderedDict(shock => i for (i, shock) in enumerate(shocks))
+                shockdec_mb.metadata[:shock_indices] = OrderedDict(shock => i for (i, shock) in enumerate(shocks))
             end
             for shock in shocks
                 varshock = Symbol(var, "__", shock)
@@ -47,7 +47,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
             end
         end
     else
-        shockdec_mb.metadata[:shock_indices] = DataStructures.OrderedDict(comp => i for (i, comp) in enumerate(comps))
+        shockdec_mb.metadata[:shock_indices] = OrderedDict(comp => i for (i, comp) in enumerate(comps))
         for var in vars
             for comp in comps
                 varcomp = Symbol(var, "__", comp)
@@ -81,7 +81,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
     else
         hist_mb = MeansBands(Dict(metadata), DataFrame(date = hist_dates), Dict{Symbol, DataFrame}())
         hist_mb.metadata[:product]   = :hist
-        hist_mb.metadata[:date_inds] = DataStructures.OrderedDict(date => i for (i, date) in enumerate(hist_dates))
+        hist_mb.metadata[:date_inds] = OrderedDict(date => i for (i, date) in enumerate(hist_dates))
         for var in vars
             hist_mb.means[var] = decomps[var][hist_inds, individual_shocks ? :shock : :total]
             hist_mb.bands[var] = DataFrame(date = hist_dates)
@@ -96,7 +96,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
     else
         fcast_mb = MeansBands(Dict(metadata), DataFrame(date = fcast_dates), Dict{Symbol, DataFrame}())
         fcast_mb.metadata[:product]   = :forecast
-        fcast_mb.metadata[:date_inds] = DataStructures.OrderedDict(date => i for (i, date) in enumerate(fcast_dates))
+        fcast_mb.metadata[:date_inds] = OrderedDict(date => i for (i, date) in enumerate(fcast_dates))
         for var in vars
             fcast_mb.means[var] = decomps[var][fcast_inds, individual_shocks ? :shock : :total]
             fcast_mb.bands[var] = DataFrame(date = fcast_dates)
@@ -152,7 +152,7 @@ function plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, c
     end
 
     # Loop through variables
-    plots = DataStructures.OrderedDict{Symbol, Plots.Plot}()
+    plots = OrderedDict{Symbol, Plots.Plot}()
     for (var, title) in zip(vars, titles)
         # Call recipe
         plots[var] = DSGE.shockdec(var, mbs..., groups;
