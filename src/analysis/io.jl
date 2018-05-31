@@ -302,10 +302,12 @@ end
 """
 ```
 write_means_tables_shockdec(m, input_type, cond_type, class;
-    forecast_string = "", dirname = tablespath(m, \"forecast\"),
+    forecast_string = "",
+    read_dirname = workpath(m, \"forecast\"),
+    write_dirname = tablespath(m, \"forecast\"),
     kwargs...)
 
-write_means_tables_shockdec(dirname, filestring_base, mb_shockdec,
+write_means_tables_shockdec(write_dirname, filestring_base, mb_shockdec,
     mb_trend, mb_dettrend, mb_hist, mb_forecast; tablevars = get_variables(mb),
     columnvars = get_shocks(mb), groups = [])
 ```
@@ -321,7 +323,7 @@ write_means_tables_shockdec(dirname, filestring_base, mb_shockdec,
 
 **Method 2 only:**
 
-- `dirname::String`: directory to which tables are saved
+- `write_dirname::String`: directory to which tables are saved
 - `filestring_base::Vector{String}`: the result of `filestring_base(m)`,
   typically `[\"vint=yymmdd\"]``
 - `mb_shockdec::MeansBands`
