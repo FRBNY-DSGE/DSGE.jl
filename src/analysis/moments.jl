@@ -142,6 +142,11 @@ function prior_table(m::AbstractModel; subset_string::String = "",
     # Write priors
     for group_desc in keys(groupings)
         params = groupings[group_desc]
+
+        # Take out anticipated shock SDs 2 to k - these priors are all the same
+        antshock_params = [m[k] for k in [Symbol("σ_r_m$i") for i = 2:n_anticipated_shocks(m)]]
+        params = setdiff(params, antshock_params)
+
         n_params = length(params)
         n_rows = convert(Int, ceil(n_params/2))
 
