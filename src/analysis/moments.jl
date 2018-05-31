@@ -367,7 +367,7 @@ function prior_posterior_table(m::AbstractModel, post_values::Vector;
 
         # Write grouping description if not empty
         if !isempty(group_desc)
-            @printf means_fid "\\multicolumn{7}{c}{\\textit{%s}} \\\\[3pt]\n" group_desc
+            @printf fid "\\multicolumn{7}{c}{\\textit{%s}} \\\\[3pt]\n" group_desc
         end
 
         for param in params
