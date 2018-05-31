@@ -61,13 +61,14 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
 
     ### 3. Produce TeX tables
 
-    if use_mode
-        prior_posterior_table(m, post_mode; subset_string = subset_string, groupings = groupings, use_mode = use_mode)
-    else
-        prior_posterior_table(m, post_means; subset_string = subset_string, groupings = groupings, use_mode = use_mode)
-    end
-    prior_posterior_moments_table(m, post_means, post_bands;
-                                  percent = percent, subset_string = subset_string, groupings = groupings)
+    prior_posterior_table(m, use_mode ? post_mode : post_means;
+                          subset_string = subset_string,
+                          groupings = groupings, use_mode = use_mode)
+    prior_posterior_moments_table(m, post_means, post_bands; percent = percent,
+                                  subset_string = subset_string, groupings = groupings)
+    prior_table(m, groupings = groupings)
+    posterior_table(m, post_means, post_bands, percent = percent,
+                    subset_string = subset_string, groupings = groupings)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         @printf "Tables are saved as %s.\n" tablespath(m, "estimate", "*.tex")
@@ -101,7 +102,7 @@ prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}()
 ```
 """
 function prior_table(m::AbstractModel; subset_string::String = "",
-             groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
+                     groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -124,6 +125,7 @@ function prior_table(m::AbstractModel; subset_string::String = "",
     @printf priors_fid "{\\small\n"
     @printf priors_fid "\\begin{longtable}{rlrr@{\\hspace{1in}}rlrr}\n"
     @printf priors_fid "\\caption{Priors}\n"
+    @printf priors_fid "\\label{tab:param-priors}\n"
     @printf priors_fid "\\\\ \\hline\n"
 
     @printf priors_fid "& Dist & Mean & Std Dev & & Dist & Mean & Std Dev \\\\ \\hline\n"
@@ -134,10 +136,10 @@ function prior_table(m::AbstractModel; subset_string::String = "",
     @printf priors_fid "\\endfoot\n"
 
     # Map prior distributions to identifying strings
-    distid(::Distributions.Beta)    = "Beta"
-    distid(::Distributions.Gamma)   = "Gamma"
-    distid(::Distributions.Normal)  = "Normal"
-    distid(::RootInverseGamma) = "InvG"
+    distid(::Distributions.Beta)   = "Beta"
+    distid(::Distributions.Gamma)  = "Gamma"
+    distid(::Distributions.Normal) = "Normal"
+    distid(::RootInverseGamma)     = "InvG"
 
     # Write priors
     for group_desc in keys(groupings)
@@ -207,6 +209,95 @@ function prior_table(m::AbstractModel; subset_string::String = "",
 
     # Close file
     close(priors_fid)
+end
+
+"""
+```
+posterior_table(m, post_means, post_bands; percent = 0.9, subset_string = "",
+    groupings = Dict{String, Vector{Parameter}}())
+```
+"""
+function posterior_table(m::AbstractModel, post_means::Vector, post_bands::Matrix;
+                         percent::AbstractFloat = 0.9,
+                         subset_string::String = "",
+                         groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
+
+    if isempty(groupings)
+        sorted_parameters = sort(m.parameters, by = (x -> x.key))
+        groupings[""] = sorted_parameters
+    end
+
+    # Open the TeX file
+    basename = "posterior"
+    if !isempty(subset_string)
+        basename *= "_sub=$(subset_string)"
+    end
+    priors_out = tablespath(m, "estimate", "$basename.tex")
+    fid = open(priors_out, "w")
+
+    # Write header
+    write_table_preamble(fid)
+
+    @printf fid "\\renewcommand*\\footnoterule{}"
+    @printf fid "\\vspace*{.5cm}\n"
+    @printf fid "{\\small\n"
+    @printf fid "\\begin{longtable}{rrc@{\\hspace{1in}}rrc}\n"
+    @printf fid "\\caption{Posteriors}\n"
+    @printf fid "\\label{tab:param-posteriors}\n"
+    @printf fid "\\\\ \\hline\n"
+
+    lb = (1 - percent)/2 * 100
+    ub = 100 - lb
+    @printf fid "& Mean & (p%0.0f, p%0.0f) & & Mean & (p%0.0f, p%0.0f) \\\\ \\hline\n" lb ub lb ub
+    @printf fid "\\endhead\n"
+
+    @printf fid "\\hline \\\\\n"
+    @printf fid "\\endfoot\n"
+
+    # Write priors
+    for group_desc in keys(groupings)
+        params = groupings[group_desc]
+        n_params = length(params)
+        n_rows = convert(Int, ceil(n_params/2))
+
+        # Write grouping description if not empty
+        if !isempty(group_desc)
+            @printf fid "\\multicolumn{6}{l}{\\textit{%s}} \\\\[3pt]\n" group_desc
+        end
+
+        for i = 1:n_rows
+            # Write left column
+            θ = params[i]
+            j = m.keys[θ.key]
+            @printf fid "\$%s\$ & " θ.tex_label
+            @printf fid "%0.2f & " post_means[j]
+            @printf fid "(%0.2f, %0.2f) & " post_bands[j, :]...
+
+            # Write right column if it exists
+            if n_rows + i <= n_params
+                θ = params[n_rows + i]
+                (prior_mean, prior_std) = moments(θ)
+                @printf fid "\$%s\$ & " θ.tex_label
+                @printf fid "%0.2f & " post_means[j]
+                @printf fid "(%0.2f, %0.2f)" post_bands[j, :]...
+            else
+                @printf fid "& &"
+            end
+
+            # Add padding after last row in a grouping
+            if i == n_rows
+                @printf fid " \\\\[3pt]\n"
+            else
+                @printf fid " \\\\\n"
+            end
+        end
+    end
+
+    # Write footer
+    write_table_postamble(fid; small = true)
+
+    # Close file
+    close(fid)
 end
 
 """
