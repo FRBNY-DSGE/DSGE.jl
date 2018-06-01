@@ -196,23 +196,31 @@ function prior_table(m::AbstractModel; subset_string::String = "",
             # Write left column
             θ = params[i]
             (prior_mean, prior_std) = moments(θ)
-            @printf fid "\$%s\$ & " θ.tex_label
-            @printf fid "%s & " (θ.fixed ? "-" : distid(get(θ.prior)))
-            @printf fid "%0.2f & " prior_mean
-            @printf fid "%0.2f & " prior_std
+            @printf fid "\$%s\$ &" θ.tex_label
+            @printf fid " %s &" (θ.fixed ? "-" : distid(get(θ.prior)))
+            @printf fid " %0.2f &" prior_mean
+            if θ.fixed
+                @printf fid " \\scriptsize{fixed} &"
+            else
+                @printf fid " %0.2f &" prior_std
+            end
             anticipated_shock_footnote(θ)
 
             # Write right column if it exists
             if n_rows + i <= n_params
                 θ = params[n_rows + i]
                 (prior_mean, prior_std) = moments(θ)
-                @printf fid "\$%s\$ & " θ.tex_label
-                @printf fid "%s & " (θ.fixed ? "-" : distid(get(θ.prior)))
-                @printf fid "%0.2f & " prior_mean
-                @printf fid "%0.2f" prior_std
+                @printf fid " \$%s\$ &" θ.tex_label
+                @printf fid " %s &" (θ.fixed ? "-" : distid(get(θ.prior)))
+                @printf fid " %0.2f &" prior_mean
+                if θ.fixed
+                    @printf fid " \\scriptsize{fixed}"
+                else
+                    @printf fid " %0.2f" prior_std
+                end
                 anticipated_shock_footnote(θ)
             else
-                @printf fid "& & &"
+                @printf fid  "& & &"
             end
 
             # Add padding after last row in a grouping
@@ -293,20 +301,28 @@ function posterior_table(m::AbstractModel, post_means::Vector, post_bands::Matri
             # Write left column
             θ = params[i]
             j = m.keys[θ.key]
-            @printf fid "\$%s\$ & " θ.tex_label
-            @printf fid "%0.2f & " post_means[j]
-            @printf fid "(%0.2f, %0.2f) & " post_bands[j, :]...
+            @printf fid "\$%s\$ &" θ.tex_label
+            @printf fid " %0.2f &" post_means[j]
+            if θ.fixed
+                @printf fid " \\scriptsize{fixed} &"
+            else
+                @printf fid " (%0.2f, %0.2f) &" post_bands[j, :]...
+            end
 
             # Write right column if it exists
             if n_rows + i <= n_params
                 θ = params[n_rows + i]
                 j = m.keys[θ.key]
                 (prior_mean, prior_std) = moments(θ)
-                @printf fid "\$%s\$ & " θ.tex_label
-                @printf fid "%0.2f & " post_means[j]
-                @printf fid "(%0.2f, %0.2f)" post_bands[j, :]...
+                @printf fid " \$%s\$ &" θ.tex_label
+                @printf fid " %0.2f &" post_means[j]
+                if θ.fixed
+                    @printf fid " \\scriptsize{fixed}"
+                else
+                    @printf fid " (%0.2f, %0.2f)" post_bands[j, :]...
+                end
             else
-                @printf fid "& &"
+                @printf fid " & &"
             end
 
             # Add padding after last row in a grouping
