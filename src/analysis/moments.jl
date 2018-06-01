@@ -300,6 +300,7 @@ function posterior_table(m::AbstractModel, post_means::Vector, post_bands::Matri
             # Write right column if it exists
             if n_rows + i <= n_params
                 θ = params[n_rows + i]
+                j = m.keys[θ.key]
                 (prior_mean, prior_std) = moments(θ)
                 @printf fid "\$%s\$ & " θ.tex_label
                 @printf fid "%0.2f & " post_means[j]
