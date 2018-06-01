@@ -1,11 +1,14 @@
 """
 ```
 moment_tables(m; percent = 0.90, subset_inds = 1:0, subset_string = "",
-    verbose = :none, use_mode = false, tables = [:prior_posterior_means, :moments, :prior, :posterior])
+    groupings = Dict{String, Vector{Parameter}}(), use_mode = false,
+    tables = [:prior_posterior_means, :moments, :prior, :posterior],
+    caption = true, outdir = "", verbose = :none)
 ```
 
-Computes prior and posterior parameter moments. Tabulates prior mean, posterior mean, and
-bands in various LaTeX tables stored `tablespath(m)`.
+Computes prior and posterior parameter moments. Tabulates prior mean, posterior
+mean, and bands in various LaTeX tables. These tables will be saved in `outdir`
+if it is nonempty, or else in `tablespath(m, \"estimate\")`.
 
 ### Inputs
 
@@ -19,16 +22,24 @@ bands in various LaTeX tables stored `tablespath(m)`.
 - `subset_string::String`: short string identifying the subset to be
   appended to the output filenames. If `subset_inds` is nonempty but
   `subset_string` is empty, an error is thrown
+- `groupings::Dict{String, Vector{Parameter}}`: see `?parameter_groupings`
+- `use_mode::Bool`: use the modal parameters instead of the mean in the
+  prior_posterior_means table
+- `tables::Vector{Symbol}`: which tables to produce
+- `caption::Bool`: whether to include table captions
+- `outdir::String`: where to save output tables
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`
-- `use_mode::Bool`: return a table with the modal parameters as opposed to the mean
-- `tables::Vector{Symbol}`: which tables to produce
 """
-function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
-                       subset_inds::Range{Int64} = 1:0, subset_string::String = "",
+function moment_tables(m::AbstractModel;
+                       percent::AbstractFloat = 0.90,
+                       subset_inds::Range{Int64} = 1:0,
+                       subset_string::String = "",
                        groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
-                       verbose::Symbol = :low, use_mode::Bool = false,
+                       verbose::Symbol = :low,
+                       use_mode::Bool = false,
                        tables::Vector{Symbol} = [:prior_posterior_means, :moments, :prior, :posterior],
+                       caption::Bool = true,
                        outdir::String = "")
 
     ### 1. Load parameter draws from Metropolis-Hastings
@@ -67,22 +78,23 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
     if :prior_posterior_means in tables
         prior_posterior_table(m, use_mode ? post_mode : post_means;
                               subset_string = subset_string, groupings = groupings,
-                              use_mode = use_mode, outdir = outdir)
+                              use_mode = use_mode, caption = caption, outdir = outdir)
     end
 
     if :moments in tables
         prior_posterior_moments_table(m, post_means, post_bands; percent = percent,
                                       subset_string = subset_string, groupings = groupings,
-                                      outdir = outdir)
+                                      caption = caption, outdir = outdir)
     end
 
     if :prior in tables
-        prior_table(m, groupings = groupings, outdir = outdir)
+        prior_table(m, groupings = groupings, caption = caption, outdir = outdir)
     end
 
     if :posterior in tables
         posterior_table(m, post_means, post_bands, percent = percent,
-                        subset_string = subset_string, groupings = groupings, outdir = outdir)
+                        subset_string = subset_string, groupings = groupings,
+                        caption = caption, outdir = outdir)
     end
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -114,11 +126,13 @@ end
 """
 ```
 prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}(),
-    outdir = "")
+    caption = true, outdir = "")
 ```
 """
-function prior_table(m::AbstractModel; subset_string::String = "",
+function prior_table(m::AbstractModel;
+                     subset_string::String = "",
                      groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                     caption::Bool = true,
                      outdir::String = "")
 
     if isempty(groupings)
@@ -144,7 +158,9 @@ function prior_table(m::AbstractModel; subset_string::String = "",
     @printf fid "\\vspace*{.5cm}\n"
     @printf fid "{\\small\n"
     @printf fid "\\begin{longtable}{rlrr@{\\hspace{1in}}rlrr}\n"
-    @printf fid "\\caption{Priors}\n"
+    if caption
+        @printf fid "\\caption{Priors}\n"
+    end
     @printf fid "\\label{tab:param-priors}\n"
     @printf fid "\\\\ \\hline\n"
 
@@ -242,13 +258,14 @@ end
 """
 ```
 posterior_table(m, post_means, post_bands; percent = 0.9, subset_string = "",
-    groupings = Dict{String, Vector{Parameter}}(), outdir = "")
+    groupings = Dict{String, Vector{Parameter}}(), caption = true, outdir = "")
 ```
 """
 function posterior_table(m::AbstractModel, post_means::Vector, post_bands::Matrix;
                          percent::AbstractFloat = 0.9,
                          subset_string::String = "",
                          groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                         caption::Bool = true,
                          outdir::String = "")
 
     if isempty(groupings)
@@ -274,7 +291,9 @@ function posterior_table(m::AbstractModel, post_means::Vector, post_bands::Matri
     @printf fid "\\vspace*{.5cm}\n"
     @printf fid "{\\small\n"
     @printf fid "\\begin{longtable}{rrc@{\\hspace{1in}}rrc}\n"
-    @printf fid "\\caption{Posteriors}\n"
+    if caption
+        @printf fid "\\caption{Posteriors}\n"
+    end
     @printf fid "\\label{tab:param-posteriors}\n"
     @printf fid "\\\\ \\hline\n"
 
@@ -344,18 +363,20 @@ end
 """
 ```
 prior_posterior_moments_table(m, post_means, post_bands; percent = 0.9,
-    subset_string = "", outdir = "")
+    subset_string = "", groupings = Dict{String, Vector{Parameter}}(),
+    caption = true, outdir = "")
 ```
 
 Produces a table of prior means, prior standard deviations, posterior means, and
 90% bands for posterior draws.
 """
 function prior_posterior_moments_table(m::AbstractModel,
-                 post_means::Vector, post_bands::Matrix;
-                 percent::AbstractFloat = 0.9,
-                 subset_string::String = "",
-                 groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
-                 outdir::String = "")
+                                       post_means::Vector, post_bands::Matrix;
+                                       percent::AbstractFloat = 0.9,
+                                       subset_string::String = "",
+                                       groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                                       caption::Bool = true,
+                                       outdir::String = "")
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -379,7 +400,9 @@ function prior_posterior_moments_table(m::AbstractModel,
     @printf fid "\\vspace*{.5cm}\n"
     @printf fid "{\\small\n"
     @printf fid "\\begin{longtable}{lcccccc}\n"
-    @printf fid "\\caption{Parameter Estimates}\n"
+    if caption
+        @printf fid "\\caption{Parameter Estimates}\n"
+    end
     @printf fid "\\\\ \\hline\n"
 
     # Two-row column names. First row is multicolumn, where entries (i,str) are `i` columns
@@ -444,23 +467,19 @@ end
 
 """
 ```
-prior_posterior_table(m, post_values; subset_string = "")
+prior_posterior_table(m, post_values; subset_string = "",
+    groupings = Dict{String, Vector{Parameter}}(), use_mode = false,
+    caption = true, outdir = "")
 ```
 
-Produces a table of prior means and posterior means or mode. Saves to:
-
-```
-tablespath(m, \"estimate\", \"prior_posterior_means[_sub=\$subset_string].tex\")
-```
-or
-```
-tablespath(m, \"estimate\", \"prior_posterior_mode[_sub=\$subset_string].tex\")
-```
+Produce a table of prior means and posterior means or mode.
 """
 function prior_posterior_table(m::AbstractModel, post_values::Vector;
-                 subset_string::String = "",
-                 groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
-                 use_mode::Bool = false)
+                               subset_string::String = "",
+                               groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                               use_mode::Bool = false,
+                               caption::Bool = true,
+                               outdir::String = "")
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -473,16 +492,21 @@ function prior_posterior_table(m::AbstractModel, post_values::Vector;
         basename *= "_sub=$(subset_string)"
     end
     table_out = tablespath(m, "estimate", "$basename.tex")
+    if !isempty(outdir)
+        outfile = replace(outfile, dirname(outfile), outdir)
+    end
     fid = open(table_out, "w")
 
     # Write header
     write_table_preamble(fid)
     @printf fid "\\vspace*{.5cm}\n"
     @printf fid "\\begin{longtable}{ccc}\n"
-    if use_mode
-        @printf fid "\\caption{Parameter Estimates: Prior Mean and Posterior Mode}\n"
-    else
-        @printf fid "\\caption{Parameter Estimates: Prior and Posterior Means}\n"
+    if caption
+        if use_mode
+            @printf fid "\\caption{Parameter Estimates: Prior Mean and Posterior Mode}\n"
+        else
+            @printf fid "\\caption{Parameter Estimates: Prior and Posterior Means}\n"
+        end
     end
     @printf fid "\\\\ \\hline\n"
     @printf fid "Parameter & Prior & Posterior\n"
