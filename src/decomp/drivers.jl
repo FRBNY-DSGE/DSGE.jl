@@ -1,11 +1,11 @@
 """
 ```
 decompose_forecast(m_new, m_old, df_new, df_old, input_type, cond_new, cond_old,
-    classes; hs = 1:forecast_horizons(m_old), verbose = :low, kwargs...)
+    classes, hs; verbose = :low, kwargs...)
 
 decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
-    cond_new, cond_old, classes; hs = 1:forecast_horizons(m_old),
-    individual_shocks = false, check = false, atol = 1e-8)
+    cond_new, cond_old, classes, hs; individual_shocks = false,
+    check = false, atol = 1e-8)
 ```
 
 ### Inputs
@@ -14,6 +14,11 @@ decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
 - `df_new::DataFrame` and `df_old::DataFrame`
 - `cond_new::Symbol` and `cond_old::Symbol`
 - `classes::Vector{Symbol}`: some subset of `[:states, :obs, :pseudo]`
+- `hs::UnitRange{Int}`: horizons at which to calculate the forecast
+  decomposition *in terms of the old forecast*. That is, if the old forecast
+  uses data up to time T-k and the new forecast up to time T, this function
+  computes the decomposition for periods T-k+hs. All elements of `hs` must be
+  positive
 
 **Method 1 only:**
 
@@ -28,10 +33,6 @@ decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
 
 ### Keyword Arguments
 
-- `hs`: horizons at which to calculate the forecast decomposition *in terms of
-  the old forecast*. That is, if the old forecast uses data up to time T-k and
-  the new forecast up to time T, this function computes the decomposition for
-  periods T-k+hs. All elements of `hs` must be positive
 - `check::Bool`: whether to check that the individual components add up to the
   correct total difference in forecasts. This roughly doubles the runtime
 - `atol::Float64`: absolute tolerance used if `check = true`
@@ -54,8 +55,7 @@ is the number of variables in the given class).
 """
 function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                             input_type::Symbol, cond_new::Symbol, cond_old::Symbol,
-                            classes::Vector{Symbol};
-                            hs = 1:forecast_horizons(m_old),
+                            classes::Vector{Symbol}, hs::UnitRange{Int};
                             verbose::Symbol = :low, kwargs...) where M<:AbstractModel
     # Get output file names
     decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes, hs)
@@ -72,7 +72,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         params_old = load_draws(m_old, input_type, verbose = verbose)
 
         decomps = decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
-                                     cond_new, cond_old, classes; hs = hs, kwargs...)
+                                     cond_new, cond_old, classes, hs; kwargs...)
         write_forecast_decomposition(m_new, m_old, input_type, classes, hs, decomp_output_files, decomps,
                                      verbose = verbose)
 
@@ -97,7 +97,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
             mapfcn = use_parallel_workers(m_new) ? pmap : map
             decomps = mapfcn((param_new, param_old) ->
                              decompose_forecast(m_new, m_old, df_new, df_old, param_new, param_old,
-                                                cond_new, cond_old, classes; hs = hs, kwargs...),
+                                                cond_new, cond_old, classes, hs; kwargs...),
                              params_new, params_old)
 
             # Assemble outputs from this block and write to file
@@ -134,8 +134,8 @@ end
 
 function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                             params_new::Vector{Float64}, params_old::Vector{Float64},
-                            cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
-                            hs = 1:forecast_horizons(m_old),
+                            cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol},
+                            hs::UnitRange{Int};
                             individual_shocks::Bool = false,
                             check::Bool = false, atol::Float64 = 1e-8) where M<:AbstractModel
 
