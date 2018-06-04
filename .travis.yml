@@ -1,14 +1,13 @@
 language: julia
 os:
     - osx
-#   - linux
+    - linux
 julia:
     - 0.6.0
 notifications:
     email: false
 script:
     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-#   - julia --color=yes -e 'Pkg.clone(pwd()); Pkg.build("DSGE"); Pkg.test("DSGE")'
     - julia --color=yes -e 'Pkg.clone(pwd()); Pkg.build("DSGE"); Pkg.test("DSGE"; coverage=true)'
 branches:
   only:
