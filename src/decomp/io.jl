@@ -1,6 +1,6 @@
 function get_decomp_filename(m_new::M, m_old::M, input_type::Symbol,
                              cond_new::Symbol, cond_old::Symbol,
-                             product::Symbol, class::Symbol, hs::Union{Int, UnitRange{Int}};
+                             product::Symbol, class::Symbol, hs::UnitRange{Int};
                              pathfcn::Function = rawpath,
                              fileformat::Symbol = :jld) where M<:AbstractModel
     output_var = Symbol(product, class)
@@ -20,7 +20,7 @@ end
 
 function get_decomp_output_files(m_new::M, m_old::M, input_type::Symbol,
                                  cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol},
-                                 hs::Union{Int, UnitRange{Int}}) where M<:AbstractModel
+                                 hs::UnitRange{Int}) where M<:AbstractModel
     output_files = Dict{Symbol, String}()
     for comp in [:state, :shock, :indshock, :data, :param, :total]
         for class in classes
@@ -37,13 +37,13 @@ end
 
 function get_decomp_mean_file(m_new::M, m_old::M, input_type::Symbol,
                               cond_new::Symbol, cond_old::Symbol,
-                              class::Symbol, hs::Union{Int, UnitRange{Int}}) where M<:AbstractModel
+                              class::Symbol, hs::UnitRange{Int}) where M<:AbstractModel
     get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old, :decomp, class, hs,
                         pathfcn = workpath, fileformat = :jld)
 end
 
 function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
-                                      classes::Vector{Symbol}, hs::Union{Int, UnitRange{Int}},
+                                      classes::Vector{Symbol}, hs::UnitRange{Int},
                                       decomp_output_files::Dict{Symbol, String},
                                       decomps::Dict{Symbol, Array{Float64}};
                                       block_number::Nullable{Int} = Nullable{Int}(),

@@ -10,7 +10,7 @@ forecast) necessary to call the plotting function `shockdec` in
 """
 function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
                          cond_new::Symbol, cond_old::Symbol,
-                         class::Symbol, hs::Union{Int, UnitRange{Int}};
+                         class::Symbol, hs::UnitRange{Int};
                          individual_shocks::Bool = false) where M<:AbstractModel
     # Read in means
     input_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class, hs)
@@ -123,7 +123,7 @@ The `groups` keyword argument is only used if `individual_shocks = true`.
 """
 function plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, class::Symbol,
                                      input_type::Symbol, cond_new::Symbol,
-                                     cond_old::Symbol, hs::Union{Int, UnitRange{Int}};
+                                     cond_old::Symbol, hs::UnitRange{Int};
                                      titles::Vector{String} = String[],
                                      individual_shocks::Bool = false,
                                      groups::Vector{ShockGroup} = shock_groupings(m_new),

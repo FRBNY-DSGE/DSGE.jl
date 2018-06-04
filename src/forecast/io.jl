@@ -241,7 +241,7 @@ end
 """
 ```
 write_forecast_metadata(m::AbstractModel, file::JldFile, prod::Symbol,
-    class::Symbol, hs::Union{Int, UnitRange{Int}} = 1:0)
+    class::Symbol, hs::UnitRange{Int} = 1:0)
 ```
 
 Write metadata about the saved forecast output `var` to `filepath`.
@@ -263,7 +263,7 @@ functions. The `hs` keyword argument denotes horizons and is only used for
 forecast decompositions.
 """
 function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, prod::Symbol, class::Symbol;
-                                 hs::Union{Int, UnitRange{Int}} = 1:0)
+                                 hs::UnitRange{Int} = 1:0)
     # Write date range
     if prod != irf
         dates = if prod == :hist

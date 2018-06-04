@@ -1,6 +1,6 @@
 function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
                              cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol},
-                             hs::Union{Int, UnitRange{Int}};
+                             hs::UnitRange{Int};
                              verbose::Symbol = :low) where M<:AbstractModel
     # Print
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -60,7 +60,7 @@ end
 function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
                              cond_new::Symbol, cond_old::Symbol,
                              class::Symbol, var::Symbol,
-                             hs::Union{Int, UnitRange{Int}}) where M<:AbstractModel
+                             hs::UnitRange{Int}) where M<:AbstractModel
     # Read in dates
     input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, [class], hs)
     input_file = input_files[Symbol(:decomptotal, class)]
