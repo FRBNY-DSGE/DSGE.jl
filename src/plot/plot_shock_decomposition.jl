@@ -27,7 +27,6 @@ Plot shock decomposition(s) for `var` or `vars`.
 - `plotroot::String`: if nonempty, plots will be saved in that directory
 - `title::String` or `titles::Vector{String}`
 - `verbose::Symbol`
-- `fileformat::Symbol`
 
 See `?shockdec` for additional keyword arguments, all of which can be passed
 into `plot_history_and_forecast`.
@@ -38,12 +37,12 @@ into `plot_history_and_forecast`.
 """
 function plot_shock_decomposition(m::AbstractModel, var::Symbol, class::Symbol,
                                   input_type::Symbol, cond_type::Symbol;
-                                  title = "", fileformat = plot_extension(),
+                                  title = "",
                                   kwargs...)
 
     plots = plot_shock_decomposition(m, [var], class, input_type, cond_type;
                                      titles = isempty(title) ? String[] : [title],
-                                     fileformat = fileformat, kwargs...)
+                                     kwargs...)
     return plots[var]
 end
 
@@ -54,7 +53,6 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
                                   plotroot::String = figurespath(m, "forecast"),
                                   titles::Vector{String} = String[],
                                   verbose::Symbol = :low,
-                                  fileformat = plot_extension(),
                                   kwargs...)
     # Read in MeansBands
     output_vars = [Symbol(prod, class) for prod in [:shockdec, :trend, :dettrend, :hist, :forecast]]
@@ -80,7 +78,7 @@ function plot_shock_decomposition(m::AbstractModel, vars::Vector{Symbol}, class:
             output_file = get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
                                                 Symbol("shockdec_", detexify(var)),
                                                 forecast_string = forecast_string,
-                                                fileformat = fileformat)
+                                                fileformat = plot_extension())
             save_plot(plots[var], output_file, verbose = verbose)
         end
     end
