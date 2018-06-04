@@ -265,7 +265,7 @@ forecast decompositions.
 function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, prod::Symbol, class::Symbol;
                                  hs::UnitRange{Int} = 1:0)
     # Write date range
-    if prod != irf
+    if prod != :irf
         dates = if prod == :hist
             quarter_range(date_mainsample_start(m), date_mainsample_end(m))
         elseif prod in [:forecast, :bddforecast]
