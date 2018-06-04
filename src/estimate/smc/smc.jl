@@ -89,11 +89,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         end
     end
 
-    # fix seed if testing
-    if m.testing
-        srand(42)
-    end
-
     if tempered_update
         # Load the previous ParticleCloud as the starting point for time tempering
         loadpath = rawpath(m, "estimate", "smc_cloud.jld")
