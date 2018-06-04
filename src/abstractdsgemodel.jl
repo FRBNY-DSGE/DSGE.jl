@@ -175,17 +175,8 @@ n_parameters(m::AbstractModel)              = length(m.parameters)
 n_parameters_steady_state(m::AbstractModel) = length(m.steady_state)
 n_parameters_free(m::AbstractModel)         = sum([!α.fixed for α in m.parameters])
 
-"""
-```
-get_key(m, class, index)
-```
-
-Returns the name of the state (`class = :states`), observable (`:obs`),
-pseudo-observable (`:pseudo`), or shock (`:shocks` or `:stdshocks`)
-corresponding to the given `index`.
-"""
-function get_key(m::AbstractModel, class::Symbol, index::Int)
-    dict = if class == :states
+function get_dict(m::AbstractModel, class::Symbol)
+    if class == :states
         m.endogenous_states
     elseif class == :obs
         m.observables
@@ -196,7 +187,19 @@ function get_key(m::AbstractModel, class::Symbol, index::Int)
     else
         throw(ArgumentError("Invalid class: $class. Must be :states, :obs, :pseudo, :shocks, or :stdshocks"))
     end
+end
 
+"""
+```
+get_key(m, class, index)
+```
+
+Returns the name of the state (`class = :states`), observable (`:obs`),
+pseudo-observable (`:pseudo`), or shock (`:shocks` or `:stdshocks`)
+corresponding to the given `index`.
+"""
+function get_key(m::AbstractModel, class::Symbol, index::Int)
+    dict = get_dict(m, class)
     out = Base.filter(key -> dict[key] == index, collect(keys(dict)))
     if length(out) == 0
         error("Key corresponding to index $index not found for class: $class")

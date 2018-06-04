@@ -103,6 +103,9 @@ module DSGE
         construct_fcast_and_hist_dfs,
         df_to_table,
 
+        # decomp/
+        decompose_forecast, decomposition_means,
+
         # altpolicy/
         AltPolicy, taylor93, taylor99,
 
@@ -117,6 +120,7 @@ module DSGE
         # plot/
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies, plot_scenario,
+        plot_forecast_decomposition,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
@@ -179,6 +183,11 @@ module DSGE
     include("analysis/util.jl")
     include("analysis/df_to_table.jl")
 
+    include("decomp/drivers.jl")
+    include("decomp/util.jl")
+    include("decomp/io.jl")
+    include("decomp/meansbands.jl")
+
     include("altpolicy/altpolicy.jl")
     include("altpolicy/taylor93.jl")
     include("altpolicy/taylor99.jl")
@@ -198,6 +207,7 @@ module DSGE
     include("plot/plot_shock_decomposition.jl")
     include("plot/plot_altpolicies.jl")
     include("plot/plot_scenario.jl")
+    include("plot/plot_forecast_decomposition.jl")
 
     include("models/financial_frictions.jl")
 
