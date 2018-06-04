@@ -194,7 +194,7 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
         filepath = forecast_output_files[var]
         if isnull(block_number) || get(block_number) == 1
             jldopen(filepath, "w") do file
-                write_forecast_metadata(m, file, var)
+                write_forecast_metadata(m, file, get_product(var), get_class(var))
 
                 if var == :histobs
                     # :histobs just refers to data, so we only write one draw
@@ -240,7 +240,8 @@ end
 
 """
 ```
-write_forecast_metadata(m::AbstractModel, file::JldFile, var::Symbol)
+write_forecast_metadata(m::AbstractModel, file::JldFile, prod::Symbol,
+    class::Symbol, hs::UnitRange{Int} = 1:0)
 ```
 
 Write metadata about the saved forecast output `var` to `filepath`.
@@ -257,21 +258,22 @@ forecast output array. The saved dictionaries include:
 - `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for pseudoobservables
 - `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
 
-Note that we don't save dates or transformations for impulse response functions.
+Note that we don't save dates or transformations for impulse response
+functions. The `hs` keyword argument denotes horizons and is only used for
+forecast decompositions.
 """
-function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbol)
-
-    prod  = get_product(var)
-    class = get_class(var)
-
+function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, prod::Symbol, class::Symbol;
+                                 hs::UnitRange{Int} = 1:0)
     # Write date range
-    if prod != :irf
+    if prod != irf
         dates = if prod == :hist
             quarter_range(date_mainsample_start(m), date_mainsample_end(m))
         elseif prod in [:forecast, :bddforecast]
             quarter_range(date_forecast_start(m), date_forecast_end(m))
         elseif prod in [:shockdec, :dettrend, :trend]
             quarter_range(date_shockdec_start(m), date_shockdec_end(m))
+        elseif contains(string(prod), "decomp")
+            map(h -> DSGE.iterate_quarters(date_mainsample_end(m), h), hs)
         end
 
         date_indices = Dict(d::Date => i::Int for (i, d) in enumerate(dates))
@@ -311,7 +313,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     end
 
     # Write shock names and transforms
-    if class in [:shocks, :stdshocks] || prod in [:shockdec, :irf]
+    if class in [:shocks, :stdshocks] || prod in [:shockdec, :irf, :decompindshock]
         write(file, "shock_indices", m.exogenous_shocks)
         if class in [:shocks, :stdshocks]
             rev_transforms = Dict{Symbol,Symbol}(x => Symbol("identity") for x in keys(m.exogenous_shocks))
@@ -435,7 +437,8 @@ function read_forecast_series(file::JLD.JldFile, class::Symbol, product::Symbol,
 
     # Other products are ndraws x nvars x nperiods
     elseif product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
-                       :bddforecast, :bddforecastut, :bddforecast4q, :dettrend]
+                       :bddforecast, :bddforecastut, :bddforecast4q, :dettrend,
+                       :decompstate, :decompshock, :decompdata, :decompparam, :decomptotal]
         inds_to_read = if ndims == 2 # one draw
             arr = h5read(filename, "arr", (var_ind, Colon()))
         elseif ndims == 3 # many draws
