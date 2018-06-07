@@ -196,7 +196,7 @@ function marginal_data_density(c::ParticleCloud, w::Matrix{Float64}, W::Matrix{F
         w_W = w[:, 2:end] .* W[:, 1:end-1]
         sum(log.(sum(w_W, 1))) # sum across particles, take log, sum across parameters
     elseif method == :harmonic_mean
-        logpost = DSGE.get_logpost(cloud)
+        logpost = DSGE.get_logpost(c)
         c = -mean(logpost)
         -c - log(sum(W[:, end] .* exp.(-(c .+ logpost))))
     else
