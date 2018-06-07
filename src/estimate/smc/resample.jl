@@ -8,7 +8,7 @@ Reindexing and reweighting samples from a degenerate distribution
 ### Arguments:
 - `weight`: wtsim[:,i]
         the weights of a degenerate distribution.
-- `method`: :systematic or :multinomial
+- `method`: :systematic, :multinomial, or :polyalgo
         the method for resampling
 
 ### Output:
@@ -16,7 +16,21 @@ Reindexing and reweighting samples from a degenerate distribution
 - `indx`: the newly assigned indices of parameter draws.
 """
 function resample(weights::Vector{Float64}; method::Symbol = :systematic)
-    if method == :systematic
+    if method == :multinomial
+        n_parts = length(weights)
+        indx = Vector{Int64}(n_parts)
+
+        # Stores cumulative weights until given index
+        cumulative_weights = cumsum(weights/sum(weights))
+        offset = rand(n_parts)
+
+        # This could be parallelized
+        for i in 1:n_parts
+            indx[i] = findfirst(x -> offset[i] < x, cumulative_weights)
+        end
+
+        return indx
+    elseif method == :systematic
         n_parts = length(weights)
 
         # Stores cumulative weights until given index
@@ -46,11 +60,11 @@ function resample(weights::Vector{Float64}; method::Symbol = :systematic)
         end
 
         return indx
-    elseif method == :multinomial
+    elseif method == :polyalgo
         n_parts = length(weights)
         weights = Weights(weights./sum(weights))
         return sample(1:n_parts, weights, n_parts, replace = true)
     else
-        throw("Invalid resampler in SMC. Set model setting :resampler_smc to either :systematic or :multinomial")
+        throw("Invalid resampler in SMC. Set model setting :resampler_smc to either :systematic, :multinomial, or :polyalgo")
     end
 end
