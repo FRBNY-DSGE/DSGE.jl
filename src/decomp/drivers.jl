@@ -168,8 +168,10 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
             output_var = Symbol(:decomp, comp, class)
             decomp[output_var] = zeros(Ny, Nh)
         end
-        if individual_shocks
-            decomp[Symbol(:decompindshock, class)] = zeros(Ny, Nh, Ne)
+        decomp[Symbol(:decompindshock, class)] = if individual_shocks
+            zeros(Ny, Nh, Ne)
+        else
+            zeros(0, 0, 0)
         end
 
         for (i, h) in enumerate(hs)
