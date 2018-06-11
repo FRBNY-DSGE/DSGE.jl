@@ -79,7 +79,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     # Multiple-draw forecasts
     elseif input_type == :full
 
-        _, block_inds = forecast_block_inds(m_new, input_type)
+        block_inds, block_inds_thin = forecast_block_inds(m_new, input_type)
         nblocks = length(block_inds)
         total_forecast_time = 0.0
 
@@ -104,7 +104,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
             decomps = convert(Vector{Dict{Symbol, Array{Float64}}}, decomps)
             decomps = assemble_block_outputs(decomps)
             write_forecast_decomposition(m_new, m_old, input_type, classes, hs, decomp_output_files, decomps,
-                                         block_number = Nullable(block), block_inds = block_inds[block],
+                                         block_number = Nullable(block), block_inds = block_inds_thin[block],
                                          verbose = verbose)
             gc()
 
