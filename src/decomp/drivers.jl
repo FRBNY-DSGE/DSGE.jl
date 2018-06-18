@@ -130,17 +130,12 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
                             individual_shocks::Bool = false, check::Bool = false) where M<:AbstractModel
     # Check numbers of periods
-    check_decomposition_periods(m_new, m_old, df_new, df_old, cond_new, cond_old)
+    T, k, H = decomposition_periods(m_new, m_old, df_new, df_old, cond_new, cond_old)
 
     # Forecast
-    keep_startdate = date_forecast_start(m_new) # T+1
-    keep_enddate   = date_forecast_end(m_old)   # T+H
-    H = DSGE.subtract_quarters(keep_enddate, keep_startdate) + 1
-    shockdec_splitdate = date_mainsample_end(m_old) # T-k
-
     f(m::AbstractModel, df::DataFrame, params::Vector{Float64}, cond_type::Symbol; kwargs...) =
-        decomposition_forecast(m, df, params, cond_type, keep_startdate, keep_enddate,
-                               shockdec_splitdate; kwargs..., check = check)
+        decomposition_forecast(m, df, params, cond_type, T, k, H;
+                               kwargs..., check = check)
 
     out1 = f(m_new, df_new, params_new, cond_new, outputs = [:shockdec])            # new data, new params
     out2 = f(m_old, df_old, params_new, cond_old, outputs = [:shockdec, :forecast]) # old data, new params
@@ -153,14 +148,14 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     for class in classes
         # All elements of out are of size Ny x Nh, where the second dimension
         # ranges from t = T+1:T+H
-        forecastvar = Symbol(:forecast, class) # Z s_{T+h} + D
-        trendvar    = Symbol(:trend,    class) # Z D
-        dettrendvar = Symbol(:dettrend, class) # Z T^{T+h} s_0 + D
-        revisionvar = Symbol(:revision, class) # Z \sum_{t=1}^{T-k} T^{T+h-t} R ϵ_t + D
-        newsvar     = Symbol(:news,     class) # Z \sum_{t=T-k+1}^{T+h} T^{T+h-t} R ϵ_t + D
+        forecastvar = Symbol(:histforecast, class) # Z s_{T+h} + D
+        trendvar    = Symbol(:trend,        class) # Z D
+        dettrendvar = Symbol(:dettrend,     class) # Z T^{T+h} s_0 + D
+        datavar     = Symbol(:data,         class) # Z \sum_{t=1}^{T-k} T^{T+h-t} R ϵ_t + D
+        newsvar     = Symbol(:news,         class) # Z \sum_{t=T-k+1}^{T+h} T^{T+h-t} R ϵ_t + D
 
         # Data revision
-        data_comp = (out1[dettrendvar] - out2[dettrendvar]) + (out1[revisionvar] - out2[revisionvar])
+        data_comp = (out1[dettrendvar] - out2[dettrendvar]) + (out1[datavar] - out2[datavar])
         decomp[Symbol(:decompdata, class)] = data_comp
 
         # News
@@ -184,13 +179,17 @@ end
 
 """
 ```
-check_decomposition_periods(m_new, m_old, df_new, df_old, cond_new, cond_old)
+decomposition_periods(m_new, m_old, df_new, df_old, cond_new, cond_old)
 ```
 
-Check that datasets have the right number of periods.
+Returns `T`, `k`, and `H`, where:
+
+- New model has `T` periods of data
+- Old model has `T-k` periods of data
+- Old and new models both forecast up to `T+H`
 """
-function check_decomposition_periods(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
-                                     cond_new::Symbol, cond_old::Symbol) where M<:AbstractModel
+function decomposition_periods(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
+                               cond_new::Symbol, cond_old::Symbol) where M<:AbstractModel
     # Number of presample periods T0 must be the same
     T0 = n_presample_periods(m_new)
     @assert n_presample_periods(m_old) == T0
@@ -209,7 +208,10 @@ function check_decomposition_periods(m_new::M, m_old::M, df_new::DataFrame, df_o
     @assert size(df_new, 1) == T0 + T + T1_new
     @assert size(df_old, 1) == T0 + T - k + T1_old
 
-    return nothing
+    # Old model forecasts up to T+H
+    H = DSGE.subtract_quarters(date_forecast_end(m_old), date_mainsample_end(m_new))
+
+    return T, k, H
 end
 
 """
@@ -231,11 +233,11 @@ Returns `out::Dict{Symbol, Array{Float64}}`, which has keys determined as follow
 - If `:shockdec in outputs`:
   - `:trend<class>`
   - `:dettrend<class>`
-  - `:revision<class>`: like a shockdec, but only applying smoothed shocks up to `shockdec_splitdate`
+  - `:data<class>`: like a shockdec, but only applying smoothed shocks up to `shockdec_splitdate`
   - `:news<class>`: like a shockdec, but only applying smoothed shocks after `shockdec_splitdate`
 """
 function decomposition_forecast(m::AbstractModel, df::DataFrame, params::Vector{Float64}, cond_type::Symbol,
-                                keep_startdate::Date, keep_enddate::Date, shockdec_splitdate::Date;
+                                T::Int, k::Int, H::Int;
                                 outputs::Vector{Symbol} = [:forecast, :shockdec], check::Bool = false)
     # Compute state space
     DSGE.update!(m, params)
@@ -244,56 +246,42 @@ function decomposition_forecast(m::AbstractModel, df::DataFrame, params::Vector{
     # Initialize output dictionary
     out = Dict{Symbol, Array{Float64}}()
 
-    # Smooth
+    # Smooth and forecast
     histstates, histshocks, histpseudo, s_0 = smooth(m, df, system, cond_type = cond_type, draw_states = false)
+    histobs = system[:ZZ] * histstates .+ system[:DD]
 
-    # Forecast
     if :forecast in outputs || check
         s_T = histstates[:, end]
         _, forecastobs, forecastpseudo, _ =
             forecast(m, system, s_T, cond_type = cond_type, enforce_zlb = false, draw_shocks = false)
 
-        T = n_mainsample_periods(m)
-        if cond_type in [:full, :semi]
-            out[:forecastobs]    = DSGE.transplant_forecast_observables(histstates, forecastobs, system, T)
-            out[:forecastpseudo] = DSGE.transplant_forecast(histpseudo, forecastpseudo, T)
-        else
-            out[:forecastobs]    = forecastobs
-            out[:forecastpseudo] = forecastpseudo
-        end
-
-        # Keep only forecasted periods between keep_startdate and keep_enddate
-        forecast_dates = DSGE.quarter_range(date_forecast_start(m), date_forecast_end(m))
-        keep_inds = keep_startdate .<= forecast_dates .<= keep_enddate
-        out[:forecastobs]    = out[:forecastobs][:, keep_inds]
-        out[:forecastpseudo] = out[:forecastpseudo][:, keep_inds]
+        out[:histforecastobs]    = hcat(histobs,    forecastobs)[:, 1:T+H]
+        out[:histforecastpseudo] = hcat(histpseudo, forecastpseudo)[:, 1:T+H]
     end
 
     # Compute trend, dettrend, and shockdecs
     if :shockdec in outputs
-        m <= Setting(:shockdec_startdate, Nullable(keep_startdate))
-        m <= Setting(:shockdec_enddate,   Nullable(keep_enddate))
+        nstates = n_states_augmented(m)
+        nshocks = n_shocks_exogenous(m)
 
         _, out[:trendobs],    out[:trendpseudo]    = trends(system)
-        _, out[:dettrendobs], out[:dettrendpseudo] = deterministic_trends(m, system, s_0)
+        _, out[:dettrendobs], out[:dettrendpseudo] = deterministic_trends(system, s_0, T+H, 1, T+H)
 
-        # Applying ϵ_{1:T-k}
-        t0 = date_mainsample_start(m)
-        t1 = shockdec_splitdate
-        _, out[:revisionobs], out[:revisionpseudo] =
-            DSGE.shock_decompositions(m, system, histshocks, shock_start_date = t0, shock_end_date = t1)
+        # Applying all shocks
+        _, out[:shockdecobs], out[:shockdecpseudo] =
+            DSGE.shock_decompositions(system, forecast_horizons(m), histshocks, 1, T+H)
 
-        # Applying ϵ_{T-k+1:end}
-        t0 = DSGE.iterate_quarters(shockdec_splitdate, 1)
-        t1 = cond_type == :none ? date_mainsample_end(m) : date_conditional_end(m)
-        _, out[:newsobs], out[:newspseudo] =
-            DSGE.shock_decompositions(m, system, histshocks, shock_start_date = t0, shock_end_date = t1)
+        # Applying ϵ_{1:T-k} and ϵ_{T-k+1:end}
+        system0 = DSGE.zero_system_constants(system)
 
-        # Shockdec output starts as size Ny x Nh x Ne
-        # Sum over shock dimension to get size Ny x Nh
-        for output_var in [:revisionobs, :revisionpseudo, :newsobs, :newspseudo]
-            out[output_var] = squeeze(sum(out[output_var], 3), 3)
-        end
+        data_shocks = zeros(nshocks, T+H)
+        data_shocks[:, 1:T-k] = histshocks[:, 1:T-k]
+        _, out[:dataobs], out[:datapseudo], _ = forecast(system0, zeros(nstates), data_shocks)
+
+        Tstar = size(histshocks, 2) # either T or T+1
+        news_shocks = zeros(nshocks, T+H)
+        news_shocks[:, T-k+1:Tstar] = histshocks[:, T-k+1:Tstar]
+        _, out[:newsobs], out[:newspseudo], _ = forecast(system0, zeros(nstates), news_shocks)
     end
 
     # Return
