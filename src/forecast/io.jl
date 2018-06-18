@@ -241,7 +241,7 @@ end
 """
 ```
 write_forecast_metadata(m::AbstractModel, file::JldFile, prod::Symbol,
-    class::Symbol, hs::UnitRange{Int} = 1:0)
+    class::Symbol; dates::Vector{Date} = [])
 ```
 
 Write metadata about the saved forecast output `var` to `filepath`.
@@ -259,21 +259,20 @@ forecast output array. The saved dictionaries include:
 - `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
 
 Note that we don't save dates or transformations for impulse response
-functions. The `hs` keyword argument denotes horizons and is only used for
-forecast decompositions.
+functions.
 """
 function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, prod::Symbol, class::Symbol;
-                                 hs::UnitRange{Int} = 1:0)
+                                 dates::Vector{Date} = Date[])
     # Write date range
     if prod != :irf
-        dates = if prod == :hist
-            quarter_range(date_mainsample_start(m), date_mainsample_end(m))
-        elseif prod in [:forecast, :bddforecast]
-            quarter_range(date_forecast_start(m), date_forecast_end(m))
-        elseif prod in [:shockdec, :dettrend, :trend]
-            quarter_range(date_shockdec_start(m), date_shockdec_end(m))
-        elseif contains(string(prod), "decomp")
-            map(h -> DSGE.iterate_quarters(date_mainsample_end(m), h), hs)
+        if isempty(dates)
+            dates = if prod == :hist
+                quarter_range(date_mainsample_start(m), date_mainsample_end(m))
+            elseif prod in [:forecast, :bddforecast]
+                quarter_range(date_forecast_start(m), date_forecast_end(m))
+            elseif prod in [:shockdec, :dettrend, :trend]
+                quarter_range(date_shockdec_start(m), date_shockdec_end(m))
+            end
         end
 
         date_indices = Dict(d::Date => i::Int for (i, d) in enumerate(dates))
@@ -438,7 +437,7 @@ function read_forecast_series(file::JLD.JldFile, class::Symbol, product::Symbol,
     # Other products are ndraws x nvars x nperiods
     elseif product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
                        :bddforecast, :bddforecastut, :bddforecast4q, :dettrend,
-                       :decompstate, :decompshock, :decompdata, :decompparam, :decomptotal]
+                       :decompdata, :decompnews, :decomppara, :decomptotal]
         inds_to_read = if ndims == 2 # one draw
             arr = h5read(filename, "arr", (var_ind, Colon()))
         elseif ndims == 3 # many draws
