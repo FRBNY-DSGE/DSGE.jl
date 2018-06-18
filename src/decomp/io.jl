@@ -59,8 +59,8 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
             if isnull(block_number) || get(block_number) == 1
                 jldopen(filepath, "w") do file
                     # Write metadata
-                    dates = DSGE.quarter_range(date_forecast_start(m_new), date_forecast_end(m_old))
-                    DSGE.write_forecast_metadata(m_new, file, prod, class, dates = dates)
+                    # Pass in m_old because its historical and forecast dates are used
+                    DSGE.write_forecast_metadata(m_old, file, prod, class)
 
                     # Pre-allocate HDF5 dataset which will contain all draws
                     if !isnull(block_number) && get(block_number) == 1

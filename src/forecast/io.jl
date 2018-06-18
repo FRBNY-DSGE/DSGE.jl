@@ -241,7 +241,7 @@ end
 """
 ```
 write_forecast_metadata(m::AbstractModel, file::JldFile, prod::Symbol,
-    class::Symbol; dates::Vector{Date} = [])
+    class::Symbol)
 ```
 
 Write metadata about the saved forecast output `var` to `filepath`.
@@ -261,18 +261,17 @@ forecast output array. The saved dictionaries include:
 Note that we don't save dates or transformations for impulse response
 functions.
 """
-function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, prod::Symbol, class::Symbol;
-                                 dates::Vector{Date} = Date[])
+function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, prod::Symbol, class::Symbol)
     # Write date range
     if prod != :irf
-        if isempty(dates)
-            dates = if prod == :hist
-                quarter_range(date_mainsample_start(m), date_mainsample_end(m))
-            elseif prod in [:forecast, :bddforecast]
-                quarter_range(date_forecast_start(m), date_forecast_end(m))
-            elseif prod in [:shockdec, :dettrend, :trend]
-                quarter_range(date_shockdec_start(m), date_shockdec_end(m))
-            end
+        dates = if prod == :hist
+            quarter_range(date_mainsample_start(m), date_mainsample_end(m))
+        elseif prod in [:forecast, :bddforecast]
+            quarter_range(date_forecast_start(m), date_forecast_end(m))
+        elseif prod in [:shockdec, :dettrend, :trend]
+            quarter_range(date_shockdec_start(m), date_shockdec_end(m))
+        elseif contains(string(prod), "decomp")
+            quarter_range(date_mainsample_start(m), date_forecast_end(m))
         end
 
         date_indices = Dict(d::Date => i::Int for (i, d) in enumerate(dates))
