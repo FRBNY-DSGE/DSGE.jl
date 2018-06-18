@@ -29,26 +29,26 @@ where `S<:AbstractFloat`.
 
 where `nperiods = `end_index - start_index + 1`.
 """
-function DSGE.shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
+function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
     system::System{S}, histshocks::Matrix{S};
     shock_start_date::Date = date_mainsample_start(m),
-    shock_end_date::Date = DSGE.iterate_quarters(date_presample_end(m), size(histshocks, 2)))
+    shock_end_date::Date = iterate_quarters(date_presample_end(m), size(histshocks, 2)))
 
     horizon         = forecast_horizons(m)
 
     # Indices for which to return shockdecs
-    keep_start_ind  = DSGE.index_shockdec_start(m)
-    keep_end_ind    = DSGE.index_shockdec_end(m)
+    keep_start_ind  = index_shockdec_start(m)
+    keep_end_ind    = index_shockdec_end(m)
 
     # Indices for which to apply shocks while computing shockdecs
-    shock_start_ind = DSGE.subtract_quarters(shock_start_date, date_presample_end(m))
-    shock_end_ind   = DSGE.subtract_quarters(shock_end_date, date_presample_end(m))
+    shock_start_ind = subtract_quarters(shock_start_date, date_presample_end(m))
+    shock_end_ind   = subtract_quarters(shock_end_date, date_presample_end(m))
 
     shock_decompositions(system, horizon, histshocks, keep_start_ind, keep_end_ind,
                          shock_start_index = shock_start_ind, shock_end_index = shock_end_ind)
 end
 
-function DSGE.shock_decompositions{S<:AbstractFloat}(system::System{S},
+function shock_decompositions{S<:AbstractFloat}(system::System{S},
     forecast_horizons::Int, histshocks::Matrix{S},
     keep_start_index::Int, keep_end_index::Int;
     shock_start_index::Int = 1, shock_end_index = size(histshocks, 2))
@@ -71,7 +71,7 @@ function DSGE.shock_decompositions{S<:AbstractFloat}(system::System{S},
     end
 
     # Set constant system matrices to 0
-    system = DSGE.zero_system_constants(system)
+    system = zero_system_constants(system)
 
     s_0 = zeros(S, nstates)
 
@@ -126,7 +126,7 @@ where `S<:AbstractFloat`.
 where `nperiods` is the number of quarters between
 `date_shockdec_start(m)` and `date_shockdec_end(m)`, inclusive.
 """
-function DSGE.deterministic_trends{S<:AbstractFloat}(m::AbstractModel{S},
+function deterministic_trends{S<:AbstractFloat}(m::AbstractModel{S},
     system::System{S}, s_0::Vector{S})
 
     # Dates: We compute the deterministic trend starting from the
@@ -134,17 +134,17 @@ function DSGE.deterministic_trends{S<:AbstractFloat}(m::AbstractModel{S},
     # compute shock decompositions, we truncate and only store
     # results for periods corresponding to the shockdec period.
     nperiods    = subtract_quarters(date_forecast_end(m), date_mainsample_start(m)) + 1
-    start_index = DSGE.index_shockdec_start(m)
-    end_index   = DSGE.index_shockdec_end(m)
+    start_index = index_shockdec_start(m)
+    end_index   = index_shockdec_end(m)
 
     deterministic_trends(system, s_0, nperiods, start_index, end_index)
 end
 
-function DSGE.deterministic_trends{S<:AbstractFloat}(system::System{S}, s_0::Vector{S}, nperiods::Int,
+function deterministic_trends{S<:AbstractFloat}(system::System{S}, s_0::Vector{S}, nperiods::Int,
     start_index::Int, end_index::Int)
 
     # Set constant system matrices to 0
-    system = DSGE.zero_system_constants(system)
+    system = zero_system_constants(system)
 
     # Construct matrix of 0 shocks for entire history and forecast horizon
     nshocks  = size(system[:RRR], 2)
@@ -170,7 +170,7 @@ trends{S<:AbstractFloat}(system::System{S})
 Compute trend (steady-state) states, observables, and pseudo-observables. The
 trend is used for plotting shock decompositions.
 """
-function DSGE.trends{S<:AbstractFloat}(system::System{S})
+function trends{S<:AbstractFloat}(system::System{S})
 
     state_trend  = system[:CCC]
     obs_trend    = system[:ZZ]*system[:CCC] + system[:DD]
