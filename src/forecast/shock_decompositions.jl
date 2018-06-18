@@ -30,28 +30,18 @@ where `S<:AbstractFloat`.
 where `nperiods = `end_index - start_index + 1`.
 """
 function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
-    system::System{S}, histshocks::Matrix{S};
-    shock_start_date::Date = date_mainsample_start(m),
-    shock_end_date::Date = iterate_quarters(date_presample_end(m), size(histshocks, 2)))
+    system::System{S}, histshocks::Matrix{S})
 
-    horizon         = forecast_horizons(m)
+    horizon   = forecast_horizons(m)
+    start_ind = index_shockdec_start(m)
+    end_ind   = index_shockdec_end(m)
 
-    # Indices for which to return shockdecs
-    keep_start_ind  = index_shockdec_start(m)
-    keep_end_ind    = index_shockdec_end(m)
-
-    # Indices for which to apply shocks while computing shockdecs
-    shock_start_ind = subtract_quarters(shock_start_date, date_presample_end(m))
-    shock_end_ind   = subtract_quarters(shock_end_date, date_presample_end(m))
-
-    shock_decompositions(system, horizon, histshocks, keep_start_ind, keep_end_ind,
-                         shock_start_index = shock_start_ind, shock_end_index = shock_end_ind)
+    shock_decompositions(system, horizon, histshocks, start_ind, end_ind)
 end
 
 function shock_decompositions{S<:AbstractFloat}(system::System{S},
     forecast_horizons::Int, histshocks::Matrix{S},
-    keep_start_index::Int, keep_end_index::Int;
-    shock_start_index::Int = 1, shock_end_index = size(histshocks, 2))
+    start_index::Int, end_index::Int)
 
     # Setup
     nshocks      = size(system[:RRR], 2)
@@ -66,7 +56,7 @@ function shock_decompositions{S<:AbstractFloat}(system::System{S},
     pseudo = zeros(S, npseudo, allperiods, nshocks)
 
     # Check dates
-    if forecast_horizons <= 0 || keep_start_index < 1 || keep_end_index > allperiods
+    if forecast_horizons <= 0 || start_index < 1 || end_index > allperiods
         throw(DomainError())
     end
 
@@ -78,17 +68,17 @@ function shock_decompositions{S<:AbstractFloat}(system::System{S},
     for i = 1:nshocks
         # Isolate single shock
         shocks = zeros(S, nshocks, allperiods)
-        shocks[i, shock_start_index:shock_end_index] = histshocks[i, shock_start_index:shock_end_index]
+        shocks[i, 1:histperiods] = histshocks[i, :]
 
         # Iterate state space forward
         states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(system, s_0, shocks)
     end
 
     # Return shock decompositions in appropriate range
-    if keep_start_index == 1 && keep_end_index == allperiods
+    if start_index == 1 && end_index == allperiods
         return states, obs, pseudo
     else
-        range = keep_start_index:keep_end_index
+        range = start_index:end_index
         return states[:, range, :], obs[:, range, :], pseudo[:, range, :]
     end
 end
