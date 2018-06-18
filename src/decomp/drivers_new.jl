@@ -1,12 +1,9 @@
-function decompose_forecast_new(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
-                                params_new::Vector{Float64}, params_old::Vector{Float64},
-                                cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
-                                individual_shocks::Bool = false,
-                                check::Bool = false, atol::Float64 = 1e-8) where M<:AbstractModel
-    # Compute numbers of periods
-    T0, T, k, T1_new, T1_old, _ = DSGE.decomposition_periods(m_new, m_old, cond_new, cond_old)
-    @assert size(df_new, 1) == T0 + T + T1_new
-    @assert size(df_old, 1) == T0 + T - k + T1_old
+function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
+                            params_new::Vector{Float64}, params_old::Vector{Float64},
+                            cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
+                            individual_shocks::Bool = false, check::Bool = false) where M<:AbstractModel
+    # Check numbers of periods
+    check_decomposition_periods(m_new, m_old, df_new, df_old, cond_new, cond_old)
 
     # Forecast
     keep_startdate = date_forecast_start(m_new) # T+1
@@ -47,15 +44,15 @@ function decompose_forecast_new(m_new::M, m_old::M, df_new::DataFrame, df_old::D
         para_comp = out2[forecastvar] - out3[forecastvar]
         decomp[Symbol(:decomppara, class)] = para_comp
 
-        # Check decomposition
+        # Total difference
+        total_diff = para_comp + data_comp + news_comp
+        decomp[Symbol(:decomptotal, class)] = total_diff
         if check
-            exp_diff = out1[forecastvar] - out3[forecastvar]
-            act_diff = para_comp + data_comp + news_comp
-            @assert act_diff ≈ exp_diff
+            @assert total_diff ≈ out1[forecastvar] - out3[forecastvar]
         end
     end
 
-    return decomp, out1, out2, out3
+    return decomp
 end
 
 function decomposition_forecast(m::AbstractModel, df::DataFrame, params::Vector{Float64}, cond_type::Symbol,

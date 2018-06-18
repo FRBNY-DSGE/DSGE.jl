@@ -184,7 +184,6 @@ module DSGE
     include("analysis/df_to_table.jl")
 
     include("decomp/drivers.jl")
-    include("decomp/util.jl")
     include("decomp/io.jl")
     include("decomp/meansbands.jl")
 
