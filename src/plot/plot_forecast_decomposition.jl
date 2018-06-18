@@ -137,9 +137,9 @@ function DSGE.plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbo
         ind_dt = findfirst(group -> group.name == "dt", groups)
         splice!(groups, ind_dt)
     else
-        groups = [ShockGroup("data", [:data], colorant"#E5FCC2"), # yellow-green
-                  ShockGroup("news", [:news], colorant"#9DE0AD"), # sea foam green
-                  ShockGroup("para", [:para],  colorant"#45ADA8")] # turquoise
+        groups = [ShockGroup("data", [:data], colorant"#9DE0AD"), # sea foam green
+                  ShockGroup("news", [:news], colorant"#45ADA8"), # turquoise
+                  ShockGroup("para", [:para], colorant"#547980")] # blue gray
     end
 
     # Get titles if not provided
