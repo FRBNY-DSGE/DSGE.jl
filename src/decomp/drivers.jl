@@ -4,8 +4,7 @@ decompose_forecast(m_new, m_old, df_new, df_old, input_type, cond_new, cond_old,
     classes; verbose = :low, kwargs...)
 
 decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
-    cond_new, cond_old, classes; individual_shocks = false,
-    check = false)
+    cond_new, cond_old, classes; check = false)
 ```
 
 ### Inputs
@@ -30,8 +29,6 @@ decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
 
 - `check::Bool`: whether to check that the individual components add up to the
   correct total difference in forecasts. This roughly doubles the runtime
-- `individual_shocks::Bool`: whether to decompose the shock component into
-  individual shocks
 
 **Method 1 only:**
 
