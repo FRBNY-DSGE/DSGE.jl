@@ -20,11 +20,11 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
     # Common metadata
     comps = [:data, :news, :para]
     dates = decomps[collect(keys(decomps))[1]][:date]
-    vars  = collect(keys(DSGE.get_dict(m_new, class)))
+    vars  = collect(keys(get_dict(m_new, class)))
 
     metadata = Dict{Symbol, Any}()
     metadata[:para]            = input_type
-    metadata[:indices]         = DSGE.get_dict(m_new, class)
+    metadata[:indices]         = get_dict(m_new, class)
     metadata[:class]           = class
     metadata[:date_inds]       = OrderedDict(date => i for (i, date) in enumerate(dates))
     metadata[:forecast_string] = ""
@@ -128,7 +128,7 @@ and the bars give the individual shock contributions.
 
 The `groups` keyword argument is only used if `individual_shocks = true`.
 """
-function DSGE.plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, class::Symbol,
+function plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, class::Symbol,
                                      input_type::Symbol, cond_new::Symbol, cond_old::Symbol;
                                      titles::Vector{String} = String[],
                                      individual_shocks::Bool = false,
@@ -149,22 +149,22 @@ function DSGE.plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbo
     # Get titles if not provided
     if isempty(titles)
         detexify_title = typeof(Plots.backend()) == Plots.GRBackend
-        titles = map(var -> DSGE.describe_series(m_new, var, class, detexify = detexify_title), vars)
+        titles = map(var -> describe_series(m_new, var, class, detexify = detexify_title), vars)
     end
 
     # Loop through variables
     plots = OrderedDict{Symbol, Plots.Plot}()
     for (var, title) in zip(vars, titles)
         # Call recipe
-        plots[var] = DSGE.shockdec(var, mbs..., groups;
-                              ylabel = DSGE.series_ylabel(m_new, var, class),
+        plots[var] = shockdec(var, mbs..., groups;
+                              ylabel = series_ylabel(m_new, var, class),
                               title = title, kwargs...)
 
         # Save plot
         basename = Symbol(:decomp, individual_shocks ? :shocks : :total, "_", var)
         output_file = get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old, basename, Symbol(),
-                                          pathfcn = figurespath, fileformat = DSGE.plot_extension())
+                                          pathfcn = figurespath, fileformat = plot_extension())
 
-        DSGE.save_plot(plots[var], output_file, verbose = verbose)
+        save_plot(plots[var], output_file, verbose = verbose)
     end
 end

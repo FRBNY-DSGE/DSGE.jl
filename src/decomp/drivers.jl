@@ -54,7 +54,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     # Get output file names
     decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes)
 
-    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         info("Decomposing forecast...")
         println("Start time: $(now())")
     end
@@ -81,7 +81,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         total_forecast_time = 0.0
 
         for block = 1:nblocks
-            if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println()
                 info("Decomposing block $block of $nblocks...")
             end
@@ -103,7 +103,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
 
             # Calculate time to complete this block, average block time, and
             # expected time to completion
-            if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+            if VERBOSITY[verbose] >= VERBOSITY[:low]
                 block_time = toq()
                 total_forecast_time += block_time
                 total_forecast_time_min     = total_forecast_time/60
@@ -120,7 +120,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         error("Invalid input_type: $input_type. Must be in [:mode, :mean, :init, :full]")
     end
 
-    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("\nForecast decomposition complete: $(now())")
     end
 end
@@ -217,7 +217,7 @@ function decomposition_periods(m_new::M, m_old::M, df_new::DataFrame, df_old::Da
     @assert size(df_old, 1) == T0 + T - k + T1_old
 
     # Old model forecasts up to T+H
-    H = DSGE.subtract_quarters(date_forecast_end(m_old), date_mainsample_end(m_new))
+    H = subtract_quarters(date_forecast_end(m_old), date_mainsample_end(m_new))
 
     return T, k, H
 end
@@ -248,7 +248,7 @@ function decomposition_forecast(m::AbstractModel, df::DataFrame, params::Vector{
                                 T::Int, k::Int, H::Int;
                                 outputs::Vector{Symbol} = [:forecast, :shockdec], check::Bool = false)
     # Compute state space
-    DSGE.update!(m, params)
+    update!(m, params)
     system = compute_system(m)
 
     # Initialize output dictionary
@@ -277,10 +277,10 @@ function decomposition_forecast(m::AbstractModel, df::DataFrame, params::Vector{
 
         # Applying all shocks
         _, out[:shockdecobs], out[:shockdecpseudo] =
-            DSGE.shock_decompositions(system, forecast_horizons(m), histshocks, 1, T+H)
+            shock_decompositions(system, forecast_horizons(m), histshocks, 1, T+H)
 
         # Applying ϵ_{1:T-k} and ϵ_{T-k+1:end}
-        system0 = DSGE.zero_system_constants(system)
+        system0 = zero_system_constants(system)
 
         data_shocks = zeros(nshocks, T+H)
         data_shocks[:, 1:T-k] = histshocks[:, 1:T-k]
