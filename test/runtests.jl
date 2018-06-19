@@ -34,6 +34,7 @@ my_tests = [
             "scenarios/forecast",
             "scenarios/switching",
             "scenarios/drivers",
+            "decomp/decompose_forecast",
             "plot/plot"
             ]
 
