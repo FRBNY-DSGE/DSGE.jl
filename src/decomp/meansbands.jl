@@ -2,7 +2,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
                              cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
                              verbose::Symbol = :low) where M<:AbstractModel
     # Print
-    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
         info("Computing means of forecast decomposition...")
         println("Start time: " * string(now()))
@@ -12,13 +12,13 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
     input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes)
 
     for class in classes
-        if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:high]
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
             print("Computing " * string(class) * "...")
         end
 
         # Read metadata
         variable_names = jldopen(input_files[Symbol(:decomptotal, class)]) do file
-            class_long = DSGE.get_class_longname(class)
+            class_long = get_class_longname(class)
             collect(keys(read(file, string(class_long) * "_indices")))
         end
 
@@ -40,14 +40,14 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
             write(file, "decomps", decomps)
         end
 
-        if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:high]
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
             output_file = get_scenario_mb_output_file(m, scen, output_var)
             println("wrote " * basename(output_file))
         end
     end
 
     # Print
-    if DSGE.VERBOSITY[verbose] >= DSGE.VERBOSITY[:low]
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
         total_mb_time     = toq()
         total_mb_time_min = total_mb_time/60
 
@@ -74,9 +74,9 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         input_file = input_files[Symbol(product, class)]
         jldopen(input_file, "r") do file
             # Parse transform
-            class_long = DSGE.get_class_longname(class)
+            class_long = get_class_longname(class)
             transforms = read(file, string(class_long) * "_revtransforms")
-            transform = DSGE.parse_transform(transforms[var])
+            transform = parse_transform(transforms[var])
 
             # If shockdec, loop over shocks
             loopkeys = if comp == :shockdec
@@ -89,13 +89,13 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
             for key in loopkeys
                 # Read in raw output: ndraws x nperiods
                 decomp_series = if comp == :shockdec
-                    DSGE.read_forecast_series(file, class, product, var, key)
+                    read_forecast_series(file, class, product, var, key)
                 else
-                    DSGE.read_forecast_series(file, class, product, var)
+                    read_forecast_series(file, class, product, var)
                 end
 
                 # Reverse transform
-                transformed_decomp = DSGE.scenario_mb_reverse_transform(decomp_series, transform, :forecast)
+                transformed_decomp = scenario_mb_reverse_transform(decomp_series, transform, :forecast)
 
                 # Compute mean and add to DataFrame
                 decomp[key] = vec(mean(transformed_decomp, 1))
