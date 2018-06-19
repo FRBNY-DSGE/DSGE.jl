@@ -68,53 +68,40 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
 
     decomp = DataFrame(date = dates)
 
-    # Non-individual shock components are ndraws x nperiods
-    for comp in [:data, :news, :para, :total]
+    for comp in [:data, :news, :shockdec, :dettrend, :para, :total]
         product = Symbol(:decomp, comp)
 
-        # Read in raw output
         input_file = input_files[Symbol(product, class)]
-        decomp_series, transform = jldopen(input_file, "r") do file
-            # Read in variable: ndraws x nperiods
-            decomp_series = DSGE.read_forecast_series(file, class, product, var)
-
+        jldopen(input_file, "r") do file
             # Parse transform
             class_long = DSGE.get_class_longname(class)
             transforms = read(file, string(class_long) * "_revtransforms")
             transform = DSGE.parse_transform(transforms[var])
 
-            decomp_series, transform
+            # If shockdec, loop over shocks
+            loopkeys = if comp == :shockdec
+                shock_indices = read(file, "shock_indices")
+                collect(keys(shock_indices))
+            else
+                [comp]
+            end
+
+            for key in loopkeys
+                # Read in raw output: ndraws x nperiods
+                decomp_series = if comp == :shockdec
+                    DSGE.read_forecast_series(file, class, product, var, key)
+                else
+                    DSGE.read_forecast_series(file, class, product, var)
+                end
+
+                # Reverse transform
+                transformed_decomp = DSGE.scenario_mb_reverse_transform(decomp_series, transform, :forecast)
+
+                # Compute mean and add to DataFrame
+                decomp[key] = vec(mean(transformed_decomp, 1))
+            end
         end
-
-        # Reverse transform
-        transformed_decomp = DSGE.scenario_mb_reverse_transform(decomp_series, transform, :forecast)
-
-        # Compute mean and add to DataFrame
-        decomp[comp] = vec(mean(transformed_decomp, 1))
     end
-
-    # # Individual shock components are ndraws x nperiods x nshocks
-    # input_file = input_files[Symbol(:decompindshock, class)]
-    # if isfile(input_file)
-    #     jldopen(input_file, "r") do file
-    #         shock_indices = read(file, "shock_indices")
-    #         for (shock, i) in shock_indices
-    #             # Read in variable and shock: ndraws x nperiods
-    #             decomp_series = DSGE.read_forecast_series(file, class, :decompindshock, var, shock)
-
-    #             # Parse transform
-    #             class_long = DSGE.get_class_longname(class)
-    #             transforms = read(file, string(class_long) * "_revtransforms")
-    #             transform = DSGE.parse_transform(transforms[var])
-
-    #             # Reverse transform
-    #             transformed_decomp = DSGE.scenario_mb_reverse_transform(decomp_series, transform, :forecast)
-
-    #             # Compute mean and add to DataFrame
-    #             decomp[shock] = vec(mean(transformed_decomp, 1))
-    #         end
-    #     end
-    # end
 
     return decomp
 end

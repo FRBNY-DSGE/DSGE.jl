@@ -35,7 +35,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
     shockdec_mb.metadata[:product] = :shockdec
     if individual_shocks
         for var in vars
-            shocks = setdiff(names(decomps[var]), vcat([:date, :total], comps))
+            shocks = setdiff(names(decomps[var]), vcat([:date, :dettrend, :total], comps))
             if var == vars[1]
                 shockdec_mb.metadata[:shock_indices] = OrderedDict(shock => i for (i, shock) in enumerate(shocks))
             end
@@ -68,7 +68,7 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
     dettrend_mb = MeansBands(Dict(metadata), DataFrame(date = dates), Dict{Symbol, DataFrame}())
     dettrend_mb.metadata[:product] = :dettrend
     for var in vars
-        dettrend_mb.means[var] = 0.0
+        dettrend_mb.means[var] = individual_shocks ? decomps[var][:dettrend] : 0
         dettrend_mb.bands[var] = DataFrame(date = dates)
     end
 
@@ -82,7 +82,11 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
         hist_mb.metadata[:product]   = :hist
         hist_mb.metadata[:date_inds] = OrderedDict(date => i for (i, date) in enumerate(hist_dates))
         for var in vars
-            hist_mb.means[var] = decomps[var][hist_inds, individual_shocks ? :shock : :total]
+            hist_mb.means[var] = if individual_shocks
+                decomps[var][hist_inds, :data] + decomps[var][hist_inds, :news]
+            else
+                decomps[var][hist_inds, :total]
+            end
             hist_mb.bands[var] = DataFrame(date = hist_dates)
         end
     end
@@ -97,7 +101,11 @@ function make_decomp_mbs(m_new::M, m_old::M, input_type::Symbol,
         fcast_mb.metadata[:product]   = :forecast
         fcast_mb.metadata[:date_inds] = OrderedDict(date => i for (i, date) in enumerate(fcast_dates))
         for var in vars
-            fcast_mb.means[var] = decomps[var][fcast_inds, individual_shocks ? :shock : :total]
+            fcast_mb.means[var] = if individual_shocks
+                decomps[var][fcast_inds, :data] + decomps[var][fcast_inds, :news]
+            else
+                decomps[var][fcast_inds, :total]
+            end
             fcast_mb.bands[var] = DataFrame(date = fcast_dates)
         end
     end
@@ -132,11 +140,7 @@ function DSGE.plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbo
                           individual_shocks = individual_shocks)
 
     # Create shock grouping
-    if individual_shocks
-        # Remove deterministic trend (zero by construction)
-        ind_dt = findfirst(group -> group.name == "dt", groups)
-        splice!(groups, ind_dt)
-    else
+    if !individual_shocks
         groups = [ShockGroup("data", [:data], colorant"#9DE0AD"), # sea foam green
                   ShockGroup("news", [:news], colorant"#45ADA8"), # turquoise
                   ShockGroup("para", [:para], colorant"#547980")] # blue gray
