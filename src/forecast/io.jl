@@ -311,7 +311,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, prod::Symb
     end
 
     # Write shock names and transforms
-    if class in [:shocks, :stdshocks] || prod in [:shockdec, :irf, :decompindshock]
+    if class in [:shocks, :stdshocks] || prod in [:shockdec, :irf, :decompshockdec]
         write(file, "shock_indices", m.exogenous_shocks)
         if class in [:shocks, :stdshocks]
             rev_transforms = Dict{Symbol,Symbol}(x => Symbol("identity") for x in keys(m.exogenous_shocks))
@@ -436,7 +436,7 @@ function read_forecast_series(file::JLD.JldFile, class::Symbol, product::Symbol,
     # Other products are ndraws x nvars x nperiods
     elseif product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
                        :bddforecast, :bddforecastut, :bddforecast4q, :dettrend,
-                       :decompdata, :decompnews, :decomppara, :decomptotal]
+                       :decompdata, :decompnews, :decomppara, :decompdettrend, :decomptotal]
         inds_to_read = if ndims == 2 # one draw
             arr = h5read(filename, "arr", (var_ind, Colon()))
         elseif ndims == 3 # many draws

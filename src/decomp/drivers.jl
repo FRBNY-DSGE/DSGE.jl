@@ -151,27 +151,35 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         forecastvar = Symbol(:histforecast, class) # Z s_{T+h} + D
         trendvar    = Symbol(:trend,        class) # Z D
         dettrendvar = Symbol(:dettrend,     class) # Z T^{T+h} s_0 + D
+        shockdecvar = Symbol(:shockdec,     class) # Z \sum_{t=1}^{T+h} T^{T+h-t} R ϵ_t + D
         datavar     = Symbol(:data,         class) # Z \sum_{t=1}^{T-k} T^{T+h-t} R ϵ_t + D
         newsvar     = Symbol(:news,         class) # Z \sum_{t=T-k+1}^{T+h} T^{T+h-t} R ϵ_t + D
 
-        # Data revision
+        # 1(a). Data revision and news
         data_comp = (out1[dettrendvar] - out2[dettrendvar]) + (out1[datavar] - out2[datavar])
         decomp[Symbol(:decompdata, class)] = data_comp
 
-        # News
         news_comp = out1[newsvar] - out2[newsvar]
         decomp[Symbol(:decompnews, class)] = news_comp
 
-        # Parameter re-estimation
+        # 1(b). Shock decomposition and deterministic trend
+        shockdec_comp = out1[shockdecvar] - out2[shockdecvar] # Ny x Nh x Ne
+        decomp[Symbol(:decompshockdec, class)] = shockdec_comp
+
+        dettrend_comp = out1[dettrendvar] - out2[dettrendvar]
+        decomp[Symbol(:decompdettrend, class)] = dettrend_comp
+
+        # Check that 1(a) and 1(b) are equal
+        check && @assert dettrend_comp + squeeze(sum(shockdec_comp, 3), 3) ≈ data_comp + news_comp
+
+        # 2. Parameter re-estimation
         para_comp = out2[forecastvar] - out3[forecastvar]
         decomp[Symbol(:decomppara, class)] = para_comp
 
-        # Total difference
+        # 1 + 2. Total difference
         total_diff = para_comp + data_comp + news_comp
         decomp[Symbol(:decomptotal, class)] = total_diff
-        if check
-            @assert total_diff ≈ out1[forecastvar] - out3[forecastvar]
-        end
+        check && @assert total_diff ≈ out1[forecastvar] - out3[forecastvar]
     end
 
     return decomp

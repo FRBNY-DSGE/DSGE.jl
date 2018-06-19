@@ -22,7 +22,7 @@ function get_decomp_output_files(m_new::M, m_old::M, input_type::Symbol,
                                  cond_new::Symbol, cond_old::Symbol,
                                  classes::Vector{Symbol}) where M<:AbstractModel
     output_files = Dict{Symbol, String}()
-    for comp in [:data, :news, :para, :total]
+    for comp in [:data, :news, :shockdec, :dettrend, :para, :total]
         for class in classes
             product = Symbol(:decomp, comp)
             output_var = Symbol(product, class)
@@ -48,12 +48,10 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
                                       block_number::Nullable{Int} = Nullable{Int}(),
                                       block_inds::Range{Int} = 1:0,
                                       verbose::Symbol = :low) where M<:AbstractModel
-    for comp in [:data, :news, :para, :total]
+    for comp in [:data, :news, :shockdec, :dettrend, :para, :total]
         for class in classes
             prod = Symbol(:decomp, comp)
             var = Symbol(prod, class)
-            isempty(decomps[var]) && continue
-
             filepath = decomp_output_files[var]
 
             if isnull(block_number) || get(block_number) == 1
