@@ -115,6 +115,10 @@ end
 
 """
 ```
+plot_forecast_decomposition(m_new, m_old, var, class, input_type,
+    cond_new, cond_old; titles = [], individual_shocks = false,
+    groups = shock_groupings(m_new), verbose = :low, kwargs...)
+
 plot_forecast_decomposition(m_new, m_old, vars, class, input_type,
     cond_new, cond_old; titles = [], individual_shocks = false,
     groups = shock_groupings(m_new), verbose = :low, kwargs...)
@@ -122,12 +126,20 @@ plot_forecast_decomposition(m_new, m_old, vars, class, input_type,
 
 Plot forecast decomposition (looks like a shock decomposition). If
 `individual_shocks = false`, then the black and red lines give the total
-difference and the bars give the state, shock, data, and parameter
-components. Otherwise, the black and red lines give the total shock component
-and the bars give the individual shock contributions.
+difference and the bars give the data revision, news, and parameter
+components. Otherwise, the black and red lines give the total data revision +
+news component and the bars give the individual shock contributions.
 
 The `groups` keyword argument is only used if `individual_shocks = true`.
 """
+function plot_forecast_decomposition(m_new::M, m_old::M, var::Symbol, class::Symbol,
+                                     input_type::Symbol, cond_new::Symbol, cond_old::Symbol;
+                                     title::String = "", kwargs...) where M<:AbstractModel
+
+    plot_forecast_decomposition(m_new, m_old, [var], class, input_type, cond_new, cond_old;
+                                titles = isempty(title) ? String[] : [title], kwargs...)
+end
+
 function plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, class::Symbol,
                                      input_type::Symbol, cond_new::Symbol, cond_old::Symbol;
                                      titles::Vector{String} = String[],
