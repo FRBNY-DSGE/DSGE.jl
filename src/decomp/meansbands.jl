@@ -40,9 +40,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         jldopen(output_file, "w") do file
             write(file, "decomps", decomps)
         end
-
         if VERBOSITY[verbose] >= VERBOSITY[:high]
-            output_file = get_scenario_mb_output_file(m, scen, output_var)
             println("wrote " * basename(output_file))
         end
     end
