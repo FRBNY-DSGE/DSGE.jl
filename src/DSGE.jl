@@ -7,6 +7,7 @@ module DSGE
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
     using StatsBase: sample
+    using StatsFuns: chisqinvcdf
     import Calculus
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
 
@@ -152,6 +153,7 @@ module DSGE
     include("solve/gensys.jl")
     include("solve/solve.jl")
 
+    include("estimate/util.jl")
     include("estimate/kalman.jl")
     include("estimate/filter.jl")
     include("estimate/posterior.jl")
@@ -163,6 +165,7 @@ module DSGE
     include("estimate/combined_optimizer.jl")
     include("estimate/lbfgs.jl")
     include("estimate/nelder_mead.jl")
+    include("estimate/marginal_data_density.jl")
     include("estimate/estimate.jl")
     include("estimate/nearest_spd.jl")
     include("estimate/smc/particle.jl")
