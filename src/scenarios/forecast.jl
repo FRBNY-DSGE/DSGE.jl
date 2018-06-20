@@ -150,9 +150,7 @@ function write_scenario_forecasts(m::AbstractModel,
             end
         end
 
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            println(" * Wrote " * basename(filepath))
-        end
+        println(verbose, :high, " * Wrote " * basename(filepath))
     end
 end
 
@@ -167,12 +165,10 @@ function returns a `Dict{Symbol, Array{Float64}`.
 function forecast_scenario(m::AbstractModel, scen::Scenario;
                            verbose::Symbol = :low)
     # Print
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        info("Forecasting scenario = " * string(scen.key) * "...")
-        println("Start time: " * string(now()))
-        println("Forecast outputs will be saved in " * rawpath(m, "scenarios"))
-        tic()
-    end
+    info(verbose, :low, "Forecasting scenario = " * string(scen.key) * "...")
+    println(verbose, :low, "Start time: " * string(now()))
+    println(verbose, :low, "Forecast outputs will be saved in " * rawpath(m, "scenarios"))
+    tic()
 
     # Update model alt policy setting
     m <= Setting(:alternative_policy, scen.altpolicy, false, "apol",
@@ -201,12 +197,10 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
     write_scenario_forecasts(m, output_files, forecast_output, verbose = verbose)
 
     # Print
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        forecast_time = toq()
-        forecast_time_min = forecast_time/60
-        println("\nTime elapsed: " * string(forecast_time_min) * " minutes")
-        println("Forecast complete: " * string(now()))
-    end
+    forecast_time = toq()
+    forecast_time_min = forecast_time/60
+    println(verbose, :low, "\nTime elapsed: " * string(forecast_time_min) * " minutes")
+    println(verbose, :low, "Forecast complete: " * string(now()))
 
     return forecast_output
 end

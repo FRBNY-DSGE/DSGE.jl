@@ -111,6 +111,17 @@ function detexify(s::Symbol)
     Symbol(detexify(string(s)))
 end
 
+dispfns = [:print, :println, :info, :warn]
+for disp in dispfns
+    @eval begin
+        function Base.$disp(verbose::Symbol, min::Symbol, xs...)
+            if VERBOSITY[verbose] >= VERBOSITY[min]
+                $disp(xs...)
+            end
+        end
+    end
+end
+
 
 ## Testing functions
 

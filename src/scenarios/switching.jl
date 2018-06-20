@@ -11,13 +11,10 @@ of times a switch actually occured.
 function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
                             verbose::Symbol = :low)
 
-
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        info("Simulating switching for " * string(scen.key) * "...")
-        println("Start time: " * string(now()))
-        println("Outputs will be saved in " * rawpath(m, "scenarios"))
-        tic()
-    end
+    info(verbose, :low, "Simulating switching for " * string(scen.key) * "...")
+    println(verbose, :low, "Start time: " * string(now()))
+    println(verbose, :low, "Outputs will be saved in " * rawpath(m, "scenarios"))
+    tic()
 
     # Revert model alt policy to historical rule
     m <= Setting(:alternative_policy, AltPolicy(:historical, solve, eqcond), false, "apol",
@@ -62,12 +59,10 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
     write_scenario_forecasts(m, output_files, results, verbose = verbose)
 
     # Print
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        switching_time = toq()
-        switching_time_min = switching_time/60
-        println("\nTime elapsed: " * string(switching_time_min) * " minutes")
-        println("Switching complete: " * string(now()))
-    end
+    switching_time = toq()
+    switching_time_min = switching_time/60
+    println(verbose, :low, "\nTime elapsed: " * string(switching_time_min) * " minutes")
+    println(verbose, :low, "Switching complete: " * string(now()))
 
     return results, switching_results
 end

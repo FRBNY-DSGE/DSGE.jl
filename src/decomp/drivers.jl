@@ -60,10 +60,8 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     # Get output file names
     decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes, hs)
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        info("Decomposing forecast...")
-        println("Start time: $(now())")
-    end
+    info(verbose, :low, "Decomposing forecast...")
+    println(verbose, :low, "Start time: $(now())")
 
     # Single-draw forecasts
     if input_type in [:mode, :mean, :init]
@@ -84,10 +82,8 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         total_forecast_time = 0.0
 
         for block = 1:nblocks
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println()
-                info("Decomposing block $block of $nblocks...")
-            end
+            println(verbose, :low)
+            info(verbose, :low, "Decomposing block $block of $nblocks...")
             tic()
 
             # Get to work!
@@ -110,26 +106,22 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
 
             # Calculate time to complete this block, average block time, and
             # expected time to completion
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                block_time = toq()
-                total_forecast_time += block_time
-                total_forecast_time_min     = total_forecast_time/60
-                expected_time_remaining     = (total_forecast_time/block)*(nblocks - block)
-                expected_time_remaining_min = expected_time_remaining/60
+            block_time = toq()
+            total_forecast_time += block_time
+            total_forecast_time_min     = total_forecast_time/60
+            expected_time_remaining     = (total_forecast_time/block)*(nblocks - block)
+            expected_time_remaining_min = expected_time_remaining/60
 
-                println("\nCompleted $block of $nblocks blocks.")
-                println("Total time elapsed: $total_forecast_time_min minutes")
-                println("Expected time remaining: $expected_time_remaining_min minutes")
-            end
+            println(verbose, :low, "\nCompleted $block of $nblocks blocks.")
+            println(verbose, :low, "Total time elapsed: $total_forecast_time_min minutes")
+            println(verbose, :low, "Expected time remaining: $expected_time_remaining_min minutes")
         end # of loop through blocks
 
     else
         error("Invalid input_type: $input_type. Must be in [:mode, :mean, :init, :full]")
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("\nForecast decomposition complete: $(now())")
-    end
+    println(verbose, :low, "\nForecast decomposition complete: $(now())")
 end
 
 function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,

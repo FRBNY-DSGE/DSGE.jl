@@ -107,9 +107,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::Range{Int
     verbose::Symbol = :low)
 
     input_file_name = get_forecast_input_file(m, input_type)
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Loading draws from $input_file_name")
-    end
+    println(verbose, :low, "Loading draws from $input_file_name")
 
     # Load single draw
     if input_type in [:mean, :mode]
@@ -146,9 +144,7 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::Range{Int6
                     verbose::Symbol = :low)
 
     input_file_name = get_forecast_input_file(m, input_type)
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Loading draws from $input_file_name")
-    end
+    println(verbose, :low, "Loading draws from $input_file_name")
 
     if input_type in [:full, :subset]
         if isempty(block_inds)
@@ -241,11 +237,9 @@ function forecast_one(m::AbstractModel{Float64},
     output_dir = rawpath(m, "forecast")
 
     # Print
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        info("Forecasting input_type = $input_type, cond_type = $cond_type...")
-        println("Start time: $(now())")
-        println("Forecast outputs will be saved in $output_dir")
-    end
+    info(verbose, :low, "Forecasting input_type = $input_type, cond_type = $cond_type...")
+    println(verbose, :low, "Start time: $(now())")
+    println(verbose, :low, "Forecast outputs will be saved in $output_dir")
 
 
     ### Single-Draw Forecasts
@@ -262,12 +256,9 @@ function forecast_one(m::AbstractModel{Float64},
                                forecast_output; df = df, block_number = Nullable{Int64}(),
                                verbose = verbose)
 
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            total_forecast_time     = toq()
-            total_forecast_time_min = total_forecast_time/60
-
-            println("\nTotal time to forecast: $total_forecast_time_min minutes")
-        end
+        total_forecast_time     = toq()
+        total_forecast_time_min = total_forecast_time/60
+        println(verbose, :low, "\nTotal time to forecast: $total_forecast_time_min minutes")
 
 
     ### Multiple-Draw Forecasts
@@ -284,10 +275,8 @@ function forecast_one(m::AbstractModel{Float64},
         block_verbose = verbose == :none ? :none : :low
 
         for block = start_block:nblocks
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println()
-                info("Forecasting block $block of $nblocks...")
-            end
+            println(verbose, :low, )
+            info(verbose, :low, "Forecasting block $block of $nblocks...")
             tic()
 
             # Get to work!
@@ -309,25 +298,21 @@ function forecast_one(m::AbstractModel{Float64},
 
             # Calculate time to complete this block, average block time, and
             # expected time to completion
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                block_time = toq()
-                total_forecast_time += block_time
-                total_forecast_time_min     = total_forecast_time/60
-                blocks_elapsed              = block - start_block + 1
-                expected_time_remaining     = (total_forecast_time/blocks_elapsed)*(nblocks - block)
-                expected_time_remaining_min = expected_time_remaining/60
+            block_time = toq()
+            total_forecast_time += block_time
+            total_forecast_time_min     = total_forecast_time/60
+            blocks_elapsed              = block - start_block + 1
+            expected_time_remaining     = (total_forecast_time/blocks_elapsed)*(nblocks - block)
+            expected_time_remaining_min = expected_time_remaining/60
 
-                println("\nCompleted $block of $nblocks blocks.")
-                println("Total time elapsed: $total_forecast_time_min minutes")
-                println("Expected time remaining: $expected_time_remaining_min minutes")
-            end
+            println(verbose, :low, "\nCompleted $block of $nblocks blocks.")
+            println(verbose, :low, "Total time elapsed: $total_forecast_time_min minutes")
+            println(verbose, :low, "Expected time remaining: $expected_time_remaining_min minutes")
         end # of loop through blocks
 
     end # of input_type
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("\nForecast complete: $(now())")
-    end
+    println(verbose, :low, "\nForecast complete: $(now())")
 end
 
 """

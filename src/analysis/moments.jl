@@ -97,9 +97,7 @@ function moment_tables(m::AbstractModel;
                         caption = caption, outdir = outdir)
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        @printf "Tables are saved as %s.\n" tablespath(m, "estimate", "*.tex")
-    end
+    println(verbose, :low, "Tables are saved as " * tablespath(m, "estimate", "*.tex"))
 end
 
 """

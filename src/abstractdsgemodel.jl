@@ -381,10 +381,7 @@ function specify_mode!(m::AbstractModel, mode_file::String = ""; verbose=:low)
 
     update!(m,load_parameters_from_file(m,mode_file))
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Loaded previous mode from $mode_file.")
-    end
-
+    println(verbose, :low, "Loaded previous mode from $mode_file.")
 end
 
 """
@@ -408,9 +405,7 @@ function specify_hessian(m::AbstractModel, path::String=""; verbose=:low)
 
     m <= Setting(:calculate_hessian, false)
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Specified hessian from $path.")
-    end
+    println(verbose, :low, "Specified hessian from $path.")
 end
 
 
