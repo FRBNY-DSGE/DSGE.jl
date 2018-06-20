@@ -232,9 +232,7 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
             end
         end
 
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            println(" * Wrote $(basename(filepath))")
-        end
+        println(verbose, :high, " * Wrote $(basename(filepath))")
     end
 end
 

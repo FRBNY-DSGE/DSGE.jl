@@ -90,9 +90,7 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
                 end
             end
 
-            if VERBOSITY[verbose] >= VERBOSITY[:high]
-                println(" * Wrote $(basename(filepath))")
-            end
+            println(verbose, :high, " * Wrote $(basename(filepath))")
         end # of loop over classes
     end # of loop over comps
 end

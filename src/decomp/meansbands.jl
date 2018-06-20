@@ -3,19 +3,15 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
                              hs::UnitRange{Int};
                              verbose::Symbol = :low) where M<:AbstractModel
     # Print
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println()
-        info("Computing means of forecast decomposition...")
-        println("Start time: " * string(now()))
-        tic()
-    end
+    println(verbose, :low, )
+    info(verbose, :low, "Computing means of forecast decomposition...")
+    println(verbose, :low, "Start time: " * string(now()))
+    tic()
 
     input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes, hs)
 
     for class in classes
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            print("Computing " * string(class) * "...")
-        end
+        print(verbose, :high, "Computing " * string(class) * "...")
 
         # Read metadata
         variable_names = jldopen(input_files[Symbol(:decomptotal, class)]) do file
@@ -40,19 +36,15 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         jldopen(output_file, "w") do file
             write(file, "decomps", decomps)
         end
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            println("wrote " * basename(output_file))
-        end
+        println(verbose, :high, "wrote " * basename(output_file))
     end
 
     # Print
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        total_mb_time     = toq()
-        total_mb_time_min = total_mb_time/60
+    total_mb_time     = toq()
+    total_mb_time_min = total_mb_time/60
 
-        println("\nTotal time to compute scenario means and bands: " * string(total_mb_time_min) * " minutes")
-        println("Computation of means and bands complete: " * string(now()))
-    end
+    println(verbose, :low, "\nTotal time to compute scenario means and bands: " * string(total_mb_time_min) * " minutes")
+    println(verbose, :low, "Computation of means and bands complete: " * string(now()))
 end
 
 function decomposition_means(m_new::M, m_old::M, input_type::Symbol,

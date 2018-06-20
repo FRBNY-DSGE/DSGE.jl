@@ -36,14 +36,12 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
                             verbose::Symbol = :low, df::DataFrame = DataFrame(),
                             kwargs...)
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        output_dir = workpath(m, "forecast")
-        println()
-        info("Computing means and bands for input_type = $input_type, cond_type = $cond_type...")
-        println("Start time: $(now())")
-        println("Means and bands will be saved in $output_dir")
-        tic()
-    end
+    output_dir = workpath(m, "forecast")
+    println(verbose, :low)
+    info(verbose, :low, "Computing means and bands for input_type = $input_type, cond_type = $cond_type...")
+    println(verbose, :low, "Start time: $(now())")
+    println(verbose, :low, "Means and bands will be saved in $output_dir")
+    tic()
 
     # Determine full set of output_vars necessary for plotting desired result
     output_vars = add_requisite_output_vars(output_vars)
@@ -58,12 +56,10 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
 
     for output_var in output_vars
         prod = get_product(output_var)
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            if prod in [:shockdec, :irf]
-                println("Computing " * string(output_var) * " for shocks:")
-            else
-                print("Computing " * string(output_var) * "... ")
-            end
+        if prod in [:shockdec, :irf]
+            println(verbose, :high, "Computing " * string(output_var) * " for shocks:")
+        else
+            print(verbose, :high, "Computing " * string(output_var) * "... ")
         end
 
         # Compute means and bands
@@ -76,13 +72,10 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
         gc()
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        total_mb_time     = toq()
-        total_mb_time_min = total_mb_time/60
-
-        println("\nTotal time to compute means and bands: " * string(total_mb_time_min) * " minutes")
-        println("Computation of means and bands complete: " * string(now()))
-    end
+    total_mb_time     = toq()
+    total_mb_time_min = total_mb_time/60
+    println(verbose, :low, "\nTotal time to compute means and bands: " * string(total_mb_time_min) * " minutes")
+    println(verbose, :low, "Computation of means and bands complete: " * string(now()))
 end
 
 function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
@@ -128,9 +121,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
 
         # Get to work!
         for shock_name in keys(metadata[:shock_indices])
-            if VERBOSITY[verbose] >= VERBOSITY[:high]
-                println("  * " * string(shock_name))
-            end
+            println(verbose, :high, "  * " * string(shock_name))
 
             mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                           pop_growth = pop_growth, shock_name = Nullable(shock_name),
@@ -162,10 +153,8 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
         write(file, "mb", mb)
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        sep = prod in [:shockdec, :irf] ? "  " : ""
-        println(sep * "wrote " * basename(filepath))
-    end
+    sep = prod in [:shockdec, :irf] ? "  " : ""
+    println(verbose, :high, sep * "wrote " * basename(filepath))
 
     return mb
 end
