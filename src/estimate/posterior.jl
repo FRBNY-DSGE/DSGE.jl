@@ -37,11 +37,11 @@ log Pr(Θ|data) = log Pr(data|Θ) + log Pr(Θ) + const
 function posterior{T<:AbstractFloat}(m::AbstractModel{T},
                                      data::Matrix{T};
                                      sampler::Bool = false,
-                                     φ_smc::Float64 = 1.,
+                                     ϕ_smc::Float64 = 1.,
                                      catch_errors::Bool = false)
     catch_errors = catch_errors | sampler
     like = likelihood(m, data; sampler=sampler, catch_errors=catch_errors)
-    post = φ_smc*like + prior(m)
+    post = ϕ_smc*like + prior(m)
     if sampler
         return post
     else
@@ -75,7 +75,7 @@ function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
                                       parameters::Vector{T},
                                       data::Matrix{T};
                                       sampler::Bool = false,
-                                      φ_smc::Float64 = 1.,
+                                      ϕ_smc::Float64 = 1.,
                                       catch_errors::Bool = false)
     catch_errors = catch_errors | sampler
     if sampler
@@ -91,7 +91,7 @@ function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
     else
         update!(m, parameters)
     end
-    return posterior(m, data; sampler=sampler, φ_smc = φ_smc, catch_errors=catch_errors)
+    return posterior(m, data; sampler=sampler, ϕ_smc = ϕ_smc, catch_errors=catch_errors)
 
 end
 
