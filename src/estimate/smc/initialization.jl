@@ -21,13 +21,21 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
             while !success
                 try
                     update!(m, draw)
-                    draw_loglh   = likelihood(m, data)
+                    draw_loglh   = likelihood(m, data, catch_errors = true)
                     draw_logpost = prior(m)
-                catch
-                    draw = vec(rand(m.parameters, 1))
-                    continue # Keep drawing until you get valid draws
+                catch err
+                    if isa(err, ParamBoundsError)
+                        draw_loglh = draw_logpost = -Inf
+                    else
+                        throw(err)
+                    end
                 end
-                success = true
+
+                if isinf(draw_loglh)
+                    draw = vec(rand(m.parameters, 1))
+                else
+                    success = true
+                end
             end
             vector_reshape(draw, draw_loglh, draw_logpost)
         end
@@ -42,9 +50,13 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
                     update!(m, draws[:, i])
                     loglh[i] = likelihood(m, data)
                     logpost[i] = prior(m)
-                catch
-                    draws[:, i] = rand(m.parameters, 1)
-                    continue
+                catch err
+                    if isa(err, ParamBoundsError)
+                        draws[:, i] = rand(m.parameters, 1)
+                        continue
+                    else
+                        throw(err)
+                    end
                 end
                 success = true
             end
