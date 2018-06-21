@@ -162,17 +162,15 @@ end
 end
 
 function weighted_mean(c::ParticleCloud)
-    return sum(map(*, c.particles, get_weights(c)))
+    return squeeze(mean(get_vals(c), Weights(get_weights(c)), 2), 2)
 end
 
 function weighted_std(c::ParticleCloud)
-    temp = map(p -> (p - weighted_mean(c)).^2, c.particles)
-    return sqrt.(sum(map(*, temp, get_weights(c))))
+    return sqrt.(diag(weighted_cov(c)))
 end
 
 function weighted_cov(c::ParticleCloud)
-    demeaned_vals = (get_vals(c) .- weighted_mean(c))'
-    return (demeaned_vals .* get_weights(c))'*demeaned_vals
+    return cov(get_vals(c)', Weights(get_weights(c)), corrected = false)
 end
 
 for op in (:(Base.:+),
