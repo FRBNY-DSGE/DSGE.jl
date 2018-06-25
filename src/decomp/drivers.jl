@@ -125,7 +125,7 @@ end
 function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                             params_new::Vector{Float64}, params_old::Vector{Float64},
                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
-                            individual_shocks::Bool = false, check::Bool = false) where M<:AbstractModel
+                            check::Bool = false) where M<:AbstractModel
     # Check numbers of periods
     T, k, H = decomposition_periods(m_new, m_old, df_new, df_old, cond_new, cond_old)
 
