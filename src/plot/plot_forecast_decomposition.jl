@@ -145,6 +145,7 @@ function plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, c
                                      titles::Vector{String} = String[],
                                      individual_shocks::Bool = false,
                                      groups::Vector{ShockGroup} = shock_groupings(m_new),
+                                     plotroot::String = figurespath(m_new, "forecast"),
                                      verbose::Symbol = :low,
                                      kwargs...) where M<:AbstractModel
     # Create MeansBands
@@ -169,13 +170,15 @@ function plot_forecast_decomposition(m_new::M, m_old::M, vars::Vector{Symbol}, c
     for (var, title) in zip(vars, titles)
         # Call recipe
         plots[var] = shockdec(var, mbs..., groups;
+                              hist_label = "Historical Diff", forecast_label = "Forecast Diff",
                               ylabel = series_ylabel(m_new, var, class),
                               title = title, kwargs...)
 
         # Save plot
-        basename = Symbol(:decomp, individual_shocks ? :shocks : :total, "_", var)
-        output_file = get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old, basename, Symbol(),
+        base = Symbol(:decomp, individual_shocks ? :shocks : :total, "_", var)
+        output_file = get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old, base, Symbol(),
                                           pathfcn = figurespath, fileformat = plot_extension())
+        output_file = joinpath(plotroot, basename(output_file))
 
         save_plot(plots[var], output_file, verbose = verbose)
     end
