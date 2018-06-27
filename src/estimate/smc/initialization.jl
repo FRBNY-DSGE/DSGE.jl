@@ -8,12 +8,12 @@ Returns a tuple (logpost, loglh) and modifies the particle objects in the partic
 
 """
 function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
-                       parallel::Bool = false)
+                       parallel::Bool = false, verbose::Symbol = :low)
     n_parts = length(c)
     loglh = zeros(n_parts)
     logpost = zeros(n_parts)
     if parallel
-        draws, loglh, logpost = @parallel (vector_reduce) for i in 1:n_parts
+        draws, loglh, logpost = @sync @parallel (vector_reduce) for i in 1:n_parts
             draw = vec(rand(m.parameters, 1))
             draw_loglh = 0.
             draw_logpost = 0.
@@ -21,7 +21,7 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
             while !success
                 try
                     update!(m, draw)
-                    draw_loglh   = likelihood(m, data, catch_errors = true)
+                    draw_loglh   = likelihood(m, data, catch_errors = true, verbose = verbose)
                     draw_logpost = prior(m)
                 catch err
                     if isa(err, ParamBoundsError)
@@ -48,7 +48,7 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
             while !success
                 try
                     update!(m, draws[:, i])
-                    loglh[i] = likelihood(m, data)
+                    loglh[i] = likelihood(m, data, catch_errors = true, verbose = verbose)
                     logpost[i] = prior(m)
                 catch err
                     if isa(err, ParamBoundsError)
@@ -73,7 +73,7 @@ end
 # field, and for evaluating/saving the likelihood and posterior at the new data, which
 # here is just the argument, data.
 function initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
-                                 parallel::Bool = false)
+                                 parallel::Bool = false, verbose::Symbol = :low)
     # Retire log-likelihood values from the old estimation to the field old_loglh
     map(p -> p.old_loglh = p.loglh, c.particles)
 
@@ -85,14 +85,14 @@ function initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64}, c::Par
     if parallel
         loglh, logpost = @sync @parallel (scalar_reduce) for i in 1:n_parts
             update!(m, draws[:, i])
-            draw_loglh = likelihood(m, data)
+            draw_loglh = likelihood(m, data, verbose = verbose)
             draw_logpost = prior(m)
             scalar_reshape(draw_loglh, draw_logpost)
         end
     else
         for i in 1:n_parts
             update!(m, draws[:, i])
-            loglh[i] = likelihood(m, data)
+            loglh[i] = likelihood(m, data, verbose = verbose)
             logpost[i] = prior(m)
 
             # Will need a way to handle the case when the likelihood with the new data

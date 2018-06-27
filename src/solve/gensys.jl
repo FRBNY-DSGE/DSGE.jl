@@ -46,7 +46,7 @@ We constrain Julia to use the complex version of the `schurfact` routine regardl
 types of `Γ0` and `Γ1`, to match the behavior of Matlab.  Matlab always uses the complex version
 of the Schur decomposition, even if the inputs are real numbers.
 """
-function gensys(Γ0, Γ1, c, Ψ, Π, args...)
+function gensys(Γ0, Γ1, c, Ψ, Π, args...; verbose::Symbol = :high)
     F = try
         schurfact!(complex(Γ0), complex(Γ1))
     catch ex
@@ -68,15 +68,15 @@ function gensys(Γ0, Γ1, c, Ψ, Π, args...)
             rethrow(ex)
         end
     end
-    gensys(F, c, Ψ, Π, args...)
+    gensys(F, c, Ψ, Π, args...; verbose = verbose)
 end
 
-function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π)
-    gensys(F, c, Ψ, Π, new_div(F))
+function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π; verbose::Symbol = :high)
+    gensys(F, c, Ψ, Π, new_div(F), verbose = verbose)
 end
 
 # Method that does the real work. Work directly on the decomposition F
-function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
+function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div; verbose::Symbol = :high)
     eu = [0, 0]
     ϵ = 1e-6  # small number to check convergence
     nunstab = 0
@@ -141,7 +141,9 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
     if existence
         eu[1] = 1
     else
-        warn("Nonexistence: number of unstable roots exceeds number of jump variables")
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
+            warn("Nonexistence: number of unstable roots exceeds number of jump variables")
+        end
     end
 
     # Note that existence and uniqueness are not just matters of comparing
@@ -177,7 +179,9 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
     if unique
         eu[2] = 1
     else
-        warn("Indeterminacy: $(nloose) loose endogeneous error(s)")
+        if VERBOSITY[verbose] >= VERBOSITY[:high]
+            warn("Indeterminacy: $(nloose) loose endogeneous error(s)")
+        end
     end
 
 

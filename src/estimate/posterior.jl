@@ -120,7 +120,8 @@ filter over the main sample all at once.
 function likelihood{T<:AbstractFloat}(m::AbstractModel,
                                       data::Matrix{T};
                                       sampler::Bool = false,
-                                      catch_errors::Bool = false)
+                                      catch_errors::Bool = false,
+                                      verbose::Symbol = :high)
     catch_errors = catch_errors | sampler
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
@@ -135,7 +136,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
 
     # Compute state-space system
     system = try
-        compute_system(m)
+        compute_system(m, verbose = verbose)
     catch err
         if catch_errors && isa(err, GensysError)
             return -Inf
@@ -150,7 +151,9 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
         return kal[:total_loglh]
     catch err
         if catch_errors && isa(err, DomainError)
-            warn("Log of incremental likelihood is negative; returning -Inf")
+            if VERBOSITY[verbose] >= VERBOSITY[:high]
+                warn("Log of incremental likelihood is negative; returning -Inf")
+            end
             return -Inf
         else
             rethrow(err)
