@@ -78,8 +78,6 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                 end
             end
 
-            post_new = posterior!(m, para_new, data; sampler = true, ϕ_smc = ϕ_n) - para_new_density
-
             # Accept/Reject
             post_old = post - para_old_density
             η = exp(post_new - post_old)
