@@ -96,13 +96,13 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         cloud = load(loadpath, "cloud")
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
-        initialize_likelihoods!(m, data, cloud, parallel = parallel)
+        initialize_likelihoods!(m, data, cloud, parallel = parallel, verbose = verbose)
     else
         # Instantiating ParticleCloud object
         cloud = ParticleCloud(m, n_parts)
 
         # Modifies the cloud object in place to update draws, loglh, & logpost
-        initial_draw!(m, data, cloud, parallel = parallel)
+        initial_draw!(m, data, cloud, parallel = parallel, verbose = verbose)
 
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
     end
@@ -216,11 +216,11 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     if parallel
         new_particles = @parallel (vcat) for j in 1:n_parts
             mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                     c = c, α = α, old_data = old_data)
+                     c = c, α = α, old_data = old_data, verbose = verbose)
         end
     else
         new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                                  c = c, α = α, old_data = old_data) for j = 1:n_parts]
+                                  c = c, α = α, old_data = old_data, verbose = verbose) for j = 1:n_parts]
     end
 
     cloud.particles = new_particles
