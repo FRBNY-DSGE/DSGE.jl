@@ -16,7 +16,7 @@ For calculating the log marginal data density for a given posterior sample.
 - `calculation_method::Symbol`: either `:incremental_weights` or `:harmonic_mean`
 - `parallel::Bool`
 """
-function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{Float64}();
+function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{Float64}(0, 0);
                                estimation_method::Symbol = :smc, calculation_method = :incremental_weights,
                                parallel::Bool = false)
     if estimation_method == :mh && calculation_method == :incremental_weights
@@ -84,8 +84,7 @@ function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}
 
     p = 0.1:0.1:0.8
     pcrit = map(x -> chisqinvcdf(n_free_para, x), p)
-    # densfac = mean(logpost) - 60
-    densfac = -960
+    densfac = mean(logpost)
 
     θ_free = θ_all[free_para_inds, :]
     θ_bar_free = vec(mean(θ_free, 2))
