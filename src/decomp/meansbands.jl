@@ -1,6 +1,5 @@
 function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
-                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol},
-                             hs::UnitRange{Int};
+                             cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
                              verbose::Symbol = :low) where M<:AbstractModel
     # Print
     println(verbose, :low, )
@@ -8,7 +7,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
     println(verbose, :low, "Start time: " * string(now()))
     tic()
 
-    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes, hs)
+    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes)
 
     for class in classes
         print(verbose, :high, "Computing " * string(class) * "...")
@@ -22,7 +21,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         # Get to work!
         mapfcn = use_parallel_workers(m_new) ? pmap : map
         decomp_vec = mapfcn(var -> decomposition_means(m_new, m_old, input_type,
-                                                       cond_new, cond_old, class, var, hs),
+                                                       cond_new, cond_old, class, var),
                             variable_names)
         decomps = OrderedDict{Symbol, DataFrame}()
         for (var, decomp) in zip(variable_names, decomp_vec)
@@ -30,7 +29,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
         end
 
         # Write to file
-        output_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class, hs)
+        output_file = get_decomp_mean_file(m_new, m_old, input_type, cond_new, cond_old, class)
         output_dir = dirname(output_file)
         isdir(output_dir) || mkpath(output_dir)
         jldopen(output_file, "w") do file
@@ -43,16 +42,15 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
     total_mb_time     = toq()
     total_mb_time_min = total_mb_time/60
 
-    println(verbose, :low, "\nTotal time to compute scenario means and bands: " * string(total_mb_time_min) * " minutes")
+    println(verbose, :low, "\nTotal time to compute decomposition means and bands: " * string(total_mb_time_min) * " minutes")
     println(verbose, :low, "Computation of means and bands complete: " * string(now()))
 end
 
 function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
                              cond_new::Symbol, cond_old::Symbol,
-                             class::Symbol, var::Symbol,
-                             hs::UnitRange{Int}) where M<:AbstractModel
+                             class::Symbol, var::Symbol) where M<:AbstractModel
     # Read in dates
-    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, [class], hs)
+    input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, [class])
     input_file = input_files[Symbol(:decomptotal, class)]
     dates = jldopen(input_file, "r") do file
         sort(collect(keys(read(file, "date_indices"))))
@@ -60,50 +58,37 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
 
     decomp = DataFrame(date = dates)
 
-    # Non-individual shock components are ndraws x nperiods
-    for comp in [:state, :shock, :data, :param, :total]
+    for comp in [:data, :news, :shockdec, :dettrend, :para, :total]
         product = Symbol(:decomp, comp)
 
-        # Read in raw output
         input_file = input_files[Symbol(product, class)]
-        decomp_series, transform = jldopen(input_file, "r") do file
-            # Read in variable: ndraws x nperiods
-            decomp_series = read_forecast_series(file, class, product, var)
-
+        jldopen(input_file, "r") do file
             # Parse transform
             class_long = get_class_longname(class)
             transforms = read(file, string(class_long) * "_revtransforms")
             transform = parse_transform(transforms[var])
 
-            decomp_series, transform
-        end
+            # If shockdec, loop over shocks
+            loopkeys = if comp == :shockdec
+                shock_indices = read(file, "shock_indices")
+                collect(keys(shock_indices))
+            else
+                [comp]
+            end
 
-        # Reverse transform
-        transformed_decomp = scenario_mb_reverse_transform(decomp_series, transform, :forecast)
-
-        # Compute mean and add to DataFrame
-        decomp[comp] = vec(mean(transformed_decomp, 1))
-    end
-
-    # Individual shock components are ndraws x nperiods x nshocks
-    input_file = input_files[Symbol(:decompindshock, class)]
-    if isfile(input_file)
-        jldopen(input_file, "r") do file
-            shock_indices = read(file, "shock_indices")
-            for (shock, i) in shock_indices
-                # Read in variable and shock: ndraws x nperiods
-                decomp_series = read_forecast_series(file, class, :decompindshock, var, shock)
-
-                # Parse transform
-                class_long = get_class_longname(class)
-                transforms = read(file, string(class_long) * "_revtransforms")
-                transform = parse_transform(transforms[var])
+            for key in loopkeys
+                # Read in raw output: ndraws x nperiods
+                decomp_series = if comp == :shockdec
+                    read_forecast_series(file, class, product, var, key)
+                else
+                    read_forecast_series(file, class, product, var)
+                end
 
                 # Reverse transform
                 transformed_decomp = scenario_mb_reverse_transform(decomp_series, transform, :forecast)
 
                 # Compute mean and add to DataFrame
-                decomp[shock] = vec(mean(transformed_decomp, 1))
+                decomp[key] = vec(mean(transformed_decomp, 1))
             end
         end
     end

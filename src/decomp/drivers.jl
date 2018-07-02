@@ -1,11 +1,10 @@
 """
 ```
 decompose_forecast(m_new, m_old, df_new, df_old, input_type, cond_new, cond_old,
-    classes, hs; verbose = :low, kwargs...)
+    classes; verbose = :low, kwargs...)
 
 decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
-    cond_new, cond_old, classes, hs; individual_shocks = false,
-    check = false, atol = 1e-8)
+    cond_new, cond_old, classes; check = false)
 ```
 
 ### Inputs
@@ -14,11 +13,6 @@ decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
 - `df_new::DataFrame` and `df_old::DataFrame`
 - `cond_new::Symbol` and `cond_old::Symbol`
 - `classes::Vector{Symbol}`: some subset of `[:states, :obs, :pseudo]`
-- `hs::UnitRange{Int}`: horizons at which to calculate the forecast
-  decomposition *in terms of the old forecast*. That is, if the old forecast
-  uses data up to time T-k and the new forecast up to time T, this function
-  computes the decomposition for periods T-k+hs. All elements of `hs` must be
-  positive
 
 **Method 1 only:**
 
@@ -35,43 +29,43 @@ decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
 
 - `check::Bool`: whether to check that the individual components add up to the
   correct total difference in forecasts. This roughly doubles the runtime
-- `atol::Float64`: absolute tolerance used if `check = true`
 
 **Method 1 only:**
 
 - `verbose::Symbol`
 
-**Method 2 only:**
-
-- `individual_shocks::Bool`: whether to decompose the shock component into
-  individual shocks
-
 ### Outputs
 
 The first method returns nothing. The second method returns
 `decomp::Dict{Symbol, Matrix{Float64}}`, which has keys of the form
-`:decomp<component><class>` and values of size `Ny` x `length(hs)` (where `Ny`
-is the number of variables in the given class).
+`:decomp<component><class>` and values of size `Ny` x `Nh`, where
+
+- `Ny` is the number of variables in the given class
+- `Nh` is the number of common forecast periods, i.e. periods between
+  `date_forecast_start(m_new)` and `date_forecast_end(m_old)`
 """
 function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                             input_type::Symbol, cond_new::Symbol, cond_old::Symbol,
-                            classes::Vector{Symbol}, hs::UnitRange{Int};
+                            classes::Vector{Symbol};
                             verbose::Symbol = :low, kwargs...) where M<:AbstractModel
     # Get output file names
-    decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes, hs)
+    decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes)
 
     info(verbose, :low, "Decomposing forecast...")
     println(verbose, :low, "Start time: $(now())")
+
+    # Set up call to lower-level method
+    f(params_new::Vector{Float64}, params_old::Vector{Float64}) =
+      decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
+                         cond_new, cond_old, classes; kwargs...)
 
     # Single-draw forecasts
     if input_type in [:mode, :mean, :init]
 
         params_new = load_draws(m_new, input_type, verbose = verbose)
         params_old = load_draws(m_old, input_type, verbose = verbose)
-
-        decomps = decompose_forecast(m_new, m_old, df_new, df_old, params_new, params_old,
-                                     cond_new, cond_old, classes, hs; kwargs...)
-        write_forecast_decomposition(m_new, m_old, input_type, classes, hs, decomp_output_files, decomps,
+        decomps = f(params_new, params_old)
+        write_forecast_decomposition(m_new, m_old, input_type, classes, decomp_output_files, decomps,
                                      verbose = verbose)
 
     # Multiple-draw forecasts
@@ -89,17 +83,13 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
             # Get to work!
             params_new = load_draws(m_new, input_type, block_inds[block], verbose = verbose)
             params_old = load_draws(m_old, input_type, block_inds[block], verbose = verbose)
-
             mapfcn = use_parallel_workers(m_new) ? pmap : map
-            decomps = mapfcn((param_new, param_old) ->
-                             decompose_forecast(m_new, m_old, df_new, df_old, param_new, param_old,
-                                                cond_new, cond_old, classes, hs; kwargs...),
-                             params_new, params_old)
+            decomps = mapfcn(f, params_new, params_old)
 
             # Assemble outputs from this block and write to file
             decomps = convert(Vector{Dict{Symbol, Array{Float64}}}, decomps)
             decomps = assemble_block_outputs(decomps)
-            write_forecast_decomposition(m_new, m_old, input_type, classes, hs, decomp_output_files, decomps,
+            write_forecast_decomposition(m_new, m_old, input_type, classes, decomp_output_files, decomps,
                                          block_number = Nullable(block), block_inds = block_inds_thin[block],
                                          verbose = verbose)
             gc()
@@ -126,104 +116,76 @@ end
 
 function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                             params_new::Vector{Float64}, params_old::Vector{Float64},
-                            cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol},
-                            hs::UnitRange{Int};
-                            individual_shocks::Bool = false,
-                            check::Bool = false, atol::Float64 = 1e-8) where M<:AbstractModel
+                            cond_new::Symbol, cond_old::Symbol, classes::Vector{Symbol};
+                            check::Bool = false) where M<:AbstractModel
+    # Check numbers of periods
+    T, k, H = decomposition_periods(m_new, m_old, df_new, df_old, cond_new, cond_old)
 
-    # Compute numbers of periods
-    # k_cond is h adjusted for (differences in) conditioning
-    T0, T, k, T1_new, T1_old, k_cond =
-        decomposition_periods(m_new, m_old, cond_new, cond_old)
+    # Forecast
+    f(m::AbstractModel, df::DataFrame, params::Vector{Float64}, cond_type::Symbol; kwargs...) =
+        decomposition_forecast(m, df, params, cond_type, T, k, H;
+                               kwargs..., check = check)
 
-    @assert size(df_new, 1) == T0 + T + T1_new
-    @assert size(df_old, 1) == T0 + T + T1_old - k
-
-    # Update parameters, filter, and smooth
-    sys_new, sys_old, s_new_new_tgt, s_new_new_tgT, ϵ_new_new_tgT, s_old_new_Tmk_Tmk, s_old_old_Tmk_Tmk =
-        prepare_decomposition!(m_new, m_old, df_new, df_old, params_new, params_old,
-                               cond_new, cond_old, k_cond; atol = atol)
-
-    s_new_new_Tmk_Tmk = s_new_new_tgt[:, end-k_cond]
-    s_new_new_Tmk_T   = s_new_new_tgT[:, end-k_cond]
+    out1 = f(m_new, df_new, params_new, cond_new, outputs = [:shockdec])            # new data, new params
+    out2 = f(m_old, df_old, params_new, cond_old, outputs = [:shockdec, :forecast]) # old data, new params
+    out3 = f(m_old, df_old, params_old, cond_old, outputs = [:forecast])            # old data, old params
 
     # Initialize output dictionary
     decomp = Dict{Symbol, Array{Float64}}()
 
+    # Decomposition
     for class in classes
-        # Initialize output matrix
-        ZZ, _ = class_measurement_matrices(sys_new, class)
-        Ny    = size(ZZ, 1)
-        Ne    = size(sys_new[:RRR], 2)
-        Nh    = length(hs)
-        for comp in [:state, :shock, :data, :param, :total]
-            output_var = Symbol(:decomp, comp, class)
-            decomp[output_var] = zeros(Ny, Nh)
-        end
-        decomp[Symbol(:decompindshock, class)] = if individual_shocks
-            zeros(Ny, Nh, Ne)
-        else
-            zeros(0, 0, 0)
-        end
+        # All elements of out are of size Ny x Nh, where the second dimension
+        # ranges from t = T+1:T+H
+        forecastvar = Symbol(:histforecast, class) # Z s_{T+h} + D
+        trendvar    = Symbol(:trend,        class) # Z D
+        dettrendvar = Symbol(:dettrend,     class) # Z T^{T+h} s_0 + D
+        shockdecvar = Symbol(:shockdec,     class) # Z \sum_{t=1}^{T+h} T^{T+h-t} R ϵ_t + D
+        datavar     = Symbol(:data,         class) # Z \sum_{t=1}^{T-k} T^{T+h-t} R ϵ_t + D
+        newsvar     = Symbol(:news,         class) # Z \sum_{t=T-k+1}^{T+h} T^{T+h-t} R ϵ_t + D
 
-        for (i, h) in enumerate(hs)
-            # Adjust h for (differences in) conditioning
-            h_cond = h - T1_old
-            @assert h_cond >= 0
+        # 1(a). Data revision and news
+        data_comp = (out1[dettrendvar] - out2[dettrendvar]) + (out1[datavar] - out2[datavar])
+        decomp[Symbol(:decompdata, class)] = data_comp
 
-            # Decompose into components
-            state_comp = decompose_states_reest(sys_new, s_new_new_Tmk_Tmk, s_new_new_Tmk_T,
-                                                class, k_cond, h_cond)
-            shock_comp, indshock_comps = decompose_shocks_observed(sys_new, ϵ_new_new_tgT,
-                                                                   class, k_cond, h_cond,
-                                                                   individual_shocks = individual_shocks)
-            if check
-                @assert check_states_shocks_decomp(sys_new, s_new_new_tgt, s_new_new_tgT, class,
-                                                   k_cond, h_cond, state_comp, shock_comp, atol = atol)
-            end
+        news_comp = out1[newsvar] - out2[newsvar]
+        decomp[Symbol(:decompnews, class)] = news_comp
 
-            data_comp = decompose_data_revisions(sys_new, s_new_new_Tmk_Tmk, s_old_new_Tmk_Tmk,
-                                                 class, k_cond, h_cond)
-            param_comp = decompose_param_reest(sys_new, sys_old, s_old_new_Tmk_Tmk, s_old_old_Tmk_Tmk,
-                                               class, k_cond, h_cond)
+        # 1(b). Shock decomposition and deterministic trend
+        shockdec_comp = out1[shockdecvar] - out2[shockdecvar] # Ny x Nh x Ne
+        decomp[Symbol(:decompshockdec, class)] = shockdec_comp
 
-            decomp[Symbol(:decompstate, class)][:, i] = state_comp
-            decomp[Symbol(:decompshock, class)][:, i] = shock_comp
-            decomp[Symbol(:decompdata,  class)][:, i] = data_comp
-            decomp[Symbol(:decompparam, class)][:, i] = param_comp
-            if individual_shocks
-                decomp[Symbol(:decompindshock, class)][:, i, :] = indshock_comps
-            end
+        dettrend_comp = out1[dettrendvar] - out2[dettrendvar]
+        decomp[Symbol(:decompdettrend, class)] = dettrend_comp
 
-            # Compute total difference
-            decomp[Symbol(:decomptotal, class)][:, i] = state_comp + shock_comp + data_comp + param_comp
-        end
+        # Check that 1(a) and 1(b) are equal
+        check && @assert dettrend_comp + squeeze(sum(shockdec_comp, 3), 3) ≈ data_comp + news_comp
+
+        # 2. Parameter re-estimation
+        para_comp = out2[forecastvar] - out3[forecastvar]
+        decomp[Symbol(:decomppara, class)] = para_comp
+
+        # 1 + 2. Total difference
+        total_diff = para_comp + data_comp + news_comp
+        decomp[Symbol(:decomptotal, class)] = total_diff
+        check && @assert total_diff ≈ out1[forecastvar] - out3[forecastvar]
     end
-
-    check && @assert check_total_decomp(m_new, m_old, df_new, df_old, sys_new, sys_old,
-                                        cond_new, cond_old, classes, decomp,
-                                        T, k, hs; atol = atol)
 
     return decomp
 end
 
 """
 ```
-decomposition_periods(m_new, m_old, cond_new, cond_old)
+decomposition_periods(m_new, m_old, df_new, df_old, cond_new, cond_old)
 ```
 
-Compute and return numbers of periods.
+Returns `T`, `k`, and `H`, where:
 
-### Outputs
-
-- `T0::Int`: number of presample periods. Must be the same for `m_new` and `m_old`
-- `T::Int`: number of main-sample periods for `m_new`
-- `k::Int`: difference in number of main-sample periods between `m_old` and
-  `m_new`. `m_old` has `T-k`
-- `T1_new::Int` and `T1_old::Int`: number of conditional periods for each model
-- `k_cond::Int`: difference in number of main-sample + conditional periods
+- New model has `T` periods of data
+- Old model has `T-k` periods of data
+- Old and new models both forecast up to `T+H`
 """
-function decomposition_periods(m_new::M, m_old::M,
+function decomposition_periods(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
                                cond_new::Symbol, cond_old::Symbol) where M<:AbstractModel
     # Number of presample periods T0 must be the same
     T0 = n_presample_periods(m_new)
@@ -239,233 +201,86 @@ function decomposition_periods(m_new::M, m_old::M,
     T1_new = cond_new == :none ? 0 : n_conditional_periods(m_new)
     T1_old = cond_old == :none ? 0 : n_conditional_periods(m_old)
 
-    # Adjust k for (differences in) conditioning
-    k_cond = k + T1_new - T1_old
+    # Check DataFrame sizes
+    @assert size(df_new, 1) == T0 + T + T1_new
+    @assert size(df_old, 1) == T0 + T - k + T1_old
 
-    return T0, T, k, T1_new, T1_old, k_cond
+    # Old model forecasts up to T+H
+    H = subtract_quarters(date_forecast_end(m_old), date_mainsample_end(m_new))
+
+    return T, k, H
 end
 
 """
 ```
-prepare_decomposition!(m_new, m_old, df_new, df_old, params_new, params_old,
-    cond_new, cond_old, k; atol = 1e-8)
+decomposition_forecast(m, df, params, cond_type, keep_startdate, keep_enddate, shockdec_splitdate;
+    outputs = [:forecast, :shockdec], check = false)
 ```
 
-Update `m_new` and `m_old` with `params_new` and `params_old`,
-respectively. Compute state-space matrices, filter, and smooth.
+Equivalent of `forecast_one_draw` for forecast decomposition. `keep_startdate =
+date_forecast_start(m_new)` corresponds to time T+1, `keep_enddate =
+date_forecast_end(m_old)` to time T+H, and `shockdec_splitdate =
+date_mainsample_end(m_old)` to time T-k.
 
-### Outputs
+Returns `out::Dict{Symbol, Array{Float64}}`, which has keys determined as follows:
 
-- `sys_new::System` and `sys_old::System`
-- `s_new_new_tgt::Matrix{Float64}`: filtered states using `df_new` and `params_new`
-- `s_new_new_tgT::Matrix{Float64}`: smoothed states using `df_new` and `params_new`
-- `ϵ_new_new_tgT::Matrix{Float64}`: smoothed shocks using `df_new` and `params_new`
-- `s_old_new_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_old` and `params_new`
-- `s_old_old_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_old` and `params_old`
+- If `:forecast in outputs` or `check = true`:
+  - `:forecast<class>`
+
+- If `:shockdec in outputs`:
+  - `:trend<class>`
+  - `:dettrend<class>`
+  - `:data<class>`: like a shockdec, but only applying smoothed shocks up to `shockdec_splitdate`
+  - `:news<class>`: like a shockdec, but only applying smoothed shocks after `shockdec_splitdate`
 """
-function prepare_decomposition!(m_new::M, m_old::M, df_new::DataFrame, df_old::DataFrame,
-                                params_new::Vector{Float64}, params_old::Vector{Float64},
-                                cond_new::Symbol, cond_old::Symbol,
-                                k::Int; atol::Float64 = 1e-8) where M<:AbstractModel
-    # Update parameters
-    update!(m_new, params_new)
-    update!(m_old, params_old)
-    sys_new = compute_system(m_new)
-    sys_old = compute_system(m_old)
+function decomposition_forecast(m::AbstractModel, df::DataFrame, params::Vector{Float64}, cond_type::Symbol,
+                                T::Int, k::Int, H::Int;
+                                outputs::Vector{Symbol} = [:forecast, :shockdec], check::Bool = false)
+    # Compute state space
+    update!(m, params)
+    system = compute_system(m)
 
-    # Filter and smooth
-    s_new_new_tgt = filter(m_new, df_new, sys_new, cond_type = cond_new, outputs = [:filt],
-                                include_presample = false)[:s_filt]
-    s_new_new_tgT, ϵ_new_new_tgT = smooth(m_new, df_new, sys_new, cond_type = cond_new, draw_states = false)
+    # Initialize output dictionary
+    out = Dict{Symbol, Array{Float64}}()
 
-    s_old_new_Tmk_Tmk = filter(m_new, df_old, sys_new, cond_type = cond_old, outputs = Symbol[],
-                                    include_presample = false)[:s_T]
-    s_old_old_Tmk_Tmk = filter(m_old, df_old, sys_old, cond_type = cond_old, outputs = Symbol[],
-                                    include_presample = false)[:s_T]
+    # Smooth and forecast
+    histstates, histshocks, histpseudo, s_0 = smooth(m, df, system, cond_type = cond_type, draw_states = false)
+    histobs = system[:ZZ] * histstates .+ system[:DD]
 
-    # Check sizes
-    T = size(s_new_new_tgt, 2)
-    @assert size(s_new_new_tgT, 2) == size(ϵ_new_new_tgT, 2) == T
-    @assert isapprox(s_new_new_tgt[:, end], s_new_new_tgT[:, end], atol = atol)
+    if :forecast in outputs || check
+        s_T = histstates[:, end]
+        _, forecastobs, forecastpseudo, _ =
+            forecast(m, system, s_T, cond_type = cond_type, enforce_zlb = false, draw_shocks = false)
 
-    return sys_new, sys_old, s_new_new_tgt, s_new_new_tgT, ϵ_new_new_tgT, s_old_new_Tmk_Tmk, s_old_old_Tmk_Tmk
-end
-
-"""
-```
-decompose_states_reest(sys_new, s_Tmk_Tmk, s_Tmk_T, class, k, h)
-```
-
-Compute the difference in forecasts attributable to changes in estimates of the
-state s_{T-k}.
-
-### Inputs
-
-- `sys_new::System`: state-space matrices under new parameters
-- `s_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_new` and `params_new`
-- `s_Tmk_T::Vector{Float64}`: s_{T-k|T} from smoothing using `df_new` and `params_new`
-- `class::Symbol
-- `k::Int`
-- `h::Int`
-
-### Outputs
-
-- `state_comp::Vector{Float64}`
-"""
-function decompose_states_reest(sys_new::System, s_Tmk_Tmk::Vector{Float64},
-                                s_Tmk_T::Vector{Float64}, class::Symbol, k::Int, h::Int)
-    # New parameters, new data
-    TTT = sys_new[:TTT]
-    ZZ, _ = class_measurement_matrices(sys_new, class)
-
-    # State component = Z T^h (s_{T-k|T} - s_{T-k|T-k})
-    state_comp = ZZ * TTT^h * (s_Tmk_T - s_Tmk_Tmk)
-    return state_comp
-end
-
-"""
-```
-decompose_shocks_observed(sys_new, ϵ_tgT, class, k, h; individual_shocks = false)
-```
-
-Compute the difference in forecasts attributable to observing the shock sequence
-ϵ_{T-k+1:min(T-k+h,T)}. (If h <= k, then T-k+h <= T and we observe shocks up to
-T-k+h. If h > k, then T-k+h > T and we observe shocks up to T.)
-
-### Inputs
-
-- `sys_new::System`: state-space matrices under new parameters
-- `ϵ_tgT::Matrix{Float64}`: ϵ_{t|T}, t = 1:T from smoothing using `df_new` and `params_new`
-- `classes::Vector{Symbol}
-- `k::Int`
-- `h::Int`
-
-### Keyword Arguments
-
-- `individual_shocks::Bool` whether to decompose into the contributions of
-  observing each individual shock (like in a shock decomposition)
-
-### Outputs
-
-- `shock_comp::Vector{Float64}`: size `nobs` x 1
-- `indshock_comps::Matrix{Float64}`: either size `nobs` x `nshocks` (if
-  `individual_shocks = true`) or an empty matrix
-"""
-function decompose_shocks_observed(sys_new::System, ϵ_tgT::Matrix{Float64},
-                                   class::Symbol, k::Int, h::Int;
-                                   individual_shocks::Bool = false)
-    # New parameters, new data
-    TTT, RRR, CCC = sys_new[:TTT], sys_new[:RRR], sys_new[:CCC]
-    ZZ, _ = class_measurement_matrices(sys_new, class)
-    Ns = size(TTT, 1)
-    Ne = size(RRR, 2)
-    Nt = size(ϵ_tgT, 2)
-
-    # Shock component = Z sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ_{T-k+j|T} )
-    shock_sum = zeros(Ns)
-    for j = 1:min(k, h)
-        shock_sum .+= TTT^(h-j) * RRR * ϵ_tgT[:, end-k+j]
-    end
-    shock_comp = ZZ * shock_sum
-
-    # Component for shock i = Z sum_{j=1}^(min(k,h)) ( T^(h-j) R ϵ^i_{T-k+j|T} )
-    indshock_comps = if individual_shocks
-        shock_sum = zeros(Ns, Ne)
-        for i = 1:Ne
-            ϵ_i_tgT = zeros(Ne, Nt)
-            ϵ_i_tgT[i, :] = ϵ_tgT[i, :]
-            for j = 1:min(k, h)
-                shock_sum[:, i] .+= TTT^(h-j) * RRR * ϵ_i_tgT[:, end-k+j]
-            end
-        end
-        ZZ * shock_sum
-    else
-        Matrix{Float64}(0, 0)
-    end
-    return shock_comp, indshock_comps
-end
-
-"""
-```
-decompose_data_revision(sys_new, s_new_Tmk_Tmk, s_old_Tmk_Tmk, class, k, h)
-```
-
-Compute y^{d_new,θ_new}_{T-k+h|T-k} - y^{d_old,θ_new}_{T-k+h|T-k}, the
-difference in forecasts attributable to data revisions.
-
-### Inputs
-
-- `sys_new::System`: state-space matrices under new parameters
-- `s_new_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_new` and `params_new`
-- `s_old_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_old` and `params_new`
-- `class::Symbol`
-- `k::Int`
-- `h::Int`
-
-### Outputs
-
-- `data_comp::Vector{Float64}`
-"""
-function decompose_data_revisions(sys_new::System, s_new_Tmk_Tmk::Vector{Float64},
-                                  s_old_Tmk_Tmk::Vector{Float64}, class::Symbol,
-                                  k::Int, h::Int)
-    # New parameters, new and old data
-    TTT = sys_new[:TTT]
-    ZZ, _ = class_measurement_matrices(sys_new, class)
-
-    # Data revision component = y^new_{T-k+h|T-k} - y^old_{T-k+h|T-k}
-    #     = Z T^h ( s^new_{T-k|T-k} - s^old_{T-k|T-k} )
-    data_comp = ZZ * TTT^h * (s_new_Tmk_Tmk - s_old_Tmk_Tmk)
-    return data_comp
-end
-
-"""
-```
-decompose_param_reest(sys_new, sys_old, s_new_Tmk_Tmk, s_old_Tmk_Tmk, class, k, h)
-```
-
-Compute y^{d_old,θ_new}_{T-k+h|T-k} - y^{d_old,θ_old}_{T-k+h|T-k}, the
-difference in forecasts attributable to parameter re-estimation.
-
-### Inputs
-
-- `sys_new::System`: state-space matrices under new parameters
-- `sys_old::System`: state-space matrices under old parameters
-- `s_new_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_old` and `params_new`
-- `s_old_Tmk_Tmk::Vector{Float64}`: s_{T-k|T-k} from filtering using `df_old` and `params_old`
-- `class::Symbol`
-- `k::Int`
-- `h::Int`
-
-### Outputs
-
-- `param_comp::Vector{Float64}`
-"""
-function decompose_param_reest(sys_new::System, sys_old::System,
-                               s_new_Tmk_Tmk::Vector{Float64}, s_old_Tmk_Tmk::Vector{Float64},
-                               class::Symbol, k::Int, h::Int)
-    # New and old parameters, old data
-    ZZ_new, DD_new = class_measurement_matrices(sys_new, class)
-    ZZ_old, DD_old = class_measurement_matrices(sys_old, class)
-
-    function forecast(system::System, s_0::Vector{Float64}, h::Int)
-        TTT, CCC = system[:TTT], system[:CCC]
-        s_h = TTT^h * s_0
-        for j = 1:h
-            s_h .+= TTT^(j-1) * CCC
-        end
-        return s_h
+        out[:histforecastobs]    = hcat(histobs,    forecastobs)[:, 1:T+H]
+        out[:histforecastpseudo] = hcat(histpseudo, forecastpseudo)[:, 1:T+H]
     end
 
-    # y^new_{T-k+h|T-k} = Z^new (T^new^h s^new_{T-k|T-k} + \sum_{j=1}^h (T^new)^(j-1) C^new) + D^new
-    s_new_Tmkph_Tmk = forecast(sys_new, s_new_Tmk_Tmk, h)
-    y_new_Tmkph_Tmk = ZZ_new * s_new_Tmkph_Tmk + DD_new
+    # Compute trend, dettrend, and shockdecs
+    if :shockdec in outputs
+        nstates = n_states_augmented(m)
+        nshocks = n_shocks_exogenous(m)
 
-    # y^old_{T-k+h|T-k} = Z^old (T^old^h s^old_{T-k|T-k} + \sum_{j=1}^h (T^old)^(j-1) C^old) + D^old
-    s_old_Tmkph_Tmk = forecast(sys_old, s_old_Tmk_Tmk, h)
-    y_old_Tmkph_Tmk = ZZ_old * s_old_Tmkph_Tmk + DD_old
+        _, out[:trendobs],    out[:trendpseudo]    = trends(system)
+        _, out[:dettrendobs], out[:dettrendpseudo] = deterministic_trends(system, s_0, T+H, 1, T+H)
 
-    # Parameter re-estimation component = y^new_{T-k+h|T-k} - y^old_{T-k+h|T-k}
-    param_comp = y_new_Tmkph_Tmk - y_old_Tmkph_Tmk
-    return param_comp
+        # Applying all shocks
+        _, out[:shockdecobs], out[:shockdecpseudo] =
+            shock_decompositions(system, forecast_horizons(m), histshocks, 1, T+H)
+
+        # Applying ϵ_{1:T-k} and ϵ_{T-k+1:end}
+        system0 = zero_system_constants(system)
+
+        data_shocks = zeros(nshocks, T+H)
+        data_shocks[:, 1:T-k] = histshocks[:, 1:T-k]
+        _, out[:dataobs], out[:datapseudo], _ = forecast(system0, zeros(nstates), data_shocks)
+
+        Tstar = size(histshocks, 2) # either T or T+1
+        news_shocks = zeros(nshocks, T+H)
+        news_shocks[:, T-k+1:Tstar] = histshocks[:, T-k+1:Tstar]
+        _, out[:newsobs], out[:newspseudo], _ = forecast(system0, zeros(nstates), news_shocks)
+    end
+
+    # Return
+    return out
 end
