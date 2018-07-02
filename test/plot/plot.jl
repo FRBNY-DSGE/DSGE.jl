@@ -73,10 +73,9 @@ m_old <= Setting(:date_forecast_start, quartertodate("2014-Q4"))
 m_old <= Setting(:date_conditional_end, quartertodate("2014-Q4"))
 df_new = load_data(m)
 df_old = df_new[1:end-4, :]
-@time decompose_forecast(m, m_old, df_new, df_old, :mode, :none, :none, [:obs], 1:12;
-                         individual_shocks = true, verbose = :none)
-@time decomposition_means(m, m_old, :mode, :none, :none, [:obs], 1:12, verbose = :none)
+@time decompose_forecast(m, m_old, df_new, df_old, :mode, :none, :none, [:obs]; verbose = :none)
+@time decomposition_means(m, m_old, :mode, :none, :none, [:obs], verbose = :none)
 for indshocks in [true, false]
-    plot_forecast_decomposition(m, m_old, [:obs_nominalrate], :obs, :mode, :none, :none, 1:12,
+    plot_forecast_decomposition(m, m_old, [:obs_nominalrate], :obs, :mode, :none, :none,
                                 individual_shocks = indshocks, verbose = :none)
 end
