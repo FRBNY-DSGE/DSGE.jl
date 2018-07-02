@@ -27,7 +27,7 @@ like:
   (increase from baseline).  How does the economy respond?
 
 We will conceive of all alternative scenario forecasts as occuring in
-"deviations from baseline scenario". That is, if the scenario consists of
+"deviations from baseline forecast". That is, if the scenario consists of
 spreads increasing by 50 basis points, then we want this to be independent of
 the underlying model and baseline forecast, such that in our own forecast,
 spreads actually are 50 basis points above our baseline forecast.
@@ -37,12 +37,9 @@ spreads actually are 50 basis points above our baseline forecast.
 
 ### The `Scenario` Type
 
-The `Scenario` type encodes the basic information needed to forecast one
-scenario draw. (A scenario draw is one set of target paths. Often, multiple
-draws of target paths will be associated with one scenario name, which
-collectively make up a forecast distribution for the particular scenario.)
-
-For now, we'll consider the following fields of the `Scenario` type:
+The `Scenario` type encodes the basic information needed to forecast an
+alternative scenario. For now, we'll consider the following fields of the
+`Scenario` type:
 
 - `key::Symbol`: scenario identifier, appearing in file names
 - `description::String`: longer name, e.g. "High Spreads"
@@ -55,12 +52,17 @@ For now, we'll consider the following fields of the `Scenario` type:
   at least as many instruments as there are targets. If this field is the empty
   array, then all model shocks will be used
 - `targets::DataFrame`: contains the specific target values, *given in deviations
-  from some baseline scenario*. No `:date` field is required, since the scenario
+  from some baseline forecast*. No `:date` field is required, since the scenario
   is assumed to begin in the first forecasted period of the model
 - `instruments::DataFrame`: initially empty `DataFrame`, which is populated
   after backing out the necessary shocks to hit the targets
 - `vintage::String`: scenario vintage in `yymmdd` format, which can be different
   from the data vintage
+- `n_draws::Int`: number of scenario draws. A scenario draw is one set of target
+  paths. Often, multiple draws of target paths will be associated with one
+  scenario name, which collectively make up a forecast distribution for the
+  particular scenario. This field is usually initialized to 0 and then updated
+  upon reading in the target draws
 
 ### Setting Up Input Target Paths
 
@@ -89,7 +91,7 @@ with some exceptions:
   instruments.
 - Forecasting is done in deviations from baseline. That is, let ``s^a_t`` and
   ``s^b_t`` be the state vectors under the alternative and baseline scenarios
-  respectively, and define ``y^a_t`` and ``yb_t`` analogously for observable
+  respectively, and define ``y^a_t`` and ``y^b_t`` analogously for observable
   vectors. Then the state space in deviations is
 
   ```math
@@ -123,7 +125,7 @@ likewise similar to `compute_meansbands` for regular forecasts. The default
 
 ```
 output_vars = [:forecastutobs, :forecastobs, :forecast4qobs,
-              :forecastutpseudo, :forecastpseudo, :forecast4qpseudo]
+               :forecastutpseudo, :forecastpseudo, :forecast4qpseudo]
 ```
 
 The product `:forecastut` refers to untransformed forecasts, i.e. forecasts in
@@ -202,18 +204,30 @@ the original scenario:
 ## Aggregating Multiple Scenarios
 
 Finally, we are sometimes interested in aggregating the forecast draws from
-multiple `SingleScenario`s. We define the `ScenarioAggregate` type, which has
-the following fields:
+multiple scenarios. We define the `ScenarioAggregate` type, which has the
+following fields:
 
 - `key::Symbol`
 - `description::String`
-- `scenario_groups::Vector{Vector{SingleScenario}}`
-- `proportions::Vector{Float64}`: vector of the same length as
-  `scenario_groups`. Scenario draws from the scenarios in `scenario_groups[i]`
-  are sampled into the aggregate distribution with probability `proportions[i]`
+- `scenarios::Vector{AbstractScenario}`: vector of component scenarios, **some
+  of which might be themselves `ScenarioAggregates`**
+- `sample::Bool`: indicates whether to
+- `proportions::Vector{Float64}`: vector of relative scenario proportions
 - `total_draws::Int`: desired final number of draws
 - `replace::Bool`: indicates whether to sample with replacement
 - `vintage::String`
+
+In addition to the default constructor, there are two more `ScenarioAggregate`
+constructors, corresponding to the two possible values of `sample`. The key,
+description, vector of component scenarios, and vintage are always specified.
+
+- `sample = false`: No additional fields are required for this constructor, as
+  the component scenario draws are kept in their original proportions. The
+  `proportions` and `total_draws` fields are initialized to dummy values and are
+  updated when the component draws are read in. `replace` is set to false.
+- `sample = true`: Additionally specify `proportions`, `total_draws`, and
+  `replace`. Draws from `scenarios[i]` are sampled into the aggregate
+  distribution with probability `proportions[i]`
 
 `SingleScenario` and `ScenarioAggregate` are both subtypes of the abstract type
 `AbstractScenario`. The actual sampling and aggregating of scenario draws
