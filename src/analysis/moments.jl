@@ -1,5 +1,70 @@
 """
 ```
+function load_posterior_moments(m; load_bands = true, include_fixed = false)
+```
+
+Load posterior moments (mean, std) of parameters for a particular sample, and optionally
+also load 5% and 95% lower and upper bands.
+
+### Keyword Arguments
+- `load_bands::Bool`: Optionally include the 5% and 95% percentiles for the sample of parameters
+in the returned df
+- `include_fixed::Bool`: Optionally include the fixed parameters in the returned df
+- `excl_list::Vector{Symbol}`: List parameters by their key that you want to exclude from
+loading
+
+### Outputs
+- `df`: A dataframe containing the aforementioned moments/bands
+"""
+function load_posterior_moments(m::AbstractModel; load_bands::Bool = true,
+                                include_fixed::Bool = false,
+                                excl_list::Vector{Symbol} = Vector{Symbol}(0))
+
+    if include_fixed
+        parameters          = m.parameters
+        parameter_indices   = 1:n_parameters(m)
+    else
+        parameters          = Base.filter(x -> x.fixed == false, m.parameters)
+        parameter_indices   = find(x -> x.fixed == false, m.parameters)
+    end
+
+    n_params = length(parameter_indices)
+
+    # Remove excluded parameters
+    non_excl_indices = find(x -> !(x in excl_list), [parameters[i].key for i in 1:n_params])
+    parameters = parameters[non_excl_indices]
+    parameter_indices = parameter_indices[non_excl_indices]
+
+    n_particles = get_setting(m, :n_particles)
+
+    # Read in Posterior Draws
+    params = load_draws(m, :full)
+    params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params
+    params_mean = vec(mean(params, 1))
+    params_std  = vec(std(params, 1))
+
+    df = DataFrame()
+    df[:param] = [DSGE.detexify(parameters[i].tex_label) for i in 1:length(parameters)]
+    df[:post_mean] = params_mean[parameter_indices]
+    df[:post_std]  = params_std[parameter_indices]
+
+    if load_bands
+        post_lb = Vector{Float64}(length(parameters))
+        post_ub = similar(post_lb)
+        for i in 1:length(parameters)
+            post_lb[i] = quantile(params[:, parameter_indices][:, i], .05)
+            post_ub[i] = quantile(params[:, parameter_indices][:, i], .95)
+        end
+    end
+
+    df[:post_lb] = post_lb
+    df[:post_ub] = post_ub
+
+    return df
+end
+
+"""
+```
 moment_tables(m; percent = 0.90, subset_inds = 1:0, subset_string = "",
     verbose = :none)
 ```
