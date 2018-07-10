@@ -102,9 +102,8 @@ module DSGE
         which_density_bands,
         prepare_meansbands_tables_timeseries, prepare_means_tables_shockdec, prepare_meansbands_table_irf,
         write_meansbands_tables_timeseries, write_means_tables_shockdec, prepare_meansbands_table_irf,
-        write_meansbands_tables_all,
-        construct_fcast_and_hist_dfs,
-        df_to_table,
+        write_meansbands_tables_all, construct_fcast_and_hist_dfs,
+        df_to_table, load_posterior_moments,
 
         # altpolicy/
         AltPolicy, taylor93, taylor99,
@@ -120,6 +119,7 @@ module DSGE
         # plot/
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies, plot_scenario,
+        plot_posterior_intervals, plot_posterior_interval_comparison,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
@@ -203,6 +203,7 @@ module DSGE
     include("scenarios/transform.jl")
 
     include("plot/util.jl")
+    include("plot/plot_posterior_intervals.jl")
     include("plot/plot_prior_posterior.jl")
     include("plot/plot_impulse_response.jl")
     include("plot/plot_history_and_forecast.jl")
