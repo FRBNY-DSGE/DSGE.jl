@@ -13,6 +13,7 @@ The `Particle` type contains the values and weight of a given vector of paramete
 - `logpost::Float64`: The log-posterior of the Particle
 - `old_loglh::Float64`: The log-likelihood of the Particle evaluated at the old data (only non-zero during time tempering)
 - `old_logpost::Float64`: The log-posterior of the Particle evaluated at the old data (only non-zero during time tempering)
+- `accept::Bool`: Whether or not the mutation of the particle was accepted in the previous period
 """
 type Particle
     weight::Float64
