@@ -182,7 +182,7 @@ type ScenarioAggregate <: AbstractScenario
             if !all(p -> 0.0 <= p <= 1.0, proportions)
                 error("Elements of proportions must be between 0 and 1")
             end
-            if sum(proportions) != 1.0
+            if !(sum(proportions) ≈ 1.0)
                 error("Elements of proportions must sum to 1")
             end
         end
