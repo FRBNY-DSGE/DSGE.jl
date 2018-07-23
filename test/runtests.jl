@@ -20,7 +20,6 @@ my_tests = [
             "estimate/hessian",
             "estimate/csminwel",=#
             "estimate/optimize",
-            "estimate/eig",
             "estimate/metropolis_hastings",
             "estimate/smc",
             "estimate/mutation",
