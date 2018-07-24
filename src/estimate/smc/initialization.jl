@@ -1,6 +1,6 @@
 """
 ```
-initial_draw(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud)
+initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud)
 ```
 
 Draw from a general starting distribution (set by default to be from the prior) to initialize the SMC algorithm.
