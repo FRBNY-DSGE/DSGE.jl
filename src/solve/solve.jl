@@ -27,30 +27,39 @@ function solve(m::AbstractModel; apply_altpolicy = false, verbose::Symbol = :hig
     altpolicy_solve = alternative_policy(m).solve
 
 
-    if altpolicy_solve == solve || !apply_altpolicy
+    if get_setting(m, :solution_method) == :gensys
+        if altpolicy_solve == solve || !apply_altpolicy
 
-        # Get equilibrium condition matrices
-        Γ0, Γ1, C, Ψ, Π  = eqcond(m)
+            # Get equilibrium condition matrices
+            Γ0, Γ1, C, Ψ, Π  = eqcond(m)
 
-        # Solve model
-        TTT_gensys, CCC_gensys, RRR_gensys, fmat, fwt, ywt, gev, eu, loose =
-            gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = verbose)
+            # Solve model
+            TTT_gensys, CCC_gensys, RRR_gensys, fmat, fwt, ywt, gev, eu, loose =
+                gensys(Γ0, Γ1, C, Ψ, Π, 1+1e-6, verbose = verbose)
 
-        # Check for LAPACK exception, existence and uniqueness
-        if eu[1] != 1 || eu[2] != 1
-            throw(GensysError())
+            # Check for LAPACK exception, existence and uniqueness
+            if eu[1] != 1 || eu[2] != 1
+                throw(GensysError())
+            end
+
+            TTT_gensys = real(TTT_gensys)
+            RRR_gensys = real(RRR_gensys)
+            CCC_gensys = real(CCC_gensys)
+
+            # Augment states
+            TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
+
+        else
+            # Change the policy rule
+            TTT, RRR, CCC = altpolicy_solve(m)
         end
+    elseif get_setting(m, :solution_method) == :klein
+        steadystate!(m)
+        TTT_jump, TTT_state = klein_solve(m)
 
-        TTT_gensys = real(TTT_gensys)
-        RRR_gensys = real(RRR_gensys)
-        CCC_gensys = real(CCC_gensys)
-
-        # Augment states
-        TTT, RRR, CCC = augment_states(m, TTT_gensys, RRR_gensys, CCC_gensys)
-
-    else
-        # Change the policy rule
-        TTT, RRR, CCC = altpolicy_solve(m)
+        # Transition
+        TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
+        CCC = zeros(n_model_states(m))
     end
 
     return TTT, RRR, CCC
@@ -78,3 +87,27 @@ type GensysError <: Exception
 end
 GensysError() = GensysError("Error in Gensys")
 Base.showerror(io::IO, ex::GensysError) = print(io, ex.msg)
+
+# Need an additional transition_equation function to properly stack the
+# individual state and jump transition matrices/shock mapping matrices to
+# a single state space for all of the model_states
+function klein_transition_matrices(m::AbstractModel,
+                                   TTT_state::Matrix{Float64}, TTT_jump::Matrix{Float64})
+    TTT = zeros(n_model_states(m), n_model_states(m))
+
+    # Loading mapping time t states to time t+1 states
+    TTT[1:n_states(m), 1:n_states(m)] = TTT_state
+
+    # Loading mapping time t jumps to time t+1 states
+    TTT[1:n_states(m), n_states(m)+1:end] = 0.
+
+    # Loading mapping time t states to time t+1 jumps
+    TTT[n_states(m)+1:end, 1:n_states(m)] = TTT_jump*TTT_state
+
+    # Loading mapping time t jumps to time t+1 jumps
+    TTT[n_states(m)+1:end, n_states(m)+1:end] = 0.
+
+    RRR = shock_loading(m, TTT_jump)
+
+    return TTT, RRR
+end
