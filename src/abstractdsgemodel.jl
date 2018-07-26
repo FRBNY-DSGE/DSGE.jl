@@ -112,6 +112,30 @@ function (<=){T}(m::AbstractModel{T}, ssp::SteadyStateParameter)
     end
 end
 
+"""
+```
+(<=){T}(m::AbstractModel{T}, ssp::SteadyStateParameterGrid)
+```
+
+Add a new steady-state value to the model by appending `ssp` to the `m.steady_state` and
+adding `ssp.key` to `m.keys`.
+"""
+function (<=){T}(m::AbstractModel{T}, ssp::SteadyStateParameterGrid)
+
+    if !in(ssp.key, keys(m.keys))
+        new_param_index = length(m.keys) + 1
+
+        # append ssp to steady_state vector
+        push!(m.steady_state, ssp)
+
+        # add parameter location to dict
+        setindex!(m.keys, new_param_index, ssp.key)
+    else
+        # overwrite the previous parameter with the new one
+        setindex!(m, ssp, ssp.key)
+    end
+end
+
 Distributions.logpdf(m::AbstractModel) = logpdf(m.parameters)
 Distributions.pdf(m::AbstractModel) = exp(logpdf(m))
 
