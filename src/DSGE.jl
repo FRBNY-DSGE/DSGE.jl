@@ -123,8 +123,8 @@ module DSGE
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
-        Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, eqcond, measurement, pseudo_measurement,
-        shock_groupings,
+        Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, KrusellSmith, eqcond,
+        measurement, pseudo_measurement, shock_groupings,
 
         # util
         @test_matrix_approx_eq, @test_matrix_approx_eq_eps
@@ -213,50 +213,55 @@ module DSGE
     include("plot/plot_altpolicies.jl")
     include("plot/plot_scenario.jl")
 
-    include("models/financial_frictions.jl")
+    # Representative Agent Models
+    include("models/representative_agent/financial_frictions.jl")
 
-    include("models/m990/m990.jl")
-    include("models/m990/subspecs.jl")
-    include("models/m990/eqcond.jl")
-    include("models/m990/observables.jl")
-    include("models/m990/measurement.jl")
-    include("models/m990/pseudo_observables.jl")
-    include("models/m990/pseudo_measurement.jl")
-    include("models/m990/augment_states.jl")
+    include("models/representative_agent/m990/m990.jl")
+    include("models/representative_agent/m990/subspecs.jl")
+    include("models/representative_agent/m990/eqcond.jl")
+    include("models/representative_agent/m990/observables.jl")
+    include("models/representative_agent/m990/measurement.jl")
+    include("models/representative_agent/m990/pseudo_observables.jl")
+    include("models/representative_agent/m990/pseudo_measurement.jl")
+    include("models/representative_agent/m990/augment_states.jl")
 
-    include("models/m1002/m1002.jl")
-    include("models/m1002/subspecs.jl")
-    include("models/m1002/eqcond.jl")
-    include("models/m1002/observables.jl")
-    include("models/m1002/measurement.jl")
-    include("models/m1002/pseudo_observables.jl")
-    include("models/m1002/pseudo_measurement.jl")
-    include("models/m1002/augment_states.jl")
+    include("models/representative_agent/m1002/m1002.jl")
+    include("models/representative_agent/m1002/subspecs.jl")
+    include("models/representative_agent/m1002/eqcond.jl")
+    include("models/representative_agent/m1002/observables.jl")
+    include("models/representative_agent/m1002/measurement.jl")
+    include("models/representative_agent/m1002/pseudo_observables.jl")
+    include("models/representative_agent/m1002/pseudo_measurement.jl")
+    include("models/representative_agent/m1002/augment_states.jl")
 
-    include("models/m1010/m1010.jl")
-    include("models/m1010/subspecs.jl")
-    include("models/m1010/eqcond.jl")
-    include("models/m1010/observables.jl")
-    include("models/m1010/measurement.jl")
-    include("models/m1010/pseudo_observables.jl")
-    include("models/m1010/pseudo_measurement.jl")
-    include("models/m1010/augment_states.jl")
+    include("models/representative_agent/m1010/m1010.jl")
+    include("models/representative_agent/m1010/subspecs.jl")
+    include("models/representative_agent/m1010/eqcond.jl")
+    include("models/representative_agent/m1010/observables.jl")
+    include("models/representative_agent/m1010/measurement.jl")
+    include("models/representative_agent/m1010/pseudo_observables.jl")
+    include("models/representative_agent/m1010/pseudo_measurement.jl")
+    include("models/representative_agent/m1010/augment_states.jl")
 
-    include("models/smets_wouters/smets_wouters.jl")
-    include("models/smets_wouters/subspecs.jl")
-    include("models/smets_wouters/eqcond.jl")
-    include("models/smets_wouters/observables.jl")
-    include("models/smets_wouters/measurement.jl")
-    include("models/smets_wouters/augment_states.jl")
+    include("models/representative_agent/smets_wouters/smets_wouters.jl")
+    include("models/representative_agent/smets_wouters/subspecs.jl")
+    include("models/representative_agent/smets_wouters/eqcond.jl")
+    include("models/representative_agent/smets_wouters/observables.jl")
+    include("models/representative_agent/smets_wouters/measurement.jl")
+    include("models/representative_agent/smets_wouters/augment_states.jl")
 
-    include("models/an_schorfheide/an_schorfheide.jl")
-    include("models/an_schorfheide/subspecs.jl")
-    include("models/an_schorfheide/eqcond.jl")
-    include("models/an_schorfheide/observables.jl")
-    include("models/an_schorfheide/measurement.jl")
-    include("models/an_schorfheide/pseudo_observables.jl")
-    include("models/an_schorfheide/pseudo_measurement.jl")
-    include("models/an_schorfheide/augment_states.jl")
+    include("models/representative_agent/an_schorfheide/an_schorfheide.jl")
+    include("models/representative_agent/an_schorfheide/subspecs.jl")
+    include("models/representative_agent/an_schorfheide/eqcond.jl")
+    include("models/representative_agent/an_schorfheide/observables.jl")
+    include("models/representative_agent/an_schorfheide/measurement.jl")
+    include("models/representative_agent/an_schorfheide/pseudo_observables.jl")
+    include("models/representative_agent/an_schorfheide/pseudo_measurement.jl")
+    include("models/representative_agent/an_schorfheide/augment_states.jl")
 
+    # Heterogeneous Agent Models
+    include("models/heterogeneous_agent/krusell_smith/krusell_smith.jl")
+    include("models/heterogeneous_agent/krusell_smith/observables.jl")
+    include("models/heterogeneous_agent/krusell_smith/measurement.jl")
 
 end
