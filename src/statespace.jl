@@ -198,7 +198,7 @@ function compute_system_function{S<:AbstractFloat}(system::System{S})
 
     # Define transition and measurement functions
     @inline Φ(s_t1::Vector{S}, ϵ_t::Vector{S}) = TTT*s_t1 + RRR*ϵ_t + CCC
-    @inline Ψ(s_t::Vector{S},  u_t::Vector{S}) = ZZ*s_t + DD + u_t
+    @inline Ψ(s_t::Vector{S}) = ZZ*s_t + DD
 
     # Define shock and measurement error distributions
     nshocks = size(QQ, 1)
