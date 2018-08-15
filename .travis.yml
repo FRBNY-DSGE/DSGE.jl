@@ -1,11 +1,15 @@
 language: julia
 os:
     - osx
-#   - linux
+    - linux
 julia:
     - 0.6.0
 notifications:
     email: false
+addons:
+  apt:
+    packages:
+    - hdf5-tools
 script:
     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
 #   - julia --color=yes -e 'Pkg.clone(pwd()); Pkg.build("DSGE"); Pkg.test("DSGE")'
