@@ -15,7 +15,7 @@ addons:
   apt:
     packages:
     - hdf5-tools
-    - libn1opt0
+    - libnlopt0
 script:
     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
 #   - julia --color=yes -e 'Pkg.clone(pwd()); Pkg.build("DSGE"); Pkg.test("DSGE")'
