@@ -1,7 +1,7 @@
-using DSGE
+using DSGE, StateSpaceRoutines
 using JLD
 using Base.Test
-import DSGE: jacobian
+import DSGE: jacobian, n_observables, n_shocks_exogenous, n_backward_looking_states, n_model_states
 
 path = dirname(@__FILE__)
 
@@ -107,4 +107,89 @@ saved_hx = load("$path/reference/klein.jld", "hx")
 @testset "Solve" begin
     @test @test_matrix_approx_eq saved_gx TTT_jump
     @test @test_matrix_approx_eq saved_hx TTT_state
+end
+
+### Filtering
+
+# Setup
+N    = 200
+m    = KrusellSmith()
+endo = m.endogenous_states
+
+# Model Solution/Transition Equation
+TTT, RRR, CCC = solve(m)
+
+# Measurement Equation
+meas = measurement(m, TTT, RRR, CCC)
+ZZ  = meas[:ZZ]
+DD  = meas[:DD]
+EE  = fill(0.1, (1,1))
+QQ  = meas[:QQ]
+
+# Generate measurement errors and shocks
+srand(42)
+u_t     = EE*randn(n_observables(m), N)
+ε_t     = QQ*randn(n_shocks_exogenous(m), N)
+
+####################################
+# Simulate states forward N periods
+####################################
+s_t = zeros(n_model_states(m), N)
+for t in 1:N
+    # Initialize with shock around steady state
+    if t == 1
+        s_t[:, t] = RRR*ε_t[:, t]
+    else
+        s_t[:, t] = TTT*s_t[:, t-1] + RRR*ε_t[:, t]
+    end
+end
+
+# Simulation in terms of grid values
+simulated_log_gdp = vec(s_t[endo[:z′_t], :] + (m[:α]/m[:Kstar])*s_t[endo[:K′_t], :])
+meas_log_gdp      = simulated_log_gdp + u_t[1, :]
+
+##########
+# Filter!
+##########
+
+# Measurement equation
+data = ZZ*s_t + u_t   # Should be the same as meas_log_gdp
+
+# Initialize with 0 initial condition
+s_0     = zeros(n_model_states(m))
+P_0     = RRR*QQ*RRR'
+
+# Testing the simulation and filter setup
+file = jldopen("$path/reference/simulate_and_filter.jld", "r")
+saved_u_t  = read(file, "u_t")
+saved_ε_t  = read(file, "eps_t")
+saved_s_t  = read(file, "s_t")
+saved_s_jump_t = read(file, "s_jump_t")
+saved_simulated_log_gdp = read(file, "simulated_log_gdp")
+saved_meas_log_gdp = read(file, "meas_log_gdp")
+saved_data = read(file, "data")
+saved_s_0  = read(file, "s_0")
+saved_P_0  = read(file, "P_0")
+close(file)
+
+@testset "Simulate and Filter" begin
+    @test saved_u_t ≈ u_t
+    @test saved_ε_t ≈ ε_t
+    @test saved_s_t ≈ s_t[1:n_backward_looking_states(m), :]
+    @test saved_s_jump_t ≈ s_t[n_backward_looking_states(m)+1:end, :]
+    @test saved_simulated_log_gdp ≈ simulated_log_gdp
+    @test saved_meas_log_gdp ≈ meas_log_gdp
+    @test saved_data ≈ data
+    @test saved_s_0 ≈ s_0[1:n_backward_looking_states(m)]
+    @test saved_P_0 ≈ P_0[1:n_backward_looking_states(m), 1:n_backward_looking_states(m)]
+end
+
+# Testing the filter inputs against the outputs
+EE_zero = zeros(1, 1)
+reference_output = load("$path/reference/filter_inputs_output.jld")
+test = kalman_filter(reference_output["y"], TTT, RRR, CCC, QQ, ZZ,
+                     DD, EE_zero, s_0, P_0)
+
+@testset "Check Filter Output" begin
+    @test test[1] ≈ reference_output["loglik"]
 end
