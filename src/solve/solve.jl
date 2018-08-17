@@ -55,7 +55,7 @@ function solve(m::AbstractModel; apply_altpolicy = false, verbose::Symbol = :hig
         end
     elseif get_setting(m, :solution_method) == :klein
         steadystate!(m)
-        TTT_jump, TTT_state = klein_solve(m)
+        TTT_jump, TTT_state = klein(m)
 
         # Transition
         TTT, RRR = klein_transition_matrices(m, TTT_state, TTT_jump)
