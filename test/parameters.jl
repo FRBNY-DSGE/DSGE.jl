@@ -1,13 +1,15 @@
 using DSGE
 using Base.Test, Distributions
 
-for T in subtypes(Transform)
-    u = parameter(:σ_pist, 2.5230, (1e-8, 5.), (1e-8, 5.), T(), fixed=false)
-    @test ( transform_to_real_line(u) |> x -> transform_to_model_space(u,x) ) == u.value
+@testset "Ensure transformations to the real line/model space are valid" begin
+    for T in subtypes(Transform)
+        u = parameter(:σ_pist, 2.5230, (1e-8, 5.), (1e-8, 5.), T(), fixed=false)
+        @test ( transform_to_real_line(u) |> x -> transform_to_model_space(u,x) ) == u.value
 
-    if !isa(T,Type{DSGE.Untransformed})
-        # check transform_to_real_line and transform_to_model_space to different things if T is not DSGE.Untransformed
-        @test transform_to_real_line(u,u.value) != transform_to_model_space(u,u.value)
+        if !isa(T,Type{DSGE.Untransformed})
+            # check transform_to_real_line and transform_to_model_space to different things if T is not DSGE.Untransformed
+            @test transform_to_real_line(u,u.value) != transform_to_model_space(u,u.value)
+        end
     end
 end
 
@@ -20,33 +22,43 @@ pvec =  ParameterVector{Float64}(N)
 for i in 1:length(pvec)
 	pvec[i] = (i%2 == 0) ? u : v
 end
-@test logpdf(pvec) ≈ 50*logpdf(v)
-@test pdf(pvec) ≈ exp(50*logpdf(v))
+@testset "Check logpdf/pdf function approximations" begin
+    @test logpdf(pvec) ≈ 50*logpdf(v)
+    @test pdf(pvec) ≈ exp(50*logpdf(v))
+end
 
 updated = update(pvec, ones(length(pvec)))
 update!(pvec, ones(length(pvec)))
 
-@test all(updated .== pvec)
-@test logpdf(pvec) == logpdf(updated)
+@testset "Check if update! preserves dimensions and values" begin
+    @test all(updated .== pvec)
+    @test logpdf(pvec) == logpdf(updated)
+end
 
-# test we only update unfixed parameters
-for p in pvec
-	if p.fixed
-		@test p.value == 2.5230
-	elseif isa(p, Parameter)
-		@test p.value == one(Float64)
-	end
+# test we only update non-fixed parameters
+@testset "Ensure only non-fixed parameters are updated" begin
+    for p in pvec
+        if p.fixed
+            @test p.value == 2.5230
+        elseif isa(p, Parameter)
+            @test p.value == one(Float64)
+        end
+    end
 end
 
 # vector of new values must be the same length
-@test_throws AssertionError update!(pvec, ones(length(pvec)-1))
+@testset "Ensure update! enforces the same length of the parameter vector being updated" begin
+    @test_throws AssertionError update!(pvec, ones(length(pvec)-1))
+end
 
-for w in [parameter(:moop, 3.0, fixed=false), parameter(:moop, 3.0; scaling = log, fixed=false)]
-	# new values must be of the same type
-	@test_throws MethodError parameter(w, one(Int))
+@testset "Ensure parameters being updated are of the same type." begin
+    for w in [parameter(:moop, 3.0, fixed=false), parameter(:moop, 3.0; scaling = log, fixed=false)]
+        # new values must be of the same type
+        @test_throws MethodError parameter(w, one(Int))
 
-	# new value is out of bounds
-	@test_throws ParamBoundsError parameter(w, -1.)
+        # new value is out of bounds
+        @test_throws ParamBoundsError parameter(w, -1.)
+    end
 end
 
 # subspecs
@@ -80,25 +92,27 @@ end
 m = AnSchorfheide()
 sstest(m)
 
-@test m[:ι_w].value == 0.0
-@test m[:ι_w].valuebounds == (0.0, .9999)
-@test m[:ι_w].transform == DSGE.Untransformed()
-@test m[:ι_w].transform_parameterization == (0.0,0.9999)
-@test isa(m[:ι_w].prior.value, Normal)
+@testset "Test steady-state parameters" begin
+    @test m[:ι_w].value == 0.0
+    @test m[:ι_w].valuebounds == (0.0, .9999)
+    @test m[:ι_w].transform == DSGE.Untransformed()
+    @test m[:ι_w].transform_parameterization == (0.0,0.9999)
+    @test isa(m[:ι_w].prior.value, Normal)
 
-@test m[:ι_p].value == 0.0
-@test m[:ι_p].valuebounds == (0.0, 0.0)
-@test isnull(m[:ι_p].prior)
-@test m[:ι_p].fixed == true
+    @test m[:ι_p].value == 0.0
+    @test m[:ι_p].valuebounds == (0.0, 0.0)
+    @test isnull(m[:ι_p].prior)
+    @test m[:ι_p].fixed == true
 
-@test m[:δ].value == 0.02
-@test m[:δ].valuebounds == (0.02, 0.02)
-@test isnull(m[:δ].prior)
-@test m[:δ].fixed == true
+    @test m[:δ].value == 0.02
+    @test m[:δ].valuebounds == (0.02, 0.02)
+    @test isnull(m[:δ].prior)
+    @test m[:δ].fixed == true
 
-@test m[:ϵ_p].value == 0.750
-@test m[:ϵ_p].transform == DSGE.Exponential()
-@test isa(m[:ϵ_p].prior.value, Gamma)
-@test m[:ϵ_p].fixed==false
+    @test m[:ϵ_p].value == 0.750
+    @test m[:ϵ_p].transform == DSGE.Exponential()
+    @test isa(m[:ϵ_p].prior.value, Gamma)
+    @test m[:ϵ_p].fixed==false
+end
 
 nothing

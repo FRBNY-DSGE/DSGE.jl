@@ -30,7 +30,10 @@ hessian, _ = hessian!(m, mode, data; verbose=:none)
 # are needed.
 expect = hessian_expected[1:max_free_ind, 1:max_free_ind]
 actual = hessian[1:max_free_ind, 1:max_free_ind]
-@test_matrix_approx_eq_eps expect actual 0.1 3.0
+
+@testset "Check Hessian calculation" begin
+    @test @test_matrix_approx_eq_eps expect actual 0.1 3.0
+end
 
 m.testing = false
 

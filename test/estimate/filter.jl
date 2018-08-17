@@ -17,28 +17,32 @@ exp_kal = jldopen("$path/../reference/filter_out.jld", "r") do file
 end
 
 # Without providing z0 and P0
-kal = DSGE.filter(m, df, system)
-for out in fieldnames(kal)
-    expect = exp_kal[out]
-    actual = kal[out]
+@testset "Check Kalman filter outputs without initializing state/state-covariance" begin
+    kal = DSGE.filter(m, df, system)
+    for out in fieldnames(kal)
+        expect = exp_kal[out]
+        actual = kal[out]
 
-    if ndims(expect) == 0
-        @test expect ≈ actual
-    else
-        @test_matrix_approx_eq(expect, actual)
+        if ndims(expect) == 0
+            @test expect ≈ actual
+        else
+            @test @test_matrix_approx_eq(expect, actual)
+        end
     end
 end
 
 # Providing z0 and P0
-kal = DSGE.filter(m, df, system, z0, P0)
-for out in fieldnames(kal)
-    expect = exp_kal[out]
-    actual = kal[out]
+@testset "Check Kalman filter outputs initializing state/state-covariance" begin
+    kal = DSGE.filter(m, df, system, z0, P0)
+    for out in fieldnames(kal)
+        expect = exp_kal[out]
+        actual = kal[out]
 
-    if ndims(expect) == 0
-        @test expect ≈ actual
-    else
-        @test_matrix_approx_eq(expect, actual)
+        if ndims(expect) == 0
+            @test expect ≈ actual
+        else
+            @test @test_matrix_approx_eq(expect, actual)
+        end
     end
 end
 
