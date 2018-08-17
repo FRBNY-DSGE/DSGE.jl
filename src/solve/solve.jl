@@ -85,27 +85,3 @@ type GensysError <: Exception
 end
 GensysError() = GensysError("Error in Gensys")
 Base.showerror(io::IO, ex::GensysError) = print(io, ex.msg)
-
-# Need an additional transition_equation function to properly stack the
-# individual state and jump transition matrices/shock mapping matrices to
-# a single state space for all of the model_states
-function klein_transition_matrices(m::AbstractModel,
-                                   TTT_state::Matrix{Float64}, TTT_jump::Matrix{Float64})
-    TTT = zeros(n_model_states(m), n_model_states(m))
-
-    # Loading mapping time t states to time t+1 states
-    TTT[1:n_states(m), 1:n_states(m)] = TTT_state
-
-    # Loading mapping time t jumps to time t+1 states
-    TTT[1:n_states(m), n_states(m)+1:end] = 0.
-
-    # Loading mapping time t states to time t+1 jumps
-    TTT[n_states(m)+1:end, 1:n_states(m)] = TTT_jump*TTT_state
-
-    # Loading mapping time t jumps to time t+1 jumps
-    TTT[n_states(m)+1:end, n_states(m)+1:end] = 0.
-
-    RRR = shock_loading(m, TTT_jump)
-
-    return TTT, RRR
-end

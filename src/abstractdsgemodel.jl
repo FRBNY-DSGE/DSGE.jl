@@ -218,6 +218,7 @@ n_parameters_free(m::AbstractModel)         = sum([!α.fixed for α in m.paramet
 
 # Convenience functions for working with heterogeneous agent models
 # that differentiate between backward looking "state" variables and "jump" variables
+n_backward_looking_states(m::AbstractModel) = get_setting(m, :n_backward_looking_states)
 n_jumps(m::AbstractModel) = get_setting(m, :n_jumps)
 n_model_states(m::AbstractModel) = get_setting(m, :n_model_states)
 
@@ -228,8 +229,8 @@ n_model_states(m::AbstractModel) = get_setting(m, :n_model_states)
 # However, the number of jumps and states unnormalized are required for
 # the construction of the Jacobian, hence the reason for these helpers
 n_jumps_unnormalized(m::AbstractModel) = n_jumps(m) + get_setting(m, :normalize_distr_variables)
-n_states_unnormalized(m::AbstractModel) = n_states(m) + get_setting(m, :normalize_distr_variables)
-n_model_states_unnormalized(m::AbstractModel) = n_jumps_unnormalized(m) + n_states_unnormalized(m)
+n_backward_looking_states_unnormalized(m::AbstractModel) = n_backward_looking_states(m) + get_setting(m, :normalize_distr_variables)
+n_model_states_unnormalized(m::AbstractModel) = n_jumps_unnormalized(m) + n_backward_looking_states_unnormalized(m)
 
 """
 ```
