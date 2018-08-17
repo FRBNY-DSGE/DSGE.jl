@@ -1,4 +1,5 @@
 using DSGE, JLD
+using Base.Test
 
 path = dirname(@__FILE__)
 
@@ -24,18 +25,22 @@ exp_states, exp_obs, exp_pseudo, exp_shocks =
 # Without shocks
 states, obs, pseudo, shocks = forecast(m, system, s_0; draw_shocks = false)
 
-@test_matrix_approx_eq exp_states states
-@test_matrix_approx_eq exp_obs    obs
-@test_matrix_approx_eq exp_pseudo pseudo
-@test_matrix_approx_eq exp_shocks shocks
+@testset "Testing forecasting without drawing shocks" begin
+    @test @test_matrix_approx_eq exp_states states
+    @test @test_matrix_approx_eq exp_obs    obs
+    @test @test_matrix_approx_eq exp_pseudo pseudo
+    @test @test_matrix_approx_eq exp_shocks shocks
+end
 
 # Supplying shocks
 states, obs, pseudo, shocks = forecast(m, system, s_0; shocks = shocks)
 
-@test_matrix_approx_eq exp_states states
-@test_matrix_approx_eq exp_obs    obs
-@test_matrix_approx_eq exp_pseudo pseudo
-@test_matrix_approx_eq exp_shocks shocks
+@testset "Testing forecasting with pre-supplied shocks" begin
+    @test @test_matrix_approx_eq exp_states states
+    @test @test_matrix_approx_eq exp_obs    obs
+    @test @test_matrix_approx_eq exp_pseudo pseudo
+    @test @test_matrix_approx_eq exp_shocks shocks
+end
 
 # Draw normally distributed shocks
 states, obs, pseudo, shocks = forecast(m, system, s_0; draw_shocks = true)
@@ -52,12 +57,13 @@ zlb_value = forecast_zlb_value(m)
 shocks = zeros(n_shocks_exogenous(m), forecast_horizons(m))
 shocks[ind_r_sh, :] = -10.
 
-states, obs, pseudo, shocks = forecast(m, system, s_0; shocks = shocks)
-@assert all(x -> x < zlb_value, obs[ind_r, :])
+@testset "Ensure valid forecasting at the ZLB" begin
+    states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks)
+    @test all(x -> x < zlb_value, obs[ind_r, :])
 
-states, obs, pseudo, shocks = forecast(m, system, s_0; shocks = shocks, enforce_zlb = true)
-@assert all(x -> abs(x - zlb_value) < 0.01, obs[ind_r, :])
-@assert all(x -> x != -10.,                 shocks[ind_r_sh, :])
-
+    states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks, enforce_zlb = true)
+    @test all(x -> abs(x - zlb_value) < 0.01, obs[ind_r, :])
+    @test all(x -> x != -10.,                 shocks[ind_r_sh, :])
+end
 
 nothing

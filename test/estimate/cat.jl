@@ -17,8 +17,10 @@ exp_kal12 = jldopen("$path/../reference/kalman_cat_out.jld", "r") do file
     read(file, "kal12")
 end
 
-for arg in fieldnames(kal1)
-    @test exp_kal12[arg] ≈ kal12[arg]
+@testset "Testing Kalman output concatenation" begin
+    for arg in fieldnames(kal1)
+        @test exp_kal12[arg] ≈ kal12[arg]
+    end
 end
 
 nothing
