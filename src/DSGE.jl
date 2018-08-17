@@ -142,6 +142,8 @@ module DSGE
     include("observables.jl")
     include("statespace.jl")
     include("util.jl")
+    include("grids.jl")
+    include("chebyshev.jl")
 
     include("data/load_data.jl")
     include("data/fred_data.jl")
