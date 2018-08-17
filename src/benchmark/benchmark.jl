@@ -3,10 +3,39 @@ using JLD
 
 """
 ```
-print_all_benchmarks(trial, prev_trial, trial_name; stats = [:min, :median, :mean, :max], factors = [:times, :gctimes, :memory, :allocs])
+print_all_benchmarks(trial, ref, trial_name; stats = [:min, :median, :mean, :max], factors = [:times, :gctimes, :memory, :allocs])
 ```
 
 For printing the benchmark comparisons given by the BenchmarkTools package of a single trial.
+
+### Arguments
+- `trial::BenchmarkTools.Trial`: A trial of type BenchmarkTools.Trial, outputted from `@benchmark`.
+- `ref::String`: The location of the previous trial, saved by the `write_ref_trial` method
+- `trial_name::String`: The name of the trial being benchmarked, i.e. `forecast_one`, if the `forecast_one` function is the trial being benchmarked
+"""
+function print_all_benchmarks(trial::BenchmarkTools.Trial, ref::String,
+                              trial_name::String;
+                              stats::Vector{Symbol} = [:min, :median, :mean, :max],
+                              factors::Vector{Symbol} = [:times, :gctimes, :memory, :allocs])
+    print_all_benchmarks(trial_to_dict(trial), ref, trial_name, stats = stats, factors = factors)
+end
+
+# For a single trial comparison
+function print_all_benchmarks(trial::Dict{Symbol, Union{Vector, Int}}, ref::String,
+                              trial_name::String;
+                              stats::Vector{Symbol} = [:min, :median, :mean, :max],
+                              factors::Vector{Symbol} = [:times, :gctimes, :memory, :allocs])
+    prev_trial = load(ref, trial_name)
+    print_all_benchmarks(trial, prev_trial, trial_name, stats = stats, factors = factors)
+end
+
+
+"""
+```
+print_all_benchmarks(trial, prev_trial, trial_name; stats = [:min, :median, :mean, :max], factors = [:times, :gctimes, :memory, :allocs])
+```
+
+The underlying method for printing the benchmark comparisons given by the BenchmarkTools package of a single trial.
 
 ### Arguments
 - `trial::Dict{Symbol, Union{Vector, Int}}`: A dictionary mapping the `factors` to their values for an individual trial.
@@ -45,23 +74,6 @@ function print_all_benchmarks(trial::Dict{Symbol, Union{Vector, Int}},
         end
         print("\n")
     end
-end
-
-# For a single trial comparison
-function print_all_benchmarks(trial::BenchmarkTools.Trial, ref::String,
-                              trial_name::String;
-                              stats::Vector{Symbol} = [:min, :median, :mean, :max],
-                              factors::Vector{Symbol} = [:times, :gctimes, :memory, :allocs])
-    print_all_benchmarks(trial_to_dict(trial), ref, trial_name, stats = stats, factors = factors)
-end
-
-# For a single trial comparison
-function print_all_benchmarks(trial::Dict{Symbol, Union{Vector, Int}}, ref::String,
-                              trial_name::String;
-                              stats::Vector{Symbol} = [:min, :median, :mean, :max],
-                              factors::Vector{Symbol} = [:times, :gctimes, :memory, :allocs])
-    prev_trial = load(ref, trial_name)
-    print_all_benchmarks(trial, prev_trial, trial_name, stats = stats, factors = factors)
 end
 
 """
