@@ -39,8 +39,8 @@ trial_names = [:forecast_one, :compute_meansbands, :meansbands_to_matrix]
 group = construct_trial_group(trials, trial_names)
 group_name = "modal_meansbands"
 
-print_all_benchmarks(group, "../reference/$group_name.jld", group_name, trial_names)
 # write_ref_trial_group(group, trial_names, group_name)
+print_all_benchmarks(group, "../reference/$group_name.jld", group_name, trial_names)
 
 #######################
 # Full-distribution
@@ -59,5 +59,5 @@ trial_names = [:forecast_one, :compute_meansbands, :meansbands_to_matrix]
 group = construct_trial_group(trials, trial_names)
 group_name = "full_meansbands"
 
-print_all_benchmarks(group, "../reference/$group_name.jld", group_name, trial_names)
 # write_ref_trial_group(group, trial_names, group_name)
+print_all_benchmarks(group, "../reference/$group_name.jld", group_name, trial_names)
