@@ -265,5 +265,7 @@ module DSGE
     include("models/heterogeneous_agent/krusell_smith/krusell_smith.jl")
     include("models/heterogeneous_agent/krusell_smith/observables.jl")
     include("models/heterogeneous_agent/krusell_smith/measurement.jl")
+    include("models/heterogeneous_agent/krusell_smith/steady_state.jl")
+    include("models/heterogeneous_agent/krusell_smith/subspecs.jl")
 
 end
