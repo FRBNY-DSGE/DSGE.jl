@@ -212,6 +212,10 @@ function KrusellSmith(subspec::String="ss0";
     init_grids!(m)
 
     init_model_indices!(m)
+    init_subspec!(m)
+
+    # Solve for the steady state
+    steadystate!(m)
 
     # So that the indices of m.endogenous_states reflect the normalization
     normalize_state_indices!(m)
@@ -244,11 +248,13 @@ function init_parameters!(m::KrusellSmith)
     m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
                    description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label="\\sigma_{z}")
-    m <= parameter(:μ_s, 0., fixed = true, description = "μ_s: Mu of log normal in income")
+    m <= parameter(:μ_s, 0., fixed = true, description = "μ_s: Mu of log normal in income",
+                   tex_label = "\\mu_s")
     m <= parameter(:σ_s, 0.5, fixed = true,
-                   description = "σ_s: Sigma of log normal in income")
+                   description = "σ_s: Sigma of log normal in income",
+                   tex_label = "\\sigma_s")
 
-    m <= parameter(:e_y, 0.1, fixed = true, description = "e_y: Measurement error on GDP",
+    m <= parameter(:e_y, 1e-3, fixed = true, description = "e_y: Measurement error on GDP",
                    tex_label = "e_y")
 
     # Setting steady-state parameters
@@ -342,7 +348,7 @@ function model_settings!(m::KrusellSmith)
     m <= Setting(:n_jumps, 160 - get_setting(m, :normalize_distr_variables),
                  "Number of jump variables (forward looking) accounting for
                 the discretization across the grid")
-    m <= Setting(:n_model_states, get_setting(m, :n_states) + get_setting(m, :n_jumps),
+    m <= Setting(:n_model_states, n_states(m) + n_jumps(m),
                  "Number of 'states' in the state space model. Because backward and forward
                  looking variables need to be explicitly tracked for the Klein solution
                  method, we have n_states and n_jumps")
