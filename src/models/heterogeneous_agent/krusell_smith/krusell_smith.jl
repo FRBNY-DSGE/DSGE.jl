@@ -325,16 +325,16 @@ function model_settings!(m::KrusellSmith)
                  variables")
     m <= Setting(:jump_indices, 5:6, "Which indices of m.endogenous_states correspond to jump
                  variables")
-    m <= Setting(:n_states, 162 - get_setting(m, :normalize_distr_variables),
+    m <= Setting(:n_backward_looking_states, 162 - get_setting(m, :normalize_distr_variables),
                  "Number of state variables, in the true sense (fully
                  backward looking) accounting for the discretization across the grid")
     m <= Setting(:n_jumps, 160 - get_setting(m, :normalize_distr_variables),
                  "Number of jump variables (forward looking) accounting for
                 the discretization across the grid")
-    m <= Setting(:n_model_states, n_states(m) + n_jumps(m),
+    m <= Setting(:n_model_states, n_backward_looking_states(m) + n_jumps(m),
                  "Number of 'states' in the state space model. Because backward and forward
                  looking variables need to be explicitly tracked for the Klein solution
-                 method, we have n_states and n_jumps")
+                 method, we have n_backward_looking_states and n_jumps")
 
     # Mollifier setting parameters
     m <= Setting(:In, 0.443993816237631, "Normalizing constant for the mollifier")
