@@ -1,4 +1,5 @@
 using DSGE, JLD
+using Base.Test
 
 path = dirname(@__FILE__)
 
@@ -18,8 +19,10 @@ exp_states, exp_obs, exp_pseudo =
         read(file, "exp_states"), read(file, "exp_obs"), read(file, "exp_pseudo")
     end
 
-@test_matrix_approx_eq exp_states states
-@test_matrix_approx_eq exp_obs    obs
-@test_matrix_approx_eq exp_pseudo pseudo
+@testset "Compare irfs to expected output" begin
+    @test @test_matrix_approx_eq exp_states states
+    @test @test_matrix_approx_eq exp_obs    obs
+    @test @test_matrix_approx_eq exp_pseudo pseudo
+end
 
 nothing

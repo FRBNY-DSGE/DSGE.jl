@@ -1,4 +1,5 @@
 using DSGE, HDF5, JLD
+using Base.Test
 
 path = dirname(@__FILE__)
 
@@ -31,29 +32,33 @@ exp_modal_means, exp_modal_bands, exp_full_means, exp_full_bands =
     end
 
 # Modal
-@time forecast_one(m, :mode, :none, output_vars, verbose = :none)
-@time compute_meansbands(m, :mode, :none, output_vars; compute_shockdec_bands = true, verbose = :none)
-@time meansbands_to_matrix(m, :mode, :none, output_vars; verbose = :none)
+forecast_one(m, :mode, :none, output_vars, verbose = :none)
+compute_meansbands(m, :mode, :none, output_vars; compute_shockdec_bands = true, verbose = :none)
+meansbands_to_matrix(m, :mode, :none, output_vars; verbose = :none)
 
-for var in output_vars
-    filename = get_forecast_filename(m, :mode, :none, Symbol("mb_matrix_", var),
-                                     pathfcn = workpath, fileformat = :h5)
-    @test_matrix_approx_eq exp_modal_means[var] h5read(filename, "means")
-    @test_matrix_approx_eq exp_modal_bands[var] h5read(filename, "bands")
+@testset "Check modal meansbands computation" begin
+    for var in output_vars
+        filename = get_forecast_filename(m, :mode, :none, Symbol("mb_matrix_", var),
+                                         pathfcn = workpath, fileformat = :h5)
+        @test @test_matrix_approx_eq exp_modal_means[var] h5read(filename, "means")
+        @test @test_matrix_approx_eq exp_modal_bands[var] h5read(filename, "bands")
+    end
 end
 
 # Full-distribution
 @everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
-@time forecast_one(m, :full, :none, output_vars, verbose = :none)
-@time compute_meansbands(m, :full, :none, output_vars; compute_shockdec_bands = true, verbose = :none)
-@time meansbands_to_matrix(m, :full, :none, output_vars; verbose = :none)
+forecast_one(m, :full, :none, output_vars, verbose = :none)
+compute_meansbands(m, :full, :none, output_vars; compute_shockdec_bands = true, verbose = :none)
+meansbands_to_matrix(m, :full, :none, output_vars; verbose = :none)
 
-for var in output_vars
-    filename = get_forecast_filename(m, :full, :none, Symbol("mb_matrix_", var),
-                                     pathfcn = workpath, fileformat = :h5)
-    @test_matrix_approx_eq exp_full_means[var] h5read(filename, "means")
-    @test_matrix_approx_eq exp_full_bands[var] h5read(filename, "bands")
+@testset "Check full meansbands computation" begin
+    for var in output_vars
+        filename = get_forecast_filename(m, :full, :none, Symbol("mb_matrix_", var),
+                                         pathfcn = workpath, fileformat = :h5)
+        @test @test_matrix_approx_eq exp_full_means[var] h5read(filename, "means")
+        @test @test_matrix_approx_eq exp_full_bands[var] h5read(filename, "bands")
+    end
 end
 
 nothing
