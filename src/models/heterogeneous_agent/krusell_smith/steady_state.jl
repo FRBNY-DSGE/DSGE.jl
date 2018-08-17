@@ -124,6 +124,8 @@ function steadystate!(m::KrusellSmith, tol::Float64 = 1e-5, maxit::Int64 = 100, 
     m[:μstar] = μ
     m[:Kstar] = newK
     m[:KFstar] = KF
+
+    nothing
 end
 
 @inline function mollifier(z::Float64,zhi::Float64,
