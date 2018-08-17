@@ -22,15 +22,17 @@ states = Dict{Symbol, Matrix{Float64}}()
 shocks = Dict{Symbol, Matrix{Float64}}()
 pseudo = Dict{Symbol, Matrix{Float64}}()
 
-for smoother in [:hamilton, :koopman, :carter_kohn, :durbin_koopman]
-    m <= Setting(:forecast_smoother, smoother)
+@testset "Test smoother without drawing states" begin
+    for smoother in [:hamilton, :koopman, :carter_kohn, :durbin_koopman]
+        m <= Setting(:forecast_smoother, smoother)
 
-    states[smoother], shocks[smoother], pseudo[smoother] =
-        smooth(m, df, system; draw_states = false)
+        states[smoother], shocks[smoother], pseudo[smoother] =
+            smooth(m, df, system; draw_states = false)
 
-    @test_matrix_approx_eq exp_states states[smoother]
-    @test_matrix_approx_eq exp_shocks shocks[smoother]
-    @test_matrix_approx_eq exp_pseudo pseudo[smoother]
+        @test @test_matrix_approx_eq exp_states states[smoother]
+        @test @test_matrix_approx_eq exp_shocks shocks[smoother]
+        @test @test_matrix_approx_eq exp_pseudo pseudo[smoother]
+    end
 end
 
 # Smooth, drawing states
