@@ -1,12 +1,4 @@
 import DataStructures: OrderedDict
-import DSGE: description, AbstractModel, default_settings!,
-             AbstractParameter, ParameterVector, parameter, SteadyStateParameter,
-             SquareRoot, BetaAlt, Exponential, RootInverseGamma,
-             Setting, get_setting,
-             Observable, PseudoObservable,
-             init_subspec!,
-             DSGE_DATE_FORMAT
-
 """
 ```
 KrusellSmith{T} <: AbstractModel{T}
