@@ -306,6 +306,9 @@ function model_settings!(m::KrusellSmith)
     m <= Setting(:saveroot, saveroot, "Root of data directory structure")
     m <= Setting(:dataroot, datapath, "Input data directory path")
 
+    # Solution method
+    m <= Setting(:solution_method, :klein)
+
     # Anticipated shocks
     m <= Setting(:n_anticipated_shocks, 0,
                  "Number of anticipated policy shocks")
