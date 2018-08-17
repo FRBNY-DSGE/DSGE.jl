@@ -21,17 +21,23 @@ end
 x0 = [1.0, 1.0]
 hessian_expected = rosenbrock_hessian(x0)
 hessian, _ = DSGE.hessizero(rosenbrock, x0; check_neg_diag=true)
-@test_matrix_approx_eq hessian_expected hessian
+@testset "Check valid hessian at the minimum" begin
+    @test_matrix_approx_eq hessian_expected hessian
+end
 
 # Not at the min (indeed, we are at max), ensure throws error
 x1 = [1.0, 1.0]
 rosenbrock_neg(x) = -rosenbrock(x)
-@test_throws Exception hessian, _ = DSGE.hessizero(rosenbrock_neg, x1; check_neg_diag=true)
+@testset "Throw error for hessian calculation not at the min" begin
+    @test_throws Exception hessian, _ = DSGE.hessizero(rosenbrock_neg, x1; check_neg_diag=true)
+end
 
 # Not at the min, check matches closed form
 x1 = Vector[[0.5, 1.5], [-1.0, -1.0]]
-for x in x1
-    hessian_expected = rosenbrock_hessian(x)
-    hessian, _ = DSGE.hessizero(rosenbrock, x)
-    @test_matrix_approx_eq hessian_expected hessian
+@testset "Check closed-form of the hessian" begin
+    for x in x1
+        hessian_expected = rosenbrock_hessian(x)
+        hessian, _ = DSGE.hessizero(rosenbrock, x)
+        @test @test_matrix_approx_eq hessian_expected hessian
+    end
 end

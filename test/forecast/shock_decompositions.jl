@@ -20,16 +20,20 @@ exp_states, exp_obs, exp_pseudo =
 # With shockdec_startdate not null
 states, obs, pseudo = shock_decompositions(m, system, histshocks)
 
-@test_matrix_approx_eq exp_states[:startdate] states
-@test_matrix_approx_eq exp_obs[:startdate]    obs
-@test_matrix_approx_eq exp_pseudo[:startdate] pseudo
+@testset "Test shockdec with non-null startdate" begin
+    @test @test_matrix_approx_eq exp_states[:startdate] states
+    @test @test_matrix_approx_eq exp_obs[:startdate]    obs
+    @test @test_matrix_approx_eq exp_pseudo[:startdate] pseudo
+end
 
 # With shockdec_startdate null
 m <= Setting(:shockdec_startdate, Nullable{Date}())
 states, obs, pseudo = shock_decompositions(m, system, histshocks)
 
-@test_matrix_approx_eq exp_states[:no_startdate] states
-@test_matrix_approx_eq exp_obs[:no_startdate]    obs
-@test_matrix_approx_eq exp_pseudo[:no_startdate] pseudo
+@testset "Test shockdec with null startdate" begin
+    @test @test_matrix_approx_eq exp_states[:no_startdate] states
+    @test @test_matrix_approx_eq exp_obs[:no_startdate]    obs
+    @test @test_matrix_approx_eq exp_pseudo[:no_startdate] pseudo
+end
 
 nothing
