@@ -77,7 +77,7 @@ module DSGE
         subtract_quarters, iterate_quarters,
 
         # solve/
-        gensys, solve,
+        gensys, solve, klein,
 
         # estimate/
         simulated_annealing, combined_optimizer, lbfgs,
@@ -154,6 +154,7 @@ module DSGE
 
     include("solve/gensys.jl")
     include("solve/solve.jl")
+    include("solve/klein.jl")
 
     include("estimate/util.jl")
     include("estimate/kalman.jl")
@@ -263,9 +264,10 @@ module DSGE
 
     # Heterogeneous Agent Models
     include("models/heterogeneous_agent/krusell_smith/krusell_smith.jl")
-    include("models/heterogeneous_agent/krusell_smith/observables.jl")
-    include("models/heterogeneous_agent/krusell_smith/measurement.jl")
     include("models/heterogeneous_agent/krusell_smith/steady_state.jl")
     include("models/heterogeneous_agent/krusell_smith/subspecs.jl")
+    include("models/heterogeneous_agent/krusell_smith/jacobian.jl")
+    include("models/heterogeneous_agent/krusell_smith/observables.jl")
+    include("models/heterogeneous_agent/krusell_smith/measurement.jl")
 
 end
