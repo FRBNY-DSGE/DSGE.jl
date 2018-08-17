@@ -267,6 +267,7 @@ module DSGE
     include("models/heterogeneous_agent/krusell_smith/steady_state.jl")
     include("models/heterogeneous_agent/krusell_smith/subspecs.jl")
     include("models/heterogeneous_agent/krusell_smith/jacobian.jl")
+    include("models/heterogeneous_agent/krusell_smith/shock_loading.jl")
     include("models/heterogeneous_agent/krusell_smith/observables.jl")
     include("models/heterogeneous_agent/krusell_smith/measurement.jl")
 
