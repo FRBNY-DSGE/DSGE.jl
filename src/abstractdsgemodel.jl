@@ -41,6 +41,23 @@ end
     end
 end
 
+Base.setindex!(m::AbstractModel, value::Array, k::Symbol) = Base.setindex!(m, value, m.keys[k])
+
+@inline function Base.setindex!(m::AbstractModel, value::Array, i::Integer)
+    if i <= (j = length(m.parameters))
+        param = m.parameters[i]
+        param.value = value
+        if isa(param, ScaledParameter)
+            param.scaledvalue = param.scaling(value)
+        end
+        return param
+    else
+        steady_state_param = m.steady_state[i-j]
+        steady_state_param.value = value
+        return steady_state_param
+    end
+end
+
 """
 ```
 setindex!(m::AbstractModel, param::AbstractParameter, i::Integer)
