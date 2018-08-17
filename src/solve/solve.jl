@@ -26,7 +26,6 @@ function solve(m::AbstractModel; apply_altpolicy = false, verbose::Symbol = :hig
 
     altpolicy_solve = alternative_policy(m).solve
 
-
     if get_setting(m, :solution_method) == :gensys
         if altpolicy_solve == solve || !apply_altpolicy
 
@@ -54,7 +53,6 @@ function solve(m::AbstractModel; apply_altpolicy = false, verbose::Symbol = :hig
             TTT, RRR, CCC = altpolicy_solve(m)
         end
     elseif get_setting(m, :solution_method) == :klein
-        steadystate!(m)
         TTT_jump, TTT_state = klein(m)
 
         # Transition
