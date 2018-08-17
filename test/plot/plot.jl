@@ -23,8 +23,8 @@ output_vars = add_requisite_output_vars([:histobs, :forecastobs, :shockdecobs, :
 
 @everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
-@time forecast_one(m, :full, :none, output_vars, verbose = :none)
-@time compute_meansbands(m, :full, :none, output_vars; verbose = :none)
+forecast_one(m, :full, :none, output_vars, verbose = :none)
+compute_meansbands(m, :full, :none, output_vars; verbose = :none)
 
 println("The following warning is expected test behavior:")
 
@@ -59,8 +59,10 @@ scenario_means_bands(m, alt, verbose = :none)
 plot_scenario(m, :obs_nominalrate, :obs, alt, untrans = true, verbose = :none)
 plot_scenario(m, :obs_nominalrate, :obs, alt, verbose = :none)
 plot_scenario(m, :obs_nominalrate, :obs, alt, fourquarter = true, verbose = :none)
-@test_throws ErrorException plot_scenario(m, :obs_nominalrate, :obs, alt,
-                                          untrans = true, fourquarter = true)
+@testset "Test scenario exception" begin
+    @test_throws ErrorException plot_scenario(m, :obs_nominalrate, :obs, alt,
+                                              untrans = true, fourquarter = true)
+end
 
 # Hair plot
 realized = load_data(m, verbose = :none)
