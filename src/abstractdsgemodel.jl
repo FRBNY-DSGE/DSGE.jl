@@ -187,7 +187,7 @@ inds_prezlb_periods(m::AbstractModel)     = collect(index_mainsample_start(m):(i
 inds_zlb_periods(m::AbstractModel)        = collect(index_zlb_start(m):(index_forecast_start(m)-1))
 inds_mainsample_periods(m::AbstractModel) = collect(index_mainsample_start(m):(index_forecast_start(m)-1))
 
-# Number of a few things that are useful
+# Convenience functions
 n_states(m::AbstractModel)                  = length(m.endogenous_states)
 n_states_augmented(m::AbstractModel)        = n_states(m) + length(m.endogenous_states_augmented)
 n_shocks_exogenous(m::AbstractModel)        = length(m.exogenous_shocks)
@@ -198,6 +198,21 @@ n_equilibrium_conditions(m::AbstractModel)  = length(m.equilibrium_conditions)
 n_parameters(m::AbstractModel)              = length(m.parameters)
 n_parameters_steady_state(m::AbstractModel) = length(m.steady_state)
 n_parameters_free(m::AbstractModel)         = sum([!α.fixed for α in m.parameters])
+
+# Convenience functions for working with heterogeneous agent models
+# that differentiate between backward looking "state" variables and "jump" variables
+n_jumps(m::AbstractModel) = get_setting(m, :n_jumps)
+n_model_states(m::AbstractModel) = get_setting(m, :n_model_states)
+
+# The numbers for n_states, and n_jumps assumes normalization
+# There is a procedure in klein_solve that normalizes the state variable grids
+# by removing an entry from them. Hence the number of states and jumps being
+# tracked should be 1 less if normalized
+# However, the number of jumps and states unnormalized are required for
+# the construction of the Jacobian, hence the reason for these helpers
+n_jumps_unnormalized(m::AbstractModel) = n_jumps(m) + get_setting(m, :normalize_distr_variables)
+n_states_unnormalized(m::AbstractModel) = n_states(m) + get_setting(m, :normalize_distr_variables)
+n_model_states_unnormalized(m::AbstractModel) = n_jumps_unnormalized(m) + n_states_unnormalized(m)
 
 """
 ```
