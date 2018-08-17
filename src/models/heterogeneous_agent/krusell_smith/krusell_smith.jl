@@ -291,18 +291,6 @@ function init_grids!(m::KrusellSmith)
     m.grids = grids
 end
 
-# """
-# ```
-# steadystate!(m::KrusellSmith)
-# ```
-
-# Calculates the model's steady-state values. `steadystate!(m)` must be called whenever
-# the parameters of `m` are updated.
-# """
-# function steadystate!(m::KrusellSmith)
-    # return m
-# end
-
 function model_settings!(m::KrusellSmith)
     default_settings!(m)
 
