@@ -306,18 +306,6 @@ function init_grids!(m::BondLabor)
     m.grids = grids
 end
 
-"""
-```
-steadystate!(m::BondLabor)
-```
-
-Calculates the model's steady-state values. `steadystate!(m)` must be called whenever
-the parameters of `m` are updated.
-"""
-function steadystate!(m::BondLabor)
-    return m
-end
-
 function model_settings!(m::BondLabor)
     default_settings!(m)
 

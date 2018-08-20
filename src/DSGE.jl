@@ -272,6 +272,7 @@ module DSGE
     include("models/heterogeneous_agent/krusell_smith/measurement.jl")
 
     include("models/heterogeneous_agent/bond_labor/bond_labor.jl")
+    include("models/heterogeneous_agent/bond_labor/steady_state.jl")
     # include("models/heterogeneous_agent/bond_labor/measurement.jl")
     # include("models/heterogeneous_agent/bond_labor/observables.jl")
 end
