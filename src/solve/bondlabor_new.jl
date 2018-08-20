@@ -1,6 +1,6 @@
 using Distributions
-using PyPlot
 using Roots
+include("klein_solve.jl")
 
 function tauchen86(μ::AbstractFloat,σ::AbstractFloat,n::Int64,λ::AbstractFloat)
     #output is xgrid, xprob
@@ -28,15 +28,13 @@ function tauchen86(μ::AbstractFloat,σ::AbstractFloat,n::Int64,λ::AbstractFloa
     return ( xgrid,xprob, xscale )
 end
 
-
 function trunc_lognpdf(x, UP, LO, mu, sig)
     # truncated log normal pdf
     logn = LogNormal(mu, sig)
     return (x-LO.>=-eps()).*(x-UP.<=eps()).*pdf.(logn,x)/(cdf.(logn,UP)-cdf.(logn,LO))
 end
 
-# set parameters 
-
+# set parameters
 R        = 1.04                    # 4 percent steady state real interst rate
 γ        = 1.0                     # CRRA Parameter
 ν        = 1.0                     # Inverse Frisch Elasticity of Labor supply
@@ -50,18 +48,16 @@ mus = 0.0;
 sigs     = 0.5                     # sigma of log normal in income
 # sscale   = shi-slo                 # size of our s grid
 elo      = 0.0                     # stochastic consumption commitments
-ehi      = 1.0                       
-abar     = -0.5  
+ehi      = 1.0
+abar     = -0.5
 xlo      = abar - ehi              # lower bound on cash on hand
 xhi      = 4.0                    # upper bound on cash on hand
 xscale   = xhi-xlo                 # size of w grid
 ρz     = 0.95                    # persistence of agg tfp
 
-
 # make grids
 xgrid    = collect(linspace(xlo,xhi,nx)) #Evenly spaced grid
 xwts     = (xscale/nx)*ones(nx)          #quadrature weights
-
 
 if ns==1
     sgrid = ones(1)
@@ -74,20 +70,18 @@ else
     g = sprob./swts
 end
 
-
-
-
 SGRIDB   = kron(sgrid,ones(nx))
 XGRIDB   = kron(ones(ns),xgrid)
-BIGWTS   = kron(swts,xwts) 
+BIGWTS   = kron(swts,xwts)
 
+# Normalizing constants
+# Note: xscale/nx == xwts[1], and sscale/ns == swts[1]
 MX       = sqrt(xscale/nx)*eye(nx)       # matrix that maps from set of values of a functions at a point to the set of normalized scaling function coefficients
-MS       = sqrt(sscale/ns)*eye(ns) 
+MS       = sqrt(sscale/ns)*eye(ns)
 MXinv    = sqrt(nx/(xscale))*eye(nx)     # inverse of MX
 MSinv    = sqrt(ns/(sscale))*eye(ns)     # inverse of MS
 MSMX = kron(MS,MX)
 MSMXinv = inv(MSMX)
-
 
 function mollifier(z::AbstractFloat,ehi::AbstractFloat,elo::AbstractFloat)
     # mollifier function
@@ -107,36 +101,25 @@ function dmollifier(x::AbstractFloat, ehi::AbstractFloat, elo::AbstractFloat)
     dy  = -(2*temp./((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier(x, ehi, elo)
 end
 
-
-
-qfunction(e) = mollifier(e,ehi,elo)
-qp(e) = dmollifier(e,ehi,elo)
-
-
-
+qfunction(x) = mollifier(x,ehi,elo)
+qp(x) = dmollifier(x,ehi,elo)
 
 # guess for the W function W(w) = beta R E u'(c_{t+1})
-Win = ones(nx,ns) 
+Win = ones(nx,ns)
 
 # compute constrained consumption and labor supply once and for all
 χss = zeros(nx*ns)
 # ηss = zeros(nx*ns)
 aborrow  = abar/R
 
-
-
-
 laborzero(s::AbstractFloat,x::AbstractFloat,c::AbstractFloat,ν::AbstractFloat,γ::AbstractFloat,aborrow::AbstractFloat) = s^(1+ν) - ((aborrow+c-x)^ν)*c^γ
 chifun(s::AbstractFloat,x::AbstractFloat,ν::AbstractFloat,γ::AbstractFloat,aborrow::AbstractFloat) = fzero(c ->laborzero(s,x,c,ν,γ,aborrow), 0.0,15.0)
 # etafun(s::AbstractFloat,x::AbstractFloat,ν::AbstractFloat,γ::AbstractFloat,aborrow::AbstractFloat) = chifun(s,x,ν,γ,aborrow)^(-(γ/ν))*s^(1.0/ν)
 
-
-
-
 for iss=1:ns
     for ix=1:nx
         χss[ix + nx*(iss-1)] = chifun(sgrid[iss],xgrid[ix],ν,γ,aborrow)
-        # ηss[ix + nx*(iss-1)] = etafun(sgrid[iss],xgrid[ix],ν,γ,aborrow)   
+        # ηss[ix + nx*(iss-1)] = etafun(sgrid[iss],xgrid[ix],ν,γ,aborrow)
     end
 end
 
@@ -174,7 +157,7 @@ function sspolicy(β::AbstractFloat,
     damp    = 0.05          # how much we update W guess
     counter = 1
     dist    = 1.0          # distance between Win and Wout on decision rules
-    tol     = 1e-4          # acceptable error 
+    tol     = 1e-4          # acceptable error
     Wout    = copy(Win)    # initialize Wout
     tr      = zeros(n,n)   # transition matrix mapping todays dist of w to w'
     qxg = zeros(n,n)          # auxilary variable to compute LHS of euler
@@ -215,7 +198,7 @@ function sspolicy(β::AbstractFloat,
                 for isp=1:ns
                     tr[ixp+nx*(isp-1),ix+nx*(iss-1)] += qfunction(ap[ix+nx*(iss-1)] - XGRIDB[nx*(isp-1)+ixp])*g[isp]
                 end
-            end   
+            end
         end
     end
     return (c,h,ap,Wout,tr)
@@ -258,24 +241,29 @@ function findss(βlo::AbstractFloat,
                                        ehi, elo, XGRIDB, SGRIDB,
                                        xwts, swts, Win, g, χss)
         # sspolicy returns the consumption and hours decision rules, a prime
-        # decision rule, Win = updated β R u'(c_{t+1}), 
+        # decision rule, Win = updated β R u'(c_{t+1}),
         # KF is the Kolmogorov foward operator
         # and is the map which moves you from cash on hand distribution
         # today to cash on had dist tomorrow
 
-        LPMKF=MSMX*KF*MSMX'
-        
+        LPMKF = MSMX*KF*MSMX'
+
+        temp = xwts[1]*swts[1]*KF
+        @assert LPMKF ≈ temp
+
         # find eigenvalue closest to 1
         (Dee,Vee) = eig(LPMKF)
         if abs(Dee[1]-1)>2e-1 # that's the tolerance we are allowing
             warn("your eigenvalue is ", Dee[1], " which is too far from 1, something is wrong")
         end
-        μ = MSMXinv*real(Vee[:,1]) #Pick the eigen vecor associated with the largest
+
+        μ = real(Vee[:,1]) # Pick the eigen vecor associated with the largest
         # eigenvalue and moving it back to values
 
-        μ = μ/(xswts'*μ) #Scale of eigenvectors not determinate: rescale to integrate to exactly 1
+        μ = μ/(xswts'*μ) # Scale of eigenvectors not determinate: rescale to integrate to exactly 1
         # change all following stuff to work with R not K
-        excess = xswts'*(μ.*ap)  #compute excess supply of savings, which is a fn of w
+
+        excess = xswts'*(μ.*ap)  # compute excess supply of savings, which is a fn of w
 
         # bisection
         if excess>0
@@ -294,13 +282,14 @@ tic()
                             xwts, swts, Win, g,χss)
 toc()
 
-
+# Jacobian stuff
 # we will always order things XP YP X Y
 # convention is that capital letters generally refer to indices
 MUP  = 1:nx*ns
 ZP   = nx*ns+1
 ELLP = nx*ns+2:2*nx*ns+1
 RP   = 2*nx*ns+2
+
 MU   = 2*nx*ns+3:3*nx*ns+2
 Z    = 3*nx*ns+3
 ELL  = 3*nx*ns+4:4*nx*ns+3
@@ -308,25 +297,25 @@ R    = 4*nx*ns+4
 
 # create objects needed for solve.jl
 funops = 1:2 # which operators output a function
-F1 = 1:nx*ns #euler eqn
-F2 = nx*ns+1:2*nx*ns #KF
-F3 = 2*nx*ns+1:2*nx*ns+1 #mkt ckr
-F4 = 2*nx*ns+2:2*nx*ns+2 #z
+F1 = 1:nx*ns # euler eqn
+F2 = nx*ns+1:2*nx*ns # KF
+F3 = 2*nx*ns+1:2*nx*ns+1 # mkt ckr
+F4 = 2*nx*ns+2:2*nx*ns+2 # z
 
-#Create auxiliary variables
+# Create auxiliary variables
 # c = min.(ell.^(-1.0/γ),χss) # Consumption Decision Rule
 # η = (SGRIDB.^(1.0/ν)).*(c.^(-γ/ν))
 
-#EE 
-ξ   = zeros(nx*ns,nx*ns) 
+# EE
+ξ   = zeros(nx*ns,nx*ns)
 Γ   = zeros(nx*ns,1)
 ellRHS = zeros(nx*ns,1)
-Ξ   = zeros(nx*ns,nx*ns) 
+Ξ   = zeros(nx*ns,nx*ns)
 LEE = zeros(nx*ns,nx*ns)
 WEE = zeros(nx*ns,1)
 REE = zeros(nx*ns,1)
 
-#EE jacobian terms
+# EE jacobian terms
 for ix=1:nx
     for is =1:ns
         i = ix + nx*(is-1)
@@ -350,20 +339,19 @@ for ix=1:nx
         Γ[i] = sumΓ
         WEE[i] = sumWEE
         REE[i] = sumREE
-        ellRHS[i] = sumELLRHS 
+        ellRHS[i] = sumELLRHS
     end
 end
 
-ELLEE = (β/γ)*R*R*Γ.*(1+ (γ/ν)*SGRIDB.*η./c).*(ell.^(-1-1/γ) ).*((ell.^(-1/γ)).<=χss)-1 
+ELLEE = (β/γ)*R*R*Γ.*(1+ (γ/ν)*SGRIDB.*η./c).*(ell.^(-1-1/γ) ).*((ell.^(-1/γ)).<=χss)-1
 
-
-#KF
+# KF
 LKF = zeros(nx*ns,nx*ns)
 WKF = zeros(nx*ns,1)
 RKF = zeros(nx*ns,1)
 MKF = zeros(nx*ns,nx*ns)
 
-#KF jacobian terms
+# KF jacobian terms
 for ixp=1:nx
     for isp =1:ns
         ip = ixp + nx*(isp-1)
@@ -386,8 +374,7 @@ for ixp=1:nx
     end
 end
 
-        
-#MKT CKR
+# MKT CKR
 WMKT = 0.0
 RMKT = 0.0
 
@@ -399,10 +386,10 @@ for ix =1:nx
     end
 end
 
-
-# Make the Jacobian 
+# Make the Jacobian
 JJ = zeros(2*nx*ns+2,4*nx*ns+4)
-#Euler equation
+
+# Euler equation
 JJ[F1,ZP]  = -γ*β*R*WEE
 
 JJ[F1,ELLP] = β*R*LEE
@@ -413,9 +400,9 @@ JJ[F1,Z]  = β*R*R*Γ.*(SGRIDB.*η*(1+1/ν) - (1+ (γ/ν)*SGRIDB.*η./c).*chipW.
 
 JJ[F1,ELL] = diagm(ELLEE[:])
 
-JJ[F1,R] = ellRHS/R + β*R*(SGRIDB.*η + XGRIDB - c).*Γ - β*R*R*Γ.*(1+ (γ/ν)*SGRIDB.*η./c ).*chipR.*((ell.^(-1/γ)).>χss) 
+JJ[F1,R] = ellRHS/R + β*R*(SGRIDB.*η + XGRIDB - c).*Γ - β*R*R*Γ.*(1+ (γ/ν)*SGRIDB.*η./c ).*chipR.*((ell.^(-1/γ)).>χss)
 
-#KF
+# KF
 JJ[F2,MUP] = eye(nx*ns)
 
 JJ[F2,MU]  = MKF
@@ -426,24 +413,24 @@ JJ[F2,ELL] = LKF
 
 JJ[F2,R]   = RKF
 
-#mkt ckr
+# mkt ckr
 JJ[F3,MU]  = (η'.*SGRIDB' - c').*BIGWTS'
 
 JJ[F3,Z]   = WMKT'
 
-JJ[F3,ELL] = (1/γ)*μ'.*(SGRIDB'*(γ/ν).*(η./c)' + 1).*BIGWTS'.*( ell.^(-1-1/γ) )'.*((ell.^(-1/γ)).<=χss)' 
+JJ[F3,ELL] = (1/γ)*μ'.*(SGRIDB'*(γ/ν).*(η./c)' + 1).*BIGWTS'.*( ell.^(-1-1/γ) )'.*((ell.^(-1/γ)).<=χss)'
 
 JJ[F3,R]   = RMKT'
 
-#TFP
+# TFP
 JJ[F4,ZP]  = -1
 
 JJ[F4,Z]   = ρz
 
-#Create PPP matrix
+# Create PPP matrix
 P1 = kron(eye(ns),ones(nx,1))
 Ptemp = eye(nx)
-Ptemp = Ptemp[:,2:end] 
+Ptemp = Ptemp[:,2:end]
 P2 = kron(eye(ns),Ptemp)
 P = [P1 P2]
 
@@ -454,8 +441,6 @@ Qleft     = cat([1 2],S,[1],eye(nx*ns),[1])
 Qx        = cat([1 2],S,[1])
 Qy        = cat([1 2],eye(nx*ns),[1])
 
-include("solve.jl")
-
 tic()
-gx2, hx2, gx, hx =  solve(JJ, Qleft, Qx, Qy)
+gx2, hx2, gx, hx =  klein_solve(JJ, Qleft, Qx, Qy)
 toc()
