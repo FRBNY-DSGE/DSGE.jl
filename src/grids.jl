@@ -1,3 +1,5 @@
+import Distributions: Normal, pdf, cdf
+
 ###############################
 # Type Definition/Constructors
 ###############################
@@ -44,6 +46,32 @@ end
 
 function curtis_clenshaw_quadrature(kind::Int = 2)
     return (lb, ub, n) -> curtis_clenshaw_quadrature(lb, ub, n, kind = kind)
+end
+
+function tauchen86(μ::AbstractFloat,σ::AbstractFloat,n::Int64,λ::AbstractFloat)
+    # output is xgrid, xprob
+    xhi = μ + λ*σ;
+    xlo = μ - λ*σ;
+    xgrid = zeros(n);
+    xscale =(xhi-xlo)/(n-1)
+
+    for i=1:n
+        xgrid[i] = xlo + xscale*(i-1);
+    end
+    m = zeros(n-1);
+    for i=1:n-1
+        m[i] = (xgrid[i]+xgrid[i+1])/2;
+    end
+    xprob = zeros(n);
+    normie = Normal(μ,σ)
+    normpdf(x) = pdf.(normie,x)
+    normcdf(x) = cdf.(normie,x)
+    for j=2:n-1
+        xprob[j] = normcdf(m[j]) - normcdf(m[j-1]);
+    end
+    xprob[1] = normcdf(m[1]);
+    xprob[n] = 1 - normcdf(m[n-1]);
+    return ( xgrid,xprob, xscale )
 end
 
 ####################
