@@ -127,6 +127,10 @@ function jacobian(m::KrusellSmith)
 
     JJ[eq[:eq_TFP], endo[:z_t]]    = -m[:ρ_z]
 
+    if !m.testing && get_setting(m, :normalize_distr_variables)
+        JJ = normalize(m, JJ)
+    end
+
     return JJ
 end
 
@@ -161,4 +165,52 @@ function augment_model_states(endo::OrderedDict{Symbol, UnitRange}, n_model_stat
         endo_aug[unprimed_state] = unprimed_inds
     end
     return endo_aug
+end
+
+function normalize(m::KrusellSmith, JJ::Matrix{Float64})
+    nw = get_setting(m, :nw)
+
+    P = eye(nw)
+    P[:,1] = ones(nw)
+
+    Q = Matrix{Float64}(nw, nw)
+    Q::Matrix{Float64}, _ = qr(P)
+
+    S = Matrix{Float64}(nw, nw-1)
+    S::Matrix{Float64} = Q[:, 2:end]'
+
+    Qf = zeros(4*nw, 4*nw+2)
+    Qf[1:nw, 1:nw] = eye(nw)
+    Qf[nw+1:2*nw-1, nw+1:2*nw] = S
+    Qf[2*nw:3*nw-2, 2*nw+1:3*nw] = S
+    Qf[3*nw-1:4*nw, 3*nw+1:4*nw+2] = eye(nw+2)
+    #Qf = cat([1 2],eye(nw),S,S,eye(nw),[1],[1])
+
+    # Qx and Qy are for normalizing any variables that represent distributions
+    # the S component is for normalizing a distribution, the other identity portions
+    # are for non-distributional variables
+    # The distribution in the states, x, is the lagged μ
+    # The distribution in the jumps, y, is the current μ
+    Qx = cat([1 2], S, eye(nw), [1], [1])   # 161 x 162
+    Qy = cat([1 2], S, eye(nw))             # 159 x 160
+
+    m <= Setting(:n_predetermined_variables, size(Qx, 1))
+
+    # whenever outputs and/or inputs are densities,
+    # pre/postmultiply the jacobians from step 2 by an appropriate
+    # matrix so things integrate to 1
+
+    # Qright = zeros(8*nw+4, 8*nw)
+    # Qright[1:nw, 1:nw-1] = S'
+    # Qright[nw+1:2*nw+2, nw:2*nw+1] = eye(nw+2)
+    # Qright[2*nw+3:3*nw+2, 2*nw+2:3*nw] = S'
+    # Qright[3*nw+3:4*nw+2, 3*nw+1:4*nw] = eye(nw)
+    # Qright[4*nw+3:5*nw+2, 4*nw+1:5*nw-1] = S'
+    # Qright[5*nw+3:6*nw+4, 5*nw:6*nw+1] = eye(nw+2)
+    # Qright[6*nw+5:7*nw+4, 6*nw+2:7*nw] = S'
+    # Qright[7*nw+5:8*nw+4, 7*nw+1:8*nw] = eye(nw)
+    Qright = cat([1,2],Qx',Qy',Qx',Qy')
+    Jac1 = Qf*JJ*Qright
+
+    return Jac1
 end

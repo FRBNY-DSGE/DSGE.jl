@@ -26,6 +26,7 @@ close(file)
 end
 
 ### Jacobian
+m.testing = true
 JJ       = jacobian(m)
 saved_JJ = load("$path/reference/jacobian.jld", "saved_JJ")
 nw       = load("$path/reference/jacobian.jld", "nw")
@@ -99,6 +100,7 @@ F6 = 4*nw+2:4*nw+2
 end
 
 ### Klein
+m.testing = false
 TTT_jump, TTT_state = klein(m)
 
 saved_gx = load("$path/reference/klein.jld", "gx")
