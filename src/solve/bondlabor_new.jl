@@ -93,38 +93,6 @@ function dmollifier(x::AbstractFloat, ehi::AbstractFloat, elo::AbstractFloat)
     dy  = -(2*temp./((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier(x, ehi, elo)
 end
 
-qfunction(x) = mollifier(x,ehi,elo)
-qp(x) = dmollifier(x,ehi,elo)
-
-# guess for the W function W(w) = beta R E u'(c_{t+1})
-Win = ones(nx,ns)
-
-# compute constrained consumption and labor supply once and for all
-χss = zeros(nx*ns)
-# ηss = zeros(nx*ns)
-aborrow  = abar/R
-
-laborzero(s::AbstractFloat,x::AbstractFloat,c::AbstractFloat,ν::AbstractFloat,γ::AbstractFloat,aborrow::AbstractFloat) = s^(1+ν) - ((aborrow+c-x)^ν)*c^γ
-chifun(s::AbstractFloat,x::AbstractFloat,ν::AbstractFloat,γ::AbstractFloat,aborrow::AbstractFloat) = fzero(c ->laborzero(s,x,c,ν,γ,aborrow), 0.0,15.0)
-# etafun(s::AbstractFloat,x::AbstractFloat,ν::AbstractFloat,γ::AbstractFloat,aborrow::AbstractFloat) = chifun(s,x,ν,γ,aborrow)^(-(γ/ν))*s^(1.0/ν)
-
-for iss=1:ns
-    for ix=1:nx
-        χss[ix + nx*(iss-1)] = chifun(sgrid[iss],xgrid[ix],ν,γ,aborrow)
-        # ηss[ix + nx*(iss-1)] = etafun(sgrid[iss],xgrid[ix],ν,γ,aborrow)
-    end
-end
-
-chipW = (1+ν)./( ν./( aborrow + χss - XGRIDB) + γ./χss  )
-chipR = (1/(R*R))*(  ν*abar./(aborrow + χss - XGRIDB) )./( ν./( aborrow + χss - XGRIDB) + γ./χss  )
-
-# initial guesses
-βguess = 0.8
-
-winconst= βguess*R*sum((qfunction.(abar - XGRIDB).*χss.^(-γ)).*(kron((swts.*g),xwts)))
-# println(winconst)
-Win = winconst*ones(nx*ns)
-
 function sspolicy(β::AbstractFloat,
                   R::AbstractFloat,
                   γ::AbstractFloat,
@@ -137,7 +105,11 @@ function sspolicy(β::AbstractFloat,
                   swts::Vector{Float64},
                   Win::Vector{Float64},
                   g::Vector{Float64},
-                  χss::Vector{Float64})
+                  χss::Vector{Float64};
+                  damp::Float64 = 0.05,
+                  dist::Float64 = 1.,
+                  tol::Float64 = 1e-4,
+                  maxit::Int64 = 500)
     # outputs: [c,ap,Wout,tr]
 
     nx      = length(xwts)
@@ -146,14 +118,12 @@ function sspolicy(β::AbstractFloat,
     c       = zeros(n)      # consumption
     h       = zeros(n)      # hours
     ap      = zeros(n)      # savings
-    damp    = 0.05          # how much we update W guess
     counter = 1
-    dist    = 1.0          # distance between Win and Wout on decision rules
-    tol     = 1e-4          # acceptable error
     Wout    = copy(Win)    # initialize Wout
     tr      = zeros(n,n)   # transition matrix mapping todays dist of w to w'
-    qxg = zeros(n,n)          # auxilary variable to compute LHS of euler
-    maxit = 500
+    qxg     = zeros(n,n)   # auxilary variable to compute LHS of euler
+    qfunction(x) = mollifier(x,ehi,elo)
+
     while dist>tol && counter<maxit
         # compute c(w) given guess for Win = β*R*E[u'(c_{t+1})]
         c  = min.(Win.^(-1.0/γ),χss)
@@ -196,12 +166,9 @@ function sspolicy(β::AbstractFloat,
     return (c,h,ap,Wout,tr)
 end
 
-βlo = 0.4/R # excess should be -ve
-βhi = 1/R # excess is +
-function findss(βlo::AbstractFloat,
-                βhi::AbstractFloat,
-                R::AbstractFloat,
+function findss(R::AbstractFloat,
                 γ::AbstractFloat,
+                abar::AbstractFloat,
                 sigs::AbstractFloat,
                 ehi::AbstractFloat,
                 elo::AbstractFloat,
@@ -209,16 +176,17 @@ function findss(βlo::AbstractFloat,
                 SGRIDB::Vector,
                 xwts::Vector,
                 swts::Vector,
-                Win::Vector{Float64},
-                g::Vector{Float64},
-                χss::Vector{Float64})
-    excess = 5000.0 # excess supply of savings
-    tol = 1e-5
-    count=1
-    maxit=10
+                g::Vector{Float64};
+                βlo::Float64 = 0.4/R,
+                βhi::Float64 = 1./R,
+                excess::Float64 = 5000.,
+                tol::Float64 = 1e-5,
+                maxit::Int64 = 10)
+
     nx      = length(xwts)
     ns      = length(swts)
     n       = ns*nx
+    count   = 1
     c = zeros(n)
     h = zeros(n)
     ap = zeros(n)
@@ -226,6 +194,35 @@ function findss(βlo::AbstractFloat,
     μ = zeros(n)
     β = (βlo+βhi)/2.0
     xswts = kron(swts,xwts)
+
+    qfunction(x) = mollifier(x,ehi,elo)
+
+    ##################################
+    # compute constrained consumption and labor supply once and for all
+    χss = zeros(nx*ns)
+    # ηss = zeros(nx*ns)
+    aborrow  = abar/R
+
+    laborzero(s::AbstractFloat, x::AbstractFloat, c::AbstractFloat,
+              ν::AbstractFloat, γ::AbstractFloat, aborrow::AbstractFloat) = s^(1+ν) - ((aborrow+c-x)^ν)*c^γ
+    chifun(s::AbstractFloat, x::AbstractFloat, ν::AbstractFloat,
+           γ::AbstractFloat, aborrow::AbstractFloat) = fzero(c ->laborzero(s, x, c, ν, γ, aborrow), 0.0, 15.0)
+    # etafun(s::AbstractFloat,x::AbstractFloat,ν::AbstractFloat,γ::AbstractFloat,aborrow::AbstractFloat) = chifun(s,x,ν,γ,aborrow)^(-(γ/ν))*s^(1.0/ν)
+
+    for iss=1:ns
+        for ix=1:nx
+            χss[ix + nx*(iss-1)] = chifun(sgrid[iss],xgrid[ix],ν,γ,aborrow)
+            # ηss[ix + nx*(iss-1)] = etafun(sgrid[iss],xgrid[ix],ν,γ,aborrow)
+        end
+    end
+    ##################################
+
+    # guess for the W function W(w) = β R E u'(c_{t+1})
+    βguess = 0.8
+    winconst= βguess*R*sum((qfunction.(abar - XGRIDB).*χss.^(-γ)).*(kron((swts.*g),xwts)))
+    # println(winconst)
+    Win = winconst*ones(nx*ns)
+
     while abs(excess)>tol && count<maxit # clearing markets
         # println(excess)
         β = (βlo+βhi)/2.0
@@ -262,18 +259,26 @@ function findss(βlo::AbstractFloat,
         end
         count += 1
     end
-    return (Win, c, h, μ, β)
+    return (Win, c, h, μ, β, χss)
 end
 
 tic()
-(ell, c, η, μ, β) = findss(βlo, βhi, R, γ, sigs,
-                           ehi, elo, XGRIDB, SGRIDB,
-                           xwts, swts, Win, g,χss)
+(ell, c, η, μ, β, χss) = findss(R, γ, abar, sigs,
+                                ehi, elo, XGRIDB, SGRIDB,
+                                xwts, swts, g)
 toc()
 
 test_output && include("test/steady_state.jl")
 
 # Jacobian stuff
+
+# Create auxiliary variables
+# c = min.(ell.^(-1.0/γ),χss) # Consumption Decision Rule
+# η = (SGRIDB.^(1.0/ν)).*(c.^(-γ/ν))
+aborrow  = abar/R
+chipW = (1+ν)./( ν./( aborrow + χss - XGRIDB) + γ./χss  )
+chipR = (1/(R*R))*(  ν*abar./(aborrow + χss - XGRIDB) )./( ν./( aborrow + χss - XGRIDB) + γ./χss  )
+
 # we will always order things XP YP X Y
 # convention is that capital letters generally refer to indices
 MUP  = 1:nx*ns
@@ -293,10 +298,6 @@ F2 = nx*ns+1:2*nx*ns # KF
 F3 = 2*nx*ns+1:2*nx*ns+1 # mkt ckr
 F4 = 2*nx*ns+2:2*nx*ns+2 # z
 
-# Create auxiliary variables
-# c = min.(ell.^(-1.0/γ),χss) # Consumption Decision Rule
-# η = (SGRIDB.^(1.0/ν)).*(c.^(-γ/ν))
-
 # EE
 ξ   = zeros(nx*ns,nx*ns)
 Γ   = zeros(nx*ns,1)
@@ -305,6 +306,10 @@ ellRHS = zeros(nx*ns,1)
 LEE = zeros(nx*ns,nx*ns)
 WEE = zeros(nx*ns,1)
 REE = zeros(nx*ns,1)
+
+# Mollifier convenience functions
+qfunction(x) = mollifier(x,ehi,elo)
+qp(x) = dmollifier(x,ehi,elo)
 
 # EE jacobian terms
 for ix=1:nx
