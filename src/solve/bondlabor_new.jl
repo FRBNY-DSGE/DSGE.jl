@@ -1,6 +1,9 @@
+using JLD
 using Distributions
 using Roots
 include("klein_solve.jl")
+
+test_output = true
 
 function tauchen86(μ::AbstractFloat,σ::AbstractFloat,n::Int64,λ::AbstractFloat)
     #output is xgrid, xprob
@@ -28,48 +31,46 @@ function tauchen86(μ::AbstractFloat,σ::AbstractFloat,n::Int64,λ::AbstractFloa
     return ( xgrid,xprob, xscale )
 end
 
-function trunc_lognpdf(x, UP, LO, mu, sig)
-    # truncated log normal pdf
-    logn = LogNormal(mu, sig)
-    return (x-LO.>=-eps()).*(x-UP.<=eps()).*pdf.(logn,x)/(cdf.(logn,UP)-cdf.(logn,LO))
-end
-
 # set parameters
+# Economic Parameters
 R        = 1.04                    # 4 percent steady state real interst rate
 γ        = 1.0                     # CRRA Parameter
 ν        = 1.0                     # Inverse Frisch Elasticity of Labor supply
+abar     = -0.5                    # Borrowing floor
+ρz       = 0.95                    # persistence of agg tfp
+mus      = 0.0
+sigs     = 0.5                     # sigma of log normal in income
+
+# Settings
 In       = 0.443993816237631       # normalizing constant for the mollifier
 nx       = 50                      # cash on hand ditn grid points
 ns       = 2                      # skill distribution grid points
 n        = nx*ns
 # slo      = 0.5                     # lower bound on skill grid
 # shi      = 1.5                     # upper bound on skill
-mus = 0.0;
-sigs     = 0.5                     # sigma of log normal in income
 # sscale   = shi-slo                 # size of our s grid
 elo      = 0.0                     # stochastic consumption commitments
 ehi      = 1.0
-abar     = -0.5
 xlo      = abar - ehi              # lower bound on cash on hand
 xhi      = 4.0                    # upper bound on cash on hand
 xscale   = xhi-xlo                 # size of w grid
-ρz     = 0.95                    # persistence of agg tfp
 
 # make grids
-xgrid    = collect(linspace(xlo,xhi,nx)) #Evenly spaced grid
-xwts     = (xscale/nx)*ones(nx)          #quadrature weights
+xgrid    = collect(linspace(xlo,xhi,nx)) # Evenly spaced grid
+xwts     = (xscale/nx)*ones(nx)          # quadrature weights
 
-if ns==1
+if ns == 1
     sgrid = ones(1)
     swts = ones(1)
     g=ones(1)
 else
     (lsgrid,sprob,sscale) = tauchen86(mus,sigs,ns,3.0)
-    swts     = (sscale/ns)*ones(ns) #quadrature weights
-    sgrid = exp.(lsgrid)             #exp(sgrid)
-    g = sprob./swts
+    swts  = (sscale/ns)*ones(ns)    # quadrature weights
+    sgrid = exp.(lsgrid)            # exp(sgrid)
+    g     = sprob./swts
 end
 
+# make kron grid, for stacking nx*ns as opposed to dealing with two dimensions
 SGRIDB   = kron(sgrid,ones(nx))
 XGRIDB   = kron(ones(ns),xgrid)
 BIGWTS   = kron(swts,xwts)
@@ -126,11 +127,11 @@ end
 chipW = (1+ν)./( ν./( aborrow + χss - XGRIDB) + γ./χss  )
 chipR = (1/(R*R))*(  ν*abar./(aborrow + χss - XGRIDB) )./( ν./( aborrow + χss - XGRIDB) + γ./χss  )
 
-#initial guesses
+# initial guesses
 βguess = 0.8
 
 winconst= βguess*R*sum((qfunction.(abar - XGRIDB).*χss.^(-γ)).*(kron((swts.*g),xwts)))
-println(winconst)
+# println(winconst)
 Win = winconst*ones(nx*ns)
 
 function sspolicy(β::AbstractFloat,
@@ -235,7 +236,7 @@ function findss(βlo::AbstractFloat,
     β = (βlo+βhi)/2.0
     xswts = kron(swts,xwts)
     while abs(excess)>tol && count<maxit # clearing markets
-    	println(excess)
+        # println(excess)
         β = (βlo+βhi)/2.0
         (c, h, ap, Win, KF) = sspolicy(β, R, γ, sigs,
                                        ehi, elo, XGRIDB, SGRIDB,
@@ -278,9 +279,11 @@ end
 
 tic()
 (ell, c, η, μ, β) = findss(βlo, βhi, R, γ, sigs,
-                            ehi, elo, XGRIDB, SGRIDB,
-                            xwts, swts, Win, g,χss)
+                           ehi, elo, XGRIDB, SGRIDB,
+                           xwts, swts, Win, g,χss)
 toc()
+
+test_output && include("test/steady_state.jl")
 
 # Jacobian stuff
 # we will always order things XP YP X Y
@@ -427,6 +430,8 @@ JJ[F4,ZP]  = -1
 
 JJ[F4,Z]   = ρz
 
+test_output && include("test/jacobian.jl")
+
 # Create PPP matrix
 P1 = kron(eye(ns),ones(nx,1))
 Ptemp = eye(nx)
@@ -444,3 +449,5 @@ Qy        = cat([1 2],eye(nx*ns),[1])
 tic()
 gx2, hx2, gx, hx =  klein_solve(JJ, Qleft, Qx, Qy)
 toc()
+
+test_output && include("test/solve.jl")
