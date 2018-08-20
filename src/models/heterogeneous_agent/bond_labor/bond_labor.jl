@@ -332,6 +332,8 @@ function model_settings!(m::BondLabor)
     # distributions
     m <= Setting(:normalize_distr_variables, true, "Whether or not to perform the
                  normalization of the μ distribution in the Klein solution step")
+    m <= Setting(:n_predetermined_variables, 0, "Number of predetermined variables after
+                 removing the densities. Calculated with the Jacobian normalization")
 
     m <= Setting(:state_indices, 1:2, "Which indices of m.endogenous_states correspond to state
                  variables")

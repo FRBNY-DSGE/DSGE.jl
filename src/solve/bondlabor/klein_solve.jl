@@ -1,10 +1,7 @@
-function klein_solve(Jac0, Qleft, Qx, Qy)
-	# step756: whenever outputs and/or inputs are densities,
-	# pre/postmultiply the jacobians from step 2 by an appropriate
-	# matrix so things integrate to 1
-	Qright = cat([1,2],Qx',Qy',Qx',Qy')
-	Jac1 = Qleft*Jac0*Qright
-	#println("finished step 3")
+function klein_solve(m::BondLabor)
+
+    Jac1 = jacobian(m)
+    NK   = get_setting(m, :n_predetermined_variables)
 
 	# apply generalized Schur decomposition a la Klein (2000)
 	n = size(Jac1,1)
@@ -17,11 +14,7 @@ function klein_solve(Jac0, Qleft, Qx, Qy)
 	QZ = ordschur(QZ,eigselect)
 	# note: because we did (A,B), beta gives eigs corresponding to B
 
-	NK = size(Qx,1) # number of predetermined vars. NOTE: this is after
-					# removing elements corresponding to densities
 	nk = sum(convert(Array{Int64,1},eigselect)) # number of stable eigs
-	println("NK = ",NK)
-	println("nk = ",nk)
 	if nk>NK
 	    warn("equilibrium is locally indeterminate")
 	elseif nk<NK
@@ -56,10 +49,10 @@ function klein_solve(Jac0, Qleft, Qx, Qy)
 		warn("max abs eigenvalue of S11invT11 and hx are different!")
 	end
 
-	# next, want to represent policy functions in terms of meaningful things
+    # next, want to represent policy functions in terms of meaningful things
 
-	gx_fval = Qy'*gx_coef*Qx
-	hx_fval = Qx'*hx_coef*Qx
+    # gx_fval = Qy'*gx_coef*Qx
+    # hx_fval = Qx'*hx_coef*Qx
 
-	return gx_fval, hx_fval, gx_coef, hx_coef
+	return gx_coef, hx_coef
 end
