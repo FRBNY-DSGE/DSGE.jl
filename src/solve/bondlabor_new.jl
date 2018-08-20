@@ -75,15 +75,6 @@ SGRIDB   = kron(sgrid,ones(nx))
 XGRIDB   = kron(ones(ns),xgrid)
 BIGWTS   = kron(swts,xwts)
 
-# Normalizing constants
-# Note: xscale/nx == xwts[1], and sscale/ns == swts[1]
-MX       = sqrt(xscale/nx)*eye(nx)       # matrix that maps from set of values of a functions at a point to the set of normalized scaling function coefficients
-MS       = sqrt(sscale/ns)*eye(ns)
-MXinv    = sqrt(nx/(xscale))*eye(nx)     # inverse of MX
-MSinv    = sqrt(ns/(sscale))*eye(ns)     # inverse of MS
-MSMX = kron(MS,MX)
-MSMXinv = inv(MSMX)
-
 function mollifier(z::AbstractFloat,ehi::AbstractFloat,elo::AbstractFloat)
     # mollifier function
     In = 0.443993816237631
@@ -247,10 +238,7 @@ function findss(βlo::AbstractFloat,
         # and is the map which moves you from cash on hand distribution
         # today to cash on had dist tomorrow
 
-        LPMKF = MSMX*KF*MSMX'
-
-        temp = xwts[1]*swts[1]*KF
-        @assert LPMKF ≈ temp
+        LPMKF = xwts[1]*swts[1]*KF
 
         # find eigenvalue closest to 1
         (Dee,Vee) = eig(LPMKF)
