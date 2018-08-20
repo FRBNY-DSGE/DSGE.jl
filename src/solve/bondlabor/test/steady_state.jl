@@ -12,9 +12,9 @@ saved_β    = read(file, "beta")
 close(file)
 
 @testset "Check steady state outputs" begin
-    @test saved_ell ≈ ell
-    @test saved_c   ≈ c
-    @test saved_η   ≈ η
-    @test saved_μ   ≈ μ
-    @test saved_β   ≈ β
+    @test saved_ell ≈ m[:lstar].value
+    @test saved_c   ≈ m[:cstar].value
+    @test saved_η   ≈ m[:ηstar].value
+    @test saved_μ   ≈ m[:μstar].value
+    @test saved_β   ≈ m[:βstar].value
 end
