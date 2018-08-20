@@ -4,8 +4,6 @@ using Distributions
 using JLD
 using Roots
 
-include("klein_solve.jl")
-
 test_output = true
 
 m = BondLabor()
@@ -25,7 +23,7 @@ test_output && include("test/jacobian.jl")
 
 # Solve
 m.testing = false      # So the Jacobian will be normalized within the klein solution
-gx, hx = klein_solve(m)
-@btime klein_solve(m)
+gx, hx = klein(m)
+@btime klein(m)
 
 test_output && include("test/solve.jl")
