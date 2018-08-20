@@ -181,5 +181,35 @@ function jacobian(m::BondLabor)
 
     JJ[F4,Z]   = ρ_z
 
+    if !m.testing && get_setting(m, :normalize_distr_variables)
+        JJ = normalize(m, JJ)
+    end
+
     return JJ
+end
+
+function normalize(m::BondLabor, JJ::Matrix{Float64})
+    nx = get_setting(m, :nx)
+    ns = get_setting(m, :ns)
+
+    # Create PPP matrix
+    P1 = kron(eye(ns),ones(nx,1))
+    Ptemp = eye(nx)
+    Ptemp = Ptemp[:,2:end]
+    P2 = kron(eye(ns),Ptemp)
+    P = [P1 P2]
+
+    (Q,R) = qr(P)
+
+    S         = Q[:,ns+1:end]'
+    Qleft     = cat([1 2],S,[1],eye(nx*ns),[1])
+    Qx        = cat([1 2],S,[1])
+    Qy        = cat([1 2],eye(nx*ns),[1])
+
+    m <= Setting(:n_predetermined_variables, size(Qx, 1))
+
+	Qright = cat([1,2],Qx',Qy',Qx',Qy')
+	Jac1 = Qleft*JJ*Qright
+
+    return Jac1
 end
