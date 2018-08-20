@@ -123,8 +123,8 @@ module DSGE
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
-        Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, KrusellSmith, eqcond,
-        measurement, pseudo_measurement, shock_groupings,
+        Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, KrusellSmith,
+        BondLabor, eqcond, measurement, pseudo_measurement, shock_groupings,
 
         # util
         @test_matrix_approx_eq, @test_matrix_approx_eq_eps
@@ -271,4 +271,7 @@ module DSGE
     include("models/heterogeneous_agent/krusell_smith/observables.jl")
     include("models/heterogeneous_agent/krusell_smith/measurement.jl")
 
+    include("models/heterogeneous_agent/bond_labor/bond_labor.jl")
+    # include("models/heterogeneous_agent/bond_labor/measurement.jl")
+    # include("models/heterogeneous_agent/bond_labor/observables.jl")
 end

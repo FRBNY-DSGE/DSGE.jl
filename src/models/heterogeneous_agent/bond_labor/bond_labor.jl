@@ -72,7 +72,13 @@ equilibrium conditions.
 type BondLabor{T} <: AbstractModel{T}
     parameters::ParameterVector{T}                         # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                       # model steady-state values
-    grids::OrderedDict{Symbol,Grid}                        # quadrature grids
+
+    # Temporary to get it to work. Need to
+    # figure out a more flexible way to define
+    # "grids" that are not necessarily quadrature
+    # grids within the model
+    grids::OrderedDict{Symbol,Union{Grid, Vector}}
+
     keys::OrderedDict{Symbol,Int}                          # human-readable names for all the model
                                                            # parameters and steady-states
 
@@ -110,41 +116,38 @@ function init_model_indices!(m::BondLabor)
     # Endogenous states
     endogenous_states = collect([
     # These states corresp. to the following in the original notation
-    #    LMP,    LELLP,  KKP,   ZP,    MP,    ELLP,
-        :μ′_t1, :l′_t1, :K′_t, :z′_t, :μ′_t, :l′_t])
+    #    MUP,   ZP,    ELLP,  RP
+        :μ′_t, :z′_t, :l′_t, :R′_t])
 
     # Exogenous shocks
     exogenous_shocks = collect([:z_sh])
 
     # Equilibrium conditions
     equilibrium_conditions = collect([
-        :eq_euler, :eq_kolmogorov_fwd, :eq_μ, :eq_l, :eq_K_law_of_motion, :eq_TFP])
+        :eq_euler, :eq_kolmogorov_fwd, :eq_market_clearing, :eq_TFP])
 
     # Observables
     observables = keys(m.observable_mappings)
 
     ########################################################################################
     # Setting indices of endogenous_states and equilibrium conditions manually for now
-    nw = get_setting(m, :nw)
+    nx = get_setting(m, :nx)
+    ns = get_setting(m, :ns)
     endo = m.endogenous_states_unnormalized
     eqconds = m.equilibrium_conditions
 
     # State variables
-    endo[:μ′_t1] = 1:nw
-    endo[:l′_t1] = nw+1:2*nw
-    endo[:K′_t]  = 2*nw+1:2*nw+1
-    endo[:z′_t]  = 2*nw+2:2*nw+2
+    endo[:μ′_t]  = 1:nx*ns
+    endo[:z′_t]  = nx*ns+1:nx*ns+1
 
     # Jump variables
-    endo[:μ′_t]  = 2*nw+3:3*nw+2
-    endo[:l′_t]  = 3*nw+3:4*nw+2
+    endo[:l′_t]  = nx*ns+2:2*nx*ns+1
+    endo[:R′_t]  = 2*nx*ns+2:2*nx*ns+2
 
-    eqconds[:eq_euler]              = 1:nw
-    eqconds[:eq_kolmogorov_fwd]     = nw+1:2*nw
-    eqconds[:eq_μ]                  = 2*nw+1:3*nw
-    eqconds[:eq_l]                  = 3*nw+1:4*nw
-    eqconds[:eq_K_law_of_motion]    = 4*nw+1:4*nw+1
-    eqconds[:eq_TFP]                = 4*nw+2:4*nw+2
+    eqconds[:eq_euler]              = 1:nx*ns
+    eqconds[:eq_kolmogorov_fwd]     = nx*ns+1:2*nx*ns
+    eqconds[:eq_market_clearing]    = 2*nx*ns+1:2*nx*ns+1
+    eqconds[:eq_TFP]                = 2*nx*ns+2:2*nx*ns+2
     ########################################################################################
 
     m.endogenous_states = deepcopy(endo)
@@ -192,7 +195,7 @@ function BondLabor(subspec::String="ss0";
     end
 
     # Set observable transformations
-    init_observable_mappings!(m)
+    # init_observable_mappings!(m)
 
     # Initialize parameters
     init_parameters!(m)
@@ -202,11 +205,12 @@ function BondLabor(subspec::String="ss0";
 
     init_model_indices!(m)
 
+    # Temporarily comment out while working on steadystate!
     # Solve for the steady state
-    steadystate!(m)
+    # steadystate!(m)
 
     # So that the indices of m.endogenous_states reflect the normalization
-    normalize_state_indices!(m)
+    # normalize_state_indices!(m)
 
     return m
 end
@@ -222,54 +226,48 @@ those).
 """
 function init_parameters!(m::BondLabor)
     # Initialize parameters
-
-    #### Changes
-    # Unclear if the discount rate should be a parameter, given we're solving for it
-#    m <= parameter(:β, 0.95, fixed = true,
-#                   description = "β: Discount rate.", tex_label = "\\beta")
-
+    m <= parameter(:R, 1.04, fixed = true,
+                   description = "R: Steady-state gross real interest rate.", tex_label = "R")
     m <= parameter(:γ, 1.0, fixed = true,
                    description = "γ: CRRA Parameter.", tex_label = "\\gamma")
-
-    # Didn't see explicit articulation of what commented portions are supposed to be set to in their code. Do we have α and δ in this model?
-#    m <= parameter(:α, 1.0/3.0, fixed = true,
-#                   description = "α: Capital Share.", tex_label = "\\alpha")
-#    m <= parameter(:δ, 0.2, fixed = true,
-#                   description = "δ: Depreciation.", tex_label = "\\delta")
+    m <= parameter(:ν, 1.0, fixed = true,
+                   description = "Inverse Frisch elasticity of labor supply.", tex_label = "\\nu")
+    m <= parameter(:abar, -0.5, fixed = true,
+                   description = "Borrowing floor.", tex_label = "\\bar{a}")
     m <= parameter(:ρ_z, 0.95, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_z: AR(1) coefficient in the technology process.",
                    tex_label="\\rho_z")
-#    m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,
-#                   description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
-#                   tex_label="\\sigma_{z}")
     m <= parameter(:μ_s, 0., fixed = true, description = "μ_s: Mu of log normal in income")
     m <= parameter(:σ_s, 0.5, fixed = true,
                    description = "σ_s: Sigma of log normal in income")
-    m <= parameter(:e_y, 0.1, fixed = true, description = "e_y: Measurement error on GDP",
-                   tex_label = "e_y")
+    # m <= parameter(:e_y, 0.1, fixed = true, description = "e_y: Measurement error on GDP",
+                   # tex_label = "e_y")
 
     # Setting steady-state parameters
-    nw = get_setting(m, :nw)
+    nx = get_setting(m, :nx)
+    ns = get_setting(m, :ns)
 
-    m <= SteadyStateParameterGrid(:lstar, fill(NaN, nw), description = "Steady-state expected discounted
+    m <= SteadyStateParameterGrid(:lstar, fill(NaN, nx*ns), description = "Steady-state expected discounted
                                   marginal utility of consumption", tex_label = "l_*")
-    m <= SteadyStateParameterGrid(:cstar, fill(NaN, nw), description = "Steady-state consumption",
+    m <= SteadyStateParameterGrid(:cstar, fill(NaN, nx*ns), description = "Steady-state consumption",
                                   tex_label = "c_*")
-    m <= SteadyStateParameterGrid(:μstar, fill(NaN, nw), description = "Steady-state cross-sectional
+    m <= SteadyStateParameterGrid(:ηstar, fill(NaN, nx*ns), description = "Steady-state
+                                  level of labor supply",
+                                  tex_label = "\\eta_*")
+    m <= SteadyStateParameterGrid(:μstar, fill(NaN, nx*ns), description = "Steady-state cross-sectional
                                   density of cash on hand", tex_label = "\\mu_*")
-    m <= SteadyStateParameter(:Kstar, NaN, description = "Steady-state capital", tex_label = "K_*")
-    m <= SteadyStateParameter(:Lstar, NaN, description = "Steady-state labor", tex_label = "L_*")
-    m <= SteadyStateParameter(:Wstar, NaN, description = "Steady-state wages", tex_label = "W_*")
 
-    ##### Changes:
-    # Set Rstar to be 1.04, as desired (is not solved for in this model)
-    m <= SteadyStateParameter(:Rstar, 1.04, description = "Steady-state net-return on
-                              capital", tex_label = "R_*")
-    # Do solve for discount rate in this model
-    m <= SteadyStateParameter(:β, NaN, description = "Discount rate.", tex_label = "\\beta")
+    # Figure out a better description for this...
+    m <= SteadyStateParameterGrid(:χstar, fill(NaN, nx*ns), description = "Steady-state
+                                  solution for constrained consumption and labor supply",
+                                  tex_label = "\\chi_*")
 
-    m <= SteadyStateParameterGrid(:KFstar, fill(NaN, (nw, nw)), description = "Steady-state Kolmogorov
-                                  Forward Equation", tex_label = "KF_*")
+    m <= SteadyStateParameter(:βstar, NaN, description = "Steady-state discount factor",
+                              tex_label = "\\beta_*")
+    # m <= SteadyStateParameter(:Lstar, NaN, description = "Steady-state labor", tex_label = "L_*")
+    # m <= SteadyStateParameter(:Wstar, NaN, description = "Steady-state wages", tex_label = "W_*")
+    # m <= SteadyStateParameterGrid(:KFstar, fill(NaN, (nw, nw)), description = "Steady-state Kolmogorov
+                                  # Forward Equation", tex_label = "KF_*")
 end
 
 """
@@ -278,34 +276,47 @@ init_grids!(m::BondLabor)
 ```
 """
 function init_grids!(m::BondLabor)
-    wscale  = get_setting(m, :wscale)
-    wlo     = get_setting(m, :wlo)
-    whi     = get_setting(m, :whi)
-    nw      = get_setting(m, :nw)
+    xscale  = get_setting(m, :xscale)
+    xlo     = get_setting(m, :xlo)
+    xhi     = get_setting(m, :xhi)
+    nx      = get_setting(m, :nx)
 
-    slo     = get_setting(m, :slo)
-    shi     = get_setting(m, :shi)
     ns      = get_setting(m, :ns)
+    λ       = get_setting(m, :λ)
 
     grids = OrderedDict()
 
-    grids[:wgrid] = Grid(uniform_quadrature(wscale), wlo, whi, nw, scale = wscale)
-    grids[:sgrid] = Grid(curtis_clenshaw_quadrature(2), slo, shi, ns)
+    # Cash on hand grid
+    grids[:xgrid] = Grid(uniform_quadrature(xscale), xlo, xhi, nx, scale = xscale)
+
+    # Skill grid
+    lsgrid, sprob, sscale = tauchen86(m[:μ_s].value, m[:σ_s].value, ns, λ)
+    swts = (sscale/ns)*ones(ns)
+    sgrid = exp.(lsgrid)
+    grids[:sgrid] = Grid(sgrid, swts, sscale)
+
+    # Density of skill across skill grid
+    grids[:ggrid] = sprob./swts
+
+    # Total grid vectorized across both dimensions
+    grids[:sgrid_total] = kron(sgrid, ones(nx))
+    grids[:xgrid_total] = kron(ones(ns), grids[:xgrid].points)
+    grids[:weights_total] = kron(swts, grids[:xgrid].weights)
 
     m.grids = grids
 end
 
-# """
-# ```
-# steadystate!(m::BondLabor)
-# ```
+"""
+```
+steadystate!(m::BondLabor)
+```
 
-# Calculates the model's steady-state values. `steadystate!(m)` must be called whenever
-# the parameters of `m` are updated.
-# """
-# function steadystate!(m::BondLabor)
-    # return m
-# end
+Calculates the model's steady-state values. `steadystate!(m)` must be called whenever
+the parameters of `m` are updated.
+"""
+function steadystate!(m::BondLabor)
+    return m
+end
 
 function model_settings!(m::BondLabor)
     default_settings!(m)
@@ -334,16 +345,20 @@ function model_settings!(m::BondLabor)
     m <= Setting(:normalize_distr_variables, true, "Whether or not to perform the
                  normalization of the μ distribution in the Klein solution step")
 
-    m <= Setting(:state_indices, 1:4, "Which indices of m.endogenous_states correspond to state
+    m <= Setting(:state_indices, 1:2, "Which indices of m.endogenous_states correspond to state
                  variables")
-    m <= Setting(:jump_indices, 5:6, "Which indices of m.endogenous_states correspond to jump
+    m <= Setting(:jump_indices, 3:4, "Which indices of m.endogenous_states correspond to jump
                  variables")
-    m <= Setting(:n_states, 162 - get_setting(m, :normalize_distr_variables),
+
+    # Need to think of a better way to handle indices accounting for distributional
+    # variables
+    m <= Setting(:n_states, 101 - get_setting(m, :normalize_distr_variables),
                  "Number of state variables, in the true sense (fully
                  backward looking) accounting for the discretization across the grid")
-    m <= Setting(:n_jumps, 160 - get_setting(m, :normalize_distr_variables),
+    m <= Setting(:n_jumps, 100,
                  "Number of jump variables (forward looking) accounting for
                 the discretization across the grid")
+
     m <= Setting(:n_model_states, get_setting(m, :n_states) + get_setting(m, :n_jumps),
                  "Number of 'states' in the state space model. Because backward and forward
                  looking variables need to be explicitly tracked for the Klein solution
@@ -351,81 +366,80 @@ function model_settings!(m::BondLabor)
 
     # Mollifier setting parameters
     m <= Setting(:In, 0.443993816237631, "Normalizing constant for the mollifier")
-    m <= Setting(:smoother, 1.0, "Scale of the molifier (how peaked the mollifier is)
-                 smoother = 0 you get uniform dist")
-    m <= Setting(:zlo, 0.0, "Second income shock to mollify actual income")
-    m <= Setting(:zhi, 1.0, "Upper bound on this process")
+    m <= Setting(:elo, 0.0, "Lower bound on stochastic consumption commitments")
+    m <= Setting(:ehi, 1.0, "Upper bound on stochastic consumption commitments")
 
-    # w: Cash on Hand Grid Setup
-    m <= Setting(:nw, 60, "Cash on hand distribution grid points")
-    m <= Setting(:wlo, 0.5, "Lower bound on cash on hand")
-    m <= Setting(:whi, 4.0, "Upper Bound on cash on hand")
-    m <= Setting(:wscale, get_setting(m, :whi) - get_setting(m, :wlo), "Size of the wgrid")
+    # x: Cash on Hand Grid Setup
+    m <= Setting(:nx, 50, "Cash on hand distribution grid points")
+    m <= Setting(:xlo, -0.5 - 1.0, "Lower bound on cash on hand")
+    m <= Setting(:xhi, 4.0, "Upper Bound on cash on hand")
+    m <= Setting(:xscale, get_setting(m, :xhi) - get_setting(m, :xlo), "Size of the xgrid")
 
     # s: Skill Distribution/ "Units of effective labor" Grid Setup
-    m <= Setting(:ns, 50, "Skill distribution grid points")
-    m <= Setting(:slo, 0.5, "Lower bound on skill grid")
-    m <= Setting(:shi, 1.5, "Upper bound on skill")
-    m <= Setting(:sscale, (get_setting(m, :shi) - get_setting(m, :slo))/2.0, "Size of our s
-                 grid, relative to size of [-1, 1]")
+    m <= Setting(:ns, 2, "Skill distribution grid points")
+    m <= Setting(:λ, 3.0, "The λ parameter in the Tauchen distribution calculation")
+
+    # Total grid x*s
+    m <= Setting(:n, get_setting(m, :nx) * get_setting(m, :ns), "Total grid size, multiplying
+                 across grid dimensions.")
 end
 
-# For normalizing the states
-function normalize_state_indices!(m::AbstractModel)
-    endo                 = m.endogenous_states
-    state_indices        = get_setting(m, :state_indices)
-    jump_indices         = get_setting(m, :jump_indices)
-    normalization_factor = get_setting(m, :normalize_distr_variables)
+# # For normalizing the states
+# function normalize_state_indices!(m::AbstractModel)
+    # endo                 = m.endogenous_states
+    # state_indices        = get_setting(m, :state_indices)
+    # jump_indices         = get_setting(m, :jump_indices)
+    # normalization_factor = get_setting(m, :normalize_distr_variables)
 
-    model_state_keys     = endo.keys
-    jump_keys            = endo.keys[jump_indices]
+    # model_state_keys     = endo.keys
+    # jump_keys            = endo.keys[jump_indices]
 
-    # This structure assumes that states are always ordered before jumps
-    # And that both states and jumps have the same number of variables
-    # to be normalized, in this case μ′_t1 and μ′_t
-    normalize_states!(endo, normalization_factor, model_state_keys)
-    normalize_jumps!(endo, normalization_factor, jump_keys)
+    # # This structure assumes that states are always ordered before jumps
+    # # And that both states and jumps have the same number of variables
+    # # to be normalized, in this case μ′_t1 and μ′_t
+    # normalize_states!(endo, normalization_factor, model_state_keys)
+    # normalize_jumps!(endo, normalization_factor, jump_keys)
 
-    # TO DO: Include assertions to ensure that the indices are all
-    # consecutive and that the right factor was subtracted from each distribution object
-end
+    # # TO DO: Include assertions to ensure that the indices are all
+    # # consecutive and that the right factor was subtracted from each distribution object
+# end
 
-# Shift a UnitRange type down by an increment
-# If this UnitRange is the first_range in the group being shifted, then do not
-# subtract the increment from the start
-# e.g.
-# If you have 1:80 as your first range, then shift(1:80, -1; first_range = true)
-# should return 1:79
-# However, if you have 81:160 as range, that is not your first range, then the
-# function should return 80:159
-function shift(inds::UnitRange, increment::Int64; first_range::Bool = false)
-    if first_range
-        return UnitRange(inds.start, inds.stop + increment)
-    else
-        return UnitRange(inds.start + increment, inds.stop + increment)
-    end
-end
+# # Shift a UnitRange type down by an increment
+# # If this UnitRange is the first_range in the group being shifted, then do not
+# # subtract the increment from the start
+# # e.g.
+# # If you have 1:80 as your first range, then shift(1:80, -1; first_range = true)
+# # should return 1:79
+# # However, if you have 81:160 as range, that is not your first range, then the
+# # function should return 80:159
+# function shift(inds::UnitRange, increment::Int64; first_range::Bool = false)
+    # if first_range
+        # return UnitRange(inds.start, inds.stop + increment)
+    # else
+        # return UnitRange(inds.start + increment, inds.stop + increment)
+    # end
+# end
 
-function normalize_states!(endo::OrderedDict, normalization_factor::Bool,
-                           model_state_keys::Vector{Symbol})
-    for (i, model_state) in enumerate(model_state_keys)
-        inds = endo[model_state]
-        if i == 1
-            endo[model_state] = shift(inds, -normalization_factor, first_range = true)
-        else
-            endo[model_state] = shift(inds, -normalization_factor)
-        end
-    end
-end
+# function normalize_states!(endo::OrderedDict, normalization_factor::Bool,
+                           # model_state_keys::Vector{Symbol})
+    # for (i, model_state) in enumerate(model_state_keys)
+        # inds = endo[model_state]
+        # if i == 1
+            # endo[model_state] = shift(inds, -normalization_factor, first_range = true)
+        # else
+            # endo[model_state] = shift(inds, -normalization_factor)
+        # end
+    # end
+# end
 
-function normalize_jumps!(endo::OrderedDict, normalization_factor::Bool,
-                          jump_keys::Vector{Symbol})
-    for (i, jump) in enumerate(jump_keys)
-        inds = endo[jump]
-        if i == 1
-            endo[jump] = shift(inds, -normalization_factor, first_range = true)
-        else
-            endo[jump] = shift(inds, -normalization_factor)
-        end
-    end
-end
+# function normalize_jumps!(endo::OrderedDict, normalization_factor::Bool,
+                          # jump_keys::Vector{Symbol})
+    # for (i, jump) in enumerate(jump_keys)
+        # inds = endo[jump]
+        # if i == 1
+            # endo[jump] = shift(inds, -normalization_factor, first_range = true)
+        # else
+            # endo[jump] = shift(inds, -normalization_factor)
+        # end
+    # end
+# end
