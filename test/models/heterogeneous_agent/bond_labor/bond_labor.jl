@@ -1,7 +1,35 @@
-using Base.Test
+using DSGE
+using Base.Test, BenchmarkTools
 using JLD
 
 path = dirname(@__FILE__)
+
+m = BondLabor()
+
+# Steady-state computation
+steadystate!(m)
+@btime steadystate!(m)
+
+file = jldopen("$path/reference/steady_state.jld", "r")
+saved_ell  = read(file, "ell")
+saved_c    = read(file, "c")
+saved_η    = read(file, "eta")
+saved_μ    = read(file, "mu")
+saved_β    = read(file, "beta")
+close(file)
+
+@testset "Check steady state outputs" begin
+    @test saved_ell ≈ m[:lstar].value
+    @test saved_c   ≈ m[:cstar].value
+    @test saved_η   ≈ m[:ηstar].value
+    @test saved_μ   ≈ m[:μstar].value
+    @test saved_β   ≈ m[:βstar].value
+end
+
+# Jacobian computation
+m.testing = true        # So that it will test against the unnormalized Jacobian
+JJ = DSGE.jacobian(m)
+@btime JJ = DSGE.jacobian(m)
 
 file = jldopen("$path/reference/jacobian.jld", "r")
 saved_JJ  = read(file, "JJ")
@@ -57,4 +85,23 @@ F4 = 2*nx*ns+2:2*nx*ns+2 # z
         @test saved_JJ[F4, ZP] ≈ JJ[F4, ZP]
         @test saved_JJ[F4, Z] ≈ JJ[F4, Z]
     end
+end
+
+# Solve
+m.testing = false      # So the Jacobian will be normalized within the klein solution
+gx, hx = klein(m)
+@btime klein(m)
+
+file = jldopen("$path/reference/solve.jld", "r")
+# saved_gx2  = read(file, "gx2")
+# saved_hx2  = read(file, "hx2")
+saved_gx   = read(file, "gx")
+saved_hx   = read(file, "hx")
+close(file)
+
+@testset "Check solve outputs" begin
+    # @test saved_gx2 ≈ gx2
+    # @test saved_hx2 ≈ hx2
+    @test saved_gx  ≈ gx
+    @test saved_hx  ≈ hx
 end
