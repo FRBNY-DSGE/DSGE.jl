@@ -11,6 +11,17 @@ function augment_model_states(endo::OrderedDict{Symbol, UnitRange}, n_model_stat
         unprimed_inds::UnitRange  = reindex_unprimed_model_states(inds, n_model_states)
         endo_aug[unprimed_state] = unprimed_inds
     end
+
+    # Ensure all ranges are consecutive
+    endo_ranges = endo_aug.vals
+    for i in 1:length(endo_ranges)
+        if i == 1
+            @assert endo_ranges[1].start == 1
+        else
+            @assert endo_ranges[i].start == endo_ranges[i-1].stop + 1
+        end
+    end
+
     return endo_aug
 end
 
