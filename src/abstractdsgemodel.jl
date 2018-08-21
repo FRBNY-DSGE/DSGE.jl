@@ -228,8 +228,8 @@ n_model_states(m::AbstractModel) = get_setting(m, :n_model_states)
 # tracked should be 1 less if normalized
 # However, the number of jumps and states unnormalized are required for
 # the construction of the Jacobian, hence the reason for these helpers
-n_jumps_unnormalized(m::AbstractModel) = n_jumps(m) + get_setting(m, :normalize_distr_variables)
-n_backward_looking_states_unnormalized(m::AbstractModel) = n_backward_looking_states(m) + get_setting(m, :normalize_distr_variables)
+n_jumps_unnormalized(m::AbstractModel) = n_jumps(m) + get_setting(m, :n_jump_distributions)
+n_backward_looking_states_unnormalized(m::AbstractModel) = n_backward_looking_states(m) + get_setting(m, :n_backward_looking_distributions)
 n_model_states_unnormalized(m::AbstractModel) = n_jumps_unnormalized(m) + n_backward_looking_states_unnormalized(m)
 
 """

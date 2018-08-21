@@ -134,39 +134,6 @@ function jacobian(m::KrusellSmith)
     return JJ
 end
 
-# The reason for this function is that the canonical form for the Klein solution method is
-# as follows:
-# E_t A([x_{t+1}, y_{t+1}]) = B[x_t, y_t]
-# Where we only need to track [x_{t+1}, y_{t+1}] as states when
-# we transform the system from canonical form to state space form
-# Hence because we only keep track of the t+1 indexed variables, which we denote
-# with a ′, we need a way of calculating the indices in the Jacobian corresponding
-# to the t indexed variables.
-function reindex_unprimed_model_states(inds::UnitRange, n_model_states::Int64)
-    return inds + n_model_states
-end
-
-# Returns a model state variable symbol without the prime
-function unprime(state::Symbol)
-    return Symbol(replace(string(state), "′", ""))
-end
-
-# Adds the unprimed model states to the dictionary of ranges to properly
-# fill the Jacobian matrix
-# Note: This is not augmentation in the usual sense, which incorporates lags of
-# model state variables after the transition equation has been solved for
-# but rather, augmenting the model states with lags prior to solution since the
-# solution method requires lags
-function augment_model_states(endo::OrderedDict{Symbol, UnitRange}, n_model_states::Int64)
-    endo_aug = deepcopy(endo)
-    for (state::Symbol, inds::UnitRange) in endo
-        unprimed_state = unprime(state)
-        unprimed_inds::UnitRange  = reindex_unprimed_model_states(inds, n_model_states)
-        endo_aug[unprimed_state] = unprimed_inds
-    end
-    return endo_aug
-end
-
 function normalize(m::KrusellSmith, JJ::Matrix{Float64})
     nw = get_setting(m, :nw)
 

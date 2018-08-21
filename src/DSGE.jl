@@ -270,6 +270,8 @@ module DSGE
     include("models/representative_agent/an_schorfheide/augment_states.jl")
 
     # Heterogeneous Agent Models
+    include("models/heterogeneous_agent/util.jl")
+
     include("models/heterogeneous_agent/krusell_smith/krusell_smith.jl")
     include("models/heterogeneous_agent/krusell_smith/steady_state.jl")
     include("models/heterogeneous_agent/krusell_smith/subspecs.jl")
@@ -281,6 +283,6 @@ module DSGE
     include("models/heterogeneous_agent/bond_labor/bond_labor.jl")
     include("models/heterogeneous_agent/bond_labor/steady_state.jl")
     include("models/heterogeneous_agent/bond_labor/jacobian.jl")
-    # include("models/heterogeneous_agent/bond_labor/measurement.jl")
-    # include("models/heterogeneous_agent/bond_labor/observables.jl")
+    include("models/heterogeneous_agent/bond_labor/measurement.jl")
+    include("models/heterogeneous_agent/bond_labor/observables.jl")
 end
