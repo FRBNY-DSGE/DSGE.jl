@@ -22,8 +22,8 @@ benchmarked against.
 - `trial_name::String`: The name of the trial being written.
 
 """
-function write_ref_trial(trial::BenchmarkTools.Trial, trial_name::String)
-    filepath = "../reference/$trial_name.jld"
+function write_ref_trial(trial::BenchmarkTools.Trial, trial_name::String;
+                         filepath::String = "../reference/$trial_name.jld")
     if isfile(filepath)
         println("There is already a reference file in $filepath. Do you want to overwrite it? (y/n)")
         response = readline(STDIN)
@@ -53,8 +53,8 @@ end
 
 function write_ref_trial_group(group::Dict{Symbol, Dict},
                                trial_names::Vector{Symbol},
-                               group_name::String)
-    filepath = "../reference/$group_name.jld"
+                               group_name::String;
+                               filepath::String = "../reference/$group_name.jld")
     if isfile(filepath)
         println("There is already a reference file in $filepath. Do you want to overwrite it? (y/n)")
         response = readline(STDIN)
