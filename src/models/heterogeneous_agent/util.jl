@@ -1,0 +1,90 @@
+# Adds the unprimed model states to the dictionary of ranges to properly
+# fill the Jacobian matrix
+# Note: This is not augmentation in the usual sense, which incorporates lags of
+# model state variables after the transition equation has been solved for
+# but rather, augmenting the model states with lags prior to solution since the
+# solution method requires lags
+function augment_model_states(endo::OrderedDict{Symbol, UnitRange}, n_model_states::Int64)
+    endo_aug = deepcopy(endo)
+    for (state::Symbol, inds::UnitRange) in endo
+        unprimed_state = unprime(state)
+        unprimed_inds::UnitRange  = reindex_unprimed_model_states(inds, n_model_states)
+        endo_aug[unprimed_state] = unprimed_inds
+    end
+    return endo_aug
+end
+
+# The reason for this function is that the canonical form for the Klein solution method is
+# as follows:
+# E_t A([x_{t+1}, y_{t+1}]) = B[x_t, y_t]
+# Where we only need to track [x_{t+1}, y_{t+1}] as states when
+# we transform the system from canonical form to state space form
+# Hence because we only keep track of the t+1 indexed variables, which we denote
+# with a ′, we need a way of calculating the indices in the Jacobian corresponding
+# to the t indexed variables.
+function reindex_unprimed_model_states(inds::UnitRange, n_model_states::Int64)
+    return inds + n_model_states
+end
+
+# Returns a model state variable symbol without the prime
+function unprime(state::Symbol)
+    return Symbol(replace(string(state), "′", ""))
+end
+
+######################################################################################
+# For normalizing the states
+function normalize_state_indices!(m::AbstractModel)
+    normalized_states = m.normalized_states
+
+    endo                     = m.endogenous_states
+    model_state_keys         = endo.keys
+    normalized_state_inds    = findin(model_state_keys, normalized_states)
+
+    m.endogenous_states = normalize(endo, model_state_keys, normalized_state_inds)
+end
+
+# Shift a UnitRange type down by an increment
+# If this UnitRange is the first_range in the group being shifted, then do not
+# subtract the increment from the start
+# e.g.
+# If you have 1:80 as your first range, then shift(1:80, -1; first_range = true)
+# should return 1:79
+# However, if you have 81:160 as range, that is not your first range, then the
+# function should return 80:159
+function shift(inds::UnitRange, increment::Int64; first_range::Bool = false)
+    if first_range
+        return UnitRange(inds.start, inds.stop + increment)
+    else
+        return UnitRange(inds.start + increment, inds.stop + increment)
+    end
+end
+
+# normalize the distributional states located in indices specified by normalized_state_inds
+function normalize(endo::OrderedDict{Symbol, UnitRange},
+                   model_state_keys::Vector{Symbol},
+                   normalized_state_inds::Vector{Int64})
+    n_state_vars = length(endo)
+
+    # For each state that needs to be normalizedd...
+    for i in normalized_state_inds
+        # Subtract 1 from both the beginning and end of the UnitRange...
+        for j in i:n_state_vars
+            inds = endo[model_state_keys[j]]
+            # Except for the first UnitRange in a given normalization
+            first_range = (j == i)
+            endo[model_state_keys[j]] = shift(inds, -1, first_range = first_range)
+        end
+    end
+
+    # Ensure all ranges are consecutive
+    endo_ranges = endo.vals
+    for i in 1:n_state_vars
+        if i == 1
+            @assert endo_ranges[1].start == 1
+        else
+            @assert endo_ranges[i].start == endo_ranges[i-1].stop + 1
+        end
+    end
+
+    return endo
+end

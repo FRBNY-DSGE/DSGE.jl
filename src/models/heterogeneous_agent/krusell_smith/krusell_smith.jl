@@ -79,6 +79,8 @@ type KrusellSmith{T} <: AbstractModel{T}
     keys::OrderedDict{Symbol,Int}                          # human-readable names for all the model
                                                            # parameters and steady-states
 
+    normalized_states::Vector{Symbol}                      # All of the distributional
+                                                           # states that need to be normalized
     endogenous_states_unnormalized::OrderedDict{Symbol,UnitRange} # Vector of unnormalized
                                                            # ranges of indices
     endogenous_states::OrderedDict{Symbol,UnitRange}       # Vector of ranges corresponding
@@ -150,6 +152,8 @@ function init_model_indices!(m::KrusellSmith)
     eqconds[:eq_TFP]                = 4*nw+2:4*nw+2
     ########################################################################################
 
+    m.normalized_states = [:μ′_t1, :μ′_t]
+
     m.endogenous_states = deepcopy(endo)
     for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
@@ -173,6 +177,8 @@ function KrusellSmith(subspec::String="ss0";
             # grids and keys
             OrderedDict{Symbol,Grid}(), OrderedDict{Symbol,Int}(),
 
+            # normalized_states
+            Vector{Symbol}(),
             # model indices
             # endogenous states unnormalized, endogenous states normalized
             OrderedDict{Symbol,UnitRange}(), OrderedDict{Symbol,UnitRange}(),
@@ -316,23 +322,28 @@ function model_settings!(m::KrusellSmith)
                  # "Padding for anticipated policy shocks")
 
     # Number of states and jumps
-    # May want to generalize this functionality for other models with multiple
-    # distributions
     m <= Setting(:normalize_distr_variables, true, "Whether or not to perform the
-                 normalization of the μ distribution in the Klein solution step")
+                 normalization of the distributional states in the Klein solution step")
     m <= Setting(:n_predetermined_variables, 0, "Number of predetermined variables after
                  removing the densities. Calculated with the Jacobian normalization")
 
-    m <= Setting(:state_indices, 1:4, "Which indices of m.endogenous_states correspond to state
-                 variables")
+    m <= Setting(:state_indices, 1:4, "Which indices of m.endogenous_states correspond to
+                 backward looking state variables")
     m <= Setting(:jump_indices, 5:6, "Which indices of m.endogenous_states correspond to jump
                  variables")
-    m <= Setting(:n_backward_looking_states, 162 - get_setting(m, :normalize_distr_variables),
+
+    # Note, these settings assume normalization.
+    m <= Setting(:n_backward_looking_distributions, 1, "Number of state variables that are
+                 distributional variables.")
+    m <= Setting(:n_backward_looking_states, 162 - get_setting(m, :n_backward_looking_distributions),
                  "Number of state variables, in the true sense (fully
                  backward looking) accounting for the discretization across the grid")
-    m <= Setting(:n_jumps, 160 - get_setting(m, :normalize_distr_variables),
+    m <= Setting(:n_jump_distributions, 1, "Number of jump variables that are distributional
+                 variables.")
+    m <= Setting(:n_jumps, 160 - get_setting(m, :n_jump_distributions),
                  "Number of jump variables (forward looking) accounting for
                 the discretization across the grid")
+
     m <= Setting(:n_model_states, n_backward_looking_states(m) + n_jumps(m),
                  "Number of 'states' in the state space model. Because backward and forward
                  looking variables need to be explicitly tracked for the Klein solution
@@ -357,64 +368,4 @@ function model_settings!(m::KrusellSmith)
     m <= Setting(:shi, 1.5, "Upper bound on skill")
     m <= Setting(:sscale, (get_setting(m, :shi) - get_setting(m, :slo))/2.0, "Size of our s
                  grid, relative to size of [-1, 1]")
-end
-
-# For normalizing the states
-function normalize_state_indices!(m::AbstractModel)
-    endo = m.endogenous_states
-    state_indices = get_setting(m, :state_indices)
-    jump_indices  = get_setting(m, :jump_indices)
-    normalization_factor = get_setting(m, :normalize_distr_variables)
-
-    model_state_keys    = endo.keys
-    jump_keys           = endo.keys[jump_indices]
-
-    # This structure assumes that states are always ordered before jumps
-    # And that both states and jumps have the same number of variables
-    # to be normalized, in this case μ′_t1 and μ′_t
-    normalize_states!(endo, normalization_factor, model_state_keys)
-    normalize_jumps!(endo, normalization_factor, jump_keys)
-
-    # TO DO: Include assertions to ensure that the indices are all
-    # consecutive and that the right factor was subtracted from each distribution object
-end
-
-# Shift a UnitRange type down by an increment
-# If this UnitRange is the first_range in the group being shifted, then do not
-# subtract the increment from the start
-# e.g.
-# If you have 1:80 as your first range, then shift(1:80, -1; first_range = true)
-# should return 1:79
-# However, if you have 81:160 as range, that is not your first range, then the
-# function should return 80:159
-function shift(inds::UnitRange, increment::Int64; first_range::Bool = false)
-    if first_range
-        return UnitRange(inds.start, inds.stop + increment)
-    else
-        return UnitRange(inds.start + increment, inds.stop + increment)
-    end
-end
-
-function normalize_states!(endo::OrderedDict, normalization_factor::Bool,
-                           model_state_keys::Vector{Symbol})
-    for (i, model_state) in enumerate(model_state_keys)
-        inds = endo[model_state]
-        if i == 1
-            endo[model_state] = shift(inds, -normalization_factor, first_range = true)
-        else
-            endo[model_state] = shift(inds, -normalization_factor)
-        end
-    end
-end
-
-function normalize_jumps!(endo::OrderedDict, normalization_factor::Bool,
-                          jump_keys::Vector{Symbol})
-    for (i, jump) in enumerate(jump_keys)
-        inds = endo[jump]
-        if i == 1
-            endo[jump] = shift(inds, -normalization_factor, first_range = true)
-        else
-            endo[jump] = shift(inds, -normalization_factor)
-        end
-    end
 end
