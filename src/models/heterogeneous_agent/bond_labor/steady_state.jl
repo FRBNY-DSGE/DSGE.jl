@@ -201,6 +201,11 @@ end
 
 function dmollifier(x::AbstractFloat, ehi::AbstractFloat, elo::AbstractFloat)
     In = 0.443993816237631
-    temp = (-1.0 + 2.0*(x-elo)/(ehi-elo))
-    dy  = -(2*temp./((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier(x, ehi, elo)
+    if x < ehi && x > elo
+        temp = (-1.0 + 2.0*(x-elo)/(ehi-elo))
+        dy  = -(2*temp./((1 - temp.^2).^2)).*(2/(ehi-elo)).*mollifier(x, ehi, elo)
+    else
+        dy = 0.0
+    end
+    return dy
 end
