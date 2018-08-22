@@ -1,5 +1,10 @@
 function jacobian(m::BondLabor)
 
+    # Load in endogenous state and eq cond indices
+    endo = augment_model_states(m.endogenous_states_unnormalized,
+                                n_model_states_unnormalized(m))
+    eq   = m.equilibrium_conditions
+
     # Load in parameters, steady-state parameters, and grids
     γ    = m[:γ]
     abar = m[:abar]
@@ -38,24 +43,6 @@ function jacobian(m::BondLabor)
     chipW = (1+ν)./( ν./( aborrow + χss - xgrid_total) + γ./χss  )
     chipR = (1/(R*R))*(  ν*abar./(aborrow + χss - xgrid_total) )./( ν./( aborrow + χss - xgrid_total) + γ./χss  )
 
-    # we will always order things XP YP X Y
-    # convention is that capital letters generally refer to indices
-    MUP  = 1:nx*ns
-    ZP   = nx*ns+1
-    ELLP = nx*ns+2:2*nx*ns+1
-    RP   = 2*nx*ns+2
-
-    MU   = 2*nx*ns+3:3*nx*ns+2
-    Z    = 3*nx*ns+3
-    ELL  = 3*nx*ns+4:4*nx*ns+3
-    R    = 4*nx*ns+4
-
-    # create objects needed for solve.jl
-    F1 = 1:nx*ns # euler eqn
-    F2 = nx*ns+1:2*nx*ns # KF
-    F3 = 2*nx*ns+1:2*nx*ns+1 # mkt ckr
-    F4 = 2*nx*ns+2:2*nx*ns+2 # z
-
     # EE
     ξ   = zeros(nx*ns,nx*ns)
     Γ   = zeros(nx*ns,1)
@@ -64,6 +51,9 @@ function jacobian(m::BondLabor)
     LEE = zeros(nx*ns,nx*ns)
     WEE = zeros(nx*ns,1)
     REE = zeros(nx*ns,1)
+    ELLEE = zeros(nx*ns)
+    ELWEE = zeros(nx*ns)
+    ELREE = zeros(nx*ns)
 
     # Mollifier convenience functions
     qfunction(x) = mollifier(x,ehi,elo)
@@ -94,10 +84,12 @@ function jacobian(m::BondLabor)
             WEE[i] = sumWEE
             REE[i] = sumREE
             ellRHS[i] = sumELLRHS
+
+            ELWEE[i] = sumΓ * (sgrid_total[i]*η[i]*(1+1/ν) - (1+(γ/ν)*sgrid_total[i]*η[i]/c[i])*chipW[i]*((l[i]^(-1/γ))>χss[i]))
+            ELREE[i] = β*R*(sgrid_total[i] * η[i] + xgrid_total[i] - c[i])*sumΓ - β*R^2*sumΓ*(1 + (γ/ν)*sgrid_total[i]*η[i]/c[i]) * chipR[i] * ((l[i]^(-1/γ))>χss[i])
+            ELLEE[i] = (β/γ)*R^2*sumΓ * (1 + (γ/ν)*sgrid_total[i]*η[i]/c[i]) * (l[i]^(-1-1/γ)) * ((l[i]^(-1/γ)) <= χss[i])-1
         end
     end
-
-    ELLEE = (β/γ)*R*R*Γ.*(1+ (γ/ν)*sgrid_total.*η./c).*(l.^(-1-1/γ) ).*((l.^(-1/γ)).<=χss)-1
 
     # KF
     LKF = zeros(nx*ns,nx*ns)
@@ -129,12 +121,16 @@ function jacobian(m::BondLabor)
     end
 
     # MKT CKR
-    WMKT = 0.0
+    μMKT = zeros(nx*ns)
+    LMKT = zeros(nx*ns)
     RMKT = 0.0
+    WMKT = 0.0
 
     for ix in 1:nx
         for is in 1:ns
             i = ix + nx*(is-1)
+            μMKT[i] = (η[i] * sgrid_total[i] - c[i]) * weights_total[i]
+            LMKT[i] = (1/γ)*μ[i] * (sgrid_total[i]*(γ/ν)*(η[i]/c[i]) + 1) * weights_total[i] * (l[i]^(-1-1/γ))*((l[i]^(-1/γ))<=χss[i])
             RMKT += -( swts[is]*μ[i]*γ*η[i]/(ν*c[i]) + μ[i] )*swts[is]*xwts[ix]*chipR[i]*((l[i]^(-1/γ))>χss[i])
             WMKT += (1+1/ν)*η[i]*sgrid[is]*μ[i]*swts[is]*xwts[ix] - (1+ sgrid[is]*γ*η[i]/(ν*c[i]))*μ[i]*swts[is]*xwts[ix]*chipW[i]*((l[i]^(-1/γ))>χss[i])
         end
@@ -144,42 +140,42 @@ function jacobian(m::BondLabor)
     JJ = zeros(2*nx*ns+2,4*nx*ns+4)
 
     # Euler equation
-    JJ[F1,ZP]  = -γ*β*R*WEE
+    JJ[eq[:eq_euler], endo[:z′_t]]  = -γ*β*R*WEE
 
-    JJ[F1,ELLP] = β*R*LEE
+    JJ[eq[:eq_euler], endo[:l′_t]] = β*R*LEE
 
-    JJ[F1,RP] = -γ*β*R*REE
+    JJ[eq[:eq_euler], endo[:R′_t]] = -γ*β*R*REE
 
-    JJ[F1,Z]  = β*R*R*Γ.*(sgrid_total.*η*(1+1/ν) - (1+ (γ/ν)*sgrid_total.*η./c).*chipW.*((l.^(-1/γ)).>χss)  )
+    JJ[eq[:eq_euler], endo[:z_t]]  = β*R^2*ELWEE
 
-    JJ[F1,ELL] = diagm(ELLEE[:])
+    JJ[eq[:eq_euler], endo[:l_t]] = Diagonal(ELLEE)
 
-    JJ[F1,R] = ellRHS/R + β*R*(sgrid_total.*η + xgrid_total - c).*Γ - β*R*R*Γ.*(1+ (γ/ν)*sgrid_total.*η./c ).*chipR.*((l.^(-1/γ)).>χss)
+    JJ[eq[:eq_euler], endo[:R_t]] = ellRHS/R + ELREE
 
     # KF
-    JJ[F2,MUP] = eye(nx*ns)
+    JJ[eq[:eq_kolmogorov_fwd], endo[:μ′_t]] = eye(nx*ns)
 
-    JJ[F2,MU]  = MKF
+    JJ[eq[:eq_kolmogorov_fwd], endo[:μ_t]]  = MKF
 
-    JJ[F2,Z]   = WKF
+    JJ[eq[:eq_kolmogorov_fwd], endo[:z_t]]   = WKF
 
-    JJ[F2,ELL] = LKF
+    JJ[eq[:eq_kolmogorov_fwd], endo[:l_t]] = LKF
 
-    JJ[F2,R]   = RKF
+    JJ[eq[:eq_kolmogorov_fwd], endo[:R_t]]   = RKF
 
     # mkt ckr
-    JJ[F3,MU]  = (η'.*sgrid_total' - c').*weights_total'
+    JJ[eq[:eq_market_clearing], endo[:μ_t]]  = μMKT
 
-    JJ[F3,Z]   = WMKT'
+    JJ[eq[:eq_market_clearing], endo[:z_t]]   = WMKT
 
-    JJ[F3,ELL] = (1/γ)*μ'.*(sgrid_total'*(γ/ν).*(η./c)' + 1).*weights_total'.*( l.^(-1-1/γ) )'.*((l.^(-1/γ)).<=χss)'
+    JJ[eq[:eq_market_clearing], endo[:l_t]] = LMKT
 
-    JJ[F3,R]   = RMKT'
+    JJ[eq[:eq_market_clearing], endo[:R_t]]   = RMKT
 
     # TFP
-    JJ[F4,ZP]  = -1
+    JJ[eq[:eq_TFP], endo[:z′_t]]  = -1
 
-    JJ[F4,Z]   = ρ_z
+    JJ[eq[:eq_TFP], endo[:z_t]]   = ρ_z
 
     if !m.testing && get_setting(m, :normalize_distr_variables)
         JJ = normalize(m, JJ)
