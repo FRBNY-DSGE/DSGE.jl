@@ -131,7 +131,7 @@ function jacobian(m::BondLabor)
             i = ix + nx*(is-1)
             μMKT[i] = (η[i] * sgrid_total[i] - c[i]) * weights_total[i]
             LMKT[i] = (1/γ)*μ[i] * (sgrid_total[i]*(γ/ν)*(η[i]/c[i]) + 1) * weights_total[i] * (l[i]^(-1-1/γ))*((l[i]^(-1/γ))<=χss[i])
-            RMKT += -( swts[is]*μ[i]*γ*η[i]/(ν*c[i]) + μ[i] )*swts[is]*xwts[ix]*chipR[i]*((l[i]^(-1/γ))>χss[i])
+            RMKT += -( sgrid[is]*μ[i]*γ*η[i]/(ν*c[i]) + μ[i] )*swts[is]*xwts[ix]*chipR[i]*((l[i]^(-1/γ))>χss[i])
             WMKT += (1+1/ν)*η[i]*sgrid[is]*μ[i]*swts[is]*xwts[ix] - (1+ sgrid[is]*γ*η[i]/(ν*c[i]))*μ[i]*swts[is]*xwts[ix]*chipW[i]*((l[i]^(-1/γ))>χss[i])
         end
     end
