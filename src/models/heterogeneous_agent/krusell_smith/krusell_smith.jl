@@ -79,8 +79,10 @@ type KrusellSmith{T} <: AbstractModel{T}
     keys::OrderedDict{Symbol,Int}                          # human-readable names for all the model
                                                            # parameters and steady-states
 
-    normalized_states::Vector{Symbol}                      # All of the distributional
-                                                           # states that need to be normalized
+    state_variables::Vector{Symbol}                        # Vector of symbols of the state variables
+    jump_variables::Vector{Symbol}                         # Vector of symbols of the jump variables
+    normalized_model_states::Vector{Symbol}                # All of the distributional model
+                                                           # state variables that need to be normalized
     endogenous_states_unnormalized::OrderedDict{Symbol,UnitRange} # Vector of unnormalized
                                                            # ranges of indices
     endogenous_states::OrderedDict{Symbol,UnitRange}       # Vector of ranges corresponding
@@ -152,9 +154,11 @@ function init_model_indices!(m::KrusellSmith)
     eqconds[:eq_TFP]                = 4*nw+2:4*nw+2
     ########################################################################################
 
-    m.normalized_states = [:μ′_t1, :μ′_t]
-
+    m.normalized_model_states = [:μ′_t1, :μ′_t]
     m.endogenous_states = deepcopy(endo)
+    m.state_variables = m.endogenous_states.keys[get_setting(m, :state_indices)]
+    m.jump_variables = m.endogenous_states.keys[get_setting(m, :jump_indices)]
+
     for (i,k) in enumerate(exogenous_shocks);            m.exogenous_shocks[k]            = i end
     for (i,k) in enumerate(observables);                 m.observables[k]                 = i end
 end
@@ -177,8 +181,9 @@ function KrusellSmith(subspec::String="ss0";
             # grids and keys
             OrderedDict{Symbol,Grid}(), OrderedDict{Symbol,Int}(),
 
-            # normalized_states
-            Vector{Symbol}(),
+            # normalized_model_states, state_inds, jump_inds
+            Vector{Symbol}(), Vector{Symbol}(), Vector{Symbol}(),
+
             # model indices
             # endogenous states unnormalized, endogenous states normalized
             OrderedDict{Symbol,UnitRange}(), OrderedDict{Symbol,UnitRange}(),
@@ -216,7 +221,7 @@ function KrusellSmith(subspec::String="ss0";
     steadystate!(m)
 
     # So that the indices of m.endogenous_states reflect the normalization
-    normalize_state_indices!(m)
+    normalize_model_state_indices!(m)
 
     return m
 end
@@ -333,21 +338,32 @@ function model_settings!(m::KrusellSmith)
                  variables")
 
     # Note, these settings assume normalization.
-    m <= Setting(:n_backward_looking_distributions, 1, "Number of state variables that are
+    m <= Setting(:n_degrees_of_freedom_removed, 1, "Number of degrees of freedom from the
+                 distributional variables to remove.")
+    n_dof_removed = get_setting(m, :n_degrees_of_freedom_removed)
+    m <= Setting(:n_backward_looking_distributional_vars, 1, "Number of state variables that are
                  distributional variables.")
-    m <= Setting(:n_backward_looking_states, 162 - get_setting(m, :n_backward_looking_distributions),
+    n_backlook_dists = get_setting(m, :n_backward_looking_distributional_vars)
+    m <= Setting(:backward_looking_states_normalization_factor,
+                 n_dof_removed*n_backlook_dists, "The number of dimensions removed from the
+                 backward looking state variables for the normalization.")
+    m <= Setting(:n_backward_looking_states, 162 - get_setting(m, :backward_looking_states_normalization_factor),
                  "Number of state variables, in the true sense (fully
-                 backward looking) accounting for the discretization across the grid")
-    m <= Setting(:n_jump_distributions, 1, "Number of jump variables that are distributional
+                  backward looking) accounting for the discretization across the grid.")
+    m <= Setting(:n_jump_distributional_vars, 1, "Number of jump variables that are distributional
                  variables.")
-    m <= Setting(:n_jumps, 160 - get_setting(m, :n_jump_distributions),
+    n_jump_dists = get_setting(m, :n_jump_distributional_vars)
+    m <= Setting(:jumps_normalization_factor,
+                 n_dof_removed*n_jump_dists, "The number of dimensions removed from the
+                 jump variables for the normalization.")
+    m <= Setting(:n_jumps, 160 - get_setting(m, :jumps_normalization_factor),
                  "Number of jump variables (forward looking) accounting for
-                the discretization across the grid")
+                  the discretization across the grid")
 
-    m <= Setting(:n_model_states, n_backward_looking_states(m) + n_jumps(m),
+    m <= Setting(:n_model_states, get_setting(m, :n_backward_looking_states) + get_setting(m, :n_jumps),
                  "Number of 'states' in the state space model. Because backward and forward
                  looking variables need to be explicitly tracked for the Klein solution
-                 method, we have n_backward_looking_states and n_jumps")
+                 method, we have n_states and n_jumps")
 
     # Mollifier setting parameters
     m <= Setting(:In, 0.443993816237631, "Normalizing constant for the mollifier")
