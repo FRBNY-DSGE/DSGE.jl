@@ -20,7 +20,8 @@ Var(u_t) = EE
 Cov(ϵ_t, u_t) = 0
 ```
 """
-function measurement{T<:AbstractFloat}(m::BondLabor{T})
+function measurement{T<:AbstractFloat}(m::BondLabor{T}, TTT::Matrix{T},
+                                       RRR::Matrix{T}, CCC::Vector{T})
     endo      = m.endogenous_states
     exo       = m.exogenous_shocks
     obs       = m.observables
@@ -44,6 +45,11 @@ function measurement{T<:AbstractFloat}(m::BondLabor{T})
 
     # Variance of innovations
     QQ[exo[:z_sh], exo[:z_sh]] = m[:σ_z]^2
+
+    # Adjustment to DD because measurement equation assumes CCC is the zero vector
+    if any(CCC != 0)
+        DD += ZZ*((UniformScaling(1) - TTT)\CCC)
+    end
 
     return Measurement(ZZ, DD, QQ, EE)
 end
