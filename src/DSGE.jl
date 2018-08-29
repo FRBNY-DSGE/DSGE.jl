@@ -283,6 +283,7 @@ module DSGE
     include("models/heterogeneous_agent/bond_labor/bond_labor.jl")
     include("models/heterogeneous_agent/bond_labor/steady_state.jl")
     include("models/heterogeneous_agent/bond_labor/jacobian.jl")
-    include("models/heterogeneous_agent/bond_labor/measurement.jl")
+    include("models/heterogeneous_agent/bond_labor/shock_loading.jl")
     include("models/heterogeneous_agent/bond_labor/observables.jl")
+    include("models/heterogeneous_agent/bond_labor/measurement.jl")
 end
