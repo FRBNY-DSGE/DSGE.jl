@@ -44,14 +44,20 @@ end
 
 ######################################################################################
 # For normalizing the states
-function normalize_state_indices!(m::AbstractModel)
-    normalized_states = m.normalized_states
+function normalize_model_state_indices!(m::AbstractModel)
+    normalized_model_states = m.normalized_model_states
 
     endo                     = m.endogenous_states
     model_state_keys         = endo.keys
-    normalized_state_inds    = findin(model_state_keys, normalized_states)
+    normalized_model_state_inds = findin(model_state_keys, normalized_model_states)
+    state_inds                  = get_setting(m, :state_indices)
+    jump_inds                   = get_setting(m, :jump_indices)
+    state_normalization_factor  = get_setting(m, :backward_looking_states_normalization_factor)
+    jump_normalization_factor   = get_setting(m, :jumps_normalization_factor)
 
-    m.endogenous_states = normalize(endo, model_state_keys, normalized_state_inds)
+    m.endogenous_states = normalize(endo, model_state_keys, normalized_model_state_inds,
+                                    state_inds, jump_inds,
+                                    state_normalization_factor, jump_normalization_factor)
 end
 
 # Shift a UnitRange type down by an increment
@@ -73,23 +79,33 @@ end
 # normalize the distributional states located in indices specified by normalized_state_inds
 function normalize(endo::OrderedDict{Symbol, UnitRange},
                    model_state_keys::Vector{Symbol},
-                   normalized_state_inds::Vector{Int64})
-    n_state_vars = length(endo)
+                   normalized_model_state_inds::Vector{Int64},
+                   state_inds::UnitRange{Int64},
+                   jump_inds::UnitRange{Int64},
+                   state_normalization_factor::Int64,
+                   jump_normalization_factor::Int64)
+    n_model_state_vars = length(endo)
 
-    # For each state that needs to be normalizedd...
-    for i in normalized_state_inds
+    # For each model state that needs to be normalized...
+    for i in normalized_model_state_inds
+        normalization_factor =
+        if i in state_inds
+            state_normalization_factor
+        elseif i in jump_inds
+            jump_normalization_factor
+        end
         # Subtract 1 from both the beginning and end of the UnitRange...
-        for j in i:n_state_vars
+        for j in i:n_model_state_vars
             inds = endo[model_state_keys[j]]
             # Except for the first UnitRange in a given normalization
             first_range = (j == i)
-            endo[model_state_keys[j]] = shift(inds, -1, first_range = first_range)
+            endo[model_state_keys[j]] = shift(inds, -normalization_factor, first_range = first_range)
         end
     end
 
     # Ensure all ranges are consecutive
     endo_ranges = endo.vals
-    for i in 1:n_state_vars
+    for i in 1:n_model_state_vars
         if i == 1
             @assert endo_ranges[1].start == 1
         else
