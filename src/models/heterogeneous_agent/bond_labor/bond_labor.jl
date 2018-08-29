@@ -348,12 +348,12 @@ function model_settings!(m::BondLabor)
     # Note, these settings assume normalization.
     m <= Setting(:n_backward_looking_distributions, 1, "Number of state variables that are
                  distributional variables.")
-    m <= Setting(:n_backward_looking_states, 101 - get_setting(m, :n_backward_looking_distributions),
+    m <= Setting(:n_backward_looking_states, 151 - get_setting(m, :n_backward_looking_distributions),
                  "Number of state variables, in the true sense (fully
                   backward looking) accounting for the discretization across the grid")
     m <= Setting(:n_jump_distributions, 1, "Number of jump variables that are distributional
                  variables.")
-    m <= Setting(:n_jumps, 101 - get_setting(m, :n_jump_distributions),
+    m <= Setting(:n_jumps, 151 - get_setting(m, :n_jump_distributions),
                  "Number of jump variables (forward looking) accounting for
                   the discretization across the grid")
 
@@ -368,7 +368,7 @@ function model_settings!(m::BondLabor)
     m <= Setting(:ehi, 1.0, "Upper bound on stochastic consumption commitments")
 
     # x: Cash on Hand Grid Setup
-    m <= Setting(:nx, 50, "Cash on hand distribution grid points")
+    m <= Setting(:nx, 75, "Cash on hand distribution grid points")
     m <= Setting(:xlo, -0.5 - 1.0, "Lower bound on cash on hand")
     m <= Setting(:xhi, 4.0, "Upper Bound on cash on hand")
     m <= Setting(:xscale, get_setting(m, :xhi) - get_setting(m, :xlo), "Size of the xgrid")
