@@ -92,6 +92,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     if tempered_update
         # Load the previous ParticleCloud as the starting point for time tempering
         loadpath = rawpath(m, "estimate", "smc_cloud.jld")
+        #loadpath = rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)])
         loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
 
         cloud = load(loadpath, "cloud")
@@ -115,6 +116,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     end
 
     # Instantiate incremental and normalized weight matrices to be used for logMDD calculation
+    #w_matrix = fill(1/n_parts, (n_parts,1))
     w_matrix = zeros(n_parts, 1)
     if tempered_update
         W_matrix = similar(w_matrix)
@@ -122,8 +124,11 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             W_matrix[k] = cloud.particles[k].weight
         end
     else
-        W_matrix = ones(n_parts, 1)
+        W_matrix = fill(1/n_parts, (n_parts,1))
+        #update_weights!(cloud, fill(1/n_parts, n_parts))
+        #W_matrix = ones(n_parts, 1)
     end
+    z_matrix = ones(1)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         init_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)
@@ -158,17 +163,23 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ### Step 1: Correction
     ########################################################################################
 
-    # Calculate incremental weights
+    # Calculate incremental weights (if no old data, get_old_loglh(cloud) returns zero)
     incremental_weights = exp.((ϕ_n1 - ϕ_n)*get_old_loglh(cloud) + (ϕ_n - ϕ_n1)*get_loglh(cloud))
+
+    # inc_wt*W_n-1
+    #mult_weights = get_weights(cloud).*incremental_weights
 
     # Update weights
     update_weights!(cloud, incremental_weights)
+
+    mult_weights = get_weights(cloud)
 
     # Normalize weights
     normalize_weights!(cloud)
 
     normalized_weights = get_weights(cloud)
 
+    push!(z_matrix, sum(mult_weights))
     w_matrix = hcat(w_matrix, incremental_weights)
     W_matrix = hcat(W_matrix, normalized_weights)
 
@@ -192,6 +203,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         reset_weights!(cloud)
         cloud.resamples += 1
         resampled_last_period = true
+        W_matrix[:, i] = fill(1/n_parts, (n_parts,1))
     end
 
     ########################################################################################
@@ -204,6 +216,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     θ_bar = weighted_mean(cloud)
     R = weighted_cov(cloud)
+    # add to itself and divide by 2 to ensure marix is positive semi-definite symmetric (not off due to numerical
+    #error) and values haven't changed
     R_fr = (R[free_para_inds, free_para_inds] + R[free_para_inds, free_para_inds]')/2
 
     # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
@@ -243,17 +257,18 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ########################################################################################
 
     if !m.testing
-        simfile = h5open(rawpath(m, "estimate", "smcsave.h5"),"w")
+        simfile = h5open(rawpath(m, "estimate", "smcsave.h5", ["adpt="*string(tempering_target)]),"w")
         particle_store = d_create(simfile, "smcparams", datatype(Float32),
                                   dataspace(n_parts, n_params))
         for i in 1:length(cloud)
             particle_store[i,:] = cloud.particles[i].value
         end
         close(simfile)
-        jldopen(rawpath(m, "estimate", "smc_cloud.jld"), "w") do file
+        jldopen(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)]), "w") do file
             write(file, "cloud", cloud)
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)
+            write(file, "z", z_matrix)
         end
     end
 end
