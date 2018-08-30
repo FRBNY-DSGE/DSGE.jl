@@ -59,10 +59,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     resampled_last_period = false   # To ensure proper resetting of ESS_bar right after resample
     ϕ_n = 0.                        # Instantiating ϕ_n and ϕ_prop variables to be referenced in their
     ϕ_prop = 0.                     # respective while loop conditions
-    use_fixed_schedule = get_setting(m, :use_fixed_schedule)
+    use_fixed_schedule = get_setting(m, :adaptive_tempering_target_smc)==0.0#get_setting(m, :use_fixed_schedule)
     λ = get_setting(m, :λ)
     n_Φ = get_setting(m, :n_Φ)
-    tempering_target = get_setting(m, :tempering_target)
+    tempering_target = get_setting(m, :adaptive_tempering_target_smc)
 
     # Step 2 (Correction) settings
     resampling_method = get_setting(m, :resampler_smc)
@@ -257,14 +257,16 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ########################################################################################
 
     if !m.testing
-        simfile = h5open(rawpath(m, "estimate", "smcsave.h5", ["adpt="*string(tempering_target)]),"w")
+        simfile = h5open(rawpath(m, "estimate", "smcsave.h5"), "w")
+        #simfile = h5open(rawpath(m, "estimate", "smcsave.h5", ["adpt="*string(tempering_target)]),"w")
         particle_store = d_create(simfile, "smcparams", datatype(Float32),
                                   dataspace(n_parts, n_params))
         for i in 1:length(cloud)
             particle_store[i,:] = cloud.particles[i].value
         end
         close(simfile)
-        jldopen(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)]), "w") do file
+        #jldopen(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)]), "w") do file
+        jldopen(rawpath(m, "estimate", "smc_cloud.jld"), "w") do file
             write(file, "cloud", cloud)
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)
