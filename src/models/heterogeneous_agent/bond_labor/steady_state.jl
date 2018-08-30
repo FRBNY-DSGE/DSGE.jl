@@ -85,11 +85,17 @@ function steadystate!(m::BondLabor;
             warn("your eigenvalue is ", Dee[1], " which is too far from 1, something is wrong")
         end
 
-        μ = real(Vee[:,1]) # Pick the eigen vecor associated with the largest
-        # eigenvalue and moving it back to values
+        μ = real(Vee[:,1]) # Pick the eigen vector associated with the largest
+                           # eigenvalue and move it back to values
+                           # mdχ: the μ chosen is the eigenvector associated to the largest
+                           # eigenvalue of the KF because that means, we have induced the
+                           # shift in μ by the largest amount possible for a given KF.
+                           # Hence, to find the steady-state μ, we want to pick the
+                           # potential μ that changes by the most (i.e. the largest
+                           # eigenvector) so we have an upper bound on the degree of change
+                           # of μ induced by the KF.
 
         μ = μ/(weights_total'*μ) # Scale of eigenvectors not determinate: rescale to integrate to exactly 1
-        # change all following stuff to work with R not K
 
         excess = weights_total'*(μ.*ap)  # compute excess supply of savings, which is a fn of w
 
@@ -154,6 +160,8 @@ function policy(β::AbstractFloat,
                 sumn=0.0
                 for ixp in 1:nx
                     for isp in 1:ns
+                        # This is the parameterized expectations algorithm approximation of the
+                        # conditional expectation within the Euler equation
                        sumn += qfunction(ap[ix+nx*(iss-1)] - xgrid_total[nx*(isp-1)+ixp])*g[isp]*xwts[ixp]*swts[isp]*(c[nx*(isp-1)+ixp]^(-γ) )
                     end
                 end
