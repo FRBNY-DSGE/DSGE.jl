@@ -146,10 +146,11 @@ function default_settings!(m::AbstractModel)
     settings[:mixture_proportion] = Setting(:mixture_proportion, 1., "The mixture proportion for the mutation step's proposal distribution")
 
     # Endogenous ϕ Schedule
-    settings[:use_fixed_schedule] = Setting(:use_fixed_schedule, true, true, "fix", "Boolean indicating whether or not to use a fixed tempering (ϕ) schedule")
+    settings[:use_fixed_schedule] = Setting(:use_fixed_schedule, true, "Boolean indicating whether or not to use a fixed tempering (ϕ) schedule")
     settings[:tempering_target] = Setting(:tempering_target, 0.95, "The coefficient of the sample size metric to be targeted when solving for an endogenous ϕ")
     settings[:resampling_threshold] = Setting(:resampling_threshold, 0.5, "The threshold such that the particles will be resampled when the population drops below threshold * N")
     # temporary setting to save different output files
+    settings[:adaptive_tempering_target_smc] = Setting(:adaptive_tempering_target_smc, 0.97, true, "adpt", "Either the adaptive tempering target or 0.0 if using fixed schedule")
     settings[:smc_iteration] = Setting(:smc_iteration, 1, true, "iter", "The iteration index for the number of times smc has been run on the same data vintage. Primarily for numerical accuracy/testing purposes.")
     settings[:previous_data_vintage] = Setting(:previous_data_vintage, vint, "The old data vintage to start SMC from when time tempering.")
     # Alternative policy
