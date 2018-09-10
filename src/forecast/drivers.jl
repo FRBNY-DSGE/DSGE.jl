@@ -117,7 +117,13 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::Range{Int
     # Load full distribution
     elseif input_type == :full
 
-        params = map(Float64, h5read(input_file_name, "mhparams"))
+        if get_setting(m, :sampling_method) == :MH
+            params = map(Float64, h5read(input_file_name, "mhparams"))
+        elseif get_setting(m, :sampling_method) == :SMC
+            params = map(Float64, h5read(input_file_name, "smcparams"))
+        else
+            throw("Invalid :sampling_method setting specification.")
+        end
 
     # Load subset of full distribution
     elseif input_type == :subset
@@ -125,7 +131,13 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::Range{Int
         if isempty(subset_inds)
             error("Must supply nonempty range of subset_inds if input_type == :subset")
         else
-            params = map(Float64, h5read(input_file_name, "mhparams", (subset_inds, :)))
+            if get_setting(m, :sampling_method) == :MH
+                params = map(Float64, h5read(input_file_name, "mhparams", (subset_inds, :)))
+            elseif get_setting(m, :sampling_method) == :SMC
+                params = map(Float64, h5read(input_file_name, "smcparams", (subset_inds, :)))
+            else
+                throw("Invalid :sampling_method setting specification.")
+            end
         end
 
     # Return initial parameters of model object
@@ -153,7 +165,13 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::Range{Int6
             ndraws = length(block_inds)
             params = Vector{Vector{Float64}}(ndraws)
             for (i, j) in zip(1:ndraws, block_inds)
-                params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
+                if get_setting(m, :sampling_method) == :MH
+                    params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
+                elseif get_setting(m, :sampling_method) == :SMC
+                    params[i] = vec(map(Float64, h5read(input_file_name, "smcparams", (j, :))))
+                else
+                    throw("Invalid :sampling_method setting specification.")
+                end
             end
             return params
         end
