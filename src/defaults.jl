@@ -87,6 +87,7 @@ function default_settings!(m::AbstractModel)
         "Total number of cycles to use in the combined optimization routine")
     settings[:optimization_attempts] = Setting(:optimization_attempts, 4,
         "Number of times to attempt optimization in estimate()")
+    settings[:sampling_method] = Setting(:sampling_method, :MH, "The sampling method used, either :MH or :SMC")
 
     # Metropolis-Hastings
     settings[:n_mh_simulations] = Setting(:n_mh_simulations, 5000,
