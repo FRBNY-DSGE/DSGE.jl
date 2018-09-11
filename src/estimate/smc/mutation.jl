@@ -29,6 +29,7 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                   blocks_free::Vector{Vector{Int64}}, blocks_all::Vector{Vector{Int64}},
                   ϕ_n::Float64, ϕ_n1::Float64; c::Float64 = 1., α::Float64 = 1.,
                   old_data::Matrix{Float64} = Matrix{Float64}(size(data, 1), 0),
+                  use_chand_recursion::Bool = true,
                   verbose::Symbol = :low)
 
     n_steps = get_setting(m, :n_mh_steps_smc)
@@ -67,12 +68,20 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
 
             try
                 update!(m, para_new)
-                like_new = likelihood(m, data; sampler = true, verbose = verbose)
+                like_new = likelihood(m, data; sampler = true, use_chand_recursion = true,
+                                      verbose = verbose)
+                if like_new == -Inf
+                    post_new = like_old_data = -Inf
+                end
                 post_new = ϕ_n*like_new + prior(m) - para_new_density
-                like_old_data = isempty(old_data) ? 0. : likelihood(m, old_data; sampler = true, verbose = verbose)
+                like_old_data = isempty(old_data) ? 0. : likelihood(m, old_data; sampler = true,
+                                                                    use_chand_recursion = use_chand_recursion,
+                                                                    verbose = verbose)
             catch err
                 if isa(err, ParamBoundsError)
                     post_new = like_new = like_old_data = -Inf
+                #elseif isa(err, SPDError)
+                #    post_new = like_new = like_old_data = -Inf
                 else
                     throw(err)
                 end
