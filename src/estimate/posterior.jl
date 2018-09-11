@@ -121,6 +121,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
                                       data::Matrix{T};
                                       sampler::Bool = false,
                                       catch_errors::Bool = false,
+                                      use_chand_recursion = true,
                                       verbose::Symbol = :high)
     catch_errors = catch_errors | sampler
 
@@ -147,8 +148,14 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
 
     # Return total log-likelihood, excluding the presample
     try
-        kal = filter(m, data, system; outputs = [:loglh], include_presample = false)
-        return kal[:total_loglh]
+        if use_chand_recursion==false
+            kal = filter(m, data, system; outputs = [:loglh], include_presample = false)
+            return kal[:total_loglh]
+        else
+            return chand_recursion(data, system[:TTT], system[:RRR], system[:CCC],
+                                   system[:QQ], system[:ZZ], system[:DD], system[:EE];
+                                   allout = false, Nt0 = n_presample_periods(m))[1]
+        end
     catch err
         if catch_errors && isa(err, DomainError)
             if VERBOSITY[verbose] >= VERBOSITY[:high]
