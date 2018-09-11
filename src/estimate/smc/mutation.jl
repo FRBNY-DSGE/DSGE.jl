@@ -68,7 +68,7 @@ function mutation(m::AbstractModel, data::T, p::Particle, d::Distribution,
 
             try
                 update!(m, para_new)
-                like_new = likelihood(m, data; sampler = true, use_chand_recursion = use_chand_recursion,
+                like_new = likelihood(m, data; sampler = true, use_chand_recursion = true,
                                       verbose = verbose)
                 if like_new == -Inf
                     post_new = like_old_data = -Inf
@@ -80,8 +80,8 @@ function mutation(m::AbstractModel, data::T, p::Particle, d::Distribution,
             catch err
                 if isa(err, ParamBoundsError)
                     post_new = like_new = like_old_data = -Inf
-                elseif isa(err, PosDefException)
-                    post_new = like_new = like_old_data = -Inf
+                #elseif isa(err, SPDError)
+                #    post_new = like_new = like_old_data = -Inf
                 else
                     throw(err)
                 end
