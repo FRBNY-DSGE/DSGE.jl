@@ -8,7 +8,7 @@ Returns a tuple (logpost, loglh) and modifies the particle objects in the partic
 
 """
 function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
-                       parallel::Bool = false, verbose::Symbol = :low)
+                       parallel::Bool = false, use_chand_recursion::Bool = true, verbose::Symbol = :low)
     n_parts = length(c)
     loglh = zeros(n_parts)
     logpost = zeros(n_parts)
@@ -21,12 +21,18 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
             while !success
                 try
                     update!(m, draw)
-                    draw_loglh   = likelihood(m, data, catch_errors = true, verbose = verbose)
+                    draw_loglh   = likelihood(m, data, catch_errors = true, use_chand_recursion=use_chand_recursion, verbose = verbose)
                     draw_logpost = prior(m)
+                    if draw_loglh == -Inf
+                        draw_logpost = -Inf
+                    end
                 catch err
                     if isa(err, ParamBoundsError)
                         draw_loglh = draw_logpost = -Inf
+                    #elseif isa(err, SPDError)
+                    #    draw_loglh = draw_logpost = -Inf
                     else
+                     #   draw_loglh = draw_logpost = -Inf
                         throw(err)
                     end
                 end
