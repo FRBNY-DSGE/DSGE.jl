@@ -135,6 +135,7 @@ function smc(m::AbstractModel, data::Matrix;
     end
 
     # Instantiate incremental and normalized weight matrices to be used for logMDD calculation
+    #w_matrix = fill(1/n_parts, (n_parts,1))
     w_matrix = zeros(n_parts, 1)
     if tempered_update
         W_matrix = similar(w_matrix)
@@ -143,6 +144,8 @@ function smc(m::AbstractModel, data::Matrix;
         end
     else
         W_matrix = fill(1/n_parts, (n_parts,1))
+        #update_weights!(cloud, fill(1/n_parts, n_parts))
+        #W_matrix = ones(n_parts, 1)
     end
     z_matrix = ones(1)
 
@@ -160,7 +163,7 @@ function smc(m::AbstractModel, data::Matrix;
 
     while ϕ_n < 1.
 
-    begin_time = time_ns()
+    tic()
     cloud.stage_index = i += 1
 
     ########################################################################################
@@ -181,6 +184,9 @@ function smc(m::AbstractModel, data::Matrix;
 
     # Calculate incremental weights (if no old data, get_old_loglh(cloud) returns zero)
     incremental_weights = exp.((ϕ_n1 - ϕ_n)*get_old_loglh(cloud) + (ϕ_n - ϕ_n1)*get_loglh(cloud))
+
+    # inc_wt*W_n-1
+    #mult_weights = get_weights(cloud).*incremental_weights
 
     # Update weights
     update_weights!(cloud, incremental_weights)
@@ -241,13 +247,13 @@ function smc(m::AbstractModel, data::Matrix;
     blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
     if parallel
-        new_particles = @distributed (vcat) for k in 1:n_parts
-            mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                     c = c, α = α, old_data = old_data, use_chand_recursion = use_chand_recursion, verbose = verbose)
+        new_particles = @parallel (vcat) for j in 1:n_parts
+            mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
+                     c = c, α = α, old_data = old_data, verbose = verbose)
         end
     else
-        new_particles = [mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                                  c = c, α = α, old_data = old_data, verbose = verbose) for k = 1:n_parts]
+        new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
+                                  c = c, α = α, old_data = old_data, verbose = verbose) for j = 1:n_parts]
     end
 
     cloud.particles = new_particles
@@ -257,7 +263,7 @@ function smc(m::AbstractModel, data::Matrix;
     ### Timekeeping and Output Generation
     ########################################################################################
 
-    cloud.total_sampling_time += (time_ns() - begin_time)/1e9
+    cloud.total_sampling_time += toq()
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         end_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)
@@ -271,13 +277,15 @@ function smc(m::AbstractModel, data::Matrix;
 
     if !m.testing
         simfile = h5open(rawpath(m, "estimate", "smcsave.h5"), "w")
+        #simfile = h5open(rawpath(m, "estimate", "smcsave.h5", ["adpt="*string(tempering_target)]),"w")
         particle_store = d_create(simfile, "smcparams", datatype(Float32),
                                   dataspace(n_parts, n_params))
         for i in 1:length(cloud)
             particle_store[i,:] = cloud.particles[i].value
         end
         close(simfile)
-        jldopen(rawpath(m, "estimate", "smc_cloud.jld2"), true, true, true, IOStream) do file
+        #jldopen(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)]), "w") do file
+        jldopen(rawpath(m, "estimate", "smc_cloud.jld"), "w") do file
             write(file, "cloud", cloud)
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)
