@@ -17,7 +17,7 @@ function init_observable_mappings!(m::AnSchorfheide)
 
     gdp_rev_transform = loggrowthtopct_annualized_percapita
 
-    observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPCTPI__FRED],
+    observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPDEF__FRED],
                                        gdp_fwd_transform, gdp_rev_transform,
                                        "Real GDP Growth", "Real GDP Growth Per Capita")
 
