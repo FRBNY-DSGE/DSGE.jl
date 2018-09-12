@@ -125,7 +125,7 @@ variables easily and keep the code clear.
 The more interesting fields are `input_series`, `fwd_transform`, and
 `rev_transform`. The `input_series` field is a vector of `Symbol`s, each of
 which must be of the form `:SERIES__SOURCE`. In the case of GDP, this field is
-the vector `[:GDP__FRED, :CNP16OV__FRED, :GDPCTPI__FRED]`. All of these series
+the vector `[:GDP__FRED, :CNP16OV__FRED, :GDPDEF__FRED]`. All of these series
 come from FRED, and in particular, we use the nominal GDP, working-age civilian
 population, and GDP deflator series to construct the real per-capita GDP growth.
 
@@ -150,7 +150,7 @@ observables can make use of the same commonly used functions.
 Finally, we can construct the `gdp` observable as follows:
 
 ```julia
-data_series = [:GDP__FRED, :CNP16OV__FRED, :GDPCTPI__FRED]
+data_series = [:GDP__FRED, :CNP16OV__FRED, :GDPDEF__FRED]
 fwd_transform = function (levels) ... end    # an anonymous function definition
 rev_transform = loggrowthtopct_annualized_percapita
 obs_gdp = Observable(:obs_gdp, data_series, fwd_transform, rev_transform,
