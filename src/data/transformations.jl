@@ -27,7 +27,7 @@ end
 
 
 """
-`nominal_to_real(col, df; deflator_mnemonic = :GDPCTPI)`
+`nominal_to_real(col, df; deflator_mnemonic = :GDPDEF)`
 
 Converts nominal to real values using the specified deflator.
 
@@ -40,7 +40,7 @@ Converts nominal to real values using the specified deflator.
 - `deflator_mnemonic`: indicates which deflator to use to calculate real values. Default
   value is the FRED GDP Deflator mnemonic.
 """
-function nominal_to_real(col::Symbol, df::DataFrame; deflator_mnemonic::Symbol = :GDPCTPI)
+function nominal_to_real(col::Symbol, df::DataFrame; deflator_mnemonic::Symbol = :GDPDEF)
     return df[col] ./ df[deflator_mnemonic]
 end
 
