@@ -17,7 +17,7 @@ function init_observable_mappings!(m::Model1010)
 
     gdp_rev_transform = loggrowthtopct_annualized_percapita
 
-    observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPCTPI__FRED],
+    observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPDEF__FRED],
                                        gdp_fwd_transform, gdp_rev_transform,
                                        "Real GDP Growth", "Real GDP Growth Per Capita")
 
@@ -55,7 +55,7 @@ function init_observable_mappings!(m::Model1010)
 
     wages_rev_transform = loggrowthtopct_annualized
 
-    observables[:obs_wages] = Observable(:obs_wages, [:COMPNFB__FRED, :GDPCTPI__FRED],
+    observables[:obs_wages] = Observable(:obs_wages, [:COMPNFB__FRED, :GDPDEF__FRED],
                                          wages_fwd_transform, wages_rev_transform,
                                          "Percent Change in Wages",
                                          "Q-to-Q Percent Change of Real Compensation (using GDP deflator)")
@@ -69,13 +69,13 @@ function init_observable_mappings!(m::Model1010)
         # TO:   Approximate quarter-to-quarter percent change of gdp deflator,
         #       i.e.  quarterly gdp deflator inflation
 
-        oneqtrpctchange(levels[:GDPCTPI])
+        oneqtrpctchange(levels[:GDPDEF])
     end
 
 
     gdpdeflator_rev_transform = loggrowthtopct_annualized
 
-    observables[:obs_gdpdeflator] = Observable(:obs_gdpdeflator, [:GDPCTPI__FRED],
+    observables[:obs_gdpdeflator] = Observable(:obs_gdpdeflator, [:GDPDEF__FRED],
                                                gdpdeflator_fwd_transform, gdpdeflator_rev_transform,
                                                "GDP Deflator",
                                                "Q-to-Q Percent Change of GDP Deflator")
