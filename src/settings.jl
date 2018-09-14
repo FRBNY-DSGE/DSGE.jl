@@ -18,7 +18,7 @@ computational settings.
   `print=true`.
 - `description::String`: Short description of what the setting is used for.
 """
-type Setting{T}
+mutable struct Setting{T}
     key::Symbol                  # name of setting
     value::T                     # whatever the setting is
     print::Bool                  # whether or not to add this setting to the print
