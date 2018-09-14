@@ -1,4 +1,4 @@
-using Base.Test
+using Test, Distributed, Dates
 @everywhere using DSGE, JLD
 
 my_tests = [
@@ -20,8 +20,8 @@ my_tests = [
             "estimate/hessian",
             "estimate/csminwel",
             "estimate/optimize",
-            "estimate/metropolis_hastings",
-            "forecast/smooth",
+            "estimate/metropolis_hastings"
+#=            "forecast/smooth",
             "forecast/forecast",
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
@@ -34,7 +34,7 @@ my_tests = [
             "scenarios/switching",
             "scenarios/drivers",
             "plot/plot"
-            ]
+=#            ]
 
 for test in my_tests
     test_file = string("$test.jl")
