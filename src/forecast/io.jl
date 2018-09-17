@@ -180,8 +180,8 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                                 forecast_output::Dict{Symbol, Array{Float64}};
                                 df::DataFrame = DataFrame(),
                                 block_number::Nullable{Int64} = Nullable{Int64}(),
-                                block_inds::Range{Int64} = 1:0,
-                                subset_inds::Range{Int64} = 1:0,
+                                block_inds::AbstractRange{Int64} = 1:0,
+                                subset_inds::AbstractRange{Int64} = 1:0,
                                 verbose::Symbol = :low)
 
     for var in output_vars
@@ -259,7 +259,7 @@ forecast output array. The saved dictionaries include:
 
 Note that we don't save dates or transformations for impulse response functions.
 """
-function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbol)
+function write_forecast_metadata(m::AbstractModel, file::JLD2.JLDFile, var::Symbol)
 
     prod  = get_product(var)
     class = get_class(var)
@@ -322,14 +322,14 @@ end
 
 """
 ```
-write_forecast_block(file::JLD.JldFile, arr::Array, block_number::Int,
-    block_inds::Range{Int64})
+write_forecast_block(file::JLD2.JLDFile, arr::Array, block_number::Int,
+    block_inds::AbstractRange{Int64})
 ```
 
 Writes `arr` to the subarray of `file` indicated by `block_inds`.
 """
-function write_forecast_block(file::JLD.JldFile, arr::Array,
-                              block_inds::Range{Int64})
+function write_forecast_block(file::JLD2.JLDFile, arr::Array,
+                              block_inds::AbstractRange{Int64})
     pfile = file.plain
     dataset = HDF5.d_open(pfile, "arr")
     ndims = length(size(dataset))
@@ -338,7 +338,7 @@ end
 
 """
 ```
-read_forecast_metadata(file::JLD.JldFile)
+read_forecast_metadata(file::JLD2.JLDFile)
 ```
 
 Read metadata from forecast output files. This includes dictionaries mapping
@@ -358,7 +358,7 @@ their respective indices in the saved forecast output array. Depending on the
 - `shock_revtransforms::Dict{Symbol, Symbol}`: shocks are not transformed, so
   all values are `:identity`
 """
-function read_forecast_metadata(file::JLD.JldFile)
+function read_forecast_metadata(file::JLD2.JLDFile)
     metadata = Dict{Symbol, Any}()
     for field in setdiff(names(file), "arr")
         metadata[Symbol(field)] = read(file, field)
@@ -413,7 +413,7 @@ Read only the forecast output for a particular variable (e.g. for a particular
 observable) and possibly a particular shock. Result should be a matrix of size
 `ndraws` x `nperiods`.
 """
-function read_forecast_series(file::JLD.JldFile, class::Symbol, product::Symbol, var_name::Symbol)
+function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol, var_name::Symbol)
     # Get index corresponding to var_name
     class_long = get_class_longname(class)
     indices = read(file, "$(class_long)_indices")
@@ -449,7 +449,7 @@ function read_forecast_series(file::JLD.JldFile, class::Symbol, product::Symbol,
     return arr
 end
 
-function read_forecast_series(file::JLD.JldFile, class::Symbol, product::Symbol, var_name::Symbol,
+function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol, var_name::Symbol,
                               shock_name::Symbol)
     # Get indices corresponding to var_name and shock_name
     class_long = get_class_longname(class)

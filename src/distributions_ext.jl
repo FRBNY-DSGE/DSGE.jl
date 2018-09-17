@@ -7,7 +7,7 @@ functions, but rather new functions with the same names.
 =#
 
 import Distributions: params, mean, std, pdf, logpdf, rand, Distribution, Matrixvariate
-import Base: length, rank
+import Base: length
 
 """
 ```
