@@ -130,10 +130,10 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     return transformed
 end
 
-function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Function;
-                                             fourquarter::Bool = false,
-                                             y0::T = NaN, y0s::Vector{T} = T[],
-                                             pop_growth::Vector{T} = T[])
+function reverse_transform(y::Array{T}, rev_transform::Function;
+                           fourquarter::Bool = false,
+                           y0::T = NaN, y0s::Vector{T} = T[],
+                           pop_growth::Vector{T} = T[]) where {T<:AbstractFloat}
     if fourquarter
         if rev_transform in [loggrowthtopct_4q_percapita, loggrowthtopct_4q,
                              loggrowthtopct_4q_approx]

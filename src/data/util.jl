@@ -19,7 +19,7 @@ end
 """
 `get_quarter_ends(start_date::Date,end_date::Date)`
 
-Returns a DataArray of quarter end dates between `start_date` and `end_date`.
+Returns an Array of quarter end dates between `start_date` and `end_date`.
 """
 function get_quarter_ends(start_date::Date,end_date::Date)
     map(lastdayofquarter, collect(start_date:Dates.Month(3):end_date))
@@ -101,12 +101,12 @@ end
 
 """
 ```
-missing2nan!(df::DataArray)
+missing2nan!(df::Array)
 ```
 
 Convert all elements of Union{X, Missing.Missing} and the like to type X.
 """
-function missing2nan!(v::DataArray)
+function missing2nan!(v::Array)
     valid_types = [Date, Float64]
     new_v = tryparse.(new_type, v)
     if all(isnull.(new_v))
@@ -129,12 +129,12 @@ end
 
 """
 ```
-na2nan!(df::DataArray)
+na2nan!(df::Array)
 ```
 
-Convert all NAs in a DataArray to NaNs.
+Convert all NAs in an Array to NaNs.
 """
-function na2nan!(v::DataArray)
+function na2nan!(v::Array)
     for i = 1:length(v)
         v[i] = ismissing(v[i]) ?  NaN : v[i]
     end
