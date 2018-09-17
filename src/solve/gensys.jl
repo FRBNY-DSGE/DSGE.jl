@@ -5,8 +5,8 @@
 ```
 gensys(Γ0, Γ1, c, Ψ, Π)
 gensys(Γ0, Γ1, c, Ψ, Π, div)
-gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π)
-gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
+gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π)
+gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
 ```
 
 Generate state-space solution to canonical-form DSGE model.
@@ -50,7 +50,7 @@ function gensys(Γ0, Γ1, c, Ψ, Π, args...)
     F = try
         schurfact!(complex(Γ0), complex(Γ1))
     catch ex
-        if isa(ex, Base.LinAlg.LAPACKException)
+        if isa(ex, LinearAlgebra.LAPACKException)
             info("LAPACK exception thrown while computing Schur decomposition of Γ0 and Γ1.")
             eu = [-3, -3]
 
@@ -71,12 +71,12 @@ function gensys(Γ0, Γ1, c, Ψ, Π, args...)
     gensys(F, c, Ψ, Π, args...)
 end
 
-function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π)
+function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π)
     gensys(F, c, Ψ, Π, new_div(F))
 end
 
 # Method that does the real work. Work directly on the decomposition F
-function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
+function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
     eu = [0, 0]
     ϵ = 1e-6  # small number to check convergence
     nunstab = 0
@@ -212,7 +212,7 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
 end
 
 
-function new_div(F::Base.LinAlg.GeneralizedSchur)
+function new_div(F::LinearAlgebra.GeneralizedSchur)
     ϵ = 1e-6  # small number to check convergence
     n = size(F[:T], 1)
     a, b = F[:S], F[:T]

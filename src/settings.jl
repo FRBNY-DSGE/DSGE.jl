@@ -27,12 +27,12 @@ mutable struct Setting{T}
 end
 
 # for printing codes to filename string
-Base.convert{T<:Number, U<:Number}(::Type{T}, s::Setting{U}) = convert(T, s.value)
-Base.convert(::Type{String}, s::Setting{String}) = convert(String, s.value)
+Base.convert(::Type{T}, s::Setting{U}) where {T<:Number, U<:Number} = convert(T, s.value)
+Base.convert(::Type{S}, s::Setting{S}) where {S<:String} = convert(String, s.value)
 
-Base.promote_rule{T<:Number,U<:Number}(::Type{Setting{T}}, ::Type{U}) = promote_rule(T,U)
-Base.promote_rule(::Type{Setting{String}}, ::Type{String}) = promote_rule(String, String)
-Base.promote_rule(::Type{Setting{Bool}}, ::Type{Bool}) = promote_rule(Bool, Bool)
+Base.promote_rule(::Type{Setting{T}}, ::Type{U}) where {T<:Number,U<:Number} = promote_rule(T,U)
+Base.promote_rule(::Type{Setting{S}}, ::Type{S}) where {S<:String} = promote_rule(String, String)
+Base.promote_rule(::Type{Setting{B}}, ::Type{B}) where {B<:Bool}   = promote_rule(Bool, Bool)
 
 Base.string(s::Setting{String}) = string(s.value)
 
