@@ -1,7 +1,7 @@
 """
 ```
-measurement{T<:AbstractFloat}(m::AnSchorfheide{T}, TTT::Matrix{T},
-                              RRR::Matrix{T}, CCC::Vector{T})
+measurement(m::AnSchorfheide{T}, TTT::Matrix{T},
+            RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
 ```
 
 Assign measurement equation
@@ -18,10 +18,10 @@ Var(u_t) = EE
 Cov(ϵ_t, u_t) = 0
 ```
 """
-function measurement{T<:AbstractFloat}(m::AnSchorfheide{T},
-                                       TTT::Matrix{T},
-                                       RRR::Matrix{T},
-                                       CCC::Vector{T})
+function measurement(m::AnSchorfheide{T},
+                     TTT::Matrix{T},
+                     RRR::Matrix{T},
+                     CCC::Vector{T}) where {T<:AbstractFloat}
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
     exo      = m.exogenous_shocks

@@ -174,7 +174,7 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
                 sub_strs = split(column_key, "_")
                 column_key = sub_strs[1]*"\\_"*sub_strs[2]
             end
-            column_entry = "\\parbox\{0.3\\linewidth\}\{\\centering "*column_key*"\}"
+            column_entry = "\\parbox\\{0.3\\linewidth\\}\\{\\centering "*column_key*"\\}"
             if i != n_columns
                 @printf fid "& %s " column_entry
             else
@@ -261,13 +261,13 @@ function unit_mappings(m::AbstractModel, df::DataFrame,
         name = key != :date ? header_mappings[key] : continue
         if key in obs_keys
             if ismatch(r"pct_annualized", string(m.observable_mappings[key].rev_transform))
-                units[name] = "("quarter*"/"*quarter*") \\% Annualized"
+                units[name] = "("*quarter*"/"*quarter*") \\% Annualized"
             elseif ismatch(r"quartertoannual", string(m.observable_mappings[key].rev_transform))
                 units[name] = quarter
             end
         elseif key in pseudo_keys
             if ismatch(r"pct_annualized", string(m.pseudo_observable_mappings[key].rev_transform))
-                units[name] = "("quarter*"/"*quarter*") \\% Annualized"
+                units[name] = "("*quarter*"/"*quarter*") \\% Annualized"
             elseif ismatch(r"quartertoannual", string(m.pseudo_observable_mappings[key].rev_transform))
                 units[name] = quarter
             elseif ismatch(r"identity", string(m.pseudo_observable_mappings[key].rev_transform))

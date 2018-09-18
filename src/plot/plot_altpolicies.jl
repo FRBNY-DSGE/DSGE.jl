@@ -36,27 +36,27 @@ Plot `var` or `vars` forecasts under the alternative policies in `models`.
 See `?histforecast` for additional keyword arguments, all of which can be passed
 into `plot_altpolicies`.
 """
-function plot_altpolicies{T<:AbstractModel}(models::Vector{T}, var::Symbol, class::Symbol,
-                                            cond_type::Symbol; title::String = "",
-                                            kwargs...)
+function plot_altpolicies(models::Vector{T}, var::Symbol, class::Symbol,
+                          cond_type::Symbol; title::String = "",
+                          kwargs...) where {T<:AbstractModel}
     plots = plot_altpolicies(models, [var], class, cond_type;
                              title = isempty(title) ? String[] : [title],
                              kwargs...)
     return plots[var]
 end
 
-function plot_altpolicies{T<:AbstractModel}(models::Vector{T}, vars::Vector{Symbol}, class::Symbol,
-                                            cond_type::Symbol;
-                                            forecast_string::String = "",
-                                            altpol_string::String = "",
-                                            start_date::Date = iterate_quarters(date_mainsample_end(models[1]), -4),
-                                            end_date::Date = iterate_quarters(date_forecast_start(models[1]), 20),
-                                            untrans::Bool = false,
-                                            fourquarter::Bool = false,
-                                            plotroot::String = figurespath(m, "forecast"),
-                                            titles::Vector{String} = String[],
-                                            verbose::Symbol = :low,
-                                            kwargs...)
+function plot_altpolicies(models::Vector{T}, vars::Vector{Symbol}, class::Symbol,
+                          cond_type::Symbol;
+                          forecast_string::String = "",
+                          altpol_string::String = "",
+                          start_date::Date = iterate_quarters(date_mainsample_end(models[1]), -4),
+                          end_date::Date = iterate_quarters(date_forecast_start(models[1]), 20),
+                          untrans::Bool = false,
+                          fourquarter::Bool = false,
+                          plotroot::String = figurespath(m, "forecast"),
+                          titles::Vector{String} = String[],
+                          verbose::Symbol = :low,
+                          kwargs...) where {T<:AbstractModel}
     # Determine output_vars
     if untrans && fourquarter
         error("Only one of untrans or fourquarter can be true")

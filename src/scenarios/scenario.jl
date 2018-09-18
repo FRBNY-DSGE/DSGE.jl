@@ -15,7 +15,7 @@ abstract type AbstractScenario end
 
 abstract type SingleScenario <: AbstractScenario end
 
-type Scenario <: SingleScenario
+mutable struct Scenario <: SingleScenario
     key::Symbol
     description::String
     target_names::Vector{Symbol}
@@ -89,7 +89,7 @@ function targets_to_data(m::AbstractModel, scen::Scenario)
     return df
 end
 
-type SwitchingScenario <: SingleScenario
+mutable struct SwitchingScenario <: SingleScenario
     key::Symbol
     description::String
     vintage::String
@@ -152,13 +152,13 @@ ScenarioAggregate(key, description, scenarios, proportions, total_draws,
     replace, vintage)
 ```
 
-Composite type for aggregated `AbstractScenario`s. Scenarios in
+Composite mutable struct for aggregated `AbstractScenario`s. Scenarios in
 `scenarios::Vector{AbstractScenario}` are sampled into the aggregate
 with the probability of the corresponding entry in `proportions` (whose values
 must sum to 1). The field `replace` indicates whether to sample with
 replacement.
 """
-type ScenarioAggregate <: AbstractScenario
+mutable struct ScenarioAggregate <: AbstractScenario
     key::Symbol
     description::String
     scenarios::Vector{AbstractScenario}
