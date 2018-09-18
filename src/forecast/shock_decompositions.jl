@@ -29,8 +29,8 @@ where `S<:AbstractFloat`.
 
 where `nperiods = `end_index - start_index + 1`.
 """
-function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
-    system::System{S}, histshocks::Matrix{S})
+function shock_decompositions(m::AbstractModel,
+    system::System{S}, histshocks::Matrix{S}) where {S<:AbstractFloat}
 
     horizon   = forecast_horizons(m)
     start_ind = index_shockdec_start(m)
@@ -39,9 +39,9 @@ function shock_decompositions{S<:AbstractFloat}(m::AbstractModel,
     shock_decompositions(system, horizon, histshocks, start_ind, end_ind)
 end
 
-function shock_decompositions{S<:AbstractFloat}(system::System{S},
+function shock_decompositions(system::System{S},
     forecast_horizons::Int, histshocks::Matrix{S},
-    start_index::Int, end_index::Int)
+    start_index::Int, end_index::Int) where {S<:AbstractFloat}
 
     # Setup
     nshocks      = size(system[:RRR], 2)
@@ -116,8 +116,8 @@ where `S<:AbstractFloat`.
 where `nperiods` is the number of quarters between
 `date_shockdec_start(m)` and `date_shockdec_end(m)`, inclusive.
 """
-function deterministic_trends{S<:AbstractFloat}(m::AbstractModel{S},
-    system::System{S}, z0::Vector{S})
+function deterministic_trends(m::AbstractModel{S},
+    system::System{S}, z0::Vector{S}) where {S<:AbstractFloat}
 
     # Dates: We compute the deterministic trend starting from the
     # first historical period.  However, since it is only used to
@@ -130,8 +130,8 @@ function deterministic_trends{S<:AbstractFloat}(m::AbstractModel{S},
     deterministic_trends(system, z0, nperiods, start_index, end_index)
 end
 
-function deterministic_trends{S<:AbstractFloat}(system::System{S}, z0::Vector{S}, nperiods::Int,
-    start_index::Int, end_index::Int)
+function deterministic_trends(system::System{S}, z0::Vector{S}, nperiods::Int,
+    start_index::Int, end_index::Int) where {S<:AbstractFloat}
 
     # Set constant system matrices to 0
     system = zero_system_constants(system)
@@ -154,13 +154,13 @@ end
 
 """
 ```
-trends{S<:AbstractFloat}(system::System{S})
+trends(system::System{S}) where {S<:AbstractFloat}
 ```
 
 Compute trend (steady-state) states, observables, and pseudo-observables. The
 trend is used for plotting shock decompositions.
 """
-function trends{S<:AbstractFloat}(system::System{S})
+function trends(system::System{S}) where {S<:AbstractFloat}
 
     state_trend  = system[:CCC]
     obs_trend    = system[:ZZ]*system[:CCC] + system[:DD]

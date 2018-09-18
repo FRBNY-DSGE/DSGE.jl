@@ -240,7 +240,7 @@ end
 
 """
 ```
-write_forecast_metadata(m::AbstractModel, file::JldFile, var::Symbol)
+write_forecast_metadata(m::AbstractModel, file::JLD2.JLDFile, var::Symbol)
 ```
 
 Write metadata about the saved forecast output `var` to `filepath`.
