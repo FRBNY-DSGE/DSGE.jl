@@ -46,7 +46,7 @@ Note that the Cartesian product (product x class) is the set of options for
   `DataFrame`s containing confidence bands for each variable. See
   `find_density_bands` for more information.
 """
-type MeansBands
+mutable struct MeansBands
     metadata::Dict{Symbol,Any}
     means::DataFrame
     bands::Dict{Symbol,DataFrame}
@@ -585,8 +585,8 @@ prepare_meansbands_table_timeseries(mb, var)
 Returns a `DataFrame` of means and bands for a particular time series variable
 (either `hist` or `forecast` of some type). Columns are sorted such that the
 bands are ordered from smallest to largest, and the means are on the far
-right. For example, a `MeansBands` containing 50\% and 68\% bands would be
-ordered as follows: [68\% lower, 50\% lower, 50\% upper, 68\% upper, mean].
+right. For example, a `MeansBands` containing 50\\% and 68\\% bands would be
+ordered as follows: [68\\% lower, 50\\% lower, 50\\% upper, 68\\% upper, mean].
 
 ### Inputs
 
@@ -636,8 +636,8 @@ Returns a `DataFrame` of means and bands for a particular impulse
 response function of variable (observable, pseudoobservable, or state)
 `v` to shock `s`. Columns are sorted such that the bands are ordered from
 smallest to largest, and the means are on the far right. For example,
-a MeansBands object containing 50\% and 68\% bands would be ordered as
-follows: [68\% lower, 50\% lower, 50\% upper, 68\% upper, mean].
+a MeansBands object containing 50\\% and 68\\% bands would be ordered as
+follows: [68\\% lower, 50\\% lower, 50\\% upper, 68\\% upper, mean].
 
 ### Inputs
 - `mb::MeansBands`: time-series MeansBands object

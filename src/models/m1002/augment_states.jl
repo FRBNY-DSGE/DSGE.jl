@@ -1,6 +1,6 @@
 """
 ```
-augment_states{T<:AbstractFloat}(m::AbstractModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
+augment_states(m::AbstractModel, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T}) where {T<:AbstractFloat}
 ```
 
 ### Arguments
@@ -41,7 +41,7 @@ The diagram below shows how `TTT` is extended to `TTT_aug`.
     |_________________________________|
 
 """
-function augment_states{T<:AbstractFloat}(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T})
+function augment_states(m::Model1002, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
     endo     = m.endogenous_states
     endo_new = m.endogenous_states_augmented
     exo      = m.exogenous_shocks
