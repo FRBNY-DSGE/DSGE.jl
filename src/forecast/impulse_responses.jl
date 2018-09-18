@@ -24,12 +24,12 @@ where `S<:AbstractFloat`
 - `pseudo::Array{S, 3}`: matrix of size `npseudo` x `horizon` x `nshocks` of
   pseudo-observable impulse response functions
 """
-function impulse_responses{S<:AbstractFloat}(m::AbstractModel, system::System{S})
+function impulse_responses(m::AbstractModel, system::System{S}) where {S<:AbstractFloat}
     horizon = impulse_response_horizons(m)
     impulse_responses(system, horizon)
 end
 
-function impulse_responses{S<:AbstractFloat}(system::System{S}, horizon::Int)
+function impulse_responses(system::System{S}, horizon::Int) where {S<:AbstractFloat}
     # Setup
     nshocks      = size(system[:RRR], 2)
     nstates      = size(system[:TTT], 1)

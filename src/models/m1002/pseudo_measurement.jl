@@ -1,7 +1,7 @@
  """
 ```
-pseudo_measurement{T<:AbstractFloat}(m::Model1002{T},
-    TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T})
+pseudo_measurement(m::Model1002{T},
+    TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
 ```
 
 Assign pseudo-measurement equation (a linear combination of states):
@@ -10,10 +10,10 @@ Assign pseudo-measurement equation (a linear combination of states):
 x_t = ZZ_pseudo*s_t + DD_pseudo
 ```
 """
-function pseudo_measurement{T<:AbstractFloat}(m::Model1002{T},
-                                              TTT::Matrix{T},
-                                              RRR::Matrix{T},
-                                              CCC::Vector{T})
+function pseudo_measurement(m::Model1002{T},
+                            TTT::Matrix{T},
+                            RRR::Matrix{T},
+                            CCC::Vector{T}) where {T<:AbstractFloat}
 
     endo      = m.endogenous_states
     endo_addl = m.endogenous_states_augmented
@@ -41,7 +41,7 @@ function pseudo_measurement{T<:AbstractFloat}(m::Model1002{T},
 
     ## Natural Rate
     ZZ_pseudo[pseudo[:NaturalRate],endo[:r_f_t]] = 1.
-    DD_pseudo[pseudo[:NaturalRate]]              = 100.*(m[:rstar]-1.)
+    DD_pseudo[pseudo[:NaturalRate]]              = 100.0*(m[:rstar]-1.0)
 
     ## π_t
     ZZ_pseudo[pseudo[:π_t],endo[:π_t]] = 1.
