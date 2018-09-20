@@ -1,5 +1,5 @@
 using DSGE
-using Base.Test
+using Test
 
 # Test `hessizero` in context of Rosenbrock function
 function rosenbrock(x::Vector)

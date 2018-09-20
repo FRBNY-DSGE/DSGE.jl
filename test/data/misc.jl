@@ -1,5 +1,5 @@
 using DSGE
-using Base.Test, Meta
+using Test, Meta
 using DataFrames: DataFrame
 using DataArrays: @data
 
