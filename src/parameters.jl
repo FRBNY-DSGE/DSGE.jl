@@ -1,7 +1,6 @@
 import Base: <=
 
 Interval{T} = Tuple{T,T}
-Nullable{T} = Union{T, Nothing}
 """
 ```
 Transform
@@ -194,7 +193,7 @@ Base.showerror(io::IO, ex::ParamBoundsError) = print(io, ex.msg)
 ```
 parameter{T,U<:Transform}(key::Symbol, value::T, valuebounds = (value,value),
                           transform_parameterization = (value,value),
-                          transform = Untransformed(), prior = NullablePrior(),
+                          transform = Untransformed(), prior = NullablePrior();
                           fixed = true, scaling::Function = identity, description = "",
                           tex_label::String = "")
 ```
@@ -212,7 +211,7 @@ function parameter(key::Symbol,
                    fixed::Bool              = true,
                    scaling::Function        = identity,
                    description::String = "No description available.",
-                   tex_label::String = "") where T <: Transform where U <:Transform
+                   tex_label::String = "") where {T, U <:Transform}
 
     # If fixed=true, force bounds to match and leave prior as null.  We need to define new
     # variable names here because of lexical scoping.
@@ -252,13 +251,13 @@ end
 """
 ```
 SteadyStateParameter(key::Symbol, value::T; description::String = "",
-                      tex_label::String = "") where T <: Number
+                      tex_label::String = "") where {T <: Number}
 ```
 
 SteadyStateParameter constructor with optional `description` and `tex_label` arguments.
 """
 function SteadyStateParameter(key::Symbol, value::T; description::String = "No description available",
-                              tex_label::String = "") where T <: Number
+                              tex_label::String = "") where {T <: Number}
 
     return SteadyStateParameter(key, value, description, tex_label)
 end
@@ -272,7 +271,7 @@ parameter{T<:Number,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::T)
 Returns an UnscaledParameter with value field equal to `newvalue`. If `p` is a fixed
 parameter, it is returned unchanged.
 """
-function parameter(p::UnscaledParameter{T,U}, newvalue::T) where T <: Number where U <: Transform
+function parameter(p::UnscaledParameter{T,U}, newvalue::T) where {T <: Number, U <: Transform}
     p.fixed && return p    # if the parameter is fixed, don't change its value
     a,b = p.valuebounds
     if !(a <= newvalue <= b)
@@ -291,7 +290,7 @@ parameter{T<:Number,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
 Returns a ScaledParameter with value field equal to `newvalue` and scaledvalue field equal
 to `p.scaling(newvalue)`. If `p` is a fixed parameter, it is returned unchanged.
 """
-function parameter(p::ScaledParameter{T,U}, newvalue::T) where T <: Number where U <: Transform
+function parameter(p::ScaledParameter{T,U}, newvalue::T) where {T <: Number, U <: Transform}
     p.fixed && return p    # if the parameter is fixed, don't change its value
     a,b = p.valuebounds
     if !(a <= newvalue <= b)
@@ -302,7 +301,7 @@ function parameter(p::ScaledParameter{T,U}, newvalue::T) where T <: Number where
                          p.scaling, p.description, p.tex_label)
 end
 
-function Base.show(io::IO, p::Parameter{T,U}) where T where U
+function Base.show(io::IO, p::Parameter{T,U}) where {T, U}
     @printf io "%s\n" typeof(p)
     @printf io "(:%s)\n%s\n"      p.key p.description
     @printf io "LaTeX label: %s\n"     p.tex_label
@@ -322,7 +321,7 @@ function Base.show(io::IO, p::Parameter{T,U}) where T where U
     @printf io "parameter is %s\n" p.fixed ? "fixed" : "not fixed"
 end
 
-function Base.show(io::IO, p::SteadyStateParameter{T}) where T
+function Base.show(io::IO, p::SteadyStateParameter{T}) where {T}
     @printf io "%s\n" typeof(p)
     @printf io "(:%s)\n%s\n"      p.key p.description
     @printf io "LaTeX label: %s\n"     p.tex_label
@@ -397,7 +396,7 @@ Base.convert(::Type{T}, p::UnscaledParameter) where T <: Number     = convert(T,
 Base.convert(::Type{T}, p::ScaledParameter) where T <: Number       = convert(T,p.scaledvalue)
 Base.convert(::Type{T}, p::SteadyStateParameter) where T <: Number  = convert(T,p.value)
 
-Base.promote_rule(::Type{AbstractParameter{T}}, ::Type{U}) where T<:Number where U<:Number = promote_rule(T,U)
+Base.promote_rule(::Type{AbstractParameter{T}}, ::Type{U}) where {T<:Number, U<:Number} = promote_rule(T,U)
 
 for op in (:(Base.:+),
            :(Base.:-),
@@ -465,7 +464,7 @@ update(pvec::ParameterVector{T}, values::Vector{T}) where T = update!(copy(pvec)
 
 Distributions.pdf(p::AbstractParameter) = exp(logpdf(p))
 # we want the unscaled value for ScaledParameters
-Distributions.logpdf(p::Parameter{T,U}) where T where U = logpdf(get(p.prior),p.value)
+Distributions.logpdf(p::Parameter{T,U}) where {T, U} = logpdf(get(p.prior),p.value)
 
 # this function is optimised for speed
 function Distributions.logpdf(pvec::ParameterVector{T}) where T
