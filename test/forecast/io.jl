@@ -1,4 +1,4 @@
-using DSGE, Base.Test, JLD
+using DSGE, Base.Test, JLD2
 
 # Initialize model object
 m = AnSchorfheide(testing = true)

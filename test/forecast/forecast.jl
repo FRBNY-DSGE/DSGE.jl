@@ -1,4 +1,4 @@
-using DSGE, JLD
+using DSGE, JLD2
 using Base.Test
 
 path = dirname(@__FILE__)
