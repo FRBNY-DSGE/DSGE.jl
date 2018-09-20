@@ -1,6 +1,9 @@
 # This code is based on a routine originally copyright Chris Sims.
 # See http://sims.princeton.edu/yftp/gensys/
 
+# eye(n::Integer) deprecated in Julia v0.7.0 onwards
+@inline eye(n::Integer) = Matrix{Float64}(I, n, n)
+
 """
 ```
 gensys(Γ0, Γ1, c, Ψ, Π)
@@ -42,7 +45,7 @@ If `div` is omitted from argument list, a `div`>1 is calculated.
 
 ### Notes
 
-We constrain Julia to use the complex version of the `schur` routine regardless of the
+We constrain Julia to use the complex version of the `schurfact` routine regardless of the
 types of `Γ0` and `Γ1`, to match the behavior of Matlab.  Matlab always uses the complex version
 of the Schur decomposition, even if the inputs are real numbers.
 """
@@ -114,11 +117,11 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
     end
 
     FS = ordschur!(F, select)
-    a, b, qt, z = FS[:S], FS[:T], FS[:Q], FS[:Z]
+    a, b, qt, z = FS.S, FS.T, FS.Q, FS.Z
     gev = hcat(diag(a), diag(b))
     qt1 = qt[:, 1:(n - nunstab)]
     qt2 = qt[:, (n - nunstab + 1):n]
-    etawt = Ac_mul_B(qt2, Π)
+    etawt = adjoint(qt2) * Π #Ac_mul_B(qt2, Π)
     neta = size(Π, 2)
 
     # branch below is to handle case of no stable roots, rather than quitting with an error
@@ -130,11 +133,11 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
         veta = zeros(neta, 0)
         bigev = 0
     else
-        etawtsvd = svdfact!(etawt)
-        bigev = find(etawtsvd[:S] .> ϵ)
-        ueta = etawtsvd[:U][:, bigev]
-        veta = etawtsvd[:V][:, bigev]
-        deta = diagm(etawtsvd[:S][bigev])
+        etawtsvd = svd!(etawt)
+        bigev = (LinearIndices(etawtsvd.S))[findall(etawtsvd.S .> ϵ)]
+        ueta = etawtsvd.U[:, bigev]
+        veta = etawtsvd.V[:, bigev]
+        deta = Matrix(Diagonal(etawtsvd.S[bigev]))
     end
 
     existence = length(bigev) >= nunstab
@@ -156,21 +159,21 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
         veta1 = zeros(neta, 0)
         deta1 = zeros(0, 0)
     else
-        etawt1 = Ac_mul_B(qt1, Π)
+        etawt1 = adjoint(qt1) * Π #Ac_mul_B(qt1, Π)
         ndeta1 = min(n - nunstab, neta)
-        etawt1svd = svdfact!(etawt1)
-        bigev = find(etawt1svd[:S] .> ϵ)
-        ueta1 = etawt1svd[:U][:, bigev]
-        veta1 = etawt1svd[:V][:, bigev]
-        deta1 = diagm(etawt1svd[:S][bigev])
+        etawt1svd = svd!(etawt1)
+        bigev = (LinearIndices(etawtsvd.S))[findall(etawt1svd.S .> ϵ)]
+        ueta1 = etawt1svd.U[:, bigev]
+        veta1 = etawt1svd.V[:, bigev]
+        deta1 = Matrix(Diagonal(etawt1svd.S[bigev]))
     end
 
     if isempty(veta1)
         unique = true
     else
-        loose = veta1 - A_mul_Bc(veta, veta) * veta1
-        loosesvd = svdfact!(loose)
-        nloose = sum(abs.(loosesvd[:S]) .> ϵ * n)
+        loose = veta1 - (veta * adjoint(veta)) * veta1
+        loosesvd = svd!(loose)
+        nloose = sum(abs.(loosesvd.S) .> ϵ * n)
         unique = (nloose == 0)
     end
 
@@ -180,8 +183,7 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
         warn("Indeterminacy: $(nloose) loose endogeneous error(s)")
     end
 
-
-    tmat = hcat(eye(n - nunstab), -(ueta * (deta \ veta') * veta1 * A_mul_Bc(deta1, ueta1))')
+    tmat = hcat(eye(n - nunstab), -(ueta * (deta \ veta') * veta1 * (deta1 * adjoint(ueta1)))')
 
     G0 = vcat(tmat * a, hcat(zeros(nunstab, n - nunstab), eye(nunstab)))
     G1 = vcat(tmat * b, zeros(nunstab, n))
@@ -193,15 +195,15 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
     usix = (n - nunstab + 1):n
     Busix = b[usix,usix]
     Ausix = a[usix,usix]
-    C = G0I * vcat(tmat * Ac_mul_B(qt, c), (Ausix - Busix) \ Ac_mul_B(qt2, c))
-    impact = G0I * vcat(tmat * Ac_mul_B(qt, Ψ), zeros(nunstab, size(Ψ, 2)))
+    C = G0I * vcat(tmat * (adjoint(qt) * c), (Ausix - Busix) \ (adjoint(qt2) * c))
+    impact = G0I * vcat(tmat * (adjoint(qt) * Ψ), zeros(nunstab, size(Ψ, 2)))
     fmat = Busix \ Ausix
-    fwt = -Busix \ Ac_mul_B(qt2, Ψ)
+    fwt = -Busix \ (adjoint(qt2) * Ψ)
     ywt = G0I[:, usix]
 
-    loose = G0I * vcat(etawt1 * (eye(neta) - A_mul_Bc(veta, veta)), zeros(nunstab, neta))
+    loose = G0I * vcat(etawt1 * (eye(neta) - (veta * adjoint(veta))), zeros(nunstab, neta))
 
-    G1 = real(z * A_mul_Bc(G1, z))
+    G1 = real(z * (G1 * adjoint(z)))
     C = real(z * C)
     impact = real(z * impact)
     loose = real(z * loose)
