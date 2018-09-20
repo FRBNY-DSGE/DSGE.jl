@@ -1,5 +1,5 @@
 using DSGE
-using Base.Test, DataFrames, HDF5
+using Test, DataFrames, HDF5
 
 path = dirname(@__FILE__)
 

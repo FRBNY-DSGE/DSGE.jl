@@ -1,5 +1,5 @@
 using DSGE
-using HDF5, Base.Test, Distributions
+using HDF5, Test, Distributions
 
 path = dirname(@__FILE__)
 
