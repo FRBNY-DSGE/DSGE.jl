@@ -42,13 +42,13 @@ If `div` is omitted from argument list, a `div`>1 is calculated.
 
 ### Notes
 
-We constrain Julia to use the complex version of the `schurfact` routine regardless of the
+We constrain Julia to use the complex version of the `schur` routine regardless of the
 types of `Γ0` and `Γ1`, to match the behavior of Matlab.  Matlab always uses the complex version
 of the Schur decomposition, even if the inputs are real numbers.
 """
 function gensys(Γ0, Γ1, c, Ψ, Π, args...)
     F = try
-        schurfact!(complex(Γ0), complex(Γ1))
+        schur!(complex(Γ0), complex(Γ1))
     catch ex
         if isa(ex, LinearAlgebra.LAPACKException)
             info("LAPACK exception thrown while computing Schur decomposition of Γ0 and Γ1.")
@@ -81,7 +81,7 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
     ϵ = 1e-6  # small number to check convergence
     nunstab = 0
     zxz = 0
-    a, b, = F[:S], F[:T]
+    a, b, = F.S, F.T
     n = size(a, 1)
 
     select = BitArray(n)
@@ -214,8 +214,8 @@ end
 
 function new_div(F::LinearAlgebra.GeneralizedSchur)
     ϵ = 1e-6  # small number to check convergence
-    n = size(F[:T], 1)
-    a, b = F[:S], F[:T]
+    n = size(F.T, 1)
+    a, b = F.S, F.T
     div = 1.01
     for i in 1:n
         if abs(a[i, i]) > 0
