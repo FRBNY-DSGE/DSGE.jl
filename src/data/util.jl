@@ -32,17 +32,17 @@ Convert `string` in the form "YYqX", "YYYYqX", or "YYYY-qX" to a Date of the end
 the indicated quarter. "X" is in `{1,2,3,4}` and the case of "q" is ignored.
 """
 function quartertodate(string::String)
-    if ismatch(r"^[0-9]{2}[qQ][1-4]$", string)
+    if occursin(r"^[0-9]{2}[qQ][1-4]$", string)
         year = "20"*string[1:2]
         quarter = string[end]
-    elseif ismatch(r"^[0-9]{4}[qQ][1-4]$", string)
+    elseif occursin(r"^[0-9]{4}[qQ][1-4]$", string)
         year = string[1:4]
         quarter = string[end]
-    elseif ismatch(r"^[0-9]{4}-[qQ][1-4]$", string)
+    elseif occursin(r"^[0-9]{4}-[qQ][1-4]$", string)
         year = string[1:4]
         quarter = string[end]
     else
-        throw(ParseError("Invalid format: $string"))
+        throw(Meta.ParseError("Invalid format: $string"))
     end
 
     year = parse(Int, year)
