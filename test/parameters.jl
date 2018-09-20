@@ -97,7 +97,7 @@ sstest(m)
     @test m[:ι_w].valuebounds == (0.0, .9999)
     @test m[:ι_w].transform == DSGE.Untransformed()
     @test m[:ι_w].transform_parameterization == (0.0,0.9999)
-    @test isa(m[:ι_w].prior.value, Normal)
+    @test isa(m[:ι_w].prior, Normal)
 
     @test m[:ι_p].value == 0.0
     @test m[:ι_p].valuebounds == (0.0, 0.0)
@@ -111,7 +111,7 @@ sstest(m)
 
     @test m[:ϵ_p].value == 0.750
     @test m[:ϵ_p].transform == DSGE.Exponential()
-    @test isa(m[:ϵ_p].prior.value, Gamma)
+    @test isa(m[:ϵ_p].prior, Gamma)
     @test m[:ϵ_p].fixed==false
 end
 

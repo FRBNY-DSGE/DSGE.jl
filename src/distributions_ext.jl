@@ -8,7 +8,7 @@ functions, but rather new functions with the same names.
 
 import Distributions: params, mean, std, pdf, logpdf, rand, Distribution, Matrixvariate
 import Base: length
-
+import SpecialFunctions: gamma
 """
 ```
 BetaAlt(μ::AbstractFloat, σ::AbstractFloat)
