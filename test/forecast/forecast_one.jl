@@ -1,4 +1,4 @@
-using DSGE, Base.Test, HDF5, JLD2
+using DSGE, Test, HDF5, JLD2
 
 path = dirname(@__FILE__)
 
