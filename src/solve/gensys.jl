@@ -57,14 +57,14 @@ function gensys(Γ0, Γ1, c, Ψ, Π, args...)
             info("LAPACK exception thrown while computing Schur decomposition of Γ0 and Γ1.")
             eu = [-3, -3]
 
-            G1 = Array{Float64, 2}(0,0)
-            C = Array{Float64, 1}(0)
-            impact = Array{Float64, 2}(0,0)
-            fmat = Array{Complex{Float64}, 2}(0,0)
-            fwt = Array{Complex{Float64}, 2}(0,0)
-            ywt = Vector{Complex{Float64}}(0)
-            gev = Vector{Complex{Float64}}(0)
-            loose = Array{Float64, 2}(0,0)
+            G1 = Array{Float64, 2}(undef,0,0)
+            C = Array{Float64, 1}(undef,0)
+            impact = Array{Float64, 2}(undef,0,0)
+            fmat = Array{Complex{Float64}, 2}(undef,0,0)
+            fwt = Array{Complex{Float64}, 2}(undef,0,0)
+            ywt = Vector{Complex{Float64}}(undef,0)
+            gev = Vector{Complex{Float64}}(undef,0)
+            loose = Array{Float64, 2}(undef,0,0)
 
             return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
         else
@@ -87,7 +87,7 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
     a, b, = F.S, F.T
     n = size(a, 1)
 
-    select = BitArray(n)
+    select = BitArray(undef, n)
     for i in 1:n
         # nunstab is the variable name used by Chris Sims, but it seems
         # that nunstab should actually correspond to the number of stable λs
@@ -104,14 +104,14 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
         warn("Coincident zeros. Indeterminacy and/or nonexistence.")
         eu=[-2, -2]
 
-        G1 = Array{Float64, 2}(0, 0)
-        C = Array{Float64, 1}(0)
-        impact = Array{Float64, 2}(0)
-        fmat = Array{Complex{Float64}, 2}(0,0)
-        fwt = Array{Complex{Float64}, 2}(0,0)
-        ywt = Vector{Complex{Float64}}(0)
-        gev = Vector{Complex{Float64}}(0)
-        loose = Array{Float64, 2}(0,0)
+        G1 = Array{Float64, 2}(undef,0, 0)
+        C = Array{Float64, 1}(undef,0)
+        impact = Array{Float64, 2}(undef,0)
+        fmat = Array{Complex{Float64}, 2}(undef,0,0)
+        fwt = Array{Complex{Float64}, 2}(undef,0,0)
+        ywt = Vector{Complex{Float64}}(undef,0)
+        gev = Vector{Complex{Float64}}(undef,0)
+        loose = Array{Float64, 2}(undef,0,0)
 
         return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
     end
