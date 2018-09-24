@@ -1,4 +1,5 @@
 using DSGE, DataFrames, JLD2
+using Dates
 using Test
 
 path = dirname(@__FILE__)
@@ -7,14 +8,19 @@ path = dirname(@__FILE__)
 m = AnSchorfheide(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 
-df, system, z0, P0 = jldopen("$path/../reference/forecast_args.jld", "r") do file
+df, system, z0, P0 = jldopen("$path/../reference/forecast_args.jld2", "r") do file
     read(file, "df"), read(file, "system"), read(file, "z0"), read(file, "P0")
 end
 
 # Read expected output
-exp_kal = jldopen("$path/../reference/filter_out.jld", "r") do file
+exp_kal = jldopen("$path/../reference/filter_out.jld2", "r") do file
     read(file, "exp_kal")
 end
+df2 = DataFrame()
+df2[:date] = df[:date]
+df2[:obs_cpi] = df[:obs_cpi]
+df2[:obs_gdp] = df[:obs_gdp]
+df2[:obs_nominalrate] = df[:obs_nominalrate]
 
 # Without providing z0 and P0
 @testset "Check Kalman filter outputs without initializing state/state-covariance" begin

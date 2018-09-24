@@ -577,7 +577,7 @@ function bfgsi(H0, dg, dx; verbose::Symbol = :none)
         # gradient is super small so don't worry updating right now
         # do nothing
     else
-        warn("bfgs update failed")
+        @warn "bfgs update failed"
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             @printf "|dg| = %f, |dx| = %f\n" (norm(dg)) (norm(dx))

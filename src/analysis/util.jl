@@ -216,7 +216,7 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
 
         padding = if start_date < population_data[1, :date]
             # Start date is before population data; compute number of NaNs to prepend
-            warn("Start date $start_date is before population data begins: prepending NaNs")
+            @warn "Start date $start_date is before population data begins: prepending NaNs"
             n_nans = subtract_quarters(population_data[1, :date], start_date)
 
             DataFrame(date = quarter_range(start_date, iterate_quarters(population_data[1,:date], -1)))

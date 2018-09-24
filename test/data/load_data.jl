@@ -41,7 +41,7 @@ path = dirname(@__FILE__)
         semicond_data = df_to_matrix(m, semicond_df; cond_type=:semi)
         @test @test_matrix_approx_eq exp_semicond_data semicond_data
     else
-        warn("Skipping load_data test because FRED_API_KEY not present")
+        @warn "Skipping load_data test because FRED_API_KEY not present"
     end
 end
 
