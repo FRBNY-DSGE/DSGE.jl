@@ -59,13 +59,11 @@ function smc(m::AbstractModel, data::Matrix;
 
     # Time Tempering
     tempered_update = !isempty(old_data)
-
-    # TEMPORARILY DISABLE FOR TESTING.
-    # # Quick check that if there is a tempered update that the old vintage and current vintage are different
-    # if tempered_update
-        # old_vintage = get_setting(m, :previous_data_vintage)
-        # @assert old_vintage != data_vintage(m)
-    # end
+    # Quick check that if there is a tempered update that the old vintage and current vintage are different
+    if tempered_update
+        old_vintage = get_setting(m, :previous_data_vintage)
+        @assert old_vintage != data_vintage(m)
+    end
 
     # Step 0 (ϕ schedule) settings
     i = 1                           # The index tracking the stage of the algorithm
@@ -249,7 +247,7 @@ function smc(m::AbstractModel, data::Matrix;
     if parallel
         new_particles = @parallel (vcat) for j in 1:n_parts
             mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                     c = c, α = α, old_data = old_data, verbose = verbose)
+                     c = c, α = α, old_data = old_data, use_chand_recursion = use_chand_recursion, verbose = verbose)
         end
     else
         new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
