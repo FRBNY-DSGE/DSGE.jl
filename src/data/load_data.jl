@@ -404,7 +404,12 @@ function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
     sort!(cols, by = x -> m.observables[x])
     df1 = df1[cols]
 
-    return convert(Matrix{Float64}, df1)'
+    y = convert(Matrix{Float64}, df1)'
+
+    if any(isnan.(y)) & get_setting(m, :use_chand_recursion)
+        error("Cannot use Chandrasekhar recursions with missing data.")
+    end
+    return y
 end
 
 """
