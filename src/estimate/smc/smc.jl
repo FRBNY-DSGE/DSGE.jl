@@ -47,6 +47,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     use_chand_recursion = get_setting(m, :use_chand_recursion)
 
+    if any(isnan.(data)) & use_chand_recursion
+        error("Cannot use Chandrasekhar recursions with missing data")
+    end
+
     # Time Tempering
     tempered_update = !isempty(old_data)
     # Quick check that if there is a tempered update that the old vintage and current vintage are different
