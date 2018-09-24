@@ -101,7 +101,7 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
     nunstab = n - sum(select)
 
     if zxz == 1
-        warn("Coincident zeros. Indeterminacy and/or nonexistence.")
+        @warn "Coincident zeros. Indeterminacy and/or nonexistence."
         eu=[-2, -2]
 
         G1 = Array{Float64, 2}(undef,0, 0)
@@ -144,7 +144,7 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
     if existence
         eu[1] = 1
     else
-        warn("Nonexistence: number of unstable roots exceeds number of jump variables")
+        @warn "Nonexistence: number of unstable roots exceeds number of jump variables"
     end
 
     # Note that existence and uniqueness are not just matters of comparing
@@ -180,7 +180,7 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
     if unique
         eu[2] = 1
     else
-        warn("Indeterminacy: $(nloose) loose endogeneous error(s)")
+        @warn "Indeterminacy: $(nloose) loose endogeneous error(s)"
     end
 
     tmat = hcat(eye(n - nunstab), -(ueta * (deta \ veta') * veta1 * (deta1 * adjoint(ueta1)))')
