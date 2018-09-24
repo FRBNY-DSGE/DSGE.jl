@@ -234,7 +234,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
 
     # forecast string
     if isempty(forecast_string) && (mb1.metadata[:forecast_string] != mb2.metadata[:forecast_string])
-        warn("No forecast_string provided: using $(mb1.metadata[:forecast_string])")
+        @warn "No forecast_string provided: using $(mb1.metadata[:forecast_string])"
     end
     forecast_string = mb1.metadata[:forecast_string]
 

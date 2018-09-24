@@ -1,7 +1,6 @@
 using DSGE
-using Test, Meta
+using Test
 using DataFrames: DataFrame
-using DataArrays: @data
 
 @testset "Miscellaneous data handling functions" begin
     # Previous and next quarter arithmetic
@@ -29,7 +28,7 @@ using DataArrays: @data
     @test_throws Meta.ParseError quartertodate("12345")
 
     df = DataFrame(date = ["1913-12-23", "1992-11-14", "2002-01-01", "2014-12-19"],
-                   x = @data([1, 2, NA, 4]))
+                   x = [1, 2, missing, 4])
     DSGE.format_dates!(:date, df)
 end
 

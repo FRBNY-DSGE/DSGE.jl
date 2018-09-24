@@ -143,11 +143,11 @@ function test_matrix_eq2(expect::Array{T},
                    " or |a - b|/|b| <= ", ϵ_rel, "%,",
                    " ∀ a ∈ ", actstr, ",",
                    " ∀ b ∈ ",expstr)
-        warn("assertion failed:\n",
+        @warn "assertion failed:\n",
              "    ", sdiff,
              "\n$(n_abs_diff) entries fail absolute equality filter",
              "\n$(n_rel_diff) entries fail relative equality filter",
-             "\n$(n_mixed_diff) entries fail both equality filters\n")
+             "\n$(n_mixed_diff) entries fail both equality filters\n"
         return false
     end
     return true

@@ -360,7 +360,7 @@ function write_means_tables_shockdec(m::AbstractModel, input_type::Symbol,
                                       forecast_string = forecast_string, directory = read_dirname)
         catch ex
             if output_var in [Symbol(:hist, class), Symbol(:forecast, class)]
-                warn("MeansBands for " * string(output_var) * " not found")
+                @warn "MeansBands for " * string(output_var) * " not found"
                 mbs[output_var] = MeansBands()
             else
                 rethrow(ex)
