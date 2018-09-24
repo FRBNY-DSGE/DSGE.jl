@@ -11,7 +11,7 @@ end
 
 """
 ```
-posterior(m::AbstractModel{T}, data::Matrix{T};
+posterior(m::AbstractModel{T}, data::AbstractArray{T};
           mh::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
 ```
 
@@ -35,7 +35,7 @@ log Pr(Θ|data) = log Pr(data|Θ) + log Pr(Θ) + const
   `ParamBoundsError`
 """
 function posterior(m::AbstractModel{T},
-                   data::Matrix{T};
+                   data::AbstractArray{T};
                    mh::Bool = false,
                    catch_errors::Bool = false) where {T<:AbstractFloat}
     catch_errors = catch_errors || mh
@@ -45,7 +45,7 @@ end
 
 """
 ```
-posterior!(m::AbstractModel{T}, parameters::Vector{T}, data::Matrix{T};
+posterior!(m::AbstractModel{T}, parameters::Vector{T}, data::AbstractArray{T};
            mh::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
 ```
 
@@ -55,7 +55,7 @@ Evaluates the log posterior density at `parameters`.
 
 - `m`: The model object
 - `parameters`: New values for the model parameters
-- `data`: Matrix of input data for observables
+- `data`: AbstractArray of input data for observables
 
 ### Optional Arguments
 
@@ -66,7 +66,7 @@ Evaluates the log posterior density at `parameters`.
 """
 function posterior!(m::AbstractModel{T},
                     parameters::Vector{T},
-                    data::Matrix{T};
+                    data::AbstractArray{T};
                     mh::Bool = false,
                     catch_errors::Bool = false) where {T<:AbstractFloat}
     catch_errors = catch_errors || mh
@@ -89,7 +89,7 @@ end
 
 """
 ```
-likelihood(m::AbstractModel, data::Matrix{T};
+likelihood(m::AbstractModel, data::AbstractArray{T};
            mh::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
 ```
 
@@ -111,7 +111,7 @@ filter over the main sample all at once.
 - `catch_errors`: Whether or not to catch errors of type `GensysError`
 """
 function likelihood(m::AbstractModel,
-                    data::Matrix{T};
+                    data::AbstractArray{T};
                     mh::Bool = false,
                     catch_errors::Bool = false) where {T<:AbstractFloat}
     catch_errors = catch_errors || mh
@@ -143,7 +143,7 @@ function likelihood(m::AbstractModel,
         return kal[:total_loglh]
     catch err
         if catch_errors && isa(err, DomainError)
-            warn("Log of incremental likelihood is negative; returning -Inf")
+            @warn "Log of incremental likelihood is negative; returning -Inf"
             return -Inf
         else
             rethrow(err)

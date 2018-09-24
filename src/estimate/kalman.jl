@@ -20,22 +20,22 @@ Kalman{S<:AbstractFloat}
 """
 struct Kalman{S<:AbstractFloat}
     loglh::Vector{S}     # log p(y_t | y_{1:t-1}), t = 1:T
-    s_pred::Matrix{S}    # s_{t|t-1}, t = 1:T
+    s_pred::AbstractArray{S}    # s_{t|t-1}, t = 1:T
     P_pred::Array{S, 3}  # P_{t|t-1}, t = 1:T
-    s_filt::Matrix{S}    # s_{t|t}, t = 1:T
+    s_filt::AbstractArray{S}    # s_{t|t}, t = 1:T
     P_filt::Array{S, 3}  # P_{t|t}, t = 1:T
     s_0::Vector{S}       # s_0
-    P_0::Matrix{S}       # P_0
+    P_0::AbstractArray{S}       # P_0
     s_T::Vector{S}       # s_{T|T}
-    P_T::Matrix{S}       # P_{T|T}
+    P_T::AbstractArray{S}       # P_{T|T}
     total_loglh::S       # log p(y_{1:t})
 end
 
 function Kalman(loglh::Vector{S},
-                s_pred::Matrix{S}, P_pred::Array{S, 3},
-                s_filt::Matrix{S}, P_filt::Array{S, 3},
-                s_0::Vector{S}, P_0::Matrix{S},
-                s_T::Vector{S}, P_T::Matrix{S}) where {S<:AbstractFloat}
+                s_pred::AbstractArray{S}, P_pred::Array{S, 3},
+                s_filt::AbstractArray{S}, P_filt::Array{S, 3},
+                s_0::Vector{S}, P_0::AbstractArray{S},
+                s_T::Vector{S}, P_T::AbstractArray{S}) where {S<:AbstractFloat}
 
     return Kalman{S}(loglh, s_pred, P_pred, s_filt, P_filt, s_0, P_0, s_T, P_T, sum(loglh))
 end
@@ -86,12 +86,12 @@ end
 zlb_regime_indices(m, data, start_date = date_presample_start(m))
 ```
 
-Returns a Vector{Range{Int64}} of index ranges for the pre- and post-ZLB
+Returns a Vector{AbstractRange{Int64}} of index ranges for the pre- and post-ZLB
 regimes. The optional argument `start_date` indicates the first quarter of
 `data`.
 """
-function zlb_regime_indices(m::AbstractModel{S}, data::Matrix{S},
-                            start_date::Date = date_presample_start(m)) where {S<:AbstractFloat}
+function zlb_regime_indices(m::AbstractModel{S}, data::AbstractArray{S},
+                            start_date::Dates.Date = date_presample_start(m)) where {S<:AbstractFloat}
     T = size(data, 2)
 
     if n_anticipated_shocks(m) > 0
@@ -100,15 +100,15 @@ function zlb_regime_indices(m::AbstractModel{S}, data::Matrix{S},
 
         elseif date_presample_start(m) <= start_date <= date_zlb_start(m)
             n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
-            regime_inds = Vector{Range{Int64}}(2)
+            regime_inds = Vector{AbstractRange{Int64}}(2)
             regime_inds[1] = 1:n_nozlb_periods
             regime_inds[2] = (n_nozlb_periods+1):T
 
         else # date_zlb_start(m) < start_date
-            regime_inds = Range{Int64}[1:T]
+            regime_inds = AbstractRange{Int64}[1:T]
         end
     else
-        regime_inds = Range{Int64}[1:T]
+        regime_inds = AbstractRange{Int64}[1:T]
     end
 
     return regime_inds
@@ -120,7 +120,7 @@ zlb_regime_matrices(m, system, start_date = date_presample_start(m))
 ```
 
 Returns `TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs`, an 8-tuple of
-`Vector{Matrix{S}}`s and `Vector{Vector{S}}`s of system matrices for the pre-
+`Vector{AbstractArray{S}}`s and `Vector{Vector{S}}`s of system matrices for the pre-
 and post-ZLB regimes. Of these, only `QQ` changes from pre- to post-ZLB: the
 entries corresponding to anticipated shock variances are zeroed out pre-ZLB.
 """

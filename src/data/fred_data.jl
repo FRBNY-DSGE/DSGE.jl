@@ -88,11 +88,11 @@ function load_fred_data(m::AbstractModel;
                                                        vintage_dates=string(vint_date))
             catch err
                 if :msg in fieldnames(err)
-                    warn(err.msg)
+                    @warn err.msg
                 else
                     show(err)
                 end
-                warn("FRED series $s could not be fetched at vintage $vint.")
+                @warn "FRED series $s could not be fetched at vintage $vint."
 
                 try
                     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -103,11 +103,11 @@ function load_fred_data(m::AbstractModel;
                                                            observation_end=string(end_date))
                 catch err
                     if :msg in fieldnames(err)
-                        warn(err.msg)
+                        @warn err.msg
                     else
                         show(err)
                     end
-                    warn("FRED series $s could not be fetched.")
+                    @warn "FRED series $s could not be fetched."
                     continue
                 end
             end
