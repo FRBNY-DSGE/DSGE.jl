@@ -23,8 +23,9 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
                     update!(m, draw)
                     draw_loglh   = likelihood(m, data, catch_errors = true, use_chand_recursion=use_chand_recursion, verbose = verbose)
                     draw_logpost = prior(m)
-                    if draw_loglh == -Inf
+                    if (draw_loglh == -Inf) | (draw_loglh===NaN)
                         draw_logpost = -Inf
+                        draw_loglh = -Inf
                     end
                 catch err
                     if isa(err, ParamBoundsError)
