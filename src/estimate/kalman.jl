@@ -67,11 +67,11 @@ end
 function Base.cat(m::AbstractModel, k1::Kalman{S},
     k2::Kalman{S}; allout::Bool = true) where {S<:AbstractFloat}
 
-    loglh  = cat(1, k1[:loglh], k2[:loglh])
-    s_pred = cat(2, k1[:s_pred], k2[:s_pred])
-    P_pred = cat(3, k1[:P_pred], k2[:P_pred])
-    s_filt = cat(2, k1[:s_filt], k2[:s_filt])
-    P_filt = cat(3, k1[:P_filt], k2[:P_filt])
+    loglh  = cat(k1[:loglh], k2[:loglh], dims = 1)
+    s_pred = cat(k1[:s_pred], k2[:s_pred], dims = 2)
+    P_pred = cat(k1[:P_pred], k2[:P_pred], dims = 3)
+    s_filt = cat(k1[:s_filt], k2[:s_filt], dims = 2)
+    P_filt = cat(k1[:P_filt], k2[:P_filt], dims = 3)
     s_0    = k1[:s_0]
     P_0    = k1[:P_0]
     s_T    = k2[:s_T]
