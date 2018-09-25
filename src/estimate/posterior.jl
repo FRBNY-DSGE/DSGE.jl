@@ -121,7 +121,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
                                       data::Matrix{T};
                                       sampler::Bool = false,
                                       catch_errors::Bool = false,
-                                      use_chand_recursion = true,
+                                      use_chand_recursion = false,
                                       verbose::Symbol = :high)
     catch_errors = catch_errors | sampler
 
