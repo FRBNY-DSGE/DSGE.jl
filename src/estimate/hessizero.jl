@@ -26,14 +26,10 @@ function hessizero(fcn::Function,
         diag_elements = @sync @distributed (hcat) for i = 1:n_para
             hess_diag_element(fcn, x, i; check_neg_diag=check_neg_diag, verbose=verbose)
         end
-        for i = 1:n_para
-            hessian[i, i] = diag_elements[i]
-        end
+        hessian = diagm(0 => diag_elements)
     else
-        for i=1:n_para
-            hessian[i,i] = hess_diag_element(fcn, x, i; check_neg_diag=check_neg_diag,
-                                             verbose=verbose)
-        end
+        hessian = diagm(0 => hess_diag_element(fcn, x, i; check_neg_diag=check_neg_diag,
+                                               verbose=verbose))
     end
 
     # Now compute off-diagonal elements
@@ -43,7 +39,7 @@ function hessizero(fcn::Function,
 
     # Build indices to iterate over
     n_off_diag_els = Int(n_para*(n_para-1)/2)
-    off_diag_inds = Vector{Tuple{Int,Int}}(n_off_diag_els)
+    off_diag_inds = Vector{Tuple{Int,Int}}(undef, n_off_diag_els)
     k=1
     for i=1:(n_para-1), j=(i+1):n_para
         off_diag_inds[k] = (i,j)
@@ -59,7 +55,7 @@ function hessizero(fcn::Function,
         # Ensure off_diag_out is array
         off_diag_out = hcat(off_diag_out)
     else
-        off_diag_out = Array{Tuple{T, T},1}(n_off_diag_els)
+        off_diag_out = Array{Tuple{T, T},1}(undef, n_off_diag_els)
         for (k,(i,j)) in enumerate(off_diag_inds)
             σ_xσ_y = sqrt(abs(hessian[i, i]*hessian[j, j]))
             off_diag_out[k] = hess_offdiag_element(fcn, x, i, j, σ_xσ_y; verbose=verbose)
