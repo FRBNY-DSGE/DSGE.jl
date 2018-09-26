@@ -184,11 +184,11 @@ function get_data_filename(m::AbstractModel, cond_type::Symbol)
 
     # If writing conditional data, append conditional vintage and ID to filename
     if cond_type in [:semi, :full]
-        push!(filestrings, "cdid=" * lpad(cond_id(m), 2, 0))
+        push!(filestrings, "cdid=" * lpad(string(cond_id(m)), 2, string(0)))
         push!(filestrings, "cdvt=" * cond_vintage(m))
     end
 
-    push!(filestrings, "dsid=" * lpad(data_id(m), 2, 0))
+    push!(filestrings, "dsid=" * lpad(string(data_id(m)), 2, string(0)))
     push!(filestrings, "vint=" * data_vintage(m))
     filename = join(filestrings, "_")
 
