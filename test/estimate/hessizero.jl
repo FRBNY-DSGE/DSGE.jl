@@ -20,7 +20,7 @@ end
 # At the min, ensure no negatives in diagonal
 x0 = [1.0, 1.0]
 hessian_expected = rosenbrock_hessian(x0)
-hessian, _ = DSGE.hessizero(rosenbrock, x0; check_neg_diag=true)
+global hessian, = DSGE.hessizero(rosenbrock, x0; check_neg_diag=true)
 @testset "Check valid hessian at the minimum" begin
     @test_matrix_approx_eq hessian_expected hessian
 end
@@ -36,8 +36,8 @@ end
 x1 = Vector[[0.5, 1.5], [-1.0, -1.0]]
 @testset "Check closed-form of the hessian" begin
     for x in x1
-        hessian_expected = rosenbrock_hessian(x)
-        hessian, _ = DSGE.hessizero(rosenbrock, x)
+        local hessian_expected = rosenbrock_hessian(x)
+        local hessian, = DSGE.hessizero(rosenbrock, x)
         @test @test_matrix_approx_eq hessian_expected hessian
     end
 end
