@@ -33,7 +33,7 @@ optimize!(m::AbstractModel, data::Matrix;
 Wrapper function to send a model to csminwel (or another optimization routine).
 """
 function optimize!(m::AbstractModel,
-                   data::Matrix;
+                   data::AbstractArray;
                    method::Symbol       = :csminwel,
                    xtol::Real           = 1e-32,  # default from Optim.jl
                    ftol::Float64        = 1e-14,  # Default from csminwel
@@ -68,7 +68,7 @@ function optimize!(m::AbstractModel,
 
     # Inputs to optimization
     H0             = 1e-4 * eye(n_parameters_free(m))
-    para_free_inds = find([!θ.fixed for θ in m.parameters])
+    para_free_inds = findall([!θ.fixed for θ in m.parameters])
     x_model        = transform_to_real_line(m.parameters)
     x_opt          = x_model[para_free_inds]
 

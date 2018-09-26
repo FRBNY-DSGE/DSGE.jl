@@ -16,7 +16,7 @@ hessian_expected = h5read("$path/../reference/hessian.h5","hessian")
 
 # Test subset of hessian elements.
 para_free      = [!θ.fixed for θ in m.parameters]
-para_free_inds = find(para_free)
+para_free_inds = findall(para_free)
 
 max_free_ind = DSGE.n_hessian_test_params(m)
 if max_free_ind < maximum(para_free_inds)
