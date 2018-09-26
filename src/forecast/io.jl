@@ -45,10 +45,10 @@ end
 """
 ```
 get_forecast_filename(m, input_type, cond_type, output_var;
-    pathfcn = rawpath, forecast_string = "", fileformat = :jld)
+    pathfcn = rawpath, forecast_string = "", fileformat = :jld2)
 
 get_forecast_filename(directory, filestring_base, input_type, cond_type,
-    output_var; forecast_string = "", fileformat = :jld)
+    output_var; forecast_string = "", fileformat = :jld2)
 ```
 
 ### Notes
@@ -66,7 +66,7 @@ function get_forecast_filename(m::AbstractModel, input_type::Symbol,
                                cond_type::Symbol, output_var::Symbol;
                                pathfcn::Function = rawpath,
                                forecast_string::String = "",
-                               fileformat::Symbol = :jld)
+                               fileformat::Symbol = :jld2)
 
     # First, we need to make sure we get all of the settings that have been printed to this filestring
     directory = pathfcn(m, "forecast")
@@ -79,7 +79,7 @@ end
 
 function get_forecast_filename(directory::String, filestring_base::Vector{String},
                                input_type::Symbol, cond_type::Symbol, output_var::Symbol;
-                               forecast_string::String = "", fileformat = :jld)
+                               forecast_string::String = "", fileformat = :jld2)
 
     # Base file name
     file_name = String("$output_var.$fileformat")
@@ -110,10 +110,10 @@ end
 """
 ```
 get_forecast_output_files(m, input_type, cond_type, output_vars;
-    forecast_string = "", fileformat = :jld)
+    forecast_string = "", fileformat = :jld2)
 
 get_forecast_output_files(directory, filestring_base, input_type, cond_type,
-    output_vars; forecast_string = "", fileformat = :jld)
+    output_vars; forecast_string = "", fileformat = :jld2)
 ```
 
 Compute the appropriate output filenames for model `m`, forecast input
@@ -128,7 +128,7 @@ type `input_type`, and conditional type `cond_type`, for each output variable in
 
 - `forecast_string::String`: subset identifier for when `input_type = :subset`
 - `fileformat::Symbol`: file extension, without a period. Defaults to
-  `:jld`, though `:h5` is another common option.
+  `:jld2`, though `:h5` is another common option.
 
 ### Notes
 
@@ -137,7 +137,7 @@ See `get_forecast_filename` for more information.
 function get_forecast_output_files(m::AbstractModel, input_type::Symbol,
                                    cond_type::Symbol, output_vars::Vector{Symbol};
                                    forecast_string::String = "",
-                                   fileformat::Symbol = :jld)
+                                   fileformat::Symbol = :jld2)
 
     directory = rawpath(m, "forecast")
     base      = filestring_base(m)
@@ -149,7 +149,7 @@ end
 
 function get_forecast_output_files(directory::String, filestring_base::Vector{String},
                                    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                                   forecast_string::String = "", fileformat::Symbol = :jld)
+                                   forecast_string::String = "", fileformat::Symbol = :jld2)
 
     output_files    = Dict{Symbol, String}()
     for var in remove_meansbands_only_output_vars(output_vars)
@@ -217,8 +217,7 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                         # Initialize dataset
                         pfile = file.plain
                         HDF5.d_create(pfile, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
-                    end
-                end
+                    end                end
             end
         end
 
