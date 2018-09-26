@@ -1,4 +1,4 @@
-using Test, Distributed, Dates
+using Test, Distributed, Dates, DataFrames
 @everywhere using DSGE, JLD2, Printf
 
 my_tests = [
@@ -16,12 +16,12 @@ my_tests = [
             #"estimate/filter",
             #"estimate/cat",
             #"estimate/posterior",
-            "estimate/hessizero",
-            "estimate/hessian",
-            "estimate/csminwel",
-            "estimate/optimize",
-            "estimate/metropolis_hastings"
-#=            "forecast/smooth",
+            #"estimate/hessizero",
+            #"estimate/hessian",
+            #"estimate/csminwel",
+            #"estimate/optimize",
+            #"estimate/metropolis_hastings",
+            "forecast/smooth",
             "forecast/forecast",
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
@@ -34,7 +34,7 @@ my_tests = [
             "scenarios/switching",
             "scenarios/drivers",
             "plot/plot"
-=#            ]
+            ]
 
 for test in my_tests
     test_file = string("$test.jl")
