@@ -8,14 +8,14 @@ m = AnSchorfheide(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:forecast_horizons, 1)
 
-system = jldopen("$path/../reference/forecast_args.jld","r") do file
+system = jldopen("$path/../reference/forecast_args.jld2","r") do file
     read(file, "system")
 end
 z0 = zeros(n_states_augmented(m))
 
 # Read expected output
 exp_states, exp_obs, exp_pseudo, exp_shocks =
-    jldopen("$path/../reference/forecast_out.jld", "r") do file
+    jldopen("$path/../reference/forecast_out.jld2", "r") do file
         read(file, "exp_states"),
         read(file, "exp_obs"),
         read(file, "exp_pseudo"),
@@ -55,7 +55,7 @@ ind_r = m.observables[:obs_nominalrate]
 ind_r_sh = m.exogenous_shocks[:rm_sh]
 zlb_value = forecast_zlb_value(m)
 shocks = zeros(n_shocks_exogenous(m), forecast_horizons(m))
-shocks[ind_r_sh, :] = -10.
+shocks[ind_r_sh, :] .= -10.
 
 @testset "Ensure valid forecasting at the ZLB" begin
     states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks)
