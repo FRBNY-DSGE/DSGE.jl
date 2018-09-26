@@ -252,18 +252,18 @@ function forecast_one(m::AbstractModel{Float64},
 
     if input_type in [:mode, :mean, :init]
 
-        tic()
+        toq = @elapsed let
+            params = load_draws(m, input_type; verbose = verbose)
+            forecast_output = forecast_one_draw(m, input_type, cond_type, output_vars,
+                                                params, df, verbose = verbose)
 
-        params = load_draws(m, input_type; verbose = verbose)
-        forecast_output = forecast_one_draw(m, input_type, cond_type, output_vars,
-                                            params, df, verbose = verbose)
-
-        write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
-                               forecast_output; df = df, block_number = Nullable{Int64}(),
-                               verbose = verbose)
+            write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
+                                   forecast_output; df = df, block_number = Nullable{Int64}(),
+                                   verbose = verbose)
+        end
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            total_forecast_time     = toq()
+            total_forecast_time     = toq
             total_forecast_time_min = total_forecast_time/60
 
             println("\nTotal time to forecast: $total_forecast_time_min minutes")
