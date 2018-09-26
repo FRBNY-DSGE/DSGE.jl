@@ -79,7 +79,7 @@ dir = joinpath(saveroot(m), "output_data", "an_schorfheide", "ss0")
         end
     end
     jldopen(dict[:irfobs], "r") do file
-        @test !haskey(file, "date_indices")#!HDF5.exists(file, "date_indices")
+        @test !haskey(file, "date_indices")
         @test all(x -> x == Symbol("DSGE.identity"), values(read(file, "observable_revtransforms")))
     end
 end
