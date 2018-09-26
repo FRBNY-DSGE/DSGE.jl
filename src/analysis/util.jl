@@ -4,15 +4,15 @@
 
 function get_class(output_var::Symbol)
     s = string(output_var)
-    if contains(s, "pseudo")
+    if occursin("pseudo", s)
         :pseudo
-    elseif contains(s, "obs")
+    elseif occursin("obs", s)
         :obs
-    elseif contains(s, "state")
+    elseif occursin("state", s)
         :states
-    elseif contains(s, "stdshock")
+    elseif occursin("stdshock", s)
         :stdshocks
-    elseif contains(s, "shock")
+    elseif occursin("shock", s)
         :shocks
     else
         error("Invalid output_var: " * s)
@@ -21,39 +21,39 @@ end
 
 function get_product(output_var::Symbol)
     s = string(output_var)
-    if contains(s, "bddhistforecast4q")
+    if occursin("bddhistforecast4q", s)
         :bddhistforecast4q
-    elseif contains(s, "histforecast4q")
+    elseif occursin("histforecast4q", s)
         :histforecast4q
-    elseif contains(s, "bddhistforecast")
+    elseif occursin("bddhistforecast", s)
         :bddhistforecast
-    elseif contains(s, "histforecast")
+    elseif occursin("histforecast", s)
         :histforecast
-    elseif contains(s, "hist4q")
+    elseif occursin("hist4q", s)
         :hist4q
-    elseif contains(s, "histut")
+    elseif occursin("histut", s)
         :histut
-    elseif contains(s, "hist")
+    elseif occursin("hist", s)
         :hist
-    elseif contains(s, "bddforecast4q")
+    elseif occursin("bddforecast4q", s)
         :bddforecast4q
-    elseif contains(s, "forecast4q")
+    elseif occursin("forecast4q", s)
         :forecast4q
-    elseif contains(s, "bddforecastut")
+    elseif occursin("bddforecastut", s)
         :bddforecastut
-    elseif contains(s, "forecastut")
+    elseif occursin("forecastut", s)
         :forecastut
-    elseif contains(s, "bddforecast")
+    elseif occursin("bddforecast", s)
         :bddforecast
-    elseif contains(s, "forecast")
+    elseif occursin("forecast", s)
         :forecast
-    elseif contains(s, "shockdec")
+    elseif occursin("shockdec", s)
         :shockdec
-    elseif contains(s, "dettrend")
+    elseif occursin("dettrend", s)
         :dettrend
-    elseif contains(s, "trend")
+    elseif occursin("trend", s)
         :trend
-    elseif contains(s, "irf")
+    elseif occursin("irf", s)
         :irf
     else
         error("Invalid output_var: " * s)

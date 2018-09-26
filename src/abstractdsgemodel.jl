@@ -312,10 +312,10 @@ end
 
 function date_shockdec_start(m::AbstractModel)
     startdate = get_setting(m, :shockdec_startdate)
-    if !isnull(startdate)
-        return get(startdate)
+    if (Nullables.isnull(startdate)) | (startdate===nothing)
+        return DSGE.date_mainsample_start(m)
     else
-        return date_mainsample_start(m)
+        return get(startdate)
     end
 end
 
