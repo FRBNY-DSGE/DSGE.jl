@@ -45,7 +45,7 @@ function estimate(m::AbstractModel;
     estimate(m, df; verbose=verbose, proposal_covariance=proposal_covariance,
              mle = mle, run_MH = run_MH)
 end
-function estimate(m::AbstractModel, data::Matrix{Float64};
+function estimate(m::AbstractModel, data::AbstractArray{Float64};
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix(0,0),
                   mle::Bool = false,
@@ -229,7 +229,7 @@ distribution of the parameters.
 """
 function metropolis_hastings(propdist::Distribution,
                              m::AbstractModel,
-                             data::Matrix{T},
+                             data::AbstractArray{T},
                              cc0::T,
                              cc::T;
                              verbose::Symbol=:low) where {T<:AbstractFloat}
@@ -237,7 +237,7 @@ function metropolis_hastings(propdist::Distribution,
 
     # If testing, set the random seeds at fixed numbers
     if m.testing
-        srand(m.rng, 654)
+        Random.seed!(m.rng, 654)
     end
 
     # Set number of draws, how many we will save, and how many we will burn
@@ -296,7 +296,7 @@ function metropolis_hastings(propdist::Distribution,
 
     for block = 1:n_blocks
 
-        tic()
+        begin_time = time_ns()
         block_rejections = 0
 
         for j = 1:(n_sim*mhthin)
@@ -364,7 +364,7 @@ function metropolis_hastings(propdist::Distribution,
         # Calculate time to complete this block, average block time, and
         # expected time to completion
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            block_time = toq()
+            block_time = time_ns() - begin_time
             total_sampling_time += block_time
             total_sampling_time_minutes = total_sampling_time/60
             expected_time_remaining_sec     = (total_sampling_time/block)*(n_blocks - block)
