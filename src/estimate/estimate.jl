@@ -402,7 +402,7 @@ function compute_parameter_covariance(m::AbstractModel)
     # Read in saved parameter draws
     param_draws_path = rawpath(m,"estimate","mhsave.h5")
     if !isfile(param_draws_path)
-        @printf STDERR "Saved parameter draws not found.\n"
+        @printf stderror "Saved parameter draws not found.\n"
         return
     end
     param_draws = h5open(param_draws_path, "r") do f

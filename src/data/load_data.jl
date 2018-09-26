@@ -396,7 +396,7 @@ function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
         else
             date_mainsample_end(m)
         end
-        df1 = df1[start_date .<= df[:, :date] .<= end_date, :]
+        df1 = df1[start_date .<= df[:date] .<= end_date, :]
     end
 
     # Discard columns not used
