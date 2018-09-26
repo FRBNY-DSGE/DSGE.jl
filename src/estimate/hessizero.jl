@@ -29,8 +29,8 @@ function hessizero(fcn::Function,
         hessian = diagm(0 => diag_elements)
     else
         for i=1:n_para
-        hessian[i,i] = hess_diag_element(fcn, x, i; check_neg_diag=check_neg_diag,
-                                         verbose=verbose)
+            hessian[i,i] = hess_diag_element(fcn, x, i; check_neg_diag=check_neg_diag,
+                                             verbose=verbose)
         end
     end
 
