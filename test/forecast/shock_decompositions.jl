@@ -27,7 +27,8 @@ states, obs, pseudo = shock_decompositions(m, system, histshocks)
 end
 
 # With shockdec_startdate null
-m <= Setting(:shockdec_startdate, Nullable{Date}())
+#m <= Setting(:shockdec_startdate, Nullable{Date}())
+m <= Setting(:shockdec_startdate, nothing)
 states, obs, pseudo = shock_decompositions(m, system, histshocks)
 
 @testset "Test shockdec with null startdate" begin
