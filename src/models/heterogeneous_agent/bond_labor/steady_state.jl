@@ -3,7 +3,7 @@ function steadystate!(m::BondLabor;
                       βhi::Float64 = 1./m[:R],
                       excess::Float64 = 5000.,
                       tol::Float64 = 1e-5,
-                      maxit::Int64 = 10)
+                      maxit::Int64 = 100)
 
     # Load in parameters and grids
     R     = m[:R]
@@ -66,11 +66,12 @@ function steadystate!(m::BondLabor;
     l_in = l_in_const*ones(nx*ns)
 
     while abs(excess) > tol && count < maxit # clearing markets
+        l_in_guess = ones(n)
         # println(excess)
         β = (βlo + βhi)/2.0
         (c, η, ap, l_in, KF) = policy(β, R.value, γ.value, ν.value, sigs.value,
                                       ehi, elo, xgrid_total, sgrid_total,
-                                      xwts, swts, l_in, ggrid, χss)
+                                      xwts, swts, l_in_guess, ggrid, χss)
         # sspolicy returns the consumption and hours decision rules, a prime
         # decision rule, l_in = updated β R u'(c_{t+1}),
         # KF is the Kolmogorov foward operator

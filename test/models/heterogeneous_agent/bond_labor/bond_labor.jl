@@ -16,6 +16,7 @@ saved_c    = read(file, "c")
 saved_η    = read(file, "eta")
 saved_μ    = read(file, "mu")
 saved_β    = read(file, "beta")
+saved_χss  = read(file, "chi_ss")
 close(file)
 
 @testset "Check steady state outputs" begin
@@ -24,6 +25,7 @@ close(file)
     @test saved_η   ≈ m[:ηstar].value
     @test saved_μ   ≈ m[:μstar].value
     @test saved_β   ≈ m[:βstar].value
+    @test saved_χss ≈ m[:χstar].value
 end
 
 # Jacobian computation
@@ -93,15 +95,11 @@ gx, hx = klein(m)
 @btime klein(m)
 
 file = jldopen("$path/reference/solve.jld", "r")
-# saved_gx2  = read(file, "gx2")
-# saved_hx2  = read(file, "hx2")
 saved_gx   = read(file, "gx")
 saved_hx   = read(file, "hx")
 close(file)
 
 @testset "Check solve outputs" begin
-    # @test saved_gx2 ≈ gx2
-    # @test saved_hx2 ≈ hx2
     @test saved_gx  ≈ gx
     @test saved_hx  ≈ hx
 end
