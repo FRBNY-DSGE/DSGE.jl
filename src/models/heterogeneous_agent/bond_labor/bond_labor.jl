@@ -251,7 +251,7 @@ function init_parameters!(m::BondLabor)
                    description="σ_z: The standard deviation of the process describing the stationary component of productivity.",
                    tex_label="\\sigma_{z}")
     m <= parameter(:μ_s, 0., fixed = true, description = "μ_s: Mu of log normal in income")
-    m <= parameter(:σ_s, 0.5, fixed = true,
+    m <= parameter(:σ_s, 0.1, fixed = true,
                    description = "σ_s: Sigma of log normal in income")
     m <= parameter(:e_y, 1e-3, fixed = true, description = "e_y: Measurement error on GDP",
                    tex_label = "e_y")
@@ -297,6 +297,8 @@ function init_grids!(m::BondLabor)
     ns      = get_setting(m, :ns)
     λ       = get_setting(m, :λ)
 
+    ehi     = get_setting(m, :ehi)
+
     grids = OrderedDict()
 
     # Cash on hand grid
@@ -305,7 +307,7 @@ function init_grids!(m::BondLabor)
     # Skill grid
     lsgrid, sprob, sscale = tauchen86(m[:μ_s].value, m[:σ_s].value, ns, λ)
     swts = (sscale/ns)*ones(ns)
-    sgrid = exp.(lsgrid)
+    sgrid = exp.(lsgrid) + ehi
     grids[:sgrid] = Grid(sgrid, swts, sscale)
 
     # Density of skill across skill grid
