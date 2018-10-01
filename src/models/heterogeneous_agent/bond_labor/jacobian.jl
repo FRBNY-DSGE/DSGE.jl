@@ -185,6 +185,17 @@ function jacobian(m::BondLabor)
 end
 
 function normalize(m::BondLabor, JJ::Matrix{Float64})
+
+    Qx, _, Qleft, Qright = compose_normalization_matrices(m)
+
+    m <= Setting(:n_predetermined_variables, size(Qx, 1))
+
+	Jac1 = Qleft*JJ*Qright
+
+    return Jac1
+end
+
+function compose_normalization_matrices(m::BondLabor)
     nx = get_setting(m, :nx)
     ns = get_setting(m, :ns)
 
@@ -201,11 +212,7 @@ function normalize(m::BondLabor, JJ::Matrix{Float64})
     Qleft     = cat([1 2],S,[1],eye(nx*ns),[1])
     Qx        = cat([1 2],S,[1])
     Qy        = cat([1 2],eye(nx*ns),[1])
+	Qright    = cat([1,2],Qx',Qy',Qx',Qy')
 
-    m <= Setting(:n_predetermined_variables, size(Qx, 1))
-
-	Qright = cat([1,2],Qx',Qy',Qx',Qy')
-	Jac1 = Qleft*JJ*Qright
-
-    return Jac1
+    return Qx, Qy, Qleft, Qright
 end
