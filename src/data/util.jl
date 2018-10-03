@@ -4,7 +4,7 @@
 Returns Date identifying last day of the previous quarter
 """
 function prev_quarter(q::TimeType = now())
-    Date(lastdayofquarter(firstdayofquarter(q)-Dates.Day(1)))
+    Dates.Date(lastdayofquarter(firstdayofquarter(q)-Dates.Day(1)))
 end
 
 """
@@ -13,7 +13,7 @@ end
 Returns Date identifying last day of the next quarter
 """
 function next_quarter(q::TimeType = now())
-    Date(lastdayofquarter(lastdayofquarter(q)+Dates.Day(1)))
+    Dates.Date(lastdayofquarter(lastdayofquarter(q)+Dates.Day(1)))
 end
 
 """
@@ -21,7 +21,7 @@ end
 
 Returns an Array of quarter end dates between `start_date` and `end_date`.
 """
-function get_quarter_ends(start_date::Date,end_date::Date)
+function get_quarter_ends(start_date::Dates.Date,end_date::Dates.Date)
     map(lastdayofquarter, collect(start_date:Dates.Month(3):end_date))
 end
 
@@ -61,7 +61,7 @@ the indicated quarter. "X" is in `{1,2,3,4}` and the case of "q" is ignored.
 
 Return an integer from the set `{1,2,3,4}`, corresponding to one of the quarters in a year given a Date object.
 """
-function datetoquarter(date::Date)
+function datetoquarter(date::Dates.Date)
     month = Dates.month(date)
     if month in 1:3
         return 1
@@ -81,7 +81,7 @@ end
 
 Compute the number of quarters between t1 and t0, including t0 and excluding t1.
 """
-function subtract_quarters(t1::Date, t0::Date)
+function subtract_quarters(t1::Dates.Date, t0::Dates.Date)
     days = t1 - t0
     quarters = round(days.value / 365.25 * 4.0)
     return convert(Int, quarters)
@@ -95,7 +95,7 @@ Change column `col` of dates in `df` from String to Date, and map any dates give
 interior of a quarter to the last day of the quarter.
 """
 function format_dates!(col::Symbol, df::DataFrame)
-    df[col] = Date.(df[col])
+    df[col] = Dates.Date.(df[col])
     map!(lastdayofquarter, df[col], df[col])
 end
 
@@ -107,10 +107,10 @@ missing2nan!(df::Array)
 Convert all elements of Union{X, Missing.Missing} and the like to type X.
 """
 function missing2nan!(v::Array)
-    valid_types = [Date, Float64]
+    valid_types = [Dates.Date, Float64]
     new_v = tryparse.(new_type, v)
     if all(isnull.(new_v))
-        new_v = tryparse.(Date, new_v)
+        new_v = tryparse.(Dates.Date, new_v)
     end
 end
 
@@ -206,7 +206,7 @@ Returns the date corresponding to `start` + `quarters` quarters.
 - `start`: starting date
 - `quarters`: number of quarters to iterate forward or backward
 """
-function iterate_quarters(start::Date, quarters::Int)
+function iterate_quarters(start::Dates.Date, quarters::Int)
 
     next = start
     if quarters < 0

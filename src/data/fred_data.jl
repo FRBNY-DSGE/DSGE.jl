@@ -19,8 +19,8 @@ The FRED API reports observations according to the quarter-start date. `load_fre
 returns data indexed by quarter-end date for compatibility with other datasets.
 """
 function load_fred_data(m::AbstractModel;
-                        start_date::Date = Date("1959-01-01", "y-m-d"),
-                        end_date::Date   = prev_quarter(),
+                        start_date::Dates.Date = Dates.Date("1959-01-01", "y-m-d"),
+                        end_date::Dates.Date   = prev_quarter(),
                         verbose::Symbol  = :low)
 
     data_series = parse_data_series(m)
@@ -69,9 +69,9 @@ function load_fred_data(m::AbstractModel;
 
         # Have to do this wacky parsing to prepend the century to the data vintage
         vint_date = if parse(Int,vint[1:2]) < 59
-            Year(2000) + Date(vint, dateformat)
+            Year(2000) + Dates.Date(vint, dateformat)
         else
-            Year(1900) + Date(vint, dateformat)
+            Year(1900) + Dates.Date(vint, dateformat)
         end
 
         fredseries = Array{FredSeries, 1}(length(missing_series))

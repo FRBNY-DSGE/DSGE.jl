@@ -190,8 +190,8 @@ population is repeated until `end_date` using
 `resize_population_forecast`. Returns a `Vector{Float64}`.
 """
 function get_population_series(mnemonic::Symbol, population_data::DataFrame,
-                               population_forecast::DataFrame, start_date::Date,
-                               end_date::Date)
+                               population_forecast::DataFrame, start_date::Dates.Date,
+                               end_date::Dates.Date)
 
     last_historical_date = population_data[end, :date]
 
@@ -259,7 +259,7 @@ Returns the appropriate population series for the `product`.
 """
 function get_mb_population_series(product::Symbol, population_data::DataFrame,
                                   population_forecast::DataFrame,
-                                  date_list::Vector{Date})
+                                  date_list::Vector{Dates.Date})
 
     if product == :irf
         # Return empty vector for IRFs, which don't correspond to real dates
