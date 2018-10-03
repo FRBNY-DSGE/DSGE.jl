@@ -125,7 +125,7 @@ and post-ZLB regimes. Of these, only `QQ` changes from pre- to post-ZLB: the
 entries corresponding to anticipated shock variances are zeroed out pre-ZLB.
 """
 function zlb_regime_matrices(m::AbstractModel{S}, system::System{S},
-                             start_date::Date = date_presample_start(m)) where {S<:AbstractFloat}
+                             start_date::Dates.Date = date_presample_start(m)) where {S<:AbstractFloat}
     if n_anticipated_shocks(m) > 0
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")
