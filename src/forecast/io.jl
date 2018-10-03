@@ -192,7 +192,19 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
             continue
         end
         filepath = forecast_output_files[var]
-        if isnull(block_number) || get(block_number) == 1
+        jldopen(filepath, "w") do file
+            write_forecast_metadata(m, file, var)
+            if var == :histobs
+                @assert !isempty(df) "df cannot be empty if trying to write :histobs"
+                df1 = df[date_mainsample_start(m) .<= df[:date] .<= date_mainsample_end(m), :]
+                data = df_to_matrix(m, df1)
+                write(file, "arr", data)
+            elseif var != :histobs
+                write(file, "arr", forecast_output[var])
+            end
+        end
+
+        #=if isnull(block_number) || get(block_number) == 1
             jldopen(filepath, "w") do file
                 write_forecast_metadata(m, file, var)
 
@@ -215,13 +227,14 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                         chunk_dims[1] = block_size
 
                         # Initialize dataset
-                        pfile = file.plain
-                        HDF5.d_create(pfile, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
+                        #pfile = datatypes#file.plain
+                        JLD2.write_dataset(file, WriteDataspace(file, Array{Float64}(undef, dims...)), FT_FLOATING_POINT, JLD2.objodr(1.0), Array{Float64}(undef, dims...), file.datatype_wsession)
+                        #HDF5.d_create(pfile, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
                     end                end
             end
-        end
+        end =#
 
-        if var != :histobs
+        #=if var != :histobs
             jldopen(filepath, "r+") do file
                 if isnull(block_number)
                     write(file, "arr", forecast_output[var])
@@ -229,7 +242,7 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                     write_forecast_block(file, forecast_output[var], block_inds)
                 end
             end
-        end
+        end =#
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             println(" * Wrote $(basename(filepath))")
@@ -359,7 +372,7 @@ their respective indices in the saved forecast output array. Depending on the
 """
 function read_forecast_metadata(file::JLD2.JLDFile)
     metadata = Dict{Symbol, Any}()
-    for field in setdiff(names(file), "arr")
+    for field in setdiff(keys(file), "arr")
         metadata[Symbol(field)] = read(file, field)
     end
     return metadata
@@ -391,7 +404,7 @@ function read_forecast_output(m::AbstractModel, input_type::Symbol, cond_type::S
         # `nvars` x `nperiods`
         if product == :trend
             nperiods = length(read(file, "date_indices"))
-            fcast_series = repeat(fcast_series, outer = [1, nperiods])
+            fcast_series = repeat(fcast_series, outer = (1, nperiods))
         end
 
         # Parse transform
@@ -418,28 +431,34 @@ function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol
     indices = read(file, "$(class_long)_indices")
     var_ind = indices[var_name]
 
-    pfile = file.plain
-    filename = pfile.filename
-    dataset = HDF5.d_open(pfile, "arr")
+   # pfile = file.plain
+   # filename = pfile.filename
+   # dataset = HDF5.d_open(pfile, "arr")
+    filename = file.path
+    dataset = FileIO.load(filename, "arr")
     ndims = length(size(dataset))
 
     # Trends are ndraws x nvars
     if product == :trend
+        whole = FileIO.load(filename, "arr")
         if ndims == 1 # one draw
-            arr = h5read(filename, "arr", (var_ind,))
+            arr = whole[var_ind, Colon()]
             arr = reshape(arr, (1, 1))
         elseif ndims == 2 # many draws
-            arr = h5read(filename, "arr", (Colon(), var_ind))
+            arr = whole[Colon(), var_ind]
+            arr = reshape(arr, (length(arr),1))
         end
 
     # Other products are ndraws x nvars x nperiods
     elseif product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
                        :bddforecast, :bddforecastut, :bddforecast4q, :dettrend]
         inds_to_read = if ndims == 2 # one draw
-            arr = h5read(filename, "arr", (var_ind, Colon()))
+            whole = FileIO.load(filename, "arr")
+            arr = whole[var_ind, Colon()]
+            arr = reshape(arr, (1, length(arr)))
         elseif ndims == 3 # many draws
-            arr = h5read(filename, "arr", (Colon(), var_ind, Colon()))
-            arr = squeeze(arr, 2)
+            whole = FileIO.load(filename, "arr")
+            arr = whole[Colon(), var_ind, Colon()]
         end
     else
         error("Invalid product: $product for this method")
@@ -457,18 +476,20 @@ function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol
     shock_indices = read(file, "shock_indices")
     shock_ind = shock_indices[shock_name]
 
-    pfile = file.plain
-    filename = pfile.filename
-    dataset = HDF5.d_open(pfile, "arr")
+    #pfile = file.plain
+    #filename = pfile.filename
+    #dataset = HDF5.d_open(pfile, "arr")
+    filename = file.path
+    dataset = load(filename, "arr")
     ndims = length(size(dataset))
 
     if ndims == 3 # one draw
-        arr = h5read(filename, "arr", (var_ind, Colon(), shock_ind))
-        arr = squeeze(arr, (1, 3))
-        arr = reshape(arr, (1, length(arr)))
+        whole = load(filename, "arr")
+        arr = whole[var_ind, :, shock_ind]
+        arr = reshape(arr, 1, length(arr))
     elseif ndims == 4 # many draws
-        arr = h5read(filename, "arr", (Colon(), var_ind, Colon(), shock_ind))
-        arr = squeeze(arr, (2, 4))
+        whole = load(filename, "arr")
+        arr = whole[:, var_ind, :, shock_ind]
     end
 
     return arr

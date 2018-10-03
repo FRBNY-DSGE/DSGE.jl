@@ -5,12 +5,12 @@
 """
 ```
 get_meansbands_input_file(m, input_type, cond_type, output_var;
-    forecast_string = "", fileformat = :jld)
+    forecast_string = "", fileformat = :jld2)
 ```
 
 ```
 get_meansbands_input_file(directory, filestring_base, input_type, cond_type, output_var;
-    forecast_string = "", fileformat = :jld)
+    forecast_string = "", fileformat = :jld2)
 ```
 
 Returns a dictionary of raw forecast output files to read in to compute means
@@ -40,18 +40,17 @@ and bands.
 """
 function get_meansbands_input_file(m::AbstractModel, input_type::Symbol,
                                    cond_type::Symbol, output_var::Symbol;
-                                   forecast_string::String = "", fileformat = :jld)
+                                   forecast_string::String = "", fileformat = :jld2)
 
     directory = rawpath(m, "forecast")
     base = filestring_base(m)
     get_meansbands_input_file(directory, base, input_type, cond_type, output_var;
-                              forecast_string = forecast_string,
-                              fileformat = fileformat)
+                              forecast_string = forecast_string, fileformat = fileformat)
 end
 
 function get_meansbands_input_file(directory::String, filestring_base::Vector{String},
                                    input_type::Symbol, cond_type::Symbol, output_var::Symbol;
-                                   forecast_string::String = "", fileformat::Symbol = :jld)
+                                   forecast_string::String = "", fileformat::Symbol = :jld2)
 
     filename = get_forecast_filename(directory, filestring_base,
                                      input_type, cond_type, output_var,
@@ -72,12 +71,12 @@ end
 """
 ```
 get_meansbands_output_file(m, input_type, cond_type, output_var;
-    forecast_string = "", fileformat = :jld)
+    forecast_string = "", fileformat = :jld2)
 ```
 
 ```
 get_meansbands_output_file(directory, filestring_base, input_type, cond_type, output_var;
-    forecast_string = "", fileformat = :jld)
+    forecast_string = "", fileformat = :jld2)
 ```
 
 Returns a dictionary of raw forecast output files in which to save
@@ -108,7 +107,7 @@ computed means and bands.
 function get_meansbands_output_file(m::AbstractModel, input_type::Symbol,
                                     cond_type::Symbol, output_var::Symbol;
                                     forecast_string::String = "",
-                                    fileformat::Symbol = :jld,
+                                    fileformat::Symbol = :jld2,
                                     directory::String = workpath(m, "forecast"))
 
     directory = directory
@@ -120,7 +119,7 @@ end
 function get_meansbands_output_file(directory::String,
                                     filestring_base::Vector{String},
                                     input_type::Symbol, cond_type::Symbol, output_var::Symbol;
-                                    forecast_string::String = "", fileformat = :jld)
+                                    forecast_string::String = "", fileformat = :jld2)
 
     get_forecast_filename(directory, filestring_base,
                           input_type, cond_type, Symbol("mb", output_var);
