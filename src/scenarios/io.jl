@@ -6,7 +6,7 @@ get_scenario_input_file(m, scen::Scenario)
 Get file name of raw scenario targets from `inpath(m, \"scenarios\")`.
 """
 function get_scenario_input_file(m::AbstractModel, scen::Scenario)
-    basename = string(scen.key) * "_" * scen.vintage * ".jld"
+    basename = string(scen.key) * "_" * scen.vintage * ".jld2"
     return inpath(m, "scenarios", basename)
 end
 
@@ -52,7 +52,7 @@ end
 """
 ```
 get_scenario_filename(m, scen::AbstractScenario, output_var;
-    pathfcn = rawpath, fileformat = :jld, directory = "")
+    pathfcn = rawpath, fileformat = :jld2, directory = "")
 ```
 
 Get scenario file name of the form
@@ -62,7 +62,7 @@ will be returned instead.
 """
 function get_scenario_filename(m::AbstractModel, scen::AbstractScenario, output_var::Symbol;
                                pathfcn::Function = rawpath,
-                               fileformat::Symbol = :jld,
+                               fileformat::Symbol = :jld2,
                                directory::String = "")
     filestring_addl = Vector{String}()
     if isa(scen, SingleScenario)
