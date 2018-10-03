@@ -1,4 +1,4 @@
-using DSGE, HDF5, JLD2
+using DSGE, HDF5, JLD2, Nullables
 using Test
 
 path = dirname(@__FILE__)
@@ -32,8 +32,8 @@ exp_modal_means, exp_modal_bands, exp_full_means, exp_full_bands =
     end
 
 # Modal
-forecast_one(m, :mode, :none, output_vars, verbose = :none)
-compute_meansbands(m, :mode, :none, output_vars; compute_shockdec_bands = true, verbose = :none)
+forecast_one(m, :mode, :none, output_vars, verbose = :high)
+compute_meansbands(m, :mode, :none, output_vars; compute_shockdec_bands = true, verbose = :high)
 meansbands_to_matrix(m, :mode, :none, output_vars; verbose = :none)
 
 @testset "Check modal meansbands computation" begin
@@ -45,12 +45,13 @@ meansbands_to_matrix(m, :mode, :none, output_vars; verbose = :none)
     end
 end
 
+
 # Full-distribution
 @everywhere using DSGE
-m <= Setting(:forecast_block_size, 5)
-forecast_one(m, :full, :none, output_vars, verbose = :none)
-compute_meansbands(m, :full, :none, output_vars; compute_shockdec_bands = true, verbose = :none)
-meansbands_to_matrix(m, :full, :none, output_vars; verbose = :none)
+m <= Setting(:forecast_block_size, 5000)
+forecast_one(m, :full, :none, output_vars, verbose = :high)
+compute_meansbands(m, :full, :none, output_vars; compute_shockdec_bands = true, verbose = :high)
+meansbands_to_matrix(m, :full, :none, output_vars; verbose = :high)
 
 @testset "Check full meansbands computation" begin
     for var in output_vars
