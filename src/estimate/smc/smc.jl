@@ -45,6 +45,12 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     n_params = n_parameters(m)
     n_blocks = get_setting(m, :n_smc_blocks)
 
+    use_chand_recursion = get_setting(m, :use_chand_recursion)
+
+    if any(isnan.(data)) & use_chand_recursion
+        error("Cannot use Chandrasekhar recursions with missing data")
+    end
+
     # Time Tempering
     tempered_update = !isempty(old_data)
     # Quick check that if there is a tempered update that the old vintage and current vintage are different
@@ -59,10 +65,10 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     resampled_last_period = false   # To ensure proper resetting of ESS_bar right after resample
     ϕ_n = 0.                        # Instantiating ϕ_n and ϕ_prop variables to be referenced in their
     ϕ_prop = 0.                     # respective while loop conditions
-    use_fixed_schedule = get_setting(m, :use_fixed_schedule)
+    use_fixed_schedule = get_setting(m, :adaptive_tempering_target_smc)==0.0#get_setting(m, :use_fixed_schedule)
     λ = get_setting(m, :λ)
     n_Φ = get_setting(m, :n_Φ)
-    tempering_target = get_setting(m, :tempering_target)
+    tempering_target = get_setting(m, :adaptive_tempering_target_smc)
 
     # Step 2 (Correction) settings
     resampling_method = get_setting(m, :resampler_smc)
@@ -92,6 +98,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     if tempered_update
         # Load the previous ParticleCloud as the starting point for time tempering
         loadpath = rawpath(m, "estimate", "smc_cloud.jld")
+        #loadpath = rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)])
         loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
 
         cloud = load(loadpath, "cloud")
@@ -102,7 +109,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         cloud = ParticleCloud(m, n_parts)
 
         # Modifies the cloud object in place to update draws, loglh, & logpost
-        initial_draw!(m, data, cloud, parallel = parallel, verbose = verbose)
+        initial_draw!(m, data, cloud, parallel = parallel, use_chand_recursion = use_chand_recursion,
+                      verbose = verbose)
 
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
     end
@@ -115,6 +123,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     end
 
     # Instantiate incremental and normalized weight matrices to be used for logMDD calculation
+    #w_matrix = fill(1/n_parts, (n_parts,1))
     w_matrix = zeros(n_parts, 1)
     if tempered_update
         W_matrix = similar(w_matrix)
@@ -122,8 +131,11 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             W_matrix[k] = cloud.particles[k].weight
         end
     else
-        W_matrix = ones(n_parts, 1)
+        W_matrix = fill(1/n_parts, (n_parts,1))
+        #update_weights!(cloud, fill(1/n_parts, n_parts))
+        #W_matrix = ones(n_parts, 1)
     end
+    z_matrix = ones(1)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         init_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)
@@ -158,17 +170,23 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ### Step 1: Correction
     ########################################################################################
 
-    # Calculate incremental weights
+    # Calculate incremental weights (if no old data, get_old_loglh(cloud) returns zero)
     incremental_weights = exp.((ϕ_n1 - ϕ_n)*get_old_loglh(cloud) + (ϕ_n - ϕ_n1)*get_loglh(cloud))
+
+    # inc_wt*W_n-1
+    #mult_weights = get_weights(cloud).*incremental_weights
 
     # Update weights
     update_weights!(cloud, incremental_weights)
+
+    mult_weights = get_weights(cloud)
 
     # Normalize weights
     normalize_weights!(cloud)
 
     normalized_weights = get_weights(cloud)
 
+    push!(z_matrix, sum(mult_weights))
     w_matrix = hcat(w_matrix, incremental_weights)
     W_matrix = hcat(W_matrix, normalized_weights)
 
@@ -192,6 +210,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         reset_weights!(cloud)
         cloud.resamples += 1
         resampled_last_period = true
+        W_matrix[:, i] = fill(1/n_parts, (n_parts,1))
     end
 
     ########################################################################################
@@ -204,6 +223,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     θ_bar = weighted_mean(cloud)
     R = weighted_cov(cloud)
+    # add to itself and divide by 2 to ensure marix is positive semi-definite symmetric (not off due to numerical
+    #error) and values haven't changed
     R_fr = (R[free_para_inds, free_para_inds] + R[free_para_inds, free_para_inds]')/2
 
     # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
@@ -216,7 +237,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     if parallel
         new_particles = @parallel (vcat) for j in 1:n_parts
             mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                     c = c, α = α, old_data = old_data, verbose = verbose)
+                     c = c, α = α, old_data = old_data, use_chand_recursion = use_chand_recursion, verbose = verbose)
         end
     else
         new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
@@ -243,17 +264,20 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ########################################################################################
 
     if !m.testing
-        simfile = h5open(rawpath(m, "estimate", "smcsave.h5"),"w")
+        simfile = h5open(rawpath(m, "estimate", "smcsave.h5"), "w")
+        #simfile = h5open(rawpath(m, "estimate", "smcsave.h5", ["adpt="*string(tempering_target)]),"w")
         particle_store = d_create(simfile, "smcparams", datatype(Float32),
                                   dataspace(n_parts, n_params))
         for i in 1:length(cloud)
             particle_store[i,:] = cloud.particles[i].value
         end
         close(simfile)
+        #jldopen(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)]), "w") do file
         jldopen(rawpath(m, "estimate", "smc_cloud.jld"), "w") do file
             write(file, "cloud", cloud)
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)
+            write(file, "z", z_matrix)
         end
     end
 end

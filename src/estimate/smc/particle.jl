@@ -63,7 +63,7 @@ end
 function ParticleCloud(m::AbstractModel, n_parts::Int)
     return ParticleCloud([Particle(1/n_parts,[m.parameters[i].key for i in 1:length(m.parameters)],
                          zeros(length(m.parameters)),0.,0.,0.,false) for n in 1:n_parts],
-                         zeros(1),zeros(1),1,0,0,0.,0., 0.)
+                         zeros(1),zeros(1),1,0,0,0.,0.25, 0.)
 end
 
 function get_weights(c::ParticleCloud)
@@ -164,6 +164,12 @@ end
 
 function weighted_mean(c::ParticleCloud)
     return squeeze(mean(get_vals(c), Weights(get_weights(c)), 2), 2)
+end
+
+function weighted_quantile(c::ParticleCloud, i::Int64)
+    lb = quantile(get_vals(c)[i, :], Weights(get_weights(c)), .05)
+    ub = quantile(get_vals(c)[i, :], Weights(get_weights(c)), .95)
+    return lb, ub
 end
 
 function weighted_std(c::ParticleCloud)
