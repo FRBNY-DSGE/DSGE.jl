@@ -194,7 +194,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
     end
 
     # turn NAs into NaNs
-    na2nan!(df)
+#    na2nan!(df)
 
     sort!(df, :date)
 
