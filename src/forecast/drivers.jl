@@ -242,7 +242,7 @@ function forecast_one(m::AbstractModel{Float64},
 
     # Print
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        info("Forecasting input_type = $input_type, cond_type = $cond_type...")
+        @info "Forecasting input_type = $input_type, cond_type = $cond_type..."
         println("Start time: $(now())")
         println("Forecast outputs will be saved in $output_dir")
     end
@@ -286,31 +286,32 @@ function forecast_one(m::AbstractModel{Float64},
         for block = start_block:nblocks
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println()
-                info("Forecasting block $block of $nblocks...")
+                @info "Forecasting block $block of $nblocks..."
             end
-            tic()
+           toq = @elapsed let
 
-            # Get to work!
-            params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
+               # Get to work!
+               params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
 
-            mapfcn = use_parallel_workers(m) ? pmap : map
-            forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
-                                                                 param, df, verbose = verbose),
-                                      params)
+               mapfcn = use_parallel_workers(m) ? pmap : map
+               forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
+                                                                    param, df, verbose = verbose),
+                                         params)
 
-            # Assemble outputs from this block and write to file
-            forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
-            forecast_output = assemble_block_outputs(forecast_outputs)
-            write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
-                                   forecast_output; df = df, block_number = Nullable(block),
-                                   verbose = block_verbose, block_inds = block_inds_thin[block],
-                                   subset_inds = subset_inds)
-            gc()
+               # Assemble outputs from this block and write to file
+               forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
+               forecast_output = assemble_block_outputs(forecast_outputs)
+               write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
+                                      forecast_output; df = df, block_number = Nullable(block),
+                                      verbose = block_verbose, block_inds = block_inds_thin[block],
+                                      subset_inds = subset_inds)
+               GC.gc()
+           end
 
             # Calculate time to complete this block, average block time, and
             # expected time to completion
             if VERBOSITY[verbose] >= VERBOSITY[:low]
-                block_time = toq()
+                block_time = toq
                 total_forecast_time += block_time
                 total_forecast_time_min     = total_forecast_time/60
                 blocks_elapsed              = block - start_block + 1
