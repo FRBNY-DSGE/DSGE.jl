@@ -705,7 +705,7 @@ function model_settings!(m::Model1002)
 
     # Data
     m <= Setting(:data_id, 3, "Dataset identifier")
-    if get_setting(m, :cond_id) in [1,2]
+    if get_setting(m, :cond_id) in collect(1:5)
         m <= Setting(:cond_full_names, [:obs_gdp, :obs_corepce, :obs_spread, :obs_nominalrate, :obs_longrate],
                      "Observables used in conditional forecasts")
     elseif get_setting(m, :cond_id) == 6
