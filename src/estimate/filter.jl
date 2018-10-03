@@ -48,7 +48,7 @@ end
 
 function filter(m::AbstractModel, data::AbstractArray{S}, system::System,
     s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
-    start_date::Date = date_presample_start(m), include_presample::Bool = true,
+    start_date::Dates.Date = date_presample_start(m), include_presample::Bool = true,
     outputs::Vector{Symbol} = [:loglh, :pred, :filt]) where {S<:AbstractFloat}
 
     # Partition sample into pre- and post-ZLB regimes

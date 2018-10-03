@@ -73,7 +73,7 @@ series. This method is called by the higher-level functions as well as
   data. This is required when the reverse transform associated with
   `untransformed` or `y` adjusts for population.
 """
-function reverse_transform(m::AbstractModel, untransformed::AbstractArray, start_date::Date,
+function reverse_transform(m::AbstractModel, untransformed::AbstractArray, start_date::Dates.Date,
                            vars::Vector{Symbol}, class::Symbol;
                            fourquarter::Bool = false,
                            verbose::Symbol = :low)
@@ -94,7 +94,7 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
                            fourquarter::Bool = false, verbose::Symbol = :low)
     # Dates
     @assert (:date in names(untransformed)) "untransformed must have a date column"
-    date_list  = convert(Vector{Date}, untransformed[:date])
+    date_list  = convert(Vector{Dates.Date}, untransformed[:date])
     start_date = date_list[1]
     end_date   = date_list[end]
 

@@ -77,8 +77,8 @@ function MeansBands()
                       :cond_type => :none, :para => :none,
                       :indices => Dict{Symbol, Int}(:none => 1))
 
-    means = DataFrame(date = [Date(0)], none = [0.0])
-    bands = Dict{Symbol,DataFrame}(:none => DataFrame(date = [Date(0)]))
+    means = DataFrame(date = [Dates.Date(0)], none = [0.0])
+    bands = Dict{Symbol,DataFrame}(:none => DataFrame(date = [Dates.Date(0)]))
 
     MeansBands(metadata, means, bands)
 end
@@ -109,7 +109,7 @@ Returns whether the `mb` object in question is a dummy.
 function Base.isempty(mb::MeansBands)
 
     return get_class(mb) == :none && get_product(mb) == :none &&
-        startdate_means(mb) == Date(0) &&
+        startdate_means(mb) == Dates.Date(0) &&
         collect(names(mb.means)) ==  [:date, :none] &&
         collect(keys(mb.bands)) ==  [:none]
 end
@@ -227,7 +227,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     end
 
     # date indices
-    date_indices = Dict(d::Date => i::Int for (i, d) in enumerate(means[:date]))
+    date_indices = Dict(d::Dates.Date => i::Int for (i, d) in enumerate(means[:date]))
 
     # variable indices
     indices = Dict(var::Symbol => i::Int for (i, var) in enumerate(names(means)))
