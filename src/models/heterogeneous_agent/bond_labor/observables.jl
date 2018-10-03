@@ -21,7 +21,7 @@ function init_observable_mappings!(m::BondLabor)
 
     gdp_rev_transform = logleveltopct_annualized
 
-    observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPCTPI__FRED],
+    observables[:obs_gdp] = Observable(:obs_gdp, [:GDP__FRED, population_mnemonic, :GDPDEF__FRED],
                                        gdp_fwd_transform, gdp_rev_transform,
                                        "Log Real GDP", "")
 
