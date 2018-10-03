@@ -89,7 +89,7 @@ module DSGE
         metropolis_hastings, compute_parameter_covariance, prior, get_estimation_output_files,
         compute_moments, find_density_bands, mutation, resample, smc,
         mvnormal_mixture_draw, nearest_spd, marginal_data_density,
-        initial_draw, ParticleCloud, Particle,
+        initial_draw!, ParticleCloud, Particle,
 
         # forecast/
         load_draws, forecast_one,
