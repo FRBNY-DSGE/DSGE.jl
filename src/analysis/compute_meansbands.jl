@@ -39,7 +39,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         output_dir = workpath(m, "forecast")
         println()
-        info("Computing means and bands for input_type = $input_type, cond_type = $cond_type...")
+        @info "Computing means and bands for input_type = $input_type, cond_type = $cond_type..."
         println("Start time: $(now())")
         println("Means and bands will be saved in $output_dir")
         tic()
@@ -73,7 +73,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
                                 population_forecast = population_forecast,
                                 verbose = verbose,
                                 kwargs...)
-        gc()
+        GC.gc()
     end
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
@@ -196,21 +196,23 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     # Reverse transform
     y0_index = get_y0_index(m, product)
     data = class == :obs ? convert(Vector{Float64}, df[var_name]) : fill(NaN, size(df, 1))
+
     transformed_series = mb_reverse_transform(fcast_series, transform, product, class,
                                               y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)
 
     # Compute means and bands
-    means = vec(mean(transformed_series, 1))
+    means = vec(mean(transformed_series, dims= 1))
     bands = if product in [:shockdec, :dettrend, :trend] && !compute_shockdec_bands
         Dict{Symbol,DataFrame}()
     else
         find_density_bands(transformed_series, density_bands, minimize = minimize)
     end
+
     return means, bands
 end
 
-function mb_reverse_transform(fcast_series::Array{Float64}, transform::Function,
+function mb_reverse_transform(fcast_series::AbstractArray{Float64}, transform::Function,
                               product::Symbol, class::Symbol;
                               y0_index::Int = -1,
                               data::AbstractVector{Float64} = Float64[],
@@ -233,7 +235,6 @@ function mb_reverse_transform(fcast_series::Array{Float64}, transform::Function,
         else
             Float64[]
         end
-
         reverse_transform(fcast_series, transform4q;
                           fourquarter = true, y0s = y0s,
                           pop_growth = pop_growth)

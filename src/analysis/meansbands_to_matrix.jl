@@ -28,7 +28,7 @@ function meansbands_to_matrix(m::AbstractModel, input_type::Symbol,
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
-        info("Converting means and bands to matrices for input_type = $input_type, cond_type = $cond_type...")
+        @info "Converting means and bands to matrices for input_type = $input_type, cond_type = $cond_type..."
         println("Start time: $(now())")
         println("Means and bands matrices will be saved in $output_dir")
     end
