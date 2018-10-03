@@ -73,7 +73,7 @@ series. This method is called by the higher-level functions as well as
   data. This is required when the reverse transform associated with
   `untransformed` or `y` adjusts for population.
 """
-function reverse_transform(m::AbstractModel, untransformed::Matrix, start_date::Date,
+function reverse_transform(m::AbstractModel, untransformed::AbstractArray, start_date::Date,
                            vars::Vector{Symbol}, class::Symbol;
                            fourquarter::Bool = false,
                            verbose::Symbol = :low)
@@ -130,7 +130,7 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     return transformed
 end
 
-function reverse_transform(y::Array{T}, rev_transform::Function;
+function reverse_transform(y::AbstractArray{T}, rev_transform::Function;
                            fourquarter::Bool = false,
                            y0::T = NaN, y0s::Vector{T} = T[],
                            pop_growth::Vector{T} = T[]) where {T<:AbstractFloat}
