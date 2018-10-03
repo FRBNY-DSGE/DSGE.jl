@@ -30,8 +30,9 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
                 catch err
                     if isa(err, ParamBoundsError)
                         draw_loglh = draw_logpost = -Inf
-                    #elseif isa(err, SPDError)
-                    #    draw_loglh = draw_logpost = -Inf
+                    # from the pinv done in klein
+                    elseif isa(err, LinAlg.LAPACKException)
+                       draw_loglh = draw_logpost = -Inf
                     else
                      #   draw_loglh = draw_logpost = -Inf
                         throw(err)

@@ -80,8 +80,9 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             catch err
                 if isa(err, ParamBoundsError)
                     post_new = like_new = like_old_data = -Inf
-                #elseif isa(err, SPDError)
-                #    post_new = like_new = like_old_data = -Inf
+                # from the pinv done in klein
+                elseif isa(err, LinAlg.LAPACKException)
+                    post_new = like_new = -Inf
                 else
                     throw(err)
                 end
