@@ -406,7 +406,7 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands(draws::Matrix, percent::T; minimize::Bool = true) where {T<:AbstractFloat}
+function find_density_bands(draws::AbstractArray, percent::T; minimize::Bool = true) where {T<:AbstractFloat}
 
     if !(0 <= percent <= 1)
         error("percent must be between 0 and 1")
@@ -415,7 +415,7 @@ function find_density_bands(draws::Matrix, percent::T; minimize::Bool = true) wh
     ndraws, nperiods = size(draws)
 
     if ndraws == 1
-        band = repmat(draws, 2, 1)
+        band = repeat(draws, outer=(2, 1))
         return band
     end
 
@@ -463,7 +463,6 @@ function find_density_bands(draws::Matrix, percent::T; minimize::Bool = true) wh
         band[2,i] = draw_variable_i[low]
         band[1,i] = draw_variable_i[high]
     end
-
     return band
 end
 
@@ -485,17 +484,15 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands(draws::Matrix, percents::Vector{T}; minimize::Bool = true) where {T<:AbstractFloat}
+function find_density_bands(draws::AbstractArray, percents::Vector{T}; minimize::Bool = true) where {T<:AbstractFloat}
 
     bands = DataFrame()
 
     for p in percents
         out = find_density_bands(draws, p, minimize = minimize)
-
         bands[Symbol("$(100*p)\\% UB")] = vec(out[2,:])
         bands[Symbol("$(100*p)\\% LB")] = vec(out[1,:])
     end
-
     bands
 end
 
