@@ -111,7 +111,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_v
     transformed_series = scenario_mb_reverse_transform(fcast_series, transform, product)
 
     # Compute means and bands
-    means = vec(mean(transformed_series, 1))
+    means = vec(mean(transformed_series, dims=1))
     bands = find_density_bands(transformed_series, density_bands, minimize = minimize)
     return means, bands
 end
