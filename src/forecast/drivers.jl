@@ -155,7 +155,7 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::AbstractRa
             error("Must supply nonempty range of block_inds for this load_draws method")
         else
             ndraws = length(block_inds)
-            params = Vector{Vector{Float64}}(ndraws)
+            params = Vector{Vector{Float64}}(undef, ndraws)
             for (i, j) in zip(1:ndraws, block_inds)
                 params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
             end
@@ -242,7 +242,7 @@ function forecast_one(m::AbstractModel{Float64},
 
     # Print
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        @info "Forecasting input_type = $input_type, cond_type = $cond_type..."
+        @Base.info "Forecasting input_type = $input_type, cond_type = $cond_type..."
         println("Start time: $(now())")
         println("Forecast outputs will be saved in $output_dir")
     end
@@ -286,7 +286,7 @@ function forecast_one(m::AbstractModel{Float64},
         for block = start_block:nblocks
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println()
-                @info "Forecasting block $block of $nblocks..."
+                @Base.info "Forecasting block $block of $nblocks..."
             end
            toq = @elapsed let
 
@@ -411,7 +411,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     # Decide whether to draw states/shocks in smoother/forecast
     uncertainty_override = forecast_uncertainty_override(m)
-    uncertainty = if isnull(uncertainty_override)
+    uncertainty = if Nullables.isnull(uncertainty_override)
         if input_type in [:init, :mode, :mean]
             false
         elseif input_type in [:full, :subset]

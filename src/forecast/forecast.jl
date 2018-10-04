@@ -1,6 +1,6 @@
 """
 ```
-forecast(m, system, z0; enforce_zlb = false, shocks = Matrix{S}(0,0))
+forecast(m, system, z0; enforce_zlb = false, shocks = Matrix{S}(undef, 0,0))
 
 forecast(system, z0, shocks; enforce_zlb = false)
 ```
@@ -49,7 +49,7 @@ where `S<:AbstractFloat`.
 """
 function forecast(m::AbstractModel, system::System{S},
     z0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
-    shocks::Matrix{S} = Matrix{S}(0, 0), draw_shocks::Bool = false) where {S<:AbstractFloat}
+    shocks::Matrix{S} = Matrix{S}(undef, 0, 0), draw_shocks::Bool = false) where {S<:AbstractFloat}
 
     # Numbers of things
     nshocks = n_shocks_exogenous(m)

@@ -270,7 +270,7 @@ function csminwel(fcn::Function,
                 retcodeh = retcode3
             end
 
-            if isdefined(:gh)
+            if @isdefined gh
                 nogh = isempty(gh)
             else
                 nogh = true
@@ -300,7 +300,7 @@ function csminwel(fcn::Function,
         end
 
         # record# retcodeh of previous x
-        copy!(x_previous, x)
+        copyto!(x_previous, x)
 
         # update before next iteration
         f_x_previous, f_x = f_x, fh

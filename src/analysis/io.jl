@@ -56,10 +56,10 @@ function get_meansbands_input_file(directory::String, filestring_base::Vector{St
                                      input_type, cond_type, output_var,
                                      forecast_string = forecast_string,
                                      fileformat = fileformat)
-    filename = replace(filename, "hist4q", "hist")
-    filename = replace(filename, "histut", "hist")
-    filename = replace(filename, "forecast4q", "forecast")
-    filename = replace(filename, "forecastut", "forecast")
+    filename = replace(filename, "hist4q" => "hist")
+    filename = replace(filename, "histut" => "hist")
+    filename = replace(filename, "forecast4q" => "forecast")
+    filename = replace(filename, "forecastut" => "forecast")
     return filename
 end
 
