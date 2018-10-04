@@ -74,7 +74,7 @@ function load_fred_data(m::AbstractModel;
             Year(1900) + Dates.Date(vint, dateformat)
         end
 
-        fredseries = Array{FredSeries, 1}(length(missing_series))
+        fredseries = Array{FredSeries, 1}(undef, length(missing_series))
         f = Fred()
 
         for (i,s) in enumerate(missing_series)
