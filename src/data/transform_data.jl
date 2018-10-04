@@ -127,7 +127,7 @@ function transform_population_data(population_data::DataFrame, population_foreca
                                    use_hpfilter::Bool = true)
 
     # Unfiltered population data
-    population_recorded = population_data[:,[:date, population_mnemonic]]
+    population_recorded = population_data[[:date, population_mnemonic]]
 
     # Make sure first period of unfiltered population forecast is the first forecast quarter
     if !isempty(population_forecast)

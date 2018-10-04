@@ -32,8 +32,8 @@ exp_modal_means, exp_modal_bands, exp_full_means, exp_full_bands =
     end
 
 # Modal
-forecast_one(m, :mode, :none, output_vars, verbose = :high)
-compute_meansbands(m, :mode, :none, output_vars; compute_shockdec_bands = true, verbose = :high)
+forecast_one(m, :mode, :none, output_vars, verbose = :none)
+compute_meansbands(m, :mode, :none, output_vars; compute_shockdec_bands = true, verbose = :none)
 meansbands_to_matrix(m, :mode, :none, output_vars; verbose = :none)
 
 @testset "Check modal meansbands computation" begin

@@ -18,11 +18,11 @@ function taylor93_eqcond(m::AbstractModel)
     endo = m.endogenous_states
 
     # Zero out old policy rule
-    Γ0[eq[:eq_mp], :] = 0
-    Γ1[eq[:eq_mp], :] = 0
+    Γ0[eq[:eq_mp], :] .= 0
+    Γ1[eq[:eq_mp], :] .= 0
     C[eq[:eq_mp]]     = 0
-    Ψ[eq[:eq_mp], :]  = 0
-    Π[eq[:eq_mp], :]  = 0
+    Ψ[eq[:eq_mp], :]  .= 0
+    Π[eq[:eq_mp], :]  .= 0
 
     # Put in new policy rule
     Γ0[eq[:eq_mp], endo[:R_t]]   = 1
