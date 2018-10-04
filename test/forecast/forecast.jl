@@ -23,7 +23,7 @@ exp_states, exp_obs, exp_pseudo, exp_shocks =
     end
 
 # Without shocks
-states, obs, pseudo, shocks = forecast(m, system, z0; draw_shocks = false)
+global states, obs, pseudo, shocks = forecast(m, system, z0; draw_shocks = false)
 
 @testset "Testing forecasting without drawing shocks" begin
     @test @test_matrix_approx_eq exp_states states
@@ -33,7 +33,7 @@ states, obs, pseudo, shocks = forecast(m, system, z0; draw_shocks = false)
 end
 
 # Supplying shocks
-states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks)
+global states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks)
 
 @testset "Testing forecasting with pre-supplied shocks" begin
     @test @test_matrix_approx_eq exp_states states
@@ -43,7 +43,7 @@ states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks)
 end
 
 # Draw normally distributed shocks
-states, obs, pseudo, shocks = forecast(m, system, z0; draw_shocks = true)
+global states, obs, pseudo, shocks = forecast(m, system, z0; draw_shocks = true)
 
 # Draw t-distributed shocks
 m <= Setting(:forecast_tdist_shocks, true)

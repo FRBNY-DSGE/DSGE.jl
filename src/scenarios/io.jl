@@ -107,8 +107,8 @@ Call `get_scenario_filename` while replacing `forecastut` and `forecast4q` in
 """
 function get_scenario_mb_input_file(m::AbstractModel, scen::AbstractScenario, output_var::Symbol)
     input_file = get_scenario_filename(m, scen, output_var)
-    input_file = replace(input_file, "forecastut", "forecast")
-    input_file = replace(input_file, "forecast4q", "forecast")
+    input_file = replace(input_file, "forecastut" => "forecast")
+    input_file = replace(input_file, "forecast4q" => "forecast")
     return input_file
 end
 
