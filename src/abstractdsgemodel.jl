@@ -642,10 +642,10 @@ Draw a random sample from the model's prior distribution.
 function rand_prior(m::AbstractModel; ndraws::Int = 100_000)
     T = typeof(m.parameters[1].value)
     npara = length(m.parameters)
-    priorsim = Array{T}(ndraws, npara)
+    priorsim = Array{T}(undef, ndraws, npara)
 
     for i in 1:ndraws
-        priodraw = Array{T}(npara)
+        priodraw = Array{T}(undef, npara)
 
         # Parameter draws per particle
         for j in 1:length(m.parameters)

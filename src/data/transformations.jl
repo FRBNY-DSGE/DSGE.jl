@@ -474,7 +474,7 @@ function loggrowthtopct_4q(y::AbstractArray, data::AbstractVector = fill(NaN, 3)
         y_4q = y[:,  1:end-3] + y[:, 2:end-2] + y[:, 3:end-1] + y[:, 4:end]
     end
 
-    100. * (exp.(y_4q/100.) - 1.)
+    100. * (exp.(y_4q/100.) .- 1.)
 end
 
 """
@@ -528,7 +528,7 @@ function loggrowthtopct_4q_percapita(y::AbstractArray, pop_growth::AbstractVecto
 
     @assert length(pop_growth_4q) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
 
-    100. * (exp.(y_4q/100. .+ pop_growth_4q) - 1.)
+    100. * (exp.(y_4q/100. .+ pop_growth_4q) .- 1.)
 end
 
 """
@@ -638,7 +638,7 @@ function prepend_data(y::AbstractArray, data::AbstractVector)
         y_extended = vcat(data, y)
     else
         ndraws = size(y, 1)
-        datas  = repmat(data', ndraws, 1)
+        datas  = repeat(data', outer=(ndraws, 1))
         y_extended = hcat(datas, y)
     end
 

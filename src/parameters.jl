@@ -501,9 +501,9 @@ function describe_prior(param::Parameter)
         (prior_mean, prior_std) = DSGE.moments(param)
 
         prior_dist = string(typeof(get(param.prior)))
-        prior_dist = replace(prior_dist, "Distributions.", "")
-        prior_dist = replace(prior_dist, "DSGE.", "")
-        prior_dist = replace(prior_dist, "{Float64}", "")
+        prior_dist = replace(prior_dist, "Distributions." => "")
+        prior_dist = replace(prior_dist, "DSGE." => "")
+        prior_dist = replace(prior_dist, "{Float64}" => "")
 
         mom1, mom2 = if isa(prior, DSGE.RootInverseGamma)
             "tau", "nu"

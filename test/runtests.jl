@@ -13,7 +13,7 @@ my_tests = [
             #"data/load_data",
             #"solve/gensys",
             #"solve/solve",
-            "estimate/filter",
+            #="estimate/filter",
             "estimate/cat",
             "estimate/posterior",
             "estimate/hessizero",
@@ -25,7 +25,7 @@ my_tests = [
             "forecast/forecast",
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
-            "forecast/io",
+            "forecast/io", =#
             "forecast/forecast_one",
             "analysis/compute_meansbands",
             "altpolicy/altpolicy",
