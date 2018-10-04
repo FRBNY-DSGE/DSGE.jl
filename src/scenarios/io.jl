@@ -20,8 +20,8 @@ Return the number of draws for `scen`, determined using
 """
 function n_scenario_draws(m::AbstractModel, scen::Scenario)
     input_file = get_scenario_input_file(m, scen)
-    draws = h5open(input_file, "r") do file
-        dataset = HDF5.o_open(file, "arr")
+    draws = jldopen(input_file, "r") do file
+        dataset = file["arr"]
         size(dataset)[1]
     end
     return draws
@@ -37,7 +37,9 @@ Add the targets from the `draw_index`th draw of the raw scenario targets to
 """
 function load_scenario_targets!(m::AbstractModel, scen::Scenario, draw_index::Int)
     path = get_scenario_input_file(m, scen)
-    raw_targets = squeeze(h5read(path, "arr", (draw_index, :, :)), 1)
+    file = load(path)
+    raw_targets = file["arr"][draw_index, :, :]
+    #raw_targets = squeeze(h5read(path, "arr", (draw_index, :, :)), 1)
     target_inds = load(path, "target_indices")
 
     @assert collect(keys(target_inds)) == scen.target_names "Target indices in $path do not match target names in $(scen.key)"
@@ -160,7 +162,7 @@ function get_scenario_mb_metadata(m::AbstractModel, agg::ScenarioAggregate, outp
         end
 
         # Throw error if start date for this scenario doesn't match
-        if map(reverse, scen_dates)[1] != start_date
+        if Dict([reverse(scen_date) for scen_date = pairs(scen_dates)])[1] != start_date
             error("All scenarios in agg must start from the same date")
         end
 
