@@ -68,7 +68,7 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
         else
             date_mainsample_end(m)
         end
-        df = df[start_date .<= df[:, :date] .<= end_date, :]
+        df = df[start_date .<= df[:date] .<= end_date, :]
 
         if !m.testing
             save_data(m, df; cond_type=cond_type)
@@ -203,7 +203,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
         filename = inpath(m, "raw", "population_data_levels_$vint.csv")
         mnemonic = parse_population_mnemonic(m)[1]
         if !isnull(mnemonic)
-            CSV.write(filename, df[:,[:date, get(mnemonic)]])
+            CSV.write(filename, df[[:date, get(mnemonic)]])
         end
     end
 
@@ -533,7 +533,7 @@ function read_population_forecast(filename::String, population_mnemonic::Symbol;
         DSGE.format_dates!(:date, df)
         sort!(df, :date)
 
-        return df[:, [:date, population_mnemonic]]
+        return df[[:date, population_mnemonic]]
     else
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             warn("No population forecast found")
