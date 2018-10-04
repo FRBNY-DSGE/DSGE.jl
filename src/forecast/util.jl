@@ -74,8 +74,8 @@ function forecast_block_inds(m::AbstractModel, input_type::Symbol; subset_inds::
     nblocks = convert(Int64, ceil(ndraws / block_size))
 
     # Fill in draw indices for each block
-    block_inds      = Vector{AbstractRange{Int64}}(nblocks)
-    block_inds_thin = Vector{AbstractRange{Int64}}(nblocks)
+    block_inds      = Vector{AbstractRange{Int64}}(undef, nblocks)
+    block_inds_thin = Vector{AbstractRange{Int64}}(undef, nblocks)
     current_draw      = start_ind - 1
     current_draw_thin = start_ind - 1
     for i = 1:(nblocks-1)
@@ -245,7 +245,7 @@ function assemble_block_outputs(dicts::Vector{Dict{Symbol, Array{Float64}}})
     if !isempty(dicts)
         for var in keys(dicts[1])
             outputs  = map(dict -> reshape(dict[var], (1, size(dict[var])...)), dicts)
-            out[var] = cat(1, outputs...)
+            out[var] = cat(outputs..., dims=1)
         end
     end
     return out

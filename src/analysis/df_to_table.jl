@@ -59,14 +59,14 @@ function construct_fcast_and_hist_dfs(m::AbstractModel, cond_type::Symbol,
     obs = intersect(vars, m.observables.keys)
     pseudo = intersect(vars, m.pseudo_observables.keys)
 
-    df_histobs    = mb_histobs.means[:, vcat(:date, obs)]
-    df_histpseudo = mb_histpseudo.means[:, vcat(:date, pseudo)]
+    df_histobs    = mb_histobs.means[vcat(:date, obs)]
+    df_histpseudo = mb_histpseudo.means[vcat(:date, pseudo)]
     hist_start_ind = findfirst(x -> x == hist_start, df_histobs[:date])
     df_histobs    = df_histobs[hist_start_ind:end, :]
     df_histpseudo = df_histpseudo[hist_start_ind:end, :]
 
-    df_forecastobs      = mb_forecastobs.means[:, vcat(:date, obs)]
-    df_forecastpseudo   = mb_forecastpseudo.means[:, vcat(:date, pseudo)]
+    df_forecastobs      = mb_forecastobs.means[vcat(:date, obs)]
+    df_forecastpseudo   = mb_forecastpseudo.means[vcat(:date, pseudo)]
     if use_4q
         # If producing 4q figures, then the forecast_end date must be a Q4 date
         forecast_end = DSGE.quartertodate(string(Dates.year(forecast_end))*"-Q4")

@@ -22,8 +22,8 @@ function compute_scenario_system(m::AbstractModel, scen::Scenario;
     for shock in keys(m.exogenous_shocks)
         if !(shock in scen.instrument_names)
             shock_index = m.exogenous_shocks[shock]
-            system[:QQ][shock_index, :] = 0
-            system[:QQ][:, shock_index] = 0
+            system[:QQ][shock_index, :] .= 0
+            system[:QQ][:, shock_index] .= 0
         end
     end
 
