@@ -26,12 +26,12 @@ my_tests = [
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
             "forecast/io", =#
-            "forecast/forecast_one",
-            "analysis/compute_meansbands",
-            "altpolicy/altpolicy",
-            "scenarios/scenario",
-            "scenarios/forecast",
-            "scenarios/switching",
+            #"forecast/forecast_one",
+            #"analysis/compute_meansbands",
+            #"altpolicy/altpolicy",
+            #"scenarios/scenario",
+            #"scenarios/forecast",
+            #"scenarios/switching",
             "scenarios/drivers",
             "plot/plot"
             ]

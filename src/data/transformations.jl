@@ -259,7 +259,7 @@ loggrowthtopct_annualized(y)
 Transform from log growth rates to annualized quarter-over-quarter percent change.
 """
 function loggrowthtopct_annualized(y::AbstractArray)
-    100. * (exp.(y/100.).^4 - 1.)
+    100. * (exp.(y/100.).^4 .- 1.)
 end
 
 """
@@ -299,7 +299,7 @@ function loggrowthtopct_annualized_percapita(y::AbstractArray, pop_growth::Abstr
 
     @assert length(pop_growth) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
 
-    100. * (exp.(y/100. .+ pop_growth).^4 - 1.)
+    100. * (exp.(y/100. .+ pop_growth).^4 .- 1.)
 end
 
 """
