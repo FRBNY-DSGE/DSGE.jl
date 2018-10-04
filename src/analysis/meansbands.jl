@@ -175,7 +175,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
 
     # compute means field
     means = vcat(mb1.means, mb2.means)
-    na2nan!(means)
+    #na2nan!(means)
 
     # compute bands field
     bands = Dict{Symbol, DataFrame}()
