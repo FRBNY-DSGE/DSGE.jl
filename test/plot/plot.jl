@@ -22,7 +22,7 @@ overrides[:full] = joinpath(estroot, "metropolis_hastings.h5")
 output_vars = add_requisite_output_vars([:histobs, :forecastobs, :shockdecobs, :irfobs])
 
 @everywhere using DSGE
-m <= Setting(:forecast_block_size, 5)
+m <= Setting(:forecast_block_size, 10000)
 forecast_one(m, :full, :none, output_vars, verbose = :none)
 compute_meansbands(m, :full, :none, output_vars; verbose = :none)
 
