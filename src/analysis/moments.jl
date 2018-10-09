@@ -490,8 +490,8 @@ function find_density_bands(draws::AbstractArray, percents::Vector{T}; minimize:
 
     for p in percents
         out = find_density_bands(draws, p, minimize = minimize)
-        bands[Symbol("$(100*p)\\% UB")] = vec(out[2,:])
-        bands[Symbol("$(100*p)\\% LB")] = vec(out[1,:])
+        bands[Symbol("$(100*p)% UB")] = vec(out[2,:])
+        bands[Symbol("$(100*p)% LB")] = vec(out[1,:])
     end
     bands
 end
