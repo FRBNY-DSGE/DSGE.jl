@@ -194,7 +194,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
         else
             vcat(fill(NaN, nperiods_mb1), mb2vars[var])
         end
-        na2nan!(bands[var])
+        #na2nan!(bands[var])
     end
 
     # compute metadata
@@ -515,7 +515,6 @@ function which_density_bands(mb::MeansBands; uniquify=false, ordered=true)
         else
             [lowers; uppers]
         end
-
         return strs
     end
 end
@@ -722,8 +721,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     @assert get_product(mb_dettrend) == :dettrend "The third argument must be a MeansBands object for a deterministic trend"
 
     # Get the variable-shock combinations we want to print
-    varshocks = Symbol["$var" * DSGE_SHOCKDEC_DELIM * "$shock" for shock in shocks]
-
+    varshocks = [Symbol("$var" * DSGE_SHOCKDEC_DELIM * "$shock") for shock in shocks]
     # Fetch the columns corresponding to varshocks
     df_shockdec = mb_shockdec.means[union([:date], varshocks)]
 
@@ -767,7 +765,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     for group in groups
         # Sum shock values for each group
         shock_vectors = [df[shock] for shock in group.shocks]
-        shock_sum = reduce(+, v0, shock_vectors)
+        shock_sum = reduce(+, shock_vectors; init = v0)
         df[Symbol(group.name)] = shock_sum
 
         # Delete original (ungrouped) shocks from df
