@@ -2,18 +2,18 @@ using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStru
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra
 
 my_tests = [
-            #"core",
-            #"parameters",
-            #"models/an_schorfheide/an_schorfheide",
-            #"models/smets_wouters/smets_wouters",
-            #"models/m990/m990",
-            #"models/m1002/m1002",
-            #"models/m1010/m1010",
-            #"data/misc",
-            #"data/load_data",
-            #"solve/gensys",
-            #"solve/solve",
-            #="estimate/filter",
+            #="core",
+            "parameters",
+            "models/an_schorfheide/an_schorfheide",
+            "models/smets_wouters/smets_wouters",
+            "models/m990/m990",
+            "models/m1002/m1002",
+            "models/m1010/m1010",
+            "data/misc",
+            "data/load_data",
+            "solve/gensys",
+            "solve/solve",
+            "estimate/filter",
             "estimate/cat",
             "estimate/posterior",
             "estimate/hessizero",
@@ -25,14 +25,14 @@ my_tests = [
             "forecast/forecast",
             "forecast/shock_decompositions",
             "forecast/impulse_responses",
-            "forecast/io", =#
-            #"forecast/forecast_one",
-            #"analysis/compute_meansbands",
-            #"altpolicy/altpolicy",
-            #"scenarios/scenario",
-            #"scenarios/forecast",
-            #"scenarios/switching",
-            "scenarios/drivers",
+            "forecast/io",
+            "forecast/forecast_one",
+            "analysis/compute_meansbands",
+            "altpolicy/altpolicy",
+            "scenarios/scenario",
+            "scenarios/forecast",
+            "scenarios/switching",
+            "scenarios/drivers",=#
             "plot/plot"
             ]
 

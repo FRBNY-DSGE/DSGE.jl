@@ -5,7 +5,7 @@ plot_history_and_forecast(m, var, class, input_type, cond_type;
 
 plot_history_and_forecast(m, vars, class, input_type, cond_type;
     forecast_string = "", bdd_and_unbdd = false,
-    untrans = false, fourquarter = false,
+
     plotroot = figurespath(m, \"forecast\"), titles = [],
     plot_handles = fill(plot(), length(vars)), verbose = :low,
     kwargs...)
@@ -84,7 +84,6 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
     fcast = read_mb(m, input_type, cond_type, Symbol(fcast_prod, class), forecast_string = forecast_string,
                     bdd_and_unbdd = bdd_and_unbdd)
 
-
     # Get titles if not provided
     if isempty(titles)
         detexify_title = typeof(Plots.backend()) == Plots.GRBackend
@@ -100,7 +99,6 @@ function plot_history_and_forecast(m::AbstractModel, vars::Vector{Symbol}, class
                       ylabel = series_ylabel(m, var, class, untrans = untrans,
                                              fourquarter = fourquarter),
                       title = title, kwargs...)
-
         # Save plot
         if !isempty(plotroot)
             output_file = get_forecast_filename(plotroot, filestring_base(m), input_type, cond_type,
@@ -198,7 +196,7 @@ histforecast
 
     # Bands
     sort!(bands_pcts, rev = true) # s.t. non-transparent bands will be plotted correctly
-    inds = find(start_date .<= combined.bands[var][:date] .<= end_date)
+    inds = findall(start_date .<= combined.bands[var][:date] .<= end_date)
 
     for (i, pct) in enumerate(bands_pcts)
         seriestype := :line
@@ -260,8 +258,8 @@ histforecast
         linestyle  :=  haskey(styles, :hist) ? styles[:hist] : :solid
         label      :=  haskey(names, :hist) ? names[:hist] : "History"
 
-        inds = intersect(find(start_date .<= dates .<= end_date),
-                         find(hist.means[1, :date] .<= dates .<= hist.means[end, :date]))
+        inds = intersect(findall(start_date .<= dates .<= end_date),
+                         findall(hist.means[1, :date] .<= dates .<= hist.means[end, :date]))
         combined.means[inds, :date], combined.means[inds, var]
     end
 
@@ -274,8 +272,8 @@ histforecast
         linestyle  :=  haskey(styles, :forecast) ? styles[:forecast] : :solid
         label      :=  haskey(names, :forecast) ? names[:forecast] : "Forecast"
 
-        inds = intersect(find(start_date .<= dates .<= end_date),
-                         find(hist.means[end, :date] .<= dates .<= forecast.means[end, :date]))
+        inds = intersect(findall(start_date .<= dates .<= end_date),
+                         findall(hist.means[end, :date] .<= dates .<= forecast.means[end, :date]))
         combined.means[inds, :date], combined.means[inds, var]
     end
 end
