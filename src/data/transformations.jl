@@ -175,7 +175,7 @@ difflog(x::Array{AbstractFloat})
 ```
 """
 function difflog(x::Array)
-    DSGE.na2nan!(x)
+    #DSGE.na2nan!(x)
     return difflog(convert(Vector, x))
 end
 

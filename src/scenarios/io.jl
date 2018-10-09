@@ -210,7 +210,7 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
                               product::Symbol, var_name::Symbol)
     # Aggregate scenarios
     nscens = length(agg.scenarios)
-    agg_draws = Vector{Matrix{Float64}}(nscens)
+    agg_draws = Vector{Matrix{Float64}}(undef, nscens)
 
     # If not sampling, initialize vector to record number of draws in each
     # scenario in order to update `agg.proportions` and `agg.total_draws` at the
@@ -243,7 +243,7 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
                 else
                     quotient  = convert(Int, floor(actual_ndraws / desired_ndraws))
                     remainder = actual_ndraws % desired_ndraws
-                    vcat(repmat(1:actual_ndraws, quotient),
+                    vcat(repeat(1:actual_ndraws, outer = quotient),
                          sample(1:actual_ndraws, remainder, replace = false))
                 end
             end
@@ -257,7 +257,7 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
     end
 
     # Stack draws from all component scenarios
-    fcast_series = cat(1, agg_draws...)
+    fcast_series = cat(agg_draws..., dims = 1)
 
     # If not sampling, update `agg.proportions` and `agg.total_draws`
     if !agg.sample
