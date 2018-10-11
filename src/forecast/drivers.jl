@@ -403,7 +403,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     irfs_only = all(x -> x == :irf, output_prods)
 
     # Compute state space
-    update!(m, params)
+    DSGE.update!(m, params)
     system = compute_system(m)
 
     # Initialize output dictionary

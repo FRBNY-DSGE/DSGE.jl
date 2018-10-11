@@ -376,7 +376,7 @@ function specify_mode!(m::AbstractModel, mode_file::String = ""; verbose=:low)
     end
     mode_file = normpath(mode_file)
 
-    update!(m,load_parameters_from_file(m,mode_file))
+    DSGE.update!(m,load_parameters_from_file(m,mode_file))
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Loaded previous mode from $mode_file.")
@@ -603,7 +603,7 @@ paramter values.
 """
 function transform_to_model_space!(m::AbstractModel, values::Vector{T}) where T<:AbstractFloat
     new_values = transform_to_model_space(m.parameters, values)
-    update!(m, new_values)
+    DSGE.update!(m, new_values)
     steadystate!(m)
 end
 
@@ -619,7 +619,7 @@ Update `m.parameters` with `values`, recomputing the steady-state parameter valu
 - `values`: the new values to assign to non-steady-state parameters.
 """
 function update!(m::AbstractModel, values::Vector{T}) where {T <: AbstractFloat}
-    update!(m.parameters, values)
+    DSGE.update!(m.parameters, values)
     steadystate!(m)
 end
 
