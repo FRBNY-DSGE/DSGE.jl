@@ -16,9 +16,9 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
         Base.@info "Simulating switching for " * string(scen.key) * "..."
         println("Start time: " * string(now()))
         println("Outputs will be saved in " * rawpath(m, "scenarios"))
-        tic()
     end
 
+    tic = time_ns()
     # Revert model alt policy to historical rule
     m <= Setting(:alternative_policy, AltPolicy(:historical, solve, eqcond), false, "apol",
                  "Alternative policy")
@@ -63,7 +63,7 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
 
     # Print
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        switching_time = toq()
+        switching_time = time_ns() - tic
         switching_time_min = switching_time/60
         println("\nTime elapsed: " * string(switching_time_min) * " minutes")
         println("Switching complete: " * string(now()))
