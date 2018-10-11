@@ -133,7 +133,6 @@ function smc(m::AbstractModel, data::Matrix;
     end
 
     # Instantiate incremental and normalized weight matrices to be used for logMDD calculation
-    #w_matrix = fill(1/n_parts, (n_parts,1))
     w_matrix = zeros(n_parts, 1)
     if tempered_update
         W_matrix = similar(w_matrix)
@@ -142,8 +141,6 @@ function smc(m::AbstractModel, data::Matrix;
         end
     else
         W_matrix = fill(1/n_parts, (n_parts,1))
-        #update_weights!(cloud, fill(1/n_parts, n_parts))
-        #W_matrix = ones(n_parts, 1)
     end
     z_matrix = ones(1)
 
@@ -182,9 +179,6 @@ function smc(m::AbstractModel, data::Matrix;
 
     # Calculate incremental weights (if no old data, get_old_loglh(cloud) returns zero)
     incremental_weights = exp.((ϕ_n1 - ϕ_n)*get_old_loglh(cloud) + (ϕ_n - ϕ_n1)*get_loglh(cloud))
-
-    # inc_wt*W_n-1
-    #mult_weights = get_weights(cloud).*incremental_weights
 
     # Update weights
     update_weights!(cloud, incremental_weights)
