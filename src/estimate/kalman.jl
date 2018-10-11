@@ -100,7 +100,7 @@ function zlb_regime_indices(m::AbstractModel{S}, data::AbstractArray{Union{S, Mi
 
         elseif date_presample_start(m) <= start_date <= date_zlb_start(m)
             n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
-            regime_inds = Vector{AbstractRange{Int64}}(2)
+            regime_inds = Vector{AbstractRange{Int64}}(undef, 2)
             regime_inds[1] = 1:n_nozlb_periods
             regime_inds[2] = (n_nozlb_periods+1):T
 
