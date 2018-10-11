@@ -76,7 +76,7 @@ function forecast(m::AbstractModel, system::System{S},
                 ind_ant1 = m.exogenous_shocks[:rm_shl1]
                 ind_antn = m.exogenous_shocks[Symbol("rm_shl$(n_anticipated_shocks(m))")]
                 ant_shock_inds = ind_ant1:ind_antn
-                shocks[ant_shock_inds, :] = 0
+                shocks[ant_shock_inds, :] .= 0
             end
         else
             shocks = zeros(S, nshocks, horizon)
