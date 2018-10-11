@@ -25,7 +25,7 @@ post_expected = load(file, "post_expected")
 
     # Ensure if we are not evaluating at start vector, then we do not get the reference
     # posterior
-    y = x .+ 0.01
+    global y = x .+ 0.01
     post_not_at_start = posterior!(m, y, data)
     ϵ = 1.0
     @test abs(post_at_start - post_not_at_start) > ϵ
