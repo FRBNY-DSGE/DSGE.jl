@@ -171,9 +171,9 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
         Base.@info "Forecasting scenario = " * string(scen.key) * "..."
         println("Start time: " * string(now()))
         println("Forecast outputs will be saved in " * rawpath(m, "scenarios"))
-        tic()
     end
 
+    tic = time_ns()
     # Update model alt policy setting
     m <= Setting(:alternative_policy, scen.altpolicy, false, "apol",
                  "Alternative policy")
@@ -202,7 +202,7 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
 
     # Print
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        forecast_time = toq()
+        forecast_time = time_ns() - tic
         forecast_time_min = forecast_time/60
         println("\nTime elapsed: " * string(forecast_time_min) * " minutes")
         println("Forecast complete: " * string(now()))
