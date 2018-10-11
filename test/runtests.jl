@@ -2,7 +2,7 @@ using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStru
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra
 
 my_tests = [
-            #="core",
+            "core",
             "parameters",
             "models/an_schorfheide/an_schorfheide",
             "models/smets_wouters/smets_wouters",
@@ -32,7 +32,7 @@ my_tests = [
             "scenarios/scenario",
             "scenarios/forecast",
             "scenarios/switching",
-            "scenarios/drivers",=#
+            "scenarios/drivers",
             "plot/plot"
             ]
 

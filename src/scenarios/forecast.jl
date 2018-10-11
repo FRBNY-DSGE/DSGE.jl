@@ -168,7 +168,7 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
                            verbose::Symbol = :low)
     # Print
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        info("Forecasting scenario = " * string(scen.key) * "...")
+        Base.@info "Forecasting scenario = " * string(scen.key) * "..."
         println("Start time: " * string(now()))
         println("Forecast outputs will be saved in " * rawpath(m, "scenarios"))
         tic()

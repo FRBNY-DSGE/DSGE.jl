@@ -47,7 +47,7 @@ global states, obs, pseudo, shocks = forecast(m, system, z0; draw_shocks = true)
 
 # Draw t-distributed shocks
 m <= Setting(:forecast_tdist_shocks, true)
-states, obs, pseudo, shocks = forecast(m, system, z0; draw_shocks = true)
+global states, obs, pseudo, shocks = forecast(m, system, z0; draw_shocks = true)
 m <= Setting(:forecast_tdist_shocks, false)
 
 # Enforce ZLB
@@ -58,10 +58,10 @@ shocks = zeros(n_shocks_exogenous(m), forecast_horizons(m))
 shocks[ind_r_sh, :] .= -10.
 
 @testset "Ensure valid forecasting at the ZLB" begin
-    states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks)
+    global states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks)
     @test all(x -> x < zlb_value, obs[ind_r, :])
 
-    states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks, enforce_zlb = true)
+    global states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks, enforce_zlb = true)
     @test all(x -> abs(x - zlb_value) < 0.01, obs[ind_r, :])
     @test all(x -> x != -10.,                 shocks[ind_r_sh, :])
 end

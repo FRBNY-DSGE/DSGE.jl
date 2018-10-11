@@ -13,7 +13,7 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
 
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        info("Simulating switching for " * string(scen.key) * "...")
+        Base.@info "Simulating switching for " * string(scen.key) * "..."
         println("Start time: " * string(now()))
         println("Outputs will be saved in " * rawpath(m, "scenarios"))
         tic()

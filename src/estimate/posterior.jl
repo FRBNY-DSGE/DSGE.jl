@@ -11,7 +11,7 @@ end
 
 """
 ```
-posterior(m::AbstractModel{T}, data::AbstractArray{T};
+posterior(m::AbstractModel{T}, data::AbstractArray{Union{T, Missing}};
           mh::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
 ```
 
@@ -35,7 +35,7 @@ log Pr(Θ|data) = log Pr(data|Θ) + log Pr(Θ) + const
   `ParamBoundsError`
 """
 function posterior(m::AbstractModel{T},
-                   data::AbstractArray{T};
+                   data::AbstractArray{Union{T, Missing}};
                    mh::Bool = false,
                    catch_errors::Bool = false) where {T<:AbstractFloat}
     catch_errors = catch_errors || mh
@@ -45,7 +45,7 @@ end
 
 """
 ```
-posterior!(m::AbstractModel{T}, parameters::Vector{T}, data::AbstractArray{T};
+posterior!(m::AbstractModel{T}, parameters::Vector{T}, data::AbstractArray{Union{T, Missing}};
            mh::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
 ```
 
@@ -66,13 +66,13 @@ Evaluates the log posterior density at `parameters`.
 """
 function posterior!(m::AbstractModel{T},
                     parameters::Vector{T},
-                    data::AbstractArray{T};
+                    data::AbstractArray{Union{T, Missing}};
                     mh::Bool = false,
                     catch_errors::Bool = false) where {T<:AbstractFloat}
     catch_errors = catch_errors || mh
     if mh
         try
-            update!(m, parameters)
+            DSGE.update!(m, parameters)
         catch err
             if isa(err, ParamBoundsError)
                 return -Inf
@@ -81,7 +81,7 @@ function posterior!(m::AbstractModel{T},
             end
         end
     else
-        update!(m, parameters)
+        DSGE.update!(m, parameters)
     end
     return posterior(m, data; mh=mh, catch_errors=catch_errors)
 
@@ -89,7 +89,7 @@ end
 
 """
 ```
-likelihood(m::AbstractModel, data::AbstractArray{T};
+likelihood(m::AbstractModel, data::AbstractArray{Union{T, Missing}}
            mh::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
 ```
 
@@ -111,7 +111,7 @@ filter over the main sample all at once.
 - `catch_errors`: Whether or not to catch errors of type `GensysError`
 """
 function likelihood(m::AbstractModel,
-                    data::AbstractArray{T};
+                    data::AbstractArray{Union{T, Missing}};
                     mh::Bool = false,
                     catch_errors::Bool = false) where {T<:AbstractFloat}
     catch_errors = catch_errors || mh

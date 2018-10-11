@@ -148,7 +148,7 @@ function optimize!(m::AbstractModel,
 
             # check that model can be solved
             try
-                update!(m, x_proposal_all)
+                DSGE.update!(m, x_proposal_all)
                 solve(m)
                 x_proposal_all = transform_to_real_line(m.parameters, x_proposal_all)
                 success = true
