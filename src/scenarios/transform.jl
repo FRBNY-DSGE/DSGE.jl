@@ -33,9 +33,9 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
         Base.@info "Computing means and bands for scenario = " * string(scen.key) * "..."
         println("Start time: " * string(now()))
         println("Means and bands will be saved in " * workpath(m, "scenarios"))
-        tic()
     end
 
+    tic = time_ns()
     # Revert model alt policy to historical rule
     m <= Setting(:alternative_policy, AltPolicy(:historical, solve, eqcond), false, "apol",
                  "Alternative policy")
@@ -56,7 +56,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
 
     # Print
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        total_mb_time     = toq()
+        total_mb_time     = time_ns() - tic
         total_mb_time_min = total_mb_time/60
 
         println("\nTotal time to compute scenario means and bands: " * string(total_mb_time_min) * " minutes")
