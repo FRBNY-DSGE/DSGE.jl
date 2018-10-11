@@ -54,7 +54,7 @@ function gensys(Γ0, Γ1, c, Ψ, Π, args...)
         schur!(complex(Γ0), complex(Γ1))
     catch ex
         if isa(ex, LinearAlgebra.LAPACKException)
-            info("LAPACK exception thrown while computing Schur decomposition of Γ0 and Γ1.")
+            Base.@info "LAPACK exception thrown while computing Schur decomposition of Γ0 and Γ1."
             eu = [-3, -3]
 
             G1 = Array{Float64, 2}(undef,0,0)

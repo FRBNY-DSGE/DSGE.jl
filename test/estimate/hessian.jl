@@ -10,9 +10,9 @@ m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
 # Setup paths
 
-data = h5read("$path/../reference/hessian.h5","data")'
-mode = h5read("$path/../reference/hessian.h5","paramsmode")
-hessian_expected = h5read("$path/../reference/hessian.h5","hessian")
+data = load("$path/../reference/hessian.jld2","data")'
+mode = load("$path/../reference/hessian.jld2","paramsmode")
+hessian_expected = load("$path/../reference/hessian.jld2","hessian")
 
 # Test subset of hessian elements.
 para_free      = [!θ.fixed for θ in m.parameters]
