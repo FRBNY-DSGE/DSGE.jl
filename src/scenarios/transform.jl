@@ -30,7 +30,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
     # Print
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
-        info("Computing means and bands for scenario = " * string(scen.key) * "...")
+        Base.@info "Computing means and bands for scenario = " * string(scen.key) * "..."
         println("Start time: " * string(now()))
         println("Means and bands will be saved in " * workpath(m, "scenarios"))
         tic()

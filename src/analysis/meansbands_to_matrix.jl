@@ -59,13 +59,13 @@ function meansbands_to_matrix(m::AbstractModel, input_type::Symbol,
                                     Symbol("mb_matrix_", output_var);
                                     pathfcn = workpath,
                                     forecast_string = forecast_string,
-                                    fileformat = :h5)
+                                    fileformat = :jld2)
 
     # Convert MeansBands objects to matrices
     means, bands = meansbands_to_matrix(mb)
 
     # Save to file
-    h5open(outfile, "w") do file
+    jldopen(outfile, "w") do file
         write(file, "means", means)
         write(file, "bands", bands)
     end

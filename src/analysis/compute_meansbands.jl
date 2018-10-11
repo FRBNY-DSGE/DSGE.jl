@@ -211,7 +211,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     return means, bands
 end
 
-function mb_reverse_transform(fcast_series::AbstractArray{Float64}, transform::Function,
+function mb_reverse_transform(fcast_series::AbstractArray, transform::Function,
                               product::Symbol, class::Symbol;
                               y0_index::Int = -1,
                               data::AbstractVector{Float64} = Float64[],

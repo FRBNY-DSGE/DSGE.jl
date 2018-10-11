@@ -7,10 +7,10 @@ custom_settings = Dict{Symbol, Setting}(
     :date_forecast_start  => Setting(:date_forecast_start, quartertodate("2015-Q4")))
 m = AnSchorfheide(custom_settings = custom_settings, testing = true)
 
-file = "$path/../reference/posterior.h5"
-data = h5read(file, "data")'
-lh_expected = h5read(file, "likelihood")
-post_expected = h5read(file, "posterior")
+file = "$path/../reference/posterior.jld2"
+data = load(file, "data")'
+lh_expected = load(file, "lh_expected")
+post_expected = load(file, "post_expected")
 
 @testset "Check likelihood and posterior calculations" begin
     lh = likelihood(m, data)

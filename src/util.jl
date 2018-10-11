@@ -114,8 +114,8 @@ end
 
 ## Testing functions
 
-function test_matrix_eq2(expect::Array{T},
-                         actual::Array{T},
+function test_matrix_eq2(expect::AbstractArray,
+                         actual::AbstractArray,
                          expstr::String,
                          actstr::String,
                          ϵ_abs::Float64 = 1e-6,
@@ -128,15 +128,15 @@ function test_matrix_eq2(expect::Array{T},
 
     # Absolute difference filter
     abs_diff   = abs.(actual .- expect) .> ϵ_abs
-    n_abs_diff = sum(abs_diff)
+    n_abs_diff = sum(skipmissing(abs_diff))
 
     # Relative difference filter
     rel_diff   = 100*abs.((actual .- expect) ./ expect) .> ϵ_rel
-    n_rel_diff = sum(rel_diff)
+    n_rel_diff = sum(skipmissing(rel_diff))
 
     # Element is only problematic if it fails *both* tests.
     mixed_diff   = abs_diff .& rel_diff
-    n_mixed_diff = sum(mixed_diff)
+    n_mixed_diff = sum(skipmissing(mixed_diff))
 
     if n_mixed_diff ≠ 0
         sdiff = string("|a - b| <= ", ϵ_abs,

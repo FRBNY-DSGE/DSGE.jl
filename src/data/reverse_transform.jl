@@ -130,15 +130,15 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     return transformed
 end
 
-function reverse_transform(y::AbstractArray{T}, rev_transform::Function;
+function reverse_transform(y::AbstractArray, rev_transform::Function;
                            fourquarter::Bool = false,
-                           y0::T = NaN, y0s::Vector{T} = T[],
-                           pop_growth::Vector{T} = T[]) where {T<:AbstractFloat}
+                           y0 = missing, y0s::Vector = Vector(undef, 0),
+                           pop_growth::Vector = Vector(undef, 0)) where {T<:AbstractFloat}
     if fourquarter
         if rev_transform in [loggrowthtopct_4q_percapita, loggrowthtopct_4q,
                              loggrowthtopct_4q_approx]
             # Sum growth rates y_{t-3}, y_{t-2}, y_{t-1}, and y_t
-            y0s = isempty(y0s) ? fill(NaN, 3) : y0s
+            y0s = isempty(y0s) ? fill(missing, 3) : y0s
             if rev_transform == loggrowthtopct_4q_percapita
                 rev_transform(y, pop_growth, y0s)
             else
@@ -147,7 +147,7 @@ function reverse_transform(y::AbstractArray{T}, rev_transform::Function;
         elseif rev_transform in [logleveltopct_4q_percapita, logleveltopct_4q,
                                  logleveltopct_4q_approx]
             # Divide log levels y_t by y_{t-4}
-            y0s = isempty(y0s) ? fill(NaN, 4) : y0s
+            y0s = isempty(y0s) ? fill(missing, 4) : y0s
             if rev_transform == logleveltopct_4q_percapita
                 rev_transform(y, pop_growth, y0s)
             else

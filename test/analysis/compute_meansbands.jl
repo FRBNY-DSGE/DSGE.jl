@@ -39,9 +39,9 @@ meansbands_to_matrix(m, :mode, :none, output_vars; verbose = :none)
 @testset "Check modal meansbands computation" begin
     for var in output_vars
         filename = get_forecast_filename(m, :mode, :none, Symbol("mb_matrix_", var),
-                                         pathfcn = workpath, fileformat = :h5)
-        @test @test_matrix_approx_eq exp_modal_means[var] h5read(filename, "means")
-        @test @test_matrix_approx_eq exp_modal_bands[var] h5read(filename, "bands")
+                                         pathfcn = workpath, fileformat = :jld2)
+        @test @test_matrix_approx_eq exp_modal_means[var] load(filename, "means")
+        @test @test_matrix_approx_eq exp_modal_bands[var] load(filename, "bands")
     end
 end
 
@@ -56,9 +56,9 @@ meansbands_to_matrix(m, :full, :none, output_vars; verbose = :high)
 @testset "Check full meansbands computation" begin
     for var in output_vars
         filename = get_forecast_filename(m, :full, :none, Symbol("mb_matrix_", var),
-                                         pathfcn = workpath, fileformat = :h5)
-        @test @test_matrix_approx_eq exp_full_means[var] h5read(filename, "means")
-        @test @test_matrix_approx_eq exp_full_bands[var] h5read(filename, "bands")
+                                         pathfcn = workpath, fileformat = :jld2)
+        @test @test_matrix_approx_eq exp_full_means[var] load(filename, "means")
+        @test @test_matrix_approx_eq exp_full_bands[var] load(filename, "bands")
     end
 end
 
