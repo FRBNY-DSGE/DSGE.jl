@@ -37,7 +37,7 @@ function describe_series(m::AbstractModel, var::Symbol, class::Symbol;
     elseif class == :states
         string(var)
     elseif class in [:shocks, :stdshocks]
-        replace(string(var), r"_sh$", "")
+        replace(string(var), r"_sh$" => "")
     else
         error("Invalid class: " * string(class))
     end

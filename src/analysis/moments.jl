@@ -80,7 +80,7 @@ bands in various LaTeX tables stored `tablespath(m)`.
 
 - `percent::AbstractFloat`: the percentage of the mass of draws from
   Metropolis-Hastings included between the bands displayed in output tables.
-- `subset_inds::Range{Int64}`: indices specifying the draws we want to use
+- `subset_inds::AbstractRange{Int64}`: indices specifying the draws we want to use
 - `subset_string::String`: short string identifying the subset to be
   appended to the output filenames. If `subset_inds` is nonempty but
   `subset_string` is empty, an error is thrown
@@ -89,8 +89,8 @@ bands in various LaTeX tables stored `tablespath(m)`.
 - `use_mode::Bool`: Return a table with the modal parameters as opposed to the mean
 """
 function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
-                       subset_inds::Range{Int64} = 1:0, subset_string::String = "",
-                       groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                       subset_inds::AbstractRange{Int64} = 1:0, subset_string::String = "",
+                       groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
                        verbose::Symbol = :low, use_mode::Bool = false)
 
     ### 1. Load parameter draws from Metropolis-Hastings
@@ -166,7 +166,7 @@ prior_table(m; subset_string = "", groupings = Dict{String, Vector{Parameter}}()
 ```
 """
 function prior_table(m::AbstractModel; subset_string::String = "",
-             groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
+             groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -287,7 +287,7 @@ function prior_posterior_moments_table(m::AbstractModel,
                  post_means::Vector, post_bands::Matrix;
                  percent::AbstractFloat = 0.9,
                  subset_string::String = "",
-                 groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
+                 groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}())
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -356,7 +356,7 @@ function prior_posterior_moments_table(m::AbstractModel,
             index = m.keys[param.key]
             (prior_mean, prior_std) = moments(param)
 
-            @printf moments_fid "\$\%4.99s\$ & " param.tex_label
+            @printf moments_fid "\$ \\%4.99s\$ & " param.tex_label
             @printf moments_fid "%s & " (param.fixed ? "-" : distid(get(param.prior)))
             @printf moments_fid "%8.3f & " prior_mean
             @printf moments_fid "%8.3f & " prior_std
@@ -389,7 +389,7 @@ tablespath(m, \"estimate\", \"prior_posterior_mode[_sub=\$subset_string].tex\")
 """
 function prior_posterior_table(m::AbstractModel, post_values::Vector;
                  subset_string::String = "",
-                 groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                 groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
                  use_mode::Bool = false)
 
     if isempty(groupings)
@@ -442,9 +442,9 @@ function prior_posterior_table(m::AbstractModel, post_values::Vector;
                 isa(prior, RootInverseGamma) ? prior.τ : mean(prior)
             end
 
-            @printf fid "\$\%4.99s\$ & " param.tex_label
+            @printf fid "\$ \\%4.99s\$ & " param.tex_label
             @printf fid "%8.3f & " post_value
-            @printf fid "\%8.3f \\\\\n" post_values[index]
+            @printf fid "\\%8.3f \\\\\n" post_values[index]
         end
     end
 
@@ -473,7 +473,7 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands{T<:AbstractFloat}(draws::Matrix, percent::T; minimize::Bool = true)
+function find_density_bands(draws::AbstractArray, percent::T; minimize::Bool = true) where {T<:AbstractFloat}
 
     if !(0 <= percent <= 1)
         error("percent must be between 0 and 1")
@@ -482,7 +482,7 @@ function find_density_bands{T<:AbstractFloat}(draws::Matrix, percent::T; minimiz
     ndraws, nperiods = size(draws)
 
     if ndraws == 1
-        band = repmat(draws, 2, 1)
+        band = repeat(draws, outer=(2, 1))
         return band
     end
 
@@ -530,13 +530,12 @@ function find_density_bands{T<:AbstractFloat}(draws::Matrix, percent::T; minimiz
         band[2,i] = draw_variable_i[low]
         band[1,i] = draw_variable_i[high]
     end
-
     return band
 end
 
 """
 ```
-find_density_bands{T<:AbstractFloat}(draws::Matrix, percents::Vector{T}; minimize::Bool=true)
+find_density_bands(draws::Matrix, percents::Vector{T}; minimize::Bool=true) where {T<:AbstractFloat}
 ```
 
 Returns a `2` x `cols(draws)` matrix `bands` such that `percent` of the mass of `draws[:,i]`
@@ -552,17 +551,15 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands{T<:AbstractFloat}(draws::Matrix, percents::Vector{T}; minimize::Bool = true)
+function find_density_bands(draws::AbstractArray, percents::Vector{T}; minimize::Bool = true) where {T<:AbstractFloat}
 
     bands = DataFrame()
 
     for p in percents
         out = find_density_bands(draws, p, minimize = minimize)
-
-        bands[Symbol("$(100*p)\% UB")] = vec(out[2,:])
-        bands[Symbol("$(100*p)\% LB")] = vec(out[1,:])
+        bands[Symbol("$(100*p)% UB")] = vec(out[2,:])
+        bands[Symbol("$(100*p)% LB")] = vec(out[1,:])
     end
-
     bands
 end
 

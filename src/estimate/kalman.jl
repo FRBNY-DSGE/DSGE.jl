@@ -17,24 +17,24 @@ Kalman{S<:AbstractFloat}
 - `P_0`: variance-covariance matrix for `s_0`
 - `total_loglh`: log p(y_{1:t})
 """
-immutable Kalman{S<:AbstractFloat}
+struct Kalman{S<:AbstractFloat}
     loglh::Vector{S}     # log p(y_t | y_{1:t-1}), t = 1:T
-    s_pred::Matrix{S}    # s_{t|t-1}, t = 1:T
+    s_pred::AbstractArray{S}    # s_{t|t-1}, t = 1:T
     P_pred::Array{S, 3}  # P_{t|t-1}, t = 1:T
-    s_filt::Matrix{S}    # s_{t|t}, t = 1:T
+    s_filt::AbstractArray{S}    # s_{t|t}, t = 1:T
     P_filt::Array{S, 3}  # P_{t|t}, t = 1:T
     s_0::Vector{S}       # s_0
-    P_0::Matrix{S}       # P_0
+    P_0::AbstractArray{S}       # P_0
     s_T::Vector{S}       # s_{T|T}
-    P_T::Matrix{S}       # P_{T|T}
+    P_T::AbstractArray{S}       # P_{T|T}
     total_loglh::S       # log p(y_{1:t})
 end
 
 function Kalman(loglh::Vector{S},
-                s_pred::Matrix{S}, P_pred::Array{S, 3},
-                s_filt::Matrix{S}, P_filt::Array{S, 3},
-                s_0::Vector{S}, P_0::Matrix{S},
-                s_T::Vector{S}, P_T::Matrix{S}) where {S<:AbstractFloat}
+                s_pred::AbstractArray{S}, P_pred::Array{S, 3},
+                s_filt::AbstractArray{S}, P_filt::Array{S, 3},
+                s_0::Vector{S}, P_0::AbstractArray{S},
+                s_T::Vector{S}, P_T::AbstractArray{S}) where {S<:AbstractFloat}
 
     return Kalman{S}(loglh, s_pred, P_pred, s_filt, P_filt, s_0, P_0, s_T, P_T, sum(loglh))
 end
@@ -51,26 +51,26 @@ function Base.getindex(kal::Kalman, inds::Union{Int, UnitRange{Int}})
     t0 = first(inds)
     t1 = last(inds)
 
-    return Kalman(kal[:loglh][inds],        # loglh
-                  kal[:s_pred][:,    inds], # s_pred
-                  kal[:P_pred][:, :, inds], # P_pred
-                  kal[:s_filt][:,    inds], # filt
-                  kal[:P_filt][:, :, inds], # P_filt
-                  kal[:s_filt][:,    t0],   # s_0
-                  kal[:P_filt][:, :, t0],   # P_0
-                  kal[:s_filt][:,    t1],   # s_T
-                  kal[:P_filt][:, :, t1],   # P_T
-                  sum(kal[:loglh][inds]))   # total_loglh
+    return DSGE.Kalman(kal[:loglh][inds],        # loglh
+                       kal[:s_pred][:,    inds], # s_pred
+                       kal[:P_pred][:, :, inds], # P_pred
+                       kal[:s_filt][:,    inds], # filt
+                       kal[:P_filt][:, :, inds], # P_filt
+                       kal[:s_filt][:,    t0],   # s_0
+                       kal[:P_filt][:, :, t0],   # P_0
+                       kal[:s_filt][:,    t1],   # s_T
+                       kal[:P_filt][:, :, t1],   # P_T
+                       sum(kal[:loglh][inds]))   # total_loglh
 end
 
-function Base.cat{S<:AbstractFloat}(m::AbstractModel, k1::Kalman{S},
-    k2::Kalman{S}; allout::Bool = true)
+function Base.cat(m::AbstractModel, k1::Kalman{S},
+    k2::Kalman{S}; allout::Bool = true) where {S<:AbstractFloat}
 
-    loglh  = cat(1, k1[:loglh], k2[:loglh])
-    s_pred = cat(2, k1[:s_pred], k2[:s_pred])
-    P_pred = cat(3, k1[:P_pred], k2[:P_pred])
-    s_filt = cat(2, k1[:s_filt], k2[:s_filt])
-    P_filt = cat(3, k1[:P_filt], k2[:P_filt])
+    loglh  = cat(k1[:loglh], k2[:loglh], dims = 1)
+    s_pred = cat(k1[:s_pred], k2[:s_pred], dims = 2)
+    P_pred = cat(k1[:P_pred], k2[:P_pred], dims = 3)
+    s_filt = cat(k1[:s_filt], k2[:s_filt], dims = 2)
+    P_filt = cat(k1[:P_filt], k2[:P_filt], dims = 3)
     s_0    = k1[:s_0]
     P_0    = k1[:P_0]
     s_T    = k2[:s_T]
@@ -85,12 +85,12 @@ end
 zlb_regime_indices(m, data, start_date = date_presample_start(m))
 ```
 
-Returns a Vector{Range{Int64}} of index ranges for the pre- and post-ZLB
+Returns a Vector{AbstractRange{Int64}} of index ranges for the pre- and post-ZLB
 regimes. The optional argument `start_date` indicates the first quarter of
 `data`.
 """
-function zlb_regime_indices{S<:AbstractFloat}(m::AbstractModel{S}, data::Matrix{S},
-                                              start_date::Date = date_presample_start(m))
+function zlb_regime_indices(m::AbstractModel{S}, data::AbstractArray{Union{S, Missing}},
+                            start_date::Dates.Date = date_presample_start(m)) where {S<:AbstractFloat}
     T = size(data, 2)
 
     if n_anticipated_shocks(m) > 0 && !isempty(data)
@@ -99,15 +99,15 @@ function zlb_regime_indices{S<:AbstractFloat}(m::AbstractModel{S}, data::Matrix{
 
         elseif date_presample_start(m) <= start_date <= date_zlb_start(m)
             n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
-            regime_inds = Vector{Range{Int64}}(2)
+            regime_inds = Vector{AbstractRange{Int64}}(undef, 2)
             regime_inds[1] = 1:n_nozlb_periods
             regime_inds[2] = (n_nozlb_periods+1):T
 
         else # date_zlb_start(m) < start_date
-            regime_inds = Range{Int64}[1:T]
+            regime_inds = AbstractRange{Int64}[1:T]
         end
     else
-        regime_inds = Range{Int64}[1:T]
+        regime_inds = AbstractRange{Int64}[1:T]
     end
 
     return regime_inds
@@ -118,12 +118,12 @@ end
 zlb_regime_matrices(m, system, start_date = date_presample_start(m))
 ```
 Returns `TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs`, an 8-tuple of
-`Vector{Matrix{S}}`s and `Vector{Vector{S}}`s of system matrices for the pre-
+`Vector{AbstractArray{S}}`s and `Vector{Vector{S}}`s of system matrices for the pre-
 and post-ZLB regimes. Of these, only `QQ` changes from pre- to post-ZLB: the
 entries corresponding to anticipated shock variances are zeroed out pre-ZLB.
 """
-function zlb_regime_matrices{S<:AbstractFloat}(m::AbstractModel{S}, system::System{S},
-                                               start_date::Date = date_presample_start(m))
+function zlb_regime_matrices(m::AbstractModel{S}, system::System{S},
+                             start_date::Dates.Date = date_presample_start(m)) where {S<:AbstractFloat}
     if n_anticipated_shocks(m) > 0
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")

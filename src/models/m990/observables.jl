@@ -239,12 +239,12 @@ function init_observable_mappings!(m::Model990)
 
         start_date = Dates.lastdayofquarter(date_presample_start(m) - Dates.Month(3))
         end_date   = date_mainsample_end(m)
-        date_range = start_date .<= levels[:, :date] .<= end_date
+        date_range = start_date .<= levels[:date] .<= end_date
         tfp_unadj_inrange = levels[date_range, :TFPKQ]
 
         tfp_unadj      = levels[:TFPKQ]
         tfp_unadj_mean = mean(tfp_unadj_inrange[.!isnan.(tfp_unadj_inrange)])
-        (tfp_unadj - tfp_unadj_mean) ./ (4*(1 - levels[:TFPJQ]))
+        (tfp_unadj .- tfp_unadj_mean) ./ (4*(1 .- levels[:TFPJQ]))
     end
 
     tfp_rev_transform = quartertoannual
@@ -265,7 +265,7 @@ function init_observable_mappings!(m::Model990)
         # TO:   Same
 
         ant_fwd_transform = function (levels)
-            levels[:, Symbol("ant$i")]
+            levels[Symbol("ant$i")]
         end
 
         ant_rev_transform = quartertoannual

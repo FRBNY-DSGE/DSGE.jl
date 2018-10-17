@@ -4,7 +4,7 @@
 Returns Date identifying last day of the previous quarter
 """
 function prev_quarter(q::TimeType = now())
-    Date(lastdayofquarter(firstdayofquarter(q)-Dates.Day(1)))
+    Dates.Date(lastdayofquarter(firstdayofquarter(q)-Dates.Day(1)))
 end
 
 """
@@ -13,15 +13,15 @@ end
 Returns Date identifying last day of the next quarter
 """
 function next_quarter(q::TimeType = now())
-    Date(lastdayofquarter(lastdayofquarter(q)+Dates.Day(1)))
+    Dates.Date(lastdayofquarter(lastdayofquarter(q)+Dates.Day(1)))
 end
 
 """
 `get_quarter_ends(start_date::Date,end_date::Date)`
 
-Returns a DataArray of quarter end dates between `start_date` and `end_date`.
+Returns an Array of quarter end dates between `start_date` and `end_date`.
 """
-function get_quarter_ends(start_date::Date,end_date::Date)
+function get_quarter_ends(start_date::Dates.Date,end_date::Dates.Date)
     map(lastdayofquarter, collect(start_date:Dates.Month(3):end_date))
 end
 
@@ -32,17 +32,17 @@ Convert `string` in the form "YYqX", "YYYYqX", or "YYYY-qX" to a Date of the end
 the indicated quarter. "X" is in `{1,2,3,4}` and the case of "q" is ignored.
 """
 function quartertodate(string::String)
-    if ismatch(r"^[0-9]{2}[qQ][1-4]$", string)
+    if occursin(r"^[0-9]{2}[qQ][1-4]$", string)
         year = "20"*string[1:2]
         quarter = string[end]
-    elseif ismatch(r"^[0-9]{4}[qQ][1-4]$", string)
+    elseif occursin(r"^[0-9]{4}[qQ][1-4]$", string)
         year = string[1:4]
         quarter = string[end]
-    elseif ismatch(r"^[0-9]{4}-[qQ][1-4]$", string)
+    elseif occursin(r"^[0-9]{4}-[qQ][1-4]$", string)
         year = string[1:4]
         quarter = string[end]
     else
-        throw(ParseError("Invalid format: $string"))
+        throw(Meta.ParseError("Invalid format: $string"))
     end
 
     year = parse(Int, year)
@@ -61,7 +61,7 @@ the indicated quarter. "X" is in `{1,2,3,4}` and the case of "q" is ignored.
 
 Return an integer from the set `{1,2,3,4}`, corresponding to one of the quarters in a year given a Date object.
 """
-function datetoquarter(date::Date)
+function datetoquarter(date::Dates.Date)
     month = Dates.month(date)
     if month in 1:3
         return 1
@@ -81,7 +81,7 @@ end
 
 Compute the number of quarters between t1 and t0, including t0 and excluding t1.
 """
-function subtract_quarters(t1::Date, t0::Date)
+function subtract_quarters(t1::Dates.Date, t0::Dates.Date)
     days = t1 - t0
     quarters = round(days.value / 365.25 * 4.0)
     return convert(Int, quarters)
@@ -95,22 +95,22 @@ Change column `col` of dates in `df` from String to Date, and map any dates give
 interior of a quarter to the last day of the quarter.
 """
 function format_dates!(col::Symbol, df::DataFrame)
-    df[col] = Date.(df[col])
+    df[col] = Dates.Date.(df[col])
     map!(lastdayofquarter, df[col], df[col])
 end
 
 """
 ```
-missing2nan!(df::DataArray)
+missing2nan!(df::Array)
 ```
 
 Convert all elements of Union{X, Missing.Missing} and the like to type X.
 """
-function missing2nan!(v::DataArray)
-    valid_types = [Date, Float64]
+function missing2nan!(v::Array)
+    valid_types = [Dates.Date, Float64]
     new_v = tryparse.(new_type, v)
     if all(isnull.(new_v))
-        new_v = tryparse.(Date, new_v)
+        new_v = tryparse.(Dates.Date, new_v)
     end
 end
 
@@ -129,12 +129,12 @@ end
 
 """
 ```
-na2nan!(df::DataArray)
+na2nan!(df::Array)
 ```
 
-Convert all NAs in a DataArray to NaNs.
+Convert all NAs in an Array to NaNs.
 """
-function na2nan!(v::DataArray)
+function na2nan!(v::Array)
     for i = 1:length(v)
         v[i] = ismissing(v[i]) ?  NaN : v[i]
     end
@@ -159,13 +159,13 @@ function nan_cond_vars!(m::AbstractModel, df::DataFrame; cond_type::Symbol = :no
 
         # NaN out non-conditional variables
         cond_names_nan = setdiff(names(df), [cond_names; :date])
-        T = eltype(df[:, cond_names_nan])
-        df[df[:, :date] .>= date_forecast_start(m), cond_names_nan] = convert(T, NaN)
+        T = eltype(df[cond_names_nan])
+        df[df[:date] .>= date_forecast_start(m), cond_names_nan] = convert(T, NaN)
 
         # Warn if any conditional variables are missing
         for var in cond_names
-            if any(isnan.(df[df[:, :date] .>= date_forecast_start(m), var]))
-                warn("Missing some conditional observations for " * string(var))
+            if any(isnan.(df[df[:date] .>= date_forecast_start(m), var]))
+                @warn "Missing some conditional observations for " * string(var)
             end
         end
     end
@@ -184,11 +184,11 @@ function get_data_filename(m::AbstractModel, cond_type::Symbol)
 
     # If writing conditional data, append conditional vintage and ID to filename
     if cond_type in [:semi, :full]
-        push!(filestrings, "cdid=" * lpad(cond_id(m), 2, 0))
+        push!(filestrings, "cdid=" * lpad(string(cond_id(m)), 2, string(0)))
         push!(filestrings, "cdvt=" * cond_vintage(m))
     end
 
-    push!(filestrings, "dsid=" * lpad(data_id(m), 2, 0))
+    push!(filestrings, "dsid=" * lpad(string(data_id(m)), 2, string(0)))
     push!(filestrings, "vint=" * data_vintage(m))
     filename = join(filestrings, "_")
 
@@ -206,7 +206,7 @@ Returns the date corresponding to `start` + `quarters` quarters.
 - `start`: starting date
 - `quarters`: number of quarters to iterate forward or backward
 """
-function iterate_quarters(start::Date, quarters::Int)
+function iterate_quarters(start::Dates.Date, quarters::Int)
 
     next = start
     if quarters < 0

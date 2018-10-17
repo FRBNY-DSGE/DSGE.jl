@@ -3,7 +3,7 @@
 
 Calculates log joint prior density of m.parameters.
 """
-function prior{T<:AbstractFloat}(m::AbstractModel{T})
+function prior(m::AbstractModel{T}) where {T<:AbstractFloat}
     free_params = Base.filter(θ -> !θ.fixed, m.parameters)
     logpdfs = map(logpdf, free_params)
     return sum(logpdfs)
@@ -11,8 +11,8 @@ end
 
 """
 ```
-posterior{T<:AbstractFloat}(m::AbstractModel{T}, data::Matrix{T};
-                             sampler::Bool = false, catch_errors::Bool = false, φ_smc = 1)
+posterior(m::AbstractModel{T}, data::AbstractArray{Union{T, Missing}};
+          mh::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
 ```
 
 Calculates and returns the log of the posterior distribution for `m.parameters`:
@@ -34,25 +34,19 @@ log Pr(Θ|data) = log Pr(data|Θ) + log Pr(Θ) + const
 - `φ_smc`: a tempering factor to change the relative weighting of the prior and the
     likelihood when calculating the posterior. It is used primarily in SMC.
 """
-function posterior{T<:AbstractFloat}(m::AbstractModel{T},
-                                     data::Matrix{T};
-                                     sampler::Bool = false,
-                                     ϕ_smc::Float64 = 1.,
-                                     catch_errors::Bool = false)
-    catch_errors = catch_errors | sampler
-    like = likelihood(m, data; sampler=sampler, catch_errors=catch_errors)
-    post = ϕ_smc*like + prior(m)
-    if sampler
-        return post
-    else
-        return post
-    end
+function posterior(m::AbstractModel{T},
+                   data::AbstractArray{Union{T, Missing}};
+                   mh::Bool = false,
+                   catch_errors::Bool = false) where {T<:AbstractFloat}
+    catch_errors = catch_errors || mh
+    post = likelihood(m, data; mh = mh, catch_errors = catch_errors) + prior(m)
+    return post
 end
 
 """
 ```
-posterior!{T<:AbstractFloat}(m::AbstractModel{T}, parameters::Vector{T}, data::Matrix{T};
-                                  sampler::Bool = false, catch_errors::Bool = false, φ_smc = 1)
+posterior!(m::AbstractModel{T}, parameters::Vector{T}, data::AbstractArray{Union{T, Missing}};
+           mh::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
 ```
 
 Evaluates the log posterior density at `parameters`.
@@ -61,7 +55,7 @@ Evaluates the log posterior density at `parameters`.
 
 - `m`: The model object
 - `parameters`: New values for the model parameters
-- `data`: Matrix of input data for observables
+- `data`: AbstractArray of input data for observables
 
 ### Optional Arguments
 - `sampler`: Whether metropolis_hastings or smc is the caller. If `sampler=true`, the log likelihood and the
@@ -71,16 +65,15 @@ Evaluates the log posterior density at `parameters`.
 - `φ_smc`: a tempering factor to change the relative weighting of the prior and the
     likelihood when calculating the posterior. It is used primarily in SMC.
 """
-function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
-                                      parameters::Vector{T},
-                                      data::Matrix{T};
-                                      sampler::Bool = false,
-                                      ϕ_smc::Float64 = 1.,
-                                      catch_errors::Bool = false)
-    catch_errors = catch_errors | sampler
-    if sampler
+function posterior!(m::AbstractModel{T},
+                    parameters::Vector{T},
+                    data::AbstractArray{Union{T, Missing}};
+                    mh::Bool = false,
+                    catch_errors::Bool = false) where {T<:AbstractFloat}
+    catch_errors = catch_errors || mh
+    if mh
         try
-            update!(m, parameters)
+            DSGE.update!(m, parameters)
         catch err
             if isa(err, ParamBoundsError)
                 return -Inf
@@ -89,7 +82,7 @@ function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
             end
         end
     else
-        update!(m, parameters)
+        DSGE.update!(m, parameters)
     end
     return posterior(m, data; sampler=sampler, ϕ_smc = ϕ_smc, catch_errors=catch_errors)
 
@@ -97,8 +90,8 @@ end
 
 """
 ```
-likelihood{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T};
-                              sampler::Bool = false, catch_errors::Bool = false)
+likelihood(m::AbstractModel, data::AbstractArray{Union{T, Missing}}
+           mh::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
 ```
 
 Evaluate the DSGE likelihood function. Can handle two-part estimation where the observed
@@ -117,12 +110,11 @@ filter over the main sample all at once.
   the zero-lower-bound period are returned in a dictionary.
 - `catch_errors`: If `sampler = true`, `GensysErrors` should always be caught.
 """
-function likelihood{T<:AbstractFloat}(m::AbstractModel,
-                                      data::Matrix{T};
-                                      sampler::Bool = false,
-                                      catch_errors::Bool = false,
-                                      verbose::Symbol = :high)
-    catch_errors = catch_errors | sampler
+function likelihood(m::AbstractModel,
+                    data::AbstractArray{Union{T, Missing}};
+                    mh::Bool = false,
+                    catch_errors::Bool = false) where {T<:AbstractFloat}
+    catch_errors = catch_errors || mh
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if sampler
@@ -151,9 +143,7 @@ function likelihood{T<:AbstractFloat}(m::AbstractModel,
         return kal[:total_loglh]
     catch err
         if catch_errors && isa(err, DomainError)
-            if VERBOSITY[verbose] >= VERBOSITY[:high]
-                warn("Log of incremental likelihood is negative; returning -Inf")
-            end
+            @warn "Log of incremental likelihood is negative; returning -Inf"
             return -Inf
         else
             rethrow(err)

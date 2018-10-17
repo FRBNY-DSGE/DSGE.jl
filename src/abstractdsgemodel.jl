@@ -63,14 +63,14 @@ Base.setindex!(m::AbstractModel, value, k::Symbol) = Base.setindex!(m, value, m.
 
 """
 ```
-(<=){T}(m::AbstractModel{T}, p::AbstractParameter{T})
+(m::AbstractModel{T} <= p::AbstractParameter{T}) where T
 ```
 
 Syntax for adding a parameter to a model: m <= parameter.
 NOTE: If `p` is added to `m` and length(m.steady_state) > 0, `keys(m)` will not generate the
 index of `p` in `m.parameters`.
 """
-function (<=){T}(m::AbstractModel{T}, p::AbstractParameter{T})
+function (m::AbstractModel{T} <= p::AbstractParameter{T}) where T
 
     if !in(p.key, keys(m.keys))
 
@@ -90,13 +90,13 @@ end
 
 """
 ```
-(<=){T}(m::AbstractModel{T}, ssp::SteadyStateParameter)
+(m::AbstractModel{T} <= ssp::SteadyStateParameter) where T
 ```
 
 Add a new steady-state value to the model by appending `ssp` to the `m.steady_state` and
 adding `ssp.key` to `m.keys`.
 """
-function (<=){T}(m::AbstractModel{T}, ssp::SteadyStateParameter)
+function (m::AbstractModel{T} <= ssp::SteadyStateParameter) where T
 
     if !in(ssp.key, keys(m.keys))
         new_param_index = length(m.keys) + 1
@@ -312,10 +312,10 @@ end
 
 function date_shockdec_start(m::AbstractModel)
     startdate = get_setting(m, :shockdec_startdate)
-    if !isnull(startdate)
-        return get(startdate)
+    if (Nullables.isnull(startdate)) | (startdate===nothing)
+        return DSGE.date_mainsample_start(m)
     else
-        return date_mainsample_start(m)
+        return get(startdate)
     end
 end
 
@@ -376,7 +376,7 @@ function specify_mode!(m::AbstractModel, mode_file::String = ""; verbose=:low)
     end
     mode_file = normpath(mode_file)
 
-    update!(m,load_parameters_from_file(m,mode_file))
+    DSGE.update!(m,load_parameters_from_file(m,mode_file))
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("Loaded previous mode from $mode_file.")
@@ -513,7 +513,7 @@ end
 # Input data handled slightly differently, because it is not model-specific.
 """
 ```
-inpath{T<:String}(m::AbstractModel, in_type::T, file_name::T="")
+inpath(m::AbstractModel, in_type::T, file_name::T="") where {T<:String}
 ```
 
 Returns path to specific input data file, creating containing directory as needed. If
@@ -590,7 +590,7 @@ end
 
 """
 ```
-transform_to_model_space!{T<:AbstractFloat}(m::AbstractModel, values::Vector{T})
+transform_to_model_space!(m::AbstractModel, values::Vector{T}) where T<:AbstractFloat
 ```
 
 Transforms `values` from the real line to the model space, and assigns `values[i]` to
@@ -601,15 +601,15 @@ paramter values.
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
 """
-function transform_to_model_space!{T<:AbstractFloat}(m::AbstractModel, values::Vector{T})
+function transform_to_model_space!(m::AbstractModel, values::Vector{T}) where T<:AbstractFloat
     new_values = transform_to_model_space(m.parameters, values)
-    update!(m, new_values)
+    DSGE.update!(m, new_values)
     steadystate!(m)
 end
 
 """
 ```
-update!{T<:AbstractFloat}(m::AbstractModel, values::Vector{T})
+update!(m::AbstractModel, values::Vector{T}) where {T<:AbstractFloat}
 ```
 
 Update `m.parameters` with `values`, recomputing the steady-state parameter values.
@@ -618,8 +618,8 @@ Update `m.parameters` with `values`, recomputing the steady-state parameter valu
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
 """
-function update!{T<:AbstractFloat}(m::AbstractModel, values::Vector{T})
-    update!(m.parameters, values)
+function update!(m::AbstractModel, values::Vector{T}) where {T <: AbstractFloat}
+    DSGE.update!(m.parameters, values)
     steadystate!(m)
 end
 
@@ -642,10 +642,10 @@ Draw a random sample from the model's prior distribution.
 function rand_prior(m::AbstractModel; ndraws::Int = 100_000)
     T = typeof(m.parameters[1].value)
     npara = length(m.parameters)
-    priorsim = Array{T}(ndraws, npara)
+    priorsim = Array{T}(undef, ndraws, npara)
 
     for i in 1:ndraws
-        priodraw = Array{T}(npara)
+        priodraw = Array{T}(undef, npara)
 
         # Parameter draws per particle
         for j in 1:length(m.parameters)
@@ -671,10 +671,10 @@ end
 
 """
 ```
-type ShockGroup
+mutable struct ShockGroup
 ```
 
-The `ShockGroup` type is used in `prepare_means_table_shockdec` and
+The `ShockGroup` mutable struct is used in `prepare_means_table_shockdec` and
 `plot_shock_decompositions`. When plotting shock decompositions, we usually want
 to group the shocks into categories (financial, monetary policy, etc.) so that
 the resulting grouped bar plot is legible.
@@ -685,7 +685,7 @@ the resulting grouped bar plot is legible.
 - `shocks::Vector{Symbol}`
 - `color::Colorant`
 """
-type ShockGroup
+mutable struct ShockGroup
     name::String
     shocks::Vector{Symbol}
     color::Colorant

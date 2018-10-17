@@ -149,12 +149,12 @@ shockdec
                                       detexify_shocks = false,
                                       groups = groups)
     dates = df[:date]
-    xnums = (1:length(dates)) - 0.5
+    xnums = (1:length(dates)) .- 0.5
 
     # Assign date ticks
-    inds = intersect(find(x -> start_date .<= x .<= end_date,  dates),
-                     find(x -> Dates.month(x) == 3,            dates),
-                     find(x -> Dates.year(x) % tick_size == 0, dates))
+    inds = intersect(findall(x -> start_date .<= x .<= end_date,  dates),
+                     findall(x -> Dates.month(x) == 3,            dates),
+                     findall(x -> Dates.year(x) % tick_size == 0, dates))
     xticks --> (xnums[inds], map(Dates.year, dates[inds]))
 
     # Set date axis limits
@@ -175,8 +175,10 @@ shockdec
         bar_width  --> 1
         legendfont --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
 
-        x = df[:date]
-        y = convert(Matrix{Float64}, df[cat_names])
+        inds = findall(start_date .<= dates .<= end_date)
+        x = df[inds, :date]
+        y = convert(Array, df[inds, cat_names])
+
         StatPlots.GroupedBar((x, y))
     end
 
@@ -188,10 +190,9 @@ shockdec
         linecolor := hist_color
         label     := hist_label
 
-        inds = find(hist.means[1, :date] .<= dates .<= hist.means[end, :date])
-        x = xnums[inds]
-        y = convert(Vector{Float64}, df[inds, :detrendedMean])
-        x, y
+        inds = intersect(findall(start_date .<= dates .<= end_date),
+                         findall(hist.means[1, :date] .<= dates .<= hist.means[end, :date]))
+        xnums[inds], df[inds, :detrendedMean]
     end
 
     # Detrended mean forecast
@@ -199,9 +200,8 @@ shockdec
         linecolor := forecast_color
         label     := forecast_label
 
-        inds = find(hist.means[end, :date] .<= dates .<= forecast.means[end, :date])
-        x = xnums[inds]
-        y = convert(Vector{Float64}, df[inds, :detrendedMean])
-        x, y
+        inds = intersect(findall(start_date .<= dates .<= end_date),
+                         findall(hist.means[end, :date] .<= dates .<= forecast.means[end, :date]))
+        xnums[inds], df[inds, :detrendedMean]
     end
 end

@@ -1,17 +1,24 @@
-julia 0.6
+julia 0.7
+BenchmarkTools
 Calculus
 CSV
-DataArrays
 DataFrames
 DataStructures
+Dates
 Distributions
 FredData
 HDF5
-JLD
+JLD2
 Optim
 QuantEcon
+Missings
+Nullables
 Plots
+Printf
+RecipesBase
 Roots
+SparseArrays
+SpecialFunctions
 StateSpaceRoutines
 StatPlots
 StatsBase

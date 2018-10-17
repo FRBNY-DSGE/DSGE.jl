@@ -57,7 +57,7 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
             cond_levels = load_cond_data_levels(m; verbose=verbose)
             levels, cond_levels = reconcile_column_names(levels, cond_levels)
             levels = vcat(levels, cond_levels)
-            na2nan!(levels)
+            #na2nan!(levels)
         end
         df = transform_data(m, levels; cond_type=cond_type, verbose=verbose)
 
@@ -68,7 +68,7 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
         else
             date_mainsample_end(m)
         end
-        df = df[start_date .<= df[:, :date] .<= end_date, :]
+        df = df[start_date .<= df[:date] .<= end_date, :]
 
         if !m.testing
             save_data(m, df; cond_type=cond_type)
@@ -138,7 +138,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
         # Check that this source is actually used
         mnemonics = data_series[source]
         if isempty(mnemonics)
-            warn("No series were specified from $(string(source))")
+            @warn "No series were specified from $(string(source))"
             continue
         end
 
@@ -167,7 +167,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             if !in(lastdayofquarter(start_date), addl_data[:date]) ||
                 !in(lastdayofquarter(end_date), addl_data[:date])
 
-                warn("$file does not contain the entire date range specified; NaNs used.")
+                @warn "$file does not contain the entire date range specified; NaNs used."
             end
 
             # Make sure each mnemonic that was specified is present
@@ -189,12 +189,12 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             addl_data = DataFrame(fill(NaN, (size(df,1), length(mnemonics))))
             names!(addl_data, mnemonics)
             df = hcat(df, addl_data)
-            warn("$file was not found; NaNs used")
+            @warn "$file was not found; NaNs used"
         end
     end
 
     # turn NAs into NaNs
-    na2nan!(df)
+#    na2nan!(df)
 
     sort!(df, :date)
 
@@ -203,7 +203,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
         filename = inpath(m, "raw", "population_data_levels_$vint.csv")
         mnemonic = parse_population_mnemonic(m)[1]
         if !isnull(mnemonic)
-            CSV.write(filename, df[:,[:date, get(mnemonic)]])
+            CSV.write(filename, df[[:date, get(mnemonic)]])
         end
     end
 
@@ -230,7 +230,7 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
     # Prepare file name
     cond_vint = cond_vintage(m)
-    cond_idno = lpad(cond_id(m), 2, 0) # print as 2 digits
+    cond_idno = lpad(string(cond_id(m)), 2, string(0)) # print as 2 digits
     file = inpath(m, "cond", "cond_cdid=" * cond_idno * "_cdvt=" * cond_vint * ".csv")
 
     if isfile(file)
@@ -251,13 +251,13 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
 
             population_mnemonic = get(parse_population_mnemonic(m)[1])
             rename!(pop_forecast, :POPULATION =>  population_mnemonic)
-            na2nan!(pop_forecast)
-            format_dates!(:date, pop_forecast)
+            #DSGE.na2nan!(pop_forecast)
+            DSGE.format_dates!(:date, pop_forecast)
 
             cond_df = join(cond_df, pop_forecast, on=:date, kind=:left)
 
             # Turn NAs into NaNs
-            na2nan!(cond_df)
+            #na2nan!(cond_df)
             sort!(cond_df, :date)
 
             return cond_df
@@ -359,7 +359,7 @@ function isvalid_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
     # Ensure that no series is all NaN
     for col in setdiff(names(df), [:date])
         if all(isnan.(df[col]))
-            warn("df[$col] is all NaN.")
+            @warn "df[$col] is all NaN."
         end
     end
 
@@ -396,7 +396,7 @@ function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
         else
             date_mainsample_end(m)
         end
-        df1 = df1[start_date .<= df[:, :date] .<= end_date, :]
+        df1 = df1[start_date .<= df[:date] .<= end_date, :]
     end
 
     # Discard columns not used
@@ -404,7 +404,7 @@ function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
     sort!(cols, by = x -> m.observables[x])
     df1 = df1[cols]
 
-    return convert(Matrix{Float64}, df1)'
+    return convert(Matrix{Union{Missing, Float64}}, df1)'
 end
 
 """
@@ -416,7 +416,7 @@ Create a `DataFrame` out of the matrix `data`, including a `:date` column
 beginning in `start_date`.  Variable names and indices are obtained from
 `m.observables`.
 """
-function data_to_df{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T}, start_date::Date)
+function data_to_df(m::AbstractModel, data::Matrix{T}, start_date::Date) where {T<:AbstractFloat}
     # Check number of rows = number of observables
     nobs = n_observables(m)
     @assert size(data, 1) == nobs "Number of rows of data matrix ($(size(data, 1))) must equal number of observables ($nobs)"
@@ -489,8 +489,8 @@ function read_population_data(filename::String; verbose::Symbol = :low)
 
     df = CSV.read(filename)
 
-    na2nan!(df)
-    format_dates!(:date, df)
+    #DSGE.na2nan!(df)
+    DSGE.format_dates!(:date, df)
     sort!(df, :date)
 
     return df
@@ -529,14 +529,14 @@ function read_population_forecast(filename::String, population_mnemonic::Symbol;
         df = CSV.read(filename)
 
         rename!(df, :POPULATION => population_mnemonic)
-        na2nan!(df)
-        format_dates!(:date, df)
+        #DSGE.na2nan!(df)
+        DSGE.format_dates!(:date, df)
         sort!(df, :date)
 
-        return df[:, [:date, population_mnemonic]]
+        return df[[:date, population_mnemonic]]
     else
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            warn("No population forecast found")
+            @warn "No population forecast found"
         end
 
         return DataFrame()

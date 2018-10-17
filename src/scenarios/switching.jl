@@ -13,12 +13,12 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
 
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        info("Simulating switching for " * string(scen.key) * "...")
+        Base.@info "Simulating switching for " * string(scen.key) * "..."
         println("Start time: " * string(now()))
         println("Outputs will be saved in " * rawpath(m, "scenarios"))
-        tic()
     end
 
+    tic = time_ns()
     # Revert model alt policy to historical rule
     m <= Setting(:alternative_policy, AltPolicy(:historical, solve, eqcond), false, "apol",
                  "Alternative policy")
@@ -34,8 +34,12 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
 
     for (i, output_var) in enumerate([:forecastobs, :forecastpseudo])
         # Read in original and default draws
-        original_draws = load(original_output_files[output_var], "arr")
-        default_draws  = load(default_output_files[output_var], "arr")
+        original_draws = h5open(replace(original_output_files[output_var], "jld2" => "h5"), "r") do file
+            read(file, "arr")
+        end
+        default_draws  = h5open(replace(default_output_files[output_var], "jld2" => "h5")) do file
+            read(file, "arr")
+        end
 
         n_draws, n_vars, n_periods = size(original_draws)
         n_default_draws = size(default_draws, 1)
@@ -63,7 +67,7 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
 
     # Print
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        switching_time = toq()
+        switching_time = time_ns() - tic
         switching_time_min = switching_time/60
         println("\nTime elapsed: " * string(switching_time_min) * " minutes")
         println("Switching complete: " * string(now()))

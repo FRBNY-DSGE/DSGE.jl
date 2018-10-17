@@ -1,11 +1,12 @@
-using DSGE, JLD
+using DSGE, JLD2
+using Test
 
 path = dirname(@__FILE__)
 
 # Set up arguments
 m = AnSchorfheide(testing = true)
 
-system = jldopen("$path/../reference/forecast_args.jld","r") do file
+system = jldopen("$path/../reference/forecast_args.jld2","r") do file
     read(file, "system")
 end
 
@@ -14,12 +15,14 @@ states, obs, pseudo = impulse_responses(m, system)
 
 # Compare to expected output
 exp_states, exp_obs, exp_pseudo =
-    jldopen("$path/../reference/impulse_responses_out.jld", "r") do file
+    jldopen("$path/../reference/impulse_responses_out.jld2", "r") do file
         read(file, "exp_states"), read(file, "exp_obs"), read(file, "exp_pseudo")
     end
 
-@test_matrix_approx_eq exp_states states
-@test_matrix_approx_eq exp_obs    obs
-@test_matrix_approx_eq exp_pseudo pseudo
+@testset "Compare irfs to expected output" begin
+    @test @test_matrix_approx_eq exp_states states
+    @test @test_matrix_approx_eq exp_obs    obs
+    @test @test_matrix_approx_eq exp_pseudo pseudo
+end
 
 nothing

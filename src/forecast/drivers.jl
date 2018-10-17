@@ -29,10 +29,10 @@ necessary.
 - `output_vars`
 - `df`
 """
-function prepare_forecast_inputs!{S<:AbstractFloat}(m::AbstractModel{S},
+function prepare_forecast_inputs!(m::AbstractModel{S},
     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-    df::DataFrame = DataFrame(), subset_inds::Range{Int64} = 1:0,
-    verbose::Symbol = :none)
+    df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
+    verbose::Symbol = :none) where {S<:AbstractFloat}
 
     # Compute everything that will be needed to plot original output_vars
     output_vars = add_requisite_output_vars(output_vars)
@@ -86,12 +86,12 @@ Load and return parameter draws from Metropolis-Hastings.
 - `m::AbstractModel`: model object
 - `input_type::Symbol`: one of the options for `input_type` described in the
   documentation for `forecast_one`
-- `block_inds::Range{Int64}`: indices of the current block (already indexed by
+- `block_inds::AbstractRange{Int64}`: indices of the current block (already indexed by
   `jstep`) to be read in. Only used in second method
 
 ### Keyword Arguments
 
-- `subset_inds::Range{Int64}`: indices specifying the subset of draws to be read
+- `subset_inds::AbstractRange{Int64}`: indices specifying the subset of draws to be read
   in. Only used in first method
 - `verbose::Symbol`: desired frequency of function progress messages printed to
   standard out. One of `:none`, `:low`, or `:high`. If `:low` or greater, prints
@@ -103,7 +103,7 @@ Load and return parameter draws from Metropolis-Hastings.
   `Vector{Float64}`. Second method returns a `Vector{Vector{Float64}}` of
   parameter draws for this block.
 """
-function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::Range{Int64} = 1:0,
+function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0,
     verbose::Symbol = :low)
 
     input_file_name = get_forecast_input_file(m, input_type)
@@ -153,7 +153,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::Range{Int
     return params
 end
 
-function load_draws(m::AbstractModel, input_type::Symbol, block_inds::Range{Int64};
+function load_draws(m::AbstractModel, input_type::Symbol, block_inds::AbstractRange{Int64};
                     verbose::Symbol = :low)
 
     input_file_name = get_forecast_input_file(m, input_type)
@@ -166,7 +166,7 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::Range{Int6
             error("Must supply nonempty range of block_inds for this load_draws method")
         else
             ndraws = length(block_inds)
-            params = Vector{Vector{Float64}}(ndraws)
+            params = Vector{Vector{Float64}}(undef, ndraws)
             for (i, j) in zip(1:ndraws, block_inds)
                 if get_setting(m, :sampling_method) == :MH
                     params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
@@ -222,7 +222,7 @@ conditional data case given by `cond_type`.
 - `df::DataFrame`: Historical data. If `cond_type in [:semi, :full]`, then the
    final row of `df` should be the period containing conditional data. If not
    provided, will be loaded using `load_data` with the appropriate `cond_type`
-- `subset_inds::Range{Int64}`: indices specifying the draws we want to use. If a
+- `subset_inds::AbstractRange{Int64}`: indices specifying the draws we want to use. If a
   more sophisticated selection criterion is desired, the user is responsible for
   determining the indices corresponding to that criterion. If `input_type` is
   not `subset`, `subset_inds` will be ignored
@@ -239,7 +239,7 @@ None. Output is saved to files returned by
 """
 function forecast_one(m::AbstractModel{Float64},
     input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-    df::DataFrame = DataFrame(), subset_inds::Range{Int64} = 1:0,
+    df::DataFrame = DataFrame(), subset_inds::AbstractRange{Int64} = 1:0,
     forecast_string::String = "", verbose::Symbol = :low)
 
     ### Common Setup
@@ -257,7 +257,7 @@ function forecast_one(m::AbstractModel{Float64},
 
     # Print
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        info("Forecasting input_type = $input_type, cond_type = $cond_type...")
+        @Base.info "Forecasting input_type = $input_type, cond_type = $cond_type..."
         println("Start time: $(now())")
         println("Forecast outputs will be saved in $output_dir")
     end
@@ -267,18 +267,18 @@ function forecast_one(m::AbstractModel{Float64},
 
     if input_type in [:mode, :mean, :init]
 
-        tic()
+        toq = @elapsed let
+            params = load_draws(m, input_type; verbose = verbose)
+            forecast_output = forecast_one_draw(m, input_type, cond_type, output_vars,
+                                                params, df, verbose = verbose)
 
-        params = load_draws(m, input_type; verbose = verbose)
-        forecast_output = forecast_one_draw(m, input_type, cond_type, output_vars,
-                                            params, df, verbose = verbose)
-
-        write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
-                               forecast_output; df = df, block_number = Nullable{Int64}(),
-                               verbose = verbose)
+            write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
+                                   forecast_output; df = df, block_number = Nullable{Int64}(),
+                                   verbose = verbose)
+        end
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            total_forecast_time     = toq()
+            total_forecast_time     = toq
             total_forecast_time_min = total_forecast_time/60
 
             println("\nTotal time to forecast: $total_forecast_time_min minutes")
@@ -301,31 +301,34 @@ function forecast_one(m::AbstractModel{Float64},
         for block = start_block:nblocks
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println()
-                info("Forecasting block $block of $nblocks...")
+                @Base.info "Forecasting block $block of $nblocks..."
+               # @Base.info "Forecasting all blocks"
             end
-            tic()
+           toq = @elapsed let
 
-            # Get to work!
-            params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
+               # Get to work!
+               params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
+               #params = load_draws(m, input_type, block_inds[1][1]:block_inds[end][end]; verbose = verbose)
 
-            mapfcn = use_parallel_workers(m) ? pmap : map
-            forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
-                                                                 param, df, verbose = verbose),
-                                      params)
+               mapfcn = use_parallel_workers(m) ? pmap : map
+               forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
+                                                                    param, df, verbose = verbose),
+                                         params)
 
-            # Assemble outputs from this block and write to file
-            forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
-            forecast_output = assemble_block_outputs(forecast_outputs)
-            write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
-                                   forecast_output; df = df, block_number = Nullable(block),
-                                   verbose = block_verbose, block_inds = block_inds_thin[block],
-                                   subset_inds = subset_inds)
-            gc()
+               # Assemble outputs from this block and write to file
+               forecast_outputs = convert(Vector{Dict{Symbol, Array{Float64}}}, forecast_outputs)
+               forecast_output = assemble_block_outputs(forecast_outputs)
+               write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
+                                      forecast_output; df = df, block_number = Nullable(block),
+                                      verbose = block_verbose, block_inds = block_inds_thin[block],
+                                      subset_inds = subset_inds)
+               GC.gc()
+           end
 
             # Calculate time to complete this block, average block time, and
             # expected time to completion
             if VERBOSITY[verbose] >= VERBOSITY[:low]
-                block_time = toq()
+                block_time = toq
                 total_forecast_time += block_time
                 total_forecast_time_min     = total_forecast_time/60
                 blocks_elapsed              = block - start_block + 1
@@ -417,7 +420,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     irfs_only = all(x -> x == :irf, output_prods)
 
     # Compute state space
-    update!(m, params)
+    DSGE.update!(m, params)
     system = compute_system(m)
 
     # Initialize output dictionary
@@ -425,7 +428,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     # Decide whether to draw states/shocks in smoother/forecast
     uncertainty_override = forecast_uncertainty_override(m)
-    uncertainty = if isnull(uncertainty_override)
+    uncertainty = if Nullables.isnull(uncertainty_override)
         if input_type in [:init, :mode, :mean]
             false
         elseif input_type in [:full, :subset]
