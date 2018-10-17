@@ -1,4 +1,4 @@
-using DSGE, Base.Test
+using DSGE, Test
 
 # Initialize model object
 m = AnSchorfheide(testing = true)
@@ -43,7 +43,7 @@ end
     end
 
     s_T = zeros(n_states_augmented(m))
-    _, forecastobs, _, _ = forecast(m, sys, s_T, shocks = forecastshocks)
+    global _, forecastobs,_ ,_  = forecast(m, sys, s_T, shocks = forecastshocks)
     for var in scen.target_names
         i = m.observables[var]
         @test scen.targets[var] ≈ forecastobs[i, :]

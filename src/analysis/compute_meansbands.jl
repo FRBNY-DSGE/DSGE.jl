@@ -36,46 +36,51 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
                             verbose::Symbol = :low, df::DataFrame = DataFrame(),
                             kwargs...)
 
-    output_dir = workpath(m, "forecast")
-    println(verbose, :low)
-    info(verbose, :low, "Computing means and bands for input_type = $input_type, cond_type = $cond_type...")
-    println(verbose, :low, "Start time: $(now())")
-    println(verbose, :low, "Means and bands will be saved in $output_dir")
-    tic()
-
-    # Determine full set of output_vars necessary for plotting desired result
-    output_vars = add_requisite_output_vars(output_vars)
-
-    # Load population data and main dataset (required for some transformations)
-    if all(var -> get_product(var) == :irf, output_vars)
-        population_data, population_forecast = DataFrame(), DataFrame()
-    else
-        population_data, population_forecast = load_population_growth(m, verbose = verbose)
-        isempty(df) && (df = load_data(m, verbose = :none))
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        output_dir = workpath(m, "forecast")
+        println()
+        @Base.info "Computing means and bands for input_type = $input_type, cond_type = $cond_type..."
+        println("Start time: $(now())")
+        println("Means and bands will be saved in $output_dir")
     end
+    toq = @elapsed let
+        # Determine full set of output_vars necessary for plotting desired result
+        output_vars = add_requisite_output_vars(output_vars)
 
-    for output_var in output_vars
-        prod = get_product(output_var)
-        if prod in [:shockdec, :irf]
-            println(verbose, :high, "Computing " * string(output_var) * " for shocks:")
+        # Load population data and main dataset (required for some transformations)
+        if all(var -> get_product(var) == :irf, output_vars)
+            population_data, population_forecast = DataFrame(), DataFrame()
         else
-            print(verbose, :high, "Computing " * string(output_var) * "... ")
+            population_data, population_forecast = load_population_growth(m, verbose = verbose)
+            isempty(df) && (df = load_data(m, verbose = :none))
         end
+        for output_var in output_vars
+            prod = get_product(output_var)
+            if VERBOSITY[verbose] >= VERBOSITY[:high]
+                if prod in [:shockdec, :irf]
+                    println("Computing " * string(output_var) * " for shocks:")
+                else
+                    print("Computing " * string(output_var) * "... ")
+                end
+            end
 
-        # Compute means and bands
-        mb = compute_meansbands(m, input_type, cond_type, output_var, df;
-                                forecast_string = forecast_string,
-                                population_data = population_data,
-                                population_forecast = population_forecast,
-                                verbose = verbose,
-                                kwargs...)
-        gc()
+            # Compute means and bands
+            mb = compute_meansbands(m, input_type, cond_type, output_var, df;
+                                    forecast_string = forecast_string,
+                                    population_data = population_data,
+                                    population_forecast = population_forecast,
+                                    verbose = verbose,
+                                    kwargs...)
+            GC.gc()
+        end
     end
+    if VERBOSITY[verbose] >= VERBOSITY[:low]
+        total_mb_time     = toq
+        total_mb_time_min = total_mb_time/60
 
-    total_mb_time     = toq()
-    total_mb_time_min = total_mb_time/60
-    println(verbose, :low, "\nTotal time to compute means and bands: " * string(total_mb_time_min) * " minutes")
-    println(verbose, :low, "Computation of means and bands complete: " * string(now()))
+        println("\nTotal time to compute means and bands: " * string(total_mb_time_min) * " minutes")
+        println("Computation of means and bands complete: " * string(now()))
+    end
 end
 
 function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Symbol,
@@ -149,8 +154,11 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
                                           forecast_string = forecast_string)
     dirpath = dirname(filepath)
     isdir(dirpath) || mkpath(dirpath)
-    jldopen(filepath, "w") do file
-        write(file, "mb", mb)
+    jldopen(filepath, true, true, true, IOStream) do file
+        for (key, value) in mb
+            write(file, key, value)
+        end
+        #write(file, "mb", mb)
     end
 
     sep = prod in [:shockdec, :irf] ? "  " : ""
@@ -190,16 +198,17 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
                                               pop_growth = pop_growth)
 
     # Compute means and bands
-    means = vec(mean(transformed_series, 1))
+    means = vec(mean(transformed_series, dims= 1))
     bands = if product in [:shockdec, :dettrend, :trend] && !compute_shockdec_bands
         Dict{Symbol,DataFrame}()
     else
         find_density_bands(transformed_series, density_bands, minimize = minimize)
     end
+
     return means, bands
 end
 
-function mb_reverse_transform(fcast_series::Array{Float64}, transform::Function,
+function mb_reverse_transform(fcast_series::AbstractArray, transform::Function,
                               product::Symbol, class::Symbol;
                               y0_index::Int = -1,
                               data::AbstractVector{Float64} = Float64[],
@@ -222,7 +231,6 @@ function mb_reverse_transform(fcast_series::Array{Float64}, transform::Function,
         else
             Float64[]
         end
-
         reverse_transform(fcast_series, transform4q;
                           fourquarter = true, y0s = y0s,
                           pop_growth = pop_growth)

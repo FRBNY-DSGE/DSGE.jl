@@ -46,7 +46,7 @@ Note that the Cartesian product (product x class) is the set of options for
   `DataFrame`s containing confidence bands for each variable. See
   `find_density_bands` for more information.
 """
-type MeansBands
+mutable struct MeansBands
     metadata::Dict{Symbol,Any}
     means::DataFrame
     bands::Dict{Symbol,DataFrame}
@@ -77,8 +77,8 @@ function MeansBands()
                       :cond_type => :none, :para => :none,
                       :indices => Dict{Symbol, Int}(:none => 1))
 
-    means = DataFrame(date = [Date(0)], none = [0.0])
-    bands = Dict{Symbol,DataFrame}(:none => DataFrame(date = [Date(0)]))
+    means = DataFrame(date = [Dates.Date(0)], none = [0.0])
+    bands = Dict{Symbol,DataFrame}(:none => DataFrame(date = [Dates.Date(0)]))
 
     MeansBands(metadata, means, bands)
 end
@@ -113,7 +113,7 @@ Returns whether the `mb` object in question is a dummy.
 function Base.isempty(mb::MeansBands)
 
     return get_class(mb) == :none && get_product(mb) == :none &&
-        startdate_means(mb) == Date(0) &&
+        startdate_means(mb) == Dates.Date(0) &&
         collect(names(mb.means)) ==  [:date, :none] &&
         collect(keys(mb.bands)) ==  [:none]
 end
@@ -178,7 +178,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
 
     # compute means field
     means = vcat(mb1.means, mb2.means)
-    na2nan!(means)
+    #na2nan!(means)
 
     # compute bands field
     bands = Dict{Symbol, DataFrame}()
@@ -197,7 +197,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
         else
             vcat(fill(NaN, nperiods_mb1), mb2vars[var])
         end
-        na2nan!(bands[var])
+        #na2nan!(bands[var])
     end
 
     # compute metadata
@@ -230,14 +230,14 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     end
 
     # date indices
-    date_indices = Dict(d::Date => i::Int for (i, d) in enumerate(means[:date]))
+    date_indices = Dict(d::Dates.Date => i::Int for (i, d) in enumerate(means[:date]))
 
     # variable indices
     indices = Dict(var::Symbol => i::Int for (i, var) in enumerate(names(means)))
 
     # forecast string
     if isempty(forecast_string) && (mb1.metadata[:forecast_string] != mb2.metadata[:forecast_string])
-        warn("No forecast_string provided: using $(mb1.metadata[:forecast_string])")
+        @warn "No forecast_string provided: using $(mb1.metadata[:forecast_string])"
     end
     forecast_string = mb1.metadata[:forecast_string]
 
@@ -503,8 +503,8 @@ function which_density_bands(mb::MeansBands; uniquify=false, ordered=true)
         strs = map(string,names(mb.bands[var]))
         strs = setdiff(strs, ["date"])
 
-        lowers = strs[map(ismatch, repmat([r"LB"], length(strs)), strs)]
-        uppers = strs[map(ismatch, repmat([r"UB"], length(strs)), strs)]
+        lowers = strs[map(occursin, repeat([r"LB"], outer=length(strs)), strs)]
+        uppers = strs[map(occursin, repeat([r"UB"], outer=length(strs)), strs)]
 
         # sort
         if ordered
@@ -518,7 +518,6 @@ function which_density_bands(mb::MeansBands; uniquify=false, ordered=true)
         else
             [lowers; uppers]
         end
-
         return strs
     end
 end
@@ -588,8 +587,8 @@ prepare_meansbands_table_timeseries(mb, var)
 Returns a `DataFrame` of means and bands for a particular time series variable
 (either `hist` or `forecast` of some type). Columns are sorted such that the
 bands are ordered from smallest to largest, and the means are on the far
-right. For example, a `MeansBands` containing 50\% and 68\% bands would be
-ordered as follows: [68\% lower, 50\% lower, 50\% upper, 68\% upper, mean].
+right. For example, a `MeansBands` containing 50\\% and 68\\% bands would be
+ordered as follows: [68\\% lower, 50\\% lower, 50\\% upper, 68\\% upper, mean].
 
 ### Inputs
 
@@ -639,8 +638,8 @@ Returns a `DataFrame` of means and bands for a particular impulse
 response function of variable (observable, pseudoobservable, or state)
 `v` to shock `s`. Columns are sorted such that the bands are ordered from
 smallest to largest, and the means are on the far right. For example,
-a MeansBands object containing 50\% and 68\% bands would be ordered as
-follows: [68\% lower, 50\% lower, 50\% upper, 68\% upper, mean].
+a MeansBands object containing 50\\% and 68\\% bands would be ordered as
+follows: [68\\% lower, 50\\% lower, 50\\% upper, 68\\% upper, mean].
 
 ### Inputs
 - `mb::MeansBands`: time-series MeansBands object
@@ -725,8 +724,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     @assert get_product(mb_dettrend) == :dettrend "The third argument must be a MeansBands object for a deterministic trend"
 
     # Get the variable-shock combinations we want to print
-    varshocks = Symbol["$var" * DSGE_SHOCKDEC_DELIM * "$shock" for shock in shocks]
-
+    varshocks = [Symbol("$var" * DSGE_SHOCKDEC_DELIM * "$shock") for shock in shocks]
     # Fetch the columns corresponding to varshocks
     df_shockdec = mb_shockdec.means[union([:date], varshocks)]
     df_trend    = mb_trend.means[[:date, var]]
@@ -768,7 +766,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     for group in groups
         # Sum shock values for each group
         shock_vectors = [df[shock] for shock in group.shocks]
-        shock_sum = reduce(+, v0, shock_vectors)
+        shock_sum = reduce(+, shock_vectors; init = v0)
         df[Symbol(group.name)] = shock_sum
 
         # Delete original (ungrouped) shocks from df

@@ -1,4 +1,4 @@
-using DSGE, Base.Test, JLD
+using DSGE, Test, JLD2, OrderedCollections, HDF5
 
 # Initialize model object
 m = AnSchorfheide(testing = true)
@@ -19,9 +19,9 @@ dir = joinpath(saveroot(m), "output_data", "an_schorfheide", "ss0")
     @test get_forecast_input_file(m, :subset) == overrides[:subset]
 
     # get_forecast_filename
-    @test get_forecast_filename(m, :mode, :none, :histstates) == joinpath(dir, "forecast", "raw", "histstates_cond=none_para=mode_test.jld")
-    @test get_forecast_filename(m, :mode, :none, :histstates; pathfcn = workpath) == joinpath(dir, "forecast", "work", "histstates_cond=none_para=mode_test.jld")
-    @test get_forecast_filename(m, :mode, :none, :histstates; forecast_string = "test") == joinpath(dir, "forecast", "raw", "histstates_cond=none_fcid=test_para=mode_test.jld")
+    @test get_forecast_filename(m, :mode, :none, :histstates) == joinpath(dir, "forecast", "raw", "histstates_cond=none_para=mode_test.jld2")
+    @test get_forecast_filename(m, :mode, :none, :histstates; pathfcn = workpath) == joinpath(dir, "forecast", "work", "histstates_cond=none_para=mode_test.jld2")
+    @test get_forecast_filename(m, :mode, :none, :histstates; forecast_string = "test") == joinpath(dir, "forecast", "raw", "histstates_cond=none_fcid=test_para=mode_test.jld2")
     @test get_forecast_filename(m, :mode, :none, :histstates; fileformat = :h5) == joinpath(dir, "forecast", "raw", "histstates_cond=none_para=mode_test.h5")
 
     # get_forecast_filestring_addl
@@ -79,7 +79,7 @@ dir = joinpath(saveroot(m), "output_data", "an_schorfheide", "ss0")
         end
     end
     jldopen(dict[:irfobs], "r") do file
-        @test !HDF5.exists(file, "date_indices")
+        @test !haskey(file, "date_indices")
         @test all(x -> x == Symbol("DSGE.identity"), values(read(file, "observable_revtransforms")))
     end
 end

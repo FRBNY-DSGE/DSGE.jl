@@ -1,5 +1,5 @@
 using DSGE
-using Base.Test, DataFrames, HDF5
+using Test, DataFrames, HDF5
 
 path = dirname(@__FILE__)
 
@@ -8,7 +8,7 @@ path = dirname(@__FILE__)
     if haskey(ENV, "FRED_API_KEY") || isfile(joinpath(ENV["HOME"],".freddatarc"))
 
         # Specify vintage and dates
-        custom_settings = Dict{Symbol, Setting}(
+        global custom_settings = Dict{Symbol, Setting}(
                 :data_vintage            => Setting(:data_vintage, "160812"),
                 :cond_vintage            => Setting(:cond_vintage, "160812"),
                 :cond_id                 => Setting(:cond_id, 0),
@@ -17,12 +17,12 @@ path = dirname(@__FILE__)
                 :date_conditional_end    => Setting(:date_forecast_start, quartertodate("2016-Q3")),
                 :n_anticipated_shocks    => Setting(:n_anticipated_shocks, 6))
 
-        m = Model990(custom_settings = custom_settings, testing = true)
+        global m = Model990(custom_settings = custom_settings, testing = true)
 
         # Read expected results
         exp_data, exp_cond_data, exp_semicond_data =
-            h5open("$path/../reference/load_data_out.h5", "r") do h5
-                read(h5, "data"), read(h5, "cond_data"), read(h5, "semicond_data")
+            jldopen("$path/../reference/load_data_out.jld2", "r") do file
+                read(file, "data"), read(file, "cond_data"), read(file, "semi_cond_data")
             end
 
         # Unconditional data
@@ -41,7 +41,7 @@ path = dirname(@__FILE__)
         semicond_data = df_to_matrix(m, semicond_df; cond_type=:semi)
         @test @test_matrix_approx_eq exp_semicond_data semicond_data
     else
-        warn("Skipping load_data test because FRED_API_KEY not present")
+        @warn "Skipping load_data test because FRED_API_KEY not present"
     end
 end
 

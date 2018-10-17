@@ -1,7 +1,7 @@
 """
 ```
-pseudo_measurement{T<:AbstractFloat}(m::AnSchorfheide{T},
-    TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T})
+pseudo_measurement(m::AnSchorfheide{T},
+    TTT::Matrix{T}, RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
 ```
 
 Assign pseudo-measurement equation (a linear combination of states):
@@ -10,10 +10,10 @@ Assign pseudo-measurement equation (a linear combination of states):
 x_t = ZZ_pseudo*s_t + DD_pseudo
 ```
 """
-function pseudo_measurement{T<:AbstractFloat}(m::AnSchorfheide{T},
-                                              TTT::Matrix{T},
-                                              RRR::Matrix{T},
-                                              CCC::Vector{T})
+function pseudo_measurement(m::AnSchorfheide{T},
+                            TTT::Matrix{T},
+                            RRR::Matrix{T},
+                            CCC::Vector{T}) where {T<:AbstractFloat}
     endo   = m.endogenous_states
     pseudo = m.pseudo_observables
 

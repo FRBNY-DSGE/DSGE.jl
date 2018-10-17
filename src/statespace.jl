@@ -7,16 +7,16 @@ The transition equation of the state-space model takes the form
 
 The `Transition` type stores the coefficient `Matrix{T}`s (`TTT`, `RRR`) and constant `Vector{T} CCC`.
 """
-type Transition{T<:AbstractFloat}
+mutable struct Transition{T<:AbstractFloat}
     TTT::Matrix{T}
     RRR::Matrix{T}
     CCC::Vector{T}
 end
-function Transition{T<:AbstractFloat}(TTT::Matrix{T}, RRR::Matrix{T})
+function Transition(TTT::Matrix{T}, RRR::Matrix{T}) where T <: AbstractFloat
     CCC = zeros(eltype(TTT), size(TTT, 1))
     Transition{T}(TTT, RRR, CCC)
 end
-function Transition{T<:AbstractFloat}(TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
+function Transition(TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T}) where T <: AbstractFloat
     Transition{T}(TTT, RRR, collect(CCC))
 end
 function Base.getindex(eq::Transition, d::Symbol)
@@ -47,7 +47,7 @@ observables `y_t`, and `Ne` is the number of shocks `ϵ_t`:
 - `QQ`: the `Ne` x `Ne` covariance matrix for the shocks `ϵ_t`
 - `EE`: the `Ny` x `Ny` covariance matrix for the measurement error `η_t`
 """
-type Measurement{T<:AbstractFloat}
+mutable struct Measurement{T<:AbstractFloat}
     ZZ::Matrix{T}
     DD::Vector{T}
     QQ::Matrix{T}
@@ -86,7 +86,7 @@ pseudo-observables `x_t`:
 - `ZZ_pseudo`: the `Nx` x `Ns` pseudo-measurement matrix
 - `DD_pseudo`: the `Nx` x 1 constant vector
 """
-type PseudoMeasurement{T<:AbstractFloat}
+mutable struct PseudoMeasurement{T<:AbstractFloat}
     ZZ_pseudo::Matrix{T}
     DD_pseudo::Vector{T}
 end
@@ -106,13 +106,13 @@ A type containing the transition and measurement equations for a
 state-space model. The matrices may be directly indexed: `sys[:TTT]`
 returns `sys.transition.TTT`, etc.
 """
-type System{T<:AbstractFloat}
+mutable struct System{T<:AbstractFloat}
     transition::Transition{T}
     measurement::Measurement{T}
     pseudo_measurement::PseudoMeasurement{T}
 end
 
-function System{T<:AbstractFloat}(transition::Transition{T}, measurement::Measurement{T})
+function System(transition::Transition{T}, measurement::Measurement{T}) where T <: AbstractFloat
     # Initialize empty pseudo-measurement equation
     _n_states = size(transition.TTT, 1)
     _n_pseudo = 0
@@ -126,11 +126,11 @@ end
 function Base.getindex(system::System, d::Symbol)
     if d in (:transition, :measurement, :pseudo_measurement)
         return getfield(system, d)
-    elseif d in fieldnames(system.transition)
+    elseif d in fieldnames(typeof(system.transition))
         return getfield(system.transition, d)
-    elseif d in fieldnames(system.measurement)
+    elseif d in fieldnames(typeof(system.measurement))
         return getfield(system.measurement, d)
-    elseif d in fieldnames(system.pseudo_measurement)
+    elseif d in fieldnames(typeof(system.pseudo_measurement))
         return getfield(system.pseudo_measurement, d)
     else
         throw(KeyError(d))
@@ -152,7 +152,7 @@ compute_system(m; apply_altpolicy = false)
 Given the current model parameters, compute the state-space system
 corresponding to model `m`. Returns a `System` object.
 """
-function compute_system{T<:AbstractFloat}(m::AbstractModel{T}; apply_altpolicy = false)
+function compute_system(m::AbstractModel{T}; apply_altpolicy = false) where T <: AbstractFloat
     # Solve model
     TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy)
     transition_equation = Transition(TTT, RRR, CCC)
@@ -161,7 +161,7 @@ function compute_system{T<:AbstractFloat}(m::AbstractModel{T}; apply_altpolicy =
     measurement_equation = measurement(m, TTT, RRR, CCC)
 
     type_tuple = (typeof(m), Matrix{T}, Matrix{T}, Vector{T})
-    if method_exists(pseudo_measurement, type_tuple)
+    if hasmethod(pseudo_measurement, type_tuple)
         # Solve pseudo-measurement equation
         pseudo_measurement_equation = pseudo_measurement(m, TTT, RRR, CCC)
         return System(transition_equation, measurement_equation, pseudo_measurement_equation)
@@ -172,7 +172,7 @@ end
 
 """
 ```
-compute_system_function{S<:AbstractFloat}(system::System{S})
+compute_system_function(system::System{S}) where S<:AbstractFloat
 ```
 
 ### Inputs
@@ -186,7 +186,7 @@ compute_system_function{S<:AbstractFloat}(system::System{S})
 - `F_ϵ::Distributions.MvNormal`: shock distribution
 - `F_u::Distributions.MvNormal`: measurement error distribution
 """
-function compute_system_function{S<:AbstractFloat}(system::System{S})
+function compute_system_function(system::System{S}) where S <: AbstractFloat
     # Unpack system
     TTT    = system[:TTT]
     RRR    = system[:RRR]
@@ -209,7 +209,7 @@ function compute_system_function{S<:AbstractFloat}(system::System{S})
     return Φ, Ψ, F_ϵ, F_u
 end
 
-function zero_system_constants{S<:AbstractFloat}(system::System{S})
+function zero_system_constants(system::System{S}) where S <: AbstractFloat
     system = copy(system)
 
     system.transition.CCC = zeros(size(system[:CCC]))

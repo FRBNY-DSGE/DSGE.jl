@@ -1,5 +1,5 @@
 using BenchmarkTools
-using JLD
+using JLD2
 
 """
 ```
@@ -135,8 +135,8 @@ function print_single_benchmark(trial::Dict{Symbol, Union{Vector, Int}},
                            calc_stat(prev_trial[factor]), times, group)
 end
 
-function print_single_benchmark{T<:Real}(title::Symbol, new::T, old::T, times::Bool = false,
-                                         group::Bool = false)
+function print_single_benchmark(title::Symbol, new::T, old::T, times::Bool = false,
+                                group::Bool = false) where {T<:Real}
     bad_state = times ? "slower" : "larger"
     good_state = times ? "faster" : "smaller"
 

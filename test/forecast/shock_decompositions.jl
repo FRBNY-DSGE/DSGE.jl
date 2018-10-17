@@ -1,4 +1,4 @@
-using DSGE, JLD
+using DSGE, JLD2
 
 path = dirname(@__FILE__)
 
@@ -7,13 +7,13 @@ m = AnSchorfheide(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 m <= Setting(:forecast_horizons, 1)
 
-system, histshocks = jldopen("$path/../reference/forecast_args.jld","r") do file
+system, histshocks = jldopen("$path/../reference/forecast_args.jld2","r") do file
     read(file, "system"), read(file, "histshocks")
 end
 
 # Read expected output
 exp_states, exp_obs, exp_pseudo =
-    jldopen("$path/../reference/shock_decompositions_out.jld", "r") do file
+    jldopen("$path/../reference/shock_decompositions_out.jld2", "r") do file
         read(file, "exp_states"), read(file, "exp_obs"), read(file, "exp_pseudo")
     end
 
@@ -27,7 +27,8 @@ states, obs, pseudo = shock_decompositions(m, system, histshocks)
 end
 
 # With shockdec_startdate null
-m <= Setting(:shockdec_startdate, Nullable{Date}())
+#m <= Setting(:shockdec_startdate, Nullable{Date}())
+m <= Setting(:shockdec_startdate, nothing)
 states, obs, pseudo = shock_decompositions(m, system, histshocks)
 
 @testset "Test shockdec with null startdate" begin

@@ -149,12 +149,12 @@ shockdec
                                       detexify_shocks = false,
                                       groups = groups)
     dates = df[:date]
-    xnums = (1:length(dates)) - 0.5
+    xnums = (1:length(dates)) .- 0.5
 
     # Assign date ticks
-    inds = intersect(find(x -> start_date .<= x .<= end_date,  dates),
-                     find(x -> Dates.month(x) == 3,            dates),
-                     find(x -> Dates.year(x) % tick_size == 0, dates))
+    inds = intersect(findall(x -> start_date .<= x .<= end_date,  dates),
+                     findall(x -> Dates.month(x) == 3,            dates),
+                     findall(x -> Dates.year(x) % tick_size == 0, dates))
     xticks --> (xnums[inds], map(Dates.year, dates[inds]))
 
     # Set date axis limits

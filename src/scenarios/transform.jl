@@ -34,6 +34,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
     println(verbose, :low, "Means and bands will be saved in " * workpath(m, "scenarios"))
     tic()
 
+    tic = time_ns()
     # Revert model alt policy to historical rule
     m <= Setting(:alternative_policy, AltPolicy(:historical, solve, eqcond), false, "apol",
                  "Alternative policy")
@@ -102,7 +103,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_v
     transformed_series = scenario_mb_reverse_transform(fcast_series, transform, product)
 
     # Compute means and bands
-    means = vec(mean(transformed_series, 1))
+    means = vec(mean(transformed_series, dims=1))
     bands = find_density_bands(transformed_series, density_bands, minimize = minimize)
     return means, bands
 end

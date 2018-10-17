@@ -1,6 +1,5 @@
 using DSGE
-using Distributions
-using Base.Test
+using Distributions, Test
 
 # Test Parameter type
 
@@ -72,15 +71,15 @@ cx = 2 * (α - 1/2)
 end
 
 m = AnSchorfheide()
-lastparam = parameter(:p, 0.0)
-for θ in m.parameters
-    isa(θ, Parameter) && (lastparam = θ)
+let lastparam = parameter(:p, 0.0)
+    for θ in m.parameters
+        isa(θ, Parameter) && (lastparam = θ)
+    end
+    @testset "Check AnSchorfheide last parameter" begin
+        @test isa(lastparam, Parameter)
+        @test lastparam.value == 0.20*2.237937
+    end
 end
-@testset "Check AnSchorfheide last parameter" begin
-    @test isa(lastparam, Parameter)
-    @test lastparam.value == 0.20*2.237937
-end
-
 # transform_to_real_line and transform_to_model_space, acting on the entire parameter vector. they should be inverses!
 pvec = m.parameters
 vals = transform_to_real_line(pvec)
@@ -125,7 +124,7 @@ vint = Setting(:data_vintage, "REF", true, "vint", "Date of data") # full constr
     m.testing = false
     m <= Setting(:n_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Hastings")
     @test m.settings[:n_mh_blocks].value == 5
-    @test ismatch(r"^\s*_mhbk=5_vint=(\d{6})", DSGE.filestring(m))
+    @test occursin(r"^\s*_mhbk=5_vint=(\d{6})", DSGE.filestring(m))
     DSGE.filestring(m, "key=val")
     DSGE.filestring(m, ["key=val", "foo=bar"])
     m.testing = true

@@ -176,8 +176,8 @@ function init_observable_mappings!(m::Model1010)
         # Another note: There were no 20-year treasuries between
         #       1987-1993. Therefore, we use the LTGOVTBD series until 2000, then splice in the GS20 series.
 
-        start_splice = Date("1987-03-31")
-        end_splice   = Date("1993-09-30")
+        start_splice = Dates.Date("1987-03-31")
+        end_splice   = Dates.Date("1993-09-30")
 
         stopgap_dates   = start_splice .<= levels[:date] .<= end_splice
         avg_stopgap     = (levels[stopgap_dates, :GS10] + levels[stopgap_dates, :GS30]) / 2.
