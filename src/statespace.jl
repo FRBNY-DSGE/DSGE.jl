@@ -155,7 +155,7 @@ corresponding to model `m`. Returns a `System` object.
 function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
                         verbose::Symbol = :high) where T <: AbstractFloat
     # Solve model
-    TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy, verbose = verbose)
+    TTT, RRR, CCC = solve(m; apply_altpolicy = apply_altpolicy) #, verbose = verbose)
     transition_equation = Transition(TTT, RRR, CCC)
 
     # Solve measurement equation
