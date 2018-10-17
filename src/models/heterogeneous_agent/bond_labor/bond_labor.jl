@@ -358,41 +358,6 @@ function model_settings!(m::BondLabor)
     m <= Setting(:jump_indices, 3:4, "Which indices of m.endogenous_states correspond to jump
                  variables")
 
-    # Note, these settings assume normalization.
-    # The n degrees of freedom removed depends on the distributions/dimensions
-    # of heterogeneity that we have discretized over, in this case,
-    # cash on hand and the skill distribution. In general the rule of
-    # thumb is, remove one degree of freedom for the first endogenous distribution (cash on
-    # hand), then one additional degree of freedom for each exogenous distribution (skill
-    # distribution). Multiple endogenous distributions only permit removing a single degree
-    # of freedom since it is then non-trivial to obtain the marginal distributions.
-    m <= Setting(:n_degrees_of_freedom_removed, 2, "Number of degrees of freedom from the
-                 distributional variables to remove.")
-    n_dof_removed = get_setting(m, :n_degrees_of_freedom_removed)
-    m <= Setting(:n_backward_looking_distributional_vars, 1, "Number of state variables that are
-                 distributional variables.")
-    n_backlook_dists = get_setting(m, :n_backward_looking_distributional_vars)
-    m <= Setting(:backward_looking_states_normalization_factor,
-                 n_dof_removed*n_backlook_dists, "The number of dimensions removed from the
-                 backward looking state variables for the normalization.")
-    m <= Setting(:n_backward_looking_states, 151 - get_setting(m, :backward_looking_states_normalization_factor),
-                 "Number of state variables, in the true sense (fully
-                  backward looking) accounting for the discretization across the grid.")
-    m <= Setting(:n_jump_distributional_vars, 0, "Number of jump variables that are distributional
-                 variables.")
-    n_jump_dists = get_setting(m, :n_jump_distributional_vars)
-    m <= Setting(:jumps_normalization_factor,
-                 n_dof_removed*n_jump_dists, "The number of dimensions removed from the
-                 jump variables for the normalization.")
-    m <= Setting(:n_jumps, 151 - get_setting(m, :jumps_normalization_factor),
-                 "Number of jump variables (forward looking) accounting for
-                  the discretization across the grid")
-
-    m <= Setting(:n_model_states, get_setting(m, :n_backward_looking_states) + get_setting(m, :n_jumps),
-                 "Number of 'states' in the state space model. Because backward and forward
-                 looking variables need to be explicitly tracked for the Klein solution
-                 method, we have n_states and n_jumps")
-
     # Mollifier setting parameters
     m <= Setting(:In, 0.443993816237631, "Normalizing constant for the mollifier")
     m <= Setting(:elo, 0.0, "Lower bound on stochastic consumption commitments")
@@ -411,4 +376,68 @@ function model_settings!(m::BondLabor)
     # Total grid x*s
     m <= Setting(:n, get_setting(m, :nx) * get_setting(m, :ns), "Total grid size, multiplying
                  across grid dimensions.")
+
+    # Function-valued variables include distributional variables
+    m <= Setting(:n_function_valued_backward_looking_states, 1, "Number of function-valued
+                 backward looking state variables")
+    m <= Setting(:n_backward_looking_distributional_vars, 1, "Number of state variables that are
+                 distributional variables.")
+    m <= Setting(:n_function_valued_jumps, 1, "Number of function-valued jump variables")
+    m <= Setting(:n_jump_distributional_vars, 0, "Number of jump variables that are distributional
+                 variables.")
+
+    # Note, these settings assume normalization.
+    # The n degrees of freedom removed depends on the distributions/dimensions
+    # of heterogeneity that we have discretized over, in this case,
+    # cash on hand and the skill distribution. In general the rule of
+    # thumb is, remove one degree of freedom for the first endogenous distribution (cash on
+    # hand), then one additional degree of freedom for each exogenous distribution (skill
+    # distribution). Multiple endogenous distributions only permit removing a single degree
+    # of freedom since it is then non-trivial to obtain the marginal distributions.
+    m <= Setting(:n_degrees_of_freedom_removed, 2, "Number of degrees of freedom from the
+                 distributional variables to remove.")
+    n_dof_removed = get_setting(m, :n_degrees_of_freedom_removed)
+
+    ####################################################
+    # Calculating the number of backward-looking states
+    ####################################################
+    n_backward_looking_distr_vars = get_setting(m, :n_backward_looking_distributional_vars)
+    m <= Setting(:backward_looking_states_normalization_factor,
+                 n_dof_removed*n_backward_looking_distr_vars, "The number of dimensions removed from the
+                 backward looking state variables for the normalization.")
+
+    n = get_setting(m, :n)
+    n_backward_looking_vars = length(get_setting(m, :state_indices))
+    n_backward_looking_function_valued_vars = get_setting(m, :n_function_valued_backward_looking_states)
+    n_backward_looking_scalar_vars = n_backward_looking_vars - n_backward_looking_function_valued_vars
+
+    m <= Setting(:n_backward_looking_states, n*n_backward_looking_distr_vars +
+                 n_backward_looking_scalar_vars - get_setting(m, :backward_looking_states_normalization_factor),
+                 "Number of state variables, in the true sense (fully
+                  backward looking) accounting for the discretization across the grid
+                  of function-valued variables and the normalization of
+                  distributional variables.")
+
+    ##################################
+    # Calculating the number of jumps
+    ##################################
+    n_jump_distr_vars = get_setting(m, :n_jump_distributional_vars)
+    m <= Setting(:jumps_normalization_factor,
+                 n_dof_removed*n_jump_distr_vars, "The number of dimensions removed from the
+                 jump variables for the normalization.")
+
+    n_jump_vars = length(get_setting(m, :jump_indices))
+    n_jump_function_valued_vars = get_setting(m, :n_function_valued_jumps)
+    n_jump_scalar_vars = n_jump_vars - n_jump_function_valued_vars
+
+    m <= Setting(:n_jumps, n*n_jump_function_valued_vars +
+                 n_jump_scalar_vars - get_setting(m, :jumps_normalization_factor),
+                 "Number of jump variables (forward looking) accounting for
+                  the discretization across the grid of function-valued variables and the
+                  normalization of distributional variables.")
+
+    m <= Setting(:n_model_states, get_setting(m, :n_backward_looking_states) + get_setting(m, :n_jumps),
+                 "Number of 'states' in the state space model. Because backward and forward
+                 looking variables need to be explicitly tracked for the Klein solution
+                 method, we have n_states and n_jumps")
 end
