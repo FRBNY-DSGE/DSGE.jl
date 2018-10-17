@@ -287,11 +287,13 @@ function forecast_one(m::AbstractModel{Float64},
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println()
                 @Base.info "Forecasting block $block of $nblocks..."
+               # @Base.info "Forecasting all blocks"
             end
            toq = @elapsed let
 
                # Get to work!
                params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
+               #params = load_draws(m, input_type, block_inds[1][1]:block_inds[end][end]; verbose = verbose)
 
                mapfcn = use_parallel_workers(m) ? pmap : map
                forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,

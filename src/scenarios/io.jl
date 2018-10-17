@@ -193,13 +193,15 @@ function read_scenario_output(m::AbstractModel, scen::SingleScenario, class::Sym
     # Get filename
     filename = get_scenario_mb_input_file(m, scen, Symbol(product, class))
 
-    jldopen(filename, "r") do file
+    h5open(replace(filename, "jld2" => "h5"), "r") do file
+    #jldopen(filename, "r") do file
         # Read forecast outputs
         fcast_series = read_forecast_series(file, class, product, var_name)
 
         # Parse transform
         class_long = get_class_longname(class)
-        transforms = read(file, string(class_long) * "_revtransforms")
+        transforms = load(replace(file.filename, "h5" => "jld2"), string(class_long) * "_revtransforms")
+        #transforms = load(file, string(class_long) * "_revtransforms")
         transform = parse_transform(transforms[var_name])
 
         fcast_series, transform

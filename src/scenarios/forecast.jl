@@ -144,7 +144,9 @@ function write_scenario_forecasts(m::AbstractModel,
         filepath = scenario_output_files[var]
         jldopen(filepath, "w") do file
             write_forecast_metadata(m, file, var)
-            write(file, "arr", forecast_output[var])
+        end
+        h5open(replace(filepath, "jld2" => "h5"), "w") do file
+            write(file, "arr", Array{Float64}(forecast_output[var]))
             if :proportion_switched in keys(scenario_output_files)
                 write(file, "proportion_switched", forecast_output[:proportion_switched][i])
             end
@@ -199,7 +201,6 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
     forecast_output = assemble_block_outputs(forecast_outputs)
     output_files = get_scenario_output_files(m, scen, [:forecastobs, :forecastpseudo])
     write_scenario_forecasts(m, output_files, forecast_output, verbose = verbose)
-
     # Print
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         forecast_time = time_ns() - tic
