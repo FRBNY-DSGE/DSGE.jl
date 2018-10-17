@@ -250,12 +250,12 @@ distribution of the parameters.
    - `:high`: Status updates provided at each draw.
 ```
 """
-function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
+function metropolis_hastings(propdist::Distribution,
                                                m::AbstractModel,
                                                data::Matrix{T},
                                                cc0::T,
                                                cc::T;
-                                               verbose::Symbol=:low)
+                                               verbose::Symbol=:low) where T<: AbstractFloat
 
 
     # If testing, set the random seeds at fixed numbers
