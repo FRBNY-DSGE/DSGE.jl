@@ -34,8 +34,12 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
 
     for (i, output_var) in enumerate([:forecastobs, :forecastpseudo])
         # Read in original and default draws
-        original_draws = load(original_output_files[output_var], "arr")
-        default_draws  = load(default_output_files[output_var], "arr")
+        original_draws = h5open(replace(original_output_files[output_var], "jld2" => "h5"), "r") do file
+            read(file, "arr")
+        end
+        default_draws  = h5open(replace(default_output_files[output_var], "jld2" => "h5")) do file
+            read(file, "arr")
+        end
 
         n_draws, n_vars, n_periods = size(original_draws)
         n_default_draws = size(default_draws, 1)
