@@ -2,9 +2,9 @@ using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStru
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra
 
 my_tests = [
-            "core",
+            #="core",
             "parameters",
-            "models/an_schorfheide/an_schorfheide",
+            "models/an_schorfheide/an_schorfheide", =#
             "models/smets_wouters/smets_wouters",
             "models/m990/m990",
             "models/m1002/m1002",
