@@ -6,7 +6,7 @@ get_scenario_input_file(m, scen::Scenario)
 Get file name of raw scenario targets from `inpath(m, \"scenarios\")`.
 """
 function get_scenario_input_file(m::AbstractModel, scen::Scenario)
-    basename = string(scen.key) * "_" * scen.vintage * ".jld"
+    basename = string(scen.key) * "_" * scen.vintage * ".jld2"
     return inpath(m, "scenarios", basename)
 end
 
@@ -21,8 +21,8 @@ Return the number of draws for `scen`, determined using
 """
 function count_scenario_draws!(m::AbstractModel, scen::Scenario)
     input_file = get_scenario_input_file(m, scen)
-    draws = h5open(input_file, "r") do file
-        dataset = HDF5.o_open(file, "arr")
+    draws = jldopen(input_file, "r") do file
+        dataset = file["arr"]
         size(dataset)[1]
     end
     scen.n_draws = draws
@@ -38,21 +38,16 @@ Add the targets from the `draw_index`th draw of the raw scenario targets to
 `scen.targets`.
 """
 function load_scenario_targets!(m::AbstractModel, scen::Scenario, draw_index::Int)
-    if isempty(scen.target_names)
-        n_periods = forecast_horizons(m)
-        for target in keys(m.observables)
-            scen.targets[target] = fill(NaN, n_periods)
-        end
-    else
-        path = get_scenario_input_file(m, scen)
-        raw_targets = squeeze(h5read(path, "arr", (draw_index, :, :)), 1)
-        target_inds = load(path, "target_indices")
+    path = get_scenario_input_file(m, scen)
+    file = load(path)
+    raw_targets = file["arr"][draw_index, :, :]
+    #raw_targets = squeeze(h5read(path, "arr", (draw_index, :, :)), 1)
+    target_inds = load(path, "target_indices")
 
-        @assert collect(keys(target_inds)) == scen.target_names "Target indices in $path do not match target names in $(scen.key)"
+    @assert collect(keys(target_inds)) == scen.target_names "Target indices in $path do not match target names in $(scen.key)"
 
-        for (target_name, target_index) in target_inds
-            scen.targets[target_name] = raw_targets[target_index, :]
-        end
+    for (target_name, target_index) in target_inds
+        scen.targets[target_name] = raw_targets[target_index, :]
     end
 
     return scen.targets
@@ -61,7 +56,7 @@ end
 """
 ```
 get_scenario_filename(m, scen::AbstractScenario, output_var;
-    pathfcn = rawpath, fileformat = :jld, directory = "")
+    pathfcn = rawpath, fileformat = :jld2, directory = "")
 ```
 
 Get scenario file name of the form
@@ -71,7 +66,7 @@ will be returned instead.
 """
 function get_scenario_filename(m::AbstractModel, scen::AbstractScenario, output_var::Symbol;
                                pathfcn::Function = rawpath,
-                               fileformat::Symbol = :jld,
+                               fileformat::Symbol = :jld2,
                                directory::String = "")
     filestring_addl = Vector{String}()
     if isa(scen, SingleScenario)
@@ -116,8 +111,8 @@ Call `get_scenario_filename` while replacing `forecastut` and `forecast4q` in
 """
 function get_scenario_mb_input_file(m::AbstractModel, scen::AbstractScenario, output_var::Symbol)
     input_file = get_scenario_filename(m, scen, output_var)
-    input_file = replace(input_file, "forecastut", "forecast")
-    input_file = replace(input_file, "forecast4q", "forecast")
+    input_file = replace(input_file, "forecastut" => "forecast")
+    input_file = replace(input_file, "forecast4q" => "forecast")
     return input_file
 end
 
@@ -169,7 +164,7 @@ function get_scenario_mb_metadata(m::AbstractModel, agg::ScenarioAggregate, outp
         end
 
         # Throw error if start date for this scenario doesn't match
-        if map(reverse, scen_dates)[1] != start_date
+        if Dict([reverse(scen_date) for scen_date = pairs(scen_dates)])[1] != start_date
             error("All scenarios in agg must start from the same date")
         end
 
@@ -200,13 +195,15 @@ function read_scenario_output(m::AbstractModel, scen::SingleScenario, class::Sym
     # Get filename
     filename = get_scenario_mb_input_file(m, scen, Symbol(product, class))
 
-    jldopen(filename, "r") do file
+    h5open(replace(filename, "jld2" => "h5"), "r") do file
+    #jldopen(filename, "r") do file
         # Read forecast outputs
         fcast_series = read_forecast_series(file, class, product, var_name)
 
         # Parse transform
         class_long = get_class_longname(class)
-        transforms = read(file, string(class_long) * "_revtransforms")
+        transforms = load(replace(file.filename, "h5" => "jld2"), string(class_long) * "_revtransforms")
+        #transforms = load(file, string(class_long) * "_revtransforms")
         transform = parse_transform(transforms[var_name])
 
         fcast_series, transform
@@ -217,7 +214,7 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
                               product::Symbol, var_name::Symbol)
     # Aggregate scenarios
     nscens = length(agg.scenarios)
-    agg_draws = Vector{Matrix{Float64}}(nscens)
+    agg_draws = Vector{Matrix{Float64}}(undef, nscens)
 
     # If not sampling, initialize vector to record number of draws in each
     # scenario in order to update `agg.proportions` and `agg.total_draws` at the
@@ -250,7 +247,7 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
                 else
                     quotient  = convert(Int, floor(actual_ndraws / desired_ndraws))
                     remainder = actual_ndraws % desired_ndraws
-                    vcat(repmat(1:actual_ndraws, quotient),
+                    vcat(repeat(1:actual_ndraws, outer = quotient),
                          sample(1:actual_ndraws, remainder, replace = false))
                 end
             end
@@ -264,7 +261,7 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
     end
 
     # Stack draws from all component scenarios
-    fcast_series = cat(1, agg_draws...)
+    fcast_series = cat(agg_draws..., dims = 1)
 
     # If not sampling, update `agg.proportions` and `agg.total_draws`
     if !agg.sample

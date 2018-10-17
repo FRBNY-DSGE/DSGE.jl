@@ -1,4 +1,4 @@
-using Base: Test
+using Test
 using HDF5
 using DSGE
 
@@ -15,10 +15,10 @@ C_exp = h5read(file,"C_gensys")
 impact_exp = h5read(file, "impact")
 eu_exp = h5read(file, "eu")
 
-@test_matrix_approx_eq G1_exp G1
+@testset "Check gensys outputs match reference" begin
+    @test @test_matrix_approx_eq G1_exp G1
+    @test @test_matrix_approx_eq C_exp C
+    @test @test_matrix_approx_eq impact_exp impact
 
-@test_matrix_approx_eq C_exp C
-
-@test_matrix_approx_eq impact_exp impact
-
-@test isequal(eu_exp, eu)
+    @test isequal(eu_exp, eu)
+end

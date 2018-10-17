@@ -1,12 +1,15 @@
 # This code is based on a routine originally copyright Chris Sims.
 # See http://sims.princeton.edu/yftp/gensys/
 
+# eye(n::Integer) deprecated in Julia v0.7.0 onwards
+@inline eye(n::Integer) = Matrix{Float64}(I, n, n)
+
 """
 ```
 gensys(Γ0, Γ1, c, Ψ, Π)
 gensys(Γ0, Γ1, c, Ψ, Π, div)
-gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π)
-gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
+gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π)
+gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
 ```
 
 Generate state-space solution to canonical-form DSGE model.
@@ -48,20 +51,20 @@ of the Schur decomposition, even if the inputs are real numbers.
 """
 function gensys(Γ0, Γ1, c, Ψ, Π, args...; verbose::Symbol = :high)
     F = try
-        schurfact!(complex(Γ0), complex(Γ1))
+        schur!(complex(Γ0), complex(Γ1))
     catch ex
-        if isa(ex, Base.LinAlg.LAPACKException)
-            info("LAPACK exception thrown while computing Schur decomposition of Γ0 and Γ1.")
+        if isa(ex, LinearAlgebra.LAPACKException)
+            Base.@info "LAPACK exception thrown while computing Schur decomposition of Γ0 and Γ1."
             eu = [-3, -3]
 
-            G1 = Array{Float64, 2}(0,0)
-            C = Array{Float64, 1}(0)
-            impact = Array{Float64, 2}(0,0)
-            fmat = Array{Complex{Float64}, 2}(0,0)
-            fwt = Array{Complex{Float64}, 2}(0,0)
-            ywt = Vector{Complex{Float64}}(0)
-            gev = Vector{Complex{Float64}}(0)
-            loose = Array{Float64, 2}(0,0)
+            G1 = Array{Float64, 2}(undef,0,0)
+            C = Array{Float64, 1}(undef,0)
+            impact = Array{Float64, 2}(undef,0,0)
+            fmat = Array{Complex{Float64}, 2}(undef,0,0)
+            fwt = Array{Complex{Float64}, 2}(undef,0,0)
+            ywt = Vector{Complex{Float64}}(undef,0)
+            gev = Vector{Complex{Float64}}(undef,0)
+            loose = Array{Float64, 2}(undef,0,0)
 
             return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
         else
@@ -71,20 +74,20 @@ function gensys(Γ0, Γ1, c, Ψ, Π, args...; verbose::Symbol = :high)
     gensys(F, c, Ψ, Π, args...; verbose = verbose)
 end
 
-function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π; verbose::Symbol = :high)
-    gensys(F, c, Ψ, Π, new_div(F), verbose = verbose)
+function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π)
+    gensys(F, c, Ψ, Π, new_div(F))
 end
 
 # Method that does the real work. Work directly on the decomposition F
-function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div; verbose::Symbol = :high)
+function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
     eu = [0, 0]
     ϵ = 1e-6  # small number to check convergence
     nunstab = 0
     zxz = 0
-    a, b, = F[:S], F[:T]
+    a, b, = F.S, F.T
     n = size(a, 1)
 
-    select = BitArray(n)
+    select = BitArray(undef, n)
     for i in 1:n
         # nunstab is the variable name used by Chris Sims, but it seems
         # that nunstab should actually correspond to the number of stable λs
@@ -98,27 +101,27 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div; verbose::Symbol
     nunstab = n - sum(select)
 
     if zxz == 1
-        warn("Coincident zeros. Indeterminacy and/or nonexistence.")
+        @warn "Coincident zeros. Indeterminacy and/or nonexistence."
         eu=[-2, -2]
 
-        G1 = Matrix{Float64}(0, 0)
-        C = Vector{Float64}(0)
-        impact = Matrix{Float64}(0, 0)
-        fmat = Matrix{Complex{Float64}}(0, 0)
-        fwt = Matrix{Complex{Float64}}(0, 0)
-        ywt = Vector{Complex{Float64}}(0)
-        gev = Vector{Complex{Float64}}(0)
-        loose = Matrix{Float64}(0, 0)
+        G1 = Array{Float64, 2}(undef,0, 0)
+        C = Array{Float64, 1}(undef,0)
+        impact = Array{Float64, 2}(undef,0)
+        fmat = Array{Complex{Float64}, 2}(undef,0,0)
+        fwt = Array{Complex{Float64}, 2}(undef,0,0)
+        ywt = Vector{Complex{Float64}}(undef,0)
+        gev = Vector{Complex{Float64}}(undef,0)
+        loose = Array{Float64, 2}(undef,0,0)
 
         return G1, C, impact, fmat, fwt, ywt, gev, eu, loose
     end
 
     FS = ordschur!(F, select)
-    a, b, qt, z = FS[:S], FS[:T], FS[:Q], FS[:Z]
+    a, b, qt, z = FS.S, FS.T, FS.Q, FS.Z
     gev = hcat(diag(a), diag(b))
     qt1 = qt[:, 1:(n - nunstab)]
     qt2 = qt[:, (n - nunstab + 1):n]
-    etawt = Ac_mul_B(qt2, Π)
+    etawt = adjoint(qt2) * Π #Ac_mul_B(qt2, Π)
     neta = size(Π, 2)
 
     # branch below is to handle case of no stable roots, rather than quitting with an error
@@ -130,20 +133,18 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div; verbose::Symbol
         veta = zeros(neta, 0)
         bigev = 0
     else
-        etawtsvd = svdfact!(etawt)
-        bigev = find(etawtsvd[:S] .> ϵ)
-        ueta = etawtsvd[:U][:, bigev]
-        veta = etawtsvd[:V][:, bigev]
-        deta = diagm(etawtsvd[:S][bigev])
+        etawtsvd = svd!(etawt)
+        bigev = (LinearIndices(etawtsvd.S))[findall(etawtsvd.S .> ϵ)]
+        ueta = etawtsvd.U[:, bigev]
+        veta = etawtsvd.V[:, bigev]
+        deta = Matrix(Diagonal(etawtsvd.S[bigev]))
     end
 
     existence = length(bigev) >= nunstab
     if existence
         eu[1] = 1
     else
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            warn("Nonexistence: number of unstable roots exceeds number of jump variables")
-        end
+        @warn "Nonexistence: number of unstable roots exceeds number of jump variables"
     end
 
     # Note that existence and uniqueness are not just matters of comparing
@@ -158,34 +159,31 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div; verbose::Symbol
         veta1 = zeros(neta, 0)
         deta1 = zeros(0, 0)
     else
-        etawt1 = Ac_mul_B(qt1, Π)
+        etawt1 = adjoint(qt1) * Π #Ac_mul_B(qt1, Π)
         ndeta1 = min(n - nunstab, neta)
-        etawt1svd = svdfact!(etawt1)
-        bigev = find(etawt1svd[:S] .> ϵ)
-        ueta1 = etawt1svd[:U][:, bigev]
-        veta1 = etawt1svd[:V][:, bigev]
-        deta1 = diagm(etawt1svd[:S][bigev])
+        etawt1svd = svd!(etawt1)
+        bigev = (LinearIndices(etawtsvd.S))[findall(etawt1svd.S .> ϵ)]
+        ueta1 = etawt1svd.U[:, bigev]
+        veta1 = etawt1svd.V[:, bigev]
+        deta1 = Matrix(Diagonal(etawt1svd.S[bigev]))
     end
 
     if isempty(veta1)
         unique = true
     else
-        loose = veta1 - A_mul_Bc(veta, veta) * veta1
-        loosesvd = svdfact!(loose)
-        nloose = sum(abs.(loosesvd[:S]) .> ϵ * n)
+        loose = veta1 - (veta * adjoint(veta)) * veta1
+        loosesvd = svd!(loose)
+        nloose = sum(abs.(loosesvd.S) .> ϵ * n)
         unique = (nloose == 0)
     end
 
     if unique
         eu[2] = 1
     else
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            warn("Indeterminacy: $(nloose) loose endogeneous error(s)")
-        end
+        @warn "Indeterminacy: $(nloose) loose endogeneous error(s)"
     end
 
-
-    tmat = hcat(eye(n - nunstab), -(ueta * (deta \ veta') * veta1 * A_mul_Bc(deta1, ueta1))')
+    tmat = hcat(eye(n - nunstab), -(ueta * (deta \ veta') * veta1 * (deta1 * adjoint(ueta1)))')
 
     G0 = vcat(tmat * a, hcat(zeros(nunstab, n - nunstab), eye(nunstab)))
     G1 = vcat(tmat * b, zeros(nunstab, n))
@@ -197,15 +195,15 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div; verbose::Symbol
     usix = (n - nunstab + 1):n
     Busix = b[usix,usix]
     Ausix = a[usix,usix]
-    C = G0I * vcat(tmat * Ac_mul_B(qt, c), (Ausix - Busix) \ Ac_mul_B(qt2, c))
-    impact = G0I * vcat(tmat * Ac_mul_B(qt, Ψ), zeros(nunstab, size(Ψ, 2)))
+    C = G0I * vcat(tmat * (adjoint(qt) * c), (Ausix - Busix) \ (adjoint(qt2) * c))
+    impact = G0I * vcat(tmat * (adjoint(qt) * Ψ), zeros(nunstab, size(Ψ, 2)))
     fmat = Busix \ Ausix
-    fwt = -Busix \ Ac_mul_B(qt2, Ψ)
+    fwt = -Busix \ (adjoint(qt2) * Ψ)
     ywt = G0I[:, usix]
 
-    loose = G0I * vcat(etawt1 * (eye(neta) - A_mul_Bc(veta, veta)), zeros(nunstab, neta))
+    loose = G0I * vcat(etawt1 * (eye(neta) - (veta * adjoint(veta))), zeros(nunstab, neta))
 
-    G1 = real(z * A_mul_Bc(G1, z))
+    G1 = real(z * (G1 * adjoint(z)))
     C = real(z * C)
     impact = real(z * impact)
     loose = real(z * loose)
@@ -216,10 +214,10 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div; verbose::Symbol
 end
 
 
-function new_div(F::Base.LinAlg.GeneralizedSchur)
+function new_div(F::LinearAlgebra.GeneralizedSchur)
     ϵ = 1e-6  # small number to check convergence
-    n = size(F[:T], 1)
-    a, b = F[:S], F[:T]
+    n = size(F.T, 1)
+    a, b = F.S, F.T
     div = 1.01
     for i in 1:n
         if abs(a[i, i]) > 0

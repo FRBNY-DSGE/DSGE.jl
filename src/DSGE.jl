@@ -1,8 +1,8 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-    using Base.Dates, Base.Test
-    using CSV, DataFrames, DataArrays, Distributions, FredData, HDF5, JLD, Optim, Plots, RecipesBase, StateSpaceRoutines, StatPlots
+    using Dates, Test, BenchmarkTools
+    using CSV, DataFrames, Distributed, Distributions, FileIO, FredData, HDF5, JLD2, LinearAlgebra, Missings, Nullables, Optim, Printf, Random, RecipesBase, SparseArrays, SpecialFunctions, StateSpaceRoutines, StatPlots, Dates
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
@@ -12,7 +12,6 @@ module DSGE
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
 
     export
-
         # distributions_ext.jl
         BetaAlt, GammaAlt, RootInverseGamma, DegenerateMvNormal, DegenerateDiagMvTDist, MatrixNormal,
 
@@ -64,6 +63,9 @@ module DSGE
 
         # statespace.jl
         Transition, Measurement, PseudoMeasurement, System, compute_system,
+
+        # benchmark/
+        print_all_benchmarks, construct_trial_group, write_ref_trial, write_ref_trial_group,
 
         # data/
         load_data, load_data_levels, load_cond_data_levels, load_fred_data,
@@ -142,6 +144,10 @@ module DSGE
     include("observables.jl")
     include("statespace.jl")
     include("util.jl")
+
+    include("benchmark/util.jl")
+    include("benchmark/benchmark.jl")
+    include("benchmark/io.jl")
 
     include("data/load_data.jl")
     include("data/fred_data.jl")

@@ -1,4 +1,4 @@
-using DSGE, DataFrames, JLD
+using DSGE, DataFrames, JLD2, FileIO
 
 path = dirname(@__FILE__())
 
@@ -6,31 +6,40 @@ path = dirname(@__FILE__())
 m = AnSchorfheide(testing = true)
 m <= Setting(:date_forecast_start, quartertodate("2015-Q4"))
 
-df, system = jldopen("$path/../reference/forecast_args.jld","r") do file
-    read(file, "df"), read(file, "system")
-end
+forecast_args = load("$path/../reference/forecast_args.jld2")
+df = forecast_args["df"]
+system = forecast_args["system"]
+#df, system = jldopen("$path/../reference/forecast_args.jld2","r") do file
+#    read(file, "df"), read(file, "system")
+#end
 
 # Read expected output
-exp_states, exp_shocks, exp_pseudo = jldopen("$path/../reference/smooth_out.jld", "r") do file
-    read(file, "exp_states"),
-    read(file, "exp_shocks"),
-    read(file, "exp_pseudo")
-end
+smooth_out = load("$path/../reference/smooth_out.jld2")
+exp_states = smooth_out["exp_states"]
+exp_shocks = smooth_out["exp_shocks"]
+exp_pseudo = smooth_out["exp_pseudo"]
+#exp_states, exp_shocks, exp_pseudo = jldopen("$path/../reference/smooth_out.jld2", "r") do file
+#    read(file, "exp_states"),
+#    read(file, "exp_shocks"),
+#    read(file, "exp_pseudo")
+#end
 
 # Smooth without drawing states
 states = Dict{Symbol, Matrix{Float64}}()
 shocks = Dict{Symbol, Matrix{Float64}}()
 pseudo = Dict{Symbol, Matrix{Float64}}()
 
-for smoother in [:hamilton, :koopman, :carter_kohn, :durbin_koopman]
-    m <= Setting(:forecast_smoother, smoother)
+@testset "Test smoother without drawing states" begin
+    for smoother in [:hamilton, :koopman, :carter_kohn, :durbin_koopman]
+        m <= Setting(:forecast_smoother, smoother)
 
-    states[smoother], shocks[smoother], pseudo[smoother] =
-        smooth(m, df, system; draw_states = false)
+        states[smoother], shocks[smoother], pseudo[smoother] =
+            smooth(m, df, system; draw_states = false)
 
-    @test_matrix_approx_eq exp_states states[smoother]
-    @test_matrix_approx_eq exp_shocks shocks[smoother]
-    @test_matrix_approx_eq exp_pseudo pseudo[smoother]
+        @test @test_matrix_approx_eq exp_states states[smoother]
+        @test @test_matrix_approx_eq exp_shocks shocks[smoother]
+        @test @test_matrix_approx_eq exp_pseudo pseudo[smoother]
+    end
 end
 
 # Smooth, drawing states

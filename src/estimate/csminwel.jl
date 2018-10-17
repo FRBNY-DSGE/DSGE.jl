@@ -3,7 +3,7 @@ This code is based on a routine originally copyright Chris Sims.
 See http://sims.princeton.edu/yftp/optimize/
 =#
 
-immutable Csminwel <: Optim.SecondOrderOptimizer end
+struct Csminwel <: Optim.SecondOrderOptimizer end
 
 const rc_messages = Dict(0 => "Standard Iteration",
                          1 => "zero gradient",
@@ -270,7 +270,7 @@ function csminwel(fcn::Function,
                 retcodeh = retcode3
             end
 
-            if isdefined(:gh)
+            if @isdefined gh
                 nogh = isempty(gh)
             else
                 nogh = true
@@ -300,7 +300,7 @@ function csminwel(fcn::Function,
         end
 
         # record# retcodeh of previous x
-        copy!(x_previous, x)
+        copyto!(x_previous, x)
 
         # update before next iteration
         f_x_previous, f_x = f_x, fh
@@ -355,7 +355,7 @@ function csminwel(fcn::Function,
                   rng::AbstractRNG     = MersenneTwister(0),
                   kwargs...)
 
-    grad{T<:Number}(x::Array{T}) = csminwell_grad(fcn, x, args...; kwargs...)
+    grad(x::Array{T}) where {T<:Number} = csminwell_grad(fcn, x, args...; kwargs...)
     csminwel(fcn, grad, x0, H0, args...;
              xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
              store_trace=store_trace, show_trace=show_trace,
@@ -367,7 +367,7 @@ function csminwell_grad(fcn, x, args...; kwargs...)
     f(a) = fcn(a, args...; kwargs...)
     gr = Calculus.gradient(f, x)
     bad_grads = abs.(gr) .>= 1e15
-    gr[bad_grads] = 0.0
+    gr[bad_grads] .= 0.0
     return gr, any(bad_grads)
 end
 
@@ -577,7 +577,7 @@ function bfgsi(H0, dg, dx; verbose::Symbol = :none)
         # gradient is super small so don't worry updating right now
         # do nothing
     else
-        warn("bfgs update failed")
+        @warn "bfgs update failed"
 
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             @printf "|dg| = %f, |dx| = %f\n" (norm(dg)) (norm(dx))

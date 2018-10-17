@@ -73,7 +73,7 @@ Metropolis-Hastings always rejects.
 
 * `msg::String`: Info message. Default = \"Error in Gensys\"
 """
-type GensysError <: Exception
+mutable struct GensysError <: Exception
     msg::String
 end
 GensysError() = GensysError("Error in Gensys")

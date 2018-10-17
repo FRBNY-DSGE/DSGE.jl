@@ -39,45 +39,44 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         output_dir = workpath(m, "forecast")
         println()
-        info("Computing means and bands for input_type = $input_type, cond_type = $cond_type...")
+        @Base.info "Computing means and bands for input_type = $input_type, cond_type = $cond_type..."
         println("Start time: $(now())")
         println("Means and bands will be saved in $output_dir")
-        tic()
     end
+    toq = @elapsed let
+        # Determine full set of output_vars necessary for plotting desired result
+        output_vars = add_requisite_output_vars(output_vars)
 
-    # Determine full set of output_vars necessary for plotting desired result
-    output_vars = add_requisite_output_vars(output_vars)
-
-    # Load population data and main dataset (required for some transformations)
-    if all(var -> get_product(var) == :irf, output_vars)
-        population_data, population_forecast = DataFrame(), DataFrame()
-    else
-        population_data, population_forecast = load_population_growth(m, verbose = verbose)
-        isempty(df) && (df = load_data(m, verbose = :none))
-    end
-
-    for output_var in output_vars
-        prod = get_product(output_var)
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            if prod in [:shockdec, :irf]
-                println("Computing " * string(output_var) * " for shocks:")
-            else
-                print("Computing " * string(output_var) * "... ")
-            end
+        # Load population data and main dataset (required for some transformations)
+        if all(var -> get_product(var) == :irf, output_vars)
+            population_data, population_forecast = DataFrame(), DataFrame()
+        else
+            population_data, population_forecast = load_population_growth(m, verbose = verbose)
+            isempty(df) && (df = load_data(m, verbose = :none))
         end
 
-        # Compute means and bands
-        mb = compute_meansbands(m, input_type, cond_type, output_var, df;
-                                forecast_string = forecast_string,
-                                population_data = population_data,
-                                population_forecast = population_forecast,
-                                verbose = verbose,
-                                kwargs...)
-        gc()
-    end
+        for output_var in output_vars
+            prod = get_product(output_var)
+            if VERBOSITY[verbose] >= VERBOSITY[:high]
+                if prod in [:shockdec, :irf]
+                    println("Computing " * string(output_var) * " for shocks:")
+                else
+                    print("Computing " * string(output_var) * "... ")
+                end
+            end
 
+            # Compute means and bands
+            mb = compute_meansbands(m, input_type, cond_type, output_var, df;
+                                    forecast_string = forecast_string,
+                                    population_data = population_data,
+                                    population_forecast = population_forecast,
+                                    verbose = verbose,
+                                    kwargs...)
+            GC.gc()
+        end
+    end
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        total_mb_time     = toq()
+        total_mb_time     = toq
         total_mb_time_min = total_mb_time/60
 
         println("\nTotal time to compute means and bands: " * string(total_mb_time_min) * " minutes")
@@ -158,8 +157,11 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
                                           forecast_string = forecast_string)
     dirpath = dirname(filepath)
     isdir(dirpath) || mkpath(dirpath)
-    jldopen(filepath, "w") do file
-        write(file, "mb", mb)
+    jldopen(filepath, true, true, true, IOStream) do file
+        for (key, value) in mb
+            write(file, key, value)
+        end
+        #write(file, "mb", mb)
     end
 
     if VERBOSITY[verbose] >= VERBOSITY[:high]
@@ -196,21 +198,23 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     # Reverse transform
     y0_index = get_y0_index(m, product)
     data = class == :obs ? convert(Vector{Float64}, df[var_name]) : fill(NaN, size(df, 1))
+
     transformed_series = mb_reverse_transform(fcast_series, transform, product, class,
                                               y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)
 
     # Compute means and bands
-    means = vec(mean(transformed_series, 1))
+    means = vec(mean(transformed_series, dims= 1))
     bands = if product in [:shockdec, :dettrend, :trend] && !compute_shockdec_bands
         Dict{Symbol,DataFrame}()
     else
         find_density_bands(transformed_series, density_bands, minimize = minimize)
     end
+
     return means, bands
 end
 
-function mb_reverse_transform(fcast_series::Array{Float64}, transform::Function,
+function mb_reverse_transform(fcast_series::AbstractArray, transform::Function,
                               product::Symbol, class::Symbol;
                               y0_index::Int = -1,
                               data::AbstractVector{Float64} = Float64[],
@@ -233,7 +237,6 @@ function mb_reverse_transform(fcast_series::Array{Float64}, transform::Function,
         else
             Float64[]
         end
-
         reverse_transform(fcast_series, transform4q;
                           fourquarter = true, y0s = y0s,
                           pop_growth = pop_growth)

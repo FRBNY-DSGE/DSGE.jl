@@ -1,5 +1,5 @@
-using Base.Test
-@everywhere using DSGE, JLD
+using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures
+@everywhere using DSGE, JLD2, Printf, LinearAlgebra
 
 my_tests = [
             "core",

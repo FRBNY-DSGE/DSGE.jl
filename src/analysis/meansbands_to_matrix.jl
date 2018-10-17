@@ -28,7 +28,7 @@ function meansbands_to_matrix(m::AbstractModel, input_type::Symbol,
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println()
-        info("Converting means and bands to matrices for input_type = $input_type, cond_type = $cond_type...")
+        @Base.info "Converting means and bands to matrices for input_type = $input_type, cond_type = $cond_type..."
         println("Start time: $(now())")
         println("Means and bands matrices will be saved in $output_dir")
     end
@@ -59,13 +59,13 @@ function meansbands_to_matrix(m::AbstractModel, input_type::Symbol,
                                     Symbol("mb_matrix_", output_var);
                                     pathfcn = workpath,
                                     forecast_string = forecast_string,
-                                    fileformat = :h5)
+                                    fileformat = :jld2)
 
     # Convert MeansBands objects to matrices
     means, bands = meansbands_to_matrix(mb)
 
     # Save to file
-    h5open(outfile, "w") do file
+    jldopen(outfile, "w") do file
         write(file, "means", means)
         write(file, "bands", bands)
     end
@@ -103,8 +103,8 @@ function meansbands_to_matrix(mb::MeansBands)
                 :dettrend, :trend]
 
         # construct means and bands arrays
-        means = Array{T,2}(nvars, nperiods)
-        bands = Array{T}(nbands, nvars, nperiods)
+        means = Array{T,2}(undef, nvars, nperiods)
+        bands = Array{T}(undef, nbands, nvars, nperiods)
 
         # extract each series and place in arrays
         for series in setdiff(names(mb.means), [:date])
@@ -122,8 +122,8 @@ function meansbands_to_matrix(mb::MeansBands)
         nshocks = length(shock_inds)
 
         # construct means and bands arrays
-        means = Array{T}(nvars, nperiods, nshocks)
-        bands = Array{T}(nbands, nvars, nperiods, nshocks)
+        means = Array{T}(undef, nvars, nperiods, nshocks)
+        bands = Array{T}(undef, nbands, nvars, nperiods, nshocks)
 
         for series in setdiff(names(mb.means), [:date])
 

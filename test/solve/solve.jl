@@ -1,5 +1,5 @@
 using HDF5
-using Base.Test
+using Test
 using DSGE
 
 path = dirname(@__FILE__)
@@ -11,6 +11,9 @@ RRR_expected = h5read(file, "RRR")
 
 m = AnSchorfheide()
 TTT, RRR, CCC = solve(m)
-@test_matrix_approx_eq TTT_expected TTT
-@test_matrix_approx_eq RRR_expected RRR
-@test_matrix_approx_eq CCC_expected CCC
+
+@testset "Check state-space system matches reference" begin
+    @test @test_matrix_approx_eq TTT_expected TTT
+    @test @test_matrix_approx_eq RRR_expected RRR
+    @test @test_matrix_approx_eq CCC_expected CCC
+end
