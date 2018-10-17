@@ -4,7 +4,7 @@ using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStru
 my_tests = [
             #="core",
             "parameters",
-            "models/an_schorfheide/an_schorfheide", =#
+            "models/an_schorfheide/an_schorfheide",
             "models/smets_wouters/smets_wouters",
             "models/m990/m990",
             "models/m1002/m1002",
@@ -18,7 +18,7 @@ my_tests = [
             "estimate/posterior",
             "estimate/hessizero",
             "estimate/hessian",
-            "estimate/csminwel",
+            "estimate/csminwel",=#
             "estimate/optimize",
             "estimate/eig",
             "estimate/metropolis_hastings",

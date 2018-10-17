@@ -12,7 +12,7 @@ end
 """
 ```
 posterior(m::AbstractModel{T}, data::AbstractArray{Union{T, Missing}};
-          mh::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
+          sampler::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
 ```
 
 Calculates and returns the log of the posterior distribution for `m.parameters`:
@@ -36,17 +36,19 @@ log Pr(Θ|data) = log Pr(data|Θ) + log Pr(Θ) + const
 """
 function posterior(m::AbstractModel{T},
                    data::AbstractArray{Union{T, Missing}};
-                   mh::Bool = false,
+                   sampler::Bool = false,
+                   φ_smc::Float64 = 1.,
                    catch_errors::Bool = false) where {T<:AbstractFloat}
-    catch_errors = catch_errors || mh
-    post = likelihood(m, data; mh = mh, catch_errors = catch_errors) + prior(m)
+    catch_errors = catch_errors || sampler
+    like = likelihood(m, data; sampler=sampler, catch_errors = catch_errors)
+    post = φ_smc*like + prior(m)
     return post
 end
 
 """
 ```
 posterior!(m::AbstractModel{T}, parameters::Vector{T}, data::AbstractArray{Union{T, Missing}};
-           mh::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
+           sampler::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
 ```
 
 Evaluates the log posterior density at `parameters`.
@@ -68,10 +70,11 @@ Evaluates the log posterior density at `parameters`.
 function posterior!(m::AbstractModel{T},
                     parameters::Vector{T},
                     data::AbstractArray{Union{T, Missing}};
-                    mh::Bool = false,
+                    sampler::Bool = false,
+                    φ_smc::Float64 = 1.,
                     catch_errors::Bool = false) where {T<:AbstractFloat}
-    catch_errors = catch_errors || mh
-    if mh
+    catch_errors = catch_errors || sampler
+    if sampler
         try
             DSGE.update!(m, parameters)
         catch err
@@ -84,14 +87,14 @@ function posterior!(m::AbstractModel{T},
     else
         DSGE.update!(m, parameters)
     end
-    return posterior(m, data; sampler=sampler, ϕ_smc = ϕ_smc, catch_errors=catch_errors)
+    return posterior(m, data; sampler=sampler, φ_smc = φ_smc, catch_errors=catch_errors)
 
 end
 
 """
 ```
 likelihood(m::AbstractModel, data::AbstractArray{Union{T, Missing}}
-           mh::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
+           sampler::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
 ```
 
 Evaluate the DSGE likelihood function. Can handle two-part estimation where the observed
@@ -112,9 +115,11 @@ filter over the main sample all at once.
 """
 function likelihood(m::AbstractModel,
                     data::AbstractArray{Union{T, Missing}};
-                    mh::Bool = false,
-                    catch_errors::Bool = false) where {T<:AbstractFloat}
-    catch_errors = catch_errors || mh
+                    sampler::Bool = false,
+                    catch_errors::Bool = false,
+                    use_chand_recursion = false,
+                    verbose::Symbol = :high) where {T<:AbstractFloat}
+    catch_errors = catch_errors | sampler
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
     if sampler
