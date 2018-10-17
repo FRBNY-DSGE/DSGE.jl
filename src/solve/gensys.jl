@@ -49,7 +49,7 @@ We constrain Julia to use the complex version of the `schurfact` routine regardl
 types of `Γ0` and `Γ1`, to match the behavior of Matlab.  Matlab always uses the complex version
 of the Schur decomposition, even if the inputs are real numbers.
 """
-function gensys(Γ0, Γ1, c, Ψ, Π, args...; verbose::Symbol = :high)
+function gensys(Γ0, Γ1, c, Ψ, Π, args...) #; verbose::Symbol = :high)
     F = try
         schur!(complex(Γ0), complex(Γ1))
     catch ex
@@ -71,7 +71,7 @@ function gensys(Γ0, Γ1, c, Ψ, Π, args...; verbose::Symbol = :high)
             rethrow(ex)
         end
     end
-    gensys(F, c, Ψ, Π, args...; verbose = verbose)
+    gensys(F, c, Ψ, Π, args...) #; verbose = verbose)
 end
 
 function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π)
