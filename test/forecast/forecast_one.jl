@@ -44,8 +44,8 @@ for cond_type in [:none, :semi, :full]
     out[cond_type] = Dict{Symbol, Array{Float64}}()
     output_files = get_forecast_output_files(m, :mode, cond_type, output_vars)
     for var in keys(output_files)
-        out[cond_type][var] = load(output_files[var], "arr")
-        #out[cond_type][var] = h5read(output_files[var], "arr")
+        #out[cond_type][var] = load(output_files[var], "arr")
+        out[cond_type][var] = h5read(replace(output_files[var], "jld2" => "h5"), "arr")
     end
 end
 
@@ -84,18 +84,17 @@ end
 @everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
 forecast_one(m, :full, :none, output_vars, verbose = :none)
-
 # Test read_forecast_output
 @testset "Test full-distribution blocking" begin
     for input_type in [:mode, :full]
         output_files = get_forecast_output_files(m, input_type, :none, output_vars)
-        jldopen(output_files[:trendobs], "r") do file
+        h5open(replace(output_files[:trendobs], "jld2" => "h5"), "r") do file
             @test ndims(DSGE.read_forecast_series(file, :obs, :trend, :obs_gdp)) == 2
         end
-        jldopen(output_files[:forecastobs], "r") do file
+        h5open(replace(output_files[:forecastobs], "jld2" => "h5"), "r") do file
             @test ndims(DSGE.read_forecast_series(file, :obs, :forecast, :obs_gdp)) == 2
         end
-        jldopen(output_files[:irfobs], "r") do file
+        h5open(replace(output_files[:irfobs], "jld2" => "h5"), "r") do file
             @test ndims(DSGE.read_forecast_series(file, :obs, :irf, :obs_gdp, :rm_sh)) == 2
         end
     end

@@ -23,9 +23,13 @@ forecast_scenario(m, alt, verbose = :none)
 expect = jldopen(get_scenario_input_file(m, alt), "r") do file
     read(file, "arr")
 end
-global actual = jldopen(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "r") do file
-    dict = read(file, "observable_indices")
-    inds = map(var -> dict[var], def.target_names)
+
+dict = load(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "observable_indices")
+#do file
+ #   dict = read(file, "observable_indices")
+#end
+inds = map(var -> dict[var], def.target_names)
+global actual = h5open(replace(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "jld2" => "h5"), "r") do file
     read(file, "arr")[:, inds, :]
 end
 @testset "Test dummy scenarios" begin
@@ -38,10 +42,12 @@ probs_exit  = zeros(12)
 allalt = SwitchingScenario(:allalt, alt, def, probs_enter, probs_exit)
 simulate_switching(m, allalt, verbose = :none)
 
-file_original_draws = load(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs])
-original_draws = file_original_draws["arr"]
-global file_actual = load(get_scenario_output_files(m, allalt, [:forecastobs])[:forecastobs])
-global actual = file_actual["arr"]
+original_draws = h5open(replace(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "jld2" => "h5")) do file
+    read(file, "arr")
+end
+actual = h5open(replace(get_scenario_output_files(m, allalt, [:forecastobs])[:forecastobs], "jld2" => "h5")) do file
+    read(file, "arr")
+end
 @testset "Test switching scenarios" begin
     @test original_draws ≈ actual
 end
@@ -52,10 +58,18 @@ probs_exit  = zeros(12)
 alldef = SwitchingScenario(:alldef, alt, def, probs_enter, probs_exit)
 simulate_switching(m, alldef, verbose = :none)
 
-file_default_draws = load(get_scenario_output_files(m, def, [:forecastobs])[:forecastobs])
-default_draws = file_default_draws["arr"]
-global file_actual = load(get_scenario_output_files(m, alldef, [:forecastobs])[:forecastobs])
-global actual = file_actual["arr"]
+#file_default_draws = read(get_scenario_output_files(m, def, [:forecastobs])[:forecastobs])
+#default_draws = file_default_draws["arr"]
+default_draws = h5open(replace(get_scenario_output_files(m, def, [:forecastobs])[:forecastobs], "jld2" => "h5")) do file
+    read(file, "arr")
+end
+
+#global file_actual = read(get_scenario_output_files(m, alldef, [:forecastobs])[:forecastobs])
+#global actual = file_actual["arr"]
+actual = h5open(replace(get_scenario_output_files(m, alldef, [:forecastobs])[:forecastobs], "jld2" => "h5")) do file
+    read(file, "arr")
+end
+
 @testset "Test never switching scenarios" begin
     for i = 1:10 # Check that the ith draw of actual matches some draw j from default_draws
         @test for j = 1:10
@@ -73,8 +87,11 @@ somealt = SwitchingScenario(:somealt, alt, def, probs_enter, probs_exit)
 simulate_switching(m, somealt, verbose = :none)
 
 @testset "Test switching scenarios, where the switch happens at particular points in time" begin
-    global file_actual = load(get_scenario_output_files(m, somealt, [:forecastobs])[:forecastobs])
-    global actual = file_actual["arr"]
+    #global file_actual = load(get_scenario_output_files(m, somealt, [:forecastobs])[:forecastobs])
+    #global actual = file_actual["arr"]
+    actual = h5open(replace(get_scenario_output_files(m, somealt, [:forecastobs])[:forecastobs], "jld2" => "h5")) do file
+        read(file, "arr")
+    end
     for i = 1:10
         @test actual[i, :, 5:8] ≈ original_draws[i, :, 1:4]
         @test for j = 1:10
@@ -154,9 +171,9 @@ forecast_scenario(m, scale, verbose = :none)
 expect = jldopen(get_scenario_input_file(m, scale), "r") do file
     2.0 * read(file, "arr")
 end
-global actual = jldopen(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "r") do file
-    dict = read(file, "observable_indices")
-    inds = map(var -> dict[var], def.target_names)
+dict = load(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "observable_indices")
+inds = map(var -> dict[var], def.target_names)
+global actual = h5open(replace(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "jld2" => "h5"), "r") do file
     read(file, "arr")[:, inds, :]
 end
 @testset "Test scenario aggregation, drawing with replacement" begin
