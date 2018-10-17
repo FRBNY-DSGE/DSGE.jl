@@ -6,7 +6,7 @@ parameters). Note these functions are NOT new methods for the Distributions.Beta
 functions, but rather new functions with the same names.
 =#
 
-import Distributions: params, mean, std, pdf, logpdf, rand, Distribution, Matrixvariate
+import Distributions: params, mean, std, pdf, logpdf, rand, Distribution, Matrixvariate, LinearAlgebra
 import Base: length
 import SpecialFunctions: gamma
 """
