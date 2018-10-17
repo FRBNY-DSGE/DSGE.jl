@@ -1,4 +1,4 @@
-using DSGE, Base.Test
+using DSGE, Test
 
 # Initialize model object
 m = Model990(testing = true)

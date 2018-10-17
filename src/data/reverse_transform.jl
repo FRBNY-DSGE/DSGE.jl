@@ -73,7 +73,7 @@ series. This method is called by the higher-level functions as well as
   data. This is required when the reverse transform associated with
   `untransformed` or `y` adjusts for population.
 """
-function reverse_transform(m::AbstractModel, untransformed::Matrix, start_date::Date,
+function reverse_transform(m::AbstractModel, untransformed::AbstractArray, start_date::Dates.Date,
                            vars::Vector{Symbol}, class::Symbol;
                            fourquarter::Bool = false,
                            verbose::Symbol = :low)
@@ -94,7 +94,7 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
                            fourquarter::Bool = false, verbose::Symbol = :low)
     # Dates
     @assert (:date in names(untransformed)) "untransformed must have a date column"
-    date_list  = convert(Vector{Date}, untransformed[:date])
+    date_list  = convert(Vector{Dates.Date}, untransformed[:date])
     start_date = date_list[1]
     end_date   = date_list[end]
 
@@ -130,15 +130,15 @@ function reverse_transform(m::AbstractModel, untransformed::DataFrame, class::Sy
     return transformed
 end
 
-function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Function;
-                                             fourquarter::Bool = false,
-                                             y0::T = NaN, y0s::Vector{T} = T[],
-                                             pop_growth::Vector{T} = T[])
+function reverse_transform(y::AbstractArray, rev_transform::Function;
+                           fourquarter::Bool = false,
+                           y0 = missing, y0s::Vector = Vector(undef, 0),
+                           pop_growth::Vector = Vector(undef, 0)) where {T<:AbstractFloat}
     if fourquarter
         if rev_transform in [loggrowthtopct_4q_percapita, loggrowthtopct_4q,
                              loggrowthtopct_4q_approx]
             # Sum growth rates y_{t-3}, y_{t-2}, y_{t-1}, and y_t
-            y0s = isempty(y0s) ? fill(NaN, 3) : y0s
+            y0s = isempty(y0s) ? fill(missing, 3) : y0s
             if rev_transform == loggrowthtopct_4q_percapita
                 rev_transform(y, pop_growth, y0s)
             else
@@ -147,7 +147,7 @@ function reverse_transform{T<:AbstractFloat}(y::Array{T}, rev_transform::Functio
         elseif rev_transform in [logleveltopct_4q_percapita, logleveltopct_4q,
                                  logleveltopct_4q_approx]
             # Divide log levels y_t by y_{t-4}
-            y0s = isempty(y0s) ? fill(NaN, 4) : y0s
+            y0s = isempty(y0s) ? fill(missing, 4) : y0s
             if rev_transform == logleveltopct_4q_percapita
                 rev_transform(y, pop_growth, y0s)
             else

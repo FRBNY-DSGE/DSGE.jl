@@ -1,8 +1,8 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-    using Base.Dates, Base.Test, BenchmarkTools
-    using CSV, DataFrames, DataArrays, Distributions, FredData, HDF5, JLD, Optim, Plots, RecipesBase, StateSpaceRoutines, StatPlots
+    using Dates, Test, BenchmarkTools
+    using CSV, DataFrames, Distributed, Distributions, FileIO, FredData, HDF5, JLD2, LinearAlgebra, Missings, Nullables, Optim, Printf, Random, RecipesBase, SparseArrays, SpecialFunctions, StateSpaceRoutines, StatPlots, Dates
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
@@ -11,7 +11,6 @@ module DSGE
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
 
     export
-
         # distributions_ext.jl
         BetaAlt, GammaAlt, RootInverseGamma, DegenerateMvNormal, DegenerateDiagMvTDist, MatrixNormal,
 

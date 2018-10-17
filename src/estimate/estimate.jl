@@ -28,7 +28,7 @@ Estimate the DSGE parameter posterior distribution.
 """
 function estimate(m::AbstractModel, df::DataFrame;
                   verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix(0,0),
+                  proposal_covariance::Matrix=Matrix(undef, 0, 0),
                   mle::Bool = false,
                   run_MH::Bool = true)
     data = df_to_matrix(m, df)
@@ -37,7 +37,7 @@ function estimate(m::AbstractModel, df::DataFrame;
 end
 function estimate(m::AbstractModel;
                   verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix(0,0),
+                  proposal_covariance::Matrix=Matrix(undef, 0, 0),
                   mle::Bool = false,
                   run_MH::Bool = true)
     # Load data
@@ -45,7 +45,7 @@ function estimate(m::AbstractModel;
     estimate(m, df; verbose=verbose, proposal_covariance=proposal_covariance,
              mle = mle, run_MH = run_MH)
 end
-function estimate(m::AbstractModel, data::Matrix{Float64};
+function estimate(m::AbstractModel, data::AbstractArray{Float64};
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix(0,0),
                   mle::Bool = false,
@@ -191,8 +191,8 @@ end
 
 """
 ```
-metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractModel,
-    data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low)
+metropolis_hastings(propdist::Distribution, m::AbstractModel,
+    data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low) where {T<:AbstractFloat}
 ```
 
 Implements the Metropolis-Hastings MCMC algorithm for sampling from the posterior
@@ -217,17 +217,17 @@ distribution of the parameters.
    - `:high`: Status updates provided at each draw.
 ```
 """
-function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
-                                               m::AbstractModel,
-                                               data::Matrix{T},
-                                               cc0::T,
-                                               cc::T;
-                                               verbose::Symbol=:low)
+function metropolis_hastings(propdist::Distribution,
+                             m::AbstractModel,
+                             data::AbstractArray{Union{T, Missing}},
+                             cc0::T,
+                             cc::T;
+                             verbose::Symbol=:low) where {T<:AbstractFloat}
 
 
     # If testing, set the random seeds at fixed numbers
     if m.testing
-        srand(m.rng, 654)
+        Random.seed!(m.rng, 654)
     end
 
     # Set number of draws, how many we will save, and how many we will burn
@@ -284,7 +284,7 @@ function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
 
     for block = 1:n_blocks
 
-        tic()
+        begin_time = time_ns()
         block_rejections = 0
 
         for j = 1:(n_sim*mhthin)
@@ -379,7 +379,7 @@ function compute_parameter_covariance(m::AbstractModel)
     # Read in saved parameter draws
     param_draws_path = rawpath(m,"estimate","mhsave.h5")
     if !isfile(param_draws_path)
-        @printf STDERR "Saved parameter draws not found.\n"
+        @printf stderror "Saved parameter draws not found.\n"
         return
     end
     param_draws = h5open(param_draws_path, "r") do f

@@ -48,13 +48,12 @@ end
 forecast_block_inds(m, input_type; subset_inds = 1:0)
 ```
 
-Returns a pair of `Vector{Range{Int64}}`s, `block_inds` and `block_inds_thin`,
+Returns a pair of `Vector{AbstractRange{Int64}}`s, `block_inds` and `block_inds_thin`,
 each of length equal to the number of forecast blocks. `block_inds[i]` is the
 range of indices for block `i` before thinning by `jstep` and
 `block_inds_thin[i]` is the range after thinning.
 """
-function forecast_block_inds(m::AbstractModel, input_type::Symbol;
-                             subset_inds::Range{Int64} = 1:0)
+function forecast_block_inds(m::AbstractModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0)
 
     if input_type == :full
         ndraws    = n_forecast_draws(m, :full)
@@ -81,8 +80,8 @@ function forecast_block_inds(m::AbstractModel, input_type::Symbol;
     nblocks = convert(Int64, ceil(ndraws / block_size))
 
     # Fill in draw indices for each block
-    block_inds      = Vector{Range{Int64}}(nblocks)
-    block_inds_thin = Vector{Range{Int64}}(nblocks)
+    block_inds      = Vector{AbstractRange{Int64}}(undef, nblocks)
+    block_inds_thin = Vector{AbstractRange{Int64}}(undef, nblocks)
     current_draw      = start_ind - 1
     current_draw_thin = start_ind - 1
     for i = 1:(nblocks-1)
@@ -166,8 +165,7 @@ Remove the smoothed states, shocks, or pseudo-observables corresponding to
 conditional data periods. This is necessary because when we forecast with
 conditional data, we smooth beyond the last historical period.
 """
-function transplant_history{T<:AbstractFloat}(history::Matrix{T},
-    last_hist_period::Int)
+function transplant_history(history::Matrix{T}, last_hist_period::Int) where {T<:AbstractFloat}
 
     if isempty(history)
         return history
@@ -184,8 +182,8 @@ transplant_forecast(history, forecast, last_hist_period)
 Transplant the smoothed states, shocks, or pseudo-observables corresponding to
 conditional data periods from the history to the forecast.
 """
-function transplant_forecast{T<:AbstractFloat}(history::Matrix{T},
-    forecast::Matrix{T}, last_hist_period::Int)
+function transplant_forecast(history::Matrix{T}, forecast::Matrix{T},
+                             last_hist_period::Int) where {T<:AbstractFloat}
 
     ncondperiods = size(history, 2) - last_hist_period
     cond_range   = (last_hist_period + 1):(last_hist_period + ncondperiods)
@@ -208,8 +206,9 @@ just give us back the data. However, in the conditional data periods, we only
 have data for a subset of observables, so we need to get the remaining
 observables by mapping the smoothed states.
 """
-function transplant_forecast_observables{T<:AbstractFloat}(histstates::Matrix{T},
-    forecastobs::Matrix{T}, system::System{T}, last_hist_period::Int)
+function transplant_forecast_observables(histstates::Matrix{T}, forecastobs::Matrix{T},
+                                         system::System{T},
+                                         last_hist_period::Int) where {T<:AbstractFloat}
 
     nvars        = size(forecastobs, 1)
     ncondperiods = size(histstates, 2) - last_hist_period
@@ -229,7 +228,7 @@ standardize_shocks(shocks, QQ)
 Normalize shocks by their standard deviations. Shocks with zero standard
 deviation will be set to zero.
 """
-function standardize_shocks{T<:AbstractFloat}(shocks::Matrix{T}, QQ::Matrix{T})
+function standardize_shocks(shocks::Matrix{T}, QQ::Matrix{T}) where {T<:AbstractFloat}
     stdshocks = shocks ./ sqrt.(diag(QQ))
 
     zeroed_shocks = find(diag(QQ) .== 0)
@@ -252,7 +251,7 @@ function assemble_block_outputs(dicts::Vector{Dict{Symbol, Array{Float64}}})
     if !isempty(dicts)
         for var in keys(dicts[1])
             outputs  = map(dict -> reshape(dict[var], (1, size(dict[var])...)), dicts)
-            out[var] = cat(1, outputs...)
+            out[var] = cat(outputs..., dims=1)
         end
     end
     return out
@@ -267,7 +266,7 @@ Returns the dimension of the forecast output specified by `input_type` and
 `output_var`.
 """
 function get_forecast_output_dims(m::AbstractModel, input_type::Symbol, output_var::Symbol;
-                                  subset_inds::Range{Int64} = 1:0)
+                                  subset_inds::AbstractRange{Int64} = 1:0)
     prod  = get_product(output_var)
     class = get_class(output_var)
 

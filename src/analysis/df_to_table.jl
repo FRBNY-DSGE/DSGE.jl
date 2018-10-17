@@ -58,14 +58,14 @@ function construct_fcast_and_hist_dfs(m::AbstractModel, cond_type::Symbol,
     obs = intersect(vars, m.observables.keys)
     pseudo = intersect(vars, m.pseudo_observables.keys)
 
-    df_histobs    = mb_histobs.means[:, vcat(:date, obs)]
-    df_histpseudo = mb_histpseudo.means[:, vcat(:date, pseudo)]
+    df_histobs    = mb_histobs.means[vcat(:date, obs)]
+    df_histpseudo = mb_histpseudo.means[vcat(:date, pseudo)]
     hist_start_ind = findfirst(x -> x == hist_start, df_histobs[:date])
     df_histobs    = df_histobs[hist_start_ind:end, :]
     df_histpseudo = df_histpseudo[hist_start_ind:end, :]
 
-    df_forecastobs      = mb_forecastobs.means[:, vcat(:date, obs)]
-    df_forecastpseudo   = mb_forecastpseudo.means[:, vcat(:date, pseudo)]
+    df_forecastobs      = mb_forecastobs.means[vcat(:date, obs)]
+    df_forecastpseudo   = mb_forecastpseudo.means[vcat(:date, pseudo)]
     if use_4q
         # If producing 4q figures, then the forecast_end date must be a Q4 date
         forecast_end = quartertodate(string(Dates.year(forecast_end))*"-Q4")
@@ -169,11 +169,11 @@ function df_to_table(df::DataFrame, caption::String, filename::String, savedir::
         @printf fid "%s " column_keys[1]
         for i in 2:n_columns
             column_key = string(column_keys[i])
-            if ismatch(r"_", column_key) # if the key has an underscore then replace it with the proper LaTeX syntax
+            if occursin(r"_", column_key) # if the key has an underscore then replace it with the proper LaTeX syntax
                 sub_strs = split(column_key, "_")
                 column_key = sub_strs[1]*"\\_"*sub_strs[2]
             end
-            column_entry = "\\parbox\{0.3\\linewidth\}\{\\centering "*column_key*"\}"
+            column_entry = "\\parbox\\{0.3\\linewidth\\}\\{\\centering "*column_key*"\\}"
             if i != n_columns
                 @printf fid "& %s " column_entry
             else
@@ -259,17 +259,17 @@ function unit_mappings(m::AbstractModel, df::DataFrame,
     for key in names(df)
         name = key != :date ? header_mappings[key] : continue
         if key in obs_keys
-            if ismatch(r"pct_annualized", string(m.observable_mappings[key].rev_transform))
-                units[name] = "("quarter*"/"*quarter*") \\% Annualized"
-            elseif ismatch(r"quartertoannual", string(m.observable_mappings[key].rev_transform))
+            if occursin(r"pct_annualized", string(m.observable_mappings[key].rev_transform))
+                units[name] = "("*quarter*"/"*quarter*") \\% Annualized"
+            elseif occursin(r"quartertoannual", string(m.observable_mappings[key].rev_transform))
                 units[name] = quarter
             end
         elseif key in pseudo_keys
-            if ismatch(r"pct_annualized", string(m.pseudo_observable_mappings[key].rev_transform))
-                units[name] = "("quarter*"/"*quarter*") \\% Annualized"
-            elseif ismatch(r"quartertoannual", string(m.pseudo_observable_mappings[key].rev_transform))
+            if occursin(r"pct_annualized", string(m.pseudo_observable_mappings[key].rev_transform))
+                units[name] = "("*quarter*"/"*quarter*") \\% Annualized"
+            elseif occursin(r"quartertoannual", string(m.pseudo_observable_mappings[key].rev_transform))
                 units[name] = quarter
-            elseif ismatch(r"identity", string(m.pseudo_observable_mappings[key].rev_transform))
+            elseif occursin(r"identity", string(m.pseudo_observable_mappings[key].rev_transform))
                 units[name] = quarter
             end
         end

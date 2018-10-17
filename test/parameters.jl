@@ -1,5 +1,5 @@
 using DSGE
-using Base.Test, Distributions
+using Test, Distributions, InteractiveUtils, Nullables
 
 @testset "Ensure transformations to the real line/model space are valid" begin
     for T in subtypes(Transform)
@@ -18,7 +18,7 @@ N = 10^2
 u = parameter(:bloop, 2.5230, (1e-8, 5.), (1e-8, 5.), DSGE.SquareRoot(); fixed = true)
 v = parameter(:cat, 2.5230, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), Gamma(2.00, 0.1))
 
-pvec =  ParameterVector{Float64}(N)
+pvec =  ParameterVector{Float64}(undef, N)
 for i in 1:length(pvec)
 	pvec[i] = (i%2 == 0) ? u : v
 end
@@ -28,7 +28,7 @@ end
 end
 
 updated = update(pvec, ones(length(pvec)))
-update!(pvec, ones(length(pvec)))
+DSGE.update!(pvec, ones(length(pvec)))
 
 @testset "Check if update! preserves dimensions and values" begin
     @test all(updated .== pvec)
@@ -48,7 +48,7 @@ end
 
 # vector of new values must be the same length
 @testset "Ensure update! enforces the same length of the parameter vector being updated" begin
-    @test_throws AssertionError update!(pvec, ones(length(pvec)-1))
+    @test_throws AssertionError DSGE.update!(pvec, ones(length(pvec)-1))
 end
 
 @testset "Ensure parameters being updated are of the same type." begin

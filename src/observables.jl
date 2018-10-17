@@ -1,6 +1,6 @@
 """
 ```
-type Observable
+mutable struct Observable
 ```
 
 ### Fields
@@ -17,7 +17,7 @@ type Observable
 - `name::String`: e.g. \"Real GDP growth\"
 - `longname::String`: e.g. \"Real GDP growth per capita\"
 """
-type Observable
+mutable struct Observable
     key
     input_series::Vector{Symbol} # (vector of Mnemonics, e.g. GDPC1@FRED)
                                  # parse this to determine source
@@ -37,7 +37,7 @@ end
 
 """
 ```
-type PseudoObservable
+mutable struct PseudoObservable
 ```
 
 ### Fields
@@ -49,7 +49,7 @@ type PseudoObservable
 - `rev_transform::Function`: Transforms a series from model units into
   observable units. May take kwargs.
 """
-type PseudoObservable
+mutable struct PseudoObservable
     key::Symbol
     name::String
     longname::String

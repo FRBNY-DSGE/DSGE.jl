@@ -25,9 +25,9 @@ x_init = [10.0, -9.0]
 x_expected = [a, a^2.0]
 
 @testset "Check csminwel gradient calculation for correctness" begin
-    res_real_grad, _ = csminwel(rosenbrock_csminwel, rosenbrock_grad, x_init)
+    res_real_grad,  = csminwel(rosenbrock_csminwel, rosenbrock_grad, x_init)
     @test x_expected ≈ res_real_grad.minimizer
-    res_numeric_grad, _ = csminwel(rosenbrock_csminwel, x_init)
+    res_numeric_grad,  = csminwel(rosenbrock_csminwel, x_init)
     @test x_expected ≈ res_numeric_grad.minimizer atol=1.0e-8
 end
 

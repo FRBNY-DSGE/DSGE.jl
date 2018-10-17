@@ -22,8 +22,8 @@ function compute_scenario_system(m::AbstractModel, scen::Scenario;
     for shock in keys(m.exogenous_shocks)
         if !(shock in scen.instrument_names)
             shock_index = m.exogenous_shocks[shock]
-            system[:QQ][shock_index, :] = 0
-            system[:QQ][:, shock_index] = 0
+            system[:QQ][shock_index, :] .= 0
+            system[:QQ][:, shock_index] .= 0
         end
     end
 
@@ -143,8 +143,10 @@ function write_scenario_forecasts(m::AbstractModel,
     for (i, var) in enumerate([:forecastobs, :forecastpseudo])
         filepath = scenario_output_files[var]
         jldopen(filepath, "w") do file
-            write_forecast_metadata(m, file, get_product(var), get_class(var))
-            write(file, "arr", forecast_output[var])
+            write_forecast_metadata(m, file, var)
+        end
+        h5open(replace(filepath, "jld2" => "h5"), "w") do file
+            write(file, "arr", Array{Float64}(forecast_output[var]))
             if :proportion_switched in keys(scenario_output_files)
                 write(file, "proportion_switched", forecast_output[:proportion_switched][i])
             end
@@ -170,6 +172,7 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
     println(verbose, :low, "Forecast outputs will be saved in " * rawpath(m, "scenarios"))
     tic()
 
+    tic = time_ns()
     # Update model alt policy setting
     m <= Setting(:alternative_policy, scen.altpolicy, false, "apol",
                  "Alternative policy")
@@ -195,7 +198,6 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
     forecast_output = assemble_block_outputs(forecast_outputs)
     output_files = get_scenario_output_files(m, scen, [:forecastobs, :forecastpseudo])
     write_scenario_forecasts(m, output_files, forecast_output, verbose = verbose)
-
     # Print
     forecast_time = toq()
     forecast_time_min = forecast_time/60
