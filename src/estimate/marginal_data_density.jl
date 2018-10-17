@@ -55,7 +55,7 @@ function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{
             n_draws = size(params, 2)
 
             if parallel
-                logpost = @parallel (vcat) for i in 1:n_draws
+                logpost = @distributed (vcat) for i in 1:n_draws
                     posterior!(m, params[:, i], data)
                 end
             else
@@ -282,7 +282,7 @@ function marginal_data_density_frontier(m::AbstractModel, data::Matrix{Float64} 
             n_draws = size(params, 2)
 
             if parallel
-                logpost = @parallel (vcat) for i in 1:n_draws
+                logpost = @distributed (vcat) for i in 1:n_draws
                     posterior!(m, params[:, i], data)
                 end
             else

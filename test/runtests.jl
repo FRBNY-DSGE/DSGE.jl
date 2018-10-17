@@ -1,4 +1,4 @@
-using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures
+using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra
 
 my_tests = [

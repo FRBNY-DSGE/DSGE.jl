@@ -125,7 +125,8 @@ vint = Setting(:data_vintage, "REF", true, "vint", "Date of data") # full constr
     m.testing = false
     m <= Setting(:n_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Hastings")
     @test m.settings[:n_mh_blocks].value == 5
-    @test occursin(r"^\s*_mhbk=5_vint=(\d{6})", DSGE.filestring(m))
+    @show DSGE.filestring(m)
+    @test occursin(r"^\s*_mhbk=5_vint=(\d{6})", string(DSGE.filestring(m)))
     DSGE.filestring(m, "key=val")
     DSGE.filestring(m, ["key=val", "foo=bar"])
     m.testing = true

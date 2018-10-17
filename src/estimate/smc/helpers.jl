@@ -79,8 +79,8 @@ the standard distribution and `(1 - α)` of the diagonalized distribution.
 - `old mixture_density::T`: The mixture density conditional on θ_new evaluated at `θ_old` to be used in calculating the MH move probability
 
 """
-function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Distribution;
-                                                 cc::T = 1.0, α::T = 1.)
+function mvnormal_mixture_draw(θ_old::Vector{T}, d_prop::Distribution;
+                                                 cc::T = 1.0, α::T = 1.) where T <: AbstractFloat
     @assert 0 <= α <= 1
 
     d_bar = MvNormal(d_prop.μ, cc*d_prop.Σ)
@@ -106,9 +106,9 @@ function mvnormal_mixture_draw{T<:AbstractFloat}(θ_old::Vector{T}, d_prop::Dist
     return θ_new, new_mixture_density, old_mixture_density
 end
 
-function compute_ESS{T<:AbstractFloat}(loglh::Vector{T}, current_weights::Vector{T},
+function compute_ESS(loglh::Vector{T}, current_weights::Vector{T},
                                        ϕ_n::T, ϕ_n1::T;
-                                       old_loglh::Vector{T} = zeros(length(loglh)))
+                                       old_loglh::Vector{T} = zeros(length(loglh))) where T <: AbstractFloat
     incremental_weights = exp.((ϕ_n1 - ϕ_n)*old_loglh + (ϕ_n - ϕ_n1)*loglh)
     new_weights = current_weights.*incremental_weights
     normalized_weights = new_weights/sum(new_weights)
