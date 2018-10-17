@@ -192,30 +192,18 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
             continue
         end
         filepath = forecast_output_files[var]
-        jldopen(filepath, "w") do file
-            write_forecast_metadata(m, file, var)
-            if var == :histobs
-                @assert !isempty(df) "df cannot be empty if trying to write :histobs"
-                df1 = df[date_mainsample_start(m) .<= df[:date] .<= date_mainsample_end(m), :]
-                data = df_to_matrix(m, df1)
-                write(file, "arr", data)
-            elseif var != :histobs
-                write(file, "arr", forecast_output[var])
-            end
-        end
-
-        #=if isnull(block_number) || get(block_number) == 1
+        if isnull(block_number) || get(block_number) == 1
             jldopen(filepath, "w") do file
                 write_forecast_metadata(m, file, var)
-
+            end
+            h5open(replace(filepath, "jld2" => "h5"), "w") do file
                 if var == :histobs
                     # :histobs just refers to data, so we only write one draw
                     # (as all draws would be the same)
                     @assert !isempty(df) "df cannot be empty if trying to write :histobs"
                     df1 = df[date_mainsample_start(m) .<= df[:date] .<= date_mainsample_end(m), :]
                     data = df_to_matrix(m, df1)
-                    write(file, "arr", data)
-
+                    write(file, "arr", Array{Float64}(data))
                 else
                     # Otherwise, pre-allocate HDF5 dataset which will contain
                     # all draws
@@ -226,24 +214,24 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                         chunk_dims = collect(dims)
                         chunk_dims[1] = block_size
 
-                        # Initialize dataset
-                        #pfile = datatypes#file.plain
-                        JLD2.write_dataset(file, WriteDataspace(file, Array{Float64}(undef, dims...)), FT_FLOATING_POINT, JLD2.objodr(1.0), Array{Float64}(undef, dims...), file.datatype_wsession)
-                        #HDF5.d_create(pfile, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
-                    end                end
-            end
-        end =#
 
-        #=if var != :histobs
-            jldopen(filepath, "r+") do file
-                if isnull(block_number)
-                    write(file, "arr", forecast_output[var])
-                else
-                    write_forecast_block(file, forecast_output[var], block_inds)
+                        # Initialize dataset
+                        #pfile = file #.plain
+                        dset = HDF5.d_create(file, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
+                    end
                 end
             end
-        end =#
+        end
 
+        if var != :histobs
+            h5open(replace(filepath, "jld2" => "h5"), "r+") do file
+                if isnull(block_number)
+                    write(file, "arr", Array{Float64}(forecast_output[var]))
+                else
+                    write_forecast_block(file, Array{Float64}(forecast_output[var]), block_inds)
+                end
+            end
+        end
         if VERBOSITY[verbose] >= VERBOSITY[:high]
             println(" * Wrote $(basename(filepath))")
         end
@@ -340,12 +328,14 @@ write_forecast_block(file::JLD2.JLDFile, arr::Array, block_number::Int,
 
 Writes `arr` to the subarray of `file` indicated by `block_inds`.
 """
-function write_forecast_block(file::JLD2.JLDFile, arr::Array,
+function write_forecast_block(file, arr::Array,
                               block_inds::AbstractRange{Int64})
-    pfile = file.plain
-    dataset = HDF5.d_open(pfile, "arr")
-    ndims = length(size(dataset))
-    dataset[block_inds, fill(Colon(), ndims-1)...] = arr
+    #pfile = file #.plain
+    dataset = HDF5.d_open(file, "arr")
+    dims = size(dataset)
+    ndims = length(dims)
+    dataset[block_inds, fill(Colon(), ndims-1)...] = arr #pfile was dataset before
+    set_dims!(dataset, dims)
 end
 
 """
@@ -390,7 +380,7 @@ function read_forecast_output(m::AbstractModel, input_type::Symbol, cond_type::S
     product = get_product(output_var)
     class   = get_class(output_var)
 
-    jldopen(filename, "r") do file
+    h5open(replace(filename, "jld2" => "h5"), "r") do file
         # Read forecast output
         fcast_series = if isnull(shock_name)
             read_forecast_series(file, class, product, var_name)
@@ -403,13 +393,13 @@ function read_forecast_output(m::AbstractModel, input_type::Symbol, cond_type::S
         # different in each period. Now we have something of size `ndraws` x
         # `nvars` x `nperiods`
         if product == :trend
-            nperiods = length(read(file, "date_indices"))
+            nperiods = length(load(replace(file.filename, "h5" => "jld2"), "date_indices"))
             fcast_series = repeat(fcast_series, outer = (1, nperiods))
         end
 
         # Parse transform
         class_long = get_class_longname(class)
-        transforms = read(file, string(class_long) * "_revtransforms")
+        transforms = load(replace(file.filename, "h5" => "jld2"), string(class_long) * "_revtransforms")
         transform = parse_transform(transforms[var_name])
 
         fcast_series, transform
@@ -425,22 +415,22 @@ Read only the forecast output for a particular variable (e.g. for a particular
 observable) and possibly a particular shock. Result should be a matrix of size
 `ndraws` x `nperiods`.
 """
-function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol, var_name::Symbol)
+function read_forecast_series(file::HDF5File, class::Symbol, product::Symbol, var_name::Symbol)
     # Get index corresponding to var_name
     class_long = get_class_longname(class)
-    indices = read(file, "$(class_long)_indices")
+    indices = load(replace(file.filename, "h5" => "jld2"), "$(class_long)_indices")
     var_ind = indices[var_name]
 
    # pfile = file.plain
    # filename = pfile.filename
    # dataset = HDF5.d_open(pfile, "arr")
-    filename = file.path
-    dataset = FileIO.load(filename, "arr")
+    filename = file.filename
+    dataset = HDF5.d_open(file, "arr")
     ndims = length(size(dataset))
 
     # Trends are ndraws x nvars
     if product == :trend
-        whole = FileIO.load(filename, "arr")
+        whole = h5read(filename, "arr")
         if ndims == 1 # one draw
             arr = whole[var_ind, Colon()]
             arr = reshape(arr, (1, 1))
@@ -453,11 +443,11 @@ function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol
     elseif product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
                        :bddforecast, :bddforecastut, :bddforecast4q, :dettrend]
         inds_to_read = if ndims == 2 # one draw
-            whole = FileIO.load(filename, "arr")
+            whole = h5read(filename, "arr")
             arr = whole[var_ind, Colon()]
             arr = reshape(arr, (1, length(arr)))
         elseif ndims == 3 # many draws
-            whole = FileIO.load(filename, "arr")
+            whole = h5read(filename, "arr")
             arr = whole[Colon(), var_ind, Colon()]
         end
     else
@@ -467,28 +457,28 @@ function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol
     return arr
 end
 
-function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol, var_name::Symbol,
+function read_forecast_series(file::HDF5File, class::Symbol, product::Symbol, var_name::Symbol,
                               shock_name::Symbol)
     # Get indices corresponding to var_name and shock_name
     class_long = get_class_longname(class)
-    indices = read(file, "$(class_long)_indices")
+    indices = load(replace(file.filename, "h5" => "jld2"), "$(class_long)_indices")
     var_ind = indices[var_name]
-    shock_indices = read(file, "shock_indices")
+    shock_indices = load(replace(file.filename, "h5" => "jld2"), "shock_indices")
     shock_ind = shock_indices[shock_name]
 
     #pfile = file.plain
     #filename = pfile.filename
     #dataset = HDF5.d_open(pfile, "arr")
-    filename = file.path
-    dataset = load(filename, "arr")
+    filename = file.filename
+    dataset = HDF5.d_open(file, "arr")
     ndims = length(size(dataset))
 
     if ndims == 3 # one draw
-        whole = load(filename, "arr")
+        whole = h5read(filename, "arr")
         arr = whole[var_ind, :, shock_ind]
         arr = reshape(arr, 1, length(arr))
     elseif ndims == 4 # many draws
-        whole = load(filename, "arr")
+        whole = h5read(filename, "arr")
         arr = whole[:, var_ind, :, shock_ind]
     end
 

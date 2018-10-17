@@ -48,7 +48,7 @@ end
 
 # Full-distribution
 @everywhere using DSGE
-m <= Setting(:forecast_block_size, 5000)
+m <= Setting(:forecast_block_size, 5)
 forecast_one(m, :full, :none, output_vars, verbose = :none)
 compute_meansbands(m, :full, :none, output_vars; compute_shockdec_bands = true, verbose = :none)
 meansbands_to_matrix(m, :full, :none, output_vars; verbose = :none)
