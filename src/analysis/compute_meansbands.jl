@@ -158,10 +158,10 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     dirpath = dirname(filepath)
     isdir(dirpath) || mkpath(dirpath)
     jldopen(filepath, true, true, true, IOStream) do file
-        for (key, value) in mb
-            write(file, key, value)
-        end
-        #write(file, "mb", mb)
+        #for (key, value) in mb
+        #    write(file, key, value)
+        #end
+        write(file, "mb", mb)
     end
 
     if VERBOSITY[verbose] >= VERBOSITY[:high]
