@@ -120,7 +120,7 @@ Base.rank(d::DegenerateMvNormal)
 
 Returns the rank of `d.σ`.
 """
-function Base.rank(d::DegenerateMvNormal)
+function LinearAlgebra.rank(d::DegenerateMvNormal)
     return rank(d.σ)
 end
 
