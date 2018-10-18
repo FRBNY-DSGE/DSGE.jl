@@ -162,7 +162,7 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
         etawt1 = adjoint(qt1) * Π #Ac_mul_B(qt1, Π)
         ndeta1 = min(n - nunstab, neta)
         etawt1svd = svd!(etawt1)
-        bigev = (LinearIndices(etawtsvd.S))[findall(etawt1svd.S .> ϵ)]
+        bigev = (LinearIndices(etawt1svd.S))[findall(etawt1svd.S .> ϵ)]
         ueta1 = etawt1svd.U[:, bigev]
         veta1 = etawt1svd.V[:, bigev]
         deta1 = Matrix(Diagonal(etawt1svd.S[bigev]))
