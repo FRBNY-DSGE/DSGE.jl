@@ -253,7 +253,7 @@ posterior_table(m, post_means, post_bands; percent = 0.9, subset_string = "",
 function posterior_table(m::AbstractModel, post_means::Vector, post_bands::Matrix;
                          percent::AbstractFloat = 0.9,
                          subset_string::String = "",
-                         groupings::Associative{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                         groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
                          caption::Bool = true,
                          outdir::String = "")
 
@@ -436,7 +436,7 @@ function prior_posterior_moments_table(m::AbstractModel,
             index = m.keys[param.key]
             (prior_mean, prior_std) = moments(param)
 
-            @printf fid "\$\%4.99s\$ & " param.tex_label
+            @printf fid "\$%4.99s\$ & " param.tex_label
             @printf fid "%s & " (param.fixed ? "-" : distid(get(param.prior)))
             @printf fid "%8.3f & " prior_mean
             @printf fid "%8.3f & " prior_std

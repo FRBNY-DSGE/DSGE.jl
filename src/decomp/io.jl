@@ -46,7 +46,7 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
                                       decomp_output_files::Dict{Symbol, String},
                                       decomps::Dict{Symbol, Array{Float64}};
                                       block_number::Nullable{Int} = Nullable{Int}(),
-                                      block_inds::Range{Int} = 1:0,
+                                      block_inds::AbstractRange{Int} = 1:0,
                                       verbose::Symbol = :low) where M<:AbstractModel
     for comp in [:data, :news, :shockdec, :dettrend, :para, :total]
         for class in classes
