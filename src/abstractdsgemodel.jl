@@ -113,7 +113,7 @@ end
 Add a new steady-state value to the model by appending `ssp` to the `m.steady_state` and
 adding `ssp.key` to `m.keys`.
 """
-function (<=){T}(m::AbstractModel{T}, ssp::SteadyStateParameter)
+function (<=){T}(m::AbstractModel{T}, ssp<:{SteadyStateParameter,SteadyStateParameterArray})
 
     if !in(ssp.key, keys(m.keys))
         new_param_index = length(m.keys) + 1

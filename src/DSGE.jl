@@ -2,7 +2,8 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
     using Base.Dates, Base.Test, BenchmarkTools
-    using CSV, DataFrames, DataArrays, Distributions, FredData, HDF5, JLD, Optim, Plots, RecipesBase, StateSpaceRoutines, StatPlots
+    using CSV, DataFrames, DataArrays, Distributions, FredData, HDF5, JLD, Optim, Plots, RecipesBase
+    using StateSpaceRoutines, StatPlots
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
@@ -128,6 +129,9 @@ module DSGE
         init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
         Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, KrusellSmith,
         BondLabor, eqcond, measurement, pseudo_measurement, shock_groupings,
+
+        # models/ (Continuous time)
+        solve_hjb, solve_kfe, model_settings!, KrusellSmithCT, SteadyStateParameterArray,
 
         # util
         @test_matrix_approx_eq, @test_matrix_approx_eq_eps
@@ -286,4 +290,17 @@ module DSGE
     include("models/heterogeneous_agent/bond_labor/shock_loading.jl")
     include("models/heterogeneous_agent/bond_labor/observables.jl")
     include("models/heterogeneous_agent/bond_labor/measurement.jl")
+
+    # Continuous Time Heterogenous Agent Models
+    include("models/heterogeneous_agent/solve_hjb.jl")
+    include("models/heterogeneous_agent/solve_kfe.jl")
+
+    include("models/heterogeneous_agent/krusell_smith_ct/krusell_smith_ct.jl")
+    include("models/heterogeneous_agent/krusell_smith_ct/measurement.jl")
+    include("models/heterogeneous_agent/krusell_smith_ct/eqcond.jl")
+
+#    include("models/heterogeneous_agent/one_asset_hank/one_asset_hank.jl")
+#    include("models/heterogeneous_agent/one_asset_hank/measurement.jl")
+#    include("models/heterogeneous_agent/one_asset_hank/eqcond.jl")
+#    include("models/heterogeneous_agent/one_asset_hank/util.jl")
 end
