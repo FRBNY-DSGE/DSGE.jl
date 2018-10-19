@@ -45,7 +45,7 @@ function estimate(m::AbstractModel;
     estimate(m, df; verbose=verbose, proposal_covariance=proposal_covariance,
              mle = mle, run_MH = run_MH)
 end
-function estimate(m::AbstractModel, data::AbstractArray{Float64};
+function estimate(m::AbstractModel, data::AbstractArray;
                   verbose::Symbol=:low,
                   proposal_covariance::Matrix=Matrix(0,0),
                   mle::Bool = false,
