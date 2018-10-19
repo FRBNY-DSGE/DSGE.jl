@@ -1,9 +1,9 @@
 # To be removed after running this test individually in the REPL successfully
 using DSGE
-using HDF5, JLD2
-using Test
+using HDF5, JLD, JLD2
+import Base.Test: @test, @testset
 
-file = jldopen("reference/helpers_input.jld2", "r")
+file = JLD.jldopen("reference/helpers_input.jld", "r")
 cloud = read(file, "cloud")
 proposed_fixed_schedule = read(file, "proposed_fixed_schedule")
 i = read(file, "i")
@@ -14,7 +14,7 @@ tempering_target = read(file, "tempering_target")
 resampled_last_period = read(file, "resampled_last_period")
 close(file)
 
-Random.seed!(42)
+srand(42)
 test_ϕ_n, test_resampled_last_period, test_j, test_ϕ_prop = DSGE.solve_adaptive_ϕ(cloud, proposed_fixed_schedule,
                                                                              i, j, ϕ_prop, ϕ_n1, tempering_target,
                                                                              resampled_last_period)
@@ -31,7 +31,7 @@ JLD2.jldopen("reference/helpers_output.jld2", "w") do file
     write(file, "phi_prop", test_ϕ_prop)
 end=#
 
-file = jldopen("reference/helpers_output.jld2", "r")
+file = JLD.jldopen("reference/helpers_output.jld", "r")
 saved_ϕ_n = read(file, "phi_n")
 saved_resampled_last_period = read(file, "resampled_last_period")
 saved_j = read(file, "j")
