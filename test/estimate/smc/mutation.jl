@@ -1,11 +1,16 @@
 # To be removed after running this test individually in the REPL successfully
 using DSGE
-using HDF5, JLD2, Distributions, LinearAlgebra, PDMats
-using Test
+using HDF5, JLD, JLD2
+import Base.Test: @test, @testset
 
-m = AnSchorfheide(testing = true)
+path = dirname(@__FILE__)
 
-@load "reference/smc.jld2" data
+m = AnSchorfheide()
+
+saveroot = normpath(joinpath(dirname(@__FILE__),"save"))
+m <= Setting(:saveroot, saveroot)
+
+data = h5read("reference/smc.h5", "data")
 
 m <= Setting(:n_particles, 400)
 m <= Setting(:n_Φ, 100)
@@ -24,12 +29,22 @@ m <= Setting(:use_fixed_schedule, true)
 
 n_parts = get_setting(m, :n_particles)
 
-@load "reference/mutation_inputs.jld2" old_particles d blocks_free blocks_all ϕ_n ϕ_n1 c α old_data
+file = JLD.jldopen("reference/mutation_inputs.jld", "r")
+old_particles = read(file, "particles")
+d = read(file, "d")
+blocks_free = read(file, "blocks_free")
+blocks_all = read(file, "blocks_all")
+ϕ_n = read(file, "ϕ_n")
+ϕ_n1 = read(file, "ϕ_n1")
+c = read(file, "c")
+α = read(file, "α")
+old_data = read(file, "old_data")
+close(file)
 
 function stack_values(particles::Vector{Particle}, field::Symbol)
     n_parts = length(particles)
     init_field_value = getfield(particles[1], field)
-    stacked_values = Vector{typeof(init_field_value)}(undef, n_parts)
+    stacked_values = Vector{typeof(init_field_value)}(n_parts)
 
     for (i, particle) in enumerate(particles)
         stacked_values[i] = getfield(particle, field)
@@ -38,20 +53,27 @@ function stack_values(particles::Vector{Particle}, field::Symbol)
     return stacked_values
 end
 
-Random.seed!(42)
+srand(42)
 
 new_particles = [mutation(m, data, old_particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
                  c = c, α = α, old_data = old_data) for j = 1:n_parts]
 
-saved_particles = load("reference/mutation_outputs.jld2", "particles")
+#=jldopen("reference/mutation_outputs.jld", "w") do file
+    write(file, "particles", new_particles)
+end
+JLD2.jldopen("reference/mutation_outputs.jld2", "w") do file
+    write(file, "particles", new_particles)
+end =#
 
-particle_fields = fieldnames(typeof(new_particles[1]))
+saved_particles = load("reference/mutation_outputs.jld", "particles")
+
+particle_fields = fieldnames(new_particles[1])
 @testset "Individual Particle Fields Post-Mutation" begin
     @test stack_values(new_particles, :weight) == stack_values(saved_particles, :weight)
-    @test stack_values(new_particles, :keys) == stack_values(saved_particles, :keys)
-    @test stack_values(new_particles, :value) == stack_values(saved_particles, :value)
-    @test stack_values(new_particles, :loglh) ≈ stack_values(saved_particles, :loglh)
-    @test stack_values(new_particles, :logpost) ≈ stack_values(saved_particles, :logpost)
-    @test stack_values(new_particles, :old_loglh) == stack_values(saved_particles, :old_loglh)
-    @test stack_values(new_particles, :accept) == stack_values(saved_particles, :accept)
+    for field in particle_fields
+        new_particles_field = stack_values(new_particles, field)
+        saved_particles_field = stack_values(saved_particles, field)
+
+        @test new_particles_field == saved_particles_field
+    end
 end

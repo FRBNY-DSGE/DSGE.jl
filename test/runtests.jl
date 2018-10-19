@@ -1,5 +1,5 @@
-using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random
-@everywhere using DSGE, JLD2, Printf, LinearAlgebra
+using Base.Test
+@everywhere using DSGE, JLD
 
 my_tests = [
             "core",
@@ -21,12 +21,12 @@ my_tests = [
             "estimate/csminwel",
             "estimate/optimize",
             "estimate/metropolis_hastings",
-            "estimate/smc/mutation",
+            "estimate/smc/smc",
             "estimate/smc/helpers",
             "estimate/smc/initialization",
             "estimate/smc/resample",
             "estimate/smc/util",
-            "estimate/smc/smc",
+            "estimate/smc/mutation",
             "data/misc",
             "data/load_data",
             "forecast/smooth",
