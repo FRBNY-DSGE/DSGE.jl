@@ -10,9 +10,9 @@ test_sys_resample = resample(weights, method = :systematic)
 test_multi_resample = resample(weights, method = :multinomial)
 test_poly_resample = resample(weights, method = :polyalgo)
 
-saved_sys_resample = load("../../reference/resample.jld", "sys")
-saved_multi_resample = load("../../reference/resample.jld", "multi")
-saved_poly_resample = load("../../reference/resample.jld", "poly")
+saved_sys_resample = load("reference/resample.jld", "sys")
+saved_multi_resample = load("reference/resample.jld", "multi")
+saved_poly_resample = load("reference/resample.jld", "poly")
 
 ####################################################################
 @testset "Resampling methods" begin
