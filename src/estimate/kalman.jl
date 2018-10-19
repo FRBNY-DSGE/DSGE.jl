@@ -89,7 +89,7 @@ Returns a Vector{AbstractRange{Int64}} of index ranges for the pre- and post-ZLB
 regimes. The optional argument `start_date` indicates the first quarter of
 `data`.
 """
-function zlb_regime_indices(m::AbstractModel{S}, data::AbstractArray{Union{S, Missing}},
+function zlb_regime_indices(m::AbstractModel{S}, data::AbstractArray,
                             start_date::Dates.Date = date_presample_start(m)) where {S<:AbstractFloat}
     T = size(data, 2)
 

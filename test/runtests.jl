@@ -1,4 +1,4 @@
-using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra
+using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra
 
 my_tests = [
@@ -18,10 +18,10 @@ my_tests = [
             "estimate/posterior",
             "estimate/hessizero",
             "estimate/hessian",
-            "estimate/csminwel",=#
+            "estimate/csminwel",
             "estimate/optimize",
-            "estimate/metropolis_hastings",
-            "estimate/smc",
+            "estimate/metropolis_hastings", =#
+            "estimate/smc/smc",
             "estimate/mutation",
             "data/misc",
             "data/load_data",

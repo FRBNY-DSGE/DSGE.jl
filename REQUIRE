@@ -6,6 +6,7 @@ DataFrames
 DataStructures
 Dates
 Distributions
+FileIO
 FredData
 HDF5
 JLD2
@@ -22,3 +23,4 @@ SpecialFunctions
 StateSpaceRoutines
 StatPlots
 StatsBase
+StatsFuns

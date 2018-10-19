@@ -6,7 +6,7 @@ module DSGE
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
-    using StatsBase: sample
+    using StatsBase: sample, Weights
     using StatsFuns: chisqinvcdf
     import Calculus
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults

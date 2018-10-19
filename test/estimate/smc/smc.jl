@@ -1,16 +1,16 @@
 # To be removed after running this test individually in the REPL successfully
 using DSGE
-using HDF5, JLD
+using HDF5, JLD2
 import Base.Test: @test, @testset
 
 path = dirname(@__FILE__)
 
 m = AnSchorfheide()
 
-saveroot = normpath(joinpath(dirname(@__FILE__),"..","..","save"))
+saveroot = normpath(joinpath(dirname(@__FILE__),"save"))
 m <= Setting(:saveroot, saveroot)
 
-data = h5read("../../reference/smc.h5", "data")
+data = h5read("reference/smc.h5", "data")
 
 m <= Setting(:n_particles, 400)
 m <= Setting(:n_Φ, 100)
@@ -33,12 +33,12 @@ m <= Setting(:use_fixed_schedule, false)
 srand(42)
 smc(m, data, verbose = :none) # us.txt gives equiv to periods 95:174 in our current dataset
 
-test_file = load(rawpath(m, "estimate", "smc_cloud.jld"))
+test_file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
 test_cloud  = test_file["cloud"]
 test_w      = test_file["w"]
 test_W      = test_file["W"]
 
-saved_file = load("../../reference/smc_cloud_fix=true.jld")
+saved_file = load("reference/smc_cloud_fix=true.jld2")
 saved_cloud  = saved_file["cloud"]
 saved_w      = saved_file["w"]
 saved_W      = saved_file["W"]
