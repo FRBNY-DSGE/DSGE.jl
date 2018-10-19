@@ -90,6 +90,7 @@ function default_settings!(m::AbstractModel)
         "Calculate the hessian at the mode")
     settings[:n_hessian_test_params] = Setting(:n_hessian_test_params, typemax(Int),
         "Max number of free params for which to calculate Hessian")
+    settings[:use_chand_recursion] = Setting(:use_chand_recursion, false, "Use Chandrasekhar Recursions instead of standard Kalman filter")
 
     # Metropolis-Hastings
     settings[:n_mh_simulations] = Setting(:n_mh_simulations, 5000,

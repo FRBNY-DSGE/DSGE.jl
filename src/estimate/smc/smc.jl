@@ -91,8 +91,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     if tempered_update
         # Load the previous ParticleCloud as the starting point for time tempering
-        loadpath = rawpath(m, "estimate", "smc_cloud.jld")
-        #loadpath = rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)])
+        loadpath = rawpath(m, "estimate", "smc_cloud.jld2")
+        #loadpath = rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(tempering_target)])
         loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
 
         cloud = load(loadpath, "cloud")
@@ -228,13 +228,13 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
     if parallel
-        new_particles = @distributed (vcat) for k in 1:n_parts
-            mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
+        new_particles = @parallel (vcat) for j in 1:n_parts
+            mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
                      c = c, α = α, old_data = old_data, verbose = verbose)
         end
     else
-        new_particles = [mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                                  c = c, α = α, old_data = old_data, verbose = verbose) for k = 1:n_parts]
+        new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
+                                  c = c, α = α, old_data = old_data, verbose = verbose) for j = 1:n_parts]
     end
 
     cloud.particles = new_particles
@@ -265,8 +265,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             particle_store[i,:] = cloud.particles[i].value
         end
         close(simfile)
-        #jldopen(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)]), "w") do file
-        jldopen(rawpath(m, "estimate", "smc_cloud.jld"), "w") do file
+        #jldopen(rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(tempering_target)]), "w") do file
+        jldopen(rawpath(m, "estimate", "smc_cloud.jld2"), "w") do file
             write(file, "cloud", cloud)
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)
