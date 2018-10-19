@@ -22,7 +22,6 @@ n_iterations = 3
 x0 = Float64[p.value for p in m.parameters]
 
 out, H = optimize!(m, data; iterations=n_iterations)
-
 @testset "Check optimize minimizers are the same" begin
     @test @test_matrix_approx_eq minimizer out.minimizer
     @test minimum ≈ out.minimum atol=5e-7

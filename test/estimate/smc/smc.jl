@@ -16,19 +16,17 @@ m <= Setting(:n_particles, 400)
 m <= Setting(:n_Φ, 100)
 m <= Setting(:λ, 2.0)
 m <= Setting(:n_smc_blocks, 1)
-m <= Setting(:use_parallel_workers, false)
+m <= Setting(:use_parallel_workers, true)
 m <= Setting(:step_size_smc, 0.5)
 m <= Setting(:n_mh_steps_smc, 1)
 m <= Setting(:resampler_smc, :polyalgo)
 m <= Setting(:target_accept, 0.25)
 
 m <= Setting(:mixture_proportion, .9)
-m <= Setting(:tempering_target, 0.95)
+m <= Setting(:adaptive_tempering_target_smc, false)
 m <= Setting(:resampling_threshold, .5)
-# m <= Setting(:use_fixed_schedule, true)
-
-# TEMPORARY
-m <= Setting(:use_fixed_schedule, false)
+m <= Setting(:smc_iteration, 0)
+m <= Setting(:use_chand_recursion, true)
 
 srand(42)
 smc(m, data, verbose = :none) # us.txt gives equiv to periods 95:174 in our current dataset
@@ -37,11 +35,20 @@ test_file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
 test_cloud  = test_file["cloud"]
 test_w      = test_file["w"]
 test_W      = test_file["W"]
+test_z = test_file["z"]
+
+#=JLD2.jldopen("reference/smc_cloud_fix=true.jld2", "w") do file
+    write(file, "cloud", test_cloud)
+    write(file, "w", test_w)
+    write(file, "W", test_W)
+    write(file, "z", test_z)
+end=#
 
 saved_file = load("reference/smc_cloud_fix=true.jld2")
 saved_cloud  = saved_file["cloud"]
 saved_w      = saved_file["w"]
 saved_W      = saved_file["W"]
+
 
 ####################################################################
 cloud_fields = fieldnames(test_cloud)

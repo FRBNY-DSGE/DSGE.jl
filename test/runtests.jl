@@ -23,6 +23,10 @@ my_tests = [
             "estimate/metropolis_hastings", =#
             "estimate/smc/smc",
             "estimate/mutation",
+            "estimate/smc/helpers", =#
+            "estimate/smc/initialization",
+            "estimate/smc/resample",
+            "estimate/smc/util",
             "data/misc",
             "data/load_data",
             "forecast/smooth",
