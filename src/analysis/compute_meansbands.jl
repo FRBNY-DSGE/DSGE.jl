@@ -43,7 +43,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
         println("Start time: $(now())")
         println("Means and bands will be saved in $output_dir")
     end
-    toq = @elapsed let
+    elapsed_time = @elapsed let
         # Determine full set of output_vars necessary for plotting desired result
         output_vars = add_requisite_output_vars(output_vars)
 
@@ -75,7 +75,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
         end
     end
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        total_mb_time     = toq
+        total_mb_time     = elapsed_time
         total_mb_time_min = total_mb_time/60
 
         println("\nTotal time to compute means and bands: " * string(total_mb_time_min) * " minutes")

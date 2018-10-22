@@ -345,7 +345,7 @@ function metropolis_hastings(propdist::Distribution,
 
         # Calculate time to complete this block, average block time, and
         # expected time to completion
-        block_time = toq()
+        block_time = (time_ns() - begin_time)/1e9
         total_sampling_time += block_time
         total_sampling_time_minutes = total_sampling_time/60
         expected_time_remaining_sec     = (total_sampling_time/block)*(n_blocks - block)

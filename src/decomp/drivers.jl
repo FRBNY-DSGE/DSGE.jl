@@ -78,7 +78,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         for block = 1:nblocks
             println(verbose, :low)
             info(verbose, :low, "Decomposing block $block of $nblocks...")
-            tic()
+            begin_time = time_ns()
 
             # Get to work!
             params_new = load_draws(m_new, input_type, block_inds[block], verbose = verbose)
@@ -96,7 +96,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
 
             # Calculate time to complete this block, average block time, and
             # expected time to completion
-            block_time = toq()
+            block_time = (time_ns() - begin_time)/1e9
             total_forecast_time += block_time
             total_forecast_time_min     = total_forecast_time/60
             expected_time_remaining     = (total_forecast_time/block)*(nblocks - block)
