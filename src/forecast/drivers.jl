@@ -255,7 +255,7 @@ function forecast_one(m::AbstractModel{Float64},
     output_dir = rawpath(m, "forecast")
 
     # Print
-    info(verbose, :low, "Forecasting input_type = $input_type, cond_type = $cond_type...")
+    info_print(verbose, :low, "Forecasting input_type = $input_type, cond_type = $cond_type...")
     println(verbose, :low, "Start time: $(now())")
     println(verbose, :low, "Forecast outputs will be saved in $output_dir")
 
@@ -295,7 +295,7 @@ function forecast_one(m::AbstractModel{Float64},
 
         for block = start_block:nblocks
             println(verbose, :low, )
-            info(verbose, :low, "Forecasting block $block of $nblocks...")
+            info_print(verbose, :low, "Forecasting block $block of $nblocks...")
             begin_time = time_ns()
 
             # Get to work!

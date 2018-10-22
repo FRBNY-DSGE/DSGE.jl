@@ -27,7 +27,7 @@ function meansbands_to_matrix(m::AbstractModel, input_type::Symbol,
     output_dir  = workpath(m, "forecast")
 
     println(verbose, :low, )
-    info(verbose, :low, "Converting means and bands to matrices for input_type = $input_type, cond_type = $cond_type...")
+    info_print(verbose, :low, "Converting means and bands to matrices for input_type = $input_type, cond_type = $cond_type...")
     println(verbose, :low, "Start time: $(now())")
     println(verbose, :low, "Means and bands matrices will be saved in $output_dir")
 

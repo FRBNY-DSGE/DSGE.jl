@@ -51,7 +51,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
     # Get output file names
     decomp_output_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes)
 
-    info(verbose, :low, "Decomposing forecast...")
+    info_print(verbose, :low, "Decomposing forecast...")
     println(verbose, :low, "Start time: $(now())")
 
     # Set up call to lower-level method
@@ -77,7 +77,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
 
         for block = 1:nblocks
             println(verbose, :low)
-            info(verbose, :low, "Decomposing block $block of $nblocks...")
+            info_print(verbose, :low, "Decomposing block $block of $nblocks...")
             begin_time = time_ns()
 
             # Get to work!

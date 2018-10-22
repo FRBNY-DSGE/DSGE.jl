@@ -111,7 +111,7 @@ function detexify(s::Symbol)
     Symbol(detexify(string(s)))
 end
 
-dispfns = [:print, :println, :info, :warn]
+dispfns = [:print, :println]
 for disp in dispfns
     @eval begin
         function Base.$disp(verbose::Symbol, min::Symbol, xs...)
@@ -122,6 +122,17 @@ for disp in dispfns
     end
 end
 
+function info_print(verbose::Symbol, min::Symbol, x::String)
+    if VERBOSITY[verbose] >= VERBOSITY[min]
+        @info(x)
+    end
+end
+
+function warn_print(verbose::Symbol, min::Symbol, x::String)
+    if VERBOSITY[verbose] >= VERBOSITY[min]
+        @warn(x)
+    end
+end
 
 ## Testing functions
 

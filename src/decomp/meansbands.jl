@@ -3,7 +3,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
                              verbose::Symbol = :low) where M<:AbstractModel
     # Print
     println(verbose, :low, )
-    info(verbose, :low, "Computing means of forecast decomposition...")
+    info_print(verbose, :low, "Computing means of forecast decomposition...")
     println(verbose, :low, "Start time: " * string(now()))
     begin_time = time_ns()
 
