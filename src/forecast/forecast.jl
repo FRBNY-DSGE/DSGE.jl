@@ -2,13 +2,13 @@
 ```
 forecast(m, system, z0; enforce_zlb = false, shocks = Matrix{S}(undef, 0,0))
 
-forecast(system, s_0, shocks; enforce_zlb = false)
+forecast(system, z0, shocks; enforce_zlb = false)
 ```
 
 ### Inputs
 
 - `system::System{S}`: state-space system matrices
-- `s_0::Vector{S}`: state vector in the final historical period
+- `z0::Vector{S}`: state vector in the final historical period
 - `shocks::Matrix{S}`: `nshocks` x `nperiods` matrix of shocks to use when
   forecasting. Note that in the first method, `nperiods` doesn't necessarily
   have to equal `forecast_horizons(m)`; it will be truncated or padded with
@@ -104,7 +104,7 @@ function forecast(m::AbstractModel, system::System{S},
     if alt_policy.solve != identity &&
         alt_policy.forecast_init != identity
 
-        shocks, s_0 = alt_policy.forecast_init(m, shocks, s_0, cond_type = cond_type)
+        shocks, z0 = alt_policy.forecast_init(m, shocks, z0, cond_type = cond_type)
     end
 
     # Get variables necessary to enforce the zero lower bound in the forecast
@@ -112,7 +112,7 @@ function forecast(m::AbstractModel, system::System{S},
     ind_r_sh = m.exogenous_shocks[:rm_sh]
     zlb_value = forecast_zlb_value(m)
 
-    forecast(system, s_0, shocks; enforce_zlb = enforce_zlb,
+    forecast(system, z0, shocks; enforce_zlb = enforce_zlb,
         ind_r = ind_r, ind_r_sh = ind_r_sh, zlb_value = zlb_value)
 end
 
@@ -158,7 +158,7 @@ function forecast(system::System{S}, z0::Vector{S},
 
     # Iterate state space forward
     states = zeros(S, nstates, horizon)
-    states[:, 1], shocks[:, 1] = iterate(s_0, shocks[:, 1])
+    states[:, 1], shocks[:, 1] = iterate(z0, shocks[:, 1])
     for t in 2:horizon
         states[:, t], shocks[:, t] = iterate(states[:, t-1], shocks[:, t])
     end

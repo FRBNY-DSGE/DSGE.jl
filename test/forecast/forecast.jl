@@ -11,7 +11,7 @@ m <= Setting(:forecast_horizons, 1)
 system = jldopen("$path/../reference/forecast_args.jld2","r") do file
     read(file, "system")
 end
-s_0 = zeros(n_states_augmented(m))
+z0 = zeros(n_states_augmented(m))
 
 # Read expected output
 exp_states, exp_obs, exp_pseudo, exp_shocks =
