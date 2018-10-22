@@ -11,7 +11,7 @@ of times a switch actually occured.
 function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
                             verbose::Symbol = :low)
 
-    info(verbose, :low, "Simulating switching for " * string(scen.key) * "...")
+    info_print(verbose, :low, "Simulating switching for " * string(scen.key) * "...")
     println(verbose, :low, "Start time: " * string(now()))
     println(verbose, :low, "Outputs will be saved in " * rawpath(m, "scenarios"))
 

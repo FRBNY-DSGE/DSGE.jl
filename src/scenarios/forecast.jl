@@ -167,7 +167,7 @@ function returns a `Dict{Symbol, Array{Float64}`.
 function forecast_scenario(m::AbstractModel, scen::Scenario;
                            verbose::Symbol = :low)
     # Print
-    info(verbose, :low, "Forecasting scenario = " * string(scen.key) * "...")
+    info_print(verbose, :low, "Forecasting scenario = " * string(scen.key) * "...")
     println(verbose, :low, "Start time: " * string(now()))
     println(verbose, :low, "Forecast outputs will be saved in " * rawpath(m, "scenarios"))
 

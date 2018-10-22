@@ -29,7 +29,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
                               kwargs...)
     # Print
     println(verbose, :low, )
-    info(verbose, :low, "Computing means and bands for scenario = " * string(scen.key) * "...")
+    info_print(verbose, :low, "Computing means and bands for scenario = " * string(scen.key) * "...")
     println(verbose, :low, "Start time: " * string(now()))
     println(verbose, :low, "Means and bands will be saved in " * workpath(m, "scenarios"))
 
