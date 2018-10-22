@@ -5,7 +5,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
     println(verbose, :low, )
     info(verbose, :low, "Computing means of forecast decomposition...")
     println(verbose, :low, "Start time: " * string(now()))
-    tic()
+    begin_time = time_ns()
 
     input_files = get_decomp_output_files(m_new, m_old, input_type, cond_new, cond_old, classes)
 
@@ -39,7 +39,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
     end
 
     # Print
-    total_mb_time     = toq()
+    total_mb_time     = (time_ns() - begin_time)/1e9
     total_mb_time_min = total_mb_time/60
 
     println(verbose, :low, "\nTotal time to compute decomposition means and bands: " * string(total_mb_time_min) * " minutes")

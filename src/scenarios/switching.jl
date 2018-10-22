@@ -63,7 +63,7 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
     write_scenario_forecasts(m, output_files, results, verbose = verbose)
 
     # Print
-    switching_time = time_ns() - tic
+    switching_time = (time_ns() - tic)/1e9
     switching_time_min = switching_time/60
     println(verbose, :low, "\nTime elapsed: " * string(switching_time_min) * " minutes")
     println(verbose, :low, "Switching complete: " * string(now()))

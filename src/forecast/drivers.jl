@@ -264,7 +264,7 @@ function forecast_one(m::AbstractModel{Float64},
 
     if input_type in [:mode, :mean, :init]
 
-        toq = @elapsed let
+        elapsed_time = @elapsed let
             params = load_draws(m, input_type; verbose = verbose)
             forecast_output = forecast_one_draw(m, input_type, cond_type, output_vars,
                                                 params, df, verbose = verbose)
@@ -275,7 +275,7 @@ function forecast_one(m::AbstractModel{Float64},
         end
 
 
-        total_forecast_time     = toq()
+        total_forecast_time     = elapsed_time
         total_forecast_time_min = total_forecast_time/60
         println(verbose, :low, "\nTotal time to forecast: $total_forecast_time_min minutes")
 
@@ -296,7 +296,7 @@ function forecast_one(m::AbstractModel{Float64},
         for block = start_block:nblocks
             println(verbose, :low, )
             info(verbose, :low, "Forecasting block $block of $nblocks...")
-            tic()
+            begin_time = time_ns()
 
             # Get to work!
             params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
@@ -317,7 +317,7 @@ function forecast_one(m::AbstractModel{Float64},
 
             # Calculate time to complete this block, average block time, and
             # expected time to completion
-            block_time = toq()
+            block_time = (time_ns() - begin_time)/1e9
             total_forecast_time += block_time
             total_forecast_time_min     = total_forecast_time/60
             blocks_elapsed              = block - start_block + 1

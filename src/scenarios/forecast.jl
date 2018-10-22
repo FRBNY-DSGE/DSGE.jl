@@ -170,9 +170,8 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
     info(verbose, :low, "Forecasting scenario = " * string(scen.key) * "...")
     println(verbose, :low, "Start time: " * string(now()))
     println(verbose, :low, "Forecast outputs will be saved in " * rawpath(m, "scenarios"))
-    tic()
 
-    tic = time_ns()
+    start_time = time_ns()
     # Update model alt policy setting
     m <= Setting(:alternative_policy, scen.altpolicy, false, "apol",
                  "Alternative policy")
@@ -199,7 +198,7 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
     output_files = get_scenario_output_files(m, scen, [:forecastobs, :forecastpseudo])
     write_scenario_forecasts(m, output_files, forecast_output, verbose = verbose)
     # Print
-    forecast_time = toq()
+    forecast_time = (time_ns() - start_time)/1e9
     forecast_time_min = forecast_time/60
     println(verbose, :low, "\nTime elapsed: " * string(forecast_time_min) * " minutes")
     println(verbose, :low, "Forecast complete: " * string(now()))
