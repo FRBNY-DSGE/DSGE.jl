@@ -2,7 +2,7 @@ using DSGE, JLD, DifferentialEquations
 
 # Get transition equations
 m = KrusellSmithCT()
-T, R, C, inverse_basis, basis = solve(m)
+T, R, C, inverse_basis, basis = solvect(m)
 
 # Make initial guess
 n_vars = n_states(m)

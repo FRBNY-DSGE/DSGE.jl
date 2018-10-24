@@ -107,13 +107,13 @@ end
 
 """
 ```
-(<=){T}(m::AbstractModel{T}, ssp::SteadyStateParameter)
+(<=){T}(m::AbstractModel{T}, ssp::Union{SteadyStateParameter,SteadyStateParameterArray})
 ```
 
 Add a new steady-state value to the model by appending `ssp` to the `m.steady_state` and
 adding `ssp.key` to `m.keys`.
 """
-function (<=){T}(m::AbstractModel{T}, ssp<:{SteadyStateParameter,SteadyStateParameterArray})
+function (<=){T}(m::AbstractModel{T}, ssp::Union{SteadyStateParameter, SteadyStateParameterArray})
 
     if !in(ssp.key, keys(m.keys))
         new_param_index = length(m.keys) + 1

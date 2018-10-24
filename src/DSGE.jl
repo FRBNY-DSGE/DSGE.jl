@@ -2,14 +2,15 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
     using Base.Dates, Base.Test, BenchmarkTools
-    using CSV, DataFrames, DataArrays, Distributions, FredData, HDF5, JLD, Optim, Plots, RecipesBase
-    using StateSpaceRoutines, StatPlots
+    using BasisMatrices, CSV, DataFrames, DataArrays, Distributions, ForwardDiff, FredData, HDF5, JLD
+    using Optim, Plots, RecipesBase, StateSpaceRoutines, StatPlots
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
+    using DifferentialEquations: ODEProblem, Tsit5, Euler
     using Roots: fzero, ConvergenceFailed
     using StatsBase: sample
     using StatsFuns: chisqinvcdf
-    import Calculus
+    import Calculus, Missings, Nullables, Base.<
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
 
     export
@@ -130,8 +131,19 @@ module DSGE
         Model990, Model1002, Model1010, SmetsWouters, AnSchorfheide, KrusellSmith,
         BondLabor, eqcond, measurement, pseudo_measurement, shock_groupings,
 
-        # models/ (Continuous time)
-        solve_hjb, solve_kfe, model_settings!, KrusellSmithCT, SteadyStateParameterArray,
+        #### Continuous time
+        # models
+        solve_hjb, solve_kfe, model_settings!, AbstractCTModel, KrusellSmithCT, SteadyStateParameterArray,
+        OneAssetHANK,
+
+        # solve/
+        gensysct, gensysct!, new_divct, decomposition_svdct!, <,
+        krylov_reduction, valueref_reduction, deflated_block_arnoldi, change_basis, oneDquad_spline,
+        extend_to_nd, projection_for_subset, spline_basis, solve_static_conditions,
+
+        # estimate
+        hessizero,
+        transform_transition_matrices,
 
         # util
         @test_matrix_approx_eq, @test_matrix_approx_eq_eps
@@ -142,8 +154,10 @@ module DSGE
     const DSGE_SHOCKDEC_DELIM = "__"
 
     include("parameters.jl")
+    include("parameters_hank.jl")     # HANK
     include("distributions_ext.jl")
     include("abstractdsgemodel.jl")
+    include("abstract_ct_model.jl")   # HANK
     include("settings.jl")
     include("defaults.jl")
     include("observables.jl")
@@ -292,6 +306,15 @@ module DSGE
     include("models/heterogeneous_agent/bond_labor/measurement.jl")
 
     # Continuous Time Heterogenous Agent Models
+    include("estimate/filter_hank.jl")
+    include("estimate/hessizero_hank.jl")
+    include("estimate/transform_transition_matrices.jl")
+
+    include("solve/solve_hank.jl")
+    include("solve/gensysct.jl")
+    include("solve/reduction.jl")
+    include("solve/sparse_reduction.jl")
+
     include("models/heterogeneous_agent/solve_hjb.jl")
     include("models/heterogeneous_agent/solve_kfe.jl")
 
@@ -299,8 +322,8 @@ module DSGE
     include("models/heterogeneous_agent/krusell_smith_ct/measurement.jl")
     include("models/heterogeneous_agent/krusell_smith_ct/eqcond.jl")
 
-#    include("models/heterogeneous_agent/one_asset_hank/one_asset_hank.jl")
-#    include("models/heterogeneous_agent/one_asset_hank/measurement.jl")
-#    include("models/heterogeneous_agent/one_asset_hank/eqcond.jl")
-#    include("models/heterogeneous_agent/one_asset_hank/util.jl")
+    include("models/heterogeneous_agent/one_asset_hank/one_asset_hank.jl")
+    include("models/heterogeneous_agent/one_asset_hank/measurement.jl")
+    include("models/heterogeneous_agent/one_asset_hank/eqcond.jl")
+    include("models/heterogeneous_agent/one_asset_hank/helpers.jl")
 end

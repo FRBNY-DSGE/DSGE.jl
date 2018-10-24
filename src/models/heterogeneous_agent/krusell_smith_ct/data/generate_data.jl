@@ -1,7 +1,7 @@
 using JLD
 using DSGE
 m = KrusellSmithCT()
-T, R, ~, inverse_basis = solve(m)
+T, R, ~, inverse_basis = solvect(m)
 
 n_vars = get_setting(m, :n_vars)
 n_expectation_errors = get_setting(m, :n_expectation_errors)

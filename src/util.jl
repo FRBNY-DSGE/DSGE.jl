@@ -172,3 +172,30 @@ margin of absolute tolerance given by `ϵ_abs` and a margin of relative toleranc
 macro test_matrix_approx_eq_eps(a,b,c,d)
     :(test_matrix_eq2($(esc(a)),$(esc(b)),$(string(a)),$(string(b)),$(esc(c)),$(esc(d))))
 end
+
+"""
+    <(a::Complex, b::Complex)
+
+Compare real values of complex numbers.
+"""
+function <(a::Complex, b::Complex)
+    return a.re < b.re
+end
+
+"""
+    <(a::Real, b::Complex)
+
+Compare real values of complex numbers.
+"""
+function <(a::Real, b::Complex)
+    return a < b.re
+end
+
+"""
+    <(a::Complex, b::Real)
+
+Compare real values of complex numbers.
+"""
+function <(a::Complex, b::Real)
+    return a.re < b
+end
