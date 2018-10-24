@@ -75,57 +75,16 @@ function CTBlockKalmanFilter(T::Matrix{S}, R::Matrix{S}, C::Vector{S}, Q::Matrix
         end
     end
 
-    return CTBlockKalmanFilter(T_powers, R_blocks, C, Q, Z, D, E, RQRp
+    return CTBlockKalmanFilter(T_powers, R_blocks, C, Q, Z, D, E, RQRp,
                                s_0, P_dict, n_simulate_states, NaN)
 end
 
+
 """
 ```
-init_stationary_states(T, R, C, Q)
-```
-
-Compute the initial state `s_0` and state covariance matrix `P_0` under the
-stationarity condition:
-
-```
-s_0  = (I - T)\C
-P_0 = reshape(I - kron(T, T))\vec(R*Q*R'), Ns, Ns)
-```
-
-where:
-
-- `kron(T, T)` is a matrix of dimension `Ns^2` x `Ns^2`, the Kronecker
-  product of `T`
-- `vec(R*Q*R')` is the `Ns^2` x 1 column vector constructed by stacking the
-  `Ns` columns of `R*Q*R'`
-
-All eigenvalues of `T` are inside the unit circle when the state space model
-is stationary. When the preceding formula cannot be applied, the initial state
-vector estimate is set to `C` and its covariance matrix is given by `1e6 * I`.
-"""
-function init_stationary_states(T::Matrix{S}, R::Matrix{S}, C::Vector{S},
-                                Q::Matrix{S}) where {S<:AbstractFloat}
-    e, _ = eig(T)
-    if all(abs.(e) .< 1)
-        s_0 = (UniformScaling(1) - T)\C
-        P_0 = solve_discrete_lyapunov(T, R*Q*R')
-    else
-        Ns = size(T, 1)
-        s_0 = C
-        P_0 = 1e6 * eye(Ns)
-    end
-    return s_0, P_0
-end
-"""
-```
-kalman_filter(y, T, R, C, Q, Z, D, E, s_0 = Vector(), P_0 = Matrix();
+ct_block_kalman_filter(y, T, R, C, Q, Z, D, E, s_0 = Vector(), P_0 = Matrix();
     outputs = [:loglh, :pred, :filt], Nt0 = 0)
-
-kalman_filter(regime_indices, y, Ts, Rs, Cs, Qs, Zs, Ds, Es,
-    s_0 = Vector(), P_0 = Matrix(); outputs = [:loglh, :pred, :filt],
-    Nt0 = 0)
 ```
-
 This function implements the Kalman filter for the following state-space model:
 
 ```
@@ -142,9 +101,6 @@ Cov(ϵ_t, u_t) = 0
 - `y`: `Ny` x `Nt` matrix containing data `y_1, ... , y_T`
 - `s_0`: optional `Ns` x 1 initial state vector
 - `P_0`: optional `Ns` x `Ns` initial state covariance matrix
-
-**Method 1 only:**
-
 - `T`: `Ns` x `Ns` state transition matrix
 - `R`: `Ns` x `Ne` matrix in the transition equation mapping shocks to states
 - `C`: `Ns` x 1 constant vector in the transition equation
@@ -153,18 +109,6 @@ Cov(ϵ_t, u_t) = 0
   observables
 - `D`: `Ny` x 1 constant vector in the measurement equation
 - `E`: `Ny` x `Ny` matrix of measurement error covariances
-
-**Method 2 only:**
-
-- `regime_indices`: `Vector{Range{Int}}` of length `n_regimes`, where
-  `regime_indices[i]` indicates the time periods `t` in regime `i`
-- `Ts`: `Vector{Matrix{S}}` of `T` matrices for each regime
-- `Rs`
-- `Cs`
-- `Qs`
-- `Zs`
-- `Ds`
-- `Es`
 
 where:
 
@@ -197,26 +141,15 @@ where:
 - `s_T`: `Ns` x 1 final filtered state `s_{T|T}`
 - `P_T`: `Ns` x `Ns` final filtered state covariance matrix `P_{T|T}`
 
-### Notes
-
-When `s_0` and `P_0` are omitted, they are computed using
-`init_stationary_states`.
-"""
-"""
-```
-ct_block_kalman_filter
-```
-
-pCompute the one-step-ahead states s_{t|t-1} and state covariances P_{t|t-1} and
+Compute the one-step-ahead states s_{t|t-1} and state covariances P_{t|t-1} and
 assign to `k`.
 """
 function ct_block_kalman_filter(y::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Vector{S},
                           Q::Matrix{S}, Z::Matrix{S}, D::Vector{S}, E::Matrix{S},
-                          n_simulate_states::Int64, s_0::Vector{S} = Vector{S}(0),
+                          n_simulate_states::Int64 = 1, s_0::Vector{S} = Vector{S}(0),
                           P_0::Matrix{S} = Matrix{S}(0, 0);
                           outputs::Vector{Symbol} = [:loglh, :pred, :filt],
-                          Nt0::Int = 0,
-                          n_simulate_states::Int = 1) where {S<:AbstractFLoat}
+                          Nt0::Int = 0) where {S<:AbstractFloat}
     # Check s_0, P_0 right dimensions
     if size(s_0, 1) != n_simulate_states * size(T, 1)
         error("Dimension error: s_0 does not stack intermediate simulated states.")
@@ -261,6 +194,8 @@ function ct_block_kalman_filter(y::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Vec
                         P_tmp[1 + T_size * (i-1):T_size * i, 1 + T_size * (j-1):T_size * j] = k.P_t[(j,i)]'
                     else
                         P_tmp[1 + T_size * (i-1):T_size * i, 1 + T_size * (j-1):T_size * j] = k.P_t[(i,j)]
+                    end
+                end
             end
             P_pred[:, :, t] = P_tmp
         end
@@ -277,6 +212,8 @@ function ct_block_kalman_filter(y::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Vec
                         P_tmp[1 + T_size * (i-1):T_size * i, 1 + T_size * (j-1):T_size * j] = k.P_t[(j,i)]'
                     else     # held in P_t as an element
                         P_tmp[1 + T_size * (i-1):T_size * i, 1 + T_size * (j-1):T_size * j] = k.P_t[(i,j)]
+                    end
+                end
             end
             P_filt[:, :, t] = P_tmp
         end

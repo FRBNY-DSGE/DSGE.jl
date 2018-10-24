@@ -234,6 +234,19 @@ n_model_states_unnormalized(m::AbstractModel) = n_jumps_unnormalized(m) + n_back
 
 """
 ```
+AbstractCTModel{T} <: AbstractModel{T}
+```
+
+The AbstractCTModel is defined as a subtype of AbstractModel to accomodate the
+numerical methods and procedures specific to continuous time models.
+"""
+abstract type AbstractCTModel{T} <: AbstractModel{T} end
+
+n_states(m::AbstractCTModel) = sum(map(i -> length(collect(m.endogenous_states)[i][2]), 1:length(keys(m.endogenous_states))))
+n_shocks_expectational(m::AbstractCTModel) = sum(map(i -> length(collect(m.expected_shocks)[i][2]), 1:length(keys(m.expected_shocks))))
+
+"""
+```
 get_key(m, class, index)
 ```
 
