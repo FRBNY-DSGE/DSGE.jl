@@ -24,7 +24,7 @@ x[n_v + n_g + 3] = m[:C_ss].value
 x[n_v + n_g + 4] = m[:Y_ss].value
 x[n_v + n_g + 5] = m[:B_ss].value
 
-T, R, ~, inverse_basis = solve(m)
+T, R, ~, inverse_basis = solvect(m)
 
 nst = size(T,1) ###
 C = zeros(nst)

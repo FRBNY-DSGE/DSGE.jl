@@ -82,7 +82,7 @@ equilibrium conditions.
   dictionary that stores names and transformations to/from model units. See
   `PseudoObservable` for further details.
 """
-type KrusellSmithCT{T} <: AbstractModel{T}
+type KrusellSmithCT{T} <: AbstractCTModel{T}
     parameters::ParameterVector{T}                          # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                        # model steady-state values
     keys::OrderedDict{Symbol,Int}                           # human-readable names for all the model
@@ -195,7 +195,7 @@ function KrusellSmithCT(subspec::String="ss0";
     # Set settings
     model_settings!(m)
     default_test_settings!(m)
-    default_test_settings_hank!(m)
+
     for custom_setting in values(custom_settings)
         m <= custom_setting
     end
@@ -488,7 +488,6 @@ end
 
 function model_settings!(m::KrusellSmithCT)
     default_settings!(m)
-    default_settings_hank!(m)
 
     # State space grid
     m <= Setting(:I, 100, "Dimension of wealth grid")
@@ -584,3 +583,13 @@ function model_settings!(m::KrusellSmithCT)
 
 end
 
+"""
+Overloading functions so as to properly grab information from CT Hank Models.
+"""
+n_states(m::KrusellSmithCT) = sum(map(i -> length(collect(m.endogenous_states)[i][2]), 1:length(keys(m.endogenous_states))))
+n_shocks_expectational(m::KrusellSmithCT) = sum(map(i -> length(collect(m.expected_shocks)[i][2]), 1:length(keys(m.expected_shocks))))
+
+#=
+n_states(m::OneAssetHANK) = sum(map(i -> length(collect(m.endogenous_states)[i][2]), 1:length(keys(m.endogenous_states))))
+n_shocks_expectational(m::OneAssetHANK) = sum(map(i -> length(collect(m.expected_shocks)[i][2]), 1:length(keys(m.expected_shocks))))
+=#

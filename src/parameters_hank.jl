@@ -59,13 +59,8 @@ end
 # Operator Overloading/Arithmetic
 ##################################
 
-#Currently not working correctly
+# Currently not working correctly
 
-
-
-# We want to use value field from UnscaledParameters and
-# SteadyStateParameters in computation, so we alias their union here.
-UnscaledOrSteadyState = Union{UnscaledParameter, SteadyStateParameter}
 #=
 # Defining arithmetic on/standard function evaluation of grids
 for op in (:(Base.:+),
@@ -78,31 +73,7 @@ for op in (:(Base.:+),
     @eval ($op)(x::Integer, g::SteadyStateParameterArray)        = ($op)(x, g.value)
     @eval ($op)(x::Number, g::SteadyStateParameterArray)         = ($op)(x, g.value)
 end
-
-# Add standard vectorized arithmetic for Unscaled or Steady-State Parameters
-for op in (:(Base.:+),
-           :(Base.:-),
-           :(Base.:*),
-           :(Base.:/))
-
-    @eval ($op)(p::UnscaledOrSteadyState, x::Vector)        = ($op)(p.value, x)
-    @eval ($op)(p::UnscaledOrSteadyState, x::Matrix)        = ($op)(p.value, x)
-    @eval ($op)(x::Vector, p::UnscaledOrSteadyState)        = ($op)(x, p.value)
-    @eval ($op)(x::Matrix, p::UnscaledOrSteadyState)         = ($op)(x, p.value)
-end
-
 =#
-for op in (:(Base.:+),
-           :(Base.:-),
-           :(Base.:*),
-           :(Base.:/))
-
-    @eval ($op)(p::UnscaledOrSteadyState, x::Vector) = ($op)(p.value, x)
-    @eval ($op)(p::UnscaledOrSteadyState, x::Matrix) = ($op)(p.value, x)
-    @eval ($op)(x::Vector, p::UnscaledOrSteadyState) = ($op)(x, p.value)
-    @eval ($op)(x::Matrix, p::UnscaledOrSteadyState) = ($op)(x, p.value)
-end
-
 # This should help us avoid type instability with Dual Types
 #=for op in (:(Base.:+),
            :(Base.:-),
