@@ -231,8 +231,8 @@ deviation will be set to zero.
 function standardize_shocks(shocks::Matrix{T}, QQ::Matrix{T}) where {T<:AbstractFloat}
     stdshocks = shocks ./ sqrt.(diag(QQ))
 
-    zeroed_shocks = find(diag(QQ) .== 0)
-    stdshocks[zeroed_shocks, :] = 0
+    zeroed_shocks = findall(diag(QQ) .== 0)
+    stdshocks[zeroed_shocks, :] .= 0
 
     return stdshocks
 end

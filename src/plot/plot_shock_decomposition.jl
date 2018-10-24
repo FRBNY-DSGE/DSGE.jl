@@ -188,7 +188,7 @@ shockdec
         linecolor := hist_color
         label     := hist_label
 
-        inds = find(hist.means[1, :date] .<= dates .<= hist.means[end, :date])
+        inds = findall(hist.means[1, :date] .<= dates .<= hist.means[end, :date])
         x = xnums[inds]
         y = convert(Vector{Float64}, df[inds, :detrendedMean])
         x, y
@@ -199,7 +199,7 @@ shockdec
         linecolor := forecast_color
         label     := forecast_label
 
-        inds = find(hist.means[end, :date] .<= dates .<= forecast.means[end, :date])
+        inds = findall(hist.means[end, :date] .<= dates .<= forecast.means[end, :date])
         x = xnums[inds]
         y = convert(Vector{Float64}, df[inds, :detrendedMean])
         x, y
