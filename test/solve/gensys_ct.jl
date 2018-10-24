@@ -1,5 +1,5 @@
 using DSGE, JLD, DataStructures
-import Base.Test: @test, @testset
+import Test: @test, @testset
 import DSGE: @test_matrix_approx_eq
 
 # Load pre-input files

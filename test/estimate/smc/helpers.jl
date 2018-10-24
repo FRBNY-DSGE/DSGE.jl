@@ -1,7 +1,7 @@
 # To be removed after running this test individually in the REPL successfully
 using DSGE
 using HDF5, JLD
-import Base.Test: @test, @testset
+import Test: @test, @testset
 
 file = jldopen("../../reference/helpers_input.jld", "r")
 cloud = read(file, "cloud")

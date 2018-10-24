@@ -1,6 +1,6 @@
 using DSGE, StateSpaceRoutines
 using JLD
-using Base.Test
+using Test
 import DSGE: jacobian, n_observables, n_shocks_exogenous, n_backward_looking_states, n_model_states
 
 path = dirname(@__FILE__)

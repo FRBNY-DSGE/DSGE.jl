@@ -1,5 +1,5 @@
-using DSGE
-using Base.Test, Distributions
+using DSGE, Nullables
+using Test, Distributions
 
 @testset "Ensure transformations to the real line/model space are valid" begin
     for T in subtypes(Transform)
@@ -18,7 +18,7 @@ N = 10^2
 u = parameter(:bloop, 2.5230, (1e-8, 5.), (1e-8, 5.), DSGE.SquareRoot(); fixed = true)
 v = parameter(:cat, 2.5230, (1e-8, 5.), (1e-8, 5.), DSGE.Exponential(), Gamma(2.00, 0.1))
 
-pvec =  ParameterVector{Float64}(N)
+pvec =  ParameterVector{Float64}(undef, N)
 for i in 1:length(pvec)
 	pvec[i] = (i%2 == 0) ? u : v
 end

@@ -1,5 +1,5 @@
 using DSGE, JLD
-import Base.Test: @test, @testset
+import Test: @test, @testset
 import DataStructures: OrderedDict
 
 ### Model
