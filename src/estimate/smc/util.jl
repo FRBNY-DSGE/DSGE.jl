@@ -91,6 +91,10 @@ function generate_free_blocks(n_free_para::Int64, n_blocks::Int64)
     return blocks_free
 end
 
+function isempty(c::ParticleCloud)
+    length(c.particles) == 0
+end
+
 """
 ```
 function generate_all_blocks(blocks_free, free_para_inds)
