@@ -116,8 +116,13 @@ where `S<:AbstractFloat`.
 where `nperiods` is the number of quarters between
 `date_shockdec_start(m)` and `date_shockdec_end(m)`, inclusive.
 """
+<<<<<<< HEAD
+function deterministic_trends{S<:AbstractFloat}(m::AbstractModel{S},
+    system::System{S}, s_0::Vector{S})
+=======
 function deterministic_trends(m::AbstractModel{S},
     system::System{S}, z0::Vector{S}) where {S<:AbstractFloat}
+>>>>>>> master-0.7
 
     # Dates: We compute the deterministic trend starting from the
     # first historical period.  However, since it is only used to
@@ -127,11 +132,16 @@ function deterministic_trends(m::AbstractModel{S},
     start_index = index_shockdec_start(m)
     end_index   = index_shockdec_end(m)
 
-    deterministic_trends(system, z0, nperiods, start_index, end_index)
+    deterministic_trends(system, s_0, nperiods, start_index, end_index)
 end
 
+<<<<<<< HEAD
+function deterministic_trends{S<:AbstractFloat}(system::System{S}, s_0::Vector{S}, nperiods::Int,
+    start_index::Int, end_index::Int)
+=======
 function deterministic_trends(system::System{S}, z0::Vector{S}, nperiods::Int,
     start_index::Int, end_index::Int) where {S<:AbstractFloat}
+>>>>>>> master-0.7
 
     # Set constant system matrices to 0
     system = zero_system_constants(system)
@@ -141,7 +151,7 @@ function deterministic_trends(system::System{S}, z0::Vector{S}, nperiods::Int,
     shocks   = zeros(S, nshocks, nperiods)
 
     # Use forecast to iterate state-space system forward without shocks or the ZLB procedure
-    states, obs, pseudo, _ = forecast(system, z0, shocks)
+    states, obs, pseudo, _ = forecast(system, s_0, shocks)
 
     # Return deterministic trends in appropriate range
     if start_index == 1 && end_index == nperiods
