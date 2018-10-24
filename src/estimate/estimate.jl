@@ -151,7 +151,7 @@ function estimate(m::AbstractModel, data::AbstractArray{Float64};
 
         # Compute the inverse of the Hessian via eigenvalue decomposition
         S_diag, U = eig(hessian)
-        big_eig_vals = find(x -> x > 1e-6, S_diag)
+        big_eig_vals = findall(x -> x > 1e-6, S_diag)
         rank = length(big_eig_vals)
 
         S_inv = zeros(n, n)
