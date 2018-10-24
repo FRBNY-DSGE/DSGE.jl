@@ -1,0 +1,32 @@
+Use of btime on 50 years worth of data (200 quarters)
+
+Simulate subintervals
+Sim_freq: 2 states per quarter
+  50.181 ms (15071 allocations: 67.84 MiB)
+Sim_freq: 3 states per quarter
+  126.252 ms (15071 allocations: 149.88 MiB)
+Sim_freq: 12 states per quarter
+  4.601 s (16214 allocations: 2.30 GiB)
+
+
+CT ODE Integration in between: -> Not much speed gains from using simpler ODE scheme
+Euler method for ODE integration
+  418.813 ms (440419 allocations: 634.90 MiB)
+Tsitouras Runge-Kutta 5/4 method for ODE integration
+  421.565 ms (440019 allocations: 634.89 MiB)
+
+A note on the data generation:
+We simulate daily level data with an Euler-Maruyama scheme. We solve for the steady state
+of the Krusell Smith model, back out the state transition matrices, and then
+use the Euler-Maruyama scheme to generate a 18,000 long vector of data (200 quarters).
+We then assume that the econometrician cannot observe any of the states except
+those which coincide with quarters, i.e. if the first data point is the initial state,
+which is observed, then the econometrician cannot view the next 89 data points. The
+econometrician will only see the 90th data point, and then 180th data point, and so on.
+We are estimating whether or not the econometrician is able to recover the true volatility,
+knowing the exact state, which is a flow variable.
+We are not testing whether or not the econometrician can make
+inferences based on data of stock variables.
+
+Why the change in time from previously reported? I forgot that I encapsulated the recomputation
+of the steady state in the timing, resulting in the longer times.

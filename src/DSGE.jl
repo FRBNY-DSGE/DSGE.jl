@@ -12,7 +12,7 @@ module DSGE
     using StatsFuns: chisqinvcdf
     import Calculus, Missings, Nullables, Base.<
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
-
+    import StateSpaceRoutines: KalmanFilter
     export
 
         # distributions_ext.jl
@@ -142,8 +142,11 @@ module DSGE
         extend_to_nd, projection_for_subset, spline_basis, solve_static_conditions,
 
         # estimate
-        hessizero,
-        transform_transition_matrices,
+        hessizero, hess_diag_element, hess_offdiag_element, transform_transition_matrices,
+
+        # estimate/ct_filters
+        BlockKalmanFilter, init_stationary_states, block_kalman_filter, CTBlockKalmanFilter,
+        ct_block_kalman_filter, ct_kalman_filter, forecast!,
 
         # util
         @test_matrix_approx_eq, @test_matrix_approx_eq_eps
@@ -154,10 +157,8 @@ module DSGE
     const DSGE_SHOCKDEC_DELIM = "__"
 
     include("parameters.jl")
-    include("parameters_hank.jl")     # HANK
     include("distributions_ext.jl")
     include("abstractdsgemodel.jl")
-    include("abstract_ct_model.jl")   # HANK
     include("settings.jl")
     include("defaults.jl")
     include("observables.jl")
@@ -203,6 +204,14 @@ module DSGE
     include("estimate/smc/mutation.jl")
     include("estimate/smc/resample.jl")
     include("estimate/smc/smc.jl")
+
+    # CT HANK code
+    include("estimate/filter_hank.jl")
+    include("estimate/hessizero_hank.jl")
+    include("estimate/transform_transition_matrices.jl")
+    include("estimate/ct_filters/ct_kalman_filter.jl")
+    include("estimate/ct_filters/block_kalman_filter.jl")
+    include("estimate/ct_filters/ct_block_kalman_filter.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")
@@ -306,10 +315,6 @@ module DSGE
     include("models/heterogeneous_agent/bond_labor/measurement.jl")
 
     # Continuous Time Heterogenous Agent Models
-    include("estimate/filter_hank.jl")
-    include("estimate/hessizero_hank.jl")
-    include("estimate/transform_transition_matrices.jl")
-
     include("solve/solve_hank.jl")
     include("solve/gensysct.jl")
     include("solve/reduction.jl")

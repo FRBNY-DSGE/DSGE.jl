@@ -1,0 +1,64 @@
+This file records data on the accuracy of maximum likelihood estimation by examining the
+variation between the true log likelihood and our estimate of the log likelihood
+done via MLE.
+
+The mean absolute distance is calculated as mean(true_lik - max_lik),
+where max_lik is a vector holding the
+computed maximum log likelihoods, and true_lik is a scalar
+holding the true log likelihood. The standard deviation of the error
+just takes std(true_lik - max_lik), and the max absolute error is
+maximum(abs.(true_lik - max_lik)).
+
+
+CT ODE Integration scheme:
+
+Mean absolute distance
+0.0012189473684210519
+
+
+Standard deviation of error
+0.0004855400926456598
+
+
+Max absolute error
+0.001999999999999999
+
+
+Subinterval simulation scheme:
+
+
+Sim_freq: 2 states per quarter
+Mean absolute distance
+0.0015726315789473678
+
+
+Standard deviation of error
+0.0004381995013556403
+
+
+Max absolute error
+0.001999999999999999
+
+
+Sim_freq: 3 states per quarter
+Mean absolute distance
+0.0015831578947368412
+
+
+Standard deviation of error
+0.00043566355884597165
+
+Max absolute error
+0.001999999999999999
+
+Sim_freq: 12 states per quarter
+Mean absolute distance
+0.0015915789473684204
+
+
+Standard deviation of error
+0.00042298334586797823
+
+
+Max absolute error
+0.001999999999999999

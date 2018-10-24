@@ -71,7 +71,7 @@ function ct_kalman_filter(y::Matrix{S},
 
     return loglh, s_pred, P_pred, s_filt, P_filt, s_0, P_0, s_T, P_T
 end
-        forecast!(k, tspan; method = method, reltol = reltol, abstol = abstol)
+
 
 """
 ```
