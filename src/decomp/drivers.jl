@@ -159,7 +159,7 @@ function decompose_forecast(m_new::M, m_old::M, df_new::DataFrame, df_old::DataF
         decomp[Symbol(:decompdettrend, class)] = dettrend_comp
 
         # Check that 1(a) and 1(b) are equal
-        check && @assert dettrend_comp + squeeze(sum(shockdec_comp, 3), 3) ≈ data_comp + news_comp
+        check && @assert dettrend_comp + dropdims(sum(shockdec_comp, dims = 3), dims = 3) ≈ data_comp + news_comp
 
         # 2. Parameter re-estimation
         para_comp = out2[forecastvar] - out3[forecastvar]

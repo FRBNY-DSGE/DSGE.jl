@@ -88,7 +88,7 @@ function decomposition_means(m_new::M, m_old::M, input_type::Symbol,
                 transformed_decomp = scenario_mb_reverse_transform(decomp_series, transform, :forecast)
 
                 # Compute mean and add to DataFrame
-                decomp[key] = vec(mean(transformed_decomp, 1))
+                decomp[key] = vec(mean(transformed_decomp, dims = 1))
             end
         end
     end

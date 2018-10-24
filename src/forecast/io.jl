@@ -271,7 +271,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD2.JLDFile, var::Symb
             quarter_range(date_forecast_start(m), date_forecast_end(m))
         elseif prod in [:shockdec, :dettrend, :trend]
             quarter_range(date_shockdec_start(m), date_shockdec_end(m))
-        elseif contains(string(prod), "decomp")
+        elseif prod == :decomp
             quarter_range(date_mainsample_start(m), date_forecast_end(m))
         end
 
@@ -416,22 +416,19 @@ Read only the forecast output for a particular variable (e.g. for a particular
 observable) and possibly a particular shock. Result should be a matrix of size
 `ndraws` x `nperiods`.
 """
-function read_forecast_series(file::HDF5File, class::Symbol, product::Symbol, var_name::Symbol)
+function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol, var_name::Symbol)
     # Get index corresponding to var_name
     class_long = get_class_longname(class)
-    indices = load(replace(file.filename, "h5" => "jld2"), "$(class_long)_indices")
+    filepath = file.path
+    indices = load(filepath, "$(class_long)_indices")
     var_ind = indices[var_name]
 
-   # pfile = file.plain
-   # filename = pfile.filename
-   # dataset = HDF5.d_open(pfile, "arr")
-    filename = file.filename
-    dataset = HDF5.d_open(file, "arr")
+    dataset = load(filepath, "arr")
     ndims = length(size(dataset))
 
     # Trends are ndraws x nvars
     if product == :trend
-        whole = h5read(filename, "arr")
+        whole = load(filepath, "arr")
         if ndims == 1 # one draw
             arr = whole[var_ind, Colon()]
             arr = reshape(arr, (1, 1))
@@ -445,11 +442,11 @@ function read_forecast_series(file::HDF5File, class::Symbol, product::Symbol, va
                        :bddforecast, :bddforecastut, :bddforecast4q, :dettrend,
                        :decompdata, :decompnews, :decomppara, :decompdettrend, :decomptotal]
         inds_to_read = if ndims == 2 # one draw
-            whole = h5read(filename, "arr")
+            whole = load(filepath, "arr")
             arr = whole[var_ind, Colon()]
             arr = reshape(arr, (1, length(arr)))
         elseif ndims == 3 # many draws
-            whole = h5read(filename, "arr")
+            whole = load(filepath, "arr")
             arr = whole[Colon(), var_ind, Colon()]
         end
     else
@@ -459,28 +456,25 @@ function read_forecast_series(file::HDF5File, class::Symbol, product::Symbol, va
     return arr
 end
 
-function read_forecast_series(file::HDF5File, class::Symbol, product::Symbol, var_name::Symbol,
+function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol, var_name::Symbol,
                               shock_name::Symbol)
     # Get indices corresponding to var_name and shock_name
     class_long = get_class_longname(class)
-    indices = load(replace(file.filename, "h5" => "jld2"), "$(class_long)_indices")
+    filepath = file.path
+    indices = load(filepath, "$(class_long)_indices")
     var_ind = indices[var_name]
-    shock_indices = load(replace(file.filename, "h5" => "jld2"), "shock_indices")
+    shock_indices = load(filepath, "shock_indices")
     shock_ind = shock_indices[shock_name]
 
-    #pfile = file.plain
-    #filename = pfile.filename
-    #dataset = HDF5.d_open(pfile, "arr")
-    filename = file.filename
-    dataset = HDF5.d_open(file, "arr")
+    dataset = load(filepath, "arr")
     ndims = length(size(dataset))
 
     if ndims == 3 # one draw
-        whole = h5read(filename, "arr")
+        whole = load(filepath, "arr")
         arr = whole[var_ind, :, shock_ind]
         arr = reshape(arr, 1, length(arr))
     elseif ndims == 4 # many draws
-        whole = h5read(filename, "arr")
+        whole = load(filepath, "arr")
         arr = whole[:, var_ind, :, shock_ind]
     end
 
