@@ -1,5 +1,5 @@
 using HDF5
-using Base.Test
+using Test
 using DSGE
 
 path = dirname(@__FILE__)

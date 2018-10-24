@@ -1,7 +1,6 @@
 using DSGE
 using Distributions
-using Base.Test
-
+using Test
 # Test Parameter type
 
 # UnscaledParameter, fixed=false
@@ -72,7 +71,7 @@ cx = 2 * (α - 1/2)
 end
 
 m = AnSchorfheide()
-lastparam = parameter(:p, 0.0)
+global lastparam = parameter(:p, 0.0)
 for θ in m.parameters
     isa(θ, Parameter) && (lastparam = θ)
 end
@@ -125,7 +124,7 @@ vint = Setting(:data_vintage, "REF", true, "vint", "Date of data") # full constr
     m.testing = false
     m <= Setting(:n_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Hastings")
     @test m.settings[:n_mh_blocks].value == 5
-    @test ismatch(r"^\s*_mhbk=5_vint=(\d{6})", DSGE.filestring(m))
+    @test occursin(r"^\s*_mhbk=5_vint=(\d{6})", DSGE.filestring(m))
     DSGE.filestring(m, "key=val")
     DSGE.filestring(m, ["key=val", "foo=bar"])
     m.testing = true

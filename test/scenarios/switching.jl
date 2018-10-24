@@ -1,4 +1,4 @@
-using DSGE, Base.Test
+using DSGE, Test
 
 # Test switch
 original = zeros(1,4)

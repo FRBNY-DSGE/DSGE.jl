@@ -1,6 +1,6 @@
 using JLD
 import DataStructures: OrderedDict
-import Base.Test: @test, @testset
+import Test: @test, @testset
 import DSGE: @test_matrix_approx_eq
 using DSGE
 
