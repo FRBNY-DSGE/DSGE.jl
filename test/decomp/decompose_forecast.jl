@@ -1,4 +1,5 @@
-using DSGE, Base.Test, JLD
+using DSGE, JLD2
+using Test
 
 path = dirname(@__FILE__)
 
@@ -18,17 +19,10 @@ m_new = make_test_model(2016)
 m_old = make_test_model(2014)
 
 # Read in data and parameters
-file = jldopen("$path/../reference/decompose_forecast_args.jld", "r")
-df_new = read(file, "df_new")
-df_old = read(file, "df_old")
-params_new = read(file, "params_new")
-params_old = read(file, "params_old")
-close(file)
+@load "$path/../reference/decompose_forecast_args.jld2" df_new df_old params_new params_old
 
 # Read in expected outputs
-exp_decomps = jldopen("$path/../reference/decompose_forecast_out.jld", "r") do file
-    read(file, "exp_decomps")
-end
+@load "$path/../reference/decompose_forecast_out.jld2" exp_decomps
 
 cond_types = [(:none, :none), (:none, :full), (:full, :none), (:full, :full)]
 for (cond_new, cond_old) in cond_types

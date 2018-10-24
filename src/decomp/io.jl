@@ -2,7 +2,7 @@ function get_decomp_filename(m_new::M, m_old::M, input_type::Symbol,
                              cond_new::Symbol, cond_old::Symbol,
                              product::Symbol, class::Symbol;
                              pathfcn::Function = rawpath,
-                             fileformat::Symbol = :jld) where M<:AbstractModel
+                             fileformat::Symbol = :jld2) where M<:AbstractModel
     output_var = Symbol(product, class)
 
     fn_new = get_forecast_filename(m_new, input_type, cond_new, output_var,
@@ -12,7 +12,7 @@ function get_decomp_filename(m_new::M, m_old::M, input_type::Symbol,
     dir = dirname(fn_new)
     base_new, ext = splitext(basename(fn_new))
     base_old, _   = splitext(basename(fn_old))
-    base_old = replace(base_old, string(output_var), "")
+    base_old = replace(base_old, string(output_var) => "")
     base_old = spec(m_old) * "_" * subspec(m_old) * base_old
 
     return joinpath(dir, base_new * "__" * base_old * ext)
@@ -28,7 +28,7 @@ function get_decomp_output_files(m_new::M, m_old::M, input_type::Symbol,
             output_var = Symbol(product, class)
             output_files[output_var] =
                 get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old,
-                                    product, class, pathfcn = rawpath, fileformat = :h5)
+                                    product, class, pathfcn = rawpath, fileformat = :jld2)
         end
     end
     return output_files
@@ -38,7 +38,7 @@ function get_decomp_mean_file(m_new::M, m_old::M, input_type::Symbol,
                               cond_new::Symbol, cond_old::Symbol,
                               class::Symbol) where M<:AbstractModel
     get_decomp_filename(m_new, m_old, input_type, cond_new, cond_old, :decomp, class,
-                        pathfcn = workpath, fileformat = :jld)
+                        pathfcn = workpath, fileformat = :jld2)
 end
 
 function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
@@ -58,7 +58,7 @@ function write_forecast_decomposition(m_new::M, m_old::M, input_type::Symbol,
                 jldopen(filepath, "w") do file
                     # Write metadata
                     # Pass in m_old because its historical and forecast dates are used
-                    write_forecast_metadata(m_old, file, prod, class)
+                    write_forecast_metadata(m_old, file, var)
 
                     # Pre-allocate HDF5 dataset which will contain all draws
                     if !isnull(block_number) && get(block_number) == 1
