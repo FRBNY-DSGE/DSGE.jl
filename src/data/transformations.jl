@@ -171,10 +171,10 @@ end
 
 """
 ```
-difflog(x::DataArray{AbstractFloat})
+difflog(x::Array{Union{AbstractFloat, Missing}})
 ```
 """
-function difflog(x::DataArray)
+function difflog(x::Array{Union{AbstractFloat, Missing}})
     na2nan!(x)
     return difflog(convert(Vector, x))
 end

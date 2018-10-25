@@ -55,7 +55,7 @@ If x  ~ RootInverseGamma(ν, τ), then
 
 x has mode τ and ν degrees of freedom.
 """
-type RootInverseGamma <: Distribution{Univariate, Continuous}
+mutable struct RootInverseGamma <: Distribution{Univariate, Continuous}
     ν::Int
     τ::Float64
 end
@@ -107,7 +107,7 @@ distribution. The covariance matrix may not be full rank (hence degenerate).
 
 See [Multivariate normal distribution - Degenerate case](en.wikipedia.org/wiki/Multivariate_normal_distribution#Degenerate_case).
 """
-type DegenerateMvNormal <: Distribution{Multivariate, Continuous}
+mutable struct DegenerateMvNormal <: Distribution{Multivariate, Continuous}
     μ::Vector          # mean
     σ::Matrix          # standard deviation
 end
@@ -164,7 +164,7 @@ The `DegenerateDiagMvTDist` type implements a degenerate multivariate Student's 
 distribution, where the covariance matrix is diagonal. The covariance matrix may
 not be full rank (hence degenerate).
 """
-type DegenerateDiagMvTDist <: Distribution{Multivariate, Continuous}
+mutable struct DegenerateDiagMvTDist <: Distribution{Multivariate, Continuous}
     μ::Vector          # mean
     σ::Matrix          # standard deviation
     ν::Int             # degrees of freedom
@@ -254,7 +254,7 @@ distribution. Note that the matrix must be square.
 
 See [Matrix normal distribution - Degenerate case](en.wikipedia.org/wiki/Matrix_normal_distribution).
 """
-type MatrixNormal <: Distribution{Matrixvariate, Continuous}
+mutable struct MatrixNormal <: Distribution{Matrixvariate, Continuous}
     μ::Matrix # mean
     U::Matrix # row variance
     V::Matrix # col variance
