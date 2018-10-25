@@ -27,8 +27,8 @@ path = dirname(@__FILE__)
 
         # Unconditional data
         println("The following warnings are expected test behavior:")
-        df = load_data(m; try_disk=false, verbose=:none)
-        data = df_to_matrix(m, df)
+        global df = load_data(m; try_disk=false, verbose=:none)
+        global data = df_to_matrix(m, df)
         @test @test_matrix_approx_eq exp_data data
 
         # Conditional data

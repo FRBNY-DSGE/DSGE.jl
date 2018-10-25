@@ -45,7 +45,7 @@ simulate_switching(m, allalt, verbose = :none)
 original_draws = h5open(replace(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "jld2" => "h5")) do file
     read(file, "arr")
 end
-actual = h5open(replace(get_scenario_output_files(m, allalt, [:forecastobs])[:forecastobs], "jld2" => "h5")) do file
+global actual = h5open(replace(get_scenario_output_files(m, allalt, [:forecastobs])[:forecastobs], "jld2" => "h5")) do file
     read(file, "arr")
 end
 @testset "Test switching scenarios" begin
@@ -66,7 +66,7 @@ end
 
 #global file_actual = read(get_scenario_output_files(m, alldef, [:forecastobs])[:forecastobs])
 #global actual = file_actual["arr"]
-actual = h5open(replace(get_scenario_output_files(m, alldef, [:forecastobs])[:forecastobs], "jld2" => "h5")) do file
+global actual = h5open(replace(get_scenario_output_files(m, alldef, [:forecastobs])[:forecastobs], "jld2" => "h5")) do file
     read(file, "arr")
 end
 
