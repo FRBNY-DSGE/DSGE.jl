@@ -312,7 +312,7 @@ function forecast_one(m::AbstractModel{Float64},
                                    forecast_output; df = df, block_number = Nullable(block),
                                    verbose = block_verbose, block_inds = block_inds_thin[block],
                                    subset_inds = subset_inds)
-            gc()
+            GC.gc()
 
             # Calculate time to complete this block, average block time, and
             # expected time to completion
