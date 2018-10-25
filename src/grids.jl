@@ -3,7 +3,7 @@ import Distributions: Normal, pdf, cdf
 ###############################
 # Type Definition/Constructors
 ###############################
-type Grid
+mutable struct Grid
     points::Vector{Float64}
     weights::Vector{Float64}
     scale::Float64
@@ -11,9 +11,9 @@ type Grid
 end
 
 # Constructor utilizing a custom weight calculation function
-function Grid{T<:Real}(quadrature::Function,
-                       lower_bound::T, upper_bound::T,
-                       n_points::Int; scale::Float64 = 1.)
+function Grid(quadrature::Function,
+              lower_bound::T, upper_bound::T,
+              n_points::Int; scale::Float64 = 1.) where {T<:Real}
     grid, weights = quadrature(lower_bound, upper_bound, n_points)
     Grid(grid, weights, scale)
 end
@@ -24,22 +24,22 @@ end
 # Enforce that quadrature rules with additional keyword arguments get mapped to
 # A pre-populated version of that rule that only accepts 3 arguments:
 # Lower bound, upper bound, and number of points
-function uniform_quadrature{T<:Real}(lower_bound::T, upper_bound::T, n_points::Int;
-                                     scale::T = 1)
+function uniform_quadrature(lower_bound::T, upper_bound::T, n_points::Int;
+                            scale::T = 1) where {T<:Real}
     grid = collect(linspace(lower_bound, upper_bound, n_points))
     weights = fill(scale/n_points, n_points)
     return grid, weights
 end
 
-function uniform_quadrature{T<:Real}(scale::T = 1)
+function uniform_quadrature(scale::T = 1) where {T<:Real}
     return (lb, ub, n) -> uniform_quadrature(lb, ub, n, scale = scale)
 end
 
 # NOTE: Should modify chebpts function to return cleaner types...
 # Kind indicates the "kind" of the chebyshev polynomial grid
 # The terminology is generally, "Chebyshev polynomials of the Nth kind"
-function curtis_clenshaw_quadrature{T<:Real}(lower_bound::T, upper_bound::T,
-                                             n_points::Int; kind::Int = 2)
+function curtis_clenshaw_quadrature(lower_bound::T, upper_bound::T,
+                                    n_points::Int; kind::Int = 2) where {T<:Real}
     grid, weights = chebpts(n_points, lower_bound, upper_bound, kind)
     return grid', squeeze(weights', 2)
 end
@@ -81,11 +81,11 @@ function get_grid(m::AbstractModel, grid_name::Symbol)
     return m.grids[grid_name]
 end
 
-function quadrature_sum{T<:Real}(x::Vector{T}, grid::Grid)
+function quadrature_sum(x::Vector{T}, grid::Grid) where {T<:Real}
     return sum(grid.weights .* x .* grid.points)
 end
 
-function quadrature_sum{T<:Real}(grid::Grid, x::Vector{T})
+function quadrature_sum(grid::Grid, x::Vector{T}) where {T<:Real}
     return sum(x, grid)
 end
 

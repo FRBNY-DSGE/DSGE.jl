@@ -16,9 +16,9 @@ performed by the `transform_to_real_line` function, and is reversed by the
 """
 abstract type Transform end
 
-immutable Untransformed <: Transform end
-immutable SquareRoot    <: Transform end
-immutable Exponential   <: Transform end
+struct Untransformed <: Transform end
+struct SquareRoot    <: Transform end
+struct Exponential   <: Transform end
 
 Base.show(io::IO, t::Untransformed) = @printf io "x -> x\n"
 Base.show(io::IO, t::SquareRoot)    = @printf io "x -> (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)\n"
@@ -83,7 +83,7 @@ conditions.
   significance.
 - `tex_label::String`: String for printing the parameter name to LaTeX.
 """
-type UnscaledParameter{T,U} <: Parameter{T,U}
+mutable struct UnscaledParameter{T,U} <: Parameter{T,U}
     key::Symbol
     value::T                                # parameter value in model space
     valuebounds::Interval{T}                # bounds of parameter value
@@ -126,7 +126,7 @@ conditions.
   significance.
 - `tex_label::String`: String for printing parameter name to LaTeX.
 """
-type ScaledParameter{T,U} <: Parameter{T,U}
+mutable struct ScaledParameter{T,U} <: Parameter{T,U}
     key::Symbol
     value::T
     scaledvalue::T
@@ -161,7 +161,7 @@ equilibrium conditions.
 - `description::String`: Short description of the parameter's economic significance.
 - `tex_label::String`: String for printing parameter name to LaTeX.
 """
-type SteadyStateParameter{T} <: AbstractParameter{T}
+mutable struct SteadyStateParameter{T} <: AbstractParameter{T}
     key::Symbol
     value::T
     description::String
@@ -190,17 +190,17 @@ equilibrium conditions.
 - `description::String`: Short description of the parameter's economic significance.
 - `tex_label::String`: String for printing parameter name to LaTeX.
 """
-type SteadyStateParameterGrid{T} <: AbstractParameter{T}
+mutable struct SteadyStateParameterGrid{T} <: AbstractParameter{T}
     key::Symbol
     value::Array{T}
     description::String
     tex_label::String
 end
 
-function SteadyStateParameterGrid{T<:Number}(key::Symbol,
-                                             value::Array{T};
-                                             description::String = "No description available",
-                                             tex_label::String = "")
+function SteadyStateParameterGrid(key::Symbol,
+                                  value::Array{T};
+                                  description::String = "No description available",
+                                  tex_label::String = "") where {T<:Number}
 
     return SteadyStateParameterGrid{T}(key, value, description, tex_label)
 end
@@ -226,7 +226,7 @@ equilibrium conditions.
 - `description::String`: Short description of the parameter's economic significance.
 - `tex_label::String`: String for printing parameter name to LaTeX.
 """
-type SteadyStateParameterArray{T} <: AbstractParameter{T}
+mutable struct SteadyStateParameterArray{T} <: AbstractParameter{T}
     key::Symbol
     value::Array{T}
     description::String
@@ -242,11 +242,10 @@ SteadyStateParameterArray{T<:Number}(key::Symbol, value::Array{T};
 
 SteadyStateParameter constructor with optional `description` and `tex_label` arguments.
 """
-
-function SteadyStateParameterArray{T<:Number}(key::Symbol,
-                                             value::Array{T};
-                                             description::String = "No description available",
-                                             tex_label::String = "")
+function SteadyStateParameterArray(key::Symbol,
+                                   value::Array{T};
+                                   description::String = "No description available",
+                                   tex_label::String = "") where {T<:Number}
 
     return SteadyStateParameterArray(key, value, description, tex_label)
 end
@@ -254,7 +253,7 @@ end
 # TypeError: non-boolean (BitArray{1}) used in boolean context
 # gets thrown when we print the value.
 
-function Base.show{T}(io::IO, p::SteadyStateParameterArray{T})
+function Base.show(io::IO, p::SteadyStateParameterArray{T}) where {T}
     @printf io "%s\n" typeof(p)
     @printf io "(:%s)\n%s\n"      p.key p.description
     @printf io "LaTeX label: %s\n"     p.tex_label
@@ -278,7 +277,7 @@ ParamBoundsError <: Exception
 A `ParamBoundsError` is thrown upon an attempt to assign a parameter value that is not
 between `valuebounds`.
 """
-type ParamBoundsError <: Exception
+mutable struct ParamBoundsError <: Exception
     msg::String
 end
 ParamBoundsError() = ParamBoundsError("Value not between valuebounds")
@@ -297,17 +296,16 @@ By default, returns a fixed `UnscaledParameter` object with key `key`
 and value `value`. If `scaling` is given, a `ScaledParameter` object
 is returned.
 """
-
-function parameter{T,U<:Transform}(key::Symbol,
-                                   value::T,
-                                   valuebounds::Interval{T} = (value,value),
-                                   transform_parameterization::Interval{T} = (value,value),
-                                   transform::U             = Untransformed(),
-                                   prior::NullableOrPrior   = NullablePrior();
-                                   fixed::Bool              = true,
-                                   scaling::Function        = identity,
-                                   description::String = "No description available.",
-                                   tex_label::String = "")
+function parameter(key::Symbol,
+                   value::T,
+                   valuebounds::Interval{T} = (value,value),
+                   transform_parameterization::Interval{T} = (value,value),
+                   transform::U             = Untransformed(),
+                   prior::NullableOrPrior   = NullablePrior();
+                   fixed::Bool              = true,
+                   scaling::Function        = identity,
+                   description::String = "No description available.",
+                   tex_label::String = "") where {T,U<:Transform}
 
     # If fixed=true, force bounds to match and leave prior as null.  We need to define new
     # variable names here because of lexical scoping.
@@ -346,17 +344,17 @@ end
 
 """
 ```
-SteadyStateParameter{T<:Number}(key::Symbol, value::T;
-                                description::String = "",
-                                tex_label::String = "")
+SteadyStateParameter(key::Symbol, value::T;
+                     description::String = "",
+                     tex_label::String = "") where {T<:Number}
 ```
 
 SteadyStateParameter constructor with optional `description` and `tex_label` arguments.
 """
-function SteadyStateParameter{T<:Number}(key::Symbol,
-                                       value::T;
-                                       description::String = "No description available",
-                                       tex_label::String = "")
+function SteadyStateParameter(key::Symbol,
+                              value::T;
+                              description::String = "No description available",
+                              tex_label::String = "") where {T<:Number}
 
     return SteadyStateParameter(key, value, description, tex_label)
 end
@@ -364,13 +362,13 @@ end
 
 """
 ```
-parameter{T<:Number,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::T)
+parameter(p::UnscaledParameter{T,U}, newvalue::T) where {T<:Number,U<:Transform}
 ```
 
 Returns an UnscaledParameter with value field equal to `newvalue`. If `p` is a fixed
 parameter, it is returned unchanged.
 """
-function parameter{T<:Number,U<:Transform}(p::UnscaledParameter{T,U}, newvalue::T)
+function parameter(p::UnscaledParameter{T,U}, newvalue::T) where {T<:Number,U<:Transform}
     p.fixed && return p    # if the parameter is fixed, don't change its value
     a,b = p.valuebounds
     if !(a <= newvalue <= b)
@@ -383,13 +381,13 @@ end
 
 """
 ```
-parameter{T<:Number,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
+parameter(p::ScaledParameter{T,U}, newvalue::T) where {T<:Number,U<:Transform}
 ```
 
 Returns a ScaledParameter with value field equal to `newvalue` and scaledvalue field equal
 to `p.scaling(newvalue)`. If `p` is a fixed parameter, it is returned unchanged.
 """
-function parameter{T<:Number,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
+function parameter(p::ScaledParameter{T,U}, newvalue::T) where {T<:Number,U<:Transform}
     p.fixed && return p    # if the parameter is fixed, don't change its value
     a,b = p.valuebounds
     if !(a <= newvalue <= b)
@@ -400,7 +398,7 @@ function parameter{T<:Number,U<:Transform}(p::ScaledParameter{T,U}, newvalue::T)
                          p.scaling, p.description, p.tex_label)
 end
 
-function Base.show{T,U}(io::IO, p::Parameter{T,U})
+function Base.show(io::IO, p::Parameter{T,U}) where {T,U}
     @printf io "%s\n" typeof(p)
     @printf io "(:%s)\n%s\n"      p.key p.description
     @printf io "LaTeX label: %s\n"     p.tex_label
@@ -420,7 +418,7 @@ function Base.show{T,U}(io::IO, p::Parameter{T,U})
     @printf io "parameter is %s\n" p.fixed ? "fixed" : "not fixed"
 end
 
-function Base.show{T}(io::IO, p::SteadyStateParameter{T})
+function Base.show(io::IO, p::SteadyStateParameter{T}) where {T}
     @printf io "%s\n" typeof(p)
     @printf io "(:%s)\n%s\n"      p.key p.description
     @printf io "LaTeX label: %s\n"     p.tex_label
@@ -428,7 +426,7 @@ function Base.show{T}(io::IO, p::SteadyStateParameter{T})
     @printf io "value:        %+6f\n" p.value
 end
 
-function Base.show{T}(io::IO, p::SteadyStateParameterGrid{T})
+function Base.show(io::IO, p::SteadyStateParameterGrid{T}) where {T}
     @printf io "%s\n" typeof(p)
     @printf io "(:%s)\n%s\n"      p.key p.description
     @printf io "LaTeX label: %s\n"     p.tex_label
@@ -449,21 +447,21 @@ a scalar (default=1):
 - SquareRoot:    `(a+b)/2 + (b-a)/2 * c * x/sqrt(1 + c^2 * x^2)`
 - Exponential:   `a + exp(c*(x-b))`
 """
-transform_to_model_space{T}(p::Parameter{T,Untransformed}, x::T) = x
-function transform_to_model_space{T}(p::Parameter{T,SquareRoot}, x::T)
+transform_to_model_space(p::Parameter{T,Untransformed}, x::T) where {T} = x
+function transform_to_model_space(p::Parameter{T,SquareRoot}, x::T) where {T}
     (a,b), c = p.transform_parameterization, one(T)
     (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)
 end
-function transform_to_model_space{T}(p::Parameter{T,Exponential}, x::T)
+function transform_to_model_space(p::Parameter{T,Exponential}, x::T) where {T}
     (a,b),c = p.transform_parameterization,one(T)
     a + exp(c*(x-b))
 end
 
-transform_to_model_space{T}(pvec::ParameterVector{T}, values::Vector{T}) = map(transform_to_model_space, pvec, values)
+transform_to_model_space(pvec::ParameterVector{T}, values::Vector{T}) where {T}  = map(transform_to_model_space, pvec, values)
 
 """
 ```
-transform_to_real_line{T<:Number, U<:Transform}(p::Parameter{T,U}, x::T = p.value)
+transform_to_real_line(p::Parameter{T,U}, x::T = p.value) where {T<:Number, U<:Transform}
 ```
 
 Transforms `p.value` from model space (between `p.valuebounds`) to the real line, without updating
@@ -474,8 +472,8 @@ where (a,b) = p.transform_parameterization, c a scalar (default=1), and x = p.va
 - SquareRoot:   (1/c)*cx/sqrt(1 - cx^2), where cx =  2 * (x - (a+b)/2)/(b-a)
 - Exponential:   a + exp(c*(x-b))
 """
-transform_to_real_line{T}(p::Parameter{T,Untransformed}, x::T = p.value) = x
-function transform_to_real_line{T}(p::Parameter{T,SquareRoot}, x::T = p.value)
+transform_to_real_line(p::Parameter{T,Untransformed}, x::T = p.value) where {T} = x
+function transform_to_real_line(p::Parameter{T,SquareRoot}, x::T = p.value) where {T}
     (a,b), c = p.transform_parameterization, one(T)
     cx = 2. * (x - (a+b)/2.)/(b-a)
     if cx^2 >1
@@ -488,22 +486,22 @@ function transform_to_real_line{T}(p::Parameter{T,SquareRoot}, x::T = p.value)
     end
     (1/c)*cx/sqrt(1 - cx^2)
 end
-function transform_to_real_line{T}(p::Parameter{T,Exponential}, x::T = p.value)
+function transform_to_real_line(p::Parameter{T,Exponential}, x::T = p.value) where {T}
     (a,b),c = p.transform_parameterization,one(T)
-    b + (1./c) * log(x-a)
+    b + (1 ./ c) * log(x-a)
 end
 
-transform_to_real_line{T}(pvec::ParameterVector{T}, values::Vector{T}) = map(transform_to_real_line, pvec, values)
-transform_to_real_line{T}(pvec::ParameterVector{T}) = map(transform_to_real_line, pvec)
+transform_to_real_line(pvec::ParameterVector{T}, values::Vector{T}) where {T} = map(transform_to_real_line, pvec, values)
+transform_to_real_line(pvec::ParameterVector{T}) where {T} = map(transform_to_real_line, pvec)
 
 
 # define operators to work on parameters
 
-Base.convert{T<:Number}(::Type{T}, p::UnscaledParameter)  = convert(T,p.value)
-Base.convert{T<:Number}(::Type{T}, p::ScaledParameter)    = convert(T,p.scaledvalue)
-Base.convert{T<:Number}(::Type{T}, p::SteadyStateParameter)  = convert(T,p.value)
+Base.convert(::Type{T}, p::UnscaledParameter) where {T<:Number}     = convert(T,p.value)
+Base.convert(::Type{T}, p::ScaledParameter) where {T<:Number}       = convert(T,p.scaledvalue)
+Base.convert(::Type{T}, p::SteadyStateParameter) where {T<:Number}  = convert(T,p.value)
 
-Base.promote_rule{T<:Number,U<:Number}(::Type{AbstractParameter{T}}, ::Type{U}) = promote_rule(T,U)
+Base.promote_rule(::Type{AbstractParameter{T}}, ::Type{U}) where {T<:Number,U<:Number} = promote_rule(T,U)
 
 # Define scalar operators on parameters
 for op in (:(Base.:+),
@@ -571,36 +569,36 @@ end
 
 """
 ```
-update!{T}(pvec::ParameterVector{T}, values::Vector{T})
+update!(pvec::ParameterVector{T}, values::Vector{T}) where {T}
 ```
 
 Update all parameters in `pvec` that are not fixed with
 `values`. Length of `values` must equal length of `pvec`.
+Function optimized for speed.
 """
-# this function is optimised for speed
-function update!{T}(pvec::ParameterVector{T}, values::Vector{T})
+function update!(pvec::ParameterVector{T}, values::Vector{T}) where {T}
     @assert length(values) == length(pvec) "Length of input vector (=$(length(values))) must match length of parameter vector (=$(length(pvec)))"
     map!(parameter, pvec, pvec, values)
 end
 
 """
 ```
-update{T}(pvec::ParameterVector{T}, values::Vector{T})
+update(pvec::ParameterVector{T}, values::Vector{T}) where {T}
 ```
 
 Returns a copy of `pvec` where non-fixed parameter values are updated
 to `values`. `pvec` remains unchanged. Length of `values` must
 equal length of `pvec`.
 """
-# define the non-mutating version like this because we need the type stability of map!
-update{T}(pvec::ParameterVector{T}, values::Vector{T}) = update!(copy(pvec), values)
+update(pvec::ParameterVector{T}, values::Vector{T}) where {T} = update!(copy(pvec), values)
+# ^ define the non-mutating version like this because we need the type stability of map!
 
 Distributions.pdf(p::AbstractParameter) = exp(logpdf(p))
 # we want the unscaled value for ScaledParameters
-Distributions.logpdf{T,U}(p::Parameter{T,U}) = logpdf(get(p.prior),p.value)
+Distributions.logpdf(p::Parameter{T,U}) where {T,U} = logpdf(get(p.prior),p.value)
 
 # this function is optimised for speed
-function Distributions.logpdf{T}(pvec::ParameterVector{T})
+function Distributions.logpdf(pvec::ParameterVector{T}) where {T}
 	x = zero(T)
 	@inbounds for i = 1:length(pvec)
         if hasprior(pvec[i])
@@ -611,7 +609,7 @@ function Distributions.logpdf{T}(pvec::ParameterVector{T})
 end
 
 # calculate logpdf at new values, without needing to allocate a temporary array with update
-function Distributions.logpdf{T}(pvec::ParameterVector{T}, values::Vector{T})
+function Distributions.logpdf(pvec::ParameterVector{T}, values::Vector{T}) where {T}
     @assert length(values) == length(pvec) "Length of input vector (=$(length(values))) must match length of parameter vector (=$(length(pvec)))"
 
     x = zero(T)
@@ -623,8 +621,8 @@ function Distributions.logpdf{T}(pvec::ParameterVector{T}, values::Vector{T})
     x
 end
 
-Distributions.pdf{T}(pvec::ParameterVector{T}) = exp(logpdf(pvec))
-Distributions.pdf{T}(pvec::ParameterVector{T}, values::Vector{T}) = exp(logpdf(pvec, values))
+Distributions.pdf(pvec::ParameterVector{T}) where {T} = exp(logpdf(pvec))
+Distributions.pdf(pvec::ParameterVector{T}, values::Vector{T}) where {T} = exp(logpdf(pvec, values))
 
 """
 ```

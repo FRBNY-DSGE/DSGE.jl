@@ -1,9 +1,9 @@
 isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
-    using Base.Dates, Base.Test, BenchmarkTools
-    using BasisMatrices, CSV, DataFrames, DataArrays, Distributions, FileIO, ForwardDiff, FredData, HDF5, JLD
-    using Nullables, Optim, Plots, RecipesBase, StateSpaceRoutines, StatPlots
+    using Dates, Test, BenchmarkTools
+    using BasisMatrices, CSV, DataFrames, Distributions, FileIO, ForwardDiff, FredData, HDF5, JLD
+    using LinearAlgebra, Nullables, Optim, Printf, RecipesBase, StateSpaceRoutines, StatPlots
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
     using QuantEcon: solve_discrete_lyapunov
     using DifferentialEquations: ODEProblem, Tsit5, Euler

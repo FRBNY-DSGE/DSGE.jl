@@ -205,7 +205,7 @@ function ccquadwts(n,chebkind)
         tk=zeros(size(tvec,1)+1,1);
         tk[1,1]=1;
         tk[2:end,1]=tvec
-        c = 2./tk';  # Exact integrals of T_k (even)
+        c = 2 ./ tk';  # Exact integrals of T_k (even)
         cvec=c[floor(Int,n/2):-1:2]';
         ck=zeros(1,size(c,2)+size(cvec,2))
         ck[1,1:size(c,2)] = c;
@@ -221,7 +221,7 @@ function ccquadwts(n,chebkind)
         tk=zeros(size(tvec,1)+1,1);
         tk[1,1]=1;
         tk[2:end,1]=tvec
-        m = 2./tk';  # Exact integrals of T_k (even)
+        m = 2 ./ tk';  # Exact integrals of T_k (even)
         # Mirror the vector for the use of ifft:
         if mod(n,2)==1 #n is odd
             cvec=-m[floor(Int,(n+1)/2):-1:2]';
@@ -235,7 +235,7 @@ function ccquadwts(n,chebkind)
             ck[1,size(m,2)+2:end] = cvec;
         end
         v = exp.(1im*[0:n-1...]'*pi/n);      # weight (rotation) vector
-        c = ck.*v;                      # Apply the weight vector
+        c = ck .* v;                      # Apply the weight vector
         w = real(ifft(c,2));             # Call ifft
     else
         println("Error: Chebkind must be 1 or 2")
@@ -259,9 +259,9 @@ function chebpts(n,lo,hi,chebkind)
             #second kind (the ones with points at the boundary)
             m = n - 1;
             # Points for default domain of [-1,1]
-            x = sin.(pi*(-m:2:m)/(2*m)).';  # (Use of sine enforces symmetry.)
+            x = copy(transpose(sin.(pi*(-m:2:m)/(2*m))));  # (Use of sine enforces symmetry.)
         elseif chebkind==1
-            x = sin.(pi*((-n+1:2:n-1)/(2*n))).'; # (Use of sine enforces symmetry.)
+            x = copy(transpose(sin.(pi*((-n+1:2:n-1)/(2*n))))); # (Use of sine enforces symmetry.)
         else
             println("Error: Chebtype Must be 1 or 2")
         end
@@ -310,7 +310,7 @@ function cheb2leg_direct(c_cheb, normalize)
     N = size(c_cheb,1)                     # Number of columns.
     m = size(c_cheb,2)                   # Number of rows.
     N = N - 1;                          # Degree of polynomial.
-    x = cos.(.5*pi*(0:2*N).'/N);         # 2*N+1 Chebyshev grid (reversed order).
+    x = cos.(.5*pi*transpose((0:2*N))/N);         # 2*N+1 Chebyshev grid (reversed order).
     temparg=zeros(2*N+1,m);
     temparg[1:N+1,1:m]=c_cheb;
     ff = dctTypeI(temparg);                           #Ordering and normalization differ from Matlab version
@@ -322,7 +322,7 @@ function cheb2leg_direct(c_cheb, normalize)
     L[:,1] = 1+0*x;          #P_0
     L[:,2] = x;              #P_1.
     for k = 1:N-1 # Recurrence relation:
-        P = (2-1/(k+1))*Pm1.*x - (1-1/(k+1))*Pm2;
+        P = (2-1/(k+1))*Pm1 .* x - (1-1/(k+1))*Pm2;
         Pm2 = Pm1;
         Pm1 = P;
         L[:,2+k] = P;
@@ -332,7 +332,7 @@ function cheb2leg_direct(c_cheb, normalize)
 
     # Normalize:
     if ( normalize )
-        c_leg  = broadcast(*, c_leg, 1./sqrt.([0:N...]+.5) );
+        c_leg  = broadcast(*, c_leg, 1 ./ sqrt.([0:N...]+.5) );
     end
 
     return c_leg
