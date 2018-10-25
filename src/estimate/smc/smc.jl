@@ -34,7 +34,7 @@ SMC is broken up into three main steps:
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis Hastings algorithm.
 """
 function smc(m::AbstractModel, data::Matrix{Float64};
-             verbose::Symbol = :low, old_data::Matrix{Float64} = Matrix{Float64}(size(data, 1), 0))
+             verbose::Symbol = :low, old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0))
     ########################################################################################
     ### Setting Parameters
     ########################################################################################
@@ -44,6 +44,12 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     n_parts = get_setting(m, :n_particles)
     n_params = n_parameters(m)
     n_blocks = get_setting(m, :n_smc_blocks)
+
+    use_chand_recursion = get_setting(m, :use_chand_recursion)
+
+    if any(isnan.(data)) & use_chand_recursion
+        error("Cannot use Chandrasekhar recursions with missing data")
+    end
 
     # Time Tempering
     tempered_update = !isempty(old_data)
@@ -73,8 +79,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     c = get_setting(m, :step_size_smc)
     target = accept = get_setting(m, :target_accept)
     α = get_setting(m, :mixture_proportion)
-    fixed_para_inds = find([θ.fixed for θ in m.parameters])
-    free_para_inds = find([!θ.fixed for θ in m.parameters])
+    fixed_para_inds = findall([θ.fixed for θ in m.parameters])
+    free_para_inds = findall([!θ.fixed for θ in m.parameters])
     n_free_para = length(free_para_inds)
 
     ########################################################################################
@@ -91,8 +97,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     if tempered_update
         # Load the previous ParticleCloud as the starting point for time tempering
-        loadpath = rawpath(m, "estimate", "smc_cloud.jld2")
-        #loadpath = rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(tempering_target)])
+        loadpath = rawpath(m, "estimate", "smc_cloud.jld")
+        #loadpath = rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)])
         loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
 
         cloud = load(loadpath, "cloud")
@@ -103,20 +109,20 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         cloud = ParticleCloud(m, n_parts)
 
         # Modifies the cloud object in place to update draws, loglh, & logpost
-        initial_draw!(m, data, cloud, parallel = parallel, verbose = verbose)
+        initial_draw!(m, data, cloud, parallel = parallel, use_chand_recursion = use_chand_recursion,
+                      verbose = verbose)
 
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
     end
 
     # Fixed schedule for construction of ϕ_prop
     if use_fixed_schedule
-        cloud.tempering_schedule = ((collect(1:n_Φ)-1)/(n_Φ-1)).^λ
+        cloud.tempering_schedule = ((collect(1:n_Φ) .- 1)/(n_Φ-1)).^λ
     else
-        proposed_fixed_schedule = ((collect(1:n_Φ)-1)/(n_Φ-1)).^λ
+        proposed_fixed_schedule = ((collect(1:n_Φ) .- 1)/(n_Φ-1)).^λ
     end
 
     # Instantiate incremental and normalized weight matrices to be used for logMDD calculation
-    #w_matrix = fill(1/n_parts, (n_parts,1))
     w_matrix = zeros(n_parts, 1)
     if tempered_update
         W_matrix = similar(w_matrix)
@@ -125,8 +131,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         end
     else
         W_matrix = fill(1/n_parts, (n_parts,1))
-        #update_weights!(cloud, fill(1/n_parts, n_parts))
-        #W_matrix = ones(n_parts, 1)
     end
     z_matrix = ones(1)
 
@@ -144,7 +148,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     while ϕ_n < 1.
 
-    tic()
+    begin_time = time_ns()
     cloud.stage_index = i += 1
 
     ########################################################################################
@@ -165,9 +169,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     # Calculate incremental weights (if no old data, get_old_loglh(cloud) returns zero)
     incremental_weights = exp.((ϕ_n1 - ϕ_n)*get_old_loglh(cloud) + (ϕ_n - ϕ_n1)*get_loglh(cloud))
-
-    # inc_wt*W_n-1
-    #mult_weights = get_weights(cloud).*incremental_weights
 
     # Update weights
     update_weights!(cloud, incremental_weights)
@@ -228,13 +229,13 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
     if parallel
-        new_particles = @parallel (vcat) for j in 1:n_parts
-            mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                     c = c, α = α, old_data = old_data, verbose = verbose)
+        new_particles = @distributed (vcat) for k in 1:n_parts
+            mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
+                     c = c, α = α, old_data = old_data, use_chand_recursion = use_chand_recursion, verbose = verbose)
         end
     else
-        new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                                  c = c, α = α, old_data = old_data, verbose = verbose) for j = 1:n_parts]
+        new_particles = [mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
+                                  c = c, α = α, old_data = old_data, verbose = verbose) for k = 1:n_parts]
     end
 
     cloud.particles = new_particles
@@ -244,7 +245,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     ### Timekeeping and Output Generation
     ########################################################################################
 
-    cloud.total_sampling_time += toq()
+    cloud.total_sampling_time += (time_ns() - begin_time)/1e9
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         end_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)
@@ -265,8 +266,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
             particle_store[i,:] = cloud.particles[i].value
         end
         close(simfile)
-        #jldopen(rawpath(m, "estimate", "smc_cloud.jld2", ["adpt="*string(tempering_target)]), "w") do file
-        jldopen(rawpath(m, "estimate", "smc_cloud.jld2"), "w") do file
+        #jldopen(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)]), "w") do file
+        jldopen(rawpath(m, "estimate", "smc_cloud.jld"), "w") do file
             write(file, "cloud", cloud)
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)
