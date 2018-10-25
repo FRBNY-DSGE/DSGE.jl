@@ -279,7 +279,6 @@ function forecast_one(m::AbstractModel{Float64},
         total_forecast_time_min = total_forecast_time/60
         println(verbose, :low, "\nTotal time to forecast: $total_forecast_time_min minutes")
 
-
     ### Multiple-Draw Forecasts
 
     elseif input_type in [:full, :subset]
@@ -330,6 +329,8 @@ function forecast_one(m::AbstractModel{Float64},
         end # of loop through blocks
 
     end # of input_type
+
+    combine_raw_forecast_output_and_metadata(m, forecast_output_files, verbose = verbose)
 
     println(verbose, :low, "\nForecast complete: $(now())")
 end

@@ -192,6 +192,10 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
             continue
         end
         filepath = forecast_output_files[var]
+        # Write forecast metadata to a jld2 and the raw forecast output
+        # to an h5. The data in the HDF5 will be transferred to the jld2
+        # and the h5 file will be deleted when combine_raw_forecast_output_and_metadata
+        # is executed.
         if isnull(block_number) || get(block_number) == 1
             jldopen(filepath, "w") do file
                 write_forecast_metadata(m, file, var)
@@ -213,7 +217,6 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                         block_size = forecast_block_size(m)
                         chunk_dims = collect(dims)
                         chunk_dims[1] = block_size
-
 
                         # Initialize dataset
                         #pfile = file #.plain
@@ -341,6 +344,33 @@ end
 
 """
 ```
+combine_raw_forecast_output_and_metadata()
+```
+Writes the raw forecast output data (`arr`) saved in the temporary h5 file to the
+jld2 file containing the rest of the forecast metadata. The intermediary h5 step exists because
+jld2 does not support chunked memory assignment in the same way that jld and h5 permitted previously.
+"""
+function combine_raw_forecast_output_and_metadata(m::AbstractModel,
+                                                  forecast_output_files::Dict{Symbol, String};
+                                                  verbose::Symbol = :low)
+    for jld_file_path in values(forecast_output_files)
+        h5_file_path = replace(jld_file_path, "jld2" => "h5")
+        arr = h5read(h5_file_path, "arr")
+        jldopen(jld_file_path, "r+") do file
+            write(file, "arr", arr)
+        end
+        # Remove the h5 containing the raw forecast output when the data has been transferred.
+        rm(h5_file_path)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            jld_file_name = replace(jld_file_path, rawpath(m, "forecast")*"/" => "")
+            h5_file_name = replace(h5_file_path, rawpath(m, "forecast")*"/" => "")
+            println("Wrote raw forecast output to $jld_file_name and removed $h5_file_name")
+        end
+    end
+end
+
+"""
+```
 read_forecast_metadata(file::JLD2.JLDFile)
 ```
 
@@ -381,7 +411,7 @@ function read_forecast_output(m::AbstractModel, input_type::Symbol, cond_type::S
     product = get_product(output_var)
     class   = get_class(output_var)
 
-    h5open(replace(filename, "jld2" => "h5"), "r") do file
+    jldopen(filename, "r") do file
         # Read forecast output
         fcast_series = if isnull(shock_name)
             read_forecast_series(file, class, product, var_name)
@@ -394,13 +424,13 @@ function read_forecast_output(m::AbstractModel, input_type::Symbol, cond_type::S
         # different in each period. Now we have something of size `ndraws` x
         # `nvars` x `nperiods`
         if product == :trend
-            nperiods = length(load(replace(file.filename, "h5" => "jld2"), "date_indices"))
+            nperiods = length(read(file, "date_indices"))
             fcast_series = repeat(fcast_series, outer = (1, nperiods))
         end
 
         # Parse transform
         class_long = get_class_longname(class)
-        transforms = load(replace(file.filename, "h5" => "jld2"), string(class_long) * "_revtransforms")
+        transforms = read(file, string(class_long) * "_revtransforms")
         transform = parse_transform(transforms[var_name])
 
         fcast_series, transform
