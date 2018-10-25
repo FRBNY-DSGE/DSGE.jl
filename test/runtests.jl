@@ -1,8 +1,8 @@
-using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase
+using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra
 
 my_tests = [
-            #="core",
+            "core",
             "parameters",
             "models/an_schorfheide/an_schorfheide",
             "models/smets_wouters/smets_wouters",
@@ -20,13 +20,7 @@ my_tests = [
             "estimate/hessian",
             "estimate/csminwel",
             "estimate/optimize",
-            "estimate/metropolis_hastings", =#
-            "estimate/smc/smc",
-            "estimate/mutation",
-            "estimate/smc/helpers", =#
-            "estimate/smc/initialization",
-            "estimate/smc/resample",
-            "estimate/smc/util",
+            "estimate/metropolis_hastings",
             "data/misc",
             "data/load_data",
             "forecast/smooth",
@@ -41,7 +35,13 @@ my_tests = [
             "scenarios/forecast",
             "scenarios/switching",
             "scenarios/drivers",
-            "plot/plot"
+            "plot/plot",
+            "estimate/smc/mutation",
+            "estimate/smc/helpers",
+            "estimate/smc/initialization",
+            "estimate/smc/resample",
+            "estimate/smc/util",
+            "estimate/smc/smc",
             ]
 
 for test in my_tests
