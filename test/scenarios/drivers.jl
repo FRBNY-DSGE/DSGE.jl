@@ -89,7 +89,7 @@ simulate_switching(m, somealt, verbose = :none)
 @testset "Test switching scenarios, where the switch happens at particular points in time" begin
     #global file_actual = load(get_scenario_output_files(m, somealt, [:forecastobs])[:forecastobs])
     #global actual = file_actual["arr"]
-    actual = h5open(replace(get_scenario_output_files(m, somealt, [:forecastobs])[:forecastobs], "jld2" => "h5")) do file
+    global actual = h5open(replace(get_scenario_output_files(m, somealt, [:forecastobs])[:forecastobs], "jld2" => "h5")) do file
         read(file, "arr")
     end
     for i = 1:10
