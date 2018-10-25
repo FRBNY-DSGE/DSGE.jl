@@ -1,14 +1,14 @@
 # To be removed after running this test individually in the REPL successfully
 using DSGE
 using HDF5, JLD2
-import Base.Test: @test, @testset
+using Test
 
 path = dirname(@__FILE__)
 
 m = AnSchorfheide()
 
-saveroot = normpath(joinpath(dirname(@__FILE__),"save"))
-m <= Setting(:saveroot, saveroot)
+#saveroot = normpath(joinpath(dirname(@__FILE__),"save"))
+m <= Setting(:saveroot, tempdir())
 
 data = h5read("reference/smc.h5", "data")
 
@@ -28,16 +28,16 @@ m <= Setting(:resampling_threshold, .5)
 m <= Setting(:smc_iteration, 0)
 m <= Setting(:use_chand_recursion, true)
 
-srand(42)
+Random.seed!(42)
 smc(m, data, verbose = :none) # us.txt gives equiv to periods 95:174 in our current dataset
 
-test_file = load(rawpath(m, "estimate", "smc_cloud.jld2"))
+test_file = load(rawpath(m, "estimate", "smc_cloud.jld"))
 test_cloud  = test_file["cloud"]
 test_w      = test_file["w"]
 test_W      = test_file["W"]
 test_z = test_file["z"]
 
-#=JLD2.jldopen("reference/smc_cloud_fix=true.jld2", "w") do file
+#=JLD2.jldopen("reference/smc_cloud_fix=true.jld2", true, true, true, IOStream) do file
     write(file, "cloud", test_cloud)
     write(file, "w", test_w)
     write(file, "W", test_W)
@@ -51,7 +51,7 @@ saved_W      = saved_file["W"]
 
 
 ####################################################################
-cloud_fields = fieldnames(test_cloud)
+cloud_fields = fieldnames(typeof(test_cloud))
 @testset "ParticleCloud Fields" begin
     @test @test_matrix_approx_eq DSGE.get_vals(test_cloud) DSGE.get_vals(saved_cloud)
     @test @test_matrix_approx_eq DSGE.get_loglh(test_cloud) DSGE.get_loglh(saved_cloud)
@@ -67,7 +67,7 @@ end
 
 test_particle = test_cloud.particles[1]
 saved_particle = saved_cloud.particles[1]
-particle_fields = fieldnames(test_particle)
+particle_fields = fieldnames(typeof(test_particle))
 @testset "Individual Particle Fields Post-SMC" begin
     @test test_particle.weight == saved_particle.weight
     @test test_particle.keys == saved_particle.keys

@@ -1,14 +1,11 @@
 # To be removed after running this test individually in the REPL successfully
 using DSGE
-using HDF5, JLD, JLD2
-import Base.Test: @test, @testset
+using HDF5, JLD2, Distributions, LinearAlgebra, PDMats
+using Test
 
 path = dirname(@__FILE__)
 
-m = AnSchorfheide()
-
-saveroot = normpath(joinpath(dirname(@__FILE__),"save"))
-m <= Setting(:saveroot, saveroot)
+m = AnSchorfheide(testing = true)
 
 data = h5read("reference/smc.h5", "data")
 
@@ -29,7 +26,7 @@ m <= Setting(:use_fixed_schedule, true)
 
 n_parts = get_setting(m, :n_particles)
 
-file = JLD.jldopen("reference/mutation_inputs.jld", "r")
+file = jldopen("reference/mutation_inputs.jld2", "r")
 old_particles = read(file, "particles")
 d = read(file, "d")
 blocks_free = read(file, "blocks_free")
@@ -44,7 +41,7 @@ close(file)
 function stack_values(particles::Vector{Particle}, field::Symbol)
     n_parts = length(particles)
     init_field_value = getfield(particles[1], field)
-    stacked_values = Vector{typeof(init_field_value)}(n_parts)
+    stacked_values = Vector{typeof(init_field_value)}(undef, n_parts)
 
     for (i, particle) in enumerate(particles)
         stacked_values[i] = getfield(particle, field)
@@ -53,7 +50,7 @@ function stack_values(particles::Vector{Particle}, field::Symbol)
     return stacked_values
 end
 
-srand(42)
+Random.seed!(42)
 
 new_particles = [mutation(m, data, old_particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
                  c = c, α = α, old_data = old_data) for j = 1:n_parts]
@@ -65,15 +62,15 @@ JLD2.jldopen("reference/mutation_outputs.jld2", "w") do file
     write(file, "particles", new_particles)
 end =#
 
-saved_particles = load("reference/mutation_outputs.jld", "particles")
+saved_particles = load("reference/mutation_outputs.jld2", "particles")
 
-particle_fields = fieldnames(new_particles[1])
+particle_fields = fieldnames(typeof(new_particles[1]))
 @testset "Individual Particle Fields Post-Mutation" begin
     @test stack_values(new_particles, :weight) == stack_values(saved_particles, :weight)
-    for field in particle_fields
-        new_particles_field = stack_values(new_particles, field)
-        saved_particles_field = stack_values(saved_particles, field)
-
-        @test new_particles_field == saved_particles_field
-    end
+    @test stack_values(new_particles, :keys) == stack_values(saved_particles, :keys)
+    @test stack_values(new_particles, :value) == stack_values(saved_particles, :value)
+    @test stack_values(new_particles, :loglh) ≈ stack_values(saved_particles, :loglh)
+    @test stack_values(new_particles, :logpost) ≈ stack_values(saved_particles, :logpost)
+    @test stack_values(new_particles, :old_loglh) == stack_values(saved_particles, :old_loglh)
+    @test stack_values(new_particles, :accept) == stack_values(saved_particles, :accept)
 end
