@@ -9,6 +9,7 @@ Dates
 Distributions
 FileIO
 FredData
+LinearAlgebra
 HDF5
 JLD2
 Optim
