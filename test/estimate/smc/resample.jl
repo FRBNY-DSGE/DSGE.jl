@@ -10,11 +10,11 @@ test_sys_resample = resample(weights, method = :systematic)
 test_multi_resample = resample(weights, method = :multinomial)
 test_poly_resample = resample(weights, method = :polyalgo)
 
-jldopen("resample.jld2", "w") do file
+#=jldopen("resample.jld2", "w") do file
     file["sys"] = test_sys_resample
     file["multi"] = test_multi_resample
     file["poly"] = test_poly_resample
-end
+end=#
 
 saved_sys_resample = load("reference/resample.jld", "sys")
 saved_multi_resample = load("reference/resample.jld", "multi")
