@@ -81,7 +81,7 @@ equilibrium conditions.
   dictionary that stores names and transformations to/from model units. See
   `PseudoObservable` for further details.
 """
-type OneAssetHANK{T} <: AbstractCTModel{T}
+mutable struct OneAssetHANK{T} <: AbstractCTModel{T}
     parameters::ParameterVector{T}                          # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                        # model steady-state values
     keys::OrderedDict{Symbol,Int}                           # human-readable names for all the model
@@ -120,7 +120,6 @@ Arguments:
 Description:
 Initializes indices for all of `m`'s states, shocks, and equilibrium conditions.
 """
-
 function init_model_indices!(m::OneAssetHANK)
     # Endogenous states
     endogenous_states = collect([:value_function, :inflation, :distribution,
@@ -322,7 +321,7 @@ function init_parameters!(m::OneAssetHANK)
                    tex_label="govbvrule_fixnomB")
 
     m <= parameter(:labdisutil, m[:meanlabeff] / ((0.75 ^(-m[:coefrra])) *
-                                                  ((1./3.)^(1/m[:frisch]))), fixed=true,
+                                                  ((1. / 3.)^(1/m[:frisch]))), fixed=true,
                    description="Coefficient of labor disutility",
                    tex_label="labdisutil")
 
@@ -426,29 +425,29 @@ function steadystate!(m::OneAssetHANK)
         calculate_ss_equil_vars(zz, labor_share_ss, meanlabeff, lumptransferpc, govbondtarget)
 
     # Initialize matrices for finite differences
-    Vaf = Array{Complex128}(I, J)
-    Vab = Array{Complex128}(I, J)
+    Vaf = Array{ComplexF64}(I, J)
+    Vab = Array{ComplexF64}(I, J)
 
-    cf  = Array{Complex128}(I, J) # forward consumption difference
-    hf  = Array{Complex128}(I, J) # forward hours difference
-    sf  = Array{Complex128}(I, J) # forward saving difference
-    cb  = Array{Complex128}(I, J) # backward consumption difference
-    hb  = Array{Complex128}(I, J) # backward hours difference
-    sb  = Array{Complex128}(I, J) # backward saving difference
-    c0  = Array{Complex128}(I, J)
-    A   = Array{Complex128}(I*J, I*J)
+    cf  = Array{ComplexF64}(I, J) # forward consumption difference
+    hf  = Array{ComplexF64}(I, J) # forward hours difference
+    sf  = Array{ComplexF64}(I, J) # forward saving difference
+    cb  = Array{ComplexF64}(I, J) # backward consumption difference
+    hb  = Array{ComplexF64}(I, J) # backward hours difference
+    sb  = Array{ComplexF64}(I, J) # backward saving difference
+    c0  = Array{ComplexF64}(I, J)
+    A   = Array{ComplexF64}(I*J, I*J)
 
     # Aswitch*v = \lambda_z(v(a,z') - v(a,z))
     # Captures expected change in value function due to jumps in z
-    Aswitch = kron(ymarkov_combined, speye(Complex128, I))
+    Aswitch = kron(ymarkov_combined, speye(ComplexF64, I))
 
     # Initialize steady state variables
-    V  = Array{Complex128}(I, J) # value function
-    u  = Array{Complex128}(I, J) # flow utility across state space
-    s  = Array{Complex128}(I, J) # savings across state space
-    c  = Array{Complex128}(I, J) # flow consumption
-    h  = Array{Complex128}(I, J) # flow hours of labor
-    h0 = Array{Complex128}(I, J) # guess of what h will be
+    V  = Array{ComplexF64}(I, J) # value function
+    u  = Array{ComplexF64}(I, J) # flow utility across state space
+    s  = Array{ComplexF64}(I, J) # savings across state space
+    c  = Array{ComplexF64}(I, J) # flow consumption
+    h  = Array{ComplexF64}(I, J) # flow hours of labor
+    h0 = Array{ComplexF64}(I, J) # guess of what h will be
 
     # Creates functions for computing flow utility, income earned, and labor done given
     # CRRA + frisch elasticity style labor disutility
@@ -512,7 +511,7 @@ function steadystate!(m::OneAssetHANK)
         end
 
         # Create initial guess for g0
-        g0 = zeros(Complex128, I, J)
+        g0 = zeros(ComplexF64, I, J)
         # Assign stationary income distribution weight at a = 0, zero elsewhere
         g0[iszero.(a), :] = g_z
         # g_z is marginal distribution, so re-weight by some multiplier of Lebesgue measure

@@ -223,8 +223,8 @@ function oneDquad_spline(x::Vector{Float64}, knots::Vector{Float64})
     aux_mat2 = spdiagm(ones(n_knots), 0, n_knots, n_knots) + spdiagm(ones(n_knots-1), 1, n_knots, n_knots)
     aux_mat2[end, end] = 0
     aux_mat2[n_knots, 1] = 1
-    aux_mat3 = spdiagm([-2./diff(knots); 0], 0, n_knots, n_knots + 1) +
-        spdiagm([2./diff(knots); 1], 1, n_knots, n_knots + 1)
+    aux_mat3 = spdiagm([-2 ./ diff(knots); 0], 0, n_knots, n_knots + 1) +
+        spdiagm([2 ./ diff(knots); 1], 1, n_knots, n_knots + 1)
 
     # Return values
     from_knots = first_interp_mat + aux_mat*(full(aux_mat2)\full(aux_mat3))

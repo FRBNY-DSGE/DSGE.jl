@@ -111,8 +111,8 @@ Compute the initial state `s_0` and state covariance matrix `P_0` under the
 stationarity condition:
 
 ```
-s_0  = (I - T)\C
-P_0 = reshape(I - kron(T, T))\vec(R*Q*R'), Ns, Ns)
+s_0  = (I - T)\\C
+P_0 = reshape(I - kron(T, T))\\vec(R*Q*R'), Ns, Ns)
 ```
 
 where:

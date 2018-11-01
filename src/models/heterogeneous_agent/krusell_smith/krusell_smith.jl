@@ -1,4 +1,3 @@
-import DataStructures: OrderedDict
 """
 ```
 KrusellSmith{T} <: AbstractModel{T}
@@ -72,7 +71,7 @@ equilibrium conditions.
   user. See `load_data` and `Observable` for further details.
 
 """
-type KrusellSmith{T} <: AbstractModel{T}
+mutable struct KrusellSmith{T} <: AbstractModel{T}
     parameters::ParameterVector{T}                         # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                       # model steady-state values
     grids::OrderedDict{Symbol,Grid}                        # quadrature grids

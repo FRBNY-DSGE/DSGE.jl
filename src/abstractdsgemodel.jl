@@ -640,7 +640,7 @@ function filestring_base(m::AbstractModel)
     end
 end
 
-filestring(m::AbstractModel) = filestring(m, Vector{String}())
+filestring(m::AbstractModel) = filestring(m, Vector{String}(undef, 0))
 filestring(m::AbstractModel, d::String) = filestring(m, [String(d)])
 function filestring(m::AbstractModel, d::Vector{String})
     base = filestring_base(m)

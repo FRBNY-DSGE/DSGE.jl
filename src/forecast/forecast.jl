@@ -47,9 +47,9 @@ where `S<:AbstractFloat`.
   pseudo-observables
 - `shocks::Matrix{S}`: matrix of size `nshocks` x `horizon` of shock innovations
 """
-function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
+function forecast(m::AbstractModel, system::System{S},
     s_0::Vector{S}; cond_type::Symbol = :none, enforce_zlb::Bool = false,
-    shocks::Matrix{S} = Matrix{S}(0, 0), draw_shocks::Bool = false)
+    shocks::Matrix{S} = Matrix{S}(0, 0), draw_shocks::Bool = false) where {S<:AbstractFloat}
 
     # Numbers of things
     nshocks = n_shocks_exogenous(m)
@@ -111,9 +111,9 @@ function forecast{S<:AbstractFloat}(m::AbstractModel, system::System{S},
         ind_r = ind_r, ind_r_sh = ind_r_sh, zlb_value = zlb_value)
 end
 
-function forecast{S<:AbstractFloat}(system::System{S}, s_0::Vector{S},
+function forecast(system::System{S}, s_0::Vector{S},
     shocks::Matrix{S}; enforce_zlb::Bool = false, ind_r::Int = -1,
-    ind_r_sh::Int = -1, zlb_value::S = 0.13/4)
+    ind_r_sh::Int = -1, zlb_value::S = 0.13/4) where {S<:AbstractFloat}
 
     # Unpack system
     T, R, C = system[:TTT], system[:RRR], system[:CCC]

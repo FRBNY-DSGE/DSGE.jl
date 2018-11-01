@@ -5,9 +5,9 @@ necessary because we specify prior distributions wrt mean and SD
 parameters). Note these functions are NOT new methods for the Distributions.Beta, etc.
 functions, but rather new functions with the same names.
 =#
-
+import LinearAlgebra: rank
 import Distributions: params, mean, std, pdf, logpdf, rand, Distribution, Matrixvariate
-import Base: length, rank
+import Base: length
 
 """
 ```
@@ -114,12 +114,12 @@ end
 
 """
 ```
-Base.rank(d::DegenerateMvNormal)
+LinearAlgebra.rank(d::DegenerateMvNormal)
 ```
 
 Returns the rank of `d.σ`.
 """
-function Base.rank(d::DegenerateMvNormal)
+function LinearAlgebra.rank(d::DegenerateMvNormal)
     return rank(d.σ)
 end
 

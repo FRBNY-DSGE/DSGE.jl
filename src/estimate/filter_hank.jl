@@ -35,10 +35,10 @@ where `S<:AbstractFloat`.
 
 - `kal::Kalman`: see `?Kalman`
 """
-function filter{S<:AbstractFloat}(m::AbstractCTModel, data::Matrix{S}, system::System,
-    s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0);
-    start_date::Date = date_presample_start(m), include_presample::Bool = true,
-    outputs::Vector{Symbol} = [:loglh, :pred, :filt])
+function filter(m::AbstractCTModel, data::Matrix{S}, system::System,
+                s_0::Vector{S} = Vector{S}(0), P_0::Matrix{S} = Matrix{S}(0, 0);
+                start_date::Date = date_presample_start(m), include_presample::Bool = true,
+                outputs::Vector{Symbol} = [:loglh, :pred, :filt]) where {S<:AbstractFloat}
 
     # Get system matrices for each regime
     TTTs, RRRs, CCCs, QQs, ZZs, DDs, EEs = system[:TTT], system[:RRR], system[:CCC], system[:QQ], system[:ZZ], system[:DD], system[:EE]

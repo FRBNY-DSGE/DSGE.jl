@@ -118,7 +118,7 @@ function eqcond(m::Model1002)
     Γ1[eq[:eq_nevol], endo[:kbar_t]]   = m[:ζ_nqk]
     Γ1[eq[:eq_nevol], endo[:n_t]]      = m[:ζ_nn]
     Γ1[eq[:eq_nevol], endo[:R_t]]      = -m[:ζ_nR]
-    Γ1[eq[:eq_nevol], endo[:b_t]]      = m[:ζ_nR]*((m[:σ_c]*(1.+m[:h]*exp(-m[:z_star])))/(1.-m[:h]*exp(-m[:z_star])))
+    Γ1[eq[:eq_nevol], endo[:b_t]]      = m[:ζ_nR]*((m[:σ_c]*(1 .+ m[:h]*exp(-m[:z_star])))/(1 .- m[:h]*exp(-m[:z_star])))
 
     # Flexible prices and wages
     Γ0[eq[:eq_nevol_f], endo[:n_f_t]]      = 1.
@@ -130,7 +130,7 @@ function eqcond(m::Model1002)
     Γ1[eq[:eq_nevol_f], endo[:kbar_f_t]]   = m[:ζ_nqk]
     Γ1[eq[:eq_nevol_f], endo[:n_f_t]]      = m[:ζ_nn]
     Γ1[eq[:eq_nevol_f], endo[:r_f_t]]      = -m[:ζ_nR]
-    Γ1[eq[:eq_nevol_f], endo[:b_t]]      = m[:ζ_nR]*((m[:σ_c]*(1.+m[:h]*exp(-m[:z_star])))/(1.-m[:h]*exp(-m[:z_star])))
+    Γ1[eq[:eq_nevol_f], endo[:b_t]]      = m[:ζ_nR]*((m[:σ_c]*(1 .+ m[:h]*exp(-m[:z_star])))/(1 .- m[:h]*exp(-m[:z_star])))
 
     # Flexible prices and wages - ASSUME NO FINANCIAL FRICTIONS
     Γ0[eq[:eq_capval_f], endo[:rktil_f_t]] = 1.

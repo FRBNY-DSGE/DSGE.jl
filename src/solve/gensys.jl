@@ -5,8 +5,8 @@
 ```
 gensys(Γ0, Γ1, c, Ψ, Π)
 gensys(Γ0, Γ1, c, Ψ, Π, div)
-gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π)
-gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div)
+gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π)
+gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div)
 ```
 
 Generate state-space solution to canonical-form DSGE model.
@@ -48,9 +48,9 @@ of the Schur decomposition, even if the inputs are real numbers.
 """
 function gensys(Γ0, Γ1, c, Ψ, Π, args...; verbose::Symbol = :high)
     F = try
-        schurfact!(complex(Γ0), complex(Γ1))
+        schur!(complex(Γ0), complex(Γ1))
     catch ex
-        if isa(ex, Base.LinAlg.LAPACKException)
+        if isa(ex, LinearAlgebra.LAPACKException)
             info("LAPACK exception thrown while computing Schur decomposition of Γ0 and Γ1.")
             eu = [-3, -3]
 
@@ -71,17 +71,17 @@ function gensys(Γ0, Γ1, c, Ψ, Π, args...; verbose::Symbol = :high)
     gensys(F, c, Ψ, Π, args...; verbose = verbose)
 end
 
-function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π; verbose::Symbol = :high)
+function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π; verbose::Symbol = :high)
     gensys(F, c, Ψ, Π, new_div(F), verbose = verbose)
 end
 
 # Method that does the real work. Work directly on the decomposition F
-function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div; verbose::Symbol = :high)
+function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div; verbose::Symbol = :high)
     eu = [0, 0]
     ϵ = 1e-6  # small number to check convergence
     nunstab = 0
     zxz = 0
-    a, b, = F[:S], F[:T]
+    a, b, = F.S, F.T
     n = size(a, 1)
 
     select = BitArray(n)
@@ -114,7 +114,7 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div; verbose::Symbol
     end
 
     FS = ordschur!(F, select)
-    a, b, qt, z = FS[:S], FS[:T], FS[:Q], FS[:Z]
+    a, b, qt, z = FS.S, FS.T, FS.Q, FS.Z
     gev = hcat(diag(a), diag(b))
     qt1 = qt[:, 1:(n - nunstab)]
     qt2 = qt[:, (n - nunstab + 1):n]
@@ -131,10 +131,10 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div; verbose::Symbol
         bigev = 0
     else
         etawtsvd = svdfact!(etawt)
-        bigev = find(etawtsvd[:S] .> ϵ)
-        ueta = etawtsvd[:U][:, bigev]
-        veta = etawtsvd[:V][:, bigev]
-        deta = diagm(etawtsvd[:S][bigev])
+        bigev = find(etawtsvd.S .> ϵ)
+        ueta = etawtsvd.U[:, bigev]
+        veta = etawtsvd.V[:, bigev]
+        deta = diagm(etawtsvd.S[bigev])
     end
 
     existence = length(bigev) >= nunstab
@@ -161,17 +161,17 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div; verbose::Symbol
         etawt1 = Ac_mul_B(qt1, Π)
         ndeta1 = min(n - nunstab, neta)
         etawt1svd = svdfact!(etawt1)
-        bigev = find(etawt1svd[:S] .> ϵ)
-        ueta1 = etawt1svd[:U][:, bigev]
-        veta1 = etawt1svd[:V][:, bigev]
-        deta1 = diagm(etawt1svd[:S][bigev])
+        bigev = find(etawt1svd.S .> ϵ)
+        ueta1 = etawt1svd.U[:, bigev]
+        veta1 = etawt1svd.V[:, bigev]
+        deta1 = diagm(etawt1svd.S[bigev])
     end
 
     if isempty(veta1)
         unique = true
     else
         loose = veta1 - A_mul_Bc(veta, veta) * veta1
-        loosesvd = svdfact!(loose)
+        loosesvd = svd!(loose; full=false)
         nloose = sum(abs.(loosesvd[:S]) .> ϵ * n)
         unique = (nloose == 0)
     end
@@ -216,7 +216,7 @@ function gensys(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π, div; verbose::Symbol
 end
 
 
-function new_div(F::Base.LinAlg.GeneralizedSchur)
+function new_div(F::LinearAlgebra.GeneralizedSchur)
     ϵ = 1e-6  # small number to check convergence
     n = size(F[:T], 1)
     a, b = F[:S], F[:T]

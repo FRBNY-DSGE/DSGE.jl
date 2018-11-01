@@ -1,6 +1,6 @@
 """
 ```
-measurement{T<:AbstractFloat}(m::KrusellSmithCT{T}, TTT::Matrix{T},
+measurement(m::KrusellSmithCT{T}, TTT::Matrix{T},
                               RRR::Matrix{T}, CCC::Vector{T})
 ```
 
@@ -18,18 +18,19 @@ Var(u_t) = EE
 Cov(ϵ_t, u_t) = 0
 ```
 """
-function measurement{T<:AbstractFloat}(m::KrusellSmithCT{T},
-                                       TTT::Matrix{T},
-                                       RRR::Matrix{T},
-                                       CCC::Vector{T},
-                                       inverse_basis::SparseMatrixCSC{T,Int64})
+function measurement(m::KrusellSmithCT{T},
+                     TTT::Matrix{T},
+                     RRR::Matrix{T},
+                     CCC::Vector{T},
+                     inverse_basis::SparseMatrixCSC{T,Int64}) where {T<:AbstractFloat}
     return measurement(m, TTT, RRR, CCC, full(inverse_basis))
 end
-function measurement{T<:AbstractFloat}(m::KrusellSmithCT{T},
-                                       TTT::Matrix{T},
-                                       RRR::Matrix{T},
-                                       CCC::Vector{T},
-                                       inverse_basis::Matrix{T})
+
+function measurement(m::KrusellSmithCT{T},
+                     TTT::Matrix{T},
+                     RRR::Matrix{T},
+                     CCC::Vector{T},
+                     inverse_basis::Matrix{T}) where {T<:AbstractFloat}
 
     endo = m.endogenous_states
 
@@ -56,14 +57,15 @@ function measurement{T<:AbstractFloat}(m::KrusellSmithCT{T},
 
 end
 
-function measurement{T<:AbstractFloat}(m::KrusellSmithCT{T},
-                                       TT::Matrix{T},
-                                       RR::Matrix{T},
-                                       CC::Vector{T},
-                                       inverse_basis::Matrix{T},
-                                       dt::T,
-                                       track_lag::Bool = true;
-                                       abs_err::Float64 = 1e-8, max_iter::Int64 = size(TT, 1)*2)
+function measurement(m::KrusellSmithCT{T},
+                     TT::Matrix{T},
+                     RR::Matrix{T},
+                     CC::Vector{T},
+                     inverse_basis::Matrix{T},
+                     dt::T,
+                     track_lag::Bool = true;
+                     abs_err::Float64 = 1e-8,
+                     max_iter::Int64 = size(TT, 1)*2) where {T<:AbstractFloat}
 
     endo = m.endogenous_states
 

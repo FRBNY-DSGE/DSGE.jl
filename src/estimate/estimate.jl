@@ -224,8 +224,8 @@ end
 
 """
 ```
-metropolis_hastings{T<:AbstractFloat}(propdist::Distribution, m::AbstractModel,
-    data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low)
+metropolis_hastings(propdist::Distribution, m::AbstractModel,
+    data::Matrix{T}, cc0::T, cc::T; verbose::Symbol = :low) where {T<:AbstractFloat}
 ```
 
 Implements the Metropolis-Hastings MCMC algorithm for sampling from the posterior
@@ -250,12 +250,12 @@ distribution of the parameters.
    - `:high`: Status updates provided at each draw.
 ```
 """
-function metropolis_hastings{T<:AbstractFloat}(propdist::Distribution,
-                                               m::AbstractModel,
-                                               data::Matrix{T},
-                                               cc0::T,
-                                               cc::T;
-                                               verbose::Symbol=:low)
+function metropolis_hastings(propdist::Distribution,
+                             m::AbstractModel,
+                             data::Matrix{T},
+                             cc0::T,
+                             cc::T;
+                             verbose::Symbol=:low) where {T<:AbstractFloat}
 
 
     # If testing, set the random seeds at fixed numbers

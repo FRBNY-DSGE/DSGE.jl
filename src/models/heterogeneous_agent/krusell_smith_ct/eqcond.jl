@@ -13,7 +13,6 @@ Expresses the equilibrium conditions in canonical form using Γ0, Γ1, C, Ψ, an
 * `Ψ`  (`n_vars` x `n_shocks_exogenous`) holds coefficients of iid shocks.
 * `Π`  (`n_vars` x `n_states_expectational`) holds coefficients of expectational states.
 """
-
 function eqcond(m::KrusellSmithCT)
 
     # Read in steady state vars, params, and grids
@@ -65,7 +64,7 @@ function eqcond(m::KrusellSmithCT)
 
     A_switch = [-speye(I) * λ1 speye(I) * λ1; speye(I) * λ2 -speye(I) * λ2]
 
-    function get_residuals{T<:Real}(x::Vector{T})
+    function get_residuals(x::Vector{T}) where {T<:Real}
 
         # Unpack vars and convert all values to dual types (see JuliaDiff)
         V_vec             = x[1:2*I]       + V_ss

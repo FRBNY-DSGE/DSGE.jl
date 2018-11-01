@@ -1,5 +1,3 @@
-import DSGE: Measurement, get_setting, n_observables, n_shocks_exogenous
-
 """
 ```
 measurement{T<:AbstractFloat}(m::BondLabor{T}, TTT::Matrix{T}, RRR::Matrix{T},
@@ -20,8 +18,8 @@ Var(u_t) = EE
 Cov(ϵ_t, u_t) = 0
 ```
 """
-function measurement{T<:AbstractFloat}(m::BondLabor{T}, TTT::Matrix{T},
-                                       RRR::Matrix{T}, CCC::Vector{T})
+function measurement(m::BondLabor{T}, TTT::Matrix{T},
+                     RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
     endo      = m.endogenous_states_unnormalized
     exo       = m.exogenous_shocks
     obs       = m.observables

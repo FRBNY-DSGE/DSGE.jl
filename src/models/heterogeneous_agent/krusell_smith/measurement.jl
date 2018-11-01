@@ -2,8 +2,8 @@ import DSGE: Measurement, get_setting, n_observables, n_shocks_exogenous
 
 """
 ```
-measurement{T<:AbstractFloat}(m::KrusellSmith{T}, TTT::Matrix{T}, RRR::Matrix{T},
-                              CCC::Vector{T})
+measurement(m::KrusellSmith{T}, TTT::Matrix{T}, RRR::Matrix{T},
+            CCC::Vector{T}) where {T<:AbstractFloat}
 ```
 
 Assign measurement equation
@@ -20,8 +20,8 @@ Var(u_t) = EE
 Cov(ϵ_t, u_t) = 0
 ```
 """
-function measurement{T<:AbstractFloat}(m::KrusellSmith{T}, TTT::Matrix{T}, RRR::Matrix{T},
-                                       CCC::Vector{T})
+function measurement(m::KrusellSmith{T}, TTT::Matrix{T}, RRR::Matrix{T},
+                     CCC::Vector{T}) where {T<:AbstractFloat}
     endo      = m.endogenous_states
     exo       = m.exogenous_shocks
     obs       = m.observables

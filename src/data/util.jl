@@ -32,17 +32,17 @@ Convert `string` in the form "YYqX", "YYYYqX", or "YYYY-qX" to a Date of the end
 the indicated quarter. "X" is in `{1,2,3,4}` and the case of "q" is ignored.
 """
 function quartertodate(string::String)
-    if ismatch(r"^[0-9]{2}[qQ][1-4]$", string)
+    if occursin(r"^[0-9]{2}[qQ][1-4]$", string)
         year = "20"*string[1:2]
         quarter = string[end]
-    elseif ismatch(r"^[0-9]{4}[qQ][1-4]$", string)
+    elseif occursin(r"^[0-9]{4}[qQ][1-4]$", string)
         year = string[1:4]
         quarter = string[end]
-    elseif ismatch(r"^[0-9]{4}-[qQ][1-4]$", string)
+    elseif occursin(r"^[0-9]{4}-[qQ][1-4]$", string)
         year = string[1:4]
         quarter = string[end]
     else
-        throw(ParseError("Invalid format: $string"))
+        throw(Meta.ParseError("Invalid format: $string"))
     end
 
     year = parse(Int, year)
@@ -101,12 +101,12 @@ end
 
 """
 ```
-missing2nan!(df::DataArray)
+missing2nan!(df::Array{Union{T, Missing}}) where T
 ```
 
 Convert all elements of Union{X, Missing.Missing} and the like to type X.
 """
-function missing2nan!(v::DataArray)
+function missing2nan!(v::Array{Union{T, Missing}}) where T
     valid_types = [Date, Float64]
     new_v = tryparse.(new_type, v)
     if all(isnull.(new_v))
@@ -129,12 +129,12 @@ end
 
 """
 ```
-na2nan!(df::DataArray)
+na2nan!(df::Array{Union{T, Missing}}) where T
 ```
 
-Convert all NAs in a DataArray to NaNs.
+Convert all NAs in a Array{Union{T, Missing}} to NaNs.
 """
-function na2nan!(v::DataArray)
+function na2nan!(v::Array{Union{T, Missing}}) where T
     for i = 1:length(v)
         v[i] = ismissing(v[i]) ?  NaN : v[i]
     end
