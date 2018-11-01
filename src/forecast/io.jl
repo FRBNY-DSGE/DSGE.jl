@@ -186,8 +186,8 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                                 forecast_output::Dict{Symbol, Array{Float64}};
                                 df::DataFrame = DataFrame(),
                                 block_number::Nullable{Int64} = Nullable{Int64}(),
-                                block_inds::Range{Int64} = 1:0,
-                                subset_inds::Range{Int64} = 1:0,
+                                block_inds::AbstractRange{Int64} = 1:0,
+                                subset_inds::AbstractRange{Int64} = 1:0,
                                 verbose::Symbol = :low)
 
     for var in output_vars
@@ -329,13 +329,13 @@ end
 """
 ```
 write_forecast_block(file::JLD.JldFile, arr::Array, block_number::Int,
-    block_inds::Range{Int64})
+    block_inds::AbstractRange{Int64})
 ```
 
 Writes `arr` to the subarray of `file` indicated by `block_inds`.
 """
 function write_forecast_block(file::JLD.JldFile, arr::Array,
-                              block_inds::Range{Int64})
+                              block_inds::AbstractRange{Int64})
     pfile = file.plain
     dataset = HDF5.d_open(pfile, "arr")
     ndims = length(size(dataset))

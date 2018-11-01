@@ -1,7 +1,7 @@
 """
 ```
-measurement{T<:AbstractFloat}(m::KrusellSmith{T}, TTT::Matrix{T},
-                              RRR::Matrix{T}, CCC::Vector{T})
+measurement(m::KrusellSmith{T}, TTT::Matrix{T},
+            RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
 ```
 
 Assign measurement equation
@@ -18,11 +18,11 @@ Var(u_t) = EE
 Cov(ϵ_t, u_t) = 0
 ```
 """
-function measurement{T<:AbstractFloat}(m::OneAssetHANK{T},
-                                       TTT::Matrix{T},
-                                       RRR::Matrix{T},
-                                       CCC::Vector{T},
-                                       inverse_basis::Matrix{T})
+function measurement(m::OneAssetHANK{T},
+                     TTT::Matrix{T},
+                     RRR::Matrix{T},
+                     CCC::Vector{T},
+                     inverse_basis::Matrix{T}) where {T<:AbstractFloat}
     endo = m.endogenous_states
 
     track_lag = get_setting(m, :track_lag)
@@ -48,11 +48,11 @@ function measurement{T<:AbstractFloat}(m::OneAssetHANK{T},
 
 end
 
-function measurement{T<:AbstractFloat}(m::OneAssetHANK{T},
-                                       TTT::Matrix{T},
-                                       RRR::Matrix{T},
-                                       CCC::Vector{T},
-                                       inverse_basis::SparseMatrixCSC{T,Int64})
+function measurement(m::OneAssetHANK{T},
+                     TTT::Matrix{T},
+                     RRR::Matrix{T},
+                     CCC::Vector{T},
+                     inverse_basis::SparseMatrixCSC{T,Int64}) where {T<:AbstractFloat}
     endo = m.endogenous_states
 
     track_lag = get_setting(m, :track_lag)
@@ -78,14 +78,15 @@ function measurement{T<:AbstractFloat}(m::OneAssetHANK{T},
 
 end
 
-function measurement{T<:AbstractFloat}(m::OneAssetHANK{T},
-                                       TT::Matrix{T},
-                                       RR::Matrix{T},
-                                       CC::Vector{T},
-                                       inverse_basis::Matrix{T},
-                                       dt::T,
-                                       track_lag::Bool = true;
-                                       abs_err::Float64 = 1e-8, max_iter::Int64 = size(TT, 1)*2)
+function measurement(m::OneAssetHANK{T},
+                     TT::Matrix{T},
+                     RR::Matrix{T},
+                     CC::Vector{T},
+                     inverse_basis::Matrix{T},
+                     dt::T,
+                     track_lag::Bool = true;
+                     abs_err::Float64 = 1e-8,
+                     max_iter::Int64 = size(TT, 1)*2) where {T<:AbstractFloat}
 
     endo = m.endogenous_states
     freq = get_setting(m, :state_simulation_freq)

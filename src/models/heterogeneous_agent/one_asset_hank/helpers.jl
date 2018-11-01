@@ -73,22 +73,25 @@ end
     return zz
 end
 
-@inline function construct_household_problem_functions{R<:AbstractFloat,T<:Real,S<:Number}(V::Matrix{S}, w::T, coefrra::R, frisch::R, labtax::R, labdisutil::R)
+@inline function construct_household_problem_functions(V::Matrix{S}, w::T,
+                                                       coefrra::R, frisch::R,
+                                                       labtax::R,
+                                                       labdisutil::R) where {R<:AbstractFloat,T<:Real,S<:Number}
 
-    @inline function util{U<:Number}(c::U, h::U)
+    @inline function util(c::U, h::U) where {U<:Number}
         f(x::U) = coefrra == 1.0 ? log(x) : x^(1-coefrra) / (1-coefrra)
         return f(c) - labdisutil * (h ^ (1 + 1/frisch)/(1 + 1/frisch))
     end
 
-    @inline income{T<:Number,U<:Number,V<:Number}(h::U, z::Float64, profshare::V, lumptransfer::V, r::T,
-                   a::Float64) = h * z * w * (1 - labtax) + lumptransfer + profshare + r * a
+    @inline income(h::U, z::Float64, profshare::V, lumptransfer::V, r::T,
+                   a::Float64) where {T<:Number,U<:Number,V<:Number} = h * z * w * (1 - labtax) + lumptransfer + profshare + r * a
 
-    @inline labor{U<:Number,V<:Number}(z::U, val::V) = (z * w * (1 - labtax) * val / labdisutil) ^ frisch
+    @inline labor(z::U, val::V) where {U<:Number,V<:Number} = (z * w * (1 - labtax) * val / labdisutil) ^ frisch
 
     return util, income, labor
 end
 
-@inline function construct_initial_diff_matrices{S<:Number,T<:Number,U<:Number}(V::Matrix{T},
+@inline function construct_initial_diff_matrices(V::Matrix{T},
                                                  Vaf::Matrix{T}, Vab::Matrix{T},
                                                  income::Function, labor::Function,
                                                  h::Matrix{U}, h0::Matrix{U},
@@ -96,7 +99,7 @@ end
                                                  lumptransfer::T,
                                                  amax::S, amin::S, coefrra::S, r::S,
                                                  daf::Vector{S}, dab::Vector{S},
-                                                 maxhours::S)
+                                                 maxhours::S) where {S<:Number,T<:Number,U<:Number}
     I,J = size(V)
     cf  = similar(V)
     hf  = similar(V)
@@ -139,8 +142,8 @@ end
 end
 
 @inline function calculate_ss_equil_vars(zz::Matrix{Float64},
-                                 h::Matrix{Complex128},
-                                 g::Vector{Complex128}, azdelta::Vector{Float64},
+                                 h::Matrix{ComplexF64},
+                                 g::Vector{ComplexF64}, azdelta::Vector{Float64},
                                  aa::Matrix{Float64}, m_ss::Float64,
                                  meanlabeff::Float64, lumptransferpc::Float64,
                                  govbondtarget::Float64)
@@ -157,16 +160,17 @@ end
     return N_ss, Y_ss, B_ss, profit_ss, profshare, lumptransfer, bond_err
 end
 
-@inline function hours_iteration{S<:Number,T<:Number,U<:Number}(income::Function, labor::Function,
-                                                                zz::Matrix{Float64},
-                                                                profshare::Matrix{T},
-                                                                lumptransfer::T,
-                                                                aa::Matrix{Float64},
-                                                                coefrra::Float64, r::S,
-                                                                cf::Matrix{T}, hf::Matrix{T},
-                                                                cb::Matrix{T}, hb::Matrix{T},
-                                                                c0::Matrix{T}, h0::Matrix{U},
-                                                                maxhours::Float64, niter_hours::Int64)
+@inline function hours_iteration(income::Function, labor::Function,
+                                 zz::Matrix{Float64},
+                                 profshare::Matrix{T},
+                                 lumptransfer::T,
+                                 aa::Matrix{Float64},
+                                 coefrra::Float64, r::S,
+                                 cf::Matrix{T}, hf::Matrix{T},
+                                 cb::Matrix{T}, hb::Matrix{T},
+                                 c0::Matrix{T}, h0::Matrix{U},
+                                 maxhours::Float64,
+                                 niter_hours::Int64) where {S<:Number,T<:Number,U<:Number}
     I, J = size(zz)
     for ih = 1:niter_hours
         for j=1:J, i=1:I
@@ -188,7 +192,8 @@ end
 end
 
 # For compute_steady_state; choose upwinding direction
-@inline function upwind{T<:Number}(ρ::Float64, V::Matrix{T}, args...; Delta_HJB::Float64 = 1e6)
+@inline function upwind(ρ::Float64, V::Matrix{T}, args...;
+                        Delta_HJB::Float64 = 1e6) where {T<:Number}
     A, u, h, c, s = upwind(args...)
     I, J = size(u)
     B    = (1 / Delta_HJB + ρ) * speye(T, I*J) - A
@@ -198,16 +203,15 @@ end
 end
 
 # For equilibrium_conditions; choose upwinding direction.
-@inline function upwind{T<:Number, S<:Number}(
-                util::Function,
-                A_switch::SparseMatrixCSC{S, Int64},
-                cf::Matrix{T}, cb::Matrix{T},
-                c0::Matrix{T}, hf::Matrix{T},
-                hb::Matrix{T}, h0::Matrix{T},
-                sf::Matrix{T}, sb::Matrix{T},
-                Vaf::Matrix{T}, Vab::Matrix{T},
-                daf::Vector{Float64},
-                dab::Vector{Float64})
+@inline function upwind(util::Function,
+                        A_switch::SparseMatrixCSC{S, Int64},
+                        cf::Matrix{T}, cb::Matrix{T},
+                        c0::Matrix{T}, hf::Matrix{T},
+                        hb::Matrix{T}, h0::Matrix{T},
+                        sf::Matrix{T}, sb::Matrix{T},
+                        Vaf::Matrix{T}, Vab::Matrix{T},
+                        daf::Vector{Float64},
+                        dab::Vector{Float64}) where {T<:Number, S<:Number}
 
     I,J = size(sb)
     h   = similar(sb)
@@ -243,8 +247,8 @@ end
     end
 
     # R: Pretty sure the indexing for this ought be the same as in the KrusellSmith model
-    X[1,:] = T == Complex128 ? complex(0.) : 0.
-    Z[I,:] = T == Complex128 ? complex(0.) : 0.
+    X[1,:] = T == ComplexF64 ? complex(0.) : 0.
+    Z[I,:] = T == ComplexF64 ? complex(0.) : 0.
 
     A = spdiagm((reshape(X,I*J)[2:I*J], reshape(Y,I*J), reshape(Z,I*J)[1:I*J-1]),(-1,0,1),I*J,I*J) + A_switch
 
@@ -254,10 +258,10 @@ end
 
 # Using the market clearing condition on bonds to determine whether or not
 # an equilibrium has been reached
-@inline function check_bond_market_clearing(bond_err::Complex128, crit_S::Float64,
-                                    r::Float64, rmin::Float64, rmax::Float64,
-                                    rrho::Float64, rhomin::Float64, rhomax::Float64,
-                                    iter_r::Bool, iter_rho::Bool)
+@inline function check_bond_market_clearing(bond_err::ComplexF64, crit_S::Float64,
+                                            r::Float64, rmin::Float64, rmax::Float64,
+                                            rrho::Float64, rhomin::Float64, rhomax::Float64,
+                                            iter_r::Bool, iter_rho::Bool)
     clearing_condition = false
     # Using the market clearing condition on bonds to determine whether or not
     # an equilibrium has been reached

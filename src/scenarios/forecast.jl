@@ -189,7 +189,7 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
     system = compute_scenario_system(m, scen)
 
     # Get to work!
-    ndraws = scen.n_draws == 0 ? count_scenario_draws!(m, scen): scen.n_draws
+    ndraws = (scen.n_draws == 0) ? count_scenario_draws!(m, scen) : scen.n_draws
     mapfcn = use_parallel_workers(m) ? pmap : map
     forecast_outputs = mapfcn(draw_ind -> forecast_scenario_draw(m, scen, system, draw_ind),
                               1:ndraws)

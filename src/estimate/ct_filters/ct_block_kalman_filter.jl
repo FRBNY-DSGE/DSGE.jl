@@ -26,9 +26,9 @@ KalmanFilter(T, R, C, Q, Z, D, E, [s_0, P_0])
 Outer constructor for the `KalmanFilter` type.
 """
 function CTBlockKalmanFilter(T::Matrix{S}, R::Matrix{S}, C::Vector{S}, Q::Matrix{S},
-                      Z::Matrix{S}, D::Vector{S}, E::Matrix{S}, s_0::Vector{S} = Vector{S}(0),
-                           P_0::Matrix{S} = Matrix{S}(0, 0);
-                             n_simulate_states::Int64 = 1) where {S<:AbstractFloat}
+                             Z::Matrix{S}, D::Vector{S}, E::Matrix{S}, s_0::Vector{S} = Vector{S}(0),
+                             P_0::Matrix{S} = Matrix{S}(0, 0),
+                             n_simulate_states::Int64=1) where {S<:AbstractFloat}
     if isempty(s_0) || isempty(P_0)
         s_0, P_0 = init_stationary_states(T, R, C, Q)
     end
@@ -145,9 +145,9 @@ Compute the one-step-ahead states s_{t|t-1} and state covariances P_{t|t-1} and
 assign to `k`.
 """
 function ct_block_kalman_filter(y::Matrix{S}, T::Matrix{S}, R::Matrix{S}, C::Vector{S},
-                          Q::Matrix{S}, Z::Matrix{S}, D::Vector{S}, E::Matrix{S},
-                          n_simulate_states::Int64 = 1, s_0::Vector{S} = Vector{S}(0),
-                          P_0::Matrix{S} = Matrix{S}(0, 0);
+                          Q::Matrix{S}, Z::Matrix{S}, D::Vector{S}, E::Matrix{S};
+                          n_simulate_states::Int = 1, s_0::Vector{S} = Vector{S}(undef, 0),
+                          P_0::Matrix{S} = Matrix{S}(undef, 0, 0),
                           outputs::Vector{Symbol} = [:loglh, :pred, :filt],
                           Nt0::Int = 0) where {S<:AbstractFloat}
     # Check s_0, P_0 right dimensions

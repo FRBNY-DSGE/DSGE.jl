@@ -1,5 +1,3 @@
-using Base.Test, BenchmarkTools, DataFrames, Plots, ForwardDiff
-
 @inline function policy(m::KrusellSmith,
                         net_return::Float64, wage::Float64,
                         l_in::Vector{Float64}, g::Vector{Float64}, KF::Array{Float64,2};

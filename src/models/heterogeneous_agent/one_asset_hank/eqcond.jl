@@ -67,7 +67,7 @@ function eqcond(m::OneAssetHANK)
     # Note: make TFP a setting?
     TFP               = 1.0
 
-    @inline function get_residuals{T<:Real}(x::Vector{T})
+    @inline function get_residuals(x::Vector{T}) where {T<:Real}
         # Prepare steady state deviations
         V           = reshape(x[1:n_v - 1]       + V_ss, I, J)
         inflation   = x[n_v]                     + inflation_ss

@@ -11,7 +11,7 @@
 # function to return collections of items (because an Int/Float64 can only contain a
 # single value).
 # E.g.
-# a, b = @parallel (scalar_reduce) for i in 1:10000
+# a, b = @distributed (scalar_reduce) for i in 1:10000
     # [[1], [2]]
 # end
 # a = [1, 1, 1, ...]

@@ -1,3 +1,4 @@
+#=
 """
 ```
 hessizero{T<:AbstractFloat}(fcn::Function, x::Vector{T};
@@ -13,7 +14,6 @@ Compute Hessian of function `fcn` evaluated at `x`.
 - `verbose`: Print verbose output
 - `distr`: Use available parallel workers to increase performance.
 """
-#=
 function hessizero{T<:AbstractFloat}(fcn::Function,
                                     x::Vector{T};
                                     check_neg_diag::Bool=false,
@@ -24,7 +24,7 @@ function hessizero{T<:AbstractFloat}(fcn::Function,
 
     # Compute diagonal elements first
     if distr && nworkers() > 1
-        diag_elements = @sync @parallel (hcat) for i = 1:n_para
+        diag_elements = @sync @distributed (hcat) for i = 1:n_para
             hess_diag_element(fcn, x, i; check_neg_diag=check_neg_diag, verbose=verbose)
         end
         for i = 1:n_para
@@ -57,7 +57,7 @@ function hessizero{T<:AbstractFloat}(fcn::Function,
 
         # Iterate over off diag elements
         if distr
-            off_diag_out = @sync @parallel (hcat) for (i,j) in off_diag_inds
+            off_diag_out = @sync @distributed (hcat) for (i,j) in off_diag_inds
                 σ_xσ_y = sqrt(abs(hessian[i, i]*hessian[j, j]))
                 hess_offdiag_element(fcn, x, i, j, σ_xσ_y; verbose=verbose)
             end

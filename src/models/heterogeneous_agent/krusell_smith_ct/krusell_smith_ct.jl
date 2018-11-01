@@ -3,7 +3,7 @@
 KrusellSmithCT{T} <: AbstractModel{T}
 ```
 
-The `KrusellSmithCT` type defines the structure of the Krusell Smith (1998) model
+The `KrusellSmithCT` mutable struct defines the structure of the Krusell Smith (1998) model
 in 'Income and Wealth Heterogeneity in the Macroeconomy'
 originally written in MATLAB by Ben Moll and SeHyoun Ahn at
 https://sehyoun.com/EXAMPLE_PHACT_KS.html
@@ -82,7 +82,7 @@ equilibrium conditions.
   dictionary that stores names and transformations to/from model units. See
   `PseudoObservable` for further details.
 """
-type KrusellSmithCT{T} <: AbstractCTModel{T}
+mutable struct KrusellSmithCT{T} <: AbstractCTModel{T}
     parameters::ParameterVector{T}                          # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                        # model steady-state values
     keys::OrderedDict{Symbol,Int}                           # human-readable names for all the model

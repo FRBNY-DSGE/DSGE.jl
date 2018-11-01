@@ -1,11 +1,7 @@
-# This code is based on a routine originally copyright Chris Sims.
-# See http://sims.princeton.edu/yftp/gensys/
-# We also ported SeHyoun Ahn's version used in PHACT (called schur_solver)
-
 """
 ```
 gensysct(Γ0, Γ1, c, Ψ, Π; ϵ, div)
-gensysct(F::Base.LinAlg.GeneralizedSchur, c, Ψ, Π; ϵ, div)
+gensysct(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π; ϵ, div)
 ```
 
 Generate state-space solution to canonical-form DSGE model.
@@ -27,6 +23,10 @@ Returned values are
 G1, C, impact, qt', a, b, z, eu
 ```
 
+This code is based on a [routine](http://sims.princeton.edu/yftp/gensys/) originally copyright Chris Sims.
+
+Here for completeness, but should not be used for most HACT/HANK models.
+
 Also returned is the qz decomposition, qt'az' = Γ0, qt'bz' = Γ1, with a and b
 upper triangular and the system ordered so that all zeros on the diagonal of b are in
 the lower right corner, all cases where the real part of bii/aii is greater than or
@@ -46,19 +46,24 @@ If `div` is omitted from argument list, a `div`>1 is calculated.
 * `eu[1]==-1` for existence for white noise η
 * `eu==[-2,-2]` for coincident zeros.
 """
-# Uses qz decomposition. Here for completeness, but should not be used for most HACT/HANK models
-function gensysct(Γ0::Matrix{Float64}, Γ1::Matrix{Float64}, c::Array{Float64}, Ψ::Matrix{Float64}, Π::Matrix{Float64};
-                  check_existence::Bool = true, check_uniqueness::Bool = true, ϵ::Float64 = sqrt(eps()) * 10,
+function gensysct(Γ0::Matrix{Float64}, Γ1::Matrix{Float64}, c::Array{Float64},
+                  Ψ::Matrix{Float64}, Π::Matrix{Float64};
+                  check_existence::Bool = true, check_uniqueness::Bool = true,
+                  ϵ::Float64 = sqrt(eps()) * 10,
                   div::Float64 = -1.0, complex_decomposition::Bool = false)
+
     F = complex_decomposition ? schurfact(complex(Γ0), complex(Γ1)) : schurfact(real(Γ0), real(Γ1))
     gensysct(F, c, Ψ, Π; check_existence = check_existence, check_uniqueness = check_uniqueness,
              ϵ = ϵ, div = div)
 end
 
 # In place version. Changes Γ0, Γ1
-function gensysct!(Γ0::Matrix{Float64}, Γ1::Matrix{Float64}, c::Array{Float64}, Ψ::Matrix{Float64}, Π::Matrix{Float64};
-                  check_existence::Bool = true, check_uniqueness::Bool = true, ϵ::Float64 = sqrt(eps()) * 10,
-                  div::Float64 = -1.0, complex_decomposition::Bool = false)
+function gensysct!(Γ0::Matrix{Float64}, Γ1::Matrix{Float64}, c::Array{Float64},
+                   Ψ::Matrix{Float64}, Π::Matrix{Float64};
+                   check_existence::Bool = true, check_uniqueness::Bool = true,
+                   ϵ::Float64 = sqrt(eps()) * 10,
+                   div::Float64 = -1.0, complex_decomposition::Bool = false)
+
     F = complex_decomposition ? schurfact!(complex(Γ0), complex(Γ1)) : schurfact!(real(Γ0), real(Γ1))
     gensysct(F, c, Ψ, Π; check_existence = check_existence, check_uniqueness = check_uniqueness,
              ϵ = ϵ, div = div)
@@ -66,7 +71,8 @@ end
 
 # Uses basic schur decomposition
 function gensysct(Γ1::Matrix{Float64}, c::Array{Float64}, Ψ::Matrix{Float64}, Π::Matrix{Float64};
-                  check_existence::Bool = true, check_uniqueness::Bool = true, ϵ::Float64 = sqrt(eps()) * 10,
+                  check_existence::Bool = true, check_uniqueness::Bool = true,
+                  ϵ::Float64 = sqrt(eps()) * 10,
                   div::Float64 = -1.0, complex_decomposition::Bool = false)
     # Assumes that Γ0 is the identity
     F = complex_decomposition ? schurfact(complex(Γ1)) : schurfact(real(Γ1))
@@ -84,7 +90,7 @@ function gensysct!(Γ1::Matrix{Float64}, c::Array{Float64}, Ψ::Matrix{Float64},
              ϵ = ϵ, div = div)
 end
 
-function gensysct(F::Base.LinAlg.GeneralizedSchur, c::Array{Float64}, Ψ::Matrix{Float64}, Π::Matrix{Float64};
+function gensysct(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64}, Ψ::Matrix{Float64}, Π::Matrix{Float64};
                   check_existence::Bool = true, check_uniqueness::Bool = true, ϵ::Float64 = sqrt(eps()) * 10,
                   div::Float64 = -1.0)
     div < 0.0 && (div = new_divct(F; ϵ = ϵ))
@@ -187,7 +193,7 @@ end
 #         -1 solution exists for white noise η
 # eu[2] = 1 solution is unique
 #         0 solution is not unique
-function gensysct(F::Base.LinAlg.Schur, c::Array{Float64}, Ψ::Matrix{Float64}, Π::Matrix{Float64};
+function gensysct(F::LinearAlgebra.Schur, c::Array{Float64}, Ψ::Matrix{Float64}, Π::Matrix{Float64};
                   check_existence::Bool = true, check_uniqueness::Bool = true, ϵ::Float64 = sqrt(eps()) * 10,
                   div::Float64 = -1.0)
     eu = [0, 0]
@@ -257,7 +263,7 @@ function gensysct(F::Base.LinAlg.Schur, c::Array{Float64}, Ψ::Matrix{Float64}, 
     return G1::Matrix{Float64}, C::Matrix{Float64}, impact::Matrix{Float64}, U::Matrix, T::Matrix::Matrix, eu::Vector{Int64}
 end
 
-function new_divct(F::Base.LinAlg.GeneralizedSchur; ϵ::Float64 = sqrt(eps()) * 10)
+function new_divct(F::LinearAlgebra.GeneralizedSchur; ϵ::Float64 = sqrt(eps()) * 10)
     a, b = F[:S], F[:T]
     n = size(a, 1)
     div = 0.001

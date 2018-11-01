@@ -6,7 +6,7 @@
 # methods for well-conditioned A matrices and ill-conditioned A matrices.
 # All of these methods return the stacked distribution.
 
-function solve_kfe(A::SparseMatrixCSC{Complex128, Int64}, partitions::Vector{Float64},
+function solve_kfe(A::SparseMatrixCSC{ComplexF64, Int64}, partitions::Vector{Float64},
                    dimensions::Vector{Int64})
 
     if size(partitions, 1) != 1 || size(dimensions, 1) != 1
@@ -35,7 +35,7 @@ end
 # Iterative method for ill-conditioned A
 # g0: initial distribution guess provided by user
 # integrate_mat: weights distribution points by some multiple of their Lebesgue measure across wealth
-function solve_kfe(A::SparseMatrixCSC{Complex128, Int64}, g0::Matrix{Float64},
+function solve_kfe(A::SparseMatrixCSC{ComplexF64, Int64}, g0::Matrix{Float64},
                    weight_mat::SparseMatrixCSC{Float64, Int64};
                    maxit_kfe::Int64 = 1000, tol_kfe::Float64 = 1e-12,
                    Δ_kfe::Float64 = 1e6)
@@ -53,7 +53,7 @@ function solve_kfe(A::SparseMatrixCSC{Complex128, Int64}, g0::Matrix{Float64},
         # by adding g/Δ_KFE, where Δ_KFE is large => g/Δ_KFE ≈ 0. Thus,
         # g/Δ_KFE = A'*g + g/Δ_KFE => g = Δ_KFE A'*g + g
         # => (I - Δ_KFE A')g = g; could also use (I + Δ_KFE A')g = g
-        gg1_tilde = (speye(Complex128, dim_size) - Δ_kfe * A') \ gg_tilde
+        gg1_tilde = (speye(ComplexF64, dim_size) - Δ_kfe * A') \ gg_tilde
         gg1_tilde = gg1_tilde ./ sum(gg1_tilde) # normalize
         gg1       = weight_mat \ gg1_tilde # undo integration over wealth
 
@@ -69,7 +69,7 @@ function solve_kfe(A::SparseMatrixCSC{Complex128, Int64}, g0::Matrix{Float64},
 end
 
 # Previous function but for complex g0
-function solve_kfe(A::SparseMatrixCSC{Complex128, Int64}, g0::Matrix{Complex128},
+function solve_kfe(A::SparseMatrixCSC{ComplexF64, Int64}, g0::Matrix{ComplexF64},
                    weight_mat::SparseMatrixCSC{Float64, Int64};
                    maxit_kfe::Int64 = 1000, tol_kfe::Float64 = 1e-12,
                    Δ_kfe::Float64 = 1e6)
@@ -86,7 +86,7 @@ function solve_kfe(A::SparseMatrixCSC{Complex128, Int64}, g0::Matrix{Complex128}
         # 0 = A'g -> g = A'g + g -> (I - A')g = g, but to avoid issues with small numbers
         # we use a large scalar Delta_KFE such that
         # 0 = A' Delta_KFE g -> (I - Delta_KFE A') g = g
-        gg1_tilde = (speye(Complex128, dim_size) - Δ_kfe * A') \ gg_tilde # Left divide
+        gg1_tilde = (speye(ComplexF64, dim_size) - Δ_kfe * A') \ gg_tilde # Left divide
         gg1_tilde = gg1_tilde ./ sum(gg1_tilde) # normalize to one to get pdf
         gg1 = weight_mat \ gg1_tilde # undo integration over wealth
 
@@ -104,7 +104,7 @@ end
 
 # Iterative methods when weight_mat is (1) not sparse or
 # (2) a dense matrix that integrates out non-wealth variables (rather than a diagonal one),
-function solve_kfe(A::SparseMatrixCSC{Complex128, Int64}, g0::Vector{Float64},
+function solve_kfe(A::SparseMatrixCSC{ComplexF64, Int64}, g0::Vector{Float64},
                    weight_mat::Matrix{Float64};
                    maxit_kfe::Int64 = 1000, tol_kfe::Float64 = 1e-12,
                    Δ_kfe::Float64 = 1e6)
@@ -118,7 +118,7 @@ end
 
 # Iterative method when weight_mat is a vector of differences of the wealth grid
 # e.g. if x = [0 .05, .1, .15], then weight_mat = [.05, .05, .05]
-function solve_kfe(A::SparseMatrixCSC{Complex128, Int64}, g0::Vector{Float64},
+function solve_kfe(A::SparseMatrixCSC{ComplexF64, Int64}, g0::Vector{Float64},
                    grid::Vector{Float64};
                    maxit_kfe::Int64 = 1000, tol_kfe::Float64 = 1e-12,
                    Δ_kfe::Float64 = 1e6)
@@ -135,7 +135,7 @@ function solve_kfe(A::SparseMatrixCSC{Complex128, Int64}, g0::Vector{Float64},
 end
 
 # Allows for complex g0
-function solve_kfe(A::SparseMatrixCSC{Complex128, Int64}, g0::Vector{Complex128},
+function solve_kfe(A::SparseMatrixCSC{ComplexF64, Int64}, g0::Vector{ComplexF64},
                    weight_mat::Matrix{Float64};
                    maxit_kfe::Int64 = 1000, tol_kfe::Float64 = 1e-12,
                    Δ_kfe::Float64 = 1e6)
@@ -147,7 +147,7 @@ function solve_kfe(A::SparseMatrixCSC{Complex128, Int64}, g0::Vector{Complex128}
     end
 end
 
-function solve_kfe(A::SparseMatrixCSC{Complex128, Int64}, g0::Vector{Complex128},
+function solve_kfe(A::SparseMatrixCSC{ComplexF64, Int64}, g0::Vector{ComplexF64},
                    grid::Vector{Float64};
                    maxit_kfe::Int64 = 1000, tol_kfe::Float64 = 1e-12,
                    Δ_kfe::Float64 = 1e6)

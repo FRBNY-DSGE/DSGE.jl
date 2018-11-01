@@ -1,6 +1,7 @@
 """
 ```
-transform_transition_matrices{T<:AbstractFloat}(m::AbstractModel, T::Matrix{T}, R::Matrix{T}, C::Matrix{T})
+transform_transition_matrices(m::AbstractModel, T::Matrix{T},
+                              R::Matrix{T}, C::Matrix{T}) where {T<:AbstractFloat}
 ```
 
 ### Arguments
@@ -15,8 +16,9 @@ transform_transition_matrices{T<:AbstractFloat}(m::AbstractModel, T::Matrix{T}, 
 
 ### Description
 """
-
-function transform_transition_matrices{T<:AbstractFloat}(m::AbstractModel, TT::Matrix{T}, R::Matrix{T}, C::Vector{T}; track_lag::Bool = true)
+function transform_transition_matrices(m::AbstractModel, TT::Matrix{T},
+                                       R::Matrix{T}, C::Vector{T};
+                                       track_lag::Bool = true) where {T<:AbstractFloat}
 
     freq = get_setting(m, :state_simulation_freq)
     if track_lag

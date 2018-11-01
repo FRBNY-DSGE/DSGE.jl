@@ -15,7 +15,7 @@ The `Particle` type contains the values and weight of a given vector of paramete
 - `old_logpost::Float64`: The log-posterior of the Particle evaluated at the old data (only non-zero during time tempering)
 - `accept::Bool`: Whether or not the mutation of the particle was accepted in the previous period
 """
-type Particle
+mutable struct Particle
     weight::Float64
     keys::Vector{Symbol}
     value::Vector{Float64}
@@ -46,7 +46,7 @@ the final output will be the final cloud of particles, of which only the particl
 - `accept::Float64`: The average acceptance rate of mutation steps
 - `total_sampling_time::Float64`: The total amount of time that the smc algorith took to execute
 """
-type ParticleCloud
+mutable struct ParticleCloud
     particles::Vector{Particle}
     tempering_schedule::Vector{Float64}
     ESS::Vector{Float64}

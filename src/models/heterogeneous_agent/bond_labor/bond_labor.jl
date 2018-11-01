@@ -1,5 +1,3 @@
-import DataStructures: OrderedDict
-
 """
 ```
 BondLabor{T} <: AbstractModel{T}
@@ -69,7 +67,7 @@ equilibrium conditions.
   user. See `load_data` and `Observable` for further details.
 
 """
-type BondLabor{T} <: AbstractModel{T}
+mutable struct BondLabor{T} <: AbstractModel{T}
     parameters::ParameterVector{T}                         # vector of all time-invariant model parameters
     steady_state::ParameterVector{T}                       # model steady-state values
 

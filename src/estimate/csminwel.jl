@@ -3,7 +3,7 @@ This code is based on a routine originally copyright Chris Sims.
 See http://sims.princeton.edu/yftp/optimize/
 =#
 
-immutable Csminwel <: Optim.SecondOrderOptimizer end
+struct Csminwel <: Optim.SecondOrderOptimizer end
 
 const rc_messages = Dict(0 => "Standard Iteration",
                          1 => "zero gradient",
@@ -355,7 +355,7 @@ function csminwel(fcn::Function,
                   rng::AbstractRNG     = MersenneTwister(0),
                   kwargs...)
 
-    grad{T<:Number}(x::Array{T}) = csminwell_grad(fcn, x, args...; kwargs...)
+    grad(x::Array{T}) where {T<:Number} = csminwell_grad(fcn, x, args...; kwargs...)
     csminwel(fcn, grad, x0, H0, args...;
              xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
              store_trace=store_trace, show_trace=show_trace,

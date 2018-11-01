@@ -1,6 +1,6 @@
 function steadystate!(m::BondLabor;
                       βlo::Float64 = 0.4/m[:R],
-                      βhi::Float64 = 1./m[:R],
+                      βhi::Float64 = 1.0/m[:R],
                       excess::Float64 = 5000.,
                       tol::Float64 = 1e-5,
                       maxit::Int64 = 100)

@@ -3,7 +3,7 @@
 
 Calculates log joint prior density of m.parameters.
 """
-function prior{T<:AbstractFloat}(m::AbstractModel{T})
+function prior(m::AbstractModel{T}) where {T<:AbstractFloat}
     free_params = Base.filter(θ -> !θ.fixed, m.parameters)
     logpdfs = map(logpdf, free_params)
     return sum(logpdfs)
@@ -11,8 +11,8 @@ end
 
 """
 ```
-posterior{T<:AbstractFloat}(m::AbstractModel{T}, data::Matrix{T};
-                             sampler::Bool = false, catch_errors::Bool = false, φ_smc = 1)
+posterior(m::AbstractModel{T}, data::Matrix{T};
+          sampler::Bool = false, catch_errors::Bool = false, φ_smc = 1) where {T<:AbstractFloat}
 ```
 
 Calculates and returns the log of the posterior distribution for `m.parameters`:
@@ -34,11 +34,11 @@ log Pr(Θ|data) = log Pr(data|Θ) + log Pr(Θ) + const
 - `φ_smc`: a tempering factor to change the relative weighting of the prior and the
     likelihood when calculating the posterior. It is used primarily in SMC.
 """
-function posterior{T<:AbstractFloat}(m::AbstractModel{T},
-                                     data::Matrix{T};
-                                     sampler::Bool = false,
-                                     ϕ_smc::Float64 = 1.,
-                                     catch_errors::Bool = false)
+function posterior(m::AbstractModel{T},
+                   data::Matrix{T};
+                   sampler::Bool = false,
+                   ϕ_smc::Float64 = 1.,
+                   catch_errors::Bool = false) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
     like = likelihood(m, data; sampler=sampler, catch_errors=catch_errors)
     post = ϕ_smc*like + prior(m)
@@ -51,8 +51,8 @@ end
 
 """
 ```
-posterior!{T<:AbstractFloat}(m::AbstractModel{T}, parameters::Vector{T}, data::Matrix{T};
-                                  sampler::Bool = false, catch_errors::Bool = false, φ_smc = 1)
+posterior!(m::AbstractModel{T}, parameters::Vector{T}, data::Matrix{T};
+           sampler::Bool = false, catch_errors::Bool = false, φ_smc = 1) where {T<:AbstractFloat}
 ```
 
 Evaluates the log posterior density at `parameters`.
@@ -71,12 +71,12 @@ Evaluates the log posterior density at `parameters`.
 - `φ_smc`: a tempering factor to change the relative weighting of the prior and the
     likelihood when calculating the posterior. It is used primarily in SMC.
 """
-function posterior!{T<:AbstractFloat}(m::AbstractModel{T},
-                                      parameters::Vector{T},
-                                      data::Matrix{T};
-                                      sampler::Bool = false,
-                                      ϕ_smc::Float64 = 1.,
-                                      catch_errors::Bool = false)
+function posterior!(m::AbstractModel{T},
+                    parameters::Vector{T},
+                    data::Matrix{T};
+                    sampler::Bool = false,
+                    ϕ_smc::Float64 = 1.,
+                    catch_errors::Bool = false) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
     if sampler
         try
@@ -97,8 +97,8 @@ end
 
 """
 ```
-likelihood{T<:AbstractFloat}(m::AbstractModel, data::Matrix{T};
-                              sampler::Bool = false, catch_errors::Bool = false)
+likelihood(m::AbstractModel, data::Matrix{T};
+           sampler::Bool = false, catch_errors::Bool = false) where {T<:AbstractFloat}
 ```
 
 Evaluate the DSGE likelihood function. Can handle two-part estimation where the observed
@@ -117,12 +117,12 @@ filter over the main sample all at once.
   the zero-lower-bound period are returned in a dictionary.
 - `catch_errors`: If `sampler = true`, `GensysErrors` should always be caught.
 """
-function likelihood{T<:AbstractFloat}(m::AbstractModel,
-                                      data::Matrix{T};
-                                      sampler::Bool = false,
-                                      catch_errors::Bool = false,
-                                      use_chand_recursion = false,
-                                      verbose::Symbol = :high)
+function likelihood(m::AbstractModel,
+                    data::Matrix{T};
+                    sampler::Bool = false,
+                    catch_errors::Bool = false,
+                    use_chand_recursion = false,
+                    verbose::Symbol = :high) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds

@@ -235,13 +235,13 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
     if parallel
-        new_particles = @parallel (vcat) for j in 1:n_parts
-            mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
+        new_particles = @distributed (vcat) for k in 1:n_parts
+            mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
                      c = c, α = α, old_data = old_data, use_chand_recursion = use_chand_recursion, verbose = verbose)
         end
     else
-        new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                                  c = c, α = α, old_data = old_data, verbose = verbose) for j = 1:n_parts]
+        new_particles = [mutation(m, data, cloud.particles[k], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
+                                  c = c, α = α, old_data = old_data, verbose = verbose) for k = 1:n_parts]
     end
 
     cloud.particles = new_particles

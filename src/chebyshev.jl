@@ -315,7 +315,7 @@ function cheb2leg_direct(c_cheb, normalize)
     temparg[1:N+1,1:m]=c_cheb;
     ff = dctTypeI(temparg);                           #Ordering and normalization differ from Matlab version
     f=flipdim(ff,1);                                   # Values on 2*N+1 Chebyshev grid.
-    w = ccquadwts(2*N+1,2).';     # Clenshaw-Curtis quadrature weights.
+    w = copy(transpose(ccquadwts(2*N+1,2)));     # Clenshaw-Curtis quadrature weights.
     Pm2 = 1;
     Pm1 = x;                   # Initialize.
     L = zeros(2*N+1, N+1);              # Vandermonde matrix.
@@ -328,7 +328,7 @@ function cheb2leg_direct(c_cheb, normalize)
         L[:,2+k] = P;
     end
     scale = (2*[0:N...]+1)/2;            # Scaling in coefficients [NIST, (18.3.1)].
-    c_leg = broadcast(*, L.'*(broadcast(*, f ,w)), scale); # Legendre coeffs.
+    c_leg = broadcast(*, transpose(L)*(broadcast(*, f ,w)), scale); # Legendre coeffs.
 
     # Normalize:
     if ( normalize )

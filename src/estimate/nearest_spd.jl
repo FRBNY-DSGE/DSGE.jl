@@ -44,6 +44,7 @@ function nearest_spd(A::Matrix)
         try
             chol(Ahat)
             chol_success = true
+        catch
         end
         k = k + 1
         if !chol_success

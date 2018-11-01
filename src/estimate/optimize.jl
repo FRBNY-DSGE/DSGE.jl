@@ -9,7 +9,7 @@ type optimization_result{T}
 ```
 Container type for various optimization outputs
 """
-type optimization_result{T}
+mutable struct optimization_result{T}
     minimizer::Vector{T}
     minimum::T
     converged::Bool

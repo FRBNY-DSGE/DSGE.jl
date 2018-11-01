@@ -108,7 +108,7 @@ function eqcond(m::Model990)
     Γ1[eq[:eq_nevol], endo[:kbar_t]]   = m[:ζ_nqk]
     Γ1[eq[:eq_nevol], endo[:n_t]]      = m[:ζ_nn]
     Γ1[eq[:eq_nevol], endo[:R_t]]      = -m[:ζ_nR]
-    Γ1[eq[:eq_nevol], endo[:b_t]]      = m[:ζ_nR]*((m[:σ_c]*(1.+m[:h]*exp(-m[:z_star])))/(1.-m[:h]*exp(-m[:z_star])))
+    Γ1[eq[:eq_nevol], endo[:b_t]]      = m[:ζ_nR]*((m[:σ_c]*(1 .+ m[:h]*exp(-m[:z_star])))/(1 .- m[:h]*exp(-m[:z_star])))
 
     # Flexible prices and wages - ASSUME NO FINANCIAL FRICTIONS
     Γ0[eq[:eq_capval_f], endo[:Erk_f_t]] = -m[:r_k_star]/(1 + m[:r_k_star] - m[:δ])
