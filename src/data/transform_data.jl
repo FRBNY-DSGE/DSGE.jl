@@ -147,7 +147,7 @@ function transform_population_data(population_data::DataFrame, population_foreca
 
     # HP filter
     if use_hpfilter
-        population_all = convert(Array{Float64}, population_all)
+        population_all = convert(Array{Union{Float64, Missing}}, population_all)
         filtered_population, _ = hpfilter(population_all, 1600)
     end
 
