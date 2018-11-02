@@ -252,7 +252,7 @@ distribution of the parameters.
 """
 function metropolis_hastings(propdist::Distribution,
                                                m::AbstractModel,
-                                               data::AbstractArray{Union{T, Missing}},
+                                               data::AbstractArray,
                                                cc0::T,
                                                cc::T;
                                                verbose::Symbol=:low) where T<: AbstractFloat

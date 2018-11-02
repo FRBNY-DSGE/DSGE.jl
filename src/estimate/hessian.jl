@@ -8,7 +8,7 @@ Compute Hessian of DSGE posterior function evaluated at x.
 """
 function hessian!(m::AbstractModel,
                   x::Vector{T},
-                  data::AbstractArray{Union{T, Missing}};
+                  data::AbstractArray;
                   verbose::Symbol = :none) where {T<:AbstractFloat}
     DSGE.update!(m, x)
 

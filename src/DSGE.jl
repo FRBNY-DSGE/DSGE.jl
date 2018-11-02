@@ -9,6 +9,7 @@ module DSGE
     using Roots: fzero, ConvergenceFailed
     using StatsBase: sample, Weights
     using StatsFuns: chisqinvcdf
+    import Base.rank
     import Calculus
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
 
