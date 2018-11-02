@@ -201,7 +201,7 @@ function ccquadwts(n,chebkind)
     elseif ( n == 1 )                  # Special case (single point)
         w = 2;
     elseif (chebkind==2)                                 # General case, Polynomials of 2nd kind
-        tvec = 1-[2.0:2.0:(n-1)...].^2
+        tvec = 1 .- [2.0:2.0:(n-1)...].^2
         tk=zeros(size(tvec,1)+1,1);
         tk[1,1]=1;
         tk[2:end,1]=tvec
@@ -217,7 +217,7 @@ function ccquadwts(n,chebkind)
         w[1] = zz;
         w[n] = zz;
     elseif (chebkind==1)                                 # General case, Polynomials of 1st kind
-        tvec = 1-[2.0:2.0:(n-1)...].^2
+        tvec = 1 .- [2.0:2.0:(n-1)...].^2
         tk=zeros(size(tvec,1)+1,1);
         tk[1,1]=1;
         tk[2:end,1]=tvec
@@ -267,7 +267,7 @@ function chebpts(n,lo,hi,chebkind)
         end
     end
 
-    xr=((hi-lo)/2)*x+(hi+lo)/2; # Rescaled to new grid
+    xr=((hi .- lo)/2)*x+(hi+lo)/2; # Rescaled to new grid
 
     xwts=((hi-lo)/2)*ccquadwts(n,chebkind); #Rescale Clenshaw Curtis Quadrature Weights
 
