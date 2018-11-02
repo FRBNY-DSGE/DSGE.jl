@@ -84,7 +84,7 @@ function gensys(F::LinearAlgebra.GeneralizedSchur, c, Ψ, Π, div; verbose::Symb
     a, b, = F.S, F.T
     n = size(a, 1)
 
-    select = BitArray(n)
+    select = BitArray(undef, n)
     for i in 1:n
         # nunstab is the variable name used by Chris Sims, but it seems
         # that nunstab should actually correspond to the number of stable λs
