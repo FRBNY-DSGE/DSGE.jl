@@ -102,9 +102,7 @@ function save_plot(p::Plots.Plot, output_file::String = ""; verbose::Symbol = :l
         !isdir(output_dir) && mkpath(output_dir)
         Plots.savefig(output_file)
 
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Saved $output_file")
-        end
+        println(verbose, :low, "Saved $output_file")
     end
 end
 

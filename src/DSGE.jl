@@ -2,8 +2,9 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
     using Dates, Test, BenchmarkTools
-    using CSV, DataFrames, Distributed, Distributions, FileIO, FredData, HDF5, JLD2, LinearAlgebra, Missings, Nullables, Optim, Printf, Random, RecipesBase, SparseArrays, SpecialFunctions, StateSpaceRoutines, StatPlots, Dates
-    using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
+    using Distributed, Distributions, FileIO, FredData, HDF5, JLD2, LinearAlgebra, Missings, Nullables, Optim, Printf, Random, RecipesBase, SparseArrays, SpecialFunctions, StateSpaceRoutines, StatPlots
+    using CSV, DataFrames, DataStructures, OrderedCollections
+    using DataStructures: SortedDict, insert!, ForwardOrdering
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
     using StatsBase: sample, Weights
@@ -107,6 +108,9 @@ module DSGE
         write_meansbands_tables_all, construct_fcast_and_hist_dfs,
         df_to_table, load_posterior_moments,
 
+        # decomp/
+        decompose_forecast, decomposition_means,
+
         # altpolicy/
         AltPolicy, taylor93, taylor99,
 
@@ -122,6 +126,7 @@ module DSGE
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies, plot_scenario,
         plot_posterior_intervals, plot_posterior_interval_comparison,
+        plot_forecast_decomposition,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
@@ -198,6 +203,10 @@ module DSGE
     include("analysis/util.jl")
     include("analysis/df_to_table.jl")
 
+    include("decomp/drivers.jl")
+    include("decomp/io.jl")
+    include("decomp/meansbands.jl")
+
     include("altpolicy/altpolicy.jl")
     include("altpolicy/taylor93.jl")
     include("altpolicy/taylor99.jl")
@@ -218,6 +227,7 @@ module DSGE
     include("plot/plot_shock_decomposition.jl")
     include("plot/plot_altpolicies.jl")
     include("plot/plot_scenario.jl")
+    include("plot/plot_forecast_decomposition.jl")
 
     include("models/financial_frictions.jl")
 

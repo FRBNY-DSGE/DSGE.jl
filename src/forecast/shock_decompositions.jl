@@ -63,7 +63,7 @@ function shock_decompositions(system::System{S},
     # Set constant system matrices to 0
     system = zero_system_constants(system)
 
-    s_0 = zeros(S, nstates)
+    z0 = zeros(S, nstates)
 
     for i = 1:nshocks
         # Isolate single shock
@@ -71,7 +71,7 @@ function shock_decompositions(system::System{S},
         shocks[i, 1:histperiods] = histshocks[i, :]
 
         # Iterate state space forward
-        states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(system, s_0, shocks)
+        states[:, :, i], obs[:, :, i], pseudo[:, :, i], _ = forecast(system, z0, shocks)
     end
 
     # Return shock decompositions in appropriate range
@@ -85,22 +85,22 @@ end
 
 """
 ```
-deterministic_trends(m, system, s_0)
+deterministic_trends(m, system, z0)
 
-deterministic_trends(system, s_0, nperiods, start_index, end_index)
+deterministic_trends(system, z0, nperiods, start_index, end_index)
 ```
 
 Compute deterministic trend values of states, observables, and
 pseudo-observables, given a model object and system matrices. The deterministic
 trend for a single draw is simply the series that would be obtained by iterating
-the state-space system forward, beginning from a state vector `s_0` in the last
+the state-space system forward, beginning from a state vector `z0` in the last
 presample period.
 
 ### Inputs
 
 - `m::AbstractModel`: model object
 - `system::System{S}`: state-space system matrices
-- `s_0`::Vector{S}: initial state vector
+- `z0`::Vector{S}: initial state vector
 
 where `S<:AbstractFloat`.
 

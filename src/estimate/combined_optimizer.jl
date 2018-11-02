@@ -52,9 +52,7 @@ function combined_optimizer(fcn::Function,
     while cycle < max_cycles && converged == false
 
         # first, run LBFGS
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Running L-BFGS...")
-        end
+        println(verbose, :low, "Running L-BFGS...")
         out_lbfgs = Optim.optimize(fcn, x_opt, lbfgs(),
                    Optim.Options(autodiff=autodiff, g_tol = grtol, f_tol = ftol, x_tol = xtol,
                    iterations = iterations, store_trace = store_trace, show_trace = show_trace,
@@ -65,9 +63,7 @@ function combined_optimizer(fcn::Function,
         minimizer_lbfgs = out_lbfgs.minimizer
 
         # second, run simulated annealing with the trace disabled
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Running simulated annealing...")
-        end
+        println(verbose, :low, "Running simulated annealing...")
 
         # simulated annealing gets more iterations, no trace printout
         sa_iterations = min(iterations * 10, 250)
@@ -89,13 +85,10 @@ function combined_optimizer(fcn::Function,
         converged = rel_diff < ftol
         cycle += 1
 
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("cycle: $cycle")
-            println("relative function difference: $(round(rel_diff,5))")
-        end
+        println(verbose, :low, "cycle: $cycle")
+        println(verbose, :low, "relative function difference: $(round(rel_diff,5))")
 
         f_opt = cycle_best
-
     end
 
     println("optimization complete. cycles: $cycle")

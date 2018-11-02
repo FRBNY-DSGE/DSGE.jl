@@ -144,17 +144,13 @@ function write_scenario_forecasts(m::AbstractModel,
         filepath = scenario_output_files[var]
         jldopen(filepath, "w") do file
             write_forecast_metadata(m, file, var)
-        end
-        h5open(replace(filepath, "jld2" => "h5"), "w") do file
             write(file, "arr", Array{Float64}(forecast_output[var]))
             if :proportion_switched in keys(scenario_output_files)
                 write(file, "proportion_switched", forecast_output[:proportion_switched][i])
             end
         end
 
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            println(" * Wrote " * basename(filepath))
-        end
+        println(verbose, :high, " * Wrote " * basename(filepath))
     end
 end
 
@@ -169,13 +165,11 @@ function returns a `Dict{Symbol, Array{Float64}`.
 function forecast_scenario(m::AbstractModel, scen::Scenario;
                            verbose::Symbol = :low)
     # Print
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        Base.@info "Forecasting scenario = " * string(scen.key) * "..."
-        println("Start time: " * string(now()))
-        println("Forecast outputs will be saved in " * rawpath(m, "scenarios"))
-    end
+    info_print(verbose, :low, "Forecasting scenario = " * string(scen.key) * "...")
+    println(verbose, :low, "Start time: " * string(now()))
+    println(verbose, :low, "Forecast outputs will be saved in " * rawpath(m, "scenarios"))
 
-    tic = time_ns()
+    start_time = time_ns()
     # Update model alt policy setting
     m <= Setting(:alternative_policy, scen.altpolicy, false, "apol",
                  "Alternative policy")
@@ -202,12 +196,10 @@ function forecast_scenario(m::AbstractModel, scen::Scenario;
     output_files = get_scenario_output_files(m, scen, [:forecastobs, :forecastpseudo])
     write_scenario_forecasts(m, output_files, forecast_output, verbose = verbose)
     # Print
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        forecast_time = time_ns() - tic
-        forecast_time_min = forecast_time/60
-        println("\nTime elapsed: " * string(forecast_time_min) * " minutes")
-        println("Forecast complete: " * string(now()))
-    end
+    forecast_time = (time_ns() - start_time)/1e9
+    forecast_time_min = forecast_time/60
+    println(verbose, :low, "\nTime elapsed: " * string(forecast_time_min) * " minutes")
+    println(verbose, :low, "Forecast complete: " * string(now()))
 
     return forecast_output
 end

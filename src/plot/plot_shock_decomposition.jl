@@ -177,8 +177,7 @@ shockdec
 
         inds = findall(start_date .<= dates .<= end_date)
         x = df[inds, :date]
-        y = convert(Array, df[inds, cat_names])
-
+        y = convert(Matrix{Float64}, df[inds, cat_names])
         StatPlots.GroupedBar((x, y))
     end
 
@@ -192,7 +191,7 @@ shockdec
 
         inds = intersect(findall(start_date .<= dates .<= end_date),
                          findall(hist.means[1, :date] .<= dates .<= hist.means[end, :date]))
-        xnums[inds], df[inds, :detrendedMean]
+        xnums[inds], convert(Vector{Float64}, df[inds, :detrendedMean])
     end
 
     # Detrended mean forecast
@@ -202,6 +201,6 @@ shockdec
 
         inds = intersect(findall(start_date .<= dates .<= end_date),
                          findall(hist.means[end, :date] .<= dates .<= forecast.means[end, :date]))
-        xnums[inds], df[inds, :detrendedMean]
+        xnums[inds], convert(Vector{Float64}, df[inds, :detrendedMean])
     end
 end

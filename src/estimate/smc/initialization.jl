@@ -7,8 +7,8 @@ Draw from a general starting distribution (set by default to be from the prior) 
 Returns a tuple (logpost, loglh) and modifies the particle objects in the particle cloud in place.
 
 """
-function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
-                       parallel::Bool = false, use_chand_recursion::Bool = true, verbose::Symbol = :low)
+function initial_draw!(m::AbstractModel, data::AbstractMatrix, c::ParticleCloud;
+                       parallel::Bool = false, use_chand_recursion::Bool = false, verbose::Symbol = :low)
     n_parts = length(c)
     loglh = zeros(n_parts)
     logpost = zeros(n_parts)
@@ -87,7 +87,7 @@ end
 # ParticleCloud from a previous estimation to each particle's respective old_loglh
 # field, and for evaluating/saving the likelihood and posterior at the new data, which
 # here is just the argument, data.
-function initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
+function initialize_likelihoods!(m::AbstractModel, data::Matrix{Union{Float64, Missing}}, c::ParticleCloud;
                                  parallel::Bool = false, verbose::Symbol = :low)
     # Retire log-likelihood values from the old estimation to the field old_loglh
     map(p -> p.old_loglh = p.loglh, c.particles)

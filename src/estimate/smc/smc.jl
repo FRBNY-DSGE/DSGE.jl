@@ -33,8 +33,9 @@ SMC is broken up into three main steps:
 - `Selection`: Resample the particles if the distribution of particles begins to degenerate, according to a tolerance level for the ESS.
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis Hastings algorithm.
 """
-function smc(m::AbstractModel, data::Matrix{Float64};
-             verbose::Symbol = :low, old_data::Matrix{Float64} = Matrix{Float64}(undef, size(data, 1), 0))
+function smc(m::AbstractModel, data::T;
+             verbose::Symbol = :low, old_data::T =
+             T(undef, size(data, 1), 0)) where T <: AbstractMatrix
     ########################################################################################
     ### Setting Parameters
     ########################################################################################
@@ -47,8 +48,13 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     use_chand_recursion = get_setting(m, :use_chand_recursion)
 
-    if any(isnan.(data)) & use_chand_recursion
-        error("Cannot use Chandrasekhar recursions with missing data")
+    if use_chand_recursion
+        if any(ismissing.(data)) || any(ismissing.(old_data))
+            error("Cannot use Chandrasekhar recursions with missing data")
+        end
+        # Ensure concretely-typed data matrix for Chandrasekhar recursion
+        data = convert(Matrix{Float64}, data)
+        old_data = convert(Matrix{Float64}, old_data)
     end
 
     # Time Tempering
@@ -259,15 +265,13 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     if !m.testing
         simfile = h5open(rawpath(m, "estimate", "smcsave.h5"), "w")
-        #simfile = h5open(rawpath(m, "estimate", "smcsave.h5", ["adpt="*string(tempering_target)]),"w")
         particle_store = d_create(simfile, "smcparams", datatype(Float32),
                                   dataspace(n_parts, n_params))
         for i in 1:length(cloud)
             particle_store[i,:] = cloud.particles[i].value
         end
         close(simfile)
-        #jldopen(rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)]), "w") do file
-        jldopen(rawpath(m, "estimate", "smc_cloud.jld"), "w") do file
+        jldopen(rawpath(m, "estimate", "smc_cloud.jld2"), "w") do file
             write(file, "cloud", cloud)
             write(file, "w", w_matrix)
             write(file, "W", W_matrix)

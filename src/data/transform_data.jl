@@ -56,9 +56,7 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
     data_transforms = collect_data_transforms(m)
 
     for series in keys(data_transforms)
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            println("Transforming series $series...")
-        end
+        println(verbose, :high, "Transforming series $series...")
         f = data_transforms[series]
         transformed[series] = f(levels)
     end
