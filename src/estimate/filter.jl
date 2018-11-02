@@ -46,7 +46,7 @@ function filter(m::AbstractModel, df::DataFrame, system::System{S},
            include_presample = include_presample, outputs = outputs)
 end
 
-function filter(m::AbstractModel, data::AbstractArray, system::System{S},
+function filter(m::AbstractModel, data::AbstractArray{Union{S, Missing}}, system::System,
     s_0::Vector{S} = Vector{S}(undef, 0), P_0::Matrix{S} = Matrix{S}(undef, 0, 0);
     start_date::Date = date_presample_start(m), include_presample::Bool = true,
     outputs::Vector{Symbol} = [:loglh, :pred, :filt]) where {S<:AbstractFloat}

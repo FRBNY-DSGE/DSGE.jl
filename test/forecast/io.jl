@@ -1,4 +1,5 @@
-using DSGE, Test, JLD2, OrderedCollections, HDF5
+using DSGE, Test, Dates
+using JLD2, OrderedCollections, HDF5
 
 # Initialize model object
 m = AnSchorfheide(testing = true)
@@ -9,7 +10,7 @@ dir = joinpath(saveroot(m), "output_data", "an_schorfheide", "ss0")
     @test get_forecast_input_file(m, :init) == ""
     @test get_forecast_input_file(m, :mode) == rawpath(m, "estimate", "paramsmode.h5")
     @test get_forecast_input_file(m, :full) == rawpath(m, "estimate", "mhsave.h5")
-    overrides = forecast_input_file_overrides(m)
+    global overrides = forecast_input_file_overrides(m)
     overrides[:mode] = tempname()
     @test_throws ErrorException get_forecast_input_file(m, :mode)
     overrides[:full] = mktemp()[1]

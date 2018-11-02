@@ -10,7 +10,7 @@ m = AnSchorfheide()
 #saveroot = normpath(joinpath(dirname(@__FILE__),"save"))
 #m <= Setting(:saveroot, saveroot)
 
-data = h5read("reference/smc.h5", "data")
+@load "reference/smc.jld2" data
 
 m <= Setting(:n_particles, 400)
 m <= Setting(:n_Φ, 100)

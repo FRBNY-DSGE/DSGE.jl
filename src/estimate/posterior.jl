@@ -117,11 +117,11 @@ filter over the main sample all at once.
 - `catch_errors`: If `sampler = true`, `GensysErrors` should always be caught.
 """
 function likelihood(m::AbstractModel,
-                                      data::AbstractArray;
-                                      sampler::Bool = false,
-                                      catch_errors::Bool = false,
-                                      use_chand_recursion = false,
-                                      verbose::Symbol = :high) where {T<:AbstractFloat}
+                    data::AbstractMatrix;
+                    sampler::Bool = false,
+                    catch_errors::Bool = false,
+                    use_chand_recursion = false,
+                    verbose::Symbol = :high) where {T<:AbstractFloat}
     catch_errors = catch_errors | sampler
 
     # During Metropolis-Hastings, return -∞ if any parameters are not within their bounds
@@ -151,14 +151,14 @@ function likelihood(m::AbstractModel,
             kal = filter(m, data, system; outputs = [:loglh], include_presample = false)
             return kal[:total_loglh]
         else
-            return chand_recursion(data, system[:TTT], system[:RRR], system[:CCC],
-                                   system[:QQ], system[:ZZ], system[:DD], system[:EE];
-                                   allout = false, Nt0 = n_presample_periods(m))[1]
+            chand_recursion(data, system[:TTT], system[:RRR], system[:CCC],
+                            system[:QQ], system[:ZZ], system[:DD], system[:EE];
+                            allout = false, Nt0 = n_presample_periods(m))[1]
         end
     catch err
         if catch_errors && isa(err, DomainError)
             if VERBOSITY[verbose] >= VERBOSITY[:high]
-                warn("Log of incremental likelihood is negative; returning -Inf")
+                @warn "Log of incremental likelihood is negative; returning -Inf"
             end
             return -Inf
         else

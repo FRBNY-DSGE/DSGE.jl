@@ -1,4 +1,5 @@
 using DSGE, HDF5, JLD2, Plots
+using Distributed, Dates, OrderedCollections, DataStructures, DataFrames
 
 path = dirname(@__FILE__)
 
@@ -25,7 +26,6 @@ output_vars = add_requisite_output_vars([:histobs, :forecastobs, :shockdecobs, :
 m <= Setting(:forecast_block_size, 5)
 forecast_one(m, :full, :none, output_vars, verbose = :none)
 compute_meansbands(m, :full, :none, output_vars; verbose = :none)
-
 println("The following warning is expected test behavior:")
 
 # Plot history and forecast
@@ -70,3 +70,16 @@ hist_mb = read_mb(m, :full, :none, :histobs)
 fcast_mb = read_mb(m, :full, :none, :bddforecastobs)
 hair_plot(:obs_nominalrate, realized, [hist_mb], [fcast_mb];
           plotroot = saveroot(m), verbose = :none)
+
+# Forecast decomposition
+m_old = deepcopy(m)
+m_old <= Setting(:date_forecast_start, quartertodate("2014-Q4"))
+m_old <= Setting(:date_conditional_end, quartertodate("2014-Q4"))
+df_new = load_data(m)
+df_old = df_new[1:end-4, :]
+@time decompose_forecast(m, m_old, df_new, df_old, :mode, :none, :none, [:obs]; verbose = :none)
+@time decomposition_means(m, m_old, :mode, :none, :none, [:obs], verbose = :none)
+for indshocks in [true, false]
+    plot_forecast_decomposition(m, m_old, [:obs_nominalrate], :obs, :mode, :none, :none,
+                                individual_shocks = indshocks, verbose = :none)
+end

@@ -99,10 +99,7 @@ function hess_diag_element(fcn::Function,
     dx       = exp.(-(6:2:(6+(ndx-1)*2))')
     hessdiag = zeros(ndx, 1)
 
-    # Computation
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Hessian element: ($i, $i)")
-    end
+    println(verbose, :low, "Hessian element: ($i, $i)")
 
     # Diagonal element computation
     for k = 3:4
@@ -118,9 +115,7 @@ function hess_diag_element(fcn::Function,
         hessdiag[k]  = -(2fx - fdx - fdy) / (dx[k]*dxscale[i])^2
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        println("Values: $(hessdiag)")
-    end
+    println(verbose, :high, "Values: $(hessdiag)")
 
     value = (hessdiag[3]+hessdiag[4])/2
 
@@ -128,9 +123,7 @@ function hess_diag_element(fcn::Function,
         error("Negative diagonal in Hessian")
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        println("Value used: $value")
-    end
+    println(verbose, :high, "Value used: $value")
 
     return value
 end
@@ -150,9 +143,7 @@ function hess_offdiag_element(fcn::Function,
     hessdiag = zeros(ndx, 1)
 
     # Computation
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Hessian element: ($i, $j)")
-    end
+    println(verbose, :low, "Hessian element: ($i, $j)")
 
     for k = 3:4
         paradx      = copy(x)
@@ -170,9 +161,7 @@ function hess_offdiag_element(fcn::Function,
         hessdiag[k]  = -(fx - fdx - fdy + fdxdy) / (dx[k]*dx[k]*dxscale[i]*dxscale[j])
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        println("Values: $(hessdiag)")
-    end
+    println(verbose, :high, "Values: $(hessdiag)")
 
     value = (hessdiag[3]+hessdiag[4])/2
 
@@ -186,10 +175,8 @@ function hess_offdiag_element(fcn::Function,
         value = 0
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        println("Value used: $value")
-        println("Correlation: $ρ_xy")
-    end
+    println(verbose, :high, "Value used: $value")
+    println(verbose, :high, "Correlation: $ρ_xy")
 
     return value, ρ_xy
 end

@@ -43,7 +43,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
         println("Start time: $(now())")
         println("Means and bands will be saved in $output_dir")
     end
-    toq = @elapsed let
+    elapsed_time = @elapsed let
         # Determine full set of output_vars necessary for plotting desired result
         output_vars = add_requisite_output_vars(output_vars)
 
@@ -54,7 +54,6 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
             population_data, population_forecast = load_population_growth(m, verbose = verbose)
             isempty(df) && (df = load_data(m, verbose = :none))
         end
-
         for output_var in output_vars
             prod = get_product(output_var)
             if VERBOSITY[verbose] >= VERBOSITY[:high]
@@ -76,7 +75,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol,
         end
     end
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        total_mb_time     = toq
+        total_mb_time     = elapsed_time
         total_mb_time_min = total_mb_time/60
 
         println("\nTotal time to compute means and bands: " * string(total_mb_time_min) * " minutes")
@@ -127,9 +126,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
 
         # Get to work!
         for shock_name in keys(metadata[:shock_indices])
-            if VERBOSITY[verbose] >= VERBOSITY[:high]
-                println("  * " * string(shock_name))
-            end
+            println(verbose, :high, "  * " * string(shock_name))
 
             mb_vec = pmap(var_name -> compute_meansbands(m, input_type, cond_type, output_var, var_name, df;
                                           pop_growth = pop_growth, shock_name = Nullable(shock_name),
@@ -158,16 +155,11 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     dirpath = dirname(filepath)
     isdir(dirpath) || mkpath(dirpath)
     jldopen(filepath, true, true, true, IOStream) do file
-        #for (key, value) in mb
-        #    write(file, key, value)
-        #end
         write(file, "mb", mb)
     end
 
-    if VERBOSITY[verbose] >= VERBOSITY[:high]
-        sep = prod in [:shockdec, :irf] ? "  " : ""
-        println(sep * "wrote " * basename(filepath))
-    end
+    sep = prod in [:shockdec, :irf] ? "  " : ""
+    println(verbose, :high, sep * "wrote " * basename(filepath))
 
     return mb
 end
@@ -197,8 +189,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
 
     # Reverse transform
     y0_index = get_y0_index(m, product)
-    data = class == :obs ? convert(Vector{Float64}, df[var_name]) : fill(NaN, size(df, 1))
-
+    data = class == :obs && product != :irf ? convert(Vector{Float64}, df[var_name]) : fill(NaN, size(df, 1))
     transformed_series = mb_reverse_transform(fcast_series, transform, product, class,
                                               y0_index = y0_index, data = data,
                                               pop_growth = pop_growth)

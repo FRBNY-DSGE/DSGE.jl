@@ -28,18 +28,12 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
     # Check if already downloaded
     if try_disk && has_saved_data(m; cond_type=cond_type)
         filename = get_data_filename(m, cond_type)
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            print("Reading dataset $(filename) from disk...")
-        end
+        print(verbose, :low, "Reading dataset $(filename) from disk...")
         df = read_data(m; cond_type = cond_type)
         if isvalid_data(m, df; cond_type = cond_type)
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("dataset from disk valid")
-            end
+            println(verbose, :low, "dataset from disk valid")
         else
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("dataset from disk not valid")
-            end
+            println(verbose, :low, "dataset from disk not valid")
             recreate_data = true
         end
     else
@@ -48,16 +42,13 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
 
     # Download routines
     if recreate_data
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Creating dataset...")
-        end
+        println(verbose, :low, "Creating dataset...")
 
         levels = load_data_levels(m; verbose=verbose)
         if cond_type in [:semi, :full]
             cond_levels = load_cond_data_levels(m; verbose=verbose)
             levels, cond_levels = reconcile_column_names(levels, cond_levels)
             levels = vcat(levels, cond_levels)
-            #na2nan!(levels)
         end
         df = transform_data(m, levels; cond_type=cond_type, verbose=verbose)
 
@@ -73,13 +64,9 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
         if !m.testing
             save_data(m, df; cond_type=cond_type)
         end
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("dataset creation successful")
-        end
+        println(verbose, :low, "dataset creation successful")
 
-        # NaN out conditional period variables not in `cond_semi_names(m)` or
-        # `cond_full_names(m)` if necessary
-        nan_cond_vars!(m, df; cond_type = cond_type)
+        missing_cond_vars!(m, df; cond_type = cond_type)
 
         # check that dataset is valid
         isvalid_data(m, df)
@@ -152,9 +139,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
         file = inpath(m, "raw", "$(lowercase(string(source)))_$vint.csv")
 
         if isfile(file)
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Reading data from $file...")
-            end
+            println(verbose, :low, "Reading data from $file...")
 
             # Read in dataset and check that the file contains data for the proper dates
             addl_data = CSV.read(file)
@@ -167,7 +152,7 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             if !in(lastdayofquarter(start_date), addl_data[:date]) ||
                 !in(lastdayofquarter(end_date), addl_data[:date])
 
-                @warn "$file does not contain the entire date range specified; NaNs used."
+                @warn "$file does not contain the entire date range specified; missings used."
             end
 
             # Make sure each mnemonic that was specified is present
@@ -185,16 +170,13 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             addl_data = addl_data[rows, cols]
             df = join(df, addl_data, on=:date, kind=:outer)
         else
-            # If series not found, use all NaNs
-            addl_data = DataFrame(fill(NaN, (size(df,1), length(mnemonics))))
+            # If series not found, use all Missings
+            addl_data = DataFrame(fill(missing, (size(df,1), length(mnemonics))))
             names!(addl_data, mnemonics)
             df = hcat(df, addl_data)
-            @warn "$file was not found; NaNs used"
+            @warn "$file was not found; missings used"
         end
     end
-
-    # turn NAs into NaNs
-#    na2nan!(df)
 
     sort!(df, :date)
 
@@ -234,9 +216,7 @@ function load_cond_data_levels(m::AbstractModel; verbose::Symbol=:low)
     file = inpath(m, "cond", "cond_cdid=" * cond_idno * "_cdvt=" * cond_vint * ".csv")
 
     if isfile(file)
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Reading conditional data from $file...")
-        end
+        println(verbose, :low, "Reading conditional data from $file...")
 
         # Read data
         cond_df = CSV.read(file)
@@ -309,9 +289,7 @@ function read_data(m::AbstractModel; cond_type::Symbol = :none)
     # Convert date column from string to Date
     df[:date] = map(Date, df[:date])
 
-    # NaN out conditional period variables not in `cond_semi_names(m)` or
-    # `cond_full_names(m)` if necessary
-    nan_cond_vars!(m, df; cond_type = cond_type)
+    missing_cond_vars!(m, df; cond_type = cond_type)
 
     return df
 end
@@ -356,10 +334,10 @@ function isvalid_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
         println(datesdiff)
     end
 
-    # Ensure that no series is all NaN
+    # Ensure that no series is all missing
     for col in setdiff(names(df), [:date])
-        if all(isnan.(df[col]))
-            @warn "df[$col] is all NaN."
+        if all(ismissing.(df[col]))
+            @warn "df[$col] is all missing."
         end
     end
 
@@ -404,7 +382,7 @@ function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
     sort!(cols, by = x -> m.observables[x])
     df1 = df1[cols]
 
-    return convert(Matrix{Union{Missing, Float64}}, df1)'
+    return permutedims(convert(Matrix{Union{Missing, Float64}}, df1))
 end
 
 """
@@ -483,13 +461,9 @@ function read_population_data(m::AbstractModel; verbose::Symbol = :low)
 end
 
 function read_population_data(filename::String; verbose::Symbol = :low)
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Reading population data from $filename...")
-    end
+    println(verbose, :low, "Reading population data from $filename...")
 
     df = CSV.read(filename)
-
-    #DSGE.na2nan!(df)
     DSGE.format_dates!(:date, df)
     sort!(df, :date)
 
@@ -522,12 +496,9 @@ end
 function read_population_forecast(filename::String, population_mnemonic::Symbol;
                                   verbose::Symbol = :low)
     if isfile(filename)
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Loading population forecast from $filename...")
-        end
+        println(verbose, :low, "Loading population forecast from $filename...")
 
         df = CSV.read(filename)
-
         rename!(df, :POPULATION => population_mnemonic)
         #DSGE.na2nan!(df)
         DSGE.format_dates!(:date, df)
@@ -538,7 +509,6 @@ function read_population_forecast(filename::String, population_mnemonic::Symbol;
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             @warn "No population forecast found"
         end
-
         return DataFrame()
     end
 end

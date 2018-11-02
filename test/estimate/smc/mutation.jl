@@ -3,11 +3,9 @@ using DSGE
 using HDF5, JLD2, Distributions, LinearAlgebra, PDMats
 using Test
 
-path = dirname(@__FILE__)
-
 m = AnSchorfheide(testing = true)
 
-data = h5read("reference/smc.h5", "data")
+@load "reference/smc.jld2" data
 
 m <= Setting(:n_particles, 400)
 m <= Setting(:n_Φ, 100)
@@ -26,17 +24,7 @@ m <= Setting(:use_fixed_schedule, true)
 
 n_parts = get_setting(m, :n_particles)
 
-file = jldopen("reference/mutation_inputs.jld2", "r")
-old_particles = read(file, "particles")
-d = read(file, "d")
-blocks_free = read(file, "blocks_free")
-blocks_all = read(file, "blocks_all")
-ϕ_n = read(file, "ϕ_n")
-ϕ_n1 = read(file, "ϕ_n1")
-c = read(file, "c")
-α = read(file, "α")
-old_data = read(file, "old_data")
-close(file)
+@load "reference/mutation_inputs.jld2" old_particles d blocks_free blocks_all ϕ_n ϕ_n1 c α old_data
 
 function stack_values(particles::Vector{Particle}, field::Symbol)
     n_parts = length(particles)
@@ -54,13 +42,6 @@ Random.seed!(42)
 
 new_particles = [mutation(m, data, old_particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
                  c = c, α = α, old_data = old_data) for j = 1:n_parts]
-
-#=jldopen("reference/mutation_outputs.jld", "w") do file
-    write(file, "particles", new_particles)
-end
-JLD2.jldopen("reference/mutation_outputs.jld2", "w") do file
-    write(file, "particles", new_particles)
-end =#
 
 saved_particles = load("reference/mutation_outputs.jld2", "particles")
 

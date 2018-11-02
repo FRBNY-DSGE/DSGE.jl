@@ -55,6 +55,8 @@ function get_product(output_var::Symbol)
         :trend
     elseif occursin("irf", s)
         :irf
+    elseif occursin("decomp", s)
+        :decomp
     else
         error("Invalid output_var: " * s)
     end

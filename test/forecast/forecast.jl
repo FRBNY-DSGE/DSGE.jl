@@ -57,7 +57,6 @@ zlb_value = forecast_zlb_value(m)
 shocks = zeros(n_shocks_exogenous(m), forecast_horizons(m))
 shocks[ind_r_sh, :] .= -10.
 
-
 @testset "Ensure valid forecasting at the ZLB" begin
     global states, obs, pseudo, shocks = forecast(m, system, z0; shocks = shocks)
     @test all(x -> x < zlb_value, obs[ind_r, :])

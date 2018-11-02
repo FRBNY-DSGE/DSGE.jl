@@ -21,6 +21,12 @@ my_tests = [
             "estimate/csminwel",
             "estimate/optimize",
             "estimate/metropolis_hastings",
+            "estimate/smc/mutation",
+            "estimate/smc/helpers",
+            "estimate/smc/initialization",
+            "estimate/smc/resample",
+            "estimate/smc/util",
+            "estimate/smc/smc",
             "data/misc",
             "data/load_data",
             "forecast/smooth",
@@ -35,13 +41,8 @@ my_tests = [
             "scenarios/forecast",
             "scenarios/switching",
             "scenarios/drivers",
-            "plot/plot",
-            "estimate/smc/mutation",
-            "estimate/smc/helpers",
-            "estimate/smc/initialization",
-            "estimate/smc/resample",
-            "estimate/smc/util",
-            "estimate/smc/smc",
+            "decomp/decompose_forecast",
+            "plot/plot"
             ]
 
 for test in my_tests

@@ -1,16 +1,13 @@
 # To be removed after running this test individually in the REPL successfully
 using DSGE
-using HDF5, JLD2
+using JLD2
 using Test
-
-path = dirname(@__FILE__)
 
 m = AnSchorfheide()
 
-#saveroot = normpath(joinpath(dirname(@__FILE__),"save"))
 m <= Setting(:saveroot, tempdir())
 
-data = h5read("reference/smc.h5", "data")
+@load "reference/smc.jld2" data
 
 m <= Setting(:n_particles, 400)
 m <= Setting(:n_Φ, 100)
@@ -29,26 +26,20 @@ m <= Setting(:smc_iteration, 0)
 m <= Setting(:use_chand_recursion, true)
 
 Random.seed!(42)
+
 smc(m, data, verbose = :none) # us.txt gives equiv to periods 95:174 in our current dataset
 
-test_file = load(rawpath(m, "estimate", "smc_cloud.jld"))
-test_cloud  = test_file["cloud"]
-test_w      = test_file["w"]
-test_W      = test_file["W"]
-test_z = test_file["z"]
+file = jldopen(rawpath(m, "estimate", "smc_cloud.jld2"), "r")
+test_cloud = read(file, "cloud")
+test_w     = read(file, "w")
+test_W     = read(file, "W")
+close(file)
 
-#=JLD2.jldopen("reference/smc_cloud_fix=true.jld2", true, true, true, IOStream) do file
-    write(file, "cloud", test_cloud)
-    write(file, "w", test_w)
-    write(file, "W", test_W)
-    write(file, "z", test_z)
-end=#
-
-saved_file = load("reference/smc_cloud_fix=true.jld2")
-saved_cloud  = saved_file["cloud"]
-saved_w      = saved_file["w"]
-saved_W      = saved_file["W"]
-
+file = jldopen("reference/smc_test_cloud.jld2", "r")
+saved_cloud = read(file, "cloud")
+saved_w     = read(file, "w")
+saved_W     = read(file, "W")
+close(file)
 
 ####################################################################
 cloud_fields = fieldnames(typeof(test_cloud))
