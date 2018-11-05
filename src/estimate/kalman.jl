@@ -86,7 +86,7 @@ end
 zlb_regime_indices(m, data, start_date = date_presample_start(m))
 ```
 
-Returns a Vector{AbstractRange{Int64}} of index ranges for the pre- and post-ZLB
+Returns a Vector{UnitRange{Int64}} of index ranges for the pre- and post-ZLB
 regimes. The optional argument `start_date` indicates the first quarter of
 `data`.
 """
@@ -100,15 +100,15 @@ function zlb_regime_indices(m::AbstractModel{S}, data::AbstractArray{Union{S, Mi
 
         elseif date_presample_start(m) <= start_date <= date_zlb_start(m)
             n_nozlb_periods = subtract_quarters(date_zlb_start(m), start_date)
-            regime_inds = Vector{AbstractRange{Int64}}(undef, 2)
+            regime_inds = Vector{UnitRange{Int64}}(undef, 2)
             regime_inds[1] = 1:n_nozlb_periods
             regime_inds[2] = (n_nozlb_periods+1):T
 
         else # date_zlb_start(m) < start_date
-            regime_inds = AbstractRange{Int64}[1:T]
+            regime_inds = UnitRange{Int64}[1:T]
         end
     else
-        regime_inds = AbstractRange{Int64}[1:T]
+        regime_inds = UnitRange{Int64}[1:T]
     end
 
     return regime_inds
