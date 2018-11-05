@@ -114,12 +114,12 @@ end
 
 """
 ```
-Base.rank(d::DegenerateMvNormal)
+rank(d::DegenerateMvNormal)
 ```
 
 Returns the rank of `d.σ`.
 """
-function LinearAlgebra.rank(d::DegenerateMvNormal)
+function rank(d::DegenerateMvNormal)
     return rank(d.σ)
 end
 
@@ -178,7 +178,7 @@ end
 
 """
 ```
-rank(d::DegenerateDiagMvTDist)
+LinearAlgebra.rank(d::DegenerateDiagMvTDist)
 ```
 
 Returns the rank of `d.σ`.
