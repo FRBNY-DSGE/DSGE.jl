@@ -171,24 +171,24 @@ function estimate(m::AbstractModel, data::AbstractArray{Float64};
             @assert (n, n) == size(hessian)
 
             # Compute the inverse of the Hessian via eigenvalue decomposition
-            S_diag, U = eig(hessian)
-            big_eig_vals = find(x -> x > 1e-6, S_diag)
-            rank = length(big_eig_vals)
+            S_diag, U = eigen(hessian)
+            big_eig_vals = findall(x -> x > 1e-6, S_diag)
+            hessian_rank = length(big_eig_vals)
 
             S_inv = zeros(n, n)
-            for i = (n-rank+1):n
+            for i = (n-hessian_rank+1):n
                 S_inv[i, i] = 1/S_diag[i]
             end
 
-        hessian_inv = U*sqrt.(S_inv) #this is the inverse of the hessian
-        DegenerateMvNormal(params, hessian_inv)
-    else
-        DegenerateMvNormal(params, proposal_covariance)
-    end
+            hessian_inv = U*sqrt.(S_inv) #this is the inverse of the hessian
+            DegenerateMvNormal(params, hessian_inv)
+        else
+            DegenerateMvNormal(params, proposal_covariance)
+        end
 
-    if Base.rank(propdist) != n_parameters_free(m)
-        println("problem –    shutting down dimensions")
-    end
+        if rank(propdist) != n_parameters_free(m)
+            println("problem –    shutting down dimensions")
+        end
 
         ########################################################################################
         ### Step 3: Sample from posterior using Metropolis-Hastings algorithm
