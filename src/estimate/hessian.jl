@@ -1,6 +1,6 @@
 """
 ```
-hessian!{T<:AbstractFloat}(m::AbstractModel, x::Vector{T}, data::AbstractArray{Union{T, Missing}};
+hessian!{T<:AbstractFloat}(m::AbstractModel, x::Vector{T}, data::AbstractArray;
                            verbose::Symbol = :none)
 ```
 

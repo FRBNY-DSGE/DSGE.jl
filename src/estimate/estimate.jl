@@ -50,7 +50,7 @@ function estimate(m::AbstractModel;
              mle = mle, sampling = sampling)
 end
 
-function estimate(m::AbstractModel, data::AbstractArray{Float64};
+function estimate(m::AbstractModel, data::AbstractArray;
                   verbose::Symbol = :low,
                   proposal_covariance::Matrix = Matrix(undef, 0,0),
                   mle::Bool = false,
