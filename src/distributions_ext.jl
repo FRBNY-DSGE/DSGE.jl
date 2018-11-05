@@ -179,7 +179,7 @@ end
 
 """
 ```
-rank(d::DegenerateDiagMvTDist)
+LinearAlgebra.rank(d::DegenerateDiagMvTDist)
 ```
 
 Returns the rank of `d.σ`.
