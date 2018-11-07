@@ -5,9 +5,9 @@
 # i.e. grid_param = 1 implies a uniform grid
 # And grid_min/grid_max are the start and endpoints of the grid
 @inline function construct_asset_grid(I::Int64, grid_param::Int64, grid_min::Float64, grid_max::Float64)
-    a  = collect(linspace(0, 1, I))
+    a  = collect(range(0, stop=1, length=I))
     a  = a .^ (1 / grid_param)
-    a  = grid_min + (grid_max - grid_min) * a
+    a  = grid_min .+ (grid_max - grid_min) * a
     return a
 end
 
@@ -35,7 +35,7 @@ end
             adelta[i]   = 0.5 * (daf[i-1] + daf[i])
         end
     end
-    azdelta = repmat(adelta, J)
+    azdelta = repeat(adelta, J)
 
     return daf, dab, azdelta
 end
@@ -120,8 +120,8 @@ end
         cf[i,j] = Vaf[i,j] ^ (-1 / coefrra)
         cb[i,j] = Vab[i,j] ^ (-1 / coefrra)
 
-        hf[i,j] = min(labor(zz[i,j], Vaf[i,j]), maxhours)
-        hb[i,j] = min(labor(zz[i,j], Vab[i,j]), maxhours)
+        hf[i,j] = min(real(labor(zz[i,j], Vaf[i,j])), maxhours) # R: labor is... complex? :(
+        hb[i,j] = min(real(labor(zz[i,j], Vab[i,j])), maxhours)
     end
 
     return Vaf, Vab, cf, hf, cb, hb
@@ -177,15 +177,15 @@ end
             if i==I
                 cf[end, j] = income(hf[end, j], zz[end, j], profshare[end, j], lumptransfer, r, aa[end, j])
                 hf[end, j] = labor(zz[end, j], cf[end, j] ^ (-coefrra))
-                hf[end, j] = min(hf[end, j], maxhours)
+                hf[end, j] = min(real(hf[end, j]), maxhours)
             elseif i==1
                 cb[1, j] = income(hb[1, j], zz[1, j], profshare[1, j], lumptransfer, r, aa[1, j])
                 hb[1, j] = labor(zz[1, j], cb[1, j] ^ (-coefrra))
-                hb[1, j] = min(hb[1, j], maxhours)
+                hb[1, j] = min(real(hb[1, j]), maxhours)
             end
             c0[i, j] = income(h0[i, j], zz[i, j], profshare[i, j], lumptransfer, r, aa[i, j])
             h0[i, j] = labor(zz[i, j], c0[i, j]^(-coefrra))
-            h0[i, j] = min(h0[i, j], maxhours)
+            h0[i, j] = min(real(h0[i, j]), maxhours)
         end
     end
     return cf, hf, cb, hb, c0, h0
@@ -247,10 +247,10 @@ end
     end
 
     # R: Pretty sure the indexing for this ought be the same as in the KrusellSmith model
-    X[1,:] = T == ComplexF64 ? complex(0.) : 0.
-    Z[I,:] = T == ComplexF64 ? complex(0.) : 0.
+    X[1,:] .= T == ComplexF64 ? complex(0.) : 0.
+    Z[I,:] .= T == ComplexF64 ? complex(0.) : 0.
 
-    A = spdiagm((reshape(X,I*J)[2:I*J], reshape(Y,I*J), reshape(Z,I*J)[1:I*J-1]),(-1,0,1),I*J,I*J) + A_switch
+    A = spdiagm(-1 => reshape(X,I*J)[2:I*J], 0 => reshape(Y,I*J), 1 => reshape(Z,I*J)[1:I*J-1]) + A_switch
 
     return A, u, h, c, s
 end

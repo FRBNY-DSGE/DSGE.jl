@@ -26,7 +26,7 @@ function jacobian(m::KrusellSmith)
     m[:Rstar] = MPK(1.0, m[:Lstar].value, m[:Kstar].value, m[:α].value, m[:δ].value)     # Steady state net return on capital
 
     # KF equation
-    KFmollificand::Array{Float64, 2} = (repmat(wgrid.points, 1, nw*ns) - m[:Rstar]*repmat(wgrid.points'-m[:cstar].value', nw, ns))/m[:Wstar] - kron(sgrid.points',ones(nw, nw))
+    KFmollificand::Array{Float64, 2} = (repeat(wgrid.points, 1, nw*ns) - m[:Rstar]*repeat(wgrid.points'-m[:cstar].value', nw, ns))/m[:Wstar] - kron(sgrid.points',ones(nw, nw))
     μRHS::Array{Float64,1} = mollifier.(KFmollificand, zhi, zlo, smoother)*kron(sgrid.weights.*(g/m[:Wstar]), wgrid.weights.*m[:μstar].value)
 
     # These matrices (from the Euler equation) correspond to the matrices in the PDF documentation on Dropbox
@@ -80,7 +80,7 @@ function jacobian(m::KrusellSmith)
 
     # Euler equation (EE)
     term1_EE::Array{Float64, 1} = m[:β]*Γ*wgrid.weights - m[:β]*(m[:Rstar]/m[:Wstar]) * ((wgrid.points-m[:cstar].value) .* (ξ*wgrid.weights))
-    term2_EE::Array{Float64, 1} = -(1.0/m[:Wstar]) * (lRHS+((m[:β]*m[:Rstar])/m[:Wstar]) * ξ.*(repmat(wgrid.points', nw, 1) - m[:Rstar]*repmat(wgrid.points-m[:cstar].value,1,nw))*wgrid.weights)
+    term2_EE::Array{Float64, 1} = -(1.0/m[:Wstar]) * (lRHS+((m[:β]*m[:Rstar])/m[:Wstar]) * ξ.*(repeat(wgrid.points', nw, 1) - m[:Rstar]*repeat(wgrid.points-m[:cstar].value,1,nw))*wgrid.weights)
 
     JJ[eq[:eq_euler], endo[:K′_t]]  = term1_EE*dRdK + term2_EE*dWdK
     JJ[eq[:eq_euler], endo[:z′_t]] = term1_EE*dRdZ + term2_EE*dWdZ
@@ -96,8 +96,8 @@ function jacobian(m::KrusellSmith)
 
     JJ[eq[:eq_kolmogorov_fwd], endo[:l_t1]] = (-(m[:Rstar]/m[:Wstar])*(1.0/m[:γ])*ζ') * diagm( m[:μstar].value.*wgrid.weights.*(m[:lstar].value.^(-(1.0+m[:γ])/m[:γ])) .*(m[:lstar].value.^(-1.0/m[:γ]) .<= wgrid.points))
 
-    term1_KF::Array{Float64,1} = -(1.0/m[:Wstar])*(ζ'.*repmat((wgrid.points-m[:cstar].value)',nw,1))*(m[:μstar].value.*wgrid.weights)
-    term2_KF::Array{Float64,1} = -(μRHS/m[:Wstar] + (1.0/(m[:Wstar]*m[:Wstar]))*(ζ'.*(repmat(wgrid.points,1,nw) - m[:Rstar]*repmat( (wgrid.points-m[:cstar].value)',nw,1)))*(m[:μstar].value.*wgrid.weights))
+    term1_KF::Array{Float64,1} = -(1.0/m[:Wstar])*(ζ'.*repeat((wgrid.points-m[:cstar].value)',nw,1))*(m[:μstar].value.*wgrid.weights)
+    term2_KF::Array{Float64,1} = -(μRHS/m[:Wstar] + (1.0/(m[:Wstar]*m[:Wstar]))*(ζ'.*(repeat(wgrid.points,1,nw) - m[:Rstar]*repeat( (wgrid.points-m[:cstar].value)',nw,1)))*(m[:μstar].value.*wgrid.weights))
 
     JJ[eq[:eq_kolmogorov_fwd], endo[:K_t]]  = term1_KF*dRdK + term2_KF*dWdK
     JJ[eq[:eq_kolmogorov_fwd], endo[:z_t]]   = term1_KF*dRdZ + term2_KF*dWdZ

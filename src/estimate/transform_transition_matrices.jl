@@ -71,7 +71,7 @@ function transform_transition_matrices(m::AbstractModel, TT::Matrix{T},
                 RRR[1+size(R,1)*(i-1):size(R,1)*i, 1+size(R,2)*j:size(R,2)*(j+1)] = TR_powers[i-j-2]
             end
         end
-        CCC = vcat(zeros(C), repmat(C, freq))
+        CCC = vcat(zeros(C), repeat(C, freq))
     else
         RRR[1:size(R, 1), 1:size(R,2)] = TR_powers[0]
         for i in 2:freq
@@ -80,7 +80,7 @@ function transform_transition_matrices(m::AbstractModel, TT::Matrix{T},
                 RRR[1+size(R,1)*(i-1):size(R,1)*i, 1+size(R,2)*j:size(R,2)*(j+1)] = TR_powers[i-j-1]
             end
         end
-        CCC = repmat(C, freq) #vec(repmat(C, 1, freq))
+        CCC = repeat(C, freq) #vec(repeat(C, 1, freq))
     end
 
     return TTT, RRR, CCC

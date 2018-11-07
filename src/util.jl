@@ -174,6 +174,21 @@ macro test_matrix_approx_eq_eps(a,b,c,d)
 end
 
 """
+Sparse identity matrix - since deprecated in 0.7
+"""
+function speye(n::Integer)
+    return SparseMatrixCSC{Float64}(I, n, n)
+end
+
+"""
+Sparse identity matrix - since deprecated in 0.7
+"""
+function speye(T::Type, n::Integer)
+    return SparseMatrixCSC{T}(I, n, n)
+end
+
+
+"""
     <(a::Complex, b::Complex)
 
 Compare real values of complex numbers.
@@ -198,4 +213,28 @@ Compare real values of complex numbers.
 """
 function <(a::Complex, b::Real)
     return a.re < b
+end
+
+function min(a::Complex, b::Real)
+    return min(a.re, b)
+end
+
+function min(a::Complex, b::Complex)
+    return min(a.re, b.re)
+end
+
+function min(a::Real, b::Complex)
+    return min(a, b.re)
+end
+
+function max(a::Complex, b::Real)
+    return max(a.re, b)
+end
+
+function max(a::Complex, b::Complex)
+    return max(a.re, b.re)
+end
+
+function max(a::Real, b::Complex)
+    return max(a, b.re)
 end

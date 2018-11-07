@@ -33,7 +33,7 @@ function krylov_reduction(m::AbstractCTModel, Γ0::SparseMatrixCSC{Float64,Int64
     n_state_vars         -= n_state_vars_unreduce
 
     # Slice Γ1 into different parts. See Why Inequality matters paper.
-    Γ1_full = full(Γ1)
+    Γ1_full = Array{Float64}(Γ1)
     B_pv    = -Γ1_full[n_total + 1:n_vars, n_total + 1:n_vars] \ Γ1_full[n_total + 1:n_vars, 1:n_jump_vars]
     B_pg    = -Γ1_full[n_total + 1:n_vars, n_total + 1:n_vars] \
            Γ1_full[n_total + 1:n_vars, n_jump_vars + 1:n_jump_vars + n_state_vars]
@@ -57,18 +57,21 @@ function krylov_reduction(m::AbstractCTModel, Γ0::SparseMatrixCSC{Float64,Int64
 
     # Build state space reduction transform
     reduced_basis = spzeros(Float64, n_jump_vars+n_state_vars_red,n_vars)
-    reduced_basis[1:n_jump_vars,1:n_jump_vars] = speye(n_jump_vars)
+    reduced_basis[1:n_jump_vars,1:n_jump_vars] = SparseMatrixCSC{Float64}(I, n_jump_vars, n_jump_vars)
     reduced_basis[n_jump_vars+1:n_jump_vars+n_state_vars_red,n_jump_vars+1:n_jump_vars+n_state_vars] = V_g'
-    reduced_basis[n_jump_vars+n_state_vars_red+1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce,n_jump_vars+n_state_vars+1:n_jump_vars+n_state_vars+n_state_vars_unreduce] = eye(n_state_vars_unreduce)
+    reduced_basis[n_jump_vars + n_state_vars_red + 1:n_jump_vars + n_state_vars_red + n_state_vars_unreduce,
+                  n_jump_vars + n_state_vars + 1:n_jump_vars + n_state_vars + n_state_vars_unreduce] =
+                      Matrix{Float64}(I, n_state_vars_unreduce,
+                                      n_state_vars_unreduce)
 
     # Build inverse transform
     inv_reduced_basis                              = spzeros(Float64, n_vars, n_jump_vars + n_state_vars_red)
-    inv_reduced_basis[1:n_jump_vars,1:n_jump_vars] = speye(n_jump_vars)
+    inv_reduced_basis[1:n_jump_vars,1:n_jump_vars] = SparseMatrixCSC(I, n_jump_vars, n_jump_vars)
     inv_reduced_basis[n_jump_vars+1:n_jump_vars+n_state_vars,n_jump_vars+1:n_state_vars_red+n_jump_vars] = V_g
     inv_reduced_basis[n_total+1:n_vars,1:n_jump_vars] = B_pv
     inv_reduced_basis[n_total+1:n_vars,n_jump_vars+1:n_jump_vars+n_state_vars_red] = B_pg * V_g
     inv_reduced_basis[n_total+1:n_vars,n_jump_vars+n_state_vars_red+1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce] = B_pZ
-    inv_reduced_basis[n_jump_vars+n_state_vars+1:n_total,n_jump_vars+n_state_vars_red+1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce] = speye(n_state_vars_unreduce)
+    inv_reduced_basis[n_jump_vars+n_state_vars+1:n_total,n_jump_vars+n_state_vars_red+1:n_jump_vars+n_state_vars_red+n_state_vars_unreduce] = SparseMatrixCSC{Float64}(I, n_state_vars_unreduce, n_state_vars_unreduce)
 
     m <= Setting(:n_state_vars_red, n_state_vars_red + n_state_vars_unreduce,
                  "Number of state variables after reduction")
@@ -143,7 +146,7 @@ function change_basis(basis, inv_basis, Γ0::SparseMatrixCSC{Float64,Int64},
     g1 = basis * Γ1 * inv_basis
 
     if ignore_Γ0
-        g0 = eye(g1)
+        g0 = SparseMatrixCSC{Float64}(I, size(g1))
     else
         g0 = basis * Γ0 * inv_basis
     end
@@ -166,7 +169,7 @@ function solve_static_conditions(Γ0::SparseMatrixCSC{Float64,Int64},
     g0  = state_red * Γ0 * inv_state_red # adjust Γ0 to new basis
     g1  = state_red * Γ1 * inv_state_red # Zero out redundant rows/columns in Γ1
     g1  = g0 \ g1                        # Force Γ1 and other matrices
-    Psi = g0 \ (state_red * Ψ)          # to be the ones corresponding to when
+    Psi = g0 \ (state_red * Ψ)           # to be the ones corresponding to when
     Pi  = g0 \ (state_red * Π)           # Γ0 is the identity
     c   = g0 \ (state_red * C)
 

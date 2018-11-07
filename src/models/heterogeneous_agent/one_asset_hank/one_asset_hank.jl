@@ -391,7 +391,7 @@ function steadystate!(m::OneAssetHANK)
     ymarkov_combined = get_setting(m, :ymarkov_combined)
 
     # Set necessary variables
-    aa   = repmat(a, 1, J)
+    aa   = repeat(a, 1, J)
     amax = maximum(a)
     amin = minimum(a)
 
@@ -425,29 +425,29 @@ function steadystate!(m::OneAssetHANK)
         calculate_ss_equil_vars(zz, labor_share_ss, meanlabeff, lumptransferpc, govbondtarget)
 
     # Initialize matrices for finite differences
-    Vaf = Array{ComplexF64}(I, J)
-    Vab = Array{ComplexF64}(I, J)
+    Vaf = Array{ComplexF64}(undef, I, J)
+    Vab = Array{ComplexF64}(undef, I, J)
 
-    cf  = Array{ComplexF64}(I, J) # forward consumption difference
-    hf  = Array{ComplexF64}(I, J) # forward hours difference
-    sf  = Array{ComplexF64}(I, J) # forward saving difference
-    cb  = Array{ComplexF64}(I, J) # backward consumption difference
-    hb  = Array{ComplexF64}(I, J) # backward hours difference
-    sb  = Array{ComplexF64}(I, J) # backward saving difference
-    c0  = Array{ComplexF64}(I, J)
-    A   = Array{ComplexF64}(I*J, I*J)
+    cf  = Array{ComplexF64}(undef, I, J) # forward consumption difference
+    hf  = Array{ComplexF64}(undef, I, J) # forward hours difference
+    sf  = Array{ComplexF64}(undef, I, J) # forward saving difference
+    cb  = Array{ComplexF64}(undef, I, J) # backward consumption difference
+    hb  = Array{ComplexF64}(undef, I, J) # backward hours difference
+    sb  = Array{ComplexF64}(undef, I, J) # backward saving difference
+    c0  = Array{ComplexF64}(undef, I, J)
+    A   = Array{ComplexF64}(undef, I*J, I*J)
 
     # Aswitch*v = \lambda_z(v(a,z') - v(a,z))
     # Captures expected change in value function due to jumps in z
-    Aswitch = kron(ymarkov_combined, speye(ComplexF64, I))
+    Aswitch = kron(ymarkov_combined, SparseMatrixCSC{ComplexF64}(LinearAlgebra.I, I, I))
 
     # Initialize steady state variables
-    V  = Array{ComplexF64}(I, J) # value function
-    u  = Array{ComplexF64}(I, J) # flow utility across state space
-    s  = Array{ComplexF64}(I, J) # savings across state space
-    c  = Array{ComplexF64}(I, J) # flow consumption
-    h  = Array{ComplexF64}(I, J) # flow hours of labor
-    h0 = Array{ComplexF64}(I, J) # guess of what h will be
+    V  = Array{ComplexF64}(undef, I, J) # value function
+    u  = Array{ComplexF64}(undef, I, J) # flow utility across state space
+    s  = Array{ComplexF64}(undef, I, J) # savings across state space
+    c  = Array{ComplexF64}(undef, I, J) # flow consumption
+    h  = Array{ComplexF64}(undef, I, J) # flow hours of labor
+    h0 = Array{ComplexF64}(undef, I, J) # guess of what h will be
 
     # Creates functions for computing flow utility, income earned, and labor done given
     # CRRA + frisch elasticity style labor disutility
@@ -517,7 +517,7 @@ function steadystate!(m::OneAssetHANK)
         # g_z is marginal distribution, so re-weight by some multiplier of Lebesgue measure
         g0 = g0 ./ reshape(azdelta, I, J)
         # Solve for distribution
-        g = solve_kfe(A, g0, spdiagm(azdelta, 0),
+        g = solve_kfe(A, g0, spdiagm(0 => azdelta),
                        maxit_kfe = maxit_kfe, tol_kfe = tol_kfe,
                        Δ_kfe = Δ_kfe)
 
@@ -622,12 +622,12 @@ function model_settings!(m::OneAssetHANK)
                  "Number of dimensions approximated by spline basis that
                   were not used to compute the basis matrix")
 
-    knots = collect(linspace(get_setting(m, :amin), get_setting(m, :amax), get_setting(m, :n_knots)-1))
+    knots = collect(range(get_setting(m, :amin), stop=get_setting(m, :amax), length=get_setting(m, :n_knots)-1))
     knots = (get_setting(m, :amax) - get_setting(m, :amin)) /
-            (2^get_setting(m, :c_power)-1) * ((knots - get_setting(m, :amin))
+            (2^get_setting(m, :c_power)-1) * ((knots .- get_setting(m, :amin))
                                               / (get_setting(m, :amax) -
-                                                 get_setting(m, :amin)) + 1) .^ get_setting(m, :c_power) +
-                                                 get_setting(m, :amin) - (get_setting(m, :amax) -
+                                                 get_setting(m, :amin)) .+ 1) .^ get_setting(m, :c_power) .+
+                                                 get_setting(m, :amin) .- (get_setting(m, :amax) -
                                                                           get_setting(m, :amin)) /
                                                                           (2 ^ get_setting(m, :c_power) - 1)
     m <= Setting(:knots_dict, Dict(1 => knots),

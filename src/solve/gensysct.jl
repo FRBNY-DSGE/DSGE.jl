@@ -64,7 +64,7 @@ function gensysct!(Γ0::Matrix{Float64}, Γ1::Matrix{Float64}, c::Array{Float64}
                    ϵ::Float64 = sqrt(eps()) * 10,
                    div::Float64 = -1.0, complex_decomposition::Bool = false)
 
-    F = complex_decomposition ? schurfact!(complex(Γ0), complex(Γ1)) : schurfact!(real(Γ0), real(Γ1))
+    F = complex_decomposition ? schur!(complex(Γ0), complex(Γ1)) : schur!(real(Γ0), real(Γ1))
     gensysct(F, c, Ψ, Π; check_existence = check_existence, check_uniqueness = check_uniqueness,
              ϵ = ϵ, div = div)
 end
@@ -85,7 +85,7 @@ function gensysct!(Γ1::Matrix{Float64}, c::Array{Float64}, Ψ::Matrix{Float64},
                   check_existence::Bool = true, check_uniqueness::Bool = true, ϵ::Float64 = sqrt(eps()) * 10,
                   div::Float64 = -1.0, complex_decomposition::Bool = false)
     # Assumes that Γ0 is the identity
-    F = complex_decomposition ? schurfact!(complex(Γ1)) : schurfact!(real(Γ1))
+    F = complex_decomposition ? schur!(complex(Γ1)) : schur!(real(Γ1))
     gensysct(F, c, Ψ, Π; check_existence = check_existence, check_uniqueness = check_uniqueness,
              ϵ = ϵ, div = div)
 end
@@ -95,7 +95,7 @@ function gensysct(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64}, Ψ::Matr
                   div::Float64 = -1.0)
     div < 0.0 && (div = new_divct(F; ϵ = ϵ))
     eu = [0, 0]
-    a, b = F[:S], F[:T]
+    a, b = F.S, F.T
     n = size(a, 1)
 
     for i in 1:n
@@ -103,7 +103,7 @@ function gensysct(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64}, Ψ::Matr
             info("Coincident zeros.  Indeterminacy and/or nonexistence.")
             eu = [-2, -2]
             G1 = Array{Float64, 2}() ;  C = Array{Float64, 1}() ; impact = Array{Float64, 2}()
-            a, b, qt, z = FS[:S], FS[:T], FS[:Q], FS[:Z]
+            a, b, qt, z = FS.S, FS.T, FS.Q, FS.Z
             return G1, C, impact, qt', a, b, z, eu
         end
     end
@@ -113,7 +113,7 @@ function gensysct(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64}, Ψ::Matr
     end
     nunstab = sum(movelast)
     FS = ordschur!(F, .!movelast)
-    a, b, qt, z = FS[:S], FS[:T], FS[:Q], FS[:Z]
+    a, b, qt, z = FS.S, FS.T, FS.Q, FS.Z
 
     qt1 = qt[:, 1:(n - nunstab)]
     qt2 = qt[:, (n - nunstab + 1):n]
@@ -129,7 +129,7 @@ function gensysct(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64}, Ψ::Matr
         exist = true
         existx = true
     else
-        exist = vecnorm(uz- A_mul_Bc(ueta, ueta) * uz, 2) < ϵ * n
+        exist = norm(uz- (ueta * adjoint(ueta)) * uz, 2) < ϵ * n
 
         zwtx0 = b2 \ zwt
         zwtx = zwtx0
@@ -140,7 +140,7 @@ function gensysct(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64}, Ψ::Matr
         end
         zwtx = b2 * zwtx
         bigev, ux, dx, vx = decomposition_svdct!(zwtx, ϵ = ϵ)
-        existx = vecnorm(ux - ueta * ueta' * ux, 2) < ϵ * n
+        existx = norm(ux - ueta * ueta' * ux, 2) < ϵ * n
     end
 
     etawt1 = qt1' * Π # Ac_mul_B(qt1, Π)
@@ -158,7 +158,7 @@ function gensysct(F::LinearAlgebra.GeneralizedSchur, c::Array{Float64}, Ψ::Matr
     if isempty(veta1) || !check_uniqueness
         eu[2] = 1
     else
-        eu[2] = Int64(vecnorm(veta1- A_mul_Bc(veta, veta) * veta1, 2) < ϵ * n)
+        eu[2] = Int64(norm(veta1- (veta * adjoint(veta)) * veta1, 2) < ϵ * n)
     end
 
     tmat = hcat(eye(n - nunstab), -ueta1 * deta1 * conj(veta1)' * veta * (deta \ ueta'))
@@ -197,9 +197,9 @@ function gensysct(F::LinearAlgebra.Schur, c::Array{Float64}, Ψ::Matrix{Float64}
                   check_existence::Bool = true, check_uniqueness::Bool = true, ϵ::Float64 = sqrt(eps()) * 10,
                   div::Float64 = -1.0)
     eu = [0, 0]
-    U, T = F[:Z], F[:T]        # U is unitary matrix, T is Schur matrix
+    U, T = F.Z, F.T        # U is unitary matrix, T is Schur matrix
     n = size(U, 1)
-    g_eigs = real(F[:values]) # Get real eigenvalues
+    g_eigs = real(F.values) # Get real eigenvalues
     stable_eigs = g_eigs .<= 0 # stable eigenvalues
     nunstab = n - sum(stable_eigs)  # Unstable eigenvalues
     if div > -1
@@ -217,7 +217,7 @@ function gensysct(F::LinearAlgebra.Schur, c::Array{Float64}, Ψ::Matrix{Float64}
         nunstab = div
     else
         FS = ordschur!(F, stable_eigs)
-        U, T = FS[:Z], FS[:T]
+        U, T = FS.Z, FS.T
     end
 
     U1 = U[:, 1:(n - nunstab)]'
@@ -232,7 +232,7 @@ function gensysct(F::LinearAlgebra.Schur, c::Array{Float64}, Ψ::Matrix{Float64}
         if isempty(bigev)
             eu[1] = 1
         else
-            eu[1] = vecnorm(uz- A_mul_Bc(ueta, ueta) * uz, 2) < ϵ * n
+            eu[1] = norm(uz- (ueta * adjoint(ueta)) * uz, 2) < ϵ * n
         end
 
         if (eu[1] == 0 && (div == -1))
@@ -251,11 +251,12 @@ function gensysct(F::LinearAlgebra.Schur, c::Array{Float64}, Ψ::Matrix{Float64}
         if isempty(veta1)
             eu[2] = 1
         else
-            eu[2] = Int64(vecnorm(veta1 - A_mul_Bc(veta, veta) * veta1, 2) < ϵ * n)
+            eu[2] = Int64(norm(veta1 - (veta * adjoint(veta)) * veta1, 2) < ϵ * n)
         end
     end
-
-    G1 = real(U * T * spdiagm([ones(n - nunstab); zeros(nunstab)], 0, n, n) * U')
+    I, J, V = SparseArrays.spdiagm_internal(0 => [ones(n - nunstab); zeros(nunstab)])
+    diag_m = sparse(I, J, V, n, n)
+    G1 = real(U * T * diag_m * U')#spdiagm([ones(n - nunstab); zeros(nunstab)], 0, n, n) * U')
     F = U1[:, 1:nunstab]' * inv(U1[:, nunstab + 1:end]')
     impact = [F * Ψ[nunstab + 1:end, :]; Ψ[nunstab + 1:end, :]]
     C = real(U * c) .* ones(size(U, 1), 1)
@@ -264,7 +265,7 @@ function gensysct(F::LinearAlgebra.Schur, c::Array{Float64}, Ψ::Matrix{Float64}
 end
 
 function new_divct(F::LinearAlgebra.GeneralizedSchur; ϵ::Float64 = sqrt(eps()) * 10)
-    a, b = F[:S], F[:T]
+    a, b = F.S, F.T
     n = size(a, 1)
     div = 0.001
     for i in 1:n
@@ -279,11 +280,11 @@ function new_divct(F::LinearAlgebra.GeneralizedSchur; ϵ::Float64 = sqrt(eps()) 
 end
 
 function decomposition_svdct!(A; ϵ::Float64 = sqrt(eps()) * 10)
-    Asvd = svdfact!(A)
-    bigev = find(Asvd[:S] .> ϵ)
-    Au = Asvd[:U][:, bigev]
-    Ad = diagm(Asvd[:S][bigev])
-    Av = Asvd[:V][:, bigev]
+    Asvd = svd!(A)
+    bigev = findall(Asvd.S .> ϵ)
+    Au = Asvd.U[:, bigev]
+    Ad = diagm(0 => Asvd.S[bigev])
+    Av = Asvd.V[:, bigev]
     return bigev, Au, Ad, Av
 end
 
@@ -293,8 +294,8 @@ function gensysct(Γ0::SparseMatrixCSC{Float64,Int64}, Γ1::SparseMatrixCSC{Floa
                   Π::SparseMatrixCSC{Float64,Int64};
                   check_existence::Bool = true, check_uniqueness::Bool = true, ϵ::Float64 = sqrt(eps()) * 10,
                   div::Float64 = -1.0, complex_decomposition::Bool = false)
-    F = complex_decomposition ? schurfact(complex(full(Γ0)), complex(ful(Γ1))) : schurfact(real(full(Γ0)), real(full(Γ1)))
-    gensysct(F, full(c), full(Ψ), full(Π); check_existence = check_existence,
+    F = complex_decomposition ? schurfact(complex(Matrix{Float64}(Γ0)), complex(Matrix{Float64}(Γ1))) : schurfact(real(Matrix{Float64}(Γ0)), real(Matrix{Float64}(Γ1)))
+    gensysct(F, Matrix{Float64}(c), Matrix{Float64}(Ψ), Matrix{Float64}(Π); check_existence = check_existence,
              check_uniqueness = check_uniqueness, ϵ = ϵ, div = div)
 end
 
@@ -303,8 +304,8 @@ function gensysct!(Γ0::SparseMatrixCSC{Float64,Int64}, Γ1::SparseMatrixCSC{Flo
                    Π::SparseMatrixCSC{Float64,Int64};
                   check_existence::Bool = true, check_uniqueness::Bool = true, ϵ::Float64 = sqrt(eps()) * 10,
                   div::Float64 = -1.0, complex_decomposition::Bool = false)
-    F = complex_decomposition ? schurfact!(complex(full(Γ0)), complex(full(Γ1))) : schurfact!(real(full(Γ0)), real(full(Γ1)))
-    gensysct(F, full(c), full(Ψ), full(Π); check_existence = check_existence,
+    F = complex_decomposition ? schur!(complex(Matrix{Float64}(Γ0)), complex(Matrix{Float64}(Γ1))) : schur!(real(Matrix{Float64}(Γ0)), real(Matrix{Float64}(Γ1)))
+    gensysct(F, Matrix{Float64}(c), Matrix{Float64}(Ψ), Matrix{Float64}(Π); check_existence = check_existence,
              check_uniqueness = check_uniqueness, ϵ = ϵ, div = div)
 end
 
@@ -313,8 +314,8 @@ function gensysct(Γ1::SparseMatrixCSC{Float64,Int64}, c::SparseMatrixCSC{Float6
                   check_existence::Bool = true, check_uniqueness::Bool = true, ϵ::Float64 = sqrt(eps()) * 10,
                   div::Float64 = -1.0, complex_decomposition::Bool = false)
     # Assumes that Γ0 is the identity
-    F = complex_decomposition ? schurfact(complex(full(Γ1))) : schurfact(real(full(Γ1)))
-    gensysct(F, full(c), full(Ψ), full(Π); check_existence = check_existence,
+    F = complex_decomposition ? schurfact(complex(Matrix{Float64}(Γ1))) : schurfact(real(Matrix{Float64}(Γ1)))
+    gensysct(F, Matrix{Float64}(c), Matrix{Float64}(Ψ), Matrix{Float64}(Π); check_existence = check_existence,
              check_uniqueness = check_uniqueness, ϵ = ϵ, div = div)
 end
 
@@ -323,7 +324,7 @@ function gensysct!(Γ1::SparseMatrixCSC{Float64,Int64}, c::SparseMatrixCSC{Float
                   check_existence::Bool = true, check_uniqueness::Bool = true, ϵ::Float64 = sqrt(eps()) * 10,
                   div::Float64 = -1.0, complex_decomposition::Bool = false)
     # Assumes that Γ0 is the identity
-    F = complex_decomposition ? schurfact!(complex(full(Γ1))) : schurfact!(real(full(Γ1)))
-    gensysct(F, full(c), full(Ψ), full(Π); check_existence = check_existence,
+    F = complex_decomposition ? schur!(complex(Matrix{Float64}(Γ1))) : schur!(real(Matrix{Float64}(Γ1)))
+    gensysct(F, Matrix{Float64}(c), Matrix{Float64}(Ψ), Matrix{Float64}(Π); check_existence = check_existence,
              check_uniqueness = check_uniqueness, ϵ = ϵ, div = div)
 end

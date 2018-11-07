@@ -15,7 +15,7 @@ function Grid(quadrature::Function,
               lower_bound::T, upper_bound::T,
               n_points::Int; scale::Float64 = 1.) where {T<:Real}
     grid, weights = quadrature(lower_bound, upper_bound, n_points)
-    Grid(grid, weights, scale)
+    Grid(reshape(grid, size(grid)[1]), weights, scale)
 end
 
 ####################
@@ -26,7 +26,7 @@ end
 # Lower bound, upper bound, and number of points
 function uniform_quadrature(lower_bound::T, upper_bound::T, n_points::Int;
                             scale::T = 1) where {T<:Real}
-    grid = collect(range(lower_bound, upper_bound, n_points))
+    grid = collect(range(lower_bound, step=upper_bound, length=n_points))
     weights = fill(scale/n_points, n_points)
     return grid, weights
 end
@@ -41,7 +41,7 @@ end
 function curtis_clenshaw_quadrature(lower_bound::T, upper_bound::T,
                                     n_points::Int; kind::Int = 2) where {T<:Real}
     grid, weights = chebpts(n_points, lower_bound, upper_bound, kind)
-    return grid', squeeze(weights', 2)
+    return grid', dropdims(weights', dims=2)
 end
 
 function curtis_clenshaw_quadrature(kind::Int = 2)

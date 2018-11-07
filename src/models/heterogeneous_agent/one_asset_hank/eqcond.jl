@@ -30,7 +30,7 @@ function eqcond(m::OneAssetHANK)
     I, J              = size(zz)
     amax              = get_setting(m, :amax)
     amin              = get_setting(m, :amin)
-    aa                = repmat(a, 1, J)
+    aa                = repeat(a, 1, J)
     A_switch          = kron(ymarkov_combined, speye(Float64, I))
     daf, dab, azdelta = initialize_diff_grids(a, I, J)
 
@@ -185,7 +185,7 @@ function eqcond(m::OneAssetHANK)
                                                 inflation_dot - inflation_error))
 
         g_azdelta            = vec(g) .* vec(azdelta)
-        g_intermediate       = spdiagm(1 ./ azdelta, 0) * A' * g_azdelta
+        g_intermediate       = spdiagm(0 => 1 ./ azdelta) * A' * g_azdelta
         g_residual           = g_dot - g_intermediate[1:end-1]
 
         mp_residual          = mp_dot - (-θ_MP * MP + σ_MP * mp_shock)

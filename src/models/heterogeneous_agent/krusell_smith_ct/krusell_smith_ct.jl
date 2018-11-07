@@ -1,6 +1,6 @@
 """
 ```
-KrusellSmithCT{T} <: AbstractModel{T}
+KrusellSmithCT{T} <: AbstractCTModel{T}
 ```
 
 The `KrusellSmithCT` mutable struct defines the structure of the Krusell Smith (1998) model
@@ -88,7 +88,7 @@ mutable struct KrusellSmithCT{T} <: AbstractCTModel{T}
     keys::OrderedDict{Symbol,Int}                           # human-readable names for all the model
                                                             # parameters and steady-states
 
-    endogenous_states::OrderedDict{Symbol,Vector{Int}}      # these fields used to create matrices in the
+    endogenous_states::OrderedDict{Symbol,Vector{Int}}      # these fields are used to create matrices in the
     exogenous_shocks::OrderedDict{Symbol,Int}               # measurement and equilibrium condition equations.
     expected_shocks::OrderedDict{Symbol,Vector{Int}}        #
     equilibrium_conditions::OrderedDict{Symbol,Vector{Int}} #
@@ -302,9 +302,9 @@ function init_parameters!(m::KrusellSmithCT)
                    tex_label="\\tau")
 
     # Steady state parameters
-    m <= SteadyStateParameterArray(:V_ss, Vector{Float64}(0); description =
+    m <= SteadyStateParameterArray(:V_ss, Vector{Float64}(undef, 0); description =
                                    "Stacked steady-state value function")
-    m <= SteadyStateParameterArray(:gg_ss, Vector{Float64}(0); description =
+    m <= SteadyStateParameterArray(:gg_ss, Vector{Float64}(undef, 0); description =
                                    "Stacked steady-state distribution across state space")
     m <= SteadyStateParameter(:log_aggregate_tfp_ss, NaN, description =
                               "Steady-state level of aggregate shocks")
@@ -314,11 +314,11 @@ function init_parameters!(m::KrusellSmithCT)
     m <= SteadyStateParameter(:Y_ss, NaN, description = "Steady-state output level")
     m <= SteadyStateParameter(:C_ss, NaN, description = "Steady-state consumption level")
     m <= SteadyStateParameter(:I_ss, NaN, description = "Steady-state investment level")
-    m <= SteadyStateParameterArray(:If_ss, Matrix{Float64}(0, 0); description =
+    m <= SteadyStateParameterArray(:If_ss, Matrix{Float64}(undef, 0, 0); description =
                                    "Steady-state forward difference upwind scheme")
-    m <= SteadyStateParameterArray(:Ib_ss, Matrix{Float64}(0, 0); description =
+    m <= SteadyStateParameterArray(:Ib_ss, Matrix{Float64}(undef, 0, 0); description =
                                    "Steady-state backward difference upwind scheme")
-    m <= SteadyStateParameterArray(:I0_ss, Matrix{Float64}(0, 0); description =
+    m <= SteadyStateParameterArray(:I0_ss, Matrix{Float64}(undef, 0, 0); description =
                                    "Steady-state no drift upwind scheme")
 end
 
@@ -354,11 +354,10 @@ function steadystate!(m::KrusellSmithCT)
     z_avg::Float64       = (m[:λ1].value * z[2] + m[:λ2].value * z[1]) / (m[:λ1].value + m[:λ2].value)
     aa::Array{Float64,2} = get_setting(m, :aa)
     zz::Array{Float64,2} = get_setting(m, :zz)
-    A_switch::SparseMatrixCSC{Float64,Int64} = [-speye(Float64, I) * Float64(m[:λ1].value) speye(Float64,I) *
-                                                Float64(m[:λ1].value); speye(Float64,I) *
-                                                Float64(m[:λ2].value) -speye(Float64,I) * Float64(m[:λ2].value)]
+
     # A_switch * v = lambda_z * (v(a, z') - v(a, z)) in Eqn 8 of Why Inequality Matters
     # basically captures the expected change in value function due to jumps in z
+    A_switch = [-SparseMatrixCSC{Float64}(LinearAlgebra.I, I, I) * m[:λ1].value SparseMatrixCSC{Float64}(LinearAlgebra.I, I, I) * m[:λ1].value; SparseMatrixCSC{Float64}(LinearAlgebra.I, I, I) * m[:λ2].value -SparseMatrixCSC{Float64}(LinearAlgebra.I, I, I) * m[:λ2].value]
 
     # Read in initial rates
     r0::Float64   = get_setting(m, :r0)
@@ -384,8 +383,8 @@ function steadystate!(m::KrusellSmithCT)
     KD::Float64 = (((α) / (r + δ)) ^ (1 / (1 - α))) * z_avg # capital demand
     w::Float64  = (1 - α) * (KD ^ α) * ((z_avg) ^ (-α))     # wage rate
     v0::Array{Float64,2} = similar(dVf)                     # initial value function guess
-    v0[:, 1] = (w * μ * (1 - z[1]) + r.*a) .^ (1 - γ)/(1 - γ)/ρ # add guesses
-    v0[:, 2] = (w * (1 - τ) * z[2] + r.*a) .^ (1 - γ)/(1 - γ)/ρ
+    v0[:, 1] = (w * μ * (1 - z[1]) .+ r .* a) .^ (1 - γ)/(1 - γ)/ρ # add guesses
+    v0[:, 2] = (w * (1 - τ) * z[2] .+ r .* a) .^ (1 - γ)/(1 - γ)/ρ
 
     If::Array{Float64,2} = similar(dVf) # 1 if forward difference, 0 if not
     Ib::Array{Float64,2} = similar(dVf) # 1 if backward difference, 0 if not
@@ -407,29 +406,29 @@ function steadystate!(m::KrusellSmithCT)
 
             # Compute forward difference
             dVf[1:I - 1, :] = (V[2:I, :] - V[1:(I - 1), :])/da
-            dVf[I, :] = (w * ((1 - τ) * z + μ * (1 - z)) + r.*amax).^(-γ)
+            dVf[I, :] = (w * ((1 - τ) * z .+ μ * (1 .- z)) .+ r .* amax).^(-γ)
 
             # Compute backward difference
             dVb[2:I, :] = (V[2:I, :] - V[1:(I - 1), :])/da
-            dVb[1, :] = (w * ((1 - τ) * z + μ * (1 - z)) + r.*amin).^(-γ)
+            dVb[1, :] = (w * ((1 - τ) * z .+ μ * (1 .- z)) .+ r .* amin).^(-γ)
 
             # Compute consumption and savings with forward difference
             cf  = dVf.^(-1/γ)
-            ssf = w*((1 - τ) * zz + μ * (1 - zz)) + r.*aa - cf
+            ssf = w*((1 - τ) * zz + μ * (1 .- zz)) + r .* aa - cf
 
             # Compute consumption and savings with backward difference
             cb = dVb.^(-1/γ)
-            ssb = w*((1 - τ) * zz + μ * (1 - zz)) + r.*aa - cb
+            ssb = w*((1 - τ) * zz + μ * (1 .- zz)) + r .* aa - cb
 
             # Compute consumption and derivative of value function for no drift
-            c0::Array{Float64,2}  = w*((1 - τ) * zz + μ * (1 - zz)) + r.*aa
+            c0::Array{Float64,2}  = w*((1 - τ) * zz .+ μ * (1 .- zz)) + r.*aa
             dV0::Array{Float64,2} = c0.^(-γ)
 
             # Compute upwind differences and matrix
             dV_upwind, If, Ib, I0 = upwind_value_function(dVf, dVb, dV0, ssf, ssb)
             c = dV_upwind .^ (-1 / γ)
             u = c .^ (1 - γ) / (1 - γ)
-            savingsSS = w * ((1 - τ) * zz + μ * (1 - zz)) + r.*aa - c
+            savingsSS = w * ((1 - τ) * zz + μ * (1 .- zz)) + r .* aa .- c
 
             # Create A matrix and solve for hjb
             A = upwind_matrix(A_switch, ssf, ssb, da, I, J)
@@ -493,7 +492,7 @@ function model_settings!(m::KrusellSmithCT)
     m <= Setting(:I, 100, "Dimension of wealth grid")
     m <= Setting(:amin, 0., "Minimium wealth")
     m <= Setting(:amax, 100., "Maximum wealth")
-    m <= Setting(:a, collect(linspace(0., 100., 100)), "Wealth grid")
+    m <= Setting(:a, collect(range(0., stop=100., length=100)), "Wealth grid")
     m <= Setting(:da, 100. / (100 - 1), "Size of partitions in wealth grid")
     m <= Setting(:aa, [get_setting(m, :a) get_setting(m, :a)],
                  "Repetition of wealth grid across income grid dimension")
@@ -530,15 +529,16 @@ function model_settings!(m::KrusellSmithCT)
     m <= Setting(:c_power, 7, "Amount of bending of knot point locations to make them nonuniform")
 
     # Create knot points for spline reductoin
-    knots = collect(linspace(get_setting(m, :amin), get_setting(m, :amax), get_setting(m, :n_knots) - 1))
+    knots = collect(range(get_setting(m, :amin),
+                          stop=get_setting(m, :amax), length=get_setting(m, :n_knots) .- 1))
     knots = (get_setting(m, :amax) - get_setting(m, :amin))/(2^get_setting(m, :c_power) - 1) *
-        ((knots - get_setting(m, :amin)) / (get_setting(m, :amax) - get_setting(m, :amin)) + 1) .^
-        get_setting(m, :c_power) + get_setting(m, :amin) - (get_setting(m, :amax) -
+        ((knots .- get_setting(m, :amin)) / (get_setting(m, :amax) .- get_setting(m, :amin)) .+ 1) .^
+        get_setting(m, :c_power) .+ get_setting(m, :amin) .- (get_setting(m, :amax) .-
                                    get_setting(m, :amin))/(2^get_setting(m, :c_power) - 1)
 
     # Reduction continued
-    m <= Setting(:knots_dict, Dict(1 => collect(linspace(get_setting(m, :amin),
-                                   get_setting(m, :amax), 12 - 1))),
+    m <= Setting(:knots_dict, Dict(1 => collect(range(get_setting(m, :amin),
+                                   stop=get_setting(m, :amax), length=(12 - 1)))),
                  "Location of knot points for each dimension for value function reduction")
     m <= Setting(:spline_grid, get_setting(m, :a), "Grids for spline basis")
     m <= Setting(:n_prior, 1,

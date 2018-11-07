@@ -500,8 +500,8 @@ function which_density_bands(mb::MeansBands; uniquify=false, ordered=true)
         strs = map(string,names(mb.bands[var]))
         strs = setdiff(strs, ["date"])
 
-        lowers = strs[map(occursin, repmat([r"LB"], length(strs)), strs)]
-        uppers = strs[map(occursin, repmat([r"UB"], length(strs)), strs)]
+        lowers = strs[map(occursin, repeat([r"LB"], length(strs)), strs)]
+        uppers = strs[map(occursin, repeat([r"UB"], length(strs)), strs)]
 
         # sort
         if ordered
