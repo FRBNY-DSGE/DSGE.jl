@@ -9,6 +9,7 @@ DataStructures
 DifferentialEquations
 Distributions
 FileIO
+FFTW
 ForwardDiff
 FredData
 HDF5

@@ -135,8 +135,9 @@ function valuef_reduction(m::AbstractModel,
 # Look up the algorithm for this method.
 function deflated_block_arnoldi(A::Function, B::Matrix{Float64}, m::Int64)
 
-    Q, ~ = qr(B)
-    basis = Matrix{Float64}(size(Q,1), 0)
+    F = qr(B)
+    Q = Matrix{Float64}(F.Q)
+    basis = Matrix{Float64}(undef, size(Q,1), 0)
     realsmall = sqrt(eps())
 
     if m == 1
@@ -151,7 +152,7 @@ function deflated_block_arnoldi(A::Function, B::Matrix{Float64}, m::Int64)
             end
 
             # Check for potential deflation
-            Q = Matrix{Float64}(size(Q,1), 0)
+            Q = Matrix{Float64}(undef, size(Q,1), 0)
             for j in 1:size(aux,2)
                 weight = sqrt(sum(aux[:,j].^2))
                 if weight > realsmall
@@ -166,12 +167,10 @@ function deflated_block_arnoldi(A::Function, B::Matrix{Float64}, m::Int64)
             for j in 1:size(basis,2)
                 Q -= basis[:,j] .* basis[:,j]' * Q
             end
-            Q = Q ./ sqrt.(sum(Q.^2,1))
+            Q = Q ./ sqrt.(sum(Q.^2, dims=1))
         end
     end
-
-    err = qr(A(Q) - basis * basis' * A(Q))[2]::Matrix{Float64}
-
+    err = qr(A(Q) - basis * basis' * A(Q)).R::Matrix{Float64}
     return basis, Q, err
 end
 
@@ -244,7 +243,7 @@ function spline_basis(x::Array{Float64}, knots::Dict{Int64,Vector{Float64}}, deg
     # the coefficient vector of knot points to the coefficient vector of the provided
     # state space array x, i.e. S*knots = x, where S is the spline basis matrix.
     from_knots = BasisMatrix(basis, Expanded(), x, 0).vals[1]
-    to_knots = full(from_knots'*from_knots) \ full(from_knots')
+    to_knots = Matrix{Float64}(from_knots'*from_knots) \ Matrix{Float64}(from_knots')
     return from_knots, sparse(to_knots)
 end
 
@@ -276,8 +275,10 @@ end
 #    to_approx = basis change from large number of points to small
 function extend_to_nd(from_small::SparseMatrixCSC{Float64,Int64}, to_small::SparseMatrixCSC{Float64,Int64},
                       n_prior::Int64, n_post::Int64)
-    from_approx = kron(kron(speye(n_post), from_small), speye(n_prior))
-    to_approx = kron(kron(speye(n_post), to_small), speye(n_prior))
+    from_approx = kron(kron(SparseMatrixCSC{Float64}(I, n_post, n_post), from_small),
+                       SparseMatrixCSC{Float64}(I, n_prior, n_prior))
+    to_approx = kron(kron(SparseMatrixCSC{Float64}(I, n_post, n_post), to_small),
+                     SparseMatrixCSC{Float64}(I, n_prior, n_prior))
     return from_approx, to_approx
 end
 
@@ -298,8 +299,8 @@ function projection_for_subset(from_small::SparseMatrixCSC{Float64,Int64},
                                n_pre::Int64, n_post::Int64)
 
     n_full, n_red = size(from_small)
-    from_approx = spdiagm(ones(n_red+n_pre), 0, n_full + n_pre, n_pre + n_red)
-    to_approx = spdiagm(ones(n_red+n_pre), 0, n_pre + n_red, n_full + n_pre)
+    I, J, V = SparseArrays.spdiagm_internal(0 => ones(n_red+n_pre)); from_approx = sparse(I, J, V, n_full + n_pre, n_pre + n_red)
+    I, J, V = SparseArrays.spdiagm_internal(0 => ones(n_red+n_pre)); to_approx = sparse(I, J, V, n_pre + n_red, n_full + n_pre)
     from_approx[1+n_pre:n_pre+n_full, n_pre+1:n_pre+n_red] = from_small
     to_approx[n_pre+1:n_pre+n_red, n_pre+1:n_pre+n_full] = to_small
 

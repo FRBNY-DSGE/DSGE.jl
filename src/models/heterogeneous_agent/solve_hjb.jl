@@ -9,7 +9,7 @@ function upwind_value_function(dVf::Matrix{T}, dVb::Matrix{T}, dV0::Matrix{T},
                                sf::Matrix{T}, sb::Matrix{T}) where {T<:Number}
     If = sf .> 0 # positive drift -> forward diff
     Ib = sb .< 0 # negative drift -> backward dift
-    I0 = (1 - If - Ib)
+    I0 = (1 .- If .- Ib)
     V  =  dVf .* If + dVb .* Ib + dV0 .* I0 # Compute upwinded value function difference matrix
     return V, If, Ib, I0
 end
@@ -144,12 +144,12 @@ function upwind_matrix(A_switch::SparseMatrixCSC{R, Int64},
         # use min/max b/c assumes we set I0 entries to 1 only if sf/sb exactly zero
         X = -min.(sb, 0) / diff
         Y = -max.(sf, 0) / diff + min.(sb, 0) / diff
-        Z = max.(sf, 0) / diff
+        Z =  max.(sf, 0) / diff
     else
         # Need to multiply with Ib, If to be consistent with how we set the entries of I0
         X = -Ib .* sb ./ diff
         Y = -If .* sf ./ diff + Ib .* sb ./ diff
-        Z = If .* sf ./ diff
+        Z =  If .* sf ./ diff
     end
     total_dims = wealth_dim * other_dims
     centdiag = vec(Y)
@@ -164,10 +164,7 @@ function upwind_matrix(A_switch::SparseMatrixCSC{R, Int64},
         end
     end
 
-    AA = spdiagm(centdiag, 0, total_dims, total_dims) +
-        spdiagm(updiag, 1, total_dims, total_dims) +
-        spdiagm(lowdiag, -1, total_dims, total_dims)
-
+    AA = SparseArrays.spdiagm(0 => centdiag, 1 => updiag, -1 => lowdiag)
     A = AA + A_switch
     return A
 end
@@ -187,7 +184,7 @@ end
 
 function solve_hjb(A::SparseMatrixCSC{R, Int64}, ρ::S,
                    Δ_HJB::S, u::Vector{T}, V::Vector{T}) where {R<:Number, S<:Number, T<:Number}
-    B = (1/Δ_HJB + ρ) * speye(size(A, 1)) - A
+    B = (1/Δ_HJB + ρ) * SparseMatrixCSC(I, size(A, 1), size(A, 1)) - A
     b = u + V / Δ_HJB
     return vec(B \ b)
 end

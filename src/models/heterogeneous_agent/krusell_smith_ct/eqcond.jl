@@ -62,7 +62,7 @@ function eqcond(m::KrusellSmithCT)
     C_ss  = m[:C_ss].value
     I_ss  = m[:I_ss].value
 
-    A_switch = [-speye(I) * λ1 speye(I) * λ1; speye(I) * λ2 -speye(I) * λ2]
+    A_switch = [-SparseMatrixCSC{Float64}(LinearAlgebra.I, I, I) * λ1 SparseMatrixCSC{Float64}(LinearAlgebra.I, I, I) * λ1; SparseMatrixCSC{Float64}(LinearAlgebra.I, I, I) * λ2 -SparseMatrixCSC{Float64}(LinearAlgebra.I, I, I) * λ2]
 
     function get_residuals(x::Vector{T}) where {T<:Real}
 
@@ -104,7 +104,7 @@ function eqcond(m::KrusellSmithCT)
         #----------------------------------------------------------------
         # Compute one iteration of HJB Equation
         #----------------------------------------------------------------
-        c0 = w * ((1 - τ) * zz + μ * (1 - zz)) + r * aa
+        c0 = w * ((1 - τ) * zz + μ * (1 .- zz)) + r * aa
 
         for j=1:J, i=1:I
             # Compute consumption and derivative of value function for no drift
@@ -144,7 +144,7 @@ function eqcond(m::KrusellSmithCT)
             end
         end
 
-        A = spdiagm((reshape(Y,IJ),reshape(X,IJ)[2:IJ],reshape(Z,IJ)[1:IJ-1]),(0,-1,1),IJ,IJ) + A_switch
+        A = spdiagm(0 => reshape(Y,IJ), -1 => reshape(X,IJ)[2:IJ], 1 => reshape(Z,IJ)[1:IJ-1]) + A_switch
 
         #----------------------------------------------------------------
         # Compute residuals of equilibrium conditions

@@ -24,14 +24,14 @@ function solve(m::AbstractCTModel; sparse_mat::Bool = true, check_Γ0::Bool = tr
     if check_Γ0
         try
             n_total = get_setting(m, :n_jump_vars) + get_setting(m, :n_state_vars)
-            @assert eye(n_total) ≈ Γ0[1:n_total, 1:n_total]
+            @assert Matrix{Float64}(I, n_total, n_total) ≈ Γ0[1:n_total, 1:n_total]
         catch
             Γ0, Γ1, Ψ, Π, C, basis_redundant, inv_basis_redundant = solve_static_conditions(Γ0, Γ1, Ψ, Π, C)
         end
     end
-    if !isdefined(:inv_basis_redundant)
-        inv_basis_redundant = speye(size(Γ0,1))
-        basis_redundant = speye(size(Γ0,1))
+    if !(@isdefined inv_basis_redundant)
+        inv_basis_redundant = SparseMatrixCSC{Float64}(I, size(Γ0,1), size(Γ0,1))
+        basis_redundant = SparseMatrixCSC{Float64}(I, size(Γ0,1), size(Γ0,1))
     end
 
     if sparse_mat
@@ -62,7 +62,9 @@ function solve(m::AbstractCTModel; sparse_mat::Bool = true, check_Γ0::Bool = tr
     end
 
     # Solve LRE model
-    TTT_gensys, CCC_gensys, RRR_gensys, ~, ~, eu = gensysct!(full(Γ1), full(C), full(Ψ), full(Π), complex_decomposition = complex_decomp)
+    TTT_gensys, CCC_gensys, RRR_gensys, ~, ~, eu = gensysct!(Matrix{Float64}(Γ1), Matrix{Float64}(C),
+                                                             Matrix{Float64}(Ψ), Matrix{Float64}(Π),
+                                                             complex_decomposition = complex_decomp)
 
     # Check for LAPACK exception, existence and uniqueness
     if eu[1] != 1 || eu[2] != 1

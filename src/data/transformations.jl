@@ -638,7 +638,7 @@ function prepend_data(y::AbstractArray, data::AbstractVector)
         y_extended = vcat(data, y)
     else
         ndraws = size(y, 1)
-        datas  = repmat(data', ndraws, 1)
+        datas  = repeat(data', ndraws, 1)
         y_extended = hcat(datas, y)
     end
 

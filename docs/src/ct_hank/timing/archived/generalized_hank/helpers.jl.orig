@@ -79,15 +79,15 @@ function initialize_diff_grids(zz::Matrix{Float64}, a::Vector{Float64})
     dab = similar(a) # backward difference for a
     adelta = similar(a) # size of differences
 
-    aa = repmat(a, 1, J)
+    aa = repeat(a, 1, J)
 
     daf[1:end-1]    = a[2:end] - a[1:end-1]
     daf[end]        = a[end] - a[end-1]
     dab[1]          = a[2] - a[1]
     dab[2:end]      = a[2:end] - a[1:end-1]
 
-    dazf = repmat(daf, 1, J)
-    dazb = repmat(dab, 1, J)
+    dazf = repeat(daf, 1, J)
+    dazb = repeat(dab, 1, J)
 
     # Create a grid of lengths of overlapping intervals in a dimension.
     # The purpose is generally to compute Riemann integrals
@@ -100,7 +100,7 @@ function initialize_diff_grids(zz::Matrix{Float64}, a::Vector{Float64})
     adelta[end] = 0.5 * daf[end-1]
 
     # azdelta is like aa/zz/dazf: repeats adelta across J columns
-    azdelta = repmat(adelta, 1, J)
+    azdelta = repeat(adelta, 1, J)
 
     # Convert into a sparse matrix
     azdelta_mat = spdiagm(vec(azdelta), 0)

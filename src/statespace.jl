@@ -126,11 +126,11 @@ end
 function Base.getindex(system::System, d::Symbol)
     if d in (:transition, :measurement, :pseudo_measurement)
         return getfield(system, d)
-    elseif d in fieldnames(system.transition)
+    elseif d in fieldnames(typeof(system.transition))
         return getfield(system.transition, d)
-    elseif d in fieldnames(system.measurement)
+    elseif d in fieldnames(typeof(system.measurement))
         return getfield(system.measurement, d)
-    elseif d in fieldnames(system.pseudo_measurement)
+    elseif d in fieldnames(typeof(system.pseudo_measurement))
         return getfield(system.pseudo_measurement, d)
     else
         throw(KeyError(d))
@@ -162,7 +162,7 @@ function compute_system(m::AbstractModel{T}; apply_altpolicy = false,
     measurement_equation = measurement(m, TTT, RRR, CCC)
 
     type_tuple = (typeof(m), Matrix{T}, Matrix{T}, Vector{T})
-    if method_exists(pseudo_measurement, type_tuple)
+    if hasmethod(pseudo_measurement, type_tuple)
         # Solve pseudo-measurement equation
         pseudo_measurement_equation = pseudo_measurement(m, TTT, RRR, CCC)
         return System(transition_equation, measurement_equation, pseudo_measurement_equation)

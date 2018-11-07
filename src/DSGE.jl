@@ -2,7 +2,7 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
     using BasisMatrices, BenchmarkTools, CSV, DataFrames, Dates
-    using Distributed, Distributions, FileIO, ForwardDiff, FredData, HDF5, JLD
+    using Distributed, Distributions, FFTW, FileIO, ForwardDiff, FredData, HDF5, JLD
     using LinearAlgebra, Nullables, Optim, Printf, Random, RecipesBase
     using SparseArrays, SpecialFunctions, StateSpaceRoutines, StatPlots, Test
     using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
@@ -11,9 +11,10 @@ module DSGE
     using Roots: fzero, ConvergenceFailed
     using StatsBase: sample
     using StatsFuns: chisqinvcdf
-    import Calculus, Missings, Nullables, Base.<
+    import Calculus, Missings, Nullables, Base.<, Base.min, Base.max
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
     import StateSpaceRoutines: KalmanFilter
+    import SparseArrays: sparse
     export
 
         # distributions_ext.jl
@@ -150,7 +151,7 @@ module DSGE
         ct_block_kalman_filter, ct_kalman_filter, forecast!,
 
         # util
-        @test_matrix_approx_eq, @test_matrix_approx_eq_eps
+        @test_matrix_approx_eq, @test_matrix_approx_eq_eps, speye, min, max
 
     const VERBOSITY = Dict(:none => 0, :low => 1, :high => 2)
     const DSGE_DATE_FORMAT = "yymmdd"

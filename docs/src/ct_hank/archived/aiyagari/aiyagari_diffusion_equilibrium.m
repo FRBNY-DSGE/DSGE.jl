@@ -67,20 +67,20 @@ zeta = mu/dz + s2/(2*dz2);
 %This will be the upperdiagonal of the matrix Aswitch
 updiag=zeros(I,1); %This is necessary because of the peculiar way spdiags is defined.
 for j=1:J
-    updiag=[updiag;repmat(zeta(j),I,1)];
+    updiag=[updiag;repeat(zeta(j),I,1)];
 end
 
 %This will be the center diagonal of the matrix Aswitch
-centdiag=repmat(chi(1)+yy(1),I,1);
+centdiag=repeat(chi(1)+yy(1),I,1);
 for j=2:J-1
-    centdiag=[centdiag;repmat(yy(j),I,1)];
+    centdiag=[centdiag;repeat(yy(j),I,1)];
 end
-centdiag=[centdiag;repmat(yy(J)+zeta(J),I,1)];
+centdiag=[centdiag;repeat(yy(J)+zeta(J),I,1)];
 
 %This will be the lower diagonal of the matrix Aswitch
-lowdiag=repmat(chi(2),I,1);
+lowdiag=repeat(chi(2),I,1);
 for j=3:J
-    lowdiag=[lowdiag;repmat(chi(j),I,1)];
+    lowdiag=[lowdiag;repeat(chi(j),I,1)];
 end
 
 %Add up the upper, center, and lower diagonal into a sparse matrix

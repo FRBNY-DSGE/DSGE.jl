@@ -483,7 +483,7 @@ function find_density_bands(draws::Matrix, percent::T;
     ndraws, nperiods = size(draws)
 
     if ndraws == 1
-        band = repmat(draws, 2, 1)
+        band = repeat(draws, 2, 1)
         return band
     end
 

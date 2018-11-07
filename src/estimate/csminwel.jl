@@ -270,7 +270,7 @@ function csminwel(fcn::Function,
                 retcodeh = retcode3
             end
 
-            if isdefined(:gh)
+            if @isdefined gh
                 nogh = isempty(gh)
             else
                 nogh = true

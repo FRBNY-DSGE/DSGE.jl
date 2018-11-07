@@ -250,7 +250,7 @@ function read_scenario_output(m::AbstractModel, agg::ScenarioAggregate, class::S
                 else
                     quotient  = convert(Int, floor(actual_ndraws / desired_ndraws))
                     remainder = actual_ndraws % desired_ndraws
-                    vcat(repmat(1:actual_ndraws, quotient),
+                    vcat(repeat(1:actual_ndraws, quotient),
                          sample(1:actual_ndraws, remainder, replace = false))
                 end
             end

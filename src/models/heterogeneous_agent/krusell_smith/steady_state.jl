@@ -18,8 +18,8 @@
     dist::Float64            = 1.0         # distance between l_in and l_out on decision rules
     l_out::Array{Float64,1}  = copy(l_in)  # initialize l_out
 
-    ap = Array{Float64,1}(nw) # savings
-    q  = Array{Float64,2}(nw, nw * ns) # auxilary variable to compute LHS of euler
+    ap = Array{Float64,1}(undef, nw) # savings
+    q  = Array{Float64,2}(undef, nw, nw * ns) # auxilary variable to compute LHS of euler
 
     count = 1
 
@@ -78,9 +78,9 @@ function steadystate!(m::KrusellSmith, tol::Float64 = 1e-5, maxit::Int64 = 100, 
     l_in = fill(0.3, nw)        # This corresponds to l^i_t = βE_t[R_{t+1} u'(c^i_{t+1})]
                                 #                           = βE_t[R_{t+1} min(l^i_{t+1}, (w^i_{t+1}^(-1/γ))]
 
-    ap   = Array{Float64,1}(nw)
-    KF   = Array{Float64,2}(nw, nw) # The Kolmogorov Forward Equation for μ
-    μ    = Array{Float64,1}(nw)     # The cross-sectional density of cash on hand, w
+    ap   = Array{Float64,1}(undef, nw)
+    KF   = Array{Float64,2}(undef, nw, nw) # The Kolmogorov Forward Equation for μ
+    μ    = Array{Float64,1}(undef, nw)     # The cross-sectional density of cash on hand, w
     newK = 0.0
 
     diseqm = 1000.
@@ -100,7 +100,7 @@ function steadystate!(m::KrusellSmith, tol::Float64 = 1e-5, maxit::Int64 = 100, 
         # from cash on hand distribution today to cash on hand dist tomorrow
 
         # find eigenvalue closest to 1
-        D,V = eig(wgrid.weights[1] * KF)
+        D,V = eigen(wgrid.weights[1] * KF)
 
         if norm(D[1] - 1.0) > 2e-1 # that's the tolerance we are allowing
             warn("your eigenvalue is too far from 1, something is wrong")
@@ -152,7 +152,7 @@ end
 
     # truncated log normal pdf
     logn = LogNormal(mu, sig)
-    return (x - xlo.>= -eps()).*(x-xhi.<=eps()).*pdf.(logn,x)/(cdf(logn,xhi)-cdf(logn,xlo))
+    return (x .- xlo .>= -eps()) .* (x .- xhi .<= eps()) .* pdf.(logn,x) / (cdf(logn,xhi) .- cdf(logn,xlo))
 end
 
 # ω_t
@@ -195,7 +195,7 @@ end
     nw_array = nw * (0:ns-1)
     for iw = 1:nw
         for iwp = 1:nw
-            @inbounds KF[iwp, iw] = sum(q[iw, nw_array + iwp] .* g_sweights_prod)
+            @inbounds KF[iwp, iw] = sum(q[iw, nw_array .+ iwp] .* g_sweights_prod)
         end
     end
     return KF

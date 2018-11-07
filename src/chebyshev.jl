@@ -267,7 +267,7 @@ function chebpts(n,lo,hi,chebkind)
         end
     end
 
-    xr=((hi .- lo)/2)*x+(hi+lo)/2; # Rescaled to new grid
+    xr=((hi .- lo)/2) * x .+ (hi .+ lo)/2; # Rescaled to new grid
 
     xwts=((hi-lo)/2)*ccquadwts(n,chebkind); #Rescale Clenshaw Curtis Quadrature Weights
 
@@ -395,7 +395,7 @@ end
 
 # The function is a constant.
 if ( n == 1 )
-    return fx = repmat(fvals, size(x,1), 1);
+    return fx = repeat(fvals, size(x,1), 1);
 end
 
 # The function is NaN.
