@@ -20,7 +20,8 @@ function load_posterior_moments(m::AbstractModel;
                                 cloud::ParticleCloud = ParticleCloud(m, 0),
                                 load_bands::Bool = true,
                                 include_fixed::Bool = false,
-                                excl_list::Vector{Symbol} = Vector{Symbol}(0))
+                                excl_list::Vector{Symbol} = Vector{Symbol}(0),
+                                weighted::Bool = true)
     parameters = m.parameters
 
     # Read in Posterior Draws
@@ -30,6 +31,7 @@ function load_posterior_moments(m::AbstractModel;
         params = params'
     else
         params = get_vals(cloud)
+        weights = get_weights(cloud)
     end
 
     # Index out the fixed parameters
@@ -47,7 +49,7 @@ function load_posterior_moments(m::AbstractModel;
     params = params[included_indices, :]
     tex_labels = [DSGE.detexify(parameters[i].tex_label) for i in 1:length(parameters)]
 
-    load_posterior_moments(params, tex_labels, load_bands = load_bands)
+    load_posterior_moments(params, weights, tex_labels, weighted = weighted, load_bands = load_bands)
 end
 
 # Aggregating many ParticleClouds to calculate moments across
@@ -56,31 +58,40 @@ function load_posterior_moments(m::AbstractModel,
                                 clouds::Vector{ParticleCloud};
                                 load_bands::Bool = true,
                                 include_fixed::Bool = false,
-                                excl_list::Vector{Symbol} = Vector{Symbol}(0))
+                                excl_list::Vector{Symbol} = Vector{Symbol}(0),
+                                weighted::Bool = true)
     n_params = n_parameters(m)
     n_particles = length(clouds[1])
     n_clouds = length(clouds)
     all_draws = Matrix{Float64}(n_params, n_particles*n_clouds)
+    all_weights = Vector{Float64}(n_particles*n_clouds)
 
     for (i, c) in enumerate(clouds)
         all_draws[:, ((i-1)*n_particles+1):(i*n_particles)] = get_vals(c)
+        all_weights[((i-1)*n_particles+1):(i*n_particles)] = get_weights(c)
     end
 
     cloud = ParticleCloud(m, n_particles*n_clouds)
     update_draws!(cloud, all_draws)
+    update_weights!(cloud, all_weights)
 
-    load_posterior_moments(m; cloud = cloud, load_bands = load_bands, include_fixed = include_fixed, excl_list = excl_list)
+    load_posterior_moments(m; weighted = weighted, cloud = cloud, load_bands = load_bands, include_fixed = include_fixed, excl_list = excl_list)
 end
 
 # Base method
 # Assumes n_parameters x n_draws
-function load_posterior_moments(params::Matrix{Float64}, tex_labels::Vector{String}; load_bands::Bool = true)
+function load_posterior_moments(params::Matrix{Float64}, weights::Vector{Float64}, tex_labels::Vector{String}; weighted::Bool = true, load_bands::Bool = true)
     if size(params, 1) > size(params, 2)
         warn("`params` argument to load_posterior_moments seems to be oriented incorrectly.
         The argument should be n_params x n_draws. Currently, size(params) = ($(size(params, 1)), $(size(params, 2)))")
     end
-    params_mean = vec(mean(params, 2))
-    params_std  = vec(std(params, 2))
+    if weighted
+        params_mean = vec(mean(params, Weights(weights), 2))
+        params_std = vec(mean(params, Weights(weights), 2))
+    else
+        params_mean = vec(mean(params, 2))
+        params_std  = vec(std(params, 2))
+    end
 
     df = DataFrame()
     df[:param] = tex_labels
@@ -91,8 +102,8 @@ function load_posterior_moments(params::Matrix{Float64}, tex_labels::Vector{Stri
         post_lb = Vector{Float64}(length(params_mean))
         post_ub = similar(post_lb)
         for i in 1:length(params_mean)
-            post_lb[i] = quantile(params[i, :], .05)
-            post_ub[i] = quantile(params[i, :], .95)
+            post_lb[i] = quantile(params[i, :], Weights(weights), .05)
+            post_ub[i] = quantile(params[i, :], Weights(weights), .95)
         end
     end
 
