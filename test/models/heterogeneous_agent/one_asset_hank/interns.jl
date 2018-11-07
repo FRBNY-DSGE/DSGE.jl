@@ -5,7 +5,8 @@ import DataStructures: OrderedDict
 ### Model
 m = OneAssetHANK()
 # Test ouput of steadystate! has not changed
-#=out = load("reference/steadystate_output_interns.jld")
+#=
+out = load("reference/new_steadystate_output.jld2")
 @testset "steadystate!(m) output" begin
     steadystate!(m)
     N = length(m.parameters)
@@ -22,7 +23,7 @@ m = OneAssetHANK()
 end
 =#
 # Test ouput of eqcond has not changed
-out = load("reference/eqcond_output_interns.jld")
+out = load("reference/eqcond_output_interns.jld2")
 @testset "eqcond(m) output" begin
     Γ0, Γ1, Ψ, Π, C = eqcond(m)
     @test size(Γ0) == size(out["output"][1])
@@ -37,7 +38,7 @@ out = load("reference/eqcond_output_interns.jld")
 end
 
 # Test ouput of solve has not changed
-out = load("reference/solve_output_interns.jld")
+out = load("reference/solve_output_interns.jld2")
 @testset "solve(m) output" begin
     TTT, RRR, CCC, inverse_basis = solve(m)
     @test TTT           == out["TTT"]
