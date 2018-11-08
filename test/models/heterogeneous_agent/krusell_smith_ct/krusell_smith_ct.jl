@@ -60,7 +60,7 @@ update!(m.settings[:zz], Setting(:zz, ones(100, 1) * get_setting(m, :z)'))
 update!(m.settings[:zzz], Setting(:zzz, reshape(get_setting(m, :zz), 2 * 100, 1)))
 endo = m.endogenous_states
 update!(m.settings[:n_jump_vars], Setting(:n_jump_vars, length(endo[:value_function])))
-update!(m.settings[:n_state_vars], Setting(:n_state_vars, length(endo[:distribution]) + n_shocks_exogenous(m)))
+update!(m.settings[:n_state_vars], Setting(:n_state_vars, length(endo[:distribution]) .+ n_shocks_exogenous(m)))
 update!(m.settings[:n_state_vars_unreduce], Setting(:n_state_vars_unreduce, 0))
 update!(m.settings[:rmax], Setting(:rmin, .0001))
 update!(m.settings[:rmax], Setting(:rmax, m[:ρ].value))
