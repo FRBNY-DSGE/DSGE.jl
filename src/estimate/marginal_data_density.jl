@@ -76,6 +76,15 @@ function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{
 
 end
 
+function marginal_data_density(m::AbstractModel)
+    file = load(rawpath(m, "estimate", "smc_cloud.jld"))
+    cloud, w, W = file["cloud"], file["w"], file["W"]
+    w_W = w[:, 2:end] .* W[:, 1:end-1]
+
+    return sum(log.(sum(w_W, 1))) # sum across particles, take log, sum across parameters
+end
+
+
 function marginal_data_density(params::Matrix{Float64}, logpost::Vector{Float64}, free_para_inds::Vector{Int64})
     # From margdensim.m
     n_draws = size(params, 2)
