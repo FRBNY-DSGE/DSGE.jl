@@ -63,7 +63,24 @@ function load_posterior_moments(m::AbstractModel,
     n_params = n_parameters(m)
     n_particles = length(clouds[1])
     n_clouds = length(clouds)
-    all_draws = Matrix{Float64}(n_params, n_particles*n_clouds)
+    n_free_params = length(Base.filter(x -> x.fixed == false, m.parameters))
+
+    p_mean = Array{Float64}(n_free_params, n_clouds)
+    p_lb = Array{Float64}(n_free_params, n_clouds)
+    p_ub = Array{Float64}(n_free_params, n_clouds)
+
+    for (i, c) in enumerate(clouds)
+        df_i = load_posterior_moments(m; weighted = weighted, cloud = c, load_bands = load_bands, include_fixed = include_fixed, excl_list = excl_list)
+        p_mean[:, i] = df_i[:post_mean]
+        p_lb[:, i] = df_i[:post_lb]
+        p_ub[:, i] = df_i[:post_ub]
+    end
+    param = load_posterior_moments(m; cloud = clouds[1], load_bands = true, include_fixed = false)[:param]
+    df = DataFrame(param = param, post_mean = squeeze(mean(p_mean,2),2), post_std = squeeze(std(p_mean,2),2), post_lb = squeeze(mean(p_lb,2),2), post_ub = squeeze(mean(p_ub,2),2))
+
+    return df
+
+    #=all_draws = Matrix{Float64}(n_params, n_particles*n_clouds)
     all_weights = Vector{Float64}(n_particles*n_clouds)
 
     for (i, c) in enumerate(clouds)
@@ -75,7 +92,7 @@ function load_posterior_moments(m::AbstractModel,
     update_draws!(cloud, all_draws)
     update_weights!(cloud, all_weights)
 
-    load_posterior_moments(m; weighted = weighted, cloud = cloud, load_bands = load_bands, include_fixed = include_fixed, excl_list = excl_list)
+    load_posterior_moments(m; weighted = weighted, cloud = cloud, load_bands = load_bands, include_fixed = include_fixed, excl_list = excl_list)=#
 end
 
 # Base method
@@ -87,7 +104,7 @@ function load_posterior_moments(params::Matrix{Float64}, weights::Vector{Float64
     end
     if weighted
         params_mean = vec(mean(params, Weights(weights), 2))
-        params_std = vec(mean(params, Weights(weights), 2))
+        params_std = vec(std(params, Weights(weights), 2))
     else
         params_mean = vec(mean(params, 2))
         params_std  = vec(std(params, 2))
