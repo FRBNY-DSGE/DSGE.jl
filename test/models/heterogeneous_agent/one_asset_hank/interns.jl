@@ -1,5 +1,5 @@
-using DSGE, JLD2
-import Test: @test, @testset
+using DSGE, JLD2, FileIO
+import Test: @test, @testset, @test
 import DataStructures: OrderedDict
 
 ### Model
@@ -21,7 +21,7 @@ out = load("reference/new_steadystate_output.jld2")
     end
     @test m.keys == out["keys"]
 end
-=#
+
 # Test ouput of eqcond has not changed
 out = load("reference/eqcond_output_interns.jld2")
 @testset "eqcond(m) output" begin
@@ -36,13 +36,13 @@ out = load("reference/eqcond_output_interns.jld2")
     @test Π  == out["output"][4]
     @test C  == out["output"][5]
 end
-
+=#
 # Test ouput of solve has not changed
 out = load("reference/solve_output_interns.jld2")
 @testset "solve(m) output" begin
     TTT, RRR, CCC, inverse_basis = solve(m)
-    @test TTT           == out["TTT"]
-    @test RRR           == out["RRR"]
-    @test CCC           == out["CCC"]
-    @test inverse_basis == out["inverse_basis"]
+    @test TTT           ≈ out["TTT"]
+    @test RRR           ≈ out["RRR"]
+    @test CCC           ≈ out["CCC"]
+    @test inverse_basis ≈ out["inverse_basis"]
 end

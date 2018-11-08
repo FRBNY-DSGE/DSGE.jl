@@ -136,7 +136,7 @@ function valuef_reduction(m::AbstractModel,
 function deflated_block_arnoldi(A::Function, B::Matrix{Float64}, m::Int64)
 
     F = qr(B)
-    Q = Matrix{Float64}(F.Q)
+    Q = Matrix{Float64}(F.Q * Matrix{Float64}(I, size(B)))
     basis = Matrix{Float64}(undef, size(Q,1), 0)
     realsmall = sqrt(eps())
 
