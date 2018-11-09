@@ -1,4 +1,4 @@
-using DSGE, JLD2, FileIO
+using DSGE, JLD2, FileIO, Distributions, Nullables
 import Test: @test, @testset, @test
 import DataStructures: OrderedDict
 
@@ -21,26 +21,27 @@ out = load("reference/new_steadystate_output.jld2")
     end
     @test m.keys == out["keys"]
 end
+=#
 
 # Test ouput of eqcond has not changed
-out = load("reference/eqcond_output_interns.jld2")
+out = load("reference/eqcond_output.jld2")
+Γ0, Γ1, Ψ, Π, C = eqcond(m)
 @testset "eqcond(m) output" begin
-    Γ0, Γ1, Ψ, Π, C = eqcond(m)
-    @test size(Γ0) == size(out["output"][1])
-    @test size(Γ1) == size(out["output"][2])
-    @test typeof(Γ0) == typeof(out["output"][1])
-    @test typeof(Γ1) == typeof(out["output"][2])
-    @test Γ0 == out["output"][1]
-    @test Γ1 == out["output"][2]
-    @test Ψ  == out["output"][3]
-    @test Π  == out["output"][4]
-    @test C  == out["output"][5]
+    @test size(Γ0) == size(out["Γ0"])
+    @test size(Γ1) == size(out["Γ1"])
+    @test typeof(Γ0) == typeof(out["Γ0"])
+    @test typeof(Γ1) == typeof(out["Γ1"])
+    @test Γ0 == out["Γ0"]
+    @test Γ1 == out["Γ1"]
+    @test Ψ  == out["Ψ"]
+    @test Π  == out["Π"]
+    @test C  == out["C"]
 end
-=#
+
 # Test ouput of solve has not changed
-out = load("reference/solve_output_interns.jld2")
+out = load("reference/new_solve_output.jld2")
+TTT, RRR, CCC, inverse_basis = solve(m)
 @testset "solve(m) output" begin
-    TTT, RRR, CCC, inverse_basis = solve(m)
     @test TTT           ≈ out["TTT"]
     @test RRR           ≈ out["RRR"]
     @test CCC           ≈ out["CCC"]
