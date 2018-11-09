@@ -74,7 +74,7 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
                                             cloud_baseline::ParticleCloud = ParticleCloud(m_baseline, 0),
                                             cloud_comparisons::Vector{ParticleCloud} = [ParticleCloud(m_comparison, 0)],
                                             df_baseline::DataFrame = DataFrame(),
-                                            df_comparison::DataFrame = DataFrame(),
+                                            df_comparisons::Vector{DataFrame} = [DataFrame()],
                                             plotroot::String = figurespath(m_baseline, "estimate"),
                                             verbose::Symbol = :low,
                                             in_deviations::Bool = false,
@@ -92,19 +92,23 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
                                              include_fixed = include_fixed, excl_list = excl_list)
     end
 
-    if isempty(df_comparison)
+    if isempty(df_comparisons[1])
         for i=1:length(cloud_comparisons)
             df_comparisons[i] = load_posterior_moments(m_comparison; cloud = cloud_comparisons[i],
                                                       load_bands = true, include_fixed = include_fixed,
                                                       excl_list = excl_list)
         end
     end
+    for i=1:length(df_comparisons)
+        df_comparisons[i] = df_comparisons[i][param_range, :]
+        df_comparisons[i][:param_inds] = param_range
+    end
 
     # Indexing out a block of the parameters
     df_baseline = df_baseline[param_range, :]
-    df_comparison = df_comparison[param_range, :]
+  #  df_comparison = df_comparison[param_range, :]
     df_baseline[:param_inds] = param_range
-    df_comparison[:param_inds] = param_range
+  #  df_comparison[:param_inds] = param_range
 
     parameter_labels = df_baseline[:param]
 
@@ -151,13 +155,14 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
                               :hline, markerstrokecolor = :black)
         @df df_baseline plot!(p, :param_inds, :post_mean, label = "", linealpha = 0, marker =
                               :hline, markerstrokecolor = :black)
+        colors = [:blue, :green, :red, :orange, :yellow]
         for i = 1:length(df_comparisons)
-            @df df_comparisons[i] plot!(p, :param_inds, :post_ub, label = comp_label, linealpha = 0, marker =
-                                    :hline, markerstrokecolor = :red)
-            @df df_comparisons[i] plot!(p, :param_inds, :post_lb, label = "", linealpha = 0, marker =
-                                    :hline, markerstrokecolor = :red)
-            @df df_comparisons[i] plot!(p, :param_inds, :post_mean, label = "", linealpha = 0, marker =
-                                    :hline, markerstrokecolor = :red)
+            @df (df_comparisons[i]) plot!(p, :param_inds, :post_ub, label = comp_labels[i], linealpha = 0, marker =
+                                    :hline, markerstrokecolor = colors[i])
+            @df (df_comparisons[i]) plot!(p, :param_inds, :post_lb, label = "", linealpha = 0, marker =
+                                    :hline, markerstrokecolor = colors[i])
+            @df (df_comparisons[i]) plot!(p, :param_inds, :post_mean, label = "", linealpha = 0, marker =
+                                    :hline, markerstrokecolor = colors[i])
         end
         rescale_annotations_fontsize!(p, 6)
         relocate_annotations!(p, :right, :top)
@@ -189,7 +194,7 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
                                             scale_by_std::Bool = false,
                                             base_label::String = "",
                                             comp_labels::Vector{String} = [""],
-                                            title::String = in_deviations ? "$comp_labels[1] deviations from $base_label Interval Comparisons" : "$base_label and $comp_labels[1] Interval Comparisons",
+                                            title::String = in_deviations ? "$(comp_labels[1]) deviations from $base_label Interval Comparisons" : "$base_label and $(comp_labels[1]) Interval Comparisons",
                                             block::Int64 = 0, include_fixed::Bool = false,
                                             param_range::UnitRange = include_fixed ? UnitRange(1, n_parameters(m_baseline)) : UnitRange(1, n_parameters_free(m_baseline)),
                                             excl_list::Vector{Symbol} = Vector{Symbol}(0),
@@ -205,6 +210,6 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
 
     plot_posterior_interval_comparison(m_baseline, m_comparison, df_baseline = df_baseline, df_comparisons = df_comparisons,
                                        plotroot = plotroot, verbose = verbose, in_deviations = in_deviations, scale_by_std = scale_by_std,
-                                       base_label = base_label, comp_label = comp_labels, title = "", param_range = param_range, block = block,
-                                       excl_list = excl_list, filename_tag = filename_tag)
+                                       base_label = base_label, comp_labels = comp_labels, title = "", param_range = param_range, block =
+                                       block, excl_list = excl_list, filename_tag = filename_tag)
 end
