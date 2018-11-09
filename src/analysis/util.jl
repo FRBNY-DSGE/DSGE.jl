@@ -4,15 +4,15 @@
 
 function get_class(output_var::Symbol)
     s = string(output_var)
-    if contains(s, "pseudo")
+    if occursin("pseudo", s)
         :pseudo
-    elseif contains(s, "obs")
+    elseif occursin("obs", s)
         :obs
-    elseif contains(s, "state")
+    elseif occursin("state", s)
         :states
-    elseif contains(s, "stdshock")
+    elseif occursin("stdshock", s)
         :stdshocks
-    elseif contains(s, "shock")
+    elseif occursin("shock", s)
         :shocks
     else
         error("Invalid output_var: " * s)
@@ -21,40 +21,42 @@ end
 
 function get_product(output_var::Symbol)
     s = string(output_var)
-    if contains(s, "bddhistforecast4q")
+    if occursin("bddhistforecast4q", s)
         :bddhistforecast4q
-    elseif contains(s, "histforecast4q")
+    elseif occursin("histforecast4q", s)
         :histforecast4q
-    elseif contains(s, "bddhistforecast")
+    elseif occursin("bddhistforecast", s)
         :bddhistforecast
-    elseif contains(s, "histforecast")
+    elseif occursin("histforecast", s)
         :histforecast
-    elseif contains(s, "hist4q")
+    elseif occursin("hist4q", s)
         :hist4q
-    elseif contains(s, "histut")
+    elseif occursin("histut", s)
         :histut
-    elseif contains(s, "hist")
+    elseif occursin("hist", s)
         :hist
-    elseif contains(s, "bddforecast4q")
+    elseif occursin("bddforecast4q", s)
         :bddforecast4q
-    elseif contains(s, "forecast4q")
+    elseif occursin("forecast4q", s)
         :forecast4q
-    elseif contains(s, "bddforecastut")
+    elseif occursin("bddforecastut", s)
         :bddforecastut
-    elseif contains(s, "forecastut")
+    elseif occursin("forecastut", s)
         :forecastut
-    elseif contains(s, "bddforecast")
+    elseif occursin("bddforecast", s)
         :bddforecast
-    elseif contains(s, "forecast")
+    elseif occursin("forecast", s)
         :forecast
-    elseif contains(s, "shockdec")
+    elseif occursin("shockdec", s)
         :shockdec
-    elseif contains(s, "dettrend")
+    elseif occursin("dettrend", s)
         :dettrend
-    elseif contains(s, "trend")
+    elseif occursin("trend", s)
         :trend
-    elseif contains(s, "irf")
+    elseif occursin("irf", s)
         :irf
+    elseif occursin("decomp", s)
+        :decomp
     else
         error("Invalid output_var: " * s)
     end
@@ -190,8 +192,8 @@ population is repeated until `end_date` using
 `resize_population_forecast`. Returns a `Vector{Float64}`.
 """
 function get_population_series(mnemonic::Symbol, population_data::DataFrame,
-                               population_forecast::DataFrame, start_date::Date,
-                               end_date::Date)
+                               population_forecast::DataFrame, start_date::Dates.Date,
+                               end_date::Dates.Date)
 
     last_historical_date = population_data[end, :date]
 
@@ -216,7 +218,7 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
 
         padding = if start_date < population_data[1, :date]
             # Start date is before population data; compute number of NaNs to prepend
-            warn("Start date $start_date is before population data begins: prepending NaNs")
+            @warn "Start date $start_date is before population data begins: prepending NaNs"
             n_nans = subtract_quarters(population_data[1, :date], start_date)
 
             DataFrame(date = quarter_range(start_date, iterate_quarters(population_data[1,:date], -1)))
@@ -226,22 +228,22 @@ function get_population_series(mnemonic::Symbol, population_data::DataFrame,
 
         unpadded_data = if population_data[1, :date] < end_date < population_data[end, :date]
             # Dates entirely in past
-            population_data[start_date .<= population_data[:, :date] .<= end_date, :]
+            population_data[start_date .<= population_data[:date] .<= end_date, :]
         else
             # Dates span past and forecast
-            data  = population_data[start_date .<= population_data[:, :date], :]
-            fcast = population_forecast[population_forecast[:, :date] .<= end_date, :]
+            data  = population_data[start_date .<= population_data[:date], :]
+            fcast = population_forecast[population_forecast[:date] .<= end_date, :]
             vcat(data, fcast)
         end
 
         padding, unpadded_data = reconcile_column_names(padding, unpadded_data)
         padded_data = vcat(padding, unpadded_data)
-        na2nan!(padded_data)
+        #na2nan!(padded_data)
         padded_data
 
     elseif population_forecast[1, :date] <= start_date <= population_forecast[end, :date]
         # Dates entirely in forecast
-        population_forecast[start_date .<= population_forecast[:, :date] .<= end_date, :]
+        population_forecast[start_date .<= population_forecast[:date] .<= end_date, :]
     else
         # start_date comes after population_forecast[end, :date]
         error("Start date $start_date comes after population forecast ends")
@@ -259,7 +261,7 @@ Returns the appropriate population series for the `product`.
 """
 function get_mb_population_series(product::Symbol, population_data::DataFrame,
                                   population_forecast::DataFrame,
-                                  date_list::Vector{Date})
+                                  date_list::Vector{Dates.Date})
 
     if product == :irf
         # Return empty vector for IRFs, which don't correspond to real dates

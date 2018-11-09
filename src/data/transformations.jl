@@ -99,7 +99,7 @@ to the columns of `y`, returning the trend component `yt` and the cyclical compo
 For quarterly data, one can use λ=1600.
 
 Consecutive missing values at the beginning or end of the time series are excluded from the
-filtering. If there are missing values within the series, the filtered values are all NaN.
+filtering. If there are missing values within the series, the filtered values are all missing.
 
 See also:
 ```
@@ -108,20 +108,20 @@ Investigation\". Journal of Money, Credit, and Banking 29 (1): 1–16.
 ```
 """
 function hpfilter(y::AbstractVector, λ::Real)
-    # Indices of consecutive NaN elements at beginning
+    # Indices of consecutive missing elements at beginning
     i = 1
     j = length(y)
-    while isnan(y[i])
+    while ismissing(y[i])
         i = i+1
     end
-    while isnan(y[j])
+    while ismissing(y[j])
         j = j-1
     end
 
-    # Filter and adjust for NaNs
+    # Filter and adjust for missings
     yt_, yf_ = hpfilter_(y[i:j], λ)
-    yt = [fill(NaN, i-1); yt_; fill(NaN, length(y)-j)]
-    yf = [fill(NaN, i-1); yf_; fill(NaN, length(y)-j)]
+    yt = [fill(missing, i-1); yt_; fill(missing, length(y)-j)]
+    yf = [fill(missing, i-1); yf_; fill(missing, length(y)-j)]
 
     return yt, yf
 end
@@ -165,17 +165,16 @@ difflog(x::AbstractVector)
 ```
 """
 function difflog(x::Vector)
-    [NaN; log.(x[2:end]) - log.(x[1:end-1])]
+    [missing; log.(x[2:end]) - log.(x[1:end-1])]
 end
 
 
 """
 ```
-difflog(x::Array{Union{AbstractFloat, Missing}})
+difflog(x::Array{AbstractFloat})
 ```
 """
-function difflog(x::Array{Union{AbstractFloat, Missing}})
-    na2nan!(x)
+function difflog(x::Array)
     return difflog(convert(Vector, x))
 end
 
@@ -259,7 +258,7 @@ loggrowthtopct_annualized(y)
 Transform from log growth rates to annualized quarter-over-quarter percent change.
 """
 function loggrowthtopct_annualized(y::AbstractArray)
-    100. * (exp.(y/100.).^4 - 1.)
+    100. * (exp.(y/100.).^4 .- 1.)
 end
 
 """
@@ -299,7 +298,7 @@ function loggrowthtopct_annualized_percapita(y::AbstractArray, pop_growth::Abstr
 
     @assert length(pop_growth) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
 
-    100. * (exp.(y/100. .+ pop_growth).^4 - 1.)
+    100. * (exp.(y/100. .+ pop_growth).^4 .- 1.)
 end
 
 """
@@ -474,7 +473,7 @@ function loggrowthtopct_4q(y::AbstractArray, data::AbstractVector = fill(NaN, 3)
         y_4q = y[:,  1:end-3] + y[:, 2:end-2] + y[:, 3:end-1] + y[:, 4:end]
     end
 
-    100. * (exp.(y_4q/100.) - 1.)
+    100. * (exp.(y_4q/100.) .- 1.)
 end
 
 """
@@ -528,7 +527,7 @@ function loggrowthtopct_4q_percapita(y::AbstractArray, pop_growth::AbstractVecto
 
     @assert length(pop_growth_4q) == nperiods "Length of pop_growth ($(length(pop_growth))) must equal number of periods of y ($nperiods)"
 
-    100. * (exp.(y_4q/100. .+ pop_growth_4q) - 1.)
+    100. * (exp.(y_4q/100. .+ pop_growth_4q) .- 1.)
 end
 
 """
@@ -638,7 +637,7 @@ function prepend_data(y::AbstractArray, data::AbstractVector)
         y_extended = vcat(data, y)
     else
         ndraws = size(y, 1)
-        datas  = repeat(data', ndraws, 1)
+        datas  = repeat(data', outer=(ndraws, 1))
         y_extended = hcat(datas, y)
     end
 

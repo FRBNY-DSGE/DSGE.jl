@@ -1,4 +1,5 @@
-using DSGE, Test, HDF5, JLD
+using DSGE, HDF5, JLD2, OrderedCollections, DataStructures, Statistics
+using Test, Dates
 
 # Initialize model object
 m = AnSchorfheide(testing = true)
@@ -23,11 +24,13 @@ forecast_scenario(m, alt, verbose = :none)
 expect = jldopen(get_scenario_input_file(m, alt), "r") do file
     read(file, "arr")
 end
-actual = jldopen(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "r") do file
-    dict = read(file, "observable_indices")
-    inds = map(var -> dict[var], def.target_names)
-    read(file, "arr")[:, inds, :]
+
+jldopen(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "r") do file
+    observable_indices = read(file, "observable_indices")
+    global inds = map(var -> observable_indices[var], def.target_names)
+    global actual = read(file, "arr")[:, inds, :]
 end
+
 @testset "Test dummy scenarios" begin
     @test expect ≈ actual
 end
@@ -38,8 +41,12 @@ probs_exit  = zeros(12)
 allalt = SwitchingScenario(:allalt, alt, def, probs_enter, probs_exit)
 simulate_switching(m, allalt, verbose = :none)
 
-original_draws = h5read(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "arr")
-actual = h5read(get_scenario_output_files(m, allalt, [:forecastobs])[:forecastobs], "arr")
+original_draws = jldopen(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs]) do file
+    read(file, "arr")
+end
+actual = jldopen(get_scenario_output_files(m, allalt, [:forecastobs])[:forecastobs]) do file
+    read(file, "arr")
+end
 @testset "Test switching scenarios" begin
     @test original_draws ≈ actual
 end
@@ -50,15 +57,21 @@ probs_exit  = zeros(12)
 alldef = SwitchingScenario(:alldef, alt, def, probs_enter, probs_exit)
 simulate_switching(m, alldef, verbose = :none)
 
-default_draws = h5read(get_scenario_output_files(m, def, [:forecastobs])[:forecastobs], "arr")
-actual = h5read(get_scenario_output_files(m, alldef, [:forecastobs])[:forecastobs], "arr")
+default_draws = jldopen(get_scenario_output_files(m, def, [:forecastobs])[:forecastobs]) do file
+    read(file, "arr")
+end
+
+actual = jldopen(get_scenario_output_files(m, alldef, [:forecastobs])[:forecastobs]) do file
+    read(file, "arr")
+end
+
 @testset "Test never switching scenarios" begin
     for i = 1:10 # Check that the ith draw of actual matches some draw j from default_draws
-        @test for j = 1:10
-            if actual[i, :, :] ≈ default_draws[j, :, :]
-                return true
-            end
+        matches_one = false
+        for j = 1:10
+            (actual[i, :, :] ≈ default_draws[j, :, :]) && (matches_one = true)
         end
+        @test matches_one
     end
 end
 
@@ -69,21 +82,23 @@ somealt = SwitchingScenario(:somealt, alt, def, probs_enter, probs_exit)
 simulate_switching(m, somealt, verbose = :none)
 
 @testset "Test switching scenarios, where the switch happens at particular points in time" begin
-    actual = h5read(get_scenario_output_files(m, somealt, [:forecastobs])[:forecastobs], "arr")
+    global actual = jldopen(get_scenario_output_files(m, somealt, [:forecastobs])[:forecastobs]) do file
+        read(file, "arr")
+    end
     for i = 1:10
         @test actual[i, :, 5:8] ≈ original_draws[i, :, 1:4]
-        @test for j = 1:10
-            if actual[i, :, [1:4;9:12]] ≈ default_draws[j, :, [1:4;9:12]]
-                return true
-            end
+        matches_one = false
+        for j = 1:10
+            (actual[i, :, [1:4;9:12]] ≈ default_draws[j, :, [1:4;9:12]]) && (matches_one = true)
         end
+        @test matches_one
     end
 end
 
 # Transform single scenarios
 scenario_means_bands(m, alt, verbose = :none)
 scenario_means_bands(m, allalt, verbose = :none)
-actual = squeeze(mean(original_draws, 1), 1)
+global actual = dropdims(mean(original_draws, dims = 1), dims=1)
 
 @testset "Test single scenarios" begin
     mb1 = read_scenario_mb(m, alt, :forecastutobs)
@@ -115,7 +130,7 @@ end
 aggall = ScenarioAggregate(:aggall, "Test Scenario Aggregate", AbstractScenario[def, alt],
                            [0.5, 0.5], 20, false, "REF")
 scenario_means_bands(m, aggall, verbose = :none)
-actual = squeeze(mean(cat(1, default_draws, original_draws), 1), 1)
+global actual = dropdims(mean(cat(default_draws, original_draws, dims = 1), dims = 1), dims=1)
 
 @testset "Test scenario aggregation" begin
     mb = read_scenario_mb(m, aggall, :forecastutobs)
@@ -127,7 +142,7 @@ actual = squeeze(mean(cat(1, default_draws, original_draws), 1), 1)
     aggalt = ScenarioAggregate(:aggalt, "Test Scenario Aggregate", AbstractScenario[def, alt],
                                [0.0, 1.0], 20, false, "REF")
     scenario_means_bands(m, aggalt, verbose = :none)
-    actual = squeeze(mean(repeat(original_draws, outer = [2, 1, 1]), 1), 1)
+    global actual = dropdims(mean(repeat(original_draws, outer = [2, 1, 1]), dims = 1), dims=1)
 
     mb = read_scenario_mb(m, aggalt, :forecastutobs)
     for (var, ind) in mb.metadata[:indices]
@@ -149,10 +164,11 @@ forecast_scenario(m, scale, verbose = :none)
 expect = jldopen(get_scenario_input_file(m, scale), "r") do file
     2.0 * read(file, "arr")
 end
-actual = jldopen(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "r") do file
-    dict = read(file, "observable_indices")
-    inds = map(var -> dict[var], def.target_names)
-    read(file, "arr")[:, inds, :]
+
+jldopen(get_scenario_output_files(m, alt, [:forecastobs])[:forecastobs], "r") do file
+    observable_indices = read(file, "observable_indices")
+    global inds = map(var -> observable_indices[var], def.target_names)
+    global actual = read(file, "arr")[:, inds, :]
 end
 @testset "Test scenario aggregation, drawing with replacement" begin
     @test expect ≈ actual

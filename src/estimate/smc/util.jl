@@ -48,7 +48,7 @@ end
 # The following two functions are to ensure type conformity of the return arguments
 function scalar_reshape(args...)
     n_args = length(args)
-    return_arg = Vector{Vector{Float64}}(n_args)
+    return_arg = Vector{Vector{Float64}}(undef, n_args)
     for i in 1:n_args
         arg = typeof(args[i]) <: Vector ? args[i] : [args[i]]
         return_arg[i] = arg
@@ -58,7 +58,7 @@ end
 
 function vector_reshape(args...)
     n_args = length(args)
-    return_arg = Vector{Matrix{Float64}}(n_args)
+    return_arg = Vector{Matrix{Float64}}(undef, n_args)
     for i in 1:n_args
         arg = typeof(args[i]) <: Vector ? args[i] : [args[i]]
         return_arg[i] = reshape(arg, length(arg), 1)
@@ -79,7 +79,7 @@ function generate_free_blocks(n_free_para::Int64, n_blocks::Int64)
     subset_length = cld(n_free_para, n_blocks) # ceiling division
     last_block_length = n_free_para - subset_length*(n_blocks - 1)
 
-    blocks_free = Vector{Vector{Int64}}(n_blocks)
+    blocks_free = Vector{Vector{Int64}}(undef, n_blocks)
     for i in 1:n_blocks
         if i < n_blocks
             blocks_free[i] = rand_inds[((i-1)*subset_length + 1):(i*subset_length)]
@@ -160,11 +160,11 @@ function end_stage_print(cloud::ParticleCloud;
     println("--------------------------")
     if use_fixed_schedule
         println("Iteration = $(cloud.stage_index) / $(cloud.n_Φ)")
-        println("time elapsed: $(round(total_sampling_time_minutes, 4)) minutes")
-        println("estimated time remaining: $(round(expected_time_remaining_minutes, 4)) minutes")
+        println("time elapsed: $(round(total_sampling_time_minutes, digits = 4)) minutes")
+        println("estimated time remaining: $(round(expected_time_remaining_minutes, digits = 4)) minutes")
     else
         println("Iteration = $(cloud.stage_index)")
-        println("time elapsed: $(round(total_sampling_time_minutes, 4)) minutes")
+        println("time elapsed: $(round(total_sampling_time_minutes, digits = 4)) minutes")
     end
     println("--------------------------")
         println("phi = $(cloud.tempering_schedule[cloud.stage_index])")
@@ -177,7 +177,7 @@ function end_stage_print(cloud::ParticleCloud;
         μ = weighted_mean(cloud)
         σ = weighted_std(cloud)
         for n=1:length(cloud.particles[1])
-            println("$(cloud.particles[1].keys[n]) = $(round(μ[n], 5)), $(round(σ[n], 5))")
+            println("$(cloud.particles[1].keys[n]) = $(round(μ[n], digits = 5)), $(round(σ[n], digits = 5))")
         end
     end
 end

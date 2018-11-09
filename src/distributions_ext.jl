@@ -5,10 +5,10 @@ necessary because we specify prior distributions wrt mean and SD
 parameters). Note these functions are NOT new methods for the Distributions.Beta, etc.
 functions, but rather new functions with the same names.
 =#
-import LinearAlgebra: rank
-import Distributions: params, mean, std, pdf, logpdf, rand, Distribution, Matrixvariate
-import Base: length
 
+import Distributions: params, mean, std, pdf, logpdf, rand, Distribution, Matrixvariate, LinearAlgebra
+import Base: length
+import SpecialFunctions: gamma
 """
 ```
 BetaAlt(μ::AbstractFloat, σ::AbstractFloat)
@@ -46,7 +46,7 @@ end
 
 """
 ```
-type RootInverseGamma <: Distribution{Univariate, Continuous}
+mutable struct RootInverseGamma <: Distribution{Univariate, Continuous}
 ```
 
 If x  ~ RootInverseGamma(ν, τ), then
@@ -56,7 +56,7 @@ If x  ~ RootInverseGamma(ν, τ), then
 x has mode τ and ν degrees of freedom.
 """
 mutable struct RootInverseGamma <: Distribution{Univariate, Continuous}
-    ν::Int
+    ν::Float64
     τ::Float64
 end
 
@@ -88,13 +88,13 @@ end
 
 """
 ```
-Distributions.rand(d::RootInverseGamma)
+Distributions.rand(d::RootInverseGamma; cc::T = 1.0) where T <: AbstractFloat
 ```
 
 Generate a draw from the RootInverseGamma distribution `d`.
 """
-function Distributions.rand(d::RootInverseGamma)
-    return sqrt(d.ν * d.τ^2 / sum(randn(d.ν).^2))
+function Distributions.rand(d::RootInverseGamma; cc::T = 1.0) where {T<:AbstractFloat}
+    return sqrt(d.ν * d.τ^2 / sum(randn(round(Int,d.ν)).^2))
 end
 
 """
@@ -102,7 +102,7 @@ end
 DegenerateMvNormal <: Distribution{Multivariate, Continuous}
 ```
 
-The `DegenerateMvNormal` type implements a degenerate multivariate normal
+The `DegenerateMvNormal` mutable struct implements a degenerate multivariate normal
 distribution. The covariance matrix may not be full rank (hence degenerate).
 
 See [Multivariate normal distribution - Degenerate case](en.wikipedia.org/wiki/Multivariate_normal_distribution#Degenerate_case).
@@ -114,12 +114,12 @@ end
 
 """
 ```
-LinearAlgebra.rank(d::DegenerateMvNormal)
+rank(d::DegenerateMvNormal)
 ```
 
 Returns the rank of `d.σ`.
 """
-function LinearAlgebra.rank(d::DegenerateMvNormal)
+function rank(d::DegenerateMvNormal)
     return rank(d.σ)
 end
 
@@ -134,12 +134,12 @@ Base.length(d::DegenerateMvNormal) = length(d.μ)
 
 """
 ```
-Distributions.rand{T<:AbstractFloat}(d::DegenerateMvNormal; cc::T = 1.0)
+Distributions.rand(d::DegenerateMvNormal; cc::T = 1.0) where T <: AbstractFloat
 ```
 
 Generate a draw from `d` with variance optionally scaled by `cc^2`.
 """
-function Distributions.rand(d::DegenerateMvNormal; cc::AbstractFloat = 1.0)
+function Distributions.rand(d::DegenerateMvNormal; cc::T = 1.0) where T <: AbstractFloat
     return d.μ + cc*d.σ*randn(length(d))
 end
 
@@ -160,7 +160,7 @@ end
 DegenerateDiagMvTDist <: Distribution{Multivariate, Continuous}
 ```
 
-The `DegenerateDiagMvTDist` type implements a degenerate multivariate Student's t
+The `DegenerateDiagMvTDist` mutable struct implements a degenerate multivariate Student's t
 distribution, where the covariance matrix is diagonal. The covariance matrix may
 not be full rank (hence degenerate).
 """
@@ -178,7 +178,7 @@ end
 
 """
 ```
-rank(d::DegenerateDiagMvTDist)
+LinearAlgebra.rank(d::DegenerateDiagMvTDist)
 ```
 
 Returns the rank of `d.σ`.
@@ -249,7 +249,7 @@ end
 MatrixNormal <: Distribution{Matrixvariate, Continuous}
 ```
 
-The `MatrixNormal` type implements a matrixvariate normal
+The `MatrixNormal` mutable struct implements a matrixvariate normal
 distribution. Note that the matrix must be square.
 
 See [Matrix normal distribution - Degenerate case](en.wikipedia.org/wiki/Matrix_normal_distribution).
@@ -299,7 +299,7 @@ Base.size(d::MatrixNormal) = size(d.μ)
 
 """
 ```
-Distributions.rand{T<:AbstractFloat}(d::MatrixNormal)
+Distributions.rand(d::MatrixNormal)
 ```
 
 Generate a draw from `d`.

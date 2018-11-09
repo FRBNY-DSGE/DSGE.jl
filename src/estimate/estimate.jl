@@ -31,7 +31,7 @@ Estimate the DSGE parameter posterior distribution.
 """
 function estimate(m::AbstractModel, df::DataFrame;
                   verbose::Symbol = :low,
-                  proposal_covariance::Matrix = Matrix(0,0),
+                  proposal_covariance::Matrix = Matrix(undef, 0,0),
                   mle::Bool = false,
                   sampling::Bool = true)
     data = df_to_matrix(m, df)
@@ -41,7 +41,7 @@ end
 
 function estimate(m::AbstractModel;
                   verbose::Symbol = :low,
-                  proposal_covariance::Matrix = Matrix(0,0),
+                  proposal_covariance::Matrix = Matrix(undef, 0,0),
                   mle::Bool = false,
                   sampling::Bool = true)
     # Load data
@@ -50,9 +50,9 @@ function estimate(m::AbstractModel;
              mle = mle, sampling = sampling)
 end
 
-function estimate(m::AbstractModel, data::Matrix{Float64};
+function estimate(m::AbstractModel, data::AbstractArray;
                   verbose::Symbol = :low,
-                  proposal_covariance::Matrix = Matrix(0,0),
+                  proposal_covariance::Matrix = Matrix(undef, 0,0),
                   mle::Bool = false,
                   sampling::Bool = true)
 
@@ -88,7 +88,7 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
         attempts = 1
 
         while !converged
-            tic()
+            begin_time = time_ns()
             out, H = optimize!(m, data;
                                method = get_setting(m, :optimization_method),
                                ftol = ftol, grtol = gtol, xtol = xtol,
@@ -100,10 +100,10 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
             total_iterations += out.iterations
             converged = out.converged || attempts > max_attempts
 
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                @printf "Total iterations completed: %d\n" total_iterations
-                @printf "Optimization time elapsed: %5.2f\n" optimization_time += toq()
-            end
+            end_time = (time_ns() - begin_time)/1e9
+
+            println(verbose, :low, @sprintf "Total iterations completed: %d\n" total_iterations)
+            println(verbose, :low, @sprintf "Optimization time elapsed: %5.2f\n" optimization_time += end_time)
 
             # Write params to file after every `n_iterations` iterations
             params = map(θ->θ.value, m.parameters)
@@ -171,24 +171,24 @@ function estimate(m::AbstractModel, data::Matrix{Float64};
             @assert (n, n) == size(hessian)
 
             # Compute the inverse of the Hessian via eigenvalue decomposition
-            S_diag, U = eig(hessian)
-            big_eig_vals = find(x -> x > 1e-6, S_diag)
-            rank = length(big_eig_vals)
+            S_diag, U = eigen(hessian)
+            big_eig_vals = findall(x -> x > 1e-6, S_diag)
+            hessian_rank = length(big_eig_vals)
 
             S_inv = zeros(n, n)
-            for i = (n-rank+1):n
+            for i = (n-hessian_rank+1):n
                 S_inv[i, i] = 1/S_diag[i]
             end
 
-        hessian_inv = U*sqrt.(S_inv) #this is the inverse of the hessian
-        DegenerateMvNormal(params, hessian_inv)
-    else
-        DegenerateMvNormal(params, proposal_covariance)
-    end
+            hessian_inv = U*sqrt.(S_inv) #this is the inverse of the hessian
+            DegenerateMvNormal(params, hessian_inv)
+        else
+            DegenerateMvNormal(params, proposal_covariance)
+        end
 
-    if Base.rank(propdist) != n_parameters_free(m)
-        println("problem –    shutting down dimensions")
-    end
+        if rank(propdist) != n_parameters_free(m)
+            println("problem –    shutting down dimensions")
+        end
 
         ########################################################################################
         ### Step 3: Sample from posterior using Metropolis-Hastings algorithm
@@ -251,16 +251,16 @@ distribution of the parameters.
 ```
 """
 function metropolis_hastings(propdist::Distribution,
-                             m::AbstractModel,
-                             data::Matrix{T},
-                             cc0::T,
-                             cc::T;
-                             verbose::Symbol=:low) where {T<:AbstractFloat}
+                                               m::AbstractModel,
+                                               data::AbstractArray,
+                                               cc0::T,
+                                               cc::T;
+                                               verbose::Symbol=:low) where T<: AbstractFloat
 
 
     # If testing, set the random seeds at fixed numbers
     if m.testing
-        srand(m.rng, 654)
+        Random.seed!(m.rng, 654)
     end
 
     # Set number of draws, how many we will save, and how many we will burn
@@ -295,10 +295,8 @@ function metropolis_hastings(propdist::Distribution,
 
 
     # Report number of blocks that will be used
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Blocks: $n_blocks")
-        println("Draws per block: $n_sim")
-    end
+    println(verbose, :low, "Blocks: $n_blocks")
+    println(verbose, :low, "Draws per block: $n_sim")
 
     # For n_sim*mhthin iterations within each block, generate a new parameter draw.
     # Decide to accept or reject, and save every (mhthin)th draw that is accepted.
@@ -319,7 +317,7 @@ function metropolis_hastings(propdist::Distribution,
 
     for block = 1:n_blocks
 
-        tic()
+        begin_time = time_ns()
         block_rejections = 0
 
         for j = 1:(n_sim*mhthin)
@@ -331,9 +329,7 @@ function metropolis_hastings(propdist::Distribution,
             # gensys returns a meaningful system) and evaluate the posterior
             post_new = posterior!(m, para_new, data; sampler = true)
 
-            if VERBOSITY[verbose] >= VERBOSITY[:high]
-                println("Block $block, Iteration $j: posterior = $post_new")
-            end
+            println(verbose, :high, "Block $block, Iteration $j: posterior = $post_new")
 
             # Choose to accept or reject the new parameter by calculating the
             # ratio (r) of the new posterior value relative to the old one We
@@ -351,16 +347,12 @@ function metropolis_hastings(propdist::Distribution,
                 post_old = post_new
                 propdist.μ = para_new
 
-                if VERBOSITY[verbose] >= VERBOSITY[:high]
-                    println("Block $block, Iteration $j: accept proposed jump")
-                end
+                println(verbose, :high, "Block $block, Iteration $j: accept proposed jump")
             else
                 # Reject proposed jump
                 block_rejections += 1
 
-                if VERBOSITY[verbose] >= VERBOSITY[:high]
-                    println("Block $block, Iteration $j: reject proposed jump")
-                end
+                println(verbose, :high, "Block $block, Iteration $j: reject proposed jump")
             end
 
             # Save every (mhthin)th draw
@@ -386,27 +378,22 @@ function metropolis_hastings(propdist::Distribution,
 
         # Calculate time to complete this block, average block time, and
         # expected time to completion
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            block_time = toq()
-            total_sampling_time += block_time
-            total_sampling_time_minutes = total_sampling_time/60
-            expected_time_remaining_sec     = (total_sampling_time/block)*(n_blocks - block)
-            expected_time_remaining_minutes = expected_time_remaining_sec/60
+        end_time = (time_ns() - begin_time)/1e9
+        total_sampling_time += end_time
+        total_sampling_time_minutes = total_sampling_time/60
+        expected_time_remaining_sec     = (total_sampling_time/block)*(n_blocks - block)
+        expected_time_remaining_minutes = expected_time_remaining_sec/60
 
-            println("Completed $block of $n_blocks blocks.")
-            println("Total time to compute $block blocks: $total_sampling_time_minutes minutes")
-            println("Expected time remaining for Metropolis-Hastings: $expected_time_remaining_minutes minutes")
-            println("Block $block rejection rate: $block_rejection_rate \n")
-        end
-
+        println(verbose, :low, "Completed $block of $n_blocks blocks.")
+        println(verbose, :low, "Total time to compute $block blocks: $total_sampling_time_minutes minutes")
+        println(verbose, :low, "Expected time remaining for Metropolis-Hastings: $expected_time_remaining_minutes minutes")
+        println(verbose, :low, "Block $block rejection rate: $block_rejection_rate \n")
     end # of loop over blocks
 
     close(simfile)
 
     rejection_rate = all_rejections / (n_blocks*n_sim*mhthin)
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Overall rejection rate: $rejection_rate")
-    end
+    println(verbose, :low, "Overall rejection rate: $rejection_rate")
 end
 
 """
@@ -426,7 +413,7 @@ function compute_parameter_covariance(m::AbstractModel)
     if get_setting(m, :sampling_method) == :MH
         param_draws_path = rawpath(m, "estimate", "mhsave.h5")
         if !isfile(param_draws_path)
-            @printf STDERR "Saved parameter draws not found.\n"
+            @printf stderr "Saved parameter draws not found.\n"
             return
         end
         param_draws = h5open(param_draws_path, "r") do f
@@ -443,7 +430,7 @@ function compute_parameter_covariance(m::AbstractModel)
     elseif get_setting(m, :sampling_method) == :SMC
         param_draws_path = rawpath(m, "estimate", "smcsave.h5")
         if !isfile(param_draws_path)
-            @printf STDERR "Saved parameter draws not found.\n"
+            @printf stderr "Saved parameter draws not found.\n"
             return
         end
         param_draws = h5open(param_draws_path, "r") do f

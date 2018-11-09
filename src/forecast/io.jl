@@ -51,10 +51,10 @@ end
 """
 ```
 get_forecast_filename(m, input_type, cond_type, output_var;
-    pathfcn = rawpath, forecast_string = "", fileformat = :jld)
+    pathfcn = rawpath, forecast_string = "", fileformat = :jld2)
 
 get_forecast_filename(directory, filestring_base, input_type, cond_type,
-    output_var; forecast_string = "", fileformat = :jld)
+    output_var; forecast_string = "", fileformat = :jld2)
 ```
 
 ### Notes
@@ -72,7 +72,7 @@ function get_forecast_filename(m::AbstractModel, input_type::Symbol,
                                cond_type::Symbol, output_var::Symbol;
                                pathfcn::Function = rawpath,
                                forecast_string::String = "",
-                               fileformat::Symbol = :jld)
+                               fileformat::Symbol = :jld2)
 
     # First, we need to make sure we get all of the settings that have been printed to this filestring
     directory = pathfcn(m, "forecast")
@@ -85,7 +85,7 @@ end
 
 function get_forecast_filename(directory::String, filestring_base::Vector{String},
                                input_type::Symbol, cond_type::Symbol, output_var::Symbol;
-                               forecast_string::String = "", fileformat = :jld)
+                               forecast_string::String = "", fileformat = :jld2)
 
     # Base file name
     file_name = String("$output_var.$fileformat")
@@ -116,10 +116,10 @@ end
 """
 ```
 get_forecast_output_files(m, input_type, cond_type, output_vars;
-    forecast_string = "", fileformat = :jld)
+    forecast_string = "", fileformat = :jld2)
 
 get_forecast_output_files(directory, filestring_base, input_type, cond_type,
-    output_vars; forecast_string = "", fileformat = :jld)
+    output_vars; forecast_string = "", fileformat = :jld2)
 ```
 
 Compute the appropriate output filenames for model `m`, forecast input
@@ -134,7 +134,7 @@ type `input_type`, and conditional type `cond_type`, for each output variable in
 
 - `forecast_string::String`: subset identifier for when `input_type = :subset`
 - `fileformat::Symbol`: file extension, without a period. Defaults to
-  `:jld`, though `:h5` is another common option.
+  `:jld2`, though `:h5` is another common option.
 
 ### Notes
 
@@ -143,7 +143,7 @@ See `get_forecast_filename` for more information.
 function get_forecast_output_files(m::AbstractModel, input_type::Symbol,
                                    cond_type::Symbol, output_vars::Vector{Symbol};
                                    forecast_string::String = "",
-                                   fileformat::Symbol = :jld)
+                                   fileformat::Symbol = :jld2)
 
     directory = rawpath(m, "forecast")
     base      = filestring_base(m)
@@ -155,7 +155,7 @@ end
 
 function get_forecast_output_files(directory::String, filestring_base::Vector{String},
                                    input_type::Symbol, cond_type::Symbol, output_vars::Vector{Symbol};
-                                   forecast_string::String = "", fileformat::Symbol = :jld)
+                                   forecast_string::String = "", fileformat::Symbol = :jld2)
 
     output_files    = Dict{Symbol, String}()
     for var in remove_meansbands_only_output_vars(output_vars)
@@ -198,18 +198,22 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
             continue
         end
         filepath = forecast_output_files[var]
+        # Write forecast metadata to a jld2 and the raw forecast output
+        # to an h5. The data in the HDF5 will be transferred to the jld2
+        # and the h5 file will be deleted when combine_raw_forecast_output_and_metadata
+        # is executed.
         if isnull(block_number) || get(block_number) == 1
             jldopen(filepath, "w") do file
                 write_forecast_metadata(m, file, var)
-
+            end
+            h5open(replace(filepath, "jld2" => "h5"), "w") do file
                 if var == :histobs
                     # :histobs just refers to data, so we only write one draw
                     # (as all draws would be the same)
                     @assert !isempty(df) "df cannot be empty if trying to write :histobs"
                     df1 = df[date_mainsample_start(m) .<= df[:date] .<= date_mainsample_end(m), :]
                     data = df_to_matrix(m, df1)
-                    write(file, "arr", data)
-
+                    write(file, "arr", Array{Float64}(data))
                 else
                     # Otherwise, pre-allocate HDF5 dataset which will contain
                     # all draws
@@ -221,32 +225,29 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                         chunk_dims[1] = block_size
 
                         # Initialize dataset
-                        pfile = file.plain
-                        HDF5.d_create(pfile, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
+                        #pfile = file #.plain
+                        dset = HDF5.d_create(file, "arr", datatype(Float64), dataspace(dims...), "chunk", chunk_dims)
                     end
                 end
             end
         end
 
         if var != :histobs
-            jldopen(filepath, "r+") do file
+            h5open(replace(filepath, "jld2" => "h5"), "r+") do file
                 if isnull(block_number)
-                    write(file, "arr", forecast_output[var])
+                    write(file, "arr", Array{Float64}(forecast_output[var]))
                 else
-                    write_forecast_block(file, forecast_output[var], block_inds)
+                    write_forecast_block(file, Array{Float64}(forecast_output[var]), block_inds)
                 end
             end
         end
-
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            println(" * Wrote $(basename(filepath))")
-        end
+        println(verbose, :high, " * Wrote $(basename(filepath))")
     end
 end
 
 """
 ```
-write_forecast_metadata(m::AbstractModel, file::JldFile, var::Symbol)
+write_forecast_metadata(m::AbstractModel, file::JLD2.JLDFile, var::Symbol)
 ```
 
 Write metadata about the saved forecast output `var` to `filepath`.
@@ -263,9 +264,10 @@ forecast output array. The saved dictionaries include:
 - `pseudoobservable_revtransforms::Dict{Symbol, Symbol}`: saved identifiers for reverse transforms used for pseudoobservables
 - `shock_names::Dict{Symbol, Int}`: saved for `var in [:histshocks, :forecastshocks, :shockdecstates, :shockdecobs, :shockdecpseudo]`
 
-Note that we don't save dates or transformations for impulse response functions.
+Note that we don't save dates or transformations for impulse response
+functions.
 """
-function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbol)
+function write_forecast_metadata(m::AbstractModel, file::JLD2.JLDFile, var::Symbol)
 
     prod  = get_product(var)
     class = get_class(var)
@@ -278,6 +280,8 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
             quarter_range(date_forecast_start(m), date_forecast_end(m))
         elseif prod in [:shockdec, :dettrend, :trend]
             quarter_range(date_shockdec_start(m), date_shockdec_end(m))
+        elseif prod == :decomp
+            quarter_range(date_mainsample_start(m), date_forecast_end(m))
         end
 
         date_indices = Dict(d::Date => i::Int for (i, d) in enumerate(dates))
@@ -317,7 +321,7 @@ function write_forecast_metadata(m::AbstractModel, file::JLD.JldFile, var::Symbo
     end
 
     # Write shock names and transforms
-    if class in [:shocks, :stdshocks] || prod in [:shockdec, :irf]
+    if class in [:shocks, :stdshocks] || prod in [:shockdec, :irf, :decompshockdec]
         write(file, "shock_indices", m.exogenous_shocks)
         if class in [:shocks, :stdshocks]
             rev_transforms = Dict{Symbol,Symbol}(x => Symbol("identity") for x in keys(m.exogenous_shocks))
@@ -328,23 +332,52 @@ end
 
 """
 ```
-write_forecast_block(file::JLD.JldFile, arr::Array, block_number::Int,
+write_forecast_block(file::JLD2.JLDFile, arr::Array, block_number::Int,
     block_inds::AbstractRange{Int64})
 ```
 
 Writes `arr` to the subarray of `file` indicated by `block_inds`.
 """
-function write_forecast_block(file::JLD.JldFile, arr::Array,
+function write_forecast_block(file, arr::Array,
                               block_inds::AbstractRange{Int64})
-    pfile = file.plain
-    dataset = HDF5.d_open(pfile, "arr")
-    ndims = length(size(dataset))
-    dataset[block_inds, fill(Colon(), ndims-1)...] = arr
+    #pfile = file #.plain
+    dataset = HDF5.d_open(file, "arr")
+    dims = size(dataset)
+    ndims = length(dims)
+    dataset[block_inds, fill(Colon(), ndims-1)...] = arr #pfile was dataset before
+    set_dims!(dataset, dims)
 end
 
 """
 ```
-read_forecast_metadata(file::JLD.JldFile)
+combine_raw_forecast_output_and_metadata()
+```
+Writes the raw forecast output data (`arr`) saved in the temporary h5 file to the
+jld2 file containing the rest of the forecast metadata. The intermediary h5 step exists because
+jld2 does not support chunked memory assignment in the same way that jld and h5 permitted previously.
+"""
+function combine_raw_forecast_output_and_metadata(m::AbstractModel,
+                                                  forecast_output_files::Dict{Symbol, String};
+                                                  verbose::Symbol = :low)
+    for jld_file_path in values(forecast_output_files)
+        h5_file_path = replace(jld_file_path, "jld2" => "h5")
+        arr = h5read(h5_file_path, "arr")
+        jldopen(jld_file_path, "r+") do file
+            write(file, "arr", arr)
+        end
+        # Remove the h5 containing the raw forecast output when the data has been transferred.
+        rm(h5_file_path)
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            jld_file_name = replace(jld_file_path, rawpath(m, "forecast")*"/" => "")
+            h5_file_name = replace(h5_file_path, rawpath(m, "forecast")*"/" => "")
+            println("Wrote raw forecast output to $jld_file_name and removed $h5_file_name")
+        end
+    end
+end
+
+"""
+```
+read_forecast_metadata(file::JLD2.JLDFile)
 ```
 
 Read metadata from forecast output files. This includes dictionaries mapping
@@ -364,9 +397,9 @@ their respective indices in the saved forecast output array. Depending on the
 - `shock_revtransforms::Dict{Symbol, Symbol}`: shocks are not transformed, so
   all values are `:identity`
 """
-function read_forecast_metadata(file::JLD.JldFile)
+function read_forecast_metadata(file::JLD2.JLDFile)
     metadata = Dict{Symbol, Any}()
-    for field in setdiff(names(file), "arr")
+    for field in setdiff(keys(file), "arr")
         metadata[Symbol(field)] = read(file, field)
     end
     return metadata
@@ -398,7 +431,7 @@ function read_forecast_output(m::AbstractModel, input_type::Symbol, cond_type::S
         # `nvars` x `nperiods`
         if product == :trend
             nperiods = length(read(file, "date_indices"))
-            fcast_series = repeat(fcast_series, outer = [1, nperiods])
+            fcast_series = repeat(fcast_series, outer = (1, nperiods))
         end
 
         # Parse transform
@@ -419,34 +452,38 @@ Read only the forecast output for a particular variable (e.g. for a particular
 observable) and possibly a particular shock. Result should be a matrix of size
 `ndraws` x `nperiods`.
 """
-function read_forecast_series(file::JLD.JldFile, class::Symbol, product::Symbol, var_name::Symbol)
+function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol, var_name::Symbol)
     # Get index corresponding to var_name
     class_long = get_class_longname(class)
-    indices = read(file, "$(class_long)_indices")
+    filepath = file.path
+    indices = load(filepath, "$(class_long)_indices")
     var_ind = indices[var_name]
 
-    pfile = file.plain
-    filename = pfile.filename
-    dataset = HDF5.d_open(pfile, "arr")
+    dataset = load(filepath, "arr")
     ndims = length(size(dataset))
 
     # Trends are ndraws x nvars
     if product == :trend
+        whole = load(filepath, "arr")
         if ndims == 1 # one draw
-            arr = h5read(filename, "arr", (var_ind,))
+            arr = whole[var_ind, Colon()]
             arr = reshape(arr, (1, 1))
         elseif ndims == 2 # many draws
-            arr = h5read(filename, "arr", (Colon(), var_ind))
+            arr = whole[Colon(), var_ind]
+            arr = reshape(arr, (length(arr),1))
         end
 
     # Other products are ndraws x nvars x nperiods
     elseif product in [:hist, :histut, :hist4q, :forecast, :forecastut, :forecast4q,
-                       :bddforecast, :bddforecastut, :bddforecast4q, :dettrend]
+                       :bddforecast, :bddforecastut, :bddforecast4q, :dettrend,
+                       :decompdata, :decompnews, :decomppara, :decompdettrend, :decomptotal]
         inds_to_read = if ndims == 2 # one draw
-            arr = h5read(filename, "arr", (var_ind, Colon()))
+            whole = load(filepath, "arr")
+            arr = whole[var_ind, Colon()]
+            arr = reshape(arr, (1, length(arr)))
         elseif ndims == 3 # many draws
-            arr = h5read(filename, "arr", (Colon(), var_ind, Colon()))
-            arr = squeeze(arr, 2)
+            whole = load(filepath, "arr")
+            arr = whole[Colon(), var_ind, Colon()]
         end
     else
         error("Invalid product: $product for this method")
@@ -455,27 +492,26 @@ function read_forecast_series(file::JLD.JldFile, class::Symbol, product::Symbol,
     return arr
 end
 
-function read_forecast_series(file::JLD.JldFile, class::Symbol, product::Symbol, var_name::Symbol,
+function read_forecast_series(file::JLD2.JLDFile, class::Symbol, product::Symbol, var_name::Symbol,
                               shock_name::Symbol)
     # Get indices corresponding to var_name and shock_name
     class_long = get_class_longname(class)
-    indices = read(file, "$(class_long)_indices")
+    filepath = file.path
+    indices = load(filepath, "$(class_long)_indices")
     var_ind = indices[var_name]
-    shock_indices = read(file, "shock_indices")
+    shock_indices = load(filepath, "shock_indices")
     shock_ind = shock_indices[shock_name]
 
-    pfile = file.plain
-    filename = pfile.filename
-    dataset = HDF5.d_open(pfile, "arr")
+    dataset = load(filepath, "arr")
     ndims = length(size(dataset))
 
     if ndims == 3 # one draw
-        arr = h5read(filename, "arr", (var_ind, Colon(), shock_ind))
-        arr = squeeze(arr, (1, 3))
-        arr = reshape(arr, (1, length(arr)))
+        whole = load(filepath, "arr")
+        arr = whole[var_ind, :, shock_ind]
+        arr = reshape(arr, 1, length(arr))
     elseif ndims == 4 # many draws
-        arr = h5read(filename, "arr", (Colon(), var_ind, Colon(), shock_ind))
-        arr = squeeze(arr, (2, 4))
+        whole = load(filepath, "arr")
+        arr = whole[:, var_ind, :, shock_ind]
     end
 
     return arr

@@ -1,7 +1,6 @@
 import Base: <=
 
 Interval{T} = Tuple{T,T}
-
 """
 ```
 Transform
@@ -287,7 +286,7 @@ Base.showerror(io::IO, ex::ParamBoundsError) = print(io, ex.msg)
 ```
 parameter{T,U<:Transform}(key::Symbol, value::T, valuebounds = (value,value),
                           transform_parameterization = (value,value),
-                          transform = Untransformed(), prior = NullablePrior(),
+                          transform = Untransformed(), prior = NullablePrior();
                           fixed = true, scaling::Function = identity, description = "",
                           tex_label::String = "")
 ```
@@ -300,12 +299,12 @@ function parameter(key::Symbol,
                    value::T,
                    valuebounds::Interval{T} = (value,value),
                    transform_parameterization::Interval{T} = (value,value),
-                   transform::U             = Untransformed(),
+                   transform::U             = DSGE.Untransformed(),
                    prior::NullableOrPrior   = NullablePrior();
                    fixed::Bool              = true,
                    scaling::Function        = identity,
                    description::String = "No description available.",
-                   tex_label::String = "") where {T,U<:Transform}
+                   tex_label::String = "") where {T, U <:Transform}
 
     # If fixed=true, force bounds to match and leave prior as null.  We need to define new
     # variable names here because of lexical scoping.
@@ -344,17 +343,14 @@ end
 
 """
 ```
-SteadyStateParameter(key::Symbol, value::T;
-                     description::String = "",
-                     tex_label::String = "") where {T<:Number}
+SteadyStateParameter(key::Symbol, value::T; description::String = "",
+                      tex_label::String = "") where {T <: Number}
 ```
 
 SteadyStateParameter constructor with optional `description` and `tex_label` arguments.
 """
-function SteadyStateParameter(key::Symbol,
-                              value::T;
-                              description::String = "No description available",
-                              tex_label::String = "") where {T<:Number}
+function SteadyStateParameter(key::Symbol, value::T; description::String = "No description available",
+                              tex_label::String = "") where {T <: Number}
 
     return SteadyStateParameter(key, value, description, tex_label)
 end
@@ -368,7 +364,7 @@ parameter(p::UnscaledParameter{T,U}, newvalue::T) where {T<:Number,U<:Transform}
 Returns an UnscaledParameter with value field equal to `newvalue`. If `p` is a fixed
 parameter, it is returned unchanged.
 """
-function parameter(p::UnscaledParameter{T,U}, newvalue::T) where {T<:Number,U<:Transform}
+function parameter(p::UnscaledParameter{T,U}, newvalue::T) where {T <: Number, U <: Transform}
     p.fixed && return p    # if the parameter is fixed, don't change its value
     a,b = p.valuebounds
     if !(a <= newvalue <= b)
@@ -387,7 +383,7 @@ parameter(p::ScaledParameter{T,U}, newvalue::T) where {T<:Number,U<:Transform}
 Returns a ScaledParameter with value field equal to `newvalue` and scaledvalue field equal
 to `p.scaling(newvalue)`. If `p` is a fixed parameter, it is returned unchanged.
 """
-function parameter(p::ScaledParameter{T,U}, newvalue::T) where {T<:Number,U<:Transform}
+function parameter(p::ScaledParameter{T,U}, newvalue::T) where {T <: Number, U <: Transform}
     p.fixed && return p    # if the parameter is fixed, don't change its value
     a,b = p.valuebounds
     if !(a <= newvalue <= b)
@@ -398,7 +394,7 @@ function parameter(p::ScaledParameter{T,U}, newvalue::T) where {T<:Number,U<:Tra
                          p.scaling, p.description, p.tex_label)
 end
 
-function Base.show(io::IO, p::Parameter{T,U}) where {T,U}
+function Base.show(io::IO, p::Parameter{T,U}) where {T, U}
     @printf io "%s\n" typeof(p)
     @printf io "(:%s)\n%s\n"      p.key p.description
     @printf io "LaTeX label: %s\n"     p.tex_label
@@ -447,17 +443,17 @@ a scalar (default=1):
 - SquareRoot:    `(a+b)/2 + (b-a)/2 * c * x/sqrt(1 + c^2 * x^2)`
 - Exponential:   `a + exp(c*(x-b))`
 """
-transform_to_model_space(p::Parameter{T,Untransformed}, x::T) where {T} = x
-function transform_to_model_space(p::Parameter{T,SquareRoot}, x::T) where {T}
+transform_to_model_space(p::Parameter{T,Untransformed}, x::T) where T = x
+function transform_to_model_space(p::Parameter{T,SquareRoot}, x::T) where T
     (a,b), c = p.transform_parameterization, one(T)
     (a+b)/2 + (b-a)/2*c*x/sqrt(1 + c^2 * x^2)
 end
-function transform_to_model_space(p::Parameter{T,Exponential}, x::T) where {T}
+function transform_to_model_space(p::Parameter{T,Exponential}, x::T) where T
     (a,b),c = p.transform_parameterization,one(T)
     a + exp(c*(x-b))
 end
 
-transform_to_model_space(pvec::ParameterVector{T}, values::Vector{T}) where {T}  = map(transform_to_model_space, pvec, values)
+transform_to_model_space(pvec::ParameterVector{T}, values::Vector{T}) where T = map(transform_to_model_space, pvec, values)
 
 """
 ```
@@ -472,8 +468,8 @@ where (a,b) = p.transform_parameterization, c a scalar (default=1), and x = p.va
 - SquareRoot:   (1/c)*cx/sqrt(1 - cx^2), where cx =  2 * (x - (a+b)/2)/(b-a)
 - Exponential:   a + exp(c*(x-b))
 """
-transform_to_real_line(p::Parameter{T,Untransformed}, x::T = p.value) where {T} = x
-function transform_to_real_line(p::Parameter{T,SquareRoot}, x::T = p.value) where {T}
+transform_to_real_line(p::Parameter{T,Untransformed}, x::T = p.value) where T = x
+function transform_to_real_line(p::Parameter{T,SquareRoot}, x::T = p.value) where T
     (a,b), c = p.transform_parameterization, one(T)
     cx = 2. * (x - (a+b)/2.)/(b-a)
     if cx^2 >1
@@ -486,22 +482,22 @@ function transform_to_real_line(p::Parameter{T,SquareRoot}, x::T = p.value) wher
     end
     (1/c)*cx/sqrt(1 - cx^2)
 end
-function transform_to_real_line(p::Parameter{T,Exponential}, x::T = p.value) where {T}
+function transform_to_real_line(p::Parameter{T,Exponential}, x::T = p.value) where T
     (a,b),c = p.transform_parameterization,one(T)
     b + (1 ./ c) * log(x-a)
 end
 
-transform_to_real_line(pvec::ParameterVector{T}, values::Vector{T}) where {T} = map(transform_to_real_line, pvec, values)
-transform_to_real_line(pvec::ParameterVector{T}) where {T} = map(transform_to_real_line, pvec)
+transform_to_real_line(pvec::ParameterVector{T}, values::Vector{T}) where T  = map(transform_to_real_line, pvec, values)
+transform_to_real_line(pvec::ParameterVector{T}) where T = map(transform_to_real_line, pvec)
 
 
 # define operators to work on parameters
 
-Base.convert(::Type{T}, p::UnscaledParameter) where {T<:Number}     = convert(T,p.value)
-Base.convert(::Type{T}, p::ScaledParameter) where {T<:Number}       = convert(T,p.scaledvalue)
-Base.convert(::Type{T}, p::SteadyStateParameter) where {T<:Number}  = convert(T,p.value)
+Base.convert(::Type{T}, p::UnscaledParameter) where T <: Number     = convert(T,p.value)
+Base.convert(::Type{T}, p::ScaledParameter) where T <: Number       = convert(T,p.scaledvalue)
+Base.convert(::Type{T}, p::SteadyStateParameter) where T <: Number  = convert(T,p.value)
 
-Base.promote_rule(::Type{AbstractParameter{T}}, ::Type{U}) where {T<:Number,U<:Number} = promote_rule(T,U)
+Base.promote_rule(::Type{AbstractParameter{T}}, ::Type{U}) where {T<:Number, U<:Number} = promote_rule(T,U)
 
 # Define scalar operators on parameters
 for op in (:(Base.:+),
@@ -569,36 +565,38 @@ end
 
 """
 ```
-update!(pvec::ParameterVector{T}, values::Vector{T}) where {T}
+update!(pvec::ParameterVector{T}, values::Vector{T}) where T
 ```
 
 Update all parameters in `pvec` that are not fixed with
 `values`. Length of `values` must equal length of `pvec`.
 Function optimized for speed.
 """
-function update!(pvec::ParameterVector{T}, values::Vector{T}) where {T}
+function update!(pvec::ParameterVector{T}, values::Vector{T}) where T
+    # this function is optimised for speed
     @assert length(values) == length(pvec) "Length of input vector (=$(length(values))) must match length of parameter vector (=$(length(pvec)))"
     map!(parameter, pvec, pvec, values)
 end
 
 """
 ```
-update(pvec::ParameterVector{T}, values::Vector{T}) where {T}
+update(pvec::ParameterVector{T}, values::Vector{T}) where T
 ```
 
 Returns a copy of `pvec` where non-fixed parameter values are updated
 to `values`. `pvec` remains unchanged. Length of `values` must
 equal length of `pvec`.
+
+We define the non-mutating version like this because we need the type stability of map!
 """
-update(pvec::ParameterVector{T}, values::Vector{T}) where {T} = update!(copy(pvec), values)
-# ^ define the non-mutating version like this because we need the type stability of map!
+update(pvec::ParameterVector{T}, values::Vector{T}) where T = update!(copy(pvec), values)
 
 Distributions.pdf(p::AbstractParameter) = exp(logpdf(p))
 # we want the unscaled value for ScaledParameters
-Distributions.logpdf(p::Parameter{T,U}) where {T,U} = logpdf(get(p.prior),p.value)
+Distributions.logpdf(p::Parameter{T,U}) where {T, U} = logpdf(get(p.prior),p.value)
 
 # this function is optimised for speed
-function Distributions.logpdf(pvec::ParameterVector{T}) where {T}
+function Distributions.logpdf(pvec::ParameterVector{T}) where T
 	x = zero(T)
 	@inbounds for i = 1:length(pvec)
         if hasprior(pvec[i])
@@ -609,7 +607,7 @@ function Distributions.logpdf(pvec::ParameterVector{T}) where {T}
 end
 
 # calculate logpdf at new values, without needing to allocate a temporary array with update
-function Distributions.logpdf(pvec::ParameterVector{T}, values::Vector{T}) where {T}
+function Distributions.logpdf(pvec::ParameterVector{T}, values::Vector{T}) where T
     @assert length(values) == length(pvec) "Length of input vector (=$(length(values))) must match length of parameter vector (=$(length(pvec)))"
 
     x = zero(T)
@@ -621,8 +619,8 @@ function Distributions.logpdf(pvec::ParameterVector{T}, values::Vector{T}) where
     x
 end
 
-Distributions.pdf(pvec::ParameterVector{T}) where {T} = exp(logpdf(pvec))
-Distributions.pdf(pvec::ParameterVector{T}, values::Vector{T}) where {T} = exp(logpdf(pvec, values))
+Distributions.pdf(pvec::ParameterVector{T}) where T  = exp(logpdf(pvec))
+Distributions.pdf(pvec::ParameterVector{T}, values::Vector{T}) where T = exp(logpdf(pvec, values))
 
 """
 ```
@@ -672,8 +670,9 @@ function describe_prior(param::Parameter)
         (prior_mean, prior_std) = moments(param)
 
         prior_dist = string(typeof(get(param.prior)))
-        prior_dist = replace(prior_dist, "Distributions.", "")
-        prior_dist = replace(prior_dist, "{Float64}", "")
+        prior_dist = replace(prior_dist, "Distributions." => "")
+        prior_dist = replace(prior_dist, "DSGE." => "")
+        prior_dist = replace(prior_dist, "{Float64}" => "")
 
         mom1, mom2 = if isa(prior, RootInverseGamma)
             "tau", "nu"

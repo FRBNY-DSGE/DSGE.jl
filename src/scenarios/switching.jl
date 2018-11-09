@@ -11,14 +11,11 @@ of times a switch actually occured.
 function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
                             verbose::Symbol = :low)
 
+    info_print(verbose, :low, "Simulating switching for " * string(scen.key) * "...")
+    println(verbose, :low, "Start time: " * string(now()))
+    println(verbose, :low, "Outputs will be saved in " * rawpath(m, "scenarios"))
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        info("Simulating switching for " * string(scen.key) * "...")
-        println("Start time: " * string(now()))
-        println("Outputs will be saved in " * rawpath(m, "scenarios"))
-        tic()
-    end
-
+    tic = time_ns()
     # Revert model alt policy to historical rule
     m <= Setting(:alternative_policy, AltPolicy(:historical, solve, eqcond), false, "apol",
                  "Alternative policy")
@@ -34,8 +31,12 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
 
     for (i, output_var) in enumerate([:forecastobs, :forecastpseudo])
         # Read in original and default draws
-        original_draws = load(original_output_files[output_var], "arr")
-        default_draws  = load(default_output_files[output_var], "arr")
+        original_draws = jldopen(original_output_files[output_var], "r") do file
+            read(file, "arr")
+        end
+        default_draws  = jldopen(default_output_files[output_var], "r") do file
+            read(file, "arr")
+        end
 
         n_draws, n_vars, n_periods = size(original_draws)
         n_default_draws = size(default_draws, 1)
@@ -62,12 +63,10 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
     write_scenario_forecasts(m, output_files, results, verbose = verbose)
 
     # Print
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        switching_time = toq()
-        switching_time_min = switching_time/60
-        println("\nTime elapsed: " * string(switching_time_min) * " minutes")
-        println("Switching complete: " * string(now()))
-    end
+    switching_time = (time_ns() - tic)/1e9
+    switching_time_min = switching_time/60
+    println(verbose, :low, "\nTime elapsed: " * string(switching_time_min) * " minutes")
+    println(verbose, :low, "Switching complete: " * string(now()))
 
     return results, switching_results
 end

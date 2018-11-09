@@ -1,4 +1,4 @@
-using DSGE, Test, HDF5, JLD
+using DSGE, Test, HDF5, JLD2, FileIO, LinearAlgebra
 
 path = dirname(@__FILE__)
 
@@ -44,12 +44,12 @@ for cond_type in [:none, :semi, :full]
     out[cond_type] = Dict{Symbol, Array{Float64}}()
     output_files = get_forecast_output_files(m, :mode, cond_type, output_vars)
     for var in keys(output_files)
-        out[cond_type][var] = h5read(output_files[var], "arr")
+        out[cond_type][var] = load(output_files[var], "arr")
     end
 end
 
 # Read expected output
-exp_out = jldopen("$path/../reference/forecast_one_out.jld", "r") do file
+exp_out = jldopen("$path/../reference/forecast_one_out.jld2", "r") do file
     read(file, "exp_out")
 end
 
@@ -83,7 +83,6 @@ end
 @everywhere using DSGE
 m <= Setting(:forecast_block_size, 5)
 forecast_one(m, :full, :none, output_vars, verbose = :none)
-
 # Test read_forecast_output
 @testset "Test full-distribution blocking" begin
     for input_type in [:mode, :full]

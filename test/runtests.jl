@@ -1,5 +1,5 @@
-using Test, Distributed, Printf
-@everywhere using DSGE, JLD2
+using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random
+@everywhere using DSGE, JLD2, Printf, LinearAlgebra
 
 my_tests = [
 ##            "core",
@@ -27,10 +27,13 @@ my_tests = [
             "estimate/hessian",
             "estimate/csminwel",
             "estimate/optimize",
-            "estimate/eig",
             "estimate/metropolis_hastings",
-            # "estimate/smc",
-            # "estimate/mutation",
+            "estimate/smc/mutation",
+            "estimate/smc/helpers",
+            "estimate/smc/initialization",
+            "estimate/smc/resample",
+            "estimate/smc/util",
+            "estimate/smc/smc",
             "data/misc",
             "data/load_data",
             "forecast/smooth",
@@ -45,6 +48,7 @@ my_tests = [
             "scenarios/forecast",
             "scenarios/switching",
             "scenarios/drivers",
+            "decomp/decompose_forecast",
             "plot/plot"
             ]
 

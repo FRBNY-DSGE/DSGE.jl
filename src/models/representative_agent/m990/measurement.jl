@@ -1,7 +1,7 @@
 """
 ```
-measurement{T<:AbstractFloat}(m::Model990{T}, TTT::Matrix{T}, RRR::Matrix{T},
-                              CCC::Vector{T})
+measurement(m::Model990{T}, TTT::Matrix{T}, RRR::Matrix{T},
+            CCC::Vector{T}) where {T<:AbstractFloat}
 ```
 
 Assign measurement equation

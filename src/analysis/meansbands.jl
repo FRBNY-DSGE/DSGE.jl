@@ -77,8 +77,8 @@ function MeansBands()
                       :cond_type => :none, :para => :none,
                       :indices => Dict{Symbol, Int}(:none => 1))
 
-    means = DataFrame(date = [Date(0)], none = [0.0])
-    bands = Dict{Symbol,DataFrame}(:none => DataFrame(date = [Date(0)]))
+    means = DataFrame(date = [Dates.Date(0)], none = [0.0])
+    bands = Dict{Symbol,DataFrame}(:none => DataFrame(date = [Dates.Date(0)]))
 
     MeansBands(metadata, means, bands)
 end
@@ -90,7 +90,11 @@ function Base.show(io::IO, mb::MeansBands)
     @printf io "  cond: %s\n"    get_cond_type(mb)
     @printf io "  para: %s\n"    get_para(mb)
     if mb.metadata[:product] != :trend && mb.metadata[:product] != :irf
-        @printf io "  dates: %s - %s\n" startdate_means(mb) enddate_means(mb)
+        if isempty(mb.metadata[:date_inds])
+            @printf io "  dates: []\n"
+        else
+            @printf io "  dates: %s - %s\n" startdate_means(mb) enddate_means(mb)
+        end
     end
     @printf io "  # of variables: %s\n" n_vars_means(mb)
     @printf io "  bands: %s\n" which_density_bands(mb, uniquify=true)
@@ -109,7 +113,7 @@ Returns whether the `mb` object in question is a dummy.
 function Base.isempty(mb::MeansBands)
 
     return get_class(mb) == :none && get_product(mb) == :none &&
-        startdate_means(mb) == Date(0) &&
+        startdate_means(mb) == Dates.Date(0) &&
         collect(names(mb.means)) ==  [:date, :none] &&
         collect(keys(mb.bands)) ==  [:none]
 end
@@ -170,12 +174,11 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     # Assert dates are contiguous
     last_mb1_date  = enddate_means(mb1)
     first_mb2_date = startdate_means(mb2)
-
     @assert iterate_quarters(last_mb1_date, 1) == first_mb2_date
 
     # compute means field
     means = vcat(mb1.means, mb2.means)
-    na2nan!(means)
+    #na2nan!(means)
 
     # compute bands field
     bands = Dict{Symbol, DataFrame}()
@@ -186,7 +189,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     nperiods_mb2 = length(mb2.metadata[:date_inds])
 
     bothvars = intersect(mb1vars, mb2vars)
-    for var in union(keys(mb1.bands), keys(mb2.bands))
+    for var in setdiff(union(keys(mb1.bands), keys(mb2.bands)), [:date])
         bands[var] = if var in bothvars
             vcat(mb1.bands[var], mb2.bands[var])
         elseif var in setdiff(mb1vars, mb2vars)
@@ -194,7 +197,7 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
         else
             vcat(fill(NaN, nperiods_mb1), mb2vars[var])
         end
-        na2nan!(bands[var])
+        #na2nan!(bands[var])
     end
 
     # compute metadata
@@ -227,14 +230,14 @@ function Base.cat(mb1::MeansBands, mb2::MeansBands;
     end
 
     # date indices
-    date_indices = Dict(d::Date => i::Int for (i, d) in enumerate(means[:date]))
+    date_indices = Dict(d::Dates.Date => i::Int for (i, d) in enumerate(means[:date]))
 
     # variable indices
     indices = Dict(var::Symbol => i::Int for (i, var) in enumerate(names(means)))
 
     # forecast string
     if isempty(forecast_string) && (mb1.metadata[:forecast_string] != mb2.metadata[:forecast_string])
-        warn("No forecast_string provided: using $(mb1.metadata[:forecast_string])")
+        @warn "No forecast_string provided: using $(mb1.metadata[:forecast_string])"
     end
     forecast_string = mb1.metadata[:forecast_string]
 
@@ -418,7 +421,7 @@ function get_shockdec_means(mb::MeansBands, var::Symbol; shocks::Vector{Symbol} 
 
     # Extract the subset of columns relating to the variable `var` and the shocks listed in `shocks.`
     # If `shocks` not provided, give all the shocks
-    var_cols = collect(names(mb.means))[find([contains(string(col), string(var)) for col in names(mb.means)])]
+    var_cols = collect(names(mb.means))[findall([contains(string(col), string(var)) for col in names(mb.means)])]
     if !isempty(shocks)
         var_cols = [col -> contains(string(col), string(shock)) ? col : nothing for shock in shocks]
     end
@@ -500,8 +503,8 @@ function which_density_bands(mb::MeansBands; uniquify=false, ordered=true)
         strs = map(string,names(mb.bands[var]))
         strs = setdiff(strs, ["date"])
 
-        lowers = strs[map(occursin, repeat([r"LB"], length(strs)), strs)]
-        uppers = strs[map(occursin, repeat([r"UB"], length(strs)), strs)]
+        lowers = strs[map(occursin, repeat([r"LB"], outer=length(strs)), strs)]
+        uppers = strs[map(occursin, repeat([r"UB"], outer=length(strs)), strs)]
 
         # sort
         if ordered
@@ -515,7 +518,6 @@ function which_density_bands(mb::MeansBands; uniquify=false, ordered=true)
         else
             [lowers; uppers]
         end
-
         return strs
     end
 end
@@ -550,7 +552,7 @@ function get_shockdec_bands(mb::MeansBands, var::Symbol;
 
     # Extract the subset of columns relating to the variable `var` and the shocks listed in `shocks.`
     # If `shocks` not provided, give all the shocks
-    var_cols = collect(keys(mb.bands))[find([contains(string(col), string(var)) for col in keys(mb.bands)])]
+    var_cols = collect(keys(mb.bands))[findall([contains(string(col), string(var)) for col in keys(mb.bands)])]
     if !isempty(shocks)
         var_cols = [col -> contains(string(col), string(shock)) ? col : nothing for shock in shocks]
     end
@@ -722,11 +724,9 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     @assert get_product(mb_dettrend) == :dettrend "The third argument must be a MeansBands object for a deterministic trend"
 
     # Get the variable-shock combinations we want to print
-    varshocks = Symbol["$var" * DSGE_SHOCKDEC_DELIM * "$shock" for shock in shocks]
-
+    varshocks = [Symbol("$var" * DSGE_SHOCKDEC_DELIM * "$shock") for shock in shocks]
     # Fetch the columns corresponding to varshocks
     df_shockdec = mb_shockdec.means[union([:date], varshocks)]
-
     df_trend    = mb_trend.means[[:date, var]]
     df_dettrend = mb_dettrend.means[[:date, var]]
 
@@ -748,8 +748,7 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
 
     # If mb_forecast and mb_hist are passed in, add the detrended time series
     # mean of var to the table
-    if !isempty(mb_forecast) && !isempty(mb_hist)
-
+    if !(isempty(mb_forecast) && isempty(mb_hist))
         mb_timeseries = cat(mb_hist, mb_forecast)
 
         # Truncate to just the dates we want
@@ -767,11 +766,11 @@ function prepare_means_table_shockdec(mb_shockdec::MeansBands, mb_trend::MeansBa
     for group in groups
         # Sum shock values for each group
         shock_vectors = [df[shock] for shock in group.shocks]
-        shock_sum = reduce(+, v0, shock_vectors)
+        shock_sum = reduce(+, shock_vectors; init = v0)
         df[Symbol(group.name)] = shock_sum
 
         # Delete original (ungrouped) shocks from df
-        delete!(df, group.shocks)
+        delete!(df, setdiff(group.shocks, [Symbol(group.name)]))
     end
 
     # Remove Unicode characters from shock names

@@ -19,8 +19,8 @@ The FRED API reports observations according to the quarter-start date. `load_fre
 returns data indexed by quarter-end date for compatibility with other datasets.
 """
 function load_fred_data(m::AbstractModel;
-                        start_date::Date = Date("1959-01-01", "y-m-d"),
-                        end_date::Date   = prev_quarter(),
+                        start_date::Dates.Date = Dates.Date("1959-01-01", "y-m-d"),
+                        end_date::Dates.Date   = prev_quarter(),
                         verbose::Symbol  = :low)
 
     data_series = parse_data_series(m)
@@ -45,9 +45,7 @@ function load_fred_data(m::AbstractModel;
         qend = lastdayofquarter(end_date)
 
         if !in(qstart, data[:date]) || !in(qend, data[:date])
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("FRED dataset on disk missing start or end date. Fetching data from FRED.")
-            end
+            println(verbose, :low, "FRED dataset on disk missing start or end date. Fetching data from FRED.")
             data = DataFrame(date = get_quarter_ends(start_date,end_date))
             missing_series = mnemonics
         else
@@ -69,18 +67,16 @@ function load_fred_data(m::AbstractModel;
 
         # Have to do this wacky parsing to prepend the century to the data vintage
         vint_date = if parse(Int,vint[1:2]) < 59
-            Year(2000) + Date(vint, dateformat)
+            Year(2000) + Dates.Date(vint, dateformat)
         else
-            Year(1900) + Date(vint, dateformat)
+            Year(1900) + Dates.Date(vint, dateformat)
         end
 
-        fredseries = Array{FredSeries, 1}(length(missing_series))
+        fredseries = Array{FredSeries, 1}(undef, length(missing_series))
         f = Fred()
 
         for (i,s) in enumerate(missing_series)
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Fetching FRED series $s...")
-            end
+            println(verbose, :low, "Fetching FRED series $s...")
             try
                 fredseries[i] = get_data(f, string(s); frequency="q",
                                                        observation_start=string(start_date),
@@ -88,26 +84,24 @@ function load_fred_data(m::AbstractModel;
                                                        vintage_dates=string(vint_date))
             catch err
                 if :msg in fieldnames(err)
-                    warn(err.msg)
+                    @warn err.msg
                 else
                     show(err)
                 end
-                warn("FRED series $s could not be fetched at vintage $vint.")
+                @warn "FRED series $s could not be fetched at vintage $vint."
 
                 try
-                    if VERBOSITY[verbose] >= VERBOSITY[:low]
-                        println("Fetching FRED series $s without vintage...")
-                    end
+                    println(verbose, :low, "Fetching FRED series $s without vintage...")
                     fredseries[i] = get_data(f, string(s); frequency="q",
                                                            observation_start=string(start_date),
                                                            observation_end=string(end_date))
                 catch err
                     if :msg in fieldnames(err)
-                        warn(err.msg)
+                        @warn err.msg
                     else
                         show(err)
                     end
-                    warn("FRED series $s could not be fetched.")
+                    @warn "FRED series $s could not be fetched."
                     continue
                 end
             end
@@ -120,7 +114,7 @@ function load_fred_data(m::AbstractModel;
                 series_id = Symbol(series.id)
                 rename!(series.df, :value => series_id)
                 map!(x->lastdayofquarter(x), series.df[:date], series.df[:date])
-                data = join(data, series.df[:,[:date, series_id]], on=:date, kind=:outer)
+                data = join(data, series.df[[:date, series_id]], on=:date, kind=:outer)
             end
         end
 
@@ -133,9 +127,7 @@ function load_fred_data(m::AbstractModel;
 
         if !m.testing
             CSV.write(datafile, data, missingstring = "NaN")
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Updated data from FRED written to $datafile.")
-            end
+            println(verbose, :low, "Updated data from FRED written to $datafile.")
         end
     end
 

@@ -1,20 +1,20 @@
 """
 ```
-hessian!(m::AbstractModel, x::Vector{T}, data::Matrix{T};
-         verbose::Symbol = :none) where {T<:AbstractFloat}
+hessian!{T<:AbstractFloat}(m::AbstractModel, x::Vector{T}, data::AbstractArray;
+                           verbose::Symbol = :none)
 ```
 
 Compute Hessian of DSGE posterior function evaluated at x.
 """
 function hessian!(m::AbstractModel,
                   x::Vector{T},
-                  data::Matrix{T};
+                  data::AbstractArray;
                   verbose::Symbol = :none) where {T<:AbstractFloat}
-    update!(m, x)
+    DSGE.update!(m, x)
 
     # Index of free parameters
     para_free      = [!θ.fixed for θ in m.parameters]
-    para_free_inds = find(para_free)
+    para_free_inds = findall(para_free)
 
     # Compute hessian only for freem parameters with indices less than max. Useful for
     # testing purposes.

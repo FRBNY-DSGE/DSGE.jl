@@ -87,6 +87,7 @@ function default_settings!(m::AbstractModel)
         "Total number of cycles to use in the combined optimization routine")
     settings[:optimization_attempts] = Setting(:optimization_attempts, 4,
         "Number of times to attempt optimization in estimate()")
+    settings[:sampling_method] = Setting(:sampling_method, :MH, "The sampling method used, either :MH or :SMC")
 
     # Estimation
     settings[:sampling_method] = Setting(:sampling_method, :MH, "The method used to generate samples from the posterior distribution of the parameters.")

@@ -37,7 +37,7 @@ function describe_series(m::AbstractModel, var::Symbol, class::Symbol;
     elseif class == :states
         string(var)
     elseif class in [:shocks, :stdshocks]
-        replace(string(var), r"_sh$", "")
+        replace(string(var), r"_sh$" => "")
     else
         error("Invalid class: " * string(class))
     end
@@ -102,9 +102,7 @@ function save_plot(p::Plots.Plot, output_file::String = ""; verbose::Symbol = :l
         !isdir(output_dir) && mkpath(output_dir)
         Plots.savefig(output_file)
 
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            println("Saved $output_file")
-        end
+        println(verbose, :low, "Saved $output_file")
     end
 end
 
