@@ -1,5 +1,5 @@
 using Test, Distributed, Printf
-@everywhere using DSGE, JLD
+@everywhere using DSGE, JLD2
 
 my_tests = [
 ##            "core",
