@@ -107,9 +107,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
     verbose::Symbol = :low)
 
     input_file_name = get_forecast_input_file(m, input_type)
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Loading draws from $input_file_name")
-    end
+    println(verbose, :low, "Loading draws from $input_file_name")
 
     # Load single draw
     if input_type in [:mean, :mode]
@@ -123,7 +121,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
         elseif get_setting(m, :sampling_method) == :SMC
             params = map(Float64, h5read(input_file_name, "smcparams"))
         else
-            throw("Invalid sampling method specification. Change in setting :sampling_method")
+            throw("Invalid :sampling method specification. Change in setting :sampling_method")
         end
 
     # Load subset of full distribution
@@ -137,7 +135,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
             elseif get_setting(m, :sampling_method) == :SMC
                 params = map(Float64, h5read(input_file_name, "smcparams", (subset_inds, :)))
             else
-                throw("Invalid sampling method specification. Change in setting :sampling_method")
+                throw("Invalid :sampling method specification. Change in setting :sampling_method")
             end
         end
 
@@ -157,21 +155,21 @@ function load_draws(m::AbstractModel, input_type::Symbol, block_inds::AbstractRa
                     verbose::Symbol = :low)
 
     input_file_name = get_forecast_input_file(m, input_type)
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("Loading draws from $input_file_name")
-    end
+    println(verbose, :low, "Loading draws from $input_file_name")
 
     if input_type in [:full, :subset]
         if isempty(block_inds)
             error("Must supply nonempty range of block_inds for this load_draws method")
         else
             ndraws = length(block_inds)
-            params = Vector{Vector{Float64}}(ndraws)
+            params = Vector{Vector{Float64}}(undef, ndraws)
             for (i, j) in zip(1:ndraws, block_inds)
                 if get_setting(m, :sampling_method) == :MH
                     params[i] = vec(map(Float64, h5read(input_file_name, "mhparams", (j, :))))
-                else
+                elseif get_setting(m, :sampling_method) == :SMC
                     params[i] = vec(map(Float64, h5read(input_file_name, "smcparams", (j, :))))
+                else
+                    throw("Invalid :sampling_method setting specification.")
                 end
             end
             return params
@@ -256,34 +254,29 @@ function forecast_one(m::AbstractModel{Float64},
     output_dir = rawpath(m, "forecast")
 
     # Print
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        info("Forecasting input_type = $input_type, cond_type = $cond_type...")
-        println("Start time: $(now())")
-        println("Forecast outputs will be saved in $output_dir")
-    end
+    info_print(verbose, :low, "Forecasting input_type = $input_type, cond_type = $cond_type...")
+    println(verbose, :low, "Start time: $(now())")
+    println(verbose, :low, "Forecast outputs will be saved in $output_dir")
 
 
     ### Single-Draw Forecasts
 
     if input_type in [:mode, :mean, :init]
 
-        tic()
+        elapsed_time = @elapsed let
+            params = load_draws(m, input_type; verbose = verbose)
+            forecast_output = forecast_one_draw(m, input_type, cond_type, output_vars,
+                                                params, df, verbose = verbose)
 
-        params = load_draws(m, input_type; verbose = verbose)
-        forecast_output = forecast_one_draw(m, input_type, cond_type, output_vars,
-                                            params, df, verbose = verbose)
-
-        write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
-                               forecast_output; df = df, block_number = Nullable{Int64}(),
-                               verbose = verbose)
-
-        if VERBOSITY[verbose] >= VERBOSITY[:low]
-            total_forecast_time     = toq()
-            total_forecast_time_min = total_forecast_time/60
-
-            println("\nTotal time to forecast: $total_forecast_time_min minutes")
+            write_forecast_outputs(m, input_type, output_vars, forecast_output_files,
+                                   forecast_output; df = df, block_number = Nullable{Int64}(),
+                                   verbose = verbose)
         end
 
+
+        total_forecast_time     = elapsed_time
+        total_forecast_time_min = total_forecast_time/60
+        println(verbose, :low, "\nTotal time to forecast: $total_forecast_time_min minutes")
 
     ### Multiple-Draw Forecasts
 
@@ -299,11 +292,9 @@ function forecast_one(m::AbstractModel{Float64},
         block_verbose = verbose == :none ? :none : :low
 
         for block = start_block:nblocks
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println()
-                info("Forecasting block $block of $nblocks...")
-            end
-            tic()
+            println(verbose, :low, )
+            info_print(verbose, :low, "Forecasting block $block of $nblocks...")
+            begin_time = time_ns()
 
             # Get to work!
             params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
@@ -320,29 +311,27 @@ function forecast_one(m::AbstractModel{Float64},
                                    forecast_output; df = df, block_number = Nullable(block),
                                    verbose = block_verbose, block_inds = block_inds_thin[block],
                                    subset_inds = subset_inds)
-            gc()
+            GC.gc()
 
             # Calculate time to complete this block, average block time, and
             # expected time to completion
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                block_time = toq()
-                total_forecast_time += block_time
-                total_forecast_time_min     = total_forecast_time/60
-                blocks_elapsed              = block - start_block + 1
-                expected_time_remaining     = (total_forecast_time/blocks_elapsed)*(nblocks - block)
-                expected_time_remaining_min = expected_time_remaining/60
+            block_time = (time_ns() - begin_time)/1e9
+            total_forecast_time += block_time
+            total_forecast_time_min     = total_forecast_time/60
+            blocks_elapsed              = block - start_block + 1
+            expected_time_remaining     = (total_forecast_time/blocks_elapsed)*(nblocks - block)
+            expected_time_remaining_min = expected_time_remaining/60
 
-                println("\nCompleted $block of $nblocks blocks.")
-                println("Total time elapsed: $total_forecast_time_min minutes")
-                println("Expected time remaining: $expected_time_remaining_min minutes")
-            end
+            println(verbose, :low, "\nCompleted $block of $nblocks blocks.")
+            println(verbose, :low, "Total time elapsed: $total_forecast_time_min minutes")
+            println(verbose, :low, "Expected time remaining: $expected_time_remaining_min minutes")
         end # of loop through blocks
 
     end # of input_type
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        println("\nForecast complete: $(now())")
-    end
+    combine_raw_forecast_output_and_metadata(m, forecast_output_files, verbose = verbose)
+
+    println(verbose, :low, "\nForecast complete: $(now())")
 end
 
 """
@@ -425,7 +414,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
 
     # Decide whether to draw states/shocks in smoother/forecast
     uncertainty_override = forecast_uncertainty_override(m)
-    uncertainty = if isnull(uncertainty_override)
+    uncertainty = if Nullables.isnull(uncertainty_override)
         if input_type in [:init, :mode, :mean]
             false
         elseif input_type in [:full, :subset]

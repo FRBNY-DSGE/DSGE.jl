@@ -30,11 +30,12 @@ function n_forecast_draws(m::AbstractModel, input_type::Symbol)
         draws = h5open(input_file, "r") do file
             if get_setting(m, :sampling_method) == :MH
                 dataset = HDF5.o_open(file, "mhparams")
-                size(dataset)[1]
-            else
+            elseif get_setting(m, :sampling_method) == :SMC
                 dataset = HDF5.o_open(file, "smcparams")
-                size(dataset)[1]
+            else
+                throw("Invalid :sampling_method setting specification.")
             end
+            size(dataset)[1]
         end
         return draws
     else
@@ -55,8 +56,8 @@ range of indices for block `i` before thinning by `jstep` and
 function forecast_block_inds(m::AbstractModel, input_type::Symbol; subset_inds::AbstractRange{Int64} = 1:0)
 
     if input_type == :full
-        ndraws = n_forecast_draws(m, :full)
-        jstep = get_jstep(m, ndraws)
+        ndraws    = n_forecast_draws(m, :full)
+        jstep     = get_jstep(m, ndraws)
         start_ind = 1
         end_ind   = ndraws
     elseif input_type == :subset
@@ -79,8 +80,8 @@ function forecast_block_inds(m::AbstractModel, input_type::Symbol; subset_inds::
     nblocks = convert(Int64, ceil(ndraws / block_size))
 
     # Fill in draw indices for each block
-    block_inds      = Vector{AbstractRange{Int64}}(nblocks)
-    block_inds_thin = Vector{AbstractRange{Int64}}(nblocks)
+    block_inds      = Vector{AbstractRange{Int64}}(undef, nblocks)
+    block_inds_thin = Vector{AbstractRange{Int64}}(undef, nblocks)
     current_draw      = start_ind - 1
     current_draw_thin = start_ind - 1
     for i = 1:(nblocks-1)
@@ -164,8 +165,8 @@ Remove the smoothed states, shocks, or pseudo-observables corresponding to
 conditional data periods. This is necessary because when we forecast with
 conditional data, we smooth beyond the last historical period.
 """
-function transplant_history(history::Matrix{T},
-                            last_hist_period::Int) where {T<:AbstractFloat}
+function transplant_history(history::Matrix{T}, last_hist_period::Int) where {T<:AbstractFloat}
+
     if isempty(history)
         return history
     else
@@ -205,8 +206,9 @@ just give us back the data. However, in the conditional data periods, we only
 have data for a subset of observables, so we need to get the remaining
 observables by mapping the smoothed states.
 """
-function transplant_forecast_observables(histstates::Matrix{T},
-    forecastobs::Matrix{T}, system::System{T}, last_hist_period::Int) where {T<:AbstractFloat}
+function transplant_forecast_observables(histstates::Matrix{T}, forecastobs::Matrix{T},
+                                         system::System{T},
+                                         last_hist_period::Int) where {T<:AbstractFloat}
 
     nvars        = size(forecastobs, 1)
     ncondperiods = size(histstates, 2) - last_hist_period
@@ -229,8 +231,8 @@ deviation will be set to zero.
 function standardize_shocks(shocks::Matrix{T}, QQ::Matrix{T}) where {T<:AbstractFloat}
     stdshocks = shocks ./ sqrt.(diag(QQ))
 
-    zeroed_shocks = find(diag(QQ) .== 0)
-    stdshocks[zeroed_shocks, :] = 0
+    zeroed_shocks = findall(diag(QQ) .== 0)
+    stdshocks[zeroed_shocks, :] .= 0
 
     return stdshocks
 end
@@ -249,7 +251,7 @@ function assemble_block_outputs(dicts::Vector{Dict{Symbol, Array{Float64}}})
     if !isempty(dicts)
         for var in keys(dicts[1])
             outputs  = map(dict -> reshape(dict[var], (1, size(dict[var])...)), dicts)
-            out[var] = cat(1, outputs...)
+            out[var] = cat(outputs..., dims=1)
         end
     end
     return out

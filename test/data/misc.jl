@@ -1,7 +1,6 @@
 using DSGE
 using Test
 using DataFrames: DataFrame
-using DataArrays: @data
 
 @testset "Miscellaneous data handling functions" begin
     # Previous and next quarter arithmetic
@@ -17,7 +16,7 @@ using DataArrays: @data
     DSGE.subtract_quarters(end_date, start_date)
 
     df1 = DataFrame(a = [1])
-    df2 = DataFrame()
+    global df2 = DataFrame()
     df1, df2 = DSGE.reconcile_column_names(df1, df2)
     @test names(df1) == names(df2)
     @test size(df2, 1) == 0
@@ -25,29 +24,27 @@ using DataArrays: @data
     quartertodate("11q3")
     quartertodate("1997q4")
     quartertodate("1985-Q1")
-    @test_throws ParseError quartertodate("2005q9")
-    @test_throws ParseError quartertodate("12345")
+    @test_throws Meta.ParseError quartertodate("2005q9")
+    @test_throws Meta.ParseError quartertodate("12345")
 
-    df = DataFrame(date = ["1913-12-23", "1992-11-14", "2002-01-01", "2014-12-19"],
-                   x = @data([1, 2, NA, 4]))
+    global df = DataFrame(date = ["1913-12-23", "1992-11-14", "2002-01-01", "2014-12-19"],
+                          x = [1, 2, missing, 4])
     DSGE.format_dates!(:date, df)
 end
 
-#DSGE.na2nan!(df)
-
 # Test hpfilter, ensuring missing data are handled correctly
-nanfront = [NaN; NaN]
-nanback  = [NaN]
+missingfront = [missing; missing]
+missingback  = [missing]
 y  = [0.; 1.; 0.; 1.]
-yn = [nanfront; y; nanback]
+yn = [missingfront; y; missingback]
 yf, yt   = hpfilter(y, 1600)
 yfn, ytn = hpfilter(yn, 1600)
 
 @testset "HP Filter and missing data handling" begin
-    @test isequal(nanfront, yfn[1:length(nanfront)])
-    @test isequal(nanfront, ytn[1:length(nanfront)])
-    @test isequal(nanback, yfn[(end-length(nanback)+1):end])
-    @test isequal(nanback, ytn[(end-length(nanback)+1):end])
+    @test isequal(missingfront, yfn[1:length(missingfront)])
+    @test isequal(missingfront, ytn[1:length(missingfront)])
+    @test isequal(missingback, yfn[(end-length(missingback)+1):end])
+    @test isequal(missingback, ytn[(end-length(missingback)+1):end])
 end
 
 nothing

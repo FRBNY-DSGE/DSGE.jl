@@ -7,13 +7,13 @@ Draw from a general starting distribution (set by default to be from the prior) 
 Returns a tuple (logpost, loglh) and modifies the particle objects in the particle cloud in place.
 
 """
-function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
-                       parallel::Bool = false, use_chand_recursion::Bool = true, verbose::Symbol = :low)
+function initial_draw!(m::AbstractModel, data::AbstractMatrix, c::ParticleCloud;
+                       parallel::Bool = false, use_chand_recursion::Bool = false, verbose::Symbol = :low)
     n_parts = length(c)
     loglh = zeros(n_parts)
     logpost = zeros(n_parts)
     if parallel
-        draws, loglh, logpost = @sync @distributed (vector_reduce) for i in 1:n_parts
+        draws, loglh, logpost = @distributed (vector_reduce) for i in 1:n_parts
             draw = vec(rand(m.parameters, 1))
             draw_loglh = 0.
             draw_logpost = 0.
@@ -30,9 +30,8 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
                 catch err
                     if isa(err, ParamBoundsError)
                         draw_loglh = draw_logpost = -Inf
-                    # from the pinv done in klein
-                    elseif isa(err, LinearAlgebra.LAPACKException)
-                       draw_loglh = draw_logpost = -Inf
+                    #elseif isa(err, SPDError)
+                    #    draw_loglh = draw_logpost = -Inf
                     else
                      #   draw_loglh = draw_logpost = -Inf
                         throw(err)
@@ -47,8 +46,8 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
             end
             vector_reshape(draw, draw_loglh, draw_logpost)
         end
-        loglh = squeeze(loglh, 1)
-        logpost = squeeze(logpost, 1)
+        loglh = dropdims(loglh, dims = 1)
+        logpost = dropdims(logpost, dims = 1)
     else
         draws = rand(m.parameters, n_parts)
         for i in 1:n_parts
@@ -56,17 +55,25 @@ function initial_draw!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud
             while !success
                 try
                     update!(m, draws[:, i])
-                    loglh[i] = likelihood(m, data, catch_errors = true, verbose = verbose)
+                    loglh[i] = likelihood(m, data, catch_errors = true, use_chand_recursion = use_chand_recursion, verbose = verbose)
                     logpost[i] = prior(m)
+                    if (loglh[i] == -Inf) | (loglh[i]===NaN)
+                        logpost[i] = -Inf
+                        loglh[i] = -Inf
+                    end
                 catch err
                     if isa(err, ParamBoundsError)
-                        draws[:, i] = rand(m.parameters, 1)
-                        continue
+                        loglh[i] = logpost[i] = -Inf #draws[:, i] = rand(m.parameters, 1)
+                        #continue
                     else
                         throw(err)
                     end
                 end
-                success = true
+                if isinf(loglh[i])
+                    draws[:, i] = rand(m.parameters, 1)
+                else
+                    success = true
+                end
             end
         end
     end
@@ -80,7 +87,7 @@ end
 # ParticleCloud from a previous estimation to each particle's respective old_loglh
 # field, and for evaluating/saving the likelihood and posterior at the new data, which
 # here is just the argument, data.
-function initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64}, c::ParticleCloud;
+function initialize_likelihoods!(m::AbstractModel, data::Matrix{Union{Float64, Missing}}, c::ParticleCloud;
                                  parallel::Bool = false, verbose::Symbol = :low)
     # Retire log-likelihood values from the old estimation to the field old_loglh
     map(p -> p.old_loglh = p.loglh, c.particles)
@@ -91,7 +98,7 @@ function initialize_likelihoods!(m::AbstractModel, data::Matrix{Float64}, c::Par
     logpost = zeros(n_parts)
 
     if parallel
-        loglh, logpost = @sync @distributed (scalar_reduce) for i in 1:n_parts
+        loglh, logpost = @distributed (scalar_reduce) for i in 1:n_parts
             update!(m, draws[:, i])
             draw_loglh = likelihood(m, data, verbose = verbose)
             draw_logpost = prior(m)

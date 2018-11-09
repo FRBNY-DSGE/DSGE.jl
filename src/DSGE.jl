@@ -2,21 +2,21 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module DSGE
     using BasisMatrices, BenchmarkTools, CSV, DataFrames, Dates
-    using Distributed, Distributions, FFTW, FileIO, ForwardDiff, FredData, HDF5, JLD
-    using LinearAlgebra, Nullables, Optim, Printf, Random, RecipesBase
+    using Distributed, Distributions, FFTW, FileIO, ForwardDiff, FredData, HDF5, JLD2
+    using LinearAlgebra, Missings, Nullables, Optim, OrderedCollections, Printf, Random, RecipesBase
     using SparseArrays, SpecialFunctions, StateSpaceRoutines, StatPlots, Test
-    using DataStructures: SortedDict, insert!, ForwardOrdering, OrderedDict
+    using DataStructures
     using QuantEcon: solve_discrete_lyapunov
     using DifferentialEquations: ODEProblem, Tsit5, Euler
     using Roots: fzero, ConvergenceFailed
-    using StatsBase: sample
+    using StatsBase: sample, Weights
     using StatsFuns: chisqinvcdf
     import Calculus, Missings, Nullables, Base.<, Base.min, Base.max
+    import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
     import StateSpaceRoutines: KalmanFilter
     import SparseArrays: sparse
     export
-
         # distributions_ext.jl
         BetaAlt, GammaAlt, RootInverseGamma, DegenerateMvNormal, DegenerateDiagMvTDist, MatrixNormal,
 
@@ -112,6 +112,9 @@ module DSGE
         write_meansbands_tables_all, construct_fcast_and_hist_dfs,
         df_to_table, load_posterior_moments,
 
+        # decomp/
+        decompose_forecast, decomposition_means,
+
         # altpolicy/
         AltPolicy, taylor93, taylor99,
 
@@ -127,6 +130,7 @@ module DSGE
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies, plot_scenario,
         plot_posterior_intervals, plot_posterior_interval_comparison,
+        plot_forecast_decomposition,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
@@ -168,6 +172,10 @@ module DSGE
     include("util.jl")
     include("grids.jl")
     include("chebyshev.jl")
+
+    include("benchmark/util.jl")
+    include("benchmark/benchmark.jl")
+    include("benchmark/io.jl")
 
     include("benchmark/util.jl")
     include("benchmark/benchmark.jl")
@@ -231,6 +239,10 @@ module DSGE
     include("analysis/util.jl")
     include("analysis/df_to_table.jl")
 
+    include("decomp/drivers.jl")
+    include("decomp/io.jl")
+    include("decomp/meansbands.jl")
+
     include("altpolicy/altpolicy.jl")
     include("altpolicy/taylor93.jl")
     include("altpolicy/taylor99.jl")
@@ -251,6 +263,7 @@ module DSGE
     include("plot/plot_shock_decomposition.jl")
     include("plot/plot_altpolicies.jl")
     include("plot/plot_scenario.jl")
+    include("plot/plot_forecast_decomposition.jl")
 
     # Representative Agent Models
     include("models/representative_agent/financial_frictions.jl")

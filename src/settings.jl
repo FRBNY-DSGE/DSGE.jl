@@ -31,8 +31,8 @@ Base.convert(::Type{T}, s::Setting{U}) where {T<:Number, U<:Number} = convert(T,
 Base.convert(::Type{String}, s::Setting{String}) = convert(String, s.value)
 
 Base.promote_rule(::Type{Setting{T}}, ::Type{U}) where {T<:Number,U<:Number} = promote_rule(T,U)
-Base.promote_rule(::Type{Setting{String}}, ::Type{String}) = String
-Base.promote_rule(::Type{Setting{Bool}}, ::Type{Bool}) = promote_rule(Bool, Bool)
+Base.promote_rule(::Type{Setting{String}}, ::Type{String}) = String # promote_rule(String, String)
+Base.promote_rule(::Type{Setting{Bool}}, ::Type{Bool})  = Bool #promote_rule(Bool, Bool)
 
 Base.string(s::Setting{String}) = string(s.value)
 

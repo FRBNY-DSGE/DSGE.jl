@@ -1,6 +1,6 @@
 """
 ```
-augment_states(m::AnSchorfheide, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T})
+augment_states(m::AnSchorfheide, TTT::Matrix{T}, RRR::Matrix{T}, CCC::Matrix{T}) where {T<:AbstractFloat}
 ```
 
 ### Arguments
@@ -41,7 +41,7 @@ The diagram below shows how `TTT` is extended to `TTT_aug`.
     |_________________________________|
 
 """
-function augment_states(m::AnSchorfheide, TTT::Matrix{T},
-                        RRR::Matrix{T}, CCC::Vector{T}) where {T<:AbstractFloat}
+function augment_states(m::AnSchorfheide, TTT::Matrix{T}, RRR::Matrix{T},
+                        CCC::Vector{T}) where {T<:AbstractFloat}
     return TTT, RRR, CCC
 end

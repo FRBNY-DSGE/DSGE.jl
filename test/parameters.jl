@@ -1,5 +1,5 @@
-using DSGE, Nullables
-using Test, Distributions
+using DSGE
+using Test, Distributions, InteractiveUtils, Nullables
 
 @testset "Ensure transformations to the real line/model space are valid" begin
     for T in subtypes(Transform)
@@ -28,7 +28,7 @@ end
 end
 
 updated = update(pvec, ones(length(pvec)))
-update!(pvec, ones(length(pvec)))
+DSGE.update!(pvec, ones(length(pvec)))
 
 @testset "Check if update! preserves dimensions and values" begin
     @test all(updated .== pvec)
@@ -48,7 +48,7 @@ end
 
 # vector of new values must be the same length
 @testset "Ensure update! enforces the same length of the parameter vector being updated" begin
-    @test_throws AssertionError update!(pvec, ones(length(pvec)-1))
+    @test_throws AssertionError DSGE.update!(pvec, ones(length(pvec)-1))
 end
 
 @testset "Ensure parameters being updated are of the same type." begin

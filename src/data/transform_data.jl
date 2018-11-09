@@ -56,9 +56,7 @@ function transform_data(m::AbstractModel, levels::DataFrame; cond_type::Symbol =
     data_transforms = collect_data_transforms(m)
 
     for series in keys(data_transforms)
-        if VERBOSITY[verbose] >= VERBOSITY[:high]
-            println("Transforming series $series...")
-        end
+        println(verbose, :high, "Transforming series $series...")
         f = data_transforms[series]
         transformed[series] = f(levels)
     end
@@ -127,13 +125,13 @@ function transform_population_data(population_data::DataFrame, population_foreca
                                    use_hpfilter::Bool = true)
 
     # Unfiltered population data
-    population_recorded = population_data[:,[:date, population_mnemonic]]
+    population_recorded = population_data[[:date, population_mnemonic]]
 
     # Make sure first period of unfiltered population forecast is the first forecast quarter
     if !isempty(population_forecast)
         last_recorded_date = population_recorded[end, :date]
         if population_forecast[1, :date] <= last_recorded_date
-            last_recorded_ind   = find(population_forecast[:date] .== last_recorded_date)[1]
+            last_recorded_ind   = findall(population_forecast[:date] .== last_recorded_date)[1]
             population_forecast = population_forecast[(last_recorded_ind+1):end, :]
         end
         @assert subtract_quarters(population_forecast[1, :date], last_recorded_date) == 1
@@ -149,7 +147,7 @@ function transform_population_data(population_data::DataFrame, population_foreca
 
     # HP filter
     if use_hpfilter
-        population_all = convert(Array{Float64}, population_all)
+        population_all = convert(Array{Union{Float64, Missing}}, population_all)
         filtered_population, _ = hpfilter(population_all, 1600)
     end
 

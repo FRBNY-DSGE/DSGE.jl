@@ -1,18 +1,18 @@
 # To be removed after running this test individually in the REPL successfully
 using DSGE
-using HDF5, JLD
-import Test: @test, @testset
+using HDF5, JLD2
+using Test
 
-srand(42)
+Random.seed!(42)
 weights = rand(400)
 weights = weights/sum(weights)
 test_sys_resample = resample(weights, method = :systematic)
 test_multi_resample = resample(weights, method = :multinomial)
 test_poly_resample = resample(weights, method = :polyalgo)
 
-saved_sys_resample = load("../../reference/resample.jld", "sys")
-saved_multi_resample = load("../../reference/resample.jld", "multi")
-saved_poly_resample = load("../../reference/resample.jld", "poly")
+saved_sys_resample = load("reference/resample.jld2", "sys")
+saved_multi_resample = load("reference/resample.jld2", "multi")
+saved_poly_resample = load("reference/resample.jld2", "poly")
 
 ####################################################################
 @testset "Resampling methods" begin

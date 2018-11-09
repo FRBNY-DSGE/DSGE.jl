@@ -1,6 +1,4 @@
-function augment_states(m::SmetsWouters{T},
-                        TTT::Matrix{T},
-                        RRR::Matrix{T},
+function augment_states(m::SmetsWouters{T}, TTT::Matrix{T}, RRR::Matrix{T},
                         CCC::Vector{T}) where {T<:AbstractFloat}
     endo = m.endogenous_states
     endo_addl = m.endogenous_states_augmented

@@ -18,7 +18,7 @@ Reindexing and reweighting samples from a degenerate distribution
 function resample(weights::Vector{Float64}; method::Symbol = :systematic)
     if method == :multinomial
         n_parts = length(weights)
-        indx = Vector{Int64}(n_parts)
+        indx = Vector{Int64}(undef, n_parts)
 
         # Stores cumulative weights until given index
         cumulative_weights = cumsum(weights/sum(weights))
@@ -50,7 +50,7 @@ function resample(weights::Vector{Float64}; method::Symbol = :systematic)
             return 0
         end
 
-        indx = Vector{Int64}(n_parts)
+        indx = Vector{Int64}(undef, n_parts)
         for i in 1:n_parts
             if i == 1
                 indx[i] = subsys(i, offset, n_parts, 1, cumulative_weights)

@@ -88,7 +88,7 @@ function targets_to_data(m::AbstractModel, scen::Scenario)
         df[var] = if var in scen.target_names
             scen.targets[var]
         else
-            fill(NaN, horizons)
+            fill(missing, horizons)
         end
     end
     return df
@@ -182,7 +182,7 @@ mutable struct ScenarioAggregate <: AbstractScenario
             if !all(p -> 0.0 <= p <= 1.0, proportions)
                 error("Elements of proportions must be between 0 and 1")
             end
-            if sum(proportions) != 1.0
+            if !(sum(proportions) ≈ 1.0)
                 error("Elements of proportions must sum to 1")
             end
         end

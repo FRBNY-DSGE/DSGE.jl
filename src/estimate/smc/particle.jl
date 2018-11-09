@@ -163,7 +163,7 @@ end
 end
 
 function weighted_mean(c::ParticleCloud)
-    return squeeze(mean(get_vals(c), Weights(get_weights(c)), 2), 2)
+    return dropdims(mean(get_vals(c), Weights(get_weights(c)), 2), dims = 2)
 end
 
 function weighted_quantile(c::ParticleCloud, i::Int64)
@@ -177,7 +177,7 @@ function weighted_std(c::ParticleCloud)
 end
 
 function weighted_cov(c::ParticleCloud)
-    return cov(get_vals(c)', Weights(get_weights(c)), corrected = false)
+    return cov(Matrix(get_vals(c)'), Weights(get_weights(c)), corrected = false)
 end
 
 for op in (:(Base.:+),
