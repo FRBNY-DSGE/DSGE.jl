@@ -84,7 +84,8 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
                                             title::String = in_deviations ? "$comp_label deviations from $base_label Interval Comparisons" : "$base_label and $comp_label Interval Comparisons",
                                             block::Int64 = 0, include_fixed::Bool = false,
                                             param_range::UnitRange = include_fixed ? UnitRange(1, n_parameters(m_baseline)) : UnitRange(1, n_parameters_free(m_baseline)),
-                                            excl_list::Vector{Symbol} = Vector{Symbol}(0))
+                                            excl_list::Vector{Symbol} = Vector{Symbol}(0),
+                                            filename_tag::String = "")
 
     if isempty(df_baseline)
         df_baseline = load_posterior_moments(m_baseline; cloud = cloud_baseline, load_bands = true,
@@ -161,7 +162,7 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
     if !isempty(plotroot)
         vint = data_vintage(m_baseline)
         output_file = joinpath(plotroot, "posterior_comparison_intervals_" *
-                               "deviat=$(in_deviations)_" * "vint=$vint")
+                               "deviat=$(in_deviations)_" * "vint=$vint" * "_" *filename_tag)
         if !iszero(block)
             output_file = output_file * "_block=$block"
         end
@@ -187,7 +188,8 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
                                             title::String = in_deviations ? "$comp_label deviations from $base_label Interval Comparisons" : "$base_label and $comp_label Interval Comparisons",
                                             block::Int64 = 0, include_fixed::Bool = false,
                                             param_range::UnitRange = include_fixed ? UnitRange(1, n_parameters(m_baseline)) : UnitRange(1, n_parameters_free(m_baseline)),
-                                            excl_list::Vector{Symbol} = Vector{Symbol}(0))
+                                            excl_list::Vector{Symbol} = Vector{Symbol}(0),
+                                            filename_tag::String = "")
 
     df_baseline = load_posterior_moments(m_baseline, clouds_baseline, load_bands = true,
                                          include_fixed = include_fixed, excl_list = excl_list)
@@ -197,5 +199,5 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
     plot_posterior_interval_comparison(m_baseline, m_comparison, df_baseline = df_baseline, df_comparison = df_comparison,
                                        plotroot = plotroot, verbose = verbose, in_deviations = in_deviations, scale_by_std = scale_by_std,
                                        base_label = base_label, comp_label = comp_label, title = title, param_range = param_range, block = block,
-                                       excl_list = excl_list)
+                                       excl_list = excl_list, filename_tag = filename_tag)
 end
