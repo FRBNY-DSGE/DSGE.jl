@@ -697,8 +697,8 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands(draws::AbstractArray, percents::Vector{T}; minimize::Bool = true) where {T<:AbstractFloat}
-
+function find_density_bands(draws::AbstractArray, percents::Vector{T};
+                            minimize::Bool = true) where {T<:AbstractFloat}
     bands = DataFrame()
 
     for p in percents

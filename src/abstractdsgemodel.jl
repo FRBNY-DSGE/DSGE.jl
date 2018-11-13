@@ -80,14 +80,14 @@ Base.setindex!(m::AbstractModel, value, k::Symbol) = Base.setindex!(m, value, m.
 
 """
 ```
-(m::AbstractModel{T} <= p::AbstractParameter{T}) where T
+(<=)(m::AbstractModel{T}, p::AbstractParameter{T}) where T
 ```
 
 Syntax for adding a parameter to a model: m <= parameter.
 NOTE: If `p` is added to `m` and length(m.steady_state) > 0, `keys(m)` will not generate the
 index of `p` in `m.parameters`.
 """
-function (m::AbstractModel{T} <= p::AbstractParameter{T}) where T
+function (<=)(m::AbstractModel{T}, p::AbstractParameter{T}) where T
 
     if !in(p.key, keys(m.keys))
 
@@ -675,7 +675,7 @@ paramter values.
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
 """
-function transform_to_model_space!(m::AbstractModel, values::Vector{T}) where T<:AbstractFloat
+function transform_to_model_space!(m::AbstractModel, values::Vector{T}) where {T<:AbstractFloat}
     new_values = transform_to_model_space(m.parameters, values)
     DSGE.update!(m, new_values)
     steadystate!(m)

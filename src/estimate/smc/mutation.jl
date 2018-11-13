@@ -30,7 +30,7 @@ function mutation(m::AbstractModel, data::T, p::Particle, d::Distribution,
                   ϕ_n::Float64, ϕ_n1::Float64; c::Float64 = 1., α::Float64 = 1.,
                   old_data::T = T(size(data, 1), 0),
                   use_chand_recursion::Bool = false,
-                  verbose::Symbol = :low) where T <: AbstractMatrix
+                  verbose::Symbol = :low) where {T <: AbstractMatrix}
 
     n_steps = get_setting(m, :n_mh_steps_smc)
 
