@@ -1,19 +1,19 @@
-using DSGE, JLD, DataStructures
+using DSGE, JLD2, DataStructures
 import Test: @test, @testset
 import DSGE: @test_matrix_approx_eq
 
 # Load pre-input files
-out = load("../../test_outputs/solve/splines_outputs_mat.jld")
+out = load("../../test_outputs/solve/splines_outputs_mat.jld2")
 g0 = full(out["g0"]); g1 = full(out["g1"]); psi = full(out["psi"])
 Pi = full(out["pi"]); c = full(out["constant"])
-out = load("../../test_outputs/solve/splines_outputs.jld")
+out = load("../../test_outputs/solve/splines_outputs.jld2")
 Γ0 = full(out["Γ0"]); Γ1 = full(out["Γ1"]); Ψ = full(out["Ψ"])
 Π = full(out["Π"]); C_val = full(out["C"])
 
 # Load checking files
-out = load("../../test_outputs/solve/post_gensys_mat.jld")
+out = load("../../test_outputs/solve/post_gensys_mat.jld2")
 G1_mat = full(out["G1"]); impact_mat = full(out["impact"])
-out = load("../../test_outputs/solve/post_gensys.jld")
+out = load("../../test_outputs/solve/post_gensys.jld2")
 G1 = full(out["G1"]); impact = full(out["impact"]);
 
 # Check non-in-place first

@@ -13,7 +13,6 @@ FileIO
 FFTW
 ForwardDiff
 FredData
-LinearAlgebra
 HDF5
 JLD2
 LinearAlgebra
@@ -32,3 +31,4 @@ StateSpaceRoutines
 StatPlots
 StatsBase
 StatsFuns
+Test

@@ -1,4 +1,4 @@
-using JLD
+using JLD2
 using DSGE
 m = KrusellSmithCT()
 T, R, ~, inverse_basis = solvect(m)
@@ -24,5 +24,4 @@ end
 data = zeros(1,Int(n/2))
 data[1, :] = [s[nst - 2, 2 * i] for i = 1:Int(n/2)]
 
-save("simulated_data.jld", "data", data)
-
+save("simulated_data.jld2", "data", data)

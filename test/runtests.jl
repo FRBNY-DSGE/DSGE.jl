@@ -2,8 +2,8 @@ using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStru
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra
 
 my_tests = [
-##            "core",
-#            "parameters",
+#            "core",
+            "parameters",
 #            "models/representative_agent/an_schorfheide/an_schorfheide",
 #            "models/representative_agent/smets_wouters/smets_wouters",
 #            "models/representative_agent/m990/m990",

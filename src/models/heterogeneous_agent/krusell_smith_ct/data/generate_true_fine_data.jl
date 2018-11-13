@@ -1,4 +1,4 @@
-using DSGE, JLD, DifferentialEquations
+using DSGE, JLD2, DifferentialEquations
 
 # Get transition equations
 m = KrusellSmithCT()
@@ -20,7 +20,7 @@ W = WienerProcess(0.0, 0., 0.)
 prob = SDEProblem(f, g, u0, tspan, W)
 sol = solve(prob, EM(), dt = dt)
 
-save("fine_data_red_basis.jld", "states", sol.u)
+save("fine_data_red_basis.jld2", "states", sol.u)
 states = sol.u
 data = zeros(1, (length(states) - 1) / 90)
 
@@ -29,4 +29,4 @@ for i = 1:length(data)
     full_state = inverse_basis * states[1+ (i-1)*90]
     data[i] = full_state[m.endogenous_states[:output][1]]
 end
-save("simulated_data.jld", "data", data)
+save("simulated_data.jld2", "data", data)
