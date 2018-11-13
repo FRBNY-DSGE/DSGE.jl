@@ -493,9 +493,9 @@ transform_to_real_line(pvec::ParameterVector{T}) where T = map(transform_to_real
 
 # define operators to work on parameters
 
-Base.convert(::Type{T}, p::UnscaledParameter) where T <: Number     = convert(T,p.value)
-Base.convert(::Type{T}, p::ScaledParameter) where T <: Number       = convert(T,p.scaledvalue)
-Base.convert(::Type{T}, p::SteadyStateParameter) where T <: Number  = convert(T,p.value)
+Base.convert(::Type{T}, p::UnscaledParameter) where {T <: Number}     = convert(T,p.value)
+Base.convert(::Type{T}, p::ScaledParameter) where {T <: Number}       = convert(T,p.scaledvalue)
+Base.convert(::Type{T}, p::SteadyStateParameter) where {T <: Number}  = convert(T,p.value)
 
 Base.promote_rule(::Type{AbstractParameter{T}}, ::Type{U}) where {T<:Number, U<:Number} = promote_rule(T,U)
 
