@@ -1,29 +1,29 @@
-using DSGE, JLD, DataStructures
+using DSGE, JLD2, DataStructures
 import Test: @test, @testset
 import DSGE: @test_matrix_approx_eq
 
 m = KrusellSmith()
 
 # Load pre-reduced canonical form matrices
-g1 = load("../../test_outputs/solve/canonical.jld", "g1")
-g0 = load("../../test_outputs/solve/canonical.jld", "g0")
-psi = load("../../test_outputs/solve/canonical.jld", "psi")
-pi = load("../../test_outputs/solve/canonical.jld", "pi")
-c = load("../../test_outputs/solve/canonical.jld", "c")
+g1 = load("../../test_outputs/solve/canonical.jld2", "g1")
+g0 = load("../../test_outputs/solve/canonical.jld2", "g0")
+psi = load("../../test_outputs/solve/canonical.jld2", "psi")
+pi = load("../../test_outputs/solve/canonical.jld2", "pi")
+c = load("../../test_outputs/solve/canonical.jld2", "c")
 
 # Load reduced canonical form matrices
-g1_kry = load("../../test_outputs/solve/canonical_kry.jld", "g1")
-g0_kry = load("../../test_outputs/solve/canonical_kry.jld", "g0")
-psi_kry = load("../../test_outputs/solve/canonical_kry.jld", "psi")
-pi_kry = load("../../test_outputs/solve/canonical_kry.jld", "pi")
-c_kry = load("../../test_outputs/solve/canonical_kry.jld", "c")
+g1_kry = load("../../test_outputs/solve/canonical_kry.jld2", "g1")
+g0_kry = load("../../test_outputs/solve/canonical_kry.jld2", "g0")
+psi_kry = load("../../test_outputs/solve/canonical_kry.jld2", "psi")
+pi_kry = load("../../test_outputs/solve/canonical_kry.jld2", "pi")
+c_kry = load("../../test_outputs/solve/canonical_kry.jld2", "c")
 
 # Load Krylov + spline reduced canonical form matrices
-g1_spl = load("../../test_outputs/solve/canonical_spl.jld", "g1")
-g0_spl = load("../../test_outputs/solve/canonical_spl.jld", "g0")
-psi_spl = load("../../test_outputs/solve/canonical_spl.jld", "psi")
-pi_spl = load("../../test_outputs/solve/canonical_spl.jld", "pi")
-c_spl = load("../../test_outputs/solve/canonical_spl.jld", "c")
+g1_spl = load("../../test_outputs/solve/canonical_spl.jld2", "g1")
+g0_spl = load("../../test_outputs/solve/canonical_spl.jld2", "g0")
+psi_spl = load("../../test_outputs/solve/canonical_spl.jld2", "psi")
+pi_spl = load("../../test_outputs/solve/canonical_spl.jld2", "pi")
+c_spl = load("../../test_outputs/solve/canonical_spl.jld2", "c")
 
 # Update model
 update!(m.settings[:I], Setting(:I, 100))

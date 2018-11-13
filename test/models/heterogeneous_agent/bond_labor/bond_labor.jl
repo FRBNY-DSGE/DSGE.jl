@@ -1,6 +1,6 @@
 using DSGE
 using Test, BenchmarkTools
-using JLD
+using JLD2
 
 path = dirname(@__FILE__)
 
@@ -10,7 +10,7 @@ m = BondLabor()
 steadystate!(m)
 @btime steadystate!(m)
 
-file = jldopen("$path/reference/steady_state.jld", "r")
+file = jldopen("$path/reference/steady_state.jld2", "r")
 saved_ell  = read(file, "ell")
 saved_c    = read(file, "c")
 saved_η    = read(file, "eta")
@@ -33,7 +33,7 @@ m.testing = true        # So that it will test against the unnormalized Jacobian
 JJ = DSGE.jacobian(m)
 @btime JJ = DSGE.jacobian(m)
 
-file = jldopen("$path/reference/jacobian.jld", "r")
+file = jldopen("$path/reference/jacobian.jld2", "r")
 saved_JJ  = read(file, "JJ")
 close(file)
 
@@ -94,7 +94,7 @@ m.testing = false      # So the Jacobian will be normalized within the klein sol
 gx, hx = klein(m)
 @btime klein(m)
 
-file = jldopen("$path/reference/solve.jld", "r")
+file = jldopen("$path/reference/solve.jld2", "r")
 saved_gx   = read(file, "gx")
 saved_hx   = read(file, "hx")
 close(file)

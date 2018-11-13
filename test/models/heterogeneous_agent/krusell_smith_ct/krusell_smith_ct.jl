@@ -1,7 +1,7 @@
-using JLD
+using JLD2
 import DataStructures: OrderedDict
 import Test: @test, @testset
-import DSGE: @test_matrix_approx_eq
+import DSGE: @test_matrix_approx_eq, update!
 using DSGE
 
 ### Model
@@ -12,9 +12,9 @@ m = KrusellSmithCT()
 # Endogenous states
 endo = m.endogenous_states
 @testset "Model indices" begin
-    @test n_states(m) == length(endo[:value_function]) + length(endo[:distribution]) + length(endo[:log_aggregate_tfp]) + 6
+    @test n_states(m) == length(endo[:value_function]) .+ length(endo[:distribution]) .+ length(endo[:log_aggregate_tfp]) + 6
     @test get_setting(m, :n_jump_vars) == length(endo[:value_function])
-    @test get_setting(m, :n_state_vars) == length(endo[:distribution]) + length(endo[:log_aggregate_tfp]) - get_setting(m, :n_state_vars_unreduce)
+    @test get_setting(m, :n_state_vars) == length(endo[:distribution]) .+ length(endo[:log_aggregate_tfp]) - get_setting(m, :n_state_vars_unreduce)
 
     # Exogenous shocks
     @test n_shocks_exogenous(m) == 1
@@ -27,11 +27,11 @@ end
 #=
 # Load test values
 # TODO: These file paths are out of date
-params = load("../../../test_outputs/krusell_smith/saved_params.jld", "params")
-grids = load("../../../test_outputs/krusell_smith/saved_params.jld", "grids")
-init_params = load("../../../test_outputs/krusell_smith/saved_params.jld", "init_params")
-approx_params = load("../../../test_outputs/krusell_smith/saved_params.jld", "approx_params")
-vars_ss_mat = load("../../../test_outputs/krusell_smith/vars_ss.jld")
+params = load("../../../test_outputs/krusell_smith/saved_params.jld2", "params")
+grids = load("../../../test_outputs/krusell_smith/saved_params.jld2", "grids")
+init_params = load("../../../test_outputs/krusell_smith/saved_params.jld2", "init_params")
+approx_params = load("../../../test_outputs/krusell_smith/saved_params.jld2", "approx_params")
+vars_ss_mat = load("../../../test_outputs/krusell_smith/vars_ss.jld2")
 vars_ss_mat = vars_ss_mat["varsSS"]
 
 # Update parameters

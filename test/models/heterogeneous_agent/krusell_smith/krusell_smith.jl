@@ -1,6 +1,5 @@
 using DSGE, StateSpaceRoutines
-using JLD
-using Test
+using JLD2, Test
 import DSGE: jacobian, n_observables, n_shocks_exogenous, n_backward_looking_states, n_model_states
 
 path = dirname(@__FILE__)
@@ -9,7 +8,7 @@ path = dirname(@__FILE__)
 m = KrusellSmith()
 
 ### Steady State
-file = jldopen("$path/reference/steady_state.jld", "r")
+file = jldopen("$path/reference/steady_state.jld2", "r")
 saved_l = read(file, "saved_l")
 saved_c = read(file, "saved_c")
 saved_μ = read(file, "saved_mu")
@@ -28,8 +27,8 @@ end
 ### Jacobian
 m.testing = true
 JJ       = jacobian(m)
-saved_JJ = load("$path/reference/jacobian.jld", "saved_JJ")
-nw       = load("$path/reference/jacobian.jld", "nw")
+saved_JJ = load("$path/reference/jacobian.jld2", "saved_JJ")
+nw       = load("$path/reference/jacobian.jld2", "nw")
 
 # we will always order things XP YP X Y
 # convention is that capital letters generally refer to indices
@@ -103,8 +102,8 @@ end
 m.testing = false
 TTT_jump, TTT_state = klein(m)
 
-saved_gx = load("$path/reference/klein.jld", "gx")
-saved_hx = load("$path/reference/klein.jld", "hx")
+saved_gx = load("$path/reference/klein.jld2", "gx")
+saved_hx = load("$path/reference/klein.jld2", "hx")
 
 @testset "Solve" begin
     @test @test_matrix_approx_eq saved_gx TTT_jump
@@ -162,7 +161,7 @@ s_0     = zeros(n_model_states(m))
 P_0     = RRR*QQ*RRR'
 
 # Testing the simulation and filter setup
-file = jldopen("$path/reference/simulate_and_filter.jld", "r")
+file = jldopen("$path/reference/simulate_and_filter.jld2", "r")
 saved_u_t  = read(file, "u_t")
 saved_ε_t  = read(file, "eps_t")
 saved_s_t  = read(file, "s_t")
@@ -188,7 +187,7 @@ end
 
 # Testing the filter inputs against the outputs
 EE_zero = zeros(1, 1)
-reference_output = load("$path/reference/filter_inputs_output.jld")
+reference_output = load("$path/reference/filter_inputs_output.jld2")
 test = kalman_filter(reference_output["y"], TTT, RRR, CCC, QQ, ZZ,
                      DD, EE_zero, s_0, P_0)
 

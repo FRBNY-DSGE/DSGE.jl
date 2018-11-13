@@ -1,4 +1,4 @@
-using JLD
+using JLD2
 m = OneAssetHANK()#=
 m <= Setting(:reduce_state_vars, false)
 m <= Setting(:reduce_v, false)
@@ -28,4 +28,4 @@ for i = 2:n
 end
 data = zeros(1,Int(n/2))
 data[1,:] = [s[64,2*i] for i = 1:Int(n/2)]
-save("simulated_data.jld", "data", data)
+save("simulated_data.jld2", "data", data)

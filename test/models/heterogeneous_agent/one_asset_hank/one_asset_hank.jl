@@ -1,4 +1,4 @@
-using DSGE, JLD
+using DSGE, JLD2
 import Test: @test, @testset
 import DSGE: @test_matrix_approx_eq
 import DataStructures: OrderedDict
@@ -25,12 +25,12 @@ end
 # Load test values. Only using params for now, hard-coded other values,
 # but we list the other sets of parameters here if user wants to
 # edit this test file.
-params = load("../../../test_outputs/one_asset_hank/saved_params.jld", "params")
-# grids = load("../../../test_outputs/one_asset_hank/saved_params.jld", "grids")
-# init_params = load("../../../test_outputs/one_asset_hank/saved_params.jld", "init_params")
-# approx_params = load("../../../test_outputs/one_asset_hank/saved_params.jld", "approx_params")
-# red_params = load("../../../test_outputs/one_asset_hank/saved_params.jld", "red_params")
-vars_ss_mat = load("../../../test_outputs/one_asset_hank/vars_ss.jld")
+params = load("../../../test_outputs/one_asset_hank/saved_params.jld2", "params")
+# grids = load("../../../test_outputs/one_asset_hank/saved_params.jld2", "grids")
+# init_params = load("../../../test_outputs/one_asset_hank/saved_params.jld2", "init_params")
+# approx_params = load("../../../test_outputs/one_asset_hank/saved_params.jld2", "approx_params")
+# red_params = load("../../../test_outputs/one_asset_hank/saved_params.jld2", "red_params")
+vars_ss_mat = load("../../../test_outputs/one_asset_hank/vars_ss.jld2")
 
 # Update parameters
 m[:coefrra] = params[:coefrra]

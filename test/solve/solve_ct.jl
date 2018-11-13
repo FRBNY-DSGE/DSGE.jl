@@ -1,22 +1,22 @@
-using DSGE, JLD, DataStructures
+using DSGE, JLD2, DataStructures
 import Test: @test, @testset
 import DSGE: @test_matrix_approx_eq
 
 # Load true values
-true_inverse_basis = load("../../test_outputs/solve/solve.jld", "inverse_basis")
-G1 = load("../../test_outputs/solve/solve.jld", "G1")
-impact = load("../../test_outputs/solve/solve.jld", "impact")
+true_inverse_basis = load("../../test_outputs/solve/solve.jld2", "inverse_basis")
+G1 = load("../../test_outputs/solve/solve.jld2", "G1")
+impact = load("../../test_outputs/solve/solve.jld2", "impact")
 
 # Test
 m = KrusellSmith()
 ### Steady state
 
 # Load test values
-params = load("../../test_outputs/krusell_smith/saved_params.jld", "params")
-grids = load("../../test_outputs/krusell_smith/saved_params.jld", "grids")
-init_params = load("../../test_outputs/krusell_smith/saved_params.jld", "init_params")
-approx_params = load("../../test_outputs/krusell_smith/saved_params.jld", "approx_params")
-vars_ss_mat = load("../../test_outputs/krusell_smith/vars_ss.jld")
+params = load("../../test_outputs/krusell_smith/saved_params.jld2", "params")
+grids = load("../../test_outputs/krusell_smith/saved_params.jld2", "grids")
+init_params = load("../../test_outputs/krusell_smith/saved_params.jld2", "init_params")
+approx_params = load("../../test_outputs/krusell_smith/saved_params.jld2", "approx_params")
+vars_ss_mat = load("../../test_outputs/krusell_smith/vars_ss.jld2")
 vars_ss_mat = vars_ss_mat["varsSS"]
 
 # Update parameters
