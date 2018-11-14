@@ -132,7 +132,7 @@ function load_fred_data(m::AbstractModel;
         end
 
         if !m.testing
-            CSV.write(datafile, data, missingstring = "NaN")
+            CSV.write(datafile, data, missingstring = "")
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 println("Updated data from FRED written to $datafile.")
             end

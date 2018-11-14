@@ -99,7 +99,7 @@ to the columns of `y`, returning the trend component `yt` and the cyclical compo
 For quarterly data, one can use λ=1600.
 
 Consecutive missing values at the beginning or end of the time series are excluded from the
-filtering. If there are missing values within the series, the filtered values are all NaN.
+filtering. If there are missing values within the series, the filtered values are all missing.
 
 See also:
 ```
@@ -108,20 +108,20 @@ Investigation\". Journal of Money, Credit, and Banking 29 (1): 1–16.
 ```
 """
 function hpfilter(y::AbstractVector, λ::Real)
-    # Indices of consecutive NaN elements at beginning
+    # Indices of consecutive missing elements at beginning
     i = 1
     j = length(y)
-    while isnan(y[i])
+    while ismissing(y[i])
         i = i+1
     end
-    while isnan(y[j])
+    while ismissing(y[j])
         j = j-1
     end
 
-    # Filter and adjust for NaNs
+    # Filter and adjust for missings
     yt_, yf_ = hpfilter_(y[i:j], λ)
-    yt = [fill(NaN, i-1); yt_; fill(NaN, length(y)-j)]
-    yf = [fill(NaN, i-1); yf_; fill(NaN, length(y)-j)]
+    yt = [fill(missing, i-1); yt_; fill(missing, length(y)-j)]
+    yf = [fill(missing, i-1); yf_; fill(missing, length(y)-j)]
 
     return yt, yf
 end
@@ -165,7 +165,7 @@ difflog(x::AbstractVector)
 ```
 """
 function difflog(x::Vector)
-    [NaN; log.(x[2:end]) - log.(x[1:end-1])]
+    [missing; log.(x[2:end]) - log.(x[1:end-1])]
 end
 
 
@@ -175,7 +175,6 @@ difflog(x::Array{AbstractFloat})
 ```
 """
 function difflog(x::Array)
-    #DSGE.na2nan!(x)
     return difflog(convert(Vector, x))
 end
 

@@ -32,21 +32,19 @@ using DataFrames: DataFrame
     DSGE.format_dates!(:date, df)
 end
 
-#DSGE.na2nan!(df)
-
 # Test hpfilter, ensuring missing data are handled correctly
-nanfront = [NaN; NaN]
-nanback  = [NaN]
+missingfront = [missing; missing]
+missingback  = [missing]
 y  = [0.; 1.; 0.; 1.]
-yn = [nanfront; y; nanback]
+yn = [missingfront; y; missingback]
 yf, yt   = hpfilter(y, 1600)
 yfn, ytn = hpfilter(yn, 1600)
 
 @testset "HP Filter and missing data handling" begin
-    @test isequal(nanfront, yfn[1:length(nanfront)])
-    @test isequal(nanfront, ytn[1:length(nanfront)])
-    @test isequal(nanback, yfn[(end-length(nanback)+1):end])
-    @test isequal(nanback, ytn[(end-length(nanback)+1):end])
+    @test isequal(missingfront, yfn[1:length(missingfront)])
+    @test isequal(missingfront, ytn[1:length(missingfront)])
+    @test isequal(missingback, yfn[(end-length(missingback)+1):end])
+    @test isequal(missingback, ytn[(end-length(missingback)+1):end])
 end
 
 nothing
