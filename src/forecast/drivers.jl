@@ -284,16 +284,13 @@ function forecast_one(m::AbstractModel{Float64},
         block_verbose = verbose == :none ? :none : :low
 
         for block = start_block:nblocks
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println()
-                @Base.info "Forecasting block $block of $nblocks..."
-               # @Base.info "Forecasting all blocks"
-            end
+           if VERBOSITY[verbose] >= VERBOSITY[:low]
+               println()
+               @Base.info "Forecasting block $block of $nblocks..."
+           end
            toq = @elapsed let
-
                # Get to work!
                params = load_draws(m, input_type, block_inds[block]; verbose = verbose)
-               #params = load_draws(m, input_type, block_inds[1][1]:block_inds[end][end]; verbose = verbose)
 
                mapfcn = use_parallel_workers(m) ? pmap : map
                forecast_outputs = mapfcn(param -> forecast_one_draw(m, input_type, cond_type, output_vars,
@@ -327,6 +324,8 @@ function forecast_one(m::AbstractModel{Float64},
         end # of loop through blocks
 
     end # of input_type
+
+	combine_raw_forecast_output_and_metadata(m, forecast_output_files, verbose = verbose)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("\nForecast complete: $(now())")
@@ -405,7 +404,7 @@ function forecast_one_draw(m::AbstractModel{Float64}, input_type::Symbol, cond_t
     irfs_only = all(x -> x == :irf, output_prods)
 
     # Compute state space
-    DSGE.update!(m, params)
+    update!(m, params)
     system = compute_system(m)
 
     # Initialize output dictionary
