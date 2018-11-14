@@ -88,13 +88,13 @@ forecast_one(m, :full, :none, output_vars, verbose = :none)
 @testset "Test full-distribution blocking" begin
     for input_type in [:mode, :full]
         output_files = get_forecast_output_files(m, input_type, :none, output_vars)
-        h5open(replace(output_files[:trendobs], "jld2" => "h5"), "r") do file
+        jldopen(output_files[:trendobs], "r") do file
             @test ndims(DSGE.read_forecast_series(file, :obs, :trend, :obs_gdp)) == 2
         end
-        h5open(replace(output_files[:forecastobs], "jld2" => "h5"), "r") do file
+        jldopen(output_files[:forecastobs], "r") do file
             @test ndims(DSGE.read_forecast_series(file, :obs, :forecast, :obs_gdp)) == 2
         end
-        h5open(replace(output_files[:irfobs], "jld2" => "h5"), "r") do file
+        jldopen(output_files[:irfobs], "r") do file
             @test ndims(DSGE.read_forecast_series(file, :obs, :irf, :obs_gdp, :rm_sh)) == 2
         end
     end

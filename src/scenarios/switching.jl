@@ -34,10 +34,10 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
 
     for (i, output_var) in enumerate([:forecastobs, :forecastpseudo])
         # Read in original and default draws
-        original_draws = h5open(replace(original_output_files[output_var], "jld2" => "h5"), "r") do file
+        original_draws = jldopen(original_output_files[output_var], "r") do file
             read(file, "arr")
         end
-        default_draws  = h5open(replace(default_output_files[output_var], "jld2" => "h5")) do file
+        default_draws  = jldopen(default_output_files[output_var], "r") do file
             read(file, "arr")
         end
 
@@ -67,7 +67,7 @@ function simulate_switching(m::AbstractModel, scen::SwitchingScenario;
 
     # Print
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        switching_time = time_ns() - tic
+        switching_time = (time_ns() - tic)/1e9
         switching_time_min = switching_time/60
         println("\nTime elapsed: " * string(switching_time_min) * " minutes")
         println("Switching complete: " * string(now()))
