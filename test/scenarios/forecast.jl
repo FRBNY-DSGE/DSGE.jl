@@ -19,7 +19,7 @@ end
 
 # Test compute_scenario_system
 @testset "Test compute_scenario_system, filter_shocks!, and shock_scaling" begin
-    sys = compute_scenario_system(m, scen)
+    global sys = compute_scenario_system(m, scen)
     @test all(x -> x == 0, sys[:CCC])
     @test all(x -> x == 0, sys[:DD])
     @test all(x -> x == 0, sys[:DD_pseudo])
@@ -36,7 +36,7 @@ end
     for var in scen.target_names
         scen.targets[var] = rand(forecast_horizons(m))
     end
-    forecastshocks = filter_shocks!(m, scen, sys)
+    global forecastshocks = filter_shocks!(m, scen, sys)
     for var in scen.instrument_names
         i = m.exogenous_shocks[var]
         @test scen.instruments[var] == forecastshocks[i, :]
@@ -54,7 +54,7 @@ end
                      shock_scaling = 2.0)
     scale.targets = scen.targets
 
-    forecastshocks = filter_shocks!(m, scale, sys)
+    global forecastshocks = filter_shocks!(m, scale, sys)
     for var in scale.target_names
         i = m.observables[var]
         @test scale.targets[var] == scen.targets[var]

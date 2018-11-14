@@ -35,7 +35,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
         println("Means and bands will be saved in " * workpath(m, "scenarios"))
     end
 
-    tic = time_ns()
+    start_time = time_ns()
     # Revert model alt policy to historical rule
     m <= Setting(:alternative_policy, AltPolicy(:historical, solve, eqcond), false, "apol",
                  "Alternative policy")
@@ -56,7 +56,7 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario,
 
     # Print
     if VERBOSITY[verbose] >= VERBOSITY[:low]
-        total_mb_time     = time_ns() - tic
+        total_mb_time     = (time_ns() - start_time)/1e9
         total_mb_time_min = total_mb_time/60
 
         println("\nTotal time to compute scenario means and bands: " * string(total_mb_time_min) * " minutes")
@@ -72,8 +72,8 @@ function scenario_means_bands(m::AbstractModel, scen::AbstractScenario, output_v
 
     # Get to work!
     mapfcn = use_parallel_workers(m) ? pmap : map
-    mb_vec = pmap(var_name -> scenario_means_bands(m, scen, output_var, var_name; kwargs...),
-                  variable_names)
+    mb_vec = mapfcn(var_name -> scenario_means_bands(m, scen, output_var, var_name; kwargs...),
+                    variable_names)
 
     # Re-assemble pmap outputs
     means = DataFrame(date = date_list)
