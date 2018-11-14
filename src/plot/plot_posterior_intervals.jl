@@ -188,7 +188,7 @@ function plot_posterior_interval_comparison(m_baseline::AbstractModel,
                                             m_comparison::AbstractModel,
                                             clouds_baseline::Vector{ParticleCloud},
                                             clouds_comparisons::Vector{Vector{ParticleCloud}};
-                                            plotroot::String = figurespath(m, "estimate"),
+                                            plotroot::String = figurespath(m_baseline, "estimate"),
                                             verbose::Symbol = :low,
                                             in_deviations::Bool = false,
                                             scale_by_std::Bool = false,
