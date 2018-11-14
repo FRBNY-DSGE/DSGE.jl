@@ -57,7 +57,6 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
             cond_levels = load_cond_data_levels(m; verbose=verbose)
             levels, cond_levels = reconcile_column_names(levels, cond_levels)
             levels = vcat(levels, cond_levels)
-            #na2nan!(levels)
         end
         df = transform_data(m, levels; cond_type=cond_type, verbose=verbose)
 
@@ -77,9 +76,7 @@ function load_data(m::AbstractModel; cond_type::Symbol = :none, try_disk::Bool =
             println("dataset creation successful")
         end
 
-        # NaN out conditional period variables not in `cond_semi_names(m)` or
-        # `cond_full_names(m)` if necessary
-        nan_cond_vars!(m, df; cond_type = cond_type)
+        missing_cond_vars!(m, df; cond_type = cond_type)
 
         # check that dataset is valid
         isvalid_data(m, df)
@@ -162,12 +159,12 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             # Convert dates from strings to quarter-end dates for date arithmetic
             format_dates!(:date, addl_data)
 
-            # Warn on sources with incomplete data; missing data will be replaced with NaN
+            # Warn on sources with incomplete data; missing data will be replaced with missing
             # during merge.
             if !in(lastdayofquarter(start_date), addl_data[:date]) ||
                 !in(lastdayofquarter(end_date), addl_data[:date])
 
-                @warn "$file does not contain the entire date range specified; NaNs used."
+                @warn "$file does not contain the entire date range specified; missings used."
             end
 
             # Make sure each mnemonic that was specified is present
@@ -185,16 +182,13 @@ function load_data_levels(m::AbstractModel; verbose::Symbol=:low)
             addl_data = addl_data[rows, cols]
             df = join(df, addl_data, on=:date, kind=:outer)
         else
-            # If series not found, use all NaNs
-            addl_data = DataFrame(fill(NaN, (size(df,1), length(mnemonics))))
+            # If series not found, use all missings
+            addl_data = DataFrame(fill(missing, (size(df,1), length(mnemonics))))
             names!(addl_data, mnemonics)
             df = hcat(df, addl_data)
-            @warn "$file was not found; NaNs used"
+            @warn "$file was not found; missings used"
         end
     end
-
-    # turn NAs into NaNs
-#    na2nan!(df)
 
     sort!(df, :date)
 
@@ -309,9 +303,7 @@ function read_data(m::AbstractModel; cond_type::Symbol = :none)
     # Convert date column from string to Date
     df[:date] = map(Date, df[:date])
 
-    # NaN out conditional period variables not in `cond_semi_names(m)` or
-    # `cond_full_names(m)` if necessary
-    nan_cond_vars!(m, df; cond_type = cond_type)
+    missing_cond_vars!(m, df; cond_type = cond_type)
 
     return df
 end
@@ -356,10 +348,10 @@ function isvalid_data(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
         println(datesdiff)
     end
 
-    # Ensure that no series is all NaN
+    # Ensure that no series is all missing
     for col in setdiff(names(df), [:date])
-        if all(isnan.(df[col]))
-            @warn "df[$col] is all NaN."
+        if all(ismissing.(df[col]))
+            @warn "df[$col] is all missing."
         end
     end
 
@@ -404,7 +396,7 @@ function df_to_matrix(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none
     sort!(cols, by = x -> m.observables[x])
     df1 = df1[cols]
 
-    return convert(Matrix{Union{Missing, Float64}}, df1)'
+    return permutedims(convert(Matrix{Union{Missing, Float64}}, df1))
 end
 
 """
@@ -488,8 +480,6 @@ function read_population_data(filename::String; verbose::Symbol = :low)
     end
 
     df = CSV.read(filename)
-
-    #DSGE.na2nan!(df)
     DSGE.format_dates!(:date, df)
     sort!(df, :date)
 
@@ -527,9 +517,7 @@ function read_population_forecast(filename::String, population_mnemonic::Symbol;
         end
 
         df = CSV.read(filename)
-
         rename!(df, :POPULATION => population_mnemonic)
-        #DSGE.na2nan!(df)
         DSGE.format_dates!(:date, df)
         sort!(df, :date)
 
@@ -538,7 +526,6 @@ function read_population_forecast(filename::String, population_mnemonic::Symbol;
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             @warn "No population forecast found"
         end
-
         return DataFrame()
     end
 end

@@ -136,19 +136,19 @@ Convert all NAs in an Array to NaNs.
 """
 function na2nan!(v::Array)
     for i = 1:length(v)
-        v[i] = ismissing(v[i]) ?  NaN : v[i]
+        v[i] = isnan(v[i]) ?  NaN : v[i]
     end
 end
 
 """
 ```
-nan_cond_vars!(m, df; cond_type = :none)
+missing_cond_vars!(m, df; cond_type = :none)
 ```
 
-NaN out conditional period variables not in `cond_semi_names(m)` or
-`cond_full_names(m)` if necessary.
+Make conditional period variables not in `cond_semi_names(m)` or
+`cond_full_names(m)` missing if necessary.
 """
-function nan_cond_vars!(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
+function missing_cond_vars!(m::AbstractModel, df::DataFrame; cond_type::Symbol = :none)
     if cond_type in [:semi, :full]
         # Get appropriate
         cond_names = if cond_type == :semi
@@ -157,14 +157,14 @@ function nan_cond_vars!(m::AbstractModel, df::DataFrame; cond_type::Symbol = :no
             cond_full_names(m)
         end
 
-        # NaN out non-conditional variables
-        cond_names_nan = setdiff(names(df), [cond_names; :date])
-        T = eltype(df[cond_names_nan])
-        df[df[:date] .>= date_forecast_start(m), cond_names_nan] = convert(T, NaN)
+        # Make non-conditional variables missing
+        cond_names_missing = setdiff(names(df), [cond_names; :date])
+        T = eltype(df[cond_names_missing])
+        df[df[:date] .>= date_forecast_start(m), cond_names_missing] = convert(T, missing)
 
         # Warn if any conditional variables are missing
         for var in cond_names
-            if any(isnan.(df[df[:date] .>= date_forecast_start(m), var]))
+            if any(ismissing.(df[df[:date] .>= date_forecast_start(m), var]))
                 @warn "Missing some conditional observations for " * string(var)
             end
         end
@@ -231,17 +231,17 @@ end
 reconcile_column_names(a::DataFrame, b::DataFrame)
 ```
 
-adds columns of NaNs to a and b so that both have
+adds columns of missings to a and b so that both have
 the same set of column names.
 """
 function reconcile_column_names(a::DataFrame, b::DataFrame)
     new_a_cols = setdiff(names(b), names(a))
     new_b_cols = setdiff(names(a), names(b))
     for col in new_a_cols
-        a[col] = fill(NaN, size(a, 1))
+        a[col] = fill(missing, size(a, 1))
     end
     for col in new_b_cols
-        b[col] = fill(NaN, size(b, 1))
+        b[col] = fill(missing, size(b, 1))
     end
     return a, b
 end
