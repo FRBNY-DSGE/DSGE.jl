@@ -1,6 +1,6 @@
 """
 ```
-estimate(m, data; verbose=:low, proposal_covariance=Matrix())
+estimate(m, data; verbose = :low, proposal_covariance = Matrix(undef, 0, 0))
 ```
 
 Estimate the DSGE parameter posterior distribution.
@@ -27,30 +27,29 @@ Estimate the DSGE parameter posterior distribution.
 - `run_MH`: Set to false to disable sampling from the posterior.
 """
 function estimate(m::AbstractModel, df::DataFrame;
-                  verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix(undef, 0, 0),
+                  verbose::Symbol = :low,
+                  proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
                   run_MH::Bool = true)
     data = df_to_matrix(m, df)
-    estimate(m, data; verbose=verbose, proposal_covariance=proposal_covariance,
+    estimate(m, data; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, run_MH = run_MH)
 end
 function estimate(m::AbstractModel;
-                  verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix(undef, 0, 0),
+                  verbose::Symbol = :low,
+                  proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
                   run_MH::Bool = true)
     # Load data
-    df = load_data(m; verbose=verbose)
-    estimate(m, df; verbose=verbose, proposal_covariance=proposal_covariance,
+    df = load_data(m; verbose = verbose)
+    estimate(m, df; verbose = verbose, proposal_covariance = proposal_covariance,
              mle = mle, run_MH = run_MH)
 end
 function estimate(m::AbstractModel, data::AbstractArray;
-                  verbose::Symbol=:low,
-                  proposal_covariance::Matrix=Matrix(0,0),
+                  verbose::Symbol = :low,
+                  proposal_covariance::Matrix = Matrix(undef, 0,0),
                   mle::Bool = false,
                   run_MH::Bool = true)
-
 
     ########################################################################################
     ### Step 1: Find posterior/likelihood mode (if reoptimizing, run optimization routine)
@@ -78,21 +77,23 @@ function estimate(m::AbstractModel, data::AbstractArray;
         attempts = 1
 
         while !converged
-            tic()
+            begin_time = time_ns()
             out, H = optimize!(m, data;
                                method = get_setting(m, :optimization_method),
-                               ftol=ftol, grtol = gtol, xtol = xtol,
-                               iterations=n_iterations, show_trace=true, step_size=step_size,
-                               verbose=verbose,
+                               ftol = ftol, grtol = gtol, xtol = xtol,
+                               iterations = n_iterations, show_trace = true, step_size = step_size,
+                               verbose = verbose,
                                mle = mle)
 
             attempts += 1
             total_iterations += out.iterations
             converged = out.converged || attempts > max_attempts
 
+            end_time = (time_ns() - begin_time)/1e9
+
             if VERBOSITY[verbose] >= VERBOSITY[:low]
                 @printf "Total iterations completed: %d\n" total_iterations
-                @printf "Optimization time elapsed: %5.2f\n" optimization_time += toq()
+                @printf "Optimization time elapsed: %5.2f\n" optimization_time += end_time
             end
 
             # Write params to file after every `n_iterations` iterations
@@ -148,8 +149,9 @@ function estimate(m::AbstractModel, data::AbstractArray;
         hessian = h5open(fn,"r") do file
             read(file, "hessian")
         end
+	end
 
-        # Compute inverse hessian and create proposal distribution, or
+	# Compute inverse hessian and create proposal distribution, or
         # just create it with the given cov matrix if we have it
         propdist = if isempty(proposal_covariance)
             # Make sure the mode and hessian have the same number of parameters
@@ -175,7 +177,6 @@ function estimate(m::AbstractModel, data::AbstractArray;
         if rank(propdist) != n_parameters_free(m)
             println("problem –    shutting down dimensions")
         end
-    end
 
     ########################################################################################
     ### Step 3: Sample from posterior using Metropolis-Hastings algorithm
@@ -227,7 +228,7 @@ distribution of the parameters.
 """
 function metropolis_hastings(propdist::Distribution,
                              m::AbstractModel,
-                             data::AbstractArray{Union{T, Missing}},
+                             data::AbstractArray,
                              cc0::T,
                              cc::T;
                              verbose::Symbol=:low) where {T<:AbstractFloat}
@@ -362,8 +363,8 @@ function metropolis_hastings(propdist::Distribution,
         # Calculate time to complete this block, average block time, and
         # expected time to completion
         if VERBOSITY[verbose] >= VERBOSITY[:low]
-            block_time = time_ns() - begin_time
-            total_sampling_time += block_time
+            end_time = (time_ns() - begin_time)/1e9
+            total_sampling_time += end_time
             total_sampling_time_minutes = total_sampling_time/60
             expected_time_remaining_sec     = (total_sampling_time/block)*(n_blocks - block)
             expected_time_remaining_minutes = expected_time_remaining_sec/60
