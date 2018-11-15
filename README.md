@@ -17,11 +17,11 @@ For the latest documentation on the *code*, click on the docs|latest button
 above. Documentation for the most recent *model version* is available
 [here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf).
 
-The New York Fed DSGE team is currently working on extending the code to include
-forecasts and other features. Ongoing work on implementing Sequential Monte
-Carlo (SMC) sampling can be found on the `smc` branch. Further extensions of the
-DSGE model code may be released in the future at the discretion of the New York
-Fed.
+The New York Fed DSGE team is currently extending the code to solve and estimate
+heterogeneous agent models.
+Ongoing work on implementing Sequential Monte Carlo (SMC) sampling can be found on the `smc` branch.
+Further extensions of the DSGE model code may be released in the future at the discretion
+of the New York Fed.
 
 ## Installation
 
@@ -32,8 +32,8 @@ julia> Pkg.add("DSGE")
 ```
 # Versioning
 
-To use `DSGE.jl` with Julia version 0.4, please check out tag
-0.2.0. To do this, click on the drop-down menu that reads `branch:
+To use `DSGE.jl` with Julia version 0.6, please check out tag
+0.4.1. To do this, click on the drop-down menu that reads `branch:
 master` on the left-hand side of the page. Select `tags`, then
-`v0.2.0`.  If you've already cloned the repo, you can simply run
-`git checkout v0.2.0`.
+`v0.4.1`.  If you've already cloned the repo, you can simply run
+`git checkout v0.4.1`.
