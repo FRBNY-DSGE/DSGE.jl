@@ -44,8 +44,7 @@ for cond_type in [:none, :semi, :full]
     out[cond_type] = Dict{Symbol, Array{Float64}}()
     output_files = get_forecast_output_files(m, :mode, cond_type, output_vars)
     for var in keys(output_files)
-        #out[cond_type][var] = load(output_files[var], "arr")
-        out[cond_type][var] = h5read(replace(output_files[var], "jld2" => "h5"), "arr")
+        out[cond_type][var] = load(output_files[var], "arr")
     end
 end
 
