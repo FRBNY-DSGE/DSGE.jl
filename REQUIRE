@@ -9,6 +9,7 @@ Distributions
 FredData
 HDF5
 JLD2
+FileIO
 Optim
 QuantEcon
 Missings
