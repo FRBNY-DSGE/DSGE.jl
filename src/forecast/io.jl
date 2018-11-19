@@ -207,7 +207,9 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                     @assert !isempty(df) "df cannot be empty if trying to write :histobs"
                     df1 = df[date_mainsample_start(m) .<= df[:date] .<= date_mainsample_end(m), :]
                     data = df_to_matrix(m, df1)
-                    write(file, "arr", Array{Float64}(data))
+
+                    # Must call missing2nan since you cannot write Missing types to HDF5 files
+                    write(file, "arr", missing2nan(data))
                 else
                     # Otherwise, pre-allocate HDF5 dataset which will contain
                     # all draws
