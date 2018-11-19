@@ -498,7 +498,7 @@ function steadystate!(m::OneAssetHANK)
 
             # See helpers.jl: this is a custom upwind function, not one from solve_hjb.jl
             V, A, u, h, c, s  = upwind(ρ, V, util, Aswitch, cf, cb, c0, hf, hb, h0, sf, sb, Vaf, Vab,
-                                    daf, dab; Delta_HJB = Δ_HJB)
+                                    daf, dab; Δ_HJB = Δ_HJB)
 
             # Check for convergence
             Vchange = V - v
