@@ -120,8 +120,8 @@ end
         cf[i,j] = Vaf[i,j] ^ (-1 / coefrra)
         cb[i,j] = Vab[i,j] ^ (-1 / coefrra)
 
-        hf[i,j] = min(real(labor(zz[i,j], Vaf[i,j])), maxhours) # R: labor is... complex? :(
-        hb[i,j] = min(real(labor(zz[i,j], Vab[i,j])), maxhours)
+        hf[i,j] = min(norm(labor(zz[i,j], Vaf[i,j])), maxhours)
+        hb[i,j] = min(norm(labor(zz[i,j], Vab[i,j])), maxhours)
     end
 
     return Vaf, Vab, cf, hf, cb, hb
@@ -177,15 +177,15 @@ end
             if i==I
                 cf[end, j] = income(hf[end, j], zz[end, j], profshare[end, j], lumptransfer, r, aa[end, j])
                 hf[end, j] = labor(zz[end, j], cf[end, j] ^ (-coefrra))
-                hf[end, j] = min(real(hf[end, j]), maxhours)
+                hf[end, j] = min(norm(hf[end, j]), maxhours)
             elseif i==1
                 cb[1, j] = income(hb[1, j], zz[1, j], profshare[1, j], lumptransfer, r, aa[1, j])
                 hb[1, j] = labor(zz[1, j], cb[1, j] ^ (-coefrra))
-                hb[1, j] = min(real(hb[1, j]), maxhours)
+                hb[1, j] = min(norm(hb[1, j]), maxhours)
             end
             c0[i, j] = income(h0[i, j], zz[i, j], profshare[i, j], lumptransfer, r, aa[i, j])
             h0[i, j] = labor(zz[i, j], c0[i, j]^(-coefrra))
-            h0[i, j] = min(real(h0[i, j]), maxhours)
+            h0[i, j] = min(norm(h0[i, j]), maxhours)
         end
     end
     return cf, hf, cb, hb, c0, h0
@@ -193,11 +193,11 @@ end
 
 # For compute_steady_state; choose upwinding direction
 @inline function upwind(ρ::Float64, V::Matrix{T}, args...;
-                        Delta_HJB::Float64 = 1e6) where {T<:Number}
+                        Δ_HJB::Float64 = 1e6) where {T<:Number}
     A, u, h, c, s = upwind(args...)
     I, J = size(u)
-    B    = (1 / Delta_HJB + ρ) * speye(T, I*J) - A
-    b    = reshape(u, I*J) + reshape(V, I*J) / Delta_HJB
+    B    = (1 / Δ_HJB + ρ) * speye(T, I*J) - A
+    b    = reshape(u, I*J) + reshape(V, I*J) / Δ_HJB
     V    = reshape(B \ b, I, J)
     return V, A, u, h, c, s
 end
@@ -259,32 +259,32 @@ end
 # Using the market clearing condition on bonds to determine whether or not
 # an equilibrium has been reached
 @inline function check_bond_market_clearing(bond_err::ComplexF64, crit_S::Float64,
-                                            r::Float64, rmin::Float64, rmax::Float64,
-                                            rrho::Float64, rhomin::Float64, rhomax::Float64,
-                                            iter_r::Bool, iter_rho::Bool)
+                                            r::Float64, r_min::Float64, r_max::Float64,
+                                            r_ρ::Float64, ρ_min::Float64, ρ_max::Float64,
+                                            iter_r::Bool, iter_ρ::Bool)
     clearing_condition = false
     # Using the market clearing condition on bonds to determine whether or not
     # an equilibrium has been reached
     if abs(bond_err) > crit_S
         if bond_err > 0
             if iter_r
-                rmax   = r
-                r      = 0.5 * (r + rmin)
-            elseif iter_rho
-                rhomin = rrho
-                rrho   = 0.5 * (rrho + rhomax)
+                r_max  = r
+                r      = 0.5 * (r + r_min)
+            elseif iter_ρ
+                ρ_min = r_ρ
+                r_ρ   = 0.5 * (r_ρ + ρ_max)
             end
         else
             if iter_r
-                rmin   = r
-                r      = 0.5 * (r + rmax)
-            elseif iter_rho
-                rhomax = rrho
-                rrho   = 0.5 * (rrho + rhomin)
+                r_min  = r
+                r      = 0.5 * (r + r_max)
+            elseif iter_ρ
+                ρ_max = r_ρ
+                r_ρ   = 0.5 * (r_ρ + ρ_min)
             end
         end
     else
         clearing_condition = true
     end
-    return r, rmin, rmax, rrho, rhomin, rhomax, clearing_condition
+    return r, r_min, r_max, r_ρ, ρ_min, ρ_max, clearing_condition
 end
