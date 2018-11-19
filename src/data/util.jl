@@ -101,17 +101,17 @@ end
 
 """
 ```
-missing2nan!(df::Array)
+missing2nan(a::Array)
 ```
 
-Convert all elements of Union{X, Missing.Missing} and the like to type X.
+Convert all elements of Union{X, Missing.Missing} or Missing.Missing to type Float64.
 """
-function missing2nan!(v::Array)
-    valid_types = [Dates.Date, Float64]
-    new_v = tryparse.(new_type, v)
-    if all(isnull.(new_v))
-        new_v = tryparse.(Dates.Date, new_v)
+function missing2nan(a::Array)
+    a_new = Array{Float64}(undef, size(a))
+    for i in eachindex(a)
+        a_new[i] = ismissing(a[i]) ? NaN : a[i]
     end
+    return a_new
 end
 
 """

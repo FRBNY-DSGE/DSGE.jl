@@ -158,9 +158,6 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
     dirpath = dirname(filepath)
     isdir(dirpath) || mkpath(dirpath)
     jldopen(filepath, true, true, true, IOStream) do file
-        #for (key, value) in mb
-        #    write(file, key, value)
-        #end
         write(file, "mb", mb)
     end
 
@@ -197,7 +194,7 @@ function compute_meansbands(m::AbstractModel, input_type::Symbol, cond_type::Sym
 
     # Reverse transform
     y0_index = get_y0_index(m, product)
-    data = class == :obs ? convert(Vector{Float64}, df[var_name]) : fill(NaN, size(df, 1))
+    data = class == :obs ? missing2nan(df[var_name]) : fill(NaN, size(df, 1))
 
     transformed_series = mb_reverse_transform(fcast_series, transform, product, class,
                                               y0_index = y0_index, data = data,
