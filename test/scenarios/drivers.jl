@@ -5,7 +5,8 @@ using Test, Dates
 m = AnSchorfheide(testing = true)
 m <= Setting(:forecast_horizons, 12)
 
-estroot = normpath(joinpath(dirname(@__FILE__), "..", "reference"))
+# estroot = normpath(joinpath(dirname(@__FILE__), "..", "reference"))
+estroot = normpath("reference")
 overrides = forecast_input_file_overrides(m)
 overrides[:mode] = joinpath(estroot, "optimize.h5")
 

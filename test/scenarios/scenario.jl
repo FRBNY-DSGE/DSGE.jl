@@ -16,12 +16,18 @@ scen = Scenario(:testscen, "Test Scenario", [:obs_gdp, :obs_cpi], [:g_sh, :rm_sh
     end
     @test n_target_horizons(scen) == 2
 
-    act = targets_to_data(m, scen)
-    exp = copy(scen.targets)
-    exp[:date] = DSGE.quarter_range(date_forecast_start(m), date_forecast_end(m))
-    exp[:obs_nominalrate] = fill(NaN, 2)
-    for col in names(exp)
-        @test act[col] == exp[col] || (all(isnan.(act[col])) && all(isnan.(exp[col])))
+    global act = targets_to_data(m, scen)
+    global expt = copy(scen.targets)
+    expt[:date] = DSGE.quarter_range(date_forecast_start(m), date_forecast_end(m))
+    expt[:obs_nominalrate] = fill(missing, 2)
+    for col in names(expt)
+        global check = false
+        if ismissing(act[col] == expt[col])
+            check = (all(ismissing.(act[col])) && all(ismissing.(expt[col])))
+        else
+            check = (act[col] == expt[col])
+        end
+        @test check
     end
 end
 
