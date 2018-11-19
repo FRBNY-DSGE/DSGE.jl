@@ -136,7 +136,7 @@ function print_single_benchmark(trial::Dict{Symbol, Union{Vector, Int}},
 end
 
 function print_single_benchmark(title::Symbol, new::T, old::T, times::Bool = false,
-                                group::Bool = false) where {T<:Real}
+                                group::Bool = false) where T<:Real
     bad_state = times ? "slower" : "larger"
     good_state = times ? "faster" : "smaller"
 

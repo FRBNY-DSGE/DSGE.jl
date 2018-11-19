@@ -58,6 +58,12 @@ function load_scenario_targets!(m::AbstractModel, scen::Scenario, draw_index::In
         end
     end
 
+    @assert collect(keys(target_inds)) == scen.target_names "Target indices in $path do not match target names in $(scen.key)"
+
+    for (target_name, target_index) in target_inds
+        scen.targets[target_name] = raw_targets[target_index, :]
+    end
+
     return scen.targets
 end
 

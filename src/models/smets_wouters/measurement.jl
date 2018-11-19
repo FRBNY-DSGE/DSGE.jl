@@ -72,6 +72,16 @@ function measurement(m::SmetsWouters{T},
     ZZ[obs[:obs_investment], endo[:z_t]]       = 1.0
     DD[obs[:obs_investment]]                   = 100*(exp(m[:zstar])-1)
 
+    #Measurement error
+    EE[obs[:obs_gdp],1] = m[:e_y]^2
+    EE[obs[:obs_hours],2] = m[:e_L]^2
+    EE[obs[:obs_wages],3] = m[:e_w]^2
+    EE[obs[:obs_gdpdeflator],4] = m[:e_π]^2
+    EE[obs[:obs_nominalrate],5] = m[:e_R]^2
+    EE[obs[:obs_consumption],6] = m[:e_c]^2
+    EE[obs[:obs_investment],7] = m[:e_i]^2
+
+    #Variance of innovations
     QQ[exo[:g_sh], exo[:g_sh]]           = m[:σ_g]^2
     QQ[exo[:b_sh], exo[:b_sh]]           = m[:σ_b]^2
     QQ[exo[:μ_sh], exo[:μ_sh]]           = m[:σ_μ]^2

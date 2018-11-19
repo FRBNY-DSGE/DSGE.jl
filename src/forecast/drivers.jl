@@ -116,13 +116,12 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
 
     # Load full distribution
     elseif input_type == :full
-
         if get_setting(m, :sampling_method) == :MH
             params = map(Float64, h5read(input_file_name, "mhparams"))
         elseif get_setting(m, :sampling_method) == :SMC
             params = map(Float64, h5read(input_file_name, "smcparams"))
         else
-            throw("Invalid :sampling_method setting specification.")
+            throw("Invalid :sampling method specification. Change in setting :sampling_method")
         end
 
     # Load subset of full distribution
@@ -136,7 +135,7 @@ function load_draws(m::AbstractModel, input_type::Symbol; subset_inds::AbstractR
             elseif get_setting(m, :sampling_method) == :SMC
                 params = map(Float64, h5read(input_file_name, "smcparams", (subset_inds, :)))
             else
-                throw("Invalid :sampling_method setting specification.")
+                throw("Invalid :sampling method specification. Change in setting :sampling_method")
             end
         end
 

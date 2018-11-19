@@ -127,9 +127,7 @@ function load_fred_data(m::AbstractModel;
 
         if !m.testing
             CSV.write(datafile, data, missingstring = "")
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Updated data from FRED written to $datafile.")
-            end
+            println(verbose, :low, "Updated data from FRED written to $datafile.")
         end
     end
 

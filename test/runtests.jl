@@ -1,4 +1,4 @@
-using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures
+using Test, Distributed, Dates, DataFrames, OrderedCollections, FileIO, DataStructures, LinearAlgebra, StatsBase, Random
 @everywhere using DSGE, JLD2, Printf, LinearAlgebra
 
 my_tests = [
@@ -21,6 +21,14 @@ my_tests = [
             "estimate/csminwel",
             "estimate/optimize",
             "estimate/metropolis_hastings",
+            "estimate/smc/mutation",
+            "estimate/smc/helpers",
+            "estimate/smc/initialization",
+            "estimate/smc/resample",
+            "estimate/smc/util",
+            "estimate/smc/smc",
+            "data/misc",
+            "data/load_data",
             "forecast/smooth",
             "forecast/forecast",
             "forecast/shock_decompositions",

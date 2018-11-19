@@ -1,5 +1,70 @@
 """
 ```
+function load_posterior_moments(m; load_bands = true, include_fixed = false)
+```
+
+Load posterior moments (mean, std) of parameters for a particular sample, and optionally
+also load 5% and 95% lower and upper bands.
+
+### Keyword Arguments
+- `load_bands::Bool`: Optionally include the 5% and 95% percentiles for the sample of parameters
+in the returned df
+- `include_fixed::Bool`: Optionally include the fixed parameters in the returned df
+- `excl_list::Vector{Symbol}`: List parameters by their key that you want to exclude from
+loading
+
+### Outputs
+- `df`: A dataframe containing the aforementioned moments/bands
+"""
+function load_posterior_moments(m::AbstractModel; load_bands::Bool = true,
+                                include_fixed::Bool = false,
+                                excl_list::Vector{Symbol} = Vector{Symbol}(0))
+
+    if include_fixed
+        parameters          = m.parameters
+        parameter_indices   = 1:n_parameters(m)
+    else
+        parameters          = Base.filter(x -> x.fixed == false, m.parameters)
+        parameter_indices   = find(x -> x.fixed == false, m.parameters)
+    end
+
+    n_params = length(parameter_indices)
+
+    # Remove excluded parameters
+    non_excl_indices = find(x -> !(x in excl_list), [parameters[i].key for i in 1:n_params])
+    parameters = parameters[non_excl_indices]
+    parameter_indices = parameter_indices[non_excl_indices]
+
+    n_particles = get_setting(m, :n_particles)
+
+    # Read in Posterior Draws
+    params = load_draws(m, :full)
+    params = get_setting(m, :sampling_method) == :MH ? thin_mh_draws(m, params) : params
+    params_mean = vec(mean(params, 1))
+    params_std  = vec(std(params, 1))
+
+    df = DataFrame()
+    df[:param] = [DSGE.detexify(parameters[i].tex_label) for i in 1:length(parameters)]
+    df[:post_mean] = params_mean[parameter_indices]
+    df[:post_std]  = params_std[parameter_indices]
+
+    if load_bands
+        post_lb = Vector{Float64}(length(parameters))
+        post_ub = similar(post_lb)
+        for i in 1:length(parameters)
+            post_lb[i] = quantile(params[:, parameter_indices][:, i], .05)
+            post_ub[i] = quantile(params[:, parameter_indices][:, i], .95)
+        end
+    end
+
+    df[:post_lb] = post_lb
+    df[:post_ub] = post_ub
+
+    return df
+end
+
+"""
+```
 moment_tables(m; percent = 0.90, subset_inds = 1:0, subset_string = "",
     groupings = Dict{String, Vector{Parameter}}(), use_mode = false,
     tables = [:prior_posterior_means, :moments, :prior, :posterior],
@@ -161,10 +226,11 @@ function prior_table(m::AbstractModel; subset_string::String = "",
     @printf fid "\\endfoot\n"
 
     # Map prior distributions to identifying strings
-    distid(::Distributions.Beta)   = "Beta"
-    distid(::Distributions.Gamma)  = "Gamma"
-    distid(::Distributions.Normal) = "Normal"
-    distid(::RootInverseGamma)     = "InvG"
+    distid(::Distributions.Uniform) = "Uniform"
+    distid(::Distributions.Beta)    = "Beta"
+    distid(::Distributions.Gamma)   = "Gamma"
+    distid(::Distributions.Normal)  = "Normal"
+    distid(::RootInverseGamma)      = "InvG"
 
     # Write priors
     for group_desc in keys(groupings)
@@ -417,6 +483,7 @@ function prior_posterior_moments_table(m::AbstractModel,
     @printf fid "\\endfoot\n"
 
     # Map prior distributions to identifying strings
+    distid(::Distributions.Uniform) = "U"
     distid(::Distributions.Beta)    = "B"
     distid(::Distributions.Gamma)   = "G"
     distid(::Distributions.Normal)  = "N"
@@ -436,7 +503,7 @@ function prior_posterior_moments_table(m::AbstractModel,
             index = m.keys[param.key]
             (prior_mean, prior_std) = moments(param)
 
-            @printf fid "\$ %4.99s\$ & " param.tex_label
+            @printf fid "\$%4.99s\$ & " param.tex_label
             @printf fid "%s & " (param.fixed ? "-" : distid(get(param.prior)))
             @printf fid "%8.3f & " prior_mean
             @printf fid "%8.3f & " prior_std
@@ -552,7 +619,7 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands(draws::AbstractArray, percent::T; minimize::Bool = true) where {T<:AbstractFloat}
+function find_density_bands(draws::AbstractArray, percent::T; minimize::Bool = true) where T<:AbstractFloat
 
     if !(0 <= percent <= 1)
         error("percent must be between 0 and 1")
@@ -614,7 +681,7 @@ end
 
 """
 ```
-find_density_bands(draws::Matrix, percents::Vector{T}; minimize::Bool=true) where {T<:AbstractFloat}
+find_density_bands(draws::Matrix, percents::Vector{T}; minimize::Bool=true) where T<:AbstractFloat
 ```
 
 Returns a `2` x `cols(draws)` matrix `bands` such that `percent` of the mass of `draws[:,i]`
@@ -630,7 +697,7 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands(draws::AbstractArray, percents::Vector{T}; minimize::Bool = true) where {T<:AbstractFloat}
+function find_density_bands(draws::AbstractArray, percents::Vector{T}; minimize::Bool = true) where T<:AbstractFloat
 
     bands = DataFrame()
 

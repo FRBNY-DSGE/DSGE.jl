@@ -223,7 +223,7 @@ function init_parameters!(m::AnSchorfheide)
                    description="κ: Composite parameter in New Keynesian Phillips Curve.",
                    tex_label="\\kappa")
 
-    m <= parameter(:ψ_1, 1.1434, (1 + 1e-20, 1e5), (1+1e-20, 1e5), Exponential(), GammaAlt(1.5, 0.25), fixed=false,
+    m <= parameter(:ψ_1, 1.1434, (1+1e-20, 1e5), (1+1e-20, 1e5), Exponential(), GammaAlt(1.5, 0.25), fixed=false,
                    description="ψ_1: The weight on inflation in the monetary policy rule.",
                    tex_label="\\psi_1")
     m <= parameter(:ψ_2, 0.4536, (1e-20, 1e5), (1e-20, 1e5), Exponential(), GammaAlt(0.5, 0.25), fixed=false,
@@ -232,7 +232,7 @@ function init_parameters!(m::AnSchorfheide)
 
     m <= parameter(:rA, 0.0313, (1e-20, 1e5), (1e-20, 1e5), Exponential(), GammaAlt(0.5, 0.5), fixed=false,
                    description="rA: β (discount factor) = 1/(1+ rA/400).",
-                   tex_label="\\rA")
+                   tex_label="rA")
 
     m <= parameter(:π_star, 8.1508, (1e-20, 1e5), (1e-20, 1e5), Exponential(), GammaAlt(7., 2.), fixed=false,
                    description="π_star: Target inflation rate.",

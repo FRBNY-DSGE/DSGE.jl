@@ -7,7 +7,8 @@ module DSGE
     using DataStructures: SortedDict, insert!, ForwardOrdering
     using QuantEcon: solve_discrete_lyapunov
     using Roots: fzero, ConvergenceFailed
-    using StatsBase: sample
+    using StatsBase: sample, Weights
+    using StatsFuns: chisqinvcdf
     import Calculus
     import LinearAlgebra: rank
     import Optim: optimize, SecondOrderOptimizer, MultivariateOptimizationResults
@@ -86,8 +87,10 @@ module DSGE
         simulated_annealing, combined_optimizer, lbfgs,
         filter, likelihood, posterior, posterior!,
         optimize!, csminwel, hessian!, estimate, proposal_distribution,
-        metropolis_hastings, compute_parameter_covariance,
-        prior, get_estimation_output_files,
+        metropolis_hastings, compute_parameter_covariance, prior, get_estimation_output_files,
+        compute_moments, find_density_bands, mutation, resample, smc,
+        mvnormal_mixture_draw, nearest_spd, marginal_data_density,
+        initial_draw!, ParticleCloud, Particle,
 
         # forecast/
         load_draws, forecast_one,
@@ -103,9 +106,11 @@ module DSGE
         which_density_bands,
         prepare_meansbands_tables_timeseries, prepare_means_tables_shockdec, prepare_meansbands_table_irf,
         write_meansbands_tables_timeseries, write_means_tables_shockdec, prepare_meansbands_table_irf,
-        write_meansbands_tables_all,
-        construct_fcast_and_hist_dfs,
-        df_to_table,
+        write_meansbands_tables_all, construct_fcast_and_hist_dfs,
+        df_to_table, load_posterior_moments,
+
+        # decomp/
+        decompose_forecast, decomposition_means,
 
         # decomp/
         decompose_forecast, decomposition_means,
@@ -124,7 +129,7 @@ module DSGE
         # plot/
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies, plot_scenario,
-        plot_forecast_decomposition,
+        plot_posterior_intervals, plot_posterior_interval_comparison, plot_forecast_decomposition,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,
@@ -162,6 +167,7 @@ module DSGE
     include("solve/gensys.jl")
     include("solve/solve.jl")
 
+    include("estimate/util.jl")
     include("estimate/kalman.jl")
     include("estimate/filter.jl")
     include("estimate/posterior.jl")
@@ -173,7 +179,16 @@ module DSGE
     include("estimate/combined_optimizer.jl")
     include("estimate/lbfgs.jl")
     include("estimate/nelder_mead.jl")
+    include("estimate/marginal_data_density.jl")
     include("estimate/estimate.jl")
+    include("estimate/nearest_spd.jl")
+    include("estimate/smc/particle.jl")
+    include("estimate/smc/initialization.jl")
+    include("estimate/smc/helpers.jl")
+    include("estimate/smc/util.jl")
+    include("estimate/smc/mutation.jl")
+    include("estimate/smc/resample.jl")
+    include("estimate/smc/smc.jl")
 
     include("forecast/util.jl")
     include("forecast/io.jl")
@@ -206,6 +221,7 @@ module DSGE
     include("scenarios/transform.jl")
 
     include("plot/util.jl")
+    include("plot/plot_posterior_intervals.jl")
     include("plot/plot_prior_posterior.jl")
     include("plot/plot_impulse_response.jl")
     include("plot/plot_history_and_forecast.jl")
@@ -260,4 +276,6 @@ module DSGE
     include("models/an_schorfheide/pseudo_observables.jl")
     include("models/an_schorfheide/pseudo_measurement.jl")
     include("models/an_schorfheide/augment_states.jl")
+
+
 end

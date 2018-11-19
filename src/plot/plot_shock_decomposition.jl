@@ -175,8 +175,9 @@ shockdec
         bar_width  --> 1
         legendfont --> Plots.Font("sans-serif", 5, :hcenter, :vcenter, 0.0, colorant"black")
 
-        x = df[:date]
-        y = convert(Matrix{Float64}, df[cat_names])
+        inds = findall(start_date .<= dates .<= end_date)
+        x = df[inds, :date]
+        y = convert(Matrix{Float64}, df[inds, cat_names])
         StatPlots.GroupedBar((x, y))
     end
 
@@ -188,10 +189,9 @@ shockdec
         linecolor := hist_color
         label     := hist_label
 
-        inds = findall(hist.means[1, :date] .<= dates .<= hist.means[end, :date])
-        x = xnums[inds]
-        y = convert(Vector{Float64}, df[inds, :detrendedMean])
-        x, y
+        inds = intersect(findall(start_date .<= dates .<= end_date),
+                         findall(hist.means[1, :date] .<= dates .<= hist.means[end, :date]))
+        xnums[inds], convert(Vector{Float64}, df[inds, :detrendedMean])
     end
 
     # Detrended mean forecast
@@ -199,9 +199,8 @@ shockdec
         linecolor := forecast_color
         label     := forecast_label
 
-        inds = findall(hist.means[end, :date] .<= dates .<= forecast.means[end, :date])
-        x = xnums[inds]
-        y = convert(Vector{Float64}, df[inds, :detrendedMean])
-        x, y
+        inds = intersect(findall(start_date .<= dates .<= end_date),
+                         findall(hist.means[end, :date] .<= dates .<= forecast.means[end, :date]))
+        xnums[inds], convert(Vector{Float64}, df[inds, :detrendedMean])
     end
 end

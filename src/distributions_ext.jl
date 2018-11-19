@@ -6,7 +6,7 @@ parameters). Note these functions are NOT new methods for the Distributions.Beta
 functions, but rather new functions with the same names.
 =#
 
-import Distributions: params, mean, std, pdf, logpdf, rand, Distribution, Matrixvariate
+import Distributions: params, mean, std, pdf, logpdf, rand, Distribution, Matrixvariate, LinearAlgebra
 import Base: length
 import SpecialFunctions: gamma
 """
@@ -44,17 +44,16 @@ function GammaAlt(μ::AbstractFloat, σ::AbstractFloat)
     return Distributions.Gamma(α, β)
 end
 
-
 """
 ```
 mutable struct RootInverseGamma <: Distribution{Univariate, Continuous}
 ```
 
-If x ~ RootInverseGamma(ν, τ²), then
-  x² ~ ScaledInverseChiSquared(ν, τ²)
-  x² ~ InverseGamma(ν/2, ντ²/2)
+If x  ~ RootInverseGamma(ν, τ), then
+   x² ~ ScaledInverseChiSquared(ν, τ²)
+   x² ~ InverseGamma(ν/2, ντ²/2)
 
-ν represents the degrees of freedom.
+x has mode τ and ν degrees of freedom.
 """
 mutable struct RootInverseGamma <: Distribution{Univariate, Continuous}
     ν::Float64
@@ -92,10 +91,10 @@ end
 Distributions.rand(d::RootInverseGamma; cc::T = 1.0) where T <: AbstractFloat
 ```
 
-Generate a draw from d with variance optionally scaled by cc^2 (for a RootInverseGamma)
+Generate a draw from the RootInverseGamma distribution `d`.
 """
-function Distributions.rand(d::RootInverseGamma; cc::T = 1.0) where T <: AbstractFloat
-    return sqrt(d.ν*(d.τ^2)^2/sum(randn(round(Int,d.ν)).^2))
+function Distributions.rand(d::RootInverseGamma; cc::T = 1.0) where T<:AbstractFloat
+    return sqrt(d.ν * d.τ^2 / sum(randn(round(Int,d.ν)).^2))
 end
 
 """
@@ -115,7 +114,7 @@ end
 
 """
 ```
-Base.rank(d::DegenerateMvNormal)
+rank(d::DegenerateMvNormal)
 ```
 
 Returns the rank of `d.σ`.
@@ -135,12 +134,12 @@ Base.length(d::DegenerateMvNormal) = length(d.μ)
 
 """
 ```
-Distributions.rand(d::DegenerateMvNormal; cc::T = 1.0) where T <: AbstractFloat
+Distributions.rand(d::DegenerateMvNormal; cc::T = 1.0) where T<:AbstractFloat
 ```
 
 Generate a draw from `d` with variance optionally scaled by `cc^2`.
 """
-function Distributions.rand(d::DegenerateMvNormal; cc::T = 1.0) where T <: AbstractFloat
+function Distributions.rand(d::DegenerateMvNormal; cc::T = 1.0) where T<:AbstractFloat
     return d.μ + cc*d.σ*randn(length(d))
 end
 
