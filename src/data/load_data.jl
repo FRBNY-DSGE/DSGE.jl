@@ -394,7 +394,7 @@ Create a `DataFrame` out of the matrix `data`, including a `:date` column
 beginning in `start_date`.  Variable names and indices are obtained from
 `m.observables`.
 """
-function data_to_df(m::AbstractModel, data::Matrix{T}, start_date::Date) where {T<:AbstractFloat}
+function data_to_df(m::AbstractModel, data::Matrix{T}, start_date::Date) where T<:AbstractFloat
     # Check number of rows = number of observables
     nobs = n_observables(m)
     @assert size(data, 1) == nobs "Number of rows of data matrix ($(size(data, 1))) must equal number of observables ($nobs)"

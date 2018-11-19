@@ -173,7 +173,6 @@ function ss7!(m::Model1010)
                    description="σ_BBB: Standard deviation on the AR(1) process for measurement error on the BBB spread.",
                    tex_label="\\sigma_{BBB}")
 
-
     m <= parameter(:σ_b_liqp, 0.0269, (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(100., sqrt(1/400)),
                    fixed=false,
                    description="σ_b_liqp: Standard deviation of stationary component of liquid asset preference shifter process.",

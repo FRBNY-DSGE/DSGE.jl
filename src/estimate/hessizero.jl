@@ -3,7 +3,7 @@
 hessizero(fcn::Function, x::Vector{T};
           check_neg_diag::Bool=false,
           verbose::Symbol=:none,
-          distr::Bool=true) where {T<:AbstractFloat}
+          distr::Bool=true) where T<:AbstractFloat
 ```
 
 Compute Hessian of function `fcn` evaluated at `x`.
@@ -17,7 +17,7 @@ function hessizero(fcn::Function,
                    x::Vector{T};
                    check_neg_diag::Bool=false,
                    verbose::Symbol=:none,
-                   distr::Bool=true) where {T<:AbstractFloat}
+                   distr::Bool=true) where T<:AbstractFloat
     n_para = length(x)
     hessian  = zeros(n_para, n_para)
 
@@ -92,7 +92,7 @@ function hess_diag_element(fcn::Function,
                            i::Int;
                            ndx::Int=6,
                            check_neg_diag::Bool=false,
-                           verbose::Symbol=:none) where {T<:AbstractFloat}
+                           verbose::Symbol=:none) where T<:AbstractFloat
     # Setup
     n_para = length(x)
     dxscale  = ones(n_para, 1)
@@ -135,7 +135,7 @@ function hess_offdiag_element(fcn::Function,
                               j::Int,
                               σ_xσ_y::T;
                               ndx::Int=6,
-                              verbose::Symbol=:none) where {T<:AbstractFloat}
+                              verbose::Symbol=:none) where T<:AbstractFloat
     # Setup
     n_para = length(x)
     dxscale  = ones(n_para, 1)

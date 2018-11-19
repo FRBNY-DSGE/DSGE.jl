@@ -1,5 +1,5 @@
 using DSGE
-using Distributions, Test
+using Distributions, Test, LinearAlgebra
 
 # Test Parameter type
 
@@ -109,6 +109,7 @@ end
 n_mh_blocks = Setting(:n_mh_blocks, 22) # short constructor
 reoptimize = Setting(:reoptimize, false)
 vint = Setting(:data_vintage, "REF", true, "vint", "Date of data") # full constructor
+
 @testset "Check settings corresponding to parameters" begin
     @test promote_rule(Setting{Float64}, Float16) == Float64
     @test promote_rule(Setting{Bool}, Bool) == Bool
@@ -124,7 +125,7 @@ vint = Setting(:data_vintage, "REF", true, "vint", "Date of data") # full constr
     m.testing = false
     m <= Setting(:n_mh_blocks, 5, true, "mhbk", "Number of blocks for Metropolis-Hastings")
     @test m.settings[:n_mh_blocks].value == 5
-    @test occursin(r"^\s*_mhbk=5_vint=(\d{6})", DSGE.filestring(m))
+    @test occursin(r"^\s*_adpt=0.97_iter=1_mhbk=5_vint=(\d{6})", DSGE.filestring(m)) #@test occursin(r"^\s*_mhbk=5_vint=(\d{6})", DSGE.filestring(m))
     DSGE.filestring(m, "key=val")
     DSGE.filestring(m, ["key=val", "foo=bar"])
     m.testing = true

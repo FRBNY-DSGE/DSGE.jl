@@ -345,7 +345,7 @@ function csminwel(fcn::Function,
                   rng::AbstractRNG     = MersenneTwister(0),
                   kwargs...)
 
-    grad(x::Array{T}) where {T<:Number} = csminwell_grad(fcn, x, args...; kwargs...)
+    grad(x::Array{T}) where {T <: Number} = csminwell_grad(fcn, x, args...; kwargs...)
     csminwel(fcn, grad, x0, H0, args...;
              xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
              store_trace=store_trace, show_trace=show_trace,
