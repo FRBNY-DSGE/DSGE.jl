@@ -25,8 +25,8 @@ df2[:obs_nominalrate] = df[:obs_nominalrate]
 @testset "Check Kalman filter outputs without initializing state/state-covariance" begin
     kal = DSGE.filter(m, df, system)
     for out in fieldnames(typeof(kal))
-        global expect = exp_kal[out]
-        global actual = kal[out]
+        expect = exp_kal[out]
+        actual = kal[out]
 
         if ndims(expect) == 0
             @test expect ≈ actual
@@ -40,8 +40,8 @@ end
 @testset "Check Kalman filter outputs initializing state/state-covariance" begin
     kal = DSGE.filter(m, df, system, z0, P0)
     for out in fieldnames(typeof(kal))
-        global expect = exp_kal[out]
-        global actual = kal[out]
+        expect = exp_kal[out]
+        actual = kal[out]
 
         if ndims(expect) == 0
             @test expect ≈ actual

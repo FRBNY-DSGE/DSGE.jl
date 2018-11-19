@@ -54,7 +54,7 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
     if use_mode
         post_mode = h5read(get_forecast_input_file(m, :mode), "params")
     end
-    post_means = vec(mean(params, 1))
+    post_means = vec(mean(params, dims = 1))
 
     # Save posterior means
     basename = "paramsmean"
@@ -65,7 +65,7 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
     h5open(filename, "w") do file
         write(file, "post_means", post_means)
     end
-    post_bands = find_density_bands(params, percent; minimize = true)'
+    post_bands = permutedims(find_density_bands(params, percent; minimize = true))
 
     ### 3. Produce TeX tables
 
@@ -436,7 +436,7 @@ function prior_posterior_moments_table(m::AbstractModel,
             index = m.keys[param.key]
             (prior_mean, prior_std) = moments(param)
 
-            @printf fid "\$%4.99s\$ & " param.tex_label
+            @printf fid "\$ %4.99s\$ & " param.tex_label
             @printf fid "%s & " (param.fixed ? "-" : distid(get(param.prior)))
             @printf fid "%8.3f & " prior_mean
             @printf fid "%8.3f & " prior_std
@@ -521,7 +521,7 @@ function prior_posterior_table(m::AbstractModel, post_values::Vector;
                 isa(prior, RootInverseGamma) ? prior.τ : mean(prior)
             end
 
-            @printf fid "\$ \\%4.99s\$ & " param.tex_label
+            @printf fid "\$ %4.99s\$ & " param.tex_label
             @printf fid "%8.3f & " post_value
             @printf fid "\\%8.3f \\\\\n" post_values[index]
         end

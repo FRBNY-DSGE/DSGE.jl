@@ -88,7 +88,7 @@ function targets_to_data(m::AbstractModel, scen::Scenario)
         df[var] = if var in scen.target_names
             scen.targets[var]
         else
-            fill(NaN, horizons)
+            fill(missing, horizons)
         end
     end
     return df

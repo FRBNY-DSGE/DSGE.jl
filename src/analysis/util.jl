@@ -152,6 +152,9 @@ function load_population_growth(m::AbstractModel; verbose::Symbol = :low)
         else
             DataFrame()
         end
+        if (isempty(unfiltered_forecast) && use_population_forecast(m))
+            throw("Must set use_population_forecast setting to false if no population_forecast_$vint.csv file is provided as data. This file should be manually added to the saveroot in the raw sub-directory if the user wants to use a population forecast.")
+        end
 
         # HP filter if necessary
         data, forecast = transform_population_data(unfiltered_data, unfiltered_forecast, get(mnemonic);
