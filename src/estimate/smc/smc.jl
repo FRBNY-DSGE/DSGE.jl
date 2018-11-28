@@ -59,11 +59,13 @@ function smc(m::AbstractModel, data::Matrix;
 
     # Time Tempering
     tempered_update = !isempty(old_data)
-    # Quick check that if there is a tempered update that the old vintage and current vintage are different
-    if tempered_update
-        old_vintage = get_setting(m, :previous_data_vintage)
-        @assert old_vintage != data_vintage(m)
-    end
+
+    # TEMPORARILY DISABLE FOR TESTING.
+    # # Quick check that if there is a tempered update that the old vintage and current vintage are different
+    # if tempered_update
+        # old_vintage = get_setting(m, :previous_data_vintage)
+        # @assert old_vintage != data_vintage(m)
+    # end
 
     # Step 0 (ϕ schedule) settings
     i = 1                           # The index tracking the stage of the algorithm
