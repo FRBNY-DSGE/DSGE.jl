@@ -33,9 +33,9 @@ SMC is broken up into three main steps:
 - `Selection`: Resample the particles if the distribution of particles begins to degenerate, according to a tolerance level for the ESS.
 - `Mutation`: Propagate particles {θ(i), W(n)} via N(MH) steps of a Metropolis Hastings algorithm.
 """
-function smc(m::AbstractModel, data::T;
-             verbose::Symbol = :low, old_data::T =
-             T(undef, size(data, 1), 0)) where T <: AbstractMatrix
+function smc(m::AbstractModel, data::Matrix{Float64};
+             verbose::Symbol = :low, old_data::Matrix{Float64} = Matrix{Float64}(size(data, 1), 0),
+             old_cloud::ParticleCloud = ParticleCloud(m, 0))
     ########################################################################################
     ### Setting Parameters
     ########################################################################################
@@ -59,11 +59,13 @@ function smc(m::AbstractModel, data::T;
 
     # Time Tempering
     tempered_update = !isempty(old_data)
-    # Quick check that if there is a tempered update that the old vintage and current vintage are different
-    if tempered_update
-        old_vintage = get_setting(m, :previous_data_vintage)
-        @assert old_vintage != data_vintage(m)
-    end
+
+    # TEMPORARILY DISABLE FOR TESTING.
+    # # Quick check that if there is a tempered update that the old vintage and current vintage are different
+    # if tempered_update
+        # old_vintage = get_setting(m, :previous_data_vintage)
+        # @assert old_vintage != data_vintage(m)
+    # end
 
     # Step 0 (ϕ schedule) settings
     i = 1                           # The index tracking the stage of the algorithm
@@ -102,12 +104,16 @@ function smc(m::AbstractModel, data::T;
     end
 
     if tempered_update
-        # Load the previous ParticleCloud as the starting point for time tempering
-        loadpath = rawpath(m, "estimate", "smc_cloud.jld2")
-        #loadpath = rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)])
-        loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
+        if isempty(old_cloud)
+            # Load the previous ParticleCloud as the starting point for time tempering
+            loadpath = rawpath(m, "estimate", "smc_cloud.jld")
+            #loadpath = rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)])
+            loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
 
-        cloud = load(loadpath, "cloud")
+            cloud = load(loadpath, "cloud")
+        else
+            cloud = old_cloud
+        end
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
         initialize_likelihoods!(m, data, cloud, parallel = parallel, verbose = verbose)
     else
