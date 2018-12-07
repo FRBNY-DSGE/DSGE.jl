@@ -529,9 +529,9 @@ prior_posterior_table(m, post_values; subset_string = "",
 Produce a table of prior means and posterior means or mode.
 """
 function prior_posterior_table(m::AbstractModel, post_values::Vector;
-                 subset_string::String = "",
-                 groupings::AbstractDict{String, Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
-                 use_mode::Bool = false)
+                               subset_string::String = "",
+                               groupings::AbstractDict{String,Vector{Parameter}} = Dict{String, Vector{Parameter}}(),
+                               use_mode::Bool = false)
 
     if isempty(groupings)
         sorted_parameters = sort(m.parameters, by = (x -> x.key))
@@ -619,8 +619,8 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands(draws::AbstractArray, percent::T; minimize::Bool = true) where T<:AbstractFloat
-
+function find_density_bands(draws::AbstractArray, percent::T;
+                            minimize::Bool = true) where {T<:AbstractFloat}
     if !(0 <= percent <= 1)
         error("percent must be between 0 and 1")
     end
@@ -697,9 +697,8 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands(draws::AbstractArray, percents::Vector{T}; minimize::Bool = true) where T<:AbstractFloat
-
-
+function find_density_bands(draws::AbstractArray, percents::Vector{T};
+                            minimize::Bool = true) where {T<:AbstractFloat}
     bands = DataFrame()
 
     for p in percents
