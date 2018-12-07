@@ -32,7 +32,7 @@ out = load("reference/eqcond_output.jld2")
     @test typeof(Γ0) == typeof(out["output"][1])
     @test typeof(Γ1) == typeof(out["output"][2])
     @test Γ0 == out["output"][1]
-    @test Γ1 == out["output"][2]
+    @test Γ1 ≈ out["output"][2] # Note: this does not hold with perfect equality
     @test Ψ  == out["output"][3]
     @test Π  == out["output"][4]
     @test C  == out["output"][5]
