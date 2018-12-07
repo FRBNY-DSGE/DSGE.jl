@@ -119,7 +119,7 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
     if use_mode
         post_mode = h5read(get_forecast_input_file(m, :mode), "params")
     end
-    post_means = vec(mean(params, 1))
+    post_means = vec(mean(params, dims = 1))
 
     # Save posterior means
     basename = "paramsmean"
@@ -130,7 +130,7 @@ function moment_tables(m::AbstractModel; percent::AbstractFloat = 0.90,
     h5open(filename, "w") do file
         write(file, "post_means", post_means)
     end
-    post_bands = find_density_bands(params, percent; minimize = true)'
+    post_bands = permutedims(find_density_bands(params, percent; minimize = true))
 
     ### 3. Produce TeX tables
 
@@ -230,7 +230,7 @@ function prior_table(m::AbstractModel; subset_string::String = "",
     distid(::Distributions.Beta)    = "Beta"
     distid(::Distributions.Gamma)   = "Gamma"
     distid(::Distributions.Normal)  = "Normal"
-    distid(::RootInverseGamma) = "InvG"
+    distid(::RootInverseGamma)      = "InvG"
 
     # Write priors
     for group_desc in keys(groupings)
@@ -588,7 +588,7 @@ function prior_posterior_table(m::AbstractModel, post_values::Vector;
                 isa(prior, RootInverseGamma) ? prior.τ : mean(prior)
             end
 
-            @printf fid "\$ \\%4.99s\$ & " param.tex_label
+            @printf fid "\$ %4.99s\$ & " param.tex_label
             @printf fid "%8.3f & " post_value
             @printf fid "\\%8.3f \\\\\n" post_values[index]
         end
@@ -619,7 +619,7 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands(draws::AbstractArray, percent::T; minimize::Bool = true) where {T<:AbstractFloat}
+function find_density_bands(draws::AbstractArray, percent::T; minimize::Bool = true) where T<:AbstractFloat
 
     if !(0 <= percent <= 1)
         error("percent must be between 0 and 1")
@@ -681,7 +681,7 @@ end
 
 """
 ```
-find_density_bands(draws::Matrix, percents::Vector{T}; minimize::Bool=true) where {T<:AbstractFloat}
+find_density_bands(draws::Matrix, percents::Vector{T}; minimize::Bool=true) where T<:AbstractFloat
 ```
 
 Returns a `2` x `cols(draws)` matrix `bands` such that `percent` of the mass of `draws[:,i]`
@@ -697,8 +697,9 @@ is above `bands[1,i]` and below `bands[2,i]`.
 - `minimize`: if `true`, choose shortest interval, otherwise just chop off lowest and
   highest (percent/2)
 """
-function find_density_bands(draws::AbstractArray, percents::Vector{T};
-                            minimize::Bool = true) where {T<:AbstractFloat}
+function find_density_bands(draws::AbstractArray, percents::Vector{T}; minimize::Bool = true) where T<:AbstractFloat
+
+
     bands = DataFrame()
 
     for p in percents

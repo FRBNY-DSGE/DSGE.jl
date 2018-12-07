@@ -1,6 +1,6 @@
 """
 ```
-estimate(m, data; verbose=:low, proposal_covariance=Matrix(), method=:SMC)
+estimate(m, data; verbose = :low, proposal_covariance = Matrix(undef, 0, 0))
 ```
 
 Estimate the DSGE parameter posterior distribution.
@@ -31,7 +31,7 @@ Estimate the DSGE parameter posterior distribution.
 """
 function estimate(m::AbstractModel, df::DataFrame;
                   verbose::Symbol = :low,
-                  proposal_covariance::Matrix = Matrix(undef, 0,0),
+                  proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
                   sampling::Bool = true)
     data = df_to_matrix(m, df)
@@ -41,7 +41,7 @@ end
 
 function estimate(m::AbstractModel;
                   verbose::Symbol = :low,
-                  proposal_covariance::Matrix = Matrix(undef, 0,0),
+                  proposal_covariance::Matrix = Matrix(undef, 0, 0),
                   mle::Bool = false,
                   sampling::Bool = true)
     # Load data
@@ -101,7 +101,6 @@ function estimate(m::AbstractModel, data::AbstractArray;
             converged = out.converged || attempts > max_attempts
 
             end_time = (time_ns() - begin_time)/1e9
-
             println(verbose, :low, @sprintf "Total iterations completed: %d\n" total_iterations)
             println(verbose, :low, @sprintf "Optimization time elapsed: %5.2f\n" optimization_time += end_time)
 
@@ -137,9 +136,7 @@ function estimate(m::AbstractModel, data::AbstractArray;
 
         ## Calculate the Hessian at the posterior mode
         hessian = if calculate_hessian(m)
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Recalculating Hessian...")
-            end
+            println(verbose, :low, "Recalculating Hessian...")
 
             hessian, _ = hessian!(m, params, data; verbose=verbose)
 
@@ -149,19 +146,17 @@ function estimate(m::AbstractModel, data::AbstractArray;
 
             hessian
 
-            ## Read in a pre-calculated Hessian
-        else
-            fn = hessian_path(m)
-            if VERBOSITY[verbose] >= VERBOSITY[:low]
-                println("Using pre-calculated Hessian from $fn")
-            end
+    # Read in a pre-calculated Hessian
+    else
+        fn = hessian_path(m)
+        println(verbose, :low, "Using pre-calculated Hessian from $fn")
 
-            hessian = h5open(fn,"r") do file
-                read(file, "hessian")
-            end
-
-            hessian
+        hessian = h5open(fn,"r") do file
+            read(file, "hessian")
         end
+
+        hessian
+	end
 
         # Compute inverse hessian and create proposal distribution, or
         # just create it with the given cov matrix if we have it
@@ -251,11 +246,11 @@ distribution of the parameters.
 ```
 """
 function metropolis_hastings(propdist::Distribution,
-                                               m::AbstractModel,
-                                               data::AbstractArray,
-                                               cc0::T,
-                                               cc::T;
-                                               verbose::Symbol=:low) where T<: AbstractFloat
+                             m::AbstractModel,
+                             data::AbstractArray,
+                             cc0::T,
+                             cc::T;
+                             verbose::Symbol=:low) where T<:AbstractFloat
 
 
     # If testing, set the random seeds at fixed numbers
@@ -378,8 +373,8 @@ function metropolis_hastings(propdist::Distribution,
 
         # Calculate time to complete this block, average block time, and
         # expected time to completion
-        end_time = (time_ns() - begin_time)/1e9
-        total_sampling_time += end_time
+        block_time = (time_ns() - begin_time)/1e9
+        total_sampling_time += block_time
         total_sampling_time_minutes = total_sampling_time/60
         expected_time_remaining_sec     = (total_sampling_time/block)*(n_blocks - block)
         expected_time_remaining_minutes = expected_time_remaining_sec/60

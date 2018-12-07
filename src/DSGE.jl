@@ -115,6 +115,9 @@ module DSGE
         # decomp/
         decompose_forecast, decomposition_means,
 
+        # decomp/
+        decompose_forecast, decomposition_means,
+
         # altpolicy/
         AltPolicy, taylor93, taylor99,
 
@@ -129,8 +132,7 @@ module DSGE
         # plot/
         plot_prior_posterior, plot_impulse_response, plot_history_and_forecast, hair_plot,
         plot_forecast_comparison, plot_shock_decomposition, plot_altpolicies, plot_scenario,
-        plot_posterior_intervals, plot_posterior_interval_comparison,
-        plot_forecast_decomposition,
+        plot_posterior_intervals, plot_posterior_interval_comparison, plot_forecast_decomposition,
 
         # models/
         init_parameters!, steadystate!, init_observable_mappings!, init_pseudo_observable_mappings!,

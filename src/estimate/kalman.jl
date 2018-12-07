@@ -34,7 +34,7 @@ function Kalman(loglh::Vector{S},
                 s_pred::AbstractArray{S}, P_pred::Array{S, 3},
                 s_filt::AbstractArray{S}, P_filt::Array{S, 3},
                 s_0::Vector{S}, P_0::AbstractArray{S},
-                s_T::Vector{S}, P_T::AbstractArray{S}) where {S<:AbstractFloat}
+                s_T::Vector{S}, P_T::AbstractArray{S}) where S<:AbstractFloat
 
     return Kalman{S}(loglh, s_pred, P_pred, s_filt, P_filt, s_0, P_0, s_T, P_T, sum(loglh))
 end
@@ -64,7 +64,7 @@ function Base.getindex(kal::Kalman, inds::Union{Int, UnitRange{Int}})
 end
 
 function Base.cat(m::AbstractModel, k1::Kalman{S},
-                  k2::Kalman{S}; allout::Bool = true) where {S<:AbstractFloat}
+    k2::Kalman{S}; allout::Bool = true) where S<:AbstractFloat
 
     loglh  = cat(k1[:loglh], k2[:loglh], dims = 1)
     s_pred = cat(k1[:s_pred], k2[:s_pred], dims = 2)
@@ -90,7 +90,7 @@ regimes. The optional argument `start_date` indicates the first quarter of
 `data`.
 """
 function zlb_regime_indices(m::AbstractModel{S}, data::AbstractArray,
-                            start_date::Dates.Date = date_presample_start(m)) where {S<:AbstractFloat}
+                            start_date::Dates.Date = date_presample_start(m)) where S<:AbstractFloat
     T = size(data, 2)
 
     if n_anticipated_shocks(m) > 0 && !isempty(data)
@@ -123,7 +123,7 @@ and post-ZLB regimes. Of these, only `QQ` changes from pre- to post-ZLB: the
 entries corresponding to anticipated shock variances are zeroed out pre-ZLB.
 """
 function zlb_regime_matrices(m::AbstractModel{S}, system::System{S},
-                             start_date::Dates.Date = date_presample_start(m)) where {S<:AbstractFloat}
+                             start_date::Dates.Date = date_presample_start(m)) where S<:AbstractFloat
     if n_anticipated_shocks(m) > 0
         if start_date < date_presample_start(m)
             error("Start date $start_date must be >= date_presample_start(m)")

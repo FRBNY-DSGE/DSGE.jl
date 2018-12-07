@@ -39,7 +39,6 @@ For the latest documentation on the *code*, click on the docs|latest button
 above. Documentation for the most recent *model version* is available
 [here](https://github.com/FRBNY-DSGE/DSGE.jl/blob/master/docs/DSGE_Model_Documentation_1002.pdf).
 
-
 This Julia-language implementation mirrors the MATLAB code included in
 the Liberty Street Economics blog post [The FRBNY DSGE Model
 Forecast](http://libertystreeteconomics.newyorkfed.org/2015/05/the-frbny-dsge-model-forecast-april-2015.html).
@@ -59,4 +58,4 @@ appropriate place for a new user to start. It initializes a new model,
 sets some SMC-related parameters, runs SMC, and generates a LaTeX
 document documenting parameter moments. You can run this file by
 running `include("$(Pkg.dir("DSGE"))/docs/examples/test_smc.jl")` from
-the REPL. 
+the REPL.
