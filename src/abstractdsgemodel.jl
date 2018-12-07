@@ -587,7 +587,7 @@ end
 # Input data handled slightly differently, because it is not model-specific.
 """
 ```
-inpath(m::AbstractModel, in_type::T, file_name::T="") where {T<:String}
+inpath(m::AbstractModel, in_type::T, file_name::T="") where T<:String
 ```
 
 Returns path to specific input data file, creating containing directory as needed. If
@@ -683,7 +683,7 @@ end
 
 """
 ```
-update!(m::AbstractModel, values::Vector{T}) where {T<:AbstractFloat}
+update!(m::AbstractModel, values::Vector{T}) where T<:AbstractFloat
 ```
 
 Update `m.parameters` with `values`, recomputing the steady-state parameter values.
@@ -692,7 +692,7 @@ Update `m.parameters` with `values`, recomputing the steady-state parameter valu
 - `m`: the model object
 - `values`: the new values to assign to non-steady-state parameters.
 """
-function update!(m::AbstractModel, values::Vector{T}) where {T <: AbstractFloat}
+function update!(m::AbstractModel, values::Vector{T}) where T<:AbstractFloat
     DSGE.update!(m.parameters, values)
     steadystate!(m)
 end

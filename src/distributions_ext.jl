@@ -93,7 +93,7 @@ Distributions.rand(d::RootInverseGamma; cc::T = 1.0) where T <: AbstractFloat
 
 Generate a draw from the RootInverseGamma distribution `d`.
 """
-function Distributions.rand(d::RootInverseGamma; cc::T = 1.0) where {T<:AbstractFloat}
+function Distributions.rand(d::RootInverseGamma; cc::T = 1.0) where T<:AbstractFloat
     return sqrt(d.ν * d.τ^2 / sum(randn(round(Int,d.ν)).^2))
 end
 
@@ -119,7 +119,7 @@ rank(d::DegenerateMvNormal)
 
 Returns the rank of `d.σ`.
 """
-function rank(d::DegenerateMvNormal)
+function LinearAlgebra.rank(d::DegenerateMvNormal)
     return rank(d.σ)
 end
 
@@ -134,12 +134,12 @@ Base.length(d::DegenerateMvNormal) = length(d.μ)
 
 """
 ```
-Distributions.rand(d::DegenerateMvNormal; cc::T = 1.0) where T <: AbstractFloat
+Distributions.rand(d::DegenerateMvNormal; cc::T = 1.0) where T<:AbstractFloat
 ```
 
 Generate a draw from `d` with variance optionally scaled by `cc^2`.
 """
-function Distributions.rand(d::DegenerateMvNormal; cc::T = 1.0) where T <: AbstractFloat
+function Distributions.rand(d::DegenerateMvNormal; cc::T = 1.0) where T<:AbstractFloat
     return d.μ + cc*d.σ*randn(length(d))
 end
 

@@ -213,7 +213,9 @@ function write_forecast_outputs(m::AbstractModel, input_type::Symbol,
                     @assert !isempty(df) "df cannot be empty if trying to write :histobs"
                     df1 = df[date_mainsample_start(m) .<= df[:date] .<= date_mainsample_end(m), :]
                     data = df_to_matrix(m, df1)
-                    write(file, "arr", Array{Float64}(data))
+
+                    # Must call missing2nan since you cannot write Missing types to HDF5 files
+                    write(file, "arr", missing2nan(data))
                 else
                     # Otherwise, pre-allocate HDF5 dataset which will contain
                     # all draws
@@ -350,7 +352,7 @@ end
 
 """
 ```
-combine_raw_forecast_output_and_metadata()
+combine_raw_forecast_output_and_metadata(m, forecast_output_files; verbose = :low)
 ```
 Writes the raw forecast output data (`arr`) saved in the temporary h5 file to the
 jld2 file containing the rest of the forecast metadata. The intermediary h5 step exists because
