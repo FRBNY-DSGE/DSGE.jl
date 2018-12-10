@@ -76,8 +76,18 @@ function marginal_data_density(m::AbstractModel, data::Matrix{Float64} = Matrix{
 
 end
 
+function tt2string(time_temper::Symbol)
+    if time_temper==:new
+        return "new"
+    elseif time_temper==:old
+        return "old"
+    elseif time_temper==:whole
+        return "whole"
+    end
+end
+
 function marginal_data_density(m::AbstractModel)
-    file = load(rawpath(m, "estimate", "smc_cloud.jld"))
+    file = load(rawpath(m, "estimate")*"/smc_cloud_adpt=$(get_setting(m, :adaptive_tempering_target_smc))_iter=$(get_setting(m, :smc_iteration))_ttemp=$(tt2string(get_setting(m, :time_tempered)))_vint=$(get_setting(m, :data_vintage))"*".jld") #load(rawpath(m, "estimate", "smc_cloud.jld"))
     cloud, w, W = file["cloud"], file["w"], file["W"]
     w_W = w[:, 2:end] .* W[:, 1:end-1]
 
