@@ -39,11 +39,12 @@ out = load("reference/eqcond_output.jld2")
 end
 
 # Test ouput of solve has not changed
-out = load("reference/solve_output_interns.jld2")
+#out = load("reference/solve_output_interns.jld2")
+out = load("reference/one_asset_after_upgrade.jld2")
 TTT, RRR, CCC, inverse_basis = solve(m)
 @testset "solve(m) output" begin
-    @test TTT           ≈ out["TTT"]
-    @test RRR           ≈ out["RRR"]
-    @test CCC           ≈ out["CCC"]
-    @test inverse_basis ≈ out["inverse_basis"]
+    @test TTT           = out["TTT"]
+    @test RRR           = out["RRR"]
+    @test CCC           = out["CCC"]
+    @test inverse_basis = out["inverse_basis"]
 end

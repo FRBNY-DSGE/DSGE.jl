@@ -15,7 +15,8 @@ Driver to compute the model solution and augment transition matrices.
     S_t = TTT*S_{t-1} + RRR*ϵ_t + CCC
     ```
 """
-function solve(m::AbstractCTModel; sparse_mat::Bool = true, check_Γ0::Bool = true, complex_decomp::Bool = false)
+function solve(m::AbstractCTModel; sparse_mat::Bool = true, check_Γ0::Bool = true,
+               complex_decomp::Bool = false, alt_policy::Bool = false)
 
     # Get equilibrium condition matrices
     Γ0, Γ1, Ψ, Π, C = eqcond(m)
