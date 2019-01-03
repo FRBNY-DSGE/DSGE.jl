@@ -146,6 +146,18 @@ function update_mutation!(p::Particle, para::Array{Float64,1},
     p.accept = accept
 end
 
+# RECA
+function update_mutation!(para_path::String,  p::Particle, para::Array{Float64,1},
+                          like::Float64, post::Float64, old_like::Float64, accept::Bool)
+    out = readdlm(para_path)
+
+    p.value = para
+    p.loglh = like
+    p.logpost = post
+    p.old_loglh = old_like
+    p.accept = accept
+end
+
 function update_val!(p::Particle, val::Array{Float64,1})
     p.value = val
 end
