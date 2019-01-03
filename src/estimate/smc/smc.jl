@@ -41,6 +41,7 @@ function smc(m::AbstractModel, data::Matrix;
     ########################################################################################
 
     # General
+    fortran_path = "../fortran/" # RECA
     parallel = get_setting(m, :use_parallel_workers)
     n_parts = get_setting(m, :n_particles)
     n_params = n_parameters(m)
@@ -120,7 +121,9 @@ function smc(m::AbstractModel, data::Matrix;
         cloud = ParticleCloud(m, n_parts)
 
         # Modifies the cloud object in place to update draws, loglh, & logpost
-        initial_draw!(m, data, cloud, parallel = parallel, use_chand_recursion = use_chand_recursion,
+        # RECA
+        initial_draw!(m, data, cloud, fortran_path, parallel = parallel,
+                      use_chand_recursion = use_chand_recursion,
                       verbose = verbose)
 
         initialize_cloud_settings!(m, cloud; tempered_update = tempered_update)
@@ -152,6 +155,8 @@ function smc(m::AbstractModel, data::Matrix;
     ########################################################################################
     ### Recursion
     ########################################################################################
+    # RECA
+    resample_periods = get_resample_periods(fortran_path)
 
     if VERBOSITY[verbose] >= VERBOSITY[:low]
         println("\n\n SMC recursion starts \n\n")
@@ -159,108 +164,115 @@ function smc(m::AbstractModel, data::Matrix;
 
     while ϕ_n < 1.
 
-    tic()
-    cloud.stage_index = i += 1
+        tic()
+        cloud.stage_index = i += 1
 
-    ########################################################################################
-    ### Step 0: Setting ϕ_n (either adaptively or by the fixed schedule)
-    ########################################################################################
-    ϕ_n1 = cloud.tempering_schedule[i-1]
+        ########################################################################################
+        ### Step 0: Setting ϕ_n (either adaptively or by the fixed schedule)
+        ########################################################################################
+        ϕ_n1 = cloud.tempering_schedule[i-1]
 
-    if use_fixed_schedule
-        ϕ_n = cloud.tempering_schedule[i]
-    else
-        ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud, proposed_fixed_schedule, i, j, ϕ_prop,
-                                                                 ϕ_n1, tempering_target, resampled_last_period)
-    end
-
-    ########################################################################################
-    ### Step 1: Correction
-    ########################################################################################
-
-    # Calculate incremental weights (if no old data, get_old_loglh(cloud) returns zero)
-    incremental_weights = exp.((ϕ_n1 - ϕ_n)*get_old_loglh(cloud) + (ϕ_n - ϕ_n1)*get_loglh(cloud))
-
-    # Update weights
-    update_weights!(cloud, incremental_weights)
-
-    mult_weights = get_weights(cloud)
-
-    # Normalize weights
-    normalize_weights!(cloud)
-
-    normalized_weights = get_weights(cloud)
-
-    push!(z_matrix, sum(mult_weights))
-    w_matrix = hcat(w_matrix, incremental_weights)
-    W_matrix = hcat(W_matrix, normalized_weights)
-
-    ########################################################################################
-    ### Step 2: Selection
-    ########################################################################################
-
-    # Calculate the degeneracy/effective sample size metric
-    push!(cloud.ESS, 1/sum(normalized_weights.^2))
-
-    # If this assertion does not hold then there are likely too few particles
-    @assert !isnan(cloud.ESS[i]) "no particles have non-zero weight"
-
-    # Resample if the degeneracy/effective sample size metric falls below the accepted threshold
-    if (cloud.ESS[i] < threshold)
-        new_inds = resample(normalized_weights; method = resampling_method)
-
-        # update parameters/logpost/loglh with resampled values
-        # reset the weights to 1/n_parts
-        cloud.particles = [deepcopy(cloud.particles[i]) for i in new_inds]
-        reset_weights!(cloud)
-        cloud.resamples += 1
-        resampled_last_period = true
-        W_matrix[:, i] = fill(1/n_parts, (n_parts,1))
-    end
-
-    ########################################################################################
-    ### Step 3: Mutation
-    ########################################################################################
-
-    # Calculate the adaptive c-step to be used as a scaling coefficient in the mutation MH stea
-    c = c*(0.95 + 0.10*exp(16*(cloud.accept - target))/(1 + exp(16*(cloud.accept - target))))
-    cloud.c = c
-
-    θ_bar = weighted_mean(cloud)
-    R = weighted_cov(cloud)
-    # add to itself and divide by 2 to ensure marix is positive semi-definite symmetric (not off due to numerical
-    #error) and values haven't changed
-    R_fr = (R[free_para_inds, free_para_inds] + R[free_para_inds, free_para_inds]')/2
-
-    # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
-    d = MvNormal(θ_bar[free_para_inds], R_fr)
-
-    # New way of generating blocks
-    blocks_free = generate_free_blocks(n_free_para, n_blocks)
-    blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
-
-    if parallel
-        new_particles = @parallel (vcat) for j in 1:n_parts
-            mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                     c = c, α = α, old_data = old_data, use_chand_recursion = use_chand_recursion, verbose = verbose)
+        if use_fixed_schedule
+            ϕ_n = cloud.tempering_schedule[i]
+        else
+            ϕ_n, resampled_last_period, j, ϕ_prop = solve_adaptive_ϕ(cloud, proposed_fixed_schedule, i, j, ϕ_prop,
+                                                                     ϕ_n1, tempering_target, resampled_last_period)
         end
-    else
-        new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
-                                  c = c, α = α, old_data = old_data, verbose = verbose) for j = 1:n_parts]
-    end
 
-    cloud.particles = new_particles
-    update_acceptance_rate!(cloud) # update average acceptance rate
+        ########################################################################################
+        ### Step 1: Correction
+        ########################################################################################
 
-    ########################################################################################
-    ### Timekeeping and Output Generation
-    ########################################################################################
+        # Calculate incremental weights (if no old data, get_old_loglh(cloud) returns zero)
+        incremental_weights = exp.((ϕ_n1 - ϕ_n)*get_old_loglh(cloud) + (ϕ_n - ϕ_n1)*get_loglh(cloud))
 
-    cloud.total_sampling_time += toq()
+        # Update weights
+        update_weights!(cloud, incremental_weights)
 
-    if VERBOSITY[verbose] >= VERBOSITY[:low]
-        end_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)
-    end
+        mult_weights = get_weights(cloud)
+
+        # Normalize weights
+        normalize_weights!(cloud)
+
+        normalized_weights = get_weights(cloud)
+
+        push!(z_matrix, sum(mult_weights))
+        w_matrix = hcat(w_matrix, incremental_weights)
+        W_matrix = hcat(W_matrix, normalized_weights)
+
+        ########################################################################################
+        ### Step 2: Selection
+        ########################################################################################
+
+        # Calculate the degeneracy/effective sample size metric
+        push!(cloud.ESS, 1/sum(normalized_weights.^2))
+
+        # If this assertion does not hold then there are likely too few particles
+        @assert !isnan(cloud.ESS[i]) "no particles have non-zero weight"
+
+        # Resample if the degeneracy/effective sample size metric falls below the accepted threshold
+        if i in resample_periods # RECA: old line (cloud.ESS[i] < threshold)
+            new_inds = resample(i, fortran_path)
+            #new_inds = resample(normalized_weights; method = resampling_method)
+
+            # update parameters/logpost/loglh with resampled values
+            # reset the weights to 1/n_parts
+            cloud.particles = [deepcopy(cloud.particles[i]) for i in new_inds]
+            reset_weights!(cloud)
+            cloud.resamples += 1
+            resampled_last_period = true
+            W_matrix[:, i] = fill(1/n_parts, (n_parts,1))
+        end
+
+        ########################################################################################
+        ### Step 3: Mutation
+        ########################################################################################
+
+        # Calculate the adaptive c-step to be used as a scaling coefficient in the mutation MH stea
+        c = c*(0.95 + 0.10*exp(16*(cloud.accept - target))/(1 + exp(16*(cloud.accept - target))))
+        cloud.c = c
+
+        θ_bar = weighted_mean(cloud)
+        R = weighted_cov(cloud)
+        # add to itself and divide by 2 to ensure marix is positive semi-definite symmetric (not off due to numerical
+        #error) and values haven't changed
+        R_fr = (R[free_para_inds, free_para_inds] + R[free_para_inds, free_para_inds]')/2
+
+        # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
+        d = MvNormal(θ_bar[free_para_inds], R_fr)
+
+        # New way of generating blocks
+        blocks_free = generate_free_blocks(n_free_para, n_blocks)
+        blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
+
+        # RECA: Want to grab right mixr
+        mixr = readdlm(fortran_path * convert_string(i) * "mixr.txt")
+
+        if parallel
+            new_particles = @parallel (vcat) for j in 1:n_parts
+                mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
+                         c = c, α = α, old_data = old_data,
+                         use_chand_recursion = use_chand_recursion, verbose = verbose,
+                         mixr = mixr[j,:])
+            end
+        else
+            new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all,
+                                      ϕ_n, ϕ_n1; c = c, α = α, old_data = old_data,
+                                      verbose = verbose, mixr = mixr[j,:]) for j = 1:n_parts]
+        end
+
+        cloud.particles = new_particles
+        update_acceptance_rate!(cloud) # update average acceptance rate
+
+        ########################################################################################
+        ### Timekeeping and Output Generation
+        ########################################################################################
+
+        cloud.total_sampling_time += toq()
+
+        if VERBOSITY[verbose] >= VERBOSITY[:low]
+            end_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)
+        end
 
     end
 

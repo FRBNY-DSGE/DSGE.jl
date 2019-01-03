@@ -93,6 +93,9 @@ module DSGE
         mvnormal_mixture_draw, nearest_spd, marginal_data_density,
         initial_draw!, ParticleCloud, Particle,
 
+        # FORTRAN
+        get_resample_periods, resample, convert_string,
+
         # forecast/
         load_draws, forecast_one,
         smooth, forecast, shock_decompositions, deterministic_trends, trends, impulse_responses,

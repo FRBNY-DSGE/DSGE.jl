@@ -1,3 +1,24 @@
+# Utility function for checking all of the files in a directory. Want to grab when resamples occur.
+function get_resample_periods(path::String)
+    resample_periods = Base.filter(x -> (endswith(x,"resamp.txt") &
+                                         length(x)==13), readdir(path))
+    return [parse(Int, file[1:3]) for file in resample_periods]
+end
+
+function resample(period::Int, path::String)
+    return readdlm(path * convert_string(period) * "resamp.txt")
+end
+
+function convert_string(i::Int)
+    if i < 10
+        return "00" * string(i)
+    elseif i < 100
+        return "0" * string(i)
+    else
+        return string(i)
+    end
+end
+
 # The return type of reduce functions must be the same type as the tuple of arguments being input
 # E.g. If args is a tuple of Vector{Float64}, then the return argument must also be a Vector{Float64}
 # Thus, to implement a scalar reduce function, where each individual iteration returns
