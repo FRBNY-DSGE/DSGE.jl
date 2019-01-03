@@ -1,12 +1,12 @@
 # Utility function for checking all of the files in a directory. Want to grab when resamples occur.
 function get_resample_periods(path::String)
     resample_periods = Base.filter(x -> (endswith(x,"resamp.txt") &
-                                         length(x)==13), readdir(path))
+                                         (x != "resamp.txt")), readdir(path))
     return [parse(Int, file[1:3]) for file in resample_periods]
 end
 
 function resample(period::Int, path::String)
-    return readdlm(path * convert_string(period) * "resamp.txt")
+    return Int.(vec(readdlm(path * convert_string(period) * "resamp.txt")))
 end
 
 function convert_string(i::Int)
