@@ -41,7 +41,7 @@ function smc(m::AbstractModel, data::Matrix;
     ########################################################################################
 
     # General
-    fortran_path = "../fortran/" # RECA
+    fortran_path = "/data/dsge_data_dir/dsgejl/reca/SMCProject/specfiles/fortran/" # RECA
     parallel = get_setting(m, :use_parallel_workers)
     n_parts = get_setting(m, :n_particles)
     n_params = n_parameters(m)
@@ -212,6 +212,7 @@ function smc(m::AbstractModel, data::Matrix;
 
         # Resample if the degeneracy/effective sample size metric falls below the accepted threshold
         if i in resample_periods # RECA: old line (cloud.ESS[i] < threshold)
+            @show "HERE"
             new_inds = resample(i, fortran_path)
             #new_inds = resample(normalized_weights; method = resampling_method)
 
@@ -267,7 +268,6 @@ function smc(m::AbstractModel, data::Matrix;
         ########################################################################################
         ### Timekeeping and Output Generation
         ########################################################################################
-
         cloud.total_sampling_time += toq()
 
         if VERBOSITY[verbose] >= VERBOSITY[:low]
