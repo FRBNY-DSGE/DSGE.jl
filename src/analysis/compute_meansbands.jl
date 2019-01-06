@@ -229,6 +229,7 @@ function mb_reverse_transform(fcast_series::AbstractArray, transform::Function,
         else
             Float64[]
         end
+
         reverse_transform(fcast_series, transform4q;
                           fourquarter = true, y0s = y0s,
                           pop_growth = pop_growth)
