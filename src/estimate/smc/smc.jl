@@ -103,7 +103,7 @@ function smc(m::AbstractModel, data::T;
 
     if tempered_update
         # Load the previous ParticleCloud as the starting point for time tempering
-        loadpath = rawpath(m, "estimate", "smc_cloud.jld")
+        loadpath = rawpath(m, "estimate", "smc_cloud.jld2")
         #loadpath = rawpath(m, "estimate", "smc_cloud.jld", ["adpt="*string(tempering_target)])
         loadpath = replace(loadpath, r"vint=[0-9]{6}", "vint="*old_vintage)
 
