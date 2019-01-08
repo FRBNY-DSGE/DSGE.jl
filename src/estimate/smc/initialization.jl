@@ -87,7 +87,7 @@ end
 # ParticleCloud from a previous estimation to each particle's respective old_loglh
 # field, and for evaluating/saving the likelihood and posterior at the new data, which
 # here is just the argument, data.
-function initialize_likelihoods!(m::AbstractModel, data::Matrix{Union{Float64, Missing}}, c::ParticleCloud;
+function initialize_likelihoods!(m::AbstractModel, data::Matrix, c::ParticleCloud;
                                  parallel::Bool = false, verbose::Symbol = :low)
     # Retire log-likelihood values from the old estimation to the field old_loglh
     map(p -> p.old_loglh = p.loglh, c.particles)
