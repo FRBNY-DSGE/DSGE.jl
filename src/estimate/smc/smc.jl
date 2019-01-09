@@ -257,6 +257,16 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # fortpara = readdlm(fortran_path * convert_string(i) * "parasim.txt")
         # fortpost = readdlm(fortran_path * convert_string(i) * "postsim.txt")
         # fortlik  = readdlm(fortran_path * convert_string(i) * "liksim.txt")
+        @show "HERE1"
+        @show typeof(step)
+        @show typeof(step[1])
+        my_steps = [step[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks +
+                                     1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks +
+                                     n_blocks * n_steps] for j in 1:n_parts]
+        @show "HERE2"
+        @show typeof(my_steps), typeof(my_steps[1])
+        @show my_steps[1]
+
 
         if parallel
             new_particles = @parallel (vcat) for j in 1:n_parts

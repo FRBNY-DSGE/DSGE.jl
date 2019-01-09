@@ -186,8 +186,6 @@ FOR FOTRAN TESTING.
 Return a Vector{Vector{Int64}} where each internal Vector{Int64} contains indices corresponding to those in `blocks_free` but mapping to `1:n_para` (as opposed to `1:n_free_para`). These blocks are used to reconstruct the particle vector by inserting the mutated free parameters into the size `n_para,` particle vector, which also contains fixed parameters.
 """
 function generate_free_blocks(blocks_all::Vector{Vector{Int64}}, free_para_inds::Vector{Int64})
-    @show blocks_all
-    @show free_para_inds
     blocks_free = similar(blocks_all)
     my_map = Dict{Int64, Int64}()
     for (free_ind, ind) in zip([i for i=1:length(free_para_inds)], free_para_inds)
