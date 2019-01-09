@@ -43,7 +43,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     # RECA
     fortran_path = "/data/dsge_data_dir/dsgejl/reca/SMCProject/specfiles/fortran/"
     fortESS      = vec(readdlm(fortran_path * "ESS.txt"))
-    step         = vec(readdlm(fortran_path * "stepprobs.txt"))
+    stepprobs    = vec(readdlm(fortran_path * "stepprobs.txt"))
 
     # General
     parallel = get_setting(m, :use_parallel_workers)
@@ -258,7 +258,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # fortpost = readdlm(fortran_path * convert_string(i) * "postsim.txt")
         # fortlik  = readdlm(fortran_path * convert_string(i) * "liksim.txt")
 
-        @show [size(step[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + 1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + n_blocks * n_steps]) for j in 1:n_parts]
         if parallel
             new_particles = @parallel (vcat) for j in 1:n_parts
                 # RECA: Testing against FORTRAN
@@ -272,7 +271,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                          c = c, α = α, old_data = old_data,
                          use_chand_recursion = use_chand_recursion, verbose = verbose,
                          mixr = mixr[j,:],
-                         step = step[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + 1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + n_blocks * n_steps])
+                         stepprobs = stepprobs[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + 1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + n_blocks * n_steps])
             end
         else
             new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all,
@@ -289,8 +288,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         @show cloud.ESS[i] ≈ fortESS[i], cloud.ESS[i], fortESS[i]
         #@assert get_vals(cloud)    ≈ fortpara
         #@assert get_logpost(cloud) ≈ fortpost
-        @show size(get_loglh(cloud)), size(fortlik)
-        @show mean(get_loglh(cloud)), mean(fortlik)
+        #show size(get_loglh(cloud)), size(fortlik)
+        #show mean(get_loglh(cloud)), mean(fortlik)
 
 
 
