@@ -41,7 +41,7 @@ function parameter_map()
         18 => 17, # rdely  => :ψ3
         19 => 18, # pibar  => :π_star
         20 => 14, # betin  => :β
-        21 => 24, # lbar   => :Lmean   // suspicious
+        21 => 24, # lbar   => :Lmean   // given different prior
         22 => 23, # gambar => :γ
         23 => 1,  # alp    => :α
         24 => 25, # g_y    => :g_star  || FIXED
@@ -162,19 +162,43 @@ end
 
 """
 ```
-function generate_free_blocks(n_free_para, n_blocks, path, i)
+function generate_all_blocks(n_free_para, n_blocks, path, i)
 ```
 USED FOR FORTRAN TESTING.
 Return a Vector{Vector{Int64}} where each internal Vector{Int64} contains a subset of the range 1:n_free_para of randomly permuted indices. This is used to index out random blocks of free parameters from the covariance matrix for the mutation step.
 """
-function generate_free_blocks(n_free_para::Int64, n_blocks::Int64, path::String, i::Int64)
+function generate_all_blocks(n_free_para::Int64, n_blocks::Int64, path::String, i::Int64)
     break_points = [0, 13, 25, 36] # this is from the FORTRAN code
-    fort_inds    = readdlm(path * convert_string(i) * "randomblocks.txt")[1:n_free_para]
-    my_map       = parameter_map()
-    inds         = [my_map[x] for x in fort_inds]
+    # fort_inds    = readdlm(path * convert_string(i) * "randomblocks.txt")[1:n_free_para]
+    # my_map       = parameter_map()
+    # inds         = [my_map[x] for x in fort_inds]
+    inds = readdlm(path * convert_string(i) * "randomblocks.txt")[1:n_free_para]
+    inds = [Int(x) for x in inds]
     fortran_list = [inds[break_points[j]+1:break_points[j+1]] for j=1:n_blocks]
     return fortran_list
 end
+
+"""
+```
+function generate_free_blocks(blocks_free, free_para_inds)
+```
+FOR FOTRAN TESTING.
+Return a Vector{Vector{Int64}} where each internal Vector{Int64} contains indices corresponding to those in `blocks_free` but mapping to `1:n_para` (as opposed to `1:n_free_para`). These blocks are used to reconstruct the particle vector by inserting the mutated free parameters into the size `n_para,` particle vector, which also contains fixed parameters.
+"""
+function generate_free_blocks(blocks_all::Vector{Vector{Int64}}, free_para_inds::Vector{Int64})
+    @show blocks_all
+    @show free_para_inds
+    blocks_free = similar(blocks_all)
+    my_map = Dict{Int64, Int64}()
+    for (free_ind, ind) in zip([i for i=1:length(free_para_inds)], free_para_inds)
+        my_map[ind] = free_ind
+    end
+    for (i, block) in enumerate(blocks_all)
+        blocks_free[i] = [my_map[x] for x in block]
+    end
+    return blocks_free
+end
+
 
 function isempty(c::ParticleCloud)
     length(c.particles) == 0

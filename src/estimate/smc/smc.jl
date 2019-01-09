@@ -87,9 +87,9 @@ function smc(m::AbstractModel, data::Matrix{Float64};
     c = get_setting(m, :step_size_smc)
     target = accept = get_setting(m, :target_accept)
     α = get_setting(m, :mixture_proportion)
+
     # RECA
-    ##################### HERE #########################
-    fixed_para_inds = [4, 6, 8, 10, 24]#find([θ.fixed for θ in m.parameters])
+    fixed_para_inds = find([θ.fixed for θ in m.parameters])
     free_para_inds = find([!θ.fixed for θ in m.parameters])
     n_free_para = length(free_para_inds)
 
@@ -246,26 +246,27 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         d = MvNormal(θ_bar[free_para_inds], R_fr)
 
         # New way of generating blocks
-        blocks_free = generate_free_blocks(n_free_para, n_blocks, fortran_path, i) # RECA: last two args
-        blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
+        # blocks_free = generate_free_blocks(n_free_para, n_blocks)
+        # blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
+        blocks_all   = generate_all_blocks(n_free_para, n_blocks, fortran_path, i) # RECA: sort of confusing fn names
+        blocks_free  = generate_free_blocks(blocks_all, free_para_inds) # RECA
 
         # RECA: mixr gives which distribution we ought draw from
         mixr = readdlm(fortran_path * convert_string(i) * "mixr.txt")
         eps  = readdlm(fortran_path * convert_string(i) * "eps.txt")
-
-#        fortpara = readdlm(fortran_path * convert_string(i) * "parasim.txt")
-#        fortpost = readdlm(fortran_path * convert_string(i) * "postsim.txt")
-#        fortlik  = readdlm(fortran_path * convert_string(i) * "liksim.txt")
-
+        # fortpara = readdlm(fortran_path * convert_string(i) * "parasim.txt")
+        # fortpost = readdlm(fortran_path * convert_string(i) * "postsim.txt")
+        # fortlik  = readdlm(fortran_path * convert_string(i) * "liksim.txt")
 
         if parallel
             new_particles = @parallel (vcat) for j in 1:n_parts
                 # RECA: Testing against FORTRAN
-#                begin
-#                    p = cloud.particles[j]
-#                    update_mutation!(p, fortpara[j,:], fortlik[j], fortpost[j], 0.0, true)
-#                    p
-#                end
+                # code below returns the same ESS value, very comparable logMDD
+                # begin
+                #     p = cloud.particles[j]
+                #     update_mutation!(p, fortpara[j,:], fortlik[j], fortpost[j], 0.0, true)
+                #     p
+                # end
                 mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
                          c = c, α = α, old_data = old_data,
                          use_chand_recursion = use_chand_recursion, verbose = verbose,
