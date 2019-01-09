@@ -115,5 +115,6 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
         end
     end
     update_mutation!(p, para, like, post, like_prev, accept)
+    typeof(p)
     return p
 end
