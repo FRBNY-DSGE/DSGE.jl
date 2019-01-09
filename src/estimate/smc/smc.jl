@@ -40,8 +40,11 @@ function smc(m::AbstractModel, data::Matrix;
     ### Setting Parameters
     ########################################################################################
 
+    # RECA
+    fortran_path = "/data/dsge_data_dir/dsgejl/reca/SMCProject/specfiles/fortran/"
+    fortESS      = readdlm(fortran_path * "ESS.txt")
+
     # General
-    fortran_path = "/data/dsge_data_dir/dsgejl/reca/SMCProject/specfiles/fortran/" # RECA
     parallel = get_setting(m, :use_parallel_workers)
     n_parts = get_setting(m, :n_particles)
     n_params = n_parameters(m)
@@ -211,8 +214,9 @@ function smc(m::AbstractModel, data::Matrix;
         @assert !isnan(cloud.ESS[i]) "no particles have non-zero weight"
 
         # Resample if the degeneracy/effective sample size metric falls below the accepted threshold
-        if i in resample_periods # RECA: old line (cloud.ESS[i] < threshold)
-            @show "HERE"
+        if (cloud.ESS[i] < threshold)
+            @assert i in resample_periods # RECA: test to ensure resample at same periods
+
             new_inds = resample(i, fortran_path)
             #new_inds = resample(normalized_weights; method = resampling_method)
 
@@ -229,7 +233,7 @@ function smc(m::AbstractModel, data::Matrix;
         ### Step 3: Mutation
         ########################################################################################
 
-        # Calculate the adaptive c-step to be used as a scaling coefficient in the mutation MH stea
+        # Calculate the adaptive c-step to be used as a scaling coefficient in the mutation MH step
         c = c*(0.95 + 0.10*exp(16*(cloud.accept - target))/(1 + exp(16*(cloud.accept - target))))
         cloud.c = c
 
@@ -243,14 +247,24 @@ function smc(m::AbstractModel, data::Matrix;
         d = MvNormal(θ_bar[free_para_inds], R_fr)
 
         # New way of generating blocks
-        blocks_free = generate_free_blocks(n_free_para, n_blocks)
+        blocks_free = generate_free_blocks(n_free_para, n_blocks, fortran_path, i) # RECA: last two args
         blocks_all  = generate_all_blocks(blocks_free, free_para_inds)
 
         # RECA: Want to grab right mixr
         mixr = readdlm(fortran_path * convert_string(i) * "mixr.txt")
 
+        fortpara = readdlm(fortran_path * convert_string(i) * "parasim.txt")
+        fortpost = readdlm(fortran_path * convert_string(i) * "postsim.txt")
+        fortlik  = readdlm(fortran_path * convert_string(i) * "liksim.txt")
+
         if parallel
             new_particles = @parallel (vcat) for j in 1:n_parts
+                # RECA: Testing against FORTRAN
+#                begin
+#                    p = cloud.particles[j]
+#                    update_mutation!(p, fortpara[j,:], fortlik[j], fortpost[j], 0.0, true)
+#                    p
+#                end
                 mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
                          c = c, α = α, old_data = old_data,
                          use_chand_recursion = use_chand_recursion, verbose = verbose,
@@ -264,6 +278,17 @@ function smc(m::AbstractModel, data::Matrix;
 
         cloud.particles = new_particles
         update_acceptance_rate!(cloud) # update average acceptance rate
+
+        ########################################################################################
+        ### Reca: Testing Against FORTRAN
+        ########################################################################################
+        @show cloud.ESS[i] ≈ fortESS[i], cloud.ESS[i], fortESS[i]
+        #@assert get_vals(cloud)    ≈ fortpara
+        #@assert get_logpost(cloud) ≈ fortpost
+        @show size(get_loglh(cloud)), size(fortlik)
+        @show mean(get_loglh(cloud)), mean(fortlik)
+
+
 
         ########################################################################################
         ### Timekeeping and Output Generation

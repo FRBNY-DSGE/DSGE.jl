@@ -31,14 +31,16 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                   old_data::Matrix{Float64} = Matrix{Float64}(size(data, 1), 0),
                   use_chand_recursion::Bool = false,
                   verbose::Symbol = :low,
-                  mixr = Vector{Float64}(size(blocks_all,1), 0)) # RECA: need to add n_mh if want > 1
+                  mixr = Vector{Float64}(size(blocks_all,1), 0), # RECA: need to add n_mh if want > 1
+                  uu   = Vector{Float64}(size(blocks_all,1), 0)) # RECA: need to add n_mh if want > 1
 
     n_steps = get_setting(m, :n_mh_steps_smc)
 
     # draw initial step probability
     # conditions for testing purposes
     #step_prob = rand()
-    step_prob = mixr[1]
+    step_prob = uu[1]#mixr[1]
+    mix_draw  = mixr[1]
     mm = 1 # RECA
 
     para = p.value
@@ -60,7 +62,8 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             d_subset = MvNormal(d.μ[block_f], d.Σ.mat[block_f, block_f])
 
             para_draw, para_new_density, para_old_density = mvnormal_mixture_draw(para_subset,
-                                                                                  d_subset;
+                                                                                  d_subset,
+                                                                                  mix_draw; # RECA
                                                                                   cc = c, α = α)
 
             para_new = copy(para)
@@ -107,7 +110,8 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             # draw again for the next step
             #step_prob = rand()
             mm += 1
-            step_prob = (mm==4 ? 0 : mixr[mm])
+            step_prob = (mm==4 ? 0 : uu[mm])
+            mix_draw  = (mm==4 ? 0 : mixr[mm])
         end
     end
     update_mutation!(p, para, like, post, like_prev, accept)
