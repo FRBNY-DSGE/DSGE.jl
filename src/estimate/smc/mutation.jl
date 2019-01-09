@@ -32,14 +32,14 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                   use_chand_recursion::Bool = false,
                   verbose::Symbol = :low,
                   mixr = Vector{Float64}(size(blocks_all,1), 0), # RECA: need to add n_mh if want > 1
-                  step = Vector{Float64}(size(blocks_all,1), 0)) # RECA: need to add n_mh if want > 1
+                  stepprobs = Vector{Float64}(size(blocks_all,1), 0)) # RECA: need to add n_mh if want > 1
 
     n_steps = get_setting(m, :n_mh_steps_smc)
 
     # draw initial step probability
     # conditions for testing purposes
     #step_prob = rand()
-    step_prob = step[1]
+    step_prob = stepprobs[1]
     mix_draw  = mixr[1]
     mm = 1 # RECA
 
@@ -54,6 +54,9 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
 
     for step in 1:n_steps
         for (block_f, block_a) in zip(blocks_free, blocks_all)
+
+            step_prob = stepprobs[mm]
+            mix_draw  = mixr[mm]
 
             # Index out the parameters corresponding to a given random block
             # And also create a distribution centered at the weighted mean
@@ -106,13 +109,9 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                 like_prev = like_old_data            # para_new_density throughout the iterations
                 accept = true
             end
-
+            mm += 1
             # draw again for the next step
             #step_prob = rand()
-            mm += 1
-            @show step, mm
-            step_prob = (mm >= n_blocks * n_steps + 1 ? 0 : step[mm])
-            mix_draw  = (mm >= n_blocks * n_steps + 1 ? 0 : mixr[mm])
         end
     end
     update_mutation!(p, para, like, post, like_prev, accept)
