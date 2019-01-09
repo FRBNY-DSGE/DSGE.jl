@@ -32,14 +32,14 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                   use_chand_recursion::Bool = false,
                   verbose::Symbol = :low,
                   mixr = Vector{Float64}(size(blocks_all,1), 0), # RECA: need to add n_mh if want > 1
-                  uu   = Vector{Float64}(size(blocks_all,1), 0)) # RECA: need to add n_mh if want > 1
+                  step = Vector{Float64}(size(blocks_all,1), 0)) # RECA: need to add n_mh if want > 1
 
     n_steps = get_setting(m, :n_mh_steps_smc)
 
     # draw initial step probability
     # conditions for testing purposes
     #step_prob = rand()
-    step_prob = uu[1]#mixr[1]
+    step_prob = step[1]
     mix_draw  = mixr[1]
     mm = 1 # RECA
 
@@ -110,7 +110,7 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             # draw again for the next step
             #step_prob = rand()
             mm += 1
-            step_prob = (mm==4 ? 0 : uu[mm])
+            step_prob = (mm==4 ? 0 : step[mm])
             mix_draw  = (mm==4 ? 0 : mixr[mm])
         end
     end
