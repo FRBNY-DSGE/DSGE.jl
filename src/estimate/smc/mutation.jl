@@ -62,8 +62,8 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             d_subset = MvNormal(d.μ[block_f], d.Σ.mat[block_f, block_f])
 
             para_draw, para_new_density, para_old_density = mvnormal_mixture_draw(para_subset,
-                                                                                  d_subset,
-                                                                                  mix_draw; # RECA
+                                                                                  d_subset;
+                                                                                  #mix_draw; # RECA
                                                                                   cc = c, α = α)
 
             para_new = copy(para)
@@ -94,7 +94,7 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                     throw(err)
                 end
             end
-            @show "here we are"
+
             # Accept/Reject
             post_old = post - para_old_density
             η = exp(post_new - post_old)
@@ -110,11 +110,11 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             # draw again for the next step
             #step_prob = rand()
             mm += 1
-            step_prob = (mm==4 ? 0 : step[mm])
-            mix_draw  = (mm==4 ? 0 : mixr[mm])
+            @show step, mm
+            step_prob = (mm >= n_blocks * n_steps + 1 ? 0 : step[mm])
+            mix_draw  = (mm >= n_blocks * n_steps + 1 ? 0 : mixr[mm])
         end
     end
     update_mutation!(p, para, like, post, like_prev, accept)
-    typeof(p)
     return p
 end
