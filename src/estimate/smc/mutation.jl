@@ -94,7 +94,7 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                     throw(err)
                 end
             end
-
+            @show "here we are"
             # Accept/Reject
             post_old = post - para_old_density
             η = exp(post_new - post_old)
