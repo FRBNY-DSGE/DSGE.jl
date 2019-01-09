@@ -42,8 +42,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
     # RECA
     fortran_path = "/data/dsge_data_dir/dsgejl/reca/SMCProject/specfiles/fortran/"
-    fortESS      = readdlm(fortran_path * "ESS.txt")
-    step         = readdlm(fortran_path * "stepprobs.txt")
+    fortESS      = vec(readdlm(fortran_path * "ESS.txt"))
+    step         = vec(readdlm(fortran_path * "stepprobs.txt"))
 
     # General
     parallel = get_setting(m, :use_parallel_workers)
@@ -257,17 +257,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # fortpara = readdlm(fortran_path * convert_string(i) * "parasim.txt")
         # fortpost = readdlm(fortran_path * convert_string(i) * "postsim.txt")
         # fortlik  = readdlm(fortran_path * convert_string(i) * "liksim.txt")
-        @show "HERE1"
-        @show typeof(step)
-        @show typeof(step[1])
-        my_steps = [step[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks +
-                                     1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks +
-                                     n_blocks * n_steps] for j in 1:n_parts]
-        @show "HERE2"
-        @show typeof(my_steps), typeof(my_steps[1])
-        @show my_steps[1]
 
-
+        @show [size(step[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + 1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + n_blocks * n_steps]) for j in 1:n_parts]
         if parallel
             new_particles = @parallel (vcat) for j in 1:n_parts
                 # RECA: Testing against FORTRAN
@@ -281,9 +272,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                          c = c, α = α, old_data = old_data,
                          use_chand_recursion = use_chand_recursion, verbose = verbose,
                          mixr = mixr[j,:],
-                         step = step[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks +
-                                     1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks +
-                                     n_blocks * n_steps])
+                         step = step[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + 1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + n_blocks * n_steps])
             end
         else
             new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all,
