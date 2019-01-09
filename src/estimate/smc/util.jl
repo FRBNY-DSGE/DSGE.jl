@@ -19,6 +19,54 @@ function convert_string(i::Int)
     end
 end
 
+function parameter_map()
+    return Dict{Int64, Int64}(
+        1 => 7,   # varphi => :S''
+        2 => 19,  # sigmac => :σ_c
+        3 => 8,   # h      => :h
+        4 => 13,  # lamw   => :λ_w    || FIXED
+        5 => 11,  # xiw    => :ζ_w
+        6 => 22,  # epsw   => :ϵ_w    || FIXED
+        7 => 10,  # sigmal => :ν_l
+        8 => 4,   # del    => :δ      || FIXED
+        9 => 2,   # xip    => :ζ_p
+        10 => 21, # epsp   => :ϵ_p    || FIXED
+        11 => 12, # iotaw  => :ι_w
+        12 => 3,  # iotap  => :ι_p
+        13 => 9,  # ppsi   => :ppsi
+        14 => 6,  # capphi => :Φ
+        15 => 15, # rpi    => :ψ1
+        16 => 20, # rho    => :ρ
+        17 => 16, # ry     => :ψ2
+        18 => 17, # rdely  => :ψ3
+        19 => 18, # pibar  => :π_star
+        20 => 14, # betin  => :β
+        21 => 24, # lbar   => :Lmean   // suspicious
+        22 => 23, # gambar => :γ
+        23 => 1,  # alp    => :α
+        24 => 25, # g_y    => :g_star  || FIXED
+
+        25 => 29, # rhoa   => :ρ_z
+        26 => 27, # rhob   => :ρ_b
+        27 => 26, # rhog   => :ρ_g
+        28 => 28, # rhoi   => :ρ_μ
+        29 => 32, # rhor   => :ρ_rm
+        30 => 30, # rhop   => :ρ_λ_f
+        31 => 31, # rhow   => :ρ_λ_w
+
+        32 => 41, # mup    => :η_λ_f
+        33 => 42, # muw    => :η_λ_w
+        34 => 40, # rhoga  => :η_gz
+
+        35 => 36, # sigmaa => :σ_z
+        36 => 34, # sigmab => :σ_b
+        37 => 33, # sigmag => :σ_g
+        38 => 35, # sigmai => :σ_μ
+        39 => 39, # sigmar => :σ_rm
+        40 => 37, # sigmap => :σ_λ_f
+        41 => 38) # sigmaw => :σ_λ_w
+end
+
 # The return type of reduce functions must be the same type as the tuple of arguments being input
 # E.g. If args is a tuple of Vector{Float64}, then the return argument must also be a Vector{Float64}
 # Thus, to implement a scalar reduce function, where each individual iteration returns
@@ -110,6 +158,22 @@ function generate_free_blocks(n_free_para::Int64, n_blocks::Int64)
         end
     end
     return blocks_free
+end
+
+"""
+```
+function generate_free_blocks(n_free_para, n_blocks, path, i)
+```
+USED FOR FORTRAN TESTING.
+Return a Vector{Vector{Int64}} where each internal Vector{Int64} contains a subset of the range 1:n_free_para of randomly permuted indices. This is used to index out random blocks of free parameters from the covariance matrix for the mutation step.
+"""
+function generate_free_blocks(n_free_para::Int64, n_blocks::Int64, path::String, i::Int64)
+    break_points = [0, 13, 25, 36] # this is from the FORTRAN code
+    fort_inds    = readdlm(path * convert_string(i) * "randomblocks.txt")[1:n_free_para]
+    my_map       = parameter_map()
+    inds         = [my_map[x] for x in fort_inds]
+    fortran_list = [inds[break_points[j]+1:break_points[j+1]] for j=1:n_blocks]
+    return fortran_list
 end
 
 function isempty(c::ParticleCloud)
