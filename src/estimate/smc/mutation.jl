@@ -32,7 +32,10 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                   use_chand_recursion::Bool = false,
                   verbose::Symbol = :low,
                   mixr = Vector{Float64}(size(blocks_all,1), 0), # RECA: need to add n_mh if want > 1
-                  stepprobs = Vector{Float64}(size(blocks_all,1), 0)) # RECA: need to add n_mh if want > 1
+                  eps  = Matrix{Float64}(size(1, 41), 0), # RECA : size(n_steps, n_para)
+                  stepprobs = Vector{Float64}(size(blocks_all,1), 0),
+                  step_pr = Matrix{Float64}(size(1, 1), 0),
+                  step_lik = Matrix{Float64}(size(1, 1), 0)) # RECA: need to add n_mh if want > 1
 
     n_steps = get_setting(m, :n_mh_steps_smc)
 
@@ -53,6 +56,9 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
     accept = false
 
     for step in 1:n_steps
+
+        eps_step = eps[step, :]
+
         for (block_f, block_a) in zip(blocks_free, blocks_all)
 
             step_prob = stepprobs[mm]
@@ -64,9 +70,13 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             para_subset = para[block_a]
             d_subset = MvNormal(d.μ[block_f], d.Σ.mat[block_f, block_f])
 
+            # RECA
+            eps_block = eps_step[block_a]
+
             para_draw, para_new_density, para_old_density = mvnormal_mixture_draw(para_subset,
                                                                                   d_subset;
-                                                                                  #mix_draw; # RECA
+                                                                                  mixr = mix_draw, # RECA
+                                                                                  eps = eps_block, # RECA
                                                                                   cc = c, α = α)
 
             para_new = copy(para)
@@ -109,7 +119,11 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                 like_prev = like_old_data            # para_new_density throughout the iterations
                 accept = true
             end
+#            print(para)
+#            print(step_pr[mm])
+#            @assert like == step_lik[mm]
             mm += 1
+
             # draw again for the next step
             #step_prob = rand()
         end

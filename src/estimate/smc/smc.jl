@@ -214,10 +214,13 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         # Resample if the degeneracy/effective sample size metric falls below the accepted threshold
         if (cloud.ESS[i] < threshold)
-            @assert i in resample_periods # RECA: test to ensure resample at same periods
-
-            new_inds = resample(i, fortran_path)
-            #new_inds = resample(normalized_weights; method = resampling_method)
+            if i in resample_periods # RECA: test to ensure resample at same periods
+                print_with_color(:blue, "Resample occurs in FORTRAN set of resample periods.\n")
+                new_inds = resample(i, fortran_path)
+            else
+                print_with_color(:red, "RESAMPLE NOT IN FORTRAN SET OF RESAMPLE PERIODS.\n")
+                new_inds = resample(normalized_weights; method = resampling_method)
+            end
 
             # update parameters/logpost/loglh with resampled values
             # reset the weights to 1/n_parts
@@ -239,7 +242,7 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         θ_bar = weighted_mean(cloud)
         R = weighted_cov(cloud)
         # add to itself and divide by 2 to ensure marix is positive semi-definite symmetric (not off due to numerical
-        #error) and values haven't changed
+        # error) and values haven't changed
         R_fr = (R[free_para_inds, free_para_inds] + R[free_para_inds, free_para_inds]')/2
 
         # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
@@ -254,9 +257,11 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         # RECA: mixr gives which distribution we ought draw from
         mixr = readdlm(fortran_path * convert_string(i) * "mixr.txt")
         eps  = readdlm(fortran_path * convert_string(i) * "eps.txt")
-        # fortpara = readdlm(fortran_path * convert_string(i) * "parasim.txt")
-        # fortpost = readdlm(fortran_path * convert_string(i) * "postsim.txt")
-        # fortlik  = readdlm(fortran_path * convert_string(i) * "liksim.txt")
+        step_pr = readdlm(fortran_path * convert_string(i) * "step_pr.txt")
+        step_lik = readdlm(fortran_path * convert_string(i) * "step_lik.txt")
+        fortpara = readdlm(fortran_path * convert_string(i) * "parasim.txt")
+        fortpost = readdlm(fortran_path * convert_string(i) * "postsim.txt")
+        fortlik  = readdlm(fortran_path * convert_string(i) * "liksim.txt")
 
         if parallel
             new_particles = @parallel (vcat) for j in 1:n_parts
@@ -270,8 +275,11 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                 mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all, ϕ_n, ϕ_n1;
                          c = c, α = α, old_data = old_data,
                          use_chand_recursion = use_chand_recursion, verbose = verbose,
+                         # RECA'S TESTING VARIABLES:
                          mixr = mixr[j,:],
-                         stepprobs = stepprobs[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + 1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + n_blocks * n_steps])
+                         eps = eps[(j-1) * n_steps + 1:j * n_steps, :],
+                         stepprobs = stepprobs[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + 1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + n_blocks * n_steps],
+                         step_pr = step_pr[j,:], step_lik = step_lik[j,:])
             end
         else
             new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all,
@@ -288,9 +296,13 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         @show cloud.ESS[i] ≈ fortESS[i], cloud.ESS[i], fortESS[i]
         #@assert get_vals(cloud)    ≈ fortpara
         #@assert get_logpost(cloud) ≈ fortpost
-        #show size(get_loglh(cloud)), size(fortlik)
-        #show mean(get_loglh(cloud)), mean(fortlik)
-
+        #@show sum(get_vals(cloud) - fortpara)
+        @show size(get_vals(cloud)), size(fortpara)
+        @show sum(get_loglh(cloud) - vec(fortlik))
+        @show min(get_loglh(cloud)), indmin(get_loglh(cloud)), min(vec(fortlik)), indmin(vec(fortlik))
+        @show min(get_vals(cloud)), indmin(get_vals(cloud)), min(vec(fortpara)), indgmin((fortpara))
+        @show mean(get_vals(cloud), 1), mean(fortpara, 1)
+        @show mean(get_loglh(cloud)), mean(fortlik)
 
 
         ########################################################################################
@@ -301,7 +313,6 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         if VERBOSITY[verbose] >= VERBOSITY[:low]
             end_stage_print(cloud; verbose = verbose, use_fixed_schedule = use_fixed_schedule)
         end
-
     end
 
     ########################################################################################
