@@ -35,7 +35,8 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                   eps  = Matrix{Float64}(size(1, 41), 0), # RECA : size(n_steps, n_para)
                   stepprobs = Vector{Float64}(size(blocks_all,1), 0),
                   step_pr = Matrix{Float64}(size(1, 1), 0),
-                  step_lik = Matrix{Float64}(size(1, 1), 0)) # RECA: need to add n_mh if want > 1
+                  step_lik = Matrix{Float64}(size(1, 1), 0),
+                  mu = Vector{Float64}(size(41,1), 0)) # RECA: need to add n_mh if want > 1
 
     n_steps = get_setting(m, :n_mh_steps_smc)
 
@@ -77,8 +78,7 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
                                                                                   d_subset;
                                                                                   mixr = mix_draw, # RECA
                                                                                   eps = eps_block, # RECA
-                                                                                  cc = c, α = α)
-
+                                                                                  cc = c, α = α, mu=mu[block_a])
             para_new = copy(para)
             para_new[block_a] = para_draw
 
@@ -110,14 +110,14 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
 
             # Accept/Reject
             post_old = post - para_old_density
-            η = exp(post_new - post_old)
+            η        = exp(post_new - post_old)
 
             if step_prob < η # accept
                 para   = para_new
                 like   = like_new
                 post   = post_new + para_new_density # Have to add it back so as to not accumulate
                 like_prev = like_old_data            # para_new_density throughout the iterations
-                accept = true
+                accept += length(block_a) #true
             end
 #            print(para)
 #            print(step_pr[mm])
@@ -128,6 +128,6 @@ function mutation(m::AbstractModel, data::Matrix{Float64}, p::Particle, d::Distr
             #step_prob = rand()
         end
     end
-    update_mutation!(p, para, like, post, like_prev, accept)
+    update_mutation_FORTRAN!(p, para, like, post, like_prev, accept/(length(d_subset.μ))
     return p
 end

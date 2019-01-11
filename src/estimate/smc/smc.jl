@@ -241,8 +241,17 @@ function smc(m::AbstractModel, data::Matrix{Float64};
 
         θ_bar = weighted_mean(cloud)
         R = weighted_cov(cloud)
-        # add to itself and divide by 2 to ensure marix is positive semi-definite symmetric (not off due to numerical
-        # error) and values haven't changed
+
+        mu       = vec(readdlm(fortran_path * convert_string(i) * "mean.txt"))
+        fort_var = readdlm(fortran_path * convert_string(i) * "var.txt")
+        #@show θ_bar mu
+        @show sum(abs.(θ_bar-mu))
+        @show θ_bar ≈ mu
+        @show sum(abs.(R-fort_var))
+        @show R ≈ fort_var
+
+        # add to itself and divide by 2 to ensure marix is positive semi-definite symmetric
+        # (not off due to numerical error) and values haven't changed
         R_fr = (R[free_para_inds, free_para_inds] + R[free_para_inds, free_para_inds]')/2
 
         # MvNormal centered at ̄θ with var-cov ̄Σ, subsetting out the fixed parameters
@@ -279,7 +288,8 @@ function smc(m::AbstractModel, data::Matrix{Float64};
                          mixr = mixr[j,:],
                          eps = eps[(j-1) * n_steps + 1:j * n_steps, :],
                          stepprobs = stepprobs[(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + 1:(i-2) * n_parts * n_steps * n_blocks + (j-1) * n_steps * n_blocks + n_blocks * n_steps],
-                         step_pr = step_pr[j,:], step_lik = step_lik[j,:])
+                         step_pr = step_pr[j,:], step_lik = step_lik[j,:],
+                         mu = mu)
             end
         else
             new_particles = [mutation(m, data, cloud.particles[j], d, blocks_free, blocks_all,
@@ -294,16 +304,14 @@ function smc(m::AbstractModel, data::Matrix{Float64};
         ### Reca: Testing Against FORTRAN
         ########################################################################################
         @show cloud.ESS[i] ≈ fortESS[i], cloud.ESS[i], fortESS[i]
-        #@assert get_vals(cloud)    ≈ fortpara
-        #@assert get_logpost(cloud) ≈ fortpost
-        #@show sum(get_vals(cloud) - fortpara)
-        @show size(get_vals(cloud)), size(fortpara)
-        @show sum(get_loglh(cloud) - vec(fortlik))
-        @show min(get_loglh(cloud)), indmin(get_loglh(cloud)), min(vec(fortlik)), indmin(vec(fortlik))
-        @show min(get_vals(cloud)), indmin(get_vals(cloud)), min(vec(fortpara)), indgmin((fortpara))
-        @show mean(get_vals(cloud), 1), mean(fortpara, 1)
+        #@assert get_vals(cloud)    ≈ transpose(fortpara)
+        #@assert get_logpost(cloud) ≈ transpose(fortpost)
+        @show sum(abs.(get_vals(cloud) - transpose(fortpara)))
+        @show sum(abs.(get_loglh(cloud) - vec(fortlik)))
+        @show findmin(get_loglh(cloud)), findmin(vec(fortlik))
+        @show findmin(get_vals(cloud)), findmin(transpose(fortpara))
+        #@show mean(get_vals(cloud), 2), mean(transpose(fortpara), 2)
         @show mean(get_loglh(cloud)), mean(fortlik)
-
 
         ########################################################################################
         ### Timekeeping and Output Generation
