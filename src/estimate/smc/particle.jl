@@ -22,7 +22,7 @@ mutable struct Particle
     loglh::Float64
     logpost::Float64
     old_loglh::Float64
-    accept::Bool
+    accept::Float64 #Bool # TO MATCH FORTRAN
 end
 
 """
@@ -145,6 +145,17 @@ function update_mutation!(p::Particle, para::Array{Float64,1},
     p.old_loglh = old_like
     p.accept = accept
 end
+
+
+function update_mutation_RECA!(p::Particle, para::Array{Float64,1},
+                          like::Float64, post::Float64, old_like::Float64, accept::Float64)
+    p.value = para
+    p.loglh = like
+    p.logpost = post
+    p.old_loglh = old_like
+    p.accept = accept
+end
+
 
 # RECA
 function update_mutation!(para_path::String,  p::Particle, para::Array{Float64,1},
