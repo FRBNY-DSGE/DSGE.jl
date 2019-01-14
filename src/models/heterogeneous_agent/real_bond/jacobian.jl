@@ -271,9 +271,9 @@ function jacobian(m::RealBond)
     JJ[F9,MONP] = 1.0
     JJ[F9,MON]  = -ρmon
 
-    # if !m.testing && get_setting(m, :normalize_distr_variables)
-        # JJ = normalize(m, JJ)
-    # end
+    if !m.testing && get_setting(m, :normalize_distr_variables)
+        JJ = normalize(m, JJ)
+    end
 
     return JJ
 end
@@ -303,9 +303,9 @@ function compose_normalization_matrices(m::RealBond)
     (Q,R) = qr(P)
 
     S         = Q[:,ns+1:end]'
-    Qleft     = cat([1 2],S,[1],eye(nx*ns),[1])
-    Qx        = cat([1 2],S,[1])
-    Qy        = cat([1 2],eye(nx*ns),[1])
+    Qleft     = cat([1 2],eye(nx*ns),S,[1],[1],[1],[1],[1],[1],[1])
+    Qx        = cat([1 2],S,[1],[1])
+    Qy        = cat([1 2],eye(nx*ns),[1],[1],[1],[1],[1])
 	Qright    = cat([1,2],Qx',Qy',Qx',Qy')
 
     return Qx, Qy, Qleft, Qright
