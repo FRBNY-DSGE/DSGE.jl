@@ -230,8 +230,8 @@ function RealBond(subspec::String="ss0";
     # Initialize model indices
     init_model_indices!(m)
 
-    # # Solve for the steady state
-    # steadystate!(m)
+    # Solve for the steady state
+    steadystate!(m)
 
     # So that the indices of m.endogenous_states reflect the normalization
     normalize_model_state_indices!(m)
@@ -258,7 +258,7 @@ function init_parameters!(m::RealBond)
                    description = "Inverse Frisch elasticity of labor supply.", tex_label = "\\nu")
     m <= parameter(:abar, -0.5, fixed = true,
                    description = "Borrowing floor.", tex_label = "\\bar{a}")
-    m <= parameter(:ρ_z, 0.95, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
+    m <= parameter(:ρ_z, 0.0, (1e-5, 0.999), (1e-5, 0.999), SquareRoot(), BetaAlt(0.5, 0.2), fixed=false,
                    description="ρ_z: AR(1) coefficient in the technology process.",
                    tex_label="\\rho_z")
     m <= parameter(:σ_z, sqrt(.007), (1e-8, 5.), (1e-8, 5.), Exponential(), RootInverseGamma(2, 0.10), fixed=false,

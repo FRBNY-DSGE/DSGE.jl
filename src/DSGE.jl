@@ -333,6 +333,7 @@ module DSGE
 
     include("models/heterogeneous_agent/real_bond/real_bond.jl")
     include("models/heterogeneous_agent/real_bond/steady_state.jl")
+    include("models/heterogeneous_agent/real_bond/jacobian.jl")
 
     # Continuous Time Heterogenous Agent Models
     include("solve/solve_hank.jl")
