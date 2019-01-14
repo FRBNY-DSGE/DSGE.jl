@@ -60,7 +60,7 @@ function steadystate!(m::RealBond;
     laborzero(s::AbstractFloat, x::AbstractFloat, c::AbstractFloat,
               ν::AbstractFloat, γ::AbstractFloat, aborrow::AbstractFloat) = s^(1+ν) - ((aborrow+c-x)^ν)*c^γ
     chifun(s::AbstractFloat, x::AbstractFloat, ν::AbstractFloat,
-           γ::AbstractFloat, aborrow::AbstractFloat) = fzero(c ->laborzero(s, x, c, ν, γ, aborrow), 0.0, 15.0)
+           γ::AbstractFloat, aborrow::AbstractFloat) = fzero(c ->laborzero(s, x, c, ν, γ, aborrow), x-aborrow+1e-8, 15.0)
     # etafun(s::AbstractFloat,x::AbstractFloat,ν::AbstractFloat,γ::AbstractFloat,aborrow::AbstractFloat) = chifun(s,x,ν,γ,aborrow)^(-(γ/ν))*s^(1.0/ν)
 
     for iss in 1:ns
